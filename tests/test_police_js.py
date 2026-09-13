@@ -241,3 +241,61 @@ def test_les_affiches_recherche_a_deux_etoiles(banc, paquet):
     }""")
     assert 1 <= r["pendant"] <= paquet["recherche"]["police"]["affiches_max"]
     assert r["apres"] == 0
+
+
+def test_a_cinq_etoiles_l_helico_te_survole_et_rien_ne_retombe(banc, paquet):
+    palier5 = paquet["recherche"]["paliers"][5]
+    assert palier5["helico"] and palier5["barrages"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        j.intouchable = true;
+        L.Police.ajouterChaleur(15);                // cinq etoiles
+        let apparu = -1, dMin = Infinity;
+        for (let i = 0; i < 900; i++) {
+            o.frame(1);
+            const h = L.Police.helico();
+            if (h && apparu < 0) apparu = i;
+            if (h) dMin = Math.min(dMin, Math.hypot(h.x - j.x, h.y - j.y));
+        }
+        const vu = L.B.recherche.vu, etoiles = L.B.recherche.etoiles;
+        L.Jeu.rendre();                              // il se dessine, avec son ombre
+        L.Police.remiseAZero();
+        let parti = -1;
+        for (let i = 0; i < 900 && parti < 0; i++) { o.frame(1); if (!L.Police.helico()) parti = i; }
+        return { apparu: apparu, dMin: dMin, vu: vu, etoiles: etoiles, parti: parti };
+    }""")
+    assert 0 <= r["apparu"] < 120, "a cinq etoiles, l'helico arrive"
+    assert r["dMin"] < 90, "il vient te survoler"
+    assert r["etoiles"] == 5 and r["vu"] < 5, "sous l'helico, rien ne retombe"
+    assert 0 <= r["parti"] < 900, "la chasse finie, il s'en va"
+
+
+def test_a_cinq_etoiles_un_barrage_se_dresse_devant_le_char(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y; j.intouchable = true;
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(function (e) { L.Entites.retirer(e); });
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        L.Police.ajouterChaleur(15);
+        v.vitesse = 3;
+        const b = L.Police.poserBarrage(v);
+        const autos = L.Police.barrages();
+        const surRoute = autos.every(function (a) { return L.Monde.estChaussee(Math.floor(a.x / L.TT), Math.floor(a.y / L.TT)); });
+        const devant = b && b.x > v.x + 200;
+        const agents = L.Police.agents().filter(function (a) { return Math.hypot(a.x - b.x, a.y - b.y) < 60; }).length;
+        L.Police.remiseAZero();
+        j.x = v.x = b.x - 900; j.y = v.y = b.y + 400;        // loin : le barrage se leve
+        o.frame(120);
+        return { pose: !!b, autos: autos.length, surRoute: surRoute, devant: devant, agents: agents,
+                 travers: autos.length ? Math.abs(Math.abs(autos[0].angle) - Math.PI / 2) < 0.01 : null,
+                 apres: L.Police.barrages().length };
+    }""")
+    assert r["pose"] and r["autos"] == 2, "deux autos en travers"
+    assert r["surRoute"] and r["devant"], "sur la rue, devant toi"
+    assert r["travers"] is True, "en travers de la voie"
+    assert r["agents"] == 2, "deux agents derriere"
+    assert r["apres"] == 0, "la chasse finie et hors de vue, le barrage se leve"

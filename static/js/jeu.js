@@ -97,7 +97,21 @@ const Jeu = (function () {
     if (B.menu) Hud.fermerMenu();
   }
 
-  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); }
+  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); }
+
+  /** La carte de la ville, plein ecran : la simulation attend. */
+  function ouvrirCarte() {
+    if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    if (B.menu) Hud.fermerMenu();
+    B.etat = 'carte';
+    Hud.etat('carte');
+  }
+
+  function fermerCarte() {
+    if (B.etat !== 'carte') return;
+    B.etat = 'jeu';
+    Hud.etat('jeu');
+  }
 
   function retourTitre() {
     Missions.sauvegarderPartie();
@@ -123,7 +137,7 @@ const Jeu = (function () {
     }
     if (B.etat === 'jeu') {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
-      if (Entree.neuf('carte')) { Hud.demanderScore(); B.etat = 'pause'; Hud.etat('pause'); Entree.videPresse(); return; }
+      if (Entree.neuf('carte')) { ouvrirCarte(); Entree.videPresse(); return; }
       Monde.majHeure();
       Monde.majChemins();
       Entites.maj();
@@ -135,6 +149,9 @@ const Jeu = (function () {
       Monde.majCamera();
       Son.Mus.tick();
       B.t++;
+    } else if (B.etat === 'carte') {
+      // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
+      if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }
     } else if (B.etat === 'pause') {
       if (Entree.neuf('pause')) { reprendre(); Entree.videPresse(); return; }
       if (B.menu) Hud.majMenu();
@@ -158,7 +175,11 @@ const Jeu = (function () {
     Entites.dessiner(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
-    Base.fin(Monde.ambiance(), Monde.lampesVisibles(vue));
+    if (!B.interieur) Police.dessinerHelico(ctx, vue);
+    const lampes = Monde.lampesVisibles(vue);
+    const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
+    if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
+    Base.fin(Monde.ambiance(), lampes);
     Hud.dessiner();
   }
 
@@ -243,7 +264,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, entrer, sortir, pause, reprendre, basculerPause, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, entrer, sortir, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

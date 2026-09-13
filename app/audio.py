@@ -86,6 +86,12 @@ CATALOGUE: list[Echantillon] = [
     _e("sirene", "Sirène de police", duree_s=4.0, volume=0.6, boucle=True,
        prompt="a police car siren wailing steadily, seamless loop, no music, "
               "no engine, no traffic"),
+    _e("helico", "Hélicoptère", duree_s=4.0, volume=0.6, boucle=True,
+       prompt="a police helicopter hovering overhead, rotor blades thumping steadily, "
+              "seamless loop, no music, no voices, no siren"),
+    _e("telephone", "Sonnerie du téléphone", duree_s=1.6, volume=0.6,
+       prompt="an old flip phone ringing twice, short electronic ringtone, close, "
+              "no music, no voices"),
     _e("moteur", "Moteur au ralenti", duree_s=4.0, volume=0.5, boucle=True,
        prompt="a four cylinder car engine idling steadily, seamless loop, "
               "close-up, no music"),
@@ -197,8 +203,20 @@ def voix_histoire() -> list[dict]:
     return sortie
 
 
+def voix_journal() -> list[dict]:
+    """Chaque manchette du Clairon, lue par le narrateur (la version `lu`, en casse naturelle)."""
+    from . import journal, missions
+    perso = missions.personnage("narrateur")
+    if perso is None:
+        raise ValueError("le narrateur manque a missions.PERSONNAGES")
+    return [{"slug": f"narrateur-journal-{r['slug']}", "texte": r["lu"], "genre": perso["genre"], "voix": perso["voix"],
+             "volume": 0.85, "histoire": True, "qui": "narrateur", "mission": "journal", "partie": "journal",
+             "telephone": False}
+            for r in journal.REGLES + journal.SPECIALES]
+
+
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + voix_histoire()
+    return list(VOIX) + voix_histoire() + voix_journal()
 
 
 def voix_par_slug(slug: str) -> Voix | None:
@@ -314,6 +332,6 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_histoire()
+            for v in voix_histoire() + voix_journal()
         ],
     }

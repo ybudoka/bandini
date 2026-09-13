@@ -245,6 +245,8 @@ const Histoire = (function () {
     }
     const m = disponibleDe(slug);
     if (m) { dire(m, 'intro', function () { commencer(m.slug); }); return true; }
+    const mn = B.defs.marche_noir;
+    if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
     Hud.dialogue(p.nom, [faite('m5') ? 'LE FAUBOURG EST TRANQUILLE. MERCI.' : 'REVIENS ME VOIR PLUS TARD.'], 120);
     return true;
   }

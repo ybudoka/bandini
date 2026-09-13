@@ -137,6 +137,7 @@ const Hud = (function () {
   function menuPause() {
     return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
+      { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
       { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
       { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDEE'); return false; } },
@@ -348,6 +349,46 @@ const Hud = (function () {
     B.stats.rects += 6;
   }
 
+  /** La ville entiere, deux pixels par tuile, avec ses lieux nommes, le
+      joueur, l'objectif — et la police si elle te cherche. */
+  function dessinerCarte(ctx) {
+    const carte = Monde.carte.interieur ? (B.exterieur && B.exterieur.carte) : Monde.carte, j = B.joueur;
+    if (!carte || !j) return;
+    ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(0, 0, VW, VH);
+    const mini = Monde.miniCarte(carte);
+    const echelle = Math.max(1, Math.floor(Math.min((VW - 20) / carte.w, (VH - 40) / carte.h)));
+    const l = carte.w * echelle, h = carte.h * echelle;
+    const ox = Math.round((VW - l) / 2), oy = Math.round((VH - h) / 2) + 6;
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
+    B.stats.images++;
+    const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
+    for (const point of carte.points) {
+      const p = pos(point.x * TT, point.y * TT);
+      ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
+      ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
+      B.stats.rects += 2;
+    }
+    if (B.recherche.etoiles > 0) {
+      ctx.fillStyle = '#4f8fe8';
+      for (const e of (B.exterieur ? B.exterieur.entites : B.entites)) {
+        if (!(e.agent && e.vivant) && !(e.type === 'vehicule' && e.conducteur === 'police')) continue;
+        const p = pos(e.x, e.y); ctx.fillRect(p.x, p.y, 2, 2); B.stats.rects++;
+      }
+    }
+    const gps = Histoire.cible();
+    if (gps && (B.t >> 3) % 2 === 0) { const p = pos(gps.x, gps.y); ctx.fillStyle = gps.couleur || '#e8b33c'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5); B.stats.rects++; }
+    const pj = pos(B.exterieur ? B.exterieur.x : j.x, B.exterieur ? B.exterieur.y : j.y);
+    ctx.fillStyle = '#101018'; ctx.fillRect(pj.x - 2, pj.y - 2, 6, 6);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(pj.x - 1, pj.y - 1, 4, 4);
+    B.stats.rects += 2;
+    const titre = 'BAIE-DES-BRUMES — LE FAUBOURG';
+    texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
+    const zone = Monde.zoneA ? (B.exterieur ? null : Monde.zoneA(j.x, j.y)) : null;
+    const aide = (zone ? zone.nom.toUpperCase() + ' · ' : '') + (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
+    texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
+  }
+
   //: Ce que la derniere image a dessine, en pixels logiques. Sert au test
   //: tactile : aucun element du HUD ne doit finir sous un bouton.
   let ancres = [];
@@ -456,6 +497,7 @@ const Hud = (function () {
       }
     }
     if (B.etat === 'jeu') { invite(ctx); dessinerDialogue(ctx); dessinerMenu(ctx); }
+    if (B.etat === 'carte') dessinerCarte(ctx);
     dessinerFondu(ctx);
     if (B.options.perf) {
       const s = B.stats;

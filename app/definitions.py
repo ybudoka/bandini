@@ -34,6 +34,8 @@ def assembler() -> dict:
         "personnages": missions.PERSONNAGES,
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
+        "journal_speciales": journal.SPECIALES,
+        "marche_noir": magasins.MARCHE_NOIR,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,
         "tenues": magasins.TENUES,

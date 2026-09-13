@@ -206,7 +206,7 @@ def test_le_sergent_ami_et_le_faubourg_libere(banc):
     }""")
     assert r["nuit"] is False and r["attend"] == "ATTENDS LA NUIT", "M4 commence de jour : on attend la nuit"
     assert r["ami"] is True and r["libere"] is True and r["bar"] is True
-    assert r["manchette"] == "LES CRAVATES CHASSÉES DU FAUBOURG"
+    assert r["manchette"] == "cravates_chassees", "la une de demain, par son slug (journal.SPECIALES)"
     assert r["faites"] == ["m1", "m2", "m3", "m4", "m5"]
 
 
@@ -234,3 +234,62 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
     assert r["defi"] == "tour" and r["ligne"].startswith("TOUR DU FAUBOURG 2:00 TOUR 1/3")
     assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]
     assert r["apres"] is None and "RATÉ" in r["msg"], "sans char, le tour rate"
+
+
+def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paquet):
+    mn = paquet["marche_noir"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.stats.tues = 2;
+        L.Missions.nouveauJour();
+        const lue = L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1];
+        const titre = L.B.dialogue && L.B.dialogue.lignes[0];
+        // La manchette de M5, imposee : par son slug, et lue elle aussi.
+        L.B.partie.manchetteForcee = 'cravates_chassees';
+        L.Missions.nouveauJour();
+        const forcee = L.B.dialogue && L.B.dialogue.lignes[0];
+        const forceeLue = L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1];
+        // Josee, avant et apres M5.
+        const avant = L.Histoire.parler('josee');
+        const menuAvant = L.B.menu && L.B.menu.titre;
+        L.B.dialogue = null;
+        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.B.partie.argent = 1000;
+        L.Histoire.parler('josee');
+        const menu = L.B.menu;
+        const pistolet = menu.items.find(function (i) { return i.libelle === 'PISTOLET'; });
+        pistolet.faire(pistolet);
+        return { lue: lue, titre: titre, forcee: forcee, forceeLue: forceeLue, avant: avant, menuAvant: menuAvant,
+                 menu: menu.titre, prix: pistolet.detail, argent: L.B.partie.argent, arme: !!L.B.partie.armes.pistolet };
+    }""")
+    pistolet = next(a for a in paquet["armes"] if a["slug"] == "pistolet")
+    prix = round(pistolet["prix"] * mn["rabais"])
+    assert r["titre"] == "UN MORT DANS LA RUE" and r["lue"] == "narrateur-journal-un_mort"
+    assert r["forcee"] == "LES CRAVATES CHASSEES DU FAUBOURG" and r["forceeLue"] == "narrateur-journal-cravates_chassees"
+    assert r["avant"] is True and r["menuAvant"] is None, "avant M5, Josee ne vend rien"
+    assert r["menu"] == "MARCHÉ NOIR" and r["prix"] == f"{prix} $"
+    assert r["argent"] == 1000 - prix and r["arme"] is True
+
+
+def test_la_carte_de_la_ville_s_ouvre_et_se_ferme(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        o.tape('KeyN', 2);
+        const ouverte = L.B.etat;
+        L.Jeu.rendre();                                   // (rendre remet les compteurs a zero au debut)
+        const dessine = L.B.stats.rects;
+        const t0 = L.B.t;
+        o.frame(10);
+        const fige = L.B.t === t0;
+        o.tape('KeyN', 2);
+        const fermee = L.B.etat;
+        L.Jeu.pause();
+        const item = L.B.menu.items.find(function (i) { return i.libelle === 'CARTE DE LA VILLE'; });
+        item.faire(item);
+        const parLeMenu = L.B.etat;
+        o.tape('Escape', 2);
+        return { ouverte: ouverte, dessine: dessine, fige: fige, fermee: fermee, parLeMenu: parLeMenu, fin: L.B.etat };
+    }""")
+    assert r["ouverte"] == "carte" and r["dessine"] > 10, "N ouvre la carte, qui se dessine"
+    assert r["fige"] is True, "la carte ouverte, le temps s'arrete"
+    assert r["fermee"] == "jeu" and r["parLeMenu"] == "carte" and r["fin"] == "jeu"

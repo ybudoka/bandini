@@ -536,7 +536,7 @@ const Missions = (function () {
     const regles = B.defs.journal || [];
     let choisie = null;
     // L'histoire a fait la une : la manchette est imposee, une fois.
-    if (p.manchetteForcee) { choisie = { titre: p.manchetteForcee, texte: 'TOUTE LA VILLE EN PARLE.' }; p.manchetteForcee = null; }
+    if (p.manchetteForcee) { choisie = (B.defs.journal_speciales || []).find(function (m) { return m.slug === p.manchetteForcee; }) || null; p.manchetteForcee = null; }
     for (const r of regles) {
       if (choisie) break;
       if (delta(r.cle) >= r.min) { choisie = r; break; }
@@ -545,17 +545,45 @@ const Missions = (function () {
     return choisie || regles[regles.length - 1] || null;
   }
 
+  /** La manchette s'affiche ET se lit : le narrateur du Clairon la dit a voix haute. */
+  function direLaManchette(m) {
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
+    if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
+  }
+
   function lireLeJournal() {
     const m = B.partie.derniereManchette;
-    if (m) Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
+    if (m) direLaManchette(m);
     else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN A SIGNALER A BAIE-DES-BRUMES.'], 300);
   }
 
   function nouveauJour() {
     revenusDuJour();
     const m = manchetteDuJour();
-    if (m) { B.partie.derniereManchette = m; Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420); }
+    if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
     else Hud.message('JOUR ' + B.partie.jour);
+  }
+
+  // --- Le marche noir : Josee, une fois le Faubourg libere --------------------------------
+
+  function menuMarcheNoir() {
+    const p = B.partie, mn = B.defs.marche_noir || { rabais: 1, articles: [], munitions: [] };
+    const items = [];
+    mn.articles.forEach(function (slug) {
+      const arme = Combat.armeDef(slug);
+      if (!arme) return;
+      const prix = Math.round(arme.prix * mn.rabais), deja = !!p.armes[slug];
+      items.push({ libelle: arme.nom.toUpperCase(), detail: deja ? 'DEJA A TOI' : prix + ' $', actif: !deja && p.argent >= prix,
+                   faire: function () { payer(prix, arme.nom.toUpperCase()); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+    });
+    mn.munitions.forEach(function (slug) {
+      const arme = Combat.armeDef(slug);
+      if (!arme || !p.armes[slug] || arme.prix_munitions === null) return;
+      const prix = Math.round(arme.prix_munitions * mn.rabais), pleine = p.armes[slug].mun >= arme.munitions_max;
+      items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : prix + ' $', actif: !pleine && p.argent >= prix,
+                   faire: function () { payer(prix, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+    });
+    return { titre: 'MARCHÉ NOIR', sur: p.argent + ' $', aide: 'SANS FACTURE. ' + Math.round((1 - mn.rabais) * 100) + ' % DE MOINS QUE CHEZ GUS.', items: items };
   }
 
   // --- Les paquets caches ------------------------------------------------------------------
@@ -642,5 +670,5 @@ const Missions = (function () {
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
            setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
-           revenusDuJour, manchetteDuJour, ramasserPaquet, majInvite, rabais, maj };
+           revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();

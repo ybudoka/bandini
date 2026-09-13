@@ -346,15 +346,16 @@ const Monde = (function () {
 
   /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
       au chargement valent mieux que 64x48 relus a chaque image. */
-  function miniCarte() {
-    if (carte.mini) return carte.mini;
-    const c = Base.nouveauCanvas(carte.w, carte.h);
+  function miniCarte(laquelle) {
+    const k = laquelle || carte;                  // la ville, meme quand on est dedans
+    if (k.mini) return k.mini;
+    const c = Base.nouveauCanvas(k.w, k.h);
     const ctx = c.getContext('2d');
-    for (let y = 0; y < carte.h; y++) {
-      const ligne = carte.sol[y];
+    for (let y = 0; y < k.h; y++) {
+      const ligne = k.sol[y];
       let debut = 0, couleur = couleurMini(ligne[0]);
-      for (let x = 1; x <= carte.w; x++) {
-        const suivante = x < carte.w ? couleurMini(ligne[x]) : null;
+      for (let x = 1; x <= k.w; x++) {
+        const suivante = x < k.w ? couleurMini(ligne[x]) : null;
         if (suivante !== couleur) {
           ctx.fillStyle = couleur;
           ctx.fillRect(debut, y, x - debut, 1);
@@ -362,7 +363,7 @@ const Monde = (function () {
         }
       }
     }
-    carte.mini = c;
+    k.mini = c;
     return c;
   }
 

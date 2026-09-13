@@ -232,3 +232,30 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     assert page.evaluate("window.BANDINI.Son.Voix.enCours.slug").startswith("ti_guy-m1-")
     assert page.evaluate("window.BANDINI.Son.Voix.ducking") is True
     assert erreurs == []
+
+
+def test_la_ville_tient_le_rythme_de_nuit_a_trois_etoiles(page, serveur, erreurs):
+    """Une sonde, pas un juge : Chromium sans GPU n'est pas un telephone. Elle
+    mesure le temps moyen d'une image (`B.stats.ms`) de nuit, a 3 etoiles,
+    au volant — le pire cas ordinaire — et ne crie que si c'est franchement
+    hors de prix. Le chiffre s'imprime : c'est lui qu'on regarde."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur;
+        j.intouchable = true;
+        L.B.partie.heure = 0.9;
+        L.Police.ajouterChaleur(9);
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_timeout(4000)
+    ms = page.evaluate("window.BANDINI.B.stats.ms")
+    images = page.evaluate("window.BANDINI.B.stats.images")
+    entites = page.evaluate("window.BANDINI.B.entites.length")
+    print(f"\n[perf] {ms:.1f} ms par image, {images} images dessinees, {entites} entites, 3 etoiles, nuit")
+    assert ms < 40, f"{ms:.1f} ms par image : la ville ne tient plus le rythme"
+    assert erreurs == []

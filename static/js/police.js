@@ -299,6 +299,119 @@ const Police = (function () {
     return { gaz: gaz, frein: frein, direction: borner(ecart * 2, -1, 1), freinMain: Math.abs(ecart) > 1.2 && v.vitesse > 2 };
   }
 
+  // --- L'helico : l'oeil dans le ciel, a cinq etoiles -----------------------------------
+  //
+  // Il ne tire pas, il VOIT : tant qu'il te survole, rien ne retombe. On s'en
+  // debarrasse en rentrant quelque part, ou en tenant 90 s... il ne lache
+  // rien. Son ombre court au sol, son projecteur te suit la nuit.
+
+  const HELICO_VITESSE = 3.4, HELICO_ALTITUDE = 40, HELICO_RAYON_VOL = 56;
+
+  function helico() { return B.entites.find(function (e) { return e.type === 'helico'; }) || null; }
+
+  function peuplerHelico() {
+    const j = B.joueur;
+    if (helico() || B.t % 60 !== 0) return;
+    const a = B.rng() * Math.PI * 2;
+    Entites.creer('helico', j.x + Math.cos(a) * 520, j.y + Math.sin(a) * 520, {
+      r: 0, z: HELICO_ALTITUDE, solide: false, vivant: true, dessine: false, orbite: a, rotor: 0, part: false,
+    });
+    Hud.message('UN HÉLICO !', 150);
+  }
+
+  function majHelico(h) {
+    const j = B.joueur, r = B.recherche, cible = j.dansVehicule ? j.dansVehicule : j;
+    h.rotor += 0.9;
+    if (r.etoiles <= 0 || !palier().helico) h.part = true;
+    let bx, by;
+    if (h.part) { bx = h.x + (h.x - cible.x) * 2 + 400; by = h.y - 400; }
+    else { h.orbite += 0.008; bx = cible.x + Math.cos(h.orbite) * HELICO_RAYON_VOL; by = cible.y + Math.sin(h.orbite) * HELICO_RAYON_VOL; }
+    const dx = bx - h.x, dy = by - h.y, d = Math.hypot(dx, dy) || 1;
+    const pas = Math.min(HELICO_VITESSE, d * 0.06 + 0.4);
+    h.vx = h.vx * 0.9 + dx / d * pas * 0.1; h.vy = h.vy * 0.9 + dy / d * pas * 0.1;
+    h.x += h.vx; h.y += h.vy;
+    if (Math.hypot(h.vx, h.vy) > 0.3) h.angle = Math.atan2(h.vy, h.vx);
+    if (h.part && dist2(h.x, h.y, j.x, j.y) > 700 * 700) { Entites.retirer(h); Son.boucle('helico', false); return; }
+    // Il voit tout ce qui est sous lui, sauf a travers un toit.
+    const vision = defs().vision.helico, portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
+    if (!h.part && !B.interieur && dist2(h.x, h.y, cible.x, cible.y) < portee * portee) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
+    const dist = Math.hypot(h.x - j.x, h.y - j.y);
+    if (!Son.boucleActive('helico')) Son.boucle('helico', true, 0.6);
+    Son.reglerBoucle('helico', Math.max(0.05, 1 - dist / 700));
+  }
+
+  /** L'helico se dessine par-dessus tout, avec son ombre au sol et son rotor qui tourne. */
+  function dessinerHelico(ctx, vue) {
+    const h = helico();
+    if (!h) return;
+    const x = Math.round(h.x - vue.x), y = Math.round(h.y - vue.y);
+    if (x < -40 || x > VW + 40 || y < -60 || y > VH + 40) return;
+    ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(x - 10, y - 4, 20, 8); B.stats.rects++;   // l'ombre, au sol
+    const yz = y - h.z;
+    ctx.save(); ctx.translate(x, yz); ctx.rotate(h.angle || 0);
+    ctx.fillStyle = '#1f3a6e'; ctx.fillRect(-8, -5, 16, 10);              // la cabine
+    ctx.fillStyle = '#16264a'; ctx.fillRect(-20, -2, 12, 4);              // la queue
+    ctx.fillStyle = '#7fb3d8'; ctx.fillRect(2, -3, 5, 6);                 // la vitre
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(-4, -1, 3, 2);
+    ctx.restore();
+    ctx.save(); ctx.translate(x, yz); ctx.rotate(h.rotor);
+    ctx.fillStyle = 'rgba(230,230,240,0.8)'; ctx.fillRect(-18, -1, 36, 2); ctx.fillRect(-1, -18, 2, 36);   // le rotor
+    ctx.restore();
+    B.stats.rects += 6;
+  }
+
+  /** Le projecteur de l'helico, la nuit : une lampe de plus pour `Base.fin`. */
+  function lampeHelico(vue) {
+    const h = helico();
+    if (!h || h.part) return null;
+    return { x: h.x - vue.x, y: h.y - vue.y, r: 70, c: 'rgba(255,255,230,0.75)' };
+  }
+
+  // --- Les barrages : deux autos en travers, devant toi, a cinq etoiles --------------------
+
+  const BARRAGE_TOUTES_LES = 900, BARRAGE_DISTANCE = [260, 440];
+
+  function barrages() { return B.entites.filter(function (e) { return e.type === 'vehicule' && e.barrage; }); }
+
+  function majBarrages() {
+    const j = B.joueur, r = B.recherche, v = j.dansVehicule;
+    const existants = barrages();
+    if (r.etoiles <= 0 || !palier().barrages) {
+      existants.forEach(function (b) { if (!Entites.visibleAEcran(b.x, b.y, 60)) Entites.retirer(b); });
+      return;
+    }
+    if (B.t % BARRAGE_TOUTES_LES !== 0 || !v || Math.abs(v.vitesse) < 1) return;
+    if (existants.some(function (b) { return dist2(b.x, b.y, j.x, j.y) < 500 * 500; })) return;
+    poserBarrage(v);
+  }
+
+  /** Cherche, devant le char, une tuile de voie droite ; y pose deux autos en
+      travers et deux agents derriere. Rend le barrage pose, ou null. */
+  function poserBarrage(v) {
+    const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
+    for (let d = BARRAGE_DISTANCE[0]; d <= BARRAGE_DISTANCE[1]; d += 16) {
+      const px = v.x + cx * d, py = v.y + cy * d;
+      const tx = Math.floor(px / TT), ty = Math.floor(py / TT);
+      const f = Monde.fleche(tx, ty);
+      const pas = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[f];
+      if (!pas || !Monde.estChaussee(tx, ty)) continue;
+      const route = Math.atan2(pas[1], pas[0]), travers = route + Math.PI / 2;
+      const nx = Math.cos(travers), ny = Math.sin(travers);
+      const centre = { x: tx * TT + 8, y: ty * TT + 8 };
+      const autos = [];
+      for (const s of [-1, 1]) {
+        const a = Vehicules.creer('police', centre.x + nx * 14 * s, centre.y + ny * 14 * s, travers, { etat: 'stationne', barrage: true, conducteur: null });
+        if (a) autos.push(a);
+      }
+      if (!autos.length) continue;
+      for (const s of [-1, 1]) creerAgent(centre.x + cx * 26 + nx * 10 * s, centre.y + cy * 26 + ny * 10 * s, 'poursuit');
+      Entites.indexer();
+      Hud.message('BARRAGE !', 120);
+      return { x: centre.x, y: centre.y, autos: autos };
+    }
+    return null;
+  }
+
   // --- Les affiches ----------------------------------------------------------------
 
   let facades = { carte: null, liste: [] };
@@ -349,10 +462,14 @@ const Police = (function () {
     decroitre();
     if (r.etoiles > 0) {
       peuplerAutos();
+      if (palier().helico) peuplerHelico();
     } else {
       autos().forEach(function (v) { if (!Entites.visibleAEcran(v.x, v.y, 60)) Entites.retirer(v); });
     }
     majAffiches();
+    const h = helico();
+    if (h) majHelico(h);
+    majBarrages();
     // Les temoins qui courent vers un agent : arrives, ils racontent. Loin de
     // tout agent, ils telephonent au bout du delai.
     const t = defs().temoins;
@@ -371,5 +488,6 @@ const Police = (function () {
   }
 
   return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, signalerCrime, rapporter, acheterLeSilence, remiseAZero,
-           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, maj };
+           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
+           helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

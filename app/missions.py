@@ -57,6 +57,9 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#c0392b", "h": "#101018", "s": "#f0c098", "p": "#101018"}, "ou": "point:contact"},
     {"slug": "civil", "nom": "Le client", "genre": "homme", "voix": "Alexandre - Authentic French Canadian",
      "couleurs": {"c": "#7f8c8d", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": ""},
+    # Le narrateur du Clairon : un vieil homme qui soupire, il lit la manchette du matin.
+    {"slug": "narrateur", "nom": "Le Clairon de la Baie", "genre": "homme", "voix": "annonceur centre d'achat 1",
+     "couleurs": {"c": "#3a3a4a", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": ""},
 ]
 
 
@@ -175,7 +178,7 @@ CATALOGUE: list[Mission] = [
     {
         "slug": "m5", "titre": "La Chef des Quais", "donneur": "josee", "prerequis": ["m4"],
         "recompense": 800, "phase": 1, "echec": ["mort", "arrete"],
-        "donne": {"propriete": "bar", "faubourg_libere": True, "manchette": "LES CRAVATES CHASSÉES DU FAUBOURG",
+        "donne": {"propriete": "bar", "faubourg_libere": True, "manchette": "cravates_chassees",
                   "message": "LE BAR EST À TOI"},
         "objectifs": [
             {"type": "tuer", "groupe": "cravates", "n": 6, "ou": "zone:cravates", "coins": 3, "texte": "VIDE LES TROIS COINS DES CRAVATES"},

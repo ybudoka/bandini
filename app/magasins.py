@@ -77,3 +77,9 @@ def par_slug(slug: str) -> Magasin | None:
         if magasin["slug"] == slug:
             return magasin
     return None
+
+
+#: Le marche noir : Josee, au bar, une fois le Faubourg libere (M5). Les
+#: memes armes que Chez Gus, mais a ce prix-la — et sans facture.
+MARCHE_NOIR: dict = {"apres": "m5", "rabais": 0.7, "articles": ["couteau", "pistolet", "fusil"],
+                     "munitions": ["pistolet", "fusil"]}
