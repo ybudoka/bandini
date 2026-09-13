@@ -1689,3 +1689,57 @@ def test_un_char_coince_dix_secondes_est_debloque(banc):
     assert r["debloques"] >= 1, "le chien de garde n'a pas mordu"
     assert r["bouge"] > 0, "le char n'est jamais reparti"
     assert r["surRoute"], "le char debloque a fini hors de la route"
+
+
+def test_un_char_sort_de_chaque_t_par_la_tige_sans_tourner_en_rond(banc):
+    """Martin : « ils tournent en rond dans l'intersection ». Par la tige d'un
+    T, la sortie prevue est souvent impossible depuis la rangee ou l'on entre :
+    le char doit quand meme sortir, par n'importe quel bras, sans repasser
+    par la boite."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(97);
+        const c = L.Monde.carte, j = L.B.joueur, T = L.TT;
+        const tes = c.intersections.filter(function (i) { return i.stop; });
+        const resultats = [];
+        tes.forEach(function (inter, k) {
+            if (k % 3) return;                        // un T sur trois : assez pour couvrir les quatre tiges
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule' && e.type !== 'pieton'; });
+            j.x = (inter.x - 1) * T + 8; j.y = (inter.y - 1) * T + 8;
+            L.Monde.centrerCamera(j.x, j.y);
+            // La ligne d'arret de la tige : la tuile 'S' dont le sens est celui du stop.
+            let sx = -1, sy = -1;
+            for (const cle in c.arrets) {
+                if (c.arrets[cle] !== inter.stop) continue;
+                const xy = cle.split(',').map(Number);
+                const p = { '<': [-1, 0], '>': [1, 0], '^': [0, -1], 'v': [0, 1] }[inter.stop];
+                if (L.Monde.intersectionA(xy[0] + p[0], xy[1] + p[1]) === inter) { sx = xy[0]; sy = xy[1]; break; }
+            }
+            if (sx < 0) { resultats.push({ inter: k, stop: inter.stop, erreur: 'pas de ligne d arret' }); return; }
+            const p = { '<': [-1, 0], '>': [1, 0], '^': [0, -1], 'v': [0, 1] }[inter.stop];
+            const v = L.Vehicules.creer('auto', (sx - p[0] * 2) * T + 8, (sy - p[1] * 2) * T + 8, Math.atan2(p[1], p[0]), { conducteur: 'trafic', etat: 'roule', sens: inter.stop });
+            v.sortie = ['droit', 'gauche', 'droite'];   // tout droit : impossible, c'est la tige
+            let entre = false, sorti = false, boucles = 0, derniere = null;
+            const vus = new Set();
+            for (let i = 0; i < 1500 && !sorti; i++) {
+                o.frame(1);
+                const tx = Math.floor(v.x / T), ty = Math.floor(v.y / T);
+                const cle = tx + ',' + ty;
+                const dedans = tx >= inter.x - 2 && tx < inter.x + inter.l + 2 && ty >= inter.y - 2 && ty < inter.y + inter.h + 2;
+                if (dedans) {
+                    entre = true;
+                    // Une boucle, c'est REVENIR sur une tuile deja quittee — pas y rester.
+                    if (cle !== derniere) { if (vus.has(cle)) boucles++; vus.add(cle); derniere = cle; }
+                }
+                else if (entre && L.Monde.fleche(tx, ty) !== '.' && L.Monde.fleche(tx, ty) !== '+') sorti = true;
+            }
+            resultats.push({ inter: k, stop: inter.stop, entre: entre, sorti: sorti, boucles: boucles, sens: v.sens, debloques: v.debloques || 0 });
+        });
+        return resultats;
+    }""")
+    assert r, "aucun T"
+    for res in r:
+        assert "erreur" not in res, res
+        assert res["entre"] and res["sorti"], f"le char n'est pas ressorti du T : {res}"
+        assert res["debloques"] == 0, f"le chien de garde a du intervenir : {res}"
+        assert res["boucles"] <= 1, f"le char a tourne en rond dans le T : {res}"

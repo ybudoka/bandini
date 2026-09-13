@@ -542,6 +542,7 @@ const Vehicules = (function () {
       const p = PAS_FLECHE[droit];
       const droite = FLECHE_DE[(-p[1]) + ',' + p[0]], gauche = FLECHE_DE[p[1] + ',' + (-p[0])];
       const vers = { droit: droit, droite: droite, gauche: gauche };
+      // 1. La sortie prevue, dans l'ordre des preferences.
       for (const choix of v.sortie) {
         const sens = vers[choix];
         if (peutSortir(tx, ty, sens)) {
@@ -550,29 +551,50 @@ const Vehicules = (function () {
           return centre(tx + q[0], ty + q[1]);
         }
       }
-      // Rien ne sort par la ou l'on regarde : on continue sur le '+' si c'en
-      // est un, sinon on rejoint la voie la plus proche (jamais le trottoir).
+      // 2. Rien ne sort d'ici dans ces sens : on avance dans la boite.
       if (Monde.fleche(tx + p[0], ty + p[1]) === '+') return centre(tx + p[0], ty + p[1]);
-      v.sortie = null;
-      return voieLaPlusProche(v, tx, ty);
+      // 3. Cul-de-sac devant (la tige d'un T) : n'importe quelle sortie fera.
+      for (const sens of [droite, gauche]) {
+        if (peutSortir(tx, ty, sens)) {
+          const q = PAS_FLECHE[sens];
+          v.sens = sens; v.sortie = null;
+          return centre(tx + q[0], ty + q[1]);
+        }
+      }
+      // 4. Aucune sortie depuis cette rangee : on se decale DANS la boite
+      //    (vers la droite d'abord) jusqu'a en trouver une. ⚠️ Jamais « la
+      //    voie la plus proche » ici : elle ramenait dans la boite, et le char
+      //    tournait en rond — Martin l'a vu.
+      for (const sens of [droite, gauche]) {
+        const q = PAS_FLECHE[sens];
+        if (Monde.fleche(tx + q[0], ty + q[1]) === '+') { v.sens = sens; return centre(tx + q[0], ty + q[1]); }
+      }
+      // 5. Boite d'une tuile sans issue : demi-tour sur place.
+      const arriere = FLECHE_DE[(-p[0]) + ',' + (-p[1])];
+      v.sens = arriere; v.sortie = null;
+      return centre(tx - p[0], ty - p[1]);
     }
     // Hors route : on cherche la voie la plus proche.
     return voieLaPlusProche(v, tx, ty);
   }
 
-  /** La voie la plus proche dont la fleche ne nous ramene pas d'ou l'on vient. */
+  /** La voie la plus proche qui MENE QUELQUE PART : sa fleche continue sur
+      une voie (pas dans une boite), elle ne pointe pas vers nous, et une voie
+      dans notre rangee ou notre colonne passe avant une voie en diagonale. */
   function voieLaPlusProche(v, tx, ty) {
-    let meilleur = null, dMin = Infinity;
+    let meilleur = null, coutMin = Infinity, sens = null;
     for (let dy = -3; dy <= 3; dy++) {
       for (let dx = -3; dx <= 3; dx++) {
         const g = Monde.fleche(tx + dx, ty + dy);
         if (!PAS_FLECHE[g]) continue;
         const q = PAS_FLECHE[g];
-        if (tx + dx + q[0] === tx && ty + dy + q[1] === ty) continue;   // elle pointe vers nous
-        const d = dx * dx + dy * dy;
-        if (d < dMin) { dMin = d; meilleur = centre(tx + dx, ty + dy); v.sens = g; }
+        if (tx + dx + q[0] === tx && ty + dy + q[1] === ty) continue;           // elle pointe vers nous
+        if (!PAS_FLECHE[Monde.fleche(tx + dx + q[0], ty + dy + q[1])]) continue;   // elle ne continue pas
+        const cout = dx * dx + dy * dy + (dx !== 0 && dy !== 0 ? 6 : 0);
+        if (cout < coutMin) { coutMin = cout; meilleur = centre(tx + dx, ty + dy); sens = g; }
       }
     }
+    if (meilleur) v.sens = sens;
     return meilleur;
   }
 
