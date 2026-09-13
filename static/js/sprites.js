@@ -474,6 +474,86 @@ const TUILES = (function () {
   const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
                     fils: '#d8d2c4', rails: [6, 11], poteau0: 0 };
 
+  /* --- Les toits ----------------------------------------------------------
+
+     ⚠️ Un toit etait peint TUILE PAR TUILE, chacune ignorant les autres : un
+     carre de couleur et des points tires de `hash2`. C'est une TEXTURE, pas un
+     toit — et une texture uniforme ne peut pas etre realiste, parce qu'un vrai
+     toit vu d'en haut ne se lit ni par son grain ni par sa couleur. Il se lit
+     par son BORD : parapet, corniche, gouttiere, la ligne d'ombre au pourtour.
+     Sans bord, deux batiments mitoyens couverts pareil n'en font plus qu'un.
+
+     `v` porte donc ce que le voisinage apprend a la tuile (`varianteDeToit`,
+     monde.js) : les quatre bits des cotes ou le toit S'ARRETE (1 nord, 2 est,
+     4 sud, 8 ouest), et au-dessus le grain (ou le versant, pour une pente). */
+  const TOIT_TOLE = { fond: '#5b4a4a', clair: '#7a6464', sombre: '#402f2f', grain: '#655252',
+                      tole: true };
+  const TOIT_ARDOISE = { fond: '#4a4f5e', clair: '#69708a', sombre: '#343845', grain: '#545a6b',
+                         rangs: 4 };
+  const TOIT_GRAVIER = { fond: '#6d6152', clair: '#8b7d6a', sombre: '#4f4539', grain: '#7b6e5d',
+                         gravier: true };
+  const TOIT_BARDEAU = { fond: '#6b5a4a', clair: '#8e7862', sombre: '#4a3d32', grain: '#7a6752',
+                         faite: '#a08a72' };
+
+  /** Le champ d'un toit plat : sa matiere, avant le bord. */
+  function champDeToit(ctx, bruitDe, T, style) {
+    plein(ctx, style.fond, T);
+    if (style.rangs) {
+      ctx.fillStyle = style.sombre;
+      for (let y = 0; y < T; y += style.rangs) ctx.fillRect(0, y, T, 1);
+    }
+    if (style.tole) {
+      ctx.fillStyle = style.grain;
+      for (let x = 2; x < T; x += 5) ctx.fillRect(x, 0, 1, T);     // les joints de la tole
+    }
+    points(ctx, bruitDe, T, style.grain, style.gravier ? 16 : 8, 3);
+    points(ctx, bruitDe, T, style.sombre, style.gravier ? 10 : 5, 90);
+  }
+
+  /** Le bord : un parapet clair au ras du vide, et sa ligne d'ombre a
+      l'interieur. C'est le premier repere d'un toit — celui qui dit ou finit
+      le batiment. */
+  function bordDeToit(ctx, v, T, style) {
+    const cotes = [[1, 0, -1], [2, 1, 0], [4, 0, 1], [8, -1, 0]];
+    for (const [bit, dx, dy] of cotes) {
+      if (!(v & bit)) continue;
+      ctx.fillStyle = style.clair;
+      if (dy) ctx.fillRect(0, dy < 0 ? 0 : T - 2, T, 2);
+      else ctx.fillRect(dx < 0 ? 0 : T - 2, 0, 2, T);
+      ctx.fillStyle = style.sombre;
+      if (dy) ctx.fillRect(0, dy < 0 ? 2 : T - 3, T, 1);
+      else ctx.fillRect(dx < 0 ? 2 : T - 3, 0, 1, T);
+    }
+  }
+
+  function toitPlat(ctx, v, T, style) {
+    champDeToit(ctx, (v >> 4) + 1, T, style);
+    bordDeToit(ctx, v & 15, T, style);
+  }
+
+  /** Le toit a deux versants : le bardeau, et une pente qui s'eclaircit vers la
+      LIGNE DE FAITE. ⚠️ Le versant vient du voisinage (`varianteDePente`
+      compte les tuiles de toit au nord et au sud) : c'est ce qui permet a la
+      faite d'apparaitre toute seule la ou les deux pentes se rencontrent, sans
+      qu'une tuile ait besoin de savoir qu'elle est au milieu. */
+  function toitEnPente(ctx, v, T, style) {
+    const versant = (v >> 4) & 3;           // 0 nord, 1 faite, 2 sud
+    plein(ctx, style.fond, T);
+    for (let y = 0; y < T; y++) {
+      // Vers la faite, la pente prend la lumiere ; vers le bas, elle la perd.
+      const part = versant === 0 ? y / (T - 1) : versant === 2 ? 1 - y / (T - 1) : 1 - Math.abs(y - T / 2) / (T / 2);
+      const dose = Math.round(part * 3);
+      if (dose >= 2) { ctx.fillStyle = style.grain; ctx.fillRect(0, y, T, 1); }
+      else if (dose === 0) { ctx.fillStyle = style.sombre; ctx.fillRect(0, y, T, 1); }
+    }
+    ctx.fillStyle = style.sombre;
+    for (let y = 2; y < T; y += 4) ctx.fillRect(0, y, T, 1);        // les rangs de bardeaux
+    if (versant === 1) { ctx.fillStyle = style.faite; ctx.fillRect(0, T / 2 - 1, T, 2); }
+    else if (versant === 0) { ctx.fillStyle = style.faite; ctx.fillRect(0, T - 1, T, 1); }
+    else { ctx.fillStyle = style.faite; ctx.fillRect(0, 0, T, 1); }
+    bordDeToit(ctx, v & 15, T, style);
+  }
+
   return {
     ',': function (ctx, v, T) { plein(ctx, '#4f8d3e', T); points(ctx, v, T, '#5a9c47', 12, 3); points(ctx, v, T, '#427a33', 8, 60); },
     '.': trottoir,
@@ -523,9 +603,10 @@ const TUILES = (function () {
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
     's': function (ctx, v, T) { plein(ctx, '#d8c48a', T); points(ctx, v, T, '#c9b576', 10, 4); },
     '~': function (ctx, v, T) { plein(ctx, '#2c5f8a', T); ctx.fillStyle = '#3b73a3'; ctx.fillRect(2 + (v % 5), 4, 6, 1); ctx.fillRect(7 - (v % 4), 11, 5, 1); },
-    'B': function (ctx, v, T) { plein(ctx, '#5b4a4a', T); points(ctx, v, T, '#655252', 10, 2); points(ctx, v, T, '#4e3f3f', 8, 80); },
-    'E': function (ctx, v, T) { plein(ctx, '#4a4f5e', T); ctx.fillStyle = '#424656'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); points(ctx, v, T, '#545a6b', 6, 20); },
-    'O': function (ctx, v, T) { plein(ctx, '#6d6152', T); points(ctx, v, T, '#7b6e5d', 14, 40); points(ctx, v, T, '#5d5346', 10, 90); },
+    'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_TOLE); },
+    'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_ARDOISE); },
+    'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },
+    'P': function (ctx, v, T) { toitEnPente(ctx, v, T, TOIT_BARDEAU); },
     'F': function (ctx, v, T) { facade(ctx, v, T); },
     'W': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#243447'; ctx.fillRect(3, 3, 10, 9); ctx.fillStyle = '#7fb3d8'; ctx.fillRect(4, 4, 3, 3); ctx.fillStyle = '#4d7ea3'; ctx.fillRect(8, 4, 4, 7); ctx.fillRect(4, 8, 3, 3); },
     'D': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(4, 3, 8, 13); ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 9, 1, 1); },
@@ -1019,7 +1100,94 @@ const FACADES = (function () {
     return (n ^ (n >>> 16)) >>> 0;
   }
 
-  return { devanture: devanture, residence: residence, graffiti: graffiti, T: T };
+  /* --- Ce qu'un toit PORTE ------------------------------------------------
+
+     Vu d'en haut, ce qui rend un toit credible, c'est son encombrement :
+     sorties de ventilation, unites de climatisation, cheminee, cage
+     d'escalier, reservoir d'eau, antennes. La ville n'en avait aucun.
+
+     ⚠️ Ce n'est PAS du decor : `poser_decor` refuse les tuiles solides, et il a
+     raison — le decor est une entite qu'on heurte. Ce qui est sur un toit n'est
+     heurte par personne : c'est du dessin, il voyage dans le paquet et se peint
+     dans le morceau, une fois, comme les enseignes. Le budget d'image n'y
+     touche jamais.
+
+     ⚠️ Chacun porte son OMBRE, au sud-est : sans elle, une boite grise posee sur
+     un toit gris se lit comme une tache de peinture — c'est exactement ce qui
+     est arrive aux premiers comptoirs, et la lecon est deja ecrite plus haut. */
+  const TOITURES = {
+    ventilation: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 6, y + 7, 7, 6);
+      ctx.fillStyle = '#8f8b84'; ctx.fillRect(x + 4, y + 5, 7, 6);
+      ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 5, y + 6, 5, 4);
+      ctx.fillStyle = '#a8a49c'; ctx.fillRect(x + 5, y + 6, 5, 1);
+      if (h % 2) { ctx.fillStyle = '#8f8b84'; ctx.fillRect(x + 12, y + 9, 3, 3); }
+    },
+    clim: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 4, y + 6, 11, 9);
+      ctx.fillStyle = '#9aa0a6'; ctx.fillRect(x + 2, y + 4, 11, 9);
+      ctx.fillStyle = '#7a7f85'; ctx.fillRect(x + 3, y + 5, 9, 7);
+      ctx.fillStyle = '#5f6469';
+      for (let i = 0; i < 4; i++) ctx.fillRect(x + 4, y + 6 + i * 2, 7, 1);
+      ctx.fillStyle = '#b4bac0'; ctx.fillRect(x + 2, y + 4, 11, 1);
+    },
+    cheminee: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 7, y + 6, 6, 8);
+      ctx.fillStyle = '#8a5a4a'; ctx.fillRect(x + 5, y + 3, 6, 9);
+      ctx.fillStyle = '#6e4438'; for (let i = 0; i < 4; i++) ctx.fillRect(x + 5, y + 5 + i * 2, 6, 1);
+      ctx.fillStyle = '#b0a89c'; ctx.fillRect(x + 4, y + 2, 8, 2);
+      ctx.fillStyle = '#2b2620'; ctx.fillRect(x + 6, y + 3, 4, 1);
+    },
+    cage: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 5, y + 6, 11, 10);
+      ctx.fillStyle = '#6d6a63'; ctx.fillRect(x + 2, y + 3, 12, 11);
+      ctx.fillStyle = '#57544e'; ctx.fillRect(x + 3, y + 4, 10, 9);
+      ctx.fillStyle = '#8a867e'; ctx.fillRect(x + 2, y + 3, 12, 1);
+      ctx.fillStyle = '#3a3732'; ctx.fillRect(x + 5, y + 9, 6, 4);      // la porte du toit
+      ctx.fillStyle = '#b0aca4'; ctx.fillRect(x + 10, y + 10, 1, 1);
+    },
+    reservoir: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.35)'; ctx.fillRect(x + 5, y + 7, 11, 8);
+      ctx.fillStyle = '#7a6144'; ctx.fillRect(x + 3, y + 2, 10, 11);
+      ctx.fillStyle = '#5f4b34'; ctx.fillRect(x + 4, y + 3, 8, 9);
+      ctx.fillStyle = '#93795a';
+      ctx.fillRect(x + 3, y + 4, 10, 1); ctx.fillRect(x + 3, y + 9, 10, 1);
+      ctx.fillStyle = '#3f3226'; ctx.fillRect(x + 4, y + 13, 2, 2); ctx.fillRect(x + 10, y + 13, 2, 2);
+    },
+    antenne: function (ctx, x, y, h) {
+      ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 8, y + 8, 5, 1);
+      ctx.fillStyle = '#b4b0a8';
+      ctx.fillRect(x + 7, y + 2, 1, 10);
+      for (let i = 0; i < 3; i++) ctx.fillRect(x + 5, y + 4 + i * 3, 5, 1);
+      ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 6, y + 11, 3, 2);
+      if (h % 3 === 0) { ctx.fillStyle = '#c4362f'; ctx.fillRect(x + 7, y + 1, 1, 1); }
+    },
+  };
+
+  /** Ce qu'un toit porte, a sa tuile. `t` = { x, y, type }. */
+  function toiture(ctx, t, ox, oy) {
+    const peintre = TOITURES[t.type];
+    if (!peintre) return;
+    peintre(ctx, ox, oy, hash(t.x, t.y));
+  }
+
+  /** L'ombre d'un batiment sur la rue : une bande sombre au sud d'une facade.
+
+      ⚠️ C'est ce qui donne de la HAUTEUR a toute la ville d'un coup — sans elle,
+      un mur vu d'en haut est une tuile comme une autre, et la ville est plate.
+      Elle se peint SOUS les enseignes : une ombre par-dessus une pancarte
+      donnerait une pancarte sale. */
+  function ombreDeMur(ctx, ox, oy) {
+    ctx.fillStyle = 'rgba(11,10,18,0.42)';
+    ctx.fillRect(ox, oy, T, 5);
+    ctx.fillStyle = 'rgba(11,10,18,0.22)';
+    ctx.fillRect(ox, oy + 5, T, 3);
+    ctx.fillStyle = 'rgba(11,10,18,0.10)';
+    ctx.fillRect(ox, oy + 8, T, 2);
+  }
+
+  return { devanture: devanture, residence: residence, graffiti: graffiti,
+           toiture: toiture, ombreDeMur: ombreDeMur, TOITURES: TOITURES, T: T };
 })();
 
 /* Decor procedural : (ctx, w, h). `r` = rayon au sol, `solide` = on s'y cogne.

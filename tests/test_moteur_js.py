@@ -549,6 +549,72 @@ def test_la_legende_de_la_carte_se_derive_de_la_table_des_couleurs(banc, paquet)
     assert r["etat"] == "carte" and r["rects"] > 0
 
 
+def test_un_toit_porte_son_bord_et_ses_versants(banc):
+    """⚠️ Un toit etait peint TUILE PAR TUILE, chacune ignorant les autres : un
+    carre de couleur et des points tires de `hash2`. C'est une texture, pas un
+    toit — et une texture uniforme ne peut pas etre realiste, parce qu'un vrai
+    toit vu d'en haut ne se lit ni par son grain ni par sa couleur. Il se lit par
+    son BORD.
+
+    Ce juge mesure les deux choses que le voisinage doit apprendre a la tuile :
+    ou le toit s'arrete (le bord), et sur quel versant on est (la pente). Il
+    compare aussi les cuissons : un bord ne se peint pas comme un plein toit,
+    sinon il n'y a pas de bord."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        // Un toit plat assez large pour avoir un DEDANS et des bords.
+        let plein = null, bord = null;
+        for (let ty = 2; ty < c.h - 2 && !plein; ty++) {
+            for (let tx = 2; tx < c.w - 2 && !plein; tx++) {
+                const g = L.Monde.glyphe(tx, ty);
+                if ('BEO'.indexOf(g) < 0) continue;
+                const v = L.Monde.varianteDeToit(g, tx, ty);
+                if ((v & 15) === 0) { plein = { g: g, x: tx, y: ty, v: v }; }
+                else if (!bord) { bord = { g: g, x: tx, y: ty, v: v }; }
+            }
+        }
+        function peindre(glyphe, variante) {
+            const t = L.Base.nouveauCanvas(L.TT, L.TT);
+            const ctx = t.getContext('2d');
+            ctx.traces = [];
+            L.TUILES[glyphe](ctx, variante, L.TT);
+            return ctx.traces;
+        }
+        // La pente : les versants d'un toit de maison, du nord au sud.
+        let pente = null;
+        for (let ty = 2; ty < c.h - 2 && !pente; ty++) {
+            for (let tx = 2; tx < c.w - 2 && !pente; tx++) {
+                if (L.Monde.glyphe(tx, ty) !== 'P') continue;
+                let haut = ty;
+                while (L.Monde.glyphe(tx, haut - 1) === 'P') haut--;
+                let bas = ty;
+                while (L.Monde.glyphe(tx, bas + 1) === 'P') bas++;
+                if (bas - haut < 1) continue;
+                const versants = [];
+                for (let y = haut; y <= bas; y++) versants.push((L.Monde.varianteDePente('P', tx, y) >> 4) & 3);
+                pente = { versants: versants, hauteur: bas - haut + 1 };
+            }
+        }
+        return { plein: plein, bord: bord, pente: pente,
+                 tracePlein: plein ? peindre(plein.g, plein.v).length : 0,
+                 traceBord: bord ? peindre(bord.g, bord.v).length : 0,
+                 memeGrain: plein && bord
+                   ? JSON.stringify(peindre(plein.g, (plein.v & 240))) === JSON.stringify(peindre(plein.g, (plein.v & 240) | 15))
+                   : true };
+    }""")
+    assert r["plein"] and r["bord"], "aucun toit plat avec un dedans et un bord"
+    assert r["bord"]["v"] & 15, "la tuile de bord n'a pas de bord"
+    assert r["traceBord"] > r["tracePlein"], "un bord se peint comme un plein toit"
+    assert r["memeGrain"] is False, "les quatre bords ne changent rien au dessin"
+    assert r["pente"], "aucun toit a deux versants dans la ville"
+    versants = r["pente"]["versants"]
+    assert versants[0] == 0, f"la premiere rangee doit etre le versant nord : {versants}"
+    assert versants[-1] == 2, f"la derniere doit etre le versant sud : {versants}"
+    assert versants == sorted(versants), f"les versants doivent se suivre du nord au sud : {versants}"
+    assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
+
+
 def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

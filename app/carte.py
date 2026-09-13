@@ -105,9 +105,14 @@ LEGENDE: dict[str, dict] = {
     # et c'est pour ca que l'ancienne rampe n'avait l'air de rien.
     "R": {"nom": "pied de rampe", "route": True, "rampe": True},
     "J": {"nom": "lèvre de rampe", "route": True, "rampe": True},
-    "B": {"nom": "toit de tole", "solide": 1},
-    "E": {"nom": "toit d'ardoise", "solide": 1},
-    "O": {"nom": "toit de gravier", "solide": 1},
+    "B": {"nom": "toit de tole", "solide": 1, "toit": True},
+    "E": {"nom": "toit d'ardoise", "solide": 1, "toit": True},
+    "O": {"nom": "toit de gravier", "solide": 1, "toit": True},
+    # ⚠️ Le seul toit qui n'est pas plat : deux versants et une ligne de faite.
+    # Le dessin ne le sait pas d'avance — il COMPTE les tuiles de toit au nord
+    # et au sud pour savoir sur quel versant il est (`varianteDePente`,
+    # monde.js). Une banlieue de bungalows vue d'en haut, c'est ca.
+    "P": {"nom": "toit à deux versants", "solide": 1, "toit": True, "pente": True},
     "F": {"nom": "façade", "solide": 1},
     "W": {"nom": "vitrine", "solide": 1, "lampe": True},
     "D": {"nom": "porte", "solide": 1, "porte": True},
@@ -258,7 +263,37 @@ ALLEE = 2
 
 PAS = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
 
-TOITS = "BEO"
+#: Les couvertures, par genre de batiment. ⚠️ `des.choix(TOITS)` tirait au
+#: hasard dans les trois : un entrepot heritait de l'ardoise et un bungalow du
+#: gravier goudronne. Un toit se lit d'abord a sa MATIERE, et la matiere se
+#: choisit sur le batiment — de la tole sur un hangar, du gravier sur un
+#: entrepot, de l'ardoise en ville, deux versants sur une maison.
+TOITS = "BEOP"
+TOIT_PENTE = "P"
+COUVERTURES = {
+    "maisons": "PPE",           # deux versants, presque toujours
+    "banlieue": "PPP",          # le bungalow : jamais autre chose
+    "hangars": "BBO",           # de la tole, du gravier
+    "industriel": "BOO",
+    "gang": "BO",
+    "commerces": "EEO",         # l'ardoise de la vieille ville
+}
+
+#: L'equipement de toit : ce qui rend un toit credible vu d'en haut. ⚠️ Ce
+#: n'est PAS du decor — `poser_decor` refuse les tuiles solides, et il a raison :
+#: le decor est une entite qu'on heurte. Ce qui est sur un toit n'est heurte par
+#: personne, c'est du DESSIN : ca voyage dans le paquet et s'indexe par morceau,
+#: comme les devantures et les graffitis.
+#:
+#: `poids` : combien de tuiles de toit il faut, en moyenne, pour en poser un.
+EQUIPEMENTS_DE_TOIT = (
+    {"type": "ventilation", "poids": 8, "genres": ()},
+    {"type": "clim", "poids": 14, "genres": ("commerces", "industriel", "hangars", "gang")},
+    {"type": "cheminee", "poids": 10, "genres": ("maisons", "banlieue", "commerces")},
+    {"type": "cage", "poids": 26, "genres": ("commerces", "industriel", "hangars")},
+    {"type": "reservoir", "poids": 30, "genres": ("commerces", "industriel")},
+    {"type": "antenne", "poids": 16, "genres": ()},
+)
 
 #: ⚠️ Les genres d'ilot qui ont pignon sur rue. Pas les maisons ni la banlieue
 #: (on n'accroche pas une enseigne sur un bungalow), pas les cours de gang.
@@ -639,6 +674,11 @@ class _Chantier:
         #: Les rampes, meme regle du de separe : un tremplin de plus ne doit
         #: pas deplacer un arbre a l'autre bout de la ville.
         self.des_rampe = Des(graine ^ 0x5A17E)
+        #: Les toits, meme regle du de separe : leur matiere et leur equipement
+        #: sont une couche PEINTE, et une couche peinte ne deplace pas un mur a
+        #: l'autre bout de la ville.
+        self.des_toit = Des(graine ^ 0x701A5)
+        self.toits: list[dict] = []
         #: Les clotures, meme regle — et la lecon a ete payee : en tirant la
         #: trouee d'un terrain vague et la barriere d'une cour dans le de commun,
         #: toute la suite du hasard se decalait. La ville livree changeait de
@@ -800,25 +840,95 @@ class _Chantier:
             return False
         return franchissable(self.sol[y][x])
 
-    def batiment_forme(self, tuiles: set[tuple[int, int]], vitrines: float = 0.0) -> list[tuple[int, int]]:
+    def batiment_forme(self, tuiles: set[tuple[int, int]], vitrines: float = 0.0,
+                       genre: str = "commerces") -> list[tuple[int, int]]:
         """Peint un batiment de forme QUELCONQUE et rend ses tuiles de facade.
 
         ⚠️ La regle est purement locale : toute tuile dont la voisine du sud
         n'appartient pas au batiment est une facade. C'est ce qui fait marcher
         les formes en U et en L sans un seul cas particulier — on voit toujours
         le mur avant, jamais le dos d'un toit.
+
+        ⚠️ La COUVERTURE, elle, appartient au batiment entier et se choisit sur
+        son genre (`COUVERTURES`) : le bruit d'un toit se tire par tuile, mais
+        une matiere qui changerait d'une tuile a l'autre ne serait plus un toit.
+        C'est ici aussi qu'on l'encombre — l'equipement a besoin de connaitre
+        TOUT l'ensemble des tuiles, pas chacune a son tour.
         """
-        toit = self.des.choix(TOITS)
+        # ⚠️ Le de COMMUN, comme avant : `batiment_forme` tirait deja sa
+        # couverture ici, et un tirage de moins (ou de plus) dans ce de-la
+        # decalerait toute la suite du hasard — la ville livree changerait de
+        # gabarits, et le depanneur perdrait son enseigne. Seul l'EQUIPEMENT,
+        # qui n'existait pas, passe par le de des toits.
+        toit = self.des.choix(COUVERTURES.get(genre, TOITS))
+        # ⚠️ Jamais la MEME couverture qu'un voisin colle. Deux batiments
+        # mitoyens couverts pareil n'en font plus qu'un vu d'en haut : le bord
+        # se lit dans le voisinage (« ma voisine n'est pas le meme toit »), et
+        # entre deux toits identiques il n'y a pas de bord a trouver. Le choix
+        # se CORRIGE sans tirer de nouveau — un de de plus decalerait la ville.
+        voisines = {self.sol[y][x] for x, y in self._autour(tuiles)}
+        if toit in voisines:
+            for autre in COUVERTURES.get(genre, TOITS) + TOITS:
+                if autre not in voisines:
+                    toit = autre
+                    break
         facades = []
         for tx, ty in sorted(tuiles):
             if (tx, ty + 1) in tuiles:
                 self.sol[ty][tx] = toit
             else:
                 facades.append((tx, ty))
+        self.equiper_le_toit(tuiles, facades, genre)
         for tx, ty in facades:
             coin = (tx - 1, ty) not in tuiles or (tx + 1, ty) not in tuiles
             self.sol[ty][tx] = "W" if (not coin and self.des.chance(vitrines)) else "F"
         return facades
+
+    def _autour(self, tuiles: set[tuple[int, int]]) -> set[tuple[int, int]]:
+        """Les tuiles collees au batiment, hors du batiment."""
+        bord = set()
+        for x, y in tuiles:
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                vx, vy = x + dx, y + dy
+                if (vx, vy) in tuiles or not (0 <= vx < self.largeur and 0 <= vy < self.hauteur):
+                    continue
+                bord.add((vx, vy))
+        return bord
+
+    def equiper_le_toit(self, tuiles: set[tuple[int, int]], facades: list[tuple[int, int]],
+                        genre: str) -> None:
+        """Ce que le toit PORTE : ventilation, climatisation, cheminee, cage
+        d'escalier, reservoir, antennes.
+
+        ⚠️ Jamais sur une tuile de BORD — un equipement au ras du parapet se lit
+        comme un morceau de mur, et c'est le bord qui doit se voir. Jamais colle
+        a un autre non plus : deux boites cote a cote font une tache. Et jamais
+        sur une facade, une vitrine ou une porte : ce qui est sur un toit est
+        derriere le mur avant, pas dessus.
+        """
+        avant = set(facades)
+        # Une tuile de PLEIN toit : ses quatre voisines appartiennent au
+        # batiment et aucune n'est une facade.
+        dedans = sorted(
+            (x, y) for x, y in tuiles
+            if (x, y) not in avant
+            and all((x + dx, y + dy) in tuiles and (x + dx, y + dy) not in avant
+                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        )
+        if not dedans:
+            return
+        choix = [e for e in EQUIPEMENTS_DE_TOIT if not e["genres"] or genre in e["genres"]]
+        if not choix:
+            return
+        occupe: set[tuple[int, int]] = set()
+        for x, y in dedans:
+            if any((x + dx, y + dy) in occupe for dx in (-1, 0, 1) for dy in (-1, 0, 1)):
+                continue
+            fiche = choix[self.des_toit.entier(0, len(choix) - 1)]
+            if not self.des_toit.chance(1 / fiche["poids"]):
+                continue
+            occupe.add((x, y))
+            self.toits.append({"x": x, "y": y, "type": fiche["type"]})
 
     def poser_porte(self, facades: list[tuple[int, int]], special: dict | None = None,
                     proba: float = 0.65, visite: dict | None = None) -> tuple[int, int] | None:
@@ -1558,7 +1668,7 @@ class _Chantier:
         if force:
             # Un batiment garanti garde sa masse : ni cour ni coin mordu.
             tuiles = {(bx + i, by + j) for j in range(bh) for i in range(bl)}
-        return self.batiment_forme(tuiles, vitrines)
+        return self.batiment_forme(tuiles, vitrines, genre)
 
     # --- La fourriere (M9) --------------------------------------------------
 
@@ -2354,6 +2464,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "paquets": paquets,
         "zones": chantier.zones(),
         "points_interet": chantier.points,
+        "toits": chantier.toits,
         "apparition": {"joueur": {"x": depart[0], "y": depart[1]}},
         "interieurs": INTERIEURS,
         "tuiles_bouchees": bouchees,

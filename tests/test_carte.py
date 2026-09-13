@@ -267,6 +267,71 @@ def test_chaque_lieu_declare_sa_famille_et_sa_couleur():
     assert CARTE["familles"] == carte.FAMILLES_DE_LIEU, "les familles doivent voyager dans le paquet"
 
 
+def test_la_couverture_d_un_toit_suit_le_genre_du_batiment():
+    """⚠️ `batiment_forme` faisait `des.choix(TOITS)` : un entrepot heritait de
+    l'ardoise et un bungalow du gravier goudronne. Un toit se lit d'abord a sa
+    matiere, et la matiere appartient au BATIMENT, pas au hasard."""
+    for genre, couverture in carte.COUVERTURES.items():
+        assert couverture, genre
+        assert set(couverture) <= set(carte.TOITS), (genre, couverture)
+        for glyphe in couverture:
+            assert carte.LEGENDE[glyphe].get("toit"), glyphe
+    # La banlieue est faite de bungalows : deux versants, jamais autre chose.
+    assert set(carte.COUVERTURES["banlieue"]) == {carte.TOIT_PENTE}
+    # Et un entrepot n'a pas d'ardoise.
+    for genre in ("hangars", "industriel"):
+        assert "E" not in carte.COUVERTURES[genre], genre
+
+
+def test_deux_batiments_mitoyens_ne_portent_pas_la_meme_couverture():
+    """⚠️ Le bord d'un toit se lit dans le VOISINAGE : « ma voisine n'est pas le
+    meme toit ». Entre deux batiments collés couverts pareil, il n'y a donc aucun
+    bord a trouver — ils n'en font plus qu'un vu d'en haut, et c'est justement ce
+    que le bord devait empecher.
+
+    Le generateur corrige le tirage au lieu d'en refaire un : un de de plus
+    decalerait toute la ville (la lecon du de des devantures, du de des rampes et
+    du de des clotures). Ce juge pose deux batiments collés, l'un apres l'autre,
+    et regarde ce que le second choisit."""
+    chantier = carte._Chantier(carte.PLAN, 7)
+    premier = {(3 + i, 3 + j) for i in range(4) for j in range(3)}
+    second = {(7 + i, 3 + j) for i in range(4) for j in range(3)}
+    chantier.batiment_forme(premier, genre="commerces")
+    toit_premier = chantier.sol[3][3]
+    for _ in range(12):
+        chantier.batiment_forme(second, genre="commerces")
+        assert chantier.sol[3][7] != toit_premier, "le voisin a la meme couverture"
+    assert toit_premier in carte.COUVERTURES["commerces"]
+
+
+def test_ce_qu_un_toit_porte_ne_se_pose_jamais_n_importe_ou():
+    """L'equipement de toit — ventilation, climatisation, cheminee, cage,
+    reservoir, antennes — est ce qui rend un toit credible vu d'en haut.
+
+    ⚠️ Il n'est PAS du decor (`poser_decor` refuse les tuiles solides, et il a
+    raison : le decor est une entite qu'on heurte). Il voyage donc dans le
+    paquet, et ces regles-la sont tout ce qui l'empeche de se poser au mauvais
+    endroit : jamais sur un bord (un equipement au ras du parapet se lit comme
+    un morceau de mur), jamais colle a un autre, jamais sur une facade."""
+    sol = CARTE["sol"]
+    poses = {(t["x"], t["y"]) for t in CARTE["toits"]}
+    types = {e["type"] for e in carte.EQUIPEMENTS_DE_TOIT}
+    assert len(CARTE["toits"]) >= 40, f"presque rien sur les toits : {len(CARTE['toits'])}"
+    assert {t["type"] for t in CARTE["toits"]} <= types
+    for t in CARTE["toits"]:
+        x, y = t["x"], t["y"]
+        assert sol[y][x] in carte.TOITS, f"{t['type']} sur « {sol[y][x]} »"
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            voisine = sol[y + dy][x + dx]
+            assert voisine in carte.TOITS, (
+                f"{t['type']} au bord du toit : « {voisine} » en ({x + dx},{y + dy})"
+            )
+        for dx in (-1, 0, 1):
+            for dy in (-1, 0, 1):
+                if (dx or dy) and (x + dx, y + dy) in poses:
+                    raise AssertionError(f"deux equipements colles en ({x},{y})")
+
+
 def test_les_portes_menent_a_un_interieur():
     slugs = set()
     for porte in CARTE["portes"]:

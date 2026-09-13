@@ -53,7 +53,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les donneurs qu'on ne voyait pas | **livré** (13 sept. 2026) | bug de Martin (« je n'arrive pas à faire la mission sergent Bouchard, je vais à la cantine, mais je ne vois pas quoi faire ») — et il avait raison deux fois. D'abord le **nom** : Marco l'envoie au « casse-croûte » (le Faubourg, à côté du poste), pas à la **Cantine des Quais**, un autre bâtiment à l'autre bout de la ville. Ensuite, et c'est le vrai bug : **Bouchard et Josée n'existaient nulle part**. Ce sont les deux seuls donneurs qui se tiennent DEDANS (`ou: point:sergent`, `point:contact`), et `creerDonneurs()` ne posait que ceux de la rue (`porte:`) : on poussait la porte, la salle était vide, et il fallait deviner qu'un **point invisible** attendait au fond à droite. Ils sont maintenant **posés en entrant** (`creerDonneursDedans`, appelée par `Jeu.entrer` juste après le commis et les clients), ils naissent et meurent avec la pièce comme tout le monde, et la table Python→piece ne se recopie plus en JS : `personnageDuPoint` / `pieceDuPoint` la **déduisent** du `ou` de `missions.py`. ⚠️ Josée pointe une **table** (personne ne se tient debout sur une table) : `placeDebout` prend la tuile libre voisine la plus proche du milieu de la pièce — le fond d'un coin, ce n'est pas une scène. ⚠️ Le GPS a fallu le corriger du même coup (`ouTrouver`) : dedans, un donneur vit en coordonnées de **pièce**, et le poser tel quel sur la minicarte envoyait la flèche à six tuiles du coin de la ville. Et une **bulle de bande dessinée** dit qui attend après toi — voir la ligne suivante. ACTION dedans vise maintenant **la personne avant le comptoir**, et le HUD la nomme (« PARLER À SERGENT BOUCHARD ») | 2 juges de banc (on entre, quelqu'un est là, debout hors des meubles, à portée de son point, et il parle ; il ne suit pas dans la rue) |
 | Les bulles qui interpellent | **livré** (13 sept. 2026) | demande de Martin (« avec une petite bulle de type bande dessiné qui nous interpelle ») : le jeu avait déjà deux pastilles de 8 px au-dessus des têtes — le « ! » du témoin, le trait de la peur (`cri`). Elles disent un **état d'esprit** ; elles ne peuvent pas dire un **mot**, et c'est le mot qui manquait. `Entites.bulle(e, texte, {duree, fond, encre})` pose une boîte à queue au-dessus de **n'importe quelle entité** (police 3x5, coins coupés, la queue sur la tête de celui qui parle, une montée de 6 images puis une respiration), `Entites.taire(e)` l'efface, et elle se dessine dans une **deuxième passe**, après tout le monde : dans une pièce, un client passe devant le donneur une fois sur deux, et une bulle à moitié cachée par une nuque ne se lit plus. ⚠️ Le texte **ne s'invente pas en JS** : `personnages[].heler` dans `missions.py`, comme toutes les répliques du jeu, court par force (`HELER_MAX`) et vérifié par un juge. ⚠️ Une bulle qui ne s'éteint jamais ne veut plus rien dire : elle ne s'allume que si **ce donneur-là** a une job pour toi (ou t'attend pour la finir), elle se tait pendant sa propre mission, et **aucune** bulle ne s'affiche pendant un dialogue — quelqu'un te parle déjà, en bas de l'écran. Deux emplois pour l'instant : les **cinq donneurs** et le **client du taxi** de M3, qui levait le bras au bord du trottoir sans rien dire | 1 juge Python (chaque donneur a son mot, assez court), 1 de banc (elle s'allume sur le bon donneur, s'éteint après, et vit d'une image à l'autre), 1 dans le taxi ; vérifié à l'écran dans un vrai navigateur (casse-croûte, bar, terminus) |
 | Le souffle en surplus | **livré** (13 sept. 2026) | demande de Martin (« les choses qui donnent du souffle devraient donner un **bonus**, parce que le souffle monte seul ») : il remontait de 0,24 par image — une barre vide pleine en **7 s** — et `nourrir` plafonnait à 100, donc une poutine à 18 $ rendait 70 points qu'on avait gratuitement en s'arrêtant quatre secondes. Manger ajoute maintenant **par-dessus** les 100 (plafond 60) : le surplus **part en premier** au sprint, ne remonte **jamais** tout seul, et se perd en dormant, à l'hôpital et en prison. À l'écran, une ligne cyan d'un pixel **posée sur** la barre — elle garde sa couleur sous café (barre verte) et **disparaît au volant**, où la barre montre la carrosserie. Son plafond est un réglage de **poursuite** : 60 points = 2,5 s de sprint de plus, 5 s sous café, et un juge refait le calcul. 2 juges neufs |
-| Les toits | **correctif** à faire | demande de Martin (« je veux que les toits soient plus réalistes ») : ils sont peints tuile par tuile, sans bord, sans rien dessus, sans ombre au sol, et une maison a le même toit plat qu'un entrepôt |
+| Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Les armes à feu | ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
 | Le carnet | ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
 | Les terrains de banlieue | ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
@@ -410,7 +410,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Clôtures nord-sud couchées | **livré** : variante de clôture lue dans les voisines (est-ouest, nord-sud, coin, bout), pour les trois glyphes | une clôture verticale a l'air verticale ; un bout de course porte son poteau |
 | — | La carte | joueur qui pulse (autre rythme et autre forme que l'objectif), flèche au bord pour une cible hors cadre, légende dérivée de la table des couleurs, une couleur déclarée par lieu | se trouver du premier coup d'œil sur la carte plein écran ; lire un blip sans l'avoir appris |
 | — | Le souffle en surplus | **livré** : surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
-| — | Les toits | bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
+| — | Les toits | **livré** : bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
 | — | Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
 | — | Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
@@ -429,9 +429,9 @@ hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée e
 sortie 1, les clôtures 1, les toits 2, les armes à feu 2, le carnet 2, l'eau 3.
 
 Ce qui reste, **dans l'ordre où on le fera** (le plus facile d'abord, correctif avant ajout
-à taille égale, prérequis devant) : **correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout les terrains
+à taille égale, prérequis devant) : ajout les armes à feu 2 · ajout le carnet 2 · ajout les terrains
 de banlieue 2 · ajout M11 2 · **correctif** l'eau 3 · ajout M15 3 · ajout M9 3 · ajout M10 3 ·
-ajout M12 4 · ajout M14 4 · ajout M13 4. Les six
+ajout M12 4 · ajout M14 4 · ajout M13 4. Les cinq
 premières ne dépendent de rien ; les clôtures sont livrées (les cours des Érables se traversent), l'eau décide de
 la piscine et débloque le bateau de M9 et le traversier de M12 ; M10 demande le camion de
 M9 ; M13 est la fin, et la fin se pose en dernier.
@@ -456,18 +456,17 @@ pour la fin ce qui demande de l'infrastructure ou tout le reste du jeu.
 
 | Ordre | Genre | Vague | Taille | Prérequis |
 |---|---|---|---|---|
-| 1 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
-| 2 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
-| 3 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
-| 4 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
-| 5 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
-| 6 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
-| 7 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
-| 8 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
-| 9 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
-| 10 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
-| 11 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
-| 12 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+| 1 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
+| 2 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
+| 3 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
+| 4 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
+| 5 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
+| 6 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
+| 7 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
+| 8 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
+| 9 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
+| 10 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
+| 11 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre l'ordre à la lettre — les huit
@@ -807,56 +806,58 @@ lit d'un coup d'œil « j'ai du souffle, et j'ai de l'avance en plus ».
   l'arrêt il ne remonte pas d'un point quand la base, elle, remonte ; au sprint c'est lui qui
   part en premier (la base reste pleine) ; et une nuit l'efface.
 
-### Les toits (**correctif**, taille 2)
+### Les toits (**correctif**, taille 2) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « je veux que les toits des bâtiments soient plus réalistes. »
 
-⚠️ **Le défaut est le même que celui des stationnements avant qu'on les dessine** : le toit
-est peint **tuile par tuile**, chacune ignorant les autres. `TUILES.B/E/O` remplit un carré
-d'une couleur et sème des points tirés de `hash2(x, y)` ; l'ardoise ajoute un trait
-horizontal tous les 4 px. C'est une **texture**, pas un toit — et une texture uniforme ne
-peut pas être réaliste, parce qu'un vrai toit vu d'en haut ne se lit ni par son grain ni par
-sa couleur.
+⚠️ **Le défaut était le même que celui des stationnements avant qu'on les dessine** : le toit
+était peint **tuile par tuile**, chacune ignorant les autres. `TUILES.B/E/O` remplissait un
+carré d'une couleur et semait des points tirés de `hash2(x, y)` — et comme la variante valait
+0 pour tous les toits, **toutes les tuiles d'un toit étaient rigoureusement identiques**.
+C'était une texture, pas un toit — et une texture uniforme ne peut pas être réaliste, parce
+qu'un vrai toit vu d'en haut ne se lit ni par son grain ni par sa couleur.
 
-Ce qui manque, dans l'ordre de ce qui se voit :
+Ce qui a été livré, dans l'ordre de ce qui se voit :
 
-- **Un bord.** C'est le premier repère d'un toit : parapet, corniche, gouttière, une ligne
-  d'ombre au pourtour. Sans lui, deux bâtiments mitoyens couverts pareil n'en font plus
-  qu'un, et on ne voit pas où finit l'un.
-- **Une identité par bâtiment.** Le bruit est tiré par tuile, alors un hangar de 26 tuiles a
-  exactement le même grain qu'une maison de 4. Or `batiment_forme()` connaît déjà **tout
-  l'ensemble** des tuiles du bâtiment : c'est là que se décident une ligne de faîte, un puits
-  de lumière, une cage d'escalier — des choses qui appartiennent au bâtiment, pas à la tuile.
-- **De quoi l'encombrer.** Vu d'en haut, ce qui rend un toit crédible, c'est ce qu'il porte :
-  sorties de ventilation, unités de climatisation, cheminée, cage d'escalier, réservoir
-  d'eau, antennes. Aujourd'hui, rien du tout.
-- **Une ombre sur la rue.** Le bâtiment ne projette rien. Une bande sombre d'une ou deux
-  tuiles au sud d'une façade donne immédiatement de la hauteur à toute la ville.
-- **Des pentes pour ce qui en a.** `TOITS = "BEO"` — tôle, ardoise, gravier — sont tous
-  **plats**. Une banlieue de bungalows vue d'en haut, c'est des toits à deux versants, une
-  ligne de faîte et deux pentes de teinte différente.
-- **Le genre du bâtiment choisit sa couverture.** `batiment_forme()` fait `des.choix(TOITS)` :
-  un entrepôt peut hériter de l'ardoise et un bungalow du gravier goudronné.
-
-**Comment, sans rien coûter par image** : un toit est peint **dans le morceau**, une fois,
-comme les devantures — le budget d'image (≤ 6 blits, ≤ 160 `drawImage`) n'y touche jamais.
-Et le patron est déjà écrit deux fois : les passages piétons et les cases de stationnement
-lisent une variante **venue du voisinage** (`varianteDeTuile`), c'est exactement ce qu'il
-faut ici pour dire bord, coin, intérieur, versant nord ou sud. L'équipement de toit voyage
-dans le paquet et s'indexe par morceau comme `devantures` et `graffitis`.
-
-- ⚠️ **L'équipement de toit n'est pas du décor.** `poser_decor` refuse les tuiles solides —
-  et il a raison, le décor est une entité qu'on heurte. Ce qui est sur un toit n'est heurté
-  par personne : c'est du dessin, il passe par le paquet, pas par `B.entites`.
-- ⚠️ **Un beau toit donne envie d'y monter.** Rien n'est prévu pour : le joueur à pied n'a
-  pas de `z`, le toit est solide 1, et une ville où l'on croit pouvoir grimper sans pouvoir
-  le faire est plus frustrante qu'une ville aux toits plats. Tant qu'on n'a pas d'escaliers,
-  les toits restent **muets pour le jeu** — et c'est une décision, pas un oubli.
-- **Juges** : chaque bâtiment a une couverture cohérente avec son genre ; toute tuile de toit
-  au bord du bâtiment porte un bord (donc deux bâtiments mitoyens se séparent à l'œil) ; un
-  équipement ne se pose jamais sur une tuile de bord ni collé à un autre ; aucun ne se pose
-  sur une façade, une vitrine ou une porte ; et le poids du paquet reste sous ses bornes
-  (400 Ko bruts, 70 Ko gzip) — un toit, c'est beaucoup de tuiles.
+- **Un bord.** Parapet clair au ras du vide et sa ligne d'ombre à l'intérieur, sur chaque côté
+  où le toit s'arrête. C'est le premier repère d'un toit : celui qui dit où finit le bâtiment.
+- ⚠️ **Et c'est pour ça que deux voisins collés ne portent jamais la même couverture.** Le bord
+  se lit dans le voisinage (« ma voisine n'est pas le même toit ») : entre deux toits
+  identiques, il n'y a **aucun bord à trouver**. Le générateur corrige donc le tirage — sans
+  en refaire un, parce qu'un dé de plus décalerait toute la ville (la leçon des devantures,
+  des rampes et des clôtures).
+- **Une identité par bâtiment.** `COUVERTURES` choisit la matière sur le **genre** :
+  deux versants en banlieue, tôle et gravier à La Shop, ardoise dans la vieille ville. Avant,
+  `des.choix(TOITS)` donnait l'ardoise à un entrepôt et le gravier goudronné à un bungalow.
+- **Un grain qui varie.** Le bruit entre dans la variante (`GRAINS_DE_TOIT`), donc deux tuiles
+  voisines ne sont plus le même dessin — un hangar de 26 tuiles ne se lit plus comme un damier.
+- **Des pentes.** Le toit `P` a deux versants et une ligne de faîte, et le versant se
+  **compte dans les voisines** (combien de tuiles du même toit au nord, combien au sud) : la
+  faîte apparaît toute seule là où les deux pentes se rencontrent, sans qu'une tuile ait
+  besoin de savoir qu'elle est au milieu, et **sans une donnée de plus dans le paquet**.
+- **De quoi l'encombrer.** 172 équipements : ventilation, climatisation, cheminée, cage
+  d'escalier, réservoir d'eau, antennes. ⚠️ **Ce n'est pas du décor** — `poser_decor` refuse
+  les tuiles solides, et il a raison : le décor est une entité qu'on heurte. Ce qui est sur un
+  toit n'est heurté par personne : c'est du dessin, il voyage dans le paquet et s'indexe par
+  morceau comme les devantures et les graffitis.
+- **Une ombre sur la rue.** Une bande sombre en dégradé au sud de chaque mur — elle donne
+  d'un coup de la hauteur à toute la ville. ⚠️ Elle se peint **sous** les enseignes (une ombre
+  par-dessus une pancarte donnerait une pancarte sale), et la boucle part **une rangée
+  au-dessus du morceau** : l'ombre d'un mur assis sur la dernière rangée du morceau voisin
+  appartient à celui-ci, et sans ça une bande de trottoir sur seize n'avait pas d'ombre.
+- **Rien de tout ça ne coûte par image** : tout est peint **dans le morceau**, une fois. Le
+  budget d'image (≤ 6 blits, ≤ 160 `drawImage`) n'y touche jamais.
+- ⚠️ **Un beau toit donne envie d'y monter.** Rien n'est prévu pour : le joueur à pied n'a pas
+  de `z`, le toit est solide 1, et une ville où l'on croit pouvoir grimper sans pouvoir le
+  faire est plus frustrante qu'une ville aux toits plats. Les toits restent **muets pour le
+  jeu** tant qu'on n'a pas d'escaliers — et c'est une décision, pas un oubli.
+- **Juges (4 neufs)** : la couverture suit le genre (et la banlieue n'a que des versants, un
+  entrepôt jamais d'ardoise) ; deux bâtiments collés posés l'un après l'autre ne portent pas la
+  même couverture ; l'équipement ne se pose jamais au bord d'un toit, ni collé à un autre, ni
+  ailleurs que sur du toit ; et au banc, une tuile de bord ne se peint pas comme un plein toit
+  (les cuissons se comparent trait par trait) pendant que les versants se suivent du nord au
+  sud avec **une seule** ligne de faîte. Le paquet pèse **368 Ko bruts / 41 Ko gzip**, sous ses
+  bornes de 400 / 70.
 
 ### Les armes à feu (**ajout**, taille 2)
 

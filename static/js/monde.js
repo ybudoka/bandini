@@ -106,6 +106,8 @@ const Monde = (function () {
         return [r.x, r.y, r.l, 2];
       }),
       graffitis: indexerParMorceau(def.graffitis || [], function () { return [0, 0, 1, 1]; }),
+      // Ce qu'un toit porte : une tuile chacun, meme regle d'index.
+      toits: indexerParMorceau(def.toits || [], function () { return [0, 0, 1, 1]; }),
     };
     B.carte = carte;
     return carte;
@@ -409,6 +411,49 @@ const Monde = (function () {
     return g === 'J' ? 1 : 0;             // une moitie orpheline : vers l'est
   }
 
+  //: Combien de grains differents pour un meme toit. ⚠️ La tuile est cuite par
+  //: (glyphe, variante) : sans un grain DANS la variante, toutes les tuiles d'un
+  //: toit etaient rigoureusement identiques — c'est une moitie de ce qui faisait
+  //: « une texture, pas un toit ».
+  const GRAINS_DE_TOIT = 4;
+
+  /** La variante d'un toit plat : les quatre bits des cotes ou il S'ARRETE
+      (1 nord, 2 est, 4 sud, 8 ouest), et le grain par-dessus.
+
+      ⚠️ « S'arrete » veut dire : la voisine n'est pas le MEME toit. Deux
+      batiments mitoyens portent donc un bord chacun — c'est ce qui les separe a
+      l'oeil, et c'est pour ca que le generateur refuse de couvrir deux voisins
+      de la meme matiere. */
+  function varianteDeToit(g, tx, ty) {
+    const bord = (glyphe(tx, ty - 1) !== g ? 1 : 0) | (glyphe(tx + 1, ty) !== g ? 2 : 0)
+      | (glyphe(tx, ty + 1) !== g ? 4 : 0) | (glyphe(tx - 1, ty) !== g ? 8 : 0);
+    return bord + 16 * (hash2(tx, ty) % GRAINS_DE_TOIT);
+  }
+
+  /** La variante d'un toit a deux versants : le bord, et le VERSANT — 0 nord,
+      1 la ligne de faite, 2 sud.
+
+      ⚠️ Le versant se COMPTE dans les voisines : combien de tuiles du meme toit
+      au nord, combien au sud. C'est ce qui fait apparaitre la faite toute seule
+      la ou les deux pentes se rencontrent, sans qu'une tuile ait besoin de
+      savoir qu'elle est au milieu — et sans une seule donnee de plus dans le
+      paquet. La course est bornee : un toit plus haut que ca n'existe pas. */
+  function varianteDePente(g, tx, ty) {
+    const bord = (glyphe(tx, ty - 1) !== g ? 1 : 0) | (glyphe(tx + 1, ty) !== g ? 2 : 0)
+      | (glyphe(tx, ty + 1) !== g ? 4 : 0) | (glyphe(tx - 1, ty) !== g ? 8 : 0);
+    let nord = 0, sud = 0;
+    while (nord < 12 && glyphe(tx, ty - 1 - nord) === g) nord++;
+    while (sud < 12 && glyphe(tx, ty + 1 + sud) === g) sud++;
+    const versant = nord === sud ? 1 : (nord < sud ? 0 : 2);
+    return bord + 16 * versant;
+  }
+
+  /** Un toit a cette tuile ? (les quatre couvertures) */
+  function estToit(tx, ty) {
+    const p = carte.legende[glyphe(tx, ty)];
+    return !!(p && p.toit);
+  }
+
   /** Une cloture a cette tuile ? (grillage, palissade ou barbele) */
   function estCloture(tx, ty) { const s = solidite(tx, ty); return s === 4 || s === 5; }
 
@@ -438,6 +483,8 @@ const Monde = (function () {
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
     const p = carte.legende[g];
     if (p && p.cloture) return varianteDeCloture(tx, ty);
+    if (p && p.pente) return varianteDePente(g, tx, ty);
+    if (p && p.toit) return varianteDeToit(g, tx, ty);
     return varianteDePassage(g, tx, ty);
   }
 
@@ -508,6 +555,21 @@ const Monde = (function () {
   function peindreDevantures(ctx, mx, my) {
     const cle = mx + ',' + my;
     const ox = mx * MORCEAU, oy = my * MORCEAU;
+    // ⚠️ L'ombre des murs d'abord : elle se peint SOUS les enseignes (une ombre
+    // par-dessus une pancarte donnerait une pancarte sale) et sous tout le
+    // reste. Un batiment ne projetait rien, et une ville sans ombre est plate.
+    // ⚠️ On commence a j = -1, une rangee AU-DESSUS du morceau : l'ombre d'un mur
+    // tombe sur la tuile du dessous, et celle d'un mur assis sur la derniere
+    // rangee du morceau voisin appartient a CELUI-CI. Sans ca, une bande de
+    // trottoir sur seize n'avait pas d'ombre — et c'est la couture qui se voit.
+    for (let j = -1; j < MORCEAU; j++) {
+      for (let i = 0; i < MORCEAU; i++) {
+        const tx = ox + i, ty = oy + j;
+        if (solidite(tx, ty) !== 1 || estToit(tx, ty)) continue;      // un MUR, pas un toit
+        if (solidite(tx, ty + 1) === 1) continue;                      // il n'y a pas de rue dessous
+        FACADES.ombreDeMur(ctx, i * TT, (j + 1) * TT);
+      }
+    }
     const genres = genresDevanture();
     const devantures = carte.devantures && carte.devantures.get(cle);
     if (devantures && genres.length) {
@@ -523,6 +585,10 @@ const Monde = (function () {
       residences.forEach(function (r) {
         FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT);
       });
+    }
+    const toits = carte.toits && carte.toits.get(cle);
+    if (toits) {
+      toits.forEach(function (t) { FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT); });
     }
     const tags = carte.graffitis && carte.graffitis.get(cle);
     if (tags) {
@@ -704,7 +770,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estCloture, varianteDeCloture, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
