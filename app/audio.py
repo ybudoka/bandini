@@ -143,6 +143,17 @@ RADIOS: list[Radio] = [
        "driving underground techno instrumental, 128 bpm, four-on-the-floor kick, "
        "acid bassline, hypnotic synth stabs, Montreal warehouse rave at 3 am, "
        "no vocals, loopable"),
+    # v2 / M8 — deux stations de plus, une par nouveau bout de ville. ⚠️ Elles
+    # restent INSTRUMENTALES comme les autres : une voix chantee par-dessus une
+    # sirene, on n'entend plus ni l'une ni l'autre.
+    _r("dix_quatre", "10-4", "scanner",
+       "tense instrumental cop-show groove, muted guitar stabs, dry rimshot drums, "
+       "low synth drone, faint radio static and morse blips, 1970s police "
+       "procedural, no vocals, loopable"),
+    _r("traversier", "Radio-Traversier", "rigodon",
+       "lively Quebecois traditional reel, fiddle lead, diatonic accordion, foot "
+       "tapping rhythm, spoons, upright bass, joyful village dance hall, "
+       "instrumental, loopable"),
 ]
 
 #: La musique de FOND : ce qu'on entend a pied, sous la rumeur de la ville.

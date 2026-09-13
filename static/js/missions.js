@@ -324,7 +324,7 @@ const Missions = (function () {
       case 'lit':
         items.push({ libelle: 'DORMIR JUSQU’AU MATIN', detail: 'SAUVEGARDE', faire: function () { dormir(); return true; } });
         items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDEE'); return true; } });
-        return { titre: 'LA PLANQUE', items: items };
+        return { titre: piece.nom.toUpperCase(), items: items };
       case 'coffre':
         return menuCoffre();
       case 'garde_robe':
@@ -338,7 +338,7 @@ const Missions = (function () {
       case 'hotdog':
         items.push({ libelle: 'HOT-DOG', detail: tarifs.hotdog + ' $ / +' + tarifs.hotdog_pv + ' PV', actif: p.argent >= tarifs.hotdog,
                      faire: function () { payer(tarifs.hotdog, 'HOT-DOG'); soigner(B.joueur, tarifs.hotdog_pv); Son.SFX.argent(); return false; } });
-        return { titre: 'CASSE-CROUTE DU FAUBOURG', items: items, sur: p.argent + ' $' };
+        return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
         items.push({ libelle: 'SOINS COMPLETS', detail: prix + ' $', actif: p.argent >= prix && B.joueur.vie < B.joueur.vieMax,
@@ -351,7 +351,7 @@ const Missions = (function () {
       case 'journal':
         items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
                      faire: function () { payer(tarifs.journal, 'JOURNAL'); lireLeJournal(); return true; } });
-        return { titre: 'KIOSQUE A JOURNAUX', items: items, sur: p.argent + ' $' };
+        return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       default:
         return null;
     }

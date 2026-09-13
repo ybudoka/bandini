@@ -108,7 +108,7 @@ const Vehicules = (function () {
     }
     if (B.t % 20 !== 0) return;
     const zone = Monde.zoneA(j.x, j.y);
-    const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6);
+    const voulu = Math.min(t.vehicules_max, (zone ? zone.vehicules : 6) * Monde.rythme(zone));
     if (roulent < voulu) {
       const place = placeDansLeTrafic();
       if (place) {
@@ -673,9 +673,20 @@ const Vehicules = (function () {
       au centre de la voie la plus proche dans son sens, cap redressé,
       croisement rendu. Martin en a vu trois de travers dans une boîte ;
       plutôt que courir après chaque cause, on garantit la sortie. */
-  /** Au rouge pour vrai ? (Pas l'attente de boite, pas un stop : un feu.) */
-  function auRouge(v) {
-    if (!v.attendFeu || v.attenteBoite !== 0 || v.stopT !== undefined) return false;
+  /** Une attente LEGITIME : un vrai feu rouge, un stop qui s'egrene, ou une
+      boite qu'un autre char n'a pas encore rendue.
+
+      ⚠️ Elle est BORNEE, sinon elle serait une excuse a tout : un feu rouge
+      dure au plus 480 images, l'attente de boite au plus `patience x 2`. Un
+      char pris pour de vrai n'est jamais dans un de ces trois cas bien
+      longtemps — et on ne compte pas contre lui le temps ou il a raison
+      d'attendre. (C'est ce qui mordait a tort : 480 images de feu rouge PUIS
+      110 d'attente de boite faisaient 600, et le chien sautait sur un char
+      parfaitement sage.) */
+  function attenteLegitime(v) {
+    if (!v.attendFeu) return false;
+    if (v.stopT !== undefined && v.stopT > 0) return true;
+    if (v.attenteBoite > 0) return v.attenteBoite < trafic().patience_images * 2;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const p = PAS_FLECHE[v.sens] || [0, 0];
     const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
@@ -683,21 +694,20 @@ const Vehicules = (function () {
   }
 
   function debloquer(v) {
-    const immobile = Math.abs(v.vx) + Math.abs(v.vy) < 0.05;
+    const immobile = Math.abs(v.vx) + Math.abs(v.vy) < 0.05 && !attenteLegitime(v);
     v.immobileT = immobile ? (v.immobileT || 0) + 1 : 0;
     // ⚠️ « Sur place » : il bouge, mais n'avance pas (un va-et-vient entre
     // deux cibles). Il n'est jamais immobile, le compteur ci-dessus ne le
     // voit pas ; la capture de Martin, elle, le montrait bien. On compare a
     // l'endroit ou il etait il y a dix secondes. Seul un vrai feu rouge excuse.
     if (!v.ancrage || B.t - v.ancrage.t >= 600) {
-      if (v.ancrage && !auRouge(v) && dist2(v.x, v.y, v.ancrage.x, v.ancrage.y) < 24 * 24) v.surPlace = (v.surPlace || 0) + 1;
+      if (v.ancrage && !attenteLegitime(v) && dist2(v.x, v.y, v.ancrage.x, v.ancrage.y) < 24 * 24) v.surPlace = (v.surPlace || 0) + 1;
       else v.surPlace = 0;
       v.ancrage = { x: v.x, y: v.y, t: B.t };
     }
     if (v.immobileT < 600 && !v.surPlace) return false;
-    // Au rouge pour vrai ? Le feu ne dure jamais plus de 480 images : au-dela, non.
-    if (!v.surPlace && auRouge(v) && v.immobileT < 720) return false;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    v.etatBloque = etatCourt(v);                   // ce qu'il attendait, avant qu'on efface tout
     const voie = voieLaPlusProche(v, tx, ty);
     v.cible = null; v.sortie = null; v.enBoite = null; v.stopT = undefined; v.attenteBoite = 0; v.attendFeu = false;
     v.patience = 0; v.force = 90; v.immobileT = 0; v.surPlace = 0; v.ancrage = null; v.debloques = (v.debloques || 0) + 1;
@@ -852,9 +862,9 @@ const Vehicules = (function () {
     if (v.boites.length > 8) v.boites.shift();
   }
 
-  function anomalie(v, quoi) {
+  function anomalie(v, quoi, etat) {
     const a = { t: B.t, quoi: quoi, slug: v.slug, id: v.id, x: v.x, y: v.y, tx: Math.floor(v.x / TT), ty: Math.floor(v.y / TT),
-                etat: etatCourt(v), points: (v.trace || []).slice() };
+                etat: etat || etatCourt(v), points: (v.trace || []).slice() };
     B.trace.anomalies.push(a);
     B.trace.total++;
     if (B.trace.anomalies.length > TRACE_ANOMALIES_MAX) B.trace.anomalies.shift();
@@ -877,7 +887,7 @@ const Vehicules = (function () {
       if (v.trace.length > TRACE_POINTS) v.trace.shift();
     }
     // 1. Le chien de garde a du le deplacer : les rails ont failli.
-    if ((v.debloques || 0) > (v.traceDebloques || 0)) { v.traceDebloques = v.debloques; anomalie(v, 'CHIEN DE GARDE'); }
+    if ((v.debloques || 0) > (v.traceDebloques || 0)) { v.traceDebloques = v.debloques; anomalie(v, 'CHIEN DE GARDE', v.etatBloque); }
     // 2. Il repasse dans la meme boite : il tourne en rond.
     if (v.boites && v.boites.length >= 3) {
       const dernier = v.boites[v.boites.length - 1];

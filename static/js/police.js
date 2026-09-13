@@ -133,7 +133,11 @@ const Police = (function () {
     const arch = Entites.archetype('policier');
     const a = Entites.creerPieton(x, y, arch);
     a.agent = true; a.metier = 'police'; a.swaps = Object.assign({}, PALETTE_AGENT);
-    a.arme = 'pistolet'; a.etat = etat || 'flane'; a.chemin = null; a.cheminT = 0; a.tirT = 0; a.vuT = 9999;
+    // ⚠️ `vuT` = depuis combien de temps il ne te voit plus. Un agent qui nait
+    // EN POURSUITE te voit, par definition : a 9999 il abandonnait des la
+    // premiere image, avant meme d'avoir regarde.
+    a.arme = 'pistolet'; a.etat = etat || 'flane'; a.chemin = null; a.cheminT = 0; a.tirT = 0;
+    a.vuT = a.etat === 'poursuit' ? 0 : 9999;
     return a;
   }
 

@@ -19,9 +19,14 @@ const Jeu = (function () {
     Vehicules.creerSignalisation();
     Entites.creerPaquets(Monde.carte.def);
     // Le char laisse devant la planque a la derniere sauvegarde.
+    // ⚠️ Sans position (la carte a change sous la partie — M8 a quintuple la
+    // ville), il revient sur la rue la plus proche de la porte : une position
+    // d'une ancienne carte tombe au hasard, et c'est un char dans un mur.
     const garde = p.planque.vehicule;
     if (garde && Vehicules.vehiculeDef(garde.slug)) {
-      const v = Vehicules.creer(garde.slug, garde.x, garde.y, garde.angle || 0, { etat: 'stationne' });
+      const place = garde.x === null || garde.x === undefined
+        ? placeDevantLaPlanque() : { x: garde.x, y: garde.y };
+      const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne' });
       if (v) { v.couleur = garde.couleur; v.swaps = { c: garde.couleur }; v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; }
     }
     const app = Monde.carte.apparition.joueur;
@@ -121,6 +126,21 @@ const Jeu = (function () {
   }
 
   // --- Boucle -------------------------------------------------------------------------
+
+  /** La tuile de rue la plus proche de la porte de la planque. */
+  function placeDevantLaPlanque() {
+    const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
+    if (!porte) return null;
+    for (let r = 1; r <= 8; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          const tx = porte.x + dx, ty = porte.y + dy;
+          if (Monde.estRoute(tx, ty) && !Monde.estPassage(tx, ty)) return { x: tx * TT + 8, y: ty * TT + 8 };
+        }
+      }
+    }
+    return null;
+  }
 
   function maj() {
     Entree.debutImage();
@@ -243,8 +263,12 @@ const Jeu = (function () {
       B.partie = Sauvegarde.completer(Sauvegarde.lire(), defs);
       if (B.partie.empreinte && B.partie.empreinte !== defs.empreinte) {
         // Le catalogue a change : on garde la partie, mais une position qui
-        // n'existe plus sur la nouvelle carte doit etre oubliee.
+        // n'existe plus sur la nouvelle carte doit etre oubliee — la sienne, et
+        // celle du char gare devant la planque.
         B.partie.x = null; B.partie.y = null;
+        if (B.partie.planque && B.partie.planque.vehicule) {
+          B.partie.planque.vehicule.x = null; B.partie.planque.vehicule.y = null;
+        }
       }
       const app = defs.carte.apparition.joueur;
       Monde.centrerCamera(app.x * TT, app.y * TT);

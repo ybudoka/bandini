@@ -137,9 +137,17 @@ const Entites = (function () {
     return cat[0];
   }
 
-  /** Un passant au hasard, tire selon les poids du catalogue. */
-  function archetypeDeRue() {
-    const ordinaires = B.defs.pietons.catalogue.filter(function (p) { return p.frequence > 0 && !p.gang; });
+  /** Un passant au hasard, tire selon les poids du catalogue.
+
+      ⚠️ Les passants de QUARTIER (`districts`) ne naissent que chez eux : un
+      debardeur sur les quais, un banlieusard aux Erables. Sans cela les cinq
+      districts sont le meme district repeint cinq fois. */
+  function archetypeDeRue(x, y) {
+    const zone = Monde.zoneA(x, y);
+    const district = zone ? zone.district : null;
+    const ordinaires = B.defs.pietons.catalogue.filter(function (p) {
+      return p.frequence > 0 && !p.gang && (!p.districts || p.districts.indexOf(district) >= 0);
+    });
     let tirage = B.rng() * ordinaires.reduce(function (s, p) { return s + p.frequence; }, 0);
     for (const p of ordinaires) {
       tirage -= p.frequence;
@@ -149,7 +157,7 @@ const Entites = (function () {
   }
 
   function creerPieton(x, y, arch) {
-    const p = arch || archetypeDeRue();
+    const p = arch || archetypeDeRue(x, y);
     const bourse = Math.round(p.argent[0] + B.rng() * (p.argent[1] - p.argent[0]));
     const e = creer('pieton', x, y, {
       r: p.sprite === 'enfant' ? 4 : 5, sprite: p.sprite || 'joueur', swaps: p.couleurs,
@@ -211,7 +219,7 @@ const Entites = (function () {
       soit, le voile du titre n'est pas encore tombe. */
   function peuplerDabord() {
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
-    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * 0.6;
+    const voulu = Math.min(MAX_PIETONS, (zone ? zone.pietons : 12) * Monde.rythme(zone)) * 0.6;
     for (let essai = 0; essai < 80 && B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; }).length < voulu; essai++) {
       const a = B.rng() * Math.PI * 2, d = 40 + B.rng() * 260;
       const tx = Math.floor((B.joueur.x + Math.cos(a) * d) / TT), ty = Math.floor((B.joueur.y + Math.sin(a) * d) / TT);
@@ -233,13 +241,13 @@ const Entites = (function () {
       if (e.vivant && !e.metier) vivants++;
     }
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
-    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12);
+    const voulu = Math.min(MAX_PIETONS, (zone ? zone.pietons : 12) * Monde.rythme(zone));
     if (vivants >= voulu || B.t % 12 !== 0) return;
     const place = placeDeNaissance();
     if (!place) return;
     // La nuit, pres du bar et du port, la Brume a ses habituees.
     const nuit = Monde.estNuit();
-    if (nuit && zone && (zone.slug === 'port' || zone.slug === 'faubourg') && B.rng() < 0.18) {
+    if (nuit && zone && zone.brume && B.rng() < 0.18) {
       const fille = archetype('racoleuse');
       if (fille) {
         const e = creerPieton(place.x, place.y, fille);

@@ -21,7 +21,7 @@ jalons » à chaque jalon livré.
 | M6 Missions et gang | **livré** (13 sept. 2026) | `missions.py` : 6 personnages (une voix ElevenLabs chacun), **5 missions** (Ti-Guy, Mme Thibodeau, Marco, Sgt Bouchard, Josée) en objectifs typés, 35 répliques, 3 défis ; `histoire.js` : donneurs devant leur porte (ou à leur point dedans), **dialogues dits à voix haute** (chargés par mission, ducking radio/ambiance, voix « du combiné » au téléphone, le joueur écoute), **téléphone** (le donneur suivant appelle), machine à objectifs (aller/monter/livrer/tuer/ramasser/courses/semer/retourner), char de M1 dans une ruelle, fuyard en moto sur les rails (fuite), escorte de Ti-Guy, Cravates posées en ville, échec sur prison/hôpital, récompenses (bâton, rabais, sergent ami → pot-de-vin, bar, Faubourg libéré, manchette), **GPS** (blip, flèche au bord, distance), objectif en haut, **défis** à panneaux (saut, tour chrono, livraison sans bosse), gang qui attaque l'arme au poing sur son territoire |
 | M7 Finition v1 | **livré** (13 sept. 2026) | **5★** : hélico (te survole, rien ne retombe sous lui, ombre au sol, projecteur la nuit, rotor en boucle ElevenLabs) et **barrages** (deux autos-patrouille en travers devant toi, deux agents derrière) ; **journal lu par le narrateur** (9 manchettes + celle de M5, voix « annonceur centre d'achat 1 », version `lu` en casse naturelle) ; **marché noir** chez Josée après M5 (`magasins.MARCHE_NOIR`, −30 %) ; **carte de la ville** plein écran (N, ou PAUSE → CARTE : lieux, police, objectif, joueur) ; sonnerie de téléphone réelle ; sonde de performance Playwright (ms par image de nuit à 3★ au volant). Défi du jour à graine serveur : reporté en v2 |
 | **v1 complète** | **livrée** (13 sept. 2026) | M0 → M7 en ligne, 308 tests ; la suite est planifiée ci-dessous (« La v2 — sept vagues ») |
-| M8 Les cinq districts | à faire (v2) | Les Quais, Les Érables, La Shop, La Pointe : trame propre, gang propre, deux radios ; la ville reste **continue** |
+| M8 Les cinq districts | **livré** (13 sept. 2026) | la ville passe de 157×112 à **421×213 tuiles** (5,1 ×) : Les Érables (banlieue, Les Chevreuils), La Shop (industriel, Les Boulonneux), Les Quais (port, Les Morues), La Pointe (parc, Les Skateux) et **la baie** — une seule grille de blocs, un district par rectangle, aucune fusion par-dessus une frontière ; une rue dont tous les blocs voisins sont de l'eau est **noyée** (c'est ce qui ferme la baie et coupe le chenal), et **un pont** relie La Pointe ; 5 nouveaux lieux (dépanneur, Hôtel Bandini, cantine des Quais, usine Prévost, phare) ; 4 gangs + 4 passants de quartier (`districts` les enferme chez eux) ; densité **et rythme** par district (La Shop déserte la nuit, les Quais le matin) ; radios *10-4* et *Radio-Traversier* ; paquet **319 Ko bruts / 33 Ko gzip**, `generer()` 94 ms au démarrage, **0,29 ms par image** de nuit à 5★ (0,26 avant) ; chien de garde du trafic corrigé (480 images de feu rouge **puis** l'attente de boîte faisaient 600 : il mordait un char sage) |
 | M9 Le parc et les boulots | à faire (v2) | camion, autobus, ambulance, remorqueuse (bateau en dernier) ; ambulance/pizza/remorquage au klaxon, fourrière, radio procédurale |
 | M10 L'argent sale | à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M11 La police apprend | à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, bouclier humain |
@@ -105,11 +105,12 @@ plein de contacts douteux, à **Baie-des-Brumes**, ville de port et de brouillar
 débarques en autobus avec 50 $. Deux fins **v2** : *Le Boss* (posséder les 4 propriétés,
 libérer 4 districts) ou *Sacrer son camp* (15 000 $ en poche, traversier de nuit à 0 étoile).
 
-**Districts** : Le Faubourg (centre, gang Les Cravates) **v1** · Les Quais (port, Les Morues)
+**Districts** (M8) : Le Faubourg (centre, gang Les Cravates) · Les Quais (port, Les Morues)
 · Les Érables (banlieue, Les Chevreuils) · La Shop (industriel, Les Boulonneux) · La Pointe
-(parc-île, Les Skateux) **v2**. Journal : *Le Clairon de la Baie*. Radios : *La Brume*
-(jazz, auto), *Taxi-Radio* (country), *Le Choc* (punk, moto), *10-4* (ondes du poste),
-*Radio-Traversier* (rigodon) ; l'autobus n'a que son moteur.
+(parc au bout d'un pont, Les Skateux), autour de **la baie**. Journal : *Le Clairon de la
+Baie*. Radios : *La Brume* (jazz, auto), *Taxi-Radio* (country), *Le Choc* (techno, moto),
+*10-4* (ondes du poste, auto-patrouille), *Radio-Traversier* (rigodon, camion) ; l'autobus
+n'a que son moteur.
 
 **La rue dans la vraie vie (13 sept. 2026)** : un char du trafic ne quitte jamais sa voie
 — il est **sur des rails** (centre de tuile en centre de tuile ; la physique arcade ne sert
@@ -303,7 +304,9 @@ static/css/styles.css  static/img/favicon.svg  static/js/ (14 fichiers ci-dessus
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette,
         frame(n), touches, singe)  test_routes.py test_scores.py test_definitions.py
         test_vehicules.py test_armes.py test_economie.py test_recherche.py test_carte.py
-        test_missions.py test_magasins.py test_version.py test_moteur_js.py test_navigateur.py
+        test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
+        test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
+        test_trace_js.py test_districts_js.py test_navigateur.py
 scripts/  verifier_dependances.py  git-hooks/post-commit
 deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
          systemd/bandini-gestiondojo.service.example nginx/bandini-gestiondojo.conf.example caddy/README.md
@@ -322,7 +325,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M5 | Intérieurs et économie | **fait** : 10 intérieurs, magasins, planque (sauvegarde, coffre, garde-robe, char stationné), revente/réparation/peinture, propriétés, paquets cachés, journal du matin, bilan de session, options, envoi du score depuis la pause | acheter, vendre, sauvegarder, recharger ; 9 tests de banc |
 | M6 | Missions et gang | **fait** : cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue **avec la voix de chaque réplique** (une voix par personnage, ducking, voix « du combiné »), GPS ; reste pour M7 : contacts du marché noir, journal lu par le narrateur | finir les 5 missions, **les entendre** ; 7 tests de banc (donneurs, M1 de bout en bout, échec + reprise, appel, M2 combat + fuyard, M4/M5 récompenses, défis) + 1 navigateur (la voix se décode, la radio baisse) |
 | M7 | Finition v1 | **fait** : 5★ (barrages, hélico), journal lu par le narrateur, marché noir, carte plein écran, sonnerie et rotor réels, sonde Playwright ; reste v2 : défi du jour à graine serveur, mesure sur vrai téléphone (Martin) | 60 i/s de nuit à 3★ sur téléphone ; 2 tests de banc police (hélico, barrage), 2 histoire (narrateur + marché noir, carte), 1 sonde navigateur |
-| M8 | Les cinq districts | quatre districts de plus (trame, gang, zones, radios *10-4* et *Radio-Traversier*), la ville d'un seul tenant | on roule du Faubourg à La Pointe sans chargement ; juges de connexité sur **toute** la ville |
+| M8 | Les cinq districts | **fait** : quatre districts de plus autour de la baie (trame, gang, passants, densité et rythme propres), rues **noyées** et un pont, 5 lieux, 2 radios, carte plein écran à l'échelle de la ville, vieille sauvegarde rattrapée (le char de la planque revient à la rue la plus proche) | on roule du Faubourg à La Pointe sans chargement (test de banc : on le conduit) ; 15 juges de carte + 5 de banc ; connexité forte sur **toute** la ville, à quatre graines |
 | M9 | Le parc et les boulots | camion, autobus, ambulance, remorqueuse, bateau ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule | trois boulots finis d'affilée ; sortir son char de la fourrière |
 | M10 | L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
 | M11 | La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool |
@@ -343,38 +346,58 @@ Ce que la v2 **ne fait pas**, pour que le plan tienne : pas de multijoueur en li
 de 3D, pas d'histoire à plus de deux fins, pas de génération de sprites par IA. Le jeu
 reste un GTA 1 québécois en pixels, joué au téléphone.
 
-### M8 — Les cinq districts (taille 4)
+### M8 — Les cinq districts (taille 4) — **livré le 13 sept. 2026**
 
-*Ce que ça donne :* la ville cesse d'être un quartier. Quatre quartiers de plus, chacun
-avec sa trame, son gang, son bruit, et une raison d'y aller.
+*Ce que ça donne :* la ville cesse d'être un quartier. **421 × 213 tuiles** au lieu de
+157 × 112 (5,1 ×), quatre quartiers de plus autour d'une baie, chacun avec sa trame, son
+gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
 
-- `carte.py` : un plan par district et un **plan de ville** qui les assemble. Les artères
-  se rejoignent d'un district à l'autre ; l'eau borde Les Quais et isole La Pointe, qu'un
-  **pont** relie. Les trames doivent se distinguer à l'œil, sinon les quartiers se
-  ressemblent : Les Quais = blocs longs, hangars, quais ; Les Érables = grandes parcelles,
-  maisons détachées, culs-de-sac ; La Shop = très gros blocs, peu de rues, stationnements ;
-  La Pointe = parc, sentiers, une seule route.
-- `pietons.py` : Les Morues, Les Chevreuils, Les Boulonneux, Les Skateux — quatre gangs
-  (couleurs, courage, territoire), et des passants de quartier (dockers, banlieusards,
-  ouvriers, ados).
-- `carte.zones()` : police, véhicules et piétons **par district** — la banlieue est calme,
-  La Shop est déserte la nuit, les Quais grouillent le matin.
-- `audio.py` : deux radios de plus (*10-4*, les ondes du poste ; *Radio-Traversier*,
-  rigodon) ; l'autobus n'a que son moteur.
-- ⚠️ **Le paquet de définitions.** Mesuré le 13 sept. : 101 Ko bruts, **17 Ko gzip**, dont
-  **64 Ko pour la carte** (157 × 112 = 17 584 tuiles) ; `carte.generer()` prend 16 ms.
-  Cinq districts font environ 360 Ko bruts / 60 Ko gzip et 80 ms de génération au
-  démarrage. On **relève le budget du test à 400 Ko bruts** (le gzip, lui, reste petit) et
-  on garde une seule carte dans le paquet : découper la ville en tranches servies à la
-  demande est une machinerie dont personne n'a encore prouvé le besoin. Le déclencheur est
-  écrit d'avance : si le téléphone de Martin met plus de 2 s entre « Jouer » et la ville,
-  ou si la mémoire tousse, la carte sort du paquet (`/api/carte`, ETag, districts chargés
-  autour du joueur — `Monde.charger()` sait déjà le faire pour les intérieurs).
-- **Juges** : connexité forte des voies sur **toute** la ville (BFS) ; chaque district
-  joignable en char depuis chaque autre ; un seul îlot marchable sur cinq graines ;
-  asymétrie **par district** ; le pont est le seul lien vers La Pointe et il est carrossable.
-- **Fini quand** : on roule du Faubourg à La Pointe sans chargement, la carte plein écran
-  et la mini-carte suivent, et le nom du quartier change sous la mini-carte.
+- `carte.py` : **une seule grille de blocs** (20 × 12), un district par rectangle,
+  assemblés par `_assembler()`. C'est ce qui garde la ville d'un seul tenant — les artères
+  traversent les frontières, rien ne se charge en roulant. Un district ne fusionne **jamais**
+  par-dessus sa frontière (sinon déplacer un quartier en casserait un autre) : le juge est
+  dans l'assembleur.
+- ⚠️ **La règle qui fait la géographie** : une rue dont *tous* les blocs voisins sont de
+  l'eau est **noyée** — elle n'est ni bâtie ni carrossable, et l'eau reste dessous. Une rue
+  de rive (eau d'un bord, terre de l'autre) reste une rue : c'est le boulevard du bassin.
+  Cette seule règle ferme la baie, arrête la rue du pourtour au bord de l'eau et coupe pour
+  de bon le chenal de La Pointe. Et `PONTS` fait l'exception : **un** pont, tablier de
+  planches, que le juge défait pour vérifier qu'il est bien le seul lien.
+- Les trames se distinguent à l'œil, et un juge le mesure sur trois chiffres (rues au mètre
+  carré, taux de fusion, largeur moyenne des colonnes) : Les Quais = blocs longs de trois
+  blocs, hangars, quais ; Les Érables = grandes parcelles, maisons détachées sur gazon ;
+  La Shop = des 2 × 2 partout, presque pas de rues, stationnements ; La Pointe = bois,
+  sentiers de terre, quatre maisons et un phare.
+- ⚠️ **Pas de vrai cul-de-sac.** Un croisement à un seul bras piège un char : il y entre et
+  la seule sortie est la voie qui pointe sur lui. La banlieue a donc des rues qui s'arrêtent
+  en **T** (déjà gérées : STOP à la tige) et des ruelles sans issue dans les îlots, pas des
+  culs-de-sac routiers — et `test_les_croisements_sont_des_croisements` interdit le reste.
+- `pietons.py` : Les Morues, Les Chevreuils, Les Boulonneux (les seuls hostiles sans qu'on
+  sorte une arme), Les Skateux ; et quatre passants de quartier — débardeur, banlieusard,
+  machiniste, promeneur de chien — que le champ `districts` **enferme chez eux**.
+- `carte.zones()` : police, véhicules et piétons par district, plus un **rythme**
+  (nuit, matin, soir) : La Shop tombe à 0,15 la nuit, les Quais montent à 1,4 le matin.
+- 5 lieux de plus, un par district : dépanneur Chez Ti-Paul (caisse, journal), **Hôtel
+  Bandini** (un deuxième lit, donc une deuxième sauvegarde — et la propriété v2 qui
+  l'attendait existe enfin), cantine des Quais (hot-dog), usine Prévost, phare de La Pointe.
+- `audio.py` : *10-4* (auto-patrouille) et *Radio-Traversier* (camion). **À générer et à
+  écouter** : `uv run python scripts/audio_elevenlabs.py --refaire dix_quatre traversier`.
+- **Le paquet, mesuré** : 319 Ko bruts, **33 Ko gzip** (prévu : 360 / 60), `generer()`
+  94 ms **une fois au démarrage du serveur** — le paquet est construit à la création de
+  l'app, pas par requête. Budget du test relevé à 400 Ko bruts, et un second juge tient le
+  gzip sous 70 Ko : c'est lui qui voyage. La carte reste dans le paquet ; le déclencheur du
+  découpage est toujours écrit d'avance (plus de 2 s entre « Jouer » et la ville sur le
+  téléphone de Martin → `/api/carte`, ETag, districts chargés autour du joueur).
+- **Rythme** : 0,29 ms par image de nuit à 5★ (0,26 avant M8). La ville a quintuplé, pas le
+  coût de l'image : rien ne parcourt la carte par image.
+- ⚠️ **Le chien de garde mordait un char sage.** Un feu rouge dure jusqu'à 480 images ;
+  l'attente de boîte qui suit, jusqu'à 400. 480 + 110 = 600, exactement le seuil du chien —
+  et le mode TRACE signalait une anomalie sur un char parfaitement poli. `immobileT` ne
+  compte plus le temps d'une **attente légitime** (feu rouge, stop qui s'égrène, boîte
+  encore prise), chacune bornée. L'anomalie garde en plus l'état d'**avant** le déblocage.
+- **Une vieille sauvegarde** ne place plus rien dans un mur : l'empreinte du catalogue a
+  changé, donc la position du joueur *et* celle du char gardé devant la planque sont
+  oubliées ; le char revient sur la rue la plus proche de la porte.
 
 ### M9 — Le parc automobile et les boulots (taille 3)
 

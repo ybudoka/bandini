@@ -428,6 +428,21 @@ const Monde = (function () {
 
   function estNuit() { return ambiance().alpha > 0.4; }
 
+  /** Le facteur de foule d'un quartier a cette heure-ci : (nuit, matin, soir).
+
+      ⚠️ C'est ce qui empeche les cinq districts d'etre le meme district a cinq
+      endroits. La Shop se vide a la noirceur (0,15), les Quais grouillent au
+      matin (1,4), la banlieue dort. Le jour reste la reference : 1. */
+  function rythme(zone) {
+    const r = zone && zone.rythme;
+    if (!r) return 1;
+    const h = B.partie ? B.partie.heure : 0.5;
+    if (h >= 0.82 || h < 0.25) return r[0];
+    if (h < 0.42) return r[1];
+    if (h < 0.70) return 1;
+    return r[2];
+  }
+
   function heureTexte() {
     const h = B.partie ? B.partie.heure : 0.5;
     const minutes = Math.floor(h * 24 * 60);
@@ -452,7 +467,7 @@ const Monde = (function () {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
     charger, entrer, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
-    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
+    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };

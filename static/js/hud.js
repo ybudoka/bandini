@@ -356,7 +356,12 @@ const Hud = (function () {
     if (!carte || !j) return;
     ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(0, 0, VW, VH);
     const mini = Monde.miniCarte(carte);
-    const echelle = Math.max(1, Math.floor(Math.min((VW - 20) / carte.w, (VH - 40) / carte.h)));
+    // ⚠️ Au-dessus de 1, on reste sur un ENTIER : une carte de pixels etiree a
+    // 1,7 bave. En dessous, on prend la fraction telle quelle — depuis les cinq
+    // districts (421 x 213 tuiles), mieux vaut une ville un peu floue qu'une
+    // ville qui deborde de l'ecran.
+    const brut = Math.min((VW - 20) / carte.w, (VH - 40) / carte.h);
+    const echelle = brut >= 1 ? Math.floor(brut) : brut;
     const l = carte.w * echelle, h = carte.h * echelle;
     const ox = Math.round((VW - l) / 2), oy = Math.round((VH - h) / 2) + 6;
     ctx.imageSmoothingEnabled = false;
@@ -382,10 +387,11 @@ const Hud = (function () {
     ctx.fillStyle = '#101018'; ctx.fillRect(pj.x - 2, pj.y - 2, 6, 6);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(pj.x - 1, pj.y - 1, 4, 4);
     B.stats.rects += 2;
-    const titre = 'BAIE-DES-BRUMES — LE FAUBOURG';
-    texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     const zone = Monde.zoneA ? (B.exterieur ? null : Monde.zoneA(j.x, j.y)) : null;
-    const aide = (zone ? zone.nom.toUpperCase() + ' · ' : '') + (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
+    const ville = (carte.def && carte.def.nom ? carte.def.nom : 'Baie-des-Brumes').toUpperCase();
+    const titre = ville + (zone ? ' — ' + zone.nom.toUpperCase() : '');
+    texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
+    const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
   }
 

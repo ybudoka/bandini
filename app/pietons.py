@@ -35,20 +35,22 @@ class Pieton(TypedDict):
     accompagne: str | None
     metier: str | None
     heures: tuple[float, float] | None
+    districts: tuple[str, ...] | None
     frequence: float
     phase: int
 
 
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
        courage=0.0, temoin=0.3, vie=60, argent=(2, 20), arme=None, gang=None,
-       intouchable=False, accompagne=None, metier=None, heures=None, frequence=1.0,
-       phase=1) -> Pieton:
+       intouchable=False, accompagne=None, metier=None, heures=None, districts=None,
+       frequence=1.0, phase=1) -> Pieton:
     return Pieton(
         slug=slug, nom=nom, sprite=sprite,
         couleurs={"c": chandail, "h": cheveux, "s": peau, "p": pantalon},
         vitesse=vitesse, courage=courage, temoin=temoin, vie=vie, argent=argent,
         arme=arme, gang=gang, intouchable=intouchable, accompagne=accompagne,
-        metier=metier, heures=heures, frequence=frequence, phase=phase,
+        metier=metier, heures=heures, districts=districts,
+        frequence=frequence, phase=phase,
     )
 
 
@@ -69,6 +71,35 @@ CATALOGUE: list[Pieton] = [
     _p("cravate", "Cravate", "#2c3e50", "#1a1a1a", "#e8b088", "#1f2a36",
        courage=0.9, vie=90, vitesse=1.05, argent=(20, 80), arme="batte",
        gang="cravates", frequence=0.0, temoin=0.0),
+    # v2 / M8 — les quatre gangs des nouveaux districts. Meme regle que les
+    # Cravates : frequence 0, ils ne naissent QUE sur leur territoire.
+    _p("morue", "Une Morue", "#1d6f6f", "#3a2a1a", "#c98d66", "#2a3540",
+       courage=0.85, vie=95, vitesse=0.95, argent=(15, 70), arme="batte",
+       gang="morues", frequence=0.0, temoin=0.0),
+    _p("chevreuil", "Un Chevreuil", "#8a5a2b", "#4a3320", "#e8b088", "#3a2f22",
+       courage=0.7, vie=80, vitesse=1.1, argent=(20, 90), arme="batte",
+       gang="chevreuils", frequence=0.0, temoin=0.0),
+    _p("boulonneux", "Un Boulonneux", "#5a5f66", "#2a2a2a", "#c98d66", "#2f3338",
+       courage=0.95, vie=105, vitesse=0.9, argent=(10, 55), arme="batte",
+       gang="boulonneux", frequence=0.0, temoin=0.0),
+    _p("skateux", "Un Skateux", "#9b3fa8", "#1a1a1a", "#e8b088", "#2a2a3a",
+       courage=0.55, vie=70, vitesse=1.3, argent=(5, 40), arme=None,
+       gang="skateux", frequence=0.0, temoin=0.0),
+    # ⚠️ Les passants de quartier : `districts` les ENFERME chez eux. Un
+    # debardeur aux Erables, un banlieusard sur les quais, et les cinq
+    # quartiers redeviennent le meme quartier repeint.
+    _p("docker", "Débardeur", "#c8842a", "#2a2a2a", "#c98d66", "#38404a",
+       courage=0.6, vie=90, vitesse=0.95, argent=(15, 55), temoin=0.15,
+       districts=("quais",), frequence=2.4),
+    _p("banlieusard", "Banlieusard", "#7f9a4e", "#5a3a1a", "#f0c098", "#454f38",
+       courage=0.2, vie=65, vitesse=0.9, argent=(20, 80), temoin=0.65,
+       districts=("erables",), frequence=2.4),
+    _p("machiniste", "Machiniste", "#4a5a75", "#1a1a1a", "#c98d66", "#2a3240",
+       courage=0.55, vie=85, vitesse=0.95, argent=(12, 50), temoin=0.2,
+       districts=("shop",), frequence=2.2),
+    _p("promeneur", "Promeneur de chien", "#2f8f6a", "#6b4b2c", "#e8b088", "#3a3a4a",
+       courage=0.1, vie=60, vitesse=0.85, argent=(10, 45), temoin=0.55,
+       districts=("pointe",), frequence=2.2),
     _p("itinerant", "Itinérant", "#6b5a48", "#6b5a48", "#c98d66", "#4a4438",
        vitesse=0.75, courage=0.2, frequence=1.0, argent=(1, 8), temoin=0.1),
     _p("livreur", "Livreur", "#c0392b", "#3a2a1a", "#c98d66", "#2a2a3a",
@@ -102,7 +133,22 @@ CATALOGUE: list[Pieton] = [
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.
 GANGS: list[dict] = [
     {"slug": "cravates", "nom": "Les Cravates", "pieton": "cravate", "zone": "cravates",
-     "membres": 8, "hostile_si_arme": True, "hostile_toujours": False, "phase": 1},
+     "district": "faubourg", "membres": 8, "hostile_si_arme": True,
+     "hostile_toujours": False, "phase": 1},
+    # v2 / M8 — une gang par district. Les Boulonneux sont les seuls a ne pas
+    # attendre que tu sortes une arme : La Shop n'est a personne d'autre.
+    {"slug": "morues", "nom": "Les Morues", "pieton": "morue", "zone": "morues",
+     "district": "quais", "membres": 8, "hostile_si_arme": True,
+     "hostile_toujours": False, "phase": 1},
+    {"slug": "chevreuils", "nom": "Les Chevreuils", "pieton": "chevreuil", "zone": "chevreuils",
+     "district": "erables", "membres": 6, "hostile_si_arme": True,
+     "hostile_toujours": False, "phase": 1},
+    {"slug": "boulonneux", "nom": "Les Boulonneux", "pieton": "boulonneux", "zone": "boulonneux",
+     "district": "shop", "membres": 9, "hostile_si_arme": True,
+     "hostile_toujours": True, "phase": 1},
+    {"slug": "skateux", "nom": "Les Skateux", "pieton": "skateux", "zone": "skateux",
+     "district": "pointe", "membres": 6, "hostile_si_arme": True,
+     "hostile_toujours": False, "phase": 1},
 ]
 
 #: Ce qui arrive a un pieton qu'on frappe, en images (60 par seconde).
@@ -130,9 +176,14 @@ def par_slug(slug: str) -> Pieton | None:
     return None
 
 
-def ordinaires() -> list[Pieton]:
-    """Ceux qui peuplent la rue (gangs et metiers apparaissent autrement)."""
-    return [p for p in CATALOGUE if p["frequence"] > 0 and p["gang"] is None]
+def ordinaires(district: str | None = None) -> list[Pieton]:
+    """Ceux qui peuplent la rue (gangs et metiers apparaissent autrement).
+
+    Sans district : ceux de partout. Avec : ceux de partout PLUS ceux de ce
+    quartier-la — jamais ceux du quartier d'a cote.
+    """
+    return [p for p in CATALOGUE if p["frequence"] > 0 and p["gang"] is None
+            and (p["districts"] is None or (district in (p["districts"] or ())))]
 
 
 def de_metier(metier: str) -> list[Pieton]:
