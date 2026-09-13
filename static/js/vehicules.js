@@ -707,7 +707,7 @@ const Vehicules = (function () {
 
   function maj() {
     const j = B.joueur;
-    if (!j) return;
+    if (!j || B.interieur) return;
     for (let i = B.entites.length - 1; i >= 0; i--) {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;

@@ -75,6 +75,34 @@ const Monde = (function () {
     return carte;
   }
 
+  /** Entre dans une piece : on garde la ville de cote et on charge la petite
+      carte ASCII de l'interieur (meme legende, aucune voie, aucune lampe). */
+  function entrer(porte) {
+    const ville = carte;
+    const inte = ville.def.interieurs[porte.interieur];
+    if (!inte) return null;
+    const def = {
+      slug: inte.slug, nom: inte.nom, largeur: inte.largeur, hauteur: inte.hauteur, sol: inte.sol,
+      voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
+      portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
+      lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
+      apparition: { joueur: inte.apparition }, interieurs: {}, ambulants: [],
+    };
+    charger(def);
+    carte.interieur = inte;
+    carte.ville = ville;
+    carte.porte = porte;
+    return carte;
+  }
+
+  /** Ressort : la ville reprend sa place telle qu'on l'a laissee (morceaux
+      cuits compris — rien a repeindre). */
+  function restaurer(ville) {
+    carte = ville;
+    B.carte = ville;
+    return ville;
+  }
+
   function glyphe(tx, ty) {
     if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return 'B';
     return carte.sol[ty][tx];
@@ -153,6 +181,13 @@ const Monde = (function () {
   function estRampe(tx, ty) {
     const p = carte && carte.legende[glyphe(tx, ty)];
     return !!(p && p.rampe);
+  }
+
+  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade),
+      au sud dedans (la sortie est sur le mur du bas). Jamais les deux. */
+  function porteDevant(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    return porteA(tx, ty - 1) || porteA(tx, ty + 1);
   }
 
   /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */
@@ -273,9 +308,18 @@ const Monde = (function () {
 
   // --- Camera ---------------------------------------------------------------------
 
+  /** Une carte plus petite que l'ecran (une piece) se centre : la camera
+      prend alors une valeur negative, et le sol se dessine au milieu. */
+  function cibleCamera(x, y) {
+    return {
+      x: carte.pxW < VW ? (carte.pxW - VW) / 2 : borner(x - VW / 2, 0, carte.pxW - VW),
+      y: carte.pxH < VH ? (carte.pxH - VH) / 2 : borner(y - VH / 2, 0, carte.pxH - VH),
+    };
+  }
+
   function centrerCamera(x, y) {
-    B.cam.x = borner(x - VW / 2, 0, Math.max(0, carte.pxW - VW));
-    B.cam.y = borner(y - VH / 2, 0, Math.max(0, carte.pxH - VH));
+    const c = cibleCamera(x, y);
+    B.cam.x = c.x; B.cam.y = c.y;
   }
 
   function majCamera() {
@@ -286,10 +330,9 @@ const Monde = (function () {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);
       avanceX = Math.cos(v.angle) * 48 * f; avanceY = Math.sin(v.angle) * 48 * f;
     } else { avanceX = j.vx * 14; avanceY = j.vy * 14; }
-    const cibleX = borner(j.x + avanceX - VW / 2, 0, Math.max(0, carte.pxW - VW));
-    const cibleY = borner(j.y + avanceY - VH / 2, 0, Math.max(0, carte.pxH - VH));
-    B.cam.x += (cibleX - B.cam.x) * 0.12;
-    B.cam.y += (cibleY - B.cam.y) * 0.12;
+    const cible = cibleCamera(j.x + avanceX, j.y + avanceY);
+    B.cam.x += (cible.x - B.cam.x) * 0.12;
+    B.cam.y += (cible.y - B.cam.y) * 0.12;
     if (B.cam.secousse > 0) B.cam.secousse *= 0.9;
   }
 
@@ -311,6 +354,7 @@ const Monde = (function () {
   }
 
   function ambiance(heure) {
+    if (carte && carte.interieur && heure === undefined) return { teinte: 'rgb(255,255,255)', alpha: 0 };
     const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
     let a = TEINTES[0], b = TEINTES[TEINTES.length - 1];
     for (let i = 0; i < TEINTES.length - 1; i++) {
@@ -345,8 +389,8 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
-    charger, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
-    ligneLibre, porteA, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
+    charger, entrer, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
     miniCarte, couleurMini,
     get carte() { return carte; },

@@ -15,7 +15,8 @@ jalons » à chaque jalon livré.
 | La rue dans la vraie vie | **livré** (13 sept. 2026) | retour de Martin (chars fous, piétons sur la chaussée, puis chars coincés au croisement, bandes des passages à l'envers) : un char d'en face dans la voie d'à côté n'est plus un obstacle, un croisement se **réserve** (un char à la fois, jusqu'à ce qu'il ressorte), les bandes sont parallèles à la circulation ; le trafic roule **sur des rails** (centre de tuile en centre de tuile, jamais un coin coupé), les piétons **ne posent pas le pied sur la chaussée** et traversent au passage quand c'est sûr, sortent des portes et rentrent chez eux ; **feux visibles** aux vrais croisements, **STOP** à la tige des T, priorité aux piétons engagés, **cyclistes** dont on prend le vélo |
 | M2 Piétons et poings | **livré** (12 sept. 2026) | `pietons.py` (8 archétypes, courage, témoin, gangs) ; hachage spatial, bulle de foule, flâner/fuir/témoin/riposter, mêlée en trois temps, coup fort, roulade, projectiles + plombs + cloche, visée assistée, armes de fortune qui cassent, sang plafonné, pickpocket dans le dos |
 | M3 Véhicules | **livré** (13 sept. 2026) | auto, taxi, moto, auto-patrouille (sprite) ; physique arcade, **chaîne de cercles**, sous-pas, monter/descendre/carjacking/éjection, trafic qui **lit le champ `voie`** (tourne à gauche après le croisement, ralentit avant le coin), feux sur les vrais croisements, dégâts/fumée/feu/explosion, alarmes, rampes, renversements, taxi au klaxon avec pourboire selon la douceur, hôpital quand on meurt, moteur qui monte dans les tours |
-| M5 Intérieurs et économie | à faire | **avant M4**, décision de Martin (13 sept. 2026) |
+| M5 Intérieurs et économie | **en cours** (13 sept. 2026) | livré : entrer/sortir des 10 intérieurs (fondu, pièce centrée, points d'action), menus canvas qui figent le jeu, planque (dormir = sauvegarder + lendemain, coffre à l'abri de la prison, garde-robe, char stationné qui revient), garage (revente, réparation, peinture qui efface le vol), Chez Gus (armes, munitions), Boutique Rosa (tenues), casse-croûte, hôpital, propriétés (achat à la porte, caisse plafonnée à 3 jours), 20 paquets cachés + primes, journal du matin (`journal.py`). Reste : bilan de session, options, tableau des scores en jeu |
+| Gestes et lisibilité | **livré** (13 sept. 2026) | retour de Martin : le corps **bouge** quand on agit — élan du coup, bras et arme superposés (toutes armes, PNJ compris), chancellement quand on est touché, roulade qui tourne, dos courbé pour ramasser, éclair de bouche au tir ; les accents et l'apostrophe courbe tombaient sur « ? » dans la police pixel — normalisés avant le dessin, avec un test sur chaque nom du jeu |
 | M4 Police | à faire | après M5 |
 | M6 Missions et gang | à faire | répliques **dites à voix haute** en plus du texte (décision du 13 sept.) |
 | M7 Finition v1 | à faire | |
@@ -153,11 +154,14 @@ Le jeu **parle**. Chaque réplique de l'histoire est écrite dans `missions.py` 
 source unique) et **dite** par une voix ElevenLabs générée une fois, comme les répliques
 des passants. Ce que ça implique, jalon par jalon :
 
-- **Une voix par personnage**, nommée dans `audio.VOIX_PERSONNAGES` : Ti-Guy (receleur,
-  gouailleur), Mme Thibodeau (potins, âgée), Sgt Réjean Bouchard (grave, la bouche
-  pleine), Josée « La Chef » (sèche), Dr Lachance (posé), Marco « Le Cousin » (mielleux),
-  le narrateur du journal. Priorité aux voix **québécoises** de la bibliothèque (Léo
-  aujourd'hui) ; Martin en ajoute à son compte au besoin — c'est une ligne à changer.
+- **Une voix par personnage**, nommée dans `audio.VOIX_PERSONNAGES`. Martin a ajouté des
+  voix québécoises à son compte le 13 sept. ; distribution proposée : Ti-Guy = *Felix
+  Tabarnak* (l'homme de tous les jours), Sgt Bouchard = *Khaivan* (accent bien dialectal),
+  Mme Thibodeau = *Julia* (courtoise, chaleureuse), Josée « La Chef » = *Jeanne Mance*,
+  Dr Lachance = *Patrick* (clair, ancien journaliste), Marco « Le Cousin » = *Québec
+  Tremblay*, le narrateur du Clairon = *annonceur centre d'achat 1* (vieil homme qui
+  soupire), les passants = *Felix* et *Amélie* (déjà en place). Une ligne à changer par
+  personnage.
 - **La réplique est la source** : `missions.py` porte `{"qui": "ti_guy", "texte": "…"}` ;
   le slug du fichier se déduit (`voix-ti_guy-m1-03.mp3`), la recette est donc le texte
   lui-même. `scripts/audio_elevenlabs.py --voix` génère ce qui manque, au caractère (≈ 40

@@ -312,6 +312,12 @@ const DECORS = {
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 3, 6, 2);
     ctx.fillStyle = '#6f757c'; ctx.fillRect(4, 8, 2, 14);
   } },
+  paquet: { w: 12, h: 10, ancre: [6, 9], r: 4, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 10, 8);
+    ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 3, 8, 3);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(5, 2, 2, 8); ctx.fillRect(1, 5, 10, 2);
+    ctx.fillStyle = '#101018'; ctx.fillRect(1, 9, 10, 1);
+  } },
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
   } },

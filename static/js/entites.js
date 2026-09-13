@@ -168,6 +168,12 @@ const Entites = (function () {
     return e;
   }
 
+  /** Rebatit l'index fixe a partir des entites presentes (retour de l'interieur). */
+  function reindexerDecor() {
+    grilleFixe.clear();
+    for (const e of B.entites) if ((e.type === 'decor' || e.type === 'ambulant') && e.solide) ajouterA(grilleFixe, e);
+  }
+
   /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran.
       Une fois sur trois, il SORT D'UNE PORTE — la ville a des dedans. */
   function placeDeNaissance() {
@@ -246,6 +252,14 @@ const Entites = (function () {
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
       : null;
     creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
+  }
+
+  /** Les paquets caches qu'on n'a pas encore ramasses. */
+  function creerPaquets(def) {
+    (def.paquets || []).forEach(function (q) {
+      if (B.partie.paquets[q.numero]) return;
+      creer('paquet', q.x * TT + 8, q.y * TT + 12, { numero: q.numero, r: 4, solide: false, decor: 'paquet', dessine: true });
+    });
   }
 
   /** Les kiosques et les camions de la carte, avec quelqu'un derriere. */
@@ -708,6 +722,7 @@ const Entites = (function () {
       const e = B.entites[i];
       if (!e.actif) continue;
       e.t++;
+      if (e.animT > 0) e.animT--;
       if (e.type === 'joueur') majJoueur(e);
       else if (e.type === 'pieton') { majPieton(e); actifs++; }
       else if (e.type === 'ramassage'
@@ -716,7 +731,7 @@ const Entites = (function () {
       }
     }
     majParticules();
-    if (B.joueur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
+    if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
     B.stats.actifs = actifs;
   }
 
@@ -732,6 +747,79 @@ const Entites = (function () {
     // le corps n'avancait et tout le monde avait l'air de courir.
     const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
     return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre };
+  }
+
+  // --- La pose : ce que le corps fait en plus de marcher ---------------------------
+
+  /** Pure : (entite) -> { dx, dy, rot, echelleY, bras }. L'elan d'un coup
+      (on recule, on se jette, on revient), le chancellement quand on est
+      touche, la roulade qui tourne, le dos qui se courbe pour ramasser — et
+      le BRAS, avec l'arme au bout, dont la longueur suit les trois temps.
+
+      ⚠️ Tout part d'ici, et rien d'autre ne connait ces chiffres : un test
+      lit la pose sans dessiner, et le dessin ne fait qu'appliquer. */
+  function pose(e) {
+    const p = { dx: 0, dy: 0, rot: 0, echelleY: 1, bras: null };
+    const cx = Math.cos(e.angle), cy = Math.sin(e.angle);
+    if (e.roule > 0) {
+      p.rot = (1 - e.roule / Combat.ROULADE_IMAGES) * Math.PI * 2 * (cx >= 0 ? 1 : -1);
+      return p;
+    }
+    if (e.animT > 0 && e.animType === 'ramasse') { p.dy = 3; p.echelleY = 0.78; }
+    if (e.recul > 0 && e.vivant && e.etat !== 'assomme') p.rot = (e.vx >= 0 ? 1 : -1) * 0.22;   // il chancelle
+    const arme = Combat.armeDef(e.arme || 'poings') || Combat.armeDef('poings');
+    if (e.etat === 'attaque' && e.phase && arme) {
+      const elan = e.phase === 'anticipation' ? -2 : (e.phase === 'actif' ? 3 : 1);
+      p.dx += Math.round(cx * elan); p.dy += Math.round(cy * elan * 0.6);
+      const longueur = arme.type === 'tir' ? 7 : (e.phase === 'anticipation' ? 2 : (e.phase === 'actif' ? 9 : 5));
+      p.bras = { longueur: longueur, angle: e.angle, arme: arme, actif: e.phase === 'actif' };
+    } else if (arme && arme.slug !== 'poings' && e.vivant && !e.dansVehicule && e.etat !== 'assomme') {
+      // L'arme se voit AUSSI au repos : on sait ce qu'on tient. Une lame
+      // pend vers l'avant-bas, un canon pointe devant.
+      p.bras = { longueur: 4, angle: arme.type === 'tir' ? e.angle : e.angle * 0.5 + Math.PI / 4, arme: arme, actif: false };
+    }
+    return p;
+  }
+
+  function dessinerBras(ctx, e, p, cx, cy) {
+    const b = p.bras;
+    const peau = (e.swaps && e.swaps.s) || '#e8b088';
+    const droite = Math.cos(b.angle) >= 0;
+    const sx = Math.round(e.x - cx + p.dx + (droite ? 3 : -3));
+    const sy = Math.round(e.y - e.z - cy + p.dy - 8);
+    const ex = Math.round(sx + Math.cos(b.angle) * b.longueur);
+    const ey = Math.round(sy + Math.sin(b.angle) * b.longueur * 0.8);
+    ctx.strokeStyle = peau; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
+    if (b.arme.slug === 'poings') {
+      ctx.fillStyle = peau; ctx.fillRect(ex - 1, ey - 1, 3, 3);
+      B.stats.rects++;
+      return;
+    }
+    const image = Atlas.cuirePeintre('objet|' + b.arme.sprite, 16, 10, function (g, w, h) {
+      OBJETS[OBJETS[b.arme.sprite] ? b.arme.sprite : 'defaut'](g, w, h);
+    });
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.rotate(b.angle);
+    ctx.drawImage(image, -2, -5);
+    ctx.restore();
+    B.stats.images++;
+  }
+
+  /** Le corps, avec sa pose : decale, penche, tourne, tasse. */
+  function dessinerCorps(ctx, e, img, p, cx, cy) {
+    const x = e.x - cx + p.dx, y = e.y - e.z - cy + p.dy;
+    if (!p.rot && p.echelleY === 1) {
+      ctx.drawImage(img.canvas, Math.round(x - img.ancre[0]), Math.round(y - img.ancre[1]));
+      return;
+    }
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    if (p.rot) ctx.rotate(p.rot);
+    if (p.echelleY !== 1) ctx.scale(1, p.echelleY);
+    ctx.drawImage(img.canvas, -img.ancre[0], -img.ancre[1]);
+    ctx.restore();
   }
 
   function dessinerDecals(ctx, cam) {
@@ -799,7 +887,12 @@ const Entites = (function () {
       if (!img) continue;
       if (e.vivant) ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;
-      ctx.drawImage(img.canvas, Math.round(e.x - img.ancre[0] - cx), Math.round(e.y - e.z - img.ancre[1] - cy));
+      const p = pose(e);
+      // Le bras passe DERRIERE le corps quand on regarde vers le haut.
+      const brasDerriere = p.bras && Math.sin(p.bras.angle) < -0.4;
+      if (p.bras && brasDerriere) dessinerBras(ctx, e, p, cx, cy);
+      dessinerCorps(ctx, e, img, p, cx, cy);
+      if (p.bras && !brasDerriere) dessinerBras(ctx, e, p, cx, cy);
       B.stats.images += 2;
       // La bulle du temoin : on doit VOIR qu'on a ete vu.
       if (e.cri > 0 && e.vivant) {
@@ -814,13 +907,13 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES,
-    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPieton,
+    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, imageDe,
+    dessiner, dessinerDecals, dessinerParticules, imageDe, pose,
   };
 })();

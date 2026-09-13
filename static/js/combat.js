@@ -180,6 +180,12 @@ const Combat = (function () {
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
       });
     }
+    // L'eclair de bouche : trois etincelles au bout du canon, une fraction de seconde.
+    for (let i = 0; i < 3; i++) {
+      Entites.particule(e.x + Math.cos(angle) * 12, e.y - 7 + Math.sin(angle) * 9,
+                        Math.cos(angle) * (1 + i * 0.7) + (B.rng() - 0.5) * 0.4, Math.sin(angle) * (1 + i * 0.7) * 0.7,
+                        4 + i, i === 0 ? '#ffffff' : '#ffd23a', 2, 0);
+    }
     if (joueur) {
       const sac = B.partie.armes[arme.slug];
       if (sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
@@ -347,20 +353,28 @@ const Combat = (function () {
     }
 
     if (Entree.neuf('action')) {
+      // Dedans : la sortie, ou un point (lit, coffre, comptoir...).
+      if (B.interieur) {
+        if (Missions.utiliserPoint(j)) return;
+        if (Monde.porteDevant(j)) { Jeu.sortir(); return; }
+        return;
+      }
       // ⚠️ L'ordre compte : on sert au kiosque avant de faire les poches du
       // vendeur, sinon on ne peut plus jamais acheter un hot-dog.
       if (Missions.interagir(j)) return;
       const objet = objetSousLaMain(j);
       if (objet) {
+        j.animT = 14; j.animType = 'ramasse';         // on se penche
         if (ramasserArme(objet.arme, objet.munitions)) {
           Hud.message((armeDef(objet.arme) || {}).nom || 'ARME');
           j.arme = objet.arme;
           B.partie.arme = objet.arme;
         }
         Entites.retirer(objet);
-      } else if (!pickpocket(j)) {
-        const porte = Monde.porteA(Math.floor(j.x / TT), Math.floor((j.y - 10) / TT));
-        if (porte) Hud.message('FERME POUR L’INSTANT');
+      } else {
+        const porte = Monde.porteDevant(j);
+        if (porte) { if (!Missions.acheterPropriete(porte)) Jeu.entrer(porte); }
+        else pickpocket(j);
       }
     }
   }

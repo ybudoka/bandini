@@ -835,6 +835,23 @@ class _Chantier:
                 places.append((x, y))
         return places
 
+    def paquets(self, nombre: int = 20) -> list[dict]:
+        """Vingt paquets caches dans les recoins : ruelles, terrains vagues,
+        coins de parc, quais. Jamais sur une rue, jamais devant une porte,
+        et espaces — les trouver doit faire visiter la ville."""
+        recoins = [(x, y) for y in range(1, self.hauteur - 1) for x in range(1, self.largeur - 1)
+                   if self.sol[y][x] in "x,Qs" and (x, y) not in self.reserve and (x, y) not in self.occupe]
+        poses: list[dict] = []
+        for _essai in range(4000):
+            if len(poses) >= nombre or not recoins:
+                break
+            x, y = recoins[self.des.suivant() % len(recoins)]
+            if any(abs(p["x"] - x) + abs(p["y"] - y) < 18 for p in poses):
+                continue
+            self.occupe.add((x, y))
+            poses.append({"numero": len(poses), "x": x, "y": y})
+        return poses
+
     def bornes(self) -> None:
         for inter in self.intersections:
             if not self.des.chance(0.30):
@@ -911,6 +928,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier.lampadaires()
     chantier.bornes()
     ambulants = chantier.ambulants()
+    paquets = chantier.paquets()
 
     terminus = next(p for p in chantier.points if p["slug"] == "terminus")
     depart = (terminus["x"], terminus["y"])
@@ -935,6 +953,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "lampes": chantier.lampes,
         "decor": chantier.decor,
         "ambulants": ambulants,
+        "paquets": paquets,
         "zones": chantier.zones(),
         "points_interet": chantier.points,
         "apparition": {"joueur": {"x": depart[0], "y": depart[1]}},

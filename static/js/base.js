@@ -12,6 +12,9 @@ const TT = 16;
 const B = {
   etat: 'chargement',   // chargement | titre | jeu | pause | prison | hopital | fin
   menu: null,           // objet de menu canvas ; non nul = simulation figee
+  interieur: null,      // la piece ou l'on est, ou null dehors
+  exterieur: null,      // la ville mise de cote pendant qu'on est dedans
+  dialogue: null,       // boite de texte en cours
   fondu: null,
   t: 0,                 // images simulees depuis le demarrage
   rng: null,
@@ -44,12 +47,14 @@ function etatInitial(defs) {
     heure: 0.35,
     vie: 100,
     tenue: 'chandail',
+    tenues: ['chandail'],
     armes: { poings: { mun: null } },
     arme: 'poings',
-    planque: { armes: {}, vehicule: null },
+    planque: { armes: {}, vehicule: null, coffre: 0 },
     proprietes: {},
     missionsFaites: {},
     paquets: {},
+    journal: null,
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };
@@ -204,6 +209,7 @@ const Sauvegarde = (function () {
     for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
+    if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     return out;

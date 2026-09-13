@@ -24,6 +24,101 @@ const Hud = (function () {
 
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
+  // --- Menus canvas ---------------------------------------------------------------
+  //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur }.
+  //: `faire()` rend true pour fermer le menu, false pour le laisser ouvert
+  //: (on achete trois hot-dogs sans rouvrir le comptoir).
+
+  let repetT = 0;
+
+  function ouvrirMenu(menu) {
+    menu.curseur = menu.curseur || 0;
+    B.menu = menu;
+    Entree.contexte('menu');
+    Son.SFX.menu();
+  }
+
+  function fermerMenu() {
+    B.menu = null;
+    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+  }
+
+  /** Navigation : haut/bas (clavier, stick, joystick), ACTION choisit, FRAPPE ou annuler ferme. */
+  function majMenu() {
+    const m = B.menu;
+    if (!m) return;
+    const axe = Entree.axe;
+    let sens = 0;
+    if (Entree.neuf('haut')) sens = -1;
+    if (Entree.neuf('bas')) sens = 1;
+    if (!sens && axe.source !== 'clavier' && Math.abs(axe.y) > 0.6) {
+      if (repetT <= 0) { sens = axe.y < 0 ? -1 : 1; repetT = 12; } else repetT--;
+    } else if (axe.mag < 0.3) repetT = 0;
+    if (sens) {
+      const n = m.items.length;
+      m.curseur = (m.curseur + sens + n) % n;
+      Son.SFX.menu();
+    }
+    if (Entree.neuf('action')) {
+      const item = m.items[m.curseur];
+      if (item && item.actif !== false) {
+        const fini = item.faire ? item.faire(item) : true;
+        if (fini !== false && B.menu === m) fermerMenu();
+      } else Son.SFX.erreur();
+    }
+    if (Entree.neuf('annuler') || Entree.neuf('attaque') || Entree.neuf('pause')) fermerMenu();
+  }
+
+  function dessinerMenu(ctx) {
+    const m = B.menu;
+    if (!m) return;
+    const l = 300, h = Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    const x = (VW - l) / 2, y = (VH - h) / 2;
+    ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, y, l, h);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1);
+    texte(ctx, m.titre, x + 8, y + 7, '#e8b33c', 2);
+    if (m.sur) texte(ctx, m.sur, x + l - 8 - Atlas.largeurTexte(m.sur, 1), y + 10, '#cdc6e6', 1);
+    m.items.forEach(function (item, i) {
+      const yy = y + 28 + i * 14;
+      const choisi = i === m.curseur;
+      const actif = item.actif !== false;
+      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, l - 8, 12); }
+      texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
+      if (item.detail) texte(ctx, item.detail, x + l - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
+    });
+    if (m.aide) texte(ctx, m.aide, x + 8, y + h - 12, '#8a8698', 1);
+    B.stats.rects += 4;
+  }
+
+  /** L'invite du bas : ce que fera ACTION ici. */
+  function invite(ctx) {
+    const j = B.joueur;
+    if (!j || j.dansVehicule || !B.invite) return;
+    const t = 'ACTION : ' + B.invite;
+    const l = Atlas.largeurTexte(t, 1);
+    ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
+    texte(ctx, t, (VW - l) / 2, VH - 24, '#efe6d0', 1);
+    noter('invite', (VW - l) / 2 - 4, VH - 26, l + 8, 11);
+  }
+
+  /** Une boite de texte : une ou deux lignes, qui se ferme au bouton. */
+  function dialogue(qui, lignes, duree) {
+    B.dialogue = { qui: qui, lignes: Array.isArray(lignes) ? lignes : [lignes], t: 0, duree: duree || 0 };
+  }
+
+  function dessinerDialogue(ctx) {
+    const d = B.dialogue;
+    if (!d) return;
+    d.t++;
+    const h = 22 + d.lignes.length * 9;
+    ctx.fillStyle = 'rgba(11,10,18,0.9)'; ctx.fillRect(12, VH - h - 8, VW - 24, h);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
+    if (d.qui) texte(ctx, d.qui.toUpperCase(), 18, VH - h - 2, '#e8b33c', 1);
+    d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, 18, VH - h + 8 + i * 9, '#efe6d0', 1); });
+    if (d.duree && d.t > d.duree) B.dialogue = null;
+    B.stats.rects += 2;
+  }
+
   /** Un fondu au noir, avec une ligne au milieu : ce qui se passe ne se
       montre pas. Sert aussi aux portes et aux ellipses (M5). */
   function fondu(duree, texte) {
@@ -206,7 +301,7 @@ const Hud = (function () {
           texte(ctx, 'TAXI : UN CLIENT ATTEND', 70, 16, '#e8b33c', 1);
         }
       }
-      miniCarte(ctx);
+      if (!B.interieur) miniCarte(ctx);
       // Argent, etoiles, heure a droite.
       // ⚠️ En tactile, les boutons PAUSE et PLEIN ECRAN sont poses par-dessus
       // le coin haut-droit du canevas : la colonne se decale pour ne pas
@@ -224,8 +319,8 @@ const Hud = (function () {
       texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
       noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 13);
       // Le quartier ou l'on se trouve, sous la mini-carte.
-      const zone = j ? Monde.zoneA(j.x, j.y) : null;
-      noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
+      const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;
+      if (!B.interieur) noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
       if (zone) {
         // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
         // trottoir en plein jour — teste a l'oeil, pas en theorie.
@@ -264,6 +359,7 @@ const Hud = (function () {
         Atlas.texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH / 2 + 12, '#cdc6e6', 1);
       }
     }
+    if (B.etat === 'jeu') { invite(ctx); dessinerDialogue(ctx); dessinerMenu(ctx); }
     dessinerFondu(ctx);
     if (B.options.perf) {
       const s = B.stats;
@@ -271,6 +367,6 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dessiner, miniCarte, MINI, montrerScores, demanderScore,
+  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();

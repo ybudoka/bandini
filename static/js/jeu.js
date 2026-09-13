@@ -17,6 +17,13 @@ const Jeu = (function () {
     Entites.creerDecor(Monde.carte.def);
     Entites.creerAmbulants(Monde.carte.def);
     Vehicules.creerSignalisation();
+    Entites.creerPaquets(Monde.carte.def);
+    // Le char laisse devant la planque a la derniere sauvegarde.
+    const garde = p.planque.vehicule;
+    if (garde && Vehicules.vehiculeDef(garde.slug)) {
+      const v = Vehicules.creer(garde.slug, garde.x, garde.y, garde.angle || 0, { etat: 'stationne' });
+      if (v) { v.couleur = garde.couleur; v.swaps = { c: garde.couleur }; v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; }
+    }
     const app = Monde.carte.apparition.joueur;
     const x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
     const y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;
@@ -30,6 +37,45 @@ const Jeu = (function () {
     Entree.contexte('pied');
     Son.Ambiance.jouer();
     Hud.message('BAIE-DES-BRUMES', 150);
+  }
+
+  /** Passer une porte : fondu, la ville mise de cote, la piece chargee. */
+  function entrer(porte) {
+    const j = B.joueur;
+    if (!porte || !porte.interieur || B.interieur || j.dansVehicule) return false;
+    const piece = Monde.entrer(porte);
+    if (!piece) return false;
+    B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
+    B.entites = [j];
+    B.particules.length = 0;
+    B.interieur = piece.interieur;
+    Entites.reindexerDecor();
+    j.x = piece.interieur.apparition.x * TT + 8;
+    j.y = piece.interieur.apparition.y * TT + 8;
+    j.vx = 0; j.vy = 0; j.face = 'haut';
+    Monde.centrerCamera(j.x, j.y);
+    Hud.fondu(40, null);
+    Son.SFX.porte();
+    Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    return true;
+  }
+
+  function sortir() {
+    const j = B.joueur, ext = B.exterieur;
+    if (!B.interieur || !ext) return false;
+    Monde.restaurer(ext.carte);
+    B.entites = ext.entites;
+    if (B.entites.indexOf(j) < 0) B.entites.push(j);
+    B.particules.length = 0;
+    B.interieur = null;
+    B.exterieur = null;
+    Entites.reindexerDecor();
+    j.x = ext.x; j.y = ext.y; j.vx = 0; j.vy = 0; j.face = 'bas';
+    Entites.dansLaCarte(j);
+    Monde.centrerCamera(j.x, j.y);
+    Hud.fondu(40, null);
+    Son.SFX.porte();
+    return true;
   }
 
   function pause() {
@@ -62,6 +108,12 @@ const Jeu = (function () {
       B.options.muet = !B.options.muet;
       Son.majVolume();
       Hud.message(B.options.muet ? 'SON COUPE' : 'SON');
+    }
+    if (B.etat === 'jeu' && B.menu) {
+      // Un menu ouvert fige la simulation : le temps ne passe pas au comptoir.
+      Hud.majMenu();
+      Entree.videPresse();
+      return;
     }
     if (B.etat === 'jeu') {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
@@ -174,7 +226,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, pause, reprendre, basculerPause, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, entrer, sortir, pause, reprendre, basculerPause, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

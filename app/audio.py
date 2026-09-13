@@ -157,11 +157,11 @@ class Voix(TypedDict):
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
-#: `scripts/audio_elevenlabs.py --voix` le dit, il ne devine pas. Leo parle
-#: quebecois. Sarah est une voix anglaise que le modele multilingue fait
-#: parler francais : le jour ou une Quebecoise entre dans la bibliotheque,
-#: c'est ici qu'on la nomme.
-VOIX_PAR_GENRE = {"homme": "Léo - Français québécois", "femme": "Sarah - Mature, Reassuring, Confident"}
+#: `scripts/audio_elevenlabs.py --voix` le dit, il ne devine pas. Martin a
+#: ajoute des voix quebecoises le 13 sept. : Felix (« l'homme de tous les
+#: jours ») pour les passants, Amelie (accent d'ici, articulation nette) pour
+#: les passantes.
+VOIX_PAR_GENRE = {"homme": "Felix Tabarnak - Confident and Witty", "femme": "Amélie - Young, Confident and Friendly"}
 
 #: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
 #: fois de suite le meme (le moteur tire au hasard, avec un temps mort).

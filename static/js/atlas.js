@@ -116,6 +116,22 @@ const Atlas = (function () {
     return c;
   }
 
+  //: ⚠️ A cinq pixels de haut, un accent ne se lit pas ; et un glyphe absent
+  //: tombait sur « ? » (HÔPITAL, CASSE-CROÛTE, BÂTON, l'apostrophe courbe…).
+  //: On ramene donc chaque lettre a sa base AVANT de la dessiner.
+  const SANS_ACCENT = {
+    'À': 'A', 'Â': 'A', 'Ä': 'A', 'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Î': 'I', 'Ï': 'I',
+    'Ô': 'O', 'Ö': 'O', 'Ù': 'U', 'Û': 'U', 'Ü': 'U', 'Ç': 'C', 'Œ': 'OE', 'Æ': 'AE', 'Ÿ': 'Y',
+    '’': "'", '‘': "'", '«': '"', '»': '"', '“': '"', '”': '"', '—': '-', '–': '-', '…': '...',
+  };
+
+  /** Majuscules sans accent ni ponctuation courbe : ce que la police sait ecrire. */
+  function normaliser(s) {
+    let out = '';
+    for (const ch of String(s).toUpperCase()) out += (ch in SANS_ACCENT) ? SANS_ACCENT[ch] : ch;
+    return out;
+  }
+
   /** Texte en police pixel 3x5 (majuscules, chiffres, ponctuation). */
   function texte(ctx, s, x, y, couleur, echelle) {
     const e = echelle || 1;
@@ -123,7 +139,7 @@ const Atlas = (function () {
     if (!police) return;
     ctx.fillStyle = couleur || '#fff';
     let cx = x;
-    s = String(s).toUpperCase();
+    s = normaliser(s);
     for (const ch of s) {
       const g = police[ch] || police['?'];
       if (ch !== ' ' && g) {
@@ -137,9 +153,9 @@ const Atlas = (function () {
     return cx - x;
   }
 
-  function largeurTexte(s, echelle) { return String(s).length * 4 * (echelle || 1) - (echelle || 1); }
+  function largeurTexte(s, echelle) { return normaliser(s).length * 4 * (echelle || 1) - (echelle || 1); }
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, cuireRotations, cuireTuile, cuirePeintre, texte, largeurTexte, vider, get taille() { return cache.size; } };
+  return { valider, cuire, cuireRotations, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
 })();

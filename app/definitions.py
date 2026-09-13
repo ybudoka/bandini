@@ -12,7 +12,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import armes, audio, carte, economie, magasins, missions, pietons, recherche, vehicules
+from . import armes, audio, carte, economie, journal, magasins, missions, pietons, recherche, vehicules
 from .version import VERSION
 
 
@@ -32,6 +32,7 @@ def assembler() -> dict:
         "missions": missions.CATALOGUE,
         "defis": missions.DEFIS,
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
+        "journal": journal.REGLES,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,
         "tenues": magasins.TENUES,

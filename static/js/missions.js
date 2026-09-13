@@ -191,13 +191,350 @@ const Missions = (function () {
     },
   };
 
+  // --- Les points d'action des interieurs --------------------------------------------
+
+  const LIBELLES = {
+    lit: 'DORMIR', coffre: 'COFFRE', garde_robe: 'GARDE-ROBE', vendre: 'VENDRE LE CHAR', reparer: 'REPARER',
+    repeindre: 'REPEINDRE', acheter: 'ACHETER', hotdog: 'MANGER', soigner: 'SE FAIRE SOIGNER', caisse: 'LA CAISSE',
+    journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', sortie_prison: 'SORTIR', casier: 'CASIER', guichet: 'GUICHET',
+  };
+
+  function pointSousLaMain(j) {
+    const piece = B.interieur;
+    if (!piece) return null;
+    const tx = j.x / TT - 0.5, ty = j.y / TT - 0.5;
+    let meilleur = null, dMin = 1.6;
+    for (const p of piece.points) {
+      const d = Math.hypot(p.x - tx, p.y - ty);
+      if (d < dMin) { dMin = d; meilleur = p; }
+    }
+    return meilleur;
+  }
+
+  function utiliserPoint(j) {
+    const point = pointSousLaMain(j);
+    if (!point) return false;
+    j.animT = 10; j.animType = 'ramasse';           // un geste vers le comptoir
+    const menu = menuDuPoint(point);
+    if (!menu) { Hud.message('PLUS TARD'); return true; }
+    Hud.ouvrirMenu(menu);
+    return true;
+  }
+
+  function proprieteDe(lieu) {
+    return (B.defs.economie.proprietes || []).find(function (p) { return p.lieu === lieu; }) || null;
+  }
+
+  function possede(propriete) { return !!(propriete && B.partie.proprietes[propriete.slug]); }
+
+  /** L'entree de menu « prendre la caisse » d'une propriete a soi. */
+  function itemCaisse(lieu) {
+    const prop = proprieteDe(lieu);
+    if (!possede(prop)) return null;
+    const caisse = B.partie.proprietes[prop.slug].caisse || 0;
+    return { libelle: 'PRENDRE LA CAISSE', detail: caisse + ' $', actif: caisse > 0, faire: function () {
+      encaisser(caisse, prop.nom.toUpperCase());
+      B.partie.proprietes[prop.slug].caisse = 0;
+      return true;
+    } };
+  }
+
+  function menuDuPoint(point) {
+    const piece = B.interieur, p = B.partie, tarifs = B.defs.economie.tarifs;
+    const items = [];
+    const caisse = itemCaisse(piece.slug);
+    if (caisse) items.push(caisse);
+    switch (point.type) {
+      case 'lit':
+        items.push({ libelle: 'DORMIR JUSQU’AU MATIN', detail: 'SAUVEGARDE', faire: function () { dormir(); return true; } });
+        items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDEE'); return true; } });
+        return { titre: 'LA PLANQUE', items: items };
+      case 'coffre':
+        return menuCoffre();
+      case 'garde_robe':
+        return menuGardeRobe();
+      case 'vendre':
+      case 'reparer':
+      case 'repeindre':
+        return menuGarage(items);
+      case 'acheter':
+        return piece.slug === 'armurerie' ? menuArmurerie() : menuVetements();
+      case 'hotdog':
+        items.push({ libelle: 'HOT-DOG', detail: tarifs.hotdog + ' $ / +' + tarifs.hotdog_pv + ' PV', actif: p.argent >= tarifs.hotdog,
+                     faire: function () { payer(tarifs.hotdog, 'HOT-DOG'); soigner(B.joueur, tarifs.hotdog_pv); Son.SFX.argent(); return false; } });
+        return { titre: 'CASSE-CROUTE DU FAUBOURG', items: items, sur: p.argent + ' $' };
+      case 'soigner': {
+        const prix = B.defs.economie.hopital.minimum;
+        items.push({ libelle: 'SOINS COMPLETS', detail: prix + ' $', actif: p.argent >= prix && B.joueur.vie < B.joueur.vieMax,
+                     faire: function () { payer(prix, 'SOINS'); soigner(B.joueur, 999); return true; } });
+        return { titre: 'HOPITAL DE BAIE-DES-BRUMES', items: items, sur: p.argent + ' $' };
+      }
+      case 'caisse':
+        if (!caisse) items.push({ libelle: 'CE N’EST PAS A TOI', actif: false });
+        return { titre: piece.nom.toUpperCase(), items: items };
+      case 'journal':
+        items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
+                     faire: function () { payer(tarifs.journal, 'JOURNAL'); lireLeJournal(); return true; } });
+        return { titre: 'KIOSQUE A JOURNAUX', items: items, sur: p.argent + ' $' };
+      default:
+        return null;
+    }
+  }
+
+  // --- La planque ----------------------------------------------------------------------
+
+  function menuCoffre() {
+    const p = B.partie;
+    function depot(n) { return function () { const m = Math.min(n, p.argent); p.argent -= m; p.planque.coffre += m; Son.SFX.argent(); return false; }; }
+    function retrait(n) { return function () { const m = Math.min(n, p.planque.coffre); p.planque.coffre -= m; p.argent += m; Son.SFX.argent(); return false; }; }
+    return { titre: 'LE COFFRE', sur: 'COFFRE ' + p.planque.coffre + ' $ · POCHES ' + p.argent + ' $',
+             aide: 'CE QUI EST DANS LE COFFRE NE PART PAS EN PRISON',
+             items: [
+               { libelle: 'DEPOSER 100 $', actif: p.argent >= 1, faire: depot(100) },
+               { libelle: 'DEPOSER TOUT', actif: p.argent >= 1, faire: depot(Infinity) },
+               { libelle: 'RETIRER 100 $', actif: p.planque.coffre >= 1, faire: retrait(100) },
+               { libelle: 'RETIRER TOUT', actif: p.planque.coffre >= 1, faire: retrait(Infinity) },
+             ] };
+  }
+
+  function porterTenue(slug) {
+    const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === slug; });
+    if (!tenue) return false;
+    B.partie.tenue = slug;
+    B.joueur.swaps = { c: tenue.couleur };
+    // Changer de linge, c'est devenir quelqu'un d'autre pour la police (M4 affinera).
+    Police.remiseAZero();
+    return true;
+  }
+
+  function menuGardeRobe() {
+    const p = B.partie;
+    const items = (B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }).map(function (t) {
+      return { libelle: t.nom.toUpperCase(), detail: p.tenue === t.slug ? 'PORTEE' : '', faire: function () { porterTenue(t.slug); return true; } };
+    });
+    return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TETE' };
+  }
+
+  /** Dormir : la nuit passe, on se reveille au matin, la partie est sauvee. */
+  function dormir() {
+    const p = B.partie;
+    p.jour += 1;
+    p.heure = 0.30;
+    B.joueur.vie = B.joueur.vieMax;
+    B.joueur.endurance = 100;
+    p.vie = B.joueur.vie;
+    Police.remiseAZero();
+    nouveauJour();
+    sauvegarderPartie();
+    Hud.fondu(120, 'LE LENDEMAIN MATIN');
+  }
+
+  // --- Le garage de Ti-Guy --------------------------------------------------------------
+
+  /** Le char gare devant : le plus proche de la porte, dans les 90 px. */
+  function charDevant() {
+    const ext = B.exterieur;
+    if (!ext) return null;
+    let meilleur = null, dMin = 90 * 90;
+    for (const e of ext.entites) {
+      if (e.type !== 'vehicule' || e.etat === 'epave') continue;
+      const d = dist2(e.x, e.y, ext.x, ext.y);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    return meilleur;
+  }
+
+  function prixDeVente(v) {
+    const eco = B.defs.economie, p = B.partie;
+    const ventes = (p.ventes && p.ventes[v.slug] && p.ventes[v.slug].jour === p.jour) ? p.ventes[v.slug].n : 0;
+    const part = Math.max(0, Math.min(1, v.vie / v.vieMax));
+    return Math.max(0, Math.round(v.def.prix * eco.vente_fraction * part * Math.max(0, 1 - eco.vente_malus_doublon * ventes)));
+  }
+
+  function menuGarage(items) {
+    const eco = B.defs.economie, p = B.partie, v = charDevant();
+    if (!v) {
+      items.push({ libelle: 'GARE UN CHAR DEVANT LA PORTE', actif: false });
+      return { titre: 'GARAGE ROCCO BANDINI', items: items };
+    }
+    const vente = prixDeVente(v);
+    const reparation = Math.round((v.vieMax - v.vie) * eco.reparation_par_pv);
+    items.push({ libelle: 'VENDRE ' + v.def.nom.toUpperCase(), detail: vente + ' $', actif: vente > 0, faire: function () {
+      encaisser(vente, 'VENDU');
+      p.ventes = p.ventes || {};
+      const jour = p.ventes[v.slug] && p.ventes[v.slug].jour === p.jour ? p.ventes[v.slug].n : 0;
+      p.ventes[v.slug] = { jour: p.jour, n: jour + 1 };
+      const i = B.exterieur.entites.indexOf(v);
+      if (i >= 0) B.exterieur.entites.splice(i, 1);
+      return true;
+    } });
+    items.push({ libelle: 'REPARER', detail: reparation + ' $', actif: reparation > 0 && p.argent >= reparation, faire: function () {
+      payer(reparation, 'REPARATION'); v.vie = v.vieMax; return true;
+    } });
+    items.push({ libelle: 'REPEINDRE (EFFACE LE VOL)', detail: eco.repeinte + ' $', actif: p.argent >= eco.repeinte, faire: function () {
+      payer(eco.repeinte, 'PEINTURE');
+      const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
+      v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
+      v.swaps = { c: v.couleur }; v.vole = false; v.alarme = 0;
+      Police.remiseAZero();
+      return true;
+    } });
+    return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
+  }
+
+  // --- Les magasins ------------------------------------------------------------------
+
+  function magasin(slug) { return (B.defs.magasins || []).find(function (m) { return m.slug === slug; }) || null; }
+
+  function menuArmurerie() {
+    const p = B.partie, m = magasin('armurerie');
+    const items = [];
+    (m ? m.articles : []).forEach(function (slug) {
+      const arme = Combat.armeDef(slug);
+      if (!arme) return;
+      const deja = !!p.armes[slug];
+      items.push({ libelle: arme.nom.toUpperCase(), detail: deja ? 'DEJA A TOI' : arme.prix + ' $', actif: !deja && p.argent >= arme.prix,
+                   faire: function () { payer(arme.prix, arme.nom.toUpperCase()); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+    });
+    (m ? m.munitions : []).forEach(function (slug) {
+      const arme = Combat.armeDef(slug);
+      if (!arme || !p.armes[slug] || arme.prix_munitions === null) return;
+      const pleine = p.armes[slug].mun >= arme.munitions_max;
+      items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : arme.prix_munitions + ' $',
+                   actif: !pleine && p.argent >= arme.prix_munitions,
+                   faire: function () { payer(arme.prix_munitions, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+    });
+    return { titre: 'CHEZ GUS', items: items, sur: p.argent + ' $' };
+  }
+
+  function menuVetements() {
+    const p = B.partie;
+    const items = (B.defs.tenues || []).map(function (t) {
+      const deja = p.tenues.indexOf(t.slug) >= 0;
+      return { libelle: t.nom.toUpperCase(), detail: deja ? (p.tenue === t.slug ? 'PORTEE' : 'A TOI') : t.prix + ' $',
+               actif: deja || p.argent >= t.prix, faire: function () {
+                 if (!deja) { payer(t.prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
+                 porterTenue(t.slug);
+                 return true;
+               } };
+    });
+    return { titre: 'BOUTIQUE ROSA', items: items, sur: p.argent + ' $' };
+  }
+
+  // --- Les proprietes -------------------------------------------------------------------
+
+  /** A la porte d'une propriete a vendre : acheter ou entrer. Rend true si un menu s'ouvre. */
+  function acheterPropriete(porte) {
+    const prop = proprieteDe(porte.lieu);
+    if (!prop || prop.phase !== 1 || possede(prop)) return false;
+    const p = B.partie;
+    Hud.ouvrirMenu({ titre: prop.nom.toUpperCase(), sur: p.argent + ' $',
+      aide: prop.revenu_par_jour + ' $ PAR JOUR, A RAMASSER SUR PLACE',
+      items: [
+        { libelle: 'ACHETER', detail: prop.prix + ' $', actif: p.argent >= prop.prix, faire: function () {
+          payer(prop.prix, prop.nom.toUpperCase());
+          p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
+          Hud.message(prop.nom.toUpperCase() + ' EST A TOI', 180);
+          return true;
+        } },
+        { libelle: 'ENTRER', faire: function () { Jeu.entrer(porte); return true; } },
+      ] });
+    return true;
+  }
+
+  function revenusDuJour() {
+    const eco = B.defs.economie, p = B.partie;
+    for (const slug in p.proprietes) {
+      const prop = eco.proprietes.find(function (q) { return q.slug === slug; });
+      if (!prop) continue;
+      const plafond = prop.revenu_par_jour * eco.caisse_jours_max;
+      p.proprietes[slug].caisse = Math.min(plafond, (p.proprietes[slug].caisse || 0) + prop.revenu_par_jour);
+    }
+  }
+
+  // --- Le journal du matin --------------------------------------------------------------
+
+  function manchetteDuJour() {
+    const p = B.partie, hier = p.journal || {}, s = p.stats;
+    const delta = function (k) { return (s[k] || 0) - (hier[k] || 0); };
+    const regles = B.defs.journal || [];
+    let choisie = null;
+    for (const r of regles) {
+      if (delta(r.cle) >= r.min) { choisie = r; break; }
+    }
+    p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0 };
+    return choisie || regles[regles.length - 1] || null;
+  }
+
+  function lireLeJournal() {
+    const m = B.partie.derniereManchette;
+    if (m) Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
+    else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN A SIGNALER A BAIE-DES-BRUMES.'], 300);
+  }
+
   function nouveauJour() {
-    if (typeof Hud !== 'undefined') Hud.message('JOUR ' + B.partie.jour);
+    revenusDuJour();
+    const m = manchetteDuJour();
+    if (m) { B.partie.derniereManchette = m; Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420); }
+    else Hud.message('JOUR ' + B.partie.jour);
+  }
+
+  // --- Les paquets caches ------------------------------------------------------------------
+
+  function ramasserPaquet(paquet) {
+    const p = B.partie, tarifs = B.defs.economie.tarifs;
+    B.joueur.animT = 12; B.joueur.animType = 'ramasse';
+    p.paquets[paquet.numero] = true;
+    const n = Object.keys(p.paquets).length;
+    encaisser(tarifs.paquet, 'PAQUET ' + n + '/' + Monde.carte.def.paquets.length);
+    if (n === 10) encaisser(tarifs.paquets_prime_10, 'PRIME : DIX PAQUETS');
+    if (n === 20) encaisser(tarifs.paquets_prime_20, 'PRIME : VINGT PAQUETS');
+    Entites.retirer(paquet);
+  }
+
+  /** L'invite ACTION du HUD : ce qu'on ferait ici, maintenant. */
+  function majInvite(j) {
+    B.invite = null;
+    if (!j || j.dansVehicule || B.menu) return;
+    if (B.interieur) {
+      const point = pointSousLaMain(j);
+      if (point) { B.invite = LIBELLES[point.type] || point.type.toUpperCase(); return; }
+      if (Monde.porteDevant(j)) B.invite = 'SORTIR';
+      return;
+    }
+    const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
+    if (etal) { const c = commerceDe(etal.slug); B.invite = c ? c.nom.toUpperCase() + ' — ' + B.defs.economie.tarifs[c.tarif] + ' $' : 'ACHETER'; return; }
+    const objet = Combat.objetSousLaMain(j);
+    if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
+    const porte = Monde.porteDevant(j);
+    if (porte) {
+      const prop = proprieteDe(porte.lieu);
+      B.invite = (prop && prop.phase === 1 && !possede(prop)) ? 'ACHETER ' + prop.nom.toUpperCase() : 'ENTRER';
+      return;
+    }
+    const v = Vehicules.vehiculeSousLaMain(j);
+    if (v) B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase();
   }
 
   function sauvegarderPartie() {
     const p = B.partie, j = B.joueur;
-    if (j) { p.x = Math.round(j.x); p.y = Math.round(j.y); p.vie = Math.max(1, j.vie); p.arme = j.arme; }
+    if (j) {
+      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : { x: j.x, y: j.y };
+      p.x = Math.round(dehors.x); p.y = Math.round(dehors.y); p.vie = Math.max(1, j.vie); p.arme = j.arme;
+      // Le char gare devant la planque revient avec la partie.
+      const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;
+      const porte = planque.portes.find(function (q) { return q.lieu === 'planque'; });
+      p.planque.vehicule = null;
+      if (porte) {
+        const entites = B.exterieur ? B.exterieur.entites : B.entites;
+        for (const e of entites) {
+          if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
+            p.planque.vehicule = { slug: e.slug, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };
+            break;
+          }
+        }
+      }
+    }
     p.empreinte = B.defs.empreinte;
     return Sauvegarde.ecrire(p);
   }
@@ -205,11 +542,18 @@ const Missions = (function () {
   function maj() {
     majMinuteries();
     taxi.maj();
+    majInvite(B.joueur);
+    // Les paquets se ramassent en passant dessus.
+    if (B.joueur && !B.interieur) {
+      for (const e of Entites.autour(B.joueur.x, B.joueur.y, 12, function (q) { return q.type === 'paquet'; })) ramasserPaquet(e);
+    }
     if (B.t % 600 === 0 && B.etat === 'jeu') sauvegarderPartie();
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
-           setTimeoutJeu, taxi, maj };
+           setTimeoutJeu, taxi, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
+           dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
+           revenusDuJour, manchetteDuJour, ramasserPaquet, majInvite, maj };
 })();

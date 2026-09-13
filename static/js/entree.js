@@ -224,7 +224,9 @@ const Entree = (function () {
     contexteCourant = nom;
     const etiquettes = nom === 'vehicule'
       ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
-      : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'COURS', arme: 'ARME' };
+      : nom === 'menu'
+        ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
+        : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'COURS', arme: 'ARME' };
     Object.keys(etiquettes).forEach(function (a) {
       const b = doc.querySelector('#boutons b[data-a="' + a + '"]');
       if (b) b.textContent = etiquettes[a];

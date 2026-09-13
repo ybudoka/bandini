@@ -721,6 +721,7 @@ def test_on_vole_un_char_et_on_en_descend(banc):
         L.Jeu.commencer();
         L.graine(41);
         const j = L.B.joueur;
+        j.y += 40;                                  // loin de la porte du terminus : E y entrerait
         const v = o.char('auto', 24, 0, 0);
         const avantVol = L.B.partie.stats.volees;
         o.tape('KeyE', 2);
@@ -1258,3 +1259,331 @@ def test_les_passages_ont_une_tuile_pleine_et_une_en_bout(banc):
         pleines, ouest, est = r[g]
         assert pleines > 0 and ouest > 0 and est > 0, r
         assert pleines == ouest + est, f"passage « {g} » : {pleines} pleines pour {ouest + est} en bout"
+
+
+# --- M5 : interieurs et economie ----------------------------------------------
+
+
+def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // Ce qui ne bouge pas : ni les pietons (oublies quand on s'eloigne), ni les
+        // chars, ni les armes de fortune (semees au fil des images).
+        const fixes = function () { return L.B.entites.filter(function (e) { return ['pieton', 'vehicule', 'ramassage', 'projectile'].indexOf(e.type) < 0; }).length; };
+        const dehors = { entites: fixes(), w: c.w };
+        o.tape('KeyE', 3);
+        const dedans = { interieur: L.B.interieur ? L.B.interieur.slug : null, w: L.Monde.carte.w, entites: L.B.entites.length,
+                         nuit: L.Monde.ambiance().alpha, cam: L.B.cam.x < 0,
+                         sol: L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT)),
+                         invite: (function () { j.x = L.B.interieur.sortie.x * L.TT + 8; j.y = (L.B.interieur.sortie.y - 1) * L.TT + 8; L.Missions.majInvite(j); return L.B.invite; })() };
+        o.tape('KeyE', 3);
+        return { dehors: dehors, dedans: dedans, apres: { interieur: L.B.interieur, w: L.Monde.carte.w, entites: fixes(),
+                 pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) } };
+    }""")
+    assert r["dedans"]["interieur"] == "planque" and r["dedans"]["w"] < r["dehors"]["w"]
+    assert r["dedans"]["entites"] == 1, "la ville est entree avec nous"
+    assert r["dedans"]["nuit"] == 0 and r["dedans"]["cam"] is True, "une piece se centre et n'a pas de nuit"
+    assert r["dedans"]["sol"] == 0 and r["dedans"]["invite"] == "SORTIR"
+    assert r["apres"]["interieur"] is None and r["apres"]["w"] == r["dehors"]["w"]
+    assert r["apres"]["entites"] == r["dehors"]["entites"], "la ville n'est pas revenue telle quelle"
+    assert r["apres"]["pres"] < 20, "on doit ressortir devant la porte"
+
+
+def test_le_menu_fige_le_jeu_et_se_navigue(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const t0 = L.B.t;
+        let choisi = null;
+        L.Hud.ouvrirMenu({ titre: 'ESSAI', items: [
+            { libelle: 'UN', faire: function () { choisi = 'un'; return true; } },
+            { libelle: 'DEUX', faire: function () { choisi = 'deux'; return true; } },
+            { libelle: 'TROIS', actif: false, faire: function () { choisi = 'trois'; return true; } },
+        ] });
+        o.frame(30);
+        const fige = L.B.t === t0;
+        o.tape('KeyS', 2);
+        const curseur = L.B.menu.curseur;
+        o.tape('KeyE', 2);
+        const ferme = L.B.menu === null;
+        L.Hud.ouvrirMenu({ titre: 'ESSAI', items: [{ libelle: 'X', faire: function () { return true; } }] });
+        o.tape('Space', 2);
+        return { fige: fige, curseur: curseur, choisi: choisi, ferme: ferme, retour: L.B.menu === null,
+                 etiquette: o.elements.tactile.querySelectorAll('[data-a]')[1].textContent };
+    }""")
+    assert r["fige"] is True, "le temps passe pendant un menu"
+    assert r["curseur"] == 1 and r["choisi"] == "deux" and r["ferme"] is True
+    assert r["retour"] is True, "FRAPPE doit fermer un menu"
+
+
+def test_la_planque_dort_sauve_et_garde_le_coffre(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Jeu.entrer(porte);
+        L.B.partie.argent = 250; j.vie = 30;
+        const jour = L.B.partie.jour;
+        // Le coffre.
+        const coffre = L.B.interieur.points.find(function (p) { return p.type === 'coffre'; });
+        j.x = coffre.x * L.TT + 8; j.y = coffre.y * L.TT + 8 + 12;
+        L.Missions.utiliserPoint(j);
+        const menuCoffre = L.B.menu.titre;
+        L.B.menu.items[0].faire();          // deposer 100
+        L.Hud.fermerMenu();
+        // Le lit.
+        const lit = L.B.interieur.points.find(function (p) { return p.type === 'lit'; });
+        j.x = lit.x * L.TT + 8; j.y = lit.y * L.TT + 8 + 12;
+        L.Missions.utiliserPoint(j);
+        L.B.menu.items[0].faire();          // dormir
+        L.Hud.fermerMenu();
+        const brut = JSON.parse(o.store[L.Sauvegarde.CLE]);
+        return { menuCoffre: menuCoffre, coffre: L.B.partie.planque.coffre, poches: L.B.partie.argent,
+                 jour: L.B.partie.jour - jour, heure: L.B.partie.heure, vie: j.vie,
+                 sauve: { coffre: brut.planque.coffre, jour: brut.jour, x: brut.x }, fondu: !!L.B.fondu,
+                 dehorsX: porte.x * L.TT + 8 };
+    }""")
+    assert r["menuCoffre"] == "LE COFFRE"
+    assert r["coffre"] == 100 and r["poches"] == 150
+    assert r["jour"] == 1 and 0.25 < r["heure"] < 0.35, "on se reveille le lendemain matin"
+    assert r["vie"] == 100 and r["fondu"] is True
+    assert r["sauve"]["coffre"] == 100 and r["sauve"]["jour"] == r["jour"] + 1
+    assert abs(r["sauve"]["x"] - r["dehorsX"]) < 4, "la sauvegarde doit retenir la position DEHORS, devant la porte"
+
+
+def test_le_garage_rachete_repare_et_repeint(banc, paquet):
+    eco = paquet["economie"]
+    auto = next(v for v in paquet["vehicules"] if v["slug"] == "auto")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        const v = o.char('auto', 20, 8, 0);
+        v.vie = 50; v.vole = true;
+        L.Jeu.entrer(porte);
+        L.B.partie.argent = 1000;
+        const point = L.B.interieur.points.find(function (p) { return p.type === 'reparer'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        L.Missions.utiliserPoint(j);
+        const menu = L.B.menu;
+        const libelles = menu.items.map(function (i) { return i.libelle; });
+        const vente = L.Missions.prixDeVente(v);
+        const item = function (debut) { return (L.B.menu.items.find(function (i) { return i.libelle.indexOf(debut) === 0; }) || { faire: function () { throw new Error(debut + ' absent de ' + L.B.menu.items.map(function (i) { return i.libelle; }).join('|')); } }); };
+        item('REPARER').faire();
+        const apresReparation = { vie: v.vie, argent: L.B.partie.argent };
+        item('REPEINDRE').faire();
+        const apresPeinture = { vole: v.vole, argent: L.B.partie.argent };
+        L.Missions.utiliserPoint(j);
+        item('VENDRE').faire();
+        return { libelles: libelles, vente: vente, apresReparation: apresReparation, apresPeinture: apresPeinture,
+                 argent: L.B.partie.argent, reste: L.B.exterieur.entites.indexOf(v) >= 0 };
+    }""")
+    assert any(libelle.startswith("VENDRE") for libelle in r["libelles"]) and "REPARER" in r["libelles"]
+    assert r["vente"] == round(auto["prix"] * eco["vente_fraction"] * 0.5)
+    assert r["apresReparation"]["vie"] == auto["vie"]
+    assert r["apresReparation"]["argent"] == 1000 - 50 * eco["reparation_par_pv"]
+    assert r["apresPeinture"]["vole"] is False and r["apresPeinture"]["argent"] == r["apresReparation"]["argent"] - eco["repeinte"]
+    assert r["reste"] is False, "le char vendu est encore devant le garage"
+    assert r["argent"] > r["apresPeinture"]["argent"], "la vente n'a rien rapporte"
+
+
+def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
+    batte = next(a for a in paquet["armes"] if a["slug"] == "batte")
+    coupe_vent = next(t for t in paquet["tenues"] if t["slug"] == "coupe_vent")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        function entrer(lieu, type) {
+            if (L.B.interieur) L.Jeu.sortir();
+            const porte = c.portes.find(function (p) { return p.lieu === lieu; });
+            j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+            L.Jeu.entrer(porte);
+            const point = L.B.interieur.points.find(function (p) { return p.type === type; });
+            j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+            L.Missions.utiliserPoint(j);
+            return L.B.menu;
+        }
+        L.B.partie.argent = 500;
+        const gus = entrer('armurerie', 'acheter');
+        gus.items.find(function (i) { return i.libelle === %s; }).faire();
+        const apresBaton = { arme: !!L.B.partie.armes.batte, argent: L.B.partie.argent, titre: gus.titre };
+        L.Hud.fermerMenu();
+        const rosa = entrer('vetements', 'acheter');
+        rosa.items.find(function (i) { return i.libelle === 'COUPE-VENT BLEU'; }).faire();
+        return { apresBaton: apresBaton, tenue: L.B.partie.tenue, tenues: L.B.partie.tenues, argent: L.B.partie.argent,
+                 swap: j.swaps.c, titre: rosa.titre };
+    }""" % json.dumps(batte["nom"].upper()))
+    assert r["apresBaton"]["titre"] == "CHEZ GUS" and r["apresBaton"]["arme"] is True
+    assert r["apresBaton"]["argent"] == 500 - batte["prix"]
+    assert r["titre"] == "BOUTIQUE ROSA" and r["tenue"] == "coupe_vent" and "coupe_vent" in r["tenues"]
+    assert r["swap"] == coupe_vent["couleur"], "la tenue doit changer la couleur du chandail"
+    assert r["argent"] == 500 - batte["prix"] - coupe_vent["prix"]
+
+
+def test_une_propriete_s_achete_et_rapporte(banc, paquet):
+    kiosque = next(p for p in paquet["economie"]["proprietes"] if p["slug"] == "kiosque")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'kiosque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Missions.majInvite(j);
+        const invite = L.B.invite;
+        L.B.partie.argent = 2000;
+        const ouvert = L.Missions.acheterPropriete(porte);
+        L.B.menu.items[0].faire();
+        L.Hud.fermerMenu();
+        const achete = !!L.B.partie.proprietes.kiosque;
+        L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour();
+        const caisse = L.B.partie.proprietes.kiosque.caisse;
+        // Dedans, on ramasse la caisse.
+        L.Jeu.entrer(porte);
+        const point = L.B.interieur.points.find(function (p) { return p.type === 'caisse'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        L.Missions.utiliserPoint(j);
+        const avant = L.B.partie.argent;
+        L.B.menu.items[0].faire();
+        L.Missions.majInvite(j);
+        return { invite: invite, ouvert: ouvert, achete: achete, caisse: caisse, gain: L.B.partie.argent - avant,
+                 reste: L.B.partie.proprietes.kiosque.caisse, deuxieme: L.Missions.acheterPropriete(porte) };
+    }""")
+    assert r["invite"].startswith("ACHETER"), r["invite"]
+    assert r["ouvert"] is True and r["achete"] is True
+    assert r["caisse"] == kiosque["revenu_par_jour"] * paquet["economie"]["caisse_jours_max"], "la caisse doit plafonner"
+    assert r["gain"] == r["caisse"] and r["reste"] == 0
+    assert r["deuxieme"] is False, "une propriete a soi ne se rachete pas"
+
+
+def test_les_paquets_caches_se_ramassent_et_paient(banc, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const paquets = L.B.entites.filter(function (e) { return e.type === 'paquet'; });
+        const n = paquets.length;
+        const argent = L.B.partie.argent;
+        for (let i = 0; i < 10; i++) {
+            const q = L.B.entites.find(function (e) { return e.type === 'paquet'; });
+            j.x = q.x; j.y = q.y;
+            L.Entites.indexer();
+            L.Missions.maj();
+        }
+        L.Missions.sauvegarderPartie();
+        const brut = JSON.parse(o.store[L.Sauvegarde.CLE]);
+        return { n: n, restants: L.B.entites.filter(function (e) { return e.type === 'paquet'; }).length,
+                 gain: L.B.partie.argent - argent, sauves: Object.keys(brut.paquets).length };
+    }""")
+    assert r["n"] == 20
+    assert r["restants"] == 10
+    assert r["gain"] == 10 * tarifs["paquet"] + tarifs["paquets_prime_10"]
+    assert r["sauves"] == 10, "les paquets ramasses doivent etre sauvegardes"
+
+
+def test_le_journal_du_matin_raconte_hier(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.stats.tues = 0;
+        L.Missions.nouveauJour();
+        const calme = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
+        L.B.dialogue = null;
+        L.B.partie.stats.tues = 2;
+        L.Missions.nouveauJour();
+        const sang = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
+        return { calme: calme, sang: sang, qui: L.B.dialogue.qui };
+    }""")
+    assert r["qui"] == "LE CLAIRON DE LA BAIE"
+    assert r["calme"] == "BRUME SUR LE BASSIN"
+    assert r["sang"] == "UN MORT DANS LA RUE"
+
+
+# --- Les gestes : le corps bouge quand on agit ----------------------------
+
+
+def test_le_coup_a_un_elan_et_un_bras(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.Entites.regarder(j, 1, 0);
+        const repos = L.Entites.pose(j);
+        L.Combat.frapper(j, false);
+        const phases = {};
+        for (let i = 0; i < 40 && j.etat === 'attaque'; i++) {
+            const p = L.Entites.pose(j);
+            if (!phases[j.phase]) phases[j.phase] = { dx: p.dx, bras: p.bras ? p.bras.longueur : null };
+            L.Entites.indexer(); L.Combat.maj();
+        }
+        // Une batte au repos se voit dans la main ; un coup l'allonge.
+        L.B.partie.armes.batte = { mun: null, usure: 0 }; j.arme = 'batte';
+        const batteRepos = L.Entites.pose(j);
+        L.Combat.frapper(j, false);
+        for (let i = 0; i < 40 && j.phase !== 'actif'; i++) { L.Entites.indexer(); L.Combat.maj(); }
+        const batteActive = L.Entites.pose(j);
+        // On dessine sans planter, bras compris.
+        L.Jeu.rendre();
+        return { repos: repos, phases: phases, batteRepos: batteRepos.bras && batteRepos.bras.arme.slug,
+                 batteLongueurRepos: batteRepos.bras && batteRepos.bras.longueur,
+                 batteActive: batteActive.bras && batteActive.bras.longueur, images: L.B.stats.images };
+    }""")
+    assert r["repos"]["bras"] is None and r["repos"]["dx"] == 0, "les poings au repos ne se dessinent pas"
+    assert r["phases"]["anticipation"]["dx"] < 0 < r["phases"]["actif"]["dx"], "on recule puis on se jette"
+    assert r["phases"]["anticipation"]["bras"] < r["phases"]["actif"]["bras"], "le bras s'allonge au moment du coup"
+    assert r["batteRepos"] == "batte", "une arme tenue doit se voir au repos"
+    assert r["batteActive"] > r["batteLongueurRepos"]
+    assert r["images"] > 0
+
+
+def test_la_roulade_tourne_et_le_recul_chancelle(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(81);
+        const j = L.B.joueur;
+        j.roule = L.Combat.ROULADE_IMAGES / 2;
+        const roule = L.Entites.pose(j).rot;
+        j.roule = 0;
+        const cible = o.poser('ouvrier', 14, 0);
+        cible.vx = 1.5; cible.recul = 5;
+        const chancelle = L.Entites.pose(cible).rot;
+        j.animT = 5; j.animType = 'ramasse';
+        const penche = L.Entites.pose(j);
+        return { roule: roule, chancelle: chancelle, penche: penche.echelleY, dy: penche.dy };
+    }""")
+    assert abs(abs(r["roule"]) - 3.14159) < 0.05, "a mi-roulade, le corps est a l'envers"
+    assert r["chancelle"] != 0
+    assert r["penche"] < 1 and r["dy"] > 0, "ramasser courbe le dos"
+
+
+def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
+    """Un glyphe absent tombe sur « ? » : HÔPITAL, CASSE-CROÛTE, BÂTON… Martin
+    l'a vu a l'ecran. Chaque nom du jeu doit se normaliser en glyphes connus."""
+    r = banc("""function (L, o) {
+        const d = L.B.defs;
+        const textes = [];
+        d.armes.forEach(function (a) { textes.push(a.nom); });
+        d.vehicules.forEach(function (v) { textes.push(v.nom); });
+        d.tenues.forEach(function (t) { textes.push(t.nom); });
+        d.magasins.forEach(function (m) { textes.push(m.nom); });
+        d.ambulants.forEach(function (m) { textes.push(m.nom); });
+        d.carte.points_interet.forEach(function (p) { textes.push(p.nom); });
+        d.carte.zones.forEach(function (z) { textes.push(z.nom); });
+        Object.keys(d.carte.interieurs).forEach(function (k) { textes.push(d.carte.interieurs[k].nom); });
+        d.journal.forEach(function (j) { textes.push(j.titre, j.texte); });
+        d.audio.voix.forEach(function (v) { textes.push(v.texte); });
+        d.audio.radios.forEach(function (r) { textes.push(r.nom); });
+        d.economie.proprietes.forEach(function (p) { textes.push(p.nom); });
+        d.pietons.catalogue.forEach(function (p) { textes.push(p.nom); });
+        ['DORMIR JUSQU’AU MATIN', 'REVEIL A L’HOPITAL — 30 $', 'Baie-des-Brumes… la brume'].forEach(function (t) { textes.push(t); });
+        const inconnus = {};
+        textes.forEach(function (t) {
+            for (const ch of L.Atlas.normaliser(t)) if (ch !== ' ' && !L.POLICE_PIXEL[ch]) inconnus[ch] = (inconnus[ch] || 0) + 1;
+        });
+        return { n: textes.length, inconnus: inconnus, hopital: L.Atlas.normaliser('Hôpital de Baie-des-Brumes'),
+                 largeur: L.Atlas.largeurTexte('Œuvre', 1) };
+    }""")
+    assert r["n"] > 40
+    assert r["inconnus"] == {}, f"glyphes que la police ne sait pas ecrire : {r['inconnus']}"
+    assert r["hopital"] == "HOPITAL DE BAIE-DES-BRUMES"
+    assert r["largeur"] == 6 * 4 - 1, "la largeur doit compter le OE en deux lettres"
