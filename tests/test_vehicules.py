@@ -83,6 +83,28 @@ def test_la_chaine_de_cercles_ne_laisse_aucun_trou():
     assert vehicules.par_slug("autobus")["cercles"] == vehicules.PHYSIQUE["cercles"] + 2
 
 
+def test_seul_le_velo_n_a_pas_de_reservoir():
+    """⚠️ Retour de Martin : aujourd'hui, un velo EXPLOSE. Il a 30 PV — le plus
+    fragile du jeu — et `endommager()` appelait `exploser()` des que les PV
+    tombaient a zero, pour tous les vehicules sans une seule exception. Deux
+    coups de batte, et il partait en boule de feu : quarante particules, une
+    deflagration de 60 px a 90 points de degats, l'ecran qui tremble, et un
+    delit `explosion` a +2★. On renversait un velo, et la police arrivait.
+
+    La regle tient sur une ligne de fiche : ce qui n'a pas de reservoir ne
+    brule pas et n'explose pas. C'est ICI qu'elle se decide — pas dans un
+    `slug === 'velo'` cache dans le navigateur. Le jour ou on ajoute une
+    trottinette, ce test le dira."""
+    sans = {v["slug"] for v in vehicules.CATALOGUE if not v["reservoir"]}
+    assert sans == {"velo"}, f"le catalogue a change de sens : {sans}"
+    for v in vehicules.CATALOGUE:
+        assert isinstance(v["reservoir"], bool), v["slug"]
+        # ⚠️ Ce qui a un moteur a de l'essence. La coupure n'est pas le prix ni
+        # les PV : c'est la classe.
+        if v["classe"] != "velo":
+            assert v["reservoir"], f"{v['slug']} roule sans essence ?"
+
+
 def test_seuls_les_lourds_defoncent():
     """Un char leger ne casse rien : sinon la ville entiere se demonte a la
     berline, et les clotures ne veulent plus rien dire."""

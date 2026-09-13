@@ -1735,6 +1735,68 @@ def test_un_char_explose_et_brule_ce_qui_l_entoure(banc, paquet):
     assert r["crimes"] >= 1, "faire exploser un char n'est pas un crime ?"
 
 
+def test_un_velo_ne_saute_pas_il_se_plie(banc, paquet):
+    """⚠️ Retour de Martin : un velo EXPLOSE. Il a 30 PV, le plus fragile du
+    jeu ; deux coups de batte et il partait en boule de feu — quarante
+    particules, une deflagration de 60 px a 90 points de degats sur tout ce qui
+    l'entoure, l'ecran qui tremble, et un delit `explosion` a +2★ avec une
+    alarme de 15 tuiles. On renversait un velo, et la police arrivait.
+
+    Le meme decor que le juge de l'explosion, au velo pres : un voisin a 18 px,
+    un temoin plus loin. Rien de tout ca ne doit bouger — et le velo doit quand
+    meme finir en epave, sinon on l'a rendu indestructible."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(45);
+        const v = o.char('velo', 60, 0, 0);
+        const voisin = o.poser('ouvrier', 60, 18);
+        voisin.courage = 0;
+        const auto = o.char('auto', 60, 30, 0);
+        L.Entites.indexer();
+        const secousse0 = L.B.cam.secousse;
+        L.Vehicules.endommager(v, 9999, L.B.joueur);
+        const apres = { etat: v.etat, vie: v.vie, plie: !!v.plie, voisin: voisin.vie === voisin.vieMax,
+                        auto: auto.vie === auto.vieMax, secousse: L.B.cam.secousse <= secousse0,
+                        crimes: L.B.partie.stats.crimes, etoiles: L.B.recherche.etoiles,
+                        particules: L.B.particules.length, decals: L.B.decals.length };
+        // Et il ne BRULE pas non plus : cent images sur une epave a zero PV
+        // ne doivent poser ni flamme ni fumee. ⚠️ On compte les particules
+        // POSEES PRES DU VELO, pas la longueur du tableau : celles de la chute
+        // s'eteignent pendant la mesure, et le solde serait negatif.
+        const vraiP = L.Entites.particule;
+        let fume = 0;
+        L.Entites.particule = function (x, y) {
+            if (Math.hypot(x - v.x, y - v.y) < 24) fume++;
+            return vraiP.apply(null, arguments);
+        };
+        o.frame(100);
+        L.Entites.particule = vraiP;
+        apres.fume = fume;
+        // Le meme coup sur une auto, lui, fait bien tout sauter : c'est le
+        // temoin que le juge mesure une DIFFERENCE, pas une panne.
+        const a2 = o.char('auto', -200, 0, 0);
+        L.Entites.indexer();
+        L.Vehicules.endommager(a2, 9999, L.B.joueur);
+        apres.auto_saute = { etat: a2.etat, crimes: L.B.partie.stats.crimes };
+        return apres;
+    }""")
+    assert r["etat"] == "epave" and r["vie"] == 0 and r["plie"] is True, (
+        "un velo detruit doit rester une epave, pliee : %s" % r
+    )
+    assert r["voisin"] is True, "le velo a blesse quelqu'un en se pliant"
+    assert r["auto"] is True, "le velo a endommage le char d'a cote"
+    assert r["secousse"] is True, "l'ecran a tremble pour un velo"
+    assert r["decals"] == 0, "un velo plie laisse une marque d'explosion au sol"
+    assert r["particules"] < 20, "quarante particules de feu pour un velo : %s" % r["particules"]
+    assert r["crimes"] == 0 and r["etoiles"] == 0, (
+        "plier un velo a donne %s crime(s) et %s etoile(s)" % (r["crimes"], r["etoiles"])
+    )
+    assert r["fume"] == 0, "le velo a zero PV fume ou brule : %s particules" % r["fume"]
+    assert r["auto_saute"]["etat"] == "epave" and r["auto_saute"]["crimes"] >= 1, (
+        "une auto, elle, doit toujours exploser et se compter : %s" % r["auto_saute"]
+    )
+
+
 def test_le_carjacking_se_voit_toujours(banc, paquet):
     gravite = paquet["recherche"]["delits"]["carjacking"]["etoiles"]
     r = banc("""function (L, o) {

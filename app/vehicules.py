@@ -11,6 +11,9 @@ Depuis M9, une fiche porte aussi ce que le char SAIT FAIRE, et le navigateur
 n'a pas a le deviner de son slug :
 
     cercles   la chaine de cercles qui le represente (3 par defaut)
+    reservoir ce qui n'en a pas ne brule pas et n'explose pas — le velo, et
+              lui seul aujourd'hui. C'est PYTHON qui le decide : le navigateur
+              n'a pas a reconnaitre un velo a son slug
     defonce   0 = rien ; sinon la fraction de vitesse gardee en cassant un
               obstacle bas (cloture, borne-fontaine, poubelle)
     soigne    PV par seconde rendus a qui le conduit (l'ambulance)
@@ -51,6 +54,7 @@ class Vehicule(TypedDict):
     ejecte: bool
     eau: bool
     cercles: int
+    reservoir: bool
     defonce: float
     soigne: float
     crochet: bool
@@ -61,7 +65,7 @@ class Vehicule(TypedDict):
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
-       masse=1.0, cercles=3, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
+       masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
        radio=None, phase=1) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
@@ -70,7 +74,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         braquage=braquage, adherence=0.12 if not eau else 0.05, adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
-        ejecte=ejecte, eau=eau, cercles=cercles, defonce=defonce, soigne=soigne,
+        ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, defonce=defonce, soigne=soigne,
         crochet=crochet, boulot=boulot, radio=radio, phase=phase,
     )
 
@@ -91,8 +95,11 @@ CATALOGUE: list[Vehicule] = [
        radio="le_choc"),
     # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
     # prendre a son cycliste (qui temoigne), on en tombe au premier choc.
+    # ⚠️ `reservoir=False` : un velo n'a pas d'essence, donc il ne brule pas et
+    # n'explose pas. C'est le SEUL du catalogue dans ce cas, et c'est le seul
+    # endroit ou ca se decide.
     _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
-       ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True),
+       ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
     # --- M9, le parc automobile ------------------------------------------

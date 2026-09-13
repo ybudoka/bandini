@@ -328,7 +328,33 @@ const Vehicules = (function () {
     if (v.etat === 'epave' || degats <= 0) return;
     v.vie -= degats;
     if (source) v.agresseur = source;
-    if (v.vie <= 0) exploser(v);
+    if (v.vie > 0) return;
+    // ⚠️ Ce qui n'a pas de reservoir ne brule pas et n'explose pas : ca se
+    // PLIE. C'est la fiche qui le dit (`reservoir`), pas un `slug === 'velo'`
+    // cache ici — le jour ou une trottinette arrive, elle se plie toute seule.
+    if (v.def.reservoir === false) plier(v); else exploser(v);
+  }
+
+  /** Un char sans reservoir a zero PV : il tombe sur le cote, tordu, et c'est
+      tout. Pas de feu, pas de fumee, pas de secousse, pas de deflagration —
+      et surtout AUCUN DELIT : on renversait un velo, et la police arrivait
+      pour une explosion a deux etoiles. */
+  function plier(v) {
+    v.etat = 'epave';
+    v.vie = 0;
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    v.plie = true;
+    v.swaps = { c: '#4a4a52' };
+    v.angle += (B.rng() - 0.5) * 1.6;      // il gît de travers : on voit qu'il est tombe
+    v.epaveT = physique().epave_secondes * 60;
+    v.alarme = 0;
+    for (let i = 0; i < 8; i++) {
+      const a = B.rng() * Math.PI * 2, s = 0.4 + B.rng();
+      Entites.particule(v.x, v.y, Math.cos(a) * s, Math.sin(a) * s * 0.6, 16 + B.rng() * 10, '#8a8a8a', 1, 0.06);
+    }
+    Son.SFX.choc();
+    if (v.conducteur && v.conducteur !== 'trafic') descendre(v.conducteur, true);
+    if (v.conducteur === 'trafic') v.conducteur = null;
   }
 
   /** Un char du trafic qui nous passe pres : on l'entend passer, une fois. */
@@ -348,14 +374,19 @@ const Vehicules = (function () {
     bruitDePassage(v);
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
-      if (B.t % 6 === 0) Entites.particule(v.x + (B.rng() - 0.5) * 14, v.y - 4, (B.rng() - 0.5) * 0.3, -0.2, 40, '#3a3a3a', 2, -0.01);
+      // ⚠️ Une carcasse fume — sauf celle qui n'avait rien a bruler. Un velo
+      // plie sur le trottoir ne degage pas une colonne de fumee noire.
+      if (v.def.reservoir !== false && B.t % 6 === 0) Entites.particule(v.x + (B.rng() - 0.5) * 14, v.y - 4, (B.rng() - 0.5) * 0.3, -0.2, 40, '#3a3a3a', 2, -0.01);
       return;
     }
     const part = v.vie / v.vieMax;
-    if (part < ph.feu_sous) {
+    // ⚠️ Sans reservoir, pas de feu ni de fumee : un velo cabosse au bord du
+    // trottoir ne s'enflamme pas tout seul, et rien ne le ronge jusqu'a zero.
+    const brule = v.def.reservoir !== false;
+    if (brule && part < ph.feu_sous) {
       if (B.t % 3 === 0) Entites.particule(v.x + (B.rng() - 0.5) * 10, v.y - 6, (B.rng() - 0.5) * 0.4, -0.5, 18, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
       if (B.t % 60 === 0) endommager(v, ph.feu_degats_par_seconde, v.agresseur);
-    } else if (part < ph.fumee_sous && B.t % 8 === 0) {
+    } else if (brule && part < ph.fumee_sous && B.t % 8 === 0) {
       Entites.particule(v.x + (B.rng() - 0.5) * 8, v.y - 6, (B.rng() - 0.5) * 0.3, -0.3, 30, '#8a8a8a', 2, -0.01);
     }
     if (v.alarme > 0) {

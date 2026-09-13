@@ -56,10 +56,11 @@ ne bougent pas quand l'ordre de travail change.
 | Le souffle en surplus | **livré** (13 sept. 2026) | demande de Martin (« les choses qui donnent du souffle devraient donner un **bonus**, parce que le souffle monte seul ») : il remontait de 0,24 par image — une barre vide pleine en **7 s** — et `nourrir` plafonnait à 100, donc une poutine à 18 $ rendait 70 points qu'on avait gratuitement en s'arrêtant quatre secondes. Manger ajoute maintenant **par-dessus** les 100 (plafond 60) : le surplus **part en premier** au sprint, ne remonte **jamais** tout seul, et se perd en dormant, à l'hôpital et en prison. À l'écran, une ligne cyan d'un pixel **posée sur** la barre — elle garde sa couleur sous café (barre verte) et **disparaît au volant**, où la barre montre la carrosserie. Son plafond est un réglage de **poursuite** : 60 points = 2,5 s de sprint de plus, 5 s sous café, et un juge refait le calcul. 2 juges neufs |
 | Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Le fondu de l'hôpital et de la prison | **livré** (13 sept. 2026) | demande de Martin (« il faut corriger le fade out et in quand on va à l'hôpital ou qu'on se fait enfermer ») : quatre changements de scène — l'hôpital, la prison, la compagnie, le coucher — étaient restés sur `Hud.fondu` + `setTimeoutJeu`, soit **deux horloges** que rien ne liait : l'une comptait dans le dessin, l'autre dans la mise à jour. On se regardait donc disparaître de la rue à **80 % de noir**, le texte se lisait par-dessus le trottoir où l'on venait de tomber, et la ville continuait de tourner pendant les deux secondes et demie — un char pouvait repasser sur un joueur à 1 PV. Les quatre passent maintenant par la machine des portes, `Jeu.transiter()`, qui n'a **qu'une** horloge et change la scène **pile** à alpha 1. Elle gagne pour eux un troisième nombre, `[fermer, tenir, ouvrir]` : une porte, on la passe ; une nuit, un séjour à l'hôpital **font passer du temps**, et ce temps se sent dans le noir tenu, où le texte s'écrit — et **seulement** là. `Hud.fondu`, `setTimeoutJeu` et leurs minuteries sont supprimés : plus une seule deuxième horloge dans le jeu |
-| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. **Reste** : `defonce`, `soigne`, `crochet`, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe, et **un vélo qui n'explose plus** |
+| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. **Reste** : `defonce`, `soigne`, `crochet`, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
 | Rampes vraiment prenables | **P1** **correctif** à faire | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
 | Étoiles de recherche illisibles | **P2** **correctif** à faire | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
+| La nuit ne se vide pas | **P2** **correctif** à faire | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **P2** **correctif** à faire | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
 | Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
 | Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
@@ -426,6 +427,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P1** Rampes vraiment prenables | élan, portée et freinage **calculés** depuis la fiche du char au lieu d'être écrits en tuiles ; la trajectoire rejouée par un test pour chaque rampe posée | réussir Le Grand Saut en moto et retomber sur la rue, pas dans un mur |
 | — | **P2** L'endurance du Faubourg | trois vitesses (marche / course gratuite / sprint coûteux), policier aligné sur la course, renommage `joueur_course`, barre qui s'efface quand elle est pleine | traverser la ville sans gérer une barre ; ne plus semer un agent en marchant vite |
 | — | **P2** Étoiles de recherche illisibles | étoile **dessinée** (pas un caractère agrandi), jaune à elle, en haut au centre avec la ligne d'objectif qui descend, étoiles éteintes **creuses**, clignotement rouge gardé, ancre tactile réenregistrée | lire son niveau de recherche sans quitter la route des yeux |
+| — | **P2** La nuit ne se vide pas | rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | **P2** Arbres dans les sentiers | une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
@@ -489,10 +491,11 @@ ordre-là.
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, ce que les fiches disent que les chars savent faire, et le vélo qui explose. Prérequis de M10 |
+| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, ce que les fiches disent que les chars savent faire (`defonce`, `soigne`, `crochet`), et le sport et le luxe. Prérequis de M10 |
 | **P1** | **correctif** | Une rampe qu'on peut vraiment prendre | 2 | ⚠️ *Le Grand Saut* est au tableau des défis et **ne peut pas se gagner** : la moto vole 126 px pour 96 px de réception |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
 | **P2** | **correctif** | Les étoiles de recherche, grosses, jaunes et au centre | 1 | ⚠️ l'argent est dessiné **deux fois plus gros** que le niveau de recherche, qui est la seule chose qui compte en poursuite |
+| **P2** | **correctif** | La nuit ne se vide pas | 1 | ⚠️ le Faubourg ne perd **aucune** voiture la nuit — le plafond `vehicules_max` mord avant le rythme — et garde 19 piétons à 3 h du matin |
 | **P2** | **correctif** | Des arbres plantés au milieu des sentiers | 1 | à chaque parc — et `self.reserve` fait déjà ça pour le devant des portes |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
@@ -981,15 +984,108 @@ Ce qui a été livré, dans l'ordre de ce qui se voit :
 Le **Python est commité** (`7a4d26e` pour le catalogue, les boulots, les stations ; `e49603a`
 pour le lot de la fourrière) : les fiches, l'économie, la carte et leurs juges existent.
 
-**Livré le 13 sept. 2026 — les quatre chars existent** (voir la fiche ci-dessous).
-**Reste à faire**, et c'est celui qui se joue :
+**Livré le 13 sept. 2026** — les quatre chars existent, et un vélo ne saute plus (les deux
+fiches ci-dessous). **Reste à faire**, et c'est celui qui se joue :
 
 - `defonce`, `soigne`, `crochet` sont dans les fiches et **personne ne les lit** ;
 - les **boulots au klaxon** ne se prennent pas : `Missions.taxi` est encore le seul, et la
   fourrière n'a ni comptoir, ni saisie à l'arrestation, ni chars dans sa cour ;
 - la **radio procédurale** est dans le paquet mais `Son.Radio` ne sait pas qu'une station
   peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien ;
-- le **sport** et le **luxe** n'existent pas encore, ni le **vélo qui n'explose plus**.
+- le **sport** et le **luxe** n'existent pas encore.
+
+- `vehicules.py` : les quatre chars **existent et roulent** (fiche livrée plus bas) ; ce que
+  leurs fiches disent qu'ils savent faire reste à brancher — le `defonce` du **camion** (il
+  sert à M10), le `soigne` de l'**ambulance**, le `crochet` de la **remorqueuse**.
+  Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
+  carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
+  suffit pour l'eau.
+- **Le haut de gamme : deux chars qu'on vole exprès** (demande de Martin). Tout le reste du
+  parc est utilitaire — on le prend parce qu'il sert. Il manque le contraire : un char
+  qu'on prend parce qu'on le **veut**. Deux fiches, pas dix, et elles s'opposent.
+  - **Le sport** (coupé décapotable) : la plus rapide sur quatre roues, reprise sèche, et
+    une adhérence basse qui la fait partir en travers au frein à main. Carrosserie mince
+    (peu de PV) : un barrage l'arrête pour de bon. Alarme.
+  - **Le luxe** (grosse berline noire) : lourde, elle encaisse, elle ne va pas vite — et
+    c'est **la meilleure revente du jeu** au garage de Ti-Guy. Alarme longue.
+  - ⚠️ **Ce qui compte, c'est où on les trouve**, sinon ce sont deux lignes de catalogue
+    de plus. Leur `frequence` est la plus basse du parc, et `carte.zones()` leur donne un
+    **goût de quartier** : le luxe se gare devant l'Hôtel Bandini et dans les entrées des
+    Érables, le sport traîne au Carré et devant le bar le soir. Ni l'un ni l'autre ne naît
+    dans La Shop — on ne laisse pas une décapotable dans une cour à ferraille. Un char rare
+    qu'on croise partout n'est plus rare.
+  - Le reste tombe tout seul : `economie.prix_vente` est déjà proportionnelle au prix neuf,
+    donc le luxe devient la meilleure course d'argent du jeu **sans une ligne de plus**, et
+    le malus par doublon du même jour empêche d'en faire une usine. En M10, le shylock
+    accepte un char de luxe en acompte : c'est la passerelle.
+- Boulots au klaxon, sur le patron du taxi : **ambulance** (un blessé quelque part, chrono,
+  le sortir vivant), **pizza** (trois livraisons, la pizza refroidit — le pourboire fond),
+  **remorquage** (la fourrière paie pour les épaves).
+- **Fourrière** : un char mal garé, ou saisi à l'arrestation, part au lot ; on le rachète
+  au comptoir, ou on le reprend par-dessus la clôture (1★, et les gars du lot ripostent).
+  - ⚠️ **« Mal garé » doit vouloir dire quelque chose** (**correctif** : la règle est
+    promise par la fourrière et n'existe nulle part). Depuis que les stationnements ont
+    de vraies **cases** (`^ v < >`, une tuile de large, deux de creux), la définition tombe
+    toute seule et se teste : est mal garé un char **laissé hors d'une case ET qui gêne** —
+    sur la chaussée, en travers d'une allée, devant une porte, sur un passage piéton, dans
+    la cour d'un commerce. Un char dans sa case, ou rangé sur une ruelle, ne se fait jamais
+    remorquer. ⚠️ Et **jamais celui de la planque**, quoi qu'il arrive : c'est la
+    sauvegarde de Martin.
+  - ⚠️ **Le lot de la fourrière se gare comme les autres** (**correctif**). Sa cour est aujourd'hui un
+    rectangle de `p` avec des places calculées à la main — alors que `_stationnement()`
+    sait maintenant poser des rangées de cases, des allées et un îlot de béton. La cour doit
+    passer par lui : des chars saisis rangés de travers dans un lot municipal, c'est
+    exactement ce qu'on vient de corriger partout ailleurs, et les `places` du paquet se
+    lisent alors dans les cases plutôt que dans une grille inventée.
+  - ⚠️ **Mais pas de tremplin dans la cour.** `_stationnement()` finit par poser un
+    `_tremplin_de_stationnement` dans une allée — dans la fourrière, ce serait une sortie
+    par-dessus la clôture sans payer, et toute l'idée du lot tombe. La cour demande les
+    cases **sans** le tremplin.
+- **Radio procédurale** : `Son.Mus` (le séquenceur trois voix, déjà là) génère une station
+  par véhicule à partir d'une graine — le camion a sa toune, l'autobus n'a que son moteur.
+- **Juges** : chaque char a son sprite (harnais Node) ; la remorqueuse n'en traîne qu'un à
+  la fois ; l'ambulance ne ressuscite personne ; la fourrière ne peut **jamais** manger le
+  char de la planque (c'est la sauvegarde de Martin) ; le sport reste **sous** la moto et
+  ne dépasse l'auto-patrouille que d'un cheveu ; le luxe est la plus grosse revente et la
+  plus basse fréquence du parc ; aucun des deux ne naît dans un district qui ne les veut
+  pas.
+
+#### Un vélo ne saute plus, il se plie (**correctif**, taille 1) — **livré le 13 sept. 2026**
+
+*Retour de Martin :* il part en boule de feu et donne 2★.
+
+⚠️ **Et c'est exactement ce qui se passait.** `endommager()` appelait `exploser()` dès que
+les PV tombaient à zéro, **pour tous les véhicules sans une seule exception** — et le vélo a
+30 PV, le plus fragile du jeu. Deux coups de batte, et le juge du banc le mesure : quarante
+particules, quatre marques au sol, une déflagration de 60 px qui blesse le passant à 18 px
+**et** cabosse l'auto d'à côté, l'écran qui tremble, un délit `explosion` et son alarme de
+15 tuiles. On renversait un vélo, et la police arrivait.
+
+Ce qui a été livré :
+
+- **La règle tient sur une ligne de fiche** : `vehicules.py` gagne `reservoir` — **ce qui n'a
+  pas de réservoir ne brûle pas et n'explose pas**. ⚠️ C'est **Python** qui le décide, pas un
+  `slug === 'velo'` caché dans le navigateur : le jour où une trottinette arrive, elle se plie
+  toute seule, et un juge dit que le vélo est le **seul** du catalogue dans ce cas.
+- **Un vélo à zéro PV se plie** : il gît de travers (un peu de cap au hasard, pour qu'on voie
+  qu'il est tombé), il grisonne, son cycliste part avec — il est déjà `ejecte` —, huit
+  poussières et le bruit d'un choc. Pas d'explosion, pas de secousse, pas de marque au sol.
+- ⚠️ **Il ne brûle pas non plus avant.** `majEtatDuChar` mettait le feu sous 20 % des PV et
+  rongeait 4 PV par seconde jusqu'à l'explosion : un vélo cabossé au bord du trottoir
+  s'enflammait tout seul, puis sautait. Ni feu ni fumée sans réservoir.
+- ⚠️ **Ni une fois plié.** La carcasse d'un char fume tant qu'elle est là ; celle d'un vélo,
+  non — il n'avait rien à brûler. C'est le détail qu'on ne voit qu'en regardant l'épave dix
+  secondes, et c'est là qu'une règle à moitié appliquée se remarque.
+- ⚠️ **Ni dans la chaîne** : `exploser()` endommage les véhicules autour, donc une explosion
+  en déclenche d'autres. Un vélo garé à côté d'un char qui saute se plie maintenant au lieu
+  d'agrandir la déflagration gratuitement — sans une ligne de plus, parce que c'est
+  `endommager()` qui tranche, et que toute la chaîne passe par lui.
+- **Juges (2 neufs)** : côté Python, le vélo est le seul sans réservoir et tout ce qui n'est
+  pas de la classe `velo` en a un ; côté banc, **le même décor que le juge de l'explosion**,
+  au vélo près — le voisin est intact, l'auto d'à côté est intacte, l'écran n'a pas tremblé,
+  zéro marque, zéro délit, zéro étoile, et **zéro particule près du vélo pendant les cent
+  images qui suivent**. ⚠️ Le même test fait ensuite sauter une auto pour de vrai : il mesure
+  une **différence**, pas une panne.
 
 #### Les quatre chars existent (taille 1) — **livré le 13 sept. 2026**
 
@@ -1025,83 +1121,6 @@ Ce qui a été livré :
 - **Juges (2 neufs)** : celui des sprites de phase 1, et celui qui crée les cinq chars, les
   conduit vingt images, mesure la chaîne de cercles (aucun trou, le compte de la fiche) et
   dessine une image sans planter.
-
-- `vehicules.py` : **camion** (lent, lourd, défonce un mur — il sert à M10), **autobus**
-  (long, deux cercles de collision de plus, pas de radio), **ambulance** (rapide, sirène,
-  soigne), **remorqueuse** (un crochet : on accroche un char et on le traîne).
-  Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
-  carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
-  suffit pour l'eau.
-- **Le haut de gamme : deux chars qu'on vole exprès** (demande de Martin). Tout le reste du
-  parc est utilitaire — on le prend parce qu'il sert. Il manque le contraire : un char
-  qu'on prend parce qu'on le **veut**. Deux fiches, pas dix, et elles s'opposent.
-  - **Le sport** (coupé décapotable) : la plus rapide sur quatre roues, reprise sèche, et
-    une adhérence basse qui la fait partir en travers au frein à main. Carrosserie mince
-    (peu de PV) : un barrage l'arrête pour de bon. Alarme.
-  - **Le luxe** (grosse berline noire) : lourde, elle encaisse, elle ne va pas vite — et
-    c'est **la meilleure revente du jeu** au garage de Ti-Guy. Alarme longue.
-  - ⚠️ **Ce qui compte, c'est où on les trouve**, sinon ce sont deux lignes de catalogue
-    de plus. Leur `frequence` est la plus basse du parc, et `carte.zones()` leur donne un
-    **goût de quartier** : le luxe se gare devant l'Hôtel Bandini et dans les entrées des
-    Érables, le sport traîne au Carré et devant le bar le soir. Ni l'un ni l'autre ne naît
-    dans La Shop — on ne laisse pas une décapotable dans une cour à ferraille. Un char rare
-    qu'on croise partout n'est plus rare.
-  - Le reste tombe tout seul : `economie.prix_vente` est déjà proportionnelle au prix neuf,
-    donc le luxe devient la meilleure course d'argent du jeu **sans une ligne de plus**, et
-    le malus par doublon du même jour empêche d'en faire une usine. En M10, le shylock
-    accepte un char de luxe en acompte : c'est la passerelle.
-- ⚠️ **Un vélo n'explose pas** — **correctif**, retour de Martin. Aujourd'hui, il explose. `endommager()`
-  appelle `exploser()` dès que les PV tombent à zéro, **pour tous les véhicules sans une
-  seule exception** — et le vélo a 30 PV, le plus fragile du jeu. Deux coups de batte, et il
-  part en boule de feu : quarante particules, une déflagration de 60 px qui fait 90 points de
-  dégâts à tout ce qui se trouve autour, l'écran qui tremble, et un délit `explosion` à
-  **+2★** avec une alarme de 15 tuiles. On renverse un vélo, et la police arrive.
-  - La règle tient sur une ligne de fiche : **ce qui n'a pas de réservoir ne brûle pas et
-    n'explose pas**. `vehicules.py` gagne `reservoir` (faux pour le seul vélo) — c'est Python
-    qui décide, pas un `slug === 'velo'` caché dans le JS.
-  - Un vélo à zéro PV **se plie** : il tombe sur le côté, son cycliste part avec (il est déjà
-    `ejecte`), et il reste là, tordu. Pas de feu, pas de fumée, pas de son d'explosion, pas de
-    secousse de caméra, et **aucun délit**.
-  - ⚠️ Il ne brûle pas non plus **avant** : `majEtatDuChar` met le feu sous 20 % des PV et
-    enlève 4 PV par seconde jusqu'à l'explosion. Un vélo ne s'enflamme pas tout seul au bord
-    du trottoir.
-  - ⚠️ Ni **dans la chaîne** : `exploser()` endommage les véhicules autour, donc une
-    explosion en déclenche d'autres. Un vélo garé à côté d'un char ne doit pas agrandir la
-    déflagration gratuitement.
-  - **Juges** : un véhicule sans réservoir n'explose jamais, quel que soit le dégât reçu ; un
-    vélo détruit ne signale aucun délit et ne blesse personne autour ; et le vélo est le seul
-    du catalogue dans ce cas — le jour où on ajoute une trottinette, le test le dira.
-- Boulots au klaxon, sur le patron du taxi : **ambulance** (un blessé quelque part, chrono,
-  le sortir vivant), **pizza** (trois livraisons, la pizza refroidit — le pourboire fond),
-  **remorquage** (la fourrière paie pour les épaves).
-- **Fourrière** : un char mal garé, ou saisi à l'arrestation, part au lot ; on le rachète
-  au comptoir, ou on le reprend par-dessus la clôture (1★, et les gars du lot ripostent).
-  - ⚠️ **« Mal garé » doit vouloir dire quelque chose** (**correctif** : la règle est
-    promise par la fourrière et n'existe nulle part). Depuis que les stationnements ont
-    de vraies **cases** (`^ v < >`, une tuile de large, deux de creux), la définition tombe
-    toute seule et se teste : est mal garé un char **laissé hors d'une case ET qui gêne** —
-    sur la chaussée, en travers d'une allée, devant une porte, sur un passage piéton, dans
-    la cour d'un commerce. Un char dans sa case, ou rangé sur une ruelle, ne se fait jamais
-    remorquer. ⚠️ Et **jamais celui de la planque**, quoi qu'il arrive : c'est la
-    sauvegarde de Martin.
-  - ⚠️ **Le lot de la fourrière se gare comme les autres** (**correctif**). Sa cour est aujourd'hui un
-    rectangle de `p` avec des places calculées à la main — alors que `_stationnement()`
-    sait maintenant poser des rangées de cases, des allées et un îlot de béton. La cour doit
-    passer par lui : des chars saisis rangés de travers dans un lot municipal, c'est
-    exactement ce qu'on vient de corriger partout ailleurs, et les `places` du paquet se
-    lisent alors dans les cases plutôt que dans une grille inventée.
-  - ⚠️ **Mais pas de tremplin dans la cour.** `_stationnement()` finit par poser un
-    `_tremplin_de_stationnement` dans une allée — dans la fourrière, ce serait une sortie
-    par-dessus la clôture sans payer, et toute l'idée du lot tombe. La cour demande les
-    cases **sans** le tremplin.
-- **Radio procédurale** : `Son.Mus` (le séquenceur trois voix, déjà là) génère une station
-  par véhicule à partir d'une graine — le camion a sa toune, l'autobus n'a que son moteur.
-- **Juges** : chaque char a son sprite (harnais Node) ; la remorqueuse n'en traîne qu'un à
-  la fois ; l'ambulance ne ressuscite personne ; la fourrière ne peut **jamais** manger le
-  char de la planque (c'est la sauvegarde de Martin) ; le sport reste **sous** la moto et
-  ne dépasse l'auto-patrouille que d'un cheveu ; le luxe est la plus grosse revente et la
-  plus basse fréquence du parc ; aucun des deux ne naît dans un district qui ne les veut
-  pas.
 
 ### Une rampe qu'on peut vraiment prendre (**correctif**, taille 2)
 
@@ -1247,6 +1266,53 @@ blanc. C'est à l'envers.
 - **Juges** : les étoiles sont l'élément le plus grand du HUD en poursuite ; on distingue
   allumée d'éteinte sans compter ; rien du HUD ne se chevauche au centre (étoiles et ligne
   d'objectif) ; et aucune ancre ne tombe sous un bouton tactile.
+
+### La nuit ne se vide pas (**correctif**, taille 1)
+
+*Demande de Martin :* « la nuit, il devrait y avoir moins de monde et de voitures sur les
+routes. »
+
+Le mécanisme existe depuis M8 — chaque district a un `rythme` (nuit, matin, soir) que
+`Monde.rythme()` applique aux piétons et aux véhicules. ⚠️ **Mais il ne fait presque rien, et
+dans le Faubourg il ne fait littéralement rien.**
+
+| District | Piétons | Véhicules en circulation |
+|---|---|---|
+| **Le Faubourg** | 26 → **19,5** | 9 → **9** |
+| Les Quais | 20 → 14 | 8 → 5,6 |
+| Les Érables | 14 → 7 | 7 → 3,5 |
+| La Pointe | 12 → 4,2 | 4 → 1,4 |
+| La Shop | 11 → 1,6 | 9 → 1,3 |
+
+⚠️ **Le Faubourg ne perd pas une seule voiture la nuit**, et c'est arithmétique, pas une
+impression : il en déclare 12, son rythme de nuit vaut 0,75, et le plafond `vehicules_max`
+vaut **9**. Or 12 × 0,75 = 9. `min(9, 9)` le jour, `min(9, 9)` la nuit — **le plafond mord
+avant le rythme**, et la nuit n'existe pas. C'est le quartier où l'on passe le plus de temps,
+et c'est le seul où la valeur tombe pile sur le plafond.
+
+⚠️ **Et il garde 19 piétons à 3 h du matin.** Un rythme de 0,75 enlève un quart du monde : ça
+ne se voit pas. Une nuit, c'est un trottoir vide et deux phares au loin.
+
+- **Les rythmes de nuit descendent**, et le Faubourg le premier. La Shop à 0,15 est le bon
+  exemple : elle se vide pour de vrai, et c'est exactement ce qui la rend inquiétante — le
+  reste de la ville devrait avoir le droit d'être inquiétant aussi.
+- ⚠️ **Le plafond doit s'appliquer avant le rythme, pas après.** `min(plafond, déclaré) ×
+  rythme`, et non `min(plafond, déclaré × rythme)`. Sinon tout district généreux le jour se
+  retrouve coincé au plafond la nuit, et la correction des nombres ne suffira pas.
+- ⚠️ **La police, elle, ne suit aucun rythme.** `zone.police` est lu tel quel : autant
+  d'agents à 4 h du matin qu'à midi. Une ville déserte patrouillée comme en plein jour, ça se
+  remarque tout de suite — et à l'inverse, une police plus rare la nuit rend la nuit
+  intéressante.
+- **Les chars stationnés restent**, et c'est juste : on ne rentre pas son char dans sa poche.
+  Mais leur répartition devrait tourner — plus dans les entrées des Érables la nuit, moins sur
+  les rues commerçantes.
+- **Ce que ça donne, et c'est le vrai gain** : la nuit devient un **choix**. Moins de monde,
+  c'est moins de témoins, donc moins d'étoiles pour le même geste. Le jeu a déjà tout ce qu'il
+  faut pour ça — les témoins, les cônes de vision réduits la nuit — il ne manquait que des
+  rues vraiment vides pour que ça se sente.
+- **Juges** : dans **chaque** district, la nuit compte strictement moins de piétons et moins
+  de véhicules que le jour (un test qui aurait rougi sur le Faubourg) ; le plafond ne masque
+  jamais le rythme ; et la police suit le rythme comme le reste.
 
 ### Des arbres plantés au milieu des sentiers (**correctif**, taille 1)
 
