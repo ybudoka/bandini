@@ -35,3 +35,15 @@ def test_export_complet():
     for cle in ("paliers", "delits", "vision", "temoins", "deguisement", "vitesses", "tuile_px"):
         assert cle in e
     assert e["vitesses"]["joueur_sprint"] > e["vitesses"]["policier"] > e["vitesses"]["pieton_course"]
+
+
+def test_la_police_de_terrain_est_bornee():
+    police = recherche.POLICE
+    assert 1 <= police["patrouille_par_zone_max"] <= 6
+    assert 1 <= police["regarde_toutes_les_images"] <= 10, "un agent qui regarde trop rarement rate tout"
+    assert 8 <= police["arrestation_px"] <= 24
+    assert police["poursuite_abandon_s"] < recherche.PALIERS[1]["decroissance_s"] * 2
+    assert 0.5 <= police["auto_vitesse"] <= 1.0
+    assert police["tir_cadence_s"] > 0 and police["tir_portee_tuiles"] <= recherche.VISION["policier"]["jour"]
+    assert 1 <= police["prison_heures"] <= 12
+    assert recherche.PALIERS[3]["tirent"] and not recherche.PALIERS[2]["tirent"], "on tire a partir de 3 etoiles"

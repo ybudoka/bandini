@@ -101,9 +101,27 @@ VITESSES = {"joueur_marche": 1.2, "joueur_sprint": 2.1, "pieton": 0.45, "pieton_
             "policier": 1.9, "endurance": 100, "endurance_par_image": 0.4}
 
 
+#: La police sur le terrain : patrouille, poursuite, arrestation, prison.
+POLICE = {
+    "patrouille_par_zone_max": 3,   # agents a pied dans la bulle, plafond (la zone dit combien)
+    "regarde_toutes_les_images": 3, # un agent teste son cone une image sur trois (budget)
+    "arrestation_px": 16,           # au contact : la main au collet
+    "poursuite_abandon_s": 12,      # sans te voir pendant ce temps, l'agent retourne patrouiller
+    "chemin_toutes_les_images": 30, # l'agent redemande son chemin (A*) a ce rythme
+    "auto_vitesse": 0.85,           # fraction de la vitesse max de l'auto-patrouille en poursuite
+    "auto_sortent_px": 60,          # si tu es a pied, les agents descendent a cette distance
+    "tir_cadence_s": 1.2,           # a 3 etoiles et plus, un agent tire a ce rythme
+    "tir_portee_tuiles": 9,
+    "affiches_max": 6,              # affiches « Recherche » dans la bulle a partir de 2 etoiles
+    "prison_heures": 6,             # le temps que la prison prend, en heures de jeu
+    "silence_rayon_px": 30,         # a quelle distance on achete le silence d'un temoin
+}
+
+
 def exporter() -> dict:
     return {
         "tuile_px": TUILE_PX,
+        "police": dict(POLICE),
         "paliers": PALIERS,
         "etoiles_max": ETOILES_MAX,
         "chaleur_par_gravite": CHALEUR_PAR_GRAVITE,

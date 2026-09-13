@@ -199,6 +199,66 @@ const Monde = (function () {
     return trouvee;
   }
 
+  // --- Chemins : un A* a budget --------------------------------------------------------
+  //: Les demandes font la file ; on en sert DEUX par image, chacune plafonnee a
+  //: 800 noeuds — un chemin introuvable ne doit pas geler l'image. Le demandeur
+  //: repart en ligne droite en attendant (`repli`).
+
+  const fileChemins = [];
+  const BUDGET_PAR_IMAGE = 2, NOEUDS_MAX = 800;
+
+  /** Demande un chemin en tuiles de (x0,y0) a (x1,y1) en pixels ; `fait(chemin)`
+      recoit une liste de {x, y} (pixels, centres de tuiles) ou null. */
+  function demanderChemin(x0, y0, x1, y1, masque, fait) {
+    fileChemins.push({ x0: x0, y0: y0, x1: x1, y1: y1, masque: masque, fait: fait });
+  }
+
+  function majChemins() {
+    for (let n = 0; n < BUDGET_PAR_IMAGE && fileChemins.length; n++) {
+      const d = fileChemins.shift();
+      d.fait(chemin(d.x0, d.y0, d.x1, d.y1, d.masque));
+    }
+  }
+
+  /** A* sur la grille (4 voisins), synchrone, plafonne. Rend des centres de
+      tuiles en pixels, depart exclu, ou null si trop loin / bloque. */
+  function chemin(x0, y0, x1, y1, masque) {
+    const sx = Math.floor(x0 / TT), sy = Math.floor(y0 / TT), gx = Math.floor(x1 / TT), gy = Math.floor(y1 / TT);
+    if (!carte || bloque(gx, gy, masque)) return null;
+    if (sx === gx && sy === gy) return [];
+    const w = carte.w;
+    const ouvert = [{ x: sx, y: sy, g: 0, f: Math.abs(gx - sx) + Math.abs(gy - sy) }];
+    const vu = new Map();      // cle -> { g, parent }
+    vu.set(sy * w + sx, { g: 0, parent: -1 });
+    let noeuds = 0;
+    while (ouvert.length) {
+      // Le plus prometteur : une file simple suffit a 800 noeuds.
+      let mi = 0;
+      for (let i = 1; i < ouvert.length; i++) if (ouvert[i].f < ouvert[mi].f) mi = i;
+      const c = ouvert.splice(mi, 1)[0];
+      if (c.x === gx && c.y === gy) {
+        const out = [];
+        let cle = gy * w + gx;
+        while (cle !== sy * w + sx) {
+          out.push({ x: (cle % w) * TT + 8, y: Math.floor(cle / w) * TT + 8 });
+          cle = vu.get(cle).parent;
+        }
+        return out.reverse();
+      }
+      if (++noeuds > NOEUDS_MAX) return null;
+      for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const nx = c.x + d[0], ny = c.y + d[1];
+        if (nx < 0 || ny < 0 || nx >= carte.w || ny >= carte.h || bloque(nx, ny, masque)) continue;
+        const cle = ny * w + nx, g = c.g + 1;
+        const deja = vu.get(cle);
+        if (deja && deja.g <= g) continue;
+        vu.set(cle, { g: g, parent: c.y * w + c.x });
+        ouvert.push({ x: nx, y: ny, g: g, f: g + Math.abs(gx - nx) + Math.abs(gy - ny) });
+      }
+    }
+    return null;
+  }
+
   // --- Rendu du sol ---------------------------------------------------------------
 
   /** Un passage pieton fait deux tuiles de large, mais ses bandes n'en
@@ -392,7 +452,7 @@ const Monde = (function () {
     charger, entrer, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
-    miniCarte, couleurMini,
-    get carte() { return carte; },
+    miniCarte, couleurMini, chemin, demanderChemin, majChemins,
+    get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };
 })();

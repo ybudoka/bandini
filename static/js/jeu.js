@@ -121,6 +121,7 @@ const Jeu = (function () {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
       if (Entree.neuf('carte')) { Hud.demanderScore(); B.etat = 'pause'; Hud.etat('pause'); Entree.videPresse(); return; }
       Monde.majHeure();
+      Monde.majChemins();
       Entites.maj();
       Combat.maj();
       Vehicules.maj();

@@ -616,8 +616,37 @@ const Vehicules = (function () {
     return dMin;
   }
 
+  /** Le chien de garde du trafic : dix secondes sans bouger, sans feu rouge
+      devant, c'est un char coince — quelle qu'en soit la cause. On le recale
+      au centre de la voie la plus proche dans son sens, cap redressé,
+      croisement rendu. Martin en a vu trois de travers dans une boîte ;
+      plutôt que courir après chaque cause, on garantit la sortie. */
+  function debloquer(v) {
+    const immobile = Math.abs(v.vx) + Math.abs(v.vy) < 0.05;
+    v.immobileT = immobile ? (v.immobileT || 0) + 1 : 0;
+    if (v.immobileT < 600) return false;
+    if (v.attendFeu && v.attenteBoite === 0 && v.stopT === undefined) {
+      // Au rouge pour vrai ? Le feu ne dure jamais plus de 480 images : au-dela, non.
+      const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+      const p = PAS_FLECHE[v.sens] || [0, 0];
+      const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
+      if (inter && !Monde.feuVert(inter, v.sens) && v.immobileT < 720) return false;
+    }
+    const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    const voie = voieLaPlusProche(v, tx, ty);
+    v.cible = null; v.sortie = null; v.enBoite = null; v.stopT = undefined; v.attenteBoite = 0; v.attendFeu = false;
+    v.patience = 0; v.force = 90; v.immobileT = 0; v.debloques = (v.debloques || 0) + 1;
+    if (voie) {
+      v.x = voie.x; v.y = voie.y;
+      const q = PAS_FLECHE[v.sens] || [1, 0];
+      v.angle = Math.atan2(q[1], q[0]);
+    }
+    return true;
+  }
+
   function majConducteur(v) {
     const t = trafic();
+    if (debloquer(v)) return;
     if (!v.cible || (v.attendFeu && !v.cible.tx)) v.cible = prochaineCible(v);
     if (!v.cible) { majPhysique(v, { gaz: 0, frein: 1, direction: 0 }); return; }
     if (v.attendFeu) {

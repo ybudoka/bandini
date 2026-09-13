@@ -1621,3 +1621,71 @@ def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
     assert r["options"] == "OPTIONS" and r["sangApres"] == (not r["sangAvant"]) and r["sauvees"] == r["sangApres"]
     assert r["bilan"]["titre"] == "BILAN" and r["bilan"]["lignes"] >= 9
     assert r["etat"] == "jeu" and r["menu"] is None, "Echap doit reprendre et fermer le menu"
+
+
+# --- M4 : la police -----------------------------------------------------------
+
+
+def test_le_a_etoile_contourne_un_batiment_et_ne_gele_pas(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, j = L.B.joueur;
+        // Un batiment garanti : on part devant sa porte et on vise derriere lui (la ruelle).
+        const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
+        const x0 = porte.x * L.TT + 8, y0 = (porte.y + 1) * L.TT + 8;
+        let ty = porte.y - 1;
+        while (ty > 0 && L.Monde.solidite(porte.x, ty) === 1) ty--;
+        const x1 = porte.x * L.TT + 8, y1 = ty * L.TT + 8;
+        const t0 = Date.now();
+        const chemin = L.Monde.chemin(x0, y0, x1, y1, L.Monde.MASQUE_PIETON);
+        const ms = Date.now() - t0;
+        let traverseUnMur = false;
+        (chemin || []).forEach(function (p) { if (L.Monde.solidite(Math.floor(p.x / L.TT), Math.floor(p.y / L.TT)) === 1) traverseUnMur = true; });
+        const direct = Math.abs(y1 - y0) / L.TT;
+        // La file : deux demandes servies par image, la troisieme attend.
+        let servies = 0;
+        for (let i = 0; i < 3; i++) L.Monde.demanderChemin(x0, y0, x1, y1, L.Monde.MASQUE_PIETON, function () { servies++; });
+        L.Monde.majChemins();
+        const apresUneImage = servies, enAttente = L.Monde.cheminsEnAttente;
+        L.Monde.majChemins();
+        // Une cible dans un mur : null, tout de suite.
+        const impossible = L.Monde.chemin(x0, y0, porte.x * L.TT + 8, porte.y * L.TT + 8, L.Monde.MASQUE_PIETON);
+        return { trouve: !!chemin, longueur: chemin ? chemin.length : 0, direct: direct, traverseUnMur: traverseUnMur,
+                 ms: ms, apresUneImage: apresUneImage, enAttente: enAttente, servies: servies, impossible: impossible };
+    }""")
+    assert r["trouve"], "pas de chemin pour contourner l'armurerie"
+    assert r["traverseUnMur"] is False
+    assert r["longueur"] > r["direct"], "le chemin doit faire le tour, pas passer a travers"
+    assert r["ms"] < 50
+    assert r["apresUneImage"] == 2 and r["enAttente"] == 1 and r["servies"] == 3
+    assert r["impossible"] is None
+
+
+def test_un_char_coince_dix_secondes_est_debloque(banc):
+    """Quelle qu'en soit la cause (ici : le joueur plante devant, de travers
+    dans la boite), un char du trafic qui ne bouge plus repart."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(95);
+        const c = L.Monde.carte, j = L.B.joueur, T = L.TT;
+        const inter = c.intersections.find(function (i) { return i.feux && i.l === 4; });
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule' && e.type !== 'pieton'; });
+        // Un char de travers au milieu de la boite, sans cible, le joueur colle devant lui.
+        const v = L.Vehicules.creer('auto', (inter.x + 1) * T + 12, (inter.y + 1) * T + 10, 0.6, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        v.cible = { x: v.x, y: v.y, tx: inter.x + 1, ty: inter.y + 1 };
+        j.x = v.x + Math.cos(0.6) * 24; j.y = v.y + Math.sin(0.6) * 24;
+        L.Monde.centrerCamera(j.x, j.y);
+        const x0 = v.x, y0 = v.y, angle0 = v.angle;
+        let bouge = 0;
+        for (let i = 0; i < 1500; i++) {
+            o.frame(1);
+            j.x = v.x + Math.cos(v.angle) * 24; j.y = v.y + Math.sin(v.angle) * 24;   // le joueur reste devant
+            if (Math.hypot(v.x - x0, v.y - y0) > 40 && !bouge) bouge = i;
+        }
+        const droit = Math.abs(Math.sin(2 * v.angle)) < 0.2;
+        return { bouge: bouge, debloques: v.debloques || 0, droit: droit, angle0: angle0,
+                 surRoute: L.Monde.estRoute(Math.floor(v.x / T), Math.floor(v.y / T)) };
+    }""")
+    assert r["debloques"] >= 1, "le chien de garde n'a pas mordu"
+    assert r["bouge"] > 0, "le char n'est jamais reparti"
+    assert r["surRoute"], "le char debloque a fini hors de la route"
