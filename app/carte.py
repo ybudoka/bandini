@@ -50,6 +50,8 @@ Forme servie (`exporter()`) :
 
 from __future__ import annotations
 
+import math
+
 from . import devantures as devantures_mod
 from . import magasins
 
@@ -2432,6 +2434,17 @@ def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
     return piece
 
 
+#: Le rayon ou ACTION attrape un point d'action (`pointSousLaMain`,
+#: missions.js), en tuiles. ⚠️ Il est ICI parce que c'est ici qu'on peut le
+#: juger : un point pose a moins que ca de la tuile de sortie VOLE la porte —
+#: ACTION sert le comptoir, toujours, et on ne ressort plus. Six pieces etaient
+#: dans ce cas (« chez Ti-Paul, il est impossible de sortir »), et le point du
+#: journal du depanneur etait PILE sur la tuile de sortie. Le jeu, lui, fait
+#: maintenant passer la porte avant le comptoir ; ce juge-ci empeche de
+#: redessiner le piege.
+RAYON_POINT = 1.6
+
+
 def _verifier_piece(piece: dict) -> None:
     groupes = composantes_marchables(piece)
     if len(groupes) != 1:
@@ -2449,6 +2462,13 @@ def _verifier_piece(piece: dict) -> None:
         if not any(solidite(sol[y + dy][x + dx]) == 0
                    for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
             raise ValueError(f"{piece['slug']} : le point {point['type']} est inaccessible")
+        # ⚠️ Et il ne vole pas la porte : voir RAYON_POINT.
+        sortie = piece["apparition"]
+        ecart = math.hypot(x - sortie["x"], y - sortie["y"])
+        if ecart < RAYON_POINT:
+            raise ValueError(
+                f"{piece['slug']} : le point {point['type']} est a {ecart:.2f} tuile de la "
+                f"sortie (minimum {RAYON_POINT}) — il volerait ACTION a la porte")
     for gens in piece["gens"]:
         if gens["qui"] not in QUI_DEDANS:
             raise ValueError(f"{piece['slug']} : « {gens['qui']} » n'est pas quelqu'un")
@@ -2527,7 +2547,7 @@ B  ccccc    yyB
 B           yyB
 Bn            B
 BBBBWWDWWBBBBBB
-""", points=(_pt("acheter", 5, 6),), gens=_gens(("commis", 5, 4), ("client", 2, 4))),
+""", points=(_pt("acheter", 4, 6),), gens=_gens(("commis", 5, 4), ("client", 2, 4))),
 
     # Le poste : le comptoir, les classeurs, le banc de ceux qui attendent.
     _piece("poste", "Poste de police", sol="u", plan="""
@@ -2595,7 +2615,7 @@ Bccccccc  B
 B         B
 Bn        B
 BBBWWDWWBBB
-""", points=(_pt("caisse", 3, 4), _pt("journal", 6, 4)),
+""", points=(_pt("caisse", 3, 4), _pt("journal", 7, 4)),
      gens=_gens(("commis", 3, 2),)),
 
     # Chez Ti-Paul : deux allees, les frigos au fond, la caisse a l'entree.
@@ -2607,10 +2627,10 @@ B eeeee  eeee B
 B             B
 B eeeee  eeee B
 B             B
-Bcccccc   n   B
+Bcccccc   n e B
 B             B
 BBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 3, 8, genre="bouffe"), _pt("journal", 6, 8)),
+""", points=(_pt("emplettes", 3, 8, genre="bouffe"), _pt("journal", 12, 8)),
      gens=_gens(("commis", 3, 6), ("client", 9, 4))),
 
     # L'Hotel Bandini : le hall, le tapis, et l'escalier vers les chambres.
@@ -2692,7 +2712,7 @@ B   a h   B
 B         B
 Bz j    e B
 BBBWWDWWBBB
-""", points=(_pt("lit", 2, 1), _pt("journal", 4, 4)),
+""", points=(_pt("lit", 2, 1), _pt("journal", 3, 4)),
      gens=_gens(("commis", 8, 4),)),
 )
 
@@ -2761,7 +2781,7 @@ B   cccccc   B
 B            B
 Bn         yyB
 BBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 5, 5, genre="commerce"),), gens=_gens(("commis", 5, 3),)),
+""", points=(_pt("emplettes", 4, 5, genre="commerce"),), gens=_gens(("commis", 5, 3),)),
 
     _piece("boutique_marine", "La poissonnerie", sol="u", plan="""
 BBBBBBBBBBBBBB
@@ -2807,7 +2827,7 @@ B             B
 B  ccccc  yy  B
 B         yy  B
 BBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 5, 6, genre="mode"),), gens=_gens(("commis", 5, 4),)),
+""", points=(_pt("emplettes", 3, 6, genre="mode"),), gens=_gens(("commis", 5, 4),)),
 
     _piece("boutique_savoir", "La librairie", plan="""
 BBBBBBBBBBBBBB

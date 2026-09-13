@@ -355,9 +355,17 @@ const Combat = (function () {
 
     if (Entree.neuf('action')) {
       // Dedans : la sortie, ou un point (lit, coffre, comptoir...).
+      // ⚠️ LA PORTE D'ABORD, et c'est un bloquant qui l'a decide (« chez
+      // Ti-Paul, il est impossible de sortir »). `pointSousLaMain` attrape un
+      // point dans 1,6 tuile AUTOUR de soi, quand `porteDevant` n'accepte que
+      // la tuile collee a la porte : six pieces avaient un comptoir assez pres
+      // de leur unique tuile de sortie pour voler ACTION a chaque fois, et
+      // `utiliserPoint` rend `true` meme quand il n'a qu'un « PLUS TARD » a
+      // dire — aucune deuxieme pression ne finissait par sortir.
+      // Un comptoir se sert d'un pas de cote ; une porte, non.
       if (B.interieur) {
-        if (Missions.utiliserPoint(j)) return;
         if (Monde.porteDevant(j)) { Jeu.sortir(); return; }
+        if (Missions.utiliserPoint(j)) return;
         return;
       }
       // ⚠️ L'ordre compte : on sert au kiosque avant de faire les poches du

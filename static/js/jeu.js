@@ -350,6 +350,7 @@ const Jeu = (function () {
 
   function rendre() {
     if (!B.carte) return;
+    B.image++;                          // l'horloge de l'OEIL : elle avance meme quand le monde est fige
     const ctx = Base.debut();
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, VW, VH);

@@ -641,7 +641,7 @@ const Hud = (function () {
 
   /** Le rayon de l'anneau du joueur a cette image : il s'ouvre, il se referme. */
   function pulse(base, amplitude) {
-    const part = (B.t % PULSE_JOUEUR) / PULSE_JOUEUR;
+    const part = (B.image % PULSE_JOUEUR) / PULSE_JOUEUR;
     return base + Math.round(Math.sin(part * Math.PI) * amplitude);
   }
 
@@ -714,7 +714,7 @@ const Hud = (function () {
       const couleur = gps.couleur || '#e8b33c';
       const gx = MINI.x + Math.round(gps.x / TT) - sx, gy = MINI.y + Math.round(gps.y / TT) - sy;
       const dedans = gx >= MINI.x && gx < MINI.x + MINI.l && gy >= MINI.y && gy < MINI.y + MINI.h;
-      const bat = (B.t % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
+      const bat = (B.image % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
       if (dedans) {
         if (bat) losange(ctx, gx, gy, 2, couleur);
         marqueurs.cible = { x: gx, y: gy, forme: 'losange', visible: bat, dedans: true };
@@ -732,7 +732,7 @@ const Hud = (function () {
     }
     // Le taxi : le client (bleu) ou la destination (or) clignote.
     const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
-    if (cible && (B.t >> 4) % 2 === 0) {
+    if (cible && (B.image >> 4) % 2 === 0) {
       const bx = MINI.x + Math.round(cible.x / TT) - sx, by = MINI.y + Math.round(cible.y / TT) - sy;
       if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) {
         ctx.fillStyle = Missions.taxi.etape === 'attente' ? '#6f9fd8' : '#e8b33c';
@@ -801,7 +801,7 @@ const Hud = (function () {
     marqueurs.cible = null;
     if (gps) {
       const p = pos(gps.x, gps.y);
-      const bat = (B.t % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
+      const bat = (B.image % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
       if (bat) losange(ctx, p.x, p.y, 3, gps.couleur || '#e8b33c');
       marqueurs.cible = { x: p.x, y: p.y, forme: 'losange', visible: bat, dedans: true };
     }

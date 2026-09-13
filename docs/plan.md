@@ -47,9 +47,11 @@ ne bougent pas quand l'ordre de travail change.
 | Des commerces, du monde qui habite, des vrais intérieurs | **livré** (13 sept. 2026) | demande de Martin (« beaucoup plus de variété de commerce ou bien enlever certaines devantures pour remplacer par des résidences ; ajouter des appartements à étage ; améliorer les intérieurs, car présentement il n'y a jamais rien, seulement des comptoirs vides ; ajoute aussi des intérieurs pour plusieurs types ; valide les missions qui doivent avoir des choses à l'intérieur ») : **142 noms d'enseigne** au lieu de 56 (14 à 48 par quartier) et **trois familles de plus** (santé, mode, savoir) ; `choisir_enseigne` refuse le même nom à moins de **40 tuiles** — La Shop affichait sept fois « FERRAILLE ». **74 immeubles à logements** remplacent 20 devantures et habillent les quartiers d'habitation : une couche peinte comme les enseignes (zéro solidité touchée), **1 à 3 étages** de fenêtres, balcon, **escalier de fer** sur le trottoir, et une fenêtre sur trois allumée la nuit. Les **29 intérieurs** sont maintenant **dessinés à la main** (un plan par pièce, l'espace = le plancher) avec **onze meubles** (comptoir, étagère, table, chaise, lit, frigo, machine, plante, classeur, poêle, escalier) et **trois planchers** (bois, céramique, tapis) — et du **monde dedans** : un commis à son poste, des clients tirés dans les passants du quartier. **Un commerce ordinaire sur cinq s'ouvre pour de vrai** (42 portes au lieu de 16) : dix pièces génériques, une par famille de devanture, et le **nom de l'enseigne voyage sur la porte** — on entre chez « TABAGIE DUBOIS », pas dans « Boutique ». Nouveaux comptoirs : `emplettes` (`magasins.COMPTOIRS`, data), `salon` (le barbier change tes cheveux **et fait oublier ta tête à la police**), `escalier` (l'étage du plex et la chambre de l'hôtel), `fouiller` (les tiroirs d'un logement, une fois par adresse), `casier` (le carnet du poste). ⚠️ **Trois comptoirs étaient morts** (`guichet`, `sortie_prison`, `casier` : un libellé, aucun menu, « PLUS TARD ») — un juge du banc compare maintenant ce que `carte.INTERIEURS` dessine à ce que `missions.js` sert, et seul le comptoir de la fourrière reste en chantier (il appartient à M9). ⚠️ **Un meuble ne remplit pas sa tuile** : sans plancher peint dessous, chaque table était un trou **noir** — `plancher` voyage donc avec la pièce. **125 juges de plus** (`test_interieurs.py`, `test_interieurs_js.py`, et les logements dans `test_devantures.py`) |
 | Les transitions des portes | **livré** (13 sept. 2026) | retour de Martin (« la transition n'est pas juste ») : elle ne l'était pas parce qu'elle arrivait **dans le mauvais ordre** — `entrer()` chargeait la pièce, *puis* lançait le fondu, dont la première moitié noircissait donc sur la scène déjà changée. Ce n'était pas un fondu enchaîné, c'était un clignotement. `Jeu.transiter()` remet l'ordre : **noircir sur l'ancienne → changer au noir → éclaircir sur la nouvelle**, le jeu **figé** pendant (un char ne te renverse plus sur un écran noir), des durées **asymétriques** (entrer 46 images, sortir 26), la caméra posée au noir sur la cible que l'amorti viserait, la porte qui s'entend au noir, et un reste d'élan au pas de la porte. 3 juges de banc : la scène mesurée **à chaque image**, le gel (ni temps, ni passant, ni char), et sortir **pendant** le fondu d'entrée |
 | Les clôtures : grillage, bois, barbelé | **livré** (13 sept. 2026) | demande de Martin (« il faut des clôtures, mais si elles ne sont pas barbelées, qu'on puisse passer par-dessus », puis « ajoute aussi des clôtures de bois pour la variété ») : on passait par-dessus **toutes** les clôtures — sans même ralentir, parce que `f` était solide 3 et que le masque des piétons ne la voyait pas. Elles ont maintenant leur solidité à elles : **4 s'enjambe** (grillage, palissade de bois — 48 images en haut, immobile, sans frapper ni courir), **5 ne se passe pas** (barbelé). Franchir est une capacité de **tout le monde**, au même prix : l'A\* des agents traverse le grillage à 5 tuiles de coût et l'agent l'enjambe pour de vrai — une poursuite ne se gagne pas en escaladant. Du barbelé dans les cours de gang et de La Shop, du grillage à la fourrière (décision) et sur les terrains vagues, **de la palissade de bois dans les cours arrière des Érables** (188 tuiles). 6 juges neufs |
-| Enfermé dans six commerces | **correctif** à faire | bug de Martin (« chez Ti-Paul, impossible de sortir ») : `utiliserPoint` passe **avant** la porte et attrape tout point à 1,6 tuile — or il n'y a qu'une tuile d'où sortir. **Six pièces** sont sans issue, et le dépanneur a son point **sur** la tuile de sortie |
-| Clôtures nord-sud couchées | **correctif** à faire | bug de Martin : les trois peintres de clôture ne dessinent que l'est-ouest, donc une clôture verticale est une pile de panneaux vus de face. Il leur faut leur variante de voisinage, comme les passages et les cases |
+| Enfermé dans six commerces | **livré** (13 sept. 2026) | bug de Martin (« chez Ti-Paul, impossible de sortir ») : `utiliserPoint` passait **avant** la porte et attrape tout point à 1,6 tuile — or il n'y a qu'une tuile d'où sortir, et il rend `true` même quand il n'a qu'un « PLUS TARD » à dire. **Deux corrections, et il fallait les deux** : la porte passe maintenant avant le comptoir (un comptoir se sert d'un pas de côté, une porte non), et un **juge Python** interdit tout point d'action à moins de `RAYON_POINT` (1,6 tuile) de la tuile de sortie — il rougissait six fois le jour où il a été écrit. Les six pièces se sont redessinées (le comptoir recule, le journal du dépanneur s'en va contre son mur). 3 juges neufs, dont un qui **remet le piège à la main** |
+| Clôtures nord-sud couchées | **livré** (13 sept. 2026) | bug de Martin : les trois peintres ne dessinaient que l'est-ouest, donc une clôture verticale était une pile de panneaux vus de face. Elles lisent maintenant leurs voisines (`varianteDeCloture` : un masque des quatre côtés où la clôture continue) et se peignent en **bras** — le même code pour les trois, avec les deux axes échangés en nord-sud, un poteau au centre à chaque coin et à chaque bout. Le juge compare les **deux cuissons trait par trait** : le nord-sud doit être l'est-ouest tourné |
 | La carte | **livré** (13 sept. 2026) | demande de Martin (« un icône clignotant pour savoir où on est, une légende, savoir où est la mission en cours ») : le joueur **était** dessiné — un carré blanc de 2 px, lisible sur le Faubourg de 157×112 et perdu depuis que la ville fait 421×213. Il **pulse** maintenant (un anneau qui s'ouvre et se referme, 40 images) et ne disparaît **jamais** — on ne cache pas ce qu'on cherche ; l'objectif bat à un autre rythme (16) et dans une autre forme (un losange doré). Hors du cadre de la mini-carte, il devient une **flèche** au lieu d'une position bornée au coin, qui mentait. Et la **légende** se construit depuis la table des couleurs, descendue de Python (`FAMILLES_DE_LIEU`, 8 familles) : les seize lieux ont tous une couleur **déclarée**, là où `COULEUR_BLIP` en connaissait dix et laissait six au gris. 4 juges neufs |
+| Les donneurs qu'on ne voyait pas | **livré** (13 sept. 2026) | bug de Martin (« je n'arrive pas à faire la mission sergent Bouchard, je vais à la cantine, mais je ne vois pas quoi faire ») — et il avait raison deux fois. D'abord le **nom** : Marco l'envoie au « casse-croûte » (le Faubourg, à côté du poste), pas à la **Cantine des Quais**, un autre bâtiment à l'autre bout de la ville. Ensuite, et c'est le vrai bug : **Bouchard et Josée n'existaient nulle part**. Ce sont les deux seuls donneurs qui se tiennent DEDANS (`ou: point:sergent`, `point:contact`), et `creerDonneurs()` ne posait que ceux de la rue (`porte:`) : on poussait la porte, la salle était vide, et il fallait deviner qu'un **point invisible** attendait au fond à droite. Ils sont maintenant **posés en entrant** (`creerDonneursDedans`, appelée par `Jeu.entrer` juste après le commis et les clients), ils naissent et meurent avec la pièce comme tout le monde, et la table Python→piece ne se recopie plus en JS : `personnageDuPoint` / `pieceDuPoint` la **déduisent** du `ou` de `missions.py`. ⚠️ Josée pointe une **table** (personne ne se tient debout sur une table) : `placeDebout` prend la tuile libre voisine la plus proche du milieu de la pièce — le fond d'un coin, ce n'est pas une scène. ⚠️ Le GPS a fallu le corriger du même coup (`ouTrouver`) : dedans, un donneur vit en coordonnées de **pièce**, et le poser tel quel sur la minicarte envoyait la flèche à six tuiles du coin de la ville. Et une **bulle de bande dessinée** dit qui attend après toi — voir la ligne suivante. ACTION dedans vise maintenant **la personne avant le comptoir**, et le HUD la nomme (« PARLER À SERGENT BOUCHARD ») | 2 juges de banc (on entre, quelqu'un est là, debout hors des meubles, à portée de son point, et il parle ; il ne suit pas dans la rue) |
+| Les bulles qui interpellent | **livré** (13 sept. 2026) | demande de Martin (« avec une petite bulle de type bande dessiné qui nous interpelle ») : le jeu avait déjà deux pastilles de 8 px au-dessus des têtes — le « ! » du témoin, le trait de la peur (`cri`). Elles disent un **état d'esprit** ; elles ne peuvent pas dire un **mot**, et c'est le mot qui manquait. `Entites.bulle(e, texte, {duree, fond, encre})` pose une boîte à queue au-dessus de **n'importe quelle entité** (police 3x5, coins coupés, la queue sur la tête de celui qui parle, une montée de 6 images puis une respiration), `Entites.taire(e)` l'efface, et elle se dessine dans une **deuxième passe**, après tout le monde : dans une pièce, un client passe devant le donneur une fois sur deux, et une bulle à moitié cachée par une nuque ne se lit plus. ⚠️ Le texte **ne s'invente pas en JS** : `personnages[].heler` dans `missions.py`, comme toutes les répliques du jeu, court par force (`HELER_MAX`) et vérifié par un juge. ⚠️ Une bulle qui ne s'éteint jamais ne veut plus rien dire : elle ne s'allume que si **ce donneur-là** a une job pour toi (ou t'attend pour la finir), elle se tait pendant sa propre mission, et **aucune** bulle ne s'affiche pendant un dialogue — quelqu'un te parle déjà, en bas de l'écran. Deux emplois pour l'instant : les **cinq donneurs** et le **client du taxi** de M3, qui levait le bras au bord du trottoir sans rien dire | 1 juge Python (chaque donneur a son mot, assez court), 1 de banc (elle s'allume sur le bon donneur, s'éteint après, et vit d'une image à l'autre), 1 dans le taxi ; vérifié à l'écran dans un vrai navigateur (casse-croûte, bar, terminus) |
 | Le souffle en surplus | **correctif** à faire | demande de Martin : le souffle remonte seul à 0,24 par image (une barre pleine en **7 s**), donc manger ne donne rien. Ce que la bouffe rend devient un **surplus** au-dessus de 100, qui se dépense en premier et ne revient jamais seul — une ligne plus mince, d'une autre couleur, posée sur la barre jaune |
 | Les toits | **correctif** à faire | demande de Martin (« je veux que les toits soient plus réalistes ») : ils sont peints tuile par tuile, sans bord, sans rien dessus, sans ombre au sol, et une maison a le même toit plat qu'un entrepôt |
 | Les armes à feu | ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
@@ -327,12 +329,12 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'|'vehicule'|'menu')`, `empecherZoom()`, vibration |
 | 5 | `son.js` | échantillons réels (fetch + `decodeAudioData`, variantes tirées au hasard, boucles allumables) **avec repli synthétisé** (`ton`, `bruit`), `SFX`, `Mus` séquenceur 3 voix (Loren) |
 | 6 | `monde.js` | carte active depuis le paquet, `solide()` (masques : mur, eau, basse, **clôture**, **barbelé**), `ligneLibre()` (DDA), A* à budget (2/image, cap 800 nœuds, file, repli ligne droite, **une clôture se paie 5 tuiles**), feux, cache de morceaux 256 px, caméra amortie avec avance, horloge jour-nuit, intérieurs (pile `B.exterieur`), mini-carte |
-| 7 | `entites.js` | **enjamber une clôture** (capacité de tout le monde, au même prix), structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, **deux** index spatiaux 64 px (le décor ne bouge jamais : bâti une fois ; le reste rebâti à chaque image), cercle-vs-tuiles, piétons (flâne, figé, fuit, **témoin**, riposte, assommé, aveuglé, mort), gangs, bulle 300–520 px, armes de fortune semées, ramassages, particules, décalques, tri par y (les morts d'abord) |
+| 7 | `entites.js` | **enjamber une clôture** (capacité de tout le monde, au même prix), structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, **deux** index spatiaux 64 px (le décor ne bouge jamais : bâti une fois ; le reste rebâti à chaque image), cercle-vs-tuiles, piétons (flâne, figé, fuit, **témoin**, riposte, assommé, aveuglé, mort), gangs, bulle 300–520 px, armes de fortune semées, ramassages, particules, décalques, tri par y (les morts d'abord), **bulles de bande dessinée** (`bulle`/`taire`, un mot au-dessus de n'importe qui, dessinées en deuxième passe par-dessus tout le monde) |
 | 8 | `combat.js` | arcs de mêlée (anticipation → actif → repos), coup fort, esquive, projectiles, fusil à plombs, fronde en cloche, extincteur, réactions, saignement, mort, sang (plafond 150 décalques), lâcher/ramasser, cycle d'armes, visée assistée |
 | 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, **déport dans la voie d'à côté** sur un boulevard pour dépasser ou contourner un piéton, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital |
 | 11 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
-| 12 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |
+| 12 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), posés **dehors** devant leur porte ou **dedans** à leur point en entrant chez eux, leur **bulle** quand ils ont une job pour toi, le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |
 | 13 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores |
 | 14 | `jeu.js` | machine d'états (`chargement | titre | jeu | prison | hopital | fin`), `maj()`, `rendre()`, `boucle()`, **les portes** (`transiter()` : noircir sur l'ancienne scène, changer au noir, éclaircir sur la nouvelle — le jeu figé pendant, comme sous un menu), amorçage (`fetch` du paquet), `window.BANDINI` (surface de test et débogage : `B`, espaces de noms, `graine(n)`, `entree(a)`, `debug.cones`, `maj`, `rendre`, `stats`) |
 
@@ -405,7 +407,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Les transitions | fondu enchaîné dans le bon ordre pour entrer et sortir, jeu figé pendant, caméra posée au noir, son de porte au noir | entrer et sortir vingt fois sans un clignotement ; ne jamais se faire renverser pendant un écran noir |
 | — | Les clôtures | **livré** : grillage et palissade de bois qu'on enjambe (48 images, sans frapper), barbelé infranchissable, et la police qui enjambe au même prix | couper par une cour et se faire suivre par l'agent ; ne jamais semer la police avec une clôture |
 | — | Enfermé dans six commerces | la porte ne se laisse plus voler par un comptoir, et un juge Python interdit tout point d'action à moins de 1,6 tuile de la sortie | entrer et ressortir de chacune des seize pièces |
-| — | Clôtures nord-sud couchées | variante de clôture lue dans les voisines (est-ouest, nord-sud, coin, bout), pour les trois glyphes | une clôture verticale a l'air verticale ; un bout de course porte son poteau |
+| — | Clôtures nord-sud couchées | **livré** : variante de clôture lue dans les voisines (est-ouest, nord-sud, coin, bout), pour les trois glyphes | une clôture verticale a l'air verticale ; un bout de course porte son poteau |
 | — | La carte | joueur qui pulse (autre rythme et autre forme que l'objectif), flèche au bord pour une cible hors cadre, légende dérivée de la table des couleurs, une couleur déclarée par lieu | se trouver du premier coup d'œil sur la carte plein écran ; lire un blip sans l'avoir appris |
 | — | Le souffle en surplus | surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
 | — | Les toits | bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
@@ -427,11 +429,10 @@ hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée e
 sortie 1, les clôtures 1, les toits 2, les armes à feu 2, le carnet 2, l'eau 3.
 
 Ce qui reste, **dans l'ordre où on le fera** (le plus facile d'abord, correctif avant ajout
-à taille égale, prérequis devant) : **correctif** enfermé dans six commerces 1 · **correctif**
-clôtures nord-sud 1 · **correctif** le souffle en surplus 1 ·
+à taille égale, prérequis devant) : **correctif** le souffle en surplus 1 ·
 **correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout les terrains
 de banlieue 2 · ajout M11 2 · **correctif** l'eau 3 · ajout M15 3 · ajout M9 3 · ajout M10 3 ·
-ajout M12 4 · ajout M14 4 · ajout M13 4. Les neuf
+ajout M12 4 · ajout M14 4 · ajout M13 4. Les sept
 premières ne dépendent de rien ; les clôtures sont livrées (les cours des Érables se traversent), l'eau décide de
 la piscine et débloque le bateau de M9 et le traversier de M12 ; M10 demande le camion de
 M9 ; M13 est la fin, et la fin se pose en dernier.
@@ -456,21 +457,19 @@ pour la fin ce qui demande de l'infrastructure ou tout le reste du jeu.
 
 | Ordre | Genre | Vague | Taille | Prérequis |
 |---|---|---|---|---|
-| 1 | **correctif** | On est enfermé dans six commerces | 1 | aucun — c'est un **bloquant** : on ne ressort pas de chez Ti-Paul |
-| 2 | **correctif** | Les clôtures nord-sud sont couchées | 1 | aucun — `varianteDeTuile` sait déjà faire ça pour trois autres tuiles |
-| 3 | **correctif** | Le souffle en surplus | 1 | aucun — mais il touche la même barre que le café |
-| 4 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
-| 5 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
-| 6 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
-| 7 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
-| 8 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
-| 9 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
-| 10 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
-| 11 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
-| 12 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
-| 13 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
-| 14 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
-| 15 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+| 1 | **correctif** | Le souffle en surplus | 1 | aucun — mais il touche la même barre que le café |
+| 2 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
+| 3 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
+| 4 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
+| 5 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
+| 6 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
+| 7 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
+| 8 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
+| 9 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
+| 10 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
+| 11 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
+| 12 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
+| 13 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre l'ordre à la lettre — les huit
@@ -654,75 +653,75 @@ jamais devant une façade.
   ce que les données disent, on ne frappe pas pendant, on retombe de l'autre côté) ; le barbelé
   ne se passe ni à pied ni en char ; et **une poursuite ne se gagne pas en enjambant**.
 
-### On est enfermé dans six commerces (**correctif**, taille 1)
+### On est enfermé dans six commerces (**correctif**, taille 1) — **livré le 13 sept. 2026**
 
 *Bug signalé par Martin :* « chez Ti-Paul, il est impossible de sortir. »
 
-⚠️ **C'est vrai, et ce n'est pas que chez Ti-Paul : six pièces sont sans issue.** La cause
-tient en deux lignes de `combat.js` :
+⚠️ **C'était vrai, et ce n'était pas que chez Ti-Paul : six pièces étaient sans issue.** La
+cause tenait en deux lignes de `combat.js` — **le comptoir passait avant la porte** — et en
+deux rayons qui ne se parlaient pas : `pointSousLaMain()` attrape le point le plus proche
+dans **1,6 tuile autour** de soi, quand `porteDevant()` n'accepte que la tuile collée à la
+porte. Dans une pièce dont la porte est au mur du bas, il n'y a donc **qu'une seule tuile
+d'où l'on peut sortir** : qu'un point d'action tombe à moins de 1,6 tuile de celle-là, et
+ACTION sert le comptoir — toujours. Chez Ti-Paul, le point du journal était **sur** la tuile
+de sortie (distance 0,00) ; Rosa, le kiosque, le phare et les deux boutiques génériques
+étaient à 1,00 ou 1,41.
 
-```js
-if (Missions.utiliserPoint(j)) return;
-if (Monde.porteDevant(j)) { Jeu.sortir(); return; }
-```
+⚠️ Et il n'y avait **aucun repli** : `utiliserPoint()` rend `true` dès qu'il trouve un point
+— même sans menu à ouvrir, il affiche « PLUS TARD » et rend `true`. Aucune deuxième pression
+ne finissait par sortir. On quittait vers le titre, ou on restait.
 
-**Le comptoir passe avant la porte.** Et `pointSousLaMain()` attrape le point le plus proche
-dans un rayon de **1,6 tuile** — pas *sur* la tuile, *autour*. Or `porteDevant()` n'accepte
-que la tuile collée à la porte : dans une pièce dont la porte est au mur du bas, il n'y a
-donc **qu'une seule tuile d'où l'on peut sortir**. Qu'un point d'action tombe à moins de
-1,6 tuile de celle-là, et ACTION sert le comptoir — toujours — sans jamais atteindre la porte.
-
-Mesuré sur les pièces d'aujourd'hui, en distance à la tuile de sortie :
-
-| Pièce | Point | Distance | |
-|---|---|---|---|
-| Dépanneur Chez Ti-Paul | `journal` | **0,00** | le point est **sur** la tuile de sortie |
-| Boutique Rosa | `acheter` | 1,41 | |
-| Kiosque de Mme Thibodeau | `journal` | 1,41 | |
-| Le phare de La Pointe | `journal` | 1,41 | |
-| Boutique (commerce) | `emplettes` | 1,41 | |
-| Boutique (mode) | `emplettes` | 1,00 | |
-
-⚠️ Et il n'y a **aucun repli** : `utiliserPoint()` rend `true` dès qu'il trouve un point —
-même sans menu à ouvrir, il affiche « PLUS TARD » et rend `true`. Aucune deuxième pression
-ne finit par sortir. On quitte vers le titre, ou on reste.
-
-**Deux corrections, et il faut les deux** — l'une répare aujourd'hui, l'autre empêche demain :
+**Deux corrections, et il fallait les deux** — l'une répare aujourd'hui, l'autre empêche
+demain :
 
 - **La porte ne se laisse plus voler** : sur la tuile de sortie, ACTION sort. Un comptoir se
   sert d'un pas de côté ; une porte, non.
-- ⚠️ **Un juge Python sur `INTERIEURS`**, parce que c'est là que le mal se crée : **aucun
-  point d'action à moins de 1,6 tuile de la tuile de sortie**. Il rougirait six fois
-  aujourd'hui. C'est exactement le genre de règle qu'on ne voit qu'en jouant et qui se
-  vérifie en trois lignes, avant même qu'une pièce soit dessinée.
-- Les six pièces se redessinent ensuite : le comptoir recule d'une tuile, et le journal du
-  dépanneur s'en va contre son mur.
+- ⚠️ **Un juge Python sur `INTERIEURS`**, parce que c'est là que le mal se crée : aucun point
+  d'action à moins de `RAYON_POINT` (1,6 tuile) de la tuile de sortie. Il rougissait **six
+  fois** le jour où il a été écrit, et il lève maintenant **à l'import** (`_verifier_piece`),
+  comme les autres règles de plan — une pièce fautive ne se charge plus.
+- **Les six pièces se sont redessinées** : le comptoir recule d'une tuile, et le journal du
+  dépanneur s'en va contre son mur, sur sa propre étagère.
+- **Juges (3 neufs)** : aucun point à moins de 1,6 tuile de la sortie (une pièce à la fois,
+  par `parametrize`) ; on ressort de **chaque** pièce de la ville en appuyant sur ACTION là où
+  l'on arrive ; et un troisième qui **remet le piège à la main** — un point d'action posé pile
+  sur la tuile de sortie — pour que la correction du jeu ait son propre juge, indépendant du
+  dessin des pièces. Ce dernier rougit dès qu'on remet le comptoir avant la porte.
 
-### Les clôtures nord-sud sont couchées (**correctif**, taille 1)
+### Les clôtures nord-sud sont couchées (**correctif**, taille 1) — **livré le 13 sept. 2026**
 
 *Bug signalé par Martin :* « les clôtures qui sont nord-sud ne sont pas dans le bon sens. »
 
-Les trois clôtures viennent d'être livrées, et leurs trois peintres ne savent dessiner
-qu'**un seul sens** : est-ouest. Les lisses traversent la tuile sur toute sa largeur
-(`fillRect(0, 4, T, 1)`), les poteaux sont à `x = 2` et `x = 13`, et les planches du bois se
-tiennent côte à côte en travers. Une clôture qui descend du nord au sud est donc une **pile
-de panneaux vus de face** — d'où l'impression, juste, qu'elle est couchée.
+Les trois clôtures venaient d'être livrées, et leurs trois peintres ne savaient dessiner
+qu'**un seul sens** : est-ouest. Les lisses traversaient la tuile sur toute sa largeur, les
+poteaux étaient à `x = 2` et `x = 13`, et les planches du bois se tenaient côte à côte en
+travers. Une clôture qui descend du nord au sud était donc une **pile de panneaux vus de
+face** — d'où l'impression, juste, qu'elle était couchée.
 
-⚠️ **Et le remède est déjà écrit trois fois dans le dépôt.** `varianteDeTuile()` sait
-justement demander à une tuile ce que ses voisines lui apprennent : les passages piétons, les
-cases de stationnement et les rampes s'en servent déjà. Les clôtures, elles, tombent dans le
-repli et ne reçoivent qu'un bruit stable. Il leur faut leur propre variante — **est-ouest,
-nord-sud, coin, bout de course** — lue dans les quatre voisines, comme les autres.
+⚠️ **Et le remède était déjà écrit trois fois dans le dépôt.** `varianteDeTuile()` sait
+demander à une tuile ce que ses voisines lui apprennent : les passages piétons, les cases de
+stationnement et les rampes s'en servent. Les clôtures tombaient dans le repli et ne
+recevaient qu'un bruit stable. Elles ont maintenant `varianteDeCloture()` — **un masque des
+quatre côtés où la clôture continue** (1 nord, 2 est, 4 sud, 8 ouest).
 
-- **Un coin et un bout comptent.** Une clôture qui s'arrête net au milieu d'un terrain a
-  besoin d'un poteau de bout, sinon elle a l'air coupée au couteau ; deux qui se rejoignent
-  ont besoin de leur coin, sinon le poteau manque et la maille flotte.
-- ⚠️ Ça vaut pour les **trois** : grillage, bois et barbelé partagent la même géométrie et
-  doivent partager la même variante — sinon on corrige un sens sur trois clôtures et on
-  recommence à la prochaine.
-- **Juges** : une clôture nord-sud ne se peint pas comme une est-ouest (le banc compare les
-  deux cuissons) ; tout bout de course porte son poteau ; et le juge tourne pour les trois
-  glyphes, pas seulement pour le grillage.
+- **Le dessin se fait en BRAS** : un brin du centre vers chaque côté où ça continue. Tout
+  passe par `bloc`/`trait`, qui **échangent les deux axes** selon le sens — c'est tout le
+  correctif, et c'est ce qui garantit qu'un nord-sud est un est-ouest tourné.
+- **Un coin et un bout comptent** : un poteau se pose au centre dès que ce n'est pas une ligne
+  droite. Sans lui, une clôture qui s'arrête a l'air coupée au couteau et la maille flotte au
+  tournant.
+- ⚠️ **Les trois partagent la géométrie** et ne diffèrent que par leur palette et ce qu'elles
+  portent (la maille du grillage, les planches du bois, les trois fils et les épines du
+  barbelé) — sinon on corrige un sens sur une clôture et on recommence à la prochaine. Et les
+  trois se **continuent l'une l'autre** : un grillage qui se poursuit en barbelé est une seule
+  ligne, parce qu'ici c'est la géométrie qui compte, pas la matière.
+- ⚠️ **La hauteur des planches se tire sur un seul axe** : le même brin tourné doit donner le
+  même dessin tourné, sinon le juge ne peut plus rien comparer.
+- **Juges** : pour **chacun des trois glyphes**, le nord-sud n'est pas le même dessin que
+  l'est-ouest, il en est le **tourné trait par trait**, un bout de course porte son poteau
+  central, un coin aussi, et une ligne droite ne l'a pas. ⚠️ Le banc sait maintenant
+  **enregistrer les `fillRect`** d'une cuisson (`ctx.traces`) : sans ça, on ne peut pas juger
+  un dessin sous Node — le canevas du banc ne garde aucun pixel.
 
 ### La carte : se trouver, lire, et voir où va la mission (**correctif**, taille 1) — **livré le 13 sept. 2026**
 

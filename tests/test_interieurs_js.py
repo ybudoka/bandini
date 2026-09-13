@@ -238,6 +238,72 @@ def test_les_meubles_ne_coincent_personne(banc):
     assert r["bloquants"] == []
 
 
+def test_on_ressort_de_toutes_les_pieces_par_la_porte(banc):
+    """⚠️ Le bloquant du 13 sept. 2026 : « chez Ti-Paul, il est impossible de
+    sortir ». On entrait, et ACTION servait le comptoir — toujours : le point
+    d'action s'attrape dans 1,6 tuile AUTOUR de soi, la porte seulement sur la
+    tuile collee a elle, et six pieces avaient un comptoir assez pres. Pire,
+    `utiliserPoint` rend `true` meme quand il n'a qu'un « PLUS TARD » a dire :
+    aucune deuxieme pression ne finissait par sortir. On quittait vers le titre,
+    ou on restait.
+
+    Le juge passe par le VRAI chemin — la touche ACTION, la ou l'on arrive en
+    entrant — et il le fait dans CHAQUE piece de la ville : c'est la seule facon
+    de voir venir la prochaine."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const prises = [], vues = [];
+        for (const porte of c.portes) {
+            if (L.B.interieur) o.sortir();
+            j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+            if (!o.entrer(porte)) continue;
+            const slug = L.B.interieur.slug;
+            if (vues.indexOf(slug) < 0) vues.push(slug);
+            // On ne bouge pas : on arrive sur la tuile de sortie, et on appuie.
+            o.tape('KeyE', 2);
+            o.fondu();
+            if (L.B.interieur) {
+                prises.push(slug + ' (' + (L.B.menu ? 'menu ' + L.B.menu.titre : 'rien') + ')');
+                if (L.B.menu) L.Hud.fermerMenu();
+                o.sortir();
+            }
+        }
+        if (L.B.interieur) o.sortir();
+        return { prises: prises, pieces: vues.length, dehors: L.B.interieur === null };
+    }""")
+    assert r["pieces"] >= 25, r["pieces"]
+    assert r["prises"] == [], f"on reste enferme dans : {r['prises']}"
+    assert r["dehors"] is True
+
+
+def test_un_comptoir_sur_la_tuile_de_sortie_ne_vole_pas_la_porte(banc):
+    """⚠️ Les deux corrections du bloquant sont necessaires, et chacune a son
+    juge : le plan des pieces garde la tuile de sortie libre (juge Python), et le
+    jeu fait passer la porte avant le comptoir (celui-ci).
+
+    Ici on REMET le piege a la main — un point d'action pose pile sur la tuile de
+    sortie, comme le journal de chez Ti-Paul l'etait — et la porte doit gagner
+    quand meme. Sans ca, la premiere piece dessinee de travers rendrait le jeu
+    injouable une deuxieme fois."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'depanneur'; }) || c.portes[0];
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.entrer(porte);
+        const piece = L.B.interieur;
+        const sortie = piece.apparition;
+        piece.points.push({ type: 'journal', x: sortie.x, y: sortie.y });
+        const sousLaMain = !!L.Missions.pointSousLaMain(j);
+        o.tape('KeyE', 2);
+        o.fondu();
+        return { sousLaMain: sousLaMain, dedans: L.B.interieur, menu: L.B.menu ? L.B.menu.titre : null };
+    }""")
+    assert r["sousLaMain"] is True, "le piege n'a pas ete remis : le point n'est pas a portee"
+    assert r["dedans"] is None, f"le comptoir a vole la porte (menu : {r['menu']})"
+
+
 def test_une_piece_se_peint_sans_planter(banc):
     """On entre dans chaque piece et on laisse tourner six images : c'est le
     chemin qui cuit les tuiles de meuble, une par glyphe."""

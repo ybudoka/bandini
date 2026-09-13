@@ -129,6 +129,58 @@ def test_on_ne_traverse_plus_une_cloture_en_courant(banc):
     assert r["apres"]["enjambe"] is False and r["apres"]["z"] == 0
 
 
+def test_une_cloture_nord_sud_ne_se_peint_pas_comme_une_est_ouest(banc):
+    """⚠️ Bug de Martin : « les clotures qui sont nord-sud ne sont pas dans le
+    bon sens. » Les trois peintres ne savaient dessiner qu'est-ouest — lisses en
+    travers de toute la tuile, poteaux a x=2 et x=13, planches cote a cote — et
+    une cloture qui descend du nord au sud etait une PILE DE PANNEAUX VUS DE
+    FACE. Elles lisent maintenant leurs voisines (`varianteDeCloture`), comme les
+    passages pietons, les cases de stationnement et les rampes le font deja.
+
+    Le juge compare les deux CUISSONS, trait par trait : le nord-sud doit etre
+    l'est-ouest TOURNE (les deux axes echanges), sinon c'est un autre dessin — ou
+    le meme, ce qui etait le bug. Et il tourne pour les trois glyphes : sinon on
+    corrige un sens sur une cloture et on recommence a la prochaine."""
+    r = banc("""function (L, o) {
+        function peindre(glyphe, variante) {
+            const c = L.Base.nouveauCanvas(L.TT, L.TT);
+            const ctx = c.getContext('2d');
+            ctx.traces = [];
+            L.TUILES[glyphe](ctx, variante, L.TT);
+            return ctx.traces;
+        }
+        const sortie = {};
+        for (const glyphe of ['f', 'w', 'X']) {
+            const est_ouest = peindre(glyphe, 2 | 8);       // elle continue a l'est et a l'ouest
+            const nord_sud = peindre(glyphe, 1 | 4);        // elle continue au nord et au sud
+            const bout = peindre(glyphe, 8);                // elle s'arrete ici
+            const coin = peindre(glyphe, 1 | 2);            // un coin nord-est
+            sortie[glyphe] = {
+                est_ouest: est_ouest, nord_sud: nord_sud,
+                // Le meme dessin, les deux axes echanges.
+                tourne: est_ouest.map(function (t) { return [t[1], t[0], t[3], t[2], t[4]]; }),
+                bout: bout.length, coin: coin.length, droit: est_ouest.length,
+                // Le poteau du centre : ce qui tient le tournant et ferme un bout.
+                poteauBout: bout.some(function (t) { return t[0] === 7 && t[2] === 2; }),
+                poteauCoin: coin.some(function (t) { return t[0] === 7 && t[2] === 2; }),
+                poteauDroit: est_ouest.some(function (t) { return t[0] === 7 && t[2] === 2; }),
+            };
+        }
+        return sortie;
+    }""")
+    for glyphe, mesure in r.items():
+        assert mesure["est_ouest"], f"{glyphe} : une cloture est-ouest ne dessine rien"
+        assert mesure["nord_sud"] != mesure["est_ouest"], (
+            f"{glyphe} : le nord-sud se peint exactement comme l'est-ouest — elle est couchee"
+        )
+        assert sorted(map(str, mesure["nord_sud"])) == sorted(map(str, mesure["tourne"])), (
+            f"{glyphe} : le nord-sud n'est pas l'est-ouest tourne"
+        )
+        assert mesure["poteauBout"] is True, f"{glyphe} : un bout de course sans poteau — coupe au couteau"
+        assert mesure["poteauCoin"] is True, f"{glyphe} : un coin sans poteau — la maille flotte"
+        assert mesure["poteauDroit"] is False, f"{glyphe} : un poteau au milieu d'une ligne droite"
+
+
 def test_le_barbele_ne_se_passe_pas(banc):
     """Le barbele se met la ou quelqu'un a paye pour que personne n'entre : ni a
     pied, ni en char, ni en l'enjambant. Sans ca, il ne veut rien dire."""
@@ -395,6 +447,41 @@ def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(banc):
     assert r["formes"] == ["anneau", "losange"], "les deux reperes ont la meme forme"
     assert r["pulse"] != r["battement"], "le joueur et l'objectif battent au meme rythme"
     assert r["dedans"] is True
+
+
+def test_la_carte_ouverte_les_reperes_battent_encore(banc):
+    """⚠️ Sur la carte plein ecran, Martin ne voyait plus rien clignoter. Le
+    dessin etait bon : c'est l'HORLOGE qui etait mauvaise. L'anneau et le
+    losange battaient sur `B.t`, le temps du MONDE — et le monde est fige tant
+    que la carte est ouverte. Les deux reperes restaient donc geles sur l'image
+    ou l'on a appuye sur N, et une fois sur deux geles sur du VIDE : le losange
+    tombait dans sa demi-periode eteinte et n'en ressortait jamais.
+
+    Le test ouvre la carte et REGARDE, sans toucher a rien : ce qui bat a
+    l'ecran doit battre sur les images dessinees, pas sur celles simulees."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
+        o.tape('KeyN');
+        const ouverte = L.B.etat === 'carte';
+        const t = L.B.t, rayons = [], cible = [], joueur = [];
+        // On n'appuie sur RIEN : la carte reste ouverte, on ne fait que regarder.
+        for (let i = 0; i < 96; i++) {
+            o.frame(1);
+            const m = L.Hud.marqueurs();
+            joueur.push(m.joueur ? 1 : 0);
+            rayons.push(m.joueur ? m.joueur.r : -1);
+            cible.push(m.cible && m.cible.visible ? 1 : 0);
+        }
+        return { ouverte: ouverte, fige: L.B.t === t, etat: L.B.etat,
+                 joueur: joueur, rayons: rayons, cible: cible };
+    }""")
+    assert r["ouverte"] and r["etat"] == "carte", "la carte ne s'est pas ouverte sur N"
+    assert r["fige"] is True, "le monde tourne sous la carte : le test ne prouve plus rien"
+    assert all(r["joueur"]), "le repere du joueur disparait sur la carte"
+    assert len(set(r["rayons"])) > 2, "l'anneau du joueur est fige : la carte ouverte, plus rien ne pulse"
+    assert 0 in r["cible"] and 1 in r["cible"], "l'objectif ne clignote plus une fois la carte ouverte"
 
 
 def test_une_cible_hors_du_cadre_devient_une_fleche_et_pas_une_position(banc):

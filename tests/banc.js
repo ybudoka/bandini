@@ -21,7 +21,15 @@ function faireC2d() {
    'lineTo', 'arc', 'ellipse', 'rect', 'fill', 'stroke', 'clip', 'clearRect', 'strokeRect', 'fillText', 'strokeText',
    'drawImage', 'quadraticCurveTo', 'bezierCurveTo', 'putImageData', 'resetTransform'].forEach(function (m) { c[m] = function () {}; });
   c.rects = 0;
-  c.fillRect = function () { c.rects++; };
+  // ⚠️ `traces` : pose un tableau ici et chaque `fillRect` s'y ecrit. C'est la
+  // seule facon de JUGER UN DESSIN sous Node — le canevas du banc ne garde
+  // aucun pixel. Sert a comparer deux cuissons d'une meme tuile (une cloture
+  // nord-sud ne se peint pas comme une est-ouest).
+  c.traces = null;
+  c.fillRect = function (x, y, w, h) {
+    c.rects++;
+    if (c.traces) c.traces.push([Math.round(x), Math.round(y), Math.round(w), Math.round(h), String(c.fillStyle)]);
+  };
   c.measureText = function (s) { return { width: String(s).length * 4 }; };
   c.createLinearGradient = function () { return { addColorStop: function () {} }; };
   c.createRadialGradient = function () { return { addColorStop: function () {} }; };

@@ -378,6 +378,102 @@ const TUILES = (function () {
       for (let x = d; x < T; x += 8) ctx.fillRect(x, y, 1, 3);
     }
   }
+  /* --- Les trois clotures -------------------------------------------------
+
+     ⚠️ Le SENS vient des voisines (`varianteDeCloture`, monde.js) : `v` est le
+     masque des quatre cotes ou la cloture continue — 1 nord, 2 est, 4 sud,
+     8 ouest. Sans lui, les trois peintres ne savaient dessiner qu'est-ouest,
+     et une cloture qui descend du nord au sud etait une PILE DE PANNEAUX VUS
+     DE FACE. « Les clotures qui sont nord-sud ne sont pas dans le bon sens » :
+     c'etait exactement ca.
+
+     Le dessin se fait en BRAS — un bras du centre vers chaque cote ou la
+     cloture continue — et tout passe par `trait`/`bloc`, qui echangent les
+     axes selon le sens. Les trois clotures partagent donc la MEME geometrie et
+     ne different que par leur palette et par ce qu'elles portent en haut :
+     sinon on corrige un sens sur une cloture et on recommence a la prochaine.
+
+     ⚠️ Elles doivent aussi se distinguer d'un coup d'oeil, parce qu'elles ne
+     veulent pas dire la meme chose : le grillage et le bois s'enjambent, le
+     barbele ne se passe pas. Le grillage est clair et maille ; le bois est
+     brun, en planches serrees ; le barbele est sombre, ses poteaux montent
+     plus haut et il porte ses trois fils et leurs epines. */
+
+  /** Un rectangle dans le repere du brin : `u` le long de la cloture, `w` en
+      travers. En est-ouest c'est (x, y) ; en nord-sud, les deux s'echangent —
+      et c'est tout le correctif. */
+  function bloc(ctx, sens, u, w, lu, lw) {
+    if (sens === 'h') ctx.fillRect(u, w, lu, lw); else ctx.fillRect(w, u, lw, lu);
+  }
+  function trait(ctx, sens, u0, u1, w, ep) { bloc(ctx, sens, u0, w, u1 - u0, ep); }
+
+  /** Un brin de cloture, du centre vers un cote (ou d'un bord a l'autre). */
+  function brinDeCloture(ctx, sens, u0, u1, T, style) {
+    ctx.fillStyle = style.ombre; trait(ctx, sens, u0, u1, 12, 2);        // l'ombre au pied
+    ctx.fillStyle = style.lisse;
+    trait(ctx, sens, u0, u1, style.rails[0], 1);
+    trait(ctx, sens, u0, u1, style.rails[1], 1);
+    if (style.planches) {
+      // Le bois : des planches EN TRAVERS du brin, jamais deux de la meme
+      // hauteur — c'est ce qui se lit comme une palissade et pas comme une
+      // barriere de metal.
+      ctx.fillStyle = style.planches;
+      for (let u = u0; u < u1; u += 3) {
+        // ⚠️ La hauteur se tire sur `u` SEUL : le meme brin tourne doit donner
+        // le meme dessin tourne — c'est ce que le juge compare, trait par trait.
+        const h = 9 + (hash2(u, 7) % 3);
+        bloc(ctx, sens, u, 13 - h, 2, h);
+      }
+    } else {
+      ctx.fillStyle = style.maille;
+      for (let u = u0; u < u1; u++) {
+        for (let w = style.rails[0] + 1; w < style.rails[1]; w++) {
+          if ((u + w) % 4 === 0 || (u - w + 16) % 4 === 0) bloc(ctx, sens, u, w, 1, 1);
+        }
+      }
+    }
+    if (style.fils) {
+      // Les trois fils du barbele, et leurs epines : au-dessus de tout.
+      ctx.fillStyle = style.fils;
+      for (const w of [1, 3, 5]) trait(ctx, sens, u0, u1, w, 1);
+      for (let u = u0 + 1; u < u1; u += 5) {
+        bloc(ctx, sens, u, 0, 1, 6);
+        bloc(ctx, sens, u - 1, 2, 3, 1);
+        bloc(ctx, sens, u - 1, 4, 3, 1);
+      }
+    }
+    ctx.fillStyle = style.poteau;
+    for (const u of [2, 13]) if (u >= u0 && u < u1) bloc(ctx, sens, u, style.poteau0, 1, 13 - style.poteau0);
+  }
+
+  function clotureTuile(ctx, v, T, style) {
+    plein(ctx, '#4f8d3e', T);
+    const N = (v & 1) !== 0, E = (v & 2) !== 0, S = (v & 4) !== 0, O = (v & 8) !== 0;
+    // ⚠️ Une cloture toute seule se peint quand meme, est-ouest : sans ca,
+    // elle n'aurait aucun bras a dessiner et le terrain vague montrerait un
+    // trou dans son grillage.
+    const seule = !N && !E && !S && !O;
+    if (E || seule) brinDeCloture(ctx, 'h', 8, T, T, style);
+    if (O || seule) brinDeCloture(ctx, 'h', 0, 8, T, style);
+    if (N) brinDeCloture(ctx, 'v', 0, 8, T, style);
+    if (S) brinDeCloture(ctx, 'v', 8, T, T, style);
+    // Un poteau au centre des que ce n'est pas une ligne droite : au tournant
+    // la maille flotterait sans lui, et une cloture qui s'arrete net au milieu
+    // d'un terrain aurait l'air coupee au couteau.
+    const bras = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (O ? 1 : 0);
+    if (!(bras === 2 && ((E && O) || (N && S)))) {
+      ctx.fillStyle = style.poteau;
+      ctx.fillRect(7, style.poteau0, 2, 14 - style.poteau0);
+    }
+  }
+
+  const CLOTURE_GRILLAGE = { ombre: '#3f7331', lisse: '#9aa0a6', maille: '#7a7d82', poteau: '#b0b6bc',
+                     rails: [4, 11], poteau0: 2 };
+  const CLOTURE_BOIS = { ombre: '#3f7331', lisse: '#6d5232', planches: '#8a6a42', poteau: '#a3814f',
+                 rails: [3, 11], poteau0: 2 };
+  const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
+                    fils: '#d8d2c4', rails: [6, 11], poteau0: 0 };
+
   return {
     ',': function (ctx, v, T) { plein(ctx, '#4f8d3e', T); points(ctx, v, T, '#5a9c47', 12, 3); points(ctx, v, T, '#427a33', 8, 60); },
     '.': trottoir,
@@ -436,51 +532,9 @@ const TUILES = (function () {
     'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'b': function (ctx, v, T) { trottoir(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(6, 4, 4, 10); ctx.fillStyle = '#101018'; ctx.fillRect(6, 8, 4, 1); },
-    /* --- Les deux clotures -------------------------------------------------
-
-       ⚠️ Elles doivent se distinguer D'UN COUP D'OEIL, parce qu'elles ne
-       veulent pas dire la meme chose : le grillage s'enjambe (une seconde en
-       haut), le barbele ne se passe pas. Deux clotures qui se ressemblent, et
-       le joueur apprend la difference en restant plante devant la mauvaise.
-       Le grillage est clair, maille, bas ; le barbele est sombre, ses poteaux
-       montent plus haut et il porte ses trois fils et leurs epines. */
-    'f': function (ctx, v, T) {
-      plein(ctx, '#4f8d3e', T);
-      ctx.fillStyle = '#3f7331'; ctx.fillRect(0, 12, T, 2);            // l'ombre au pied
-      ctx.fillStyle = '#9aa0a6';
-      ctx.fillRect(0, 4, T, 1); ctx.fillRect(0, 11, T, 1);             // les deux lisses
-      ctx.fillStyle = '#7a7d82';
-      for (let x = 0; x < T; x += 4) {                                  // la maille
-        for (let k = 0; k < 6; k++) { ctx.fillRect(x + (k % 4), 5 + k, 1, 1); ctx.fillRect(x + 3 - (k % 4), 5 + k, 1, 1); }
-      }
-      ctx.fillStyle = '#b0b6bc'; ctx.fillRect(2, 2, 1, 11); ctx.fillRect(13, 2, 1, 11);   // les poteaux
-    },
-    'w': function (ctx, v, T) {
-      plein(ctx, '#4f8d3e', T);
-      ctx.fillStyle = '#3f7331'; ctx.fillRect(0, 12, T, 2);            // l'ombre au pied
-      ctx.fillStyle = '#8a6a42';
-      for (let x = 0; x < T; x += 3) {                                  // les planches, debout
-        const h = 9 + (hash2(v, x) % 3);                                // aucune n'est de la meme hauteur
-        ctx.fillRect(x, 13 - h, 2, h);
-      }
-      ctx.fillStyle = '#6d5232'; ctx.fillRect(0, 7, T, 1);              // la lisse qui les tient
-      ctx.fillStyle = '#a3814f'; ctx.fillRect(0, 3, T, 1);              // le dessus, au soleil
-    },
-    'X': function (ctx, v, T) {
-      plein(ctx, '#4f8d3e', T);
-      ctx.fillStyle = '#3a6c2d'; ctx.fillRect(0, 12, T, 2);
-      ctx.fillStyle = '#5d5852';
-      ctx.fillRect(0, 6, T, 1); ctx.fillRect(0, 11, T, 1);
-      for (let x = 0; x < T; x += 4) {
-        for (let k = 0; k < 5; k++) { ctx.fillRect(x + (k % 4), 7 + k, 1, 1); ctx.fillRect(x + 3 - (k % 4), 7 + k, 1, 1); }
-      }
-      ctx.fillStyle = '#7d766a'; ctx.fillRect(1, 0, 2, 13); ctx.fillRect(13, 0, 2, 13);   // deux poteaux, plus hauts
-      ctx.fillStyle = '#d8d2c4';                                        // les trois fils
-      ctx.fillRect(0, 1, T, 1); ctx.fillRect(0, 3, T, 1); ctx.fillRect(0, 5, T, 1);
-      for (let x = 1; x < T; x += 5) {                                  // et leurs epines
-        ctx.fillRect(x, 0, 1, 6); ctx.fillRect(x - 1, 2, 3, 1); ctx.fillRect(x - 1, 4, 3, 1);
-      }
-    },
+    'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
+    'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
+    'X': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BARBELE); },
 
     /* --- Dedans : le plancher et les meubles ------------------------------
 

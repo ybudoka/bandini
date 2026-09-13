@@ -11,6 +11,8 @@ unique, plancher d'un seul tenant, points atteignables) — ici on juge ce qu'il
 y a DEDANS, et les promesses que les portes de la ville font au joueur.
 """
 
+import math
+
 import pytest
 
 from app import armes, carte, devantures, economie, magasins, missions, pietons
@@ -29,6 +31,29 @@ TYPES_SERVIS = frozenset({
     "hotdog", "soigner", "caisse", "journal", "contact", "sergent", "casier",
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
 })
+
+
+@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+def test_aucun_comptoir_ne_vole_la_porte(slug):
+    """⚠️ Le bloquant du 13 sept. 2026 : « chez Ti-Paul, il est impossible de
+    sortir ». Six pieces etaient sans issue, et la cause tenait a deux rayons qui
+    ne se parlaient pas : ACTION attrape un point d'action dans **1,6 tuile
+    autour** de soi, alors que la porte n'accepte que la tuile collee a elle. Un
+    comptoir pose assez pres de l'unique tuile de sortie prenait donc ACTION a
+    chaque fois — et chez Ti-Paul, le point du journal etait PILE dessus.
+
+    Le jeu fait maintenant passer la porte avant le comptoir ; ce juge-ci garde
+    la porte de sortie libre, pour que le piege ne se redessine pas. ⚠️ Il
+    rougissait six fois le jour ou il a ete ecrit. C'est le genre de regle qu'on
+    ne voit qu'en jouant et qui se verifie en trois lignes."""
+    piece = carte.INTERIEURS[slug]
+    sortie = piece["apparition"]
+    for point in piece["points"]:
+        ecart = math.hypot(point["x"] - sortie["x"], point["y"] - sortie["y"])
+        assert ecart >= carte.RAYON_POINT, (
+            f"{slug} : le point {point['type']} est a {ecart:.2f} tuile de la sortie "
+            f"— il volerait ACTION a la porte"
+        )
 
 
 @pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))

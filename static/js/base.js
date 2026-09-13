@@ -18,6 +18,12 @@ const B = {
   fondu: null,
   transition: null,     // un fondu de porte EN COURS ; non nul = simulation figee (voir Jeu.transiter)
   t: 0,                 // images simulees depuis le demarrage
+  /*: Les images DESSINEES depuis le demarrage. ⚠️ Ce n'est pas `t` : `t` est le
+    temps du MONDE, et il s'arrete des qu'on ouvre la carte, un menu ou la
+    pause. Ce qui bat a l'ecran — l'anneau du joueur, le losange de l'objectif —
+    bat sur celle-ci, sinon le repere qu'on ouvre la carte pour trouver reste
+    fige sur l'image ou on l'a ouverte, et une fois sur deux fige sur du vide. */
+  image: 0,
   rng: null,
   graine: 1,
   defs: null,           // le paquet /api/definitions

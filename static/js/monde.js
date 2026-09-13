@@ -409,13 +409,35 @@ const Monde = (function () {
     return g === 'J' ? 1 : 0;             // une moitie orpheline : vers l'est
   }
 
+  /** Une cloture a cette tuile ? (grillage, palissade ou barbele) */
+  function estCloture(tx, ty) { const s = solidite(tx, ty); return s === 4 || s === 5; }
+
+  /** La variante d'une cloture : le masque des cotes ou elle CONTINUE — 1 nord,
+      2 est, 4 sud, 8 ouest.
+
+      ⚠️ C'est ce qui lui donne son sens. Les trois peintres ne savaient dessiner
+      qu'est-ouest, alors une cloture nord-sud etait une pile de panneaux vus de
+      face (« les clotures qui sont nord-sud ne sont pas dans le bon sens »). Et
+      le remede etait deja ecrit trois fois dans le fichier : passages pietons,
+      cases de stationnement et rampes lisent deja leurs voisines.
+
+      ⚠️ Les trois clotures se continuent l'une l'autre : un grillage qui se
+      poursuit en barbele est une seule ligne, et elle doit se dessiner comme
+      telle — c'est la geometrie qui compte ici, pas la matiere. */
+  function varianteDeCloture(tx, ty) {
+    return (estCloture(tx, ty - 1) ? 1 : 0) | (estCloture(tx + 1, ty) ? 2 : 0)
+      | (estCloture(tx, ty + 1) ? 4 : 0) | (estCloture(tx - 1, ty) ? 8 : 0);
+  }
+
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
-      voisines. Passage pieton, case de stationnement et rampe en ont une ; les
-      autres se contentent d'un bruit stable. */
+      voisines. Passage pieton, case de stationnement, rampe et cloture en ont
+      une ; les autres se contentent d'un bruit stable. */
   function varianteDeTuile(g, tx, ty) {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
+    const p = carte.legende[g];
+    if (p && p.cloture) return varianteDeCloture(tx, ty);
     return varianteDePassage(g, tx, ty);
   }
 
@@ -682,7 +704,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estCloture, varianteDeCloture, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
