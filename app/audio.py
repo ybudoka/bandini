@@ -171,8 +171,9 @@ CATALOGUE: list[Echantillon] = [
 #   la sonnette de velo, 49 dB pour la caisse enregistreuse. Or c'est LA que
 #   vit le clinquant d'une piece, le verre d'un phare, le laiton d'une
 #   cloche : on payait pour un son dont on avait jete la moitie ;
-# - la moitie du poids etait du silence en QUEUE : 91 % du clic de menu,
-#   75 % d'un pas, 69 % du klaxon ;
+# - un septieme du poids etait du silence en QUEUE (14 % en moyenne, mais
+#   69 % d'un pas, 55 % d'un ramassage, 43 % d'un coup de poing) : de quoi
+#   payer une bonne partie de l'aigu qu'on vient de recuperer ;
 # - les pics allaient de -34 dB (un pas) a 0 dB pile (huit fichiers colles au
 #   plafond), donc `volume` ne dosait rien : il multipliait un accident ;
 # - deux fichiers etaient franchement STEREO (la porte, le refus : leurs deux
@@ -192,12 +193,24 @@ FORMAT_MASTER = "mp3_44100_128"
 #: partent du meme niveau, le catalogue seul decide qui est plus fort.
 PIC_VISE_DBFS = -1.0
 
-#: Sous ce niveau, c'est la queue du son : on la coupe plutot que de payer un
-#: tiers du fichier en silence. On en garde 30 ms, et on ferme par un fondu
+#: Sous ce niveau, c'est la queue du son : on la coupe plutot que de payer
+#: jusqu'aux deux tiers du fichier en silence. On en garde 30 ms, et on ferme par un fondu
 #: de 15 ms — couper net sur une decroissance, ca fait un clic.
+#: ⚠️ Ce seuil ne vaut QU'APRES normalisation : il est alors toujours a 44 dB
+#: sous le pic, quelle que soit la generation. Applique avant, il tombe en
+#: plein milieu d'un son sorti faible — voir `finir()`.
 SEUIL_QUEUE_DBFS = -45.0
 QUEUE_GARDEE_S = 0.03
 FONDU_S = 0.015
+
+#: Sous cette duree, il ne reste plus de son : la finition refuse plutot que
+#: de livrer un fichier de souffle.
+DUREE_PLANCHER_S = 0.05
+
+#: Au-dela de ce gain, ce n'est pas la finition qui a bien travaille : c'est
+#: la GENERATION qui etait faible, et on vient de remonter son souffle avec
+#: elle. Le script le dit, et ces sons-la se REFONT.
+GAIN_SUSPECT_DB = 20.0
 
 #: Deux debits, en mono et en 44,1 kHz. Un choc porte des transitoires et du
 #: verre, il en a besoin ; une boucle de moteur est une matiere qui tourne, et

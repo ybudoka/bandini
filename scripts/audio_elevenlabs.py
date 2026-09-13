@@ -23,8 +23,10 @@ import argparse
 import json
 import os
 import queue
+import re
 import subprocess
 import sys
+import tempfile
 import threading
 from pathlib import Path
 
@@ -38,10 +40,15 @@ LANCEUR = Path(os.environ.get(
     Path.home() / ".mcp-servers" / "elevenlabs" / "run.sh",
 )).expanduser()
 
-#: 22 kHz mono a 32 kbit/s : un bruitage de jeu pese alors 3 a 5 Ko. Le
-#: 44 kHz du catalogue ElevenLabs serait trois fois plus lourd pour un son
-#: qu'on entend une demi-seconde a travers un haut-parleur de telephone.
+#: Les voix des passants restent en 22 kHz : une replique de deux mots a
+#: travers un haut-parleur de telephone n'a pas d'aigu a perdre.
 FORMAT = "mp3_22050_32"
+
+#: ⚠️ Les BRUITAGES, eux, ne sont plus generes a leur taille finale. On
+#: demande le meilleur master (`audio.FORMAT_MASTER`) et `finir()` le ramene
+#: a la taille du jeu — voir la longue note de `app/audio.py` : en generant
+#: directement en 22 kHz / 32 kbit/s on jetait tout l'aigu AVANT de pouvoir
+#: le regarder, et on gardait en echange un tiers de silence.
 
 
 class ClientMCP:
@@ -103,6 +110,106 @@ class ClientMCP:
         self.proc.stdin.close()
         self.proc.terminate()
         self.proc.wait(timeout=10)
+
+
+# --- La finition : du master ElevenLabs au fichier du jeu ---------------------------
+
+
+def _sortie_ffmpeg(arguments: list[str]) -> str:
+    """Lance ffmpeg et rend ce qu'il a dit. ⚠️ `volumedetect` ecrit sur la
+    sortie d'ERREUR et au niveau `info` : un `-v error` de trop, et on mesure
+    le silence."""
+    fait = subprocess.run(["ffmpeg", "-hide_banner", "-y", *arguments],
+                          capture_output=True, text=True)
+    if fait.returncode != 0:
+        raise RuntimeError("ffmpeg : " + fait.stderr.strip()[-400:])
+    return fait.stderr
+
+
+def _pic_dbfs(chemin: Path) -> float:
+    sortie = _sortie_ffmpeg(["-i", str(chemin), "-af", "volumedetect", "-f", "null", "-"])
+    trouve = re.search(r"max_volume: (-?[\d.]+) dB", sortie)
+    if not trouve:
+        raise RuntimeError(f"pas de pic mesurable dans {chemin.name}")
+    return float(trouve.group(1))
+
+
+def _duree_s(chemin: Path) -> float:
+    """⚠️ ffprobe rend `N/A` — pas une erreur, pas un zero — sur un fichier
+    dont il ne sait rien dire (un wav vide, par exemple, ce qui arrive quand
+    le rognage a tout mange). On le lit comme une duree nulle."""
+    fait = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
+                           "-of", "csv=p=0", str(chemin)], capture_output=True, text=True)
+    dit = fait.stdout.strip()
+    try:
+        return float(dit)
+    except ValueError:
+        return 0.0
+
+
+def finir(master: Path, cible: Path, boucle: bool) -> dict:
+    """Mono, normalise, rogne, encode. Rend ce qui a change, pour le dire.
+
+    Quatre gestes, et l'ORDRE est la seule chose difficile ici :
+
+    1. **mono** — le jeu place ses sons lui-meme (`StereoPanner`) ; un
+       fichier deja large arrive a gauche quoi qu'on fasse. Et on ne peut
+       juger un niveau qu'une fois les deux canaux melanges ;
+    2. **normaliser au pic** (`PIC_VISE_DBFS`) — tous les fichiers partent
+       alors du meme niveau, et c'est ce qui rend le `volume` du catalogue
+       credible ;
+    3. **rogner la queue** — SEULEMENT MAINTENANT. ⚠️ Rogner avant de
+       normaliser, c'est ce que j'ai fait d'abord, et c'est faux : le seuil
+       est un niveau ABSOLU (-45 dBFS), donc sur une generation sortie a
+       -34 dB il tombe 11 dB sous le pic, c'est-a-dire en plein milieu du
+       son. Mesure : un pas s'est fait rogner a 0,06 s, puis remonter de
+       +37 dB — il ne restait que le souffle. Normalise d'abord, le seuil
+       est toujours a 44 dB sous le pic, quelle que soit la generation ;
+    4. **fondre et encoder** — 15 ms de fondu, sinon couper une decroissance
+       fait un clic.
+
+    ⚠️ Une BOUCLE saute 3 et le fondu de 4 : la couture est exactement ce que
+    le rognage abime, et un fondu ferait un trou a chaque tour.
+    """
+    avant = master.stat().st_size
+    with tempfile.TemporaryDirectory(prefix="bandini-finition-") as temporaire:
+        dossier = Path(temporaire)
+
+        mono = dossier / "mono.wav"
+        _sortie_ffmpeg(["-i", str(master), "-af", "pan=mono|c0=0.5*c0+0.5*c1",
+                        "-ar", "44100", "-ac", "1", str(mono)])
+        gain = audio.PIC_VISE_DBFS - _pic_dbfs(mono)
+
+        plein = dossier / "plein.wav"
+        _sortie_ffmpeg(["-i", str(mono), "-af", f"volume={gain:.2f}dB", str(plein)])
+
+        rogne = plein
+        if not boucle:
+            rogne = dossier / "rogne.wav"
+            coupe = ("silenceremove=start_periods=1:start_threshold="
+                     f"{audio.SEUIL_QUEUE_DBFS}dB:detection=peak:start_silence=")
+            _sortie_ffmpeg(["-i", str(plein), "-af",
+                            f"{coupe}0.005,areverse,{coupe}{audio.QUEUE_GARDEE_S},areverse",
+                            str(rogne)])
+
+        duree = _duree_s(rogne)
+        if duree < audio.DUREE_PLANCHER_S:
+            raise RuntimeError(f"il ne reste que {duree:.3f} s apres rognage — "
+                               "master muet ou presque")
+
+        filtres = [] if boucle else [
+            f"afade=t=out:st={max(0.0, duree - audio.FONDU_S):.3f}:d={audio.FONDU_S}"]
+        cible.parent.mkdir(parents=True, exist_ok=True)
+        _sortie_ffmpeg(["-i", str(rogne), *(["-af", ",".join(filtres)] if filtres else []),
+                        "-ar", "44100", "-ac", "1",
+                        "-b:a", audio.DEBIT_BOUCLE if boucle else audio.DEBIT_BREF,
+                        "-map_metadata", "-1", str(cible)])
+
+    return {"avant": avant, "apres": cible.stat().st_size, "duree": duree, "gain": gain,
+            # ⚠️ Un gain enorme veut dire que la GENERATION etait faible, pas
+            # que la finition a bien travaille : on remonte alors le souffle
+            # avec le son. Ca se refait (`--refaire <slug>`), ca ne se repare pas.
+            "faiblard": gain > audio.GAIN_SUSPECT_DB}
 
 
 def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
@@ -169,30 +276,46 @@ def main() -> int:
 
     dossier = str(audio.RACINE_STATIQUE / audio.DOSSIER)
     client = ClientMCP(LANCEUR)
-    faits, rates = 0, []
+    faits, rates, faibles = 0, [], []
     try:
         etat = client.appeler("elevenlabs_status", {})
         print("\nElevenLabs :", etat.get("cle", "?"), "·", etat.get("quota", etat.get("caracteres_restants", "?")))
-        for echantillon, indice in travail:
-            nom = audio.nom_fichier(echantillon, indice)
-            cible = audio.chemin(echantillon, indice)
-            if cible.exists():
-                cible.unlink()          # --refaire : le serveur n'ecrase jamais
-            reponse = client.appeler("elevenlabs_sound_effect", {
-                "prompt": echantillon["prompt"],
-                "duration_seconds": echantillon["duree_s"],
-                "prompt_influence": 0.6,
-                "loop": echantillon["boucle"],
-                "output_format": FORMAT,
-                "output_dir": dossier,
-                "nom": nom[:-4],
-            })
-            if reponse.get("ok"):
+        # ⚠️ Les masters ne vont PAS dans static/ : ils y resteraient. Ils
+        # vivent le temps de la generation, et c'est `finir()` qui ecrit le
+        # fichier du jeu.
+        with tempfile.TemporaryDirectory(prefix="bandini-masters-") as masters:
+            for echantillon, indice in travail:
+                nom = audio.nom_fichier(echantillon, indice)
+                cible = audio.chemin(echantillon, indice)
+                if cible.exists():
+                    cible.unlink()      # --refaire : le serveur n'ecrase jamais
+                reponse = client.appeler("elevenlabs_sound_effect", {
+                    "prompt": echantillon["prompt"],
+                    "duration_seconds": echantillon["duree_s"],
+                    "prompt_influence": echantillon["influence"],
+                    "loop": echantillon["boucle"],
+                    "output_format": audio.FORMAT_MASTER,
+                    "output_dir": masters,
+                    # ⚠️ Le serveur n'ecrase jamais : deux variantes du meme
+                    # slug se marcheraient dessus sans l'indice dans le nom.
+                    "nom": nom[:-4],
+                })
+                if not reponse.get("ok"):
+                    rates.append((nom, reponse.get("erreur")))
+                    print(f"  ✗ {nom:>16}  {reponse.get('erreur')}")
+                    continue
+                try:
+                    bilan = finir(Path(reponse["fichier"]), cible, echantillon["boucle"])
+                except (RuntimeError, OSError) as souci:
+                    rates.append((nom, f"finition : {souci}"))
+                    print(f"  ✗ {nom:>16}  finition : {souci}")
+                    continue
                 faits += 1
-                print(f"  ✓ {nom:>16}  {reponse['octets']:>6} octets")
-            else:
-                rates.append((nom, reponse.get("erreur")))
-                print(f"  ✗ {nom:>16}  {reponse.get('erreur')}")
+                print(f"  ✓ {nom:>18}  {bilan['apres']:>6} o  {bilan['duree']:>5.2f} s  "
+                      f"gain {bilan['gain']:+5.1f} dB"
+                      f"{'  ⚠ generation faible' if bilan['faiblard'] else ''}")
+                if bilan["faiblard"]:
+                    faibles.append(nom)
         for ligne in voix:
             nom = audio.nom_fichier_voix(ligne)
             cible = audio.chemin_voix(ligne)
@@ -236,6 +359,9 @@ def main() -> int:
         client.fermer()
 
     print(f"\n{faits} son(s) generes, {len(rates)} en echec.")
+    if faibles:
+        print("⚠️  Sortis trop faibles de chez ElevenLabs, donc remontes avec leur souffle "
+              f"— a refaire : {' '.join(faibles)}")
     for nom, erreur in rates:
         print(f"  {nom} : {erreur}")
     if faits:

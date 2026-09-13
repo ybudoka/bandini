@@ -57,7 +57,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Le fondu de l'hôpital et de la prison | **livré** (13 sept. 2026) | demande de Martin (« il faut corriger le fade out et in quand on va à l'hôpital ou qu'on se fait enfermer ») : quatre changements de scène — l'hôpital, la prison, la compagnie, le coucher — étaient restés sur `Hud.fondu` + `setTimeoutJeu`, soit **deux horloges** que rien ne liait : l'une comptait dans le dessin, l'autre dans la mise à jour. On se regardait donc disparaître de la rue à **80 % de noir**, le texte se lisait par-dessus le trottoir où l'on venait de tomber, et la ville continuait de tourner pendant les deux secondes et demie — un char pouvait repasser sur un joueur à 1 PV. Les quatre passent maintenant par la machine des portes, `Jeu.transiter()`, qui n'a **qu'une** horloge et change la scène **pile** à alpha 1. Elle gagne pour eux un troisième nombre, `[fermer, tenir, ouvrir]` : une porte, on la passe ; une nuit, un séjour à l'hôpital **font passer du temps**, et ce temps se sent dans le noir tenu, où le texte s'écrit — et **seulement** là. `Hud.fondu`, `setTimeoutJeu` et leurs minuteries sont supprimés : plus une seule deuxième horloge dans le jeu |
 | Des sirènes qu'on entend | **livré** (13 sept. 2026) | demande de Martin (« je veux des sirènes pour les ambulances et polices ») : il n'y en avait **qu'une**, et presque jamais — `Son.boucle('sirene', …)` ne s'allumait que pour une auto-patrouille de l'IA en chasse, à volume fixe, sans distance. L'ambulance déclare pourtant `sirene: true` depuis M9 et n'en a **jamais** fait entendre une seule ; au volant, aucune des deux. Maintenant : **deux sons** (celle de la police monte et descend, celle de l'ambulance fait deux notes — les confondre, c'est ne pas savoir qui arrive derrière soi), un **volume qui suit la distance** (460 px de portée), une **ambulance sur trois** qui naît en course dans le trafic, et au volant d'un char à sirène le **bouton du klaxon devient celui de la sirène** — l'étiquette du bouton tactile le dit |
-| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. **Reste** : `defonce`, `soigne`, `crochet`, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
+| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. Le **camion défonce** ce qui est bas et jamais une façade, l'**ambulance soigne** qui la conduit sans ressusciter personne. **Reste** : le `crochet` de la remorqueuse, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
 | Rampes vraiment prenables | **P1** **correctif** à faire | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | Un saut qu'on ne voit pas | **P1** **correctif** à faire | bug de Martin (« les rampes n'ont pas l'air de fonctionner »). ⚠️ Elles fonctionnent : le saut mesure **7,8 px** pour une berline (2,0 px pour un vélo) et dure **0,3 s**, sur des tuiles de 16 px. Et l'ombre est un rectangle **fixe** de 20 × 10 qui ne rétrécit ni ne s'éloigne — elle ne raconte aucune hauteur |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
@@ -497,7 +497,7 @@ ordre-là.
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, ce que les fiches disent que les chars savent faire (`defonce`, `soigne`, `crochet`), et le sport et le luxe. Prérequis de M10 |
+| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, le `crochet` de la remorqueuse, et le sport et le luxe. Prérequis de M10 |
 | **P1** | **correctif** | Une rampe qu'on peut vraiment prendre | 2 | ⚠️ *Le Grand Saut* est au tableau des défis et **ne peut pas se gagner** : la moto vole 126 px pour 96 px de réception |
 | **P1** | **correctif** | Un saut qu'on ne voit pas | 1 | ⚠️ un saut mesure **7 px** et dure 0,3 s : les rampes ont l'air de ne pas marcher, et l'ombre est un rectangle fixe qui ne dit aucune hauteur |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
@@ -1041,16 +1041,15 @@ pour le lot de la fourrière) : les fiches, l'économie, la carte et leurs juges
 **Livré le 13 sept. 2026** — les quatre chars existent, et un vélo ne saute plus (les deux
 fiches ci-dessous). **Reste à faire**, et c'est celui qui se joue :
 
-- `defonce`, `soigne`, `crochet` sont dans les fiches et **personne ne les lit** ;
+- le `crochet` de la remorqueuse est dans la fiche et **personne ne le lit** ;
 - les **boulots au klaxon** ne se prennent pas : `Missions.taxi` est encore le seul, et la
   fourrière n'a ni comptoir, ni saisie à l'arrestation, ni chars dans sa cour ;
 - la **radio procédurale** est dans le paquet mais `Son.Radio` ne sait pas qu'une station
   peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien ;
 - le **sport** et le **luxe** n'existent pas encore.
 
-- `vehicules.py` : les quatre chars **existent et roulent** (fiche livrée plus bas) ; ce que
-  leurs fiches disent qu'ils savent faire reste à brancher — le `defonce` du **camion** (il
-  sert à M10), le `soigne` de l'**ambulance**, le `crochet` de la **remorqueuse**.
+- `vehicules.py` : les quatre chars **existent, roulent, défoncent et soignent** (fiches
+  livrées plus bas) ; reste le `crochet` de la **remorqueuse**.
   Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
   carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
   suffit pour l'eau.
@@ -1103,6 +1102,44 @@ fiches ci-dessous). **Reste à faire**, et c'est celui qui se joue :
   ne dépasse l'auto-patrouille que d'un cheveu ; le luxe est la plus grosse revente et la
   plus basse fréquence du parc ; aucun des deux ne naît dans un district qui ne les veut
   pas.
+
+#### Le camion défonce, l'ambulance soigne (taille 1) — **livré le 13 sept. 2026**
+
+`defonce` et `soigne` étaient dans les fiches depuis M9, et **personne ne les lisait** : le
+camion rebondissait sur un grillage comme une berline, et l'ambulance était une fourgonnette
+blanche. Trois nombres du catalogue (0,75 · 0,7 · 0,6) et un quatrième (2 PV/s) qui ne
+voulaient rien dire.
+
+- **`Monde.defoncer(tx, ty)`** fait tomber une tuile **basse** et met à sa place le sol de ses
+  voisines. ⚠️ **Le glyphe de remplacement se LIT DANS LES VOISINES** : une clôture entre un
+  gazon et un trottoir laisse du gazon ou du trottoir. C'est ce qui évite un glyphe
+  « décombres » de plus, avec son peintre, son entrée de légende et son octet dans le
+  paquet — le trou dans une clôture, c'est la clôture qui manque, pas des gravats.
+- ⚠️ **Et les morceaux voisins se repeignent, pas seulement le sien.** Une clôture lit ses
+  voisines pour savoir comment se dessiner (`varianteDeCloture`, livré le matin même) : en
+  casser une change le dessin des deux d'à côté, qui peuvent être dans un autre morceau.
+- ⚠️ **Tout ou rien.** `defoncerDevant()` regarde **toutes** les tuiles qui bloquent avant de
+  trancher : s'il y en a une seule qu'on ne casse pas, le camion s'arrête comme n'importe qui.
+  Casser « celles qu'on peut » et s'arrêter sur le reste laisserait un trou dans une clôture
+  **sans être passé** — le pire des deux mondes.
+- ⚠️ **Jamais une façade**, jamais l'eau, jamais le barbelé, jamais un meuble. La ville tient
+  par ses murs : les juges de connexité, les intérieurs et les devantures en dépendent, et un
+  trou dans un mur ouvrirait sur un toit.
+- **Ce qui reste de vitesse est le `defonce` de la fiche** — 0,75 pour le camion. Un mur de
+  clôture coûte donc quelque chose (et `defonce_degats` à la carrosserie), sinon on le
+  franchit sans le sentir.
+- **L'ambulance rend `soigne` PV par seconde à qui la conduit.** ⚠️ Elle ne **ressuscite**
+  personne : un mort reste mort. Sinon elle devient la sortie de secours de toutes les
+  fusillades, et l'hôpital ne veut plus rien dire.
+- ⚠️ **Ça ne se sauvegarde pas.** La ville se répare au rechargement : le trou dans la
+  clôture vit le temps de la session. C'est une décision — la carte est le paquet, et écrire
+  les tuiles cassées dans la sauvegarde ferait grossir chaque partie de tout ce qu'on a
+  renversé depuis le premier jour.
+- **Juges (2 neufs)** : un camion lancé traverse un grillage **et** une borne-fontaine, en
+  garde 0,75 de sa vitesse mesurée **à l'image du passage**, et s'abîme ; il **ne traverse ni
+  une façade ni du barbelé** ; une berline ne casse rien ; au pas (sous
+  `defonce_vitesse_min`), personne ne défonce. Et l'ambulance rend bien ses PV, s'arrête au
+  plafond, met la sauvegarde à jour, pendant qu'une berline n'en rend aucun.
 
 #### Un vélo ne saute plus, il se plie (**correctif**, taille 1) — **livré le 13 sept. 2026**
 

@@ -161,6 +161,58 @@ const Vehicules = (function () {
     return out;
   }
 
+  /** Les tuiles qui bloquent le char a cette place — la liste, pas un oui/non.
+      C'est ce qu'il faut pour decider si un LOURD passe au travers : il faut
+      les voir TOUTES avant de trancher. */
+  function tuilesQuiBloquent(v, x, y) {
+    const out = [];
+    for (const c of cercles(v, x, y)) {
+      const tx0 = Math.floor((c.x - c.r) / TT), tx1 = Math.floor((c.x + c.r) / TT);
+      const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
+      for (let ty = ty0; ty <= ty1; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE)) out.push([tx, ty]);
+        }
+      }
+    }
+    return out;
+  }
+
+  /** Un lourd lance passe AU TRAVERS de ce qui est bas. Rend vrai si la voie
+      s'est ouverte.
+
+      ⚠️ **Tout ou rien.** On regarde d'abord TOUTES les tuiles qui bloquent :
+      s'il y en a une seule qu'on ne casse pas (une façade, l'eau, du barbelé),
+      le camion s'arrête comme n'importe qui. Casser « celles qu'on peut » et
+      s'arrêter sur le reste laisserait un trou dans une clôture sans être
+      passé — le pire des deux mondes.
+
+      Le `defonce` de la fiche dit ce qu'il RESTE de vitesse une fois passé au
+      travers : 0,75 pour le camion, 0,6 pour la remorqueuse. Un mur de clôture
+      coûte donc quelque chose, sinon on le franchit sans le sentir. */
+  function defoncerDevant(v, x, y) {
+    const ph = physique();
+    if (!v.def.defonce || B.interieur) return false;
+    if (Math.hypot(v.vx, v.vy) < ph.defonce_vitesse_min) return false;
+    const tuiles = tuilesQuiBloquent(v, x, y);
+    if (!tuiles.length) return false;
+    for (const t of tuiles) {
+      const s = Monde.solidite(t[0], t[1]);
+      if (s !== 3 && s !== 4) return false;      // une façade : on s'arrête
+      if (Monde.estMeuble(t[0], t[1])) return false;
+    }
+    let casse = false;
+    for (const t of tuiles) if (Monde.defoncer(t[0], t[1])) casse = true;
+    if (!casse) return false;
+    v.vitesse *= v.def.defonce;
+    v.vx *= v.def.defonce; v.vy *= v.def.defonce;
+    endommager(v, ph.defonce_degats, v.agresseur);
+    Entites.poussiere(x, y, 10);
+    Son.SFX.choc();
+    if (v.conducteur === B.joueur) { B.cam.secousse = Math.max(B.cam.secousse, 0.5); Entree.vibrer(120); }
+    return true;
+  }
+
   /** Un des cercles touche-t-il une tuile qui bloque un char ? (en l'air : non) */
   function bloqueParLesTuiles(v, x, y) {
     if (v.z > 6) return false;
@@ -215,12 +267,16 @@ const Vehicules = (function () {
       // Axe par axe : un mur de face arrete, un mur de cote fait glisser.
       let choc = 0;
       if (px !== 0) {
-        if (bloqueParLesTuiles(v, v.x + px, v.y)) { choc = Math.max(choc, Math.abs(v.vx)); v.vx = -v.vx * ph.choc_rebond; }
-        else v.x += px;
+        if (bloqueParLesTuiles(v, v.x + px, v.y)) {
+          if (defoncerDevant(v, v.x + px, v.y)) v.x += px;
+          else { choc = Math.max(choc, Math.abs(v.vx)); v.vx = -v.vx * ph.choc_rebond; }
+        } else v.x += px;
       }
       if (py !== 0) {
-        if (bloqueParLesTuiles(v, v.x, v.y + py)) { choc = Math.max(choc, Math.abs(v.vy)); v.vy = -v.vy * ph.choc_rebond; }
-        else v.y += py;
+        if (bloqueParLesTuiles(v, v.x, v.y + py)) {
+          if (defoncerDevant(v, v.x, v.y + py)) v.y += py;
+          else { choc = Math.max(choc, Math.abs(v.vy)); v.vy = -v.vy * ph.choc_rebond; }
+        } else v.y += py;
       }
       if (choc >= ph.choc_vitesse_min) {
         heurterMur(v, choc);
@@ -400,6 +456,23 @@ const Vehicules = (function () {
       if (v.alarme % 40 === 0) Son.SFX.klaxon();
     }
     if (v.klaxonT > 0) { v.klaxonT--; if (v.klaxonT === 29) Son.SFX.klaxon(); }
+    soignerAuVolant(v);
+  }
+
+  /** L'ambulance rend des PV a qui la conduit — `soigne` de la fiche, en PV
+      par seconde.
+
+      ⚠️ Elle ne RESSUSCITE personne : un mort reste mort, et le boulot est
+      perdu. C'est la seule chose que la fiche disait et qu'il fallait tenir —
+      sinon l'ambulance devient la sortie de secours de toutes les fusillades,
+      et l'hopital ne veut plus rien dire. */
+  function soignerAuVolant(v) {
+    if (!v.def.soigne || B.t % 60 !== 0) return;
+    const c = v.conducteur;
+    if (!c || c === 'trafic' || c === 'police' || !c.vivant) return;
+    if (c.vie <= 0 || c.vie >= c.vieMax) return;
+    c.vie = Math.min(c.vieMax, c.vie + v.def.soigne);
+    if (c === B.joueur) B.partie.vie = c.vie;
   }
 
   function exploser(v) {
@@ -1200,7 +1273,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, sirenes,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, defoncerDevant, sirenes,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

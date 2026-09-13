@@ -75,6 +75,140 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
     )
 
 
+def test_un_lourd_defonce_ce_qui_est_bas_et_jamais_une_facade(banc, paquet):
+    r"""⚠️ `defonce` etait dans les fiches depuis M9 et PERSONNE NE LE LISAIT.
+    Le camion, l'autobus et la remorqueuse rebondissaient sur un grillage
+    comme une berline — trois nombres du catalogue (0,75, 0,7, 0,6) qui ne
+    voulaient rien dire.
+
+    Le juge tient les deux moities de la regle, et la seconde est la plus
+    importante : ce qui est BAS cede (borne-fontaine, grillage, palissade),
+    et une FACADE, jamais. La ville tient par ses murs — les juges de
+    connexite, les interieurs et les devantures en dependent, et un trou dans
+    un mur ouvrirait sur un toit."""
+    ph = paquet["conduite"]["physique"]
+    r = banc(r"""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        const out = {};
+
+        // Une tuile de la solidite voulue, avec du libre au nord et au sud :
+        // on lance le char dessus par le nord.
+        function fonceSur(slug, solide, vitesse) {
+            for (let ty = 4; ty < c.h - 4; ty++) {
+                for (let tx = 4; tx < c.w - 4; tx++) {
+                    if (L.Monde.solidite(tx, ty) !== solide) continue;
+                    if (L.Monde.estMeuble(tx, ty)) continue;
+                    let libre = true;
+                    for (let d = 1; d <= 3; d++) if (L.Monde.solidite(tx, ty - d) !== 0) libre = false;
+                    if (!libre) continue;
+                    L.B.entites = L.B.entites.filter(function (e) { return e.type === 'joueur'; });
+                    L.Entites.reindexerDecor(); L.Entites.indexer();
+                    const j = L.B.joueur;
+                    j.x = tx * L.TT + 8; j.y = (ty - 3) * L.TT + 8;
+                    const v = L.Vehicules.creer(slug, j.x, j.y, Math.PI / 2, { etat: 'roule' });
+                    L.Vehicules.monter(j, v);
+                    v.vitesse = vitesse; v.vx = 0; v.vy = vitesse;
+                    const avant = { glyphe: L.Monde.glyphe(tx, ty), solide: L.Monde.solidite(tx, ty), y: v.y, vie: v.vie };
+                    // ⚠️ On garde le pied dedans et on va JUSQU'AU BOUT : casser
+                    // la tuile ne suffit pas, il faut ressortir de l'autre cote.
+                    // Et on mesure ce qui RESTE de vitesse a l'image du passage,
+                    // pas a la fin — apres, le char a repris son elan.
+                    let casse = false, garde = null;
+                    for (let i = 0; i < 90; i++) {
+                        const v0 = Math.abs(v.vy);
+                        L.Vehicules.avancer(v);
+                        if (!casse && L.Monde.solidite(tx, ty) !== avant.solide) {
+                            casse = true;
+                            garde = v0 > 0 ? Math.abs(v.vy) / v0 : 0;
+                        }
+                        v.vy = Math.max(Math.abs(v.vy), vitesse * 0.6);   // toujours vers le sud
+                    }
+                    const r = { casse: casse,
+                                glypheAvant: avant.glyphe, glypheApres: L.Monde.glyphe(tx, ty),
+                                passe: v.y > (ty + 1) * L.TT, abime: v.vie < avant.vie,
+                                garde: garde === null ? null : Math.round(garde * 100) / 100 };
+                    L.Vehicules.descendre(j, true);
+                    L.Entites.retirer(v);
+                    return r;
+                }
+            }
+            return null;
+        }
+
+        out.camionGrillage = fonceSur('camion', 4, 3.0);       // grillage / palissade
+        out.camionBasse = fonceSur('camion', 3, 3.0);          // borne-fontaine
+        out.camionFacade = fonceSur('camion', 1, 3.0);         // ⚠️ une façade : jamais
+        out.camionBarbele = fonceSur('camion', 5, 3.0);        // ⚠️ le barbelé non plus
+        out.autoGrillage = fonceSur('auto', 4, 3.0);           // une berline ne casse rien
+        out.camionLent = fonceSur('camion', 4, 0.6);           // au pas, on ne défonce pas
+        return out;
+    }""")
+    assert r["camionGrillage"], "aucun grillage isolé trouvé dans la ville"
+    g = r["camionGrillage"]
+    assert g["casse"] is True and g["passe"] is True, "le camion n'a pas traversé le grillage : %s" % g
+    assert g["glypheApres"] != g["glypheAvant"], "la tuile n'a pas changé"
+    assert g["abime"] is True, "passer au travers ne coûte rien à la carrosserie"
+    defonce = next(v for v in paquet["vehicules"] if v["slug"] == "camion")["defonce"]
+    assert abs(g["garde"] - defonce) < 0.25, (
+        "le camion garde %s de sa vitesse au lieu de %s" % (g["garde"], defonce)
+    )
+    assert r["camionBasse"] and r["camionBasse"]["casse"] is True, (
+        "une borne-fontaine doit céder aussi : %s" % r["camionBasse"]
+    )
+    # ⚠️ La moitié qui compte.
+    assert r["camionFacade"] and r["camionFacade"]["casse"] is False and r["camionFacade"]["passe"] is False, (
+        "LE CAMION A TRAVERSÉ UNE FAÇADE : %s" % r["camionFacade"]
+    )
+    if r["camionBarbele"]:
+        assert r["camionBarbele"]["casse"] is False, "le barbelé a cédé : %s" % r["camionBarbele"]
+    assert r["autoGrillage"] and r["autoGrillage"]["casse"] is False, (
+        "une berline défonce un grillage : %s" % r["autoGrillage"]
+    )
+    assert r["camionLent"] and r["camionLent"]["casse"] is False, (
+        "on défonce au pas, sous %s px/image : %s" % (ph["defonce_vitesse_min"], r["camionLent"])
+    )
+
+
+def test_l_ambulance_soigne_son_conducteur_mais_ne_ressuscite_personne(banc, paquet):
+    """`soigne` était dans la fiche depuis M9 et personne ne le lisait :
+    l'ambulance était une fourgonnette blanche.
+
+    ⚠️ Et la limite compte autant que le don : elle ne RESSUSCITE personne. Un
+    mort reste mort — sinon l'ambulance devient la sortie de secours de toutes
+    les fusillades, et l'hôpital ne veut plus rien dire."""
+    soigne = next(v for v in paquet["vehicules"] if v["slug"] == "ambulance")["soigne"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const amb = o.char('ambulance', 30, 0, 0);
+        L.Vehicules.monter(j, amb);
+        j.vie = 40;
+        o.frame(180);                       // trois secondes au volant
+        const rendu = j.vie - 40;
+        const sauve = L.B.partie.vie;
+        // Au plafond, ça n'ajoute rien.
+        j.vie = j.vieMax;
+        o.frame(120);
+        const plafond = j.vie === j.vieMax;
+        L.Vehicules.descendre(j, true);
+        // Une auto, elle, ne soigne rien.
+        const auto = o.char('auto', 30, 0, 0);
+        L.Vehicules.monter(j, auto);
+        j.vie = 40;
+        o.frame(180);
+        const autoRend = j.vie - 40;
+        return { rendu: rendu, sauve: sauve, plafond: plafond, autoRend: autoRend, max: j.vieMax };
+    }""")
+    assert r["rendu"] > 0, "l'ambulance ne soigne pas son conducteur"
+    assert abs(r["rendu"] - soigne * 3) <= soigne, (
+        "trois secondes doivent rendre environ %s PV, pas %s" % (soigne * 3, r["rendu"])
+    )
+    assert r["sauve"] == 40 + r["rendu"], "la sauvegarde n'a pas suivi les PV rendus"
+    assert r["plafond"] is True, "l'ambulance dépasse le maximum de vie"
+    assert r["autoRend"] == 0, "une berline soigne : %s PV" % r["autoRend"]
+
+
 def test_les_ambulances_et_les_polices_ont_chacune_leur_sirene(banc):
     """⚠️ Demande de Martin : « je veux des sirènes pour les ambulances et
     polices. »
