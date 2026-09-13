@@ -418,7 +418,8 @@ def test_une_replique_au_telephone_atteint_la_sortie(banc):
 def _biquad(type_, f0, q, f, fs=48000.0):
     """Le gain lineaire d'un filtre biquad a la frequence `f`. Formules RBJ :
     celles que le Web Audio implemente vraiment."""
-    import cmath, math
+    import cmath
+    import math
     w0 = 2 * math.pi * f0 / fs
     cw, alpha = math.cos(w0), math.sin(w0) / (2 * q)
     if type_ == "lowpass":

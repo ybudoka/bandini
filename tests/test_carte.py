@@ -230,9 +230,14 @@ def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
 
 
 def test_les_lampadaires_eclairent_depuis_un_trottoir():
+    """⚠️ Deux sortes de lumiere depuis les devantures : le LAMPADAIRE, qui a
+    toujours son poteau planté sur un trottoir, et la VITRINE, qui n'en a pas —
+    elle n'est qu'un reflet au pied d'un mur. Confondre les deux ferait echouer
+    ce juge des qu'on ajoute un commerce."""
     positions = {(d["x"], d["y"]) for d in CARTE["decor"] if d["type"] == "lampadaire"}
-    assert len(CARTE["lampes"]) >= 40
-    for lampe in CARTE["lampes"]:
+    poteaux = [lampe for lampe in CARTE["lampes"] if lampe.get("c") != "vitrine"]
+    assert len(poteaux) >= 40
+    for lampe in poteaux:
         assert (lampe["x"], lampe["y"]) in positions, "une lampe sans poteau"
         assert CARTE["sol"][lampe["y"]][lampe["x"]] == "."
 

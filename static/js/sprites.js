@@ -283,6 +283,134 @@ const TUILES = (function () {
   };
 })();
 
+/* Les devantures et les graffitis : une COUCHE peinte par-dessus les tuiles.
+
+   ⚠️ Rien ici n'est solide et rien ne bouge : ces dessins vivent dans le
+   morceau de decor, cuit une fois et garde en cache. Une rue commercante ne
+   coute donc pas une image de plus a l'affichage — c'est ce qui permet d'en
+   mettre partout.
+
+   ⚠️ Le repere est celui du MORCEAU : (ox, oy) est le coin haut-gauche de la
+   tuile d'ancrage dans le canvas du morceau, et il peut etre negatif ou
+   depasser — une enseigne a cheval sur deux morceaux est peinte DANS LES DEUX,
+   et chacun garde la moitie qui le regarde. */
+const FACADES = (function () {
+  'use strict';
+
+  const T = 16;
+
+  //: Hauteurs, sur les 16 px du mur vu d'en haut. Le bandeau prend la moitie
+  //: haute (le nom doit se lire sans s'arreter de rouler), l'auvent la fait
+  //: reculer, et la vitre au pied du mur est ce qui s'allume la nuit.
+  const BANDEAU_Y = 1, BANDEAU_H = 8;
+  const AUVENT_Y = 9, AUVENT_H = 4;
+  const VITRE_Y = 13, VITRE_H = 3;
+
+  function eclaircir(couleur, dose) {
+    const n = parseInt(couleur.slice(1), 16);
+    const r = Math.min(255, ((n >> 16) & 255) + dose);
+    const v = Math.min(255, ((n >> 8) & 255) + dose);
+    const b = Math.min(255, (n & 255) + dose);
+    return 'rgb(' + r + ',' + v + ',' + b + ')';
+  }
+
+  /** Le bandeau, le nom, l'auvent raye, la vitre et la pancarte.
+      `d` = { x, y, l, genre, texte, pancarte, porte }, `g` = le genre. */
+  function devanture(ctx, d, g, ox, oy) {
+    const large = d.l * T;
+
+    // Le bandeau : fond sombre, une arete claire en haut pour le detacher du toit.
+    ctx.fillStyle = g.bandeau;
+    ctx.fillRect(ox, oy + BANDEAU_Y, large, BANDEAU_H);
+    ctx.fillStyle = eclaircir(g.bandeau, 26);
+    ctx.fillRect(ox, oy + BANDEAU_Y, large, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';
+    ctx.fillRect(ox, oy + BANDEAU_Y + BANDEAU_H - 1, large, 1);
+
+    // Le nom, centre. ⚠️ Arrondi a l'entier : un texte pose sur un demi-pixel
+    // est floute par le canvas, et a cinq pixels de haut il devient illisible.
+    const larg = Atlas.largeurTexte(d.texte, 1);
+    Atlas.texte(ctx, d.texte, Math.round(ox + (large - larg) / 2), oy + BANDEAU_Y + 2, g.lettres, 1);
+
+    // L'auvent : des rayures d'une tuile sur deux, coupees devant la porte.
+    for (let i = 0; i < d.l; i++) {
+      const x = ox + i * T;
+      ctx.fillStyle = g.auvent;
+      ctx.fillRect(x, oy + AUVENT_Y, T, AUVENT_H);
+      ctx.fillStyle = eclaircir(g.auvent, 34);
+      for (let k = 0; k < T; k += 6) ctx.fillRect(x + k, oy + AUVENT_Y, 3, AUVENT_H);
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.fillRect(x, oy + AUVENT_Y + AUVENT_H - 1, T, 1);
+    }
+
+    // La vitre au pied du mur : c'est elle qu'on voit briller de loin la nuit.
+    ctx.fillStyle = g.vitre;
+    ctx.fillRect(ox + 1, oy + VITRE_Y, large - 2, VITRE_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    for (let i = 1; i < d.l; i++) ctx.fillRect(ox + i * T - 1, oy + VITRE_Y, 2, VITRE_H);
+
+    if (d.pancarte) pancarte(ctx, d, g, ox, oy);
+  }
+
+  /** L'enseigne perpendiculaire : elle DEPASSE du mur sur le trottoir, c'est
+      ce qui la rend lisible quand on arrive par le cote. */
+  function pancarte(ctx, d, g, ox, oy) {
+    const x = d.pancarte < 0 ? ox + 2 : ox + d.l * T - 9;
+    const y = oy + T + 1;                       // la tuile de trottoir, sous le mur
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    ctx.fillRect(x + 1, y + 1, 7, 10);          // l'ombre portee au sol
+    ctx.fillStyle = g.bandeau;
+    ctx.fillRect(x, y, 7, 10);
+    ctx.fillStyle = eclaircir(g.bandeau, 30);
+    ctx.fillRect(x, y, 7, 1);
+    ctx.fillStyle = g.lettres;
+    ctx.fillRect(x + 2, y + 2, 3, 1);
+    ctx.fillRect(x + 2, y + 4, 3, 1);
+    ctx.fillRect(x + 2, y + 6, 2, 1);
+    ctx.fillStyle = g.auvent;                    // la potence qui la tient au mur
+    ctx.fillRect(x + 3, y - 2, 1, 2);
+  }
+
+  //: Trois facons de salir un mur. 0 = le mot seul, 1 = le barbouillage seul,
+  //: 2 = les deux. ⚠️ Un tag est TOUJOURS un peu de travers et deborde un peu :
+  //: pose bien droit dans sa tuile, il a l'air d'un panneau officiel.
+  function graffiti(ctx, gr, couleur, ox, oy) {
+    const h = hash(gr.x, gr.y);
+    if (gr.motif !== 1) {
+      const dx = 1 + (h % 3), dy = 3 + ((h >> 3) % 4);
+      if (gr.penche) {
+        ctx.save();
+        ctx.translate(ox + dx, oy + dy);
+        ctx.rotate(-0.14);
+        ctx.fillStyle = 'rgba(0,0,0,0.40)';
+        Atlas.texte(ctx, gr.texte, 1, 1, 'rgba(0,0,0,0.40)', 1);
+        Atlas.texte(ctx, gr.texte, 0, 0, couleur, 1);
+        ctx.restore();
+      } else {
+        Atlas.texte(ctx, gr.texte, ox + dx + 1, oy + dy + 1, 'rgba(0,0,0,0.40)', 1);
+        Atlas.texte(ctx, gr.texte, ox + dx, oy + dy, couleur, 1);
+      }
+    }
+    if (gr.motif !== 0) {
+      ctx.fillStyle = couleur;
+      for (let i = 0; i < 7; i++) {
+        const b = hash(gr.x + i * 7, gr.y - i * 3);
+        ctx.fillRect(ox + (b % 14), oy + 2 + ((b >> 4) % 12), 1 + (b % 3), 1);
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.12)';
+      ctx.fillRect(ox + 2 + (h % 6), oy + 4 + ((h >> 5) % 6), 4, 1);
+    }
+  }
+
+  function hash(x, y) {
+    let n = (x * 374761393 + y * 668265263) >>> 0;
+    n = (n ^ (n >>> 13)) * 1274126177 >>> 0;
+    return (n ^ (n >>> 16)) >>> 0;
+  }
+
+  return { devanture: devanture, graffiti: graffiti, T: T };
+})();
+
 /* Decor procedural : (ctx, w, h). `r` = rayon au sol, `solide` = on s'y cogne.
    ⚠️ Un poteau ou un buisson n'est PAS solide : un trottoir de 32 px ou l'on
    reste coince sur une poubelle est un trottoir qu'on n'emprunte plus.

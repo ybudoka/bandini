@@ -64,12 +64,24 @@ const Monde = (function () {
       morceaux: new Map(), visibles: new Set(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       intersections: def.intersections || [],
-      lampes: (def.lampes || []).map(function (l) { return { x: l.x * TT + 8, y: l.y * TT + 2, r: 44, c: 'rgba(255,214,130,0.55)' }; }),
+      // ⚠️ Deux sortes de lumiere : le lampadaire, haut et large, et la
+      // VITRINE, basse et chaude, qui ne fait qu'un reflet sur le trottoir.
+      lampes: (def.lampes || []).map(function (l) {
+        const vitrine = l.c === 'vitrine';
+        return { x: l.x * TT + 8, y: l.y * TT + (vitrine ? 6 : 2),
+                 r: l.r || 44,
+                 c: vitrine ? 'rgba(255,226,170,0.34)' : 'rgba(255,214,130,0.55)' };
+      }),
       portes: def.portes || [],
       points: def.points_interet || [],
       zones: def.zones || [],
       apparition: def.apparition,
       pxW: w * TT, pxH: h * TT,
+      devantures: indexerParMorceau(def.devantures || [], function (d) {
+        // Le mur ET la tuile de trottoir sous lui (la pancarte y pend).
+        return [d.x, d.y, d.l, 2];
+      }),
+      graffitis: indexerParMorceau(def.graffitis || [], function () { return [0, 0, 1, 1]; }),
     };
     B.carte = carte;
     return carte;
@@ -282,6 +294,35 @@ const Monde = (function () {
     return hash2(tx, ty) % 4;
   }
 
+  /** Range des poses par morceau. ⚠️ Une pose qui deborde est rangee dans TOUS
+      les morceaux qu'elle touche : chacun en peindra la part qui le regarde, et
+      une enseigne a cheval sur deux morceaux n'est pas coupee en deux. */
+  function indexerParMorceau(poses, boite) {
+    const index = new Map();
+    poses.forEach(function (pose) {
+      const b = boite(pose);
+      const x0 = b[0] || pose.x, y0 = b[1] || pose.y;
+      const m0x = Math.floor(x0 / MORCEAU), m0y = Math.floor(y0 / MORCEAU);
+      const m1x = Math.floor((x0 + b[2] - 1) / MORCEAU), m1y = Math.floor((y0 + b[3] - 1) / MORCEAU);
+      for (let my = m0y; my <= m1y; my++) {
+        for (let mx = m0x; mx <= m1x; mx++) {
+          const cle = mx + ',' + my;
+          const liste = index.get(cle);
+          if (liste) liste.push(pose); else index.set(cle, [pose]);
+        }
+      }
+    });
+    return index;
+  }
+
+  function genresDevanture() {
+    return (B.defs && B.defs.devantures && B.defs.devantures.genres) || [];
+  }
+
+  function couleursTag() {
+    return (B.defs && B.defs.devantures && B.defs.devantures.couleurs_tag) || ['#d34f3a'];
+  }
+
   function peindreMorceau(mx, my) {
     const c = Base.nouveauCanvas(MORCEAU_PX, MORCEAU_PX);
     const ctx = c.getContext('2d');
@@ -295,7 +336,30 @@ const Monde = (function () {
         ctx.drawImage(tuile, i * TT, j * TT);
       }
     }
+    peindreDevantures(ctx, mx, my);
     return c;
+  }
+
+  /** Les enseignes et les tags, par-dessus les tuiles du morceau. */
+  function peindreDevantures(ctx, mx, my) {
+    const cle = mx + ',' + my;
+    const ox = mx * MORCEAU, oy = my * MORCEAU;
+    const genres = genresDevanture();
+    const devantures = carte.devantures && carte.devantures.get(cle);
+    if (devantures && genres.length) {
+      devantures.forEach(function (d) {
+        const g = genres[d.genre] || genres[0];
+        FACADES.devanture(ctx, d, g, (d.x - ox) * TT, (d.y - oy) * TT);
+      });
+    }
+    const tags = carte.graffitis && carte.graffitis.get(cle);
+    if (tags) {
+      const couleurs = couleursTag();
+      tags.forEach(function (gr) {
+        FACADES.graffiti(ctx, gr, couleurs[gr.couleur % couleurs.length],
+                         (gr.x - ox) * TT, (gr.y - oy) * TT);
+      });
+    }
   }
 
   function dessinerSol(ctx, cam) {

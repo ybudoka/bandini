@@ -50,6 +50,7 @@ Forme servie (`exporter()`) :
 
 from __future__ import annotations
 
+from . import devantures as devantures_mod
 from . import magasins
 
 TUILE_PX = 16
@@ -91,6 +92,10 @@ VOIES = {".", ">", "<", "^", "v", "+", "S"}
 PAS = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
 
 TOITS = "BEO"
+
+#: ⚠️ Les genres d'ilot qui ont pignon sur rue. Pas les maisons ni la banlieue
+#: (on n'accroche pas une enseigne sur un bungalow), pas les cours de gang.
+GENRES_COMMERCANTS = frozenset({"commerces", "hangars", "industriel"})
 
 # --- Les cinq districts -----------------------------------------------------
 
@@ -405,6 +410,17 @@ class _Chantier:
         self.arrets: dict[str, str] = {}
         self.reserve: set[tuple[int, int]] = set()
         self.occupe: set[tuple[int, int]] = set()
+        #: Les devantures (bandeau + nom + vitrines + pancarte) et les tags.
+        #: ⚠️ Ce sont des COUCHES PEINTES : elles ne changent aucune solidite,
+        #: donc aucun juge de circulation ni de connexite ne depend d'elles.
+        self.devantures: list[dict] = []
+        self.graffitis: list[dict] = []
+        self.murs_tagges: set[tuple[int, int]] = set()
+        #: ⚠️ Les devantures tirent dans LEUR PROPRE de. Avec le de commun, choisir
+        #: un nom d'enseigne decalait toute la suite du hasard et deplacait des
+        #: arbres a l'autre bout de la ville : une couche peinte ne doit pas
+        #: bouger un seul mur. Cette graine-ci peut changer sans rien casser.
+        self.des_devanture = Des(graine ^ 0x5EA51)
 
     # --- Trame --------------------------------------------------------------
 
@@ -602,6 +618,174 @@ class _Chantier:
         for j in (1, 2):
             self.reserve.add((px, py + j))
         return px, py
+
+    # --- Les devantures ------------------------------------------------------
+
+    #: Quatre tuiles par defaut (64 px, seize lettres) ; cinq seulement pour
+    #: faire tenir un nom long. Au-dela, l'enseigne avale la facade du voisin
+    #: et deux commerces mitoyens n'en font plus qu'un.
+    ENSEIGNE_MAX = 4
+    ENSEIGNE_ETIREE = 5
+    ENSEIGNE_MIN = 2
+
+    def district_en(self, x: int, y: int) -> str:
+        """Le quartier d'une tuile — il decide des noms sur les enseignes."""
+        for district in DISTRICTS:
+            dx, dy, dl, dh = self.rect_district(district)
+            if dx <= x < dx + dl and dy <= y < dy + dh:
+                return district["slug"]
+        return DISTRICTS[0]["slug"]
+
+    def _bande_de_facade(self, facades: set[tuple[int, int]],
+                         ax: int, ay: int) -> tuple[int, int]:
+        """Les facades d'un seul tenant autour de `ax` sur la rangee `ay`.
+
+        ⚠️ Sur la MEME rangee et contigues : une facade en L a des morceaux de
+        mur a deux hauteurs, et un bandeau a cheval sur les deux flotterait sur
+        le toit.
+        """
+        gauche = ax
+        while (gauche - 1, ay) in facades:
+            gauche -= 1
+        droite = ax
+        while (droite + 1, ay) in facades:
+            droite += 1
+        return gauche, droite - gauche + 1
+
+    def poser_devanture(self, facades: list[tuple[int, int]], ancre: tuple[int, int],
+                        genre: str, special: dict | None = None) -> bool:
+        """Un bandeau, un nom, des vitrines et une pancarte. Rend True si pose.
+
+        ⚠️ Les tuiles du bandeau deviennent des VITRINES (`W`) : meme solidite
+        que la facade, mais elles portent une lampe — une rue commercante
+        s'allume la nuit, et c'est ce qui la distingue d'une rue d'entrepots.
+        """
+        ax, ay = ancre
+        ensemble = set(facades)
+        depart, dispo = self._bande_de_facade(ensemble, ax, ay)
+        if dispo < self.ENSEIGNE_MIN:
+            return False
+        large = min(self.ENSEIGNE_MAX, dispo)
+        # Centree sur la porte, puis ramenee dans la bande.
+        x0 = min(max(ax - large // 2, depart), depart + dispo - large)
+
+        if special is not None:
+            choix = devantures_mod.enseigne_speciale(special["slug"], special["nom"])
+            if choix is None:
+                return False
+            texte, genre_visuel = choix
+        else:
+            catalogue = devantures_mod.commerces_du_district(self.district_en(ax, ay))
+            texte, famille = catalogue[self.des_devanture.entier(0, len(catalogue) - 1)]
+            genre_visuel = devantures_mod.genre_index(famille)
+        # ⚠️ Un nom trop long pour la bande n'est pas coupe : on elargit tant
+        # qu'on peut, et si ca ne rentre toujours pas on renonce a l'enseigne
+        # plutot que d'afficher « QUINCAILLE ».
+        while (not devantures_mod.tient_en(texte, large, TUILE_PX)
+               and large < min(dispo, self.ENSEIGNE_ETIREE)):
+            large += 1
+            x0 = min(max(ax - large // 2, depart), depart + dispo - large)
+        if not devantures_mod.tient_en(texte, large, TUILE_PX):
+            return False
+
+        for i in range(large):
+            tx = x0 + i
+            if self.sol[ay][tx] == "F":
+                self.sol[ay][tx] = "W"
+
+        # La pancarte pend a un bout du bandeau, du cote ou il y a du trottoir.
+        # ⚠️ Tiree au sort parmi les bouts possibles : en prenant toujours le
+        # premier, toutes les pancartes de la ville pendaient a gauche.
+        cotes = [sens for bout, sens in ((x0, -1), (x0 + large - 1, 1))
+                 if self.marchable_en(bout, ay + 1)]
+        pancarte = cotes[self.des_devanture.entier(0, len(cotes) - 1)] if cotes else 0
+
+        self.devantures.append({
+            "x": x0, "y": ay, "l": large, "genre": genre_visuel,
+            "texte": texte, "pancarte": pancarte,
+            "porte": 1 if special is not None else 0,
+        })
+        # ⚠️ Une vitrine eclaire le trottoir. Sans ca, la rue commercante et la
+        # rangee d'entrepots sont le meme noir a minuit, et tout le travail des
+        # enseignes disparaît la moitie du temps de jeu. Lueur BASSE et courte :
+        # c'est un reflet sur le trottoir, pas un lampadaire.
+        self.lampes.append({"x": x0 + large // 2, "y": ay + 1,
+                            "r": 20 + 4 * large, "c": "vitrine"})
+        for i in range(large):
+            self.murs_tagges.add((x0 + i, ay))       # pas de graffiti sur une vitrine
+        return True
+
+    # --- Les graffitis -------------------------------------------------------
+
+    def graffitis_sur_les_murs(self) -> None:
+        """Des tags sur les murs nus. Le gang du coin signe chez lui.
+
+        ⚠️ Jamais sur une devanture : un commerce lave sa vitrine. Les tags
+        vont sur les facades restees nues (`F`) et sur les portes condamnees —
+        c'est-a-dire exactement les murs dont personne ne s'occupe.
+        """
+        cours = [(z["x"], z["y"], z["l"], z["h"], z["gang"])
+                 for z in self.zones() if z.get("gang")]
+
+        def gang_proche(x: int, y: int) -> str | None:
+            for zx, zy, zl, zh, gang in cours:
+                if zx - 6 <= x < zx + zl + 6 and zy - 6 <= y < zy + zh + 6:
+                    return gang
+            return None
+
+        for y in range(self.hauteur):
+            for x in range(self.largeur):
+                if self.sol[y][x] not in ("F", "d"):
+                    continue
+                if (x, y) in self.murs_tagges:
+                    continue
+                # Un mur ne se tague que s'il se VOIT : il faut pouvoir se
+                # planter devant.
+                if not self.marchable_en(x, y + 1):
+                    continue
+                gang = gang_proche(x, y)
+                #: Trois murs sur cent en ville, un sur cinq au pied d'une cour
+                #: de gang : un tag partout ne marque plus rien.
+                chance = 0.20 if gang else 0.03
+                if not self.des_devanture.chance(chance):
+                    continue
+                if gang and self.des_devanture.chance(0.75):
+                    mots = devantures_mod.TAGS_GANG.get(gang, devantures_mod.TAGS_LIBRES)
+                else:
+                    mots = devantures_mod.TAGS_LIBRES
+                # ⚠️ Un tag long deborde sur les murs voisins : on compte
+                # d'abord la place REELLE (jusqu'a trois tuiles de mur d'un
+                # seul tenant), puis on ne tire que parmi les mots qui y
+                # tiennent. Sans ca, « LA VILLE DORT » finissait ecrit en
+                # travers d'un trottoir ou d'une vitrine.
+                place = 1
+                while place < 3 and x + place < self.largeur \
+                        and self.sol[y][x + place] in ("F", "d") \
+                        and (x + place, y) not in self.murs_tagges:
+                    place += 1
+                possibles = [m for m in mots
+                             if devantures_mod.tient_en(m, place, TUILE_PX, marge=0)]
+                if not possibles:
+                    continue
+                texte = possibles[self.des_devanture.entier(0, len(possibles) - 1)]
+                self.graffitis.append({
+                    "x": x, "y": y,
+                    "motif": devantures_mod.MOTIFS[self.des_devanture.entier(0, len(devantures_mod.MOTIFS) - 1)],
+                    "couleur": self.des_devanture.entier(0, len(devantures_mod.COULEURS_TAG) - 1),
+                    "texte": texte,
+                    "penche": self.des_devanture.entier(0, 1),
+                })
+                self.murs_tagges.add((x, y))
+
+    def _ancre_devanture(self, facades: list[tuple[int, int]]) -> tuple[int, int] | None:
+        """Ou irait la porte si ce batiment en avait une : le milieu de sa
+        facade la plus au sud qui donne sur du marchable."""
+        candidats = [(tx, ty) for tx, ty in facades if self.marchable_en(tx, ty + 1)]
+        if not candidats:
+            return None
+        bas = max(ty for _, ty in candidats)
+        rangee = sorted(c for c in candidats if c[1] == bas)
+        return rangee[len(rangee) // 2]
 
     def poser_decor(self, type_: str, x: int, y: int) -> bool:
         """Du decor seulement sur une tuile libre, hors route et hors devant de porte."""
@@ -848,9 +1032,19 @@ class _Chantier:
             else:
                 self._jardin(px, py, pl, ph)
         if facades_vedette:
-            self.poser_porte(facades_vedette, special)
+            porte = self.poser_porte(facades_vedette, special)
+            if porte:
+                self.poser_devanture(facades_vedette, porte, genre, special)
         for facades, _, _ in batiments:
-            self.poser_porte(facades)
+            porte = self.poser_porte(facades)
+            # ⚠️ Une devanture ne suit pas la porte : un commerce a pignon sur
+            # rue qu'on ne peut pas visiter reste un commerce, et une rue ou
+            # seuls les trois batiments visitables ont une enseigne n'a l'air
+            # d'une rue commercante nulle part.
+            if genre in GENRES_COMMERCANTS:
+                ancre = porte or self._ancre_devanture(facades)
+                if ancre:
+                    self.poser_devanture(facades, ancre, genre)
         for _ in range(max(1, largeur // 10)):
             self.poser_decor("poubelle", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, 1))
@@ -1267,6 +1461,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier.bornes()
     ambulants = chantier.ambulants()
     paquets = chantier.paquets()
+    # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
+    # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
+    chantier.graffitis_sur_les_murs()
 
     terminus = next(p for p in chantier.points if p["slug"] == "terminus")
     depart = (terminus["x"], terminus["y"])
@@ -1293,6 +1490,8 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "portes": chantier.portes,
         "lampes": chantier.lampes,
         "decor": chantier.decor,
+        "devantures": chantier.devantures,
+        "graffitis": chantier.graffitis,
         "ambulants": ambulants,
         "paquets": paquets,
         "zones": chantier.zones(),
