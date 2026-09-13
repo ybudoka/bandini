@@ -104,6 +104,21 @@ DEGUISEMENT = {"vehicule_s": 3, "vehicule_etoiles": 1, "vetements_remise_max": 3
 VITESSES = {"joueur_marche": 1.2, "joueur_sprint": 2.1, "pieton": 0.45, "pieton_course": 1.35,
             "policier": 1.9, "endurance": 100, "endurance_par_image": 0.4}
 
+#: Enjamber un grillage : ce que ca coute. ⚠️ Le meme prix POUR TOUT LE MONDE —
+#: le joueur, un agent, un gardien de fourriere. Si franchir une cloture etait
+#: une capacite du joueur seul, la premiere cloture venue deviendrait l'exploit
+#: qui gagne toutes les poursuites : on enjambe, les agents restent plantes de
+#: l'autre cote. C'est ici, en donnees, pour qu'on ne puisse pas l'oublier d'un
+#: cote et pas de l'autre.
+#: Les deux chiffres disent la MEME chose : 48 images en haut de la cloture,
+#: c'est 3,5 tuiles de marche (1,2 px/image, 16 px la tuile) — d'ou les 5 tuiles
+#: que l'A* paie pour traverser, l'exposition en plus.
+CLOTURES = {
+    "enjambe_images": 48,      # la pose : on ne frappe pas, on ne tire pas, on ne court pas
+    "cout_chemin_tuiles": 5,   # ce que l'A* paie pour un grillage
+    "hauteur_px": 5,           # de combien le corps se souleve au sommet (dessin)
+}
+
 
 #: La police sur le terrain : patrouille, poursuite, arrestation, prison.
 POLICE = {
@@ -135,4 +150,5 @@ def exporter() -> dict:
         "temoins": TEMOINS,
         "deguisement": DEGUISEMENT,
         "vitesses": VITESSES,
+        "clotures": CLOTURES,
     }

@@ -147,6 +147,100 @@ def test_tout_ce_qui_est_marchable_est_relie():
         assert (porte["x"], porte["y"] + 1) in principal, porte
 
 
+def test_les_trois_clotures_disent_ce_qu_elles_font():
+    """⚠️ Le defaut que Martin a nomme : « une cloture, si elle n'est pas
+    barbelee, qu'on puisse passer par-dessus ». On passait par-dessus TOUTES —
+    sans meme ralentir. `f` etait solide 3 : le masque des vehicules la voyait,
+    celui des pietons non. Une cloture n'arretait donc que les chars, et a pied
+    elle n'existait pas.
+
+    Les trois sortes vivent maintenant dans la legende, et rien d'autre ne les
+    distingue : 4 s'enjambe (grillage, palissade de bois), 5 ne se passe pas
+    (barbele). Aucune n'est solide 1 — on VOIT a travers une cloture."""
+    for glyphe in carte.CLOTURES:
+        proprietes = carte.LEGENDE[glyphe]
+        assert proprietes.get("cloture"), glyphe
+        assert carte.solidite(glyphe) in (4, 5), glyphe
+        assert not carte.marchable(glyphe), f"on ne se tient pas SUR une cloture ({glyphe})"
+        assert carte.solidite(glyphe) != 0, f"un char franchirait {glyphe}"
+    for glyphe in carte.ENJAMBABLES:
+        assert carte.solidite(glyphe) == 4 and carte.franchissable(glyphe), glyphe
+    assert carte.solidite(carte.BARBELE) == 5
+    assert not carte.franchissable(carte.BARBELE), "le barbele s'enjambe : il ne veut plus rien dire"
+
+
+def test_la_ville_porte_les_trois_clotures_la_ou_elles_ont_un_sens():
+    """Chacune a un endroit et une raison : du barbele la ou quelqu'un a paye
+    pour que personne n'entre (les cours de gang, les cours de La Shop), du
+    grillage la ou l'on passe par-dessus (la fourriere, les terrains vagues), et
+    du bois dans les cours arriere de la banlieue — la variete demandee par
+    Martin, et ce qui fait qu'une banlieue a l'air d'une banlieue vue d'en haut.
+    """
+    zones = [z for z in CARTE["zones"] if z.get("district")]
+
+    def district(x, y):
+        for z in zones:
+            if z["x"] <= x < z["x"] + z["l"] and z["y"] <= y < z["y"] + z["h"]:
+                return z["slug"]
+        return None
+
+    par_cloture: dict[str, set[str]] = {g: set() for g in carte.CLOTURES}
+    compte = dict.fromkeys(carte.CLOTURES, 0)
+    for y, ligne in enumerate(CARTE["sol"]):
+        for x, glyphe in enumerate(ligne):
+            if glyphe in carte.CLOTURES:
+                compte[glyphe] += 1
+                par_cloture[glyphe].add(district(x, y))
+    for glyphe, n in compte.items():
+        assert n >= 20, f"presque pas de {carte.LEGENDE[glyphe]['nom']} dans la ville : {n}"
+    assert par_cloture[carte.BOIS] == {"erables"},         f"la palissade de bois est une image de BANLIEUE : {par_cloture[carte.BOIS]}"
+    assert "shop" in par_cloture[carte.BARBELE]
+    # La fourriere garde son GRILLAGE, et c'est une decision : « on le reprend
+    # par-dessus la cloture » est la moitie de ce qui la rend interessante.
+    lot = CARTE["fourriere"]
+    tour = ([(lot["x"] + i, lot["y"]) for i in range(lot["largeur"])]
+            + [(lot["x"], lot["y"] + j) for j in range(lot["hauteur"])])
+    clotures = [CARTE["sol"][y][x] for x, y in tour if CARTE["sol"][y][x] in carte.CLOTURES]
+    assert len(clotures) > 10 and set(clotures) == {carte.GRILLAGE},         "du barbele a la fourriere : il ne reste qu'une caisse a payer"
+
+
+def test_un_barbele_ne_referme_jamais_une_poche():
+    """⚠️ Le piege du barbele : c'est un mur pour un pieton. Une cour qu'il
+    referme n'est plus dans la ville — et `boucher_les_poches`, qui est le filet
+    du generateur, la MURE en silence (avec ses arbres, et parfois le devant
+    d'une porte d'a cote).
+
+    Le juge est double : la ville reste d'un seul tenant a pied en comptant le
+    barbele comme un mur (c'est ce que fait `composantes_marchables`), et la
+    graine livree ne fait boucher aucune tuile."""
+    assert len(carte.composantes_marchables(CARTE)) == 1
+    assert CARTE["tuiles_bouchees"] == 0
+    principal = carte.composantes_marchables(CARTE)[0]
+    for y, ligne in enumerate(CARTE["sol"]):
+        for x, glyphe in enumerate(ligne):
+            if glyphe != carte.BARBELE:
+                continue
+            for vx, vy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if not (0 <= vy < CARTE["hauteur"] and 0 <= vx < CARTE["largeur"]):
+                    continue
+                if carte.marchable(CARTE["sol"][vy][vx]):
+                    assert (vx, vy) in principal,                         f"du sol enferme par du barbele en ({vx},{vy})"
+
+
+def test_une_cloture_relie_ses_deux_cotes_mais_le_barbele_coupe():
+    """Les deux faces de `composantes_marchables`, sur une petite carte a la
+    main : un grillage est un PONT (on l'enjambe), un barbele est un mur."""
+    def petite(cloture):
+        return {"sol": ["BBBBB", "B.f.B".replace("f", cloture), "BBBBB"]}
+
+    assert len(carte.composantes_marchables(petite(carte.GRILLAGE))) == 1
+    assert len(carte.composantes_marchables(petite(carte.BOIS))) == 1
+    assert len(carte.composantes_marchables(petite(carte.BARBELE))) == 2
+    # Et la tuile de cloture n'est jamais DANS un groupe : on ne s'y tient pas.
+    groupe = carte.composantes_marchables(petite(carte.GRILLAGE))[0]
+    assert (2, 1) not in groupe and {(1, 1), (3, 1)} <= groupe
+
+
 def test_les_portes_menent_a_un_interieur():
     slugs = set()
     for porte in CARTE["portes"]:

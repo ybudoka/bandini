@@ -151,7 +151,10 @@ const Police = (function () {
     const p = reglages();
     if (a.cheminT-- <= 0 || !a.chemin) {
       a.cheminT = p.chemin_toutes_les_images;
-      Monde.demanderChemin(a.x, a.y, but.x, but.y, Monde.MASQUE_PIETON, function (chemin) { a.chemin = chemin; });
+      // ⚠️ MASQUE_A_PIED, pas MASQUE_PIETON : un agent sait enjamber un
+      // grillage, exactement comme le joueur et au meme prix. Sinon la premiere
+      // cloture venue gagne toutes les poursuites.
+      Monde.demanderChemin(a.x, a.y, but.x, but.y, Monde.MASQUE_A_PIED, function (chemin) { a.chemin = chemin; });
     }
     let cible = but;
     if (a.chemin && a.chemin.length) {
@@ -161,6 +164,9 @@ const Police = (function () {
     const dx = cible.x - a.x, dy = cible.y - a.y, d = Math.hypot(dx, dy);
     if (d < 2) { a.vx = 0; a.vy = 0; return true; }
     a.vx = dx / d * vitesse; a.vy = dy / d * vitesse;
+    // Une cloture sur le chemin : il l'enjambe, et il y perd le meme temps que
+    // nous. Une poursuite ne se gagne donc pas en escaladant.
+    if (Entites.enjamber(a, a.vx, a.vy)) return false;
     Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_PIETON);
     Entites.dansLaCarte(a);
     a.anim.dist += vitesse;
@@ -172,6 +178,7 @@ const Police = (function () {
   function gere(a) {
     const j = B.joueur, r = B.recherche, p = reglages(), v = defs().vitesses;
     if (!a.vivant || a.etat === 'assomme' || a.recul > 0) return false;
+    if (a.enjambe) { a.vx = 0; a.vy = 0; return true; }        // il est en haut d'une cloture
     if (a.etat === 'attaque') { a.vx = 0; a.vy = 0; return true; }        // il tire : Combat mene la phase
     if (a.etat === 'attaque_joueur') a.etat = 'poursuit';                 // Combat rend la main : on reprend la chasse
     if (a.etat === 'fuit' || a.etat === 'temoin') a.etat = 'poursuit';    // un agent ne fuit pas

@@ -54,6 +54,65 @@ def test_l_agent_voit_le_crime_et_va_voir(banc):
     assert r["agents"] == 2
 
 
+def test_une_poursuite_ne_se_gagne_pas_en_enjambant_une_cloture(banc):
+    """⚠️ LE piege du correctif des clotures : si franchir un grillage etait une
+    capacite du joueur seul, la premiere cloture venue deviendrait l'exploit qui
+    gagne toutes les poursuites — on enjambe, les agents restent plantes de
+    l'autre cote.
+
+    Franchir est donc une capacite de tout le monde, au meme prix : l'A* des
+    agents traverse le grillage (a un cout plus eleve qu'une tuile), et l'agent
+    l'enjambe pour de vrai, une seconde en haut comme nous."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, j = L.B.joueur;
+        // ⚠️ Une LONGUE cloture, et c'est tout le sel du juge : devant une
+        // cloture d'une tuile, faire le tour coute moins cher que l'enjamber, et
+        // un agent qui fait le tour a raison. C'est au milieu d'un grillage de
+        // neuf tuiles que le choix se pose vraiment.
+        const LONG = 9;
+        let place = null;
+        for (let ty = 4; ty < c.h - 4 && !place; ty++) {
+            for (let tx = 4; tx < c.w - 4 - LONG && !place; tx++) {
+                let course = 0;
+                while (course < LONG + 6 && L.Monde.solidite(tx + course, ty) === 4
+                       && L.Monde.solidite(tx + course, ty - 1) === 0
+                       && L.Monde.solidite(tx + course, ty + 1) === 0) course++;
+                if (course < LONG) continue;
+                const mx = tx + (course >> 1);
+                let libre = true;
+                for (const d of [-3, -2, -1, 1, 2]) if (L.Monde.solidite(mx, ty + d) !== 0) libre = false;
+                if (libre) place = { tx: mx, ty: ty, course: course };
+            }
+        }
+        if (!place) throw new Error('aucune longue cloture enjambable avec de la place autour');
+        L.B.entites = L.B.entites.filter(function (e) { return e.type === 'joueur'; });
+        L.Entites.reindexerDecor(); L.Entites.indexer();
+        // Le joueur d'un cote, l'agent lance de l'autre.
+        j.x = place.tx * L.TT + 8; j.y = (place.ty + 2) * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        const a = L.Police.creerAgent(place.tx * L.TT + 8, (place.ty - 2) * L.TT + 8, 'poursuit');
+        L.Entites.indexer();
+        L.B.recherche.etoiles = 2;
+        const d0 = Math.hypot(a.x - j.x, a.y - j.y);
+        let enjambe = false, images = 0;
+        for (let i = 0; i < 600; i++) {
+            o.frame(1);
+            images++;
+            L.B.recherche.etoiles = Math.max(2, L.B.recherche.etoiles);   // la chasse reste ouverte
+            if (a.enjambe) enjambe = true;
+            if (Math.floor(a.y / L.TT) > place.ty) break;
+        }
+        return { enjambe: enjambe, images: images, d0: d0, cote: Math.floor(a.y / L.TT) - place.ty,
+                 cloture: place.ty, course: place.course, vivant: a.vivant, arrete: !!j.arrete };
+    }""")
+    assert r["enjambe"] is True, "l'agent n'a jamais enjambe : la cloture est un exploit"
+    assert r["cote"] > 0, "l'agent est reste de l'autre cote de la cloture"
+    assert r["images"] > 40, (
+        "l'agent a franchi la cloture sans y perdre de temps : elle ne coute rien a la police"
+    )
+
+
 def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
     r = banc(AGENT + """
         L.Jeu.commencer();

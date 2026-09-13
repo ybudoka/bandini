@@ -436,7 +436,51 @@ const TUILES = (function () {
     'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'b': function (ctx, v, T) { trottoir(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(6, 4, 4, 10); ctx.fillStyle = '#101018'; ctx.fillRect(6, 8, 4, 1); },
-    'f': function (ctx, v, T) { plein(ctx, '#4f8d3e', T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(0, 6, T, 1); ctx.fillRect(0, 10, T, 1); ctx.fillRect(2, 3, 1, 11); ctx.fillRect(13, 3, 1, 11); },
+    /* --- Les deux clotures -------------------------------------------------
+
+       ⚠️ Elles doivent se distinguer D'UN COUP D'OEIL, parce qu'elles ne
+       veulent pas dire la meme chose : le grillage s'enjambe (une seconde en
+       haut), le barbele ne se passe pas. Deux clotures qui se ressemblent, et
+       le joueur apprend la difference en restant plante devant la mauvaise.
+       Le grillage est clair, maille, bas ; le barbele est sombre, ses poteaux
+       montent plus haut et il porte ses trois fils et leurs epines. */
+    'f': function (ctx, v, T) {
+      plein(ctx, '#4f8d3e', T);
+      ctx.fillStyle = '#3f7331'; ctx.fillRect(0, 12, T, 2);            // l'ombre au pied
+      ctx.fillStyle = '#9aa0a6';
+      ctx.fillRect(0, 4, T, 1); ctx.fillRect(0, 11, T, 1);             // les deux lisses
+      ctx.fillStyle = '#7a7d82';
+      for (let x = 0; x < T; x += 4) {                                  // la maille
+        for (let k = 0; k < 6; k++) { ctx.fillRect(x + (k % 4), 5 + k, 1, 1); ctx.fillRect(x + 3 - (k % 4), 5 + k, 1, 1); }
+      }
+      ctx.fillStyle = '#b0b6bc'; ctx.fillRect(2, 2, 1, 11); ctx.fillRect(13, 2, 1, 11);   // les poteaux
+    },
+    'w': function (ctx, v, T) {
+      plein(ctx, '#4f8d3e', T);
+      ctx.fillStyle = '#3f7331'; ctx.fillRect(0, 12, T, 2);            // l'ombre au pied
+      ctx.fillStyle = '#8a6a42';
+      for (let x = 0; x < T; x += 3) {                                  // les planches, debout
+        const h = 9 + (hash2(v, x) % 3);                                // aucune n'est de la meme hauteur
+        ctx.fillRect(x, 13 - h, 2, h);
+      }
+      ctx.fillStyle = '#6d5232'; ctx.fillRect(0, 7, T, 1);              // la lisse qui les tient
+      ctx.fillStyle = '#a3814f'; ctx.fillRect(0, 3, T, 1);              // le dessus, au soleil
+    },
+    'X': function (ctx, v, T) {
+      plein(ctx, '#4f8d3e', T);
+      ctx.fillStyle = '#3a6c2d'; ctx.fillRect(0, 12, T, 2);
+      ctx.fillStyle = '#5d5852';
+      ctx.fillRect(0, 6, T, 1); ctx.fillRect(0, 11, T, 1);
+      for (let x = 0; x < T; x += 4) {
+        for (let k = 0; k < 5; k++) { ctx.fillRect(x + (k % 4), 7 + k, 1, 1); ctx.fillRect(x + 3 - (k % 4), 7 + k, 1, 1); }
+      }
+      ctx.fillStyle = '#7d766a'; ctx.fillRect(1, 0, 2, 13); ctx.fillRect(13, 0, 2, 13);   // deux poteaux, plus hauts
+      ctx.fillStyle = '#d8d2c4';                                        // les trois fils
+      ctx.fillRect(0, 1, T, 1); ctx.fillRect(0, 3, T, 1); ctx.fillRect(0, 5, T, 1);
+      for (let x = 1; x < T; x += 5) {                                  // et leurs epines
+        ctx.fillRect(x, 0, 1, 6); ctx.fillRect(x - 1, 2, 3, 1); ctx.fillRect(x - 1, 4, 3, 1);
+      }
+    },
 
     /* --- Dedans : le plancher et les meubles ------------------------------
 

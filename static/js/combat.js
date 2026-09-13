@@ -326,7 +326,10 @@ const Combat = (function () {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
     }
-    if (!j || j.dansVehicule || !j.vivant) return;
+    // ⚠️ En haut d'une cloture, on ne fait RIEN : ni frapper, ni tirer, ni
+    // rouler, ni ouvrir une porte. C'est ce prix-la qui fait d'une cloture un
+    // choix plutot qu'un raccourci gratuit.
+    if (!j || j.dansVehicule || !j.vivant || j.enjambe) return;
 
     if (Entree.neuf('esquive')) roulade(j);
     if (Entree.neuf('arme')) cycler(j);

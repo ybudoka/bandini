@@ -112,7 +112,23 @@ LEGENDE: dict[str, dict] = {
     "d": {"nom": "porte condamnée", "solide": 1},
     "G": {"nom": "porte de garage", "solide": 1, "garage": True},
     "b": {"nom": "borne-fontaine", "solide": 3},
-    "f": {"nom": "clôture", "solide": 3},
+    # --- Les deux clotures --------------------------------------------------
+    # ⚠️ Une cloture n'arretait QUE les chars : `f` etait solide 3, donc le
+    # masque des pietons ne la voyait pas et on la traversait en COURANT. C'est
+    # ce qui la rendait muette. Elles ont maintenant leur solidite a elles :
+    #   4 — le grillage : on l'ENJAMBE, une seconde en haut, immobile et sans
+    #       rien pouvoir faire. C'est ce prix-la qui fait d'une cloture un
+    #       choix — couper par la cour, ou faire le tour.
+    #   5 — le barbele : personne ne passe, ni a pied ni en char. Il se met la
+    #       ou quelqu'un a paye pour que personne n'entre.
+    # ⚠️ Ni l'un ni l'autre n'est solide 1 : on VOIT a travers une cloture, donc
+    # un cone de police la traverse (`ligneLibre` ne s'arrete qu'au 1).
+    "f": {"nom": "grillage", "solide": 4, "cloture": "grillage"},
+    # ⚠️ `w` minuscule — `W` majuscule est une vitrine. Les deux se confondent a
+    # la relecture, alors ils ne vivent jamais dans le meme genre de plan : une
+    # vitrine est BATIE (solidite 1), une palissade est une CLOTURE (4).
+    "w": {"nom": "palissade de bois", "solide": 4, "cloture": "bois"},
+    "X": {"nom": "barbelé", "solide": 5, "cloture": "barbele"},
     # --- Dedans : les planchers et les meubles ------------------------------
     # ⚠️ Un MEUBLE est solide 3, comme la borne-fontaine et la cloture : il
     # arrete un char, pas un piéton. C'est ce qui permet d'en poser partout
@@ -139,6 +155,16 @@ LEGENDE: dict[str, dict] = {
     "/": {"nom": "escalier", "solide": 3, "meuble": True},
 }
 
+#: Les trois clotures, par leur glyphe. ⚠️ Toute la difference de JEU tient dans
+#: la legende (solidite 4 contre 5) : le grillage et la palissade de bois
+#: s'enjambent, le barbele ne se passe pas. Le bois ne change rien aux regles —
+#: c'est de la VARIETE, et elle a sa place : une banlieue dont les cours arriere
+#: sont en grillage industriel n'a pas l'air d'une banlieue.
+GRILLAGE, BOIS, BARBELE = "f", "w", "X"
+CLOTURES = frozenset({GRILLAGE, BOIS, BARBELE})
+#: Ce qui s'enjambe (une seconde en haut), par opposition au barbele.
+ENJAMBABLES = frozenset({GRILLAGE, BOIS})
+
 #: Les glyphes qui ne vivent QUE dans une piece. ⚠️ Un juge les interdit dans
 #: la ville : un lit sur un trottoir voudrait dire qu'un plan d'interieur a
 #: ete peint sur la carte par erreur, et personne ne le verrait avant de
@@ -155,7 +181,26 @@ def solidite(glyphe: str) -> int:
 
 
 def marchable(glyphe: str) -> bool:
+    """Ce qu'un pieton peut FOULER : du sol libre, ou un obstacle bas qu'il
+    contourne d'un pas (borne-fontaine, meuble).
+
+    ⚠️ Pas une cloture : on ne se tient pas SUR une cloture. On l'enjambe
+    (grillage, solidite 4) ou on ne passe pas du tout (barbele, 5) — c'est
+    `franchissable` qui le dit.
+    """
     return solidite(glyphe) in (0, 3)
+
+
+def franchissable(glyphe: str) -> bool:
+    """Ce qu'un pieton peut TRAVERSER a pied, en enjambant s'il le faut.
+
+    ⚠️ C'est la connexite qui se juge ici, pas le placement : une cour derriere
+    un grillage fait partie de la ville (on y entre par-dessus, au prix d'une
+    seconde), une cour derriere du barbele n'en fait pas partie. C'est pour ca
+    que le juge « tout ce qui est marchable est relie » est du meme coup la
+    garantie qu'un barbele ne referme jamais une poche.
+    """
+    return solidite(glyphe) in (0, 3, 4)
 
 
 def routier(glyphe: str) -> bool:
@@ -163,7 +208,13 @@ def routier(glyphe: str) -> bool:
 
 
 def composantes_marchables(carte: dict) -> list[set[tuple[int, int]]]:
-    """Les groupes de tuiles marchables reliees entre elles (4-connexite)."""
+    """Les groupes de tuiles marchables reliees entre elles (4-connexite).
+
+    ⚠️ On passe PAR-DESSUS le grillage : il se franchit, donc les deux cotes
+    d'une cloture sont le meme groupe. Le barbele, lui, coupe — et c'est tout
+    son sens. Une tuile de cloture n'est jamais DANS un groupe (on ne s'y tient
+    pas) : elle n'est qu'un pont.
+    """
     sol = carte["sol"]
     vues: set[tuple[int, int]] = set()
     groupes = []
@@ -172,18 +223,24 @@ def composantes_marchables(carte: dict) -> list[set[tuple[int, int]]]:
             if not marchable(glyphe) or (x, y) in vues:
                 continue
             groupe: set[tuple[int, int]] = set()
+            # ⚠️ `visites` compte AUSSI les tuiles de cloture : elles ne sont
+            # jamais dans le groupe (on ne s'y tient pas), et sans elles la
+            # pile ferait l'aller-retour cloture <-> voisine pour toujours.
+            visites: set[tuple[int, int]] = set()
             pile = [(x, y)]
             while pile:
                 cx, cy = pile.pop()
-                if (cx, cy) in groupe:
+                if (cx, cy) in visites or not (0 <= cy < len(sol) and 0 <= cx < len(sol[cy])):
                     continue
-                if not (0 <= cy < len(sol) and 0 <= cx < len(sol[cy])):
+                if not franchissable(sol[cy][cx]):
                     continue
-                if not marchable(sol[cy][cx]):
-                    continue
-                groupe.add((cx, cy))
+                visites.add((cx, cy))
+                # Une cloture n'est qu'un pont : elle relie ses voisines sans
+                # jamais compter comme du sol.
+                if marchable(sol[cy][cx]):
+                    groupe.add((cx, cy))
                 pile.extend(((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)))
-            vues |= groupe
+            vues |= visites
             groupes.append(groupe)
     return groupes
 
@@ -547,6 +604,12 @@ class _Chantier:
         #: Les rampes, meme regle du de separe : un tremplin de plus ne doit
         #: pas deplacer un arbre a l'autre bout de la ville.
         self.des_rampe = Des(graine ^ 0x5A17E)
+        #: Les clotures, meme regle — et la lecon a ete payee : en tirant la
+        #: trouee d'un terrain vague et la barriere d'une cour dans le de commun,
+        #: toute la suite du hasard se decalait. La ville livree changeait de
+        #: gabarits, une dent creuse se refermait sur le devant d'une porte, et
+        #: huit tuiles se faisaient boucher a l'autre bout de la carte.
+        self.des_cloture = Des(graine ^ 0xC107E)
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -687,9 +750,20 @@ class _Chantier:
                 self.bouchon[j][i] = glyphe
 
     def marchable_en(self, x: int, y: int) -> bool:
+        """Une tuile ou un pieton peut se TENIR (voir `marchable`) : c'est ce
+        que demande un placement — un devant de porte, un bandeau, une bouche
+        d'escalier."""
         if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
             return False
         return marchable(self.sol[y][x])
+
+    def franchissable_en(self, x: int, y: int) -> bool:
+        """Une tuile qu'un pieton peut TRAVERSER, cloture comprise (il
+        l'enjambe). ⚠️ C'est ce que demande une question de connexite — « est-ce
+        qu'on peut aller la ? » — jamais un placement."""
+        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+            return False
+        return franchissable(self.sol[y][x])
 
     def batiment_forme(self, tuiles: set[tuple[int, int]], vitrines: float = 0.0) -> list[tuple[int, int]]:
         """Peint un batiment de forme QUELCONQUE et rend ses tuiles de facade.
@@ -1053,6 +1127,22 @@ class _Chantier:
         rangee = sorted(c for c in candidats if c[1] == bas)
         return rangee[len(rangee) // 2]
 
+    def poser_cloture(self, x: int, y: int, glyphe: str) -> bool:
+        """Une tuile de cloture — sauf devant une facade ou un devant de porte.
+
+        ⚠️ Une porte se pose sur la facade SUD d'un batiment et exige du
+        marchable devant elle. Une cloture peinte la (une cour arriere qui touche
+        le mur du voisin) fait rater `poser_porte` : le batiment perd sa porte,
+        son enseigne et son commerce, et personne ne le voit avant de chercher
+        une boutique qui n'existe plus.
+        """
+        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+            return False
+        if (x, y) in self.reserve or (y > 0 and solidite(self.sol[y - 1][x]) == 1):
+            return False
+        self.sol[y][x] = glyphe
+        return True
+
     def poser_decor(self, type_: str, x: int, y: int) -> bool:
         """Du decor seulement sur une tuile libre, hors route et hors devant de porte."""
         if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
@@ -1259,10 +1349,14 @@ class _Chantier:
                 parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
             if genre == "gang":
                 # Une cour cloturee, avec une entree pour les chars.
+                # ⚠️ Du BARBELE : c'est la cour d'un gang, quelqu'un a paye pour
+                # que personne n'entre. On y passe par l'entree des chars, pas
+                # par-dessus — et cette entree est ce qui garantit que la cour
+                # n'est jamais une poche fermee (juge : un seul ilot marchable).
                 ouverture = self.des.entier(2, max(3, largeur - 7))
                 for i in range(largeur):
                     if not ouverture <= i < ouverture + 5 and self.des.chance(0.8):
-                        self.sol[by + bh - 1][x + i] = "f"
+                        self.sol[by + bh - 1][x + i] = BARBELE
                 for _ in range(3):
                     self.poser_decor("caisse", x + self.des.entier(0, largeur - 1),
                                      by + self.des.entier(0, 1))
@@ -1300,7 +1394,7 @@ class _Chantier:
             elif contenu == "stationnement":
                 self._stationnement(px, py, pl, ph, genre)
             else:
-                self._jardin(px, py, pl, ph)
+                self._jardin(px, py, pl, ph, genre)
         if facades_vedette:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
@@ -1444,11 +1538,16 @@ class _Chantier:
     def _fourriere(self, x: int, y: int, largeur: int, hauteur: int, special: dict) -> None:
         """Une cour d'asphalte cloturee, une guerite, UNE grille.
 
-        ⚠️ Tout le lot tient sur une propriete de la cloture : `f` est solide 3
-        — elle arrete les chars, pas les gens. C'est ce qui fait les deux
+        ⚠️ Tout le lot tient sur une propriete de la cloture : le GRILLAGE
+        s'enjambe (solidite 4) et arrete les chars. C'est ce qui fait les deux
         facons de reprendre son char sans une ligne de code pour les
         distinguer : par la grille, en payant au comptoir ; ou par-dessus la
-        cloture, a pied, et le lot appelle.
+        cloture, a pied — une seconde en haut, et le lot appelle.
+
+        ⚠️ Et c'est du grillage, PAS du barbele, alors qu'un vrai lot municipal
+        serait barbele : « on le reprend par-dessus la cloture » est la moitie de
+        ce qui rend la fourriere interessante. Du barbele la, et il ne reste
+        qu'une caisse a payer.
 
         ⚠️ Et il n'y a QU'UNE grille. Deux ouvertures, et sortir son char sans
         payer ne demanderait plus rien a personne.
@@ -1478,13 +1577,13 @@ class _Chantier:
         gx = lx + lot_l - self.GRILLE_L - 2
         for i in range(lot_l):
             if not gx <= lx + i < gx + self.GRILLE_L:
-                self.sol[zy + zh - 1][lx + i] = "f"
-            self.sol[zy][lx + i] = "f"
+                self.sol[zy + zh - 1][lx + i] = GRILLAGE
+            self.sol[zy][lx + i] = GRILLAGE
         for j in range(zh):
-            self.sol[zy + j][lx] = "f"
-            self.sol[zy + j][lx + lot_l - 1] = "f"
+            self.sol[zy + j][lx] = GRILLAGE
+            self.sol[zy + j][lx + lot_l - 1] = GRILLAGE
         for tx, ty in guerite:                                  # la guerite reste batie
-            if self.sol[ty][tx] == "f":
+            if self.sol[ty][tx] == GRILLAGE:
                 self.sol[ty][tx] = "F"
         porte = self.poser_porte(facades, special)
         # Les places : sous la guerite, jamais dans l'axe de la grille.
@@ -1507,9 +1606,21 @@ class _Chantier:
 
     def _terrain_vague(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         self.rect(x, y, largeur, hauteur, ",")
+        # ⚠️ Les cours de La Shop sont BARBELEES : de la ferraille derriere une
+        # cloture qu'on enjambe, ca ne dit rien ; derriere du barbele, ca dit
+        # « quelqu'un a paye pour que personne n'entre ». Ailleurs, c'est du
+        # grillage — un terrain vague de quartier, on y passe.
+        # ⚠️ Et le barbele laisse TOUJOURS une trouee : la cloture n'est qu'a
+        # demi peinte (une tuile sur deux), mais « a demi » n'est pas un juge.
+        # Sans trouee garantie, un terrain vague ferme devient une poche que
+        # `boucher_les_poches` mure — et la ferraille disparait sans un mot.
+        cloture = BARBELE if self.district_en(x, y) == "shop" else GRILLAGE
+        troue = self.des_cloture.entier(0, max(0, largeur - 2))
         for i in range(largeur):
+            if i in (troue, troue + 1):
+                continue
             if self.des.chance(0.5):
-                self.sol[y + hauteur - 1][x + i] = "f"
+                self.poser_cloture(x + i, y + hauteur - 1, cloture)
         for _ in range(max(1, largeur * hauteur // 12)):
             self.poser_decor("debris", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
@@ -1523,8 +1634,48 @@ class _Chantier:
             self.proposer_rampe([(cx, y + hauteur // 2, None)],
                                 cloture=(cx, y + hauteur - 1))
 
-    def _jardin(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+    def _jardin(self, x: int, y: int, largeur: int, hauteur: int,
+                genre: str = "commerces") -> None:
+        """Du gazon, des arbres — et, chez le monde, une cour arriere cloturee.
+
+        ⚠️ La palissade de bois est la VARIETE que demandait Martin, et c'est
+        aussi ce qui fait qu'une banlieue a l'air d'une banlieue vue d'en haut :
+        des cours delimitees. Elle s'enjambe comme un grillage (solidite 4), donc
+        elle ne peut pas enfermer une poche — on entre dans une cour arriere en
+        passant par-dessus, c'est meme tout son interet.
+
+        ⚠️ Une BARRIERE, toujours : un cote de la cour reste ouvert. Sans elle,
+        traverser une banlieue a pied deviendrait une suite d'escalades, et le
+        prix d'une cloture (une seconde, immobile) se paierait dix fois par rue.
+
+        ⚠️ La BANLIEUE seulement (Les Erables), pas les quartiers de maisons du
+        Faubourg. Mesure a l'appui : en cloturant les deux, 274 tuiles de
+        palissade tombaient au milieu du vieux quartier — le carre ou l'on
+        commence la partie devenait un labyrinthe de cours, et quatre juges de
+        banc ne trouvaient plus une tuile libre autour du joueur. Une cour
+        arriere cloturee, c'est une image de banlieue ; en ville, c'est une haie
+        d'obstacles.
+
+        ⚠️ Jamais devant une facade (`poser_cloture`) : une porte exige du
+        marchable devant elle, et une palissade collee au mur du voisin fait
+        disparaitre la porte, l'enseigne et le commerce avec elle.
+        """
         self.rect(x, y, largeur, hauteur, ",")
+        # ⚠️ La barriere s'ouvre sur du MARCHABLE, et s'il n'y en a pas, la cour
+        # reste ouverte. Mesure a l'appui : une cour de 3 x 3 dont la seule sortie
+        # donnait sur le mur du voisin devenait une poche, `boucher_les_poches` la
+        # murait — huit tuiles, dont le devant d'une porte, et un commerce du
+        # quartier se retrouvait sans entree.
+        sorties = [i for i in range(1, largeur - 1) if self.marchable_en(x + i, y + hauteur)]
+        if (genre == "banlieue" and largeur >= 3 and hauteur >= 3
+                and sorties and self.des_cloture.chance(0.7)):
+            barriere = self.des_cloture.choix(sorties)
+            for i in range(largeur):
+                if i != barriere:
+                    self.poser_cloture(x + i, y + hauteur - 1, BOIS)
+            for j in range(hauteur - 1):
+                self.poser_cloture(x, y + j, BOIS)
+                self.poser_cloture(x + largeur - 1, y + j, BOIS)
         for _ in range(max(1, largeur * hauteur // 10)):
             self.poser_decor(self.des.choix(("arbre", "buisson")),
                              x + self.des.entier(0, largeur - 1),
@@ -1536,10 +1687,11 @@ class _Chantier:
         """Une tuile ou un char passe VRAIMENT : rien de solide, pas de decor,
         pas le devant d'une porte.
 
-        ⚠️ Une solidite de 3 (cloture, borne-fontaine) laisse passer un pieton
-        mais arrete un char. Une cloture dans l'elan, c'est un elan qui
-        n'existe pas — c'est ce qui rendait les rampes de la cour des gangs
-        injouables : on les voyait, on ne pouvait pas les prendre.
+        ⚠️ Toute solidite non nulle arrete un char — une borne-fontaine (3) comme
+        une cloture (4, 5), meme si un pieton passe par-dessus les deux. Une
+        cloture dans l'elan, c'est un elan qui n'existe pas : c'est ce qui rendait
+        les rampes de la cour des gangs injouables — on les voyait, on ne pouvait
+        pas les prendre.
         """
         return (0 <= x < self.largeur and 0 <= y < self.hauteur
                 and solidite(self.sol[y][x]) == 0
@@ -1591,7 +1743,7 @@ class _Chantier:
                 # image juste de toute facon.
                 cx, cy = cloture
                 for i in (-1, 0, 1):
-                    if 0 <= cx + i < self.largeur and self.sol[cy][cx + i] == "f":
+                    if 0 <= cx + i < self.largeur and self.sol[cy][cx + i] in CLOTURES:
                         self.sol[cy][cx + i] = ","
             for x, y, axe in proposition["essais"]:
                 if self.poser_rampe(x, y, axe):
@@ -2017,12 +2169,16 @@ class _Chantier:
         parc). Si elle en bouche beaucoup, c'est un gabarit qu'il faut revoir,
         et `generer()` le dit tout haut.
         """
+        # ⚠️ On cherche par `franchissable_en`, pas `marchable_en` : une cour
+        # derriere un grillage se rejoint en l'enjambant, elle n'est donc PAS une
+        # poche. Avec `marchable_en`, la cour de la fourriere, celle du gang et
+        # tous les terrains vagues se faisaient murer d'un coup.
         vus = {depart}
         pile = [depart]
         while pile:
             cx, cy = pile.pop()
             for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
-                if (nx, ny) in vus or not self.marchable_en(nx, ny):
+                if (nx, ny) in vus or not self.franchissable_en(nx, ny):
                     continue
                 vus.add((nx, ny))
                 pile.append((nx, ny))

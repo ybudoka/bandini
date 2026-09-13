@@ -60,6 +60,104 @@ def test_le_joueur_marche_et_ne_traverse_pas_les_murs(banc):
     assert r["etat"] == "jeu" and r["dataEtat"] == "jeu"
 
 
+#: Trouve une tuile de cloture (par sa solidite) avec du libre au nord et au sud,
+#: vide la rue de tout le monde, et pose le joueur une tuile AU NORD. Le meme
+#: decor pour les trois juges de cloture.
+DEVANT_UNE_CLOTURE = """
+    function devantUneCloture(L, o, solide) {
+        const c = L.Monde.carte;
+        for (let ty = 3; ty < c.h - 3; ty++) {
+            for (let tx = 3; tx < c.w - 3; tx++) {
+                if (L.Monde.solidite(tx, ty) !== solide) continue;
+                if (L.Monde.solidite(tx, ty - 1) !== 0 || L.Monde.solidite(tx, ty - 2) !== 0) continue;
+                if (L.Monde.solidite(tx, ty + 1) !== 0 || L.Monde.solidite(tx, ty + 2) !== 0) continue;
+                // ⚠️ La rue se vide, DECOR COMPRIS : un arbre pose dans une cour
+                // arretait le joueur avant la cloture, et le juge mesurait un
+                // buisson en croyant mesurer une palissade.
+                L.B.entites = L.B.entites.filter(function (e) { return e.type === 'joueur'; });
+                L.Entites.reindexerDecor(); L.Entites.indexer();
+                const j = L.B.joueur;
+                j.x = tx * L.TT + 8; j.y = (ty - 1) * L.TT + 8;
+                L.Monde.centrerCamera(j.x, j.y);
+                return { tx: tx, ty: ty, j: j };
+            }
+        }
+        return null;
+    }
+"""
+
+
+def test_on_ne_traverse_plus_une_cloture_en_courant(banc):
+    """⚠️ La demande de Martin : « des clotures, mais si elles ne sont pas
+    barbelees, qu'on puisse passer par-dessus ». On passait par-dessus TOUTES —
+    sans meme ralentir : `f` etait solide 3, donc le masque des pietons ne la
+    voyait pas. Une cloture n'arretait que les chars.
+
+    Maintenant on l'ENJAMBE, et ca coute : une seconde en haut, immobile, sans
+    frapper — c'est ce prix-la qui fait d'une cloture un choix (couper par la
+    cour, ou faire le tour) plutot qu'un trait de peinture."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        const place = devantUneCloture(L, o, 4);
+        if (!place) throw new Error('aucune cloture enjambable dans la ville');
+        const j = place.j, regles = L.Entites.reglesCloture();
+        const y0 = j.y;
+        o.touche('KeyS'); o.touche('ShiftLeft');          // on POUSSE, et en courant
+        o.frame(6);
+        const pendant = { enjambe: !!j.enjambe, y: j.y, tuile: Math.floor(j.y / L.TT),
+                          cloture: place.ty, z: j.z };
+        // Ce qu'on ne peut PAS faire en haut d'une cloture : frapper.
+        o.touche('Space'); o.frame(2); o.relacher('Space');
+        const frappe = j.etat;
+        let images = 6, zMax = 0;
+        for (let i = 0; i < 200 && j.enjambe; i++) { o.frame(1); images++; zMax = Math.max(zMax, j.z); }
+        o.relacher('KeyS'); o.relacher('ShiftLeft');
+        const apres = { tuile: Math.floor(j.y / L.TT), x: j.x, enjambe: !!j.enjambe, z: j.z,
+                        colonne: Math.floor(j.x / L.TT) };
+        return { pendant: pendant, frappe: frappe, images: images, zMax: zMax, apres: apres,
+                 duree: regles.enjambe_images, y0: Math.floor(y0 / L.TT) };
+    }""" % DEVANT_UNE_CLOTURE)
+    assert r["pendant"]["enjambe"] is True, "on pousse une cloture et rien ne se passe"
+    assert r["pendant"]["tuile"] == r["y0"], "on a traverse la cloture en courant"
+    assert r["frappe"] != "attaque", "on frappe en haut d'une cloture"
+    assert r["zMax"] > 0, "le corps ne se souleve jamais : rien ne dit qu'il est EN HAUT"
+    assert r["duree"] - 4 <= r["images"] <= r["duree"] + 12, (
+        "l'enjambee doit durer ce que les donnees disent (%s images) : %s" % (r["duree"], r["images"])
+    )
+    assert r["apres"]["tuile"] == r["pendant"]["cloture"] + 1, "on ne retombe pas de l'autre cote"
+    assert r["apres"]["enjambe"] is False and r["apres"]["z"] == 0
+
+
+def test_le_barbele_ne_se_passe_pas(banc):
+    """Le barbele se met la ou quelqu'un a paye pour que personne n'entre : ni a
+    pied, ni en char, ni en l'enjambant. Sans ca, il ne veut rien dire."""
+    r = banc("""function (L, o) {
+        %s
+        L.Jeu.commencer();
+        const place = devantUneCloture(L, o, 5);
+        if (!place) throw new Error('aucun barbele dans la ville');
+        const j = place.j;
+        const tuile0 = Math.floor(j.y / L.TT);
+        o.touche('KeyS'); o.touche('ShiftLeft');
+        let enjambe = false;
+        for (let i = 0; i < 240; i++) { o.frame(1); if (j.enjambe) enjambe = true; }
+        o.relacher('KeyS'); o.relacher('ShiftLeft');
+        const tuile = Math.floor(j.y / L.TT);
+        // ⚠️ Le char en DERNIER, et la mesure du joueur avant : un char lance
+        // dans le dos du joueur le pousse, et on mesurerait sa poussee en
+        // croyant mesurer le barbele.
+        const v = L.Vehicules.creer('auto', place.tx * L.TT + 8, (place.ty - 3) * L.TT + 8, Math.PI / 2, { etat: 'stationne' });
+        j.x = v.x - 60;                                  // on se tasse de sa route
+        for (let i = 0; i < 90; i++) { v.vitesse = 4; L.Vehicules.maj(); }
+        return { enjambe: enjambe, tuile: tuile, tuile0: tuile0, cloture: place.ty,
+                 char: Math.floor(v.y / L.TT) };
+    }""" % DEVANT_UNE_CLOTURE)
+    assert r["enjambe"] is False, "on enjambe le barbele"
+    assert r["tuile"] == r["tuile0"], "on est passe a travers le barbele"
+    assert r["char"] < r["cloture"], "un char a franchi le barbele"
+
+
 def test_la_manette_a_une_zone_morte_radiale(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -2391,10 +2489,20 @@ def test_un_char_coince_dix_secondes_est_debloque(banc):
         const droit = Math.abs(Math.sin(2 * v.angle)) < 0.2;
         // Le sur-place : un char qu'on ramene chaque image a son point de depart.
         const w = L.Vehicules.creer('auto', (inter.x + 1) * T + 8, (inter.y + 1) * T + 8, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
-        j.x = w.x; j.y = w.y + 40; L.Monde.centrerCamera(j.x, j.y);     // a portee : la bulle d'oubli ne le retire pas
         const wx = w.x, wy = w.y;
         let mordu = -1;
-        for (let i = 0; i < 1400 && mordu < 0; i++) { o.frame(1); if (w.debloques) mordu = i; else { w.x = wx; w.y = wy; } }
+        // ⚠️ Le joueur reste colle au char et en vie A CHAQUE IMAGE. Deux
+        // raisons, et la seconde a deja fait passer ce test pour un bogue du
+        // chien de garde : la bulle d'oubli retire un char loin du joueur, et un
+        // joueur plante vingt secondes au milieu d'un croisement finit par se
+        // faire renverser — l'hopital l'emmene a l'autre bout de la ville, le
+        // char est oublie, et plus personne ne surveille rien.
+        for (let i = 0; i < 1400 && mordu < 0; i++) {
+            j.x = wx; j.y = wy + 40; j.vie = j.vieMax; j.invincible = 30;
+            L.Monde.centrerCamera(j.x, j.y);
+            o.frame(1);
+            if (w.debloques) mordu = i; else { w.x = wx; w.y = wy; }
+        }
         return { bouge: bouge, debloques: v.debloques || 0, droit: droit, angle0: angle0,
                  surRoute: L.Monde.estRoute(Math.floor(v.x / T), Math.floor(v.y / T)), mordu: mordu };
     }""")

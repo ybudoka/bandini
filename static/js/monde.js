@@ -14,9 +14,20 @@ const Monde = (function () {
   // que le tour de l'ecran (9 visibles au pire), avec de la marge pour ne pas
   // repeindre a chaque pas de cote.
   const MORCEAUX_MAX = 24;
-  const MUR = 1, EAU = 2, BASSE = 4;  // masques de collision
-  const MASQUE_PIETON = MUR | EAU;
-  const MASQUE_VEHICULE = MUR | EAU | BASSE;
+  // Masques de collision, un bit par sorte d'obstacle (voir `solidite`).
+  const MUR = 1, EAU = 2, BASSE = 4, GRILLAGE = 8, BARBELE = 16;
+  // ⚠️ Le CORPS d'un pieton ne franchit aucune cloture : il s'arrete dessus.
+  // Avant, `f` etait solide 3 (BASSE) et ce masque ne la voyait pas — une
+  // cloture n'arretait que les chars, et a pied on la traversait sans meme
+  // ralentir. C'est ce qui la rendait muette.
+  const MASQUE_PIETON = MUR | EAU | GRILLAGE | BARBELE;
+  const MASQUE_VEHICULE = MUR | EAU | BASSE | GRILLAGE | BARBELE;
+  // ⚠️ Le masque des CHEMINS a pied, et il n'est pas celui des corps : un
+  // grillage s'enjambe, donc un chemin peut le traverser — plus cher qu'une
+  // tuile normale (`COUT_GRILLAGE`), jamais gratuitement. Si le A* s'arretait
+  // aux clotures comme les corps, la premiere cloture venue gagnerait toutes
+  // les poursuites : on enjambe, et les agents restent plantes de l'autre cote.
+  const MASQUE_A_PIED = MUR | EAU | BARBELE;
 
   const SORTES_DE_LAMPE = {
     poteau: { dy: 2, c: 'rgba(255,214,130,0.55)' },
@@ -162,8 +173,13 @@ const Monde = (function () {
     if (s === 1) return (masque & MUR) !== 0;
     if (s === 2) return (masque & EAU) !== 0;
     if (s === 3) return (masque & BASSE) !== 0;
+    if (s === 4) return (masque & GRILLAGE) !== 0;
+    if (s === 5) return (masque & BARBELE) !== 0;
     return false;
   }
+  /** Une cloture qui s'enjambe a cette tuile — grillage ou palissade de bois
+      (voir `Entites.enjamber`). Le barbele, lui, ne s'enjambe pas. */
+  function estEnjambable(tx, ty) { return solidite(tx, ty) === 4; }
   function estRoute(tx, ty) {
     if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return false;
     return carte.route[ty * carte.w + tx] === 1;
@@ -252,6 +268,15 @@ const Monde = (function () {
 
   const fileChemins = [];
   const BUDGET_PAR_IMAGE = 2, NOEUDS_MAX = 800;
+  //: Ce que coute une tuile de cloture dans un chemin a pied, en tuiles de
+  //: marche. ⚠️ Il vient du paquet (`recherche.clotures`) : la duree de
+  //: l'enjambee et son prix dans le chemin doivent rester la MEME decision, et
+  //: le jour ou l'un bouge sans l'autre, un agent choisit la cloture pour
+  //: gagner du temps qu'il ne gagne pas.
+  function coutCloture() {
+    const c = B.defs && B.defs.recherche && B.defs.recherche.clotures;
+    return (c && c.cout_chemin_tuiles) || 5;
+  }
 
   /** Demande un chemin en tuiles de (x0,y0) a (x1,y1) en pixels ; `fait(chemin)`
       recoit une liste de {x, y} (pixels, centres de tuiles) ou null. */
@@ -272,7 +297,7 @@ const Monde = (function () {
     const sx = Math.floor(x0 / TT), sy = Math.floor(y0 / TT), gx = Math.floor(x1 / TT), gy = Math.floor(y1 / TT);
     if (!carte || bloque(gx, gy, masque)) return null;
     if (sx === gx && sy === gy) return [];
-    const w = carte.w;
+    const w = carte.w, cout = coutCloture();
     const ouvert = [{ x: sx, y: sy, g: 0, f: Math.abs(gx - sx) + Math.abs(gy - sy) }];
     const vu = new Map();      // cle -> { g, parent }
     vu.set(sy * w + sx, { g: 0, parent: -1 });
@@ -295,7 +320,11 @@ const Monde = (function () {
       for (const d of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
         const nx = c.x + d[0], ny = c.y + d[1];
         if (nx < 0 || ny < 0 || nx >= carte.w || ny >= carte.h || bloque(nx, ny, masque)) continue;
-        const cle = ny * w + nx, g = c.g + 1;
+        // ⚠️ Une cloture que le masque laisse passer se PAIE : c'est une
+        // seconde en haut d'un grillage ou d'une palissade, pas un pas. Sans ce
+        // cout, le chemin le plus court passerait toujours par-dessus les
+        // clotures — et un agent ferait le tour de la ville en escaladant.
+        const cle = ny * w + nx, g = c.g + (solidite(nx, ny) === 4 ? cout : 1);
         const deja = vu.get(cle);
         if (deja && deja.g <= g) continue;
         vu.set(cle, { g: g, parent: c.y * w + c.x });
@@ -519,6 +548,9 @@ const Monde = (function () {
     const p = carte.legende[glyphe] || {};
     if (p.solide === 2) return '#24506f';
     if (p.solide === 1) return '#4a3f3f';
+    // Une cloture se voit sur la carte : elle dit qu'une cour est fermee. Le
+    // barbele tire vers le rouge — c'est le seul qu'on ne passe pas.
+    if (p.cloture) return p.cloture === 'barbele' ? '#8a5b5b' : '#7d7a6a';
     if (p.route) return '#34373d';
     if (p.trottoir) return '#8a877c';
     if (p.herbe) return '#3f6b33';
@@ -646,8 +678,8 @@ const Monde = (function () {
   }
 
   return {
-    MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
+    MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estRoute, estPassage, estChaussee, marchablePieton,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

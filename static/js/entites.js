@@ -499,6 +499,77 @@ const Entites = (function () {
     }
   }
 
+  // --- Enjamber une cloture ------------------------------------------------------------
+
+  /*: Enjamber, c'est une capacite de TOUT LE MONDE — le joueur, un agent, un
+    gardien. ⚠️ Si le grillage n'etait un cout que pour le joueur, la premiere
+    cloture venue deviendrait l'exploit qui gagne toutes les poursuites : on
+    enjambe, et les agents restent plantes de l'autre cote. Le prix est donc un
+    seul chiffre, en donnees (`recherche.clotures`), lu ici comme par l'A*. */
+  function reglesCloture() {
+    return (B.defs && B.defs.recherche && B.defs.recherche.clotures)
+      || { enjambe_images: 48, cout_chemin_tuiles: 5, hauteur_px: 5 };
+  }
+
+  /** La cloture qu'on pousse, dans le sens du mouvement, et ou l'on retombe —
+      ou null s'il n'y a rien a enjamber (ou rien derriere).
+
+      ⚠️ UN SEUL axe, le dominant : une enjambee en diagonale retomberait entre
+      deux tuiles, et le corps finirait dans le coin d'un mur. */
+  function clotureDevant(e, dx, dy) {
+    if (!dx && !dy) return null;
+    const sx = Math.abs(dx) >= Math.abs(dy) ? Math.sign(dx) : 0;
+    const sy = sx === 0 ? Math.sign(dy) : 0;
+    const tx = Math.floor((e.x + sx * (e.r + 2)) / TT), ty = Math.floor((e.y + sy * (e.r + 2)) / TT);
+    if (!Monde.estEnjambable(tx, ty)) return null;
+    // Derriere la cloture : une tuile ou l'on peut retomber. Deux grillages
+    // colles ne s'enjambent pas d'un coup — on en franchit un, puis l'autre.
+    const ax = tx + sx, ay = ty + sy;
+    if (Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) return null;
+    return { sx: sx, sy: sy, tx: tx, ty: ty, ax: ax, ay: ay };
+  }
+
+  /** Commence l'enjambee si une cloture est devant. Rend true si elle commence. */
+  function enjamber(e, dx, dy) {
+    if (e.enjambe || e.dansVehicule || !e.vivant) return false;
+    const c = clotureDevant(e, dx, dy);
+    if (!c) return false;
+    const regles = reglesCloture();
+    // ⚠️ La retombee est CENTREE sur la tuile d'arrivee dans l'axe traverse, et
+    // bornee dans l'autre : sans ca, un corps qui chevauche deux tuiles de
+    // travers retombe a moitie dans le mur d'a cote.
+    const cx = c.ax * TT + 8, cy = c.ay * TT + 8;
+    const marge = TT / 2 - e.r - 0.01;
+    const x1 = c.sx ? cx : borner(e.x, cx - marge, cx + marge);
+    const y1 = c.sy ? cy : borner(e.y, cy - marge, cy + marge);
+    e.enjambe = { t: 0, duree: regles.enjambe_images, haut: regles.hauteur_px,
+                  x0: e.x, y0: e.y, x1: x1, y1: y1 };
+    e.vx = 0; e.vy = 0;
+    e.charge = 0;
+    if (e.etat === 'attaque') { e.etat = 'flane'; e.phase = null; }
+    regarder(e, c.sx, c.sy);
+    Son.SFX.pas();
+    return true;
+  }
+
+  /** Avance l'enjambee. Rend true tant qu'elle dure : l'appelant ne fait RIEN
+      d'autre cette image-la — on est immobile en haut d'une cloture, et c'est
+      exactement ce qui fait le prix d'un raccourci. */
+  function majEnjambe(e) {
+    const en = e.enjambe;
+    if (!en) return false;
+    en.t++;
+    const part = Math.min(1, en.t / en.duree);
+    e.x = en.x0 + (en.x1 - en.x0) * part;
+    e.y = en.y0 + (en.y1 - en.y0) * part;
+    // Une cloche : on monte, on passe, on redescend. C'est le seul signe visible
+    // que le corps est EN HAUT de quelque chose.
+    e.z = Math.round(Math.sin(part * Math.PI) * en.haut);
+    e.vx = 0; e.vy = 0;
+    if (part >= 1) { e.enjambe = null; e.z = 0; Son.SFX.pas(); }
+    return true;
+  }
+
   function dansLaCarte(e) {
     const c = Monde.carte;
     e.x = borner(e.x, e.r, c.pxW - e.r);
@@ -515,6 +586,7 @@ const Entites = (function () {
 
   function majJoueur(j) {
     if (j.dansVehicule) return;
+    if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
     if (B.cinema) { j.vx = 0; j.vy = 0; return; }     // quelqu'un lui parle : il ecoute
     const v = B.defs.recherche.vitesses;
     const axe = Entree.axe;
@@ -542,6 +614,9 @@ const Entites = (function () {
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
+    // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
+    // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
+    if (axe.mag > 0 && enjamber(j, j.vx, j.vy)) { Hud.message('PAR-DESSUS'); return; }
     const avant = { x: j.x, y: j.y };
     deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_PIETON);
     dansLaCarte(j);
@@ -572,6 +647,7 @@ const Entites = (function () {
     const reactions = B.defs.pietons.reactions;
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
     if (e.saigne > 0) saigner(e);
+    if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
 
     if (e.etat === 'fige') {
       // ⚠️ Fige veut dire « il tient son poste », pas « c'est un poteau ». Un
@@ -1139,6 +1215,7 @@ const Entites = (function () {
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
+    enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

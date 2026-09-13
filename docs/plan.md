@@ -46,11 +46,13 @@ ne bougent pas quand l'ordre de travail change.
 | Manger, boire, courir | **livré** (13 sept. 2026) | demande de Martin (« il faut que la bouffe redonne de l'énergie et le café permet de courir plus longtemps ») : un kiosque ne rendait que des **PV**, et le souffle (`endurance`, 100 points, 0,4 par image au sprint) ne se refaisait **qu'en arrêtant de courir** — autrement dit, les quatre commerces de trottoir ne servaient à rien à la seule minute où l'on en a besoin, celle où la police est derrière. Manger rend maintenant les deux (`*_souffle` dans `economie.TARIFS` : hot-dog +40, poutine +70, café +30), et ce qui coûte plus cher nourrit plus, en vie **comme en jambes**. ⚠️ **Le café n'achète que de la DURÉE.** Pendant 90 s (`economie.CAFE`) le sprint ne coûte que la **moitié** : 4,2 s de course d'une traite deviennent 8,4 s. Sa vitesse, elle, ne bouge pas d'un pixel — les 2,1 du sprint contre 1,9 au policier et 1,35 au fuyard sont ce qui rend une poursuite **gagnable des deux côtés** ; y toucher pour 4 $ aurait cassé toutes les poursuites du jeu d'un coup, alors un juge mesure la distance par image sous café et la refuse si elle change. ⚠️ C'est une **minuterie, pas une dépense** : elle s'écoule dans `Missions.maj` (donc aussi au volant et dans une pièce, là où `majJoueur` ne passe pas), elle ne s'**empile** pas (un deuxième café repart le compte — sinon on s'achète l'endurance infinie à 4 $) et elle ne survit ni à la nuit ni à l'hôpital. ⚠️ Et elle **se voit** : la barre d'endurance passe au vert et clignote la dernière seconde, parce qu'un souffle long qui s'arrête au milieu d'une fuite sans rien annoncer se lit comme une panne. Le **casse-croûte sert le café** lui aussi : la roulotte du trottoir ferme de 14 h 24 à 4 h 48 et elle était le seul endroit du jeu où courir plus longtemps s'achetait. 4 juges Python (la bouffe rend du souffle sans faire déborder la barre, la poutine vaut son prix, le café n'achète que de la durée et dure plus qu'un plein de souffle, seul le café réveille) + 2 de banc (manger remonte le souffle et ne déborde pas, un hot-dog ne réveille pas ; sous café on tient **deux fois plus d'images à la même vitesse**) |
 | Des commerces, du monde qui habite, des vrais intérieurs | **livré** (13 sept. 2026) | demande de Martin (« beaucoup plus de variété de commerce ou bien enlever certaines devantures pour remplacer par des résidences ; ajouter des appartements à étage ; améliorer les intérieurs, car présentement il n'y a jamais rien, seulement des comptoirs vides ; ajoute aussi des intérieurs pour plusieurs types ; valide les missions qui doivent avoir des choses à l'intérieur ») : **142 noms d'enseigne** au lieu de 56 (14 à 48 par quartier) et **trois familles de plus** (santé, mode, savoir) ; `choisir_enseigne` refuse le même nom à moins de **40 tuiles** — La Shop affichait sept fois « FERRAILLE ». **74 immeubles à logements** remplacent 20 devantures et habillent les quartiers d'habitation : une couche peinte comme les enseignes (zéro solidité touchée), **1 à 3 étages** de fenêtres, balcon, **escalier de fer** sur le trottoir, et une fenêtre sur trois allumée la nuit. Les **29 intérieurs** sont maintenant **dessinés à la main** (un plan par pièce, l'espace = le plancher) avec **onze meubles** (comptoir, étagère, table, chaise, lit, frigo, machine, plante, classeur, poêle, escalier) et **trois planchers** (bois, céramique, tapis) — et du **monde dedans** : un commis à son poste, des clients tirés dans les passants du quartier. **Un commerce ordinaire sur cinq s'ouvre pour de vrai** (42 portes au lieu de 16) : dix pièces génériques, une par famille de devanture, et le **nom de l'enseigne voyage sur la porte** — on entre chez « TABAGIE DUBOIS », pas dans « Boutique ». Nouveaux comptoirs : `emplettes` (`magasins.COMPTOIRS`, data), `salon` (le barbier change tes cheveux **et fait oublier ta tête à la police**), `escalier` (l'étage du plex et la chambre de l'hôtel), `fouiller` (les tiroirs d'un logement, une fois par adresse), `casier` (le carnet du poste). ⚠️ **Trois comptoirs étaient morts** (`guichet`, `sortie_prison`, `casier` : un libellé, aucun menu, « PLUS TARD ») — un juge du banc compare maintenant ce que `carte.INTERIEURS` dessine à ce que `missions.js` sert, et seul le comptoir de la fourrière reste en chantier (il appartient à M9). ⚠️ **Un meuble ne remplit pas sa tuile** : sans plancher peint dessous, chaque table était un trou **noir** — `plancher` voyage donc avec la pièce. **125 juges de plus** (`test_interieurs.py`, `test_interieurs_js.py`, et les logements dans `test_devantures.py`) |
 | Les transitions des portes | **livré** (13 sept. 2026) | retour de Martin (« la transition n'est pas juste ») : elle ne l'était pas parce qu'elle arrivait **dans le mauvais ordre** — `entrer()` chargeait la pièce, *puis* lançait le fondu, dont la première moitié noircissait donc sur la scène déjà changée. Ce n'était pas un fondu enchaîné, c'était un clignotement. `Jeu.transiter()` remet l'ordre : **noircir sur l'ancienne → changer au noir → éclaircir sur la nouvelle**, le jeu **figé** pendant (un char ne te renverse plus sur un écran noir), des durées **asymétriques** (entrer 46 images, sortir 26), la caméra posée au noir sur la cible que l'amorti viserait, la porte qui s'entend au noir, et un reste d'élan au pas de la porte. 3 juges de banc : la scène mesurée **à chaque image**, le gel (ni temps, ni passant, ni char), et sortir **pendant** le fondu d'entrée |
-| Les clôtures | **correctif** à faire | demande de Martin : une clôture n'arrête que les chars — à pied on la traverse **sans ralentir**. Le grillage doit s'enjamber (une seconde, sans pouvoir frapper), le barbelé ne doit pas se passer du tout |
+| Les clôtures : grillage, bois, barbelé | **livré** (13 sept. 2026) | demande de Martin (« il faut des clôtures, mais si elles ne sont pas barbelées, qu'on puisse passer par-dessus », puis « ajoute aussi des clôtures de bois pour la variété ») : on passait par-dessus **toutes** les clôtures — sans même ralentir, parce que `f` était solide 3 et que le masque des piétons ne la voyait pas. Elles ont maintenant leur solidité à elles : **4 s'enjambe** (grillage, palissade de bois — 48 images en haut, immobile, sans frapper ni courir), **5 ne se passe pas** (barbelé). Franchir est une capacité de **tout le monde**, au même prix : l'A\* des agents traverse le grillage à 5 tuiles de coût et l'agent l'enjambe pour de vrai — une poursuite ne se gagne pas en escaladant. Du barbelé dans les cours de gang et de La Shop, du grillage à la fourrière (décision) et sur les terrains vagues, **de la palissade de bois dans les cours arrière des Érables** (188 tuiles). 6 juges neufs |
 | La carte | **correctif** à faire | demande de Martin : un repère clignotant pour se trouver, une légende, et voir où va la mission. Le carré blanc du joueur n'a pas grossi quand la ville a quintuplé, et **6 lieux sur 16** partagent le gris par défaut |
+| Le souffle en surplus | **correctif** à faire | demande de Martin : le souffle remonte seul à 0,24 par image (une barre pleine en **7 s**), donc manger ne donne rien. Ce que la bouffe rend devient un **surplus** au-dessus de 100, qui se dépense en premier et ne revient jamais seul — une ligne plus mince, d'une autre couleur, posée sur la barre jaune |
 | Les toits | **correctif** à faire | demande de Martin (« je veux que les toits soient plus réalistes ») : ils sont peints tuile par tuile, sans bord, sans rien dessus, sans ombre au sol, et une maison a le même toit plat qu'un entrepôt |
 | Les armes à feu | ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
 | Le carnet | ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
+| Les terrains de banlieue | ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | M11 La police apprend | ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, bouclier humain |
 | L'eau n'est plus un mur | **correctif** à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
 | M15 La ville te parle | ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), et les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières** (8 répliques aujourd'hui, tirées sans mémoire) |
@@ -322,8 +324,8 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'|'vehicule'|'menu')`, `empecherZoom()`, vibration |
 | 5 | `son.js` | échantillons réels (fetch + `decodeAudioData`, variantes tirées au hasard, boucles allumables) **avec repli synthétisé** (`ton`, `bruit`), `SFX`, `Mus` séquenceur 3 voix (Loren) |
-| 6 | `monde.js` | carte active depuis le paquet, `solide()`, `ligneLibre()` (DDA), A* à budget (2/image, cap 800 nœuds, file, repli ligne droite), feux, cache de morceaux 256 px, caméra amortie avec avance, horloge jour-nuit, intérieurs (pile `B.exterieur`), mini-carte |
-| 7 | `entites.js` | structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, **deux** index spatiaux 64 px (le décor ne bouge jamais : bâti une fois ; le reste rebâti à chaque image), cercle-vs-tuiles, piétons (flâne, figé, fuit, **témoin**, riposte, assommé, aveuglé, mort), gangs, bulle 300–520 px, armes de fortune semées, ramassages, particules, décalques, tri par y (les morts d'abord) |
+| 6 | `monde.js` | carte active depuis le paquet, `solide()` (masques : mur, eau, basse, **clôture**, **barbelé**), `ligneLibre()` (DDA), A* à budget (2/image, cap 800 nœuds, file, repli ligne droite, **une clôture se paie 5 tuiles**), feux, cache de morceaux 256 px, caméra amortie avec avance, horloge jour-nuit, intérieurs (pile `B.exterieur`), mini-carte |
+| 7 | `entites.js` | **enjamber une clôture** (capacité de tout le monde, au même prix), structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, **deux** index spatiaux 64 px (le décor ne bouge jamais : bâti une fois ; le reste rebâti à chaque image), cercle-vs-tuiles, piétons (flâne, figé, fuit, **témoin**, riposte, assommé, aveuglé, mort), gangs, bulle 300–520 px, armes de fortune semées, ramassages, particules, décalques, tri par y (les morts d'abord) |
 | 8 | `combat.js` | arcs de mêlée (anticipation → actif → repos), coup fort, esquive, projectiles, fusil à plombs, fronde en cloche, extincteur, réactions, saignement, mort, sang (plafond 150 décalques), lâcher/ramasser, cycle d'armes, visée assistée |
 | 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, **déport dans la voie d'à côté** sur un boulevard pour dépasser ou contourner un piéton, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital |
@@ -399,11 +401,13 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M7 | Finition v1 | **fait** : 5★ (barrages, hélico), journal lu par le narrateur, marché noir, carte plein écran, sonnerie et rotor réels, sonde Playwright ; reste v2 : défi du jour à graine serveur, mesure sur vrai téléphone (Martin) | 60 i/s de nuit à 3★ sur téléphone ; 2 tests de banc police (hélico, barrage), 2 histoire (narrateur + marché noir, carte), 1 sonde navigateur |
 | M8 | Les cinq districts | **fait** : quatre districts de plus autour de la baie (trame, gang, passants, densité et rythme propres), rues **noyées** et un pont, 5 lieux, 2 radios, carte plein écran à l'échelle de la ville, vieille sauvegarde rattrapée (le char de la planque revient à la rue la plus proche) | on roule du Faubourg à La Pointe sans chargement (test de banc : on le conduit) ; 15 juges de carte + 5 de banc ; connexité forte sur **toute** la ville, à quatre graines |
 | — | Les transitions | fondu enchaîné dans le bon ordre pour entrer et sortir, jeu figé pendant, caméra posée au noir, son de porte au noir | entrer et sortir vingt fois sans un clignotement ; ne jamais se faire renverser pendant un écran noir |
-| — | Les clôtures | grillage qu'on enjambe (une pose, une seconde, sans frapper), barbelé infranchissable, et la police qui enjambe aussi | couper par une cour et se faire suivre par l'agent ; ne jamais semer la police avec une clôture |
+| — | Les clôtures | **livré** : grillage et palissade de bois qu'on enjambe (48 images, sans frapper), barbelé infranchissable, et la police qui enjambe au même prix | couper par une cour et se faire suivre par l'agent ; ne jamais semer la police avec une clôture |
 | — | La carte | joueur qui pulse (autre rythme et autre forme que l'objectif), flèche au bord pour une cible hors cadre, légende dérivée de la table des couleurs, une couleur déclarée par lieu | se trouver du premier coup d'œil sur la carte plein écran ; lire un blip sans l'avoir appris |
+| — | Le souffle en surplus | surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
 | — | Les toits | bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
 | — | Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
 | — | Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
+| — | Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
 | M11 | La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool |
 | — | L'eau n'est plus un mur | nage à l'endurance, noyade à bout de souffle, char qui coule et ne revient pas, police qui nage aussi, rive de sable en eau basse | traverser un chenal de justesse ; ne jamais traverser la baie ; un char noyé reste au fond |
 | M15 | La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte (48 clips), tirage sans les quatre dernières, par `B.rng()` | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; traverser une foule sans entendre deux fois la même phrase |
@@ -419,12 +423,13 @@ hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée e
 sortie 1, les clôtures 1, les toits 2, les armes à feu 2, le carnet 2, l'eau 3.
 
 Ce qui reste, **dans l'ordre où on le fera** (le plus facile d'abord, correctif avant ajout
-à taille égale, prérequis devant) : **correctif** les clôtures 1 · **correctif** la carte 1 ·
-**correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout M11 2 ·
-**correctif** l'eau 3 · ajout M15 3 · ajout M9 3 · ajout M10 3 · ajout M12 4 · ajout M14 4 ·
-ajout M13 4. Les sept premières ne dépendent de rien ; l'eau navigable débloque le bateau de
-M9 et le traversier de M12 ; M10 demande le camion de M9 ; M13 est la fin, et la fin se pose
-en dernier.
+à taille égale, prérequis devant) : **correctif** la carte 1 · **correctif** le souffle en
+surplus 1 · **correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout
+les terrains de banlieue 2 · ajout M11 2 · **correctif** l'eau 3 · ajout M15 3 · ajout M9 3 ·
+ajout M10 3 · ajout M12 4 · ajout M14 4 · ajout M13 4. Les huit
+premières ne dépendent de rien ; les clôtures sont livrées (les cours des Érables se traversent), l'eau décide de
+la piscine et débloque le bateau de M9 et le traversier de M12 ; M10 demande le camion de
+M9 ; M13 est la fin, et la fin se pose en dernier.
 
 ## La v2 — huit vagues (plan du 13 sept. 2026)
 
@@ -446,19 +451,20 @@ pour la fin ce qui demande de l'infrastructure ou tout le reste du jeu.
 
 | Ordre | Genre | Vague | Taille | Prérequis |
 |---|---|---|---|---|
-| 1 | **correctif** | Les clôtures : grillage ou barbelé | 1 | aucun — mais la police doit enjamber comme le joueur |
-| 2 | **correctif** | La carte (se trouver, légende, objectif) | 1 | aucun — six lieux sur seize partagent déjà le même gris |
+| 1 | **correctif** | La carte (se trouver, légende, objectif) | 1 | aucun — six lieux sur seize partagent déjà le même gris |
+| 2 | **correctif** | Le souffle en surplus | 1 | aucun — mais il touche la même barre que le café |
 | 3 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
 | 4 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
 | 5 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
-| 6 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
-| 7 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12 |
-| 8 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
-| 9 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
-| 10 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
-| 11 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
-| 12 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
-| 13 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+| 6 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
+| 7 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
+| 8 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
+| 9 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
+| 10 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
+| 11 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
+| 12 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
+| 13 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
+| 14 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre l'ordre à la lettre — les six
@@ -576,41 +582,71 @@ Ce qui a été livré avec l'ordre :
   le noir complet), le gel (ni `B.t`, ni l'heure, ni un passant, ni un char ne bougent), et la
   sortie **pendant** le fondu d'entrée.
 
-### Les clôtures : grillage ou barbelé (**correctif**, taille 1)
+### Les clôtures : grillage, bois ou barbelé (**correctif**, taille 1) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « il faut des clôtures, mais si elles ne sont pas barbelées, qu'on
-puisse passer par-dessus. »
+puisse passer par-dessus. » Puis, en cours de route : « ajoute aussi des clôtures de bois
+pour de la variété. »
 
-⚠️ **Aujourd'hui on passe par-dessus toutes les clôtures — sans même ralentir.** `f` est
-solide **3** : le masque des véhicules la voit, celui des piétons non (`MASQUE_PIETON =
-MUR | EAU`). Une clôture n'arrête donc que les chars, et à pied elle n'existe pas. C'est ce
-qui la rend muette : on la traverse en courant comme si elle n'était pas là.
+⚠️ **On passait par-dessus toutes les clôtures — sans même ralentir.** `f` était solide **3** :
+le masque des véhicules la voyait, celui des piétons non (`MASQUE_PIETON = MUR | EAU`). Une
+clôture n'arrêtait donc que les chars, et à pied elle n'existait pas. C'est ce qui la rendait
+muette : on la traversait en courant comme si elle n'était pas là.
 
-Deux sortes, et chacune veut dire quelque chose :
+Les clôtures ont maintenant **leur solidité à elles**, et c'est la légende — elle seule — qui
+dit laquelle fait quoi :
 
-- **Le grillage** (`f`, celui d'aujourd'hui) : on l'**enjambe**, mais ça coûte. Une pose,
-  une seconde environ, pendant laquelle on ne frappe pas, on ne tire pas, on ne court pas —
-  et on est une cible immobile en haut d'une clôture. C'est ce prix-là qui fait d'une clôture
-  un **choix** : couper par la cour, ou faire le tour.
-- **Le barbelé** (un glyphe de plus) : on ne passe pas. Ni à pied, ni en char. Il se met là
-  où quelqu'un a payé pour que personne n'entre : les cours de La Shop, l'arrière du poste
-  de police, la cour des Cravates.
+- **4, ça s'enjambe** : le **grillage** (`f`) et la **palissade de bois** (`w`). Une pose de
+  48 images (0,8 s), pendant laquelle on ne frappe pas, on ne tire pas, on ne court pas — et
+  on est une cible immobile, soulevée de 5 px, en haut d'une clôture. C'est ce prix-là qui
+  fait d'une clôture un **choix** : couper par la cour, ou faire le tour.
+- **5, ça ne se passe pas** : le **barbelé** (`X`). Ni à pied, ni en char. Il se met là où
+  quelqu'un a payé pour que personne n'entre : les cours de gang (avec leur seule entrée de
+  chars) et les cours de ferraille de La Shop.
+- ⚠️ **Aucune n'est solide 1** : on **voit** à travers une clôture, donc un cône de police la
+  traverse (`ligneLibre` ne s'arrête qu'au 1). Une clôture qui cache serait un autre
+  mécanisme, avec ses propres juges.
 
-⚠️ **Le piège, et c'est le plus gros : la police doit savoir enjamber.** Le A\* des piétons
-travaille sur `MASQUE_PIETON` ; si le grillage devient un coût pour le joueur seul, la
-première clôture venue devient un exploit qui gagne toutes les poursuites — on enjambe, les
-agents restent plantés de l'autre côté. Franchir une clôture est donc une **capacité de tout
-le monde**, avec le même prix en temps, et le chemin la traverse à un coût plus élevé qu'une
-tuile normale. Un gardien de fourrière, lui aussi, sort de sa cour.
+⚠️ **Le piège, et c'était le plus gros : la police sait enjamber.** Le A\* des piétons
+travaillait sur `MASQUE_PIETON` ; si le grillage n'avait été un coût que pour le joueur, la
+première clôture venue serait devenue l'exploit qui gagne toutes les poursuites. Il y a donc
+un **masque de chemin** à part (`MASQUE_A_PIED` : le barbelé bloque, le grillage non) et un
+**coût** de 5 tuiles par clôture traversée — les deux chiffres, la durée et le coût, vivent
+dans les mêmes données (`recherche.CLOTURES`) parce qu'ils disent la même chose. Un agent
+lancé derrière le joueur franchit la même clôture, au même prix. ⚠️ Et devant une clôture
+d'une seule tuile, il fait le **tour** — c'est moins cher, et il a raison : le juge se pose
+donc au milieu d'un grillage de neuf tuiles.
 
-⚠️ **La fourrière garde du grillage, et c'est une décision.** Un vrai lot municipal serait
-barbelé — mais « on le reprend par-dessus la clôture » est la moitié de ce qui rend la
-fourrière intéressante. Du barbelé là, et il ne reste qu'une caisse à payer.
+**La palissade de bois** ne change aucune règle : c'est de la **variété**, et elle a sa place.
+Une banlieue dont les cours arrière sont en grillage industriel n'a pas l'air d'une banlieue.
+Elle ne se pose donc que dans **Les Érables** (188 tuiles), toujours avec une **barrière**, et
+jamais devant une façade.
 
-- **Juges** : la ville reste d'un seul tenant à pied **même en comptant le barbelé comme un
-  mur** (`composantes_marchables == 1`) ; un barbelé ne referme jamais une poche ; aucun
-  véhicule ne franchit ni l'un ni l'autre ; et une poursuite ne se gagne pas en enjambant —
-  un agent lancé derrière le joueur franchit la même clôture, au même prix.
+- ⚠️ **Trois pièges de génération, tous payés comptant** (mesures à l'appui) :
+  - En clôturant aussi les quartiers de maisons du Faubourg, 274 tuiles de palissade tombaient
+    au milieu du vieux quartier : le carré où l'on commence la partie devenait un labyrinthe
+    de cours, et quatre juges de banc ne trouvaient plus une tuile libre autour du joueur.
+  - Une barrière qui s'ouvre sur le mur du voisin fait de la cour une **poche** :
+    `boucher_les_poches` la mure en silence — huit tuiles, dont le devant d'une porte, et un
+    commerce se retrouvait sans entrée. La barrière s'ouvre donc sur du marchable, sinon la
+    cour reste ouverte.
+  - Les clôtures tirent dans **leur propre dé** (`des_cloture`), comme les devantures et les
+    rampes : avec le dé commun, la trouée d'un terrain vague décalait toute la suite du hasard
+    et la ville livrée changeait de gabarits.
+- **Deux prédicats, et il fallait les deux** : `marchable` (ce qu'un piéton peut **fouler** —
+  une clôture, non) et `franchissable` (ce qu'il peut **traverser**, en enjambant s'il le
+  faut). La connexité et le bouchage des poches passent par le second : une cour derrière un
+  grillage fait partie de la ville, une cour derrière du barbelé n'en fait pas partie. C'est
+  ce qui fait du vieux juge « tout ce qui est marchable est relié » la garantie qu'**un
+  barbelé ne referme jamais une poche**.
+- **Juges (6 neufs)** : les trois clôtures disent ce qu'elles font (solidité, jamais foulables,
+  aucune franchissable en char) ; la ville porte les trois **là où elles ont un sens** (le bois
+  aux Érables seulement, du barbelé à La Shop, et la fourrière **garde son grillage** — « on le
+  reprend par-dessus la clôture » est la moitié de ce qui la rend intéressante) ; un barbelé ne
+  referme jamais une poche ; un grillage relie ses deux côtés et un barbelé coupe (sur une
+  petite carte à la main) ; on ne traverse plus une clôture en courant (on l'enjambe, ça dure
+  ce que les données disent, on ne frappe pas pendant, on retombe de l'autre côté) ; le barbelé
+  ne se passe ni à pied ni en char ; et **une poursuite ne se gagne pas en enjambant**.
 
 ### La carte : se trouver, lire, et voir où va la mission (**correctif**, taille 1)
 
@@ -652,6 +688,51 @@ Les trois manquent pour trois raisons différentes, et une seule des trois est u
   entrée de légende ; la légende se dérive de la table, donc ajouter un lieu sans couleur
   fait rougir le test, pas le joueur ; le joueur et l'objectif ne battent jamais au même
   rythme ; une cible hors du cadre de la mini-carte se dessine en flèche, jamais en position.
+
+### Le souffle en surplus (**correctif**, taille 1)
+
+*Demande de Martin :* « les choses qui donnent du souffle devraient donner un **bonus** de
+souffle, parce que le souffle monte seul actuellement. Ce serait une petite ligne de couleur
+différente qui se superposerait sur la ligne jaune du souffle. »
+
+⚠️ **Et c'est mesurable.** Le sprint coûte 0,4 par image ; dès qu'on arrête de courir, le
+souffle remonte de 0,4 × 0,6 = **0,24 par image** — une barre vide se remplit toute seule en
+**sept secondes**. Or `nourrir()` fait `min(100, endurance + souffle)`. Une poutine à 18 $
+rend donc 70 points… qu'on aurait eus gratuitement en s'arrêtant quatre secondes.
+
+⚠️ Pire : le dépôt s'est déjà donné cette raison-là, et elle n'a jamais tenu. Le commit
+`1a03d16` dit « manger reprend le souffle », et `economie.py` explique : « sans ça, le seul
+moyen de reprendre son souffle était d'arrêter de courir — un kiosque ne servait à rien quand
+on est poursuivi ». L'intention était juste ; la régénération automatique la vidait de son
+sens le jour même.
+
+**Le surplus est ce que la régénération ne peut pas donner.** Manger ne remplit plus la barre :
+il ajoute par-dessus, au-delà des 100. Et cette part-là :
+
+- **se dépense en premier** quand on sprinte ;
+- **ne revient jamais toute seule** — c'est la seule chose sur cette barre qu'on ne peut pas
+  récupérer en s'arrêtant, et c'est exactement ce qui redonne un sens au kiosque ;
+- **se perd** en dormant, à l'hôpital et en prison, comme le reste de ce qui est passager.
+
+**À l'écran** : une ligne plus mince, d'une autre couleur, **posée par-dessus** la barre jaune
+plutôt qu'à côté — on lit d'un coup d'œil « j'ai du souffle, et j'ai de l'avance en plus ».
+
+- ⚠️ **Cette barre porte déjà deux autres messages**, et c'est le vrai risque. Sous café, elle
+  passe au **vert** et clignote la dernière seconde ; **au volant**, ce n'est plus le souffle
+  du tout mais la carrosserie du char. Trois choses sur 60 × 5 pixels, ça ne se décide pas au
+  hasard : le surplus se pose **sur** la barre (il ne la remplace pas), il garde sa couleur
+  que la base soit jaune ou verte, et **il disparaît au volant** — sinon il se superpose aux
+  points de vie d'une auto, ce qui ne veut rien dire.
+- ⚠️ **Le plafond du surplus est un réglage de poursuite, pas de confort.** Le joueur sprinte
+  à 2,1, le policier court à 1,9 : chaque point de surplus est de l'avance qu'on ne peut pas
+  lui reprendre. À 0,4 par image, 100 points de surplus valent **quatre secondes** de sprint
+  de plus — et **huit** sous café, puisque le café divise la dépense par deux. Le plafond se
+  choisit sur ce calcul-là, et un juge le refait.
+- **Juges** : manger au-dessus de 100 ne monte plus la base mais le surplus, et jamais
+  au-delà de son plafond ; le surplus part avant la base ; il ne remonte pas d'un seul point
+  à l'arrêt (c'est toute la différence avec la barre) ; il est nul après une nuit, une
+  arrestation ou l'hôpital ; et le surplus plein, café compris, reste sous le nombre de
+  secondes de sprint qu'on s'autorise.
 
 ### Les toits (**correctif**, taille 2)
 
@@ -804,6 +885,58 @@ gardent leur nom. Trois choses, trois noms — écrit ici pour qu'on arrête de 
   émis, jamais recalculés ; le répertoire ne montre **que** `p.connus`, et un test rejoue une
   partie neuve pour vérifier qu'aucun personnage non rencontré n'y apparaît ; le carnet reste
   sous son plafond après cent jours de jeu simulés.
+
+### Les terrains de banlieue (**ajout**, taille 2)
+
+*Demande de Martin :* « les terrains des résidences doivent être plus fournis — jardin,
+piscine, sentier vers la rue, entrée de voiture, voiture, et autres idées. »
+
+M8 a eu raison sur le principe et le dit dans son propre code : « la banlieue se reconnaît au
+**vide** autour des maisons, pas aux maisons ». Les marges sont donc larges — jusqu'à cinq
+tuiles. Mais ce vide est aujourd'hui `_jardin()` : du gazon, et un arbre ou un buisson par
+dix tuiles, posés au hasard. Or un terrain de banlieue est le contraire du vide — c'est
+**plein des traces de la vie de quelqu'un**.
+
+- **L'entrée de voiture, et l'auto dedans.** Une bande d'asphalte de la rue jusqu'au côté de
+  la maison. ⚠️ Et voici le meilleur morceau : elle se dessine avec les **cases de
+  stationnement** qu'on vient de livrer — une case `^`/`v` tournée vers la maison. Comme
+  `placeStationnee()` cherche déjà les cases pour y garer une auto dans ses lignes, **la
+  voiture dans l'entrée arrive sans une ligne de code de plus**.
+  - ⚠️ **Mais pas dans toutes les entrées.** Si chaque bungalow porte une case, la banlieue
+    se remplit de chars stationnés et le budget d'entités y passe. Une entrée sur trois, pas
+    plus ; les autres restent de l'asphalte nu — ce qui est aussi la vraie vie.
+  - ⚠️ **Une entrée touche la rue**, toujours. C'est la même règle que « toute rangée de
+    stationnement touche une allée » : une entrée qui ne rejoint pas la chaussée n'est pas
+    une entrée, c'est un carré d'asphalte.
+- **Le sentier de la porte à la rue.** `poser_porte()` réserve déjà les deux tuiles devant la
+  porte ; le sentier les relie au trottoir. Sans lui, on marche sur le gazon pour entrer chez
+  les gens — et c'est précisément ce qui donne l'impression du « pas fini ».
+- **La piscine**, hors terre, au fond de la cour. ⚠️ Elle rencontre de plein fouet la vague
+  de l'eau : une piscine de banlieue n'est pas la baie. C'est de l'**eau basse** — on y entre
+  debout, on ne s'y noie pas — donc le même cas que la rive de sable que cette vague-là
+  prévoit déjà. Et un juge : **une piscine ne coupe jamais le sentier** de la porte à la rue.
+- **Le grillage entre deux terrains**, et c'est là que ça cesse d'être décoratif : avec la
+  vague des clôtures, une haie de grillage s'enjambe. Une poursuite à pied dans Les Érables
+  devient une suite de cours à traverser, au lieu d'une course en ligne droite sur le
+  trottoir. **C'est la seule idée de la liste qui change le jeu**, et elle ne coûte rien de
+  plus une fois les clôtures faites.
+- **Le reste, qui n'est que du décor et c'est très bien** : un cabanon au fond, une corde à
+  linge, un BBQ sur la galerie, une balançoire là où il y a des enfants (le jeu en a déjà).
+- **Deux idées de plus, avec leur crochet** :
+  - une **pancarte À VENDRE** sur un terrain de temps en temps — `economie.PROPRIETES` existe,
+    et une maison à vendre devient une propriété de plus le jour où on veut en ajouter ;
+  - un **chien attaché dans une cour**, qui jappe quand tu passes. ⚠️ Ce n'est pas du décor :
+    un chien qui jappe est un **témoin**, il réveille la rue. À décider franchement — soit il
+    alerte pour vrai, soit il ne fait qu'un bruit, mais pas « un peu ».
+- ⚠️ **Le vrai coût est dans le paquet, pas à l'écran.** `decor` est une liste qui voyage :
+  six objets par terrain, sur un district entier, et on sort des bornes (400 Ko bruts, 70 Ko
+  gzip). **On mesure avant**, et si ça déborde, le décor de terrain se **dérive de la
+  position** (`hash2`) au lieu de voyager — exactement ce qui a été fait pour les usures
+  d'asphalte des stationnements.
+- **Juges** : toute entrée de voiture rejoint la chaussée ; un sentier relie chaque porte de
+  banlieue à la rue, sans passer par une piscine ; une case d'entrée n'apparaît que sur une
+  fraction des terrains, mesurée ; et le paquet reste sous ses bornes, sinon le décor se
+  dérive et ne voyage plus.
 
 ### M11 — La police apprend (**ajout**, taille 2)
 
