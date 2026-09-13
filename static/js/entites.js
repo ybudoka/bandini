@@ -294,8 +294,11 @@ const Entites = (function () {
       const e = B.entites[i];
       if (e.type !== 'pieton') continue;
       const loin = dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI;
-      // Les personnages de l'histoire et les figurants d'une mission ne s'oublient pas : ils attendent.
-      if (loin && !e.personnage && !e.mission && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
+      // Les personnages de l'histoire, les figurants d'une mission et les
+      // marchands derriere leur comptoir ne s'oublient pas : ils attendent.
+      // ⚠️ Le marchand s'oubliait comme un passant : on debarquait de l'autobus
+      // et les neuf comptoirs de la ville se vidaient a la premiere image.
+      if (loin && !e.personnage && !e.mission && !e.commerce && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
       if (e.vivant && !e.metier) vivants++;
     }
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);

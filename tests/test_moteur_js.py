@@ -1125,6 +1125,28 @@ def test_la_portee_de_recherche_couvre_la_plus_grosse_empreinte(banc):
     assert r["trop"] == [], f"PORTEE_DECOR ({r['portee']}) ne couvre pas ces decors"
 
 
+def test_le_marchand_reste_derriere_son_comptoir(banc):
+    """⚠️ Le guichet du camion-restaurant est TROUE pour qu'on voie le marchand
+    dedans — encore faut-il qu'il y soit. `peupler()` oubliait tout pieton a
+    plus de 520 px du joueur, marchands compris : on debarquait de l'autobus
+    et les neuf comptoirs de la ville se vidaient a la premiere image. Un
+    marchand tient son poste comme un personnage d'histoire : il attend.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const compter = function () {
+            return { comptoirs: L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).length,
+                     marchands: L.B.entites.filter(function (e) { return e.commerce; }).length };
+        };
+        const avant = compter();
+        o.frame(60);
+        return { avant: avant, apres: compter() };
+    }""")
+    assert r["avant"]["comptoirs"] > 0, "aucun commerce ambulant sur la carte"
+    assert r["avant"]["marchands"] == r["avant"]["comptoirs"], "un comptoir nait sans marchand"
+    assert r["apres"]["marchands"] == r["apres"]["comptoirs"], "les marchands s'oublient quand on est loin"
+
+
 def test_la_foule_ne_se_traverse_plus(banc):
     """Retour de Martin : « empeche que les choses se chevauchent ».
 
@@ -2271,6 +2293,9 @@ def test_les_pietons_restent_sur_les_trottoirs(banc):
             if (i < 300 || i % 30) continue;
             L.B.entites.forEach(function (e) {
                 if (e.type !== 'pieton' || !e.vivant || e.recul > 0) return;
+                // Le marchand du camion-restaurant tient son comptoir sur un
+                // stationnement : il n'y marche pas, il y est pose par la carte.
+                if (e.commerce) return;
                 const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
                 releves++;
                 if (L.Monde.estChaussee(tx, ty)) surLaChaussee++;

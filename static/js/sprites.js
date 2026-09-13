@@ -1310,6 +1310,78 @@ const FACADES = (function () {
    un mur invisible de 22 px devant et derriere. Il faut une boite.
    ⚠️ L'arbre, lui, garde son cercle : son tronc fait 3 px et sa cime est
    PEINTE EN HAUTEUR. On passe sous une cime, on ne passe pas dans un comptoir. */
+
+/* Un decor dessine en grille, comme un personnage, quand des fillRect ne
+   suffisent plus a le lire : une lettre par pixel, `.` = transparent. */
+function peindreGrilleDecor(ctx, pal, grille) {
+  for (let y = 0; y < grille.length; y++) {
+    const ligne = grille[y];
+    let x = 0;
+    while (x < ligne.length) {
+      const ch = ligne[x];
+      let fin = x + 1;
+      while (fin < ligne.length && ligne[fin] === ch) fin++;
+      if (ch !== '.') { ctx.fillStyle = pal[ch]; ctx.fillRect(x, y, fin - x, 1); }
+      x = fin;
+    }
+  }
+}
+
+/* Le camion-restaurant, vu de trois quarts : un fourgon a caisse, l'enseigne
+   sur le toit, la cheminee de la hotte qui fume, l'auvent raye au-dessus du
+   guichet, le menu a la craie, le comptoir avec les frites et le gobelet, la
+   cabine et son phare, deux vraies roues.
+
+   ⚠️ Le guichet est TROUE. Le marchand est une vraie entite, dessinee AVANT
+   le camion (tri par y), les pieds 11 px au-dessus de l'ancre
+   (`Entites.creerAmbulants`). Peindre l'interieur du guichet, c'etait le
+   cacher : on ne voyait que trois pixels de cheveux au-dessus du toit. Les
+   dix colonnes vides (17..26, rangees 11..18) sont exactement sa tete et ses
+   epaules ; l'auvent couvre le haut de sa tete, le comptoir ses jambes. Le
+   bitume qui passe dans les coins du trou fait l'ombre de la cuisine. */
+const PAL_CAMION_CUISINE = {
+  k: '#101018', g: '#27ae60', d: '#1e8e4f', G: '#4cc47e', r: '#c0392b', c: '#efe6d0',
+  v: '#7fb3d8', V: '#b8dcf0', m: '#9aa0a8', M: '#6f757c', t: '#1a1a1e', h: '#8a8f96',
+  l: '#fff3b0', y: '#e8b33c', o: '#d98324', b: '#2c2c2c', s: '#dfe4e8',
+};
+const GRILLE_CAMION_CUISINE = [
+  '...kkkkkkkkkkkkkkkkkkkkkkkkkkkkk.....ss.....',
+  '...kccccccccccccccccccccccccccck....ss......',
+  '...kccccccccccccccccccccccccccck...ss.......',
+  '...kccccccccccccccccccccccccccck..MMMM......',
+  '...kccccccccccccccccccccccccccck...mm.......',
+  '...kccccccccccccccccccccccccccck...mm.......',
+  '...kkkkkkkkkkkkkkkkkkkkkkkkkkkkk....mm......',
+  '..GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG.',
+  '..dggggggggggrrccrrccrrccrrccrrggggggggggdd.',
+  '..dggggggggggrrccrrccrrccrrccrrgddddddddddd.',
+  '..dggggggggggrrccrrccrrccrrccrrgdVVvvvvvddd.',
+  '..dgggggggggggggk..........kggggdVvvvvvvddd.',
+  '..dgbbbbbbbbggggk..........kggggdvvvvvvvddd.',
+  '..dgbyyyybcbggggk..........kggggdvvvvvvvddd.',
+  '..dgbbbbbbbbggggk..........kggggdvvvvvvvdll.',
+  '..dgbyyybbcbggggk..........kggggdvvvvvvvdll.',
+  '..dgbbbbbbbbggggk..........kggggddddddddddd.',
+  '..dgbyyyybcbggyyk..........kccggdggggggggdd.',
+  '..dgbbbbbbbbggook..........kccggdgggggmmgdd.',
+  '..dgggggggggggmmmmmmmmmmmmmmmmggdggggggggdd.',
+  '..dgggggggggggMMMMMMMMMMMMMMMMggdggggggggdd.',
+  '..dgggggggggggggggggggggggggggggdggggggggdd.',
+  '..dgggggggggggggggggggggggggggggdggggggggdd.',
+  '..dcccccccccccccccccccccccccccccdccccccccdd.',
+  '..dgggggggggggggggggggggggggggggdggggggggdd.',
+  '..dgggggggggggggggggggggggggggggdggggggggdd.',
+  '..dgggggggggggggggggggggggggggggdggggggggdd.',
+  '.mmmddddddddddddddddddddddddddddddddddddmmm.',
+  '.mmmddddddddddddddddddddddddddddddddddddmmm.',
+  '......ttttt.......................ttttt.....',
+  '.....ttttttt.....................ttttttt....',
+  '.....tthhhtt.....................tthhhtt....',
+  '.....tthhhtt.....................tthhhtt....',
+  '.....ttttttt.....................ttttttt....',
+  '......ttttt.......................ttttt.....',
+];
+
 const DECORS = {
   arbre: { w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -1380,15 +1452,13 @@ const DECORS = {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 18, 5, 5); ctx.fillRect(18, 18, 5, 5);
     ctx.fillStyle = '#101018'; ctx.fillRect(6, 20, 3, 3); ctx.fillRect(19, 20, 3, 3);
   } },
-  camion_cuisine: { w: 44, h: 28, ancre: [22, 27], r: 16, sol: [20, 4], solide: true, peindre: function (ctx, w, h) {
-    ctx.fillStyle = '#27ae60'; ctx.fillRect(2, 4, 40, 16);             // caisse
-    ctx.fillStyle = '#1e8e4f'; ctx.fillRect(2, 4, 40, 3);
-    ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 9, 20, 8);              // guichet
-    ctx.fillStyle = '#2c2c2c'; ctx.fillRect(8, 11, 16, 4);
-    ctx.fillStyle = '#d8b83a'; ctx.fillRect(28, 9, 10, 3); ctx.fillRect(28, 14, 10, 2);
-    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 20, 8, 7); ctx.fillRect(30, 20, 8, 7);
-    ctx.fillStyle = '#101018'; ctx.fillRect(6, 22, 4, 5); ctx.fillRect(32, 22, 4, 5);
-    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(2, 18, 40, 2);
+  // La boite au sol n'a pas bouge : la caisse va toujours de x 2 a 42.
+  camion_cuisine: { w: 44, h: 35, ancre: [22, 34], r: 16, sol: [20, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(3, 32, 38, 3);     // l'ombre sous la caisse
+    peindreGrilleDecor(ctx, PAL_CAMION_CUISINE, GRILLE_CAMION_CUISINE);
+    // ⚠️ Des lettres NOIRES : en rouge sur le creme, a 3 px de large, le mot
+    // ne se lisait plus a l'echelle du jeu. Le rouge, c'est l'auvent qui le porte.
+    Atlas.texte(ctx, 'POUTINE', 4, 1, '#101018', 1);                     // 7 lettres = 27 px, pile dans l'enseigne
   } },
   feu: { w: 10, h: 24, ancre: [5, 23], r: 2, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee
