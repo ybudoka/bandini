@@ -36,6 +36,99 @@ def test_les_sprites_sont_integres(banc):
     assert r == []
 
 
+def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
+    """⚠️ Le juge que le prologue de `vehicules.py` promet depuis M9 et qui
+    n'existait pas : « phase 1 = le navigateur a son sprite ».
+
+    `test_les_sprites_sont_integres` valide les sprites DECLARES ; il ne dit
+    rien du catalogue. Pendant ce temps, quatre chars de phase 1 — camion,
+    autobus, ambulance, remorqueuse — etaient dans le paquet, tires par le
+    trafic, vendables au garage, et rien ne les dessinait. Le catalogue
+    promettait des chars que le jeu ne montrait pas, et aucun test ne le
+    disait. Celui-ci le dit, et il dira la meme chose du bateau le jour ou on
+    le passera en phase 1."""
+    r = banc("""function (L, o) {
+        const manquants = [];
+        const tailles = {};
+        for (const v of L.B.defs.vehicules) {
+            if (v.phase !== 1) continue;
+            const def = L.SPRITES[v.sprite];
+            if (!def) { manquants.push(v.slug + ' -> ' + v.sprite); continue; }
+            tailles[v.slug] = [def.w, def.h, v.longueur, v.largeur, def.rotations || 0];
+        }
+        return { manquants: manquants, tailles: tailles,
+                 phase2: L.B.defs.vehicules.filter(function (v) { return v.phase !== 1; }).map(function (v) { return v.slug; }) };
+    }""")
+    assert r["manquants"] == [], "des chars de phase 1 sans sprite : %s" % r["manquants"]
+    attendus = {v["slug"] for v in paquet["vehicules"] if v["phase"] == 1}
+    assert set(r["tailles"]) == attendus
+    for slug, (w, h, lon, lat, rotations) in r["tailles"].items():
+        # ⚠️ Le sprite doit COUVRIR la carrosserie, sinon un char de 48 px
+        # dessine sur 32 laisse deux capots dans le vide a chaque bout.
+        assert w >= lon, "%s : sprite de %s px pour %s px de long" % (slug, w, lon)
+        assert h >= lat, "%s : sprite de %s px pour %s px de large" % (slug, h, lat)
+        # … sans etre une affiche : la marge sert aux roues, pas a rien.
+        assert w <= lon + 6 and h <= lat + 4, "%s : %sx%s pour %sx%s" % (slug, w, h, lon, lat)
+        assert rotations == 32, "%s se dessine en %s caps" % (slug, rotations)
+    assert r["phase2"] == ["bateau"], (
+        "la phase 2 a change : ce juge doit suivre (%s)" % r["phase2"]
+    )
+
+
+def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
+    """⚠️ Un sprite ne suffit pas : le char doit NAITRE dans le trafic, tenir
+    la route, et se laisser conduire. Ce juge les cree tous les quatre, les
+    fait rouler, et verifie au passage la chose que le catalogue disait sans
+    que personne ne l'ecoute — la chaine de cercles.
+
+    Elle valait 3 pour tout le monde (`PHYSIQUE.cercles`), alors que la fiche
+    de l'autobus en demande 5 : a 48 px de long pour 16 de large, trois
+    cercles laissent deux trous par lesquels une moto entre dans l'autobus
+    sans que rien ne se touche."""
+    slugs = [v["slug"] for v in paquet["vehicules"] if v["phase"] == 1]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const out = {};
+        for (const slug of %s) {
+            const v = o.char(slug, 0, 0, 0);
+            if (!v) { out[slug] = 'pas cree'; continue; }
+            // La chaine de cercles : combien, et couvre-t-elle la carrosserie ?
+            const cs = L.Vehicules.cercles(v);
+            let trou = 0;
+            for (let i = 1; i < cs.length; i++) {
+                const d = Math.hypot(cs[i].x - cs[i-1].x, cs[i].y - cs[i-1].y);
+                trou = Math.max(trou, d - 2 * cs[i].r);
+            }
+            // On le conduit : dix images de gaz, il doit avancer.
+            L.Vehicules.monter(j, v);
+            const x0 = v.x;
+            o.touche('KeyW'); o.frame(20); o.relacher('KeyW');
+            const avance = Math.hypot(v.x - x0, v.y - v.y);
+            const dessine = !!L.SPRITES[v.sprite];
+            L.Vehicules.descendre(j, true);
+            out[slug] = { cercles: cs.length, fiche: v.def.cercles, trou: Math.round(trou * 100) / 100,
+                          avance: Math.round(Math.abs(v.x - x0) * 10) / 10, dessine: dessine };
+            L.Entites.retirer(v);
+        }
+        L.Jeu.rendre();                       // et le dessin ne plante pas
+        return out;
+    }""" % json.dumps(slugs))
+    for slug, bilan in r.items():
+        assert bilan != "pas cree", slug
+        assert bilan["dessine"], "%s n'a pas de sprite" % slug
+        assert bilan["cercles"] == bilan["fiche"], (
+            "%s : %s cercles alors que sa fiche en demande %s" % (slug, bilan["cercles"], bilan["fiche"])
+        )
+        assert bilan["trou"] <= 0, (
+            "%s : %s px de trou entre deux cercles — une moto y entre" % (slug, bilan["trou"])
+        )
+        assert bilan["avance"] > 2, "%s ne bouge pas quand on met le gaz" % slug
+    assert r["autobus"]["cercles"] == 5 and r["camion"]["cercles"] == 4, (
+        "les deux longs doivent avoir leurs cercles de plus : %s" % r
+    )
+
+
 def test_le_joueur_marche_et_ne_traverse_pas_les_murs(banc):
     # On mesure vers l'OUEST : a l'est du terminus se tient Ti-Guy, et depuis
     # que la foule ne se traverse plus, un personnage fige est un obstacle.

@@ -206,6 +206,113 @@ SPRITES.moto = {
   swaps: ['c'], poses: { base: [GRILLE_MOTO] },
 };
 
+/* --- M9, le parc automobile ---------------------------------------------------
+
+   ⚠️ Vu d'en haut, un char est un TOIT. C'est ce qui decide de ces quatre
+   dessins : ce n'est pas le pare-brise qui nomme un vehicule a douze pixels de
+   large, c'est ce qu'il porte sur le dos — les nervures d'une caisse, les
+   trappes d'un autobus, une croix rouge, un bras de levage et son crochet.
+   Chacun est plus long que l'auto, et la marge reste la meme (longueur + 4,
+   largeur + 2) : le sprite depasse de deux pixels pour les roues. */
+// Une caisse a nervures et une cabine : c'est la caisse qui le nomme d'en haut.
+SPRITES.camion = {
+  w: 44, h: 18, ancre: [22, 9], rotations: 32,
+  pal: { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#00000030' },
+  swaps: ['c'], poses: { base: [[
+    '.....rrrrr.....rrrrr.............rrrrr......',
+    '.....rrrrr.....rrrrr.............rrrrr......',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kbbbbbbbbbbbbbbbbbbbbbbbbbbbkccccccccccccc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcccc.',
+    '.kttbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcllc.',
+    '.kttbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcllc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcccc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkssssscvvvcccc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkssssscvvvcccc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcccc.',
+    '.kttbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcllc.',
+    '.kttbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcllc.',
+    '.kbbbbbkbbbbbkbbbbbkbbbbbkbbbkccccccvvvcccc.',
+    '.kbbbbbbbbbbbbbbbbbbbbbbbbbbbkccccccccccccc.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.....rrrrr.....rrrrr.............rrrrr......',
+    '.....rrrrr.....rrrrr.............rrrrr......',
+  ]] },
+};
+// Le plus long du parc — cinq cercles de collision, et un toit a trappes.
+SPRITES.autobus = {
+  w: 52, h: 18, ancre: [26, 9], rotations: 32,
+  pal: { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#00000030' },
+  swaps: ['c'], poses: { base: [[
+    '......rrrrr...........rrrrr.............rrrrr.......',
+    '......rrrrr...........rrrrr.............rrrrr.......',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kcvvvkvvvvvkvvvvvkvvvvvkvvvvvkvvvvvkvvvvvkkcccccck.',
+    '.kcccccccccccccccccccccccccccccccccccccccckkvvvvcck.',
+    '.kttcccccccccccccccccccccccccccccccccccccckkvvvvllk.',
+    '.kttccssssssssssscccccsssssssssssccccccccckkvvvvllk.',
+    '.kccccssssssssssscccccsssssssssssccccccccckkvvvvcck.',
+    '.kccccssssssssssscccccsssssssssssccccccccckkvvvvcck.',
+    '.kccccssssssssssscccccsssssssssssccccccccckkvvvvcck.',
+    '.kccccssssssssssscccccsssssssssssccccccccckkvvvvcck.',
+    '.kttccssssssssssscccccsssssssssssccccccccckkvvvvllk.',
+    '.kttcccccccccccccccccccccccccccccccccccccckkvvvvllk.',
+    '.kcccccccccccccccccccccccccccccccccccccccckkvvvvcck.',
+    '.kcvvvkvvvvvkvvvvvkvvvvvkvvvvvkvvvvvkvvvvvkkcccccck.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '......rrrrr...........rrrrr.............rrrrr.......',
+    '......rrrrr...........rrrrr.............rrrrr.......',
+  ]] },
+};
+// ⚠️ La croix se lit d'EN HAUT : vue de dessus, c'est elle qui la nomme.
+SPRITES.ambulance = {
+  w: 36, h: 17, ancre: [18, 8], rotations: 32,
+  pal: { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' },
+  swaps: ['c'], poses: { base: [[
+    '.....rrrrr................rrrrr.....',
+    '.....rrrrr................rrrrr.....',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kcvvvvvvvvvvvvvvvvvkkcccccccccccck.',
+    '.kcccccccccccccccccckkcvvvcyyyyccck.',
+    '.kttccccccxxxxcccccckkcvvvcyyyyccck.',
+    '.kttssssssxxxxsssssskkcvvvcccccllck.',
+    '.kccccccxxxxxxxxcccckkcvvvcccccllck.',
+    '.kccccccxxxxxxxxcccckkcvvvcccccccck.',
+    '.kccccccxxxxxxxxcccckkcvvvcccccllck.',
+    '.kttssssssxxxxsssssskkcvvvcccccllck.',
+    '.kttccccccxxxxcccccckkcvvvcyyyyccck.',
+    '.kcccccccccccccccccckkcvvvcyyyyccck.',
+    '.kcvvvvvvvvvvvvvvvvvkkcccccccccccck.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.....rrrrr................rrrrr.....',
+    '.....rrrrr................rrrrr.....',
+  ]] },
+};
+// Le bras couche sur le plateau, et le crochet qui depasse a l'arriere.
+SPRITES.remorqueuse = {
+  w: 40, h: 17, ancre: [20, 8], rotations: 32,
+  pal: { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#00000030' },
+  swaps: ['c'], poses: { base: [[
+    '.......rrrrr.....rrrrr........rrrrr.....',
+    '.......rrrrr.....rrrrr........rrrrr.....',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kcccccccccccccccccccccckkccccyyyycccck.',
+    '.kcccccccccccccccccccccckkvvvcyyyycccck.',
+    '.kttccsssssssssssssssssskkvvvcccclllcck.',
+    '.kttcccccccccccccccccccckkvvvcccclllcck.',
+    '.kpppphhhhhhhhhhhhhhhhhhkkvvvccccccccck.',
+    '.k..ppkkkkkkkkkkkkkkkkkhkkvvvccccccccck.',
+    '.kpppphhhhhhhhhhhhhhhhhhkkvvvccccccccck.',
+    '.kttcccccccccccccccccccckkvvvcccclllcck.',
+    '.kttccsssssssssssssssssskkvvvcccclllcck.',
+    '.kcccccccccccccccccccccckkvvvccccccccck.',
+    '.kcccccccccccccccccccccckkcccccccccccck.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.......rrrrr.....rrrrr........rrrrr.....',
+    '.......rrrrr.....rrrrr........rrrrr.....',
+  ]] },
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {

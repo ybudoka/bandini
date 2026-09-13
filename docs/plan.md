@@ -56,11 +56,13 @@ ne bougent pas quand l'ordre de travail change.
 | Le souffle en surplus | **livré** (13 sept. 2026) | demande de Martin (« les choses qui donnent du souffle devraient donner un **bonus**, parce que le souffle monte seul ») : il remontait de 0,24 par image — une barre vide pleine en **7 s** — et `nourrir` plafonnait à 100, donc une poutine à 18 $ rendait 70 points qu'on avait gratuitement en s'arrêtant quatre secondes. Manger ajoute maintenant **par-dessus** les 100 (plafond 60) : le surplus **part en premier** au sprint, ne remonte **jamais** tout seul, et se perd en dormant, à l'hôpital et en prison. À l'écran, une ligne cyan d'un pixel **posée sur** la barre — elle garde sa couleur sous café (barre verte) et **disparaît au volant**, où la barre montre la carrosserie. Son plafond est un réglage de **poursuite** : 60 points = 2,5 s de sprint de plus, 5 s sous café, et un juge refait le calcul. 2 juges neufs |
 | Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Le fondu de l'hôpital et de la prison | **livré** (13 sept. 2026) | demande de Martin (« il faut corriger le fade out et in quand on va à l'hôpital ou qu'on se fait enfermer ») : quatre changements de scène — l'hôpital, la prison, la compagnie, le coucher — étaient restés sur `Hud.fondu` + `setTimeoutJeu`, soit **deux horloges** que rien ne liait : l'une comptait dans le dessin, l'autre dans la mise à jour. On se regardait donc disparaître de la rue à **80 % de noir**, le texte se lisait par-dessus le trottoir où l'on venait de tomber, et la ville continuait de tourner pendant les deux secondes et demie — un char pouvait repasser sur un joueur à 1 PV. Les quatre passent maintenant par la machine des portes, `Jeu.transiter()`, qui n'a **qu'une** horloge et change la scène **pile** à alpha 1. Elle gagne pour eux un troisième nombre, `[fermer, tenir, ouvrir]` : une porte, on la passe ; une nuit, un séjour à l'hôpital **font passer du temps**, et ce temps se sent dans le noir tenu, où le texte s'écrit — et **seulement** là. `Hud.fondu`, `setTimeoutJeu` et leurs minuteries sont supprimés : plus une seule deuxième horloge dans le jeu |
-| M9 Le parc et les boulots | **P1** ajout, **à moitié livré** (13 sept. 2026) | camion, autobus, ambulance, remorqueuse (bateau en dernier) ; **un sport et un luxe**, rares et par quartier ; ambulance/pizza/remorquage au klaxon, fourrière, radio procédurale ; **un vélo n'explose plus** (retour de Martin : aujourd'hui il part en boule de feu et donne 2★) |
+| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. **Reste** : `defonce`, `soigne`, `crochet`, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe, et **un vélo qui n'explose plus** |
 | Rampes vraiment prenables | **P1** **correctif** à faire | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
+| Étoiles de recherche illisibles | **P2** **correctif** à faire | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
 | Arbres dans les sentiers | **P2** **correctif** à faire | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
 | Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
+| Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **P3** **correctif** à faire | demande de Martin, mesurée : **les 41 intérieurs** dépassent l'empreinte de leur bâtiment — un logement de banlieue de 3 × 3 ouvre sur une pièce de 16 × 9. Une porte doit imposer une taille minimale au bâtiment, et il faut de **petites** pièces |
 | L'eau n'est plus un mur | **P3** **correctif** à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
@@ -420,11 +422,13 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Le souffle en surplus | **livré** : surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
 | — | Les toits | **livré** : bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
 | — | Le fondu de l'hôpital et de la prison | **livré** : les quatre ellipses passent par `Jeu.transiter()`, exporté, avec un temps de **noir tenu** où le texte s'écrit ; `Hud.fondu` et les minuteries de `missions.js` disparaissent | se réveiller à l'hôpital sans avoir vu la téléportation, et ne pas se faire écraser pendant le noir |
-| M9 | **P1** Le parc et les boulots | camion, autobus, ambulance, remorqueuse, bateau ; le sport et le luxe (rares, par quartier, la meilleure revente) ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule ; la cour de la fourrière rangée en cases, sans tremplin ; `reservoir` : ce qui n'en a pas ne brûle ni n'explose | trois boulots finis d'affilée ; sortir son char de la fourrière ; trouver un luxe et le revendre ; démolir un vélo sans que la police arrive ; se faire remorquer pour avoir laissé son char en travers, jamais pour l'avoir mis dans une case |
+| M9 | **P1** Le parc et les boulots | **les quatre sprites : livrés** (le catalogue ne ment plus, et un juge le tient) ; restent le bateau ; le sport et le luxe (rares, par quartier, la meilleure revente) ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule ; la cour de la fourrière rangée en cases, sans tremplin ; `reservoir` : ce qui n'en a pas ne brûle ni n'explose | trois boulots finis d'affilée ; sortir son char de la fourrière ; trouver un luxe et le revendre ; démolir un vélo sans que la police arrive ; se faire remorquer pour avoir laissé son char en travers, jamais pour l'avoir mis dans une case |
 | — | **P1** Rampes vraiment prenables | élan, portée et freinage **calculés** depuis la fiche du char au lieu d'être écrits en tuiles ; la trajectoire rejouée par un test pour chaque rampe posée | réussir Le Grand Saut en moto et retomber sur la rue, pas dans un mur |
 | — | **P2** L'endurance du Faubourg | trois vitesses (marche / course gratuite / sprint coûteux), policier aligné sur la course, renommage `joueur_course`, barre qui s'efface quand elle est pleine | traverser la ville sans gérer une barre ; ne plus semer un agent en marchant vite |
+| — | **P2** Étoiles de recherche illisibles | étoile **dessinée** (pas un caractère agrandi), jaune à elle, en haut au centre avec la ligne d'objectif qui descend, étoiles éteintes **creuses**, clignotement rouge gardé, ancre tactile réenregistrée | lire son niveau de recherche sans quitter la route des yeux |
 | — | **P2** Arbres dans les sentiers | une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
+| — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
 | — | **P3** Trottoir et traverses de deux tuiles | `TROTTOIR = 1` (trottoirs **et** traverses), rues rétrécies pour garder leurs voies, tout ce qui vivait sur le trottoir relogé, le littéral `2` de `monde.js` remplacé par `grille.trottoir`, juges de géométrie rejoués | une rue qui a l'air d'une rue ; aucun bouchon de piétons devant un commerce ni à une traverse |
 | — | **P3** Pièces plus grandes que leur maison | plancher de la pièce ≤ empreinte × étages, taille minimale imposée par la porte, pièces par tranche de taille | sortir d'un dépanneur sans avoir l'impression d'être sorti d'une cabane |
 | — | **P3** L'eau n'est plus un mur | nage à l'endurance, noyade à bout de souffle, char qui coule et ne revient pas, police qui nage aussi, rive de sable en eau basse | traverser un chenal de justesse ; ne jamais traverser la baie ; un char noyé reste au fond |
@@ -485,11 +489,13 @@ ordre-là.
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P1** | ajout | M9 Le parc et les boulots | 3 | ⚠️ **Le catalogue promet quatre chars que le jeu ne dessine pas.** Le Python est commité, le JS n'existe pas : ni sprites, ni boulots, ni comptoir de fourrière, ni radio du camion. Prérequis de M10 |
+| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, ce que les fiches disent que les chars savent faire, et le vélo qui explose. Prérequis de M10 |
 | **P1** | **correctif** | Une rampe qu'on peut vraiment prendre | 2 | ⚠️ *Le Grand Saut* est au tableau des défis et **ne peut pas se gagner** : la moto vole 126 px pour 96 px de réception |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
+| **P2** | **correctif** | Les étoiles de recherche, grosses, jaunes et au centre | 1 | ⚠️ l'argent est dessiné **deux fois plus gros** que le niveau de recherche, qui est la seule chose qui compte en poursuite |
 | **P2** | **correctif** | Des arbres plantés au milieu des sentiers | 1 | à chaque parc — et `self.reserve` fait déjà ça pour le devant des portes |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
+| **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P3** | **correctif** | Une pièce plus grande que sa maison | 2 | **le trottoir** : rétrécir les rues rétrécit les bâtiments |
 | **P3** | **correctif** | L'eau n'est plus un mur | 3 | débloque le **bateau** de M9 et le **traversier** de M12, et décide de la piscine des terrains |
@@ -971,26 +977,54 @@ Ce qui a été livré, dans l'ordre de ce qui se voit :
 
 *Ce que ça donne :* autre chose à conduire, et de quoi gagner sa vie autrement.
 
-⚠️ **À moitié livré le 13 sept. 2026, et il faut être précis sur la moitié qui manque.**
+⚠️ **Aux deux tiers le 13 sept. 2026, et il faut être précis sur ce qui manque.**
 Le **Python est commité** (`7a4d26e` pour le catalogue, les boulots, les stations ; `e49603a`
-pour le lot de la fourrière) : les fiches, l'économie, la carte et leurs juges existent, et
-666 tests passent. Le **JS n'existe pas encore** — et c'est celui qui se joue :
+pour le lot de la fourrière) : les fiches, l'économie, la carte et leurs juges existent.
 
-- aucun des quatre nouveaux chars n'a de **sprite** (`camion`, `autobus`, `ambulance`,
-  `remorqueuse` sont en phase 1 dans le catalogue, mais rien ne les dessine) ;
-- `cercles`, `defonce`, `soigne`, `crochet` sont dans les fiches et **personne ne les lit** ;
+**Livré le 13 sept. 2026 — les quatre chars existent** (voir la fiche ci-dessous).
+**Reste à faire**, et c'est celui qui se joue :
+
+- `defonce`, `soigne`, `crochet` sont dans les fiches et **personne ne les lit** ;
 - les **boulots au klaxon** ne se prennent pas : `Missions.taxi` est encore le seul, et la
   fourrière n'a ni comptoir, ni saisie à l'arrestation, ni chars dans sa cour ;
 - la **radio procédurale** est dans le paquet mais `Son.Radio` ne sait pas qu'une station
-  peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien.
+  peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien ;
+- le **sport** et le **luxe** n'existent pas encore, ni le **vélo qui n'explose plus**.
 
-⚠️ Tant que ce n'est pas fait, **le catalogue promet des chars que le jeu ne montre pas** —
-et rien ne l'a dit. Le prologue de `vehicules.py` annonce pourtant : « phase 1 = le navigateur
-a son sprite. Un test vérifie que chaque véhicule de phase 1 a un sprite. » **Ce test n'existe
-pas.** `test_les_sprites_sont_integres` valide les sprites *déclarés* dans `SPRITES`, pas le
-fait qu'un char du catalogue en ait un. Le premier juge à écrire pour cette moitié est donc
-celui-là : **pour chaque véhicule de phase 1, `SPRITES[v.sprite]` existe** — il rougirait
-aujourd'hui, quatre fois, et c'est exactement ce qu'on lui demande.
+#### Les quatre chars existent (taille 1) — **livré le 13 sept. 2026**
+
+⚠️ **Le catalogue promettait des chars que le jeu ne montrait pas, et rien ne le disait.**
+`camion`, `autobus`, `ambulance` et `remorqueuse` étaient en phase 1 : le trafic les tirait,
+le garage les rachetait, la fourrière les comptait — et `SPRITES[v.sprite]` n'existait pas,
+donc `dessinerUn()` sortait en silence sur son `if (!def) return`. Un char invisible qui
+roule, qu'on peut heurter et voler.
+
+Le prologue de `vehicules.py` annonçait pourtant : « phase 1 = le navigateur a son sprite. Un
+test vérifie que chaque véhicule de phase 1 a un sprite. » ⚠️ **Ce test n'existait pas.**
+`test_les_sprites_sont_integres` valide les sprites *déclarés* dans `SPRITES` — il ne dit
+rien du catalogue. C'est donc lui qu'on a écrit en premier, et il rougissait quatre fois.
+
+Ce qui a été livré :
+
+- **Le juge d'abord** : pour chaque véhicule de phase 1, `SPRITES[v.sprite]` existe, le
+  sprite **couvre** la carrosserie (jamais plus court que `longueur`, jamais une affiche non
+  plus : `longueur + 6` au plus) et il se cuit en 32 caps. ⚠️ Il tient aussi la liste de la
+  phase 2 : le jour où le bateau y passe, le test le réclame au lieu de se taire.
+- **Quatre sprites, et une règle de dessin qui vient de la vue.** ⚠️ **Vu d'en haut, un char
+  est un TOIT** : à douze pixels de large, ce n'est pas le pare-brise qui nomme un véhicule,
+  c'est ce qu'il porte sur le dos. D'où les **nervures** de la caisse du camion, les
+  **trappes** de l'autobus, la **croix rouge** de l'ambulance, et le **bras couché avec son
+  crochet qui dépasse** de la remorqueuse. La marge reste celle de l'auto (longueur + 4,
+  largeur + 2) : deux pixels pour les roues, de chaque côté.
+- ⚠️ **La chaîne de cercles lit enfin la fiche.** `cercles()` prenait `PHYSIQUE.cercles` — 3
+  pour tout le monde, y compris pour un autobus de 48 px de long sur 16 de large. Le juge
+  Python `test_la_chaine_de_cercles_ne_laisse_aucun_trou` exigeait 5 depuis M9, le catalogue
+  les déclarait, et **le navigateur ne les lisait pas** : deux trous restaient entre les
+  cercles, par lesquels une moto entrait dans l'autobus sans que rien ne se touche. Un
+  deuxième juge mesure maintenant l'écart entre cercles voisins **au banc**, char par char.
+- **Juges (2 neufs)** : celui des sprites de phase 1, et celui qui crée les cinq chars, les
+  conduit vingt images, mesure la chaîne de cercles (aucun trou, le compte de la fiche) et
+  dessine une image sans planter.
 
 - `vehicules.py` : **camion** (lent, lourd, défonce un mur — il sert à M10), **autobus**
   (long, deux cercles de collision de plus, pas de radio), **ambulance** (rapide, sirène,
@@ -1177,6 +1211,43 @@ armes à feu : **la vitesse achète de la distance, jamais l'impunité**.
   un écart **borné** (le même calcul que pour le char rapide) ; et la durée d'un souffle se
   compare à la **taille de la ville**, pas à un nombre choisi une fois pour toutes.
 
+### Les étoiles de recherche, grosses, jaunes et au centre (**correctif**, taille 1)
+
+*Demande de Martin :* « je veux les étoiles de police plus grosses, jaunes et au centre de
+l'écran. »
+
+⚠️ **Aujourd'hui, l'argent est dessiné deux fois plus gros que le niveau de recherche.** Les
+étoiles sont du **texte** — des `★` de la police 5 × 7, à l'échelle **1** — rangés dans la
+colonne du coin haut-droit, sous un montant en argent tracé à l'échelle **2**. La chose la
+plus importante d'une poursuite est donc le plus petit élément de l'écran, dans un coin, en
+blanc. C'est à l'envers.
+
+- **Plus grosses** : pas en agrandissant le caractère. Un `★` de 5 × 7 tiré à l'échelle 3
+  donne une bouillie de blocs. Une **étoile dessinée**, cuite comme les autres sprites depuis
+  sa grille de caractères, se lit à n'importe quelle taille — et l'atlas sait déjà faire
+  exactement ça.
+- **Jaunes.** ⚠️ Avec une nuance à trancher : le doré `#e8b33c` est **déjà** celui de
+  l'argent, juste au-dessus, et celui de « ce qui est à toi » sur la carte. Deux choses
+  différentes de la même couleur dans le même coin, ça ne se lit plus. Soit les étoiles
+  prennent un jaune à elles, soit elles déménagent — et justement, elles déménagent.
+- **Au centre.** ⚠️ Pas au milieu de l'écran : le milieu, c'est le joueur, et une rangée
+  d'étoiles par-dessus l'action cacherait ce qu'on regarde. **En haut, centré** — la place des
+  étoiles dans le genre. Mais ce coin-là est déjà pris : `noter('objectif', …)` y écrit la
+  ligne de mission. Les étoiles passent devant (en poursuite, c'est **l'information**), et la
+  ligne d'objectif descend sous elles.
+- **Les étoiles éteintes ne sont pas des points.** Le code écrit `'.'` pour celles qu'on n'a
+  pas — ça se voyait à l'échelle 1, ça ne tiendra pas en gros. Il faut une étoile **creuse** :
+  on doit lire « trois sur cinq » d'un coup d'œil, sans compter.
+- **Le clignotement rouge reste**, et c'est lui qui dit qu'un palier vient de changer. En
+  jaune, il doit rester aussi visible qu'en blanc — c'est le seul signal du passage à
+  l'étoile suivante, et il ne se remplace pas par « c'est plus gros ».
+- ⚠️ **Le tactile** : `noter()` enregistre chaque élément du HUD, et un test vérifie
+  qu'aucun ne finit sous un bouton du pouce. Les étoiles qui déménagent réenregistrent leur
+  ancre, sinon le juge tactile parle encore de l'ancien coin.
+- **Juges** : les étoiles sont l'élément le plus grand du HUD en poursuite ; on distingue
+  allumée d'éteinte sans compter ; rien du HUD ne se chevauche au centre (étoiles et ligne
+  d'objectif) ; et aucune ancre ne tombe sous un bouton tactile.
+
 ### Des arbres plantés au milieu des sentiers (**correctif**, taille 1)
 
 *Demande de Martin :* « les arbres ne devraient pas être dans les sentiers. »
@@ -1203,6 +1274,66 @@ qu'une allée **se réserve en se traçant**.
 - **Juges** : aucun décor solide sur une tuile d'allée, dans aucun parc, sur cinq graines ;
   et de l'entrée d'un parc jusqu'à son cœur, le chemin reste franchissable à pied sans
   contourner un tronc.
+
+### La musique dit où tu es et ce qui t'arrive (**ajout**, taille 3)
+
+*Demande de Martin :* « je veux des musiques différentes par district, et une musique générée
+par IA pour l'écran titre. Je veux aussi des musiques pour quand on se bat avec des gangs, et
+quand on a plusieurs étoiles. »
+
+Aujourd'hui il y a **une** musique de fond — `ville`, 60 secondes, la même de La Pointe aux
+Quais — et le thème du menu, écrit en notes. Rien ne change quand on traverse un pont, rien ne
+change quand trois Cravates te tombent dessus, rien ne change à quatre étoiles.
+
+**Le thème du titre : le plan l'avait déjà prévu, mot pour mot.** `musique.py` s'explique
+là-dessus depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais
+instruments, elle se posera **par-dessus** comme les radios — c'est la même règle que partout
+dans `audio.py` : l'échantillon quand il existe, la synthèse sinon ». Ce n'est donc pas un
+revirement : le thème écrit en notes devient le **filet**, et un enregistrement se pose
+dessus. Le jour où le fichier manque — réseau coupé, génération ratée — le menu a encore sa
+musique.
+
+**Cinq districts, cinq ambiances**, chacune avec ce qui fait son quartier : la brume et le
+piano du Faubourg, le calme plat des Érables, le fer et le vide de La Shop, la corne et les
+mouettes des Quais, le vent et les arbres de La Pointe.
+
+⚠️ **Trois choses à régler, et ce sont elles le vrai travail** — pas les pistes :
+
+- **Le poids.** Une piste de 60 s à 64 kbit/s pèse 480 Ko. Cinq districts, un titre, une
+  poursuite et une bagarre font **huit** pistes, presque 4 Mo — le dossier audio en pèse déjà
+  4. Elles ne peuvent donc **pas** se charger au démarrage. La règle des radios s'applique
+  telle quelle : on charge **au moment d'en avoir besoin**, une à la fois, et la piste d'un
+  district s'annonce quand on approche de sa frontière, pas quand on y entre.
+- **La couture.** Les districts se touchent — c'est tout le propos de M8, la ville est d'un
+  seul tenant et rien ne se charge en roulant. Une musique ne peut donc pas **couper** à la
+  frontière : elle se fond sur quelques secondes. ⚠️ Et il faut de l'**hystérésis** : on
+  traverse une frontière en zigzag sur un boulevard, et une musique qui bascule à chaque pas
+  de côté est pire que pas de musique du tout.
+- ⚠️ **Qui gagne.** C'est la question qu'aucune des quatre demandes ne pose et dont tout
+  dépend. Il y a déjà de la radio dans un char, l'ambiance à pied, la rumeur de la foule, les
+  sirènes et les voix. Il faut **une échelle, écrite une fois** :
+
+  | | |
+  |---|---|
+  | 1 | une réplique de l'histoire — elle baisse déjà tout le reste |
+  | 2 | **la poursuite**, à partir de N étoiles |
+  | 3 | **la bagarre de gang** |
+  | 4 | la radio du char, ou l'ambiance du district |
+
+  Et la rumeur de la foule passe dessous, toujours.
+
+- ⚠️ **Une musique d'état a besoin d'une queue.** Les étoiles montent et descendent, une
+  bagarre s'arrête et reprend. Sans durée minimale ni fondu de sortie, la poursuite
+  démarrerait et s'arrêterait trois fois en dix secondes. La musique de poursuite continue
+  quelques secondes après la dernière étoile perdue — c'est ce qui fait qu'on **souffle**.
+- **À partir de combien d'étoiles ?** Une étoile, c'est un témoin qui a appelé ; ça n'est pas
+  une poursuite. La musique arrive à **deux**, et peut monter d'un cran à quatre, quand
+  l'hélico entre. Un seul réglage en Python, comme tout le reste.
+- **Juges** : chaque district a une ambiance déclarée, et aucune ne se charge avant qu'on en
+  approche ; une seule piste de musique joue à la fois (l'échelle est respectée, un test la
+  rejoue) ; traverser une frontière en zigzag ne change pas de piste plus d'une fois ; le
+  thème du menu joue **même sans aucun fichier** ; et le poids total reste sous son plafond,
+  mesuré comme celui des radios.
 
 ### Le carnet : la mission, le journal, le répertoire (**ajout**, taille 2)
 

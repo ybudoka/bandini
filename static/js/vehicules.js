@@ -137,8 +137,14 @@ const Vehicules = (function () {
 
   // --- Geometrie : la chaine de cercles ------------------------------------------
 
+  /** ⚠️ Le nombre de cercles vient de la FICHE, pas d'une constante unique.
+      Il en faut au moins `longueur / largeur`, sinon deux cercles voisins
+      laissent un trou et une moto entre dans l'autobus par le milieu sans que
+      rien ne se touche (juge Python `test_la_chaine_de_cercles_ne_laisse_aucun_trou`).
+      Les cinq de l'autobus et les quatre du camion ne sont pas un reglage de
+      confort : c'est ce qui fait qu'ils ont une carrosserie. */
   function cercles(v, x, y, angle) {
-    const n = physique().cercles;
+    const n = v.def.cercles || physique().cercles;
     const demi = v.def.longueur / 2 - v.r;
     const out = [];
     const cx = Math.cos(angle === undefined ? v.angle : angle), cy = Math.sin(angle === undefined ? v.angle : angle);
