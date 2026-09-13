@@ -1703,6 +1703,62 @@ def test_les_passages_ont_une_tuile_pleine_et_une_en_bout(banc):
         assert pleines == ouest + est, f"passage « {g} » : {pleines} pleines pour {ouest + est} en bout"
 
 
+def test_une_case_de_stationnement_se_peint_et_se_gare(banc):
+    """Une case fait deux tuiles : le FOND (ligne de nez, butoir) et l'ouverture
+    sur l'allee. Le peintre ne le sait pas du generateur, il le LIT dans les
+    voisines — et c'est la meme lecture qui met une auto stationnee dans ses
+    lignes plutot qu'en travers du terrain."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, NEZ = { '^': [0, -1], 'v': [0, 1], '<': [-1, 0], '>': [1, 0] };
+        let fonds = 0, ouvertes = 0, mauvaises = 0;
+        const coins = {}, cases = [];
+        for (let y = 1; y < c.h - 1; y++) for (let x = 1; x < c.w - 1; x++) {
+            const g = c.sol[y][x], nez = NEZ[g];
+            if (!nez) continue;
+            const v = L.Monde.varianteDeCase(g, x, y);
+            const fond = (v & 1) !== 0;
+            if (fond !== (c.sol[y + nez[1]][x + nez[0]] !== g)) mauvaises++;
+            if (fond) fonds++; else ouvertes++;
+            coins[v & 3] = (coins[v & 3] || 0) + 1;
+            cases.push([x, y]);
+        }
+        // ⚠️ Une auto ne se stationne QUE hors de l'ecran, entre 180 et 560 px
+        // du joueur : on se plante donc au milieu du coin le plus fourni en
+        // cases, sinon on juge un quartier ou il n'y a rien a peupler.
+        let mieux = cases[0], n = 0;
+        for (let i = 0; i < cases.length; i += 8) {
+            const p = cases.filter(function (k) {
+                return Math.abs(k[0] - cases[i][0]) < 30 && Math.abs(k[1] - cases[i][1]) < 30;
+            }).length;
+            if (p > n) { n = p; mieux = cases[i]; }
+        }
+        L.B.joueur.x = mieux[0] * L.TT; L.B.joueur.y = mieux[1] * L.TT;
+        o.frame(900);
+        const gares = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.etat === 'stationne'; });
+        const poses = gares.map(function (v) {
+            const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
+            const g = c.sol[ty][tx], nez = NEZ[g];
+            return {
+                case: !!nez,
+                angle: !!nez && Math.abs(Math.atan2(nez[1], nez[0]) - v.angle) < 0.01,
+                centree: (v.x % L.TT === 8 && v.y % L.TT === 0) || (v.y % L.TT === 8 && v.x % L.TT === 0),
+            };
+        });
+        return { fonds: fonds, ouvertes: ouvertes, mauvaises: mauvaises, coins: coins, poses: poses };
+    }""")
+    assert r["mauvaises"] == 0, "une tuile de fond mal lue : le butoir se peint du mauvais bord"
+    assert r["fonds"] > 0 and r["fonds"] == r["ouvertes"], \
+        f"{r['fonds']} fonds pour {r['ouvertes']} ouvertures : une case n'a pas deux tuiles"
+    assert set(r["coins"]) == {"0", "1", "2", "3"}, \
+        f"le peintre n'a jamais vu les quatre coins d'une rangee : {r['coins']}"
+    assert r["poses"], "aucune auto ne s'est stationnee en 900 images"
+    for pose in r["poses"]:
+        assert pose["case"], "une auto stationnee hors d'une case"
+        assert pose["angle"], "une auto stationnee de travers dans sa case"
+        assert pose["centree"], "une auto stationnee a cheval sur ses lignes"
+
+
 # --- M5 : interieurs et economie ----------------------------------------------
 
 

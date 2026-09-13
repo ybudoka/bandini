@@ -83,6 +83,13 @@ const Vehicules = (function () {
     return null;
   }
 
+  //: Le glyphe d'une case dit ou pointe le NEZ de l'auto garee.
+  const NEZ = { '^': [0, -1], 'v': [0, 1], '<': [-1, 0], '>': [1, 0] };
+
+  /** Une case de stationnement libre, DANS SES LIGNES : on cherche la tuile du
+      fond (celle contre la ligne de nez) qui a le reste de sa case derriere
+      elle, et l'auto se pose a cheval sur les deux — elle fait deux tuiles de
+      long, la case aussi. */
   function placeStationnee() {
     const t = trafic(), c = Monde.carte, j = B.joueur;
     for (let essai = 0; essai < 20; essai++) {
@@ -90,10 +97,13 @@ const Vehicules = (function () {
       const d = t.naissance_px * 0.6 + B.rng() * (t.oubli_px - t.naissance_px);
       const tx = Math.floor((j.x + Math.cos(a) * d) / TT), ty = Math.floor((j.y + Math.sin(a) * d) / TT);
       if (tx < 1 || ty < 2 || tx >= c.w - 1 || ty >= c.h - 1) continue;
-      if (Monde.glyphe(tx, ty) !== 'p' || Monde.glyphe(tx, ty - 1) !== 'p') continue;
-      const x = tx * TT + 8, y = ty * TT;
+      const g = Monde.glyphe(tx, ty), nez = NEZ[g];
+      if (!nez) continue;
+      if (Monde.glyphe(tx + nez[0], ty + nez[1]) === g) continue;     // pas le fond
+      if (Monde.glyphe(tx - nez[0], ty - nez[1]) !== g) continue;     // case tronquee
+      const x = (tx + 0.5 - nez[0] / 2) * TT, y = (ty + 0.5 - nez[1] / 2) * TT;
       if (Entites.visibleAEcran(x, y, 40) || !libreAutour(x, y, 40)) continue;
-      return { x: x, y: y, angle: -Math.PI / 2 };
+      return { x: x, y: y, angle: Math.atan2(nez[1], nez[0]) };
     }
     return null;
   }
