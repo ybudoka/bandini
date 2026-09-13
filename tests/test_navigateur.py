@@ -91,6 +91,20 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
         assert boite["x"] + boite["width"] <= 844 and boite["y"] + boite["height"] <= 390
     croix = page.locator("#croix").bounding_box()
     assert croix["width"] >= 120
+
+    # ⚠️ Aucun chevauchement : deux pastilles qui se mordent, c'est un pouce
+    # qui frappe quand il voulait courir. Le defaut s'etait glisse entre
+    # ACTION et COURS sans que rien ne le dise.
+    boites = {a: page.locator(f'#tactile b[data-a="{a}"]').bounding_box()
+              for a in ("attaque", "action", "esquive", "arme", "pause", "plein")}
+    boites["croix"] = croix
+    noms = sorted(boites)
+    for i, un in enumerate(noms):
+        for autre in noms[i + 1:]:
+            a, b = boites[un], boites[autre]
+            chevauche = (a["x"] < b["x"] + b["width"] and b["x"] < a["x"] + a["width"]
+                         and a["y"] < b["y"] + b["height"] and b["y"] < a["y"] + a["height"])
+            assert not chevauche, f"{un} et {autre} se chevauchent : {a} / {b}"
     # Glisser sur le joystick deplace le joueur.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     cx, cy = croix["x"] + croix["width"] / 2, croix["y"] + croix["height"] / 2

@@ -149,13 +149,17 @@ const Hud = (function () {
       barre(ctx, 6, 13, 60, 3, j ? j.endurance / 100 : 1, '#e8b33c');
       miniCarte(ctx);
       // Argent, etoiles, heure a droite.
+      // ⚠️ En tactile, les boutons PAUSE et PLEIN ECRAN sont poses par-dessus
+      // le coin haut-droit du canevas : la colonne se decale pour ne pas
+      // finir cachee sous le pouce.
+      const marge = Entree.estTactile ? 40 : 6;
       const argent = p.argent.toLocaleString('fr-CA') + ' $';
-      Atlas.texte(ctx, argent, VW - 6 - Atlas.largeurTexte(argent, 2), 6, '#e8b33c', 2);
+      Atlas.texte(ctx, argent, VW - marge - Atlas.largeurTexte(argent, 2), 6, '#e8b33c', 2);
       let etoiles = '';
       for (let i = 0; i < B.defs.recherche.etoiles_max; i++) etoiles += i < B.recherche.etoiles ? '★' : '.';
-      Atlas.texte(ctx, etoiles, VW - 6 - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#555560', 1);
+      Atlas.texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#555560', 1);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
-      Atlas.texte(ctx, heure, VW - 6 - Atlas.largeurTexte(heure, 1), 28, '#cdc6e6', 1);
+      Atlas.texte(ctx, heure, VW - marge - Atlas.largeurTexte(heure, 1), 28, '#cdc6e6', 1);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j ? Monde.zoneA(j.x, j.y) : null;
       if (zone) {

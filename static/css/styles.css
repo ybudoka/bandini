@@ -206,7 +206,10 @@ body.tactile .aide { display: none; }
 #boutons b.on, #haut b.on { background: rgba(232, 179, 60, .55); transform: translateY(1px) scale(.94); }
 #boutons b[data-a="attaque"] { right: 6px; bottom: 8px; width: 76px; height: 76px; font-size: 12px; }
 #boutons b[data-a="attaque"].on { background: rgba(196, 54, 47, .6); }
-#boutons b[data-a="action"] { right: 88px; bottom: 56px; width: 66px; height: 66px; }
+/* ⚠️ `bottom` d'ACTION doit rester >= hauteur de COURS + 8 px : a 56 px les
+   deux pastilles se chevauchaient de 8 px, et le pouce declenchait l'une pour
+   l'autre. Le test tactile mesure maintenant ce chevauchement. */
+#boutons b[data-a="action"] { right: 88px; bottom: 72px; width: 66px; height: 66px; }
 #boutons b[data-a="action"].on { background: rgba(60, 140, 200, .55); }
 #boutons b[data-a="esquive"] { right: 96px; bottom: 0; width: 64px; height: 64px; }
 #boutons b[data-a="arme"] { right: 14px; bottom: 96px; width: 64px; height: 64px; }
