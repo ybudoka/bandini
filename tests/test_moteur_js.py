@@ -587,3 +587,121 @@ def test_des_armes_de_fortune_trainent_en_ville(banc, paquet):
     assert set(r["armes"]) <= fortunes, r["armes"]
     assert r["casse"] is True, f"la {r['arme']} n'a pas casse apres {r['usure']} coups"
     assert r["porte"] == "poings", "on garde une arme cassee a la main"
+
+
+# --- La vie de rue : enfants, meres, kiosques, la Brume -------------------
+
+
+def test_un_enfant_ne_peut_pas_etre_touche(banc):
+    """⚠️ Regle du moteur, pas consigne : RIEN n'atteint un enfant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(31);
+        const j = L.B.joueur;
+        const petit = o.poser('enfant', 12, 0);
+        o.viser(petit);
+        const avant = petit.vie;
+        // Au poing, au couteau, et d'une balle en pleine poitrine.
+        j.arme = 'couteau'; L.B.partie.armes.couteau = { mun: null, usure: 0 };
+        for (let coup = 0; coup < 6; coup++) {
+            L.Combat.frapper(j, true);
+            for (let i = 0; i < 30; i++) { L.Entites.indexer(); L.Combat.maj(); }
+        }
+        const auCouteau = petit.vie;
+        const direct = L.Entites.blesser(petit, 999, j, {});
+        return { avant: avant, auCouteau: auCouteau, direct: direct,
+                 vivant: petit.vivant, etat: petit.etat, tues: L.B.partie.stats.tues,
+                 intouchable: petit.intouchable, sprite: petit.sprite };
+    }""")
+    assert r["intouchable"] is True and r["sprite"] == "enfant"
+    assert r["auCouteau"] == r["avant"], "un enfant a perdu de la vie"
+    assert r["direct"] is False, "blesser() a accepte de toucher un enfant"
+    assert r["vivant"] is True and r["tues"] == 0
+    assert r["etat"] == "fuit", "il devrait detaler"
+
+
+def test_la_mere_ne_sort_pas_sans_son_petit(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(32);
+        const mere = o.poser('mere', 30, 0);
+        mere.etat = 'flane';
+        const petit = mere.petit;
+        // On eloigne le petit : il doit revenir vers elle.
+        petit.x = mere.x + 120; petit.y = mere.y + 80;
+        const avant = Math.hypot(petit.x - mere.x, petit.y - mere.y);
+        o.frame(240);
+        const apres = Math.hypot(petit.x - mere.x, petit.y - mere.y);
+        return { arch: petit ? petit.arch : null, avant: avant, apres: apres,
+                 suit: petit.suit === mere };
+    }""")
+    assert r["arch"] == "enfant", "la mere est sortie sans son petit"
+    assert r["suit"] is True
+    assert r["apres"] < r["avant"], "le petit ne rejoint pas sa mere"
+
+
+def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
+        j.x = etal.x; j.y = etal.y + 22; j.vie = 40; L.B.partie.argent = 100;
+        L.Entites.indexer();
+        const achat = L.Missions.interagir(j);
+        const apres = { vie: j.vie, argent: L.B.partie.argent };
+        // Sans le sou, on ne mange pas.
+        L.B.partie.argent = 1; j.vie = 40;
+        const refus = L.Missions.interagir(j);
+        const vendeurs = L.B.entites.filter(function (e) { return e.metier === 'ambulant'; }).length;
+        const etals = L.B.entites.filter(function (e) { return e.type === 'ambulant'; }).length;
+        return { achat: achat, apres: apres, refus: refus, vieApresRefus: j.vie,
+                 argentApresRefus: L.B.partie.argent, vendeurs: vendeurs, etals: etals };
+    }""")
+    assert r["achat"] is True
+    assert r["apres"]["argent"] == 100 - tarifs["hotdog"]
+    assert r["apres"]["vie"] == 40 + tarifs["hotdog_pv"]
+    assert r["refus"] is True and r["vieApresRefus"] == 40 and r["argentApresRefus"] == 1
+    assert r["etals"] >= 6 and r["vendeurs"] == r["etals"], "un kiosque sans personne derriere"
+
+
+def test_le_kiosque_a_journaux_ferme_la_nuit(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const journaux = L.Missions.commerceDe('journaux');
+        const camion = L.Missions.commerceDe('camion_cuisine');
+        L.B.partie.heure = 0.5;
+        const midi = [L.Missions.ouvert(journaux), L.Missions.ouvert(camion)];
+        L.B.partie.heure = 0.95;
+        const nuit = [L.Missions.ouvert(journaux), L.Missions.ouvert(camion)];
+        return { midi: midi, nuit: nuit, heures: journaux.heures };
+    }""")
+    assert r["midi"] == [True, True]
+    assert r["nuit"] == [False, True], "le camion-restaurant, lui, veille"
+
+
+def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(33);
+        const j = L.B.joueur;
+        const fille = o.poser('racoleuse', 12, 0);
+        fille.etat = 'arret';
+        L.Entites.indexer();
+        j.vie = 50; L.B.partie.argent = 200;
+        L.B.recherche.etoiles = 2;
+        const recherche = L.Missions.interagir(j);
+        const apresRecherche = { vie: j.vie, argent: L.B.partie.argent };
+        L.B.recherche.etoiles = 0;
+        const ok = L.Missions.interagir(j);
+        return { metier: fille.metier, recherche: recherche, apresRecherche: apresRecherche,
+                 ok: ok, vie: j.vie, argent: L.B.partie.argent, fondu: !!L.B.fondu };
+    }""")
+    assert r["metier"] == "compagnie"
+    assert r["recherche"] is True and r["apresRecherche"]["argent"] == 200, \
+        "elle a servi alors que la police cherchait le joueur"
+    assert r["ok"] is True
+    assert r["argent"] == 200 - tarifs["compagnie"]
+    assert r["vie"] == 50 + tarifs["compagnie_pv"]
+    assert r["fondu"] is True, "ca doit passer par un fondu, pas par une scene"

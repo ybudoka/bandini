@@ -287,3 +287,28 @@ def test_n_importe_quelle_graine_donne_une_ville_jouable(graine):
     assert {p["lieu"] for p in ville["portes"]} == {p["lieu"] for p in CARTE["portes"]}
     for porte in ville["portes"]:
         assert carte.marchable(ville["sol"][porte["y"] + 1][porte["x"]]), porte
+
+
+def test_les_commerces_ambulants_ont_leur_place():
+    """Un kiosque se pose sur un trottoir au bord de la rue, un camion sur un
+    stationnement — et jamais devant une porte."""
+    from app import magasins
+
+    poses = CARTE["ambulants"]
+    assert len(poses) >= 6, f"seulement {len(poses)} commerces ambulants"
+    devants = {(p["x"], p["y"] + 1) for p in CARTE["portes"]}
+    vus = set()
+    for pose in poses:
+        commerce = magasins.ambulant(pose["slug"])
+        assert commerce, pose["slug"]
+        glyphe = CARTE["sol"][pose["y"]][pose["x"]]
+        attendu = "." if commerce["sur"] == "trottoir" else "p"
+        assert glyphe == attendu, f"{pose['slug']} pose sur « {glyphe} »"
+        assert carte.marchable(CARTE["sol"][pose["y"] + 1][pose["x"]]), \
+            f"{pose['slug']} : on ne peut pas se placer devant"
+        assert (pose["x"], pose["y"]) not in devants, "un kiosque bouche une porte"
+        assert (pose["x"], pose["y"]) not in vus, "deux commerces sur la meme tuile"
+        vus.add((pose["x"], pose["y"]))
+    for a, b in zip(sorted(vus), sorted(vus)[1:]):
+        if a[1] == b[1]:
+            assert abs(a[0] - b[0]) >= 2, "deux kiosques colles"

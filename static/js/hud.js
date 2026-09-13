@@ -24,6 +24,27 @@ const Hud = (function () {
 
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
+  /** Un fondu au noir, avec une ligne au milieu : ce qui se passe ne se
+      montre pas. Sert aussi aux portes et aux ellipses (M5). */
+  function fondu(duree, texte) {
+    B.fondu = { t: 0, duree: duree || 90, texte: texte || null };
+  }
+
+  function dessinerFondu(ctx) {
+    const f = B.fondu;
+    if (!f) return;
+    f.t++;
+    const part = f.t / f.duree;
+    const alpha = part < 0.5 ? part * 2 : (1 - part) * 2;
+    ctx.fillStyle = 'rgba(11,10,18,' + Math.min(1, alpha).toFixed(3) + ')';
+    ctx.fillRect(0, 0, VW, VH);
+    if (f.texte && part > 0.35 && part < 0.75) {
+      const l = Atlas.largeurTexte(f.texte, 1);
+      Atlas.texte(ctx, f.texte, (VW - l) / 2, VH / 2 - 4, '#cdc6e6', 1);
+    }
+    if (f.t >= f.duree) B.fondu = null;
+  }
+
   // --- Scores ---------------------------------------------------------------------
 
   function afficherScores(scores) {
@@ -220,12 +241,13 @@ const Hud = (function () {
         Atlas.texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH / 2 + 12, '#cdc6e6', 1);
       }
     }
+    dessinerFondu(ctx);
     if (B.options.perf) {
       const s = B.stats;
       Atlas.texte(ctx, Math.round(s.ms * 10) / 10 + 'MS ' + s.images + 'I ' + s.entites + 'E', 6, VH - 8, '#8f8', 1);
     }
   }
 
-  return { init, voile, etat, message, dessiner, miniCarte, MINI, montrerScores, demanderScore,
+  return { init, voile, etat, message, fondu, dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();

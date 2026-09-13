@@ -347,6 +347,9 @@ const Combat = (function () {
     }
 
     if (Entree.neuf('action')) {
+      // ⚠️ L'ordre compte : on sert au kiosque avant de faire les poches du
+      // vendeur, sinon on ne peut plus jamais acheter un hot-dog.
+      if (Missions.interagir(j)) return;
       const objet = objetSousLaMain(j);
       if (objet) {
         if (ramasserArme(objet.arme, objet.munitions)) {

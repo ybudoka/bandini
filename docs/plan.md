@@ -11,6 +11,7 @@ jalons » à chaque jalon livré.
 | M0 Squelette et mise en ligne | **livré** (12 sept. 2026) | dépôt `ybudoka/bandini`, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; serveur installé, https://bandini.gestiondojo.ca |
 | M1 La ville | **livré** (12 sept. 2026) | `carte.py` : trame **irrégulière** (colonnes, rangées et rues toutes différentes), superblocs qui avalent des rues, parcelles BSP par îlot, 157×112 tuiles, 62 croisements dont des T, 10 intérieurs ; juges (voies fortement connexes, un seul îlot marchable, **asymétrie**) ; cache de morceaux borné, mini-carte |
 | Audio ElevenLabs | **livré** (12 sept. 2026) | MCP `elevenlabs` + `app/audio.py` + 14 bruitages dans `static/audio/` ; voix (M6) et radios (M3) par le même chemin |
+| Vie de rue | **livré** (12 sept. 2026) | femmes, enfants (**intouchables**), mères suivies de leur petit, filles de la Brume (la nuit, un fondu, jamais une scène), kiosques à hot-dogs / journaux / roulotte à café et camions-restaurants posés par `carte.py` |
 | M2 Piétons et poings | **livré** (12 sept. 2026) | `pietons.py` (8 archétypes, courage, témoin, gangs) ; hachage spatial, bulle de foule, flâner/fuir/témoin/riposter, mêlée en trois temps, coup fort, roulade, projectiles + plombs + cloche, visée assistée, armes de fortune qui cassent, sang plafonné, pickpocket dans le dos |
 | M3 Véhicules | à faire | |
 | M4 Police | à faire | |
@@ -80,6 +81,15 @@ libérer 4 districts) ou *Sacrer son camp* (15 000 $ en poche, traversier de nui
 (parc-île, Les Skateux) **v2**. Journal : *Le Clairon de la Baie*. Radios : *La Brume*
 (jazz, auto), *Taxi-Radio* (country), *Le Choc* (punk, moto), *10-4* (ondes du poste),
 *Radio-Traversier* (rigodon) ; l'autobus n'a que son moteur.
+
+**Vie de rue (12 sept. 2026)** : la foule mêle hommes, femmes, ados, itinérants, livreurs,
+**mères accompagnées de leur enfant** et **enfants** — ces derniers sont **intouchables** :
+aucune arme, aucun véhicule ne les atteint, ils détalent de plus loin que les adultes. C'est
+une règle du catalogue (`pietons.intouchable`), pas une consigne. Les **filles de la Brume**
+travaillent la nuit près du bar et du port : on paie, l'écran fond au noir, la vie remonte —
+rien ne se montre, et elles refusent quand la police te cherche. Les **commerces ambulants**
+(kiosque à hot-dogs, kiosque à journaux, roulotte à café, camion-restaurant) sont posés par
+le générateur sur les trottoirs et les stationnements, avec un marchand derrière.
 
 **Donneurs** : Ti-Guy Lelièvre (receleur du garage), Mme Thibodeau (kiosque, potins),
 Sgt Réjean Bouchard (mange au casse-croûte, prend 20 %), Josée « La Chef » (Morues),

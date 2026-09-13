@@ -92,9 +92,12 @@ TEMOINS = {
 DEGUISEMENT = {"vehicule_s": 3, "vehicule_etoiles": 1, "vetements_remise_max": 3,
                "vetements_etoiles": 2}
 
-#: Le pieton court a 1,7 px/image et le policier a 1,9 : le joueur (2,1 en
-#: sprint) peut fuir, mais son endurance (100, -0,4/image) ne dure que 4 s.
-VITESSES = {"joueur_marche": 1.2, "joueur_sprint": 2.1, "pieton": 0.8, "pieton_course": 1.7,
+#: ⚠️ Un passant MARCHE : 0,55 px/image, soit deux tuiles a la seconde. A 0,8
+#: il avait l'air de courir tout le temps — remarque de Martin en jouant, et
+#: c'est le genre de defaut qu'aucun test ne voit. Quand il fuit (1,5) il
+#: reste plus lent que le joueur au sprint (2,1) et que le policier (1,9) :
+#: c'est ce qui rend une poursuite gagnable.
+VITESSES = {"joueur_marche": 1.2, "joueur_sprint": 2.1, "pieton": 0.45, "pieton_course": 1.35,
             "policier": 1.9, "endurance": 100, "endurance_par_image": 0.4}
 
 

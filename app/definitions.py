@@ -32,6 +32,7 @@ def assembler() -> dict:
         "defis": missions.DEFIS,
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "magasins": magasins.CATALOGUE,
+        "ambulants": magasins.AMBULANTS,
         "tenues": magasins.TENUES,
     }
 

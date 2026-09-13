@@ -50,6 +50,8 @@ Forme servie (`exporter()`) :
 
 from __future__ import annotations
 
+from . import magasins
+
 TUILE_PX = 16
 
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
@@ -779,6 +781,55 @@ class _Chantier:
                 if self.poser_decor("lampadaire", x, y):
                     self.lampes.append({"x": x, "y": y})
 
+    def ambulants(self) -> list[dict]:
+        """Les commerces sans porte : kiosques sur le trottoir, camions au
+        stationnement. On les espace : trois kiosques a hot-dogs au meme coin,
+        c'est une file d'attente, pas une ville."""
+        poses: list[dict] = []
+        ecart = 22
+        for commerce in magasins.AMBULANTS:
+            candidats = self._places_ambulantes(commerce["sur"])
+            if not candidats:
+                continue
+            for _ in range(commerce["nombre"]):
+                choisi = None
+                for _essai in range(60):
+                    x, y = candidats[self.des.suivant() % len(candidats)]
+                    if any(abs(p["x"] - x) + abs(p["y"] - y) < ecart for p in poses):
+                        continue
+                    if (x, y) in self.occupe or (x, y) in self.reserve:
+                        continue
+                    choisi = (x, y)
+                    break
+                if not choisi:
+                    continue
+                self.occupe.add(choisi)
+                poses.append({"slug": commerce["slug"], "x": choisi[0], "y": choisi[1]})
+        return poses
+
+    def _places_ambulantes(self, sur: str) -> list[tuple[int, int]]:
+        """Une place est bonne si on peut s'y arreter ET etre servi devant."""
+        places = []
+        for y in range(1, self.hauteur - 2):
+            for x in range(1, self.largeur - 1):
+                glyphe = self.sol[y][x]
+                if sur == "trottoir":
+                    if glyphe != "." or not marchable(self.sol[y + 1][x]):
+                        continue
+                    voisins = (self.sol[y][x - 1], self.sol[y][x + 1],
+                               self.sol[y - 1][x], self.sol[y + 1][x])
+                    if not any(routier(v) for v in voisins):
+                        continue
+                elif sur == "stationnement":
+                    if glyphe != "p" or self.sol[y][x + 1] != "p":
+                        continue
+                    if not marchable(self.sol[y + 1][x]):
+                        continue
+                else:  # pragma: no cover - garde-fou de relecture du catalogue
+                    raise ValueError(f"support inconnu : {sur!r}")
+                places.append((x, y))
+        return places
+
     def bornes(self) -> None:
         for inter in self.intersections:
             if not self.des.chance(0.30):
@@ -854,6 +905,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier.ilots()
     chantier.lampadaires()
     chantier.bornes()
+    ambulants = chantier.ambulants()
 
     terminus = next(p for p in chantier.points if p["slug"] == "terminus")
     depart = (terminus["x"], terminus["y"])
@@ -877,6 +929,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "portes": chantier.portes,
         "lampes": chantier.lampes,
         "decor": chantier.decor,
+        "ambulants": ambulants,
         "zones": chantier.zones(),
         "points_interet": chantier.points,
         "apparition": {"joueur": {"x": depart[0], "y": depart[1]}},

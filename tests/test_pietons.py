@@ -11,7 +11,12 @@ def test_un_pieton_est_jouable(pieton):
     assert set(pieton["couleurs"]) == {"c", "h", "s", "p"}, pieton["slug"]
     for couleur in pieton["couleurs"].values():
         assert couleur.startswith("#") and len(couleur) == 7, couleur
-    assert 0.5 <= pieton["vitesse"] <= 1.5
+    # Un marchand derriere son kiosque ne marche pas : sa vitesse est nulle,
+    # et c'est ce qui le dit. Tous les autres marchent.
+    if pieton["metier"] == "ambulant":
+        assert pieton["vitesse"] == 0.0
+    else:
+        assert 0.5 <= pieton["vitesse"] <= 1.5
     assert 0.0 <= pieton["courage"] <= 1.0
     assert 0.0 <= pieton["temoin"] <= 1.0
     assert 20 <= pieton["vie"] <= 150
@@ -19,6 +24,37 @@ def test_un_pieton_est_jouable(pieton):
     assert 0 <= mini <= maxi <= 200
     if pieton["arme"]:
         assert armes.par_slug(pieton["arme"]), pieton["arme"]
+
+
+def test_les_enfants_sont_intouchables():
+    """⚠️ Le jeu est adulte : on y meurt, le sang coule. Un enfant, non.
+
+    C'est une regle du catalogue, donc du moteur — pas une consigne qu'on
+    peut oublier d'appliquer dans une branche du code de combat.
+    """
+    enfants = [p for p in pietons.CATALOGUE if p["sprite"] == "enfant"]
+    assert enfants, "plus d'enfants dans la ville ?"
+    for enfant in enfants:
+        assert enfant["intouchable"] is True, enfant["slug"]
+        assert enfant["arme"] is None
+        assert enfant["courage"] == 0.0, "un enfant ne riposte pas"
+    for pieton in pietons.CATALOGUE:
+        if pieton["accompagne"]:
+            accompagne = pietons.par_slug(pieton["accompagne"])
+            assert accompagne and accompagne["intouchable"], pieton["slug"]
+
+
+def test_les_metiers_ont_leurs_heures():
+    for pieton in pietons.CATALOGUE:
+        if pieton["metier"]:
+            assert pieton["frequence"] == 0.0, \
+                f"{pieton['slug']} : un metier ne nait pas au hasard dans la rue"
+        if pieton["heures"]:
+            debut, fin = pieton["heures"]
+            assert 0 <= debut < 1 and 0 <= fin < 1
+    nuit = pietons.par_slug("racoleuse")
+    assert pietons.travaille_a(nuit, 0.95) and not pietons.travaille_a(nuit, 0.5)
+    assert pietons.de_metier("compagnie") and pietons.de_metier("ambulant")
 
 
 def test_les_slugs_sont_uniques():

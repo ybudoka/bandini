@@ -15,6 +15,7 @@ const Jeu = (function () {
     Entites.vider();
     B.entites.length = 0;
     Entites.creerDecor(Monde.carte.def);
+    Entites.creerAmbulants(Monde.carte.def);
     const app = Monde.carte.apparition.joueur;
     const x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
     const y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;

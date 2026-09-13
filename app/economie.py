@@ -77,6 +77,15 @@ TARIFS = {
     "sergent_efface_etoile": 150,
     "hotdog": 10,
     "hotdog_pv": 25,
+    "poutine": 18,
+    "poutine_pv": 45,
+    "journal": 2,
+    "cafe": 4,
+    "cafe_pv": 10,
+    # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,
+    # de la vie qui revient. Elle refuse quand la police te cherche.
+    "compagnie": 60,
+    "compagnie_pv": 40,
 }
 
 #: Vente d'un vehicule vole au garage clandestin : fraction du prix neuf, en

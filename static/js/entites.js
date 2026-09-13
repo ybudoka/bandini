@@ -151,12 +151,21 @@ const Entites = (function () {
   function creerPieton(x, y, arch) {
     const p = arch || archetypeDeRue();
     const bourse = Math.round(p.argent[0] + B.rng() * (p.argent[1] - p.argent[0]));
-    return creer('pieton', x, y, {
-      r: 5, sprite: 'joueur', swaps: p.couleurs, arch: p.slug, gang: p.gang,
+    const e = creer('pieton', x, y, {
+      r: p.sprite === 'enfant' ? 4 : 5, sprite: p.sprite || 'joueur', swaps: p.couleurs,
+      arch: p.slug, gang: p.gang, metier: p.metier || null,
       vie: p.vie, vieMax: p.vie, allure: p.vitesse, courage: p.courage,
       probaTemoin: p.temoin, argent: bourse, arme: p.arme || null,
+      intouchable: !!p.intouchable,
       etat: 'flane', dir: Math.floor(B.rng() * 4), butT: 0, cri: 0,
     });
+    // Une mere ne sort pas sans son petit : il la suit, et il detale avec elle.
+    if (p.accompagne) {
+      const petit = creerPieton(x + 10, y + 4, archetype(p.accompagne));
+      petit.suit = e;
+      e.petit = petit;
+    }
+    return e;
   }
 
   /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran. */
@@ -189,18 +198,47 @@ const Entites = (function () {
       if (e.type !== 'pieton') continue;
       const loin = dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI;
       if (loin && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
-      if (e.vivant) vivants++;
+      if (e.vivant && !e.metier) vivants++;
     }
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12);
     if (vivants >= voulu || B.t % 12 !== 0) return;
     const place = placeDeNaissance();
     if (!place) return;
+    // La nuit, pres du bar et du port, la Brume a ses habituees.
+    const nuit = Monde.estNuit();
+    if (nuit && zone && (zone.slug === 'port' || zone.slug === 'faubourg') && B.rng() < 0.18) {
+      const fille = archetype('racoleuse');
+      if (fille) {
+        const e = creerPieton(place.x, place.y, fille);
+        e.etat = 'arret';
+        e.minuterie = 600;
+        return;
+      }
+    }
     // Sur le territoire d'une gang, ce sont ses membres qui trainent dehors.
     const gang = zone && zone.gang && B.rng() < 0.5
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
       : null;
     creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
+  }
+
+  /** Les kiosques et les camions de la carte, avec quelqu'un derriere. */
+  function creerAmbulants(def) {
+    (def.ambulants || []).forEach(function (a) {
+      const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === a.slug; });
+      if (!commerce) return;
+      const fiche = DECORS[commerce.sprite] || {};
+      creer('ambulant', a.x * TT + 8, a.y * TT + 15, {
+        decor: commerce.sprite, slug: a.slug, r: fiche.r === undefined ? 10 : fiche.r,
+        solide: true, dessine: true,
+      });
+      ajouterA(grilleFixe, B.entites[B.entites.length - 1]);
+      const vendeur = creerPieton(a.x * TT + 8, a.y * TT + 4, archetype('vendeur'));
+      vendeur.etat = 'fige';
+      vendeur.face = 'bas';
+      vendeur.commerce = a.slug;
+    });
   }
 
   /** Des armes de fortune trainent partout : un cone de chantier, une
@@ -325,6 +363,22 @@ const Entites = (function () {
     if (e.saigne > 0) saigner(e);
 
     if (e.etat === 'fige') { e.vx = 0; e.vy = 0; return; }
+    // Le petit colle a sa mere : il ne flane jamais tout seul.
+    if (e.suit && e.suit.vivant && e.etat !== 'fuit') {
+      const ecart = B.defs.pietons.reactions.suite_distance_px;
+      const dx = e.suit.x - e.x, dy = e.suit.y - e.y;
+      const norme = Math.hypot(dx, dy);
+      if (norme > ecart) {
+        const vitesse = Math.min(v.pieton_course, v.pieton * e.allure * 1.6);
+        e.vx = dx / norme * vitesse;
+        e.vy = dy / norme * vitesse;
+      } else { e.vx = 0; e.vy = 0; }
+      deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+      dansLaCarte(e);
+      e.anim.dist += Math.abs(e.vx) + Math.abs(e.vy);
+      regarder(e, e.vx, e.vy);
+      return;
+    }
     if (e.etat === 'assomme') {
       if (--e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
       return;
@@ -354,9 +408,24 @@ const Entites = (function () {
       e.vx = dx / norme * vitesse;
       e.vy = dy / norme * vitesse;
       if (norme < 18 && e.t % 40 === 0) Combat.frapper(e);
+    } else if (e.etat === 'arret') {
+      // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
+      e.vx = 0; e.vy = 0;
+      if (--e.minuterie <= 0) e.etat = 'flane';
+      return;
     } else {
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
-      if (e.butT-- <= 0) { e.dir = Math.floor(B.rng() * 4); e.butT = 60 + Math.floor(B.rng() * 180); }
+      if (e.butT-- <= 0) {
+        if (B.rng() < 0.3) {
+          e.etat = 'arret';
+          e.minuterie = 50 + Math.floor(B.rng() * 160);
+          e.butT = 90;
+          e.vx = 0; e.vy = 0;
+          return;
+        }
+        e.dir = Math.floor(B.rng() * 4);
+        e.butT = 90 + Math.floor(B.rng() * 240);
+      }
       const dir = DIRECTIONS[e.dir];
       e.vx = dir[0] * vitesse;
       e.vy = dir[1] * vitesse;
@@ -375,9 +444,17 @@ const Entites = (function () {
   /** Un coup, une chute, un cri : qui voit ca prend peur (ou s'approche). */
   function alerter(x, y, menace, gravite) {
     const reactions = B.defs.pietons.reactions;
-    for (const e of pietonsAutour(x, y, reactions.peur_rayon_tuiles * TT)) {
+    // Un enfant prend peur de bien plus loin que les grandes personnes.
+    const rayonMax = Math.max(reactions.peur_rayon_tuiles, reactions.enfant_peur_tuiles) * TT;
+    for (const e of pietonsAutour(x, y, rayonMax)) {
+      const rayon = (e.intouchable ? reactions.enfant_peur_tuiles : reactions.peur_rayon_tuiles) * TT;
+      if (dist2(e.x, e.y, x, y) > rayon * rayon) continue;
       if (e === menace || e.etat === 'assomme') continue;
       if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
+      if (e.intouchable) {                       // l'enfant ne fait que detaler
+        e.etat = 'fuit'; e.menace = menace; e.minuterie = reactions.fuite_secondes * 90; e.cri = 120;
+        continue;
+      }
       if (e.gang && gravite >= 1) { e.etat = 'attaque_joueur'; e.cri = 90; continue; }
       if (e.courage > 0 && B.rng() < e.courage * 0.5 && gravite >= 2) {
         e.etat = 'attaque_joueur'; e.cri = 90; continue;
@@ -405,6 +482,16 @@ const Entites = (function () {
   function blesser(e, degats, source, options) {
     const opts = options || {};
     if (!e.vivant || e.invincible > 0) return false;
+    // ⚠️ RIEN n'atteint un enfant : ni un poing, ni une balle, ni un char. Le
+    // jeu est adulte, pas ca. Il prend peur et il court, point.
+    if (e.intouchable) {
+      e.etat = 'fuit';
+      e.menace = source;
+      e.minuterie = B.defs.pietons.reactions.fuite_secondes * 90;
+      e.cri = 120;
+      alerter(e.x, e.y, source, 1);
+      return false;
+    }
     e.vie -= degats;
     e.menace = source || e.menace;
     e.recul = Math.max(e.recul, opts.renverse ? 22 : 8);
@@ -540,7 +627,9 @@ const Entites = (function () {
     const cuit = Atlas.cuire(e.sprite, def, e.swaps);
     const poses = cuit.poses[e.face] || cuit.poses.bas;
     const bouge = Math.abs(e.vx) + Math.abs(e.vy) > 0.05;
-    const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 7) % 4] : 0;
+    // ⚠️ Une foulee de 9 px, pas 7 : a 7, les jambes tournaient plus vite que
+    // le corps n'avancait et tout le monde avait l'air de courir.
+    const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
     return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre };
   }
 
@@ -585,7 +674,7 @@ const Entites = (function () {
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
     for (const e of visibles) {
-      if (e.type === 'decor') {
+      if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
         if (!d) continue;
         const c = Atlas.cuirePeintre('decor|' + e.decor, d.w, d.h, d.peindre);
@@ -622,7 +711,8 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES,
-    creer, retirer, vider, creerJoueur, creerDecor, creerPieton, archetype, archetypeDeRue,
+    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPieton,
+    archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj,

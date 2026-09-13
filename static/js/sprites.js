@@ -44,6 +44,35 @@ const SPRITES = {
   },
 };
 
+/* L'enfant : 10x13, la tete plus grosse et deux poses par direction. Il ne
+   sert jamais de cible (`intouchable` dans le catalogue) — il court, c'est
+   tout. */
+SPRITES.enfant = {
+  w: 10, h: 13, ancre: [5, 12],
+  pal: { k: '#101018', s: '#f0c098', h: '#6b4b2c', c: '#f1c40f', p: '#2f6b8a', o: '#ffffff', b: '#5a3a1a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkk...', '..khhhhk..', '.khhhhhhk.', '.khsssshk.', '.ksossosk.', '.kssssssk.', '..kssssk..',
+       '..kcccck..', '.kcccccck.', '.kskccksk.', '..kppppk..', '..kppkppk.', '..kk..kk..'],
+      ['...kkkk...', '..khhhhk..', '.khhhhhhk.', '.khsssshk.', '.ksossosk.', '.kssssssk.', '..kssssk..',
+       '..kcccck..', '.kcccccck.', '.kskccksk.', '..kppppk..', '..kpppk...', '..kkbk....'],
+    ],
+    haut: [
+      ['...kkkk...', '..khhhhk..', '.khhhhhhk.', '.khhhhhhk.', '.khhhhhhk.', '.kssssssk.', '..kssssk..',
+       '..kcccck..', '.kcccccck.', '.kskccksk.', '..kppppk..', '..kppkppk.', '..kk..kk..'],
+      ['...kkkk...', '..khhhhk..', '.khhhhhhk.', '.khhhhhhk.', '.khhhhhhk.', '.kssssssk.', '..kssssk..',
+       '..kcccck..', '.kcccccck.', '.kskccksk.', '..kppppk..', '...kppk...', '....kbk...'],
+    ],
+    cote: [
+      ['...kkkk...', '..khhhhk..', '..khhhhhk.', '..khssosk.', '..khsssk..', '...kssk...', '...kssk...',
+       '...kcccck.', '...kcccck.', '...kcckck.', '...kpppk..', '...kppk...', '...kbbk...'],
+      ['...kkkk...', '..khhhhk..', '..khhhhhk.', '..khssosk.', '..khsssk..', '...kssk...', '...kssk...',
+       '...kcccck.', '...kcccck.', '...kcckck.', '...kpppk..', '..kpk.kpk.', '..kbk.kbk.'],
+    ],
+  },
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {
@@ -154,6 +183,41 @@ const DECORS = {
     ctx.fillStyle = '#3b73a3'; ctx.fillRect(9, 16, 7, 2); ctx.fillRect(19, 20, 6, 2);
     ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
     ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
+  } },
+  kiosque_hotdog: { w: 26, h: 26, ancre: [13, 25], r: 10, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 2, 24, 5);              // parasol
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 2, 4, 5); ctx.fillRect(13, 2, 4, 5);
+    ctx.fillStyle = '#7a7d82'; ctx.fillRect(12, 7, 2, 6);              // mat
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(4, 13, 18, 9);             // comptoir
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(4, 13, 18, 2);
+    ctx.fillStyle = '#d98324'; ctx.fillRect(7, 16, 5, 2); ctx.fillRect(14, 16, 5, 2);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 22, 3, 4); ctx.fillRect(18, 22, 3, 4);
+  } },
+  kiosque_journaux: { w: 24, h: 26, ancre: [12, 25], r: 9, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#2f6b8a'; ctx.fillRect(2, 4, 20, 18);
+    ctx.fillStyle = '#24506f'; ctx.fillRect(2, 4, 20, 3);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 9, 7, 9); ctx.fillRect(13, 9, 7, 9);
+    ctx.fillStyle = '#8a8698'; ctx.fillRect(5, 11, 5, 1); ctx.fillRect(5, 13, 5, 1);
+    ctx.fillRect(14, 11, 5, 1); ctx.fillRect(14, 13, 5, 1);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 22, 18, 4);
+  } },
+  roulotte_cafe: { w: 28, h: 24, ancre: [14, 23], r: 11, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 4, 24, 14);
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 4, 24, 3);
+    ctx.fillStyle = '#2c2c2c'; ctx.fillRect(6, 9, 16, 6);
+    ctx.fillStyle = '#d98324'; ctx.fillRect(8, 11, 4, 2); ctx.fillRect(16, 11, 4, 2);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 18, 5, 5); ctx.fillRect(18, 18, 5, 5);
+    ctx.fillStyle = '#101018'; ctx.fillRect(6, 20, 3, 3); ctx.fillRect(19, 20, 3, 3);
+  } },
+  camion_cuisine: { w: 44, h: 28, ancre: [22, 27], r: 16, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#27ae60'; ctx.fillRect(2, 4, 40, 16);             // caisse
+    ctx.fillStyle = '#1e8e4f'; ctx.fillRect(2, 4, 40, 3);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 9, 20, 8);              // guichet
+    ctx.fillStyle = '#2c2c2c'; ctx.fillRect(8, 11, 16, 4);
+    ctx.fillStyle = '#d8b83a'; ctx.fillRect(28, 9, 10, 3); ctx.fillRect(28, 14, 10, 2);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 20, 8, 7); ctx.fillRect(30, 20, 8, 7);
+    ctx.fillStyle = '#101018'; ctx.fillRect(6, 22, 4, 5); ctx.fillRect(32, 22, 4, 5);
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(2, 18, 40, 2);
   } },
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
