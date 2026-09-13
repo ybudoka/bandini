@@ -1,0 +1,66 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+  workflow_dispatch:
+
+# Un push qui en remplace un autre annule la CI du precedent. Rien ne se met
+# en ligne d'ici (le deploiement se fait a la main sur le serveur).
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  rapide:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Installer les dependances
+        run: uv sync --all-groups
+      - name: Verifier la synchronisation requirements.txt / pyproject.toml
+        run: uv run python scripts/verifier_dependances.py
+      - name: Lint
+        run: uv run ruff check .
+      # ⚠️ BANDINI_TESTS_OBLIGATOIRES=1 interdit aux tests Node de se sauter :
+      # sans Node, l'execution finirait verte sans avoir fait tourner le moteur.
+      - name: Tests (Python + moteur sous Node)
+        run: uv run pytest -q --ignore=tests/test_navigateur.py
+        env:
+          BANDINI_TESTS_OBLIGATOIRES: "1"
+
+  navigateur:
+    needs: rapide
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Installer les dependances
+        run: uv sync --all-groups
+      - name: Cache Chromium
+        id: chromium
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: chromium-${{ runner.os }}-${{ hashFiles('uv.lock') }}
+      - name: Installer Chromium
+        if: steps.chromium.outputs.cache-hit != 'true'
+        run: uv run playwright install --with-deps chromium
+      - name: Dependances systeme de Chromium
+        if: steps.chromium.outputs.cache-hit == 'true'
+        run: uv run playwright install-deps chromium
+      - name: Tests de navigateur
+        run: uv run pytest -q tests/test_navigateur.py
+        env:
+          BANDINI_TESTS_OBLIGATOIRES: "1"

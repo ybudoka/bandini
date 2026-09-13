@@ -1,0 +1,96 @@
+#!/bin/sh
+# Pose le numero de version DANS le commit qui vient d'etre fait.
+#
+# Le niveau ne se choisit pas : il se lit dans le message, qui suit deja
+# Conventional Commits. `feat!:` (rupture) > `feat:` (mineur) > `fix:` et
+# `perf:` (correctif) ; `docs:`, `chore:`, `test:`... ne touchent a rien. Le
+# calcul vit dans `app/version.py` — ici, il n'y a que la plomberie git.
+#
+# Installation, une fois par clone :
+#
+#     git config core.hooksPath scripts/git-hooks
+#
+# ⚠️ Pourquoi `post-commit` et un `--amend`, plutot que `commit-msg` ?
+# Parce que le `git add` d'un crochet `commit-msg` N'ENTRE PAS dans le commit
+# en cours — mesure : le fichier se retrouve dans le commit SUIVANT, git ayant
+# deja fige son index. Or le niveau ne se connait qu'a partir du message, donc
+# jamais avant `commit-msg`. Il ne reste que ce chemin : laisser le commit se
+# faire, puis le completer. Le commit reecrit vient d'etre cree a l'instant, il
+# n'a donc jamais pu etre pousse.
+#
+# ⚠️ Ce crochet ne casse JAMAIS un commit : toutes les sorties sont des
+# `exit 0`, y compris les pannes. Un outil de confort qui bloque un commit est
+# un outil qu'on desinstalle — et la version cesserait d'avancer du tout.
+
+# Notre propre `--amend` rappelle ce crochet : on s'arrete avant de boucler.
+[ -n "$BANDINI_VERSION" ] && exit 0
+
+RACINE=$(git rev-parse --show-toplevel 2> /dev/null) || exit 0
+cd "$RACINE" || exit 0
+GIT_DIR_ABS=$(git rev-parse --git-dir) || exit 0
+
+# Une operation en cours (fusion, rebasage, picorage, retour) rejoue des
+# commits qui portent DEJA leur numero : le reposer le ferait avancer deux
+# fois, et pour toute une branche d'un coup.
+for temoin in MERGE_HEAD CHERRY_PICK_HEAD REVERT_HEAD rebase-merge rebase-apply; do
+  if [ -e "$GIT_DIR_ABS/$temoin" ]; then exit 0; fi
+done
+
+# Un commit de fusion n'apporte rien en propre : « sha parent1 parent2 ».
+if [ "$(git rev-list --no-walk --parents -n 1 HEAD | wc -w)" -gt 2 ]; then exit 0; fi
+
+# ⚠️ Deja versionne dans ce commit. C'est ce qui rend un `git commit --amend`
+# neutre : sans ce garde-fou, chaque retouche d'un `feat:` avancerait le mineur
+# une fois de plus. Et c'est aussi ce qui respecte un numero pose a la main.
+if git show --format= --name-only HEAD | grep -qx 'pyproject.toml'; then exit 0; fi
+
+# ⚠️ Le verrou d'uv porte le MEME numero que le pyproject : il avance donc dans
+# le meme commit. Oublie ici, chaque commit laisserait un `uv.lock` perime que
+# le premier `uv run` venu corrigerait tout seul — l'arbre de travail sali sans
+# raison visible, et ce numero-la commite plus tard avec autre chose.
+# Ajoute seulement s'il est suivi : un depot sans verrou ne doit pas voir le
+# `--amend` echouer sur un chemin inconnu de git.
+FICHIERS=pyproject.toml
+if git ls-files --error-unmatch uv.lock > /dev/null 2>&1; then
+  FICHIERS="$FICHIERS uv.lock"
+fi
+
+# ⚠️ Modifies a cote : on n'y touche pas. Le `--amend --only` plus bas prend les
+# fichiers tels qu'ils sont dans l'arbre de travail — il emporterait donc dans
+# le commit une modification que personne n'a demande d'y mettre (une borne de
+# dependance en cours d'essai, par exemple).
+# shellcheck disable=SC2086 # noms de fichiers connus, sans espace
+if [ -n "$(git status --porcelain -- $FICHIERS)" ]; then
+  echo "version : pyproject.toml ou uv.lock est deja modifie, numero non pose." >&2
+  exit 0
+fi
+
+# Le venv du projet s'il est la, sinon n'importe quel python3 : `version.py`
+# ne demande que la bibliotheque standard, precisement pour ce cas.
+if [ -x "$RACINE/.venv/bin/python" ]; then
+  PYTHON="$RACINE/.venv/bin/python"
+elif command -v python3 > /dev/null 2>&1; then
+  PYTHON=python3
+else
+  echo "version : aucun python3 trouve, numero non pose." >&2
+  exit 0
+fi
+
+NOUVELLE=$(git log -1 --pretty=%B | "$PYTHON" "$RACINE/app/version.py" --appliquer) || exit 0
+[ -z "$NOUVELLE" ] && exit 0
+
+# `--only -- <fichiers>` et non un `--amend` sec : apres un commit partiel
+# (`git commit -- un_fichier`), l'index garde le reste des changements prepares,
+# et un `--amend` sec les emporterait tous dans le commit.
+# shellcheck disable=SC2086 # noms de fichiers connus, sans espace
+if BANDINI_VERSION=1 git commit --amend --no-edit --no-verify --only -- $FICHIERS > /dev/null; then
+  echo "==> version $NOUVELLE"
+else
+  # On ne laisse pas le depot sale sur un echec : le numero repart comme il
+  # etait, et le commit reste celui que l'auteur a fait.
+  # shellcheck disable=SC2086 # noms de fichiers connus, sans espace
+  git checkout -- $FICHIERS
+  echo "version : l'amend a echoue, numero non pose." >&2
+fi
+
+exit 0

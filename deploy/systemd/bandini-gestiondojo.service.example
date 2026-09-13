@@ -1,0 +1,24 @@
+; Copier vers /etc/systemd/system/bandini-gestiondojo.service puis :
+;   sudo systemctl daemon-reload
+;   sudo systemctl enable --now bandini-gestiondojo
+;
+; Jumeau du service jeux-gestiondojo, avec son propre dossier et son port.
+
+[Unit]
+Description=Gunicorn pour Bandini (bandini.gestiondojo.ca)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/srv/bandini/current
+; Le .env vit HORS du dossier de release : une nouvelle version ne doit jamais
+; ecraser la configuration du serveur.
+EnvironmentFile=/srv/bandini/shared/.env
+ExecStart=/srv/bandini/current/.venv/bin/gunicorn --config /srv/bandini/current/deploy/gunicorn.conf.py run:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

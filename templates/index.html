@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block corps %}
+<main id="bandini" class="jeu" data-etat="chargement"
+      data-url-definitions="{{ url_for('jeu.api_definitions') }}"
+      data-url-scores="{{ url_for('jeu.api_scores') }}">
+
+  <div class="ecran">
+    <canvas id="toile" width="480" height="270" aria-label="Zone de jeu"></canvas>
+
+    {# Voiles DOM : seulement la ou il faut un champ texte ou une liste. #}
+    <section class="voile" id="voile-titre">
+      <h1 class="titre">Bandini</h1>
+      <p class="sous-titre">{{ SITE_TAGLINE }}</p>
+      <div class="boutons">
+        <button class="bouton bouton--principal" id="bouton-jouer" type="button">Jouer</button>
+        <button class="bouton" id="bouton-scores" type="button">Meilleurs scores</button>
+      </div>
+      <p class="aide">
+        <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action ·
+        <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme · <kbd>Échap</kbd> pause · <kbd>M</kbd> son
+      </p>
+      <p class="aide aide--petit" id="etat-chargement">Chargement de Baie-des-Brumes…</p>
+    </section>
+
+    <section class="voile" id="voile-scores" hidden>
+      <h2 class="titre titre--petit">Meilleurs scores</h2>
+      <ol class="scores" id="liste-scores"></ol>
+      <div class="boutons">
+        <button class="bouton bouton--principal" id="bouton-fermer-scores" type="button">Retour</button>
+      </div>
+    </section>
+
+    <section class="voile" id="voile-score-envoi" hidden>
+      <h2 class="titre titre--petit">Ton nom pour le tableau</h2>
+      <form class="score-form" id="score-form">
+        <div class="score-form__ligne">
+          <input id="pseudo" name="pseudo" maxlength="16" autocomplete="nickname" placeholder="Ton pseudo">
+          <button class="bouton bouton--principal" type="submit">Envoyer</button>
+        </div>
+        <p class="score-form__etat" id="score-etat"></p>
+      </form>
+      <div class="boutons">
+        <button class="bouton" id="bouton-annuler-score" type="button">Annuler</button>
+      </div>
+    </section>
+  </div>
+
+  {# Commandes tactiles : de vrais elements, jamais de hit-test sur le canvas. #}
+  <div id="tactile" aria-hidden="true">
+    <div id="croix"><u></u></div>
+    <div id="boutons">
+      <b data-a="attaque">FRAPPE</b><b data-a="action">ACTION</b><b data-a="esquive">COURS</b><b data-a="arme">ARME</b>
+    </div>
+    <div id="haut"><b data-a="pause">❚❚</b><b data-a="plein">⛶</b></div>
+  </div>
+</main>
+{% endblock %}
+
+{% block scripts %}
+{# ⚠️ L'ORDRE EST LA DEPENDANCE, et cette liste est la source unique : le banc
+   d'essai (tests/banc.js) la lit pour charger les memes fichiers. #}
+<script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/entree.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/son.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/monde.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/entites.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/combat.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/vehicules.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/police.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/missions.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/hud.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/jeu.js') }}?v={{ version }}"></script>
+{% endblock %}

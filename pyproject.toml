@@ -1,0 +1,40 @@
+[project]
+name = "bandini"
+# ⚠️ Ne se tape pas a la main : le crochet scripts/git-hooks/post-commit le pose
+# dans le commit selon le message (feat: mineur, fix: correctif, feat!: rupture).
+# Installer une fois par clone : git config core.hooksPath scripts/git-hooks
+version = "0.1.0"
+description = "Bandini — ville ouverte en pixel art, dans le navigateur"
+readme = "README.md"
+requires-python = ">=3.11"
+# ⚠️ Doit rester synchronise avec `requirements.txt` : le deploiement installe
+# depuis requirements.txt (deploy/deploy.sh), la CI et le venv local passent
+# par ce fichier. `scripts/verifier_dependances.py` compare les deux.
+dependencies = [
+    "flask>=3.1.0",
+    "gunicorn>=23.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest",
+    "ruff",
+    # Tests de navigateur (tests/test_navigateur.py). Deux temps : ce paquet,
+    # PUIS `uv run playwright install chromium`. Groupe dev seulement : rien de
+    # tout ca ne part en production.
+    "pytest-playwright>=0.8.0",
+    # ⚠️ Epingle : le Chromium de cette version est deja en cache sur le poste
+    # (partage avec online-4all-games). Monter les deux ensemble.
+    "playwright==1.62.0",
+]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
