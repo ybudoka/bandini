@@ -278,6 +278,21 @@ function banc(corps) {
     L.Entites.indexer();
     return p;
   }
+  /** Laisse jouer jusqu'au bout le fondu de porte en cours, s'il y en a un.
+
+      ⚠️ Un fondu de porte change la scene AU NOIR, pas a l'appel de
+      `Jeu.entrer()` : un test qui lirait `B.interieur` tout de suite lirait
+      encore la rue. Et le jeu est FIGE pendant — ces images-la ne coutent rien a
+      la simulation. Rend le nombre d'images qu'il a fallu. */
+  function fondu() {
+    let n = 0;
+    while (L.B.transition && n < 240) { frame(1); n++; }
+    return n;
+  }
+  /** Passer une porte comme le joueur : le fondu joue, la piece est chargee. */
+  function entrer(porte) { const ok = L.Jeu.entrer(porte); fondu(); return ok; }
+  /** Ressortir, fondu joue. */
+  function sortir() { const ok = L.Jeu.sortir(); fondu(); return ok; }
   /** Pose un char stationne a (dx, dy) du joueur, cap `angle`, et reindexe. */
   function char(slug, dx, dy, angle) {
     const j = L.B.joueur;
@@ -334,6 +349,7 @@ function banc(corps) {
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
+                   fondu: fondu, entrer: entrer, sortir: sortir,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d'),
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).

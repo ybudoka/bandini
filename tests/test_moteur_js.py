@@ -1762,6 +1762,141 @@ def test_une_case_de_stationnement_se_peint_et_se_gare(banc):
 # --- M5 : interieurs et economie ----------------------------------------------
 
 
+def test_le_fondu_de_porte_noircit_avant_de_changer_de_scene(banc):
+    """⚠️ Le defaut que Martin a nomme « la transition n'est pas juste » : la
+    piece se chargeait PUIS le fondu partait de transparent. Sa premiere moitie
+    noircissait donc sur la scene deja changee — on voyait la piece une image,
+    l'ecran noircissait, il s'eclaircissait sur la meme piece. Ce test mesure la
+    scene a CHAQUE image : aucune ne doit montrer la nouvelle avant le noir
+    complet, et la porte doit s'entendre la, au noir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        const villeW = c.w;
+        // La porte s'entend-elle, et QUAND ?
+        const sons = [];
+        const vraiSon = L.Son.SFX.porte;
+        L.Son.SFX.porte = function () { sons.push({ noir: L.B.transition ? L.B.transition.t : -1, dedans: !!L.B.interieur }); return vraiSon.apply(null, arguments); };
+        L.Jeu.entrer(porte);
+        const images = [];
+        for (let i = 0; i < 120 && L.B.transition; i++) {
+            o.frame(1);
+            const tr = L.B.transition;
+            // L'alpha du noir, comme le HUD le calcule : 0 -> 1, puis 1 -> 0.
+            const alpha = tr ? (tr.t <= tr.ferme ? tr.t / tr.ferme : 1 - (tr.t - tr.ferme) / tr.ouvre) : 0;
+            images.push({ alpha: Math.round(alpha * 1000) / 1000, w: L.Monde.carte.w, dedans: !!L.B.interieur });
+        }
+        const entree = images.length;
+        // Et au retour : plus vif qu'a l'aller.
+        L.Jeu.sortir();
+        const sortie = o.fondu();
+        return { villeW: villeW, images: images, entree: entree, sortie: sortie, sons: sons,
+                 dedans: L.B.interieur, w: L.Monde.carte.w };
+    }""")
+    change = [i for i, im in enumerate(r["images"]) if im["dedans"]]
+    assert change, "on n'est jamais entre"
+    premiere = change[0]
+    assert r["images"][premiere]["alpha"] == 1.0, (
+        "la nouvelle scene se montre a %s de noir : le fondu clignote"
+        % r["images"][premiere]["alpha"]
+    )
+    for im in r["images"][:premiere]:
+        assert im["w"] == r["villeW"] and not im["dedans"], "la piece est chargee avant le noir"
+        assert im["alpha"] < 1.0
+    assert r["images"][-1]["alpha"] < 0.2, "le fondu ne finit pas en clair"
+    assert r["sons"][0] == {"noir": premiere + 1, "dedans": True}, (
+        "la porte doit s'entendre AU NOIR, a l'image du changement : %s" % r["sons"]
+    )
+    assert len(r["sons"]) == 2 and r["sons"][1]["dedans"] is False, (
+        "la porte de sortie s'entend aussi au noir, une fois la rue revenue : %s" % r["sons"]
+    )
+    assert r["sortie"] < r["entree"], "sortir doit etre plus vif qu'entrer"
+    assert 30 <= r["entree"] <= 90 and r["sortie"] >= 20, (
+        "un fondu de porte se sent : ni un clignotement, ni une attente (%s, %s)"
+        % (r["entree"], r["sortie"])
+    )
+
+
+def test_le_jeu_est_fige_pendant_un_fondu_de_porte(banc):
+    """⚠️ La simulation continuait pendant le fondu : on pouvait sortir d'une
+    piece et se faire renverser par un char qu'on n'a pas vu venir, sur un ecran
+    noir ou l'on ne controle rien. Un menu fige deja tout ; une porte pareil."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.frame(2);
+        // Un passant qui marche, un char qui roule : rien de tout ca ne doit
+        // avancer d'un pixel pendant le noir.
+        const passant = o.poser('flaneur', 24, 0);
+        passant.etat = 'flane';
+        const char = o.char('auto', -30, 0, 0);
+        char.etat = 'roule'; char.vitesse = 3;
+        j.vie = 60;
+        const avant = { t: L.B.t, vie: j.vie, px: passant.x, py: passant.y, cx: char.x, heure: L.B.partie.heure };
+        L.Jeu.entrer(porte);
+        const images = o.fondu();
+        const apres = { t: L.B.t, vie: j.vie, px: passant.x, py: passant.y, cx: char.x, heure: L.B.partie.heure };
+        // Et une fois dedans, le jeu repart : le temps passe de nouveau.
+        o.frame(5);
+        return { avant: avant, apres: apres, images: images, repart: L.B.t - apres.t, dedans: !!L.B.interieur };
+    }""")
+    assert r["dedans"] is True and r["images"] > 20
+    assert r["apres"]["t"] == r["avant"]["t"], "le temps de jeu a passe pendant le fondu"
+    assert r["apres"]["heure"] == r["avant"]["heure"], "l'heure a avance pendant le fondu"
+    assert r["apres"]["vie"] == r["avant"]["vie"], "le joueur a pris des coups pendant le fondu"
+    assert r["apres"]["px"] == r["avant"]["px"] and r["apres"]["py"] == r["avant"]["py"], "un passant a marche pendant le fondu"
+    assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
+    assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
+
+
+def test_sortir_pendant_le_fondu_d_entree_ramene_devant_la_porte(banc):
+    """⚠️ Le cas qui casse tout : ressortir alors que le fondu d'entree joue
+    encore. La scene ne change qu'au noir — celui qui sort avant ne trouverait
+    aucun interieur, la sortie serait refusee, et le joueur se reveillerait
+    dedans sans l'avoir demande."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        const x0 = porte.x * L.TT + 8, y0 = (porte.y + 1) * L.TT + 10;
+        j.x = x0; j.y = y0;
+        // Aller-retour normal, d'abord : on revient au pixel.
+        o.entrer(porte);
+        o.sortir();
+        const normal = { x: j.x, y: j.y, dedans: L.B.interieur };
+        // Puis on ressort AVANT le noir : trois images de fondu, et on repart.
+        j.x = x0; j.y = y0;
+        L.Jeu.entrer(porte);
+        o.frame(3);
+        const avantLeNoir = { dedans: !!L.B.interieur, fondu: !!L.B.transition };
+        const sorti = L.Jeu.sortir();
+        o.fondu();
+        // L'elan qui reste au pas de la porte, avant que le jeu reprenne la main.
+        const elan = { garde: Math.abs(j.vy) > 0, vers: j.vy > 0, face: j.face };
+        // La camera ne saute pas : elle est deja posee quand le jeu repart.
+        const cam = { x: L.B.cam.x, y: L.B.cam.y };
+        o.frame(1);
+        const bouge = Math.hypot(L.B.cam.x - cam.x, L.B.cam.y - cam.y);
+        return { normal: normal, avantLeNoir: avantLeNoir, sorti: sorti, dedans: L.B.interieur,
+                 x: j.x, y: j.y, x0: x0, y0: y0, bouge: bouge, elan: elan };
+    }""")
+    assert r["normal"]["dedans"] is None and (r["normal"]["x"], r["normal"]["y"]) == (r["x0"], r["y0"]), (
+        "un aller-retour par la porte doit ramener a la tuile EXACTE"
+    )
+    assert r["avantLeNoir"] == {"dedans": False, "fondu": True}
+    assert r["sorti"] is True, "sortir pendant le fondu d'entree a ete refuse"
+    assert r["dedans"] is None, "on est reste dedans"
+    assert (r["x"], r["y"]) == (r["x0"], r["y0"]), "on ne revient pas devant la porte"
+    assert r["bouge"] < 2, "la camera saute a la premiere image jouable : %s px" % r["bouge"]
+    assert r["elan"] == {"garde": True, "vers": True, "face": "bas"}, (
+        "on sort d'une porte avec un reste d'elan vers la rue, pas d'un arret complet : %s" % r["elan"]
+    )
+
+
 def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -1773,14 +1908,20 @@ def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
         const fixes = function () { return L.B.entites.filter(function (e) { return ['pieton', 'vehicule', 'ramassage', 'projectile'].indexOf(e.type) < 0; }).length; };
         const dehors = { entites: fixes(), w: c.w };
         o.tape('KeyE', 3);
+        // La porte passe par un fondu : la piece se charge AU NOIR, pas au clic.
+        const pendant = { interieur: L.B.interieur, t: L.B.t, fondu: !!L.B.transition };
+        o.fondu();
         const dedans = { interieur: L.B.interieur ? L.B.interieur.slug : null, w: L.Monde.carte.w, entites: L.B.entites.length,
                          nuit: L.Monde.ambiance().alpha, cam: L.B.cam.x < 0,
                          sol: L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT)),
                          invite: (function () { j.x = L.B.interieur.sortie.x * L.TT + 8; j.y = (L.B.interieur.sortie.y - 1) * L.TT + 8; L.Missions.majInvite(j); return L.B.invite; })() };
         o.tape('KeyE', 3);
-        return { dehors: dehors, dedans: dedans, apres: { interieur: L.B.interieur, w: L.Monde.carte.w, entites: fixes(),
+        o.fondu();
+        return { dehors: dehors, pendant: pendant, dedans: dedans, apres: { interieur: L.B.interieur, w: L.Monde.carte.w, entites: fixes(),
                  pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) } };
     }""")
+    assert r["pendant"]["fondu"] is True, "passer une porte doit lancer un fondu"
+    assert r["pendant"]["interieur"] is None, "la piece est chargee AVANT le noir : le fondu clignote"
     assert r["dedans"]["interieur"] == "planque" and r["dedans"]["w"] < r["dehors"]["w"]
     assert r["dedans"]["entites"] == 1, "la ville est entree avec nous"
     assert r["dedans"]["nuit"] == 0 and r["dedans"]["cam"] is True, "une piece se centre et n'a pas de nuit"
@@ -1822,7 +1963,7 @@ def test_la_planque_dort_sauve_et_garde_le_coffre(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         L.B.partie.argent = 250; j.vie = 30;
         const jour = L.B.partie.jour;
         // Le coffre.
@@ -1862,7 +2003,7 @@ def test_le_garage_rachete_repare_et_repeint(banc, paquet):
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         const v = o.char('auto', 20, 8, 0);
         v.vie = 50; v.vole = true;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         L.B.partie.argent = 1000;
         const point = L.B.interieur.points.find(function (p) { return p.type === 'reparer'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
@@ -1896,10 +2037,10 @@ def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
         function entrer(lieu, type) {
-            if (L.B.interieur) L.Jeu.sortir();
+            if (L.B.interieur) o.sortir();
             const porte = c.portes.find(function (p) { return p.lieu === lieu; });
             j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-            L.Jeu.entrer(porte);
+            o.entrer(porte);
             const point = L.B.interieur.points.find(function (p) { return p.type === type; });
             j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
             L.Missions.utiliserPoint(j);
@@ -1933,7 +2074,7 @@ def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'acheter'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
         L.B.partie.argent = 2000;
@@ -1982,7 +2123,7 @@ def test_une_propriete_s_achete_et_rapporte(banc, paquet):
         L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour();
         const caisse = L.B.partie.proprietes.kiosque.caisse;
         // Dedans, on ramasse la caisse.
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'caisse'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
         L.Missions.utiliserPoint(j);

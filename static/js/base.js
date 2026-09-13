@@ -16,6 +16,7 @@ const B = {
   exterieur: null,      // la ville mise de cote pendant qu'on est dedans
   dialogue: null,       // boite de texte en cours
   fondu: null,
+  transition: null,     // un fondu de porte EN COURS ; non nul = simulation figee (voir Jeu.transiter)
   t: 0,                 // images simulees depuis le demarrage
   rng: null,
   graine: 1,

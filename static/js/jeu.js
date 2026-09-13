@@ -37,6 +37,7 @@ const Jeu = (function () {
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
     B.mission = null; B.defi = null; B.cinema = null;
+    B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
     B.etat = 'jeu';
@@ -49,25 +50,116 @@ const Jeu = (function () {
     Hud.message('BAIE-DES-BRUMES', 150);
   }
 
-  /** Passer une porte : fondu, la ville mise de cote, la piece chargee. */
+  // --- Les portes : noircir sur l'ancienne, changer au noir, eclaircir sur la nouvelle ---
+
+  /*: La duree d'un fondu de porte, en images (60 = une seconde) : [noircir,
+    eclaircir]. ⚠️ ASYMETRIQUE, et c'est voulu : entrer prend son temps — on
+    pousse une porte, on veut le sentir — alors que sortir doit etre vif, parce
+    qu'on veut retourner au jeu. Les 40 images d'avant, partagees en deux,
+    etaient juste assez pour clignoter et pas assez pour lire. */
+  const FONDU_ENTREE = [26, 20];
+  const FONDU_ETAGE = [20, 16];
+  const FONDU_SORTIE = [15, 11];
+
+  /*: Ce qu'on garde d'elan en passant une porte, en fraction de la marche : on
+    ne repart pas d'un arret complet. Une course qui s'arrete net au pas de la
+    porte se sent teleportee. */
+  const ELAN_DE_PORTE = 0.5;
+
+  /** Un changement de scene qui se voit : on noircit sur la scene qu'on QUITTE,
+      elle change AU NOIR (`faire`), et on eclaircit sur la nouvelle.
+
+      ⚠️ C'est l'ordre, et lui seul, qui fait un fondu. `entrer()` chargeait la
+      piece PUIS demandait le fondu : sa premiere moitie noircissait donc sur la
+      scene deja changee et sa seconde l'eclaircissait — on voyait la piece une
+      image, l'ecran noircissait, il s'eclaircissait sur la meme piece. Ce n'est
+      pas un fondu enchaine, c'est un clignotement, et l'oeil le sait meme quand
+      on n'arrive pas a le nommer.
+
+      Le jeu est FIGE pendant (voir `maj()`). */
+  function transiter(duree, faire) {
+    B.transition = { t: 0, ferme: duree[0], ouvre: duree[1], faire: faire, fait: false, vu: false };
+  }
+
+  /** Le changement de scene lui-meme, au noir — une fois, jamais deux. */
+  function auNoir() {
+    const tr = B.transition;
+    if (!tr || tr.fait) return;
+    tr.fait = true;
+    tr.faire();
+  }
+
+  /** Avance le fondu d'une image.
+
+      ⚠️ Le noir s'arrete PILE a `ferme` (alpha 1) avant de changer la scene, et
+      il ne s'eclaircit pas avant d'avoir ete dessine une fois (`vu`, pose par le
+      HUD) : la boucle rattrape jusqu'a quatre images de simulation entre deux
+      images dessinees, et sans ces deux precautions la premiere image de la
+      nouvelle scene pourrait se montrer a 94 % de noir — donc se montrer. */
+  function majTransition() {
+    const tr = B.transition;
+    if (!tr) return;
+    if (!tr.fait) {
+      tr.t++;
+      if (tr.t >= tr.ferme) { tr.t = tr.ferme; auNoir(); }
+      return;
+    }
+    if (!tr.vu) return;
+    tr.t++;
+    if (tr.t >= tr.ferme + tr.ouvre) B.transition = null;
+  }
+
+  /** Finit tout de suite le fondu en cours.
+
+      ⚠️ Passer une porte pendant qu'un autre fondu joue est LE cas qui casse
+      tout : sans ca, `sortir()` appele pendant le noircissement d'une entree ne
+      trouve aucun interieur, refuse — et le joueur se reveille dedans sans avoir
+      rien demande. */
+  function finirTransition() {
+    if (!B.transition) return;
+    auNoir();
+    B.transition = null;
+  }
+
+  /** Poser le joueur au pas d'une porte : la face et un reste d'elan dans le
+      sens ou l'on passe, et la camera deja a sa place.
+
+      ⚠️ La camera se pose AU NOIR, sur la cible exacte que `majCamera` viserait
+      a la premiere image (position + avance de l'elan) : personne ne voit le
+      saut, et l'amorti n'a rien a rattraper quand le jeu repart. */
+  function poserDansLaPorte(j, sens) {
+    const pas = B.defs.recherche.vitesses.joueur_marche * ELAN_DE_PORTE;
+    j.vx = 0; j.vy = sens === 'haut' ? -pas : pas;
+    j.face = sens;
+    Entites.dansLaCarte(j);
+    Monde.centrerCamera(j.x + j.vx * 14, j.y + j.vy * 14);
+  }
+
+  /** Passer une porte : on noircit sur la rue, la piece se charge AU NOIR, on
+      eclaircit dedans. */
   function entrer(porte) {
     const j = B.joueur;
+    finirTransition();
     if (!porte || !porte.interieur || B.interieur || j.dansVehicule) return false;
-    const piece = Monde.entrer(porte);
-    if (!piece) return false;
-    B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
-    B.entites = [j];
-    B.particules.length = 0;
-    B.interieur = piece.interieur;
-    Entites.reindexerDecor();
-    Entites.peuplerInterieur(piece.interieur);
-    j.x = piece.interieur.apparition.x * TT + 8;
-    j.y = piece.interieur.apparition.y * TT + 8;
-    j.vx = 0; j.vy = 0; j.face = 'haut';
-    Monde.centrerCamera(j.x, j.y);
-    Hud.fondu(40, null);
-    Son.SFX.porte();
-    Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    // ⚠️ La piece se cherche AVANT de noircir : un fondu qui ne mene nulle part
+    // est plus laid qu'une porte qui ne s'ouvre pas.
+    const interieurs = (Monde.carte.def && Monde.carte.def.interieurs) || {};
+    if (!interieurs[porte.interieur]) return false;
+    transiter(FONDU_ENTREE, function () {
+      const piece = Monde.entrer(porte);
+      if (!piece) return;
+      B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
+      B.entites = [j];
+      B.particules.length = 0;
+      B.interieur = piece.interieur;
+      Entites.reindexerDecor();
+      Entites.peuplerInterieur(piece.interieur);
+      j.x = piece.interieur.apparition.x * TT + 8;
+      j.y = piece.interieur.apparition.y * TT + 8;
+      poserDansLaPorte(j, 'haut');
+      Son.SFX.porte();          // la porte s'entend AU NOIR : c'est la qu'on la passe
+      Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    });
     return true;
   }
 
@@ -79,43 +171,50 @@ const Jeu = (function () {
       au joueur par ou il est monte. */
   function changerEtage(slug) {
     const j = B.joueur;
+    finirTransition();
     if (!B.interieur || !B.exterieur || j.dansVehicule) return false;
     const depuis = B.interieur.slug;
-    const piece = Monde.changerPiece(slug);
-    if (!piece) return false;
-    B.entites = [j];
-    B.particules.length = 0;
-    B.interieur = piece.interieur;
-    Entites.reindexerDecor();
-    Entites.peuplerInterieur(piece.interieur);
-    const retour = (piece.interieur.points || []).find(function (p) {
-      return p.type === 'escalier' && p.vers === depuis;
-    }) || piece.interieur.apparition;
-    j.x = retour.x * TT + 8; j.y = retour.y * TT + 8;
-    j.vx = 0; j.vy = 0; j.face = 'bas';
-    Entites.dansLaCarte(j);
-    Monde.centrerCamera(j.x, j.y);
-    Hud.fondu(30, null);
-    Son.SFX.porte();
-    Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    // Comme pour une porte : l'etage se cherche avant de noircir.
+    const etages = (B.exterieur.carte.def && B.exterieur.carte.def.interieurs) || {};
+    if (!etages[slug]) return false;
+    transiter(FONDU_ETAGE, function () {
+      const piece = Monde.changerPiece(slug);
+      if (!piece) return;
+      B.entites = [j];
+      B.particules.length = 0;
+      B.interieur = piece.interieur;
+      Entites.reindexerDecor();
+      Entites.peuplerInterieur(piece.interieur);
+      const retour = (piece.interieur.points || []).find(function (p) {
+        return p.type === 'escalier' && p.vers === depuis;
+      }) || piece.interieur.apparition;
+      j.x = retour.x * TT + 8; j.y = retour.y * TT + 8;
+      poserDansLaPorte(j, 'bas');
+      Son.SFX.porte();
+      Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    });
     return true;
   }
 
   function sortir() {
-    const j = B.joueur, ext = B.exterieur;
+    const j = B.joueur;
+    finirTransition();
+    const ext = B.exterieur;
     if (!B.interieur || !ext) return false;
-    Monde.restaurer(ext.carte);
-    B.entites = ext.entites;
-    if (B.entites.indexOf(j) < 0) B.entites.push(j);
-    B.particules.length = 0;
-    B.interieur = null;
-    B.exterieur = null;
-    Entites.reindexerDecor();
-    j.x = ext.x; j.y = ext.y; j.vx = 0; j.vy = 0; j.face = 'bas';
-    Entites.dansLaCarte(j);
-    Monde.centrerCamera(j.x, j.y);
-    Hud.fondu(40, null);
-    Son.SFX.porte();
+    transiter(FONDU_SORTIE, function () {
+      Monde.restaurer(ext.carte);
+      B.entites = ext.entites;
+      if (B.entites.indexOf(j) < 0) B.entites.push(j);
+      B.particules.length = 0;
+      B.interieur = null;
+      B.exterieur = null;
+      Entites.reindexerDecor();
+      // ⚠️ La tuile devant la porte, au pixel : entrer puis sortir doit ramener
+      // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
+      j.x = ext.x; j.y = ext.y;
+      poserDansLaPorte(j, 'bas');
+      Son.SFX.porte();
+    });
     return true;
   }
 
@@ -198,6 +297,15 @@ const Jeu = (function () {
       // Commencer a la manette ne donne AUCUN geste au navigateur : il refuse
       // alors le son sans rien dire. On le dit a sa place.
       if (sansSon) Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      Entree.videPresse();
+      return;
+    }
+    if (B.etat === 'jeu' && B.transition) {
+      // ⚠️ Le jeu est FIGE pendant un fondu de porte. Avant, la simulation
+      // continuait : on pouvait sortir d'une piece et se faire renverser par un
+      // char qu'on n'a pas vu venir, sur un ecran noir ou l'on ne controle rien.
+      // Un menu fige deja tout (`if (B.menu) return`) ; une porte fait pareil.
+      majTransition();
       Entree.videPresse();
       return;
     }
@@ -361,7 +469,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, entrer, sortir, changerEtage, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, entrer, sortir, changerEtage, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

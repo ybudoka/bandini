@@ -472,13 +472,34 @@ const Hud = (function () {
     B.stats.rects += 2;
   }
 
+  /** Le noir d'un fondu de porte (`Jeu.transiter`) : il monte a 1 sur la scene
+      qu'on quitte, et redescend sur la nouvelle.
+
+      ⚠️ `vu` dit au jeu que le noir a ete DESSINE. C'est le HUD qui le sait, et
+      lui seul : sans ce drapeau, la boucle qui rattrape plusieurs images de
+      simulation d'un coup eclaircirait deja quand la nouvelle scene se montre
+      pour la premiere fois. */
+  function dessinerTransition(ctx) {
+    const tr = B.transition;
+    if (!tr) return;
+    const part = tr.t <= tr.ferme ? tr.t / tr.ferme : 1 - (tr.t - tr.ferme) / tr.ouvre;
+    const alpha = Math.max(0, Math.min(1, part));
+    ctx.fillStyle = 'rgba(11,10,18,' + alpha.toFixed(3) + ')';
+    ctx.fillRect(0, 0, VW, VH);
+    if (tr.fait) tr.vu = true;
+    B.stats.rects++;
+  }
+
   /** Un fondu au noir, avec une ligne au milieu : ce qui se passe ne se
-      montre pas. Sert aussi aux portes et aux ellipses (M5). */
+      montre pas. Sert aux ellipses (M5) — les portes, elles, passent par
+      `Jeu.transiter` : un fondu qui change la scene avant de noircir ne fond
+      rien. */
   function fondu(duree, texte) {
     B.fondu = { t: 0, duree: duree || 90, texte: texte || null };
   }
 
   function dessinerFondu(ctx) {
+    dessinerTransition(ctx);
     const f = B.fondu;
     if (!f) return;
     f.t++;

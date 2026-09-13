@@ -71,13 +71,13 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         L.Missions.majInvite(j);
         const invite = L.B.invite;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const gens = L.B.entites.filter(function (e) { return e.type === 'pieton'; });
         const commis = gens.filter(function (e) { return e.arch === 'commis'; });
         const dedans = { nom: L.B.interieur.nom, slug: L.B.interieur.slug, gens: gens.length,
                          commis: commis.length, poste: commis.length ? !!commis[0].poste : false,
                          points: L.B.interieur.points.length };
-        L.Jeu.sortir();
+        o.sortir();
         return { invite: invite, porte: porte, dedans: dedans,
                  dehors: L.B.entites.filter(function (e) { return e.arch === 'commis'; }).length };
     }""")
@@ -98,7 +98,7 @@ def test_le_comptoir_d_un_commerce_ordinaire_vend(banc, paquet):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.interieur === 'boutique_bouffe'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'emplettes'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8;
         L.B.partie.argent = 200; j.vie = 40; j.endurance = 20;
@@ -127,21 +127,23 @@ def test_l_escalier_monte_a_l_etage_et_redescend(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.interieur === 'logement'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const bas = { slug: L.B.interieur.slug, dehors: !!L.B.exterieur };
         const point = L.B.interieur.points.find(function (p) { return p.type === 'escalier'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8;
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         L.Missions.utiliserPoint(j);
+        o.fondu();                      // l'escalier passe par un fondu, comme une porte
         const haut = { slug: L.B.interieur.slug, nom: L.B.interieur.nom, dehors: !!L.B.exterieur,
                        w: L.Monde.carte.w, sol: L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT)) };
         // On redescend par l'escalier de l'etage.
         const retour = L.B.interieur.points.find(function (p) { return p.type === 'escalier'; });
         j.x = retour.x * L.TT + 8; j.y = retour.y * L.TT + 8;
         L.Missions.utiliserPoint(j);
+        o.fondu();
         const revenu = L.B.interieur.slug;
-        L.Jeu.sortir();
+        o.sortir();
         return { bas: bas, invite: invite, haut: haut, revenu: revenu,
                  sorti: L.B.interieur, pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) };
     }""")
@@ -161,9 +163,9 @@ def test_les_tiroirs_d_un_logement_ne_se_fouillent_qu_une_fois(banc, paquet):
         const j = L.B.joueur, c = L.Monde.carte;
         const portes = c.portes.filter(function (p) { return p.interieur === 'logement'; });
         function fouiller(porte) {
-            if (L.B.interieur) L.Jeu.sortir();
+            if (L.B.interieur) o.sortir();
             j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-            L.Jeu.entrer(porte);
+            o.entrer(porte);
             const point = L.B.interieur.points.find(function (p) { return p.type === 'fouiller'; });
             j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8;
             const avant = L.B.partie.argent;
@@ -192,7 +194,7 @@ def test_le_barbier_change_la_tete_et_fait_oublier_la_tienne(banc, paquet):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.interieur === 'boutique_service'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.Jeu.entrer(porte);
+        o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'salon'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8;
         L.B.partie.argent = 100;
@@ -244,13 +246,13 @@ def test_une_piece_se_peint_sans_planter(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const vues = [];
         for (const porte of c.portes) {
-            if (L.B.interieur) L.Jeu.sortir();
+            if (L.B.interieur) o.sortir();
             j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-            if (!L.Jeu.entrer(porte)) continue;
+            if (!o.entrer(porte)) continue;
             o.frame(3);
             vues.push(L.B.interieur.slug);
         }
-        if (L.B.interieur) L.Jeu.sortir();
+        if (L.B.interieur) o.sortir();
         return { vues: vues.length, pieces: Object.keys(c.def.interieurs).length,
                  etat: L.B.etat, entites: L.B.entites.length };
     }""")

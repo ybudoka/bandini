@@ -184,7 +184,7 @@ def test_les_etoiles_ne_tombent_que_hors_de_vue(banc, paquet):
         const menu = L.B.menu;
         L.B.entites.filter(function (e) { return e.agent; }).forEach(function (e) { L.Entites.retirer(e); });
         L.B.recherche.vu = 0;
-        const entre = L.Jeu.entrer({ interieur: 'poste' });  // et tu te caches dedans
+        const entre = o.entrer({ interieur: 'poste' });  // et tu te caches dedans
         o.frame(%d * 60 + 30);
         return { vuParLAgent: vuParLAgent, vuCompteur: vuCompteur, menu: menu, entre: entre, cache: L.B.recherche.etoiles };
     }""" % (palier1, palier1))
