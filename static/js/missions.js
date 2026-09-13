@@ -60,9 +60,20 @@ const Missions = (function () {
 
   /** Manger reprend aussi le souffle. L'endurance ne va pas dans la
       sauvegarde (elle se refait toute seule) : elle vit sur le joueur. */
+  /** Manger : le souffle d'abord, et ce qui deborde devient du SURPLUS.
+
+      ⚠️ Sans le surplus, manger ne servait a rien : le souffle remonte tout
+      seul de 0,24 par image des qu'on arrete de courir — une barre vide se
+      remplit en sept secondes. Une poutine a 18 $ rendait 70 points qu'on
+      aurait eus gratuitement en s'arretant quatre secondes. Le surplus est la
+      part que la regeneration ne peut PAS donner. */
   function nourrir(j, souffle) {
     if (!souffle || !j) return;
-    j.endurance = Math.min(B.defs.recherche.vitesses.endurance, j.endurance + souffle);
+    const plein = B.defs.recherche.vitesses.endurance;
+    const manque = Math.max(0, plein - j.endurance);
+    j.endurance = Math.min(plein, j.endurance + souffle);
+    const reste = souffle - manque;
+    if (reste > 0) j.surplus = Math.min(B.defs.economie.souffle.surplus_max, (j.surplus || 0) + reste);
   }
 
   /** Le cafe : pendant un temps, le sprint coute moitie moins (`economie.cafe`
@@ -155,6 +166,7 @@ const Missions = (function () {
     setTimeoutJeu(60, function () {
       if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
       j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
+      j.surplus = 0;                  // le surplus est passager : il ne survit pas a l'hopital
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       j.hospitalise = false;
@@ -212,7 +224,7 @@ const Missions = (function () {
     setTimeoutJeu(60, function () {
       const poste = Monde.carte.points.find(function (q) { return q.slug === 'poste'; });
       if (poste) { j.x = poste.x * TT + 8; j.y = poste.y * TT + 20; }
-      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false;
+      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false; j.surplus = 0;
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       sauvegarderPartie();
@@ -588,6 +600,8 @@ const Missions = (function () {
     B.joueur.vie = B.joueur.vieMax;
     B.joueur.endurance = 100;
     B.joueur.cafeine = 0;
+    B.joueur.surplus = 0;             // une nuit reprend le souffle, pas l'avance
+
     p.vie = B.joueur.vie;
     Police.remiseAZero();
     nouveauJour();

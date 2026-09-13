@@ -52,7 +52,7 @@ ne bougent pas quand l'ordre de travail change.
 | La carte | **livré** (13 sept. 2026) | demande de Martin (« un icône clignotant pour savoir où on est, une légende, savoir où est la mission en cours ») : le joueur **était** dessiné — un carré blanc de 2 px, lisible sur le Faubourg de 157×112 et perdu depuis que la ville fait 421×213. Il **pulse** maintenant (un anneau qui s'ouvre et se referme, 40 images) et ne disparaît **jamais** — on ne cache pas ce qu'on cherche ; l'objectif bat à un autre rythme (16) et dans une autre forme (un losange doré). Hors du cadre de la mini-carte, il devient une **flèche** au lieu d'une position bornée au coin, qui mentait. Et la **légende** se construit depuis la table des couleurs, descendue de Python (`FAMILLES_DE_LIEU`, 8 familles) : les seize lieux ont tous une couleur **déclarée**, là où `COULEUR_BLIP` en connaissait dix et laissait six au gris. 4 juges neufs |
 | Les donneurs qu'on ne voyait pas | **livré** (13 sept. 2026) | bug de Martin (« je n'arrive pas à faire la mission sergent Bouchard, je vais à la cantine, mais je ne vois pas quoi faire ») — et il avait raison deux fois. D'abord le **nom** : Marco l'envoie au « casse-croûte » (le Faubourg, à côté du poste), pas à la **Cantine des Quais**, un autre bâtiment à l'autre bout de la ville. Ensuite, et c'est le vrai bug : **Bouchard et Josée n'existaient nulle part**. Ce sont les deux seuls donneurs qui se tiennent DEDANS (`ou: point:sergent`, `point:contact`), et `creerDonneurs()` ne posait que ceux de la rue (`porte:`) : on poussait la porte, la salle était vide, et il fallait deviner qu'un **point invisible** attendait au fond à droite. Ils sont maintenant **posés en entrant** (`creerDonneursDedans`, appelée par `Jeu.entrer` juste après le commis et les clients), ils naissent et meurent avec la pièce comme tout le monde, et la table Python→piece ne se recopie plus en JS : `personnageDuPoint` / `pieceDuPoint` la **déduisent** du `ou` de `missions.py`. ⚠️ Josée pointe une **table** (personne ne se tient debout sur une table) : `placeDebout` prend la tuile libre voisine la plus proche du milieu de la pièce — le fond d'un coin, ce n'est pas une scène. ⚠️ Le GPS a fallu le corriger du même coup (`ouTrouver`) : dedans, un donneur vit en coordonnées de **pièce**, et le poser tel quel sur la minicarte envoyait la flèche à six tuiles du coin de la ville. Et une **bulle de bande dessinée** dit qui attend après toi — voir la ligne suivante. ACTION dedans vise maintenant **la personne avant le comptoir**, et le HUD la nomme (« PARLER À SERGENT BOUCHARD ») | 2 juges de banc (on entre, quelqu'un est là, debout hors des meubles, à portée de son point, et il parle ; il ne suit pas dans la rue) |
 | Les bulles qui interpellent | **livré** (13 sept. 2026) | demande de Martin (« avec une petite bulle de type bande dessiné qui nous interpelle ») : le jeu avait déjà deux pastilles de 8 px au-dessus des têtes — le « ! » du témoin, le trait de la peur (`cri`). Elles disent un **état d'esprit** ; elles ne peuvent pas dire un **mot**, et c'est le mot qui manquait. `Entites.bulle(e, texte, {duree, fond, encre})` pose une boîte à queue au-dessus de **n'importe quelle entité** (police 3x5, coins coupés, la queue sur la tête de celui qui parle, une montée de 6 images puis une respiration), `Entites.taire(e)` l'efface, et elle se dessine dans une **deuxième passe**, après tout le monde : dans une pièce, un client passe devant le donneur une fois sur deux, et une bulle à moitié cachée par une nuque ne se lit plus. ⚠️ Le texte **ne s'invente pas en JS** : `personnages[].heler` dans `missions.py`, comme toutes les répliques du jeu, court par force (`HELER_MAX`) et vérifié par un juge. ⚠️ Une bulle qui ne s'éteint jamais ne veut plus rien dire : elle ne s'allume que si **ce donneur-là** a une job pour toi (ou t'attend pour la finir), elle se tait pendant sa propre mission, et **aucune** bulle ne s'affiche pendant un dialogue — quelqu'un te parle déjà, en bas de l'écran. Deux emplois pour l'instant : les **cinq donneurs** et le **client du taxi** de M3, qui levait le bras au bord du trottoir sans rien dire | 1 juge Python (chaque donneur a son mot, assez court), 1 de banc (elle s'allume sur le bon donneur, s'éteint après, et vit d'une image à l'autre), 1 dans le taxi ; vérifié à l'écran dans un vrai navigateur (casse-croûte, bar, terminus) |
-| Le souffle en surplus | **correctif** à faire | demande de Martin : le souffle remonte seul à 0,24 par image (une barre pleine en **7 s**), donc manger ne donne rien. Ce que la bouffe rend devient un **surplus** au-dessus de 100, qui se dépense en premier et ne revient jamais seul — une ligne plus mince, d'une autre couleur, posée sur la barre jaune |
+| Le souffle en surplus | **livré** (13 sept. 2026) | demande de Martin (« les choses qui donnent du souffle devraient donner un **bonus**, parce que le souffle monte seul ») : il remontait de 0,24 par image — une barre vide pleine en **7 s** — et `nourrir` plafonnait à 100, donc une poutine à 18 $ rendait 70 points qu'on avait gratuitement en s'arrêtant quatre secondes. Manger ajoute maintenant **par-dessus** les 100 (plafond 60) : le surplus **part en premier** au sprint, ne remonte **jamais** tout seul, et se perd en dormant, à l'hôpital et en prison. À l'écran, une ligne cyan d'un pixel **posée sur** la barre — elle garde sa couleur sous café (barre verte) et **disparaît au volant**, où la barre montre la carrosserie. Son plafond est un réglage de **poursuite** : 60 points = 2,5 s de sprint de plus, 5 s sous café, et un juge refait le calcul. 2 juges neufs |
 | Les toits | **correctif** à faire | demande de Martin (« je veux que les toits soient plus réalistes ») : ils sont peints tuile par tuile, sans bord, sans rien dessus, sans ombre au sol, et une maison a le même toit plat qu'un entrepôt |
 | Les armes à feu | ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
 | Le carnet | ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
@@ -409,7 +409,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Enfermé dans six commerces | la porte ne se laisse plus voler par un comptoir, et un juge Python interdit tout point d'action à moins de 1,6 tuile de la sortie | entrer et ressortir de chacune des seize pièces |
 | — | Clôtures nord-sud couchées | **livré** : variante de clôture lue dans les voisines (est-ouest, nord-sud, coin, bout), pour les trois glyphes | une clôture verticale a l'air verticale ; un bout de course porte son poteau |
 | — | La carte | joueur qui pulse (autre rythme et autre forme que l'objectif), flèche au bord pour une cible hors cadre, légende dérivée de la table des couleurs, une couleur déclarée par lieu | se trouver du premier coup d'œil sur la carte plein écran ; lire un blip sans l'avoir appris |
-| — | Le souffle en surplus | surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
+| — | Le souffle en surplus | **livré** : surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
 | — | Les toits | bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
 | — | Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
 | — | Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
@@ -429,10 +429,9 @@ hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée e
 sortie 1, les clôtures 1, les toits 2, les armes à feu 2, le carnet 2, l'eau 3.
 
 Ce qui reste, **dans l'ordre où on le fera** (le plus facile d'abord, correctif avant ajout
-à taille égale, prérequis devant) : **correctif** le souffle en surplus 1 ·
-**correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout les terrains
+à taille égale, prérequis devant) : **correctif** les toits 2 · ajout les armes à feu 2 · ajout le carnet 2 · ajout les terrains
 de banlieue 2 · ajout M11 2 · **correctif** l'eau 3 · ajout M15 3 · ajout M9 3 · ajout M10 3 ·
-ajout M12 4 · ajout M14 4 · ajout M13 4. Les sept
+ajout M12 4 · ajout M14 4 · ajout M13 4. Les six
 premières ne dépendent de rien ; les clôtures sont livrées (les cours des Érables se traversent), l'eau décide de
 la piscine et débloque le bateau de M9 et le traversier de M12 ; M10 demande le camion de
 M9 ; M13 est la fin, et la fin se pose en dernier.
@@ -457,19 +456,18 @@ pour la fin ce qui demande de l'infrastructure ou tout le reste du jeu.
 
 | Ordre | Genre | Vague | Taille | Prérequis |
 |---|---|---|---|---|
-| 1 | **correctif** | Le souffle en surplus | 1 | aucun — mais il touche la même barre que le café |
-| 2 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
-| 3 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
-| 4 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
-| 5 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
-| 6 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
-| 7 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
-| 8 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
-| 9 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
-| 10 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
-| 11 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
-| 12 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
-| 13 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+| 1 | **correctif** | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
+| 2 | ajout | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
+| 3 | ajout | Le carnet (mission, journal, répertoire) | 2 | aucun — toutes les données existent déjà |
+| 4 | ajout | Les terrains de banlieue | 2 | **les clôtures**, livrées : c'est le grillage — et la palissade de bois — qui rendent les cours traversables |
+| 5 | ajout | M11 La police apprend | 2 | aucun — la police de M4 suffit |
+| 6 | **correctif** | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12. ⚠️ C'est lui qui décide de la piscine (eau basse) |
+| 7 | ajout | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent. ⚠️ Contient **un correctif** : les passants qui se répètent |
+| 8 | ajout | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ Contient **deux correctifs** : le vélo qui explose, la cour de la fourrière. ⚠️ **À moitié livré** : le Python est commité, le JS n'existe pas — voir la fiche |
+| 9 | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
+| 10 | ajout | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
+| 11 | ajout | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
+| 12 | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
 ville complète) ; il est livré. Rien n'oblige à suivre l'ordre à la lettre — les huit
@@ -767,50 +765,47 @@ Les trois manquaient pour trois raisons différentes, et une seule des trois ét
   C'est la seule façon de mesurer un clignotement sans regarder l'écran, et c'est le même
   patron que les ancres du test tactile.
 
-### Le souffle en surplus (**correctif**, taille 1)
+### Le souffle en surplus (**correctif**, taille 1) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « les choses qui donnent du souffle devraient donner un **bonus** de
 souffle, parce que le souffle monte seul actuellement. Ce serait une petite ligne de couleur
 différente qui se superposerait sur la ligne jaune du souffle. »
 
-⚠️ **Et c'est mesurable.** Le sprint coûte 0,4 par image ; dès qu'on arrête de courir, le
+⚠️ **Et c'était mesurable.** Le sprint coûte 0,4 par image ; dès qu'on arrête de courir, le
 souffle remonte de 0,4 × 0,6 = **0,24 par image** — une barre vide se remplit toute seule en
-**sept secondes**. Or `nourrir()` fait `min(100, endurance + souffle)`. Une poutine à 18 $
-rend donc 70 points… qu'on aurait eus gratuitement en s'arrêtant quatre secondes.
+**sept secondes**. Or `nourrir()` faisait `min(100, endurance + souffle)`. Une poutine à 18 $
+rendait donc 70 points… qu'on aurait eus gratuitement en s'arrêtant quatre secondes.
 
-⚠️ Pire : le dépôt s'est déjà donné cette raison-là, et elle n'a jamais tenu. Le commit
-`1a03d16` dit « manger reprend le souffle », et `economie.py` explique : « sans ça, le seul
-moyen de reprendre son souffle était d'arrêter de courir — un kiosque ne servait à rien quand
-on est poursuivi ». L'intention était juste ; la régénération automatique la vidait de son
-sens le jour même.
+⚠️ Pire : le dépôt s'était déjà donné cette raison-là, et elle n'avait jamais tenu. Le commit
+`1a03d16` dit « manger reprend le souffle », et `economie.py` expliquait : « sans ça, le seul
+moyen de reprendre son souffle était d'arrêter de courir ». L'intention était juste ; la
+régénération automatique la vidait de son sens le jour même.
 
 **Le surplus est ce que la régénération ne peut pas donner.** Manger ne remplit plus la barre :
-il ajoute par-dessus, au-delà des 100. Et cette part-là :
+il ajoute par-dessus, au-delà des 100 (plafond **60**). Et cette part-là :
 
-- **se dépense en premier** quand on sprinte ;
-- **ne revient jamais toute seule** — c'est la seule chose sur cette barre qu'on ne peut pas
-  récupérer en s'arrêtant, et c'est exactement ce qui redonne un sens au kiosque ;
+- **se dépense en premier** quand on sprinte — c'est la seule qui vaille ce qu'on l'a payée ;
+- **ne revient jamais toute seule**, et c'est exactement ce qui redonne un sens au kiosque ;
 - **se perd** en dormant, à l'hôpital et en prison, comme le reste de ce qui est passager.
 
-**À l'écran** : une ligne plus mince, d'une autre couleur, **posée par-dessus** la barre jaune
-plutôt qu'à côté — on lit d'un coup d'œil « j'ai du souffle, et j'ai de l'avance en plus ».
+**À l'écran** : une ligne cyan d'un pixel, **posée sur** la barre jaune plutôt qu'à côté — on
+lit d'un coup d'œil « j'ai du souffle, et j'ai de l'avance en plus ».
 
-- ⚠️ **Cette barre porte déjà deux autres messages**, et c'est le vrai risque. Sous café, elle
+- ⚠️ **Cette barre porte déjà deux autres messages**, et c'était le vrai risque. Sous café elle
   passe au **vert** et clignote la dernière seconde ; **au volant**, ce n'est plus le souffle
-  du tout mais la carrosserie du char. Trois choses sur 60 × 5 pixels, ça ne se décide pas au
-  hasard : le surplus se pose **sur** la barre (il ne la remplace pas), il garde sa couleur
-  que la base soit jaune ou verte, et **il disparaît au volant** — sinon il se superpose aux
-  points de vie d'une auto, ce qui ne veut rien dire.
-- ⚠️ **Le plafond du surplus est un réglage de poursuite, pas de confort.** Le joueur sprinte
-  à 2,1, le policier court à 1,9 : chaque point de surplus est de l'avance qu'on ne peut pas
-  lui reprendre. À 0,4 par image, 100 points de surplus valent **quatre secondes** de sprint
-  de plus — et **huit** sous café, puisque le café divise la dépense par deux. Le plafond se
-  choisit sur ce calcul-là, et un juge le refait.
-- **Juges** : manger au-dessus de 100 ne monte plus la base mais le surplus, et jamais
-  au-delà de son plafond ; le surplus part avant la base ; il ne remonte pas d'un seul point
-  à l'arrêt (c'est toute la différence avec la barre) ; il est nul après une nuit, une
-  arrestation ou l'hôpital ; et le surplus plein, café compris, reste sous le nombre de
-  secondes de sprint qu'on s'autorise.
+  du tout mais la carrosserie du char. Le surplus se pose donc **sur** la barre sans la
+  remplacer, garde sa couleur que la base soit jaune ou verte, et **disparaît au volant** —
+  sinon il se superposerait aux points de vie d'une auto, ce qui ne veut rien dire.
+- ⚠️ **Le plafond est un réglage de poursuite, pas de confort.** Le joueur sprinte à 2,1, le
+  policier court à 1,9 : chaque point de surplus est de l'avance qu'on ne peut pas lui
+  reprendre. À 0,4 par image, 60 points valent **2,5 secondes** de sprint de plus — et **5**
+  sous café, puisque le café divise la dépense par deux. Le budget (`surplus_secondes_max`)
+  est déclaré à côté, et un juge refait le calcul dès qu'un des trois nombres bouge.
+- **Juges (2 neufs)** : côté Python, le plein de surplus reste sous le budget de secondes,
+  café compris, et une poutine en donne un vrai morceau ; côté banc, les quatre promesses d'un
+  coup — manger à barre pleine monte le surplus et pas la base, jamais au-delà du plafond ; à
+  l'arrêt il ne remonte pas d'un point quand la base, elle, remonte ; au sprint c'est lui qui
+  part en premier (la base reste pleine) ; et une nuit l'efface.
 
 ### Les toits (**correctif**, taille 2)
 

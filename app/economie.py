@@ -118,6 +118,27 @@ TARIFS = {
 #: la minuterie).
 CAFE = {"duree_s": 90, "depense": 0.5}
 
+#: Le souffle en SURPLUS : ce que manger ajoute PAR-DESSUS les 100 points de la
+#: barre quand elle est deja pleine.
+#:
+#: ⚠️ Sans lui, manger ne servait a rien — et le depot s'etait deja donne la
+#: raison inverse sans qu'elle tienne un jour. Le sprint coute 0,4 par image, et
+#: des qu'on arrete de courir le souffle remonte de 0,4 x 0,6 = 0,24 : une barre
+#: vide se remplit TOUTE SEULE en sept secondes. Une poutine a 18 $ rendait donc
+#: 70 points qu'on aurait eus gratuitement en s'arretant quatre secondes.
+#:
+#: Le surplus est exactement ce que la regeneration ne peut pas donner : il se
+#: depense EN PREMIER, il ne revient JAMAIS tout seul, et il se perd en dormant,
+#: a l'hopital et en prison — comme tout ce qui est passager.
+#:
+#: ⚠️ `surplus_max` est un reglage de POURSUITE, pas de confort. Le joueur
+#: sprinte a 2,1 et le policier court a 1,9 : chaque point de surplus est de
+#: l'avance qu'on ne peut pas lui reprendre. A 0,4 par image, 60 points valent
+#: 2,5 s de sprint de plus — et 5 s sous cafe, qui divise la depense par deux.
+#: `surplus_secondes_max` est le budget qu'on s'autorise, cafe compris, et un
+#: juge refait le calcul a chaque fois qu'on touche a l'un des trois nombres.
+SOUFFLE = {"surplus_max": 60, "surplus_secondes_max": 6}
+
 # --- Les boulots au klaxon (M9) -------------------------------------------
 
 #: ⚠️ UN boulot = UNE fiche. La v1 avait les trois nombres du taxi perdus dans
@@ -266,6 +287,7 @@ def exporter() -> dict:
         "hopital": dict(HOPITAL),
         "tarifs": dict(TARIFS),
         "cafe": dict(CAFE),
+        "souffle": dict(SOUFFLE),
         "boulots": {k: dict(v) for k, v in BOULOTS.items()},
         "fourriere": dict(FOURRIERE),
         "tuiles_type": TUILES_TYPE,

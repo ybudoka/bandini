@@ -867,6 +867,17 @@ const Hud = (function () {
       const cafeine = j && !v && j.cafeine > 0 && (j.cafeine > 60 || (j.cafeine >> 2) % 2 === 0);
       barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1),
             v ? '#7fb3d8' : (cafeine ? '#8fd46a' : '#e8b33c'));
+      // Le souffle EN SURPLUS : une ligne plus mince POSEE SUR la barre, pas a
+      // cote — on lit d'un coup « j'ai du souffle, et j'ai de l'avance en plus ».
+      // ⚠️ Elle garde sa couleur que la base soit jaune ou verte (le cafe), et
+      // elle DISPARAIT au volant : la barre y montre la carrosserie du char, et
+      // du souffle par-dessus des points de vie ne voudrait rien dire.
+      if (!v && j && j.surplus > 0) {
+        const part = Math.min(1, j.surplus / B.defs.economie.souffle.surplus_max);
+        ctx.fillStyle = '#7fd4ff';
+        ctx.fillRect(6, 14, Math.max(1, Math.round(60 * part)), 1);
+        B.stats.rects++;
+      }
       noter('vie', 6, 6, 60, 10);
       if (v) {
         const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);

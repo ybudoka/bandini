@@ -1165,6 +1165,64 @@ def test_manger_redonne_du_souffle_et_le_cafe_reveille(banc, paquet):
     assert r["cafeine"] == cafe["duree_s"] * 60
 
 
+def test_le_souffle_en_surplus_s_achete_et_ne_revient_pas_tout_seul(banc, paquet):
+    """⚠️ Le defaut que Martin a nomme : « le souffle monte seul actuellement ».
+    Il remonte de 0,24 par image des qu'on arrete de courir — une barre vide se
+    remplit en sept secondes — et `nourrir` plafonnait a 100. Une poutine a 18 $
+    rendait donc 70 points qu'on aurait eus gratuitement en s'arretant quatre
+    secondes : le kiosque ne servait a rien, malgre l'intention inverse ecrite
+    dans le depot depuis M5.
+
+    Le surplus est ce que la regeneration ne peut PAS donner. Ce test tient les
+    quatre promesses d'un coup : il se remplit par-dessus, il se depense en
+    premier, il ne revient jamais tout seul, et il est passager."""
+    souffle = paquet["economie"]["souffle"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const plein = L.B.defs.recherche.vitesses.endurance;
+        // 1. Manger a barre pleine : la base ne bouge plus, le surplus monte.
+        j.endurance = plein; j.surplus = 0;
+        L.Missions.nourrir(j, 40);
+        const pardessus = { base: j.endurance, surplus: j.surplus };
+        // 2. Et jamais au-dela du plafond.
+        L.Missions.nourrir(j, 9999);
+        const plafonne = j.surplus;
+        // 3. A l'arret, il ne remonte pas d'un point — la base, si.
+        j.endurance = 40; j.surplus = 20;
+        o.frame(120);
+        const repos = { base: j.endurance, surplus: j.surplus };
+        // 4. Au sprint, c'est le surplus qui part en premier.
+        j.endurance = 100; j.surplus = 20;
+        o.touche('ShiftLeft'); o.touche('KeyA');
+        let images = 0;
+        while (j.surplus > 0 && images < 400) { o.frame(1); images++; }
+        const videSurplus = { base: j.endurance, images: images };
+        o.relacher('KeyA'); o.relacher('ShiftLeft');
+        // 5. Passager : une nuit l'efface.
+        j.surplus = 30;
+        L.Missions.dormir();
+        const apresLaNuit = j.surplus;
+        return { pardessus: pardessus, plafonne: plafonne, repos: repos,
+                 videSurplus: videSurplus, apresLaNuit: apresLaNuit, plein: plein };
+    }""")
+    assert r["pardessus"] == {"base": r["plein"], "surplus": 40}, (
+        "manger a barre pleine doit monter le SURPLUS, pas la base"
+    )
+    assert r["plafonne"] == souffle["surplus_max"], "le surplus depasse son plafond"
+    assert r["repos"]["surplus"] == 20, "le surplus remonte tout seul : il ne vaut plus rien"
+    assert r["repos"]["base"] > 40, "la base, elle, doit remonter a l'arret"
+    # ⚠️ Une image de jeu peut en rattraper une deuxieme (l'accumulateur de la
+    # boucle) : la base a le droit de perdre le cout d'une image ou deux apres
+    # que le surplus est tombe a zero, pas davantage.
+    depense = paquet["recherche"]["vitesses"]["endurance_par_image"]
+    assert r["videSurplus"]["base"] >= 100 - depense * 2, (
+        "la base a baisse avant le surplus : on depense d'abord ce qui revient gratuitement"
+    )
+    assert 0 < r["videSurplus"]["images"] < 400
+    assert r["apresLaNuit"] == 0, "une nuit rend le souffle, pas l'avance achetee"
+
+
 def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
     """⚠️ Ce qui s'achete, c'est la DUREE du sprint, jamais sa vitesse.
 

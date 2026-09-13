@@ -126,7 +126,7 @@ const Entites = (function () {
     const p = B.partie;
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
-      vie: p.vie, vieMax: 100, endurance: 100, cafeine: 0, arme: p.arme || 'poings',
+      vie: p.vie, vieMax: 100, endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
     });
     B.joueur = j;
@@ -603,10 +603,18 @@ const Entites = (function () {
     // reste ce qu'il est (2,1 contre 1,9 au policier), seule la DEPENSE baisse.
     // La minuterie, elle, s'ecoule dans `Missions.maj` — meme au volant.
     const cafe = j.cafeine > 0 ? B.defs.economie.cafe.depense : 1;
-    if (veutCourir && axe.mag > 0 && j.endurance > 0) {
+    if (veutCourir && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
       vitesse = v.joueur_sprint;
-      j.endurance = Math.max(0, j.endurance - v.endurance_par_image * cafe);
+      // ⚠️ Le SURPLUS part en premier : c'est la seule part de cette barre
+      // qu'on ne peut pas reprendre en s'arretant, donc la seule qui vaille ce
+      // qu'on l'a payee au comptoir. La base, elle, remonte toute seule.
+      const cout = v.endurance_par_image * cafe;
+      const surSurplus = Math.min(j.surplus || 0, cout);
+      j.surplus = (j.surplus || 0) - surSurplus;
+      j.endurance = Math.max(0, j.endurance - (cout - surSurplus));
     } else {
+      // ⚠️ La regeneration ne touche JAMAIS au surplus : c'est ce qui fait la
+      // difference entre une barre qui se remplit seule et une avance achetee.
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }
     if (j.etat === 'attaque') vitesse *= 0.45;    // on frappe en marchant, pas en courant

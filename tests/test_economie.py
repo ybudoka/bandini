@@ -50,6 +50,30 @@ def test_la_bouffe_redonne_du_souffle_et_la_poutine_vaut_son_prix():
     assert economie.TARIFS["poutine_pv"] > economie.TARIFS["hotdog_pv"]
 
 
+def test_le_surplus_de_souffle_est_un_reglage_de_poursuite():
+    """⚠️ Le souffle remonte TOUT SEUL de 0,24 par image des qu'on arrete de
+    courir : une barre vide se remplit en sept secondes, et une poutine a 18 $
+    rendait 70 points qu'on aurait eus gratuitement en s'arretant quatre
+    secondes. Le surplus est ce que la regeneration ne peut pas donner.
+
+    Son plafond n'est donc pas un reglage de confort mais de POURSUITE : le
+    joueur sprinte a 2,1, le policier court a 1,9, et chaque point de surplus
+    est de l'avance qu'on ne peut pas lui reprendre. Ce test refait le calcul —
+    il rougit si l'un des trois nombres bouge sans les autres."""
+    v = recherche.VITESSES
+    surplus = economie.SOUFFLE["surplus_max"]
+    assert 0 < surplus <= v["endurance"], "un surplus plus gros que la barre elle-meme"
+    # Le plein de surplus, en secondes de sprint — cafe compris, puisque le cafe
+    # divise la depense et double donc ce que le surplus vaut.
+    secondes = surplus / (v["endurance_par_image"] * economie.CAFE["depense"]) / 60
+    assert secondes <= economie.SOUFFLE["surplus_secondes_max"], (
+        f"{secondes:.1f} s de sprint gratuit sous cafe : la police ne rattrape plus personne"
+    )
+    # Et il vaut la peine : au moins une poutine doit pouvoir en donner un plein
+    # morceau, sinon le comptoir promet une avance qu'il ne donne pas.
+    assert economie.TARIFS["poutine_souffle"] >= surplus / 2
+
+
 def test_le_cafe_fait_courir_plus_longtemps_sans_courir_plus_vite():
     """⚠️ Le cafe n'achete que de la DUREE.
 
