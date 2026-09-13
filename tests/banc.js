@@ -174,6 +174,19 @@ function banc(corps) {
     L.Entites.indexer();
     return p;
   }
+  /** Pose un char stationne a (dx, dy) du joueur, cap `angle`, et reindexe. */
+  function char(slug, dx, dy, angle) {
+    const j = L.B.joueur;
+    const v = L.Vehicules.creer(slug, j.x + dx, j.y + dy, angle || 0, { etat: 'stationne' });
+    L.Entites.indexer();
+    return v;
+  }
+  /** La premiere rangee de voie « > » a la colonne 14 (milieu d'un bloc, loin d'une ligne d'arret). */
+  function ligneDroite() {
+    const c = L.Monde.carte;
+    for (let y = 0; y < c.h; y++) if (c.voie[y][14] === '>') return { x: 14 * L.TT + 8, y: y * L.TT + 8 };
+    return null;
+  }
   /** Tourne le joueur vers une cible (le sens compte : l'arc est devant). */
   function viser(cible) {
     const j = L.B.joueur;
@@ -193,7 +206,7 @@ function banc(corps) {
   }
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
-                   poser: poser, viser: viser,
+                   poser: poser, viser: viser, char: char, ligneDroite: ligneDroite,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d') };
 
   // Le demarrage est asynchrone (fetch) : on attend la promesse du jeu.

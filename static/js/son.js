@@ -108,7 +108,7 @@ const Son = (function () {
     });
   }
 
-  /** Joue l'echantillon `slug` s'il est charge. Rend la source, ou null. */
+  /** Joue l'echantillon `slug` s'il est charge. Rend { source, gain }, ou null. */
   function echantillon(slug, options) {
     if (!pret()) return null;
     const liste = tampons.get(slug);
@@ -123,7 +123,7 @@ const Son = (function () {
     gain.gain.value = (def ? def.volume : 1) * ((options && options.volume) || 1);
     source.connect(gain).connect(maitre);
     source.start(ctx.currentTime);
-    return source;
+    return { source: source, gain: gain, base: def ? def.volume : 1 };
   }
 
   function joue(slug) { return echantillon(slug) !== null; }
@@ -132,12 +132,21 @@ const Son = (function () {
   function boucle(slug, actif, volume) {
     const courante = boucles.get(slug);
     if (actif && !courante) {
-      const source = echantillon(slug, { boucle: true, volume: volume });
-      if (source) boucles.set(slug, source);
+      const jouee = echantillon(slug, { boucle: true, volume: volume });
+      if (jouee) boucles.set(slug, jouee);
     } else if (!actif && courante) {
-      try { courante.stop(); } catch (e) { /* deja finie */ }
+      try { courante.source.stop(); } catch (e) { /* deja finie */ }
       boucles.delete(slug);
     }
+  }
+
+  /** Regle une boucle en marche : volume (0..1) et hauteur (1 = normale).
+      C'est ce qui fait monter le moteur dans les tours. */
+  function reglerBoucle(slug, volume, hauteur) {
+    const courante = boucles.get(slug);
+    if (!courante) return;
+    if (volume !== undefined) courante.gain.gain.value = courante.base * volume;
+    if (hauteur !== undefined && courante.source.playbackRate) courante.source.playbackRate.value = hauteur;
   }
 
   function boucleActive(slug) { return boucles.has(slug); }
@@ -165,7 +174,7 @@ const Son = (function () {
 
   return {
     init, reveiller, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
-    chargerEchantillons, echantillon, joue, boucle, boucleActive,
+    chargerEchantillons, echantillon, joue, boucle, boucleActive, reglerBoucle,
     get contexte() { return ctx; },
     get charges() { return tampons.size; },
   };

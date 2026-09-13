@@ -474,7 +474,7 @@ const Entites = (function () {
     if (e.saigne % 60 === 0) {
       e.vie -= reactions.degats_saignement;
       goutte(e.x, e.y);
-      if (e.vie <= 0 && e.vivant) tuer(e, e.menace);
+      if (e.vie <= 0 && e.vivant) { if (e.type === 'joueur') Missions.hopital(e.menace); else tuer(e, e.menace); }
     }
   }
 
@@ -502,7 +502,9 @@ const Entites = (function () {
     if (opts.saigne) e.saigne = Math.min(B.defs.pietons.reactions.saignement_images, opts.saigne);
     if (e !== B.joueur) sang(e.x, e.y, opts.saigne ? 6 : 3);
     Son.SFX.touche();
-    if (e.vie <= 0) {
+    if (e.vie <= 0 && e.type === 'joueur') {
+      Missions.hopital(source);
+    } else if (e.vie <= 0) {
       if (opts.assomme) assommer(e);
       else tuer(e, source);
     } else if (e.type === 'pieton') {
@@ -682,6 +684,7 @@ const Entites = (function () {
         B.stats.images++;
         continue;
       }
+      if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage') {
         const def = Combat.armeDef(e.arme);
         const c = Atlas.cuirePeintre('objet|' + (def ? def.sprite : 'poings'), 16, 10, function (g, w, h) {

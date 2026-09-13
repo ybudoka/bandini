@@ -95,22 +95,121 @@ const Missions = (function () {
     return false;
   }
 
+  // --- L'hopital : on ne meurt pas, on paie ------------------------------------------
+
+  /** Le joueur tombe : fondu, reveil a l'hopital, facture, armes gardees. */
+  function hopital(source) {
+    const j = B.joueur;
+    if (!j || j.hospitalise) return;
+    j.hospitalise = true;
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    j.vie = 1; j.vx = 0; j.vy = 0; j.roule = 0; j.etat = 'flane';
+    const facture = factureHopital(B.partie.argent);
+    payer(facture, 'HOPITAL');
+    B.partie.stats.hospitalisations = (B.partie.stats.hospitalisations || 0) + 1;
+    Hud.fondu(150, 'REVEIL A L’HOPITAL — ' + facture + ' $');
+    Police.remiseAZero();
+    if (taxi.etape) taxi.abandonner();
+    const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+    setTimeoutJeu(60, function () {
+      if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
+      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100;
+      Entites.dansLaCarte(j);
+      Monde.centrerCamera(j.x, j.y);
+      j.hospitalise = false;
+    });
+  }
+
+  //: Des minuteries en images de jeu (pas setTimeout : le banc n'a pas d'horloge).
+  const minuteries = [];
+  function setTimeoutJeu(images, fn) { minuteries.push({ t: images, fn: fn }); }
+  function majMinuteries() {
+    for (let i = minuteries.length - 1; i >= 0; i--) {
+      if (--minuteries[i].t <= 0) { const m = minuteries.splice(i, 1)[0]; m.fn(); }
+    }
+  }
+
+  // --- Le taxi : un client, une destination, un pourboire selon la douceur ----------
+
+  const taxi = {
+    etape: null,           // null | 'attente' | 'course'
+    client: null, destination: null, distance: 0, chocsDepart: 0, t: 0, courses: 0,
+
+    /** Le klaxon dans un taxi : on prend un client, ou on n'a rien a faire. */
+    klaxon: function (v) {
+      if (v.slug !== 'taxi' || taxi.etape) return false;
+      const place = Entites.placeDeNaissance();
+      const arch = Entites.archetypeDeRue();
+      const x = place ? place.x : v.x + Math.cos(v.angle) * 80, y = place ? place.y : v.y + Math.sin(v.angle) * 80;
+      const client = Entites.creerPieton(x, y, arch);
+      client.etat = 'fige'; client.cri = 9999; client.client = true;
+      taxi.client = client; taxi.etape = 'attente'; taxi.t = 0;
+      Hud.message('UN CLIENT ATTEND');
+      return true;
+    },
+
+    maj: function () {
+      if (!taxi.etape) return;
+      const j = B.joueur, v = j.dansVehicule;
+      taxi.t++;
+      if (!v || v.slug !== 'taxi' || v.etat === 'epave') { taxi.abandonner('COURSE PERDUE'); return; }
+      if (taxi.etape === 'attente') {
+        const c = taxi.client;
+        if (!c || !c.vivant) { taxi.abandonner('CLIENT PERDU'); return; }
+        if (dist2(v.x, v.y, c.x, c.y) < 40 * 40 && Math.abs(v.vitesse) < 0.4) {
+          Entites.retirer(c);
+          taxi.client = null;
+          const lieux = Monde.carte.points.filter(function (p) { return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200; });
+          const lieu = lieux[Math.floor(B.rng() * lieux.length)] || Monde.carte.points[0];
+          taxi.destination = { x: lieu.x * TT + 8, y: lieu.y * TT + 8, nom: lieu.nom };
+          taxi.distance = Math.hypot(taxi.destination.x - v.x, taxi.destination.y - v.y);
+          taxi.chocsDepart = v.chocs;
+          taxi.etape = 'course';
+          Hud.message('DIRECTION : ' + lieu.nom.toUpperCase(), 180);
+          Son.SFX.porte();
+        }
+        return;
+      }
+      const d = taxi.destination;
+      if (dist2(v.x, v.y, d.x, d.y) < 44 * 44 && Math.abs(v.vitesse) < 0.4) {
+        const tarifs = B.defs.economie.tarifs;
+        const chocs = v.chocs - taxi.chocsDepart;
+        const douceur = Math.max(0, 1 - chocs * 0.34);
+        const prix = Math.round(tarifs.taxi_base + tarifs.taxi_par_tuile * (taxi.distance / TT));
+        const pourboire = Math.round(tarifs.taxi_pourboire_max * douceur);
+        encaisser(prix + pourboire, pourboire ? 'COURSE + ' + pourboire + ' $ DE POURBOIRE' : 'COURSE (CONDUITE BRUTALE)');
+        taxi.courses++;
+        B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;
+        taxi.etape = null; taxi.destination = null;
+      }
+    },
+
+    abandonner: function (raison) {
+      if (taxi.client) { taxi.client.etat = 'flane'; taxi.client.cri = 0; taxi.client.client = false; }
+      taxi.client = null; taxi.destination = null; taxi.etape = null;
+      if (raison) Hud.message(raison);
+    },
+  };
+
   function nouveauJour() {
     if (typeof Hud !== 'undefined') Hud.message('JOUR ' + B.partie.jour);
   }
 
   function sauvegarderPartie() {
     const p = B.partie, j = B.joueur;
-    if (j) { p.x = Math.round(j.x); p.y = Math.round(j.y); p.vie = j.vie; p.arme = j.arme; }
+    if (j) { p.x = Math.round(j.x); p.y = Math.round(j.y); p.vie = Math.max(1, j.vie); p.arme = j.arme; }
     p.empreinte = B.defs.empreinte;
     return Sauvegarde.ecrire(p);
   }
 
   function maj() {
+    majMinuteries();
+    taxi.maj();
     if (B.t % 600 === 0 && B.etat === 'jeu') sauvegarderPartie();
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
-           commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, maj };
+           commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
+           setTimeoutJeu, taxi, maj };
 })();

@@ -34,10 +34,21 @@ const Monde = (function () {
     }
     const portes = new Map();
     (def.portes || []).forEach(function (p) { portes.set(p.x + ',' + p.y, p); });
+    // Chaque tuile de croisement connait son croisement : un char a la ligne
+    // d'arret demande a QUEL feu il obeit.
+    const croisements = new Map();
+    (def.intersections || []).forEach(function (inter, i) {
+      inter.i = i;
+      inter.decalage = hash2(inter.x, inter.y) % 600;
+      for (let y = inter.y; y < inter.y + inter.h; y++) {
+        for (let x = inter.x; x < inter.x + inter.l; x++) croisements.set(x + ',' + y, inter);
+      }
+    });
     carte = {
       def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende,
       solide: solide, route: route, morceaux: new Map(), visibles: new Set(),
-      portesParTuile: portes, mini: null,
+      portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
+      intersections: def.intersections || [],
       lampes: (def.lampes || []).map(function (l) { return { x: l.x * TT + 8, y: l.y * TT + 2, r: 44, c: 'rgba(255,214,130,0.55)' }; }),
       portes: def.portes || [],
       points: def.points_interet || [],
@@ -89,6 +100,36 @@ const Monde = (function () {
   /** Une porte a cette tuile ? (index : on interroge a chaque image) */
   function porteA(tx, ty) {
     return carte.portesParTuile.get(tx + ',' + ty) || null;
+  }
+
+  function fleche(tx, ty) {
+    if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return '.';
+    return carte.voie[ty][tx];
+  }
+
+  /** Le sens d'une ligne d'arret ('>' '<' '^' 'v'), ou null. */
+  function sensArret(tx, ty) { return carte.arrets[tx + ',' + ty] || null; }
+
+  function intersectionA(tx, ty) { return carte.croisements.get(tx + ',' + ty) || null; }
+
+  /** Le feu est-il vert pour qui roule dans ce sens vers ce croisement ?
+      ⚠️ Un croisement en T ou en L n'a pas de feu : on y passe a vue. */
+  function feuVert(inter, sens) {
+    if (!inter || inter.bras.length < 4) return true;
+    const t = B.defs.conduite.trafic;
+    const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
+    const phase = (B.t + inter.decalage) % cycle;
+    const nordSud = sens === '^' || sens === 'v';
+    const moitie = phase < cycle / 2;
+    // Premiere moitie : nord-sud roule. L'orange ferme la fin de chaque moitie.
+    const dansMoitie = moitie ? phase : phase - cycle / 2;
+    if (dansMoitie >= t.feu_vert_images) return false;
+    return nordSud === moitie;
+  }
+
+  function estRampe(tx, ty) {
+    const p = carte && carte.legende[glyphe(tx, ty)];
+    return !!(p && p.rampe);
   }
 
   /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */
@@ -261,6 +302,7 @@ const Monde = (function () {
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
     charger, glyphe, solidite, bloque, estRoute, ligneLibre, porteA, zoneA,
+    fleche, sensArret, intersectionA, feuVert, estRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
     miniCarte, couleurMini,
     get carte() { return carte; },

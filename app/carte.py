@@ -552,6 +552,11 @@ class _Chantier:
             self.rect(x, zy, largeur, zh, "," if genre == "maisons" else ".")
             for parcelle in self._parcelles(x, zy, largeur, zh, mini):
                 parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
+            if genre == "gang" and largeur >= 12:
+                # Deux rampes dans la cour : le premier saut du jeu.
+                rx = x + largeur // 2 - 4
+                self.rect(rx, by + bh - 2, 2, 1, "R")
+                self.rect(rx + 6, by + bh - 2, 2, 1, "R")
             if genre == "gang":
                 # Une cour cloturee, avec une entree pour les chars.
                 ouverture = self.des.entier(2, max(3, largeur - 7))

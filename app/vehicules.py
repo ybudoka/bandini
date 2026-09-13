@@ -81,6 +81,49 @@ CATALOGUE: list[Vehicule] = [
 
 CLASSES = ("auto", "moto", "camion", "bateau")
 
+#: Le trafic : combien de chars vivent dans la bulle du joueur, et comment un
+#: conducteur regarde devant lui. Les feux durent en images (60 par seconde).
+TRAFIC = {
+    "vehicules_max": 9,           # en circulation, dans la bulle
+    "stationnes_max": 6,          # a l'arret sur les stationnements
+    "regard_tuiles": 4,           # a quelle distance un conducteur regarde devant
+    "distance_securite_px": 34,   # plus pres que ca, il freine
+    "vitesse_ville": 0.55,        # fraction de la vitesse max en circulation
+    "patience_images": 200,       # bloque plus longtemps : il force le passage
+    "feu_vert_images": 420,
+    "feu_orange_images": 60,
+    "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle
+    "oubli_px": 560,
+}
+
+#: Ce qui arrive quand un char touche quelque chose. ⚠️ Les degats se
+#: calculent sur la VITESSE RELATIVE : un choc a 4 px/image contre un mur fait
+#: aussi mal que deux chars a 2 px/image l'un contre l'autre.
+PHYSIQUE = {
+    "sous_pas_px": 3.0,           # au-dessus, on decoupe le deplacement
+    "cercles": 3,                 # la chaine de cercles qui represente un char
+    "choc_vitesse_min": 1.0,      # sous ca, un contact n'est pas un choc
+    "choc_degats_par_px": 7,
+    "choc_rebond": 0.35,
+    "renverse_vitesse_min": 1.2,  # sous ca, un pieton est bouscule, pas renverse
+    "renverse_degats_par_px": 28,
+    "fumee_sous": 0.5,            # fraction des PV
+    "feu_sous": 0.2,
+    "feu_degats_par_seconde": 4,
+    "explosion_rayon_px": 60,
+    "explosion_degats": 90,
+    "epave_secondes": 40,
+    "alarme_secondes": 12,
+    "ejection_vitesse_min": 2.6,  # moto : au-dessus, le choc ejecte le pilote
+    "rampe_impulsion": 0.42,      # vz = vitesse * ca en sortant d'une rampe
+    "gravite": 0.18,
+    "portee_monter_px": 30,       # a quelle distance on peut ouvrir une portiere
+}
+
+
+def exporter_conduite() -> dict:
+    return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE)}
+
 
 def par_slug(slug: str) -> Vehicule | None:
     for vehicule in CATALOGUE:

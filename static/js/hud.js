@@ -156,6 +156,16 @@ const Hud = (function () {
       ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(px, py, 2, 2);
       B.stats.rects += 2;
     }
+    // Le taxi : le client (bleu) ou la destination (or) clignote.
+    const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
+    if (cible && (B.t >> 4) % 2 === 0) {
+      const bx = MINI.x + Math.round(cible.x / TT) - sx, by = MINI.y + Math.round(cible.y / TT) - sy;
+      if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) {
+        ctx.fillStyle = Missions.taxi.etape === 'attente' ? '#6f9fd8' : '#e8b33c';
+        ctx.fillRect(bx - 1, by - 1, 3, 3);
+        B.stats.rects++;
+      }
+    }
     // Le joueur par-dessus tout le reste : c'est lui qu'on cherche des yeux.
     const jx = MINI.x + Math.round(j.x / TT) - sx, jy = MINI.y + Math.round(j.y / TT) - sy;
     ctx.fillStyle = '#101018'; ctx.fillRect(jx - 1, jy - 1, 4, 4);
@@ -181,8 +191,21 @@ const Hud = (function () {
     if (B.etat === 'jeu' || B.etat === 'pause') {
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
-      barre(ctx, 6, 13, 60, 3, j ? j.endurance / 100 : 1, '#e8b33c');
+      const v = j && j.dansVehicule;
+      // Au volant, la barre jaune est celle du char, pas l'endurance.
+      barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1), v ? '#7fb3d8' : '#e8b33c');
       noter('vie', 6, 6, 60, 10);
+      if (v) {
+        const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);
+        texte(ctx, kmh + ' KM/H', 70, 8, '#efe6d0', 1);
+        if (Missions.taxi.etape === 'course' && Missions.taxi.destination) {
+          const d = Missions.taxi.destination;
+          const dist = Math.round(Math.hypot(d.x - v.x, d.y - v.y) / TT);
+          texte(ctx, 'TAXI : ' + d.nom.toUpperCase() + ' ' + dist + 'M', 70, 16, '#e8b33c', 1);
+        } else if (Missions.taxi.etape === 'attente') {
+          texte(ctx, 'TAXI : UN CLIENT ATTEND', 70, 16, '#e8b33c', 1);
+        }
+      }
       miniCarte(ctx);
       // Argent, etoiles, heure a droite.
       // ⚠️ En tactile, les boutons PAUSE et PLEIN ECRAN sont poses par-dessus

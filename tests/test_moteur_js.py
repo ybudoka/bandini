@@ -305,7 +305,8 @@ def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
         L.Jeu.commencer();
         o.frame(600);
         const j = L.B.joueur;
-        const pietons = L.B.entites.filter(function (e) { return e.type === 'pieton'; });
+        // ⚠️ Les marchands derriere leur kiosque ne sont pas la foule.
+        const pietons = L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; });
         const loin = pietons.filter(function (e) {
             return Math.hypot(e.x - j.x, e.y - j.y) > L.Entites.BULLE_OUBLI + 80;
         });
@@ -315,7 +316,7 @@ def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
         j.x = c.pxW - 200; j.y = c.pxH - 200;
         L.Monde.centrerCamera(j.x, j.y);
         o.frame(600);
-        const apres = L.B.entites.filter(function (e) { return e.type === 'pieton'; });
+        const apres = L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; });
         const proches = apres.filter(function (e) {
             return Math.hypot(e.x - j.x, e.y - j.y) < L.Entites.BULLE_OUBLI;
         });
@@ -323,7 +324,8 @@ def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
                  apres: apres.length, proches: proches.length, max: L.Entites.MAX_PIETONS,
                  sol: apres.map(function (e) { return L.Monde.solidite(Math.floor(e.x / L.TT), Math.floor(e.y / L.TT)); }) };
     }""")
-    assert 4 <= r["avant"] <= r["max"], "la rue est vide ou bondee"
+    # +1 : une mere nait avec son petit, et la bulle compte les vivants AVANT.
+    assert 4 <= r["avant"] <= r["max"] + 1, "la rue est vide ou bondee"
     assert r["loin"] == 0, "des pietons trainent hors de la bulle"
     assert r["vus"] > 0, "personne a l'ecran"
     assert r["proches"] == r["apres"] > 0, "la foule n'a pas suivi le joueur"
@@ -705,3 +707,272 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
     assert r["argent"] == 200 - tarifs["compagnie"]
     assert r["vie"] == 50 + tarifs["compagnie_pv"]
     assert r["fondu"] is True, "ca doit passer par un fondu, pas par une scene"
+
+
+# --- M3 : vehicules ----------------------------------------------------------
+
+
+def test_on_vole_un_char_et_on_en_descend(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(41);
+        const j = L.B.joueur;
+        const v = o.char('auto', 24, 0, 0);
+        const avantVol = L.B.partie.stats.volees;
+        o.tape('KeyE', 2);
+        const dedans = { conducteur: v.conducteur === j, dansVehicule: j.dansVehicule === v,
+                         dessine: j.dessine, contexte: o.elements.tactile.querySelectorAll('[data-a]')[0].textContent };
+        o.tape('KeyE', 2);
+        return { dedans: dedans, dehors: { conducteur: v.conducteur, dansVehicule: j.dansVehicule, dessine: j.dessine },
+                 volees: L.B.partie.stats.volees - avantVol, vole: v.vole,
+                 loin: Math.hypot(j.x - v.x, j.y - v.y) };
+    }""")
+    assert r["dedans"]["conducteur"] and r["dedans"]["dansVehicule"] and r["dedans"]["dessine"] is False
+    assert r["dedans"]["contexte"] == "KLAXON", "les boutons tactiles n'ont pas change d'etiquette"
+    assert r["dehors"]["conducteur"] is None and r["dehors"]["dansVehicule"] is None and r["dehors"]["dessine"] is True
+    assert r["volees"] == 1 and r["vole"] is True
+    assert 8 < r["loin"] < 40, "le joueur doit descendre A COTE du char"
+
+
+def test_la_vitesse_max_et_la_marche_arriere(banc, paquet):
+    auto = next(v for v in paquet["vehicules"] if v["slug"] == "auto")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const x0 = v.x;
+        o.touche('KeyW'); o.frame(300); o.relacher('KeyW');
+        const pleine = v.vitesse, x1 = v.x;
+        o.touche('KeyS'); o.frame(200);
+        const recul = v.vitesse;
+        o.relacher('KeyS');
+        return { pleine: pleine, avance: x1 - x0, recul: recul, y: v.y - d.y,
+                 sol: L.Monde.solidite(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT)) };
+    }""")
+    assert r["pleine"] > auto["vitesse_max"] * 0.95, f"{r['pleine']} px/image, la voiture n'atteint pas sa vitesse"
+    assert r["pleine"] <= auto["vitesse_max"] + 1e-6
+    assert r["avance"] > 800, "elle n'a pas avance"
+    assert -auto["vitesse_recul"] - 1e-6 <= r["recul"] < -0.3, "la marche arriere ne marche pas"
+    assert abs(r["y"]) < 4, "elle a devie en ligne droite"
+    assert r["sol"] == 0
+
+
+def test_le_frein_a_main_fait_deriver(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function virage(freinMain) {
+            const j = L.B.joueur, d = o.ligneDroite();
+            j.x = d.x; j.y = d.y;
+            if (j.dansVehicule) L.Vehicules.descendre(j, true);
+            const v = o.char('auto', 0, 0, 0);
+            v.vitesse = 3.5; v.vx = 3.5; v.vy = 0;
+            L.Vehicules.monter(j, v);
+            let ecartMax = 0;
+            for (let i = 0; i < 25; i++) {
+                L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1, freinMain: freinMain });
+                const capVitesse = Math.atan2(v.vy, v.vx);
+                ecartMax = Math.max(ecartMax, Math.abs(L.Vehicules.courbeBraquage ? (capVitesse - v.angle) : 0));
+            }
+            L.Entites.retirer(v);
+            return ecartMax;
+        }
+        return { sans: virage(false), avec: virage(true) };
+    }""")
+    assert r["avec"] > r["sans"] * 1.3, f"la derive au frein a main ({r['avec']:.2f}) ne depasse pas la conduite normale ({r['sans']:.2f})"
+
+
+def test_un_mur_fait_mal_mais_ne_se_traverse_pas(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, -Math.PI / 2);   // plein nord : le bord de la carte
+        L.Vehicules.monter(j, v);
+        const vie0 = v.vie;
+        o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
+        let dedans = false;
+        for (const c of L.Vehicules.cercles(v)) {
+            if (L.Monde.bloque(Math.floor(c.x / L.TT), Math.floor(c.y / L.TT), L.Monde.MASQUE_VEHICULE)) dedans = true;
+        }
+        return { perdu: vie0 - v.vie, chocs: v.chocs, dedans: dedans, vitesse: Math.abs(v.vitesse), y: v.y };
+    }""")
+    assert r["perdu"] > 0, "le mur n'a pas fait de degats"
+    assert r["chocs"] >= 1
+    assert r["dedans"] is False, "le char est entre dans le mur"
+    assert r["vitesse"] < 1.5
+    assert r["y"] > 0
+
+
+def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
+    maximum = paquet["conduite"]["trafic"]["vehicules_max"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(43);
+        o.frame(1200);
+        const suivis = new Map();
+        L.B.entites.forEach(function (e) { if (e.type === 'vehicule' && e.conducteur === 'trafic') suivis.set(e.id, { x: e.x, y: e.y, d: 0 }); });
+        for (let i = 0; i < 1800; i++) {
+            o.frame(1);
+            L.B.entites.forEach(function (e) {
+                const s = suivis.get(e.id);
+                if (!s) return;
+                s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y;
+            });
+        }
+        const chars = L.B.entites.filter(function (e) { return e.type === 'vehicule'; });
+        let dansUnMur = 0, horsRoute = 0;
+        chars.forEach(function (v) {
+            const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
+            if (L.Monde.solidite(tx, ty) === 1) dansUnMur++;
+            if (v.conducteur === 'trafic' && !L.Monde.estRoute(tx, ty)) horsRoute++;
+        });
+        const distances = Array.from(suivis.values()).map(function (s) { return s.d; });
+        const bouges = distances.filter(function (d) { return d > 300; }).length;
+        return { roulent: chars.filter(function (v) { return v.conducteur === 'trafic'; }).length,
+                 suivis: distances.length, bouges: bouges, dansUnMur: dansUnMur, horsRoute: horsRoute,
+                 total: chars.length, epaves: chars.filter(function (v) { return v.etat === 'epave'; }).length,
+                 ms: L.B.stats.ms };
+    }""")
+    assert r["roulent"] >= 3, "le trafic ne se peuple pas"
+    assert r["roulent"] <= maximum
+    assert r["dansUnMur"] == 0, "un char est dans un mur"
+    assert r["horsRoute"] <= 1, f"{r['horsRoute']} chars du trafic hors de la route"
+    assert r["epaves"] == 0, "le trafic s'entretue tout seul"
+    assert r["suivis"] >= 3 and r["bouges"] >= r["suivis"] * 0.6, \
+        f"{r['bouges']}/{r['suivis']} chars ont roule : le trafic se bloque"
+
+
+def test_renverser_un_pieton_est_un_crime(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(44);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const victime = o.poser('passant', 90, 0);
+        const enfant = o.poser('enfant', 90, 30);
+        const crimes = L.B.partie.stats.crimes;
+        v.vitesse = 3.5; v.vx = 3.5; v.vy = 0;
+        o.touche('KeyW'); o.frame(60); o.relacher('KeyW');
+        return { vie: victime.vie, max: victime.vieMax, etat: victime.etat, crimes: L.B.partie.stats.crimes - crimes,
+                 enfant: enfant.vie === enfant.vieMax && enfant.vivant };
+    }""")
+    assert r["vie"] < r["max"], "le pieton n'a pas ete renverse"
+    assert r["crimes"] >= 1, "renverser quelqu'un n'est pas compte comme un crime"
+    assert r["enfant"] is True, "un enfant a ete touche par un char"
+
+
+def test_un_char_explose_et_brule_ce_qui_l_entoure(banc, paquet):
+    ph = paquet["conduite"]["physique"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(45);
+        const v = o.char('auto', 60, 0, 0);
+        const voisin = o.poser('ouvrier', 60, 18);
+        voisin.courage = 0;
+        const loin = o.poser('passant', 60, 300);
+        L.Entites.indexer();
+        L.Vehicules.endommager(v, 9999, L.B.joueur);
+        return { etat: v.etat, vie: v.vie, voisin: voisin.vie, voisinMax: voisin.vieMax,
+                 loin: loin.vie === loin.vieMax, decals: L.B.decals.length,
+                 particules: L.B.particules.length, crimes: L.B.partie.stats.crimes };
+    }""")
+    assert r["etat"] == "epave" and r["vie"] == 0
+    assert r["voisin"] < r["voisinMax"], "l'explosion n'a pas touche le voisin"
+    assert ph["explosion_rayon_px"] < 300
+    assert r["loin"] is True, "l'explosion a porte a 300 px"
+    assert r["particules"] > 20 and r["decals"] >= 1
+    assert r["crimes"] >= 1, "faire exploser un char n'est pas un crime ?"
+
+
+def test_le_carjacking_se_voit_toujours(banc, paquet):
+    gravite = paquet["recherche"]["delits"]["carjacking"]["etoiles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(46);
+        const j = L.B.joueur;
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        const v = o.char('auto', 20, 0, 0);
+        v.conducteur = 'trafic'; v.etat = 'roule';
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+        const temoins = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin'; }).length;
+        return { conducteur: v.conducteur === j, temoins: temoins,
+                 chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100,
+                 gravite: L.B.defs.recherche.chaleur_par_gravite };
+    }""")
+    assert r["conducteur"] is True
+    assert r["temoins"] == 1, "la victime du carjacking doit sortir et temoigner"
+    assert r["chaleur"] == gravite * r["gravite"], "le carjacking n'a pas chauffe la police"
+
+
+def test_les_feux_alternent_et_les_t_n_en_ont_pas(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const inters = L.Monde.carte.intersections;
+        const croix = inters.find(function (i) { return i.bras.length === 4; });
+        const te = inters.find(function (i) { return i.bras.length === 3; });
+        const cycle = 2 * (L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images);
+        const releves = [];
+        for (let t = 0; t < cycle; t += 30) {
+            L.B.t = t - croix.decalage;
+            releves.push([L.Monde.feuVert(croix, '^'), L.Monde.feuVert(croix, '>')]);
+        }
+        const deuxVerts = releves.filter(function (r) { return r[0] && r[1]; }).length;
+        const nsVert = releves.filter(function (r) { return r[0]; }).length;
+        const eoVert = releves.filter(function (r) { return r[1]; }).length;
+        return { deuxVerts: deuxVerts, nsVert: nsVert, eoVert: eoVert, total: releves.length,
+                 teVert: L.Monde.feuVert(te, '^') && L.Monde.feuVert(te, '>') };
+    }""")
+    assert r["deuxVerts"] == 0, "les deux sens ont ete verts en meme temps"
+    assert r["nsVert"] > 0 and r["eoVert"] > 0
+    assert abs(r["nsVert"] - r["eoVert"]) <= 1, "un sens est favorise"
+    assert r["teVert"] is True, "un T n'a pas de feu : on y passe a vue"
+
+
+def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(47);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('taxi', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const argent0 = L.B.partie.argent;
+        o.tape('Space', 2);                              // klaxon : un client
+        const t = L.Missions.taxi;
+        const etape1 = t.etape, client = t.client;
+        if (client) { v.x = client.x + 10; v.y = client.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+        o.frame(3);
+        const etape2 = t.etape, dest = t.destination;
+        if (dest) { v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+        o.frame(3);
+        return { etape1: etape1, etape2: etape2, etape3: t.etape, gain: L.B.partie.argent - argent0, courses: t.courses };
+    }""")
+    assert r["etape1"] == "attente" and r["etape2"] == "course" and r["etape3"] is None
+    assert r["courses"] == 1
+    assert r["gain"] >= tarifs["taxi_base"] + tarifs["taxi_pourboire_max"], \
+        "une course sans un choc doit donner le pourboire plein"
+
+
+def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.argent = 400;
+        L.Entites.blesser(j, 9999, null, {});
+        const pendant = { vivant: j.vivant, fondu: !!L.B.fondu };
+        o.frame(90);
+        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        return { pendant: pendant, vie: j.vie, max: j.vieMax, argent: L.B.partie.argent,
+                 loin: Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT), etat: L.B.etat };
+    }""")
+    assert r["pendant"]["vivant"] is True and r["pendant"]["fondu"] is True
+    assert r["vie"] == r["max"], "le joueur ne s'est pas reveille en pleine forme"
+    assert r["argent"] < 400, "l'hopital n'a pas facture"
+    assert r["loin"] < 48, "le joueur ne s'est pas reveille a l'hopital"
+    assert r["etat"] == "jeu"

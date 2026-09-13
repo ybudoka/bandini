@@ -73,6 +73,62 @@ SPRITES.enfant = {
   },
 };
 
+/* Les vehicules, vus de dessus, l'AVANT A DROITE (angle 0 = est). Un seul
+   dessin par type : l'atlas le fait tourner en 32 caps a la cuisson. `c` est
+   la carrosserie (echangee par couleur), `x`/`y` les accents de toit (enseigne
+   du taxi, gyrophare de la police), `l` les phares, `t` les feux arriere. */
+const GRILLE_AUTO = [
+      '.....rrrr.............rrrr......',
+      '.....rrrr.............rrrr......',
+      '..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+      '.kcccccccccccccccccccccccssssck.',
+      '.ktccccvvkccccccccccvvvkccccclk.',
+      '.ktccccvvkccccccccccvvvkccccclk.',
+      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
+      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
+      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
+      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
+      '.ktccccvvkccccccccccvvvkccccclk.',
+      '.ktccccvvkccccccccccvvvkccccclk.',
+      '.kcccccccccccccccccccccccssssck.',
+      '..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+      '.....rrrr.............rrrr......',
+      '.....rrrr.............rrrr......',
+    ];
+const GRILLE_MOTO = [
+      '....................',
+      '....................',
+      '........hhh..k......',
+      '.rrrrkkkpppkkklrrrr.',
+      '.rrrrtccpppcckcrrrr.',
+      '.rrrrtccpppcckcrrrr.',
+      '.rrrrkkkpppkkklrrrr.',
+      '........hhh..k......',
+      '....................',
+      '....................',
+    ];
+
+SPRITES.auto = {
+  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' },
+  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+};
+SPRITES.taxi = {
+  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  pal: { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', s: '#00000030' },
+  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+};
+SPRITES.police = {
+  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  pal: { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' },
+  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+};
+SPRITES.moto = {
+  w: 20, h: 10, ancre: [10, 5], rotations: 32,
+  pal: { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', h: '#2c2c2c', p: '#3a3a4a', l: '#fff3b0', t: '#ff4b3e' },
+  swaps: ['c'], poses: { base: [GRILLE_MOTO] },
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {

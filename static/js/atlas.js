@@ -71,6 +71,32 @@ const Atlas = (function () {
     return cuit;
   }
 
+  /** Cuit les `n` rotations d'un sprite (pose `base`, image 0) : un seul
+      dessin de char, 32 caps. Le canevas est carre, de cote la diagonale du
+      dessin, pour qu'aucun cap ne soit rogne ; il est ancre a son centre.
+
+      ⚠️ Le lissage doit rester eteint sur le canevas TOURNE : un char tourne
+      avec `imageSmoothingEnabled` a true devient une tache floue. */
+  function cuireRotations(nom, def, swaps, n) {
+    const cle = 'rot|' + nom + '|' + n + '|' + (swaps ? JSON.stringify(swaps) : '');
+    if (cache.has(cle)) return cache.get(cle);
+    const base = cuire(nom, def, swaps).poses.base[0];
+    const cote = Math.ceil(Math.hypot(def.w, def.h)) + 2;
+    const images = [];
+    for (let i = 0; i < n; i++) {
+      const c = Base.nouveauCanvas(cote, cote);
+      const ctx = c.getContext('2d');
+      ctx.imageSmoothingEnabled = false;
+      ctx.translate(cote / 2, cote / 2);
+      ctx.rotate(i * Math.PI * 2 / n);
+      ctx.drawImage(base, -def.w / 2, -def.h / 2);
+      images.push(c);
+    }
+    const cuit = { cote: cote, n: n, images: images };
+    cache.set(cle, cuit);
+    return cuit;
+  }
+
   /** Cuit une tuile 16x16 par un peintre procedural (variante = entier stable). */
   function cuireTuile(glyphe, variante, peintre) {
     const cle = 'tuile|' + glyphe + '|' + variante;
@@ -115,5 +141,5 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, cuireTuile, cuirePeintre, texte, largeurTexte, vider, get taille() { return cache.size; } };
+  return { valider, cuire, cuireRotations, cuireTuile, cuirePeintre, texte, largeurTexte, vider, get taille() { return cache.size; } };
 })();

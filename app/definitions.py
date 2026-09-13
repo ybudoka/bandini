@@ -22,6 +22,7 @@ def assembler() -> dict:
         "tuile_px": carte.TUILE_PX,
         "audio": audio.exporter(),
         "vehicules": vehicules.CATALOGUE,
+        "conduite": vehicules.exporter_conduite(),
         "armes": armes.CATALOGUE,
         "ordre_armes": armes.ORDRE_CYCLE,
         "economie": economie.exporter(),
