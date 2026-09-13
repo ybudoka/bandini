@@ -737,29 +737,38 @@ const Entites = (function () {
 
   // --- Dessin ------------------------------------------------------------------------------
 
+  /** Le nom de la pose a dessiner : la marche, ou le coup qui part. */
+  function nomDePose(e) {
+    if (e.etat === 'attaque' && e.phase && e.phase !== 'anticipation') return 'frappe_' + e.face;
+    return e.face;
+  }
+
   function imageDe(e) {
     const def = SPRITES[e.sprite];
     if (!def) return null;
     const cuit = Atlas.cuire(e.sprite, def, e.swaps);
-    const poses = cuit.poses[e.face] || cuit.poses.bas;
+    const nom = nomDePose(e);
+    const poses = cuit.poses[nom] || cuit.poses[e.face] || cuit.poses.bas;
     const bouge = Math.abs(e.vx) + Math.abs(e.vy) > 0.05;
     // ⚠️ Une foulee de 9 px, pas 7 : a 7, les jambes tournaient plus vite que
     // le corps n'avancait et tout le monde avait l'air de courir.
     const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
-    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre };
+    const main = def.mains ? (def.mains[cuit.poses[nom] ? nom : e.face] || null) : null;
+    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: nom.endsWith('gauche') };
   }
 
   // --- La pose : ce que le corps fait en plus de marcher ---------------------------
 
-  /** Pure : (entite) -> { dx, dy, rot, echelleY, bras }. L'elan d'un coup
+  /** Pure : (entite) -> { dx, dy, rot, echelleY, arme }. L'elan d'un coup
       (on recule, on se jette, on revient), le chancellement quand on est
       touche, la roulade qui tourne, le dos qui se courbe pour ramasser — et
-      le BRAS, avec l'arme au bout, dont la longueur suit les trois temps.
+      l'ARME tenue, qui se dessine dans la main de la pose (le bras, lui, est
+      dans le sprite : la pose de coup le tend).
 
       ⚠️ Tout part d'ici, et rien d'autre ne connait ces chiffres : un test
       lit la pose sans dessiner, et le dessin ne fait qu'appliquer. */
   function pose(e) {
-    const p = { dx: 0, dy: 0, rot: 0, echelleY: 1, bras: null };
+    const p = { dx: 0, dy: 0, rot: 0, echelleY: 1, arme: null };
     const cx = Math.cos(e.angle), cy = Math.sin(e.angle);
     if (e.roule > 0) {
       p.rot = (1 - e.roule / Combat.ROULADE_IMAGES) * Math.PI * 2 * (cx >= 0 ? 1 : -1);
@@ -771,37 +780,25 @@ const Entites = (function () {
     if (e.etat === 'attaque' && e.phase && arme) {
       const elan = e.phase === 'anticipation' ? -2 : (e.phase === 'actif' ? 3 : 1);
       p.dx += Math.round(cx * elan); p.dy += Math.round(cy * elan * 0.6);
-      const longueur = arme.type === 'tir' ? 7 : (e.phase === 'anticipation' ? 2 : (e.phase === 'actif' ? 9 : 5));
-      p.bras = { longueur: longueur, angle: e.angle, arme: arme, actif: e.phase === 'actif' };
-    } else if (arme && arme.slug !== 'poings' && e.vivant && !e.dansVehicule && e.etat !== 'assomme') {
-      // L'arme se voit AUSSI au repos : on sait ce qu'on tient. Une lame
-      // pend vers l'avant-bas, un canon pointe devant.
-      p.bras = { longueur: 4, angle: arme.type === 'tir' ? e.angle : e.angle * 0.5 + Math.PI / 4, arme: arme, actif: false };
     }
+    // L'arme se voit dans la main, au repos comme au coup : on sait ce qu'on tient.
+    if (arme && arme.slug !== 'poings' && e.vivant && !e.dansVehicule && e.etat !== 'assomme') p.arme = arme;
     return p;
   }
 
-  function dessinerBras(ctx, e, p, cx, cy) {
-    const b = p.bras;
-    const peau = (e.swaps && e.swaps.s) || '#e8b088';
-    const droite = Math.cos(b.angle) >= 0;
-    const sx = Math.round(e.x - cx + p.dx + (droite ? 3 : -3));
-    const sy = Math.round(e.y - e.z - cy + p.dy - 8);
-    const ex = Math.round(sx + Math.cos(b.angle) * b.longueur);
-    const ey = Math.round(sy + Math.sin(b.angle) * b.longueur * 0.8);
-    ctx.strokeStyle = peau; ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(ex, ey); ctx.stroke();
-    if (b.arme.slug === 'poings') {
-      ctx.fillStyle = peau; ctx.fillRect(ex - 1, ey - 1, 3, 3);
-      B.stats.rects++;
-      return;
-    }
-    const image = Atlas.cuirePeintre('objet|' + b.arme.sprite, 16, 10, function (g, w, h) {
-      OBJETS[OBJETS[b.arme.sprite] ? b.arme.sprite : 'defaut'](g, w, h);
+  /** L'arme dans la main de la pose : `img.main` = [x, y, angle] dans la grille. */
+  function dessinerArme(ctx, e, img, p, cx, cy) {
+    if (!p.arme || !img.main) return;
+    const image = Atlas.cuirePeintre('objet|' + p.arme.sprite, 16, 10, function (g, w, h) {
+      OBJETS[OBJETS[p.arme.sprite] ? p.arme.sprite : 'defaut'](g, w, h);
     });
+    const mx = img.miroir ? (SPRITES[e.sprite].w - 1 - img.main[0]) : img.main[0];
+    const angle = img.miroir ? Math.PI - img.main[2] : img.main[2];
+    const x = Math.round(e.x - cx + p.dx - img.ancre[0] + mx), y = Math.round(e.y - e.z - cy + p.dy - img.ancre[1] + img.main[1]);
     ctx.save();
-    ctx.translate(ex, ey);
-    ctx.rotate(b.angle);
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    if (img.miroir) ctx.scale(1, -1);
     ctx.drawImage(image, -2, -5);
     ctx.restore();
     B.stats.images++;
@@ -888,11 +885,11 @@ const Entites = (function () {
       if (e.vivant) ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;
       const p = pose(e);
-      // Le bras passe DERRIERE le corps quand on regarde vers le haut.
-      const brasDerriere = p.bras && Math.sin(p.bras.angle) < -0.4;
-      if (p.bras && brasDerriere) dessinerBras(ctx, e, p, cx, cy);
+      // L'arme passe DERRIERE le corps quand on regarde vers le haut.
+      const derriere = e.face === 'haut';
+      if (derriere) dessinerArme(ctx, e, img, p, cx, cy);
       dessinerCorps(ctx, e, img, p, cx, cy);
-      if (p.bras && !brasDerriere) dessinerBras(ctx, e, p, cx, cy);
+      if (!derriere) dessinerArme(ctx, e, img, p, cx, cy);
       B.stats.images += 2;
       // La bulle du temoin : on doit VOIR qu'on a ete vu.
       if (e.cri > 0 && e.vivant) {
@@ -914,6 +911,6 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, imageDe, pose,
+    dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
   };
 })();

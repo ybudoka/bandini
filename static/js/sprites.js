@@ -9,6 +9,13 @@ const SPRITES = {
     w: 12, h: 16, ancre: [6, 15],
     pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#c0392b', p: '#2a2a3a', o: '#ffffff', b: '#5a3a1a' },
     swaps: ['c', 'h', 's', 'p'],
+    // La main qui tient l'arme, par pose : [x, y] dans la grille, et l'angle
+    // de l'arme (0 = vers la droite, PI/2 = vers nous). Les poses « cote »
+    // valent pour « droite » ; « gauche » se miroite.
+    mains: {
+      bas: [10, 10, Math.PI / 2 + 0.6], haut: [10, 10, -Math.PI / 2 + 0.4], droite: [8, 10, 0.9],
+      frappe_bas: [6, 9, Math.PI / 2], frappe_haut: [10, 3, -Math.PI / 2], frappe_droite: [11, 8, 0],
+    },
     poses: {
       bas: [
         ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..',
@@ -26,6 +33,12 @@ const SPRITES = {
         ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..',
          '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kpk..kppk.', '..kbk..kbbk.', '..kk..kkkk..'],
       ],
+      // ⚠️ Le coup est une VRAIE pose : le bras du sprite se tend vers la
+      // cible. Un bras dessine par-dessus faisait un troisieme bras (Martin).
+      // Une image par direction ; « cote » se miroite comme la marche.
+      frappe_bas: [['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kckksskckc.', '.kckksskckc.', '.kskkkkkksc.', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.']],
+      frappe_haut: [['....kkkk....', '...khhhhk...', '..khhhhhhkss', '..khhhhhhkss', '..khhhhhhkck', '..khsssshkck', '...ksssskck.', '..kcccccckck', '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.']],
+      frappe_cote: [['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....', '...kcccck...', '...kccccccss', '...kcckkkkkk', '...kcck.....', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kbk.kbk..', '...kkk.kkk..']],
       // ⚠️ Une seule image, et l'entite pose `face = 'couche'` : c'est ainsi
       // qu'un KO et un mort se dessinent sans faire tourner un canevas.
       couche: [

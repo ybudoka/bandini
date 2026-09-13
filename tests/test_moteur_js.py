@@ -1503,36 +1503,45 @@ def test_le_journal_du_matin_raconte_hier(banc):
 # --- Les gestes : le corps bouge quand on agit ----------------------------
 
 
-def test_le_coup_a_un_elan_et_un_bras(banc):
+def test_le_coup_a_un_elan_et_une_pose_de_coup(banc):
+    """⚠️ Le bras est DANS le sprite : la pose de coup le tend. Un bras dessine
+    par-dessus faisait un troisieme bras (Martin)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
         L.Entites.regarder(j, 1, 0);
-        const repos = L.Entites.pose(j);
+        const repos = { pose: L.Entites.nomDePose(j), arme: L.Entites.pose(j).arme, dx: L.Entites.pose(j).dx };
         L.Combat.frapper(j, false);
         const phases = {};
         for (let i = 0; i < 40 && j.etat === 'attaque'; i++) {
             const p = L.Entites.pose(j);
-            if (!phases[j.phase]) phases[j.phase] = { dx: p.dx, bras: p.bras ? p.bras.longueur : null };
+            if (!phases[j.phase]) phases[j.phase] = { dx: p.dx, pose: L.Entites.nomDePose(j), image: !!L.Entites.imageDe(j).canvas };
             L.Entites.indexer(); L.Combat.maj();
         }
-        // Une batte au repos se voit dans la main ; un coup l'allonge.
+        // Toutes les directions ont leur pose de coup, gauche par miroir.
+        const cuit = L.Atlas.cuire('joueur', L.SPRITES.joueur, null);
+        const poses = ['frappe_bas', 'frappe_haut', 'frappe_droite', 'frappe_gauche'].filter(function (n) { return !!cuit.poses[n]; });
+        // Une batte se voit dans la main, au repos et au coup ; la main est celle de la pose.
         L.B.partie.armes.batte = { mun: null, usure: 0 }; j.arme = 'batte';
-        const batteRepos = L.Entites.pose(j);
+        const mainRepos = L.Entites.imageDe(j).main;
         L.Combat.frapper(j, false);
         for (let i = 0; i < 40 && j.phase !== 'actif'; i++) { L.Entites.indexer(); L.Combat.maj(); }
-        const batteActive = L.Entites.pose(j);
-        // On dessine sans planter, bras compris.
+        const mainCoup = L.Entites.imageDe(j).main;
+        const armeTenue = L.Entites.pose(j).arme && L.Entites.pose(j).arme.slug;
+        L.Entites.regarder(j, -1, 0);
+        const gauche = L.Entites.imageDe(j);
         L.Jeu.rendre();
-        return { repos: repos, phases: phases, batteRepos: batteRepos.bras && batteRepos.bras.arme.slug,
-                 batteLongueurRepos: batteRepos.bras && batteRepos.bras.longueur,
-                 batteActive: batteActive.bras && batteActive.bras.longueur, images: L.B.stats.images };
+        return { repos: repos, phases: phases, poses: poses, mainRepos: mainRepos, mainCoup: mainCoup, armeTenue: armeTenue,
+                 gauche: { pose: gauche.pose, miroir: gauche.miroir }, images: L.B.stats.images };
     }""")
-    assert r["repos"]["bras"] is None and r["repos"]["dx"] == 0, "les poings au repos ne se dessinent pas"
+    assert r["repos"]["pose"] == "droite" and r["repos"]["arme"] is None and r["repos"]["dx"] == 0
+    assert r["phases"]["anticipation"]["pose"] == "droite", "on arme le coup dans la pose de marche"
+    assert r["phases"]["actif"]["pose"] == "frappe_droite" and r["phases"]["actif"]["image"] is True
     assert r["phases"]["anticipation"]["dx"] < 0 < r["phases"]["actif"]["dx"], "on recule puis on se jette"
-    assert r["phases"]["anticipation"]["bras"] < r["phases"]["actif"]["bras"], "le bras s'allonge au moment du coup"
-    assert r["batteRepos"] == "batte", "une arme tenue doit se voir au repos"
-    assert r["batteActive"] > r["batteLongueurRepos"]
+    assert sorted(r["poses"]) == ["frappe_bas", "frappe_droite", "frappe_gauche", "frappe_haut"]
+    assert r["armeTenue"] == "batte"
+    assert r["mainRepos"] != r["mainCoup"], "la main du coup n'est pas celle du repos"
+    assert r["gauche"] == {"pose": "frappe_gauche", "miroir": True}
     assert r["images"] > 0
 
 

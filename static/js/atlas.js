@@ -57,14 +57,17 @@ const Atlas = (function () {
         return c;
       });
     }
-    // « gauche » = miroir de « cote » si le sprite n'en definit pas.
-    if (def.poses.cote && !def.poses.gauche) {
-      poses.gauche = def.poses.cote.map(function (grille) {
+    // « gauche » = miroir de « cote » si le sprite n'en definit pas — et de
+    // meme pour toute pose « X_cote » (frappe_cote → frappe_gauche/droite).
+    for (const pose in def.poses) {
+      const base = pose === 'cote' ? '' : (pose.endsWith('_cote') ? pose.slice(0, -5) + '_' : null);
+      if (base === null || def.poses[base + 'gauche']) continue;
+      poses[base + 'gauche'] = def.poses[pose].map(function (grille) {
         const c = Base.nouveauCanvas(def.w, def.h);
         peindreGrille(c.getContext('2d'), grille, pal, def.w, def.h, true);
         return c;
       });
-      poses.droite = poses.cote;
+      poses[base + 'droite'] = poses[pose];
     }
     const cuit = { w: def.w, h: def.h, ancre: def.ancre || [def.w >> 1, def.h - 1], poses: poses };
     cache.set(cle, cuit);
