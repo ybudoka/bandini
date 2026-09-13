@@ -134,7 +134,13 @@ n'a que son moteur.
 qu'au joueur, seule exception autorisée hors route). Un piéton ne pose pas le pied sur la
 chaussée : il traverse **au passage**, quand les chars de cette rue sont au rouge (ou, sans
 feu, quand aucun n'approche) ; poussé sur la rue par un char, il regagne le trottoir. Il
-sort des portes et y rentre parfois. Les croisements à quatre bras ont des **feux** (deux
+sort des portes et y rentre parfois. Sur un **boulevard** (deux voies dans le même sens), un
+char bloqué par un piéton planté sur la chaussée, une épave ou une auto arrêtée **se déporte**
+— par la gauche si elle est libre, sinon par la droite — au lieu d'attendre derrière : il vise
+la tuile d'à côté et les rails font le virage. Il ne se déporte jamais dans une voie occupée
+(couloir vérifié deux tuiles derrière, cinq devant), jamais à l'approche d'une ligne d'arrêt,
+et il reste sous la vitesse qui renverse tant qu'il longe l'obstacle. Il ne revient pas dans
+sa voie ensuite : la nouvelle en est une. Les croisements à quatre bras ont des **feux** (deux
 lanternes), la tige d'un **T** a un **STOP** (arrêt complet, puis passage si la boîte est
 libre), et un char cède aux piétons engagés. Des **cyclistes** roulent avec le trafic ; on
 peut prendre leur vélo (ils tombent et témoignent) — pas de moteur, pas de radio.
@@ -275,7 +281,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 6 | `monde.js` | carte active depuis le paquet, `solide()`, `ligneLibre()` (DDA), A* à budget (2/image, cap 800 nœuds, file, repli ligne droite), feux, cache de morceaux 256 px, caméra amortie avec avance, horloge jour-nuit, intérieurs (pile `B.exterieur`), mini-carte |
 | 7 | `entites.js` | structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, **deux** index spatiaux 64 px (le décor ne bouge jamais : bâti une fois ; le reste rebâti à chaque image), cercle-vs-tuiles, piétons (flâne, figé, fuit, **témoin**, riposte, assommé, aveuglé, mort), gangs, bulle 300–520 px, armes de fortune semées, ramassages, particules, décalques, tri par y (les morts d'abord) |
 | 8 | `combat.js` | arcs de mêlée (anticipation → actif → repos), coup fort, esquive, projectiles, fusil à plombs, fronde en cloche, extincteur, réactions, saignement, mort, sang (plafond 150 décalques), lâcher/ramasser, cycle d'armes, visée assistée |
-| 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
+| 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, **déport dans la voie d'à côté** sur un boulevard pour dépasser ou contourner un piéton, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital |
 | 11 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
 | 12 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |

@@ -998,20 +998,26 @@ def test_la_fille_de_la_brume_tient_son_coin(banc):
         const fille = o.poser('racoleuse', 20, 0);
         const passante = o.poser('passante', -20, 0);
         fille.etat = 'flane'; passante.etat = 'flane';
-        const p0 = { x: fille.x, y: fille.y }, q0 = { x: passante.x, y: passante.y };
-        let ecartFille = 0, ecartPassante = 0, arrets = 0;
+        const p0 = { x: fille.x, y: fille.y };
+        let ecartFille = 0, cheminPassante = 0, arrets = 0;
+        let px = passante.x, py = passante.y;
         for (let i = 0; i < 80; i++) {
             o.frame(30);
             if (fille.etat === 'arret') arrets++;
             ecartFille = Math.max(ecartFille, Math.hypot(fille.x - p0.x, fille.y - p0.y));
-            ecartPassante = Math.max(ecartPassante, Math.hypot(passante.x - q0.x, passante.y - q0.y));
+            cheminPassante += Math.hypot(passante.x - px, passante.y - py);
+            px = passante.x; py = passante.y;
         }
         return { poste: !!fille.poste, arrets: arrets,
-                 fille: Math.round(ecartFille), passante: Math.round(ecartPassante) };
+                 fille: Math.round(ecartFille), passante: Math.round(cheminPassante) };
     }""")
     assert r["poste"] is True, "elle n'a pas de coin a tenir"
     assert r["fille"] < 80, "en 40 s elle a quitte son coin"
-    assert r["passante"] > 120, "⚠️ une passante, elle, doit continuer de flaner"
+    # ⚠️ On mesure le CHEMIN de la passante, pas son ecart au depart : une
+    # flaneuse qui revient sur ses pas fait un long chemin et un petit ecart.
+    # L'ecart tombait a 113 px sur certaines graines — le seuil jugeait le
+    # hasard du trajet, pas le fait qu'elle flane.
+    assert r["passante"] > 400, "⚠️ une passante, elle, doit continuer de flaner"
     assert r["arrets"] > 30, "elle marche plus qu'elle n'attend"
 
 
@@ -1416,6 +1422,111 @@ def test_le_trafic_reste_dans_sa_voie(banc):
     # de regagner sa voie. Au-dela, c'est le trafic qui coupe les coins.
     assert r["horsRoute"] <= r["releves"] * 0.01, f"{r['horsRoute']} releves de trafic hors de la route"
     assert r["tournes"] > 3, "le trafic ne tourne jamais"
+
+
+def test_un_char_se_deporte_pour_contourner_un_pieton(banc):
+    """Sur un boulevard, un pieton plante au milieu de la voie ne bloque plus :
+    le char se tasse dans la voie d'a cote — par la gauche — et repart."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(61);
+        const T = L.TT;
+        const b = o.boulevard(true);
+        if (!b) return { trouve: false };
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+        const y0 = b.y;
+        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        v.vitesse = 1.2;
+        // Un passant fige au milieu de la chaussee, cinq tuiles devant.
+        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
+        p.etat = 'fige';
+        let yMin = y0, depasse = false, renverse = false, voie = null;
+        for (let i = 0; i < 400; i++) {
+            L.Entites.indexer();
+            L.Vehicules.majConducteur(v);
+            v.x += v.vx; v.y += v.vy;
+            yMin = Math.min(yMin, v.y);
+            if (!p.vivant) renverse = true;
+            if (depasse) continue;
+            if (v.x > p.x + 24) {
+                depasse = true;
+                voie = L.Monde.fleche(Math.floor(v.x / T), Math.floor(v.y / T));   // ou roule-t-il en doublant ?
+            }
+        }
+        return { trouve: true, depasse: depasse, deports: v.deports || 0, renverse: renverse,
+                 gauche: Math.round(y0 - yMin), voie: voie };
+    }""")
+    assert r["trouve"], "aucun boulevard a deux voies dans le meme sens sur la carte"
+    assert r["deports"] >= 1, "le char n'a jamais essaye de se tasser"
+    assert r["gauche"] >= 10, f"il s'est tasse de {r['gauche']} px : ce n'est pas la voie de gauche"
+    assert r["depasse"], "le char n'a jamais depasse le pieton"
+    assert r["renverse"] is False, "⚠️ on contourne le pieton, on ne le fauche pas"
+    assert r["voie"] == ">", "en doublant, le char n'etait pas dans une voie de son sens"
+
+
+def test_sur_une_rue_a_deux_voies_le_char_attend(banc):
+    """⚠️ Le pendant du test precedent : sans voie parallele dans son sens, se
+    deporter serait rouler a contresens. Le char attend, comme avant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(62);
+        const T = L.TT;
+        const b = o.boulevard(false);
+        if (!b) return { trouve: false };
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+        const y0 = b.y;
+        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        v.vitesse = 1.2;
+        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
+        p.etat = 'fige';
+        let ecart = 0;
+        for (let i = 0; i < 180; i++) {
+            L.Entites.indexer();
+            L.Vehicules.majConducteur(v);
+            v.x += v.vx; v.y += v.vy;
+            ecart = Math.max(ecart, Math.abs(v.y - y0));
+        }
+        return { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart),
+                 arrete: Math.abs(v.vx) + Math.abs(v.vy) < 0.05, avant: v.x < p.x };
+    }""")
+    assert r["trouve"], "aucune rue a une seule voie par sens sur la carte"
+    assert r["deports"] == 0, "le char s'est deporte a contresens"
+    assert r["ecart"] <= 4, f"il a quitte sa voie de {r['ecart']} px"
+    assert r["arrete"] and r["avant"], "le char n'a pas attendu derriere le pieton"
+
+
+def test_on_ne_se_deporte_pas_dans_une_voie_occupee(banc):
+    """La voie d'a cote n'est libre que si personne n'y roule — devant COMME
+    derriere. Un char qui arrive vite par la gauche a la priorite ; celui qui
+    est coince reste derriere son pieton plutot que de lui couper la route."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(63);
+        const T = L.TT;
+        const b = o.boulevard(true);
+        if (!b) return { trouve: false };
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+        const y0 = b.y;
+        const v = L.Vehicules.creer('auto', b.x, y0, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        v.vitesse = 1.2;
+        const p = L.Entites.creerPieton(b.x + 5 * T, y0, null);
+        p.etat = 'fige';
+        // Un char arrete dans la voie de gauche, juste a cote du pieton.
+        const mur = L.Vehicules.creer('auto', b.x + 5 * T, y0 - T, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        mur.vitesse = 0;
+        let ecart = 0;
+        for (let i = 0; i < 180; i++) {
+            L.Entites.indexer();
+            L.Vehicules.majConducteur(v);
+            v.x += v.vx; v.y += v.vy;
+            ecart = Math.max(ecart, Math.abs(v.y - y0));
+        }
+        return { trouve: true, deports: v.deports || 0, ecart: Math.round(ecart), avant: v.x < p.x };
+    }""")
+    assert r["trouve"], "aucun boulevard a deux voies dans le meme sens sur la carte"
+    assert r["deports"] == 0, "le char s'est tasse dans une voie occupee"
+    assert r["ecart"] <= 4, f"il a quitte sa voie de {r['ecart']} px"
+    assert r["avant"], "le char a traverse le pieton au lieu d'attendre"
 
 
 def test_les_feux_et_les_stops_sont_poses(banc):

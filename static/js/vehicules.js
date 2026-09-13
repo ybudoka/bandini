@@ -10,7 +10,11 @@
    tuile par tuile. Sur un croisement, il choisit une sortie ; a une ligne
    d'arret, il regarde le feu. Quand il veut tourner a gauche, il traverse le
    croisement avant de virer — parce qu'il cherche la voie dont la fleche va
-   dans son sens, et qu'elle est de l'autre cote. */
+   dans son sens, et qu'elle est de l'autre cote.
+
+   Sur un boulevard (deux voies dans le meme sens), un char bloque par un
+   pieton, une epave ou un char arrete ne reste pas derriere : il vise la
+   tuile d'a cote et se DEPORTE, par la gauche si elle est libre. */
 
 const Vehicules = (function () {
   'use strict';
@@ -43,7 +47,7 @@ const Vehicules = (function () {
       slug: slug, def: def, angle: angle || 0, vitesse: 0, vx: 0, vy: 0, z: 0, vz: 0,
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
-      patience: 0, force: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
+      patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
       vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite,
     }, options || {}));
     return v;
@@ -641,6 +645,69 @@ const Vehicules = (function () {
     return true;
   }
 
+  // --- Le deport : se tasser dans la voie d'a cote -----------------------------------
+  //
+  // Une rue a deux voies (un boulevard : `RUES_V`/`RUES_H` a 8) a DEUX tuiles
+  // cote a cote portant la meme fleche. Un char coince derriere un pieton
+  // arrete au milieu de la chaussee, une epave ou le char du joueur n'a alors
+  // aucune raison d'attendre : il se deporte, comme dans la vraie rue. Sur une
+  // rue a deux voies (largeur 6), il n'y a pas de voisine dans notre sens, et
+  // tout ce code se tait.
+
+  /** La voie d'a cote est-elle degagee ? On regarde un couloir qui va de DEUX
+      tuiles derriere a `depassement_tuiles` devant : un char qui arrive vite
+      par derriere dans cette voie compte autant qu'un char arrete dedans. Les
+      echantillons se chevauchent (un par tuile, rayon 13 px), le couloir est
+      donc continu : le centre d'un char ne peut pas s'y glisser entre deux. */
+  function voieLibre(v, tx, ty, p) {
+    const avant = trafic().depassement_tuiles;
+    for (let k = -2; k <= avant; k++) {
+      const x = (tx + p[0] * k) * TT + 8, y = (ty + p[1] * k) * TT + 8;
+      const gene = Entites.autour(x, y, TT * 0.8, function (e) {
+        return e !== v && (e.type === 'vehicule'
+          || ((e.type === 'pieton' || e.type === 'joueur') && e.vivant && !e.dansVehicule));
+      });
+      if (gene.length) return false;
+    }
+    return true;
+  }
+
+  /** Le pas lateral vers une voie parallele libre — a GAUCHE d'abord (on
+      depasse par la gauche), a droite sinon. null s'il n'y en a pas.
+
+      ⚠️ On exige que la voisine ET la tuile suivante portent notre fleche :
+      c'est ce qui interdit de se deporter juste avant une ligne d'arret ou
+      dans une boite de croisement, ou le deport couperait la trajectoire de
+      quelqu'un qui a la priorite. */
+  function voieDeDepassement(v, tx, ty) {
+    const p = PAS_FLECHE[v.sens];
+    if (!p) return null;
+    for (const q of [[p[1], -p[0]], [-p[1], p[0]]]) {
+      if (Monde.fleche(tx + q[0], ty + q[1]) !== v.sens) continue;
+      if (Monde.fleche(tx + q[0] + p[0], ty + q[1] + p[1]) !== v.sens) continue;
+      if (!voieLibre(v, tx + q[0], ty + q[1], p)) continue;
+      return q;
+    }
+    return null;
+  }
+
+  /** Viser la voie d'a cote, une tuile plus loin : les rails font le reste —
+      le char y glisse en diagonale et, arrive au centre, `prochaineCible`
+      relit la fleche sous lui et continue tout droit dans sa nouvelle voie. */
+  function changerDeVoie(v) {
+    if (v.deportT > 0) return true;                      // deja en train de se tasser
+    if (v.deportFroid > 0) return false;                 // on vient de le faire : pas de zigzag
+    const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    if (Monde.fleche(tx, ty) !== v.sens) return false;   // en boite ou a l'arret : pas ici
+    const q = voieDeDepassement(v, tx, ty);
+    if (!q) return false;
+    const p = PAS_FLECHE[v.sens];
+    v.cible = centre(tx + q[0] + p[0], ty + q[1] + p[1]);
+    v.deportT = trafic().depassement_images;
+    v.deports = (v.deports || 0) + 1;
+    return true;
+  }
+
   /** Quelque chose devant ? Rend la distance, ou Infinity. */
   function obstacleDevant(v) {
     const t = trafic();
@@ -722,6 +789,8 @@ const Vehicules = (function () {
   function majConducteur(v) {
     const t = trafic();
     if (debloquer(v)) return;
+    if (v.deportT > 0 && --v.deportT === 0) v.deportFroid = t.depassement_images;
+    if (v.deportFroid > 0) v.deportFroid--;
     // L'escorte (Ti-Guy, M4) : elle te suit, et t'attend quand elle t'a rejoint.
     if (v.escorte && B.joueur && dist2(v.x, v.y, B.joueur.x, B.joueur.y) < 70 * 70) { rouler(v, 0); return; }
     if (!v.cible || (v.attendFeu && !v.cible.tx)) v.cible = prochaineCible(v);
@@ -733,7 +802,13 @@ const Vehicules = (function () {
       if (!v.cible) return;
     }
     const dx = v.cible.x - v.x, dy = v.cible.y - v.y;
-    if (dx * dx + dy * dy < 36) { v.cible = prochaineCible(v); if (!v.cible) return; }
+    if (dx * dx + dy * dy < 36) {
+      // Arrive : si c'etait la voie d'a cote, le deport est fini et on s'interdit
+      // le suivant un moment — sinon un char zigzague entre deux voies.
+      if (v.deportT > 0) { v.deportT = 0; v.deportFroid = t.depassement_images; }
+      v.cible = prochaineCible(v);
+      if (!v.cible) return;
+    }
     const voulu = angleVers(v.x, v.y, v.cible.x, v.cible.y);
     const ecart = ecartAngle(v.angle, voulu);
     let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville);   // sirene : bien plus vite
@@ -747,12 +822,20 @@ const Vehicules = (function () {
     if (ici === '+' || ici === 'S' || devant === '+' || devant === 'S') vitesseVoulue = Math.min(vitesseVoulue, v.poursuite ? 1.5 : 1.1);
     if (Math.abs(ecart) > 0.5) vitesseVoulue = Math.min(vitesseVoulue, 0.8);
     const obstacle = obstacleDevant(v);
-    if (obstacle < t.distance_securite_px) {
+    const proche = obstacle < t.distance_securite_px;
+    // ⚠️ On decide de se tasser DE LOIN (deux fois la distance de securite),
+    // pas au dernier moment : a une tuile du pieton, le deport serait un coup
+    // de volant a 45 degres. De loin, la diagonale se voit venir.
+    const deport = obstacle < t.distance_securite_px * 2 && changerDeVoie(v);
+    if (proche && !deport) {
       vitesseVoulue = 0;
       v.patience++;
       if (v.patience > t.patience_images) { v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) vitesseVoulue *= 0.5;
+      // ⚠️ Tant qu'on longe l'obstacle, on reste SOUS la vitesse qui renverse :
+      // on contourne un pieton plante sur la chaussee, on ne le fauche pas.
+      if (deport && proche) vitesseVoulue = Math.min(vitesseVoulue, physique().renverse_vitesse_min * 0.9);
       v.patience = 0;
     }
     if (v.force > 0) { v.force--; vitesseVoulue = Math.max(vitesseVoulue, v.def.vitesse_max * 0.25); }
@@ -874,7 +957,7 @@ const Vehicules = (function () {
 
   /** L'etat d'un char de trafic en trois lettres : ce qu'il attend, depuis combien de temps. */
   function etatCourt(v) {
-    let e = v.attendFeu ? 'FEU' : v.stopT !== undefined ? 'STOP' : v.attenteBoite > 0 ? 'BOITE' : v.enBoite ? 'DANS' : 'ROULE';
+    let e = v.attendFeu ? 'FEU' : v.stopT !== undefined ? 'STOP' : v.attenteBoite > 0 ? 'BOITE' : v.deportT > 0 ? 'DEPORT' : v.enBoite ? 'DANS' : 'ROULE';
     if (v.immobileT > 60) e += ' ' + Math.round(v.immobileT / 60) + 'S';
     return e;
   }
@@ -1011,6 +1094,7 @@ const Vehicules = (function () {
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
+    voieDeDepassement, voieLibre, changerDeVoie,
     croisementLibre, creerSignalisation, dessinerFeu, maj, dessinerUn,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };

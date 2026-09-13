@@ -94,6 +94,8 @@ TRAFIC = {
     "regard_tuiles": 4,           # a quelle distance un conducteur regarde devant
     "distance_securite_px": 34,   # plus pres que ca, il freine
     "vitesse_ville": 0.55,        # fraction de la vitesse max en circulation
+    "depassement_tuiles": 5,      # la voie d'a cote doit etre libre sur ce tant
+    "depassement_images": 90,     # apres un deport, on ne se redeporte pas avant
     "patience_images": 200,       # bloque plus longtemps : il force le passage
     "arret_images": 45,           # au STOP : on s'immobilise ce temps-la
     "priorite_pieton_px": 70,     # un pieton engage sur le passage : on attend

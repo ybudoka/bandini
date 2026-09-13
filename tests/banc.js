@@ -291,6 +291,29 @@ function banc(corps) {
     for (let y = 0; y < c.h; y++) if (c.voie[y][14] === '>') return { x: 14 * L.TT + 8, y: y * L.TT + 8 };
     return null;
   }
+  /** Une tuile de voie « > » avec dix tuiles droites devant — assez loin d'une
+      ligne d'arret pour qu'aucun feu ne vienne brouiller une mesure de trafic.
+      `double` : sa voisine du NORD va dans le meme sens (un boulevard, la voie
+      de GAUCHE existe, c'est par la qu'on depasse) ; sinon : aucune des deux
+      voisines n'y va (une rue a deux voies, une par sens). Rend null si la
+      carte n'en a pas. */
+  function boulevard(double) {
+    const c = L.Monde.carte;
+    for (let y = 3; y < c.h - 3; y++) {
+      for (let x = 3; x < c.w - 14; x++) {
+        if (c.voie[y][x] !== '>') continue;
+        const gauche = c.voie[y - 1][x] === '>';
+        if (double ? !gauche : (gauche || c.voie[y + 1][x] === '>')) continue;
+        let droit = true;
+        for (let k = 0; k <= 10; k++) {
+          if (c.voie[y][x + k] !== '>') droit = false;
+          if (double && c.voie[y - 1][x + k] !== '>') droit = false;
+        }
+        if (droit) return { tx: x, ty: y, x: x * L.TT + 8, y: y * L.TT + 8 };
+      }
+    }
+    return null;
+  }
   /** Tourne le joueur vers une cible (le sens compte : l'arc est devant). */
   function viser(cible) {
     const j = L.B.joueur;
@@ -310,7 +333,7 @@ function banc(corps) {
   }
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
-                   poser: poser, viser: viser, char: char, ligneDroite: ligneDroite,
+                   poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d'),
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).

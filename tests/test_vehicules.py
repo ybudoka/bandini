@@ -37,6 +37,11 @@ def test_le_trafic_et_la_physique_sont_bornes():
     assert 1 <= t["vehicules_max"] <= 30 and 0 <= t["stationnes_max"] <= 20
     assert 0.2 <= t["vitesse_ville"] <= 1.0
     assert t["feu_vert_images"] > t["feu_orange_images"] > 0
+    # ⚠️ On ne se deporte pas les yeux plus courts que devant soi : la voie
+    # d'a cote doit etre degagee au moins aussi loin qu'on regarde, sinon on
+    # se tasse derriere un char qu'on aurait vu en restant dans sa voie.
+    assert t["depassement_tuiles"] >= t["regard_tuiles"]
+    assert t["depassement_images"] > 0
     assert t["naissance_px"] < t["oubli_px"]
     assert 0 < ph["sous_pas_px"] <= 4, "un sous-pas plus grand qu'un rayon traverse les murs"
     assert ph["cercles"] >= 2
