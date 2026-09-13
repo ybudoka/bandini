@@ -158,9 +158,16 @@ function banc(corps) {
   function touche(code) { (ecouteurs.keydown || []).forEach(function (f) { f(evenement('keydown', { code: code })); }); }
   function relacher(code) { (ecouteurs.keyup || []).forEach(function (f) { f(evenement('keyup', { code: code })); }); }
   function tape(code, images) { touche(code); frame(1); relacher(code); frame(images || 1); }
-  function pad(axes, boutons) {
+  /** Branche une manette. `fiche` : { id, mapping } — `mapping: ''` imite une
+      manette Bluetooth que le navigateur ne reconnait pas. */
+  function pad(axes, boutons, fiche) {
     pads.length = 0;
-    if (axes) pads.push({ connected: true, axes: axes, buttons: (boutons || []).map(function (v) { return { pressed: v > 0.5, value: v }; }) });
+    if (axes) {
+      pads.push({ connected: true, axes: axes,
+                  id: (fiche && fiche.id) || 'Banc Pad',
+                  mapping: fiche && fiche.mapping !== undefined ? fiche.mapping : 'standard',
+                  buttons: (boutons || []).map(function (v) { return { pressed: v > 0.5, value: v }; }) });
+    }
   }
   function pointeur(type, x, y, id) { croix.dispatch(type, evenement(type, { clientX: x, clientY: y, pointerId: id || 1 })); }
   function bouton(a, type) { const b = boutonsTactiles.find(function (q) { return q.dataset.a === a; }); b.dispatch(type, evenement(type, { pointerId: 2 })); }

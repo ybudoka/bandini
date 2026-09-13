@@ -23,9 +23,31 @@ const Entree = (function () {
     muet: ['KeyM'],
     carte: ['KeyN'],
   };
-  const MAP_MANETTE = { 0: 'action', 1: 'esquive', 2: 'attaque', 3: 'arme', 4: 'arme', 5: 'attaque',
-                        8: 'carte', 9: 'pause', 12: 'haut', 13: 'bas', 14: 'gauche', 15: 'droite' };
+  //: La disposition d'une manette RECONNUE par le navigateur (`mapping:
+  //: "standard"`, W3C) : 0 le bouton du bas, 1 celui de droite, 2 celui de
+  //: gauche, 3 celui du haut, 4/5 les boutons d'epaule, 6/7 les gachettes,
+  //: 8 SELECT, 9 START, 12-15 la croix.
+  //:
+  //: ⚠️ Une manette Bluetooth que le navigateur NE reconnait pas rend
+  //: `mapping: ""` et numerote ses boutons comme elle veut — la meme manette
+  //: n'a pas les memes numeros sur le telephone et sur le Mac. Ca ne se devine
+  //: pas : l'ecran MANETTE des options fait REAPPRENDRE chaque bouton en
+  //: l'appuyant, et garde le resultat dans les options (`options.manette`).
+  const MANETTE_DEFAUT = {
+    action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
+    carte: [8], pause: [9], muet: [],
+    haut: [12], bas: [13], gauche: [14], droite: [15],
+  };
+  //: Le stick de marche, puis le gaz et le frein. Sur une manette reconnue ce
+  //: sont les gachettes 7 et 6 ; ailleurs, souvent des AXES — d'ou les deux
+  //: types, et le repos mesure au moment ou on les apprend (une gachette-axe
+  //: repose a -1 sur une manette et a 0 sur la suivante).
+  const AXES_DEFAUT = [0, 1];
+  const PEDALES_DEFAUT = { gaz: { type: 'bouton', i: 7 }, frein: { type: 'bouton', i: 6 } };
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
+  //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
+  //: celui-la » pendant un apprentissage.
+  const GESTE = 0.5;
   const TOUCHES_JEU = new Set([].concat.apply([], Object.values(MAP_TOUCHES)));
 
   const enfonce = {}, presse = {};       // clavier, par e.code
@@ -36,6 +58,11 @@ const Entree = (function () {
   let gaz = 0, frein = 0;
   let manetteVue = false, tactile = false, contexteCourant = 'pied';
   let nav = null, doc = null, fenetre = null;
+  let profil = null;                 // { boutons, axes, gaz, frein } — voir profilParDefaut
+  let parIndice = {};                // indice de bouton -> actions, refait avec le profil
+  let apprentissage = null;          // { quoi, fait, reference }
+  const ignores = {};                // le bouton qu'on vient d'apprendre, jusqu'au relachement
+  const info = { branchee: false, id: '', mapping: '', boutons: [], axes: [] };
 
   function poser(sac, a, v) {
     v = !!v;
@@ -72,33 +99,178 @@ const Entree = (function () {
 
   // --- Manette ----------------------------------------------------------------------
 
+  function profilParDefaut() {
+    const boutons = {};
+    for (const a in MANETTE_DEFAUT) boutons[a] = MANETTE_DEFAUT[a].slice();
+    return { boutons: boutons, axes: AXES_DEFAUT.slice(),
+             gaz: Object.assign({}, PEDALES_DEFAUT.gaz),
+             frein: Object.assign({}, PEDALES_DEFAUT.frein) };
+  }
+
+  /** Charge un profil de manette (celui des options, ou rien pour les defauts)
+      et refait la table `indice -> actions` que `lireManette` consulte. */
+  function reglerManette(p) {
+    profil = profilParDefaut();
+    if (p && p.boutons) {
+      for (const a in profil.boutons) {
+        if (Array.isArray(p.boutons[a])) profil.boutons[a] = p.boutons[a].slice();
+      }
+    }
+    if (p && Array.isArray(p.axes) && p.axes.length === 2) profil.axes = p.axes.slice();
+    for (const cle of ['gaz', 'frein']) {
+      const s = p && p[cle];
+      if (s && (s.type === 'bouton' || s.type === 'axe')) profil[cle] = Object.assign({}, s);
+    }
+    parIndice = {};
+    for (const a in profil.boutons) {
+      for (const i of profil.boutons[a]) (parIndice[i] = parIndice[i] || []).push(a);
+    }
+    return profil;
+  }
+
+  function profilManette() {
+    if (!profil) reglerManette(null);
+    return JSON.parse(JSON.stringify(profil));
+  }
+
+  function valeurBouton(p, i) {
+    const bt = p.buttons && p.buttons[i];
+    if (!bt) return 0;
+    return bt.value !== undefined && bt.value !== null ? bt.value : (bt.pressed ? 1 : 0);
+  }
+
+  /** Une pedale : un bouton analogique, ou un axe dont on a mesure le repos. */
+  function lirePedale(p, source) {
+    if (!source) return 0;
+    if (source.type !== 'axe') return valeurBouton(p, source.i);
+    const v = p.axes[source.i];
+    if (v === undefined || v === null) return 0;
+    const plage = (source.plein === undefined ? 1 : source.plein) - (source.repos || 0);
+    if (!plage) return 0;
+    return borner((v - (source.repos || 0)) / plage, 0, 1);
+  }
+
+  /** Le prochain bouton (ou, pour le gaz, le frein et le stick, le prochain
+      axe pousse) devient `quoi`. Rend une fonction qui annule l'attente.
+
+      ⚠️ Tant qu'on apprend, la manette ne COMMANDE plus rien : sans cela, le
+      bouton qu'on apprend valide aussi la ligne du menu ou on l'apprend. */
+  function apprendre(quoi, fait) {
+    apprentissage = { quoi: quoi, fait: fait || null, reference: null };
+    for (const a in vPad) vPad[a] = false;
+    return function () { apprentissage = null; };
+  }
+
+  function apprendEnCours() { return apprentissage ? apprentissage.quoi : null; }
+
+  function annulerApprentissage() { apprentissage = null; }
+
+  function poserAppris(quoi, source) {
+    if (!profil) reglerManette(null);
+    if (quoi === 'gaz' || quoi === 'frein') {
+      profil[quoi] = source;
+    } else if (quoi === 'stick') {
+      const i = source.i;
+      profil.axes = i % 2 === 0 ? [i, i + 1] : [i - 1, i];
+    } else if (source.type === 'bouton') {
+      // Un bouton ne fait qu'une chose : on le retire de partout ailleurs.
+      for (const a in profil.boutons) {
+        profil.boutons[a] = profil.boutons[a].filter(function (k) { return k !== source.i; });
+      }
+      profil.boutons[quoi] = [source.i];
+      ignores[source.i] = true;
+    } else {
+      return false;
+    }
+    reglerManette(profil);
+    return true;
+  }
+
+  /** Regarde ce qui a bouge depuis le debut de l'apprentissage. */
+  function ecouterApprentissage(p) {
+    const a = apprentissage;
+    const axes = (p.axes || []);
+    if (!a.reference) {
+      a.reference = { boutons: (p.buttons || []).map(function (_, i) { return valeurBouton(p, i); }),
+                      axes: axes.slice() };
+      return;
+    }
+    for (let b = 0; b < (p.buttons || []).length; b++) {
+      const avant = a.reference.boutons[b] || 0;
+      if (valeurBouton(p, b) > GESTE && avant <= GESTE) {
+        const source = { type: 'bouton', i: b };
+        const pose = poserAppris(a.quoi, source);
+        // ⚠️ On vide AVANT le rappel : un rappel qui enchaine (« tout
+        // reapprendre ») verrait sinon son propre apprentissage efface juste
+        // apres, et la suite s'arreterait au premier bouton.
+        apprentissage = null;
+        if (pose && a.fait) a.fait(source);
+        return;
+      }
+    }
+    if (a.quoi !== 'gaz' && a.quoi !== 'frein' && a.quoi !== 'stick') return;
+    for (let k = 0; k < axes.length; k++) {
+      const repos = a.reference.axes[k] === undefined ? 0 : a.reference.axes[k];
+      if (Math.abs(axes[k] - repos) > GESTE) {
+        const source = { type: 'axe', i: k, repos: repos, plein: axes[k] };
+        const pose = poserAppris(a.quoi, source);
+        apprentissage = null;
+        if (pose && a.fait) a.fait(source);
+        return;
+      }
+    }
+  }
+
   function lireManette() {
     if (!nav || !nav.getGamepads) return;
+    if (!profil) reglerManette(null);
     const etat = {};
     let branchee = false, sx = 0, sy = 0, g = 0, f = 0;
     const pads = nav.getGamepads() || [];
+    info.branchee = false; info.id = ''; info.mapping = ''; info.boutons = []; info.axes = [];
     for (let i = 0; i < pads.length; i++) {
       const p = pads[i];
       if (!p || p.connected === false) continue;
       branchee = true;
-      for (let b = 0; b < p.buttons.length; b++) {
-        const bt = p.buttons[b], a = MAP_MANETTE[b];
-        if (a && bt && (bt.pressed || bt.value > 0.5)) etat[a] = true;
+      if (!info.branchee) {
+        info.branchee = true;
+        info.id = p.id || '';
+        info.mapping = p.mapping || '';
+        info.axes = (p.axes || []).map(function (v) { return Math.round((v || 0) * 100) / 100; });
       }
-      const ax = p.axes[0] || 0, ay = p.axes[1] || 0;
+      for (let b = 0; b < (p.buttons || []).length; b++) {
+        const v = valeurBouton(p, b);
+        if (v > GESTE && info.boutons.indexOf(b) < 0) info.boutons.push(b);
+        if (ignores[b]) { if (v <= GESTE) delete ignores[b]; continue; }
+        const actions = parIndice[b];
+        if (actions && v > GESTE) for (const a of actions) etat[a] = true;
+      }
+      const ax = p.axes[profil.axes[0]] || 0, ay = p.axes[profil.axes[1]] || 0;
       const h = Math.hypot(ax, ay);
       if (h > ZONE_MORTE) {
         const m = borner((h - ZONE_MORTE) / (ZONE_PLEINE - ZONE_MORTE), 0, 1);
         sx = ax / h * m; sy = ay / h * m;
       }
-      if (p.buttons[7]) g = Math.max(g, p.buttons[7].value || 0);
-      if (p.buttons[6]) f = Math.max(f, p.buttons[6].value || 0);
+      g = Math.max(g, lirePedale(p, profil.gaz));
+      f = Math.max(f, lirePedale(p, profil.frein));
+      if (apprentissage) ecouterApprentissage(p);
     }
     if (!branchee && !manetteVue) return;
     manetteVue = branchee;
-    for (const a in MAP_TOUCHES) poser(vPad, a, etat[a]);
+    // Pendant un apprentissage la manette ne commande rien (voir `apprendre`).
+    for (const a in MAP_TOUCHES) poser(vPad, a, apprentissage ? false : etat[a]);
+    if (apprentissage) { stick.x = 0; stick.y = 0; stick.mag = 0; gaz = 0; frein = 0; return; }
     stick.x = sx; stick.y = sy; stick.mag = Math.hypot(sx, sy);
     gaz = g; frein = f;
+  }
+
+  /** Ce que la manette dit d'elle-meme — l'ecran MANETTE le montre tel quel.
+      `mapping` vide = le navigateur ne la reconnait pas, ses numeros de
+      boutons ne veulent rien dire, il faut les reapprendre. */
+  function manetteInfo() {
+    return { branchee: info.branchee, id: info.id, mapping: info.mapping,
+             boutons: info.boutons.slice(), axes: info.axes.slice(),
+             apprend: apprentissage ? apprentissage.quoi : null };
   }
 
   // --- Tactile ----------------------------------------------------------------------
@@ -246,9 +418,11 @@ const Entree = (function () {
   }
 
   return {
-    MAP_TOUCHES, MAP_MANETTE, ZONE_MORTE,
+    MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
     init, debutImage, bas, neuf, videPresse, toutRelacher, contexte, passerEnTactile,
     lireManette, vibrer, pleinEcran,
+    reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
+    annulerApprentissage, manetteInfo,
     get axe() { return axe; }, get gaz() { return gaz; }, get frein() { return frein; },
     get estTactile() { return tactile; },
     _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, pouce: pouce, stick: stick }; },

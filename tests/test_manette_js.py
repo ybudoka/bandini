@@ -1,0 +1,191 @@
+"""La manette : la disposition par defaut, et celle qu'on lui reapprend.
+
+⚠️ `o.frame(2)` apres chaque `o.pad(...)`, jamais `frame(1)` : la boucle a un pas
+fixe et un accumulateur, si bien qu'une image du banc fait parfois zero `maj()`
+et la suivante deux. Avec `frame(1)`, on lit l'etat de la manette d'AVANT.
+
+⚠️ Le probleme que ces tests gardent : une manette Bluetooth que le navigateur
+ne reconnait pas (`mapping: ''`) numerote ses boutons comme elle veut. La meme
+manette n'a pas les memes numeros sur le telephone et sur le Mac — ca ne se
+devine pas, ca se reapprend. Retour de Martin, 13 sept. 2026.
+"""
+
+
+def test_la_disposition_par_defaut_est_celle_d_une_manette_reconnue(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const vu = {};
+        const actions = ['action', 'esquive', 'attaque', 'arme', 'carte', 'pause', 'haut', 'bas', 'gauche', 'droite', 'annuler'];
+        for (let b = 0; b <= 15; b++) {
+            const boutons = []; for (let k = 0; k <= 15; k++) boutons.push(k === b ? 1 : 0);
+            o.pad([0, 0], boutons); o.frame(2);
+            vu[b] = actions.filter(function (a) { return L.Entree.bas(a); });
+        }
+        o.pad(null); o.frame(2);
+        return vu;
+    }""")
+    assert r["0"] == ["action"]
+    assert set(r["1"]) == {"esquive", "annuler"}, "le bouton de droite doit aussi servir de RETOUR"
+    assert r["2"] == ["attaque"] and r["5"] == ["attaque"]
+    assert r["3"] == ["arme"] and r["4"] == ["arme"]
+    assert r["8"] == ["carte"] and r["9"] == ["pause"]
+    assert (r["12"], r["13"], r["14"], r["15"]) == (["haut"], ["bas"], ["gauche"], ["droite"])
+
+
+def test_on_reapprend_un_bouton_et_il_reste_appris(banc):
+    """Le geste de Martin : OPTIONS > MANETTE > ACTION, puis il appuie."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function boutons(i) { const b = []; for (let k = 0; k <= 9; k++) b.push(k === i ? 1 : 0); return b; }
+        o.pad([0, 0], boutons(-1)); o.frame(2);
+        L.Entree.apprendre('action');
+        o.frame(2);                                  // la manette au repos : la reference
+        const pendant = { action: L.Entree.bas('action'), apprend: L.Entree.apprendEnCours() };
+        o.pad([0, 0], boutons(7)); o.frame(2);       // il appuie sur 7
+        const profil = L.Entree.profilManette();
+        o.pad([0, 0], boutons(-1)); o.frame(2);      // il relache
+        o.pad([0, 0], boutons(7)); o.frame(2);
+        const surSept = L.Entree.bas('action');
+        o.pad([0, 0], boutons(0)); o.frame(2);
+        const surZero = L.Entree.bas('action');
+        o.pad(null); o.frame(2);
+        return { pendant: pendant, boutonsAction: profil.boutons.action, surSept: surSept, surZero: surZero,
+                 apprend: L.Entree.apprendEnCours(), options: L.B.options.manette ? L.B.options.manette.boutons.action : null };
+    }""")
+    assert r["pendant"]["apprend"] == "action"
+    assert r["pendant"]["action"] is False, "la manette ne commande rien pendant qu'on l'apprend"
+    assert r["boutonsAction"] == [7]
+    assert r["surSept"] is True, "le bouton appris ne fait pas ACTION"
+    assert r["surZero"] is False, "l'ancien bouton fait encore ACTION"
+    assert r["apprend"] is None
+
+
+def test_le_bouton_qu_on_vient_d_apprendre_ne_valide_pas_le_menu(banc):
+    """⚠️ Sinon on apprend un bouton et il choisit aussitot la ligne du menu ou
+    on l'apprenait — on n'en sortirait jamais."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function boutons(i) { const b = []; for (let k = 0; k <= 9; k++) b.push(k === i ? 1 : 0); return b; }
+        o.pad([0, 0], boutons(-1)); o.frame(2);
+        L.Entree.apprendre('action');
+        o.frame(2);
+        o.pad([0, 0], boutons(3)); o.frame(2);       // appris
+        const justeApres = L.Entree.neuf('action');
+        o.frame(2);                                   // toujours enfonce
+        const encoreTenu = L.Entree.bas('action');
+        o.pad([0, 0], boutons(-1)); o.frame(2);       // relache
+        o.pad([0, 0], boutons(3)); o.frame(2);        // nouvel appui, pour de vrai
+        const vraiAppui = L.Entree.bas('action');
+        o.pad(null); o.frame(2);
+        return { justeApres: justeApres, encoreTenu: encoreTenu, vraiAppui: vraiAppui };
+    }""")
+    assert r["justeApres"] is False and r["encoreTenu"] is False
+    assert r["vraiAppui"] is True
+
+
+def test_une_gachette_sur_un_axe_s_apprend_aussi(banc):
+    """Beaucoup de manettes non reconnues rendent le gaz comme un AXE qui
+    repose a -1 : on mesure son repos au moment de l'apprendre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        o.pad([0, 0, -1, -1], [0, 0, 0, 0], { mapping: '', id: 'Bidule BT Gamepad' });
+        o.frame(2);
+        const info = L.Entree.manetteInfo();
+        L.Entree.apprendre('gaz');
+        o.frame(2);                                   // repos : axe 2 a -1
+        o.pad([0, 0, 1, -1], [0, 0, 0, 0], { mapping: '' }); o.frame(2);
+        const source = L.Entree.profilManette().gaz;
+        const plein = L.Entree.gaz;
+        o.pad([0, 0, 0, -1], [0, 0, 0, 0], { mapping: '' }); o.frame(2);
+        const moitie = L.Entree.gaz;
+        o.pad([0, 0, -1, -1], [0, 0, 0, 0], { mapping: '' }); o.frame(2);
+        const rien = L.Entree.gaz;
+        o.pad(null); o.frame(2);
+        return { mapping: info.mapping, id: info.id, source: source, plein: plein, moitie: moitie, rien: rien };
+    }""")
+    assert r["mapping"] == "", "l'ecran MANETTE doit pouvoir dire « NON RECONNUE »"
+    assert r["id"].startswith("Bidule")
+    assert r["source"]["type"] == "axe" and r["source"]["i"] == 2 and r["source"]["repos"] == -1
+    assert r["plein"] == 1 and r["rien"] == 0
+    assert 0.4 < r["moitie"] < 0.6
+
+
+def test_l_ecran_manette_dit_ce_que_la_manette_dit_d_elle_meme(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        o.pad([0, 0], [0, 0, 1, 0], { mapping: '', id: 'Bidule BT Gamepad' }); o.frame(2);
+        const m = L.Hud.menuManette();
+        m.maj(m);
+        const inconnue = { sur: m.sur, aide: m.aide, action: m.items[0].detail };
+        o.pad([0, 0], [1, 0, 0, 0], { mapping: 'standard', id: 'Xbox Wireless' }); o.frame(2);
+        m.maj(m);
+        const reconnue = { sur: m.sur, aide: m.aide };
+        // Et « REMETTRE PAR DEFAUT » efface le profil garde dans les options.
+        L.B.options.manette = { boutons: { action: [7] } };
+        L.Entree.reglerManette(L.B.options.manette);
+        const avant = L.Entree.profilManette().boutons.action;
+        m.items.find(function (i) { return i.libelle === 'REMETTRE PAR DEFAUT'; }).faire();
+        o.pad(null); o.frame(2);
+        return { inconnue: inconnue, reconnue: reconnue, avant: avant,
+                 apres: L.Entree.profilManette().boutons.action, options: L.B.options.manette };
+    }""")
+    assert r["inconnue"]["sur"] == "NON RECONNUE"
+    assert "2" in r["inconnue"]["aide"], "les boutons enfonces doivent se voir"
+    assert r["inconnue"]["action"] == "BOUTON 0"
+    assert r["reconnue"]["sur"] == "RECONNUE"
+    assert r["avant"] == [7] and r["apres"] == [0]
+    assert r["options"] is None
+
+
+def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
+    """⚠️ Le vrai geste quand rien ne repond : TOUT REAPPRENDRE, et le jeu
+    demande un bouton apres l'autre. La croix compte pour quatre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function boutons(i) { const b = []; for (let k = 0; k <= 15; k++) b.push(k === i ? 1 : 0); return b; }
+        o.pad([0, 0], boutons(-1)); o.frame(2);
+        const m = L.Hud.menuManette();
+        m.items.find(function (i) { return i.libelle === 'TOUT REAPPRENDRE'; }).faire();
+        const demandes = [];
+        // On appuie sur 15, 14, 13... : chaque geste doit etre pris par l'action suivante.
+        for (let n = 0; n < 14; n++) {
+            demandes.push(L.Entree.apprendEnCours());
+            if (!L.Entree.apprendEnCours()) break;
+            o.pad([0, 0], boutons(-1)); o.frame(2);          // repos
+            o.pad([0, 0], boutons(15 - n)); o.frame(2);      // il appuie
+        }
+        const profil = L.Entree.profilManette();
+        o.pad(null); o.frame(2);
+        return { demandes: demandes, action: profil.boutons.action, attaque: profil.boutons.attaque,
+                 haut: profil.boutons.haut, droite: profil.boutons.droite,
+                 fini: L.Entree.apprendEnCours(), garde: !!L.B.options.manette };
+    }""")
+    assert r["demandes"][:5] == ["action", "attaque", "esquive", "arme", "annuler"]
+    assert "haut" in r["demandes"] and "bas" in r["demandes"], "la croix s'apprend en quatre gestes"
+    assert r["action"] == [15] and r["attaque"] == [14]
+    assert r["fini"] is None, "la file doit finir"
+    assert r["garde"] is True, "le profil appris doit etre garde dans les options"
+
+
+def test_on_commence_la_partie_a_la_manette(banc):
+    """⚠️ « Jouer » n'etait qu'un bouton de la page : sans toucher l'ecran, on
+    ne pouvait pas commencer — ni a la manette, ni au clavier."""
+    r = banc("""function (L, o) {
+        const avant = L.B.etat;                       // le banc demarre au titre
+        o.pad([0, 0], [1, 0]); o.frame(2);            // bouton ACTION
+        const apad = L.B.etat;
+        o.pad(null); o.frame(2);
+        return { avant: avant, apad: apad, voile: L.Hud.voileCourant };
+    }""")
+    assert r["avant"] == "titre"
+    assert r["apad"] == "jeu", "le bouton ACTION de la manette doit lancer la partie"
+    assert r["voile"] is None
+
+
+def test_on_commence_la_partie_au_clavier(banc):
+    r = banc("""function (L, o) {
+        const avant = L.B.etat;
+        o.tape('Enter', 2);
+        return { avant: avant, apres: L.B.etat };
+    }""")
+    assert r["avant"] == "titre" and r["apres"] == "jeu"

@@ -16,7 +16,9 @@ const Hud = (function () {
     d.getElementById('score-form').addEventListener('submit', envoyerScore);
   }
 
+  let voileCourant = null;
   function voile(nom) {
+    voileCourant = nom;
     for (const n in voiles) voiles[n].hidden = (n !== nom);
   }
 
@@ -47,6 +49,15 @@ const Hud = (function () {
   function majMenu() {
     const m = B.menu;
     if (!m) return;
+    // Un menu qui montre quelque chose de VIVANT (l'ecran MANETTE, et les
+    // boutons qu'on voit s'allumer) se refait a chaque image.
+    if (m.maj) m.maj(m);
+    // ⚠️ Pendant qu'on reapprend un bouton, le menu ne bouge plus : la manette
+    // est muette (voir `Entree.apprendre`) et le clavier ne sert qu'a annuler.
+    if (Entree.apprendEnCours()) {
+      if (Entree.neuf('pause') || Entree.neuf('annuler')) { Entree.annulerApprentissage(); Son.SFX.erreur(); }
+      return;
+    }
     const axe = Entree.axe;
     let sens = 0;
     if (Entree.neuf('haut')) sens = -1;
@@ -109,8 +120,103 @@ const Hud = (function () {
       bascule('muet', 'SON COUPE'),
       bascule('daltonien', 'PALETTE DALTONIENNE'),
       bascule('trace', 'TRACE DES VEHICULES'),
+      { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
+  }
+
+  //: Les actions qu'on peut reapprendre, dans l'ordre de « TOUT REAPPRENDRE ».
+  //: La croix compte pour une ligne et s'apprend en quatre gestes.
+  const LIGNES_MANETTE = [
+    ['action', 'ACTION / ENTRER'],
+    ['attaque', 'FRAPPER / KLAXON'],
+    ['esquive', 'COURIR / FREIN A MAIN'],
+    ['arme', 'ARME / RADIO'],
+    ['annuler', 'RETOUR'],
+    ['pause', 'PAUSE'],
+    ['carte', 'CARTE'],
+    ['croix', 'CROIX DIRECTIONNELLE'],
+    ['gaz', 'GAZ'],
+    ['frein', 'FREIN'],
+    ['stick', 'STICK DE MARCHE'],
+  ];
+  const CROIX = ['haut', 'bas', 'gauche', 'droite'];
+  const NOM_CROIX = { haut: 'HAUT', bas: 'BAS', gauche: 'GAUCHE', droite: 'DROITE' };
+
+  function detailManette(quoi, profil) {
+    if (quoi === 'stick') return 'AXES ' + profil.axes[0] + '/' + profil.axes[1];
+    if (quoi === 'gaz' || quoi === 'frein') {
+      const s = profil[quoi];
+      return (s.type === 'axe' ? 'AXE ' : 'BOUTON ') + s.i;
+    }
+    if (quoi === 'croix') {
+      const n = CROIX.map(function (a) { return profil.boutons[a][0]; }).filter(function (v) { return v !== undefined; });
+      return n.length ? n.join(' ') : 'AUCUN';
+    }
+    const b = profil.boutons[quoi] || [];
+    return b.length ? 'BOUTON ' + b.join(', ') : 'AUCUN';
+  }
+
+  /** L'ecran MANETTE : ce que la manette dit d'elle-meme, et un bouton par
+      action qu'on REAPPREND en l'appuyant.
+
+      ⚠️ Les numeros de boutons d'une manette Bluetooth que le navigateur ne
+      reconnait pas (`mapping` vide) ne veulent rien dire : la meme manette
+      n'a pas les memes numeros sur le telephone et sur le Mac. On ne peut pas
+      deviner — ici on appuie, et le jeu note. */
+  function menuManette() {
+    let suite = null;                 // la file de « TOUT REAPPRENDRE »
+    function garder() {
+      B.options.manette = Entree.profilManette();
+      Sauvegarde.ecrireOptions(B.options);
+    }
+    function apprendreUn(quoi, apres) {
+      if (quoi === 'croix') return apprendreCroix(0, apres);
+      Entree.apprendre(quoi, function () { garder(); Son.SFX.menu(); if (apres) apres(); });
+    }
+    function apprendreCroix(k, apres) {
+      if (k >= CROIX.length) { if (apres) apres(); return; }
+      Entree.apprendre(CROIX[k], function () { garder(); Son.SFX.menu(); apprendreCroix(k + 1, apres); });
+    }
+    function toutReapprendre(k) {
+      if (k >= LIGNES_MANETTE.length) { suite = null; return; }
+      suite = LIGNES_MANETTE[k][0];
+      apprendreUn(suite, function () { toutReapprendre(k + 1); });
+    }
+    const items = LIGNES_MANETTE.map(function (l) {
+      return { libelle: l[1], quoi: l[0], faire: function () { apprendreUn(l[0]); return false; } };
+    });
+    items.push({ libelle: 'TOUT REAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
+    items.push({ libelle: 'REMETTRE PAR DEFAUT', faire: function () {
+      Entree.reglerManette(null); B.options.manette = null; Sauvegarde.ecrireOptions(B.options);
+      suite = null; Son.SFX.menu(); return false;
+    } });
+    items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuOptions()); return false; } });
+    const menu = { titre: 'MANETTE', items: items, curseur: 0 };
+    menu.maj = function (m) {
+      const etat = Entree.manetteInfo(), profil = Entree.profilManette();
+      // ⚠️ La ligne du haut est le vrai diagnostic : une manette « NON
+      // RECONNUE » explique a elle seule des boutons qui ne repondent pas la
+      // ou on les attend.
+      m.sur = etat.branchee ? (etat.mapping === 'standard' ? 'RECONNUE' : 'NON RECONNUE') : 'AUCUNE MANETTE';
+      for (const item of m.items) {
+        if (!item.quoi) continue;
+        const encours = etat.apprend && (etat.apprend === item.quoi
+          || (item.quoi === 'croix' && CROIX.indexOf(etat.apprend) >= 0));
+        item.detail = encours
+          ? 'APPUIE' + (item.quoi === 'croix' ? ' ' + NOM_CROIX[etat.apprend] : '') + '...'
+          : detailManette(item.quoi, profil);
+      }
+      m.aide = etat.apprend
+        ? 'APPUIE SUR LE BOUTON VOULU · ECHAP : ANNULER'
+        : (etat.branchee
+          ? 'ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—')
+            + ' · ' + (etat.id || '?').slice(0, 26).toUpperCase()
+          : 'BRANCHE UNE MANETTE ET APPUIE SUR UN BOUTON');
+      void suite;
+    };
+    menu.maj(menu);
+    return menu;
   }
 
   /** Le bilan de la session : ce qu'on a fait depuis le debut. */
@@ -516,7 +622,8 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuBilan,
+  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuManette, menuBilan,
+    get voileCourant() { return voileCourant; },
            dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();

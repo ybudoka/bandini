@@ -149,6 +149,15 @@ const Jeu = (function () {
       Son.majVolume();
       Hud.message(B.options.muet ? 'SON COUPE' : 'SON');
     }
+    // ⚠️ « Jouer » n'etait qu'un bouton de la page : a la manette (ou au
+    // clavier), on ne pouvait pas commencer la partie sans toucher l'ecran.
+    if (B.etat === 'titre' && Hud.voileCourant === 'titre'
+        && (Entree.neuf('action') || Entree.neuf('pause'))) {
+      Son.reveiller();
+      commencer();
+      Entree.videPresse();
+      return;
+    }
     if (B.etat === 'jeu' && B.menu) {
       // Un menu ouvert fige la simulation : le temps ne passe pas au comptoir.
       Hud.majMenu();
@@ -173,6 +182,9 @@ const Jeu = (function () {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
       if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }
     } else if (B.etat === 'pause') {
+      // ⚠️ Pendant qu'on reapprend un bouton de manette, ECHAP annule
+      // l'apprentissage ; il ne sort pas de la pause.
+      if (Entree.apprendEnCours()) { Hud.majMenu(); Entree.videPresse(); return; }
       if (Entree.neuf('pause')) { reprendre(); Entree.videPresse(); return; }
       if (B.menu) Hud.majMenu();
       else if (Entree.neuf('action')) reprendre();
@@ -240,6 +252,8 @@ const Jeu = (function () {
     Son.init(w, racine.dataset.urlStatique);
     Sauvegarde.init(w.localStorage);
     Object.assign(B.options, Sauvegarde.lireOptions() || {});
+    // Les boutons de manette reappris par le joueur (ecran OPTIONS > MANETTE).
+    Entree.reglerManette(B.options.manette);
     // ?trace=1 (ou ?perf=1) dans l'adresse : le mode s'allume sans passer par le menu.
     const adresse = (w.location && w.location.search) || '';
     if (/[?&]trace=1/.test(adresse)) B.options.trace = true;

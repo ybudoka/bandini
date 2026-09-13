@@ -31,7 +31,7 @@ const B = {
   budget: { chemins: 2, los: 20 },
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
-  options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false },
+  options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, manette: null },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
