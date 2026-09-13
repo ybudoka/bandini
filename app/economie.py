@@ -77,16 +77,33 @@ TARIFS = {
     "sergent_efface_etoile": 150,
     "hotdog": 10,
     "hotdog_pv": 25,
+    "hotdog_souffle": 40,
     "poutine": 18,
     "poutine_pv": 45,
+    "poutine_souffle": 70,
     "journal": 2,
     "cafe": 4,
     "cafe_pv": 10,
+    "cafe_souffle": 30,
     # ⚠️ La compagnie se paie et ne se montre pas : un fondu, une replique,
     # de la vie qui revient. Elle refuse quand la police te cherche.
     "compagnie": 60,
     "compagnie_pv": 40,
 }
+
+#: Manger rend des PV *et* du souffle (`*_souffle`, sur les 100 d'endurance de
+#: `recherche.VITESSES`) : une poutine a 18 $ vaut deux hot-dogs, en vie comme
+#: en jambes. Sans ca, le seul moyen de reprendre son souffle etait d'arreter
+#: de courir — un kiosque ne servait a rien quand on est poursuivi.
+#:
+#: ⚠️ Le cafe, lui, ne nourrit pas : il TIENT DEBOUT. Pendant `duree_s`
+#: secondes, le sprint ne coute que `depense` de ce qu'il coute d'habitude —
+#: on court DEUX FOIS PLUS LONGTEMPS, jamais plus vite. La vitesse, c'est ce
+#: qui separe le joueur (2,1) du policier (1,9) et de la foule ; y toucher
+#: pour 4 $ casserait toutes les poursuites du jeu. La duree, non : elle
+#: s'ecoule meme au volant, et elle ne s'empile pas (un deuxieme cafe repart
+#: la minuterie).
+CAFE = {"duree_s": 90, "depense": 0.5}
 
 #: Vente d'un vehicule vole au garage clandestin : fraction du prix neuf, en
 #: proportion des points de vie restants, moins 20 % par doublon du meme jour.
@@ -156,6 +173,7 @@ def exporter() -> dict:
         "pot_de_vin_ami_max": POT_DE_VIN_AMI_MAX,
         "hopital": dict(HOPITAL),
         "tarifs": dict(TARIFS),
+        "cafe": dict(CAFE),
         "vente_fraction": VENTE_FRACTION,
         "vente_malus_doublon": VENTE_MALUS_DOUBLON,
         "reparation_par_pv": REPARATION_PAR_PV,

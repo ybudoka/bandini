@@ -12,22 +12,31 @@ from typing import TypedDict
 TYPES = ("armurerie", "vetements", "garage", "casse_croute")
 
 #: Les commerces qui n'ont pas de porte : on les sert sur le trottoir.
-#: `service` dit ce qu'on y achete, `tarif`/`gain_pv` pointent dans
-#: `economie.TARIFS` — les prix ne vivent jamais en double.
+#: `service` dit ce qu'on y achete, `tarif`/`gain_pv`/`gain_souffle` pointent
+#: dans `economie.TARIFS` — les prix ne vivent jamais en double. `effet` nomme
+#: ce qui dure apres la bouchee : seul le cafe en a un (`economie.CAFE`).
 AMBULANTS: list[dict] = [
     {"slug": "hotdog", "nom": "Kiosque à hot-dogs", "sprite": "kiosque_hotdog",
      "service": "manger", "tarif": "hotdog", "gain_pv": "hotdog_pv",
+     "gain_souffle": "hotdog_souffle", "effet": None,
      "nombre": 3, "sur": "trottoir", "heures": None, "phase": 1},
     {"slug": "journaux", "nom": "Kiosque à journaux", "sprite": "kiosque_journaux",
      "service": "journal", "tarif": "journal", "gain_pv": None,
+     "gain_souffle": None, "effet": None,
      "nombre": 2, "sur": "trottoir", "heures": [0.25, 0.75], "phase": 1},
     {"slug": "cafe", "nom": "Roulotte à café", "sprite": "roulotte_cafe",
      "service": "manger", "tarif": "cafe", "gain_pv": "cafe_pv",
+     "gain_souffle": "cafe_souffle", "effet": "cafe",
      "nombre": 2, "sur": "trottoir", "heures": [0.2, 0.6], "phase": 1},
     {"slug": "camion_cuisine", "nom": "Camion-restaurant", "sprite": "camion_cuisine",
      "service": "manger", "tarif": "poutine", "gain_pv": "poutine_pv",
+     "gain_souffle": "poutine_souffle", "effet": None,
      "nombre": 2, "sur": "stationnement", "heures": None, "phase": 1},
 ]
+
+#: Ce qu'un `effet` sait faire. Un kiosque qui en nommerait un autre serait une
+#: promesse que le navigateur ne tient pas — un juge le refuse.
+EFFETS = ("cafe",)
 
 
 def ambulant(slug: str) -> dict | None:

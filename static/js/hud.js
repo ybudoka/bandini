@@ -683,7 +683,12 @@ const Hud = (function () {
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       const v = j && j.dansVehicule;
       // Au volant, la barre jaune est celle du char, pas l'endurance.
-      barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1), v ? '#7fb3d8' : '#e8b33c');
+      // ⚠️ Sous cafe, la barre d'endurance passe au vert et clignote la
+      // derniere seconde : sans ca, le souffle long s'arrete au milieu d'une
+      // fuite sans que rien ne l'ait annonce.
+      const cafeine = j && !v && j.cafeine > 0 && (j.cafeine > 60 || (j.cafeine >> 2) % 2 === 0);
+      barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1),
+            v ? '#7fb3d8' : (cafeine ? '#8fd46a' : '#e8b33c'));
       noter('vie', 6, 6, 60, 10);
       if (v) {
         const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);

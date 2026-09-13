@@ -58,7 +58,24 @@ const Missions = (function () {
     B.partie.vie = j.vie;
   }
 
-  /** Acheter au kiosque ou au camion : de la vie contre de l'argent. */
+  /** Manger reprend aussi le souffle. L'endurance ne va pas dans la
+      sauvegarde (elle se refait toute seule) : elle vit sur le joueur. */
+  function nourrir(j, souffle) {
+    if (!souffle || !j) return;
+    j.endurance = Math.min(B.defs.recherche.vitesses.endurance, j.endurance + souffle);
+  }
+
+  /** Le cafe : pendant un temps, le sprint coute moitie moins (`economie.cafe`
+      le dit, `Entites` le depense). Un deuxieme cafe ne s'empile pas, il
+      repart la minuterie — sinon on s'acheterait l'endurance infinie a 4 $. */
+  function cafeine(j) {
+    if (!j) return;
+    j.cafeine = Math.round(B.defs.economie.cafe.duree_s * 60);
+    Hud.message('BIEN RÉVEILLÉ');
+  }
+
+  /** Acheter au kiosque ou au camion : de la vie, du souffle et, au café, de
+      quoi courir plus longtemps — contre de l'argent. */
   function acheterAmbulant(j, etal) {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
@@ -67,6 +84,8 @@ const Missions = (function () {
     if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
     payer(prix, commerce.nom.toUpperCase());
     soigner(j, commerce.gain_pv ? B.defs.economie.tarifs[commerce.gain_pv] : 0);
+    nourrir(j, commerce.gain_souffle ? B.defs.economie.tarifs[commerce.gain_souffle] : 0);
+    if (commerce.effet === 'cafe') cafeine(j);
     Son.SFX.argent();
     if (commerce.service === 'journal') Hud.message('LE CLAIRON DE LA BAIE');
     return true;
@@ -135,7 +154,7 @@ const Missions = (function () {
     const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
     setTimeoutJeu(60, function () {
       if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
-      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100;
+      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       j.hospitalise = false;
@@ -343,8 +362,14 @@ const Missions = (function () {
       case 'acheter':
         return piece.slug === 'armurerie' ? menuArmurerie() : menuVetements();
       case 'hotdog':
-        items.push({ libelle: 'HOT-DOG', detail: tarifs.hotdog + ' $ / +' + tarifs.hotdog_pv + ' PV', actif: p.argent >= tarifs.hotdog,
-                     faire: function () { payer(tarifs.hotdog, 'HOT-DOG'); soigner(B.joueur, tarifs.hotdog_pv); Son.SFX.argent(); return false; } });
+        items.push({ libelle: 'HOT-DOG', detail: tarifs.hotdog + ' $ / +' + tarifs.hotdog_pv + ' PV +' + tarifs.hotdog_souffle + ' SOUFFLE',
+                     actif: p.argent >= tarifs.hotdog,
+                     faire: function () { payer(tarifs.hotdog, 'HOT-DOG'); soigner(B.joueur, tarifs.hotdog_pv); nourrir(B.joueur, tarifs.hotdog_souffle); Son.SFX.argent(); return false; } });
+        // Un casse-croute sert le cafe : sinon la roulotte du trottoir est le
+        // seul endroit du jeu ou courir plus longtemps s'achete, et elle ferme.
+        items.push({ libelle: 'CAFÉ', detail: tarifs.cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
+                     actif: p.argent >= tarifs.cafe,
+                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); Son.SFX.argent(); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
@@ -405,6 +430,7 @@ const Missions = (function () {
     p.heure = 0.30;
     B.joueur.vie = B.joueur.vieMax;
     B.joueur.endurance = 100;
+    B.joueur.cafeine = 0;
     p.vie = B.joueur.vie;
     Police.remiseAZero();
     nouveauJour();
@@ -669,6 +695,9 @@ const Missions = (function () {
 
   function maj() {
     majMinuteries();
+    // Le cafe est une minuterie, pas une depense : il s'ecoule aussi au volant
+    // et dans une piece, la ou `majJoueur` ne passe pas.
+    if (B.joueur && B.joueur.cafeine > 0) B.joueur.cafeine--;
     taxi.maj();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
@@ -680,7 +709,7 @@ const Missions = (function () {
   }
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
-           commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
+           commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };

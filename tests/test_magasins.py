@@ -1,4 +1,4 @@
-from app import armes, magasins, vehicules
+from app import armes, magasins, recherche, vehicules
 
 
 def test_magasins():
@@ -32,6 +32,10 @@ def test_les_ambulants_pointent_vers_des_tarifs_qui_existent():
         if commerce["gain_pv"]:
             assert commerce["gain_pv"] in economie.TARIFS
             assert 0 < economie.TARIFS[commerce["gain_pv"]] <= 100
+        if commerce["gain_souffle"]:
+            assert commerce["gain_souffle"] in economie.TARIFS
+            assert 0 < economie.TARIFS[commerce["gain_souffle"]] <= recherche.VITESSES["endurance"]
+        assert commerce["effet"] in (None, *magasins.EFFETS)
         assert commerce["sur"] in ("trottoir", "stationnement")
         assert 1 <= commerce["nombre"] <= 6
         if commerce["heures"]:
@@ -42,3 +46,22 @@ def test_les_ambulants_pointent_vers_des_tarifs_qui_existent():
 def test_les_slugs_ambulants_sont_uniques():
     slugs = [c["slug"] for c in magasins.AMBULANTS]
     assert len(slugs) == len(set(slugs))
+
+
+def test_ce_qui_se_mange_redonne_du_souffle():
+    """Un kiosque a manger rend de la vie ET du souffle.
+
+    Sans le souffle, un kiosque ne sert a rien la ou on en a besoin : en
+    poursuite, la seule facon de reprendre son endurance etait de s'arreter
+    de courir. Le journal, lui, ne se mange pas.
+    """
+    for commerce in magasins.AMBULANTS:
+        if commerce["service"] == "manger":
+            assert commerce["gain_pv"] and commerce["gain_souffle"], commerce["slug"]
+        else:
+            assert not commerce["gain_souffle"], commerce["slug"]
+
+
+def test_seul_le_cafe_reveille():
+    reveillent = [c["slug"] for c in magasins.AMBULANTS if c["effet"] == "cafe"]
+    assert reveillent == ["cafe"], "l'effet du cafe ne s'achete qu'au cafe"

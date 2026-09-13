@@ -127,7 +127,7 @@ const Entites = (function () {
     const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === p.tenue; });
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: tenue ? { c: tenue.couleur } : null,
-      vie: p.vie, vieMax: 100, endurance: 100, arme: p.arme || 'poings',
+      vie: p.vie, vieMax: 100, endurance: 100, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
     });
     B.joueur = j;
@@ -505,9 +505,13 @@ const Entites = (function () {
     }
     const veutCourir = Entree.bas('esquive') || (axe.source !== 'clavier' && axe.mag > 0.85);
     let vitesse = v.joueur_marche;
+    // ⚠️ Le cafe allonge la course, il ne l'accelere PAS : `joueur_sprint`
+    // reste ce qu'il est (2,1 contre 1,9 au policier), seule la DEPENSE baisse.
+    // La minuterie, elle, s'ecoule dans `Missions.maj` — meme au volant.
+    const cafe = j.cafeine > 0 ? B.defs.economie.cafe.depense : 1;
     if (veutCourir && axe.mag > 0 && j.endurance > 0) {
       vitesse = v.joueur_sprint;
-      j.endurance = Math.max(0, j.endurance - v.endurance_par_image);
+      j.endurance = Math.max(0, j.endurance - v.endurance_par_image * cafe);
     } else {
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }

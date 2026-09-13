@@ -844,6 +844,78 @@ def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
     assert r["etals"] >= 6 and r["vendeurs"] == r["etals"], "un kiosque sans personne derriere"
 
 
+def test_manger_redonne_du_souffle_et_le_cafe_reveille(banc, paquet):
+    tarifs = paquet["economie"]["tarifs"]
+    cafe = paquet["economie"]["cafe"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.heure = 0.4;                    // la roulotte a cafe est ouverte
+        L.B.partie.argent = 200;
+        function acheter(slug) {
+          const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === slug; })[0];
+          j.x = etal.x; j.y = etal.y + 22;
+          L.Entites.indexer();
+          return L.Missions.interagir(j);
+        }
+        j.endurance = 20; j.vie = 40;
+        const hotdog = acheter('hotdog');
+        const apres = { souffle: j.endurance, vie: j.vie, cafeine: j.cafeine };
+        // Manger a plein souffle ne fait pas deborder la barre.
+        j.endurance = 100; acheter('hotdog');
+        const plein = j.endurance;
+        j.endurance = 20;
+        const achatCafe = acheter('cafe');
+        return { hotdog: hotdog, apres: apres, plein: plein, achatCafe: achatCafe,
+                 souffleCafe: j.endurance, cafeine: j.cafeine };
+    }""")
+    assert r["hotdog"] is True
+    assert r["apres"]["souffle"] == 20 + tarifs["hotdog_souffle"]
+    assert r["apres"]["vie"] == 40 + tarifs["hotdog_pv"]
+    assert r["apres"]["cafeine"] == 0, "un hot-dog nourrit, il ne reveille pas"
+    assert r["plein"] == 100, "le souffle deborde"
+    assert r["achatCafe"] is True
+    assert r["souffleCafe"] == 20 + tarifs["cafe_souffle"]
+    assert r["cafeine"] == cafe["duree_s"] * 60
+
+
+def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
+    """⚠️ Ce qui s'achete, c'est la DUREE du sprint, jamais sa vitesse.
+
+    On mesure les deux : combien d'images on tient au sprint d'un souffle
+    plein a zero (ca doit doubler), et la distance parcourue par image (elle
+    ne doit pas bouger d'un pixel — sinon la police ne rattrape plus personne).
+    """
+    cafe = paquet["economie"]["cafe"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        function tenir() {
+          j.endurance = 100;
+          const depart = { x: j.x, y: j.y };
+          let n = 0;
+          o.touche('ShiftLeft'); o.touche('KeyA');
+          while (j.endurance > 0 && n < 2000) { o.frame(1); n++; }
+          o.relacher('KeyA'); o.relacher('ShiftLeft');
+          return { images: n, px: Math.hypot(j.x - depart.x, j.y - depart.y) };
+        }
+        const ajeun = tenir();
+        L.Missions.cafeine(j);
+        const pose = j.cafeine;
+        const souscafe = tenir();
+        return { ajeun: ajeun, souscafe: souscafe, pose: pose, reste: j.cafeine };
+    }""")
+    assert r["ajeun"]["images"] > 0 and r["souscafe"]["images"] < 2000
+    # Le rapport, pas le compte : la premiere image d'une course part avant que
+    # l'axe ne soit lu, et une image d'ecart ne dit rien de l'equilibrage.
+    assert r["souscafe"]["images"] / r["ajeun"]["images"] > 1 / cafe["depense"] - 0.15
+    assert r["pose"] == cafe["duree_s"] * 60
+    assert r["reste"] == r["pose"] - r["souscafe"]["images"], "la minuterie doit tomber d'une image par image"
+    vitesse_ajeun = r["ajeun"]["px"] / r["ajeun"]["images"]
+    vitesse_cafe = r["souscafe"]["px"] / r["souscafe"]["images"]
+    assert abs(vitesse_cafe - vitesse_ajeun) < 0.05, "le cafe accelere le joueur : la police ne le rattrapera plus"
+
+
 def test_le_kiosque_a_journaux_ferme_la_nuit(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
