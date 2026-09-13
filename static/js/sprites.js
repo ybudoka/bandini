@@ -437,8 +437,187 @@ const TUILES = (function () {
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
     'b': function (ctx, v, T) { trottoir(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(6, 4, 4, 10); ctx.fillStyle = '#101018'; ctx.fillRect(6, 8, 4, 1); },
     'f': function (ctx, v, T) { plein(ctx, '#4f8d3e', T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(0, 6, T, 1); ctx.fillRect(0, 10, T, 1); ctx.fillRect(2, 3, 1, 11); ctx.fillRect(13, 3, 1, 11); },
-    't': function (ctx, v, T) { plein(ctx, '#b8a98a', T); ctx.fillStyle = '#a89979'; ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 0, 1, T); },
-    'c': function (ctx, v, T) { plein(ctx, '#6b4b2c', T); ctx.fillStyle = '#8a6a3f'; ctx.fillRect(0, 0, T, 4); },
+
+    /* --- Dedans : le plancher et les meubles ------------------------------
+
+       ⚠️ Un meuble se dessine VU D'EN HAUT, avec juste assez de face au sud
+       pour qu'on lise son volume : c'est la meme regle que les facades de la
+       ville. Un dessin a plat (l'ancien comptoir : un rectangle brun barre
+       d'un trait clair) se lit comme une tache de peinture au sol, et c'est
+       exactement pour ca qu'une piece meublee avait l'air vide.
+
+       ⚠️ Aucun meuble ne touche les quatre bords de sa tuile : il faut voir le
+       plancher entre deux, sinon une rangee d'etageres devient un mur — et le
+       joueur, lui, passe a travers (solidite 3). */
+
+    't': function (ctx, v, T) {
+      plein(ctx, '#b0a083', T);
+      ctx.fillStyle = '#a08f72';                       // les joints des planches
+      for (let y = (v % 2) * 4; y < T; y += 8) ctx.fillRect(0, y, T, 1);
+      ctx.fillStyle = '#bcac8f';
+      for (let y = (v % 2) * 4 + 1; y < T; y += 8) ctx.fillRect(0, y, T, 1);
+      points(ctx, v, T, '#a89979', 6, 30);             // le grain du bois
+    },
+    'u': function (ctx, v, T) {
+      plein(ctx, '#cfd3cb', T);
+      ctx.fillStyle = '#bcc1b9';                       // un carreau sur deux
+      ctx.fillRect(0, 0, 8, 8); ctx.fillRect(8, 8, 8, 8);
+      ctx.fillStyle = 'rgba(0,0,0,0.10)';              // les joints
+      ctx.fillRect(0, 7, T, 1); ctx.fillRect(7, 0, 1, T);
+      ctx.fillRect(0, 15, T, 1); ctx.fillRect(15, 0, 1, T);
+    },
+    'y': function (ctx, v, T) {
+      plein(ctx, '#8a3f3a', T);
+      ctx.fillStyle = '#9c4f46';
+      for (let y = 2; y < T; y += 4) ctx.fillRect(0, y, T, 2);
+      ctx.fillStyle = '#c9a24a';                       // le galon du tapis
+      ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, T - 1, T, 1);
+      points(ctx, v, T, '#7a3531', 5, 12);
+    },
+    // Le comptoir : un dessus clair, une arete, et la joue sombre au sud.
+    'c': function (ctx, v, T) {
+      plein(ctx, '#8a6a3f', T);
+      ctx.fillStyle = '#a8834f';
+      ctx.fillRect(0, 1, T, 9);
+      ctx.fillStyle = '#c2a06a';
+      ctx.fillRect(0, 1, T, 1);
+      ctx.fillStyle = '#5e4326';                       // la joue, face au client
+      ctx.fillRect(0, 10, T, 5);
+      ctx.fillStyle = 'rgba(0,0,0,0.30)';
+      ctx.fillRect(0, T - 1, T, 1);
+    },
+    // L'etagere : des boites de couleur sur deux tablettes. La variante change
+    // la marchandise — sans ca, une allee entiere est le meme paquet.
+    'e': function (ctx, v, T) {
+      plein(ctx, '#7a6244', T);
+      ctx.fillStyle = '#6a5238';
+      ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 7, T, 1);
+      const teintes = ['#b8503f', '#3f7ab8', '#d8b83a', '#4f9e5a', '#c2762c', '#8f5fb0'];
+      for (let k = 0; k < 4; k++) {
+        const i = (v * 3 + k) % teintes.length;
+        ctx.fillStyle = teintes[i];
+        ctx.fillRect(1 + (k % 2) * 8, 2 + Math.floor(k / 2) * 7, 6, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.25)';
+        ctx.fillRect(1 + (k % 2) * 8, 6 + Math.floor(k / 2) * 7, 6, 1);
+      }
+    },
+    // La table : un plateau CLAIR sur un piétement sombre. ⚠️ Le bois sombre
+    // d'avant faisait un trou noir dans le plancher : a l'ecran, une table et
+    // un billard se lisaient comme deux caisses posees la.
+    'a': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(3, 5, T - 4, T - 5);                // l'ombre portee
+      ctx.fillStyle = '#5b3f26';                       // le piétement
+      ctx.fillRect(2, 3, T - 4, T - 5);
+      ctx.fillStyle = '#a0784a';                       // le plateau
+      ctx.fillRect(2, 2, T - 4, T - 6);
+      ctx.fillStyle = '#bb9160';                       // le vernis qui accroche
+      ctx.fillRect(3, 3, T - 6, 2);
+      ctx.fillStyle = 'rgba(0,0,0,0.22)';
+      ctx.fillRect(2, T - 5, T - 4, 1);
+    },
+    // La chaise : plus petite que la table, dossier au nord (on s'assoit face
+    // au sud). On doit voir le plancher tout autour, sinon deux chaises collees
+    // font une banquette.
+    'h': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(5, 8, 8, 6);
+      ctx.fillStyle = '#7a5230';
+      ctx.fillRect(4, 3, 8, 2);                        // le dossier
+      ctx.fillStyle = '#96683c';
+      ctx.fillRect(4, 6, 8, 7);                        // l'assise
+      ctx.fillStyle = '#ab7b4c';
+      ctx.fillRect(5, 7, 6, 3);
+    },
+    // Le lit : matelas, oreiller au nord, couverture au sud.
+    'l': function (ctx, v, T) {
+      plein(ctx, '#d8d2c4', T);
+      ctx.fillStyle = '#efeae0';
+      ctx.fillRect(1, 1, T - 2, 5);                    // l'oreiller
+      ctx.fillStyle = '#3f6b8a';
+      ctx.fillRect(0, 7, T, T - 7);                    // la couverture
+      ctx.fillStyle = '#4d7ea3';
+      ctx.fillRect(0, 8, T, 1); ctx.fillRect(0, 12, T, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(0, T - 1, T, 1);
+    },
+    // Le frigo (ou la vitrine refrigeree) : blanc, une poignee, un reflet.
+    'j': function (ctx, v, T) {
+      plein(ctx, '#b9c2c4', T);
+      ctx.fillStyle = '#d8e0e2';
+      ctx.fillRect(1, 1, T - 2, 11);
+      ctx.fillStyle = '#8fa3a8';
+      ctx.fillRect(1, 12, T - 2, 3);                   // la face
+      ctx.fillStyle = '#5f6f74';
+      ctx.fillRect(11, 3, 2, 7);                       // la poignee
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.fillRect(3, 3, 4, 1);
+    },
+    // La machine : de la tole, des boulons, une courroie. La variante tourne
+    // le bloc — deux tours de suite ne sont pas le meme tour.
+    'm': function (ctx, v, T) {
+      plein(ctx, '#6f7378', T);
+      ctx.fillStyle = '#82868c';
+      ctx.fillRect(1, 1, T - 2, T - 4);
+      ctx.fillStyle = '#5a5e63';
+      ctx.fillRect(1, T - 4, T - 2, 3);
+      ctx.fillStyle = '#3f4347';
+      if (v % 2) ctx.fillRect(3, 4, T - 6, 3); else ctx.fillRect(4, 3, 3, T - 8);
+      ctx.fillStyle = '#d8b83a';
+      ctx.fillRect(2, 2, 1, 1); ctx.fillRect(T - 3, 2, 1, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, T - 1, T, 1);
+    },
+    // La plante verte : un pot et trois touffes. Rien d'autre ne dit « on
+    // s'occupe de cette piece-la ».
+    'n': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(5, 11, 8, 4);
+      ctx.fillStyle = '#8a5a3a';
+      ctx.fillRect(5, 10, 7, 5);
+      ctx.fillStyle = '#a06c46';
+      ctx.fillRect(5, 10, 7, 1);
+      ctx.fillStyle = '#2f7a44';
+      ctx.fillRect(4, 3, 9, 7);
+      ctx.fillStyle = '#3f9a56';
+      ctx.fillRect(6, 2, 5, 4); ctx.fillRect(3, 5, 3, 3);
+      ctx.fillStyle = '#256238';
+      ctx.fillRect(8, 6, 4, 3);
+    },
+    // Le classeur (ou le coffre) : deux tiroirs et leurs poignees.
+    'k': function (ctx, v, T) {
+      plein(ctx, '#5a6470', T);
+      ctx.fillStyle = '#6e7a88';
+      ctx.fillRect(1, 1, T - 2, 6); ctx.fillRect(1, 8, T - 2, 6);
+      ctx.fillStyle = '#c9ccd2';
+      ctx.fillRect(6, 3, 4, 1); ctx.fillRect(6, 10, 4, 1);
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.fillRect(0, T - 1, T, 1);
+    },
+    // Le poele : quatre ronds et la porte du four.
+    'z': function (ctx, v, T) {
+      plein(ctx, '#c4c7c2', T);
+      ctx.fillStyle = '#3a3a3e';
+      for (let k = 0; k < 4; k++) ctx.fillRect(2 + (k % 2) * 7, 2 + Math.floor(k / 2) * 5, 5, 3);
+      ctx.fillStyle = '#8f9490';
+      ctx.fillRect(1, 12, T - 2, 3);
+      ctx.fillStyle = '#d8b83a';
+      ctx.fillRect(3, 13, 1, 1); ctx.fillRect(6, 13, 1, 1);
+    },
+    // L'escalier : des marches et deux limons. Il MENE quelque part — c'est le
+    // seul meuble dont on attend qu'il fasse quelque chose quand on est
+    // dessus, et il doit donc se reconnaitre du premier coup d'oeil.
+    '/': function (ctx, v, T) {
+      plein(ctx, '#6b5a44', T);
+      for (let k = 0; k < 4; k++) {
+        ctx.fillStyle = ['#8a7458', '#9c8566', '#ae9674', '#c0a782'][k];
+        ctx.fillRect(2, k * 4, T - 4, 3);
+        ctx.fillStyle = 'rgba(0,0,0,0.30)';
+        ctx.fillRect(2, k * 4 + 3, T - 4, 1);
+      }
+      ctx.fillStyle = '#4a3d2e';                       // les limons
+      ctx.fillRect(0, 0, 2, T); ctx.fillRect(T - 2, 0, 2, T);
+    },
   };
 })();
 
@@ -591,6 +770,120 @@ const FACADES = (function () {
     ctx.fillRect(x + 3, y - 2, 1, 2);
   }
 
+  /* --- Les residences ---------------------------------------------------
+
+     ⚠️ Un logement se lit a trois choses, et aucune n'est un nom : les ETAGES
+     (des rangees de fenetres, pas un mur nu), le BALCON, et l'ESCALIER DE FER
+     qui descend sur le trottoir. C'est ce qui separe une rue ou l'on habite
+     d'une rue d'entrepots — avant, les deux etaient le meme mur de brique.
+
+     ⚠️ Vu d'en haut, on ne voit pas la hauteur : ce sont les RANGEES de
+     fenetres qui la disent. Une rangee par etage au-dessus du rez-de-chaussee,
+     et le rez prend le bas de la tuile, la ou le passant marche. */
+
+  const CORNICHE_H = 2;
+  const RDC_Y = 11, RDC_H = 5;
+
+  function fenetre(ctx, m, x, y, l, h) {
+    ctx.fillStyle = m.cadre;
+    ctx.fillRect(x, y, l, h);
+    ctx.fillStyle = m.vitre;
+    ctx.fillRect(x + 1, y + 1, l - 2, h - 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.16)';
+    ctx.fillRect(x + 1, y + 1, 1, h - 2);
+  }
+
+  /** La rangee de fenetres d'un etage, deux par tuile. */
+  function etage(ctx, r, m, ox, oy, y) {
+    for (let i = 0; i < r.l; i++) {
+      const x = ox + i * T;
+      fenetre(ctx, m, x + 2, y, 5, 3);
+      fenetre(ctx, m, x + 9, y, 5, 3);
+    }
+  }
+
+  /** Le garde-corps du balcon : des barreaux et une main courante. */
+  function balcon(ctx, fer, ox, oy, large, y) {
+    ctx.fillStyle = fer.ombre;
+    ctx.fillRect(ox, oy + y + 3, large, 1);
+    ctx.fillStyle = fer.barreau;
+    for (let x = 0; x < large; x += 3) ctx.fillRect(ox + x, oy + y, 1, 3);
+    ctx.fillStyle = fer.arete;
+    ctx.fillRect(ox, oy + y, large, 1);
+  }
+
+  /** L'escalier exterieur, sur la tuile de trottoir sous la porte. `sens` :
+      0 tout droit, -1 il tourne vers l'ouest, +1 vers l'est. */
+  function escalier(ctx, fer, x, y, sens) {
+    ctx.fillStyle = fer.ombre;
+    ctx.fillRect(x + 2, y + 1, 12, 13);
+    for (let k = 0; k < 5; k++) {
+      ctx.fillStyle = fer.marche;
+      ctx.fillRect(x + 3, y + 1 + k * 3, 10, 2);
+      ctx.fillStyle = fer.arete;
+      ctx.fillRect(x + 3, y + 1 + k * 3, 10, 1);
+    }
+    ctx.fillStyle = fer.barreau;                  // les deux limons
+    ctx.fillRect(x + 2, y, 1, 15);
+    ctx.fillRect(x + 13, y, 1, 15);
+    if (sens) {                                   // le palier du bas, en biais
+      const bx = sens < 0 ? x - 4 : x + 10;
+      ctx.fillStyle = fer.marche;
+      ctx.fillRect(bx, y + 12, 8, 3);
+      ctx.fillStyle = fer.barreau;
+      ctx.fillRect(bx, y + 11, 8, 1);
+    }
+  }
+
+  /** La porte d'un logement : bois sombre, une imposte, des sonnettes. */
+  function porteDeLogement(ctx, m, fer, x, y, h, quoi) {
+    ctx.fillStyle = 'rgba(0,0,0,0.40)';
+    ctx.fillRect(x + 1, y, T - 2, h);
+    ctx.fillStyle = m.porte;
+    ctx.fillRect(x + 2, y, T - 4, h);
+    ctx.fillStyle = quoi === 'D' ? m.allumee : m.vitre;   // l'imposte
+    ctx.fillRect(x + 4, y + 1, T - 8, 2);
+    if (quoi === 'd') {
+      ctx.fillStyle = '#6b5a48';
+      ctx.fillRect(x + 2, y + 1, T - 4, 1);
+      ctx.fillRect(x + 2, y + h - 2, T - 4, 1);
+      return;
+    }
+    ctx.fillStyle = fer.arete;                            // les sonnettes
+    ctx.fillRect(x + 3, y + 3, 1, 1); ctx.fillRect(x + 3, y + 5, 1, 1);
+    if (quoi === 'D') {
+      ctx.fillStyle = '#d8b83a';                          // la poignee : on entre
+      ctx.fillRect(x + T - 5, y + Math.floor(h / 2), 2, 1);
+    }
+  }
+
+  /** `r` = { x, y, l, etages, motifs, escalier, porte, mur, balcon }. */
+  function residence(ctx, r, m, fer, ox, oy) {
+    const large = r.l * T;
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';                   // l'ombre de la corniche
+    ctx.fillRect(ox, oy, large, CORNICHE_H);
+    ctx.fillStyle = m.joint;
+    ctx.fillRect(ox, oy, large, 1);
+
+    const hauts = Math.max(0, r.etages - 1);
+    for (let e = 0; e < hauts; e++) etage(ctx, r, m, ox, oy, oy + 2 + e * 4);
+    if (r.balcon && hauts) balcon(ctx, fer, ox, oy, large, 2 + (hauts - 1) * 4 + 3);
+
+    const motifs = r.motifs || '';
+    for (let i = 0; i < r.l; i++) {
+      const x = ox + i * T;
+      const quoi = motifs[i] || 'F';
+      if (quoi === 'D' || quoi === 'd' || quoi === 'P' || quoi === 'G') {
+        porteDeLogement(ctx, m, fer, x, oy + RDC_Y, RDC_H, quoi);
+      } else {
+        fenetre(ctx, m, x + 3, oy + RDC_Y + 1, 10, 4);
+        ctx.fillStyle = 'rgba(0,0,0,0.18)';               // le soubassement
+        ctx.fillRect(x, oy + T - 1, T, 1);
+      }
+    }
+    if (r.etages >= 2) escalier(ctx, fer, ox + r.porte * T, oy + T, r.escalier);
+  }
+
   //: Trois facons de salir un mur. 0 = le mot seul, 1 = le barbouillage seul,
   //: 2 = les deux. ⚠️ Un tag est TOUJOURS un peu de travers et deborde un peu :
   //: pose bien droit dans sa tuile, il a l'air d'un panneau officiel.
@@ -628,7 +921,7 @@ const FACADES = (function () {
     return (n ^ (n >>> 16)) >>> 0;
   }
 
-  return { devanture: devanture, graffiti: graffiti, T: T };
+  return { devanture: devanture, residence: residence, graffiti: graffiti, T: T };
 })();
 
 /* Decor procedural : (ctx, w, h). `r` = rayon au sol, `solide` = on s'y cogne.

@@ -60,11 +60,42 @@ const Jeu = (function () {
     B.particules.length = 0;
     B.interieur = piece.interieur;
     Entites.reindexerDecor();
+    Entites.peuplerInterieur(piece.interieur);
     j.x = piece.interieur.apparition.x * TT + 8;
     j.y = piece.interieur.apparition.y * TT + 8;
     j.vx = 0; j.vy = 0; j.face = 'haut';
     Monde.centrerCamera(j.x, j.y);
     Hud.fondu(40, null);
+    Son.SFX.porte();
+    Hud.message(piece.interieur.nom.toUpperCase(), 120);
+    return true;
+  }
+
+  /** Monter l'escalier : meme adresse, autre plancher.
+
+      ⚠️ On ne repasse PAS par la rue : `B.exterieur` reste ce qu'il etait, et
+      c'est toujours par la porte d'en bas qu'on ressortira. On arrive sur
+      l'escalier qui redescend — pas au milieu de la piece : c'est ce qui dit
+      au joueur par ou il est monte. */
+  function changerEtage(slug) {
+    const j = B.joueur;
+    if (!B.interieur || !B.exterieur || j.dansVehicule) return false;
+    const depuis = B.interieur.slug;
+    const piece = Monde.changerPiece(slug);
+    if (!piece) return false;
+    B.entites = [j];
+    B.particules.length = 0;
+    B.interieur = piece.interieur;
+    Entites.reindexerDecor();
+    Entites.peuplerInterieur(piece.interieur);
+    const retour = (piece.interieur.points || []).find(function (p) {
+      return p.type === 'escalier' && p.vers === depuis;
+    }) || piece.interieur.apparition;
+    j.x = retour.x * TT + 8; j.y = retour.y * TT + 8;
+    j.vx = 0; j.vy = 0; j.face = 'bas';
+    Entites.dansLaCarte(j);
+    Monde.centrerCamera(j.x, j.y);
+    Hud.fondu(30, null);
     Son.SFX.porte();
     Hud.message(piece.interieur.nom.toUpperCase(), 120);
     return true;
@@ -330,7 +361,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, entrer, sortir, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, entrer, sortir, changerEtage, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

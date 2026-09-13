@@ -75,6 +75,26 @@ TARIFS = {
     "poutine_pv": 45,
     "poutine_souffle": 70,
     "journal": 2,
+    # Les comptoirs des commerces ordinaires (`magasins.COMPTOIRS`). ⚠️ Tous
+    # moins bons au dollar que le kiosque a hot-dogs : un depanneur depanne, il
+    # ne nourrit pas. Ce qu'on achete ici, on l'achete parce qu'on est DEVANT,
+    # pas parce que c'est une aubaine — c'est la porte a cote qui a de la
+    # valeur, pas le sandwich.
+    "sandwich": 8,
+    "sandwich_pv": 20,
+    "sandwich_souffle": 30,
+    "biere": 8,
+    "biere_pv": 8,
+    "biere_souffle": 35,
+    "friture": 14,
+    "friture_pv": 35,
+    "friture_souffle": 55,
+    "pilules": 20,
+    "pilules_pv": 50,
+    "coupe": 12,
+    # Les tiroirs d'un logement ou l'on n'habite pas. Une fois par adresse.
+    "fouille_min": 10,
+    "fouille_max": 60,
     "cafe": 4,
     "cafe_pv": 10,
     "cafe_souffle": 30,

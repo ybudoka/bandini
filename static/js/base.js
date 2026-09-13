@@ -53,6 +53,8 @@ function etatInitial(defs) {
     vie: 100,
     tenue: 'chandail',
     tenues: ['chandail'],
+    cheveux: null,        // la couleur donnee par le barbier (`magasins.COIFFURES`)
+    fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
     arme: 'poings',
     planque: { armes: {}, vehicule: null, coffre: 0 },
@@ -71,6 +73,19 @@ function etatInitial(defs) {
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };
+}
+
+/** Les couleurs du joueur : son linge, et sa coupe s'il est passe chez le barbier.
+
+    ⚠️ UNE seule fonction pour les deux. `porterTenue` remplacait les swaps par
+    `{ c: couleur }` : la teinture du barbier disparaissait des qu'on changeait
+    de chandail, et on se demandait pourquoi la police nous reconnaissait. */
+function apparenceDuJoueur(partie, defs) {
+  const tenue = ((defs && defs.tenues) || []).find(function (t) { return t.slug === partie.tenue; });
+  const swaps = {};
+  if (tenue) swaps.c = tenue.couleur;
+  if (partie.cheveux) swaps.h = partie.cheveux;
+  return Object.keys(swaps).length ? swaps : null;
 }
 
 // --- Maths ------------------------------------------------------------------

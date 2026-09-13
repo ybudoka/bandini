@@ -46,6 +46,84 @@ def ambulant(slug: str) -> dict | None:
     return None
 
 
+# --- Les comptoirs des commerces ordinaires --------------------------------
+
+#: ⚠️ « Un comptoir qui ne donne rien est une porte qu'on ouvre pour rien. »
+#: Depuis qu'un commerce ordinaire sur cinq s'ouvre, il fallait repondre a la
+#: question : et qu'est-ce qu'on y fait ? Un comptoir par FAMILLE de devanture
+#: (`devantures.GENRES`), et chaque article fait quelque chose qui se mesure —
+#: des points de vie, du souffle, une arme, une tenue.
+#:
+#: Les prix pointent dans `economie.TARIFS` : ils ne vivent jamais en double.
+#: Une arme prend son prix au catalogue des armes, fois `marge` (le
+#: quincaillier n'est pas un armurier) ; une tenue prend le sien fois `rabais`
+#: (la friperie vend de l'usage).
+
+
+class Article(TypedDict):
+    slug: str
+    nom: str
+    tarif: str | None          # la cle dans economie.TARIFS
+    gain_pv: str | None
+    gain_souffle: str | None
+    effet: str | None
+    arme: str | None           # un slug de armes.CATALOGUE
+    tenue: str | None          # un slug de TENUES
+    journal: bool
+
+
+def _art(slug: str, nom: str, tarif: str | None = None, *, pv: str | None = None,
+         souffle: str | None = None, effet: str | None = None, arme: str | None = None,
+         tenue: str | None = None, journal: bool = False) -> Article:
+    return Article(slug=slug, nom=nom, tarif=tarif, gain_pv=pv, gain_souffle=souffle,
+                   effet=effet, arme=arme, tenue=tenue, journal=journal)
+
+
+COMPTOIRS: dict[str, dict] = {
+    "bouffe": {"nom": "Le comptoir", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("sandwich", "Sandwich", "sandwich", pv="sandwich_pv", souffle="sandwich_souffle"),
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+    ]},
+    "service": {"nom": "Le comptoir", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+        _art("journal", "Le Clairon de la Baie", "journal", journal=True),
+    ]},
+    # La quincaillerie : les memes batons que Chez Gus, au prix du voisin.
+    "artisan": {"nom": "La quincaillerie", "marge": 1.3, "rabais": 1.0, "articles": [
+        _art("batte", "Bâton", arme="batte"),
+        _art("couteau", "Couteau", arme="couteau"),
+    ]},
+    "nuit": {"nom": "Le bar", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("biere", "Grosse bière", "biere", pv="biere_pv", souffle="biere_souffle"),
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+    ]},
+    "commerce": {"nom": "Le magasin", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("sandwich", "Sandwich", "sandwich", pv="sandwich_pv", souffle="sandwich_souffle"),
+        _art("journal", "Le Clairon de la Baie", "journal", journal=True),
+    ]},
+    "marine": {"nom": "La poissonnerie", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("friture", "Poisson frit", "friture", pv="friture_pv", souffle="friture_souffle"),
+    ]},
+    "industrie": {"nom": "Le magasin", "marge": 1.25, "rabais": 1.0, "articles": [
+        _art("extincteur", "Extincteur", arme="extincteur"),
+        _art("cafe", "Café", "cafe", pv="cafe_pv", souffle="cafe_souffle", effet="cafe"),
+    ]},
+    "sante": {"nom": "La pharmacie", "marge": 1.0, "rabais": 1.0, "articles": [
+        _art("pilules", "Pilules", "pilules", pv="pilules_pv"),
+    ]},
+    # La friperie : du linge d'occasion. Changer de linge fait oublier ta tete
+    # (`porterTenue` remet la police a zero) — a ce prix-la, ca vaut le detour.
+    "mode": {"nom": "La friperie", "marge": 1.0, "rabais": 0.6, "articles": [
+        _art("coupe_vent", "Coupe-vent bleu", tenue="coupe_vent"),
+        _art("chemise_hawai", "Chemise hawaïenne", tenue="chemise_hawai"),
+    ]},
+}
+
+
+def comptoir(genre: str) -> dict | None:
+    return COMPTOIRS.get(genre)
+
+
 class Magasin(TypedDict):
     slug: str
     nom: str
@@ -64,6 +142,18 @@ TENUES = [
     {"slug": "veste_cuir", "nom": "Veste de cuir", "prix": 200, "couleur": "#2c2c2c"},
     {"slug": "complet", "nom": "Complet gris", "prix": 500, "couleur": "#7f8c8d"},
     {"slug": "chemise_hawai", "nom": "Chemise hawaïenne", "prix": 120, "couleur": "#f39c12"},
+]
+
+#: Chez le barbier (`boutique_service`) : la coupe change la COULEUR des cheveux
+#: du sprite (`h`). ⚠️ Ce n'est pas de la coquetterie — changer de tete remet la
+#: police a zero, exactement comme changer de linge. C'est ce qui fait d'un
+#: salon de coiffure un endroit ou l'on entre en courant.
+COIFFURES: list[dict] = [
+    {"slug": "brun", "nom": "Brun", "couleur": "#3a2a1a"},
+    {"slug": "noir", "nom": "Noir de jais", "couleur": "#101018"},
+    {"slug": "blond", "nom": "Blond", "couleur": "#d8b46a"},
+    {"slug": "roux", "nom": "Roux", "couleur": "#a8452a"},
+    {"slug": "gris", "nom": "Poivre et sel", "couleur": "#b8b8b8"},
 ]
 
 CATALOGUE: list[Magasin] = [

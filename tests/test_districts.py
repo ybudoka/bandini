@@ -188,4 +188,5 @@ def test_une_autre_graine_garde_la_ville_d_un_seul_tenant(graine):
     # du bati ou de l'eau. Quelques tuiles, c'est le generateur qui fait son
     # travail ; des centaines, c'est un gabarit qui enferme un quartier.
     assert ville["tuiles_bouchees"] < 60, ville["tuiles_bouchees"]
-    assert {p["lieu"] for p in ville["portes"]} == {p["lieu"] for p in CARTE["portes"]}
+    garantis = {special["slug"] for special in carte.SPECIAUX.values()} | {"kiosque"}
+    assert {p["lieu"] for p in ville["portes"]} >= garantis

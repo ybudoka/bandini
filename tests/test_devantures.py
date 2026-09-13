@@ -314,3 +314,162 @@ def test_on_voit_toujours_une_porte_sur_d_autres_graines(graine):
     for d in ville["devantures"]:
         assert set(d["motifs"]) & PORTES_VISIBLES, (graine, d)
         assert len(d["motifs"]) == d["l"], (graine, d)
+
+
+# --- Les logements ---------------------------------------------------------------
+# ⚠️ Deuxieme retour de Martin (13 sept. 2026) : « plus de variete de commerces,
+# ou bien enleve des devantures pour mettre des residences ». Les deux. Une
+# residence est la MEME chose qu'une devanture pour la carte : une couche
+# peinte, zero solidite touchee. Les juges ci-dessous gardent cette frontiere-la
+# exactement comme ceux des enseignes.
+
+
+def test_la_ville_a_des_logements(ville):
+    assert len(ville["residences"]) >= 50, len(ville["residences"])
+
+
+def test_on_habite_dans_les_quartiers_ou_l_on_habite(ville):
+    """Le Faubourg et les Erables ont des logements ; La Shop, c'est des
+    entrepots — un immeuble a logements au milieu de la ferraille dirait le
+    contraire de ce que le quartier raconte."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    quartiers = {}
+    for residence in ville["residences"]:
+        district = chantier.district_en(residence["x"], residence["y"])
+        quartiers[district] = quartiers.get(district, 0) + 1
+    assert quartiers.get("faubourg", 0) >= 10, quartiers
+    assert quartiers.get("erables", 0) >= 10, quartiers
+
+
+def test_une_residence_est_posee_sur_un_mur(ville, sol):
+    for r in ville["residences"]:
+        for i in range(r["l"]):
+            g = sol[r["y"]][r["x"] + i]
+            assert g in MURS_DEVANTURE, f"logement en ({r['x'] + i},{r['y']}) : tuile « {g} »"
+
+
+def test_une_residence_se_voit_depuis_la_rue(ville, sol):
+    for r in ville["residences"]:
+        vues = [i for i in range(r["l"]) if carte.marchable(sol[r["y"] + 1][r["x"] + i])]
+        assert vues, f"logement en ({r['x']},{r['y']}) ne donne sur rien"
+
+
+def test_rien_ne_se_peint_deux_fois_sur_le_meme_mur(ville):
+    """⚠️ Une enseigne par-dessus un immeuble a logements, et on lirait
+    « BOULANGERIE » entre deux rangees de fenetres."""
+    pris: dict[tuple[int, int], str] = {}
+    for couche, nom in ((ville["devantures"], "enseigne"), (ville["residences"], "logement")):
+        for p in couche:
+            for i in range(p["l"]):
+                cle = (p["x"] + i, p["y"])
+                assert cle not in pris, f"{nom} par-dessus {pris[cle]} en {cle}"
+                pris[cle] = nom
+
+
+def test_le_masque_d_un_logement_dit_la_verite_du_sol(ville, sol):
+    for r in ville["residences"]:
+        assert len(r["motifs"]) == r["l"], r
+        for i, lettre in enumerate(r["motifs"]):
+            glyphe = sol[r["y"]][r["x"] + i]
+            if lettre == "P":
+                assert glyphe in ("F", "W"), r
+            else:
+                assert glyphe == lettre, r
+
+
+def test_on_voit_toujours_par_ou_l_on_rentre_chez_soi(ville):
+    for r in ville["residences"]:
+        assert set(r["motifs"]) & PORTES_VISIBLES, f"logement sans porte : {r}"
+        assert 0 <= r["porte"] < r["l"], r
+        assert r["motifs"][r["porte"]] in PORTES_VISIBLES, r
+
+
+def test_les_etages_restent_dans_les_bornes(ville):
+    for r in ville["residences"]:
+        assert 1 <= r["etages"] <= 3, r
+        assert r["escalier"] in (-1, 0, 1), r
+        assert 0 <= r["mur"] < len(devantures.MURS), r
+        assert r["balcon"] in (0, 1), r
+        # Un escalier exterieur sans etage a monter n'est qu'un obstacle.
+        assert r["etages"] >= 2 or r["escalier"] == 0, r
+
+
+def test_l_escalier_exterieur_descend_sur_du_marchable(ville, sol):
+    """⚠️ Il se peint sur la tuile SOUS la porte : s'il tombait dans un mur ou
+    sur la chaussee, on verrait des marches de fer au milieu de la rue."""
+    for r in ville["residences"]:
+        if r["etages"] < 2:
+            continue
+        x, y = r["x"] + r["porte"], r["y"] + 1
+        assert carte.marchable(sol[y][x]), f"escalier dans « {sol[y][x]} » en ({x},{y})"
+
+
+def test_un_logement_ne_change_aucune_solidite(ville, sol):
+    """Le juge de la frontiere, comme pour les enseignes : la couche peinte ne
+    transforme pas une tuile. Une residence ne repeint meme pas les vitrines."""
+    for r in ville["residences"]:
+        for i in range(r["l"]):
+            assert carte.LEGENDE[sol[r["y"] + 0][r["x"] + i]].get("solide") == 1
+
+
+def test_les_familles_de_brique_se_tiennent(ville):
+    for m in devantures.MURS:
+        assert set(m) == {"slug", "brique", "joint", "cadre", "vitre", "allumee", "porte"}
+        for cle, valeur in m.items():
+            if cle != "slug":
+                assert valeur.startswith("#") and len(valeur) == 7, m
+    assert set(devantures.FER) == {"barreau", "marche", "arete", "ombre"}
+
+
+def test_une_fenetre_allumee_n_est_pas_un_lampadaire(ville):
+    """Trois sortes de lumiere, trois comportements. La fenetre est la plus
+    faible et la plus rare : une rue ou toutes les fenetres brillent a trois
+    heures du matin ment sur la ville."""
+    fenetres = [lampe for lampe in ville["lampes"] if lampe.get("c") == "fenetre"]
+    assert fenetres, "aucune fenetre allumee : la nuit, les logements sont des blocs noirs"
+    assert len(fenetres) <= len(ville["residences"]) * 0.6, "toute la ville veille"
+    for lampe in fenetres:
+        assert lampe["r"] < 45, "une fenetre n'eclaire pas comme un lampadaire"
+
+
+# --- La variete des enseignes ----------------------------------------------------
+
+
+def test_chaque_quartier_a_de_quoi_ne_pas_se_repeter():
+    """⚠️ Mesure du 13 sept. 2026 : huit noms pour vingt-quatre vitrines a La
+    Shop donnaient sept « FERRAILLE ». Il faut au moins de quoi habiller une rue
+    entiere sans revenir sur ses pas."""
+    for district, liste in devantures.COMMERCES.items():
+        assert len(liste) >= 14, f"{district} : {len(liste)} noms seulement"
+
+
+def test_deux_enseignes_pareilles_ne_se_voient_pas_du_meme_trottoir(ville):
+    """La regle de `choisir_enseigne`, jugee sur la ville finie."""
+    par_nom: dict[str, list[tuple[int, int]]] = {}
+    for d in ville["devantures"]:
+        par_nom.setdefault(d["texte"], []).append((d["x"], d["y"]))
+    for nom, places in par_nom.items():
+        for i, a in enumerate(places):
+            for b in places[i + 1:]:
+                ecart = max(abs(a[0] - b[0]), abs(a[1] - b[1]))
+                assert ecart >= devantures.DISTANCE_DOUBLON, \
+                    f"deux « {nom} » a {ecart} tuiles l'une de l'autre ({a} et {b})"
+
+
+def test_la_rue_porte_plusieurs_familles_de_commerce(ville):
+    """Sept familles pour cent commerces, c'etait deux rues de la meme couleur.
+    Toutes doivent servir — sinon autant les enlever du catalogue."""
+    genres = {d["genre"] for d in ville["devantures"]}
+    assert len(genres) >= 8, f"seulement {len(genres)} familles sur {len(devantures.GENRES)}"
+
+
+@pytest.mark.parametrize("graine", [1, 7, 99, 777])
+def test_les_logements_tiennent_sur_d_autres_graines(graine):
+    ville = carte.generer(graine=graine)
+    sol = ville["sol"]
+    assert ville["residences"], graine
+    for r in ville["residences"]:
+        assert len(r["motifs"]) == r["l"], (graine, r)
+        assert set(r["motifs"]) & PORTES_VISIBLES, (graine, r)
+        for i in range(r["l"]):
+            assert sol[r["y"]][r["x"] + i] in MURS_DEVANTURE, (graine, r)

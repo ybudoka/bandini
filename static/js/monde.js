@@ -18,6 +18,12 @@ const Monde = (function () {
   const MASQUE_PIETON = MUR | EAU;
   const MASQUE_VEHICULE = MUR | EAU | BASSE;
 
+  const SORTES_DE_LAMPE = {
+    poteau: { dy: 2, c: 'rgba(255,214,130,0.55)' },
+    vitrine: { dy: 6, c: 'rgba(255,226,170,0.34)' },
+    fenetre: { dy: 8, c: 'rgba(255,212,150,0.22)' },
+  };
+
   let carte = null;
 
   function charger(def) {
@@ -60,17 +66,19 @@ const Monde = (function () {
     });
     carte = {
       def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende,
+      // Le plancher d'une piece : ce qu'on peint SOUS les meubles (null dehors).
+      plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
       morceaux: new Map(), visibles: new Set(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       intersections: def.intersections || [],
-      // ⚠️ Deux sortes de lumiere : le lampadaire, haut et large, et la
-      // VITRINE, basse et chaude, qui ne fait qu'un reflet sur le trottoir.
+      // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
+      // LAMPADAIRE (haut, large, blanc-jaune), la VITRINE (basse et chaude,
+      // un reflet sur le trottoir) et la FENETRE d'un logement (faible, dans
+      // le mur — on doit deviner qu'il y a quelqu'un, pas lire son journal).
       lampes: (def.lampes || []).map(function (l) {
-        const vitrine = l.c === 'vitrine';
-        return { x: l.x * TT + 8, y: l.y * TT + (vitrine ? 6 : 2),
-                 r: l.r || 44,
-                 c: vitrine ? 'rgba(255,226,170,0.34)' : 'rgba(255,214,130,0.55)' };
+        const sorte = SORTES_DE_LAMPE[l.c] || SORTES_DE_LAMPE.poteau;
+        return { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c };
       }),
       portes: def.portes || [],
       rampes: def.rampes || [],
@@ -82,6 +90,10 @@ const Monde = (function () {
         // Le mur ET la tuile de trottoir sous lui (la pancarte y pend).
         return [d.x, d.y, d.l, 2];
       }),
+      // Les logements : meme regle, l'escalier de fer descend sur le trottoir.
+      residences: indexerParMorceau(def.residences || [], function (r) {
+        return [r.x, r.y, r.l, 2];
+      }),
       graffitis: indexerParMorceau(def.graffitis || [], function () { return [0, 0, 1, 1]; }),
     };
     B.carte = carte;
@@ -92,10 +104,16 @@ const Monde = (function () {
       carte ASCII de l'interieur (meme legende, aucune voie, aucune lampe). */
   function entrer(porte) {
     const ville = carte;
-    const inte = ville.def.interieurs[porte.interieur];
-    if (!inte) return null;
+    const commune = ville.def.interieurs[porte.interieur];
+    if (!commune) return null;
+    // ⚠️ Le nom vient de la PORTE quand elle en porte un : dix-huit commerces
+    // partagent la meme piece, et le bandeau qu'on vient de lire dans la rue
+    // est la seule chose qui les distingue. D'ou la COPIE : renommer la piece
+    // du catalogue renommerait les dix-sept autres.
+    const inte = Object.assign({}, commune, { nom: porte.nom || commune.nom });
     const def = {
       slug: inte.slug, nom: inte.nom, largeur: inte.largeur, hauteur: inte.hauteur, sol: inte.sol,
+      plancher: inte.plancher,
       voie: inte.sol.map(function (l) { return '.'.repeat(l.length); }), legende: ville.legende,
       portes: [{ x: inte.sortie.x, y: inte.sortie.y, interieur: null, lieu: 'sortie' }],
       lampes: [], decor: [], zones: [], points_interet: [], intersections: [], arrets: {},
@@ -106,6 +124,21 @@ const Monde = (function () {
     carte.ville = ville;
     carte.porte = porte;
     return carte;
+  }
+
+  /** Monte (ou descend) d'un etage : on change de piece sans ressortir.
+
+      ⚠️ La ville et la PORTE d'ou l'on vient ne bougent pas : c'est par elles
+      qu'on ressortira, meme trois etages plus haut. Un escalier qui rechargeait
+      la ville aurait remis le joueur sur le trottoir a chaque marche. */
+  function changerPiece(slug) {
+    if (!carte || !carte.interieur || !carte.ville) return null;
+    const ville = carte.ville, porte = carte.porte;
+    carte = ville;
+    B.carte = ville;
+    // ⚠️ Sans le nom : l'etage a le sien (« Un logement, en haut »), et c'est
+    // la seule facon de savoir qu'on a change de plancher.
+    return entrer(Object.assign({}, porte, { interieur: slug, nom: null }));
   }
 
   /** Ressort : la ville reprend sa place telle qu'on l'a laissee (morceaux
@@ -379,6 +412,15 @@ const Monde = (function () {
     return (B.defs && B.defs.devantures && B.defs.devantures.genres) || [];
   }
 
+  function mursDeResidence() {
+    return (B.defs && B.defs.devantures && B.defs.devantures.murs) || [];
+  }
+
+  function ferDesEscaliers() {
+    return (B.defs && B.defs.devantures && B.defs.devantures.fer)
+      || { barreau: '#3d4348', marche: '#8a8f94', arete: '#adb2b6', ombre: 'rgba(0,0,0,0.35)' };
+  }
+
   function couleursTag() {
     return (B.defs && B.defs.devantures && B.defs.devantures.couleurs_tag) || ['#d34f3a'];
   }
@@ -391,6 +433,14 @@ const Monde = (function () {
         const tx = mx * MORCEAU + i, ty = my * MORCEAU + j;
         if (tx >= carte.w || ty >= carte.h) continue;
         const g = carte.sol[ty][tx];
+        // ⚠️ Le plancher d'abord, sous les meubles : une chaise, une table ou
+        // une plante ne remplit pas sa tuile, et ce qui reste serait du VIDE —
+        // c'est-a-dire du noir. (Vu en plein visage : chaque table du bar avait
+        // un cadre noir, et la plante etait posee dans un trou.)
+        if (carte.plancher && (carte.legende[g] || {}).meuble) {
+          const fond = TUILES[carte.plancher] || TUILES[','];
+          ctx.drawImage(Atlas.cuireTuile(carte.plancher, varianteDeTuile(carte.plancher, tx, ty), fond), i * TT, j * TT);
+        }
         const peintre = TUILES[g] || TUILES[','];
         const tuile = Atlas.cuireTuile(g, varianteDeTuile(g, tx, ty), peintre);
         ctx.drawImage(tuile, i * TT, j * TT);
@@ -400,7 +450,7 @@ const Monde = (function () {
     return c;
   }
 
-  /** Les enseignes et les tags, par-dessus les tuiles du morceau. */
+  /** Les enseignes, les logements et les tags, par-dessus les tuiles du morceau. */
   function peindreDevantures(ctx, mx, my) {
     const cle = mx + ',' + my;
     const ox = mx * MORCEAU, oy = my * MORCEAU;
@@ -410,6 +460,14 @@ const Monde = (function () {
       devantures.forEach(function (d) {
         const g = genres[d.genre] || genres[0];
         FACADES.devanture(ctx, d, g, (d.x - ox) * TT, (d.y - oy) * TT);
+      });
+    }
+    const residences = carte.residences && carte.residences.get(cle);
+    const murs = mursDeResidence();
+    if (residences && murs.length) {
+      const fer = ferDesEscaliers();
+      residences.forEach(function (r) {
+        FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT);
       });
     }
     const tags = carte.graffitis && carte.graffitis.get(cle);
@@ -589,7 +647,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
-    charger, entrer, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

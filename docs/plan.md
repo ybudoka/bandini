@@ -6,6 +6,12 @@ jalons » à chaque jalon livré.
 
 ## État des jalons
 
+Les lignes **livrées** sont dans l'ordre où elles l'ont été ; celles **à faire** sont dans
+l'ordre où on compte les faire — du plus facile au plus difficile, prérequis devant (le
+détail et les prérequis sont dans « La v2 » plus bas). ⚠️ Les numéros de jalon sont des
+**noms**, pas un ordre : tout le dépôt y renvoie, alors ils ne bougent pas quand l'ordre de
+travail change.
+
 | Jalon | État | Notes |
 |---|---|---|
 | M0 Squelette et mise en ligne | **livré** (12 sept. 2026) | dépôt `ybudoka/bandini`, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; serveur installé, https://bandini.gestiondojo.ca |
@@ -20,7 +26,7 @@ jalons » à chaque jalon livré.
 | M4 Police | **livré** (13 sept. 2026) | `police.js` réécrit : agents à pied (archétype `policier`, patrouille par zone, cône vérifié une image sur trois, poursuite par **A\*** sur les trottoirs, arrestation au contact, sortent le joueur d'un char arrêté), **rien n'est compté tant qu'un agent ne l'a pas vu** — un passant qui a vu devient témoin porteur du crime, court le raconter à un agent ou téléphone (`temoins`), et on peut **acheter son silence** (20 $) ; délits bruyants (`temoin: false`) comptés tout de suite ; étoiles qui ne tombent qu'hors de vue (dedans aussi) ; menu d'arrestation **obligatoire** (pot-de-vin selon casier/étoiles, sergent ami plus tard, refus = délit) ; prison (amende, armes confisquées, casier, 6 h, réveil au poste, sauvegarde) ; autos de patrouille à 3★ qui **suivent les rails** vers le joueur (feux brûlés, sortie vers lui) et foncent de près, agents qui descendent ; tirs à 3★ ; −1★ en changeant de char hors de vue ; affiches « Recherché » sur les façades à 2★ ; blips bleus, étoiles qui clignotent ; **mode TRACE** (idée de Martin) : le jeu dessine le trajet de chaque char et se surveille (chien de garde, tour en rond, hors voie) |
 | M6 Missions et gang | **livré** (13 sept. 2026) | `missions.py` : 6 personnages (une voix ElevenLabs chacun), **5 missions** (Ti-Guy, Mme Thibodeau, Marco, Sgt Bouchard, Josée) en objectifs typés, 35 répliques, 3 défis ; `histoire.js` : donneurs devant leur porte (ou à leur point dedans), **dialogues dits à voix haute** (chargés par mission, ducking radio/ambiance, voix « du combiné » au téléphone, le joueur écoute), **téléphone** (le donneur suivant appelle), machine à objectifs (aller/monter/livrer/tuer/ramasser/courses/semer/retourner), char de M1 dans une ruelle, fuyard en moto sur les rails (fuite), escorte de Ti-Guy, Cravates posées en ville, échec sur prison/hôpital, récompenses (bâton, rabais, sergent ami → pot-de-vin, bar, Faubourg libéré, manchette), **GPS** (blip, flèche au bord, distance), objectif en haut, **défis** à panneaux (saut, tour chrono, livraison sans bosse), gang qui attaque l'arme au poing sur son territoire |
 | M7 Finition v1 | **livré** (13 sept. 2026) | **5★** : hélico (te survole, rien ne retombe sous lui, ombre au sol, projecteur la nuit, rotor en boucle ElevenLabs) et **barrages** (deux autos-patrouille en travers devant toi, deux agents derrière) ; **journal lu par le narrateur** (9 manchettes + celle de M5, voix « annonceur centre d'achat 1 », version `lu` en casse naturelle) ; **marché noir** chez Josée après M5 (`magasins.MARCHE_NOIR`, −30 %) ; **carte de la ville** plein écran (N, ou PAUSE → CARTE : lieux, police, objectif, joueur) ; sonnerie de téléphone réelle ; sonde de performance Playwright (ms par image de nuit à 3★ au volant). Défi du jour à graine serveur : reporté en v2 |
-| **v1 complète** | **livrée** (13 sept. 2026) | M0 → M7 en ligne, 308 tests ; la suite est planifiée ci-dessous (« La v2 — sept vagues ») |
+| **v1 complète** | **livrée** (13 sept. 2026) | M0 → M7 en ligne, 308 tests ; la suite est planifiée ci-dessous (« La v2 — huit vagues ») |
 | M8 Les cinq districts | **livré** (13 sept. 2026) | la ville passe de 157×112 à **421×213 tuiles** (5,1 ×) : Les Érables (banlieue, Les Chevreuils), La Shop (industriel, Les Boulonneux), Les Quais (port, Les Morues), La Pointe (parc, Les Skateux) et **la baie** — une seule grille de blocs, un district par rectangle, aucune fusion par-dessus une frontière ; une rue dont tous les blocs voisins sont de l'eau est **noyée** (c'est ce qui ferme la baie et coupe le chenal), et **un pont** relie La Pointe ; 5 nouveaux lieux (dépanneur, Hôtel Bandini, cantine des Quais, usine Prévost, phare) ; 4 gangs + 4 passants de quartier (`districts` les enferme chez eux) ; densité **et rythme** par district (La Shop déserte la nuit, les Quais le matin) ; radios *10-4* et *Radio-Traversier* ; paquet **319 Ko bruts / 33 Ko gzip**, `generer()` 94 ms au démarrage, **0,29 ms par image** de nuit à 5★ (0,26 avant) ; chien de garde du trafic corrigé (480 images de feu rouge **puis** l'attente de boîte faisaient 600 : il mordait un char sage) |
 | Manette réapprenable | **livré** (13 sept. 2026) | retour de Martin (« les boutons de la manette bluetooth ne sont pas bien mappé ») : les numéros de boutons d'une manette que le navigateur ne reconnaît pas (`mapping: ""`) ne veulent rien dire — la même manette n'a pas les mêmes numéros sur le téléphone et sur le Mac, **ça ne se devine pas**. OPTIONS > **MANETTE** : des **dispositions à choisir** (`app/manettes.py` : Xbox/PlayStation, **8BitDo en Bluetooth**, Bluetooth croix-sur-un-axe) et un **dessin de manette en pixels** qui sert de **preuve** — on appuie, la pièce s'allume ; au bon endroit, c'est la bonne disposition. Le dessin s'allume par **numéro de bouton**, pas par action : l'épaule droite et le bouton de gauche font la même chose et doivent pourtant se distinguer. ⚠️ Sur cet écran la manette ne **ferme** plus le menu (`manetteInerte`) — on y appuie sur ses boutons pour les voir, pas pour commander — mais elle peut encore bouger le curseur et choisir, sinon un joueur qui n'a qu'une manette resterait enfermé. Deuxième écran, RÉAPPRENDRE : ce que la manette dit d'elle-même (nom, RECONNUE / NON RECONNUE, boutons enfoncés et axes qui bougent en direct), une ligne par action qu'on réapprend en l'appuyant, la croix en quatre gestes, gaz et frein en **bouton ou en axe** (repos mesuré : une gâchette-axe repose à −1 sur une manette et à 0 sur la suivante), TOUT RÉAPPRENDRE qui enchaîne, PAR DÉFAUT ; gardé dans les options. **Croix-chapeau** : sur une 8BitDo en Bluetooth la croix n'est pas quatre boutons mais UN axe — on appuie et aucun numéro ne s'allume, elle a l'air morte ; on apprend HAUT et DROITE et le tour des huit positions se déduit, diagonales comprises (sinon repli sur les quatre côtés). L'écran liste les **axes qui bougent**, nomme un bouton **que la disposition ne connaît pas** (sinon il n'allume rien et on croirait la manette morte), et souffle le mode Xbox aux 8BitDo (le dongle 2,4 GHz ou le câble : c'est là que le navigateur les reconnaît). ⚠️ **Mesure de Martin** : ses gâchettes ouvraient la carte et la pause — or carte et pause sont 8 et 9 sur une manette reconnue, donc ses gâchettes *sont* 8 et 9, et toute la numérotation DirectInput suit (boutons de droite 0/1/3/4, épaules 6-7, SELECT/START 10-11). Un juge garde ce fait : le « corriger » effacerait le retour. ⚠️ Un apprentissage **attend qu'on relâche** : sur un axe, lâcher le haut bouge autant qu'appuyer sur le bas, et la direction suivante s'apprenait sur la valeur du repos — la croix tenait alors les quatre directions en permanence. Corrigé au passage : `annuler` n'avait **aucun** bouton (le bouton de droite fait RETOUR), et « Jouer » n'était qu'un bouton de la page — on commence maintenant la partie à la manette ou au clavier |
 | Le son retenu | **livré** (13 sept. 2026) | retour de Martin (« regarde pourquoi je n'ai pas de son ») : un `AudioContext` naît **suspended** tant que la page n'a reçu aucun **vrai geste** (clic, touche, toucher), et `resume()` est alors refusé — or **l'API Manette ne compte pas comme un geste**. Depuis qu'on peut commencer la partie au pad (0.16.0), un joueur à la manette traversait donc toute la ville en silence, et le refus était avalé par un `.catch()` vide : **rien** ne le disait. ⚠️ La panne n'était ni dans les fichiers (79 mp3 servis en 200) ni dans le serveur (le paquet annonce bien ses 20 échantillons) ni dans le code du son — elle était dans **la permission du navigateur**, qu'on ne pensait même pas à demander. `Son.etatSon()` distingue maintenant quatre silences très différents : `actif`, `attente` (il manque un geste), `coupe` (choix du joueur, OPTIONS) et `absent` (pas d'audio du tout — le banc) ; un bandeau sur l'écran titre dit quoi faire **avant** qu'on joue, un message le redit si on commence quand même au pad, et OPTIONS porte une ligne **SON** qui n'est pas un réglage mais un **diagnostic** — sans elle, on cherche la panne dans ses haut-parleurs. `resume()` étant asynchrone, l'état revient par `onstatechange`, sinon le bandeau resterait affiché alors que le son est revenu. ⚠️ Le banc a maintenant un **faux AudioContext** (`o.brancherAudio(false)`) qui refuse `resume()` : c'est le seul endroit où l'on peut reproduire le silence à volonté — et le vrai Chromium des tests le confirme, il charge la page avec un contexte `suspended` |
@@ -31,12 +37,39 @@ jalons » à chaque jalon livré.
 | Rien ne se chevauche plus | **livré** (13 sept. 2026) | retour de Martin, capture à l'appui (« empêche que les choses se chevauchent ») : le joueur **debout dans la carrosserie** du camion-restaurant. Deux chevauchements, deux causes. ⚠️ **Le décor** : la collision n'était pas absente, sa **forme** était fausse. Un camion-restaurant fait 44 px de large et 8 px de profond ; son unique cercle (r 16) tenait dans la profondeur, donc il laissait **6 px de carrosserie** libres de chaque côté — et le cercle qui aurait couvert la largeur (r 22) aurait posé un mur invisible de 22 px devant et derrière. Un cercle ne sait pas tenir un rectangle. Chaque décor carré porte maintenant une **boîte au sol** (`sol: [demi-largeur, demi-profondeur]`, mesurée sur les `fillRect` de son peintre) dont on ressort par le côté le moins enfoncé : banc, caisse, fontaine, les deux kiosques, la roulotte, le camion. L'arbre, lui, **garde son cercle** : son tronc fait 3 px et sa cime est peinte en hauteur — on passe sous une cime, pas dans un comptoir (même raison pour le parasol du kiosque à hot-dogs). ⚠️ **La foule** : personne ne poussait personne. Deux passants qui se croisaient se superposaient **exactement** — mesuré en marchant deux minutes : **1032 paires** enfoncées l'une dans l'autre en 960 images, jusqu'à **9,9 px**, soit deux corps de 10 px parfaitement confondus. `demeler()` sépare maintenant tout le monde à chaque image, sur un index **refait** (celui du début d'image est périmé : il laissait passer exactement les paires qui venaient de se rejoindre), en poussant par `deplacerCercle` — sinon on se pousse mutuellement **dans un mur**, ce qui est pire. Après : **0,1 px** au pire, dès la première image. ⚠️ Et l'on ne **naît** plus dans quelqu'un : les deux branches de `placeDeNaissance` rendent un **centre de tuile**, donc deux naissances sur la même tuile, c'est le même pixel (deux agents nés l'un dans l'autre à l'image 31). ⚠️ Le plafond de séparation doit passer **devant les jambes les plus rapides** : fixé à 1,5 px il arrêtait bien le joueur qui **marche** (1,2) et laissait passer celui qui **sprinte** (2,1) — il suffisait de tenir MAJ pour entrer dans le vendeur ; il se calcule désormais sur les vitesses du paquet. ⚠️ Et « figé » veut dire **il tient son poste**, pas **c'est un poteau** : vraiment immobile, un donneur planté sur le trottoir bouchait la rue **pour toujours** — l'agent lancé aux trousses du joueur venait buter sur Ti-Guy et y restait (260 images sur place, l'arrestation n'arrivait jamais). Il se laisse donc bousculer de 10 px et **rentre chez lui** ; au-delà il redevient un mur, sinon on promènerait un personnage d'histoire jusqu'au port. 6 juges (on ne se tient dans aucun décor par aucun des quatre côtés, la portée de recherche couvre le **coin** de la plus grosse boîte — sinon le camion n'est même pas trouvé et rien ne rougit —, la foule ne se chevauche plus et ne naît plus empilée, courir ne traverse pas les gens, le figé cède puis revient). Coût : **0,337 → 0,356 ms par image** à 5★ avec 1992 entités |
 | La voix au téléphone qu'on n'entendait plus | **livré** (13 sept. 2026) | retour de Martin (« les voix au téléphone ne sont pas assez forte ») : ce n'était pas une question de **volume** mais de **filtre**. Le combiné était un seul `bandpass` à 1,5 kHz (Q 1,2) — bien plus pincé qu'un vrai téléphone, 6 dB par octave de chaque côté. Or c'est **sous 900 Hz** que la parole porte le gros de sa puissance : mesuré, la voix au combiné sortait à **−6,5 dB à 500 Hz** et **−11 dB à 300 Hz**, donc **plus bas qu'en direct**, et les 1,6× de compensation étaient loin du compte. C'est maintenant la **vraie bande téléphonique** (300 Hz – 3,4 kHz), dessinée par un passe-haut puis un passe-bas qui laissent **plat** tout ce qu'il y a entre — et 2× de compensation, parce qu'une voix coupée de ses graves s'entend moins fort à puissance égale et qu'un appel se prend au milieu des moteurs. Après : **+8,1 dB à 500 Hz, +7,6 dB à 1 kHz, +7,7 dB à 3 kHz** — de +4 à +18 dB selon la fréquence, et le combiné passe **au-dessus** de la voix en direct sur toute la bande de la parole. ⚠️ Encore un test d'une autre **nature** : les juges existants vérifiaient que la réplique au téléphone **atteint la sortie** (elle l'atteignait, la chaîne était branchée, la source démarrait) — atteindre la sortie ne dit rien de ce qui **en sort**. Les 2 nouveaux ne lisent pas les réglages, ils **calculent** la réponse réelle de la chaîne (formules RBJ, celles que le Web Audio implémente) en suivant les branchements du gain jusqu'au maître : le combiné doit sortir au-dessus du direct sur toute la bande de la parole, et cette bande doit rester plate à 6 dB près. Remis l'ancien filtre, ils tombent (12,7 dB d'écart : « le combiné pince trop ») |
 | Manger, boire, courir | **livré** (13 sept. 2026) | demande de Martin (« il faut que la bouffe redonne de l'énergie et le café permet de courir plus longtemps ») : un kiosque ne rendait que des **PV**, et le souffle (`endurance`, 100 points, 0,4 par image au sprint) ne se refaisait **qu'en arrêtant de courir** — autrement dit, les quatre commerces de trottoir ne servaient à rien à la seule minute où l'on en a besoin, celle où la police est derrière. Manger rend maintenant les deux (`*_souffle` dans `economie.TARIFS` : hot-dog +40, poutine +70, café +30), et ce qui coûte plus cher nourrit plus, en vie **comme en jambes**. ⚠️ **Le café n'achète que de la DURÉE.** Pendant 90 s (`economie.CAFE`) le sprint ne coûte que la **moitié** : 4,2 s de course d'une traite deviennent 8,4 s. Sa vitesse, elle, ne bouge pas d'un pixel — les 2,1 du sprint contre 1,9 au policier et 1,35 au fuyard sont ce qui rend une poursuite **gagnable des deux côtés** ; y toucher pour 4 $ aurait cassé toutes les poursuites du jeu d'un coup, alors un juge mesure la distance par image sous café et la refuse si elle change. ⚠️ C'est une **minuterie, pas une dépense** : elle s'écoule dans `Missions.maj` (donc aussi au volant et dans une pièce, là où `majJoueur` ne passe pas), elle ne s'**empile** pas (un deuxième café repart le compte — sinon on s'achète l'endurance infinie à 4 $) et elle ne survit ni à la nuit ni à l'hôpital. ⚠️ Et elle **se voit** : la barre d'endurance passe au vert et clignote la dernière seconde, parce qu'un souffle long qui s'arrête au milieu d'une fuite sans rien annoncer se lit comme une panne. Le **casse-croûte sert le café** lui aussi : la roulotte du trottoir ferme de 14 h 24 à 4 h 48 et elle était le seul endroit du jeu où courir plus longtemps s'achetait. 4 juges Python (la bouffe rend du souffle sans faire déborder la barre, la poutine vaut son prix, le café n'achète que de la durée et dure plus qu'un plein de souffle, seul le café réveille) + 2 de banc (manger remonte le souffle et ne déborde pas, un hot-dog ne réveille pas ; sous café on tient **deux fois plus d'images à la même vitesse**) |
-| M9 Le parc et les boulots | à faire (v2) | camion, autobus, ambulance, remorqueuse (bateau en dernier) ; ambulance/pizza/remorquage au klaxon, fourrière, radio procédurale |
-| M10 L'argent sale | à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
+| Des commerces, du monde qui habite, des vrais intérieurs | **livré** (13 sept. 2026) | demande de Martin (« beaucoup plus de variété de commerce ou bien enlever certaines devantures pour remplacer par des résidences ; ajouter des appartements à étage ; améliorer les intérieurs, car présentement il n'y a jamais rien, seulement des comptoirs vides ; ajoute aussi des intérieurs pour plusieurs types ; valide les missions qui doivent avoir des choses à l'intérieur ») : **142 noms d'enseigne** au lieu de 56 (14 à 48 par quartier) et **trois familles de plus** (santé, mode, savoir) ; `choisir_enseigne` refuse le même nom à moins de **40 tuiles** — La Shop affichait sept fois « FERRAILLE ». **74 immeubles à logements** remplacent 20 devantures et habillent les quartiers d'habitation : une couche peinte comme les enseignes (zéro solidité touchée), **1 à 3 étages** de fenêtres, balcon, **escalier de fer** sur le trottoir, et une fenêtre sur trois allumée la nuit. Les **29 intérieurs** sont maintenant **dessinés à la main** (un plan par pièce, l'espace = le plancher) avec **onze meubles** (comptoir, étagère, table, chaise, lit, frigo, machine, plante, classeur, poêle, escalier) et **trois planchers** (bois, céramique, tapis) — et du **monde dedans** : un commis à son poste, des clients tirés dans les passants du quartier. **Un commerce ordinaire sur cinq s'ouvre pour de vrai** (42 portes au lieu de 16) : dix pièces génériques, une par famille de devanture, et le **nom de l'enseigne voyage sur la porte** — on entre chez « TABAGIE DUBOIS », pas dans « Boutique ». Nouveaux comptoirs : `emplettes` (`magasins.COMPTOIRS`, data), `salon` (le barbier change tes cheveux **et fait oublier ta tête à la police**), `escalier` (l'étage du plex et la chambre de l'hôtel), `fouiller` (les tiroirs d'un logement, une fois par adresse), `casier` (le carnet du poste). ⚠️ **Trois comptoirs étaient morts** (`guichet`, `sortie_prison`, `casier` : un libellé, aucun menu, « PLUS TARD ») — un juge du banc compare maintenant ce que `carte.INTERIEURS` dessine à ce que `missions.js` sert, et seul le comptoir de la fourrière reste en chantier (il appartient à M9). ⚠️ **Un meuble ne remplit pas sa tuile** : sans plancher peint dessous, chaque table était un trou **noir** — `plancher` voyage donc avec la pièce. **125 juges de plus** (`test_interieurs.py`, `test_interieurs_js.py`, et les logements dans `test_devantures.py`) |
+| Les transitions | à faire | retour de Martin (« la transition n'est pas juste ») : le fondu de porte noircit sur la scène **déjà changée** — il faut noircir sur l'ancienne, changer au noir, éclaircir sur la nouvelle ; figer le jeu pendant, ne plus faire sauter la caméra |
+| Les clôtures | à faire | demande de Martin : une clôture n'arrête que les chars — à pied on la traverse **sans ralentir**. Le grillage doit s'enjamber (une seconde, sans pouvoir frapper), le barbelé ne doit pas se passer du tout |
+| Les toits | à faire | demande de Martin (« je veux que les toits soient plus réalistes ») : ils sont peints tuile par tuile, sans bord, sans rien dessus, sans ombre au sol, et une maison a le même toit plat qu'un entrepôt |
+| Les armes à feu | à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
+| L'eau n'est plus un mur | à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
 | M11 La police apprend | à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, bouclier humain |
-| M12 La ville vit | à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue |
+| M15 La ville te parle | à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), et les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières** (8 répliques aujourd'hui, tirées sans mémoire) |
+| M9 Le parc et les boulots | à faire (v2) | camion, autobus, ambulance, remorqueuse (bateau en dernier) ; **un sport et un luxe**, rares et par quartier ; ambulance/pizza/remorquage au klaxon, fourrière, radio procédurale ; **un vélo n'explose plus** (retour de Martin : aujourd'hui il part en boule de feu et donne 2★) |
+| M10 L'argent sale | à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
+| M12 La ville vit | à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **le chantier** et les nids-de-poule |
+| M14 Meta v2 | à faire (v2) | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
 | M13 Les deux fins | à faire (v2) | une mission par district, Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* |
-| M14 Meta v2 | à faire (v2) | défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
+
+## Dettes
+
+⚠️ Ce qui est **sciemment pas fait**. Ça vivait éparpillé dans les notes de jalons, là où on
+ne relit jamais — et une dette qu'on ne relit pas devient un oubli. Chacune porte donc son
+**déclencheur** : la chose qui dit qu'il est temps de la payer. Une dette sans déclencheur
+est un oubli avec du style.
+
+| Dette | Pourquoi pas fait | Déclencheur |
+|---|---|---|
+| Les radios **10-4** et **Radio-Traversier** sont déclarées mais jamais générées ni écoutées | ElevenLabs Music se paie à la seconde, et M8 avait déjà de quoi écouter | La prochaine séance avec la clé : `uv run python scripts/audio_elevenlabs.py --refaire dix_quatre traversier` — puis **les écouter**, un fichier qui se décode n'est pas un fichier qui sonne bien |
+| Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
+| Le **découpage du paquet** (`/api/carte`, ETag, districts chargés autour du joueur) | 33 Ko gzip aujourd'hui : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
+| Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
+| `SECRET_KEY` vaut encore `cle-de-developpement-a-changer` par défaut | Sans compte ni session, une clé faible ne protège rien | **M14** : le jour où une session vaut une partie. `installer.sh` devra la générer et refuser de démarrer sans elle |
+
+⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
+exclu de la commande locale ci-dessous parce qu'il monte un Chromium et prend des minutes —
+mais **la CI le fait tourner**, dans un deuxième job, avec `BANDINI_TESTS_OBLIGATOIRES=1`.
+Il n'est pas oublié, il est ailleurs.
 
 ## Reprendre le travail
 
@@ -247,7 +280,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `armes.py` | poings + 7 armes : dégâts, portée, cadence, chargeur, prix, `etoiles_usage` | première = poings à 0 $, prix croissants |
 | `economie.py` | `ARGENT_DEPART`, `amende(etoiles, casier)` = `min(argent, base[★] × (1 + 0,5 × casier))`, pots-de-vin `40 × ★ × (1 + 0,5 × casier)`, hôpital `clamp(10 %, 30, 500)`, propriétés, `FORTUNE_MAX`, ce que la bouffe rend (`*_pv` et `*_souffle`) et `CAFE` (durée + dépense du sprint) | jamais négatif, monotone, plafonné, retour sur investissement 10–60 min, coordonnées sur une porte, le café n'achète que de la **durée** et dure plus qu'un plein de souffle |
 | `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) | contigus, monotones, palier 0 sans réponse |
-| `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `o` place, `q` quai, `~` eau, majuscules = bâtiment spécial garanti, `<` et `^` = bloc **avalé** par son voisin) + `COLONNES`/`RANGEES`/`RUES_V`/`RUES_H` (aucune égale à sa voisine) ; `generer(plan, graine)` produit tuiles (`sol`, `voie` = champ de direction + lignes d'arrêt), intersections (avec leurs bras), portes, lampes, décor, zones, apparitions ; intérieurs en ASCII. **Trois sources d'irrégularité** : la trame, les superblocs (une rue qui n'existe pas → des T), et le découpage BSP en parcelles inégales (bâtiments en U ou en L, dents creuses, terrains vagues, stationnements). Un **filet** bouche les poches injoignables au lieu de livrer un îlot muré | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), un seul îlot marchable **sur cinq graines**, portes ⇔ intérieurs, aucun gabarit sur une rue **qui existe**, un superbloc avale bien sa rue, **juge d'asymétrie**, déterministe |
+| `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `o` place, `q` quai, `~` eau, majuscules = bâtiment spécial garanti, `<` et `^` = bloc **avalé** par son voisin) + `COLONNES`/`RANGEES`/`RUES_V`/`RUES_H` (aucune égale à sa voisine) ; `generer(plan, graine)` produit tuiles (`sol`, `voie` = champ de direction + lignes d'arrêt), intersections (avec leurs bras), portes, lampes, décor, zones, apparitions ; intérieurs en ASCII. **Trois sources d'irrégularité** : la trame, les superblocs (une rue qui n'existe pas → des T), et le découpage BSP en parcelles inégales (bâtiments en U ou en L, dents creuses, terrains vagues, stationnements). Un **stationnement est dessiné**, pas rayé au hasard : des rangées de cases de 1 × 2 tuiles (le gabarit exact de l'auto, glyphes `^ v < >` = où pointe le **nez**), des allées de manœuvre — toute rangée en touche une —, des rangées **dos à dos** dès qu'il y a douze tuiles de creux, des îlots de béton (`I`) et un lampadaire au bout des rangées. Un **filet** bouche les poches injoignables au lieu de livrer un îlot muré. Deux **couches peintes** par-dessus, qui ne touchent à aucune solidité : les **devantures** (bandeau, nom, vitrines, pancarte) et les **résidences** (étages de fenêtres, balcon, escalier de fer) — `_a_quoi_sert()` décide, par bâtiment, commerce ou logement. Les **intérieurs sont dessinés à la main** (`_piece`, un plan par pièce, l'espace = le plancher, meubles en glyphes) et **jugés à l'import** : une porte, un plancher d'un seul tenant, des points atteignables | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), un seul îlot marchable **sur cinq graines**, portes ⇔ intérieurs, aucun gabarit sur une rue **qui existe**, un superbloc avale bien sa rue, **toute rangée de stationnement touche une allée** et toute case fait deux tuiles de creux, **juge d'asymétrie**, déterministe |
 | `missions.py` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues | prérequis sans cycle, cibles sur tuile marchable, références existantes |
 | `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue |
 | `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`) | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille |
@@ -256,6 +289,8 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
 | `routes.py` | `/`, `/api/definitions` (ETag, 304), `/api/scores` GET/POST, `/sante`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `bd.py` (M14) | SQLite sous `DONNEES_DIR` : ouverture, **WAL + `timeout`** (deux workers gunicorn), migrations numérotées, vidage quotidien | une migration s'applique une seule fois, deux workers écrivent sans se barrer, une base vide se crée toute seule |
+| `comptes.py` (M14) | inscription, connexion, mot de passe haché, session signée, la partie au serveur, l'effacement du compte | un mot de passe n'est jamais gardé en clair, un pseudo pris est refusé, effacer efface vraiment, le jeu marche **sans** compte |
 
 Réutiliser tels quels : `create_app` de `/Users/martingagne/dev/car-game/app/__init__.py`,
 `config.py`, `run.py`, `Tableau` de `app/scores.py`, `scripts/verifier_dependances.py`,
@@ -324,6 +359,7 @@ run.py  config.py  pyproject.toml (name bandini, version 0.0.0)  requirements.tx
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py
+      bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/img/favicon.svg  static/js/ (14 fichiers ci-dessus)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette/audio,
@@ -353,25 +389,67 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M6 | Missions et gang | **fait** : cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue **avec la voix de chaque réplique** (une voix par personnage, ducking, voix « du combiné »), GPS ; reste pour M7 : contacts du marché noir, journal lu par le narrateur | finir les 5 missions, **les entendre** ; 7 tests de banc (donneurs, M1 de bout en bout, échec + reprise, appel, M2 combat + fuyard, M4/M5 récompenses, défis) + 1 navigateur (la voix se décode, la radio baisse) |
 | M7 | Finition v1 | **fait** : 5★ (barrages, hélico), journal lu par le narrateur, marché noir, carte plein écran, sonnerie et rotor réels, sonde Playwright ; reste v2 : défi du jour à graine serveur, mesure sur vrai téléphone (Martin) | 60 i/s de nuit à 3★ sur téléphone ; 2 tests de banc police (hélico, barrage), 2 histoire (narrateur + marché noir, carte), 1 sonde navigateur |
 | M8 | Les cinq districts | **fait** : quatre districts de plus autour de la baie (trame, gang, passants, densité et rythme propres), rues **noyées** et un pont, 5 lieux, 2 radios, carte plein écran à l'échelle de la ville, vieille sauvegarde rattrapée (le char de la planque revient à la rue la plus proche) | on roule du Faubourg à La Pointe sans chargement (test de banc : on le conduit) ; 15 juges de carte + 5 de banc ; connexité forte sur **toute** la ville, à quatre graines |
-| M9 | Le parc et les boulots | camion, autobus, ambulance, remorqueuse, bateau ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule | trois boulots finis d'affilée ; sortir son char de la fourrière |
-| M10 | L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
+| — | Les transitions | fondu enchaîné dans le bon ordre pour entrer et sortir, jeu figé pendant, caméra posée au noir, son de porte au noir | entrer et sortir vingt fois sans un clignotement ; ne jamais se faire renverser pendant un écran noir |
+| — | Les clôtures | grillage qu'on enjambe (une pose, une seconde, sans frapper), barbelé infranchissable, et la police qui enjambe aussi | couper par une cour et se faire suivre par l'agent ; ne jamais semer la police avec une clôture |
+| — | Les toits | bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
+| — | Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
+| — | L'eau n'est plus un mur | nage à l'endurance, noyade à bout de souffle, char qui coule et ne revient pas, police qui nage aussi, rive de sable en eau basse | traverser un chenal de justesse ; ne jamais traverser la baie ; un char noyé reste au fond |
 | M11 | La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool |
-| M12 | La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe |
+| M15 | La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte (48 clips), tirage sans les quatre dernières, par `B.rng()` | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; traverser une foule sans entendre deux fois la même phrase |
+| M9 | Le parc et les boulots | camion, autobus, ambulance, remorqueuse, bateau ; le sport et le luxe (rares, par quartier, la meilleure revente) ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule ; la cour de la fourrière rangée en cases, sans tremplin ; `reservoir` : ce qui n'en a pas ne brûle ni n'explose | trois boulots finis d'affilée ; sortir son char de la fourrière ; trouver un luxe et le revendre ; démolir un vélo sans que la police arrive ; se faire remorquer pour avoir laissé son char en travers, jamais pour l'avoir mis dans une case |
+| M10 | L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
+| M12 | La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, chantier du jour et nids-de-poule | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; un chantier qui force un détour sans couper la ville |
+| M14 | Meta v2 | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
 | M13 | Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* | atteindre les deux fins ; chaque réplique se dit à voix haute |
-| M14 | Meta v2 | défi du jour à graine serveur, mode photo, coop locale | le classement du jour tourne ; deux manettes sur un écran |
 
 Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
-M8 4, M9 3, M10 3, M11 2, M12 3, M13 4, M14 2 (v2 = 21).
+M8 4, M9 3, M10 3, M11 2, M12 4, M13 4, M14 4, M15 3 (v2 = 27) ;
+hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée et de
+sortie 1, les clôtures 1, les toits 2, les armes à feu 2, l'eau 3.
 
-## La v2 — sept vagues (plan du 13 sept. 2026)
+Ce qui reste, **dans l'ordre où on le fera** (le plus facile d'abord, prérequis devant) :
+les transitions 1 · les clôtures 1 · les toits 2 · les armes à feu 2 · M11 2 · l'eau 3 ·
+M15 3 · M9 3 · M10 3 · M12 4 · M14 4 · M13 4. Les six premières ne dépendent de rien ;
+l'eau navigable débloque le bateau de M9 et le traversier de M12 ; M10 demande le camion de
+M9 ; M13 est la fin, et la fin se pose en dernier.
 
-Règle inchangée : **chaque vague reste jouable, testée, déployée**. L'ordre suit les
-dépendances — M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière
-ont besoin de la ville complète) ; M9 à M12 se permutent selon l'envie du moment.
+## La v2 — huit vagues (plan du 13 sept. 2026)
+
+Règle inchangée : **chaque vague reste jouable, testée, déployée**.
+
+⚠️ **Les numéros sont des noms, pas un ordre.** M9 s'appelle M9 parce qu'on l'a nommée là,
+et le dépôt entier y renvoie — renuméroter casserait tous les renvois pour rien. L'ordre de
+travail, c'est celui des sections ci-dessous : **du plus facile au plus difficile, avec les
+prérequis devant**. On commence par ce qui se sent tout de suite et coûte peu, et on garde
+pour la fin ce qui demande de l'infrastructure ou tout le reste du jeu.
+
+| Ordre | Vague | Taille | Prérequis |
+|---|---|---|---|
+| 1 | Les transitions d'entrée et de sortie | 1 | aucun — un défaut qu'on sent à chaque porte |
+| 2 | Les clôtures : grillage ou barbelé | 1 | aucun — mais la police doit enjamber comme le joueur |
+| 3 | Les toits | 2 | aucun — le patron de `varianteDeTuile` vient d'être écrit pour les cases |
+| 4 | Les armes à feu | 2 | aucun — le marché noir de M7 leur sert de comptoir |
+| 5 | M11 La police apprend | 2 | aucun — la police de M4 suffit |
+| 6 | L'eau n'est plus un mur | 3 | aucun — et c'est le **prérequis du bateau** reporté de M9, et du traversier de M12 |
+| 7 | M15 La ville te parle | 3 | aucun — le narrateur, le journal et les voix existent |
+| 8 | M9 Le parc et les boulots | 3 | aucun — et c'est le **prérequis de M10** (le camion). ⚠️ **Commencée** : tout le Python est écrit (catalogue, boulots, fourrière, stations procédurales) ; il reste le JS |
+| 9 | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
+| 10 | M12 La ville vit | 4 | aucun, mais tramway, traversier et neige touchent à la physique |
+| 11 | M14 Meta v2 | 4 | aucun — c'est de l'**infrastructure** (serveur, BD, comptes), un autre métier que le reste |
+| 12 | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à venir après **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
+
+M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
+ville complète) ; il est livré. Rien n'oblige à suivre l'ordre à la lettre — les six
+premières ne dépendent de rien et se permutent selon l'envie du moment.
 
 Ce que la v2 **ne fait pas**, pour que le plan tienne : pas de multijoueur en ligne, pas
 de 3D, pas d'histoire à plus de deux fins, pas de génération de sprites par IA. Le jeu
 reste un GTA 1 québécois en pixels, joué au téléphone.
+
+⚠️ **Un compte (M14) n'est pas du multijoueur.** Deux joueurs ne se voient jamais dans la
+même ville ; le serveur ne fait que garder une partie et un classement. La ligne ci-dessus
+tient : c'est une sauvegarde qui voyage, pas une partie partagée — et le jeu continue de
+tourner entièrement dans le navigateur, compte ou pas.
 
 ### M8 — Les cinq districts (taille 4) — **livré le 13 sept. 2026**
 
@@ -426,41 +504,183 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
   changé, donc la position du joueur *et* celle du char gardé devant la planque sont
   oubliées ; le char revient sur la rue la plus proche de la porte.
 
-### M9 — Le parc automobile et les boulots (taille 3)
+### Les transitions d'entrée et de sortie (taille 1)
 
-*Ce que ça donne :* autre chose à conduire, et de quoi gagner sa vie autrement.
+*Retour de Martin :* « il faut améliorer les transitions quand on entre et sort des endroits.
+La transition n'est pas juste. »
 
-- `vehicules.py` : **camion** (lent, lourd, défonce un mur — il sert à M10), **autobus**
-  (long, deux cercles de collision de plus, pas de radio), **ambulance** (rapide, sirène,
-  soigne), **remorqueuse** (un crochet : on accroche un char et on le traîne).
-  Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
-  carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
-  suffit pour l'eau.
-- Boulots au klaxon, sur le patron du taxi : **ambulance** (un blessé quelque part, chrono,
-  le sortir vivant), **pizza** (trois livraisons, la pizza refroidit — le pourboire fond),
-  **remorquage** (la fourrière paie pour les épaves).
-- **Fourrière** : un char mal garé, ou saisi à l'arrestation, part au lot ; on le rachète
-  au comptoir, ou on le reprend par-dessus la clôture (1★, et les gars du lot ripostent).
-- **Radio procédurale** : `Son.Mus` (le séquenceur trois voix, déjà là) génère une station
-  par véhicule à partir d'une graine — le camion a sa toune, l'autobus n'a que son moteur.
-- **Juges** : chaque char a son sprite (harnais Node) ; la remorqueuse n'en traîne qu'un à
-  la fois ; l'ambulance ne ressuscite personne ; la fourrière ne peut **jamais** manger le
-  char de la planque (c'est la sauvegarde de Martin).
+⚠️ **Elle n'est pas juste parce qu'elle arrive dans le mauvais ordre.** `Jeu.entrer()` charge
+la pièce, téléporte le joueur, recentre la caméra — **puis** appelle `Hud.fondu(40)`. Or le
+fondu va de transparent à noir puis à transparent : sa première moitié noircit donc sur la
+scène **déjà changée**. On voit la pièce une image, l'écran noircit, et il s'éclaircit sur
+la même pièce. Ce n'est pas un fondu enchaîné, c'est un clignotement — et l'œil le sait même
+quand on n'arrive pas à le nommer.
 
-### M10 — L'argent sale (taille 3)
+L'ordre juste, et le jeu le connaît déjà : **noircir sur l'ancienne scène → changer au
+noir → éclaircir sur la nouvelle**. C'est exactement ce que font la prison et l'hôpital
+(`Hud.fondu(150, texte)` et le changement de décor 60 images plus tard, donc au noir). Les
+portes sont les seules à ne pas s'en servir.
 
-*Ce que ça donne :* une raison de se lever le matin — la dette de Rocco.
+Ce qu'il faut, en plus de l'ordre :
 
-- **Le shylock** : 15 000 $, un intérêt par jour, des rappels au téléphone, puis des hommes
-  de main qui te trouvent où que tu sois. Rembourser ouvre une des deux fins (M13).
-- **Guichets** : les défoncer au camion (bruyant, 2★, la caisse par terre) ou poser un
-  **skimmer** et revenir le lendemain (silencieux, lent, il peut être trouvé).
-- **Assurance et fraude** : assurer un char au garage, le faire disparaître, encaisser —
-  trois fois de suite et l'assureur enquête.
-- `economie.py` : dette, intérêts **bornés**, primes, seuils de suspicion.
-- **Juges** : la dette ne dépasse jamais son plafond ; un joueur qui ne fait rien ne devient
-  pas insolvable en une nuit ; la fraude rapporte **moins à l'heure** que le travail honnête
-  — sinon le jeu se joue tout seul et le taxi ne sert plus à rien.
+- **Le jeu se fige pendant le fondu.** Aujourd'hui la simulation continue : on peut sortir
+  d'une pièce et se faire renverser par un char qu'on n'a pas vu venir, pendant un écran
+  noir où l'on ne contrôle rien. Un menu fige déjà tout (`if (B.menu) return`) ; un fondu de
+  porte doit faire pareil.
+- **Une durée qui se sent, et asymétrique.** 40 images pour l'aller-retour complet, c'est
+  un tiers de seconde par moitié — assez pour clignoter, pas assez pour lire. Entrer peut
+  prendre son temps (on passe une porte) ; sortir doit être vif (on veut retourner au jeu).
+- **La caméra ne saute pas.** `centrerCamera` la téléporte, ce qui annule l'amorti et
+  l'avance de `majCamera`. Au noir, personne ne voit le saut : c'est **là** qu'il faut le
+  faire, et éclaircir sur une caméra déjà posée.
+- **Le son au bon moment.** `Son.SFX.porte()` joue à l'instant du changement — donc
+  aujourd'hui avant même que l'écran ait bougé. La porte s'entend **au noir**, quand on la
+  passe.
+- **On ne repart pas d'un arrêt complet.** La vitesse est remise à zéro et la face forcée
+  (`haut` en entrant, `bas` en sortant) : une course s'arrête net au pas de la porte. Garder
+  un peu d'élan dans le sens de la porte suffit à ce que ça se sente traversé, pas téléporté.
+- **Juges** : entre le début du fondu et la fin, aucune image ne montre la nouvelle scène
+  avant le noir (on mesure la scène à chaque image au banc) ; le joueur ne perd pas de vie
+  pendant une transition ; entrer puis sortir ramène **exactement** à la tuile devant la
+  porte, même en sortant pendant que le fondu d'entrée joue encore (le cas qui casse tout).
+
+### Les clôtures : grillage ou barbelé (taille 1)
+
+*Demande de Martin :* « il faut des clôtures, mais si elles ne sont pas barbelées, qu'on
+puisse passer par-dessus. »
+
+⚠️ **Aujourd'hui on passe par-dessus toutes les clôtures — sans même ralentir.** `f` est
+solide **3** : le masque des véhicules la voit, celui des piétons non (`MASQUE_PIETON =
+MUR | EAU`). Une clôture n'arrête donc que les chars, et à pied elle n'existe pas. C'est ce
+qui la rend muette : on la traverse en courant comme si elle n'était pas là.
+
+Deux sortes, et chacune veut dire quelque chose :
+
+- **Le grillage** (`f`, celui d'aujourd'hui) : on l'**enjambe**, mais ça coûte. Une pose,
+  une seconde environ, pendant laquelle on ne frappe pas, on ne tire pas, on ne court pas —
+  et on est une cible immobile en haut d'une clôture. C'est ce prix-là qui fait d'une clôture
+  un **choix** : couper par la cour, ou faire le tour.
+- **Le barbelé** (un glyphe de plus) : on ne passe pas. Ni à pied, ni en char. Il se met là
+  où quelqu'un a payé pour que personne n'entre : les cours de La Shop, l'arrière du poste
+  de police, la cour des Cravates.
+
+⚠️ **Le piège, et c'est le plus gros : la police doit savoir enjamber.** Le A\* des piétons
+travaille sur `MASQUE_PIETON` ; si le grillage devient un coût pour le joueur seul, la
+première clôture venue devient un exploit qui gagne toutes les poursuites — on enjambe, les
+agents restent plantés de l'autre côté. Franchir une clôture est donc une **capacité de tout
+le monde**, avec le même prix en temps, et le chemin la traverse à un coût plus élevé qu'une
+tuile normale. Un gardien de fourrière, lui aussi, sort de sa cour.
+
+⚠️ **La fourrière garde du grillage, et c'est une décision.** Un vrai lot municipal serait
+barbelé — mais « on le reprend par-dessus la clôture » est la moitié de ce qui rend la
+fourrière intéressante. Du barbelé là, et il ne reste qu'une caisse à payer.
+
+- **Juges** : la ville reste d'un seul tenant à pied **même en comptant le barbelé comme un
+  mur** (`composantes_marchables == 1`) ; un barbelé ne referme jamais une poche ; aucun
+  véhicule ne franchit ni l'un ni l'autre ; et une poursuite ne se gagne pas en enjambant —
+  un agent lancé derrière le joueur franchit la même clôture, au même prix.
+
+### Les toits (taille 2)
+
+*Demande de Martin :* « je veux que les toits des bâtiments soient plus réalistes. »
+
+⚠️ **Le défaut est le même que celui des stationnements avant qu'on les dessine** : le toit
+est peint **tuile par tuile**, chacune ignorant les autres. `TUILES.B/E/O` remplit un carré
+d'une couleur et sème des points tirés de `hash2(x, y)` ; l'ardoise ajoute un trait
+horizontal tous les 4 px. C'est une **texture**, pas un toit — et une texture uniforme ne
+peut pas être réaliste, parce qu'un vrai toit vu d'en haut ne se lit ni par son grain ni par
+sa couleur.
+
+Ce qui manque, dans l'ordre de ce qui se voit :
+
+- **Un bord.** C'est le premier repère d'un toit : parapet, corniche, gouttière, une ligne
+  d'ombre au pourtour. Sans lui, deux bâtiments mitoyens couverts pareil n'en font plus
+  qu'un, et on ne voit pas où finit l'un.
+- **Une identité par bâtiment.** Le bruit est tiré par tuile, alors un hangar de 26 tuiles a
+  exactement le même grain qu'une maison de 4. Or `batiment_forme()` connaît déjà **tout
+  l'ensemble** des tuiles du bâtiment : c'est là que se décident une ligne de faîte, un puits
+  de lumière, une cage d'escalier — des choses qui appartiennent au bâtiment, pas à la tuile.
+- **De quoi l'encombrer.** Vu d'en haut, ce qui rend un toit crédible, c'est ce qu'il porte :
+  sorties de ventilation, unités de climatisation, cheminée, cage d'escalier, réservoir
+  d'eau, antennes. Aujourd'hui, rien du tout.
+- **Une ombre sur la rue.** Le bâtiment ne projette rien. Une bande sombre d'une ou deux
+  tuiles au sud d'une façade donne immédiatement de la hauteur à toute la ville.
+- **Des pentes pour ce qui en a.** `TOITS = "BEO"` — tôle, ardoise, gravier — sont tous
+  **plats**. Une banlieue de bungalows vue d'en haut, c'est des toits à deux versants, une
+  ligne de faîte et deux pentes de teinte différente.
+- **Le genre du bâtiment choisit sa couverture.** `batiment_forme()` fait `des.choix(TOITS)` :
+  un entrepôt peut hériter de l'ardoise et un bungalow du gravier goudronné.
+
+**Comment, sans rien coûter par image** : un toit est peint **dans le morceau**, une fois,
+comme les devantures — le budget d'image (≤ 6 blits, ≤ 160 `drawImage`) n'y touche jamais.
+Et le patron est déjà écrit deux fois : les passages piétons et les cases de stationnement
+lisent une variante **venue du voisinage** (`varianteDeTuile`), c'est exactement ce qu'il
+faut ici pour dire bord, coin, intérieur, versant nord ou sud. L'équipement de toit voyage
+dans le paquet et s'indexe par morceau comme `devantures` et `graffitis`.
+
+- ⚠️ **L'équipement de toit n'est pas du décor.** `poser_decor` refuse les tuiles solides —
+  et il a raison, le décor est une entité qu'on heurte. Ce qui est sur un toit n'est heurté
+  par personne : c'est du dessin, il passe par le paquet, pas par `B.entites`.
+- ⚠️ **Un beau toit donne envie d'y monter.** Rien n'est prévu pour : le joueur à pied n'a
+  pas de `z`, le toit est solide 1, et une ville où l'on croit pouvoir grimper sans pouvoir
+  le faire est plus frustrante qu'une ville aux toits plats. Tant qu'on n'a pas d'escaliers,
+  les toits restent **muets pour le jeu** — et c'est une décision, pas un oubli.
+- **Juges** : chaque bâtiment a une couverture cohérente avec son genre ; toute tuile de toit
+  au bord du bâtiment porte un bord (donc deux bâtiments mitoyens se séparent à l'œil) ; un
+  équipement ne se pose jamais sur une tuile de bord ni collé à un autre ; aucun ne se pose
+  sur une façade, une vitrine ou une porte ; et le poids du paquet reste sous ses bornes
+  (400 Ko bruts, 70 Ko gzip) — un toit, c'est beaucoup de tuiles.
+
+### Les armes à feu (taille 2)
+
+*Demande de Martin :* « je veux des armes à feu. »
+
+Il y en a **deux** aujourd'hui, et c'est ça le problème : le **pistolet** (250 $, chargeur
+de 12, 30 points) et le **fusil à pompe** (600 $, 8 cartouches, 6 plombs). Sur dix armes au
+catalogue, huit sont de la mêlée, du ramassé par terre ou une fronde. Il ne manque pas *une*
+arme à feu — il manque une **raison de choisir** entre elles. Trois de plus, et chacune
+répond à une question que les deux autres ne savent pas régler :
+
+- **La mitraillette** — *« ils sont trois. »* Automatique : on tient le bouton, la cadence
+  est haute, les dégâts par balle bas, et la dispersion **monte tant qu'on tient**. On arrose
+  ou on tire par rafales courtes ; c'est le choix qui fait l'arme. ⚠️ Le moteur ne sait pas
+  tirer en automatique : une arme tire un coup par pression, `cadence` images plus tard. Le
+  champ `auto` est du travail neuf, et il touche au tactile — au téléphone, « tenir » est un
+  geste, pas un clic.
+- **La carabine** — *« il est loin. »* Longue portée, lente, précise, un passant d'une balle.
+  ⚠️ **Plafonnée à la largeur de l'écran** : la vue fait 480 px de large, soit 30 tuiles.
+  Une portée qui dépasse ça, c'est tirer sur ce qu'on ne voit pas — et le pistolet est déjà
+  à 180 px, onze tuiles. La carabine s'arrête à ce que l'écran montre, et c'est une borne,
+  pas un réglage.
+- **Le cocktail Molotov** — *« ils sont groupés, et je veux que ça dure. »* Il se lance **en
+  cloche**, comme la fronde (le seul projectile qui a déjà un `z` et une gravité), et il
+  laisse une **flaque de feu** qui brûle quelques secondes — le feu existe déjà, c'est celui
+  des chars sous 20 % de PV, avec ses dégâts par seconde. Deux mécaniques déjà écrites, une
+  arme neuve.
+
+Ce qu'il faut décider en même temps, sinon l'ajout se retourne contre le jeu :
+
+- ⚠️ **Une arme à feu change le jeu de police, pas seulement le combat.** La taxonomie est
+  déjà là : sortir une arme près d'un policier +1★, tirer sur un policier +2★, le tuer +3★.
+  Chaque nouvelle arme déclare donc son `etoiles_usage` — et **une arme bruyante réveille le
+  quartier** : une rafale s'entend comme une explosion s'entend (l'alarme de rayon existe
+  déjà), même quand personne ne t'a vu.
+- ⚠️ **La même parade que pour le char rapide.** Une carabine qui descend les policiers hors
+  de leur cône rendrait le 5★ gratuit. La parade est celle qu'on a déjà écrite pour la
+  vitesse : le cône n'est pas le seul sens. **Un coup de feu s'entend** — tirer de loin
+  t'évite d'être *vu*, jamais d'être *cherché*. La distance achète du temps, pas
+  l'impunité.
+- ⚠️ **Les munitions font l'équilibre, pas les dégâts.** Une mitraillette qui vide trente
+  balles en deux secondes est inutile ou infinie selon le prix du chargeur, et rien entre les
+  deux. `prix_munitions` porte tout le poids.
+- **Où on les achète** : pas chez Gus. Le **marché noir** existe depuis M7, en arrière du
+  bar — c'est là que se vend ce qui fait du bruit, et ça donne enfin à ce comptoir autre
+  chose à offrir qu'à M10.
+- **Juges** : les prix montent toujours dans l'ordre du catalogue (le test existe) ; aucune
+  portée ne dépasse la largeur de la vue ; une arme automatique consomme bien une balle par
+  coup et s'arrête chargeur vide ; le feu d'un Molotov s'éteint, ne se propage pas à
+  l'infini, et compte comme une mort **causée par le joueur** (sinon on tue sans étoiles) ;
+  et un policier abattu laisse tomber son arme — ça marche déjà, ça doit continuer.
 
 ### M11 — La police apprend (taille 2)
 
@@ -478,9 +698,235 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
 - **Juges** : la portée du cône reste bornée quel que soit le casier ; le stool ne naît pas
   dans le dos d'un joueur immobile ; l'avocat ne rend jamais un casier négatif.
 
-### M12 — La ville vit (taille 3)
+### L'eau n'est plus un mur (taille 3)
+
+*Demande de Martin :* « l'eau ne doit plus être un mur, mais qu'on puisse soit y nager ou
+s'y noyer, à pied ou dans un véhicule. »
+
+Aujourd'hui c'est littéralement un mur : `MASQUE_PIETON = MUR | EAU` et `MASQUE_VEHICULE =
+MUR | EAU | BASSE`. On s'arrête au bord de la baie comme contre une façade, ce qui est le
+plus étrange dans une ville qui s'appelle Baie-des-Brumes.
+
+**À pied : on nage, et c'est le souffle qui décide.** L'endurance existe déjà — 100 points,
+0,4 par image à la course, rendue par la bouffe et tenue plus longtemps par le café. Nager
+la dépense plus vite. À bout de souffle, on coule : on se réveille à l'hôpital avec sa
+facture, exactement comme quand on tombe (`Missions.hopital` fait déjà tout ça).
+
+**En véhicule : il coule.** Aucun char ne flotte. Il s'enfonce en quelques secondes ; le
+conducteur sort et nage, ou coule avec. Le char est perdu — ⚠️ et la fourrière ne va pas le
+chercher au fond : un char noyé est un char perdu, sinon couler devient un moyen commode de
+se faire rembourser une épave.
+
+⚠️ **Le vrai enjeu n'est pas la noyade, c'est le pont.** M8 a bâti sa géographie sur une
+règle : une rue dont tous les blocs voisins sont de l'eau est **noyée**, et `PONTS` fait
+l'unique exception — « un pont, que le juge défait pour vérifier qu'il est bien le seul
+lien ». Si l'on nage, La Pointe n'est plus une île et ce juge devient un mensonge.
+
+La sortie est de reformuler le juge, pas de l'affaiblir : **le pont est le seul lien
+CARROSSABLE**. Un homme traverse un chenal à la nage, une auto non — c'est plus vrai qu'avant,
+pas moins. Et le souffle fait le reste : la largeur du chenal doit coûter assez de souffle
+pour que la traversée soit un pari, et la baie, elle, ne se traverse pas. ⚠️ **Ça se mesure**
+et c'est un test : largeur de l'eau × dépense par image contre les 100 points d'endurance.
+
+- ⚠️ **La police nage aussi**, comme elle enjambe les clôtures. Sinon l'eau devient l'exploit
+  anti-police le plus simple du jeu : deux pas dans la baie et on est intouchable.
+- ⚠️ **Les piétons, eux, ne se noient jamais.** `marchablePieton` exclut déjà la chaussée ;
+  il doit exclure l'eau pour tout ce qui flâne. Un passant qui part se baigner dans la baie
+  parce que son errance l'y a mené, c'est le genre de chose qu'on ne voit qu'en jeu.
+- ⚠️ **Les juges de connexité gardent leur sens.** `composantes_marchables` continue
+  d'ignorer l'eau : il sert à prouver qu'aucun trottoir n'est enclavé, et si l'eau reliait
+  les rives, il ne dirait plus rien du tout.
+- **Il faut un bord.** On ne doit pas passer d'un pas de la terre ferme à la noyade : le
+  sable (`s`) existe déjà comme rive, et il devient l'eau **basse** où l'on entre encore
+  debout. C'est là que se joue la lisibilité — voir où ça devient sérieux.
+- **Coût réel à ne pas cacher** : nager est un état de plus (une pose de sprite — on ne voit
+  que la tête et les bras), plus les remous, plus le char qui s'enfonce.
+- **Et ça débloque le bateau.** M9 le reporte faute de « tuiles d'eau carrossables » : c'est
+  exactement ce que cette vague apporte. Le traversier de M12 y gagne aussi.
+- **Juges** : on ne traverse pas la baie à la nage, quel que soit le café bu ; le pont reste
+  le seul lien carrossable (le juge de M8, reformulé) ; un char dans l'eau coule toujours et
+  ne revient jamais ; un policier lancé derrière le joueur entre dans l'eau comme lui ;
+  aucun piéton ordinaire ne met un pied dans l'eau de toute une partie de banc.
+
+### M15 — La ville te parle (taille 3)
+
+*Ce que ça donne :* le jeu cesse d'être muet entre deux répliques de mission — et il
+t'apprend enfin ce qu'il sait faire.
+
+⚠️ **Cette vague ne dépend de rien.** C'est celle qu'on prend quand on veut un gain rapide :
+les trois morceaux passent par des pièces déjà en place (le narrateur de M7, le journal de
+M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
+
+- **Le journal du matin t'apprend à jouer.** Le jeu a maintenant des boulots au klaxon, une
+  fourrière, un marché noir, des propriétés, trois défis — et **rien n'explique rien** : M1
+  apprend à marcher et à voler un char, et après ça le joueur est tout seul. Or `journal.py`
+  trie déjà ses règles du plus grave au plus banal et finit par un repli « rien à signaler ».
+  Ce repli devient **un encadré qui enseigne une chose** — « Saviez-vous qu'un coup de klaxon
+  dans un taxi vous trouve un client? ». Une par jour, lue à voix haute par le narrateur qui
+  existe déjà, **sans une seule fenêtre de plus**.
+  - ⚠️ On n'enseigne que ce que le joueur n'a **pas encore fait** : `p.stats` le sait. Un jeu
+    qui explique le taxi à quelqu'un qui a fait trente courses n'explique rien, il agace.
+  - Jamais deux fois la même : la partie garde ce qui a été lu. Quand il n'y a plus rien à
+    apprendre, le repli redevient « rien à signaler » — et c'est une bonne nouvelle.
+- **La radio parle.** Les trois stations sont des boucles instrumentales ; or l'âme d'une
+  radio, c'est ce qui se dit **entre** les tounes. Tout le mécanisme est là : `Son.Voix`, le
+  ducking, le filtre du combiné. Un clip toutes les deux ou trois boucles, en trois sortes :
+  - **un animateur par station** — feutré à La Brume, jovial au Taxi-Radio, et personne au
+    Choc : juste un jingle, c'est le propos de la station ;
+  - **des pubs** pour des commerces qui existent (Chez Gus, Boutique Rosa, le Dépanneur
+    Ti-Paul). ⚠️ **La pub change quand tu achètes le commerce** — c'est cette ligne-là qui
+    fait que ça vaut la peine, et pas une autre ;
+  - **un bulletin de nouvelles** qui rejoue la manchette de `journal.py` : la radio parle
+    donc de **ce que tu as fait hier**, dans un char que tu viens de voler.
+  - Une vingtaine de clips à 40 Ko : 800 Ko, largement sous le plafond de 3 Mo des voix. Et
+    la règle de `audio.py` tient toujours — `exporter()` ne déclare que les fichiers
+    présents, une station sans animateur joue simplement sa musique.
+- **Les passants : plus de choses, moins souvent, et jamais les mêmes** (demande de Martin).
+  Aujourd'hui il y a **huit** répliques — quatre par genre. Un passant parle dès qu'il passe
+  à 30 px, avec un temps mort global de 4 secondes, et la réplique est tirée par un
+  `Math.random()` **sans aucune mémoire**. Sur quatre choix, une chance sur quatre de répéter
+  la précédente : dans une rue passante, on entend « Fait frette, hein? » trois fois en vingt
+  secondes. ⚠️ Le commentaire d'`audio.VOIX` promet pourtant « jamais deux fois de suite le
+  même » — **c'est faux**, et ça l'a toujours été : un tirage au hasard peut sortir deux fois
+  le même, c'est même sa définition.
+  - **Plus de choses.** La banque grossit, et elle grossit **deux fois** : `audio.VOIX` gagne
+    un champ `quand` (`normal`, `peur`, `celebre`, `nuit`), et chaque contexte a ses
+    répliques. La ville se met à te reconnaître au lieu de te dire bonjour pendant que tu
+    saignes.
+  - **Moins souvent.** Le temps mort monte, et surtout **parler devient une chance, pas une
+    certitude** : la plupart des gens qu'on croise ne disent rien, comme dans la vraie vie.
+    Un passant qui parle à chaque fois qu'on le frôle, c'est ce qui rend huit répliques
+    fatigantes bien avant qu'elles soient usées.
+  - **Jamais les mêmes.** Le moteur garde les **quatre dernières** répliques dites et les
+    exclut du tirage. ⚠️ **Ça impose une taille minimale à chaque banque** : pour en exclure
+    quatre, il en faut au moins six, sinon il ne reste rien à tirer et la règle se retourne
+    contre elle-même. C'est un test, pas une intention — et une banque trop courte retombe
+    sur `normal` plutôt que de se répéter.
+  - ⚠️ **Et le tirage passe par `B.rng()`**, pas par `Math.random()`. Tout le hasard du jeu
+    y passe déjà — c'est ce qui rend le banc reproductible et donc juge. Cette ligne-là lui
+    échappe, et c'est précisément celle qu'on veut pouvoir tester.
+  - Le compte : 4 contextes × 2 genres × 6 répliques = **48 clips**, soit environ 1,2 Mo —
+    sous le plafond de 3 Mo des voix. Et la règle d'`audio.py` tient : `exporter()` ne
+    déclare que les fichiers présents, une banque vide se rabat sur `normal`.
+- **Juges** : une leçon ne se donne qu'une fois et jamais sur ce qui est déjà fait ; un clip
+  de radio ne coupe jamais une réplique de mission (le ducking a déjà sa file d'attente) ;
+  la pub d'un commerce possédé n'est plus celle d'un commerce à visiter ; **aucune des quatre dernières
+  répliques dites ne peut ressortir**, et toute banque où l'on tire en contient au moins six
+  (quatre à exclure, deux pour que ça reste un tirage) ; le tirage passe par `B.rng()`, donc
+  le banc peut jouer mille rencontres et compter les répétitions — il doit en trouver zéro.
+
+### M9 — Le parc automobile et les boulots (taille 3)
+
+*Ce que ça donne :* autre chose à conduire, et de quoi gagner sa vie autrement.
+
+- `vehicules.py` : **camion** (lent, lourd, défonce un mur — il sert à M10), **autobus**
+  (long, deux cercles de collision de plus, pas de radio), **ambulance** (rapide, sirène,
+  soigne), **remorqueuse** (un crochet : on accroche un char et on le traîne).
+  Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
+  carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
+  suffit pour l'eau.
+- **Le haut de gamme : deux chars qu'on vole exprès** (demande de Martin). Tout le reste du
+  parc est utilitaire — on le prend parce qu'il sert. Il manque le contraire : un char
+  qu'on prend parce qu'on le **veut**. Deux fiches, pas dix, et elles s'opposent.
+  - **Le sport** (coupé décapotable) : la plus rapide sur quatre roues, reprise sèche, et
+    une adhérence basse qui la fait partir en travers au frein à main. Carrosserie mince
+    (peu de PV) : un barrage l'arrête pour de bon. Alarme.
+  - **Le luxe** (grosse berline noire) : lourde, elle encaisse, elle ne va pas vite — et
+    c'est **la meilleure revente du jeu** au garage de Ti-Guy. Alarme longue.
+  - ⚠️ **Ce qui compte, c'est où on les trouve**, sinon ce sont deux lignes de catalogue
+    de plus. Leur `frequence` est la plus basse du parc, et `carte.zones()` leur donne un
+    **goût de quartier** : le luxe se gare devant l'Hôtel Bandini et dans les entrées des
+    Érables, le sport traîne au Carré et devant le bar le soir. Ni l'un ni l'autre ne naît
+    dans La Shop — on ne laisse pas une décapotable dans une cour à ferraille. Un char rare
+    qu'on croise partout n'est plus rare.
+  - Le reste tombe tout seul : `economie.prix_vente` est déjà proportionnelle au prix neuf,
+    donc le luxe devient la meilleure course d'argent du jeu **sans une ligne de plus**, et
+    le malus par doublon du même jour empêche d'en faire une usine. En M10, le shylock
+    accepte un char de luxe en acompte : c'est la passerelle.
+- ⚠️ **Un vélo n'explose pas** (retour de Martin). Aujourd'hui, il explose. `endommager()`
+  appelle `exploser()` dès que les PV tombent à zéro, **pour tous les véhicules sans une
+  seule exception** — et le vélo a 30 PV, le plus fragile du jeu. Deux coups de batte, et il
+  part en boule de feu : quarante particules, une déflagration de 60 px qui fait 90 points de
+  dégâts à tout ce qui se trouve autour, l'écran qui tremble, et un délit `explosion` à
+  **+2★** avec une alarme de 15 tuiles. On renverse un vélo, et la police arrive.
+  - La règle tient sur une ligne de fiche : **ce qui n'a pas de réservoir ne brûle pas et
+    n'explose pas**. `vehicules.py` gagne `reservoir` (faux pour le seul vélo) — c'est Python
+    qui décide, pas un `slug === 'velo'` caché dans le JS.
+  - Un vélo à zéro PV **se plie** : il tombe sur le côté, son cycliste part avec (il est déjà
+    `ejecte`), et il reste là, tordu. Pas de feu, pas de fumée, pas de son d'explosion, pas de
+    secousse de caméra, et **aucun délit**.
+  - ⚠️ Il ne brûle pas non plus **avant** : `majEtatDuChar` met le feu sous 20 % des PV et
+    enlève 4 PV par seconde jusqu'à l'explosion. Un vélo ne s'enflamme pas tout seul au bord
+    du trottoir.
+  - ⚠️ Ni **dans la chaîne** : `exploser()` endommage les véhicules autour, donc une
+    explosion en déclenche d'autres. Un vélo garé à côté d'un char ne doit pas agrandir la
+    déflagration gratuitement.
+  - **Juges** : un véhicule sans réservoir n'explose jamais, quel que soit le dégât reçu ; un
+    vélo détruit ne signale aucun délit et ne blesse personne autour ; et le vélo est le seul
+    du catalogue dans ce cas — le jour où on ajoute une trottinette, le test le dira.
+- Boulots au klaxon, sur le patron du taxi : **ambulance** (un blessé quelque part, chrono,
+  le sortir vivant), **pizza** (trois livraisons, la pizza refroidit — le pourboire fond),
+  **remorquage** (la fourrière paie pour les épaves).
+- **Fourrière** : un char mal garé, ou saisi à l'arrestation, part au lot ; on le rachète
+  au comptoir, ou on le reprend par-dessus la clôture (1★, et les gars du lot ripostent).
+  - ⚠️ **« Mal garé » doit vouloir dire quelque chose.** Depuis que les stationnements ont
+    de vraies **cases** (`^ v < >`, une tuile de large, deux de creux), la définition tombe
+    toute seule et se teste : est mal garé un char **laissé hors d'une case ET qui gêne** —
+    sur la chaussée, en travers d'une allée, devant une porte, sur un passage piéton, dans
+    la cour d'un commerce. Un char dans sa case, ou rangé sur une ruelle, ne se fait jamais
+    remorquer. ⚠️ Et **jamais celui de la planque**, quoi qu'il arrive : c'est la
+    sauvegarde de Martin.
+  - ⚠️ **Le lot de la fourrière se gare comme les autres.** Sa cour est aujourd'hui un
+    rectangle de `p` avec des places calculées à la main — alors que `_stationnement()`
+    sait maintenant poser des rangées de cases, des allées et un îlot de béton. La cour doit
+    passer par lui : des chars saisis rangés de travers dans un lot municipal, c'est
+    exactement ce qu'on vient de corriger partout ailleurs, et les `places` du paquet se
+    lisent alors dans les cases plutôt que dans une grille inventée.
+  - ⚠️ **Mais pas de tremplin dans la cour.** `_stationnement()` finit par poser un
+    `_tremplin_de_stationnement` dans une allée — dans la fourrière, ce serait une sortie
+    par-dessus la clôture sans payer, et toute l'idée du lot tombe. La cour demande les
+    cases **sans** le tremplin.
+- **Radio procédurale** : `Son.Mus` (le séquenceur trois voix, déjà là) génère une station
+  par véhicule à partir d'une graine — le camion a sa toune, l'autobus n'a que son moteur.
+- **Juges** : chaque char a son sprite (harnais Node) ; la remorqueuse n'en traîne qu'un à
+  la fois ; l'ambulance ne ressuscite personne ; la fourrière ne peut **jamais** manger le
+  char de la planque (c'est la sauvegarde de Martin) ; le sport reste **sous** la moto et
+  ne dépasse l'auto-patrouille que d'un cheveu ; le luxe est la plus grosse revente et la
+  plus basse fréquence du parc ; aucun des deux ne naît dans un district qui ne les veut
+  pas.
+
+### M10 — L'argent sale (taille 3)
+
+*Ce que ça donne :* une raison de se lever le matin — la dette de Rocco.
+
+- **Le shylock** : 15 000 $, un intérêt par jour, des rappels au téléphone, puis des hommes
+  de main qui te trouvent où que tu sois. Rembourser ouvre une des deux fins (M13).
+- **Guichets** : les défoncer au camion (bruyant, 2★, la caisse par terre) ou poser un
+  **skimmer** et revenir le lendemain (silencieux, lent, il peut être trouvé).
+- **Assurance et fraude** : assurer un char au garage, le faire disparaître, encaisser —
+  trois fois de suite et l'assureur enquête.
+- `economie.py` : dette, intérêts **bornés**, primes, seuils de suspicion.
+- **Juges** : la dette ne dépasse jamais son plafond ; un joueur qui ne fait rien ne devient
+  pas insolvable en une nuit ; la fraude rapporte **moins à l'heure** que le travail honnête
+  — sinon le jeu se joue tout seul et le taxi ne sert plus à rien.
+
+### M12 — La ville vit (taille 4)
 
 *Ce que ça donne :* une ville qui bouge toute seule, avec ou sans toi.
+
+- **Le chantier** (demande de Martin) : rien ne dit « Québec » comme une voie barrée depuis
+  trois ans — et ce n'est pas qu'une farce. C'est une **surcouche** au champ `voie`, tirée
+  par la graine du jour : une voie fermée, des cônes orange (le sprite `cone` existe déjà
+  dans `OBJETS`), un détour. Le trafic sait déjà se déporter dans la voie d'à côté ; ici il
+  n'a plus le choix. La ville devient différente d'un jour à l'autre **sans regénérer une
+  seule tuile**, et la police a enfin un endroit où se tenir sans raison.
+  - ⚠️ **Un chantier ne coupe jamais la ville en deux.** Il ferme UNE voie d'un boulevard,
+    jamais une rue à voie unique, jamais un pont, jamais la seule approche d'un croisement.
+    Le juge est celui de M1 (`voies_bloquees` : fortement connexes) rejoué **avec** le
+    chantier posé — s'il rougit, le chantier se pose ailleurs.
+  - **Nid-de-poule** : une tuile qui secoue la caméra et coûte deux points de carrosserie.
+    Deux lignes, et toute la ville prend un accent. Jamais dans un croisement (on y freine
+    déjà), jamais deux côte à côte.
 
 - **Tramway** : une ligne sur rails du Faubourg aux Quais, des arrêts, des portes — et il
   ne s'arrête pas pour toi. ⚠️ C'est un véhicule qui **ignore** le champ de direction : il
@@ -490,6 +936,53 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
   pousse la neige et les chars mal garés ; la police glisse aussi.
 - ⚠️ La neige touche à la physique **et** au rendu : elle arrive derrière une option, et la
   sonde de performance Playwright la mesure avant qu'elle soit allumée par défaut.
+
+### M14 — Meta v2 (taille 4)
+
+- **Un compte et une base de données** (demande de Martin). Aujourd'hui la partie vit dans
+  le `localStorage` du navigateur : elle ne traverse pas. Vingt minutes au téléphone, puis
+  on s'assoit à l'ordi, et on recommence. Un compte règle ça, et il porte aussi le défi du
+  jour et le classement — qui ont besoin d'un serveur de toute façon.
+  - **`app/bd.py` + SQLite**, sous `DONNEES_DIR`. Une seule machine, deux workers gunicorn,
+    quelques dizaines de joueurs : un serveur de base de données serait une pièce de plus à
+    installer, à surveiller et à redémarrer pour rien. ⚠️ **WAL et un `timeout`**, sinon les
+    deux workers se marchent dessus et ça donne `database is locked` — en production
+    seulement, jamais en local où il n'y a qu'un worker.
+  - **`app/comptes.py`** : pseudo + mot de passe haché (`generate_password_hash`, déjà là
+    avec Flask), session signée. ⚠️ **`SECRET_KEY` vaut encore `cle-de-developpement-a-changer`
+    par défaut** — tant qu'un compte n'existe pas, ça ne coûte rien ; le jour où une session
+    vaut une partie, une clé par défaut en production laisse forger n'importe qui. Le
+    `installer.sh` doit la générer et refuser de démarrer sans elle.
+  - **Ce qu'on demande, et rien d'autre** : un pseudo, un mot de passe, et un courriel
+    **facultatif** qui ne sert qu'à reprendre un mot de passe perdu. Sans lui, un mot de
+    passe perdu est un compte perdu, et c'est écrit noir sur blanc à l'inscription. Une page
+    dit ce qui est gardé et comment tout effacer — c'est un jeu pour s'amuser, pas une
+    raison de tenir un fichier sur du monde.
+  - ⚠️ **Le compte ne devient jamais obligatoire.** Le `localStorage` reste le défaut : on
+    joue sans compte, comme avant, et le compte n'est qu'une **synchronisation**. Sinon une
+    panne de serveur, une connexion coupée dans l'autobus ou un certificat expiré empêchent
+    de jouer à un jeu qui tourne entièrement dans le navigateur.
+  - **Le tableau des scores déménage** dans la BD avec ses règles intactes (pseudo validé,
+    borne de vraisemblance de `economie.GAIN_MAX_PAR_SECONDE`, tri, plafond). Deux endroits
+    pour la même chose, c'est deux endroits qui dérivent. Un score sans compte s'y inscrit
+    toujours, sous un pseudo, comme aujourd'hui.
+  - ⚠️ **On ne peut pas empêcher la triche d'un jeu qui tourne dans le navigateur** — une
+    partie qu'on peut poster est une partie qu'on peut fabriquer. Ce qu'on peut faire, c'est
+    que ça ne rapporte rien : le classement garde sa borne, le serveur garde la durée et la
+    date de chaque partie, et une partie reprise repart avec sa durée, pas à zéro.
+  - **Le schéma va changer** : la sauvegarde a déjà `version` + `empreinte` + le repli de
+    `completer()`. La même discipline s'applique côté serveur — une migration par version,
+    jamais une colonne ajoutée à la main sur le serveur.
+  - **Une BD, c'est quelque chose à sauvegarder.** `deploy/installer.sh` pose un vidage
+    quotidien (`.backup`, pas une copie du fichier à chaud) et une rétention de sept jours.
+    Une base de données sans copie de sûreté est une perte de données qui attend sa date.
+- **Défi du jour** à graine serveur (reporté de M7) : `/api/defi` donne la graine du jour,
+  le classement est celui du jour, tout le monde joue la même ville.
+- **Mode photo** : le jeu se fige, la caméra se détache, quelques filtres, et l'image se
+  télécharge.
+- **Coop locale** (risqué) : deux manettes, une caméra qui tient les deux joueurs, zoom
+  arrière quand ils s'éloignent. ⚠️ 480 × 270 n'est pas grand : à décider **après un essai**,
+  pas avant.
 
 ### M13 — Les deux fins (taille 4)
 
@@ -507,16 +1000,6 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
 - **Juges** : un test force chacune des deux fins (elles sont atteignables) ; la dette reste
   remboursable jusqu'au bout (aucune fin ne se referme sur un bug) ; chaque réplique
   nouvelle a son personnage et sa voix.
-
-### M14 — Meta v2 (taille 2)
-
-- **Défi du jour** à graine serveur (reporté de M7) : `/api/defi` donne la graine du jour,
-  le classement est celui du jour, tout le monde joue la même ville.
-- **Mode photo** : le jeu se fige, la caméra se détache, quelques filtres, et l'image se
-  télécharge.
-- **Coop locale** (risqué) : deux manettes, une caméra qui tient les deux joueurs, zoom
-  arrière quand ils s'éloignent. ⚠️ 480 × 270 n'est pas grand : à décider **après un essai**,
-  pas avant.
 
 ## Serveur (M0, `deploy/installer.sh`, idempotent, en `dojoadmin`)
 
@@ -556,8 +1039,32 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
   au champ de direction. Chacun est un conducteur à part (`conducteur: 'rail'`, `'eau'`),
   jamais une exception glissée dans `majConducteur` — et le mode trace les surveille comme
   le reste.
+- **Un char rapide qui casse toutes les poursuites (M9)** : le jour où le sport roule plus
+  vite que l'auto-patrouille, la police du jeu entier devient décorative — et c'est le genre
+  de dégât qu'on ne voit pas en jouant dix minutes. Trois parades, et il en faut trois :
+  la vitesse de pointe reste **sous la moto** et ne dépasse la patrouille que d'un cheveu
+  (un juge le mesure) ; la carrosserie est mince, donc un **barrage** l'arrête pour de bon ;
+  et l'**hélico** de 4★ ne court pas après, il suit. La vitesse achète de la distance,
+  jamais l'impunité.
 - **Économie qui se joue toute seule (M10)** : tout gain passe par un juge « à l'heure »,
   comparé au taxi ; la fraude et les skimmers doivent rester moins payants que le travail.
+  Le **luxe** de M9 tombe sous la même règle : sa revente est la meilleure du jeu, mais le
+  malus par doublon du même jour interdit d'en faire une chaîne de montage.
+- **Le serveur devient indispensable (M14)** : c'est le vrai danger du compte. Un jeu qui
+  tourne dans le navigateur et qui ne démarre plus parce qu'une base de données est barrée,
+  qu'un certificat a expiré ou qu'on est dans le métro, a perdu ce qu'il avait de mieux. Le
+  `localStorage` reste donc le **défaut**, le compte n'est qu'une synchronisation, et le
+  jeu doit se lancer, se jouer et se sauvegarder **serveur éteint**. Un test le vérifie en
+  coupant le réseau, pas en le supposant.
+- **Des mots de passe et des comptes à garder (M14)** : hachage par `generate_password_hash`,
+  `SECRET_KEY` vraie en production (voir les Dettes), courriel facultatif, une page qui dit
+  ce qui est gardé et un bouton qui efface tout. Et une base de données sans **copie de
+  sûreté quotidienne** est une perte de données qui attend sa date : le vidage est dans
+  `installer.sh`, pas dans une bonne intention.
+- **Un chantier qui coupe la ville (M12)** : une voie fermée au mauvais endroit, et un
+  quartier devient inatteignable en char sans qu'aucune capture d'écran ne le montre. Le
+  juge de M1 (`voies_bloquees`, fortement connexes) se rejoue **avec le chantier posé** ; il
+  rougit, le chantier se pose ailleurs. Jamais sur un pont, jamais sur une rue à voie unique.
 - **Coop locale (M14)** : un essai jetable avant toute promesse ; si l'écran est trop petit
   à deux, le jalon tombe et le mode photo suffit.
 - **Audio absent ou cassé** : `exporter()` ne déclare que les fichiers présents, chaque

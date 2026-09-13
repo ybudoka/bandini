@@ -124,9 +124,8 @@ const Entites = (function () {
 
   function creerJoueur(x, y) {
     const p = B.partie;
-    const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === p.tenue; });
     const j = creer('joueur', x, y, {
-      r: 5, sprite: 'joueur', swaps: tenue ? { c: tenue.couleur } : null,
+      r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
       vie: p.vie, vieMax: 100, endurance: 100, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
     });
@@ -193,6 +192,29 @@ const Entites = (function () {
       e.petit = petit;
     }
     return e;
+  }
+
+  /** Les gens d'une piece : le commis a son poste, les clients qui flanent.
+
+      ⚠️ Ils naissent a l'entree et meurent a la sortie — `B.entites` est
+      remplace des deux cotes de la porte (`Jeu.entrer`/`Jeu.sortir`), alors il
+      n'y a rien a nettoyer. Et `peupler()` ne tourne pas dedans : personne
+      d'autre n'apparaîtra dans le dos du joueur pendant qu'il magasine.
+
+      ⚠️ Le CLIENT est tire dans les passants ordinaires : dans une piece, la
+      zone est vide, donc `archetypeDeRue` rend ceux de partout. C'est ce qui
+      fait qu'on ne croise pas le meme figurant dans les vingt commerces. */
+  function peuplerInterieur(piece) {
+    if (!piece || !piece.gens) return;
+    for (const g of piece.gens) {
+      const arch = g.qui === 'commis' ? archetype('commis') : archetypeDeRue(g.x * TT, g.y * TT);
+      if (!arch) continue;
+      const e = creerPieton(g.x * TT + 8, g.y * TT + 8, arch);
+      e.face = 'bas';
+      // Le commis ne quitte pas sa caisse ; le client, lui, magasine.
+      if (g.qui === 'commis') e.poste = { x: e.x, y: e.y };
+    }
+    indexer();
   }
 
   /** Rebatit l'index fixe a partir des entites presentes (retour de l'interieur). */
@@ -1112,6 +1134,7 @@ const Entites = (function () {
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
+    peuplerInterieur,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
     semerDesArmesDeFortune, visibleAEcran,

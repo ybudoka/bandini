@@ -12,6 +12,12 @@ from app import carte, economie, magasins
 
 CARTE = carte.exporter()
 
+#: Les lieux qu'une ville DOIT avoir, quelle que soit la graine. ⚠️ Les autres
+#: portes (un commerce ordinaire qui ouvre, un logement qu'on peut visiter) sont
+#: tirees au sort : leur nombre et leurs noms changent d'une graine a l'autre,
+#: et c'est voulu. Ce qui ne doit jamais changer, c'est cette liste-ci.
+LIEUX_GARANTIS = {special["slug"] for special in carte.SPECIAUX.values()} | {"kiosque"}
+
 
 def test_rectangulaire_et_glyphes_connus():
     assert len(CARTE["sol"]) == CARTE["hauteur"]
@@ -90,10 +96,14 @@ def test_la_ville_est_irreguliere():
     assert any(len(b) == 3 for b in bras), "aucun croisement en T"
 
     # Les batiments : autant de formes que possible, et au moins une cour.
-    tailles = set()
-    for porte in CARTE["portes"]:
-        tailles.add(porte["x"])
-    assert len(tailles) == len(CARTE["portes"])
+    # ⚠️ Les portes ne s'alignent pas. Le juge exigeait des colonnes TOUTES
+    # differentes ; il tenait tant qu'il y avait seize portes dans 421
+    # colonnes. Depuis qu'un commerce ordinaire sur cinq ouvre la sienne, deux
+    # portes tombent parfois dans la meme colonne a deux quartiers d'ecart —
+    # ce n'est pas un damier, c'est un anniversaire partage. Ce qui compte,
+    # c'est qu'elles restent EPARPILLEES.
+    colonnes = {porte["x"] for porte in CARTE["portes"]}
+    assert len(colonnes) >= len(CARTE["portes"]) * 0.8, "les portes s'alignent"
     fronts = _empreintes_de_batiments(CARTE)
     assert len(fronts) >= 20, f"seulement {len(fronts)} batiments"
     assert len(set(fronts)) >= 8, "les batiments ont tous la meme boite"
@@ -243,7 +253,11 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     parce qu'un arbre occupait les coins qui auraient rougi.)
     """
     positions = {(d["x"], d["y"]) for d in CARTE["decor"] if d["type"] == "lampadaire"}
-    poteaux = [lampe for lampe in CARTE["lampes"] if lampe.get("c") != "vitrine"]
+    #: ⚠️ Trois sortes de lumiere, maintenant : le poteau, la VITRINE (un reflet
+    #: au pied d'un commerce) et la FENETRE allumee d'un logement. Seul le
+    #: premier a un poteau plante dans le sol.
+    poteaux = [lampe for lampe in CARTE["lampes"]
+               if lampe.get("c") not in ("vitrine", "fenetre")]
     assert len(poteaux) >= 40
     trottoirs = 0
     for lampe in poteaux:
@@ -284,7 +298,7 @@ def test_une_autre_graine_redecore_la_meme_ossature():
     autre = carte.generer(graine=carte.GRAINE + 1)
     assert autre["voie"] == CARTE["voie"], "les rues ne dependent pas du hasard"
     assert autre["sol"] != CARTE["sol"], "la graine ne change rien : le hasard est mort"
-    assert ({p["lieu"] for p in autre["portes"]} == {p["lieu"] for p in CARTE["portes"]}), \
+    assert {p["lieu"] for p in autre["portes"]} >= LIEUX_GARANTIS, \
         "un batiment garanti a disparu avec la graine"
     assert autre["portes"] != CARTE["portes"], "les batiments ne bougent pas du tout ?"
     assert len(carte.composantes_marchables(autre)) == 1
@@ -308,7 +322,7 @@ def test_n_importe_quelle_graine_donne_une_ville_jouable(graine):
     assert len(carte.composantes_marchables(ville)) == 1
     sans_aller, sans_retour = carte.voies_bloquees(ville)
     assert not sans_aller and not sans_retour
-    assert {p["lieu"] for p in ville["portes"]} == {p["lieu"] for p in CARTE["portes"]}
+    assert {p["lieu"] for p in ville["portes"]} >= LIEUX_GARANTIS
     for porte in ville["portes"]:
         assert carte.marchable(ville["sol"][porte["y"] + 1][porte["x"]]), porte
 

@@ -128,6 +128,14 @@ CATALOGUE: list[Pieton] = [
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),
+    # ⚠️ Le commis TIENT UN COMPTOIR, dedans. Il ne naît jamais dans la rue
+    # (frequence 0) : `entites.peuplerInterieur` le pose derriere sa caisse
+    # quand on pousse la porte. Sans lui, une piece meublee reste un musee —
+    # c'est le monde derriere le comptoir qui fait qu'on est entre quelque
+    # part. Sa caisse est dans ses poches : le voler est un vrai choix.
+    _p("commis", "Commis", "#d8d8d0", "#4a3320", "#e8b088", "#3a3a4a",
+       vitesse=0.55, courage=0.3, vie=65, argent=(25, 95), temoin=0.5,
+       metier="commerce", frequence=0.0),
     # L'agent : un pieton que la police dirige quand il poursuit. Il patrouille
     # sur les trottoirs comme tout le monde, arme au ceinturon, et ne nait
     # jamais au hasard — `police.js` en place autant que la zone en demande.

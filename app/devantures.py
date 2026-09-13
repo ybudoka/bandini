@@ -38,6 +38,13 @@ GENRES: list[Genre] = [
     {"slug": "commerce", "bandeau": "#1f4a32", "lettres": "#bff0cf", "auvent": "#2e6b46", "vitre": "#d2f5de"},
     {"slug": "marine", "bandeau": "#14454a", "lettres": "#a8e6e0", "auvent": "#1d666d", "vitre": "#c2f0ea"},
     {"slug": "industrie", "bandeau": "#4a4030", "lettres": "#e8c98a", "auvent": "#6b5a40", "vitre": "#f0d9a8"},
+    # ⚠️ Trois familles de plus, et ce n'est pas de la decoration : avec sept
+    # couleurs pour cent seize commerces, deux rues voisines finissaient en
+    # rouge et bleu comme la premiere. La croix verte de la pharmacie, la
+    # prune de la mercerie et l'encre du libraire se reconnaissent de loin.
+    {"slug": "sante", "bandeau": "#1f5a4a", "lettres": "#c8f0dd", "auvent": "#2e7d66", "vitre": "#d8f5ea"},
+    {"slug": "mode", "bandeau": "#5f2145", "lettres": "#ffc2dd", "auvent": "#8d3568", "vitre": "#ffd4e8"},
+    {"slug": "savoir", "bandeau": "#33305c", "lettres": "#d4cfff", "auvent": "#4d4680", "vitre": "#e2ddff"},
 ]
 
 INDEX_GENRE = {g["slug"]: i for i, g in enumerate(GENRES)}
@@ -48,44 +55,146 @@ INDEX_GENRE = {g["slug"]: i for i, g in enumerate(GENRES)}
 #: ecrits ici assez courts pour qu'on n'ait jamais a couper.
 LARGEUR_LETTRE = 4
 
-#: Les commerces ordinaires : ceux qu'on ne visite pas, mais qui font la ville.
+#: Les commerces ordinaires : ceux qui font la ville, qu'on les visite ou non.
 #: Ils sont ranges par district pour que chaque quartier se reconnaisse a ses
 #: vitrines — une poissonnerie aux Quais, un atelier de soudure a La Shop.
+#:
+#: ⚠️ Un catalogue COURT se voit : a huit noms pour vingt-quatre vitrines, La
+#: Shop affichait sept fois « FERRAILLE » et la rue devenait un papier peint
+#: (mesure du 13 sept. 2026 : sept doublons pour quatre noms, sur 116
+#: devantures). Chaque quartier en porte donc trois a quatre fois plus, et
+#: `_Chantier.choisir_enseigne` refuse le meme nom a moins de
+#: `DISTANCE_DOUBLON` tuiles : on n'en voit jamais deux du meme trottoir.
 COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
+    # Le Faubourg : le centre-ville ouvrier, celui qui a de tout et rien de neuf.
     "faubourg": (
         ("TABAGIE DUBOIS", "commerce"), ("EPICERIE MARCEL", "bouffe"),
         ("BARBIER GILLES", "service"), ("SALON MIREILLE", "service"),
-        ("QUINCAILLERIE", "artisan"), ("PHARMACIE ROY", "service"),
+        ("QUINCAILLERIE", "artisan"), ("PHARMACIE ROY", "sante"),
         ("BOULANGERIE", "bouffe"), ("CORDONNERIE", "artisan"),
-        ("DISQUES VOGUE", "nuit"), ("TAVERNE CHEZ GO", "nuit"),
+        ("DISQUES VOGUE", "savoir"), ("TAVERNE CHEZ GO", "nuit"),
         ("BIJOUTERIE", "commerce"), ("PHOTO EXPRESS", "service"),
         ("CLUB VIDEO", "nuit"), ("CAISSE POP", "service"),
-        ("MEUBLES GAGNON", "artisan"), ("FRIPERIE", "commerce"),
-        ("LIBRAIRIE", "commerce"), ("SALLE DE POOL", "nuit"),
+        ("MEUBLES GAGNON", "artisan"), ("FRIPERIE", "mode"),
+        ("LIBRAIRIE", "savoir"), ("SALLE DE POOL", "nuit"),
+        ("BOUCHERIE PARE", "bouffe"), ("ROTISSERIE", "bouffe"),
+        ("PATISSERIE", "bouffe"), ("FRUITERIE", "bouffe"),
+        ("PIZZERIA NAPOLI", "bouffe"), ("LAITERIE", "bouffe"),
+        ("5-10-15", "commerce"), ("RADIO-TV DUMAS", "commerce"),
+        ("SPORTS BEAULIEU", "commerce"), ("JOUETS ET TRAINS", "commerce"),
+        ("BUANDERIE", "service"), ("ASSURANCES", "service"),
+        ("BANQUE", "service"), ("NOTAIRE BELIVEAU", "service"),
+        ("OPTICIEN", "sante"), ("DENTISTE", "sante"),
+        ("CLINIQUE", "sante"), ("TAILLEUR ROMEO", "mode"),
+        ("CHAUSSURES LEO", "mode"), ("MERCERIE", "mode"),
+        ("LE CLAIRON", "savoir"), ("PAPETERIE", "savoir"),
+        ("IMPRIMERIE", "artisan"), ("PLOMBERIE", "artisan"),
+        ("SERRURIER", "artisan"), ("TAPISSIER", "artisan"),
+        ("CINEMA RIALTO", "nuit"), ("SALLE DE QUILLES", "nuit"),
+        ("BRASSERIE", "nuit"), ("DISCO LE MIRAGE", "nuit"),
     ),
+    # Les Erables : la banlieue. Ce qu'on trouve a pied quand on a un char.
     "erables": (
         ("DEPANNEUR", "bouffe"), ("FLEURISTE ROSE", "commerce"),
         ("NETTOYEUR", "service"), ("CASSE-CROUTE", "bouffe"),
         ("GARDERIE", "service"), ("CREMERIE", "bouffe"),
         ("COIFFURE LINE", "service"), ("ANIMALERIE", "commerce"),
+        ("PHARMACIE", "sante"), ("VETERINAIRE", "sante"),
+        ("BOULANGERIE", "bouffe"), ("MARCHE BEAUDOIN", "bouffe"),
+        ("BEIGNES CHEZ TI", "bouffe"), ("POULET BBQ", "bouffe"),
+        ("ECOLE DE DANSE", "savoir"), ("BIBLIOTHEQUE", "savoir"),
+        ("MUSIQUE LAROSE", "savoir"), ("QUINCAILLERIE", "artisan"),
+        ("PEPINIERE", "artisan"), ("COUTURE CHEZ EVA", "mode"),
+        ("BOUTIQUE DIANE", "mode"), ("CAISSE POP", "service"),
+        ("BUREAU DE POSTE", "service"), ("TAXI DIAMANT", "service"),
+        ("PHOTOGRAPHE", "service"), ("LAVE-AUTO", "industrie"),
+        ("PNEUS DESCHAMPS", "industrie"), ("CLUB VIDEO", "nuit"),
     ),
+    # La Shop : l'industriel. Rien ne s'achete ici qui ne serve a reparer.
     "shop": (
         ("SOUDURE PELLETIER", "industrie"), ("PIECES USAGEES", "industrie"),
         ("ATELIER 12", "industrie"), ("PNEUS BEAULIEU", "industrie"),
         ("FERRAILLE", "industrie"), ("ELECTRIQUE", "industrie"),
         ("OUTILLAGE", "artisan"), ("PEINTURE AUTO", "industrie"),
+        ("MACHINERIE", "industrie"), ("ACIER DU NORD", "industrie"),
+        ("PIECES D'AUTO", "industrie"), ("SABLAGE AU JET", "industrie"),
+        ("TRANSMISSION", "industrie"), ("DEBOSSELAGE", "industrie"),
+        ("SILENCIEUX", "industrie"), ("RADIATEURS", "industrie"),
+        ("ENTREPOT 7", "commerce"), ("PALETTES", "artisan"),
+        ("BOIS DE SCIAGE", "artisan"), ("FERBLANTIER", "artisan"),
+        ("LOCATION D'OUTILS", "artisan"), ("SALOPETTES", "mode"),
+        ("CANTINE MOBILE", "bouffe"), ("CAFE DU MATIN", "bouffe"),
+        ("TAVERNE LA SHOP", "nuit"), ("BOTTES DE TRAVAIL", "mode"),
     ),
+    # Les Quais : le port. Tout sent le sel, meme la buanderie.
     "quais": (
         ("POISSONNERIE", "marine"), ("APPATS ET LIGNES", "marine"),
         ("CORDAGES", "marine"), ("TAVERNE DU PORT", "nuit"),
         ("CANTINE", "bouffe"), ("MOTEURS MARINS", "marine"),
         ("CHANTIER NAVAL", "marine"), ("GLACE ET SEL", "marine"),
+        ("POISSON FRAIS", "marine"), ("FUMOIR", "marine"),
+        ("VOILERIE", "marine"), ("ACCASTILLAGE", "marine"),
+        ("CAPITAINERIE", "marine"), ("LOCATION CHALOUPE", "marine"),
+        ("DOUANES", "service"), ("BUANDERIE", "service"),
+        ("BUREAU DE PAIE", "service"), ("TABAGIE DU PORT", "commerce"),
+        ("BINERIE", "bouffe"), ("BOULANGERIE", "bouffe"),
+        ("EPICERIE DU QUAI", "bouffe"), ("BAR LE MATELOT", "nuit"),
+        ("HOTEL DES QUAIS", "nuit"), ("CIRE ET HUILE", "industrie"),
+        ("MISSION DU PORT", "sante"), ("BOTTES ET CIRES", "mode"),
     ),
+    # La Pointe : le parc au bout de la ville. On y vient l'ete.
     "pointe": (
         ("LOCATION VELOS", "commerce"), ("CASSE-CROUTE", "bouffe"),
         ("SOUVENIRS", "commerce"), ("CREMERIE", "bouffe"),
+        ("CANTINE DU PARC", "bouffe"), ("PATATES FRITES", "bouffe"),
+        ("DEPANNEUR", "bouffe"), ("MOTEL LA POINTE", "nuit"),
+        ("SALLE DE JEUX", "nuit"), ("ARTISANAT", "artisan"),
+        ("PECHE ET CHASSE", "commerce"), ("PLANCHES", "commerce"),
+        ("PHOTO SOUVENIR", "service"), ("CHALOUPES", "marine"),
     ),
 }
+
+# --- Les residences ---------------------------------------------------------
+
+#: ⚠️ Un logement n'a pas d'enseigne : ce qui le fait lire, c'est la BRIQUE, les
+#: ETAGES de fenetres et l'escalier de fer. Trois briques suffisent a casser la
+#: rangee — au-dela, la rue perd son unite et chaque maison a l'air d'un
+#: batiment public.
+class Mur(TypedDict):
+    slug: str
+    brique: str
+    joint: str
+    cadre: str
+    vitre: str
+    allumee: str
+    porte: str
+
+
+MURS: list[Mur] = [
+    {"slug": "brique_rouge", "brique": "#8c4a3c", "joint": "#6f392e", "cadre": "#d3c8b4",
+     "vitre": "#3f4d5c", "allumee": "#ffd98a", "porte": "#4a2f1e"},
+    {"slug": "brique_jaune", "brique": "#9a8352", "joint": "#7d6a41", "cadre": "#e0d8c2",
+     "vitre": "#3a4653", "allumee": "#ffe0a0", "porte": "#3c3524"},
+    {"slug": "bardeau_gris", "brique": "#6f7176", "joint": "#5b5d62", "cadre": "#c9ccd2",
+     "vitre": "#36414d", "allumee": "#ffe6b8", "porte": "#2f3a44"},
+]
+
+#: Le fer des escaliers exterieurs et des balcons — le meme pour toute la ville.
+#: ⚠️ Un escalier de couleur differente par maison ferait un decor de carton :
+#: dans un vrai quartier, c'est le meme ferblantier qui les a tous poses.
+FER = {"barreau": "#3d4348", "marche": "#8a8f94", "arete": "#adb2b6",
+       "ombre": "rgba(0,0,0,0.35)"}
+
+
+def mur(index: int) -> Mur:
+    return MURS[index % len(MURS)]
+
+
+#: A quelle distance (en tuiles) deux enseignes ont le droit de porter le meme
+#: nom. ⚠️ Mesure sur l'ecran, pas au gout : la vue fait 26 tuiles de large, et
+#: une rue se lit sur deux ecrans. En deca, on voit le doublon du meme
+#: trottoir, et la ville a l'air d'une seule rue copiee-collee.
+DISTANCE_DOUBLON = 40
 
 #: Les lieux garantis (`carte.SPECIAUX`) : leur vrai nom est long (« Dépanneur
 #: Chez Ti-Paul »), l'enseigne est courte. Un slug absent d'ici prend son nom.
@@ -175,6 +284,8 @@ def tient_en(texte: str, tuiles: int, tuile_px: int = 16, marge: int = 4) -> boo
 def exporter() -> dict:
     return {
         "genres": [dict(g) for g in GENRES],
+        "murs": [dict(m) for m in MURS],
+        "fer": dict(FER),
         "couleurs_tag": list(COULEURS_TAG),
         "motifs": list(MOTIFS),
     }

@@ -297,11 +297,19 @@ const Missions = (function () {
 
   // --- Les points d'action des interieurs --------------------------------------------
 
+  //: ⚠️ Un type de point sans libelle ici, ou sans cas dans `menuDuPoint`, est
+  //: un comptoir qu'on touche pour rien. Le juge du banc les compare a ceux que
+  //: `carte.INTERIEURS` declare : on ne peut plus dessiner un comptoir mort.
   const LIBELLES = {
     lit: 'DORMIR', coffre: 'COFFRE', garde_robe: 'GARDE-ROBE', vendre: 'VENDRE LE CHAR', reparer: 'REPARER',
     repeindre: 'REPEINDRE', acheter: 'ACHETER', hotdog: 'MANGER', soigner: 'SE FAIRE SOIGNER', caisse: 'LA CAISSE',
-    journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', sortie_prison: 'SORTIR', casier: 'CASIER', guichet: 'GUICHET',
+    journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', casier: 'LE CARNET',
+    emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
+    fourriere: 'LE LOT',
   };
+
+  /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
+  function libelleDuPoint(type) { return LIBELLES[type] || null; }
 
   function pointSousLaMain(j) {
     const piece = B.interieur;
@@ -322,6 +330,9 @@ const Missions = (function () {
     // Le sergent au casse-croute, Josee au bar : des personnages, pas des comptoirs.
     if (point.type === 'sergent') return Histoire.parler('bouchard');
     if (point.type === 'contact') return Histoire.parler('josee');
+    // L'escalier et les tiroirs : un geste, pas un menu.
+    if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
+    if (point.type === 'fouiller') return fouiller(point);
     const menu = menuDuPoint(point);
     if (!menu) { Hud.message('PLUS TARD'); return true; }
     Hud.ouvrirMenu(menu);
@@ -389,9 +400,133 @@ const Missions = (function () {
         items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
                      faire: function () { payer(tarifs.journal, 'JOURNAL'); lireLeJournal(); return true; } });
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+      case 'emplettes':
+        return menuComptoir(point, items);
+      case 'salon':
+        return menuSalon(items);
+      case 'casier':
+        return menuCasier();
       default:
         return null;
     }
+  }
+
+  // --- Les comptoirs des commerces ordinaires ------------------------------------------
+
+  /** Ce qu'on achete au comptoir d'un commerce ordinaire.
+
+      ⚠️ Rien n'est ecrit ici : le comptoir vient du serveur
+      (`magasins.COMPTOIRS`, par famille de devanture), les prix de
+      `economie.TARIFS`, les armes du catalogue des armes et les tenues de
+      celui des tenues. Ajouter un article a une quincaillerie ne demande donc
+      pas une ligne de JS — et un article qui pointerait a cote se voit au
+      test, pas dans la partie. */
+  function menuComptoir(point, items) {
+    const p = B.partie, tarifs = B.defs.economie.tarifs, piece = B.interieur;
+    const comptoir = (B.defs.comptoirs || {})[point.genre];
+    if (!comptoir) return null;
+    comptoir.articles.forEach(function (a) {
+      if (a.arme) return items.push(itemArme(a, comptoir.marge));
+      if (a.tenue) return items.push(itemTenue(a, comptoir.rabais));
+      const prix = Math.round(tarifs[a.tarif] || 0);
+      const gains = [];
+      if (a.gain_pv) gains.push('+' + tarifs[a.gain_pv] + ' PV');
+      if (a.gain_souffle) gains.push('+' + tarifs[a.gain_souffle] + ' SOUFFLE');
+      items.push({ libelle: a.nom.toUpperCase(), detail: prix + ' $' + (gains.length ? ' / ' + gains.join(' ') : ''),
+                   actif: p.argent >= prix,
+                   faire: function () {
+                     payer(prix, a.nom.toUpperCase());
+                     if (a.gain_pv) soigner(B.joueur, tarifs[a.gain_pv]);
+                     if (a.gain_souffle) nourrir(B.joueur, tarifs[a.gain_souffle]);
+                     if (a.effet === 'cafe') cafeine(B.joueur);
+                     if (a.journal) { lireLeJournal(); return true; }
+                     Son.SFX.argent();
+                     return false;
+                   } });
+    });
+    return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+  }
+
+  /** Une arme au comptoir du quincaillier : la meme que Chez Gus, avec sa marge. */
+  function itemArme(article, marge) {
+    const p = B.partie, arme = Combat.armeDef(article.arme);
+    if (!arme) return { libelle: article.nom.toUpperCase(), actif: false };
+    const prix = Math.round(arme.prix * (marge || 1));
+    const deja = !!p.armes[article.arme];
+    return { libelle: article.nom.toUpperCase(), detail: deja ? 'DEJA A TOI' : prix + ' $',
+             actif: !deja && p.argent >= prix,
+             faire: function () {
+               payer(prix, article.nom.toUpperCase());
+               Combat.ramasserArme(article.arme, arme.chargeur);
+               return false;
+             } };
+  }
+
+  /** Une tenue a la friperie : le prix de la boutique, moins le rabais de l'usage. */
+  function itemTenue(article, rabaisTenue) {
+    const p = B.partie;
+    const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === article.tenue; });
+    if (!tenue) return { libelle: article.nom.toUpperCase(), actif: false };
+    const prix = Math.round(tenue.prix * (rabaisTenue || 1));
+    const deja = p.tenues.indexOf(article.tenue) >= 0;
+    return { libelle: tenue.nom.toUpperCase(),
+             detail: deja ? (p.tenue === article.tenue ? 'PORTEE' : 'A TOI') : prix + ' $',
+             actif: deja || p.argent >= prix,
+             faire: function () {
+               if (!deja) { payer(prix, tenue.nom.toUpperCase()); p.tenues.push(article.tenue); }
+               porterTenue(article.tenue);
+               return true;
+             } };
+  }
+
+  /** Le barbier : une couleur de cheveux, et la police cherche encore le gars
+      d'avant. ⚠️ Meme effet qu'un changement de linge (`Police.remiseAZero`) :
+      c'est LA raison d'entrer chez un coiffeur quand on a les etoiles au cul. */
+  function menuSalon(items) {
+    const p = B.partie, prix = B.defs.economie.tarifs.coupe;
+    (B.defs.coiffures || []).forEach(function (c) {
+      items.push({ libelle: c.nom.toUpperCase(), detail: p.cheveux === c.couleur ? 'C\u2019EST LA TIENNE' : prix + ' $',
+                   actif: p.cheveux !== c.couleur && p.argent >= prix,
+                   faire: function () {
+                     payer(prix, 'COUPE DE CHEVEUX');
+                     p.cheveux = c.couleur;
+                     B.joueur.swaps = apparenceDuJoueur(p, B.defs);
+                     Police.remiseAZero();
+                     return true;
+                   } });
+    });
+    return { titre: B.interieur.nom.toUpperCase(), items: items, sur: p.argent + ' $',
+             aide: 'CHANGER DE TETE FAIT OUBLIER LA TIENNE' };
+  }
+
+  /** Le carnet du poste : ce que la police sait de toi. M11 l'etoffera. */
+  function menuCasier() {
+    const p = B.partie, eco = B.defs.economie;
+    return { titre: 'LE CARNET', items: [
+      { libelle: 'DOSSIER', detail: p.casier + ' / ' + eco.casier_max, actif: false },
+      { libelle: 'ARRESTATIONS', detail: '' + p.stats.arrestations, actif: false },
+      { libelle: 'CRIMES VUS', detail: '' + p.stats.crimes, actif: false },
+      { libelle: 'CHARS VOLES', detail: '' + p.stats.volees, actif: false },
+      { libelle: 'LA PROCHAINE AMENDE', detail: amende(p.argent, 1, p.casier) + ' $', actif: false },
+    ], aide: 'PLUS LE DOSSIER EST EPAIS, PLUS L\u2019AMENDE MONTE' };
+  }
+
+  /** Fouiller les tiroirs d'un logement : une fois par adresse et par etage.
+
+      ⚠️ La cle est celle de la PORTE, pas de la piece : les vingt logements de
+      la ville partagent le meme plan, et sans ca le premier fouille les aurait
+      tous vides. L'etage compte a part — deux planchers, deux commodes. */
+  function fouiller(point) {
+    const p = B.partie, tarifs = B.defs.economie.tarifs;
+    const porte = Monde.carte.porte;
+    const cle = (porte ? porte.lieu : 'ici') + ':' + B.interieur.slug + ':' + point.x + ',' + point.y;
+    p.fouilles = p.fouilles || {};
+    if (p.fouilles[cle]) { Hud.message('LES TIROIRS SONT VIDES'); return true; }
+    p.fouilles[cle] = 1;
+    const gain = Math.round(tarifs.fouille_min + B.rng() * (tarifs.fouille_max - tarifs.fouille_min));
+    encaisser(gain, 'DANS LES TIROIRS');
+    Son.SFX.argent();
+    return true;
   }
 
   // --- La planque ----------------------------------------------------------------------
@@ -414,7 +549,9 @@ const Missions = (function () {
     const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === slug; });
     if (!tenue) return false;
     B.partie.tenue = slug;
-    B.joueur.swaps = { c: tenue.couleur };
+    // ⚠️ `apparenceDuJoueur` et pas `{ c: ... }` : ecraser les swaps effacait la
+    // teinture du barbier des qu'on changeait de linge.
+    B.joueur.swaps = apparenceDuJoueur(B.partie, B.defs);
     // Changer de linge, c'est devenir quelqu'un d'autre pour la police (M4 affinera).
     Police.remiseAZero();
     return true;
@@ -715,7 +852,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
-           dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
+           setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();
