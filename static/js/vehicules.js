@@ -544,32 +544,47 @@ const Vehicules = (function () {
       const p = PAS_FLECHE[droit];
       const droite = FLECHE_DE[(-p[1]) + ',' + p[0]], gauche = FLECHE_DE[p[1] + ',' + (-p[0])];
       const vers = { droit: droit, droite: droite, gauche: gauche };
-      // Au premier '+', on decide ou l'on va : tout droit, a gauche, a droite.
-      // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
-      // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
-      if (!v.sortie && v.poursuite && B.joueur) {
-        const j = B.joueur, signe = v.fuite ? -1 : 1;
-        v.sortie = ['droit', 'droite', 'gauche'].sort(function (a, b) {
-          const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
-          return signe * (dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y));
-        });
-      } else if (!v.sortie) {
-        const tirage = B.rng();
-        const ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
-        v.sortie = ordre;
+      // Au premier '+', on decide ou l'on va : tout droit, a droite, a gauche —
+      // et on le garde EN SENS ABSOLUS pour toute la boite.
+      // ⚠️ Une preference relative (« a gauche ») relue a chaque tuile par
+      // rapport au cap du moment fait tourner a gauche, puis a gauche du
+      // nouveau cap, puis encore : le char faisait le tour de la boite sans
+      // fin. Martin l'a vu, et le juge des boites en trouvait 1858 cas.
+      if (!v.sortie) {
+        let ordre;
+        if (v.poursuite && B.joueur) {
+          // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
+          // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
+          const j = B.joueur, signe = v.fuite ? -1 : 1;
+          ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) {
+            const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
+            return signe * (dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y));
+          });
+        } else {
+          const tirage = B.rng();
+          ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+        }
+        v.sortie = ordre.map(function (choix) { return vers[choix]; });
       }
-      // 1. La sortie prevue, dans l'ordre des preferences.
-      for (const choix of v.sortie) {
-        const sens = vers[choix];
+      // 1. La sortie voulue, si elle part d'ici. Sinon on traverse la boite
+      //    tout droit jusqu'a la voie d'ou elle part : un virage a droite se
+      //    prend a l'entree de la boite, un virage a gauche au fond.
+      const voulu = v.sortie[0];
+      if (peutSortir(tx, ty, voulu)) {
+        const q = PAS_FLECHE[voulu];
+        v.sens = voulu;
+        return centre(tx + q[0], ty + q[1]);
+      }
+      if (Monde.fleche(tx + p[0], ty + p[1]) === '+') return centre(tx + p[0], ty + p[1]);
+      // 2. Au fond de la boite sans la sortie voulue : les autres, dans l'ordre.
+      for (const sens of v.sortie.slice(1)) {
         if (peutSortir(tx, ty, sens)) {
           const q = PAS_FLECHE[sens];
           v.sens = sens;
           return centre(tx + q[0], ty + q[1]);
         }
       }
-      // 2. Rien ne sort d'ici dans ces sens : on avance dans la boite.
-      if (Monde.fleche(tx + p[0], ty + p[1]) === '+') return centre(tx + p[0], ty + p[1]);
-      // 3. Cul-de-sac devant (la tige d'un T) : n'importe quelle sortie fera.
+      // 3. N'importe quelle sortie d'ici fera (a droite, a gauche du cap).
       for (const sens of [droite, gauche]) {
         if (peutSortir(tx, ty, sens)) {
           const q = PAS_FLECHE[sens];
@@ -579,8 +594,7 @@ const Vehicules = (function () {
       }
       // 4. Aucune sortie depuis cette rangee : on se decale DANS la boite
       //    (vers la droite d'abord) jusqu'a en trouver une. ⚠️ Jamais « la
-      //    voie la plus proche » ici : elle ramenait dans la boite, et le char
-      //    tournait en rond — Martin l'a vu.
+      //    voie la plus proche » ici : elle ramenait dans la boite.
       for (const sens of [droite, gauche]) {
         const q = PAS_FLECHE[sens];
         if (Monde.fleche(tx + q[0], ty + q[1]) === '+') { v.sens = sens; return centre(tx + q[0], ty + q[1]); }
@@ -659,21 +673,34 @@ const Vehicules = (function () {
       au centre de la voie la plus proche dans son sens, cap redressé,
       croisement rendu. Martin en a vu trois de travers dans une boîte ;
       plutôt que courir après chaque cause, on garantit la sortie. */
+  /** Au rouge pour vrai ? (Pas l'attente de boite, pas un stop : un feu.) */
+  function auRouge(v) {
+    if (!v.attendFeu || v.attenteBoite !== 0 || v.stopT !== undefined) return false;
+    const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    const p = PAS_FLECHE[v.sens] || [0, 0];
+    const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
+    return !!inter && !Monde.feuVert(inter, v.sens);
+  }
+
   function debloquer(v) {
     const immobile = Math.abs(v.vx) + Math.abs(v.vy) < 0.05;
     v.immobileT = immobile ? (v.immobileT || 0) + 1 : 0;
-    if (v.immobileT < 600) return false;
-    if (v.attendFeu && v.attenteBoite === 0 && v.stopT === undefined) {
-      // Au rouge pour vrai ? Le feu ne dure jamais plus de 480 images : au-dela, non.
-      const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
-      const p = PAS_FLECHE[v.sens] || [0, 0];
-      const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
-      if (inter && !Monde.feuVert(inter, v.sens) && v.immobileT < 720) return false;
+    // ⚠️ « Sur place » : il bouge, mais n'avance pas (un va-et-vient entre
+    // deux cibles). Il n'est jamais immobile, le compteur ci-dessus ne le
+    // voit pas ; la capture de Martin, elle, le montrait bien. On compare a
+    // l'endroit ou il etait il y a dix secondes. Seul un vrai feu rouge excuse.
+    if (!v.ancrage || B.t - v.ancrage.t >= 600) {
+      if (v.ancrage && !auRouge(v) && dist2(v.x, v.y, v.ancrage.x, v.ancrage.y) < 24 * 24) v.surPlace = (v.surPlace || 0) + 1;
+      else v.surPlace = 0;
+      v.ancrage = { x: v.x, y: v.y, t: B.t };
     }
+    if (v.immobileT < 600 && !v.surPlace) return false;
+    // Au rouge pour vrai ? Le feu ne dure jamais plus de 480 images : au-dela, non.
+    if (!v.surPlace && auRouge(v) && v.immobileT < 720) return false;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const voie = voieLaPlusProche(v, tx, ty);
     v.cible = null; v.sortie = null; v.enBoite = null; v.stopT = undefined; v.attenteBoite = 0; v.attendFeu = false;
-    v.patience = 0; v.force = 90; v.immobileT = 0; v.debloques = (v.debloques || 0) + 1;
+    v.patience = 0; v.force = 90; v.immobileT = 0; v.surPlace = 0; v.ancrage = null; v.debloques = (v.debloques || 0) + 1;
     if (voie) {
       v.x = voie.x; v.y = voie.y;
       const q = PAS_FLECHE[v.sens] || [1, 0];

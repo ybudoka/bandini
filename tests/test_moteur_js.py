@@ -838,14 +838,17 @@ def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
         L.Jeu.commencer();
         L.graine(43);
         o.frame(1200);
+        // ⚠️ On ne suit un char que tant qu'il est LA : la bulle d'oubli retire
+        // ceux qui s'eloignent du joueur, et un char retire ne bouge plus —
+        // le test les prenait pour des chars bloques.
         const suivis = new Map();
-        L.B.entites.forEach(function (e) { if (e.type === 'vehicule' && e.conducteur === 'trafic') suivis.set(e.id, { x: e.x, y: e.y, d: 0 }); });
+        L.B.entites.forEach(function (e) { if (e.type === 'vehicule' && e.conducteur === 'trafic') suivis.set(e.id, { x: e.x, y: e.y, d: 0, images: 0 }); });
         for (let i = 0; i < 1800; i++) {
             o.frame(1);
             L.B.entites.forEach(function (e) {
                 const s = suivis.get(e.id);
                 if (!s) return;
-                s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y;
+                s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y; s.images++;
             });
         }
         const chars = L.B.entites.filter(function (e) { return e.type === 'vehicule'; });
@@ -855,7 +858,8 @@ def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
             if (L.Monde.solidite(tx, ty) === 1) dansUnMur++;
             if (v.conducteur === 'trafic' && !L.Monde.estRoute(tx, ty)) horsRoute++;
         });
-        const distances = Array.from(suivis.values()).map(function (s) { return s.d; });
+        const presents = Array.from(suivis.values()).filter(function (s) { return s.images >= 600; });
+        const distances = presents.map(function (s) { return s.d / s.images * 1800; });   // ramene a 1800 images
         const bouges = distances.filter(function (d) { return d > 300; }).length;
         return { roulent: chars.filter(function (v) { return v.conducteur === 'trafic'; }).length,
                  suivis: distances.length, bouges: bouges, dansUnMur: dansUnMur, horsRoute: horsRoute,
@@ -1685,7 +1689,10 @@ def test_le_a_etoile_contourne_un_batiment_et_ne_gele_pas(banc):
 
 def test_un_char_coince_dix_secondes_est_debloque(banc):
     """Quelle qu'en soit la cause (ici : le joueur plante devant, de travers
-    dans la boite), un char du trafic qui ne bouge plus repart."""
+    dans la boite), un char du trafic qui ne bouge plus repart — par lui-meme
+    (la cascade de sorties) ou par le chien de garde. Et un char qui fait du
+    SUR-PLACE (il bouge sans avancer : un va-et-vient) se fait mordre aussi :
+    la capture de Martin montrait un char jamais immobile, jamais debloque."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(95);
@@ -1705,11 +1712,17 @@ def test_un_char_coince_dix_secondes_est_debloque(banc):
             if (Math.hypot(v.x - x0, v.y - y0) > 40 && !bouge) bouge = i;
         }
         const droit = Math.abs(Math.sin(2 * v.angle)) < 0.2;
+        // Le sur-place : un char qu'on ramene chaque image a son point de depart.
+        const w = L.Vehicules.creer('auto', (inter.x + 1) * T + 8, (inter.y + 1) * T + 8, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        j.x = w.x; j.y = w.y + 40; L.Monde.centrerCamera(j.x, j.y);     // a portee : la bulle d'oubli ne le retire pas
+        const wx = w.x, wy = w.y;
+        let mordu = -1;
+        for (let i = 0; i < 1400 && mordu < 0; i++) { o.frame(1); if (w.debloques) mordu = i; else { w.x = wx; w.y = wy; } }
         return { bouge: bouge, debloques: v.debloques || 0, droit: droit, angle0: angle0,
-                 surRoute: L.Monde.estRoute(Math.floor(v.x / T), Math.floor(v.y / T)) };
+                 surRoute: L.Monde.estRoute(Math.floor(v.x / T), Math.floor(v.y / T)), mordu: mordu };
     }""")
-    assert r["debloques"] >= 1, "le chien de garde n'a pas mordu"
-    assert r["bouge"] > 0, "le char n'est jamais reparti"
+    assert 0 < r["bouge"] < 700, "le char n'est jamais reparti (seul, ou par le chien de garde a 600 images)"
+    assert 600 <= r["mordu"] < 1300, "un char qui bouge sans avancer doit se faire mordre par le chien de garde"
     assert r["surRoute"], "le char debloque a fini hors de la route"
 
 
