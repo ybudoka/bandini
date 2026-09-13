@@ -75,6 +75,82 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
     )
 
 
+def test_les_ambulances_et_les_polices_ont_chacune_leur_sirene(banc):
+    """⚠️ Demande de Martin : « je veux des sirènes pour les ambulances et
+    polices. »
+
+    Il n'y en avait qu'UNE, et presque jamais : `Son.boucle('sirene', …)` ne
+    s'allumait que pour une auto-patrouille de l'IA en chasse, à volume fixe,
+    sans distance. L'ambulance déclare pourtant `sirene: true` depuis M9 et
+    n'en a jamais fait entendre une seule. Et au volant, aucune des deux : on
+    conduisait une ambulance en silence.
+
+    Ce juge tient les trois choses qui manquaient : DEUX boucles distinctes
+    (on doit savoir qui arrive derrière soi), un volume qui suit la DISTANCE
+    (une sirène qu'on entend toujours ne veut plus rien dire), et le bouton
+    du klaxon qui allume la sienne quand on est au volant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const out = {};
+        // 1. Deux sons, deux boucles : la police et l'ambulance ne se
+        //    confondent pas.
+        const amb = o.char('ambulance', 40, 0, 0);
+        amb.sirene = true;
+        L.Entites.indexer();
+        o.frame(2);
+        const S = L.Vehicules.sirenes;
+        out.ambulance = { police: S.sirene > 0, sienne: S.sirene_ambulance > 0 };
+        out.pres = S.sirene_ambulance;
+        // 2. Le volume suit la distance : loin, elle se tait. ⚠️ 520 px et
+        //    pas 2000 : au-dela de `oubli_px` le trafic OUBLIE le char, et on
+        //    mesurerait une disparition au lieu d'un volume.
+        amb.x = j.x + 520; amb.y = j.y;
+        o.frame(2);
+        out.loin = S.sirene_ambulance;
+        amb.x = j.x + 40;
+        o.frame(2);
+        out.revenue = S.sirene_ambulance > 0;
+        // 3. Eteinte, plus rien.
+        amb.sirene = false;
+        o.frame(2);
+        out.eteinte = S.sirene_ambulance > 0;
+        // 4. Au volant, le bouton du klaxon est celui de la sirene — et
+        //    l'etiquette du bouton tactile le dit.
+        L.Vehicules.monter(j, amb);
+        out.etiquette = o.doc.querySelector('#boutons b[data-a="attaque"]').textContent;
+        o.tape('KeyJ', 2);
+        out.allumee = amb.sirene;
+        out.entendue = S.sirene_ambulance;
+        o.tape('KeyJ', 2);
+        out.rerreteinte = amb.sirene;
+        L.Vehicules.descendre(j, true);
+        // 5. Une auto, elle, klaxonne : le bouton ne change pas de metier
+        //    pour tout le monde.
+        const auto = o.char('auto', 40, 0, 0);
+        L.Vehicules.monter(j, auto);
+        out.etiquetteAuto = o.doc.querySelector('#boutons b[data-a="attaque"]').textContent;
+        o.tape('KeyJ', 2);
+        out.klaxon = auto.klaxonT > 0;
+        return out;
+    }""")
+    assert r["ambulance"] == {"police": False, "sienne": True}, (
+        "une ambulance doit avoir SA sirene, pas celle de la police : %s" % r["ambulance"]
+    )
+    assert r["loin"] == 0, "on entend une ambulance a 2000 px"
+    assert 0 < r["pres"] <= 1, "le volume ne suit pas la distance : %s" % r["pres"]
+    assert r["revenue"] is True, "la sirene ne revient pas quand elle se rapproche"
+    assert r["eteinte"] is False, "la sirene continue apres avoir ete eteinte"
+    assert r["etiquette"] == "SIRENE", "le bouton dit encore KLAXON dans une ambulance"
+    assert r["allumee"] is True and r["entendue"] == 1, (
+        "au volant, la sirene doit sonner a plein : %s" % r["entendue"]
+    )
+    assert r["rerreteinte"] is False, "le bouton n'eteint pas la sirene"
+    assert r["etiquetteAuto"] == "KLAXON" and r["klaxon"] is True, (
+        "dans une auto, le meme bouton doit rester le klaxon : %s" % r
+    )
+
+
 def test_aucune_carrosserie_n_est_transparente(banc):
     """⚠️ Bug de Martin : « l'autobus est transparent. »
 

@@ -45,70 +45,170 @@ class Echantillon(TypedDict):
     boucle: bool
     volume: float
     variantes: int
+    influence: float
 
 
 def _e(slug: str, nom: str, prompt: str, duree_s: float, *, volume: float = 0.8,
-       boucle: bool = False, variantes: int = 1, categorie: str = "sfx") -> Echantillon:
+       boucle: bool = False, variantes: int = 1, categorie: str = "sfx",
+       influence: float = 0.6) -> Echantillon:
     return Echantillon(slug=slug, nom=nom, categorie=categorie, prompt=prompt,
-                       duree_s=duree_s, boucle=boucle, volume=volume, variantes=variantes)
+                       duree_s=duree_s, boucle=boucle, volume=volume,
+                       variantes=variantes, influence=influence)
 
 
 #: ⚠️ `variantes` > 1 : le meme geste ne doit pas rendre le meme son dix fois
-#: par seconde. Les pas et les coups en ont deux ; c'est la ou l'oreille
-#: s'agace le plus vite.
+#: par seconde. Les pas, les coups et les grognements en ont trois ou quatre ;
+#: c'est la ou l'oreille s'agace le plus vite. Un clic de menu, lui, DOIT etre
+#: toujours le meme : une interface qui varie a l'air cassee.
+#:
+#: ⚠️ `volume` porte maintenant TOUT le dosage. La finition normalise chaque
+#: fichier au meme pic (-1 dBFS), donc deux sons qui sortaient l'un a -24 dB et
+#: l'autre a 0 dB sortent desormais pareil : le seul endroit ou l'un est plus
+#: fort que l'autre, c'est ici. Les valeurs ci-dessous REPRODUISENT le melange
+#: d'avant (pic mesure x volume d'avant) — sauf `pas` et `sonnette`, qui
+#: mesuraient sous -23 dB une fois mixes, c'est-a-dire sous le seuil de ce
+#: qu'on entend en jouant.
+#:
+#: ⚠️ `influence` (0 a 1) dit au modele a quel point coller a la description.
+#: Haut pour ce qui doit etre UNE chose exacte (un clic, un klaxon, une
+#: sirene) ; plus bas pour une matiere (une explosion, une foule), ou le
+#: modele rend mieux quand on lui laisse de la place.
 CATALOGUE: list[Echantillon] = [
-    _e("pas", "Pas sur le trottoir", variantes=2, duree_s=0.5, volume=0.35,
-       prompt="a single soft footstep on a wet concrete sidewalk, close-up, dry, "
+    _e("pas", "Pas sur le trottoir", variantes=4, duree_s=0.5, volume=0.11,
+       prompt="a single footstep, hard leather sole on damp concrete sidewalk, "
+              "sharp heel tap then a small scuff of grit, dry close-up, "
               "no reverb, no music"),
-    _e("coup", "Coup de poing", variantes=2, duree_s=0.7, volume=0.9,
-       prompt="a hard bare-knuckle punch landing on a leather jacket, short dry "
-              "impact, no music"),
-    _e("touche", "Coup encaissé", duree_s=0.7, volume=0.7,
-       prompt="a short male grunt of pain after being hit, dry, close-up, no music"),
-    _e("ramasse", "Objet ramassé", duree_s=0.6, volume=0.6,
-       prompt="picking up a small metal object from the pavement, short bright "
-              "clink, no music"),
-    _e("argent", "Argent encaissé", duree_s=0.9, volume=0.7,
-       prompt="old cash register drawer opening with coins clinking, short, "
-              "bright, no music"),
-    _e("menu", "Clic de menu", duree_s=0.5, volume=0.5,
-       prompt="a short dry retro user interface click, single blip, no music"),
-    _e("erreur", "Refus", duree_s=0.6, volume=0.5,
-       prompt="a short low buzzer denial tone, dry, no music"),
-    _e("etoile", "Niveau de recherche", duree_s=1.0, volume=0.7,
-       prompt="a tense police radio alert chirp followed by static, short, no music"),
-    _e("porte", "Porte", duree_s=1.0, volume=0.6,
-       prompt="an old wooden door opening with a short creak, close-up, no music"),
-    _e("choc", "Tôle froissée", duree_s=1.2, volume=0.9,
-       prompt="two cars colliding, sharp metal crunch and glass, short, no music"),
-    _e("explosion", "Explosion", duree_s=2.0, volume=1.0,
-       prompt="a car exploding, deep boom with debris falling, no music"),
-    _e("klaxon", "Klaxon", duree_s=0.7, volume=0.7,
-       prompt="a single short car horn honk, city street, no music"),
-    _e("sirene", "Sirène de police", duree_s=4.0, volume=0.6, boucle=True,
-       prompt="a police car siren wailing steadily, seamless loop, no music, "
-              "no engine, no traffic"),
-    _e("helico", "Hélicoptère", duree_s=4.0, volume=0.6, boucle=True,
-       prompt="a police helicopter hovering overhead, rotor blades thumping steadily, "
-              "seamless loop, no music, no voices, no siren"),
-    _e("telephone", "Sonnerie du téléphone", duree_s=1.6, volume=0.6,
-       prompt="an old flip phone ringing twice, short electronic ringtone, close, "
-              "no music, no voices"),
-    _e("moteur", "Moteur au ralenti", duree_s=4.0, volume=0.5, boucle=True,
-       prompt="a four cylinder car engine idling steadily, seamless loop, "
-              "close-up, no music"),
+    _e("coup", "Coup de poing", variantes=3, duree_s=0.8, volume=0.22,
+       prompt="a single bare-knuckle punch landing hard on a leather jacket, "
+              "sharp meaty slap with a dull low body thud underneath, dry and "
+              "close, no reverb, no music"),
+    _e("touche", "Coup encaissé", variantes=3, duree_s=0.9, volume=0.79,
+       prompt="a short winded male grunt of pain after a punch to the ribs, "
+              "breath forced out through the teeth, dry close-up, no words, "
+              "no music"),
+    _e("ramasse", "Objet ramassé", variantes=2, duree_s=0.7, volume=0.16,
+       prompt="picking a small steel object up off wet asphalt, a brief "
+              "metallic scrape then a bright clink, close-up, dry, no music"),
+    _e("argent", "Argent encaissé", duree_s=1.2, volume=0.56,
+       prompt="an old mechanical cash register drawer springing open, a bell "
+              "ping and coins tumbling onto the metal tray, bright and close, "
+              "no music"),
+    _e("menu", "Clic de menu", duree_s=0.5, volume=0.38, influence=0.75,
+       prompt="a single short retro user interface blip, dry electronic click "
+              "with a tiny pitched tail, no reverb, no music"),
+    _e("erreur", "Refus", duree_s=0.6, volume=0.56, influence=0.75,
+       prompt="a short low electronic buzzer denying an action, flat dull "
+              "tone, dry, no music"),
+    _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
+       prompt="a police radio alert chirp followed by a burst of squelch "
+              "static, tense and short, no voices, no music"),
+    _e("porte", "Porte", duree_s=1.2, volume=0.66,
+       prompt="an old wooden door on a dry hinge swinging open, a low creak "
+              "then the latch knocking against the frame, close-up, small "
+              "room, no music"),
+    _e("choc", "Tôle froissée", variantes=2, duree_s=1.5, volume=1.0, influence=0.45,
+       prompt="two cars colliding at city speed, one hard metal crunch, sheet "
+              "metal buckling, headlight glass shattering onto the road, "
+              "close, no music"),
+    _e("explosion", "Explosion", duree_s=2.5, volume=1.0, influence=0.45,
+       prompt="a car exploding, a sharp cracking blast then a deep "
+              "body-shaking boom, metal debris and glass raining down onto "
+              "asphalt, no music"),
+    _e("klaxon", "Klaxon", variantes=2, duree_s=0.8, volume=0.79, influence=0.75,
+       prompt="one short car horn honk from an old sedan, slightly flat "
+              "two-tone blare, city street, no music"),
+    _e("sirene", "Sirène de police", duree_s=4.0, volume=0.61, boucle=True,
+       influence=0.75,
+       prompt="a police car siren wailing up and down steadily, close, "
+              "seamless loop, no music, no engine, no traffic"),
+    # ⚠️ DEUX sirenes, pas une. Celle de la police monte et descend sans
+    # s'arreter ; celle d'une ambulance fait deux notes, plus haut et plus
+    # lent. Les confondre, c'est ne pas savoir qui arrive derriere soi — et
+    # c'est toute la difference entre se ranger et se sauver.
+    _e("sirene_ambulance", "Sirène d'ambulance", duree_s=4.0, volume=0.62,
+       boucle=True, influence=0.75,
+       prompt="an ambulance siren, two-tone hi-lo wail alternating slowly, "
+              "seamless loop, no music, no engine, no traffic"),
+    _e("helico", "Hélicoptère", duree_s=4.0, volume=0.68, boucle=True,
+       influence=0.75,
+       prompt="a police helicopter hovering overhead, rotor blades thumping "
+              "steadily, seamless loop, no music, no voices, no siren"),
+    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.62,
+       influence=0.75,
+       prompt="an old flip phone ringing twice on a table, thin electronic "
+              "ringtone with a faint buzz of vibration, close, no voices, "
+              "no music"),
+    _e("moteur", "Moteur au ralenti", duree_s=4.0, volume=0.32, boucle=True,
+       influence=0.75,
+       prompt="a four cylinder car engine idling steadily at low rpm, "
+              "close-up from outside the hood, slight lope, seamless loop, "
+              "no music"),
     # La rumeur : son volume suit le nombre de gens autour du joueur.
-    _e("foule", "Rumeur de la rue", duree_s=8.0, volume=0.5, boucle=True,
-       prompt="distant crowd of people chatting on a busy city sidewalk, murmur and "
-              "footsteps, no distinct words, seamless loop, no music"),
-    _e("passage_auto", "Auto qui passe", variantes=2, duree_s=1.8, volume=0.6,
-       prompt="a car driving past at city speed, engine whoosh with doppler effect, "
-              "close, no music, no horn"),
-    _e("passage_moto", "Moto qui passe", duree_s=1.8, volume=0.6,
-       prompt="a motorcycle roaring past on a city street, doppler effect, close, no music"),
-    _e("sonnette", "Sonnette de vélo", duree_s=0.7, volume=0.5,
-       prompt="a bicycle bell ringing twice, bright, close, no music"),
+    _e("foule", "Rumeur de la rue", duree_s=8.0, volume=0.23, boucle=True,
+       influence=0.45,
+       prompt="distant crowd of people chatting on a busy city sidewalk, "
+              "murmur and footsteps, no distinct words, seamless loop, "
+              "no music"),
+    _e("passage_auto", "Auto qui passe", variantes=2, duree_s=2.0, volume=0.68,
+       influence=0.45,
+       prompt="a car driving past at city speed on wet asphalt, tyre roar "
+              "swelling and falling away with a doppler shift, close, "
+              "no horn, no music"),
+    _e("passage_moto", "Moto qui passe", duree_s=2.0, volume=0.68, influence=0.45,
+       prompt="a motorcycle accelerating past on a city street, exhaust bark "
+              "with a doppler drop, close, no music"),
+    _e("sonnette", "Sonnette de vélo", duree_s=1.0, volume=0.11, influence=0.75,
+       prompt="a bicycle bell struck twice, bright ringing brass with a "
+              "shimmering tail, close, no music"),
 ]
+
+# --- La finition des bruitages -------------------------------------------------------
+#
+# ⚠️ Ce qu'ElevenLabs rend n'est PAS ce qu'on garde. Mesure du 13 septembre
+# 2026 sur les 24 premiers fichiers (22 kHz, 32 kbit/s, stereo) :
+#
+# - au-dessus de 8 kHz il ne restait rien — 47 dB sous le niveau du son pour
+#   la sonnette de velo, 49 dB pour la caisse enregistreuse. Or c'est LA que
+#   vit le clinquant d'une piece, le verre d'un phare, le laiton d'une
+#   cloche : on payait pour un son dont on avait jete la moitie ;
+# - la moitie du poids etait du silence en QUEUE : 91 % du clic de menu,
+#   75 % d'un pas, 69 % du klaxon ;
+# - les pics allaient de -34 dB (un pas) a 0 dB pile (huit fichiers colles au
+#   plafond), donc `volume` ne dosait rien : il multipliait un accident ;
+# - deux fichiers etaient franchement STEREO (la porte, le refus : leurs deux
+#   canaux ne se ressemblent qu'a 1 dB pres), et un son deja large ne se
+#   laisse plus placer par le `StereoPanner` de `son.js`.
+#
+# On demande donc le meilleur master que le palier donne, et `ffmpeg` le
+# ramene a la taille du jeu (`scripts/audio_elevenlabs.py`, `finir`).
+
+#: Le master demande a ElevenLabs. 44,1 kHz : deux fois la bande passante du
+#: 22 kHz d'avant, donc l'aigu existe. On ne le garde pas tel quel.
+FORMAT_MASTER = "mp3_44100_128"
+
+#: Le pic vise apres normalisation, pour tous les bruitages. -1 dBFS et pas
+#: 0 : un encodeur mp3 depasse l'echantillon d'origine, et ca s'entend comme
+#: une saturation. ⚠️ C'est ce qui rend `volume` credible : tous les fichiers
+#: partent du meme niveau, le catalogue seul decide qui est plus fort.
+PIC_VISE_DBFS = -1.0
+
+#: Sous ce niveau, c'est la queue du son : on la coupe plutot que de payer un
+#: tiers du fichier en silence. On en garde 30 ms, et on ferme par un fondu
+#: de 15 ms — couper net sur une decroissance, ca fait un clic.
+SEUIL_QUEUE_DBFS = -45.0
+QUEUE_GARDEE_S = 0.03
+FONDU_S = 0.015
+
+#: Deux debits, en mono et en 44,1 kHz. Un choc porte des transitoires et du
+#: verre, il en a besoin ; une boucle de moteur est une matiere qui tourne, et
+#: elle joue en continu — elle passe a 64.
+DEBIT_BREF = "96k"
+DEBIT_BOUCLE = "64k"
+
+#: ⚠️ Une BOUCLE ne se rogne pas et ne se fond pas : la couture est exactement
+#: ce que le rognage abime, et un fondu ferait un trou a chaque tour. Elle
+#: n'a droit qu'au mono et au gain.
+
 
 SLUGS = tuple(e["slug"] for e in CATALOGUE)
 

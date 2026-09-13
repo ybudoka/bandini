@@ -48,7 +48,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite,
+      vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false,
     }, options || {}));
     return v;
   }
@@ -127,7 +127,13 @@ const Vehicules = (function () {
       const place = placeDansLeTrafic();
       if (place) {
         const v = creer(typeDeRue().slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
-        if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
+        if (v) {
+          v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
+          // ⚠️ Une ambulance sur trois est EN COURSE, et on l'entend passer.
+          // Les deux autres rentrent au garage : une ville ou toutes les
+          // ambulances hurlent n'est pas une ville, c'est une alarme.
+          if (v.def.sirene) v.sirene = B.rng() < AMBULANCE_EN_COURSE;
+        }
       }
     } else if (stationnes < t.stationnes_max && B.t % 40 === 0) {
       const place = placeStationnee();
@@ -480,7 +486,7 @@ const Vehicules = (function () {
     j.dansVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
     j.x = v.x; j.y = v.y;
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
-    Entree.contexte('vehicule');
+    Entree.contexte(v.def.sirene ? 'vehicule_sirene' : 'vehicule');
     if (v.def.classe === 'velo') Son.SFX.ramasse(); else { Son.SFX.porte(); Son.boucle('moteur', true, 0.6); }
     if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
     Hud.message(v.def.nom.toUpperCase());
@@ -928,7 +934,13 @@ const Vehicules = (function () {
     const v = j.dansVehicule;
     if (v.etat === 'epave') { descendre(j, true); return; }
     majPhysique(v, commandesJoueur(v));
-    if (Entree.neuf('attaque')) { v.klaxonT = 30; if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v); }
+    if (Entree.neuf('attaque')) {
+      // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
+      // Le boulot, lui, se prend au meme bouton — dans une ambulance, on
+      // repond a l'appel et on part la sirene allumee, d'un seul geste.
+      if (v.def.sirene) { v.sirene = !v.sirene; Son.SFX.touche(); } else v.klaxonT = 30;
+      if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v);
+    }
     if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {
       const station = Son.Radio.suivante();
@@ -941,9 +953,62 @@ const Vehicules = (function () {
 
   // --- Boucle -------------------------------------------------------------------------
 
+  //: A quelle distance on entend encore une sirene. Au-dela, elle se tait —
+  //: sinon la moindre poursuite a l'autre bout du district hurle dans le
+  //: casque, et une sirene qu'on entend toujours ne veut plus rien dire.
+  const SIRENE_PORTEE_PX = 460;
+  //: Une ambulance sur trois qui naît dans le trafic est EN COURSE. Les deux
+  //: autres rentrent au garage : une ville ou toutes les ambulances hurlent
+  //: n'est pas une ville, c'est une alarme.
+  const AMBULANCE_EN_COURSE = 1 / 3;
+
+  /** La boucle qui va avec ce char. ⚠️ DEUX sirenes, pas une : celle de la
+      police monte et descend sans s'arreter, celle d'une ambulance fait deux
+      notes, plus haut et plus lent. Les confondre, c'est ne pas savoir qui
+      arrive derriere soi — et c'est toute la difference entre se ranger et
+      se sauver. */
+  function boucleDeSirene(v) { return v.def.police ? 'sirene' : 'sirene_ambulance'; }
+
+  //: Ce que le melangeur a demande a `Son`, par boucle : 0 = eteinte.
+  const sirenes = { sirene: 0, sirene_ambulance: 0 };
+
+  /** Les sirenes : une boucle par sorte, au volume du char le plus proche qui
+      la fait hurler.
+
+      ⚠️ Avant, il n'y en avait qu'une, allumee a volume fixe des qu'une
+      auto-patrouille chassait, et **jamais** pour une ambulance — dont la
+      fiche declare pourtant `sirene: true` depuis M9. Au volant, on n'en avait
+      aucune : on conduisait une ambulance en silence. */
+  function majSirenes() {
+    const j = B.joueur;
+    const voulu = { sirene: 0, sirene_ambulance: 0 };
+    if (j && !B.interieur) {
+      for (const v of B.entites) {
+        if (v.type !== 'vehicule' || v.etat === 'epave' || !v.sirene) continue;
+        // Au volant, on l'a sur le toit : plein volume, sans distance.
+        const d = v.conducteur === j ? 0 : Math.hypot(v.x - j.x, v.y - j.y);
+        const part = Math.max(0, 1 - d / SIRENE_PORTEE_PX);
+        const slug = boucleDeSirene(v);
+        if (part > voulu[slug]) voulu[slug] = part;
+      }
+    }
+    for (const slug in voulu) {
+      const part = voulu[slug] > 0.02 ? voulu[slug] : 0;
+      const avant = sirenes[slug] || 0;
+      // ⚠️ Le melangeur retient CE QU'IL A DEMANDE, il ne lit pas l'etat de
+      // `Son`. Un mp3 absent (ou un navigateur sans geste) laisse
+      // `boucleActive` a faux pour toujours : s'y fier, c'est redemander la
+      // meme boucle soixante fois par seconde sans jamais s'en rendre compte.
+      if (part && !avant) Son.boucle(slug, true, part);
+      else if (part) Son.reglerBoucle(slug, part);
+      else if (avant) Son.boucle(slug, false);
+      sirenes[slug] = part;
+    }
+  }
+
   function maj() {
     const j = B.joueur;
-    if (!j || B.interieur) return;
+    if (!j || B.interieur) { majSirenes(); return; }
     for (let i = B.entites.length - 1; i >= 0; i--) {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
@@ -953,10 +1018,8 @@ const Vehicules = (function () {
       else if (v.conducteur === 'trafic') majConducteur(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
-      if (v.conducteur === 'police') {
-        v.sirene = B.recherche.etoiles > 0;                    // la chasse finie, la sirene se tait
-        if (v.sirene && !Son.boucleActive('sirene')) Son.boucle('sirene', true, 0.5);
-      }
+      // La chasse finie, la sirene de l'auto-patrouille se tait.
+      if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
       if (v.conducteur === 'trafic' || (v.conducteur === 'police' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
@@ -967,7 +1030,7 @@ const Vehicules = (function () {
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
     }
     peupler();
-    if (Son.boucleActive('sirene') && !Police.autos().some(function (v) { return v.sirene; })) Son.boucle('sirene', false);
+    majSirenes();
     if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
@@ -1137,7 +1200,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, sirenes,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

@@ -56,10 +56,13 @@ ne bougent pas quand l'ordre de travail change.
 | Le souffle en surplus | **livré** (13 sept. 2026) | demande de Martin (« les choses qui donnent du souffle devraient donner un **bonus**, parce que le souffle monte seul ») : il remontait de 0,24 par image — une barre vide pleine en **7 s** — et `nourrir` plafonnait à 100, donc une poutine à 18 $ rendait 70 points qu'on avait gratuitement en s'arrêtant quatre secondes. Manger ajoute maintenant **par-dessus** les 100 (plafond 60) : le surplus **part en premier** au sprint, ne remonte **jamais** tout seul, et se perd en dormant, à l'hôpital et en prison. À l'écran, une ligne cyan d'un pixel **posée sur** la barre — elle garde sa couleur sous café (barre verte) et **disparaît au volant**, où la barre montre la carrosserie. Son plafond est un réglage de **poursuite** : 60 points = 2,5 s de sprint de plus, 5 s sous café, et un juge refait le calcul. 2 juges neufs |
 | Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Le fondu de l'hôpital et de la prison | **livré** (13 sept. 2026) | demande de Martin (« il faut corriger le fade out et in quand on va à l'hôpital ou qu'on se fait enfermer ») : quatre changements de scène — l'hôpital, la prison, la compagnie, le coucher — étaient restés sur `Hud.fondu` + `setTimeoutJeu`, soit **deux horloges** que rien ne liait : l'une comptait dans le dessin, l'autre dans la mise à jour. On se regardait donc disparaître de la rue à **80 % de noir**, le texte se lisait par-dessus le trottoir où l'on venait de tomber, et la ville continuait de tourner pendant les deux secondes et demie — un char pouvait repasser sur un joueur à 1 PV. Les quatre passent maintenant par la machine des portes, `Jeu.transiter()`, qui n'a **qu'une** horloge et change la scène **pile** à alpha 1. Elle gagne pour eux un troisième nombre, `[fermer, tenir, ouvrir]` : une porte, on la passe ; une nuit, un séjour à l'hôpital **font passer du temps**, et ce temps se sent dans le noir tenu, où le texte s'écrit — et **seulement** là. `Hud.fondu`, `setTimeoutJeu` et leurs minuteries sont supprimés : plus une seule deuxième horloge dans le jeu |
+| Des sirènes qu'on entend | **livré** (13 sept. 2026) | demande de Martin (« je veux des sirènes pour les ambulances et polices ») : il n'y en avait **qu'une**, et presque jamais — `Son.boucle('sirene', …)` ne s'allumait que pour une auto-patrouille de l'IA en chasse, à volume fixe, sans distance. L'ambulance déclare pourtant `sirene: true` depuis M9 et n'en a **jamais** fait entendre une seule ; au volant, aucune des deux. Maintenant : **deux sons** (celle de la police monte et descend, celle de l'ambulance fait deux notes — les confondre, c'est ne pas savoir qui arrive derrière soi), un **volume qui suit la distance** (460 px de portée), une **ambulance sur trois** qui naît en course dans le trafic, et au volant d'un char à sirène le **bouton du klaxon devient celui de la sirène** — l'étiquette du bouton tactile le dit |
 | M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. **Reste** : `defonce`, `soigne`, `crochet`, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
 | Rampes vraiment prenables | **P1** **correctif** à faire | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
+| Un saut qu'on ne voit pas | **P1** **correctif** à faire | bug de Martin (« les rampes n'ont pas l'air de fonctionner »). ⚠️ Elles fonctionnent : le saut mesure **7,8 px** pour une berline (2,0 px pour un vélo) et dure **0,3 s**, sur des tuiles de 16 px. Et l'ombre est un rectangle **fixe** de 20 × 10 qui ne rétrécit ni ne s'éloigne — elle ne raconte aucune hauteur |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
 | Étoiles de recherche illisibles | **P2** **correctif** à faire | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
+| Clôture nord-sud trop large | **P2** **correctif** à faire | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **P2** **correctif** à faire | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **P2** **correctif** à faire | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
 | Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
@@ -423,10 +426,13 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Le souffle en surplus | **livré** : surplus au-dessus de 100, dépensé en premier, jamais régénéré, perdu en dormant ; ligne mince d'une autre couleur sur la barre, absente au volant | courir plus longtemps parce qu'on a mangé, et le voir sur la barre ; ne pas récupérer ce surplus en s'arrêtant |
 | — | Les toits | **livré** : bord et parapet, un toit par bâtiment (faîte, versants, équipements), ombre au sol, couverture selon le genre | reconnaître deux bâtiments mitoyens à leurs toits ; une banlieue qui a l'air d'une banlieue vue d'en haut |
 | — | Le fondu de l'hôpital et de la prison | **livré** : les quatre ellipses passent par `Jeu.transiter()`, exporté, avec un temps de **noir tenu** où le texte s'écrit ; `Hud.fondu` et les minuteries de `missions.js` disparaissent | se réveiller à l'hôpital sans avoir vu la téléportation, et ne pas se faire écraser pendant le noir |
+| — | Des sirènes qu'on entend | **livré** : deux boucles (police, ambulance), volume selon la distance, une ambulance sur trois en course, et le klaxon qui devient la sirène au volant | reconnaître une ambulance d'une auto-patrouille sans la voir ; allumer sa sirène et sentir la rue changer |
 | M9 | **P1** Le parc et les boulots | **les quatre sprites : livrés** (le catalogue ne ment plus, et un juge le tient) ; restent le bateau ; le sport et le luxe (rares, par quartier, la meilleure revente) ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule ; la cour de la fourrière rangée en cases, sans tremplin ; `reservoir` : ce qui n'en a pas ne brûle ni n'explose | trois boulots finis d'affilée ; sortir son char de la fourrière ; trouver un luxe et le revendre ; démolir un vélo sans que la police arrive ; se faire remorquer pour avoir laissé son char en travers, jamais pour l'avoir mis dans une case |
 | — | **P1** Rampes vraiment prenables | élan, portée et freinage **calculés** depuis la fiche du char au lieu d'être écrits en tuiles ; la trajectoire rejouée par un test pour chaque rampe posée | réussir Le Grand Saut en moto et retomber sur la rue, pas dans un mur |
+| — | **P1** Un saut qu'on ne voit pas | impulsion et gravité réglées **avec** la réception, le vélo qui ne décolle plus, ombre à la taille du char qui s'éloigne et pâlit avec l'altitude (comme celle de l'hélico) | voir un char quitter le sol et retomber, et savoir de combien |
 | — | **P2** L'endurance du Faubourg | trois vitesses (marche / course gratuite / sprint coûteux), policier aligné sur la course, renommage `joueur_course`, barre qui s'efface quand elle est pleine | traverser la ville sans gérer une barre ; ne plus semer un agent en marchant vite |
 | — | **P2** Étoiles de recherche illisibles | étoile **dessinée** (pas un caractère agrandi), jaune à elle, en haut au centre avec la ligne d'objectif qui descend, étoiles éteintes **creuses**, clignotement rouge gardé, ancre tactile réenregistrée | lire son niveau de recherche sans quitter la route des yeux |
+| — | **P2** Clôture nord-sud trop large | brin nord-sud réduit à son épaisseur (trait, chapeaux de poteaux, liseré d'ombre), poteau à la jointure des coins, juge retourné : le nord-sud est **plus mince**, pas une rotation | une clôture verticale qui a l'air debout, pas couchée |
 | — | **P2** La nuit ne se vide pas | rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | **P2** Arbres dans les sentiers | une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
@@ -493,8 +499,10 @@ ordre-là.
 |---|---|---|---|---|
 | **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, ce que les fiches disent que les chars savent faire (`defonce`, `soigne`, `crochet`), et le sport et le luxe. Prérequis de M10 |
 | **P1** | **correctif** | Une rampe qu'on peut vraiment prendre | 2 | ⚠️ *Le Grand Saut* est au tableau des défis et **ne peut pas se gagner** : la moto vole 126 px pour 96 px de réception |
+| **P1** | **correctif** | Un saut qu'on ne voit pas | 1 | ⚠️ un saut mesure **7 px** et dure 0,3 s : les rampes ont l'air de ne pas marcher, et l'ombre est un rectangle fixe qui ne dit aucune hauteur |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
 | **P2** | **correctif** | Les étoiles de recherche, grosses, jaunes et au centre | 1 | ⚠️ l'argent est dessiné **deux fois plus gros** que le niveau de recherche, qui est la seule chose qui compte en poursuite |
+| **P2** | **correctif** | Une clôture nord-sud se voit par la tranche | 1 | ⚠️ corrigée **par une rotation** : un panneau de 7 px posé à plat. Et un juge exige cette rotation — il interdit la correction |
 | **P2** | **correctif** | La nuit ne se vide pas | 1 | ⚠️ le Faubourg ne perd **aucune** voiture la nuit — le plafond `vehicules_max` mord avant le rythme — et garde 19 piétons à 3 h du matin |
 | **P2** | **correctif** | Des arbres plantés au milieu des sentiers | 1 | à chaque parc — et `self.reserve` fait déjà ça pour le devant des portes |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
@@ -976,6 +984,52 @@ Ce qui a été livré, dans l'ordre de ce qui se voit :
   nouvelle machine : la compagnie, l'hôpital, le coucher au lit de la planque et le souffle
   perdu la nuit lisent maintenant `B.transition`, et jouent le fondu avant de mesurer.
 
+### Des sirènes qu'on entend (**correctif**, taille 1) — **livré le 13 sept. 2026**
+
+*Demande de Martin :* « je veux des sirènes pour les ambulances et polices. »
+
+⚠️ **Il n'y en avait qu'une, et presque jamais.** `Son.boucle('sirene', true, 0.5)`
+s'allumait dans une seule branche : `v.conducteur === 'police'` avec au moins une étoile.
+Trois conséquences, et Martin les a toutes entendues d'un coup :
+
+- **L'ambulance n'a jamais fait entendre une sirène.** Sa fiche déclare pourtant
+  `sirene: true` depuis M9 — comme `cercles` et `defonce`, c'est une promesse du catalogue
+  que le navigateur ne lisait pas.
+- **Au volant, aucune des deux.** On volait une auto-patrouille ou une ambulance, et on
+  conduisait en silence. C'est la première chose qu'on essaie.
+- **Et le volume était fixe** : allumée, elle sonnait pareil à dix pixels et à l'autre bout
+  du district. Une sirène qu'on entend toujours ne veut plus rien dire.
+
+Ce qui a été livré :
+
+- **Deux sons, pas un.** `sirene_ambulance` rejoint le catalogue audio (ElevenLabs, 4 s en
+  boucle, 16 Ko) : deux notes qui alternent lentement, là où celle de la police monte et
+  descend sans s'arrêter. ⚠️ **Les confondre, c'est ne pas savoir qui arrive derrière soi**,
+  et c'est toute la différence entre se ranger et se sauver.
+- **Un mélangeur**, `majSirenes()` : une boucle par **sorte**, à chaque image, au volume du
+  char le plus proche qui la fait hurler — `1 − d / 460 px`, et zéro au-delà. Les deux
+  peuvent sonner en même temps ; ni l'une ni l'autre ne dépend d'une branche de l'IA.
+- ⚠️ **Le mélangeur retient ce qu'il a demandé**, il ne lit pas l'état de `Son`. Un mp3
+  absent — ou un navigateur qui n'a pas encore reçu de geste — laisse `boucleActive` à faux
+  **pour toujours** : s'y fier, c'est redemander la même boucle soixante fois par seconde
+  sans jamais s'en apercevoir. C'est la leçon du son retenu, appliquée avant de se la reprendre.
+- **Une ambulance sur trois qui naît dans le trafic est en course**, sirène allumée : on
+  l'entend traverser. Les deux autres rentrent au garage — une ville où **toutes** les
+  ambulances hurlent n'est pas une ville, c'est une alarme.
+- **Au volant d'un char à sirène, le bouton du klaxon est celui de la sirène**, et
+  l'étiquette du bouton tactile passe de KLAXON à SIRÈNE. ⚠️ Le klaxon d'une auto-patrouille
+  n'a jamais servi à rien, et le boulot se prendra **au même bouton** : dans une ambulance,
+  on répond à l'appel et on part la sirène allumée, d'un seul geste. Dans une auto, le bouton
+  reste le klaxon — un juge le vérifie, pour que le métier du bouton ne change pas pour tout
+  le monde.
+- ⚠️ **Ce qui n'a pas été jugé, et il faut le dire** : *le son lui-même*. Le juge du
+  navigateur prouve que `sirene_ambulance-1.mp3` se **décode** ; personne ici n'a d'oreilles.
+  Si elle ne sonne pas comme une ambulance, c'est `--refaire sirene_ambulance`.
+- **Juge (1 neuf)** : deux boucles distinctes pour une ambulance et une auto-patrouille ; le
+  volume tombe à zéro à 520 px et revient en se rapprochant ; éteindre la sirène la fait
+  taire ; le bouton l'allume et l'éteint au volant, avec la bonne étiquette ; et dans une
+  auto le même bouton klaxonne toujours.
+
 ### M9 — Le parc automobile et les boulots (**ajout**, taille 3)
 
 *Ce que ça donne :* autre chose à conduire, et de quoi gagner sa vie autrement.
@@ -1132,6 +1186,58 @@ Ce qui a été livré :
   couleur translucide » — les trois autos en vivent très bien — c'est la **surface** qui
   décide. Il rougissait à 17 %.
 
+### Un saut qu'on ne voit pas (**correctif**, taille 1)
+
+*Bug signalé par Martin :* « les rampes n'ont pas l'air de fonctionner, et s'il marche, il
+faut qu'on voie une ombre pour bien imager le saut. »
+
+⚠️ **Elles fonctionnent. Le saut mesure sept pixels et dure un tiers de seconde.** C'est pour
+ça qu'il n'a pas l'air d'exister : `vz` vaut `vitesse × 0,42`, la gravité vaut 0,18, et la
+hauteur d'un saut est donc `vz² / 2g` :
+
+| Char | Vitesse max | Hauteur du saut | Durée |
+|---|---|---|---|
+| Berline | 4,0 | **7,8 px** | 0,31 s |
+| Moto | 5,2 | **13,2 px** | 0,40 s |
+| Auto-patrouille | 4,4 | 9,5 px | 0,34 s |
+| Camion | 2,8 | 3,8 px | 0,22 s |
+| **Vélo** | 2,0 | **2,0 px** | 0,16 s |
+
+**Une tuile fait 16 px et un char est dessiné 32 × 16.** Un char qui monte de sept pixels
+pendant un tiers de seconde, ce n'est pas un saut : c'est une bosse. Le joueur passe sur le
+tremplin, entend le moteur, et ne voit rien — il en conclut, raisonnablement, que la rampe ne
+marche pas.
+
+- **Il faut que ça décolle pour de vrai.** L'impulsion et la gravité sont deux nombres dans
+  `PHYSIQUE`, et ils se règlent ensemble : on veut un char qui monte assez haut pour passer
+  **par-dessus quelque chose** et qui reste en l'air assez longtemps pour qu'on le voie
+  partir. ⚠️ Et ça se règle **avec** la fiche de la réception : plus le saut est haut, plus il
+  est long, et plus il faut de place pour retomber. Les deux se décident ensemble ou pas du
+  tout.
+- ⚠️ **Le vélo ne devrait pas sauter.** À 2 px/image il monte de deux pixels — moins que
+  l'épaisseur de son ombre. Un vélo qui « saute » sans que rien ne bouge est pire qu'un vélo
+  qui refuse la rampe. Soit il passe le seuil, soit il ne le passe pas ; à deux pixels, il ne
+  le passe pas.
+
+**L'ombre existe déjà, et elle ne dit rien.** `dessinerUn()` pose un rectangle noir de
+**20 × 10 px, fixe**, dès que `z > 2` :
+
+- elle a **la même taille pour tout le monde** — l'autobus fait 48 px de long et projette la
+  même tache qu'une moto ;
+- elle ne **bouge pas avec la hauteur** : elle ne rétrécit pas, ne s'écarte pas, ne pâlit pas.
+  Or c'est exactement ça qui dit « il est haut » — une ombre qui reste collée sous le char ne
+  raconte aucune altitude ;
+- elle est **rectangulaire et non orientée**, alors que le char tourne sur 32 caps.
+
+Ce qu'il faut : une ombre **à la taille du char**, qui **s'éloigne** et **rétrécit** à mesure
+qu'il monte, et qui s'éclaircit avec l'altitude. Le jeu sait déjà faire ça — l'hélicoptère de
+M7 a son ombre au sol depuis le premier jour.
+
+- **Juges** : la hauteur d'un saut se voit (elle dépasse la hauteur d'un char dessiné) ; un
+  vélo ne décolle jamais ; l'ombre existe pendant **tout** le vol, pas seulement au-dessus
+  d'un seuil ; sa taille suit celle du char ; et la hauteur du saut reste cohérente avec la
+  réception exigée par le générateur — le même calcul, une seule fois.
+
 ### Une rampe qu'on peut vraiment prendre (**correctif**, taille 2)
 
 *Demande de Martin :* « les défis de rampe doivent vraiment être réalisables, avec assez
@@ -1276,6 +1382,45 @@ blanc. C'est à l'envers.
 - **Juges** : les étoiles sont l'élément le plus grand du HUD en poursuite ; on distingue
   allumée d'éteinte sans compter ; rien du HUD ne se chevauche au centre (étoiles et ligne
   d'objectif) ; et aucune ancre ne tombe sous un bouton tactile.
+
+### Une clôture nord-sud se voit par la tranche (**correctif**, taille 1)
+
+*Demande de Martin :* « les clôtures nord-sud doivent être plus vues de haut, donc mince. »
+
+Les clôtures lisent maintenant leurs voisines et ne sont plus couchées — mais elles ont été
+corrigées **par une rotation** : le nord-sud est l'est-ouest tourné de 90°, les deux axes
+échangés. D'où un panneau vertical large de sept pixels, avec sa maille et ses lisses, qui a
+l'air d'être **posé à plat** plutôt que debout.
+
+⚠️ **La bonne règle est déjà écrite deux fois dans le dépôt, et les clôtures ne l'appliquent
+pas.** Les bâtiments : « toute tuile dont la voisine du sud n'appartient pas au bâtiment est
+une façade — on voit toujours le mur avant, jamais le dos d'un toit ». Les meubles : « un
+meuble se dessine **vu d'en haut, avec juste assez de face au sud** pour qu'on lise son
+volume — c'est la même règle que les façades de la ville ».
+
+La caméra regarde donc d'en haut, avec un peu de face au sud. Il en découle, sans rien
+inventer :
+
+- **Est-ouest** : on la voit **de face**. Sa hauteur est visible — lisses, maille, poteaux. Le
+  panneau actuel est juste, il ne change pas.
+- **Nord-sud** : on la voit **par la tranche**. Il ne reste que son **épaisseur** : un trait
+  fin, les chapeaux de poteaux, et un liseré d'ombre d'un côté. Deux ou trois pixels de large,
+  pas sept. Une clôture n'a pas d'épaisseur, c'est tout son propos.
+- **Au coin**, les deux se rencontrent : le bras est-ouest garde sa face, le bras nord-sud est
+  mince, et le poteau du centre fait la jointure — c'est lui qui empêche que la différence de
+  largeur ait l'air d'une cassure.
+
+⚠️ **Et un juge verrouille aujourd'hui exactement le défaut.**
+`test_une_cloture_nord_sud_ne_se_peint_pas_comme_une_est_ouest` compare les deux cuissons
+trait par trait et exige que « le nord-sud soit l'est-ouest **tourné**, les deux axes
+échangés ». Il a rendu service — il a sorti les clôtures de leur premier bug — mais il
+**interdit maintenant la correction**. Il doit être remplacé par son contraire : le nord-sud
+n'est **pas** la rotation de l'est-ouest, il est **plus mince** que lui, et le juge mesure
+cette largeur.
+
+- **Juges** : la largeur peinte d'un brin nord-sud est strictement inférieure à la hauteur
+  peinte d'un brin est-ouest, pour les **trois** clôtures ; un coin porte son poteau ; et le
+  nord-sud n'est plus la rotation de l'est-ouest (l'ancien juge, retourné).
 
 ### La nuit ne se vide pas (**correctif**, taille 1)
 

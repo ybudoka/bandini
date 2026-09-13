@@ -518,6 +518,11 @@ const Entree = (function () {
     contexteCourant = nom;
     const etiquettes = nom === 'vehicule'
       ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
+      // ⚠️ Sur un char a sirene, le bouton du klaxon EST celui de la sirene :
+      // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
+      // klaxon d'une auto-patrouille n'a jamais servi a rien.
+      : nom === 'vehicule_sirene'
+      ? { attaque: 'SIRENE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
       : nom === 'menu'
         ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
         : nom === 'dialogue'
