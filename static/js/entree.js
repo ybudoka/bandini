@@ -61,6 +61,12 @@ const Entree = (function () {
   let profil = null;                 // { boutons, axes, gaz, frein } — voir profilParDefaut
   let parIndice = {};                // indice de bouton -> actions, refait avec le profil
   let apprentissage = null;          // { quoi, fait, reference }
+  //: Le REPOS de la manette : ce que valent ses axes quand on ne touche a
+  //: rien. ⚠️ Ca ne se suppose pas — une gachette repose a -1 sur une manette
+  //: et a 0 sur la suivante, et une croix-chapeau repose HORS de son anneau. On
+  //: le MESURE : une demi-seconde sans qu'un axe bouge et sans bouton enfonce.
+  let reposManette = null, reposCandidat = null, reposStable = 0;
+  const REPOS_IMAGES = 30;
   const ignores = {};                // le bouton qu'on vient d'apprendre, jusqu'au relachement
   const info = { branchee: false, id: '', mapping: '', boutons: [], axes: [] };
 
@@ -104,7 +110,8 @@ const Entree = (function () {
     for (const a in MANETTE_DEFAUT) boutons[a] = MANETTE_DEFAUT[a].slice();
     return { boutons: boutons, axes: AXES_DEFAUT.slice(),
              gaz: Object.assign({}, PEDALES_DEFAUT.gaz),
-             frein: Object.assign({}, PEDALES_DEFAUT.frein) };
+             frein: Object.assign({}, PEDALES_DEFAUT.frein),
+             croix: null };
   }
 
   /** Charge un profil de manette (celui des options, ou rien pour les defauts)
@@ -120,6 +127,9 @@ const Entree = (function () {
     for (const cle of ['gaz', 'frein']) {
       const s = p && p[cle];
       if (s && (s.type === 'bouton' || s.type === 'axe')) profil[cle] = Object.assign({}, s);
+    }
+    if (p && p.croix && typeof p.croix.i === 'number' && p.croix.valeurs) {
+      profil.croix = { i: p.croix.i, valeurs: Object.assign({}, p.croix.valeurs) };
     }
     parIndice = {};
     for (const a in profil.boutons) {
@@ -150,6 +160,51 @@ const Entree = (function () {
     return borner((v - (source.repos || 0)) / plage, 0, 1);
   }
 
+  const CROIX_ACTIONS = ['haut', 'bas', 'gauche', 'droite'];
+  //: L'ordre des huit positions d'une croix-chapeau, dans le sens des
+  //: aiguilles d'une montre a partir du haut.
+  const TOUR_CROIX = [['haut'], ['haut', 'droite'], ['droite'], ['droite', 'bas'],
+                      ['bas'], ['bas', 'gauche'], ['gauche'], ['gauche', 'haut']];
+  const TOL_CROIX = 0.12;
+
+  /** Une croix-CHAPEAU : UN seul axe pour huit directions.
+
+      ⚠️ Beaucoup de manettes en Bluetooth — les 8BitDo entre autres — rendent
+      la croix comme ca : on appuie dessus et AUCUN numero de bouton ne bouge,
+      ce qui donne exactement l'impression qu'elle est morte. Ici on apprend une
+      direction a la fois ; des qu'on connait HAUT et DROITE, on deduit le tour
+      complet (huit positions regulierement espacees sur l'axe), diagonales
+      comprises. Si le tour ne se verifie pas sur les directions qu'on connait
+      aussi, on retombe sur la correspondance exacte : les quatre cotes
+      marchent, pas les diagonales — mieux vaut ca qu'une croix qui ment. */
+  function lireCroix(p, etat) {
+    const c = profil.croix;
+    if (!c) return;
+    const v = p.axes[c.i];
+    if (v === undefined || v === null) return;
+    const vals = c.valeurs;
+    const pas = (vals.haut !== undefined && vals.droite !== undefined)
+      ? (vals.droite - vals.haut) / 2 : 0;
+    if (pas && tourCoherent(vals, pas)) {
+      const k = Math.round((v - vals.haut) / pas);
+      if (k >= 0 && k <= 7 && Math.abs(vals.haut + k * pas - v) <= TOL_CROIX) {
+        for (const a of TOUR_CROIX[k]) etat[a] = true;
+      }
+      return;
+    }
+    for (const a in vals) if (Math.abs(v - vals[a]) <= TOL_CROIX) etat[a] = true;
+  }
+
+  /** Le tour deduit de HAUT et DROITE place-t-il BAS et GAUCHE la ou ils sont ? */
+  function tourCoherent(vals, pas) {
+    const attendus = { bas: 4, gauche: 6 };
+    for (const a in attendus) {
+      if (vals[a] === undefined) continue;
+      if (Math.abs(vals[a] - (vals.haut + attendus[a] * pas)) > TOL_CROIX) return false;
+    }
+    return true;
+  }
+
   /** Le prochain bouton (ou, pour le gaz, le frein et le stick, le prochain
       axe pousse) devient `quoi`. Rend une fonction qui annule l'attente.
 
@@ -165,6 +220,9 @@ const Entree = (function () {
 
   function annulerApprentissage() { apprentissage = null; }
 
+  /** Oublie le repos mesure — a faire quand on change de manette. */
+  function oublierRepos() { reposManette = null; reposCandidat = null; reposStable = 0; }
+
   function poserAppris(quoi, source) {
     if (!profil) reglerManette(null);
     if (quoi === 'gaz' || quoi === 'frein') {
@@ -172,6 +230,11 @@ const Entree = (function () {
     } else if (quoi === 'stick') {
       const i = source.i;
       profil.axes = i % 2 === 0 ? [i, i + 1] : [i - 1, i];
+    } else if (source.type === 'axe' && CROIX_ACTIONS.indexOf(quoi) >= 0) {
+      // Une direction apprise sur un AXE : c'est une croix-chapeau.
+      if (!profil.croix || profil.croix.i !== source.i) profil.croix = { i: source.i, valeurs: {} };
+      profil.croix.valeurs[quoi] = source.plein;
+      profil.boutons[quoi] = [];
     } else if (source.type === 'bouton') {
       // Un bouton ne fait qu'une chose : on le retire de partout ailleurs.
       for (const a in profil.boutons) {
@@ -186,13 +249,50 @@ const Entree = (function () {
     return true;
   }
 
-  /** Regarde ce qui a bouge depuis le debut de l'apprentissage. */
+  /** Suit le repos tant qu'on n'apprend rien : c'est la reference de tout. */
+  function suivreRepos(p) {
+    for (let b = 0; b < (p.buttons || []).length; b++) {
+      if (valeurBouton(p, b) > GESTE) { reposCandidat = null; reposStable = 0; return; }
+    }
+    const axes = (p.axes || []);
+    const pareil = reposCandidat && reposCandidat.length === axes.length
+      && axes.every(function (v, i) { return Math.abs(v - reposCandidat[i]) < 0.05; });
+    if (pareil) {
+      if (++reposStable >= REPOS_IMAGES) reposManette = { axes: reposCandidat.slice() };
+    } else {
+      reposCandidat = axes.slice();
+      reposStable = 0;
+    }
+  }
+
+  /** La manette est-elle revenue au repos qu'on lui connait ? */
+  function auRepos(p) {
+    if (!reposManette) return true;
+    for (let b = 0; b < (p.buttons || []).length; b++) if (valeurBouton(p, b) > GESTE) return false;
+    const axes = p.axes || [];
+    for (let k = 0; k < axes.length; k++) {
+      const r = reposManette.axes[k];
+      if (r !== undefined && Math.abs(axes[k] - r) > GESTE) return false;
+    }
+    return true;
+  }
+
+  /** Regarde ce qui a bouge depuis le debut de l'apprentissage.
+
+      ⚠️ On n'arme pas tant que la manette n'est pas REVENUE AU REPOS. Sans ca,
+      « tout reapprendre » prenait le RELACHEMENT de la direction precedente
+      pour le geste suivant : sur une croix-chapeau, lacher le haut fait bouger
+      l'axe autant qu'appuyer sur le bas, et BAS se retrouvait appris sur la
+      valeur du repos — une croix qui tient tout enfoncee, tout le temps. */
   function ecouterApprentissage(p) {
     const a = apprentissage;
     const axes = (p.axes || []);
     if (!a.reference) {
+      if (!auRepos(p)) { a.attend = true; return; }
+      a.attend = false;
       a.reference = { boutons: (p.buttons || []).map(function (_, i) { return valeurBouton(p, i); }),
                       axes: axes.slice() };
+      if (!reposManette) reposManette = { axes: axes.slice() };
       return;
     }
     for (let b = 0; b < (p.buttons || []).length; b++) {
@@ -208,10 +308,17 @@ const Entree = (function () {
         return;
       }
     }
-    if (a.quoi !== 'gaz' && a.quoi !== 'frein' && a.quoi !== 'stick') return;
+    // Le gaz, le frein, le stick — et les directions, qui sont souvent un
+    // seul axe (croix-chapeau) plutot que quatre boutons.
+    if (a.quoi !== 'gaz' && a.quoi !== 'frein' && a.quoi !== 'stick'
+        && CROIX_ACTIONS.indexOf(a.quoi) < 0) return;
     for (let k = 0; k < axes.length; k++) {
       const repos = a.reference.axes[k] === undefined ? 0 : a.reference.axes[k];
       if (Math.abs(axes[k] - repos) > GESTE) {
+        // Un axe qui revient a SON repos connu n'est pas un geste, c'est un
+        // relachement : on ne l'apprend pas.
+        const connu = reposManette && reposManette.axes[k];
+        if (connu !== undefined && Math.abs(axes[k] - connu) <= GESTE) continue;
         const source = { type: 'axe', i: k, repos: repos, plein: axes[k] };
         const pose = poserAppris(a.quoi, source);
         apprentissage = null;
@@ -251,6 +358,8 @@ const Entree = (function () {
         const m = borner((h - ZONE_MORTE) / (ZONE_PLEINE - ZONE_MORTE), 0, 1);
         sx = ax / h * m; sy = ay / h * m;
       }
+      lireCroix(p, etat);
+      if (!apprentissage) suivreRepos(p);
       g = Math.max(g, lirePedale(p, profil.gaz));
       f = Math.max(f, lirePedale(p, profil.frein));
       if (apprentissage) ecouterApprentissage(p);
@@ -270,7 +379,8 @@ const Entree = (function () {
   function manetteInfo() {
     return { branchee: info.branchee, id: info.id, mapping: info.mapping,
              boutons: info.boutons.slice(), axes: info.axes.slice(),
-             apprend: apprentissage ? apprentissage.quoi : null };
+             apprend: apprentissage ? apprentissage.quoi : null,
+             attend: !!(apprentissage && apprentissage.attend) };
   }
 
   // --- Tactile ----------------------------------------------------------------------
@@ -422,7 +532,7 @@ const Entree = (function () {
     init, debutImage, bas, neuf, videPresse, toutRelacher, contexte, passerEnTactile,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
-    annulerApprentissage, manetteInfo,
+    annulerApprentissage, oublierRepos, manetteInfo,
     get axe() { return axe; }, get gaz() { return gaz; }, get frein() { return frein; },
     get estTactile() { return tactile; },
     _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, pouce: pouce, stick: stick }; },

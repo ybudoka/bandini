@@ -150,6 +150,8 @@ const Hud = (function () {
       return (s.type === 'axe' ? 'AXE ' : 'BOUTON ') + s.i;
     }
     if (quoi === 'croix') {
+      // Une croix-chapeau (un seul axe pour huit directions) se dit autrement.
+      if (profil.croix) return 'AXE ' + profil.croix.i + ' · ' + Object.keys(profil.croix.valeurs).length + '/4';
       const n = CROIX.map(function (a) { return profil.boutons[a][0]; }).filter(function (v) { return v !== undefined; });
       return n.length ? n.join(' ') : 'AUCUN';
     }
@@ -188,13 +190,21 @@ const Hud = (function () {
     });
     items.push({ libelle: 'TOUT REAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
     items.push({ libelle: 'REMETTRE PAR DEFAUT', faire: function () {
-      Entree.reglerManette(null); B.options.manette = null; Sauvegarde.ecrireOptions(B.options);
+      Entree.reglerManette(null); Entree.oublierRepos();
+      B.options.manette = null; Sauvegarde.ecrireOptions(B.options);
       suite = null; Son.SFX.menu(); return false;
     } });
     items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuOptions()); return false; } });
     const menu = { titre: 'MANETTE', items: items, curseur: 0 };
+    let repos = null;                 // les axes au repos, pour voir lesquels bougent
     menu.maj = function (m) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
+      if (!repos || repos.length !== etat.axes.length) repos = etat.axes.slice();
+      // ⚠️ Les AXES QUI BOUGENT, c'est le diagnostic de la croix morte : sur
+      // bien des manettes Bluetooth la croix n'est pas quatre boutons mais un
+      // seul axe, et on appuie dessus sans qu'aucun numero ne s'allume.
+      const bougent = etat.axes.map(function (v, i) { return Math.abs(v - repos[i]) > 0.3 ? i : -1; })
+        .filter(function (i) { return i >= 0; });
       // ⚠️ La ligne du haut est le vrai diagnostic : une manette « NON
       // RECONNUE » explique a elle seule des boutons qui ne repondent pas la
       // ou on les attend.
@@ -207,11 +217,19 @@ const Hud = (function () {
           ? 'APPUIE' + (item.quoi === 'croix' ? ' ' + NOM_CROIX[etat.apprend] : '') + '...'
           : detailManette(item.quoi, profil);
       }
+      // Une 8BitDo en Bluetooth se presente en manette Switch ou DirectInput ;
+      // par le dongle 2,4 GHz ou le cable, elle se presente en Xbox — et la, le
+      // navigateur la reconnait. Ca vaut la peine de le dire sur place.
+      const indice = /8bitdo/i.test(etat.id || '') && etat.mapping !== 'standard'
+        ? '8BITDO : DONGLE 2,4 GHZ OU CABLE = MODE XBOX'
+        : (etat.id || '?').slice(0, 24).toUpperCase();
       m.aide = etat.apprend
-        ? 'APPUIE SUR LE BOUTON VOULU · ECHAP : ANNULER'
+        ? (etat.attend ? 'RELACHE D’ABORD · ECHAP : ANNULER'
+                       : 'APPUIE SUR LE BOUTON (OU LA CROIX) VOULU · ECHAP : ANNULER')
         : (etat.branchee
           ? 'ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—')
-            + ' · ' + (etat.id || '?').slice(0, 26).toUpperCase()
+            + ' · AXES : ' + (bougent.length ? bougent.join(' ') : '—')
+            + ' · ' + indice
           : 'BRANCHE UNE MANETTE ET APPUIE SUR UN BOUTON');
       void suite;
     };
