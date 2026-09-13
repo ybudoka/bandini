@@ -94,6 +94,62 @@ CATALOGUE: list[Echantillon] = [
 SLUGS = tuple(e["slug"] for e in CATALOGUE)
 
 
+class Radio(TypedDict):
+    slug: str
+    nom: str
+    style: str
+    prompt: str
+    duree_s: int
+    volume: float
+    phase: int
+
+
+def _r(slug, nom, style, prompt, *, duree_s=45, volume=0.45, phase=1) -> Radio:
+    return Radio(slug=slug, nom=nom, style=style, prompt=prompt, duree_s=duree_s,
+                 volume=volume, phase=phase)
+
+
+#: Les stations. Une piste par station, INSTRUMENTALE (une voix chantee par-
+#: dessus une sirene, c'est illisible), generee par ElevenLabs Music. Elle
+#: boucle ; la coupure au rebouclage passe pour un jingle de station.
+#: ⚠️ `duree_s` se paie a la seconde et se telecharge au premier tour de cle :
+#: 45 s a 64 kbit/s font 360 Ko, ce qu'un telephone avale sans broncher.
+RADIOS: list[Radio] = [
+    _r("la_brume", "La Brume", "jazz",
+       "slow smoky late-night jazz trio, upright bass, brushed drums, muted trumpet, "
+       "foggy harbour town mood, instrumental, lo-fi radio feel, steady tempo, loopable"),
+    _r("taxi_radio", "Taxi-Radio", "country",
+       "warm mid-tempo country instrumental, twangy telecaster, pedal steel, shuffle "
+       "drums, upright bass, Quebec country bar feel, no vocals, loopable"),
+    _r("le_choc", "Le Choc", "punk",
+       "fast raw garage punk instrumental, distorted guitars, driving drums, "
+       "shouting energy but no vocals, 1980s Montreal punk basement, loopable"),
+]
+
+#: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
+#: bouillie ; plus haut, la piste depasse le demi-mega.
+FORMAT_RADIO = "mp3_44100_64"
+
+
+def radio_par_slug(slug: str) -> Radio | None:
+    for radio in RADIOS:
+        if radio["slug"] == slug:
+            return radio
+    return None
+
+
+def nom_fichier_radio(radio: Radio) -> str:
+    return f"radio-{radio['slug']}.mp3"
+
+
+def chemin_radio(radio: Radio) -> Path:
+    return RACINE_STATIQUE / DOSSIER / nom_fichier_radio(radio)
+
+
+def radios_manquantes() -> list[Radio]:
+    return [r for r in RADIOS if not chemin_radio(r).is_file()]
+
+
 def par_slug(slug: str) -> Echantillon | None:
     for echantillon in CATALOGUE:
         if echantillon["slug"] == slug:
@@ -127,6 +183,7 @@ def orphelins() -> list[str]:
     if not dossier.is_dir():
         return []
     attendus = {nom_fichier(e, i) for e in CATALOGUE for i in range(1, e["variantes"] + 1)}
+    attendus |= {nom_fichier_radio(r) for r in RADIOS}
     return sorted(f.name for f in dossier.iterdir()
                   if f.is_file() and f.suffix == ".mp3" and f.name not in attendus)
 
@@ -139,5 +196,11 @@ def exporter() -> dict:
         "echantillons": [
             {**echantillon, "fichiers": fichiers_presents(echantillon)}
             for echantillon in CATALOGUE
+        ],
+        # Les radios se chargent au premier tour de cle, jamais au demarrage.
+        "radios": [
+            {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
+             "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
+            for r in RADIOS
         ],
     }

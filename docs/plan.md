@@ -10,7 +10,7 @@ jalons » à chaque jalon livré.
 |---|---|---|
 | M0 Squelette et mise en ligne | **livré** (12 sept. 2026) | dépôt `ybudoka/bandini`, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; serveur installé, https://bandini.gestiondojo.ca |
 | M1 La ville | **livré** (12 sept. 2026) | `carte.py` : trame **irrégulière** (colonnes, rangées et rues toutes différentes), superblocs qui avalent des rues, parcelles BSP par îlot, 157×112 tuiles, 62 croisements dont des T, 10 intérieurs ; juges (voies fortement connexes, un seul îlot marchable, **asymétrie**) ; cache de morceaux borné, mini-carte |
-| Audio ElevenLabs | **livré** (12 sept. 2026) | MCP `elevenlabs` + `app/audio.py` + 14 bruitages dans `static/audio/` ; voix (M6) et radios (M3) par le même chemin |
+| Audio ElevenLabs | **livré** (12 sept. 2026) | MCP `elevenlabs` + `app/audio.py` + 14 bruitages dans `static/audio/` ; **3 radios** (La Brume, Taxi-Radio, Le Choc) générées par ElevenLabs Music le 13 sept., chargées au premier tour de clé ; voix des personnages en M6 |
 | Vie de rue | **livré** (12 sept. 2026) | femmes, enfants (**intouchables**), mères suivies de leur petit, filles de la Brume (la nuit, un fondu, jamais une scène), kiosques à hot-dogs / journaux / roulotte à café et camions-restaurants posés par `carte.py` |
 | M2 Piétons et poings | **livré** (12 sept. 2026) | `pietons.py` (8 archétypes, courage, témoin, gangs) ; hachage spatial, bulle de foule, flâner/fuir/témoin/riposter, mêlée en trois temps, coup fort, roulade, projectiles + plombs + cloche, visée assistée, armes de fortune qui cassent, sang plafonné, pickpocket dans le dos |
 | M3 Véhicules | **livré** (13 sept. 2026) | auto, taxi, moto, auto-patrouille (sprite) ; physique arcade, **chaîne de cercles**, sous-pas, monter/descendre/carjacking/éjection, trafic qui **lit le champ `voie`** (tourne à gauche après le croisement, ralentit avant le coin), feux sur les vrais croisements, dégâts/fumée/feu/explosion, alarmes, rampes, renversements, taxi au klaxon avec pourboire selon la douceur, hôpital quand on meurt, moteur qui monte dans les tours |
@@ -34,8 +34,9 @@ Les sons manquants se regénèrent par le serveur MCP `elevenlabs` (clé dans
 
 ```bash
 uv run python scripts/audio_elevenlabs.py --essai       # ce qui serait généré
-uv run python scripts/audio_elevenlabs.py               # génère ce qui manque
-uv run python scripts/audio_elevenlabs.py --refaire coup pas
+uv run python scripts/audio_elevenlabs.py               # génère les bruitages qui manquent
+uv run python scripts/audio_elevenlabs.py --radios      # … et les stations de radio (musique : cher)
+uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume
 ```
 
 Mise en ligne : `deploy/README.md`. Chaque jalon terminé est déployé et testé
@@ -246,7 +247,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M0 | Squelette et mise en ligne | dépôt créé (`gh repo create ybudoka/bandini --public`), Flask + uv + crochet de version, `index.html` avec canvas/tactile/voiles, 13 fichiers avec espaces de noms, boucle, échelle entière, entrées (3 sources + analogique), `BANDINI`, `banc.js`, CI ; **installation serveur + DNS + Caddy + première release** (écran titre « Baie-des-Brumes, bientôt ») | CI verte ; `https://bandini.gestiondojo.ca/sante` |
 | M1 | La ville | `carte.py` générateur + juges, paquet `/api/definitions`, atlas + validateur, tuiles, cache de morceaux, caméra, joueur qui marche (clavier, manette, tactile), jour-nuit + lampes, mini-carte | on parcourt tout le Faubourg au téléphone |
 | M2 | Piétons et poings | **fait** : apparition, flâner/fuir/témoin/riposte, mêlée en trois temps, coup fort chargé, roulade, armes du catalogue (mêlée, tir, plombs, cloche, jet), projectiles, ramassage, armes improvisées qui cassent, sang plafonné, pickpocket, HUD arme et charge | bagarre dans la rue ; 13 tests de banc (arc devant/derrière, un coup = un dégât, poings assomment vs lame tue, budget, témoin) |
-| M3 | Véhicules | **fait** : auto, taxi, moto, auto-patrouille ; physique, chaîne de cercles, monter/descendre/éjecter, trafic + feux, dégâts/explosion, alarmes, rampes, taxi au klaxon (pourboire selon la douceur), son moteur ; hôpital quand on meurt (avancé de M4). Reste pour plus tard : projeter un piéton dans le trafic, radios | voler, conduire, planter ; 11 tests de banc (vMax, marche arrière, dérive au frein à main, mur, **trafic 3000 images**, renversement, explosion, carjacking, feux, taxi, hôpital) |
+| M3 | Véhicules | **fait** : auto, taxi, moto, auto-patrouille ; physique, chaîne de cercles, monter/descendre/éjecter, trafic + feux, dégâts/explosion, alarmes, rampes, taxi au klaxon (pourboire selon la douceur), son moteur ; hôpital quand on meurt (avancé de M4). Radios livrées (bouton RADIO : station suivante, puis silence). Reste : projeter un piéton dans le trafic | voler, conduire, planter ; 11 tests de banc (vMax, marche arrière, dérive au frein à main, mur, **trafic 3000 images**, renversement, explosion, carjacking, feux, taxi, hôpital) |
 | M4 | Police | crimes, cônes + ligne de vue, témoins (acheter le silence), recherche 1–3★, patrouille/poursuite/arrestation, autos de poursuite, prison (amende, pot-de-vin, casier), hôpital, sergent ami, affiches | se faire pincer ; tests cône, décroissance, amendes |
 | M5 | Intérieurs et économie | 5 intérieurs, magasins, planque (sauvegarde, coffre, garage), revente, propriétés, paquets cachés, journal du matin, bilan de session, tableau des scores, options | acheter, vendre, sauvegarder, recharger |
 | M6 | Missions et gang | cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue, GPS, contacts du marché noir | finir les 5 missions |

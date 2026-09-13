@@ -404,6 +404,7 @@ const Vehicules = (function () {
     Entree.contexte('vehicule');
     Son.SFX.porte();
     Son.boucle('moteur', true, 0.6);
+    if (v.def.radio) Son.Radio.jouer(v.def.radio);
     Hud.message(v.def.nom.toUpperCase());
     return true;
   }
@@ -429,6 +430,7 @@ const Vehicules = (function () {
     Entites.dansLaCarte(j);
     Entree.contexte('pied');
     Son.boucle('moteur', false);
+    Son.Radio.arreter();
     if (!force) Son.SFX.porte();
     if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.abandonner('SORTI DU TAXI');
     return true;
@@ -606,6 +608,11 @@ const Vehicules = (function () {
     majPhysique(v, commandesJoueur(v));
     if (Entree.neuf('attaque')) { v.klaxonT = 30; if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v); }
     if (Entree.neuf('action')) descendre(j, false);
+    if (Entree.neuf('arme')) {
+      const station = Son.Radio.suivante();
+      const def = station ? Son.Radio.station(station) : null;
+      Hud.message(def ? 'RADIO : ' + def.nom.toUpperCase() : 'RADIO ETEINTE');
+    }
     // Le moteur monte dans les tours.
     Son.reglerBoucle('moteur', 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);
   }

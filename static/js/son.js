@@ -167,6 +167,63 @@ const Son = (function () {
     porte: function () { if (!joue('porte')) ton(300, 0.1, 'triangle', 0.2, 0.7); },
   };
 
+  // --- La radio : une station par char, chargee au premier tour de cle ---------
+
+  const Radio = {
+    courante: null,          // slug de la station qui joue
+    demandee: null,          // slug demande pendant que le fichier arrive
+    chargees: new Map(),     // slug -> AudioBuffer
+
+    stations: function () { return (B.defs && B.defs.audio && B.defs.audio.radios) || []; },
+    station: function (slug) { return Radio.stations().find(function (r) { return r.slug === slug; }) || null; },
+
+    /** Allume une station. Le fichier se telecharge la premiere fois : la
+        musique arrive une seconde apres le demarrage, comme une vraie radio. */
+    jouer: function (slug) {
+      const station = Radio.station(slug);
+      Radio.arreter();
+      if (!station) return false;
+      Radio.demandee = slug;
+      if (!ctx || !station.fichier) return true;           // pas d'audio : on garde l'etat
+      if (tampons.has('radio-' + slug)) { Radio._demarrer(slug); return true; }
+      if (Radio.chargees.get(slug) === 'en cours') return true;
+      Radio.chargees.set(slug, 'en cours');
+      fenetre.fetch(base + B.defs.audio.dossier + '/' + station.fichier)
+        .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+        .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+        .then(function (tampon) {
+          tampons.set('radio-' + slug, [tampon]);
+          Radio.chargees.set(slug, 'prete');
+          if (Radio.demandee === slug) Radio._demarrer(slug);
+        })
+        .catch(function () { Radio.chargees.delete(slug); });
+      return true;
+    },
+
+    _demarrer: function (slug) {
+      const station = Radio.station(slug);
+      boucle('radio-' + slug, true, station ? station.volume : 0.4);
+      Radio.courante = slug;
+    },
+
+    arreter: function () {
+      if (Radio.courante) boucle('radio-' + Radio.courante, false);
+      Radio.courante = null;
+      Radio.demandee = null;
+    },
+
+    /** Le bouton RADIO : la station suivante, puis le silence, puis la premiere. */
+    suivante: function () {
+      const liste = Radio.stations();
+      if (!liste.length) return null;
+      const i = liste.findIndex(function (r) { return r.slug === Radio.demandee; });
+      if (i === liste.length - 1) { Radio.arreter(); return null; }
+      const prochaine = liste[i + 1].slug;
+      Radio.jouer(prochaine);
+      return prochaine;
+    },
+  };
+
   /* Musique : sequenceur 3 voix a venir (M7). `tick()` avance meme sans audio,
      pour rester deterministe sous le banc. */
   const Mus = { courante: null, pas: 0, jouer: function (nom) { this.courante = nom; this.pas = 0; },
@@ -174,7 +231,7 @@ const Son = (function () {
 
   return {
     init, reveiller, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
-    chargerEchantillons, echantillon, joue, boucle, boucleActive, reglerBoucle,
+    chargerEchantillons, echantillon, joue, boucle, boucleActive, reglerBoucle, Radio,
     get contexte() { return ctx; },
     get charges() { return tampons.size; },
   };

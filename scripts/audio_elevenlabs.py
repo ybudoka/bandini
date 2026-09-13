@@ -115,11 +115,19 @@ def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
             for i in range(1, e["variantes"] + 1)]
 
 
+def radios_a_faire(refaire: list[str]) -> list[dict]:
+    if not refaire:
+        return audio.radios_manquantes()
+    return [r for r in audio.RADIOS if r["slug"] in refaire]
+
+
 def main() -> int:
     argus = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     argus.add_argument("--essai", action="store_true", help="dire quoi generer, sans rien depenser")
     argus.add_argument("--refaire", nargs="*", default=[], metavar="SLUG",
                        help="regenerer ces sons meme s'ils existent")
+    argus.add_argument("--radios", action="store_true",
+                       help="generer aussi les stations de radio (musique : CHER)")
     options = argus.parse_args()
 
     if os.environ.get("CI"):
@@ -127,7 +135,9 @@ def main() -> int:
         return 2
 
     travail = a_faire(options.refaire)
-    if not travail:
+    radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
+    radios = [r for r in radios if options.radios or r["slug"] in options.refaire]
+    if not travail and not radios:
         print("Rien a generer : les", sum(e["variantes"] for e in audio.CATALOGUE),
               "fichiers sont la.")
         orphelins = audio.orphelins()
@@ -135,11 +145,14 @@ def main() -> int:
             print("Fichiers que le catalogue ne reclame plus :", ", ".join(orphelins))
         return 0
 
-    print(f"{len(travail)} fichier(s) a generer dans static/{audio.DOSSIER}/ :")
+    print(f"{len(travail) + len(radios)} fichier(s) a generer dans static/{audio.DOSSIER}/ :")
     for echantillon, indice in travail:
-        print(f"  {audio.nom_fichier(echantillon, indice):>16}  "
+        print(f"  {audio.nom_fichier(echantillon, indice):>22}  "
               f"{echantillon['duree_s']:>4} s  {'boucle  ' if echantillon['boucle'] else '        '}"
               f"{echantillon['prompt'][:60]}…")
+    for radio in radios:
+        print(f"  {audio.nom_fichier_radio(radio):>22}  {radio['duree_s']:>4} s  MUSIQUE  "
+              f"{radio['style']} — {radio['prompt'][:48]}…")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -172,6 +185,25 @@ def main() -> int:
             else:
                 rates.append((nom, reponse.get("erreur")))
                 print(f"  ✗ {nom:>16}  {reponse.get('erreur')}")
+        for radio in radios:
+            nom = audio.nom_fichier_radio(radio)
+            cible = audio.chemin_radio(radio)
+            if cible.exists():
+                cible.unlink()
+            reponse = client.appeler("elevenlabs_music", {
+                "prompt": radio["prompt"],
+                "music_length_ms": radio["duree_s"] * 1000,
+                "force_instrumental": True,
+                "output_format": audio.FORMAT_RADIO,
+                "output_dir": dossier,
+                "nom": nom[:-4],
+            })
+            if reponse.get("ok"):
+                faits += 1
+                print(f"  ✓ {nom:>22}  {reponse['octets']:>7} octets")
+            else:
+                rates.append((nom, reponse.get("erreur")))
+                print(f"  ✗ {nom:>22}  {reponse.get('erreur')}")
     finally:
         client.fermer()
 

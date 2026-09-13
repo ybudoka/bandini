@@ -39,12 +39,13 @@ class Vehicule(TypedDict):
     alarme: bool
     ejecte: bool
     eau: bool
+    radio: str | None
     phase: int
 
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
-       masse=1.0, phase=1) -> Vehicule:
+       masse=1.0, radio=None, phase=1) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -52,7 +53,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         braquage=braquage, adherence=0.12 if not eau else 0.05, adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
-        ejecte=ejecte, eau=eau, phase=phase,
+        ejecte=ejecte, eau=eau, radio=radio, phase=phase,
     )
 
 
@@ -62,11 +63,11 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
 CATALOGUE: list[Vehicule] = [
     _v("auto", "Berline", "auto", 28, 14, 4.0, 0.06, 0.045, 100, 4, 600, 0.40,
        ["#c0392b", "#2c3e50", "#ecf0f1", "#27ae60", "#8e44ad", "#d35400"], "auto",
-       alarme=False),
+       alarme=False, radio="la_brume"),
     _v("taxi", "Taxi", "auto", 28, 14, 3.8, 0.058, 0.047, 110, 4, 700, 0.12,
-       ["#f1c40f"], "taxi"),
+       ["#f1c40f"], "taxi", radio="taxi_radio"),
     _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 0.07, 40, 2, 450, 0.15,
-       ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True),
+       ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, radio="le_choc"),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True),
     _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 0.03, 300, 2, 1200, 0.10,

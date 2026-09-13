@@ -170,3 +170,23 @@ def test_les_echantillons_se_chargent_dans_un_vrai_navigateur(page, serveur, err
         "n => window.BANDINI.Son.charges === n", arg=attendus, timeout=20000)
     assert page.evaluate("window.BANDINI.Son.charges") == attendus
     assert erreurs == []
+
+
+def test_la_radio_joue_au_tour_de_cle(page, serveur, erreurs):
+    """Les radios se telechargent au premier tour de cle : c'est ici, et
+    seulement ici, qu'on sait que la piste de jazz se DECODE."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur;
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_function("window.BANDINI.Son.Radio.courante === 'la_brume'", timeout=20000)
+    assert page.evaluate("window.BANDINI.Son.boucleActive('radio-la_brume')") is True
+    page.keyboard.press("Tab")
+    page.wait_for_function("window.BANDINI.Son.Radio.demandee !== 'la_brume'", timeout=5000)
+    assert erreurs == []

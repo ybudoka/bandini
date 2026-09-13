@@ -40,13 +40,46 @@ def test_aucun_fichier_orphelin():
 
 
 def test_le_poids_audio_reste_raisonnable():
-    """Un telephone en 3G telecharge tout ca : on se tient loin du megaoctet."""
+    """Un telephone en 3G telecharge les BRUITAGES au demarrage : on se tient
+    loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
-    total = sum(f.stat().st_size for f in fichiers)
-    assert total < 600_000, f"{total} octets d'audio"
-    for fichier in fichiers:
+    bruitages = [f for f in fichiers if not f.name.startswith("radio-")]
+    radios = [f for f in fichiers if f.name.startswith("radio-")]
+    assert sum(f.stat().st_size for f in bruitages) < 600_000
+    for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
+    for fichier in radios:
+        assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
+    assert sum(f.stat().st_size for f in radios) < 2_000_000
+
+
+@pytest.mark.parametrize("radio", audio.RADIOS, ids=lambda r: r["slug"])
+def test_une_station_est_generable(radio):
+    assert radio["nom"] and radio["style"]
+    assert "instrumental" in radio["prompt"] or "no vocals" in radio["prompt"], \
+        "une voix chantee sous une sirene, c'est illisible"
+    assert 20 <= radio["duree_s"] <= 90
+    assert 0 < radio["volume"] <= 1
+
+
+def test_chaque_char_de_phase_1_a_une_station_qui_existe():
+    from app import vehicules
+
+    for vehicule in vehicules.de_phase(1):
+        if vehicule["radio"]:
+            assert audio.radio_par_slug(vehicule["radio"]), vehicule["slug"]
+    assert any(v["radio"] for v in vehicules.de_phase(1)), "aucun char n'a de radio"
+
+
+def test_les_radios_ne_sont_pas_chargees_au_demarrage(paquet):
+    """Les radios sont dans `radios`, jamais dans `echantillons` : sinon
+    `chargerEchantillons()` telechargerait un mega de jazz avant la premiere
+    image."""
+    slugs = {e["slug"] for e in paquet["audio"]["echantillons"]}
+    for radio in paquet["audio"]["radios"]:
+        assert radio["slug"] not in slugs
+        assert "fichier" in radio
 
 
 def test_le_navigateur_ne_reclame_que_des_slugs_du_catalogue():

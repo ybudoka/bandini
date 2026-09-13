@@ -976,3 +976,26 @@ def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
     assert r["argent"] < 400, "l'hopital n'a pas facture"
     assert r["loin"] < 48, "le joueur ne s'est pas reveille a l'hopital"
     assert r["etat"] == "jeu"
+
+
+def test_la_radio_suit_le_char(banc, paquet):
+    stations = [r["slug"] for r in paquet["audio"]["radios"]]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const v = o.char('auto', 24, 0, 0);
+        L.Vehicules.monter(j, v);
+        const auVolant = L.Son.Radio.demandee;
+        o.tape('Tab', 2);
+        const suivante = L.Son.Radio.demandee;
+        const parcours = [suivante];
+        for (let i = 0; i < 4; i++) { L.Son.Radio.suivante(); parcours.push(L.Son.Radio.demandee); }
+        L.Vehicules.descendre(j, true);
+        return { auVolant: auVolant, suivante: suivante, parcours: parcours, apres: L.Son.Radio.demandee,
+                 defaut: v.def.radio };
+    }""")
+    assert r["auVolant"] == r["defaut"] == "la_brume", "l'auto doit allumer La Brume"
+    assert r["suivante"] != r["auVolant"], "le bouton RADIO ne change pas de station"
+    assert None in r["parcours"], "le cycle doit passer par le silence"
+    assert set(s for s in r["parcours"] if s) <= set(stations)
+    assert r["apres"] is None, "la radio joue encore une fois descendu"
