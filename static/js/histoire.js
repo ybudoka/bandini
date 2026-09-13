@@ -533,8 +533,21 @@ const Histoire = (function () {
     for (const d of defis()) {
       let l = null;
       if (d.ou === 'rampe') {
-        const c = Monde.carte;
-        for (let ty = 1; ty < c.h - 1 && !l; ty++) for (let tx = 1; tx < c.w - 1; tx++) if (Monde.glyphe(tx, ty) === 'R') { l = { x: tx * TT + 8, y: (ty + 2) * TT + 8 }; break; }
+        // ⚠️ La PLUS PROCHE du depart, et pas la premiere venue en balayant la
+        // carte : les rampes vivent maintenant dans les cours de La Shop et au
+        // port, et le panneau du Grand Saut se posait a l'autre bout de la
+        // ville. On se pose au PIED, du cote de l'elan — un panneau derriere
+        // le tremplin, on le lit apres avoir saute.
+        const depart = Monde.carte.apparition && Monde.carte.apparition.joueur;
+        const rampes = (Monde.carte.rampes || []).slice().sort(function (a, b) {
+          if (!depart) return 0;
+          return (Math.abs(a.x - depart.x) + Math.abs(a.y - depart.y))
+               - (Math.abs(b.x - depart.x) + Math.abs(b.y - depart.y));
+        });
+        for (const r of rampes) {
+          const c = { x: (r.x - r.dx) * TT + 8, y: (r.y - r.dy) * TT + 8 };
+          if (tuileLibre(c.x - TT * 3, c.y, 3) || tuileLibre(c.x + TT * 3, c.y, 3)) { l = c; break; }
+        }
       } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
       if (!l) continue;
       const place = tuileLibre(l.x - TT * 3, l.y, 3) || tuileLibre(l.x + TT * 3, l.y, 3);

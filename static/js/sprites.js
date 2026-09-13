@@ -209,7 +209,13 @@ SPRITES.moto = {
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {
-  function bruit(v, i) { return ((v * 1103515245 + i * 12345) >>> 0) % 1000 / 1000; }
+  // ⚠️ Un vrai melange, pas une suite lineaire. Avec `v * A + i * B`, deux
+  // points voisins (i, i+1) avancent du MEME pas en x et en y : les grains se
+  // rangent en diagonale, la meme diagonale dans chaque tuile, et un grand
+  // stationnement se met a ressembler a du papier peint. Ca se voyait sur
+  // toute la ville — sauf qu'ailleurs il n'y a jamais vingt tuiles de suite
+  // du meme glyphe pour le montrer.
+  function bruit(v, i) { return hash2(v, i) % 1000 / 1000; }
   function plein(ctx, c, T) { ctx.fillStyle = c; ctx.fillRect(0, 0, T, T); }
   function points(ctx, v, T, couleur, n, i0) {
     ctx.fillStyle = couleur;
@@ -218,12 +224,151 @@ const TUILES = (function () {
     }
   }
   function asphalte(ctx, v, T) { plein(ctx, '#2f3138', T); points(ctx, v, T, '#383a42', 10, 0); points(ctx, v, T, '#26282e', 6, 100); }
+
+  /* --- Le stationnement ---------------------------------------------------
+
+     L'asphalte d'un stationnement n'est pas celui de la rue : il n'est jamais
+     refait, alors il est plus pale, plus gris, tache d'huile la ou les autos
+     s'arretent et fendu ailleurs. C'est cette usure — autant que les lignes —
+     qui fait qu'on le reconnait d'un coup d'oeil.
+
+     ⚠️ Aucune usure ne touche le BORD de la tuile : une tache ou une fissure
+     coupee net au 16e pixel dessine la grille, et la ville entiere devient un
+     quadrillage. */
+  function bitume(ctx, v, T) {
+    plein(ctx, '#35373d', T);
+    points(ctx, v, T, '#3d3f46', 14, 0);
+    points(ctx, v, T, '#2b2d33', 10, 100);
+  }
+
+  function tacheDHuile(ctx, v, T) {
+    const cx = 5 + Math.floor(bruit(v, 11) * 4), cy = 5 + Math.floor(bruit(v, 12) * 4);
+    ctx.fillStyle = 'rgba(16,16,20,0.26)';
+    ctx.fillRect(cx - 2, cy - 1, 5, 3); ctx.fillRect(cx - 1, cy - 2, 3, 5);
+    ctx.fillStyle = 'rgba(16,16,20,0.14)';
+    ctx.fillRect(cx - 3, cy, 7, 1); ctx.fillRect(cx, cy - 3, 1, 7);
+  }
+
+  function fissure(ctx, v, T) {
+    ctx.fillStyle = '#292b31';
+    let x = 3 + Math.floor(bruit(v, 21) * 9);
+    for (let y = 2; y < T - 2; y += 2) {
+      ctx.fillRect(x, y, 1, 2);
+      x += bruit(v, 30 + y) < 0.5 ? -1 : 1;
+      x = Math.max(2, Math.min(T - 3, x));
+    }
+  }
+
+  /** Une ligne de peinture usee : jamais pleine, jamais deux fois la meme. */
+  function peinture(ctx, v, x, y, l, h, i0) {
+    ctx.fillStyle = '#c4c1b6';
+    ctx.fillRect(x, y, l, h);
+    ctx.fillStyle = 'rgba(53,55,61,0.55)';       // l'asphalte qui remonte
+    const long = Math.max(l, h);
+    for (let i = 0; i < 2; i++) {
+      const d = Math.floor(bruit(v, i0 + i) * (long - 2)) + 1;
+      if (l > h) ctx.fillRect(x + d, y, 1, h); else ctx.fillRect(x, y + d, l, 1);
+    }
+  }
+
+  /** Un butoir de beton au fond de la case : le bloc qui arrete la roue.
+      Vu d'en haut, une barre claire et son ombre portee.
+
+      ⚠️ C'est LUI qui ferme la case, pas une ligne peinte : une ligne de nez
+      fait toute la largeur de la tuile, alors elle se soude a celle des cases
+      voisines et la rangee devient un trait continu d'un bout a l'autre du
+      terrain. Le butoir, lui, laisse quatre pixels de chaque cote — et on
+      compte les cases une a une. */
+  function butoir(ctx, T, cote) {
+    const d = 4;                                  // a un quart de tuile du nez
+    ctx.fillStyle = '#86837a';
+    if (cote === 'N') { ctx.fillRect(4, d, 8, 2); ctx.fillStyle = '#5a5852'; ctx.fillRect(4, d + 2, 8, 1); }
+    else if (cote === 'S') { ctx.fillRect(4, T - d - 2, 8, 2); ctx.fillStyle = '#5a5852'; ctx.fillRect(4, T - d, 8, 1); }
+    else if (cote === 'O') { ctx.fillRect(d, 4, 2, 8); ctx.fillStyle = '#5a5852'; ctx.fillRect(d + 2, 4, 1, 8); }
+    else { ctx.fillRect(T - d - 2, 4, 2, 8); ctx.fillStyle = '#5a5852'; ctx.fillRect(T - d, 4, 1, 8); }
+  }
+
+  /** Une case de stationnement. `cote` = ou pointe le NEZ de l'auto.
+
+      La variante vient de Monde.varianteDeCase :
+      bit 0 = tuile du FOND (c'est elle qui porte le butoir),
+      bit 1 = derniere case de la rangee (elle ferme son cote),
+      bits 2 et au-dela = l'usure (huit), stable par position.
+
+      ⚠️ Chaque case ne peint QUE sa ligne de gauche (ou du haut) : deux cases
+      voisines qui peignent chacune leurs deux cotes font une ligne double,
+      deux fois trop grasse, et la rangee ressemble a une echelle. */
+  function caseAuto(ctx, v, T, cote) {
+    const fond = (v & 1) !== 0, derniere = (v & 2) !== 0, usure = v >> 2;
+    bitume(ctx, v, T);
+    if (usure === 3 || usure === 5) tacheDHuile(ctx, v, T);   // l'huile tombe ou l'on se gare
+    else if (usure === 7) fissure(ctx, v, T);
+    const vertical = cote === 'N' || cote === 'S';
+    if (vertical) {
+      peinture(ctx, v, 0, 0, 1, T, 40);
+      if (derniere) peinture(ctx, v, T - 1, 0, 1, T, 44);
+    } else {
+      peinture(ctx, v, 0, 0, T, 1, 40);
+      if (derniere) peinture(ctx, v, 0, T - 1, T, 1, 44);
+    }
+    if (fond) butoir(ctx, T, cote);
+  }
   function trottoir(ctx, v, T) {
     plein(ctx, '#9a9689', T);
     ctx.fillStyle = '#8b877b'; ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 0, 1, T);
     ctx.fillStyle = '#a5a194'; ctx.fillRect(1, 1, T - 2, 1);
     points(ctx, v, T, '#8f8b7f', 5, 7);
   }
+  /* La rampe : DEUX tuiles, le pied et la levre. La variante porte le sens ou
+     ca grimpe (0 est, 1 sud, 2 ouest, 3 nord) et laquelle des deux moities on
+     peint — v = sens * 2 + levre (voir `Monde.varianteDeRampe`).
+
+     ⚠️ Elle se dessine TOUJOURS grimpant vers l'est, puis on tourne le canvas :
+     quatre pentes dessinees a la main, ce serait quatre occasions de les
+     dessiner differemment.
+
+     ⚠️ C'est le DEGRADE qui fait la pente ; les chevrons ne font que la nommer.
+     L'ancienne rampe n'avait ni l'un ni l'autre — quatre tirets jaunes plats,
+     que Martin a pris pour un marquage efface, et il avait raison. */
+  const BOIS_RAMPE = ['#5a4530', '#6a5138', '#7a5e40', '#8a6b48',
+                      '#9a7850', '#aa8558', '#b89163', '#c79d6d'];
+  function rampe(ctx, v, T) {
+    const levre = (v & 1) === 1;
+    asphalte(ctx, v, T);
+    ctx.save();
+    ctx.translate(T / 2, T / 2);
+    ctx.rotate(((v >> 1) & 3) * Math.PI / 2);
+    ctx.translate(-T / 2, -T / 2);
+    for (let i = 0; i < 4; i++) {
+      ctx.fillStyle = BOIS_RAMPE[(levre ? 4 : 0) + i];
+      ctx.fillRect(i * 4, 1, 4, T - 2);
+    }
+    // Les joues : une caisse posee sur l'asphalte, pas une peinture au sol.
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.fillRect(0, 0, T, 1);
+    ctx.fillRect(0, T - 1, T, 1);
+    // Les chevrons montrent la montee — jaunes, comme tout le marquage du jeu.
+    ctx.fillStyle = '#d8b83a';
+    for (const x0 of [2, 9]) {
+      for (let k = 0; k < 4; k++) {
+        ctx.fillRect(x0 + k, 3 + k, 1, 2);
+        ctx.fillRect(x0 + k, T - 5 - k, 1, 2);
+      }
+    }
+    if (levre) {
+      // L'arete d'ou l'on decolle, et son ombre juste derriere : sans elle, la
+      // planche a l'air posee a plat.
+      ctx.fillStyle = 'rgba(0,0,0,0.35)';
+      ctx.fillRect(T - 3, 1, 1, T - 2);
+      ctx.fillStyle = '#fff3b0';
+      ctx.fillRect(T - 2, 1, 2, T - 2);
+    } else {
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.fillRect(0, 1, 1, T - 2);
+    }
+    ctx.restore();
+  }
+
   function facade(ctx, v, T, teinte) {
     plein(ctx, teinte || '#8c4a3c', T);
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
@@ -261,10 +406,24 @@ const TUILES = (function () {
       const y0 = v === 1 ? T - 5 : 0, h = v === 0 ? T : 5;
       for (let x = 1; x < T; x += 5) ctx.fillRect(x, y0, 3, h);
     },
-    // Une ligne de case tous les trois pas : a chaque tuile, le stationnement
-    // ressemblait a un code-barres.
-    'p': function (ctx, v, T) { asphalte(ctx, v, T); if (v % 3 === 0) { ctx.fillStyle = '#c9c6bc'; ctx.fillRect(0, 2, 1, T - 4); } },
-    'R': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d8b83a'; for (let i = 0; i < T; i += 4) ctx.fillRect(i, T - 4 - i / 2, 3, 2); },
+    // L'allee de manoeuvre : de l'asphalte pale et fendu, sans une ligne.
+    'p': function (ctx, v, T) { bitume(ctx, v, T); if (v === 7) fissure(ctx, v, T); },
+    // L'ilot de beton au bout d'une rangee : une bordure tout autour, usee aux
+    // coins — c'est elle qu'on accroche en reculant.
+    'I': function (ctx, v, T) {
+      plein(ctx, '#8f8b7f', T);
+      points(ctx, v, T, '#847f74', 6, 11);
+      ctx.fillStyle = '#a8a498';
+      ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 0, 1, T);
+      ctx.fillStyle = '#6f6b62';
+      ctx.fillRect(0, T - 1, T, 1); ctx.fillRect(T - 1, 0, 1, T);
+    },
+    '^': function (ctx, v, T) { caseAuto(ctx, v, T, 'N'); },
+    'v': function (ctx, v, T) { caseAuto(ctx, v, T, 'S'); },
+    '<': function (ctx, v, T) { caseAuto(ctx, v, T, 'O'); },
+    '>': function (ctx, v, T) { caseAuto(ctx, v, T, 'E'); },
+    'R': rampe,
+    'J': rampe,
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
     's': function (ctx, v, T) { plein(ctx, '#d8c48a', T); points(ctx, v, T, '#c9b576', 10, 4); },
     '~': function (ctx, v, T) { plein(ctx, '#2c5f8a', T); ctx.fillStyle = '#3b73a3'; ctx.fillRect(2 + (v % 5), 4, 6, 1); ctx.fillRect(7 - (v % 4), 11, 5, 1); },

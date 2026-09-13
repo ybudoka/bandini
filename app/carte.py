@@ -55,6 +55,18 @@ from . import magasins
 
 TUILE_PX = 16
 
+#: Ce qu'il faut AUTOUR d'une rampe pour qu'elle serve, en tuiles : de l'ELAN
+#: avant le pied, de la RECEPTION apres la levre.
+#: ⚠️ C'est la mesure de « accessible », et elle ne se choisit pas au gout :
+#: elle se CALCULE sur la physique. Le defi du Grand Saut demande 60 px de vol
+#: en moto ; or une moto partie d'arret vole 54 px avec sept tuiles d'elan et
+#: 68 px avec dix (mesure : `vehicules.PHYSIQUE`, rampe_impulsion 0,42 et
+#: gravite 0,18). A sept, on aurait donc pose des tremplins sur lesquels le
+#: defi du jeu est IMPOSSIBLE. La reception, elle, doit couvrir le vol : 68 px
+#: font quatre tuiles et demie.
+ELAN_RAMPE = 10
+RECEPTION_RAMPE = 6
+
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
 #: 3 basse (bloque les vehicules, pas les pietons).
 LEGENDE: dict[str, dict] = {
@@ -72,7 +84,25 @@ LEGENDE: dict[str, dict] = {
     "=": {"nom": "passage piéton est-ouest", "route": True, "trottoir": True},
     ":": {"nom": "passage piéton nord-sud", "route": True, "trottoir": True},
     "p": {"nom": "stationnement", "route": True, "stationnement": True},
-    "R": {"nom": "rampe", "route": True, "rampe": True},
+    # ⚠️ Les quatre glyphes de CASE vivent dans `sol`, pas dans `voie` : ici la
+    # fleche ne dit pas ou roule un char, elle dit ou pointe le NEZ de l'auto
+    # garee. Le fond de la case est donc du cote de la fleche, et l'allee de
+    # manoeuvre de l'autre.
+    "^": {"nom": "case de stationnement, nez au nord", "route": True,
+          "stationnement": True, "case": "N"},
+    "v": {"nom": "case de stationnement, nez au sud", "route": True,
+          "stationnement": True, "case": "S"},
+    "<": {"nom": "case de stationnement, nez a l'ouest", "route": True,
+          "stationnement": True, "case": "O"},
+    ">": {"nom": "case de stationnement, nez a l'est", "route": True,
+          "stationnement": True, "case": "E"},
+    "I": {"nom": "ilot de stationnement", "trottoir": True},
+    # ⚠️ Une rampe, c'est DEUX tuiles : le PIED ou l'on monte et la LEVRE
+    # d'ou l'on decolle. Le dessin lit la paire pour savoir dans quel sens
+    # ca grimpe (`varianteDeRampe`, monde.js) — un glyphe seul ne dirait rien,
+    # et c'est pour ca que l'ancienne rampe n'avait l'air de rien.
+    "R": {"nom": "pied de rampe", "route": True, "rampe": True},
+    "J": {"nom": "lèvre de rampe", "route": True, "rampe": True},
     "B": {"nom": "toit de tole", "solide": 1},
     "E": {"nom": "toit d'ardoise", "solide": 1},
     "O": {"nom": "toit de gravier", "solide": 1},
@@ -88,6 +118,12 @@ LEGENDE: dict[str, dict] = {
 }
 
 VOIES = {".", ">", "<", "^", "v", "+", "S"}
+
+#: Le gabarit d'un stationnement, en tuiles. Une case fait UNE tuile de large et
+#: DEUX de creux : c'est exactement l'auto (32 x 16 px), pare-chocs compris.
+#: Une allee de manoeuvre en fait deux — de quoi se croiser et braquer.
+CASE_CREUX = 2
+ALLEE = 2
 
 PAS = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
 
@@ -144,7 +180,7 @@ DISTRICTS: tuple[dict, ...] = (
               "^<^<^<^",
               "i<g<i<i",
               "^<^<^<^",
-              "i<i<i<c",
+              "i<Y<i<c",
               "^<^<^<^")},
     # Les Quais — le port. Blocs LONGS d'est en ouest (des hangars de trois
     # blocs de large), une rangee de quais, l'eau au sud. Ca grouille au matin,
@@ -233,6 +269,10 @@ SPECIAUX: dict[str, dict] = {
           "genre": "industriel"},
     "V": {"slug": "phare", "nom": "Le phare de La Pointe", "interieur": "phare",
           "genre": "banlieue"},
+    # v2 / M9 — le lot de la fourriere. Ce n'est pas un ilot bati : c'est une
+    # cour d'asphalte cloturee avec une guerite, et `_fourriere()` la pose.
+    "Y": {"slug": "fourriere", "nom": "Fourrière municipale", "interieur": "fourriere",
+          "genre": "industriel"},
 }
 
 FUSIONS = {"<": (-1, 0), "^": (0, -1)}
@@ -405,6 +445,7 @@ class _Chantier:
         self.portes: list[dict] = []
         self.points: list[dict] = []
         self.decor: list[dict] = []
+        self.fourriere: dict | None = None
         self.lampes: list[dict] = []
         self.intersections: list[dict] = []
         self.arrets: dict[str, str] = {}
@@ -421,6 +462,11 @@ class _Chantier:
         #: arbres a l'autre bout de la ville : une couche peinte ne doit pas
         #: bouger un seul mur. Cette graine-ci peut changer sans rien casser.
         self.des_devanture = Des(graine ^ 0x5EA51)
+        #: Les rampes, meme regle du de separe : un tremplin de plus ne doit
+        #: pas deplacer un arbre a l'autre bout de la ville.
+        self.des_rampe = Des(graine ^ 0x5A17E)
+        self.rampes: list[dict] = []
+        self.rampes_proposees: list[dict] = []
 
     # --- Trame --------------------------------------------------------------
 
@@ -914,7 +960,9 @@ class _Chantier:
     def ilots(self) -> None:
         kiosque_pose = False
         for glyphe, x, y, largeur, hauteur in self.regions():
-            if glyphe in SPECIAUX:
+            if glyphe == "Y":
+                self._fourriere(x, y, largeur, hauteur, SPECIAUX["Y"])
+            elif glyphe in SPECIAUX:
                 special = SPECIAUX[glyphe]
                 self._ilot_bati(x, y, largeur, hauteur,
                                 genre=special.get("genre", "commerces"), special=special)
@@ -1003,11 +1051,6 @@ class _Chantier:
             self.rect(x, zy, largeur, zh, "," if genre in ("maisons", "banlieue") else ".")
             for parcelle in self._parcelles(x, zy, largeur, zh, mini):
                 parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
-            if genre == "gang" and largeur >= 12:
-                # Deux rampes dans la cour : le premier saut du jeu.
-                rx = x + largeur // 2 - 4
-                self.rect(rx, by + bh - 2, 2, 1, "R")
-                self.rect(rx + 6, by + bh - 2, 2, 1, "R")
             if genre == "gang":
                 # Une cour cloturee, avec une entree pour les chars.
                 ouverture = self.des.entier(2, max(3, largeur - 7))
@@ -1019,6 +1062,13 @@ class _Chantier:
                                      by + self.des.entier(0, 1))
 
         contenus = [self._contenu(genre) for _ in parcelles]
+        # ⚠️ « Les Skateux tiennent le stationnement » (voir DISTRICTS) — sauf
+        # que La Pointe n'en avait pas UNE tuile : la phrase etait une legende.
+        # Leur bloc en porte donc un pour de bon, et c'est la que se pose leur
+        # tremplin (`_tremplin_de_stationnement`).
+        if genre == "gang" and parcelles and self.district_en(x, y) == "pointe":
+            contenus[max(range(len(parcelles)),
+                         key=lambda k: parcelles[k][0][2] * parcelles[k][0][3])] = "stationnement"
         vedette = -1
         if special and parcelles:
             # ⚠️ Le batiment garanti ne peut pas dependre d'un tirage : sans
@@ -1042,7 +1092,7 @@ class _Chantier:
             elif contenu == "vague":
                 self._terrain_vague(px, py, pl, ph)
             elif contenu == "stationnement":
-                self.rect(px, py, pl, ph, "p")
+                self._stationnement(px, py, pl, ph, genre)
             else:
                 self._jardin(px, py, pl, ph)
         if facades_vedette:
@@ -1139,6 +1189,84 @@ class _Chantier:
             tuiles = {(bx + i, by + j) for j in range(bh) for i in range(bl)}
         return self.batiment_forme(tuiles, vitrines)
 
+    # --- La fourriere (M9) --------------------------------------------------
+
+    #: La cour, en tuiles. ⚠️ Elle ne prend PAS tout l'ilot : un bloc fusionne
+    #: de La Shop fait 39 x 24 tuiles, et une fourriere de cette taille serait
+    #: un quartier a elle seule. Le lot prend le sud-est, le reste redevient de
+    #: l'industriel ordinaire — et la cour garde des voisins, ce qui est bien
+    #: le genre d'endroit ou on la met.
+    LOT_L, LOT_H = 22, 16
+    #: Une place : un char de 48 px (l'autobus) tient dans trois tuiles, et il
+    #: faut de quoi ouvrir la portiere a cote.
+    PLACE_L, PLACE_H = 4, 3
+    #: La guerite, et la grille — la seule ouverture de la cloture.
+    GUERITE_L, GUERITE_H, GRILLE_L = 6, 4, 4
+
+    def _fourriere(self, x: int, y: int, largeur: int, hauteur: int, special: dict) -> None:
+        """Une cour d'asphalte cloturee, une guerite, UNE grille.
+
+        ⚠️ Tout le lot tient sur une propriete de la cloture : `f` est solide 3
+        — elle arrete les chars, pas les gens. C'est ce qui fait les deux
+        facons de reprendre son char sans une ligne de code pour les
+        distinguer : par la grille, en payant au comptoir ; ou par-dessus la
+        cloture, a pied, et le lot appelle.
+
+        ⚠️ Et il n'y a QU'UNE grille. Deux ouvertures, et sortir son char sans
+        payer ne demanderait plus rien a personne.
+        """
+        lot_l, lot_h = min(largeur, self.LOT_L), min(hauteur, self.LOT_H)
+        lx, ly = x + largeur - lot_l, y + hauteur - lot_h
+        if lx - x >= 10:
+            self._ilot_bati(x, y, lx - x, hauteur, genre="industriel")
+        else:
+            lx, lot_l = x, largeur
+        if ly - y >= 8:
+            self._ilot_bati(lx, y, lot_l, ly - y, genre="industriel")
+        else:
+            ly, lot_h = y, hauteur
+
+        self.rect(lx, ly, lot_l, 2, "x")                        # ruelle derriere
+        self.rect(lx, ly + lot_h - 2, lot_l, 2, ".")            # trottoir devant
+        zy, zh = ly + 2, lot_h - 4
+        if zh < 10 or lot_l < 16:  # pragma: no cover - garde-fou de relecture du plan
+            raise ValueError(f"le lot de la fourriere ne tient pas : {lot_l} x {zh}")
+        self.rect(lx, zy, lot_l, zh, "p")
+        # La guerite, au coin nord-ouest : elle donne sur la cour, pas sur la
+        # rue — on entre par la grille, comme tout le monde.
+        guerite = {(lx + 1 + i, zy + 1 + j)
+                   for i in range(self.GUERITE_L) for j in range(self.GUERITE_H)}
+        facades = self.batiment_forme(guerite)
+        gx = lx + lot_l - self.GRILLE_L - 2
+        for i in range(lot_l):
+            if not gx <= lx + i < gx + self.GRILLE_L:
+                self.sol[zy + zh - 1][lx + i] = "f"
+            self.sol[zy][lx + i] = "f"
+        for j in range(zh):
+            self.sol[zy + j][lx] = "f"
+            self.sol[zy + j][lx + lot_l - 1] = "f"
+        for tx, ty in guerite:                                  # la guerite reste batie
+            if self.sol[ty][tx] == "f":
+                self.sol[ty][tx] = "F"
+        porte = self.poser_porte(facades, special)
+        # Les places : sous la guerite, jamais dans l'axe de la grille.
+        places = []
+        for py in range(zy + self.GUERITE_H + 1, zy + zh - self.PLACE_H, self.PLACE_H):
+            for px in range(lx + 2, lx + lot_l - self.PLACE_L - 1, self.PLACE_L):
+                if gx - 1 <= px < gx + self.GRILLE_L + 1:
+                    continue
+                places.append({"x": px + 1, "y": py + 1})
+        for _ in range(3):
+            self.poser_decor("debris",
+                             lx + self.des.entier(self.GUERITE_L + 3, lot_l - 3),
+                             zy + self.des.entier(1, self.GUERITE_H))
+        self.fourriere = {
+            "x": lx, "y": zy, "largeur": lot_l, "hauteur": zh,
+            "grille": {"x": gx, "y": zy + zh - 1, "largeur": self.GRILLE_L},
+            "porte": {"x": porte[0], "y": porte[1]} if porte else None,
+            "places": places,
+        }
+
     def _terrain_vague(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         self.rect(x, y, largeur, hauteur, ",")
         for i in range(largeur):
@@ -1147,6 +1275,15 @@ class _Chantier:
         for _ in range(max(1, largeur * hauteur // 12)):
             self.poser_decor("debris", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
+        # Un tremplin de planches sur les gravats : le terrain vague est
+        # l'endroit ou une rampe se raconte toute seule. ⚠️ On COUPE la cloture
+        # devant : sinon c'est un tremplin derriere un grillage, et on vient de
+        # passer une heure a se debarrasser de ceux-la. Apres les debris, pour
+        # ne pas en poser un au milieu de la piste.
+        if largeur >= 5 and hauteur >= 4 and self.des_rampe.chance(0.45):
+            cx = x + largeur // 2
+            self.proposer_rampe([(cx, y + hauteur // 2, None)],
+                                cloture=(cx, y + hauteur - 1))
 
     def _jardin(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         self.rect(x, y, largeur, hauteur, ",")
@@ -1154,6 +1291,245 @@ class _Chantier:
             self.poser_decor(self.des.choix(("arbre", "buisson")),
                              x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
+
+    # --- Les rampes ---------------------------------------------------------
+
+    def _roulable(self, x: int, y: int) -> bool:
+        """Une tuile ou un char passe VRAIMENT : rien de solide, pas de decor,
+        pas le devant d'une porte.
+
+        ⚠️ Une solidite de 3 (cloture, borne-fontaine) laisse passer un pieton
+        mais arrete un char. Une cloture dans l'elan, c'est un elan qui
+        n'existe pas — c'est ce qui rendait les rampes de la cour des gangs
+        injouables : on les voyait, on ne pouvait pas les prendre.
+        """
+        return (0 <= x < self.largeur and 0 <= y < self.hauteur
+                and solidite(self.sol[y][x]) == 0
+                and (x, y) not in self.occupe and (x, y) not in self.reserve)
+
+    def _course(self, x: int, y: int, dx: int, dy: int, voulu: int) -> int:
+        """Combien de tuiles roulables d'affilee dans cette direction."""
+        n = 0
+        while n < voulu and self._roulable(x + dx * (n + 1), y + dy * (n + 1)):
+            n += 1
+        return n
+
+    def _libre_pour_rampe(self, x: int, y: int) -> bool:
+        """Ou une rampe a le droit de se poser.
+
+        ⚠️ Jamais sur une voie de circulation : le trafic roule sur des rails,
+        et un tremplin au milieu de sa trajectoire enverrait un char dans le
+        decor a chaque tour.
+
+        ⚠️ Jamais sur un TROTTOIR non plus, et c'est la vraie lecon du retour de
+        Martin : les anciennes rampes avaient de l'elan — vingt et une tuiles !
+        — mais uniquement le long du trottoir, entre un grillage et des murs.
+        De l'elan qu'on ne peut prendre qu'en roulant sur le trottoir n'est pas
+        de l'elan, c'est un couloir. Une rampe se pose la ou les chars passent
+        deja : asphalte, stationnement, cour, quai, terrain vague.
+        """
+        return (self._roulable(x, y) and self.voie[y][x] == "."
+                and not LEGENDE[self.sol[y][x]].get("trottoir"))
+
+    def proposer_rampe(self, essais: list[tuple[int, int, tuple[int, int] | None]],
+                       cloture: tuple[int, int] | None = None) -> None:
+        """Une rampe A ESSAYER quand la ville sera finie : chaque essai est un
+        (x, y, axe), et le premier qui tient gagne.
+
+        ⚠️ Meme lecon que les graffitis (« apres les ilots, on tague des murs
+        qui existent ») : un tremplin pose pendant les ilots voyait sa
+        reception muree par la parcelle d'a cote, batie trois lignes plus tard.
+        Mesure avant correctif : trois rampes sur onze retombaient sur un mur.
+        """
+        self.rampes_proposees.append({"essais": essais, "cloture": cloture})
+
+    def poser_les_rampes(self) -> None:
+        """Le tour des propositions, sur la ville FINIE."""
+        for proposition in self.rampes_proposees:
+            cloture = proposition["cloture"]
+            if cloture:
+                # Le trou dans le grillage se fait meme si le tremplin ne tient
+                # pas : un terrain vague avec sa cloture percee, c'est une
+                # image juste de toute facon.
+                cx, cy = cloture
+                for i in (-1, 0, 1):
+                    if 0 <= cx + i < self.largeur and self.sol[cy][cx + i] == "f":
+                        self.sol[cy][cx + i] = ","
+            for x, y, axe in proposition["essais"]:
+                if self.poser_rampe(x, y, axe):
+                    break
+
+    def poser_rampe(self, x: int, y: int, sens: tuple[int, int] | None = None) -> bool:
+        """Une rampe de deux tuiles en (x, y) : le pied, puis la levre.
+
+        ⚠️ On ne CHOISIT pas le sens, on le MESURE : les quatre axes sont
+        essayes, le plus long gagne, et aucun ne passe sans son elan et sa
+        reception. Rien de pose vaut mieux qu'un tremplin contre un mur — un
+        tremplin qu'on ne peut pas prendre n'est pas un decor, c'est une
+        enigme.
+        """
+        meilleur = None
+        for dx, dy in ([sens] if sens else [(1, 0), (-1, 0), (0, 1), (0, -1)]):
+            if not (self._libre_pour_rampe(x, y) and self._libre_pour_rampe(x + dx, y + dy)):
+                continue
+            # ⚠️ On mesure BIEN AU-DELA du minimum exige : plafonnee au
+            # minimum, la mesure donnait la meme note aux quatre axes et « le
+            # plus long gagne » ne voulait plus rien dire — l'est gagnait
+            # toujours, par ordre de la liste.
+            elan = self._course(x, y, -dx, -dy, ELAN_RAMPE * 3)
+            reception = self._course(x + dx, y + dy, dx, dy, RECEPTION_RAMPE * 3)
+            if elan < ELAN_RAMPE or reception < RECEPTION_RAMPE:
+                continue
+            if meilleur is None or elan + reception > meilleur[0]:
+                meilleur = (elan + reception, dx, dy)
+        if meilleur is None:
+            return False
+        _, dx, dy = meilleur
+        self.sol[y][x] = "R"
+        self.sol[y + dy][x + dx] = "J"
+        # ⚠️ La piste se RESERVE : un arbre pose plus tard au milieu de l'elan
+        # rendrait la rampe inutilisable sans qu'aucun juge ne bronche.
+        for k in range(-ELAN_RAMPE, RECEPTION_RAMPE + 2):
+            self.occupe.add((x + dx * k, y + dy * k))
+        self.rampes.append({"x": x, "y": y, "dx": dx, "dy": dy})
+        return True
+
+    # --- Stationnements -----------------------------------------------------
+
+    def _bandes_stationnement(self, creux: int) -> list[tuple[str, int]]:
+        """Decoupe l'axe PROFOND d'un stationnement en bandes : « R » une
+        rangee de cases, « A » une allee de manoeuvre.
+
+        ⚠️ La regle qui tient tout le dessin : TOUTE rangee touche une allee.
+        Sans elle on peint de belles cases ou aucune auto ne peut entrer, et
+        le stationnement redevient un champ d'asphalte raye au hasard.
+
+        Le motif est donc « R A (R R A)* [R] » : une rangee contre le bord, son
+        allee, puis des rangees DOS A DOS qui se partagent l'allee suivante —
+        exactement le dessin des vrais. Il faut 4 tuiles pour une rangee, 6
+        pour deux, 10 pour trois, 12 pour quatre. Ce qui reste elargit les
+        allees, puis longe le bord en voie de contournement.
+        """
+        rangees = 1
+        while 2 * (rangees + 1) + ALLEE * ((rangees + 2) // 2) <= creux:
+            rangees += 1
+        bandes = [("R", CASE_CREUX), ("A", ALLEE)]
+        paires, seule = divmod(rangees - 1, 2)
+        for _ in range(paires):
+            bandes += [("R", CASE_CREUX), ("R", CASE_CREUX), ("A", ALLEE)]
+        if seule:
+            bandes.append(("R", CASE_CREUX))
+        # ⚠️ Une rangee de plus vaut mieux qu'une allee large, mais une allee
+        # de plus de quatre tuiles n'est plus une allee : c'est une place
+        # publique. Au-dela, le reste longe le bord — la voie de contournement
+        # par ou les autos entrent.
+        reste = creux - sum(taille for _, taille in bandes)
+        for i, (type_, taille) in enumerate(bandes):
+            if type_ == "A" and reste:
+                ajout = min(reste, 4 - taille)
+                bandes[i] = ("A", taille + ajout)
+                reste -= ajout
+        if reste:
+            bandes.append(("A", reste))
+        return bandes
+
+    @staticmethod
+    def _nez_au_debut(bandes: list[tuple[str, int]], i: int) -> bool:
+        """De quel cote une rangee tourne-t-elle son PARE-CHOCS ?
+
+        Le fond de la case va contre ce qui ferme : le bord du terrain d'abord,
+        le dos de la rangee voisine ensuite — et si les deux cotes sont des
+        allees, contre la plus etroite, pour laisser la grande a la
+        circulation.
+        """
+        def ferme(k: int) -> int:
+            if not 0 <= k < len(bandes):
+                return 10                       # le bord du terrain : le mieux
+            return 5 if bandes[k][0] == "R" else -bandes[k][1]
+
+        return ferme(i - 1) >= ferme(i + 1)
+
+    def _stationnement(self, x: int, y: int, largeur: int, hauteur: int,
+                       genre: str = "commerces") -> None:
+        """Un vrai stationnement : des rangees de cases, des allees pour y
+        entrer, et un ilot de beton au bout des rangees.
+
+        Une case fait UNE tuile de large et DEUX de creux — exactement le
+        gabarit d'une auto (32 x 16 px), pour qu'une auto garee tombe dans ses
+        lignes au pixel pres.
+
+        ⚠️ Avant, une parcelle de stationnement etait un rectangle de « p » et
+        le peintre posait une ligne toutes les trois tuiles : de loin, un
+        code-barres ; de pres, des places de travers, sans allee et sans
+        entree. Le dessin se decide ICI, ou l'on connait la forme du terrain.
+        """
+        self.rect(x, y, largeur, hauteur, "p")
+        # Les allees suivent le GRAND cote : des rangees en travers du long,
+        # c'est deux fois moins d'asphalte perdu en manoeuvres.
+        debout = largeur >= hauteur
+        creux = hauteur if debout else largeur
+        longueur = largeur if debout else hauteur
+        if creux < CASE_CREUX + 2 or longueur < 3:
+            return          # une cour de service, pas un stationnement : nue
+        bandes = self._bandes_stationnement(creux)
+        allees: list[tuple[int, int]] = []
+        d = 0
+        for i, (type_, taille) in enumerate(bandes):
+            if type_ == "A":
+                allees.append((d, taille))
+                d += taille
+                continue
+            vers_le_debut = self._nez_au_debut(bandes, i)
+            if debout:
+                self.rect(x, y + d, largeur, taille, "^" if vers_le_debut else "v")
+            else:
+                self.rect(x + d, y, taille, hauteur, "<" if vers_le_debut else ">")
+            # Un ilot de beton au bout de la rangee, et un lampadaire une
+            # rangee sur deux (deux lampes cote a cote sur le meme ilot, ca
+            # eclaire deux fois moins bien et ca coute deux fois plus cher).
+            # ⚠️ L'ilot n'est PAS du trottoir : un kiosque a hot-dogs se pose
+            # sur le trottoir, et il se poserait au milieu de l'asphalte, sur
+            # le pied du lampadaire.
+            if genre not in ("hangars", "industriel") and longueur >= 8:
+                bouts = [longueur - 1] if longueur < 12 else [0, longueur - 1]
+                for k, bout in enumerate(bouts):
+                    if debout:
+                        ix, iy, il, ih = x + bout, y + d, 1, taille
+                    else:
+                        ix, iy, il, ih = x + d, y + bout, taille, 1
+                    self.rect(ix, iy, il, ih, "I")
+                    if i % 2 == 0 and k == 0:
+                        if self.poser_decor("lampadaire", ix, iy):
+                            self.lampes.append({"x": ix, "y": iy})
+            d += taille
+        self._tremplin_de_stationnement(x, y, debout, longueur, allees)
+
+    def _tremplin_de_stationnement(self, x: int, y: int, debout: bool,
+                                   longueur: int, allees: list[tuple[int, int]]) -> None:
+        """Le tremplin se pose dans une ALLEE : c'est l'axe ou l'on roule deja,
+        et le seul qui offre une piste droite — en travers des cases, on
+        arriverait de biais et on ne decollerait pas.
+
+        ⚠️ Dans La Pointe, il y en a un a tout coup : « les Skateux tiennent le
+        stationnement » (voir DISTRICTS). C'est ce qui fait de leur coin autre
+        chose qu'un decor, et ca donne au joueur une raison de traverser le
+        pont.
+        """
+        if not allees:
+            return
+        if self.district_en(x, y) != "pointe" and not self.des_rampe.chance(0.35):
+            return
+        d, taille = allees[len(allees) // 2]
+        milieu = d + taille // 2
+        # ⚠️ L'elan n'a pas a tenir dans le terrain : il continue dans la rue,
+        # et c'est tant mieux — on arrive lance au lieu de partir d'arret.
+        essais = []
+        for part in (3, 2, 1):
+            le_long = max(1, longueur * part // 4)
+            cx, cy = (x + le_long, y + milieu) if debout else (x + milieu, y + le_long)
+            for sens in (((1, 0), (-1, 0)) if debout else ((0, 1), (0, -1))):
+                essais.append((cx, cy, sens))
+        self.proposer_rampe(essais)
 
     # --- Parc, place, port --------------------------------------------------
 
@@ -1240,6 +1616,11 @@ class _Chantier:
         for _ in range(largeur * hauteur // 14):
             self.poser_decor("caisse", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
+        # Une rampe de debarquement, la ou un quai en porte vraiment une.
+        # ⚠️ L'eau n'est pas roulable : `poser_rampe` ne choisira jamais l'axe
+        # qui envoie au fond de la baie, le saut longe le port.
+        if largeur >= 10 and hauteur >= 3 and self.des_rampe.chance(0.5):
+            self.proposer_rampe([(x + largeur // 2, y + hauteur // 2, None)])
 
     def _terre_a_cote(self, tuiles: list[tuple[int, int]]) -> bool:
         """Y a-t-il de la terre le long de ce bord ? Hors carte : non.
@@ -1289,13 +1670,31 @@ class _Chantier:
 
     # --- Decor de rue et finitions -----------------------------------------
 
+    #: Ou chercher le trottoir autour d'un coin de croisement : le coin
+    #: d'abord, puis ses voisines, les plus proches en premier.
+    AUTOUR = ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1))
+
     def lampadaires(self) -> None:
-        """Deux coins opposes par croisement : de la lumiere ou l'on tourne."""
+        """Deux coins opposes par croisement : de la lumiere ou l'on tourne.
+
+        ⚠️ Un poteau se plante sur un TROTTOIR, jamais sur un parterre. Le coin
+        d'un croisement n'en est pas toujours un : devant une maison, la bande
+        de devant est en gazon, et devant la fourriere, en asphalte. On cherche
+        alors le trottoir a cote. Sans ca, le juge ne tenait que par chance —
+        il suffisait qu'un arbre libere le coin pour qu'une lampe pousse dans
+        une pelouse.
+        """
         for inter in self.intersections:
             for dx, dy in ((-1, -1), (inter["l"], inter["h"])):
                 x, y = inter["x"] + dx, inter["y"] + dy
-                if self.poser_decor("lampadaire", x, y):
-                    self.lampes.append({"x": x, "y": y})
+                for ix, iy in self.AUTOUR:
+                    cx, cy = x + ix, y + iy
+                    if not (0 <= cx < self.largeur and 0 <= cy < self.hauteur):
+                        continue
+                    if self.sol[cy][cx] != "." or not self.poser_decor("lampadaire", cx, cy):
+                        continue
+                    self.lampes.append({"x": cx, "y": cy})
+                    break
 
     def ambulants(self) -> list[dict]:
         """Les commerces sans porte : kiosques sur le trottoir, camions au
@@ -1398,6 +1797,10 @@ class _Chantier:
         if bouchees:
             self.decor = [d for d in self.decor
                           if marchable(self.sol[d["y"]][d["x"]])]
+            # ⚠️ Une rampe prise dans une poche bouchee n'existe plus : la
+            # laisser dans la liste, c'est promettre au defi du Grand Saut un
+            # tremplin qui n'est plus la.
+            self.rampes = [r for r in self.rampes if self.sol[r["y"]][r["x"]] == "R"]
         return bouchees
 
     def rect_district(self, district: dict) -> tuple[int, int, int, int]:
@@ -1473,6 +1876,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     ponts = chantier.ponts()
     chantier.lampadaires()
     chantier.bornes()
+    # ⚠️ Apres les ilots, les ponts et le decor : une rampe se juge sur la ville
+    # FINIE. Avant les paquets et les ambulants, pour que la piste d'elan soit
+    # reservee quand ils cherchent leur place.
+    chantier.poser_les_rampes()
     ambulants = chantier.ambulants()
     paquets = chantier.paquets()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
@@ -1504,8 +1911,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "portes": chantier.portes,
         "lampes": chantier.lampes,
         "decor": chantier.decor,
+        "rampes": chantier.rampes,
         "devantures": chantier.devantures,
         "graffitis": chantier.graffitis,
+        "fourriere": chantier.fourriere,
         "ambulants": ambulants,
         "paquets": paquets,
         "zones": chantier.zones(),
@@ -1607,6 +2016,11 @@ INTERIEURS: dict[str, dict] = {
     "usine": _salle("usine", "Usine Prévost", 15, 9,
                     meubles=_comptoir(2, 2, 5) + _comptoir(6, 9, 12),
                     points=({"type": "caisse", "x": 3, "y": 3},)),
+    # ⚠️ Le comptoir de la fourriere est le SEUL point d'ou l'on ressort avec
+    # un char : `missions.js` y montre le lot et ce que chacun coute.
+    "fourriere": _salle("fourriere", "Fourrière municipale", 13, 8,
+                        meubles=_comptoir(3, 2, 7) + ((10, 2, "c"),),
+                        points=({"type": "fourriere", "x": 4, "y": 4},)),
     "phare": _salle("phare", "Le phare de La Pointe", 9, 7,
                     meubles=((2, 2, "c"), (6, 2, "c")),
                     points=({"type": "lit", "x": 6, "y": 3},

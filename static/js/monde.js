@@ -73,6 +73,7 @@ const Monde = (function () {
                  c: vitrine ? 'rgba(255,226,170,0.34)' : 'rgba(255,214,130,0.55)' };
       }),
       portes: def.portes || [],
+      rampes: def.rampes || [],
       points: def.points_interet || [],
       zones: def.zones || [],
       apparition: def.apparition,
@@ -294,6 +295,65 @@ const Monde = (function () {
     return hash2(tx, ty) % 4;
   }
 
+  //: Ou pointe le nez de l'auto, pour chaque glyphe de case, et le pas qui va
+  //: vers le FOND de la case.
+  const CASES = { '^': [0, -1], 'v': [0, 1], '<': [-1, 0], '>': [1, 0] };
+
+  //: ⚠️ Huit usures d'asphalte, pas quatre. Une fissure est un dessin, pas du
+  //: bruit : avec quatre variantes on la reconnait d'une tuile a l'autre, et
+  //: le stationnement se met a montrer sa grille en diagonale.
+  const USURES = 8;
+
+  /** La variante d'une case de stationnement, lue dans ses voisines :
+      bit 0 = tuile du FOND (celle qui porte le butoir),
+      bit 1 = derniere case de la rangee (elle ferme son cote),
+      bits 2 et au-dela = l'usure (huit), stable par position.
+
+      ⚠️ C'est le VOISINAGE qui decide, jamais le generateur : une rangee de
+      cases est une bande d'un seul glyphe, et c'est ce qui permet d'en peindre
+      une de trois tuiles de creux le jour ou on en voudra une. */
+  function varianteDeCase(g, tx, ty) {
+    const pas = CASES[g];
+    if (!pas) return 0;
+    const fond = glyphe(tx + pas[0], ty + pas[1]) !== g ? 1 : 0;
+    // Le cote « suivant » d'une rangee : l'est pour les cases debout, le sud
+    // pour les couchees. La derniere case ferme la rangee de ce cote-la.
+    const cx = pas[0] === 0 ? 1 : 0, cy = pas[0] === 0 ? 0 : 1;
+    const derniere = glyphe(tx + cx, ty + cy) !== g ? 2 : 0;
+    return fond + derniere + (hash2(tx, ty) % USURES) * 4;
+  }
+
+  //: Les quatre cotes, dans l'ordre des sens d'une rampe : 0 est, 1 sud,
+  //: 2 ouest, 3 nord.
+  const COTES = [[1, 0], [0, 1], [-1, 0], [0, -1]];
+
+  /** La variante d'une rampe : deux tuiles, un PIED (« R ») et une LEVRE
+      (« J »). Le peintre doit savoir dans quel sens ca grimpe et laquelle des
+      deux moities il peint — il le lit dans la voisine : le pied cherche sa
+      levre, la levre cherche son pied. Rend sens * 2 + levre, le sens allant
+      TOUJOURS du pied vers la levre.
+
+      ⚠️ Meme regle que les cases : c'est le VOISINAGE qui decide, jamais le
+      generateur. Une rampe se deplace d'une tuile sans que le dessin bouge. */
+  function varianteDeRampe(g, tx, ty) {
+    const partenaire = g === 'R' ? 'J' : 'R';
+    for (let i = 0; i < 4; i++) {
+      if (glyphe(tx + COTES[i][0], ty + COTES[i][1]) !== partenaire) continue;
+      return ((g === 'R' ? i : (i + 2) % 4) * 2) + (g === 'J' ? 1 : 0);
+    }
+    return g === 'J' ? 1 : 0;             // une moitie orpheline : vers l'est
+  }
+
+  /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
+      voisines. Passage pieton, case de stationnement et rampe en ont une ; les
+      autres se contentent d'un bruit stable. */
+  function varianteDeTuile(g, tx, ty) {
+    if (CASES[g]) return varianteDeCase(g, tx, ty);
+    if (g === 'p') return hash2(tx, ty) % USURES;
+    if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
+    return varianteDePassage(g, tx, ty);
+  }
+
   /** Range des poses par morceau. ⚠️ Une pose qui deborde est rangee dans TOUS
       les morceaux qu'elle touche : chacun en peindra la part qui le regarde, et
       une enseigne a cheval sur deux morceaux n'est pas coupee en deux. */
@@ -332,7 +392,7 @@ const Monde = (function () {
         if (tx >= carte.w || ty >= carte.h) continue;
         const g = carte.sol[ty][tx];
         const peintre = TUILES[g] || TUILES[','];
-        const tuile = Atlas.cuireTuile(g, varianteDePassage(g, tx, ty), peintre);
+        const tuile = Atlas.cuireTuile(g, varianteDeTuile(g, tx, ty), peintre);
         ctx.drawImage(tuile, i * TT, j * TT);
       }
     }
@@ -530,7 +590,7 @@ const Monde = (function () {
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
     charger, entrer, restaurer, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
