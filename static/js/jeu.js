@@ -154,7 +154,13 @@ const Jeu = (function () {
     if (B.etat === 'titre' && Hud.voileCourant === 'titre'
         && (Entree.neuf('action') || Entree.neuf('pause'))) {
       Son.reveiller();
+      const sansSon = Son.enAttente();
       commencer();
+      // ⚠️ Apres `commencer()`, qui pose son propre message : sinon le nôtre
+      // est efface par « BAIE-DES-BRUMES » et le silence reste muet.
+      // Commencer a la manette ne donne AUCUN geste au navigateur : il refuse
+      // alors le son sans rien dire. On le dit a sa place.
+      if (sansSon) Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
       Entree.videPresse();
       return;
     }
@@ -269,8 +275,14 @@ const Jeu = (function () {
     w.addEventListener('orientationchange', function () { setTimeout(redim, 120); });
     if (w.visualViewport) w.visualViewport.addEventListener('resize', redim);
     d.addEventListener('visibilitychange', function () { if (d.hidden) { pause(); Son.suspendre(); } });
-    d.addEventListener('pointerdown', function () { Son.reveiller(); }, { passive: true });
-    d.addEventListener('keydown', function () { Son.reveiller(); }, { passive: true });
+    d.addEventListener('pointerdown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
+    d.addEventListener('keydown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
+    // On sonde tout de suite : le contexte naît « suspended » si la page n'a
+    // recu aucun geste, et c'est la seule facon de savoir — avant de jouer —
+    // qu'on va jouer en silence.
+    Son.surEtat(function () { Hud.majAvisSon(); });
+    Son.sonder();
+    Hud.majAvisSon();
     redim();
 
     return chargerDefinitions(racine.dataset.urlDefinitions).then(function (defs) {

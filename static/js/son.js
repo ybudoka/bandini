@@ -8,24 +8,53 @@ const Son = (function () {
   'use strict';
 
   const VOLUME_MAITRE = 0.18;
-  let ctx = null, maitre = null, fenetre = null, base = '';
+  let ctx = null, maitre = null, fenetre = null, base = '', surChangement = null;
   const tampons = new Map();      // slug -> [AudioBuffer]
   const boucles = new Map();      // slug -> source qui tourne
   let demandes = false;
 
   function init(w, urlStatique) { fenetre = w; base = urlStatique || '/static/'; }
 
-  function reveiller() {
-    if (!fenetre) return;
+  /** Qui prevenir quand le son passe de « retenu » a « actif » (ou l'inverse). */
+  function surEtat(f) { surChangement = f; }
+
+  /** Cree le contexte s'il manque et tente de le demarrer. Rend son etat.
+
+      ⚠️ Un AudioContext naît « suspended » tant que la page n'a pas reçu un
+      VRAI geste (clic, touche, toucher), et `resume()` est alors refuse. Or
+      l'API Manette ne compte PAS comme un geste : on peut commencer la partie
+      au pad sans que le navigateur accorde jamais le son. Le jeu doit donc
+      pouvoir DIRE qu'il attend un geste, au lieu de se taire sans rien dire. */
+  function sonder() {
+    if (!fenetre) return 'absent';
     if (!ctx) {
       const AC = fenetre.AudioContext || fenetre.webkitAudioContext;
-      if (!AC) return;
-      try { ctx = new AC(); } catch (e) { return; }
+      if (!AC) return 'absent';
+      try { ctx = new AC(); } catch (e) { return 'absent'; }
       maitre = ctx.createGain();
       maitre.gain.value = B.options.muet ? 0 : VOLUME_MAITRE;
       maitre.connect(ctx.destination);
+      // ⚠️ `resume()` est asynchrone : au retour du geste l'etat est encore
+      // « suspended ». Sans cet ecouteur, le bandeau « touche l'ecran » resterait
+      // affiche alors que le son est revenu.
+      ctx.onstatechange = function () { if (surChangement) surChangement(etatSon()); };
     }
     if (ctx.state === 'suspended') ctx.resume().catch(function () {});
+    return etatSon();
+  }
+
+  /** 'actif' | 'attente' (il manque un geste) | 'coupe' (OPTIONS) | 'absent'. */
+  function etatSon() {
+    if (!ctx) return 'absent';
+    if (ctx.state !== 'running') return 'attente';
+    return B.options.muet ? 'coupe' : 'actif';
+  }
+
+  /** Le son est branche, mais le navigateur attend un geste de la main. */
+  function enAttente() { return etatSon() === 'attente'; }
+
+  function reveiller() {
+    if (sonder() === 'absent') return;
     chargerEchantillons();
     Voix.charger();
   }
@@ -409,7 +438,7 @@ const Son = (function () {
                 stop: function () { this.courante = null; }, tick: function () { if (this.courante) this.pas++; } };
 
   return {
-    init, reveiller, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
+    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
     chargerEchantillons, echantillon, joue, jouerA, boucle, boucleActive, reglerBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },

@@ -85,7 +85,8 @@ function banc(corps) {
   croix.querySelector = function () { return pouce; };
   elements.croix = croix;
   ['voile-titre', 'voile-scores', 'voile-score-envoi', 'bouton-jouer', 'bouton-scores', 'bouton-fermer-scores',
-   'bouton-annuler-score', 'score-form', 'pseudo', 'score-etat', 'liste-scores', 'etat-chargement'].forEach(function (id) {
+   'bouton-annuler-score', 'score-form', 'pseudo', 'score-etat', 'liste-scores', 'etat-chargement',
+   'avis-son'].forEach(function (id) {
     elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : id === 'pseudo' ? 'input' : 'div', id);
   });
   const body = faireElement('body');
@@ -135,6 +136,55 @@ function banc(corps) {
     removeEventListener: function () {}, dispatchEvent: function () {},
     screen: {},
   };
+  // --- Faux audio ---------------------------------------------------------------------
+  // ⚠️ Par defaut le banc n'a PAS d'AudioContext : le jeu doit tourner muet sans
+  // broncher. `brancherAudio(demarre)` en pose un pour tester l'autre panne —
+  // celle ou le navigateur retient le son tant qu'aucun geste n'a touche la page.
+  function brancherAudio(demarre) {
+    function param(v) {
+      return { value: v, setValueAtTime: function () { return this; },
+               exponentialRampToValueAtTime: function () { return this; } };
+    }
+    function noeud(extra) {
+      return Object.assign({ connect: function (c) { return c; }, disconnect: function () {},
+                             start: function () {}, stop: function () {} }, extra || {});
+    }
+    const joues = [];
+    function FauxContexte() {
+      this.state = demarre ? 'running' : 'suspended';
+      this.currentTime = 0;
+      this.sampleRate = 48000;
+      this.destination = noeud();
+      this.joues = joues;
+      const ctx = this;
+      this.resume = function () {
+        // Sans geste, le navigateur REFUSE : la promesse part en erreur.
+        if (!demarre) return Promise.reject(new Error('pas de geste'));
+        ctx.state = 'running';
+        return Promise.resolve();
+      };
+      this.suspend = function () { ctx.state = 'suspended'; return Promise.resolve(); };
+      this.createGain = function () { return noeud({ gain: param(1) }); };
+      this.createOscillator = function () {
+        return noeud({ type: 'square', frequency: param(440),
+                       start: function () { joues.push('ton'); }, stop: function () {} });
+      };
+      this.createBufferSource = function () {
+        return noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null,
+                       start: function () { joues.push('echantillon'); }, stop: function () {} });
+      };
+      this.createBiquadFilter = function () { return noeud({ type: 'lowpass', frequency: param(800), Q: param(1) }); };
+      this.createStereoPanner = function () { return noeud({ pan: param(0) }); };
+      this.createBuffer = function (canaux, longueur) {
+        return { length: longueur, numberOfChannels: canaux,
+                 getChannelData: function () { return new Float32Array(longueur); } };
+      };
+      this.decodeAudioData = function (octets, ok) { if (ok) ok(this.createBuffer(1, 128)); };
+    }
+    fenetre.AudioContext = FauxContexte;
+    return joues;
+  }
+
   fenetre.window = fenetre;
   fenetre.globalThis = fenetre;
   vm.createContext(fenetre);
@@ -214,7 +264,8 @@ function banc(corps) {
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite,
-                   doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d') };
+                   doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d'),
+                   brancherAudio: brancherAudio };
 
   // Le demarrage est asynchrone (fetch) : on attend la promesse du jeu.
   return Promise.resolve().then(function () { return new Promise(function (r) { setImmediate(r); }); })

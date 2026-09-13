@@ -110,6 +110,17 @@ canvas#toile {
 
 .aide { margin: 0; font-size: clamp(11px, 1.5vw, 13px); opacity: .8; }
 .aide--petit { opacity: .6; }
+/* Le son attend un geste : assez visible pour qu'on le fasse, assez discret
+   pour ne pas voler la vedette au titre. */
+.aide--son {
+  margin-top: 6px;
+  padding: 4px 10px;
+  border: 1px solid rgba(232, 179, 60, .55);
+  border-radius: 6px;
+  background: rgba(232, 179, 60, .12);
+  color: #e8b33c;
+  opacity: 1;
+}
 kbd {
   display: inline-block;
   padding: 1px 5px;

@@ -259,3 +259,55 @@ def test_la_ville_tient_le_rythme_de_nuit_a_trois_etoiles(page, serveur, erreurs
     print(f"\n[perf] {ms:.1f} ms par image, {images} images dessinees, {entites} entites, 3 etoiles, nuit")
     assert ms < 40, f"{ms:.1f} ms par image : la ville ne tient plus le rythme"
     assert erreurs == []
+
+
+def test_sans_geste_le_son_est_retenu_et_la_page_le_dit(page, serveur, erreurs):
+    """La panne de Martin, dans un vrai navigateur.
+
+    ⚠️ Tant que la page n'a recu aucun geste, l'AudioContext reste « suspended »
+    et rien ne sort. L'API Manette ne donnant PAS de geste, on pouvait commencer
+    la partie au pad et traverser toute la ville en silence. Le bandeau du titre
+    est ce qui rend ce silence visible — il doit etre la AVANT qu'on joue."""
+    page.goto(serveur)
+    attendre_titre(page)
+    etat = page.evaluate("() => ({ son: window.BANDINI.Son.etatSon(),"
+                         " brut: window.BANDINI.Son.contexte.state,"
+                         " cache: document.getElementById('avis-son').hidden })")
+    assert etat["brut"] == "suspended", f"le navigateur accorde le son sans geste : {etat}"
+    assert etat["son"] == "attente", etat
+    assert etat["cache"] is False, "le silence doit se voir sur l'ecran titre"
+    texte = page.locator("#avis-son").inner_text()
+    assert "son" in texte.lower(), texte
+    assert "touche" in texte.lower() or "clique" in texte.lower(), texte
+    assert erreurs == []
+
+
+def test_un_vrai_geste_rend_le_son_et_efface_le_bandeau(page, serveur, erreurs):
+    page.goto(serveur)
+    attendre_titre(page)
+    assert page.evaluate("() => window.BANDINI.Son.enAttente()") is True
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.BANDINI.Son.etatSon() === 'actif'", timeout=10000)
+    assert page.evaluate("() => document.getElementById('avis-son').hidden") is True
+    assert erreurs == []
+
+
+def test_les_options_disent_l_etat_du_son(page, serveur, erreurs):
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    ligne = page.evaluate("""() => {
+        const L = window.BANDINI;
+        L.Jeu.pause();
+        const pause = L.B.menu;
+        const i = pause.items.findIndex(x => x.libelle === 'OPTIONS');
+        pause.items[i].faire(pause.items[i]);
+        const son = L.B.menu.items.find(x => x.libelle === 'SON');
+        return { titre: L.B.menu.titre, detail: son && son.detail, actif: son && son.actif };
+    }""")
+    assert ligne["titre"] == "OPTIONS"
+    assert ligne["detail"] == "ACTIF", ligne
+    assert ligne["actif"] is False
+    assert erreurs == []

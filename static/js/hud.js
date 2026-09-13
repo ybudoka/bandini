@@ -14,6 +14,16 @@ const Hud = (function () {
     d.getElementById('bouton-fermer-scores').addEventListener('click', function () { voile('titre'); });
     d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
     d.getElementById('score-form').addEventListener('submit', envoyerScore);
+    avisSon = d.getElementById('avis-son');
+    majAvisSon();
+  }
+
+  /** Le bandeau « touche l'ecran pour le son » de l'ecran titre. Il se montre
+      des le chargement (le contexte naît suspendu) et disparaît au premier
+      geste — c'est le seul moyen de savoir qu'on joue en silence. */
+  let avisSon = null;
+  function majAvisSon() {
+    if (avisSon) avisSon.hidden = !Son.enAttente();
   }
 
   let voileCourant = null;
@@ -124,7 +134,15 @@ const Hud = (function () {
         return false;
       } };
     }
-    return { titre: 'OPTIONS', items: [
+    // ⚠️ Le son peut etre parfaitement branche et ne rien sortir : le
+    // navigateur le retient tant qu'aucun geste n'a touche la page. Cette
+    // ligne-la n'est pas un reglage, c'est un diagnostic — sans elle, un joueur
+    // a la manette cherche la panne dans ses haut-parleurs.
+    const ETATS = { actif: 'ACTIF', attente: 'TOUCHE L\'ECRAN', coupe: 'COUPE', absent: 'INDISPONIBLE' };
+    const etatSon = { libelle: 'SON', detail: ETATS[Son.etatSon()] || '?', actif: false };
+    return { titre: 'OPTIONS', curseur: 1,
+      maj: function () { etatSon.detail = ETATS[Son.etatSon()] || '?'; }, items: [
+      etatSon,
       bascule('sang', 'SANG'),
       bascule('vibration', 'VIBRATION'),
       bascule('muet', 'SON COUPE'),
@@ -773,6 +791,7 @@ const Hud = (function () {
 
   return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     get voileCourant() { return voileCourant; },
+           majAvisSon,
            dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();
