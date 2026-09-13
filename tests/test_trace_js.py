@@ -28,6 +28,11 @@ def test_la_trace_voit_un_char_hors_voie_et_le_chien_de_garde(banc):
         L.Jeu.commencer();
         L.B.options.trace = true;
         const j = L.B.joueur;
+        // ⚠️ Le char se pose a 32 px du joueur et roule : il l'ecrasait, et
+        // l'hopital FIGE la ville le temps de son fondu (`Jeu.transiter`) —
+        // 120 images de surveillance qui ne surveillaient plus rien. Ce test
+        // juge le trafic, pas la sante du joueur : il est intouchable ici.
+        j.invincible = 9999;
         // Un char de trafic pose sur le trottoir, sans voie a suivre.
         const v = o.char('auto', 32, 0, 0);
         v.conducteur = 'trafic'; v.etat = 'roule';

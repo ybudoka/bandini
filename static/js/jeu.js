@@ -76,9 +76,22 @@ const Jeu = (function () {
       pas un fondu enchaine, c'est un clignotement, et l'oeil le sait meme quand
       on n'arrive pas a le nommer.
 
+      `duree` vaut `[fermer, ouvrir]` — ou `[fermer, TENIR, ouvrir]` quand le
+      fondu doit raconter quelque chose. ⚠️ Une porte, on la passe : rien a
+      tenir. Mais l'hopital, la prison et la nuit font PASSER DU TEMPS, et ce
+      temps se sent dans le noir. C'est pendant `tenir` — et seulement la,
+      quand l'ecran est vraiment plein — que `texte` s'ecrit.
+
       Le jeu est FIGE pendant (voir `maj()`). */
-  function transiter(duree, faire) {
-    B.transition = { t: 0, ferme: duree[0], ouvre: duree[1], faire: faire, fait: false, vu: false };
+  function transiter(duree, faire, texte) {
+    // ⚠️ Un fondu par-dessus un autre n'en empile pas deux : celui qui joue
+    // finit tout de suite (sa scene change AU NOIR, une fois), et le nouveau
+    // repart du clair. Se faire arreter en tombant dans la rue passait sinon
+    // par deux noirs superposes, chacun avec son horloge.
+    finirTransition();
+    const tenu = duree.length > 2;
+    B.transition = { t: 0, ferme: duree[0], tient: tenu ? duree[1] : 0, ouvre: duree[tenu ? 2 : 1],
+                     faire: faire, texte: texte || null, fait: false, vu: false };
   }
 
   /** Le changement de scene lui-meme, au noir — une fois, jamais deux. */
@@ -106,7 +119,7 @@ const Jeu = (function () {
     }
     if (!tr.vu) return;
     tr.t++;
-    if (tr.t >= tr.ferme + tr.ouvre) B.transition = null;
+    if (tr.t >= tr.ferme + tr.tient + tr.ouvre) B.transition = null;
   }
 
   /** Finit tout de suite le fondu en cours.
@@ -472,7 +485,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, entrer, sortir, changerEtage, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, entrer, sortir, changerEtage, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

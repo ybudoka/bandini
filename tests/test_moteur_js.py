@@ -1267,7 +1267,7 @@ def test_le_souffle_en_surplus_s_achete_et_ne_revient_pas_tout_seul(banc, paquet
         o.relacher('KeyA'); o.relacher('ShiftLeft');
         // 5. Passager : une nuit l'efface.
         j.surplus = 30;
-        L.Missions.dormir();
+        L.Missions.dormir(); o.fondu();
         const apresLaNuit = j.surplus;
         return { pardessus: pardessus, plafonne: plafonne, repos: repos,
                  videSurplus: videSurplus, apresLaNuit: apresLaNuit, plein: plein };
@@ -1356,8 +1356,10 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
         const apresRecherche = { vie: j.vie, argent: L.B.partie.argent };
         L.B.recherche.etoiles = 0;
         const ok = L.Missions.interagir(j);
+        const fondu = !!L.B.transition;
+        o.fondu();
         return { metier: fille.metier, recherche: recherche, apresRecherche: apresRecherche,
-                 ok: ok, vie: j.vie, argent: L.B.partie.argent, fondu: !!L.B.fondu };
+                 ok: ok, vie: j.vie, argent: L.B.partie.argent, fondu: fondu };
     }""")
     assert r["metier"] == "compagnie"
     assert r["recherche"] is True and r["apresRecherche"]["argent"] == 200, \
@@ -1722,8 +1724,8 @@ def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
         const j = L.B.joueur;
         L.B.partie.argent = 400;
         L.Entites.blesser(j, 9999, null, {});
-        const pendant = { vivant: j.vivant, fondu: !!L.B.fondu };
-        o.frame(90);
+        const pendant = { vivant: j.vivant, fondu: !!L.B.transition };
+        o.fondu();
         const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
         return { pendant: pendant, vie: j.vie, max: j.vieMax, argent: L.B.partie.argent,
                  loin: Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT), etat: L.B.etat };
@@ -2312,6 +2314,131 @@ def test_sortir_pendant_le_fondu_d_entree_ramene_devant_la_porte(banc):
     )
 
 
+def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
+    """⚠️ Retour de Martin : « il faut corriger le fade out et in quand on va a
+    l'hopital ou qu'on se fait enfermer. »
+
+    Les quatre ellipses (hopital, prison, compagnie, coucher) etaient restees
+    sur `Hud.fondu` + `setTimeoutJeu` : DEUX HORLOGES independantes, l'une dans
+    le dessin, l'autre dans la mise a jour. Rien ne liait le changement de scene
+    au noir — il tombait a 80 % d'alpha, donc a travers un voile transparent
+    d'un cinquieme, et le texte s'ecrivait par-dessus la rue qu'on voyait
+    encore, pendant que la ville continuait de tourner.
+
+    Ce juge mesure, image par image, les trois choses en meme temps : l'alpha a
+    l'instant OU l'on est teleporte, l'alpha a chaque fois que le texte se
+    dessine, et le temps du monde pendant le noir."""
+    r = banc(r"""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.argent = 400;
+        // Ce que le texte du fondu voit du monde : on note l'alpha a chaque
+        // fois qu'Atlas l'ecrit (le banc ne garde aucun pixel). ⚠️ On guette
+        // « REVEIL », pas « HOPITAL » : la facture passe aussi par un message
+        // du HUD, et lui a le droit de s'ecrire sur la rue.
+        const ecrits = [];
+        const vraiTexte = L.Atlas.texte;
+        function alpha() {
+            const tr = L.B.transition;
+            if (!tr) return null;
+            const noir = tr.ferme + tr.tient;
+            return tr.t <= tr.ferme ? tr.t / tr.ferme
+                 : tr.t <= noir ? 1
+                 : 1 - (tr.t - noir) / tr.ouvre;
+        }
+        L.Atlas.texte = function (ctx, s, x, y, c, e) {
+            if (String(s).indexOf('REVEIL') >= 0) ecrits.push(alpha());
+            return vraiTexte.apply(null, arguments);
+        };
+        // Un passant et un char : rien de tout ca ne doit avancer dans le noir.
+        const passant = o.poser('flaneur', 40, 0);
+        passant.etat = 'flane';
+        const char = o.char('auto', -40, 0, 0);
+        char.etat = 'roule'; char.vitesse = 3;
+        const avant = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x, x: j.x, y: j.y };
+        L.Entites.blesser(j, 9999, null, {});
+        const lance = { fondu: !!L.B.transition, tient: L.B.transition && L.B.transition.tient,
+                        dejaLoin: Math.hypot(j.x - avant.x, j.y - avant.y) };
+        // Image par image : ou est le joueur, et a quel alpha ?
+        const images = [];
+        for (let i = 0; i < 300 && L.B.transition; i++) {
+            o.frame(1);
+            images.push({ a: Math.round((alpha() === null ? 0 : alpha()) * 1000) / 1000,
+                          loin: Math.round(Math.hypot(j.x - avant.x, j.y - avant.y)) });
+        }
+        L.Atlas.texte = vraiTexte;
+        const apres = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x };
+        o.frame(5);
+        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        return { lance: lance, images: images, ecrits: ecrits, avant: avant, apres: apres,
+                 repart: L.B.t - apres.t, vie: j.vie, max: j.vieMax,
+                 arrive: Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT) };
+    }""")
+    assert r["lance"]["fondu"] is True, "tomber doit lancer un fondu de `Jeu.transiter`"
+    assert r["lance"]["tient"] > 0, "une ellipse tient le noir : c'est la que le temps passe"
+    assert r["lance"]["dejaLoin"] == 0, "le joueur est parti a l'hopital AVANT que le noir commence"
+    change = [i for i, im in enumerate(r["images"]) if im["loin"] > 8]
+    assert change, "on ne s'est jamais reveille a l'hopital"
+    assert r["images"][change[0]]["a"] == 1.0, (
+        "la teleportation se voit a %s de noir : c'est le defaut de l'ancien fondu"
+        % r["images"][change[0]]["a"]
+    )
+    assert r["ecrits"], "le fondu doit dire ou l'on se reveille et ce que ca coute"
+    assert all(a == 1.0 for a in r["ecrits"]), (
+        "le texte s'ecrit sur une rue qu'on voit encore (alphas %s)" % sorted(set(r["ecrits"]))
+    )
+    assert r["images"][-1]["a"] < 0.2, "le fondu ne finit pas en clair"
+    assert 120 <= len(r["images"]) <= 200, (
+        "une ellipse d'hopital se sent : ni un clignotement, ni une attente (%s images)"
+        % len(r["images"])
+    )
+    # ⚠️ La ville est FIGEE pendant : on gisait a 1 PV au milieu de la rue
+    # pendant deux secondes et demie, et un char pouvait repasser dessus.
+    assert r["apres"]["t"] == r["avant"]["t"], "le temps de jeu a passe pendant le fondu"
+    assert r["apres"]["heure"] == r["avant"]["heure"], "l'heure a avance pendant le fondu"
+    assert r["apres"]["px"] == r["avant"]["px"], "un passant a marche pendant le fondu"
+    assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
+    assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
+    assert r["vie"] == r["max"] and r["arrive"] < 48
+
+
+def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(banc):
+    """⚠️ Le cas qui casse tout, version ellipse : deux fondus en meme temps.
+
+    C'est celui que `finirTransition()` reglait deja pour les portes — passer
+    une porte pendant le noircissement d'une autre. Depuis que l'hopital et la
+    prison ont la meme machine, la regle doit valoir pour eux : le fondu qui
+    joue finit tout de suite (sa scene change, une fois), et le nouveau repart
+    du clair. Sinon on se reveille a l'hopital APRES etre sorti de prison."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.argent = 900;
+        L.Entites.blesser(j, 9999, null, {});
+        o.frame(10);                                  // en plein noircissement
+        const pendant = { t: L.B.transition.t, fait: L.B.transition.fait };
+        L.B.recherche.etoiles = 3;
+        L.Missions.prison(null);
+        const repart = { t: L.B.transition.t, fait: L.B.transition.fait };
+        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        const auHopital = Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT) < 48;
+        o.fondu();
+        const poste = L.Monde.carte.points.find(function (p) { return p.slug === 'poste'; });
+        return { pendant: pendant, repart: repart, auHopital: auHopital,
+                 auPoste: Math.hypot(j.x - poste.x * L.TT, j.y - poste.y * L.TT),
+                 fondus: !!L.B.transition, arrete: !!j.arrete, vie: j.vie, max: j.vieMax };
+    }""")
+    assert r["pendant"]["fait"] is False and r["pendant"]["t"] > 0, "le premier fondu doit etre en cours"
+    assert r["auHopital"] is True, (
+        "le fondu interrompu doit avoir fait ce qu'il promettait (le reveil a l'hopital), une fois"
+    )
+    assert r["repart"] == {"t": 0, "fait": False}, (
+        "le fondu de la prison repart du clair : %s" % r["repart"]
+    )
+    assert r["fondus"] is False, "il reste un fondu ouvert"
+    assert r["auPoste"] < 48 and r["arrete"] is False and r["vie"] == r["max"]
+
+
 def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -2393,11 +2520,13 @@ def test_la_planque_dort_sauve_et_garde_le_coffre(banc):
         j.x = lit.x * L.TT + 8; j.y = lit.y * L.TT + 8 + 12;
         L.Missions.utiliserPoint(j);
         L.B.menu.items[0].faire();          // dormir
+        const fondu = !!L.B.transition;
         L.Hud.fermerMenu();
+        o.fondu();
         const brut = JSON.parse(o.store[L.Sauvegarde.CLE]);
         return { menuCoffre: menuCoffre, coffre: L.B.partie.planque.coffre, poches: L.B.partie.argent,
                  jour: L.B.partie.jour - jour, heure: L.B.partie.heure, vie: j.vie,
-                 sauve: { coffre: brut.planque.coffre, jour: brut.jour, x: brut.x }, fondu: !!L.B.fondu,
+                 sauve: { coffre: brut.planque.coffre, jour: brut.jour, x: brut.x }, fondu: fondu,
                  dehorsX: porte.x * L.TT + 8 };
     }""")
     assert r["menuCoffre"] == "LE COFFRE"

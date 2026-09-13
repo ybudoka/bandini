@@ -15,8 +15,7 @@ const B = {
   interieur: null,      // la piece ou l'on est, ou null dehors
   exterieur: null,      // la ville mise de cote pendant qu'on est dedans
   dialogue: null,       // boite de texte en cours
-  fondu: null,
-  transition: null,     // un fondu de porte EN COURS ; non nul = simulation figee (voir Jeu.transiter)
+  transition: null,     // un changement de scene EN COURS ; non nul = simulation figee (voir Jeu.transiter)
   t: 0,                 // images simulees depuis le demarrage
   /*: Les images DESSINEES depuis le demarrage. ⚠️ Ce n'est pas `t` : `t` est le
     temps du MONDE, et il s'arrete des qu'on ouvre la carte, un menu ou la

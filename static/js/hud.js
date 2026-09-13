@@ -472,46 +472,34 @@ const Hud = (function () {
     B.stats.rects += 2;
   }
 
-  /** Le noir d'un fondu de porte (`Jeu.transiter`) : il monte a 1 sur la scene
-      qu'on quitte, et redescend sur la nouvelle.
+  /** Le noir d'un changement de scene (`Jeu.transiter`) : il monte a 1 sur la
+      scene qu'on quitte, se TIENT le temps de l'ellipse, et redescend sur la
+      nouvelle.
 
       ⚠️ `vu` dit au jeu que le noir a ete DESSINE. C'est le HUD qui le sait, et
       lui seul : sans ce drapeau, la boucle qui rattrape plusieurs images de
       simulation d'un coup eclaircirait deja quand la nouvelle scene se montre
-      pour la premiere fois. */
+      pour la premiere fois.
+
+      ⚠️ Et le texte ne s'ecrit QUE sur du noir plein. L'ancien fondu des
+      ellipses l'affichait entre 35 % et 75 % de sa course : « REVEIL A
+      L'HOPITAL » se lisait par-dessus le trottoir ou l'on venait de tomber. */
   function dessinerTransition(ctx) {
     const tr = B.transition;
     if (!tr) return;
-    const part = tr.t <= tr.ferme ? tr.t / tr.ferme : 1 - (tr.t - tr.ferme) / tr.ouvre;
+    const noir = tr.ferme + tr.tient;
+    const part = tr.t <= tr.ferme ? tr.t / tr.ferme
+               : tr.t <= noir ? 1
+               : 1 - (tr.t - noir) / tr.ouvre;
     const alpha = Math.max(0, Math.min(1, part));
     ctx.fillStyle = 'rgba(11,10,18,' + alpha.toFixed(3) + ')';
     ctx.fillRect(0, 0, VW, VH);
+    if (tr.texte && alpha >= 1) {
+      const l = Atlas.largeurTexte(tr.texte, 1);
+      Atlas.texte(ctx, tr.texte, (VW - l) / 2, VH / 2 - 4, '#cdc6e6', 1);
+    }
     if (tr.fait) tr.vu = true;
     B.stats.rects++;
-  }
-
-  /** Un fondu au noir, avec une ligne au milieu : ce qui se passe ne se
-      montre pas. Sert aux ellipses (M5) — les portes, elles, passent par
-      `Jeu.transiter` : un fondu qui change la scene avant de noircir ne fond
-      rien. */
-  function fondu(duree, texte) {
-    B.fondu = { t: 0, duree: duree || 90, texte: texte || null };
-  }
-
-  function dessinerFondu(ctx) {
-    dessinerTransition(ctx);
-    const f = B.fondu;
-    if (!f) return;
-    f.t++;
-    const part = f.t / f.duree;
-    const alpha = part < 0.5 ? part * 2 : (1 - part) * 2;
-    ctx.fillStyle = 'rgba(11,10,18,' + Math.min(1, alpha).toFixed(3) + ')';
-    ctx.fillRect(0, 0, VW, VH);
-    if (f.texte && part > 0.35 && part < 0.75) {
-      const l = Atlas.largeurTexte(f.texte, 1);
-      Atlas.texte(ctx, f.texte, (VW - l) / 2, VH / 2 - 4, '#cdc6e6', 1);
-    }
-    if (f.t >= f.duree) B.fondu = null;
   }
 
   // --- Scores ---------------------------------------------------------------------
@@ -971,7 +959,7 @@ const Hud = (function () {
     }
     if (B.etat === 'jeu') { invite(ctx); dessinerDialogue(ctx); dessinerMenu(ctx); }
     if (B.etat === 'carte') dessinerCarte(ctx);
-    dessinerFondu(ctx);
+    dessinerTransition(ctx);
     if (B.options.perf) {
       const s = B.stats;
       Atlas.texte(ctx, Math.round(s.ms * 10) / 10 + 'MS ' + s.images + 'I ' + s.entites + 'E', 6, VH - 8, '#8f8', 1);
@@ -983,7 +971,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },

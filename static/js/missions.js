@@ -4,6 +4,15 @@
 const Missions = (function () {
   'use strict';
 
+  /*: Les ellipses : `[noircir, TENIR, eclaircir]`, en images (voir
+    `Jeu.transiter`). ⚠️ Ce n'est pas un fondu de porte — une porte, on la
+    passe ; ici il PASSE DU TEMPS, et ce temps se sent dans le noir tenu, ou
+    s'ecrit ce qui vient d'arriver. Le noir est la moitie de la duree : plus
+    court, on n'a pas fini de lire ; plus long, on attend. */
+  const FONDU_ELLIPSE = [40, 70, 40];   // l'hopital, la prison : la plus longue absence
+  const FONDU_NUIT = [32, 56, 32];      // une nuit de sommeil
+  const FONDU_SOUFFLE = [24, 42, 24];   // la compagnie d'une fille de la Brume
+
   function encaisser(montant, raison) {
     montant = Math.max(0, Math.round(montant));
     B.partie.argent = Math.min(B.defs.economie.fortune_max, B.partie.argent + montant);
@@ -111,9 +120,10 @@ const Missions = (function () {
     if (B.recherche.etoiles > 0) { Hud.message('PAS AVEC LA POLICE AUX FESSES'); return true; }
     if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
     payer(prix, 'LA BRUME');
-    soigner(j, B.defs.economie.tarifs.compagnie_pv);
     fille.minuterie = 900;
-    Hud.fondu(90, 'ON REPREND SON SOUFFLE');
+    Jeu.transiter(FONDU_SOUFFLE, function () {
+      soigner(j, B.defs.economie.tarifs.compagnie_pv);
+    }, 'ON REPREND SON SOUFFLE');
     return true;
   }
 
@@ -157,20 +167,19 @@ const Missions = (function () {
     const facture = factureHopital(B.partie.argent);
     payer(facture, 'HOPITAL');
     B.partie.stats.hospitalisations = (B.partie.stats.hospitalisations || 0) + 1;
-    Hud.fondu(150, 'REVEIL A L’HOPITAL — ' + facture + ' $');
     Police.remiseAZero();
     if (taxi.etape) taxi.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'A L’HOPITAL');
     Histoire.evenement('mort');
     const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
-    setTimeoutJeu(60, function () {
+    Jeu.transiter(FONDU_ELLIPSE, function () {
       if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
       j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
       j.surplus = 0;                  // le surplus est passager : il ne survit pas a l'hopital
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       j.hospitalise = false;
-    });
+    }, 'REVEIL A L’HOPITAL — ' + facture + ' $');
   }
 
   // --- L'arrestation : pot-de-vin ou prison ---------------------------------------------
@@ -220,25 +229,16 @@ const Missions = (function () {
     if (agent) { agent.etat = 'flane'; agent.but = null; }
     const heures = B.defs.recherche.police.prison_heures / 24;
     p.heure += heures; while (p.heure >= 1) { p.heure -= 1; p.jour += 1; nouveauJour(); }
-    Hud.fondu(150, 'PRISON — ' + fine + ' $, ARMES CONFISQUEES');
-    setTimeoutJeu(60, function () {
+    Jeu.transiter(FONDU_ELLIPSE, function () {
       const poste = Monde.carte.points.find(function (q) { return q.slug === 'poste'; });
       if (poste) { j.x = poste.x * TT + 8; j.y = poste.y * TT + 20; }
       j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false; j.surplus = 0;
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       sauvegarderPartie();
-    });
+    }, 'PRISON — ' + fine + ' $, ARMES CONFISQUEES');
   }
 
-  //: Des minuteries en images de jeu (pas setTimeout : le banc n'a pas d'horloge).
-  const minuteries = [];
-  function setTimeoutJeu(images, fn) { minuteries.push({ t: images, fn: fn }); }
-  function majMinuteries() {
-    for (let i = minuteries.length - 1; i >= 0; i--) {
-      if (--minuteries[i].t <= 0) { const m = minuteries.splice(i, 1)[0]; m.fn(); }
-    }
-  }
 
   // --- Le taxi : un client, une destination, un pourboire selon la douceur ----------
 
@@ -592,21 +592,25 @@ const Missions = (function () {
     return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TETE' };
   }
 
-  /** Dormir : la nuit passe, on se reveille au matin, la partie est sauvee. */
-  function dormir() {
-    const p = B.partie;
-    p.jour += 1;
-    p.heure = 0.30;
-    B.joueur.vie = B.joueur.vieMax;
-    B.joueur.endurance = 100;
-    B.joueur.cafeine = 0;
-    B.joueur.surplus = 0;             // une nuit reprend le souffle, pas l'avance
+  /** Dormir : la nuit passe, on se reveille au matin, la partie est sauvee.
 
-    p.vie = B.joueur.vie;
-    Police.remiseAZero();
-    nouveauJour();
-    sauvegarderPartie();
-    Hud.fondu(120, 'LE LENDEMAIN MATIN');
+      ⚠️ La nuit passe AU NOIR, comme l'hopital et la prison : le jour ne
+      change pas sous les yeux du joueur, il a change quand la lumiere revient. */
+  function dormir() {
+    Jeu.transiter(FONDU_NUIT, function () {
+      const p = B.partie;
+      p.jour += 1;
+      p.heure = 0.30;
+      B.joueur.vie = B.joueur.vieMax;
+      B.joueur.endurance = 100;
+      B.joueur.cafeine = 0;
+      B.joueur.surplus = 0;           // une nuit reprend le souffle, pas l'avance
+
+      p.vie = B.joueur.vie;
+      Police.remiseAZero();
+      nouveauJour();
+      sauvegarderPartie();
+    }, 'LE LENDEMAIN MATIN');
   }
 
   // --- Le garage de Ti-Guy --------------------------------------------------------------
@@ -874,7 +878,6 @@ const Missions = (function () {
   }
 
   function maj() {
-    majMinuteries();
     // Le cafe est une minuterie, pas une depense : il s'ecoule aussi au volant
     // et dans une piece, la ou `majJoueur` ne passe pas.
     if (B.joueur && B.joueur.cafeine > 0) B.joueur.cafeine--;
@@ -890,7 +893,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           taxi, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();
