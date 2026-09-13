@@ -43,8 +43,9 @@ const Entites = (function () {
 
   function creerDecor(def) {
     (def.decor || []).forEach(function (d) {
+      const fiche = DECORS[d.type] || {};
       creer('decor', d.x * TT + 8, d.y * TT + 15, {
-        decor: d.type, r: d.type === 'arbre' ? 5 : 2, solide: d.type === 'arbre',
+        decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
       });
     });
   }

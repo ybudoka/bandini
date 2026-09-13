@@ -9,6 +9,11 @@ const Monde = (function () {
 
   const MORCEAU = 16;                 // tuiles par cote d'un morceau
   const MORCEAU_PX = MORCEAU * TT;
+  // ⚠️ Le Faubourg fait 77 morceaux ; a 256x256 en RGBA, tout gardez-vous
+  // coute 20 Mo de canevas — un telephone rend l'ame bien avant. On n'en garde
+  // que le tour de l'ecran (9 visibles au pire), avec de la marge pour ne pas
+  // repeindre a chaque pas de cote.
+  const MORCEAUX_MAX = 24;
   const MUR = 1, EAU = 2, BASSE = 4;  // masques de collision
   const MASQUE_PIETON = MUR | EAU;
   const MASQUE_VEHICULE = MUR | EAU | BASSE;
@@ -27,11 +32,16 @@ const Monde = (function () {
         route[y * w + x] = p.route ? 1 : 0;
       }
     }
+    const portes = new Map();
+    (def.portes || []).forEach(function (p) { portes.set(p.x + ',' + p.y, p); });
     carte = {
       def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende,
-      solide: solide, route: route, morceaux: new Map(),
+      solide: solide, route: route, morceaux: new Map(), visibles: new Set(),
+      portesParTuile: portes, mini: null,
       lampes: (def.lampes || []).map(function (l) { return { x: l.x * TT + 8, y: l.y * TT + 2, r: 44, c: 'rgba(255,214,130,0.55)' }; }),
       portes: def.portes || [],
+      points: def.points_interet || [],
+      zones: def.zones || [],
       apparition: def.apparition,
       pxW: w * TT, pxH: h * TT,
     };
@@ -76,10 +86,18 @@ const Monde = (function () {
     return true;
   }
 
-  /** Une porte a cette tuile ? */
+  /** Une porte a cette tuile ? (index : on interroge a chaque image) */
   function porteA(tx, ty) {
-    for (const p of carte.portes) if (p.x === tx && p.y === ty) return p;
-    return null;
+    return carte.portesParTuile.get(tx + ',' + ty) || null;
+  }
+
+  /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */
+  function zoneA(x, y) {
+    let trouvee = null;
+    for (const z of carte.zones) {
+      if (x >= z.x * TT && x < (z.x + z.l) * TT && y >= z.y * TT && y < (z.y + z.h) * TT) trouvee = z;
+    }
+    return trouvee;
   }
 
   // --- Rendu du sol ---------------------------------------------------------------
@@ -104,16 +122,68 @@ const Monde = (function () {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const m0x = Math.floor(cx / MORCEAU_PX), m0y = Math.floor(cy / MORCEAU_PX);
     const m1x = Math.floor((cx + VW - 1) / MORCEAU_PX), m1y = Math.floor((cy + VH - 1) / MORCEAU_PX);
+    carte.visibles.clear();
     for (let my = m0y; my <= m1y; my++) {
       for (let mx = m0x; mx <= m1x; mx++) {
         if (mx < 0 || my < 0 || mx * MORCEAU >= carte.w || my * MORCEAU >= carte.h) continue;
         const cle = mx + ',' + my;
         let m = carte.morceaux.get(cle);
-        if (!m) { m = peindreMorceau(mx, my); carte.morceaux.set(cle, m); }
+        if (m) carte.morceaux.delete(cle);          // re-insere = le plus frais
+        else m = peindreMorceau(mx, my);
+        carte.morceaux.set(cle, m);
+        carte.visibles.add(cle);
         ctx.drawImage(m, mx * MORCEAU_PX - cx, my * MORCEAU_PX - cy);
         B.stats.images++;
       }
     }
+    oublierLesVieuxMorceaux();
+    B.stats.morceaux = carte.morceaux.size;
+  }
+
+  /** Jette les morceaux les plus anciens, jamais un morceau a l'ecran. */
+  function oublierLesVieuxMorceaux() {
+    if (carte.morceaux.size <= MORCEAUX_MAX) return;
+    for (const cle of carte.morceaux.keys()) {
+      if (carte.morceaux.size <= MORCEAUX_MAX) break;
+      if (!carte.visibles.has(cle)) carte.morceaux.delete(cle);
+    }
+  }
+
+  // --- Mini-carte -----------------------------------------------------------------
+
+  /** Une couleur par FAMILLE de tuile, lue dans la legende : un glyphe ajoute
+      demain apparait tout seul sur la mini-carte. */
+  function couleurMini(glyphe) {
+    const p = carte.legende[glyphe] || {};
+    if (p.solide === 2) return '#24506f';
+    if (p.solide === 1) return '#4a3f3f';
+    if (p.route) return '#34373d';
+    if (p.trottoir) return '#8a877c';
+    if (p.herbe) return '#3f6b33';
+    if (p.ruelle) return '#4a4741';
+    return '#6b5a3a';
+  }
+
+  /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
+      au chargement valent mieux que 64x48 relus a chaque image. */
+  function miniCarte() {
+    if (carte.mini) return carte.mini;
+    const c = Base.nouveauCanvas(carte.w, carte.h);
+    const ctx = c.getContext('2d');
+    for (let y = 0; y < carte.h; y++) {
+      const ligne = carte.sol[y];
+      let debut = 0, couleur = couleurMini(ligne[0]);
+      for (let x = 1; x <= carte.w; x++) {
+        const suivante = x < carte.w ? couleurMini(ligne[x]) : null;
+        if (suivante !== couleur) {
+          ctx.fillStyle = couleur;
+          ctx.fillRect(debut, y, x - debut, 1);
+          debut = x; couleur = suivante;
+        }
+      }
+    }
+    carte.mini = c;
+    return c;
   }
 
   // --- Camera ---------------------------------------------------------------------
@@ -189,9 +259,10 @@ const Monde = (function () {
   }
 
   return {
-    MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE,
-    charger, glyphe, solidite, bloque, estRoute, ligneLibre, porteA,
+    MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
+    charger, glyphe, solidite, bloque, estRoute, ligneLibre, porteA, zoneA,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
+    miniCarte, couleurMini,
     get carte() { return carte; },
   };
 })();

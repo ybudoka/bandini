@@ -96,6 +96,49 @@ const Hud = (function () {
     B.stats.rects += 3;
   }
 
+  // --- Mini-carte ---------------------------------------------------------------------
+
+  const MINI = { x: 6, y: 22, l: 64, h: 48 };
+
+  //: Une couleur par famille de lieu — le joueur doit reconnaitre un blip sans
+  //: le lire. Le doré est a lui (planque, propriétés), le bleu aux services.
+  const COULEUR_BLIP = {
+    planque: '#e8b33c', garage: '#e8b33c', bar: '#e8b33c', kiosque: '#e8b33c',
+    poste: '#6f9fd8', hopital: '#d86f7f',
+    armurerie: '#8ad26a', vetements: '#8ad26a', casse_croute: '#8ad26a',
+    terminus: '#cdc6e6',
+  };
+
+  /** La ville autour du joueur, une tuile par pixel, avec les lieux en blips. */
+  function miniCarte(ctx) {
+    const carte = Monde.carte, j = B.joueur;
+    if (!carte || !j) return;
+    const mini = Monde.miniCarte();
+    const sx = borner(Math.round(j.x / TT) - MINI.l / 2, 0, Math.max(0, carte.w - MINI.l));
+    const sy = borner(Math.round(j.y / TT) - MINI.h / 2, 0, Math.max(0, carte.h - MINI.h));
+    ctx.fillStyle = 'rgba(11,10,18,0.85)';
+    ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
+    ctx.drawImage(mini, sx, sy, MINI.l, MINI.h, MINI.x, MINI.y, MINI.l, MINI.h);
+    B.stats.images++;
+    for (const point of carte.points) {
+      const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
+      if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
+      ctx.fillStyle = '#101018'; ctx.fillRect(px - 1, py - 1, 3, 3);
+      ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(px, py, 2, 2);
+      B.stats.rects += 2;
+    }
+    // Le joueur par-dessus tout le reste : c'est lui qu'on cherche des yeux.
+    const jx = MINI.x + Math.round(j.x / TT) - sx, jy = MINI.y + Math.round(j.y / TT) - sy;
+    ctx.fillStyle = '#101018'; ctx.fillRect(jx - 1, jy - 1, 4, 4);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(jx, jy, 2, 2);
+    ctx.fillStyle = '#efe6d0';
+    ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, 1);
+    ctx.fillRect(MINI.x - 1, MINI.y + MINI.h, MINI.l + 2, 1);
+    ctx.fillRect(MINI.x - 1, MINI.y - 1, 1, MINI.h + 2);
+    ctx.fillRect(MINI.x + MINI.l, MINI.y - 1, 1, MINI.h + 2);
+    B.stats.rects += 6;
+  }
+
   function dessiner() {
     const ctx = Base.ecran();
     const j = B.joueur, p = B.partie;
@@ -104,6 +147,7 @@ const Hud = (function () {
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       barre(ctx, 6, 13, 60, 3, j ? j.endurance / 100 : 1, '#e8b33c');
+      miniCarte(ctx);
       // Argent, etoiles, heure a droite.
       const argent = p.argent.toLocaleString('fr-CA') + ' $';
       Atlas.texte(ctx, argent, VW - 6 - Atlas.largeurTexte(argent, 2), 6, '#e8b33c', 2);
@@ -112,6 +156,14 @@ const Hud = (function () {
       Atlas.texte(ctx, etoiles, VW - 6 - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#555560', 1);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       Atlas.texte(ctx, heure, VW - 6 - Atlas.largeurTexte(heure, 1), 28, '#cdc6e6', 1);
+      // Le quartier ou l'on se trouve, sous la mini-carte.
+      const zone = j ? Monde.zoneA(j.x, j.y) : null;
+      if (zone) {
+        // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
+        // trottoir en plein jour — teste a l'oeil, pas en theorie.
+        Atlas.texte(ctx, zone.nom, MINI.x + 1, MINI.y + MINI.h + 5, '#14121c', 1);
+        Atlas.texte(ctx, zone.nom, MINI.x, MINI.y + MINI.h + 4, zone.gang ? '#e88a98' : '#e8e2f4', 1);
+      }
       // Arme en bas a droite.
       const arme = Combat.armeCourante();
       if (arme) {
@@ -139,5 +191,5 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, dessiner, montrerScores, demanderScore, afficherScores };
+  return { init, voile, etat, message, dessiner, miniCarte, MINI, montrerScores, demanderScore, afficherScores };
 })();

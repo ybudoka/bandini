@@ -11,7 +11,7 @@ import pytest
 from app import economie
 
 
-def test_le_moteur_charge_et_expose_son_api(banc):
+def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     r = banc("""function (L, o) {
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
                  carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length };
@@ -20,7 +20,7 @@ def test_le_moteur_charge_et_expose_son_api(banc):
     for cle in ("B", "Base", "Atlas", "Entree", "Son", "Monde", "Entites", "Combat", "Vehicules",
                 "Police", "Missions", "Hud", "Jeu", "Sauvegarde", "SPRITES", "TUILES"):
         assert cle in r["cles"], cle
-    assert r["carte"] == [60, 34]
+    assert r["carte"] == [paquet["carte"]["largeur"], paquet["carte"]["hauteur"]]
     assert r["fetchs"] == 1
 
 
@@ -53,7 +53,7 @@ def test_le_joueur_marche_et_ne_traverse_pas_les_murs(banc):
     }""")
     assert r["x1"] > r["x0"] + 50
     assert r["x2"] - r["x1"] > (r["x1"] - r["x0"]) * 1.4, "le sprint doit etre nettement plus rapide"
-    assert r["sol"] == 0, "le joueur a fini dans un mur"
+    assert r["sol"] in (0, 3), "le joueur a fini dans un mur"
     assert r["y"] > 0
     assert r["etat"] == "jeu" and r["dataEtat"] == "jeu"
 
@@ -175,3 +175,98 @@ def test_le_singe_ne_casse_rien(banc, graine):
     assert r["dedans"] and r["sol"] in (0, 3) and not r["nan"]
     assert r["argent"] >= 0
     assert r["t"] > 1000
+
+
+# --- M1 : la ville ---------------------------------------------------------
+
+
+def test_la_ville_recue_est_celle_du_serveur(banc, paquet):
+    r = banc("""function (L, o) {
+        const c = L.Monde.carte, d = L.B.defs.carte;
+        return { w: c.w, h: c.h, portes: c.portes.length, points: c.points.length,
+                 decor: L.B.defs.carte.decor.length, lampes: c.lampes.length,
+                 zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }) };
+    }""")
+    carte = paquet["carte"]
+    assert [r["w"], r["h"]] == [carte["largeur"], carte["hauteur"]]
+    assert r["portes"] == len(carte["portes"]) >= 8
+    assert r["points"] == len(carte["points_interet"])
+    assert r["decor"] == len(carte["decor"]) > 100
+    assert r["lampes"] == len(carte["lampes"]) > 40
+    assert r["zones"] >= 2
+    assert r["sansPeintre"] == [], "une tuile de la legende n'a pas de peintre"
+
+
+def test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const dur = L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT));
+        const lieux = L.Monde.carte.points.map(function (p) {
+            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1)];
+        });
+        return { dur: dur, lieux: lieux, zone: L.Monde.zoneA(j.x, j.y).slug,
+                 horsCarte: L.Monde.porteA(-1, -1) };
+    }""")
+    assert r["dur"] in (0, 3), "le joueur apparait dans un mur"
+    for slug, dur, porte in r["lieux"]:
+        assert dur in (0, 3), f"{slug} : on ne peut pas s'en approcher"
+        assert porte is True, f"{slug} : pas de porte au-dessus du point d'interet"
+    assert r["zone"] == "faubourg"
+    assert r["horsCarte"] is None
+
+
+def test_le_cache_de_morceaux_ne_gonfle_pas_quand_on_traverse_la_ville(banc):
+    """Un cache non borne, c'est 20 Mo de canevas et un telephone qui rame."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const vus = [];
+        // On traverse la ville en diagonale, en rendant a chaque saut.
+        for (let i = 0; i < 40; i++) {
+            j.x = 40 + (c.pxW - 80) * i / 39;
+            j.y = 40 + (c.pxH - 80) * i / 39;
+            L.Monde.centrerCamera(j.x, j.y);
+            L.Jeu.rendre();
+            vus.push(L.B.stats.morceaux);
+        }
+        return { max: Math.max.apply(null, vus), plafond: L.Monde.MORCEAUX_MAX,
+                 images: L.B.stats.images, fin: L.B.stats.morceaux };
+    }""")
+    assert r["max"] <= r["plafond"], f"{r['max']} morceaux en cache pour un plafond de {r['plafond']}"
+    assert r["fin"] > 0 and r["images"] > 0
+
+
+def test_la_mini_carte_est_cuite_une_seule_fois(banc, paquet):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const a = L.Monde.miniCarte(), b = L.Monde.miniCarte();
+        L.Hud.dessiner();
+        return { meme: a === b, w: a.width, h: a.height,
+                 eau: L.Monde.couleurMini('~'), mur: L.Monde.couleurMini('B'),
+                 route: L.Monde.couleurMini('#'), herbe: L.Monde.couleurMini(','),
+                 taille: [L.Hud.MINI.l, L.Hud.MINI.h] };
+    }""")
+    assert r["meme"] is True, "la mini-carte est repeinte a chaque appel"
+    assert [r["w"], r["h"]] == [paquet["carte"]["largeur"], paquet["carte"]["hauteur"]]
+    assert len({r["eau"], r["mur"], r["route"], r["herbe"]}) == 4, "les familles doivent se distinguer"
+    assert r["taille"] == [64, 48]
+
+
+def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        function pousser(type) {
+            const d = L.B.entites.find(function (e) { return e.decor === type; });
+            if (!d) return null;
+            j.x = d.x; j.y = d.y + 20; j.vx = 0; j.vy = 0;
+            for (let i = 0; i < 30; i++) L.Entites.deplacerCercle(j, 0, -1.2, L.Monde.MASQUE_PIETON);
+            return Math.round(j.y - d.y);
+        }
+        return { arbre: pousser('arbre'), buisson: pousser('buisson'),
+                 lampadaire: pousser('lampadaire') };
+    }""")
+    assert r["arbre"] is not None and r["arbre"] > 0, "on traverse les arbres"
+    assert r["buisson"] is not None and r["buisson"] <= 0, "un buisson ne doit pas bloquer"
+    assert r["lampadaire"] <= 0, "un lampadaire ne doit pas bloquer"
