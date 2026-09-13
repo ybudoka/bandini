@@ -20,6 +20,21 @@ const Entites = (function () {
   //: ni ne disparait sous les yeux du joueur.
   const BULLE_NAISSANCE = 300, BULLE_OUBLI = 520;
   const MAX_PIETONS = 22, MAX_PARTICULES = 300, MAX_DECALS = 150;
+  //: Jusqu'ou chercher du decor solide autour de soi. ⚠️ La recherche est un
+  //: CERCLE et l'empreinte une BOITE : il faut couvrir le coin de la boite la
+  //: plus grosse, sinon le camion-restaurant n'est meme pas trouve et on lui
+  //: passe au travers sans un seul test. Un juge refait le calcul sur chaque
+  //: decor solide — ajouter un decor plus large sans monter ce chiffre tombe.
+  const PORTEE_DECOR = 24;
+  //: Se demeler de la foule : jusqu'ou chercher ses voisins (le plus gros
+  //: rayon humain est 5 : 12 couvre large). Le pas, lui, se calcule — voir
+  //: `pasDeDemele`, il depend de la vitesse des jambes les plus rapides.
+  const RAYON_FOULE = 12;
+  //: De combien on peut bousculer quelqu'un qui tient son poste avant qu'il
+  //: devienne un mur. ⚠️ Assez pour qu'on se faufile (un corps fait 10 px de
+  //: large), pas assez pour qu'on promene un donneur de mission a l'autre bout
+  //: de la ville — au-dela, il ne cede plus, et il revient des qu'on le lache.
+  const ECART_PLANTE = 10;
 
   let suivantId = 1;
   //: Deux index : le decor ne bouge JAMAIS (bati une fois, a la creation) et
@@ -186,6 +201,16 @@ const Entites = (function () {
     for (const e of B.entites) if ((e.type === 'decor' || e.type === 'ambulant') && e.solide) ajouterA(grilleFixe, e);
   }
 
+  /** Y a-t-il deja quelqu'un debout ici ? ⚠️ Les deux branches de
+      `placeDeNaissance` rendent un CENTRE DE TUILE : deux naissances sur la
+      meme tuile, c'est le meme pixel — deux corps parfaitement confondus
+      (mesure : deux agents nes l'un dans l'autre a l'image 31, 10 px de
+      chevauchement). La foule se demele bien toute seule ensuite, mais on ne
+      devrait pas naitre a demeler. */
+  function placeLibre(x, y) {
+    return autour(x, y, 11, deboutDansLaFoule).length === 0;
+  }
+
   /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran.
       Une fois sur trois, il SORT D'UNE PORTE — la ville a des dedans. */
   function placeDeNaissance() {
@@ -196,6 +221,7 @@ const Entites = (function () {
         const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 8;
         if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) continue;
         if (visibleAEcran(x, y, 24) || !Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+        if (!placeLibre(x, y)) continue;
         return { x: x, y: y };
       }
     }
@@ -208,6 +234,7 @@ const Entites = (function () {
       if (tx < 1 || ty < 1 || tx >= carte.w - 1 || ty >= carte.h - 1) continue;
       if (Monde.solidite(tx, ty) !== 0 || Monde.estRoute(tx, ty)) continue;
       if (visibleAEcran(x, y, 24)) continue;
+      if (!placeLibre(tx * TT + 8, ty * TT + 8)) continue;
       return { x: tx * TT + 8, y: ty * TT + 8 };
     }
     return null;
@@ -224,11 +251,16 @@ const Entites = (function () {
   function peuplerDabord() {
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     const voulu = Math.min(MAX_PIETONS, (zone ? zone.pietons : 12) * Monde.rythme(zone)) * 0.6;
+    // ⚠️ L'index d'abord, et tenu a jour a chaque naissance : sans lui
+    // `placeLibre` ne voit personne, et la foule de depart nait empilee sur
+    // quelques tuiles (elle se demele ensuite, mais on la voit le faire).
+    indexer();
     for (let essai = 0; essai < 80 && B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; }).length < voulu; essai++) {
       const a = B.rng() * Math.PI * 2, d = 40 + B.rng() * 260;
       const tx = Math.floor((B.joueur.x + Math.cos(a) * d) / TT), ty = Math.floor((B.joueur.y + Math.sin(a) * d) / TT);
       if (!Monde.marchablePieton(tx, ty) || Monde.estPassage(tx, ty)) continue;
-      creerPieton(tx * TT + 8, ty * TT + 8, null);
+      if (!placeLibre(tx * TT + 8, ty * TT + 8)) continue;
+      ajouterA(grille, creerPieton(tx * TT + 8, ty * TT + 8, null));
     }
     indexer();
   }
@@ -342,15 +374,106 @@ const Entites = (function () {
   }
 
   function bloquerParDecor(e) {
-    for (const d of decorAutour(e.x, e.y, e.r + 16)) {
+    for (const d of decorAutour(e.x, e.y, e.r + PORTEE_DECOR)) {
       if (d === e) continue;
+      const fiche = DECORS[d.decor];
       const dx = e.x - d.x, dy = e.y - d.y;
+      const sol = fiche && fiche.sol;
+      if (sol) {
+        // Une boite : on ressort par le cote le moins enfonce (voir DECORS).
+        const px = sol[0] + e.r - Math.abs(dx), py = sol[1] + e.r - Math.abs(dy);
+        if (px <= 0 || py <= 0) continue;
+        if (px < py) e.x = d.x + (dx < 0 ? -1 : 1) * (sol[0] + e.r);
+        else e.y = d.y + (dy < 0 ? -1 : 1) * (sol[1] + e.r);
+        continue;
+      }
       const min = e.r + d.r;
       const d2 = dx * dx + dy * dy;
       if (d2 >= min * min || d2 === 0) continue;
       const dist = Math.sqrt(d2);
       e.x = d.x + dx / dist * min;
       e.y = d.y + dy / dist * min;
+    }
+  }
+
+  // --- La foule ne se traverse pas -------------------------------------------------
+
+  /** Debout dans la foule : ni mort, ni assomme, ni au volant. ⚠️ On marche
+      SUR un cadavre — c'est deja la regle du tri au dessin — alors un corps a
+      terre ne pousse personne et ne se fait pousser par personne. */
+  function deboutDansLaFoule(e) {
+    return e.actif && e.vivant && !e.dansVehicule && e.etat !== 'assomme'
+      && (e.type === 'pieton' || e.type === 'joueur');
+  }
+
+  /** De combien on se degage par image. ⚠️ Ce plafond doit passer DEVANT les
+      jambes les plus rapides du jeu, sinon il se retourne contre lui-meme :
+      fixe a 1,5 px, il arretait bien le joueur qui MARCHE (1,2 px/image) et
+      laissait passer celui qui SPRINTE (2,1) — courir devenait un moyen de
+      traverser les gens, et on entrait dans le vendeur en tenant MAJ. */
+  function pasDeDemele() {
+    const v = B.defs.recherche.vitesses;
+    return Math.max(v.joueur_sprint, v.policier, v.pieton_course) + 0.4;
+  }
+
+  /** Se laisse-t-il pousser ? Tout le monde, sauf celui qui tient un poste et
+      s'en trouve deja trop loin : passe ECART_PLANTE, il devient un mur — sans
+      quoi on pourrait promener un personnage d'histoire jusqu'au port. */
+  function cede(e) {
+    if (e.etat !== 'fige') return true;
+    if (!e.plante) return true;
+    return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
+  }
+
+  /** ⚠️ Personne ne traverse personne. Sans cette passe, deux passants qui se
+      croisent se superposent EXACTEMENT : on voit une tete a quatre bras, et
+      une foule tient sur une tuile. Mesure avant correctif, en marchant deux
+      minutes dans la ville : 1032 paires enfoncees l'une dans l'autre en 960
+      images, jusqu'a 9,9 px — deux corps de 10 px parfaitement confondus.
+
+      ⚠️ On POUSSE, on ne teleporte pas : la separation est plafonnee a
+      `pasDeDemele()` px par image. Deux passants nes au meme endroit se
+      degagent alors en glissant, comme une foule le fait, au lieu de se
+      detacher d'un coup. Et la poussee passe par `deplacerCercle` : sinon on
+      se pousse mutuellement DANS un mur, ce qui est pire que se chevaucher.
+
+      ⚠️ Celui qui tient un poste (le vendeur, le donneur devant sa porte) se
+      laisse bousculer de quelques pixels et rentre chez lui tout seul — voir
+      `cede` et la branche `fige` de majPieton. */
+  function demeler() {
+    const gens = [];
+    for (const e of B.entites) if (deboutDansLaFoule(e)) gens.push(e);
+    for (const e of gens) { e.pousseX = 0; e.pousseY = 0; }
+    for (const e of gens) {
+      for (const autre of autour(e.x, e.y, e.r + RAYON_FOULE, deboutDansLaFoule)) {
+        // ⚠️ Une paire, une fois — mais le tour de TOUT LE MONDE, fige compris :
+        // en sautant le fige ici, la moitie des paires (celles ou son id vient
+        // en premier) n'etait jamais examinee, et on entrait dans le vendeur.
+        if (autre.id <= e.id) continue;
+        const min = e.r + autre.r;
+        let dx = e.x - autre.x, dy = e.y - autre.y;
+        let d = Math.hypot(dx, dy);
+        if (d >= min) continue;
+        if (d < 0.001) {
+          // Pile l'un sur l'autre : il faut choisir un sens, et toujours le
+          // meme — le banc est un juge, il ne tire pas a pile ou face.
+          dx = ((e.id + autre.id) % 2) ? 1 : 0; dy = 1 - dx; d = 1;
+        }
+        // Chacun sa moitie ; celui qui ne bougera pas laisse la sienne a l'autre.
+        const chevauche = min - d;
+        const pourE = cede(autre) ? chevauche / 2 : chevauche;
+        const pourAutre = cede(e) ? chevauche / 2 : chevauche;
+        e.pousseX += dx / d * pourE; e.pousseY += dy / d * pourE;
+        autre.pousseX -= dx / d * pourAutre; autre.pousseY -= dy / d * pourAutre;
+      }
+    }
+    const pas = pasDeDemele();
+    for (const e of gens) {
+      if (!cede(e) || (e.pousseX === 0 && e.pousseY === 0)) continue;
+      const n = Math.hypot(e.pousseX, e.pousseY);
+      const k = n > pas ? pas / n : 1;
+      deplacerCercle(e, e.pousseX * k, e.pousseY * k, Monde.MASQUE_PIETON);
+      dansLaCarte(e);
     }
   }
 
@@ -424,7 +547,22 @@ const Entites = (function () {
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
     if (e.saigne > 0) saigner(e);
 
-    if (e.etat === 'fige') { e.vx = 0; e.vy = 0; return; }
+    if (e.etat === 'fige') {
+      // ⚠️ Fige veut dire « il tient son poste », pas « c'est un poteau ». Un
+      // donneur vraiment immobile bouche la rue POUR TOUJOURS : l'agent lance
+      // aux trousses du joueur venait buter sur Ti-Guy et y restait — 260
+      // images sur place, l'arrestation n'arrivait jamais. On se laisse donc
+      // bousculer de quelques pixels (voir ECART_PLANTE), et on rentre.
+      if (!e.plante) e.plante = { x: e.x, y: e.y };
+      const dx = e.plante.x - e.x, dy = e.plante.y - e.y;
+      const loin = Math.hypot(dx, dy);
+      if (loin > 0.3) {
+        const pas = Math.min(loin, v.pieton);
+        deplacerCercle(e, dx / loin * pas, dy / loin * pas, Monde.MASQUE_PIETON);
+      }
+      e.vx = 0; e.vy = 0;
+      return;
+    }
     if (e.agent && Police.gere(e)) return;               // il poursuit, il enquete : la police le dirige
     // Le petit colle a sa mere : il ne flane jamais tout seul.
     if (e.suit && e.suit.vivant && e.etat !== 'fuit') {
@@ -778,6 +916,11 @@ const Entites = (function () {
         retirer(e);
       }
     }
+    // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
+    // date du debut de l'image, et demeler la foule sur des positions perimees
+    // laisse passer exactement les paires qui viennent de se rejoindre.
+    indexer();
+    demeler();
     majParticules();
     if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
     B.stats.actifs = actifs;
@@ -963,12 +1106,12 @@ const Entites = (function () {
   }
 
   return {
-    CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES,
+    CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
     semerDesArmesDeFortune, visibleAEcran,
-    deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj,
+    deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

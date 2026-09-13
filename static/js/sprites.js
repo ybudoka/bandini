@@ -285,7 +285,17 @@ const TUILES = (function () {
 
 /* Decor procedural : (ctx, w, h). `r` = rayon au sol, `solide` = on s'y cogne.
    ⚠️ Un poteau ou un buisson n'est PAS solide : un trottoir de 32 px ou l'on
-   reste coince sur une poubelle est un trottoir qu'on n'emprunte plus. */
+   reste coince sur une poubelle est un trottoir qu'on n'emprunte plus.
+
+   `sol` = [demi-largeur, demi-profondeur] de l'EMPREINTE AU SOL, centree sur
+   l'ancre (les pieds), pour ce qui est carre. Sans `sol`, c'est `r` qui sert.
+   ⚠️ Un cercle ne sait pas tenir un camion-restaurant : 44 px de large, 8 px
+   de profond. Le cercle qui tient dans la profondeur (r 16) laisse SIX PIXELS
+   de carrosserie ou le joueur se tient debout, dans le dessin — c'est la
+   capture que Martin a envoyee ; le cercle qui couvre la largeur (r 22) pose
+   un mur invisible de 22 px devant et derriere. Il faut une boite.
+   ⚠️ L'arbre, lui, garde son cercle : son tronc fait 3 px et sa cime est
+   PEINTE EN HAUTEUR. On passe sous une cime, on ne passe pas dans un comptoir. */
 const DECORS = {
   arbre: { w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -303,12 +313,12 @@ const DECORS = {
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
-  banc: { w: 18, h: 12, ancre: [9, 11], r: 5, solide: true, peindre: function (ctx, w, h) {
+  banc: { w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 3); ctx.fillRect(1, 0, 16, 3);
     ctx.fillStyle = '#523a22'; ctx.fillRect(2, 7, 2, 5); ctx.fillRect(14, 7, 2, 5);
     ctx.fillStyle = '#7d5a36'; ctx.fillRect(1, 4, 16, 1);
   } },
-  caisse: { w: 16, h: 16, ancre: [8, 15], r: 6, solide: true, peindre: function (ctx, w, h) {
+  caisse: { w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 14, 14);
     ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 3, 12, 5);
     ctx.fillStyle = '#6e5330'; ctx.fillRect(1, 8, 14, 1); ctx.fillRect(7, 2, 2, 14);
@@ -323,7 +333,7 @@ const DECORS = {
     ctx.fillStyle = '#807768'; ctx.fillRect(3, 2, 4, 4); ctx.fillRect(8, 4, 3, 3);
     ctx.fillStyle = '#544c44'; ctx.fillRect(2, 7, 3, 2); ctx.fillRect(9, 7, 4, 2);
   } },
-  fontaine: { w: 34, h: 30, ancre: [17, 27], r: 13, solide: true, peindre: function (ctx, w, h) {
+  fontaine: { w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);
     ctx.fillStyle = '#a5a194'; ctx.fillRect(4, 12, 26, 3);
     ctx.fillStyle = '#2c5f8a'; ctx.fillRect(6, 14, 22, 11);
@@ -331,7 +341,7 @@ const DECORS = {
     ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
     ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
   } },
-  kiosque_hotdog: { w: 26, h: 26, ancre: [13, 25], r: 10, solide: true, peindre: function (ctx, w, h) {
+  kiosque_hotdog: { w: 26, h: 26, ancre: [13, 25], r: 10, sol: [9, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 2, 24, 5);              // parasol
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 2, 4, 5); ctx.fillRect(13, 2, 4, 5);
     ctx.fillStyle = '#7a7d82'; ctx.fillRect(12, 7, 2, 6);              // mat
@@ -340,7 +350,7 @@ const DECORS = {
     ctx.fillStyle = '#d98324'; ctx.fillRect(7, 16, 5, 2); ctx.fillRect(14, 16, 5, 2);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 22, 3, 4); ctx.fillRect(18, 22, 3, 4);
   } },
-  kiosque_journaux: { w: 24, h: 26, ancre: [12, 25], r: 9, solide: true, peindre: function (ctx, w, h) {
+  kiosque_journaux: { w: 24, h: 26, ancre: [12, 25], r: 9, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2f6b8a'; ctx.fillRect(2, 4, 20, 18);
     ctx.fillStyle = '#24506f'; ctx.fillRect(2, 4, 20, 3);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 9, 7, 9); ctx.fillRect(13, 9, 7, 9);
@@ -348,7 +358,7 @@ const DECORS = {
     ctx.fillRect(14, 11, 5, 1); ctx.fillRect(14, 13, 5, 1);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 22, 18, 4);
   } },
-  roulotte_cafe: { w: 28, h: 24, ancre: [14, 23], r: 11, solide: true, peindre: function (ctx, w, h) {
+  roulotte_cafe: { w: 28, h: 24, ancre: [14, 23], r: 11, sol: [12, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 4, 24, 14);
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 4, 24, 3);
     ctx.fillStyle = '#2c2c2c'; ctx.fillRect(6, 9, 16, 6);
@@ -356,7 +366,7 @@ const DECORS = {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 18, 5, 5); ctx.fillRect(18, 18, 5, 5);
     ctx.fillStyle = '#101018'; ctx.fillRect(6, 20, 3, 3); ctx.fillRect(19, 20, 3, 3);
   } },
-  camion_cuisine: { w: 44, h: 28, ancre: [22, 27], r: 16, solide: true, peindre: function (ctx, w, h) {
+  camion_cuisine: { w: 44, h: 28, ancre: [22, 27], r: 16, sol: [20, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#27ae60'; ctx.fillRect(2, 4, 40, 16);             // caisse
     ctx.fillStyle = '#1e8e4f'; ctx.fillRect(2, 4, 40, 3);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 9, 20, 8);              // guichet

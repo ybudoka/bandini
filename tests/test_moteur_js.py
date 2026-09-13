@@ -37,22 +37,24 @@ def test_les_sprites_sont_integres(banc):
 
 
 def test_le_joueur_marche_et_ne_traverse_pas_les_murs(banc):
+    # On mesure vers l'OUEST : a l'est du terminus se tient Ti-Guy, et depuis
+    # que la foule ne se traverse plus, un personnage fige est un obstacle.
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
         const x0 = j.x;
-        o.touche('KeyD'); o.frame(60); o.relacher('KeyD');
+        o.touche('KeyA'); o.frame(60); o.relacher('KeyA');
         const x1 = j.x;
-        o.touche('ShiftLeft'); o.touche('KeyD'); o.frame(60); o.relacher('KeyD'); o.relacher('ShiftLeft');
+        o.touche('ShiftLeft'); o.touche('KeyA'); o.frame(60); o.relacher('KeyA'); o.relacher('ShiftLeft');
         const x2 = j.x;
         // Vers le haut, un batiment se trouve sur le chemin : on doit s'arreter dessus.
         o.touche('KeyW'); o.frame(900); o.relacher('KeyW');
         const tx = Math.floor(j.x / L.TT), ty = Math.floor(j.y / L.TT);
-        return { x0: x0, x1: x1, x2: x2, sol: L.Monde.solidite(tx, ty), y: j.y, etat: L.B.etat,
+        return { marche: x0 - x1, sprint: x1 - x2, sol: L.Monde.solidite(tx, ty), y: j.y, etat: L.B.etat,
                  dataEtat: o.elements.bandini.dataset.etat };
     }""")
-    assert r["x1"] > r["x0"] + 50
-    assert r["x2"] - r["x1"] > (r["x1"] - r["x0"]) * 1.4, "le sprint doit etre nettement plus rapide"
+    assert r["marche"] > 50
+    assert r["sprint"] > r["marche"] * 1.4, "le sprint doit etre nettement plus rapide"
     assert r["sol"] in (0, 3), "le joueur a fini dans un mur"
     assert r["y"] > 0
     assert r["etat"] == "jeu" and r["dataEtat"] == "jeu"
@@ -84,11 +86,13 @@ def test_le_joystick_tactile_deplace_le_joueur(banc):
         L.Jeu.commencer();
         const j = L.B.joueur, x0 = j.x;
         // Le centre de #croix est en (90, 570) d'apres son faux rectangle.
+        // On tire vers la GAUCHE : a l'est du terminus, Ti-Guy fait obstacle
+        // depuis que la foule ne se traverse plus.
         o.pointeur('pointerdown', 90, 570, 1);
-        o.pointeur('pointermove', 150, 570, 1);
+        o.pointeur('pointermove', 30, 570, 1);
         o.frame(60);
         const pendant = Object.assign({}, L.Entree.axe);
-        o.pointeur('pointerup', 150, 570, 1);
+        o.pointeur('pointerup', 30, 570, 1);
         o.frame(2);
         o.bouton('esquive', 'pointerdown');
         o.frame(1);
@@ -97,8 +101,8 @@ def test_le_joystick_tactile_deplace_le_joueur(banc):
         return { dx: j.x - x0, pendant: pendant, tenu: tenu, apres: L.Entree.axe.mag,
                  tactile: o.doc.body.classList.contains('tactile') };
     }""")
-    assert r["pendant"]["source"] == "tactile" and r["pendant"]["x"] > 0.9
-    assert r["dx"] > 40
+    assert r["pendant"]["source"] == "tactile" and r["pendant"]["x"] < -0.9
+    assert r["dx"] < -40
     assert r["tenu"] is True
     assert r["apres"] == 0
     assert r["tactile"] is True
@@ -276,6 +280,157 @@ def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     assert r["arbre"] is not None and r["arbre"] > 0, "on traverse les arbres"
     assert r["buisson"] is not None and r["buisson"] <= 0, "un buisson ne doit pas bloquer"
     assert r["lampadaire"] <= 0, "un lampadaire ne doit pas bloquer"
+
+
+def test_on_ne_se_tient_pas_DANS_le_decor(banc):
+    """Retour de Martin, capture a l'appui : le joueur debout au milieu du
+    camion-restaurant, dans la carrosserie.
+
+    ⚠️ La cause n'etait pas la collision mais sa FORME. Le camion fait 44 px
+    de large et 8 px de profond ; son seul cercle (r 16) tenait dans la
+    profondeur, alors il laissait 6 px de carrosserie libres de chaque cote.
+    Chaque decor carre porte maintenant une boite `sol`, et ce juge pousse le
+    joueur dessus par les quatre cotes : il doit rester DEHORS.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const dedans = [], vus = {};
+        for (const d of L.B.entites) {
+            if (!d.decor || !d.solide) continue;
+            const f = L.DECORS[d.decor];
+            if (!f || !f.sol || vus[d.decor]) continue;
+            vus[d.decor] = true;
+            [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (c) {
+                j.x = d.x + c[0] * 60; j.y = d.y + c[1] * 60; j.vx = 0; j.vy = 0;
+                for (let i = 0; i < 120; i++) L.Entites.deplacerCercle(j, -c[0] * 1.2, -c[1] * 1.2, L.Monde.MASQUE_PIETON);
+                // Le cercle du joueur mord-il la boite au sol du decor ?
+                const mordX = f.sol[0] + j.r - Math.abs(j.x - d.x);
+                const mordY = f.sol[1] + j.r - Math.abs(j.y - d.y);
+                const mord = Math.min(mordX, mordY);
+                if (mord > 0.01) dedans.push({ decor: d.decor, cote: c.join(','), mord: +mord.toFixed(2) });
+            });
+        }
+        return { dedans: dedans, boites: Object.keys(vus).sort() };
+    }""")
+    assert "camion_cuisine" in r["boites"], "le camion-restaurant de la capture doit etre teste"
+    assert r["dedans"] == [], "le joueur se tient dans le dessin d'un decor"
+
+
+def test_la_portee_de_recherche_couvre_la_plus_grosse_empreinte(banc):
+    """⚠️ Le piege du jour ou l'on ajoutera un decor plus large : la recherche
+    du decor autour de soi est un CERCLE, l'empreinte est une BOITE. Si le
+    rayon ne va pas jusqu'au COIN de la boite, le decor n'est meme pas trouve
+    — pas de collision ratee, pas de test rouge : rien, on lui passe au
+    travers. Ce juge refait le calcul sur chaque decor solide.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const trop = [];
+        const rayonHumain = 5;             // joueur et pietons ont tous r = 5
+        for (const nom in L.DECORS) {
+            const f = L.DECORS[nom];
+            if (!f.solide) continue;
+            const coin = f.sol ? Math.hypot(f.sol[0] + rayonHumain, f.sol[1] + rayonHumain) : f.r + rayonHumain;
+            const exige = coin - rayonHumain;
+            if (exige > L.Entites.PORTEE_DECOR) trop.push({ decor: nom, exige: +exige.toFixed(1) });
+        }
+        return { trop: trop, portee: L.Entites.PORTEE_DECOR };
+    }""")
+    assert r["trop"] == [], f"PORTEE_DECOR ({r['portee']}) ne couvre pas ces decors"
+
+
+def test_la_foule_ne_se_traverse_plus(banc):
+    """Retour de Martin : « empeche que les choses se chevauchent ».
+
+    ⚠️ Personne ne poussait personne : deux passants qui se croisaient se
+    superposaient EXACTEMENT. Mesure avant correctif, en marchant deux minutes
+    dans la ville : 1032 paires enfoncees l'une dans l'autre en 960 images,
+    jusqu'a 9,9 px — deux corps de 10 px parfaitement confondus. Apres : 0,1 px
+    au pire, des la premiere image (personne ne NAIT non plus dans quelqu'un).
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        let paires = 0, pire = 0, images = 0, nes = 0;
+        // Naitre dans quelqu'un se voit a un chevauchement PLEIN (meme pixel) :
+        // les deux branches de placeDeNaissance rendent un centre de tuile.
+        const touches = ['KeyD', 'KeyW', 'KeyA', 'KeyS'];
+        for (let bloc = 0; bloc < 24; bloc++) {
+            const t = touches[bloc % 4];
+            o.touche(t);
+            for (let k = 0; k < 40; k++) {
+                o.frame(1); images++;
+                const gens = L.B.entites.filter(L.Entites.deboutDansLaFoule);
+                for (let a = 0; a < gens.length; a++) {
+                    for (let b = a + 1; b < gens.length; b++) {
+                        const d = Math.hypot(gens[a].x - gens[b].x, gens[a].y - gens[b].y);
+                        const chevauche = gens[a].r + gens[b].r - d;
+                        if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
+                        if (chevauche > gens[a].r + gens[b].r - 0.001) nes++;
+                    }
+                }
+            }
+            o.relacher(t);
+        }
+        return { images: images, paires: paires, pire: +pire.toFixed(2), nes_empiles: nes };
+    }""")
+    assert r["images"] == 960
+    assert r["pire"] < 1.0, f"deux personnes se chevauchent de {r['pire']} px"
+    assert r["nes_empiles"] == 0, "on ne nait pas dans quelqu'un"
+
+
+def test_courir_ne_permet_pas_de_traverser_les_gens(banc, paquet):
+    """⚠️ Le plafond de separation doit passer DEVANT les jambes les plus
+    rapides du jeu. Fixe a 1,5 px, il arretait bien le joueur qui MARCHE
+    (1,2 px/image) et laissait passer celui qui SPRINTE (2,1) : il suffisait
+    de tenir MAJ pour entrer dans le vendeur.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const pas = L.Entites.pasDeDemele();
+        const t = L.B.entites.find(function (e) { return e.personnage === 'ti_guy'; });
+        function foncer(sprint) {
+            j.x = t.x - 40; j.y = t.y; j.vx = 0; j.vy = 0;
+            if (sprint) o.touche('ShiftLeft');
+            o.touche('KeyD'); o.frame(120); o.relacher('KeyD');
+            if (sprint) o.relacher('ShiftLeft');
+            return +Math.hypot(j.x - t.x, j.y - t.y).toFixed(1);
+        }
+        return { pas: pas, marche: foncer(false), sprint: foncer(true), r: j.r + t.r };
+    }""")
+    vitesses = paquet["recherche"]["vitesses"]
+    assert r["pas"] > vitesses["joueur_sprint"], "on sprinte plus vite qu'on ne se demele"
+    assert r["marche"] >= r["r"] - 0.5, "on entre dans un personnage en marchant"
+    assert r["sprint"] >= r["r"] - 0.5, "on entre dans un personnage en courant"
+
+
+def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
+    """⚠️ « Fige » veut dire « il tient son poste », pas « c'est un poteau ».
+    Vraiment immobile, un donneur plante sur le trottoir bouchait la rue POUR
+    TOUJOURS : l'agent lance aux trousses du joueur venait buter dessus et y
+    restait — 260 images sur place, l'arrestation n'arrivait jamais. Il se
+    laisse donc bousculer de quelques pixels, et il rentre chez lui.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const t = L.B.entites.find(function (e) { return e.personnage === 'ti_guy'; });
+        o.frame(2);
+        const poste = { x: t.plante ? t.plante.x : t.x, y: t.plante ? t.plante.y : t.y };
+        j.x = poste.x - 40; j.y = poste.y; j.vx = 0; j.vy = 0;
+        o.touche('ShiftLeft'); o.touche('KeyD'); o.frame(240);
+        const pousse = Math.hypot(t.x - poste.x, t.y - poste.y);
+        o.relacher('KeyD'); o.relacher('ShiftLeft');
+        j.x = poste.x - 200; j.y = poste.y;              // on le lache
+        o.frame(180);
+        return { pousse: +pousse.toFixed(1), rentre: +Math.hypot(t.x - poste.x, t.y - poste.y).toFixed(1),
+                 etat: t.etat };
+    }""")
+    assert r["pousse"] > 0.5, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
+    assert r["pousse"] < 12, f"on l'a promene de {r['pousse']} px : il n'est plus a son poste"
+    assert r["rentre"] < 1, "lache, il doit revenir a sa place"
+    assert r["etat"] == "fige"
 
 
 def test_le_son_survit_a_l_absence_d_audio(banc, paquet):

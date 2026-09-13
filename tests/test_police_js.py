@@ -7,6 +7,10 @@ patrouille passe rendrait le banc lent et capricieux.
 
 # Un agent pose a cote du joueur, sur une tuile marchable, qui le regarde.
 # (L'aide vit DANS la fonction du banc : le banc ne prend qu'une expression.)
+# ⚠️ La voie doit etre libre de CORPS autant que de murs : depuis que la foule
+# ne se traverse plus, un personnage plante entre les deux (Ti-Guy attend a
+# l'est du terminus) arrete l'agent en chemin, exactement comme le ferait un
+# arbre. On testerait alors la navigation en foule, pas l'arrestation.
 AGENT = """function (L, o) {
     function poserAgent(L, etat, distance) {
         const j = L.B.joueur;
@@ -15,12 +19,19 @@ AGENT = """function (L, o) {
             const x = j.x + e[0] * distance, y = j.y + e[1] * distance;
             if (!L.Monde.marchablePieton(Math.floor(x / L.TT), Math.floor(y / L.TT))) continue;
             if (!L.Monde.ligneLibre(j.x, j.y, x, y)) continue;
+            const surLaVoie = L.B.entites.some(function (q) {
+                if (!L.Entites.deboutDansLaFoule(q) || q === j) return false;
+                const t = ((q.x - j.x) * (x - j.x) + (q.y - j.y) * (y - j.y)) / (distance * distance);
+                if (t <= 0 || t >= 1) return false;
+                return Math.hypot(j.x + (x - j.x) * t - q.x, j.y + (y - j.y) * t - q.y) < 16;
+            });
+            if (surLaVoie) continue;
             const a = L.Police.creerAgent(x, y, etat || 'flane');
             L.Entites.regarder(a, j.x - x, j.y - y);
             L.Entites.indexer();
             return a;
         }
-        throw new Error('aucune tuile marchable autour du joueur');
+        throw new Error('aucune tuile marchable et libre de monde autour du joueur');
     }
 """
 
@@ -49,7 +60,12 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
         const j = L.B.joueur;
         L.B.partie.argent = 500;
         L.Police.ajouterChaleur(3);                 // une etoile
-        const a = poserAgent(L, 'flane', 64);
+        // ⚠️ 30 px, pas 64 : a l'est du terminus Ti-Guy attend a 32 px, et
+        // depuis que la foule ne se traverse plus, l'agent lance a 64 px vient
+        // buter sur lui et n'arrive jamais — exactement comme sur un arbre.
+        // C'est la seule direction ou un agent qui FLANE repere le joueur :
+        // ailleurs sa ronde lui fait tourner la tete avant qu'il regarde.
+        const a = poserAgent(L, 'flane', 30);
         let arrive = -1;
         for (let i = 0; i < 300 && !L.B.menu; i++) { o.frame(1); if (a.etat === 'poursuit' && arrive < 0) arrive = i; }
         const menu = L.B.menu;
