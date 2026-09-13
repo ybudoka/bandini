@@ -1556,9 +1556,22 @@ def test_le_coup_a_un_elan_et_une_pose_de_coup(banc):
         const armeTenue = L.Entites.pose(j).arme && L.Entites.pose(j).arme.slug;
         L.Entites.regarder(j, -1, 0);
         const gauche = L.Entites.imageDe(j);
+        // ⚠️ L'arme doit se voir dans les QUATRE directions. La main n'est
+        // decrite que du cote droit : a gauche elle se miroite (Martin : plus
+        // d'arme des qu'il allait a gauche).
+        const mains = {};
+        [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+            L.Entites.regarder(j, d[0], d[1]);
+            j.etat = 'debout'; j.phase = null;
+            const marche = L.Entites.imageDe(j);
+            j.etat = 'attaque'; j.phase = 'actif';
+            const coup = L.Entites.imageDe(j);
+            j.etat = 'debout'; j.phase = null;
+            mains[j.face] = { marche: !!marche.main, coup: !!coup.main, pose: coup.pose };
+        });
         L.Jeu.rendre();
         return { repos: repos, phases: phases, poses: poses, mainRepos: mainRepos, mainCoup: mainCoup, armeTenue: armeTenue,
-                 gauche: { pose: gauche.pose, miroir: gauche.miroir }, images: L.B.stats.images };
+                 gauche: { pose: gauche.pose, miroir: gauche.miroir }, mains: mains, images: L.B.stats.images };
     }""")
     assert r["repos"]["pose"] == "droite" and r["repos"]["arme"] is None and r["repos"]["dx"] == 0
     assert r["phases"]["anticipation"]["pose"] == "droite", "on arme le coup dans la pose de marche"
@@ -1568,6 +1581,10 @@ def test_le_coup_a_un_elan_et_une_pose_de_coup(banc):
     assert r["armeTenue"] == "batte"
     assert r["mainRepos"] != r["mainCoup"], "la main du coup n'est pas celle du repos"
     assert r["gauche"] == {"pose": "frappe_gauche", "miroir": True}
+    for face in ("bas", "haut", "droite", "gauche"):
+        assert r["mains"][face]["marche"], "l'arme n'est pas dans la main en marchant vers " + face
+        assert r["mains"][face]["coup"], "l'arme n'est pas dans la main en frappant vers " + face
+        assert r["mains"][face]["pose"] == "frappe_" + face
     assert r["images"] > 0
 
 

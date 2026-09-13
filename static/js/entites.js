@@ -776,14 +776,19 @@ const Entites = (function () {
     const def = SPRITES[e.sprite];
     if (!def) return null;
     const cuit = Atlas.cuire(e.sprite, def, e.swaps);
-    const nom = nomDePose(e);
-    const poses = cuit.poses[nom] || cuit.poses[e.face] || cuit.poses.bas;
+    const voulu = nomDePose(e);
+    const nom = cuit.poses[voulu] ? voulu : (cuit.poses[e.face] ? e.face : 'bas');
+    const poses = cuit.poses[nom];
     const bouge = Math.abs(e.vx) + Math.abs(e.vy) > 0.05;
     // ⚠️ Une foulee de 9 px, pas 7 : a 7, les jambes tournaient plus vite que
     // le corps n'avancait et tout le monde avait l'air de courir.
     const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
-    const main = def.mains ? (def.mains[cuit.poses[nom] ? nom : e.face] || null) : null;
-    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: nom.endsWith('gauche') };
+    // ⚠️ La pose « gauche » est le miroir de « droite », mais la main n'est
+    // decrite QUE du cote droit : sans ce repli, l'arme disparaissait des que
+    // le joueur marchait vers la gauche (Martin).
+    const miroir = nom.endsWith('gauche');
+    const main = def.mains ? (def.mains[miroir ? nom.slice(0, -6) + 'droite' : nom] || null) : null;
+    return { canvas: poses[Math.min(i, poses.length - 1)], ancre: cuit.ancre, pose: nom, main: main, miroir: miroir };
   }
 
   // --- La pose : ce que le corps fait en plus de marcher ---------------------------
