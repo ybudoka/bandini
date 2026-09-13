@@ -353,11 +353,26 @@ const Son = (function () {
       gain.gain.value = def ? def.volume : 0.9;
       let sortie = gain;
       if (options && options.telephone && ctx.createBiquadFilter) {
-        // Le combine : une bande etroite autour de 1,5 kHz, un peu plus fort pour compenser.
-        const filtre = ctx.createBiquadFilter();
-        filtre.type = 'bandpass'; filtre.frequency.value = 1500; filtre.Q.value = 1.2;
-        gain.gain.value *= 1.6;
-        gain.connect(filtre); sortie = filtre;
+        /* Le combine, c'est la BANDE telephonique : 300 Hz - 3,4 kHz. Un passe-haut
+           puis un passe-bas la dessinent en laissant plat tout ce qu'il y a entre —
+           c'est-a-dire l'essentiel de la parole.
+
+           ⚠️ On avait mis un seul `bandpass` a 1,5 kHz (Q 1,2) : il pince bien plus
+           serre qu'un vrai telephone et retire 6 dB par octave de part et d'autre.
+           La voix y perdait le gros de son energie, et les 1,6x de compensation
+           etaient loin du compte : sous 900 Hz — la ou la parole a le gros de sa
+           puissance — la voix sortait PLUS BAS qu'en direct. Au telephone, on ne
+           s'entendait plus parler.
+
+           Le 2x qui reste n'est pas un caprice : une voix coupee de ses graves
+           s'entend moins fort a puissance egale, et un appel se prend au milieu
+           des moteurs et de la rue. Un combine, ca doit percer. */
+        const haut = ctx.createBiquadFilter();
+        haut.type = 'highpass'; haut.frequency.value = 300;
+        const bas = ctx.createBiquadFilter();
+        bas.type = 'lowpass'; bas.frequency.value = 3400;
+        gain.gain.value *= 2;
+        gain.connect(haut); haut.connect(bas); sortie = bas;
       }
       // ⚠️ Comme dans `echantillon()` : sans cette ligne la replique se charge,
       // se decode, « joue » (`enCours` est pose, la radio baisse, le texte

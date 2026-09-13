@@ -405,6 +405,117 @@ def test_une_replique_au_telephone_atteint_la_sortie(banc):
     assert r["relie"] is True, "au telephone, la voix n'atteint pas la sortie"
 
 
+# --- Le combine doit s'ENTENDRE ---------------------------------------------------
+# ⚠️ Atteindre la sortie ne suffit pas : entre la voix et le maitre il y a des
+# filtres, et un filtre peut rendre une replique inaudible sans rien casser.
+# C'est ce qui est arrive : un seul `bandpass` a 1,5 kHz (Q 1,2) pincait si serre
+# que sous 900 Hz — la ou la parole porte le gros de sa puissance — la voix au
+# telephone sortait PLUS BAS qu'en direct. Aucun test ne le voyait : la chaîne
+# etait branchee, la source demarrait, le volume etait « bon ». Ce juge ne lit
+# donc pas les reglages, il CALCULE ce qui sort.
+
+
+def _biquad(type_, f0, q, f, fs=48000.0):
+    """Le gain lineaire d'un filtre biquad a la frequence `f`. Formules RBJ :
+    celles que le Web Audio implemente vraiment."""
+    import cmath, math
+    w0 = 2 * math.pi * f0 / fs
+    cw, alpha = math.cos(w0), math.sin(w0) / (2 * q)
+    if type_ == "lowpass":
+        b = ((1 - cw) / 2, 1 - cw, (1 - cw) / 2)
+    elif type_ == "highpass":
+        b = ((1 + cw) / 2, -(1 + cw), (1 + cw) / 2)
+    elif type_ == "bandpass":
+        b = (alpha, 0.0, -alpha)
+    else:
+        raise AssertionError(f"filtre inconnu sur le chemin d'une voix : {type_}")
+    a = (1 + alpha, -2 * cw, 1 - alpha)
+    z = cmath.exp(-2j * math.pi * f / fs)
+    return abs((b[0] + b[1] * z + b[2] * z * z) / (a[0] + a[1] * z + a[2] * z * z))
+
+
+def _sortie(chaine, f):
+    """Ce qui sort vraiment de la chaîne a la frequence `f` : le gain, filtres compris."""
+    g = chaine["gain"]
+    for filtre in chaine["filtres"]:
+        g *= _biquad(filtre["type"], filtre["frequence"], filtre["q"], f)
+    return g
+
+
+#: Le coeur de la parole. En dessous c'est la fondamentale, au-dessus les sifflantes ;
+#: entre les deux, tout ce qui fait qu'on comprend une phrase.
+BANDE_DE_LA_PAROLE = (400, 600, 900, 1400, 2000, 3000)
+
+
+def test_au_telephone_la_voix_est_plus_forte_qu_en_direct(banc):
+    """Une voix privee de ses graves s'entend moins fort a puissance egale, et
+    un appel se prend au milieu des moteurs. Le combine doit donc sortir AU-DESSUS
+    de la voix en direct sur toute la bande de la parole — jamais en dessous."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const h = (L.B.defs.audio.histoire || [])[0];
+        L.Son.Voix.chargerHistoire(h.mission);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        // On suit les branchements du gain de la voix jusqu'au maitre, en
+        // relevant chaque filtre rencontre : c'est le chemin reel du son.
+        function chaine(v) {
+            const filtres = [];
+            const vus = new Set();
+            let n = v.gain;
+            while (n && !vus.has(n)) {
+                vus.add(n);
+                if (n.frequency && n.Q) filtres.push({ type: n.type, frequence: n.frequency.value, q: n.Q.value });
+                n = (n.__vers || [])[0];
+            }
+            return { gain: v.gain.gain.value, filtres: filtres };
+        }
+        const direct = chaine(L.Son.Voix.parler(h.slug, {}));
+        const tel = chaine(L.Son.Voix.parler(h.slug, { telephone: true }));
+        return { direct: direct, tel: tel };
+    }""")
+    assert r["tel"]["filtres"], "le telephone ne filtre rien : ce n'est plus un combine"
+    for f in BANDE_DE_LA_PAROLE:
+        direct, tel = _sortie(r["direct"], f), _sortie(r["tel"], f)
+        assert tel > direct, (
+            f"a {f} Hz le combine sort a {tel:.2f} contre {direct:.2f} en direct : "
+            "au telephone, on ne s'entend plus parler"
+        )
+
+
+def test_le_combine_laisse_passer_toute_la_bande_telephonique(banc):
+    """Un filtre trop pince sonne « radio cassee » et mange les formants. La
+    bande d'un vrai telephone (300 Hz - 3,4 kHz) doit rester a peu pres plate :
+    d'un bout a l'autre, pas plus de 6 dB d'ecart."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const h = (L.B.defs.audio.histoire || [])[0];
+        L.Son.Voix.chargerHistoire(h.mission);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const v = L.Son.Voix.parler(h.slug, { telephone: true });
+        const filtres = [];
+        const vus = new Set();
+        let n = v.gain;
+        while (n && !vus.has(n)) {
+            vus.add(n);
+            if (n.frequency && n.Q) filtres.push({ type: n.type, frequence: n.frequency.value, q: n.Q.value });
+            n = (n.__vers || [])[0];
+        }
+        return { gain: v.gain.gain.value, filtres: filtres };
+    }""")
+    import math
+    niveaux = {f: _sortie(r, f) for f in (400, 700, 1000, 1500, 2200, 3000)}
+    creux, sommet = min(niveaux.values()), max(niveaux.values())
+    ecart = 20 * math.log10(sommet / creux)
+    assert ecart < 6, (
+        f"{ecart:.1f} dB entre le creux et le sommet de la bande "
+        f"({ {f: round(n, 2) for f, n in niveaux.items()} }) : le combine pince trop"
+    )
+
+
 def test_la_page_qui_part_rend_la_carte_son(banc):
     """⚠️ Depuis qu'on ouvre un contexte des le chargement (pour savoir si le son
     est accorde), une page qui s'en va sans fermer le sien en laisse un derriere
