@@ -57,6 +57,22 @@ def test_les_metiers_ont_leurs_heures():
     assert pietons.de_metier("compagnie") and pietons.de_metier("ambulant")
 
 
+def test_la_fille_de_la_brume_ne_porte_les_couleurs_de_personne():
+    """⚠️ Retour de Martin (13 sept. 2026) : on ne les distinguait plus. Son
+    rose etait celui de la passante a une nuance pres, et ses cheveux ceux de
+    la moitie du catalogue. Le CONTOUR est dans sprites.js (`racoleuse`) ; ici
+    on garde l'autre moitie : aucune de ses couleurs ne se recroise ailleurs.
+    La peau, elle, se partage — c'est une peau."""
+    fille = pietons.par_slug("racoleuse")
+    assert fille["sprite"] == "racoleuse", "elle a repris le corps de tout le monde"
+    for autre in pietons.CATALOGUE:
+        if autre["slug"] == "racoleuse":
+            continue
+        for cle in ("c", "h", "p"):
+            assert autre["couleurs"][cle].lower() != fille["couleurs"][cle].lower(), \
+                f"{autre['slug']} porte la meme couleur « {cle} » que la fille de la Brume"
+
+
 def test_les_slugs_sont_uniques():
     assert len(pietons.SLUGS) == len(set(pietons.SLUGS))
 

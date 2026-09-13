@@ -68,6 +68,23 @@ const Son = (function () {
 
   function suspendre() { if (ctx && ctx.state === 'running') ctx.suspend().catch(function () {}); }
 
+  /** Rend la carte son quand la page s'en va. ⚠️ Un AudioContext n'est pas
+      gratuit : le navigateur en limite le nombre, et depuis qu'on en ouvre un
+      des le chargement (pour savoir si le son est accorde), une page qui part
+      sans fermer le sien en laisse un derriere elle. */
+  function fermer() {
+    if (!ctx) return;
+    const parti = ctx;
+    ctx = null; maitre = null; bruitTampon = null;
+    demandes = false;
+    tampons.clear(); boucles.clear();
+    Voix.chargees = false; Voix.enCours = null; Voix.missionsChargees.clear();
+    Ambiance.courante = null; Ambiance.chargee = null;
+    Radio.courante = null; Radio.chargees.clear();
+    Mus.arreter();
+    try { parti.close(); } catch (e) { /* deja fermee */ }
+  }
+
   /** Une note : frequence en Hz, duree en s, forme, volume, glisse (facteur de frequence finale). */
   function ton(freq, duree, forme, volume, glisse, depart) {
     if (!pret()) return;
@@ -222,6 +239,14 @@ const Son = (function () {
 
   function joue(slug) { return echantillon(slug) !== null; }
 
+  /** Ce son est-il pret a jouer ? ⚠️ Repondre en le JOUANT (comme le faisaient
+      les tests) demarre une source a chaque appel : dans une boucle d'attente,
+      ca finit par des centaines de sources en vol et le contexte cale. */
+  function estCharge(slug) {
+    const liste = tampons.get(slug);
+    return !!liste && liste.length > 0;
+  }
+
   /** Une boucle qu'on allume et qu'on eteint (sirene, moteur). */
   function boucle(slug, actif, volume) {
     const courante = boucles.get(slug);
@@ -334,6 +359,10 @@ const Son = (function () {
         gain.gain.value *= 1.6;
         gain.connect(filtre); sortie = filtre;
       }
+      // ⚠️ Comme dans `echantillon()` : sans cette ligne la replique se charge,
+      // se decode, « joue » (`enCours` est pose, la radio baisse, le texte
+      // defile) et on n'entend RIEN. C'est la meme soudure oubliee deux fois.
+      source.connect(gain);
       sortie.connect(maitre);
       Voix.baisserLeReste(true);
       source.onended = function () { if (Voix.enCours && Voix.enCours.source === source) { Voix.enCours = null; Voix.baisserLeReste(false); } if (options && options.fin) options.fin(); };
@@ -556,8 +585,8 @@ const Son = (function () {
   };
 
   return {
-    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
-    chargerEchantillons, echantillon, joue, jouerA, boucle, boucleActive, reglerBoucle,
+    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs

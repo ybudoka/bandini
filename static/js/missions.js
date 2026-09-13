@@ -87,6 +87,15 @@ const Missions = (function () {
     return true;
   }
 
+  /** La fille de la Brume a portee de main — la meme pour l'invite et pour
+      l'action, pour que le HUD ne promette jamais autre chose que ce qui va
+      se passer. */
+  function filleSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
+      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit';
+    }) || null;
+  }
+
   /** Ce qu'on peut faire la ou l'on est (bouton ACTION). */
   function interagir(j) {
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
@@ -101,9 +110,7 @@ const Missions = (function () {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
     if (temoin) return Police.acheterLeSilence(j, temoin);
-    const fille = Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit';
-    });
+    const fille = filleSousLaMain(j);
     if (fille) return compagnie(j, fille);
     return false;
   }
@@ -619,6 +626,12 @@ const Missions = (function () {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
     if (temoin) { B.invite = 'ACHETER SON SILENCE — ' + B.defs.economie.tarifs.silence_temoin + ' $'; return; }
+    // ⚠️ Meme ordre que `interagir` : elle passe avant l'objet par terre,
+    // sinon l'invite annoncerait un ramassage et ACTION ferait autre chose.
+    // C'est aussi la derniere preuve qu'on a devant soi une fille de la
+    // Brume et pas une passante — le HUD la nomme.
+    const fille = filleSousLaMain(j);
+    if (fille) { B.invite = 'LA BRUME — ' + B.defs.economie.tarifs.compagnie + ' $'; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);

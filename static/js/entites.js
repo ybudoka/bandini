@@ -167,6 +167,10 @@ const Entites = (function () {
       intouchable: !!p.intouchable,
       etat: 'flane', dir: Math.floor(B.rng() * 4), butT: 0, cri: 0,
     });
+    // ⚠️ Une fille de la Brume TIENT SON COIN : sans poste, elle se remettait
+    // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
+    // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
+    if (p.metier === 'compagnie') e.poste = { x: x, y: y };
     // Une mere ne sort pas sans son petit : il la suit, et il detale avec elle.
     if (p.accompagne) {
       const petit = creerPieton(x + 10, y + 4, archetype(p.accompagne));
@@ -405,6 +409,15 @@ const Entites = (function () {
 
   const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
+  // Jusqu'ou une fille de la Brume s'ecarte du coin qu'elle tient (3 tuiles).
+  const POSTE_RAYON = 48;
+
+  /** L'indice de DIRECTIONS le plus proche d'un vecteur. */
+  function directionVers(dx, dy) {
+    if (Math.abs(dx) > Math.abs(dy)) return dx > 0 ? 0 : 2;
+    return dy > 0 ? 1 : 3;
+  }
+
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
@@ -493,10 +506,13 @@ const Entites = (function () {
         }
       } else {
         if (e.butT-- <= 0) {
-          if (B.rng() < 0.3) {
+          // Celle qui tient un poste (la Brume) s'arrete deux fois plus
+          // souvent, et repart vers son lampadaire des qu'elle s'en eloigne.
+          const rentre = e.poste && dist2(e.x, e.y, e.poste.x, e.poste.y) > POSTE_RAYON * POSTE_RAYON;
+          if (!rentre && B.rng() < (e.poste ? 0.65 : 0.3)) {
             e.etat = 'arret';
             e.minuterie = 50 + Math.floor(B.rng() * 160);
-            e.butT = 90;
+            e.butT = e.poste ? 30 : 90;
             e.vx = 0; e.vy = 0;
             return;
           }
@@ -506,8 +522,11 @@ const Entites = (function () {
             e.etat = 'entre'; e.minuterie = 40; e.face = 'haut';
             return;
           }
-          e.dir = Math.floor(B.rng() * 4);
-          e.butT = 90 + Math.floor(B.rng() * 240);
+          e.dir = rentre ? directionVers(e.poste.x - e.x, e.poste.y - e.y) : Math.floor(B.rng() * 4);
+          // ⚠️ Celle qui tient un poste redecide vite : une flanerie de 330
+          // images l'emmenait a l'autre bout de la rue avant qu'elle songe
+          // seulement a revenir.
+          e.butT = e.poste ? 30 : 90 + Math.floor(B.rng() * 240);
         }
         const dir = DIRECTIONS[e.dir];
         // ⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee.
@@ -515,7 +534,7 @@ const Entites = (function () {
         const ax = Math.floor((e.x + dir[0] * (e.r + 4)) / TT), ay = Math.floor((e.y + dir[1] * (e.r + 4)) / TT);
         if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) {
           e.dir = (e.dir + (B.rng() < 0.5 ? 1 : 3)) % 4;      // on tourne, on ne fonce pas
-          e.butT = 60 + Math.floor(B.rng() * 120);
+          e.butT = e.poste ? 30 : 60 + Math.floor(B.rng() * 120);
           e.vx = 0; e.vy = 0;
           return;
         }

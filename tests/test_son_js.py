@@ -335,3 +335,111 @@ def test_une_note_synthetisee_atteint_la_sortie(banc):
         return { pose: joues.filter(function (n) { return n.quoi === 'ton'; }).length };
     }""")
     assert r["pose"] >= 1, "la synthese ne pose plus rien"
+
+
+def test_aucune_source_ne_joue_dans_le_vide(banc):
+    """⚠️ LE juge de cette famille de pannes. On fait sonner tout ce que le jeu
+    sait faire — bruitages, boucles, musique, repliques de l'histoire — puis on
+    demande : y a-t-il une source qui a DEMARRE sans etre reliee a la sortie ?
+    C'est exactement ce qui est arrive deux fois le 13 sept. 2026, dans
+    `echantillon()` puis dans `Voix.parler()` : la meme ligne oubliee."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        o.frame(30);                                   // ambiance + bruitages
+        for (const nom in L.Son.SFX) L.Son.SFX[nom]();  // tous les effets
+        L.Son.boucle('sirene', true, 0.6);
+        L.Son.jouerA('coup', L.B.joueur.x + 20, L.B.joueur.y, 320);
+        // Les repliques de l'histoire : on en charge une mission et on parle.
+        const h = (L.B.defs.audio.histoire || [])[0];
+        if (h) { L.Son.Voix.chargerHistoire(h.mission); }
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const parle = h ? !!L.Son.Voix.parler(h.slug, {}) : null;
+        const parleTel = h ? !!L.Son.Voix.parler(h.slug, { telephone: true }) : null;
+        // Et la musique du menu.
+        L.Jeu.retourTitre();
+        o.frame(60);
+        const ctx = L.Son.contexte;
+        return { muettes: ctx.sourcesMuettes(), sources: ctx.sources.length,
+                 parle: parle, parleTel: parleTel };
+    }""")
+    assert r["sources"] > 10, f"trop peu de sons declenches pour juger : {r['sources']}"
+    assert r["parle"] is True, "la replique de l'histoire n'a pas joue du tout"
+    assert r["parleTel"] is True, "la replique au telephone n'a pas joue du tout"
+    assert r["muettes"] == 0, f"{r['muettes']} sources ont demarre sans atteindre la sortie"
+
+
+def test_une_replique_de_l_histoire_atteint_la_sortie(banc):
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const h = (L.B.defs.audio.histoire || [])[0];
+        L.Son.Voix.chargerHistoire(h.mission);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const v = L.Son.Voix.parler(h.slug, {});
+        const ctx = L.Son.contexte;
+        return { slug: h.slug, joue: !!v,
+                 relie: v ? ctx.atteintLaSortie(v.source) : null };
+    }""")
+    assert r["joue"] is True, f"la replique {r['slug']} ne joue pas"
+    assert r["relie"] is True, "la voix joue mais n'atteint pas la sortie : on n'entend rien"
+
+
+def test_une_replique_au_telephone_atteint_la_sortie(banc):
+    """Le combine ajoute un filtre : une soudure de plus, un risque de plus."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const h = (L.B.defs.audio.histoire || [])[0];
+        L.Son.Voix.chargerHistoire(h.mission);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const v = L.Son.Voix.parler(h.slug, { telephone: true });
+        const ctx = L.Son.contexte;
+        return { joue: !!v, relie: v ? ctx.atteintLaSortie(v.source) : null };
+    }""")
+    assert r["joue"] is True
+    assert r["relie"] is True, "au telephone, la voix n'atteint pas la sortie"
+
+
+def test_la_page_qui_part_rend_la_carte_son(banc):
+    """⚠️ Depuis qu'on ouvre un contexte des le chargement (pour savoir si le son
+    est accorde), une page qui s'en va sans fermer le sien en laisse un derriere
+    elle — et le navigateur en limite le nombre. Ca ne se voit pas en jouant ;
+    ca se voit quand vingt pages s'ouvrent a la suite, comme dans nos tests."""
+    r = banc("""function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        L.Jeu.commencer();
+        o.frame(10);
+        const avant = { etat: L.Son.etatSon(), contexte: !!L.Son.contexte };
+        L.Son.fermer();
+        return { avant: avant, apres: L.Son.etatSon(), contexte: !!L.Son.contexte,
+                 musique: L.Son.Mus.courante };
+    }""")
+    assert r["avant"] == {"etat": "actif", "contexte": True}
+    assert r["apres"] == "absent", "le contexte doit vraiment etre lache"
+    assert r["contexte"] is False
+    assert r["musique"] is None
+
+
+def test_apres_fermeture_le_son_peut_repartir(banc):
+    """Fermer ne doit pas condamner le son : un retour d'onglet le rouvre."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        L.Son.fermer();
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const j = L.Son.echantillon('coup', { volume: 1 });
+        const ctx = L.Son.contexte;
+        return { etat: L.Son.etatSon(), rejoue: !!j,
+                 relie: j ? ctx.atteintLaSortie(j.source) : null };
+    }""")
+    assert r["etat"] == "actif"
+    assert r["rejoue"] is True, "le son ne repart pas apres une fermeture"
+    assert r["relie"] is True

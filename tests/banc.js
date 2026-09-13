@@ -167,6 +167,7 @@ function banc(corps) {
       return n;
     }
     const joues = [];
+    const sources = [];
     function FauxContexte() {
       fauxContexte = this;
       this.state = demarre ? 'running' : 'suspended';
@@ -174,6 +175,14 @@ function banc(corps) {
       this.sampleRate = 48000;
       this.destination = noeud({ __sortie: true });
       this.joues = joues;
+      this.sources = sources;
+      /** Les sources qui ont demarre sans jamais atteindre la sortie : elles
+          « jouent » et on n'entend rien. C'est le juge qui aurait attrape les
+          deux soudures oubliees du 13 sept. 2026 (echantillon et voix). */
+      this.sourcesMuettes = function () {
+        const ctx = this;
+        return sources.filter(function (s) { return s.__demarree && !ctx.atteintLaSortie(s); }).length;
+      };
       /** Vrai si `n` atteint la sortie en suivant les branchements. */
       this.atteintLaSortie = function (n) {
         const vus = new Set();
@@ -198,12 +207,14 @@ function banc(corps) {
       this.createGain = function () { return noeud({ gain: param(1) }); };
       this.createOscillator = function () {
         const n = noeud({ type: 'square', frequency: param(440), stop: function () {} });
-        n.start = function (t) { joues.push({ quoi: 'ton', t: t, hz: n.frequency.value, forme: n.type }); };
+        sources.push(n);
+        n.start = function (t) { n.__demarree = true; joues.push({ quoi: 'ton', t: t, hz: n.frequency.value, forme: n.type }); };
         return n;
       };
       this.createBufferSource = function () {
         const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null, stop: function () {} });
-        n.start = function (t) { joues.push({ quoi: 'echantillon', t: t }); };
+        sources.push(n);
+        n.start = function (t) { n.__demarree = true; joues.push({ quoi: 'echantillon', t: t }); };
         return n;
       };
       this.createBiquadFilter = function () { return noeud({ type: 'lowpass', frequency: param(800), Q: param(1) }); };

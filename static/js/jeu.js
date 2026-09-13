@@ -280,6 +280,11 @@ const Jeu = (function () {
     w.addEventListener('orientationchange', function () { setTimeout(redim, 120); });
     if (w.visualViewport) w.visualViewport.addEventListener('resize', redim);
     d.addEventListener('visibilitychange', function () { if (d.hidden) { pause(); Son.suspendre(); } });
+    // ⚠️ La page s'en va : on rend la carte son — mais SEULEMENT si elle ne peut
+    // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
+    // le geste le plus banal sur telephone : changer d'application). Fermer
+    // dans ce cas-la viderait les sons decodes et la page reviendrait muette.
+    w.addEventListener('pagehide', function (ev) { if (!ev || !ev.persisted) Son.fermer(); });
     d.addEventListener('pointerdown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     d.addEventListener('keydown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     // On sonde tout de suite : le contexte naît « suspended » si la page n'a

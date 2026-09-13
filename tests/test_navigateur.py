@@ -203,7 +203,8 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
     page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
     attendues = page.evaluate("window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).length")
     page.wait_for_function(
-        "n => window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).every(v => window.BANDINI.Son.echantillon('voix-' + v.slug, {volume: 0.001}) !== null) && n > 0",
+        "n => n > 0 && window.BANDINI.B.defs.audio.voix.filter(v => v.fichier)"
+        ".every(v => window.BANDINI.Son.estCharge('voix-' + v.slug))",
         arg=attendues, timeout=20000)
     assert page.evaluate("window.BANDINI.Son.boucleActive('ambiance-ville')") is True
     assert erreurs == []
@@ -356,61 +357,65 @@ window.__mesure = function (ms) {
 PLANCHER = 0.001
 
 
-def test_le_jeu_sort_vraiment_du_son(page, serveur, erreurs):
-    """⚠️ Un echantillon peut se telecharger, se decoder, demarrer, avoir le bon
-    volume et etre relie a la sortie — et ne rien produire si la source n'entre
-    dans rien. C'est arrive : aucun des 79 fichiers n'a sonne jusqu'au
-    13 sept. 2026. Ce juge ecoute la sortie plutot que l'intention."""
+def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
+    """⚠️ LE juge de bout en bout de l'audio. Un son peut se telecharger, se
+    decoder, demarrer, avoir le bon volume et sembler relie a la sortie — et ne
+    rien produire, si sa source n'entre dans aucune chaîne. C'est arrive DEUX
+    fois le 13 sept. 2026 (`echantillon()` puis `Voix.parler()`), et aucun de nos
+    juges ne l'a vu : ils verifiaient tous l'intention. Celui-ci ecoute la
+    sortie, pour les cinq familles de sons a la fois — en une seule page, parce
+    qu'un contexte audio par test finit par saturer le navigateur."""
     page.add_init_script(SONDE_AUDIO)
     page.goto(serveur)
-    attendre_titre(page)
+    page.wait_for_selector('#bandini[data-etat="titre"]', timeout=45000)
     page.click("#bouton-jouer")          # un vrai geste : le son est accorde
-    page.wait_for_selector('#bandini[data-etat="jeu"]')
-    page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=20000)
-    page.wait_for_timeout(1500)
+    page.wait_for_selector('#bandini[data-etat="jeu"]', timeout=45000)
+    page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=45000)
+    page.wait_for_function(
+        "() => (window.BANDINI.B.defs.audio.voix || []).some("
+        "v => v.fichier && window.BANDINI.Son.estCharge('voix-' + v.slug))",
+        timeout=45000)
 
-    synthese = page.evaluate("""() => {
-        const p = window.__mesure(900);
-        BANDINI.Son.ton(440, 0.6, 'square', 0.9);
-        return p;
-    }""")
-    assert synthese > PLANCHER, f"la synthese ne sort pas : {synthese:.5f}"
+    def mesurer(js):
+        return page.evaluate("() => { const p = window.__mesure(1200); (%s)(); return p; }" % js)
 
-    echantillon = page.evaluate("""() => {
-        const p = window.__mesure(900);
-        BANDINI.Son.echantillon('coup', { volume: 1 });
-        return p;
-    }""")
-    assert echantillon > PLANCHER, (
-        f"un echantillon charge ne produit AUCUN son ({echantillon:.5f}) : "
-        "la chaîne source > gain > maitre est coupee quelque part")
-    assert erreurs == []
+    niveaux = {
+        "la synthese": mesurer("() => BANDINI.Son.ton(440, 0.6, 'square', 0.9)"),
+        "un bruitage": mesurer("() => BANDINI.Son.echantillon('coup', { volume: 1 })"),
+        "une voix de passant": mesurer("""() => {
+            const v = BANDINI.B.defs.audio.voix.find(x => x.fichier);
+            BANDINI.Son.echantillon('voix-' + v.slug, { volume: 1 });
+        }"""),
+    }
 
+    # L'ambiance tourne en boucle : on l'ecoute sans rien declencher. Elle se
+    # telecharge apres les bruitages, alors on l'ATTEND plutot que de l'esperer.
+    page.wait_for_function("() => window.BANDINI.Son.boucleActive('ambiance-ville')", timeout=45000)
+    niveaux["l'ambiance"] = page.evaluate(
+        "() => { BANDINI.Son.reglerBoucle('ambiance-ville', 1); return window.__mesure(1500); }")
 
-def test_l_ambiance_de_la_ville_s_entend(page, serveur, erreurs):
-    """L'ambiance tourne en boucle : si elle est muette, la ville est morte."""
-    page.add_init_script(SONDE_AUDIO)
-    page.goto(serveur)
-    attendre_titre(page)
-    page.click("#bouton-jouer")
-    page.wait_for_selector('#bandini[data-etat="jeu"]')
-    page.wait_for_function("window.BANDINI.Son.Ambiance.courante !== null", timeout=20000)
-    page.wait_for_timeout(2000)
-    assert page.evaluate("() => BANDINI.Son.boucleActive('ambiance-ville')") is True
-    niveau = page.evaluate("() => window.__mesure(2500)")
-    assert niveau > PLANCHER, f"l'ambiance tourne mais ne s'entend pas : {niveau:.5f}"
-    assert erreurs == []
+    # Une replique de l'histoire, la ville coupee pour n'entendre qu'elle.
+    premiere = page.evaluate(
+        "window.BANDINI.B.defs.audio.histoire.find(v => v.mission === 'm1' && v.fichier)")
+    if premiere:
+        page.evaluate("(m) => window.BANDINI.Son.Voix.chargerHistoire(m)", premiere["mission"])
+        page.wait_for_function(
+            "s => window.BANDINI.Son.estCharge('histoire-' + s)", arg=premiere["slug"], timeout=45000)
+        niveaux["une replique"] = page.evaluate("""(s) => {
+            const S = window.BANDINI.Son;
+            S.Voix.couper(); S.Ambiance.arreter(); S.boucle('ambiance-ville', false);
+            const p = window.__mesure(1500);
+            S.Voix.parler(s, {});
+            return p;
+        }""", premiere["slug"])
 
-
-def test_le_theme_du_menu_s_entend(page, serveur, erreurs):
-    page.add_init_script(SONDE_AUDIO)
-    page.goto(serveur)
-    attendre_titre(page)
-    page.click("#bouton-jouer")
-    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # Le theme du menu, de retour au titre.
     page.evaluate("() => BANDINI.Jeu.retourTitre()")
-    page.wait_for_timeout(2000)
+    page.wait_for_timeout(1500)
     assert page.evaluate("() => BANDINI.Son.Mus.courante") == "titre"
-    niveau = page.evaluate("() => window.__mesure(3000)")
-    assert niveau > PLANCHER, f"le theme du menu ne sort pas : {niveau:.5f}"
+    niveaux["le theme du menu"] = page.evaluate("() => window.__mesure(2500)")
+
+    muets = [nom for nom, v in niveaux.items() if v <= PLANCHER]
+    print("\n[audio] " + " · ".join(f"{nom} {v:.4f}" for nom, v in niveaux.items()))
+    assert not muets, f"ca « joue » mais on n'entend rien : {muets} (niveaux {niveaux})"
     assert erreurs == []

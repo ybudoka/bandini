@@ -116,9 +116,15 @@ CATALOGUE: list[Pieton] = [
        frequence=1.4),
     # La Brume, la nuit : elles travaillent pres du bar et du port. Elles
     # vendent de la COMPAGNIE (voir economie.TARIFS) et rien ne se montre.
-    _p("racoleuse", "Fille de la Brume", "#e0397a", "#1a1a1a", "#f0c098", "#2a2a3a",
-       vitesse=0.9, vie=60, argent=(20, 90), temoin=0.2, metier="compagnie",
-       heures=(0.78, 0.28), frequence=0.0),
+    # ⚠️ SEUL ARCHETYPE A AVOIR SON PROPRE SPRITE (`racoleuse` dans
+    # sprites.js) : sur le corps commun elle n'etait qu'un chandail rose de
+    # plus, et on ne la reconnaissait plus dans la foule (retour de Martin).
+    # Une couleur ne distingue pas a douze pixels de large — un contour, oui.
+    # Ses couleurs ne se croisent nulle part ailleurs dans le catalogue :
+    # personne d'autre n'est blond platine, et personne ne porte ce rose-la.
+    _p("racoleuse", "Fille de la Brume", "#ff3d8e", "#f2d27a", "#f0c098", "#c2185b",
+       sprite="racoleuse", vitesse=0.9, vie=60, argent=(20, 90), temoin=0.2,
+       metier="compagnie", heures=(0.78, 0.28), frequence=0.0),
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),

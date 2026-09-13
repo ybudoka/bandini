@@ -86,6 +86,56 @@ SPRITES.enfant = {
   },
 };
 
+/* La fille de la Brume : 12x16 comme tout le monde, mais une SILHOUETTE a
+   elle. Un echange de palette ne suffisait pas — de loin, sous la teinte de
+   nuit, elle etait un passant rose de plus (retour de Martin : « on ne les
+   distingue plus, elles sont trop pareilles que tout le monde »). Ce qui se
+   reconnait a douze pixels de large, ce n'est pas une couleur, c'est un
+   contour : la jupe s'evase PLUS LARGE QUE LES EPAULES (la seule du jeu),
+   les jambes sont nues entre l'ourlet et les talons, et les cheveux tombent
+   de chaque cote du cou. Rien de plus ne se montre : c'est un contour, pas
+   une tenue.
+
+   Meme alphabet que `joueur` (`c` le bustier, `p` la jupe, `h` les cheveux,
+   `s` la peau, `b` les talons) : les echanges du catalogue marchent pareil.
+   Pas de pose de coup — elle ne frappe personne ; `couche` est celle du
+   joueur, un corps par terre est un corps par terre. */
+SPRITES.racoleuse = {
+  w: 12, h: 16, ancre: [6, 15],
+  pal: { k: '#101018', s: '#f0c098', h: '#f2d27a', c: '#ff3d8e', p: '#c2185b', o: '#ffffff', b: '#1a1a22' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '..khksskhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..kssk.kssk.', '..kbbk.kbbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '..khksskhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..kssk..ksk.', '..kbbk..kbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '..khksskhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..ksk..kssk.', '..kbk..kbbk.'],
+    ],
+    haut: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..kssk.kssk.', '..kbbk.kbbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..kssk..ksk.', '..kbbk..kbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..kcccccck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '.kppppppppk.', 'kppppppppppk', '..kssk.kssk.', '..ksk..kssk.', '..kbk..kbbk.'],
+    ],
+    cote: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khkcccck..',
+       '...kcccck...', '...kcckck...', '...kccksk...', '..kppppppk..', '.kpppppppk..', '...ksksk....', '...kbk.kbk..', '...kkk.kkk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khkcccck..',
+       '...kcccck...', '...kcckck...', '...kccksk...', '..kppppppk..', '.kpppppppk..', '..ksk..ksk..', '..kbk..kbk..', '..kkk..kkk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khkcccck..',
+       '...kcccck...', '...kcckck...', '...kccksk...', '..kppppppk..', '.kpppppppk..', '....kssk....', '....kbbk....', '....kkkk....'],
+    ],
+    couche: [
+      ['............', '............', '............', '............', '............', '............', '............',
+       '..kkkkkk....', '.kpppppkkkk.', 'kppppppccccs', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+    ],
+  },
+};
+
 /* Les vehicules, vus de dessus, l'AVANT A DROITE (angle 0 = est). Un seul
    dessin par type : l'atlas le fait tourner en 32 caps a la cuisson. `c` est
    la carrosserie (echangee par couleur), `x`/`y` les accents de toit (enseigne

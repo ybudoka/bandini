@@ -128,10 +128,19 @@ const Atlas = (function () {
     '’': "'", '‘': "'", '«': '"', '»': '"', '“': '"', '”': '"', '—': '-', '–': '-', '…': '...',
   };
 
+  //: ⚠️ Meme piege avec les espaces invisibles : toLocaleString('fr-CA') separe
+  //: les milliers par une espace fine insecable (U+202F), que la police ne
+  //: connait pas — la fortune s'affichait « 1?078 $ ». Toute espace Unicode
+  //: (fine, insecable, tabulation, saut de ligne) redevient donc une espace.
+  const ESPACES = /\s/;
+
   /** Majuscules sans accent ni ponctuation courbe : ce que la police sait ecrire. */
   function normaliser(s) {
     let out = '';
-    for (const ch of String(s).toUpperCase()) out += (ch in SANS_ACCENT) ? SANS_ACCENT[ch] : ch;
+    for (const ch of String(s).toUpperCase()) {
+      if (ch in SANS_ACCENT) out += SANS_ACCENT[ch];
+      else out += ESPACES.test(ch) ? ' ' : ch;
+    }
     return out;
   }
 

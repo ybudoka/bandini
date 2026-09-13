@@ -731,6 +731,84 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
     assert r["fondu"] is True, "ca doit passer par un fondu, pas par une scene"
 
 
+def test_la_fille_de_la_brume_a_une_silhouette_a_elle(banc):
+    """⚠️ Retour de Martin : « on ne distingue plus les prostituées, elles sont
+    trop pareilles que tout le monde. » Elles etaient le corps commun repeint
+    en rose — et a douze pixels de large, sous la teinte de nuit, une couleur
+    ne distingue rien. Ce juge tient le CONTOUR : la jupe s'evase plus large
+    que les epaules (personne d'autre), et sous l'ourlet les jambes sont de la
+    peau la ou tout le monde a du pantalon."""
+    r = banc(r"""function (L, o) {
+        // La largeur de chaque rangee du dessin de face, pixels poses.
+        function largeurs(nom) {
+            return L.SPRITES[nom].poses.bas[0].map(function (l) { return l.replace(/\./g, '').length; });
+        }
+        const f = largeurs('racoleuse'), j = largeurs('joueur');
+        const jambes = L.SPRITES.racoleuse.poses.bas[0][13];
+        L.Jeu.commencer();
+        const fille = o.poser('racoleuse', 12, 0);
+        return { sprite: fille.sprite, epaulesF: f[7], jupeF: Math.max(f[11], f[12], f[13]),
+                 epaulesJ: j[7], hanchesJ: Math.max(j[11], j[12], j[13]),
+                 jambes: jambes, cheveux: fille.swaps.h, robe: fille.swaps.c,
+                 poses: Object.keys(L.Atlas.cuire('racoleuse', L.SPRITES.racoleuse, null).poses).sort() };
+    }""")
+    assert r["sprite"] == "racoleuse", "elle porte encore le corps de tout le monde"
+    assert r["jupeF"] - r["epaulesF"] >= 4, "la jupe ne s'evase pas : de loin, c'est un passant"
+    assert r["hanchesJ"] - r["epaulesJ"] <= 1, "le corps commun, lui, tombe droit — c'est le contraste"
+    assert "s" in r["jambes"] and "p" not in r["jambes"], "les jambes ne sont pas nues sous l'ourlet"
+    assert r["cheveux"] == "#f2d27a" and r["robe"] == "#ff3d8e"
+    # ⚠️ Elle meurt comme les autres : sans `couche`, un KO restait debout.
+    for pose in ("bas", "haut", "cote", "gauche", "droite", "couche"):
+        assert pose in r["poses"], pose
+
+
+def test_la_fille_de_la_brume_tient_son_coin(banc):
+    """Le deuxieme signe, celui qu'on lit avant meme la robe : elle ATTEND.
+    Elle flanait comme tout le monde dix secondes apres etre apparue."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(34);
+        const fille = o.poser('racoleuse', 20, 0);
+        const passante = o.poser('passante', -20, 0);
+        fille.etat = 'flane'; passante.etat = 'flane';
+        const p0 = { x: fille.x, y: fille.y }, q0 = { x: passante.x, y: passante.y };
+        let ecartFille = 0, ecartPassante = 0, arrets = 0;
+        for (let i = 0; i < 80; i++) {
+            o.frame(30);
+            if (fille.etat === 'arret') arrets++;
+            ecartFille = Math.max(ecartFille, Math.hypot(fille.x - p0.x, fille.y - p0.y));
+            ecartPassante = Math.max(ecartPassante, Math.hypot(passante.x - q0.x, passante.y - q0.y));
+        }
+        return { poste: !!fille.poste, arrets: arrets,
+                 fille: Math.round(ecartFille), passante: Math.round(ecartPassante) };
+    }""")
+    assert r["poste"] is True, "elle n'a pas de coin a tenir"
+    assert r["fille"] < 80, "en 40 s elle a quitte son coin"
+    assert r["passante"] > 120, "⚠️ une passante, elle, doit continuer de flaner"
+    assert r["arrets"] > 30, "elle marche plus qu'elle n'attend"
+
+
+def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
+    """Derniere preuve, a bout de bras : l'invite ACTION la nomme et donne le
+    prix — avant, on appuyait sur ACTION en esperant que c'en etait une."""
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const fille = o.poser('racoleuse', 14, 0);
+        fille.etat = 'arret';
+        L.Entites.indexer();
+        L.Missions.majInvite(j);
+        const pres = L.B.invite;
+        fille.x = j.x + 200; fille.y = j.y + 200;
+        L.Entites.indexer();
+        L.Missions.majInvite(j);
+        return { pres: pres, loin: L.B.invite };
+    }""")
+    assert r["pres"] == "LA BRUME — " + str(tarifs["compagnie"]) + " $"
+    assert r["loin"] != r["pres"], "l'invite la promet alors qu'elle est partie"
+
+
 # --- M3 : vehicules ----------------------------------------------------------
 
 
@@ -1628,16 +1706,20 @@ def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
         d.economie.proprietes.forEach(function (p) { textes.push(p.nom); });
         d.pietons.catalogue.forEach(function (p) { textes.push(p.nom); });
         ['DORMIR JUSQU’AU MATIN', 'REVEIL A L’HOPITAL — 30 $', 'Baie-des-Brumes… la brume'].forEach(function (t) { textes.push(t); });
+        // La fortune du HUD : toLocaleString colle une espace fine insecable entre les milliers.
+        textes.push((1078).toLocaleString('fr-CA') + ' $', (1250000).toLocaleString('fr-CA') + ' $');
         const inconnus = {};
         textes.forEach(function (t) {
             for (const ch of L.Atlas.normaliser(t)) if (ch !== ' ' && !L.POLICE_PIXEL[ch]) inconnus[ch] = (inconnus[ch] || 0) + 1;
         });
         return { n: textes.length, inconnus: inconnus, hopital: L.Atlas.normaliser('Hôpital de Baie-des-Brumes'),
-                 largeur: L.Atlas.largeurTexte('Œuvre', 1) };
+                 largeur: L.Atlas.largeurTexte('Œuvre', 1),
+                 argent: L.Atlas.normaliser((1078).toLocaleString('fr-CA') + ' $') };
     }""")
     assert r["n"] > 40
     assert r["inconnus"] == {}, f"glyphes que la police ne sait pas ecrire : {r['inconnus']}"
     assert r["hopital"] == "HOPITAL DE BAIE-DES-BRUMES"
+    assert r["argent"] == "1 078 $", "le separateur des milliers doit devenir une vraie espace"
     assert r["largeur"] == 6 * 4 - 1, "la largeur doit compter le OE en deux lettres"
 
 
