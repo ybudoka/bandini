@@ -228,7 +228,8 @@ const Entites = (function () {
       const e = B.entites[i];
       if (e.type !== 'pieton') continue;
       const loin = dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI;
-      if (loin && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
+      // Les personnages de l'histoire et les figurants d'une mission ne s'oublient pas : ils attendent.
+      if (loin && !e.personnage && !e.mission && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
       if (e.vivant && !e.metier) vivants++;
     }
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
@@ -248,7 +249,7 @@ const Entites = (function () {
       }
     }
     // Sur le territoire d'une gang, ce sont ses membres qui trainent dehors.
-    const gang = zone && zone.gang && B.rng() < 0.5
+    const gang = zone && zone.gang && !(B.partie && B.partie.faubourgLibere) && B.rng() < 0.5
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
       : null;
     creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
@@ -357,6 +358,7 @@ const Entites = (function () {
 
   function majJoueur(j) {
     if (j.dansVehicule) return;
+    if (B.cinema) { j.vx = 0; j.vy = 0; return; }     // quelqu'un lui parle : il ecoute
     const v = B.defs.recherche.vitesses;
     const axe = Entree.axe;
     if (j.roule > 0) {                       // roulade : on ne se dirige plus
@@ -466,6 +468,12 @@ const Entites = (function () {
       e.vx = 0; e.vy = -vitesse;
       if (--e.minuterie <= 0) { retirer(e); return; }
     } else {
+      // Un Cravate sur son territoire : le joueur arme au poing, c'est une provocation.
+      if (e.gang && !e.cible && B.joueur.arme !== 'poings' && !B.joueur.dansVehicule && e.t % 15 === 0
+          && dist2(e.x, e.y, B.joueur.x, B.joueur.y) < (6 * TT) * (6 * TT) && Monde.ligneLibre(e.x, e.y, B.joueur.x, B.joueur.y)) {
+        const zone = Monde.zoneA(e.x, e.y);
+        if (zone && zone.gang === e.gang) { e.etat = 'attaque_joueur'; e.cri = 90; }
+      }
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
       const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
       if (Monde.estChaussee(tx, ty)) {
@@ -883,6 +891,13 @@ const Entites = (function () {
       }
       if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
       if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
+      if (e.type === 'ramassage' && e.objet === 'caisse') {
+        const d = DECORS.caisse;
+        const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);
+        ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + Math.sin(e.t / 14) * 1.5 - cy));
+        B.stats.images++;
+        continue;
+      }
       if (e.type === 'ramassage') {
         const def = Combat.armeDef(e.arme);
         const c = Atlas.cuirePeintre('objet|' + (def ? def.sprite : 'poings'), 16, 10, function (g, w, h) {

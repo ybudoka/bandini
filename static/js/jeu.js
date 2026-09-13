@@ -30,6 +30,10 @@ const Jeu = (function () {
     const j = Entites.creerJoueur(x, y);
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
+    if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
+    B.mission = null; B.defi = null; B.cinema = null;
+    Histoire.creerDonneurs();
+    Histoire.creerPanneaux();
     B.etat = 'jeu';
     B.recherche.etoiles = 0; B.recherche.chaleur = 0; B.recherche.vu = 0;
     Hud.voile(null);
@@ -127,6 +131,7 @@ const Jeu = (function () {
       Vehicules.maj();
       Police.maj();
       Missions.maj();
+      Histoire.maj();
       Monde.majCamera();
       Son.Mus.tick();
       B.t++;
@@ -246,7 +251,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Police: Police, Missions: Missions, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Police: Police, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,
     etatInitial: etatInitial, mulberry: mulberry, hash2: hash2,

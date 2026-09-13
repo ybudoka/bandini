@@ -102,7 +102,7 @@ const Vehicules = (function () {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
       const loin = dist2(v.x, v.y, j.x, j.y) > t.oubli_px * t.oubli_px;
-      if (loin && v.conducteur !== j && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
+      if (loin && v.conducteur !== j && !v.mission && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
       if (v.etat === 'epave') continue;
       if (v.conducteur === 'trafic') roulent++; else if (v.conducteur !== j) stationnes++;
     }
@@ -546,11 +546,12 @@ const Vehicules = (function () {
       const vers = { droit: droit, droite: droite, gauche: gauche };
       // Au premier '+', on decide ou l'on va : tout droit, a gauche, a droite.
       // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
+      // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
       if (!v.sortie && v.poursuite && B.joueur) {
-        const j = B.joueur;
+        const j = B.joueur, signe = v.fuite ? -1 : 1;
         v.sortie = ['droit', 'droite', 'gauche'].sort(function (a, b) {
           const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
-          return dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y);
+          return signe * (dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y));
         });
       } else if (!v.sortie) {
         const tirage = B.rng();
@@ -684,6 +685,8 @@ const Vehicules = (function () {
   function majConducteur(v) {
     const t = trafic();
     if (debloquer(v)) return;
+    // L'escorte (Ti-Guy, M4) : elle te suit, et t'attend quand elle t'a rejoint.
+    if (v.escorte && B.joueur && dist2(v.x, v.y, B.joueur.x, B.joueur.y) < 70 * 70) { rouler(v, 0); return; }
     if (!v.cible || (v.attendFeu && !v.cible.tx)) v.cible = prochaineCible(v);
     if (!v.cible) { majPhysique(v, { gaz: 0, frein: 1, direction: 0 }); return; }
     if (v.attendFeu) {
@@ -759,7 +762,7 @@ const Vehicules = (function () {
     if (v.etat === 'epave') { descendre(j, true); return; }
     majPhysique(v, commandesJoueur(v));
     if (Entree.neuf('attaque')) { v.klaxonT = 30; if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v); }
-    if (Entree.neuf('action')) descendre(j, false);
+    if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {
       const station = Son.Radio.suivante();
       const def = station ? Son.Radio.station(station) : null;
@@ -798,7 +801,7 @@ const Vehicules = (function () {
     }
     peupler();
     if (Son.boucleActive('sirene') && !Police.autos().some(function (v) { return v.sirene; })) Son.boucle('sirene', false);
-    if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t) {
+    if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
     }

@@ -186,6 +186,8 @@ const Son = (function () {
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     porte: function () { if (!joue('porte')) ton(300, 0.1, 'triangle', 0.2, 0.7); },
+    telephone: function () { for (let i = 0; i < 3; i++) { ton(1200, 0.08, 'square', 0.15, 1, i * 0.12); ton(1600, 0.08, 'square', 0.15, 1, i * 0.12 + 0.05); } },
+    mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
   };
 
   // --- Les voix des passants : un mot quand on se frole ------------------------------
@@ -207,6 +209,81 @@ const Son = (function () {
           .then(function (tampon) { tampons.set('voix-' + v.slug, [tampon]); })
           .catch(function () { /* muet, tant pis */ });
       });
+    },
+
+    // --- Les voix de l'histoire : une par personnage, chargees par mission ---
+
+    enCours: null,           // la replique qui joue { source, gain }
+    demandees: [],           // les slugs demandes (le banc n'a pas d'AudioContext : il verifie ceci)
+    missionsChargees: new Set(),
+    histoire: function () { return (B.defs && B.defs.audio && B.defs.audio.histoire) || []; },
+
+    /** Les repliques d'une mission se telechargent quand on commence a lui parler. */
+    chargerHistoire: function (mission) {
+      if (Voix.missionsChargees.has(mission)) return;
+      Voix.missionsChargees.add(mission);
+      if (!ctx || !fenetre || !fenetre.fetch) return;
+      Voix.histoire().filter(function (v) { return v.mission === mission && v.fichier; }).forEach(function (v) {
+        fenetre.fetch(base + B.defs.audio.dossier + '/' + v.fichier)
+          .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+          .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+          .then(function (tampon) {
+            tampons.set('histoire-' + v.slug, [tampon]);
+            // La replique qu'on affiche attendait justement cette voix : on la dit maintenant.
+            if (Voix.attendue && Voix.attendue.slug === v.slug && !Voix.enCours) { const a = Voix.attendue; Voix.attendue = null; Voix.parler(a.slug, a.options); }
+          })
+          .catch(function () { /* la replique restera muette : le texte est la */ });
+      });
+    },
+
+    /** Une replique de l'histoire. Une seule a la fois ; la radio et l'ambiance
+        baissent pendant qu'on parle. `telephone` : la voix vient du combine.
+        `fin` s'appelle quand la voix se tait (jamais si elle n'a pas joue). */
+    parler: function (slug, options) {
+      Voix.couper();
+      Voix.demandees.push(slug);
+      if (Voix.demandees.length > 50) Voix.demandees.shift();
+      const cle = 'histoire-' + slug;
+      const liste = tampons.get(cle);
+      Voix.attendue = null;
+      if (!pret() || !liste || !liste.length) { if (pret()) Voix.attendue = { slug: slug, options: options }; return null; }
+      const def = Voix.histoire().find(function (v) { return v.slug === slug; });
+      const source = ctx.createBufferSource();
+      source.buffer = liste[0];
+      const gain = ctx.createGain();
+      gain.gain.value = def ? def.volume : 0.9;
+      let sortie = gain;
+      if (options && options.telephone && ctx.createBiquadFilter) {
+        // Le combine : une bande etroite autour de 1,5 kHz, un peu plus fort pour compenser.
+        const filtre = ctx.createBiquadFilter();
+        filtre.type = 'bandpass'; filtre.frequency.value = 1500; filtre.Q.value = 1.2;
+        gain.gain.value *= 1.6;
+        gain.connect(filtre); sortie = filtre;
+      }
+      sortie.connect(maitre);
+      Voix.baisserLeReste(true);
+      source.onended = function () { if (Voix.enCours && Voix.enCours.source === source) { Voix.enCours = null; Voix.baisserLeReste(false); } if (options && options.fin) options.fin(); };
+      source.start(ctx.currentTime);
+      Voix.enCours = { source: source, gain: gain, slug: slug };
+      return Voix.enCours;
+    },
+
+    couper: function () {
+      Voix.attendue = null;
+      if (!Voix.enCours) return;
+      try { Voix.enCours.source.onended = null; Voix.enCours.source.stop(); } catch (e) { /* deja finie */ }
+      Voix.enCours = null;
+      Voix.baisserLeReste(false);
+    },
+
+    /** Le ducking : les boucles de musique (radio, ambiance) au quart pendant qu'on parle. */
+    baisserLeReste: function (actif) {
+      boucles.forEach(function (courante, slug) {
+        if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0) return;
+        if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
+        else if (!actif && courante.avant !== undefined) { courante.gain.gain.value = courante.avant; delete courante.avant; }
+      });
+      Voix.ducking = !!actif;
     },
 
     /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug. */

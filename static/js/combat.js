@@ -262,7 +262,7 @@ const Combat = (function () {
   // --- Ramasser, faire les poches -------------------------------------------------
 
   function objetSousLaMain(j) {
-    return Entites.autour(j.x, j.y, 18, function (e) { return e.type === 'ramassage'; })[0] || null;
+    return Entites.autour(j.x, j.y, 18, function (e) { return e.type === 'ramassage' && e.objet === 'arme'; })[0] || null;
   }
 
   function pickpocket(j) {

@@ -44,14 +44,19 @@ def test_le_poids_audio_reste_raisonnable():
     loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
-    bruitages = [f for f in fichiers if not f.name.startswith("radio-")]
+    bruitages = [f for f in fichiers if not f.name.startswith(("radio-", "histoire-"))]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
+    histoire = [f for f in fichiers if f.name.startswith("histoire-")]
     assert sum(f.stat().st_size for f in bruitages) < 600_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
         assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
     assert sum(f.stat().st_size for f in radios) < 2_000_000
+    # Les voix de l'histoire se chargent par mission : une replique reste legere.
+    for fichier in histoire:
+        assert fichier.stat().st_size < 150_000, fichier.name
+    assert sum(f.stat().st_size for f in histoire) < 3_000_000
 
 
 @pytest.mark.parametrize("radio", audio.RADIOS, ids=lambda r: r["slug"])
@@ -141,3 +146,17 @@ def test_la_rumeur_et_les_passages_existent():
         assert audio.par_slug(slug), slug
     assert audio.par_slug("foule")["boucle"] is True, "la rumeur doit boucler"
     assert audio.par_slug("passage_auto")["variantes"] >= 2
+
+
+def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
+    """Chaque replique de l'histoire est servie avec son personnage et sa
+    mission, pour que le navigateur ne charge que celles de la mission en
+    cours — jamais au demarrage."""
+    histoire = paquet["audio"]["histoire"]
+    assert len(histoire) >= 30
+    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5"}
+    assert all(v["qui"] and v["partie"] for v in histoire)
+    assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
+    assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in histoire)
+    slugs = {v["slug"] for v in histoire} | {v["slug"] for v in paquet["audio"]["voix"]}
+    assert len(slugs) == len(histoire) + len(paquet["audio"]["voix"]), "un slug de voix par replique"

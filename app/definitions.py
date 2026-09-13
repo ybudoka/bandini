@@ -31,6 +31,7 @@ def assembler() -> dict:
         "carte": carte.exporter(),
         "missions": missions.CATALOGUE,
         "defis": missions.DEFIS,
+        "personnages": missions.PERSONNAGES,
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
         "magasins": magasins.CATALOGUE,

@@ -108,7 +108,7 @@ class ClientMCP:
 def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
     if not refaire:
         return audio.manquants()
-    connus = set(audio.SLUGS) | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES} | {v["slug"] for v in audio.VOIX}
+    connus = set(audio.SLUGS) | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES} | {v["slug"] for v in audio.toutes_les_voix()}
     inconnus = [s for s in refaire if s not in connus]
     if inconnus:
         raise SystemExit(f"slugs inconnus : {inconnus} (voir app/audio.py)")
@@ -130,7 +130,7 @@ def main() -> int:
     argus.add_argument("--radios", action="store_true",
                        help="generer aussi les stations de radio (musique : CHER)")
     argus.add_argument("--voix", action="store_true",
-                       help="generer aussi les repliques des passants (voix : au caractere)")
+                       help="generer aussi les repliques des passants et de l'histoire (voix : au caractere)")
     options = argus.parse_args()
 
     if os.environ.get("CI"):
@@ -140,7 +140,7 @@ def main() -> int:
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
     radios = [r for r in radios if options.radios or r["slug"] in options.refaire]
-    voix = [v for v in (audio.VOIX if options.refaire else audio.voix_manquantes())
+    voix = [v for v in (audio.toutes_les_voix() if options.refaire else audio.voix_manquantes())
             if options.voix or v["slug"] in options.refaire]
     if not travail and not radios and not voix:
         print("Rien a generer : les", sum(e["variantes"] for e in audio.CATALOGUE),
@@ -159,8 +159,8 @@ def main() -> int:
         print(f"  {audio.nom_fichier_radio(radio):>22}  {radio['duree_s']:>4} s  MUSIQUE  "
               f"{radio['style']} — {radio['prompt'][:48]}…")
     for ligne in voix:
-        print(f"  {audio.nom_fichier_voix(ligne):>22}  {len(ligne['texte']):>4} c  VOIX     "
-              f"{ligne['voix']} — « {ligne['texte']} »")
+        print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(ligne['texte']):>4} c  VOIX     "
+              f"{ligne['voix'][:22]} — « {ligne['texte'][:60]} »")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -203,7 +203,7 @@ def main() -> int:
                 "voice": ligne["voix"],
                 "model_id": "eleven_multilingual_v2",
                 "language_code": "fr",
-                "output_format": FORMAT,
+                "output_format": audio.FORMAT_HISTOIRE if ligne.get("histoire") else FORMAT,
                 "output_dir": dossier,
                 "nom": nom[:-4],
             })

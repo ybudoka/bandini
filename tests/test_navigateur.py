@@ -207,3 +207,28 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
         arg=attendues, timeout=20000)
     assert page.evaluate("window.BANDINI.Son.boucleActive('ambiance-ville')") is True
     assert erreurs == []
+
+
+def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erreurs):
+    """Les repliques de l'histoire se chargent PAR MISSION, quand on parle au
+    donneur : c'est ici, et seulement ici, qu'on sait que le MP3 de Ti-Guy se
+    decode — et que la musique baisse pendant qu'il parle (ducking)."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
+    premiere = page.evaluate("window.BANDINI.B.defs.audio.histoire.find(v => v.mission === 'm1' && v.fichier)")
+    if not premiere:
+        pytest.skip("aucune voix de l'histoire generee (scripts/audio_elevenlabs.py --voix)")
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
+        j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        L.Missions.interagir(j);
+    }""")
+    assert page.evaluate("!!window.BANDINI.B.cinema"), "Ti-Guy ne parle pas"
+    # La voix arrive (telechargee puis decodee) : la replique en cours la joue et la radio baisse.
+    page.wait_for_function("window.BANDINI.Son.Voix.enCours !== null", timeout=20000)
+    assert page.evaluate("window.BANDINI.Son.Voix.enCours.slug").startswith("ti_guy-m1-")
+    assert page.evaluate("window.BANDINI.Son.Voix.ducking") is True
+    assert erreurs == []

@@ -63,7 +63,7 @@ const Missions = (function () {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
     if (!ouvert(commerce)) { Hud.message('FERME'); Son.SFX.erreur(); return true; }
-    const prix = B.defs.economie.tarifs[commerce.tarif];
+    const prix = Math.round(B.defs.economie.tarifs[commerce.tarif] * rabais('kiosque'));
     if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
     payer(prix, commerce.nom.toUpperCase());
     soigner(j, commerce.gain_pv ? B.defs.economie.tarifs[commerce.gain_pv] : 0);
@@ -71,6 +71,9 @@ const Missions = (function () {
     if (commerce.service === 'journal') Hud.message('LE CLAIRON DE LA BAIE');
     return true;
   }
+
+  /** Un rabais gagne dans l'histoire (1 = plein prix). */
+  function rabais(cle) { return (B.partie && B.partie.rabais && B.partie.rabais[cle]) || 1; }
 
   /** La compagnie d'une fille de la Brume : ca se paie, et ca ne se montre pas. */
   function compagnie(j, fille) {
@@ -86,6 +89,11 @@ const Missions = (function () {
 
   /** Ce qu'on peut faire la ou l'on est (bouton ACTION). */
   function interagir(j) {
+    // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
+    const perso = Histoire.personnageSousLaMain(j);
+    if (perso) return Histoire.parler(perso.personnage);
+    const panneau = Histoire.panneauSousLaMain(j);
+    if (panneau) return Histoire.proposerDefi(panneau.defi);
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) return acheterAmbulant(j, etal);
     // Un temoin qui court raconter : on lui achete le silence.
@@ -115,6 +123,8 @@ const Missions = (function () {
     Hud.fondu(150, 'REVEIL A L’HOPITAL — ' + facture + ' $');
     Police.remiseAZero();
     if (taxi.etape) taxi.abandonner();
+    if (B.defi) Histoire.finirDefi(false, 'A L’HOPITAL');
+    Histoire.evenement('mort');
     const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
     setTimeoutJeu(60, function () {
       if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
@@ -167,6 +177,8 @@ const Missions = (function () {
     p.armes = { poings: { mun: null } }; p.arme = 'poings'; j.arme = 'poings';
     Police.remiseAZero();
     if (taxi.etape) taxi.abandonner();
+    if (B.defi) Histoire.finirDefi(false, 'EN PRISON');
+    Histoire.evenement('arrete');
     if (agent) { agent.etat = 'flane'; agent.but = null; }
     const heures = B.defs.recherche.police.prison_heures / 24;
     p.heure += heures; while (p.heure >= 1) { p.heure -= 1; p.jour += 1; nouveauJour(); }
@@ -276,6 +288,9 @@ const Missions = (function () {
     const point = pointSousLaMain(j);
     if (!point) return false;
     j.animT = 10; j.animType = 'ramasse';           // un geste vers le comptoir
+    // Le sergent au casse-croute, Josee au bar : des personnages, pas des comptoirs.
+    if (point.type === 'sergent') return Histoire.parler('bouchard');
+    if (point.type === 'contact') return Histoire.parler('josee');
     const menu = menuDuPoint(point);
     if (!menu) { Hud.message('PLUS TARD'); return true; }
     Hud.ouvrirMenu(menu);
@@ -520,7 +535,10 @@ const Missions = (function () {
     const delta = function (k) { return (s[k] || 0) - (hier[k] || 0); };
     const regles = B.defs.journal || [];
     let choisie = null;
+    // L'histoire a fait la une : la manchette est imposee, une fois.
+    if (p.manchetteForcee) { choisie = { titre: p.manchetteForcee, texte: 'TOUTE LA VILLE EN PARLE.' }; p.manchetteForcee = null; }
     for (const r of regles) {
+      if (choisie) break;
       if (delta(r.cle) >= r.min) { choisie = r; break; }
     }
     p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0 };
@@ -556,15 +574,19 @@ const Missions = (function () {
   /** L'invite ACTION du HUD : ce qu'on ferait ici, maintenant. */
   function majInvite(j) {
     B.invite = null;
-    if (!j || j.dansVehicule || B.menu) return;
+    if (!j || j.dansVehicule || B.menu || B.cinema) return;
     if (B.interieur) {
       const point = pointSousLaMain(j);
       if (point) { B.invite = LIBELLES[point.type] || point.type.toUpperCase(); return; }
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
       return;
     }
+    const perso = Histoire.personnageSousLaMain(j);
+    if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
+    const panneau = Histoire.panneauSousLaMain(j);
+    if (panneau) { B.invite = 'DÉFI'; return; }
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
-    if (etal) { const c = commerceDe(etal.slug); B.invite = c ? c.nom.toUpperCase() + ' — ' + B.defs.economie.tarifs[c.tarif] + ' $' : 'ACHETER'; return; }
+    if (etal) { const c = commerceDe(etal.slug); B.invite = c ? c.nom.toUpperCase() + ' — ' + Math.round(B.defs.economie.tarifs[c.tarif] * rabais('kiosque')) + ' $' : 'ACHETER'; return; }
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
@@ -620,5 +642,5 @@ const Missions = (function () {
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
            setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
-           revenusDuJour, manchetteDuJour, ramasserPaquet, majInvite, maj };
+           revenusDuJour, manchetteDuJour, ramasserPaquet, majInvite, rabais, maj };
 })();

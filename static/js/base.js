@@ -33,6 +33,9 @@ const B = {
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
   options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
+  cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
+  mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
+  defi: null,           // le defi en cours
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },
 };
 
@@ -54,6 +57,14 @@ function etatInitial(defs) {
     planque: { armes: {}, vehicule: null, coffre: 0 },
     proprietes: {},
     missionsFaites: {},
+    mission: null,        // { slug, etape } — la mission en cours
+    appels: {},           // les appels recus, par mission
+    appelT: null,
+    defisFaits: {},
+    rabais: {},
+    sergentAmi: false,
+    faubourgLibere: false,
+    manchetteForcee: null,
     paquets: {},
     journal: null,
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },

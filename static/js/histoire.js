@@ -1,0 +1,677 @@
+/* Bandini — l'histoire : les donneurs, les missions, les defis, les voix.
+
+   Tout le texte vient de `missions.py` (le paquet `B.defs.missions`) : ici on
+   ne fait que le JOUER. Une mission = une suite d'objectifs types ; a chaque
+   image, `maj()` regarde si l'objectif courant est atteint, et passe au
+   suivant. Les repliques s'affichent dans la boite de dialogue ET se disent
+   a voix haute (`Son.Voix.parler`), une par personnage ; pendant qu'un
+   personnage parle, le joueur ecoute (il ne bouge pas), la radio baisse.
+
+   Le telephone : quand une mission devient possible, son donneur appelle
+   quelques secondes plus tard — la voix vient du combine. */
+
+const Histoire = (function () {
+  'use strict';
+
+  const DELAI_APPEL = 600;          // images entre la fin d'une mission et l'appel de la suivante
+  const RAYON_PARLER = 22;          // a cette distance d'un personnage, ACTION = lui parler
+
+  function defs() { return B.defs.missions || []; }
+  function personnages() { return B.defs.personnages || []; }
+  function personnage(slug) { return personnages().find(function (p) { return p.slug === slug; }) || null; }
+  function mission(slug) { return defs().find(function (m) { return m.slug === slug; }) || null; }
+  function faite(slug) { return !!B.partie.missionsFaites[slug]; }
+  function courante() { return B.partie.mission ? mission(B.partie.mission.slug) : null; }
+
+  /** Les missions qu'on peut commencer : prerequis faits, pas encore faites, aucune en cours. */
+  function disponibles() {
+    if (B.partie.mission) return [];
+    return defs().filter(function (m) { return !faite(m.slug) && m.prerequis.every(faite); });
+  }
+
+  function disponibleDe(donneur) {
+    return disponibles().find(function (m) { return m.donneur === donneur; }) || null;
+  }
+
+  // --- Les lieux -------------------------------------------------------------------------
+
+  function point(slug) { return Monde.carte.points.find(function (p) { return p.slug === slug; }) || null; }
+
+  /** Le pixel d'un lieu nomme : la tuile devant sa porte. Les lieux speciaux
+      sont des points d'interet ; le kiosque, lui, n'est qu'une porte. */
+  function lieu(slug) {
+    const p = point(slug);
+    if (p) return { x: p.x * TT + 8, y: p.y * TT + 8, nom: p.nom };
+    const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === slug; });
+    if (porte) {
+      const inte = Monde.carte.def.interieurs && Monde.carte.def.interieurs[porte.interieur];
+      return { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8, nom: inte ? inte.nom : slug };
+    }
+    return null;
+  }
+
+  /** Une tuile marchable pres d'un pixel, hors chaussee, en spirale. */
+  function tuileLibre(x, y, rayonMax) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    for (let r = 0; r <= (rayonMax || 4); r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        if (Monde.marchablePieton(tx + dx, ty + dy) && !Monde.estChaussee(tx + dx, ty + dy)) return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+      }
+    }
+    return null;
+  }
+
+  /** Une tuile de rue (avec une fleche) pres d'un pixel : la ou un char peut naitre. */
+  function tuileDeRue(x, y, rayonMax) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    for (let r = 1; r <= (rayonMax || 8); r++) {
+      for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+        const f = Monde.fleche(tx + dx, ty + dy);
+        if (f === '>' || f === '<' || f === '^' || f === 'v') return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8, sens: f };
+      }
+    }
+    return null;
+  }
+
+  /** La ruelle (glyphe `x`) la plus proche d'un lieu — la ou dort le char de M1. */
+  function ruellePres(slug) {
+    const p = point(slug), c = Monde.carte;
+    if (!p) return null;
+    let meilleur = null, dMin = Infinity;
+    for (let ty = 1; ty < c.h - 1; ty++) for (let tx = 1; tx < c.w - 1; tx++) {
+      if (Monde.glyphe(tx, ty) !== 'x') continue;
+      const d = dist2(tx, ty, p.x, p.y);
+      if (d < dMin) { dMin = d; meilleur = { x: tx * TT + 8, y: ty * TT + 8 }; }
+    }
+    return meilleur;
+  }
+
+  /** `ou` d'un objectif ou d'un personnage → un pixel. */
+  function resoudre(ou, m) {
+    if (!ou) return null;
+    if (ou === 'donneur') { const d = donneur(m.donneur); return d ? { x: d.x, y: d.y } : lieuDuPersonnage(m.donneur); }
+    const deux = ou.split(':');
+    if (deux[0] === 'porte') return lieu(deux[1]);
+    if (deux[0] === 'ruelle') return ruellePres(deux[1]);
+    if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
+    if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
+    return lieu(ou);
+  }
+
+  function lieuDuPersonnage(slug) {
+    const p = personnage(slug);
+    if (!p) return null;
+    const ou = p.ou.split(':');
+    if (ou[0] === 'porte') return lieu(ou[1]);
+    if (ou[0] === 'point') {                                // il est dedans : la porte de son commerce
+      const piece = ou[1] === 'sergent' ? 'casse_croute' : ou[1] === 'contact' ? 'bar' : null;
+      return piece ? lieu(piece) : null;
+    }
+    return null;
+  }
+
+  // --- Les donneurs, en chair et en os ---------------------------------------------------
+
+  function donneur(slug) {
+    return B.entites.find(function (e) { return e.type === 'pieton' && e.personnage === slug && e.vivant; }) || null;
+  }
+
+  /** Pose les personnages qui se tiennent DEHORS, a cote de leur porte. Ti-Guy
+      attend au terminus tant que M1 n'est pas faite ; les autres sont chez eux. */
+  function creerDonneurs() {
+    for (const p of personnages()) {
+      if (p.ou.indexOf('porte:') !== 0) continue;                 // les autres sont dedans
+      if (p.slug === 'ti_guy' && faite('m1')) continue;
+      const l = lieu(p.ou.slice(6));
+      if (!l) continue;
+      // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
+      // qu'ACTION au pas de la porte serve encore a autre chose.
+      const place = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
+      if (!place) continue;
+      creerPersonnage(p, place.x, place.y);
+    }
+  }
+
+  function creerPersonnage(p, x, y) {
+    const arch = { slug: 'perso_' + p.slug, nom: p.nom, sprite: 'joueur', couleurs: p.couleurs, vitesse: 0, courage: 0,
+                   temoin: 0, vie: 100, argent: [0, 0], arme: null, intouchable: true, metier: 'histoire' };
+    const e = Entites.creerPieton(x, y, arch);
+    e.personnage = p.slug; e.etat = 'fige'; e.cri = 0;
+    return e;
+  }
+
+  /** Le personnage a portee d'ACTION, s'il y en a un. */
+  function personnageSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, RAYON_PARLER).find(function (e) { return e.personnage; }) || null;
+  }
+
+  // --- Les dialogues, dits a voix haute ----------------------------------------------------
+
+  /** Une suite de repliques. Le joueur ecoute : ACTION passe a la suivante, et
+      la voix finie (ou le texte lu) passe toute seule. `fin` s'appelle apres. */
+  function dire(m, partie, fin) {
+    const lignes = ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
+      return { qui: l.qui, texte: l.texte, telephone: partie === 'appel', slug: slugDeVoix(m, partie, i) };
+    });
+    if (!lignes.length) { if (fin) fin(); return false; }
+    Son.Voix.chargerHistoire(m.slug);
+    B.cinema = { lignes: lignes, i: -1, t: 0, duree: 0, fin: fin || null, mission: m.slug, partie: partie };
+    Entree.contexte('dialogue');
+    suivante();
+    return true;
+  }
+
+  /** Le slug de voix d'une replique : `<qui>-<mission>-<n>`, n compte a travers
+      appel, intro, client, fin, echec — exactement comme `missions.repliques()`. */
+  function slugDeVoix(m, partie, i) {
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec'];
+    let n = 0;
+    for (const p of ordre) {
+      const lignes = m.dialogue[p] || [];
+      if (p === partie) return lignes[i].qui + '-' + m.slug + '-' + (n + i + 1);
+      n += lignes.length;
+    }
+    return null;
+  }
+
+  function suivante() {
+    const c = B.cinema;
+    if (!c) return;
+    c.i++;
+    if (c.i >= c.lignes.length) { finir(); return; }
+    const l = c.lignes[c.i];
+    const p = personnage(l.qui);
+    c.t = 0;
+    c.duree = 90 + l.texte.length * 3;                      // le temps de lire, si la voix manque
+    Hud.dialogue((p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0);
+    c.voix = Son.Voix.parler(l.slug, { telephone: l.telephone, fin: function () { if (B.cinema === c && c.i === c.lignes.indexOf(l)) c.duree = Math.min(c.duree, c.t + 20); } });
+  }
+
+  function finir() {
+    const c = B.cinema;
+    B.cinema = null;
+    B.dialogue = null;
+    Son.Voix.couper();
+    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+    if (c && c.fin) c.fin();
+  }
+
+  /** Deux lignes de 46 caracteres au plus : la boite fait la largeur de l'ecran. */
+  function decouper(texte) {
+    const mots = texte.split(' '), lignes = [];
+    let courante = '';
+    for (const mot of mots) {
+      if ((courante + ' ' + mot).trim().length > 46) { lignes.push(courante.trim()); courante = mot; } else courante += ' ' + mot;
+    }
+    if (courante.trim()) lignes.push(courante.trim());
+    return lignes;
+  }
+
+  function majCinema() {
+    const c = B.cinema;
+    if (!c) return;
+    c.t++;
+    if (Entree.neuf('action') || Entree.neuf('attaque') || c.t > c.duree) suivante();
+  }
+
+  // --- Le telephone ------------------------------------------------------------------------
+
+  function majTelephone() {
+    const p = B.partie;
+    if (B.cinema || p.mission || B.interieur) return;
+    const prochaine = disponibles().find(function (m) { return m.prerequis.length && m.dialogue.appel.length && !p.appels[m.slug]; });
+    if (!prochaine) return;
+    if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
+    if (B.t < p.appelT) return;
+    p.appels[prochaine.slug] = true; p.appelT = null;
+    Son.SFX.telephone();
+    dire(prochaine, 'appel', function () { Hud.message('VA VOIR ' + personnage(prochaine.donneur).nom.toUpperCase(), 180); });
+  }
+
+  // --- Parler a quelqu'un -----------------------------------------------------------------
+
+  /** ACTION pres d'un personnage (ou sur son point, dedans). Rend true si ca a fait quelque chose. */
+  function parler(slug) {
+    const p = personnage(slug);
+    if (!p || B.cinema) return false;
+    const enCours = courante();
+    if (enCours && enCours.donneur === slug) {
+      const o = objectif();
+      if (o && o.type === 'retourner') { reussir(); return true; }
+      Hud.message(objectif() ? objectif().texte : '', 150);
+      return true;
+    }
+    const m = disponibleDe(slug);
+    if (m) { dire(m, 'intro', function () { commencer(m.slug); }); return true; }
+    Hud.dialogue(p.nom, [faite('m5') ? 'LE FAUBOURG EST TRANQUILLE. MERCI.' : 'REVIENS ME VOIR PLUS TARD.'], 120);
+    return true;
+  }
+
+  // --- Les missions ------------------------------------------------------------------------
+
+  function objectif() {
+    const m = courante();
+    return m ? m.objectifs[B.partie.mission.etape] || null : null;
+  }
+
+  function commencer(slug) {
+    const m = mission(slug);
+    if (!m || B.partie.mission) return false;
+    B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
+    B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };
+    Hud.message(m.titre.toUpperCase(), 180);
+    Son.SFX.mission();
+    avancer();
+    return true;
+  }
+
+  /** L'objectif suivant. Ce qu'il faut poser en ville se pose DEHORS : si
+      l'objectif arrive pendant qu'on est dedans (Josee au bar), a la sortie. */
+  function avancer() {
+    const m = courante(), p = B.partie.mission;
+    p.etape++;
+    const o = m.objectifs[p.etape];
+    if (!o) { reussir(); return; }
+    p.debutT = B.t;
+    B.mission.aPoser = true;
+    if (!B.interieur) poser();
+    Hud.message(o.texte, 200);
+  }
+
+  function poser() {
+    const m = courante(), p = B.partie.mission, j = B.joueur;
+    const o = m.objectifs[p.etape];
+    B.mission.aPoser = false;
+    if (!o) return;
+    if (o.type === 'monter') {
+      const ou = resoudre(o.ou, m);
+      const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : tuileDeRue(ou.x, ou.y, 8)) : null;
+      const place = rue || ou;
+      if (place) {
+        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens] : 0, { etat: 'stationne', mission: m.slug });
+        if (v) { B.mission.vehicule = v; B.mission.entites.push(v); }
+      }
+    } else if (o.type === 'tuer') {
+      poserLesCravates(m, o);
+    } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
+      poserLeFuyard(m, o);
+    } else if (o.type === 'semer') {
+      B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
+      B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
+      if (o.escorte) poserLEscorte(m, o);
+    } else if (o.type === 'courses') {
+      B.mission.courses = 0; B.mission.coursesDepart = Missions.taxi.courses;
+    }
+  }
+
+  function poserLesCravates(m, o) {
+    const gang = B.defs.pietons.gangs.find(function (g) { return g.slug === o.groupe; });
+    if (!gang) return;
+    const arch = Entites.archetype(gang.pieton);
+    const centre = o.chef ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y };
+    const coins = o.coins || 1;
+    B.mission.kos = 0;
+    for (let c = 0; c < coins; c++) {
+      const a = c / coins * Math.PI * 2;
+      const cx = coins > 1 ? centre.x + Math.cos(a) * 120 : centre.x, cy = coins > 1 ? centre.y + Math.sin(a) * 120 : centre.y;
+      for (let i = 0; i < Math.ceil(o.n / coins); i++) {
+        const place = tuileLibre(cx + (i - 1) * 20 + 40, cy + 10, 6);
+        if (!place) continue;
+        const e = Entites.creerPieton(place.x, place.y, arch);
+        e.cible = true; e.mission = m.slug; e.courage = 1; e.etat = 'flane';
+        if (o.chef) { e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' }); }
+        B.mission.entites.push(e);
+        if (B.mission.entites.filter(function (q) { return q.cible && q.mission === m.slug && q.vivant && q.etat !== 'assomme'; }).length >= o.n) break;
+      }
+    }
+    Entites.indexer();
+    Entites.alerter(centre.x, centre.y, B.joueur, 1);     // ils t'ont vu venir
+  }
+
+  function poserLeFuyard(m, o) {
+    const j = B.joueur;
+    const rue = tuileDeRue(j.x, j.y, 10);
+    if (!rue) return;
+    const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
+    const v = Vehicules.creer(o.vehicule || 'moto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, fuite: true, sens: rue.sens, mission: m.slug, fuyard: true });
+    if (!v) return;
+    v.vitesse = 1.5;
+    B.mission.vehicule = v; B.mission.fuyard = v; B.mission.entites.push(v);
+    Hud.message('LE FUYARD FILE EN MOTO !', 150);
+  }
+
+  function poserLEscorte(m, o) {
+    const j = B.joueur;
+    const rue = tuileDeRue(j.x, j.y, 10);
+    if (!rue) return;
+    const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
+    const v = Vehicules.creer('auto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, escorte: true, sens: rue.sens, mission: m.slug, couleur: '#2e8b57', swaps: { c: '#2e8b57' } });
+    if (!v) return;
+    B.mission.escorte = v; B.mission.entites.push(v);
+  }
+
+  /** Le fuyard « tombe » : la moto s'arrete ou casse, un Cravate en descend avec la caisse. */
+  function faireTomberLeFuyard() {
+    const v = B.mission.fuyard;
+    if (!v || B.mission.fuyardTombe) return;
+    B.mission.fuyardTombe = true;
+    v.conducteur = null; v.etat = v.etat === 'epave' ? 'epave' : 'stationne'; v.fuite = false; v.poursuite = false;
+    const gang = B.defs.pietons.gangs[0];
+    const place = tuileLibre(v.x, v.y, 4) || { x: v.x + 12, y: v.y };
+    const e = Entites.creerPieton(place.x, place.y, Entites.archetype(gang.pieton));
+    e.cible = true; e.mission = B.partie.mission.slug; e.porteLaCaisse = true; e.etat = 'fuit'; e.menace = B.joueur; e.minuterie = 9999; e.courage = 0;
+    B.mission.entites.push(e);
+    Entites.indexer();
+    Hud.message('IL A LA CAISSE — ATTRAPE-LE !', 150);
+  }
+
+  function lacherLaCaisse(e) {
+    if (!e.porteLaCaisse) return;
+    e.porteLaCaisse = false;
+    const c = Entites.creer('ramassage', e.x + 6, e.y + 4, { r: 4, objet: 'caisse', t: 0, solide: false, mission: B.partie.mission.slug });
+    B.mission.entites.push(c);
+  }
+
+  /** Le chef sort quand ses gars sont tombes : `tuer` avec `chef` se pose au moment venu. */
+  function majObjectif() {
+    const m = courante(), p = B.partie.mission, j = B.joueur;
+    const o = m.objectifs[p.etape];
+    if (!o) return;
+    switch (o.type) {
+      case 'aller': {
+        if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
+        B.mission.attend = null;
+        const l = lieu(o.lieu);
+        if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT)) avancer();
+        return;
+      }
+      case 'monter': {
+        const v = B.mission.vehicule;
+        if (!v) { avancer(); return; }
+        if (v.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        if (j.dansVehicule === v) { p.chocs = v.chocs; avancer(); }
+        return;
+      }
+      case 'livrer': {
+        const v = B.mission.vehicule || j.dansVehicule;
+        if (!v || v.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        const l = lieu(o.lieu);
+        if (j.dansVehicule === v && l && dist2(v.x, v.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT) && Math.abs(v.vitesse) < 0.4) {
+          B.mission.sansBosse = o.sans_degats && v.chocs === p.chocs && v.vie === v.vieMax;
+          Vehicules.descendre(j, true);
+          v.mission = null; v.vole = false; v.conducteur = null; v.etat = 'stationne';
+          B.mission.entites = B.mission.entites.filter(function (e) { return e !== v; });
+          avancer();
+        }
+        return;
+      }
+      case 'tuer': {
+        const cibles = B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && !e.porteLaCaisse; });
+        const tombes = cibles.filter(function (e) { return !e.vivant || e.etat === 'assomme'; }).length;
+        B.mission.kos = tombes;
+        if (cibles.length && tombes >= Math.min(o.n, cibles.length)) {
+          if (o.chef && B.recherche.etoiles < 3 && m.objectifs[p.etape + 1] && m.objectifs[p.etape + 1].type === 'semer') Hud.message('UN TÉMOIN A APPELÉ LA POLICE !', 150);
+          avancer();
+        }
+        return;
+      }
+      case 'ramasser': {
+        const v = B.mission.fuyard;
+        if (v && !B.mission.fuyardTombe) {
+          const pres = j.dansVehicule ? j.dansVehicule : j;
+          const d = Math.hypot(v.x - pres.x, v.y - pres.y);
+          if (v.etat === 'epave' || (d < 40 && Math.abs(v.vitesse) < 0.6) || v.vie < v.vieMax * 0.5) faireTomberLeFuyard();
+          return;
+        }
+        const porteur = B.mission.entites.find(function (e) { return e.porteLaCaisse; });
+        if (porteur && (!porteur.vivant || porteur.etat === 'assomme')) lacherLaCaisse(porteur);
+        const caisse = B.mission.entites.find(function (e) { return e.objet === 'caisse'; });
+        if (caisse && dist2(j.x, j.y, caisse.x, caisse.y) < 14 * 14 && !j.dansVehicule) {
+          Entites.retirer(caisse); Son.SFX.argent(); avancer();
+        }
+        return;
+      }
+      case 'courses': {
+        B.mission.courses = Missions.taxi.courses - B.mission.coursesDepart;
+        if (B.mission.courses === o.n - 1 && Missions.taxi.etape === 'course' && !B.mission.clientDit && m.dialogue.client) {
+          B.mission.clientDit = true;
+          dire(m, 'client', null);
+        }
+        if (B.mission.courses >= o.n) avancer();
+        return;
+      }
+      case 'semer': {
+        const v = B.mission.escorte;
+        if (v && v.etat === 'epave') { echouer('vehicule_detruit'); return; }
+        if (B.recherche.etoiles === 0) avancer();
+        return;
+      }
+      case 'retourner': {
+        const d = donneur(m.donneur);
+        if (d && dist2(j.x, j.y, d.x, d.y) < RAYON_PARLER * RAYON_PARLER) reussir();
+        return;
+      }
+      case 'survivre':
+        if (B.t - p.debutT > (o.secondes || 30) * 60) avancer();
+        return;
+      case 'parler':
+        return;
+      default:
+        avancer();
+    }
+  }
+
+  function reussir() {
+    const m = courante();
+    if (!m) return;
+    const p = B.partie, d = m.donne || {};
+    nettoyer(false);
+    p.missionsFaites[m.slug] = p.jour;
+    p.mission = null;
+    p.appelT = null;
+    let prime = m.recompense;
+    if (B.mission && B.mission.sansBosse) prime += Math.round(m.recompense * 0.5);
+    Missions.encaisser(prime, m.titre.toUpperCase());
+    if (d.arme && !p.armes[d.arme]) { const a = Combat.armeDef(d.arme); p.armes[d.arme] = { mun: a && a.chargeur ? a.chargeur : null }; }
+    if (d.rabais) Object.keys(d.rabais).forEach(function (k) { p.rabais[k] = d.rabais[k]; });
+    if (d.sergent_ami) p.sergentAmi = true;
+    if (d.propriete && !p.proprietes[d.propriete]) p.proprietes[d.propriete] = { jour: p.jour, caisse: 0 };
+    if (d.faubourg_libere) p.faubourgLibere = true;
+    if (d.manchette) p.manchetteForcee = d.manchette;
+    p.stats.missions = (p.stats.missions || 0) + 1;
+    B.mission = null;
+    Son.SFX.mission();
+    dire(m, 'fin', function () {
+      if (d.message) Hud.message(d.message, 200);
+      if (m.slug === 'm1') { const t = donneur('ti_guy'); if (t) { t.etat = 'entre'; t.minuterie = 60; } }
+      Missions.sauvegarderPartie();
+    });
+  }
+
+  function echouer(raison) {
+    const m = courante();
+    if (!m) return;
+    nettoyer(true);
+    B.partie.mission = null;
+    B.mission = null;
+    Hud.message('MISSION RATÉE — ' + m.titre.toUpperCase(), 200);
+    Son.SFX.erreur();
+    B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
+    dire(m, 'echec', null);
+    void raison;
+  }
+
+  /** Ce que la mission avait pose : on l'enleve (ou on le laisse vivre sa vie). */
+  function nettoyer(tout) {
+    if (!B.mission) return;
+    for (const e of B.mission.entites) {
+      if (e.type === 'vehicule') {
+        if (tout || e.fuyard || e.escorte) { if (B.joueur.dansVehicule === e) Vehicules.descendre(B.joueur, true); Entites.retirer(e); }
+        else { e.mission = null; }
+      } else if (e.type === 'pieton') { e.cible = false; e.chef = false; if (e.vivant && e.etat !== 'assomme') { e.etat = 'fuit'; e.minuterie = 300; } }
+      else Entites.retirer(e);
+    }
+  }
+
+  /** Les echecs qui viennent d'ailleurs : la prison, l'hopital. */
+  function evenement(nom) {
+    const m = courante();
+    if (!m) return;
+    if (m.echec.indexOf(nom) >= 0) echouer(nom);
+  }
+
+  // --- Les defis -------------------------------------------------------------------------------
+
+  function defis() { return B.defs.defis || []; }
+
+  /** Un panneau par defi, pose a son point de depart. */
+  function creerPanneaux() {
+    for (const d of defis()) {
+      let l = null;
+      if (d.ou === 'rampe') {
+        const c = Monde.carte;
+        for (let ty = 1; ty < c.h - 1 && !l; ty++) for (let tx = 1; tx < c.w - 1; tx++) if (Monde.glyphe(tx, ty) === 'R') { l = { x: tx * TT + 8, y: (ty + 2) * TT + 8 }; break; }
+      } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
+      if (!l) continue;
+      const place = tuileLibre(l.x - TT * 3, l.y, 3) || tuileLibre(l.x + TT * 3, l.y, 3);
+      if (!place) continue;
+      Entites.creer('panneau', place.x, place.y, { decor: 'panneau', r: 3, solide: false, dessine: true, vivant: false, defi: d.slug });
+    }
+  }
+
+  function panneauSousLaMain(j) {
+    return Entites.autour(j.x, j.y, 24, function (e) { return e.type === 'panneau'; })[0] || null;
+  }
+
+  function proposerDefi(slug) {
+    const d = defis().find(function (q) { return q.slug === slug; });
+    if (!d || B.defi) return false;
+    const fait = !!B.partie.defisFaits[slug];
+    Hud.ouvrirMenu({ titre: d.titre.toUpperCase(), sur: fait ? 'DÉJÀ RÉUSSI' : d.prime + ' $', aide: d.texte, items: [
+      { libelle: 'COMMENCER', faire: function () { commencerDefi(d); return true; } },
+      { libelle: 'PAS MAINTENANT', faire: function () { return true; } },
+    ] });
+    return true;
+  }
+
+  function commencerDefi(d) {
+    const j = B.joueur;
+    B.defi = { slug: d.slug, t: 0, etape: 0, tours: 0, vol: 0, chocs: j.dansVehicule ? j.dansVehicule.chocs : 0, vie: j.dansVehicule ? j.dansVehicule.vie : 0 };
+    if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
+    Hud.message(d.titre.toUpperCase() + ' — GO !', 120);
+    Son.SFX.mission();
+  }
+
+  function majDefi() {
+    const f = B.defi, j = B.joueur;
+    if (!f) return;
+    const d = defis().find(function (q) { return q.slug === f.slug; });
+    f.t++;
+    if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+    const v = j.dansVehicule;
+    if (d.vehicule === 'moto') {
+      if (!v || v.slug !== 'moto') { if (f.t > 600) finirDefi(false, 'IL FAUT UNE MOTO'); return; }
+      if (v.z > 0) { f.vol += Math.hypot(v.vx, v.vy); if (f.vol >= d.vol_px) finirDefi(true); }
+      else f.vol = 0;
+      return;
+    }
+    if (d.points) {
+      if (!v) { finirDefi(false, 'SANS CHAR, PAS DE TOUR'); return; }
+      const cible = lieu(d.points[f.etape]);
+      if (cible && dist2(v.x, v.y, cible.x, cible.y) < (5 * TT) * (5 * TT)) {
+        f.etape++;
+        if (f.etape >= d.points.length) { f.etape = 0; f.tours++; Hud.message('TOUR ' + f.tours + ' / ' + d.tours, 90); }
+        if (f.tours >= d.tours) finirDefi(true);
+      }
+      return;
+    }
+    if (d.lieu) {
+      if (!v) { finirDefi(false, 'SANS CHAR, PAS DE LIVRAISON'); return; }
+      if (v.chocs !== f.chocs || v.vie < f.vie) { finirDefi(false, 'UNE BOSSE !'); return; }
+      const cible = lieu(d.lieu);
+      if (cible && dist2(v.x, v.y, cible.x, cible.y) < (4 * TT) * (4 * TT) && Math.abs(v.vitesse) < 0.4) finirDefi(true);
+    }
+  }
+
+  function finirDefi(reussi, raison) {
+    const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
+    B.defi = null;
+    if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); return; }
+    const premiere = !B.partie.defisFaits[d.slug];
+    B.partie.defisFaits[d.slug] = { jour: B.partie.jour, temps: f.t };
+    if (premiere) Missions.encaisser(d.prime, d.titre.toUpperCase());
+    else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
+    Son.SFX.mission();
+  }
+
+  // --- Le GPS : ou aller, pour le HUD ------------------------------------------------------------
+
+  /** La cible du moment : un objectif, un appel a honorer, un defi en cours. */
+  function cible() {
+    const m = courante(), p = B.partie, j = B.joueur;
+    if (!j) return null;
+    if (B.defi) {
+      const d = defis().find(function (q) { return q.slug === B.defi.slug; });
+      const l = d.points ? lieu(d.points[B.defi.etape]) : d.lieu ? lieu(d.lieu) : null;
+      return l ? { x: l.x, y: l.y, nom: l.nom, couleur: '#7fc4ff' } : null;
+    }
+    if (m) {
+      const o = m.objectifs[p.mission.etape];
+      if (!o) return null;
+      let l = null;
+      if (o.type === 'aller' || o.type === 'livrer') l = lieu(o.lieu);
+      else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
+      else if (o.type === 'retourner') l = donneur(m.donneur) || lieuDuPersonnage(m.donneur);
+      else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
+      else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
+      return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
+    }
+    // Un appel recu : le donneur a aller voir.
+    const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
+    if (attendue) { const l = donneur(attendue.donneur) || lieuDuPersonnage(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
+    return null;
+  }
+
+  /** La ligne d'objectif que le HUD ecrit en haut : mission, objectif, compte. */
+  function ligneObjectif() {
+    const m = courante();
+    if (B.defi) {
+      const d = defis().find(function (q) { return q.slug === B.defi.slug; });
+      const reste = d.chrono_s ? Math.max(0, d.chrono_s * 60 - B.defi.t) : null;
+      const chrono = reste === null ? '' : ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
+      const compte = d.points ? ' TOUR ' + (B.defi.tours + 1) + '/' + d.tours : d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
+      return d.titre.toUpperCase() + chrono + compte;
+    }
+    if (!m) return null;
+    const o = m.objectifs[B.partie.mission.etape];
+    if (!o) return null;
+    if (B.mission && B.mission.attend) return B.mission.attend;
+    let compte = '';
+    if (o.type === 'tuer') compte = ' ' + (B.mission ? B.mission.kos : 0) + '/' + o.n;
+    if (o.type === 'courses') compte = ' ' + (B.mission ? B.mission.courses : 0) + '/' + o.n;
+    return o.texte + compte;
+  }
+
+  // --- La boucle -------------------------------------------------------------------------------
+
+  function maj() {
+    if (!B.joueur || !B.partie) return;
+    majCinema();
+    if (B.cinema) return;
+    majTelephone();
+    if (B.partie.mission) {
+      if (!B.mission) B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+      if (!B.interieur) {
+        if (B.mission.aPoser) poser();
+        majObjectif();
+      }
+    }
+    majDefi();
+  }
+
+  return { disponibles, disponibleDe, personnage, personnageSousLaMain, donneur, creerDonneurs, creerPanneaux, panneauSousLaMain,
+           parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
+           proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
+})();

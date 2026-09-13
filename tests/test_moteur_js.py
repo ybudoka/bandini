@@ -763,6 +763,10 @@ def test_la_vitesse_max_et_la_marche_arriere(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur, d = o.ligneDroite();
         j.x = d.x; j.y = d.y;
+        // ⚠️ On mesure la physique, pas la chance : sans trafic sur la ligne.
+        // (Un char du trafic s'y trouvait selon la graine, et bloquait la mesure.)
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(function (e) { L.Entites.retirer(e); });
         const v = o.char('auto', 0, 0, 0);
         L.Vehicules.monter(j, v);
         const x0 = v.x;

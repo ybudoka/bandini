@@ -169,6 +169,10 @@ const Hud = (function () {
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
     if (d.qui) texte(ctx, d.qui.toUpperCase(), 18, VH - h - 2, '#e8b33c', 1);
     d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, 18, VH - h + 8 + i * 9, '#efe6d0', 1); });
+    if (B.cinema && (B.t >> 4) % 2 === 0) {
+      const suite = B.cinema.i < B.cinema.lignes.length - 1 ? 'ACTION >' : 'ACTION > FIN';
+      texte(ctx, suite, VW - 18 - Atlas.largeurTexte(suite, 1), VH - 16, '#8a8698', 1);
+    }
     if (d.duree && d.t > d.duree) B.dialogue = null;
     B.stats.rects += 2;
   }
@@ -314,6 +318,14 @@ const Hud = (function () {
         if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) { ctx.fillRect(bx, by, 2, 2); B.stats.rects++; }
       }
     }
+    // L'histoire : l'objectif, le donneur a aller voir, le defi — un blip qui clignote.
+    const gps = Histoire.cible();
+    if (gps && (B.t >> 3) % 2 === 0) {
+      const gx = MINI.x + Math.round(gps.x / TT) - sx, gy = MINI.y + Math.round(gps.y / TT) - sy;
+      const bx = borner(gx, MINI.x, MINI.x + MINI.l - 3), by = borner(gy, MINI.y, MINI.y + MINI.h - 3);   // au bord s'il est hors carte
+      ctx.fillStyle = gps.couleur || '#e8b33c'; ctx.fillRect(bx, by, 3, 3);
+      B.stats.rects++;
+    }
     // Le taxi : le client (bleu) ou la destination (or) clignote.
     const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
     if (cible && (B.t >> 4) % 2 === 0) {
@@ -408,6 +420,28 @@ const Hud = (function () {
       if (j && j.charge > 0) {
         const part = Math.min(1, j.charge / Combat.CHARGE_MIN);
         barre(ctx, 6, 19, 30, 3, part, part >= 1 ? '#efe6d0' : '#8a6a3f');
+      }
+      // L'objectif de l'histoire, en haut au centre, et la fleche vers lui au bord de l'ecran.
+      const ligne = !B.interieur ? Histoire.ligneObjectif() : null;
+      if (ligne) {
+        const l = Atlas.largeurTexte(ligne, 1);
+        texte(ctx, ligne, (VW - l) / 2, 6, B.defi ? '#7fc4ff' : '#e8b33c', 1);
+        noter('objectif', (VW - l) / 2, 6, l, 7);
+      }
+      const gps = !B.interieur && j ? Histoire.cible() : null;
+      if (gps) {
+        const dx = gps.x - j.x, dy = gps.y - j.y, d = Math.hypot(dx, dy);
+        const sx = gps.x - B.cam.x, sy = gps.y - B.cam.y;
+        if (d > 60 && (sx < 8 || sx > VW - 8 || sy < 24 || sy > VH - 30)) {
+          const a = Math.atan2(dy, dx);
+          const fx = borner(VW / 2 + Math.cos(a) * VW, 12, VW - 12), fy = borner(VH / 2 + Math.sin(a) * VH, 30, VH - 30);
+          ctx.fillStyle = gps.couleur || '#e8b33c';
+          ctx.beginPath(); ctx.moveTo(fx + Math.cos(a) * 6, fy + Math.sin(a) * 6);
+          ctx.lineTo(fx + Math.cos(a + 2.5) * 5, fy + Math.sin(a + 2.5) * 5);
+          ctx.lineTo(fx + Math.cos(a - 2.5) * 5, fy + Math.sin(a - 2.5) * 5); ctx.closePath(); ctx.fill();
+          const m = Math.round(d / TT) + 'M';
+          texte(ctx, m, borner(fx - Atlas.largeurTexte(m, 1) / 2, 2, VW - 20), borner(fy + 8, 30, VH - 20), gps.couleur || '#e8b33c', 1);
+        }
       }
       // Message.
       if (B.msg && B.msgT > 0) {

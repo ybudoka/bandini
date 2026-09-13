@@ -177,23 +177,47 @@ VOIX: list[Voix] = [
 ]
 
 
+#: Les voix de l'histoire : une par personnage, nommees dans `missions.PERSONNAGES`.
+#: A 44 kHz / 64 kbit/s (pas 22 kHz comme un bruitage) : on ecoute quelqu'un
+#: parler, pas une portiere. Elles se chargent PAR MISSION, jamais au demarrage.
+FORMAT_HISTOIRE = "mp3_44100_64"
+
+
+def voix_histoire() -> list[dict]:
+    """Chaque replique de `missions.repliques()`, avec la voix de son personnage."""
+    from . import missions
+    sortie = []
+    for r in missions.repliques():
+        perso = missions.personnage(r["qui"])
+        if perso is None:
+            raise ValueError(f"replique {r['slug']} : personnage inconnu {r['qui']!r}")
+        sortie.append({"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+                       "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+                       "partie": r["partie"], "telephone": r["telephone"]})
+    return sortie
+
+
+def toutes_les_voix() -> list[dict]:
+    return list(VOIX) + voix_histoire()
+
+
 def voix_par_slug(slug: str) -> Voix | None:
-    for voix in VOIX:
+    for voix in toutes_les_voix():
         if voix["slug"] == slug:
             return voix
     return None
 
 
-def nom_fichier_voix(voix: Voix) -> str:
-    return f"voix-{voix['slug']}.mp3"
+def nom_fichier_voix(voix: dict) -> str:
+    return f"{'histoire' if voix.get('histoire') else 'voix'}-{voix['slug']}.mp3"
 
 
-def chemin_voix(voix: Voix) -> Path:
+def chemin_voix(voix: dict) -> Path:
     return RACINE_STATIQUE / DOSSIER / nom_fichier_voix(voix)
 
 
-def voix_manquantes() -> list[Voix]:
-    return [v for v in VOIX if not chemin_voix(v).is_file()]
+def voix_manquantes() -> list[dict]:
+    return [v for v in toutes_les_voix() if not chemin_voix(v).is_file()]
 
 
 #: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
@@ -254,7 +278,7 @@ def orphelins() -> list[str]:
         return []
     attendus = {nom_fichier(e, i) for e in CATALOGUE for i in range(1, e["variantes"] + 1)}
     attendus |= {nom_fichier_radio(r) for r in RADIOS + AMBIANCES}
-    attendus |= {nom_fichier_voix(v) for v in VOIX}
+    attendus |= {nom_fichier_voix(v) for v in toutes_les_voix()}
     return sorted(f.name for f in dossier.iterdir()
                   if f.is_file() and f.suffix == ".mp3" and f.name not in attendus)
 
@@ -284,5 +308,12 @@ def exporter() -> dict:
             {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
             for v in VOIX
+        ],
+        # Les repliques de l'histoire : une voix par personnage, chargees par mission.
+        "histoire": [
+            {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
+             "telephone": v["telephone"], "volume": v["volume"],
+             "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
+            for v in voix_histoire()
         ],
     }

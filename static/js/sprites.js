@@ -320,6 +320,12 @@ const DECORS = {
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 6, 2, 17); ctx.fillRect(2, 22, 6, 2);
   } },
+  panneau: { w: 14, h: 22, ancre: [7, 21], r: 3, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(6, 8, 2, 14);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(0, 0, 14, 9);
+    ctx.fillStyle = '#101018'; ctx.fillRect(2, 2, 10, 2); ctx.fillRect(2, 5, 6, 2);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(10, 5, 2, 2);
+  } },
   stop: { w: 10, h: 22, ancre: [5, 21], r: 2, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 0, 8, 8); ctx.fillRect(0, 1, 10, 6);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 3, 6, 2);
