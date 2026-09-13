@@ -68,6 +68,10 @@ CATALOGUE: list[Vehicule] = [
        ["#f1c40f"], "taxi", radio="taxi_radio"),
     _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 0.07, 40, 2, 450, 0.15,
        ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, radio="le_choc"),
+    # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
+    # prendre a son cycliste (qui temoigne), on en tombe au premier choc.
+    _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
+       ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True),
     _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 0.03, 300, 2, 1200, 0.10,
@@ -80,7 +84,7 @@ CATALOGUE: list[Vehicule] = [
        ["#ecf0f1", "#2c3e50"], "bateau", eau=True, phase=2),
 ]
 
-CLASSES = ("auto", "moto", "camion", "bateau")
+CLASSES = ("auto", "moto", "velo", "camion", "bateau")
 
 #: Le trafic : combien de chars vivent dans la bulle du joueur, et comment un
 #: conducteur regarde devant lui. Les feux durent en images (60 par seconde).
@@ -91,6 +95,8 @@ TRAFIC = {
     "distance_securite_px": 34,   # plus pres que ca, il freine
     "vitesse_ville": 0.55,        # fraction de la vitesse max en circulation
     "patience_images": 200,       # bloque plus longtemps : il force le passage
+    "arret_images": 45,           # au STOP : on s'immobilise ce temps-la
+    "priorite_pieton_px": 70,     # un pieton engage sur le passage : on attend
     "feu_vert_images": 420,
     "feu_orange_images": 60,
     "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle

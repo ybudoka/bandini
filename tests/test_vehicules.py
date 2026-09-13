@@ -14,19 +14,22 @@ def test_slugs_uniques_et_classes_connues():
         assert v["phase"] in (1, 2)
 
 
-def test_une_auto_de_police_et_les_quatre_de_la_v1():
+def test_une_auto_de_police_les_quatre_de_la_v1_et_le_velo():
     assert any(v["police"] for v in vehicules.CATALOGUE)
-    assert {v["slug"] for v in vehicules.de_phase(1)} == {"auto", "taxi", "moto", "police"}
+    assert {v["slug"] for v in vehicules.de_phase(1)} == {"auto", "taxi", "moto", "velo", "police"}
     assert vehicules.par_slug("moto")["ejecte"] is True
+    assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
+    assert vehicules.par_slug("velo")["radio"] is None, "un velo n'a pas de radio"
+    assert vehicules.par_slug("velo")["frequence"] > 0, "il faut des cyclistes dans la rue"
     assert vehicules.par_slug("inconnu") is None
 
 
-def test_la_moto_est_la_plus_rapide_et_la_plus_fragile():
-    moto = vehicules.par_slug("moto")
+def test_la_moto_est_la_plus_rapide_et_le_velo_le_plus_fragile():
+    moto, velo = vehicules.par_slug("moto"), vehicules.par_slug("velo")
     for v in vehicules.CATALOGUE:
-        if v["slug"] != "moto":
-            assert moto["vitesse_max"] >= v["vitesse_max"]
-            assert moto["vie"] <= v["vie"]
+        assert moto["vitesse_max"] >= v["vitesse_max"], v["slug"]
+        assert velo["vie"] <= v["vie"], v["slug"]
+    assert velo["vitesse_max"] < moto["vitesse_max"] / 2, "un velo ne suit pas une moto"
 
 
 def test_le_trafic_et_la_physique_sont_bornes():

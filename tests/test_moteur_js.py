@@ -461,6 +461,10 @@ def test_le_pistolet_tire_touche_et_compte_ses_balles(banc, paquet):
         L.Jeu.commencer();
         L.graine(11);
         const j = L.B.joueur;
+        // La rue est peuplee des le depart : on la vide, la visee assistee
+        // irait chercher le premier passant venu.
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        L.Entites.indexer();
         j.arme = 'pistolet';
         L.B.partie.armes.pistolet = { mun: 12, usure: 0 };
         const cible = o.poser('ouvrier', 90, 0);
@@ -999,3 +1003,160 @@ def test_la_radio_suit_le_char(banc, paquet):
     assert None in r["parcours"], "le cycle doit passer par le silence"
     assert set(s for s in r["parcours"] if s) <= set(stations)
     assert r["apres"] is None, "la radio joue encore une fois descendu"
+
+
+# --- La rue dans la vraie vie : trottoirs, passages, feux, stops, velos ----
+
+
+def test_les_pietons_restent_sur_les_trottoirs(banc):
+    """⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee. Le
+    passage pieton est la seule exception — et un pieton pousse sur la rue
+    par un char regagne le trottoir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(51);
+        let surLaChaussee = 0, surUnPassage = 0, releves = 0;
+        for (let i = 0; i < 2400; i++) {
+            o.frame(1);
+            if (i < 300 || i % 30) continue;
+            L.B.entites.forEach(function (e) {
+                if (e.type !== 'pieton' || !e.vivant || e.recul > 0) return;
+                const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
+                releves++;
+                if (L.Monde.estChaussee(tx, ty)) surLaChaussee++;
+                if (L.Monde.estPassage(tx, ty)) surUnPassage++;
+            });
+        }
+        return { releves: releves, chaussee: surLaChaussee, passage: surUnPassage };
+    }""")
+    assert r["releves"] > 200
+    assert r["chaussee"] <= r["releves"] * 0.03, \
+        f"{r['chaussee']} releves de pietons sur la chaussee (sur {r['releves']})"
+    assert r["passage"] > 0, "personne ne traverse jamais"
+
+
+def test_un_pieton_attend_au_feu_avant_de_traverser(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        const inter = c.intersections.find(function (i) { return i.feux; });
+        // Le passage a l'ouest du croisement, sur la rue est-ouest : tuile '='.
+        const tx = inter.x - 1, ty = inter.y;
+        const est = L.Monde.glyphe(tx, ty);
+        L.B.t = -inter.decalage;                      // phase 0 : nord-sud roule, est-ouest est au rouge
+        const rougeEO = !L.Monde.feuVert(inter, '>');
+        const surAuRouge = L.Entites.traverseeSure(tx, ty, [0, 1]);
+        L.B.t += Math.floor((L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images));
+        const vertEO = L.Monde.feuVert(inter, '>');
+        const surAuVert = L.Entites.traverseeSure(tx, ty, [0, 1]);
+        return { glyphe: est, rougeEO: rougeEO, surAuRouge: surAuRouge, vertEO: vertEO, surAuVert: surAuVert };
+    }""")
+    assert r["glyphe"] == "=", "la tuile choisie n'est pas un passage de la rue est-ouest"
+    assert r["rougeEO"] is True and r["surAuRouge"] is True, "au rouge des chars, le pieton doit pouvoir traverser"
+    assert r["vertEO"] is True and r["surAuVert"] is False, "au vert des chars, le pieton doit attendre"
+
+
+def test_le_trafic_reste_dans_sa_voie(banc):
+    """Sur des rails : un char du trafic ne coupe plus un coin, jamais."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(52);
+        let horsRoute = 0, releves = 0, tournes = 0;
+        const caps = new Map();
+        for (let i = 0; i < 3000; i++) {
+            o.frame(1);
+            if (i < 200 || i % 20) continue;
+            L.B.entites.forEach(function (v) {
+                if (v.type !== 'vehicule' || v.conducteur !== 'trafic' || v.def.classe === 'velo' && false) return;
+                releves++;
+                const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
+                if (!L.Monde.estRoute(tx, ty)) horsRoute++;
+                const avant = caps.get(v.id);
+                if (avant !== undefined && Math.abs(L.ecartAngle ? 0 : 0) === 0 && Math.abs(v.sens !== avant ? 1 : 0)) tournes++;
+                caps.set(v.id, v.sens);
+            });
+        }
+        return { releves: releves, horsRoute: horsRoute, tournes: tournes,
+                 velos: L.B.entites.filter(function (v) { return v.type === 'vehicule' && v.def.classe === 'velo'; }).length };
+    }""")
+    assert r["releves"] > 300
+    # 1 % : un char pousse d'une demi-tuile par un voisin a un coin, le temps
+    # de regagner sa voie. Au-dela, c'est le trafic qui coupe les coins.
+    assert r["horsRoute"] <= r["releves"] * 0.01, f"{r['horsRoute']} releves de trafic hors de la route"
+    assert r["tournes"] > 3, "le trafic ne tourne jamais"
+
+
+def test_les_feux_et_les_stops_sont_poses(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        const feux = L.B.entites.filter(function (e) { return e.type === 'feu'; });
+        const stops = L.B.entites.filter(function (e) { return e.type === 'stop'; });
+        const croix = c.intersections.filter(function (i) { return i.feux; }).length;
+        const tes = c.intersections.filter(function (i) { return i.stop; }).length;
+        const bienPlaces = feux.concat(stops).filter(function (e) {
+            return L.Monde.solidite(Math.floor(e.x / L.TT), Math.floor(e.y / L.TT)) === 0 && !L.Monde.estRoute(Math.floor(e.x / L.TT), Math.floor(e.y / L.TT));
+        }).length;
+        // Un T dont le bras ouest manque : la tige est a l'est, on y arrive en roulant vers l'ouest.
+        const sansOuest = c.intersections.find(function (i) { return i.bras.length === 3 && i.bras.indexOf('O') < 0; });
+        return { feux: feux.length, croix: croix, stops: stops.length, tes: tes,
+                 bienPlaces: bienPlaces, stopSansOuest: sansOuest ? sansOuest.stop : null };
+    }""")
+    assert r["feux"] == r["croix"] * 2 > 0
+    assert r["stops"] == r["tes"] > 0
+    assert r["bienPlaces"] == r["feux"] + r["stops"], "un feu ou un stop est sur la route ou dans un mur"
+    assert r["stopSansOuest"] == "<", "le STOP est pour ceux qui arrivent par la tige"
+
+
+def test_un_char_s_arrete_au_stop_puis_repart(banc, paquet):
+    arret = paquet["conduite"]["trafic"]["arret_images"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(53);
+        const c = L.Monde.carte;
+        // Un T dont la tige arrive par l'est (sens '<') : on cherche sa ligne d'arret.
+        const inter = c.intersections.find(function (i) { return i.stop === '<'; });
+        let sx = -1, sy = -1;
+        for (const cle in c.arrets) {
+            const xy = cle.split(',').map(Number);
+            if (c.arrets[cle] !== '<') continue;
+            if (L.Monde.intersectionA(xy[0] - 1, xy[1]) === inter) { sx = xy[0]; sy = xy[1]; break; }
+        }
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+        const v = L.Vehicules.creer('auto', sx * L.TT + 8 + 40, sy * L.TT + 8, Math.PI, { conducteur: 'trafic', etat: 'roule', sens: '<' });
+        v.vitesse = 1.5;
+        let immobile = 0, arrive = false, reparti = false;
+        for (let i = 0; i < 600; i++) {
+            L.Entites.indexer(); L.Vehicules.majConducteur(v); v.x += v.vx; v.y += v.vy;
+            const tx = Math.floor(v.x / L.TT);
+            if (tx === sx && Math.abs(v.vx) + Math.abs(v.vy) < 0.01) { immobile++; arrive = true; }
+            if (arrive && tx < sx) { reparti = true; break; }
+        }
+        return { trouve: sx >= 0, arrive: arrive, immobile: immobile, reparti: reparti };
+    }""")
+    assert r["trouve"], "aucune ligne d'arret de T trouvee"
+    assert r["arrive"] and r["immobile"] >= arret - 2, f"le char ne s'est arrete que {r['immobile']} images au STOP"
+    assert r["reparti"], "le char n'est jamais reparti du STOP"
+
+
+def test_on_prend_le_velo_du_cycliste(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(54);
+        const j = L.B.joueur;
+        const velo = o.char('velo', 16, 0, 0);
+        velo.conducteur = 'trafic'; velo.etat = 'roule';
+        L.Entites.indexer();
+        const crimes = L.B.partie.stats.crimes;
+        L.Vehicules.monter(j, velo);
+        const cycliste = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin'; }).length;
+        o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
+        return { dedans: j.dansVehicule === velo, cycliste: cycliste, crimes: L.B.partie.stats.crimes - crimes,
+                 vitesse: velo.vitesse, max: velo.def.vitesse_max, moteur: L.Son.boucleActive('moteur'),
+                 radio: L.Son.Radio.demandee };
+    }""")
+    assert r["dedans"] is True
+    assert r["cycliste"] == 1, "le cycliste doit tomber et temoigner"
+    assert r["crimes"] >= 1
+    assert r["vitesse"] > r["max"] * 0.8, "le velo n'avance pas"
+    assert r["moteur"] is False and r["radio"] is None, "un velo n'a ni moteur ni radio"

@@ -168,9 +168,19 @@ const Entites = (function () {
     return e;
   }
 
-  /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran. */
+  /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran.
+      Une fois sur trois, il SORT D'UNE PORTE — la ville a des dedans. */
   function placeDeNaissance() {
     const carte = Monde.carte;
+    if (B.rng() < 0.34 && carte.portesFermees.length) {
+      for (let essai = 0; essai < 8; essai++) {
+        const porte = carte.portesFermees[Math.floor(B.rng() * carte.portesFermees.length)];
+        const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 8;
+        if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) continue;
+        if (visibleAEcran(x, y, 24) || !Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+        return { x: x, y: y };
+      }
+    }
     for (let essai = 0; essai < 24; essai++) {
       const angle = B.rng() * Math.PI * 2;
       const rayon = BULLE_NAISSANCE + B.rng() * (BULLE_OUBLI - BULLE_NAISSANCE - 60);
@@ -188,6 +198,21 @@ const Entites = (function () {
   function visibleAEcran(x, y, marge) {
     const m = marge || 0;
     return x > B.cam.x - m && x < B.cam.x + VW + m && y > B.cam.y - m && y < B.cam.y + VH + m;
+  }
+
+  /** Au premier instant d'une partie, la rue est deja vivante : on peuple
+      AUSSI l'ecran, une seule fois — personne ne voit apparaitre qui que ce
+      soit, le voile du titre n'est pas encore tombe. */
+  function peuplerDabord() {
+    const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
+    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * 0.6;
+    for (let essai = 0; essai < 80 && B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; }).length < voulu; essai++) {
+      const a = B.rng() * Math.PI * 2, d = 40 + B.rng() * 260;
+      const tx = Math.floor((B.joueur.x + Math.cos(a) * d) / TT), ty = Math.floor((B.joueur.y + Math.sin(a) * d) / TT);
+      if (!Monde.marchablePieton(tx, ty) || Monde.estPassage(tx, ty)) continue;
+      creerPieton(tx * TT + 8, ty * TT + 8, null);
+    }
+    indexer();
   }
 
   /** Garde la rue peuplee : on nait hors champ, on s'oublie hors de la bulle. */
@@ -413,22 +438,56 @@ const Entites = (function () {
       e.vx = 0; e.vy = 0;
       if (--e.minuterie <= 0) e.etat = 'flane';
       return;
+    } else if (e.etat === 'entre') {
+      // Il rentre chez lui : un pas vers la porte, et il n'est plus la.
+      e.vx = 0; e.vy = -vitesse;
+      if (--e.minuterie <= 0) { retirer(e); return; }
     } else {
       // Flaner : on suit une direction jusqu'a ce qu'elle ne mene plus nulle part.
-      if (e.butT-- <= 0) {
-        if (B.rng() < 0.3) {
-          e.etat = 'arret';
-          e.minuterie = 50 + Math.floor(B.rng() * 160);
-          e.butT = 90;
+      const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+      if (Monde.estChaussee(tx, ty)) {
+        // Pousse sur la chaussee (par un char) : on regagne le trottoir le plus proche.
+        const refuge = trottoirLePlusProche(tx, ty);
+        if (refuge) {
+          const dx = refuge.x - e.x, dy = refuge.y - e.y, n = Math.hypot(dx, dy) || 1;
+          e.vx = dx / n * v.pieton_course; e.vy = dy / n * v.pieton_course;
+        }
+      } else {
+        if (e.butT-- <= 0) {
+          if (B.rng() < 0.3) {
+            e.etat = 'arret';
+            e.minuterie = 50 + Math.floor(B.rng() * 160);
+            e.butT = 90;
+            e.vx = 0; e.vy = 0;
+            return;
+          }
+          // Une porte juste au nord ? Une fois sur douze, on rentre.
+          const g = Monde.glyphe(tx, ty - 1);
+          if ((g === 'd' || g === 'D') && !e.metier && !e.suit && !e.petit && B.rng() < 0.08) {
+            e.etat = 'entre'; e.minuterie = 40; e.face = 'haut';
+            return;
+          }
+          e.dir = Math.floor(B.rng() * 4);
+          e.butT = 90 + Math.floor(B.rng() * 240);
+        }
+        const dir = DIRECTIONS[e.dir];
+        // ⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee.
+        // On traverse au passage, et seulement quand c'est sur.
+        const ax = Math.floor((e.x + dir[0] * (e.r + 4)) / TT), ay = Math.floor((e.y + dir[1] * (e.r + 4)) / TT);
+        if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) {
+          e.dir = (e.dir + (B.rng() < 0.5 ? 1 : 3)) % 4;      // on tourne, on ne fonce pas
+          e.butT = 60 + Math.floor(B.rng() * 120);
           e.vx = 0; e.vy = 0;
           return;
         }
-        e.dir = Math.floor(B.rng() * 4);
-        e.butT = 90 + Math.floor(B.rng() * 240);
+        if (Monde.estPassage(ax, ay) && !Monde.estPassage(tx, ty) && !traverseeSure(ax, ay, dir)) {
+          e.vx = 0; e.vy = 0;                                   // on attend au bord
+          e.anim.dist = 0;
+          return;
+        }
+        e.vx = dir[0] * vitesse;
+        e.vy = dir[1] * vitesse;
       }
-      const dir = DIRECTIONS[e.dir];
-      e.vx = dir[0] * vitesse;
-      e.vy = dir[1] * vitesse;
     }
     const avant = { x: e.x, y: e.y };
     deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
@@ -439,6 +498,32 @@ const Entites = (function () {
     else if (bouge < 0.2) { e.dir = Math.floor(B.rng() * 4); e.vx = 0; e.vy = 0; }
     regarder(e, e.vx, e.vy);
     if (e.cri > 0) e.cri--;
+  }
+
+  /** La tuile de trottoir (ou d'herbe) la plus proche, en pixels. */
+  function trottoirLePlusProche(tx, ty) {
+    for (let r = 1; r <= 4; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (Monde.marchablePieton(tx + dx, ty + dy)) return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Peut-on s'engager sur ce passage ? Au feu : quand les chars de cette rue
+      sont au rouge. Sans feu : quand aucun char n'approche. */
+  function traverseeSure(tx, ty, dir) {
+    const inter = Monde.intersectionA(tx, ty);
+    // Le passage « = » barre une rue est-ouest : les chars y roulent en > <.
+    const sensChars = Monde.glyphe(tx, ty) === '=' ? '>' : '^';
+    if (inter && inter.feux) return !Monde.feuVert(inter, sensChars);
+    const portee = B.defs.conduite.trafic.priorite_pieton_px;
+    return autour(tx * TT + 8, ty * TT + 8, portee, function (q) {
+      return q.type === 'vehicule' && q.etat !== 'epave' && Math.abs(q.vitesse) > 0.2;
+    }).length === 0;
   }
 
   /** Un coup, une chute, un cri : qui voit ca prend peur (ou s'approche). */
@@ -685,6 +770,7 @@ const Entites = (function () {
         continue;
       }
       if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
+      if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage') {
         const def = Combat.armeDef(e.arme);
         const c = Atlas.cuirePeintre('objet|' + (def ? def.sprite : 'poings'), 16, 10, function (g, w, h) {
@@ -716,10 +802,10 @@ const Entites = (function () {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPieton,
     archetype, archetypeDeRue,
-    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler,
+    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj,
-    blesser, assommer, tuer, alerter, lacherArme,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe,
   };

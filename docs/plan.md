@@ -12,6 +12,7 @@ jalons » à chaque jalon livré.
 | M1 La ville | **livré** (12 sept. 2026) | `carte.py` : trame **irrégulière** (colonnes, rangées et rues toutes différentes), superblocs qui avalent des rues, parcelles BSP par îlot, 157×112 tuiles, 62 croisements dont des T, 10 intérieurs ; juges (voies fortement connexes, un seul îlot marchable, **asymétrie**) ; cache de morceaux borné, mini-carte |
 | Audio ElevenLabs | **livré** (12 sept. 2026) | MCP `elevenlabs` + `app/audio.py` + 14 bruitages dans `static/audio/` ; **3 radios** (La Brume, Taxi-Radio, Le Choc) générées par ElevenLabs Music le 13 sept., chargées au premier tour de clé ; voix des personnages en M6 |
 | Vie de rue | **livré** (12 sept. 2026) | femmes, enfants (**intouchables**), mères suivies de leur petit, filles de la Brume (la nuit, un fondu, jamais une scène), kiosques à hot-dogs / journaux / roulotte à café et camions-restaurants posés par `carte.py` |
+| La rue dans la vraie vie | **livré** (13 sept. 2026) | retour de Martin (chars fous, piétons sur la chaussée) : le trafic roule **sur des rails** (centre de tuile en centre de tuile, jamais un coin coupé), les piétons **ne posent pas le pied sur la chaussée** et traversent au passage quand c'est sûr, sortent des portes et rentrent chez eux ; **feux visibles** aux vrais croisements, **STOP** à la tige des T, priorité aux piétons engagés, **cyclistes** dont on prend le vélo |
 | M2 Piétons et poings | **livré** (12 sept. 2026) | `pietons.py` (8 archétypes, courage, témoin, gangs) ; hachage spatial, bulle de foule, flâner/fuir/témoin/riposter, mêlée en trois temps, coup fort, roulade, projectiles + plombs + cloche, visée assistée, armes de fortune qui cassent, sang plafonné, pickpocket dans le dos |
 | M3 Véhicules | **livré** (13 sept. 2026) | auto, taxi, moto, auto-patrouille (sprite) ; physique arcade, **chaîne de cercles**, sous-pas, monter/descendre/carjacking/éjection, trafic qui **lit le champ `voie`** (tourne à gauche après le croisement, ralentit avant le coin), feux sur les vrais croisements, dégâts/fumée/feu/explosion, alarmes, rampes, renversements, taxi au klaxon avec pourboire selon la douceur, hôpital quand on meurt, moteur qui monte dans les tours |
 | M4 Police | à faire | |
@@ -82,6 +83,16 @@ libérer 4 districts) ou *Sacrer son camp* (15 000 $ en poche, traversier de nui
 (parc-île, Les Skateux) **v2**. Journal : *Le Clairon de la Baie*. Radios : *La Brume*
 (jazz, auto), *Taxi-Radio* (country), *Le Choc* (punk, moto), *10-4* (ondes du poste),
 *Radio-Traversier* (rigodon) ; l'autobus n'a que son moteur.
+
+**La rue dans la vraie vie (13 sept. 2026)** : un char du trafic ne quitte jamais sa voie
+— il est **sur des rails** (centre de tuile en centre de tuile ; la physique arcade ne sert
+qu'au joueur, seule exception autorisée hors route). Un piéton ne pose pas le pied sur la
+chaussée : il traverse **au passage**, quand les chars de cette rue sont au rouge (ou, sans
+feu, quand aucun n'approche) ; poussé sur la rue par un char, il regagne le trottoir. Il
+sort des portes et y rentre parfois. Les croisements à quatre bras ont des **feux** (deux
+lanternes), la tige d'un **T** a un **STOP** (arrêt complet, puis passage si la boîte est
+libre), et un char cède aux piétons engagés. Des **cyclistes** roulent avec le trafic ; on
+peut prendre leur vélo (ils tombent et témoignent) — pas de moteur, pas de radio.
 
 **Vie de rue (12 sept. 2026)** : la foule mêle hommes, femmes, ados, itinérants, livreurs,
 **mères accompagnées de leur enfant** et **enfants** — ces derniers sont **intouchables** :

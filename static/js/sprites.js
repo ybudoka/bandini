@@ -123,6 +123,20 @@ SPRITES.police = {
   pal: { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' },
   swaps: ['c'], poses: { base: [GRILLE_AUTO] },
 };
+SPRITES.velo = {
+  w: 16, h: 8, ancre: [8, 4], rotations: 32,
+  pal: { k: '#101018', c: '#2980b9', r: '#2a2a2e', h: '#3a2a1a', p: '#c0392b', s: '#e8b088', l: '#fff3b0', t: '#ff4b3e' },
+  swaps: ['c'], poses: { base: [[
+    '................',
+    '......hhh.......',
+    '.kk...sss...kk..',
+    'krrk.kpppk.krrk.',
+    'krrkcccccccrrkl.',
+    'krrk.kpppk.krrk.',
+    '.kk...sss...kk..',
+    '................',
+  ]] },
+};
 SPRITES.moto = {
   w: 20, h: 10, ancre: [10, 5], rotations: 32,
   pal: { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', h: '#2c2c2c', p: '#3a3a4a', l: '#fff3b0', t: '#ff4b3e' },
@@ -274,6 +288,15 @@ const DECORS = {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 20, 8, 7); ctx.fillRect(30, 20, 8, 7);
     ctx.fillStyle = '#101018'; ctx.fillRect(6, 22, 4, 5); ctx.fillRect(32, 22, 4, 5);
     ctx.fillStyle = '#9aa0a8'; ctx.fillRect(2, 18, 40, 2);
+  } },
+  feu: { w: 10, h: 24, ancre: [5, 23], r: 2, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 6, 2, 17); ctx.fillRect(2, 22, 6, 2);
+  } },
+  stop: { w: 10, h: 22, ancre: [5, 21], r: 2, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 0, 8, 8); ctx.fillRect(0, 1, 10, 6);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 3, 6, 2);
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(4, 8, 2, 14);
   } },
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);

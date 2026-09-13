@@ -16,11 +16,13 @@ const Jeu = (function () {
     B.entites.length = 0;
     Entites.creerDecor(Monde.carte.def);
     Entites.creerAmbulants(Monde.carte.def);
+    Vehicules.creerSignalisation();
     const app = Monde.carte.apparition.joueur;
     const x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
     const y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;
     const j = Entites.creerJoueur(x, y);
     Monde.centrerCamera(j.x, j.y);
+    Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     B.etat = 'jeu';
     B.recherche.etoiles = 0; B.recherche.chaleur = 0; B.recherche.vu = 0;
     Hud.voile(null);

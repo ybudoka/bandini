@@ -240,7 +240,11 @@ const Vehicules = (function () {
           v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total);
           autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total);
           const relatif = (v.vx - autre.vx) * nx + (v.vy - autre.vy) * ny;
-          if (relatif > ph.choc_vitesse_min) {
+          // ⚠️ Le trafic ne s'entretue pas : deux chars sur leurs rails qui se
+          // frolent a un coin se poussent, sans degats. Les chocs qui comptent
+          // sont ceux ou le joueur est au volant d'un des deux.
+          const joueurImplique = v.conducteur === B.joueur || autre.conducteur === B.joueur;
+          if (relatif > ph.choc_vitesse_min && joueurImplique) {
             const degats = Math.round(relatif * ph.choc_degats_par_px);
             endommager(autre, degats, v.conducteur === B.joueur ? B.joueur : null);
             endommager(v, Math.round(degats * 0.6), autre.conducteur === B.joueur ? B.joueur : null);
@@ -385,7 +389,13 @@ const Vehicules = (function () {
   function monter(j, v) {
     if (!v || v.etat === 'epave' || j.dansVehicule) return false;
     let crime = null, vu = false;
-    if (v.conducteur === 'trafic') {
+    if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
+      // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
+      const cycliste = Entites.creerPieton(v.x, v.y + 10, Entites.archetypeDeRue());
+      cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
+      cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
+      crime = 'vol_vehicule'; vu = true;
+    } else if (v.conducteur === 'trafic') {
       // Carjacking : le conducteur sort, temoigne, et fuit. Pas besoin de temoin :
       // la victime en est un.
       const arch = Entites.archetypeDeRue();
@@ -402,8 +412,7 @@ const Vehicules = (function () {
     j.x = v.x; j.y = v.y;
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
     Entree.contexte('vehicule');
-    Son.SFX.porte();
-    Son.boucle('moteur', true, 0.6);
+    if (v.def.classe === 'velo') Son.SFX.ramasse(); else { Son.SFX.porte(); Son.boucle('moteur', true, 0.6); }
     if (v.def.radio) Son.Radio.jouer(v.def.radio);
     Hud.message(v.def.nom.toUpperCase());
     return true;
@@ -481,8 +490,17 @@ const Vehicules = (function () {
       const sens = Monde.sensArret(tx, ty) || v.sens;
       v.sens = sens;
       const p = PAS_FLECHE[sens];
-      const inter = Monde.intersectionA(tx + p[0] * 3, ty + p[1] * 3) || Monde.intersectionA(tx + p[0], ty + p[1]);
+      const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
       if (inter && !Monde.feuVert(inter, sens)) { v.attendFeu = true; return centre(tx, ty); }
+      // Un STOP : on s'immobilise, puis on passe si le croisement est libre.
+      if (inter && inter.stop === sens) {
+        if (v.stopT === undefined) v.stopT = trafic().arret_images;
+        // ⚠️ Le compte ne tourne qu'a l'ARRET complet : sinon on comptait le
+        // freinage et le char repartait sans s'etre vraiment immobilise.
+        if (Math.abs(v.vitesse) < 0.05) v.stopT = Math.max(0, v.stopT - 1);
+        if (v.stopT > 0 || !croisementLibre(inter, v)) { v.attendFeu = true; return centre(tx, ty); }
+      }
+      v.stopT = undefined;
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === '+') {
@@ -521,6 +539,13 @@ const Vehicules = (function () {
     return meilleur;
   }
 
+  /** Personne dans la boite du croisement (a part nous) ? */
+  function croisementLibre(inter, v) {
+    const cx = (inter.x + inter.l / 2) * TT, cy = (inter.y + inter.h / 2) * TT;
+    const rayon = Math.max(inter.l, inter.h) * TT / 2 + 12;
+    return Entites.autour(cx, cy, rayon, function (e) { return e.type === 'vehicule' && e !== v && e.etat !== 'epave'; }).length === 0;
+  }
+
   /** Quelque chose devant ? Rend la distance, ou Infinity. */
   function obstacleDevant(v) {
     const t = trafic();
@@ -545,15 +570,9 @@ const Vehicules = (function () {
     if (!v.cible || (v.attendFeu && !v.cible.tx)) v.cible = prochaineCible(v);
     if (!v.cible) { majPhysique(v, { gaz: 0, frein: 1, direction: 0 }); return; }
     if (v.attendFeu) {
-      // On attend au feu : on re-regarde le feu chaque image, sans bouger.
-      const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
-      if (Monde.fleche(tx, ty) === 'S') {
-        const p = PAS_FLECHE[v.sens];
-        const inter = Monde.intersectionA(tx + p[0] * 3, ty + p[1] * 3) || Monde.intersectionA(tx + p[0], ty + p[1]);
-        if (inter && !Monde.feuVert(inter, v.sens)) { majPhysique(v, { gaz: 0, frein: 1, direction: 0 }); return; }
-      }
-      v.attendFeu = false;
+      // On attend (feu rouge, stop) : on redemande chaque image, sans bouger.
       v.cible = prochaineCible(v);
+      if (v.attendFeu) { rouler(v, 0); return; }
       if (!v.cible) return;
     }
     const dx = v.cible.x - v.x, dy = v.cible.y - v.y;
@@ -580,14 +599,30 @@ const Vehicules = (function () {
       v.patience = 0;
     }
     if (v.force > 0) { v.force--; vitesseVoulue = Math.max(vitesseVoulue, v.def.vitesse_max * 0.25); }
-    const cmd = {
-      direction: borner(ecart * 2.5, -1, 1),
-      gaz: v.vitesse < vitesseVoulue ? 1 : 0,
-      frein: v.vitesse > vitesseVoulue + 0.25 ? 1 : 0,
-      freinMain: false,
-    };
-    if (vitesseVoulue === 0 && v.vitesse < 0.3) { cmd.gaz = 0; cmd.frein = 1; }
-    majPhysique(v, cmd);
+    void ecart;
+    rouler(v, vitesseVoulue);
+  }
+
+  /** Le trafic est SUR DES RAILS : il avance vers le centre de sa tuile cible,
+      accelere et freine comme un char, mais ne connait pas le braquage.
+
+      ⚠️ C'est ce qui l'empeche de couper les coins. Avec la physique du
+      joueur, un char a 1,1 px/image a un rayon de braquage d'une tuile et
+      demie : il ratait un virage sur deux et finissait sur le trottoir d'en
+      face. Ici il tourne AU centre de la tuile, comme un tramway. */
+  function rouler(v, vitesseVoulue) {
+    const d = v.def;
+    if (v.vitesse < vitesseVoulue) v.vitesse = Math.min(vitesseVoulue, v.vitesse + d.acceleration * 1.5);
+    else v.vitesse = Math.max(vitesseVoulue, v.vitesse - d.frein * 1.5);
+    if (!v.cible) { v.vx = 0; v.vy = 0; return; }
+    const dx = v.cible.x - v.x, dy = v.cible.y - v.y;
+    const dist = Math.hypot(dx, dy);
+    if (dist < 0.01 || v.vitesse <= 0) { v.vx = 0; v.vy = 0; return; }
+    const pas = Math.min(dist, v.vitesse);
+    v.vx = dx / dist * pas; v.vy = dy / dist * pas;
+    // Le cap suit la route, en douceur : on VOIT le char tourner.
+    const voulu = Math.atan2(dy, dx);
+    v.angle += ecartAngle(v.angle, voulu) * 0.3;
   }
 
   // --- Le joueur au volant ----------------------------------------------------------
@@ -614,7 +649,7 @@ const Vehicules = (function () {
       Hud.message(def ? 'RADIO : ' + def.nom.toUpperCase() : 'RADIO ETEINTE');
     }
     // Le moteur monte dans les tours.
-    Son.reglerBoucle('moteur', 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);
+    if (v.def.classe !== 'velo') Son.reglerBoucle('moteur', 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);
   }
 
   // --- Boucle -------------------------------------------------------------------------
@@ -630,7 +665,11 @@ const Vehicules = (function () {
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
-      if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
+      if (v.conducteur === 'trafic') {
+        v.x += v.vx; v.y += v.vy;
+        heurterVehicules(v);
+        heurterPietons(v);
+      } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); }
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
     }
@@ -639,6 +678,51 @@ const Vehicules = (function () {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
     }
+  }
+
+  // --- Les feux et les stops, comme du mobilier ---------------------------------------
+
+  /** Le coin de trottoir libre le plus proche : pas la borne-fontaine, pas le
+      pied du lampadaire. On s'ecarte d'une tuile s'il le faut. */
+  function coinLibre(tx, ty) {
+    const essais = [[tx, ty], [tx + 1, ty], [tx, ty - 1], [tx - 1, ty], [tx, ty + 1], [tx + 1, ty - 1]];
+    for (const c of essais) {
+      if (Monde.glyphe(c[0], c[1]) !== '.') continue;
+      if (Entites.decorAutour(c[0] * TT + 8, c[1] * TT + 8, 10).length) continue;
+      return c;
+    }
+    return [tx, ty];
+  }
+
+  function creerSignalisation() {
+    const carte = Monde.carte;
+    carte.intersections.forEach(function (inter) {
+      if (inter.feux) {
+        // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
+        for (const coin of [[inter.x + inter.l, inter.y - 1], [inter.x - 1, inter.y + inter.h]]) {
+          const c = coinLibre(coin[0], coin[1]);
+          Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, decor: 'feu', r: 2, solide: false });
+        }
+      } else if (inter.stop) {
+        const coins = { '<': [inter.x + inter.l, inter.y - 1], '>': [inter.x - 1, inter.y + inter.h],
+                        'v': [inter.x - 1, inter.y - 1], '^': [inter.x + inter.l, inter.y + inter.h] };
+        const c = coinLibre(coins[inter.stop][0], coins[inter.stop][1]);
+        Entites.creer('stop', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, decor: 'stop', r: 2, solide: false });
+      }
+    });
+  }
+
+  /** Un feu : un poteau cuit, deux lanternes peintes a la volee selon la phase. */
+  function dessinerFeu(ctx, e, cx, cy) {
+    const d = DECORS.feu;
+    const poteau = Atlas.cuirePeintre('decor|feu', d.w, d.h, d.peindre);
+    const x = Math.round(e.x - d.ancre[0] - cx), y = Math.round(e.y - d.ancre[1] - cy);
+    ctx.drawImage(poteau, x, y);
+    const ns = Monde.feuVert(e.inter, '^'), eo = Monde.feuVert(e.inter, '>');
+    const orange = !ns && !eo;
+    ctx.fillStyle = orange ? '#f39c12' : (ns ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 1, y + 2, 3, 3);    // lanterne nord-sud
+    ctx.fillStyle = orange ? '#f39c12' : (eo ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 6, y + 2, 3, 3);    // lanterne est-ouest
+    B.stats.images++; B.stats.rects += 2;
   }
 
   // --- Dessin --------------------------------------------------------------------------
@@ -662,7 +746,7 @@ const Vehicules = (function () {
     ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
-    prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur,
-    maj, dessinerUn,
+    prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
+    croisementLibre, creerSignalisation, dessinerFeu, maj, dessinerUn,
   };
 })();

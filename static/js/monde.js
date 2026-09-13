@@ -24,29 +24,44 @@ const Monde = (function () {
     const w = def.largeur, h = def.hauteur;
     const solide = new Uint8Array(w * h);
     const route = new Uint8Array(w * h);
+    const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
+    const portesFermees = [];                   // les « d » : par ou les gens rentrent chez eux
     for (let y = 0; y < h; y++) {
       const ligne = def.sol[y];
       for (let x = 0; x < w; x++) {
         const p = def.legende[ligne[x]] || {};
         solide[y * w + x] = p.solide || 0;
         route[y * w + x] = p.route ? 1 : 0;
+        passage[y * w + x] = (p.route && p.trottoir) ? 1 : 0;
+        if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y });
       }
     }
     const portes = new Map();
     (def.portes || []).forEach(function (p) { portes.set(p.x + ',' + p.y, p); });
     // Chaque tuile de croisement connait son croisement : un char a la ligne
     // d'arret demande a QUEL feu il obeit.
+    // ⚠️ La boite inclut les PASSAGES PIETONS (deux tuiles de chaque cote) :
+    // un pieton au bord du passage demande, lui aussi, a quel feu il obeit.
     const croisements = new Map();
     (def.intersections || []).forEach(function (inter, i) {
       inter.i = i;
       inter.decalage = hash2(inter.x, inter.y) % 600;
-      for (let y = inter.y; y < inter.y + inter.h; y++) {
-        for (let x = inter.x; x < inter.x + inter.l; x++) croisements.set(x + ',' + y, inter);
+      inter.feux = inter.bras.length >= 4;
+      // Un T : la rue qui s'arrete (la tige) a un STOP. Son approche est le
+      // sens qui va de la tige vers le croisement.
+      inter.stop = null;
+      if (inter.bras.length === 3) {
+        const manquant = 'NSOE'.split('').find(function (b) { return inter.bras.indexOf(b) < 0; });
+        inter.stop = { N: '^', S: 'v', O: '<', E: '>' }[manquant];   // bras manquant N → la tige est S → on arrive en montant
+      }
+      for (let y = inter.y - 2; y < inter.y + inter.h + 2; y++) {
+        for (let x = inter.x - 2; x < inter.x + inter.l + 2; x++) croisements.set(x + ',' + y, inter);
       }
     });
     carte = {
       def: def, w: w, h: h, sol: def.sol, voie: def.voie, legende: def.legende,
-      solide: solide, route: route, morceaux: new Map(), visibles: new Set(),
+      solide: solide, route: route, passage: passage, portesFermees: portesFermees,
+      morceaux: new Map(), visibles: new Set(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       intersections: def.intersections || [],
       lampes: (def.lampes || []).map(function (l) { return { x: l.x * TT + 8, y: l.y * TT + 2, r: 44, c: 'rgba(255,214,130,0.55)' }; }),
@@ -79,6 +94,14 @@ const Monde = (function () {
     if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return false;
     return carte.route[ty * carte.w + tx] === 1;
   }
+  function estPassage(tx, ty) {
+    if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return false;
+    return carte.passage[ty * carte.w + tx] === 1;
+  }
+  /** La chaussee nue : la ou un pieton n'a rien a faire. */
+  function estChaussee(tx, ty) { return estRoute(tx, ty) && !estPassage(tx, ty); }
+  /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee. */
+  function marchablePieton(tx, ty) { return !bloque(tx, ty, MASQUE_PIETON) && !estChaussee(tx, ty); }
 
   /** Ligne de vue entre deux points (pixels) : rien de MUR entre les deux. */
   function ligneLibre(x0, y0, x1, y1) {
@@ -115,7 +138,7 @@ const Monde = (function () {
   /** Le feu est-il vert pour qui roule dans ce sens vers ce croisement ?
       ⚠️ Un croisement en T ou en L n'a pas de feu : on y passe a vue. */
   function feuVert(inter, sens) {
-    if (!inter || inter.bras.length < 4) return true;
+    if (!inter || !inter.feux) return true;
     const t = B.defs.conduite.trafic;
     const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
     const phase = (B.t + inter.decalage) % cycle;
@@ -301,8 +324,8 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
-    charger, glyphe, solidite, bloque, estRoute, ligneLibre, porteA, zoneA,
-    fleche, sensArret, intersectionA, feuVert, estRampe,
+    charger, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
+    ligneLibre, porteA, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
     miniCarte, couleurMini,
     get carte() { return carte; },
