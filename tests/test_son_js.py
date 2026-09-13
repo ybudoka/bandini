@@ -135,3 +135,203 @@ def test_les_options_montrent_l_etat_du_son(banc):
     assert r["detail"] == "TOUCHE L'ECRAN", "les OPTIONS doivent nommer la panne"
     assert r["actif"] is False, "cette ligne est un diagnostic, pas un reglage"
     assert r["curseur"] != 0, "le curseur ne doit pas s'ouvrir sur une ligne qu'on ne peut pas activer"
+
+
+# --- La musique du menu ---------------------------------------------------------
+# ⚠️ Le sequenceur pose ses notes sur l'horloge AUDIO, pas sur les images : le
+# banc fait donc avancer `currentTime` de 1/60 a chaque `frame()`. Sans ca, tout
+# serait programme au meme instant et la boucle ne bouclerait jamais.
+
+
+def test_le_theme_du_menu_est_demande_des_le_titre(banc):
+    r = banc("""function (L, o) {
+        return { etat: L.B.etat, morceau: L.Son.Mus.courante,
+                 catalogue: L.Son.Mus.morceaux().length };
+    }""")
+    assert r["etat"] == "titre"
+    assert r["morceau"] == "titre", "le menu d'accueil doit reclamer sa musique"
+    assert r["catalogue"] >= 1
+
+
+def test_sans_son_accorde_la_musique_ne_pose_aucune_note(banc):
+    """⚠️ Le piege : programmer dans un contexte suspendu. L'horloge y est figee,
+    donc toutes les notes tomberaient au meme instant et sortiraient d'un seul
+    coup, en paquet, a la seconde ou le joueur touche l'ecran."""
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(false);
+        L.Son.sonder();
+        o.frame(120);
+        return { notes: joues.length, pas: L.Son.Mus.pas, debutT: L.Son.Mus.debutT };
+    }""")
+    assert r["notes"] == 0, "rien ne doit etre programme tant que le son est retenu"
+    assert r["pas"] > 0, "le morceau doit quand meme avancer, pour rester deterministe"
+    assert r["debutT"] == 0
+
+
+def test_le_theme_joue_des_que_le_son_est_accorde(banc):
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.sonder();
+        o.frame(200);
+        const tons = joues.filter(function (n) { return n.quoi === 'ton'; });
+        return { total: joues.length, tons: tons.length,
+                 formes: Array.from(new Set(tons.map(function (n) { return n.forme; }))).sort(),
+                 hz: tons.slice(0, 6).map(function (n) { return Math.round(n.hz); }),
+                 instants: tons.slice(0, 6).map(function (n) { return Math.round(n.t * 1000); }) };
+    }""")
+    assert r["tons"] > 0, "le theme ne sort pas"
+    # Basse (triangle), nappe (sine), chant (square) : les trois doivent sonner.
+    assert set(r["formes"]) >= {"triangle", "sine", "square"}, r["formes"]
+    # La premiere note de basse est un la (MIDI 45 = 110 Hz).
+    assert 110 in r["hz"], r["hz"]
+    assert r["instants"] == sorted(r["instants"]), "les notes doivent etre posees dans l'ordre"
+
+
+def test_les_notes_tombent_en_mesure(banc):
+    """Le rythme ne doit rien devoir a la cadence des images : deux attaques de
+    basse sont separees d'un nombre entier de pas, au millieme pres."""
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.sonder();
+        o.frame(400);
+        const basse = joues.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
+        const ecarts = [];
+        for (let i = 1; i < basse.length; i++) ecarts.push(basse[i].t - basse[i - 1].t);
+        const def = L.Son.Mus.def('titre');
+        return { combien: basse.length, ecarts: ecarts,
+                 pasS: 60 / def.bpm / def.pas_par_temps };
+    }""")
+    assert r["combien"] >= 4, r["combien"]
+    pas_s = r["pasS"]
+    for ecart in r["ecarts"]:
+        rapport = ecart / pas_s
+        assert abs(rapport - round(rapport)) < 0.001, f"{ecart:.4f} s n'est pas un multiple de {pas_s:.4f}"
+        assert round(rapport) >= 1
+
+
+def test_la_boucle_reboucle_sur_elle_meme(banc):
+    """Apres un tour complet, on doit retrouver exactement la meme note au meme
+    endroit — sinon la boucle derive et finit par jouer n'importe quoi."""
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.sonder();
+        const def = L.Son.Mus.def('titre');
+        const pasS = 60 / def.bpm / def.pas_par_temps;
+        // Un tour complet de la BASSE (son motif, pas celui du morceau) + un peu.
+        const basseMotif = def.voix.filter(function (v) { return v.role === 'basse'; })[0].motif;
+        const images = Math.ceil((basseMotif + 2) * pasS * 60) + 30;
+        o.frame(images);
+        const basse = joues.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
+        const debut = L.Son.Mus.debutT;
+        // La note posee au pas 0 et celle posee au pas `basseMotif` : meme hauteur.
+        function auPas(p) {
+            const t = debut + p * pasS;
+            return basse.filter(function (n) { return Math.abs(n.t - t) < 0.001; })
+                        .map(function (n) { return Math.round(n.hz); });
+        }
+        return { premier: auPas(0), tour: auPas(basseMotif), motif: basseMotif };
+    }""")
+    assert r["premier"], "aucune note au pas 0"
+    assert r["premier"] == r["tour"], f"la boucle derive : {r['premier']} puis {r['tour']}"
+
+
+def test_commencer_la_partie_fait_taire_le_theme(banc):
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.sonder();
+        o.frame(60);
+        const auMenu = L.Son.Mus.courante;
+        L.Jeu.commencer();
+        const combien = joues.length;
+        o.frame(120);
+        const apres = joues.filter(function (n) { return n.quoi === 'ton'; }).length;
+        const avant = joues.slice(0, combien).filter(function (n) { return n.quoi === 'ton'; }).length;
+        return { auMenu: auMenu, enJeu: L.Son.Mus.courante, avant: avant, apres: apres };
+    }""")
+    assert r["auMenu"] == "titre"
+    assert r["enJeu"] is None, "la musique du menu ne doit pas suivre en ville"
+    # ⚠️ On ne compare pas a zero : ce qui etait deja programme avant l'arret
+    # sonne encore un quart de seconde. Ce qu'on exige, c'est que ca s'arrete.
+    assert r["apres"] - r["avant"] < r["avant"], "le theme continue en jeu"
+
+
+def test_le_son_coupe_ne_pose_pas_de_musique(banc):
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.B.options.muet = true;
+        L.Son.sonder();
+        o.frame(150);
+        return { notes: joues.length, morceau: L.Son.Mus.courante };
+    }""")
+    assert r["morceau"] == "titre", "le morceau reste demande : c'est le son qui est coupe"
+    assert r["notes"] == 0, "SON COUPE doit vraiment tout couper"
+
+
+# --- Ce qui joue doit ATTEINDRE la sortie ---------------------------------------
+# ⚠️ Le bug du 13 sept. 2026 : dans `echantillon()`, la source n'etait branchee
+# sur rien. Le fichier se telechargeait, se decodait, la source demarrait, le
+# gain etait au bon volume et relie au maitre — mais rien n'entrait dedans. Aucune
+# erreur, aucun 404, aucune trace : juste le silence. Et le filet de synthese ne
+# prenait pas le relais, parce que `joue()` rendait `true` (l'objet existait).
+# Ces juges regardent donc le BRANCHEMENT, pas l'intention.
+
+
+def test_un_echantillon_atteint_la_sortie(banc):
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const j = L.Son.echantillon('coup', { volume: 1 });
+        const ctx = L.Son.contexte;
+        return { charges: L.Son.charges, joue: !!j,
+                 relie: j ? ctx.atteintLaSortie(j.source) : null,
+                 gainRelie: j ? ctx.atteintLaSortie(j.gain) : null };
+    }""")
+    assert r["charges"] > 0, "aucun echantillon charge : le banc ne suit pas le bon chemin"
+    assert r["joue"] is True, "l'echantillon n'a meme pas ete cree"
+    assert r["relie"] is True, "la source ne va nulle part : elle jouera dans le vide"
+    assert r["gainRelie"] is True
+
+
+def test_un_echantillon_pose_dans_le_monde_atteint_la_sortie(banc):
+    """Avec un `pan` : la chaîne est plus longue (source, gain, panoramique),
+    et c'est justement la qu'une soudure manque le plus facilement."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const j = L.Son.echantillon('coup', { volume: 1, pan: 0.8 });
+        const ctx = L.Son.contexte;
+        return { joue: !!j, relie: j ? ctx.atteintLaSortie(j.source) : null };
+    }""")
+    assert r["joue"] is True
+    assert r["relie"] is True, "avec un panoramique, le son n'atteint plus la sortie"
+
+
+def test_une_boucle_atteint_la_sortie(banc):
+    """L'ambiance, la sirene, le moteur : tout ce qui tourne en fond."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Son.boucle('foule', true, 0.5);
+        const ctx = L.Son.contexte;
+        const active = L.Son.boucleActive('foule');
+        // On retrouve la source par le registre des boucles : elle doit sortir.
+        const j = L.Son.echantillon('foule', { boucle: true, volume: 0.5 });
+        return { active: active, relie: j ? ctx.atteintLaSortie(j.source) : null };
+    }""")
+    assert r["active"] is True
+    assert r["relie"] is True
+
+
+def test_une_note_synthetisee_atteint_la_sortie(banc):
+    """Le filet lui-meme doit etre branche : c'est tout ce qui reste quand un
+    fichier manque."""
+    r = banc("""function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.sonder();
+        L.Son.ton(440, 0.2, 'square', 0.5);
+        return { pose: joues.filter(function (n) { return n.quoi === 'ton'; }).length };
+    }""")
+    assert r["pose"] >= 1, "la synthese ne pose plus rien"

@@ -98,7 +98,7 @@ def test_le_navigateur_ne_reclame_que_des_slugs_du_catalogue():
 def test_chaque_effet_garde_son_repli_synthetise():
     """⚠️ Le filet : un `joue(...)` sans `else` synthetise laisse un silence."""
     source = (RACINE_JS / "son.js").read_text(encoding="utf-8")
-    bloc = source[source.index("const SFX = {"):source.index("/* Musique")]
+    bloc = source[source.index("const SFX = {"):source.index("// --- La musique")]
     for ligne in bloc.splitlines():
         if "joue(" not in ligne:
             continue

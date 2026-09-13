@@ -311,3 +311,106 @@ def test_les_options_disent_l_etat_du_son(page, serveur, erreurs):
     assert ligne["detail"] == "ACTIF", ligne
     assert ligne["actif"] is False
     assert erreurs == []
+
+
+#: Une sonde posee sur la sortie audio : elle mesure ce qui SORT vraiment.
+#: ⚠️ C'est le seul juge qui aurait attrape le silence du 13 sept. 2026 — tout
+#: le reste (fichiers servis, tampons decodes, sources demarrees, volumes
+#: justes) etait parfaitement vert pendant qu'il ne sortait rien.
+SONDE_AUDIO = """
+window.__analyseur = null;
+(function () {
+  const C = AudioNode.prototype.connect;
+  AudioNode.prototype.connect = function (cible) {
+    if (cible === this.context.destination) {
+      if (!window.__analyseur) {
+        window.__analyseur = this.context.createAnalyser();
+        window.__analyseur.fftSize = 2048;
+        C.call(window.__analyseur, this.context.destination);
+      }
+      C.call(this, window.__analyseur);
+      return cible;
+    }
+    return C.apply(this, arguments);
+  };
+})();
+window.__mesure = function (ms) {
+  return new Promise(function (ok) {
+    const an = window.__analyseur;
+    if (!an) return ok(0);
+    const buf = new Float32Array(an.fftSize);
+    let pire = 0;
+    const t = setInterval(function () {
+      an.getFloatTimeDomainData(buf);
+      let s = 0;
+      for (let i = 0; i < buf.length; i++) s += buf[i] * buf[i];
+      pire = Math.max(pire, Math.sqrt(s / buf.length));
+    }, 30);
+    setTimeout(function () { clearInterval(t); ok(pire); }, ms);
+  });
+};
+"""
+
+#: -60 dB : largement sous ce qu'on mesure (-26 dB), largement au-dessus de zero.
+#: On juge « ca sort », pas « ca sort a tel niveau » — le niveau, c'est l'oreille.
+PLANCHER = 0.001
+
+
+def test_le_jeu_sort_vraiment_du_son(page, serveur, erreurs):
+    """⚠️ Un echantillon peut se telecharger, se decoder, demarrer, avoir le bon
+    volume et etre relie a la sortie — et ne rien produire si la source n'entre
+    dans rien. C'est arrive : aucun des 79 fichiers n'a sonne jusqu'au
+    13 sept. 2026. Ce juge ecoute la sortie plutot que l'intention."""
+    page.add_init_script(SONDE_AUDIO)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")          # un vrai geste : le son est accorde
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=20000)
+    page.wait_for_timeout(1500)
+
+    synthese = page.evaluate("""() => {
+        const p = window.__mesure(900);
+        BANDINI.Son.ton(440, 0.6, 'square', 0.9);
+        return p;
+    }""")
+    assert synthese > PLANCHER, f"la synthese ne sort pas : {synthese:.5f}"
+
+    echantillon = page.evaluate("""() => {
+        const p = window.__mesure(900);
+        BANDINI.Son.echantillon('coup', { volume: 1 });
+        return p;
+    }""")
+    assert echantillon > PLANCHER, (
+        f"un echantillon charge ne produit AUCUN son ({echantillon:.5f}) : "
+        "la chaîne source > gain > maitre est coupee quelque part")
+    assert erreurs == []
+
+
+def test_l_ambiance_de_la_ville_s_entend(page, serveur, erreurs):
+    """L'ambiance tourne en boucle : si elle est muette, la ville est morte."""
+    page.add_init_script(SONDE_AUDIO)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.BANDINI.Son.Ambiance.courante !== null", timeout=20000)
+    page.wait_for_timeout(2000)
+    assert page.evaluate("() => BANDINI.Son.boucleActive('ambiance-ville')") is True
+    niveau = page.evaluate("() => window.__mesure(2500)")
+    assert niveau > PLANCHER, f"l'ambiance tourne mais ne s'entend pas : {niveau:.5f}"
+    assert erreurs == []
+
+
+def test_le_theme_du_menu_s_entend(page, serveur, erreurs):
+    page.add_init_script(SONDE_AUDIO)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("() => BANDINI.Jeu.retourTitre()")
+    page.wait_for_timeout(2000)
+    assert page.evaluate("() => BANDINI.Son.Mus.courante") == "titre"
+    niveau = page.evaluate("() => window.__mesure(3000)")
+    assert niveau > PLANCHER, f"le theme du menu ne sort pas : {niveau:.5f}"
+    assert erreurs == []

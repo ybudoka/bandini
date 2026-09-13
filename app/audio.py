@@ -27,6 +27,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TypedDict
 
+from app import musique
+
 #: Ou vivent les fichiers, par rapport a `static/`.
 DOSSIER = "audio"
 RACINE_STATIQUE = Path(__file__).resolve().parent.parent / "static"
@@ -317,6 +319,8 @@ def exporter() -> dict:
     un son qui n'existe pas, et se rabat sur la synthese sans un 404."""
     return {
         "dossier": DOSSIER,
+        # La musique ecrite en notes (aucun fichier) : voir `app/musique.py`.
+        "musiques": musique.exporter(),
         "echantillons": [
             {**echantillon, "fichiers": fichiers_presents(echantillon)}
             for echantillon in CATALOGUE

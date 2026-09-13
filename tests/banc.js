@@ -130,6 +130,11 @@ function banc(corps) {
     fetch: function (url, opts) {
       fetchs.push({ url: url, opts: opts });
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
+      // Les sons : de quoi suivre TOUT le chemin d'un echantillon, du
+      // telechargement au branchement sur la sortie.
+      if (/\.mp3($|\?)/.test(String(url))) {
+        return Promise.resolve({ ok: true, arrayBuffer: function () { return Promise.resolve(new ArrayBuffer(64)); } });
+      }
       return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ scores: [], rang: 1 }); } });
     },
     addEventListener: function (t, f) { (ecouteurs[t] = ecouteurs[t] || []).push(f); },
@@ -140,22 +145,48 @@ function banc(corps) {
   // ⚠️ Par defaut le banc n'a PAS d'AudioContext : le jeu doit tourner muet sans
   // broncher. `brancherAudio(demarre)` en pose un pour tester l'autre panne —
   // celle ou le navigateur retient le son tant qu'aucun geste n'a touche la page.
+  let fauxContexte = null;
   function brancherAudio(demarre) {
     function param(v) {
-      return { value: v, setValueAtTime: function () { return this; },
+      // ⚠️ `setValueAtTime` pose vraiment la valeur : sinon le banc lit 440 Hz
+      // pour toutes les notes et un sequenceur faux passerait les tests.
+      return { value: v, setValueAtTime: function (x) { this.value = x; return this; },
                exponentialRampToValueAtTime: function () { return this; } };
     }
+    // ⚠️ Chaque noeud garde la liste de ce sur quoi il est branche. C'est ce qui
+    // permet de juger qu'un son ATTEINT vraiment la sortie : une source que
+    // personne ne relie au maitre demarre sans erreur et ne s'entend jamais.
+    let idNoeud = 0;
     function noeud(extra) {
-      return Object.assign({ connect: function (c) { return c; }, disconnect: function () {},
-                             start: function () {}, stop: function () {} }, extra || {});
+      const n = Object.assign({
+        __id: ++idNoeud, __vers: [],
+        connect: function (c) { this.__vers.push(c); return c; },
+        disconnect: function () { this.__vers.length = 0; },
+        start: function () {}, stop: function () {},
+      }, extra || {});
+      return n;
     }
     const joues = [];
     function FauxContexte() {
+      fauxContexte = this;
       this.state = demarre ? 'running' : 'suspended';
       this.currentTime = 0;
       this.sampleRate = 48000;
-      this.destination = noeud();
+      this.destination = noeud({ __sortie: true });
       this.joues = joues;
+      /** Vrai si `n` atteint la sortie en suivant les branchements. */
+      this.atteintLaSortie = function (n) {
+        const vus = new Set();
+        const pile = [n];
+        while (pile.length) {
+          const c = pile.pop();
+          if (!c || vus.has(c)) continue;
+          vus.add(c);
+          if (c.__sortie) return true;
+          (c.__vers || []).forEach(function (x) { pile.push(x); });
+        }
+        return false;
+      };
       const ctx = this;
       this.resume = function () {
         // Sans geste, le navigateur REFUSE : la promesse part en erreur.
@@ -166,12 +197,14 @@ function banc(corps) {
       this.suspend = function () { ctx.state = 'suspended'; return Promise.resolve(); };
       this.createGain = function () { return noeud({ gain: param(1) }); };
       this.createOscillator = function () {
-        return noeud({ type: 'square', frequency: param(440),
-                       start: function () { joues.push('ton'); }, stop: function () {} });
+        const n = noeud({ type: 'square', frequency: param(440), stop: function () {} });
+        n.start = function (t) { joues.push({ quoi: 'ton', t: t, hz: n.frequency.value, forme: n.type }); };
+        return n;
       };
       this.createBufferSource = function () {
-        return noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null,
-                       start: function () { joues.push('echantillon'); }, stop: function () {} });
+        const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null, stop: function () {} });
+        n.start = function (t) { joues.push({ quoi: 'echantillon', t: t }); };
+        return n;
       };
       this.createBiquadFilter = function () { return noeud({ type: 'lowpass', frequency: param(800), Q: param(1) }); };
       this.createStereoPanner = function () { return noeud({ pan: param(0) }); };
@@ -201,6 +234,9 @@ function banc(corps) {
     for (let i = 0; i < (n || 1); i++) {
       if (!rafCb) throw new Error('boucle non armee');
       horloge += 1000 / 60;
+      // L'horloge AUDIO avance avec les images : sans ca un sequenceur
+      // programmerait sa boucle entiere au meme instant et ne bouclerait jamais.
+      if (fauxContexte) fauxContexte.currentTime += 1 / 60;
       const cb = rafCb;
       cb(horloge);
     }
@@ -265,7 +301,9 @@ function banc(corps) {
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d'),
-                   brancherAudio: brancherAudio };
+                   brancherAudio: brancherAudio,
+                   // Laisse tourner les promesses en attente (chargement d'un son).
+                   attendre: function () { return new Promise(function (r) { setImmediate(r); }); } };
 
   // Le demarrage est asynchrone (fetch) : on attend la promesse du jeu.
   return Promise.resolve().then(function () { return new Promise(function (r) { setImmediate(r); }); })

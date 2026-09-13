@@ -71,7 +71,14 @@ const Son = (function () {
   /** Une note : frequence en Hz, duree en s, forme, volume, glisse (facteur de frequence finale). */
   function ton(freq, duree, forme, volume, glisse, depart) {
     if (!pret()) return;
-    const t0 = ctx.currentTime + (depart || 0);
+    tonA(ctx.currentTime + (depart || 0), freq, duree, forme, volume, glisse);
+  }
+
+  /** La meme note, mais POSEE a un instant de l'horloge audio. C'est ce qu'il
+      faut a un sequenceur : on programme la mesure suivante pendant que la
+      mesure courante joue, et le rythme ne depend plus du rythme des images. */
+  function tonA(t0, freq, duree, forme, volume, glisse) {
+    if (!pret()) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     osc.type = forme || 'square';
@@ -103,6 +110,37 @@ const Son = (function () {
     gain.gain.setValueAtTime(volume || 0.5, t0);
     src.connect(filtre).connect(gain).connect(maitre);
     src.start(t0);
+  }
+
+  //: Un seul tampon de bruit blanc, refait a l'identique : le balai de la
+  //: musique frappe cinq fois par seconde, et fabriquer un tampon neuf a chaque
+  //: coup reviendrait a remplir un tableau de 5 000 nombres pour un « tss ».
+  let bruitTampon = null;
+  function tamponDeBruit() {
+    if (!bruitTampon) {
+      const n = Math.floor(ctx.sampleRate * 0.5);
+      bruitTampon = ctx.createBuffer(1, n, ctx.sampleRate);
+      const d = bruitTampon.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+    }
+    return bruitTampon;
+  }
+
+  /** Un « tss » pose a un instant : bruit filtre, enveloppe courte. */
+  function bruitA(t0, duree, volume, coupure) {
+    if (!pret()) return;
+    const src = ctx.createBufferSource();
+    src.buffer = tamponDeBruit();
+    const filtre = ctx.createBiquadFilter();
+    filtre.type = 'highpass';
+    filtre.frequency.setValueAtTime(coupure || 6000, t0);
+    const gain = ctx.createGain();
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t0 + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duree);
+    src.connect(filtre).connect(gain).connect(maitre);
+    src.start(t0);
+    src.stop(t0 + duree + 0.02);
   }
 
   // --- Echantillons (fichiers generes par ElevenLabs, catalogue en Python) ----
@@ -158,6 +196,12 @@ const Son = (function () {
       pan.pan.value = Math.max(-1, Math.min(1, options.pan));
       gain.connect(pan); sortie = pan;
     }
+    // ⚠️ La source DANS le gain : sans cette ligne, tout le reste est correct —
+    // le fichier se telecharge, se decode, la source demarre, le gain est au bon
+    // volume et il est branche sur la sortie — mais rien n'entre dans la chaîne
+    // et il ne sort RIEN. C'est ainsi qu'aucun des 79 fichiers n'a jamais ete
+    // entendu jusqu'au 13 sept. 2026, sans qu'une seule erreur soit levee.
+    source.connect(gain);
     sortie.connect(maitre);
     source.start(ctx.currentTime);
     return { source: source, gain: gain, base: def ? def.volume : 1 };
@@ -432,10 +476,84 @@ const Son = (function () {
     },
   };
 
-  /* Musique : sequenceur 3 voix a venir (M7). `tick()` avance meme sans audio,
-     pour rester deterministe sous le banc. */
-  const Mus = { courante: null, pas: 0, jouer: function (nom) { this.courante = nom; this.pas = 0; },
-                stop: function () { this.courante = null; }, tick: function () { if (this.courante) this.pas++; } };
+  // --- La musique : un sequenceur, un catalogue de notes (app/musique.py) ------
+
+  //: On programme toujours un quart de seconde d'avance. En dessous, un a-coup
+  //: d'images (une carte qui se dessine, un onglet qui revient) laisserait un
+  //: trou dans la mesure ; au-dessus, arreter la musique laisserait sonner ce
+  //: qui est deja pose.
+  const HORIZON_S = 0.25;
+
+  /** Le la du diapason : MIDI 69 = 440 Hz, douze demi-tons par octave. */
+  function frequence(midi) { return 440 * Math.pow(2, (midi - 69) / 12); }
+
+  const Mus = {
+    courante: null,     // slug du morceau demande
+    pas: 0,             // ou l'on en est, en pas (avance meme sans audio)
+    debutT: 0,          // l'instant audio du pas 0 ; 0 = pas encore demarre
+    prochain: 0,        // le prochain pas a programmer
+
+    morceaux: function () { return (B.defs && B.defs.audio && B.defs.audio.musiques) || []; },
+    def: function (slug) {
+      if (!slug) return null;
+      const l = Mus.morceaux();
+      for (let i = 0; i < l.length; i++) if (l[i].slug === slug) return l[i];
+      return null;
+    },
+
+    /** Demande un morceau. Le redemander pendant qu'il joue ne le fait PAS
+        repartir du debut : le menu le reclame a chaque image. */
+    jouer: function (slug) {
+      if (Mus.courante === slug) return true;
+      if (!Mus.def(slug)) { Mus.arreter(); return false; }
+      Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+      return true;
+    },
+
+    arreter: function () { Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; },
+    stop: function () { Mus.arreter(); },       // l'ancien nom, garde par prudence
+
+    /** Pose toutes les notes d'un pas, a l'instant `t`. */
+    poser: function (def, p, t, pasS) {
+      for (let v = 0; v < def.voix.length; v++) {
+        const voix = def.voix[v];
+        const motif = voix.motif || def.pas;
+        const dans = ((p % motif) + motif) % motif;
+        for (let n = 0; n < voix.notes.length; n++) {
+          const note = voix.notes[n];
+          if (note[0] !== dans) continue;
+          const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3]) * (def.volume || 1);
+          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1]);
+          // ⚠️ 0.92 : la note s'arrete juste avant la suivante. Sans ce blanc,
+          // deux notes voisines de meme hauteur n'en font plus qu'une longue.
+          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume);
+        }
+      }
+    },
+
+    /** Une image de musique. A appeler a CHAQUE image, y compris au menu. */
+    tick: function () {
+      const def = Mus.def(Mus.courante);
+      if (!def) return;
+      // ⚠️ Tant que le son n'est pas accorde (banc sans audio, ou navigateur qui
+      // attend un geste), on avance un simple compteur : l'horloge audio est
+      // figee, et programmer dedans ferait sortir toute la boucle d'un coup au
+      // reveil. Le morceau demarrera pour de bon a la premiere image sonore.
+      if (etatSon() !== 'actif') { Mus.pas++; Mus.debutT = 0; Mus.prochain = 0; return; }
+      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
+      if (!Mus.debutT) { Mus.debutT = ctx.currentTime + 0.08; Mus.prochain = 0; }
+      const limite = ctx.currentTime + HORIZON_S;
+      // Un garde-fou : si l'onglet dort une minute, on ne rattrape pas mille
+      // pas d'un coup — on se recale sur l'horloge.
+      const retard = (ctx.currentTime - Mus.debutT) / pasS - Mus.prochain;
+      if (retard > 32) { Mus.prochain = Math.floor((ctx.currentTime - Mus.debutT) / pasS); }
+      while (Mus.debutT + Mus.prochain * pasS < limite) {
+        Mus.poser(def, Mus.prochain, Mus.debutT + Mus.prochain * pasS, pasS);
+        Mus.prochain++;
+      }
+      Mus.pas = Math.max(0, Math.floor((ctx.currentTime - Mus.debutT) / pasS));
+    },
+  };
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, majVolume, ton, bruit, SFX, Mus,

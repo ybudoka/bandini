@@ -44,6 +44,7 @@ const Jeu = (function () {
     Hud.voile(null);
     Hud.etat('jeu');
     Entree.contexte('pied');
+    Son.Mus.arreter();          // le theme du menu laisse la place a la ville
     Son.Ambiance.jouer();
     Hud.message('BAIE-DES-BRUMES', 150);
   }
@@ -123,6 +124,8 @@ const Jeu = (function () {
     B.etat = 'titre';
     Hud.etat('titre');
     Hud.voile('titre');
+    Son.Ambiance.arreter();
+    Son.Mus.jouer('titre');
   }
 
   // --- Boucle -------------------------------------------------------------------------
@@ -144,6 +147,9 @@ const Jeu = (function () {
 
   function maj() {
     Entree.debutImage();
+    // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
+    // tourner au titre, la ou la simulation, elle, ne tourne pas.
+    Son.Mus.tick();
     if (Entree.neuf('muet')) {
       B.options.muet = !B.options.muet;
       Son.majVolume();
@@ -182,7 +188,6 @@ const Jeu = (function () {
       Missions.maj();
       Histoire.maj();
       Monde.majCamera();
-      Son.Mus.tick();
       B.t++;
     } else if (B.etat === 'carte') {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
@@ -303,6 +308,10 @@ const Jeu = (function () {
       B.etat = 'titre';
       Hud.etat('titre');
       Hud.voile('titre');
+      // ⚠️ Le theme se DEMANDE ici, mais il ne sortira qu'au premier geste :
+      // tant que le navigateur retient le son, `Mus.tick()` se contente
+      // d'avancer son compteur. C'est le bandeau du titre qui reclame ce geste.
+      Son.Mus.jouer('titre');
       const etat = d.getElementById('etat-chargement');
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie en cours, jour ' + B.partie.jour : 'nouvelle partie');
       dernier = 0; accu = 0;
