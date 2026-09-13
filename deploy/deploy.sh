@@ -54,9 +54,13 @@ sudo systemctl restart "$SERVICE"
 # ⚠️ Ce curl vise gunicorn EN DIRECT (port 8006) : nginx renvoie 444 a tout
 # User-Agent contenant « curl » (regle anti-robots du serveur). Un healthcheck
 # qui passerait par nginx ou Caddy verrait une panne sur un site sain.
+# ⚠️ Les tentatives ratees sont MUETTES : gunicorn met une seconde ou deux a
+# ouvrir son port, et un « curl: (7) Failed to connect » au milieu d'un
+# deploiement reussi fait chercher une panne qui n'existe pas. Seul l'echec
+# final parle.
 echo "==> Verification (/sante)"
 for tentative in 1 2 3 4 5 6 7 8 9 10; do
-  if curl -fsS "http://127.0.0.1:$PORT/sante" > /dev/null; then
+  if curl -fsS "http://127.0.0.1:$PORT/sante" > /dev/null 2>&1; then
     echo "Site en ligne."
     # On ne garde que les 5 dernieres releases : le disque du serveur est petit.
     ls -1dt "$RELEASES"/*/ 2>/dev/null | tail -n +6 | xargs -r rm -rf

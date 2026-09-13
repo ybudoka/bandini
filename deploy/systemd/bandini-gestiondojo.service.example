@@ -13,6 +13,10 @@ Type=simple
 User=www-data
 Group=www-data
 WorkingDirectory=/srv/bandini/current
+; ⚠️ Sans HOME inscriptible, gunicorn 26 rate l'ouverture de son serveur de
+; controle et laisse un « Permission denied: /var/www/.gunicorn » dans le
+; journal a chaque demarrage — une fausse alerte qu'on relit a chaque panne.
+Environment=HOME=/srv/bandini/shared/maison
 ; Le .env vit HORS du dossier de release : une nouvelle version ne doit jamais
 ; ecraser la configuration du serveur.
 EnvironmentFile=/srv/bandini/shared/.env

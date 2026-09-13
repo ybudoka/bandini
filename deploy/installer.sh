@@ -25,9 +25,11 @@ if ss -ltnp 2>/dev/null | grep -q ":$PORT "; then
 fi
 
 echo "==> Arborescence"
-sudo -n mkdir -p "$BASE/releases" "$BASE/shared/donnees"
+sudo -n mkdir -p "$BASE/releases" "$BASE/shared/donnees" "$BASE/shared/maison"
 sudo -n chown -R dojoadmin:dojoadmin "$BASE"
-sudo -n chown www-data:www-data "$BASE/shared/donnees"
+# ⚠️ `maison` est le HOME de gunicorn : sans lui, son serveur de controle
+# echoue a chaque demarrage sur /var/www/.gunicorn (voir le service).
+sudo -n chown www-data:www-data "$BASE/shared/donnees" "$BASE/shared/maison"
 
 echo "==> Depot"
 if [ ! -d "$BASE/repo/.git" ]; then
