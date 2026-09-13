@@ -139,14 +139,21 @@ const Hud = (function () {
     B.stats.rects += 6;
   }
 
+  //: Ce que la derniere image a dessine, en pixels logiques. Sert au test
+  //: tactile : aucun element du HUD ne doit finir sous un bouton.
+  let ancres = [];
+  function noter(nom, x, y, l, h) { ancres.push({ nom: nom, x: x, y: y, l: l, h: h }); }
+
   function dessiner() {
     const ctx = Base.ecran();
     const j = B.joueur, p = B.partie;
     if (!p) return;
+    ancres = [];
     if (B.etat === 'jeu' || B.etat === 'pause') {
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       barre(ctx, 6, 13, 60, 3, j ? j.endurance / 100 : 1, '#e8b33c');
+      noter('vie', 6, 6, 60, 10);
       miniCarte(ctx);
       // Argent, etoiles, heure a droite.
       // ⚠️ En tactile, les boutons PAUSE et PLEIN ECRAN sont poses par-dessus
@@ -154,14 +161,19 @@ const Hud = (function () {
       // finir cachee sous le pouce.
       const marge = Entree.estTactile ? 40 : 6;
       const argent = p.argent.toLocaleString('fr-CA') + ' $';
-      Atlas.texte(ctx, argent, VW - marge - Atlas.largeurTexte(argent, 2), 6, '#e8b33c', 2);
+      const largeurArgent = Atlas.largeurTexte(argent, 2);
+      Atlas.texte(ctx, argent, VW - marge - largeurArgent, 6, '#e8b33c', 2);
+      noter('argent', VW - marge - largeurArgent, 6, largeurArgent, 10);
       let etoiles = '';
       for (let i = 0; i < B.defs.recherche.etoiles_max; i++) etoiles += i < B.recherche.etoiles ? '★' : '.';
       Atlas.texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#555560', 1);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
-      Atlas.texte(ctx, heure, VW - marge - Atlas.largeurTexte(heure, 1), 28, '#cdc6e6', 1);
+      const largeurHeure = Atlas.largeurTexte(heure, 1);
+      Atlas.texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
+      noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 13);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j ? Monde.zoneA(j.x, j.y) : null;
+      noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
       if (zone) {
         // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
         // trottoir en plein jour — teste a l'oeil, pas en theorie.
@@ -173,7 +185,14 @@ const Hud = (function () {
       if (arme) {
         const mun = p.armes[arme.slug] && p.armes[arme.slug].mun;
         const libelle = arme.nom.toUpperCase() + (mun === null || mun === undefined ? '' : ' ' + mun);
-        Atlas.texte(ctx, libelle, VW - 6 - Atlas.largeurTexte(libelle, 1), VH - 12, '#efe6d0', 1);
+        const large = Atlas.largeurTexte(libelle, 1);
+        // ⚠️ En tactile, le coin bas-droit est couvert par FRAPPE et ARME :
+        // l'arme courante se range sous la mini-carte, la seule zone que le
+        // pouce ne visite jamais.
+        const ax = Entree.estTactile ? MINI.x : VW - 6 - large;
+        const ay = Entree.estTactile ? MINI.y + MINI.h + 13 : VH - 12;
+        Atlas.texte(ctx, libelle, ax, ay, '#efe6d0', 1);
+        noter('arme', ax, ay, large, 7);
       }
       // Message.
       if (B.msg && B.msgT > 0) {
@@ -195,5 +214,6 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, dessiner, miniCarte, MINI, montrerScores, demanderScore, afficherScores };
+  return { init, voile, etat, message, dessiner, miniCarte, MINI, montrerScores, demanderScore,
+           afficherScores, ancres: function () { return ancres; } };
 })();

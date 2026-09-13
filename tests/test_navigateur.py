@@ -105,6 +105,23 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
             chevauche = (a["x"] < b["x"] + b["width"] and b["x"] < a["x"] + a["width"]
                          and a["y"] < b["y"] + b["height"] and b["y"] < a["y"] + a["height"])
             assert not chevauche, f"{un} et {autre} se chevauchent : {a} / {b}"
+
+    # ⚠️ Et le HUD DESSINE ne doit pas finir sous un pouce non plus : l'argent
+    # et l'arme courante se cachaient derriere les boutons, ce qu'aucune
+    # mesure de boites DOM ne pouvait voir.
+    toile = page.locator("#toile").bounding_box()
+    echelle = toile["width"] / 480.0
+    for ancre in page.evaluate("window.BANDINI.Hud.ancres()"):
+        boite = {"x": toile["x"] + ancre["x"] * echelle, "y": toile["y"] + ancre["y"] * echelle,
+                 "width": ancre["l"] * echelle, "height": ancre["h"] * echelle}
+        for nom, bouton in boites.items():
+            if nom == "croix":
+                continue
+            chevauche = (boite["x"] < bouton["x"] + bouton["width"]
+                         and bouton["x"] < boite["x"] + boite["width"]
+                         and boite["y"] < bouton["y"] + bouton["height"]
+                         and bouton["y"] < boite["y"] + boite["height"])
+            assert not chevauche, f"le HUD « {ancre['nom']} » passe sous le bouton {nom}"
     # Glisser sur le joystick deplace le joueur.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     cx, cy = croix["x"] + croix["width"] / 2, croix["y"] + croix["height"] / 2
