@@ -71,12 +71,30 @@ def test_une_station_est_generable(radio):
 
 
 def test_chaque_char_de_phase_1_a_une_station_qui_existe():
+    """Enregistree ou procedurale — mais elle existe.
+
+    ⚠️ Depuis M9, le camion et la remorqueuse ont une station ECRITE PAR UNE
+    GRAINE (`musique.STATIONS`) plutot qu'un mp3 : c'est pour ca que le juge
+    passe par `station_existe` et non par `radio_par_slug`. Un bouton RADIO
+    qui ne trouve pas sa station reste un bouton qui ne fait rien.
+    """
     from app import vehicules
 
     for vehicule in vehicules.de_phase(1):
         if vehicule["radio"]:
-            assert audio.radio_par_slug(vehicule["radio"]), vehicule["slug"]
+            assert audio.station_existe(vehicule["radio"]), vehicule["slug"]
     assert any(v["radio"] for v in vehicules.de_phase(1)), "aucun char n'a de radio"
+    assert not audio.station_existe("une_station_qui_n_existe_pas")
+
+
+def test_l_autobus_n_a_que_son_moteur():
+    """Le plan de M9 le dit : « le camion a sa toune, l'autobus n'a que son
+    moteur ». Un autobus de ville avec la radio dans la cabine, ca n'existe
+    pas, et ca enleverait au camion ce qui le distingue."""
+    from app import vehicules
+
+    assert vehicules.par_slug("autobus")["radio"] is None
+    assert vehicules.par_slug("camion")["radio"] == "station_camion"
 
 
 def test_les_radios_ne_sont_pas_chargees_au_demarrage(paquet):

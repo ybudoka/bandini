@@ -6,6 +6,17 @@ par seconde), radians par image pour le braquage, points de vie.
 
 `phase` : 1 = present dans la premiere version (le navigateur a son sprite),
 2 = vague suivante. Un test verifie que chaque vehicule de phase 1 a un sprite.
+
+Depuis M9, une fiche porte aussi ce que le char SAIT FAIRE, et le navigateur
+n'a pas a le deviner de son slug :
+
+    cercles   la chaine de cercles qui le represente (3 par defaut)
+    defonce   0 = rien ; sinon la fraction de vitesse gardee en cassant un
+              obstacle bas (cloture, borne-fontaine, poubelle)
+    soigne    PV par seconde rendus a qui le conduit (l'ambulance)
+    crochet   il peut trainer un autre char — un seul a la fois
+    boulot    le boulot qu'on prend au klaxon (`taxi`, `pizza`, `ambulance`,
+              `remorquage`), sur le patron du taxi de la v1
 """
 
 from __future__ import annotations
@@ -39,13 +50,19 @@ class Vehicule(TypedDict):
     alarme: bool
     ejecte: bool
     eau: bool
+    cercles: int
+    defonce: float
+    soigne: float
+    crochet: bool
+    boulot: str | None
     radio: str | None
     phase: int
 
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
-       masse=1.0, radio=None, phase=1) -> Vehicule:
+       masse=1.0, cercles=3, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
+       radio=None, phase=1) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -53,7 +70,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         braquage=braquage, adherence=0.12 if not eau else 0.05, adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
-        ejecte=ejecte, eau=eau, radio=radio, phase=phase,
+        ejecte=ejecte, eau=eau, cercles=cercles, defonce=defonce, soigne=soigne,
+        crochet=crochet, boulot=boulot, radio=radio, phase=phase,
     )
 
 
@@ -65,23 +83,43 @@ CATALOGUE: list[Vehicule] = [
        ["#c0392b", "#2c3e50", "#ecf0f1", "#27ae60", "#8e44ad", "#d35400"], "auto",
        alarme=False, radio="la_brume"),
     _v("taxi", "Taxi", "auto", 28, 14, 3.8, 0.058, 0.047, 110, 4, 700, 0.12,
-       ["#f1c40f"], "taxi", radio="taxi_radio"),
+       ["#f1c40f"], "taxi", boulot="taxi", radio="taxi_radio"),
+    # ⚠️ La pizza se livre en moto, et c'est ce qui fait le boulot : le char le
+    # plus rapide du jeu est aussi celui dont on tombe au premier choc.
     _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 0.07, 40, 2, 450, 0.15,
-       ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, radio="le_choc"),
+       ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, boulot="pizza",
+       radio="le_choc"),
     # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
     # prendre a son cycliste (qui temoigne), on en tombe au premier choc.
     _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
        ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
-    _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 0.03, 300, 2, 1200, 0.10,
-       ["#7f8c8d", "#c0392b", "#2c3e50"], "camion", masse=3.0, radio="traversier", phase=2),
-    _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 0.025, 250, 12, 1500, 0.06,
-       ["#2980b9"], "autobus", masse=3.0, phase=2),
+    # --- M9, le parc automobile ------------------------------------------
+    # ⚠️ `cercles` n'est pas un reglage de confort : la chaine doit COUVRIR la
+    # carrosserie, sinon deux cercles voisins laissent un trou par lequel une
+    # moto entre dans l'autobus. Il en faut au moins `longueur / largeur`
+    # (juge `test_la_chaine_de_cercles_ne_laisse_aucun_trou`) — d'ou les cinq
+    # de l'autobus, « deux de plus » que les trois de tout le monde.
+    _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 0.03, 300, 2, 1200, 0.08,
+       ["#7f8c8d", "#c0392b", "#2c3e50"], "camion", masse=3.0, cercles=4,
+       defonce=0.75, radio="station_camion"),
+    _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 0.025, 250, 12, 1500, 0.04,
+       ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7),
+    # ⚠️ L'ambulance SOIGNE (2 PV par seconde au volant) — elle ne ressuscite
+    # personne : un blesse mort reste mort, et le boulot est perdu.
     _v("ambulance", "Ambulance", "auto", 32, 15, 3.6, 0.05, 0.04, 180, 3, 1400, 0.04,
-       ["#ffffff"], "ambulance", sirene=True, alarme=True, phase=2),
+       ["#ffffff"], "ambulance", sirene=True, alarme=True, masse=1.4, soigne=2.0,
+       boulot="ambulance"),
+    _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 0.035, 220, 2, 1300, 0.05,
+       ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4,
+       defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),
+    # ⚠️ Le bateau reste en phase 2 : il demande une physique a part (l'eau n'a
+    # ni voie ni trottoir) et des quais ou embarquer. Le plan le dit lui-meme —
+    # « s'il coute plus qu'il ne donne, il tombe en v3 » — et le traversier de
+    # M12 suffit a l'eau. Il garde donc sa fiche, sans sprite et sans trafic.
     _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 0.025, 120, 4, 2000, 0.05,
-       ["#ecf0f1", "#2c3e50"], "bateau", eau=True, phase=2),
+       ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=2),
 ]
 
 CLASSES = ("auto", "moto", "velo", "camion", "bateau")
@@ -127,6 +165,18 @@ PHYSIQUE = {
     "rampe_impulsion": 0.42,      # vz = vitesse * ca en sortant d'une rampe
     "gravite": 0.18,
     "portee_monter_px": 30,       # a quelle distance on peut ouvrir une portiere
+    # ⚠️ Ce qu'un lourd defonce : les obstacles BAS (cloture, borne-fontaine,
+    # poubelle, caisse) et eux seuls. Jamais une facade : la ville tient par
+    # ses murs — les juges de connexite, les interieurs et les devantures en
+    # dependent, et un trou dans un mur ouvrirait sur un toit. Le `defonce` de
+    # la fiche dit ce qu'il RESTE de vitesse une fois passe au travers.
+    "defonce_vitesse_min": 1.4,
+    "defonce_degats": 6,          # ce que la carrosserie y laisse
+    # Le crochet de la remorqueuse : a quelle distance on accroche, et a
+    # quelle longueur le cable tient le char remorque.
+    "crochet_portee_px": 46,
+    "crochet_cable_px": 30,
+    "crochet_raideur": 0.35,
 }
 
 

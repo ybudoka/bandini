@@ -136,4 +136,70 @@ def test_la_musique_ne_reclame_aucun_fichier(theme):
 def test_le_theme_pese_moins_qu_une_seconde_de_mp3():
     import json
     octets = len(json.dumps(audio.exporter()["musiques"]))
-    assert octets < 16000, f"{octets} octets : le catalogue enfle"
+    assert octets < 48000, f"{octets} octets : le catalogue enfle"
+
+
+# --- M9 : les stations procedurales -----------------------------------------
+
+
+@pytest.fixture(scope="module")
+def stations():
+    return musique.stations()
+
+
+def test_une_station_par_char_qui_en_demande_une(stations):
+    from app import vehicules
+
+    slugs = {s["slug"] for s in stations}
+    assert slugs == {s["slug"] for s in musique.STATIONS}
+    demandees = {v["radio"] for v in vehicules.de_phase(1) if v["radio"]}
+    assert slugs <= demandees, f"station generee que personne n'ecoute : {slugs - demandees}"
+
+
+def test_la_meme_graine_donne_la_meme_toune():
+    """⚠️ Tout tient a ca. Une station qui change a chaque demarrage du
+    serveur, c'est un ETag qui bouge sans raison, un paquet qui ne se met
+    jamais en cache, et une toune qu'on ne peut plus corriger — on ne
+    retrouverait pas celle qu'on veut changer."""
+    for style in musique.STATIONS:
+        a = musique.generer_station(style)
+        b = musique.generer_station(style)
+        assert a == b, style["slug"]
+
+
+def test_toutes_les_notes_d_une_station_sont_dans_sa_gamme(stations):
+    """⚠️ Le juge qui remplace l'oreille. Une seule note hors de la gamme
+    s'entend tout de suite, et personne ne debogue une fausse note en
+    conduisant un camion. Par construction, chaque hauteur se batit sur un
+    degre — ce test verifie que la construction tient."""
+    for station, style in zip(stations, musique.STATIONS, strict=True):
+        for voix in station["voix"]:
+            if voix["forme"] == "bruit":
+                continue          # une percussion n'a pas de hauteur
+            for note in voix["notes"]:
+                demi = (int(note[1]) - style["tonique"]) % 12
+                assert demi in style["gamme"], \
+                    f"{station['slug']} / {voix['role']} : {note} hors de la gamme"
+                assert MIDI_MIN <= note[1] <= MIDI_MAX, note
+
+
+def test_une_station_tourne_assez_longtemps_sans_se_mordre_la_queue(stations):
+    for station in stations:
+        assert musique.duree_s(station) >= 30, f"{station['slug']} : la boucle s'entend"
+        for voix in station["voix"]:
+            motif = voix.get("motif", station["pas"])
+            assert motif <= station["pas"]
+            for note in voix["notes"]:
+                assert note[0] < motif, f"{station['slug']} : une note hors de son motif"
+        # Les trois voix jouees plus la batterie : le sequenceur en tient trois
+        # a la fois sans forcer, et la batterie ne compte pas comme une voix.
+        assert len(station["voix"]) == 4
+
+
+def test_deux_stations_ne_sonnent_pas_pareil(stations):
+    """Deux graines, deux tonalites, deux tempos : sinon le camion et la
+    remorqueuse ont la meme radio et la station procedurale ne sert a rien."""
+    assert len({s["bpm"] for s in stations}) == len(stations)
+    chants = [tuple(n[1] for n in next(v for v in s["voix"] if v["role"] == "chant")["notes"])
+              for s in stations]
+    assert len(set(chants)) == len(chants)

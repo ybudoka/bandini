@@ -271,11 +271,14 @@ const Missions = (function () {
       }
       const d = taxi.destination;
       if (dist2(v.x, v.y, d.x, d.y) < 44 * 44 && Math.abs(v.vitesse) < 0.4) {
-        const tarifs = B.defs.economie.tarifs;
+        // ⚠️ Les trois nombres de la course viennent de la FICHE du boulot
+        // (`economie.BOULOTS`), y compris ce qu'un choc mange du pourboire :
+        // ils etaient perdus dans `tarifs`, ou rien ne les rattachait au taxi.
+        const boulot = B.defs.economie.boulots.taxi;
         const chocs = v.chocs - taxi.chocsDepart;
-        const douceur = Math.max(0, 1 - chocs * 0.34);
-        const prix = Math.round(tarifs.taxi_base + tarifs.taxi_par_tuile * (taxi.distance / TT));
-        const pourboire = Math.round(tarifs.taxi_pourboire_max * douceur);
+        const douceur = Math.max(0, 1 - chocs * boulot.malus_choc);
+        const prix = Math.round(boulot.base + boulot.par_tuile * (taxi.distance / TT));
+        const pourboire = Math.round(boulot.prime * douceur);
         encaisser(prix + pourboire, pourboire ? 'COURSE + ' + pourboire + ' $ DE POURBOIRE' : 'COURSE (CONDUITE BRUTALE)');
         taxi.courses++;
         B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;

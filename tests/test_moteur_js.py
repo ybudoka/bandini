@@ -1276,7 +1276,7 @@ def test_les_feux_alternent_et_les_t_n_en_ont_pas(banc):
 
 
 def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
-    tarifs = paquet["economie"]["tarifs"]
+    boulot = paquet["economie"]["boulots"]["taxi"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(47);
@@ -1297,7 +1297,7 @@ def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
     }""")
     assert r["etape1"] == "attente" and r["etape2"] == "course" and r["etape3"] is None
     assert r["courses"] == 1
-    assert r["gain"] >= tarifs["taxi_base"] + tarifs["taxi_pourboire_max"], \
+    assert r["gain"] >= boulot["base"] + boulot["prime"], \
         "une course sans un choc doit donner le pourboire plein"
 
 

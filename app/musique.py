@@ -163,4 +163,139 @@ def duree_s(morceau: Morceau) -> float:
 
 
 def exporter() -> list[Morceau]:
-    return [dict(m) for m in MORCEAUX]  # type: ignore[misc]
+    return [dict(m) for m in MORCEAUX] + stations()  # type: ignore[misc]
+
+
+# --- Les stations procedurales (M9) ----------------------------------------
+
+#: ⚠️ Une station par char, ecrite par une GRAINE plutot qu'a la main. Le
+#: camion a sa toune, la remorqueuse la sienne, et aucune ne coute un mp3 ni
+#: un credit ElevenLabs. C'est le meme sequenceur trois voix que le theme du
+#: menu (`Son.Mus`) : le navigateur n'apprend rien de neuf, il recoit un
+#: morceau de plus dans `musiques`.
+#:
+#: ⚠️ Pourquoi generer en Python et non dans le navigateur : ici, pytest lit
+#: chaque note. Le juge verifie que TOUTES les hauteurs tombent dans la gamme
+#: — une seule note a cote s'entend, et personne ne debogue une fausse note a
+#: l'oreille en conduisant un camion.
+
+
+class _Des:
+    """Le meme des que `carte.Des` : une graine, une suite, aucune surprise."""
+
+    def __init__(self, graine: int) -> None:
+        self.etat = graine & 0xFFFFFFFF
+
+    def suivant(self) -> int:
+        self.etat = (self.etat * 1664525 + 1013904223) & 0xFFFFFFFF
+        return self.etat
+
+    def entier(self, a: int, b: int) -> int:
+        return a + self.suivant() % (b - a + 1)
+
+    def chance(self, p: float) -> bool:
+        return (self.suivant() % 1000) / 1000.0 < p
+
+    def choix(self, options):
+        return options[self.suivant() % len(options)]
+
+
+class Style(TypedDict):
+    slug: str
+    nom: str
+    graine: int
+    bpm: int
+    tonique: int
+    gamme: tuple[int, ...]
+    grille: tuple[int, ...]
+    forme_chant: str
+    forme_nappe: str
+    volume: float
+
+
+#: `gamme` = les demi-tons au-dessus de la tonique ; `grille` = un degre de
+#: cette gamme par mesure (l'accord se batit dessus en tierces). Tout ce qui
+#: sonne vient donc de la gamme, par construction.
+MAJEURE = (0, 2, 4, 5, 7, 9, 11)
+MINEURE = (0, 2, 3, 5, 7, 8, 10)
+
+STATIONS: list[Style] = [
+    # Le camion : country-rock de grand-route, do majeur, quatre accords qui
+    # tournent (I-V-vi-IV), le genre de toune qui passe a 4 h du matin.
+    {"slug": "station_camion", "nom": "CB-88 La Route", "graine": 20260913,
+     "bpm": 104, "tonique": 48, "gamme": MAJEURE, "grille": (0, 4, 5, 3),
+     "forme_chant": "square", "forme_nappe": "triangle", "volume": 0.7},
+    # La remorqueuse : blues de cour a ferraille, la mineur, lent, trois
+    # accords et un balai qui traine.
+    {"slug": "station_remorqueuse", "nom": "Le Lot 900 AM", "graine": 19870411,
+     "bpm": 84, "tonique": 45, "gamme": MINEURE, "grille": (0, 3, 4, 0),
+     "forme_chant": "sawtooth", "forme_nappe": "sine", "volume": 0.62},
+]
+
+#: Huit mesures de grille (la grille de quatre, jouee deux fois) et seize de
+#: chant : la boucle dure assez pour qu'on ne l'entende pas se mordre la queue
+#: le temps d'une course.
+STATION_MESURES = 16
+
+
+def _hauteur(style: Style, degre: int) -> int:
+    """Le degre `degre` de la gamme (negatif = en dessous de la tonique)."""
+    octave, index = divmod(degre, len(style["gamme"]))
+    return style["tonique"] + 12 * octave + style["gamme"][index]
+
+
+def generer_station(style: Style) -> Morceau:
+    """Un morceau complet a partir d'une graine. Deux appels donnent le meme."""
+    des = _Des(style["graine"])
+    grille = style["grille"]
+    basse: list[list[float]] = []
+    nappe: list[list[float]] = []
+    chant: list[list[float]] = []
+    for mesure in range(STATION_MESURES):
+        depart = mesure * PAS_PAR_MESURE
+        racine = grille[mesure % len(grille)]
+        # La basse marche : la fondamentale sur le 1 et le 3, la quinte entre.
+        for temps, degre in enumerate((racine, racine + 4, racine, racine + 2)):
+            basse.append([depart + temps * PAS_PAR_TEMPS, _hauteur(style, degre - 7),
+                          PAS_PAR_TEMPS])
+        # L'accord, en tierces de la gamme : jamais une note etrangere.
+        for attaque in (0, 4):
+            for degre in (racine, racine + 2, racine + 4):
+                nappe.append([depart + attaque, _hauteur(style, degre), 3])
+        # Le chant : quatre a six notes tirees dans l'accord et ses voisines.
+        for _ in range(des.entier(4, 6)):
+            pas = des.entier(0, PAS_PAR_MESURE - 1)
+            degre = racine + des.choix((7, 9, 11, 8, 10, 12))
+            duree = des.choix((1, 1, 2, 2, 3))
+            volume = 1.0 if des.chance(0.7) else 0.6
+            chant.append([depart + pas, _hauteur(style, degre), duree, volume])
+    chant.sort(key=lambda n: (n[0], n[1]))
+    # La batterie tourne sur une mesure : grosse caisse sur les temps forts,
+    # caisse claire sur le contretemps, et un charleston tire au sort.
+    batterie: list[list[float]] = [[0, 1800, 1, 1.0], [2, 5200, 1, 0.9],
+                                   [4, 1800, 1, 0.8], [6, 5200, 1, 1.0]]
+    for pas in range(PAS_PAR_MESURE):
+        if des.chance(0.5):
+            batterie.append([pas, 9000, 1, 0.25])
+    batterie.sort(key=lambda n: (n[0], n[1]))
+    return {
+        "slug": style["slug"],
+        "nom": style["nom"],
+        "bpm": style["bpm"],
+        "pas_par_temps": PAS_PAR_TEMPS,
+        "pas": STATION_MESURES * PAS_PAR_MESURE,
+        "volume": style["volume"],
+        "voix": [
+            {"role": "basse", "forme": "triangle", "volume": 0.40,
+             "motif": len(grille) * PAS_PAR_MESURE, "notes": basse[:len(grille) * 4]},
+            {"role": "nappe", "forme": style["forme_nappe"], "volume": 0.11,
+             "motif": len(grille) * PAS_PAR_MESURE, "notes": nappe[:len(grille) * 6]},
+            {"role": "chant", "forme": style["forme_chant"], "volume": 0.13, "notes": chant},
+            {"role": "batterie", "forme": "bruit", "volume": 0.09,
+             "motif": PAS_PAR_MESURE, "notes": batterie},
+        ],
+    }
+
+
+def stations() -> list[Morceau]:
+    return [generer_station(style) for style in STATIONS]

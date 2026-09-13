@@ -59,13 +59,6 @@ def facture_hopital(argent: int) -> int:
 # --- Revenus ---------------------------------------------------------------
 
 TARIFS = {
-    "taxi_base": 15,
-    "taxi_par_tuile": 0.25,
-    "taxi_pourboire_max": 15,
-    "pizza": 25,
-    "pizza_prime_rapide": 10,
-    "ambulance": 40,
-    "ambulance_vivant": 60,
     "pickpocket_min": 5,
     "pickpocket_max": 25,
     "cash_sol_min": 5,
@@ -104,6 +97,85 @@ TARIFS = {
 #: s'ecoule meme au volant, et elle ne s'empile pas (un deuxieme cafe repart
 #: la minuterie).
 CAFE = {"duree_s": 90, "depense": 0.5}
+
+# --- Les boulots au klaxon (M9) -------------------------------------------
+
+#: ⚠️ UN boulot = UNE fiche. La v1 avait les trois nombres du taxi perdus dans
+#: `TARIFS` ; a quatre boulots, ca faisait douze nombres sans parente qu'aucun
+#: test ne pouvait comparer entre eux. Ici, chaque boulot se lit en une ligne
+#: et le juge d'equilibrage les met cote a cote.
+#:
+#: `base`        ce qu'on touche en finissant, quoi qu'il arrive
+#: `par_tuile`   ce que la DISTANCE ajoute (a parcourir, pas a vol d'oiseau)
+#: `prime`       le bonus qu'on perd en route (pourboire, pizza froide, mort)
+#: `etapes`      combien de fois de suite (la pizza : trois livraisons)
+#: `chrono_s`    0 = pas de chrono ; sinon le temps avant que la prime fonde
+#: `malus_choc`  ce qu'un choc mange de la prime (le taxi : trois chocs, rien)
+
+
+class Boulot(TypedDict):
+    slug: str
+    nom: str
+    vehicule: str
+    base: int
+    par_tuile: float
+    prime: int
+    etapes: int
+    chrono_s: int
+    malus_choc: float
+
+
+BOULOTS: dict[str, Boulot] = {
+    "taxi": {"slug": "taxi", "nom": "Course", "vehicule": "taxi",
+             "base": 15, "par_tuile": 0.25, "prime": 15,
+             "etapes": 1, "chrono_s": 0, "malus_choc": 0.34},
+    # ⚠️ La pizza refroidit : la prime fond du depart de la livraison jusqu'a
+    # `chrono_s`, puis il ne reste que la base. C'est la seule pression du
+    # boulot — il n'y a rien a perdre d'autre qu'un pourboire.
+    "pizza": {"slug": "pizza", "nom": "Livraison", "vehicule": "moto",
+              "base": 20, "par_tuile": 0.2, "prime": 14,
+              "etapes": 3, "chrono_s": 50, "malus_choc": 0.0},
+    # Le blesse, lui, se perd pour de bon : la prime est sa vie.
+    "ambulance": {"slug": "ambulance", "nom": "Ambulance", "vehicule": "ambulance",
+                  "base": 40, "par_tuile": 0.3, "prime": 60,
+                  "etapes": 1, "chrono_s": 100, "malus_choc": 0.2},
+    # La fourriere paie pour les epaves : pas de prime, mais la meilleure base.
+    "remorquage": {"slug": "remorquage", "nom": "Remorquage", "vehicule": "remorqueuse",
+                   "base": 70, "par_tuile": 0.4, "prime": 0,
+                   "etapes": 1, "chrono_s": 0, "malus_choc": 0.0},
+}
+
+#: La course type qui sert a COMPARER les boulots entre eux (en tuiles). Elle
+#: ne sert a rien en jeu : le paiement se calcule sur la vraie distance.
+TUILES_TYPE = 60
+
+
+def gain_boulot(boulot: Boulot, tuiles: float = TUILES_TYPE, parfait: bool = True) -> int:
+    """Ce qu'un boulot rapporte, toutes etapes faites."""
+    par_etape = boulot["base"] + boulot["par_tuile"] * tuiles + (boulot["prime"] if parfait else 0)
+    return round(par_etape * boulot["etapes"])
+
+
+# --- La fourriere ----------------------------------------------------------
+
+#: Un char mal gare, ou saisi a l'arrestation, part au lot. On le rachete au
+#: comptoir — ou on le reprend par-dessus la cloture, et le lot appelle.
+#:
+#: ⚠️ Le rachat DOIT couter plus cher que la revente du meme char au garage
+#: (`VENTE_FRACTION`), sinon la fourriere devient une machine a argent : on y
+#: fait saisir un char pour le racheter moins cher qu'il ne se revend.
+FOURRIERE = {
+    "rachat_fraction": 0.40,
+    "rachat_minimum": 150,
+    "places": 6,              # ce que le lot garde ; au-dela, le plus vieux part
+    "etoiles_vol": 1,         # reprendre son char sans payer
+    "gardiens": 2,            # les gars du lot, qui ripostent
+}
+
+
+def prix_rachat(prix_neuf: int) -> int:
+    return max(FOURRIERE["rachat_minimum"], round(prix_neuf * FOURRIERE["rachat_fraction"]))
+
 
 #: Vente d'un vehicule vole au garage clandestin : fraction du prix neuf, en
 #: proportion des points de vie restants, moins 20 % par doublon du meme jour.
@@ -174,6 +246,9 @@ def exporter() -> dict:
         "hopital": dict(HOPITAL),
         "tarifs": dict(TARIFS),
         "cafe": dict(CAFE),
+        "boulots": {k: dict(v) for k, v in BOULOTS.items()},
+        "fourriere": dict(FOURRIERE),
+        "tuiles_type": TUILES_TYPE,
         "vente_fraction": VENTE_FRACTION,
         "vente_malus_doublon": VENTE_MALUS_DOUBLON,
         "reparation_par_pv": REPARATION_PAR_PV,

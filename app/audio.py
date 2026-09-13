@@ -152,6 +152,9 @@ RADIOS: list[Radio] = [
        "tense instrumental cop-show groove, muted guitar stabs, dry rimshot drums, "
        "low synth drone, faint radio static and morse blips, 1970s police "
        "procedural, no vocals, loopable"),
+    # ⚠️ Radio-Traversier reste declaree SANS char depuis M9 : le camion a
+    # herite d'une station procedurale, et celle-ci attend le traversier de
+    # M12 — c'est sa musique de pont, pas sa musique de cabine.
     _r("traversier", "Radio-Traversier", "rigodon",
        "lively Quebecois traditional reel, fiddle lead, diatonic accordion, foot "
        "tapping rhythm, spoons, upright bass, joyful village dance hall, "
@@ -261,6 +264,19 @@ def radio_par_slug(slug: str) -> Radio | None:
         if radio["slug"] == slug:
             return radio
     return None
+
+
+def station_existe(slug: str) -> bool:
+    """La radio d'un char : une station ENREGISTREE (ici) ou une station
+    PROCEDURALE (`musique.STATIONS`, ecrite par une graine). Les deux se
+    jouent par le meme bouton RADIO ; c'est `son.js` qui choisit la source.
+
+    ⚠️ Une troisieme sorte n'existe pas : un slug qui n'est ni dans l'une ni
+    dans l'autre est un bouton RADIO qui ne fait rien.
+    """
+    if radio_par_slug(slug):
+        return True
+    return any(station["slug"] == slug for station in musique.STATIONS)
 
 
 def nom_fichier_radio(radio: Radio) -> str:

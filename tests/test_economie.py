@@ -80,8 +80,68 @@ def test_les_proprietes():
     assert economie.FORTUNE_MAX >= 3 * sum(p["prix"] for p in economie.PROPRIETES)
 
 
+# --- M9 : les boulots et la fourriere ---------------------------------------
+
+
+def test_chaque_boulot_vaut_la_peine_sans_ecraser_les_autres():
+    """⚠️ Le juge d'equilibrage, celui que le plan reclame : tous les boulots
+    se comparent sur LA MEME course. Un boulot qui rapporte moins que le taxi
+    ne se prend jamais ; un boulot qui rapporte cinq fois plus rend les
+    quatre autres decoratifs. Entre les deux, on choisit selon l'envie — et
+    c'est tout ce qu'on demande a un boulot."""
+    taxi = economie.gain_boulot(economie.BOULOTS["taxi"])
+    assert taxi > 0
+    for slug, boulot in economie.BOULOTS.items():
+        gain = economie.gain_boulot(boulot)
+        assert taxi <= gain <= 4 * taxi, f"{slug} rapporte {gain} $ contre {taxi} $ au taxi"
+        # Rate : on garde la base, jamais rien de plus.
+        rate = economie.gain_boulot(boulot, parfait=False)
+        assert 0 < rate <= gain
+        assert boulot["base"] > 0 and boulot["etapes"] >= 1
+        assert 0 <= boulot["malus_choc"] < 1
+        assert boulot["chrono_s"] >= 0
+
+
+def test_la_pizza_refroidit_et_le_blesse_se_perd():
+    """Les deux boulots a chrono n'ont pas le meme enjeu : la pizza ne coute
+    qu'un pourboire, le blesse coute le boulot. Le chrono de l'ambulance doit
+    donc etre le plus large des deux."""
+    pizza, ambulance = economie.BOULOTS["pizza"], economie.BOULOTS["ambulance"]
+    assert pizza["chrono_s"] > 0 and ambulance["chrono_s"] > pizza["chrono_s"]
+    assert pizza["etapes"] == 3, "trois livraisons d'affilee"
+    assert ambulance["prime"] > ambulance["base"], "la prime, c'est la vie du blesse"
+    assert economie.BOULOTS["remorquage"]["chrono_s"] == 0, "une epave n'est plus a une heure pres"
+
+
+def test_la_fourriere_ne_peut_pas_devenir_une_machine_a_argent():
+    """⚠️ Racheter doit couter plus cher que revendre. Sinon le tour est
+    imparable : on se fait saisir un char, on le rachete moins cher qu'il ne
+    se revend au garage de Ti-Guy, et on recommence."""
+    from app import vehicules
+
+    for v in vehicules.de_phase(1):
+        rachat = economie.prix_rachat(v["prix"])
+        revente = economie.prix_vente(v["prix"], v["vie"], v["vie"], 0)
+        assert rachat > revente, f"{v['slug']} : rachat {rachat} $, revente {revente} $"
+    assert economie.prix_rachat(1) == economie.FOURRIERE["rachat_minimum"]
+    assert economie.FOURRIERE["places"] >= 1
+    assert economie.FOURRIERE["etoiles_vol"] >= 1, "reprendre son char sans payer, c'est un vol"
+
+
+def test_aucun_boulot_ne_depasse_la_borne_du_tableau_des_scores():
+    """Le boulot le plus riche, fait a la chaine sans jamais rater, doit
+    rester sous la borne de vraisemblance des scores."""
+    for slug, boulot in economie.BOULOTS.items():
+        # Un boulot ne se fait pas en moins de vingt secondes par etape.
+        par_seconde = economie.gain_boulot(boulot) / (20 * boulot["etapes"])
+        assert par_seconde < economie.GAIN_MAX_PAR_SECONDE, slug
+
+
 def test_export():
     e = economie.exporter()
+    assert e["boulots"]["taxi"]["base"] == economie.BOULOTS["taxi"]["base"]
+    assert set(e["boulots"]) == set(economie.BOULOTS)
+    assert e["fourriere"]["rachat_fraction"] > economie.VENTE_FRACTION
     assert e["cafe"] == economie.CAFE
     assert e["tarifs"]["hotdog_souffle"] == economie.TARIFS["hotdog_souffle"]
     assert len(e["amendes"]) == 5 and len(e["amendes"][0]) == economie.CASIER_MAX + 1
