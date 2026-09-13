@@ -166,6 +166,27 @@ const Monde = (function () {
 
   // --- Rendu du sol ---------------------------------------------------------------
 
+  /** Un passage pieton fait deux tuiles de large, mais ses bandes n'en
+      couvrent que les deux tiers (21 px), collees au croisement. Le peintre
+      doit donc savoir s'il est la tuile INTERIEURE (bandes pleines) ou
+      l'EXTERIEURE (un bout de bande du cote du croisement) : on le lit dans
+      ses voisines — l'interieure touche la boite (voie « + »), l'exterieure
+      touche une voie (fleche ou ligne d'arret).
+      0 = pleine, 1 = exterieure a l'ouest/au nord, 2 = exterieure a l'est/au sud. */
+  function varianteDePassage(g, tx, ty) {
+    if (g === '=') {
+      if (glyphe(tx + 1, ty) === '=' && fleche(tx - 1, ty) !== '+') return 1;
+      if (glyphe(tx - 1, ty) === '=' && fleche(tx + 1, ty) !== '+') return 2;
+      return 0;
+    }
+    if (g === ':') {
+      if (glyphe(tx, ty + 1) === ':' && fleche(tx, ty - 1) !== '+') return 1;
+      if (glyphe(tx, ty - 1) === ':' && fleche(tx, ty + 1) !== '+') return 2;
+      return 0;
+    }
+    return hash2(tx, ty) % 4;
+  }
+
   function peindreMorceau(mx, my) {
     const c = Base.nouveauCanvas(MORCEAU_PX, MORCEAU_PX);
     const ctx = c.getContext('2d');
@@ -175,7 +196,7 @@ const Monde = (function () {
         if (tx >= carte.w || ty >= carte.h) continue;
         const g = carte.sol[ty][tx];
         const peintre = TUILES[g] || TUILES[','];
-        const tuile = Atlas.cuireTuile(g, hash2(tx, ty) % 4, peintre);
+        const tuile = Atlas.cuireTuile(g, varianteDePassage(g, tx, ty), peintre);
         ctx.drawImage(tuile, i * TT, j * TT);
       }
     }
@@ -325,7 +346,7 @@ const Monde = (function () {
   return {
     MUR, EAU, BASSE, MASQUE_PIETON, MASQUE_VEHICULE, MORCEAUX_MAX,
     charger, glyphe, solidite, bloque, estRoute, estPassage, estChaussee, marchablePieton,
-    ligneLibre, porteA, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe,
+    ligneLibre, porteA, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, heureTexte, lampesVisibles,
     miniCarte, couleurMini,
     get carte() { return carte; },

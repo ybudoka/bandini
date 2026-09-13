@@ -185,8 +185,19 @@ const TUILES = (function () {
     // ⚠️ Les bandes d'un passage sont PARALLELES a la circulation : le pieton
     // les enjambe une a une. Rue est-ouest : bandes horizontales. C'etait a
     // l'envers — Martin l'a vu du premier coup d'oeil.
-    '=': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let y = 1; y < T; y += 5) ctx.fillRect(0, y, T, 3); },
-    ':': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let x = 1; x < T; x += 5) ctx.fillRect(x, 0, 3, T); },
+    // La variante vient de Monde.varianteDePassage : 0 pleine, 1 exterieure
+    // ouest/nord (un bout de 5 px du cote est/sud), 2 exterieure est/sud.
+    // Deux tiers de 32 px = 21 px de bandes : Martin les trouvait trop larges.
+    '=': function (ctx, v, T) {
+      asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de';
+      const x0 = v === 1 ? T - 5 : 0, l = v === 0 ? T : 5;
+      for (let y = 1; y < T; y += 5) ctx.fillRect(x0, y, l, 3);
+    },
+    ':': function (ctx, v, T) {
+      asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de';
+      const y0 = v === 1 ? T - 5 : 0, h = v === 0 ? T : 5;
+      for (let x = 1; x < T; x += 5) ctx.fillRect(x, y0, 3, h);
+    },
     // Une ligne de case tous les trois pas : a chaque tuile, le stationnement
     // ressemblait a un code-barres.
     'p': function (ctx, v, T) { asphalte(ctx, v, T); if (v % 3 === 0) { ctx.fillStyle = '#c9c6bc'; ctx.fillRect(0, 2, 1, T - 4); } },

@@ -1238,3 +1238,23 @@ def test_deux_chars_qui_tournent_a_gauche_ne_se_bloquent_pas(banc):
     assert r["ensemble"] == 0, f"les deux chars ont partage la boite pendant {r['ensemble']} images"
     assert r["aParti"] and r["bParti"], f"un char est reste coince : {r}"
     assert r["aSol"] and r["bSol"], "un char a fini hors de la route"
+
+
+def test_les_passages_ont_une_tuile_pleine_et_une_en_bout(banc):
+    """Le passage fait deux tuiles ; les bandes n'en couvrent que les deux
+    tiers, collees au croisement. Chaque passage a donc exactement une tuile
+    interieure (pleine) et une exterieure (en bout), jamais deux pleines."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        const compte = { '=': [0, 0, 0], ':': [0, 0, 0] };
+        for (let y = 0; y < c.h; y++) for (let x = 0; x < c.w; x++) {
+            const g = c.sol[y][x];
+            if (g === '=' || g === ':') compte[g][L.Monde.varianteDePassage(g, x, y)]++;
+        }
+        return compte;
+    }""")
+    for g in ("=", ":"):
+        pleines, ouest, est = r[g]
+        assert pleines > 0 and ouest > 0 and est > 0, r
+        assert pleines == ouest + est, f"passage « {g} » : {pleines} pleines pour {ouest + est} en bout"
