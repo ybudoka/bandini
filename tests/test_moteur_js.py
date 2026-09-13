@@ -183,9 +183,13 @@ def test_le_singe_ne_casse_rien(banc, graine):
 def test_la_ville_recue_est_celle_du_serveur(banc, paquet):
     r = banc("""function (L, o) {
         const c = L.Monde.carte, d = L.B.defs.carte;
+        const types = {};
+        L.B.defs.carte.decor.forEach(function (m) { types[m.type] = true; });
         return { w: c.w, h: c.h, portes: c.portes.length, points: c.points.length,
                  decor: L.B.defs.carte.decor.length, lampes: c.lampes.length,
-                 zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }) };
+                 zones: c.zones.length, sansPeintre: Object.keys(d.legende).filter(function (g) { return !L.TUILES[g]; }),
+                 decorSansPeintre: Object.keys(types).filter(function (t) { return !L.DECORS[t]; }),
+                 typesDecor: Object.keys(types).sort() };
     }""")
     carte = paquet["carte"]
     assert [r["w"], r["h"]] == [carte["largeur"], carte["hauteur"]]
@@ -195,6 +199,8 @@ def test_la_ville_recue_est_celle_du_serveur(banc, paquet):
     assert r["lampes"] == len(carte["lampes"]) > 40
     assert r["zones"] >= 2
     assert r["sansPeintre"] == [], "une tuile de la legende n'a pas de peintre"
+    assert r["decorSansPeintre"] == [], "un decor de la carte n'a pas de peintre"
+    assert len(r["typesDecor"]) >= 6, r["typesDecor"]
 
 
 def test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables(banc):

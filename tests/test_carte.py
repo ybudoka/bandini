@@ -23,9 +23,11 @@ def test_rectangulaire_et_glyphes_connus():
         assert set(voie) <= carte.VOIES, set(voie) - carte.VOIES
 
 
-def test_la_ville_a_la_taille_de_son_plan():
-    assert CARTE["largeur"] == (len(carte.PLAN[0]) + 1) * carte.ROUTE + len(carte.PLAN[0]) * carte.BLOC_L
-    assert CARTE["hauteur"] == (len(carte.PLAN) + 1) * carte.ROUTE + len(carte.PLAN) * carte.BLOC_H
+def test_la_ville_a_la_taille_de_sa_trame():
+    assert CARTE["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
+    assert CARTE["hauteur"] == sum(carte.RANGEES) + sum(carte.RUES_H)
+    assert len(carte.RUES_V) == len(carte.COLONNES) + 1
+    assert len(carte.RUES_H) == len(carte.RANGEES) + 1
 
 
 def test_les_fleches_sont_sur_la_route_et_menent_quelque_part():
@@ -58,12 +60,69 @@ def test_les_lignes_d_arret_disent_leur_sens():
 
 
 def test_les_croisements_sont_des_croisements():
-    assert len(CARTE["intersections"]) == (len(carte.PLAN[0]) + 1) * (len(carte.PLAN) + 1)
+    total = (len(carte.PLAN[0]) + 1) * (len(carte.PLAN) + 1)
+    # Un superbloc avale des croisements : il en reste moins que la trame.
+    assert 0 < len(CARTE["intersections"]) < total
     for inter in CARTE["intersections"]:
+        assert len(inter["bras"]) >= 2, inter
         for y in range(inter["y"], inter["y"] + inter["h"]):
             for x in range(inter["x"], inter["x"] + inter["l"]):
                 assert CARTE["voie"][y][x] == "+", (x, y)
                 assert carte.routier(CARTE["sol"][y][x])
+
+
+def test_la_ville_est_irreguliere():
+    """⚠️ Le juge de l'asymetrie : une ville en damier n'a aucun repere.
+
+    Chaque ligne ci-dessous protege une source d'irregularite ; si l'une saute,
+    la ville redevient un damier sans qu'aucun autre test ne s'en apercoive.
+    """
+    assert len(set(carte.COLONNES)) >= 5, "les colonnes de blocs sont trop semblables"
+    assert len(set(carte.RANGEES)) >= 4, "les rangees de blocs sont trop semblables"
+    assert len(set(carte.RUES_V)) >= 2 and len(set(carte.RUES_H)) >= 2, \
+        "toutes les rues ont la meme largeur"
+
+    maitre = carte.regions_du_plan(carte.PLAN)
+    regions = len(set(maitre.values()))
+    assert regions < len(maitre), "aucun superbloc : aucune rue ne s'arrete"
+
+    bras = {i["bras"] for i in CARTE["intersections"]}
+    assert any(len(b) == 3 for b in bras), "aucun croisement en T"
+
+    # Les batiments : autant de formes que possible, et au moins une cour.
+    tailles = set()
+    for porte in CARTE["portes"]:
+        tailles.add(porte["x"])
+    assert len(tailles) == len(CARTE["portes"])
+    fronts = _empreintes_de_batiments(CARTE)
+    assert len(fronts) >= 20, f"seulement {len(fronts)} batiments"
+    assert len(set(fronts)) >= 8, "les batiments ont tous la meme boite"
+
+
+def _empreintes_de_batiments(plan_carte):
+    """Les boites (largeur, hauteur) des paquets de tuiles solides."""
+    sol = plan_carte["sol"]
+    vus = set()
+    boites = []
+    for y, ligne in enumerate(sol):
+        for x, glyphe in enumerate(ligne):
+            if carte.solidite(glyphe) != 1 or (x, y) in vus:
+                continue
+            groupe = set()
+            pile = [(x, y)]
+            while pile:
+                cx, cy = pile.pop()
+                if (cx, cy) in groupe or not (0 <= cy < len(sol) and 0 <= cx < len(sol[cy])):
+                    continue
+                if carte.solidite(sol[cy][cx]) != 1:
+                    continue
+                groupe.add((cx, cy))
+                pile.extend(((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)))
+            vus |= groupe
+            largeur = max(c[0] for c in groupe) - min(c[0] for c in groupe) + 1
+            hauteur = max(c[1] for c in groupe) - min(c[1] for c in groupe) + 1
+            boites.append((largeur, hauteur))
+    return boites
 
 
 def test_tout_ce_qui_est_marchable_est_relie():
@@ -111,32 +170,49 @@ def test_un_interieur_est_une_piece_habitable(slug):
         assert 0 < point["y"] < piece["hauteur"] - 1
 
 
-def test_aucun_gabarit_ne_deborde_sur_la_rue():
-    """Les couloirs de rue appartiennent a la rue : rien de solide dedans."""
-    pas_rue = 0
-    for i in range(len(carte.PLAN[0]) + 1):
-        x0 = i * (carte.BLOC_L + carte.ROUTE)
-        for y in range(CARTE["hauteur"]):
-            for dx in range(carte.ROUTE):
-                glyphe = CARTE["sol"][y][x0 + dx]
-                assert carte.solidite(glyphe) != 1, f"batiment sur la rue en {(x0 + dx, y)}"
-                pas_rue += 1
-    assert pas_rue > 0
-    for j in range(len(carte.PLAN) + 1):
-        y0 = j * (carte.BLOC_H + carte.ROUTE)
-        for x in range(CARTE["largeur"]):
-            for dy in range(carte.ROUTE):
-                glyphe = CARTE["sol"][y0 + dy][x]
-                assert carte.solidite(glyphe) != 1, f"batiment sur la rue en {(x, y0 + dy)}"
+def test_aucun_gabarit_ne_deborde_sur_une_rue_qui_existe():
+    """Une rue posee appartient a la rue : rien de solide dedans, et de la
+    chaussee sur toute sa longueur. Un segment AVALE par un superbloc, lui,
+    appartient a l'ilot — c'est tout l'interet des superblocs."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    vues = 0
+    for i in range(chantier.nc + 1):
+        for j in range(chantier.nr):
+            if not chantier.rue_v_existe(i, j):
+                continue
+            for y in range(chantier.yb[j], chantier.yb[j] + carte.RANGEES[j]):
+                for dx in range(carte.RUES_V[i]):
+                    x = chantier.xr[i] + dx
+                    assert carte.solidite(CARTE["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
+                    if carte.TROTTOIR <= dx < carte.RUES_V[i] - carte.TROTTOIR:
+                        assert carte.routier(CARTE["sol"][y][x]), (x, y)
+                        assert CARTE["voie"][y][x] != "."
+                        vues += 1
+    for j in range(chantier.nr + 1):
+        for i in range(chantier.nc):
+            if not chantier.rue_h_existe(i, j):
+                continue
+            for dy in range(carte.RUES_H[j]):
+                y = chantier.yr[j] + dy
+                for x in range(chantier.xb[i], chantier.xb[i] + carte.COLONNES[i]):
+                    assert carte.solidite(CARTE["sol"][y][x]) != 1, f"batiment sur la rue en {(x, y)}"
+                    if carte.TROTTOIR <= dy < carte.RUES_H[j] - carte.TROTTOIR:
+                        assert carte.routier(CARTE["sol"][y][x]), (x, y)
+                        assert CARTE["voie"][y][x] != "."
+                        vues += 1
+    assert vues > 3000, f"seulement {vues} tuiles de chaussee verifiees"
 
 
-def test_les_chaussees_sont_des_routes_sur_toute_leur_longueur():
-    for j in range(len(carte.PLAN) + 1):
-        y0 = j * (carte.BLOC_H + carte.ROUTE) + carte.TROTTOIR
-        for x in range(CARTE["largeur"]):
-            for k in range(carte.VOIE_L):
-                assert carte.routier(CARTE["sol"][y0 + k][x]), (x, y0 + k)
-                assert CARTE["voie"][y0 + k][x] != "."
+def test_un_superbloc_avale_bien_sa_rue():
+    """La cour des Cravates couvre quatre blocs : au centre, plus de rue."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    avales = [(i, j) for i in range(1, chantier.nc) for j in range(chantier.nr)
+              if not chantier.rue_v_existe(i, j)]
+    assert avales, "aucune rue verticale avalee"
+    for i, j in avales:
+        milieu = chantier.xr[i] + carte.RUES_V[i] // 2
+        y = chantier.yb[j] + carte.RANGEES[j] // 2
+        assert CARTE["voie"][y][milieu] == ".", f"la rue {i} existe encore en {(milieu, y)}"
 
 
 def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
@@ -187,10 +263,27 @@ def test_deterministe():
 
 
 def test_une_autre_graine_redecore_la_meme_ossature():
+    """Le hasard redessine les ilots ; il ne touche ni aux rues ni aux lieux."""
     autre = carte.generer(graine=carte.GRAINE + 1)
     assert autre["voie"] == CARTE["voie"], "les rues ne dependent pas du hasard"
-    assert autre["portes"] == CARTE["portes"], "les batiments garantis non plus"
     assert autre["sol"] != CARTE["sol"], "la graine ne change rien : le hasard est mort"
+    assert ({p["lieu"] for p in autre["portes"]} == {p["lieu"] for p in CARTE["portes"]}), \
+        "un batiment garanti a disparu avec la graine"
+    assert autre["portes"] != CARTE["portes"], "les batiments ne bougent pas du tout ?"
     assert len(carte.composantes_marchables(autre)) == 1
+    assert autre["tuiles_bouchees"] == 0, "des poches a boucher : un gabarit enferme"
     sans_aller, sans_retour = carte.voies_bloquees(autre)
     assert not sans_aller and not sans_retour
+
+
+@pytest.mark.parametrize("graine", [1, 7, 12345, 20260912, 99999999])
+def test_n_importe_quelle_graine_donne_une_ville_jouable(graine):
+    """⚠️ Le decoupage en parcelles tire beaucoup de des : une seule graine
+    verte ne prouve rien. Cinq villes entieres, cinq fois les memes juges."""
+    ville = carte.generer(graine=graine)
+    assert len(carte.composantes_marchables(ville)) == 1
+    sans_aller, sans_retour = carte.voies_bloquees(ville)
+    assert not sans_aller and not sans_retour
+    assert {p["lieu"] for p in ville["portes"]} == {p["lieu"] for p in CARTE["portes"]}
+    for porte in ville["portes"]:
+        assert carte.marchable(ville["sol"][porte["y"] + 1][porte["x"]]), porte

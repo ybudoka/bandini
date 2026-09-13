@@ -79,7 +79,9 @@ const TUILES = (function () {
     '*': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(0, 0, 2, T); },
     '=': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let x = 1; x < T; x += 5) ctx.fillRect(x, 0, 3, T); },
     ':': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let y = 1; y < T; y += 5) ctx.fillRect(0, y, T, 3); },
-    'p': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d9d6cc'; ctx.fillRect(0, 0, 1, T); },
+    // Une ligne de case tous les trois pas : a chaque tuile, le stationnement
+    // ressemblait a un code-barres.
+    'p': function (ctx, v, T) { asphalte(ctx, v, T); if (v % 3 === 0) { ctx.fillStyle = '#c9c6bc'; ctx.fillRect(0, 2, 1, T - 4); } },
     'R': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d8b83a'; for (let i = 0; i < T; i += 4) ctx.fillRect(i, T - 4 - i / 2, 3, 2); },
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
     's': function (ctx, v, T) { plein(ctx, '#d8c48a', T); points(ctx, v, T, '#c9b576', 10, 4); },
@@ -133,6 +135,19 @@ const DECORS = {
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(1, 3, 14, 8); ctx.fillRect(3, 1, 10, 3);
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 3, 5, 4); ctx.fillRect(9, 5, 4, 3);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(2, 8, 12, 3);
+  } },
+  debris: { w: 14, h: 10, ancre: [7, 9], r: 4, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6b6258'; ctx.fillRect(1, 5, 12, 5);
+    ctx.fillStyle = '#807768'; ctx.fillRect(3, 2, 4, 4); ctx.fillRect(8, 4, 3, 3);
+    ctx.fillStyle = '#544c44'; ctx.fillRect(2, 7, 3, 2); ctx.fillRect(9, 7, 4, 2);
+  } },
+  fontaine: { w: 34, h: 30, ancre: [17, 27], r: 13, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);
+    ctx.fillStyle = '#a5a194'; ctx.fillRect(4, 12, 26, 3);
+    ctx.fillStyle = '#2c5f8a'; ctx.fillRect(6, 14, 22, 11);
+    ctx.fillStyle = '#3b73a3'; ctx.fillRect(9, 16, 7, 2); ctx.fillRect(19, 20, 6, 2);
+    ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
+    ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
   } },
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
