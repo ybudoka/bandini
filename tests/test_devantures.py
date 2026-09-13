@@ -232,3 +232,85 @@ def test_les_regles_tiennent_sur_d_autres_graines(graine):
             assert sol[d["y"]][d["x"] + i] in MURS_DEVANTURE, (graine, d)
     for g in ville["graffitis"]:
         assert sol[g["y"]][g["x"]] in ("F", "d"), (graine, g)
+
+
+# --- On doit TOUJOURS voir une porte -------------------------------------------
+# ⚠️ Retour de Martin : « assure-toi qu'on voit toujours une porte même si elle
+# peut être différente quand il y a une devanture ». Le bandeau, l'auvent et la
+# vitrine couvraient toute la bande : on lisait le nom du commerce et on ne
+# voyait plus par ou entrer. La devanture porte donc `motifs`, une lettre par
+# tuile, qui dit au peintre ce qu'il y a dessous.
+
+#: « W » vitrine · « D » porte qu'on ouvre · « d » condamnee · « G » garage
+#: · « P » porte PEINTE (le sol reste un mur : elle ne promet rien).
+MOTIFS_CONNUS = frozenset("WDdGP")
+PORTES_VISIBLES = frozenset("DdGP")
+
+
+def test_chaque_devanture_dit_ce_qu_il_y_a_dessous(ville):
+    for d in ville["devantures"]:
+        assert len(d["motifs"]) == d["l"], d
+        assert set(d["motifs"]) <= MOTIFS_CONNUS, d
+
+
+def test_on_voit_toujours_une_porte(ville):
+    """La garantie que Martin a demandee, en un juge."""
+    sans = [d["texte"] for d in ville["devantures"]
+            if not set(d["motifs"]) & PORTES_VISIBLES]
+    assert not sans, f"devantures sans aucune porte visible : {sans}"
+
+
+def test_le_masque_dit_la_verite_du_sol(ville, sol):
+    """⚠️ Sauf « P » : celle-la est peinte sur un mur plein, et c'est justement
+    ce qui fait qu'elle ne s'ouvre pas."""
+    for d in ville["devantures"]:
+        for i, lettre in enumerate(d["motifs"]):
+            glyphe = sol[d["y"]][d["x"] + i]
+            attendu = "W" if lettre == "P" else lettre
+            assert glyphe == attendu, (
+                f"{d['texte']} tuile {i} : le masque dit « {lettre} », le sol « {glyphe} »")
+
+
+def test_une_porte_peinte_ne_remplace_jamais_une_vraie(ville):
+    for d in ville["devantures"]:
+        if "P" in d["motifs"]:
+            assert not set(d["motifs"]) & set("DdG"), (
+                f"{d['texte']} : une porte peinte alors qu'il y en a une vraie ({d['motifs']})")
+            assert d["motifs"].count("P") == 1, d
+
+
+def test_une_porte_peinte_donne_sur_le_trottoir(ville, sol):
+    """Une porte peinte contre le mur du voisin ne se verrait jamais."""
+    for d in ville["devantures"]:
+        i = d["motifs"].find("P")
+        if i < 0:
+            continue
+        devant = sol[d["y"] + 1][d["x"] + i]
+        assert carte.marchable(devant), f"{d['texte']} : porte peinte devant « {devant} »"
+
+
+def test_une_porte_ouvrable_est_une_vraie_porte(ville):
+    """⚠️ Le sens inverse du juge precedent : un « D » dans le masque doit
+    correspondre a une porte du catalogue, sinon on peint une poignee doree —
+    la promesse qu'on peut entrer — sur un mur."""
+    vraies = {(p["x"], p["y"]) for p in ville["portes"]}
+    for d in ville["devantures"]:
+        for i, lettre in enumerate(d["motifs"]):
+            if lettre == "D":
+                assert (d["x"] + i, d["y"]) in vraies, f"{d['texte']} : fausse porte ouvrable"
+
+
+def test_les_commerces_visitables_montrent_leur_porte(ville):
+    """Les treize lieux qu'on peut visiter doivent tous exhiber leur porte."""
+    visitables = [d for d in ville["devantures"] if d["porte"]]
+    assert len(visitables) >= 10, len(visitables)
+    for d in visitables:
+        assert "D" in d["motifs"], f"{d['texte']} se visite mais ne montre pas de porte"
+
+
+@pytest.mark.parametrize("graine", [1, 7, 99, 777])
+def test_on_voit_toujours_une_porte_sur_d_autres_graines(graine):
+    ville = carte.generer(graine=graine)
+    for d in ville["devantures"]:
+        assert set(d["motifs"]) & PORTES_VISIBLES, (graine, d)
+        assert len(d["motifs"]) == d["l"], (graine, d)

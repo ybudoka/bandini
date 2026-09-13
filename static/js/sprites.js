@@ -332,24 +332,85 @@ const FACADES = (function () {
     const larg = Atlas.largeurTexte(d.texte, 1);
     Atlas.texte(ctx, d.texte, Math.round(ox + (large - larg) / 2), oy + BANDEAU_Y + 2, g.lettres, 1);
 
-    // L'auvent : des rayures d'une tuile sur deux, coupees devant la porte.
+    // ⚠️ Sous le bandeau, chaque tuile est ce que `motifs` dit qu'elle est.
+    // Une porte NE PREND PAS l'auvent et la vitrine : elle garde toute sa
+    // hauteur, sinon on lit le nom du commerce sans voir par ou entrer.
+    const motifs = d.motifs || '';
     for (let i = 0; i < d.l; i++) {
       const x = ox + i * T;
-      ctx.fillStyle = g.auvent;
-      ctx.fillRect(x, oy + AUVENT_Y, T, AUVENT_H);
-      ctx.fillStyle = eclaircir(g.auvent, 34);
-      for (let k = 0; k < T; k += 6) ctx.fillRect(x + k, oy + AUVENT_Y, 3, AUVENT_H);
-      ctx.fillStyle = 'rgba(0,0,0,0.28)';
-      ctx.fillRect(x, oy + AUVENT_Y + AUVENT_H - 1, T, 1);
+      const quoi = motifs[i] || 'W';
+      if (quoi === 'W') { auvent(ctx, g, x, oy); vitrine(ctx, g, x, oy, i, d.l, motifs); }
+      else porte(ctx, g, x, oy, quoi);
     }
 
-    // La vitre au pied du mur : c'est elle qu'on voit briller de loin la nuit.
-    ctx.fillStyle = g.vitre;
-    ctx.fillRect(ox + 1, oy + VITRE_Y, large - 2, VITRE_H);
-    ctx.fillStyle = 'rgba(0,0,0,0.30)';
-    for (let i = 1; i < d.l; i++) ctx.fillRect(ox + i * T - 1, oy + VITRE_Y, 2, VITRE_H);
-
     if (d.pancarte) pancarte(ctx, d, g, ox, oy);
+  }
+
+  function auvent(ctx, g, x, oy) {
+    ctx.fillStyle = g.auvent;
+    ctx.fillRect(x, oy + AUVENT_Y, T, AUVENT_H);
+    ctx.fillStyle = eclaircir(g.auvent, 34);
+    for (let k = 0; k < T; k += 6) ctx.fillRect(x + k, oy + AUVENT_Y, 3, AUVENT_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.fillRect(x, oy + AUVENT_Y + AUVENT_H - 1, T, 1);
+  }
+
+  /** La vitre au pied du mur : c'est elle qu'on voit briller de loin la nuit.
+      Les montants ne se posent qu'entre deux vitrines — pas contre une porte,
+      qui a deja son propre encadrement. */
+  function vitrine(ctx, g, x, oy, i, total, motifs) {
+    ctx.fillStyle = g.vitre;
+    ctx.fillRect(x, oy + VITRE_Y, T, VITRE_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.30)';
+    if (i > 0 && (motifs[i - 1] || 'W') === 'W') ctx.fillRect(x - 1, oy + VITRE_Y, 2, VITRE_H);
+    if (i === 0) ctx.fillRect(x, oy + VITRE_Y, 1, VITRE_H);
+    if (i === total - 1) ctx.fillRect(x + T - 1, oy + VITRE_Y, 1, VITRE_H);
+  }
+
+  //: ⚠️ Une porte OUVRABLE se distingue d'une porte fermee, et ca ne tient qu'a
+  //: deux details : sa vitre est claire, et elle a une poignee doree. C'est la
+  //: seule chose qui dit au joueur, de loin, qu'il peut entrer ici — le reste
+  //: de la devanture est identique. « D » on entre ; « d » condamnee (planches)
+  //: et « P » simplement fermee ; « G » le rideau du garage.
+  function porte(ctx, g, x, oy, quoi) {
+    const y = oy + AUVENT_Y;                 // la porte prend l'auvent ET la vitre
+    const h = AUVENT_H + VITRE_H;
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';      // le renfoncement
+    ctx.fillRect(x + 1, y, T - 2, h);
+
+    if (quoi === 'G') {
+      ctx.fillStyle = '#7a7d82';
+      ctx.fillRect(x + 2, y + 1, T - 4, h - 1);
+      ctx.fillStyle = '#5f6267';
+      for (let k = y + 2; k < y + h; k += 2) ctx.fillRect(x + 2, k, T - 4, 1);
+      return;
+    }
+
+    const ouvrable = quoi === 'D';
+    ctx.fillStyle = g.bandeau;                // l'encadrement, aux couleurs du commerce
+    ctx.fillRect(x + 2, y, T - 4, h);
+    ctx.fillStyle = eclaircir(g.bandeau, 22); // une arete claire : le chambranle
+    ctx.fillRect(x + 2, y, T - 4, 1);
+    // ⚠️ Une porte fermee n'est pas un trou noir : assez sombre pour qu'on voie
+    // qu'elle ne s'ouvre pas, assez claire pour qu'on la lise comme une porte.
+    ctx.fillStyle = ouvrable ? g.vitre : '#2b2734';
+    ctx.fillRect(x + 3, y + 1, T - 6, h - 2);
+    ctx.fillStyle = 'rgba(0,0,0,0.35)';       // les deux battants
+    ctx.fillRect(x + T / 2 - 1, y + 1, 1, h - 2);
+
+    if (quoi === 'd') {                       // condamnee : deux planches en travers
+      ctx.fillStyle = '#6b5a48';
+      ctx.fillRect(x + 3, y + 2, T - 6, 1);
+      ctx.fillRect(x + 3, y + h - 3, T - 6, 1);
+    } else if (ouvrable) {
+      ctx.fillStyle = '#d8b83a';               // la poignee : on entre ici
+      ctx.fillRect(x + T / 2 + 1, y + Math.floor(h / 2), 2, 1);
+      ctx.fillStyle = eclaircir(g.vitre, 20);  // un rai de lumiere au seuil
+      ctx.fillRect(x + 3, y + h - 2, T - 6, 1);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.10)';  // un reflet, pour qu'elle ne soit pas un trou
+      ctx.fillRect(x + 4, y + 2, 2, h - 4);
+    }
   }
 
   /** L'enseigne perpendiculaire : elle DEPASSE du mur sur le trottoir, c'est

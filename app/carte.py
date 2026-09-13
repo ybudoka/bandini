@@ -700,9 +700,23 @@ class _Chantier:
                  if self.marchable_en(bout, ay + 1)]
         pancarte = cotes[self.des_devanture.entier(0, len(cotes) - 1)] if cotes else 0
 
+        # ⚠️ Ce qu'il y a SOUS le bandeau, tuile par tuile : « W » vitrine,
+        # « D » porte, « d » porte condamnee, « G » porte de garage. Sans ce
+        # masque, le peintre couvrait toute la bande de vitrine et la porte
+        # disparaissait — on voyait le nom du commerce mais plus par ou entrer.
+        motifs = "".join(self.sol[ay][x0 + i] for i in range(large))
+        # ⚠️ Un commerce sans porte du tout n'existe pas. Un tiers des bandes
+        # n'en avaient aucune (le batiment a tire « pas de porte ») : on en
+        # PEINT une, marquee « P ». Elle ne touche pas au sol — c'est une porte
+        # fermee, comme les « d », et elle ne promet donc rien qu'on ne tienne.
+        if not set(motifs) & set("DdG"):
+            # Contre le trottoir : on peint la porte la ou le joueur passe.
+            visibles = [i for i in range(large) if self.marchable_en(x0 + i, ay + 1)]
+            ou = visibles[len(visibles) // 2] if visibles else large // 2
+            motifs = motifs[:ou] + "P" + motifs[ou + 1:]
         self.devantures.append({
             "x": x0, "y": ay, "l": large, "genre": genre_visuel,
-            "texte": texte, "pancarte": pancarte,
+            "texte": texte, "pancarte": pancarte, "motifs": motifs,
             "porte": 1 if special is not None else 0,
         })
         # ⚠️ Une vitrine eclaire le trottoir. Sans ca, la rue commercante et la

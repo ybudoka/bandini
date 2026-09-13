@@ -94,3 +94,52 @@ def test_les_vitrines_eclairent_la_nuit(banc):
     assert r["lampadaires"] > 0
     assert r["rayonMax"] < 44, "une vitrine ne doit pas porter aussi loin qu'un lampadaire"
     assert "rgba" in (r["couleur"] or "")
+
+
+def test_chaque_sorte_de_porte_a_son_dessin(banc):
+    """⚠️ On ne compte pas les rectangles, on regarde les COULEURS posees : la
+    poignee doree est le seul signal qui dit « on entre ici », et les planches
+    le seul qui dit « c'est condamne ». Une lettre de `motifs` qui tomberait sur
+    le dessin de la vitrine ferait disparaître la porte sans un mot."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const genres = L.B.defs.devantures.genres;
+        const toile = o.doc.createElement('canvas');
+        toile.width = 128; toile.height = 48;
+        const ctx = toile.getContext('2d');
+        const vrai = ctx.fillRect.bind(ctx);
+        let couleurs = [];
+        ctx.fillRect = function (x, y, w, h) { couleurs.push(String(ctx.fillStyle)); return vrai(x, y, w, h); };
+        const rendus = {};
+        ['WWDW', 'WWdW', 'WWPW', 'WWGW', 'WWWW'].forEach(function (m) {
+            couleurs = [];
+            L.FACADES.devanture(ctx, { x: 0, y: 0, l: m.length, genre: 0,
+                                       texte: 'TEST', pancarte: 1, motifs: m }, genres[0], 0, 0);
+            rendus[m] = couleurs;
+        });
+        return rendus;
+    }""")
+    POIGNEE, PLANCHES, RIDEAU = "#d8b83a", "#6b5a48", "#7a7d82"
+    assert POIGNEE in r["WWDW"], "la porte qu'on ouvre n'a pas sa poignee doree"
+    assert PLANCHES in r["WWdW"], "la porte condamnee n'a pas ses planches"
+    assert RIDEAU in r["WWGW"], "le garage n'a pas son rideau"
+    for sans_porte in ("WWWW",):
+        for marque in (POIGNEE, PLANCHES, RIDEAU):
+            assert marque not in r[sans_porte], f"{marque} peint sur une simple vitrine"
+    # La porte peinte est fermee : elle ne promet pas qu'on peut entrer.
+    assert POIGNEE not in r["WWPW"], "une porte PEINTE ne doit pas porter la poignee doree"
+    assert PLANCHES not in r["WWPW"], "une porte peinte n'est pas condamnee, juste fermee"
+    # ... mais elle se dessine bien : son encadrement n'est pas celui d'une vitrine.
+    assert len(r["WWPW"]) != len(r["WWWW"])
+
+
+def test_toutes_les_devantures_de_la_ville_montrent_une_porte(banc):
+    r = banc("""function (L, o) {
+        const d = L.B.defs.carte.devantures;
+        const sans = d.filter(function (x) { return !/[DdGP]/.test(x.motifs); });
+        return { total: d.length, sans: sans.length,
+                 sortes: Array.from(new Set(d.map(function (x) {
+                     return (x.motifs.match(/[DdGP]/) || ['?'])[0]; }))).sort() };
+    }""")
+    assert r["sans"] == 0, f"{r['sans']} devantures sans porte visible"
+    assert set(r["sortes"]) >= {"D", "d", "P"}, r["sortes"]
