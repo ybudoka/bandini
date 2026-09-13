@@ -402,6 +402,7 @@ const Entites = (function () {
     if (e.saigne > 0) saigner(e);
 
     if (e.etat === 'fige') { e.vx = 0; e.vy = 0; return; }
+    if (e.agent && Police.gere(e)) return;               // il poursuit, il enquete : la police le dirige
     // Le petit colle a sa mere : il ne flane jamais tout seul.
     if (e.suit && e.suit.vivant && e.etat !== 'fuit') {
       const ecart = B.defs.pietons.reactions.suite_distance_px;
@@ -431,7 +432,15 @@ const Entites = (function () {
     }
 
     let vitesse = v.pieton * e.allure;
-    if (e.etat === 'fuit' || e.etat === 'temoin') {
+    if (e.etat === 'temoin' && e.vers && e.vers.vivant) {
+      // Le temoin court VERS l'agent qu'il a repere, pour lui raconter.
+      vitesse = v.pieton_course * e.allure;
+      if (--e.minuterie <= 0) { e.etat = 'flane'; e.cri = 0; e.vers = null; }
+      const dx = e.vers.x - e.x, dy = e.vers.y - e.y;
+      const norme = Math.hypot(dx, dy) || 1;
+      e.vx = dx / norme * vitesse;
+      e.vy = dy / norme * vitesse;
+    } else if (e.etat === 'fuit' || e.etat === 'temoin') {
       vitesse = v.pieton_course * e.allure;
       if (--e.minuterie <= 0) { e.etat = 'flane'; e.cri = 0; }
       const menace = e.menace || B.joueur;
@@ -545,10 +554,12 @@ const Entites = (function () {
     const reactions = B.defs.pietons.reactions;
     // Un enfant prend peur de bien plus loin que les grandes personnes.
     const rayonMax = Math.max(reactions.peur_rayon_tuiles, reactions.enfant_peur_tuiles) * TT;
+    const recent = B.crimes.length ? B.crimes[B.crimes.length - 1] : null;
+    const crime = recent && B.t - recent.t <= 1 ? recent : null;   // le crime qu'on vient de signaler
     for (const e of pietonsAutour(x, y, rayonMax)) {
       const rayon = (e.intouchable ? reactions.enfant_peur_tuiles : reactions.peur_rayon_tuiles) * TT;
       if (dist2(e.x, e.y, x, y) > rayon * rayon) continue;
-      if (e === menace || e.etat === 'assomme') continue;
+      if (e === menace || e.etat === 'assomme' || e.agent) continue;   // l'agent ne fuit pas : la police le dirige
       if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
       if (e.intouchable) {                       // l'enfant ne fait que detaler
         e.etat = 'fuit'; e.menace = menace; e.minuterie = reactions.fuite_secondes * 90; e.cri = 120;
@@ -560,6 +571,7 @@ const Entites = (function () {
       }
       if (e.etat !== 'fuit' && e.etat !== 'temoin') {
         e.etat = B.rng() < e.probaTemoin ? 'temoin' : 'fuit';
+        if (e.etat === 'temoin' && crime && !e.crime) e.crime = crime;   // il a quelque chose a raconter
         e.menace = menace;
         e.minuterie = reactions.fuite_secondes * 60;
         e.cri = 120;
@@ -639,7 +651,8 @@ const Entites = (function () {
       B.partie.stats.tues++;
       alerter(e.x, e.y, source, 3);
       if (source === B.joueur) {
-        Police.signalerCrime('mort_pieton', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
+        if (e.agent) Police.signalerCrime('mort_policier', e.x, e.y, true);
+        else Police.signalerCrime('mort_pieton', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
       }
     }
   }

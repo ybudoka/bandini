@@ -91,6 +91,12 @@ CATALOGUE: list[Pieton] = [
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),
+    # L'agent : un pieton que la police dirige quand il poursuit. Il patrouille
+    # sur les trottoirs comme tout le monde, arme au ceinturon, et ne nait
+    # jamais au hasard — `police.js` en place autant que la zone en demande.
+    _p("policier", "Agent", "#1f3a6e", "#101018", "#e8b088", "#16264a",
+       vitesse=1.0, courage=1.0, temoin=0.0, vie=100, argent=(0, 0), arme="pistolet",
+       metier="police", frequence=0.0),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.

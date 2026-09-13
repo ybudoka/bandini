@@ -126,7 +126,8 @@ const Combat = (function () {
         Entree.vibrer(e.fort ? 40 : 18);
         user(arme);
         if (c.vivant) {
-          Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
+          if (c.agent) Police.signalerCrime('coup_policier', c.x, c.y, true);
+          else Police.signalerCrime('coup_pieton', c.x, c.y, Police.quelqu_un_voit(c.x, c.y, c));
         }
       }
     }
@@ -221,10 +222,7 @@ const Combat = (function () {
           saigne: p.saigne, angle: Math.atan2(p.vy, p.vx),
           assomme: false, renverse: false,
         });
-        if (p.tireur === B.joueur && !touche.vivant) {
-          Police.signalerCrime('mort_pieton', touche.x, touche.y, true);
-        }
-        Entites.retirer(p);
+        Entites.retirer(p);          // (la mort, s'il y en a une, est signalee par Entites.tuer)
         continue;
       }
       if (p.parcouru > p.portee || (p.cloche && p.z <= 0)) {

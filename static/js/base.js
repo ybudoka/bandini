@@ -27,11 +27,12 @@ const B = {
   particules: [],
   decals: [],
   crimes: [],
-  recherche: { etoiles: 0, chaleur: 0, vu: 0, dernierVu: null },
+  recherche: { etoiles: 0, chaleur: 0, vu: 0, dernierVu: null, flash: 0 },
   budget: { chemins: 2, los: 20 },
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
-  options: { muet: false, sang: true, vibration: true, daltonien: false },
+  options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false },
+  trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },
 };
 

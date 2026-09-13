@@ -88,6 +88,11 @@ const Missions = (function () {
   function interagir(j) {
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) return acheterAmbulant(j, etal);
+    // Un temoin qui court raconter : on lui achete le silence.
+    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
+      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
+    });
+    if (temoin) return Police.acheterLeSilence(j, temoin);
     const fille = Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
       return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit';
     });
@@ -117,6 +122,62 @@ const Missions = (function () {
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       j.hospitalise = false;
+    });
+  }
+
+  // --- L'arrestation : pot-de-vin ou prison ---------------------------------------------
+
+  /** La main au collet. Un menu : graisser la patte, ou suivre. */
+  function arrestation(agent) {
+    const j = B.joueur, r = B.recherche, eco = B.defs.economie, p = B.partie;
+    if (j.arrete) return;
+    j.arrete = true; j.vx = 0; j.vy = 0; j.etat = 'flane';
+    const etoiles = Math.max(1, r.etoiles);
+    const pot = potDeVin(etoiles, p.casier);
+    const fine = amende(p.argent, etoiles, p.casier);
+    const items = [];
+    items.push({ libelle: 'POT-DE-VIN', detail: pot + ' $', actif: p.argent >= pot, faire: function () {
+      const ami = p.sergentAmi && etoiles <= eco.pot_de_vin_ami_max;
+      const chance = eco.pot_de_vin_accepte[Math.min(5, etoiles)];
+      payer(pot, 'POT-DE-VIN');
+      if (ami || B.rng() < chance) {
+        Police.remiseAZero();
+        j.arrete = false;
+        if (agent) { agent.etat = 'flane'; agent.but = null; }
+        Hud.dialogue(ami ? 'SGT BOUCHARD' : 'L’AGENT', ['« ON N’A RIEN VU. CIRCULE. »'], 180);
+        return true;
+      }
+      Police.signalerCrime('pot_de_vin_refuse', j.x, j.y, true);
+      Hud.dialogue('L’AGENT', ['« TU TE PENSES OU, TOI? »'], 120);
+      prison(agent);
+      return true;
+    } });
+    items.push({ libelle: 'SUIVRE L’AGENT', detail: 'AMENDE ' + fine + ' $', faire: function () { prison(agent); return true; } });
+    Hud.ouvrirMenu({ titre: 'ARRETE !', sur: etoiles + ' ETOILE' + (etoiles > 1 ? 'S' : ''), items: items,
+                     aide: 'CASIER : ' + p.casier, obligatoire: true });
+  }
+
+  /** La prison prend l'amende, les armes, quelques heures, et note le casier. */
+  function prison(agent) {
+    const j = B.joueur, r = B.recherche, p = B.partie;
+    const fine = amende(p.argent, Math.max(1, r.etoiles), p.casier);
+    payer(fine, 'AMENDE');
+    p.casier = Math.min(B.defs.economie.casier_max, p.casier + 1);
+    p.stats.arrestations++;
+    p.armes = { poings: { mun: null } }; p.arme = 'poings'; j.arme = 'poings';
+    Police.remiseAZero();
+    if (taxi.etape) taxi.abandonner();
+    if (agent) { agent.etat = 'flane'; agent.but = null; }
+    const heures = B.defs.recherche.police.prison_heures / 24;
+    p.heure += heures; while (p.heure >= 1) { p.heure -= 1; p.jour += 1; nouveauJour(); }
+    Hud.fondu(150, 'PRISON — ' + fine + ' $, ARMES CONFISQUEES');
+    setTimeoutJeu(60, function () {
+      const poste = Monde.carte.points.find(function (q) { return q.slug === 'poste'; });
+      if (poste) { j.x = poste.x * TT + 8; j.y = poste.y * TT + 20; }
+      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false;
+      Entites.dansLaCarte(j);
+      Monde.centrerCamera(j.x, j.y);
+      sauvegarderPartie();
     });
   }
 
@@ -504,6 +565,10 @@ const Missions = (function () {
     }
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) { const c = commerceDe(etal.slug); B.invite = c ? c.nom.toUpperCase() + ' — ' + B.defs.economie.tarifs[c.tarif] + ' $' : 'ACHETER'; return; }
+    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
+      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
+    });
+    if (temoin) { B.invite = 'ACHETER SON SILENCE — ' + B.defs.economie.tarifs.silence_temoin + ' $'; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
@@ -553,7 +618,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, hopital,
-           setTimeoutJeu, taxi, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
+           setTimeoutJeu, taxi, arrestation, prison, utiliserPoint, pointSousLaMain, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, ramasserPaquet, majInvite, maj };
 })();

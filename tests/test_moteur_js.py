@@ -535,30 +535,48 @@ def test_la_bagarre_tient_le_budget(banc):
 
 
 def test_un_meurtre_vu_fait_monter_les_etoiles(banc, paquet):
-    """La chaine complete : je tue, quelqu'un voit, la police le sait."""
+    """La chaine complete : je tue, quelqu'un voit, il le raconte a un agent,
+    et LA la police le sait — pas avant (M4 : un temoin se rachete)."""
     gravite = paquet["recherche"]["delits"]["mort_pieton"]["etoiles"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(21);
         function meurtre(avecTemoin) {
             L.Police.remiseAZero();
+            L.B.crimes.length = 0;
             L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
             const victime = o.poser('passant', 14, 0);
+            let temoin = null;
             if (avecTemoin) {
-                const temoin = o.poser('passante', 60, 0);
+                temoin = o.poser('passante', 60, 0);
+                temoin.probaTemoin = 1; temoin.etat = 'flane';
                 L.Entites.regarder(temoin, -1, 0);
             }
             L.Entites.indexer();
             L.Entites.tuer(victime, L.B.joueur);
-            return { etoiles: L.B.recherche.etoiles, chaleur: L.B.recherche.chaleur };
+            const surLeCoup = { etoiles: L.B.recherche.etoiles, chaleur: L.B.recherche.chaleur,
+                                temoin: temoin ? temoin.etat : null, crime: !!(temoin && temoin.crime) };
+            if (!temoin) return { surLeCoup: surLeCoup };
+            // Un agent arrive dans le coin, de dos : le temoin court le lui dire.
+            const a = L.Police.creerAgent(temoin.x + 40, temoin.y, 'flane');
+            L.Entites.regarder(a, 1, 0);
+            L.Entites.indexer();
+            let quand = -1;
+            for (let i = 0; i < 400 && quand < 0; i++) { o.frame(1); if (temoin.crime && temoin.crime.rapporte) quand = i; }
+            return { surLeCoup: surLeCoup, quand: quand,
+                     chaleur: L.B.recherche.chaleur + L.B.recherche.etoiles * 100 };
         }
         const sansTemoin = meurtre(false);
         const avecTemoin = meurtre(true);
         return { sans: sansTemoin, avec: avecTemoin,
                  chaleurParGravite: L.B.defs.recherche.chaleur_par_gravite };
     }""")
-    assert r["sans"]["chaleur"] == 0, "un meurtre que personne ne voit ne chauffe pas"
-    assert r["avec"]["chaleur"] + r["avec"]["etoiles"] * 100 == gravite * r["chaleurParGravite"], \
+    assert r["sans"]["surLeCoup"]["chaleur"] == 0, "un meurtre que personne ne voit ne chauffe pas"
+    assert r["avec"]["surLeCoup"]["chaleur"] == 0 and r["avec"]["surLeCoup"]["etoiles"] == 0, \
+        "sans agent dans le coin, la police ne sait rien encore"
+    assert r["avec"]["surLeCoup"]["temoin"] == "temoin" and r["avec"]["surLeCoup"]["crime"] is True
+    assert 0 <= r["avec"]["quand"] < 400, "le temoin n'a pas rejoint l'agent"
+    assert r["avec"]["chaleur"] == gravite * r["chaleurParGravite"], \
         "le temoin n'a pas transmis la gravite du crime"
 
 

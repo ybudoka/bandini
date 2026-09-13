@@ -325,6 +325,11 @@ const DECORS = {
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 3, 6, 2);
     ctx.fillStyle = '#6f757c'; ctx.fillRect(4, 8, 2, 14);
   } },
+  affiche: { w: 10, h: 12, ancre: [5, 11], r: 0, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(0, 0, 10, 12);
+    ctx.fillStyle = '#101018'; ctx.fillRect(1, 1, 8, 2); ctx.fillRect(3, 4, 4, 4); ctx.fillRect(2, 9, 6, 1);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 10, 8, 1);
+  } },
   paquet: { w: 12, h: 10, ancre: [6, 9], r: 4, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 10, 8);
     ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 3, 8, 3);

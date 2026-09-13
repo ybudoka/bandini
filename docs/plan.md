@@ -17,7 +17,7 @@ jalons » à chaque jalon livré.
 | M3 Véhicules | **livré** (13 sept. 2026) | auto, taxi, moto, auto-patrouille (sprite) ; physique arcade, **chaîne de cercles**, sous-pas, monter/descendre/carjacking/éjection, trafic qui **lit le champ `voie`** (tourne à gauche après le croisement, ralentit avant le coin), feux sur les vrais croisements, dégâts/fumée/feu/explosion, alarmes, rampes, renversements, taxi au klaxon avec pourboire selon la douceur, hôpital quand on meurt, moteur qui monte dans les tours |
 | M5 Intérieurs et économie | **livré** (13 sept. 2026) | entrer/sortir des 10 intérieurs (fondu, pièce centrée, points d'action), menus canvas qui figent le jeu, planque (dormir = sauvegarder + lendemain, coffre à l'abri de la prison, garde-robe, char stationné qui revient), garage (revente, réparation, peinture qui efface le vol), Chez Gus (armes, munitions), Boutique Rosa (tenues), casse-croûte, hôpital, propriétés (achat à la porte, caisse plafonnée à 3 jours), 20 paquets cachés + primes, journal du matin (`journal.py`), pause = menu (reprendre, **bilan de session**, **options** sang/vibration/son/daltonien sauvegardées, envoi du score) |
 | Gestes et lisibilité | **livré** (13 sept. 2026) | retour de Martin : le corps **bouge** quand on agit — élan du coup, bras et arme superposés (toutes armes, PNJ compris), chancellement quand on est touché, roulade qui tourne, dos courbé pour ramasser, éclair de bouche au tir ; les accents et l'apostrophe courbe tombaient sur « ? » dans la police pixel — normalisés avant le dessin, avec un test sur chaque nom du jeu |
-| M4 Police | à faire | après M5 |
+| M4 Police | **livré** (13 sept. 2026) | `police.js` réécrit : agents à pied (archétype `policier`, patrouille par zone, cône vérifié une image sur trois, poursuite par **A\*** sur les trottoirs, arrestation au contact, sortent le joueur d'un char arrêté), **rien n'est compté tant qu'un agent ne l'a pas vu** — un passant qui a vu devient témoin porteur du crime, court le raconter à un agent ou téléphone (`temoins`), et on peut **acheter son silence** (20 $) ; délits bruyants (`temoin: false`) comptés tout de suite ; étoiles qui ne tombent qu'hors de vue (dedans aussi) ; menu d'arrestation **obligatoire** (pot-de-vin selon casier/étoiles, sergent ami plus tard, refus = délit) ; prison (amende, armes confisquées, casier, 6 h, réveil au poste, sauvegarde) ; autos de patrouille à 3★ qui **suivent les rails** vers le joueur (feux brûlés, sortie vers lui) et foncent de près, agents qui descendent ; tirs à 3★ ; −1★ en changeant de char hors de vue ; affiches « Recherché » sur les façades à 2★ ; blips bleus, étoiles qui clignotent ; **mode TRACE** (idée de Martin) : le jeu dessine le trajet de chaque char et se surveille (chien de garde, tour en rond, hors voie) |
 | M6 Missions et gang | à faire | répliques **dites à voix haute** en plus du texte (décision du 13 sept.) |
 | M7 Finition v1 | à faire | |
 
@@ -40,6 +40,17 @@ uv run python scripts/audio_elevenlabs.py               # génère les bruitages
 uv run python scripts/audio_elevenlabs.py --radios      # … et les stations de radio (musique : cher)
 uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume
 ```
+
+**Mode trace** (quand un char reste pris, tourne en rond, sort de la rue) : ouvrir
+`https://bandini.gestiondojo.ca/?trace=1` (ou PAUSE → OPTIONS → TRACE DES VÉHICULES).
+Chaque char du trafic traîne son trajet (vert : roule, jaune : attend un feu, un stop ou
+la boîte, rouge : immobile depuis 2 s), une ligne bleue vers sa tuile cible, un carré sur
+la sortie choisie, et son état au-dessus (`FEU 4S`, `BOITE`, `DANS`…). Le jeu se surveille
+lui-même : **chien de garde** déclenché, **tourne en rond** (trois fois la même boîte en
+20 s), **hors voie** (90 images hors de la chaussée) — l'anomalie s'affiche en rouge sur
+place pendant dix secondes avec le trajet des huit dernières secondes, et s'écrit dans la
+console (`[trace] …`) et dans `BANDINI.B.trace.anomalies`. Le bilan est en bas à droite.
+Une capture d'écran de l'anomalie suffit pour la reproduire au banc.
 
 Mise en ligne : `deploy/README.md`. Chaque jalon terminé est déployé et testé
 par Martin sur téléphone (tactile) et ordinateur (manette).
@@ -291,7 +302,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M1 | La ville | `carte.py` générateur + juges, paquet `/api/definitions`, atlas + validateur, tuiles, cache de morceaux, caméra, joueur qui marche (clavier, manette, tactile), jour-nuit + lampes, mini-carte | on parcourt tout le Faubourg au téléphone |
 | M2 | Piétons et poings | **fait** : apparition, flâner/fuir/témoin/riposte, mêlée en trois temps, coup fort chargé, roulade, armes du catalogue (mêlée, tir, plombs, cloche, jet), projectiles, ramassage, armes improvisées qui cassent, sang plafonné, pickpocket, HUD arme et charge | bagarre dans la rue ; 13 tests de banc (arc devant/derrière, un coup = un dégât, poings assomment vs lame tue, budget, témoin) |
 | M3 | Véhicules | **fait** : auto, taxi, moto, auto-patrouille ; physique, chaîne de cercles, monter/descendre/éjecter, trafic + feux, dégâts/explosion, alarmes, rampes, taxi au klaxon (pourboire selon la douceur), son moteur ; hôpital quand on meurt (avancé de M4). Radios livrées (bouton RADIO : station suivante, puis silence). Reste : projeter un piéton dans le trafic | voler, conduire, planter ; 11 tests de banc (vMax, marche arrière, dérive au frein à main, mur, **trafic 3000 images**, renversement, explosion, carjacking, feux, taxi, hôpital) |
-| M4 | Police | crimes, cônes + ligne de vue, témoins (acheter le silence), recherche 1–3★, patrouille/poursuite/arrestation, autos de poursuite, prison (amende, pot-de-vin, casier), hôpital, sergent ami, affiches | se faire pincer ; tests cône, décroissance, amendes |
+| M4 | Police | **fait** : cônes + ligne de vue, témoins qui rapportent (acheter le silence), recherche 1–5★, patrouille/poursuite (A\*)/arrestation, autos de poursuite sur rails, tirs, prison (amende, pot-de-vin, casier), affiches, déguisement par char ; sergent ami branché en M6 ; **mode trace** des véhicules | se faire pincer ; 9 tests de banc (cône, poursuite + arrestation + prison, pot-de-vin, témoin → agent, silence acheté, décroissance hors de vue, autos + tirs, déguisement, affiches) + 3 de trace |
 | M5 | Intérieurs et économie | **fait** : 10 intérieurs, magasins, planque (sauvegarde, coffre, garde-robe, char stationné), revente/réparation/peinture, propriétés, paquets cachés, journal du matin, bilan de session, options, envoi du score depuis la pause | acheter, vendre, sauvegarder, recharger ; 9 tests de banc |
 | M6 | Missions et gang | cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue **avec la voix de chaque réplique** (une voix par personnage, ducking de la radio, voix « du combiné » au téléphone), GPS, contacts du marché noir | finir les 5 missions, **les entendre** |
 | M7 | Finition v1 | 4–5★ (barrages, hélico), musique, passe sonore, HUD, performance sur vrai téléphone, Playwright, défi du jour si le temps le permet | 60 i/s de nuit à 3★ sur téléphone |

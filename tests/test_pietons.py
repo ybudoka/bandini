@@ -90,3 +90,11 @@ def test_les_reactions_sont_des_durees_credibles():
     assert reactions["recul_images"] < reactions["ko_images"]
     assert 1 <= reactions["fuite_secondes"] <= 30
     assert 0 < reactions["pickpocket_dos_degres"] <= 180
+
+
+def test_l_agent_de_police_est_un_pieton_arme_qui_ne_nait_pas_au_hasard():
+    agent = pietons.par_slug("policier")
+    assert agent and agent["metier"] == "police" and agent["frequence"] == 0.0
+    assert agent["arme"] == "pistolet" and agent["courage"] == 1.0
+    assert agent["temoin"] == 0.0, "un agent ne temoigne pas : il agit"
+    assert agent not in pietons.ordinaires()

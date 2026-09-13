@@ -47,6 +47,10 @@ CHALEUR_PAR_GRAVITE = 35
 CHALEUR_ETOILE = 100
 
 #: Etoiles ajoutees par delit (gravite), et si un temoin est necessaire.
+#: `temoin: False` = le delit est BRUYANT : quiconque le percoit suffit, la
+#: police le sait tout de suite. `temoin: True` = il faut qu'un agent le voie,
+#: ou qu'un passant qui l'a vu aille le raconter (ou telephone) — d'ici la,
+#: on peut acheter son silence.
 DELITS: dict[str, dict] = {
     "pickpocket": {"etoiles": 1, "temoin": True},
     "vol_vehicule": {"etoiles": 1, "temoin": True},
@@ -59,7 +63,7 @@ DELITS: dict[str, dict] = {
     "coup_policier": {"etoiles": 2, "temoin": False},
     "mort_policier": {"etoiles": 3, "temoin": False},
     "conduite_dangereuse": {"etoiles": 1, "temoin": False},
-    "explosion": {"etoiles": 2, "temoin": True},
+    "explosion": {"etoiles": 2, "temoin": False},
     "guichet": {"etoiles": 2, "temoin": False},
     "effraction": {"etoiles": 1, "temoin": True},
     "pot_de_vin_refuse": {"etoiles": 1, "temoin": False},

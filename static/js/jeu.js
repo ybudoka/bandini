@@ -152,6 +152,7 @@ const Jeu = (function () {
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     Entites.dessiner(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
+    if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     Base.fin(Monde.ambiance(), Monde.lampesVisibles(vue));
     Hud.dessiner();
   }
@@ -193,6 +194,10 @@ const Jeu = (function () {
     Son.init(w, racine.dataset.urlStatique);
     Sauvegarde.init(w.localStorage);
     Object.assign(B.options, Sauvegarde.lireOptions() || {});
+    // ?trace=1 (ou ?perf=1) dans l'adresse : le mode s'allume sans passer par le menu.
+    const adresse = (w.location && w.location.search) || '';
+    if (/[?&]trace=1/.test(adresse)) B.options.trace = true;
+    if (/[?&]perf=1/.test(adresse)) B.options.perf = true;
     Entree.init(d, w, w.navigator);
     Hud.init(d, racine);
     B.rng = mulberry(B.graine);

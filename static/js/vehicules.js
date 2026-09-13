@@ -422,6 +422,9 @@ const Vehicules = (function () {
       vu = Police.quelqu_un_voit(v.x, v.y, null);
       if (v.def.alarme && declencherAlarme(v)) vu = true;
     }
+    // Changer de char hors de vue : la police perd ta trace d'une etoile.
+    const r = B.recherche, deg = B.defs.recherche.deguisement;
+    if (r.etoiles > 0 && r.vu > deg.vehicule_s * 60) { r.etoiles = Math.max(0, r.etoiles - deg.vehicule_etoiles); r.vu = 0; Hud.message('ILS T’ONT PERDU DE VUE'); }
     v.conducteur = j; v.etat = 'roule'; v.vole = v.vole || !!crime; v.cible = null;
     j.dansVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
     j.x = v.x; j.y = v.y;
@@ -508,6 +511,10 @@ const Vehicules = (function () {
       v.sens = sens;
       const p = PAS_FLECHE[sens];
       const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
+      if (v.poursuite) {                             // sirene : feux, stops et boite, on brule tout
+        v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;
+        return centre(tx + p[0], ty + p[1]);
+      }
       if (inter && !Monde.feuVert(inter, sens)) { v.attendFeu = true; v.attenteBoite = 0; return centre(tx, ty); }
       // Un STOP : on s'immobilise d'abord.
       if (inter && inter.stop === sens) {
@@ -528,20 +535,28 @@ const Vehicules = (function () {
       v.attenteBoite = 0;
       v.stopT = undefined;
       v.enBoite = inter || null;                     // on prend le croisement
+      if (inter) noterLaBoite(v, inter);
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === '+') {
       if (!v.sens) v.sens = FLECHE_DE[Math.round(Math.cos(v.angle)) + ',' + Math.round(Math.sin(v.angle))] || '>';
-      // Au premier '+', on decide ou l'on va : tout droit, a gauche, a droite.
-      if (!v.sortie) {
-        const tirage = B.rng();
-        const ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
-        v.sortie = ordre;
-      }
       const droit = v.sens;
       const p = PAS_FLECHE[droit];
       const droite = FLECHE_DE[(-p[1]) + ',' + p[0]], gauche = FLECHE_DE[p[1] + ',' + (-p[0])];
       const vers = { droit: droit, droite: droite, gauche: gauche };
+      // Au premier '+', on decide ou l'on va : tout droit, a gauche, a droite.
+      // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
+      if (!v.sortie && v.poursuite && B.joueur) {
+        const j = B.joueur;
+        v.sortie = ['droit', 'droite', 'gauche'].sort(function (a, b) {
+          const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
+          return dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y);
+        });
+      } else if (!v.sortie) {
+        const tirage = B.rng();
+        const ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+        v.sortie = ordre;
+      }
       // 1. La sortie prevue, dans l'ordre des preferences.
       for (const choix of v.sortie) {
         const sens = vers[choix];
@@ -681,7 +696,7 @@ const Vehicules = (function () {
     if (dx * dx + dy * dy < 36) { v.cible = prochaineCible(v); if (!v.cible) return; }
     const voulu = angleVers(v.x, v.y, v.cible.x, v.cible.y);
     const ecart = ecartAngle(v.angle, voulu);
-    let vitesseVoulue = v.def.vitesse_max * t.vitesse_ville;
+    let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville);   // sirene : bien plus vite
     // ⚠️ On ralentit AVANT le coin, pas dedans : a 2,2 px/image le rayon de
     // braquage fait 3,6 tuiles, et un coin de rue en demande 1,5 — le char
     // ratait son virage et finissait sur le trottoir d'en face.
@@ -689,7 +704,7 @@ const Vehicules = (function () {
     const ici = Monde.fleche(tx, ty);
     const p = PAS_FLECHE[v.sens] || [0, 0];
     const devant = Monde.fleche(tx + p[0] * 2, ty + p[1] * 2);
-    if (ici === '+' || ici === 'S' || devant === '+' || devant === 'S') vitesseVoulue = Math.min(vitesseVoulue, 1.1);
+    if (ici === '+' || ici === 'S' || devant === '+' || devant === 'S') vitesseVoulue = Math.min(vitesseVoulue, v.poursuite ? 1.5 : 1.1);
     if (Math.abs(ecart) > 0.5) vitesseVoulue = Math.min(vitesseVoulue, 0.8);
     const obstacle = obstacleDevant(v);
     if (obstacle < t.distance_securite_px) {
@@ -766,20 +781,127 @@ const Vehicules = (function () {
       if (v.etat === 'epave') { if (v.epaveT <= 0 && !Entites.visibleAEcran(v.x, v.y, 40)) Entites.retirer(v); continue; }
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
+      else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
-      if (v.conducteur === 'trafic') {
+      if (v.conducteur === 'police') {
+        v.sirene = B.recherche.etoiles > 0;                    // la chasse finie, la sirene se tait
+        if (v.sirene && !Son.boucleActive('sirene')) Son.boucle('sirene', true, 0.5);
+      }
+      if (v.conducteur === 'trafic' || (v.conducteur === 'police' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);
+        if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); }
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
     }
     peupler();
+    if (Son.boucleActive('sirene') && !Police.autos().some(function (v) { return v.sirene; })) Son.boucle('sirene', false);
     if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
     }
+  }
+
+  // --- La trace : le trajet de chaque char, valide par le jeu lui-meme ----------------------
+  //
+  // Idee de Martin : plutot que de deviner au banc pourquoi un char reste pris,
+  // le jeu DESSINE ses trajets (option TRACE, ou ?trace=1) et se surveille :
+  // chien de garde declenche, char qui repasse dans la meme boite, char hors
+  // de la chaussee. Chaque anomalie garde le trajet des huit dernieres secondes
+  // et s'affiche en rouge sur place — une capture d'ecran suffit a la raconter.
+
+  const TRACE_POINTS = 120, TRACE_TOUTES_LES = 4, TRACE_ANOMALIES_MAX = 30, TRACE_MONTRE = 600;
+  let boitesId = 0;
+
+  function noterLaBoite(v, inter) {
+    inter.id = inter.id || ++boitesId;
+    v.boites = v.boites || [];
+    v.boites.push({ id: inter.id, t: B.t });
+    if (v.boites.length > 8) v.boites.shift();
+  }
+
+  function anomalie(v, quoi) {
+    const a = { t: B.t, quoi: quoi, slug: v.slug, id: v.id, x: v.x, y: v.y, tx: Math.floor(v.x / TT), ty: Math.floor(v.y / TT),
+                etat: etatCourt(v), points: (v.trace || []).slice() };
+    B.trace.anomalies.push(a);
+    B.trace.total++;
+    if (B.trace.anomalies.length > TRACE_ANOMALIES_MAX) B.trace.anomalies.shift();
+    if (typeof console !== 'undefined' && console.warn) console.warn('[trace] ' + quoi + ' — ' + v.slug + '#' + v.id + ' en (' + a.tx + ',' + a.ty + ') ' + a.etat);
+    return a;
+  }
+
+  /** L'etat d'un char de trafic en trois lettres : ce qu'il attend, depuis combien de temps. */
+  function etatCourt(v) {
+    let e = v.attendFeu ? 'FEU' : v.stopT !== undefined ? 'STOP' : v.attenteBoite > 0 ? 'BOITE' : v.enBoite ? 'DANS' : 'ROULE';
+    if (v.immobileT > 60) e += ' ' + Math.round(v.immobileT / 60) + 'S';
+    return e;
+  }
+
+  /** A chaque image, pour un char du trafic : le trajet, et les trois verifications. */
+  function majTrace(v) {
+    if (B.t % TRACE_TOUTES_LES === 0) {
+      v.trace = v.trace || [];
+      v.trace.push({ x: v.x, y: v.y });
+      if (v.trace.length > TRACE_POINTS) v.trace.shift();
+    }
+    // 1. Le chien de garde a du le deplacer : les rails ont failli.
+    if ((v.debloques || 0) > (v.traceDebloques || 0)) { v.traceDebloques = v.debloques; anomalie(v, 'CHIEN DE GARDE'); }
+    // 2. Il repasse dans la meme boite : il tourne en rond.
+    if (v.boites && v.boites.length >= 3) {
+      const dernier = v.boites[v.boites.length - 1];
+      const memes = v.boites.filter(function (b) { return b.id === dernier.id && dernier.t - b.t < 1200; }).length;
+      if (memes >= 3 && v.traceRond !== dernier.t) { v.traceRond = dernier.t; anomalie(v, 'TOURNE EN ROND'); }
+    }
+    // 3. Il roule hors de la chaussee.
+    const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty);
+    v.horsVoieT = surRoute ? 0 : (v.horsVoieT || 0) + 1;
+    if (v.horsVoieT === 90) anomalie(v, 'HORS VOIE');
+  }
+
+  /** Les anomalies encore fraiches (dix secondes) — ce que l'ecran montre. */
+  function anomaliesFraiches() {
+    return B.trace.anomalies.filter(function (a) { return B.t - a.t < TRACE_MONTRE; });
+  }
+
+  function dessinerTrace(ctx, vue) {
+    const cx = vue.x, cy = vue.y;
+    ctx.lineWidth = 1;
+    for (const v of B.entites) {
+      if (v.type !== 'vehicule' || (v.conducteur !== 'trafic' && v.conducteur !== 'police') || !v.trace) continue;
+      if (!Entites.visibleAEcran(v.x, v.y, 80)) continue;
+      const bloque = v.immobileT > 120;
+      ctx.strokeStyle = bloque ? '#ff5a4e' : v.attendFeu || v.stopT !== undefined || v.attenteBoite > 0 ? '#ffd23a' : '#5fe08a';
+      ctx.beginPath();
+      v.trace.forEach(function (q, i) { if (i === 0) ctx.moveTo(q.x - cx, q.y - cy); else ctx.lineTo(q.x - cx, q.y - cy); });
+      ctx.stroke();
+      if (v.cible && v.cible.tx !== undefined) {           // ou il veut aller
+        ctx.strokeStyle = '#7fc4ff';
+        ctx.beginPath(); ctx.moveTo(v.x - cx, v.y - cy); ctx.lineTo(v.cible.tx * TT + 8 - cx, v.cible.ty * TT + 8 - cy); ctx.stroke();
+      }
+      if (v.sortie && v.sortie.tx !== undefined) {         // la sortie qu'il a choisie
+        ctx.fillStyle = '#7fc4ff'; ctx.fillRect(v.sortie.tx * TT + 6 - cx, v.sortie.ty * TT + 6 - cy, 4, 4); B.stats.rects++;
+      }
+      Atlas.texte(ctx, etatCourt(v), Math.round(v.x - cx - 10), Math.round(v.y - cy - 16), bloque ? '#ff5a4e' : '#ffffff', 1);
+    }
+    for (const a of anomaliesFraiches()) {
+      if (!Entites.visibleAEcran(a.x, a.y, 80)) continue;
+      ctx.strokeStyle = '#ff5a4e';
+      ctx.beginPath();
+      a.points.forEach(function (q, i) { if (i === 0) ctx.moveTo(q.x - cx, q.y - cy); else ctx.lineTo(q.x - cx, q.y - cy); });
+      ctx.stroke();
+      if ((B.t >> 3) % 2 === 0) { ctx.beginPath(); ctx.arc(a.x - cx, a.y - cy, 12, 0, Math.PI * 2); ctx.stroke(); }
+      Atlas.texte(ctx, a.quoi, Math.round(a.x - cx - 20), Math.round(a.y - cy + 14), '#ff5a4e', 1);
+    }
+  }
+
+  /** Le bilan de la trace : ce que le HUD ecrit, ce qu'un test verifie. */
+  function bilanTrace() {
+    const chars = B.entites.filter(function (v) { return v.type === 'vehicule' && v.conducteur === 'trafic'; });
+    return { chars: chars.length, immobiles: chars.filter(function (v) { return v.immobileT > 120; }).length,
+             anomalies: B.trace.anomalies.length, total: B.trace.total, fraiches: anomaliesFraiches().length };
   }
 
   // --- Les feux et les stops, comme du mobilier ---------------------------------------
@@ -850,5 +972,6 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     croisementLibre, creerSignalisation, dessinerFeu, maj, dessinerUn,
+    majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

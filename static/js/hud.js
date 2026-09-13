@@ -25,7 +25,7 @@ const Hud = (function () {
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
   // --- Menus canvas ---------------------------------------------------------------
-  //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur }.
+  //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur, obligatoire }.
   //: `faire()` rend true pour fermer le menu, false pour le laisser ouvert
   //: (on achete trois hot-dogs sans rouvrir le comptoir).
 
@@ -66,7 +66,8 @@ const Hud = (function () {
         if (fini !== false && B.menu === m) fermerMenu();
       } else Son.SFX.erreur();
     }
-    if (Entree.neuf('annuler') || Entree.neuf('attaque') || Entree.neuf('pause')) fermerMenu();
+    // Un menu `obligatoire` (l'arrestation) ne se ferme que par un choix.
+    if (!m.obligatoire && (Entree.neuf('annuler') || Entree.neuf('attaque') || Entree.neuf('pause'))) fermerMenu();
   }
 
   function dessinerMenu(ctx) {
@@ -107,6 +108,7 @@ const Hud = (function () {
       bascule('vibration', 'VIBRATION'),
       bascule('muet', 'SON COUPE'),
       bascule('daltonien', 'PALETTE DALTONIENNE'),
+      bascule('trace', 'TRACE DES VEHICULES'),
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
   }
@@ -303,6 +305,15 @@ const Hud = (function () {
       ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(px, py, 2, 2);
       B.stats.rects += 2;
     }
+    // Les agents et les autos de patrouille, en bleu, quand on est recherche.
+    if (B.recherche.etoiles > 0) {
+      ctx.fillStyle = '#4f8fe8';
+      for (const e of B.entites) {
+        if (!(e.agent && e.vivant) && !(e.type === 'vehicule' && e.conducteur === 'police')) continue;
+        const bx = MINI.x + Math.round(e.x / TT) - sx, by = MINI.y + Math.round(e.y / TT) - sy;
+        if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) { ctx.fillRect(bx, by, 2, 2); B.stats.rects++; }
+      }
+    }
     // Le taxi : le client (bleu) ou la destination (or) clignote.
     const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
     if (cible && (B.t >> 4) % 2 === 0) {
@@ -365,7 +376,8 @@ const Hud = (function () {
       noter('argent', VW - marge - largeurArgent, 6, largeurArgent, 10);
       let etoiles = '';
       for (let i = 0; i < B.defs.recherche.etoiles_max; i++) etoiles += i < B.recherche.etoiles ? '★' : '.';
-      texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#8a8698', 1);
+      const flash = B.recherche.flash > 0 && (B.recherche.flash >> 2) % 2 === 0;
+      texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, flash ? '#ff5a4e' : (B.recherche.etoiles ? '#ffffff' : '#8a8698'), 1);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
       texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
@@ -414,6 +426,11 @@ const Hud = (function () {
     if (B.options.perf) {
       const s = B.stats;
       Atlas.texte(ctx, Math.round(s.ms * 10) / 10 + 'MS ' + s.images + 'I ' + s.entites + 'E', 6, VH - 8, '#8f8', 1);
+    }
+    if (B.options.trace && B.etat === 'jeu' && !B.interieur) {
+      const b = Vehicules.bilanTrace();
+      const ligne = 'TRACE ' + b.chars + ' CHARS · ' + b.immobiles + ' IMMOBILES · ' + b.total + ' ANOMALIES';
+      Atlas.texte(ctx, ligne, VW - 6 - Atlas.largeurTexte(ligne, 1), VH - 8, b.fraiches ? '#ff5a4e' : '#8f8', 1);
     }
   }
 
