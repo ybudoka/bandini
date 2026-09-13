@@ -164,6 +164,21 @@ function banc(corps) {
   }
   function pointeur(type, x, y, id) { croix.dispatch(type, evenement(type, { clientX: x, clientY: y, pointerId: id || 1 })); }
   function bouton(a, type) { const b = boutonsTactiles.find(function (q) { return q.dataset.a === a; }); b.dispatch(type, evenement(type, { pointerId: 2 })); }
+  /** Pose un pieton a (dx, dy) du joueur, FIGE, et reindexe. Sans cela chaque
+      test de combat commencerait par attendre qu'un passant veuille bien
+      passer a portee. */
+  function poser(arch, dx, dy) {
+    const j = L.B.joueur;
+    const p = L.Entites.creerPieton(j.x + dx, j.y + dy, arch ? L.Entites.archetype(arch) : null);
+    p.etat = 'fige';
+    L.Entites.indexer();
+    return p;
+  }
+  /** Tourne le joueur vers une cible (le sens compte : l'arc est devant). */
+  function viser(cible) {
+    const j = L.B.joueur;
+    L.Entites.regarder(j, cible.x - j.x, cible.y - j.y);
+  }
   function singe(images, graine, codes) {
     let a = (graine || 7) >>> 0;
     const rnd = function () { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; };
@@ -178,6 +193,7 @@ function banc(corps) {
   }
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
+                   poser: poser, viser: viser,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d') };
 
   // Le demarrage est asynchrone (fetch) : on attend la promesse du jeu.

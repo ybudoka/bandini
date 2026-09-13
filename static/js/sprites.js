@@ -26,6 +26,12 @@ const SPRITES = {
         ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..',
          '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kpk..kppk.', '..kbk..kbbk.', '..kk..kkkk..'],
       ],
+      // ⚠️ Une seule image, et l'entite pose `face = 'couche'` : c'est ainsi
+      // qu'un KO et un mort se dessinent sans faire tourner un canevas.
+      couche: [
+        ['............', '............', '............', '............', '............', '............', '............',
+         '..kkkkkk....', '.kpppppkkkk.', 'kppppppccccs', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+      ],
       cote: [
         ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....', '...kcccck...',
          '...kcccck...', '...kcckck...', '...kccksk...', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kbk.kbk..', '...kkk.kkk..'],
@@ -152,6 +158,49 @@ const DECORS = {
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
   } },
+};
+
+/* Decalques au sol : sang, gouttes, impacts. Cuits une fois par variante. */
+const DECALS = {
+  sang: function (ctx, v, w, h) {
+    ctx.fillStyle = 'rgba(110,18,18,0.72)';
+    ctx.fillRect(4 + (v % 3), 4, 7, 4); ctx.fillRect(3, 5, 10, 2); ctx.fillRect(6, 3, 4, 6);
+    ctx.fillStyle = 'rgba(80,12,12,0.6)';
+    ctx.fillRect(1 + (v % 4), 2, 2, 2); ctx.fillRect(12 - (v % 3), 7, 2, 2);
+  },
+  goutte: function (ctx, v, w, h) {
+    ctx.fillStyle = 'rgba(110,18,18,0.55)';
+    ctx.fillRect(7 + (v % 2), 5, 2, 2); ctx.fillRect(6 - (v % 2), 7, 1, 1);
+  },
+  impact: function (ctx, v, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.5)';
+    ctx.fillRect(7, 5, 2, 2); ctx.fillRect(6 + (v % 3), 4, 1, 1);
+  },
+};
+
+/* Objets poses par terre (armes lachees). 16x10, ancre au centre. */
+const OBJETS = {
+  defaut: function (ctx) { ctx.fillStyle = '#9a9689'; ctx.fillRect(4, 4, 8, 3); },
+  batte: function (ctx) { ctx.fillStyle = '#8a6a3f'; ctx.fillRect(2, 5, 12, 2); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 4, 2); },
+  couteau: function (ctx) { ctx.fillStyle = '#c9cdd4'; ctx.fillRect(5, 5, 8, 2); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(2, 5, 3, 2); },
+  pistolet: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 4, 8, 3); ctx.fillRect(4, 6, 3, 3); },
+  fusil: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 12, 2); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 4, 4, 3); },
+  fronde: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(6, 3, 2, 6); ctx.fillRect(4, 3, 6, 2); ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 6, 6, 1); },
+  extincteur: function (ctx) { ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 2, 5, 7); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 0, 3, 2); },
+  pelle: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 9, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(11, 3, 4, 6); },
+  cone: function (ctx) { ctx.fillStyle = '#d98324'; ctx.fillRect(6, 2, 4, 7); ctx.fillRect(4, 8, 8, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 5, 4, 1); },
+  bouteille: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); },
+};
+
+/* Bulles au-dessus de la tete : la peur, et le temoin qui a tout vu. */
+const BULLES = {
+  peur: function (ctx) {
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(3, 0, 2, 6); ctx.fillRect(3, 8, 2, 2);
+  },
+  temoin: function (ctx) {
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(2, 0, 4, 2); ctx.fillRect(5, 2, 2, 2);
+    ctx.fillRect(3, 4, 2, 2); ctx.fillRect(3, 8, 2, 2);
+  },
 };
 
 /* Police pixel 3x5 : 15 bits par glyphe, ligne par ligne. */

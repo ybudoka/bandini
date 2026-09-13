@@ -89,6 +89,14 @@ const Hud = (function () {
 
   // --- Dessin --------------------------------------------------------------------------
 
+  /** Du texte lisible SUR LE JEU : une ombre d'un pixel, toujours.
+      ⚠️ Sans elle, l'heure en mauve pale disparait sur un passage pieton — on
+      ne s'en apercoit qu'en jouant dehors, jamais sur un fond uni. */
+  function texte(ctx, s, x, y, couleur, echelle) {
+    Atlas.texte(ctx, s, x + 1, y + 1, 'rgba(11,10,18,0.8)', echelle);
+    return Atlas.texte(ctx, s, x, y, couleur, echelle);
+  }
+
   function barre(ctx, x, y, l, h, frac, couleur) {
     ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 1, l + 2, h + 2);
     ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x, y, l, h);
@@ -162,14 +170,14 @@ const Hud = (function () {
       const marge = Entree.estTactile ? 40 : 6;
       const argent = p.argent.toLocaleString('fr-CA') + ' $';
       const largeurArgent = Atlas.largeurTexte(argent, 2);
-      Atlas.texte(ctx, argent, VW - marge - largeurArgent, 6, '#e8b33c', 2);
+      texte(ctx, argent, VW - marge - largeurArgent, 6, '#e8b33c', 2);
       noter('argent', VW - marge - largeurArgent, 6, largeurArgent, 10);
       let etoiles = '';
       for (let i = 0; i < B.defs.recherche.etoiles_max; i++) etoiles += i < B.recherche.etoiles ? '★' : '.';
-      Atlas.texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#555560', 1);
+      texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, B.recherche.etoiles ? '#ffffff' : '#8a8698', 1);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
-      Atlas.texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
+      texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
       noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 13);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j ? Monde.zoneA(j.x, j.y) : null;
@@ -177,8 +185,7 @@ const Hud = (function () {
       if (zone) {
         // Une ombre portee d'un pixel : sans elle, le nom disparait sur le
         // trottoir en plein jour — teste a l'oeil, pas en theorie.
-        Atlas.texte(ctx, zone.nom, MINI.x + 1, MINI.y + MINI.h + 5, '#14121c', 1);
-        Atlas.texte(ctx, zone.nom, MINI.x, MINI.y + MINI.h + 4, zone.gang ? '#e88a98' : '#e8e2f4', 1);
+        texte(ctx, zone.nom, MINI.x, MINI.y + MINI.h + 4, zone.gang ? '#e88a98' : '#e8e2f4', 1);
       }
       // Arme en bas a droite.
       const arme = Combat.armeCourante();
@@ -191,8 +198,13 @@ const Hud = (function () {
         // pouce ne visite jamais.
         const ax = Entree.estTactile ? MINI.x : VW - 6 - large;
         const ay = Entree.estTactile ? MINI.y + MINI.h + 13 : VH - 12;
-        Atlas.texte(ctx, libelle, ax, ay, '#efe6d0', 1);
+        texte(ctx, libelle, ax, ay, '#efe6d0', 1);
         noter('arme', ax, ay, large, 7);
+      }
+      // La charge du coup fort, sous la barre d'endurance.
+      if (j && j.charge > 0) {
+        const part = Math.min(1, j.charge / Combat.CHARGE_MIN);
+        barre(ctx, 6, 19, 30, 3, part, part >= 1 ? '#efe6d0' : '#8a6a3f');
       }
       // Message.
       if (B.msg && B.msgT > 0) {

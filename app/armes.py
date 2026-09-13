@@ -32,6 +32,7 @@ class Arme(TypedDict):
     munitions_max: int | None
     vitesse_projectile: float
     dispersion: float
+    cloche: bool
     plombs: int
     prix: int
     prix_munitions: int | None
@@ -43,13 +44,13 @@ class Arme(TypedDict):
 
 def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation=5, actif=4,
        renverse=False, saigne=0, chargeur=None, munitions_max=None, vproj=0.0,
-       dispersion=0.0, plombs=1, prix_munitions=None, etoiles=0, usures=0,
+       dispersion=0.0, cloche=False, plombs=1, prix_munitions=None, etoiles=0, usures=0,
        sprite=None, phase=1) -> Arme:
     return Arme(
         slug=slug, nom=nom, type=type_, degats=degats, portee=portee, arc=arc,
         cadence=cadence, anticipation=anticipation, actif=actif, renverse=renverse,
         saigne=saigne, chargeur=chargeur, munitions_max=munitions_max,
-        vitesse_projectile=vproj, dispersion=dispersion, plombs=plombs, prix=prix,
+        vitesse_projectile=vproj, dispersion=dispersion, cloche=cloche, plombs=plombs, prix=prix,
         prix_munitions=prix_munitions, etoiles_usage=etoiles, usures=usures,
         sprite=sprite or slug, phase=phase,
     )
@@ -66,8 +67,10 @@ CATALOGUE: list[Arme] = [
        saigne=45),
     _a("pelle", "Pelle", "melee", 22, 20, 30, 0, anticipation=10, actif=5, renverse=True,
        usures=5),
+    # ⚠️ La seule arme qui tire EN CLOCHE : la bille passe par-dessus une
+    # cloture et retombe. Le navigateur lui donne un `z` et une gravite.
     _a("fronde", "Fronde", "tir", 10, 140, 30, 30, chargeur=30, munitions_max=90,
-       vproj=5.0, prix_munitions=5, etoiles=0),
+       vproj=5.0, cloche=True, prix_munitions=5, etoiles=0),
     _a("batte", "Bâton", "melee", 18, 18, 26, 40, arc=1.1, anticipation=8, actif=5,
        renverse=True),
     _a("couteau", "Couteau", "melee", 25, 12, 12, 60, arc=0.7, anticipation=4, actif=3,

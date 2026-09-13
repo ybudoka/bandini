@@ -21,6 +21,25 @@ const Police = (function () {
     return Monde.ligneLibre(agent.x, agent.y, x, y);
   }
 
+  /** Un temoin voit-il ce qui se passe ici ? (`sauf` = la victime elle-meme.)
+
+      ⚠️ C'est LA regle du jeu : rien n'est compte tant que ce n'est pas vu.
+      Un pieton assomme ou mort ne temoigne pas, et un mur suffit a tout
+      cacher. */
+  function quelqu_un_voit(x, y, sauf) {
+    const rayon = B.defs.recherche.temoins.rayon_tuiles * TT;
+    const vision = B.defs.recherche.vision.pieton;
+    const portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
+    const demi = vision.angle * Math.PI / 180;
+    for (const e of Entites.pietonsAutour(x, y, Math.min(rayon, portee))) {
+      if (e === sauf || !e.vivant || e.etat === 'assomme' || e.aveugle > 0) continue;
+      if (!dansLeCone(e.x, e.y, e.angle, demi, portee, x, y)) continue;
+      if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
+      return true;
+    }
+    return false;
+  }
+
   function ajouterChaleur(gravite) {
     const r = B.recherche, defs = B.defs.recherche;
     r.chaleur += gravite * defs.chaleur_par_gravite;
@@ -55,5 +74,5 @@ const Police = (function () {
     if (r.vu > palier.decroissance_s * 60) { r.etoiles--; r.vu = 0; }
   }
 
-  return { dansLeCone, voit, ajouterChaleur, signalerCrime, remiseAZero, maj };
+  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, signalerCrime, remiseAZero, maj };
 })();

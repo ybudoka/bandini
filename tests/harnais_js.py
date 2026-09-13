@@ -58,8 +58,17 @@ def lancer_node(harnais: str, entree: Any = None) -> str:
     with tempfile.TemporaryDirectory() as dossier:
         script = Path(dossier) / "harnais.js"
         script.write_text(harnais, encoding="utf-8")
-        resultat = subprocess.run(
-            [node, str(script)], capture_output=True, text=True, check=True
+        resultat = subprocess.run([node, str(script)], capture_output=True, text=True)
+    if resultat.returncode != 0:
+        # ⚠️ Sans ce message, une exception dans le JS remonte en
+        # `CalledProcessError: returned non-zero exit status 1` et la pile
+        # JavaScript — la seule chose utile — reste dans un tuyau ferme. On a
+        # debogue une fois a l'aveugle ; une fois suffit.
+        pytest.fail(
+            "le harnais Node a echoue :\n"
+            + (resultat.stderr or "(rien sur stderr)").strip()[-3000:]
+            + (f"\n--- stdout ---\n{resultat.stdout.strip()[-1000:]}" if resultat.stdout.strip() else ""),
+            pytrace=False,
         )
     return resultat.stdout
 

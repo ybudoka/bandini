@@ -29,7 +29,7 @@ const B = {
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
   options: { muet: false, sang: true, vibration: true, daltonien: false },
-  stats: { images: 0, rects: 0, entites: 0, morceaux: 0, ms: 0 },
+  stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },
 };
 
 /** Ce qui survit a un rechargement — et ses valeurs par defaut. */

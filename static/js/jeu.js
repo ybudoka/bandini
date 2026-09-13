@@ -87,7 +87,9 @@ const Jeu = (function () {
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
     Monde.dessinerSol(ctx, vue);
+    Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     Entites.dessiner(ctx, vue);
+    Entites.dessinerParticules(ctx, vue);
     Base.fin(Monde.ambiance(), Monde.lampesVisibles(vue));
     Hud.dessiner();
   }
@@ -177,7 +179,8 @@ if (typeof window !== 'undefined') {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
     Vehicules: Vehicules, Police: Police, Missions: Missions, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
-    SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, POLICE_PIXEL: POLICE_PIXEL,
+    SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS,
+    BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,
     etatInitial: etatInitial, mulberry: mulberry, hash2: hash2,
     graine: function (n) { B.graine = n; B.rng = mulberry(n); },
     entree: function (a) { const s = Entree._sacs(); return { bas: Entree.bas(a), pad: !!s.vPad[a], tactile: !!s.vTact[a], axe: Entree.axe }; },
