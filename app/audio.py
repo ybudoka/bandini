@@ -89,6 +89,17 @@ CATALOGUE: list[Echantillon] = [
     _e("moteur", "Moteur au ralenti", duree_s=4.0, volume=0.5, boucle=True,
        prompt="a four cylinder car engine idling steadily, seamless loop, "
               "close-up, no music"),
+    # La rumeur : son volume suit le nombre de gens autour du joueur.
+    _e("foule", "Rumeur de la rue", duree_s=8.0, volume=0.5, boucle=True,
+       prompt="distant crowd of people chatting on a busy city sidewalk, murmur and "
+              "footsteps, no distinct words, seamless loop, no music"),
+    _e("passage_auto", "Auto qui passe", variantes=2, duree_s=1.8, volume=0.6,
+       prompt="a car driving past at city speed, engine whoosh with doppler effect, "
+              "close, no music, no horn"),
+    _e("passage_moto", "Moto qui passe", duree_s=1.8, volume=0.6,
+       prompt="a motorcycle roaring past on a city street, doppler effect, close, no music"),
+    _e("sonnette", "Sonnette de vélo", duree_s=0.7, volume=0.5,
+       prompt="a bicycle bell ringing twice, bright, close, no music"),
 ]
 
 SLUGS = tuple(e["slug"] for e in CATALOGUE)
@@ -121,10 +132,69 @@ RADIOS: list[Radio] = [
     _r("taxi_radio", "Taxi-Radio", "country",
        "warm mid-tempo country instrumental, twangy telecaster, pedal steel, shuffle "
        "drums, upright bass, Quebec country bar feel, no vocals, loopable"),
-    _r("le_choc", "Le Choc", "punk",
-       "fast raw garage punk instrumental, distorted guitars, driving drums, "
-       "shouting energy but no vocals, 1980s Montreal punk basement, loopable"),
+    # Martin trouvait le punk trop hardcore pour la moto : techno.
+    _r("le_choc", "Le Choc", "techno",
+       "driving underground techno instrumental, 128 bpm, four-on-the-floor kick, "
+       "acid bassline, hypnotic synth stabs, Montreal warehouse rave at 3 am, "
+       "no vocals, loopable"),
 ]
+
+#: La musique de FOND : ce qu'on entend a pied, sous la rumeur de la ville.
+#: Elle se tait quand une radio prend le relais, revient quand on descend.
+AMBIANCES: list[Radio] = [
+    _r("ville", "Baie-des-Brumes", "ambiant",
+       "moody ambient score for a foggy harbour city at dusk, soft analog synth "
+       "pads, distant sparse piano notes, faint foghorn, slow, melancholic, "
+       "no drums, no vocals, seamless loop", duree_s=60, volume=0.3),
+]
+
+class Voix(TypedDict):
+    slug: str
+    texte: str
+    genre: str
+    voix: str
+    volume: float
+
+
+#: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
+#: `scripts/audio_elevenlabs.py --voix` le dit, il ne devine pas. Leo parle
+#: quebecois. Sarah est une voix anglaise que le modele multilingue fait
+#: parler francais : le jour ou une Quebecoise entre dans la bibliotheque,
+#: c'est ici qu'on la nomme.
+VOIX_PAR_GENRE = {"homme": "Léo - Français québécois", "femme": "Sarah - Mature, Reassuring, Confident"}
+
+#: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
+#: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
+VOIX: list[Voix] = [
+    {"slug": "salut_h", "texte": "Salut!", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "frette_h", "texte": "Fait frette, hein?", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "tasse_toi_h", "texte": "Heille, tasse-toi donc!", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.75},
+    {"slug": "bonne_journee_h", "texte": "Bonne journée, là.", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "salut_f", "texte": "Salut!", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "excusez_f", "texte": "Excusez-moi.", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "belle_journee_f", "texte": "Belle journée, hein?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "ca_va_f", "texte": "Ça va, toi?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+]
+
+
+def voix_par_slug(slug: str) -> Voix | None:
+    for voix in VOIX:
+        if voix["slug"] == slug:
+            return voix
+    return None
+
+
+def nom_fichier_voix(voix: Voix) -> str:
+    return f"voix-{voix['slug']}.mp3"
+
+
+def chemin_voix(voix: Voix) -> Path:
+    return RACINE_STATIQUE / DOSSIER / nom_fichier_voix(voix)
+
+
+def voix_manquantes() -> list[Voix]:
+    return [v for v in VOIX if not chemin_voix(v).is_file()]
+
 
 #: Le format des radios : 44 kHz a 64 kbit/s. Plus bas, un cuivre devient une
 #: bouillie ; plus haut, la piste depasse le demi-mega.
@@ -147,7 +217,7 @@ def chemin_radio(radio: Radio) -> Path:
 
 
 def radios_manquantes() -> list[Radio]:
-    return [r for r in RADIOS if not chemin_radio(r).is_file()]
+    return [r for r in RADIOS + AMBIANCES if not chemin_radio(r).is_file()]
 
 
 def par_slug(slug: str) -> Echantillon | None:
@@ -183,7 +253,8 @@ def orphelins() -> list[str]:
     if not dossier.is_dir():
         return []
     attendus = {nom_fichier(e, i) for e in CATALOGUE for i in range(1, e["variantes"] + 1)}
-    attendus |= {nom_fichier_radio(r) for r in RADIOS}
+    attendus |= {nom_fichier_radio(r) for r in RADIOS + AMBIANCES}
+    attendus |= {nom_fichier_voix(v) for v in VOIX}
     return sorted(f.name for f in dossier.iterdir()
                   if f.is_file() and f.suffix == ".mp3" and f.name not in attendus)
 
@@ -202,5 +273,16 @@ def exporter() -> dict:
             {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
              "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
             for r in RADIOS
+        ],
+        "ambiances": [
+            {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
+             "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
+            for r in AMBIANCES
+        ],
+        # Les repliques des passants : quelques mots, deux voix, en francais.
+        "voix": [
+            {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
+             "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
+            for v in VOIX
         ],
     }

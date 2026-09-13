@@ -28,6 +28,7 @@ const Jeu = (function () {
     Hud.voile(null);
     Hud.etat('jeu');
     Entree.contexte('pied');
+    Son.Ambiance.jouer();
     Hud.message('BAIE-DES-BRUMES', 150);
   }
 

@@ -190,3 +190,20 @@ def test_la_radio_joue_au_tour_de_cle(page, serveur, erreurs):
     page.keyboard.press("Tab")
     page.wait_for_function("window.BANDINI.Son.Radio.demandee !== 'la_brume'", timeout=5000)
     assert erreurs == []
+
+
+def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
+    """La musique de fond joue a pied des le premier geste, et les repliques
+    des passants sont decodees : un MP3 de voix tronque ne se verrait qu'a
+    l'oreille."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
+    attendues = page.evaluate("window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).length")
+    page.wait_for_function(
+        "n => window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).every(v => window.BANDINI.Son.echantillon('voix-' + v.slug, {volume: 0.001}) !== null) && n > 0",
+        arg=attendues, timeout=20000)
+    assert page.evaluate("window.BANDINI.Son.boucleActive('ambiance-ville')") is True
+    assert erreurs == []

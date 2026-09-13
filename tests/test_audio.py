@@ -110,3 +110,34 @@ def test_les_fichiers_sont_servis(client, paquet):
             assert reponse.status_code == 200, nom
             servis += 1
     assert servis >= len(audio.CATALOGUE), "des sons du catalogue ne sont pas servis"
+
+
+def test_l_ambiance_et_les_voix_sont_declarees_a_part(paquet):
+    """L'ambiance n'est pas une radio (elle joue a pied) et les voix ne sont
+    pas des bruitages (elles ont un texte et une voix nommee)."""
+    audios = paquet["audio"]
+    assert len(audios["ambiances"]) >= 1
+    for ambiance in audios["ambiances"]:
+        assert ambiance["slug"] not in {r["slug"] for r in audios["radios"]}
+        assert 0 < ambiance["volume"] <= 0.5, "la musique de fond doit rester sous la rumeur"
+    assert len(audios["voix"]) >= 6
+    genres = {v["genre"] for v in audios["voix"]}
+    assert genres == {"homme", "femme"}, "il faut des hommes ET des femmes qui parlent"
+    for voix in audio.VOIX:
+        assert 2 <= len(voix["texte"]) <= 40, "une replique de passant tient en quelques mots"
+        assert voix["voix"] and not voix["voix"].startswith("__"), \
+            f"{voix['slug']} : la voix ElevenLabs n'est pas nommee"
+
+
+def test_le_choc_est_du_techno_maintenant():
+    """Martin trouvait le punk trop hardcore pour la moto."""
+    choc = audio.radio_par_slug("le_choc")
+    assert choc["style"] == "techno" and "techno" in choc["prompt"]
+    assert "punk" not in choc["prompt"]
+
+
+def test_la_rumeur_et_les_passages_existent():
+    for slug in ("foule", "passage_auto", "passage_moto", "sonnette"):
+        assert audio.par_slug(slug), slug
+    assert audio.par_slug("foule")["boucle"] is True, "la rumeur doit boucler"
+    assert audio.par_slug("passage_auto")["variantes"] >= 2

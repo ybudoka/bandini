@@ -27,6 +27,7 @@ const Son = (function () {
     }
     if (ctx.state === 'suspended') ctx.resume().catch(function () {});
     chargerEchantillons();
+    Voix.charger();
   }
 
   /** Le son coupe doit couper AUSSI ce qui tourne deja (sirene, moteur). */
@@ -108,7 +109,8 @@ const Son = (function () {
     });
   }
 
-  /** Joue l'echantillon `slug` s'il est charge. Rend { source, gain }, ou null. */
+  /** Joue l'echantillon `slug` s'il est charge. Rend { source, gain }, ou null.
+      `options.pan` (-1..1) place le son a gauche ou a droite. */
   function echantillon(slug, options) {
     if (!pret()) return null;
     const liste = tampons.get(slug);
@@ -121,9 +123,28 @@ const Son = (function () {
     source.loop = !!(options && options.boucle);
     const gain = ctx.createGain();
     gain.gain.value = (def ? def.volume : 1) * ((options && options.volume) || 1);
-    source.connect(gain).connect(maitre);
+    let sortie = gain;
+    if (options && options.pan && ctx.createStereoPanner) {
+      const pan = ctx.createStereoPanner();
+      pan.pan.value = Math.max(-1, Math.min(1, options.pan));
+      gain.connect(pan); sortie = pan;
+    }
+    sortie.connect(maitre);
     source.start(ctx.currentTime);
     return { source: source, gain: gain, base: def ? def.volume : 1 };
+  }
+
+  /** Un son POSE dans le monde : plus loin, plus faible ; a droite, a droite.
+      Rend le volume calcule (0 = trop loin, rien n'a joue). */
+  function jouerA(slug, x, y, portee) {
+    const j = B.joueur;
+    if (!j) return 0;
+    const d = Math.hypot(x - j.x, y - j.y);
+    const p = portee || 320;
+    if (d >= p) return 0;
+    const volume = 1 - d / p;
+    echantillon(slug, { volume: volume, pan: (x - j.x) / p });
+    return volume;
   }
 
   function joue(slug) { return echantillon(slug) !== null; }
@@ -165,6 +186,86 @@ const Son = (function () {
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     porte: function () { if (!joue('porte')) ton(300, 0.1, 'triangle', 0.2, 0.7); },
+  };
+
+  // --- Les voix des passants : un mot quand on se frole ------------------------------
+
+  const Voix = {
+    dernierT: -9999, chargees: false,
+    liste: function () { return (B.defs && B.defs.audio && B.defs.audio.voix) || []; },
+
+    /** Les repliques se chargent avec les bruitages : petites, et il en faut
+        une sous la main des la premiere rencontre. */
+    charger: function () {
+      if (Voix.chargees || !ctx || !fenetre || !fenetre.fetch) return;
+      Voix.chargees = true;
+      Voix.liste().forEach(function (v) {
+        if (!v.fichier) return;
+        fenetre.fetch(base + B.defs.audio.dossier + '/' + v.fichier)
+          .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+          .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+          .then(function (tampon) { tampons.set('voix-' + v.slug, [tampon]); })
+          .catch(function () { /* muet, tant pis */ });
+      });
+    },
+
+    /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug. */
+    dire: function (genre, x, y) {
+      if (B.t - Voix.dernierT < 240) return null;
+      const choix = Voix.liste().filter(function (v) { return v.genre === genre && tampons.has('voix-' + v.slug); });
+      if (!choix.length) return null;
+      const v = choix[Math.floor(Math.random() * choix.length)];
+      Voix.dernierT = B.t;
+      const j = B.joueur;
+      echantillon('voix-' + v.slug, { volume: v.volume, pan: j ? (x - j.x) / 200 : 0 });
+      return v.slug;
+    },
+  };
+
+  // --- L'ambiance : la musique de fond, a pied ---------------------------------------
+
+  const Ambiance = {
+    courante: null, demandee: null, chargee: null,
+    def: function () { const l = (B.defs && B.defs.audio && B.defs.audio.ambiances) || []; return l[0] || null; },
+
+    /** A pied, la ville a sa musique. Elle se charge une fois, au premier geste. */
+    jouer: function () {
+      const a = Ambiance.def();
+      if (!a) return false;
+      Ambiance.demandee = a.slug;
+      if (!ctx || !a.fichier) return true;
+      if (tampons.has('ambiance-' + a.slug)) { Ambiance._demarrer(a); return true; }
+      if (Ambiance.chargee === 'en cours') return true;
+      Ambiance.chargee = 'en cours';
+      fenetre.fetch(base + B.defs.audio.dossier + '/' + a.fichier)
+        .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+        .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+        .then(function (tampon) {
+          tampons.set('ambiance-' + a.slug, [tampon]);
+          Ambiance.chargee = 'prete';
+          if (Ambiance.demandee === a.slug) Ambiance._demarrer(a);
+        })
+        .catch(function () { Ambiance.chargee = null; });
+      return true;
+    },
+    _demarrer: function (a) { boucle('ambiance-' + a.slug, true, a.volume); Ambiance.courante = a.slug; },
+    arreter: function () {
+      if (Ambiance.courante) boucle('ambiance-' + Ambiance.courante, false);
+      Ambiance.courante = null; Ambiance.demandee = null;
+    },
+  };
+
+  // --- La rumeur : la foule qu'on entend sans la voir ----------------------------------
+
+  const Rumeur = {
+    /** Le volume suit le nombre de gens autour : rien dans une ruelle vide,
+        un brouhaha sur la place. */
+    maj: function (gens) {
+      const voulu = Math.min(1, gens / 10);
+      if (voulu <= 0.02) { boucle('foule', false); return; }
+      if (!boucleActive('foule')) boucle('foule', true, voulu);
+      reglerBoucle('foule', voulu);
+    },
   };
 
   // --- La radio : une station par char, chargee au premier tour de cle ---------
@@ -231,8 +332,15 @@ const Son = (function () {
 
   return {
     init, reveiller, pret, suspendre, majVolume, ton, bruit, SFX, Mus,
-    chargerEchantillons, echantillon, joue, boucle, boucleActive, reglerBoucle, Radio,
+    chargerEchantillons, echantillon, joue, jouerA, boucle, boucleActive, reglerBoucle,
+    Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },
-    get charges() { return tampons.size; },
+    // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
+    // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.
+    get charges() {
+      const audio = B.defs && B.defs.audio;
+      if (!audio) return 0;
+      return audio.echantillons.filter(function (e) { return tampons.has(e.slug); }).length;
+    },
   };
 })();

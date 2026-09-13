@@ -1160,3 +1160,81 @@ def test_on_prend_le_velo_du_cycliste(banc):
     assert r["crimes"] >= 1
     assert r["vitesse"] > r["max"] * 0.8, "le velo n'avance pas"
     assert r["moteur"] is False and r["radio"] is None, "un velo n'a ni moteur ni radio"
+
+
+def test_l_ambiance_joue_a_pied_et_cede_a_la_radio(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const aPied = L.Son.Ambiance.demandee;
+        const j = L.B.joueur;
+        const v = o.char('auto', 24, 0, 0);
+        L.Vehicules.monter(j, v);
+        const auVolant = { ambiance: L.Son.Ambiance.demandee, radio: L.Son.Radio.demandee };
+        L.Vehicules.descendre(j, true);
+        return { aPied: aPied, auVolant: auVolant, descendu: L.Son.Ambiance.demandee };
+    }""")
+    assert r["aPied"] == "ville", "la ville doit avoir sa musique a pied"
+    assert r["auVolant"]["ambiance"] is None and r["auVolant"]["radio"] == "la_brume", \
+        "au volant, la radio remplace l'ambiance"
+    assert r["descendu"] == "ville", "descendu, l'ambiance revient"
+
+
+def test_la_rumeur_suit_la_foule_et_les_passants_parlent(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(61);
+        const j = L.B.joueur;
+        // Sans audio sous Node : on verifie la mecanique, pas le son.
+        const avant = L.Son.Voix.dernierT;
+        const p = o.poser('passante', 12, 0);
+        p.etat = 'flane';
+        o.frame(2);
+        const parle = p.aParle === true;
+        const rumeur = typeof L.Son.Rumeur.maj === 'function';
+        return { parle: parle, rumeur: rumeur, dernierT: L.Son.Voix.dernierT, avant: avant,
+                 passage: typeof L.Son.jouerA === 'function' };
+    }""")
+    assert r["parle"] is True, "un passant qui nous frole doit tenter de parler"
+    assert r["rumeur"] and r["passage"]
+
+
+def test_deux_chars_qui_tournent_a_gauche_ne_se_bloquent_pas(banc):
+    """⚠️ Le blocage de Martin : deux chars entrent au vert par des bouts
+    opposes, tous deux pour tourner a gauche, se retrouvent nez a nez au
+    milieu de la boite — et chacun attend l'autre. Un croisement ne doit
+    accueillir un char que s'il peut le laisser ressortir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(72);
+        const c = L.Monde.carte;
+        // Un croisement a feux a quatre voies (rue est-ouest large).
+        const inter = c.intersections.find(function (i) { return i.feux && i.l === 4 && i.h === 4; });
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule' && e.type !== 'pieton'; });
+        // ⚠️ Le joueur regarde de pres : hors de sa bulle, un char est oublie
+        // et le test croirait a un blocage.
+        const j = L.B.joueur;
+        j.x = (inter.x - 1) * L.TT + 8; j.y = (inter.y - 1) * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        // Phase : est-ouest au vert.
+        L.B.t = -inter.decalage + L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images + 5;
+        const T = L.TT;
+        // A arrive de l'ouest sur la voie interieure (rangee y+2), B de l'est sur la voie interieure (rangee y+1).
+        const a = L.Vehicules.creer('auto', (inter.x - 6) * T + 8, (inter.y + 2) * T + 8, 0, { conducteur: 'trafic', etat: 'roule', sens: '>' });
+        const b = L.Vehicules.creer('auto', (inter.x + inter.l + 5) * T + 8, (inter.y + 1) * T + 8, Math.PI, { conducteur: 'trafic', etat: 'roule', sens: '<' });
+        a.vitesse = 1.5; b.vitesse = 1.5;
+        a.sortie = ['gauche', 'droit', 'droite']; b.sortie = ['gauche', 'droit', 'droite'];
+        const boite = function (v) { return v.x >= inter.x * T && v.x < (inter.x + inter.l) * T && v.y >= inter.y * T && v.y < (inter.y + inter.h) * T; };
+        let dansLaBoiteEnsemble = 0, sortis = 0;
+        for (let i = 0; i < 2400; i++) {
+            o.frame(1);
+            if (boite(a) && boite(b)) dansLaBoiteEnsemble++;
+        }
+        const aParti = Math.hypot(a.x - (inter.x - 6) * T, a.y - (inter.y + 2) * T) > 8 * T && !boite(a);
+        const bParti = Math.hypot(b.x - (inter.x + inter.l + 5) * T, b.y - (inter.y + 1) * T) > 8 * T && !boite(b);
+        return { ensemble: dansLaBoiteEnsemble, aParti: aParti, bParti: bParti, aSens: a.sens, bSens: b.sens,
+                 aSol: L.Monde.estRoute(Math.floor(a.x / T), Math.floor(a.y / T)),
+                 bSol: L.Monde.estRoute(Math.floor(b.x / T), Math.floor(b.y / T)) };
+    }""")
+    assert r["ensemble"] == 0, f"les deux chars ont partage la boite pendant {r['ensemble']} images"
+    assert r["aParti"] and r["bParti"], f"un char est reste coince : {r}"
+    assert r["aSol"] and r["bSol"], "un char a fini hors de la route"

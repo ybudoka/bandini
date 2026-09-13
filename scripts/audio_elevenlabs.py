@@ -108,7 +108,8 @@ class ClientMCP:
 def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
     if not refaire:
         return audio.manquants()
-    inconnus = [s for s in refaire if not audio.par_slug(s)]
+    connus = set(audio.SLUGS) | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES} | {v["slug"] for v in audio.VOIX}
+    inconnus = [s for s in refaire if s not in connus]
     if inconnus:
         raise SystemExit(f"slugs inconnus : {inconnus} (voir app/audio.py)")
     return [(e, i) for e in audio.CATALOGUE if e["slug"] in refaire
@@ -118,7 +119,7 @@ def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
 def radios_a_faire(refaire: list[str]) -> list[dict]:
     if not refaire:
         return audio.radios_manquantes()
-    return [r for r in audio.RADIOS if r["slug"] in refaire]
+    return [r for r in audio.RADIOS + audio.AMBIANCES if r["slug"] in refaire]
 
 
 def main() -> int:
@@ -128,6 +129,8 @@ def main() -> int:
                        help="regenerer ces sons meme s'ils existent")
     argus.add_argument("--radios", action="store_true",
                        help="generer aussi les stations de radio (musique : CHER)")
+    argus.add_argument("--voix", action="store_true",
+                       help="generer aussi les repliques des passants (voix : au caractere)")
     options = argus.parse_args()
 
     if os.environ.get("CI"):
@@ -137,7 +140,9 @@ def main() -> int:
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
     radios = [r for r in radios if options.radios or r["slug"] in options.refaire]
-    if not travail and not radios:
+    voix = [v for v in (audio.VOIX if options.refaire else audio.voix_manquantes())
+            if options.voix or v["slug"] in options.refaire]
+    if not travail and not radios and not voix:
         print("Rien a generer : les", sum(e["variantes"] for e in audio.CATALOGUE),
               "fichiers sont la.")
         orphelins = audio.orphelins()
@@ -145,7 +150,7 @@ def main() -> int:
             print("Fichiers que le catalogue ne reclame plus :", ", ".join(orphelins))
         return 0
 
-    print(f"{len(travail) + len(radios)} fichier(s) a generer dans static/{audio.DOSSIER}/ :")
+    print(f"{len(travail) + len(radios) + len(voix)} fichier(s) a generer dans static/{audio.DOSSIER}/ :")
     for echantillon, indice in travail:
         print(f"  {audio.nom_fichier(echantillon, indice):>22}  "
               f"{echantillon['duree_s']:>4} s  {'boucle  ' if echantillon['boucle'] else '        '}"
@@ -153,6 +158,9 @@ def main() -> int:
     for radio in radios:
         print(f"  {audio.nom_fichier_radio(radio):>22}  {radio['duree_s']:>4} s  MUSIQUE  "
               f"{radio['style']} — {radio['prompt'][:48]}…")
+    for ligne in voix:
+        print(f"  {audio.nom_fichier_voix(ligne):>22}  {len(ligne['texte']):>4} c  VOIX     "
+              f"{ligne['voix']} — « {ligne['texte']} »")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -185,6 +193,26 @@ def main() -> int:
             else:
                 rates.append((nom, reponse.get("erreur")))
                 print(f"  ✗ {nom:>16}  {reponse.get('erreur')}")
+        for ligne in voix:
+            nom = audio.nom_fichier_voix(ligne)
+            cible = audio.chemin_voix(ligne)
+            if cible.exists():
+                cible.unlink()
+            reponse = client.appeler("elevenlabs_text_to_speech", {
+                "text": ligne["texte"],
+                "voice": ligne["voix"],
+                "model_id": "eleven_multilingual_v2",
+                "language_code": "fr",
+                "output_format": FORMAT,
+                "output_dir": dossier,
+                "nom": nom[:-4],
+            })
+            if reponse.get("ok"):
+                faits += 1
+                print(f"  ✓ {nom:>22}  {reponse['octets']:>7} octets  ({reponse.get('voix')})")
+            else:
+                rates.append((nom, reponse.get("erreur")))
+                print(f"  ✗ {nom:>22}  {reponse.get('erreur')}")
         for radio in radios:
             nom = audio.nom_fichier_radio(radio)
             cible = audio.chemin_radio(radio)

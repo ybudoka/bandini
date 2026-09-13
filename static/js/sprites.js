@@ -182,8 +182,11 @@ const TUILES = (function () {
     '|': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d9d6cc'; for (let y = 0; y < T; y += 8) ctx.fillRect(0, y, 1, 5); },
     '+': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(0, 0, T, 2); },
     '*': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(0, 0, 2, T); },
-    '=': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let x = 1; x < T; x += 5) ctx.fillRect(x, 0, 3, T); },
-    ':': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let y = 1; y < T; y += 5) ctx.fillRect(0, y, T, 3); },
+    // ⚠️ Les bandes d'un passage sont PARALLELES a la circulation : le pieton
+    // les enjambe une a une. Rue est-ouest : bandes horizontales. C'etait a
+    // l'envers — Martin l'a vu du premier coup d'oeil.
+    '=': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let y = 1; y < T; y += 5) ctx.fillRect(0, y, T, 3); },
+    ':': function (ctx, v, T) { asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de'; for (let x = 1; x < T; x += 5) ctx.fillRect(x, 0, 3, T); },
     // Une ligne de case tous les trois pas : a chaque tuile, le stationnement
     // ressemblait a un code-barres.
     'p': function (ctx, v, T) { asphalte(ctx, v, T); if (v % 3 === 0) { ctx.fillStyle = '#c9c6bc'; ctx.fillRect(0, 2, 1, T - 4); } },

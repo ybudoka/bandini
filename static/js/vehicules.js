@@ -237,6 +237,8 @@ const Vehicules = (function () {
           if (d2 >= min * min || d2 === 0) continue;
           const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, chevauche = min - d;
           const m1 = v.def.masse, m2 = autre.def.masse, total = m1 + m2;
+          const deuxDuTrafic = v.conducteur === 'trafic' && autre.conducteur === 'trafic';
+          if (deuxDuTrafic) return;                     // sur des rails : on ne se pousse pas
           v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total);
           autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total);
           const relatif = (v.vx - autre.vx) * nx + (v.vy - autre.vy) * ny;
@@ -309,8 +311,21 @@ const Vehicules = (function () {
     if (v.vie <= 0) exploser(v);
   }
 
+  /** Un char du trafic qui nous passe pres : on l'entend passer, une fois. */
+  function bruitDePassage(v) {
+    const j = B.joueur;
+    if (!j || v.conducteur !== 'trafic' || Math.abs(v.vitesse) < 0.8) return;
+    const d2 = dist2(v.x, v.y, j.x, j.y);
+    if (d2 > 90 * 90) { v.passeT = 0; return; }
+    if (v.passeT > 0) { v.passeT--; return; }
+    v.passeT = 240;
+    const slug = v.def.classe === 'velo' ? 'sonnette' : (v.def.classe === 'moto' ? 'passage_moto' : 'passage_auto');
+    Son.jouerA(slug, v.x, v.y, 160);
+  }
+
   function majEtatDuChar(v) {
     const ph = physique();
+    bruitDePassage(v);
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
       if (B.t % 6 === 0) Entites.particule(v.x + (B.rng() - 0.5) * 14, v.y - 4, (B.rng() - 0.5) * 0.3, -0.2, 40, '#3a3a3a', 2, -0.01);
@@ -413,7 +428,7 @@ const Vehicules = (function () {
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
     Entree.contexte('vehicule');
     if (v.def.classe === 'velo') Son.SFX.ramasse(); else { Son.SFX.porte(); Son.boucle('moteur', true, 0.6); }
-    if (v.def.radio) Son.Radio.jouer(v.def.radio);
+    if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
     Hud.message(v.def.nom.toUpperCase());
     return true;
   }
@@ -440,6 +455,7 @@ const Vehicules = (function () {
     Entree.contexte('pied');
     Son.boucle('moteur', false);
     Son.Radio.arreter();
+    Son.Ambiance.jouer();
     if (!force) Son.SFX.porte();
     if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.abandonner('SORTI DU TAXI');
     return true;
@@ -483,6 +499,7 @@ const Vehicules = (function () {
     v.attendFeu = false;
     if (PAS_FLECHE[f]) {
       v.sens = f; v.sortie = null;
+      v.enBoite = null;                              // on rend le croisement
       const p = PAS_FLECHE[f];
       return centre(tx + p[0], ty + p[1]);
     }
@@ -491,16 +508,26 @@ const Vehicules = (function () {
       v.sens = sens;
       const p = PAS_FLECHE[sens];
       const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
-      if (inter && !Monde.feuVert(inter, sens)) { v.attendFeu = true; return centre(tx, ty); }
-      // Un STOP : on s'immobilise, puis on passe si le croisement est libre.
+      if (inter && !Monde.feuVert(inter, sens)) { v.attendFeu = true; v.attenteBoite = 0; return centre(tx, ty); }
+      // Un STOP : on s'immobilise d'abord.
       if (inter && inter.stop === sens) {
         if (v.stopT === undefined) v.stopT = trafic().arret_images;
         // ⚠️ Le compte ne tourne qu'a l'ARRET complet : sinon on comptait le
         // freinage et le char repartait sans s'etre vraiment immobilise.
         if (Math.abs(v.vitesse) < 0.05) v.stopT = Math.max(0, v.stopT - 1);
-        if (v.stopT > 0 || !croisementLibre(inter, v)) { v.attendFeu = true; return centre(tx, ty); }
+        if (v.stopT > 0) { v.attendFeu = true; return centre(tx, ty); }
       }
+      // ⚠️ Feu vert ou stop, on ne S'ENGAGE que si la boite est libre : deux
+      // chars qui tournent a gauche de bouts opposes se retrouvaient nez a nez
+      // au milieu, chacun attendant l'autre. Un croisement, un char a la fois.
+      // Passe un long moment (un char stationne dans la boite), on y va quand meme.
+      if (inter && !croisementLibre(inter, v)) {
+        v.attenteBoite = (v.attenteBoite || 0) + 1;
+        if (v.attenteBoite < trafic().patience_images * 2) { v.attendFeu = true; return centre(tx, ty); }
+      }
+      v.attenteBoite = 0;
       v.stopT = undefined;
+      v.enBoite = inter || null;                     // on prend le croisement
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === '+') {
@@ -523,15 +550,25 @@ const Vehicules = (function () {
           return centre(tx + q[0], ty + q[1]);
         }
       }
-      // Rien ne sort d'ici dans ces sens : on continue tout droit sur le '+'.
-      return centre(tx + p[0], ty + p[1]);
+      // Rien ne sort par la ou l'on regarde : on continue sur le '+' si c'en
+      // est un, sinon on rejoint la voie la plus proche (jamais le trottoir).
+      if (Monde.fleche(tx + p[0], ty + p[1]) === '+') return centre(tx + p[0], ty + p[1]);
+      v.sortie = null;
+      return voieLaPlusProche(v, tx, ty);
     }
     // Hors route : on cherche la voie la plus proche.
+    return voieLaPlusProche(v, tx, ty);
+  }
+
+  /** La voie la plus proche dont la fleche ne nous ramene pas d'ou l'on vient. */
+  function voieLaPlusProche(v, tx, ty) {
     let meilleur = null, dMin = Infinity;
     for (let dy = -3; dy <= 3; dy++) {
       for (let dx = -3; dx <= 3; dx++) {
         const g = Monde.fleche(tx + dx, ty + dy);
         if (!PAS_FLECHE[g]) continue;
+        const q = PAS_FLECHE[g];
+        if (tx + dx + q[0] === tx && ty + dy + q[1] === ty) continue;   // elle pointe vers nous
         const d = dx * dx + dy * dy;
         if (d < dMin) { dMin = d; meilleur = centre(tx + dx, ty + dy); v.sens = g; }
       }
@@ -539,11 +576,17 @@ const Vehicules = (function () {
     return meilleur;
   }
 
-  /** Personne dans la boite du croisement (a part nous) ? */
+  /** Personne dans le croisement (a part nous) ? Un char qui s'y est engage
+      le RESERVE (`enBoite`) jusqu'a ce qu'il en ressorte : le suivant ne se
+      contente pas de regarder la boite, il attend que la place soit rendue. */
   function croisementLibre(inter, v) {
     const cx = (inter.x + inter.l / 2) * TT, cy = (inter.y + inter.h / 2) * TT;
-    const rayon = Math.max(inter.l, inter.h) * TT / 2 + 12;
-    return Entites.autour(cx, cy, rayon, function (e) { return e.type === 'vehicule' && e !== v && e.etat !== 'epave'; }).length === 0;
+    const rayon = Math.max(inter.l, inter.h) * TT / 2 + 2 * TT + 12;      // la boite ET ses passages
+    for (const e of Entites.autour(cx, cy, rayon + 40, function (q) { return q.type === 'vehicule' && q !== v && q.etat !== 'epave'; })) {
+      if (e.enBoite === inter) return false;
+      if (e.conducteur !== 'trafic' && dist2(e.x, e.y, cx, cy) < rayon * rayon) return false;   // le joueur, un char stationne
+    }
+    return true;
   }
 
   /** Quelque chose devant ? Rend la distance, ou Infinity. */
@@ -559,7 +602,15 @@ const Vehicules = (function () {
       const dx = e.x - v.x, dy = e.y - v.y;
       const devant = dx * cx + dy * cy;                 // projection sur l'axe
       const cote = Math.abs(-dx * cy + dy * cx);         // ecart lateral
-      if (devant < v.def.longueur / 2 - 4 || cote > v.def.largeur / 2 + (e.r || 5) + 2) continue;
+      // ⚠️ La tolerance laterale doit rester SOUS l'ecart entre deux voies
+      // (16 px) : avec +2 px de marge, le char d'en face, sur la voie d'a
+      // cote, comptait comme un obstacle — et tout le monde s'arretait nez a
+      // nez. C'etait l'embouteillage de Martin.
+      if (devant < v.def.longueur / 2 - 4 || cote > v.def.largeur / 2 + (e.r || 5) * 0.8) continue;
+      if (e.type === 'vehicule' && Math.abs(e.vitesse) > 0.3) {
+        const face = Math.cos(e.angle) * cx + Math.sin(e.angle) * cy;
+        if (face < -0.5 && cote > 6) continue;         // il vient en face, dans sa voie : rien a craindre
+      }
       if (devant < dMin) dMin = devant - v.def.longueur / 2;
     }
     return dMin;

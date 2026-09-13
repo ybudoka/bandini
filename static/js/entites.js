@@ -685,6 +685,20 @@ const Entites = (function () {
     }
   }
 
+  /** La foule qu'on entend, et le passant qui nous dit un mot en nous frolant. */
+  function rumeurEtRepliques() {
+    const j = B.joueur;
+    if (B.t % 15 === 0) Son.Rumeur.maj(pietonsAutour(j.x, j.y, 200).filter(function (e) { return !e.metier; }).length);
+    if (j.dansVehicule) return;
+    for (const e of pietonsAutour(j.x, j.y, 30)) {
+      if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
+      e.aParle = true;
+      const femme = /passante|dame|mere|racoleuse/.test(e.arch);
+      Son.Voix.dire(femme ? 'femme' : 'homme', e.x, e.y);
+      break;
+    }
+  }
+
   // --- Boucle ---------------------------------------------------------------------------
 
   function maj() {
@@ -702,7 +716,7 @@ const Entites = (function () {
       }
     }
     majParticules();
-    if (B.joueur) { peupler(); semerDesArmesDeFortune(); }
+    if (B.joueur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
     B.stats.actifs = actifs;
   }
 
