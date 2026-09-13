@@ -20,6 +20,14 @@ jalons » à chaque jalon livré.
 | M4 Police | **livré** (13 sept. 2026) | `police.js` réécrit : agents à pied (archétype `policier`, patrouille par zone, cône vérifié une image sur trois, poursuite par **A\*** sur les trottoirs, arrestation au contact, sortent le joueur d'un char arrêté), **rien n'est compté tant qu'un agent ne l'a pas vu** — un passant qui a vu devient témoin porteur du crime, court le raconter à un agent ou téléphone (`temoins`), et on peut **acheter son silence** (20 $) ; délits bruyants (`temoin: false`) comptés tout de suite ; étoiles qui ne tombent qu'hors de vue (dedans aussi) ; menu d'arrestation **obligatoire** (pot-de-vin selon casier/étoiles, sergent ami plus tard, refus = délit) ; prison (amende, armes confisquées, casier, 6 h, réveil au poste, sauvegarde) ; autos de patrouille à 3★ qui **suivent les rails** vers le joueur (feux brûlés, sortie vers lui) et foncent de près, agents qui descendent ; tirs à 3★ ; −1★ en changeant de char hors de vue ; affiches « Recherché » sur les façades à 2★ ; blips bleus, étoiles qui clignotent ; **mode TRACE** (idée de Martin) : le jeu dessine le trajet de chaque char et se surveille (chien de garde, tour en rond, hors voie) |
 | M6 Missions et gang | **livré** (13 sept. 2026) | `missions.py` : 6 personnages (une voix ElevenLabs chacun), **5 missions** (Ti-Guy, Mme Thibodeau, Marco, Sgt Bouchard, Josée) en objectifs typés, 35 répliques, 3 défis ; `histoire.js` : donneurs devant leur porte (ou à leur point dedans), **dialogues dits à voix haute** (chargés par mission, ducking radio/ambiance, voix « du combiné » au téléphone, le joueur écoute), **téléphone** (le donneur suivant appelle), machine à objectifs (aller/monter/livrer/tuer/ramasser/courses/semer/retourner), char de M1 dans une ruelle, fuyard en moto sur les rails (fuite), escorte de Ti-Guy, Cravates posées en ville, échec sur prison/hôpital, récompenses (bâton, rabais, sergent ami → pot-de-vin, bar, Faubourg libéré, manchette), **GPS** (blip, flèche au bord, distance), objectif en haut, **défis** à panneaux (saut, tour chrono, livraison sans bosse), gang qui attaque l'arme au poing sur son territoire |
 | M7 Finition v1 | **livré** (13 sept. 2026) | **5★** : hélico (te survole, rien ne retombe sous lui, ombre au sol, projecteur la nuit, rotor en boucle ElevenLabs) et **barrages** (deux autos-patrouille en travers devant toi, deux agents derrière) ; **journal lu par le narrateur** (9 manchettes + celle de M5, voix « annonceur centre d'achat 1 », version `lu` en casse naturelle) ; **marché noir** chez Josée après M5 (`magasins.MARCHE_NOIR`, −30 %) ; **carte de la ville** plein écran (N, ou PAUSE → CARTE : lieux, police, objectif, joueur) ; sonnerie de téléphone réelle ; sonde de performance Playwright (ms par image de nuit à 3★ au volant). Défi du jour à graine serveur : reporté en v2 |
+| **v1 complète** | **livrée** (13 sept. 2026) | M0 → M7 en ligne, 308 tests ; la suite est planifiée ci-dessous (« La v2 — sept vagues ») |
+| M8 Les cinq districts | à faire (v2) | Les Quais, Les Érables, La Shop, La Pointe : trame propre, gang propre, deux radios ; la ville reste **continue** |
+| M9 Le parc et les boulots | à faire (v2) | camion, autobus, ambulance, remorqueuse (bateau en dernier) ; ambulance/pizza/remorquage au klaxon, fourrière, radio procédurale |
+| M10 L'argent sale | à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
+| M11 La police apprend | à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, bouclier humain |
+| M12 La ville vit | à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue |
+| M13 Les deux fins | à faire (v2) | une mission par district, Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* |
+| M14 Meta v2 | à faire (v2) | défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
 
 ## Reprendre le travail
 
@@ -162,8 +170,8 @@ répliques sont dites à voix haute** (ElevenLabs, une voix par personnage) en p
 
 **Meta et présentation** : tableau des scores en ligne (fortune, missions, propriétés,
 durée) · bilan de session, caméra qui respire, visée assistée, GPS pointillé, options
-(sang, palette daltonienne, vibration) **v1** · défi du jour à graine serveur **v1 si le
-temps le permet, sinon v2** · mode photo, coop locale **v2**.
+(sang, palette daltonienne, vibration) **v1** · défi du jour à graine serveur, mode photo,
+coop locale **v2 (M14)**.
 
 ## Les voix de l'histoire (décision du 13 sept. 2026)
 
@@ -228,7 +236,7 @@ Réutiliser tels quels : `create_app` de `/Users/martingagne/dev/car-game/app/__
 `tests/harnais_js.py` et la fixture `serveur` (make_server port 0) de
 `/Users/martingagne/dev/online-4all-games/tests/`.
 
-### Côté JS (`static/js/`, 13 scripts classiques, ordre = dépendances, listés dans `templates/index.html`)
+### Côté JS (`static/js/`, 14 scripts classiques, ordre = dépendances, listés dans `templates/index.html`)
 
 Résolution logique **480×270**, échelle entière 1–8 selon les pixels physiques,
 `image-rendering: pixelated`. Boucle à pas fixe 60 Hz (accumulateur, `boucle()` de Loren).
@@ -250,8 +258,9 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital |
 | 11 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
-| 12 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores |
-| 13 | `jeu.js` | machine d'états (`chargement | titre | jeu | prison | hopital | fin`), `maj()`, `rendre()`, `boucle()`, amorçage (`fetch` du paquet), `window.BANDINI` (surface de test et débogage : `B`, espaces de noms, `graine(n)`, `entree(a)`, `debug.cones`, `maj`, `rendre`, `stats`) |
+| 12 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |
+| 13 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores |
+| 14 | `jeu.js` | machine d'états (`chargement | titre | jeu | prison | hopital | fin`), `maj()`, `rendre()`, `boucle()`, amorçage (`fetch` du paquet), `window.BANDINI` (surface de test et débogage : `B`, espaces de noms, `graine(n)`, `entree(a)`, `debug.cones`, `maj`, `rendre`, `stats`) |
 
 Budget par image (téléphone milieu de gamme) : ≤ 6 blits de morceaux, ≤ 160 `drawImage`,
 ≤ 300 particules, ≤ 25 lampes, ≤ 200 entités actives ; compteurs `stats` plafonnés par
@@ -288,8 +297,9 @@ run.py  config.py  pyproject.toml (name bandini, version 0.0.0)  requirements.tx
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
+      audio.py journal.py pietons.py
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
-static/css/styles.css  static/img/favicon.svg  static/js/ (13 fichiers ci-dessus)
+static/css/styles.css  static/img/favicon.svg  static/js/ (14 fichiers ci-dessus)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette,
         frame(n), touches, singe)  test_routes.py test_scores.py test_definitions.py
         test_vehicules.py test_armes.py test_economie.py test_recherche.py test_carte.py
@@ -312,9 +322,151 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M5 | Intérieurs et économie | **fait** : 10 intérieurs, magasins, planque (sauvegarde, coffre, garde-robe, char stationné), revente/réparation/peinture, propriétés, paquets cachés, journal du matin, bilan de session, options, envoi du score depuis la pause | acheter, vendre, sauvegarder, recharger ; 9 tests de banc |
 | M6 | Missions et gang | **fait** : cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue **avec la voix de chaque réplique** (une voix par personnage, ducking, voix « du combiné »), GPS ; reste pour M7 : contacts du marché noir, journal lu par le narrateur | finir les 5 missions, **les entendre** ; 7 tests de banc (donneurs, M1 de bout en bout, échec + reprise, appel, M2 combat + fuyard, M4/M5 récompenses, défis) + 1 navigateur (la voix se décode, la radio baisse) |
 | M7 | Finition v1 | **fait** : 5★ (barrages, hélico), journal lu par le narrateur, marché noir, carte plein écran, sonnerie et rotor réels, sonde Playwright ; reste v2 : défi du jour à graine serveur, mesure sur vrai téléphone (Martin) | 60 i/s de nuit à 3★ sur téléphone ; 2 tests de banc police (hélico, barrage), 2 histoire (narrateur + marché noir, carte), 1 sonde navigateur |
-| v2 | vagues suivantes | autres districts + gangs, radio procédurale, tramway, traversier, fourrière complète, deux fins, guichets/skimmers, assurance, shylock, stool, avocat, carnet du poste, neige, remorqueuse, mode photo, coop | un jalon par vague |
+| M8 | Les cinq districts | quatre districts de plus (trame, gang, zones, radios *10-4* et *Radio-Traversier*), la ville d'un seul tenant | on roule du Faubourg à La Pointe sans chargement ; juges de connexité sur **toute** la ville |
+| M9 | Le parc et les boulots | camion, autobus, ambulance, remorqueuse, bateau ; boulots ambulance/pizza/remorquage au klaxon ; fourrière ; radio procédurale par véhicule | trois boulots finis d'affilée ; sortir son char de la fourrière |
+| M10 | L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
+| M11 | La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool |
+| M12 | La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe |
+| M13 | Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* | atteindre les deux fins ; chaque réplique se dit à voix haute |
+| M14 | Meta v2 | défi du jour à graine serveur, mode photo, coop locale | le classement du jour tourne ; deux manettes sur un écran |
 
-Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2.
+Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
+M8 4, M9 3, M10 3, M11 2, M12 3, M13 4, M14 2 (v2 = 21).
+
+## La v2 — sept vagues (plan du 13 sept. 2026)
+
+Règle inchangée : **chaque vague reste jouable, testée, déployée**. L'ordre suit les
+dépendances — M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière
+ont besoin de la ville complète) ; M9 à M12 se permutent selon l'envie du moment.
+
+Ce que la v2 **ne fait pas**, pour que le plan tienne : pas de multijoueur en ligne, pas
+de 3D, pas d'histoire à plus de deux fins, pas de génération de sprites par IA. Le jeu
+reste un GTA 1 québécois en pixels, joué au téléphone.
+
+### M8 — Les cinq districts (taille 4)
+
+*Ce que ça donne :* la ville cesse d'être un quartier. Quatre quartiers de plus, chacun
+avec sa trame, son gang, son bruit, et une raison d'y aller.
+
+- `carte.py` : un plan par district et un **plan de ville** qui les assemble. Les artères
+  se rejoignent d'un district à l'autre ; l'eau borde Les Quais et isole La Pointe, qu'un
+  **pont** relie. Les trames doivent se distinguer à l'œil, sinon les quartiers se
+  ressemblent : Les Quais = blocs longs, hangars, quais ; Les Érables = grandes parcelles,
+  maisons détachées, culs-de-sac ; La Shop = très gros blocs, peu de rues, stationnements ;
+  La Pointe = parc, sentiers, une seule route.
+- `pietons.py` : Les Morues, Les Chevreuils, Les Boulonneux, Les Skateux — quatre gangs
+  (couleurs, courage, territoire), et des passants de quartier (dockers, banlieusards,
+  ouvriers, ados).
+- `carte.zones()` : police, véhicules et piétons **par district** — la banlieue est calme,
+  La Shop est déserte la nuit, les Quais grouillent le matin.
+- `audio.py` : deux radios de plus (*10-4*, les ondes du poste ; *Radio-Traversier*,
+  rigodon) ; l'autobus n'a que son moteur.
+- ⚠️ **Le paquet de définitions.** Mesuré le 13 sept. : 101 Ko bruts, **17 Ko gzip**, dont
+  **64 Ko pour la carte** (157 × 112 = 17 584 tuiles) ; `carte.generer()` prend 16 ms.
+  Cinq districts font environ 360 Ko bruts / 60 Ko gzip et 80 ms de génération au
+  démarrage. On **relève le budget du test à 400 Ko bruts** (le gzip, lui, reste petit) et
+  on garde une seule carte dans le paquet : découper la ville en tranches servies à la
+  demande est une machinerie dont personne n'a encore prouvé le besoin. Le déclencheur est
+  écrit d'avance : si le téléphone de Martin met plus de 2 s entre « Jouer » et la ville,
+  ou si la mémoire tousse, la carte sort du paquet (`/api/carte`, ETag, districts chargés
+  autour du joueur — `Monde.charger()` sait déjà le faire pour les intérieurs).
+- **Juges** : connexité forte des voies sur **toute** la ville (BFS) ; chaque district
+  joignable en char depuis chaque autre ; un seul îlot marchable sur cinq graines ;
+  asymétrie **par district** ; le pont est le seul lien vers La Pointe et il est carrossable.
+- **Fini quand** : on roule du Faubourg à La Pointe sans chargement, la carte plein écran
+  et la mini-carte suivent, et le nom du quartier change sous la mini-carte.
+
+### M9 — Le parc automobile et les boulots (taille 3)
+
+*Ce que ça donne :* autre chose à conduire, et de quoi gagner sa vie autrement.
+
+- `vehicules.py` : **camion** (lent, lourd, défonce un mur — il sert à M10), **autobus**
+  (long, deux cercles de collision de plus, pas de radio), **ambulance** (rapide, sirène,
+  soigne), **remorqueuse** (un crochet : on accroche un char et on le traîne).
+  Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
+  carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
+  suffit pour l'eau.
+- Boulots au klaxon, sur le patron du taxi : **ambulance** (un blessé quelque part, chrono,
+  le sortir vivant), **pizza** (trois livraisons, la pizza refroidit — le pourboire fond),
+  **remorquage** (la fourrière paie pour les épaves).
+- **Fourrière** : un char mal garé, ou saisi à l'arrestation, part au lot ; on le rachète
+  au comptoir, ou on le reprend par-dessus la clôture (1★, et les gars du lot ripostent).
+- **Radio procédurale** : `Son.Mus` (le séquenceur trois voix, déjà là) génère une station
+  par véhicule à partir d'une graine — le camion a sa toune, l'autobus n'a que son moteur.
+- **Juges** : chaque char a son sprite (harnais Node) ; la remorqueuse n'en traîne qu'un à
+  la fois ; l'ambulance ne ressuscite personne ; la fourrière ne peut **jamais** manger le
+  char de la planque (c'est la sauvegarde de Martin).
+
+### M10 — L'argent sale (taille 3)
+
+*Ce que ça donne :* une raison de se lever le matin — la dette de Rocco.
+
+- **Le shylock** : 15 000 $, un intérêt par jour, des rappels au téléphone, puis des hommes
+  de main qui te trouvent où que tu sois. Rembourser ouvre une des deux fins (M13).
+- **Guichets** : les défoncer au camion (bruyant, 2★, la caisse par terre) ou poser un
+  **skimmer** et revenir le lendemain (silencieux, lent, il peut être trouvé).
+- **Assurance et fraude** : assurer un char au garage, le faire disparaître, encaisser —
+  trois fois de suite et l'assureur enquête.
+- `economie.py` : dette, intérêts **bornés**, primes, seuils de suspicion.
+- **Juges** : la dette ne dépasse jamais son plafond ; un joueur qui ne fait rien ne devient
+  pas insolvable en une nuit ; la fraude rapporte **moins à l'heure** que le travail honnête
+  — sinon le jeu se joue tout seul et le taxi ne sert plus à rien.
+
+### M11 — La police apprend (taille 2)
+
+*Ce que ça donne :* un casier qui pèse, et des façons de le faire taire.
+
+- **Le carnet du poste** : au poste, ton casier, tes affiches, tes surnoms. Plus il est
+  épais, plus les agents te reconnaissent **de loin** (la portée du cône monte avec le
+  casier) — en plus des amendes et des pots-de-vin, qui en tiennent déjà compte.
+- **Le stool** : un passant qui te reconnaît et part téléphoner. L'acheter, le suivre, ou
+  le faire taire : chacun a son prix en étoiles.
+- **L'avocat du Carré** : cher, il efface une page du casier ou te sort de prison sans
+  amende — et il ne travaille pas deux fois la même journée.
+- **Bouclier humain** (risqué) : attraper un piéton à bout portant ; la police ne tire plus,
+  mais le compteur monte et le piéton se débat.
+- **Juges** : la portée du cône reste bornée quel que soit le casier ; le stool ne naît pas
+  dans le dos d'un joueur immobile ; l'avocat ne rend jamais un casier négatif.
+
+### M12 — La ville vit (taille 3)
+
+*Ce que ça donne :* une ville qui bouge toute seule, avec ou sans toi.
+
+- **Tramway** : une ligne sur rails du Faubourg aux Quais, des arrêts, des portes — et il
+  ne s'arrête pas pour toi. ⚠️ C'est un véhicule qui **ignore** le champ de direction : il
+  a ses propres rails, et le trafic doit lui céder.
+- **Traversier** : Les Quais ↔ La Pointe, à l'heure, quatre chars à bord, il part sans toi.
+- **Tempête de neige** (risqué) : visibilité réduite, adhérence divisée, **charrue** qui
+  pousse la neige et les chars mal garés ; la police glisse aussi.
+- ⚠️ La neige touche à la physique **et** au rendu : elle arrive derrière une option, et la
+  sonde de performance Playwright la mesure avant qu'elle soit allumée par défaut.
+
+### M13 — Les deux fins (taille 4)
+
+*Ce que ça donne :* une histoire qui se termine, de deux façons.
+
+- **Une mission par district** : quatre donneurs de plus, quatre voix ElevenLabs de plus,
+  un gang à déloger par quartier.
+- **Marco te vend** : au bout de l'arc, le cousin parle à la police — la mission bascule en
+  cours de route.
+- **Dr Lachance** devient donneur : l'hôpital a ses secrets (et ses ordonnances).
+- **Le Boss** : les 4 propriétés **et** les 4 districts libérés → manchette, générique, la
+  ville change de couleur.
+- **Sacrer son camp** : 15 000 $ en poche, traversier de nuit, 0★ → l'autre générique.
+- La partie **continue après la fin** : le score part, le monde reste.
+- **Juges** : un test force chacune des deux fins (elles sont atteignables) ; la dette reste
+  remboursable jusqu'au bout (aucune fin ne se referme sur un bug) ; chaque réplique
+  nouvelle a son personnage et sa voix.
+
+### M14 — Meta v2 (taille 2)
+
+- **Défi du jour** à graine serveur (reporté de M7) : `/api/defi` donne la graine du jour,
+  le classement est celui du jour, tout le monde joue la même ville.
+- **Mode photo** : le jeu se fige, la caméra se détache, quelques filtres, et l'image se
+  télécharge.
+- **Coop locale** (risqué) : deux manettes, une caméra qui tient les deux joueurs, zoom
+  arrière quand ils s'éloignent. ⚠️ 480 × 270 n'est pas grand : à décider **après un essai**,
+  pas avant.
 
 ## Serveur (M0, `deploy/installer.sh`, idempotent, en `dojoadmin`)
 
@@ -347,6 +499,17 @@ Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2.
 - **Ville générée injouable** : plan à la main, graine fixe, juges de connexité en pytest **avant** de dessiner.
 - **Dérive de la sauvegarde** : clé versionnée, repli sur `etatInitial()`, test d'un blob v0.
 - **Audio iOS** : réveil au premier geste, pause sur `visibilitychange`.
+- **Ville cinq fois plus grande (M8)** : le paquet est mesuré (17 Ko gzip aujourd'hui), le
+  budget du test relevé en connaissance de cause, et le déclencheur du découpage écrit
+  d'avance ; le cache de morceaux et la bulle d'activité bornent déjà le travail par image.
+- **Véhicules qui sortent des rails (M9, M12)** : le tramway et le bateau **n'obéissent pas**
+  au champ de direction. Chacun est un conducteur à part (`conducteur: 'rail'`, `'eau'`),
+  jamais une exception glissée dans `majConducteur` — et le mode trace les surveille comme
+  le reste.
+- **Économie qui se joue toute seule (M10)** : tout gain passe par un juge « à l'heure »,
+  comparé au taxi ; la fraude et les skimmers doivent rester moins payants que le travail.
+- **Coop locale (M14)** : un essai jetable avant toute promesse ; si l'écran est trop petit
+  à deux, le jalon tombe et le mode photo suffit.
 - **Audio absent ou cassé** : `exporter()` ne déclare que les fichiers présents, chaque
   effet retombe sur la synthèse, et un test navigateur prouve que chaque MP3 **se décode
   vraiment** (un fichier tronqué ne se verrait qu'à l'oreille, en jeu).
