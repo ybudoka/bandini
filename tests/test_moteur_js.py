@@ -1922,6 +1922,49 @@ def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
     assert r["argent"] == 500 - batte["prix"] - coupe_vent["prix"]
 
 
+def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
+    """⚠️ Un menu est une PHOTO de l'etat au moment ou on l'ouvre. Le comptoir,
+    lui, reste ouvert entre deux achats : sans un rafraichissement, le pistolet
+    deja paye garde son prix, se rachete une deuxieme fois, et les munitions de
+    l'arme qu'on vient d'acheter n'apparaissent qu'a la prochaine visite."""
+    pistolet = next(a for a in paquet["armes"] if a["slug"] == "pistolet")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'armurerie'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Jeu.entrer(porte);
+        const point = L.B.interieur.points.find(function (p) { return p.type === 'acheter'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        L.B.partie.argent = 2000;
+        L.Missions.utiliserPoint(j);
+        const menu = L.B.menu;
+        function ligne(m, libelle) { return m.items.find(function (i) { return i.libelle === libelle; }) || null; }
+        const avant = ligne(menu, 'PISTOLET');
+        const rang = menu.items.indexOf(avant);
+        menu.curseur = rang;
+        // On achete par le vrai chemin : la touche ACTION, et le menu reste ouvert.
+        o.tape('KeyE', 2);
+        const apres = ligne(L.B.menu, 'PISTOLET');
+        const etat = { ouvert: L.B.menu === menu, detail: apres && apres.detail, actif: apres && apres.actif,
+                       sur: L.B.menu && L.B.menu.sur, munitions: !!ligne(L.B.menu, 'MUNITIONS PISTOLET'),
+                       curseur: L.B.menu && L.B.menu.curseur };
+        // Et on rappuie : un achat unique ne se paie pas deux fois.
+        o.tape('KeyE', 2);
+        return { avant: avant.detail, rang: rang, etat: etat, argent: L.B.partie.argent,
+                 mun: L.B.partie.armes.pistolet ? L.B.partie.armes.pistolet.mun : 0 };
+    }""")
+    assert r["avant"] == "%d $" % pistolet["prix"]
+    assert r["etat"]["ouvert"] is True, "le comptoir s'est ferme sous les doigts du joueur"
+    assert r["etat"]["detail"] == "DEJA A TOI", "le comptoir affiche encore le prix d'une arme payee"
+    assert r["etat"]["actif"] is False
+    assert r["etat"]["sur"] == "%d $" % (2000 - pistolet["prix"]), "le magot affiche n'a pas bouge"
+    assert r["etat"]["munitions"] is True, "les munitions de l'arme achetee n'apparaissent pas"
+    assert r["etat"]["curseur"] == r["rang"], "le curseur a saute sous le pouce"
+    assert r["argent"] == 2000 - pistolet["prix"], "le pistolet s'est paye deux fois"
+    assert r["mun"] == pistolet["chargeur"], "l'arme achetee doit venir avec son chargeur"
+
+
 def test_une_propriete_s_achete_et_rapporte(banc, paquet):
     kiosque = next(p for p in paquet["economie"]["proprietes"] if p["slug"] == "kiosque")
     r = banc("""function (L, o) {

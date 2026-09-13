@@ -40,6 +40,8 @@ const Hud = (function () {
   //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur, obligatoire }.
   //: `faire()` rend true pour fermer le menu, false pour le laisser ouvert
   //: (on achete trois hot-dogs sans rouvrir le comptoir).
+  //: `refaire()` rend un menu NEUF : un menu qui reste ouvert se refait apres
+  //: chaque achat (voir `rafraichirMenu`).
 
   let repetT = 0;
 
@@ -53,6 +55,24 @@ const Hud = (function () {
   function fermerMenu() {
     B.menu = null;
     Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+  }
+
+  /** Refaire le menu ouvert, apres un achat qui l'a laisse ouvert.
+
+      ⚠️ Un menu est une PHOTO de l'etat au moment ou on l'ouvre : sans ca, le
+      comptoir affiche encore le prix d'un fusil deja paye — et le revend une
+      deuxieme fois. Le constructeur du menu (`refaire`) recalcule ce qui
+      s'affiche ; le curseur, lui, ne bouge pas de sous le pouce du joueur. */
+  function rafraichirMenu() {
+    const m = B.menu;
+    if (!m || !m.refaire) return;
+    const neuf = m.refaire();
+    if (!neuf || !neuf.items || !neuf.items.length) return;
+    m.items = neuf.items;
+    m.titre = neuf.titre;
+    m.sur = neuf.sur;
+    m.aide = neuf.aide;
+    m.curseur = Math.max(0, Math.min(m.curseur, m.items.length - 1));
   }
 
   /** Navigation : haut/bas (clavier, stick, joystick), ACTION choisit, FRAPPE ou annuler ferme. */
@@ -85,6 +105,7 @@ const Hud = (function () {
       if (item && item.actif !== false) {
         const fini = item.faire ? item.faire(item) : true;
         if (fini !== false && B.menu === m) fermerMenu();
+        else if (B.menu === m) rafraichirMenu();
       } else Son.SFX.erreur();
     }
     // Un menu `obligatoire` (l'arrestation) ne se ferme que par un choix.
@@ -794,7 +815,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     get voileCourant() { return voileCourant; },
            majAvisSon,
            dessiner, miniCarte, MINI, montrerScores, demanderScore,

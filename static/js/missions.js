@@ -335,6 +335,10 @@ const Missions = (function () {
     if (point.type === 'fouiller') return fouiller(point);
     const menu = menuDuPoint(point);
     if (!menu) { Hud.message('PLUS TARD'); return true; }
+    // Un comptoir qui reste ouvert se refait apres chaque achat : l'arme passe
+    // a « DEJA A TOI », le magot en haut a droite fond, les munitions de ce
+    // qu'on vient d'acheter apparaissent. Sans ca, on paie deux fois.
+    menu.refaire = function () { return menuDuPoint(point); };
     Hud.ouvrirMenu(menu);
     return true;
   }
@@ -758,7 +762,8 @@ const Missions = (function () {
       items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : prix + ' $', actif: !pleine && p.argent >= prix,
                    faire: function () { payer(prix, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
     });
-    return { titre: 'MARCHÉ NOIR', sur: p.argent + ' $', aide: 'SANS FACTURE. ' + Math.round((1 - mn.rabais) * 100) + ' % DE MOINS QUE CHEZ GUS.', items: items };
+    return { titre: 'MARCHÉ NOIR', sur: p.argent + ' $', refaire: menuMarcheNoir,
+             aide: 'SANS FACTURE. ' + Math.round((1 - mn.rabais) * 100) + ' % DE MOINS QUE CHEZ GUS.', items: items };
   }
 
   // --- Les paquets caches ------------------------------------------------------------------
