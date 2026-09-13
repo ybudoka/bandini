@@ -78,13 +78,21 @@ const Hud = (function () {
       } else Son.SFX.erreur();
     }
     // Un menu `obligatoire` (l'arrestation) ne se ferme que par un choix.
-    if (!m.obligatoire && (Entree.neuf('annuler') || Entree.neuf('attaque') || Entree.neuf('pause'))) fermerMenu();
+    // ⚠️ `manetteInerte` (l'ecran MANETTE) : on y appuie sur les boutons pour
+    // les VOIR s'allumer, pas pour commander. La manette peut encore bouger le
+    // curseur et choisir — sinon un joueur qui n'a QUE sa manette resterait
+    // enferme — mais elle ne FERME plus l'ecran sous ses doigts.
+    const ferme = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
+    if (!m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) fermerMenu();
   }
 
   function dessinerMenu(ctx) {
     const m = B.menu;
     if (!m) return;
-    const l = 300, h = Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    // `largeur`, `hauteur` et `colonne` : un menu qui montre autre chose qu'une
+    // liste (l'ecran MANETTE et son dessin) prend la place qu'il lui faut.
+    const l = m.largeur || 300;
+    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
     const x = (VW - l) / 2, y = (VH - h) / 2;
     ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, y, l, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1);
@@ -94,11 +102,13 @@ const Hud = (function () {
       const yy = y + 28 + i * 14;
       const choisi = i === m.curseur;
       const actif = item.actif !== false;
-      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, l - 8, 12); }
+      if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, (m.colonne || l) - 8, 12); }
       texte(ctx, (choisi ? '> ' : '  ') + item.libelle, x + 8, yy, actif ? (choisi ? '#efe6d0' : '#cdc6e6') : '#6a6678', 1);
-      if (item.detail) texte(ctx, item.detail, x + l - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
+      const bord = x + (m.colonne || l);
+      if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
     });
     if (m.aide) texte(ctx, m.aide, x + 8, y + h - 12, '#8a8698', 1);
+    if (m.dessiner) m.dessiner(ctx, x, y, l, h);
     B.stats.rects += 4;
   }
 
@@ -123,6 +133,63 @@ const Hud = (function () {
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
+  }
+
+  // --- La manette : une disposition a choisir, un dessin qui la prouve ---------------
+
+  //: Le dessin d'une manette, en pixels, a l'echelle 1 (78 x 46). Chaque piece
+  //: dit de quel BOUTON elle est le portrait : `a` l'action, `rang` le rang
+  //: dans sa liste (un bouton d'epaule et un bouton de droite peuvent servir la
+  //: meme action). C'est ce qui fait du dessin une PREUVE — on appuie, la piece
+  //: correspondante s'allume ; si ce n'est pas celle qu'on a sous le pouce, la
+  //: disposition choisie n'est pas la bonne.
+  const MANETTE_PIECES = [
+    { pedale: 'frein', x: 10, y: 0, l: 14, h: 4 },
+    { pedale: 'gaz', x: 54, y: 0, l: 14, h: 4 },
+    { a: 'arme', rang: 1, x: 8, y: 5, l: 18, h: 5 },
+    { a: 'attaque', rang: 1, x: 52, y: 5, l: 18, h: 5 },
+    { a: 'haut', x: 15, y: 14, l: 4, h: 4 },
+    { a: 'gauche', x: 11, y: 18, l: 4, h: 4 },
+    { a: 'droite', x: 19, y: 18, l: 4, h: 4 },
+    { a: 'bas', x: 15, y: 22, l: 4, h: 4 },
+    { a: 'carte', x: 33, y: 18, l: 5, h: 3 },
+    { a: 'pause', x: 41, y: 18, l: 5, h: 3 },
+    { a: 'arme', rang: 0, x: 59, y: 14, l: 5, h: 5 },
+    { a: 'attaque', rang: 0, x: 54, y: 19, l: 5, h: 5 },
+    { a: 'esquive', rang: 0, x: 64, y: 19, l: 5, h: 5 },
+    { a: 'action', rang: 0, x: 59, y: 24, l: 5, h: 5 },
+  ];
+  const MANETTE_L = 78, MANETTE_H = 46;
+
+  /** Cette piece est-elle enfoncee en ce moment ?
+
+      Par le NUMERO du bouton quand on en a un — c'est ce qui distingue le
+      bouton d'epaule du bouton de droite qui font la meme chose. La croix sur
+      un axe n'a pas de numero : on retombe alors sur l'action elle-meme. */
+  function pieceEnfoncee(piece, profil, etat) {
+    if (piece.pedale) return (piece.pedale === 'gaz' ? Entree.gaz : Entree.frein) > 0.15;
+    const indice = (profil.boutons[piece.a] || [])[piece.rang || 0];
+    if (indice === undefined) return Entree.bas(piece.a);
+    return etat.boutons.indexOf(indice) >= 0;
+  }
+
+  function dessinerManette(ctx, ox, oy, ech, profil, etat) {
+    function r(x, y, l, h, couleur) {
+      ctx.fillStyle = couleur;
+      ctx.fillRect(ox + x * ech, oy + y * ech, l * ech, h * ech);
+      B.stats.rects++;
+    }
+    r(0, 24, 16, 22, '#22242a'); r(62, 24, 16, 22, '#22242a');      // les poignees
+    r(4, 10, 70, 24, '#2c2c30');
+    r(6, 12, 66, 20, '#3a3d44');                                    // la face
+    r(24, 26, 9, 9, '#22242a'); r(47, 26, 9, 9, '#22242a');         // les cuvettes
+    const axe = Entree.axe, decal = axe.source === 'manette' ? axe : { x: 0, y: 0 };
+    r(26 + Math.round(decal.x * 2), 28 + Math.round(decal.y * 2), 5, 5, '#8a8698');
+    r(49, 28, 5, 5, '#6f757c');
+    r(15, 18, 4, 4, '#4a4e57');                                     // le coeur de la croix
+    for (const piece of MANETTE_PIECES) {
+      r(piece.x, piece.y, piece.l, piece.h, pieceEnfoncee(piece, profil, etat) ? '#e8b33c' : '#6f757c');
+    }
   }
 
   //: Les actions qu'on peut reapprendre, dans l'ordre de « TOUT REAPPRENDRE ».
@@ -159,17 +226,15 @@ const Hud = (function () {
     return b.length ? 'BOUTON ' + b.join(', ') : 'AUCUN';
   }
 
-  /** L'ecran MANETTE : ce que la manette dit d'elle-meme, et un bouton par
-      action qu'on REAPPREND en l'appuyant.
+  /** Le deuxieme ecran : un bouton par action, qu'on REAPPREND en l'appuyant.
 
-      ⚠️ Les numeros de boutons d'une manette Bluetooth que le navigateur ne
-      reconnait pas (`mapping` vide) ne veulent rien dire : la meme manette
-      n'a pas les memes numeros sur le telephone et sur le Mac. On ne peut pas
-      deviner — ici on appuie, et le jeu note. */
-  function menuManette() {
+      C'est le recours quand aucune disposition toute faite ne tombe juste —
+      et sur une manette que le navigateur ne reconnait pas, ca arrive. */
+  function menuManetteBoutons() {
     let suite = null;                 // la file de « TOUT REAPPRENDRE »
     function garder() {
       B.options.manette = Entree.profilManette();
+      B.options.manetteProfil = 'apprise';       // plus aucune disposition toute faite
       Sauvegarde.ecrireOptions(B.options);
     }
     function apprendreUn(quoi, apres) {
@@ -189,13 +254,8 @@ const Hud = (function () {
       return { libelle: l[1], quoi: l[0], faire: function () { apprendreUn(l[0]); return false; } };
     });
     items.push({ libelle: 'TOUT REAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
-    items.push({ libelle: 'REMETTRE PAR DEFAUT', faire: function () {
-      Entree.reglerManette(null); Entree.oublierRepos();
-      B.options.manette = null; Sauvegarde.ecrireOptions(B.options);
-      suite = null; Son.SFX.menu(); return false;
-    } });
-    items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuOptions()); return false; } });
-    const menu = { titre: 'MANETTE', items: items, curseur: 0 };
+    items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuManette()); return false; } });
+    const menu = { titre: 'REAPPRENDRE', items: items, curseur: 0, manetteInerte: true };
     let repos = null;                 // les axes au repos, pour voir lesquels bougent
     menu.maj = function (m) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
@@ -232,6 +292,69 @@ const Hud = (function () {
             + ' · ' + indice
           : 'BRANCHE UNE MANETTE ET APPUIE SUR UN BOUTON');
       void suite;
+    };
+    menu.maj(menu);
+    return menu;
+  }
+
+  /** L'ecran MANETTE : une disposition a choisir, et un dessin qui la prouve.
+
+      ⚠️ Aucun test ne peut dire si une disposition correspond a la manette de
+      quelqu'un : les numeros de boutons d'une manette que le navigateur ne
+      reconnait pas ne veulent rien dire, et la meme manette n'a pas les memes
+      numeros sur le telephone et sur le Mac. Le dessin, lui, le dit tout de
+      suite — on appuie, la piece s'allume. Au bon endroit : c'est la bonne.
+      Ailleurs : on essaie la suivante, ou on reapprend bouton par bouton. */
+  function menuManette() {
+    const bloc = B.defs.manettes || { profils: [], defaut: 'standard' };
+    function choisir(profil) {
+      Entree.reglerManette(profil);
+      Entree.oublierRepos();
+      B.options.manette = Entree.profilManette();
+      B.options.manetteProfil = profil.slug;
+      Sauvegarde.ecrireOptions(B.options);
+      Son.SFX.menu();
+      return false;
+    }
+    const items = bloc.profils.map(function (p) {
+      return { libelle: p.nom, profil: p, faire: function () { return choisir(p); } };
+    });
+    items.push({ libelle: 'REAPPRENDRE BOUTON PAR BOUTON',
+                 faire: function () { ouvrirMenu(menuManetteBoutons()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuOptions()); return false; } });
+    // Le curseur commence sur la disposition en cours : appuyer sur ACTION pour
+    // voir le bouton s'allumer ne change alors rien.
+    const actuel = B.options.manetteProfil || bloc.defaut;
+    const depart = Math.max(0, items.findIndex(function (i) { return i.profil && i.profil.slug === actuel; }));
+    const menu = { titre: 'MANETTE', items: items, curseur: depart, manetteInerte: true,
+                   largeur: 420, hauteur: 162, colonne: 212 };
+    menu.maj = function (m) {
+      const etat = Entree.manetteInfo();
+      m.sur = etat.branchee ? (etat.mapping === 'standard' ? 'RECONNUE' : 'NON RECONNUE')
+                            : 'AUCUNE MANETTE';
+      const choisi = B.options.manetteProfil || bloc.defaut;
+      for (const item of m.items) {
+        if (!item.profil) continue;
+        // ⚠️ Le detail du profil ne tient pas a cote de son nom : il se dit en
+        // bas, pour celui que le curseur survole. La colonne, elle, ne porte
+        // qu'un mot : laquelle est choisie.
+        item.detail = item.profil.slug === choisi ? 'CHOISIE' : '';
+      }
+      const survole = m.items[m.curseur];
+      const quoi = survole && survole.profil ? survole.profil.detail + ' · ' : '';
+      m.aide = etat.branchee
+        ? quoi + 'APPUIE SUR UN BOUTON : IL DOIT S’ALLUMER AU BON ENDROIT'
+        : quoi + 'BRANCHE UNE MANETTE ET APPUIE SUR UN BOUTON';
+    };
+    menu.dessiner = function (ctx, x, y) {
+      const etat = Entree.manetteInfo(), profil = Entree.profilManette();
+      dessinerManette(ctx, x + 232, y + 24, 2, profil, etat);
+      const bit = /8bitdo/i.test(etat.id || '') && etat.mapping !== 'standard';
+      const lignes = ['ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—'),
+                      bit ? '8BITDO : DONGLE 2,4 GHZ = XBOX' : (etat.id || '').slice(0, 24).toUpperCase()];
+      lignes.forEach(function (l, i) {
+        if (l) texte(ctx, l, x + 232, y + 122 + i * 10, '#8a8698', 1);
+      });
     };
     menu.maj(menu);
     return menu;
@@ -640,7 +763,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuManette, menuBilan,
+  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     get voileCourant() { return voileCourant; },
            dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };

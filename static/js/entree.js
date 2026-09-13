@@ -52,6 +52,10 @@ const Entree = (function () {
 
   const enfonce = {}, presse = {};       // clavier, par e.code
   const vPad = {}, vTact = {}, vNeuf = {}; // manette / tactile, par action
+  //: ⚠️ Les nouveautes du TACTILE a part : l'ecran MANETTE doit pouvoir
+  //: ignorer la manette (on y appuie sur ses boutons pour les VOIR, pas pour
+  //: commander) sans devenir injouable au doigt.
+  const vNeufTact = {};
   const axe = { x: 0, y: 0, mag: 0, source: 'clavier' };
   const stick = { x: 0, y: 0, mag: 0 };
   const pouce = { x: 0, y: 0, mag: 0, actif: false };
@@ -72,7 +76,10 @@ const Entree = (function () {
 
   function poser(sac, a, v) {
     v = !!v;
-    if (v && !sac[a]) vNeuf[a] = true;
+    if (v && !sac[a]) {
+      vNeuf[a] = true;
+      if (sac === vTact) vNeufTact[a] = true;
+    }
     sac[a] = v;
   }
 
@@ -82,9 +89,14 @@ const Entree = (function () {
   function neuf(a) {
     return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
+  /** Comme `neuf`, mais la manette ne compte pas — le clavier et le doigt, oui. */
+  function neufSansManette(a) {
+    return !!vNeufTact[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+  }
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
+    for (const a in vNeufTact) vNeufTact[a] = false;
   }
   function toutRelacher() {
     for (const k in enfonce) enfonce[k] = false;
@@ -529,7 +541,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo,

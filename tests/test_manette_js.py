@@ -116,25 +116,72 @@ def test_l_ecran_manette_dit_ce_que_la_manette_dit_d_elle_meme(banc):
         o.pad([0, 0], [0, 0, 1, 0], { mapping: '', id: 'Bidule BT Gamepad' }); o.frame(2);
         const m = L.Hud.menuManette();
         m.maj(m);
-        const inconnue = { sur: m.sur, aide: m.aide, action: m.items[0].detail };
+        const inconnue = { sur: m.sur, aide: m.aide };
         o.pad([0, 0], [1, 0, 0, 0], { mapping: 'standard', id: 'Xbox Wireless' }); o.frame(2);
         m.maj(m);
-        const reconnue = { sur: m.sur, aide: m.aide };
-        // Et « REMETTRE PAR DEFAUT » efface le profil garde dans les options.
-        L.B.options.manette = { boutons: { action: [7] } };
-        L.Entree.reglerManette(L.B.options.manette);
-        const avant = L.Entree.profilManette().boutons.action;
-        m.items.find(function (i) { return i.libelle === 'REMETTRE PAR DEFAUT'; }).faire();
         o.pad(null); o.frame(2);
-        return { inconnue: inconnue, reconnue: reconnue, avant: avant,
-                 apres: L.Entree.profilManette().boutons.action, options: L.B.options.manette };
+        return { inconnue: inconnue, reconnue: m.sur,
+                 profils: m.items.filter(function (i) { return i.profil; }).map(function (i) { return i.profil.slug; }) };
     }""")
     assert r["inconnue"]["sur"] == "NON RECONNUE"
-    assert "2" in r["inconnue"]["aide"], "les boutons enfonces doivent se voir"
-    assert r["inconnue"]["action"] == "BOUTON 0"
-    assert r["reconnue"]["sur"] == "RECONNUE"
-    assert r["avant"] == [7] and r["apres"] == [0]
-    assert r["options"] is None
+    assert "ALLUMER" in r["inconnue"]["aide"], "l'ecran doit dire comment se verifier"
+    assert r["reconnue"] == "RECONNUE"
+    assert r["profils"][0] == "standard" and len(r["profils"]) >= 3
+
+
+def test_choisir_une_disposition_la_pose_et_la_garde(banc):
+    """Le geste que Martin demandait : on choisit sa manette dans une liste."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function boutons(i) { const b = []; for (let k = 0; k <= 11; k++) b.push(k === i ? 1 : 0); return b; }
+        const m = L.Hud.menuManette();
+        const hid = m.items.find(function (i) { return i.profil && i.profil.slug === 'bt_hid'; });
+        hid.faire();
+        o.pad([0, 0], boutons(1)); o.frame(2);
+        const surUn = ['action', 'attaque', 'esquive', 'arme'].filter(function (a) { return L.Entree.bas(a); });
+        o.pad([0, 0], boutons(0)); o.frame(2);
+        const surZero = ['action', 'attaque', 'esquive', 'arme'].filter(function (a) { return L.Entree.bas(a); });
+        m.maj(m);
+        const marque = m.items.filter(function (i) { return i.detail === 'CHOISIE'; }).map(function (i) { return i.profil.slug; });
+        // Et on revient a la disposition standard : le bouton du bas reprend ACTION.
+        m.items.find(function (i) { return i.profil && i.profil.slug === 'standard'; }).faire();
+        o.pad([0, 0], boutons(0)); o.frame(2);
+        const retour = L.Entree.bas('action');
+        o.pad(null); o.frame(2);
+        return { surUn: surUn, surZero: surZero, marque: marque, retour: retour,
+                 garde: L.B.options.manetteProfil };
+    }""")
+    assert r["surUn"] == ["action"], "en HID, le bouton du bas est le numero 1"
+    assert sorted(r["surZero"]) == ["attaque"], "et le numero 0 est celui de gauche"
+    assert r["marque"] == ["bt_hid"], "la disposition choisie doit se voir dans la liste"
+    assert r["retour"] is True
+    assert r["garde"] == "standard"
+
+
+def test_la_disposition_a_croix_sur_un_axe_marche_sans_rien_apprendre(banc):
+    """⚠️ Le cas de la 8BitDo en Bluetooth : on choisit la disposition, et la
+    croix repond tout de suite — diagonales comprises, sans un seul geste."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0], { mapping: '' }); }
+        function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
+        const m = L.Hud.menuManette();
+        hat(1.2857142857142858); o.frame(2);
+        const avant = (function () { hat(-1); o.frame(2); return dirs(); })();
+        m.items.find(function (i) { return i.profil && i.profil.slug === 'bt_croix_axe'; }).faire();
+        const lu = {};
+        const pos = { haut: -1, bas: 0.14285714285714285, gauche: 0.7142857142857143,
+                      droite: -0.42857142857142855, diagonale: -0.7142857142857143,
+                      repos: 1.2857142857142858 };
+        for (const nom in pos) { hat(pos[nom]); o.frame(2); lu[nom] = dirs(); }
+        o.pad(null); o.frame(2);
+        return { avant: avant, lu: lu };
+    }""")
+    assert r["avant"] == [], "avant de choisir, la croix-axe ne fait rien"
+    assert r["lu"]["haut"] == ["haut"] and r["lu"]["bas"] == ["bas"]
+    assert r["lu"]["gauche"] == ["gauche"] and r["lu"]["droite"] == ["droite"]
+    assert sorted(r["lu"]["diagonale"]) == ["droite", "haut"]
+    assert r["lu"]["repos"] == []
 
 
 def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
@@ -144,7 +191,7 @@ def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
         L.Jeu.commencer();
         function boutons(i) { const b = []; for (let k = 0; k <= 15; k++) b.push(k === i ? 1 : 0); return b; }
         o.pad([0, 0], boutons(-1)); o.frame(2);
-        const m = L.Hud.menuManette();
+        const m = L.Hud.menuManetteBoutons();
         m.items.find(function (i) { return i.libelle === 'TOUT REAPPRENDRE'; }).faire();
         const demandes = [];
         // On appuie sur 15, 14, 13... : chaque geste doit etre pris par l'action suivante.
@@ -265,7 +312,7 @@ def test_relacher_la_croix_n_est_pas_un_geste(banc):
         const REPOS = 1.2857142857142858;
         function hat(v) { o.pad([0, 0, 0, 0, 0, 0, 0, 0, 0, v], [0, 0, 0, 0]); }
         function dirs() { return ['haut', 'bas', 'gauche', 'droite'].filter(function (a) { return L.Entree.bas(a); }); }
-        const m = L.Hud.menuManette();
+        const m = L.Hud.menuManetteBoutons();
         // ⚠️ Une demi-seconde au repos : c'est la que le jeu mesure le repos de
         // la croix. Dans la vraie vie, ouvrir le menu prend bien plus que ca.
         hat(REPOS); o.frame(40);
@@ -321,3 +368,55 @@ def test_la_direction_suivante_attend_qu_on_relache(banc):
     assert r["tenu"]["valeurs"] == ["haut"]
     assert r["apresRelache"] == ["haut"], "le relachement a ete pris pour un geste"
     assert abs(r["valeurs"]["bas"] - 0.142857) < 0.01
+
+
+def test_le_dessin_allume_le_bouton_qu_on_appuie(banc):
+    """⚠️ C'est toute la promesse de l'ecran : le dessin est une PREUVE. Le
+    bouton d'epaule et le bouton de droite servent la meme action — s'ils
+    s'allumaient ensemble, on ne pourrait rien verifier du tout."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Hud.menuManette();
+        m.items.find(function (i) { return i.profil && i.profil.slug === 'standard'; }).faire();
+        function ors(boutons) {
+            o.pad([0, 0], boutons, { mapping: 'standard' }); o.frame(2);
+            const vus = [];
+            const ctx = { fillStyle: '', fillRect: function (x, y, l, h) {
+                if (this.fillStyle === '#e8b33c') vus.push([x, y, l, h].join(','));
+            }, drawImage: function () {} };
+            m.dessiner(ctx, 0, 0, 420, 162);
+            return vus;
+        }
+        function b(i) { const t = []; for (let k = 0; k <= 9; k++) t.push(k === i ? 1 : 0); return t; }
+        return { rien: ors(b(-1)), zero: ors(b(0)), cinq: ors(b(5)), deux: ors(b(2)), sept: ors(b(7)) };
+    }""")
+    # Origine du dessin : x + 232, y + 24, a l'echelle 2.
+    def piece(x, y, largeur, hauteur):
+        return f"{232 + x * 2},{24 + y * 2},{largeur * 2},{hauteur * 2}"
+
+    assert r["rien"] == [], "rien d'allume quand rien n'est enfonce"
+    assert r["zero"] == [piece(59, 24, 5, 5)], "le bouton du bas"
+    assert r["cinq"] == [piece(52, 5, 18, 5)], "l'epaule droite, PAS le bouton de gauche"
+    assert r["deux"] == [piece(54, 19, 5, 5)], "le bouton de gauche, PAS l'epaule droite"
+    assert r["sept"] == [piece(54, 0, 14, 4)], "la gachette droite (le gaz)"
+
+
+def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
+    """On y appuie sur ses boutons pour les VOIR : si FRAPPE ou START fermaient
+    l'ecran, on ne pourrait pas les essayer. Le clavier, lui, ferme."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Hud.ouvrirMenu(L.Hud.menuManette());
+        function b(i) { const t = []; for (let k = 0; k <= 9; k++) t.push(k === i ? 1 : 0); return t; }
+        const etapes = [];
+        for (const i of [2, 1, 9]) {                 // FRAPPE, RETOUR, PAUSE
+            o.pad([0, 0], b(i), { mapping: 'standard' }); o.frame(2);
+            etapes.push(!!L.B.menu);
+            o.pad([0, 0], b(-1)); o.frame(2);
+        }
+        o.pad(null); o.frame(2);
+        o.tape('Space', 2);                          // FRAPPE au clavier : ca, ca ferme
+        return { etapes: etapes, apresClavier: !!L.B.menu };
+    }""")
+    assert r["etapes"] == [True, True, True], "un bouton de manette a ferme l'ecran"
+    assert r["apresClavier"] is False, "le clavier doit pouvoir fermer"

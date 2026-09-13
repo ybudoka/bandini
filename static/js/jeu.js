@@ -185,7 +185,9 @@ const Jeu = (function () {
       // ⚠️ Pendant qu'on reapprend un bouton de manette, ECHAP annule
       // l'apprentissage ; il ne sort pas de la pause.
       if (Entree.apprendEnCours()) { Hud.majMenu(); Entree.videPresse(); return; }
-      if (Entree.neuf('pause')) { reprendre(); Entree.videPresse(); return; }
+      // Sur l'ecran MANETTE, START sert a se voir s'allumer, pas a reprendre.
+      const sortir = B.menu && B.menu.manetteInerte ? Entree.neufSansManette : Entree.neuf;
+      if (sortir('pause')) { reprendre(); Entree.videPresse(); return; }
       if (B.menu) Hud.majMenu();
       else if (Entree.neuf('action')) reprendre();
       // Fermer le dernier menu avec FRAPPE, c'est reprendre.
