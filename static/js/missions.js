@@ -284,9 +284,11 @@ const Missions = (function () {
     },
 
     abandonner: function (raison) {
+      // Sans course en cours, il n'y a rien a abandonner : on se tait.
+      const encours = !!taxi.etape;
       if (taxi.client) { taxi.client.etat = 'flane'; taxi.client.cri = 0; taxi.client.client = false; }
       taxi.client = null; taxi.destination = null; taxi.etape = null;
-      if (raison) Hud.message(raison);
+      if (raison && encours) Hud.message(raison);
     },
   };
 
