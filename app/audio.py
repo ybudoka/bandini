@@ -167,10 +167,14 @@ CATALOGUE: list[Echantillon] = [
 # ⚠️ Ce qu'ElevenLabs rend n'est PAS ce qu'on garde. Mesure du 13 septembre
 # 2026 sur les 24 premiers fichiers (22 kHz, 32 kbit/s, stereo) :
 #
-# - au-dessus de 8 kHz il ne restait rien — 47 dB sous le niveau du son pour
-#   la sonnette de velo, 49 dB pour la caisse enregistreuse. Or c'est LA que
-#   vit le clinquant d'une piece, le verre d'un phare, le laiton d'une
-#   cloche : on payait pour un son dont on avait jete la moitie ;
+# - il ne restait presque rien au-dessus de 8 kHz. Mesure, en comparant le
+#   pic du signal filtre a 8 kHz au pic du fichier entier : -26 dB pour la
+#   caisse enregistreuse, -27 pour la tole froissee, -30 pour le clic de
+#   menu, -32 pour la porte. Or c'est LA que vit le clinquant d'une piece et
+#   le verre d'un phare — on payait une generation dont on jetait le haut
+#   avant meme de l'ecouter. Les memes sons sont aujourd'hui entre -6 et
+#   -10 dB. ⚠️ Un klaxon, une sirene et un moteur, eux, n'ont pas bouge :
+#   ils n'ont pas d'aigu a avoir, et c'est tres bien ;
 # - un septieme du poids etait du silence en QUEUE (14 % en moyenne, mais
 #   69 % d'un pas, 55 % d'un ramassage, 43 % d'un coup de poing) : de quoi
 #   payer une bonne partie de l'aigu qu'on vient de recuperer ;
@@ -207,10 +211,20 @@ FONDU_S = 0.015
 #: de livrer un fichier de souffle.
 DUREE_PLANCHER_S = 0.05
 
-#: Au-dela de ce gain, ce n'est pas la finition qui a bien travaille : c'est
-#: la GENERATION qui etait faible, et on vient de remonter son souffle avec
-#: elle. Le script le dit, et ces sons-la se REFONT.
-GAIN_SUSPECT_DB = 20.0
+#: Le rapport signal/bruit d'un bruitage BREF fini, sous lequel on a remonte
+#: du souffle avec le son.
+#:
+#: ⚠️ Ce n'est PAS le gain applique, et je m'y suis trompe d'abord : j'avais
+#: pose « plus de 20 dB de gain = generation ratee ». Faux. ElevenLabs rend
+#: souvent un pas a bas niveau mais parfaitement propre — mesure : `pas-2`
+#: demandait +29 dB de gain ET affichait le MEILLEUR plancher des quatre
+#: (-47 dB, 46 dB de RSB). Le drapeau envoyait donc refaire, a credits
+#: perdus, la meilleure prise du lot. Ce qui compte est le plancher de bruit
+#: du fichier fini, pas le chemin pour y arriver.
+#:
+#: ⚠️ Et seulement sur un son BREF : une sirene ou un moteur sont un son
+#: continu, leur « plancher » est le son lui-meme (13 dB pour la sirene).
+RSB_PLANCHER_DB = 30.0
 
 #: Deux debits, en mono et en 44,1 kHz. Un choc porte des transitoires et du
 #: verre, il en a besoin ; une boucle de moteur est une matiere qui tourne, et

@@ -9,6 +9,7 @@ celui qu'on utilise a la main depuis l'agent.
     uv run python scripts/audio_elevenlabs.py --essai     # ce qui serait genere
     uv run python scripts/audio_elevenlabs.py             # genere ce qui manque
     uv run python scripts/audio_elevenlabs.py --refaire coup pas
+    uv run python scripts/audio_elevenlabs.py --refaire pas-2   # cette variante-la
 
 ⚠️ CHAQUE GENERATION COUTE DES CREDITS. Le script ne touche jamais a un
 fichier deja present (sauf `--refaire`), et ne tourne jamais en CI.
@@ -134,6 +135,35 @@ def _pic_dbfs(chemin: Path) -> float:
     return float(trouve.group(1))
 
 
+def _a_du_calme(chemin: Path) -> bool:
+    """Ce fichier contient-il un moment ou le son s'arrete ?
+
+    ⚠️ C'est la condition pour pouvoir mesurer un plancher de bruit. Un
+    buzzer de refus ou une auto qui passe remplissent TOUTE leur duree : leur
+    « plancher », c'est leur son (mesure : 1 dB de RSB pour `erreur`, un
+    fichier pourtant impeccable). Sans calme, pas de mesure — et surtout pas
+    de verdict.
+    """
+    sortie = _sortie_ffmpeg(["-i", str(chemin), "-af",
+                             "silencedetect=n=-40dB:d=0.05", "-f", "null", "-"])
+    return "silence_start" in sortie
+
+
+def _rsb_db(chemin: Path) -> float:
+    """Le pic moins le plancher de bruit — ce qui reste de son une fois le
+    souffle enleve. Rend l'infini quand la question ne se pose pas."""
+    if not _a_du_calme(chemin):
+        return float("inf")
+    sortie = _sortie_ffmpeg(["-i", str(chemin), "-af",
+                             "astats=measure_overall=Noise_floor+Peak_level:"
+                             "measure_perchannel=0", "-f", "null", "-"])
+    plancher = re.search(r"Noise floor dB: (-?[\d.]+)", sortie)
+    pic = re.search(r"Peak level dB: (-?[\d.]+)", sortie)
+    if not plancher or not pic:
+        return float("inf")     # pas mesurable : on ne crie pas au loup
+    return float(pic.group(1)) - float(plancher.group(1))
+
+
 def _duree_s(chemin: Path) -> float:
     """⚠️ ffprobe rend `N/A` — pas une erreur, pas un zero — sur un fichier
     dont il ne sait rien dire (un wav vide, par exemple, ce qui arrive quand
@@ -205,22 +235,49 @@ def finir(master: Path, cible: Path, boucle: bool) -> dict:
                         "-b:a", audio.DEBIT_BOUCLE if boucle else audio.DEBIT_BREF,
                         "-map_metadata", "-1", str(cible)])
 
+    # ⚠️ On juge le fichier FINI, pas le gain qu'il a fallu. Un son sorti bas
+    # mais propre est un bon son ; un son sorti bas ET bruyant, on vient d'en
+    # remonter le souffle, et ca se REFAIT (`--refaire pas-2`) — ca ne se
+    # repare pas. Une boucle est exemptee : son plancher, c'est son son.
+    rsb = float("inf") if boucle else _rsb_db(cible)
     return {"avant": avant, "apres": cible.stat().st_size, "duree": duree, "gain": gain,
-            # ⚠️ Un gain enorme veut dire que la GENERATION etait faible, pas
-            # que la finition a bien travaille : on remonte alors le souffle
-            # avec le son. Ca se refait (`--refaire <slug>`), ca ne se repare pas.
-            "faiblard": gain > audio.GAIN_SUSPECT_DB}
+            "rsb": rsb, "souffle": rsb < audio.RSB_PLANCHER_DB}
+
+
+def _demande(nom: str) -> tuple[str, int | None]:
+    """« pas » -> tout le son ; « pas-2 » -> cette variante-la, seule.
+
+    ⚠️ ElevenLabs ne rend pas deux fois la meme qualite : sur quatre pas, il
+    en sort regulierement un beaucoup plus faible que les autres, qu'il faut
+    remonter de 25 dB avec son souffle. Refaire les quatre pour en corriger
+    un, c'est payer trois generations pour rien — et en abimer peut-etre une
+    bonne au passage. D'ou l'indice. Aucun slug ne porte de chiffre
+    (`test_un_echantillon_est_generable` l'exige), donc `nom-2` ne peut pas
+    etre autre chose qu'une variante.
+    """
+    tete, _, queue = nom.rpartition("-")
+    if tete and queue.isdigit():
+        return tete, int(queue)
+    return nom, None
 
 
 def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
     if not refaire:
         return audio.manquants()
     connus = set(audio.SLUGS) | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES} | {v["slug"] for v in audio.toutes_les_voix()}
-    inconnus = [s for s in refaire if s not in connus]
+    demandes = [_demande(nom) for nom in refaire]
+    inconnus = [nom for nom, (slug, _) in zip(refaire, demandes) if slug not in connus]
     if inconnus:
         raise SystemExit(f"slugs inconnus : {inconnus} (voir app/audio.py)")
-    return [(e, i) for e in audio.CATALOGUE if e["slug"] in refaire
-            for i in range(1, e["variantes"] + 1)]
+    hors_bornes = [f"{slug}-{indice}" for slug, indice in demandes
+                   if indice is not None and audio.par_slug(slug)
+                   and not 1 <= indice <= audio.par_slug(slug)["variantes"]]
+    if hors_bornes:
+        raise SystemExit(f"variantes qui n'existent pas : {hors_bornes}")
+    voulus = {(slug, indice) for slug, indice in demandes}
+    return [(e, i) for e in audio.CATALOGUE
+            for i in range(1, e["variantes"] + 1)
+            if (e["slug"], i) in voulus or (e["slug"], None) in voulus]
 
 
 def radios_a_faire(refaire: list[str]) -> list[dict]:
@@ -233,7 +290,8 @@ def main() -> int:
     argus = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     argus.add_argument("--essai", action="store_true", help="dire quoi generer, sans rien depenser")
     argus.add_argument("--refaire", nargs="*", default=[], metavar="SLUG",
-                       help="regenerer ces sons meme s'ils existent")
+                       help="regenerer ces sons meme s'ils existent ; « pas » refait "
+                            "les quatre variantes, « pas-2 » refait celle-la seule")
     argus.add_argument("--radios", action="store_true",
                        help="generer aussi les stations de radio (musique : CHER)")
     argus.add_argument("--voix", action="store_true",
@@ -311,10 +369,11 @@ def main() -> int:
                     print(f"  ✗ {nom:>16}  finition : {souci}")
                     continue
                 faits += 1
+                rsb = "" if bilan["rsb"] == float("inf") else f"  RSB {bilan['rsb']:>4.0f} dB"
                 print(f"  ✓ {nom:>18}  {bilan['apres']:>6} o  {bilan['duree']:>5.2f} s  "
-                      f"gain {bilan['gain']:+5.1f} dB"
-                      f"{'  ⚠ generation faible' if bilan['faiblard'] else ''}")
-                if bilan["faiblard"]:
+                      f"gain {bilan['gain']:+5.1f} dB{rsb}"
+                      f"{'  ⚠ ca souffle' if bilan['souffle'] else ''}")
+                if bilan["souffle"]:
                     faibles.append(nom)
         for ligne in voix:
             nom = audio.nom_fichier_voix(ligne)
@@ -360,8 +419,8 @@ def main() -> int:
 
     print(f"\n{faits} son(s) generes, {len(rates)} en echec.")
     if faibles:
-        print("⚠️  Sortis trop faibles de chez ElevenLabs, donc remontes avec leur souffle "
-              f"— a refaire : {' '.join(faibles)}")
+        print("⚠️  Du souffle sous le son (RSB sous "
+              f"{audio.RSB_PLANCHER_DB:.0f} dB) — a refaire : {' '.join(faibles)}")
     for nom, erreur in rates:
         print(f"  {nom} : {erreur}")
     if faits:

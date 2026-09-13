@@ -1,6 +1,8 @@
 """Le catalogue des sons — et le fait que le jeu sonne meme sans les fichiers."""
 
 import re
+import shutil
+import subprocess
 
 import pytest
 
@@ -181,3 +183,161 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
     assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in histoire)
     slugs = {v["slug"] for v in histoire} | {v["slug"] for v in paquet["audio"]["voix"]}
     assert len(slugs) == len(histoire) + len(paquet["audio"]["voix"]), "un slug de voix par replique"
+
+
+# --- La finition : on juge les FICHIERS, pas l'intention -----------------------------
+#
+# ⚠️ Ces juges-la sont d'une autre nature que ceux du dessus. Les premiers
+# verifient le CATALOGUE (une recette bien formee, un slug unique) ; ceux-ci
+# ouvrent les octets et mesurent. C'est la seule facon d'attraper ce qui nous
+# etait passe sous le nez pendant deux jours : des fichiers sans aigu, des
+# pics qui vont de -34 dB a 0, un son large qu'aucun panoramique ne rattrape.
+# Aucun ne remplace l'oreille de Martin — ils disent seulement que la chaine
+# a bien tourne, pas que le son est le bon.
+
+
+def _ffprobe(chemin, entrees):
+    fait = subprocess.run(["ffprobe", "-v", "error", "-show_entries", entrees,
+                           "-of", "default=nw=1:nk=1", str(chemin)],
+                          capture_output=True, text=True)
+    return fait.stdout.split()
+
+
+def _pic_dbfs(chemin):
+    """⚠️ `volumedetect` ecrit au niveau `info`, sur la sortie d'ERREUR : avec
+    un `-v error` de trop on mesure un silence et tous les juges passent."""
+    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin),
+                           "-af", "volumedetect", "-f", "null", "-"],
+                          capture_output=True, text=True)
+    trouve = re.search(r"max_volume: (-?[\d.]+) dB", fait.stderr)
+    assert trouve, f"pas de pic mesurable dans {chemin.name}"
+    return float(trouve.group(1))
+
+
+ffmpeg_present = pytest.mark.skipif(
+    shutil.which("ffprobe") is None or shutil.which("ffmpeg") is None,
+    reason="ffmpeg n'est pas installe : ces juges mesurent des octets")
+
+#: Les fichiers de bruitage reellement presents, avec leur echantillon.
+BRUITAGES = [(e, i) for e in audio.CATALOGUE for i in range(1, e["variantes"] + 1)
+             if audio.chemin(e, i).is_file()]
+
+
+@ffmpeg_present
+@pytest.mark.parametrize("echantillon,indice", BRUITAGES,
+                         ids=lambda x: x if isinstance(x, int) else x["slug"])
+def test_un_bruitage_est_mono_et_en_44_khz(echantillon, indice):
+    """⚠️ Mono n'est pas une economie, c'est une CORRECTION : `son.js` place
+    ses sons avec un `StereoPanner`, et un fichier deja large arrive a gauche
+    quoi qu'on lui demande. Deux des premiers fichiers etaient dans ce cas."""
+    frequence, canaux = _ffprobe(audio.chemin(echantillon, indice),
+                                 "stream=sample_rate,channels")
+    assert int(canaux) == 1, "un son large ne se laisse pas placer"
+    assert int(frequence) == 44100, "en 22 kHz il n'y a plus rien au-dessus de 11 kHz"
+
+
+@ffmpeg_present
+@pytest.mark.parametrize("echantillon,indice", BRUITAGES,
+                         ids=lambda x: x if isinstance(x, int) else x["slug"])
+def test_un_bruitage_part_du_meme_niveau(echantillon, indice):
+    """Tous au meme pic, pour que `volume` veuille dire quelque chose.
+
+    ⚠️ La marge est celle de l'ENCODEUR, pas du reglage : `ffmpeg` normalise
+    au sample pres, puis le mp3 rend un pic qui bouge — mesure sur les 32
+    fichiers, il s'ecarte de -1,0 dBFS jusqu'a 1,0 dB dans les deux sens. La
+    marge tient a 1,2 : l'ecart total est passe de **34,4 dB a 1,8 dB**, et
+    c'est ca que le juge protege.
+    """
+    pic = _pic_dbfs(audio.chemin(echantillon, indice))
+    assert abs(pic - audio.PIC_VISE_DBFS) <= 1.2, \
+        f"{pic:+.1f} dBFS au lieu de {audio.PIC_VISE_DBFS:+.1f} : le melange ne tient plus"
+
+
+@ffmpeg_present
+@pytest.mark.parametrize("echantillon,indice",
+                         [(e, i) for e, i in BRUITAGES if not e["boucle"]],
+                         ids=lambda x: x if isinstance(x, int) else x["slug"])
+def test_un_bruitage_bref_ne_finit_pas_par_du_vide(echantillon, indice):
+    """On ne paie pas pour du silence. ⚠️ Les boucles sont exclues : c'est
+    exactement leur couture qu'un rognage abimerait."""
+    chemin = audio.chemin(echantillon, indice)
+    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
+                           f"silencedetect=n={audio.SEUIL_QUEUE_DBFS}dB:d=0.2",
+                           "-f", "null", "-"], capture_output=True, text=True)
+    duree = float(_ffprobe(chemin, "format=duration")[0])
+    debuts = [float(m) for m in re.findall(r"silence_start: (-?[\d.]+)", fait.stderr)]
+    fins = [float(m) for m in re.findall(r"silence_end: ([\d.]+)", fait.stderr)]
+    if debuts and len(debuts) > len(fins):      # un silence ouvert jusqu'au bout
+        assert duree - debuts[-1] < 0.25, \
+            f"{duree - debuts[-1]:.2f} s de rien a la fin de {chemin.name}"
+
+
+@ffmpeg_present
+def test_les_bruitages_ont_de_l_aigu():
+    """Le defaut d'origine, en un juge : en 22 kHz / 32 kbit/s, il ne restait
+    presque rien au-dessus de 8 kHz.
+
+    On compare le pic du signal filtre a 8 kHz au pic du fichier entier.
+    Mesure sur les cinq sons qui DOIVENT briller — anciens fichiers puis
+    nouveaux : caisse -26 → -10, ramassage -23 → -7, tole -27 → -6, porte
+    -32 → -10, clic -30 → -7. Le seuil de -14 dB tombe entre les deux, avec
+    au moins 4 dB de marge de chaque cote : il aurait refuse les anciens
+    fichiers, il accepte ceux-ci.
+
+    ⚠️ On ne juge QUE ces cinq-la. Un klaxon, une sirene, un moteur sont des
+    sons graves : ils n'ont pas d'aigu a avoir, et leur en demander ferait
+    tomber le juge sur des fichiers parfaits. ⚠️ La sonnette de velo est
+    dehors elle aussi, pour la raison inverse : c'est le seul son que le
+    22 kHz n'avait pas trop abime (-16 dB), donc il ne separe rien.
+    """
+    for slug in ("argent", "ramasse", "choc", "porte", "menu"):
+        echantillon = audio.par_slug(slug)
+        chemin = audio.chemin(echantillon, 1)
+        if not chemin.is_file():
+            pytest.skip(f"{slug} n'est pas genere")
+        entier = _pic_dbfs(chemin)
+        fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
+                               "highpass=f=8000:poles=2,volumedetect", "-f", "null", "-"],
+                              capture_output=True, text=True)
+        aigu = float(re.search(r"max_volume: (-?[\d.]+) dB", fait.stderr).group(1))
+        assert aigu - entier > -14, \
+            f"{slug} : rien au-dessus de 8 kHz ({aigu - entier:.0f} dB sous le pic)"
+
+
+@ffmpeg_present
+@pytest.mark.parametrize("echantillon,indice",
+                         [(e, i) for e, i in BRUITAGES if not e["boucle"]],
+                         ids=lambda x: x if isinstance(x, int) else x["slug"])
+def test_un_bruitage_bref_ne_souffle_pas(echantillon, indice):
+    """Normaliser remonte le son ET son plancher. Si la generation etait
+    bruyante, on l'entend maintenant.
+
+    ⚠️ Le juge mesure le fichier FINI, jamais le gain qu'il a fallu — c'est
+    l'erreur que le script faisait : `pas-2` demandait +29 dB et sortait avec
+    le meilleur plancher des quatre variantes. Un son bas et propre est un
+    bon son.
+
+    ⚠️ On ne voit le souffle que quand le son S'ARRETE. Les boucles sont donc
+    exclues (sur une sirene, le « plancher » mesure le son continu lui-meme :
+    13 dB), et parmi les sons brefs, ceux qui remplissent toute leur duree
+    aussi — mesure : le buzzer de refus et l'auto qui passe donnent 1 dB de
+    RSB alors que leurs fichiers sont impeccables. Sans un moment de calme,
+    pas de verdict.
+    """
+    chemin = audio.chemin(echantillon, indice)
+    calme = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
+                            "silencedetect=n=-40dB:d=0.05", "-f", "null", "-"],
+                           capture_output=True, text=True)
+    if "silence_start" not in calme.stderr:
+        pytest.skip("son continu : son plancher, c'est son son")
+    fait = subprocess.run(["ffmpeg", "-hide_banner", "-i", str(chemin), "-af",
+                           "astats=measure_overall=Noise_floor+Peak_level:"
+                           "measure_perchannel=0", "-f", "null", "-"],
+                          capture_output=True, text=True)
+    plancher = re.search(r"Noise floor dB: (-?[\d.]+)", fait.stderr)
+    pic = re.search(r"Peak level dB: (-?[\d.]+)", fait.stderr)
+    if not plancher or not pic:
+        pytest.skip("plancher non mesurable sur ce fichier")
+    rsb = float(pic.group(1)) - float(plancher.group(1))
+    assert rsb >= audio.RSB_PLANCHER_DB, \
+        f"{chemin.name} : {rsb:.0f} dB de rapport signal/bruit, ca souffle"
