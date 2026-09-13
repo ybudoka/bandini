@@ -179,6 +179,55 @@ const Monde = (function () {
     if (s === 5) return (masque & BARBELE) !== 0;
     return false;
   }
+  /** Un lourd passe AU TRAVERS d'un obstacle bas : la tuile tombe, et le sol
+      de ses voisines prend sa place. Rend vrai si quelque chose a cede.
+
+      ⚠️ **Jamais une façade** (`solide 1`), jamais l'eau, jamais le barbelé, et
+      jamais un meuble : la ville tient par ses murs — les juges de connexité,
+      les intérieurs et les devantures en dépendent, et un trou dans un mur
+      ouvrirait sur un toit. Ce qui se défonce, c'est ce qui est BAS : la
+      borne-fontaine (3), le grillage et la palissade (4).
+
+      ⚠️ Et le glyphe de remplacement se LIT DANS LES VOISINES. Une clôture
+      entre un gazon et un trottoir laisse du gazon ou du trottoir — jamais une
+      tuile inventée. C'est ce qui évite un glyphe « décombres » de plus, avec
+      son peintre, son entrée de légende et son octet dans le paquet : le trou
+      dans une clôture, c'est la clôture qui manque, pas des gravats. */
+  function defoncer(tx, ty) {
+    const s = solidite(tx, ty);
+    if (s !== 3 && s !== 4) return false;
+    if (estMeuble(tx, ty)) return false;
+    // Le sol d'à côté : on préfère ce qui n'est pas de la chaussée (une
+    // clôture borde une cour bien plus souvent qu'une rue).
+    let remplacant = null, secours = null;
+    for (const d of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const vx = tx + d[0], vy = ty + d[1];
+      if (solidite(vx, vy) !== 0) continue;
+      const g = glyphe(vx, vy);
+      if (estRoute(vx, vy)) { if (!secours) secours = g; continue; }
+      remplacant = g;
+      break;
+    }
+    remplacant = remplacant || secours;
+    if (!remplacant) return false;
+    const p = carte.legende[remplacant] || {};
+    const ligne = carte.sol[ty];
+    carte.sol[ty] = ligne.slice(0, tx) + remplacant + ligne.slice(tx + 1);
+    const i = ty * carte.w + tx;
+    carte.solide[i] = p.solide || 0;
+    carte.route[i] = p.route ? 1 : 0;
+    carte.passage[i] = (p.route && p.trottoir) ? 1 : 0;
+    // ⚠️ Les morceaux VOISINS aussi : une clôture lit ses voisines pour savoir
+    // comment se peindre (`varianteDeCloture`), donc en casser une change le
+    // dessin des deux d'à côté — qui peuvent être dans un autre morceau.
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        carte.morceaux.delete(Math.floor((tx + dx) / MORCEAU) + ',' + Math.floor((ty + dy) / MORCEAU));
+      }
+    }
+    return true;
+  }
+
   /** Une cloture qui s'enjambe a cette tuile — grillage ou palissade de bois
       (voir `Entites.enjamber`). Le barbele, lui, ne s'enjambe pas. */
   function estEnjambable(tx, ty) { return solidite(tx, ty) === 4; }
@@ -770,7 +819,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

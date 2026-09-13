@@ -1121,6 +1121,16 @@ Ce qui a été livré :
 - **Juges (2 neufs)** : celui des sprites de phase 1, et celui qui crée les cinq chars, les
   conduit vingt images, mesure la chaîne de cercles (aucun trou, le compte de la fiche) et
   dessine une image sans planter.
+- ⚠️ **Corrigé le 13 sept. 2026, une heure après la mise en ligne** (bug de Martin :
+  « l'autobus est transparent »). Il l'était. `s` valait `#00000030` — un noir à 19 % — copié
+  des trois autos, **où il ne couvre que huit pixels de capot** : un reflet. Sur l'autobus, la
+  même lettre couvrait deux trappes de toit de 66 pixels, soit **17 %** de la carrosserie, et
+  le canevas de cuisson est transparent : on voyait la rue à travers l'autobus. Les quatre
+  nouvelles palettes prennent des tons **opaques** (une trappe grise, une bande orange sur le
+  blanc de l'ambulance), et **un troisième juge** tient la règle : un reflet est un détail,
+  **au plus un pixel peint sur vingt** par sprite de véhicule. La règle n'est pas « aucune
+  couleur translucide » — les trois autos en vivent très bien — c'est la **surface** qui
+  décide. Il rougissait à 17 %.
 
 ### Une rampe qu'on peut vraiment prendre (**correctif**, taille 2)
 

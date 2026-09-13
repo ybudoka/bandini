@@ -75,6 +75,53 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
     )
 
 
+def test_aucune_carrosserie_n_est_transparente(banc):
+    """⚠️ Bug de Martin : « l'autobus est transparent. »
+
+    Et il l'était. `s` valait `#00000030` — un noir à 19 % — copié des trois
+    autos, où il ne couvre que huit pixels de capot : un REFLET. Sur l'autobus,
+    la même lettre couvrait deux trappes de toit de 66 pixels chacune, soit un
+    cinquième de la carrosserie, et le canevas de cuisson est transparent :
+    on voyait la rue à travers l'autobus.
+
+    La règle n'est donc pas « aucune couleur translucide » — les trois autos
+    en vivent bien — mais **un reflet est un détail** : au plus un pixel peint
+    sur vingt. Au-delà, ce n'est plus un reflet, c'est une carrosserie qu'on
+    a oublié de peindre."""
+    r = banc("""function (L, o) {
+        const bilans = {};
+        for (const v of L.B.defs.vehicules) {
+            const def = L.SPRITES[v.sprite];
+            if (!def) continue;
+            // Les lettres dont la couleur porte un canal alpha (#rrggbbaa).
+            const claires = {};
+            for (const ch in def.pal) claires[ch] = /^#[0-9a-fA-F]{8}$/.test(def.pal[ch]);
+            let peints = 0, translucides = 0;
+            for (const pose in def.poses) {
+                for (const grille of def.poses[pose]) {
+                    for (const ligne of grille) {
+                        for (const ch of ligne) {
+                            if (ch === '.') continue;
+                            peints++;
+                            if (claires[ch]) translucides++;
+                        }
+                    }
+                }
+            }
+            bilans[v.slug] = { peints: peints, translucides: translucides };
+        }
+        return bilans;
+    }""")
+    assert r, "aucun sprite de vehicule trouve"
+    for slug, b in r.items():
+        assert b["peints"] > 40, "%s : %s pixels peints, ce n'est pas un char" % (slug, b["peints"])
+        part = b["translucides"] / b["peints"]
+        assert part <= 0.05, (
+            "%s : %s pixels translucides sur %s (%.0f %%) — on voit la rue au travers"
+            % (slug, b["translucides"], b["peints"], part * 100)
+        )
+
+
 def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
     """⚠️ Un sprite ne suffit pas : le char doit NAITRE dans le trafic, tenir
     la route, et se laisser conduire. Ce juge les cree tous les quatre, les
