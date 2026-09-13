@@ -57,7 +57,8 @@ ne bougent pas quand l'ordre de travail change.
 | Les toits | **livré** (13 sept. 2026) | demande de Martin (« je veux que les toits soient plus réalistes ») : ils étaient peints **tuile par tuile**, chacune ignorant les autres — une texture, pas un toit. Ils ont maintenant un **bord** (parapet clair + ligne d'ombre, lu dans le voisinage comme les passages piétons), un **grain** qui varie de tuile en tuile, une **couverture par genre** (`COUVERTURES` : deux versants en banlieue, tôle et gravier à La Shop, ardoise en ville) que **deux voisins collés ne partagent jamais** (sans quoi il n'y a pas de bord à trouver entre eux), des **versants** avec leur ligne de faîte — comptés dans les voisines, zéro donnée de plus —, **172 équipements** (ventilation, climatisation, cheminée, cage d'escalier, réservoir, antennes) qui voyagent dans le paquet comme les enseignes, et une **ombre portée** sur la rue qui donne d'un coup de la hauteur à la ville. 4 juges neufs ; paquet à 368 Ko bruts / 41 Ko gzip |
 | Le fondu de l'hôpital et de la prison | **livré** (13 sept. 2026) | demande de Martin (« il faut corriger le fade out et in quand on va à l'hôpital ou qu'on se fait enfermer ») : quatre changements de scène — l'hôpital, la prison, la compagnie, le coucher — étaient restés sur `Hud.fondu` + `setTimeoutJeu`, soit **deux horloges** que rien ne liait : l'une comptait dans le dessin, l'autre dans la mise à jour. On se regardait donc disparaître de la rue à **80 % de noir**, le texte se lisait par-dessus le trottoir où l'on venait de tomber, et la ville continuait de tourner pendant les deux secondes et demie — un char pouvait repasser sur un joueur à 1 PV. Les quatre passent maintenant par la machine des portes, `Jeu.transiter()`, qui n'a **qu'une** horloge et change la scène **pile** à alpha 1. Elle gagne pour eux un troisième nombre, `[fermer, tenir, ouvrir]` : une porte, on la passe ; une nuit, un séjour à l'hôpital **font passer du temps**, et ce temps se sent dans le noir tenu, où le texte s'écrit — et **seulement** là. `Hud.fondu`, `setTimeoutJeu` et leurs minuteries sont supprimés : plus une seule deuxième horloge dans le jeu |
 | Des sirènes qu'on entend | **livré** (13 sept. 2026) | demande de Martin (« je veux des sirènes pour les ambulances et polices ») : il n'y en avait **qu'une**, et presque jamais — `Son.boucle('sirene', …)` ne s'allumait que pour une auto-patrouille de l'IA en chasse, à volume fixe, sans distance. L'ambulance déclare pourtant `sirene: true` depuis M9 et n'en a **jamais** fait entendre une seule ; au volant, aucune des deux. Maintenant : **deux sons** (celle de la police monte et descend, celle de l'ambulance fait deux notes — les confondre, c'est ne pas savoir qui arrive derrière soi), un **volume qui suit la distance** (460 px de portée), une **ambulance sur trois** qui naît en course dans le trafic, et au volant d'un char à sirène le **bouton du klaxon devient celui de la sirène** — l'étiquette du bouton tactile le dit |
-| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. Le **camion défonce** ce qui est bas et jamais une façade, l'**ambulance soigne** qui la conduit sans ressusciter personne. **Reste** : le `crochet` de la remorqueuse, les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
+| Des bruitages qui ont encore leur aigu | **en cours** (13 sept. 2026) | demande de Martin (« améliore les effets spéciaux en qualité », puis « génère-les avec l'IA ») : les 24 bruitages étaient générés **à leur taille finale** (22 kHz, 32 kbit/s, stéréo), et c'était trois défauts d'un coup. ⚠️ **Plus d'aigu du tout** : au-dessus de 8 kHz il ne restait rien — **47 dB** sous le niveau du son pour la sonnette de vélo, **49** pour la caisse enregistreuse. Or c'est là que vit le clinquant d'une pièce, le verre d'un phare, le laiton d'une cloche : on payait une génération dont on jetait la moitié **avant même de l'écouter**. ⚠️ **Des niveaux au hasard** : les pics allaient de **−34 dB** (un pas) à **0 dB pile** (huit fichiers collés au plafond), donc le `volume` du catalogue ne dosait rien — il multipliait un accident. ⚠️ **Deux fichiers larges** (la porte, le refus : leurs deux canaux ne se ressemblent qu'à 1 dB près) — et un son déjà large ne se laisse plus placer par le `StereoPanner` de `son.js`, il arrive à gauche quoi qu'on lui demande. ElevenLabs rend désormais un **master** (`mp3_44100_128`) que `ffmpeg` ramène à la taille du jeu (`finir()`) : mono, normalisé au même pic (−1 dBFS), queue rognée puis fermée par un fondu de 15 ms, 96 kbit/s pour un bruit bref et 64 pour une boucle. ⚠️ **L'ordre des gestes est tout le problème** : rogner avant de normaliser — ce que j'avais fait d'abord — applique un seuil **absolu** de −45 dBFS à une génération sortie à −34 dB, donc **en plein milieu du son** ; mesuré : un pas réduit à 0,06 s puis remonté de +37 dB, il ne restait que le souffle. Normalisé d'abord, le seuil est toujours à 44 dB sous le pic. ⚠️ Une **boucle** ne se rogne ni ne se fond : c'est sa couture qu'on abîmerait, et le trou s'entendrait à chaque tour. Les `volume` sont recalculés pour **reproduire le mélange d'avant** (pic mesuré × ancien volume), sauf `pas` et `sonnette`, qui sortaient sous −23 dB une fois mixés — sous ce qu'on entend en jouant. Nouveau champ `influence` : haut pour ce qui doit être **une** chose exacte (un clic, un klaxon, une sirène), plus bas pour une matière (une explosion, une foule), où le modèle rend mieux quand on lui laisse de la place. **32 fichiers pour 21 sons** — `pas` passe à 4 variantes, `coup` et `touche` à 3, `choc`, `klaxon` et `ramasse` à 2. Le script **dénonce ses propres ratés** : au-delà de +20 dB de gain, ce n'est pas la finition qui a bien travaillé, c'est la génération qui était faible et dont on vient de remonter le souffle — il le nomme et il faut la refaire. Juges d'une autre **nature** que ceux du catalogue : ils ouvrent les octets (mono, 44,1 kHz, pic à −1 dBFS près d'un demi-décibel, pas de vide en queue, et de l'énergie au-dessus de 8 kHz sur les deux sons les plus brillants). ⚠️ **Pourquoi « en cours »** : Martin ne les a pas encore écoutés. Aucun juge ne dit qu'un son est le BON son — seulement que la chaîne a tourné |
+| M9 Le parc et les boulots | **P1** ajout, **aux deux tiers** (13 sept. 2026) | ⚠️ Le Python était commité et **le JS n'existait pas** : quatre chars de phase 1 vivaient dans le paquet, se tiraient au trafic et se revendaient au garage, mais **rien ne les dessinait** — et aucun test ne le disait, alors que le prologue de `vehicules.py` le promettait. **Livré** : les quatre sprites (camion, autobus, ambulance, remorqueuse), le juge manquant (« tout char de phase 1 a son sprite »), et la **chaîne de cercles lue dans la fiche** — elle valait 3 pour tout le monde, donc une moto entrait dans l'autobus par le milieu. Et **un vélo ne saute plus** : il n'a pas de réservoir, donc il se **plie** — pas de feu, pas de fumée, pas de secousse, aucun délit. Le **camion défonce** ce qui est bas et jamais une façade, l'**ambulance soigne** qui la conduit sans ressusciter personne. La **remorqueuse traîne** un char, un seul. **Reste** : les boulots au klaxon, la fourrière, la radio procédurale, le sport et le luxe |
 | Rampes vraiment prenables | **P1** **correctif** à faire | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | Un saut qu'on ne voit pas | **P1** **correctif** à faire | bug de Martin (« les rampes n'ont pas l'air de fonctionner »). ⚠️ Elles fonctionnent : le saut mesure **7,8 px** pour une berline (2,0 px pour un vélo) et dure **0,3 s**, sur des tuiles de 16 px. Et l'ombre est un rectangle **fixe** de 20 × 10 qui ne rétrécit ni ne s'éloigne — elle ne raconte aucune hauteur |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
@@ -497,7 +498,7 @@ ordre-là.
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, le `crochet` de la remorqueuse, et le sport et le luxe. Prérequis de M10 |
+| **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** ⚠️ **Toutes les fiches sont lues.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, et le sport et le luxe. Prérequis de M10 |
 | **P1** | **correctif** | Une rampe qu'on peut vraiment prendre | 2 | ⚠️ *Le Grand Saut* est au tableau des défis et **ne peut pas se gagner** : la moto vole 126 px pour 96 px de réception |
 | **P1** | **correctif** | Un saut qu'on ne voit pas | 1 | ⚠️ un saut mesure **7 px** et dure 0,3 s : les rampes ont l'air de ne pas marcher, et l'ombre est un rectangle fixe qui ne dit aucune hauteur |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
@@ -1041,15 +1042,14 @@ pour le lot de la fourrière) : les fiches, l'économie, la carte et leurs juges
 **Livré le 13 sept. 2026** — les quatre chars existent, et un vélo ne saute plus (les deux
 fiches ci-dessous). **Reste à faire**, et c'est celui qui se joue :
 
-- le `crochet` de la remorqueuse est dans la fiche et **personne ne le lit** ;
 - les **boulots au klaxon** ne se prennent pas : `Missions.taxi` est encore le seul, et la
   fourrière n'a ni comptoir, ni saisie à l'arrestation, ni chars dans sa cour ;
 - la **radio procédurale** est dans le paquet mais `Son.Radio` ne sait pas qu'une station
   peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien ;
 - le **sport** et le **luxe** n'existent pas encore.
 
-- `vehicules.py` : les quatre chars **existent, roulent, défoncent et soignent** (fiches
-  livrées plus bas) ; reste le `crochet` de la **remorqueuse**.
+- `vehicules.py` : les quatre chars **existent, roulent, défoncent, soignent et remorquent**
+  (fiches livrées plus bas) — plus une seule ligne de fiche que le navigateur ignore.
   Le **bateau** vient en dernier : il demande une physique à part et des tuiles d'eau
   carrossables — s'il coûte plus qu'il ne donne, il tombe en v3, et le traversier de M12
   suffit pour l'eau.
@@ -1140,6 +1140,32 @@ voulaient rien dire.
   une façade ni du barbelé** ; une berline ne casse rien ; au pas (sous
   `defonce_vitesse_min`), personne ne défonce. Et l'ambulance rend bien ses PV, s'arrête au
   plafond, met la sauvegarde à jour, pendant qu'une berline n'en rend aucun.
+
+#### Le crochet de la remorqueuse (taille 1) — **livré le 13 sept. 2026**
+
+`crochet` était la dernière ligne de fiche que personne ne lisait : la remorqueuse était un
+camion orange. Elle traîne maintenant un char — **un seul**.
+
+- **On accroche DERRIÈRE.** Un crochet est à l'arrière : il faut reculer dessus. C'est ce
+  geste, et pas le catalogue, qui fait qu'une remorqueuse n'est pas un camion.
+- ⚠️ **Un seul à la fois**, et ce n'est pas un détail de confort : c'est ce qui empêche le
+  train de douze chars qu'on ne saurait plus arrêter. Le **même bouton** accroche et décroche.
+- **Le câble** tire le char vers un point fixe derrière la remorqueuse (`crochet_cable_px`,
+  `crochet_raideur`), et le char **pointe vers elle** — c'est ce qui se lit d'un coup d'œil.
+- ⚠️ **Il reste bloqué par les tuiles** : on ne traîne pas une épave à travers un mur. Le
+  câble s'étire alors, et **s'il s'étire trop, il lâche**. Un virage serré coûte donc quelque
+  chose, sans une seule ligne de plus.
+- ⚠️ **Jamais un char conduit** : on n'accroche pas une auto avec quelqu'un dedans.
+- ⚠️ **Deux chars reliés ne se bousculent pas** (`heurterVehicules` saute la paire) et le
+  trafic **n'oublie pas** un char qu'on traîne — sinon il disparaîtrait au bout du câble dès
+  qu'il passerait la distance d'oubli. Et si la remorqueuse saute, le câble lâche : sans ça,
+  un char reste accroché à une carcasse que plus personne ne met à jour.
+- **Le boulot de remorquage est le même bouton** : il n'y aura pas deux gestes à apprendre
+  quand la fourrière ouvrira.
+- **Juge (1 neuf)** : rien ne s'accroche **devant** ; ce qui est derrière s'accroche ; un
+  deuxième appui décroche au lieu d'ajouter ; un char conduit se refuse ; en roulant droit sur
+  90 images le char suit sans monter dans la remorqueuse ni s'éloigner sans fin, et il pointe
+  vers elle ; étiré de force à 400 px, le câble lâche.
 
 #### Un vélo ne saute plus, il se plie (**correctif**, taille 1) — **livré le 13 sept. 2026**
 

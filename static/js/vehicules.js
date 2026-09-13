@@ -48,7 +48,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false,
+      vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
     }, options || {}));
     return v;
   }
@@ -116,7 +116,7 @@ const Vehicules = (function () {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
       const loin = dist2(v.x, v.y, j.x, j.y) > t.oubli_px * t.oubli_px;
-      if (loin && v.conducteur !== j && !v.mission && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
+      if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
       if (v.etat === 'epave') continue;
       if (v.conducteur === 'trafic') roulent++; else if (v.conducteur !== j) stationnes++;
     }
@@ -311,6 +311,8 @@ const Vehicules = (function () {
     const miens = cercles(v);
     const portee = v.def.longueur + 20;
     for (const autre of Entites.autour(v.x, v.y, portee, function (e) { return e.type === 'vehicule' && e !== v; })) {
+      // Le char au bout du cable n'est pas un obstacle : il est accroche.
+      if (autre === v.remorque || autre === v.remorqueePar) continue;
       const siens = cercles(autre);
       for (const a of miens) {
         for (const b of siens) {
@@ -403,6 +405,10 @@ const Vehicules = (function () {
       pour une explosion a deux etoiles. */
   function plier(v) {
     v.etat = 'epave';
+    // ⚠️ Le cable lache : sans ca, un char reste accroche a une carcasse
+    // que plus personne ne met a jour, et le trafic ne l'oublie jamais.
+    if (v.remorque) decrocher(v);
+    if (v.remorqueePar) decrocher(v.remorqueePar);
     v.vie = 0;
     v.vitesse = 0; v.vx = 0; v.vy = 0;
     v.plie = true;
@@ -457,6 +463,78 @@ const Vehicules = (function () {
     }
     if (v.klaxonT > 0) { v.klaxonT--; if (v.klaxonT === 29) Son.SFX.klaxon(); }
     soignerAuVolant(v);
+    majCrochet(v);
+  }
+
+  // --- Le crochet de la remorqueuse ------------------------------------------------
+
+  /** Le char qu'on peut accrocher : le plus proche DERRIERE soi, sans
+      conducteur, dans `crochet_portee_px`. ⚠️ Derriere : un crochet est a
+      l'arriere, et il faut donc reculer dessus — c'est le geste qui rend la
+      remorqueuse autre chose qu'un camion. */
+  function aCrocher(v) {
+    const ph = physique();
+    const ax = v.x - Math.cos(v.angle) * v.def.longueur / 2;
+    const ay = v.y - Math.sin(v.angle) * v.def.longueur / 2;
+    let meilleur = null, dMin = ph.crochet_portee_px * ph.crochet_portee_px;
+    for (const e of Entites.autour(ax, ay, ph.crochet_portee_px + 30, function (q) { return q.type === 'vehicule'; })) {
+      if (e === v || e.remorqueePar || e.remorque || e.conducteur) continue;
+      const d = dist2(e.x, e.y, ax, ay);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    return meilleur;
+  }
+
+  /** Accrocher, ou decrocher si on traine deja quelque chose. ⚠️ UN SEUL a la
+      fois : c'est la fiche qui le dit, et c'est ce qui empeche le train de
+      douze chars qu'on ne saurait plus arreter. */
+  function basculerCrochet(v) {
+    if (v.remorque) { decrocher(v); return false; }
+    const cible = aCrocher(v);
+    if (!cible) { Hud.message('RIEN A ACCROCHER DERRIERE'); return false; }
+    v.remorque = cible;
+    cible.remorqueePar = v;
+    cible.alarme = 0;
+    Son.SFX.choc();
+    Hud.message(cible.def.nom.toUpperCase() + ' ACCROCHE');
+    return true;
+  }
+
+  function decrocher(v) {
+    const t = v.remorque;
+    v.remorque = null;
+    if (!t) return;
+    t.remorqueePar = null;
+    Son.SFX.porte();
+  }
+
+  /** Le cable, une fois par image : le char remorque est tire vers un point
+      fixe derriere la remorqueuse, et il pointe vers elle.
+
+      ⚠️ Il reste BLOQUE PAR LES TUILES : on ne traine pas une epave a travers
+      un mur. Le cable s'etire alors — et s'il s'etire trop, il casse. C'est ce
+      qui rend le virage serre couteux sans une seule ligne de plus. */
+  function majCrochet(v) {
+    const t = v.remorque;
+    if (!t) return;
+    if (!t.actif || t.remorqueePar !== v) { v.remorque = null; return; }
+    const ph = physique();
+    const d = ph.crochet_cable_px + (v.def.longueur + t.def.longueur) / 2;
+    const ax = v.x - Math.cos(v.angle) * d;
+    const ay = v.y - Math.sin(v.angle) * d;
+    const dx = ax - t.x, dy = ay - t.y;
+    if (Math.hypot(dx, dy) > ph.crochet_cable_px * 2.5) {
+      Hud.message('LE CABLE A LACHE');
+      decrocher(v);
+      return;
+    }
+    t.angle = Math.atan2(v.y - t.y, v.x - t.x);
+    t.vx = dx * ph.crochet_raideur;
+    t.vy = dy * ph.crochet_raideur;
+    t.vitesse = Math.hypot(t.vx, t.vy);
+    if (!bloqueParLesTuiles(t, t.x + t.vx, t.y)) t.x += t.vx;
+    if (!bloqueParLesTuiles(t, t.x, t.y + t.vy)) t.y += t.vy;
+    Entites.dansLaCarte(t);
   }
 
   /** L'ambulance rend des PV a qui la conduit — `soigne` de la fiche, en PV
@@ -478,6 +556,10 @@ const Vehicules = (function () {
   function exploser(v) {
     const ph = physique();
     v.etat = 'epave';
+    // ⚠️ Le cable lache : sans ca, un char reste accroche a une carcasse
+    // que plus personne ne met a jour, et le trafic ne l'oublie jamais.
+    if (v.remorque) decrocher(v);
+    if (v.remorqueePar) decrocher(v.remorqueePar);
     v.vie = 0;
     v.vitesse = 0; v.vx = 0; v.vy = 0;
     v.swaps = { c: '#2a2a2a', v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a' };
@@ -1012,6 +1094,9 @@ const Vehicules = (function () {
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on
       // repond a l'appel et on part la sirene allumee, d'un seul geste.
       if (v.def.sirene) { v.sirene = !v.sirene; Son.SFX.touche(); } else v.klaxonT = 30;
+      // ⚠️ Sur la remorqueuse, le meme bouton accroche et decroche : le boulot
+      // de remorquage EST le crochet, il n'y a pas deux gestes a apprendre.
+      if (v.def.crochet) basculerCrochet(v);
       if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v);
     }
     if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
@@ -1273,7 +1358,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, defoncerDevant, sirenes,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

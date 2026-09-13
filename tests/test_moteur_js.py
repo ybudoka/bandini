@@ -170,6 +170,89 @@ def test_un_lourd_defonce_ce_qui_est_bas_et_jamais_une_facade(banc, paquet):
     )
 
 
+def test_la_remorqueuse_traine_un_char_a_la_fois(banc, paquet):
+    """`crochet` était la dernière ligne de fiche que personne ne lisait : la
+    remorqueuse était un camion orange.
+
+    ⚠️ Et « un seul à la fois » n'est pas un détail de confort — c'est ce qui
+    empêche le train de douze chars qu'on ne saurait plus arrêter. Le juge
+    tient les quatre règles : on accroche **derrière** (un crochet est à
+    l'arrière, il faut reculer dessus), un seul, jamais un char conduit, et le
+    câble **lâche** si on l'étire trop."""
+    ph = paquet["conduite"]["physique"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const rem = o.char('remorqueuse', 0, 0, 0);      // cap 0 : elle regarde l'est
+        L.Vehicules.monter(j, rem);
+        const out = {};
+        // 1. Devant, rien ne s'accroche : le crochet est DERRIERE.
+        const devant = o.char('auto', 40, 0, 0);
+        L.Entites.indexer();
+        out.devant = !!L.Vehicules.aCrocher(rem);
+        L.Entites.retirer(devant);
+        // 2. Derriere, oui.
+        const epave = o.char('auto', -36, 0, 0);
+        L.Entites.indexer();
+        out.accroche = L.Vehicules.basculerCrochet(rem);
+        out.lien = rem.remorque === epave && epave.remorqueePar === rem;
+        // 3. Un SEUL : un deuxieme char derriere ne s'ajoute pas — le meme
+        //    bouton decroche.
+        const second = o.char('auto', -80, 0, 0);
+        L.Entites.indexer();
+        L.Vehicules.basculerCrochet(rem);
+        out.apresDeuxieme = { remorque: !!rem.remorque, second: !!second.remorqueePar };
+        L.Vehicules.basculerCrochet(rem);                 // on raccroche
+        out.raccroche = !!rem.remorque;
+        // 4. Un char CONDUIT ne s'accroche pas.
+        L.Vehicules.decrocher(rem);
+        rem.remorque = null;
+        for (const e of [epave, second]) { e.remorqueePar = null; e.conducteur = 'trafic'; }
+        L.Entites.indexer();
+        out.conduit = !!L.Vehicules.aCrocher(rem);
+        for (const e of [epave, second]) e.conducteur = null;
+        L.Entites.indexer();
+        L.Vehicules.basculerCrochet(rem);
+        // 5. On roule : le char suit, a bonne distance, en pointant vers nous.
+        const suivi = [];
+        o.touche('KeyW');
+        for (let i = 0; i < 90; i++) {
+            o.frame(1);
+            const t = rem.remorque;
+            if (!t) { suivi.push(null); break; }
+            suivi.push(Math.round(Math.hypot(t.x - rem.x, t.y - rem.y)));
+        }
+        o.relacher('KeyW');
+        out.suivi = { min: Math.min.apply(null, suivi), max: Math.max.apply(null, suivi),
+                      tient: suivi.indexOf(null) < 0, n: suivi.length };
+        const t = rem.remorque;
+        out.pointe = t ? Math.abs(Math.atan2(Math.sin(t.angle - Math.atan2(rem.y - t.y, rem.x - t.x)),
+                                             Math.cos(t.angle - Math.atan2(rem.y - t.y, rem.x - t.x)))) < 0.3 : null;
+        // 6. Etire de force : le cable lache.
+        if (t) { t.x = rem.x - 400; t.y = rem.y; }
+        o.frame(2);
+        out.lache = !rem.remorque;
+        return out;
+    }""")
+    assert r["devant"] is False, "un char DEVANT s'accroche : le crochet est a l'arriere"
+    assert r["accroche"] is True and r["lien"] is True, "rien ne s'est accroche derriere"
+    assert r["apresDeuxieme"] == {"remorque": False, "second": False}, (
+        "le meme bouton doit DECROCHER, jamais accrocher un deuxieme : %s" % r["apresDeuxieme"]
+    )
+    assert r["raccroche"] is True
+    assert r["conduit"] is False, "on a accroche un char qui avait un conducteur"
+    assert r["suivi"]["tient"] is True, "le cable a lache en roulant droit"
+    plancher = (ph["crochet_cable_px"]) * 0.5
+    assert r["suivi"]["min"] > plancher, (
+        "le char remorque monte dans la remorqueuse (%s px)" % r["suivi"]["min"]
+    )
+    assert r["suivi"]["max"] < ph["crochet_cable_px"] * 4, (
+        "le cable s'allonge sans fin (%s px)" % r["suivi"]["max"]
+    )
+    assert r["pointe"] is True, "le char remorque ne pointe pas vers la remorqueuse"
+    assert r["lache"] is True, "le cable ne lache jamais, meme etire de 400 px"
+
+
 def test_l_ambulance_soigne_son_conducteur_mais_ne_ressuscite_personne(banc, paquet):
     """`soigne` était dans la fiche depuis M9 et personne ne le lisait :
     l'ambulance était une fourgonnette blanche.
