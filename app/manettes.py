@@ -38,9 +38,15 @@ HAUT = -1.0
 PAS_CHAPEAU = 2 / 7
 CHAPEAU_AXE = 9
 
-#: Les quatre boutons de droite, par POSITION (c'est ce que le dessin montre).
+#: Les quatre boutons de droite, par POSITION (c'est ce que le dessin montre) :
+#: `action` en bas, `esquive` a droite, `attaque` a gauche, `arme` en haut.
 FACES_STANDARD = {"action": 0, "esquive": 1, "attaque": 2, "arme": 3}
-FACES_HID = {"attaque": 0, "action": 1, "esquive": 2, "arme": 3}
+#: ⚠️ La numerotation DirectInput saute des numeros : les quatre boutons de
+#: droite sont 0, 1, 3 et 4 (2 et 5 ne servent a rien), les epaules 6 et 7, les
+#: GACHETTES 8 et 9, et SELECT/START seulement 10 et 11. C'est Martin qui l'a
+#: mesure en jeu, le 13 sept. 2026 : ses gachettes ouvraient la carte et la
+#: pause — donc ses gachettes sont les boutons 8 et 9, et tout le reste suit.
+FACES_DINPUT = {"action": 0, "esquive": 1, "attaque": 3, "arme": 4}
 
 
 class Profil(TypedDict):
@@ -89,10 +95,11 @@ def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
 PROFILS: list[Profil] = [
     _profil("standard", "XBOX, PLAYSTATION", "LE NAVIGATEUR LA RECONNAIT",
             faces=FACES_STANDARD),
-    _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "8BITDO, MANETTES SWITCH",
+    _profil("bt_dinput", "8BITDO EN BLUETOOTH", "GACHETTES 8 ET 9, CROIX SUR UN AXE",
+            faces=FACES_DINPUT, croix_boutons=False,
+            epaules=(6, 7), gachettes=(8, 9), meta=(10, 11)),
+    _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "NUMEROS STANDARDS, CROIX A PART",
             faces=FACES_STANDARD, croix_boutons=False),
-    _profil("bt_hid", "BLUETOOTH — DIRECTINPUT", "BOUTONS DANS L'ORDRE HID",
-            faces=FACES_HID, croix_boutons=False, meta=(10, 11)),
 ]
 
 #: Le slug de la disposition servie par defaut : celle d'une manette reconnue.

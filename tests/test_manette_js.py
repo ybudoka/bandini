@@ -130,31 +130,46 @@ def test_l_ecran_manette_dit_ce_que_la_manette_dit_d_elle_meme(banc):
 
 
 def test_choisir_une_disposition_la_pose_et_la_garde(banc):
-    """Le geste que Martin demandait : on choisit sa manette dans une liste."""
+    """Le geste que Martin demandait : on choisit sa manette dans une liste.
+
+    ⚠️ Et le test du retour qu'il a fait : en DirectInput, les GACHETTES sont
+    les boutons 8 et 9 — ceux qui, sur une manette reconnue, ouvrent la carte
+    et la pause. C'est exactement ce qui lui arrivait."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         function boutons(i) { const b = []; for (let k = 0; k <= 11; k++) b.push(k === i ? 1 : 0); return b; }
+        function lit(i) {
+            o.pad([0, 0], boutons(i)); o.frame(2);
+            return { actions: ['action', 'attaque', 'esquive', 'arme', 'carte', 'pause']
+                       .filter(function (a) { return L.Entree.bas(a); }),
+                     gaz: L.Entree.gaz, frein: L.Entree.frein };
+        }
         const m = L.Hud.menuManette();
-        const hid = m.items.find(function (i) { return i.profil && i.profil.slug === 'bt_hid'; });
-        hid.faire();
-        o.pad([0, 0], boutons(1)); o.frame(2);
-        const surUn = ['action', 'attaque', 'esquive', 'arme'].filter(function (a) { return L.Entree.bas(a); });
-        o.pad([0, 0], boutons(0)); o.frame(2);
-        const surZero = ['action', 'attaque', 'esquive', 'arme'].filter(function (a) { return L.Entree.bas(a); });
+        const avant = { huit: lit(8).actions, neuf: lit(9).actions };
+        m.items.find(function (i) { return i.profil && i.profil.slug === 'bt_dinput'; }).faire();
+        const apres = { huit: lit(8), neuf: lit(9), dix: lit(10).actions, onze: lit(11).actions,
+                        zero: lit(0).actions, trois: lit(3).actions };
         m.maj(m);
         const marque = m.items.filter(function (i) { return i.detail === 'CHOISIE'; }).map(function (i) { return i.profil.slug; });
-        // Et on revient a la disposition standard : le bouton du bas reprend ACTION.
+        // Rouvrir l'ecran pose le curseur sur la disposition en cours : appuyer
+        // sur ACTION pour voir le bouton s'allumer ne change alors rien.
+        const curseur = L.Hud.menuManette();
+        const surLaSienne = curseur.items[curseur.curseur].profil.slug;
         m.items.find(function (i) { return i.profil && i.profil.slug === 'standard'; }).faire();
-        o.pad([0, 0], boutons(0)); o.frame(2);
-        const retour = L.Entree.bas('action');
+        const retour = lit(8).actions;
         o.pad(null); o.frame(2);
-        return { surUn: surUn, surZero: surZero, marque: marque, retour: retour,
-                 garde: L.B.options.manetteProfil };
+        return { avant: avant, apres: apres, marque: marque, retour: retour,
+                 surLaSienne: surLaSienne, garde: L.B.options.manetteProfil };
     }""")
-    assert r["surUn"] == ["action"], "en HID, le bouton du bas est le numero 1"
-    assert sorted(r["surZero"]) == ["attaque"], "et le numero 0 est celui de gauche"
-    assert r["marque"] == ["bt_hid"], "la disposition choisie doit se voir dans la liste"
-    assert r["retour"] is True
+    assert r["avant"]["huit"] == ["carte"] and r["avant"]["neuf"] == ["pause"], \
+        "le symptome de Martin : les gachettes ouvrent la carte et la pause"
+    assert r["apres"]["huit"]["actions"] == [] and r["apres"]["huit"]["frein"] == 1
+    assert r["apres"]["neuf"]["actions"] == [] and r["apres"]["neuf"]["gaz"] == 1
+    assert r["apres"]["dix"] == ["carte"] and r["apres"]["onze"] == ["pause"]
+    assert r["apres"]["zero"] == ["action"] and r["apres"]["trois"] == ["attaque"]
+    assert r["marque"] == ["bt_dinput"], "la disposition choisie doit se voir dans la liste"
+    assert r["surLaSienne"] == "bt_dinput", "le curseur doit s'ouvrir sur la sienne"
+    assert r["retour"] == ["carte"], "revenir a STANDARD remet tout comme avant"
     assert r["garde"] == "standard"
 
 
@@ -420,3 +435,31 @@ def test_la_manette_ne_ferme_pas_l_ecran_sous_ses_doigts(banc):
     }""")
     assert r["etapes"] == [True, True, True], "un bouton de manette a ferme l'ecran"
     assert r["apresClavier"] is False, "le clavier doit pouvoir fermer"
+
+
+def test_un_bouton_hors_disposition_se_dit_au_lieu_de_ne_rien_faire(banc):
+    """⚠️ Un bouton que la disposition ne connait pas n'allume rien sur le
+    dessin — on croirait la manette morte. L'ecran doit le nommer : c'est le
+    signe qu'il faut une autre disposition."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const m = L.Hud.menuManette();
+        m.items.find(function (i) { return i.profil && i.profil.slug === 'standard'; }).faire();
+        function lignes(i) {
+            const b = []; for (let k = 0; k <= 11; k++) b.push(k === i ? 1 : 0);
+            o.pad([0, 0], b, { mapping: '' }); o.frame(2);
+            const vues = [];
+            const ctx = { fillStyle: '', fillRect: function () {}, drawImage: function () {} };
+            const vraiTexte = L.Atlas.texte;
+            L.Atlas.texte = function (c, s) { vues.push(s); };
+            m.dessiner(ctx, 0, 0, 420, 162);
+            L.Atlas.texte = vraiTexte;
+            return vues;
+        }
+        const connu = lignes(0), inconnu = lignes(11);
+        o.pad(null); o.frame(2);
+        return { connu: connu, inconnu: inconnu };
+    }""")
+    assert any("ENFONCES : 0" in s for s in r["connu"])
+    assert not any("PAS DANS CELLE-CI" in s for s in r["connu"]), "le bouton 0 est connu"
+    assert any("BOUTON 11 : PAS DANS CELLE-CI" in s for s in r["inconnu"])

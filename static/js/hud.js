@@ -349,9 +349,17 @@ const Hud = (function () {
     menu.dessiner = function (ctx, x, y) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
       dessinerManette(ctx, x + 232, y + 24, 2, profil, etat);
+      // ⚠️ Un bouton que la disposition ne connait pas n'allume RIEN, et on
+      // croirait la manette morte. On le dit : c'est le signe qu'il faut une
+      // autre disposition, ou reapprendre celle-la.
+      const connus = {};
+      for (const a in profil.boutons) for (const i of profil.boutons[a]) connus[i] = true;
+      for (const cle of ['gaz', 'frein']) if (profil[cle].type === 'bouton') connus[profil[cle].i] = true;
+      const inconnus = etat.boutons.filter(function (i) { return !connus[i]; });
       const bit = /8bitdo/i.test(etat.id || '') && etat.mapping !== 'standard';
       const lignes = ['ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—'),
-                      bit ? '8BITDO : DONGLE 2,4 GHZ = XBOX' : (etat.id || '').slice(0, 24).toUpperCase()];
+                      inconnus.length ? 'BOUTON ' + inconnus.join(' ') + ' : PAS DANS CELLE-CI'
+                        : (bit ? '8BITDO : DONGLE 2,4 GHZ = XBOX' : (etat.id || '').slice(0, 24).toUpperCase())];
       lignes.forEach(function (l, i) {
         if (l) texte(ctx, l, x + 232, y + 122 + i * 10, '#8a8698', 1);
       });

@@ -78,6 +78,31 @@ def test_le_tour_du_chapeau_donne_huit_positions_distinctes():
             "les huit positions tiennent dans l'axe ; le repos, lui, tombe dehors"
 
 
+def test_deux_dispositions_ne_sont_jamais_les_memes():
+    """Une ligne de plus dans la liste doit valoir une ligne de plus."""
+    vues = {}
+    for profil in manettes.PROFILS:
+        signature = (tuple(sorted((a, tuple(b)) for a, b in profil["boutons"].items())),
+                     profil["gaz"]["i"], profil["frein"]["i"], bool(profil["croix"]))
+        assert signature not in vues, f"{profil['slug']} = {vues.get(signature)}"
+        vues[signature] = profil["slug"]
+
+
+def test_la_disposition_directinput_dit_ce_que_martin_a_mesure():
+    """⚠️ Mesure en jeu, 13 sept. 2026 : sur sa 8BitDo en Bluetooth, les
+    GACHETTES ouvraient la carte et la pause. Or carte et pause sont 8 et 9 sur
+    une manette reconnue : ses gachettes sont donc 8 et 9, et toute la
+    numerotation DirectInput suit (epaules 6-7, SELECT/START 10-11). Ce test
+    garde le fait ; si quelqu'un « corrige » ces numeros, c'est ce retour-la
+    qu'il efface."""
+    profil = manettes.par_slug("bt_dinput")
+    assert profil["frein"] == {"type": "bouton", "i": 8}
+    assert profil["gaz"] == {"type": "bouton", "i": 9}
+    assert profil["boutons"]["carte"] == [10] and profil["boutons"]["pause"] == [11]
+    assert profil["boutons"]["attaque"][1] == 7 and profil["boutons"]["arme"][1] == 6
+    assert profil["croix"], "et sa croix est un axe"
+
+
 def test_le_defaut_existe_et_c_est_la_manette_reconnue():
     assert manettes.par_slug(manettes.DEFAUT)
     assert manettes.DEFAUT == "standard"
