@@ -52,7 +52,9 @@ def test_le_poids_audio_reste_raisonnable():
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
         assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
-    assert sum(f.stat().st_size for f in radios) < 2_000_000
+    # 5 stations de 45 s + l'ambiance de 60 s a 64 kbit/s : 2,3 Mo dans le
+    # depot, mais une seule piste a la fois sur le fil, au tour de cle.
+    assert sum(f.stat().st_size for f in radios) < 2_500_000
     # Les voix de l'histoire se chargent par mission : une replique reste legere.
     for fichier in histoire:
         assert fichier.stat().st_size < 150_000, fichier.name
