@@ -115,7 +115,10 @@ const Base = (function () {
     SCALE = Math.max(1, Math.min(8, Math.floor(z)));
     cv.width = VW * SCALE;
     cv.height = VH * SCALE;
-    const zAff = z >= 1 ? SCALE : z;
+    // ⚠️ Sur un telephone, l'echelle entiere peut laisser un tiers de l'ecran
+    // vide (844x390 CSS a 2x : 2,88 → 2). On etire alors en CSS a l'echelle
+    // fractionnaire : des pixels un peu inegaux valent mieux qu'un timbre-poste.
+    const zAff = z >= 1 ? (z - SCALE > 0.35 ? z : SCALE) : z;
     cv.style.width = (VW * zAff / dpr) + 'px';
     cv.style.height = (VH * zAff / dpr) + 'px';
     cv.style.imageRendering = z >= 1 ? 'pixelated' : 'auto';

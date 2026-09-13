@@ -176,7 +176,8 @@ const Monde = (function () {
   }
 
   function lampesVisibles(cam) {
-    if (!carte) return [];
+    // Les lampadaires n'eclairent qu'a la brune : en plein jour, rien.
+    if (!carte || ambiance().alpha < 0.2) return [];
     const out = [];
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const l of carte.lampes) {

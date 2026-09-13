@@ -8,7 +8,7 @@ jalons » à chaque jalon livré.
 
 | Jalon | État | Notes |
 |---|---|---|
-| M0 Squelette et mise en ligne | **en cours** (12 sept. 2026) | dépôt, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; installation serveur |
+| M0 Squelette et mise en ligne | **livré** (12 sept. 2026) | dépôt `ybudoka/bandini`, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; serveur installé, https://bandini.gestiondojo.ca |
 | M1 La ville | à faire | générateur `carte.py` (plan de blocs + gabarits), juges de connexité |
 | M2 Piétons et poings | à faire | |
 | M3 Véhicules | à faire | |
