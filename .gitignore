@@ -226,3 +226,6 @@ donnees/
 .env
 donnees/
 .venv/
+
+# Profil Chrome de la configuration « Jouer » (.vscode/launch.json)
+.vscode/chrome-profil/

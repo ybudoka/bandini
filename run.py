@@ -18,9 +18,15 @@ app = create_app()
 
 
 if __name__ == "__main__":
+    # APP_HOST=0.0.0.0 ouvre le serveur au wifi de la maison (telephone,
+    # tablette). ⚠️ La console interactive de Werkzeug est alors coupee : un
+    # shell Python ouvert a tout le reseau local n'a rien a faire la.
+    hote = os.getenv("APP_HOST", "127.0.0.1")
+    local = hote in ("127.0.0.1", "localhost")
     app.run(
-        host="127.0.0.1",
+        host=hote,
         debug=app.config.get("DEBUG", False),
+        use_debugger=app.config.get("DEBUG", False) and local,
         port=port_de_dev(),
         use_reloader=True,
     )

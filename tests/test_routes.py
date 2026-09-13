@@ -28,6 +28,11 @@ def test_definitions_avec_etag(client):
     revalide = client.get("/api/definitions", headers={"If-None-Match": etag})
     assert revalide.status_code == 304
     assert revalide.headers["ETag"] == etag
+    # nginx renvoie un ETag FAIBLE quand il compresse : il doit revalider aussi.
+    faible = client.get("/api/definitions", headers={"If-None-Match": "W/" + etag})
+    assert faible.status_code == 304
+    autre = client.get("/api/definitions", headers={"If-None-Match": '"autre"'})
+    assert autre.status_code == 200
 
 
 def test_api_scores(client):

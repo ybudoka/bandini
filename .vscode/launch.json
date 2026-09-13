@@ -1,0 +1,85 @@
+{
+  // Configurations de lancement VS Code. L'interpreteur est celui choisi dans
+  // VS Code (le `.venv` du depot, cree par `uv sync`, est detecte tout seul).
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // F5 : demarre Flask (run.py lit le .env, port 5400) puis ouvre le jeu
+      // dans Chrome avec le debogueur JS branche sur static/js. Le bouton
+      // Stop ferme Chrome ET coupe le serveur (postDebugTask).
+      "name": "Jouer (serveur + Chrome)",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://127.0.0.1:5400/",
+      "webRoot": "${workspaceFolder}",
+      "pathMapping": { "/static": "${workspaceFolder}/static" },
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-profil",
+      "preLaunchTask": "serveur",
+      "postDebugTask": "arreter le serveur"
+    },
+    {
+      // Le serveur seul, avec rechargement automatique : sauver un fichier
+      // Python redemarre Flask, et debugpy suit le processus fils.
+      "name": "Serveur Flask (run.py, rechargement auto)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "jinja": true,
+      "env": { "FLASK_DEBUG": "true" }
+    },
+    {
+      // Le meme serveur, ouvert au RESEAU LOCAL : pour jouer sur le telephone
+      // ou la tablette de la maison (meme wifi). Le terminal imprime l'adresse
+      // « Running on http://192.168.x.x:5400 » a taper sur l'appareil.
+      // La console Werkzeug est coupee des que l'hote n'est plus local (run.py).
+      "name": "Serveur Flask (reseau local — telephone, manette)",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "jinja": true,
+      "env": { "FLASK_DEBUG": "true", "APP_HOST": "0.0.0.0" }
+    },
+    {
+      // Sans rechargement : un seul processus, plus confortable pas a pas.
+      "name": "Serveur Flask (sans rechargement, pour deboguer)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "flask",
+      "args": ["--app", "run", "run", "--no-reload", "--host", "127.0.0.1", "--port", "5400"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false,
+      "jinja": true,
+      "env": { "FLASK_DEBUG": "true" }
+    },
+    {
+      // Les tests Python et le moteur JS sous Node (tests/banc.js), avec
+      // points d'arret dans app/ et tests/.
+      "name": "Tests (pytest, sans navigateur)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "--ignore=tests/test_navigateur.py"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    },
+    {
+      // Les tests de navigateur, Chromium visible (--headed) et ralenti.
+      "name": "Tests de navigateur (Playwright, visible)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-q", "tests/test_navigateur.py", "--headed", "--slowmo", "300"],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "justMyCode": false
+    }
+  ]
+}

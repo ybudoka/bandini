@@ -23,7 +23,11 @@ def api_definitions():
     """Tout ce que le navigateur doit savoir, en une requete, revalidee par ETag."""
     paquet = current_app.extensions["definitions"]
     etag = f'"{paquet.etag}"'
-    if request.if_none_match.contains(paquet.etag):
+    # ⚠️ `contains_weak`, pas `contains` : nginx compresse la reponse et marque
+    # l'ETag faible (W/"...") en passant ; le navigateur le renvoie tel quel.
+    # Avec une comparaison forte, la revalidation ne donnerait jamais 304 en
+    # production — tout en marchant parfaitement en local.
+    if request.if_none_match.contains_weak(paquet.etag):
         reponse = Response(status=304)
     else:
         reponse = Response(paquet.corps, mimetype="application/json")

@@ -1,0 +1,67 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      // Demarre Flask en arriere-plan pour la configuration « Jouer ». Le port
+      // est libere avant, pour qu'un serveur oublie ne bloque pas le lancement.
+      // -u : sortie non bufferisee, sinon « Running on » n'arrive pas tout de
+      // suite et le problemMatcher attend indefiniment.
+      "label": "serveur",
+      "type": "shell",
+      "command": "pkill -f 'python run.py' >/dev/null 2>&1; sleep 0.3; exec uv run python -u run.py",
+      "options": { "cwd": "${workspaceFolder}", "env": { "FLASK_DEBUG": "true" } },
+      "isBackground": true,
+      "presentation": { "reveal": "silent", "panel": "dedicated", "clear": true },
+      "problemMatcher": {
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Running on",
+          "endsPattern": "Running on"
+        }
+      }
+    },
+    {
+      "label": "arreter le serveur",
+      "type": "shell",
+      "command": "pkill -f 'python run.py' >/dev/null 2>&1; pkill -f 'python -u run.py' >/dev/null 2>&1; exit 0",
+      "presentation": { "reveal": "never", "panel": "dedicated" },
+      "problemMatcher": []
+    },
+    {
+      "label": "lint",
+      "type": "shell",
+      "command": "uv run ruff check . && uv run python scripts/verifier_dependances.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "test",
+      "type": "shell",
+      "command": "uv run pytest -q --ignore=tests/test_navigateur.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": { "kind": "test", "isDefault": true },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      "label": "test navigateur",
+      "type": "shell",
+      "command": "uv run pytest -q tests/test_navigateur.py",
+      "options": { "cwd": "${workspaceFolder}" },
+      "group": "test",
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    },
+    {
+      // Mise en ligne : pose la branche main sur le serveur (voir deploy/README.md).
+      "label": "mise en ligne (main)",
+      "type": "shell",
+      "command": "ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 'bash /srv/bandini/repo/deploy/deploy.sh main' && curl -s -A navigateur https://bandini.gestiondojo.ca/sante && echo",
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": { "reveal": "always", "panel": "shared", "clear": true },
+      "problemMatcher": []
+    }
+  ]
+}
