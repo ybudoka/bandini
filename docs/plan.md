@@ -17,7 +17,7 @@ jalons » à chaque jalon livré.
 | M3 Véhicules | **livré** (13 sept. 2026) | auto, taxi, moto, auto-patrouille (sprite) ; physique arcade, **chaîne de cercles**, sous-pas, monter/descendre/carjacking/éjection, trafic qui **lit le champ `voie`** (tourne à gauche après le croisement, ralentit avant le coin), feux sur les vrais croisements, dégâts/fumée/feu/explosion, alarmes, rampes, renversements, taxi au klaxon avec pourboire selon la douceur, hôpital quand on meurt, moteur qui monte dans les tours |
 | M5 Intérieurs et économie | à faire | **avant M4**, décision de Martin (13 sept. 2026) |
 | M4 Police | à faire | après M5 |
-| M6 Missions et gang | à faire | |
+| M6 Missions et gang | à faire | répliques **dites à voix haute** en plus du texte (décision du 13 sept.) |
 | M7 Finition v1 | à faire | |
 
 ## Reprendre le travail
@@ -67,6 +67,7 @@ Décisions prises avec Martin (12 sept. 2026) :
 | Mise en ligne | **tôt puis à chaque jalon** : le site existe dès le squelette, chaque jalon est déployé, Martin teste sur téléphone |
 | Idées | **toutes** les idées de la première liste + les 28 nouvelles ; prémisse, ville et personnages retenus |
 | Audio (12 sept. 2026) | les sons importants sont de **vrais échantillons ElevenLabs**, générés par le serveur MCP `elevenlabs` et versionnés dans `static/audio/` ; la synthèse de `son.js` reste le **filet** quand un fichier manque. Voix des personnages en M6, radios en M3. |
+| Voix de l'histoire (13 sept. 2026) | **chaque réplique de l'histoire est dite à voix haute, en plus d'être écrite.** Les dialogues des donneurs (Ti-Guy, Mme Thibodeau, Sgt Bouchard, Josée, Dr Lachance, Marco), le téléphone, les manchettes du journal : une voix ElevenLabs **par personnage**, générée une fois par TTS et versionnée comme le reste. Le texte reste affiché (lisibilité, muet, tactile) ; la voix s'ajoute, elle ne remplace pas. |
 
 ## La vision (tout ce qui est retenu)
 
@@ -137,12 +138,39 @@ pickpocket **v1** · propriétés à revenu (kiosque 800 $, bar 2 500 $, garage 
 assurance et fraude, le shylock **v2**.
 
 **Missions et narratif** : histoire par téléphone et PNJ, 5 missions v1 (voir plus bas),
-3 défis · contacts du marché noir, la peur fait taire les témoins **v1**.
+3 défis · contacts du marché noir, la peur fait taire les témoins **v1** · **toutes les
+répliques sont dites à voix haute** (ElevenLabs, une voix par personnage) en plus du texte
+**v1** — voir « Les voix de l'histoire » ci-dessous.
 
 **Meta et présentation** : tableau des scores en ligne (fortune, missions, propriétés,
 durée) · bilan de session, caméra qui respire, visée assistée, GPS pointillé, options
 (sang, palette daltonienne, vibration) **v1** · défi du jour à graine serveur **v1 si le
 temps le permet, sinon v2** · mode photo, coop locale **v2**.
+
+## Les voix de l'histoire (décision du 13 sept. 2026)
+
+Le jeu **parle**. Chaque réplique de l'histoire est écrite dans `missions.py` (le texte,
+source unique) et **dite** par une voix ElevenLabs générée une fois, comme les répliques
+des passants. Ce que ça implique, jalon par jalon :
+
+- **Une voix par personnage**, nommée dans `audio.VOIX_PERSONNAGES` : Ti-Guy (receleur,
+  gouailleur), Mme Thibodeau (potins, âgée), Sgt Réjean Bouchard (grave, la bouche
+  pleine), Josée « La Chef » (sèche), Dr Lachance (posé), Marco « Le Cousin » (mielleux),
+  le narrateur du journal. Priorité aux voix **québécoises** de la bibliothèque (Léo
+  aujourd'hui) ; Martin en ajoute à son compte au besoin — c'est une ligne à changer.
+- **La réplique est la source** : `missions.py` porte `{"qui": "ti_guy", "texte": "…"}` ;
+  le slug du fichier se déduit (`voix-ti_guy-m1-03.mp3`), la recette est donc le texte
+  lui-même. `scripts/audio_elevenlabs.py --voix` génère ce qui manque, au caractère (≈ 40
+  répliques × 80 caractères : quelques milliers de caractères, rien).
+- **Le texte reste affiché** dans la boîte de dialogue (lisibilité, jeu en sourdine,
+  tactile) ; la voix **s'ajoute**, elle ne remplace pas. Une réplique dont le fichier
+  manque s'affiche sans voix — le filet, comme pour les bruitages.
+- **Une seule voix à la fois** : une réplique coupe la précédente ; la radio et l'ambiance
+  baissent pendant qu'on parle (*ducking*), puis remontent.
+- **Le téléphone** : la voix vient « du combiné » (filtre passe-bande, un peu de grésil) ;
+  le journal du matin est lu par le narrateur, en plus de la manchette.
+- **Un test navigateur** prouve que chaque voix se décode ; un test Python que chaque
+  réplique a un personnage connu et tient en une phrase ou deux.
 
 ## Architecture
 
@@ -261,7 +289,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M3 | Véhicules | **fait** : auto, taxi, moto, auto-patrouille ; physique, chaîne de cercles, monter/descendre/éjecter, trafic + feux, dégâts/explosion, alarmes, rampes, taxi au klaxon (pourboire selon la douceur), son moteur ; hôpital quand on meurt (avancé de M4). Radios livrées (bouton RADIO : station suivante, puis silence). Reste : projeter un piéton dans le trafic | voler, conduire, planter ; 11 tests de banc (vMax, marche arrière, dérive au frein à main, mur, **trafic 3000 images**, renversement, explosion, carjacking, feux, taxi, hôpital) |
 | M4 | Police | crimes, cônes + ligne de vue, témoins (acheter le silence), recherche 1–3★, patrouille/poursuite/arrestation, autos de poursuite, prison (amende, pot-de-vin, casier), hôpital, sergent ami, affiches | se faire pincer ; tests cône, décroissance, amendes |
 | M5 | Intérieurs et économie | 5 intérieurs, magasins, planque (sauvegarde, coffre, garage), revente, propriétés, paquets cachés, journal du matin, bilan de session, tableau des scores, options | acheter, vendre, sauvegarder, recharger |
-| M6 | Missions et gang | cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue, GPS, contacts du marché noir | finir les 5 missions |
+| M6 | Missions et gang | cadre + téléphone + 5 missions + 3 défis, Les Cravates et leur territoire, boîte de dialogue **avec la voix de chaque réplique** (une voix par personnage, ducking de la radio, voix « du combiné » au téléphone), GPS, contacts du marché noir | finir les 5 missions, **les entendre** |
 | M7 | Finition v1 | 4–5★ (barrages, hélico), musique, passe sonore, HUD, performance sur vrai téléphone, Playwright, défi du jour si le temps le permet | 60 i/s de nuit à 3★ sur téléphone |
 | v2 | vagues suivantes | autres districts + gangs, radio procédurale, tramway, traversier, fourrière complète, deux fins, guichets/skimmers, assurance, shylock, stool, avocat, carnet du poste, neige, remorqueuse, mode photo, coop | un jalon par vague |
 
