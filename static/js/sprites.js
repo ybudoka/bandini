@@ -514,8 +514,30 @@ const TUILES = (function () {
   }
   function trait(ctx, sens, u0, u1, w, ep) { bloc(ctx, sens, u0, w, u1 - u0, ep); }
 
+  /** Un brin NORD-SUD : vu d'en haut, on le prend PAR LA TRANCHE.
+
+      ⚠️ Ce n'est pas le brin est-ouest tourne, et c'est tout le propos. La
+      camera regarde d'en haut avec juste assez de face au SUD — c'est la regle
+      des facades de la ville (« on voit toujours le mur avant, jamais le dos
+      d'un toit ») et celle des meubles. Une cloture est-ouest montre donc sa
+      hauteur : lisses, maille, poteaux. Une cloture nord-sud n'a rien a
+      montrer d'autre que son EPAISSEUR — deux ou trois pixels, un liseré
+      d'ombre a l'est, et le chapeau des poteaux. Tournee, elle faisait un
+      panneau de sept pixels pose a plat. */
+  function brinMince(ctx, u0, u1, style) {
+    const e = style.epaisseur, x = 8 - (e >> 1), lg = u1 - u0;
+    ctx.fillStyle = style.ombre; ctx.fillRect(x + e, u0, 1, lg);
+    ctx.fillStyle = style.planches || style.lisse; ctx.fillRect(x, u0, e, lg);
+    // Le barbele garde ses fils : de haut, c'est le brin clair sur le sombre.
+    if (style.fils) { ctx.fillStyle = style.fils; ctx.fillRect(x, u0, 1, lg); }
+    // Les poteaux ne montrent que leur chapeau, un peu plus large que le brin.
+    ctx.fillStyle = style.poteau;
+    for (const u of [2, 13]) if (u >= u0 && u < u1) ctx.fillRect(x - 1, u, e + 2, 2);
+  }
+
   /** Un brin de cloture, du centre vers un cote (ou d'un bord a l'autre). */
   function brinDeCloture(ctx, sens, u0, u1, T, style) {
+    if (sens === 'v') { brinMince(ctx, u0, u1, style); return; }
     ctx.fillStyle = style.ombre; trait(ctx, sens, u0, u1, 12, 2);        // l'ombre au pied
     ctx.fillStyle = style.lisse;
     trait(ctx, sens, u0, u1, style.rails[0], 1);
@@ -570,16 +592,24 @@ const TUILES = (function () {
     const bras = (N ? 1 : 0) + (E ? 1 : 0) + (S ? 1 : 0) + (O ? 1 : 0);
     if (!(bras === 2 && ((E && O) || (N && S)))) {
       ctx.fillStyle = style.poteau;
-      ctx.fillRect(7, style.poteau0, 2, 14 - style.poteau0);
+      // ⚠️ Le poteau se montre comme ce qui l'entoure : debout quand un bras
+      // est-ouest donne sa face, en CHAPEAU quand la tuile est toute en
+      // nord-sud. Un poteau de douze pixels au bout d'un brin qui en fait
+      // deux, ce n'est plus un poteau, c'est un piquet planté de travers.
+      if (E || O || seule) ctx.fillRect(7, style.poteau0, 2, 14 - style.poteau0);
+      else ctx.fillRect(8 - (style.epaisseur >> 1) - 1, 7, style.epaisseur + 2, 2);
     }
   }
 
+  //: `epaisseur` : ce qu'il reste d'une cloture quand on la prend par la
+  //: tranche (voir `brinMince`). Un grillage est un fil tendu, une palissade a
+  //: l'epaisseur de ses planches, le barbele n'est que des fils.
   const CLOTURE_GRILLAGE = { ombre: '#3f7331', lisse: '#9aa0a6', maille: '#7a7d82', poteau: '#b0b6bc',
-                     rails: [4, 11], poteau0: 2 };
+                     rails: [4, 11], poteau0: 2, epaisseur: 2 };
   const CLOTURE_BOIS = { ombre: '#3f7331', lisse: '#6d5232', planches: '#8a6a42', poteau: '#a3814f',
-                 rails: [3, 11], poteau0: 2 };
+                 rails: [3, 11], poteau0: 2, epaisseur: 3 };
   const CLOTURE_BARBELE = { ombre: '#3a6c2d', lisse: '#5d5852', maille: '#6b655c', poteau: '#7d766a',
-                    fils: '#d8d2c4', rails: [6, 11], poteau0: 0 };
+                    fils: '#d8d2c4', rails: [6, 11], poteau0: 0, epaisseur: 2 };
 
   /* --- Les toits ----------------------------------------------------------
 

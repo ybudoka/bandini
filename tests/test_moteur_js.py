@@ -570,10 +570,17 @@ def test_une_cloture_nord_sud_ne_se_peint_pas_comme_une_est_ouest(banc):
     FACE. Elles lisent maintenant leurs voisines (`varianteDeCloture`), comme les
     passages pietons, les cases de stationnement et les rampes le font deja.
 
-    Le juge compare les deux CUISSONS, trait par trait : le nord-sud doit etre
-    l'est-ouest TOURNE (les deux axes echanges), sinon c'est un autre dessin — ou
-    le meme, ce qui etait le bug. Et il tourne pour les trois glyphes : sinon on
-    corrige un sens sur une cloture et on recommence a la prochaine."""
+    ⚠️ La PREMIERE version de ce juge exigeait que le nord-sud soit l'est-ouest
+    TOURNE. Elle a sorti les clotures de leur premier bug, puis elle a verrouille
+    le suivant, que Martin a nomme aussitot : « les clotures nord-sud doivent
+    etre plus vues de haut, donc mince ». Un panneau tourne de 90 degres reste
+    un panneau — sept pixels de large, pose a plat.
+
+    La regle juste est deja ecrite deux fois dans le depot : la camera regarde
+    d'en haut avec juste assez de face au SUD (les facades de la ville, les
+    meubles des interieurs). Une cloture est-ouest montre donc sa HAUTEUR ; une
+    cloture nord-sud ne montre que son EPAISSEUR. Le juge mesure cette largeur,
+    et il tourne pour les trois glyphes."""
     r = banc("""function (L, o) {
         function peindre(glyphe, variante) {
             const c = L.Base.nouveauCanvas(L.TT, L.TT);
@@ -582,21 +589,42 @@ def test_une_cloture_nord_sud_ne_se_peint_pas_comme_une_est_ouest(banc):
             L.TUILES[glyphe](ctx, variante, L.TT);
             return ctx.traces;
         }
+        // Ce que le dessin OCCUPE sur un axe (0 = x, 1 = y), le fond d'herbe
+        // mis de cote : c'est la hauteur d'une cloture vue de face, et la
+        // largeur d'une cloture vue par la tranche.
+        function etendue(traces, axe) {
+            let min = 99, max = -1;
+            for (const t of traces) {
+                if (t[2] >= L.TT && t[3] >= L.TT) continue;      // le fond, pas la cloture
+                if (t[axe] < min) min = t[axe];
+                if (t[axe] + t[axe + 2] > max) max = t[axe] + t[axe + 2];
+            }
+            return max < 0 ? 0 : max - min;
+        }
         const sortie = {};
         for (const glyphe of ['f', 'w', 'X']) {
             const est_ouest = peindre(glyphe, 2 | 8);       // elle continue a l'est et a l'ouest
             const nord_sud = peindre(glyphe, 1 | 4);        // elle continue au nord et au sud
-            const bout = peindre(glyphe, 8);                // elle s'arrete ici
+            const bout = peindre(glyphe, 8);                // elle s'arrete ici, vers l'ouest
+            const boutNS = peindre(glyphe, 1);              // elle s'arrete ici, vers le nord
             const coin = peindre(glyphe, 1 | 2);            // un coin nord-est
             sortie[glyphe] = {
                 est_ouest: est_ouest, nord_sud: nord_sud,
-                // Le meme dessin, les deux axes echanges.
-                tourne: est_ouest.map(function (t) { return [t[1], t[0], t[3], t[2], t[4]]; }),
-                bout: bout.length, coin: coin.length, droit: est_ouest.length,
+                // La hauteur de celle qu'on voit de face, la largeur de celle
+                // qu'on prend par la tranche.
+                hauteurEO: etendue(est_ouest, 1),
+                largeurNS: etendue(nord_sud, 0),
                 // Le poteau du centre : ce qui tient le tournant et ferme un bout.
                 poteauBout: bout.some(function (t) { return t[0] === 7 && t[2] === 2; }),
                 poteauCoin: coin.some(function (t) { return t[0] === 7 && t[2] === 2; }),
                 poteauDroit: est_ouest.some(function (t) { return t[0] === 7 && t[2] === 2; }),
+                // Un bout tout en nord-sud ferme par un CHAPEAU, pas par un piquet.
+                chapeauNS: boutNS.some(function (t) { return t[1] === 7 && t[3] === 2; }),
+                // ⚠️ Le fond d'herbe fait 16 x 16 : sans le mettre de cote, il
+                // passerait pour un poteau debout a lui tout seul.
+                piquetNS: boutNS.some(function (t) {
+                    return !(t[2] >= L.TT && t[3] >= L.TT) && t[3] >= 10;
+                }),
             };
         }
         return sortie;
@@ -606,8 +634,17 @@ def test_une_cloture_nord_sud_ne_se_peint_pas_comme_une_est_ouest(banc):
         assert mesure["nord_sud"] != mesure["est_ouest"], (
             f"{glyphe} : le nord-sud se peint exactement comme l'est-ouest — elle est couchee"
         )
-        assert sorted(map(str, mesure["nord_sud"])) == sorted(map(str, mesure["tourne"])), (
-            f"{glyphe} : le nord-sud n'est pas l'est-ouest tourne"
+        # ⚠️ Le juge du bug de Martin : une cloture nord-sud se prend par la
+        # tranche, donc elle occupe NETTEMENT moins large qu'une est-ouest
+        # n'occupe haut. Tournee, elle faisait exactement la meme mesure.
+        assert mesure["largeurNS"] * 2 <= mesure["hauteurEO"], (
+            f"{glyphe} : le nord-sud fait {mesure['largeurNS']} px de large pour "
+            f"{mesure['hauteurEO']} px de haut a l'est-ouest — c'est un panneau, pas une tranche"
+        )
+        assert mesure["largeurNS"] >= 2, f"{glyphe} : le nord-sud a disparu"
+        assert mesure["chapeauNS"] is True, f"{glyphe} : un bout nord-sud sans chapeau de poteau"
+        assert mesure["piquetNS"] is False, (
+            f"{glyphe} : un poteau debout au bout d'un brin vu par la tranche"
         )
         assert mesure["poteauBout"] is True, f"{glyphe} : un bout de course sans poteau — coupe au couteau"
         assert mesure["poteauCoin"] is True, f"{glyphe} : un coin sans poteau — la maille flotte"
