@@ -39,6 +39,12 @@ class Personnage(TypedDict):
     voix: str          # le nom exact de la voix dans le compte ElevenLabs
     couleurs: dict     # les permutations du sprite `joueur` : c chandail, h cheveux, s peau, p pantalon
     ou: str            # ou il se tient : `porte:<lieu>` (dehors, a cote de la porte) ou `point:<type>` (dedans)
+    heler: str         # le mot de sa BULLE quand il a une job pour toi (voir `Entites.bulle`)
+
+
+#: ⚠️ La bulle est lue a l'ecran, en police 3x5 : plus long que ca et le mot
+#: deborde de la tete de celui qui le dit. C'est court par force, pas par style.
+HELER_MAX = 16
 
 
 #: ⚠️ Les voix sont celles que Martin a ajoutees a son compte le 13 sept. 2026
@@ -46,20 +52,27 @@ class Personnage(TypedDict):
 #: `scripts/audio_elevenlabs.py --voix` le dit : il ne devine jamais.
 PERSONNAGES: list[Personnage] = [
     {"slug": "ti_guy", "nom": "Ti-Guy", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
-     "couleurs": {"c": "#2e8b57", "h": "#3a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:terminus"},
+     "couleurs": {"c": "#2e8b57", "h": "#3a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:terminus",
+     "heler": "Hé! Le cousin!"},
     {"slug": "thibodeau", "nom": "Madame Thibodeau", "genre": "femme", "voix": "Julia",
-     "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#4a3a5a"}, "ou": "porte:kiosque"},
+     "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#4a3a5a"}, "ou": "porte:kiosque",
+     "heler": "Psst! Toi!"},
     {"slug": "marco", "nom": "Marco", "genre": "homme", "voix": "Québec Tremblay - Confident and Measured",
-     "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#c98d66", "p": "#2a2a3a"}, "ou": "porte:garage"},
+     "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#c98d66", "p": "#2a2a3a"}, "ou": "porte:garage",
+     "heler": "Hé! Viens ici!"},
     {"slug": "bouchard", "nom": "Sergent Bouchard", "genre": "homme", "voix": "Khaivan - Quebec accent",
-     "couleurs": {"c": "#1f3a6e", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:sergent"},
+     "couleurs": {"c": "#1f3a6e", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:sergent",
+     "heler": "Ici, le jeune!"},
     {"slug": "josee", "nom": "Josée", "genre": "femme", "voix": "Jeanne Mance - Charming, Clear and Young",
-     "couleurs": {"c": "#c0392b", "h": "#101018", "s": "#f0c098", "p": "#101018"}, "ou": "point:contact"},
+     "couleurs": {"c": "#c0392b", "h": "#101018", "s": "#f0c098", "p": "#101018"}, "ou": "point:contact",
+     "heler": "Approche, toi."},
     {"slug": "civil", "nom": "Le client", "genre": "homme", "voix": "Alexandre - Authentic French Canadian",
-     "couleurs": {"c": "#7f8c8d", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": ""},
+     "couleurs": {"c": "#7f8c8d", "h": "#3a2a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "",
+     "heler": "Taxi!"},
     # Le narrateur du Clairon : un vieil homme qui soupire, il lit la manchette du matin.
     {"slug": "narrateur", "nom": "Le Clairon de la Baie", "genre": "homme", "voix": "annonceur centre d'achat 1",
-     "couleurs": {"c": "#3a3a4a", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": ""},
+     "couleurs": {"c": "#3a3a4a", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "",
+     "heler": ""},
 ]
 
 

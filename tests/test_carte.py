@@ -241,6 +241,32 @@ def test_une_cloture_relie_ses_deux_cotes_mais_le_barbele_coupe():
     assert (2, 1) not in groupe and {(1, 1), (3, 1)} <= groupe
 
 
+def test_chaque_lieu_declare_sa_famille_et_sa_couleur():
+    """⚠️ Zero repli gris. Les couleurs des blips de la carte codent des familles
+    — dore pour tes places, bleu pour les services, vert pour les magasins — mais
+    la table vivait dans `hud.js`, ecrite a la main : elle declarait dix lieux, la
+    ville en compte seize, et les six autres (depanneur, hotel, cantine, usine,
+    phare, fourriere) tombaient tous sur le meme gris par defaut. M8 en avait
+    ajoute cinq, M9 un sixieme, et personne n'avait touche a la table.
+
+    Les couleurs sont maintenant des DONNEES qui descendent avec les lieux, et ce
+    juge est ce qui remplace la relecture : un lieu de plus sans famille fait
+    rougir le test, pas le joueur."""
+    for glyphe, special in carte.SPECIAUX.items():
+        assert special.get("famille") in carte.FAMILLES_DE_LIEU, (glyphe, special["slug"])
+    for point in CARTE["points_interet"]:
+        assert point.get("famille") in carte.FAMILLES_DE_LIEU, point
+    for nom, famille in carte.FAMILLES_DE_LIEU.items():
+        assert famille["couleur"].startswith("#") and len(famille["couleur"]) == 7, nom
+        assert famille["libelle"] and famille["libelle"] == famille["libelle"].upper(), nom
+    # La legende du joueur ne vaut que si les familles servent vraiment : une
+    # famille declaree que personne ne porte est une ligne de legende vide.
+    portees = {point["famille"] for point in CARTE["points_interet"]}
+    assert portees == set(carte.FAMILLES_DE_LIEU), \
+        f"familles sans lieu : {set(carte.FAMILLES_DE_LIEU) - portees}"
+    assert CARTE["familles"] == carte.FAMILLES_DE_LIEU, "les familles doivent voyager dans le paquet"
+
+
 def test_les_portes_menent_a_un_interieur():
     slugs = set()
     for porte in CARTE["portes"]:

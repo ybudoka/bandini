@@ -361,6 +361,107 @@ def test_la_mini_carte_est_cuite_une_seule_fois(banc, paquet):
     assert r["taille"] == [64, 48]
 
 
+def test_on_se_trouve_sur_la_carte_et_l_objectif_ne_bat_pas_pareil(banc):
+    """⚠️ La demande de Martin : « un icone clignotant pour savoir ou on est ».
+    Le joueur ETAIT dessine — un carre blanc de 2 px — mais depuis M8 la ville
+    fait 421 x 213 tuiles et ce carre s'est perdu dans le gris. Ce n'etait pas un
+    manque, c'etait une regression : il etait lisible sur le Faubourg.
+
+    Deux pieges, et le test tient les deux : un repere qui clignote s'EFFACE une
+    image sur deux (on ne cache pas la seule chose qu'on cherche — le joueur
+    pulse, il ne disparait jamais), et deux choses qui battent au meme rythme se
+    confondent (l'anneau du joueur contre le losange de l'objectif)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        // Un objectif a deux pas, dans le cadre de la mini-carte.
+        L.Histoire.cible = function () { return { x: j.x + 40, y: j.y + 40, nom: 'ESSAI', couleur: '#e8b33c' }; };
+        const joueur = [], cible = [], rayons = [];
+        for (let i = 0; i < 96; i++) {
+            o.frame(1);
+            const m = L.Hud.marqueurs();
+            joueur.push(m.joueur ? 1 : 0);
+            rayons.push(m.joueur ? m.joueur.r : -1);
+            cible.push(m.cible && m.cible.visible ? 1 : 0);
+        }
+        const m = L.Hud.marqueurs();
+        return { joueur: joueur, cible: cible, rayons: rayons,
+                 formes: [m.joueur.forme, m.cible.forme], dedans: m.cible.dedans,
+                 pulse: L.Hud.PULSE_JOUEUR, battement: L.Hud.BATTEMENT_CIBLE };
+    }""")
+    assert all(r["joueur"]), "le repere du joueur disparait : on cache ce qu'on cherche"
+    assert len(set(r["rayons"])) > 2, "l'anneau du joueur ne pulse pas : rien ne le ramene a l'oeil"
+    assert 0 in r["cible"] and 1 in r["cible"], "l'objectif ne clignote plus"
+    assert r["formes"] == ["anneau", "losange"], "les deux reperes ont la meme forme"
+    assert r["pulse"] != r["battement"], "le joueur et l'objectif battent au meme rythme"
+    assert r["dedans"] is True
+
+
+def test_une_cible_hors_du_cadre_devient_une_fleche_et_pas_une_position(banc):
+    """⚠️ Sur la mini-carte, une cible hors cadre BORNEE au bord est un mensonge :
+    le code la collait au coin, et un objectif a deux cents tuiles s'affichait
+    exactement comme un objectif a trois tuiles. Une fleche dit la direction ;
+    une position inventee dit le contraire de la verite."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        function marqueurPour(dx, dy) {
+            L.Histoire.cible = function () {
+                return { x: Math.max(8, Math.min(c.pxW - 8, j.x + dx)),
+                         y: Math.max(8, Math.min(c.pxH - 8, j.y + dy)), nom: 'LOIN', couleur: '#e8b33c' };
+            };
+            o.frame(1);
+            const m = L.Hud.marqueurs().cible;
+            return { forme: m.forme, x: m.x, y: m.y, dedans: m.dedans };
+        }
+        const est = marqueurPour(2400, 0);          // tout a l'est
+        const sud = marqueurPour(0, 1200);          // tout au sud
+        const pres = marqueurPour(32, 16);          // a deux pas
+        return { est: est, sud: sud, pres: pres, mini: [L.Hud.MINI.x, L.Hud.MINI.y, L.Hud.MINI.l, L.Hud.MINI.h] };
+    }""")
+    assert r["est"]["forme"] == "fleche" and r["est"]["dedans"] is False
+    assert r["sud"]["forme"] == "fleche" and r["sud"]["dedans"] is False
+    assert (r["est"]["x"], r["est"]["y"]) != (r["sud"]["x"], r["sud"]["y"]), (
+        "deux objectifs dans deux directions differentes pointent au meme endroit"
+    )
+    mx, my, large, haut = r["mini"]
+    for cote in ("est", "sud"):
+        assert mx <= r[cote]["x"] <= mx + large and my <= r[cote]["y"] <= my + haut, r[cote]
+    assert r["pres"]["forme"] == "losange" and r["pres"]["dedans"] is True
+
+
+def test_la_legende_de_la_carte_se_derive_de_la_table_des_couleurs(banc, paquet):
+    """⚠️ Une legende recopiee a la main ment des qu'on ajoute un lieu — c'est
+    exactement ce qui etait arrive a la table des couleurs : dix lieux declares,
+    seize sur la carte, six gris. La legende se batit donc DEPUIS les donnees, et
+    chaque lieu de la ville y a sa ligne."""
+    familles = paquet["carte"]["familles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const carte = L.Monde.carte;
+        const legende = L.Hud.legendeDeLaCarte(carte);
+        const couleurs = carte.points.map(function (p) { return { slug: p.slug, famille: p.famille, couleur: L.Hud.couleurDeLieu(p) }; });
+        // Et la carte plein ecran la dessine pour de vrai.
+        L.Jeu.ouvrirCarte();
+        const avant = L.B.stats.rects;
+        o.frame(1);
+        return { legende: legende, couleurs: couleurs, etat: L.B.etat, rects: L.B.stats.rects - avant,
+                 points: carte.points.length };
+    }""")
+    attendues = {f: familles[f]["couleur"] for f in familles}
+    for lieu in r["couleurs"]:
+        assert lieu["famille"] in attendues, lieu
+        assert lieu["couleur"] == attendues[lieu["famille"]], lieu
+    vues = [e["famille"] for e in r["legende"]]
+    assert vues == [f for f in familles if f in vues], "la legende doit suivre l'ordre de la table"
+    assert set(vues) == {lieu["famille"] for lieu in r["couleurs"]}, (
+        "la legende et les blips ne parlent pas des memes familles"
+    )
+    for entree in r["legende"]:
+        assert entree["libelle"] == familles[entree["famille"]]["libelle"]
+    assert r["etat"] == "carte" and r["rects"] > 0
+
+
 def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -1375,6 +1476,7 @@ def test_les_feux_alternent_et_les_t_n_en_ont_pas(banc):
 
 def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
     boulot = paquet["economie"]["boulots"]["taxi"]
+    civil = next(p for p in paquet["personnages"] if p["slug"] == "civil")
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(47);
@@ -1386,14 +1488,18 @@ def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
         o.tape('Space', 2);                              // klaxon : un client
         const t = L.Missions.taxi;
         const etape1 = t.etape, client = t.client;
+        const hele = client && client.bulle ? client.bulle.texte : null;
         if (client) { v.x = client.x + 10; v.y = client.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
         o.frame(3);
         const etape2 = t.etape, dest = t.destination;
         if (dest) { v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
         o.frame(3);
-        return { etape1: etape1, etape2: etape2, etape3: t.etape, gain: L.B.partie.argent - argent0, courses: t.courses };
+        return { etape1: etape1, etape2: etape2, etape3: t.etape, hele: hele,
+                 gain: L.B.partie.argent - argent0, courses: t.courses };
     }""")
     assert r["etape1"] == "attente" and r["etape2"] == "course" and r["etape3"] is None
+    assert r["hele"] == civil["heler"], \
+        "un client qui attend un taxi sans rien dire est un passant de plus (bulle du « civil »)"
     assert r["courses"] == 1
     assert r["gain"] >= boulot["base"] + boulot["prime"], \
         "une course sans un choc doit donner le pourboire plein"

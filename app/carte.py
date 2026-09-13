@@ -377,31 +377,64 @@ PONTS: frozenset = frozenset({("v", 17, 6)})
 
 #: Les batiments garantis : un par majuscule du plan. `interieur` doit exister
 #: dans INTERIEURS (juge `test_les_portes_menent_a_un_interieur`).
+#: Les familles de lieux : une couleur, et le mot qui l'explique sur la carte.
+#:
+#: ⚠️ **La legende de la carte se construit d'ICI**, elle ne se recopie pas a la
+#: main — sinon elle mentirait des le prochain lieu ajoute. La preuve etait deja
+#: la : `COULEUR_BLIP` (hud.js) declarait dix lieux, la ville en compte seize, et
+#: les six autres — depanneur, hotel, cantine, usine, phare, fourriere — tombaient
+#: tous sur le meme gris par defaut. M8 en a ajoute cinq, M9 un sixieme, et
+#: personne n'a touche a la table.
+#:
+#: ⚠️ Les couleurs sont des DONNEES, pas du dessin : elles descendent avec les
+#: lieux (`Python decide, JS calcule`). Et un juge exige que chaque lieu declare
+#: sa famille : ajouter un lieu sans couleur fait rougir le test, pas le joueur.
+FAMILLES_DE_LIEU: dict[str, dict] = {
+    "tes_places": {"couleur": "#e8b33c", "libelle": "TES PLACES"},
+    "magasin": {"couleur": "#8ad26a", "libelle": "MAGASINS"},
+    "manger": {"couleur": "#e8925a", "libelle": "MANGER"},
+    "service": {"couleur": "#6f9fd8", "libelle": "SERVICES"},
+    "soins": {"couleur": "#d86f7f", "libelle": "SOINS"},
+    "transport": {"couleur": "#cdc6e6", "libelle": "TRANSPORT"},
+    "travail": {"couleur": "#9a8fb0", "libelle": "TRAVAIL"},
+    "repere": {"couleur": "#7fd4d0", "libelle": "REPÈRES"},
+}
+
 SPECIAUX: dict[str, dict] = {
-    "T": {"slug": "terminus", "nom": "Terminus Baie-des-Brumes", "interieur": "terminus"},
-    "M": {"slug": "armurerie", "nom": "Chez Gus", "interieur": "armurerie"},
-    "A": {"slug": "vetements", "nom": "Boutique Rosa", "interieur": "vetements"},
-    "G": {"slug": "garage", "nom": "Garage Rocco Bandini", "interieur": "garage", "porte_garage": True},
-    "K": {"slug": "planque", "nom": "La planque de Rocco", "interieur": "planque"},
-    "P": {"slug": "poste", "nom": "Poste de police", "interieur": "poste"},
-    "H": {"slug": "hopital", "nom": "Hôpital de Baie-des-Brumes", "interieur": "hopital"},
-    "B": {"slug": "bar", "nom": "Bar Le Brouillard", "interieur": "bar"},
-    "C": {"slug": "casse_croute", "nom": "Casse-croûte du Faubourg", "interieur": "casse_croute"},
+    "T": {"slug": "terminus", "nom": "Terminus Baie-des-Brumes", "interieur": "terminus",
+          "famille": "transport"},
+    "M": {"slug": "armurerie", "nom": "Chez Gus", "interieur": "armurerie",
+          "famille": "magasin"},
+    "A": {"slug": "vetements", "nom": "Boutique Rosa", "interieur": "vetements",
+          "famille": "magasin"},
+    "G": {"slug": "garage", "nom": "Garage Rocco Bandini", "interieur": "garage",
+          "porte_garage": True, "famille": "tes_places"},
+    "K": {"slug": "planque", "nom": "La planque de Rocco", "interieur": "planque",
+          "famille": "tes_places"},
+    "P": {"slug": "poste", "nom": "Poste de police", "interieur": "poste",
+          "famille": "service"},
+    "H": {"slug": "hopital", "nom": "Hôpital de Baie-des-Brumes", "interieur": "hopital",
+          "famille": "soins"},
+    "B": {"slug": "bar", "nom": "Bar Le Brouillard", "interieur": "bar",
+          "famille": "tes_places"},
+    "C": {"slug": "casse_croute", "nom": "Casse-croûte du Faubourg", "interieur": "casse_croute",
+          "famille": "manger"},
     # v2 / M8 — un point d'arret par district : on ne traverse pas la ville
     # pour un hot-dog ou pour sauver sa partie.
     "D": {"slug": "depanneur", "nom": "Dépanneur Chez Ti-Paul", "interieur": "depanneur",
-          "genre": "banlieue"},
-    "L": {"slug": "hotel", "nom": "Hôtel Bandini", "interieur": "hotel"},
+          "genre": "banlieue", "famille": "magasin"},
+    "L": {"slug": "hotel", "nom": "Hôtel Bandini", "interieur": "hotel",
+          "famille": "tes_places"},
     "N": {"slug": "cantine", "nom": "Cantine des Quais", "interieur": "cantine",
-          "genre": "hangars"},
+          "genre": "hangars", "famille": "manger"},
     "U": {"slug": "usine", "nom": "Usine Prévost", "interieur": "usine",
-          "genre": "industriel"},
+          "genre": "industriel", "famille": "travail"},
     "V": {"slug": "phare", "nom": "Le phare de La Pointe", "interieur": "phare",
-          "genre": "banlieue"},
+          "genre": "banlieue", "famille": "repere"},
     # v2 / M9 — le lot de la fourriere. Ce n'est pas un ilot bati : c'est une
     # cour d'asphalte cloturee avec une guerite, et `_fourriere()` la pose.
     "Y": {"slug": "fourriere", "nom": "Fourrière municipale", "interieur": "fourriere",
-          "genre": "industriel"},
+          "genre": "industriel", "famille": "service"},
 }
 
 FUSIONS = {"<": (-1, 0), "^": (0, -1)}
@@ -809,8 +842,12 @@ class _Chantier:
             self.sol[py][px] = "D"
             self.portes.append({"x": px, "y": py, "interieur": special["interieur"],
                                 "lieu": special["slug"]})
+            # ⚠️ La FAMILLE voyage avec le point : c'est elle qui donne sa
+            # couleur au blip et sa ligne a la legende de la carte. Un lieu sans
+            # famille n'est pas une couleur par defaut, c'est un test rouge.
             self.points.append({"type": special["slug"], "slug": special["slug"],
-                                "nom": special["nom"], "x": px, "y": py + 1})
+                                "nom": special["nom"], "x": px, "y": py + 1,
+                                "famille": special["famille"]})
             if special.get("porte_garage") and (px - 2, py) in facades:
                 self.sol[py][px - 2] = "G"
         else:
@@ -1961,7 +1998,8 @@ class _Chantier:
             ky = y + hauteur - 5
             facades = self.batiment_forme({(kx + i, ky + j) for j in range(3) for i in range(4)}, 0.6)
             self.poser_porte(facades, {"slug": "kiosque", "interieur": "kiosque",
-                                       "nom": "Kiosque de Madame Thibodeau"})
+                                       "nom": "Kiosque de Madame Thibodeau",
+                                       "famille": "tes_places"})
         for _ in range(largeur * hauteur // (7 if sauvage else 14)):
             self.poser_decor("arbre", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
@@ -2829,6 +2867,7 @@ INTERIEUR_LOGEMENT = "logement"
 def exporter() -> dict:
     carte = generer()
     carte["legende"] = LEGENDE
+    carte["familles"] = FAMILLES_DE_LIEU
     return carte
 
 

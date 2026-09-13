@@ -154,6 +154,7 @@ const Jeu = (function () {
       B.interieur = piece.interieur;
       Entites.reindexerDecor();
       Entites.peuplerInterieur(piece.interieur);
+      Histoire.creerDonneursDedans(piece.interieur);
       j.x = piece.interieur.apparition.x * TT + 8;
       j.y = piece.interieur.apparition.y * TT + 8;
       poserDansLaPorte(j, 'haut');
@@ -185,6 +186,7 @@ const Jeu = (function () {
       B.interieur = piece.interieur;
       Entites.reindexerDecor();
       Entites.peuplerInterieur(piece.interieur);
+      Histoire.creerDonneursDedans(piece.interieur);
       const retour = (piece.interieur.points || []).find(function (p) {
         return p.type === 'escalier' && p.vers === depuis;
       }) || piece.interieur.apparition;

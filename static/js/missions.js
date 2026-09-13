@@ -242,6 +242,10 @@ const Missions = (function () {
       const x = place ? place.x : v.x + Math.cos(v.angle) * 80, y = place ? place.y : v.y + Math.sin(v.angle) * 80;
       const client = Entites.creerPieton(x, y, arch);
       client.etat = 'fige'; client.cri = 9999; client.client = true;
+      // Le meme outil que les donneurs : un client qui leve le bras au bord du
+      // trottoir sans rien dire, on le prend pour un passant de plus.
+      const civil = Histoire.personnage('civil');
+      Entites.bulle(client, civil ? civil.heler : '');
       taxi.client = client; taxi.etape = 'attente'; taxi.t = 0;
       Hud.message('UN CLIENT ATTEND');
       return true;
@@ -289,7 +293,7 @@ const Missions = (function () {
     abandonner: function (raison) {
       // Sans course en cours, il n'y a rien a abandonner : on se tait.
       const encours = !!taxi.etape;
-      if (taxi.client) { taxi.client.etat = 'flane'; taxi.client.cri = 0; taxi.client.client = false; }
+      if (taxi.client) { taxi.client.etat = 'flane'; taxi.client.cri = 0; taxi.client.client = false; Entites.taire(taxi.client); }
       taxi.client = null; taxi.destination = null; taxi.etape = null;
       if (raison && encours) Hud.message(raison);
     },
@@ -324,12 +328,19 @@ const Missions = (function () {
   }
 
   function utiliserPoint(j) {
+    // ⚠️ Un personnage DEBOUT devant nous passe avant le comptoir : depuis
+    // qu'on les voit, Bouchard et Josee ne se tiennent plus forcement sur leur
+    // point (Josee pointe une TABLE — personne ne se tient debout dessus), et
+    // c'est la personne qu'on vise, pas la tuile.
+    const perso = Histoire.personnageSousLaMain(j);
+    if (perso) { j.animT = 10; j.animType = 'ramasse'; return Histoire.parler(perso.personnage); }
     const point = pointSousLaMain(j);
     if (!point) return false;
     j.animT = 10; j.animType = 'ramasse';           // un geste vers le comptoir
-    // Le sergent au casse-croute, Josee au bar : des personnages, pas des comptoirs.
-    if (point.type === 'sergent') return Histoire.parler('bouchard');
-    if (point.type === 'contact') return Histoire.parler('josee');
+    // Le sergent au casse-croute, Josee au bar : des personnages, pas des
+    // comptoirs. Leur point reste le filet, si on l'aborde par l'autre bord.
+    const assis = Histoire.personnageDuPoint(point.type);
+    if (assis) return Histoire.parler(assis.slug);
     // L'escalier et les tiroirs : un geste, pas un menu.
     if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
     if (point.type === 'fouiller') return fouiller(point);
@@ -784,8 +795,16 @@ const Missions = (function () {
     B.invite = null;
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
     if (B.interieur) {
+      // ⚠️ Meme ordre que `utiliserPoint`, sinon le HUD promet « MANGER » et
+      // ACTION parle au sergent.
+      const dedans = Histoire.personnageSousLaMain(j);
+      if (dedans) { const d = Histoire.personnage(dedans.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
       const point = pointSousLaMain(j);
-      if (point) { B.invite = LIBELLES[point.type] || point.type.toUpperCase(); return; }
+      if (point) {
+        const assis = Histoire.personnageDuPoint(point.type);
+        B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase() : (LIBELLES[point.type] || point.type.toUpperCase());
+        return;
+      }
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
       return;
     }

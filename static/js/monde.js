@@ -192,6 +192,9 @@ const Monde = (function () {
   function estChaussee(tx, ty) { return estRoute(tx, ty) && !estPassage(tx, ty); }
   /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee. */
   function marchablePieton(tx, ty) { return !bloque(tx, ty, MASQUE_PIETON) && !estChaussee(tx, ty); }
+  /** Un meuble (table, comptoir, lit...) : un pieton PASSE dessus — la legende
+      ne l'arrete pas — mais personne n'a a s'y tenir debout. */
+  function estMeuble(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).meuble); }
 
   /** Ligne de vue entre deux points (pixels) : rien de MUR entre les deux. */
   function ligneLibre(x0, y0, x1, y1) {
@@ -679,7 +682,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estRoute, estPassage, estChaussee, marchablePieton,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, estEnjambable, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

@@ -811,6 +811,81 @@ const Entites = (function () {
     return null;
   }
 
+  // --- Les bulles de bande dessinee --------------------------------------------------------
+
+  //: ⚠️ Le jeu avait deja deux pastilles de 8 px au-dessus des tetes — le « ! »
+  //: du temoin, le trait de la peur (`cri`). Elles disent un ETAT D'ESPRIT ;
+  //: elles ne peuvent pas dire un MOT, et c'est le mot qui manquait : un
+  //: personnage plante dans un coin de piece ne s'adresse a personne, on passe
+  //: devant lui sans le voir. Une bulle, elle, INTERPELLE.
+  //:
+  //: ⚠️ Le texte ne s'invente PAS ici : il descend de `missions.py` comme
+  //: toutes les repliques du jeu (`personnages[].heler`). Cette fonction-ci ne
+  //: sait que dessiner.
+  const BULLE_H = 11;                    // 5 px de police + 3 de marge en haut et en bas
+  const BULLE_QUEUE = 3;                 // la pointe qui designe celui qui parle
+  const BULLE_DESSUS = 30;               // du sol de l'entite au haut de la boite
+  const BULLE_FOND = '#efe6d0', BULLE_ENCRE = '#1a1a22';
+
+  /** Pose (ou garde) la bulle de quelqu'un. `duree` en images, 0 = jusqu'a ce
+      qu'on la taise. Un texte vide efface la bulle : c'est la facon normale de
+      la retirer quand il n'y a plus rien a dire.
+
+      ⚠️ Reposer LE MEME mot ne remet pas l'horloge a zero — sinon la bulle
+      d'un donneur, reposee a chaque image par `Histoire.maj`, resterait figee
+      a la premiere image de son animation, pour toujours. */
+  function bulle(e, texte, options) {
+    if (!e) return null;
+    const o = options || {};
+    // ⚠️ Le mot est garde TEL QU'IL EST ECRIT dans `missions.py`, accents
+    // compris : c'est la police 3x5 qui ne sait pas les dessiner, pas le jeu
+    // qui ne sait pas les dire — et `Atlas.texte` s'en charge au dessin.
+    const mot = String(texte || '').trim();
+    if (!mot) { e.bulle = null; return null; }
+    if (e.bulle && e.bulle.texte === mot) { e.bulle.duree = o.duree || 0; return e.bulle; }
+    e.bulle = { texte: mot, t: 0, duree: o.duree || 0,
+                fond: o.fond || BULLE_FOND, encre: o.encre || BULLE_ENCRE };
+    return e.bulle;
+  }
+
+  function taire(e) { if (e) e.bulle = null; }
+
+  function majBulle(e) {
+    const b = e.bulle;
+    b.t++;
+    if (b.duree && b.t >= b.duree) e.bulle = null;
+  }
+
+  /** La boite, sa queue, son mot — au-dessus de la tete, en pixels entiers.
+
+      ⚠️ Elle se dessine APRES tout le monde (deuxieme passe dans `dessiner`) :
+      dans une piece, le commis ou un client passe devant le donneur une fois
+      sur deux, et une bulle a moitie cachee par une nuque ne se lit plus. */
+  function dessinerBulle(ctx, e, cx, cy) {
+    const b = e.bulle;
+    const large = Atlas.largeurTexte(b.texte, 1) + 8;
+    // Elle monte d'un coup en arrivant, puis elle respire : un mot qui apparaît
+    // fige se lit comme un meuble de plus.
+    const monte = b.t < 6 ? 6 - b.t : 0;
+    const flotte = Math.round(Math.sin(b.t / 18) * 1.2) - monte;
+    const x = Math.round(e.x - large / 2 - cx);
+    const y = Math.round(e.y - BULLE_DESSUS + flotte - cy);
+    // ⚠️ La queue tombe sur la TETE de celui qui parle, pas sur un coin de la
+    // boite : au fond du casse-croute, le joueur se tient a deux pas du
+    // sergent, et une queue decalee de dix pixels donnait sa replique au
+    // mauvais personnage.
+    const qx = Math.round(e.x - cx) - 1;
+    ctx.fillStyle = b.encre;
+    ctx.fillRect(x, y - 1, large, BULLE_H + 2);         // le haut et le bas
+    ctx.fillRect(x - 1, y, large + 2, BULLE_H);         // les deux cotes (coins coupes)
+    for (let i = 0; i < BULLE_QUEUE; i++) ctx.fillRect(qx, y + BULLE_H + i, BULLE_QUEUE + 2 - i, 1);
+    ctx.fillStyle = b.fond;
+    ctx.fillRect(x, y, large, BULLE_H);
+    for (let i = 0; i < BULLE_QUEUE - 1; i++) ctx.fillRect(qx + 1, y + BULLE_H + i, BULLE_QUEUE - 1 - i, 1);
+    Atlas.texte(ctx, b.texte, x + 4, y + 3, b.encre, 1);
+    B.stats.rects += 5;
+  }
+
   /** Peut-on s'engager sur ce passage ? Au feu : quand les chars de cette rue
       sont au rouge. Sans feu : quand aucun char n'approche. */
   function traverseeSure(tx, ty, dir) {
@@ -1011,6 +1086,7 @@ const Entites = (function () {
       if (!e.actif) continue;
       e.t++;
       if (e.animT > 0) e.animT--;
+      if (e.bulle) majBulle(e);
       if (e.type === 'joueur') majJoueur(e);
       else if (e.type === 'pieton') { majPieton(e); actifs++; }
       else if (e.type === 'ramassage'
@@ -1157,6 +1233,7 @@ const Entites = (function () {
     });
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
+    const bulles = [];
     for (const e of visibles) {
       if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
@@ -1196,6 +1273,10 @@ const Entites = (function () {
       dessinerCorps(ctx, e, img, p, cx, cy);
       if (!derriere) dessinerArme(ctx, e, img, p, cx, cy);
       B.stats.images += 2;
+      // Un mot a dire l'emporte sur la pastille : on ne porte pas deux bulles.
+      // ⚠️ Sauf pendant un dialogue : quelqu'un te PARLE, dans la boite en bas
+      // de l'ecran — personne ne t'interpelle par-dessus.
+      if (e.bulle && e.vivant) { if (!B.cinema) bulles.push(e); continue; }
       // La bulle du temoin : on doit VOIR qu'on a ete vu.
       if (e.cri > 0 && e.vivant) {
         const bulle = Atlas.cuirePeintre('bulle|' + (e.etat === 'temoin' ? 't' : 'p'), 8, 10, function (g, w, h) {
@@ -1205,6 +1286,7 @@ const Entites = (function () {
         B.stats.images++;
       }
     }
+    for (const e of bulles) dessinerBulle(ctx, e, cx, cy);
   }
 
   return {
@@ -1217,6 +1299,7 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
+    bulle, taire, dessinerBulle,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
   };

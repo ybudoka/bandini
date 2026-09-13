@@ -600,12 +600,81 @@ const Hud = (function () {
 
   //: Une couleur par famille de lieu — le joueur doit reconnaitre un blip sans
   //: le lire. Le doré est a lui (planque, propriétés), le bleu aux services.
-  const COULEUR_BLIP = {
-    planque: '#e8b33c', garage: '#e8b33c', bar: '#e8b33c', kiosque: '#e8b33c',
-    poste: '#6f9fd8', hopital: '#d86f7f',
-    armurerie: '#8ad26a', vetements: '#8ad26a', casse_croute: '#8ad26a',
-    terminus: '#cdc6e6',
-  };
+  /*: Les rythmes des deux reperes qu'on cherche sur une carte. ⚠️ DIFFERENTS,
+    et de formes differentes : deux choses qui battent au meme rythme se
+    confondent, et on aurait corrige la lisibilite en la cassant. Le joueur est
+    un ANNEAU blanc qui s'ouvre et se referme (40 images) et qui ne disparait
+    JAMAIS — on ne cache pas la seule chose qu'on cherche ; l'objectif est un
+    LOSANGE dore qui bat en 16 images. */
+  const PULSE_JOUEUR = 40, BATTEMENT_CIBLE = 16;
+
+  /*: Ce que la derniere image a dessine pour se reperer : le joueur, l'objectif,
+    et leur FORME. ⚠️ C'est la seule facon de juger un clignotement sans
+    regarder l'ecran — les juges lisent ca, pas des pixels. */
+  let marqueurs = { joueur: null, cible: null };
+
+  /** La couleur d'un lieu, prise dans les DONNEES (`carte.familles`).
+
+      ⚠️ Il y avait ici une table de dix lieux ecrite a la main ; la ville en
+      compte seize, et les six autres — depanneur, hotel, cantine, usine, phare,
+      fourriere — tombaient tous sur le meme gris. Une couleur ecrite a cote des
+      lieux ment des qu'on ajoute un lieu. */
+  function famillesDeLieu() { return (B.defs && B.defs.carte && B.defs.carte.familles) || {}; }
+
+  function couleurDeLieu(point) {
+    const f = famillesDeLieu()[point.famille];
+    return f ? f.couleur : '#cdc6e6';
+  }
+
+  /** La legende de la carte, BATIE depuis la table des couleurs : les familles
+      des lieux que cette ville porte, dans l'ordre de la table. */
+  function legendeDeLaCarte(carte) {
+    const familles = famillesDeLieu();
+    const portees = {};
+    for (const point of (carte.points || [])) if (point.famille) portees[point.famille] = true;
+    // ⚠️ L'ordre est celui de la TABLE, pas celui des lieux rencontres : sinon la
+    // legende se reordonne d'une ville a l'autre, et on la relit a chaque partie.
+    return Object.keys(familles).filter(function (nom) { return portees[nom]; }).map(function (nom) {
+      return { famille: nom, couleur: familles[nom].couleur, libelle: familles[nom].libelle };
+    });
+  }
+
+  /** Le rayon de l'anneau du joueur a cette image : il s'ouvre, il se referme. */
+  function pulse(base, amplitude) {
+    const part = (B.t % PULSE_JOUEUR) / PULSE_JOUEUR;
+    return base + Math.round(Math.sin(part * Math.PI) * amplitude);
+  }
+
+  /** Un anneau carre de rayon `r` — quatre traits, en pixels entiers. */
+  function anneau(ctx, x, y, r, couleur) {
+    ctx.fillStyle = couleur;
+    ctx.fillRect(x - r, y - r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y + r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y - r, 1, r * 2 + 1);
+    ctx.fillRect(x + r, y - r, 1, r * 2 + 1);
+    B.stats.rects += 4;
+  }
+
+  /** Un losange plein — la forme de l'objectif, celle que le joueur n'a pas. */
+  function losange(ctx, x, y, r, couleur) {
+    ctx.fillStyle = couleur;
+    for (let i = -r; i <= r; i++) {
+      const demi = r - Math.abs(i);
+      ctx.fillRect(x - demi, y + i, demi * 2 + 1, 1);
+    }
+    B.stats.rects += r * 2 + 1;
+  }
+
+  /** Une fleche qui POINTE, pour une cible hors du cadre. */
+  function flecheDeCarte(ctx, x, y, angle, couleur) {
+    ctx.fillStyle = couleur;
+    ctx.beginPath();
+    ctx.moveTo(x + Math.cos(angle) * 4, y + Math.sin(angle) * 4);
+    ctx.lineTo(x + Math.cos(angle + 2.4) * 4, y + Math.sin(angle + 2.4) * 4);
+    ctx.lineTo(x + Math.cos(angle - 2.4) * 4, y + Math.sin(angle - 2.4) * 4);
+    ctx.closePath();
+    ctx.fill();
+  }
 
   /** La ville autour du joueur, une tuile par pixel, avec les lieux en blips. */
   function miniCarte(ctx) {
@@ -622,7 +691,7 @@ const Hud = (function () {
       const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
       if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
       ctx.fillStyle = '#101018'; ctx.fillRect(px - 1, py - 1, 3, 3);
-      ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(px, py, 2, 2);
+      ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(px, py, 2, 2);
       B.stats.rects += 2;
     }
     // Les agents et les autos de patrouille, en bleu, quand on est recherche.
@@ -634,13 +703,32 @@ const Hud = (function () {
         if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) { ctx.fillRect(bx, by, 2, 2); B.stats.rects++; }
       }
     }
-    // L'histoire : l'objectif, le donneur a aller voir, le defi — un blip qui clignote.
+    // L'histoire : l'objectif, le donneur a aller voir, le defi.
+    // ⚠️ Hors du cadre, ce n'est plus une position — c'est une FLECHE. Avant, la
+    // cible etait BORNEE au bord : un objectif a deux cents tuiles s'affichait
+    // collé au coin, exactement comme un objectif a trois tuiles. Un repere qui
+    // invente une position est pire que pas de repere.
     const gps = Histoire.cible();
-    if (gps && (B.t >> 3) % 2 === 0) {
+    marqueurs.cible = null;
+    if (gps) {
+      const couleur = gps.couleur || '#e8b33c';
       const gx = MINI.x + Math.round(gps.x / TT) - sx, gy = MINI.y + Math.round(gps.y / TT) - sy;
-      const bx = borner(gx, MINI.x, MINI.x + MINI.l - 3), by = borner(gy, MINI.y, MINI.y + MINI.h - 3);   // au bord s'il est hors carte
-      ctx.fillStyle = gps.couleur || '#e8b33c'; ctx.fillRect(bx, by, 3, 3);
-      B.stats.rects++;
+      const dedans = gx >= MINI.x && gx < MINI.x + MINI.l && gy >= MINI.y && gy < MINI.y + MINI.h;
+      const bat = (B.t % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
+      if (dedans) {
+        if (bat) losange(ctx, gx, gy, 2, couleur);
+        marqueurs.cible = { x: gx, y: gy, forme: 'losange', visible: bat, dedans: true };
+      } else {
+        // La fleche, elle, ne clignote pas : une direction est une information,
+        // pas une alerte — et elle ne se confond avec rien d'autre.
+        const cx = MINI.x + MINI.l / 2, cy = MINI.y + MINI.h / 2;
+        const angle = Math.atan2(gy - cy, gx - cx);
+        const fx = borner(cx + Math.cos(angle) * MINI.l, MINI.x + 4, MINI.x + MINI.l - 5);
+        const fy = borner(cy + Math.sin(angle) * MINI.h, MINI.y + 4, MINI.y + MINI.h - 5);
+        flecheDeCarte(ctx, fx, fy, angle, couleur);
+        marqueurs.cible = { x: Math.round(fx), y: Math.round(fy), forme: 'fleche', visible: true,
+                            dedans: false, angle: angle };
+      }
     }
     // Le taxi : le client (bleu) ou la destination (or) clignote.
     const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
@@ -653,9 +741,16 @@ const Hud = (function () {
       }
     }
     // Le joueur par-dessus tout le reste : c'est lui qu'on cherche des yeux.
+    // ⚠️ Un carre blanc de 2 px etait lisible sur le Faubourg de 157 x 112 ; la
+    // ville a quintuple sans qu'il grossisse, et il s'est perdu dans le gris.
+    // Il PULSE donc, d'un anneau qui s'ouvre et se referme — et le point, lui,
+    // reste dessine a chaque image : on ne cache pas ce qu'on cherche.
     const jx = MINI.x + Math.round(j.x / TT) - sx, jy = MINI.y + Math.round(j.y / TT) - sy;
+    const r = pulse(2, 2);
+    anneau(ctx, jx, jy, r, 'rgba(255,255,255,0.75)');
     ctx.fillStyle = '#101018'; ctx.fillRect(jx - 1, jy - 1, 4, 4);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(jx, jy, 2, 2);
+    marqueurs.joueur = { x: jx, y: jy, r: r, forme: 'anneau', visible: true };
     ctx.fillStyle = '#efe6d0';
     ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, 1);
     ctx.fillRect(MINI.x - 1, MINI.y + MINI.h, MINI.l + 2, 1);
@@ -675,10 +770,14 @@ const Hud = (function () {
     // 1,7 bave. En dessous, on prend la fraction telle quelle — depuis les cinq
     // districts (421 x 213 tuiles), mieux vaut une ville un peu floue qu'une
     // ville qui deborde de l'ecran.
-    const brut = Math.min((VW - 20) / carte.w, (VH - 40) / carte.h);
+    // ⚠️ La ville se dessine ENTRE le titre et la legende, pas au milieu de
+    // l'ecran : centree bêtement, ses dernieres rangees finissaient sous le
+    // bandeau de la legende — et c'est La Pointe qu'on ne voyait plus.
+    const yHaut = 14, yBas = VH - 38;
+    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / carte.h);
     const echelle = brut >= 1 ? Math.floor(brut) : brut;
     const l = carte.w * echelle, h = carte.h * echelle;
-    const ox = Math.round((VW - l) / 2), oy = Math.round((VH - h) / 2) + 6;
+    const ox = Math.round((VW - l) / 2), oy = yHaut + Math.round((yBas - yHaut - h) / 2);
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
     B.stats.images++;
@@ -686,7 +785,7 @@ const Hud = (function () {
     for (const point of carte.points) {
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
-      ctx.fillStyle = COULEUR_BLIP[point.slug] || '#cdc6e6'; ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
+      ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
       B.stats.rects += 2;
     }
     if (B.recherche.etoiles > 0) {
@@ -696,18 +795,55 @@ const Hud = (function () {
         const p = pos(e.x, e.y); ctx.fillRect(p.x, p.y, 2, 2); B.stats.rects++;
       }
     }
+    // L'objectif : un losange dore qui bat. La ville entiere tient a l'ecran,
+    // alors il n'y a jamais de hors-cadre ici — pas de fleche a prevoir.
     const gps = Histoire.cible();
-    if (gps && (B.t >> 3) % 2 === 0) { const p = pos(gps.x, gps.y); ctx.fillStyle = gps.couleur || '#e8b33c'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5); B.stats.rects++; }
+    marqueurs.cible = null;
+    if (gps) {
+      const p = pos(gps.x, gps.y);
+      const bat = (B.t % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
+      if (bat) losange(ctx, p.x, p.y, 3, gps.couleur || '#e8b33c');
+      marqueurs.cible = { x: p.x, y: p.y, forme: 'losange', visible: bat, dedans: true };
+    }
+    // Le joueur : le meme anneau que sur la mini-carte, en plus large — a un
+    // demi-pixel par tuile, un carre blanc de 4 px se perd dans la ville.
     const pj = pos(B.exterieur ? B.exterieur.x : j.x, B.exterieur ? B.exterieur.y : j.y);
+    const rj = pulse(4, 3);
+    anneau(ctx, pj.x, pj.y, rj, 'rgba(255,255,255,0.8)');
     ctx.fillStyle = '#101018'; ctx.fillRect(pj.x - 2, pj.y - 2, 6, 6);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(pj.x - 1, pj.y - 1, 4, 4);
     B.stats.rects += 2;
+    marqueurs.joueur = { x: pj.x, y: pj.y, r: rj, forme: 'anneau', visible: true };
     const zone = Monde.zoneA ? (B.exterieur ? null : Monde.zoneA(j.x, j.y)) : null;
     const ville = (carte.def && carte.def.nom ? carte.def.nom : 'Baie-des-Brumes').toUpperCase();
     const titre = ville + (zone ? ' — ' + zone.nom.toUpperCase() : '');
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
+    dessinerLegende(ctx, carte);
     const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
+  }
+
+  /** La legende, en deux rangees en bas a gauche. ⚠️ Elle se lit dans les
+      donnees : les couleurs des blips codaient deja des familles, et rien ne le
+      disait au joueur. */
+  function dessinerLegende(ctx, carte) {
+    const lignes = legendeDeLaCarte(carte);
+    if (!lignes.length) return;
+    const parRangee = 4, cellule = 114;
+    // ⚠️ Un bandeau sous la legende : sans lui elle se lit sur la ville — donc
+    // sur du vert, du bleu et du gris a la fois, et une ligne sur deux disparait.
+    const rangees = Math.ceil(lignes.length / parRangee);
+    ctx.fillStyle = 'rgba(11,10,18,0.86)';
+    ctx.fillRect(0, VH - 36, VW, rangees * 9 + 8);
+    B.stats.rects++;
+    lignes.forEach(function (entree, i) {
+      const x = 12 + (i % parRangee) * cellule;
+      const y = VH - 32 + Math.floor(i / parRangee) * 9;
+      ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 1, 6, 6);
+      ctx.fillStyle = entree.couleur; ctx.fillRect(x, y, 4, 4);
+      texte(ctx, entree.libelle, x + 8, y - 1, '#cdc6e6', 1);
+      B.stats.rects += 2;
+    });
   }
 
   //: Ce que la derniere image a dessine, en pixels logiques. Sert au test
@@ -837,6 +973,8 @@ const Hud = (function () {
   }
 
   return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
+    marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
            dessiner, miniCarte, MINI, montrerScores, demanderScore,

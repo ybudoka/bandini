@@ -293,3 +293,97 @@ def test_la_carte_de_la_ville_s_ouvre_et_se_ferme(banc):
     assert r["ouverte"] == "carte" and r["dessine"] > 10, "N ouvre la carte, qui se dessine"
     assert r["fige"] is True, "la carte ouverte, le temps s'arrete"
     assert r["fermee"] == "jeu" and r["parLeMenu"] == "carte" and r["fin"] == "jeu"
+
+
+def test_le_sergent_et_josee_se_voient_dans_leur_piece(banc):
+    """⚠️ LE juge du retour de Martin : « je vais à la cantine, mais je ne vois
+    pas quoi faire ». Bouchard et Josee sont les deux seuls donneurs qui se
+    tiennent DEDANS (`ou: point:...`), et `creerDonneurs` ne posait que ceux de
+    la rue : on poussait la porte du casse-croute et la salle etait vide — le
+    sergent n'etait qu'un point invisible au fond a droite. Ici on entre, et il
+    faut trouver quelqu'un, a portee de son point, qui parle quand on l'aborde."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        function visite(lieu, type, slug) {
+            const porte = c.portes.find(function (p) { return p.lieu === lieu; });
+            o.entrer(porte);
+            const piece = L.B.interieur;
+            const point = piece.points.find(function (p) { return p.type === type; });
+            const e = L.Histoire.donneur(slug);
+            const dit = { la: !!e, sur_meuble: e ? L.Monde.estMeuble(Math.floor(e.x / L.TT), Math.floor(e.y / L.TT)) : null,
+                          du_point: e ? Math.hypot(e.x / L.TT - 0.5 - point.x, e.y / L.TT - 0.5 - point.y) : null,
+                          gens: L.B.entites.filter(function (q) { return q.type === 'pieton'; }).length };
+            if (e) {
+                j.x = e.x - 14; j.y = e.y; L.Entites.indexer();
+                L.Missions.majInvite(j);
+                dit.invite = L.B.invite;
+                dit.parle = L.Missions.utiliserPoint(j);
+                dit.qui = L.B.cinema ? L.B.cinema.lignes[0].qui : (L.B.dialogue ? L.B.dialogue.qui : null);
+                L.B.cinema = null; L.B.dialogue = null;
+            }
+            o.sortir();
+            dit.dehors = !!L.Histoire.donneur(slug);
+            return dit;
+        }
+        const sergent = visite('casse_croute', 'sergent', 'bouchard');
+        ['m1', 'm2', 'm3', 'm4'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        const josee = visite('bar', 'contact', 'josee');
+        return { sergent: sergent, josee: josee };
+    }""")
+    for qui, personne in (("bouchard", r["sergent"]), ("josee", r["josee"])):
+        assert personne["la"] is True, f"{qui} : on entre chez lui et la piece est vide"
+        assert personne["sur_meuble"] is False, f"{qui} se tient debout sur un meuble"
+        assert personne["du_point"] <= 1.5, f"{qui} : loin de son point, l'ancien comptoir ne sert plus de filet"
+        assert personne["gens"] >= 3, "le commis et les clients de la piece sont encore la"
+        assert personne["dehors"] is False, "il est reste dans sa piece, il n'a pas suivi dans la rue"
+    assert r["sergent"]["invite"] == "PARLER À SERGENT BOUCHARD", "le HUD nomme celui qu'on voit"
+    assert r["sergent"]["qui"] == "Sergent Bouchard", \
+        "sans M3 il n'a pas de job, mais il repond : c'est la boite de dialogue qui le nomme"
+    assert r["josee"]["invite"] == "PARLER À JOSÉE"
+    assert r["josee"]["qui"] == "josee", "M4 faite : Josee donne M5"
+
+
+def test_le_donneur_qui_a_une_job_pour_toi_t_interpelle(banc, paquet):
+    """⚠️ Une bulle qui ne s'eteint jamais ne veut plus rien dire : elle doit
+    dire « celui-la attend apres toi », et personne d'autre."""
+    heler = {p["slug"]: p["heler"] for p in paquet["personnages"]}
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        function bulleDe(slug) { const e = L.Histoire.donneur(slug); return e && e.bulle ? e.bulle.texte : null; }
+        o.frame(2);
+        const debut = { tiguy: bulleDe('ti_guy'), marco: bulleDe('marco') };
+        // Ti-Guy donne M1 : sa bulle s'eteint pendant, et pour de bon apres.
+        const t = L.Histoire.donneur('ti_guy');
+        L.Histoire.commencer('m1');
+        o.frame(2);
+        const pendant = bulleDe('ti_guy');
+        L.B.partie.mission.etape = 2; L.B.mission.vehicule = null;
+        L.Histoire.reussir(); L.Histoire.finir();
+        o.frame(2);
+        const apres = bulleDe('ti_guy');
+        // M1 faite : c'est Mme Thibodeau (M2) qui attend, maintenant.
+        const thibodeau = bulleDe('thibodeau');
+        // Et le sergent, dans sa piece, une fois M3 faite.
+        ['m2', 'm3'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        const porte = L.Monde.carte.portes.find(function (p) { return p.lieu === 'casse_croute'; });
+        o.entrer(porte);
+        o.frame(2);
+        const sergent = bulleDe('bouchard');
+        const b = L.Histoire.donneur('bouchard').bulle;
+        // Elle vit : elle ne repart pas a zero a chaque image, et elle se dessine.
+        const t0 = b.t; o.frame(10); const bouge = L.Histoire.donneur('bouchard').bulle.t > t0;
+        const rects = L.B.stats.rects;
+        L.Entites.dessinerBulle(o.ctx, L.Histoire.donneur('bouchard'), 0, 0);
+        return { debut: debut, pendant: pendant, apres: apres, thibodeau: thibodeau,
+                 sergent: sergent, bouge: bouge, dessine: L.B.stats.rects > rects };
+    }""")
+    assert r["debut"]["tiguy"] == heler["ti_guy"], "Ti-Guy a M1 pour toi : il t'interpelle"
+    assert r["debut"]["marco"] is None, "Marco n'a rien pour toi avant M2 : il se tait"
+    assert r["pendant"] is None, "pendant sa propre mission, le donneur n'appelle plus"
+    assert r["apres"] is None, "M1 faite, Ti-Guy n'a plus rien a dire"
+    assert r["thibodeau"] == heler["thibodeau"], "M1 faite : c'est Mme Thibodeau qui attend"
+    assert r["sergent"] == heler["bouchard"], "M3 faite : le sergent t'attend dans sa piece"
+    assert r["bouge"] is True, "une bulle reposee chaque image resterait figee a sa premiere image"
+    assert r["dessine"] is True, "la bulle ne pose aucun pixel"

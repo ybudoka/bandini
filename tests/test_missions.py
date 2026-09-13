@@ -76,3 +76,20 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
             assert m["dialogue"]["appel"], f"{m['slug']} : apres la premiere, le donneur appelle"
             assert all(ligne["qui"] == m["donneur"] for ligne in m["dialogue"]["appel"])
     assert all(v["histoire"] for v in audio.voix_histoire())
+
+
+def test_chaque_donneur_a_son_mot_pour_t_interpeller():
+    """⚠️ La bulle d'un donneur est ce qui le distingue d'un figurant : sans
+    mot, Bouchard redevient un client de plus au fond du casse-croute. Le mot
+    est court PAR FORCE (police 3x5 au-dessus d'une tete de 12 px de large), et
+    il ne s'ecrit pas en JavaScript : ici, avec les autres repliques."""
+    donneurs = {m["donneur"] for m in missions.CATALOGUE}
+    for perso in missions.PERSONNAGES:
+        assert "heler" in perso, f"{perso['slug']} : pas de mot de bulle"
+        mot = perso["heler"]
+        assert len(mot) <= missions.HELER_MAX, f"{perso['slug']} : « {mot} » deborde de sa bulle"
+        if perso["slug"] in donneurs:
+            assert mot, f"{perso['slug']} donne une mission : il doit pouvoir t'interpeller"
+    # Le client du taxi hele lui aussi — c'est le meme geste, au bord du trottoir.
+    assert missions.personnage("civil")["heler"], "le client du taxi doit lever le bras"
+    assert not missions.personnage("narrateur")["heler"], "le narrateur n'est nulle part : il ne hele personne"

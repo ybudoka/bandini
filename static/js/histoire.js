@@ -91,7 +91,7 @@ const Histoire = (function () {
   /** `ou` d'un objectif ou d'un personnage → un pixel. */
   function resoudre(ou, m) {
     if (!ou) return null;
-    if (ou === 'donneur') { const d = donneur(m.donneur); return d ? { x: d.x, y: d.y } : lieuDuPersonnage(m.donneur); }
+    if (ou === 'donneur') return ouTrouver(m.donneur);
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
     if (deux[0] === 'ruelle') return ruellePres(deux[1]);
@@ -106,8 +106,37 @@ const Histoire = (function () {
     const ou = p.ou.split(':');
     if (ou[0] === 'porte') return lieu(ou[1]);
     if (ou[0] === 'point') {                                // il est dedans : la porte de son commerce
-      const piece = ou[1] === 'sergent' ? 'casse_croute' : ou[1] === 'contact' ? 'bar' : null;
-      return piece ? lieu(piece) : null;
+      const piece = pieceDuPoint(ou[1]);
+      return piece ? lieu(piece.slug) : null;
+    }
+    return null;
+  }
+
+  /** Ou POINTER pour trouver quelqu'un : sa personne quand elle est dans le
+      meme monde que nous, sinon sa porte.
+
+      ⚠️ Dedans, le donneur qu'on a sous les yeux vit en coordonnees de PIECE
+      (12, 6 dans le casse-croute) : le poser tel quel sur la minicarte
+      enverrait la fleche a six tuiles du coin nord-ouest de la ville. */
+  function ouTrouver(slug) {
+    return (!B.interieur && donneur(slug)) || lieuDuPersonnage(slug);
+  }
+
+  //: Les personnages qui se tiennent DEDANS : leur `ou` nomme un point de
+  //: piece (`point:sergent`), et c'est le point qui dit ou ils sont. La table
+  //: ne se recopie donc nulle part — `missions.py` la porte deja.
+  function personnageDuPoint(type) {
+    return personnages().find(function (p) { return p.ou === 'point:' + type; }) || null;
+  }
+
+  /** La piece qui porte ce type de point — celle ou le personnage se tient.
+      ⚠️ Dedans, `Monde.carte.def.interieurs` est vide : c'est la VILLE qui
+      garde le catalogue des pieces. */
+  function pieceDuPoint(type) {
+    const ville = Monde.carte.ville || Monde.carte;
+    const pieces = (ville.def && ville.def.interieurs) || {};
+    for (const slug in pieces) {
+      if ((pieces[slug].points || []).some(function (q) { return q.type === type; })) return pieces[slug];
     }
     return null;
   }
@@ -132,6 +161,45 @@ const Histoire = (function () {
       if (!place) continue;
       creerPersonnage(p, place.x, place.y);
     }
+  }
+
+  /** Pose les personnages qui se tiennent DEDANS, quand on entre chez eux.
+
+      ⚠️ Ils naissent avec la piece et meurent avec elle (`B.entites` est
+      remplace des deux cotes de la porte, comme pour le commis) : rien a
+      nettoyer en sortant. Avant ca, Bouchard et Josee n'existaient NULLE PART
+      — ni dans la rue, ni dans leur piece : on poussait la porte du
+      casse-croute, la salle etait vide, et il fallait deviner qu'un point
+      invisible attendait au fond a droite. */
+  function creerDonneursDedans(piece) {
+    if (!piece) return;
+    for (const p of personnages()) {
+      if (p.ou.indexOf('point:') !== 0) continue;
+      const point = (piece.points || []).find(function (q) { return q.type === p.ou.slice(6); });
+      if (!point) continue;
+      const place = placeDebout(point);
+      const e = creerPersonnage(p, place.x, place.y);
+      e.face = 'bas';                                   // il regarde la salle, donc la porte
+    }
+    Entites.indexer();
+  }
+
+  /** Ou se TIENT quelqu'un dont le point tombe sur un meuble : Josee pointe la
+      derniere table du Brouillard, et personne ne se tient debout sur une
+      table. On prend alors la tuile libre voisine la plus proche du milieu de
+      la piece — le fond d'un coin, ce n'est pas une scene. */
+  function placeDebout(point) {
+    const centre = { x: Monde.carte.w / 2, y: Monde.carte.h / 2 };
+    let meilleure = null, dMin = Infinity;
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        const tx = point.x + dx, ty = point.y + dy;
+        if (!Monde.marchablePieton(tx, ty) || Monde.estMeuble(tx, ty)) continue;
+        const d = Math.hypot(tx - centre.x, ty - centre.y) + (dx || dy ? 0.5 : 0);   // son point d'abord
+        if (d < dMin) { dMin = d; meilleure = { x: tx * TT + 8, y: ty * TT + 8 }; }
+      }
+    }
+    return meilleure || { x: point.x * TT + 8, y: point.y * TT + 8 };
   }
 
   function creerPersonnage(p, x, y) {
@@ -638,14 +706,14 @@ const Histoire = (function () {
       let l = null;
       if (o.type === 'aller' || o.type === 'livrer') l = lieu(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
-      else if (o.type === 'retourner') l = donneur(m.donneur) || lieuDuPersonnage(m.donneur);
+      else if (o.type === 'retourner') l = ouTrouver(m.donneur);
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
     const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
-    if (attendue) { const l = donneur(attendue.donneur) || lieuDuPersonnage(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
+    if (attendue) { const l = ouTrouver(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
     return null;
   }
 
@@ -671,10 +739,28 @@ const Histoire = (function () {
 
   // --- La boucle -------------------------------------------------------------------------------
 
+  /** Les bulles des donneurs : celui qui a quelque chose pour toi t'interpelle,
+      les autres se taisent.
+
+      ⚠️ C'est la SEULE chose qui distingue un donneur d'un figurant. Dans une
+      piece, Bouchard est un pieton de plus, assis devant un mur de tuiles ; la
+      bulle dit qu'il attend apres toi, et elle s'eteint des qu'il n'attend
+      plus rien — sinon elle ne voudrait plus rien dire. */
+  function majBulles() {
+    const m = courante(), o = objectif();
+    for (const e of B.entites) {
+      if (!e.personnage || !e.vivant) continue;
+      const attend = (m && m.donneur === e.personnage && o && o.type === 'retourner') || !!disponibleDe(e.personnage);
+      const p = attend ? personnage(e.personnage) : null;
+      Entites.bulle(e, p ? p.heler : '');
+    }
+  }
+
   function maj() {
     if (!B.joueur || !B.partie) return;
     majCinema();
     if (B.cinema) return;
+    majBulles();
     majTelephone();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
@@ -686,7 +772,8 @@ const Histoire = (function () {
     majDefi();
   }
 
-  return { disponibles, disponibleDe, personnage, personnageSousLaMain, donneur, creerDonneurs, creerPanneaux, panneauSousLaMain,
+  return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
+           donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
            proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
 })();
