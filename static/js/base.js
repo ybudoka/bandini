@@ -201,6 +201,14 @@ const Sauvegarde = (function () {
 
   function effacer() { try { stockage && stockage.removeItem(CLE); } catch (e) { /* rien */ } }
 
+  const CLE_OPTIONS = 'bandini-options-v1';
+  function ecrireOptions(options) {
+    try { stockage && stockage.setItem(CLE_OPTIONS, JSON.stringify(options)); return true; } catch (e) { return false; }
+  }
+  function lireOptions() {
+    try { const brut = stockage && stockage.getItem(CLE_OPTIONS); return brut ? JSON.parse(brut) : null; } catch (e) { return null; }
+  }
+
   /** Une partie chargee recoit tout champ ajoute depuis (repli sur les defauts). */
   function completer(partie, defs) {
     const base = etatInitial(defs);
@@ -215,5 +223,5 @@ const Sauvegarde = (function () {
     return out;
   }
 
-  return { CLE, init, lire, ecrire, effacer, completer };
+  return { CLE, CLE_OPTIONS, init, lire, ecrire, effacer, completer, ecrireOptions, lireOptions };
 })();

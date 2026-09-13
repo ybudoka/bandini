@@ -83,12 +83,14 @@ const Jeu = (function () {
     B.etat = 'pause';
     Hud.etat('pause');
     Missions.sauvegarderPartie();
+    Hud.ouvrirMenu(Hud.menuPause());
   }
 
   function reprendre() {
     if (B.etat !== 'pause') return;
     B.etat = 'jeu';
     Hud.etat('jeu');
+    if (B.menu) Hud.fermerMenu();
   }
 
   function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); }
@@ -128,8 +130,11 @@ const Jeu = (function () {
       Son.Mus.tick();
       B.t++;
     } else if (B.etat === 'pause') {
-      if (Entree.neuf('pause') || Entree.neuf('action')) reprendre();
-      if (Entree.neuf('annuler')) retourTitre();
+      if (Entree.neuf('pause')) { reprendre(); Entree.videPresse(); return; }
+      if (B.menu) Hud.majMenu();
+      else if (Entree.neuf('action')) reprendre();
+      // Fermer le dernier menu avec FRAPPE, c'est reprendre.
+      if (!B.menu && B.etat === 'pause') reprendre();
     }
     Entree.videPresse();
   }
@@ -186,6 +191,7 @@ const Jeu = (function () {
     Base.initCanvas(toile, fabriqueCanvas);
     Son.init(w, racine.dataset.urlStatique);
     Sauvegarde.init(w.localStorage);
+    Object.assign(B.options, Sauvegarde.lireOptions() || {});
     Entree.init(d, w, w.navigator);
     Hud.init(d, racine);
     B.rng = mulberry(B.graine);

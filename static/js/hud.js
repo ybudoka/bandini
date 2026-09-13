@@ -90,10 +90,62 @@ const Hud = (function () {
     B.stats.rects += 4;
   }
 
+  // --- Pause : reprendre, bilan, options, quitter ------------------------------------
+
+  function menuOptions() {
+    const o = B.options;
+    function bascule(cle, libelle) {
+      return { libelle: libelle, detail: o[cle] ? 'OUI' : 'NON', faire: function (item) {
+        o[cle] = !o[cle]; item.detail = o[cle] ? 'OUI' : 'NON';
+        if (cle === 'muet') Son.majVolume();
+        Sauvegarde.ecrireOptions(o);
+        return false;
+      } };
+    }
+    return { titre: 'OPTIONS', items: [
+      bascule('sang', 'SANG'),
+      bascule('vibration', 'VIBRATION'),
+      bascule('muet', 'SON COUPE'),
+      bascule('daltonien', 'PALETTE DALTONIENNE'),
+      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
+    ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
+  }
+
+  /** Le bilan de la session : ce qu'on a fait depuis le debut. */
+  function menuBilan() {
+    const p = B.partie, s = p.stats;
+    const minutes = Math.floor((s.secondes || 0) / 60);
+    const fortune = p.argent + (p.planque.coffre || 0);
+    const lignes = [
+      ['JOUR ' + p.jour + ' · ' + minutes + ' MIN JOUEES', ''],
+      ['FORTUNE', fortune + ' $'],
+      ['PROPRIETES', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
+      ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
+      ['CRIMES', String(s.crimes || 0)],
+      ['CHARS VOLES', String(s.volees || 0)],
+      ['COURSES DE TAXI', String(s.courses || 0)],
+      ['MORTS', String(s.tues || 0)],
+      ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
+    ];
+    return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
+      .concat([{ libelle: 'ENVOYER MON SCORE', faire: function () { fermerMenu(); demanderScore(); return true; } },
+               { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+  }
+
+  function menuPause() {
+    return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
+      { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
+      { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
+      { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
+      { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDEE'); return false; } },
+      { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
+    ] };
+  }
+
   /** L'invite du bas : ce que fera ACTION ici. */
   function invite(ctx) {
     const j = B.joueur;
-    if (!j || j.dansVehicule || !B.invite) return;
+    if (!j || j.dansVehicule || !B.invite || B.menu) return;   // un menu ouvert : l'invite se tait
     const t = 'ACTION : ' + B.invite;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
@@ -354,9 +406,7 @@ const Hud = (function () {
       }
       if (B.etat === 'pause') {
         ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH);
-        Atlas.texte(ctx, 'PAUSE', (VW - Atlas.largeurTexte('PAUSE', 4)) / 2, VH / 2 - 14, '#e8b33c', 4);
-        const aide = 'ECHAP OU PAUSE : REPRENDRE';
-        Atlas.texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH / 2 + 12, '#cdc6e6', 1);
+        dessinerMenu(ctx);
       }
     }
     if (B.etat === 'jeu') { invite(ctx); dessinerDialogue(ctx); dessinerMenu(ctx); }
@@ -367,6 +417,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, dessiner, miniCarte, MINI, montrerScores, demanderScore,
+  return { init, voile, etat, message, fondu, dialogue, ouvrirMenu, fermerMenu, majMenu, menuPause, menuOptions, menuBilan,
+           dessiner, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();

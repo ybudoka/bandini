@@ -1587,3 +1587,28 @@ def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
     assert r["inconnus"] == {}, f"glyphes que la police ne sait pas ecrire : {r['inconnus']}"
     assert r["hopital"] == "HOPITAL DE BAIE-DES-BRUMES"
     assert r["largeur"] == 6 * 4 - 1, "la largeur doit compter le OE en deux lettres"
+
+
+def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        o.tape('Escape', 2);
+        const pause = { etat: L.B.etat, menu: L.B.menu && L.B.menu.titre };
+        // OPTIONS : troisieme ligne ; on bascule le sang.
+        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        const options = L.B.menu.titre;
+        const sangAvant = L.B.options.sang;
+        L.B.menu.items.find(function (i) { return i.libelle === 'SANG'; }).faire(L.B.menu.items[0]);
+        const sangApres = L.B.options.sang;
+        const sauvees = JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).sang;
+        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
+        L.B.menu.items.find(function (i) { return i.libelle === 'BILAN DE LA SESSION'; }).faire();
+        const bilan = { titre: L.B.menu.titre, lignes: L.B.menu.items.length };
+        o.tape('Escape', 2);
+        return { pause: pause, options: options, sangAvant: sangAvant, sangApres: sangApres, sauvees: sauvees,
+                 bilan: bilan, etat: L.B.etat, menu: L.B.menu };
+    }""")
+    assert r["pause"] == {"etat": "pause", "menu": "PAUSE"}
+    assert r["options"] == "OPTIONS" and r["sangApres"] == (not r["sangAvant"]) and r["sauvees"] == r["sangApres"]
+    assert r["bilan"]["titre"] == "BILAN" and r["bilan"]["lignes"] >= 9
+    assert r["etat"] == "jeu" and r["menu"] is None, "Echap doit reprendre et fermer le menu"
