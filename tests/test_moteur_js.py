@@ -270,3 +270,23 @@ def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     assert r["arbre"] is not None and r["arbre"] > 0, "on traverse les arbres"
     assert r["buisson"] is not None and r["buisson"] <= 0, "un buisson ne doit pas bloquer"
     assert r["lampadaire"] <= 0, "un lampadaire ne doit pas bloquer"
+
+
+def test_le_son_survit_a_l_absence_d_audio(banc, paquet):
+    """Sous Node il n'y a pas d'AudioContext : le jeu doit jouer quand meme."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        const avant = L.B.t;
+        for (const nom in L.Son.SFX) L.Son.SFX[nom]();
+        L.Son.boucle('sirene', true); L.Son.boucle('sirene', false);
+        o.tape('KeyD', 30);
+        return { charges: L.Son.charges, pret: L.Son.pret(), contexte: L.Son.contexte,
+                 avance: L.B.t > avant, sons: L.B.defs.audio.echantillons.length,
+                 sansFichier: L.B.defs.audio.echantillons.filter(function (e) { return !e.fichiers.length; }).map(function (e) { return e.slug; }) };
+    }""")
+    assert r["contexte"] is None and r["pret"] is False
+    assert r["charges"] == 0, "rien ne doit se charger sans AudioContext"
+    assert r["avance"] is True, "la boucle s'est arretee sur un son"
+    assert r["sons"] == len(paquet["audio"]["echantillons"])
+    assert r["sansFichier"] == [], f"sons declares sans fichier : {r['sansFichier']}"

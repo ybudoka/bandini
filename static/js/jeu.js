@@ -54,7 +54,11 @@ const Jeu = (function () {
 
   function maj() {
     Entree.debutImage();
-    if (Entree.neuf('muet')) { B.options.muet = !B.options.muet; Hud.message(B.options.muet ? 'SON COUPE' : 'SON'); }
+    if (Entree.neuf('muet')) {
+      B.options.muet = !B.options.muet;
+      Son.majVolume();
+      Hud.message(B.options.muet ? 'SON COUPE' : 'SON');
+    }
     if (B.etat === 'jeu') {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
       if (Entree.neuf('carte')) { Hud.demanderScore(); B.etat = 'pause'; Hud.etat('pause'); Entree.videPresse(); return; }
@@ -122,7 +126,7 @@ const Jeu = (function () {
     const racine = d.getElementById('bandini');
     const toile = d.getElementById('toile');
     Base.initCanvas(toile, fabriqueCanvas);
-    Son.init(w);
+    Son.init(w, racine.dataset.urlStatique);
     Sauvegarde.init(w.localStorage);
     Entree.init(d, w, w.navigator);
     Hud.init(d, racine);

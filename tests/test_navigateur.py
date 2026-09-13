@@ -117,3 +117,25 @@ def test_le_pincement_est_bloque_par_les_trois_couches():
     assert re.search(r"html,\s*body\s*\{[^}]*touch-action:\s*pan-x pan-y", css)
     assert "gesturestart" in js
     assert "env(safe-area-inset-bottom)" in css
+
+
+def test_les_echantillons_se_chargent_dans_un_vrai_navigateur(page, serveur, erreurs):
+    """⚠️ Le seul endroit qui prouve que les .mp3 generes se DECODENT vraiment.
+
+    Sous Node il n'y a pas d'AudioContext, et pytest ne sait pas lire un MP3 :
+    un fichier tronque passerait partout ailleurs et ne se verrait qu'a
+    l'oreille, en jeu.
+    """
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-jouer")          # le clic reveille l'audio
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # ⚠️ Attendre l'EGALITE, pas « au moins un » : les fichiers se decodent en
+    # parallele, et un test qui part au premier decode ne verrait jamais un MP3
+    # tronque au fond de la liste.
+    attendus = page.evaluate(
+        "window.BANDINI.B.defs.audio.echantillons.filter(e => e.fichiers.length).length")
+    page.wait_for_function(
+        "n => window.BANDINI.Son.charges === n", arg=attendus, timeout=20000)
+    assert page.evaluate("window.BANDINI.Son.charges") == attendus
+    assert erreurs == []

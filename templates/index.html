@@ -3,7 +3,8 @@
 {% block corps %}
 <main id="bandini" class="jeu" data-etat="chargement"
       data-url-definitions="{{ url_for('jeu.api_definitions') }}"
-      data-url-scores="{{ url_for('jeu.api_scores') }}">
+      data-url-scores="{{ url_for('jeu.api_scores') }}"
+      data-url-statique="{{ url_for('static', filename='') }}">
 
   <div class="ecran">
     <canvas id="toile" width="480" height="270" aria-label="Zone de jeu"></canvas>

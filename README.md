@@ -7,8 +7,10 @@ l'argent — et la police ne t'arrête que si elle **te voit**. La prison coûte
 cher. Deux fins : devenir le boss de la ville, ou sacrer ton camp par le
 traversier de nuit.
 
-Python (Flask) côté serveur, canvas côté navigateur. Aucune ressource externe :
-sprites dessinés en code, sons synthétisés.
+Python (Flask) côté serveur, canvas côté navigateur. Sprites et ville dessinés
+en code ; les bruitages sont de vrais échantillons générés par ElevenLabs
+(`scripts/audio_elevenlabs.py`), avec repli sur la synthèse si un fichier
+manque.
 
 En ligne : <https://bandini.gestiondojo.ca>
 
@@ -59,8 +61,10 @@ service systemd `bandini-gestiondojo`, vhost nginx, hôte dans Caddy, modèle
 ```
 run.py  config.py          entree, configuration (.env)
 app/                       fabrique, routes, definitions, scores, version,
-                           vehicules, armes, economie, recherche, carte, missions, magasins
+                           vehicules, armes, economie, recherche, carte, missions,
+                           magasins, audio
 templates/  static/css/    page, voiles DOM, commandes tactiles, styles
+static/audio/              bruitages (.mp3) — recette dans app/audio.py
 static/js/                 base, atlas, sprites, entree, son, monde, entites,
                            combat, vehicules, police, missions, hud, jeu
 tests/                     pytest, banc.js (Node), test_navigateur.py (Playwright)

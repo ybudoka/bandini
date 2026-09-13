@@ -9,7 +9,8 @@ jalons » à chaque jalon livré.
 | Jalon | État | Notes |
 |---|---|---|
 | M0 Squelette et mise en ligne | **livré** (12 sept. 2026) | dépôt `ybudoka/bandini`, Flask + uv, 13 fichiers JS, entrées, banc Node, CI, tests ; serveur installé, https://bandini.gestiondojo.ca |
-| M1 La ville | à faire | générateur `carte.py` (plan de blocs + gabarits), juges de connexité |
+| M1 La ville | **livré** (12 sept. 2026) | `carte.py` : plan 8×6 + gabarits, 168×110 tuiles, 63 croisements, 10 intérieurs ; juges (voies fortement connexes, un seul îlot marchable) ; cache de morceaux borné, mini-carte |
+| Audio ElevenLabs | **livré** (12 sept. 2026) | MCP `elevenlabs` + `app/audio.py` + 14 bruitages dans `static/audio/` ; voix (M6) et radios (M3) par le même chemin |
 | M2 Piétons et poings | à faire | |
 | M3 Véhicules | à faire | |
 | M4 Police | à faire | |
@@ -25,6 +26,15 @@ uv sync --all-groups && cp -n .env.example .env
 git config core.hooksPath scripts/git-hooks
 uv run ruff check . && uv run pytest -q --ignore=tests/test_navigateur.py
 uv run python run.py          # http://127.0.0.1:5400
+```
+
+Les sons manquants se regénèrent par le serveur MCP `elevenlabs` (clé dans
+`~/.mcp-servers/elevenlabs/cle.txt`) :
+
+```bash
+uv run python scripts/audio_elevenlabs.py --essai       # ce qui serait généré
+uv run python scripts/audio_elevenlabs.py               # génère ce qui manque
+uv run python scripts/audio_elevenlabs.py --refaire coup pas
 ```
 
 Mise en ligne : `deploy/README.md`. Chaque jalon terminé est déployé et testé
@@ -53,6 +63,7 @@ Décisions prises avec Martin (12 sept. 2026) :
 | Adresse | `https://bandini.gestiondojo.ca`, gunicorn **8006** (8005 = Auto Évasion, 8004 = KidTube), service `bandini-gestiondojo`, `/srv/bandini`, port local 5400 |
 | Mise en ligne | **tôt puis à chaque jalon** : le site existe dès le squelette, chaque jalon est déployé, Martin teste sur téléphone |
 | Idées | **toutes** les idées de la première liste + les 28 nouvelles ; prémisse, ville et personnages retenus |
+| Audio (12 sept. 2026) | les sons importants sont de **vrais échantillons ElevenLabs**, générés par le serveur MCP `elevenlabs` et versionnés dans `static/audio/` ; la synthèse de `son.js` reste le **filet** quand un fichier manque. Voix des personnages en M6, radios en M3. |
 
 ## La vision (tout ce qui est retenu)
 
@@ -118,8 +129,10 @@ temps le permet, sinon v2** · mode photo, coop locale **v2**.
 Comme dans `car-game` : **Python décide, JS calcule.** Tout ce qui tient dans une table
 (catalogues, économie, paliers de recherche, carte, missions, magasins) vit en Python, est
 testé par pytest et servi en **un seul paquet** `/api/definitions` (ETag, ~10 Ko gzip). Le
-JS joue ce qu'il reçoit : physique, rendu, IA locale, entrées. Sprites, sons et musique
-restent en JS (dessinés et synthétisés par le code, aucune ressource externe).
+JS joue ce qu'il reçoit : physique, rendu, IA locale, entrées. Les sprites restent
+dessinés en code ; l'audio est **mixte depuis le 12 sept. 2026** : de vrais échantillons
+ElevenLabs versionnés dans `static/audio/` (catalogue et recettes dans `app/audio.py`),
+et la synthèse de `son.js` comme filet quand un fichier manque.
 
 ### Côté Python (`app/`)
 
@@ -132,6 +145,7 @@ restent en JS (dessinés et synthétisés par le code, aucune ressource externe)
 | `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `~` eau, majuscules = bâtiment spécial garanti : P poste, H hôpital, M armurerie, A vêtements, G garage, K planque) + **gabarits** de bâtiments ; `generer(plan, graine)` produit tuiles (`sol`, `solide`, `voie` = champ de direction N/E/S/O + lignes d'arrêt), intersections, portes, lampes, décor, zones, apparitions ; intérieurs en ASCII | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), tout trottoir atteignable depuis la planque, portes ⇔ intérieurs, aucun gabarit sur une rue, déterministe |
 | `missions.py` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues | prérequis sans cycle, cibles sur tuile marchable, références existantes |
 | `magasins.py` | inventaires armurerie / vêtements / garage | articles existants |
+| `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
 | `definitions.py` | `assembler()` → `Paquet(corps, etag, taille)` construit une fois au démarrage | déterministe, < 200 Ko |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
@@ -157,7 +171,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'|'vehicule'|'menu')`, `empecherZoom()`, vibration |
-| 5 | `son.js` | `Audio_` (`ton`, `bruit`), `SFX`, moteur de véhicule, sirène, `Mus` séquenceur 3 voix (Loren) |
+| 5 | `son.js` | échantillons réels (fetch + `decodeAudioData`, variantes tirées au hasard, boucles allumables) **avec repli synthétisé** (`ton`, `bruit`), `SFX`, `Mus` séquenceur 3 voix (Loren) |
 | 6 | `monde.js` | carte active depuis le paquet, `solide()`, `ligneLibre()` (DDA), A* à budget (2/image, cap 800 nœuds, file, repli ligne droite), feux, cache de morceaux 256 px, caméra amortie avec avance, horloge jour-nuit, intérieurs (pile `B.exterieur`), mini-carte |
 | 7 | `entites.js` | structure unique `{x, y, vx, vy, r, z, angle, face, etat, t, vie, sprite, swaps, …}`, hachage spatial 64 px, cercle-vs-tuiles, piétons (flâne, traverse, fuit, **témoin**, renversé, aveuglé, mort), gangs, apparition/disparition dans une bulle 300–460 px, décor, ramassages, particules, décalques, tri par y |
 | 8 | `combat.js` | arcs de mêlée (anticipation → actif → repos), coup fort, esquive, projectiles, fusil à plombs, fronde en cloche, extincteur, réactions, saignement, mort, sang (plafond 150 décalques), lâcher/ramasser, cycle d'armes, visée assistée |
@@ -261,3 +275,6 @@ Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2.
 - **Ville générée injouable** : plan à la main, graine fixe, juges de connexité en pytest **avant** de dessiner.
 - **Dérive de la sauvegarde** : clé versionnée, repli sur `etatInitial()`, test d'un blob v0.
 - **Audio iOS** : réveil au premier geste, pause sur `visibilitychange`.
+- **Audio absent ou cassé** : `exporter()` ne déclare que les fichiers présents, chaque
+  effet retombe sur la synthèse, et un test navigateur prouve que chaque MP3 **se décode
+  vraiment** (un fichier tronqué ne se verrait qu'à l'oreille, en jeu).
