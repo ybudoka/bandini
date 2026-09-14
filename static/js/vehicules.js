@@ -289,7 +289,13 @@ const Vehicules = (function () {
     heurterPietons(v);
     // La rampe : on decolle a la sortie.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
-    if (v.z === 0 && Math.abs(v.vitesse) > 1.5 && Monde.estRampe(tx, ty)) v.vz = Math.abs(v.vitesse) * ph.rampe_impulsion;
+    // ⚠️ Le seuil de decollage vient de Python (`saut_vitesse_min`), qui le
+    // deduit de la hauteur minimale visible. L'ancien 1,5 etait ecrit ici a la
+    // main : un velo a 2 px/image le passait et « sautait » de deux pixels —
+    // moins que l'epaisseur de son ombre.
+    if (v.z === 0 && Math.abs(v.vitesse) >= B.defs.conduite.saut_vitesse_min && Monde.estRampe(tx, ty)) {
+      v.vz = Math.abs(v.vitesse) * ph.rampe_impulsion;
+    }
   }
 
   function heurterMur(v, force) {
@@ -1348,9 +1354,23 @@ const Vehicules = (function () {
     const rot = Atlas.cuireRotations(v.sprite, def, v.swaps, ROTATIONS);
     let i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
     if (i < 0) i += ROTATIONS;
-    if (v.z > 2) {                       // en l'air : l'ombre reste au sol
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(Math.round(v.x - 10 - cx), Math.round(v.y - 5 - cy), 20, 10);
+    // ⚠️ L'ombre est ce qui RACONTE la hauteur. Avant, c'etait un rectangle de
+    // 20 x 10 fixe, pose des que `z > 2` : la meme tache pour une moto et pour
+    // un autobus de 48 px, qui ne retrecissait pas, ne s'ecartait pas et ne
+    // palissait pas. Une ombre collee sous le char ne dit aucune altitude —
+    // c'est pour ca qu'un saut avait l'air de ne pas exister.
+    //
+    // Elle fait donc la taille du char, elle RETRECIT en montant, elle
+    // S'ECARTE vers le sud-est (la lumiere vient du nord-ouest, comme pour les
+    // facades) et elle palit. Et elle existe des le premier pixel de vol,
+    // jamais a partir d'un seuil.
+    if (v.z > 0) {
+      const haut = Math.min(1, v.z / 30);                 // 0 au sol, 1 tres haut
+      const l = Math.max(4, Math.round(v.def.longueur * (1 - haut * 0.35)));
+      const h = Math.max(3, Math.round(v.def.largeur * (1 - haut * 0.35)));
+      const ecart = Math.round(v.z * 0.35);
+      ctx.fillStyle = 'rgba(0,0,0,' + (0.30 - haut * 0.14).toFixed(2) + ')';
+      ctx.fillRect(Math.round(v.x - l / 2 + ecart - cx), Math.round(v.y - h / 2 + ecart - cy), l, h);
       B.stats.rects++;
     }
     ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));

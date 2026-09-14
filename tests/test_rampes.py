@@ -184,7 +184,12 @@ def test_le_dessin_sait_ou_ca_grimpe(banc):
 def test_le_panneau_du_grand_saut_se_pose_sur_une_rampe(banc):
     """Le panneau se posait sur la premiere rampe trouvee en balayant la carte
     du coin haut-gauche. Les rampes ayant demenage, il aurait atterri a l'autre
-    bout de la ville — il se pose maintenant sur la plus proche du depart."""
+    bout de la ville — il se pose maintenant sur la plus proche du depart.
+
+    ⚠️ La plus proche PARMI CELLES QUI RECOIVENT UNE MOTO (`defi`). Le Grand
+    Saut exige la moto, qui vole bien plus loin que l'auto de reference : sur
+    une rampe ordinaire, le defi se termine dans un mur et rien nulle part ne
+    le dirait. C'est tout l'objet du marquage fait par `carte.py`."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const p = L.B.entites.find(function (e) { return e.type === 'panneau' && e.defi === 'saut'; });
@@ -194,16 +199,78 @@ def test_le_panneau_du_grand_saut_se_pose_sur_une_rampe(banc):
             return Math.abs(q.x * 16 - p.x) + Math.abs(q.y * 16 - p.y);
         }).sort(function (a, b) { return a - b; });
         const depart = c.apparition.joueur;
-        const distances = (c.rampes || []).map(function (q) {
+        const pourLeDefi = (c.rampes || []).filter(function (q) { return q.defi; });
+        const distances = pourLeDefi.map(function (q) {
             return Math.abs(q.x - depart.x) + Math.abs(q.y - depart.y);
         }).sort(function (a, b) { return a - b; });
-        const laSienne = (c.rampes || []).map(function (q) {
+        const laSienne = pourLeDefi.map(function (q) {
             return { d: Math.abs(q.x * 16 - p.x) + Math.abs(q.y * 16 - p.y),
                      depart: Math.abs(q.x - depart.x) + Math.abs(q.y - depart.y) };
         }).sort(function (a, b) { return a.d - b.d; })[0];
-        return { trouve: true, colle: proches[0], sienne: laSienne.depart, plusProche: distances[0] };
+        return { trouve: true, colle: proches[0], sienne: laSienne.depart,
+                 plusProche: distances[0], pourLeDefi: pourLeDefi.length,
+                 total: (c.rampes || []).length };
     }""")
     assert r["trouve"], "aucun panneau pour Le Grand Saut : le defi est injouable"
     assert r["colle"] <= 5 * 16, f"le panneau est a {r['colle']} px de la rampe la plus proche"
+    assert r["pourLeDefi"], "aucune rampe ne recoit une moto : le Grand Saut est injouable"
+    assert r["pourLeDefi"] < r["total"], \
+        "toutes les rampes recoivent une moto — le marquage ne distingue plus rien"
     assert r["sienne"] == r["plusProche"], \
-        "le panneau n'est pas sur la rampe la plus proche du depart"
+        "le panneau n'est pas sur la rampe a moto la plus proche du depart"
+
+
+# --- Le saut se calcule, il ne se choisit plus ------------------------------
+
+
+def test_l_elan_et_la_reception_se_deduisent_de_la_physique():
+    """⚠️ Le juge du retour de Martin : « les défis de rampe doivent vraiment
+    être réalisables, avec assez d'élan et assez de place pour atterrir sans
+    frapper un mur. »
+
+    Les deux longueurs etaient des nombres de tuiles choisis a la main, et
+    mesures sur une moto PARTIE D'ARRET — alors que le generateur encourage
+    exactement le contraire (« l'elan continue dans la rue, on arrive lance »).
+    Lancee, la moto volait 126 px pour 96 px de degage.
+
+    Elles se calculent donc, et ce test refait le calcul : si quelqu'un touche
+    a l'impulsion, a la gravite ou a la moto demain, c'est ici que ca tombe.
+    """
+    auto, moto = vehicules.par_slug("auto"), vehicules.par_slug("moto")
+    defi = next(d for d in missions.DEFIS if d["slug"] == "saut")
+    assert carte.RECEPTION_RAMPE * 16 >= vehicules.saut(auto)["degage"]
+    assert carte.RECEPTION_DEFI * 16 >= vehicules.saut(moto)["degage"]
+    assert carte.RECEPTION_DEFI > carte.RECEPTION_RAMPE, \
+        "la moto vole plus loin que l'auto : sa reception ne peut pas etre la meme"
+    # L'elan garanti donne bien le vol que le defi demande, moto partie d'arret.
+    px = vehicules.elan_pour_voler(vehicules.par_slug(defi["vehicule"]), defi["vol_px"])
+    assert carte.ELAN_RAMPE * 16 >= px
+
+
+@pytest.mark.parametrize("rampe", RAMPES, ids=lambda r: f"{r['x']},{r['y']}")
+def test_on_retombe_sur_la_route_et_pas_dans_un_mur(rampe):
+    """⚠️ Le juge REJOUE la trajectoire au lieu de compter des tuiles : pour
+    chaque char capable d'atteindre cette rampe, la chute ET la marge de
+    redressement tombent sur du roulable. Un saut par-dessus un mur est un bon
+    saut ; un saut qui finit DANS un mur est un defi qu'on ne peut pas gagner.
+    """
+    degage = course(rampe["x"] + rampe["dx"], rampe["y"] + rampe["dy"],
+                    rampe["dx"], rampe["dy"], 40) * 16
+    auto = vehicules.saut(vehicules.par_slug("auto"))
+    assert degage >= auto["degage"], (
+        f"rampe {rampe['x']},{rampe['y']} : une berline a besoin de {auto['degage']:.0f} px "
+        f"et le degage n'en fait que {degage}"
+    )
+    if rampe["defi"]:
+        moto = vehicules.saut(vehicules.par_slug("moto"))
+        assert degage >= moto["degage"], (
+            f"rampe {rampe['x']},{rampe['y']} marquee `defi` mais une moto y vole "
+            f"{moto['degage']:.0f} px pour {degage} px de degage"
+        )
+
+
+def test_au_moins_une_rampe_recoit_la_moto_du_defi():
+    marquees = [r for r in RAMPES if r["defi"]]
+    assert marquees, "aucune rampe ne recoit une moto lancee : Le Grand Saut est injouable"
+    assert len(marquees) < len(RAMPES), \
+        "toutes les rampes recoivent la moto — le marquage ne distingue plus rien"

@@ -3566,3 +3566,43 @@ def test_un_char_sort_de_chaque_t_par_la_tige_sans_tourner_en_rond(banc):
         assert res["entre"] and res["sorti"], f"le char n'est pas ressorti du T : {res}"
         assert res["debloques"] == 0, f"le chien de garde a du intervenir : {res}"
         assert res["boucles"] <= 1, f"le char a tourne en rond dans le T : {res}"
+
+
+def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
+    """⚠️ Bug de Martin : « s'il marche, qu'on voie une ombre pour bien imager
+    le saut. » Elle existait — un rectangle de 20 x 10 FIXE, pose seulement
+    au-dessus de `z > 2` : la meme tache pour une moto et pour un autobus de
+    48 px, qui ne retrecissait pas, ne s'ecartait pas et ne palissait pas. Une
+    ombre collee sous le char ne dit aucune altitude, et c'est pour ca qu'un
+    saut de sept pixels avait l'air de ne pas exister.
+
+    Le juge mesure ce qu'elle raconte : elle existe des le premier pixel de
+    vol, elle a la taille du char, elle retrecit et elle s'ecarte en montant.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function ombre(slug, z) {
+            const v = o.char(slug, 0, 0, 0);
+            v.z = z;
+            const ctx = L.Base.ecran();
+            ctx.traces = [];
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            L.Entites.retirer(v);
+            // L'ombre est le seul rectangle plein : le char, lui, est une image.
+            const t = ctx.traces[0];
+            return t ? { x: t[0], y: t[1], l: t[2], h: t[3], couleur: t[4] } : null;
+        }
+        return {
+            auSol: ombre('auto', 0),
+            basse: ombre('auto', 1),
+            haute: ombre('auto', 28),
+            moto: ombre('moto', 10),
+            autobus: ombre('autobus', 10),
+        };
+    }""")
+    assert r["auSol"] is None, "un char pose au sol ne projette pas d'ombre detachee"
+    assert r["basse"], "une ombre qui n'arrive qu'au-dessus d'un seuil rate le debut du vol"
+    assert r["haute"]["l"] < r["basse"]["l"], "l'ombre ne retrecit pas quand le char monte"
+    assert r["haute"]["x"] > r["basse"]["x"], "l'ombre ne s'ecarte pas quand le char monte"
+    assert r["autobus"]["l"] > r["moto"]["l"], \
+        "l'autobus fait 48 px et la moto 20 : leur ombre ne peut pas etre la meme"

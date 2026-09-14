@@ -142,3 +142,52 @@ def test_un_boulot_par_char_et_jamais_deux_fois_le_meme():
         char = vehicules.par_slug(boulot["vehicule"])
         assert char and char["boulot"] == slug, slug
         assert char["phase"] == 1, f"{slug} : le char du boulot doit rouler"
+
+
+# --- Le saut se voit ---------------------------------------------------------
+
+
+def test_un_saut_se_voit_ou_n_a_pas_lieu():
+    """⚠️ Le juge du retour de Martin : « les rampes n'ont pas l'air de
+    fonctionner ». Elles fonctionnaient — avec 0,42 d'impulsion et 0,18 de
+    gravite, une berline montait de **7,8 px** pendant 0,31 s, sur des tuiles
+    de 16 px et pour un char dessine 32 x 16. Ce n'est pas un saut, c'est une
+    bosse, et le joueur en concluait raisonnablement que le tremplin ne marchait
+    pas.
+
+    Deux regles, et elles suffisent : un char qui decolle monte au moins sa
+    propre hauteur, et un char qui ne peut pas monter `saut_hauteur_min` ne
+    decolle pas du tout. Un velo qui « saute » de deux pixels est pire qu'un
+    velo qui refuse la rampe.
+    """
+    seuil = vehicules.saut_vitesse_min()
+    assert seuil > 0
+    for v in vehicules.de_phase(1):
+        s = vehicules.saut(v)
+        if v["vitesse_max"] < seuil:
+            assert s["hauteur"] == 0, f"{v['slug']} decolle sous le seuil"
+            continue
+        assert s["hauteur"] >= v["largeur"] / 2, (
+            f"{v['slug']} ne monte que {s['hauteur']} px : ca ne se voit pas"
+        )
+        assert s["duree"] >= 12, f"{v['slug']} : {s['duree']} images en l'air, c'est un clignement"
+    assert vehicules.saut(vehicules.par_slug("velo"))["hauteur"] == 0, \
+        "un velo a 2 px/image montait de deux pixels — il ne decolle pas"
+    assert vehicules.saut(vehicules.par_slug("auto"))["hauteur"] >= 16, \
+        "la berline doit quitter le sol d'au moins une tuile"
+
+
+def test_le_seuil_de_decollage_se_deduit_et_voyage():
+    """Le navigateur n'a plus de seuil ecrit dedans : il recoit celui que
+    Python calcule. L'ancien `1.5` etait une constante du JS, et c'est elle qui
+    laissait sauter le velo."""
+    ph = vehicules.PHYSIQUE
+    attendu = (2 * ph["gravite"] * ph["saut_hauteur_min"]) ** 0.5 / ph["rampe_impulsion"]
+    assert abs(vehicules.saut_vitesse_min() - attendu) < 0.01
+    assert vehicules.exporter_conduite()["saut_vitesse_min"] == vehicules.saut_vitesse_min()
+
+
+def test_l_elan_pour_voler_grandit_avec_la_distance_demandee():
+    moto = vehicules.par_slug("moto")
+    court, long = vehicules.elan_pour_voler(moto, 60), vehicules.elan_pour_voler(moto, 120)
+    assert 0 < court < long, "voler plus loin doit demander plus d'elan"

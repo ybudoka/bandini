@@ -607,7 +607,14 @@ const Histoire = (function () {
         // ville. On se pose au PIED, du cote de l'elan — un panneau derriere
         // le tremplin, on le lit apres avoir saute.
         const depart = Monde.carte.apparition && Monde.carte.apparition.joueur;
-        const rampes = (Monde.carte.rampes || []).slice().sort(function (a, b) {
+        // ⚠️ Seulement celles que `carte.py` a marquees `defi` : elles ont de
+        // quoi recevoir une MOTO LANCEE, pas seulement l'auto de reference. Le
+        // Grand Saut exige la moto ; un panneau pose sur une rampe ordinaire,
+        // c'est un defi qui se termine dans un mur. Repli sur toutes les
+        // rampes : mieux vaut un defi dur qu'un defi absent.
+        const toutes = Monde.carte.rampes || [];
+        const bonnes = toutes.filter(function (r) { return r.defi; });
+        const rampes = (bonnes.length ? bonnes : toutes).slice().sort(function (a, b) {
           if (!depart) return 0;
           return (Math.abs(a.x - depart.x) + Math.abs(a.y - depart.y))
                - (Math.abs(b.x - depart.x) + Math.abs(b.y - depart.y));

@@ -24,6 +24,7 @@ n'a pas a le deviner de son slug :
 
 from __future__ import annotations
 
+import math
 from typing import TypedDict
 
 
@@ -169,8 +170,25 @@ PHYSIQUE = {
     "epave_secondes": 40,
     "alarme_secondes": 12,
     "ejection_vitesse_min": 2.6,  # moto : au-dessus, le choc ejecte le pilote
-    "rampe_impulsion": 0.42,      # vz = vitesse * ca en sortant d'une rampe
-    "gravite": 0.18,
+    # ⚠️ LE SAUT DOIT SE VOIR. Avec 0,42 et 0,18, une berline montait de
+    # 7,8 px pendant 0,31 s et une moto de 13,2 px — sur des tuiles de 16 px,
+    # pour un char dessine 32 x 16. Ce n'est pas un saut, c'est une bosse :
+    # « les rampes n'ont pas l'air de fonctionner », et elles fonctionnaient.
+    #
+    # La hauteur vaut `(vitesse * impulsion)^2 / (2 * gravite)` et la portee
+    # `2 * vitesse^2 * impulsion / gravite`. Monter l'impulsion SEULE allonge
+    # le vol autant qu'elle le grandit ; c'est le RAPPORT `impulsion / gravite`
+    # qui tient la portee, et `impulsion` seule qui donne la hauteur. On monte
+    # donc les deux : une berline grimpe maintenant de 17 px (sa propre
+    # hauteur) et la moto de 29.
+    "rampe_impulsion": 0.75,      # vz = vitesse * ca en sortant d'une rampe
+    "gravite": 0.26,
+    # ⚠️ Sous cette hauteur, on ne decolle pas du tout. Un velo a 2 px/image
+    # montait de deux pixels — moins que l'epaisseur de son ombre. Un char qui
+    # « saute » sans que rien ne bouge est pire qu'un char qui refuse la rampe :
+    # le seuil de vitesse s'en DEDUIT (voir `saut_vitesse_min`), il ne se
+    # choisit pas.
+    "saut_hauteur_min": 8,
     "portee_monter_px": 30,       # a quelle distance on peut ouvrir une portiere
     # ⚠️ Ce qu'un lourd defonce : les obstacles BAS (cloture, borne-fontaine,
     # poubelle, caisse) et eux seuls. Jamais une facade : la ville tient par
@@ -187,8 +205,67 @@ PHYSIQUE = {
 }
 
 
+def saut_vitesse_min() -> float:
+    """La vitesse en dessous de laquelle on ne decolle pas d'une rampe.
+
+    ⚠️ Elle se CALCULE sur `saut_hauteur_min` : c'est la vitesse a partir de
+    laquelle le saut atteint la hauteur qu'on a jugee visible. Le navigateur
+    la recoit toute faite et n'a aucun seuil ecrit dedans — l'ancien `1.5`
+    laissait sauter le velo de deux pixels.
+    """
+    ph = PHYSIQUE
+    return round((2 * ph["gravite"] * ph["saut_hauteur_min"]) ** 0.5 / ph["rampe_impulsion"], 3)
+
+
+def saut(vehicule: Vehicule, vitesse: float | None = None) -> dict:
+    """La geometrie d'un saut : hauteur, duree, portee, freinage — en pixels et
+    en images. Une seule source pour la physique, le generateur de ville et
+    les juges ; personne ne refait le calcul dans son coin."""
+    ph = PHYSIQUE
+    v = vehicule["vitesse_max"] if vitesse is None else vitesse
+    if v < saut_vitesse_min():
+        return {"hauteur": 0.0, "duree": 0.0, "portee": 0.0,
+                "freinage": 0.0, "degage": 0.0}
+    vz = v * ph["rampe_impulsion"]
+    duree = 2 * vz / ph["gravite"]
+    portee = v * duree
+    freinage = v * v / (2 * vehicule["frein"])
+    return {
+        "hauteur": round(vz * vz / (2 * ph["gravite"]), 2),
+        "duree": round(duree, 2),
+        "portee": round(portee, 2),
+        "freinage": round(freinage, 2),
+        # ⚠️ Ce qu'il faut de ROULABLE apres la levre : le vol, la longueur du
+        # char (il retombe sur son nez, pas sur son centre), et de quoi se
+        # remettre droit. Pas le freinage complet : on atterrit et on CONTINUE,
+        # on ne s'arrete pas — exiger l'arret complet ne laisserait presque
+        # aucune place ou poser une rampe.
+        "degage": round(portee + vehicule["longueur"] + 2 * 16, 2),
+    }
+
+
+def elan_pour_voler(vehicule: Vehicule, vol_px: float) -> int:
+    """Combien de PIXELS d'elan il faut a ce char, parti d'arret, pour que son
+    saut porte au moins `vol_px`.
+
+    ⚠️ On integre l'acceleration et la friction image par image, exactement
+    comme le moteur : une formule fermee donnerait un chiffre qui ne serait pas
+    celui du jeu. C'est ce qui permet de DEDUIRE l'elan d'une rampe au lieu de
+    le choisir — et de le rededuire tout seul le jour ou l'on touche a
+    l'impulsion ou a la moto.
+    """
+    vitesse = distance = 0.0
+    for _ in range(3600):                       # une minute : bien au-dela
+        vitesse = (vitesse + vehicule["acceleration"]) * vehicule["friction"]
+        distance += vitesse
+        if saut(vehicule, vitesse)["portee"] >= vol_px:
+            return math.ceil(distance)
+    raise ValueError(f"{vehicule['slug']} ne volera jamais {vol_px} px")
+
+
 def exporter_conduite() -> dict:
-    return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE)}
+    return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE),
+            "saut_vitesse_min": saut_vitesse_min()}
 
 
 def par_slug(slug: str) -> Vehicule | None:

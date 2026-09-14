@@ -54,6 +54,8 @@ import math
 
 from . import devantures as devantures_mod
 from . import magasins
+from . import missions
+from . import vehicules
 
 TUILE_PX = 16
 
@@ -66,8 +68,59 @@ TUILE_PX = 16
 #: gravite 0,18). A sept, on aurait donc pose des tremplins sur lesquels le
 #: defi du jeu est IMPOSSIBLE. La reception, elle, doit couvrir le vol : 68 px
 #: font quatre tuiles et demie.
-ELAN_RAMPE = 10
-RECEPTION_RAMPE = 6
+def _elan_du_defi() -> int:
+    """L'elan garanti devant une rampe, en tuiles : ce qu'il faut a la moto,
+    partie d'arret, pour que *Le Grand Saut* soit possible.
+
+    ⚠️ Lui non plus ne se choisit plus. Il valait 10, mesure sur l'ancienne
+    impulsion (0,42) ou la moto peinait a voler 60 px. L'impulsion a monte pour
+    que le saut SE VOIE, donc l'elan necessaire a baisse — et une rampe qui
+    exigeait dix tuiles d'elan n'en trouvait plus au stationnement de La Pointe,
+    la ou les Skateux ont pourtant droit au leur.
+    """
+    defi = next(d for d in missions.DEFIS if d["slug"] == "saut")
+    px = vehicules.elan_pour_voler(vehicules.par_slug(defi["vehicule"]), defi["vol_px"])
+    return math.ceil(px / TUILE_PX)
+
+
+ELAN_RAMPE = _elan_du_defi()
+
+
+def _reception(slug: str) -> int:
+    """Ce qu'il faut de ROULABLE apres la levre, en tuiles, pour que ce char-la
+    retombe sur la route et non dans un mur.
+
+    ⚠️ La reception ne se choisit plus en tuiles : elle se DEDUIT du saut
+    (`vehicules.saut`). L'ancien 6 avait ete mesure sur une moto PARTIE
+    D'ARRET — 68 px de vol — alors que le code encourage exactement le
+    contraire : « l'elan n'a pas a tenir dans le terrain, il continue dans la
+    rue, on arrive lance au lieu de partir d'arret ». Lancee, la meme moto
+    volait 126 px pour 96 px de degage. On mesurait donc une chose et on en
+    jouait une autre.
+    """
+    saut = vehicules.saut(vehicules.par_slug(slug))
+    return math.ceil(saut["degage"] / TUILE_PX)
+
+
+#: ⚠️ Toute rampe recoit **l'auto**, la reference du catalogue (« l'auto est la
+#: reference, vitesse 100 % »). Exiger la moto partout ne laisserait que trois
+#: tremplins dans la ville : une regle si dure qu'elle supprime la chose
+#: qu'elle protege n'est plus une regle, c'est un veto.
+RECEPTION_RAMPE = _reception("auto")
+
+#: ⚠️ Sauf celle du Grand Saut : le defi EXIGE la moto, donc la rampe qui porte
+#: son panneau doit recevoir une moto lancee. Une rampe de defi sur laquelle le
+#: defi se termine dans un mur, c'est le bug que Martin a nomme.
+RECEPTION_DEFI = _reception("moto")
+
+#: Ou l'on PROPOSE un tremplin. ⚠️ Ces trois parts etaient trois nombres nus
+#: perdus dans trois methodes ; elles sont ici parce qu'elles se lisent
+#: ensemble avec `ELAN_RAMPE` et `RECEPTION_RAMPE` : proposer et accepter sont
+#: les deux moities de la meme decision. Le juge compte les rampes POSEES,
+#: jamais les rampes proposees.
+PART_RAMPE_COUR = 0.45
+PART_RAMPE_STATIONNEMENT = 0.35
+PART_RAMPE_VAGUE = 0.5
 
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
 #: 3 basse (bloque les vehicules, pas les pietons).
@@ -1778,7 +1831,7 @@ class _Chantier:
         # devant : sinon c'est un tremplin derriere un grillage, et on vient de
         # passer une heure a se debarrasser de ceux-la. Apres les debris, pour
         # ne pas en poser un au milieu de la piste.
-        if largeur >= 5 and hauteur >= 4 and self.des_rampe.chance(0.45):
+        if largeur >= 5 and hauteur >= 4 and self.des_rampe.chance(PART_RAMPE_COUR):
             cx = x + largeur // 2
             self.proposer_rampe([(cx, y + hauteur // 2, None)],
                                 cloture=(cx, y + hauteur - 1))
@@ -1920,17 +1973,22 @@ class _Chantier:
             if elan < ELAN_RAMPE or reception < RECEPTION_RAMPE:
                 continue
             if meilleur is None or elan + reception > meilleur[0]:
-                meilleur = (elan + reception, dx, dy)
+                meilleur = (elan + reception, dx, dy, reception)
         if meilleur is None:
             return False
-        _, dx, dy = meilleur
+        _, dx, dy, reception = meilleur
         self.sol[y][x] = "R"
         self.sol[y + dy][x + dx] = "J"
         # ⚠️ La piste se RESERVE : un arbre pose plus tard au milieu de l'elan
         # rendrait la rampe inutilisable sans qu'aucun juge ne bronche.
         for k in range(-ELAN_RAMPE, RECEPTION_RAMPE + 2):
             self.occupe.add((x + dx * k, y + dy * k))
-        self.rampes.append({"x": x, "y": y, "dx": dx, "dy": dy})
+        # ⚠️ `defi` : cette rampe-ci recoit une MOTO lancee, pas seulement
+        # l'auto de reference. Le Grand Saut exige la moto ; son panneau ne se
+        # pose que sur une rampe marquee, sinon le defi finit dans un mur et
+        # rien nulle part ne le dirait.
+        self.rampes.append({"x": x, "y": y, "dx": dx, "dy": dy,
+                            "reception": reception, "defi": reception >= RECEPTION_DEFI})
         return True
 
     # --- Stationnements -----------------------------------------------------
@@ -2056,7 +2114,7 @@ class _Chantier:
         """
         if not allees:
             return
-        if self.district_en(x, y) != "pointe" and not self.des_rampe.chance(0.35):
+        if self.district_en(x, y) != "pointe" and not self.des_rampe.chance(PART_RAMPE_STATIONNEMENT):
             return
         d, taille = allees[len(allees) // 2]
         milieu = d + taille // 2
@@ -2159,7 +2217,7 @@ class _Chantier:
         # Une rampe de debarquement, la ou un quai en porte vraiment une.
         # ⚠️ L'eau n'est pas roulable : `poser_rampe` ne choisira jamais l'axe
         # qui envoie au fond de la baie, le saut longe le port.
-        if largeur >= 10 and hauteur >= 3 and self.des_rampe.chance(0.5):
+        if largeur >= 10 and hauteur >= 3 and self.des_rampe.chance(PART_RAMPE_VAGUE):
             self.proposer_rampe([(x + largeur // 2, y + hauteur // 2, None)])
 
     def _terre_a_cote(self, tuiles: list[tuple[int, int]]) -> bool:
