@@ -1771,6 +1771,15 @@ class _Chantier:
         if zh < 10 or lot_l < 16:  # pragma: no cover - garde-fou de relecture du plan
             raise ValueError(f"le lot de la fourriere ne tient pas : {lot_l} x {zh}")
         self.rect(lx, zy, lot_l, zh, "p")
+        # ⚠️ La cour se range EN CASES, comme tous les autres stationnements de
+        # la ville. Elle etait un rectangle d'asphalte avec des places
+        # calculees a la main : des chars saisis ranges de travers dans un lot
+        # municipal, c'est exactement le defaut qu'on a corrige partout
+        # ailleurs. `_stationnement` pose les rangees, les allees et l'ilot de
+        # beton — mais PAS son tremplin.
+        self._stationnement(lx + 1, zy + 1 + self.GUERITE_H,
+                            lot_l - 2, zh - 2 - self.GUERITE_H,
+                            genre="industriel", tremplin=False)
         # La guerite, au coin nord-ouest : elle donne sur la cour, pas sur la
         # rue — on entre par la grille, comme tout le monde.
         guerite = {(lx + 1 + i, zy + 1 + j)
@@ -1788,13 +1797,20 @@ class _Chantier:
             if self.sol[ty][tx] == GRILLAGE:
                 self.sol[ty][tx] = "F"
         porte = self.poser_porte(facades, special)
-        # Les places : sous la guerite, jamais dans l'axe de la grille.
+        # ⚠️ Les places se LISENT dans les cases, elles ne s'inventent plus.
+        # Une place est le FOND d'une case (la tuile qui porte le pare-chocs) :
+        # c'est la meme regle que `placeStationnee` cote navigateur, et c'est
+        # ce qui garantit qu'un char saisi tombe dans ses lignes au pixel pres.
         places = []
-        for py in range(zy + self.GUERITE_H + 1, zy + zh - self.PLACE_H, self.PLACE_H):
-            for px in range(lx + 2, lx + lot_l - self.PLACE_L - 1, self.PLACE_L):
-                if gx - 1 <= px < gx + self.GRILLE_L + 1:
+        for ty in range(zy + 1, zy + zh - 1):
+            for tx in range(lx + 1, lx + lot_l - 1):
+                sens = LEGENDE.get(self.sol[ty][tx], {}).get("case")
+                if not sens:
                     continue
-                places.append({"x": px + 1, "y": py + 1})
+                dx, dy = PAS[{"N": "^", "S": "v", "O": "<", "E": ">"}[sens]]
+                if self.sol[ty + dy][tx + dx] == self.sol[ty][tx]:
+                    continue                      # pas le fond de la case
+                places.append({"x": tx, "y": ty, "sens": sens})
         for _ in range(3):
             self.poser_decor("debris",
                              lx + self.des.entier(self.GUERITE_L + 3, lot_l - 3),
@@ -2047,7 +2063,7 @@ class _Chantier:
         return ferme(i - 1) >= ferme(i + 1)
 
     def _stationnement(self, x: int, y: int, largeur: int, hauteur: int,
-                       genre: str = "commerces") -> None:
+                       genre: str = "commerces", tremplin: bool = True) -> None:
         """Un vrai stationnement : des rangees de cases, des allees pour y
         entrer, et un ilot de beton au bout des rangees.
 
@@ -2099,7 +2115,11 @@ class _Chantier:
                         if self.poser_decor("lampadaire", ix, iy):
                             self.lampes.append({"x": ix, "y": iy})
             d += taille
-        self._tremplin_de_stationnement(x, y, debout, longueur, allees)
+        # ⚠️ `tremplin=False` pour la cour de la fourriere : un tremplin dans
+        # une allee y serait une sortie PAR-DESSUS LA CLOTURE sans payer, et
+        # toute l'idee du lot tombe.
+        if tremplin:
+            self._tremplin_de_stationnement(x, y, debout, longueur, allees)
 
     def _tremplin_de_stationnement(self, x: int, y: int, debout: bool,
                                    longueur: int, allees: list[tuple[int, int]]) -> None:

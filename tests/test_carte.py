@@ -601,3 +601,64 @@ def test_les_commerces_ambulants_ont_leur_place():
     for a, b in zip(sorted(vus), sorted(vus)[1:]):
         if a[1] == b[1]:
             assert abs(a[0] - b[0]) >= 2, "deux kiosques colles"
+
+
+# --- La fourriere : une cour, pas un champ d'asphalte -----------------------
+
+
+def test_la_cour_de_la_fourriere_se_range_en_cases():
+    """⚠️ Elle etait un rectangle de « p » avec des places calculees a la main,
+    alors que toute la ville range ses stationnements en cases depuis qu'on les
+    dessine. Des chars saisis ranges de travers dans un lot municipal, c'est
+    exactement le defaut qu'on a corrige partout ailleurs.
+
+    Les places se LISENT donc dans les cases — chacune est le fond d'une case,
+    la tuile qui porte le pare-chocs — et plus personne ne les invente.
+    """
+    from app import economie
+
+    lot = CARTE["fourriere"]
+    assert lot, "la ville n'a pas de fourriere"
+    places = lot["places"]
+    assert len(places) >= economie.FOURRIERE["places"], \
+        f"{len(places)} places pour {economie.FOURRIERE['places']} chars gardes"
+    for place in places:
+        glyphe = CARTE["sol"][place["y"]][place["x"]]
+        assert carte.LEGENDE[glyphe].get("case") == place["sens"], \
+            f"la place {place} ne tombe pas sur une case de stationnement"
+        # Le fond d'une case : la tuile suivante, dans l'axe du nez, n'est plus
+        # la meme case. Sinon on garerait deux chars l'un dans l'autre.
+        dx, dy = carte.PAS[{"N": "^", "S": "v", "O": "<", "E": ">"}[place["sens"]]]
+        assert CARTE["sol"][place["y"] + dy][place["x"] + dx] != glyphe, \
+            f"la place {place} n'est pas le fond de sa case"
+
+
+def test_la_cour_de_la_fourriere_n_a_pas_de_tremplin():
+    """⚠️ `_stationnement` finit par poser un tremplin dans une allee. Dans la
+    cour de la fourriere, ce serait une sortie PAR-DESSUS LA CLOTURE sans
+    payer — et toute l'idee du lot tombe : on le rachete au comptoir, ou on le
+    reprend a pied et le lot appelle."""
+    lot = CARTE["fourriere"]
+    dedans = [r for r in CARTE["rampes"]
+              if lot["x"] <= r["x"] < lot["x"] + lot["largeur"]
+              and lot["y"] <= r["y"] < lot["y"] + lot["hauteur"]]
+    assert not dedans, f"un tremplin dans la cour de la fourriere : {dedans}"
+
+
+def test_on_entre_dans_la_fourriere_par_une_seule_grille():
+    """La cloture arrete les chars et pas les gens (solidite 3) : c'est ce qui
+    fait les deux facons de reprendre son char sans une ligne de code pour les
+    distinguer. Mais il n'y a QU'UNE ouverture — deux, et sortir sans payer ne
+    demanderait plus rien a personne."""
+    lot, grille = CARTE["fourriere"], CARTE["fourriere"]["grille"]
+    ouvertures = 0
+    for tx in range(lot["x"], lot["x"] + lot["largeur"]):
+        for ty in (lot["y"], lot["y"] + lot["hauteur"] - 1):
+            if carte.solidite(CARTE["sol"][ty][tx]) == 0:
+                ouvertures += 1
+    for ty in range(lot["y"], lot["y"] + lot["hauteur"]):
+        for tx in (lot["x"], lot["x"] + lot["largeur"] - 1):
+            if carte.solidite(CARTE["sol"][ty][tx]) == 0:
+                ouvertures += 1
+    assert ouvertures == grille["largeur"], \
+        f"{ouvertures} tuiles ouvertes dans la cloture, la grille en fait {grille['largeur']}"
