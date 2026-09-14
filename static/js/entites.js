@@ -317,16 +317,47 @@ const Entites = (function () {
 
   /** Une tuile ou un pieton peut naitre : marchable, hors chaussee, hors ecran.
       Une fois sur trois, il SORT D'UNE PORTE — la ville a des dedans. */
+  /** Une porte par laquelle les gens passent.
+
+      ⚠️ Toutes n'ont pas le meme sens. Un `d` est un LOGEMENT : les gens y
+      rentrent chez eux, et le dessin le dit deja (battant sombre, aucune
+      poignee de laiton, aucune enseigne) — le joueur apprend a ne pas essayer.
+      Un `D` mene a un interieur : un commerce n'avale personne quand il est
+      FERME, et le poste de police et l'hopital ne sont pas des allees et
+      venues de passants. ⚠️ Et la planque de Rocco, JAMAIS : c'est chez le
+      joueur. */
+  function porteQuiSert(porte) {
+    if (!porte) return false;
+    if (porte.glyphe === 'd') return true;                 // un logement : toujours
+    const p = Monde.porteA(porte.x, porte.y);
+    if (!p || !p.lieu) return true;
+    if (p.lieu === 'planque') return false;                // chez le joueur
+    if (p.lieu === 'poste' || p.lieu === 'hopital') return false;
+    // ⚠️ Un commerce FERME n'avale personne — mais les interieurs n'ont PAS
+    // d'heures declarees : seuls les kiosques de rue (`ambulants`) en ont. La
+    // nuit tient donc lieu de fermeture, avec la seule exception qui compte —
+    // le bar, qui vit justement la nuit. Le jour ou `carte.INTERIEURS` portera
+    // des heures, ces deux lignes deviendront `Missions.ouvert(...)`.
+    if (p.lieu === 'bar') return true;
+    return !Monde.estNuit();
+  }
+
   function placeDeNaissance() {
     const carte = Monde.carte;
+    // ⚠️ On naissait deja sur un pas de porte une fois sur trois — mais
+    // SEULEMENT HORS ECRAN. Ce n'etait pas une sortie, c'etait une naissance
+    // deguisee en sortie : son seul interet aurait ete d'etre vue. La regle
+    // « hors ecran » saute ici, et le pieton nait DANS la porte, invisible, le
+    // temps que le battant s'ouvre.
     if (B.rng() < 0.34 && carte.portesFermees.length) {
       for (let essai = 0; essai < 8; essai++) {
         const porte = carte.portesFermees[Math.floor(B.rng() * carte.portesFermees.length)];
+        if (!porteQuiSert(porte)) continue;
         const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 8;
         if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) continue;
-        if (visibleAEcran(x, y, 24) || !Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+        if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
         if (!placeLibre(x, y)) continue;
-        return { x: x, y: y };
+        return { x: x, y: y, porte: porte };
       }
     }
     for (let essai = 0; essai < 24; essai++) {
@@ -422,11 +453,19 @@ const Entites = (function () {
     }
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
+    // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
+    // toujours de la meme facon (par distance) et on n'aurait ajoute qu'une
+    // animation. Un flaneur sur le retour se choisit une porte et rentre.
+    if (B.t % 45 === 0) quelquUnRentre();
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone);
     if (vivants >= voulu || B.t % 12 !== 0) return;
     const place = placeDeNaissance();
     if (!place) return;
+    // ⚠️ Ne dans la porte : le battant s'ouvre AVANT qu'on le voie sortir.
+    const sortie = place.porte
+      ? { x: place.porte.x, y: place.porte.y, t: 0 } : null;
+    if (sortie) Monde.ouvrirPorte(sortie.x, sortie.y);
     // La nuit, pres du bar et du port, la Brume a ses habituees.
     const nuit = Monde.estNuit();
     if (nuit && zone && zone.brume && B.rng() < 0.18) {
@@ -435,6 +474,7 @@ const Entites = (function () {
         const e = creerPieton(place.x, place.y, fille);
         e.etat = 'arret';
         e.minuterie = 600;
+        if (sortie) e.sortie = sortie;
         return;
       }
     }
@@ -442,7 +482,41 @@ const Entites = (function () {
     const gang = zone && zone.gang && !(B.partie && B.partie.faubourgLibere) && B.rng() < 0.5
       ? (B.defs.pietons.gangs.find(function (g) { return g.slug === zone.gang; }) || null)
       : null;
-    creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
+    const ne = creerPieton(place.x, place.y, gang ? archetype(gang.pieton) : null);
+    if (ne && sortie) ne.sortie = sortie;
+  }
+
+  /** Un flaneur qui se choisit une porte et rentre chez lui.
+
+      ⚠️ C'est ce qui remplace une part de l'oubli par distance. Sans ca, la
+      ville se viderait toujours de la meme facon — par eloignement — et on
+      n'aurait ajoute qu'une animation.
+
+      Le RYTHME s'en sert : on sort le matin, on rentre le soir. `B.partie.heure`
+      va de 0 a 1 sur la journee. */
+  function quelquUnRentre() {
+    const carte = Monde.carte, j = B.joueur;
+    if (!j || B.interieur || !carte.portesFermees.length) return null;
+    const heure = (B.partie && B.partie.heure) || 0;
+    // Le soir et la nuit, on rentre ; au petit matin, presque personne.
+    const envie = heure > 0.66 || heure < 0.2 ? 0.55 : heure > 0.45 ? 0.25 : 0.08;
+    if (B.rng() > envie) return null;
+    const flaneurs = B.entites.filter(function (e) {
+      return e.type === 'pieton' && e.vivant && e.etat === 'flane'
+        && !e.metier && !e.personnage && !e.mission && !e.porteBut && !e.sortie;
+    });
+    if (!flaneurs.length) return null;
+    const e = flaneurs[Math.floor(B.rng() * flaneurs.length)];
+    let meilleure = null, dMin = 260 * 260;
+    for (const porte of carte.portesFermees) {
+      const d = dist2(porte.x * TT + 8, (porte.y + 1) * TT + 8, e.x, e.y);
+      if (d >= dMin || !porteQuiSert(porte)) continue;
+      if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+      dMin = d; meilleure = porte;
+    }
+    if (!meilleure) return null;
+    e.porteBut = meilleure; e.porteT = 0; e.porteBloque = 0;
+    return e;
   }
 
   /** Les paquets caches qu'on n'a pas encore ramasses. */
@@ -805,12 +879,58 @@ const Entites = (function () {
     return dy > 0 ? 1 : 3;
   }
 
+  //: Le va-et-vient des portes, en images.
+  const SORTIE_IMAGES = 26;
+
+  /** Sortir d'une porte, ou y rentrer. Rend vrai si le pieton est occupe.
+
+      ⚠️ **Une sortie visible est ce qui justifie qu'une porte s'ouvre**, et une
+      porte qui s'ouvre est ce qui rend la sortie croyable. Les deux ensemble,
+      ou ni l'une ni l'autre. */
+  function majPorte(e) {
+    if (e.sortie) {
+      // Il vient de naitre DANS la porte : invisible tant qu'elle s'ouvre,
+      // puis il avance d'une tuile et elle se referme derriere lui.
+      e.sortie.t++;
+      const ouvert = Monde.battant(e.sortie.x, e.sortie.y);
+      e.dessine = ouvert > 0.35;
+      if (e.sortie.t > SORTIE_IMAGES) { e.sortie = null; e.dessine = true; return false; }
+      if (e.dessine) {
+        e.vx = 0; e.vy = B.defs.recherche.vitesses.pieton * e.allure;
+        deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+        regarder(e, 0, 1);
+      }
+      return true;
+    }
+    if (!e.porteBut) return false;
+    const p = e.porteBut;
+    const cible = { x: p.x * TT + 8, y: (p.y + 1) * TT + 8 };
+    const d = Math.hypot(cible.x - e.x, cible.y - e.y);
+    if (d > 260 || ++e.porteT > 900) { e.porteBut = null; return false; }   // il a change d'idee
+    if (d > 6) {
+      const vitesse = B.defs.recherche.vitesses.pieton * e.allure;
+      e.vx = (cible.x - e.x) / d * vitesse; e.vy = (cible.y - e.y) / d * vitesse;
+      const avant = { x: e.x, y: e.y };
+      deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+      regarder(e, e.vx, e.vy);
+      // Bloque par la foule ou un banc : on renonce plutot que de pietiner.
+      if (Math.hypot(e.x - avant.x, e.y - avant.y) < 0.05 && ++e.porteBloque > 60) e.porteBut = null;
+      return true;
+    }
+    // Arrive : la porte s'ouvre, ET IL DISPARAIT SEULEMENT UNE FOIS OUVERTE.
+    Monde.ouvrirPorte(p.x, p.y);
+    if (Monde.battant(p.x, p.y) < 0.9) { e.vx = 0; e.vy = 0; return true; }
+    retirer(e);
+    return true;
+  }
+
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
     if (e.saigne > 0) saigner(e);
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
+    if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
 
     if (e.etat === 'fige') {
       // ⚠️ Fige veut dire « il tient son poste », pas « c'est un poteau ». Un
@@ -1523,7 +1643,7 @@ const Entites = (function () {
     briser, reparerLeDecor, DEBRIS_MAX,
     peuplerInterieur,
     archetype, archetypeDeRue,
-    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
+    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, peupler, peuplerDabord,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,

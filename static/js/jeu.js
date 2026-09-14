@@ -338,6 +338,7 @@ const Jeu = (function () {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
       if (Entree.neuf('carte')) { ouvrirCarte(); Entree.videPresse(); return; }
       Monde.majHeure();
+      Monde.majBattants();
       Monde.majChemins();
       Entites.maj();
       Combat.maj();
@@ -375,6 +376,9 @@ const Jeu = (function () {
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
     Monde.dessinerSol(ctx, vue);
+    // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
+    // morceau de 256 px a chaque image pour une porte tuerait le cache.
+    if (!B.interieur) Monde.dessinerBattants(ctx, vue);
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     Entites.dessiner(ctx, vue);
     Entites.dessinerParticules(ctx, vue);

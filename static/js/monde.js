@@ -50,7 +50,11 @@ const Monde = (function () {
         solide[y * w + x] = p.solide || 0;
         route[y * w + x] = p.route ? 1 : 0;
         passage[y * w + x] = (p.route && p.trottoir) ? 1 : 0;
-        if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y });
+        // ⚠️ Le GLYPHE reste avec la porte : un `d` est un LOGEMENT (battant
+        // sombre, pas de poignee de laiton, aucune enseigne) et un `D` mene a
+        // un interieur. Les gens passent les deux ; le joueur, seulement les
+        // `D` — et le dessin le dit deja, c'est ce qui rend la regle lisible.
+        if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y, glyphe: ligne[x] });
       }
     }
     const portes = new Map();
@@ -81,6 +85,8 @@ const Monde = (function () {
       plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
       morceaux: new Map(), visibles: new Set(),
+      // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
+      battants: new Map(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       intersections: def.intersections || [],
       // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
@@ -265,6 +271,74 @@ const Monde = (function () {
       if (e2 < dx) { err += dx; ty += sy; }
     }
     return true;
+  }
+
+  //: Combien d'images un battant met a s'ouvrir, et combien il reste ouvert.
+  //: ⚠️ Assez lent pour qu'on VOIE la porte bouger, assez court pour qu'un
+  //: passant n'attende pas sur le trottoir.
+  const BATTANT_OUVRE = 12, BATTANT_TIENT = 26;
+
+  /** Ouvre le battant de cette tuile (ou rallonge son ouverture).
+
+      ⚠️ **Une porte animee ne peut pas etre une tuile.** Le sol est CUIT dans
+      le morceau de 256 px : repeindre un morceau a chaque image pour un
+      battant tuerait le cache qui tient le rythme sur telephone. Le battant
+      est donc un petit dessin pose PAR-DESSUS, et seulement pour les portes a
+      l'ecran — il y en a une poignee. C'est la meme lecon que les feux pour
+      pietons : le poteau est une entite, la traverse est une tuile. */
+  function ouvrirPorte(tx, ty) {
+    if (!carte) return null;
+    const cle = tx + ',' + ty;
+    let b = carte.battants.get(cle);
+    if (!b) {
+      b = { x: tx, y: ty, t: BATTANT_OUVRE + BATTANT_TIENT };
+      carte.battants.set(cle, b);
+      return b;
+    }
+    // ⚠️ Redemander une porte DEJA EN TRAIN DE S'OUVRIR ne la remet pas a
+    // zero : un pieton qui attend devant appelle a chaque image, et le battant
+    // restait alors fige au premier pixel — il ne s'ouvrait jamais.
+    if (b.t > BATTANT_TIENT) return b;
+    b.t = BATTANT_TIENT;                 // elle se refermait : on la retient ouverte
+    return b;
+  }
+
+  /** De 0 (fermee) a 1 (grande ouverte). `t` descend : il s'ouvre au debut,
+      il tient, puis il se referme sur ses dernieres images. */
+  function battant(tx, ty) {
+    const b = carte && carte.battants.get(tx + ',' + ty);
+    if (!b || b.t <= 0) return 0;
+    if (b.t > BATTANT_TIENT) return (BATTANT_OUVRE + BATTANT_TIENT - b.t) / BATTANT_OUVRE;
+    return Math.min(1, b.t / BATTANT_OUVRE);
+  }
+
+  function majBattants() {
+    if (!carte) return;
+    for (const b of carte.battants.values()) {
+      if (b.t > 0) b.t--;
+      else carte.battants.delete(b.x + ',' + b.y);
+    }
+  }
+
+  /** Le battant, par-dessus le sol : un rectangle sombre qui s'efface en
+      s'ouvrant, et le noir de l'interieur derriere. */
+  function dessinerBattants(ctx, cam) {
+    if (!carte || !carte.battants.size) return;
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const b of carte.battants.values()) {
+      const x = b.x * TT - cx, y = b.y * TT - cy;
+      if (x < -TT || x > VW || y < -TT || y > VH) continue;
+      const p = battant(b.x, b.y);
+      if (p <= 0) continue;
+      ctx.fillStyle = '#100c0a';                       // le dedans, dans l'ombre
+      ctx.fillRect(x + 4, y + 3, 8, 13);
+      const reste = Math.max(0, Math.round(8 * (1 - p)));
+      if (reste > 0) {
+        ctx.fillStyle = '#3d2a1c';
+        ctx.fillRect(x + 4, y + 3, reste, 13);
+      }
+      B.stats.rects += 2;
+    }
   }
 
   /** Une porte a cette tuile ? (index : on interroge a chaque image) */
@@ -840,7 +914,8 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeLit, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeLit, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

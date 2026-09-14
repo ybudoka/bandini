@@ -436,6 +436,16 @@ def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
         const px = j.x, py = j.y;
         for (const slug of %s) {
             j.x = px; j.y = py;
+            // ⚠️ On degage la place a chaque tour : la ville vit (chars gares,
+            // passants qui sortent des portes), et un juge qui mesure « est-ce
+            // que le gaz fait avancer » ne doit pas mesurer « y a-t-il un
+            // camion gare devant ».
+            L.B.entites = L.B.entites.filter(function (e) {
+                if (e.type === 'joueur') return true;
+                if (e.type !== 'vehicule' && e.type !== 'pieton') return true;
+                return Math.hypot(e.x - px, e.y - py) > 120;
+            });
+            L.Entites.indexer();
             const v = o.char(slug, 0, 0, 0);
             if (!v) { out[slug] = 'pas cree'; continue; }
             // La chaine de cercles : combien, et couvre-t-elle la carrosserie ?
@@ -1117,6 +1127,120 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     assert versants[-1] == 2, f"la derniere doit etre le versant sud : {versants}"
     assert versants == sorted(versants), f"les versants doivent se suivre du nord au sud : {versants}"
     assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
+
+
+def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
+    """⚠️ Demande de Martin : « les piétons devraient aussi sortir et entrer dans
+    les commerces. Profites-en pour aussi faire ouvrir concrètement les
+    portes. » Les deux demandes n'en font qu'une, et le code disait pourquoi.
+
+    **Un piéton sur trois sortait déjà d'une porte — et on ne le voyait
+    jamais** : `placeDeNaissance()` refusait la place si elle était visible à
+    l'écran. Ce n'était pas une sortie, c'était une naissance déguisée en
+    sortie, dont le seul intérêt aurait été d'être vue. **Personne n'entrait
+    nulle part**, et **aucune porte ne s'ouvrait**.
+
+    Le juge tient les règles qui coûtent : une porte ne s'ouvre jamais sur
+    rien, la planque du joueur n'avale personne, un commerce fermé non plus, et
+    ⚠️ **le cache de morceaux ne bouge pas** quand une porte s'ouvre — c'est lui
+    qui tient le rythme sur téléphone."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(97);
+        const j = L.B.joueur, c = L.Monde.carte;
+        const out = {};
+
+        // 1. Un battant s'ouvre, tient, et se referme — tout seul.
+        const porte = c.portesFermees.find(function (p) { return p.glyphe === 'd'; });
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        const courbe = [];
+        for (let i = 0; i < 60; i++) { courbe.push(L.Monde.battant(porte.x, porte.y)); o.frame(1); }
+        out.battant = { debut: courbe[0], max: Math.max.apply(null, courbe), fin: courbe[courbe.length - 1],
+                        monte: courbe[6] > courbe[0] };
+
+        // 2. ⚠️ Le cache de morceaux ne bouge pas : le sol est cuit, le battant
+        //    se pose PAR-DESSUS.
+        L.Jeu.rendre();
+        const morceaux0 = L.B.stats.morceaux;
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        L.Jeu.rendre();
+        out.morceaux = { avant: morceaux0, apres: L.B.stats.morceaux };
+
+        // 3. Quelles portes servent : jamais la planque, jamais le poste.
+        function sert(lieu) {
+            const p = (c.portes || []).find(function (q) { return q.lieu === lieu; });
+            return p ? L.Entites.porteQuiSert({ x: p.x, y: p.y, glyphe: 'D' }) : null;
+        }
+        out.regles = { planque: sert('planque'), poste: sert('poste'), hopital: sert('hopital'),
+                       logement: L.Entites.porteQuiSert({ x: porte.x, y: porte.y, glyphe: 'd' }) };
+        // Un commerce : ouvert le jour, ferme la nuit.
+        // ⚠️ Les interieurs n'ont pas d'heures declarees (seuls les kiosques
+        // de rue en ont) : la nuit tient lieu de fermeture, sauf pour le bar —
+        // qui vit justement la nuit.
+        const dep = (c.portes || []).find(function (q) { return q.lieu === 'depanneur'; });
+        const bar = (c.portes || []).find(function (q) { return q.lieu === 'bar'; });
+        L.B.partie.heure = 0.5;
+        const jour = dep ? L.Entites.porteQuiSert({ x: dep.x, y: dep.y, glyphe: 'D' }) : null;
+        L.B.partie.heure = 0.95;
+        const nuit = dep ? L.Entites.porteQuiSert({ x: dep.x, y: dep.y, glyphe: 'D' }) : null;
+        const barLaNuit = bar ? L.Entites.porteQuiSert({ x: bar.x, y: bar.y, glyphe: 'D' }) : null;
+        out.commerce = { jour: jour, nuit: nuit, barLaNuit: barLaNuit };
+        L.B.partie.heure = 0.5;
+
+        // 4. Sortir : ne DANS la porte, invisible tant qu'elle s'ouvre, puis
+        //    dehors — et VISIBLE, meme en plein ecran.
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 6) * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        const arch = L.Entites.archetypeDeRue();
+        const e = L.Entites.creerPieton(porte.x * L.TT + 8, (porte.y + 1) * L.TT + 8, arch);
+        e.sortie = { x: porte.x, y: porte.y, t: 0 };
+        L.Monde.ouvrirPorte(porte.x, porte.y);
+        const y0 = e.y;
+        const vus = [];
+        for (let i = 0; i < 40; i++) { o.frame(1); vus.push(e.dessine); }
+        out.sortie = { cacheAuDebut: vus[0] === false, vuEnsuite: vus.indexOf(true) > 0,
+                       avance: Math.round(e.y - y0), libre: !e.sortie,
+                       aLEcran: L.Entites.visibleAEcran(e.x, e.y, 0) };
+
+        // 5. Entrer : il marche jusqu'a la porte, elle s'ouvre, ET IL DISPARAIT
+        //    SEULEMENT APRES — jamais devant une porte fermee.
+        e.etat = 'flane'; e.porteBut = porte; e.porteT = 0; e.porteBloque = 0;
+        e.x = porte.x * L.TT + 8; e.y = (porte.y + 3) * L.TT + 8;
+        let disparu = -1, ouvertAlors = -1;
+        for (let i = 0; i < 300 && disparu < 0; i++) {
+            o.frame(1);
+            if (L.B.entites.indexOf(e) < 0) { disparu = i; ouvertAlors = L.Monde.battant(porte.x, porte.y); }
+        }
+        out.entree = { disparu: disparu, ouvertAlors: ouvertAlors };
+        return out;
+    }""")
+    b = r["battant"]
+    assert b["debut"] == 0 and b["monte"] is True and b["max"] >= 0.99 and b["fin"] == 0, (
+        "un battant doit s'ouvrir, tenir, puis se refermer tout seul : %s" % b
+    )
+    # ⚠️ LE juge du rythme : repeindre un morceau de 256 px pour une porte
+    # tuerait le cache qui tient le téléphone.
+    assert r["morceaux"]["apres"] == r["morceaux"]["avant"], (
+        "ouvrir une porte a fait repeindre des morceaux : %s" % r["morceaux"]
+    )
+    assert r["regles"] == {"planque": False, "poste": False, "hopital": False, "logement": True}, (
+        "les portes qui servent ne sont pas les bonnes : %s" % r["regles"]
+    )
+    assert r["commerce"] == {"jour": True, "nuit": False, "barLaNuit": True}, (
+        "un commerce fermé ne doit laisser entrer personne — sauf le bar : %s" % r["commerce"]
+    )
+    s = r["sortie"]
+    assert s["cacheAuDebut"] is True, "on le voit AVANT que la porte s'ouvre : %s" % s
+    assert s["vuEnsuite"] is True and s["aLEcran"] is True, (
+        "la sortie doit se voir, et en plein écran : %s" % s
+    )
+    assert s["avance"] > 8 and s["libre"] is True, "il doit sortir de la porte et reprendre sa vie : %s" % s
+    assert r["entree"]["disparu"] >= 0, "personne n'entre nulle part : %s" % r["entree"]
+    # ⚠️ Une porte ne s'ouvre jamais sur rien : il disparaît APRÈS l'ouverture.
+    assert r["entree"]["ouvertAlors"] >= 0.9, (
+        "il est entré par une porte encore fermée (%s) : une porte ne s'ouvre jamais sur rien"
+        % r["entree"]["ouvertAlors"]
+    )
 
 
 def test_le_decor_arrete_ou_casse_sous_un_char_et_la_ville_se_repare(banc):

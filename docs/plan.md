@@ -76,7 +76,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des lits qui ont l'air de lits | **livré** (13 sept. 2026) | demande de Martin (« les lits existants doivent vraiment avoir l'air de lits, juste un set d'oreillers et des couvertes ; actuellement c'est 2 ou 4 cases avec chacune leur oreiller »). ⚠️ Le peintre du lit ne savait pas qu'il avait des voisines : chaque tuile `l` dessinait son oreiller, sa couverture et son ombre, donc un lit de 2 × 2 (tous les lits du jeu : planque, hôpital, hôtel, phare, logements) était **quatre lits d'une place collés**. Le remède était déjà écrit trois fois dans `monde.js` : le lit **lit ses voisines** comme la clôture et le toit (`varianteDeLit`, le masque des côtés où le lit continue — 1 nord, 2 est, 4 sud, 8 ouest). Le peintre n'a plus qu'une règle : la **tête de lit et l'oreiller** ne vont qu'aux tuiles sans lit au nord, l'oreiller et la couverte **courent d'une tuile à l'autre** sans couture (le piqué de la couverte tombe sur la même grille de 4 px des deux côtés de la couture), et le **cadre de bois ne se ferme que là où le lit s'arrête** — avec un pixel de plancher devant, comme tous les meubles, et l'ombre au pied seulement. ⚠️ Le corollaire, gardé par un juge des plans : **deux lits ne se touchent jamais** (collés, ils seraient peints comme un seul lit de quatre de large) et un lit est un rectangle plein d'au plus deux tuiles de côté — pas de lit en L sans tête. Un lit d'une seule tuile, d'une tuile sur deux ou de deux sur une se dessine aussi, la même règle suffit. Juges : 29 en Python (`test_interieurs.py`, un par pièce) + 1 de banc (`test_interieurs_js.py` : les quatre variantes lues dans la planque, puis les traces des quatre tuiles — un oreiller par tuile de tête et aucun au pied, à cheval sur la couture, la couverte continue, le cadre qui laisse son pixel de plancher au nord-ouest et pas à la couture). Vu à l'œil dans un rendu des traces (2 × 2, 1 × 2, 2 × 1, 1 × 1) |
 | Le décor se brise | **P2** **correctif**, **livré** (13 sept. 2026) | demande de Martin (« les bris de poteau, de banc de parc et d'arbre ») : le décor était **solide pour les piétons et fantôme pour les chars** — un autobus traversait un arbre, un kiosque et une fontaine sans ralentir, et le **lampadaire était fantôme pour tout le monde**. La **fiche décide** maintenant : `arrete` (un arbre stoppe une berline, un camion le déracine) ou `casse` (un banc, un poteau, un cône cèdent sous n'importe quoi lancé). Le bris laisse des **débris** plafonnés, **éteint la lampe** du poteau tombé, compte une **conduite dangereuse**, et la ville se **répare au lever du jour** — pas dans la minute : le quartier porte ses blessures |
 | Des sortes de gens | **P2** ajout à faire | demande de Martin (amuseurs publics, musiciens de rue, exhibitionnistes). ⚠️ 24 archétypes et **4 corps** : 21 portent celui du joueur en changeant de couleur, et 2 métiers sur 6 font quelque chose. Une sorte = un corps + une routine — musicien qui s'entend, amuseur qui attroupe des témoins, exhibitionniste que la police arrête à ta place, contractuelle, jogger, touriste, ivrogne, pickpocket, aîné, facteur |
-| Les portes s'ouvrent | **P2** ajout, **en cours** (13 sept. 2026) | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
+| Les portes s'ouvrent | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« les piétons devraient aussi sortir et entrer dans les commerces ; profites-en pour faire ouvrir concrètement les portes ») : ⚠️ un piéton sur trois sortait **déjà** d'une porte — mais `placeDeNaissance()` refusait la place si elle était **visible à l'écran**. Ce n'était pas une sortie, c'était une naissance déguisée en sortie, dont le seul intérêt aurait été d'être vue. Maintenant : un **battant** qui s'ouvre, tient et se referme — posé **par-dessus** le sol, jamais dans le morceau cuit —, on naît **dans** la porte et on en sort à l'écran, et un flâneur se choisit une porte et **rentre**, ce qui remplace une part de l'oubli par distance. ⚠️ Jamais la planque, ni le poste, ni l'hôpital ; un commerce pas la nuit — sauf le bar |
 | Le carnet | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« un rappel de la mission en cours dans le menu, un journal et un bestiaire avec les personnages connus ») : **LE CARNET** au menu Pause, trois pages — **EN COURS** (donneur, récompense, objectifs faits marqués, celui du moment, et où), **JOURNAL** (écrit tout seul depuis ce que le jeu émet déjà, daté au jour, plafonné — le quotidien cède avant les jalons), **RÉPERTOIRE** (⚠️ `p.connus` seulement : un répertoire qui montre la fin est pire que pas de répertoire). Les menus savent maintenant **défiler**, et une page recule d'un cran au lieu de rendre la main au jeu |
 | Des sons pour les armes | **livré** (13 sept. 2026) | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouaient le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appelaient `SFX.coup`), le jet d'extincteur ne faisait aucun bruit, et un chargeur vide comme une arme qui casse faisaient le **buzzer de refus** des menus. Chaque arme porte maintenant son `son` (`armes.py`) et le combat passe par `SFX.arme(def)` ; **16 échantillons ElevenLabs** (batte ×2, couteau ×2, pelle, cône, bouteille, fronde, pistolet ×2, fusil ×2, le **jet en boucle** tenu par `SFX.jet(actif)` à chaque image, la gâchette **à vide**, la **casse**, le **dégainage**), ≈ 141 Ko, chacun avec son repli synthétisé ; budget des bruitages relevé à 800 Ko. ⚠️ Au passage, un **hoquet** au départ du jet : la première pression partait par le chemin de la mêlée (anticipation, quatre images de jet, deux de repos) avant que le maintien ne prenne le relais — invisible, mais audible avec une boucle. ⚠️ **Martin n'a pas encore écouté** : `batte-1` et `batte-2` sont sortis très courts (0,18 et 0,26 s), à refaire s'ils ne sonnent pas (`--refaire batte`) |
 | La fille de la Brume parle | **livré** (13 sept. 2026) | demande de Martin (« la prostituée aussi doit parler, avec plusieurs dialogues différents ») : `rumeurEtRepliques` saute tout piéton qui a un `metier`, et elle en a un (`compagnie`) — elle ne disait jamais rien, alors que la regex des voix de femmes la nommait déjà. **Six répliques à elle** (genre `brume`, voix **Julia**, québécoise et rauque, poussée au style), dites par `Entites.accosterDepuisLaBrume` quand on passe à trois tuiles de son coin : une **bulle** avec le texte, la voix par-dessus, **jamais deux fois de suite la même** (`Son.Voix.choisir(genre, sauf)`, tiré dans le dé du jeu), pas deux fois en moins d'une demi-minute, jamais en char, jamais quand elle fuit. Le chemin des passants ne bouge pas. Budget des bruitages à 850 Ko (+52 Ko). ⚠️ Martin n'a pas encore écouté |
@@ -536,7 +536,6 @@ ordre-là.
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
 | **P2** | ajout | Des sortes de gens, pas des couleurs | 3 | ⚠️ 24 archétypes, **4 corps**, et 2 métiers sur 6 qui font quelque chose. Une sorte = un corps + une routine |
-| **P2** | ajout | Les portes s'ouvrent, et les gens les passent | 2 | ⚠️ un piéton sur trois sort **déjà** d'une porte — mais seulement **hors écran** : on ne le voit jamais. Et personne n'entre nulle part |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P3** | **correctif** | Une pièce plus grande que sa maison | 2 | **le trottoir** : rétrécir les rues rétrécit les bâtiments |
@@ -2095,7 +2094,7 @@ n'ont qu'un costume n'y sont pas. On y pige par vagues, jamais tout d'un coup.
   arrêté par un agent qui passe, sans une étoile pour le joueur ; et jamais plus de son
   plafond d'une sorte dans la bulle.
 
-### Les portes s'ouvrent, et les gens les passent (**ajout**, taille 2)
+### Les portes s'ouvrent, et les gens les passent (**ajout**, taille 2) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « les piétons devraient aussi sortir et entrer dans les commerces.
 Profites-en pour aussi faire ouvrir concrètement les portes. »
@@ -2148,6 +2147,35 @@ qui justifie qu'une porte s'ouvre. D'où une seule fiche.
   l'ouverture, jamais avant ; la planque du joueur n'avale personne ; un commerce fermé ne
   laisse entrer personne ; le cache de morceaux **ne bouge pas** quand une porte s'ouvre
   (`stats.morceaux` le mesure) ; et le va-et-vient ne fait pas déborder le plafond de piétons.
+
+**Livré le 13 sept. 2026 :**
+
+- **Le battant est une entité de dessin, pas une tuile** : `carte.battants`, une poignée
+  d'états, dessinés **par-dessus** le sol dans `Jeu.rendre()`. ⚠️ Le juge mesure
+  `stats.morceaux` avant et après une ouverture : le cache ne bouge pas d'un morceau.
+- ⚠️ **Redemander une porte déjà en train de s'ouvrir ne la remet pas à zéro.** Un piéton qui
+  attend devant appelle `ouvrirPorte` à **chaque image** : le battant restait figé au premier
+  pixel et ne s'ouvrait jamais — donc personne n'entrait. Une porte qui se referme, elle, se
+  retient ouverte. C'est le genre de bogue qu'on ne voit qu'en regardant la courbe.
+- **Sortir** : on naît **dans** la porte, invisible tant qu'elle s'ouvre, puis on avance d'une
+  tuile et elle se referme. La règle « hors écran seulement » saute — c'était précisément
+  parce qu'on ne le voyait pas que ça ne servait à rien.
+- **Entrer** : un flâneur se choisit la porte utile la plus proche, y marche, **attend qu'elle
+  soit grande ouverte**, et disparaît — jamais devant un battant fermé. S'il est bloqué par la
+  foule une seconde, il renonce plutôt que de piétiner.
+- **Quelles portes** : un `d` est un **logement** (toujours) ; un `D` mène à un intérieur — ⚠️
+  jamais la **planque** (c'est chez le joueur), ni le **poste**, ni l'**hôpital**.
+- ⚠️ **Et le joueur n'est pas trompé.** La fiche laissait le choix ; c'est le **dessin** qui
+  tranche, et il était déjà bon : un `D` a une poignée de laiton, un `d` est un battant sombre
+  sans poignée, sans enseigne et sans lumière. On apprend à ne pas pousser celle-là.
+- ⚠️ **Les intérieurs n'ont PAS d'heures déclarées** — seuls les kiosques de rue
+  (`ambulants`) en ont. La **nuit** tient donc lieu de fermeture, avec la seule exception qui
+  compte : le **bar**, qui vit justement la nuit. Le jour où `carte.INTERIEURS` portera des
+  heures, ces deux lignes deviennent `Missions.ouvert(...)`.
+- **Juge (1 neuf)** : le battant monte, tient et redescend tout seul ; le cache de morceaux ne
+  bouge pas ; la planque, le poste et l'hôpital n'avalent personne, un logement oui, un
+  commerce le jour mais pas la nuit, le bar la nuit ; on naît caché et on sort **visible, en
+  plein écran** ; et celui qui entre disparaît avec la porte **à plus de 90 % ouverte**.
 
 ### Le carnet : la mission, le journal, le répertoire (**ajout**, taille 2) — **livré le 13 sept. 2026**
 
