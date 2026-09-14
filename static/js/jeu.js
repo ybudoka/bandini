@@ -171,7 +171,7 @@ const Jeu = (function () {
       j.x = piece.interieur.apparition.x * TT + 8;
       j.y = piece.interieur.apparition.y * TT + 8;
       poserDansLaPorte(j, 'haut');
-      Son.SFX.porte();          // la porte s'entend AU NOIR : c'est la qu'on la passe
+      Son.SFX.porte(piece.interieur.porte);   // la porte s'entend AU NOIR : c'est la qu'on la passe
       Hud.message(piece.interieur.nom.toUpperCase(), 120);
     });
     return true;
@@ -205,7 +205,7 @@ const Jeu = (function () {
       }) || piece.interieur.apparition;
       j.x = retour.x * TT + 8; j.y = retour.y * TT + 8;
       poserDansLaPorte(j, 'bas');
-      Son.SFX.porte();
+      Son.SFX.porte(piece.interieur.porte);
       Hud.message(piece.interieur.nom.toUpperCase(), 120);
     });
     return true;
@@ -217,6 +217,7 @@ const Jeu = (function () {
     const ext = B.exterieur;
     if (!B.interieur || !ext) return false;
     transiter(FONDU_SORTIE, function () {
+      const genre = B.interieur ? B.interieur.porte : undefined;   // la porte qu'on a poussee en entrant
       Monde.restaurer(ext.carte);
       B.entites = ext.entites;
       if (B.entites.indexOf(j) < 0) B.entites.push(j);
@@ -228,7 +229,7 @@ const Jeu = (function () {
       // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
       j.x = ext.x; j.y = ext.y;
       poserDansLaPorte(j, 'bas');
-      Son.SFX.porte();
+      Son.SFX.porte(genre);
     });
     return true;
   }

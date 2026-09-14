@@ -283,7 +283,14 @@ const Son = (function () {
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
-    porte: function () { if (!joue('porte')) ton(300, 0.1, 'triangle', 0.2, 0.7); },
+    // ⚠️ Trois portes : le bois et la serrure d'un logement, la vitre et la
+    // clochette d'un commerce, la portiere d'un char. Le jeu appelle
+    // `porte(genre)` ; le genre vient de la fiche — de la piece (`carte._piece`,
+    // champ `porte`) ou du char (`vehicules.py`, `portieres`).
+    porte_maison: function () { if (!joue('porte_maison')) { ton(160, 0.14, 'triangle', 0.22, 0.6); bruit(0.06, 0.12, 400, 150); } },
+    porte_commerce: function () { if (!joue('porte_commerce')) { bruit(0.03, 0.08, 3000, 2000); ton(2300, 0.18, 'sine', 0.12, 1, 0.03); ton(3100, 0.25, 'sine', 0.09, 1, 0.1); } },
+    porte_vehicule: function () { if (!joue('porte_vehicule')) { bruit(0.05, 0.3, 1500, 200); ton(95, 0.09, 'square', 0.14, 0.5, 0.01); } },
+    porte: function (genre) { (SFX['porte_' + genre] || SFX.porte_maison)(); },
     telephone: function () { if (!joue('telephone')) for (let i = 0; i < 3; i++) { ton(1200, 0.08, 'square', 0.15, 1, i * 0.12); ton(1600, 0.08, 'square', 0.15, 1, i * 0.12 + 0.05); } },
     helico: function () { if (!joue('helico')) bruit(0.3, 0.2, 200, 80); },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },

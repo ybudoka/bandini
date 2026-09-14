@@ -2579,8 +2579,15 @@ def _pt(type_: str, x: int, y: int, **extra) -> dict:
     return {"type": type_, "x": x, "y": y, **extra}
 
 
+#: Ce qu'on entend en poussant la porte d'une piece : le bois et la serrure
+#: d'un logement, ou la vitre et la clochette d'un commerce (`son.js`,
+#: `SFX.porte`). ⚠️ C'est la piece qui le dit, pas le JS : un logement qui
+#: sonnait comme un depanneur, c'est ce qu'on entendait avant.
+GENRES_DE_PORTE = ("maison", "commerce")
+
+
 def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
-           points: tuple = (), gens: tuple = ()) -> dict:
+           points: tuple = (), gens: tuple = (), porte: str = "commerce") -> dict:
     """Une piece dessinee a la main, verifiee ICI et pas trois fichiers plus loin.
 
     ⚠️ Le plan est la verite : la sortie est le « D », l'apparition la tuile
@@ -2607,6 +2614,8 @@ def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
         raise ValueError(f"{slug} : la porte doit etre sur le mur du bas")
     if not marchable(lignes[py - 1][px]):
         raise ValueError(f"{slug} : on entre dans un mur")
+    if porte not in GENRES_DE_PORTE:
+        raise ValueError(f"{slug} : « {porte} » n'est pas une porte ({GENRES_DE_PORTE})")
     piece = {
         "slug": slug, "nom": nom, "largeur": largeur, "hauteur": hauteur,
         # ⚠️ Le plancher voyage avec la piece : un meuble ne couvre pas toute sa
@@ -2618,6 +2627,7 @@ def _piece(slug: str, nom: str, plan: str, *, sol: str = "t",
         "apparition": {"x": px, "y": py - 1},
         "points": [dict(p) for p in points],
         "gens": [dict(g) for g in gens],
+        "porte": porte,
     }
     _verifier_piece(piece)
     return piece
@@ -2685,7 +2695,7 @@ BBBBBBBWWDWWBBBBB
 
     # La planque de Rocco : un lit, un coffre, une garde-robe, et de quoi se
     # faire un cafe. C'est petit, c'est a nous, et ca sauve la partie.
-    _piece("planque", "La planque de Rocco", plan="""
+    _piece("planque", "La planque de Rocco", porte="maison", plan="""
 BBBBWWWBBBBBBBB
 Bll      k   nB
 Bll      k    B
@@ -2838,7 +2848,7 @@ BBBBBBWWDWWBBBBBB
      gens=_gens(("commis", 4, 1), ("client", 8, 6))),
 
     # La chambre de l'Hotel Bandini : un lit, une fenetre sur la baie.
-    _piece("hotel_chambre", "Chambre de l'Hôtel Bandini", plan="""
+    _piece("hotel_chambre", "Chambre de l'Hôtel Bandini", porte="maison", plan="""
 BBBWWWWWBBBBB
 Bll       n B
 Bll      k  B
@@ -2893,7 +2903,7 @@ BBBBWWDWWBBBBB
 """, points=(_pt("fourriere", 5, 4),), gens=_gens(("commis", 5, 2),)),
 
     # Le phare : rond, etroit, et il sent le diesel.
-    _piece("phare", "Le phare de La Pointe", plan="""
+    _piece("phare", "Le phare de La Pointe", porte="maison", plan="""
 BBBWWWBBBBB
 Bll      nB
 Bll       B
@@ -3034,7 +3044,7 @@ BBBBBWWDWWBBBB
 #: gagne par l'escalier. ⚠️ On n'est PAS chez soi : il n'y a rien a acheter
 #: ici, seulement des tiroirs a fouiller — et une seule fois par adresse.
 _LOGEMENTS: tuple[dict, ...] = (
-    _piece("logement", "Un logement", plan="""
+    _piece("logement", "Un logement", porte="maison", plan="""
 BBBBWWWWWBBBBBBB
 Bz j      k    B
 B             /B
@@ -3047,7 +3057,7 @@ BBBBBWWDWWBBBBBB
 """, points=(_pt("fouiller", 10, 1), _pt("escalier", 14, 2, vers="logement_haut")),
      gens=_gens(("client", 4, 7),)),
 
-    _piece("logement_haut", "Un logement, en haut", plan="""
+    _piece("logement_haut", "Un logement, en haut", porte="maison", plan="""
 BBBWWWWWBBBBBBB
 Bll      ll   B
 Bll      ll   B

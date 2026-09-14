@@ -3620,3 +3620,44 @@ def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
     assert r["haute"]["x"] > r["basse"]["x"], "l'ombre ne s'ecarte pas quand le char monte"
     assert r["autobus"]["l"] > r["moto"]["l"], \
         "l'autobus fait 48 px et la moto 20 : leur ombre ne peut pas etre la meme"
+
+
+def test_chaque_porte_a_son_bruit(banc):
+    """Trois portes : le bois d'un logement, la clochette d'un commerce, la
+    portiere d'un char — et RIEN de tel pour une moto ou un velo, qu'on
+    enfourche. C'etait le meme grincement pour tout le monde, taxi compris.
+    Le genre vient de la fiche (la piece, le char), pas du JS."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const genres = [], montees = [];
+        L.Son.SFX.porte = function (genre) { genres.push(genre || null); };
+        const vraiRamasse = L.Son.SFX.ramasse;
+        L.Son.SFX.ramasse = function () { montees.push('ramasse'); return vraiRamasse.apply(null, arguments); };
+        function pousser(porte) {
+            if (!porte) return null;
+            genres.length = 0;
+            o.entrer(porte); L.Jeu.sortir(); o.fondu();
+            return genres.slice();
+        }
+        const planque = pousser(c.portes.find(function (p) { return p.lieu === 'planque'; }));
+        const depanneur = pousser(c.portes.find(function (p) { return p.lieu === 'depanneur'; }));
+        const logement = pousser(c.portes.find(function (p) { return p.interieur === 'logement'; }));
+        function rouler(slug) {
+            genres.length = 0; montees.length = 0;
+            const v = o.char(slug, 30, 0, 0);
+            L.Vehicules.monter(j, v);
+            L.Vehicules.descendre(j);
+            return { portes: genres.slice(), montees: montees.slice() };
+        }
+        return { planque: planque, depanneur: depanneur, logement: logement,
+                 auto: rouler('auto'), camion: rouler('camion'), moto: rouler('moto'), velo: rouler('velo') };
+    }""")
+    assert r["planque"] == ["maison", "maison"], r["planque"]
+    assert r["depanneur"] == ["commerce", "commerce"], r["depanneur"]
+    if r["logement"] is not None:
+        assert r["logement"] == ["maison", "maison"], r["logement"]
+    for quatre_roues in ("auto", "camion"):
+        assert r[quatre_roues] == {"portes": ["vehicule", "vehicule"], "montees": []}, (quatre_roues, r[quatre_roues])
+    for deux_roues in ("moto", "velo"):
+        assert r[deux_roues] == {"portes": [], "montees": ["ramasse", "ramasse"]}, (deux_roues, r[deux_roues])

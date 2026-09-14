@@ -62,6 +62,13 @@ class Vehicule(TypedDict):
     boulot: str | None
     radio: str | None
     phase: int
+    portieres: bool
+
+
+#: Les classes dont on claque la portiere. ⚠️ Une moto et un velo n'en ont
+#: pas : on les enfourche — le bruit de la montee vient d'ici, pas d'un
+#: `slug === 'velo'` dans le JS. La chaloupe non plus, quand elle roulera.
+CLASSES_A_PORTIERES = ("auto", "camion")
 
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
@@ -77,6 +84,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
         ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, defonce=defonce, soigne=soigne,
         crochet=crochet, boulot=boulot, radio=radio, phase=phase,
+        portieres=classe in CLASSES_A_PORTIERES,
     )
 
 

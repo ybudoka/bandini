@@ -102,10 +102,27 @@ CATALOGUE: list[Echantillon] = [
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
-    _e("porte", "Porte", duree_s=1.2, volume=0.66,
-       prompt="an old wooden door on a dry hinge swinging open, a low creak "
-              "then the latch knocking against the frame, close-up, small "
-              "room, no music"),
+    # ⚠️ TROIS portes, pas une. Le meme grincement de bois servait au logement,
+    # au depanneur et au taxi — on n'entendait pas ou l'on entrait. Le genre
+    # vient de la FICHE : chaque piece dit quelle porte on pousse
+    # (`carte._piece`, champ `porte`), chaque char dit s'il a des portieres
+    # (`vehicules.py`, `portieres`). La moto et le velo n'en ont pas : on les
+    # enfourche, et c'est le cliquetis de `ramasse` qui le dit.
+    _e("porte_maison", "Porte de logement", duree_s=1.5, volume=0.66,
+       prompt="a heavy old wooden apartment door: a key turning in the lock, "
+              "the knob clicking, the door swinging open on a slightly creaky "
+              "hinge and shutting with a solid wooden thump, small echoing "
+              "stairwell, no voices, no music"),
+    _e("porte_commerce", "Porte de commerce", duree_s=1.4, volume=0.6,
+       prompt="a corner store glass door with an aluminum frame pushed open, "
+              "a small brass shop bell jingling above it, then the pneumatic "
+              "closer hissing and the door clacking shut, close-up, no voices, "
+              "no music"),
+    _e("porte_vehicule", "Portière", duree_s=1.0, volume=0.66, influence=0.7,
+       prompt="an old sedan car door: the handle clicking, the door swinging "
+              "and slamming shut with a solid metallic thunk and a short "
+              "rattle of the window glass, outdoors on a quiet street, no "
+              "engine, no music"),
     _e("choc", "Tôle froissée", variantes=2, duree_s=1.5, volume=1.0, influence=0.45,
        prompt="two cars colliding at city speed, one hard metal crunch, sheet "
               "metal buckling, headlight glass shattering onto the road, "

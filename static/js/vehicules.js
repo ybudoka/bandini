@@ -511,7 +511,7 @@ const Vehicules = (function () {
     v.remorque = null;
     if (!t) return;
     t.remorqueePar = null;
-    Son.SFX.porte();
+    Son.SFX.porte('vehicule');    // le crochet qui lache : de la tole, comme une portiere
   }
 
   /** Le cable, une fois par image : le char remorque est tire vers un point
@@ -648,10 +648,19 @@ const Vehicules = (function () {
     j.x = v.x; j.y = v.y;
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
     Entree.contexte(v.def.sirene ? 'vehicule_sirene' : 'vehicule');
-    if (v.def.classe === 'velo') Son.SFX.ramasse(); else { Son.SFX.porte(); Son.boucle('moteur', true, 0.6); }
+    bruitDePortiere(v);
+    if (v.def.classe !== 'velo') Son.boucle('moteur', true, 0.6);
     if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
     Hud.message(v.def.nom.toUpperCase());
     return true;
+  }
+
+  /** Le bruit de la montee, et de la descente : la portiere d'un char — ou
+      rien de tel pour une moto et un velo, qu'on enfourche : c'est le
+      cliquetis de `ramasse` qui le dit. ⚠️ La FICHE decide (`portieres`,
+      `vehicules.py`), pas un `slug === 'velo'` ici. */
+  function bruitDePortiere(v) {
+    if (v.def.portieres) Son.SFX.porte('vehicule'); else Son.SFX.ramasse();
   }
 
   /** Descendre : a gauche si c'est libre, sinon a droite, sinon derriere. */
@@ -677,7 +686,7 @@ const Vehicules = (function () {
     Son.boucle('moteur', false);
     Son.Radio.arreter();
     Son.Ambiance.jouer();
-    if (!force) Son.SFX.porte();
+    if (!force) bruitDePortiere(v);
     if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.abandonner('SORTI DU TAXI');
     return true;
   }

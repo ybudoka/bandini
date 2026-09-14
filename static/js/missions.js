@@ -281,7 +281,7 @@ const Missions = (function () {
           taxi.chocsDepart = v.chocs;
           taxi.etape = 'course';
           Hud.message('DIRECTION : ' + lieu.nom.toUpperCase(), 180);
-          Son.SFX.porte();
+          Son.SFX.porte('vehicule');    // le client monte et claque la portiere
         }
         return;
       }

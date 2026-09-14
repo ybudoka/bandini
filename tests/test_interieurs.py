@@ -266,3 +266,18 @@ def test_les_commerces_ont_quelqu_un_derriere_le_comptoir():
     for slug in boutiques:
         gens = carte.INTERIEURS[slug]["gens"]
         assert any(g["qui"] == "commis" for g in gens), f"{slug} : personne au comptoir"
+
+
+def test_chaque_piece_dit_quelle_porte_on_pousse():
+    """Le bruit de la porte vient de la piece : le bois d'un logement, la
+    vitre et la clochette d'un commerce. ⚠️ Un logement qui sonne comme un
+    depanneur, c'est ce qu'on entendait avant — et le taxi aussi."""
+    for slug, piece in carte.INTERIEURS.items():
+        assert piece["porte"] in carte.GENRES_DE_PORTE, slug
+    for slug in ("logement", "logement_haut", "planque", "hotel_chambre"):
+        assert carte.INTERIEURS[slug]["porte"] == "maison", slug
+    for slug in ("depanneur", "bar", "boutique_bouffe", "hotel", "terminus"):
+        assert carte.INTERIEURS[slug]["porte"] == "commerce", slug
+    # Et chaque porte de la ville mene a une piece qui sait ce qu'elle est.
+    for porte in VILLE["portes"]:
+        assert VILLE["interieurs"][porte["interieur"]]["porte"] in carte.GENRES_DE_PORTE, porte

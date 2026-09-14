@@ -280,7 +280,9 @@ def test_les_bruitages_ont_de_l_aigu():
     On compare le pic du signal filtre a 8 kHz au pic du fichier entier.
     Mesure sur les cinq sons qui DOIVENT briller — anciens fichiers puis
     nouveaux : caisse -26 → -10, ramassage -23 → -7, tole -27 → -6, porte
-    -32 → -10, clic -30 → -7. Le seuil de -14 dB tombe entre les deux, avec
+    -32 → -10, clic -30 → -7 (la porte d'alors ; depuis qu'il y en a trois,
+    c'est la clochette du commerce qu'on juge — elle DOIT briller). Le seuil
+    de -14 dB tombe entre les deux, avec
     au moins 4 dB de marge de chaque cote : il aurait refuse les anciens
     fichiers, il accepte ceux-ci.
 
@@ -290,7 +292,7 @@ def test_les_bruitages_ont_de_l_aigu():
     dehors elle aussi, pour la raison inverse : c'est le seul son que le
     22 kHz n'avait pas trop abime (-16 dB), donc il ne separe rien.
     """
-    for slug in ("argent", "ramasse", "choc", "porte", "menu"):
+    for slug in ("argent", "ramasse", "choc", "porte_commerce", "menu"):
         echantillon = audio.par_slug(slug)
         chemin = audio.chemin(echantillon, 1)
         if not chemin.is_file():

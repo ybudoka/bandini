@@ -191,3 +191,15 @@ def test_l_elan_pour_voler_grandit_avec_la_distance_demandee():
     moto = vehicules.par_slug("moto")
     court, long = vehicules.elan_pour_voler(moto, 60), vehicules.elan_pour_voler(moto, 120)
     assert 0 < court < long, "voler plus loin doit demander plus d'elan"
+
+
+def test_une_moto_et_un_velo_n_ont_pas_de_portiere():
+    """Le bruit de la montee vient de la fiche, pas d'un `slug === 'velo'`
+    dans le JS : une portiere claque sur une auto et un camion, et sur rien
+    d'autre — une moto et un velo, on les enfourche."""
+    assert set(vehicules.CLASSES_A_PORTIERES) <= set(vehicules.CLASSES)
+    par_slug = {v["slug"]: v for v in vehicules.CATALOGUE}
+    for slug in ("moto", "velo", "bateau"):
+        assert not par_slug[slug]["portieres"], slug
+    for slug in ("auto", "taxi", "police", "camion", "autobus", "ambulance", "remorqueuse"):
+        assert par_slug[slug]["portieres"], slug
