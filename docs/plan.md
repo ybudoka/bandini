@@ -88,7 +88,7 @@ ne bougent pas quand l'ordre de travail change.
 | Pièces plus grandes que leur maison | **P3** **correctif**, **livré** (14 sept. 2026) | demande de Martin, mesurée : **35 des 45 portes** de la graine livrée ouvraient sur plus grand que leur bâtiment, jusqu'à **onze fois** (9 tuiles dehors, 98 dedans). Maintenant la pièce **se choisit à la taille du bâtiment** — la plus grande qui tienne, et rien du tout si même la plus petite déborde : la porte reste alors condamnée. **Quatre petites pièces neuves** (deux de 9 tuiles de plancher, une de 18, une de 21) et **26 pièces redessinées** plus petites ; la **parcelle d'un lieu garanti se taille à la mesure de sa pièce** au lieu d'espérer que le découpage au sort en fasse une de la bonne taille ; et **chaque famille de commerce ouvre au moins une porte**, parce que « tirer l'enseigne × être assez grand × gagner le dé » laissait quatre familles sur dix sans un seul intérieur. **0 débordement sur 5 graines**, contre 34 à 46 avant. 12 juges neufs |
 | L'eau n'est plus un mur | **P3** **correctif**, **livré** (14 sept. 2026) | demande de Martin : l'eau était **littéralement un mur** (`MASQUE_PIETON` la comptait comme une façade). Maintenant : un **masque de nageur** pour le joueur et les agents (les passants, eux, n'y entrent jamais), le **souffle qui décide** — 8 points par tuile, le chenal du pont en coûte 88 sur 100 : un **pari** —, la **noyade par `Missions.hopital`** (une seule façon de perdre connaissance), le **char qui coule et qui est perdu** (jamais à la fourrière : couler ne doit pas devenir un remboursement d'épave ; le **bateau** flotte, et c'est sa fiche qui le dit), et la **police qui nage** au prix fort dans l'A\*. ⚠️ Le juge du pont est **reformulé, pas affaibli** : le pont est le seul lien **carrossable**. Le large de la baie est à **73 tuiles** de toute terre pour **40** au plafond absolu (café + estomac plein) : on n'y va pas. 6 juges neufs |
 | La dépanneuse lève les roues | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme ». C'était une **corde** : le char roulait à plat au bout d'un élastique, pointé **vers** elle, et le lien lâchait quand on l'étirait. Maintenant une **fourche** — écart fixe, **dans l'axe**, avant **levé de deux pixels** (l'ombre restée au sol, sans un seul cap de sprite en plus) — et un **plateau** pour ce que `vehicules.py` déclare `plateau` (la moto, le vélo) : elles montent **en entier**, ne heurtent plus rien, et se peignent **après** la remorqueuse. ⚠️ La remorqueuse **refuse d'avancer** là où sa charge ne passe pas (sans le garde-fou, elle reculait de 22 px dans la façade), et on **ne monte plus** dans un char remorqué. 2 juges neufs, 2 réécrits |
-| Le taxi de Marco n'est pas à vendre | **P1** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco ». Le garage de Ti-Guy achète **n'importe quel char garé devant sa porte** — et le taxi de M3 dort justement là, à la porte du garage. Vendu, il sort du monde : l'objectif attend un char qui n'existe plus, la mission **ne rate même pas**, elle reste prise, et le téléphone ne sonne plus jamais |
+| Le taxi de Marco n'est pas à vendre | **P1** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco ». Le garage de Ti-Guy achète **n'importe quel char garé devant sa porte**, et M3 pose le taxi à `porte:garage` — cette porte-là. Vendu, il sort du monde, et ⚠️ **la mission ne rate même pas** (`monter` et `livrer` n'échouent que sur une **épave**) : elle reste prise, le téléphone ne sonne plus jamais. `aQui` — le contraire de `aToi` — dit à qui est le char, vient de la fiche (`prete` dans `missions.py`) et **ne s'efface jamais** : le taxi est à Marco avant, pendant et après. Le menu le dit au lieu de le cacher : « IL EST À MARCO ». 2 juges |
 | Des feux pour piétons | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existait (`traverseeSure`) mais **personne ne la voyait** — et ⚠️ elle **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engageaient pile quand les chars accélèrent pour vider le croisement, **240 images sur 960**. Maintenant `Monde.feuPieton()` rend **blanc / dégage / rouge**, le blanc ne croise ni le vert des chars ni l'orange, et il s'éteint **180 images avant** que les chars repartent (dégagement 120 + orange 60). **351 poteaux** posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par tuile — avec le **sens du passage** dans la fiche ; blanc fixe, orange **clignotant** au dégagement. ⚠️ **Sans feu (un T), on traverse quand c'est libre** : sinon un côté de rue entier devient un cul-de-sac pour la foule, et aucun juge existant ne le verrait. 2 juges neufs |
 | Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
@@ -2810,6 +2810,49 @@ compte : un feu qui montre la mauvaise chose est pire que pas de feu.
 - **Ce qui reste ouvert** : la traverse elle-même ne s'éclaire pas. Les tuiles de passage sont
   **cuites dans le morceau** de 256 px, et les animer voudrait dire repeindre par-dessus à
   chaque image — c'est un choix de budget, pas de goût, et il se mesure avant.
+
+### Le taxi de Marco n'est pas à vendre (**correctif**, taille 1) — **livré le 14 sept. 2026**
+
+_Demande de Martin :_ « il ne faut pas pouvoir vendre le taxi de Marco. »
+
+⚠️ **Et ce n'est pas une question d'argent : c'est une histoire qui s'arrête.** M3 pose le
+taxi à `porte:garage` — la porte **même** du garage où Ti-Guy rachète n'importe quel char
+garé devant (`charDevant()` : le plus proche dans les 90 px, sans une seule question sur à
+qui il est). Trois pas, 175 $, et le taxi **sort du monde** : `menuGarage` le retire de
+`B.exterieur.entites`. L'objectif « MONTE DANS LE TAXI DE MARCO » attend alors un char qui
+n'existe plus — et **la mission ne rate même pas** : `monter` et `livrer` ne font échouer que
+sur une **épave**, jamais sur une absence. `p.mission` reste pris, `disponibles()` ne rend
+donc plus rien, le téléphone ne sonne plus jamais, et il faut **se faire arrêter**
+(`m3.echec` contient `arrete`) pour s'en sortir.
+
+**Le remède dit à qui est le char, et il le dit en Python.** `aToi` existait déjà — un char
+**payé** au guichet de la fourrière, sans quoi monter dans le sien était un vol ; il lui
+manquait son contraire. `aQui` porte le **slug du personnage** à qui le char appartient, il
+vient de la fiche (`prete` sur l'objectif `monter` de `missions.py`), et le navigateur ne
+fait que le lire : le menu affiche « IL EST À MARCO » avec le nom de `PERSONNAGES`. Une
+ligne grise **qui donne sa raison**, plutôt qu'une vente disparue sans explication.
+
+- ⚠️ **Deux refus, deux raisons, et elles ne se recouvrent pas.** `aQui` dit *à qui il est*
+  et ne s'efface **jamais** : le taxi reste à Marco une fois M3 finie, alors que `livrer`
+  remet `mission` à `null`. `mission` dit *il sert à quelque chose en ce moment* : ça couvre
+  l'**auto-patrouille de M4**, qu'on ne prête pas mais qu'on ne peut pas vendre avant de
+  l'avoir larguée — s'arrêter à cinq tuiles du garage, entrer et vendre prenait la mission
+  exactement de la même façon.
+- **RÉPARER reste ouvert** : Marco veut son taxi **entier**, et le garage est justement là
+  pour ça.
+- ⚠️ Le refus est **dans `faire`** autant que dans `actif` : un item grisé ne se déclenche
+  pas au clavier, mais c'est le **menu** qui le garantit, pas la vente. Appelée en direct,
+  elle rend `false` et fait le bruit du refus.
+- **Juges** : un Python (un char prêté l'est par un **personnage connu**, sur un objectif
+  `monter` ; le taxi de M3 est à son **donneur**) et un de banc en **trois temps** — pendant
+  la mission, **après la livraison** (`mission` tombé, `aQui` resté), et une auto de
+  n'importe qui garée à la même place, qui elle **se vend toujours** : sinon on aurait
+  réparé la fuite en fermant le garage.
+- **Resté ouvert, et c'est une question pour Martin** : monter dans le taxi que Marco te
+  **prête** compte encore comme un **vol de véhicule** (`Vehicules.monter` : un char
+  stationné qui n'est ni volé ni `aToi`), donc un passant peut te dénoncer pour un char
+  qu'on t'a confié. `aQui` donne de quoi le corriger en une ligne — mais c'est un choix de
+  jeu, pas un bogue à trancher tout seul.
 
 ### Les terrains de banlieue (**ajout**, taille 2)
 
