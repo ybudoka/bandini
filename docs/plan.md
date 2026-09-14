@@ -79,7 +79,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | Les armes à feu | **P4** ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
 | M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), et les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières** (8 répliques aujourd'hui, tirées sans mémoire) |
-| M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, bouclier humain |
+| M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **le chantier** et les nids-de-poule |
 | M14 Meta v2 | **P4** ajout à faire (v2) | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
@@ -454,7 +454,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
 | — | **P4** Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
 | M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte (48 clips), tirage sans les quatre dernières, par `B.rng()` | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; traverser une foule sans entendre deux fois la même phrase |
-| M11 | **P4** La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool |
+| M11 | **P4** La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, le hacker (le pari contre la certitude de l'avocat), bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool ; payer le hacker et repartir sans savoir ce qu'il effacera |
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, chantier du jour et nids-de-poule | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; un chantier qui force un détour sans couper la ville |
 | M14 | **P4** Meta v2 | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
@@ -2294,10 +2294,32 @@ M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
   le faire taire : chacun a son prix en étoiles.
 - **L'avocat du Carré** : cher, il efface une page du casier ou te sort de prison sans
   amende — et il ne travaille pas deux fois la même journée.
+- **Le hacker** (demande de Martin) : quelque part en ville, quelqu'un entre dans le fichier
+  de la police et efface du casier — **de façon variable**, contre rémunération.
+  - ⚠️ **Il doit être le CONTRAIRE de l'avocat, pas son doublon.** L'avocat du Carré est
+    légal, cher, sûr : une page, une fois par jour. Le hacker est **le pari** — moins cher la
+    page, mais on paie **d'avance** sans savoir combien il effacera : de rien du tout à
+    plusieurs pages d'un coup.
+  - ⚠️ **Et son espérance doit rester SOUS l'avocat à prix égal**, sinon l'avocat ne sert plus
+    à rien et le choix disparaît. C'est la règle de tout le reste : la certitude se paie plus
+    cher que la chance, jamais l'inverse.
+  - **Où** : pas au Carré, pas au bar — le marché noir y est déjà, et un deuxième comptoir au
+    même endroit n'est plus un trajet. Il travaille dans **La Shop**, le district qui tombe à
+    0,15 la nuit : y aller quand il travaille, c'est y aller seul. Le trajet fait le risque,
+    comme la caisse d'une propriété.
+  - **Ça prend du temps**, pas un clic : on paie, on revient **le lendemain**. Un trajet de
+    plus, et de quoi se refaire un casier entre-temps.
+  - ⚠️ **Le risque est réel dans les deux sens.** Payer quelqu'un pour entrer dans le fichier
+    de la police est un délit : s'il rate, ça peut **ajouter** une page au lieu d'en enlever —
+    et le **stool** de cette même vague peut apprendre qu'on y est allé. C'est ce qui empêche
+    le hacker de devenir un bouton « annuler la partie ».
 - **Bouclier humain** (risqué) : attraper un piéton à bout portant ; la police ne tire plus,
   mais le compteur monte et le piéton se débat.
 - **Juges** : la portée du cône reste bornée quel que soit le casier ; le stool ne naît pas
-  dans le dos d'un joueur immobile ; l'avocat ne rend jamais un casier négatif.
+  dans le dos d'un joueur immobile ; l'avocat ne rend jamais un casier négatif ; le hacker non
+  plus, il ne vide jamais un casier plein en une visite, son espérance reste sous l'avocat à
+  prix égal, et **effacer coûte toujours plus cher que ce que le casier coûte** — sinon le
+  casier ne veut plus rien dire, et tout M11 avec lui.
 
 ### M10 — L'argent sale (**ajout**, taille 3)
 
