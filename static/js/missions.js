@@ -280,6 +280,17 @@ const Missions = (function () {
       pris: 'A L’HOPITAL, VITE',
       fini: 'TRANSPORT',
     },
+    remorquage: {
+      // ⚠️ Ce qu'on ramasse est deja AU CROCHET : le bouton du klaxon accroche
+      // (`Vehicules.basculerCrochet`) avant d'appeler le boulot, donc dans la
+      // meme pression on accroche l'epave et on prend le contrat. Et la
+      // fourriere ne paie que les EPAVES — trainer une berline saine au lot,
+      // c'est du vol, pas du remorquage.
+      ramasser: 'crochet',
+      destination: 'fourriere',
+      pris: 'A LA FOURRIERE',
+      fini: 'REMORQUAGE',
+    },
   };
 
   const boulot = {
@@ -312,10 +323,14 @@ const Missions = (function () {
       if (boulot.etape) { if (v.def.sirene) Hud.message('UN CONTRAT EST DEJA EN COURS'); return false; }
       const sorte = SORTES[v.def.boulot];
       if (!sorte) return false;          // le remorquage attend sa fourriere
+      if (sorte.ramasser === 'crochet') {
+        if (!v.remorque) return false;                    // `basculerCrochet` l'a deja dit
+        if (v.remorque.etat !== 'epave') { Hud.message('LA FOURRIERE NE PAIE QUE LES EPAVES'); return false; }
+      }
       boulot.slug = v.def.boulot;
       boulot.etape = 'ramasse';
       boulot.t = 0; boulot.etapesFaites = 0; boulot.gagne = 0;
-      if (!sorte.ramasser) { boulot.enRoute(v); return true; }
+      if (!sorte.ramasser || sorte.ramasser === 'crochet') { boulot.enRoute(v); return true; }
       boulot.client = boulot.poser(v, sorte.ramasser);
       if (!boulot.client) { boulot.abandonner(); return false; }
       Hud.message(sorte.ramasser === 'blesse' ? 'QUELQU’UN EST A TERRE' : 'UN CLIENT ATTEND');
@@ -353,6 +368,10 @@ const Missions = (function () {
       let lieu = null;
       if (sorte.destination === 'hopital') {
         lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+      } else if (sorte.destination === 'fourriere' && Monde.carte.fourriere) {
+        // La grille du lot : la seule ouverture, et c'est par la qu'on entre.
+        const g = Monde.carte.fourriere.grille;
+        lieu = { x: g.x + Math.floor(g.largeur / 2), y: g.y, nom: 'Fourrière municipale' };
       }
       if (!lieu) {
         const loin = Monde.carte.points.filter(function (p) { return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200; });
@@ -363,7 +382,7 @@ const Missions = (function () {
       boulot.chocsDepart = v.chocs;
       boulot.t = 0;
       boulot.etape = 'route';
-      Hud.message(sorte.pris + (sorte.destination === 'hopital' ? '' : lieu.nom.toUpperCase()), 180);
+      Hud.message(sorte.pris + (sorte.destination === 'ailleurs' ? lieu.nom.toUpperCase() : ''), 180);
     },
 
     /** Ce qui reste de la prime : les chocs la mangent, le chrono la fait
@@ -395,8 +414,19 @@ const Missions = (function () {
         }
         return;
       }
+      if (sorte.ramasser === 'crochet' && !v.remorque) { boulot.abandonner('EPAVE PERDUE'); return; }
       const d = boulot.destination;
-      if (dist2(v.x, v.y, d.x, d.y) >= 44 * 44 || Math.abs(v.vitesse) >= 0.4) return;
+      // ⚠️ Au lot, on livre DANS LA COUR, pas a 44 px d'un point : la grille
+      // est une ouverture de quatre tuiles, et une remorqueuse de 36 px avec
+      // son epave au bout ne s'arrete pas au pixel pres dessus.
+      const arrive = sorte.destination === 'fourriere' ? dansLaCour(v) : dist2(v.x, v.y, d.x, d.y) < 44 * 44;
+      if (!arrive || Math.abs(v.vitesse) >= 0.4) return;
+      if (sorte.ramasser === 'crochet') {
+        // L'epave part a la ferraille : le lot la prend, il ne la range pas.
+        const epave = v.remorque;
+        Vehicules.decrocher(v);
+        Entites.retirer(epave);
+      }
       const f = boulot.fiche();
       // ⚠️ La distance se paie A CHAQUE ETAPE : trois livraisons, trois
       // trajets. Sinon la pizza rapporterait trois fois la premiere course.
@@ -473,12 +503,73 @@ const Missions = (function () {
     return Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction));
   }
 
-  /** Pose les chars saisis dans la cour, sur les cases du lot. */
+  /** Dans la cour du lot, au pixel : c'est ce qui decide si on livre une
+      epave, et si on est en train d'en sortir un char sans payer. */
+  function dansLaCour(e) {
+    const lot = Monde.carte.fourriere;
+    if (!lot) return false;
+    const tx = e.x / TT, ty = e.y / TT;
+    return tx >= lot.x && tx < lot.x + lot.largeur && ty >= lot.y && ty < lot.y + lot.hauteur;
+  }
+
+  /** Un char saisi qui franchit la cloture avec le joueur au volant : le lot
+      appelle, et les gars du lot ripostent.
+
+      ⚠️ C'est la MOITIE de ce qui rend la fourriere interessante — l'autre
+      etant le comptoir. Le grillage s'enjambe a pied et arrete les chars ;
+      il n'y a qu'une grille ; donc sortir sans payer, c'est passer devant les
+      gardiens. Rien ici ne teste la cloture : la geometrie du lot suffit. */
+  function majFourriere() {
+    const j = B.joueur, v = j && j.dansVehicule;
+    if (!v || v.saisi === null || v.saisi === undefined || B.interieur) return;
+    if (dansLaCour(v)) return;
+    const rang = v.saisi;
+    v.saisi = null;
+    v.vole = true;
+    if (rang < B.partie.fourriere.length) B.partie.fourriere.splice(rang, 1);
+    // Les rangs des autres chars de la cour glissent d'un cran : sans ca, le
+    // comptoir libererait le mauvais char au prochain rachat.
+    for (const e of B.entites) {
+      if (e.type === 'vehicule' && e.saisi !== null && e.saisi !== undefined && e.saisi > rang) e.saisi--;
+    }
+    Police.signalerCrime('fourriere', v.x, v.y, true);
+    // ⚠️ Et un PLANCHER d'etoiles, pas de la chaleur : le lot APPELLE. Sans
+    // ca, sortir un char sans payer posait 35 points sur les 100 d'une etoile
+    // — il fallait le faire trois fois pour que quiconque se deplace, et la
+    // moitie de l'interet de la fourriere tombait.
+    Police.etoilesAuMoins(B.defs.economie.fourriere.etoiles_vol);
+    // ⚠️ Les gardiens se lancent APRES `alerter` : celui-ci repasse sur tout
+    // le monde autour et remplace l'etat de qui n'est ni en fuite ni temoin —
+    // il effacait donc leur riposte a l'image meme ou on la posait.
+    Entites.alerter(v.x, v.y, j, 1);
+    for (const e of B.entites) {
+      if (e.type === 'pieton' && e.gardien && e.vivant) { e.etat = 'attaque_joueur'; e.menace = j; e.cri = 90; }
+    }
+    Hud.message('LE LOT APPELLE LA POLICE', 240);
+  }
+
+  /** Pose les chars saisis dans la cour, sur les cases du lot — et les gars
+      du lot a la grille. */
   function garnirLaFourriere() {
     const lot = Monde.carte.fourriere;
     if (!lot || !lot.places || !lot.places.length) return 0;
+    const arch = Entites.archetype('gardien');
+    // ⚠️ Idempotent : `commencer()` garnit la cour, et un rechargement ou un
+    // test peuvent la garnir encore. Deux fois les gardiens, c'est quatre gars
+    // a la grille — et deux fois les chars, c'est un char par-dessus l'autre.
+    const deja = B.entites.filter(function (e) { return e.type === 'pieton' && e.gardien; }).length;
+    const n = Math.max(0, B.defs.economie.fourriere.gardiens - deja);
+    for (let i = 0; arch && i < n; i++) {
+      // Un a chaque bout de la grille, une tuile en dedans, face a la rue.
+      const gx = i === 0 ? lot.grille.x : lot.grille.x + lot.grille.largeur - 1;
+      const g = Entites.creerPieton(gx * TT + 8, (lot.grille.y - 1) * TT + 8, arch);
+      if (!g) continue;
+      g.etat = 'fige'; g.face = 'bas'; g.gardien = true; g.poste = { x: g.x, y: g.y };
+    }
     let poses = 0;
+    const dejaPoses = B.entites.filter(function (e) { return e.type === 'vehicule' && e.saisi !== null && e.saisi !== undefined; }).length;
     B.partie.fourriere.forEach(function (c, i) {
+      if (i < dejaPoses) return;                 // deja dans la cour
       const place = lot.places[i % lot.places.length];
       const def = Vehicules.vehiculeDef(c.slug);
       if (!def) return;
@@ -522,7 +613,7 @@ const Missions = (function () {
     // devant un guichet municipal, avec son numero au registre.
     c.vole = false;
     (B.exterieur ? B.exterieur.entites : B.entites).forEach(function (e) {
-      if (e.type === 'vehicule' && e.saisi === i) { e.saisi = null; e.vole = false; }
+      if (e.type === 'vehicule' && e.saisi === i) { e.saisi = null; e.vole = false; e.aToi = true; }
     });
     Hud.message('CHAR RACHETE — IL EST DANS LA COUR');
     Son.SFX.argent();
@@ -1102,6 +1193,7 @@ const Missions = (function () {
     // et dans une piece, la ou `majJoueur` ne passe pas.
     if (B.joueur && B.joueur.cafeine > 0) B.joueur.cafeine--;
     boulot.maj();
+    majFourriere();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -1113,7 +1205,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();

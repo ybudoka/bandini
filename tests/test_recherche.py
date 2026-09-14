@@ -20,6 +20,12 @@ def test_delits():
         assert isinstance(d["temoin"], bool)
     assert recherche.DELITS["mort_policier"]["etoiles"] > recherche.DELITS["mort_pieton"]["etoiles"]
     assert recherche.DELITS["carjacking"]["temoin"] is False
+    # ⚠️ Sortir son char du lot sans payer : bruyant (les gardiens sont la pour
+    # ca), et le meme nombre d'etoiles que l'economie annonce — deux tables,
+    # une seule verite.
+    from app import economie
+    assert recherche.DELITS["fourriere"]["temoin"] is False
+    assert recherche.DELITS["fourriere"]["etoiles"] == economie.FOURRIERE["etoiles_vol"]
 
 
 def test_vision():

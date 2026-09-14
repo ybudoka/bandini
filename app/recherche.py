@@ -67,6 +67,11 @@ DELITS: dict[str, dict] = {
     "guichet": {"etoiles": 2, "temoin": False},
     "effraction": {"etoiles": 1, "temoin": True},
     "pot_de_vin_refuse": {"etoiles": 1, "temoin": False},
+    # Sortir son char de la fourriere sans passer au comptoir. ⚠️ BRUYANT : les
+    # gars du lot sont la pour ca, il n'y a pas de temoin a convaincre. Le
+    # nombre d'etoiles est celui de `economie.FOURRIERE["etoiles_vol"]`, et un
+    # juge tient les deux d'accord.
+    "fourriere": {"etoiles": 1, "temoin": False},
 }
 
 #: Cones de vision : demi-angle en degres et portee en tuiles, jour / nuit.

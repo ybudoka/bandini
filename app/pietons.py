@@ -128,6 +128,18 @@ CATALOGUE: list[Pieton] = [
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),
+    # L'homme-sandwich : un SOLLICITEUR. Il porte l'enseigne d'un kiosque sur
+    # le ventre et le dos, il fait les cent pas a quelques tuiles de son
+    # commerce et il vient vers toi quand il te voit — pour te tenir le
+    # crachoir et te glisser un coupon (`magasins.RECLAME`). Il ne nait jamais
+    # au hasard : `carte.reclames` lui donne un poste, et `entites.peupler` l'y
+    # fait naitre le jour (`heures`). ⚠️ Deuxieme archetype a avoir SON PROPRE
+    # SPRITE (`homme_sandwich`) : une pancarte plus large que les epaules est un
+    # contour, et c'est un contour qui se lit a douze pixels — pas une couleur.
+    # Son `c` est la pancarte, pas un chandail.
+    _p("homme_sandwich", "Homme-sandwich", "#f4ead2", "#4a3320", "#e8b088", "#4a4a5a",
+       sprite="homme_sandwich", vitesse=0.85, vie=65, argent=(5, 30), temoin=0.35,
+       metier="reclame", heures=(0.3, 0.85), frequence=0.0),
     # ⚠️ Le commis TIENT UN COMPTOIR, dedans. Il ne naît jamais dans la rue
     # (frequence 0) : `entites.peuplerInterieur` le pose derriere sa caisse
     # quand on pousse la porte. Sans lui, une piece meublee reste un musee —
@@ -142,6 +154,13 @@ CATALOGUE: list[Pieton] = [
     _p("policier", "Agent", "#1f3a6e", "#101018", "#e8b088", "#16264a",
        vitesse=1.0, courage=1.0, temoin=0.0, vie=100, argent=(0, 0), arme="pistolet",
        metier="police", frequence=0.0),
+    # Les gars du lot : ils tiennent la grille de la fourriere et ne naissent
+    # jamais ailleurs. ⚠️ Courage 1 et une batte, pas un pistolet : ils
+    # RIPOSTENT quand on sort un char sans payer, ils n'abattent personne —
+    # c'est la police qu'ils appellent pour ca.
+    _p("gardien", "Gardien du lot", "#5a5f66", "#2a1a10", "#e8b088", "#2a2a3a",
+       vitesse=1.05, courage=1.0, temoin=0.0, vie=110, argent=(5, 30), arme="batte",
+       metier="gardien", frequence=0.0),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.

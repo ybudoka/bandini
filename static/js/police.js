@@ -127,6 +127,24 @@ const Police = (function () {
 
   function remiseAZero() { const r = B.recherche; r.etoiles = 0; r.chaleur = 0; r.vu = 0; }
 
+  /** Un PLANCHER d'etoiles, tout de suite.
+
+      ⚠️ La chaleur est une moyenne : un delit de gravite 1 pose 35 points, et
+      il en faut 100 pour une etoile — trois delits, donc. C'est ce qu'on veut
+      pour ce qu'on voit dans la rue, et c'est exactement ce qu'on ne veut pas
+      pour un TELEPHONE : quand la fourriere appelle, elle ne « chauffe » pas
+      l'ambiance, elle donne un signalement. Le plancher est la difference
+      entre « quelqu'un a vu » et « quelqu'un a appele ». */
+  function etoilesAuMoins(n) {
+    const r = B.recherche, d = defs();
+    const voulu = Math.min(n, d.etoiles_max);
+    if (r.etoiles >= voulu) return false;
+    r.etoiles = voulu;
+    r.chaleur = 0; r.vu = 0; r.flash = 60;
+    Son.SFX.etoile();
+    return true;
+  }
+
   // --- Les agents ------------------------------------------------------------------
 
   function creerAgent(x, y, etat) {
@@ -503,7 +521,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, signalerCrime, rapporter, acheterLeSilence, remiseAZero,
+  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

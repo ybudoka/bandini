@@ -48,7 +48,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
+      vole: false, aToi: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
     }, options || {}));
     return v;
   }
@@ -650,7 +650,10 @@ const Vehicules = (function () {
       const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14, arch);
       victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
       crime = 'carjacking'; vu = true;
-    } else if (v.conducteur === null && !v.vole) {
+    } else if (v.conducteur === null && !v.vole && !v.aToi) {
+      // ⚠️ `aToi` : un char PAYE devant un guichet. Sans lui, racheter le sien
+      // a la fourriere puis monter dedans etait un `vol_vehicule` — et le
+      // comptoir ne servait plus a rien : autant sauter la cloture.
       crime = 'vol_vehicule';
       vu = Police.quelqu_un_voit(v.x, v.y, null);
       if (v.def.alarme && declencherAlarme(v)) vu = true;

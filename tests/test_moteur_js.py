@@ -2494,6 +2494,149 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
         )
 
 
+def test_la_fourriere_paie_les_epaves_qu_on_lui_amene_au_crochet(banc, paquet):
+    """⚠️ Le remorquage attendait la fourrière ; il l'a. C'est le seul boulot où
+    ce qu'on ramasse n'est pas une personne mais ce qu'on a **au crochet** : le
+    bouton du klaxon accroche d'abord (`Vehicules.basculerCrochet`), puis
+    appelle le boulot — une seule pression, l'épave est accrochée et le
+    contrat est pris.
+
+    Trois règles : la fourrière ne paie **que les épaves** (traîner une berline
+    saine au lot, c'est du vol) ; on livre **dans la cour**, pas à 44 px d'un
+    point (la grille fait quatre tuiles et la remorqueuse 36 px) ; et une épave
+    qui décroche en route, c'est le contrat qui tombe."""
+    f = paquet["economie"]["boulots"]["remorquage"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(71);
+        const j = L.B.joueur, p = L.B.partie, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const rem = o.char('remorqueuse', 0, 0, 0);          // cap 0 : l'arriere est a l'ouest
+        L.Vehicules.monter(j, rem);
+        const b = L.Missions.boulot, lot = L.Monde.carte.fourriere;
+        const out = {};
+        // 1. Une berline SAINE au crochet : pas de contrat, et on le dit.
+        const saine = o.char('auto', -36, 0, 0);
+        L.Entites.indexer();
+        o.tape('Space', 2);
+        out.saine = { accrochee: rem.remorque === saine, boulot: b.slug, msg: L.B.msg };
+        o.tape('Space', 2);                                   // on decroche
+        L.Entites.retirer(saine);
+        // 2. Une epave : accrochee ET contrat, en une pression.
+        const epave = o.char('auto', -36, 0, 0);
+        L.Entites.indexer();
+        L.Vehicules.endommager(epave, 9999, null);
+        o.frame(2);
+        o.tape('Space', 2);
+        out.epave = { accrochee: rem.remorque === epave, etatEpave: epave.etat, boulot: b.slug, etape: b.etape,
+                      dest: b.destination && b.destination.nom };
+        // 3. On decroche en route : le contrat tombe.
+        o.tape('Space', 2);
+        o.frame(2);
+        out.lache = { boulot: b.slug, etape: b.etape, msg: L.B.msg };
+        // 4. On raccroche, et on livre DANS LA COUR : paye, l'epave part a la ferraille.
+        L.Entites.indexer();
+        o.tape('Space', 2);
+        const argent0 = p.argent, distance = b.distance;
+        const cx = (lot.x + lot.largeur / 2) * L.TT, cy = (lot.y + lot.hauteur / 2) * L.TT;
+        rem.x = cx; rem.y = cy; j.x = cx; j.y = cy; rem.vitesse = 0; rem.vx = 0; rem.vy = 0;
+        epave.x = cx - 40; epave.y = cy;                       // toujours au bout du cable
+        o.frame(4);
+        out.livre = { gain: p.argent - argent0, etape: b.etape, epaveDisparue: L.B.entites.indexOf(epave) < 0,
+                      decroche: !rem.remorque, faits: b.faits.remorquage,
+                      attendu: Math.round(%d + %f * (distance / L.TT)) };
+        return out;
+    }""" % (f["base"], f["par_tuile"]))
+    assert r["saine"]["accrochee"] is True and r["saine"]["boulot"] is None, (
+        "une berline saine ne doit PAS lancer de remorquage : %s" % r["saine"]
+    )
+    assert "EPAVES" in (r["saine"]["msg"] or ""), "le refus doit se dire : %s" % r["saine"]["msg"]
+    assert r["epave"]["etatEpave"] == "epave" and r["epave"]["accrochee"] is True
+    assert r["epave"]["boulot"] == "remorquage" and r["epave"]["etape"] == "route", (
+        "une epave au crochet doit prendre le contrat en une pression : %s" % r["epave"]
+    )
+    assert "Fourrière" in r["epave"]["dest"], "le remorquage va A LA FOURRIERE : %s" % r["epave"]["dest"]
+    assert r["lache"]["boulot"] is None and r["lache"]["etape"] is None, (
+        "decrocher en route doit faire tomber le contrat : %s" % r["lache"]
+    )
+    assert r["livre"]["etape"] is None and r["livre"]["faits"] == 1, "la livraison ne finit pas : %s" % r["livre"]
+    assert r["livre"]["gain"] == r["livre"]["attendu"] > 0, (
+        "le remorquage paie %s $ au lieu de base + distance = %s $" % (r["livre"]["gain"], r["livre"]["attendu"])
+    )
+    assert r["livre"]["epaveDisparue"] is True and r["livre"]["decroche"] is True, (
+        "l'epave livree doit partir a la ferraille et le crochet se liberer : %s" % r["livre"]
+    )
+
+
+def test_sortir_son_char_du_lot_sans_payer_appelle_la_police(banc, paquet):
+    """⚠️ L'autre moitié de la fourrière : on peut reprendre son char **par-dessus
+    la clôture** — à pied on enjambe le grillage, on monte dans son char, on
+    sort par la seule grille. Le lot appelle (délit `fourriere`, bruyant : pas
+    de témoin à convaincre), les gars du lot **ripostent**, et le char redevient
+    volé. Racheté au comptoir, le même trajet ne coûte rien."""
+    f = paquet["economie"]["fourriere"]
+    etoiles = paquet["recherche"]["delits"]["fourriere"]["etoiles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(73);
+        const j = L.B.joueur, p = L.B.partie, lot = L.Monde.carte.fourriere;
+        p.fourriere.length = 0;
+        p.fourriere.push({ slug: 'auto', couleur: '#c0392b', vie: 80, vole: true });
+        p.fourriere.push({ slug: 'moto', couleur: '#1a1a1a', vie: 30, vole: true });
+        L.Missions.garnirLaFourriere();
+        L.Entites.indexer();
+        const gardiens = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.gardien; });
+        const saisis = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.saisi !== null && e.saisi !== undefined; });
+        const auto = saisis.find(function (v) { return v.slug === 'auto'; });
+        const moto = saisis.find(function (v) { return v.slug === 'moto'; });
+        const out = { gardiens: gardiens.length, saisis: saisis.length,
+                      postes: gardiens.map(function (g) { return { etat: g.etat, y: Math.round(g.y / L.TT) - lot.grille.y }; }) };
+        // 1. On enjambe (on se teleporte : la cloture a son propre juge), on
+        //    monte, on sort par la grille.
+        j.x = auto.x; j.y = auto.y + 20;
+        L.Vehicules.monter(j, auto);
+        const crimes0 = L.B.crimes.length;
+        auto.x = (lot.grille.x + 2) * L.TT; auto.y = (lot.grille.y + 3) * L.TT;   // dehors, devant la grille
+        j.x = auto.x; j.y = auto.y;
+        o.frame(2);
+        out.sortie = { crime: L.B.crimes.slice(crimes0).map(function (c) { return c.type; }),
+                       etoiles: L.B.recherche.etoiles, lot: p.fourriere.map(function (c) { return c.slug; }),
+                       saisi: auto.saisi, vole: auto.vole,
+                       ripostent: gardiens.filter(function (g) { return g.etat === 'attaque_joueur'; }).length,
+                       motoRang: moto.saisi };
+        L.Vehicules.descendre(j, true);
+        // 2. La moto, RACHETEE au comptoir, sort sans un mot.
+        const menu = L.Missions.menuFourriere([]);
+        p.argent = 9999;
+        menu.items[0].faire();
+        const crimes1 = L.B.crimes.length;
+        j.x = moto.x; j.y = moto.y + 20;
+        L.Vehicules.monter(j, moto);
+        moto.x = (lot.grille.x + 2) * L.TT; moto.y = (lot.grille.y + 3) * L.TT;
+        j.x = moto.x; j.y = moto.y;
+        o.frame(2);
+        out.rachetee = { crimes: L.B.crimes.length - crimes1, saisi: moto.saisi, vole: moto.vole,
+                         lot: p.fourriere.length };
+        return out;
+    }""")
+    assert r["gardiens"] == f["gardiens"], "il manque des gars du lot : %s" % r["gardiens"]
+    assert all(g["etat"] == "fige" and abs(g["y"]) <= 1 for g in r["postes"]), (
+        "les gardiens tiennent la grille, a une tuile pres : %s" % r["postes"]
+    )
+    assert r["saisis"] == 2
+    s = r["sortie"]
+    assert s["crime"] == ["fourriere"], "sortir sans payer doit signaler le delit `fourriere` : %s" % s["crime"]
+    assert s["etoiles"] >= etoiles, "le lot appelle : %s etoile(s)" % s["etoiles"]
+    assert s["lot"] == ["moto"] and s["saisi"] is None and s["vole"] is True, (
+        "le char sorti quitte le lot et redevient vole : %s" % s
+    )
+    assert s["ripostent"] == r["gardiens"], "les gars du lot ne ripostent pas : %s" % s
+    assert s["motoRang"] == 0, "les rangs des autres chars doivent glisser, sinon le comptoir libere le mauvais"
+    assert r["rachetee"] == {"crimes": 0, "saisi": None, "vole": False, "lot": 0}, (
+        "un char rachete sort sans un mot : %s" % r["rachetee"]
+    )
+
+
 def test_eteindre_sa_sirene_n_appelle_pas_un_nouveau_contrat(banc):
     """⚠️ Retour de Martin : « on ne devrait pas avoir de nouveaux contrats
     quand on arrête la sirène ; et quand un contrat est en cours, on ne peut

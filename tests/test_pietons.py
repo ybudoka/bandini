@@ -111,6 +111,11 @@ def test_les_reactions_sont_des_durees_credibles():
 def test_l_agent_de_police_est_un_pieton_arme_qui_ne_nait_pas_au_hasard():
     agent = pietons.par_slug("policier")
     assert agent and agent["metier"] == "police" and agent["frequence"] == 0.0
+    # Les gars du lot : un metier, donc jamais dans la rue ; du courage, une
+    # batte, et surtout PAS d'arme a feu — ils ripostent, ils n'abattent pas.
+    gardiens = pietons.de_metier("gardien")
+    assert gardiens and all(g["frequence"] == 0.0 for g in gardiens)
+    assert all(g["courage"] >= 0.9 and g["arme"] == "batte" for g in gardiens)
     assert agent["arme"] == "pistolet" and agent["courage"] == 1.0
     assert agent["temoin"] == 0.0, "un agent ne temoigne pas : il agit"
     assert agent not in pietons.ordinaires()
