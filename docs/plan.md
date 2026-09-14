@@ -68,6 +68,7 @@ ne bougent pas quand l'ordre de travail change.
 | Clôture nord-sud trop large | **livré** (13 sept. 2026) | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **livré** (13 sept. 2026) | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
+| Le décor se brise | **P2** **correctif** à faire | demande de Martin (poteaux, bancs, arbres, tout ce qui se brise). ⚠️ Aujourd'hui les chars **traversent** tout le décor sans ralentir, et le lampadaire est fantôme même à pied. Deux familles par la fiche — ce qui arrête, ce qui casse — des débris, un poteau à terre qui s'éteint, et la ville qui se souvient jusqu'au lendemain |
 | Les portes s'ouvrent | **P2** ajout à faire | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
 | Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
 | Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
@@ -443,6 +444,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Clôture nord-sud trop large | **livré** : brin nord-sud réduit à son épaisseur (trait, chapeaux de poteaux, liseré d'ombre), poteau à la jointure des coins, juge retourné : le nord-sud est **plus mince**, pas une rotation | une clôture verticale qui a l'air debout, pas couchée |
 | — | La nuit ne se vide pas | **livré** : rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | Arbres dans les sentiers | **livré** : une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
+| — | **P2** Le décor se brise | fiches `DECORS` qui disent arrête/casse et sous quel poids, débris enjambables, lampe éteinte avec son poteau, délit et témoin, réindexation au bris seulement, remise à neuf au lendemain, plafond de débris | déraciner un arbre en camion et s'écraser dessus en berline ; voir le matin ce qu'on a cassé la nuit |
 | — | **P2** Les portes s'ouvrent | battant dessiné **par-dessus** la tuile (le sol est cuit dans le morceau), sortie visible, entrée qui remplace une part de l'oubli, portes triées par ce qu'elles valent, rythme matin/soir | voir quelqu'un sortir du dépanneur et y entrer, sans que le cache de morceaux bouge |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
@@ -510,6 +512,7 @@ ordre-là.
 |---|---|---|---|---|
 | **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** ⚠️ **Toutes les fiches sont lues, et le haut de gamme est livré.** Restent « mal garé », le remorquage, la reprise par-dessus la clôture et la radio du camion. Prérequis de M10 |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
+| **P2** | **correctif** | Le décor se brise | 2 | ⚠️ le décor est **solide pour les piétons et fantôme pour les chars** : un autobus traverse un arbre, et le lampadaire est fantôme pour tout le monde |
 | **P2** | ajout | Les portes s'ouvrent, et les gens les passent | 2 | ⚠️ un piéton sur trois sort **déjà** d'une porte — mais seulement **hors écran** : on ne le voit jamais. Et personne n'entre nulle part |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
@@ -1802,6 +1805,59 @@ mouettes des Quais, le vent et les arbres de La Pointe.
   rejoue) ; traverser une frontière en zigzag ne change pas de piste plus d'une fois ; le
   thème du menu joue **même sans aucun fichier** ; et le poids total reste sous son plafond,
   mesuré comme celui des radios.
+
+### Le décor se brise (**correctif**, taille 2)
+
+*Demande de Martin :* « une interaction réaliste avec le décor — les bris de poteau, de banc
+de parc et d'arbre, tout ce qui se brise. »
+
+⚠️ **Le décor est solide pour les piétons et fantôme pour les chars.** `bloquerParDecor`
+repousse un passant hors d'un arbre, d'un banc, d'une poubelle ; côté véhicules, le seul
+appel à `decorAutour` sert à choisir une place de stationnement. Un autobus traverse donc un
+arbre, un kiosque à hot-dogs et une fontaine sans ralentir — et **le lampadaire est fantôme
+pour tout le monde** (`solide: false`), on le traverse à pied comme en char. Le défonçage
+de M9 ne casse que des **tuiles** (clôtures, bornes) : le décor, lui, n'est ni un obstacle
+ni une chose qui casse. C'est la moitié d'un monde.
+
+**Deux familles, et c'est la fiche qui décide** (`DECORS`, comme `vehicules.py` décide ce
+qu'un char sait faire) :
+
+- **ce qui ARRÊTE un char** : un arbre, une fontaine, une borne — le char prend des dégâts
+  comme contre un mur, et la chose ne cède qu'au-dessus d'un poids (le `defonce` de la fiche
+  existe déjà : un camion déracine un arbre, une berline s'y écrase) ;
+- **ce qui CASSE sous un char** : un banc, une poubelle, un kiosque à journaux, un cône, un
+  lampadaire — le char ralentit d'une fraction (`defonce`) et continue, la chose est par
+  terre.
+
+**Le bris a un après, sinon ce n'est qu'une disparition :**
+
+- des **débris** (le décor `debris` existe) là où c'était, et un banc cassé, un arbre couché
+  ou un poteau à terre deviennent des obstacles **bas** — solidité 3, comme une clôture : on
+  les enjambe à pied, un char les évite ou les défonce ;
+- ⚠️ **un lampadaire à terre ne s'allume plus.** Sa lumière vit dans `carte.lampes`, à part
+  de son poteau ; casser l'un sans éteindre l'autre donnerait un halo qui flotte au-dessus
+  de rien — exactement le genre de chose qu'on ne voit qu'en jouant, la nuit ;
+- **la ville se souvient jusqu'au lendemain** : rien ne repousse dans la minute. Ce qu'on a
+  cassé reste cassé jusqu'à `nouveauJour()`, et le quartier porte ses blessures — c'est ce
+  qui fait qu'une nuit de folie **se voit** le matin.
+
+- ⚠️ **Le décor est bâti une fois.** `grilleFixe` est l'index « qui ne bouge jamais », et
+  c'est ce qui le rend gratuit par image. Casser un décor, c'est le sortir de cet index :
+  `reindexerDecor` existe, il est rare, et il doit le rester — on réindexe au bris, jamais
+  par image. Rien à repeindre dans les morceaux : le décor est une entité, pas une tuile.
+- ⚠️ **Casser, c'est un délit.** La taxonomie a déjà « conduite dangereuse +1 » et un témoin
+  qui rapporte. Un lampadaire couché en pleine rue, un arbre déraciné dans le parc : la même
+  étoile, le même témoin. Sans ça, défoncer devient gratuit, et un char lourd vaut plus
+  qu'un char rapide.
+- ⚠️ **Le budget.** Les débris sont des entités, donc ils comptent dans le plafond. Un
+  plafond de débris par jour, les plus vieux disparaissent en premier — et un test rejoue une
+  nuit à tout casser pour vérifier que le rythme tient.
+- **Si ça coûte peu** : un poteau qui tombe peut renverser un piéton (la réaction `renverse`
+  existe). Sinon, il tombe sans toucher personne, et ce n'est pas grave.
+- **Juges** : chaque décor solide déclare s'il arrête ou s'il casse, et sous quel poids ; un
+  banc n'arrête jamais un camion, un arbre arrête toujours une berline ; un lampadaire à
+  terre a sa lumière éteinte ; un décor cassé est **enjambable** et pas fantôme ; tout est
+  debout le lendemain ; et les débris ne dépassent jamais leur plafond.
 
 ### Les portes s'ouvrent, et les gens les passent (**ajout**, taille 2)
 
