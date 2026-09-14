@@ -49,7 +49,11 @@ const Jeu = (function () {
     Hud.etat('jeu');
     Entree.contexte('pied');
     Son.Mus.arreter();          // le theme du menu laisse la place a la ville
-    Son.Ambiance.jouer();
+    // ⚠️ On ne lance plus l'ambiance UNIQUE de la ville : c'est precisement
+    // ce que la fiche retire — une seule musique de fond de La Pointe aux
+    // Quais. `Son.Chef` choisit maintenant celle du district, et se tait si
+    // une ambiance ENREGISTREE joue (elle occupe la meme case de l'echelle).
+    Son.Chef.maj();
     Hud.message('BAIE-DES-BRUMES', 150);
   }
 
@@ -282,6 +286,7 @@ const Jeu = (function () {
     Hud.etat('titre');
     Hud.voile('titre');
     Son.Ambiance.arreter();
+    Son.Chef.arreter();
     Son.Mus.jouer('titre');
   }
 
@@ -353,6 +358,8 @@ const Jeu = (function () {
       if (Entree.neuf('carte')) { ouvrirCarte(); Entree.videPresse(); return; }
       Monde.majHeure();
       Monde.majBattants();
+      // La musique suit ce qui t'arrive : district, poursuite, bagarre.
+      Son.Chef.maj();
       Monde.majChemins();
       Entites.maj();
       Combat.maj();

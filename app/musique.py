@@ -163,7 +163,7 @@ def duree_s(morceau: Morceau) -> float:
 
 
 def exporter() -> list[Morceau]:
-    return [dict(m) for m in MORCEAUX] + stations()  # type: ignore[misc]
+    return [dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -244,8 +244,11 @@ def _hauteur(style: Style, degre: int) -> int:
     return style["tonique"] + 12 * octave + style["gamme"][index]
 
 
-def generer_station(style: Style) -> Morceau:
-    """Un morceau complet a partir d'une graine. Deux appels donnent le meme."""
+def generer_station(style: Style, station: bool = True) -> Morceau:
+    """Un morceau complet a partir d'une graine. Deux appels donnent le meme.
+
+    `station` : une RADIO (le bouton d'un char peut tomber dessus) ou une
+    AMBIANCE (le chef d'orchestre la choisit, jamais le bouton radio)."""
     des = _Des(style["graine"])
     grille = style["grille"]
     basse: list[list[float]] = []
@@ -285,7 +288,7 @@ def generer_station(style: Style) -> Morceau:
         # le bouton RADIO d'un char ne doit jamais tomber dessus. C'est Python
         # qui le dit — le navigateur n'a pas a reconnaitre une station a son
         # slug.
-        "station": True,
+        "station": station,
         "bpm": style["bpm"],
         "pas_par_temps": PAS_PAR_TEMPS,
         "pas": STATION_MESURES * PAS_PAR_MESURE,
@@ -300,6 +303,95 @@ def generer_station(style: Style) -> Morceau:
              "motif": PAS_PAR_MESURE, "notes": batterie},
         ],
     }
+
+
+#: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------
+#:
+#: ⚠️ ECRITES EN NOTES, comme le theme du menu et les stations du camion — et
+#: pour la meme raison, ecrite noir sur blanc dans ce fichier depuis le premier
+#: jour : « le jour ou Martin veut une vraie piece jouee par de vrais
+#: instruments, elle se posera PAR-DESSUS comme les radios ». Huit pistes de
+#: 60 s a 64 kbit/s pesent 4 Mo, autant que tout le dossier audio ; en notes,
+#: elles pesent quelques kilo-octets et ne coutent aucun credit. Le jour ou un
+#: mp3 arrive, il se pose dessus et celles-ci redeviennent le filet.
+#:
+#: Un district = une ambiance, et c'est LA MUSIQUE qui connait les districts,
+#: pas l'inverse : `carte.py` n'a pas a savoir ce qu'on entend.
+AMBIANCES_DE_DISTRICT: dict[str, str] = {
+    "faubourg": "amb_faubourg",
+    "erables": "amb_erables",
+    "shop": "amb_shop",
+    "quais": "amb_quais",
+    "pointe": "amb_pointe",
+    "baie": "amb_quais",        # l'eau : la meme corne que le port
+}
+
+AMBIANCES: list[Style] = [
+    # Le Faubourg : la brume et le piano. Mineure, lente, peu de notes.
+    {"slug": "amb_faubourg", "nom": "Brume sur le Faubourg", "graine": 20260914,
+     "bpm": 68, "tonique": 45, "gamme": MINEURE, "grille": (0, 5, 3, 4),
+     "forme_chant": "sine", "forme_nappe": "triangle", "volume": 0.34},
+    # Les Erables : le calme plat. Majeure, douce, presque rien.
+    {"slug": "amb_erables", "nom": "Dimanche aux Érables", "graine": 19920604,
+     "bpm": 74, "tonique": 50, "gamme": MAJEURE, "grille": (0, 3, 4, 0),
+     "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.28},
+    # La Shop : le fer et le vide. Mineure, basse, dure.
+    {"slug": "amb_shop", "nom": "Fer et vide", "graine": 19771102,
+     "bpm": 88, "tonique": 38, "gamme": MINEURE, "grille": (0, 0, 5, 4),
+     "forme_chant": "square", "forme_nappe": "sawtooth", "volume": 0.30},
+    # Les Quais : la corne et les mouettes. Mineure large, lente.
+    {"slug": "amb_quais", "nom": "La corne des Quais", "graine": 19840317,
+     "bpm": 64, "tonique": 41, "gamme": MINEURE, "grille": (0, 4, 5, 3),
+     "forme_chant": "sine", "forme_nappe": "triangle", "volume": 0.32},
+    # La Pointe : le vent et les arbres. Majeure aeree.
+    {"slug": "amb_pointe", "nom": "Le vent de La Pointe", "graine": 20011225,
+     "bpm": 80, "tonique": 52, "gamme": MAJEURE, "grille": (0, 5, 3, 4),
+     "forme_chant": "triangle", "forme_nappe": "sine", "volume": 0.30},
+    # ⚠️ Les deux musiques d'ETAT : elles couvrent l'ambiance, jamais l'inverse
+    # (voir `ECHELLE`). Rapides, mineures, et plus fortes — c'est le seul
+    # moment ou la musique a le droit de prendre toute la place.
+    {"slug": "mus_poursuite", "nom": "Ils arrivent", "graine": 19990911,
+     "bpm": 148, "tonique": 40, "gamme": MINEURE, "grille": (0, 0, 4, 4),
+     "forme_chant": "square", "forme_nappe": "sawtooth", "volume": 0.46},
+    {"slug": "mus_bagarre", "nom": "Corps a corps", "graine": 20080215,
+     "bpm": 132, "tonique": 43, "gamme": MINEURE, "grille": (0, 5, 0, 3),
+     "forme_chant": "sawtooth", "forme_nappe": "square", "volume": 0.42},
+]
+
+#: ⚠️ QUI GAGNE. C'est la question qu'aucune des demandes ne pose et dont tout
+#: depend : il y a deja de la radio dans un char, l'ambiance a pied, la rumeur
+#: de la foule, les sirenes et les voix. L'echelle est ECRITE UNE FOIS, ici,
+#: et le navigateur la lit — il n'invente pas sa priorite.
+#:
+#: Le plus petit gagne. La rumeur de la foule passe dessous, toujours.
+ECHELLE: dict[str, int] = {
+    "histoire": 1,     # une replique : elle baisse deja tout le reste
+    "poursuite": 2,
+    "bagarre": 3,
+    "ambiance": 4,     # la radio du char ou le district
+}
+
+#: ⚠️ Une musique d'ETAT a besoin d'une QUEUE. Les etoiles montent et
+#: descendent, une bagarre s'arrete et reprend : sans duree minimale ni fondu,
+#: la poursuite demarrerait et s'arreterait trois fois en dix secondes. Elle
+#: continue quelques secondes apres la derniere etoile perdue — c'est ce qui
+#: fait qu'on SOUFFLE.
+#:
+#: `hysteresis_px` : on traverse une frontiere en zigzag sur un boulevard, et
+#: une musique qui bascule a chaque pas de cote est pire que pas de musique.
+MUSIQUE = {
+    "poursuite_etoiles": 2,     # une etoile, c'est un temoin qui a appele
+    "poursuite_queue_s": 7,
+    "bagarre_queue_s": 5,
+    "fondu_s": 2,
+    "hysteresis_px": 96,        # six tuiles a franchir avant de changer de piste
+}
+
+
+def ambiances() -> list[Morceau]:
+    """Les cinq districts et les deux etats, en notes. ⚠️ `station=False` : le
+    bouton RADIO d'un char ne doit jamais tomber dessus."""
+    return [generer_station(style, station=False) for style in AMBIANCES]
 
 
 def stations() -> list[Morceau]:

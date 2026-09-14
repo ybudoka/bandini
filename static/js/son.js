@@ -506,6 +506,116 @@ const Son = (function () {
     },
   };
 
+  // --- Le chef d'orchestre : qui gagne, et quand ---------------------------------
+
+  /*: ⚠️ C'est LA question qu'aucune des demandes ne posait et dont tout depend.
+    Il y a deja la radio dans un char, l'ambiance a pied, la rumeur de la foule,
+    les sirenes et les voix. Sans une echelle ECRITE UNE FOIS, chaque endroit du
+    code aurait la sienne, et deux musiques joueraient ensemble un jour sur
+    trois.
+
+    L'echelle vient de Python (`musique.ECHELLE`) : le navigateur la LIT, il ne
+    l'invente pas. Le plus petit gagne, et la rumeur passe dessous, toujours. */
+  const Chef = {
+    piste: null,          // le slug qui joue (procedural) ou null
+    rang: 99,             // son rang dans l'echelle
+    queue: 0,             // images restantes a la musique d'etat qui s'eteint
+    district: null,       // le district dont on joue l'ambiance
+    frontiere: null,      // ou l'on a bascule la derniere fois (hysteresis)
+
+    reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.musique) || {}; },
+    echelle: function () { return (B.defs && B.defs.audio && B.defs.audio.echelle) || {}; },
+
+    /** L'ambiance du district ou l'on se trouve, avec HYSTERESIS.
+
+        ⚠️ On traverse une frontiere en zigzag sur un boulevard, et une musique
+        qui bascule a chaque pas de cote est pire que pas de musique du tout.
+        On ne change donc qu'apres avoir franchi `hysteresis_px` depuis le
+        dernier basculement. */
+    ambianceDuLieu: function () {
+      const table = (B.defs && B.defs.audio && B.defs.audio.ambiances_de_district) || {};
+      const j = B.joueur;
+      if (!j) return null;
+      const zone = Monde.zoneA(j.x, j.y);
+      const slug = zone && (table[zone.district] || table[zone.slug]);
+      if (!slug) return Chef.district;
+      if (slug === Chef.district) { Chef.frontiere = null; return slug; }
+      // ⚠️ L'hysteresis sert a ne pas BASCULER trop vite ; au tout premier
+      // district, il n'y a rien a quitter. Sans ce cas, la musique attendait
+      // qu'on marche six tuiles avant de commencer — c'est-a-dire qu'elle ne
+      // commencait jamais si on restait sur place.
+      if (!Chef.district) { Chef.district = slug; Chef.frontiere = null; return slug; }
+      if (!Chef.frontiere) { Chef.frontiere = { x: j.x, y: j.y, slug: slug }; return Chef.district; }
+      if (Chef.frontiere.slug !== slug) { Chef.frontiere = { x: j.x, y: j.y, slug: slug }; return Chef.district; }
+      const seuil = Chef.reglages().hysteresis_px || 96;
+      const d = Math.hypot(j.x - Chef.frontiere.x, j.y - Chef.frontiere.y);
+      if (d < seuil) return Chef.district;
+      Chef.frontiere = null;
+      Chef.district = slug;
+      return slug;
+    },
+
+    /** Ce qui devrait jouer, maintenant : { slug, rang } ou null. */
+    voulu: function () {
+      const r = Chef.reglages(), e = Chef.echelle();
+      const j = B.joueur;
+      if (!j || B.interieur || B.etat !== 'jeu') return null;
+      // ⚠️ La QUEUE : une musique d'etat continue quelques secondes apres la
+      // derniere etoile perdue. Sans elle, la poursuite demarrerait et
+      // s'arreterait trois fois en dix secondes — et c'est cette queue qui
+      // fait qu'on SOUFFLE.
+      const chasse = B.recherche && B.recherche.etoiles >= (r.poursuite_etoiles || 2);
+      const bagarre = Chef.bagarre();
+      if (chasse || (Chef.piste === 'mus_poursuite' && Chef.queue > 0)) {
+        if (chasse) Chef.queue = (r.poursuite_queue_s || 7) * 60;
+        return { slug: 'mus_poursuite', rang: e.poursuite || 2 };
+      }
+      if (bagarre || (Chef.piste === 'mus_bagarre' && Chef.queue > 0)) {
+        if (bagarre) Chef.queue = (r.bagarre_queue_s || 5) * 60;
+        return { slug: 'mus_bagarre', rang: e.bagarre || 3 };
+      }
+      // ⚠️ La radio d'un char et l'ambiance ENREGISTREE occupent le rang de
+      // l'ambiance : elles et le district ne jouent JAMAIS ensemble, c'est la
+      // meme case de l'echelle. Le jour ou un vrai mp3 de district arrive, il
+      // se pose ici et la piece ecrite en notes redevient le filet.
+      // ⚠️ `demandee`, pas seulement `courante` : une station se DEMANDE tout
+      // de suite et n'arrive qu'une seconde plus tard (le mp3 se telecharge).
+      // Attendre son arrivee laisserait l'ambiance du district jouer par-dessus
+      // pendant tout le chargement — deux musiques a la fois, ce que l'echelle
+      // interdit.
+      if (Radio.demandee || Radio.courante || Ambiance.demandee || Ambiance.courante) return null;
+      const amb = Chef.ambianceDuLieu();
+      return amb ? { slug: amb, rang: e.ambiance || 4 } : null;
+    },
+
+    /** Se bat-on avec une gang ? Deux membres d'une gang qui t'attaquent. */
+    bagarre: function () {
+      const j = B.joueur;
+      if (!j || typeof Entites === 'undefined') return false;
+      let n = 0;
+      for (const q of Entites.pietonsAutour(j.x, j.y, 120)) {
+        if (q.gang && q.vivant && q.etat === 'attaque_joueur') n++;
+        if (n >= 2) return true;
+      }
+      return false;
+    },
+
+    maj: function () {
+      if (Chef.queue > 0) Chef.queue--;
+      const v = Chef.voulu();
+      if (!v) {
+        if (Chef.piste) { Mus.arreter(); Chef.piste = null; Chef.rang = 99; }
+        return;
+      }
+      if (v.slug === Chef.piste) return;
+      Chef.piste = v.slug; Chef.rang = v.rang;
+      Chef.queue = Chef.queue || 0;
+      Mus.jouer(v.slug);
+    },
+
+    arreter: function () { Mus.arreter(); Chef.piste = null; Chef.rang = 99; Chef.queue = 0; Chef.district = null; Chef.frontiere = null; },
+  };
+
   // --- La rumeur : la foule qu'on entend sans la voir ----------------------------------
 
   const Rumeur = {
@@ -692,7 +802,7 @@ const Son = (function () {
   };
 
   return {
-    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus,
+    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus, Chef,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },

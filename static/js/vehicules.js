@@ -897,7 +897,9 @@ const Vehicules = (function () {
     Entree.contexte('pied');
     Son.boucle('moteur', false);
     Son.Radio.arreter();
-    Son.Ambiance.jouer();
+    // ⚠️ On ne relance pas l'ambiance unique : `Son.Chef` reprend la main a
+    // la prochaine image, avec la musique du district ou l'on descend.
+    Son.Chef.maj();
     if (!force) bruitDeMontee(v);
     if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.abandonner('BOULOT ABANDONNE');
     return true;

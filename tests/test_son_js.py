@@ -249,10 +249,14 @@ def test_commencer_la_partie_fait_taire_le_theme(banc):
         return { auMenu: auMenu, enJeu: L.Son.Mus.courante, avant: avant, apres: apres };
     }""")
     assert r["auMenu"] == "titre"
-    assert r["enJeu"] is None, "la musique du menu ne doit pas suivre en ville"
-    # ⚠️ On ne compare pas a zero : ce qui etait deja programme avant l'arret
-    # sonne encore un quart de seconde. Ce qu'on exige, c'est que ca s'arrete.
-    assert r["apres"] - r["avant"] < r["avant"], "le theme continue en jeu"
+    # ⚠️ En ville, ce n'est plus le SILENCE : depuis que chaque district a son
+    # ambiance ecrite en notes, une autre piece prend la place. Ce qu'on exige
+    # n'a pas change — le theme du menu ne suit pas en ville — mais on ne peut
+    # plus le prouver en comptant les notes : une autre musique en pose aussi.
+    assert r["enJeu"] != "titre", "la musique du menu ne doit pas suivre en ville"
+    assert r["enJeu"] and r["enJeu"].startswith("amb_"), (
+        "en ville, c'est l'ambiance du district qui joue : %s" % r["enJeu"]
+    )
 
 
 def test_le_son_coupe_ne_pose_pas_de_musique(banc):
@@ -616,12 +620,16 @@ def test_la_radio_allumee_au_bouton_fait_taire_la_ville(banc):
         await o.attendre(); await o.attendre(); await o.attendre();
         L.Jeu.commencer();
         await o.attendre(); await o.attendre(); await o.attendre();
-        const ville = L.Son.Ambiance.def().slug;
+        // ⚠️ « La ville », c'est maintenant l'ambiance DU DISTRICT, ecrite en
+        // notes et jouee par le sequenceur — il n'y a plus une seule piste
+        // pour toute la ville. On la reconnait a son prefixe : c'est Python
+        // qui les nomme (`musique.AMBIANCES_DE_DISTRICT`).
         function etat() {
             const radio = L.Son.Radio.demandee;
             const proc = radio ? L.Son.Radio.estProcedurale(radio) : false;
-            return { ville: L.Son.boucleActive('ambiance-' + ville), radio: radio,
-                     station: radio ? (proc ? L.Son.Mus.courante === radio : L.Son.boucleActive('radio-' + radio)) : false };
+            const m = L.Son.Mus.courante;
+            return { ville: !!(m && m.indexOf('amb_') === 0), radio: radio,
+                     station: radio ? (proc ? m === radio : L.Son.boucleActive('radio-' + radio)) : false };
         }
         const aPied = etat();
         const j = L.B.joueur;

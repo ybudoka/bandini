@@ -82,7 +82,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le carnet | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« un rappel de la mission en cours dans le menu, un journal et un bestiaire avec les personnages connus ») : **LE CARNET** au menu Pause, trois pages — **EN COURS** (donneur, récompense, objectifs faits marqués, celui du moment, et où), **JOURNAL** (écrit tout seul depuis ce que le jeu émet déjà, daté au jour, plafonné — le quotidien cède avant les jalons), **RÉPERTOIRE** (⚠️ `p.connus` seulement : un répertoire qui montre la fin est pire que pas de répertoire). Les menus savent maintenant **défiler**, et une page recule d'un cran au lieu de rendre la main au jeu |
 | Des sons pour les armes | **livré** (13 sept. 2026) | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouaient le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appelaient `SFX.coup`), le jet d'extincteur ne faisait aucun bruit, et un chargeur vide comme une arme qui casse faisaient le **buzzer de refus** des menus. Chaque arme porte maintenant son `son` (`armes.py`) et le combat passe par `SFX.arme(def)` ; **16 échantillons ElevenLabs** (batte ×2, couteau ×2, pelle, cône, bouteille, fronde, pistolet ×2, fusil ×2, le **jet en boucle** tenu par `SFX.jet(actif)` à chaque image, la gâchette **à vide**, la **casse**, le **dégainage**), ≈ 141 Ko, chacun avec son repli synthétisé ; budget des bruitages relevé à 800 Ko. ⚠️ Au passage, un **hoquet** au départ du jet : la première pression partait par le chemin de la mêlée (anticipation, quatre images de jet, deux de repos) avant que le maintien ne prenne le relais — invisible, mais audible avec une boucle. ⚠️ **Martin n'a pas encore écouté** : `batte-1` et `batte-2` sont sortis très courts (0,18 et 0,26 s), à refaire s'ils ne sonnent pas (`--refaire batte`) |
 | La fille de la Brume parle | **livré** (13 sept. 2026) | demande de Martin (« la prostituée aussi doit parler, avec plusieurs dialogues différents ») : `rumeurEtRepliques` saute tout piéton qui a un `metier`, et elle en a un (`compagnie`) — elle ne disait jamais rien, alors que la regex des voix de femmes la nommait déjà. **Six répliques à elle** (genre `brume`, voix **Julia**, québécoise et rauque, poussée au style), dites par `Entites.accosterDepuisLaBrume` quand on passe à trois tuiles de son coin : une **bulle** avec le texte, la voix par-dessus, **jamais deux fois de suite la même** (`Son.Voix.choisir(genre, sauf)`, tiré dans le dé du jeu), pas deux fois en moins d'une demi-minute, jamais en char, jamais quand elle fuit. Le chemin des passants ne bouge pas. Budget des bruitages à 850 Ko (+52 Ko). ⚠️ Martin n'a pas encore écouté |
-| Une seule musique pour toute la ville | **P2** ajout, **en cours** (14 sept. 2026) | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
+| Une seule musique pour toute la ville | **P2** ajout, **livré** (14 sept. 2026) | demande de Martin (« des musiques différentes par district, et des musiques pour quand on se bat avec des gangs, et quand on a plusieurs étoiles ») : il y en avait **une**, la même de La Pointe aux Quais. ⚠️ Le vrai travail n'était pas les pistes, c'était **qui gagne** — l'échelle est maintenant **écrite une fois en Python** et le navigateur la lit. Cinq ambiances de district + poursuite + bagarre, **écrites en notes** (aucun mp3, aucun crédit : `musique.py` promettait cette porte depuis le premier jour), avec **hystérésis** aux frontières et **queue** sur les musiques d'état — c'est elle qui fait qu'on souffle |
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **P3** **correctif** à faire | demande de Martin, mesurée : **les 41 intérieurs** dépassent l'empreinte de leur bâtiment — un logement de banlieue de 3 × 3 ouvre sur une pièce de 16 × 9. Une porte doit imposer une taille minimale au bâtiment, et il faut de **petites** pièces |
 | L'eau n'est plus un mur | **P3** **correctif** à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
@@ -538,7 +538,6 @@ ordre-là.
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
 | **P2** | ajout | Des sortes de gens, pas des couleurs | 3 | ⚠️ 24 archétypes, **4 corps**, et 2 métiers sur 6 qui font quelque chose. Une sorte = un corps + une routine |
-| **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P3** | **correctif** | Une pièce plus grande que sa maison | 2 | **le trottoir** : rétrécir les rues rétrécit les bâtiments |
 | **P3** | **correctif** | L'eau n'est plus un mur | 3 | débloque le **bateau** de M9 et le **traversier** de M12, et décide de la piscine des terrains |
@@ -1850,7 +1849,7 @@ qu'une allée **se réserve en se traçant**.
   et de l'entrée d'un parc jusqu'à son cœur, le chemin reste franchissable à pied sans
   contourner un tronc.
 
-### La musique dit où tu es et ce qui t'arrive (**ajout**, taille 3)
+### La musique dit où tu es et ce qui t'arrive (**ajout**, taille 3) — **livré le 14 sept. 2026**
 
 *Demande de Martin :* « je veux des musiques différentes par district, et une musique générée
 par IA pour l'écran titre. Je veux aussi des musiques pour quand on se bat avec des gangs, et
@@ -1909,6 +1908,39 @@ mouettes des Quais, le vent et les arbres de La Pointe.
   rejoue) ; traverser une frontière en zigzag ne change pas de piste plus d'une fois ; le
   thème du menu joue **même sans aucun fichier** ; et le poids total reste sous son plafond,
   mesuré comme celui des radios.
+
+**Livré le 14 sept. 2026 :**
+
+- ⚠️ **Écrites en notes, et le poids disparaît avec la question.** Huit pistes de 60 s à
+  64 kbit/s pèsent 4 Mo — autant que tout le dossier audio — et coûtent des crédits
+  ElevenLabs. En notes, elles pèsent quelques kilo-octets, se chargent avec le paquet, et il
+  n'y a **rien à charger à l'approche d'une frontière**. Ce n'est pas un raccourci :
+  `musique.py` l'écrit depuis le premier jour — « le jour où Martin veut une vraie pièce
+  jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». Le jour où
+  un mp3 arrive, il se pose et celles-ci redeviennent le filet.
+- **L'échelle est en Python** (`musique.ECHELLE`) et le navigateur la **lit** : histoire 1,
+  poursuite 2, bagarre 3, ambiance 4. Sans ça, chaque endroit du JS aurait la sienne et deux
+  musiques joueraient ensemble un jour sur trois.
+- ⚠️ **La radio d'un char et l'ambiance occupent la MÊME case.** Et c'est `demandee` qu'on
+  regarde, pas `courante` : une station se demande tout de suite et n'arrive qu'une seconde
+  plus tard — attendre son arrivée laisserait le district jouer par-dessus pendant tout le
+  téléchargement.
+- ⚠️ **L'hystérésis ne s'applique pas au PREMIER district.** Elle sert à ne pas basculer trop
+  vite ; au démarrage il n'y a rien à quitter — et sans ce cas, la musique attendait qu'on
+  marche six tuiles avant de commencer, c'est-à-dire qu'elle ne commençait **jamais** si on
+  restait sur place.
+- **La queue** : la poursuite continue sept secondes après la dernière étoile perdue. Sans
+  elle, elle démarrerait et s'arrêterait trois fois en dix secondes — et c'est cette queue
+  qui fait qu'on **souffle**.
+- ⚠️ **La musique unique de la ville ne démarre plus**, c'est tout le propos. Le fichier
+  `ville.mp3` reste sur le disque et garde son juge de navigateur — celui qui prouve qu'il se
+  **décode** — mais on le demande maintenant explicitement au lieu de l'attendre.
+- **Juges (1 neuf, 4 rejoués)** : l'échelle est ordonnée et la poursuite couvre l'ambiance à
+  deux étoiles ; la queue tient ses sept secondes puis rend la main au district ; un **zigzag
+  de quarante images sur une frontière ne change de piste qu'une fois**, et s'enfoncer pour de
+  bon la change ; à pied c'est l'ambiance du district, au volant la radio, et jamais les deux.
+
+
 
 ### Le décor se brise (**correctif**, taille 2) — **livré le 13 sept. 2026**
 

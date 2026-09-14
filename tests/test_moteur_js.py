@@ -1129,6 +1129,97 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
 
 
+def test_la_musique_dit_ou_tu_es_et_ce_qui_t_arrive(banc, paquet):
+    """⚠️ Demande de Martin : « des musiques différentes par district, et des
+    musiques pour quand on se bat avec des gangs, et quand on a plusieurs
+    étoiles. » Il y avait **une** musique de fond — la même de La Pointe aux
+    Quais — et rien ne changeait quand trois Cravates te tombaient dessus.
+
+    ⚠️ **Le vrai travail n'est pas les pistes, c'est QUI GAGNE.** Il y a déjà la
+    radio dans un char, l'ambiance à pied, la rumeur, les sirènes et les voix :
+    sans une échelle **écrite une fois**, deux musiques joueraient ensemble un
+    jour sur trois. Ce juge tient l'échelle, l'**hystérésis** aux frontières et
+    la **queue** des musiques d'état — les trois choses que la fiche appelle le
+    vrai travail."""
+    m = paquet["audio"]["musique"]
+    e = paquet["audio"]["echelle"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(107);
+        o.frame(2);
+        const j = L.B.joueur, C = L.Son.Chef, out = {};
+        out.ambiance = L.Son.Mus.courante;
+
+        // 1. L'ECHELLE : la poursuite couvre l'ambiance, la bagarre la suit.
+        L.B.recherche.etoiles = ETOILES;
+        o.frame(2);
+        out.poursuite = L.Son.Mus.courante;
+        // ⚠️ Et UNE SEULE piste a la fois : le sequenceur n'en tient qu'une,
+        // c'est ce qui rend l'echelle vraie et pas seulement ecrite.
+        L.B.recherche.etoiles = 0;
+        out.queueDebut = C.queue;
+        // 2. La QUEUE : la poursuite continue APRES la derniere etoile perdue.
+        let tenue = 0;
+        while (L.Son.Mus.courante === 'mus_poursuite' && tenue < 60 * 30) { o.frame(1); tenue++; }
+        out.queue = { images: tenue, apres: L.Son.Mus.courante };
+
+        // 3. L'HYSTERESIS : un zigzag sur une frontiere ne change pas de piste.
+        const table = L.B.defs.audio.ambiances_de_district;
+        // On se pose sur une frontiere : le district d'a cote, a un cheveu.
+        const depart = L.Son.Mus.courante;
+        const seuil = L.B.defs.audio.musique.hysteresis_px;
+        let autre = null, bord = null;
+        for (const z of L.Monde.carte.zones) {
+            if (!table[z.district] || table[z.district] === depart) continue;
+            autre = z; break;
+        }
+        if (autre) {
+            bord = { x: (autre.x + 1) * L.TT, y: (autre.y + 1) * L.TT };
+            const changements = [];
+            for (let i = 0; i < 40; i++) {
+                // Un pas de cote de part et d'autre, comme sur un boulevard.
+                j.x = bord.x + (i % 2 ? 6 : -6); j.y = bord.y;
+                o.frame(1);
+                const c = L.Son.Mus.courante;
+                if (!changements.length || changements[changements.length - 1] !== c) changements.push(c);
+            }
+            out.zigzag = { changements: changements.length, seuil: seuil };
+            // Et en s'enfoncant pour de bon, la piste change.
+            for (let i = 0; i < 40; i++) { j.x = bord.x + seuil + 40; j.y = bord.y; o.frame(1); }
+            out.dedans = L.Son.Mus.courante;
+            out.attendu = table[autre.district];
+        }
+        return out;
+    }""".replace("ETOILES", str(m["poursuite_etoiles"])))
+    assert r["ambiance"] and r["ambiance"].startswith("amb_"), (
+        "à pied, l'ambiance du district doit jouer : %s" % r["ambiance"]
+    )
+    assert r["poursuite"] == "mus_poursuite", (
+        "à %s étoiles, la poursuite doit couvrir l'ambiance : %s" % (m["poursuite_etoiles"], r["poursuite"])
+    )
+    assert e["poursuite"] < e["ambiance"] and e["histoire"] < e["poursuite"] < e["bagarre"], (
+        "l'échelle n'est pas ordonnée : %s" % e
+    )
+    # ⚠️ La queue : sans elle, la poursuite démarrerait et s'arrêterait trois
+    # fois en dix secondes. C'est elle qui fait qu'on SOUFFLE.
+    assert r["queue"]["images"] >= m["poursuite_queue_s"] * 60 - 10, (
+        "la poursuite s'arrête au quart de tour : %s images au lieu de %s"
+        % (r["queue"]["images"], m["poursuite_queue_s"] * 60)
+    )
+    assert r["queue"]["apres"] and r["queue"]["apres"].startswith("amb_"), (
+        "après la poursuite, l'ambiance du district doit revenir : %s" % r["queue"]["apres"]
+    )
+    # ⚠️ L'hystérésis : une musique qui bascule à chaque pas de côté est pire
+    # que pas de musique du tout.
+    assert r.get("zigzag"), "aucune frontière trouvée : le juge ne mesure rien"
+    assert r["zigzag"]["changements"] == 1, (
+        "un zigzag sur la frontière a changé de piste %s fois" % r["zigzag"]["changements"]
+    )
+    assert r["dedans"] == r["attendu"], (
+        "en s'enfonçant pour de bon, la piste doit changer : %s au lieu de %s" % (r["dedans"], r["attendu"])
+    )
+
+
 def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
     """⚠️ Demande de Martin : « des amuseurs publics, des musiciens de rue, des
     exhibitionnistes. »
@@ -3818,21 +3909,34 @@ def test_on_prend_le_velo_du_cycliste(banc):
     assert r["moteur"] is False and r["radio"] is None, "un velo n'a ni moteur ni radio"
 
 
-def test_l_ambiance_joue_a_pied_et_cede_a_la_radio(banc):
+def test_l_ambiance_du_district_joue_a_pied_et_cede_a_la_radio(banc, paquet):
+    """⚠️ Il n'y a plus UNE musique de fond pour toute la ville : c'est
+    precisement ce que la fiche retire. À pied, c'est l'ambiance **du district
+    ou l'on se trouve** qui joue — et la radio d'un char la remplace, parce
+    qu'elles occupent **la meme case de l'echelle**."""
+    table = paquet["audio"]["ambiances_de_district"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const aPied = L.Son.Ambiance.demandee;
+        o.frame(2);
         const j = L.B.joueur;
+        const zone = L.Monde.zoneA(j.x, j.y);
+        const aPied = L.Son.Mus.courante;
         const v = o.char('auto', 24, 0, 0);
         L.Vehicules.monter(j, v);
-        const auVolant = { ambiance: L.Son.Ambiance.demandee, radio: L.Son.Radio.demandee };
+        o.frame(2);
+        const auVolant = { musique: L.Son.Mus.courante, radio: L.Son.Radio.demandee };
         L.Vehicules.descendre(j, true);
-        return { aPied: aPied, auVolant: auVolant, descendu: L.Son.Ambiance.demandee };
+        o.frame(2);
+        return { aPied: aPied, auVolant: auVolant, descendu: L.Son.Mus.courante,
+                 district: zone && zone.district };
     }""")
-    assert r["aPied"] == "ville", "la ville doit avoir sa musique a pied"
-    assert r["auVolant"]["ambiance"] is None and r["auVolant"]["radio"] == "la_brume", \
-        "au volant, la radio remplace l'ambiance"
-    assert r["descendu"] == "ville", "descendu, l'ambiance revient"
+    attendu = table[r["district"]]
+    assert r["aPied"] == attendu, (
+        "a pied, c'est l'ambiance du district qui joue : %s au lieu de %s" % (r["aPied"], attendu)
+    )
+    assert r["auVolant"]["musique"] is None and r["auVolant"]["radio"] == "la_brume", \
+        "au volant, la radio remplace l'ambiance — meme case de l'echelle"
+    assert r["descendu"] == attendu, "descendu, l'ambiance du district revient"
 
 
 def test_la_rumeur_suit_la_foule_et_les_passants_parlent(banc):

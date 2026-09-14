@@ -598,6 +598,12 @@ def exporter() -> dict:
         "dossier": DOSSIER,
         # La musique ecrite en notes (aucun fichier) : voir `app/musique.py`.
         "musiques": musique.exporter(),
+        # ⚠️ L'ECHELLE de qui gagne, et les reglages de la musique d'etat. Ils
+        # sont ECRITS UNE FOIS, en Python : le navigateur lit sa priorite, il
+        # ne l'invente pas. Sans ca, chaque endroit du JS aurait la sienne.
+        "echelle": dict(musique.ECHELLE),
+        "musique": dict(musique.MUSIQUE),
+        "ambiances_de_district": dict(musique.AMBIANCES_DE_DISTRICT),
         "echantillons": [
             {**echantillon, "fichiers": fichiers_presents(echantillon)}
             for echantillon in CATALOGUE

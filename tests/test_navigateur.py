@@ -200,6 +200,11 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
     attendre_titre(page)
     page.click("#bouton-jouer")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # ⚠️ L'ambiance de la ville ne demarre plus toute seule : chaque district
+    # a maintenant la sienne, ecrite en notes (`Son.Chef`). Le fichier, lui,
+    # existe toujours — et c'est ICI, et seulement ici, qu'on prouve qu'il se
+    # DECODE. On le demande donc explicitement.
+    page.evaluate("window.BANDINI.Son.Ambiance.jouer()")
     page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
     attendues = page.evaluate("window.BANDINI.B.defs.audio.voix.filter(v => v.fichier).length")
     page.wait_for_function(
@@ -218,6 +223,11 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     attendre_titre(page)
     page.click("#bouton-jouer")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # ⚠️ L'ambiance de la ville ne demarre plus toute seule : chaque district
+    # a maintenant la sienne, ecrite en notes (`Son.Chef`). Le fichier, lui,
+    # existe toujours — et c'est ICI, et seulement ici, qu'on prouve qu'il se
+    # DECODE. On le demande donc explicitement.
+    page.evaluate("window.BANDINI.Son.Ambiance.jouer()")
     page.wait_for_function("window.BANDINI.Son.Ambiance.courante === 'ville'", timeout=20000)
     premiere = page.evaluate("window.BANDINI.B.defs.audio.histoire.find(v => v.mission === 'm1' && v.fichier)")
     if not premiere:
@@ -390,6 +400,7 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
 
     # L'ambiance tourne en boucle : on l'ecoute sans rien declencher. Elle se
     # telecharge apres les bruitages, alors on l'ATTEND plutot que de l'esperer.
+    page.evaluate("window.BANDINI.Son.Ambiance.jouer()")
     page.wait_for_function("() => window.BANDINI.Son.boucleActive('ambiance-ville')", timeout=45000)
     niveaux["l'ambiance"] = page.evaluate(
         "() => { BANDINI.Son.reglerBoucle('ambiance-ville', 1); return window.__mesure(1500); }")
