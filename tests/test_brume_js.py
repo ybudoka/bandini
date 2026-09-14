@@ -68,18 +68,22 @@ def test_elle_se_repose_une_demi_minute_et_se_tait_quand_elle_fuit(banc):
         L.Jeu.commencer();
         L.graine(3);
         """ + ESPION + """
+        // ⚠️ On compte les voix DE LA BRUME, pas toutes : la rue parle toute
+        // seule — les passantes ont leurs repliques — et un bonjour de
+        // trottoir passait pour une relance de la fille.
+        const siennes = function () { return dits.filter(function (d) { return d.genre === 'brume'; }).length; };
         const fille = o.poser('racoleuse', 40, 0);
         o.frame(2);
-        const premiere = dits.length;
+        const premiere = siennes();
         fille.bulle = null;
         o.frame(600);                          // dix secondes : rien de neuf
-        const apresDixSecondes = dits.length;
+        const apresDixSecondes = siennes();
         const bulleApres = !!fille.bulle;
         // Elle fuit (un coup a cote, une sirene) : plus un mot, meme reposee.
         fille.accosteT = -99999; fille.etat = 'fuit'; fille.minuterie = 600;
         o.frame(3);
         return { premiere: premiere, apresDixSecondes: apresDixSecondes, bulleApres: bulleApres,
-                 enFuite: dits.length, bulleEnFuite: !!fille.bulle };
+                 enFuite: siennes(), bulleEnFuite: !!fille.bulle };
     }""")
     assert r["premiere"] == 1
     assert r["apresDixSecondes"] == 1 and r["bulleApres"] is False, "elle a repete avant la demi-minute"

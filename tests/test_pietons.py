@@ -5,18 +5,24 @@ import pytest
 from app import armes, carte, pietons
 
 
+#: Les metiers qui se tiennent quelque part au lieu de marcher.
+POSTES = {"ambulant", "musicien", "amuseur"}
+
+
 @pytest.mark.parametrize("pieton", pietons.CATALOGUE, ids=lambda p: p["slug"])
 def test_un_pieton_est_jouable(pieton):
     assert pieton["nom"]
     assert set(pieton["couleurs"]) == {"c", "h", "s", "p"}, pieton["slug"]
     for couleur in pieton["couleurs"].values():
         assert couleur.startswith("#") and len(couleur) == 7, couleur
-    # Un marchand derriere son kiosque ne marche pas : sa vitesse est nulle,
-    # et c'est ce qui le dit. Tous les autres marchent.
-    if pieton["metier"] == "ambulant":
-        assert pieton["vitesse"] == 0.0
+    # ⚠️ Ceux qui TIENNENT UN POSTE ne marchent pas : un marchand derriere son
+    # kiosque, un musicien a son coin de rue, un amuseur au milieu de son
+    # attroupement. Leur vitesse nulle est ce qui le dit — et c'est le metier
+    # qui les range la, pas leur slug.
+    if pieton["metier"] in POSTES:
+        assert pieton["vitesse"] == 0.0, pieton["slug"]
     else:
-        assert 0.5 <= pieton["vitesse"] <= 1.5
+        assert 0.5 <= pieton["vitesse"] <= 1.5, pieton["slug"]
     assert 0.0 <= pieton["courage"] <= 1.0
     assert 0.0 <= pieton["temoin"] <= 1.0
     assert 20 <= pieton["vie"] <= 150
@@ -119,3 +125,30 @@ def test_l_agent_de_police_est_un_pieton_arme_qui_ne_nait_pas_au_hasard():
     assert agent["arme"] == "pistolet" and agent["courage"] == 1.0
     assert agent["temoin"] == 0.0, "un agent ne temoigne pas : il agit"
     assert agent not in pietons.ordinaires()
+
+
+def test_les_trois_sortes_ont_un_corps_a_elles():
+    """⚠️ Demande de Martin : « des amuseurs publics, des musiciens de rue, des
+    exhibitionnistes. »
+
+    La ville avait 24 archetypes pour QUATRE corps : vingt et un portaient
+    celui du joueur avec un echange de palette. Une sorte etait donc une
+    couleur et trois chiffres — et le depot a deja paye ce defaut une fois,
+    avec les filles de la Brume qu'on ne distinguait plus de personne.
+
+    La regle : UNE SORTE = UN CORPS + UNE ROUTINE. Ce juge tient la premiere
+    moitie (un sprite a elle, un metier a elle) ; le banc tient la seconde."""
+    sortes = {"musicien", "amuseur", "exhibitionniste"}
+    trouves = {p["slug"] for p in pietons.CATALOGUE if p["slug"] in sortes}
+    assert trouves == sortes, f"il en manque : {sortes - trouves}"
+    for slug in sortes:
+        p = next(q for q in pietons.CATALOGUE if q["slug"] == slug)
+        # ⚠️ Un corps A ELLE : pas `joueur`, pas celui d'une autre sorte.
+        assert p["sprite"] == slug, f"{slug} porte le corps « {p['sprite']} »"
+        # ⚠️ Et un metier : c'est le crochet que le moteur lit pour lui donner
+        # ce qu'elle FAIT. Sans lui, ce n'est qu'un costume.
+        assert p["metier"] == slug, f"{slug} n'a pas de metier a lui"
+        assert p["frequence"] == 0.0, f"{slug} nait au hasard dans la foule"
+    # Les corps ne se partagent pas : autant de sprites que de sortes.
+    corps = {next(q for q in pietons.CATALOGUE if q["slug"] == s)["sprite"] for s in sortes}
+    assert len(corps) == len(sortes), f"deux sortes se partagent un corps : {corps}"

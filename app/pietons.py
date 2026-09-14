@@ -161,6 +161,31 @@ CATALOGUE: list[Pieton] = [
     _p("gardien", "Gardien du lot", "#5a5f66", "#2a1a10", "#e8b088", "#2a2a3a",
        vitesse=1.05, courage=1.0, temoin=0.0, vie=110, argent=(5, 30), arme="batte",
        metier="gardien", frequence=0.0),
+    # --- Trois sortes de gens (demande de Martin) -------------------------
+    # ⚠️ UNE SORTE = UN CORPS + UNE ROUTINE. Chacune a son sprite (elles ne
+    # sont pas le corps commun repeint) et son `metier`, qui est le crochet
+    # que `entites.js` lit pour lui donner ce qu'elle FAIT. Une sorte sans
+    # routine, c'est un costume — et le depot a deja paye ce defaut une fois
+    # avec les filles de la Brume.
+    #
+    # `frequence=0` : elles ne naissent pas au hasard dans la foule, on les
+    # POSE aux coins de rue, comme l'homme-sandwich.
+    _p("musicien", "Musicien de rue", "#6b4b8a", "#3a2a1a", "#e8b088", "#2a2a3a",
+       sprite="musicien", vitesse=0.0, courage=0.2, temoin=0.6, vie=70,
+       argent=(15, 60), metier="musicien", frequence=0.0),
+    # ⚠️ L'amuseur attire un ATTROUPEMENT, et un attroupement est une foule de
+    # temoins : faire un coup devant lui, c'est dix temoins d'un seul geste.
+    # Ce n'est pas du decor, c'est l'endroit de la rue ou il ne faut pas
+    # sortir une arme.
+    _p("amuseur", "Amuseur public", "#efe6d0", "#2a2a2a", "#e8b088", "#1a1a22",
+       sprite="amuseur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
+       argent=(10, 45), metier="amuseur", frequence=0.0),
+    # ⚠️ Et lui, LA POLICE L'ARRETE. C'est la seule fois ou elle s'occupe de
+    # quelqu'un d'autre que le joueur — et c'est ce gag qui la rend credible :
+    # elle n'existe pas que pour toi.
+    _p("exhibitionniste", "L'homme au manteau", "#7a5a3a", "#4a3320", "#e8b088", "#2a2a3a",
+       sprite="exhibitionniste", vitesse=0.85, courage=0.1, temoin=0.1, vie=60,
+       argent=(2, 15), metier="exhibitionniste", frequence=0.0),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.

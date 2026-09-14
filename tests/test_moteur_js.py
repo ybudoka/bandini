@@ -1129,6 +1129,103 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
 
 
+def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
+    """⚠️ Demande de Martin : « des amuseurs publics, des musiciens de rue, des
+    exhibitionnistes. »
+
+    La ville avait **24 archétypes et 4 corps** : vingt et un portaient celui du
+    joueur avec un échange de palette. Et sur six `metier`, **deux** faisaient
+    quelque chose dans le moteur ; les autres n'étaient que des nombres. Une
+    sorte était donc une couleur et trois chiffres — le dépôt a déjà payé ce
+    défaut une fois, avec les filles de la Brume qu'on ne distinguait plus de
+    personne.
+
+    **Une sorte = un corps + une routine.** Le corps est jugé côté Python ;
+    ici, c'est la **routine** — ce qu'elle fait que les autres ne font pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(101);
+        const j = L.B.joueur;
+        const out = {};
+
+        function poser(slug, dx, dy) {
+            const a = L.Entites.archetype(slug);
+            const e = L.Entites.creerPieton(j.x + dx, j.y + dy, a);
+            e.etat = slug === 'exhibitionniste' ? 'flane' : 'fige';
+            if (e.etat === 'fige') e.plante = { x: e.x, y: e.y };
+            L.Entites.indexer();
+            return e;
+        }
+
+        // 1. L'AMUSEUR attroupe — et un attroupement est une FOULE DE TEMOINS.
+        const amuseur = poser('amuseur', 30, 0);
+        const badauds = [];
+        for (let k = 0; k < 4; k++) {
+            const b = o.poser('passant', 30 + (k - 2) * 8, 14);
+            b.etat = 'flane'; b.probaTemoin = 0.2;
+            badauds.push(b);
+        }
+        L.Entites.indexer();
+        const avant = badauds.map(function (b) { return { etat: b.etat, t: b.probaTemoin }; });
+        o.frame(30);
+        out.attroupement = {
+            arretes: badauds.filter(function (b) { return b.etat === 'arret'; }).length,
+            temoinsMieux: badauds.filter(function (b, i) { return b.probaTemoin > avant[i].t; }).length,
+            avant: avant[0].etat,
+        };
+        for (const b of badauds) L.Entites.retirer(b);
+        L.Entites.retirer(amuseur);
+
+        // 2. Le MUSICIEN attroupe aussi, et il tient son poste.
+        const mus = poser('musicien', 30, 0);
+        const passant = o.poser('passant', 34, 12);
+        passant.etat = 'flane';
+        L.Entites.indexer();
+        const poste = { x: mus.x, y: mus.y };
+        o.frame(40);
+        out.musicien = { arrete: passant.etat === 'arret',
+                         bouge: Math.round(Math.hypot(mus.x - poste.x, mus.y - poste.y)),
+                         corps: mus.sprite };
+        L.Entites.retirer(passant); L.Entites.retirer(mus);
+
+        // 3. L'EXHIBITIONNISTE ouvre son manteau : elle crie et fuit.
+        const ex = poser('exhibitionniste', 30, 0);
+        const dame = o.poser('passante', 34, 10);
+        dame.etat = 'flane';
+        L.Entites.indexer();
+        let ouvert = -1;
+        for (let i = 0; i < 60 && ouvert < 0; i++) { o.frame(1); if (ex.manteauT > 0) ouvert = i; }
+        out.manteau = { ouvert: ouvert >= 0, image: ex.poseFixe, fuit: dame.etat === 'fuit',
+                        crie: dame.cri > 0, corps: ex.sprite };
+        // ⚠️ Et un AGENT qui passe l'arrete, lui — la seule fois ou la police
+        // s'occupe de quelqu'un d'autre que le joueur.
+        ex.manteauT = 0; ex.poseFixe = null;
+        const agent = L.Police.creerAgent(ex.x + 24, ex.y, 'flane');
+        L.Entites.indexer();
+        o.frame(30);
+        out.police = { fuit: ex.etat === 'fuit', menace: ex.menace === agent, suit: !!agent.but };
+        return out;
+    }""")
+    a = r["attroupement"]
+    assert a["avant"] == "flane", "le décor du juge est faux : les badauds doivent flâner au départ"
+    assert a["arretes"] >= 3, "l'amuseur n'attroupe personne : %s" % a
+    # ⚠️ Un badaud qui regarde un spectacle REGARDE : il témoigne mieux que le
+    # même passant qui marchait en pensant à autre chose.
+    assert a["temoinsMieux"] >= 3, "l'attroupement ne fait pas de meilleurs témoins : %s" % a
+    assert r["musicien"]["arrete"] is True, "personne ne s'arrête pour le musicien"
+    assert r["musicien"]["bouge"] <= 2, "le musicien quitte son coin de rue : %s px" % r["musicien"]["bouge"]
+    assert r["musicien"]["corps"] == "musicien", "le musicien porte le corps commun"
+    m = r["manteau"]
+    assert m["ouvert"] is True and m["image"] == 1, (
+        "le manteau ne s'ouvre pas, ou sur la mauvaise image : %s" % m
+    )
+    assert m["fuit"] is True and m["crie"] is True, "elle ne crie pas, ou ne fuit pas : %s" % m
+    assert m["corps"] == "exhibitionniste"
+    assert r["police"] == {"fuit": True, "menace": True, "suit": True}, (
+        "un agent doit l'arrêter, LUI : c'est ce qui rend la police crédible (%s)" % r["police"]
+    )
+
+
 def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
     """⚠️ Retour de Martin : « les portes doivent ouvrir quand j'entre aussi. »
     Elles s'ouvraient pour les piétons et **pas pour lui** — il traversait un

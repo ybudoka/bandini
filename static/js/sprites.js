@@ -219,6 +219,81 @@ const GRILLE_MOTO = [
       '....................',
     ];
 
+/* --- Trois sortes de gens, pas trois palettes -------------------------------
+
+   ⚠️ La ville avait 24 archetypes pour QUATRE corps : vingt et un portaient
+   celui du joueur avec un echange de palette. Le depot a deja paye ce defaut
+   une fois — les filles de la Brume « n'etaient qu'un echange de palette sur
+   le corps commun », et on ne les distinguait plus de personne.
+
+   La regle : UNE SORTE = UN CORPS + UNE ROUTINE. Le corps est ici ; la
+   routine est dans `entites.js`, accrochee au `metier` de la fiche. Sans la
+   routine, ce ne serait qu'un costume de plus. */
+// ⚠️ La GUITARE en travers du corps (`g`) : a douze pixels, c'est elle
+// qui le nomme, pas sa palette.
+SPRITES.musicien = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#6b4b8a', p: '#2a2a3a', o: '#ffffff', g: '#c98d3a', b: '#3a2a1a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcggggggck.', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcggggggck.', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcgggggck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcgggggck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+// Le mime : chapeau melon, visage blanc, chandail raye. Trois formes
+// qu'aucun autre corps de la ville n'a.
+SPRITES.amuseur = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#efe6d0', p: '#1a1a22', o: '#ffffff', d: '#1a1a22', b: '#1a1a22' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...koooook..', '....kook....', '.kkcccccckk.', 'kckdcdcdckck', 'kckcdcdcdckc', '.kkcdcdckkk.', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...koooook..', '....kook....', '.kckccccckk.', '.kkdcdcdck..', 'kckcdcdcdck.', '.kkcdcdckkk.', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', '.kkcccccckk.', 'kckdcdcdckck', 'kckcdcdcdckc', '.kkcdcdckkk.', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', '.kckccccckk.', '.kkdcdcdck..', 'kckcdcdcdck.', '.kkcdcdckkk.', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccck..', '.kcdcdcdck..', '.kcdcdcdck..', '..kcdcdck...', '...kppppk...', '..kppk.kk...', '..kkk.......'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccck..', '.kcdcdcdck..', '.kcdcdcdck..', '..kcdcdck...', '...kppppk...', '...kpk.kk...', '...kk.......'],
+    ],
+  },
+};
+// ⚠️ DEUX images qui ne sont pas une marche : manteau ferme, manteau
+// OUVERT. C'est son geste, et le moteur choisit la deuxieme (voir
+// `majSortes`).
+SPRITES.exhibitionniste = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#4a3320', c: '#7a5a3a', p: '#2a2a3a', o: '#ffffff', b: '#3a3a4a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kbbbbk...', '...kk..kk...'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '.kckssssckk.', '.kcksssskck.', '.kcksssskck.', '.kckssssckc.', '.kckssssckc.', '..kk.bb.kk..', '..kk....kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kbbbbk...', '...kk..kk...'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kbbbbk...', '...kk..kk...'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....kk.k....'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....k.kk....'],
+    ],
+  },
+};
+
 SPRITES.auto = {
   w: 32, h: 16, ancre: [16, 8], rotations: 32,
   pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' },

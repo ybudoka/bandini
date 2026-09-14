@@ -410,6 +410,104 @@ const Entites = (function () {
     return heures[0] < heures[1] ? (h >= heures[0] && h < heures[1]) : (h >= heures[0] || h < heures[1]);
   }
 
+  // --- Trois sortes de gens, et ce qu'elles FONT ----------------------------------
+
+  /*: ⚠️ UNE SORTE = UN CORPS + UNE ROUTINE. Le corps est dans `sprites.js`, le
+    metier dans `pietons.py` — et c'est ICI que la sorte existe vraiment. La
+    ville avait 24 archetypes pour quatre corps, et sur six metiers, DEUX
+    faisaient quelque chose : les autres etaient des nombres. Une sorte qui ne
+    fait rien est un costume, et le depot a deja paye ce defaut une fois. */
+  const SORTES = ['musicien', 'amuseur', 'exhibitionniste'];
+
+  //: Combien de chaque sorte vivent dans la bulle du joueur, au plus.
+  const SORTES_MAX = 2;
+  //: A quelle distance on s'arrete pour regarder un musicien ou un amuseur.
+  const ATTROUPEMENT_PX = 46;
+
+  /** Elles naissent aux coins de rue, pas dans la foule : `frequence` vaut
+      zero au catalogue, exactement comme l'homme-sandwich. */
+  function naitreLesSortes() {
+    if (!B.joueur || B.interieur) return 0;
+    let nes = 0;
+    for (const slug of SORTES) {
+      const arch = archetype(slug);
+      if (!arch || arch.slug !== slug) continue;
+      const deja = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === slug && q.vivant; }).length;
+      if (deja >= SORTES_MAX) continue;
+      const place = placeDeNaissance();
+      if (!place || visibleAEcran(place.x, place.y, 24)) continue;
+      const e = creerPieton(place.x, place.y, arch);
+      if (!e) continue;
+      // Le musicien et l'amuseur TIENNENT UN POSTE ; l'homme au manteau, lui,
+      // rode.
+      if (slug === 'exhibitionniste') { e.etat = 'flane'; }
+      else { e.etat = 'fige'; e.face = 'bas'; e.plante = { x: e.x, y: e.y }; }
+      nes++;
+    }
+    return nes;
+  }
+
+  /** Ce que chaque sorte fait, une fois par image.
+
+      ⚠️ Le musicien et l'amuseur ATTIRENT — et un attroupement est une foule
+      de temoins : faire un coup devant l'amuseur, c'est dix temoins d'un seul
+      geste. Ce n'est pas du decor, c'est l'endroit de la rue ou il ne faut pas
+      sortir une arme. */
+  function majSortes() {
+    if (B.interieur || B.t % 15 !== 0) return;
+    for (const e of B.entites) {
+      if (e.type !== 'pieton' || !e.vivant || e.etat === 'assomme') continue;
+      if (e.arch === 'musicien' || e.arch === 'amuseur') attrouper(e);
+      else if (e.arch === 'exhibitionniste') majManteau(e);
+    }
+  }
+
+  /** Les badauds s'arretent autour de lui et le regardent. */
+  function attrouper(e) {
+    if (e.etat !== 'fige') return;
+    for (const q of pietonsAutour(e.x, e.y, ATTROUPEMENT_PX)) {
+      if (q === e || q.metier || q.personnage || q.mission || q.porteBut) continue;
+      // ⚠️ `arret` AUSSI, pas seulement `flane` : un flaneur fait des pauses
+      // tout seul, et celui qui trainait deja a cote du jongleur restait le
+      // seul de la rue a ne pas le regarder.
+      if (q.etat !== 'flane' && q.etat !== 'arret') continue;
+      if (q.attroupe === e) continue;                   // deja dans le cercle
+      if (!Monde.ligneLibre(q.x, q.y, e.x, e.y)) continue;
+      q.etat = 'arret';
+      q.attroupe = e;
+      q.minuterie = 240 + Math.floor(B.rng() * 240);
+      regarder(q, e.x - q.x, e.y - q.y);
+      // ⚠️ Un badaud qui regarde un spectacle REGARDE : il temoigne mieux que
+      // le meme passant qui marchait en pensant a autre chose.
+      q.probaTemoin = Math.min(1, (q.probaTemoin || 0.3) + 0.4);
+    }
+  }
+
+  /** Il ouvre son manteau au passage de quelqu'un : on crie, on fuit. ⚠️ Et un
+      agent qui le voit L'ARRETE, lui — la seule fois ou la police s'occupe de
+      quelqu'un d'autre que le joueur. C'est un gag, et c'est ce gag qui la
+      rend credible : elle n'existe pas que pour toi. */
+  function majManteau(e) {
+    if (e.manteauT > 0) { e.manteauT--; if (e.manteauT === 0) e.poseFixe = null; return; }
+    const agent = pietonsAutour(e.x, e.y, 70).find(function (q) { return q.agent && q.vivant; });
+    if (agent) {
+      // Pris sur le fait : il detale, et l'agent le suit.
+      e.etat = 'fuit'; e.menace = agent; e.minuterie = 600; e.cri = 90;
+      agent.but = { x: e.x, y: e.y };
+      return;
+    }
+    const proche = pietonsAutour(e.x, e.y, 40).find(function (q) {
+      return q !== e && q.vivant && !q.metier && q.etat === 'flane';
+    });
+    if (!proche || !Monde.ligneLibre(e.x, e.y, proche.x, proche.y)) return;
+    e.manteauT = 90;
+    e.poseFixe = 1;                            // la deuxieme image : le manteau OUVERT
+    e.vx = 0; e.vy = 0;
+    regarder(e, proche.x - e.x, proche.y - e.y);
+    proche.etat = 'fuit'; proche.menace = e; proche.minuterie = 240; proche.cri = 120;
+    bulle(proche, '!');
+  }
+
   /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
       bulle du joueur. Il nait A SON POSTE et hors champ — sauf au premier
       instant d'une partie (`dabord`), ou personne ne regarde encore — et il
@@ -453,6 +551,8 @@ const Entites = (function () {
     }
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
+    if (B.t % 90 === 0) naitreLesSortes();
+    majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
     // toujours de la meme facon (par distance) et on n'aurait ajoute qu'une
     // animation. Un flaneur sur le retour se choisit une porte et rentre.
@@ -1470,7 +1570,12 @@ const Entites = (function () {
     const bouge = Math.abs(e.vx) + Math.abs(e.vy) > 0.05;
     // ⚠️ Une foulee de 9 px, pas 7 : a 7, les jambes tournaient plus vite que
     // le corps n'avancait et tout le monde avait l'air de courir.
-    const i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
+    let i = bouge ? [0, 1, 0, 2][Math.floor(e.anim.dist / 9) % 4] : 0;
+    // ⚠️ Une image IMPOSEE, quand le corps n'est pas une marche : les deux
+    // images de l'homme au manteau sont « ferme » et « OUVERT », pas deux pas.
+    // Sans ca, son geste ne se voyait jamais — il est immobile en le faisant,
+    // et l'immobile tombe toujours sur l'image zero.
+    if (e.poseFixe !== null && e.poseFixe !== undefined) i = e.poseFixe;
     // ⚠️ La pose « gauche » est le miroir de « droite », mais la main n'est
     // decrite QUE du cote droit : sans ce repli, l'arme disparaissait des que
     // le joueur marchait vers la gauche (Martin).
@@ -1644,6 +1749,7 @@ const Entites = (function () {
     peuplerInterieur,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, peupler, peuplerDabord,
+    naitreLesSortes, majSortes, SORTES, ATTROUPEMENT_PX,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
