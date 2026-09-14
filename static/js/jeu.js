@@ -29,6 +29,9 @@ const Jeu = (function () {
       const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne' });
       if (v) { v.couleur = garde.couleur; v.swaps = { c: garde.couleur }; v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; }
     }
+    // Les chars saisis attendent dans la cour du lot, comme celui de la
+    // planque attend devant sa porte.
+    Missions.garnirLaFourriere();
     const app = Monde.carte.apparition.joueur;
     const x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
     const y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;

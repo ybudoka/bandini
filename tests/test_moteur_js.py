@@ -2403,6 +2403,97 @@ def test_l_ambulance_ramasse_un_blesse_et_le_perd_si_on_traine(banc, paquet):
     assert r["faits"] == 2 and a["fini"] is None
 
 
+def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, paquet):
+    """⚠️ La fourrière existait **en Python** depuis M9 — une cour clôturée avec
+    sa guérite, 40 cases, `economie.FOURRIERE` et son juge d'équilibrage — et
+    le navigateur n'en savait rien : le comptoir « LE LOT » avait un libellé et
+    aucun menu, et rien n'y amenait jamais un char.
+
+    Trois règles, et la troisième est celle qui compte :
+
+    1. on te prend le char que tu **conduisais** — ⚠️ pas celui où tu es, car
+       la police t'en **sort** avant de t'embarquer, donc `dansVehicule` est
+       déjà nul à l'arrestation ;
+    2. il attend **dans la cour**, sur une case du lot ;
+    3. le racheter coûte **plus cher que de le revendre** au garage. Sinon on
+       se fait saisir un char exprès pour le racheter moins cher qu'il ne se
+       revend, et la fourrière devient une machine à argent.
+    """
+    f = paquet["economie"]["fourriere"]
+    eco = paquet["economie"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(67);
+        const j = L.B.joueur, p = L.B.partie;
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        // On conduit une berline, PUIS on en descend : c'est l'etat exact dans
+        // lequel la police nous laisse avant de nous embarquer.
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        L.Vehicules.descendre(j, true);
+        const avant = { dedans: !!j.dansVehicule, dernier: j.dernierVehicule === v,
+                        saisissable: L.Missions.charSaisissable(j) === v };
+        p.argent = 5000;
+        L.B.recherche.etoiles = 2;
+        L.Missions.prison(null);
+        o.fondu();
+        const apres = { lot: p.fourriere.length, slug: p.fourriere[0] && p.fourriere[0].slug,
+                        disparu: L.B.entites.indexOf(v) < 0 };
+        // ⚠️ Le lot deborde : il garde `places` chars, le plus vieux part.
+        for (let i = 0; i < %d; i++) p.fourriere.push({ slug: 'taxi', couleur: '#f1c40f', vie: 90, vole: true });
+        const v2 = o.char('moto', 0, 0, 0);
+        L.Vehicules.monter(j, v2); L.Vehicules.descendre(j, true);
+        L.Missions.saisir(v2);
+        const plein = { n: p.fourriere.length, dernier: p.fourriere[p.fourriere.length - 1].slug,
+                        premier: p.fourriere[0].slug };
+        // Le comptoir : on rachete la moto.
+        p.fourriere.length = 0;
+        p.fourriere.push({ slug: 'moto', couleur: '#1a1a1a', vie: 30, vole: true });
+        const menu = L.Missions.menuFourriere([]);
+        const argent0 = p.argent;
+        const achete = menu.items[0].faire();
+        const rachat = { titre: menu.titre, achete: achete, reste: p.fourriere.length,
+                         paye: argent0 - p.argent, prix: L.Missions.prixRachat('moto') };
+        // Vide, le comptoir le dit au lieu de se taire.
+        const vide = L.Missions.menuFourriere([]);
+        // Et les chars saisis se posent dans la COUR au demarrage.
+        p.fourriere.push({ slug: 'auto', couleur: '#c0392b', vie: 80, vole: true });
+        const poses = L.Missions.garnirLaFourriere();
+        const lot = L.Monde.carte.fourriere;
+        const dansLaCour = L.B.entites.filter(function (e) {
+            return e.type === 'vehicule' && e.saisi !== null && e.saisi !== undefined
+                && e.x / L.TT >= lot.x && e.x / L.TT < lot.x + lot.largeur
+                && e.y / L.TT >= lot.y && e.y / L.TT < lot.y + lot.hauteur;
+        }).length;
+        return { avant: avant, apres: apres, plein: plein, rachat: rachat,
+                 vide: vide.items[0].libelle, poses: poses, dansLaCour: dansLaCour,
+                 places: lot.places.length };
+    }""" % (f["places"] + 3))
+    assert r["avant"] == {"dedans": False, "dernier": True, "saisissable": True}, (
+        "a l'arrestation on est DEHORS : c'est le dernier char conduit qu'on saisit (%s)" % r["avant"]
+    )
+    assert r["apres"]["lot"] == 1 and r["apres"]["slug"] == "auto", "l'arrestation n'a rien saisi"
+    assert r["apres"]["disparu"] is True, "le char saisi est reste dans la rue"
+    assert r["plein"]["n"] == f["places"], "le lot garde %s chars, pas %s" % (f["places"], r["plein"]["n"])
+    assert r["plein"]["dernier"] == "moto", "le dernier saisi n'est pas au bout"
+    assert r["plein"]["premier"] == "taxi", "c'est le plus VIEUX qui doit partir"
+    assert r["rachat"]["achete"] is True and r["rachat"]["reste"] == 0
+    assert r["rachat"]["paye"] == r["rachat"]["prix"] > 0
+    assert r["vide"] == "LE LOT EST VIDE", "un lot vide doit le dire, pas se taire"
+    assert r["poses"] == 1 and r["dansLaCour"] == 1, (
+        "un char saisi doit attendre DANS LA COUR : %s posé(s), %s dedans" % (r["poses"], r["dansLaCour"])
+    )
+    # ⚠️ LA regle : racheter coute plus cher que revendre.
+    for v in paquet["vehicules"]:
+        rachat = max(f["rachat_minimum"], round(v["prix"] * f["rachat_fraction"]))
+        revente = round(v["prix"] * eco["vente_fraction"])
+        assert rachat > revente, (
+            "%s : rachat %s $ contre revente %s $ — la fourriere devient une machine a argent"
+            % (v["slug"], rachat, revente)
+        )
+
+
 def test_eteindre_sa_sirene_n_appelle_pas_un_nouveau_contrat(banc):
     """⚠️ Retour de Martin : « on ne devrait pas avoir de nouveaux contrats
     quand on arrête la sirène ; et quand un contrat est en cours, on ne peut

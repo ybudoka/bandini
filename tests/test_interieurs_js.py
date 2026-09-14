@@ -20,7 +20,8 @@ SANS_MENU = ("sergent", "contact", "escalier", "fouiller")
 #: piece (sinon ce test rougit), et le jour ou M9 pose son menu, on l'enleve.
 #: C'est la seule facon honnete d'avoir un comptoir dessine avant son menu —
 #: sans elle, on exempterait par habitude et « guichet » renaîtrait.
-EN_CHANTIER = {"fourriere": "M9 — le lot de la fourriere (rachat d'un char saisi)"}
+#: Vide depuis le 13 sept. 2026 : le lot de la fourriere a recu son menu.
+EN_CHANTIER: dict[str, str] = {}
 
 TYPES = sorted({p["type"] for piece in carte.INTERIEURS.values() for p in piece["points"]})
 

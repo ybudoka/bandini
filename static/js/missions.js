@@ -222,6 +222,10 @@ const Missions = (function () {
     p.casier = Math.min(B.defs.economie.casier_max, p.casier + 1);
     p.stats.arrestations++;
     p.armes = { poings: { mun: null } }; p.arme = 'poings'; j.arme = 'poings';
+    // ⚠️ Le char part au lot AVANT la remise a zero : apres, la police lache
+    // le morceau et on n'a plus de raison de savoir ce qu'on conduisait.
+    const saisi = charSaisissable(j);
+    if (saisi) { const nom = saisi.def.nom.toUpperCase(); saisir(saisi); Hud.message(nom + ' A LA FOURRIERE', 240); }
     Police.remiseAZero();
     if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'EN PRISON');
@@ -430,6 +434,101 @@ const Missions = (function () {
     },
   };
 
+  // --- La fourriere -----------------------------------------------------------------
+
+  /** Le char qu'on te prend quand on t'embarque : celui que tu conduisais.
+
+      ⚠️ `j.dansVehicule` est deja nul a l'arrestation — la police te SORT du
+      char avant de te passer les menottes. C'est donc le DERNIER char conduit
+      qui compte, et seulement s'il est encore la, a portee de vue. */
+  function charSaisissable(j) {
+    const v = j.dansVehicule || j.dernierVehicule;
+    if (!v || !v.def || !v.actif || v.etat === 'epave') return null;
+    if (dist2(v.x, v.y, j.x, j.y) > 220 * 220) return null;
+    // ⚠️ JAMAIS celui de la planque : c'est la sauvegarde de Martin, et un
+    // char qui disparait de devant chez soi pendant qu'on dort n'est pas une
+    // regle de jeu, c'est une perte.
+    const garde = B.partie.planque.vehicule;
+    if (garde && garde.slug === v.slug && dist2(v.x, v.y, garde.x, garde.y) < 40 * 40) return null;
+    return v;
+  }
+
+  /** Le lot prend le char. Il garde `places` chars ; au-dela, le plus vieux part. */
+  function saisir(v) {
+    if (!v || !v.def) return false;
+    const f = B.defs.economie.fourriere, p = B.partie;
+    p.fourriere.push({ slug: v.slug, couleur: v.couleur, vie: Math.max(1, Math.round(v.vie)), vole: !!v.vole });
+    while (p.fourriere.length > f.places) p.fourriere.shift();
+    if (B.joueur && B.joueur.dansVehicule === v) Vehicules.descendre(B.joueur, true);
+    Entites.retirer(v);
+    return true;
+  }
+
+  /** Ce qu'il en coute pour le ravoir. ⚠️ Le calcul est celui de Python
+      (`economie.prix_rachat`) : il DOIT rester plus cher que la revente du
+      meme char au garage, sinon la fourriere devient une machine a argent. */
+  function prixRachat(slug) {
+    const f = B.defs.economie.fourriere, def = Vehicules.vehiculeDef(slug);
+    if (!def) return f.rachat_minimum;
+    return Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction));
+  }
+
+  /** Pose les chars saisis dans la cour, sur les cases du lot. */
+  function garnirLaFourriere() {
+    const lot = Monde.carte.fourriere;
+    if (!lot || !lot.places || !lot.places.length) return 0;
+    let poses = 0;
+    B.partie.fourriere.forEach(function (c, i) {
+      const place = lot.places[i % lot.places.length];
+      const def = Vehicules.vehiculeDef(c.slug);
+      if (!def) return;
+      const angle = place.sens === 'N' ? -Math.PI / 2 : place.sens === 'S' ? Math.PI / 2 : place.sens === 'O' ? Math.PI : 0;
+      const v = Vehicules.creer(c.slug, place.x * TT + 8, place.y * TT + 8, angle, { etat: 'stationne' });
+      if (!v) return;
+      v.couleur = c.couleur; v.swaps = { c: c.couleur };
+      v.vie = Math.max(1, c.vie); v.vole = !!c.vole;
+      v.saisi = i;                    // son rang dans le lot : le comptoir s'y retrouve
+      poses++;
+    });
+    return poses;
+  }
+
+  /** Le comptoir du lot : on rachete, et le char est dehors dans la cour. */
+  function menuFourriere(items) {
+    const p = B.partie;
+    if (!p.fourriere.length) {
+      items.push({ libelle: 'LE LOT EST VIDE', actif: false });
+      return { titre: 'FOURRIERE MUNICIPALE', items: items, aide: 'ON T’Y AMENE CE QU’ON TE SAISIT' };
+    }
+    p.fourriere.slice().reverse().forEach(function (c) {
+      const def = Vehicules.vehiculeDef(c.slug);
+      const prix = prixRachat(c.slug);
+      items.push({ libelle: (def ? def.nom : c.slug).toUpperCase(), detail: prix + ' $', actif: p.argent >= prix,
+                   faire: function () { return racheter(c, prix); } });
+    });
+    return { titre: 'FOURRIERE MUNICIPALE', items: items,
+             sur: p.argent + ' $ · ' + p.fourriere.length + '/' + B.defs.economie.fourriere.places,
+             aide: 'UN CHAR RACHETE T’ATTEND DANS LA COUR' };
+  }
+
+  function racheter(c, prix) {
+    const p = B.partie;
+    if (p.argent < prix) { Son.SFX.erreur(); return false; }
+    const i = p.fourriere.indexOf(c);
+    if (i < 0) return false;
+    payer(prix, 'FOURRIERE');
+    p.fourriere.splice(i, 1);
+    // ⚠️ Un char rachete n'est plus vole : on vient d'en payer la sortie
+    // devant un guichet municipal, avec son numero au registre.
+    c.vole = false;
+    (B.exterieur ? B.exterieur.entites : B.entites).forEach(function (e) {
+      if (e.type === 'vehicule' && e.saisi === i) { e.saisi = null; e.vole = false; }
+    });
+    Hud.message('CHAR RACHETE — IL EST DANS LA COUR');
+    Son.SFX.argent();
+    return true;
+  }
+
   // --- Les points d'action des interieurs --------------------------------------------
 
   //: ⚠️ Un type de point sans libelle ici, ou sans cas dans `menuDuPoint`, est
@@ -552,6 +651,8 @@ const Missions = (function () {
         return menuSalon(items);
       case 'casier':
         return menuCasier();
+      case 'fourriere':
+        return menuFourriere(items);
       default:
         return null;
     }
@@ -1012,7 +1113,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           boulot, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();

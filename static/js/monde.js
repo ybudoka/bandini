@@ -93,6 +93,9 @@ const Monde = (function () {
       }),
       portes: def.portes || [],
       rampes: def.rampes || [],
+      // La cour du lot, ses cases et sa grille : c'est `Missions` qui y range
+      // les chars saisis (null dans un interieur).
+      fourriere: def.fourriere || null,
       points: def.points_interet || [],
       zones: def.zones || [],
       apparition: def.apparition,

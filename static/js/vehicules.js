@@ -659,7 +659,11 @@ const Vehicules = (function () {
     const r = B.recherche, deg = B.defs.recherche.deguisement;
     if (r.etoiles > 0 && r.vu > deg.vehicule_s * 60) { r.etoiles = Math.max(0, r.etoiles - deg.vehicule_etoiles); r.vu = 0; Hud.message('ILS T’ONT PERDU DE VUE'); }
     v.conducteur = j; v.etat = 'roule'; v.vole = v.vole || !!crime; v.cible = null;
-    j.dansVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
+    j.dansVehicule = v;
+    // ⚠️ Le dernier char conduit, pour la fourriere : la police te SORT
+    // du char avant de t'arreter, donc a l'arrestation `dansVehicule` est
+    // deja nul — sans ce souvenir, on ne saisirait jamais rien.
+    j.dernierVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
     j.x = v.x; j.y = v.y;
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
     // ⚠️ L'etiquette du bouton tactile suit l'avertisseur : SIRENE, SONNETTE, KLAXON.

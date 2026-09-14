@@ -64,6 +64,10 @@ function etatInitial(defs) {
     armes: { poings: { mun: null } },
     arme: 'poings',
     planque: { armes: {}, vehicule: null, coffre: 0 },
+    //: Les chars saisis, du plus vieux au plus recent. ⚠️ Un TABLEAU, pas un
+    //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
+    //: quand il deborde — un ordre, donc, pas un sac.
+    fourriere: [],
     proprietes: {},
     missionsFaites: {},
     mission: null,        // { slug, etape } — la mission en cours
@@ -252,6 +256,10 @@ const Sauvegarde = (function () {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
+    // ⚠️ Un tableau ne passe pas par la fusion des objets ci-dessus : une
+    // partie d'avant la fourriere arriverait avec `undefined`, et le comptoir
+    // planterait au premier clic.
+    if (!Array.isArray(out.fourriere)) out.fourriere = [];
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     return out;
