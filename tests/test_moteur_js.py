@@ -6002,6 +6002,63 @@ def test_les_etoiles_de_recherche_se_lisent(banc):
         assert r["sousEtoiles"], "la ligne d'objectif chevauche les etoiles"
 
 
+def test_la_ligne_d_objectif_ne_passe_sur_rien(banc):
+    """Bug de Martin, capture a l'appui : « bug de hoverlap en haut ». En taxi,
+    « COURSE : POSTE DE POLICE 120M » et « FAIS TROIS COURSES — KLAXONNE POUR
+    UN CLIENT 0/3 » etaient ecrits l'un DANS l'autre, tous les deux dores, a un
+    pixel de hauteur pres.
+
+    ⚠️ Rien n'etait casse : chaque ligne etait a sa place. La ligne de boulot
+    est collee sous le compteur de vitesse (x 70, y 16) et la ligne d'objectif
+    tombait sous les etoiles (y 17) — mais elle est CENTREE, et une phrase de
+    soixante-dix caracteres centree commence bien avant le milieu de l'ecran.
+    Deux mises en page qui ne se connaissaient pas.
+
+    Le juge tient la regle entiere, pas le seul cas de la capture : la ligne
+    d'objectif ne chevauche AUCUNE autre ancre du HUD. C'est elle qui cede —
+    elle descend d'une rangee par boite qu'elle croise."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        L.Histoire.commencer('m3');                 // Marco prete son taxi
+        L.B.partie.mission.etape = 1;               // « FAIS TROIS COURSES ... »
+        L.B.dialogue = null; L.B.cinema = null;
+        if (L.B.mission) L.B.mission.attend = null;
+        const taxi = (L.B.mission && L.B.mission.vehicule) || o.char('taxi', 0, 0, 0);
+        taxi.x = j.x; taxi.y = j.y; taxi.vitesse = 0;
+        L.Vehicules.monter(j, taxi);
+        o.tape('Space', 2);                         // klaxon : un client hele
+        const b = L.Missions.boulot;
+        if (b.client) { taxi.x = b.client.x + 10; taxi.y = b.client.y; j.x = taxi.x; j.y = taxi.y; }
+        o.frame(3);                                 // il monte : etape « route »
+        // ⚠️ La destination la PLUS LONGUE du jeu, et loin : c'est la ligne de
+        // boulot la plus large, la seule qui atteigne le texte centre. Un juge
+        // qui prend la premiere course venue ne reproduit rien.
+        const poste = L.Histoire.lieu('poste');
+        if (poste && b.etape === 'route') b.destination = { x: poste.x, y: poste.y, nom: poste.nom };
+        L.Jeu.rendre();
+        const ancres = L.Hud.ancres();
+        function trouver(n) { return ancres.find(function (a) { return a.nom === n; }) || null; }
+        return { ligne: L.Histoire.ligneObjectif(), etape: b.etape, ancres: ancres,
+                 objectif: trouver('objectif'), boulot: trouver('boulot') };
+    }""")
+    assert r["etape"] == "route", f"le taxi n'a pas de course : rien a chevaucher ({r['etape']})"
+    assert r["boulot"], "la ligne de boulot ne s'affiche plus"
+    assert r["objectif"], "la ligne d'objectif ne s'affiche plus"
+    o, b = r["objectif"], r["boulot"]
+    assert "COURSES" in r["ligne"], f"ce n'est pas l'objectif de la capture ({r['ligne']})"
+    assert o["x"] < b["x"] + b["l"] and b["x"] < o["x"] + o["l"], (
+        "les deux lignes ne se croisent meme plus en largeur : le juge ne prouve plus rien "
+        f"(objectif {o}, boulot {b})")
+    for autre in r["ancres"]:
+        if autre["nom"] == "objectif":
+            continue
+        chevauche = (o["x"] < autre["x"] + autre["l"] and autre["x"] < o["x"] + o["l"]
+                     and o["y"] < autre["y"] + autre["h"] and autre["y"] < o["y"] + o["h"])
+        assert not chevauche, f"la ligne d'objectif passe sur « {autre['nom']} » : {o} / {autre}"
+
+
 def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):
     """⚠️ Le dore #e8b33c est deja celui de l'argent et de « ce qui est a toi »
     sur la carte. Deux choses differentes de la meme couleur dans le meme coin

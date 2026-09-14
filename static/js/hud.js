@@ -1112,18 +1112,27 @@ const Hud = (function () {
         B.stats.rects++;
       }
       noter('vie', 6, 6, 60, 10);
+      // La ligne de boulot rend sa boite : la ligne d'objectif, centree, doit
+      // savoir ou elle passe pour ne pas lui rentrer dedans.
+      let boiteBoulot = null;
       if (v) {
         const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);
         texte(ctx, kmh + ' KM/H', 70, 8, '#efe6d0', 1);
         // ⚠️ La ligne dit QUEL boulot : a quatre, « TAXI » en tete d'une
         // livraison de pizza ne veut plus rien dire.
         const nomBoulot = Missions.boulot.fiche() ? Missions.boulot.fiche().nom.toUpperCase() : '';
+        let ligneBoulot = null;
         if (Missions.boulot.etape === 'route' && Missions.boulot.destination) {
           const d = Missions.boulot.destination;
           const dist = Math.round(Math.hypot(d.x - v.x, d.y - v.y) / TT);
-          texte(ctx, nomBoulot + ' : ' + d.nom.toUpperCase() + ' ' + dist + 'M', 70, 16, '#e8b33c', 1);
+          ligneBoulot = nomBoulot + ' : ' + d.nom.toUpperCase() + ' ' + dist + 'M';
         } else if (Missions.boulot.etape === 'ramasse') {
-          texte(ctx, nomBoulot + ' : QUELQU’UN ATTEND', 70, 16, '#e8b33c', 1);
+          ligneBoulot = nomBoulot + ' : QUELQU’UN ATTEND';
+        }
+        if (ligneBoulot) {
+          texte(ctx, ligneBoulot, 70, 16, '#e8b33c', 1);
+          boiteBoulot = { x: 70, y: 16, l: Atlas.largeurTexte(ligneBoulot, 1), h: 7 };
+          noter('boulot', boiteBoulot.x, boiteBoulot.y, boiteBoulot.l, boiteBoulot.h);
         }
       }
       if (!B.interieur) miniCarte(ctx);
@@ -1135,7 +1144,8 @@ const Hud = (function () {
       const argent = p.argent.toLocaleString('fr-CA') + ' $';
       const largeurArgent = Atlas.largeurTexte(argent, 2);
       texte(ctx, argent, VW - marge - largeurArgent, 6, '#e8b33c', 2);
-      noter('argent', VW - marge - largeurArgent, 6, largeurArgent, 10);
+      const boiteArgent = { x: VW - marge - largeurArgent, y: 6, l: largeurArgent, h: 10 };
+      noter('argent', boiteArgent.x, boiteArgent.y, boiteArgent.l, boiteArgent.h);
       // ⚠️ Les etoiles ont quitte cette colonne pour le HAUT AU CENTRE : en
       // poursuite, c'est L'information, et elle etait deux fois plus petite
       // que le montant d'argent juste au-dessus.
@@ -1143,7 +1153,8 @@ const Hud = (function () {
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
       texte(ctx, heure, VW - marge - largeurHeure, 20, '#cdc6e6', 1);
-      noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 7);
+      const boiteHeure = { x: VW - marge - largeurHeure, y: 20, l: largeurHeure, h: 7 };
+      noter('heure', boiteHeure.x, boiteHeure.y, boiteHeure.l, boiteHeure.h);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;
       if (!B.interieur) noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
@@ -1175,11 +1186,24 @@ const Hud = (function () {
       const ligne = !B.interieur ? Histoire.ligneObjectif() : null;
       if (ligne) {
         const l = Atlas.largeurTexte(ligne, 1);
-        // ⚠️ Sous les etoiles, jamais dessus : les deux se disputaient le haut
-        // au centre, et c'est le niveau de recherche qui doit gagner.
-        const y = boiteEtoiles.y + boiteEtoiles.h + 2;
-        texte(ctx, ligne, (VW - l) / 2, y, B.defi ? '#7fc4ff' : '#e8b33c', 1);
-        noter('objectif', (VW - l) / 2, y, l, 7);
+        const x = (VW - l) / 2;
+        /* ⚠️ Elle passe SOUS tout ce qu'elle croise dans le bandeau du haut,
+           jamais dessus — c'est elle qui cede, toujours. Sous les etoiles
+           d'abord : les deux se disputaient le haut au centre, et c'est le
+           niveau de recherche qui doit gagner. Sous la ligne de boulot ensuite,
+           et c'est le vrai piege : centree, une phrase de soixante-dix
+           caracteres (« FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 »)
+           remonte jusque sous le compteur de vitesse et retombait PILE sur
+           « COURSE : POSTE DE POLICE 120M » — deux textes dores imbriques a un
+           pixel pres, et plus personne ne lisait ni l'un ni l'autre. Une seule
+           regle pour les quatre boites : celle qu'on chevauche en largeur nous
+           pousse d'une rangee vers le bas. */
+        let y = 6;
+        [boiteEtoiles, boiteBoulot, boiteArgent, boiteHeure].forEach(function (b) {
+          if (b && x < b.x + b.l && x + l > b.x) y = Math.max(y, b.y + b.h + 2);
+        });
+        texte(ctx, ligne, x, y, B.defi ? '#7fc4ff' : '#e8b33c', 1);
+        noter('objectif', x, y, l, 7);
       }
       const gps = !B.interieur && j ? Histoire.cible() : null;
       if (gps) {
