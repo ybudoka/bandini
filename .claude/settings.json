@@ -1,0 +1,30 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r '(.tool_response.filePath // .tool_input.file_path) // empty'); [ -n \"$f\" ] || exit 0; r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_carte_du_depot.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --fichier \"$f\" 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "timeout": 15,
+            "statusMessage": "Garde « la carte du dépôt est-elle à jour ? »…"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_carte_du_depot.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "timeout": 15,
+            "statusMessage": "Garde « ce commit emporte-t-il la carte du dépôt ? »…"
+          }
+        ]
+      }
+    ]
+  }
+}
