@@ -4594,3 +4594,145 @@ def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):
     bloc = source[source.index("const ETOILE_ALLUMEE"):source.index("const ETOILE_L")]
     assert "#e8b33c" not in bloc, "l'etoile reprend le dore de l'argent"
     assert "ETOILE_FLASH" in source, "le clignotement rouge du changement de palier a disparu"
+
+
+def test_un_char_pris_dans_un_mur_en_ressort_toujours(banc, paquet):
+    """⚠️ Le garde-fou de Martin (« que mon véhicule ne coince plus dans un mur
+    ou un objet »). `avancer` teste les tuiles AVANT chaque pas, mais rien ne
+    regardait où le char EST — et trois choses l'y mettent : un autre char qui
+    le pousse (`heurterVehicules` ne lit pas les tuiles), un pivot sur place
+    contre une façade (la chaîne de cercles tourne DANS le mur), une retombée
+    de saut (en l'air, les tuiles ne comptent pas). Une fois dedans, chaque
+    direction est bloquée, même celle qui sort.
+
+    Le juge tient les trois moitiés de la règle : un char enfoncé de quelques
+    pixels est POUSSÉ dehors, de juste ce qu'il faut et sans changer de cap ;
+    un char au milieu d'un toit est POSÉ à la place libre la plus proche, à
+    portée, et repart de l'arrêt ; un char libre — ou en l'air — n'est pas
+    touché. Puis la preuve que ça sert : un char laissé dans une façade ROULE
+    à l'image suivante, sans même compter un choc, là où il restait pris pour
+    toujours. Et le tout passe aussi par `maj()`, pour un char à l'arrêt que
+    personne ne conduit."""
+    ph = paquet["conduite"]["physique"]
+    r = banc(r"""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, TT = L.TT;
+        const out = {};
+
+        function nettoyer() {
+            L.B.entites = L.B.entites.filter(function (e) { return e.type === 'joueur'; });
+            L.Entites.reindexerDecor(); L.Entites.indexer();
+        }
+        // Une façade (solide 1) qui court sur cinq tuiles, avec trois rangs
+        // libres au nord sur la même largeur : de quoi coucher un char le long.
+        function facadeAuSud() {
+            for (let ty = 4; ty < c.h - 4; ty++) for (let tx = 4; tx < c.w - 4; tx++) {
+                let bon = true;
+                for (let dx = -2; dx <= 2 && bon; dx++) {
+                    if (L.Monde.solidite(tx + dx, ty) !== 1) bon = false;
+                    for (let dy = 1; dy <= 3; dy++) if (L.Monde.solidite(tx + dx, ty - dy) !== 0) bon = false;
+                }
+                if (bon) return [tx, ty];
+            }
+            return null;
+        }
+        // Une tuile qui bloque, entourée de tuiles qui bloquent sur deux rangs : le milieu d'un toit.
+        function milieuDuToit() {
+            for (let ty = 4; ty < c.h - 4; ty++) for (let tx = 4; tx < c.w - 4; tx++) {
+                let plein = true;
+                for (let dy = -2; dy <= 2 && plein; dy++) for (let dx = -2; dx <= 2; dx++) {
+                    if (!L.Monde.bloque(tx + dx, ty + dy, L.Monde.MASQUE_VEHICULE)) plein = false;
+                }
+                if (plein) return [tx, ty];
+            }
+            return null;
+        }
+        function bloque(v) { return L.Vehicules.bloqueParLesTuiles(v, v.x, v.y); }
+        function arrondi(x) { return Math.round(x * 100) / 100; }
+
+        const mur = facadeAuSud();
+        out.mur = mur;
+        if (mur) {
+            const tx = mur[0], ty = mur[1];
+            const xMur = tx * TT + 8, yLibre = function (v) { return ty * TT - v.r - 1; };
+            nettoyer();
+            const v = L.Vehicules.creer('auto', xMur, 0, 0, { etat: 'stationne' });
+
+            // 1. Enfoncé de 4 px dans la façade, couché le long : poussé de 4 px, pas plus.
+            v.y = ty * TT - v.r + 4;
+            const bloqueAvant = bloque(v);
+            const bouge = L.Vehicules.degager(v);
+            out.pousse = { bloqueAvant: bloqueAvant, bouge: bouge, bloqueApres: bloque(v),
+                           dx: arrondi(v.x - xMur), dy: arrondi(v.y - (ty * TT - v.r + 4)), angle: v.angle };
+
+            // 2. Libre le long du mur, puis pivoté de 30° : un bout entre dans le mur.
+            //    Poussé dehors, il garde son cap — c'est ça, pivoter contre un mur.
+            v.x = xMur; v.y = yLibre(v); v.angle = 0;
+            L.Vehicules.degager(v);
+            const libreAvant = !bloque(v);
+            v.angle = Math.PI / 6;
+            const bloqueTourne = bloque(v);
+            const bouge2 = L.Vehicules.degager(v);
+            out.pivote = { libreAvant: libreAvant, bloqueTourne: bloqueTourne, bouge: bouge2, bloqueApres: bloque(v),
+                           angle: arrondi(v.angle), deplace: arrondi(Math.hypot(v.x - xMur, v.y - yLibre(v))) };
+
+            // 3. Libre : pas touché. Dans le mur mais en l'air : pas touché non plus.
+            v.x = xMur; v.y = yLibre(v); v.angle = 0;
+            out.libre = { bouge: L.Vehicules.degager(v), meme: v.x === xMur && v.y === yLibre(v) };
+            v.y = ty * TT - v.r + 4; v.z = 10;
+            out.enLAir = { bouge: L.Vehicules.degager(v), meme: v.y === ty * TT - v.r + 4 };
+            v.z = 0;
+
+            // 4. La preuve : laissé dans la façade avec de l'élan le long du mur,
+            //    il roule. Sans garde-fou, chaque pas était refusé — il restait là.
+            v.x = xMur; v.y = ty * TT - v.r + 4; v.angle = 0; v.chocs = 0;
+            v.vitesse = 2; v.vx = 2; v.vy = 0;
+            for (let i = 0; i < 10; i++) { L.Vehicules.avancer(v); v.vx = 2; v.vy = 0; }
+            out.roule = { dx: arrondi(v.x - xMur), chocs: v.chocs, bloque: bloque(v) };
+
+            // 5. Par `maj()` : à l'arrêt, sans conducteur, poussé dans le mur par
+            //    quelqu'un — à l'image suivante, il n'y est plus.
+            v.x = xMur; v.y = ty * TT - v.r + 4; v.angle = 0; v.vitesse = 0; v.vx = 0; v.vy = 0;
+            L.B.joueur.x = xMur; L.B.joueur.y = (ty - 3) * TT;
+            L.Vehicules.maj();
+            out.parMaj = { bloque: bloque(v), dy: arrondi(v.y - (ty * TT - v.r + 4)) };
+            L.Entites.retirer(v);
+        }
+
+        const toit = milieuDuToit();
+        out.toit = toit;
+        if (toit) {
+            nettoyer();
+            const x0 = toit[0] * TT + 8, y0 = toit[1] * TT + 8;
+            const v = L.Vehicules.creer('auto', x0, y0, 0.3, { etat: 'stationne' });
+            v.vitesse = 3; v.vx = 3; v.vy = 0.5;
+            const bloqueAvant = bloque(v);
+            const bouge = L.Vehicules.degager(v);
+            out.pose = { bloqueAvant: bloqueAvant, bouge: bouge, bloqueApres: bloque(v),
+                         deplace: arrondi(Math.hypot(v.x - x0, v.y - y0)), vitesse: v.vitesse, vx: v.vx, vy: v.vy,
+                         degagements: v.degagements || 0 };
+            L.Entites.retirer(v);
+        }
+        return out;
+    }""")
+    assert r["mur"], "aucune façade dégagée trouvée dans la ville"
+    p = r["pousse"]
+    assert p["bloqueAvant"] is True and p["bouge"] is True and p["bloqueApres"] is False, p
+    assert p["dx"] == 0 and -5 <= p["dy"] <= -4, "poussé de %s px pour 4 px d'enfoncement" % p["dy"]
+    assert p["angle"] == 0
+    q = r["pivote"]
+    assert q["libreAvant"] is True and q["bloqueTourne"] is True, "le décor du juge a changé : %s" % q
+    assert q["bouge"] is True and q["bloqueApres"] is False, q
+    assert q["angle"] == round(3.14159265 / 6, 2), "pivoter contre un mur a changé le cap : %s" % q
+    assert 0 < q["deplace"] < 8, "poussé trop loin pour un pivot : %s" % q
+    assert r["libre"] == {"bouge": False, "meme": True}, "un char libre a été déplacé"
+    assert r["enLAir"] == {"bouge": False, "meme": True}, "un char en l'air a été dégagé"
+    m = r["roule"]
+    assert m["dx"] >= 15 and m["chocs"] == 0 and m["bloque"] is False, "laissé dans la façade, il ne roule pas : %s" % m
+    assert r["parMaj"]["bloque"] is False and r["parMaj"]["dy"] < 0, "`maj()` laisse un char à l'arrêt dans le mur : %s" % r["parMaj"]
+    assert r["toit"], "aucun toit assez large trouvé"
+    t = r["pose"]
+    assert t["bloqueAvant"] is True and t["bouge"] is True and t["bloqueApres"] is False, t
+    assert 0 < t["deplace"] <= ph["degagement_px"] + 1, "posé hors de portée : %s" % t
+    assert t["vitesse"] == 0 and t["vx"] == 0 and t["vy"] == 0, "un char posé garde son élan : %s" % t
+    assert t["degagements"] == 1

@@ -250,6 +250,20 @@ PHYSIQUE = {
     "crochet_portee_px": 46,
     "crochet_cable_px": 30,
     "crochet_raideur": 0.35,
+    # ⚠️ LE GARDE-FOU (demande de Martin : « que mon vehicule ne coince plus
+    # dans un mur ou un objet »). Le deplacement teste les tuiles AVANT chaque
+    # pas, mais rien ne regardait ou le char EST : pousse par un autre char,
+    # tourne sur place contre une facade, ou retombe d'un saut, il se retrouve
+    # DANS le mur — et de la, chaque direction est bloquee, meme celle qui
+    # sort. A chaque image, un char enfonce est POUSSE hors des tuiles qu'il
+    # chevauche ; si ca ne suffit pas (un coin, une ruelle plus etroite que
+    # lui, le milieu d'un toit), il est POSE a la place libre la plus proche,
+    # cherchee par anneaux de `degagement_pas_px` jusqu'a `degagement_px`.
+    # Au-dela, on ne cherche plus : six tuiles couvrent n'importe quel mur de
+    # la ville, et un char pose plus loin ne serait plus « degage », il serait
+    # teleporte.
+    "degagement_px": 96,
+    "degagement_pas_px": 2,
 }
 
 

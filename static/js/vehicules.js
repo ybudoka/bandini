@@ -226,10 +226,11 @@ const Vehicules = (function () {
     return true;
   }
 
-  /** Un des cercles touche-t-il une tuile qui bloque un char ? (en l'air : non) */
-  function bloqueParLesTuiles(v, x, y) {
+  /** Un des cercles touche-t-il une tuile qui bloque un char ? (en l'air : non)
+      `angle` : pour essayer un autre cap sans le donner au char. */
+  function bloqueParLesTuiles(v, x, y, angle) {
     if (v.z > 6) return false;
-    for (const c of cercles(v, x, y)) {
+    for (const c of cercles(v, x, y, angle)) {
       const tx0 = Math.floor((c.x - c.r) / TT), tx1 = Math.floor((c.x + c.r) / TT);
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
@@ -239,6 +240,116 @@ const Vehicules = (function () {
       }
     }
     return false;
+  }
+
+  // --- Le garde-fou : jamais pris dans un mur --------------------------------------
+
+  /** De combien pousser le char pour sortir des tuiles qu'il chevauche : pour
+      chaque cercle et chaque tuile, la sortie la plus courte ; par axe et par
+      sens, on garde la plus longue. Nul si rien ne chevauche.
+
+      ⚠️ Le MEME test que `bloqueParLesTuiles` — la boite du cercle contre la
+      tuile, pas le cercle lui-meme. Sinon le garde-fou dirait « libre » la ou
+      `avancer` dit « bloque », et c'est exactement l'ecart dans lequel un char
+      reste pris. Un chevauchement de zero compte (le `floor` range la tuile
+      touchee parmi celles qu'on teste), d'ou le cheveu ajoute a chaque sortie.
+
+      ⚠️ La plus longue, pas la somme : trois cercles enfonces de 4 px dans la
+      meme facade demandent 4 px, pas 12 — la somme faisait sauter le char de
+      huit pixels de trop. */
+  function pousseeHorsDesTuiles(v, x, y) {
+    let xNeg = 0, xPos = 0, yNeg = 0, yPos = 0;
+    for (const c of cercles(v, x, y)) {
+      const tx0 = Math.floor((c.x - c.r) / TT), tx1 = Math.floor((c.x + c.r) / TT);
+      const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
+      for (let ty = ty0; ty <= ty1; ty++) {
+        for (let tx = tx0; tx <= tx1; tx++) {
+          if (!Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE)) continue;
+          const gauche = c.x + c.r - tx * TT, droite = (tx + 1) * TT - (c.x - c.r);
+          const haut = c.y + c.r - ty * TT, bas = (ty + 1) * TT - (c.y - c.r);
+          const versGauche = gauche < droite, versLeHaut = haut < bas;
+          const sx = versGauche ? -(gauche + 0.01) : droite + 0.01;
+          const sy = versLeHaut ? -(haut + 0.01) : bas + 0.01;
+          if (Math.abs(sx) <= Math.abs(sy)) {
+            if (versGauche) xNeg = Math.min(xNeg, sx); else xPos = Math.max(xPos, sx);
+          } else if (versLeHaut) yNeg = Math.min(yNeg, sy); else yPos = Math.max(yPos, sy);
+        }
+      }
+    }
+    return { x: xPos + xNeg, y: yPos + yNeg };
+  }
+
+  /** ⚠️ LE GARDE-FOU (demande de Martin : « mets un garde-fou pour eviter que
+      mon vehicule coince dans un mur ou un objet »).
+
+      `avancer` teste les tuiles AVANT chaque pas ; rien ne regardait ou le
+      char EST. Or trois choses l'y mettent : un autre char qui le pousse
+      (`heurterVehicules` deplace sans lire les tuiles), tourner sur place
+      contre une facade (la chaine de cercles pivote DANS le mur), et retomber
+      d'un saut (en l'air, `bloqueParLesTuiles` dit non). Une fois dedans,
+      CHAQUE direction est bloquee — meme celle qui sort — et il ne reste
+      qu'a descendre du char. « Un objet », c'est pareil : borne-fontaine,
+      cloture, meuble, tout ce que `MASQUE_VEHICULE` arrete.
+
+      D'abord on POUSSE : ce que les tuiles enfoncent, quelques fois de suite.
+      C'est ce qui fait qu'un char qui pivote contre un mur glisse le long au
+      lieu d'y entrer. Si ca ne suffit pas (un coin, une ruelle plus etroite
+      que lui, le milieu d'un toit), on le POSE a la place libre la plus
+      proche, par anneaux jusqu'a `degagement_px` — a son cap, sinon au
+      dernier cap ou il etait libre, sinon droit dans l'axe. Un char pose
+      repart de l'arret : son elan est ce qui l'a mis la. Et si meme ca ne
+      trouve rien, on n'y revient pas avant une demi-seconde : la recherche
+      est chere, et le mur ne bougera pas d'ici la.
+
+      ⚠️ Pas pour le trafic sur ses rails : il ne lit pas les tuiles, il suit
+      sa voie, et il a son propre chien de garde (`debloquer`). Rend vrai si
+      le char a bouge. */
+  function degager(v) {
+    if (v.z > 6) return false;                          // en l'air : on verra a l'atterrissage
+    if (!bloqueParLesTuiles(v, v.x, v.y)) { v.angleLibre = v.angle; return false; }
+    const ph = physique();
+    const x0 = v.x, y0 = v.y;
+    for (let i = 0; i < 6; i++) {
+      const p = pousseeHorsDesTuiles(v, v.x, v.y);
+      const n = Math.hypot(p.x, p.y);
+      if (n < 0.001) break;
+      const k = Math.min(1, TT / n);                    // jamais plus d'une tuile d'un coup
+      v.x += p.x * k; v.y += p.y * k;
+      if (!bloqueParLesTuiles(v, v.x, v.y)) return degage(v, x0, y0, false);
+    }
+    v.x = x0; v.y = y0;
+    if (v.degagementEchecT && B.t - v.degagementEchecT < 30) return false;
+    const caps = [v.angle];
+    if (v.angleLibre !== undefined && Math.abs(ecartAngle(v.angle, v.angleLibre)) > 0.01) caps.push(v.angleLibre);
+    const droit = Math.round(v.angle / (Math.PI / 2)) * (Math.PI / 2);
+    if (caps.every(function (a) { return Math.abs(ecartAngle(a, droit)) > 0.01; })) caps.push(droit);
+    const pas = ph.degagement_pas_px;
+    for (let r = 0; r <= ph.degagement_px; r += pas) {
+      const n = r === 0 ? 1 : Math.min(32, Math.max(8, Math.round(2 * Math.PI * r / pas)));
+      for (const a of caps) {
+        for (let i = 0; i < n; i++) {
+          const t = 2 * Math.PI * i / n;
+          const x = x0 + Math.cos(t) * r, y = y0 + Math.sin(t) * r;
+          if (bloqueParLesTuiles(v, x, y, a)) continue;
+          v.x = x; v.y = y; v.angle = a;
+          return degage(v, x0, y0, true);
+        }
+      }
+    }
+    v.degagementEchecT = B.t;
+    return false;
+  }
+
+  function degage(v, x0, y0, pose) {
+    v.angleLibre = v.angle;
+    v.degagements = (v.degagements || 0) + 1;
+    if (pose) {
+      v.vitesse = 0; v.vx = 0; v.vy = 0;
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('[garde-fou] ' + v.slug + '#' + v.id + ' pose a ' + Math.round(Math.hypot(v.x - x0, v.y - y0)) + ' px de la');
+      }
+    }
+    return true;
   }
 
   // --- Physique -------------------------------------------------------------------
@@ -273,6 +384,7 @@ const Vehicules = (function () {
   /** Le deplacement, decoupe en sous-pas, avec les tuiles, les chars, les gens. */
   function avancer(v) {
     const ph = physique();
+    degager(v);                                         // le garde-fou : on part d'une place libre
     const vitesse = Math.hypot(v.vx, v.vy);
     const n = Math.max(1, Math.ceil(vitesse / ph.sous_pas_px));
     const px = v.vx / n, py = v.vy / n;
@@ -1240,7 +1352,7 @@ const Vehicules = (function () {
         heurterPietons(v);
         if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
-      else { heurterPietons(v); }
+      else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
     }
     peupler();
@@ -1436,7 +1548,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

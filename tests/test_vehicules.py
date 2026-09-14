@@ -287,3 +287,16 @@ def test_le_velo_a_une_sonnette_et_les_autres_un_klaxon():
     par_slug = {v["slug"]: v for v in vehicules.CATALOGUE}
     assert par_slug["velo"]["klaxon"] == "sonnette"
     assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] != "velo")
+
+
+def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
+    """⚠️ Le degagement d'un char pris dans un mur cherche une place libre par
+    anneaux. Le pas ne doit pas depasser le sous-pas du deplacement, sinon il
+    saute par-dessus la seule bande libre d'une ruelle ; et la portee doit
+    couvrir au moins le char le plus long, sinon un autobus retombe d'un saut
+    au milieu d'un toit y reste. Mais pas plus de huit tuiles : au-dela, ce
+    n'est plus un degagement, c'est une teleportation."""
+    ph = vehicules.PHYSIQUE
+    plus_long = max(v["longueur"] for v in vehicules.de_phase(1))
+    assert 0 < ph["degagement_pas_px"] <= ph["sous_pas_px"]
+    assert plus_long <= ph["degagement_px"] <= 8 * 16
