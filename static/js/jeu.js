@@ -161,6 +161,10 @@ const Jeu = (function () {
     // est plus laid qu'une porte qui ne s'ouvre pas.
     const interieurs = (Monde.carte.def && Monde.carte.def.interieurs) || {};
     if (!interieurs[porte.interieur]) return false;
+    // ⚠️ Elle s'ouvre AVANT le fondu, pas au noir : la premiere moitie du
+    // fondu se joue sur la rue, et c'est la — et seulement la — qu'on peut
+    // voir le battant bouger. Au noir, il n'y aurait rien a voir.
+    Monde.ouvrirPorte(porte.x, porte.y);
     transiter(FONDU_ENTREE, function () {
       const piece = Monde.entrer(porte);
       if (!piece) return;
@@ -232,6 +236,10 @@ const Jeu = (function () {
       // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
       j.x = ext.x; j.y = ext.y;
       poserDansLaPorte(j, 'bas');
+      // ⚠️ La porte de la RUE s'ouvre ici, une fois `Monde.restaurer` fait :
+      // avant, `Monde.carte` est encore la piece, et ses battants ne sont pas
+      // ceux de la ville. On la trouve juste au-dessus du pas de porte.
+      Monde.ouvrirPorte(Math.floor(ext.x / TT), Math.floor(ext.y / TT) - 1);
       Son.SFX.porte(genre);
     });
     return true;
@@ -324,6 +332,12 @@ const Jeu = (function () {
       // continuait : on pouvait sortir d'une piece et se faire renverser par un
       // char qu'on n'a pas vu venir, sur un ecran noir ou l'on ne controle rien.
       // Un menu fige deja tout (`if (B.menu) return`) ; une porte fait pareil.
+      // ⚠️ SAUF les battants : c'est justement pendant le fondu qu'on doit VOIR
+      // la porte s'ouvrir. Figes avec le reste, ils resteraient au premier
+      // pixel — et le joueur traverserait une porte fermee, ce que Martin a vu.
+      // C'est la seule chose qui bouge quand tout le reste est arrete, et elle
+      // ne touche a rien d'autre qu'a son propre compteur.
+      Monde.majBattants();
       majTransition();
       Entree.videPresse();
       return;

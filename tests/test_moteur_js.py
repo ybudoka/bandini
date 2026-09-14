@@ -1129,6 +1129,57 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
 
 
+def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
+    """⚠️ Retour de Martin : « les portes doivent ouvrir quand j'entre aussi. »
+    Elles s'ouvraient pour les piétons et **pas pour lui** — il traversait un
+    battant fermé, et c'était d'autant plus voyant que les passants, eux,
+    attendaient poliment l'ouverture.
+
+    ⚠️ Et le piège est dans l'ordre : le jeu est **figé** pendant un fondu de
+    porte (`maj()` ne fait avancer que la transition). Un battant ouvert au
+    départ y resterait donc au premier pixel, et la porte serait toujours
+    fermée à l'écran. Les battants doivent battre **pendant** la transition —
+    c'est la seule chose qui bouge quand tout le reste est arrêté."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Monde.centrerCamera(j.x, j.y);
+        // 1. On entre : le battant doit s'ouvrir PENDANT que la rue est encore
+        //    visible, c'est-a-dire dans la premiere moitie du fondu.
+        L.Jeu.entrer(porte);
+        const ouvertures = [];
+        for (let i = 0; i < 60 && L.B.transition; i++) {
+            const tr = L.B.transition;
+            const alpha = tr.t <= tr.ferme ? tr.t / tr.ferme : 0;
+            ouvertures.push({ a: Math.round(alpha * 100) / 100, p: L.Monde.battant(porte.x, porte.y) });
+            o.frame(1);
+        }
+        // Sur la rue (avant le noir), a-t-on vu la porte bouger ?
+        const surLaRue = ouvertures.filter(function (q) { return q.a < 1; });
+        const out = { dedans: !!L.B.interieur,
+                      vueSurLaRue: Math.max.apply(null, surLaRue.map(function (q) { return q.p; })) };
+        // 2. On ressort : la porte de la RUE doit s'ouvrir, pas celle de la piece.
+        L.Jeu.sortir();
+        o.fondu();
+        out.sortie = L.Monde.battant(porte.x, porte.y);
+        out.dehors = L.B.interieur === null;
+        // 3. Et elle se referme toute seule.
+        o.frame(60);
+        out.refermee = L.Monde.battant(porte.x, porte.y);
+        return out;
+    }""")
+    assert r["dedans"] is True and r["dehors"] is True, "l'aller-retour par la porte n'a pas marché"
+    # ⚠️ Sur la rue, pendant que le fondu noircit : c'est là qu'on peut la voir.
+    assert r["vueSurLaRue"] > 0.5, (
+        "la porte n'a pas bougé pendant qu'on voyait encore la rue (%s) : le joueur traverse un battant fermé"
+        % r["vueSurLaRue"]
+    )
+    assert r["sortie"] > 0.5, "en ressortant, la porte de la rue doit être ouverte : %s" % r["sortie"]
+    assert r["refermee"] == 0, "la porte reste ouverte derrière le joueur : %s" % r["refermee"]
+
+
 def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
     """⚠️ Demande de Martin : « les piétons devraient aussi sortir et entrer dans
     les commerces. Profites-en pour aussi faire ouvrir concrètement les
