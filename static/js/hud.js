@@ -564,11 +564,31 @@ const Hud = (function () {
              retour: function () { ouvrirMenu(menuCarnet()); } };
   }
 
+  /** Le lieu d'un personnage, en francais : « porte:terminus » est une adresse
+      de code, pas une indication. */
+  function ouDuPersonnage(q) {
+    if (!q || !q.ou) return null;
+    const bout = String(q.ou).split(':');
+    if (bout.length < 2) return null;
+    if (bout[0] === 'porte') {
+      const ville = Monde.carte.ville || Monde.carte;
+      const pt = (ville.points || []).find(function (x) { return x.slug === bout[1]; });
+      return pt ? pt.nom : bout[1];
+    }
+    // Un point de piece : c'est la PIECE qui le situe.
+    const piece = Histoire.pieceDuPoint(bout[1]);
+    return piece ? piece.nom : bout[1];
+  }
+
   /** La fiche d'un personnage : son visage, ou il se tient, ce qu'il a dit. */
   function menuCarnetFiche(slug) {
     const p = B.partie, q = Histoire.personnage(slug);
     const items = [ligne('RENCONTRÉ', 'JOUR ' + (p.connus[slug] || '?'))];
-    if (q && q.ou) items.push(ligne('ON LE TROUVE', String(q.ou).toUpperCase()));
+    // ⚠️ `ou` vaut « porte:terminus » ou « point:sergent » — une adresse de
+    // code. On la traduit par le NOM du lieu, sinon la fiche dit au joueur
+    // d'aller a « PORTE:TERMINUS ».
+    const ou = ouDuPersonnage(q);
+    if (ou) items.push(ligne('ON LE TROUVE', ou.toUpperCase()));
     // Les missions qu'il a données, et ce qu'on en a fait.
     const siennes = (B.defs.missions || []).filter(function (m) { return m.donneur === slug; });
     siennes.forEach(function (m) {

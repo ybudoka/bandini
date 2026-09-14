@@ -2621,8 +2621,10 @@ def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
         const faux = { imageSmoothingEnabled: false, drawImage: function () { dessine++; },
                        fillRect: function () {}, fillStyle: '' };
         fiche.dessiner(faux, 0, 0, 320, 200);
+        const ligneOu = fiche.items.find(function (i) { return i.libelle === 'ON LE TROUVE'; });
         return { neuve: neuve, un: un, deux: deux, connus: connus, tous: tous,
-                 titre: fiche.titre, dessine: dessine,
+                 titre: fiche.titre, dessine: dessine, ou: ligneOu && ligneOu.detail,
+                 lieux: (L.Monde.carte.points || []).map(function (x) { return x.nom.toUpperCase(); }),
                  fiches: fiche.items.map(function (i) { return i.libelle; }) };
     }""")
     assert [x for x in r["neuve"] if x != "RETOUR"] == ["TU N’AS ENCORE PARLÉ À PERSONNE"], (
@@ -2634,6 +2636,10 @@ def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
     assert len([x for x in r["un"] if x != "RETOUR"]) == 1, "le repertoire montre quelqu'un d'autre : %s" % r["un"]
     assert r["titre"] == "TI-GUY" and r["dessine"] == 1, "la fiche doit dessiner son visage : %s" % r
     assert any("RENCONTRÉ" in x for x in r["fiches"])
+    # ⚠️ « porte:terminus » est une adresse de CODE : la fiche doit dire le nom
+    # du lieu, sinon elle envoie le joueur a « PORTE:TERMINUS ».
+    assert ":" not in (r["ou"] or ""), "la fiche donne une adresse de code : %s" % r["ou"]
+    assert r["ou"] and r["ou"] in r["lieux"], "le lieu de la fiche n'existe pas sur la carte : %s" % r["ou"]
 
 
 def test_la_fourriere_paie_les_epaves_qu_on_lui_amene_au_crochet(banc, paquet):
