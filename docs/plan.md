@@ -90,10 +90,10 @@ ne bougent pas quand l'ordre de travail change.
 | La dépanneuse lève les roues | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme ». C'était une **corde** : le char roulait à plat au bout d'un élastique, pointé **vers** elle, et le lien lâchait quand on l'étirait. Maintenant une **fourche** — écart fixe, **dans l'axe**, avant **levé de deux pixels** (l'ombre restée au sol, sans un seul cap de sprite en plus) — et un **plateau** pour ce que `vehicules.py` déclare `plateau` (la moto, le vélo) : elles montent **en entier**, ne heurtent plus rien, et se peignent **après** la remorqueuse. ⚠️ La remorqueuse **refuse d'avancer** là où sa charge ne passe pas (sans le garde-fou, elle reculait de 22 px dans la façade), et on **ne monte plus** dans un char remorqué. 2 juges neufs, 2 réécrits |
 | Le taxi de Marco n'est pas à vendre | **P1** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco ». Le garage de Ti-Guy achète **n'importe quel char garé devant sa porte**, et M3 pose le taxi à `porte:garage` — cette porte-là. Vendu, il sort du monde, et ⚠️ **la mission ne rate même pas** (`monter` et `livrer` n'échouent que sur une **épave**) : elle reste prise, le téléphone ne sonne plus jamais. `aQui` — le contraire de `aToi` — dit à qui est le char, vient de la fiche (`prete` dans `missions.py`) et **ne s'efface jamais** : le taxi est à Marco avant, pendant et après. Le menu le dit au lieu de le cacher : « IL EST À MARCO ». 2 juges |
 | Des feux pour piétons | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existait (`traverseeSure`) mais **personne ne la voyait** — et ⚠️ elle **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engageaient pile quand les chars accélèrent pour vider le croisement, **240 images sur 960**. Maintenant `Monde.feuPieton()` rend **blanc / dégage / rouge**, le blanc ne croise ni le vert des chars ni l'orange, et il s'éteint **180 images avant** que les chars repartent (dégagement 120 + orange 60). **351 poteaux** posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par tuile — avec le **sens du passage** dans la fiche ; blanc fixe, orange **clignotant** au dégagement. ⚠️ **Sans feu (un T), on traverse quand c'est libre** : sinon un côté de rue entier devient un cul-de-sac pour la foule, et aucun juge existant ne le verrait. 2 juges neufs |
-| Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout, **en cours** (14 sept. 2026) | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **en cours** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, la ligne d'objectif de l'histoire (centrée, sous les étoiles) et la ligne de boulot (`COURSE : POSTE DE POLICE 120M`, sous le compteur) tombent sur la **même rangée** — deux textes dorés imbriqués, illisibles tous les deux |
+| Les feux s'allument pour vrai | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». Une ampoule allumée est de la **peinture** : `dessinerFeu` pose un carré vert, et le voile de nuit de `Base.fin` le **multiplie** comme un mur. À minuit, le vert (46, 204, 113) tombe à (16, 76, 57), et le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122) — **plus sombre qu'un trottoir de midi**. Le seul feu de la ville qui éclaire vraiment, c'est le lampadaire, parce que lui a une entrée dans `carte.lampes`. Chaque ampoule allumée doit en poser une, **de la couleur de sa phase** |
 | M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -3001,6 +3001,59 @@ en chemin.
   la carabine s'entend à douze tuiles dans le dos d'un agent, sans étoile ; le Molotov
   n'allume qu'un brasier, tue celui qui y reste avant qu'il s'éteigne, le signale comme une
   mort du joueur, et s'éteint.
+
+### Les feux s'allument pour vrai (**correctif**, taille 1) — **en cours** (14 sept. 2026)
+
+_Demande de Martin :_ « je veux que les feux de circulation et de piéton allument pour vrai. »
+
+Ils sont **peints**, pas allumés — et la nuit, ça se retourne contre eux. `Base.fin` compose la
+nuit en **multipliant** toute l'image par la teinte de l'heure, puis rajoute les lampes en
+`lighter` par-dessus. Un feu n'a aucune lampe : il ne reçoit donc que la multiplication, comme
+une brique. À minuit (teinte 26, 32, 80 à 0,72) :
+
+| ce qu'on peint | de jour | à minuit |
+|---|---|---|
+| le vert des chars | 46, 204, 113 | **16, 76, 57** |
+| le rouge des chars | 231, 76, 60 | **82, 28, 30** |
+| le blanc qui dit MARCHE | 242, 242, 242 | **86, 90, 122** |
+| le trottoir sous le poteau | 154, 150, 137 | 54, 56, 69 |
+
+⚠️ **Le blanc du feu piéton à minuit est plus sombre qu'un trottoir de midi** (luminance 92
+contre 150). Le seul objet de la ville qui éclaire pour vrai, c'est le **lampadaire** — et la
+seule raison, c'est qu'il a une entrée dans `carte.lampes`. Les feux n'en ont pas.
+
+- **Une ampoule allumée pose une lampe, de la couleur de sa phase.** Rouge, vert, orange, le
+  blanc du piéton : ce n'est pas un halo jaune de plus, c'est **la couleur de l'information**
+  qui se répand sur l'asphalte. C'est aussi ce qui fait qu'on lit un feu **de loin**, la nuit,
+  avant même de distinguer le poteau.
+- ⚠️ **Elles se ramassent EN DESSINANT, jamais en parcourant la ville.** `carte.lampes` est une
+  liste fixe qu'on peut balayer ; les feux sont **482 poteaux** (124 pour les chars, 358 pour
+  les piétons) dont la couleur change à chaque phase. Les parcourir par image pour trouver ceux
+  de l'écran serait payer la ville entière pour en éclairer trente. `dessinerFeu` est déjà
+  appelé **une fois par feu visible** — c'est là, et nulle part ailleurs, que la lampe se pose.
+- ⚠️ **Et elles se vident toutes seules.** Une liste qu'un dessin remplit et qu'un autre module
+  doit penser à vider finit par fuir le jour où quelqu'un dessine sans composer. Elle porte donc
+  son numéro d'image (`B.image`, l'horloge de l'œil) : à l'image suivante, elle est vide sans
+  que personne l'ait vidée.
+- **Le plafond de `Base.fin` doit monter.** Il est à 25 lampes, taillé pour les lampadaires
+  seuls. Un croisement, c'est 2 poteaux de chars (2 ampoules chacun) et jusqu'à 4 poteaux de
+  piétons : **8 lampes** — et il en tient plusieurs à l'écran. Sans un plafond plus haut, les
+  feux **éteindraient les lampadaires** au lieu de s'ajouter à eux.
+- **De jour, une ampoule doit aussi se lire comme allumée**, et ça ne se joue pas sur la
+  couleur : un carré vert plat est un carré vert. Ce qui dit « allumé », c'est un **cœur** plus
+  pâle que le pourtour — la convention du pixel art pour une source de lumière, et la seule qui
+  tienne dans trois pixels sur trois.
+- ⚠️ **Deux ampoules à cinq pixels l'une de l'autre mélangent leurs halos.** Le feu des chars
+  porte le nord-sud et l'est-ouest côte à côte : quand l'un est rouge et l'autre vert, la flaque
+  au sol tire vers le jaune. C'est ce que fait un vrai croisement vu de haut ; ce qui doit rester
+  **net**, c'est le cœur de chaque ampoule, donc les halos restent **petits**.
+- ⚠️ **Le seuil de la brune est celui de tout le monde** : sous `ambiance().alpha` 0,2, les
+  lampadaires ne s'allument pas et les feux non plus. Deux seuils voudraient dire deux règles
+  pour « il fait noir », et la deuxième serait fausse un jour.
+- **Juges** : à minuit, un feu au vert pose une lampe verte et un feu au rouge une lampe rouge —
+  la couleur **suit la phase** ; en plein jour, aucune lampe ; l'orange **clignotant** du piéton
+  n'éclaire pas pendant qu'il est éteint (sinon il clignote à l'œil et brille en continu au sol) ;
+  et le compte des lampes d'une image tient sous le plafond de `Base.fin`.
 
 ### M15 — La ville te parle (**ajout**, taille 4)
 
