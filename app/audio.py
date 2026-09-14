@@ -86,6 +86,66 @@ CATALOGUE: list[Echantillon] = [
        prompt="a short winded male grunt of pain after a punch to the ribs, "
               "breath forced out through the teeth, dry close-up, no words, "
               "no music"),
+    # ⚠️ Un son PAR ARME (`armes.py`, champ `son`). Jusqu'au 13 sept. 2026,
+    # tout jouait le coup de poing : la batte, le couteau, le pistolet et le
+    # fusil aussi. Une arme qu'on n'entend pas, on ne sait pas qu'on la tient.
+    # Le geste et l'impact sont dans le MEME echantillon (comme `coup`) : le
+    # son part au debut de la phase active, avant de savoir s'il touche.
+    _e("batte", "Coup de bâton", variantes=2, duree_s=0.9, volume=0.32,
+       prompt="a wooden baseball bat swung hard and striking a body, a quick "
+              "whoosh then a deep hollow wooden thwack, dry close-up, no reverb, "
+              "no voices, no music"),
+    _e("couteau", "Coup de couteau", variantes=2, duree_s=0.7, volume=0.26,
+       prompt="a fast knife slash cutting through a leather jacket, a short "
+              "sharp blade whoosh with a thin metallic ring, dry close-up, "
+              "no voices, no music"),
+    _e("pelle", "Coup de pelle", duree_s=1.0, volume=0.35,
+       prompt="a steel garden shovel swung hard and hitting a body flat, a "
+              "heavy whoosh then a bright ringing metal clang, dry close-up, "
+              "no voices, no music"),
+    _e("cone", "Coup de cône", duree_s=0.7, volume=0.24,
+       prompt="a hollow plastic traffic cone swung and striking a body, a light "
+              "whoosh then a dull hollow plastic whack, dry close-up, no voices, "
+              "no music"),
+    _e("bouteille", "Coup de bouteille", duree_s=0.8, volume=0.3,
+       prompt="a glass beer bottle swung and smashing against a body, a short "
+              "whoosh then a sharp glass clink and crack, dry close-up, "
+              "no voices, no music"),
+    _e("fronde", "Tir de fronde", duree_s=0.6, volume=0.22, influence=0.7,
+       prompt="a slingshot fired: a rubber band stretched and released with a "
+              "sharp elastic snap and a short whip of air, dry close-up, "
+              "no voices, no music"),
+    # ⚠️ Les armes a feu sont FORTES, et c'est voulu : un coup de feu qui
+    # sonne comme une claque, on ne comprend pas pourquoi la rue se vide.
+    _e("pistolet", "Coup de pistolet", variantes=2, duree_s=1.0, volume=0.7,
+       prompt="a single 9mm pistol gunshot on a city street at night, a sharp "
+              "loud crack with a short slap of echo off the buildings, "
+              "no voices, no music"),
+    _e("fusil", "Coup de fusil à pompe", variantes=2, duree_s=1.3, volume=0.85,
+       prompt="a single pump-action shotgun blast on a city street, a deep "
+              "heavy boom with a sharp crack, then the pump racked with a "
+              "metallic clack-clack, short echo off the buildings, no voices, "
+              "no music"),
+    # Le jet de l'extincteur tourne tant qu'on appuie : une boucle, comme le
+    # moteur, allumee et eteinte par `Son.SFX.jet(actif)` a chaque image.
+    _e("extincteur", "Jet d'extincteur", duree_s=2.0, volume=0.35, boucle=True,
+       prompt="a dry chemical fire extinguisher spraying continuously, a loud "
+              "hissing rush of pressurized powder, steady, seamless loop, "
+              "no voices, no music"),
+    # Trois sons AUTOUR des armes : la gachette a vide (c'etait le buzzer des
+    # menus — on croyait le bouton casse), l'arme de fortune qui casse (le
+    # meme buzzer), et le geste de changer d'arme (c'etait le clic de menu).
+    _e("vide", "Chargeur vide", duree_s=0.5, volume=0.3, influence=0.75,
+       prompt="a handgun trigger pulled on an empty chamber, one dry metallic "
+              "click, close-up, no gunshot, no voices, no music"),
+    _e("casse", "Arme qui casse", duree_s=0.9, volume=0.4,
+       prompt="a makeshift weapon breaking in the hand, a wooden handle snapping "
+              "with a sharp crack and the pieces clattering onto asphalt, "
+              "close-up, no voices, no music"),
+    _e("degainer", "Dégainer", duree_s=0.6, volume=0.2, influence=0.7,
+       prompt="quickly drawing a weapon from inside a jacket, a short rustle of "
+              "leather and cloth with a small metallic click, close-up, "
+              "no voices, no music"),
     _e("ramasse", "Objet ramassé", variantes=2, duree_s=0.7, volume=0.16,
        prompt="picking a small steel object up off wet asphalt, a brief "
               "metallic scrape then a bright clink, close-up, dry, no music"),

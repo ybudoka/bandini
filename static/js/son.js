@@ -299,6 +299,34 @@ const Son = (function () {
     enfourcher: function () { if (!joue('enfourcher')) { bruit(0.05, 0.15, 1800, 300); ton(700, 0.05, 'square', 0.08, 0.6, 0.03); } },
     telephone: function () { if (!joue('telephone')) for (let i = 0; i < 3; i++) { ton(1200, 0.08, 'square', 0.15, 1, i * 0.12); ton(1600, 0.08, 'square', 0.15, 1, i * 0.12 + 0.05); } },
     helico: function () { if (!joue('helico')) bruit(0.3, 0.2, 200, 80); },
+    // --- Les armes : un son par arme (`armes.py`, champ `son`) ----------------
+    // ⚠️ `arme(def)` est le seul point d'entree du combat : il lit `def.son` et
+    // retombe sur le coup de poing quand l'arme n'en declare pas. Le geste et
+    // l'impact sont dans le meme son, comme pour `coup` : il part au debut de
+    // la phase active, avant de savoir si le coup touche.
+    batte: function () { if (!joue('batte')) { bruit(0.07, 0.25, 700, 150); ton(120, 0.1, 'square', 0.3, 0.5, 0.03); } },
+    couteau: function () { if (!joue('couteau')) { bruit(0.09, 0.2, 6000, 1500); ton(2400, 0.05, 'sine', 0.08, 1.3, 0.02); } },
+    pelle: function () { if (!joue('pelle')) { bruit(0.08, 0.2, 800, 200); ton(1900, 0.3, 'triangle', 0.22, 0.9, 0.04); ton(2600, 0.2, 'sine', 0.12, 1, 0.04); } },
+    cone: function () { if (!joue('cone')) { bruit(0.05, 0.2, 900, 300); ton(320, 0.08, 'triangle', 0.25, 0.6, 0.03); } },
+    bouteille: function () { if (!joue('bouteille')) { bruit(0.12, 0.3, 7000, 2500); ton(2700, 0.09, 'sine', 0.18, 1, 0.02); } },
+    fronde: function () { if (!joue('fronde')) { ton(380, 0.06, 'sine', 0.2, 2.5); bruit(0.08, 0.15, 3500, 800); } },
+    pistolet: function () { if (!joue('pistolet')) { bruit(0.15, 0.7, 3000, 200); ton(90, 0.12, 'square', 0.4, 0.4); } },
+    fusil: function () { if (!joue('fusil')) { bruit(0.3, 0.9, 2000, 100); ton(60, 0.25, 'sine', 0.5, 0.5); ton(1500, 0.04, 'square', 0.1, 1, 0.35); } },
+    // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
+    extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },
+    vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
+    casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },
+    degainer: function () { if (!joue('degainer')) { bruit(0.08, 0.1, 2500, 900); ton(520, 0.04, 'triangle', 0.1, 1, 0.05); } },
+    arme: function (def) { (def && SFX[def.son] || SFX.coup)(); },
+    /** Le jet de l'extincteur : la boucle tant que `actif`, eteinte sinon.
+        A appeler A CHAQUE IMAGE avec la verite du moment — bouton relache,
+        reservoir vide, char, mort : toutes les raisons de se taire passent par
+        la. ⚠️ Sans echantillon, `boucle()` ne ferait rien : le filet relance
+        un souffle court toutes les huit images. */
+    jet: function (actif) {
+      if (estCharge('extincteur')) { boucle('extincteur', !!actif); return; }
+      if (actif && B.t % 8 === 0) SFX.extincteur();
+    },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
   };
 

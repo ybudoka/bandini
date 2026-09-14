@@ -7,6 +7,11 @@ simple fait de la sortir sous les yeux d'un policier.
 Trois types : `melee` (arc devant soi), `tir` (projectile), `jet` (cone de
 particules, l'extincteur). Les armes improvisees (`usures` > 0) se cassent
 apres ce nombre de coups.
+
+`son` : le bruitage que fait l'arme quand on s'en sert (un slug de
+`audio.CATALOGUE`). ⚠️ Jusqu'au 13 sept. 2026 tout jouait le coup de poing,
+le pistolet et le fusil compris — une arme qu'on n'entend pas, on ne sait
+pas qu'on la tient.
 """
 
 from __future__ import annotations
@@ -40,27 +45,32 @@ class Arme(TypedDict):
     usures: int
     sprite: str
     phase: int
+    son: str
 
 
 def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation=5, actif=4,
        renverse=False, saigne=0, chargeur=None, munitions_max=None, vproj=0.0,
        dispersion=0.0, cloche=False, plombs=1, prix_munitions=None, etoiles=0, usures=0,
-       sprite=None, phase=1) -> Arme:
+       sprite=None, phase=1, son=None) -> Arme:
     return Arme(
         slug=slug, nom=nom, type=type_, degats=degats, portee=portee, arc=arc,
         cadence=cadence, anticipation=anticipation, actif=actif, renverse=renverse,
         saigne=saigne, chargeur=chargeur, munitions_max=munitions_max,
         vitesse_projectile=vproj, dispersion=dispersion, cloche=cloche, plombs=plombs, prix=prix,
         prix_munitions=prix_munitions, etoiles_usage=etoiles, usures=usures,
-        sprite=sprite or slug, phase=phase,
+        sprite=sprite or slug, phase=phase, son=son or slug,
     )
 
 
 #: ⚠️ La premiere entree est TOUJOURS les poings, a 0 $ : c'est ce que le
 #: joueur a quand la prison lui a tout pris. Les prix des armes achetables
 #: montent dans l'ordre du catalogue (ordre d'achat naturel).
+#:
+#: ⚠️ `son` vaut le slug de l'arme par defaut ; seuls les poings font `coup`.
+#: `test_armes` verifie que chaque son existe au catalogue audio, et
+#: `test_audio` que le navigateur a un effet (avec son repli) pour chacun.
 CATALOGUE: list[Arme] = [
-    _a("poings", "Poings", "melee", 8, 12, 18, 0, anticipation=5, actif=4),
+    _a("poings", "Poings", "melee", 8, 12, 18, 0, anticipation=5, actif=4, son="coup"),
     _a("cone", "Cône orange", "melee", 12, 16, 22, 0, anticipation=6, actif=5, usures=4,
        sprite="cone"),
     _a("bouteille", "Bouteille", "melee", 14, 12, 16, 0, anticipation=5, actif=4, usures=3,

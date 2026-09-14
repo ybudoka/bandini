@@ -51,7 +51,7 @@ const Combat = (function () {
     delete B.partie.armes[slug];
     if (e.arme === slug) { e.arme = 'poings'; B.partie.arme = 'poings'; }
     Hud.message('ARME CASSEE');
-    Son.SFX.erreur();
+    Son.SFX.casse();
   }
 
   // --- Frapper --------------------------------------------------------------------
@@ -84,7 +84,7 @@ const Combat = (function () {
     if (e.phase === 'anticipation') {
       e.phase = 'actif';
       e.phaseT = arme.actif;
-      Son.SFX.coup();
+      Son.SFX.arme(arme);            // la batte, le couteau... chacune son son
       if (arme.type === 'jet') return;
       arcDeMelee(e, arme);
     } else if (e.phase === 'actif') {
@@ -163,7 +163,9 @@ const Combat = (function () {
     const joueur = e === B.joueur;
     if (joueur) {
       const reste = munitions(arme.slug);
-      if (reste !== null && reste <= 0) { Son.SFX.erreur(); return false; }
+      // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
+      // que le bouton etait casse, pas le chargeur.
+      if (reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
     e.etat = 'attaque';
     e.arc = arme;
@@ -195,7 +197,7 @@ const Combat = (function () {
       Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
       Entites.alerter(e.x, e.y, e, 3);
     }
-    Son.SFX.coup();
+    Son.SFX.arme(arme);              // le coup de feu, la fronde qui claque
     return true;
   }
 
@@ -295,7 +297,7 @@ const Combat = (function () {
     const i = possedees.indexOf(e.arme);
     e.arme = possedees[(i + 1) % possedees.length];
     B.partie.arme = e.arme;
-    Son.SFX.menu();
+    Son.SFX.degainer();
   }
 
   function roulade(j) {
@@ -326,6 +328,11 @@ const Combat = (function () {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
     }
+    // Le jet de l'extincteur s'entend tant qu'il sort et se tait des qu'il
+    // s'arrete — bouton relache, reservoir vide, char, mort : on redit la
+    // verite a chaque image plutot que d'attraper chacune des sorties.
+    Son.SFX.jet(!!j && j.vivant && !j.dansVehicule && j.etat === 'attaque'
+                && !!j.arc && j.arc.type === 'jet' && j.phase === 'actif');
     // ⚠️ En haut d'une cloture, on ne fait RIEN : ni frapper, ni tirer, ni
     // rouler, ni ouvrir une porte. C'est ce prix-la qui fait d'une cloture un
     // choix plutot qu'un raccourci gratuit.
@@ -341,7 +348,12 @@ const Combat = (function () {
     } else if (j.charge > 0) {
       frapper(j, j.charge >= CHARGE_MIN);
       j.charge = 0;
-    } else if (Entree.neuf('attaque')) {
+    } else if (Entree.neuf('attaque') && arme.type !== 'jet') {
+      // ⚠️ Pas le jet : sans cette garde, la premiere pression partait par
+      // ici — anticipation, quatre images de jet, deux de repos — AVANT que le
+      // maintien ne prenne le relais juste dessous. Ca ne se voyait pas ; avec
+      // une boucle qui s'allume et s'eteint, ca s'entend : un hoquet a chaque
+      // depart.
       frapper(j, false);
     }
     if (Entree.bas('attaque') && arme.type === 'jet' && j.etat !== 'attaque') {

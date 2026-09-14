@@ -52,7 +52,10 @@ def test_le_poids_audio_reste_raisonnable():
     # ⚠️ Budget releve de 600 a 650 Ko le 13 sept. 2026 : les trois cris de
     # l'homme-sandwich (22 Ko) l'ont fait deborder de 6 Ko. On reste a un
     # tiers du megaoctet ; la prochaine fois, on compresse avant de relever.
-    assert sum(f.stat().st_size for f in bruitages) < 650_000
+    # Puis de 650 a 800 Ko le meme jour : seize bruitages d'armes (un par arme,
+    # la gachette a vide, la casse, le degainage) — un son qu'on n'avait pas,
+    # pas un son qu'on a laisse grossir. On reste sous le mega.
+    assert sum(f.stat().st_size for f in bruitages) < 800_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
@@ -369,3 +372,17 @@ def test_la_reserve_ne_compte_pas_comme_un_orphelin():
     # ⚠️ Et le jeu ne la telecharge pas : rien dans ce qu'on exporte ne la nomme.
     declares = {nom for e in audio.exporter()["echantillons"] for nom in e["fichiers"]}
     assert not (gardes & declares)
+
+
+def test_chaque_arme_a_son_effet_dans_le_navigateur():
+    """`Son.SFX.arme(def)` joue `SFX[def.son]` : il faut donc une entree — avec
+    son repli synthetise, juge plus haut — pour chaque `son` de `armes.py`, et
+    les trois d'autour (a vide, casse, degainer) que `combat.js` appelle."""
+    from app import armes
+
+    source = (RACINE_JS / "son.js").read_text(encoding="utf-8")
+    bloc = source[source.index("const SFX = {"):source.index("// --- Les voix")]
+    effets = set(re.findall(r"^\s+([a-z_]+): function", bloc, re.M))
+    for a in armes.CATALOGUE:
+        assert a["son"] in effets, f"{a['slug']} : pas d'effet SFX.{a['son']} dans son.js"
+    assert {"vide", "casse", "degainer", "arme", "jet"} <= effets
