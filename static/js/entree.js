@@ -529,7 +529,10 @@ const Entree = (function () {
         ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
         : nom === 'dialogue'
           ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·' }
-          : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'COURS', arme: 'ARME' };
+          // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
+          // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
+          // la bouffee qui coute du souffle.
+          : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
     Object.keys(etiquettes).forEach(function (a) {
       const b = doc.querySelector('#boutons b[data-a="' + a + '"]');
       if (b) b.textContent = etiquettes[a];

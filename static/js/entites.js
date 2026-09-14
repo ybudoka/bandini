@@ -647,13 +647,19 @@ const Entites = (function () {
       if (j.roule === 0) j.invincible = 6;
       return;
     }
-    const veutCourir = Entree.bas('esquive') || (axe.source !== 'clavier' && axe.mag > 0.85);
-    let vitesse = v.joueur_marche;
-    // ⚠️ Le cafe allonge la course, il ne l'accelere PAS : `joueur_sprint`
-    // reste ce qu'il est (2,1 contre 1,9 au policier), seule la DEPENSE baisse.
-    // La minuterie, elle, s'ecoule dans `Missions.maj` — meme au volant.
+    // ⚠️ TROIS vitesses, un seul bouton — et la COURSE EST LA VITESSE PAR
+    // DEFAUT. Martin l'a dit : « on court quand meme tout le temps, avec la
+    // grandeur de la carte. » Pousser le pouce a fond, ou n'importe quelle
+    // touche de direction, c'est courir ; l'effleurer, c'est marcher ; le
+    // bouton, c'est SPRINTER, et lui seul coute du souffle.
+    const veutSprinter = Entree.bas('esquive');
+    const marche = axe.source !== 'clavier' && axe.mag < 0.6;
+    let vitesse = marche ? v.joueur_marche : v.joueur_course;
+    // ⚠️ Le cafe allonge le sprint, il ne l'accelere PAS : `joueur_sprint`
+    // reste ce qu'il est, seule la DEPENSE baisse. La minuterie, elle,
+    // s'ecoule dans `Missions.maj` — meme au volant.
     const cafe = j.cafeine > 0 ? B.defs.economie.cafe.depense : 1;
-    if (veutCourir && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
+    if (veutSprinter && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
       vitesse = v.joueur_sprint;
       // ⚠️ Le SURPLUS part en premier : c'est la seule part de cette barre
       // qu'on ne peut pas reprendre en s'arretant, donc la seule qui vaille ce

@@ -66,7 +66,7 @@ ne bougent pas quand l'ordre de travail change.
 | Rampes vraiment prenables | **livré** (13 sept. 2026) | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | Un saut qu'on ne voit pas | **livré** (13 sept. 2026) | bug de Martin (« les rampes n'ont pas l'air de fonctionner »). ⚠️ Elles fonctionnent : le saut mesure **7,8 px** pour une berline (2,0 px pour un vélo) et dure **0,3 s**, sur des tuiles de 16 px. Et l'ombre est un rectangle **fixe** de 20 × 10 qui ne rétrécit ni ne s'éloigne — elle ne raconte aucune hauteur |
 | Entrer au garage, pas dans le char garé devant | **livré** (13 sept. 2026) | bug de Martin (« quand on veut entrer au garage et qu'un véhicule est devant, quand on choisit "entrer" on entre dans le véhicule au lieu du bâtiment »). ⚠️ Une seule pression d'ACTION est lue **deux fois dans la même image** : `Combat.maj` ouvre le menu ACHETER / ENTRER de la propriété (ou lance le fondu de la porte), puis `Vehicules.maj` relit la même pression et fait monter dans le char garé devant. Au moment de choisir ENTRER, `Jeu.entrer` refuse : on est déjà au volant. **La porte gagne sur la portière** : un char ne se prend plus dans l'image où un menu vient de s'ouvrir ou un fondu vient de partir — un menu et un fondu figent déjà tout le jeu (`Jeu.maj`), à plus forte raison la portière d'à côté. Deux juges de banc : une seule pression devant le garage ouvre le menu **sans** prendre le char, puis ENTRER mène dedans ; et à une porte à soi (sans menu), le fondu part et le char reste là. 1033 tests |
-| L'endurance du Faubourg | **P2** **correctif**, **en cours** (13 sept. 2026) | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
+| L'endurance du Faubourg | **P2** **correctif**, **livré** (13 sept. 2026) | demande de Martin (« que la course ne consomme plus d'énergie, mais que ce soit le sprint ») : le modèle avait été réglé pour le Faubourg de 157 tuiles et M8 a **quintuplé la ville**. Un souffle valait **33 tuiles sur 421**, et la vitesse qu'on pouvait tenir tombait **sous celle du policier** — la barre ne récompensait rien, elle taxait le déplacement. **Trois vitesses** : marche 1,2 · **course 2,0, gratuite** · sprint 2,6, qui coûte. ⚠️ Et le policier court **exactement** à la vitesse de la course, sinon une course gratuite serait l'impunité : on gagne du terrain par **bouffées de sprint**, ou en cassant la ligne de vue. La barre s'**efface** quand elle n'a rien à dire, et le bouton s'appelle **SPRINT** |
 | Étoiles de recherche illisibles | **livré** (13 sept. 2026) | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
 | Clôture nord-sud trop large | **livré** (13 sept. 2026) | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **livré** (13 sept. 2026) | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
@@ -532,7 +532,6 @@ ordre-là.
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
-| **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
 | **P2** | **correctif** | Le décor se brise | 2 | ⚠️ le décor est **solide pour les piétons et fantôme pour les chars** : un autobus traverse un arbre, et le lampadaire est fantôme pour tout le monde |
 | **P2** | ajout | Des sortes de gens, pas des couleurs | 3 | ⚠️ 24 archétypes, **4 corps**, et 2 métiers sur 6 qui font quelque chose. Une sorte = un corps + une routine |
 | **P2** | ajout | Les portes s'ouvrent, et les gens les passent | 2 | ⚠️ un piéton sur trois sort **déjà** d'une porte — mais seulement **hors écran** : on ne le voit jamais. Et personne n'entre nulle part |
@@ -1608,7 +1607,7 @@ lancé au lieu de partir d'arrêt ».
   la rampe du *Grand Saut* est validée **pour la moto**, pas pour un char moyen ; et l'élan
   disponible permet vraiment d'atteindre les 60 px de vol exigés, en partant de la rue.
 
-### L'endurance est restée celle du Faubourg (**correctif**, taille 2)
+### L'endurance est restée celle du Faubourg (**correctif**, taille 2) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « je veux que la course ne consomme plus d'énergie, mais que ce soit le
 sprint qui en consomme — étant donné qu'on court quand même tout le temps, avec la grandeur
@@ -1665,6 +1664,33 @@ armes à feu : **la vitesse achète de la distance, jamais l'impunité**.
   derrière un joueur qui court ne perd pas de terrain ; un sprint plein, café compris, ouvre
   un écart **borné** (le même calcul que pour le char rapide) ; et la durée d'un souffle se
   compare à la **taille de la ville**, pas à un nombre choisi une fois pour toutes.
+
+**Livré le 13 sept. 2026 :**
+
+- **Trois vitesses, un seul bouton** — et la **course est la vitesse par défaut**. Pousser le
+  pouce à fond, ou n'importe quelle touche de direction, c'est courir ; l'effleurer, c'est
+  marcher ; le bouton, c'est sprinter. ⚠️ **Au clavier, on ne marche donc plus**, et c'est
+  voulu : il n'y a pas d'analogique sur un clavier, et inventer une touche « marcher »
+  ajouterait une commande pour un usage que personne n'a réclamé. La marche reste là où elle
+  se dose — au pouce.
+- **Le bouton s'appelle SPRINT**, plus « COURS » : l'étiquette disait le contraire de ce que
+  le bouton fait maintenant.
+- ⚠️ **La barre de souffle s'efface quand elle n'a rien à dire.** Seul le sprint la vide :
+  elle est pleine presque tout le temps, et une barre qui ne bouge jamais ne se lit plus — on
+  cesse de la regarder le jour où elle compte. Elle revient dès qu'on entame le souffle, qu'on
+  a du surplus ou qu'on est sous café, et s'attarde une seconde pour ne pas clignoter.
+- **Le vocabulaire a été corrigé** : `joueur_course` (gratuite) et `joueur_sprint` (payante).
+  L'ancien `joueur_sprint` désignait ce qui devient la course, et le commentaire du café
+  raisonnait sur « 2,1 contre 1,9 » — la prochaine personne aurait lu le contraire de ce que
+  le code fait.
+- **Juges (3 neufs, 1 réécrit)** : traverser la ville d'un bout à l'autre — 421 tuiles, 56 s
+  de touche tenue — ne coûte **rien** ; un agent lancé derrière un joueur qui court ne perd
+  **pas un pixel**, et le même agent, même décor, perd **plus de trois tuiles** quand le
+  joueur sprinte (et le souffle baisse) ; l'écart d'un sprint plein, café compris, reste
+  **borné** sous quatre fois la portée de vision d'un agent ; et le juge du mouvement mesure
+  maintenant les **trois** vitesses au lieu de deux. ⚠️ Le juge de la fuite est une vraie
+  poursuite simulée, pas un calcul : c'est la seule façon de voir que le A* de l'agent, ses
+  virages et ses sous-pas ne lui rendent pas le terrain que la vitesse lui refuse.
 
 ### Les étoiles de recherche, grosses, jaunes et au centre (**correctif**, taille 1) — **livré le 13 sept. 2026**
 

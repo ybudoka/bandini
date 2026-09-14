@@ -106,8 +106,28 @@ DEGUISEMENT = {"vehicule_s": 3, "vehicule_etoiles": 1, "vetements_remise_max": 3
 #: c'est le genre de defaut qu'aucun test ne voit. Quand il fuit (1,5) il
 #: reste plus lent que le joueur au sprint (2,1) et que le policier (1,9) :
 #: c'est ce qui rend une poursuite gagnable.
-VITESSES = {"joueur_marche": 1.2, "joueur_sprint": 2.1, "pieton": 0.45, "pieton_course": 1.35,
-            "policier": 1.9, "endurance": 100, "endurance_par_image": 0.4}
+#: ⚠️ TROIS vitesses a pied, pas deux — et la course est GRATUITE.
+#:
+#: Le modele d'avant avait ete regle pour le Faubourg de 157 tuiles ; M8 a
+#: quintuple la ville et personne n'y etait revenu. Mesure : un souffle complet
+#: valait 4,2 s de course, soit 33 tuiles sur 421 de large ; la vitesse qu'on
+#: pouvait TENIR (courir, puis marcher pour souffler) tombait a 1,54 — sous les
+#: 1,9 du policier. Autrement dit, la barre ne recompensait rien : elle taxait
+#: le deplacement, et fuir a pied ne marchait de toute facon pas.
+#:
+#:   marche   1,2   rien
+#:   course   2,0   RIEN — la vitesse de voyage, de La Pointe aux Quais
+#:   sprint   2,6   de l'endurance, par bouffees
+#:
+#: ⚠️ Et le policier court a la vitesse de la COURSE, pas en dessous. Une
+#: course gratuite plus rapide que lui, c'est s'echapper a pied, toujours, sans
+#: rien depenser. La regle que le depot s'est deja donnee deux fois — le char
+#: rapide, les armes a feu — vaut ici aussi : la vitesse achete de la
+#: DISTANCE, jamais l'impunite. On seme la police en cassant la ligne de vue,
+#: en montant dans un char, ou en payant du souffle.
+VITESSES = {"joueur_marche": 1.2, "joueur_course": 2.0, "joueur_sprint": 2.6,
+            "pieton": 0.45, "pieton_course": 1.35,
+            "policier": 2.0, "endurance": 100, "endurance_par_image": 0.4}
 
 #: Enjamber un grillage : ce que ca coute. ⚠️ Le meme prix POUR TOUT LE MONDE —
 #: le joueur, un agent, un gardien de fourriere. Si franchir une cloture etait

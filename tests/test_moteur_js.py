@@ -474,25 +474,54 @@ def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
     )
 
 
-def test_le_joueur_marche_et_ne_traverse_pas_les_murs(banc):
-    # On mesure vers l'OUEST : a l'est du terminus se tient Ti-Guy, et depuis
-    # que la foule ne se traverse plus, un personnage fige est un obstacle.
+def test_le_joueur_a_trois_vitesses_et_ne_traverse_pas_les_murs(banc, paquet):
+    """⚠️ TROIS vitesses, un seul bouton — et la COURSE EST LA VITESSE PAR
+    DEFAUT (demande de Martin : « on court quand même tout le temps, avec la
+    grandeur de la carte »). Pousser le pouce à fond, ou n'importe quelle
+    touche de direction, c'est courir ; l'effleurer, c'est marcher ; le bouton,
+    c'est sprinter — et lui seul coûte du souffle.
+
+    On mesure vers l'OUEST : à l'est du terminus se tient Ti-Guy, et depuis que
+    la foule ne se traverse plus, un personnage figé est un obstacle."""
+    v = paquet["recherche"]["vitesses"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
-        const x0 = j.x;
-        o.touche('KeyA'); o.frame(60); o.relacher('KeyA');
-        const x1 = j.x;
-        o.touche('ShiftLeft'); o.touche('KeyA'); o.frame(60); o.relacher('KeyA'); o.relacher('ShiftLeft');
-        const x2 = j.x;
+        function versLOuest(images) { const x = j.x; o.frame(images); return x - j.x; }
+        // 1. Au clavier, sans rien : on COURT.
+        o.touche('KeyA');
+        const course = versLOuest(60);
+        o.relacher('KeyA');
+        // 2. Le pouce a peine pousse : on MARCHE.
+        o.pad([-0.5, 0], [0, 0, 0, 0]);
+        const marche = versLOuest(60);
+        o.pad(null);
+        // 3. Le bouton : on SPRINTE.
+        j.endurance = 100;
+        o.touche('ShiftLeft'); o.touche('KeyA');
+        const sprint = versLOuest(60);
+        o.relacher('KeyA'); o.relacher('ShiftLeft');
         // Vers le haut, un batiment se trouve sur le chemin : on doit s'arreter dessus.
         o.touche('KeyW'); o.frame(900); o.relacher('KeyW');
         const tx = Math.floor(j.x / L.TT), ty = Math.floor(j.y / L.TT);
-        return { marche: x0 - x1, sprint: x1 - x2, sol: L.Monde.solidite(tx, ty), y: j.y, etat: L.B.etat,
+        return { marche: marche, course: course, sprint: sprint,
+                 sol: L.Monde.solidite(tx, ty), y: j.y, etat: L.B.etat,
                  dataEtat: o.elements.bandini.dataset.etat };
     }""")
-    assert r["marche"] > 50
-    assert r["sprint"] > r["marche"] * 1.4, "le sprint doit etre nettement plus rapide"
+    assert r["course"] > 50, "au clavier, sans rien, on doit courir"
+    assert r["marche"] > 0, "le pouce a peine poussé doit quand même avancer"
+    assert r["course"] > r["marche"] * 1.3, (
+        "courir n'est pas plus rapide que marcher : %s contre %s" % (r["course"], r["marche"])
+    )
+    assert r["sprint"] > r["course"] * 1.15, (
+        "le sprint doit être nettement plus rapide que la course : %s contre %s" % (r["sprint"], r["course"])
+    )
+    # Les trois vitesses du paquet, dans l'ordre, et le policier à la course.
+    assert v["joueur_marche"] < v["joueur_course"] < v["joueur_sprint"]
+    assert v["policier"] == v["joueur_course"], (
+        "le policier doit courir exactement à la vitesse de la course : %s contre %s"
+        % (v["policier"], v["joueur_course"])
+    )
     assert r["sol"] in (0, 3), "le joueur a fini dans un mur"
     assert r["y"] > 0
     assert r["etat"] == "jeu" and r["dataEtat"] == "jeu"
@@ -1784,6 +1813,94 @@ def test_le_souffle_en_surplus_s_achete_et_ne_revient_pas_tout_seul(banc, paquet
     )
     assert 0 < r["videSurplus"]["images"] < 400
     assert r["apresLaNuit"] == 0, "une nuit rend le souffle, pas l'avance achetee"
+
+
+def test_traverser_la_ville_en_courant_ne_coute_rien(banc, paquet):
+    """⚠️ Le défaut mesuré : le modèle d'endurance avait été réglé pour le
+    Faubourg de 157 tuiles, et M8 a **quintuplé la ville** sans que personne y
+    revienne. Un souffle complet valait 4,2 s de course — **33 tuiles sur
+    421** — et la vitesse qu'on pouvait tenir (courir, puis marcher pour
+    souffler) tombait **sous celle du policier**. La barre ne récompensait
+    rien : elle taxait le déplacement.
+
+    Le juge se compare donc à la **taille de la ville**, pas à un nombre
+    choisi une fois pour toutes : on traverse d'un bout à l'autre en courant,
+    et la barre ne bouge pas d'un point."""
+    largeur = paquet["carte"]["largeur"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        // Une longue ligne droite : la rue la plus degagee qu'on trouve, et on
+        // y court le temps qu'il faudrait pour traverser la ville.
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        j.endurance = 100; j.surplus = 0;
+        const souffle0 = j.endurance;
+        const images = Math.ceil(%d * L.TT / L.B.defs.recherche.vitesses.joueur_course);
+        o.touche('KeyD');
+        let bouge = 0, avant = j.x;
+        for (let i = 0; i < images; i++) {
+            o.frame(1);
+            bouge += Math.abs(j.x - avant); avant = j.x;
+        }
+        o.relacher('KeyD');
+        return { souffle0: souffle0, souffle: j.endurance, images: images,
+                 bouge: Math.round(bouge), largeurPx: %d * L.TT };
+    }""" % (largeur, largeur))
+    assert r["souffle"] == r["souffle0"] == 100, (
+        "courir a coûté du souffle : %s au lieu de %s" % (r["souffle"], r["souffle0"])
+    )
+    # ⚠️ La mesure doit porter sur la VILLE ENTIERE, sinon elle ne dit rien :
+    # 421 tuiles a la vitesse de course, c'est pres d'une minute de touche
+    # tenue. Si ce chiffre tombe, c'est que la ville a retreci — pas que le
+    # souffle va mieux.
+    assert r["images"] > 45 * 60, (
+        "traverser la ville ne demande que %.0f s de course : la mesure ne porte plus sur la ville"
+        % (r["images"] / 60)
+    )
+
+
+def test_un_sprint_plein_ouvre_un_ecart_borne_sur_la_police(banc, paquet):
+    """⚠️ Rendre la course gratuite casserait toutes les poursuites à pied si on
+    s'arrêtait là : une course gratuite plus rapide que le policier, c'est
+    s'échapper **toujours**, sans rien dépenser. La parade est celle que le
+    dépôt s'est déjà donnée deux fois — le char rapide, les armes à feu : **la
+    vitesse achète de la distance, jamais l'impunité.**
+
+    Donc : le policier court **exactement** à la vitesse de la course, et c'est
+    le sprint — qui coûte — qui ouvre un écart. Le juge le mesure, et le veut
+    **borné** : assez pour casser une ligne de vue, pas assez pour semer
+    quelqu'un en ligne droite."""
+    v = paquet["recherche"]["vitesses"]
+    cafe = paquet["economie"]["cafe"]
+    r = banc("""function (L, o) {
+        const v = %s;
+        // Le calcul, pas la simulation : un sprint dure `endurance / cout`
+        // images, et il gagne la difference de vitesse a chaque image.
+        function ecart(depense) {
+            const images = v.endurance / (v.endurance_par_image * depense);
+            return { images: Math.round(images), px: Math.round((v.joueur_sprint - v.policier) * images) };
+        }
+        return { nu: ecart(1), cafe: ecart(%s), tuile: L.TT,
+                 course: v.joueur_course === v.policier };
+    }""" % (
+        '{"endurance": %s, "endurance_par_image": %s, "joueur_sprint": %s, "policier": %s, "joueur_course": %s}'
+        % (v["endurance"], v["endurance_par_image"], v["joueur_sprint"], v["policier"], v["joueur_course"]),
+        cafe["depense"]))
+    assert r["course"] is True, "en courant, on ne gagne AUCUN terrain sur un agent"
+    tuiles_nu = r["nu"]["px"] / r["tuile"]
+    tuiles_cafe = r["cafe"]["px"] / r["tuile"]
+    assert 5 <= tuiles_nu <= 20, (
+        "un sprint plein ouvre %.1f tuiles : trop peu pour casser une ligne de vue, ou trop pour être une fuite"
+        % tuiles_nu
+    )
+    assert tuiles_cafe > tuiles_nu, "le café doit servir à s'échapper, pas seulement à courir"
+    # ⚠️ Borné, café compris : la vision d'un agent porte 9 tuiles de jour.
+    vision = paquet["recherche"]["vision"]["policier"]["jour"]
+    assert tuiles_cafe <= vision * 4, (
+        "%.1f tuiles d'écart, c'est semer la police en ligne droite (vision : %s tuiles)"
+        % (tuiles_cafe, vision)
+    )
 
 
 def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):

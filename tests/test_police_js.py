@@ -148,6 +148,62 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
     assert r["arrete"] is False and r["auPoste"] is True
 
 
+def test_en_courant_on_ne_seme_pas_un_agent_mais_en_sprintant_on_gagne_du_terrain(banc, paquet):
+    """⚠️ LE juge du nouveau modèle d'endurance. Rendre la course **gratuite**
+    (la ville fait 421 tuiles, on court tout le temps) casserait toutes les
+    poursuites à pied si on s'arrêtait là : une course gratuite plus rapide
+    que le policier, c'est s'échapper **toujours**, sans rien dépenser.
+
+    La parade est celle que le dépôt s'est déjà donnée deux fois — le char
+    rapide, les armes à feu : **la vitesse achète de la distance, jamais
+    l'impunité.** Le policier court donc exactement à la vitesse de la course,
+    et c'est le **sprint** — qui coûte du souffle — qui ouvre l'écart.
+
+    On mesure les deux dans le même décor : mêmes 200 images, même ligne
+    droite, le souffle plein dans les deux cas."""
+    r = banc(AGENT + """
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        // Une ligne droite degagee : on fuit vers l'est sans buter sur la ville.
+        function fuir(sprint) {
+            const d = o.ligneDroite();
+            j.x = d.x; j.y = d.y;
+            j.endurance = 100; j.surplus = 0; j.cafeine = 0;
+            L.B.recherche.etoiles = 0; L.B.recherche.chaleur = 0;
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton' || !e.agent; });
+            L.Entites.indexer();
+            L.Police.ajouterChaleur(3);
+            const a = poserAgent(L, 'poursuit', 40);
+            a.but = null;
+            const depart = Math.hypot(a.x - j.x, a.y - j.y);
+            if (sprint) o.touche('ShiftLeft');
+            o.touche('KeyD');
+            for (let i = 0; i < 200; i++) o.frame(1);
+            o.relacher('KeyD');
+            if (sprint) o.relacher('ShiftLeft');
+            const fin = Math.hypot(a.x - j.x, a.y - j.y);
+            const r = { gagne: Math.round(fin - depart), souffle: Math.round(j.endurance) };
+            L.Entites.retirer(a);
+            return r;
+        }
+        const course = fuir(false);
+        const sprint = fuir(true);
+        return { course: course, sprint: sprint, tuile: L.TT };
+    }""")
+    # ⚠️ En courant : on ne gagne pas de terrain. On ne PERD pas non plus — on
+    # ne se fait pas rattraper en marchant, la course reste la vitesse de
+    # voyage. Une tuile de marge pour les virages du A* et les sous-pas.
+    assert abs(r["course"]["gagne"]) <= r["tuile"], (
+        "en courant, l'écart bouge de %s px : la course sème (ou se fait semer)" % r["course"]["gagne"]
+    )
+    assert r["course"]["souffle"] == 100, "courir a coûté du souffle : %s" % r["course"]["souffle"]
+    # En sprintant : on gagne du terrain, et ça se paie.
+    assert r["sprint"]["gagne"] > r["tuile"] * 3, (
+        "un sprint ne gagne que %s px sur un agent : fuir à pied ne marche pas" % r["sprint"]["gagne"]
+    )
+    assert r["sprint"]["souffle"] < 100, "le sprint doit coûter du souffle"
+
+
 def test_le_pot_de_vin_accepte_ou_refuse(banc, paquet):
     r = banc(AGENT + """
         L.Jeu.commencer();

@@ -35,6 +35,8 @@ const B = {
   crimes: [],
   recherche: { etoiles: 0, chaleur: 0, vu: 0, dernierVu: null, flash: 0 },
   budget: { chemins: 2, los: 20 },
+  //: Depuis quand la barre de souffle a quelque chose a dire (images).
+  souffleT: 0,
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
   options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false,

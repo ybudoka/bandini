@@ -1086,14 +1086,26 @@ const Hud = (function () {
       // derniere seconde : sans ca, le souffle long s'arrete au milieu d'une
       // fuite sans que rien ne l'ait annonce.
       const cafeine = j && !v && j.cafeine > 0 && (j.cafeine > 60 || (j.cafeine >> 2) % 2 === 0);
-      barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1),
-            v ? '#7fb3d8' : (cafeine ? '#8fd46a' : '#e8b33c'));
+      // ⚠️ La barre de souffle s'EFFACE quand elle n'a rien a dire. Depuis que
+      // la course est gratuite, seul le sprint la vide : elle est pleine
+      // presque tout le temps, et une barre qui ne bouge jamais ne se lit
+      // plus — on cesse de la regarder le jour ou elle compte. Elle revient
+      // des qu'on entame le souffle, qu'on a du surplus ou qu'on est sous
+      // cafe, et elle s'attarde une seconde pour ne pas clignoter.
+      if (j && !v) {
+        const dit = j.endurance < 100 || (j.surplus || 0) > 0 || j.cafeine > 0;
+        B.souffleT = dit ? 60 : Math.max(0, (B.souffleT || 0) - 1);
+      }
+      if (v || (j && (B.souffleT || 0) > 0)) {
+        barre(ctx, 6, 13, 60, 3, v ? v.vie / v.vieMax : (j ? j.endurance / 100 : 1),
+              v ? '#7fb3d8' : (cafeine ? '#8fd46a' : '#e8b33c'));
+      }
       // Le souffle EN SURPLUS : une ligne plus mince POSEE SUR la barre, pas a
       // cote — on lit d'un coup « j'ai du souffle, et j'ai de l'avance en plus ».
       // ⚠️ Elle garde sa couleur que la base soit jaune ou verte (le cafe), et
       // elle DISPARAIT au volant : la barre y montre la carrosserie du char, et
       // du souffle par-dessus des points de vie ne voudrait rien dire.
-      if (!v && j && j.surplus > 0) {
+      if (!v && j && j.surplus > 0 && (B.souffleT || 0) > 0) {
         const part = Math.min(1, j.surplus / B.defs.economie.souffle.surplus_max);
         ctx.fillStyle = '#7fd4ff';
         ctx.fillRect(6, 14, Math.max(1, Math.round(60 * part)), 1);

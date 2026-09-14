@@ -163,11 +163,13 @@ TARIFS = {
 #:
 #: ⚠️ Le cafe, lui, ne nourrit pas : il TIENT DEBOUT. Pendant `duree_s`
 #: secondes, le sprint ne coute que `depense` de ce qu'il coute d'habitude —
-#: on court DEUX FOIS PLUS LONGTEMPS, jamais plus vite. La vitesse, c'est ce
-#: qui separe le joueur (2,1) du policier (1,9) et de la foule ; y toucher
-#: pour 4 $ casserait toutes les poursuites du jeu. La duree, non : elle
-#: s'ecoule meme au volant, et elle ne s'empile pas (un deuxieme cafe repart
-#: la minuterie).
+#: on sprinte DEUX FOIS PLUS LONGTEMPS, jamais plus vite.
+#:
+#: ⚠️ La vitesse, c'est ce qui separe le joueur du policier, et y toucher
+#: casserait toutes les poursuites du jeu. Depuis que la COURSE est gratuite
+#: et que le policier court aussi vite (2,0), le cafe ne sert plus a « courir
+#: un peu plus longtemps » : il sert a S'ECHAPPER. C'est une bien meilleure
+#: raison de s'arreter au kiosque.
 CAFE = {"duree_s": 90, "depense": 0.5}
 
 #: Le souffle en SURPLUS : ce que manger ajoute PAR-DESSUS les 100 points de la
