@@ -93,7 +93,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les terrains de banlieue | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « les terrains des résidences doivent être plus fournis ». `_jardin()` ne posait que du gazon et un arbre par dix tuiles — or un terrain de banlieue est le **contraire du vide**. Maintenant : **38 entrées de voiture** qui vont jusqu'à la chaussée (une sur trois porte une **case**, donc une auto — mesuré 28 %), un **sentier de la porte à la rue** pour 100 % des portes, une **piscine ronde** (quatre tuiles, chacune son quart du disque), **cabanon / corde à linge / BBQ**. Le paquet passe de 410 à **413 Ko** bruts, 52 Ko gzip (plafonds 600 / 70). ⚠️ Trois défauts trouvés en chemin : une **plage qui suivait la boîte au lieu de la côte** (bancs de sable isolés en pleine baie), un **char plus long que sa case** qui finissait à cheval sur ses lignes, et un **témoin qui déréférençait `e.vers` après l'avoir mis à zéro** — le jeu plantait. 8 juges neufs |
 | Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **livré** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
-| Les feux s'allument pour vrai | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». Une ampoule allumée est de la **peinture** : `dessinerFeu` pose un carré vert, et le voile de nuit de `Base.fin` le **multiplie** comme un mur. À minuit, le vert (46, 204, 113) tombe à (16, 76, 57), et le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122) — **plus sombre qu'un trottoir de midi**. Le seul feu de la ville qui éclaire vraiment, c'est le lampadaire, parce que lui a une entrée dans `carte.lampes`. Chaque ampoule allumée doit en poser une, **de la couleur de sa phase** |
+| Les feux s'allument pour vrai | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
 | M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -3051,7 +3051,7 @@ en chemin.
   n'allume qu'un brasier, tue celui qui y reste avant qu'il s'éteigne, le signale comme une
   mort du joueur, et s'éteint.
 
-### Les feux s'allument pour vrai (**correctif**, taille 1) — **en cours** (14 sept. 2026)
+### Les feux s'allument pour vrai (**correctif**, taille 1) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « je veux que les feux de circulation et de piéton allument pour vrai. »
 
@@ -3103,6 +3103,52 @@ seule raison, c'est qu'il a une entrée dans `carte.lampes`. Les feux n'en ont p
   la couleur **suit la phase** ; en plein jour, aucune lampe ; l'orange **clignotant** du piéton
   n'éclaire pas pendant qu'il est éteint (sinon il clignote à l'œil et brille en continu au sol) ;
   et le compte des lampes d'une image tient sous le plafond de `Base.fin`.
+
+**Livré le 14 sept. 2026.** ⚠️ **L'analyse ci-dessus était trop généreuse, et la mesure l'a
+dit tout de suite** : les feux n'étaient pas *peints puis éteints par la nuit*, ils n'étaient **pas
+peints du tout**. Le premier juge écrit — « un feu au vert pose une lampe verte » — est revenu
+avec **zéro lampe**, à midi comme à minuit. En remontant : `dessinerFeu` et `dessinerFeuPieton`
+n'avaient **jamais été appelés une seule fois** depuis qu'on a posé les feux.
+
+- ⚠️ **Un champ de trop suffisait.** `creerSignalisation` créait l'entité avec `decor: 'feu'`, et
+  `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique
+  peignait le boîtier cuit — le poteau noir, sans lanternes — et faisait `continue`. Le peintre
+  nommé était derrière, inatteignable. **482 poteaux** noirs (124 pour les chars, 358 pour les
+  piétons), à tous les croisements de la ville, depuis le premier jour.
+- ⚠️ **Et le champ ne servait à rien.** Un feu n'est pas solide, il n'entre donc jamais dans
+  `grilleFixe` — les deux seuls autres lecteurs de `e.decor` (`bloquerParDecor`, `heurterDecor`)
+  passent par là. Il ne faisait que **masquer le peintre**. Il est parti, **et** l'ordre du
+  dispatch est corrigé : les peintres nommés d'abord, la branche générique ensuite. Dans l'autre
+  sens, le prochain `decor` posé sur une entité qui a déjà son peintre l'effacerait pareil.
+- ⚠️ **Pourquoi aucun juge ne l'a vu, et c'est la vraie leçon.** Les feux avaient déjà quatre
+  juges — l'alternance, les T sans feu, le dégagement de 180 images, les poteaux posés sur le
+  trottoir et pas sur la route. **Tous parlent de l'horloge ou de la carte, aucun du dessin.** Un
+  système peut être juste de bout en bout et ne rien montrer ; il manquait la question bête :
+  *est-ce qu'on voit quelque chose ?* Le banc sait y répondre — `ctx.traces` garde chaque
+  `fillRect` — et c'est ce que fait le juge neuf `test_un_feu_peint_ses_lanternes...`, **en plein
+  jour**, là où aucune lampe ne vient aider.
+- **La lampe, ensuite**, comme prévu : une par ampoule allumée, de la couleur de sa phase,
+  ramassée **en dessinant** (`Vehicules.lampesDesFeux()`), remise à `Base.fin` par `jeu.js`. La
+  liste porte son numéro d'image et se vide toute seule.
+- ⚠️ **Le rayon s'est décidé à l'écran, pas sur le papier.** À **10 px**, les deux ampoules du feu
+  des chars — cinq pixels d'écart — additionnaient assez de rouge et de vert pour rendre du
+  **blanc** : on voyait bien qu'un feu brillait, on ne lisait plus **lequel des deux sens** était
+  vert. À **7 px** et une lumière moins forte, les deux cœurs restent nets et la flaque tire vers
+  le jaune, ce qui est ce que fait un vrai croisement vu d'en haut. Le lampadaire garde ses 44 px :
+  lui éclaire une rue, un feu ne s'éclaire que lui-même — et la hiérarchie se voit.
+- **Le plafond de `Base.fin` passe de 25 à 50** : 25 lampadaires (`lampesVisibles`), 24 feux et le
+  projecteur de l'hélico. Deux juges le tiennent, et ils **lisent les trois nombres dans le JS**
+  plutôt que de les recopier — avec le seuil de la brune, qui doit rester **le même** que celui des
+  lampadaires.
+- **Juges (5 neufs)** : un feu **peint** ses deux lanternes (vert pour le sens qui roule, rouge pour
+  l'autre) et son cœur, en plein midi, mesuré sur les rectangles ; à minuit une ampoule pose une
+  lampe et **la couleur suit la phase** (les deux sens échangent au demi-cycle, l'orange n'est ni
+  l'un ni l'autre) ; **rien n'éclaire à midi** ; l'orange qui clignote **n'éclaire pas** pendant
+  qu'il est éteint ; le plafond de lampes et le seuil de la brune tiennent. Les trois juges de banc
+  sont **rouges sur le code d'avant** — vérifié en remettant le bogue.
+- **Ce qui reste ouvert, inchangé** : la traverse elle-même ne s'éclaire toujours pas (tuiles
+  cuites dans le morceau de 256 px), et les feux ne passent pas au **clignotant la nuit** — c'est
+  M12, « la ville vit ».
 
 ### M15 — La ville te parle (**ajout**, taille 4)
 
