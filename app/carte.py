@@ -2622,7 +2622,7 @@ def _pt(type_: str, x: int, y: int, **extra) -> dict:
 
 
 #: Ce qu'on entend en poussant la porte d'une piece : le bois et la serrure
-#: d'un logement, ou la vitre et la clochette d'un commerce (`son.js`,
+#: d'un logement, ou la vitre et la porte d'un commerce (`son.js`,
 #: `SFX.porte`). ⚠️ C'est la piece qui le dit, pas le JS : un logement qui
 #: sonnait comme un depanneur, c'est ce qu'on entendait avant.
 GENRES_DE_PORTE = ("maison", "commerce")

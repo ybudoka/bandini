@@ -270,7 +270,7 @@ def test_les_commerces_ont_quelqu_un_derriere_le_comptoir():
 
 def test_chaque_piece_dit_quelle_porte_on_pousse():
     """Le bruit de la porte vient de la piece : le bois d'un logement, la
-    vitre et la clochette d'un commerce. ⚠️ Un logement qui sonne comme un
+    vitre et la porte metalique d'un commerce. ⚠️ Un logement qui sonne comme un
     depanneur, c'est ce qu'on entendait avant — et le taxi aussi."""
     for slug, piece in carte.INTERIEURS.items():
         assert piece["porte"] in carte.GENRES_DE_PORTE, slug

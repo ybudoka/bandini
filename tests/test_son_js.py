@@ -598,6 +598,55 @@ def test_la_station_procedurale_du_camion_joue_vraiment(banc):
         "le theme du menu est dans le cycle de la radio : le bouton RADIO tomberait dessus"
 
 
+def test_la_radio_allumee_au_bouton_fait_taire_la_ville(banc):
+    """⚠️ Retour de Martin : « la radio des véhicules devrait arrêter la musique
+    de fond ; quand on sort des véhicules, la musique de fond reprend. »
+
+    Un char SANS station par defaut (ambulance, autobus, velo) garde l'ambiance
+    de la ville au volant — c'est voulu. Mais le bouton RADIO y lancait une
+    station PAR-DESSUS : `monter()` coupait l'ambiance, `Radio.jouer()` non.
+    La regle vit maintenant dans la radio elle-meme : une station demandee
+    fait taire la ville, et descendre du char la fait revenir.
+
+    Le juge suit les VRAIES boucles (`ambiance-*`, `radio-*`), pas seulement
+    l'etat demande : c'est le chevauchement qu'on entend qu'il faut proscrire."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const ville = L.Son.Ambiance.def().slug;
+        function etat() {
+            const radio = L.Son.Radio.demandee;
+            const proc = radio ? L.Son.Radio.estProcedurale(radio) : false;
+            return { ville: L.Son.boucleActive('ambiance-' + ville), radio: radio,
+                     station: radio ? (proc ? L.Son.Mus.courante === radio : L.Son.boucleActive('radio-' + radio)) : false };
+        }
+        const aPied = etat();
+        const j = L.B.joueur;
+        const v = o.char('ambulance', 24, 0, 0);
+        L.Vehicules.monter(j, v);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const auVolant = etat();
+        o.tape('Tab', 2);                                   // le bouton RADIO
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const allumee = etat();
+        L.Vehicules.descendre(j, true);
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const descendu = etat();
+        return { defaut: v.def.radio, aPied: aPied, auVolant: auVolant, allumee: allumee, descendu: descendu };
+    }""")
+    assert r["defaut"] is None, "le juge veut un char sans station par defaut"
+    assert r["aPied"]["ville"] is True and r["aPied"]["radio"] is None, "a pied, la ville doit jouer : %s" % r["aPied"]
+    assert r["auVolant"]["ville"] is True and r["auVolant"]["radio"] is None, \
+        "sans station par defaut, la ville continue au volant : %s" % r["auVolant"]
+    assert r["allumee"]["radio"] and r["allumee"]["station"] is True, "le bouton RADIO n'allume rien : %s" % r["allumee"]
+    assert r["allumee"]["ville"] is False, "la radio joue PAR-DESSUS la ville : %s" % r["allumee"]
+    assert r["descendu"] == {"ville": True, "radio": None, "station": False}, \
+        "descendu, la ville doit reprendre et la radio se taire : %s" % r["descendu"]
+
+
 def test_une_station_procedurale_baisse_quand_quelqu_un_parle(banc):
     """⚠️ Le ducking passait par les BOUCLES (`radio-*`, `ambiance-*`), et une
     station procedurale n'en traverse aucune : elle aurait couvert la voix au

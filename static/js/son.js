@@ -284,7 +284,7 @@ const Son = (function () {
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
     // ⚠️ Trois portes : le bois et la serrure d'un logement, la vitre et la
-    // clochette d'un commerce, la portiere d'un char. Le jeu appelle
+    // porte d'un commerce, la portiere d'un char. Le jeu appelle
     // `porte(genre)` ; le genre vient de la fiche — de la piece (`carte._piece`,
     // champ `porte`) ou du char (`vehicules.py`, `portieres`).
     porte_maison: function () { if (!joue('porte_maison')) { ton(160, 0.14, 'triangle', 0.22, 0.6); bruit(0.06, 0.12, 400, 150); } },
@@ -507,6 +507,13 @@ const Son = (function () {
       const station = Radio.station(slug);
       Radio.arreter();
       if (!station) return false;
+      // ⚠️ La radio REMPLACE la musique de la ville, et c'est ICI que ca se
+      // decide — pas seulement en montant dans un char. Un char sans station
+      // par defaut (ambulance, autobus, velo) garde l'ambiance a pied ; quand
+      // on y allume la radio au bouton, la station jouait PAR-DESSUS la ville.
+      // On coupe des la demande, pas a l'arrivee du mp3 : sinon les deux se
+      // chevauchent le temps du telechargement.
+      Ambiance.arreter();
       Radio.demandee = slug;
       // Une station procedurale n'a rien a telecharger : le sequenceur la joue
       // note par note, comme le theme du menu. Elle demarre donc tout de suite,

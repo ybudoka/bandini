@@ -627,7 +627,7 @@ const Entites = (function () {
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
-    if (axe.mag > 0 && enjamber(j, j.vx, j.vy)) { Hud.message('PAR-DESSUS'); return; }
+    if (axe.mag > 0 && enjamber(j, j.vx, j.vy)) { return; }
     const avant = { x: j.x, y: j.y };
     deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_PIETON);
     dansLaCarte(j);

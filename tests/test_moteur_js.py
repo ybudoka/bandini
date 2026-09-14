@@ -3813,7 +3813,7 @@ def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
 
 
 def test_chaque_porte_a_son_bruit(banc):
-    """Trois portes : le bois d'un logement, la clochette d'un commerce, la
+    """Trois portes : le bois d'un logement, la porte d'un commerce, la
     portiere d'un char — et RIEN de tel pour une moto ou un velo, qu'on
     enfourche. C'etait le meme grincement pour tout le monde, taxi compris.
     Le genre vient de la fiche (la piece, le char), pas du JS."""

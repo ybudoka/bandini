@@ -281,7 +281,7 @@ def test_les_bruitages_ont_de_l_aigu():
     Mesure sur les cinq sons qui DOIVENT briller — anciens fichiers puis
     nouveaux : caisse -26 → -10, ramassage -23 → -7, tole -27 → -6, porte
     -32 → -10, clic -30 → -7 (la porte d'alors ; depuis qu'il y en a trois,
-    c'est la clochette du commerce qu'on juge — elle DOIT briller). Le seuil
+    c'est la porte du commerce qu'on juge — elle DOIT briller). Le seuil
     de -14 dB tombe entre les deux, avec
     au moins 4 dB de marge de chaque cote : il aurait refuse les anciens
     fichiers, il accepte ceux-ci.
