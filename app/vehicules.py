@@ -63,6 +63,7 @@ class Vehicule(TypedDict):
     radio: str | None
     phase: int
     portieres: bool
+    klaxon: str
 
 
 #: Les classes dont on claque la portiere. ⚠️ Une moto et un velo n'en ont
@@ -70,11 +71,18 @@ class Vehicule(TypedDict):
 #: `slug === 'velo'` dans le JS. La chaloupe non plus, quand elle roulera.
 CLASSES_A_PORTIERES = ("auto", "camion")
 
+#: Ce qu'un char fait entendre au bouton du klaxon : un effet de `Son.SFX`.
+#: ⚠️ Le velo a une SONNETTE — demande de Martin — et c'est la fiche qui le
+#: dit, pas un `slug === 'velo'` dans `vehicules.js`. Les velos du trafic
+#: sonnaient deja en passant ; c'est le meme son, desormais aussi sous le
+#: pouce.
+AVERTISSEURS = ("klaxon", "sonnette")
+
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
-       radio=None, phase=1) -> Vehicule:
+       radio=None, phase=1, klaxon="klaxon") -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -84,7 +92,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
         ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, defonce=defonce, soigne=soigne,
         crochet=crochet, boulot=boulot, radio=radio, phase=phase,
-        portieres=classe in CLASSES_A_PORTIERES,
+        portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
     )
 
 
@@ -108,7 +116,8 @@ CATALOGUE: list[Vehicule] = [
     # n'explose pas. C'est le SEUL du catalogue dans ce cas, et c'est le seul
     # endroit ou ca se decide.
     _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
-       ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False),
+       ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False,
+       klaxon="sonnette"),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
     # --- M9, le parc automobile ------------------------------------------

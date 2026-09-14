@@ -129,6 +129,15 @@ CATALOGUE: list[Echantillon] = [
               "and slamming shut with a solid metallic thunk and a short "
               "rattle of the window glass, outdoors on a quiet street, no "
               "engine, no music"),
+    # ⚠️ Un velo et une moto n'ont pas de portiere : on les enfourche. Ca
+    # jouait `ramasse` — le cliquetis d'un objet qu'on ramasse — et Martin
+    # l'a entendu pour ce que c'etait. La bequille et le cadre, c'est autre
+    # chose. Sert a tout char sans portieres (`vehicules.py`).
+    _e("enfourcher", "Enfourcher un deux-roues", duree_s=0.9, volume=0.35,
+       prompt="hopping onto a parked bicycle: the metal kickstand flicked up "
+              "with a clank, the light steel frame and chain rattling as the "
+              "rider lands on the saddle, close-up, outdoors, no voices, "
+              "no music"),
     _e("choc", "Tôle froissée", variantes=2, duree_s=1.5, volume=1.0, influence=0.45,
        prompt="two cars colliding at city speed, one hard metal crunch, sheet "
               "metal buckling, headlight glass shattering onto the road, "

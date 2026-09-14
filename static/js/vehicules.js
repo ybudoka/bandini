@@ -467,7 +467,7 @@ const Vehicules = (function () {
       v.alarme--;
       if (v.alarme % 40 === 0) Son.SFX.klaxon();
     }
-    if (v.klaxonT > 0) { v.klaxonT--; if (v.klaxonT === 29) Son.SFX.klaxon(); }
+    if (v.klaxonT > 0) { v.klaxonT--; if (v.klaxonT === 29) avertir(v); }
     soignerAuVolant(v);
     majCrochet(v);
   }
@@ -647,8 +647,9 @@ const Vehicules = (function () {
     j.dansVehicule = v; j.dessine = false; j.vx = 0; j.vy = 0;
     j.x = v.x; j.y = v.y;
     if (crime) { Police.signalerCrime(crime, v.x, v.y, vu); B.partie.stats.volees++; }
-    Entree.contexte(v.def.sirene ? 'vehicule_sirene' : 'vehicule');
-    bruitDePortiere(v);
+    // ⚠️ L'etiquette du bouton tactile suit l'avertisseur : SIRENE, SONNETTE, KLAXON.
+    Entree.contexte(v.def.sirene ? 'vehicule_sirene' : v.def.klaxon === 'sonnette' ? 'vehicule_sonnette' : 'vehicule');
+    bruitDeMontee(v);
     if (v.def.classe !== 'velo') Son.boucle('moteur', true, 0.6);
     if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
     Hud.message(v.def.nom.toUpperCase());
@@ -656,11 +657,18 @@ const Vehicules = (function () {
   }
 
   /** Le bruit de la montee, et de la descente : la portiere d'un char — ou
-      rien de tel pour une moto et un velo, qu'on enfourche : c'est le
-      cliquetis de `ramasse` qui le dit. ⚠️ La FICHE decide (`portieres`,
-      `vehicules.py`), pas un `slug === 'velo'` ici. */
-  function bruitDePortiere(v) {
-    if (v.def.portieres) Son.SFX.porte('vehicule'); else Son.SFX.ramasse();
+      la bequille et le cadre d'une moto et d'un velo, qu'on enfourche.
+      ⚠️ La FICHE decide (`portieres`, `vehicules.py`), pas un
+      `slug === 'velo'` ici. */
+  function bruitDeMontee(v) {
+    if (v.def.portieres) Son.SFX.porte('vehicule'); else Son.SFX.enfourcher();
+  }
+
+  /** L'avertisseur du char, au bouton du klaxon : le klaxon, ou la sonnette
+      d'un velo. ⚠️ C'est la fiche qui le nomme (`klaxon`, `vehicules.py`),
+      et c'est un effet de `Son.SFX` — le trafic impatient passe par ici aussi. */
+  function avertir(v) {
+    (Son.SFX[v.def.klaxon] || Son.SFX.klaxon)();
   }
 
   /** Descendre : a gauche si c'est libre, sinon a droite, sinon derriere. */
@@ -686,7 +694,7 @@ const Vehicules = (function () {
     Son.boucle('moteur', false);
     Son.Radio.arreter();
     Son.Ambiance.jouer();
-    if (!force) bruitDePortiere(v);
+    if (!force) bruitDeMontee(v);
     if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.abandonner('SORTI DU TAXI');
     return true;
   }

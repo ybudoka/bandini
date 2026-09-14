@@ -203,3 +203,13 @@ def test_une_moto_et_un_velo_n_ont_pas_de_portiere():
         assert not par_slug[slug]["portieres"], slug
     for slug in ("auto", "taxi", "police", "camion", "autobus", "ambulance", "remorqueuse"):
         assert par_slug[slug]["portieres"], slug
+
+
+def test_le_velo_a_une_sonnette_et_les_autres_un_klaxon():
+    """L'avertisseur vient de la fiche : la sonnette du velo, le klaxon de tous
+    les autres — et c'est toujours un effet que `son.js` sait jouer."""
+    for v in vehicules.CATALOGUE:
+        assert v["klaxon"] in vehicules.AVERTISSEURS, v["slug"]
+    par_slug = {v["slug"]: v for v in vehicules.CATALOGUE}
+    assert par_slug["velo"]["klaxon"] == "sonnette"
+    assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] != "velo")

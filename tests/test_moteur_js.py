@@ -3632,8 +3632,8 @@ def test_chaque_porte_a_son_bruit(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const genres = [], montees = [];
         L.Son.SFX.porte = function (genre) { genres.push(genre || null); };
-        const vraiRamasse = L.Son.SFX.ramasse;
-        L.Son.SFX.ramasse = function () { montees.push('ramasse'); return vraiRamasse.apply(null, arguments); };
+        const vraiEnfourcher = L.Son.SFX.enfourcher;
+        L.Son.SFX.enfourcher = function () { montees.push('enfourcher'); return vraiEnfourcher.apply(null, arguments); };
         function pousser(porte) {
             if (!porte) return null;
             genres.length = 0;
@@ -3660,4 +3660,30 @@ def test_chaque_porte_a_son_bruit(banc):
     for quatre_roues in ("auto", "camion"):
         assert r[quatre_roues] == {"portes": ["vehicule", "vehicule"], "montees": []}, (quatre_roues, r[quatre_roues])
     for deux_roues in ("moto", "velo"):
-        assert r[deux_roues] == {"portes": [], "montees": ["ramasse", "ramasse"]}, (deux_roues, r[deux_roues])
+        assert r[deux_roues] == {"portes": [], "montees": ["enfourcher", "enfourcher"]}, (deux_roues, r[deux_roues])
+
+
+def test_le_velo_sonne_au_bouton_du_klaxon(banc):
+    """Demande de Martin : « la sonnette comme klaxon de velo ». Le meme bouton
+    qu'une auto — et l'etiquette du bouton tactile le dit. ⚠️ C'est la fiche
+    qui nomme l'avertisseur (`klaxon`, `vehicules.py`), pas un `slug === 'velo'`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const sons = [];
+        L.Son.SFX.klaxon = function () { sons.push('klaxon'); };
+        L.Son.SFX.sonnette = function () { sons.push('sonnette'); };
+        function essayer(slug) {
+            sons.length = 0;
+            const v = o.char(slug, 40, 0, 0);
+            L.Vehicules.monter(j, v);
+            const etiquette = o.doc.querySelector('#boutons b[data-a="attaque"]').textContent;
+            o.tape('KeyJ', 2);
+            o.frame(3);
+            L.Vehicules.descendre(j, true);
+            return { etiquette: etiquette, sons: sons.slice() };
+        }
+        return { velo: essayer('velo'), auto: essayer('auto') };
+    }""")
+    assert r["velo"] == {"etiquette": "SONNETTE", "sons": ["sonnette"]}, r["velo"]
+    assert r["auto"] == {"etiquette": "KLAXON", "sons": ["klaxon"]}, r["auto"]
