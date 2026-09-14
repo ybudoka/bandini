@@ -426,7 +426,8 @@ const Entites = (function () {
     ville avait 24 archetypes pour quatre corps, et sur six metiers, DEUX
     faisaient quelque chose : les autres etaient des nombres. Une sorte qui ne
     fait rien est un costume, et le depot a deja paye ce defaut une fois. */
-  const SORTES = ['musicien', 'amuseur', 'exhibitionniste'];
+  const SORTES = ['musicien', 'amuseur', 'exhibitionniste',
+                  'contractuelle', 'touriste', 'ivrogne', 'jogger', 'facteur'];
 
   //: Combien de chaque sorte vivent dans la bulle du joueur, au plus.
   const SORTES_MAX = 2;
@@ -437,19 +438,33 @@ const Entites = (function () {
       zero au catalogue, exactement comme l'homme-sandwich. */
   function naitreLesSortes() {
     if (!B.joueur || B.interieur) return 0;
+    const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     let nes = 0;
     for (const slug of SORTES) {
       const arch = archetype(slug);
       if (!arch || arch.slug !== slug) continue;
+      // ⚠️ CHACUNE A SES QUARTIERS, et c'est la fiche qui le dit. Un touriste
+      // dans La Shop et un facteur sur le port, c'est huit sortes partout
+      // pareilles — de la figuration, donc. Un quartier se reconnait aussi a
+      // qui y marche.
+      if (arch.districts && (!zone || arch.districts.indexOf(zone.district) < 0)) continue;
+      // ⚠️ DEUX pour celles qui tiennent un poste, UNE pour celles qui
+      // marchent. Un spectacle est plante quelque part : il en faut deux pour
+      // avoir une chance d'en croiser un. Une sorte qui marche, elle, traverse
+      // toute la bulle — une suffit a la voir, et deux ne font que grossir la
+      // figuration (le budget de la bagarre le compte).
+      const combien = arch.vitesse > 0 ? 1 : SORTES_MAX;
       const deja = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === slug && q.vivant; }).length;
-      if (deja >= SORTES_MAX) continue;
+      if (deja >= combien) continue;
       const place = placeDeNaissance();
       if (!place || visibleAEcran(place.x, place.y, 24)) continue;
       const e = creerPieton(place.x, place.y, arch);
       if (!e) continue;
-      // Le musicien et l'amuseur TIENNENT UN POSTE ; l'homme au manteau, lui,
-      // rode.
-      if (slug === 'exhibitionniste') { e.etat = 'flane'; }
+      // ⚠️ Qui tient un poste se lit dans la FICHE (`vitesse: 0`), pas dans
+      // une liste de slugs : le musicien et l'amuseur ne bougent pas, les six
+      // autres marchent. Une liste ici aurait fait mentir `pietons.py` a la
+      // sixieme sorte.
+      if (arch.vitesse > 0) { e.etat = 'flane'; }
       else { e.etat = 'fige'; e.face = 'bas'; e.plante = { x: e.x, y: e.y }; }
       nes++;
     }
@@ -466,8 +481,15 @@ const Entites = (function () {
     if (B.interieur || B.t % 15 !== 0) return;
     for (const e of B.entites) {
       if (e.type !== 'pieton' || !e.vivant || e.etat === 'assomme') continue;
-      if (e.arch === 'musicien' || e.arch === 'amuseur') attrouper(e);
-      else if (e.arch === 'exhibitionniste') majManteau(e);
+      // ⚠️ On aiguille sur le METIER, pas sur le slug : c'est le metier qui
+      // est le crochet declare dans `pietons.py`, et c'est lui qui dit ce que
+      // la sorte FAIT. Un slug ne dit que comment on l'appelle.
+      if (e.metier === 'musicien' || e.metier === 'amuseur') attrouper(e);
+      else if (e.metier === 'exhibitionniste') majManteau(e);
+      else if (e.metier === 'contractuelle') majContravention(e);
+      else if (e.metier === 'touriste') majPhoto(e);
+      else if (e.metier === 'ivrogne') majIvrogne(e);
+      else if (e.metier === 'facteur') majTournee(e);
     }
   }
 
@@ -505,8 +527,13 @@ const Entites = (function () {
       agent.but = { x: e.x, y: e.y };
       return;
     }
+    // ⚠️ `arret` AUSSI, pas seulement `flane` — c'est la MEME lecon que pour
+    // l'attroupement, et elle s'etait reglee a un seul endroit. Un flaneur fait
+    // des pauses tout seul (une fois sur trois, `majPieton`) : celle qui
+    // s'arretait pile devant lui etait la seule de la rue a ne rien voir, et il
+    // attendait qu'elle reparte pour ouvrir son manteau a quelqu'un d'autre.
     const proche = pietonsAutour(e.x, e.y, 40).find(function (q) {
-      return q !== e && q.vivant && !q.metier && q.etat === 'flane';
+      return q !== e && q.vivant && !q.metier && (q.etat === 'flane' || q.etat === 'arret');
     });
     if (!proche || !Monde.ligneLibre(e.x, e.y, proche.x, proche.y)) return;
     e.manteauT = 90;
@@ -515,6 +542,177 @@ const Entites = (function () {
     regarder(e, proche.x - e.x, proche.y - e.y);
     proche.etat = 'fuit'; proche.menace = e; proche.minuterie = 240; proche.cri = 120;
     bulle(proche, '!');
+  }
+
+  /** Les mots d'une sorte, lus dans la fiche. ⚠️ Jamais ecrits ici : voir
+      `pietons.PAROLES`. Un mot en dur dans le JS est un mot que personne ne
+      peut relire depuis la source de verite. */
+  function paroles(metier) {
+    const p = B.defs.pietons.paroles;
+    return (p && p[metier]) || {};
+  }
+
+  //: Jusqu'ou une sorte va chercher ce qui l'interesse (un char mal gare, une
+  //: porte a desservir), en pixels.
+  const PORTEE_SORTE = 150;
+
+  /** Le char mal gare le plus proche qui n'a pas encore sa contravention.
+
+      ⚠️ La regle du mal-gare est celle de `Missions.malGare` — la MEME que
+      celle de la fourriere, pas une deuxieme ecrite ici. Deux regles qui
+      disent « mal gare » se contrediraient le jour ou l'une bouge, et le
+      joueur verrait une contravention sur un char que personne ne remorque. */
+  function charAVerbaliser(e) {
+    let meilleur = null, dMin = PORTEE_SORTE * PORTEE_SORTE;
+    for (const v of B.entites) {
+      if (v.type !== 'vehicule' || v.contravention || !v.laisse) continue;
+      const d = dist2(v.x, v.y, e.x, e.y);
+      if (d >= dMin || !Missions.malGare(v)) continue;
+      dMin = d; meilleur = v;
+    }
+    return meilleur;
+  }
+
+  /** Elle verbalise. ⚠️ C'est elle qui rend « mal gare » VISIBLE : jusqu'ici
+      un message du HUD annoncait la remorqueuse, et rien, dans la rue, ne
+      disait pourquoi le char allait disparaitre. Un avertissement qu'on lit
+      sans voir personne l'ecrire se retient moins bien qu'une femme en
+      uniforme plantee devant son capot. */
+  function majContravention(e) {
+    if (e.ticketT > 0) {
+      e.ticketT -= 15;
+      if (e.ticketT <= 0) { e.ticketT = 0; e.etat = 'flane'; e.cap = null; }
+      return;
+    }
+    if (e.etat !== 'flane' && e.etat !== 'cap') return;
+    const v = charAVerbaliser(e);
+    if (!v) { if (e.etat === 'cap') { e.etat = 'flane'; e.cap = null; } return; }
+    if (Math.hypot(v.x - e.x, v.y - e.y) > 22) {
+      e.etat = 'cap'; e.cap = { x: v.x, y: v.y }; e.capT = 0;
+      return;
+    }
+    e.etat = 'arret'; e.minuterie = 150; e.cap = null;
+    e.ticketT = 150; e.vx = 0; e.vy = 0;
+    regarder(e, v.x - e.x, v.y - e.y);
+    v.contravention = (v.contravention || 0) + 1;
+    bulle(e, paroles('contractuelle').verbalise, { duree: 150 });
+    papier(v.x, v.y);
+    if (visibleAEcran(v.x, v.y, 60)) {
+      Hud.message((paroles('contractuelle').verbalise || '') + ' — ' + v.def.nom.toUpperCase(), 180);
+    }
+  }
+
+  /** Le papillon blanc sous l'essuie-glace. */
+  function papier(x, y) {
+    for (let i = 0; i < 4; i++) {
+      particule(x + (B.rng() - 0.5) * 6, y - 2, (B.rng() - 0.5) * 0.5, -0.3 - B.rng() * 0.3,
+                30 + B.rng() * 20, '#ffffff', 2, 0.04);
+    }
+  }
+
+  /** Il leve la tete devant une vitrine et il photographie.
+
+      ⚠️ Son interet n'est pas le flash : c'est qu'il REGARDE. `temoin: 1.0`
+      dans la fiche — le seul de la ville — donc faire un coup devant lui,
+      c'est se faire voir a coup sur. Et il est lent : on ne le seme pas en
+      marchant. */
+  function majPhoto(e) {
+    if (e.repos > 0) { e.repos -= 15; return; }
+    if (e.etat !== 'flane') return;
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    let vitrine = null;
+    for (let dy = -3; dy <= -1 && !vitrine; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (Monde.glyphe(tx + dx, ty + dy) === 'W') { vitrine = true; break; }
+      }
+    }
+    if (!vitrine) return;
+    e.etat = 'arret'; e.minuterie = 120; e.vx = 0; e.vy = 0;
+    e.face = 'haut';
+    e.repos = 600;
+    flash(e.x, e.y - 8);
+  }
+
+  function flash(x, y) {
+    for (let i = 0; i < 10; i++) {
+      const a = B.rng() * Math.PI * 2, v = 0.3 + B.rng() * 0.9;
+      particule(x, y, Math.cos(a) * v, Math.sin(a) * v * 0.6, 8 + B.rng() * 6, '#ffffff', 2, 0);
+    }
+  }
+
+  /** Il zigzague, il tombe tout seul, il insulte la rue. ⚠️ Et il NE FUIT PAS
+      (voir `alerter`) : c'est le seul de la ville, et c'est ce qui le rend
+      dangereux pour lui-meme. Une rue ou tout le monde detale de la meme
+      facon n'a qu'une reaction. */
+  function majIvrogne(e) {
+    if (e.etat !== 'flane') return;
+    // ⚠️ UN COMPTE A SOI, jamais `e.t % 60`. `majSortes` ne tourne qu'une image
+    // sur quinze et `e.t` compte depuis la NAISSANCE : les deux ne tombent
+    // ensemble que si l'on est ne sur un multiple de quinze. Un ivrogne ne du
+    // mauvais pied n'aurait jamais trebuche de sa vie — et rien ne l'aurait
+    // dit, parce que « il tombe rarement » et « il ne tombe jamais » se
+    // ressemblent beaucoup.
+    e.soulT = (e.soulT || 0) + 15;
+    if (e.soulT < 60) return;
+    e.soulT = 0;
+    if (B.rng() < 0.06) {
+      // Il tombe. Personne ne l'a touche.
+      e.etat = 'assomme';
+      e.minuterie = 120 + Math.floor(B.rng() * 180);
+      poussiere(e.x, e.y, 4);
+      return;
+    }
+    const mots = paroles('ivrogne').insultes;
+    if (mots && mots.length && B.rng() < 0.14) {
+      bulle(e, mots[Math.floor(B.rng() * mots.length)], { duree: 90 });
+    }
+  }
+
+  /** La porte la plus proche qu'il n'a pas encore desservie. */
+  function prochainePorte(e) {
+    const carte = Monde.carte;
+    if (!carte || !carte.portesFermees.length) return null;
+    const faites = e.tournee || (e.tournee = []);
+    let meilleure = null, dMin = PORTEE_SORTE * PORTEE_SORTE;
+    for (const porte of carte.portesFermees) {
+      const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 8;
+      const d = dist2(x, y, e.x, e.y);
+      if (d >= dMin || faites.indexOf(porte) >= 0) continue;
+      if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+      dMin = d; meilleure = porte;
+    }
+    return meilleure;
+  }
+
+  /** Sa tournee : d'une porte a l'autre. ⚠️ Il N'ENTRE PAS, et c'est toute la
+      difference avec le flaneur qui rentre chez lui — celui-la disparait
+      derriere le battant, le facteur reste dehors et passe au suivant. */
+  function majTournee(e) {
+    if (e.livreT > 0) {
+      e.livreT -= 15;
+      if (e.livreT <= 0) { e.livreT = 0; e.etat = 'flane'; }
+      return;
+    }
+    if (e.etat === 'cap' && e.cap && e.porteTournee) {
+      if (Math.hypot(e.cap.x - e.x, e.cap.y - e.y) > 14) return;
+      Monde.ouvrirPorte(e.porteTournee.x, e.porteTournee.y);
+      e.tournee.push(e.porteTournee);
+      e.porteTournee = null; e.cap = null;
+      e.etat = 'arret'; e.minuterie = 80; e.vx = 0; e.vy = 0;
+      e.face = 'haut';
+      e.livreT = 80;
+      bulle(e, paroles('facteur').livre, { duree: 80 });
+      return;
+    }
+    if (e.etat !== 'flane') return;
+    e.tourneeT = (e.tourneeT || 0) + 15;      // un compte a soi : voir `majIvrogne`
+    if (e.tourneeT < 45) return;
+    e.tourneeT = 0;
+    const porte = prochainePorte(e);
+    if (!porte) { if (e.tournee && e.tournee.length > 6) e.tournee.length = 0; return; }
+    e.porteTournee = porte;
+    e.cap = { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8 };
+    e.capT = 0; e.etat = 'cap';
   }
 
   /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
@@ -1144,6 +1342,18 @@ const Entites = (function () {
         e.etat = 'flane'; e.repos = r.repos_images; taire(e);
       }
       return;
+    } else if (e.etat === 'cap' && e.cap) {
+      // ⚠️ UN ETAT POUR ALLER QUELQUE PART. Flaner suit une direction jusqu'a
+      // ce qu'elle ne mene plus nulle part ; la contractuelle et le facteur,
+      // eux, ont un ENDROIT ou aller — le char mal gare, la prochaine porte de
+      // la tournee. Sans cet etat, il aurait fallu les faire tomber dessus par
+      // hasard, et une routine qui depend du hasard n'est pas une routine.
+      const dx = e.cap.x - e.x, dy = e.cap.y - e.y, norme = Math.hypot(dx, dy) || 1;
+      // On renonce : trop loin, ou ca fait dix secondes qu'on n'y arrive pas.
+      // Meme filet que `majPorte`, et pour la meme raison — un pieton coince
+      // contre un banc ne doit pas y rester pour toujours.
+      if (norme > 340 || ++e.capT > 600) { e.etat = 'flane'; e.cap = null; e.vx = 0; e.vy = 0; }
+      else { e.vx = dx / norme * vitesse; e.vy = dy / norme * vitesse; }
     } else if (e.etat === 'arret') {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
@@ -1177,7 +1387,12 @@ const Entites = (function () {
           const rentre = e.poste && dist2(e.x, e.y, e.poste.x, e.poste.y) > rayonPoste * rayonPoste;
           // L'homme-sandwich, lui, marche plus qu'il n'attend : une pancarte
           // qui bouge se voit de plus loin qu'une pancarte plantee.
-          if (!rentre && B.rng() < (e.poste ? (e.metier === 'reclame' ? 0.3 : 0.65) : 0.3)) {
+          // ⚠️ LE JOGGER NE S'ARRETE JAMAIS : ni pour souffler, ni pour
+          // regarder un amuseur (`attrouper` ecarte deja les metiers). Des
+          // ecouteurs sur les oreilles, et il passe — c'est sa routine, et
+          // c'est une routine en creux : ce qu'il ne fait pas.
+          if (!rentre && e.metier !== 'jogger'
+              && B.rng() < (e.poste ? (e.metier === 'reclame' ? 0.3 : 0.65) : 0.3)) {
             e.etat = 'arret';
             e.minuterie = 50 + Math.floor(B.rng() * 160);
             e.butT = e.poste ? 30 : 90;
@@ -1213,6 +1428,15 @@ const Entites = (function () {
         }
         e.vx = dir[0] * vitesse;
         e.vy = dir[1] * vitesse;
+        // ⚠️ L'IVROGNE ZIGZAGUE : sa direction est bonne, sa trajectoire ne
+        // l'est pas. C'est le seul de la ville a ne pas marcher droit, et ca
+        // le nomme d'aussi loin que sa bouteille — un corps qu'on reconnait a
+        // sa demarche avant de voir ses pixels.
+        if (e.metier === 'ivrogne') {
+          const a = Math.sin(e.t / 22) * 0.9, vx = e.vx, vy = e.vy;
+          e.vx = vx * Math.cos(a) - vy * Math.sin(a);
+          e.vy = vx * Math.sin(a) + vy * Math.cos(a);
+        }
       }
     }
     const avant = { x: e.x, y: e.y };
@@ -1339,6 +1563,15 @@ const Entites = (function () {
       if (dist2(e.x, e.y, x, y) > rayon * rayon) continue;
       if (e === menace || e.etat === 'assomme' || e.agent) continue;   // l'agent ne fuit pas : la police le dirige
       if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
+      // ⚠️ L'IVROGNE NE FUIT PAS. Il n'a pas peur : il n'a rien compris, et il
+      // repond. C'est le seul de la ville — une rue ou tout le monde detale de
+      // la meme facon n'a qu'une seule reaction, et on cesse de la voir.
+      if (e.metier === 'ivrogne') {
+        const mot = (B.defs.pietons.paroles.ivrogne || {}).sans_peur;
+        if (mot) bulle(e, mot, { duree: 90 });
+        e.cri = 90;
+        continue;
+      }
       if (e.intouchable) {                       // l'enfant ne fait que detaler
         e.etat = 'fuit'; e.menace = menace; e.minuterie = reactions.fuite_secondes * 90; e.cri = 120;
         continue;

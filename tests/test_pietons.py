@@ -8,6 +8,12 @@ from app import armes, carte, pietons
 #: Les metiers qui se tiennent quelque part au lieu de marcher.
 POSTES = {"ambulant", "musicien", "amuseur"}
 
+#: Les SORTES : celles qui ont un corps a elles et une routine a elles. ⚠️ La
+#: liste est ici et pas dans le juge, parce que trois juges la lisent — et une
+#: liste recopiee trois fois finit par ne plus dire la meme chose aux trois.
+SORTES = {"musicien", "amuseur", "exhibitionniste",
+          "contractuelle", "touriste", "ivrogne", "jogger", "facteur"}
+
 
 @pytest.mark.parametrize("pieton", pietons.CATALOGUE, ids=lambda p: p["slug"])
 def test_un_pieton_est_jouable(pieton):
@@ -137,8 +143,12 @@ def test_les_trois_sortes_ont_un_corps_a_elles():
     avec les filles de la Brume qu'on ne distinguait plus de personne.
 
     La regle : UNE SORTE = UN CORPS + UNE ROUTINE. Ce juge tient la premiere
-    moitie (un sprite a elle, un metier a elle) ; le banc tient la seconde."""
-    sortes = {"musicien", "amuseur", "exhibitionniste"}
+    moitie (un sprite a elle, un metier a elle) ; le banc tient la seconde.
+
+    ⚠️ Les CINQ de la deuxieme vague sont jugees ici aussi, et par la meme
+    regle : une sorte ajoutee sans corps a elle serait un costume, qu'elle soit
+    de la premiere fournee ou de la dixieme."""
+    sortes = SORTES
     trouves = {p["slug"] for p in pietons.CATALOGUE if p["slug"] in sortes}
     assert trouves == sortes, f"il en manque : {sortes - trouves}"
     for slug in sortes:
@@ -152,3 +162,47 @@ def test_les_trois_sortes_ont_un_corps_a_elles():
     # Les corps ne se partagent pas : autant de sprites que de sortes.
     corps = {next(q for q in pietons.CATALOGUE if q["slug"] == s)["sprite"] for s in sortes}
     assert len(corps) == len(sortes), f"deux sortes se partagent un corps : {corps}"
+
+
+def test_les_sortes_qui_viennent_avec_ont_leurs_quartiers():
+    """⚠️ Huit sortes qui naissent PARTOUT, ce n'est plus de la variete, c'est
+    de la figuration : on les croise toutes dans la meme rue et on cesse de les
+    voir. Chacune de la deuxieme vague declare donc ses quartiers — un touriste
+    sur les Quais et pas dans La Shop, un facteur aux Erables et pas au port.
+
+    Un quartier se reconnait a ses enseignes, a ses toits et a sa gang ; il doit
+    aussi se reconnaitre a QUI Y MARCHE."""
+    districts = {d["slug"] for d in carte.DISTRICTS}
+    deuxieme = {"contractuelle", "touriste", "ivrogne", "jogger", "facteur"}
+    for slug in sorted(deuxieme):
+        p = pietons.par_slug(slug)
+        assert p is not None, f"{slug} n'est pas au catalogue"
+        assert p["districts"], f"{slug} n'a pas de quartiers : elle naitra partout"
+        inconnus = set(p["districts"]) - districts
+        assert not inconnus, f"{slug} habite un quartier qui n'existe pas : {inconnus}"
+    # ⚠️ Et elles ne sont pas toutes dans le meme : deux quartiers au moins
+    # doivent en accueillir, sinon la regle ne sert a rien.
+    couverts = {d for slug in deuxieme for d in pietons.par_slug(slug)["districts"]}
+    assert len(couverts) >= 3, f"les cinq tiennent dans {couverts} : ce n'est plus une repartition"
+
+
+def test_ce_qu_une_sorte_dit_vit_en_python():
+    """⚠️ « Une fiche que le navigateur ne lisait pas » — le depot a paye ce
+    defaut huit fois. Le symetrique coute aussi cher : un mot ecrit en dur dans
+    `entites.js` est un mot que personne ne peut relire, corriger ni juger
+    depuis la source de verite. `missions.py` le dit deja pour l'histoire ; ce
+    qu'une sorte dit dans la rue n'est pas d'une autre nature.
+
+    Ce juge tient les deux bouts : chaque parole appartient a un metier qui
+    existe, et aucune n'est vide."""
+    metiers = {p["metier"] for p in pietons.CATALOGUE if p["metier"]}
+    for metier, mots in pietons.PAROLES.items():
+        assert metier in metiers, f"« {metier} » n'est le metier de personne"
+        assert mots, f"{metier} n'a rien a dire"
+        for cle, valeur in mots.items():
+            textes = valeur if isinstance(valeur, list) else [valeur]
+            assert textes, f"{metier}.{cle} est vide"
+            for texte in textes:
+                assert isinstance(texte, str) and texte.strip(), f"{metier}.{cle} : {texte!r}"
+    # Le paquet les porte : sans ca, le navigateur ne les verrait pas.
+    assert pietons.exporter()["paroles"] == pietons.PAROLES

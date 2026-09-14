@@ -186,6 +186,53 @@ CATALOGUE: list[Pieton] = [
     _p("exhibitionniste", "L'homme au manteau", "#7a5a3a", "#4a3320", "#e8b088", "#2a2a3a",
        sprite="exhibitionniste", vitesse=0.85, courage=0.1, temoin=0.1, vie=60,
        argent=(2, 15), metier="exhibitionniste", frequence=0.0),
+    # --- Les cinq qui viennent avec ---------------------------------------
+    # ⚠️ MEME REGLE, et ce n'est pas du remplissage : chacune sert une fiche
+    # DEJA LIVREE. Une sorte qui n'est qu'une silhouette de plus dans la rue
+    # n'a pas sa place ici — c'est exactement le defaut que « une sorte = un
+    # corps + une routine » a ete ecrite pour empecher.
+    #
+    # ⚠️ Et elles ne naissent pas au hasard non plus (`frequence=0`) : on les
+    # POSE. ⚠️ Chacune a SES QUARTIERS (`districts`) — un touriste sur les
+    # Quais et pas dans La Shop, un facteur aux Erables et pas au port. C'est
+    # ce qui les empeche d'etre une figuration de plus partout pareille, et ce
+    # qui fait qu'un quartier se reconnait aussi a qui y marche.
+
+    # Elle rend « mal gare » VISIBLE avant que la fourriere n'avale le char :
+    # jusqu'ici, un message du HUD annoncait la remorqueuse et rien, dans la
+    # rue, ne disait pourquoi.
+    _p("contractuelle", "Contractuelle", "#2e5f8a", "#3a2a1a", "#f0c098", "#26324a",
+       sprite="contractuelle", vitesse=0.9, courage=0.4, temoin=0.9, vie=70,
+       argent=(10, 40), metier="contractuelle", frequence=0.0,
+       districts=("faubourg", "shop")),
+    # ⚠️ LE MEILLEUR TEMOIN DE LA VILLE (`temoin=1.0`, le seul) : il regarde,
+    # c'est tout ce qu'il fait. Faire un coup devant lui, c'est se faire voir a
+    # coup sur — et il est lent, alors on ne le seme pas en marchant.
+    _p("touriste", "Touriste", "#f2e2a8", "#8a6a3a", "#e8b088", "#8a7a5a",
+       sprite="touriste", vitesse=0.7, courage=0.0, temoin=1.0, vie=55,
+       argent=(30, 90), metier="touriste", frequence=0.0,
+       districts=("quais", "pointe")),
+    # ⚠️ LE SEUL QUI NE FUIT PAS devant une arme — il insulte. Ce qui le rend
+    # dangereux pour lui-meme, et c'est le but : une rue ou tout le monde
+    # detale de la meme facon n'a qu'une reaction.
+    _p("ivrogne", "Ivrogne", "#6a5a4a", "#8a8a8a", "#d8a878", "#4a4438",
+       sprite="ivrogne", vitesse=0.7, courage=1.0, temoin=0.05, vie=70,
+       argent=(2, 18), metier="ivrogne", frequence=0.0,
+       districts=("quais", "faubourg")),
+    # Ecouteurs sur les oreilles : il ne temoigne de RIEN (`temoin=0.0`, le
+    # seul avec l'agent) et il ne s'arrete jamais — ni pour un amuseur, ni
+    # pour une pause.
+    _p("jogger", "Joggeuse", "#e04a3a", "#2a2a2a", "#e8b088", "#2a2a2a",
+       sprite="jogger", vitesse=1.45, courage=0.2, temoin=0.0, vie=75,
+       argent=(0, 8), metier="jogger", frequence=0.0,
+       districts=("erables", "pointe")),
+    # Sa tournee fait battre les portes de la rue une a une — et il n'ENTRE
+    # jamais. C'est toute la difference avec le flaneur qui rentre chez lui :
+    # celui-la disparait derriere le battant, le facteur reste dehors.
+    _p("facteur", "Facteur", "#2e6b4a", "#3a2a1a", "#e8b088", "#1f2f24",
+       sprite="facteur", vitesse=1.0, courage=0.3, temoin=0.5, vie=70,
+       argent=(5, 25), metier="facteur", frequence=0.0,
+       districts=("erables", "faubourg")),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.
@@ -221,6 +268,27 @@ REACTIONS = {
     "pickpocket_dos_degres": 90, # il faut etre DERRIERE lui
     "enfant_peur_tuiles": 12,    # un enfant detale de bien plus loin
     "suite_distance_px": 26,     # a quelle distance l'enfant suit sa mere
+}
+
+#: CE QUE LES SORTES DISENT — et ça vit ICI, pas dans le JavaScript.
+#:
+#: ⚠️ Le dépôt a payé huit fois le même défaut : « une fiche que le navigateur
+#: ne lisait pas ». Le symétrique coûte aussi cher — un mot écrit en dur dans
+#: `entites.js` est un mot que personne ne peut relire, corriger ni juger
+#: depuis la source de vérité. `missions.py` le dit déjà pour l'histoire (« le
+#: texte de chaque réplique vit ICI, et nulle part ailleurs ») ; ce qu'une
+#: sorte de passant dit dans la rue n'est pas d'une autre nature.
+PAROLES: dict[str, dict] = {
+    # Ce qu'elle annonce en glissant le papier sous l'essuie-glace.
+    "contractuelle": {"verbalise": "CONTRAVENTION"},
+    # Il ne rentre pas : il ouvre, il glisse, il repart.
+    "facteur": {"livre": "POSTE"},
+    # ⚠️ Il n'a pas peur, il n'a rien compris : au lieu de fuir, il répond.
+    # C'est le seul de la ville, et c'est ce qui le rend dangereux pour lui.
+    "ivrogne": {
+        "insultes": ["AYOYE", "R'GARDE OÙ TU VAS", "MON ONCLE!", "SANTÉ!"],
+        "sans_peur": "PIS QUOI ENCORE",
+    },
 }
 
 #: Un piéton assomme rapporte ses poches ; un mort ne rapporte rien de plus.
@@ -262,5 +330,6 @@ def exporter() -> dict:
         "catalogue": CATALOGUE,
         "gangs": GANGS,
         "reactions": dict(REACTIONS),
+        "paroles": {slug: dict(mots) for slug, mots in PAROLES.items()},
         "poids_total": round(sum(p["frequence"] for p in ordinaires()), 3),
     }

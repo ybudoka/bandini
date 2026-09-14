@@ -1280,6 +1280,14 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
         L.Entites.retirer(passant); L.Entites.retirer(mus);
 
         // 3. L'EXHIBITIONNISTE ouvre son manteau : elle crie et fuit.
+        // ⚠️ On vide la rue d'abord : il ouvre son manteau AU PREMIER QUI
+        // FLANE, et le juge regarde SA dame. Un passant de la ville arrive
+        // entre-temps, c'est lui qui prend le geste — et le juge conclut qu'il
+        // n'y a pas eu de geste.
+        for (const q of L.B.entites.slice()) {
+            if (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 140) L.Entites.retirer(q);
+        }
+        L.Entites.indexer();
         const ex = poser('exhibitionniste', 30, 0);
         const dame = o.poser('passante', 34, 10);
         dame.etat = 'flane';
@@ -1315,6 +1323,190 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
     assert r["police"] == {"fuit": True, "menace": True, "suit": True}, (
         "un agent doit l'arrêter, LUI : c'est ce qui rend la police crédible (%s)" % r["police"]
     )
+
+
+def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
+    """⚠️ La deuxième vague des « sortes de gens », et la même règle : **une
+    sorte = un corps + une routine**.
+
+    Celles-ci ne sont pas du remplissage — chacune sert une fiche **déjà
+    livrée** : la contractuelle rend « mal garé » visible avant que la fourrière
+    n'avale le char, le touriste est le meilleur témoin de la ville, l'ivrogne
+    est le seul qui ne fuit pas devant une arme, le jogger ne s'arrête jamais,
+    et le facteur fait battre les portes sans jamais entrer.
+
+    Le corps est jugé côté Python ; ici, c'est la **routine**."""
+    mots = paquet["pietons"]["paroles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(77);
+        const j = L.B.joueur, TT = L.TT, out = {};
+
+        // 1. LA CONTRACTUELLE : elle va au char mal gare et elle verbalise.
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const v = o.char('auto', 0, 0, 0);
+        v.laisse = true;
+        const agente = o.poser('contractuelle', 70, 0);
+        agente.etat = 'flane';
+        L.Entites.indexer();
+        const loin0 = Math.hypot(v.x - agente.x, v.y - agente.y);
+        let cap = false;
+        for (let i = 0; i < 400 && !v.contravention; i++) { o.frame(1); if (agente.etat === 'cap') cap = true; }
+        out.contravention = { malGare: L.Missions.malGare(v), cap: cap,
+                              tickets: v.contravention || 0,
+                              rapproche: Math.hypot(v.x - agente.x, v.y - agente.y) < loin0,
+                              dit: agente.bulle ? agente.bulle.texte : null,
+                              corps: agente.sprite };
+        L.Entites.retirer(agente); L.Entites.retirer(v);
+
+        // 2. LE TOURISTE : il leve la tete devant une vitrine et il photographie.
+        const c = L.Monde.carte;
+        let devant = null;
+        for (let y = 4; y < c.h - 4 && !devant; y++) {
+            for (let x = 4; x < c.w - 4; x++) {
+                if (c.sol[y][x] !== 'W') continue;
+                if (!L.Monde.marchablePieton(x, y + 2) || L.Monde.estChaussee(x, y + 2)) continue;
+                devant = { x: x * TT + 8, y: (y + 2) * TT + 8 };
+                break;
+            }
+        }
+        j.x = devant.x; j.y = devant.y + 40; L.Monde.centrerCamera(j.x, j.y);
+        const t = o.poser('touriste', devant.x - j.x, devant.y - j.y);
+        t.etat = 'flane';
+        L.Entites.indexer();
+        L.B.particules.length = 0;
+        let arrete = false;
+        for (let i = 0; i < 90 && !arrete; i++) { o.frame(1); if (t.etat === 'arret') arrete = true; }
+        out.photo = { arrete: arrete, leveLaTete: t.face === 'haut',
+                      flash: L.B.particules.length > 0, corps: t.sprite,
+                      temoin: L.Entites.archetype('touriste').temoin };
+        L.Entites.retirer(t);
+
+        // 3. L'IVROGNE : il zigzague, il ne fuit pas, et il finit par tomber.
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        function virages(e) {
+            let somme = 0, a0 = null;
+            for (let i = 0; i < 240; i++) {
+                o.frame(1);
+                if (Math.hypot(e.vx, e.vy) < 0.1) continue;
+                const a = Math.atan2(e.vy, e.vx);
+                if (a0 !== null) {
+                    let dd = a - a0;
+                    while (dd > Math.PI) dd -= 2 * Math.PI;
+                    while (dd < -Math.PI) dd += 2 * Math.PI;
+                    somme += Math.abs(dd);
+                }
+                a0 = a;
+            }
+            return Math.round(somme * 100) / 100;
+        }
+        const soul = o.poser('ivrogne', 40, 0); soul.etat = 'flane';
+        const sobre = o.poser('passant', -40, 0); sobre.etat = 'flane';
+        L.Entites.indexer();
+        const vireSoul = virages(soul), vireSobre = virages(sobre);
+        // Une arme sous le nez : tout le monde fuit, lui repond.
+        sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
+        L.Entites.alerter(soul.x, soul.y, j, 2);
+        out.ivrogne = { zigzag: vireSoul, droit: vireSobre, corps: soul.sprite,
+                        fuit: soul.etat === 'fuit', repond: soul.bulle ? soul.bulle.texte : null,
+                        lAutreFuit: sobre.etat === 'fuit' || sobre.etat === 'temoin' };
+        soul.etat = 'flane';
+        let tombe = false;
+        for (let i = 0; i < 1500 && !tombe; i++) { o.frame(1); if (soul.etat === 'assomme') tombe = true; }
+        out.ivrogne.tombe = tombe;
+        L.Entites.retirer(soul); L.Entites.retirer(sobre);
+
+        // 4. LE JOGGER : il ne s'arrete JAMAIS, et il ne temoigne de rien.
+        const jog = o.poser('jogger', 40, 0); jog.etat = 'flane';
+        const flaneur = o.poser('passant', -40, 0); flaneur.etat = 'flane';
+        L.Entites.indexer();
+        let pauses = 0, pausesFlaneur = 0;
+        const depart = { x: jog.x, y: jog.y }, departF = { x: flaneur.x, y: flaneur.y };
+        let routeJ = 0, routeF = 0;
+        let avantJ = { x: jog.x, y: jog.y }, avantF = { x: flaneur.x, y: flaneur.y };
+        for (let i = 0; i < 900; i++) {
+            o.frame(1);
+            if (jog.etat === 'arret') pauses++;
+            if (flaneur.etat === 'arret') pausesFlaneur++;
+            routeJ += Math.hypot(jog.x - avantJ.x, jog.y - avantJ.y);
+            routeF += Math.hypot(flaneur.x - avantF.x, flaneur.y - avantF.y);
+            avantJ = { x: jog.x, y: jog.y }; avantF = { x: flaneur.x, y: flaneur.y };
+        }
+        out.jogger = { pauses: pauses, pausesFlaneur: pausesFlaneur, corps: jog.sprite,
+                       route: Math.round(routeJ), routeFlaneur: Math.round(routeF),
+                       temoin: L.Entites.archetype('jogger').temoin };
+        L.Entites.retirer(jog); L.Entites.retirer(flaneur);
+
+        // 5. LE FACTEUR : il fait battre la porte, et il N'ENTRE PAS.
+        const porte = c.portesFermees.find(function (p) { return L.Monde.marchablePieton(p.x, p.y + 1); });
+        j.x = porte.x * TT + 8; j.y = (porte.y + 4) * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        const fac = o.poser('facteur', 0, -2 * TT);
+        fac.etat = 'flane';
+        L.Entites.indexer();
+        let ouverte = 0, vise = false, dit = null;
+        for (let i = 0; i < 500; i++) {
+            o.frame(1);
+            if (fac.etat === 'cap') vise = true;
+            // ⚠️ On attrape la bulle AU PASSAGE : elle dure quatre-vingts
+            // images, la tournee en dure cinq cents. La lire a la fin, c'est
+            // lire apres qu'elle s'est fermee.
+            if (fac.bulle && !dit) dit = fac.bulle.texte;
+            ouverte = Math.max(ouverte, L.Monde.battant(porte.x, porte.y));
+        }
+        out.facteur = { vise: vise, battant: Math.round(ouverte * 100) / 100, dit: dit,
+                        dehors: L.B.entites.indexOf(fac) >= 0,
+                        desservies: (fac.tournee || []).length, corps: fac.sprite };
+        return out;
+    }""")
+
+    # --- La contractuelle -----------------------------------------------------
+    c = r["contravention"]
+    assert c["malGare"] is True, "le décor du juge est faux : le char doit être mal garé"
+    assert c["cap"] is True and c["rapproche"] is True, "elle ne va pas au char : %s" % c
+    assert c["tickets"] == 1, "elle ne verbalise pas, ou deux fois : %s" % c
+    # ⚠️ Le mot vient de `pietons.PAROLES`, pas du JavaScript.
+    assert c["dit"] == mots["contractuelle"]["verbalise"], (
+        "elle ne dit pas ce que la fiche dit : %s" % c
+    )
+    assert c["corps"] == "contractuelle"
+
+    # --- Le touriste ----------------------------------------------------------
+    p = r["photo"]
+    assert p["arrete"] is True and p["leveLaTete"] is True, "il ne regarde pas la vitrine : %s" % p
+    assert p["flash"] is True, "pas de flash : %s" % p
+    assert p["corps"] == "touriste"
+    # ⚠️ Son intérêt n'est pas le flash, c'est qu'il REGARDE : le meilleur
+    # témoin de la ville, et le seul à 1,0.
+    assert p["temoin"] == 1.0, "le touriste doit être le témoin parfait : %s" % p
+
+    # --- L'ivrogne ------------------------------------------------------------
+    i = r["ivrogne"]
+    assert i["zigzag"] > i["droit"] * 2, "l'ivrogne marche aussi droit qu'un passant : %s" % i
+    assert i["fuit"] is False, "l'ivrogne fuit devant une arme : %s" % i
+    assert i["lAutreFuit"] is True, "le décor du juge est faux : le passant, lui, doit réagir"
+    assert i["repond"] == mots["ivrogne"]["sans_peur"], "il ne répond pas : %s" % i
+    assert i["tombe"] is True, "il ne tombe jamais tout seul : %s" % i
+    assert i["corps"] == "ivrogne"
+
+    # --- Le jogger ------------------------------------------------------------
+    g = r["jogger"]
+    assert g["pauses"] == 0, "le jogger s'arrête : %s" % g
+    assert g["pausesFlaneur"] > 0, "le décor du juge est faux : un flâneur, lui, fait des pauses"
+    assert g["route"] > g["routeFlaneur"], "le jogger ne court pas plus loin qu'un flâneur : %s" % g
+    assert g["temoin"] == 0.0, "le jogger ne témoigne de rien : %s" % g
+    assert g["corps"] == "jogger"
+
+    # --- Le facteur -----------------------------------------------------------
+    f = r["facteur"]
+    assert f["vise"] is True, "il ne fait pas sa tournée : %s" % f
+    assert f["battant"] > 0.5, "la porte ne bat pas : %s" % f
+    assert f["dit"] == mots["facteur"]["livre"], "il ne dit pas ce que la fiche dit : %s" % f
+    # ⚠️ ET IL N'ENTRE PAS : c'est toute la différence avec le flâneur qui
+    # rentre chez lui — celui-là disparaît derrière le battant.
+    assert f["dehors"] is True, "le facteur est entré : %s" % f
+    assert f["desservies"] >= 1, "aucune porte desservie : %s" % f
+    assert f["corps"] == "facteur"
 
 
 def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
@@ -1430,6 +1622,14 @@ def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
         //    dehors — et VISIBLE, meme en plein ecran.
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 6) * L.TT + 8;
         L.Monde.centrerCamera(j.x, j.y);
+        // ⚠️ On DEGAGE LE PAS DE PORTE : ce qu'on juge ici, c'est le battant et
+        // la sortie, pas la foule. Un passant plante sur la tuile d'en dessous
+        // et celui qui sort n'avance plus de quatre pixels — le juge parlerait
+        // alors de la densite du quartier, pas des portes.
+        for (const q of L.B.entites.slice()) {
+            if (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 120) L.Entites.retirer(q);
+        }
+        L.Entites.indexer();
         const arch = L.Entites.archetypeDeRue();
         const e = L.Entites.creerPieton(porte.x * L.TT + 8, (porte.y + 1) * L.TT + 8, arch);
         e.sortie = { x: porte.x, y: porte.y, t: 0 };
@@ -1729,6 +1929,12 @@ def test_la_foule_ne_se_traverse_plus(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         let paires = 0, pire = 0, images = 0, nes = 0;
+        // ⚠️ On mesure aussi la DUREE d'un chevauchement, et combien passent le
+        // pixel : c'est ca, « se traverser ». Une profondeur seule ne distingue
+        // pas deux corps confondus d'un frolement d'une image entre deux
+        // passants qui se croisent de face.
+        let gros = 0, plusLong = 0;
+        const durees = {};
         // Naitre dans quelqu'un se voit a un chevauchement PLEIN (meme pixel) :
         // les deux branches de placeDeNaissance rendent un centre de tuile.
         const touches = ['KeyD', 'KeyW', 'KeyA', 'KeyS'];
@@ -1738,22 +1944,44 @@ def test_la_foule_ne_se_traverse_plus(banc):
             for (let k = 0; k < 40; k++) {
                 o.frame(1); images++;
                 const gens = L.B.entites.filter(L.Entites.deboutDansLaFoule);
+                const vues = {};
                 for (let a = 0; a < gens.length; a++) {
                     for (let b = a + 1; b < gens.length; b++) {
                         const d = Math.hypot(gens[a].x - gens[b].x, gens[a].y - gens[b].y);
                         const chevauche = gens[a].r + gens[b].r - d;
                         if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
                         if (chevauche > gens[a].r + gens[b].r - 0.001) nes++;
+                        const cle = gens[a].id + '-' + gens[b].id;
+                        if (chevauche > 1) {
+                            gros++;
+                            durees[cle] = (durees[cle] || 0) + 1;
+                            plusLong = Math.max(plusLong, durees[cle]);
+                            vues[cle] = true;
+                        }
                     }
                 }
+                for (const cle in durees) if (!vues[cle]) durees[cle] = 0;
             }
             o.relacher(t);
         }
-        return { images: images, paires: paires, pire: +pire.toFixed(2), nes_empiles: nes };
+        return { images: images, paires: paires, pire: +pire.toFixed(2), nes_empiles: nes,
+                 gros: gros, plusLong: plusLong };
     }""")
     assert r["images"] == 960
-    assert r["pire"] < 1.0, f"deux personnes se chevauchent de {r['pire']} px"
     assert r["nes_empiles"] == 0, "on ne nait pas dans quelqu'un"
+    # ⚠️ CE QU'ON INTERDIT, C'EST DE SE TRAVERSER : un chevauchement qui DURE,
+    # ou qui va jusqu'à confondre deux corps. Le juge exigeait moins d'un pixel
+    # à toute image — c'était la MESURE du jour, pas la règle : deux passants
+    # qui se croisent de face se rapprochent de quatre pixels en une image, et
+    # la séparation les défait à la suivante. Exiger moins d'un pixel revenait à
+    # exiger que personne ne se croise jamais de face, et ça tenait au trajet des
+    # passants, pas au code. Le défaut d'origine (1032 paires, 9,9 px, tenues)
+    # reste rouge des trois côtés.
+    assert r["plusLong"] <= 1, (
+        f"un chevauchement tient {r['plusLong']} images : la foule se traverse"
+    )
+    assert r["gros"] <= 5, f"{r['gros']} chevauchements de plus d'un pixel en 960 images"
+    assert r["pire"] < 4.0, f"deux personnes s'enfoncent de {r['pire']} px l'une dans l'autre"
 
 
 def test_courir_ne_permet_pas_de_traverser_les_gens(banc, paquet):

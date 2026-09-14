@@ -294,6 +294,123 @@ SPRITES.exhibitionniste = {
   },
 };
 
+
+/* --- Les sept qui viennent avec ----------------------------------------------
+
+   ⚠️ MEME REGLE : une sorte = un corps + une routine. Celles-ci ne sont pas la
+   pour remplir la rue — chacune sert une fiche deja livree : la contractuelle
+   rend « mal gare » VISIBLE avant que la fourriere n'avale le char, le touriste
+   est le meilleur temoin de la ville, l'ivrogne est le seul qui ne fuit pas
+   devant une arme, le jogger ne temoigne de rien, et le facteur fait ouvrir les
+   portes. */
+
+// ⚠️ LA VISIERE qui deborde de la tete et LE CARNET BLANC sur la poitrine :
+// a douze pixels, c'est ce qui la nomme. On doit la reconnaitre de loin —
+// c'est elle qui decide si on a le temps d'aller faire sa course.
+SPRITES.contractuelle = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#f0c098', h: '#3a2a1a', c: '#2e5f8a', p: '#26324a', o: '#ffffff', v: '#1a3550', b: '#1a3550' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kccccck..', '..kvvvvvvvk.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '..kcooocck..', '..kcooocck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kccccck..', '..kvvvvvvvk.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '..kcooocck..', '..kcooocck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kccccck..', '..kcccccck..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kccccck..', '..kcccccck..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kcoock...', '...kcoock...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+// Le chapeau LARGE (il deborde des deux cotes, personne d'autre n'en a),
+// l'appareil photo sur la poitrine et le sac a dos quand il s'eloigne.
+SPRITES.touriste = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#8a6a3a', c: '#f2e2a8', p: '#8a7a5a', o: '#ffffff', a: '#e8dcae', l: '#2a2a2a', b: '#b05a3a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kaaaak...', '.kaaaaaaaak.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '..kcolocck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kaaaak...', '.kaaaaaaaak.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '..kcolocck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kaaaak...', '.kaaaaaaaak.', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcbbbbck..', '..kcbbbbck..', '..kcbbbbck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kaaaak...', '.kaaaaaaaak.', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcbbbbck..', '..kcbbbbck..', '..kcbbbbck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kaaaak...', '.kaaaaaaaak.', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..kbcccck...', '..kbcolck...', '..kbcccck...', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+// La BARBE qui mange le bas du visage et la BOUTEILLE au poing, en dehors
+// de la silhouette : deux formes qu'aucun autre corps de la ville n'a.
+SPRITES.ivrogne = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#d8a878', h: '#8a8a8a', c: '#6a5a4a', p: '#4a4438', o: '#ffffff', g: '#4a7a3a', b: '#4a4438' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khhsshhk..', '...khhhhk...', '..kcccccck..', '.gkcccccck..', '.gkcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khhsshhk..', '...khhhhk...', '..kcccccck..', '.gkcccccck..', '.gkcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khhsssk..', '...khhhhk...', '....khhk....', '...kccccck..', '..gkccccck..', '..gkccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+// Le BANDEAU blanc et les JAMBES NUES : le seul de la ville a ne pas porter
+// de pantalon, et ca se lit d'un coup d'oeil.
+SPRITES.jogger = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#e04a3a', p: '#2a2a2a', o: '#ffffff', b: '#ffffff' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..kbbbbbbk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '.skcccccks..', '.skcccccks..', '..kcccccck..', '...kppppk...', '...kssssk...', '..kss..ssk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kbbbbbbk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '.skcccccks..', '.skcccccks..', '..kcccccck..', '...kppppk...', '...kssssk...', '..kssk.ksk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..kbbbbbbk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '.skcccccks..', '.skcccccks..', '..kcccccck..', '...kppppk...', '...kssssk...', '..kss..ssk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kbbbbbbk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '.skcccccks..', '.skcccccks..', '..kcccccck..', '...kppppk...', '...kssssk...', '..kssk.ksk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '...kssk.kk..', '...kkk......'],
+      ['...kkkkkk...', '...kbbbbbk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..skccccck..', '..skccccck..', '...kccccck..', '....kpppk...', '....kssssk..', '....ksk.kk..', '....kk......'],
+    ],
+  },
+};
+// La sacoche EN BANDOULIERE (une diagonale du haut de l'epaule a la hanche)
+// et la lettre blanche au poing.
+SPRITES.facteur = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#2e6b4a', p: '#1f2f24', o: '#ffffff', v: '#1a3f2b', b: '#8a5a2a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kccccck..', '..kvvvvvvvk.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kbccccck..', '..kcbcccck..', '..kccbcock..', '..kcccbbck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kccccck..', '..kvvvvvvvk.', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kbccccck..', '..kcbcccck..', '..kccbcock..', '..kcccbbck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kccccck..', '..kcccccck..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kbccccck..', '..kcbcccck..', '..kccbccck..', '..kcccbbck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kccccck..', '..kcccccck..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kbccccck..', '..kcbcccck..', '..kccbccck..', '..kcccbbck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kccccck..', '..kvvvvvvk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kbcccck..', '...kcbcock..', '...kccbbck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+
 SPRITES.auto = {
   w: 32, h: 16, ancre: [16, 8], rotations: 32,
   pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' },
