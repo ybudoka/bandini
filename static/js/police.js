@@ -239,7 +239,12 @@ const Police = (function () {
     const j = B.joueur, r = B.recherche, p = reglages();
     if (B.t % 30 !== 0) return;
     const zone = Monde.zoneA(j.x, j.y);
-    const voulu = Math.min(p.patrouille_par_zone_max, zone ? zone.police : 1) + palier().agents_pied;
+    // ⚠️ La police suit le rythme comme le reste : autant d'agents a 4 h du
+    // matin qu'a midi, dans une ville desertee, ca se remarque tout de suite.
+    // Les renforts d'un palier de recherche, eux, ne dorment pas : on te
+    // cherche autant la nuit.
+    const voulu = Math.round(Math.min(p.patrouille_par_zone_max, zone ? zone.police : 1)
+                             * Monde.rythme(zone)) + palier().agents_pied;
     const presents = agents().length;
     if (presents >= voulu) return;
     const place = placeAgent(r.etoiles > 0 ? (r.dernierVu || j) : null);

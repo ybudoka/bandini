@@ -190,3 +190,53 @@ def test_une_autre_graine_garde_la_ville_d_un_seul_tenant(graine):
     assert ville["tuiles_bouchees"] < 60, ville["tuiles_bouchees"]
     garantis = {special["slug"] for special in carte.SPECIAUX.values()} | {"kiosque"}
     assert {p["lieu"] for p in ville["portes"]} >= garantis
+
+
+def test_la_nuit_vide_vraiment_chaque_district():
+    """⚠️ Retour de Martin : « la nuit, il devrait y avoir moins de monde et de
+    voitures sur les routes. » Le rythme existait depuis M8 et ne faisait
+    presque rien — et dans le Faubourg, il ne faisait LITTERALEMENT rien.
+
+    Il declarait 12 vehicules, son rythme de nuit valait 0,75 et le plafond
+    `vehicules_max` vaut 9. Or 12 x 0,75 = 9. Le calcul etait
+    `min(plafond, declare x rythme)` : `min(9, 9)` le jour, `min(9, 9)` la
+    nuit — le PLAFOND MORDAIT AVANT LE RYTHME, et la nuit n'existait pas dans
+    le seul quartier ou l'on passe le plus de temps.
+
+    Le plafond s'applique donc avant : `min(plafond, declare) x rythme`.
+    """
+    from app import vehicules
+
+    plafond = vehicules.TRAFIC["vehicules_max"]
+    for district in carte.DISTRICTS:
+        if district.get("eau"):
+            continue
+        nuit = district["rythme"][0]
+        assert 0 < nuit < 1, f"{district['slug']} : la nuit ne change rien ({nuit})"
+        jour_v = min(plafond, district["vehicules"])
+        assert jour_v * nuit < jour_v, f"{district['slug']} : autant de chars la nuit"
+        assert district["pietons"] * nuit < district["pietons"], \
+            f"{district['slug']} : autant de monde la nuit"
+        # Une nuit, c'est un trottoir vide et deux phares au loin : on enleve
+        # au moins la moitie du monde, pas un quart.
+        assert nuit <= 0.5, f"{district['slug']} : {nuit} de nuit, ca ne se voit pas"
+
+
+def test_le_plafond_ne_masque_plus_le_rythme():
+    """Le juge du piege lui-meme : pour CHAQUE district, la nuit doit compter
+    moins de chars que le jour APRES plafonnement. C'est ce test qui aurait
+    rougi sur le Faubourg."""
+    from app import vehicules
+
+    plafond = vehicules.TRAFIC["vehicules_max"]
+    for district in carte.DISTRICTS:
+        if district.get("eau"):
+            continue
+        jour = min(plafond, district["vehicules"])
+        nuit = min(plafond, district["vehicules"]) * district["rythme"][0]
+        ancien_calcul = min(plafond, district["vehicules"] * district["rythme"][0])
+        assert nuit < jour
+        assert nuit <= ancien_calcul, (
+            f"{district['slug']} : l'ancien calcul donnait {ancien_calcul} la nuit "
+            f"pour {jour} le jour"
+        )

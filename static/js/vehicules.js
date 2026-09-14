@@ -122,7 +122,7 @@ const Vehicules = (function () {
     }
     if (B.t % 20 !== 0) return;
     const zone = Monde.zoneA(j.x, j.y);
-    const voulu = Math.min(t.vehicules_max, (zone ? zone.vehicules : 6) * Monde.rythme(zone));
+    const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6) * Monde.rythme(zone);
     if (roulent < voulu) {
       const place = placeDansLeTrafic();
       if (place) {

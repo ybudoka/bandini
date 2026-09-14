@@ -137,3 +137,31 @@ def test_une_vieille_partie_ne_ramene_pas_son_char_dans_un_mur(banc):
     assert r["joueurLibre"], "le joueur repart dans un mur"
     assert r["char"] and r["surRue"], "le char de la planque n'est pas sur la rue"
     assert r["pres"] <= 10, f"le char revient a {r['pres']} tuiles de la planque"
+
+
+def test_la_nuit_le_trafic_et_la_foule_tombent(banc):
+    """⚠️ Le juge cote moteur : on compte ce qui vit autour du joueur a midi,
+    puis a 3 h du matin, au meme endroit. Le rythme s'appliquait APRES le
+    plafond, donc le Faubourg gardait ses neuf chars toute la nuit."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function compter(heure) {
+            L.B.partie.heure = heure;
+            L.B.entites.length = 0;
+            L.Entites.creerJoueur(L.B.joueur.x, L.B.joueur.y);
+            for (let i = 0; i < 12; i++) { L.Entites.peupler(); L.Vehicules.peupler(); }
+            return {
+                pietons: L.B.entites.filter(function (e) { return e.type === 'pieton'; }).length,
+                chars: L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.conducteur === 'trafic'; }).length,
+                rythme: L.Monde.rythme(L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y)),
+            };
+        }
+        const midi = compter(0.5);
+        const nuit = compter(0.05);
+        return { midi: midi, nuit: nuit };
+    }""")
+    assert r["midi"]["rythme"] > r["nuit"]["rythme"], "l'horloge ne change pas le rythme"
+    assert r["nuit"]["pietons"] < r["midi"]["pietons"], \
+        f"autant de monde la nuit ({r['nuit']['pietons']}) qu'a midi ({r['midi']['pietons']})"
+    assert r["nuit"]["chars"] < r["midi"]["chars"], \
+        f"autant de chars la nuit ({r['nuit']['chars']}) qu'a midi ({r['midi']['chars']})"

@@ -272,7 +272,7 @@ const Entites = (function () {
       soit, le voile du titre n'est pas encore tombe. */
   function peuplerDabord() {
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
-    const voulu = Math.min(MAX_PIETONS, (zone ? zone.pietons : 12) * Monde.rythme(zone)) * 0.6;
+    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone) * 0.6;
     // ⚠️ L'index d'abord, et tenu a jour a chaque naissance : sans lui
     // `placeLibre` ne voit personne, et la foule de depart nait empilee sur
     // quelques tuiles (elle se demele ensuite, mais on la voit le faire).
@@ -302,7 +302,7 @@ const Entites = (function () {
       if (e.vivant && !e.metier) vivants++;
     }
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
-    const voulu = Math.min(MAX_PIETONS, (zone ? zone.pietons : 12) * Monde.rythme(zone));
+    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone);
     if (vivants >= voulu || B.t % 12 !== 0) return;
     const place = placeDeNaissance();
     if (!place) return;

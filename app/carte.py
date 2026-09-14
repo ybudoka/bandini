@@ -370,7 +370,7 @@ DISTRICTS: tuple[dict, ...] = (
     # la cour des Cravates au centre. C'est ici qu'on debarque de l'autobus.
     {"slug": "faubourg", "nom": "Le Faubourg", "bx": 5, "by": 0,
      "gang": "cravates", "gang_nom": "Les Cravates", "brume": True,
-     "pietons": 26, "vehicules": 12, "police": 2, "rythme": (0.75, 1.0, 1.0),
+     "pietons": 26, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
      "plan": ("Tccchhhh",
               "cMck<hAh",
               "ccGKohhh",
@@ -382,7 +382,7 @@ DISTRICTS: tuple[dict, ...] = (
     # char le soir faute de mieux.
     {"slug": "erables", "nom": "Les Érables", "bx": 0, "by": 0,
      "gang": "chevreuils", "gang_nom": "Les Chevreuils", "brume": False,
-     "pietons": 14, "vehicules": 7, "police": 1, "rythme": (0.5, 1.1, 0.9),
+     "pietons": 14, "vehicules": 7, "police": 1, "rythme": (0.25, 1.1, 0.9),
      "plan": ("mmmpm",
               "m<m^m",
               "Dmmmm",
@@ -406,7 +406,7 @@ DISTRICTS: tuple[dict, ...] = (
     # ca se vide a la noirceur — sauf la Brume.
     {"slug": "quais", "nom": "Les Quais", "bx": 0, "by": 6,
      "gang": "morues", "gang_nom": "Les Morues", "brume": True,
-     "pietons": 20, "vehicules": 8, "police": 1, "rythme": (0.7, 1.4, 0.9),
+     "pietons": 20, "vehicules": 8, "police": 1, "rythme": (0.4, 1.4, 0.9),
      "plan": ("cc<c<<c",
               "w<<w<<c",
               "L<g<w<c",
@@ -430,7 +430,7 @@ DISTRICTS: tuple[dict, ...] = (
     # maisons au bout, et les Skateux qui tiennent le stationnement.
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
-     "pietons": 12, "vehicules": 4, "police": 1, "rythme": (0.35, 0.9, 1.2),
+     "pietons": 12, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
      "plan": ("~<<<<<",
               "n<<<nc",
               "^<<<^c",
@@ -2487,7 +2487,7 @@ class _Chantier:
         if bassin:
             sortie.append({**bassin, "slug": "port", "nom": "Le bassin", "district": "faubourg",
                            "gang": None, "brume": True, "pietons": 6, "vehicules": 2,
-                           "police": 1, "rythme": [0.8, 1.0, 1.0]})
+                           "police": 1, "rythme": [0.4, 1.0, 1.0]})
         return sortie
 
     def _enveloppe(self, glyphes: str, district: dict | None = None) -> dict | None:
