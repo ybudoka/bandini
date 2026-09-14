@@ -1664,18 +1664,27 @@ const Vehicules = (function () {
     // avec (`carte.py`, `feux_pietons`). Les deviner depuis la boite du
     // croisement, comme on le fait pour les feux des chars, c'est se tromper
     // des que la traverse ne tombe pas ou l'on croit.
+    //
+    // ⚠️ ET PAS DE CHAMP `decor` SUR UN FEU. Il y en avait un, et il a rendu
+    // les feux MUETS depuis le jour ou on les a poses : `Entites.dessiner`
+    // teste `if (e.decor)` AVANT `if (e.type === 'feu')`, donc la branche
+    // generique gagnait, peignait le boitier cuit — et s'en allait. Aucune
+    // lanterne n'a jamais ete peinte : ni rouge, ni vert, ni blanc, un poteau
+    // noir a chaque coin. Le champ ne servait a rien d'autre (un feu n'est pas
+    // solide, il n'entre donc jamais dans `grilleFixe`, et `dessinerFeu` nomme
+    // sa propre fiche) : il ne faisait que masquer le peintre.
     (carte.def.feux_pietons || []).forEach(function (f) {
       const inter = Monde.intersectionA(f.x, f.y);
       if (!inter || !inter.feux) return;
       Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
-                    { inter: inter, sens: f.sens, decor: 'feu_pieton', r: 1, solide: false });
+                    { inter: inter, sens: f.sens, r: 1, solide: false });
     });
     carte.intersections.forEach(function (inter) {
       if (inter.feux) {
         // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
         for (const coin of [[inter.x + inter.l, inter.y - 1], [inter.x - 1, inter.y + inter.h]]) {
           const c = coinLibre(coin[0], coin[1]);
-          Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, decor: 'feu', r: 2, solide: false });
+          Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, r: 2, solide: false });
         }
       } else if (inter.stop) {
         const coins = { '<': [inter.x + inter.l, inter.y - 1], '>': [inter.x - 1, inter.y + inter.h],
@@ -1686,7 +1695,94 @@ const Vehicules = (function () {
     });
   }
 
-  /** Un feu : un poteau cuit, deux lanternes peintes a la volee selon la phase. */
+  // --- Les ampoules, et la lumiere qu'elles jettent -----------------------------------
+
+  //: Une phase, c'est DEUX couleurs et pas une : l'AMPOULE (ce qu'on peint
+  //: dans la scene), et la LUMIERE qu'elle jette (ce que `Base.fin` ajoute
+  //: par-dessus la nuit, en `lighter`). La seconde tire vers le blanc et
+  //: deborde de l'ampoule — une lampe n'est pas de la peinture.
+  //:
+  //: ⚠️ Sans elle, un feu ne recoit que la MULTIPLICATION du voile de nuit,
+  //: comme une brique : a minuit le vert (46, 204, 113) tombe a (16, 76, 57),
+  //: et le blanc qui dit MARCHE (242, 242, 242) a (86, 90, 122) — plus sombre
+  //: qu'un trottoir de midi. Le seul objet qui eclairait, c'etait le
+  //: lampadaire, et sa seule raison, c'est d'avoir une entree dans
+  //: `carte.lampes`.
+  const PHASES_FEU = {
+    vert:   { ampoule: '#2ecc71', coeur: '#ccffdf', lumiere: 'rgba(110,255,165,0.50)' },
+    orange: { ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.52)' },
+    rouge:  { ampoule: '#e74c3c', coeur: '#ffc9bd', lumiere: 'rgba(255,105,85,0.50)' },
+  };
+
+  //: De quelle couleur se lit chaque etat du feu pieton. ⚠️ LE BLANC QUI
+  //: MARCHE, L'ORANGE QUI ARRETE : deux couleurs qu'on distingue d'un coup
+  //: d'oeil a cette taille, et qui ne se confondent avec aucune des trois du
+  //: feu des chars — on ne doit pas avoir a se demander lequel on regarde.
+  const PHASES_FEU_PIETON = {
+    blanc:  { ampoule: '#f2f2f2', coeur: '#ffffff', lumiere: 'rgba(220,235,255,0.55)' },
+    degage: { ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.58)' },
+    rouge:  { ampoule: '#c0392b', coeur: '#ff9c8a', lumiere: 'rgba(255,90,75,0.52)' },
+  };
+
+  //: Le seuil de la brune. ⚠️ C'est CELUI DES LAMPADAIRES, au pixel pres
+  //: (`Monde.lampesVisibles`) : deux seuils voudraient dire deux reponses a
+  //: « fait-il noir ? », et la deuxieme serait fausse un jour.
+  const BRUNE = 0.2;
+  const LAMPES_FEUX_MAX = 24;
+
+  //: Le RAYON d'un halo de feu. ⚠️ PETIT, et c'est la moitie du travail : le
+  //: lampadaire fait 44 px parce qu'il eclaire une rue, un feu fait sept
+  //: parce qu'il ne s'eclaire que lui-meme. A dix, les deux ampoules du feu
+  //: des chars — cinq pixels d'ecart — additionnaient assez de rouge et de
+  //: vert pour rendre du BLANC, et on ne lisait plus laquelle etait laquelle.
+  const RAYON_LAMPE = 7;
+
+  /** Les lampes des feux de l'image en cours, ramassees EN DESSINANT.
+
+      ⚠️ Pourquoi la, et pas en balayant la ville : `carte.lampes` est une
+      liste FIXE qu'on peut parcourir, les feux sont 482 poteaux (124 pour les
+      chars, 358 pour les pietons) dont la couleur change a chaque phase. Les
+      passer en revue par image pour trouver les trente de l'ecran, ce serait
+      payer la ville entiere pour en eclairer trente. `dessinerFeu` est deja
+      appele UNE FOIS PAR FEU VISIBLE : c'est la, et nulle part ailleurs, que
+      la lampe se pose.
+
+      ⚠️ Et la liste se vide TOUTE SEULE : elle porte son numero d'image
+      (`B.image`, l'horloge de l'oeil). Une liste qu'un dessin remplit et
+      qu'un autre module doit penser a vider fuit le jour ou quelqu'un dessine
+      sans composer. */
+  const lampesFeux = { image: -1, liste: [], allume: false };
+
+  function allumerLaLampe(x, y, c) {
+    if (lampesFeux.image !== B.image) {
+      lampesFeux.image = B.image;
+      lampesFeux.liste.length = 0;
+      // L'heure ne se demande qu'UNE FOIS par image, pas une fois par ampoule.
+      lampesFeux.allume = Monde.ambiance().alpha >= BRUNE;
+    }
+    if (!lampesFeux.allume || lampesFeux.liste.length >= LAMPES_FEUX_MAX) return;
+    lampesFeux.liste.push({ x: x, y: y, r: RAYON_LAMPE, c: c });
+  }
+
+  /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
+  function lampesDesFeux() { return lampesFeux.image === B.image ? lampesFeux.liste : []; }
+
+  /** Une ampoule allumee : le pourtour de la phase, un COEUR plus pale, et la
+      lampe qu'elle jette a la brune.
+
+      ⚠️ C'est le coeur qui dit « allumee » ; la couleur, elle, ne dit que
+      LAQUELLE. Un carre vert plat reste un carre vert — en plein jour, ou le
+      halo ne se compose pas, c'est la seule chose qui distingue une ampoule
+      d'une pastille peinte, et la seule qui tienne dans trois pixels. */
+  function ampoule(ctx, x, y, w, h, phase) {
+    ctx.fillStyle = phase.ampoule; ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = phase.coeur;
+    ctx.fillRect(x + ((w - 1) >> 1), y + ((h - 1) >> 1), w > 3 ? 2 : 1, h > 3 ? 2 : 1);
+    allumerLaLampe(x + w / 2, y + h / 2, phase.lumiere);
+    B.stats.rects += 2;
+  }
+
+  /** Un feu : un poteau cuit, deux ampoules peintes a la volee selon la phase. */
   function dessinerFeu(ctx, e, cx, cy) {
     const d = DECORS.feu;
     const poteau = Atlas.cuirePeintre('decor|feu', d.w, d.h, d.peindre);
@@ -1694,16 +1790,14 @@ const Vehicules = (function () {
     ctx.drawImage(poteau, x, y);
     const ns = Monde.feuVert(e.inter, '^'), eo = Monde.feuVert(e.inter, '>');
     const orange = !ns && !eo;
-    ctx.fillStyle = orange ? '#f39c12' : (ns ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 1, y + 2, 3, 3);    // lanterne nord-sud
-    ctx.fillStyle = orange ? '#f39c12' : (eo ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 6, y + 2, 3, 3);    // lanterne est-ouest
-    B.stats.images++; B.stats.rects += 2;
+    // ⚠️ Deux ampoules a CINQ PIXELS l'une de l'autre : leurs halos se
+    // melangent, et au rouge-vert la flaque au sol tire vers le jaune. C'est
+    // ce que fait un vrai croisement vu d'en haut ; ce qui doit rester NET,
+    // c'est le coeur de chaque ampoule — d'ou `RAYON_LAMPE`.
+    ampoule(ctx, x + 1, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (ns ? 'vert' : 'rouge')]);   // nord-sud
+    ampoule(ctx, x + 6, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (eo ? 'vert' : 'rouge')]);   // est-ouest
+    B.stats.images++;
   }
-
-  //: De quelle couleur se lit chaque etat du feu pieton. ⚠️ LE BLANC QUI
-  //: MARCHE, L'ORANGE QUI ARRETE : deux couleurs qu'on distingue d'un coup
-  //: d'oeil a cette taille, et qui ne se confondent avec aucune des trois du
-  //: feu des chars — on ne doit pas avoir a se demander lequel on regarde.
-  const COULEURS_FEU_PIETON = { blanc: '#f2f2f2', degage: '#f39c12', rouge: '#c0392b' };
 
   function dessinerFeuPieton(ctx, e, cx, cy) {
     const d = DECORS.feu_pieton;
@@ -1716,11 +1810,13 @@ const Vehicules = (function () {
     // de l'autre, et un juge tient les deux ensemble.
     const etat = Monde.feuPieton(e.inter, e.sens === '=' ? '>' : '^');
     // Le degagement CLIGNOTE : un orange fixe se lit comme « attends », un
-    // orange qui bat se lit comme « finis, mais ne pars plus ».
+    // orange qui bat se lit comme « finis, mais ne pars plus ». ⚠️ Et la
+    // LAMPE S'ETEINT AVEC L'AMPOULE, puisqu'on sort avant de la poser : un
+    // orange qui bat a l'oeil et brille en continu au sol, c'est pire qu'un
+    // clignotant qui ne clignote pas.
     if (etat === 'degage' && (B.t >> 3) % 2 === 0) { B.stats.images++; return; }
-    ctx.fillStyle = COULEURS_FEU_PIETON[etat] || COULEURS_FEU_PIETON.rouge;
-    ctx.fillRect(x + 1, y + 1, 4, 5);
-    B.stats.images++; B.stats.rects++;
+    ampoule(ctx, x + 1, y + 1, 4, 5, PHASES_FEU_PIETON[etat] || PHASES_FEU_PIETON.rouge);
+    B.stats.images++;
   }
 
   // --- Dessin --------------------------------------------------------------------------
@@ -1760,7 +1856,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, maj, dessinerUn,
+    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

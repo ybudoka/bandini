@@ -2033,6 +2033,12 @@ const Entites = (function () {
     const eauRemous = Atlas.cuirePeintre('remous', DECORS.remous.w, DECORS.remous.h, DECORS.remous.peindre);
     const bulles = [];
     for (const e of visibles) {
+      // ⚠️ LES PEINTRES NOMMES D'ABORD, la branche generique ensuite. Dans
+      // l'autre sens, un `decor` pose sur une entite qui a deja son peintre
+      // l'EFFACE en silence : c'est ce qui est arrive aux feux, muets d'un
+      // bout a l'autre de la ville parce qu'ils portaient `decor: 'feu'`.
+      if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
+      if (e.type === 'feu_pieton') { Vehicules.dessinerFeuPieton(ctx, e, cx, cy); continue; }
       if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
         if (!d) continue;
@@ -2042,8 +2048,6 @@ const Entites = (function () {
         continue;
       }
       if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
-      if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
-      if (e.type === 'feu_pieton') { Vehicules.dessinerFeuPieton(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);

@@ -406,6 +406,11 @@ const Jeu = (function () {
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
     const lampes = Monde.lampesVisibles(vue);
+    // ⚠️ Les feux ont DEJA ete peints, deux lignes plus haut : leurs lampes
+    // sont ramassees EN DESSINANT, donc il n'y a ici que celles de l'ecran, et
+    // chacune porte la couleur de sa phase a CETTE image-ci. Les chercher
+    // autrement voudrait dire balayer 482 poteaux par image.
+    if (!B.interieur) for (const l of Vehicules.lampesDesFeux()) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
     Base.fin(Monde.ambiance(), lampes);

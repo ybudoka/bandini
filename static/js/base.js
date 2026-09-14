@@ -189,6 +189,15 @@ const Base = (function () {
     return c;
   }
 
+  //: Le plafond de lampes d'une image. ⚠️ Il etait a 25, taille pour les
+  //: LAMPADAIRES SEULS — c'est aussi ce que `Monde.lampesVisibles` en rend au
+  //: plus. Les feux s'y ajoutent maintenant, une lampe par ampoule allumee :
+  //: un croisement, c'est 2 poteaux de chars a 2 ampoules et jusqu'a 4
+  //: poteaux de pietons — 8 lampes, et l'ecran en tient plusieurs. Au plafond
+  //: d'avant, les feux AURAIENT ETEINT les lampadaires au lieu de s'ajouter a
+  //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico.
+  const LAMPES_MAX = 50;
+
   /** Compose la nuit et les lampes, puis envoie a l'ecran. */
   function fin(ambiance, lampes) {
     const c = cible.ctx;
@@ -202,7 +211,7 @@ const Base = (function () {
       if (lampes && lampes.length) {
         c.save();
         c.globalCompositeOperation = 'lighter';
-        for (let i = 0; i < lampes.length && i < 25; i++) {
+        for (let i = 0; i < lampes.length && i < LAMPES_MAX; i++) {
           const l = lampes[i];
           const g = c.createRadialGradient(l.x, l.y, 2, l.x, l.y, l.r);
           g.addColorStop(0, l.c || 'rgba(255,220,140,0.55)');
