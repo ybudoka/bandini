@@ -71,6 +71,7 @@ ne bougent pas quand l'ordre de travail change.
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
 | Fruits de mer, hommes-sandwichs et des comptoirs garnis | **livré** (13 sept. 2026) | demande de Martin (« ajoute des commerces de fruits de mer et des solliciteurs hommes-sandwichs », puis « ajoute aussi plus de bouffe et de choses à manger et à boire dans tous les magasins, où ça fit »). **Les fruits de mer** : une **cabane** de trottoir (`fruits_de_mer`, guédille au homard, toit de tôles rayées, deux homards sur la glace, l'enseigne HOMARD au pied) que le générateur ne pose **qu'aux Quais et à La Pointe** — `AMBULANTS[].districts` enferme un commerce chez lui comme `pietons.districts` enferme un passant, et un juge vérifie que c'est le port qu'on mange ; huit enseignes de plus (FRUITS DE MER, HOMARD VIVANT, CRABE DES NEIGES…) dans les deux districts qui touchent l'eau ; la poissonnerie sert guédille, crevettes de Matane et chaudrée. ⚠️ Le toit de la cabane s'arrête à la rangée 3 : le marchand a les pieds 11 px au-dessus de l'ancre, ses yeux tombent à la rangée 5 — un toit plus bas les cachait et on se faisait servir par un chapeau (le camion-restaurant avait eu la même leçon, avec son guichet troué). **L'homme-sandwich** (`pietons.homme_sandwich`, métier `reclame`) : un **solliciteur**. `carte.reclames` lui donne un **poste** de trottoir à 5–14 tuiles du kiosque pour lequel il crie (le hot-dog, la poutine, la guédille — pas le journal ni le café : `AMBULANTS[].reclame` est son boniment, None = personne), tiré dans **son propre dé** (`des_reclame`) pour ne pas déplacer un paquet caché à l'autre bout de la ville ; il naît à son poste, le jour, hors champ (`naitreLesHommesSandwichs`), il fait les cent pas dans un rayon de six tuiles (le `poste` de la Brume, plus large), et quand il te voit à six tuiles il **vient vers toi** (`aborde`, à la vitesse d'un piéton, jamais en courant), s'arrête à 22 px, te regarde et **crie son boniment** dans une bulle pendant trois secondes (`boniment`, voix ElevenLabs « Approchez, approchez, venez voir ! » — genre `crieur`, dite par **Léo**, la voix de pub du compte, poussée au style : avec Felix, l'homme de tous les jours, Martin les trouvait « pas assez vendeur ») ; ACTION devant lui donne un **coupon** : la prochaine bouchée à SON kiosque à moitié prix, **une fois**, et il expire au bout de trois minutes (`RECLAME`, sur le joueur comme la caféine — trois minutes ne méritent pas une sauvegarde) ; l'invite le dit (« KIOSQUE À HOT-DOGS — 5 $ (COUPON) ») et la caisse le fait, même calcul (`prixAmbulant`). ⚠️ **Un solliciteur n'est pas un mur ni un radar** : il regarde une image sur dix, il n'aborde **que celui qui flâne** (au-dessus de la marche, il te laisse : un homme-sandwich qui se jetait dans les jambes du joueur au sprint le ralentissait de 10 % — le juge du café l'a mesuré, la police rattrapait à cause d'une pancarte), il lâche prise si tu cours, si la chaussée ou un mur barre le chemin ou si ça fait quatre secondes qu'il n'arrive pas, et une fois son boniment fait il te laisse **vingt secondes de paix** (`repos_images`) — sans ça il te suivait d'un bout à l'autre de la rue en répétant la même phrase, et un personnage qu'on veut frapper n'est pas de la vie de rue, c'est une plaie. ⚠️ **Deuxième archétype à avoir son propre sprite** (`homme_sandwich`, 14 × 16) : une pancarte plus large que les épaules, bande rouge et deux lignes d'écriture, un « A » de deux planches vu de côté — même leçon que la Brume, un contour se lit là où une couleur ne dit rien ; son `c` est la pancarte, pas un chandail. **Les comptoirs garnis** : de quoi manger et boire dans **toutes** les familles où ça a du sens — soupe aux pois, pâté chinois, pointe de tarte et liqueur au dépanneur ; beigne et liqueur au comptoir de service ; liqueur et barre de chocolat à la quincaillerie (le présentoir à côté de la caisse) ; ailes de poulet, chips et shooter de rye au bar ; chips, chocolat et liqueur au magasin ; sandwich et liqueur à la cantine de la shop ; jus d'orange et chocolat à la pharmacie ; poutine, soupe et liqueur au casse-croûte garanti. La **friperie n'en vend pas** : ça ne fitte pas, et un comptoir qui vend n'importe quoi ne dit plus où l'on est. ⚠️ Toujours la même borne, et un juge fait la division : **au dollar, rien ne bat le hot-dog** (6,5 points par dollar) — ce qu'on achète au comptoir, on l'achète parce qu'on est devant. 14 juges Python (`test_reclame.py`) + 5 de banc (`test_reclame_js.py` : il naît à son poste le jour et pas la nuit, il vient et il parle sans courir puis se tait, le coupon rabat le prix une fois et expire, la cabane sert une guédille, les comptoirs et le casse-croûte ont de quoi manger) |
 | Le décor se brise | **P2** **correctif** à faire | demande de Martin (poteaux, bancs, arbres, tout ce qui se brise). ⚠️ Aujourd'hui les chars **traversent** tout le décor sans ralentir, et le lampadaire est fantôme même à pied. Deux familles par la fiche — ce qui arrête, ce qui casse — des débris, un poteau à terre qui s'éteint, et la ville qui se souvient jusqu'au lendemain |
+| Des sortes de gens | **P2** ajout à faire | demande de Martin (amuseurs publics, musiciens de rue, exhibitionnistes). ⚠️ 24 archétypes et **4 corps** : 21 portent celui du joueur en changeant de couleur, et 2 métiers sur 6 font quelque chose. Une sorte = un corps + une routine — musicien qui s'entend, amuseur qui attroupe des témoins, exhibitionniste que la police arrête à ta place, contractuelle, jogger, touriste, ivrogne, pickpocket, aîné, facteur |
 | Les portes s'ouvrent | **P2** ajout à faire | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
 | Le carnet | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« un rappel de la mission en cours dans le menu, un journal et un bestiaire avec les personnages connus ») : **LE CARNET** au menu Pause, trois pages — **EN COURS** (donneur, récompense, objectifs faits marqués, celui du moment, et où), **JOURNAL** (écrit tout seul depuis ce que le jeu émet déjà, daté au jour, plafonné — le quotidien cède avant les jalons), **RÉPERTOIRE** (⚠️ `p.connus` seulement : un répertoire qui montre la fin est pire que pas de répertoire). Les menus savent maintenant **défiler**, et une page recule d'un cran au lieu de rendre la main au jeu |
 | Des sons pour les armes | **livré** (13 sept. 2026) | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouaient le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appelaient `SFX.coup`), le jet d'extincteur ne faisait aucun bruit, et un chargeur vide comme une arme qui casse faisaient le **buzzer de refus** des menus. Chaque arme porte maintenant son `son` (`armes.py`) et le combat passe par `SFX.arme(def)` ; **16 échantillons ElevenLabs** (batte ×2, couteau ×2, pelle, cône, bouteille, fronde, pistolet ×2, fusil ×2, le **jet en boucle** tenu par `SFX.jet(actif)` à chaque image, la gâchette **à vide**, la **casse**, le **dégainage**), ≈ 141 Ko, chacun avec son repli synthétisé ; budget des bruitages relevé à 800 Ko. ⚠️ Au passage, un **hoquet** au départ du jet : la première pression partait par le chemin de la mêlée (anticipation, quatre images de jet, deux de repos) avant que le maintien ne prenne le relais — invisible, mais audible avec une boucle. ⚠️ **Martin n'a pas encore écouté** : `batte-1` et `batte-2` sont sortis très courts (0,18 et 0,26 s), à refaire s'ils ne sonnent pas (`--refaire batte`) |
@@ -463,6 +464,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | La nuit ne se vide pas | **livré** : rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | Arbres dans les sentiers | **livré** : une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
 | — | **P2** Le décor se brise | fiches `DECORS` qui disent arrête/casse et sous quel poids, débris enjambables, lampe éteinte avec son poteau, délit et témoin, réindexation au bris seulement, remise à neuf au lendemain, plafond de débris | déraciner un arbre en camion et s'écraser dessus en berline ; voir le matin ce qu'on a cassé la nuit |
+| — | **P2** Des sortes de gens | un corps par sorte (juge : plus rien sur `sprite: 'joueur'`), une routine par métier dans `majPieton`, plafond par sorte dans la bulle, quartier et heure | voir la police arrêter quelqu'un d'autre ; savoir devant qui ne pas sortir une arme |
 | — | **P2** Les portes s'ouvrent | battant dessiné **par-dessus** la tuile (le sol est cuit dans le morceau), sortie visible, entrée qui remplace une part de l'oubli, portes triées par ce qu'elles valent, rythme matin/soir | voir quelqu'un sortir du dépanneur et y entrer, sans que le cache de morceaux bouge |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
@@ -531,6 +533,7 @@ ordre-là.
 | **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** ⚠️ **Toutes les fiches sont lues, et le haut de gamme est livré.** Restent « mal garé » (le remorquage automatique) et la radio du camion. Prérequis de M10 |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
 | **P2** | **correctif** | Le décor se brise | 2 | ⚠️ le décor est **solide pour les piétons et fantôme pour les chars** : un autobus traverse un arbre, et le lampadaire est fantôme pour tout le monde |
+| **P2** | ajout | Des sortes de gens, pas des couleurs | 3 | ⚠️ 24 archétypes, **4 corps**, et 2 métiers sur 6 qui font quelque chose. Une sorte = un corps + une routine |
 | **P2** | ajout | Les portes s'ouvrent, et les gens les passent | 2 | ⚠️ un piéton sur trois sort **déjà** d'une porte — mais seulement **hors écran** : on ne le voit jamais. Et personne n'entre nulle part |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
@@ -1920,6 +1923,103 @@ qu'un char sait faire) :
   banc n'arrête jamais un camion, un arbre arrête toujours une berline ; un lampadaire à
   terre a sa lumière éteinte ; un décor cassé est **enjambable** et pas fantôme ; tout est
   debout le lendemain ; et les débris ne dépassent jamais leur plafond.
+
+### Des sortes de gens, pas des couleurs (**ajout**, taille 3)
+
+*Demande de Martin :* « je veux plusieurs sortes de personnages non joueurs — des amuseurs
+publics, des musiciens de rue, des exhibitionnistes. »
+
+⚠️ **Il y a 24 archétypes, et 4 corps.** Vingt et un portent le corps du joueur avec un
+échange de palette. Et sur six `metier`, **deux** déclenchent quelque chose dans le moteur
+(`reclame`, `compagnie`) ; les autres sont des nombres — courage, témoin, vitesse. Une
+« sorte » est donc aujourd'hui une couleur et trois chiffres, et le plan a déjà payé ce
+défaut une fois : les filles de la Brume « n'étaient qu'un échange de palette sur le corps
+commun » et on ne les distinguait plus de personne.
+
+**La règle : une sorte = un corps + une routine.** Le catalogue garde ses nombres ; ce qui
+fait une sorte, c'est ce qu'elle **fait** que les autres ne font pas. `metier` est le
+crochet, il existe déjà — chaque sorte en apporte un, et `majPieton` gagne une routine par
+métier au lieu d'une palette par slug.
+
+**Les sortes de Martin :**
+
+- **Le musicien de rue.** Posté à un coin, il joue — et **ça s'entend** : un bruitage court en
+  boucle (M15 en a le mécanisme), ducké comme le reste sous une voix. Un chapeau devant lui :
+  on y jette une pièce, ou on la lui prend (le pickpocket existe). La foule s'arrête autour
+  (l'état `arret` existe pour l'homme-sandwich).
+- **L'amuseur public** — mime, jongleur, statue vivante. Il attire un **attroupement**, et un
+  attroupement est une **foule de témoins** : faire un coup devant lui, c'est dix témoins
+  d'un seul geste. Ce n'est pas du décor, c'est du jeu — l'endroit de la rue où il ne faut
+  pas sortir une arme.
+- **L'exhibitionniste.** Un imperméable, qu'il ouvre au passage des dames ; elles crient et
+  fuient (le cri et `fuit` existent), et **un policier qui passe l'arrête, lui** — la seule
+  fois où la police s'occupe de quelqu'un d'autre que le joueur. C'est un gag, et c'est le
+  gag qui rend la police crédible : elle n'existe pas que pour toi.
+
+**Et celles qui viennent avec, parce qu'elles servent d'autres fiches :**
+
+- **la contractuelle**, qui met des contraventions — c'est elle qui rend « mal garé »
+  **visible** avant que la fourrière ne l'avale ;
+- **le jogger**, écouteurs sur les oreilles : il ne témoigne de rien, il ne s'arrête pas ;
+- **le touriste**, qui lève la tête devant les enseignes et photographie (un flash) — le
+  témoin le plus attentif de la ville, et le plus lent ;
+- **l'ivrogne**, qui zigzague, tombe, insulte, et n'a peur de rien — le seul qui ne fuit pas
+  devant une arme, ce qui le rend dangereux pour lui ;
+- **le pickpocket**, qui vole les autres (M12, la ville coupable d'elle-même) ;
+- **la personne âgée**, à la marchette : elle traverse lentement, et les chars attendent
+  (les feux pour piétons) ;
+- **le facteur**, qui fait sa tournée de porte en porte (les portes s'ouvrent).
+
+**Le réservoir** — « je veux plein d'idées ». Chacune avec ce qu'elle *fait* ; celles qui
+n'ont qu'un costume n'y sont pas. On y pige par vagues, jamais tout d'un coup.
+
+- *Ceux qui gagnent leur vie dans la rue* : le **laveur de vitres** au feu rouge, qui
+  s'approche des chars arrêtés, essuie et tend la main — refuser, c'est un pare-brise sale ;
+  le **crieur de journaux**, qui hurle la manchette du matin (celle de `journal.py`, donc ce
+  que **tu** as fait hier) ; le **distributeur de tracts**, qui te colle un papier — et un
+  tract, c'est une chose de plus à ramasser ; le **cireur de chaussures** sur sa caisse ; le
+  **chauffeur de taxi** qui attend assis sur son capot, et qui témoigne de tout ce qui se
+  passe à son coin ; la **vendeuse de fleurs**.
+- *Ceux qui font du bruit* : le musicien, mais **par instrument** — guitare, accordéon,
+  saxophone, et le **joueur de cuillères**, parce que c'est ici ; le **prédicateur** du coin
+  qui harangue, et le **fou de la place** ; le **cracheur de feu** la nuit — une lampe qui
+  bouge ; une **petite manif** avec ses pancartes, qui bloque un trottoir : une entrave
+  piétonne, avec un policier qui la surveille.
+- *Ceux qui sont là pour toi* : l'**arnaqueur au bonneteau** — trois gobelets, on peut
+  jouer, on perd, et si on le frappe, ses deux compères sortent de la foule ; le **mendiant**
+  qui te suit trois pas et lâche ; le **dealer** au coin, qui ouvre M10 ; le **fan** qui te
+  suit quand tu es célèbre, et qui gêne ; le **journaliste** qui débarque après un gros coup
+  et photographie — le lendemain, c'est en manchette.
+- *Ceux qui font la ville* : le **brigadier scolaire**, le matin devant l'école, qui arrête
+  les chars pour faire traverser les enfants — un char qui ne s'arrête pas, c'est deux
+  étoiles ; le **déneigeur** à la pelle devant sa porte, l'hiver ; l'**employé de parc** qui
+  ramasse ; le **camion-balai** de nuit, et son gars ; l'**ouvrier de chantier** sur ses
+  entraves (M12).
+- *Ceux qui ne vont nulle part* : le **vieux sur son banc**, qui nourrit les goélands ; les
+  **enfants qui jouent au hockey dans la rue** — ils crient « CAR ! » et tassent leur but
+  quand un char arrive, et **ils sont intouchables**, comme les autres enfants ; le
+  **couple qui se chicane** sur un pas de porte ; les **fêtards** qui sortent du bar en
+  groupe, bruyants, la nuit — la seule foule qui ne fuit pas tout de suite.
+- *Ceux qui te jugent* : le **badaud qui filme** avec son téléphone — le témoin moderne, et
+  la vidéo vaut une étoile de plus si on ne la lui prend pas ; et **la madame au balcon**,
+  qui voit tout depuis sa fenêtre : un témoin qu'on **ne peut ni acheter ni rattraper**, et
+  la raison de regarder en l'air avant de faire un coup dans une ruelle.
+
+- ⚠️ **Chaque sorte a SON corps, ou elle n'existe pas.** C'est la leçon des filles de la
+  Brume. Un corps coûte peu — 12 × 16, quatre directions, trois poses — mais l'atlas et le
+  paquet grossissent, et le paquet est à 92 % de son budget brut. Un juge interdit toute
+  sorte nouvelle sur `sprite: 'joueur'`.
+- ⚠️ **Une routine coûte par image.** Un musicien qui joue est une boucle audio ; dix
+  musiciens font dix boucles. Chaque sorte a un **plafond dans la bulle** — un musicien, un
+  amuseur, un exhibitionniste à la fois — et c'est ce qui les garde rares, donc remarqués.
+- **Elles ont un quartier et une heure.** Le champ `districts` existe (le débardeur ne quitte
+  pas les Quais) et le rythme aussi : un musicien au Carré le soir, un touriste sur les Quais
+  le matin, un exhibitionniste au parc — et personne de tout ça à La Shop à 3 h.
+- **Juges** : toute sorte a son corps ; toute sorte a une routine **mesurable au banc** (elle
+  fait quelque chose qu'un passant ne fait pas) ; le musicien s'entend et se tait sous une
+  voix ; l'amuseur attroupe (N piétons en `arret` autour de lui) ; l'exhibitionniste finit
+  arrêté par un agent qui passe, sans une étoile pour le joueur ; et jamais plus de son
+  plafond d'une sorte dans la bulle.
 
 ### Les portes s'ouvrent, et les gens les passent (**ajout**, taille 2)
 
