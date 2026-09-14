@@ -72,6 +72,7 @@ ne bougent pas quand l'ordre de travail change.
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **P3** **correctif** à faire | demande de Martin, mesurée : **les 41 intérieurs** dépassent l'empreinte de leur bâtiment — un logement de banlieue de 3 × 3 ouvre sur une pièce de 16 × 9. Une porte doit imposer une taille minimale au bâtiment, et il faut de **petites** pièces |
 | L'eau n'est plus un mur | **P3** **correctif** à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
+| La dépanneuse lève les roues | **P4** ajout à faire | demande de Martin : « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme ». Aujourd'hui elle traîne tout à plat au bout d'un **câble** (`crochet_raideur`, et il lâche si on l'étire) : c'est une corde, pas une fourche. ⚠️ Le lien devient **rigide** — et la question « que se passe-t-il quand la charge est bloquée par une tuile » change de réponse : ce n'est plus le câble qui s'étire, c'est **la remorqueuse qui ne passe pas**. ⚠️ Et c'est **Python** qui dit ce qui monte sur le plateau (un champ `plateau` de fiche), pas un `classe === 'moto'` caché dans le JS — la leçon de `reservoir` |
 | Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | Les armes à feu | **P4** ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
@@ -442,6 +443,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P3** Trottoir et traverses de deux tuiles | `TROTTOIR = 1` (trottoirs **et** traverses), rues rétrécies pour garder leurs voies, tout ce qui vivait sur le trottoir relogé, le littéral `2` de `monde.js` remplacé par `grille.trottoir`, juges de géométrie rejoués | une rue qui a l'air d'une rue ; aucun bouchon de piétons devant un commerce ni à une traverse |
 | — | **P3** Pièces plus grandes que leur maison | plancher de la pièce ≤ empreinte × étages, taille minimale imposée par la porte, pièces par tranche de taille | sortir d'un dépanneur sans avoir l'impression d'être sorti d'une cabane |
 | — | **P3** L'eau n'est plus un mur | nage à l'endurance, noyade à bout de souffle, char qui coule et ne revient pas, police qui nage aussi, rive de sable en eau basse | traverser un chenal de justesse ; ne jamais traverser la baie ; un char noyé reste au fond |
+| — | **P4** La dépanneuse lève les roues | lien **rigide** au lieu d'un câble, avant levé (collé, deux pixels plus haut, l'ombre restée au sol) et **dans l'axe** ; `plateau` en fiche : moto et vélo montent en entier, dessinés par-dessus, hors des tuiles et hors des chocs ; la remorqueuse refuse d'avancer là où sa charge ne passe pas | reconnaître une dépanneuse d'une auto qui tire une corde ; ramasser une moto sans qu'elle se traîne le nez par terre |
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
 | — | **P4** Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
@@ -507,6 +509,7 @@ ordre-là.
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P3** | **correctif** | Une pièce plus grande que sa maison | 2 | **le trottoir** : rétrécir les rues rétrécit les bâtiments |
 | **P3** | **correctif** | L'eau n'est plus un mur | 3 | débloque le **bateau** de M9 et le **traversier** de M12, et décide de la piscine des terrains |
+| **P4** | ajout | La dépanneuse lève les roues | 1 | le crochet est livré : il ne reste qu'à remplacer la corde par une fourche. ⚠️ Gagne à passer **avant** le boulot de remorquage — c'est lui qui la fera faire vingt fois |
 | **P4** | ajout | Des feux pour piétons | 2 | se décide avec la traverse d'une tuile ; ⚠️ contient un correctif (on traverse pendant l'orange) |
 | **P4** | ajout | Les terrains de banlieue | 2 | les clôtures sont livrées : les cours se traversent déjà |
 | **P4** | ajout | Les armes à feu | 2 | le marché noir de M7 leur sert de comptoir |
@@ -1042,7 +1045,9 @@ fiches ci-dessous). **Reste à faire**, et c'est celui qui se joue :
   fourrière n'a ni comptoir, ni saisie à l'arrestation, ni chars dans sa cour ;
 - la **radio procédurale** est dans le paquet mais `Son.Radio` ne sait pas qu'une station
   peut venir de `musiques` plutôt que d'un mp3 — le bouton RADIO du camion ne fait rien ;
-- le **sport** et le **luxe** n'existent pas encore.
+- le **sport** et le **luxe** n'existent pas encore ;
+- et la remorqueuse **traîne** au lieu de **lever** — elle a une corde, pas une fourche (fiche
+  ci-dessous, P4).
 
 - `vehicules.py` : les quatre chars **existent, roulent, défoncent, soignent et remorquent**
   (fiches livrées plus bas) — plus une seule ligne de fiche que le navigateur ignore.
@@ -1136,6 +1141,58 @@ voulaient rien dire.
   une façade ni du barbelé** ; une berline ne casse rien ; au pas (sous
   `defonce_vitesse_min`), personne ne défonce. Et l'ambulance rend bien ses PV, s'arrête au
   plafond, met la sauvegarde à jour, pendant qu'une berline n'en rend aucun.
+
+#### La dépanneuse lève les roues (**ajout**, taille 1) — **P4, à faire**
+
+*Demande de Martin :* « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle
+remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme. »
+
+⚠️ **Aujourd'hui, c'est une corde, pas une fourche.** `majCrochet()` tire le char vers un
+point derrière la remorqueuse avec `crochet_raideur`, le char pointe **vers** elle, et le
+lien **lâche** si on l'étire. Autrement dit : le véhicule remorqué roule sur ses quatre roues,
+à plat, au bout d'un élastique. C'est ce qu'on écrit quand on a `crochet_cable_px` sous les
+yeux — et c'est ce qui fait qu'une remorqueuse ressemble encore à une auto qui tire une auto.
+
+Ce qu'il faut, et dans cet ordre :
+
+- **Le lien devient RIGIDE.** Une fourche ne s'étire pas : le point d'attache est fixe, et
+  `crochet_raideur` ne décrit plus rien. ⚠️ **Et ça change la réponse à la seule question qui
+  compte** : que se passe-t-il quand la charge est bloquée par une tuile ? Ce n'est plus le
+  câble qui s'allonge, c'est **la remorqueuse qui ne passe pas**. Elle teste donc **les deux
+  corps** avant d'avancer — le même « tout ou rien » que `defoncerDevant()`. Sans ça, on
+  recule dans un mur avec une auto au bout de la fourche et elle le traverse.
+- **L'avant est levé, et ça se voit.** ⚠️ **Ne pas inventer un sprite « nez en l'air »** : ce
+  serait 32 caps de plus par char et par couleur, pour deux pixels. Trois détails suffisent,
+  et le moteur sait déjà les faire :
+  - le char remorqué se **colle** à la remorqueuse — plus de trou de câble entre les deux ;
+  - il se dessine **deux pixels plus haut**, l'ombre restée au sol : c'est exactement ce que
+    `dessinerUn()` fait déjà pour `v.z > 2` ;
+  - et il est **dans l'axe** de la remorqueuse, plus « pointé vers elle ». Une fourche ne
+    laisse pas de jeu, et c'est ce jeu qui trahit la corde.
+- **Le plateau, pour ce qui tient dessus.** Une moto, un vélo : ça ne se lève pas par l'avant,
+  ça se **charge en entier**. ⚠️ **C'est Python qui le décide** — un champ `plateau` dans la
+  fiche (vrai pour la moto et le vélo), pas un `classe === 'moto'` caché dans le JS. C'est la
+  leçon de `reservoir` : le jour où une trottinette arrive, elle le dit elle-même, et un juge
+  vérifie que la liste n'a pas changé de sens dans notre dos.
+  - À bord, le deux-roues **ne traîne plus du tout** : même décalage, même cap, zéro écart —
+    il bouge avec la remorqueuse comme s'il en faisait partie.
+  - Il n'est plus **bloqué par les tuiles** et ne **heurte** plus rien : c'est de la
+    cargaison, pas un véhicule sur la route.
+  - Le lien ne peut donc pas lâcher : on n'étire pas un plateau. Le message « LE CÂBLE A
+    LÂCHÉ » n'a plus de sens pour lui.
+  - ⚠️ **L'ordre de dessin** : la charge se peint **après** la remorqueuse, sinon la moto
+    disparaît sous elle. C'est le genre de détail qu'on ne voit qu'une fois en jeu.
+- ⚠️ **On ne monte plus dans un char remorqué.** Rien ne l'interdit aujourd'hui, et ce serait
+  la façon la plus courte de casser la physique : deux conducteurs, deux volontés, un seul
+  lien rigide. Le refus doit se **dire** (une invite), pas juste ne rien faire.
+- **Le sprite de la remorqueuse ne change pas** : il porte déjà son bras couché et son
+  plateau. C'est la charge qui se place dessus.
+- **Juges** : une auto remorquée est **collée** (l'écart tombe sous ce qu'il vaut aujourd'hui)
+  et **dans l'axe**, pas en biais ; une moto et un vélo montent **sur** la remorqueuse — même
+  cap, même vitesse, écart nul — et se dessinent après elle ; une moto à bord ne heurte rien
+  et aucune tuile ne l'arrête ; la remorqueuse **refuse d'avancer** là où sa charge ne passe
+  pas au lieu de la traîner dans un mur ; on ne monte pas dans un char remorqué ; et `plateau`
+  est vrai pour **exactement** la moto et le vélo.
 
 #### Le crochet de la remorqueuse (taille 1) — **livré le 13 sept. 2026**
 
