@@ -2369,6 +2369,10 @@ def test_l_ambulance_ramasse_un_blesse_et_le_perd_si_on_traine(banc, paquet):
         const b = L.Missions.boulot;
         function course(attente) {
             const argent0 = L.B.partie.argent;
+            // ⚠️ On repart sirene ETEINTE : dans une ambulance, c'est
+            // l'allumage qui prend l'appel, jamais l'extinction (voir
+            // `test_eteindre_sa_sirene_n_appelle_pas_un_nouveau_contrat`).
+            v.sirene = false;
             o.tape('Space', 2);
             const etape1 = b.etape;
             const blesse = b.client;
@@ -2397,6 +2401,65 @@ def test_l_ambulance_ramasse_un_blesse_et_le_perd_si_on_traine(banc, paquet):
     assert t["gain"] < a["gain"], "arriver trop tard paie autant qu'arriver a temps"
     assert t["gain"] >= f["base"], "il reste la base, meme trop tard"
     assert r["faits"] == 2 and a["fini"] is None
+
+
+def test_eteindre_sa_sirene_n_appelle_pas_un_nouveau_contrat(banc):
+    """⚠️ Retour de Martin : « on ne devrait pas avoir de nouveaux contrats
+    quand on arrête la sirène ; et quand un contrat est en cours, on ne peut
+    pas en ravoir un autre. »
+
+    Le bouton du klaxon fait deux choses dans une ambulance : il bascule la
+    sirène **et** il prend l'appel. Le premier geste est le bon — on répond et
+    on part la sirène allumée. ⚠️ Mais l'inverse veut dire « j'ai fini », pas
+    « donne-m'en un autre » : éteindre sa sirène en sortant de l'hôpital
+    rappelait aussitôt une ambulance, et on repartait sans l'avoir demandé.
+
+    Le juge tient les trois états du bouton : on allume (contrat), on éteint
+    (rien), on rallume pendant un contrat (rien de plus)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(61);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('ambulance', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const b = L.Missions.boulot;
+        // 1. On allume : la sirene part, et l'appel se prend.
+        o.tape('Space', 2);
+        const allume = { sirene: v.sirene, slug: b.slug, etape: b.etape };
+        const premier = b.client;
+        // 2. On rallume pendant le contrat : rien de plus, et le meme client.
+        o.tape('Space', 2);                              // eteint
+        o.tape('Space', 2);                              // rallume
+        const pendant = { sirene: v.sirene, etape: b.etape, memeClient: b.client === premier };
+        // 3. Le contrat se finit, puis on ETEINT : rien ne doit repartir.
+        const c = b.client;
+        if (c) { v.x = c.x + 10; v.y = c.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+        o.frame(3);
+        const dest = b.destination;
+        if (dest) { v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+        o.frame(3);
+        const fini = { etape: b.etape, faits: b.faits.ambulance };
+        o.tape('Space', 2);                              // on eteint la sirene
+        const apres = { sirene: v.sirene, etape: b.etape, slug: b.slug };
+        // 4. Et on peut en reprendre un quand on RALLUME.
+        o.tape('Space', 2);
+        const repris = { sirene: v.sirene, etape: b.etape };
+        return { allume: allume, pendant: pendant, fini: fini, apres: apres, repris: repris };
+    }""")
+    assert r["allume"] == {"sirene": True, "slug": "ambulance", "etape": "ramasse"}, (
+        "allumer la sirene doit prendre l'appel : %s" % r["allume"]
+    )
+    assert r["pendant"] == {"sirene": True, "etape": "ramasse", "memeClient": True}, (
+        "rallumer pendant un contrat en a donne un autre : %s" % r["pendant"]
+    )
+    assert r["fini"] == {"etape": None, "faits": 1}, "le premier contrat ne s'est pas fini"
+    assert r["apres"] == {"sirene": False, "etape": None, "slug": None}, (
+        "ETEINDRE la sirene a rappele une ambulance : %s" % r["apres"]
+    )
+    assert r["repris"] == {"sirene": True, "etape": "ramasse"}, (
+        "on ne peut plus reprendre un appel en rallumant : %s" % r["repris"]
+    )
 
 
 def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):

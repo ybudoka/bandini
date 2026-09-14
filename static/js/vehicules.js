@@ -1131,11 +1131,17 @@ const Vehicules = (function () {
       // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on
       // repond a l'appel et on part la sirene allumee, d'un seul geste.
+      //
+      // ⚠️ MAIS SEULEMENT QUAND ON L'ALLUME (retour de Martin). Le geste
+      // inverse veut dire « j'ai fini », pas « donne-m'en un autre » : eteindre
+      // sa sirene en sortant de l'hopital rappelait aussitot une ambulance,
+      // et on repartait sans l'avoir demande.
+      const allume = v.def.sirene && !v.sirene;
       if (v.def.sirene) { v.sirene = !v.sirene; Son.SFX.touche(); } else v.klaxonT = 30;
       // ⚠️ Sur la remorqueuse, le meme bouton accroche et decroche : le boulot
       // de remorquage EST le crochet, il n'y a pas deux gestes a apprendre.
       if (v.def.crochet) basculerCrochet(v);
-      if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.klaxon(v);
+      if ((!v.def.sirene || allume) && typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.klaxon(v);
     }
     if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {

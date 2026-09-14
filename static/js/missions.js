@@ -299,7 +299,13 @@ const Missions = (function () {
 
     /** Le klaxon dans un char qui a un boulot : on le prend, ou rien. */
     klaxon: function (v) {
-      if (boulot.etape || !v || !v.def.boulot) return false;
+      if (!v || !v.def.boulot) return false;
+      // ⚠️ UN contrat a la fois — et sur un char a sirene, ca se DIT : le
+      // bouton vient d'allumer la sirene, il a donc l'air d'avoir fait
+      // quelque chose, et un refus muet passerait pour une panne. Dans un
+      // taxi, on se tait : le klaxon y sert a la circulation, et le repeter a
+      // chaque coup de klaxon serait du harcelement.
+      if (boulot.etape) { if (v.def.sirene) Hud.message('UN CONTRAT EST DEJA EN COURS'); return false; }
       const sorte = SORTES[v.def.boulot];
       if (!sorte) return false;          // le remorquage attend sa fourriere
       boulot.slug = v.def.boulot;
