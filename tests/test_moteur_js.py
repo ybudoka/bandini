@@ -3938,6 +3938,62 @@ def test_une_propriete_s_achete_et_rapporte(banc, paquet):
     assert r["deuxieme"] is False, "une propriete a soi ne se rachete pas"
 
 
+def test_devant_le_garage_la_porte_gagne_sur_le_char_gare_devant(banc):
+    """Bug de Martin : devant le garage, un char gare devant la porte, et
+    « ENTRER » faisait monter dans le char au lieu d'entrer dans le batiment.
+
+    Une seule pression d'ACTION, deux lecteurs dans la meme image :
+    `Combat.maj` ouvre le menu ACHETER / ENTRER de la propriete, puis
+    `Vehicules.maj` relisait la meme pression et prenait la portiere d'a cote.
+    Au moment de choisir ENTRER, `Jeu.entrer` refusait : deja au volant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.B.partie.argent = 0;                 // pas de quoi acheter : seul ENTRER compte
+        const v = o.char('auto', 20, 0, 0);    // gare devant, a portee de portiere
+        const pres = L.Vehicules.vehiculeSousLaMain(j) === v, devant = L.Monde.porteDevant(j) === porte;
+        o.tape('KeyE', 2);                     // UNE pression
+        const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
+        const auVolant = !!j.dansVehicule;
+        if (L.B.menu) { L.B.menu.curseur = 1; o.tape('KeyE', 1); }   // ENTRER
+        o.fondu();
+        return { pres: pres, devant: devant, menu: menu, auVolant: auVolant,
+                 dedans: L.B.interieur ? L.B.interieur.slug : null, attendu: porte.interieur,
+                 encoreAuVolant: !!j.dansVehicule, conducteur: v.conducteur === j };
+    }""")
+    assert r["pres"] is True and r["devant"] is True, "le decor du test : un char a portee ET la porte devant"
+    assert r["menu"] == ["ACHETER", "ENTRER"], r["menu"]
+    assert r["auVolant"] is False, "la meme pression d'ACTION a ouvert le menu ET pris la portiere"
+    assert r["dedans"] == r["attendu"], "ENTRER n'a pas mene dans le garage"
+    assert r["encoreAuVolant"] is False and r["conducteur"] is False
+
+
+def test_a_une_porte_sans_menu_le_fondu_gagne_aussi_sur_la_portiere(banc):
+    """Meme pression, meme porte, mais la propriete est a soi : plus de menu,
+    `Combat.maj` lance le fondu tout de suite — et `Vehicules.maj` ne doit pas
+    prendre le char pendant qu'on passe la porte, sinon on se reveille dans
+    la piece au volant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 };   // a soi : la porte s'ouvre sans menu
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        const v = o.char('auto', 20, 0, 0);
+        o.tape('KeyE', 1);
+        const fondu = !!L.B.transition, menu = !!L.B.menu, auVolant = !!j.dansVehicule;
+        o.fondu();
+        return { fondu: fondu, menu: menu, auVolant: auVolant,
+                 dedans: L.B.interieur ? L.B.interieur.slug : null, attendu: porte.interieur,
+                 encoreAuVolant: !!j.dansVehicule };
+    }""")
+    assert r["menu"] is False and r["fondu"] is True, "la porte d'une propriete a soi s'ouvre sans menu"
+    assert r["auVolant"] is False, "la meme pression a passe la porte ET pris la portiere"
+    assert r["dedans"] == r["attendu"] and r["encoreAuVolant"] is False
+
+
 def test_les_paquets_caches_se_ramassent_et_paient(banc, paquet):
     tarifs = paquet["economie"]["tarifs"]
     r = banc("""function (L, o) {
