@@ -68,6 +68,7 @@ ne bougent pas quand l'ordre de travail change.
 | Clôture nord-sud trop large | **livré** (13 sept. 2026) | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **livré** (13 sept. 2026) | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
+| Les portes s'ouvrent | **P2** ajout à faire | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
 | Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
 | Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
@@ -82,6 +83,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **le chantier** et les nids-de-poule |
 | M14 Meta v2 | **P4** ajout à faire (v2) | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
+| M16 Cent missions | **P4** ajout à faire (v2) | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
 | M13 Les deux fins | **P4** ajout à faire (v2) | une mission par district, Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* |
 
 ## Dettes
@@ -384,6 +386,8 @@ refusé +1 · entrer armé en territoire de gang : 0 ★ mais la gang attaque.
 Défis : Le Grand Saut du viaduc (moto) · Tour du Faubourg (3 tours < 2:00) · Livraison sans
 bosse (90 s, 1★ au départ, zéro dégât).
 
+La suite — 109 missions, 34 personnages, les cinq districts — est en **M16**.
+
 ## Arborescence du dépôt `ybudoka/bandini`
 
 ```
@@ -439,6 +443,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Clôture nord-sud trop large | **livré** : brin nord-sud réduit à son épaisseur (trait, chapeaux de poteaux, liseré d'ombre), poteau à la jointure des coins, juge retourné : le nord-sud est **plus mince**, pas une rotation | une clôture verticale qui a l'air debout, pas couchée |
 | — | La nuit ne se vide pas | **livré** : rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | Arbres dans les sentiers | **livré** : une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
+| — | **P2** Les portes s'ouvrent | battant dessiné **par-dessus** la tuile (le sol est cuit dans le morceau), sortie visible, entrée qui remplace une part de l'oubli, portes triées par ce qu'elles valent, rythme matin/soir | voir quelqu'un sortir du dépanneur et y entrer, sans que le cache de morceaux bouge |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
 | — | **P3** Trottoir et traverses de deux tuiles | `TROTTOIR = 1` (trottoirs **et** traverses), rues rétrécies pour garder leurs voies, tout ce qui vivait sur le trottoir relogé, le littéral `2` de `monde.js` remplacé par `grille.trottoir`, juges de géométrie rejoués | une rue qui a l'air d'une rue ; aucun bouchon de piétons devant un commerce ni à une traverse |
@@ -453,10 +458,11 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, chantier du jour et nids-de-poule | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; un chantier qui force un détour sans couper la ville |
 | M14 | **P4** Meta v2 | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
+| M16 | **P4** Cent missions | neuf types d'objectifs de plus, `exige` / `ferme` / `donne` étendu, lieux nommés, dialogues hors paquet, téléphone qui trie ; 109 missions en 9 arcs, 34 personnages, 3 piétons de mission, un chien, 5 défis | finir un arc par district au téléphone ; aucune mission morte au singe ; les deux fins atteignables par le catalogue |
 | M13 | **P4** Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* | atteindre les deux fins ; chaque réplique se dit à voix haute |
 
 Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
-M8 4, M9 3, M10 3, M11 2, M12 4, M13 4, M14 4, M15 3 (v2 = 27) ;
+M8 4, M9 3, M10 3, M11 2, M12 4, M13 4, M14 4, M15 3, M16 8 (v2 = 35) ;
 hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée et de
 sortie 1, le fondu de l'hôpital et de la prison 1, les clôtures 1, les toits 2, les armes à
 feu 2, le carnet 2, l'eau 3.
@@ -469,7 +475,7 @@ Ce qui reste, **trié par priorité** (le détail et la règle de tri sont dans 
 - **P3, ça porte le reste** — le trottoir et les traverses · les pièces plus grandes que leur
   maison · l'eau qui n'est plus un mur.
 - **P4, ça enrichit** — les feux pour piétons · les terrains de banlieue · les armes à feu ·
-  M15 · M11 · M10 · M12 · M14 · M13.
+  M15 · M11 · M10 · M12 · M14 · M16 · M13.
 
 ## La v2 — huit vagues (plan du 13 sept. 2026)
 
@@ -504,6 +510,7 @@ ordre-là.
 |---|---|---|---|---|
 | **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** ⚠️ **Toutes les fiches sont lues, et le haut de gamme est livré.** Restent la fourrière (comptoir, saisie, et le remorquage qui en dépend) et la radio du camion. Prérequis de M10 |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
+| **P2** | ajout | Les portes s'ouvrent, et les gens les passent | 2 | ⚠️ un piéton sur trois sort **déjà** d'une porte — mais seulement **hors écran** : on ne le voit jamais. Et personne n'entre nulle part |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
@@ -518,6 +525,7 @@ ordre-là.
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
 | **P4** | ajout | M12 La ville vit | 4 | tramway, traversier et neige touchent à la physique |
 | **P4** | ajout | M14 Meta v2 | 4 | de l'**infrastructure** (serveur, BD, comptes) : un autre métier que le reste |
+| **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) ; ⚠️ les dialogues sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
@@ -1742,6 +1750,61 @@ mouettes des Quais, le vent et les arbres de La Pointe.
   thème du menu joue **même sans aucun fichier** ; et le poids total reste sous son plafond,
   mesuré comme celui des radios.
 
+### Les portes s'ouvrent, et les gens les passent (**ajout**, taille 2)
+
+*Demande de Martin :* « les piétons devraient aussi sortir et entrer dans les commerces.
+Profites-en pour aussi faire ouvrir concrètement les portes. »
+
+Les deux demandes n'en font qu'une, et le code dit pourquoi.
+
+⚠️ **Un piéton sur trois SORT déjà d'une porte — et on ne le voit jamais.**
+`placeDeNaissance()` tire une porte une fois sur trois, puis refuse la place si elle est
+**visible à l'écran** (`if (visibleAEcran(x, y, 24)) continue`). Les gens apparaissent donc
+sur un pas de porte **là où l'on ne regarde pas**. Ce n'est pas une sortie, c'est une
+naissance déguisée en sortie — et elle ne rapporte rien, puisque son seul intérêt serait
+d'être vue.
+
+⚠️ **Et personne n'entre nulle part.** Les piétons disparaissent par oubli, quand ils sortent
+de la bulle. La ville a des dedans qui n'avalent jamais personne.
+
+⚠️ **Enfin, une porte ne s'ouvre pas.** Les peintres `D` et `d` dessinent un battant fixe, et
+il n'existe nulle part d'état d'ouverture. La clochette du commerce, livrée le 13 sept.,
+sonne sur une porte qui ne bouge pas.
+
+**Une porte qui s'ouvre est ce qui rend une sortie crédible**, et une sortie visible est ce
+qui justifie qu'une porte s'ouvre. D'où une seule fiche.
+
+- ⚠️ **Une porte animée ne peut pas être une tuile.** Le sol est **cuit dans le morceau** de
+  256 px : repeindre un morceau à chaque image pour un battant tuerait le cache qui tient le
+  rythme sur téléphone. La porte qui s'ouvre est donc un petit dessin posé **par-dessus**,
+  dans la passe des entités, et seulement pour les portes à l'écran — il y en a une poignée.
+  C'est la même leçon que les feux pour piétons : le poteau est une entité, la traverse est
+  une tuile.
+- **Sortir, pour de vrai.** Le piéton naît **dans** la porte (invisible), la porte s'ouvre, il
+  avance d'une tuile, elle se referme. La règle « hors écran seulement » saute : c'est
+  précisément parce qu'on ne le voyait pas que ça ne servait à rien.
+- **Entrer.** Un piéton qui flâne se choisit une porte comme but, marche jusqu'à elle, attend
+  qu'elle s'ouvre, disparaît dedans. ⚠️ Ça doit **remplacer une part de l'oubli par
+  distance** : sinon la ville se vide toujours de la même façon et on a juste ajouté une
+  animation.
+- ⚠️ **Toutes les portes n'ont pas le même sens.** `portesFermees` mélange les `d` — portes
+  condamnées, les logements — et les `D`, les vraies portes qui mènent à un intérieur. Il faut
+  trancher : un logement, oui ; un commerce, **aux heures d'ouverture** (`ouvert()` existe
+  déjà) ; le poste de police et l'hôpital, seulement pour qui y travaille ; **la planque de
+  Rocco, jamais** — c'est chez le joueur.
+- ⚠️ **Et le joueur ne doit pas pouvoir suivre dans le vide.** Une porte condamnée est solide :
+  elle ne mène nulle part. Si quelqu'un y entre sous les yeux du joueur, il essaiera d'entrer
+  et trouvera un mur — une promesse qu'on ne tient pas. Soit le piéton n'entre que par des
+  portes que le joueur peut franchir, soit la porte condamnée **dit** qu'elle ne s'ouvre que
+  pour ceux qui habitent là (une poignée, pas d'enseigne, aucune lumière).
+- **Le rythme s'en sert.** La nuit vide maintenant la ville pour de vrai ; les portes doivent
+  battre au **matin** (on sort) et au **soir** (on rentre), et presque plus la nuit. C'est
+  `Monde.rythme(zone)`, qui donne déjà les trois.
+- **Juges** : une porte ne s'ouvre jamais sur rien — un piéton qui entre disparaît **après**
+  l'ouverture, jamais avant ; la planque du joueur n'avale personne ; un commerce fermé ne
+  laisse entrer personne ; le cache de morceaux **ne bouge pas** quand une porte s'ouvre
+  (`stats.morceaux` le mesure) ; et le va-et-vient ne fait pas déborder le plafond de piétons.
+
 ### Le carnet : la mission, le journal, le répertoire (**ajout**, taille 2)
 
 *Demande de Martin :* « je veux pouvoir avoir un rappel de la mission en cours dans le menu.
@@ -2273,12 +2336,391 @@ M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
   arrière quand ils s'éloignent. ⚠️ 480 × 270 n'est pas grand : à décider **après un essai**,
   pas avant.
 
+### M16 — Cent missions (**ajout**, taille 8, en quatre tranches de 2)
+
+*Demande de Martin (13 sept. 2026) :* « je veux plus de 100 missions avec les personnages
+existants et de nouveaux personnages, partout sur la carte, plein de nouvelles idées ! »
+
+*Ce que ça donne :* une ville où **chaque quartier a une histoire**, et où le téléphone
+sonne pour autre chose que les cinq missions du Faubourg. **109 missions de plus** (114 en
+tout), **9 arcs**, **34 personnages de plus**, et une raison d'aller dans chacun des cinq
+districts, à chaque heure du jour. Les deux fins de M13 sont les trois dernières lignes du
+catalogue : ce jalon est celui qui les rend **atteignables**.
+
+⚠️ **Cent missions, c'est un catalogue, pas cent scripts.** Les cinq missions de la v1
+tiennent sur onze types d'objectifs et quatre causes d'échec, et `histoire.js` ne connaît
+aucune mission par son nom. La règle tient : **une mission est une liste d'objectifs dans
+`missions.py`**, et si une idée ne s'écrit pas avec les types existants, on ajoute **un
+type** — jamais un `if (slug === 'q07')`. Ce jalon en ajoute neuf, listés plus bas, et
+c'est tout ce que le moteur apprend. Les cent missions sont des **données**.
+
+#### Ce que le moteur apprend (et rien d'autre)
+
+- **Neuf types d'objectifs de plus** dans `TYPES_OBJECTIFS`, chacun avec son juge de banc :
+  `suivre` (filer un piéton ou un char sans être vu : trop près ou trop loin, c'est raté),
+  `proteger` (un personnage te suit à pied ou monte avec toi ; s'il meurt, échec
+  `protege_mort`), `pickpocket` (les poches d'un piéton **précis**, par-derrière — le
+  mécanisme de M2 existe), `payer` (donner un montant), `acheter` (un article à un
+  comptoir), `detruire` (un véhicule de la mission), `sauter` (une rampe, `vol_px` — le
+  juge du défi *Le Grand Saut*), `eteindre` (un feu à l'extincteur — le jet existe, le feu
+  de char aussi) et `boulots` (`n` boulots d'une `sorte` : généralise `courses`, qui reste
+  pour le taxi). `parler` et `survivre`, déclarés depuis M6 et jamais utilisés, servent
+  enfin.
+- **Quatre options qui traversent les types** : `chrono_s` sur n'importe quel objectif (le
+  défi l'avait, la mission non), `sans_etoile` (échec `etoile` dès qu'on est vu : les
+  missions discrètes), `sans_arme` (entrer en territoire de gang les mains vides), `contre`
+  (des adversaires sur une `course`). `ECHECS` gagne `etoile` et `protege_mort`.
+- **`exige`** : ce qu'il faut avoir **en plus** des prérequis — `argent_min` (m99),
+  `proprietes` et `liberes` (m98), `dette` (d08), `tenue` (f10), `heure`. Un prérequis dit
+  « après quoi » ; `exige` dit « dans quel état ». Les deux se lisent dans le carnet.
+- **`ferme`** : une mission qui en **ferme** une autre. C'est ce qui fait les choix (q10 ou
+  q11, r03 ou r04, d07 ou d08) : une mission fermée n'apparaît plus jamais, ni au téléphone
+  ni au carnet. ⚠️ Un choix est un choix **parce qu'il coûte** : chaque paire ferme aussi une
+  récompense, et le juge vérifie qu'aucune des deux branches ne rapporte plus du double de
+  l'autre.
+- **`donne` grossit** : `libere: "<district>"` (généralise `faubourg_libere` ; le gang
+  devient des passants, la zone s'efface de `carte.zones()`, c'est ce que compte *Le Boss*),
+  `calme: "<gang>"` (`hostile_toujours` et `hostile_si_arme` tombent — la seule façon de
+  marcher dans La Shop), `contact` (un numéro de plus au téléphone), `vehicule` (un char
+  garé devant la planque), `tenue`, `munitions`, `rabais` par comptoir, `dette: -n`,
+  `casier: -n`, `ami`/`ennemi` (Roy, Sal), `boulot` (un boulot de plus au klaxon),
+  `manchette`. Chaque clé a **un** endroit qui la lit, dans `Histoire.recompenser()`.
+- **Des lieux qu'on peut nommer.** `resoudre()` apprend `district:<slug>` (une tuile
+  marchable tirée dans le district), `boutique:<genre>` (la plus proche de ce genre :
+  pharmacie, taverne, quincaillerie…), `pont`, `quai`, `bois`, `rampe:<district>`. Et
+  **quatre lieux spéciaux de plus** dans `carte.SPECIAUX`, parce qu'une mission a besoin
+  d'une adresse stable : la **villa du maire** (Les Érables), le **Salon Ferraro** (Faubourg,
+  le barbier-shylock), le **bureau du Clairon** (Faubourg) et la **cour à ferraille de
+  Ti-Loup** (La Shop). ⚠️ Pas cinq : chaque lieu spécial est une pièce à dessiner, une
+  porte à poser et un juge de plus. Tout le reste passe par `boutique:` et `district:`.
+- **Le téléphone trie.** Avec cent missions, il sonnerait sans arrêt. Règles : **un appel
+  par demi-journée**, jamais pendant une mission, jamais à 3★ et plus ; le donneur **le plus
+  proche** appelle d'abord ; un donneur qu'on croise **hèle** (la bulle de M6) même si le
+  téléphone n'a pas encore sonné. Le carnet (P2) liste ce qui est disponible, par district :
+  c'est là que cent missions deviennent lisibles, et c'est pour ça que le carnet passe
+  avant.
+- **Les dialogues sortent du paquet.** 114 missions × 7 répliques ≈ 150 Ko bruts : le
+  paquet (319 Ko, budget 400) ne les prend pas. Le catalogue (objectifs, prérequis, `donne`)
+  reste dedans — c'est ce que le carnet et le GPS lisent — et les répliques viennent par
+  `/api/dialogue/<slug>` **quand le téléphone sonne**, avec un ETag comme le reste. Une
+  requête par mission, avant que la première voix se charge de toute façon.
+- **Trois personnages qui ne sont pas des donneurs** dans `pietons.py`, fréquence 0, posés
+  par les missions comme le fuyard de m2 : le **matelot** (les gars de Sven), le **ciseau**
+  (les hommes de main de Sal), le **gardien** (les gardes de Prévost et du lot). Et
+  **Biscuit**, le premier animal du jeu : un sprite de 8 × 6, quatre images, qui court comme
+  un fuyard et ne rapporte rien — le promeneur de chien de La Pointe n'a toujours pas de
+  chien, c'est l'occasion.
+- **La sauvegarde** : `p.libere` (par district), `p.calmes` (par gang), `p.dette`,
+  `p.contacts`, `p.fermees`, `p.choix`. `Sauvegarde.completer()` a le repli champ par champ :
+  une vieille partie repart avec tout à vide, et m6 lui est proposée dès qu'elle a fini m5.
+
+#### Les 34 personnages de plus
+
+⚠️ **Trente-quatre voix, c'est le vrai coût.** La règle de M6 est *une voix par
+personnage*, et le compte ElevenLabs de Martin n'a pas trente-quatre voix québécoises. Ce
+qu'on fait : **une voix par famille** (une douzaine), partagée entre des personnages qui ne
+parlent **jamais dans la même mission**, avec un réglage différent (stabilité, style) pour
+que ça ne s'entende pas. `audio.VOIX_PERSONNAGES` garde une ligne par personnage, et un
+juge interdit deux personnages de même voix dans un même dialogue. Les **petites jobs**
+(arc T) sont dites par les voix des passants qui existent déjà : zéro voix de plus.
+
+| Slug | Qui | Où il se tient | Ce qu'il est |
+|---|---|---|---|
+| `gus` | Gus Lévesque | Chez Gus, derrière le comptoir | l'armurier ; bourru, vend à tout le monde, n'aime personne |
+| `rosa` | Rosa Di Meo | Boutique Rosa | la couturière ; l'ancienne blonde de Rocco, en sait long |
+| `mo` | Le Grand Mo | le banc du terminus | l'itinérant qui a tout vu ; se paie en bière et en potins |
+| `fern` | Fern Côté | porte du terminus, côté quai d'autobus | le chauffeur du dernier autobus |
+| `mado` | Mado | Casse-croûte du Faubourg | la propriétaire ; nourrit le sergent, et te nourrit |
+| `lachance` | Dr Lachance | Hôpital, bureau | l'urgentologue ; prévu depuis la vision, jamais posé |
+| `ginette` | Ginette | Hôpital, comptoir | l'infirmière-chef ; sait ce que le docteur ne dit pas |
+| `sal` | Sal « Le Barbier » Ferraro | Salon Ferraro | le shylock de Rocco : 15 000 $, coupe à 12 $ |
+| `desjardins` | Me Pierre-Luc Desjardins | Bar Le Brouillard, table du fond | l'avocat du Carré ; cher, et jamais deux fois le même jour |
+| `louise` | Louise Tremblay-Dion | bureau du Clairon | la journaliste ; veut la une, quoi qu'il en coûte |
+| `roy` | Inspectrice Claudine Roy | Poste, bureau d'en haut | la police honnête ; enquête sur Bouchard |
+| `momo` | Momo Taxi | porte du casse-croûte | le chauffeur rival de Marco, endetté chez Sal |
+| `lulu` | Lucienne « Lulu » Pelletier | Cantine des Quais | la sœur de Josée ; la cantine, le poisson du vendredi |
+| `gege` | Gérard « Gégé » Morin | porte de la cantine | chef des débardeurs ; syndiqué jusqu'aux dents |
+| `sven` | Sven Haugen, « Le Norvégien » | le quai, à côté de son cargo | le contrebandier qui veut Les Quais |
+| `mireille` | Mireille | la Brume, près de l'hôtel | une fille de la Brume qui veut sortir de la rue |
+| `norbert` | Norbert | Hôtel Bandini, réception | le concierge ; discret, tarifé |
+| `berube` | Capitaine Aurèle Bérubé | le quai du traversier | le traversier de nuit — la deuxième fin |
+| `denis` | Le Beau Denis | zone des Morues | le lieutenant de Josée, et le souteneur de Mireille |
+| `tipaul` | Ti-Paul Gagnon | Dépanneur Chez Ti-Paul | le dépanneur des Érables ; bière, potins, drifts dans son parking |
+| `diane` | Diane Larivière | villa d'à côté (porte de logement, Érables) | conseillère municipale ; veut la paix, et le pouvoir |
+| `maire` | Le maire Réal Tanguay | villa du maire | corrompu, jovial, dort à l'Hôtel Bandini |
+| `jo` | Jo Bellemare | stationnement du dépanneur, le soir | chef des Chevreuils — et le fils de Diane |
+| `beaulieu` | Mme Beaulieu | un sentier des Érables, avec Biscuit | la promeneuse ; perd son chien, puis déménage |
+| `xavier` | Xavier | porte du dépanneur | l'ado qui veut un selfie avec un coupé sport |
+| `prevost` | Réjean Prévost | Usine Prévost, bureau | le patron ; a mis à pied la moitié de La Shop |
+| `raymonde` | Raymonde Fortin | porte de l'usine | présidente du syndicat |
+| `sauve` | Bob Sauvé | cour de l'usine | le contremaître ; joue sur deux tableaux |
+| `gilles` | Gilles Thériault | guérite de la fourrière | le gardien du lot ; prend sa retraite à la fin |
+| `boulon` | Gros-Boulon (Marcel Boulanger) | zone des Boulonneux | chef des Boulonneux — les gars que Prévost a mis dehors |
+| `tiloup` | Ti-Loup Ferraille | cour à ferraille | le ferrailleur ; achète les épaves, ne pose pas de questions |
+| `ovila` | Ovila Saint-Onge | Le phare | le gardien, presque aveugle, voit des lumières la nuit |
+| `zed` | Zed (Zacharie Lemieux) | stationnement de La Pointe | chef des Skateux ; respecte ceux qui sautent |
+| `maude` | Maude | un mur de La Pointe | la muraliste ; peint la ville qu'on lui laisse |
+| `trappeur` | Le Trappeur (Armand) | les bois de La Pointe | l'ermite ; collets, fronde, et pas de police |
+
+Et deux qui existent déjà et changent : **Josée** s'appelle Josée Pelletier (Lulu est sa
+sœur, ça compte dans q12), et **Marco** a une fin (m97).
+
+#### Les 109 missions
+
+Colonnes : **Après** = prérequis (`exige` entre crochets) ; **Ce qu'on fait** = les
+objectifs, dans l'ordre, avec le type en italique quand il est nouveau ; **Paie** = la
+récompense, puis ce que `donne` accorde. ⏳ = la mission attend un autre jalon, et elle est
+alors en `phase: 2` — **jamais un prérequis d'une autre** : un arc ne bloque pas sur ce qui
+n'est pas livré. Les montants sont en dollars du jeu.
+
+**Le tronc** — Josée ouvre la ville, Marco la referme.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| m6 | Le tour du propriétaire | Josée | m5 | aller au dépanneur, à la cantine, à l'usine, au phare — un district à la fois, en un jour ; *parler* à Ti-Paul, Lulu, Raymonde, Ovila | 300 ; **ouvre les neuf arcs**, quatre contacts |
+| m97 | Marco te vend | Marco | 3 districts libérés | l'appel : « viens au garage » — c'est un piège, 5★ à l'intro ; semer ; rattraper le taxi de Marco (fuyard) ; le coucher **ou** le laisser filer (choix dans la fin) | 0 ; le taxi de Marco garé à la planque, Marco disparu du jeu |
+| m98 | Le Boss | Josée | m97 [4 propriétés, 4 districts libérés] | le maire envoie tout ce qu'il a sur le Brouillard : *survivre* 180 s à 5★ avec les Morues, les Skateux et les Boulonneux à tes côtés ; aller à la villa ; *parler* au maire, qui cède | 0 ; **le générique** — la ville change de couleur (M13) |
+| m99 | Le dernier traversier | Capitaine Bérubé | m6 [15 000 $ en poche] | de nuit, 0★ (`sans_etoile`) : aller au quai du traversier ; *payer* le passage ; monter ⏳ traversier (M12) — repli : la chaloupe du capitaine, un fondu au quai | 0 ; **l'autre générique** (M13) |
+
+**Arc F — Le Faubourg après les Cravates** (12) — les commerçants respirent, Marco compte.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| f01 | Les Cravates reviennent | Ti-Guy | m6 | de nuit, six Cravates mettent le feu à la porte du bar : ramasser l'extincteur derrière le comptoir, *eteindre* ; *survivre* 120 s à la porte ; coucher celui qui reste (chef) | 300 ; la caisse du bar tient un jour de plus |
+| f02 | Le stock de Gus | Gus | f01 | le camion de munitions de Gus est à la fourrière : le prendre de nuit (`sans_etoile`), le livrer à l'armurerie sans bosse | 350 ; munitions, armurerie à −20 % |
+| f03 | La robe de Rosa | Rosa | f01 | un Chevreuil est parti avec sa livraison dans une berline de luxe : le rattraper (fuyard, en auto), ramasser la caisse, retourner | 250 ; le complet gris, Boutique Rosa à −25 % |
+| f04 | Le Grand Mo sait tout | Le Grand Mo | m6 | *acheter* trois bières à la taverne, les lui apporter ; il dit où Rocco cachait trois paquets : les ramasser | 150 ; trois paquets comptés |
+| f05 | Le dernier autobus | Fern | m6 | monter dans l'autobus au terminus ; *boulots* n=4 sorte autobus (quatre arrêts, des passagers qui montent) ; le ramener | 200 ; le boulot **autobus** au klaxon |
+| f06 | Deuxième service | Bouchard | f01 | un témoin de m4 parle : *suivre* le stool du casse-croûte jusqu'au poste sans être vu ; puis *payer* 200 son silence **ou** l'assommer à mains nues | 300 |
+| f07 | La caisse, encore | Mme Thibodeau | f04 | quelqu'un vide le kiosque : c'est un Cravate en complet gris ; *pickpocket* pour reprendre la clé ; retourner | 200 |
+| f08 | Le char de Rocco | Ti-Guy | f02, f03 | la berline de luxe de Rocco est au lot : la prendre de nuit (1★, le lot appelle), semer, la livrer au garage pour la repeindre | 0 ; **la berline de luxe** garée à la planque |
+| f09 | Marco veut sa part | Marco | f06 | *proteger* Marco, qui monte avec toi, jusqu'au kiosque, au bar et au garage pour ramasser les caisses ; deux Cravates tendent une embuscade ; sans bosse | 250 ; Marco a vu où est l'argent (ça se paie en m97) |
+| f10 | La chemise hawaïenne | Rosa | f03 [tenue : chemise hawaïenne] | un client a oublié une chemise, une lettre dans la poche : la porter — **en la portant** — à Norbert, à l'Hôtel Bandini | 300 ; contact Norbert |
+| f11 | Le feu chez Mado | Mado | m6 | un char brûle devant le casse-croûte : ramasser l'extincteur, *eteindre* avant l'explosion, chrono 40 s | 150 ; l'extincteur |
+| f12 | Le Faubourg te dit merci | Mme Thibodeau | f08, f09, f10 | cinq commerçants ont mis une enveloppe : *parler* à cinq commis dans cinq boutiques du Faubourg avant la nuit, `sans_etoile` (on ne paie pas un gars recherché) | 500 ; toutes les boutiques du Faubourg à −10 % |
+
+**Arc Q — Les Quais** (13) — Josée tient le port, Sven le veut, Mireille veut en sortir.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| q01 | La cantine de Lulu | Lulu | m6 | trois matelots mangent sans payer : les mettre dehors (tuer n=3, à la porte de la cantine) | 150 ; cantine à −25 % |
+| q02 | Le poisson du vendredi | Lulu | q01 | un camion de poisson à livrer à trois poissonneries (`boutique:marine`) dans trois districts avant qu'il tourne, chrono 180 s | 250 |
+| q03 | Les briseurs de grève | Gégé | m6 | Prévost fait venir des scabs par camion : l'intercepter sur le boulevard et le *detruire* avant l'usine | 300 |
+| q04 | La cargaison du Norvégien | Josée | q01 | de nuit, le cargo décharge : ramasser une caisse sur le quai pendant que quatre matelots patrouillent, `sans_etoile` ; la porter au bar | 400 |
+| q05 | Mireille veut sortir | Mireille | q04 | *proteger* Mireille, à pied, de la Brume jusqu'à l'hôtel, de nuit, pendant que Le Beau Denis te court après | 100 ; Mireille travaille à la réception — l'hôtel rapportera 10 % de plus |
+| q06 | Le Beau Denis | Josée | q05 | Josée est furieuse — règle ça toi-même : coucher Denis (chef) en zone des Morues, `sans_arme` ; semer 2★ | 350 ; les Morues te laissent passer (`calme`) |
+| q07 | La chambre 12 | Norbert | f10 | un client est mort dans la chambre 12 — un comptable de Prévost ; de nuit, porter le « colis » (lourd, on marche) au camion, le livrer à la cour de Ti-Loup, `sans_etoile` | 500 ; **l'Hôtel Bandini est à vendre** (10 000) |
+| q08 | Le moteur du capitaine | Capitaine Bérubé | m6 | les Skateux ont volé le moteur de sa chaloupe : le ramasser dans leur stationnement (trois Skateux), le rapporter | 200 ; ⏳ eau — la chaloupe devient conduisible quand l'eau s'ouvre |
+| q09 | La course des débardeurs | Gégé | q03 | *course* en camion autour des Quais `contre` deux débardeurs, quatre points, chrono 150 s | 300 |
+| q10 | Le Norvégien te reçoit | Sven | q04 | Sven propose mieux que Josée : une moto chargée au pont, à livrer au phare sans bosse, chrono 120 s | 600 ; **ferme q11** ; les Morues redeviennent méfiantes un jour |
+| q11 | Le cargo brûle | Josée | q04 | *detruire* les deux camions de Sven sur le quai (explosion, 2★), semer 3★ | 700 ; **ferme q10** ; manchette *Le Norvégien lève l'ancre* |
+| q12 | La Chef a un cœur | Josée | q06 | la mère de Josée et Lulu fait une crise aux Érables : monter dans l'ambulance, la ramasser, la livrer à l'hôpital, chrono 120 s, chocs pénalisés | 300 ; Josée amie (le bar rapporte 10 % de plus) |
+| q13 | La nuit des Morues | Josée | q06, q11 ou q10 | Sven se venge : *survivre* 120 s à l'hôtel, les Morues à tes côtés ; coucher le chef des matelots | 500 ; **Les Quais libérés** (`libere: quais`), manchette |
+
+**Arc E — Les Érables** (13) — la banlieue, le maire, et des ados qui tournent en rond.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| e01 | Les drifts de Ti-Paul | Ti-Paul | m6 | tous les soirs, les Chevreuils font des ronds dans son stationnement : *survivre* 60 s de nuit et en coucher trois quand ils descendent | 150 ; dépanneur à −25 % |
+| e02 | La bière de Ti-Paul | Ti-Paul | e01 | un camion de bière attend au quai : le ramener au dépanneur sans bosse, à travers la ville | 250 |
+| e03 | Biscuit s'est sauvé | Mme Beaulieu | m6 | le chien a filé dans les bois de La Pointe : le rattraper (fuyard, à pied) et le ramener | 80 ; Biscuit te suit dans les Érables |
+| e04 | La course des Chevreuils | Jo | e01 | *course* sur le boulevard des Érables `contre` trois Chevreuils, cinq points, chrono 90 s, le char que tu veux | 300 ; les Chevreuils respectent (`calme`) |
+| e05 | Le char dans la piscine | Diane | e01 | les Chevreuils ont poussé une auto dans sa piscine : la sortir à la remorqueuse, la livrer au lot | 200 ; ⏳ terrains de banlieue |
+| e06 | Le maire ne dort pas chez lui | Diane | m6 | de nuit, *suivre* la berline du maire de la villa à… l'Hôtel Bandini, sans être vu | 300 |
+| e07 | La clé de la villa | Diane | e06 | *pickpocket* le chauffeur du maire au dépanneur ; fouiller la villa (ramasser le dossier), `sans_etoile` | 400 ; **le dossier** (sert en e11 et c02) |
+| e08 | Jo a un problème | Jo | e04 | sa mère a trouvé sa cachette : deux paquets à ramasser au stationnement des Skateux avant eux, en coupé sport, chrono 200 s | 250 |
+| e09 | Le barbecue | Ti-Paul | e02 | quatre poutines du camion-restaurant à livrer à quatre maisons **en vélo** avant qu'elles refroidissent, chrono 120 s | 150 |
+| e10 | Diane veut la paix | Diane | e04, e07 | vider les Chevreuils : tuer n=6 sur deux coins, puis le chef — et le chef, c'est Jo ; la fin le dit à Diane | 600 ; **Les Érables libérés**, manchette |
+| e11 | Le maire te reçoit | Le maire | e07 | il veut le dossier : le lui vendre (*payer* à l'envers : 1 000 $) **ou** le garder pour Louise — le choix se fait dans le dialogue | 1 000 si vendu ; sinon 0 et **c02 s'ouvre** |
+| e12 | Le selfie de Xavier | Xavier | m6 | amener un coupé sport au dépanneur et *sauter* la rampe des Érables devant lui, 40 px de vol | 200 |
+| e13 | Le char de Diane | Diane | e10 | sa berline de luxe est au lot : la reprendre sans payer (1★), semer, la livrer à la villa sans bosse | 300 |
+
+**Arc S — La Shop** (13) — une usine, un syndicat, et les gars qu'on a mis dehors.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| s01 | Gilles à la guérite | Gilles | m6 | un Boulonneux est parti avec la remorqueuse du lot : la reprendre en zone des Boulonneux, la ramener | 200 ; rachat au lot à −20 % |
+| s02 | La ferraille de Ti-Loup | Ti-Loup | m6 | *boulots* n=3 sorte remorquage, destination la cour à ferraille | 250 ; le boulot **ferraille** : Ti-Loup achète les épaves |
+| s03 | La paie de la Prévost | Raymonde | q03 | le camion de paie arrive le vendredi, deux gardiens dedans : le prendre, le livrer derrière l'usine, semer 2★ | 500 |
+| s04 | Le quart de nuit | Bob Sauvé | m6 | les Boulonneux menacent le quart de nuit : *survivre* 120 s à la porte de l'usine contre huit | 300 |
+| s05 | Gros-Boulon te parle | Gros-Boulon | s02 | Ti-Loup t'a présenté : voler la berline de luxe de Prévost dans la cour de l'usine, la livrer à la ferraille pour la compacter | 400 ; **les Boulonneux te laissent vivre** (`calme`) — la seule façon de marcher dans La Shop |
+| s06 | Le rat de l'usine | Raymonde | s03 | quelqu'un a vendu la liste du syndicat : *suivre* Bob Sauvé de l'usine au bar sans être vu | 250 |
+| s07 | Le camion de Prévost | Prévost | s04 | un camion de pièces doit être au quai avant le départ du bateau : livrer sans bosse, chrono 150 s — tu travailles pour les deux bords, et c'est le propos | 350 |
+| s08 | Le lot se fait vider | Gilles | s01 | de nuit, trois Boulonneux volent des chars au lot : les coucher sur place | 200 |
+| s09 | L'explosion | Gros-Boulon | s05 | faire sauter le réservoir de l'usine : *detruire* le camion-citerne stationné dans la cour (au pistolet ou en le percutant), 2★, semer 3★ | 600 |
+| s10 | Raymonde négocie | Raymonde | s06 | *proteger* Raymonde, qui monte avec toi, jusqu'à la villa du maire et retour, deux gardiens de Prévost en poursuite | 300 |
+| s11 | La paix des Boulonneux | Prévost | s09, s10 | Prévost plie : ramasser l'accord à l'usine, l'apporter à Gros-Boulon en zone des Boulonneux `sans_arme` | 500 ; **La Shop libérée** — les Boulonneux redeviennent des machinistes, manchette *La Prévost rembauche* |
+| s12 | Le dernier char du lot | Gilles | s08 | Gilles prend sa retraite : *boulots* n=5 sorte remorquage en un jour, chrono jour | 0 ; **la remorqueuse** garée à la planque |
+| s13 | Le prototype | Prévost | s07 | un coupé sport volé à l'usine dort au stationnement des Skateux, le pont est bloqué par les Chevreuils : le reprendre, *sauter* la rampe du stationnement (30 px), le livrer à l'usine sans bosse | 400 |
+
+**Arc P — La Pointe** (11) — un phare, des bois, des planches à roulettes.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| p01 | La lampe du phare | Ovila | m6 | l'ampoule est morte : en *acheter* une à la quincaillerie la plus proche, la rapporter avant la nuit | 100 ; Ovila te connaît |
+| p02 | Le pont est bloqué | Bilodeau (retraité, porte de logement) | m6 | les Skateux ont fermé le seul pont avec des cônes : ramasser quatre cônes (ce sont des armes), coucher deux Skateux | 150 |
+| p03 | La murale de Maude | Maude | m6 | trois bombes de peinture à l'atelier de La Shop, à rapporter en moto, chrono 180 s | 150 |
+| p04 | Zed veut un défi | Zed | p02 | *course* **à pied** dans les sentiers `contre` Zed, cinq points, chrono 60 s — les Skateux courent à 1,3 | 200 ; les Skateux respectent (`calme`) |
+| p05 | Les collets du Trappeur | Le Trappeur | p01 | quelqu'un vole ses collets : attendre la nuit dans les bois, coucher les deux Skateux qui viennent | 120 ; la fronde et 60 billes |
+| p06 | Ovila voit des lumières | Ovila | p01, q04 | de nuit, une chaloupe accoste sous le phare : *suivre* les deux matelots jusqu'à leur cabane sans être vu, ramasser la caisse, l'apporter à Josée | 300 |
+| p07 | Les Bilodeau déménagent | Bilodeau | p02 | l'autobus : ramasser quatre retraités à quatre maisons du bout, les livrer à l'Hôtel Bandini, chocs pénalisés | 250 |
+| p08 | La fête au stationnement | Zed | p04 | deux caisses de bière de la taverne, en camion, sans bosse ; la police arrive : semer 1★ | 200 |
+| p09 | Le phare s'éteint | Ovila | p05 | des Skateux ont grimpé au phare et éteint la lampe, un bateau approche : monter (aller dedans), coucher trois Skateux, chrono 90 s | 300 ; manchette *Le phare a tenu* |
+| p10 | Le saut de La Pointe | Zed | p04 | *sauter* la rampe du stationnement en moto, 80 px de vol, devant les Skateux | 250 |
+| p11 | Zed et la Chef | Josée | p09, p10 | *proteger* Zed, à pied puis en char, par le pont jusqu'au Brouillard ; les Chevreuils attaquent en autos sur le boulevard | 500 ; **La Pointe libérée**, manchette |
+
+**Arc H — L'hôpital** (7) — le Dr Lachance a des secrets, et des ordonnances.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| h01 | L'ambulance de nuit | Dr Lachance | m6 | *boulots* n=3 sorte ambulance, de nuit | 300 ; facture d'hôpital à moitié |
+| h02 | Les pilules | Ginette | h01 | quelqu'un vide la pharmacie : *suivre* le commis à sa sortie — il vend aux Chevreuils au dépanneur | 200 |
+| h03 | Le docteur a une dette | Dr Lachance | h01, d01 | *proteger* Lachance, qui monte avec toi, jusqu'au Salon Ferraro et retour ; deux ciseaux suivent | 250 |
+| h04 | Le cœur | Dr Lachance | h02 | une glacière arrive par autobus au terminus : la ramasser, la livrer à l'hôpital en 90 s, n'importe quel char | 400 |
+| h05 | Le patient qui s'est sauvé | Ginette | h02 | un patient a filé — c'est le chef des Cravates de m5, recousu : le rattraper (fuyard, à pied), le ramener vivant | 200 |
+| h06 | Les ordonnances | Dr Lachance | h04 | trois ordonnances à porter à trois pharmacies dans trois districts, `sans_etoile` — elles sont fausses | 350 |
+| h07 | La nuit des urgences | Dr Lachance | h06, 1 district libéré | la guerre de gangs a rempli l'urgence : *boulots* n=5 sorte ambulance en un jour | 500 ; un séjour à l'hôpital gratuit |
+
+**Arc D — La dette de Rocco** (8) — Sal coupe les cheveux, et le reste. ⚠️ L'arc **ne dépend
+pas de M10** : la dette y est un compteur de partie (`p.dette`, 15 000 au départ, que `donne`
+fait baisser). M10 la fera vivre en dehors des missions (intérêts, rappels, hommes de main).
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| d01 | Le barbier | Sal | m6 | Sal appelle : « Rocco me devait 15 000 » ; *acheter* une coupe au salon — c'est la rencontre | 0 ; la dette s'affiche au carnet |
+| d02 | Le premier versement | Sal | d01 | *payer* 500 avant demain, chrono jour ; sinon deux ciseaux passent te voir | 0 ; dette −500 |
+| d03 | Les Ciseaux | Sal | d02 | collecter chez Momo Taxi : *parler* ; il refuse ; le coucher, *pickpocket* | 300 ; dette −300 |
+| d04 | La collecte du barbier | Sal | d03 | trois débiteurs dans trois districts : Ti-Paul, Lulu, Ovila ; *parler* à chacun — et *payer* pour eux si tu veux qu'ils t'aiment encore | 400, ou dette −800 si tu couvres les trois |
+| d05 | L'avocat du Carré | Me Desjardins | d02 | Sal veut saisir le garage : ramasser les papiers de Rocco dans le coffre de la planque, les porter au bar | 0 ; casier −2 (M11 : il efface une page) |
+| d06 | Sal perd patience | Ti-Guy | d04 | les ciseaux s'en prennent au garage : *survivre* 120 s, en coucher quatre | 200 |
+| d07 | Le coffre de Sal | Josée | d06 | de nuit, vider le salon : ramasser le coffre (lourd, on marche), 2★, semer, le porter au bar | 2 000 ; **ferme d08** ; Sal ennemi — des ciseaux toutes les nuits, pour de bon |
+| d08 | La dernière coupe | Sal | d06 [dette 0] | Sal te coupe les cheveux gratis et te donne la bague de Rocco | 0 ; **ferme d07** ; dette payée (le fil de *Sacrer son camp*) |
+
+**Arc C — Le Clairon** (6) — Louise veut la une. Toi aussi, parfois.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| c01 | Une photo pour la une | Louise | m6 | *proteger* Louise, qui monte avec toi : le poste, l'usine, le quai, dans la journée, pour ses photos | 150 |
+| c02 | Le scoop du maire | Louise | e11 (dossier gardé) | lui porter le dossier de la villa | 800 ; manchette *Le maire dort à l'hôtel* |
+| c03 | La source | Louise | c01 | *proteger* son informateur, un commis du poste, du poste à l'hôtel, de nuit, deux ciseaux aux trousses | 300 |
+| c04 | La manchette sur toi | Louise | c01 | elle titrera si tu fais parler de toi : monter à 3★ et les semer en moins de 90 s | 200 ; manchette *Bandini l'insaisissable* |
+| c05 | Le Clairon brûle | Louise | c02 | les hommes du maire (des Chevreuils) attaquent le bureau : *survivre* 120 s à l'intérieur, en coucher cinq | 400 |
+| c06 | L'entrevue | Louise | 3 districts libérés | *parler* seulement : trois questions, trois réponses au choix ; le narrateur lit la une le lendemain | 0 ; manchette au choix, lue par le narrateur |
+
+**Arc R — Roy contre Bouchard** (7) — deux polices, et il faut choisir la sienne.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| r01 | La nouvelle inspectrice | Bouchard | m6 | Roy enquête sur lui : ramasser son carnet dans son bureau au poste, de nuit, `sans_etoile` | 400 |
+| r02 | Roy te convoque | Roy | r01 | elle sait que c'est toi : *parler* — elle offre un marché ; **r03 ou r04**, pas les deux | 0 |
+| r03 | Le stool, c'est toi | Roy | r02 | être au casse-croûte à midi (`heure`), à moins de six tuiles de Bouchard quand Mado lui glisse l'enveloppe : *suivre*, *survivre* 30 s sans qu'il te voie | 500 ; **ferme r04** ; Roy amie (casier −5), le sergent n'est plus ton ami |
+| r04 | Le sergent contre-attaque | Bouchard | r02 | faire partir Roy : voler son auto-patrouille, la livrer au lot sous un faux nom (⏳ eau : au fond de la baie) | 500 ; **ferme r03** ; sergent ami pour de bon (pot-de-vin toujours accepté) |
+| r05 | La salle des pièces | Bouchard | r01 | tes armes confisquées dorment au poste : en ramasser trois, de nuit, 2★, semer | 200 ; les armes reviennent |
+| r06 | Une affiche de moins | Roy | r03 | arracher cinq affiches *Recherché* dans le Faubourg avant le matin | 0 ; casier −3 |
+| r07 | L'auto banalisée | Bouchard | r04 | en auto-patrouille (le déguisement), « arrêter » trois ciseaux de Sal pour lui — tuer n=3 en zone du Faubourg, sans étoile tant que tu es au volant | 400 |
+
+**Arc T — Les petites jobs** (15) — des gens ordinaires, un peu partout. ⚠️ Le donneur est un
+**archétype** (`pieton:<slug>@district:<slug>`), pas un personnage : le jeu en pose **un par
+jour**, tiré parmi celles qu'on n'a pas faites, près d'un lieu du district, avec la bulle
+« Hé! ». Ses répliques sont dites par les voix des passants. Une par jour, pas plus : ce
+sont des rencontres, pas un tableau de bord.
+
+| # | Titre | Qui, où | Ce qu'on fait | Paie |
+|---|---|---|---|---|
+| t01 | Mon char est au lot | banlieusard, Érables | reprendre son auto au lot (payer ou voler), la livrer chez lui | 80 |
+| t02 | Le lunch des gars | débardeur, Quais | trois hot-dogs au kiosque, à rapporter avant midi | 30, et un hot-dog |
+| t03 | Un lift au terminus | dame du Faubourg | la conduire au terminus en 60 s, sans un choc | 40 |
+| t04 | Mon vélo | ado, La Pointe | un Skateux a son vélo : le reprendre, le lui ramener | 25 |
+| t05 | La sacoche | passante, Faubourg | un itinérant est parti avec sa sacoche : le rattraper à pied | 50 |
+| t06 | La commande de la taverne | commis, taverne (partout) | deux caisses de bière au quai, en camion | 90 |
+| t07 | Le p'tit est perdu | mère, partout | trouver l'enfant (intouchable, il se cache), *proteger* jusqu'à sa mère | 60 |
+| t08 | Une job de bras | ouvrier, La Shop | trois boîtes à porter dans l'usine (lourdes, on marche) | 45 |
+| t09 | La tournée du Clairon | marchand de journaux, Faubourg | six journaux à six portes, en vélo, 90 s | 60 |
+| t10 | Le quart commence | machiniste, La Shop | le conduire à l'usine avant le quart, chrono 45 s | 40 |
+| t11 | Le feu de camp | promeneur, La Pointe | un feu dans les bois : trouver un extincteur, *eteindre* | 50 |
+| t12 | Une course avec le livreur | livreur, Faubourg | *course* en moto jusqu'à l'hôpital `contre` lui | 70 |
+| t13 | La pelle du vieux | itinérant, Quais | une Morue a sa pelle : la reprendre | 20, et la pelle |
+| t14 | Les mariés | dame, Érables | les conduire, à deux, en berline de luxe jusqu'au phare, sans bosse | 120 |
+| t15 | L'autobus manqué | passant, terminus | il rate son quart à l'usine : taxi, chrono 90 s | 40 |
+
+**Cinq défis de plus**, un par district, sur le modèle des trois qui existent (un panneau,
+un chrono, une prime, une fois) : *Le tour des Quais* (camion, 3 tours < 2:30) · *La descente
+des Érables* (vélo, du dépanneur à la villa < 0:45, sans tomber) · *Le drift de La Shop*
+(coupé sport, dix stationnements traversés < 1:30) · *Le sentier de La Pointe* (moto, six
+points dans les bois < 1:00) · *Le port à port* (n'importe quoi, du quai au phare < 1:20).
+250 $ chacun.
+
+#### Le compte, et l'équilibre
+
+- **114 missions** (5 + 109), **8 défis**, **9 arcs**, **34 personnages**, 3 piétons de
+  mission et un chien. Les missions **paient 28 620 $** si l'on additionne tout, un peu
+  moins dans une vraie partie (les choix en ferment) — de quoi rembourser Rocco (15 000)
+  **ou** acheter les quatre propriétés (17 800), jamais les deux : le reste vient des
+  boulots, des propriétés et de ce qu'on vole. C'est voulu, et c'est un juge : la somme
+  reste entre 24 000 et 32 000.
+- **Chaque type d'objectif est utilisé au moins trois fois**, sinon il ne valait pas un
+  type. Chaque district a **au moins dix missions** qui s'y passent, et chaque heure
+  (jour, soir, nuit) en a.
+- **Les fins tiennent.** *Le Boss* demande quatre districts libérés : le Faubourg (m5), Les
+  Quais (q13), Les Érables (e10), La Shop (s11), La Pointe (p11) — cinq possibles, quatre
+  suffisent. *Sacrer son camp* demande 15 000 $, et l'arc D ne l'exige pas : on peut partir
+  sans payer Rocco, c'est même le propos de cette fin-là.
+- ⚠️ **Le budget de voix** : ≈ 109 × 7 répliques × 75 caractères ≈ **57 000 caractères**,
+  dix fois la v1, générés **par tranche** et jamais tous d'un coup. Les tests de
+  `test_missions.py` qui bornent le catalogue à 30–60 voix et 4 000 caractères deviennent
+  des bornes **par arc** ; la borne globale monte à 70 000. Et la règle de M6 tient : une
+  réplique dont le fichier manque s'affiche sans voix.
+
+#### Comment on le livre — quatre tranches, chacune jouable et déployée
+
+1. **Le moteur, et le Faubourg** (taille 2) : les neuf types, `exige`, `ferme`, `donne`
+   étendu, les résolveurs de lieux, les dialogues hors paquet, le téléphone qui trie ;
+   m6 et l'arc F comme banc d'essai — douze missions qui utilisent tout. ⚠️ Le carnet
+   (P2) doit être livré avant : sans lui, treize missions disponibles sont treize appels
+   qu'on oublie.
+2. **Les trois districts** (taille 2) : arcs Q, E, S et leurs dix-neuf personnages, les
+   quatre lieux spéciaux, les trois piétons de mission, `libere` et `calme`.
+3. **La Pointe, l'hôpital, la dette, le Clairon, la police** (taille 2) : arcs P, H, D, C,
+   R ; Biscuit ; les choix (`ferme`).
+4. **Les petites jobs, les défis et les fins** (taille 2) : arc T, les cinq défis, m97 à
+   m99 — cette tranche-là **est** M13, qui garde les génériques et la ville qui change de
+   couleur.
+
+#### Juges
+
+- **Le catalogue** : chaque mission a un donneur placé (jamais deux à la même porte), des
+  lieux que `resoudre()` connaît, des types connus, des objectifs en majuscules de moins de
+  60 caractères ; les prérequis sont sans cycle ; **une mission ⏳ n'est le prérequis de
+  rien** ; chaque arc est atteignable depuis m6 ; chaque paire `ferme` ferme dans les deux
+  sens et ne rapporte pas plus du double d'un côté ; la somme des récompenses reste dans sa
+  fourchette ; chaque type sert au moins trois fois ; chaque district a ses dix missions.
+- **Les fins** : un test rejoue le catalogue en respectant prérequis, `exige` et `ferme`, et
+  atteint m98 **et** m99 (pas dans la même partie : m98 exige quatre propriétés et m99 quinze
+  mille dollars en poche, le test le prouve).
+- **Les voix** : un slug par réplique, ≤ 110 caractères, ≤ 2 phrases, un personnage connu
+  avec une voix nommée ; jamais deux personnages de même voix dans un même dialogue ; le
+  compte par arc et le total sous leurs bornes.
+- **Le paquet** : sans les dialogues, il reste sous 400 Ko bruts et 70 Ko gzip ;
+  `/api/dialogue/<slug>` répond 304 au deuxième passage et 404 pour un slug inconnu.
+- **Le banc** : m6 de bout en bout ; **une mission par nouveau type**, jouée jusqu'à la
+  récompense ; le singe qui prend vingt missions au hasard et ne trouve **aucune mission
+  morte** (un objectif qu'on ne peut pas commencer depuis l'état où on le reçoit — un char
+  qui naît dans un mur, un fuyard sans rue) ; le téléphone ne sonne jamais deux fois dans la
+  même demi-journée, jamais en mission, jamais à 3★ ; une mission fermée n'apparaît ni au
+  téléphone ni au carnet ; `libere` retire la zone du gang et `calme` retire l'hostilité, et
+  les deux survivent à une sauvegarde.
+- **Martin** : finir un arc par district au téléphone ; ne jamais se demander quoi faire
+  (le carnet le dit) ; entendre trente-quatre personnes différentes sans qu'une seule
+  paraisse en avoir la voix d'une autre.
+
 ### M13 — Les deux fins (**ajout**, taille 4)
 
 *Ce que ça donne :* une histoire qui se termine, de deux façons.
 
-- **Une mission par district** : quatre donneurs de plus, quatre voix ElevenLabs de plus,
-  un gang à déloger par quartier.
+- **Une mission par district** — et bien plus : les arcs de district, les donneurs, les
+  voix et les trois missions de fin (m97 *Marco te vend*, m98 *Le Boss*, m99 *Le dernier
+  traversier*) sont décrits dans **M16**, dont M13 est la dernière tranche. Ce qui reste
+  ici : les génériques, la ville qui change de couleur, la partie qui continue.
 - **Marco te vend** : au bout de l'arc, le cousin parle à la police — la mission bascule en
   cours de route.
 - **Dr Lachance** devient donneur : l'hôpital a ses secrets (et ses ordonnances).
