@@ -2201,16 +2201,41 @@ class _Chantier:
                              y + self.des.entier(0, hauteur - 1))
 
     def _allee(self, depart: tuple[int, int], arrivee: tuple[int, int], pave: str = ".") -> None:
-        """Une allee de deux tuiles, avec un coude au hasard — jamais tout droit."""
+        """Une allee de deux tuiles, avec un coude au hasard — jamais tout droit.
+
+        ⚠️ Elle se RESERVE en se tracant, et ce n'est pas une precaution de
+        confort : `_parc` seme ses arbres, ses bancs et ses buissons **sur tout
+        le rectangle** du parc, au hasard, et `poser_decor` ne refuse que le
+        solide, le routier, l'occupe et le reserve. Une allee est du pave (ou
+        de la terre battue) : marchable, pas routiere — rien ne la protegeait.
+        Un arbre y tombait donc, et un arbre est SOLIDE (rayon 5) : le sentier
+        qu'on a dessine pour dire « passe par ici » se retrouvait a moitie
+        bouche par ses propres arbres.
+
+        La reserve regle les trois d'un coup — le banc et le buisson tombaient
+        par le meme chemin, et le banc est solide lui aussi. Un banc A COTE de
+        l'allee reste possible : on reserve l'allee, pas ses bords.
+        """
         dx, dy = depart
         ax, ay = arrivee
         coude = dx + (ax - dx) * self.des.entier(2, 8) // 10
         for x in range(min(dx, coude), max(dx, coude) + 1):
             self.rect(x, dy, 1, 2, pave)
+            self.reserver(x, dy, 1, 2)
         for y in range(min(dy, ay), max(dy, ay) + 1):
             self.rect(coude, y, 2, 1, pave)
+            self.reserver(coude, y, 2, 1)
         for x in range(min(coude, ax), max(coude, ax) + 1):
             self.rect(x, ay, 1, 2, pave)
+            self.reserver(x, ay, 1, 2)
+
+    def reserver(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+        """Ces tuiles-la resteront libres : rien ne s'y posera (voir
+        `poser_decor`). C'est ce qui tient le devant des portes depuis M1 ; les
+        sentiers s'en servent maintenant aussi."""
+        for j in range(max(0, y), min(self.hauteur, y + hauteur)):
+            for i in range(max(0, x), min(self.largeur, x + largeur)):
+                self.reserve.add((i, j))
 
     def _place(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         """Une place publique : du pave, une fontaine, des bancs. Pas une rue."""

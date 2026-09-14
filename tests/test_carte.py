@@ -662,3 +662,45 @@ def test_on_entre_dans_la_fourriere_par_une_seule_grille():
                 ouvertures += 1
     assert ouvertures == grille["largeur"], \
         f"{ouvertures} tuiles ouvertes dans la cloture, la grille en fait {grille['largeur']}"
+
+
+def test_aucun_arbre_ne_bouche_un_sentier_de_parc():
+    """⚠️ Retour de Martin : « les arbres ne devraient pas être dans les
+    sentiers. » Et ce n'etait pas qu'une question de vue : un arbre est
+    SOLIDE, rayon 5. `_parc` trace ses allees en baionnette puis seme ses
+    arbres, ses bancs et ses buissons **sur tout le rectangle** du parc, au
+    hasard ; `poser_decor` ne refuse que le solide, le routier, l'occupe et le
+    reserve. Une allee est du pave : marchable, pas routiere. Rien ne la
+    protegeait, et un sentier barre par ses propres arbres est pire qu'un parc
+    sans sentier — on l'a dessine pour dire « passe par ici ».
+
+    Le juge REJOUE le chantier pour savoir ou sont les sentiers, au lieu de
+    deviner « du pave » (le trottoir de toute la ville en est aussi, et un
+    arbre de rue est exactement ce qu'on veut).
+    """
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.eaux()
+    chantier.rues()
+    chantier.croisements()
+    chantier.ilots()
+    solides = {"arbre", "banc", "poubelle", "caisse", "fontaine", "buisson", "debris"}
+    dessus = [d for d in CARTE["decor"]
+              if d["type"] in solides and (d["x"], d["y"]) in chantier.reserve]
+    assert not dessus, f"{len(dessus)} decors solides posés sur un sentier : {dessus[:4]}"
+    assert chantier.reserve, "plus rien n'est reserve : les sentiers ne se protegent plus"
+
+
+def test_un_sentier_de_parc_se_traverse_de_bout_en_bout():
+    """La reserve ne sert a rien si l'allee est coupee autrement. On verifie
+    qu'un parc se traverse : de chaque tuile d'allee, on rejoint les autres."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.eaux()
+    chantier.rues()
+    chantier.croisements()
+    chantier.ilots()
+    allees = {(x, y) for (x, y) in chantier.reserve
+              if carte.marchable(CARTE["sol"][y][x])}
+    assert len(allees) > 100, f"seulement {len(allees)} tuiles de sentier dans toute la ville"
+    for x, y in allees:
+        assert carte.solidite(CARTE["sol"][y][x]) == 0, \
+            f"la tuile de sentier {(x, y)} est solide : on ne passe pas"
