@@ -283,22 +283,19 @@ def test_chaque_piece_dit_quelle_porte_on_pousse():
         assert VILLE["interieurs"][porte["interieur"]]["porte"] in carte.GENRES_DE_PORTE, porte
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
-def test_un_lit_est_un_bloc_et_deux_lits_ne_se_touchent_pas(slug):
-    """Retour de Martin (13 sept. 2026) : « les lits doivent vraiment avoir l'air
-    de lits, juste un set d'oreillers et des couvertes ; actuellement c'est 2 ou
-    4 cases avec chacune leur oreiller ». Le lit se PEINT maintenant PAR SES
-    VOISINES (`varianteDeLit`, monde.js) : une tuile `l` qui en touche une autre
-    continue le meme lit — une seule tete, un seul oreiller, une couverture d'un
-    tenant.
+#: Les meubles qui se peignent PAR LEURS VOISINES (`varianteDeBloc`, monde.js) :
+#: la fiche dit `bloc`. Retour de Martin (13 sept. 2026) : « les lits doivent
+#: vraiment avoir l'air de lits, juste un set d'oreillers et des couvertes ;
+#: actuellement c'est 2 ou 4 cases avec chacune leur oreiller » — puis le
+#: billard etait huit tabourets, le tapis trois chemins de couloir.
+BLOCS = frozenset(g for g, p in carte.LEGENDE.items() if p.get("bloc"))
 
-    ⚠️ Le corollaire : deux lits colles seraient peints comme UN lit de quatre
-    de large, et un lit en L n'aurait pas de tete. Un lit est donc un rectangle
-    plein d'au plus deux tuiles de cote, et il ne touche aucun autre."""
-    sol = carte.INTERIEURS[slug]["sol"]
-    lits = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne) if g == "l"}
+
+def _blocs(sol: list[str], g: str):
+    """Les composantes 4-connexes du glyphe `g` : (x0, y0, large, haut, tuiles)."""
+    tuiles = {(x, y) for y, ligne in enumerate(sol) for x, glyphe in enumerate(ligne) if glyphe == g}
     vus: set[tuple[int, int]] = set()
-    for depart in sorted(lits):
+    for depart in sorted(tuiles):
         if depart in vus:
             continue
         bloc, front = set(), [depart]
@@ -307,10 +304,33 @@ def test_un_lit_est_un_bloc_et_deux_lits_ne_se_touchent_pas(slug):
             if (x, y) in bloc:
                 continue
             bloc.add((x, y))
-            front.extend(v for v in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)) if v in lits)
+            front.extend(v for v in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)) if v in tuiles)
         vus |= bloc
         xs, ys = [x for x, _ in bloc], [y for _, y in bloc]
-        large, haut = max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
-        assert large <= 2 and haut <= 2, (
-            f"{slug} : un lit de {large} × {haut} tuiles en {min(xs)},{min(ys)} — deux lits qui se touchent ?")
-        assert len(bloc) == large * haut, f"{slug} : un lit en L en {min(xs)},{min(ys)}"
+        yield min(xs), min(ys), max(xs) - min(xs) + 1, max(ys) - min(ys) + 1, bloc
+
+
+def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
+    """La liste est courte a dessein : un glyphe `bloc` a un peintre qui lit le
+    masque, et un peintre qui l'ignore prendrait le masque pour du bruit."""
+    assert BLOCS == {"l", "a", "y", "m"}
+
+
+@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+def test_un_bloc_est_un_rectangle_plein_et_deux_blocs_ne_se_touchent_pas(slug):
+    """⚠️ Le corollaire du dessin par les voisines : une tuile `l` qui en touche
+    une autre continue le MEME lit — une seule tete, un seul oreiller, une
+    couverture d'un tenant. Deux lits colles seraient donc peints comme UN lit
+    de quatre de large, et un bloc en L n'aurait ni tete ni bord droit. Un bloc
+    est un rectangle plein ; un lit, en plus, fait au plus deux tuiles de cote.
+
+    ⚠️ Il a rougi une fois le jour ou il a ete ecrit : dans la taverne, la table
+    de gauche touchait le billard, et les deux faisaient un meuble en L de
+    quatre tuiles sur quatre."""
+    sol = carte.INTERIEURS[slug]["sol"]
+    for g in sorted(BLOCS):
+        for x0, y0, large, haut, bloc in _blocs(sol, g):
+            nom = carte.LEGENDE[g]["nom"]
+            assert len(bloc) == large * haut, f"{slug} : un bloc de {nom} en L en {x0},{y0} — deux {nom}s qui se touchent ?"
+            if g == "l":
+                assert large <= 2 and haut <= 2, f"{slug} : un lit de {large} × {haut} tuiles en {x0},{y0}"

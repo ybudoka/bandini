@@ -334,7 +334,7 @@ def test_un_lit_de_quatre_tuiles_est_un_seul_lit(banc):
     avait des voisines : un lit de 2 × 2 etait quatre lits d'une place colles.
 
     ⚠️ Le remede etait deja ecrit pour la cloture et le toit : la variante vient
-    des voisines (`varianteDeLit`). Le juge lit les quatre variantes du lit de la
+    des voisines (`varianteDeBloc`). Le juge lit les quatre variantes du lit de la
     planque, cuit les quatre tuiles avec, et regarde les traces : l'oreiller n'est
     qu'en tete et il court d'une tuile a l'autre, la couverture aussi — et le
     cadre ne se ferme, avec son pixel de plancher, que la ou le lit s'arrete."""
@@ -345,7 +345,7 @@ def test_un_lit_de_quatre_tuiles_est_un_seul_lit(banc):
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         o.entrer(porte);
         // Le lit de la planque : nord-ouest, nord-est, sud-ouest, sud-est.
-        const variantes = [[1, 1], [2, 1], [1, 2], [2, 2]].map(function (t) { return L.Monde.varianteDeLit(t[0], t[1]); });
+        const variantes = [[1, 1], [2, 1], [1, 2], [2, 2]].map(function (t) { return L.Monde.varianteDeBloc('l', t[0], t[1]) & 15; });   // sans le grain
         o.sortir();
         function peindre(variante) {
             const ctx = L.Base.nouveauCanvas(L.TT, L.TT).getContext('2d');
@@ -383,3 +383,95 @@ def test_un_lit_de_quatre_tuiles_est_un_seul_lit(banc):
     # Un pixel de plancher au nord et a l'ouest, le cadre plein jusqu'a la couture a l'est et au sud.
     assert r["cadreNO"] == [[1, 1, 16, 16]], r["cadreNO"]
     assert r["cadreSE"] == [[0, 0, 15, 15]], r["cadreSE"]
+
+
+#: Le prelude commun des juges de blocs : cuire une tuile avec un masque et lire
+#: ses traces. ⚠️ Les masques sont ceux de `varianteDeBloc` (1 nord, 2 est,
+#: 4 sud, 8 ouest = ou le bloc CONTINUE), poses a la main : on juge le PEINTRE,
+#: la lecture des voisines a son juge chez le lit.
+_PEINDRE = """
+        function peindre(g, v) { const ctx = L.Base.nouveauCanvas(L.TT, L.TT).getContext('2d'); ctx.traces = []; L.TUILES[g](ctx, v, L.TT); return ctx.traces; }
+        function rects(traces, couleur) { return traces.filter(function (t) { return t[4] === couleur; }); }
+        function boite(t) { return [t[0], t[1], t[0] + t[2], t[1] + t[3]]; }
+        // Un bloc de quatre sur deux : la rangee de tete (nord-ouest, milieu, nord-est), puis celle du pied.
+        function quatreSurDeux(g) { return [2 | 4, 2 | 4 | 8, 4 | 8, 1 | 2, 1 | 2 | 8, 1 | 8].map(function (v) { return peindre(g, v); }); }
+"""
+
+
+def test_un_billard_de_huit_tuiles_est_une_seule_table(banc):
+    """Suite des lits (Martin, 14 sept. 2026 : « regarde si d'autres composantes
+    meriteraient un traitement similaire »). Le billard du bar et de la taverne
+    fait quatre tuiles sur deux, et c'etait huit tabourets : chaque tuile avait
+    son plateau aux bords rentres, son vernis, son chant et son ombre. Le juge
+    cuit les six tuiles avec leurs masques : au milieu de la rangee de tete le
+    plateau ne rentre que son bord nord (une tuile entouree le remplit), un
+    coin ne rentre que ses deux bords libres, le
+    vernis ne court qu'au nord et le chant qu'au sud — et une table d'une seule
+    tuile est celle d'avant, au pixel."""
+    r = banc("""function (L, o) {""" + _PEINDRE + """
+        const PLATEAU = '#a0784a', VERNIS = '#bb9160', CHANT = 'rgba(0,0,0,0.22)';
+        const t = quatreSurDeux('a');
+        return {
+            plateauMilieu: rects(t[1], PLATEAU).map(boite), plateauNO: rects(t[0], PLATEAU).map(boite),
+            plateauSE: rects(t[5], PLATEAU).map(boite), plateauCentre: rects(peindre('a', 15), PLATEAU).map(boite),
+            vernis: t.map(function (u) { return rects(u, VERNIS).length; }),
+            chant: t.map(function (u) { return rects(u, CHANT).length; }),
+            seule: rects(peindre('a', 0), PLATEAU).map(boite),
+        };
+    }""")
+    assert r["plateauMilieu"] == [[0, 2, 16, 16]], "au milieu de la tete, le plateau ne rentre que son bord nord"
+    assert r["plateauCentre"] == [[0, 0, 16, 16]], "une tuile entouree de table est tout plateau"
+    assert r["plateauNO"] == [[2, 2, 16, 16]], "le coin nord-ouest ne rentre que ses deux bords libres"
+    assert r["plateauSE"] == [[0, 0, 14, 12]], "le coin sud-est garde la place du chant et de l'ombre"
+    assert r["vernis"] == [1, 1, 1, 0, 0, 0], f"le vernis ne court qu'au nord : {r['vernis']}"
+    assert r["chant"] == [0, 0, 0, 1, 1, 1], f"le chant ne se voit qu'au sud : {r['chant']}"
+    assert r["seule"] == [[2, 2, 14, 12]], "une table d'une tuile n'a pas change"
+
+
+def test_un_tapis_de_neuf_tuiles_est_un_seul_tapis(banc):
+    """Le galon dore n'allait qu'en haut et en bas de CHAQUE tuile : le tapis de
+    trois sur trois de la planque etait trois chemins de couloir empiles, et il
+    n'avait pas de bord a gauche ni a droite. Le juge cuit les neuf tuiles : deux
+    galons aux coins, un sur les cotes, aucun au centre — et le galon du haut est
+    couche, celui de l'ouest debout. Un tapis d'une tuile en a quatre."""
+    r = banc("""function (L, o) {""" + _PEINDRE + """
+        const GALON = '#c9a24a';
+        const masques = [2 | 4, 2 | 4 | 8, 4 | 8, 1 | 2 | 4, 15, 1 | 4 | 8, 1 | 2, 1 | 2 | 8, 1 | 8];
+        const t = masques.map(function (v) { return peindre('y', v); });
+        return {
+            galons: t.map(function (u) { return rects(u, GALON).length; }),
+            haut: rects(t[1], GALON).map(boite), ouest: rects(t[3], GALON).map(boite),
+            seul: rects(peindre('y', 0), GALON).length,
+        };
+    }""")
+    assert r["galons"] == [2, 1, 2, 1, 0, 1, 2, 1, 2], f"le galon ne borde que le bord du tapis : {r['galons']}"
+    assert r["haut"] == [[0, 0, 16, 1]], "le galon du haut est couche sur le bord nord"
+    assert r["ouest"] == [[0, 0, 1, 16]], "le galon de l'ouest est debout sur le bord"
+    assert r["seul"] == 4
+
+
+def test_une_presse_de_huit_tuiles_est_une_seule_machine(banc):
+    """Les presses de l'usine font quatre tuiles sur deux, et chacune etait huit
+    petites machines avec leurs deux boulons. Le juge cuit les six tuiles : au
+    milieu de la tete la tole ne rentre que son bord nord (entouree, elle remplit
+    la tuile), les boulons ne vont qu'aux quatre coins du
+    bloc, la face au pied seulement, et la courroie est couchee dans toutes —
+    d'une tuile a l'autre, elle court jusqu'au bord. Une machine d'une tuile
+    tire son sens au sort dans le grain : les deux sens existent."""
+    r = banc("""function (L, o) {""" + _PEINDRE + """
+        const TOLE = '#82868c', FACE = '#5a5e63', BOULON = '#d8b83a', COURROIE = '#3f4347';
+        const t = quatreSurDeux('m');
+        return {
+            tole: rects(t[1], TOLE).map(boite), toleCentre: rects(peindre('m', 15), TOLE).map(boite),
+            boulons: t.map(function (u) { return rects(u, BOULON).length; }),
+            faces: t.map(function (u) { return rects(u, FACE).length; }),
+            courroies: t.map(function (u) { return rects(u, COURROIE).map(boite)[0]; }),
+            seules: [0, 16].map(function (v) { return rects(peindre('m', v), COURROIE).map(boite)[0]; }),
+        };
+    }""")
+    assert r["tole"] == [[0, 1, 16, 16]], "au milieu de la tete, la tole ne rentre que son bord nord"
+    assert r["toleCentre"] == [[0, 0, 16, 16]], "une tuile entouree de machine est toute tole"
+    assert r["boulons"] == [1, 0, 1, 1, 0, 1], f"un boulon par coin du bloc, aucun ailleurs : {r['boulons']}"
+    assert r["faces"] == [0, 0, 0, 1, 1, 1], f"la face ne se voit qu'au pied : {r['faces']}"
+    assert r["courroies"] == [[3, 4, 16, 7], [0, 4, 16, 7], [0, 4, 13, 7], [3, 4, 16, 7], [0, 4, 16, 7], [0, 4, 13, 7]], r["courroies"]
+    assert sorted(b[2] - b[0] for b in r["seules"]) == [3, 10], f"une machine seule connait les deux sens : {r['seules']}"

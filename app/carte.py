@@ -198,14 +198,21 @@ LEGENDE: dict[str, dict] = {
     # sauvegarde : on entre, on se coince, et la partie est finie.
     "t": {"nom": "plancher de bois", "dedans": True},
     "u": {"nom": "carrelage", "dedans": True},
-    "y": {"nom": "tapis", "dedans": True},
+    # ⚠️ `bloc` : un meuble qui vient en BLOCS de tuiles (un lit de 2 × 2, un
+    # billard de 4 × 2, un tapis de 3 × 3, une presse) et que le navigateur
+    # peint PAR SES VOISINES (`varianteDeBloc`, monde.js) : une tete de lit,
+    # un chant de plateau, un galon, un boulon ne vont qu'aux bords du bloc.
+    # Sans ca, chaque tuile etait un meuble entier — quatre lits d'une
+    # place, huit tabourets, trois chemins de couloir. Le corollaire, juge
+    # dans les plans : deux blocs du meme glyphe ne se touchent jamais.
+    "y": {"nom": "tapis", "dedans": True, "bloc": True},
     "c": {"nom": "comptoir", "solide": 3, "meuble": True},
     "e": {"nom": "étagère", "solide": 3, "meuble": True},
-    "a": {"nom": "table", "solide": 3, "meuble": True},
+    "a": {"nom": "table", "solide": 3, "meuble": True, "bloc": True},
     "h": {"nom": "chaise", "solide": 3, "meuble": True},
-    "l": {"nom": "lit", "solide": 3, "meuble": True},
+    "l": {"nom": "lit", "solide": 3, "meuble": True, "bloc": True},
     "j": {"nom": "frigo", "solide": 3, "meuble": True},
-    "m": {"nom": "machine", "solide": 3, "meuble": True},
+    "m": {"nom": "machine", "solide": 3, "meuble": True, "bloc": True},
     "n": {"nom": "plante", "solide": 3, "meuble": True},
     "k": {"nom": "classeur", "solide": 3, "meuble": True},
     "z": {"nom": "poêle", "solide": 3, "meuble": True},
@@ -3051,8 +3058,8 @@ B ccccccccc    B
 B              B
 B ah  ah  ah   B
 B ah  ah  ah   B
-Baaaa          B
-Baaaa      ah  B
+B          aaaaB
+B ah       aaaaB
 BBBBBWWDWWBBBBBB
 """, points=(_pt("emplettes", 4, 3, genre="nuit"),),
      gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 6))),

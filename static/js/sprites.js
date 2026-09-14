@@ -887,13 +887,23 @@ const TUILES = (function () {
       ctx.fillRect(0, 7, T, 1); ctx.fillRect(7, 0, 1, T);
       ctx.fillRect(0, 15, T, 1); ctx.fillRect(15, 0, 1, T);
     },
+    /* Le tapis. ⚠️ `v & 15` est le masque des cotes ou le tapis CONTINUE
+       (`varianteDeBloc`, monde.js) : le galon n'allait qu'en haut et en bas de
+       CHAQUE tuile, donc un tapis de trois sur trois etait trois chemins de
+       couloir empiles. Le galon ne borde que les cotes ou le tapis s'arrete,
+       et les rayures tombent sur la meme grille de quatre pixels d'une tuile a
+       l'autre. Le grain (`v >> 4`), lui, change par tuile. */
     'y': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou le tapis S'ARRETE
       plein(ctx, '#8a3f3a', T);
       ctx.fillStyle = '#9c4f46';
       for (let y = 2; y < T; y += 4) ctx.fillRect(0, y, T, 2);
-      ctx.fillStyle = '#c9a24a';                       // le galon du tapis
-      ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, T - 1, T, 1);
-      points(ctx, v, T, '#7a3531', 5, 12);
+      points(ctx, v >> 4, T, '#7a3531', 5, 12);
+      ctx.fillStyle = '#c9a24a';                       // le galon, sur les bords seulement
+      if (nord) ctx.fillRect(0, 0, T, 1);
+      if (sud) ctx.fillRect(0, T - 1, T, 1);
+      if (ouest) ctx.fillRect(0, 0, 1, T);
+      if (est) ctx.fillRect(T - 1, 0, 1, T);
     },
     // Le comptoir : un dessus clair, une arete, et la joue sombre au sud.
     'c': function (ctx, v, T) {
@@ -922,20 +932,30 @@ const TUILES = (function () {
         ctx.fillRect(1 + (k % 2) * 8, 6 + Math.floor(k / 2) * 7, 6, 1);
       }
     },
-    // La table : un plateau CLAIR sur un piétement sombre. ⚠️ Le bois sombre
-    // d'avant faisait un trou noir dans le plancher : a l'ecran, une table et
-    // un billard se lisaient comme deux caisses posees la.
+    /* La table : un plateau CLAIR sur un piétement sombre. ⚠️ Le bois sombre
+       d'avant faisait un trou noir dans le plancher : a l'ecran, une table et
+       un billard se lisaient comme deux caisses posees la.
+
+       ⚠️ `v & 15` est le masque des cotes ou la table CONTINUE
+       (`varianteDeBloc`, monde.js). Le billard du bar fait quatre tuiles sur
+       deux, et c'etait huit tabourets : chaque tuile avait son plateau, ses
+       bords rentres et son ombre. Le plateau ne rentre ses bords, ne montre
+       son chant et ne porte son ombre que la ou la table s'arrete, et le
+       vernis court le long du bord nord. Une table d'une tuile n'a pas change. */
     'a': function (ctx, v, T) {
-      ctx.fillStyle = 'rgba(0,0,0,0.20)';
-      ctx.fillRect(3, 5, T - 4, T - 5);                // l'ombre portee
-      ctx.fillStyle = '#5b3f26';                       // le piétement
-      ctx.fillRect(2, 3, T - 4, T - 5);
-      ctx.fillStyle = '#a0784a';                       // le plateau
-      ctx.fillRect(2, 2, T - 4, T - 6);
-      ctx.fillStyle = '#bb9160';                       // le vernis qui accroche
-      ctx.fillRect(3, 3, T - 6, 2);
-      ctx.fillStyle = 'rgba(0,0,0,0.22)';
-      ctx.fillRect(2, T - 5, T - 4, 1);
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou la table S'ARRETE
+      const x0 = ouest ? 2 : 0, x1 = est ? T - 2 : T;
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';               // l'ombre portee, vers le sud-est
+      ctx.fillRect(ouest ? 3 : 0, nord ? 5 : 0, (est ? T - 1 : T) - (ouest ? 3 : 0), T - (nord ? 5 : 0));
+      ctx.fillStyle = '#5b3f26';                        // le piétement
+      ctx.fillRect(x0, nord ? 3 : 0, x1 - x0, (sud ? T - 2 : T) - (nord ? 3 : 0));
+      ctx.fillStyle = '#a0784a';                        // le plateau
+      ctx.fillRect(x0, nord ? 2 : 0, x1 - x0, (sud ? T - 4 : T) - (nord ? 2 : 0));
+      if (nord) {                                       // le vernis qui accroche, le long du bord
+        ctx.fillStyle = '#bb9160';
+        ctx.fillRect(ouest ? 3 : 0, 3, (est ? T - 3 : T) - (ouest ? 3 : 0), 2);
+      }
+      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(x0, T - 5, x1 - x0, 1); }   // le chant
     },
     // La chaise : plus petite que la table, dossier au nord (on s'assoit face
     // au sud). On doit voir le plancher tout autour, sinon deux chaises collees
@@ -952,7 +972,7 @@ const TUILES = (function () {
     },
     /* Le lit : UN lit, pas une tuile.
 
-       ⚠️ `v` est le masque des cotes ou le lit CONTINUE (`varianteDeLit`,
+       ⚠️ `v & 15` est le masque des cotes ou le lit CONTINUE (`varianteDeBloc`,
        monde.js) — 1 nord, 2 est, 4 sud, 8 ouest. Sans lui, chaque tuile
        dessinait son oreiller et sa couverture, et un lit de deux tuiles sur
        deux etait quatre lits d'une place colles (« 2 ou 4 cases avec chacune
@@ -999,20 +1019,33 @@ const TUILES = (function () {
       ctx.fillStyle = 'rgba(255,255,255,0.45)';
       ctx.fillRect(3, 3, 4, 1);
     },
-    // La machine : de la tole, des boulons, une courroie. La variante tourne
-    // le bloc — deux tours de suite ne sont pas le meme tour.
+    /* La machine : de la tole, des boulons, une courroie.
+
+       ⚠️ `v & 15` est le masque des cotes ou la machine CONTINUE
+       (`varianteDeBloc`, monde.js) : les presses de l'usine font quatre tuiles
+       sur deux, et chacune etait huit petites machines avec leurs boulons. La
+       tole court d'une tuile a l'autre, les boulons ne vont qu'aux quatre
+       coins du bloc, la face et l'ombre au pied seulement. La courroie suit le
+       sens du bloc — le long d'une machine large, debout dans une machine
+       etroite — et une machine d'une tuile tire au sort (`v >> 4`) : deux
+       tours de suite ne sont pas le meme tour. */
     'm': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou la machine S'ARRETE
       plein(ctx, '#6f7378', T);
-      ctx.fillStyle = '#82868c';
-      ctx.fillRect(1, 1, T - 2, T - 4);
-      ctx.fillStyle = '#5a5e63';
-      ctx.fillRect(1, T - 4, T - 2, 3);
-      ctx.fillStyle = '#3f4347';
-      if (v % 2) ctx.fillRect(3, 4, T - 6, 3); else ctx.fillRect(4, 3, 3, T - 8);
-      ctx.fillStyle = '#d8b83a';
-      ctx.fillRect(2, 2, 1, 1); ctx.fillRect(T - 3, 2, 1, 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.25)';
-      ctx.fillRect(0, T - 1, T, 1);
+      const x0 = ouest ? 1 : 0, x1 = est ? T - 1 : T;
+      ctx.fillStyle = '#82868c';                       // la tole
+      ctx.fillRect(x0, nord ? 1 : 0, x1 - x0, (sud ? T - 4 : T) - (nord ? 1 : 0));
+      if (sud) { ctx.fillStyle = '#5a5e63'; ctx.fillRect(x0, T - 4, x1 - x0, 3); }   // la face
+      ctx.fillStyle = '#3f4347';                       // la courroie
+      const couchee = !(est && ouest) ? true : (!(nord && sud) ? false : (v >> 4) % 2 === 1);
+      if (couchee) ctx.fillRect(ouest ? 3 : 0, 4, (est ? T - 3 : T) - (ouest ? 3 : 0), 3);
+      else ctx.fillRect(4, nord ? 3 : 0, 3, (sud ? T - 5 : T) - (nord ? 3 : 0));
+      ctx.fillStyle = '#d8b83a';                       // les boulons, aux coins du bloc
+      if (nord && ouest) ctx.fillRect(2, 2, 1, 1);
+      if (nord && est) ctx.fillRect(T - 3, 2, 1, 1);
+      if (sud && ouest) ctx.fillRect(2, T - 6, 1, 1);
+      if (sud && est) ctx.fillRect(T - 3, T - 6, 1, 1);
+      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, T - 1, T, 1); }
     },
     // La plante verte : un pot et trois touffes. Rien d'autre ne dit « on
     // s'occupe de cette piece-la ».

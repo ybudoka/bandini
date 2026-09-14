@@ -600,20 +600,25 @@ const Monde = (function () {
       | (estCloture(tx, ty + 1) ? 4 : 0) | (estCloture(tx - 1, ty) ? 8 : 0);
   }
 
-  /** La variante d'un lit : le masque des cotes ou le lit CONTINUE — 1 nord,
-      2 est, 4 sud, 8 ouest — la meme lecture que la cloture.
+  /** La variante d'un meuble en BLOC (lit, table, tapis, machine — la fiche dit
+      `bloc`) : le masque des cotes ou le MEME glyphe continue — 1 nord, 2 est,
+      4 sud, 8 ouest, la meme lecture que la cloture — et un grain par-dessus
+      (bits 4 et 5), stable par position.
 
-      ⚠️ Un lit fait deux tuiles sur deux, et son peintre ne savait pas qu'il
-      avait des voisines : chaque tuile dessinait son oreiller et sa
-      couverture, donc un lit etait quatre lits d'une place colles (« 2 ou 4
-      cases avec chacune leur oreiller »). Avec le masque, la tete de lit et
-      l'oreiller ne vont qu'aux tuiles sans lit au nord, la couverture court
-      d'une tuile a l'autre, et le cadre ne se ferme que la ou le lit s'arrete.
-      Le corollaire, garde par un juge des plans : deux lits ne se touchent
-      jamais — colles, ils seraient peints comme un seul. */
-  function varianteDeLit(tx, ty) {
-    return (glyphe(tx, ty - 1) === 'l' ? 1 : 0) | (glyphe(tx + 1, ty) === 'l' ? 2 : 0)
-      | (glyphe(tx, ty + 1) === 'l' ? 4 : 0) | (glyphe(tx - 1, ty) === 'l' ? 8 : 0);
+      ⚠️ Un lit fait deux tuiles sur deux, un billard quatre sur deux, un tapis
+      trois sur trois, et leurs peintres ne savaient pas qu'ils avaient des
+      voisines : chaque tuile dessinait son oreiller, son plateau, son galon,
+      ses boulons. Un lit etait quatre lits d'une place colles (« 2 ou 4 cases
+      avec chacune leur oreiller »), un billard huit tabourets, un tapis trois
+      chemins de couloir. Avec le masque, ce qui marque un BOUT (tete de lit,
+      chant du plateau, galon, boulon, ombre) ne va qu'aux tuiles ou le bloc
+      s'arrete, et le reste court d'une tuile a l'autre. Le corollaire, garde
+      par un juge des plans : deux blocs du meme glyphe ne se touchent jamais —
+      colles, ils seraient peints comme un seul. */
+  function varianteDeBloc(g, tx, ty) {
+    return (glyphe(tx, ty - 1) === g ? 1 : 0) | (glyphe(tx + 1, ty) === g ? 2 : 0)
+      | (glyphe(tx, ty + 1) === g ? 4 : 0) | (glyphe(tx - 1, ty) === g ? 8 : 0)
+      | 16 * (hash2(tx, ty) % 4);
   }
 
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
@@ -623,8 +628,8 @@ const Monde = (function () {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
-    if (g === 'l') return varianteDeLit(tx, ty);
     const p = carte.legende[g];
+    if (p && p.bloc) return varianteDeBloc(g, tx, ty);
     if (p && p.cloture) return varianteDeCloture(tx, ty);
     if (p && p.pente) return varianteDePente(g, tx, ty);
     if (p && p.toit) return varianteDeToit(g, tx, ty);
@@ -915,7 +920,7 @@ const Monde = (function () {
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeLit, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
