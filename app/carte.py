@@ -365,12 +365,18 @@ GENRES_COMMERCANTS = frozenset({"commerces", "hangars", "industriel"})
 #: ⚠️ Un district ne fusionne JAMAIS par-dessus sa frontiere : pas de `<` en
 #: premiere colonne, pas de `^` en premiere rangee (juge `_assembler`). Sans
 #: cette regle, deplacer un quartier en casserait un autre.
+#: ⚠️ `rares` : les chars du haut de gamme qui peuvent NAITRE dans ce
+#: district. C'est ici, et pas dans le catalogue, que se joue leur rarete —
+#: un char rare qu'on croise partout n'est plus rare, et c'est tout ce qui
+#: fait qu'on le VEUT. La Shop n'en a aucun : on ne laisse pas une
+#: decapotable dans une cour a ferraille.
 DISTRICTS: tuple[dict, ...] = (
     # Le Faubourg — le quartier de la v1, intact. Trame serree, blocs courts,
     # la cour des Cravates au centre. C'est ici qu'on debarque de l'autobus.
     {"slug": "faubourg", "nom": "Le Faubourg", "bx": 5, "by": 0,
      "gang": "cravates", "gang_nom": "Les Cravates", "brume": True,
      "pietons": 26, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
+     "rares": ("sport", "luxe"),
      "plan": ("Tccchhhh",
               "cMck<hAh",
               "ccGKohhh",
@@ -383,6 +389,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "erables", "nom": "Les Érables", "bx": 0, "by": 0,
      "gang": "chevreuils", "gang_nom": "Les Chevreuils", "brume": False,
      "pietons": 14, "vehicules": 7, "police": 1, "rythme": (0.25, 1.1, 0.9),
+     "rares": ("luxe",),
      "plan": ("mmmpm",
               "m<m^m",
               "Dmmmm",
@@ -395,6 +402,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "shop", "nom": "La Shop", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
      "pietons": 11, "vehicules": 9, "police": 1, "rythme": (0.15, 1.3, 0.6),
+     "rares": (),
      "plan": ("U<i<i<p",
               "^<^<^<^",
               "i<g<i<i",
@@ -407,6 +415,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "quais", "nom": "Les Quais", "bx": 0, "by": 6,
      "gang": "morues", "gang_nom": "Les Morues", "brume": True,
      "pietons": 20, "vehicules": 8, "police": 1, "rythme": (0.4, 1.4, 0.9),
+     "rares": (),
      "plan": ("cc<c<<c",
               "w<<w<<c",
               "L<g<w<c",
@@ -419,6 +428,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "baie", "nom": "La baie", "bx": 7, "by": 6, "eau": True,
      "gang": None, "gang_nom": None, "brume": False,
      "pietons": 0, "vehicules": 0, "police": 0, "rythme": (1.0, 1.0, 1.0),
+     "rares": (),
      "plan": ("~<<<<<<",
               "^<<<<<<",
               "^<<<<<<",
@@ -431,6 +441,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
      "pietons": 12, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
+     "rares": ("sport",),
      "plan": ("~<<<<<",
               "n<<<nc",
               "^<<<^c",
@@ -2472,7 +2483,8 @@ class _Chantier:
                            "district": district["slug"], "x": x, "y": y, "l": largeur, "h": hauteur,
                            "gang": None, "brume": bool(district.get("brume")),
                            "pietons": district["pietons"], "vehicules": district["vehicules"],
-                           "police": district["police"], "rythme": list(district["rythme"])})
+                           "police": district["police"], "rythme": list(district["rythme"]),
+                           "rares": list(district.get("rares", ()))})
         for district in DISTRICTS:
             if not district.get("gang"):
                 continue
@@ -2482,12 +2494,17 @@ class _Chantier:
             sortie.append({**cour, "slug": district["gang"], "nom": district["gang_nom"],
                            "district": district["slug"], "gang": district["gang"], "brume": False,
                            "pietons": 10, "vehicules": 3, "police": 0,
-                           "rythme": list(district["rythme"])})
+                           "rythme": list(district["rythme"]),
+                           # ⚠️ Une cour de gang herite des rares de son
+                           # district : `Monde.zoneA` rend la zone la PLUS
+                           # PRECISE, et sans ca un coupe ne naitrait jamais
+                           # dans le seul coin ou l'on se bat pour eux.
+                           "rares": list(district.get("rares", ()))})
         bassin = self._enveloppe("~q", district_par_slug("faubourg"))
         if bassin:
             sortie.append({**bassin, "slug": "port", "nom": "Le bassin", "district": "faubourg",
                            "gang": None, "brume": True, "pietons": 6, "vehicules": 2,
-                           "police": 1, "rythme": [0.4, 1.0, 1.0]})
+                           "police": 1, "rythme": [0.4, 1.0, 1.0], "rares": []})
         return sortie
 
     def _enveloppe(self, glyphes: str, district: dict | None = None) -> dict | None:

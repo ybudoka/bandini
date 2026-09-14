@@ -20,7 +20,8 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
     # une physique a part et des quais ou embarquer (voir la fiche).
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
-        "camion", "autobus", "ambulance", "remorqueuse"}
+        "camion", "autobus", "ambulance", "remorqueuse",
+        "sport", "luxe"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == {"bateau"}
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
@@ -81,6 +82,79 @@ def test_la_chaine_de_cercles_ne_laisse_aucun_trou():
         assert v["cercles"] >= mini, f"{v['slug']} : {v['cercles']} cercles pour {mini:.1f} demandes"
         assert v["cercles"] >= 2
     assert vehicules.par_slug("autobus")["cercles"] == vehicules.PHYSIQUE["cercles"] + 2
+
+
+def test_le_haut_de_gamme_s_oppose_et_reste_rare():
+    """⚠️ Demande de Martin : deux chars qu'on vole EXPRES. Tout le reste du
+    parc est utilitaire — on le prend parce qu'il sert ; ceux-la, on les prend
+    parce qu'on les VEUT.
+
+    Deux fiches, et elles ne valent que si elles s'opposent : le sport est le
+    plus rapide sur quatre roues et le plus fragile des autos, le luxe est le
+    plus cher et le plus dur. Si l'un etait meilleur que l'autre en tout, il
+    n'y aurait qu'un char."""
+    sport, luxe = vehicules.par_slug("sport"), vehicules.par_slug("luxe")
+    autos = [v for v in vehicules.de_phase(1) if v["classe"] == "auto"]
+    moto = vehicules.par_slug("moto")
+
+    # Le sport : le plus rapide sur QUATRE roues, la moto restant devant.
+    for v in autos:
+        assert sport["vitesse_max"] >= v["vitesse_max"], v["slug"]
+    assert sport["vitesse_max"] < moto["vitesse_max"], "un coupe ne rattrape pas une moto"
+    assert sport["acceleration"] > vehicules.par_slug("auto")["acceleration"], "reprise molle"
+    # ⚠️ L'adherence basse EST le caractere du char : il part en travers la ou
+    # une berline se contente de ralentir.
+    assert sport["adherence"] < min(v["adherence"] for v in autos if v["slug"] != "sport")
+    # … et il le paie : la carrosserie la plus mince des autos, un barrage
+    # l'arrete pour de bon.
+    for v in autos:
+        assert sport["vie"] <= v["vie"], v["slug"]
+
+    # Le luxe : la meilleure revente du jeu, et ca tombe tout seul du prix neuf.
+    for v in vehicules.de_phase(1):
+        assert luxe["prix"] >= v["prix"], v["slug"]
+    assert luxe["vitesse_max"] < sport["vitesse_max"], "le luxe ne doit pas etre rapide EN PLUS"
+    assert luxe["masse"] > sport["masse"] * 1.5, "elle doit encaisser"
+    assert luxe["adherence"] > sport["adherence"]
+    assert luxe["alarme"] and luxe["alarme_s"] > vehicules.PHYSIQUE["alarme_secondes"], \
+        "l'alarme de la berline de luxe doit etre plus longue que les autres"
+    assert sport["alarme"], "un coupe sport sans alarme se vole trop facilement"
+
+    # ⚠️ Rares, et c'est la carte qui decide ou — pas leur frequence.
+    rares = {v["slug"] for v in vehicules.CATALOGUE if v["rare"]}
+    assert rares == {"sport", "luxe"}
+    for v in vehicules.de_phase(1):
+        if v["rare"]:
+            continue
+        if v["frequence"] > 0:
+            assert v["frequence"] > sport["frequence"], \
+                f"{v['slug']} est aussi rare qu'un coupe sport"
+
+
+def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
+    """⚠️ C'est ICI que se joue la rarete, pas dans la `frequence` : un char
+    rare qu'on croise partout n'est plus rare, et c'est tout ce qui fait qu'on
+    le veut. La Shop n'en a aucun — on ne laisse pas une decapotable dans une
+    cour a ferraille."""
+    from app import carte
+
+    rares = {v["slug"] for v in vehicules.CATALOGUE if v["rare"]}
+    declares = set()
+    for district in carte.DISTRICTS:
+        for slug in district.get("rares", ()):
+            assert slug in rares, f"{district['slug']} declare « {slug} », qui n'est pas rare"
+            declares.add(slug)
+    assert declares == rares, f"un char rare ne nait nulle part : {rares - declares}"
+    assert not carte.district_par_slug("shop")["rares"], "une decapotable a La Shop"
+    assert not carte.district_par_slug("baie")["rares"], "un coupe sur l'eau"
+
+    # Et le paquet les sort, y compris pour les sous-zones : `Monde.zoneA` rend
+    # la zone la PLUS PRECISE, donc une cour de gang doit heriter des siens.
+    zones = {z["slug"]: z for z in carte.generer()["zones"]}
+    assert set(zones["faubourg"]["rares"]) == {"sport", "luxe"}
+    assert zones["cravates"]["rares"] == zones["faubourg"]["rares"], \
+        "la cour des Cravates ne connait pas les chars de son district"
+    assert zones["shop"]["rares"] == [] and zones["boulonneux"]["rares"] == []
 
 
 def test_seul_le_velo_n_a_pas_de_reservoir():

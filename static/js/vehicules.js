@@ -53,9 +53,21 @@ const Vehicules = (function () {
     return v;
   }
 
-  /** Un type de char selon les poids du catalogue (phase 1 seulement). */
-  function typeDeRue() {
-    const types = B.defs.vehicules.filter(function (v) { return v.phase === 1 && v.frequence > 0; });
+  /** Un type de char selon les poids du catalogue (phase 1 seulement).
+
+      ⚠️ Un char `rare` ne nait QUE dans un district qui le declare (`rares` de
+      la zone, pose par `carte.py`). C'est la, et pas dans sa `frequence`, que
+      se joue sa rarete : un coupe sport qu'on croise dans une cour a ferraille
+      n'est plus un coupe sport, c'est une auto de plus. Et c'est PYTHON qui
+      decide ou — le navigateur n'a pas a savoir qu'une decapotable n'a rien a
+      faire a La Shop. */
+  function typeDeRue(zone) {
+    const rares = (zone && zone.rares) || [];
+    const types = B.defs.vehicules.filter(function (v) {
+      if (v.phase !== 1 || v.frequence <= 0) return false;
+      return !v.rare || rares.indexOf(v.slug) >= 0;
+    });
+    if (!types.length) return null;
     let tirage = B.rng() * types.reduce(function (s, v) { return s + v.frequence; }, 0);
     for (const v of types) { tirage -= v.frequence; if (tirage <= 0) return v; }
     return types[0];
@@ -126,7 +138,8 @@ const Vehicules = (function () {
     if (roulent < voulu) {
       const place = placeDansLeTrafic();
       if (place) {
-        const v = creer(typeDeRue().slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
+        const type = typeDeRue(zone);
+        const v = type && creer(type.slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
         if (v) {
           v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
           // ⚠️ Une ambulance sur trois est EN COURSE, et on l'entend passer.
@@ -137,7 +150,7 @@ const Vehicules = (function () {
       }
     } else if (stationnes < t.stationnes_max && B.t % 40 === 0) {
       const place = placeStationnee();
-      if (place) creer(typeDeRue().slug, place.x, place.y, place.angle, { etat: 'stationne' });
+      if (place) { const type = typeDeRue(zone); if (type) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' }); }
     }
   }
 
@@ -597,7 +610,9 @@ const Vehicules = (function () {
   }
 
   function declencherAlarme(v) {
-    v.alarme = physique().alarme_secondes * 60;
+    // ⚠️ `alarme_s` de la fiche : la berline de luxe hurle deux fois et demie
+    // plus longtemps que les autres. C'est le prix de la meilleure revente.
+    v.alarme = (v.def.alarme_s || physique().alarme_secondes) * 60;
     Son.SFX.klaxon();
     // L'alarme est un canal de detection : qui l'entend le sait.
     const rayon = B.defs.recherche.vision.alarme_rayon * TT;

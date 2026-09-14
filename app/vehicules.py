@@ -20,6 +20,11 @@ n'a pas a le deviner de son slug :
     crochet   il peut trainer un autre char — un seul a la fois
     boulot    le boulot qu'on prend au klaxon (`taxi`, `pizza`, `ambulance`,
               `remorquage`), sur le patron du taxi de la v1
+    rare      il ne nait QUE dans les districts qui le declarent (`rares` de
+              `carte.DISTRICTS`). Un char rare qu'on croise partout n'est plus
+              rare — et c'est tout ce qui fait qu'on le VEUT
+    alarme_s  la duree de son alarme, en secondes ; 0 = celle de tout le monde
+              (`PHYSIQUE.alarme_secondes`)
 """
 
 from __future__ import annotations
@@ -56,6 +61,8 @@ class Vehicule(TypedDict):
     eau: bool
     cercles: int
     reservoir: bool
+    rare: bool
+    alarme_s: float
     defonce: float
     soigne: float
     crochet: bool
@@ -82,15 +89,18 @@ AVERTISSEURS = ("klaxon", "sonnette")
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
-       radio=None, phase=1, klaxon="klaxon") -> Vehicule:
+       radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
         frein=round(accel * 2, 3), friction=0.995 if eau else 0.985,
-        braquage=braquage, adherence=0.12 if not eau else 0.05, adherence_frein=0.035,
+        braquage=braquage,
+        adherence=adherence if adherence is not None else (0.12 if not eau else 0.05),
+        adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
-        ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, defonce=defonce, soigne=soigne,
+        ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, rare=rare, alarme_s=alarme_s,
+        defonce=defonce, soigne=soigne,
         crochet=crochet, boulot=boulot, radio=radio, phase=phase,
         portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
     )
@@ -139,6 +149,27 @@ CATALOGUE: list[Vehicule] = [
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 0.035, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),
+    # --- Le haut de gamme : deux chars qu'on vole EXPRES ------------------
+    # ⚠️ Tout le reste du parc est utilitaire — on le prend parce qu'il sert.
+    # Ces deux-la, on les prend parce qu'on les VEUT, et ils s'opposent en
+    # tout : la vitesse contre l'argent, la carrosserie mince contre la
+    # lourde. Deux fiches, pas dix.
+    #
+    # ⚠️ `rare=True` : ils ne naissent que dans les districts qui les
+    # declarent. C'est la, et pas dans ces nombres, que se joue leur rarete.
+    _v("sport", "Coupé sport", "auto", 26, 13, 4.8, 0.085, 0.055, 75, 2, 3200, 0.02,
+       ["#c0392b", "#ecf0f1", "#f1c40f", "#16a085"], "sport",
+       alarme=True, rare=True, masse=0.85,
+       # L'adherence basse est TOUT le caractere du char : il part en travers
+       # au frein a main la ou une berline se contente de ralentir.
+       adherence=0.055),
+    _v("luxe", "Berline de luxe", "auto", 32, 15, 3.6, 0.042, 0.038, 220, 4, 5200, 0.02,
+       ["#101014", "#2c3e50", "#6b4b2c"], "luxe",
+       alarme=True, rare=True, masse=1.8,
+       # ⚠️ Elle encaisse ET elle colle a la route : elle ne recompense pas la
+       # conduite, elle recompense le vol. C'est la meilleure revente du jeu,
+       # et `economie.prix_vente` le fait toute seule — le prix neuf suffit.
+       adherence=0.16, alarme_s=30.0),
     # ⚠️ Le bateau reste en phase 2 : il demande une physique a part (l'eau n'a
     # ni voie ni trottoir) et des quais ou embarquer. Le plan le dit lui-meme —
     # « s'il coute plus qu'il ne donne, il tombe en v3 » — et le traversier de

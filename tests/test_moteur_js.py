@@ -430,7 +430,12 @@ def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         const out = {};
+        // ⚠️ On remet le joueur a SA place a chaque tour : `descendre()` le
+        // pose a cote du char, donc il derive d'un char a l'autre — et le
+        // onzieme finissait contre un mur, ou aucun gaz ne le fait avancer.
+        const px = j.x, py = j.y;
         for (const slug of %s) {
+            j.x = px; j.y = py;
             const v = o.char(slug, 0, 0, 0);
             if (!v) { out[slug] = 'pas cree'; continue; }
             // La chaine de cercles : combien, et couvre-t-elle la carrosserie ?
@@ -2056,13 +2061,21 @@ def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
         // ⚠️ On ne suit un char que tant qu'il est LA : la bulle d'oubli retire
         // ceux qui s'eloignent du joueur, et un char retire ne bouge plus —
         // le test les prenait pour des chars bloques.
+        //
+        // ⚠️ Et on suit TOUS ceux qui passent, pas seulement ceux qui etaient
+        // la a la premiere image : le joueur ne bouge pas, donc la plupart des
+        // chars presents au depart s'en vont en quelques secondes. L'echantillon
+        // tombait alors a deux ou trois, et le juge se mettait a dependre du
+        // tirage plutot que du trafic. Un char BLOQUE, lui, reste dans la bulle
+        // et accumule des images sans avancer d'un pixel : c'est exactement ce
+        // qu'on cherche, et elargir l'echantillon le trouve mieux.
         const suivis = new Map();
-        L.B.entites.forEach(function (e) { if (e.type === 'vehicule' && e.conducteur === 'trafic') suivis.set(e.id, { x: e.x, y: e.y, d: 0, images: 0 }); });
         for (let i = 0; i < 1800; i++) {
             o.frame(1);
             L.B.entites.forEach(function (e) {
+                if (e.type !== 'vehicule' || e.conducteur !== 'trafic') return;
                 const s = suivis.get(e.id);
-                if (!s) return;
+                if (!s) { suivis.set(e.id, { x: e.x, y: e.y, d: 0, images: 0 }); return; }
                 s.d += Math.hypot(e.x - s.x, e.y - s.y); s.x = e.x; s.y = e.y; s.images++;
             });
         }
@@ -2073,7 +2086,7 @@ def test_le_trafic_roule_3000_images_sans_se_bloquer(banc, paquet):
             if (L.Monde.solidite(tx, ty) === 1) dansUnMur++;
             if (v.conducteur === 'trafic' && !L.Monde.estRoute(tx, ty)) horsRoute++;
         });
-        const presents = Array.from(suivis.values()).filter(function (s) { return s.images >= 600; });
+        const presents = Array.from(suivis.values()).filter(function (s) { return s.images >= 300; });
         const distances = presents.map(function (s) { return s.d / s.images * 1800; });   // ramene a 1800 images
         const bouges = distances.filter(function (d) { return d > 300; }).length;
         return { roulent: chars.filter(function (v) { return v.conducteur === 'trafic'; }).length,

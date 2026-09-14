@@ -313,6 +313,63 @@ SPRITES.remorqueuse = {
   ]] },
 };
 
+
+/* --- M9, le haut de gamme : deux chars qu'on vole expres ----------------------
+
+   ⚠️ Ils doivent s'opposer JUSQUE DANS LE DESSIN, sinon ce sont deux lignes de
+   catalogue de plus. Le sport est le seul char du parc dont l'habitacle est
+   OUVERT — un trou dans le toit, deux sieges dedans ; le luxe est le seul dont
+   le toit est plein, lisse et cerne de chrome. Vu d'en haut, c'est tout ce
+   qu'on a pour les nommer, et ca suffit. */
+// ⚠️ Vu d'en haut, ce qui nomme un coupe sport c'est LE TROU : decapotable,
+// on voit les deux sieges. Aucun autre char du parc n'a d'habitacle ouvert.
+SPRITES.sport = {
+  w: 30, h: 15, ancre: [15, 7], rotations: 32,
+  pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' },
+  swaps: ['c'], poses: { base: [[
+    '....rrrrr............rrrrr....',
+    '....rrrrr............rrrrr....',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kcccccccccccccccccccccccccck.',
+    '.kccccccccckkkkkkkkkkvvvcccck.',
+    '.kttccccccckiiiiiiiikvvvclllk.',
+    '.kttssssssckiuuuiuuukvvvclllk.',
+    '.kccccccccckiuuuiuuukvvvcccck.',
+    '.kccssssssckiuuuiuuukvvvcccck.',
+    '.kttccccccckiiiiiiiikvvvclllk.',
+    '.kttccccccckkkkkkkkkkvvvclllk.',
+    '.kcccccccccccccccccccccccccck.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '....rrrrr............rrrrr....',
+    '....rrrrr............rrrrr....',
+  ]] },
+};
+// L'inverse exact du sport : rien ne depasse, rien ne s'ouvre. Un long
+// rectangle sombre, deux vitres fines et du chrome tout autour.
+SPRITES.luxe = {
+  w: 36, h: 17, ancre: [18, 8], rotations: 32,
+  pal: { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' },
+  swaps: ['c'], poses: { base: [[
+    '.....rrrrr................rrrrr.....',
+    '.....rrrrr................rrrrr.....',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.kcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmck.',
+    '.kcccccccccccccccccccccccccccccccck.',
+    '.ktttcccvvvcccccccccccccvvvccclllck.',
+    '.ktttcccvvvccsssssssssccvvvccclllck.',
+    '.kccccccvvvccsssssssssccvvvcmmcccck.',
+    '.kccccccvvvccsssssssssccvvvcmmcccck.',
+    '.kccccccvvvccsssssssssccvvvcmmcccck.',
+    '.ktttcccvvvccsssssssssccvvvccclllck.',
+    '.ktttcccvvvcccccccccccccvvvccclllck.',
+    '.kcccccccccccccccccccccccccccccccck.',
+    '.kcmmmmmmmmmmmmmmmmmmmmmmmmmmmmmmck.',
+    '..kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
+    '.....rrrrr................rrrrr.....',
+    '.....rrrrr................rrrrr.....',
+  ]] },
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {
