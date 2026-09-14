@@ -1645,6 +1645,17 @@ const Vehicules = (function () {
 
   function creerSignalisation() {
     const carte = Monde.carte;
+    // ⚠️ LES FEUX PIETONS VIENNENT DE LA CARTE, pas d'un coin devine ici. Leur
+    // place se lit sur la TRAVERSE — un a chaque bout, et le sens du passage
+    // avec (`carte.py`, `feux_pietons`). Les deviner depuis la boite du
+    // croisement, comme on le fait pour les feux des chars, c'est se tromper
+    // des que la traverse ne tombe pas ou l'on croit.
+    (carte.def.feux_pietons || []).forEach(function (f) {
+      const inter = Monde.intersectionA(f.x, f.y);
+      if (!inter || !inter.feux) return;
+      Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
+                    { inter: inter, sens: f.sens, decor: 'feu_pieton', r: 1, solide: false });
+    });
     carte.intersections.forEach(function (inter) {
       if (inter.feux) {
         // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
@@ -1672,6 +1683,30 @@ const Vehicules = (function () {
     ctx.fillStyle = orange ? '#f39c12' : (ns ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 1, y + 2, 3, 3);    // lanterne nord-sud
     ctx.fillStyle = orange ? '#f39c12' : (eo ? '#2ecc71' : '#e74c3c'); ctx.fillRect(x + 6, y + 2, 3, 3);    // lanterne est-ouest
     B.stats.images++; B.stats.rects += 2;
+  }
+
+  //: De quelle couleur se lit chaque etat du feu pieton. ⚠️ LE BLANC QUI
+  //: MARCHE, L'ORANGE QUI ARRETE : deux couleurs qu'on distingue d'un coup
+  //: d'oeil a cette taille, et qui ne se confondent avec aucune des trois du
+  //: feu des chars — on ne doit pas avoir a se demander lequel on regarde.
+  const COULEURS_FEU_PIETON = { blanc: '#f2f2f2', degage: '#f39c12', rouge: '#c0392b' };
+
+  function dessinerFeuPieton(ctx, e, cx, cy) {
+    const d = DECORS.feu_pieton;
+    const poteau = Atlas.cuirePeintre('decor|feu_pieton', d.w, d.h, d.peindre);
+    const x = Math.round(e.x - d.ancre[0] - cx), y = Math.round(e.y - d.ancre[1] - cy);
+    ctx.drawImage(poteau, x, y);
+    // ⚠️ Le SENS DES CHARS de la rue qu'on traverse, lu comme `traverseeSure`
+    // le lit : « = » barre une rue est-ouest. Deux endroits qui traduisent le
+    // meme glyphe, c'est un endroit de trop — mais celui-ci est a six lignes
+    // de l'autre, et un juge tient les deux ensemble.
+    const etat = Monde.feuPieton(e.inter, e.sens === '=' ? '>' : '^');
+    // Le degagement CLIGNOTE : un orange fixe se lit comme « attends », un
+    // orange qui bat se lit comme « finis, mais ne pars plus ».
+    if (etat === 'degage' && (B.t >> 3) % 2 === 0) { B.stats.images++; return; }
+    ctx.fillStyle = COULEURS_FEU_PIETON[etat] || COULEURS_FEU_PIETON.rouge;
+    ctx.fillRect(x + 1, y + 1, 4, 5);
+    B.stats.images++; B.stats.rects++;
   }
 
   // --- Dessin --------------------------------------------------------------------------
@@ -1711,7 +1746,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, maj, dessinerUn,
+    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, maj, dessinerUn,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

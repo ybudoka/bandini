@@ -1911,6 +1911,13 @@ const DECORS = {
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 6, 2, 17); ctx.fillRect(2, 22, 6, 2);
   } },
+  // ⚠️ PLUS PETIT QUE LE FEU DES CHARS, et c'est voulu : a 480 x 270 il se lit
+  // par sa COULEUR et sa FORME, jamais par son detail. Un boitier haut comme
+  // celui des autos, trois cent cinquante fois dans la ville, mangerait la rue.
+  feu_pieton: { w: 6, h: 18, ancre: [3, 17], r: 1, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 0, 6, 7);          // la lanterne se peint a la volee
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 7, 2, 10); ctx.fillRect(1, 16, 4, 2);
+  } },
   panneau: { w: 14, h: 22, ancre: [7, 21], r: 3, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6f757c'; ctx.fillRect(6, 8, 2, 14);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(0, 0, 14, 9);

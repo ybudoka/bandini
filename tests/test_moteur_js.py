@@ -452,6 +452,176 @@ def test_la_depanneuse_leve_les_roues_et_charge_les_deux_roues(banc, paquet):
     assert r["velo"] == {"plateau": True, "surLaRemorqueuse": True}, r["velo"]
 
 
+def test_le_feu_pieton_s_eteint_avant_que_les_chars_repartent(banc, paquet):
+    """⚠️ Demande de Martin : « pour les piétons, il faut ajouter des lumières de
+    priorité, et sinon ils ne passent pas. »
+
+    La règle existait (`traverseeSure`) mais **personne ne la voyait** — et elle
+    **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange**
+    aussi, donc les piétons s'engageaient exactement quand les chars accélèrent
+    pour vider le croisement, le pire moment du cycle.
+
+    Un vrai feu piéton ne s'allume pas au rouge : il s'éteint **avant** que les
+    chars repartent. Ce juge parcourt un cycle entier, image par image."""
+    t = paquet["conduite"]["trafic"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const cycle = 2 * (L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images);
+        const inter = L.Monde.carte.intersections.find(function (i) { return i.feux; });
+        const t0 = L.B.t;
+        const suite = [];
+        for (let k = 0; k < cycle; k++) {
+            L.B.t = t0 + k;
+            suite.push({
+                // Le pieton qui traverse la rue est-ouest (passage « = »).
+                pieton: L.Monde.feuPieton(inter, '>'),
+                mesChars: L.Monde.feuVert(inter, '>'),
+                lesAutres: L.Monde.feuVert(inter, '^'),
+            });
+        }
+        L.B.t = t0;
+        // Le blanc, jamais avec le vert de MA rue, jamais pendant un orange.
+        let avecMesChars = 0, pendantOrange = 0, blanc = 0, degage = 0;
+        for (const p of suite) {
+            if (p.pieton === 'blanc') blanc++;
+            if (p.pieton === 'degage') degage++;
+            if (p.pieton === 'blanc' && p.mesChars) avecMesChars++;
+            if (p.pieton === 'blanc' && !p.mesChars && !p.lesAutres) pendantOrange++;
+        }
+        // Le DEGAGEMENT : combien d'images entre la derniere blanche et le
+        // moment ou mes chars repartent.
+        // ⚠️ On tourne EN ROND : la fenetre commence a une phase quelconque, et
+        // la derniere image blanche tombe souvent apres le dernier vert de la
+        // fenetre. Chercher en avant sans reboucler, c'est ne rien trouver une
+        // fois sur deux — et le juge dirait « pas de degagement » pour un
+        // degagement parfait.
+        let dernierBlanc = -1, apres = null;
+        for (let k = 0; k < cycle; k++) {
+            if (suite[k].pieton !== 'blanc') continue;
+            if (suite[(k + 1) % cycle].pieton === 'blanc') continue;
+            dernierBlanc = k;                 // la DERNIERE d'une plage blanche
+        }
+        for (let k = 1; k <= cycle; k++) {
+            if (suite[(dernierBlanc + k) % cycle].mesChars) { apres = k - 1; break; }
+        }
+        return { cycle: cycle, blanc: blanc, degage: degage,
+                 avecMesChars: avecMesChars, pendantOrange: pendantOrange,
+                 degagementMesure: apres,
+                 sansFeux: L.Monde.feuPieton({ feux: false }, '>') };
+    }""")
+
+    assert r["blanc"] > 0, "le feu piéton n'est jamais blanc : personne ne traverse plus"
+    # ⚠️ LE DÉFAUT D'ORIGINE, tenu des deux côtés.
+    assert r["avecMesChars"] == 0, (
+        "le blanc s'allume pendant le vert des chars de sa rue (%s images)" % r["avecMesChars"]
+    )
+    assert r["pendantOrange"] == 0, (
+        "le blanc s'allume pendant l'orange (%s images) : c'est exactement le moment où les "
+        "chars accélèrent pour vider le croisement" % r["pendantOrange"]
+    )
+    # ⚠️ Et il s'éteint AVANT que les chars repartent : le dégagement, plus
+    # l'orange, séparent la dernière image blanche du premier char qui roule.
+    attendu = t["feu_pieton_degagement_images"] + t["feu_orange_images"]
+    assert r["degagementMesure"] == attendu, (
+        "le dégagement vaut %s images au lieu de %s : on s'engage trop tard"
+        % (r["degagementMesure"], attendu)
+    )
+    assert r["degage"] == t["feu_pieton_degagement_images"], r["degage"]
+    # Sans feux (un T), il n'y a pas de feu piéton : on traverse quand c'est libre.
+    assert r["sansFeux"] == "aucun"
+
+
+def test_un_pieton_attend_le_blanc_et_ne_reste_pas_planté_la_ou_il_n_y_a_pas_de_feu(banc):
+    """⚠️ « Sinon ils ne passent pas » demande une **exception**, sinon la foule
+    s'échoue. Les croisements en **T** n'ont pas de feux — ils ont un STOP.
+
+    Si un piéton n'y traverse jamais, un côté de rue entier devient un cul-de-sac
+    pour la foule, et **aucun juge existant ne le verrait** : « un seul îlot
+    marchable » parle de géométrie, pas de circulation. La règle juste est donc :
+    **au feu, on attend le blanc ; sans feu, on traverse quand c'est libre**."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, TT = L.TT, out = {};
+
+        // 1. AU FEU : on ne s'engage que sur le blanc, jamais autrement.
+        const inter = c.intersections.find(function (i) { return i.feux; });
+        let passage = null;
+        for (let y = inter.y - 3; y < inter.y + inter.h + 3 && !passage; y++) {
+            for (let x = inter.x - 3; x < inter.x + inter.l + 3; x++) {
+                if (L.Monde.glyphe(x, y) === '=') { passage = { x: x, y: y }; break; }
+            }
+        }
+        const cycle = 2 * (L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images);
+        let fautes = 0, sûr = 0;
+        const t0 = L.B.t;
+        for (let k = 0; k < cycle; k++) {
+            L.B.t = t0 + k;
+            const ok = L.Entites.traverseeSure(passage.x, passage.y, [0, 1]);
+            const feu = L.Monde.feuPieton(inter, '>');
+            if (ok) { sûr++; if (feu !== 'blanc') fautes++; }
+        }
+        L.B.t = t0;
+        out.auFeu = { sûr: sûr, fautes: fautes, cycle: cycle };
+
+        // 2. SANS FEU : un T. On traverse des que la rue est libre.
+        const te = c.intersections.find(function (i) { return !i.feux && i.bras.length === 3; });
+        let sansFeu = null;
+        for (let y = te.y - 3; y < te.y + te.h + 3 && !sansFeu; y++) {
+            for (let x = te.x - 3; x < te.x + te.l + 3; x++) {
+                const g = L.Monde.glyphe(x, y);
+                if (g === '=' || g === ':') { sansFeu = { x: x, y: y, g: g }; break; }
+            }
+        }
+        // On vide la rue de ses chars : rien ne doit plus empecher de passer.
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        L.Entites.indexer();
+        out.sansFeu = { trouve: !!sansFeu,
+                        passe: sansFeu ? L.Entites.traverseeSure(sansFeu.x, sansFeu.y, [0, 1]) : null };
+
+        // 3. LE BUDGET : un feu par bout de traverse, pas un par tuile.
+        const poteaux = (c.def.feux_pietons || []);
+        const tuiles = {};
+        let surLeTrottoir = 0, doublons = 0;
+        for (const f of poteaux) {
+            const cle = f.x + ',' + f.y;
+            if (tuiles[cle]) doublons++;
+            tuiles[cle] = true;
+            if (L.Monde.glyphe(f.x, f.y) === '.') surLeTrottoir++;
+        }
+        let passages = 0;
+        for (let y = 0; y < c.h; y++) for (let x = 0; x < c.w; x++) {
+            const g = c.sol[y][x];
+            if (g === '=' || g === ':') passages++;
+        }
+        out.budget = { poteaux: poteaux.length, doublons: doublons,
+                       surLeTrottoir: surLeTrottoir, tuilesDePassage: passages };
+        return out;
+    }""")
+
+    a = r["auFeu"]
+    assert a["sûr"] > 0, "on ne traverse jamais au feu : la foule s'échoue"
+    assert a["fautes"] == 0, (
+        "on s'engage %s images sur %s alors que le feu n'est pas au blanc" % (a["fautes"], a["cycle"])
+    )
+    s = r["sansFeu"]
+    assert s["trouve"] is True, "le juge n'a pas trouvé de passage sans feu : il ne prouve rien"
+    assert s["passe"] is True, (
+        "sans feu et sans un char en vue, on ne traverse pas : un côté de rue entier "
+        "devient un cul-de-sac pour la foule"
+    )
+    b = r["budget"]
+    assert b["doublons"] == 0, "deux poteaux sur la même tuile : %s" % b
+    assert b["poteaux"] == b["surLeTrottoir"], (
+        "un poteau est planté ailleurs que sur le trottoir : il se fait faucher, et il "
+        "cache la ligne d'arrêt (%s)" % b
+    )
+    # ⚠️ Un par BOUT, pas un par tuile : il y a bien plus de tuiles de passage
+    # que de poteaux, et c'est la mesure qui le dit.
+    assert b["poteaux"] < b["tuilesDePassage"] / 3, (
+        "autant de poteaux que de tuiles de passage : %s" % b
+    )
+
+
 def test_l_ambulance_soigne_son_conducteur_mais_ne_ressuscite_personne(banc, paquet):
     """`soigne` était dans la fiche depuis M9 et personne ne le lisait :
     l'ambulance était une fourgonnette blanche.

@@ -89,7 +89,7 @@ ne bougent pas quand l'ordre de travail change.
 | L'eau n'est plus un mur | **P3** **correctif**, **livré** (14 sept. 2026) | demande de Martin : l'eau était **littéralement un mur** (`MASQUE_PIETON` la comptait comme une façade). Maintenant : un **masque de nageur** pour le joueur et les agents (les passants, eux, n'y entrent jamais), le **souffle qui décide** — 8 points par tuile, le chenal du pont en coûte 88 sur 100 : un **pari** —, la **noyade par `Missions.hopital`** (une seule façon de perdre connaissance), le **char qui coule et qui est perdu** (jamais à la fourrière : couler ne doit pas devenir un remboursement d'épave ; le **bateau** flotte, et c'est sa fiche qui le dit), et la **police qui nage** au prix fort dans l'A\*. ⚠️ Le juge du pont est **reformulé, pas affaibli** : le pont est le seul lien **carrossable**. Le large de la baie est à **73 tuiles** de toute terre pour **40** au plafond absolu (café + estomac plein) : on n'y va pas. 6 juges neufs |
 | La dépanneuse lève les roues | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme ». C'était une **corde** : le char roulait à plat au bout d'un élastique, pointé **vers** elle, et le lien lâchait quand on l'étirait. Maintenant une **fourche** — écart fixe, **dans l'axe**, avant **levé de deux pixels** (l'ombre restée au sol, sans un seul cap de sprite en plus) — et un **plateau** pour ce que `vehicules.py` déclare `plateau` (la moto, le vélo) : elles montent **en entier**, ne heurtent plus rien, et se peignent **après** la remorqueuse. ⚠️ La remorqueuse **refuse d'avancer** là où sa charge ne passe pas (sans le garde-fou, elle reculait de 22 px dans la façade), et on **ne monte plus** dans un char remorqué. 2 juges neufs, 2 réécrits |
 | Le taxi de Marco n'est pas à vendre | **P1** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco ». Le garage de Ti-Guy achète **n'importe quel char garé devant sa porte** — et le taxi de M3 dort justement là, à la porte du garage. Vendu, il sort du monde : l'objectif attend un char qui n'existe plus, la mission **ne rate même pas**, elle reste prise, et le téléphone ne sonne plus jamais |
-| Des feux pour piétons | **P4** ajout, **en cours** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existe (`traverseeSure`) mais **personne ne la voit** — et ⚠️ elle se trompe d'un temps : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engagent pile quand les chars accélèrent pour vider le croisement |
+| Des feux pour piétons | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existait (`traverseeSure`) mais **personne ne la voyait** — et ⚠️ elle **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engageaient pile quand les chars accélèrent pour vider le croisement, **240 images sur 960**. Maintenant `Monde.feuPieton()` rend **blanc / dégage / rouge**, le blanc ne croise ni le vert des chars ni l'orange, et il s'éteint **180 images avant** que les chars repartent (dégagement 120 + orange 60). **351 poteaux** posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par tuile — avec le **sens du passage** dans la fiche ; blanc fixe, orange **clignotant** au dégagement. ⚠️ **Sans feu (un T), on traverse quand c'est libre** : sinon un côté de rue entier devient un cul-de-sac pour la foule, et aucun juge existant ne le verrait. 2 juges neufs |
 | Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | Les armes à feu | **P4** ajout, **en cours** (14 sept. 2026) | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
@@ -2733,7 +2733,7 @@ et c'est un test : largeur de l'eau × dépense par image contre les 100 points 
   elle ne ralentit pas encore. Et **le bateau** de M9 a maintenant ses tuiles d'eau : il lui
   manque son sprite et sa place au port.
 
-### Des feux pour piétons (**ajout**, taille 2) — **en cours** (14 sept. 2026)
+### Des feux pour piétons (**ajout**, taille 2) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « pour les piétons, il faut ajouter des lumières de priorité, et sinon
 ils ne passent pas. »
@@ -2776,6 +2776,40 @@ il s'éteint **avant** que les chars repartent, et c'est ce dégagement qui manq
   aucun piéton ne reste bloqué plus de N secondes à un passage sans feu ; et le nombre de
   poteaux reste dans le budget de décor et de paquet — un feu par bout de traverse, pas un par
   tuile.
+
+**Livré le 14 sept. 2026.** Le correctif d'abord, l'affichage ensuite — c'est l'ordre qui
+compte : un feu qui montre la mauvaise chose est pire que pas de feu.
+
+- ⚠️ **Le temps était faux, et ça se mesure : 240 images sur 960.** `!feuVert(...)` est vrai
+  pendant l'orange, donc un piéton s'engageait pendant tout l'orange des deux sens.
+  `Monde.feuPieton()` rend maintenant trois états — **blanc** (on s'engage), **dégage** (on
+  finit, on ne part plus), **rouge** — et `traverseeSure` n'accepte que le blanc. Le
+  dégagement laisse finir ceux qui sont déjà engagés : on ne teste qu'à **l'entrée** du
+  passage.
+- **Le dégagement vaut 120 images**, l'orange 60 : **180 images** séparent la dernière image
+  blanche du premier char qui roule. Deux secondes pour franchir deux tuiles à 0,45 px par
+  image — il en faut 71. ⚠️ Sans ce temps-là, celui qui s'engage à la dernière image se fait
+  cueillir par le premier char du vert suivant, et **c'est le jeu qui a l'air injuste**, pas le
+  piéton qui a l'air imprudent.
+- **351 poteaux**, posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par
+  tuile — et refusés partout où le trottoir est déjà pris (496 possibles, 145 écartés). ⚠️ Et
+  **le sens du passage voyage avec le poteau** : sans lui, le navigateur devrait redeviner à
+  quel feu chaque poteau obéit, et il se tromperait une fois sur deux.
+- ⚠️ **Les feux des chars se devinent depuis la boîte du croisement ; ceux des piétons, non.**
+  Une traverse ne tombe pas toujours où l'on croit — c'est la carte qui sait où elle est.
+- **Ça se lit par la couleur et la forme** : un boîtier plus petit que celui des autos (six
+  pixels sur dix-huit — trois cent cinquante fois la taille du grand mangerait la rue), le
+  **blanc qui marche**, l'**orange qui arrête**. Et l'orange du dégagement **clignote** : fixe,
+  il se lit « attends » ; qui bat, il se lit « finis, mais ne pars plus ».
+- ⚠️ **Aucun état à garder** : comme `feuVert`, `feuPieton` est une pure fonction de `B.t` et
+  du décalage du croisement. Trois cent cinquante poteaux ne coûtent donc rien de plus qu'un.
+- ⚠️ **Le juge du cycle a failli mentir** : il cherchait le prochain vert **en avant** dans une
+  fenêtre qui commence à une phase quelconque, et la dernière image blanche tombe souvent
+  après le dernier vert de la fenêtre. Il tourne maintenant **en rond** — sans quoi il aurait
+  dit « pas de dégagement » pour un dégagement parfait.
+- **Ce qui reste ouvert** : la traverse elle-même ne s'éclaire pas. Les tuiles de passage sont
+  **cuites dans le morceau** de 256 px, et les animer voudrait dire repeindre par-dessus à
+  chaque image — c'est un choix de budget, pas de goût, et il se mesure avant.
 
 ### Les terrains de banlieue (**ajout**, taille 2)
 

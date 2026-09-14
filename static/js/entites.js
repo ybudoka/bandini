@@ -1612,7 +1612,11 @@ const Entites = (function () {
     const inter = Monde.intersectionA(tx, ty);
     // Le passage « = » barre une rue est-ouest : les chars y roulent en > <.
     const sensChars = Monde.glyphe(tx, ty) === '=' ? '>' : '^';
-    if (inter && inter.feux) return !Monde.feuVert(inter, sensChars);
+    // ⚠️ `feuPieton`, pas `!feuVert` : le second est vrai pendant l'ORANGE, et
+    // les pietons s'engageaient donc pile quand les chars accelerent pour vider
+    // le croisement. On ne s'engage QUE sur le blanc — le degagement laisse
+    // finir ceux qui sont deja dedans (on ne teste qu'a l'entree du passage).
+    if (inter && inter.feux) return Monde.feuPieton(inter, sensChars) === 'blanc';
     const portee = B.defs.conduite.trafic.priorite_pieton_px;
     return autour(tx * TT + 8, ty * TT + 8, portee, function (q) {
       return q.type === 'vehicule' && q.etat !== 'epave' && Math.abs(q.vitesse) > 0.2;
@@ -2030,6 +2034,7 @@ const Entites = (function () {
       }
       if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
       if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
+      if (e.type === 'feu_pieton') { Vehicules.dessinerFeuPieton(ctx, e, cx, cy); continue; }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);

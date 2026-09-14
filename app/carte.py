@@ -2562,6 +2562,71 @@ class _Chantier:
             poses.append({"numero": len(poses), "x": x, "y": y})
         return poses
 
+    def feux_pietons(self) -> list[dict]:
+        """Un feu a CHAQUE BOUT de chaque traverse, et seulement aux croisements
+        qui ont des feux (quatre bras).
+
+        ⚠️ Un par bout, jamais un par tuile : une traverse fait deux tuiles de
+        large, et huit poteaux par croisement disent deja tout ce qu'il y a a
+        dire. Le piueton qui attend au nord ne voit pas celui du sud — il en
+        faut donc deux, et deux suffisent.
+
+        ⚠️ Et le SENS voyage avec le poteau : « = » barre une rue est-ouest (on
+        la traverse du nord au sud), « : » barre une rue nord-sud. Sans lui, le
+        navigateur devrait redeviner a quel feu chaque poteau obeit, et il se
+        tromperait une fois sur deux — c'est exactement le genre de chose qui
+        se lit une fois, ici, et plus jamais.
+        """
+        aFeux = [i for i in self.intersections if len(i["bras"]) >= 4]
+        boites = set()
+        for inter in aFeux:
+            for y in range(inter["y"] - 3, inter["y"] + inter["h"] + 3):
+                for x in range(inter["x"] - 3, inter["x"] + inter["l"] + 3):
+                    boites.add((x, y))
+        vus: set[tuple[int, int]] = set()
+        feux: list[dict] = []
+        for (x, y) in sorted(boites):
+            if (x, y) in vus or not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+                continue
+            glyphe = self.sol[y][x]
+            if glyphe not in ("=", ":"):
+                continue
+            # Le bloc de traverse, d'un seul tenant.
+            bloc, pile = {(x, y)}, [(x, y)]
+            while pile:
+                cx, cy = pile.pop()
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    nx, ny = cx + dx, cy + dy
+                    if (nx, ny) in bloc or not (0 <= nx < self.largeur and 0 <= ny < self.hauteur):
+                        continue
+                    if self.sol[ny][nx] != glyphe:
+                        continue
+                    bloc.add((nx, ny))
+                    pile.append((nx, ny))
+            vus |= bloc
+            xs = sorted({p[0] for p in bloc})
+            ys = sorted({p[1] for p in bloc})
+            if glyphe == "=":            # on la traverse du nord au sud
+                bouts = [(xs[len(xs) // 2], ys[0] - 1), (xs[len(xs) // 2], ys[-1] + 1)]
+            else:                        # on la traverse d'ouest en est
+                bouts = [(xs[0] - 1, ys[len(ys) // 2]), (xs[-1] + 1, ys[len(ys) // 2])]
+            for bx, by in bouts:
+                if not (0 <= bx < self.largeur and 0 <= by < self.hauteur):
+                    continue
+                # ⚠️ Sur le TROTTOIR, jamais sur la chaussee : un poteau plante
+                # dans la rue se fait faucher a la premiere auto, et il cache la
+                # ligne d'arret.
+                if self.sol[by][bx] != "." or (bx, by) in self.reserve:
+                    continue
+                # ⚠️ Et jamais dans un lampadaire ni sur une borne : `occupe`
+                # est le registre de ce qui tient deja la place, et deux objets
+                # sur la meme tuile, c'est un seul objet qu'on voit mal.
+                if (bx, by) in self.occupe:
+                    continue
+                self.occupe.add((bx, by))
+                feux.append({"x": bx, "y": by, "sens": glyphe})
+        return feux
+
     def bornes(self) -> None:
         for inter in self.intersections:
             if not self.des.chance(0.30):
@@ -2721,6 +2786,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "intersections": chantier.intersections,
         "portes": chantier.portes,
         "lampes": chantier.lampes,
+        "feux_pietons": chantier.feux_pietons(),
         "decor": chantier.decor,
         "rampes": chantier.rampes,
         "devantures": chantier.devantures,

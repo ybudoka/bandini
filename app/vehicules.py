@@ -202,6 +202,14 @@ TRAFIC = {
     "priorite_pieton_px": 70,     # un pieton engage sur le passage : on attend
     "feu_vert_images": 420,
     "feu_orange_images": 60,
+    # ⚠️ LE DEGAGEMENT : le blanc du pieton s'eteint AVANT que les chars
+    # repartent. Un vrai feu pieton ne s'allume pas au rouge — il laisse le
+    # temps de finir la traverse. Sans ce temps-la, celui qui s'engage a la
+    # derniere image se fait cueillir par le premier char du vert suivant, et
+    # c'est le jeu qui a l'air injuste, pas le pieton qui a l'air imprudent.
+    # Deux secondes : la traverse fait deux tuiles, on marche a 0,45 px par
+    # image, il en faut 71 pour la franchir.
+    "feu_pieton_degagement_images": 120,
     "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle
     "oubli_px": 560,
 }

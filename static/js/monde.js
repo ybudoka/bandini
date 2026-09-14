@@ -388,6 +388,36 @@ const Monde = (function () {
     return nordSud === moitie;
   }
 
+  /** Le feu PIETON d'un croisement, pour qui traverse la rue ou les chars
+      vont dans le sens `sens`. Rend 'blanc' (on s'engage), 'degage' (on ne
+      s'engage plus, on finit) ou 'rouge'.
+
+      ⚠️ IL SE TROMPAIT D'UN TEMPS. `traverseeSure` lisait `!feuVert(...)`, qui
+      est vrai pendant l'ORANGE aussi : les pietons s'engageaient exactement
+      quand les chars accelerent pour vider le croisement — le pire moment du
+      cycle. Un feu pieton ne s'allume pas au rouge : il s'eteint AVANT que les
+      chars repartent, et c'est ce degagement qui manquait.
+
+      ⚠️ Aucun etat a garder : comme `feuVert`, c'est une pure fonction de `B.t`
+      et du decalage du croisement. Trois cent cinquante poteaux ne coutent donc
+      rien de plus qu'un. */
+  function feuPieton(inter, sens) {
+    if (!inter || !inter.feux) return 'aucun';
+    const t = B.defs.conduite.trafic;
+    const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
+    const phase = (B.t + inter.decalage) % cycle;
+    const nordSud = sens === '^' || sens === 'v';
+    const moitie = phase < cycle / 2;
+    const dansMoitie = moitie ? phase : phase - cycle / 2;
+    // L'orange, des deux cotes : personne ne s'engage.
+    if (dansMoitie >= t.feu_vert_images) return 'rouge';
+    // Le vert de MA rue : les chars passent, j'attends.
+    if (nordSud === moitie) return 'rouge';
+    // Le vert d'en face : je marche — sauf sur la fin, le degagement.
+    const reste = t.feu_vert_images - dansMoitie;
+    return reste <= t.feu_pieton_degagement_images ? 'degage' : 'blanc';
+  }
+
   function estRampe(tx, ty) {
     const p = carte && carte.legende[glyphe(tx, ty)];
     return !!(p && p.rampe);
@@ -949,7 +979,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
