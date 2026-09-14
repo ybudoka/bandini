@@ -749,6 +749,9 @@ class _Chantier:
         #: gabarits, une dent creuse se refermait sur le devant d'une porte, et
         #: huit tuiles se faisaient boucher a l'autre bout de la carte.
         self.des_cloture = Des(graine ^ 0xC107E)
+        #: Les hommes-sandwichs, meme regle : un solliciteur de plus ne doit pas
+        #: deplacer un paquet cache a l'autre bout de la ville.
+        self.des_reclame = Des(graine ^ 0x5A4D1)
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -2357,7 +2360,7 @@ class _Chantier:
         poses: list[dict] = []
         ecart = 22
         for commerce in magasins.AMBULANTS:
-            candidats = self._places_ambulantes(commerce["sur"])
+            candidats = self._places_ambulantes(commerce["sur"], commerce.get("districts"))
             if not candidats:
                 continue
             for _ in range(commerce["nombre"]):
@@ -2376,11 +2379,18 @@ class _Chantier:
                 poses.append({"slug": commerce["slug"], "x": choisi[0], "y": choisi[1]})
         return poses
 
-    def _places_ambulantes(self, sur: str) -> list[tuple[int, int]]:
-        """Une place est bonne si on peut s'y arreter ET etre servi devant."""
+    def _places_ambulantes(self, sur: str,
+                           districts: tuple[str, ...] | None = None) -> list[tuple[int, int]]:
+        """Une place est bonne si on peut s'y arreter ET etre servi devant.
+
+        `districts` enferme le commerce chez lui : la cabane a fruits de mer
+        ne se pose qu'aux Quais et a La Pointe — c'est le port qu'on mange.
+        """
         places = []
         for y in range(1, self.hauteur - 2):
             for x in range(1, self.largeur - 1):
+                if districts and self.district_en(x, y) not in districts:
+                    continue
                 glyphe = self.sol[y][x]
                 if sur == "trottoir":
                     if glyphe != "." or not marchable(self.sol[y + 1][x]):
@@ -2398,6 +2408,38 @@ class _Chantier:
                     raise ValueError(f"support inconnu : {sur!r}")
                 places.append((x, y))
         return places
+
+    def reclames(self, ambulants: list[dict]) -> list[dict]:
+        """Le poste de chaque homme-sandwich : un bout de trottoir a quelques
+        tuiles du kiosque pour lequel il crie (`magasins.RECLAME`).
+
+        ⚠️ Pas DEVANT le kiosque : un solliciteur qui te coupe la route a la
+        porte du commerce, ce n'est plus de la reclame, c'est un bouchon. Et
+        pas trop loin non plus : le coupon qu'il donne expire, il faut que le
+        kiosque soit a portee de marche. On tire dans les places de trottoir
+        (les memes que les kiosques), dans le meme district, entre `mini` et
+        `maxi` tuiles ; un kiosque sans place ne recrute personne.
+        """
+        mini, maxi = magasins.RECLAME["poste_tuiles"]
+        trottoirs = self._places_ambulantes("trottoir")
+        postes: list[dict] = []
+        for pose in ambulants:
+            commerce = magasins.ambulant(pose["slug"])
+            if not commerce or not commerce.get("reclame"):
+                continue
+            district = self.district_en(pose["x"], pose["y"])
+            candidats = [
+                (x, y) for x, y in trottoirs
+                if mini <= abs(x - pose["x"]) + abs(y - pose["y"]) <= maxi
+                and self.district_en(x, y) == district
+                and (x, y) not in self.occupe and (x, y) not in self.reserve
+            ]
+            if not candidats:
+                continue
+            x, y = candidats[self.des_reclame.suivant() % len(candidats)]
+            postes.append({"commerce": pose["slug"], "x": x, "y": y,
+                           "kiosque": {"x": pose["x"], "y": pose["y"]}})
+        return postes
 
     def paquets(self, nombre: int = 20) -> list[dict]:
         """Vingt paquets caches dans les recoins : ruelles, terrains vagues,
@@ -2545,6 +2587,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # reservee quand ils cherchent leur place.
     chantier.poser_les_rampes()
     ambulants = chantier.ambulants()
+    reclames = chantier.reclames(ambulants)
     paquets = chantier.paquets()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
     # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
@@ -2581,6 +2624,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "graffitis": chantier.graffitis,
         "fourriere": chantier.fourriere,
         "ambulants": ambulants,
+        "reclames": reclames,
         "paquets": paquets,
         "zones": chantier.zones(),
         "points_interet": chantier.points,

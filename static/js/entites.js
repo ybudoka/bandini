@@ -185,6 +185,14 @@ const Entites = (function () {
     // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
     // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
     if (p.metier === 'compagnie') e.poste = { x: x, y: y };
+    // L'homme-sandwich aussi tient un poste — plus large (six tuiles) : un
+    // solliciteur fait les cent pas devant son kiosque, il n'attend pas.
+    if (p.metier === 'reclame') {
+      e.poste = { x: x, y: y };
+      e.posteRayon = (B.defs.reclame && B.defs.reclame.poste_rayon_px) || POSTE_RAYON;
+      e.heures = p.heures || null;
+      e.repos = 0;
+    }
     // Une mere ne sort pas sans son petit : il la suit, et il detale avec elle.
     if (p.accompagne) {
       const petit = creerPieton(x + 10, y + 4, archetype(p.accompagne));
@@ -285,6 +293,43 @@ const Entites = (function () {
       ajouterA(grille, creerPieton(tx * TT + 8, ty * TT + 8, null));
     }
     indexer();
+    naitreLesHommesSandwichs(true);
+    indexer();
+  }
+
+  /** Est-on dans ses heures ? `heures` = [debut, fin] sur la journee ramenee
+      a 0..1, et le creneau peut passer minuit (`pietons.travaille_a`). */
+  function enService(heures) {
+    if (!heures) return true;
+    const h = B.partie ? B.partie.heure : 0.5;
+    return heures[0] < heures[1] ? (h >= heures[0] && h < heures[1]) : (h >= heures[0] || h < heures[1]);
+  }
+
+  /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
+      bulle du joueur. Il nait A SON POSTE et hors champ — sauf au premier
+      instant d'une partie (`dabord`), ou personne ne regarde encore — et il
+      s'oublie comme tout le monde quand on s'eloigne : le poste le refait
+      naitre quand on revient. Le boniment qu'il crie est celui de son kiosque
+      (`ambulants[].reclame`) ; un kiosque qui n'en a pas ne recrute pas. */
+  function naitreLesHommesSandwichs(dabord) {
+    const def = Monde.carte && Monde.carte.def, arch = archetype('homme_sandwich');
+    if (!def || !def.reclames || !arch || !B.joueur || !enService(arch.heures)) return 0;
+    let nes = 0;
+    for (const poste of def.reclames) {
+      const x = poste.x * TT + 8, y = poste.y * TT + 8;
+      if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) continue;
+      if (!dabord && visibleAEcran(x, y, 24)) continue;
+      if (B.entites.some(function (q) { return q.type === 'pieton' && q.reclame === poste && q.vivant; })) continue;
+      if (!placeLibre(x, y)) continue;
+      const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === poste.commerce; });
+      const e = creerPieton(x, y, arch);
+      e.reclame = poste;
+      e.kiosque = poste.commerce;
+      e.boniment = (commerce && commerce.reclame) || '';
+      ajouterA(grille, e);
+      nes++;
+    }
+    return nes;
   }
 
   /** Garde la rue peuplee : on nait hors champ, on s'oublie hors de la bulle. */
@@ -301,6 +346,8 @@ const Entites = (function () {
       if (loin && !e.personnage && !e.mission && !e.commerce && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
       if (e.vivant && !e.metier) vivants++;
     }
+    // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
+    if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone);
     if (vivants >= voulu || B.t % 12 !== 0) return;
@@ -645,7 +692,32 @@ const Entites = (function () {
   const DIRECTIONS = [[1, 0], [0, 1], [-1, 0], [0, -1]];
 
   // Jusqu'ou une fille de la Brume s'ecarte du coin qu'elle tient (3 tuiles).
+  // L'homme-sandwich a le sien, plus large, dans `magasins.RECLAME`.
   const POSTE_RAYON = 48;
+
+  /** L'homme-sandwich te repere et vient te solliciter — sauf s'il vient de
+      le faire (`repos`), que tu es au volant, qu'on te parle deja, ou qu'un
+      mur vous separe. Il regarde une image sur dix : c'est un solliciteur,
+      pas un radar. Et passe ses heures, il rentre : la pancarte reste au
+      kiosque, personne ne crie « approchez » a minuit. */
+  function solliciter(e) {
+    const r = B.defs.reclame, j = B.joueur;
+    if (!enService(e.heures)) { e.etat = 'entre'; e.minuterie = 40; e.face = 'haut'; return; }
+    if (e.repos > 0) { e.repos--; return; }
+    if (e.t % 10 !== 0 || !r || !j || !j.vivant || j.dansVehicule || B.cinema || joueurCourt()) return;
+    const portee = r.rayon_tuiles * TT;
+    if (dist2(e.x, e.y, j.x, j.y) >= portee * portee || !Monde.ligneLibre(e.x, e.y, j.x, j.y)) return;
+    e.etat = 'aborde'; e.butT = 0; e.abordeT = 0;
+  }
+
+  /** ⚠️ Le solliciteur n'aborde que celui qui FLANE. Quelqu'un qui court a
+      autre chose a faire — et un homme-sandwich qui se jette dans les jambes
+      d'un joueur au sprint le ralentissait de dix pour cent (un juge de cafe
+      l'a mesure) : la police le rattrapait a cause d'une pancarte. */
+  function joueurCourt() {
+    const j = B.joueur;
+    return !!j && Math.hypot(j.vx, j.vy) > B.defs.recherche.vitesses.joueur_marche + 0.05;
+  }
 
   /** L'indice de DIRECTIONS le plus proche d'un vecteur. */
   function directionVers(dx, dy) {
@@ -697,6 +769,7 @@ const Entites = (function () {
       if (--e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
       return;
     }
+    if (e.metier === 'reclame' && (e.etat === 'flane' || e.etat === 'arret')) solliciter(e);
     if (e.recul > 0) {
       e.recul--;
       deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
@@ -730,6 +803,38 @@ const Entites = (function () {
       e.vx = dx / norme * vitesse;
       e.vy = dy / norme * vitesse;
       if (norme < 18 && e.t % 40 === 0) Combat.frapper(e);
+    } else if (e.etat === 'aborde') {
+      // Le solliciteur vient vers toi, d'un pas decide — jamais en courant :
+      // on doit pouvoir le semer en marchant, sinon c'est une poursuite.
+      const r = B.defs.reclame, j = B.joueur;
+      const dx = j.x - e.x, dy = j.y - e.y, norme = Math.hypot(dx, dy) || 1;
+      // On lache prise : le joueur court, il est loin, un mur ou la chaussee
+      // barre le chemin, ou ca fait quatre secondes qu'on n'arrive pas.
+      const ax = Math.floor((e.x + dx / norme * (e.r + 4)) / TT), ay = Math.floor((e.y + dy / norme * (e.r + 4)) / TT);
+      if (!j.vivant || j.dansVehicule || joueurCourt() || norme > r.rayon_tuiles * TT * 1.5
+          || Monde.estChaussee(ax, ay) || ++e.abordeT > 240) {
+        e.etat = 'flane'; e.repos = Math.round(r.repos_images / 4); e.vx = 0; e.vy = 0;
+        return;
+      }
+      if (norme <= r.portee_px) {
+        e.etat = 'boniment'; e.minuterie = r.boniment_images; e.vx = 0; e.vy = 0;
+        regarder(e, dx, dy);
+        bulle(e, e.boniment, { duree: r.boniment_images });
+        Son.Voix.dire('crieur', e.x, e.y);
+        return;
+      }
+      e.vx = dx / norme * vitesse;
+      e.vy = dy / norme * vitesse;
+    } else if (e.etat === 'boniment') {
+      // Il te tient le crachoir : plante devant toi, la pancarte en avant. Tu
+      // t'eloignes, il se tait ; il a fini, il te laisse la paix un moment.
+      const r = B.defs.reclame, j = B.joueur, portee = r.rayon_tuiles * TT;
+      e.vx = 0; e.vy = 0;
+      regarder(e, j.x - e.x, j.y - e.y);
+      if (--e.minuterie <= 0 || dist2(e.x, e.y, j.x, j.y) > portee * portee) {
+        e.etat = 'flane'; e.repos = r.repos_images; taire(e);
+      }
+      return;
     } else if (e.etat === 'arret') {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
@@ -759,8 +864,11 @@ const Entites = (function () {
         if (e.butT-- <= 0) {
           // Celle qui tient un poste (la Brume) s'arrete deux fois plus
           // souvent, et repart vers son lampadaire des qu'elle s'en eloigne.
-          const rentre = e.poste && dist2(e.x, e.y, e.poste.x, e.poste.y) > POSTE_RAYON * POSTE_RAYON;
-          if (!rentre && B.rng() < (e.poste ? 0.65 : 0.3)) {
+          const rayonPoste = e.posteRayon || POSTE_RAYON;
+          const rentre = e.poste && dist2(e.x, e.y, e.poste.x, e.poste.y) > rayonPoste * rayonPoste;
+          // L'homme-sandwich, lui, marche plus qu'il n'attend : une pancarte
+          // qui bouge se voit de plus loin qu'une pancarte plantee.
+          if (!rentre && B.rng() < (e.poste ? (e.metier === 'reclame' ? 0.3 : 0.65) : 0.3)) {
             e.etat = 'arret';
             e.minuterie = 50 + Math.floor(B.rng() * 160);
             e.butT = e.poste ? 30 : 90;
@@ -1306,6 +1414,7 @@ const Entites = (function () {
     peuplerInterieur,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,
+    naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     enjamber, majEnjambe, clotureDevant, reglesCloture,

@@ -133,6 +133,10 @@ COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
         ("CANTINE", "bouffe"), ("MOTEURS MARINS", "marine"),
         ("CHANTIER NAVAL", "marine"), ("GLACE ET SEL", "marine"),
         ("POISSON FRAIS", "marine"), ("FUMOIR", "marine"),
+        # Les fruits de mer : ce que le port vend quand le poisson est parti.
+        ("FRUITS DE MER", "marine"), ("HOMARD VIVANT", "marine"),
+        ("CREVETTES", "marine"), ("HUITRES ET CIE", "marine"),
+        ("CRABE DES NEIGES", "marine"), ("MOULES ET FRITES", "bouffe"),
         ("VOILERIE", "marine"), ("ACCASTILLAGE", "marine"),
         ("CAPITAINERIE", "marine"), ("LOCATION CHALOUPE", "marine"),
         ("DOUANES", "service"), ("BUANDERIE", "service"),
@@ -151,6 +155,7 @@ COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
         ("SALLE DE JEUX", "nuit"), ("ARTISANAT", "artisan"),
         ("PECHE ET CHASSE", "commerce"), ("PLANCHES", "commerce"),
         ("PHOTO SOUVENIR", "service"), ("CHALOUPES", "marine"),
+        ("FRUITS DE MER", "marine"), ("CABANE A HOMARD", "marine"),
     ),
 }
 

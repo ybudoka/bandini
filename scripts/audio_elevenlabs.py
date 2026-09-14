@@ -380,7 +380,7 @@ def main() -> int:
             cible = audio.chemin_voix(ligne)
             if cible.exists():
                 cible.unlink()
-            reponse = client.appeler("elevenlabs_text_to_speech", {
+            demande = {
                 "text": ligne["texte"],
                 "voice": ligne["voix"],
                 "model_id": "eleven_multilingual_v2",
@@ -388,7 +388,14 @@ def main() -> int:
                 "output_format": audio.FORMAT_HISTOIRE if ligne.get("histoire") else FORMAT,
                 "output_dir": dossier,
                 "nom": nom[:-4],
-            })
+            }
+            # Le rendu d'une replique qui le demande (le crieur : plus de style,
+            # moins de stabilite) — voir `audio.Voix`.
+            if ligne.get("style") is not None:
+                demande["style"] = ligne["style"]
+            if ligne.get("stabilite") is not None:
+                demande["stability"] = ligne["stabilite"]
+            reponse = client.appeler("elevenlabs_text_to_speech", demande)
             if reponse.get("ok"):
                 faits += 1
                 print(f"  ✓ {nom:>22}  {reponse['octets']:>7} octets  ({reponse.get('voix')})")

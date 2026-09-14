@@ -136,6 +136,54 @@ SPRITES.racoleuse = {
   },
 };
 
+/* L'homme-sandwich : 14 x 16, deux pixels plus large que tout le monde, et
+   c'est la pancarte qui les prend. Meme lecon que la fille de la Brume : a
+   douze pixels de large, une couleur ne distingue personne — un CONTOUR, oui.
+   La pancarte deborde des epaules, elle cache les bras et le haut des jambes,
+   elle porte une bande rouge et deux lignes d'ecriture qu'on ne lit pas mais
+   qu'on reconnait. De cote, c'est un « A » de deux planches qui l'encadre.
+
+   Meme alphabet que `joueur` : `c` est la PANCARTE (pas un chandail — le
+   catalogue lui donne un creme), `p` le pantalon, `h`, `s`, `b` comme
+   d'habitude ; `r` la bande rouge et `d` l'encre sont a lui et ne se
+   troquent pas. Pas de pose de coup : il crie, il ne frappe pas ; `couche`
+   est celle du joueur, un corps par terre est un corps par terre. */
+SPRITES.homme_sandwich = {
+  w: 14, h: 16, ancre: [7, 15],
+  pal: { k: '#101018', s: '#e8b088', h: '#4a3320', c: '#f4ead2', p: '#4a4a5a', o: '#ffffff', b: '#3a2a1a', r: '#c0392b', d: '#1a1a22' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kppk.kppk..', '...kbbk.kbbk..', '...kkkk.kkkk..'],
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kppk..kpk..', '...kbbk..kbk..', '...kkkk..kk...'],
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kpk..kppk..', '...kbk..kbbk..', '...kk..kkkk...'],
+    ],
+    haut: [
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kppk.kppk..', '...kbbk.kbbk..', '...kkkk.kkkk..'],
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kppk..kpk..', '...kbbk..kbk..', '...kkkk..kk...'],
+      ['.....kkkk.....', '....khhhhk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '.kkkkkkkkkkkk.',
+       '.krrrrrrrrrrk.', '.kcdcddcdcdck.', '.kccdcdccdcck.', '.kcccccccccck.', '.kkkkkkkkkkkk.', '...kpk..kppk..', '...kbk..kbbk..', '...kk..kkkk...'],
+    ],
+    cote: [
+      ['.....kkkk.....', '....khhhhk....', '....khhhhhk...', '....khssosk...', '....khssssk...', '....khsssk....', '.....kssk.....', '..kkkkkkkkkk..',
+       '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '....kpkkpk....', '....kbk.kbk...', '....kkk.kkk...'],
+      ['.....kkkk.....', '....khhhhk....', '....khhhhhk...', '....khssosk...', '....khssssk...', '....khsssk....', '.....kssk.....', '..kkkkkkkkkk..',
+       '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '...kpk..kpk...', '...kbk..kbk...', '...kkk..kkk...'],
+      ['.....kkkk.....', '....khhhhk....', '....khhhhhk...', '....khssosk...', '....khssssk...', '....khsssk....', '.....kssk.....', '..kkkkkkkkkk..',
+       '..krkcccckrk..', '..kckcckckck..', '..kckcckskck..', '..kckppppkck..', '..kkkkkkkkkk..', '.....kppk.....', '.....kbbk.....', '.....kkkk.....'],
+    ],
+    couche: [
+      ['..............', '..............', '..............', '..............', '..............', '..............', '..............',
+       '...kkkkkk.....', '..kpppppkkkk..', '.kppppppccccs.', '.kppppppcccck.', '..kpppppkccsk.', '...kbbkk.kkk..', '...kkk........', '..............', '..............'],
+    ],
+  },
+};
+
 /* Les vehicules, vus de dessus, l'AVANT A DROITE (angle 0 = est). Un seul
    dessin par type : l'atlas le fait tourner en 32 caps a la cuisson. `c` est
    la carrosserie (echangee par couleur), `x`/`y` les accents de toit (enseigne
@@ -1572,6 +1620,27 @@ const DECORS = {
     // ⚠️ Des lettres NOIRES : en rouge sur le creme, a 3 px de large, le mot
     // ne se lisait plus a l'echelle du jeu. Le rouge, c'est l'auvent qui le porte.
     Atlas.texte(ctx, 'POUTINE', 4, 1, '#101018', 1);                     // 7 lettres = 27 px, pile dans l'enseigne
+  } },
+  // La cabane a fruits de mer : un toit de toles rayees sur deux poteaux, un
+  // comptoir de planches avec la glace et ce qu'il y a dessus (deux homards,
+  // des crevettes), et l'enseigne au pied. ⚠️ Le toit s'arrete a la rangee 3 :
+  // le marchand a les pieds 11 px au-dessus de l'ancre (`creerAmbulants`),
+  // ses yeux tombent donc a la rangee 5 — un toit plus bas les cachait, et on
+  // se faisait servir par un chapeau. Le comptoir, lui, couvre ses jambes.
+  cabane_fruits_de_mer: { w: 30, h: 28, ancre: [15, 27], r: 11, sol: [13, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#1d666d'; ctx.fillRect(0, 0, 30, 4);                                   // le toit
+    ctx.fillStyle = '#c2f0ea'; for (let x = 2; x < 30; x += 6) ctx.fillRect(x, 0, 3, 4);     // ses rayures
+    ctx.fillStyle = '#14454a'; ctx.fillRect(0, 4, 30, 1);
+    ctx.fillStyle = '#6b4520'; ctx.fillRect(1, 5, 2, 9); ctx.fillRect(27, 5, 2, 9);           // les poteaux
+    ctx.fillStyle = '#8a5a2c'; ctx.fillRect(1, 14, 28, 8);                                   // le comptoir
+    ctx.fillStyle = '#6b4520'; ctx.fillRect(1, 14, 28, 1); ctx.fillRect(1, 21, 28, 1);
+    ctx.fillStyle = '#dff6f4'; ctx.fillRect(3, 15, 24, 5);                                   // le lit de glace
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 16, 6, 3); ctx.fillRect(19, 16, 6, 3);         // deux homards
+    ctx.fillStyle = '#7a2420'; ctx.fillRect(5, 16, 1, 3); ctx.fillRect(24, 16, 1, 3);         // leurs pinces
+    ctx.fillStyle = '#f3a683'; ctx.fillRect(13, 16, 4, 2);                                   // les crevettes
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 22, 26, 6);                                   // l'enseigne
+    ctx.fillStyle = '#14454a'; ctx.fillRect(2, 22, 26, 1);
+    Atlas.texte(ctx, 'HOMARD', 4, 23, '#7a2420', 1);                                         // 6 lettres = 23 px
   } },
   feu: { w: 10, h: 24, ancre: [5, 23], r: 2, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee

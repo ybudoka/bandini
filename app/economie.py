@@ -89,6 +89,58 @@ TARIFS = {
     "friture": 14,
     "friture_pv": 35,
     "friture_souffle": 55,
+    # Les fruits de mer (la cabane du port et le comptoir des poissonneries).
+    # ⚠️ Meme regle que le reste du trottoir : au dollar, jamais mieux que le
+    # hot-dog (6,5 points par dollar) — la guedille vaut 6,25, les crevettes
+    # 6,25. On les achete parce qu'on est aux Quais, pas parce que c'est
+    # une aubaine. Et c'est sur EUX que porte le coupon de l'homme-sandwich
+    # (`magasins.RECLAME`) : a moitie prix, ils deviennent la meilleure bouchee
+    # de la ville — pour une fois, et a trois minutes de marche.
+    "guedille": 16,
+    "guedille_pv": 40,
+    "guedille_souffle": 60,
+    "crevettes": 12,
+    "crevettes_pv": 30,
+    "crevettes_souffle": 45,
+    "chaudree": 10,
+    "chaudree_pv": 28,
+    "chaudree_souffle": 35,
+    # De quoi manger et boire PARTOUT ou ca a du sens (demande de Martin) : la
+    # soupe et le pate chinois du casse-croute, la pointe de tarte, la liqueur
+    # de la glaciere a cote de la caisse (meme chez le quincaillier), les
+    # chips et la barre de chocolat du depanneur, les ailes et le shooter du
+    # bar, le jus d'orange de la pharmacie. Toujours la meme borne : au dollar,
+    # jamais mieux que le hot-dog (6,5) — un juge fait la division.
+    "soupe": 7,
+    "soupe_pv": 20,
+    "soupe_souffle": 25,
+    "pate_chinois": 12,
+    "pate_chinois_pv": 35,
+    "pate_chinois_souffle": 40,
+    "tarte": 5,
+    "tarte_pv": 12,
+    "tarte_souffle": 18,
+    "liqueur": 3,
+    "liqueur_pv": 4,
+    "liqueur_souffle": 15,
+    "chips": 3,
+    "chips_pv": 6,
+    "chips_souffle": 12,
+    "chocolat": 2,
+    "chocolat_pv": 4,
+    "chocolat_souffle": 8,
+    "beigne": 3,
+    "beigne_pv": 8,
+    "beigne_souffle": 10,
+    "ailes": 12,
+    "ailes_pv": 30,
+    "ailes_souffle": 45,
+    "shooter": 5,
+    "shooter_pv": 3,
+    "shooter_souffle": 25,
+    "jus": 4,
+    "jus_pv": 12,
+    "jus_souffle": 12,
     "pilules": 20,
     "pilules_pv": 50,
     "coupe": 12,

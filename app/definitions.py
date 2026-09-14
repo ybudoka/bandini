@@ -41,6 +41,7 @@ def assembler() -> dict:
         "marche_noir": magasins.MARCHE_NOIR,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,
+        "reclame": magasins.RECLAME,
         "comptoirs": magasins.COMPTOIRS,
         "tenues": magasins.TENUES,
         "coiffures": magasins.COIFFURES,

@@ -38,6 +38,12 @@ def test_les_ambulants_pointent_vers_des_tarifs_qui_existent():
         assert commerce["effet"] in (None, *magasins.EFFETS)
         assert commerce["sur"] in ("trottoir", "stationnement")
         assert 1 <= commerce["nombre"] <= 6
+        if commerce["districts"]:
+            from app import carte
+            connus = {d["slug"] for d in carte.DISTRICTS}
+            assert set(commerce["districts"]) <= connus, commerce["slug"]
+        if commerce["reclame"]:
+            assert len(commerce["reclame"]) <= 24, "un boniment tient dans une bulle"
         if commerce["heures"]:
             debut, fin = commerce["heures"]
             assert 0 <= debut < 1 and 0 <= fin < 1

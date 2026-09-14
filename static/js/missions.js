@@ -100,9 +100,10 @@ const Missions = (function () {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
     if (!ouvert(commerce)) { Hud.message('FERME'); Son.SFX.erreur(); return true; }
-    const prix = Math.round(B.defs.economie.tarifs[commerce.tarif] * rabais('kiosque'));
+    const prix = prixAmbulant(j, commerce);
     if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
     payer(prix, commerce.nom.toUpperCase());
+    if (j.coupons && j.coupons[commerce.slug]) delete j.coupons[commerce.slug];   // le coupon ne sert qu'une fois
     soigner(j, commerce.gain_pv ? B.defs.economie.tarifs[commerce.gain_pv] : 0);
     nourrir(j, commerce.gain_souffle ? B.defs.economie.tarifs[commerce.gain_souffle] : 0);
     if (commerce.effet === 'cafe') cafeine(j);
@@ -113,6 +114,45 @@ const Missions = (function () {
 
   /** Un rabais gagne dans l'histoire (1 = plein prix). */
   function rabais(cle) { return (B.partie && B.partie.rabais && B.partie.rabais[cle]) || 1; }
+
+  // --- L'homme-sandwich et son coupon --------------------------------------------
+
+  /** Ce que vaut le coupon d'un homme-sandwich sur ce kiosque (1 = pas de
+      coupon). Il vit sur le JOUEUR, comme la cafeine : trois minutes ne
+      meritent pas une sauvegarde, et il ne survit pas plus qu'elle. */
+  function coupon(j, slug) {
+    return (j && j.coupons && j.coupons[slug] > 0 && B.defs.reclame) ? B.defs.reclame.rabais : 1;
+  }
+
+  /** Le prix d'une bouchee au kiosque : le tarif, le rabais de l'histoire,
+      et le coupon s'il y en a un — le meme calcul pour l'invite et l'achat,
+      pour que le HUD ne promette jamais un prix que la caisse ne fait pas. */
+  function prixAmbulant(j, commerce) {
+    return Math.round(B.defs.economie.tarifs[commerce.tarif] * rabais('kiosque') * coupon(j, commerce.slug));
+  }
+
+  /** L'homme-sandwich a portee de main : celui qui te parle, ou qui passe. */
+  function crieurSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
+      return e.metier === 'reclame' && e.vivant && e.etat !== 'fuit' && e.etat !== 'assomme' && e.etat !== 'temoin';
+    }) || null;
+  }
+
+  /** Prendre le coupon : la prochaine bouchee a SON kiosque a `reclame.rabais`
+      fois le prix, une fois, et il expire (`reclame.coupon_s`). Lui, une fois
+      son papier donne, te laisse la paix un moment. */
+  function prendreCoupon(j, crieur) {
+    const r = B.defs.reclame, c = commerceDe(crieur.kiosque);
+    if (!r || !c) return false;
+    j.coupons = j.coupons || {};
+    if (j.coupons[c.slug] > 0) { Hud.message('T’AS DÉJÀ LE COUPON'); return true; }
+    j.coupons[c.slug] = Math.round(r.coupon_s * 60);
+    Hud.message('COUPON — ' + c.nom.toUpperCase());
+    Son.SFX.ramasse();
+    crieur.etat = 'flane'; crieur.repos = r.repos_images; crieur.minuterie = 0;
+    Entites.taire(crieur);
+    return true;
+  }
 
   /** La compagnie d'une fille de la Brume : ca se paie, et ca ne se montre pas. */
   function compagnie(j, fille) {
@@ -150,6 +190,8 @@ const Missions = (function () {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
     if (temoin) return Police.acheterLeSilence(j, temoin);
+    const crieur = crieurSousLaMain(j);
+    if (crieur) return prendreCoupon(j, crieur);
     const fille = filleSousLaMain(j);
     if (fille) return compagnie(j, fille);
     return false;
@@ -714,11 +756,14 @@ const Missions = (function () {
       case 'acheter':
         return piece.slug === 'armurerie' ? menuArmurerie() : menuVetements();
       case 'hotdog':
-        items.push({ libelle: 'HOT-DOG', detail: tarifs.hotdog + ' $ / +' + tarifs.hotdog_pv + ' PV +' + tarifs.hotdog_souffle + ' SOUFFLE',
-                     actif: p.argent >= tarifs.hotdog,
-                     faire: function () { payer(tarifs.hotdog, 'HOT-DOG'); soigner(B.joueur, tarifs.hotdog_pv); nourrir(B.joueur, tarifs.hotdog_souffle); Son.SFX.argent(); return false; } });
-        // Un casse-croute sert le cafe : sinon la roulotte du trottoir est le
-        // seul endroit du jeu ou courir plus longtemps s'achete, et elle ferme.
+        // Le casse-croute : le hot-dog, la poutine, la soupe, la liqueur — et
+        // le cafe, sinon la roulotte du trottoir est le seul endroit du jeu ou
+        // courir plus longtemps s'achete, et elle ferme.
+        [['HOT-DOG', 'hotdog'], ['POUTINE', 'poutine'], ['SOUPE AUX POIS', 'soupe'], ['LIQUEUR', 'liqueur']].forEach(function (d) {
+          items.push({ libelle: d[0], detail: tarifs[d[1]] + ' $ / +' + tarifs[d[1] + '_pv'] + ' PV +' + tarifs[d[1] + '_souffle'] + ' SOUFFLE',
+                       actif: p.argent >= tarifs[d[1]],
+                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); Son.SFX.argent(); return false; } });
+        });
         items.push({ libelle: 'CAFÉ', detail: tarifs.cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
                      actif: p.argent >= tarifs.cafe,
                      faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); Son.SFX.argent(); return false; } });
@@ -1142,11 +1187,18 @@ const Missions = (function () {
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) { B.invite = 'DÉFI'; return; }
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
-    if (etal) { const c = commerceDe(etal.slug); B.invite = c ? c.nom.toUpperCase() + ' — ' + Math.round(B.defs.economie.tarifs[c.tarif] * rabais('kiosque')) + ' $' : 'ACHETER'; return; }
+    if (etal) {
+      const c = commerceDe(etal.slug);
+      B.invite = c ? c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $' + (coupon(j, c.slug) < 1 ? ' (COUPON)' : '') : 'ACHETER';
+      return;
+    }
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
     if (temoin) { B.invite = 'ACHETER SON SILENCE — ' + B.defs.economie.tarifs.silence_temoin + ' $'; return; }
+    // L'homme-sandwich : l'invite nomme le kiosque pour lequel il crie.
+    const crieur = crieurSousLaMain(j);
+    if (crieur) { const c = commerceDe(crieur.kiosque); B.invite = 'PRENDRE LE COUPON' + (c ? ' — ' + c.nom.toUpperCase() : ''); return; }
     // ⚠️ Meme ordre que `interagir` : elle passe avant l'objet par terre,
     // sinon l'invite annoncerait un ramassage et ACTION ferait autre chose.
     // C'est aussi la derniere preuve qu'on a devant soi une fille de la
@@ -1192,6 +1244,10 @@ const Missions = (function () {
     // Le cafe est une minuterie, pas une depense : il s'ecoule aussi au volant
     // et dans une piece, la ou `majJoueur` ne passe pas.
     if (B.joueur && B.joueur.cafeine > 0) B.joueur.cafeine--;
+    // Les coupons des hommes-sandwichs expirent pareil : au volant aussi.
+    if (B.joueur && B.joueur.coupons) {
+      for (const slug in B.joueur.coupons) if (--B.joueur.coupons[slug] <= 0) delete B.joueur.coupons[slug];
+    }
     boulot.maj();
     majFourriere();
     majInvite(B.joueur);
@@ -1205,6 +1261,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
+           coupon, prixAmbulant, crieurSousLaMain, prendreCoupon,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };

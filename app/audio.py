@@ -332,12 +332,17 @@ AMBIANCES: list[Radio] = [
        "no drums, no vocals, seamless loop", duree_s=60, volume=0.3),
 ]
 
-class Voix(TypedDict):
+class Voix(TypedDict, total=False):
     slug: str
     texte: str
     genre: str
     voix: str
     volume: float
+    #: Le rendu, quand la voix par defaut ne suffit pas : `style` (0 a 1)
+    #: exagere le ton de la voix, `stabilite` (0 a 1) le laisse varier quand
+    #: elle est basse. Absents = les reglages de la voix telle quelle.
+    style: float
+    stabilite: float
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
@@ -346,6 +351,12 @@ class Voix(TypedDict):
 #: jours ») pour les passants, Amelie (accent d'ici, articulation nette) pour
 #: les passantes.
 VOIX_PAR_GENRE = {"homme": "Felix Tabarnak - Confident and Witty", "femme": "Amélie - Young, Confident and Friendly"}
+
+#: ⚠️ Le crieur n'est PAS l'homme de tous les jours : avec Felix, ses cris ne
+#: sonnaient « pas assez vendeur » (retour de Martin, 13 sept. 2026). Leo est
+#: la voix de pub du compte (« enthousiaste, souriante, faite pour les
+#: commerciaux »), poussee au style et laissee libre de varier.
+VOIX_CRIEUR = "Léo - Français québécois"
 
 #: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
 #: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
@@ -358,6 +369,12 @@ VOIX: list[Voix] = [
     {"slug": "excusez_f", "texte": "Excusez-moi.", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
     {"slug": "belle_journee_f", "texte": "Belle journée, hein?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
     {"slug": "ca_va_f", "texte": "Ça va, toi?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    # Le crieur : ce que lance l'homme-sandwich quand il vient vers toi
+    # (`pietons.homme_sandwich`, `magasins.RECLAME`). Un genre a part : un
+    # passant qu'on frole ne crie pas « approchez ».
+    {"slug": "approchez_c", "texte": "Approchez, approchez, venez voir!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    {"slug": "special_c", "texte": "Le spécial du jour, c'est icitte!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    {"slug": "moitie_prix_c", "texte": "Moitié prix, moitié prix, aujourd'hui!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
 ]
 
 
