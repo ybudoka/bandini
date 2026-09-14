@@ -2054,14 +2054,31 @@ def test_la_bagarre_tient_le_budget(banc):
         L.graine(13);
         o.singe(2500, 3, ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'KeyE', 'Tab']);
         const s = L.B.stats;
+        let flaneurs = 0, metiers = 0;
+        for (const e of L.B.entites) {
+            if (e.type !== 'pieton' || !e.actif) continue;
+            if (e.metier || e.personnage) metiers++; else flaneurs++;
+        }
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
+                 flaneurs: flaneurs, metiers: metiers,
                  particules: L.B.particules.length, decals: L.B.decals.length,
                  images: s.images, morceaux: s.morceaux,
                  nan: isNaN(L.B.joueur.x) || isNaN(L.B.joueur.y) };
     }""")
     assert r["etat"] in ("jeu", "pause")
     assert not r["nan"]
-    assert r["actifs"] <= 30, f"{r['actifs']} pietons actifs"
+    # ⚠️ LE BUDGET, C'EST CELUI DES FLANEURS, et il vaut `MAX_PIETONS` (22,
+    # entites.js) : c'est le seul nombre que `peupler()` tienne. Le reste de la
+    # figuration ne se regule pas par la foule — les douze vendeurs des kiosques
+    # de la ville naissent avec elle et ne dorment jamais, les six amuseurs, les
+    # trois personnages de l'histoire et les agents de patrouille s'ajoutent
+    # par-dessus. Le juge disait `actifs <= 30` : arithmetiquement intenable
+    # (22 + 12 font deja 34), il ne tenait que tant que le singe ne traversait
+    # pas un quartier dense, et il est tombe le jour ou la ville a bouge d'une
+    # tuile. On mesure donc les deux separement, et on garde un plafond sur le
+    # total pour attraper un emballement.
+    assert r["flaneurs"] <= 22, f"{r['flaneurs']} flaneurs, le budget est de 22"
+    assert r["actifs"] <= 50, f"{r['actifs']} pietons actifs ({r['metiers']} a un metier)"
     assert r["particules"] <= 300 and r["decals"] <= 150
     assert r["images"] <= 160, f"{r['images']} drawImage par image"
 
@@ -2931,26 +2948,38 @@ def test_la_pizza_se_livre_trois_fois_et_refroidit(banc, paquet):
         o.tape('Space', 2);                              // klaxon : on part charge
         // ⚠️ Pas de ramassage : la pizza part tout de suite en route.
         const depart = { slug: b.slug, etape: b.etape, client: !!b.client };
-        const etapes = [];
+        const etapes = [], primesChaudes = [];
         for (let i = 0; i < 5 && b.etape; i++) {
             const dest = b.destination;
             v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0;
+            primesChaudes.push(b.prime(v));
             o.frame(3);
             etapes.push({ faites: b.etapesFaites, encore: !!b.etape });
         }
         const chaud = L.B.partie.argent - argent0;
-        // Et la meme chose, mais froide : on laisse le chrono s'ecouler.
+        // Et LA MEME TOURNEE, mais froide : on laisse le chrono s'ecouler.
+        // ⚠️ La graine ET le point de depart reviennent a l'identique : sans
+        // ca, la deuxieme tournee tire d'AUTRES clients (ils se choisissent
+        // autour de la moto, et elle a fini la premiere tournee a l'autre bout
+        // de la ville). On comparait deux trajets differents — une livraison
+        // froide au loin paie plus qu'une chaude a cote, et le juge disait le
+        // contraire de ce qu'il voulait dire.
+        L.graine(51);
+        v.x = d.x; v.y = d.y; j.x = d.x; j.y = d.y; v.vitesse = 0;
         L.B.partie.argent = argent0;
         o.tape('Space', 2);
         let froid = 0;
+        const primesFroides = [];
         for (let i = 0; i < 5 && b.etape; i++) {
             o.frame(%d);                                  // la pizza refroidit
             const dest = b.destination;
             v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0;
+            primesFroides.push(b.prime(v));
             o.frame(3);
         }
         froid = L.B.partie.argent - argent0;
         return { depart: depart, etapes: etapes, chaud: chaud, froid: froid,
+                 primesChaudes: primesChaudes, primesFroides: primesFroides,
                  faits: b.faits.pizza, taxis: b.faits.taxi };
     }""" % (f["chrono_s"] * 60 + 10))
     assert r["depart"] == {"slug": "pizza", "etape": "route", "client": False}, (
@@ -2970,7 +2999,21 @@ def test_la_pizza_se_livre_trois_fois_et_refroidit(banc, paquet):
     assert r["chaud"] >= (f["base"] + f["prime"]) * f["etapes"], (
         "trois livraisons chaudes rapportent %s, moins que %s" % (r["chaud"], (f["base"] + f["prime"]) * f["etapes"])
     )
-    assert r["froid"] < r["chaud"], "une pizza froide paie autant qu'une chaude"
+    # ⚠️ ON COMPARE LES PRIMES, PAS LES DEUX TOTAUX. Les clients se tirent au
+    # sort autour de la moto : la tournee froide n'est PAS la tournee chaude, et
+    # trois livraisons froides a l'autre bout de la ville paient plus, en
+    # distance, que trois chaudes a cote — le juge disait alors le contraire de
+    # ce qu'il voulait dire. La prime, elle, ne depend que du chrono : elle est
+    # entiere tant que la pizza est chaude, nulle quand elle est froide, et
+    # comme les deux livraisons paient la meme distance, c'est bien elle qui
+    # fait qu'a trajet egal une pizza froide rapporte moins.
+    assert all(prime > 0 for prime in r["primesChaudes"]), (
+        "la pizza chaude ne paie aucune prime : %s" % r["primesChaudes"]
+    )
+    assert r["primesChaudes"][0] <= f["prime"], "la prime depasse la fiche"
+    assert r["primesFroides"] == [0] * f["etapes"], (
+        "une pizza froide garde sa prime : %s" % r["primesFroides"]
+    )
     assert r["froid"] >= f["base"] * f["etapes"], "froide, il reste quand meme la base"
 
 

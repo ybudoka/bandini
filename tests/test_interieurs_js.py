@@ -68,7 +68,10 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.nom && p.interieur !== 'logement'; });
+        // ⚠️ Un logement a trois tailles depuis qu'une piece ne depasse plus
+        // son batiment (`logement_minuscule`, `logement_petit`, `logement`) :
+        // nommer la grande ne suffit plus a les ecarter toutes.
+        const porte = c.portes.find(function (p) { return p.nom && p.interieur.indexOf('logement') < 0; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         L.Missions.majInvite(j);
         const invite = L.B.invite;

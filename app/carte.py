@@ -716,6 +716,12 @@ class _Chantier:
         self.points: list[dict] = []
         self.decor: list[dict] = []
         self.fourriere: dict | None = None
+        #: L'empreinte du dernier batiment pose (voir `_pose_batiment`).
+        self.empreinte_du_batiment = 0
+        #: Les pieces qui ont deja une porte quelque part (voir
+        #: `premiere_du_genre`) : c'est ce qui garantit qu'aucune famille de
+        #: commerce ne reste une enseigne sans interieur.
+        self.genres_ouverts: set[str] = set()
         self.lampes: list[dict] = []
         self.intersections: list[dict] = []
         self.arrets: dict[str, str] = {}
@@ -1561,13 +1567,38 @@ class _Chantier:
         #: maison de banlieue tient sur son terrain, un entrepot sur le sien.
         mini = {"maisons": 4, "banlieue": 7, "hangars": 9, "industriel": 10}.get(genre, 5)
         parcelles: list[tuple[tuple[int, int, int, int], bool]] = []
-        for by, bh in self._bandes(y, hauteur, genre):
+        vedette = -1
+        # ⚠️ LA PARCELLE DU LIEU GARANTI SE TAILLE A LA MESURE DE SA PIECE, et
+        # avant le decoupage — pas apres. Le decoupage tire ses coupes au sort :
+        # lui demander ensuite la plus grosse parcelle, c'est esperer que le
+        # hasard ait fait un terrain de la bonne taille, et le garage Bandini
+        # se retrouvait sur vingt-sept tuiles pour une piece qui en veut cent
+        # vingt. On lui reserve donc SA bande — la plus profonde — et dedans une
+        # largeur calculee ; le reste de la bande se decoupe normalement.
+        bandes = list(self._bandes(y, hauteur, genre))
+        bande_vedette = (max(range(len(bandes)), key=lambda k: bandes[k][1])
+                         if special and bandes else -1)
+        for k, (by, bh) in enumerate(bandes):
             self.rect(x, by, largeur, 2, "x")                      # ruelle derriere
             self.rect(x, by + bh - 2, largeur, 2, devant)           # devant
             zy, zh = by + 2, bh - 4
             if zh < 3:
                 continue
             self.rect(x, zy, largeur, zh, "," if genre in ("maisons", "banlieue") else ".")
+            if k == bande_vedette:
+                besoin = plancher_de_la_suite(special["interieur"])
+                large = min(largeur, max(3, -(-besoin // zh)))
+                vedette = len(parcelles)
+                parcelles.append(((x, zy, large, zh), True))
+                # ⚠️ Et le reste de la bande fait UN SEUL batiment, pas une
+                # rangee de petits. Le decoupage recursif, lui, laissait entre
+                # ses parcelles des cours de deux tuiles que le lieu garanti —
+                # qui n'a plus de marge — refermait : quarante-six tuiles
+                # enclavees a murer sur une graine, quatre sur celle qu'on
+                # livre. Une parcelle, un voisin, pas de cour fermee.
+                if largeur - large >= mini:
+                    parcelles.append(((x + large, zy, largeur - large, zh), True))
+                continue
             for parcelle in self._parcelles(x, zy, largeur, zh, mini):
                 parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
             if genre == "gang":
@@ -1592,14 +1623,14 @@ class _Chantier:
         if genre == "gang" and parcelles and self.district_en(x, y) == "pointe":
             contenus[max(range(len(parcelles)),
                          key=lambda k: parcelles[k][0][2] * parcelles[k][0][3])] = "stationnement"
-        vedette = -1
-        if special and parcelles:
+        if special and parcelles and vedette < 0:
             # ⚠️ Le batiment garanti ne peut pas dependre d'un tirage : sans
             # cette ligne, un ilot de neuf tuiles tire « terrain vague » et
             # l'armurerie n'existe pas. Il prend la plus grosse parcelle qui
             # donne sur la rue, et elle est batie quoi qu'il arrive.
             vedette = max(range(len(parcelles)),
                           key=lambda k: (parcelles[k][1], parcelles[k][0][2] * parcelles[k][0][3]))
+        if vedette >= 0:
             contenus[vedette] = "bati"
 
         batiments: list[tuple[list, bool, int]] = []
@@ -1608,10 +1639,11 @@ class _Chantier:
             contenu = contenus[k]
             if contenu == "bati":
                 facades = self._pose_batiment(px, py, pl, ph, genre, force=(k == vedette))
+                empreinte = self.empreinte_du_batiment
                 if facades and k == vedette:
                     facades_vedette = facades
                 elif facades:
-                    batiments.append((facades, devant_rue, pl * ph))
+                    batiments.append((facades, devant_rue, empreinte))
             elif contenu == "vague":
                 self._terrain_vague(px, py, pl, ph)
             elif contenu == "stationnement":
@@ -1622,16 +1654,30 @@ class _Chantier:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
                 self.poser_devanture(facades_vedette, porte, genre, special)
-        for facades, _, _ in batiments:
+        for facades, _, empreinte in batiments:
             ancre = self._ancre_devanture(facades)
             quoi, enseigne = self._a_quoi_sert(genre, ancre)
             visite = None
-            if quoi == "commerce" and enseigne and self.des_devanture.chance(self.PART_COMMERCE_VISITABLE):
-                visite = {"slug": enseigne[1], "nom": enseigne[0],
-                          "interieur": INTERIEUR_DE_GENRE[enseigne[1]]}
-            elif quoi == "logement" and self.des_devanture.chance(self.PART_LOGEMENT_VISITABLE):
-                visite = {"slug": "logement", "nom": "LOGEMENT",
-                          "interieur": INTERIEUR_LOGEMENT}
+            # ⚠️ La piece se choisit A LA TAILLE DU BATIMENT : la plus grande
+            # qui tienne dans son empreinte, et RIEN du tout si meme la petite
+            # deborde — la porte reste alors condamnee. Les deux cotes ne se
+            # parlaient pas : un bungalow de neuf tuiles ouvrait sur un
+            # seize-par-neuf, seize fois sa surface. Le joueur, lui, compare a
+            # chaque porte.
+            if quoi == "commerce" and enseigne:
+                ouvre = self.des_devanture.chance(self.PART_COMMERCE_VISITABLE)
+                dedans = interieur_qui_tient(BOUTIQUES_PAR_TAILLE[enseigne[1]], empreinte)
+                if self.premiere_du_genre(dedans):
+                    ouvre = True
+                if ouvre and dedans:
+                    visite = {"slug": enseigne[1], "nom": enseigne[0], "interieur": dedans}
+            elif quoi == "logement":
+                ouvre = self.des_devanture.chance(self.PART_LOGEMENT_VISITABLE)
+                dedans = interieur_qui_tient(LOGEMENTS_PAR_TAILLE, empreinte)
+                if self.premiere_du_genre(dedans):
+                    ouvre = True
+                if ouvre and dedans:
+                    visite = {"slug": "logement", "nom": "LOGEMENT", "interieur": dedans}
             porte = self.poser_porte(facades, visite=visite)
             ancre = porte or ancre
             if not ancre:
@@ -1647,6 +1693,22 @@ class _Chantier:
         for _ in range(max(1, largeur // 10)):
             self.poser_decor("poubelle", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, 1))
+
+    def premiere_du_genre(self, interieur: str | None) -> bool:
+        """Cette piece-la n'a encore ouvert NULLE PART : alors celle-ci ouvre.
+
+        ⚠️ Sans cette regle, une famille de commerce peut n'ouvrir aucune porte
+        de toute la ville : il faut qu'un batiment tire cette enseigne-la, qu'il
+        soit assez grand pour la piece, ET qu'il gagne le de — trois chances qui
+        se multiplient, et quatre familles sur dix restaient des couleurs
+        d'enseigne qui ne menent jamais a rien. Le de decide du NOMBRE de portes
+        qui s'ouvrent ; il n'a pas a decider qu'un pan entier de la ville
+        n'existe pas. La premiere qui peut, ouvre.
+        """
+        if not interieur or interieur in self.genres_ouverts:
+            return False
+        self.genres_ouverts.add(interieur)
+        return True
 
     def _a_quoi_sert(self, genre: str, ancre: tuple[int, int] | None) -> tuple[str | None, tuple | None]:
         """Ce batiment-ci : un commerce (avec quelle enseigne), un logement, rien.
@@ -1690,8 +1752,22 @@ class _Chantier:
 
         Les marges sont ce qui cree les ruelles, les cours et les dents creuses
         entre deux immeubles colles.
+
+        ⚠️ Il retient aussi son EMPREINTE (`self.empreinte_du_batiment`) : c'est
+        elle, et pas la parcelle, qu'on compare au plancher de la piece qui
+        s'ouvre derriere. Une parcelle de 6 x 5 peut ne porter qu'un batiment
+        de 3 x 3 une fois ses marges tirees — comparer a la parcelle, c'est se
+        mentir de trois fois la surface.
         """
-        if genre == "maisons":
+        if force:
+            # ⚠️ UN LIEU GARANTI PREND SA PARCELLE EN ENTIER : pas de marge, pas
+            # de cour, pas de coin mordu. Parce qu'une porte impose une taille
+            # minimale a son batiment — le garage Bandini doit rentrer dans le
+            # garage Bandini — et parce que c'est vrai : un poste de police, une
+            # fourriere, une usine occupent leur terrain. Les marges tirees au
+            # sort, elles, font les ruelles entre les immeubles ORDINAIRES.
+            ouest = est = nord = sud = 0
+        elif genre == "maisons":
             ouest, est = self.des.entier(0, 2), self.des.entier(0, 2)
             nord, sud = self.des.entier(0, 3), self.des.entier(0, 2)
         elif genre == "banlieue":
@@ -1726,7 +1802,9 @@ class _Chantier:
         if bl < 3 or bh < 3:
             return None
         tuiles = {(bx + i, by + j) for j in range(bh) for i in range(bl)}
-        if bl >= 9 and bh >= 6 and self.des.chance(0.32):
+        if force:
+            pass
+        elif bl >= 9 and bh >= 6 and self.des.chance(0.32):
             # Un U autour d'une cour ouverte au sud.
             cl = self.des.entier(2, bl - 6)
             cx = bx + self.des.entier(2, bl - cl - 2)
@@ -1737,6 +1815,7 @@ class _Chantier:
             cl, ch = self.des.entier(2, bl // 2), self.des.entier(2, bh // 2)
             coin = bx if self.des.chance(0.5) else bx + bl - cl
             tuiles -= {(coin + i, by + bh - 1 - j) for j in range(ch) for i in range(cl)}
+        self.empreinte_du_batiment = len(tuiles)
         vitrines = {"commerces": 0.5, "maisons": 0.12, "banlieue": 0.10,
                     "hangars": 0.03, "industriel": 0.05, "gang": 0.08}.get(genre, 0.3)
         if force:
@@ -2157,16 +2236,34 @@ class _Chantier:
             return
         if self.district_en(x, y) != "pointe" and not self.des_rampe.chance(PART_RAMPE_STATIONNEMENT):
             return
-        d, taille = allees[len(allees) // 2]
-        milieu = d + taille // 2
-        # ⚠️ L'elan n'a pas a tenir dans le terrain : il continue dans la rue,
-        # et c'est tant mieux — on arrive lance au lieu de partir d'arret.
+        # ⚠️ TOUTES les allees, celle du milieu d'abord. « A tout coup » ne
+        # tenait que tant que l'allee centrale se trouvait convenir : le jour ou
+        # le decoupage a bouge, La Pointe s'est retrouvee sans tremplin et les
+        # Skateux sans terrain — une promesse ecrite trois lignes plus haut,
+        # tenue par chance. On essaie les autres avant d'abandonner.
+        milieu = len(allees) // 2
+        ordre = sorted(range(len(allees)), key=lambda k: abs(k - milieu))
         essais = []
-        for part in (3, 2, 1):
-            le_long = max(1, longueur * part // 4)
-            cx, cy = (x + le_long, y + milieu) if debout else (x + milieu, y + le_long)
-            for sens in (((1, 0), (-1, 0)) if debout else ((0, 1), (0, -1))):
-                essais.append((cx, cy, sens))
+        for k in ordre:
+            d, taille = allees[k]
+            # ⚠️ Une allee fait DEUX tuiles de large, et les deux ne se valent
+            # pas : dans La Pointe, celle du fond longe le grillage du voisin —
+            # aucun elan — pendant que l'autre ouvre sur le gazon. On ne prenait
+            # que le milieu, arrondi vers le fond, et les Skateux perdaient leur
+            # tremplin des que le terrain glissait de cinq tuiles.
+            for centre in sorted(range(d, d + taille), key=lambda v: abs(v - (d + taille // 2))):
+                # ⚠️ L'elan n'a pas a tenir dans le terrain : il continue dans
+                # la rue, et c'est tant mieux — on arrive lance au lieu de
+                # partir d'arret.
+                # ⚠️ Les trois quarts d'abord — c'est la que le tremplin est le
+                # mieux —, PUIS les autres tuiles de l'allee. On ajoute des
+                # recours APRES, jamais avant : un essai glisse en tete
+                # deplacerait des tremplins qui tiennent tres bien.
+                dabord = [max(1, longueur * part // 4) for part in (3, 2, 1)]
+                for le_long in dabord + [m for m in range(longueur - 1, 0, -1) if m not in dabord]:
+                    cx, cy = (x + le_long, y + centre) if debout else (x + centre, y + le_long)
+                    for sens in (((1, 0), (-1, 0)) if debout else ((0, 1), (0, -1))):
+                        essais.append((cx, cy, sens))
         self.proposer_rampe(essais)
 
     # --- Parc, place, port --------------------------------------------------
@@ -2773,157 +2870,143 @@ _PIECES: tuple[dict, ...] = (
     # Le terminus : c'est ici qu'on debarque au premier matin. Deux rangees de
     # bancs, la consigne derriere le guichet, et un comptoir qui sert le cafe.
     _piece("terminus", "Terminus Baie-des-Brumes", sol="u", plan="""
-BBBBWWWWWWWBBBBBB
-Bn    kkk      nB
-B  ccccccc      B
-B               B
-B hhhhh   hhhhh B
-B               B
-B hhhhh   hhhhh B
-B               B
-Bn   aa        nB
-BBBBBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 5, 3, genre="service"),),
-     gens=_gens(("commis", 5, 1), ("client", 12, 5), ("client", 3, 7))),
+BBBWWWWWBBB
+Bn  kkk  nB
+B cccccc  B
+B         B
+B hhh hhh B
+B         B
+B hhh hhh B
+BBBWWDWWBBB
+""", points=(_pt("emplettes", 4, 2, genre="service"),),
+     gens=_gens(("commis", 3, 1), ("client", 2, 3), ("client", 8, 5))),
 
     # La planque de Rocco : un lit, un coffre, une garde-robe, et de quoi se
     # faire un cafe. C'est petit, c'est a nous, et ca sauve la partie.
     _piece("planque", "La planque de Rocco", porte="maison", plan="""
-BBBBWWWBBBBBBBB
-Bll      k   nB
-Bll      k    B
-B  ah yyy     B
-B  ah yyy   m B
-B     yyy  e  B
-B          e  B
-Bj z       n  B
-BBBBBWWDWWBBBBB
-""", points=(_pt("lit", 2, 2), _pt("coffre", 9, 2), _pt("garde_robe", 11, 6))),
+BBBWWWBBBBB
+Bll   k  nB
+Bll   k  mB
+B ah yyy  B
+B ah yyy  B
+B    yyy eB
+Bj z    n B
+BBBBWWDWWBB
+""", points=(_pt("lit", 2, 2), _pt("coffre", 6, 1), _pt("garde_robe", 9, 5)),
+     gens=()),
 
     # Le garage : deux ponts, un mur d'outils, des pneus empiles.
     _piece("garage", "Garage Rocco Bandini", sol="u", plan="""
-BBBBWWWWWBBBBBBBB
-Beee        mmm B
-B               B
-B   aaa     m   B
-B   aaa         B
-B           e   B
-Bccccc      e   B
-B               B
-Bn             nB
-BBBBBBBWWDWWBBBBB
-""", points=(_pt("vendre", 3, 7), _pt("reparer", 13, 2), _pt("repeindre", 4, 5)),
-     gens=_gens(("commis", 3, 5),)),
+BBBWWWWBBB
+Bee   mm B
+B  aaa   B
+B  aaa   B
+Bccccc   B
+Bn      nB
+BBBBWWDWBB
+""", points=(_pt("vendre", 3, 4), _pt("reparer", 7, 1), _pt("repeindre", 3, 2)),
+     gens=_gens(("commis", 2, 5),)),
 
     # Chez Gus : pas une fenetre, des rateliers pleins, une cible au fond.
     _piece("armurerie", "Chez Gus", plan="""
-BBBBBBBBBBBBBBB
-BeeeeeeeeeeeeeB
-B             B
-B  ccccccccc  B
-B             B
-Bm           kB
-B             B
-Bn           nB
-BBBBBWWDWWBBBBB
-""", points=(_pt("acheter", 6, 4),), gens=_gens(("commis", 6, 2),)),
+BBBBBBBBBBB
+BeeeeeeeeeB
+B         B
+B ccccccc B
+B         B
+Bm       kB
+Bn       nB
+BBBBWWDWWBB
+""", points=(_pt("acheter", 5, 3),), gens=_gens(("commis", 5, 2),)),
 
     # Boutique Rosa : trois portants, une cabine au tapis.
     _piece("vetements", "Boutique Rosa", plan="""
-BBBBWWWWWBBBBBB
-Be e e e e   nB
-Be e e e e    B
-Be e e e e    B
-B             B
-B  ccccc    yyB
-B           yyB
-Bn            B
-BBBBWWDWWBBBBBB
-""", points=(_pt("acheter", 4, 6),), gens=_gens(("commis", 5, 4), ("client", 2, 4))),
+BBBWWWWWBBB
+Be e e   nB
+Be e e   yB
+Be e e   yB
+B         B
+B ccccc   B
+Bn        B
+BBBWWDWWBBB
+""", points=(_pt("acheter", 3, 5),),
+     gens=_gens(("commis", 4, 4), ("client", 2, 4))),
 
     # Le poste : le comptoir, les classeurs, le banc de ceux qui attendent.
     _piece("poste", "Poste de police", sol="u", plan="""
-BBBBWWWWWWBBBBBBB
-Bkkkk       n   B
-B     a h       B
-B     a h       B
-Bcccccccc      nB
-B               B
-B hhhh          B
-B               B
-Bn             nB
-BBBBBBWWDWWBBBBBB
-""", points=(_pt("casier", 4, 5),), gens=_gens(("commis", 3, 3), ("client", 7, 6))),
+BBBWWWWWBBBB
+Bkkkk    n B
+B     a h  B
+B     a h  B
+Bcccccc   nB
+B          B
+B hhhh     B
+Bn        nB
+BBBBWWDWWBBB
+""", points=(_pt("casier", 3, 4),),
+     gens=_gens(("commis", 3, 3), ("client", 7, 6))),
 
     # L'hopital : quatre lits, le carrelage, l'accueil.
     _piece("hopital", "Hôpital de Baie-des-Brumes", sol="u", plan="""
-BBBBWWWWWWWBBBBBB
-Bll  ll  ll  llnB
-Bll  ll  ll  ll B
-B               B
-B  cccccccc     B
-B               B
-B  hhhh   n     B
-B               B
-Bn             nB
-BBBBBBWWDWWBBBBBB
-""", points=(_pt("soigner", 5, 5),), gens=_gens(("commis", 5, 3), ("client", 8, 6))),
+BBBWWWWWBBB
+Bll  ll  nB
+Bll  ll   B
+B         B
+B cccccc  B
+B         B
+B hhh   n B
+BBBBWWDWWBB
+""", points=(_pt("soigner", 3, 4),),
+     gens=_gens(("commis", 3, 3), ("client", 7, 6))),
 
     # Le Brouillard : le bar, les tables, le billard — et Josee au fond.
     _piece("bar", "Bar Le Brouillard", plan="""
-BBBBBBBBBBBBBBBBB
-Bj            e B
-B ccccccccc     B
-B               B
-B  ah  ah  ah   B
-B  ah  ah  ah   B
-B               B
-Baaaa      n  ahB
-Baaaa         y B
-BBBBBWWDWWBBBBBBB
-""", points=(_pt("caisse", 5, 3), _pt("contact", 14, 7)),
-     gens=_gens(("commis", 5, 1), ("client", 6, 4), ("client", 10, 5))),
+BBBBBBBBBBBB
+Bj        eB
+B ccccccc  B
+B          B
+B ah  ah   B
+B ah  ah   B
+B          B
+Baaaa    ahB
+BBBBWWDWWBBB
+""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7)),
+     gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 5))),
 
     # Le casse-croute : la cuisine, les tabourets, les banquettes du fond.
     _piece("casse_croute", "Casse-croûte du Faubourg", sol="u", plan="""
-BBBBBBBBBBBBBBB
-Bz j     eee  B
-B             B
-Bcccccccc     B
-Bhhhhhhhh     B
-B        ah  aB
-B        ah  aB
-Bn            B
-BBBBWWDWWBBBBBB
-""", points=(_pt("hotdog", 4, 5), _pt("sergent", 12, 6)),
-     gens=_gens(("commis", 4, 2), ("client", 2, 6))),
+BBBBBBBBB
+Bzj  ee B
+B       B
+Bccccc aB
+Bhhhhh hB
+Baah    B
+BBWWDWWBB
+""", points=(_pt("hotdog", 3, 3), _pt("sergent", 7, 4)),
+     gens=_gens(("commis", 3, 2), ("client", 6, 4))),
 
     # Le kiosque de Madame Thibodeau : trois pas de large, tout est a portee.
-    _piece("kiosque", "Kiosque de Madame Thibodeau", plan="""
-BBBBBBBBBBB
-Beeeeeee  B
-B        nB
-Bccccccc  B
-B         B
-Bn        B
-BBBWWDWWBBB
-""", points=(_pt("caisse", 3, 4), _pt("journal", 7, 4)),
-     gens=_gens(("commis", 3, 2),)),
+    _piece("kiosque", "Kiosque de Mme Thibodeau", plan="""
+BBBBBB
+Be enB
+Bccc B
+B    B
+BBWDWB
+""", points=(_pt("caisse", 1, 2), _pt("journal", 3, 1)),
+     gens=_gens(("commis", 2, 1),)),
 
     # Chez Ti-Paul : deux allees, les frigos au fond, la caisse a l'entree.
     _piece("depanneur", "Dépanneur Chez Ti-Paul", plan="""
-BBBBBBBBBBBBBBB
-Bjjjj    eee  B
-B             B
-B eeeee  eeee B
-B             B
-B eeeee  eeee B
-B             B
-Bcccccc   n e B
-B             B
-BBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 3, 8, genre="bouffe"), _pt("journal", 12, 8)),
-     gens=_gens(("commis", 3, 6), ("client", 9, 4))),
+BBBBBBBBBBB
+Bjjj  eee B
+B         B
+B eeee eeeB
+B         B
+Bccccc  n B
+B         B
+BBBWWDWWBBB
+""", points=(_pt("emplettes", 3, 5, genre="bouffe"), _pt("journal", 9, 5)),
+     gens=_gens(("commis", 3, 4), ("client", 8, 2))),
 
     # L'Hotel Bandini : le hall, le tapis, et l'escalier vers les chambres.
     _piece("hotel", "Hôtel Bandini", plan="""
@@ -2984,16 +3067,13 @@ BBBBBBWWDWWBBBBBB
 
     # La fourriere : un comptoir, un classeur, et la cour derriere la vitre.
     _piece("fourriere", "Fourrière municipale", sol="u", plan="""
-BBBBWWWWWBBBBB
-Bkkk       n B
-B            B
-B  ccccccc   B
-B            B
-B  hhh       B
-B           nB
-B            B
-BBBBWWDWWBBBBB
-""", points=(_pt("fourriere", 5, 4),), gens=_gens(("commis", 5, 2),)),
+BBBWWWBB
+Bkk   nB
+B      B
+Bcccc  B
+B      B
+BBWWDWBB
+""", points=(_pt("fourriere", 2, 3),), gens=_gens(("commis", 2, 2),)),
 
     # Le phare : rond, etroit, et il sent le diesel.
     _piece("phare", "Le phare de La Pointe", porte="maison", plan="""
@@ -3017,120 +3097,118 @@ BBBWWDWWBBB
 #: pas dans « Boutique ».
 _BOUTIQUES: tuple[dict, ...] = (
     _piece("boutique_bouffe", "L'épicerie", plan="""
-BBBBBBBBBBBBBB
-Bjjj     eee B
-B            B
-B eeee  eeee B
-B            B
-B eeee  eeee B
-B            B
-Bccccc    n  B
-BBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 3, 7, genre="bouffe"),), gens=_gens(("commis", 3, 6),)),
+BBBBBBBBB
+Bjjj eeeB
+B       B
+B eee eeB
+B       B
+Bcccc  nB
+B       B
+BBWWDWWBB
+""", points=(_pt("emplettes", 2, 5, genre="bouffe"),), gens=_gens(("commis", 2, 4),)),
 
     _piece("boutique_service", "Le salon", plan="""
-BBBBWWWWBBBBBB
-Be         n B
-B            B
-B hh  hh  hh B
-B yy  yy  yy B
-B            B
-Bcccc        B
-BBBBWWDWWBBBBB
-""", points=(_pt("salon", 3, 4),), gens=_gens(("commis", 2, 5), ("client", 5, 3))),
+BBBWWWWBB
+Be     nB
+B       B
+B hh hh B
+B yy yy B
+Bcccc   B
+B       B
+BBWWDWWBB
+""", points=(_pt("salon", 2, 4),),
+     gens=_gens(("commis", 5, 5), ("client", 4, 3))),
 
-    _piece("boutique_artisan", "La quincaillerie", plan="""
-BBBBBBBBBBBBBB
-BeeeeeeeeeeeeB
-B            B
-B ee  mm  ee B
-B ee  mm  ee B
-B            B
-Bcccccc    n B
-B            B
-BBBBBWWDWWBBBB
-""", points=(_pt("emplettes", 3, 7, genre="artisan"),), gens=_gens(("commis", 3, 5),)),
+    _piece("boutique_artisan", "L'atelier", plan="""
+BBBBBBBBB
+BeeeeeeeB
+B       B
+B ee mm B
+B       B
+Bccccc nB
+B       B
+BBBWWDWBB
+""", points=(_pt("emplettes", 3, 5, genre="artisan"),), gens=_gens(("commis", 3, 4),)),
 
     _piece("boutique_nuit", "La taverne", plan="""
-BBBBBBBBBBBBBBBB
-Bj            nB
-B ccccccccc    B
-B              B
-B ah  ah  ah   B
-B ah  ah  ah   B
-B          aaaaB
-B ah       aaaaB
-BBBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 4, 3, genre="nuit"),),
-     gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 6))),
+BBBBBBBBB
+Bj     nB
+B ccccc B
+B       B
+B ah ah B
+B ah ah B
+B     aaB
+BBWWDWWBB
+""", points=(_pt("emplettes", 3, 2, genre="nuit"),),
+     gens=_gens(("commis", 3, 1), ("client", 4, 4), ("client", 7, 5))),
 
     _piece("boutique_commerce", "Le magasin", plan="""
-BBBBWWWWWBBBBB
-Be e e e e  nB
-Be e e e e   B
-B            B
-B   cccccc   B
-B            B
-Bn         yyB
-BBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 4, 5, genre="commerce"),), gens=_gens(("commis", 5, 3),)),
+BBBWWWWBB
+Be e e nB
+Be e e  B
+B       B
+B ccccc B
+B       B
+Bn     yB
+BBWWDWWBB
+""", points=(_pt("emplettes", 3, 4, genre="commerce"),), gens=_gens(("commis", 3, 3),)),
 
-    _piece("boutique_marine", "La poissonnerie", sol="u", plan="""
-BBBBBBBBBBBBBB
-Bjjjjjj    e B
-B            B
-Bcccccccc    B
-B            B
-B      a    nB
-B      a     B
-BBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 4, 4, genre="marine"),), gens=_gens(("commis", 4, 2),)),
+    _piece("boutique_marine", "La criée", sol="u", plan="""
+BBBBBBBBB
+Bjjjj  eB
+B       B
+Bccccc  B
+B       B
+B     anB
+B     a B
+BBWWDWWBB
+""", points=(_pt("emplettes", 3, 3, genre="marine"),), gens=_gens(("commis", 3, 2),)),
 
-    _piece("boutique_industrie", "L'atelier", sol="u", plan="""
-BBBBBBBBBBBBBBBB
-Bmmm    mmm   eB
-Bmmm    mmm   eB
-B              B
-B   mmm   mmm  B
-B   mmm   mmm  B
-Bcccc       n  B
-B              B
-BBBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 2, 7, genre="industrie"),), gens=_gens(("commis", 2, 5),)),
+    _piece("boutique_industrie", "La quincaillerie", sol="u", plan="""
+BBBBBBBBB
+Bmmm mmeB
+Bmmm mm B
+B       B
+B mmm   B
+Bcccc  nB
+B       B
+BBBWWDWBB
+""", points=(_pt("emplettes", 2, 5, genre="industrie"),), gens=_gens(("commis", 1, 4),)),
 
     _piece("boutique_sante", "La pharmacie", sol="u", plan="""
-BBBBWWWWWBBBBB
-Beeeeeeeeee nB
-B            B
-B  ee   ee   B
-B            B
-B  cccccc    B
-B          n B
-BBBBWWDWWBBBBB
-""", points=(_pt("emplettes", 4, 6, genre="sante"),),
-     gens=_gens(("commis", 4, 4), ("client", 6, 3))),
+BBBWWWWBB
+BeeeeeenB
+B       B
+B ee ee B
+B       B
+B ccccc B
+B      nB
+BBWWDWWBB
+""", points=(_pt("emplettes", 2, 5, genre="sante"),),
+     gens=_gens(("commis", 3, 4), ("client", 4, 3))),
 
-    _piece("boutique_mode", "La friperie", plan="""
-BBBBWWWWWBBBBBB
-Be e e e e   nB
-Be e e e e    B
-Be e e e e    B
-B             B
-B  ccccc  yy  B
-B         yy  B
-BBBBWWDWWBBBBBB
-""", points=(_pt("emplettes", 3, 6, genre="mode"),), gens=_gens(("commis", 5, 4),)),
+    _piece("boutique_mode", "La boutique", plan="""
+BBBWWWWBB
+Be e e nB
+Be e e  B
+Be e e  B
+B       B
+Bcccc yyB
+B     yyB
+BBWWDWWBB
+""", points=(_pt("emplettes", 2, 5, genre="mode"),), gens=_gens(("commis", 3, 4),)),
 
-    _piece("boutique_savoir", "La librairie", plan="""
-BBBBBBBBBBBBBB
-BeeeeeeeeeeeeB
-B            B
-B eeeeeeeeee B
-B            B
-Bcccc  a h   B
-B          n B
-BBBBBWWDWWBBBB
-""", points=(_pt("journal", 2, 6),), gens=_gens(("commis", 2, 4), ("client", 6, 2))),
+    _piece("boutique_savoir", "Le kiosque à journaux", plan="""
+BBBBBBBBB
+BeeeeeeeB
+B       B
+B eeeee B
+B       B
+Bcccc ahB
+B      nB
+BBBWWDWBB
+""", points=(_pt("journal", 2, 5),),
+     gens=_gens(("commis", 2, 4), ("client", 4, 2))),
 )
 
 #: Le logement d'un plex : celui du bas donne sur la rue, celui du haut se
@@ -3138,32 +3216,134 @@ BBBBBWWDWWBBBB
 #: ici, seulement des tiroirs a fouiller — et une seule fois par adresse.
 _LOGEMENTS: tuple[dict, ...] = (
     _piece("logement", "Un logement", porte="maison", plan="""
-BBBBWWWWWBBBBBBB
-Bz j      k    B
-B             /B
-B  aah        /B
-B  aah    yyy  B
-Bll       yyy  B
-Bll  e    yyy  B
-Bn        m   nB
-BBBBBWWDWWBBBBBB
-""", points=(_pt("fouiller", 10, 1), _pt("escalier", 14, 2, vers="logement_haut")),
-     gens=_gens(("client", 4, 7),)),
+BBBWWWWBBB
+Bll    j B
+Bll      B
+B aah   /B
+B aah  yyB
+Bz    nyyB
+BBBWWDWWBB
+""", points=(_pt("fouiller", 7, 1), _pt("escalier", 8, 3, vers="logement_haut")),
+     gens=_gens(("client", 3, 1),)),
 
     _piece("logement_haut", "Un logement, en haut", porte="maison", plan="""
-BBBWWWWWBBBBBBB
-Bll      ll   B
-Bll      ll   B
-B             B
-B  e   a  e  /B
-B      h     /B
-Bn         n  B
-BBBBBBDBBBBBBBB
-""", points=(_pt("fouiller", 3, 4), _pt("escalier", 13, 5, vers="logement")),
+BBBWWWWBBB
+Bll   ll B
+Bll   ll B
+B        B
+B e a e /B
+Bn      nB
+BBBBBDBBBB
+""", points=(_pt("fouiller", 2, 4), _pt("escalier", 8, 4, vers="logement")),
      gens=()),
 )
 
-INTERIEURS: dict[str, dict] = {p["slug"]: p for p in _PIECES + _BOUTIQUES + _LOGEMENTS}
+#: ⚠️ LES PETITES PIECES. Les 41 interieurs de la ville etaient tous autour de
+#: 14 x 9, et les batiments qui les portent vont de NEUF tuiles a 252 : un
+#: logement de banlieue de 3 x 3 ouvrait sur un 16 x 9, seize fois sa surface.
+#: Les deux cotes ne se parlaient pas — `_pose_batiment` tire ses marges au
+#: sort, `INTERIEURS` declare des pieces ecrites a la main, et personne ne
+#: comparait. Le joueur, lui, compare a chaque porte.
+#:
+#: Il faut donc des pieces PAR TRANCHE, et la porte prend la plus grande QUI
+#: TIENNE (voir `interieur_qui_tient`).
+_PETITES: tuple[dict, ...] = (
+    # ⚠️ LA PLUS PETITE DE TOUTES, et il en faut une : vingt-sept batiments
+    # ordinaires de la ville livree ne font que NEUF tuiles. Sans elle, leurs
+    # portes restaient toutes condamnees et la ville perdait un tiers de ses
+    # entrees. Trois tuiles sur trois, un lit, un poele : c'est une cabane, et
+    # c'est exactement ce qu'on voit du dehors.
+    _piece("logement_minuscule", "Une chambre", porte="maison", plan="""
+BBWBB
+Bl jB
+Bl  B
+B  zB
+BBDBB
+""", points=(_pt("fouiller", 1, 1),), gens=()),
+
+    _piece("boutique_minuscule", "Le comptoir", plan="""
+BBBBB
+Bcc B
+B  nB
+Be  B
+BWDWB
+""", points=(_pt("caisse", 1, 1),), gens=_gens(("commis", 2, 2),)),
+
+    # Un logement d'une piece : le lit, le frigo, la table. C'est tout, et
+    # c'est ce qu'il y a derriere une porte de bungalow.
+    _piece("logement_petit", "Un petit logement", porte="maison", plan="""
+BBBWWWBB
+Bll   jB
+Bll    B
+Ba    nB
+BBBWDWBB
+""", points=(_pt("fouiller", 5, 1),), gens=()),
+
+    # Une boutique d'une allee : un comptoir, une etagere, le commis derriere.
+    _piece("boutique_petite", "Le petit commerce", plan="""
+BBBBBBBBB
+Beeeee  B
+B      nB
+Bccccc  B
+BBBWWDWBB
+""", points=(_pt("caisse", 2, 3),), gens=_gens(("commis", 2, 2),)),
+)
+
+INTERIEURS: dict[str, dict] = {p["slug"]: p for p in _PIECES + _BOUTIQUES + _LOGEMENTS + _PETITES}
+
+
+def plancher_de(piece: dict) -> int:
+    """Les tuiles ou l'on POSE LE PIED dans cette piece, murs deduits.
+
+    ⚠️ On compare les planchers, pas les boites. Une piece de 15 x 10 a 13 x 8
+    tuiles de plancher une fois ses murs deduits ; un batiment de 4 x 3 n'en a
+    douze en tout. Comparer les boites, ou pire la PARCELLE, c'est se mentir de
+    trois fois la surface : c'est le plancher contre l'empreinte qui dit la
+    verite, et c'est lui que le juge mesure.
+    """
+    return max(0, piece["largeur"] - 2) * max(0, piece["hauteur"] - 2)
+
+
+def plancher_de_la_suite(slug: str) -> int:
+    """Le plus grand plancher de la SUITE — la piece et ses etages.
+
+    ⚠️ Une porte ne donne pas sur une piece, elle donne sur tout ce qu'on peut
+    atteindre en la poussant : `logement` a un escalier qui monte vers
+    `logement_haut`, et les deux doivent tenir. C'est la nuance des etages :
+    un batiment de N etages contient N PIECES DE SON EMPREINTE, jamais UNE
+    piece N fois plus grande. C'est le nombre de pieces qui se multiplie, pas
+    la surface au sol — alors on prend la PLUS GRANDE de la suite, pas la
+    somme.
+    """
+    vus: set[str] = set()
+    a_voir = [slug]
+    grand = 0
+    while a_voir:
+        courant = a_voir.pop()
+        if courant in vus or courant not in INTERIEURS:
+            continue
+        vus.add(courant)
+        piece = INTERIEURS[courant]
+        grand = max(grand, plancher_de(piece))
+        a_voir += [pt["vers"] for pt in piece["points"] if pt.get("vers")]
+    return grand
+
+
+def interieur_qui_tient(slugs: tuple[str, ...], empreinte: int) -> str | None:
+    """La plus grande piece de la liste dont la suite tient dans le batiment.
+
+    Rend `None` quand meme la plus petite deborde — et c'est un resultat, pas
+    un echec : un bungalow de trois tuiles sur trois garde sa porte, elle ne
+    s'ouvre simplement pas (`poser_porte` la condamne). Une porte qui donne sur
+    une piece plus grande que la maison est un mensonge ; une porte qu'on ne
+    pousse pas n'en est pas un.
+    """
+    tiennent = [s for s in slugs
+                if s in INTERIEURS and plancher_de_la_suite(s) <= empreinte]
+    if not tiennent:
+        return None
+    return max(tiennent, key=plancher_de_la_suite)
+
 
 #: Derriere quelle enseigne on entre dans quelle piece. ⚠️ Chaque famille de
 #: `devantures.GENRES` doit etre ici : un genre oublie, et toutes les portes
@@ -3172,8 +3352,24 @@ INTERIEUR_DE_GENRE: dict[str, str] = {
     genre["slug"]: f"boutique_{genre['slug']}" for genre in devantures_mod.GENRES
 }
 
-#: La piece qui ouvre derriere une porte de residence.
+#: Les pieces qui ouvrent derriere une enseigne, de la plus petite a la plus
+#: grande. ⚠️ La petite est la MEME pour tous les genres, et c'est voulu :
+#: l'identite du commerce voyage sur la PORTE (`visite["nom"]`), pas dans les
+#: murs. Une boucherie de neuf tuiles reste une boucherie sur son enseigne et
+#: dans le carnet ; elle a juste un comptoir au lieu de trois allees. Douze
+#: petits plans de plus auraient dit la meme chose douze fois.
+BOUTIQUES_PAR_TAILLE: dict[str, tuple[str, ...]] = {
+    slug: ("boutique_minuscule", "boutique_petite", grand)
+    for slug, grand in INTERIEUR_DE_GENRE.items()
+}
+
+#: Les pieces qui ouvrent derriere une porte de residence, de la plus petite a
+#: la plus grande. ⚠️ `interieur_qui_tient` prend la plus grande QUI TIENNE
+#: dans l'empreinte du batiment — c'est ca, « la porte prend la plus grande qui
+#: tienne ».
 INTERIEUR_LOGEMENT = "logement"
+LOGEMENTS_PAR_TAILLE: tuple[str, ...] = (
+    "logement_minuscule", "logement_petit", "logement")
 
 
 def exporter() -> dict:

@@ -199,6 +199,15 @@ const Entites = (function () {
       petit.suit = e;
       e.petit = petit;
     }
+    // ⚠️ IL ENTRE DANS L'INDEX EN NAISSANT. `placeLibre` ne lit que `grille`,
+    // et `grille` ne se refait qu'une fois par image : deux naissances dans la
+    // MEME image ne se voyaient donc pas l'une l'autre. C'est ce qui arrivait
+    // a l'image 1 — `peupler()` posait un passant, `Police.peuplerAgents()`
+    // regardait un index d'ou il manquait, et l'agent naissait sur le passant,
+    // au pixel pres (9 px de chevauchement pour deux corps de 10). Seuls
+    // `peuplerDabord` et les hommes-sandwichs indexaient leurs naissances ;
+    // maintenant c'est la naissance elle-meme qui le fait, pour tout le monde.
+    ajouterA(grille, e);
     return e;
   }
 

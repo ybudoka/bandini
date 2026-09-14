@@ -704,3 +704,111 @@ def test_un_sentier_de_parc_se_traverse_de_bout_en_bout():
     for x, y in allees:
         assert carte.solidite(CARTE["sol"][y][x]) == 0, \
             f"la tuile de sentier {(x, y)} est solide : on ne passe pas"
+
+
+# --- Une piece plus grande que sa maison ------------------------------------
+
+#: Ce qui fait la CARCASSE d'un batiment : mur, toit, facade, vitrine, porte —
+#: y compris la porte de garage, qui est du batiment et pas du trottoir. ⚠️ Lu
+#: dans LEGENDE et pas ecrit a la main : un glyphe de batiment ajoute demain
+#: entre tout seul dans le compte, au lieu de faire mentir le juge en silence.
+CARCASSE = {g for g in carte.LEGENDE if carte.LEGENDE[g].get("solide") == 1}
+
+
+def _empreinte(sol: list[str], x: int, y: int) -> int:
+    """Les tuiles du batiment qui porte cette porte — ce que le joueur VOIT."""
+    hauteur, largeur = len(sol), len(sol[0])
+    vues = {(x, y)}
+    pile = [(x, y)]
+    while pile:
+        cx, cy = pile.pop()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = cx + dx, cy + dy
+            if (0 <= nx < largeur and 0 <= ny < hauteur
+                    and (nx, ny) not in vues and sol[ny][nx] in CARCASSE):
+                vues.add((nx, ny))
+                pile.append((nx, ny))
+    return len(vues)
+
+
+#: ⚠️ CINQ graines, parce que c'est le tirage des marges qui creait l'ecart :
+#: une seule graine dirait « ca tient » de la meme facon qu'une piece de
+#: monnaie dit pile.
+GRAINES = (carte.GRAINE, 1, 2, 3, 4)
+
+
+@pytest.mark.parametrize("graine", GRAINES)
+def test_aucune_piece_ne_depasse_l_empreinte_de_sa_maison(graine):
+    """Martin : « les interieurs ne devraient pas etre plus petits que l'exterieur ».
+
+    Les 41 interieurs de la ville debordaient, et parfois de seize fois : un
+    logement de banlieue de 3 x 3 ouvrait sur un 16 x 9. La cause tenait en une
+    phrase — `_pose_batiment` tire ses marges au sort, `INTERIEURS` declare des
+    pieces ecrites a la main, et personne ne comparait.
+
+    ⚠️ On compare les PLANCHERS, pas les boites : une piece de 15 x 10 n'a que
+    13 x 8 tuiles de plancher une fois ses murs deduits. Et on compare a
+    l'EMPREINTE (ce qu'on voit de la rue), pas a la parcelle — la parcelle
+    ment de trois fois la surface.
+    """
+    ville = carte.generer(graine=graine)
+    sol = ville["sol"]
+    debords = []
+    for porte in ville["portes"]:
+        plancher = carte.plancher_de_la_suite(porte["interieur"])
+        empreinte = _empreinte(sol, porte["x"], porte["y"])
+        if plancher > empreinte:
+            debords.append((porte["interieur"], empreinte, plancher))
+    assert not debords, (
+        f"{len(debords)} portes ouvrent sur plus grand que leur batiment "
+        f"(graine {graine}) : " + ", ".join(
+            f"{slug} {emp} tuiles dehors, {pl} dedans" for slug, emp, pl in debords[:5]))
+
+
+@pytest.mark.parametrize("graine", GRAINES)
+def test_les_petites_maisons_ouvrent_sur_de_petites_pieces(graine):
+    """Le juge du dessus passerait aussi si PLUS AUCUNE porte ne s'ouvrait.
+
+    C'est la moitie qu'on oublie : condamner les quarante portes serait une
+    facon de ne jamais mentir. Alors on exige l'inverse — les petites pieces
+    existent, elles servent, et la ville garde ses portes ouvertes.
+    """
+    ville = carte.generer(graine=graine)
+    pieces = [porte["interieur"] for porte in ville["portes"]]
+    assert len(pieces) >= 25, f"seulement {len(pieces)} portes s'ouvrent (graine {graine})"
+    petites = [p for p in pieces if p in ("logement_petit", "boutique_petite")]
+    assert petites, (
+        "aucune petite piece ne sert : la ville n'a plus que des grands batiments, "
+        "ou bien les petites portes ont toutes ete condamnees")
+
+
+def test_une_porte_prend_la_plus_grande_piece_qui_tienne():
+    """La regle, en trois lignes, sans generer la ville.
+
+    ⚠️ `None` est un RESULTAT, pas un echec : un bungalow de neuf tuiles garde
+    sa porte, elle ne s'ouvre simplement pas. Une porte qui donne sur une piece
+    plus grande que la maison est un mensonge ; une porte qu'on ne pousse pas
+    n'en est pas un.
+    """
+    tranches = carte.LOGEMENTS_PAR_TAILLE
+    planchers = [carte.plancher_de_la_suite(t) for t in tranches]
+    assert planchers == sorted(planchers) and len(set(planchers)) == len(planchers), \
+        f"les « tranches » ne vont pas de la plus petite a la plus grande : {planchers}"
+    assert carte.interieur_qui_tient(tranches, planchers[0] - 1) is None
+    for rang, plancher in enumerate(planchers):
+        assert carte.interieur_qui_tient(tranches, plancher) == tranches[rang]
+        if rang:
+            assert carte.interieur_qui_tient(tranches, plancher - 1) == tranches[rang - 1]
+
+
+def test_le_plancher_dit_toute_la_suite():
+    """Une porte ne donne pas sur une piece : sur tout ce qu'elle ouvre.
+
+    `logement` a un escalier qui monte vers `logement_haut` ; les deux doivent
+    tenir dans le batiment. C'est la nuance des etages : N etages, c'est N
+    pieces de son empreinte, jamais UNE piece N fois plus grande.
+    """
+    assert carte.INTERIEURS["logement"]["points"], "l'escalier du logement a disparu"
+    assert (carte.plancher_de_la_suite("logement")
+            >= carte.plancher_de(carte.INTERIEURS["logement_haut"])), \
+        "l'etage ne compte pas dans la suite : un logement pourrait cacher un etage plus grand"

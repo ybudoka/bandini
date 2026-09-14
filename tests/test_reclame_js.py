@@ -87,7 +87,12 @@ def test_l_homme_sandwich_vient_vers_toi_et_te_tient_le_crachoir(banc, paquet):
     assert res["boniment"]["d"] <= r["portee_px"] + 4, "il parle de trop loin"
     assert res["boniment"]["face"] == "gauche", "il ne te regarde pas"
     assert res["vitesseMax"] < res["course"], "un solliciteur ne court pas"
-    assert res["apres"]["etat"] == "flane" and res["apres"]["bulle"] is False, "il ne se tait jamais"
+    # ⚠️ « Il se tait » ne veut pas dire « il remarche » : un pieton a poste
+    # s'arrete tout seul une fois sur trois (`majPieton`), et exiger `flane`
+    # revenait a jouer ce de-la a chaque fois que la ville bougeait d'une tuile.
+    # Ce qui compte est qu'il ait FINI son boniment et ferme sa bulle.
+    assert res["apres"]["etat"] in ("flane", "arret"), f"il ne se tait jamais : {res['apres']}"
+    assert res["apres"]["bulle"] is False, "sa bulle ne se ferme pas"
     assert res["apres"]["repos"] > 0, "il va recommencer tout de suite"
 
 
