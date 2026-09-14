@@ -18,6 +18,11 @@ n'a pas a le deviner de son slug :
               obstacle bas (cloture, borne-fontaine, poubelle)
     soigne    PV par seconde rendus a qui le conduit (l'ambulance)
     crochet   il peut trainer un autre char — un seul a la fois
+    plateau   il ne se leve pas par l'avant : il MONTE EN ENTIER sur la
+              remorqueuse (la moto, le velo). ⚠️ C'est ici et pas dans le JS :
+              le jour ou une trottinette arrive, elle le dit elle-meme, au lieu
+              qu'un `classe === 'moto'` cache quelque part decide pour elle —
+              c'est la lecon de `reservoir`, `defonce` et `sirene`
     boulot    le boulot qu'on prend au klaxon (`taxi`, `pizza`, `ambulance`,
               `remorquage`), sur le patron du taxi de la v1
     rare      il ne nait QUE dans les districts qui le declarent (`rares` de
@@ -66,6 +71,7 @@ class Vehicule(TypedDict):
     defonce: float
     soigne: float
     crochet: bool
+    plateau: bool
     boulot: str | None
     radio: str | None
     phase: int
@@ -88,7 +94,8 @@ AVERTISSEURS = ("klaxon", "sonnette")
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
-       masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False, boulot=None,
+       masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
+       plateau=False, boulot=None,
        radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
@@ -101,7 +108,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
         ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, rare=rare, alarme_s=alarme_s,
         defonce=defonce, soigne=soigne,
-        crochet=crochet, boulot=boulot, radio=radio, phase=phase,
+        crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
         portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
     )
 
@@ -119,7 +126,7 @@ CATALOGUE: list[Vehicule] = [
     # plus rapide du jeu est aussi celui dont on tombe au premier choc.
     _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 0.07, 40, 2, 450, 0.15,
        ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, boulot="pizza",
-       radio="le_choc"),
+       radio="le_choc", plateau=True),
     # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
     # prendre a son cycliste (qui temoigne), on en tombe au premier choc.
     # ⚠️ `reservoir=False` : un velo n'a pas d'essence, donc il ne brule pas et
@@ -127,7 +134,7 @@ CATALOGUE: list[Vehicule] = [
     # endroit ou ca se decide.
     _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
        ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False,
-       klaxon="sonnette"),
+       klaxon="sonnette", plateau=True),
     _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
     # --- M9, le parc automobile ------------------------------------------
@@ -245,11 +252,19 @@ PHYSIQUE = {
     # la fiche dit ce qu'il RESTE de vitesse une fois passe au travers.
     "defonce_vitesse_min": 1.4,
     "defonce_degats": 6,          # ce que la carrosserie y laisse
-    # Le crochet de la remorqueuse : a quelle distance on accroche, et a
-    # quelle longueur le cable tient le char remorque.
-    "crochet_portee_px": 46,
-    "crochet_cable_px": 30,
-    "crochet_raideur": 0.35,
+    # ⚠️ UNE FOURCHE, PAS UNE CORDE. Le lien etait un ressort — le char
+    # remorque roulait a plat au bout d'un elastique, pointe VERS la
+    # remorqueuse, et il lachait quand on l'etirait. C'est ce qui faisait
+    # qu'une remorqueuse ressemblait a une auto qui en tire une autre.
+    #
+    # ⚠️ Un lien rigide change la reponse a la seule question qui compte : que
+    # se passe-t-il quand la charge est bloquee par une tuile ? Ce n'est plus le
+    # cable qui s'allonge, c'est LA REMORQUEUSE QUI NE PASSE PAS. Elle teste
+    # donc les DEUX corps avant d'avancer.
+    "crochet_portee_px": 46,      # a quelle distance on accroche
+    "crochet_jeu_px": 2,          # ce qui reste entre les deux : presque rien
+    "crochet_leve_px": 2,         # de combien l'avant monte (l'ombre reste au sol)
+    "plateau_leve_px": 3,         # de combien monte ce qui charge en entier
     # ⚠️ LE GARDE-FOU (demande de Martin : « que mon vehicule ne coince plus
     # dans un mur ou un objet »). Le deplacement teste les tuiles AVANT chaque
     # pas, mais rien ne regardait ou le char EST : pousse par un autre char,

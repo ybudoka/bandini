@@ -213,25 +213,30 @@ def test_la_remorqueuse_traine_un_char_a_la_fois(banc, paquet):
         for (const e of [epave, second]) e.conducteur = null;
         L.Entites.indexer();
         L.Vehicules.basculerCrochet(rem);
-        // 5. On roule : le char suit, a bonne distance, en pointant vers nous.
-        const suivi = [];
+        // 5. On roule : la charge est POSEE, pas tiree. Ecart constant, dans
+        //    l'axe, et l'avant leve.
+        const suivi = [], biais = [];
         o.touche('KeyW');
         for (let i = 0; i < 90; i++) {
             o.frame(1);
             const t = rem.remorque;
             if (!t) { suivi.push(null); break; }
             suivi.push(Math.round(Math.hypot(t.x - rem.x, t.y - rem.y)));
+            const d = t.angle - rem.angle;
+            biais.push(Math.abs(Math.atan2(Math.sin(d), Math.cos(d))));
         }
         o.relacher('KeyW');
         out.suivi = { min: Math.min.apply(null, suivi), max: Math.max.apply(null, suivi),
-                      tient: suivi.indexOf(null) < 0, n: suivi.length };
+                      tient: suivi.indexOf(null) < 0, n: suivi.length,
+                      biais: +Math.max.apply(null, biais).toFixed(3) };
         const t = rem.remorque;
-        out.pointe = t ? Math.abs(Math.atan2(Math.sin(t.angle - Math.atan2(rem.y - t.y, rem.x - t.x)),
-                                             Math.cos(t.angle - Math.atan2(rem.y - t.y, rem.x - t.x)))) < 0.3 : null;
-        // 6. Etire de force : le cable lache.
+        out.leve = t ? t.z : null;
+        // 6. Meme jetee a quatre cents pixels, elle est REPOSEE a l'image
+        //    suivante : une fourche ne s'etire pas, donc elle ne lache pas.
         if (t) { t.x = rem.x - 400; t.y = rem.y; }
         o.frame(2);
         out.lache = !rem.remorque;
+        out.reposee = rem.remorque ? Math.round(Math.hypot(rem.remorque.x - rem.x, rem.remorque.y - rem.y)) : null;
         return out;
     }""")
     assert r["devant"] is False, "un char DEVANT s'accroche : le crochet est a l'arriere"
@@ -241,16 +246,210 @@ def test_la_remorqueuse_traine_un_char_a_la_fois(banc, paquet):
     )
     assert r["raccroche"] is True
     assert r["conduit"] is False, "on a accroche un char qui avait un conducteur"
-    assert r["suivi"]["tient"] is True, "le cable a lache en roulant droit"
-    plancher = (ph["crochet_cable_px"]) * 0.5
-    assert r["suivi"]["min"] > plancher, (
-        "le char remorque monte dans la remorqueuse (%s px)" % r["suivi"]["min"]
+    assert r["suivi"]["tient"] is True, "la charge est tombee en roulant droit"
+    # ⚠️ UNE FOURCHE N'A PAS DE JEU. Le câble donnait un écart qui respirait ;
+    # ici, il ne bouge pas d'un pixel, et il vaut ce que la fiche dit.
+    attendu = ph["crochet_jeu_px"] + (36 + 28) / 2       # longueurs remorqueuse + auto
+    assert r["suivi"]["max"] - r["suivi"]["min"] <= 1, (
+        "l'écart respire (%s à %s px) : c'est encore une corde" % (r["suivi"]["min"], r["suivi"]["max"])
     )
-    assert r["suivi"]["max"] < ph["crochet_cable_px"] * 4, (
-        "le cable s'allonge sans fin (%s px)" % r["suivi"]["max"]
+    assert abs(r["suivi"]["min"] - attendu) <= 4, (
+        "la charge n'est pas à la longueur de la fourche : %s px pour %s attendus"
+        % (r["suivi"]["min"], attendu)
     )
-    assert r["pointe"] is True, "le char remorque ne pointe pas vers la remorqueuse"
-    assert r["lache"] is True, "le cable ne lache jamais, meme etire de 400 px"
+    # ⚠️ Et DANS L'AXE, pas « pointée vers elle » : c'est ce jeu-là qui trahit
+    # la corde, bien avant qu'on regarde le dessin.
+    assert r["suivi"]["biais"] < 0.02, "la charge roule de biais : %s rad" % r["suivi"]["biais"]
+    assert r["leve"] == ph["crochet_leve_px"], "l'avant n'est pas levé : %s" % r["leve"]
+    assert r["lache"] is False, "une fourche a lâché : elle ne s'étire pas, elle ne casse pas"
+    assert r["reposee"] is not None and abs(r["reposee"] - attendu) <= 4, (
+        "jetée à 400 px, la charge n'est pas revenue sur la fourche : %s" % r["reposee"]
+    )
+
+
+def test_la_depanneuse_leve_les_roues_et_charge_les_deux_roues(banc, paquet):
+    """⚠️ Demande de Martin : « la dépanneuse devrait embarquer les roues avant
+    des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque
+    complètement sur sa plateforme. »
+
+    C'était une **corde**, pas une fourche : le char remorqué roulait à plat au
+    bout d'un élastique, pointé **vers** la remorqueuse, et le lien lâchait
+    quand on l'étirait. Le jeu du câble est ce qui trahissait la corde bien
+    avant qu'on regarde le dessin.
+
+    ⚠️ Et un lien rigide change la réponse à la seule question qui compte : que
+    se passe-t-il quand la charge est bloquée par une tuile ? Ce n'est plus le
+    câble qui s'allonge, c'est **la remorqueuse qui ne passe pas**."""
+    ph = paquet["conduite"]["physique"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(44);
+        const j = L.B.joueur, out = {};
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+
+        function atteler(slug) {
+            const rem = o.char('remorqueuse', 0, 0, 0);
+            L.Vehicules.monter(j, rem);
+            const charge = o.char(slug, -36, 0, 1.2);     // de biais, pour voir le redressement
+            L.Entites.indexer();
+            L.Vehicules.basculerCrochet(rem);
+            o.frame(2);
+            return { rem: rem, charge: charge };
+        }
+        function ranger(a) {
+            if (a.rem.remorque) L.Vehicules.decrocher(a.rem);
+            if (L.B.joueur.dansVehicule) L.Vehicules.descendre(j, true);
+            L.Entites.retirer(a.charge); L.Entites.retirer(a.rem);
+            L.Entites.indexer();
+        }
+
+        // 1. UNE AUTO : l'avant levé, collée, dans l'axe.
+        let a = atteler('auto');
+        const ecart = Math.hypot(a.charge.x - a.rem.x, a.charge.y - a.rem.y);
+        const biais = a.charge.angle - a.rem.angle;
+        out.auto = {
+            ecart: Math.round(ecart),
+            colle: Math.round(ecart - (a.rem.def.longueur + a.charge.def.longueur) / 2),
+            biais: +Math.abs(Math.atan2(Math.sin(biais), Math.cos(biais))).toFixed(3),
+            z: a.charge.z, plateau: !!a.charge.def.plateau,
+        };
+        // ⚠️ ON NE MONTE PAS DEDANS : deux conducteurs, un seul lien rigide.
+        L.Vehicules.descendre(j, true);
+        out.auto.monte = L.Vehicules.monter(j, a.charge);
+        L.Vehicules.monter(j, a.rem);
+        // 2. LA REMORQUEUSE NE PASSE PAS LA OU SA CHARGE NE PASSE PAS.
+        //    ⚠️ C'est LA question que le cable permettait de ne pas poser : il
+        //    s'etirait, et l'auto au bout traversait le mur.
+        out.mur = { libre: L.Vehicules.chargeBloquee(a.rem, a.rem.x, a.rem.y) };
+        //    On cherche une facade, et on se plante devant, la charge dedans.
+        const c = L.Monde.carte;
+        let mur = null;
+        for (let ty = 6; ty < c.h - 6 && !mur; ty++) {
+            for (let tx = 6; tx < c.w - 6; tx++) {
+                if (!L.Monde.bloque(tx, ty, L.Monde.MASQUE_VEHICULE)) continue;
+                let libre = true;
+                for (let k = 1; k <= 6; k++) if (L.Monde.bloque(tx + k, ty, L.Monde.MASQUE_VEHICULE)) libre = false;
+                if (libre) { mur = { x: tx, y: ty }; break; }
+            }
+        }
+        const recul = (a.rem.def.longueur + a.charge.def.longueur) / 2;
+        a.rem.x = (mur.x + 1) * L.TT + 8 + recul; a.rem.y = mur.y * L.TT + 8;
+        a.rem.angle = 0;                       // cap est : la charge est a l'ouest, dans le mur
+        a.rem.vitesse = 0; a.rem.vx = 0; a.rem.vy = 0;
+        L.Monde.centrerCamera(a.rem.x, a.rem.y);
+        L.Vehicules.decrocher(a.rem);
+        a.charge.x = a.rem.x - recul; a.charge.y = a.rem.y;
+        L.Entites.indexer();
+        L.Vehicules.basculerCrochet(a.rem);
+        out.mur.attelee = !!a.rem.remorque;
+        out.mur.bloque = L.Vehicules.chargeBloquee(a.rem, a.rem.x - 8, a.rem.y);
+        //    Et en marche arriere, elle NE RECULE PAS : elle ne traine pas sa
+        //    charge dans la facade.
+        const x0 = a.rem.x;
+        o.touche('KeyS');
+        for (let i = 0; i < 90; i++) o.frame(1);
+        o.relacher('KeyS');
+        out.mur.recule = Math.round(x0 - a.rem.x);
+        ranger(a);
+
+        // 3. UNE MOTO : elle monte EN ENTIER, meme cap, ecart presque nul.
+        a = atteler('moto');
+        const em = Math.hypot(a.charge.x - a.rem.x, a.charge.y - a.rem.y);
+        const bm = a.charge.angle - a.rem.angle;
+        out.moto = {
+            ecart: Math.round(em), plateau: !!a.charge.def.plateau, z: a.charge.z,
+            biais: +Math.abs(Math.atan2(Math.sin(bm), Math.cos(bm))).toFixed(3),
+            surLaRemorqueuse: em < a.rem.def.longueur / 2,
+        };
+        // ⚠️ Cargaison : aucune tuile ne l'arrete, et la remorqueuse ne se
+        // laisse plus bloquer par elle.
+        out.moto.chargeBloquee = L.Vehicules.chargeBloquee(a.rem, a.rem.x, a.rem.y);
+        // Et elle SUIT au pixel, meme en tournant.
+        o.touche('KeyW'); o.touche('KeyA');
+        let pire = 0, pireBiais = 0;
+        for (let i = 0; i < 120; i++) {
+            o.frame(1);
+            if (!a.rem.remorque) { pire = 999; break; }
+            pire = Math.max(pire, Math.abs(Math.hypot(a.charge.x - a.rem.x, a.charge.y - a.rem.y) - em));
+            const b = a.charge.angle - a.rem.angle;
+            pireBiais = Math.max(pireBiais, Math.abs(Math.atan2(Math.sin(b), Math.cos(b))));
+        }
+        o.relacher('KeyW'); o.relacher('KeyA');
+        out.moto.derive = +pire.toFixed(2);
+        out.moto.deriveBiais = +pireBiais.toFixed(3);
+        out.moto.tient = !!a.rem.remorque;
+
+        // 4. L'ORDRE DE DESSIN : la charge se peint APRES sa remorqueuse.
+        L.Jeu.rendre();
+        // On relit l'ordre que le peintre a utilise : meme regle que lui.
+        const gens = L.B.entites.filter(function (e) { return e.dessine; });
+        const prof = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
+        gens.sort(function (x, y) {
+            return (x.vivant ? 1 : 0) - (y.vivant ? 1 : 0) || prof(x) - prof(y) || x.id - y.id;
+        });
+        out.dessin = { apres: gens.indexOf(a.charge) > gens.indexOf(a.rem) };
+
+        // 5. DECROCHEE, elle redescend.
+        L.Vehicules.decrocher(a.rem);
+        out.moto.reposee = a.charge.z;
+        ranger(a);
+
+        // 6. UN VELO AUSSI MONTE SUR LE PLATEAU.
+        a = atteler('velo');
+        out.velo = { plateau: !!a.charge.def.plateau,
+                     surLaRemorqueuse: Math.hypot(a.charge.x - a.rem.x, a.charge.y - a.rem.y) < a.rem.def.longueur / 2 };
+        ranger(a);
+        return out;
+    }""")
+
+    au = r["auto"]
+    # ⚠️ COLLEE : plus de trou de câble entre les deux. L'écart vaut le jeu de
+    # la fourche, pas trente pixels de corde.
+    assert au["colle"] <= ph["crochet_jeu_px"] + 2, (
+        "il reste un trou entre la remorqueuse et sa charge : %s px" % au["colle"]
+    )
+    # ⚠️ DANS L'AXE, pas « pointée vers elle ».
+    assert au["biais"] < 0.02, "la charge est de biais : %s rad" % au["biais"]
+    assert au["z"] == ph["crochet_leve_px"], "l'avant n'est pas levé : %s" % au
+    assert au["plateau"] is False, "une auto ne monte pas sur le plateau"
+    assert au["monte"] is False, (
+        "on est monté dans un char remorqué : deux conducteurs, un seul lien rigide"
+    )
+
+    # ⚠️ LA REMORQUEUSE NE PASSE PAS là où sa charge ne passe pas : le même
+    # « tout ou rien » que `defoncerDevant`. C'est la question que le câble
+    # permettait de ne pas poser — il s'étirait, et l'auto au bout traversait
+    # le mur.
+    mur = r["mur"]
+    assert mur["libre"] is False, "le décor du juge est faux : en pleine rue, rien ne bloque"
+    assert mur["attelee"] is True, "le décor du juge est faux : rien n'est attelé devant le mur"
+    assert mur["bloque"] is True, "reculer vers une façade ne bloque pas la charge : %s" % mur
+    assert mur["recule"] <= 4, (
+        "elle a reculé de %s px avec une auto au bout de la fourche : elle la traîne dans "
+        "la façade" % mur["recule"]
+    )
+
+    m = r["moto"]
+    assert m["plateau"] is True, "la moto ne déclare pas `plateau` : %s" % m
+    assert m["surLaRemorqueuse"] is True, (
+        "la moto est accrochée derrière au lieu de monter dessus (%s px)" % m["ecart"]
+    )
+    assert m["z"] == ph["plateau_leve_px"], "elle n'est pas posée sur le plateau : %s" % m
+    assert m["biais"] < 0.02, "elle est de travers sur le plateau : %s rad" % m["biais"]
+    # ⚠️ Zéro dérive, même en tournant : elle fait partie de la remorqueuse.
+    assert m["tient"] is True, "la moto est tombée du plateau"
+    assert m["derive"] <= 1.0, "elle glisse sur le plateau : %s px" % m["derive"]
+    assert m["deriveBiais"] < 0.05, "elle pivote sur le plateau : %s rad" % m["deriveBiais"]
+    # ⚠️ C'est de la cargaison : aucune tuile ne l'arrête, donc elle ne peut pas
+    # bloquer la remorqueuse.
+    assert m["chargeBloquee"] is False, "une charge de plateau bloque la remorqueuse : %s" % m
+    assert m["reposee"] == 0, "décrochée, elle reste en l'air : %s" % m["reposee"]
+
+    assert r["dessin"]["apres"] is True, (
+        "la charge se peint AVANT sa remorqueuse : la moto disparaît dessous"
+    )
+    assert r["velo"] == {"plateau": True, "surLaRemorqueuse": True}, r["velo"]
 
 
 def test_l_ambulance_soigne_son_conducteur_mais_ne_ressuscite_personne(banc, paquet):

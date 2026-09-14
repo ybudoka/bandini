@@ -454,13 +454,13 @@ const Vehicules = (function () {
       // Axe par axe : un mur de face arrete, un mur de cote fait glisser.
       let choc = 0;
       if (px !== 0) {
-        if (bloqueParLesTuiles(v, v.x + px, v.y)) {
+        if (bloqueParLesTuiles(v, v.x + px, v.y) || chargeBloquee(v, v.x + px, v.y)) {
           if (defoncerDevant(v, v.x + px, v.y)) v.x += px;
           else { choc = Math.max(choc, Math.abs(v.vx)); v.vx = -v.vx * ph.choc_rebond; }
         } else v.x += px;
       }
       if (py !== 0) {
-        if (bloqueParLesTuiles(v, v.x, v.y + py)) {
+        if (bloqueParLesTuiles(v, v.x, v.y + py) || chargeBloquee(v, v.x, v.y + py)) {
           if (defoncerDevant(v, v.x, v.y + py)) v.y += py;
           else { choc = Math.max(choc, Math.abs(v.vy)); v.vy = -v.vy * ph.choc_rebond; }
         } else v.y += py;
@@ -701,7 +701,6 @@ const Vehicules = (function () {
     }
     if (v.klaxonT > 0) { v.klaxonT--; if (v.klaxonT === 29) avertir(v); }
     soignerAuVolant(v);
-    majCrochet(v);
   }
 
   // --- Le crochet de la remorqueuse ------------------------------------------------
@@ -743,35 +742,66 @@ const Vehicules = (function () {
     v.remorque = null;
     if (!t) return;
     t.remorqueePar = null;
+    // ⚠️ La fourche redescend : sans ca, le char reste en l'air, son ombre
+    // decollee — et `bloqueParLesTuiles` le laisse traverser les murs, parce
+    // qu'un char a plus de six pixels d'altitude est repute en plein saut.
+    t.z = 0;
     Son.SFX.porte('vehicule');    // le crochet qui lache : de la tole, comme une portiere
   }
 
-  /** Le cable, une fois par image : le char remorque est tire vers un point
-      fixe derriere la remorqueuse, et il pointe vers elle.
+  /** Ou la charge se pose, exactement. ⚠️ UNE FOURCHE N'A PAS DE JEU : c'est
+      un point fixe derriere la remorqueuse, dans SON axe — pas un point vers
+      lequel on tire. Le jeu du cable est precisement ce qui trahissait la
+      corde, bien avant qu'on regarde le dessin.
 
-      ⚠️ Il reste BLOQUE PAR LES TUILES : on ne traine pas une epave a travers
-      un mur. Le cable s'etire alors — et s'il s'etire trop, il casse. C'est ce
-      qui rend le virage serre couteux sans une seule ligne de plus. */
+      ⚠️ Et ce qui a un `plateau` (la moto, le velo — c'est `vehicules.py` qui
+      le dit) monte EN ENTIER : centre sur la remorqueuse, pas accroche
+      derriere. On ne leve pas un deux-roues par l'avant, on le charge. */
+  function placeDeLaCharge(v, t) {
+    const ph = physique();
+    if (t.def.plateau) {
+      // Sur le plateau : legerement en arriere du centre, dans l'axe.
+      const d = v.def.longueur * 0.18;
+      return { x: v.x - Math.cos(v.angle) * d, y: v.y - Math.sin(v.angle) * d,
+               angle: v.angle, z: ph.plateau_leve_px };
+    }
+    const d = ph.crochet_jeu_px + (v.def.longueur + t.def.longueur) / 2;
+    return { x: v.x - Math.cos(v.angle) * d, y: v.y - Math.sin(v.angle) * d,
+             angle: v.angle, z: ph.crochet_leve_px };
+  }
+
+  /** La charge passe-t-elle si la remorqueuse va la ? ⚠️ C'est la question que
+      le cable permettait de ne pas poser : il s'etirait, et l'auto au bout
+      traversait le mur. Rigide, la reponse change — LA REMORQUEUSE NE PASSE
+      PAS. Le meme « tout ou rien » que `defoncerDevant`.
+
+      Une charge SUR LE PLATEAU, elle, ne touche plus la route : c'est de la
+      cargaison, et rien ne l'arrete. */
+  function chargeBloquee(v, x, y, angle) {
+    const t = v.remorque;
+    if (!t || t.def.plateau) return false;
+    const faux = { x: x, y: y, angle: angle === undefined ? v.angle : angle,
+                   def: v.def, z: 0 };
+    const place = placeDeLaCharge(faux, t);
+    return bloqueParLesTuiles(t, place.x, place.y, place.angle);
+  }
+
   function majCrochet(v) {
     const t = v.remorque;
     if (!t) return;
     if (!t.actif || t.remorqueePar !== v) { v.remorque = null; return; }
-    const ph = physique();
-    const d = ph.crochet_cable_px + (v.def.longueur + t.def.longueur) / 2;
-    const ax = v.x - Math.cos(v.angle) * d;
-    const ay = v.y - Math.sin(v.angle) * d;
-    const dx = ax - t.x, dy = ay - t.y;
-    if (Math.hypot(dx, dy) > ph.crochet_cable_px * 2.5) {
-      Hud.message('LE CABLE A LACHE');
-      decrocher(v);
-      return;
-    }
-    t.angle = Math.atan2(v.y - t.y, v.x - t.x);
-    t.vx = dx * ph.crochet_raideur;
-    t.vy = dy * ph.crochet_raideur;
-    t.vitesse = Math.hypot(t.vx, t.vy);
-    if (!bloqueParLesTuiles(t, t.x + t.vx, t.y)) t.x += t.vx;
-    if (!bloqueParLesTuiles(t, t.x, t.y + t.vy)) t.y += t.vy;
+    const place = placeDeLaCharge(v, t);
+    // ⚠️ Zero ecart : elle ne SUIT pas, elle EST posee. Un char qui rattrape
+    // son point d'attache image apres image se traine toujours un peu de biais
+    // — et ce biais-la est exactement ce qui fait « corde ».
+    t.vx = place.x - t.x; t.vy = place.y - t.y;
+    t.vitesse = v.vitesse;
+    t.x = place.x; t.y = place.y;
+    t.angle = place.angle;
+    // ⚠️ `z`, c'est l'avant leve : `dessinerUn` sait deja dessiner plus haut en
+    // laissant l'ombre au sol (il le fait pour les sauts). Deux pixels, et on
+    // voit la fourche — sans un seul cap de sprite en plus.
+    t.z = place.z;
     Entites.dansLaCarte(t);
   }
 
@@ -855,6 +885,11 @@ const Vehicules = (function () {
 
   function monter(j, v) {
     if (!v || v.etat === 'epave' || j.dansVehicule) return false;
+    // ⚠️ ON NE MONTE PAS DANS UN CHAR REMORQUE. Rien ne l'interdisait, et ce
+    // serait la facon la plus courte de casser la physique : deux conducteurs,
+    // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
+    // s'ouvre pas sans un mot se lit comme un bogue.
+    if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); return false; }
     let crime = null, vu = false;
     if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
       // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
@@ -1449,6 +1484,14 @@ const Vehicules = (function () {
       if (v.type !== 'vehicule') continue;
       majEtatDuChar(v);
       if (v.etat === 'epave') { if (v.epaveT <= 0 && !Entites.visibleAEcran(v.x, v.y, 40)) Entites.retirer(v); continue; }
+      // ⚠️ UNE CHARGE NE CONDUIT PAS. `majCrochet` vient de la POSER, au pixel
+      // et au cap ; la laisser ensuite passer par `majPhysique` et `avancer`,
+      // c'est lui faire refaire sa propre physique par-dessus — elle se
+      // degageait des tuiles, rebondissait sur les murs et repartait de biais,
+      // exactement le jeu qu'on venait d'enlever. C'est la remorqueuse qui
+      // refuse de passer la ou sa charge ne passe pas (`chargeBloquee`), pas la
+      // charge qui se debat.
+      if (v.remorqueePar) continue;
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
@@ -1463,6 +1506,12 @@ const Vehicules = (function () {
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
+      // ⚠️ LA CHARGE SE POSE APRES QUE LA REMORQUEUSE A BOUGE, jamais avant.
+      // Placee au debut de l'image, elle l'etait d'apres la position de
+      // l'image PRECEDENTE : l'ecart respirait alors de la distance parcourue
+      // dans l'image — deux pixels a vitesse de croisiere, et c'est exactement
+      // le jeu qu'une corde a et qu'une fourche n'a pas. Le juge l'a vu.
+      majCrochet(v);
     }
     peupler();
     majSirenes();
@@ -1657,7 +1706,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

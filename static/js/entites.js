@@ -2006,8 +2006,14 @@ const Entites = (function () {
     }
     // ⚠️ Les morts d'abord : un cadavre se fait marcher dessus, il ne cache
     // jamais un vivant.
+    // ⚠️ UNE CHARGE SE PEINT APRES SA REMORQUEUSE. Le tri va du nord au sud ;
+    // une moto posee sur le plateau a presque la meme hauteur que le camion, et
+    // un demi-pixel decidait alors si on la voyait ou si elle disparaissait
+    // dessous. On lui donne donc la profondeur de son porteur, plus un cheveu :
+    // elle est toujours au-dessus, quel que soit le cap.
+    const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
-      return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || a.y - b.y || a.id - b.id;
+      return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;
     });
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);

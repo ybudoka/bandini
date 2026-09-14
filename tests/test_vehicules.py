@@ -199,9 +199,20 @@ def test_l_ambulance_soigne_et_la_remorqueuse_accroche():
     assert [v["slug"] for v in vehicules.CATALOGUE if v["soigne"]] == ["ambulance"]
     assert [v["slug"] for v in vehicules.CATALOGUE if v["crochet"]] == ["remorqueuse"]
     ph = vehicules.PHYSIQUE
-    assert ph["crochet_cable_px"] < ph["crochet_portee_px"], \
-        "le cable doit etre plus court que la portee, sinon le char accroche puis se detache"
-    assert 0 < ph["crochet_raideur"] <= 1
+    # ⚠️ UNE FOURCHE, PAS UNE CORDE. Le jeu doit etre plus court que la portee —
+    # sinon le char accroche puis se detache — et assez petit pour qu'on ne
+    # voie pas de trou entre les deux : c'est le trou qui fait « corde ».
+    assert ph["crochet_jeu_px"] < ph["crochet_portee_px"]
+    assert 0 <= ph["crochet_jeu_px"] <= 4, ph["crochet_jeu_px"]
+    assert 0 < ph["crochet_leve_px"] <= 6, ph["crochet_leve_px"]
+    assert 0 < ph["plateau_leve_px"] <= 6, ph["plateau_leve_px"]
+    # ⚠️ C'est PYTHON qui dit ce qui monte en entier, pas un `classe === 'moto'`
+    # cache dans le JS : le jour ou une trottinette arrive, elle le dit
+    # elle-meme. C'est la lecon de `reservoir`, `defonce` et `sirene`.
+    assert [v["slug"] for v in vehicules.CATALOGUE if v["plateau"]] == ["moto", "velo"]
+    for v in vehicules.CATALOGUE:
+        if v["plateau"]:
+            assert v["classe"] in ("moto", "velo"), v["slug"]
 
 
 def test_un_boulot_par_char_et_jamais_deux_fois_le_meme():
