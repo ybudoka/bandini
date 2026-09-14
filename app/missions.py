@@ -18,7 +18,8 @@ from typing import TypedDict
 TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
     "parler",      # toucher un personnage
-    "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`)
+    "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`) ;
+                   # `prete` : a QUI il est — un char prete ne se vend pas
     "livrer",      # amener le vehicule de la mission a un lieu ; `sans_degats` : prime
     "ramasser",    # ramasser un objet — `cible: fuyard` : le rattraper d'abord
     "tuer",        # mettre KO (ou pire) `n` membres d'un `groupe`, `chef` pour le boss
@@ -146,7 +147,8 @@ CATALOGUE: list[Mission] = [
         "recompense": 200, "phase": 1, "echec": ["arrete", "vehicule_detruit"],
         "donne": {"message": "LE SERGENT BOUCHARD VEUT TE VOIR"},
         "objectifs": [
-            {"type": "monter", "vehicule": "taxi", "ou": "porte:garage", "texte": "MONTE DANS LE TAXI DE MARCO"},
+            {"type": "monter", "vehicule": "taxi", "ou": "porte:garage", "prete": "marco",
+             "texte": "MONTE DANS LE TAXI DE MARCO"},
             {"type": "courses", "n": 3, "texte": "FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "RAMÈNE LE TAXI AU GARAGE"},
         ],

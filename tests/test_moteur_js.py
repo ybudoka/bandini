@@ -5268,6 +5268,102 @@ def test_le_garage_rachete_repare_et_repeint(banc, paquet):
     assert r["argent"] > r["apresPeinture"]["argent"], "la vente n'a rien rapporte"
 
 
+
+def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
+    """⚠️ Demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco. »
+
+    M3 pose le taxi à `porte:garage` — **la porte même** du garage où Ti-Guy
+    rachète n'importe quel char garé devant. Trois pas et 175 $ : le taxi sort
+    du monde, et l'objectif attend un char qui n'existe plus. ⚠️ Le pire n'est
+    pas l'argent, c'est que **la mission ne rate même pas** : `livrer` ne fait
+    échouer que sur une épave, donc `p.mission` reste pris, le téléphone ne
+    sonne plus jamais, et l'histoire s'arrête là — il faut se faire arrêter
+    pour s'en sortir.
+
+    Le juge tient les trois temps, et le troisième est celui qui compte :
+    pendant la mission, **après la livraison** (`mission` tombe, `aQui` reste :
+    le taxi est à Marco pour toujours), et le char de n'importe qui, qui lui se
+    vend encore — sinon on aurait réparé la fuite en fermant le garage.
+    """
+    marco = next(p for p in paquet["personnages"] if p["slug"] == "marco")
+    auto = next(v for v in paquet["vehicules"] if v["slug"] == "auto")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        function alaPorte() { j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10; }
+        function garer(v) { v.x = j.x + 20; v.y = j.y + 8; v.etat = 'stationne'; v.vitesse = 0; L.Entites.indexer(); }
+        // Le comptoir du garage : on se plante devant et on ouvre le menu.
+        function comptoir() {
+            const point = L.B.interieur.points.find(function (p) { return p.type === 'vendre'; });
+            j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+            L.Missions.utiliserPoint(j);
+            return L.B.menu.items.find(function (i) { return i.libelle.indexOf('VENDRE') === 0; });
+        }
+        function essayerDeVendre(v) {
+            L.B.partie.argent = 0;
+            // ⚠️ Sans char devant la porte, le menu n'a pas de ligne VENDRE :
+            // on la remplace par une ligne morte, sinon le juge tombe sur un
+            // « undefined » au lieu de dire ce qui cloche.
+            const item = comptoir() || { libelle: 'AUCUNE VENTE', detail: '', actif: false, faire: function () { return false; } };
+            const vendu = item.faire();
+            const r = { libelle: item.libelle, detail: item.detail, actif: item.actif !== false,
+                        vendu: vendu, argent: L.B.partie.argent, la: L.B.exterieur.entites.indexOf(v) >= 0 };
+            L.Hud.fermerMenu();
+            return r;
+        }
+
+        L.Histoire.commencer('m3');                 // Marco prête son taxi
+        const taxi = L.B.mission.vehicule;
+        // Le trafic de la rue n'a rien a faire ici : le char devant la porte
+        // doit etre CELUI qu'on teste, pas le premier passant.
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule' || e === taxi; });
+        alaPorte(); garer(taxi);
+        o.entrer(porte);
+        const pendant = essayerDeVendre(taxi);
+        o.sortir();
+
+        // La livraison, la vraie : on ramene le taxi au garage et la mission
+        // se termine toute seule — c'est la qu'on efface `mission`.
+        L.B.partie.mission.etape = 2;
+        const g = L.Histoire.lieu('garage');
+        taxi.x = g.x; taxi.y = g.y; taxi.vitesse = 0;
+        j.x = taxi.x; j.y = taxi.y;
+        L.Vehicules.monter(j, taxi);
+        o.frame(3);
+        L.B.dialogue = null; L.B.cinema = null;
+        const livre = { faite: !!L.B.partie.missionsFaites.m3, mission: taxi.mission, aQui: taxi.aQui };
+
+        alaPorte(); garer(taxi);
+        o.entrer(porte);
+        const apres = essayerDeVendre(taxi);
+        o.sortir();
+
+        // Et le char de n'importe qui, a la meme place, se vend toujours.
+        L.Entites.retirer(taxi);
+        alaPorte();
+        const v = o.char('auto', 0, 0, 0);
+        garer(v);
+        o.entrer(porte);
+        const autre = essayerDeVendre(v);
+        return { pendant: pendant, livre: livre, apres: apres, autre: autre };
+    }""")
+    attendu = "IL EST À " + marco["nom"].upper()
+    for quand, etat in (("pendant la mission", r["pendant"]), ("apres la livraison", r["apres"])):
+        assert etat["actif"] is False, f"{quand} : le garage propose encore d'acheter le taxi de Marco"
+        assert etat["detail"] == attendu, f"{quand} : le menu ne dit pas a qui il est ({etat['detail']})"
+        assert etat["vendu"] is False and etat["argent"] == 0, f"{quand} : la vente a rapporte de l'argent"
+        assert etat["la"] is True, f"{quand} : le taxi a disparu de devant le garage"
+    # ⚠️ La livraison efface `mission` — et c'est pour ca que `aQui` existe :
+    # sans lui, le taxi redeviendrait vendable la minute ou Marco le recupere.
+    assert r["livre"]["faite"], "la mission ne s'est pas terminee : le juge ne prouve rien"
+    assert r["livre"]["mission"] is None and r["livre"]["aQui"] == "marco"
+    assert r["autre"]["actif"] is True and r["autre"]["vendu"] is True, (
+        "plus personne ne peut vendre un char au garage : %s" % r["autre"]
+    )
+    assert r["autre"]["argent"] == round(auto["prix"] * paquet["economie"]["vente_fraction"])
+    assert r["autre"]["la"] is False, "le char vendu est encore devant le garage"
+
 def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
     batte = next(a for a in paquet["armes"] if a["slug"] == "batte")
     coupe_vent = next(t for t in paquet["tenues"] if t["slug"] == "coupe_vent")

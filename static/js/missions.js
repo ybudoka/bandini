@@ -1049,6 +1049,21 @@ const Missions = (function () {
     return Math.max(0, Math.round(v.def.prix * eco.vente_fraction * part * Math.max(0, 1 - eco.vente_malus_doublon * ventes)));
   }
 
+  /** A qui est ce char, si ce n'est pas a toi — le nom a dire, ou null.
+
+      ⚠️ Ti-Guy achete n'importe quel char gare devant sa porte, et c'est
+      exactement la que dort le taxi de Marco (M3 le pose a `porte:garage`).
+      Vendu, il sort du monde : l'objectif attend un char qui n'existe plus,
+      la mission ne RATE meme pas — elle reste prise, le telephone ne sonne
+      plus, et il faut se faire arreter pour s'en sortir. Deux raisons de
+      refuser, donc, et elles ne se recouvrent pas : un char de mission
+      EN COURS (`mission`), et un char PRETE (`aQui`, pose par la fiche et
+      jamais efface — le taxi reste a Marco une fois M3 finie). */
+  function aQui(v) {
+    if (v.aQui) { const p = Histoire.personnage(v.aQui); return (p ? p.nom : v.aQui).toUpperCase(); }
+    return v.mission ? 'QUELQU’UN D’AUTRE' : null;
+  }
+
   function menuGarage(items) {
     const eco = B.defs.economie, p = B.partie, v = charDevant();
     if (!v) {
@@ -1057,7 +1072,10 @@ const Missions = (function () {
     }
     const vente = prixDeVente(v);
     const reparation = Math.round((v.vieMax - v.vie) * eco.reparation_par_pv);
-    items.push({ libelle: 'VENDRE ' + v.def.nom.toUpperCase(), detail: vente + ' $', actif: vente > 0, faire: function () {
+    const proprio = aQui(v);
+    items.push({ libelle: 'VENDRE ' + v.def.nom.toUpperCase(),
+                 detail: proprio ? 'IL EST À ' + proprio : vente + ' $', actif: !proprio && vente > 0, faire: function () {
+      if (aQui(v)) { Son.SFX.erreur(); return false; }
       encaisser(vente, 'VENDU');
       p.ventes = p.ventes || {};
       const jour = p.ventes[v.slug] && p.ventes[v.slug].jour === p.jour ? p.ventes[v.slug].n : 0;

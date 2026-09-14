@@ -54,6 +54,21 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             assert any(p["slug"] == donne["propriete"] for p in economie.PROPRIETES)
 
 
+
+def test_un_char_prete_dit_a_qui_il_est():
+    """⚠️ Le taxi de M3 dort a `porte:garage` — la porte MEME du garage ou
+    Ti-Guy rachete n'importe quel char gare devant. `prete` est ce qui l'en
+    protege, et il est ICI, pas en JavaScript : le navigateur lit un slug de
+    personnage et affiche son nom (« IL EST A MARCO »). Un char prete ne se
+    vend jamais, ni pendant la mission ni apres."""
+    pretes = [(m, o) for m in missions.CATALOGUE for o in m["objectifs"] if o.get("prete")]
+    assert pretes, "aucun char prete : le taxi de Marco en est un"
+    for m, o in pretes:
+        assert o["type"] == "monter", f"{m['slug']} : seul le vehicule d'un objectif `monter` se prete"
+        assert missions.personnage(o["prete"]), f"{m['slug']} : {o['prete']} n'est pas un personnage connu"
+    taxi = next(o for m, o in pretes if m["slug"] == "m3")
+    assert taxi["prete"] == missions.par_slug("m3")["donneur"] == "marco", "le taxi de M3 est a Marco"
+
 def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     """⚠️ Ces textes sont la source des voix generees : un texte qui change
     regenere un fichier (au caractere). Court, quebecois, une voix connue."""

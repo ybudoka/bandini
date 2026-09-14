@@ -398,7 +398,11 @@ const Histoire = (function () {
       const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : tuileDeRue(ou.x, ou.y, 8)) : null;
       const place = rue || ou;
       if (place) {
-        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens] : 0, { etat: 'stationne', mission: m.slug });
+        // ⚠️ `aQui` vient de la fiche (`prete` dans `missions.py`), et il ne
+        // s'efface JAMAIS : le taxi de Marco est a Marco avant, pendant et
+        // apres — c'est lui qui l'empeche d'etre vendu au garage de Ti-Guy,
+        // qui est a deux pas de la ou il dort.
+        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
         if (v) { B.mission.vehicule = v; B.mission.entites.push(v); }
       }
     } else if (o.type === 'tuer') {
