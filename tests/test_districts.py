@@ -110,12 +110,21 @@ def test_on_roule_de_chaque_district_a_chaque_autre():
             f"{district['slug']} : {len(tuiles) - touchees} tuiles de rue sur {len(tuiles)} hors d'atteinte"
 
 
-def test_le_pont_est_le_seul_lien_vers_la_pointe():
+def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
     """⚠️ Le chenal doit couper VRAIMENT : sans pont, La Pointe est une ile.
 
     Si ce test devient vert en enlevant le pont, c'est qu'une rue, une plage ou
     un banc de sable a referme le chenal — et l'unique pont ne veut plus rien
     dire.
+
+    ⚠️ **Depuis qu'on nage, il faut dire CARROSSABLE, et ce n'est pas un
+    affaiblissement.** Un homme traverse un chenal de onze tuiles a la nage — il
+    y laisse quatre-vingt-huit points de souffle sur cent, c'est un pari et
+    `test_eau.py` le mesure. Une auto, non : elle coule. Le juge lit donc
+    `voie`, la grille des RUES, et il le lisait deja — c'est l'enonce qui
+    rattrape le code, pas l'inverse. « La Pointe est une ile pour les chars »
+    est une phrase plus vraie que « La Pointe est une ile », et c'est celle que
+    la geographie de M8 a toujours voulu dire.
     """
     ponts = CARTE["ponts"]
     assert len(ponts) == 1, ponts

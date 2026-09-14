@@ -1509,6 +1509,160 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
     assert f["corps"] == "facteur"
 
 
+def test_l_eau_n_est_plus_un_mur(banc, paquet):
+    """⚠️ Demande de Martin : « l'eau ne doit plus être un mur, mais qu'on puisse
+    soit y nager ou s'y noyer, à pied ou dans un véhicule. »
+
+    C'était littéralement un mur : `MASQUE_PIETON` et `MASQUE_VEHICULE`
+    comptaient l'eau comme une façade, et on s'arrêtait au bord de la baie —
+    ce qui est le plus étrange dans une ville qui s'appelle Baie-des-Brumes.
+
+    ⚠️ Le vrai enjeu n'est pas la noyade, c'est le **pont** : la géographie de M8
+    tenait par la collision, elle tient maintenant par le **souffle**. Les
+    nombres se jugent côté Python (`test_eau.py`) ; ici, c'est le moteur."""
+    nage = paquet["recherche"]["nage"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(31);
+        const j = L.B.joueur, c = L.Monde.carte, TT = L.TT, out = {};
+
+        // Une rive : une tuile qu'on foule, avec six tuiles d'eau plein est.
+        let rive = null;
+        for (let y = 4; y < c.h - 4 && !rive; y++) {
+            for (let x = 4; x < c.w - 10; x++) {
+                if (!L.Monde.marchablePieton(x, y) || L.Monde.estEau(x, y)) continue;
+                let eau = true;
+                for (let k = 1; k <= 9; k++) if (!L.Monde.estEau(x + k, y)) eau = false;
+                if (eau) { rive = { x: x, y: y }; break; }
+            }
+        }
+        out.rive = rive;
+
+        // 1. LES DEUX MASQUES NE DISENT PAS LA MEME CHOSE.
+        out.masques = {
+            pieton: L.Monde.bloque(rive.x + 2, rive.y, L.Monde.MASQUE_PIETON),
+            nageur: L.Monde.bloque(rive.x + 2, rive.y, L.Monde.MASQUE_NAGEUR),
+            flanerie: L.Monde.marchablePieton(rive.x + 2, rive.y),
+        };
+
+        // 2. ON ENTRE DANS L'EAU, ET LE SOUFFLE PART.
+        j.x = rive.x * TT + 8; j.y = rive.y * TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        j.endurance = 100; j.surplus = 0; j.cafeine = 0;
+        o.touche('KeyD');
+        let entre = -1;
+        for (let i = 0; i < 180 && entre < 0; i++) { o.frame(1); if (j.nage) entre = i; }
+        const souffle0 = j.endurance;
+        for (let i = 0; i < 60; i++) o.frame(1);
+        o.relacher('KeyD');
+        out.nage = { entre: entre >= 0, dansLEau: L.Entites.dansLEau(j),
+                     souffleAvant: Math.round(souffle0), souffleApres: Math.round(j.endurance),
+                     tuiles: Math.round((j.x / TT) - rive.x) };
+
+        // 3. A BOUT DE SOUFFLE, ON COULE — et on se reveille a l'hopital.
+        j.endurance = 3; j.surplus = 0;
+        const hopital = c.points.find(function (p) { return p.slug === 'hopital'; });
+        let noye = -1;
+        for (let i = 0; i < 120 && noye < 0; i++) { o.frame(1); if (L.B.transition) noye = i; }
+        o.fondu();
+        out.noyade = { noye: noye >= 0,
+                       auSec: !L.Entites.dansLEau(j),
+                       souffle: Math.round(j.endurance),
+                       pres: hopital ? Math.round(Math.hypot(j.x - (hopital.x * TT + 8), j.y - (hopital.y * TT + 8))) : null };
+
+        // 4. UN CHAR DANS L'EAU COULE, ET IL EST PERDU.
+        const eau = { x: (rive.x + 4) * TT + 8, y: rive.y * TT + 8 };
+        j.x = rive.x * TT + 8; j.y = rive.y * TT + 8;
+        j.endurance = 100; L.Monde.centrerCamera(j.x, j.y);
+        const v = L.Vehicules.creer('auto', eau.x, eau.y, 0, { etat: 'stationne' });
+        const bateau = L.Vehicules.creer('bateau', eau.x, eau.y + 3 * TT, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        let sombre = -1;
+        for (let i = 0; i < 400 && sombre < 0; i++) { o.frame(1); if (L.B.entites.indexOf(v) < 0) sombre = i; }
+        out.char = { sombre: sombre >= 0, images: sombre,
+                     coule_s: L.B.defs.recherche.nage.coule_s,
+                     // ⚠️ Et il n'est PAS a la fourriere : couler ne doit pas
+                     // devenir le moyen commode de se faire rembourser une epave.
+                     auLot: (L.B.partie.fourriere || []).some(function (q) { return q.slug === 'auto'; }),
+                     bateauFlotte: L.B.entites.indexOf(bateau) >= 0 };
+        if (L.B.entites.indexOf(bateau) >= 0) L.Entites.retirer(bateau);
+
+        // 5. UN AGENT NAGE DERRIERE TOI.
+        // ⚠️ SIX tuiles au large, pas trois : a trois, l'agent arrive a portee
+        // d'arrestation depuis la rive et s'arrete — le juge mesurait alors un
+        // agent qui te passe les menottes, pas un agent qui nage.
+        j.x = (rive.x + 6) * TT + 8; j.y = rive.y * TT + 8;
+        j.endurance = 100; j.surplus = 60;
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Police.remiseAZero();
+        // ⚠️ Sans etoile, `Police.gere` renvoie l'agent a la flanerie des la
+        // premiere image : un agent « en poursuite » sans recherche ne poursuit
+        // personne, et le juge aurait mesure un promeneur.
+        L.Police.etoilesAuMoins(2);
+        const agent = L.Police.creerAgent(rive.x * TT + 8, rive.y * TT + 8, 'poursuit');
+        agent.but = { x: j.x, y: j.y };
+        agent.vuT = 0;
+        L.Entites.indexer();
+        let mouille = false;
+        for (let i = 0; i < 300 && !mouille; i++) { o.frame(1); if (L.Entites.dansLEau(agent)) mouille = true; }
+        out.police = { mouille: mouille, vitesse: L.B.defs.recherche.nage.vitesse };
+        L.Entites.retirer(agent);
+
+        // 6. AUCUN PASSANT ORDINAIRE NE SE BAIGNE.
+        j.x = rive.x * TT + 8; j.y = rive.y * TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        let baigneurs = 0, vus = 0;
+        for (let i = 0; i < 600; i++) {
+            o.frame(1);
+            for (const e of L.B.entites) {
+                if (e.type !== 'pieton' || e.agent || !e.vivant) continue;
+                vus++;
+                if (L.Entites.dansLEau(e)) baigneurs++;
+            }
+        }
+        out.passants = { baigneurs: baigneurs, vus: vus };
+        return out;
+    }""")
+
+    assert r["rive"], "le juge n'a pas trouvé de rive : la carte n'a plus d'eau ?"
+    # ⚠️ Les deux masques : l'eau arrête un corps de piéton, jamais un nageur.
+    assert r["masques"] == {"pieton": True, "nageur": False, "flanerie": False}, (
+        "les masques ne disent plus ce qu'ils doivent dire : %s" % r["masques"]
+    )
+    n = r["nage"]
+    assert n["entre"] is True and n["dansLEau"] is True, "on ne rentre pas dans l'eau : %s" % n
+    assert n["tuiles"] >= 1, "on n'avance pas dans l'eau : %s" % n
+    # Le souffle part, et il part vite : 0,5 par image.
+    attendu = nage["souffle_par_image"] * 60
+    assert n["souffleAvant"] - n["souffleApres"] >= attendu * 0.8, (
+        "nager ne coûte presque rien : %s (attendu ~%s en une seconde)" % (n, attendu)
+    )
+    no = r["noyade"]
+    assert no["noye"] is True, "à bout de souffle, on ne coule pas : %s" % no
+    assert no["auSec"] is True, "on se réveille dans l'eau : %s" % no
+    assert no["souffle"] >= 100, "on se réveille sans souffle : %s" % no
+    assert no["pres"] is not None and no["pres"] < 64, "on ne se réveille pas à l'hôpital : %s" % no
+    ch = r["char"]
+    assert ch["sombre"] is True, "un char dans l'eau flotte : %s" % ch
+    assert ch["images"] >= ch["coule_s"] * 60 * 0.8, (
+        "il coule instantanément : on n'a pas le temps d'en sortir (%s)" % ch
+    )
+    assert ch["auLot"] is False, "un char noyé revient à la fourrière : %s" % ch
+    # ⚠️ Le bateau, lui, flotte — et c'est sa fiche qui le dit, pas une classe
+    # écrite dans le JavaScript.
+    assert ch["bateauFlotte"] is True, "la chaloupe coule aussi : %s" % ch
+    assert r["police"]["mouille"] is True, (
+        "un agent lancé derrière le joueur s'arrête au bord : l'eau devient l'exploit "
+        "anti-police le plus simple du jeu (%s)" % r["police"]
+    )
+    p = r["passants"]
+    assert p["vus"] > 500, "le juge n'a croisé personne : il ne prouve rien (%s)" % p
+    assert p["baigneurs"] == 0, (
+        "un passant s'est mis à l'eau : `marchablePieton` doit garder l'eau, et une "
+        "flânerie qui mène à la baie est le genre de chose qu'on ne voit qu'en jeu (%s)" % p
+    )
+
+
 def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
     """⚠️ Retour de Martin : « les portes doivent ouvrir quand j'entre aussi. »
     Elles s'ouvraient pour les piétons et **pas pour lui** — il traversait un

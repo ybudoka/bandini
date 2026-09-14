@@ -129,6 +129,35 @@ VITESSES = {"joueur_marche": 1.2, "joueur_course": 2.0, "joueur_sprint": 2.6,
             "pieton": 0.45, "pieton_course": 1.35,
             "policier": 2.0, "endurance": 100, "endurance_par_image": 0.4}
 
+#: NAGER — et les deux nombres se jugent CONTRE LA GEOGRAPHIE, pas au gout.
+#:
+#: ⚠️ Le vrai enjeu de l'eau n'est pas la noyade, c'est le PONT. M8 a bati sa
+#: geographie sur une regle : une rue dont tous les blocs voisins sont de l'eau
+#: est noyee, et le pont fait l'unique exception. Si l'on nage, La Pointe cesse
+#: d'etre une ile — a moins que le souffle ne s'en charge. C'est donc lui qui
+#: tient la geographie, et il se MESURE :
+#:
+#:   une tuile d'eau = 16 px / `vitesse` images x `souffle_par_image`
+#:                   = 16 / 1,0 x 0,5 = 8 points de souffle
+#:
+#:   le chenal du pont     11 tuiles =   88 points — un PARI (on a 100)
+#:   la baie              124 tuiles =  992 points — impossible, et de loin
+#:
+#: Avec le cafe (la depense de moitie) et le surplus plein (160), le plafond
+#: monte a 40 tuiles : le chenal devient confortable, la baie reste hors de
+#: portee par trois fois. Le juge refait ce calcul sur la carte livree — si
+#: quelqu'un elargit le chenal ou ralentit la nage, c'est la que ca tombe.
+#:
+#: ⚠️ Et le pont reste le seul lien CARROSSABLE. Un homme traverse un chenal a
+#: la nage, une auto non : c'est plus vrai qu'avant, pas moins.
+NAGE = {
+    "vitesse": 1.0,            # px par image — plus lent que la marche (1,2)
+    "souffle_par_image": 0.5,  # ce que nager coute ; a zero, on coule
+    "coule_s": 3.0,            # un char dans l'eau : le temps qu'il s'enfonce
+    "cout_chemin_tuiles": 8,   # ce que l'A* paie pour une tuile d'eau
+}
+
+
 #: Enjamber un grillage : ce que ca coute. ⚠️ Le meme prix POUR TOUT LE MONDE —
 #: le joueur, un agent, un gardien de fourriere. Si franchir une cloture etait
 #: une capacite du joueur seul, la premiere cloture venue deviendrait l'exploit
@@ -176,4 +205,5 @@ def exporter() -> dict:
         "deguisement": DEGUISEMENT,
         "vitesses": VITESSES,
         "clotures": CLOTURES,
+        "nage": NAGE,
     }

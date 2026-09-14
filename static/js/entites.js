@@ -928,6 +928,23 @@ const Entites = (function () {
   /** Debout dans la foule : ni mort, ni assomme, ni au volant. ⚠️ On marche
       SUR un cadavre — c'est deja la regle du tri au dessin — alors un corps a
       terre ne pousse personne et ne se fait pousser par personne. */
+  /** A-t-il les pieds dans l'eau ? ⚠️ On le LIT sous ses pieds a chaque image,
+      on ne le retient pas dans un drapeau : un etat qu'il faut penser a remettre
+      a zero est un etat qu'on oublie de remettre a zero, et le joueur serait
+      reste nageur sur le trottoir. */
+  function dansLEau(e) {
+    return Monde.estEau(Math.floor(e.x / TT), Math.floor(e.y / TT));
+  }
+
+  /** Les eclaboussures : a l'entree dans l'eau, et pendant qu'on nage. */
+  function remous(x, y, nombre) {
+    for (let i = 0; i < nombre; i++) {
+      const a = B.rng() * Math.PI * 2, v = 0.3 + B.rng() * 1.1;
+      particule(x, y, Math.cos(a) * v, Math.sin(a) * v * 0.5,
+                12 + B.rng() * 10, i % 3 ? '#cfe6f4' : '#8ab4cc', 1, 0.05);
+    }
+  }
+
   function deboutDansLaFoule(e) {
     return e.actif && e.vivant && !e.dansVehicule && e.etat !== 'assomme'
       && (e.type === 'pieton' || e.type === 'joueur');
@@ -1087,6 +1104,17 @@ const Entites = (function () {
     e.face = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
   }
 
+  /** A bout de souffle, on coule. ⚠️ Et on coule COMME ON TOMBE :
+      `Missions.hopital` fait deja tout — la facture, la police remise a zero, le
+      boulot abandonne, le fondu et le reveil. Une deuxieme facon de perdre
+      connaissance aurait sa propre facture, ses propres oublis, et le jour ou
+      l'une des deux change, l'autre ment. */
+  function noyade(j) {
+    remous(j.x, j.y, 16);
+    j.vx = 0; j.vy = 0;
+    Missions.hopital(null);
+  }
+
   // --- Joueur ---------------------------------------------------------------------------
 
   function majJoueur(j) {
@@ -1094,10 +1122,18 @@ const Entites = (function () {
     if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
     if (B.cinema) { j.vx = 0; j.vy = 0; return; }     // quelqu'un lui parle : il ecoute
     const v = B.defs.recherche.vitesses;
+    const eau = B.defs.recherche.nage;
     const axe = Entree.axe;
+    // ⚠️ L'EAU N'EST PLUS UN MUR. Le joueur et les agents portent le masque du
+    // nageur — eux seuls entrent dans la baie — et c'est le SOUFFLE qui decide
+    // jusqu'ou. Voir `recherche.NAGE` : les deux nombres se jugent contre la
+    // geographie, pas au gout.
+    const nageait = j.nage;
+    j.nage = dansLEau(j);
+    if (j.nage && !nageait) { remous(j.x, j.y, 10); Son.SFX.choc && Son.SFX.choc(); }
     if (j.roule > 0) {                       // roulade : on ne se dirige plus
       j.roule--;
-      deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_PIETON);
+      deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
       dansLaCarte(j);
       if (j.roule === 0) j.invincible = 6;
       return;
@@ -1114,7 +1150,18 @@ const Entites = (function () {
     // reste ce qu'il est, seule la DEPENSE baisse. La minuterie, elle,
     // s'ecoule dans `Missions.maj` — meme au volant.
     const cafe = j.cafeine > 0 ? B.defs.economie.cafe.depense : 1;
-    if (veutSprinter && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
+    if (j.nage) {
+      // ⚠️ Nager COUTE MEME IMMOBILE : on ne fait pas la planche dans la baie
+      // de Baie-des-Brumes. Sans ca, s'arreter au milieu de l'eau serait un
+      // moyen de refaire son souffle a l'abri de la police.
+      vitesse = eau.vitesse;
+      const cout = eau.souffle_par_image * cafe;
+      const surSurplus = Math.min(j.surplus || 0, cout);
+      j.surplus = (j.surplus || 0) - surSurplus;
+      j.endurance = Math.max(0, j.endurance - (cout - surSurplus));
+      if (j.t % 9 === 0) remous(j.x, j.y + 2, 1);
+      if (j.endurance <= 0 && (j.surplus || 0) <= 0) { noyade(j); return; }
+    } else if (veutSprinter && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
       vitesse = v.joueur_sprint;
       // ⚠️ Le SURPLUS part en premier : c'est la seule part de cette barre
       // qu'on ne peut pas reprendre en s'arretant, donc la seule qui vaille ce
@@ -1128,21 +1175,22 @@ const Entites = (function () {
       // difference entre une barre qui se remplit seule et une avance achetee.
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }
-    if (j.etat === 'attaque') vitesse *= 0.45;    // on frappe en marchant, pas en courant
+    if (j.etat === 'attaque' && !j.nage) vitesse *= 0.45;    // on frappe en marchant, pas en courant
     const mag = axe.source === 'clavier' ? axe.mag : Math.min(1, axe.mag * 1.15);
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
-    if (axe.mag > 0 && enjamber(j, j.vx, j.vy)) { return; }
+    if (axe.mag > 0 && !j.nage && enjamber(j, j.vx, j.vy)) { return; }
     const avant = { x: j.x, y: j.y };
-    deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_PIETON);
+    deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
     dansLaCarte(j);
     const d = Math.hypot(j.x - avant.x, j.y - avant.y);
     j.anim.dist += d;
     j.pasDist += d;
-    if (j.pasDist > 14) { j.pasDist = 0; Son.SFX.pas(); }
+    // On ne fait pas de pas dans l'eau.
+    if (j.pasDist > 14) { j.pasDist = 0; if (!j.nage) Son.SFX.pas(); }
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
@@ -1204,7 +1252,7 @@ const Entites = (function () {
       if (e.sortie.t > SORTIE_IMAGES) { e.sortie = null; e.dessine = true; return false; }
       if (e.dessine) {
         e.vx = 0; e.vy = B.defs.recherche.vitesses.pieton * e.allure;
-        deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+        deplacerCercle(e, e.vx, e.vy, masqueDe(e));
         regarder(e, 0, 1);
       }
       return true;
@@ -1218,7 +1266,7 @@ const Entites = (function () {
       const vitesse = B.defs.recherche.vitesses.pieton * e.allure;
       e.vx = (cible.x - e.x) / d * vitesse; e.vy = (cible.y - e.y) / d * vitesse;
       const avant = { x: e.x, y: e.y };
-      deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
       regarder(e, e.vx, e.vy);
       // Bloque par la foule ou un banc : on renonce plutot que de pietiner.
       if (Math.hypot(e.x - avant.x, e.y - avant.y) < 0.05 && ++e.porteBloque > 60) e.porteBut = null;
@@ -1231,10 +1279,26 @@ const Entites = (function () {
     return true;
   }
 
+  /** Le masque d'un corps depend d'OU IL EST, pas de qui il est.
+
+      ⚠️ Celui qui a les pieds dans l'eau doit pouvoir EN SORTIR. Un agent lance
+      a la nage derriere le joueur, revenu a `flane`, se serait retrouve fige au
+      milieu de la baie pour toujours : le masque du pieton ne laisse pas sortir
+      de l'eau plus qu'il n'y laisse entrer. Les passants, eux, n'y entrent
+      jamais — `marchablePieton` garde l'eau, et leur flanerie s'y arrete. */
+  function masqueDe(e) {
+    return (e.nage || e.agent || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
+  }
+
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
+    // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
+    // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
+    const nageait = e.nage;
+    e.nage = dansLEau(e);
+    if (e.nage && !nageait) remous(e.x, e.y, 8);
     if (e.saigne > 0) saigner(e);
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
@@ -1250,7 +1314,7 @@ const Entites = (function () {
       const loin = Math.hypot(dx, dy);
       if (loin > 0.3) {
         const pas = Math.min(loin, v.pieton);
-        deplacerCercle(e, dx / loin * pas, dy / loin * pas, Monde.MASQUE_PIETON);
+        deplacerCercle(e, dx / loin * pas, dy / loin * pas, masqueDe(e));
       }
       e.vx = 0; e.vy = 0;
       return;
@@ -1266,7 +1330,7 @@ const Entites = (function () {
         e.vx = dx / norme * vitesse;
         e.vy = dy / norme * vitesse;
       } else { e.vx = 0; e.vy = 0; }
-      deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
       dansLaCarte(e);
       e.anim.dist += Math.abs(e.vx) + Math.abs(e.vy);
       regarder(e, e.vx, e.vy);
@@ -1279,13 +1343,17 @@ const Entites = (function () {
     if (e.metier === 'reclame' && (e.etat === 'flane' || e.etat === 'arret')) solliciter(e);
     if (e.recul > 0) {
       e.recul--;
-      deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
       e.vx *= 0.82; e.vy *= 0.82;
       dansLaCarte(e);
       return;
     }
 
     let vitesse = v.pieton * e.allure;
+    // ⚠️ On nage a la vitesse de la nage, agent compris : un policier qui
+    // traverserait le chenal aussi vite qu'il court sur le quai ferait de l'eau
+    // un raccourci pour lui et un cul-de-sac pour le joueur.
+    if (e.nage) vitesse = Math.min(vitesse, B.defs.recherche.nage.vitesse);
     if (e.etat === 'temoin' && e.vers && e.vers.vivant) {
       // Le temoin court VERS l'agent qu'il a repere, pour lui raconter.
       vitesse = v.pieton_course * e.allure;
@@ -1440,7 +1508,7 @@ const Entites = (function () {
       }
     }
     const avant = { x: e.x, y: e.y };
-    deplacerCercle(e, e.vx, e.vy, Monde.MASQUE_PIETON);
+    deplacerCercle(e, e.vx, e.vy, masqueDe(e));
     dansLaCarte(e);
     const bouge = Math.hypot(e.x - avant.x, e.y - avant.y);
     e.anim.dist += bouge;
@@ -1874,8 +1942,23 @@ const Entites = (function () {
   }
 
   /** Le corps, avec sa pose : decale, penche, tourne, tasse. */
+  //: De combien un nageur s'enfonce, en pixels. ⚠️ Assez pour que les jambes
+  //: disparaissent (le corps fait treize pixels, les jambes en font trois), pas
+  //: assez pour couper le visage — c'est lui qui dit dans quel sens on nage.
+  const SOUS_L_EAU = 5;
+
   function dessinerCorps(ctx, e, img, p, cx, cy) {
     const x = e.x - cx + p.dx, y = e.y - e.z - cy + p.dy;
+    if (e.nage && !p.rot && p.echelleY === 1) {
+      // ⚠️ On coupe A LA SOURCE, pas avec un `clip` : un `clip` coute un
+      // `save`/`restore` par nageur et par image, et le dessin de la ville est
+      // deja ce qui tient le rythme sur telephone.
+      const haut = Math.max(1, img.canvas.height - SOUS_L_EAU);
+      ctx.drawImage(img.canvas, 0, 0, img.canvas.width, haut,
+                    Math.round(x - img.ancre[0]), Math.round(y - img.ancre[1]),
+                    img.canvas.width, haut);
+      return;
+    }
     if (!p.rot && p.echelleY === 1) {
       ctx.drawImage(img.canvas, Math.round(x - img.ancre[0]), Math.round(y - img.ancre[1]));
       return;
@@ -1928,6 +2011,7 @@ const Entites = (function () {
     });
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
+    const eauRemous = Atlas.cuirePeintre('remous', DECORS.remous.w, DECORS.remous.h, DECORS.remous.peindre);
     const bulles = [];
     for (const e of visibles) {
       if (e.decor) {                 // decor ET commerces ambulants
@@ -1959,7 +2043,16 @@ const Entites = (function () {
       }
       const img = imageDe(e);
       if (!img) continue;
-      if (e.vivant) ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
+      // ⚠️ Un nageur n'a pas d'ombre au sol, il a un REMOUS — et son corps est
+      // coupe a la ligne d'eau (`dessinerCorps`). Les deux ensemble : une tete
+      // sans remous sur la baie ne se voit pas, et un corps entier sur l'eau a
+      // l'air de marcher dessus.
+      if (e.vivant && e.nage) {
+        ctx.drawImage(eauRemous, Math.round(e.x - 7 - cx), Math.round(e.y - 3 - cy));
+        B.stats.images++;
+      } else if (e.vivant) {
+        ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
+      }
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;
       const p = pose(e);
       // L'arme passe DERRIERE le corps quand on regarde vers le haut.
@@ -1997,7 +2090,7 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
-    bulle, taire, dessinerBulle,
+    bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
   };

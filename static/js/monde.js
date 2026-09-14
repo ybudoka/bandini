@@ -21,13 +21,25 @@ const Monde = (function () {
   // cloture n'arretait que les chars, et a pied on la traversait sans meme
   // ralentir. C'est ce qui la rendait muette.
   const MASQUE_PIETON = MUR | EAU | GRILLAGE | BARBELE;
-  const MASQUE_VEHICULE = MUR | EAU | BASSE | GRILLAGE | BARBELE;
+  // ⚠️ LE NAGEUR NE VOIT PAS L'EAU. C'est le masque du joueur et des agents —
+  // eux seuls entrent dans la baie. Les passants gardent `MASQUE_PIETON` : un
+  // flaneur qui part se baigner parce que son errance l'y a mene, c'est le
+  // genre de chose qu'on ne voit qu'en jeu, et il n'y a rien a y gagner.
+  const MASQUE_NAGEUR = MUR | GRILLAGE | BARBELE;
+  // ⚠️ Un char NE FLOTTE PAS : il entre dans l'eau, et il coule (voir
+  // `vehicules.js`). Le masque le laisse donc passer — c'est le fond de la
+  // baie qui l'arrete, pas une facade invisible au bord de l'eau.
+  const MASQUE_VEHICULE = MUR | BASSE | GRILLAGE | BARBELE;
   // ⚠️ Le masque des CHEMINS a pied, et il n'est pas celui des corps : un
   // grillage s'enjambe, donc un chemin peut le traverser — plus cher qu'une
   // tuile normale (`COUT_GRILLAGE`), jamais gratuitement. Si le A* s'arretait
   // aux clotures comme les corps, la premiere cloture venue gagnerait toutes
   // les poursuites : on enjambe, et les agents restent plantes de l'autre cote.
-  const MASQUE_A_PIED = MUR | EAU | BARBELE;
+  // ⚠️ L'eau n'y est plus non plus : un agent nage derriere toi, sinon l'eau
+  // devient l'exploit anti-police le plus simple du jeu — deux pas dans la baie
+  // et on est intouchable. Elle se PAIE, comme le grillage (`coutEau`) : la
+  // traversee d'un chenal reste un detour cher, la baie reste impensable.
+  const MASQUE_A_PIED = MUR | BARBELE;
 
   const SORTES_DE_LAMPE = {
     poteau: { dy: 2, c: 'rgba(255,214,130,0.55)' },
@@ -250,8 +262,13 @@ const Monde = (function () {
   }
   /** La chaussee nue : la ou un pieton n'a rien a faire. */
   function estChaussee(tx, ty) { return estRoute(tx, ty) && !estPassage(tx, ty); }
-  /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee. */
+  /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee.
+      ⚠️ Elle garde l'eau MEME depuis qu'on nage : ce qui flane ne se baigne
+      pas, et les juges de connexite s'appuient dessus — si l'eau reliait les
+      rives, `composantes_marchables` ne dirait plus rien du tout. */
   function marchablePieton(tx, ty) { return !bloque(tx, ty, MASQUE_PIETON) && !estChaussee(tx, ty); }
+  /** De l'eau : on y nage, on y coule, et un char s'y enfonce. */
+  function estEau(tx, ty) { return solidite(tx, ty) === 2; }
   /** Un meuble (table, comptoir, lit...) : un pieton PASSE dessus — la legende
       ne l'arrete pas — mais personne n'a a s'y tenir debout. */
   function estMeuble(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).meuble); }
@@ -408,6 +425,15 @@ const Monde = (function () {
     const c = B.defs && B.defs.recherche && B.defs.recherche.clotures;
     return (c && c.cout_chemin_tuiles) || 5;
   }
+  //: Ce que coute une tuile d'EAU dans un chemin a pied. ⚠️ Meme raison que la
+  //: cloture : sans prix, le plus court chemin couperait par la baie a chaque
+  //: fois, et un agent traverserait a la nage ce qu'un homme met une minute a
+  //: contourner. Huit tuiles de marche — le chenal du pont coute alors quatre-
+  //: vingt-huit tuiles de detour, ce qui est a peu pres le tour par le pont.
+  function coutEau() {
+    const n = B.defs && B.defs.recherche && B.defs.recherche.nage;
+    return (n && n.cout_chemin_tuiles) || 8;
+  }
 
   /** Demande un chemin en tuiles de (x0,y0) a (x1,y1) en pixels ; `fait(chemin)`
       recoit une liste de {x, y} (pixels, centres de tuiles) ou null. */
@@ -428,7 +454,7 @@ const Monde = (function () {
     const sx = Math.floor(x0 / TT), sy = Math.floor(y0 / TT), gx = Math.floor(x1 / TT), gy = Math.floor(y1 / TT);
     if (!carte || bloque(gx, gy, masque)) return null;
     if (sx === gx && sy === gy) return [];
-    const w = carte.w, cout = coutCloture();
+    const w = carte.w, cout = coutCloture(), coutE = coutEau();
     const ouvert = [{ x: sx, y: sy, g: 0, f: Math.abs(gx - sx) + Math.abs(gy - sy) }];
     const vu = new Map();      // cle -> { g, parent }
     vu.set(sy * w + sx, { g: 0, parent: -1 });
@@ -455,7 +481,8 @@ const Monde = (function () {
         // seconde en haut d'un grillage ou d'une palissade, pas un pas. Sans ce
         // cout, le chemin le plus court passerait toujours par-dessus les
         // clotures — et un agent ferait le tour de la ville en escaladant.
-        const cle = ny * w + nx, g = c.g + (solidite(nx, ny) === 4 ? cout : 1);
+        const sn = solidite(nx, ny);
+        const cle = ny * w + nx, g = c.g + (sn === 4 ? cout : sn === 2 ? coutE : 1);
         const deja = vu.get(cle);
         if (deja && deja.g <= g) continue;
         vu.set(cle, { g: g, parent: c.y * w + c.x });
@@ -918,7 +945,8 @@ const Monde = (function () {
   }
 
   return {
-    MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
+    MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
+    MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,

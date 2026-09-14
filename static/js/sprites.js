@@ -1936,6 +1936,16 @@ const DECORS = {
   ombre: { w: 12, h: 6, ancre: [6, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.30)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
   } },
+  // ⚠️ LE REMOUS REMPLACE L'OMBRE quand on nage, et il fait deux choses d'un
+  // coup : il dit ou est la ligne d'eau (le corps est coupe juste au-dessus) et
+  // il rend le nageur lisible sur un fond qui est de la meme couleur que lui.
+  // Une tete sans remous sur la baie, on ne la voit pas.
+  remous: { w: 14, h: 7, ancre: [7, 3], r: 0, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(232,244,252,0.55)';
+    ctx.fillRect(3, 1, 8, 1); ctx.fillRect(1, 3, 12, 1); ctx.fillRect(4, 5, 6, 1);
+    ctx.fillStyle = 'rgba(120,170,200,0.45)';
+    ctx.fillRect(2, 2, 10, 1); ctx.fillRect(3, 4, 8, 1);
+  } },
 };
 
 /* Decalques au sol : sang, gouttes, impacts. Cuits une fois par variante. */

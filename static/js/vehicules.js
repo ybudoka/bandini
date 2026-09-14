@@ -48,7 +48,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, aToi: false, laisse: false, malGareT: 0, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
+      vole: false, aToi: false, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
     }, options || {}));
     return v;
   }
@@ -633,9 +633,51 @@ const Vehicules = (function () {
     Son.jouerA(slug, v.x, v.y, 160);
   }
 
+  /** Un char dans l'eau COULE. ⚠️ Et il est PERDU : on ne le retrouve ni au
+      fond, ni a la fourriere. Sinon couler devient le moyen commode de se faire
+      rembourser une epave — on pousse sa carcasse a l'eau et on va la racheter
+      au lot pour le prix d'un remorquage.
+
+      ⚠️ Le BATEAU, lui, flotte, et c'est sa fiche qui le dit (`eau`, deja la
+      pour sa friction et son adherence). Une classe ecrite ici en aurait fait
+      une deuxieme verite a tenir a jour. */
+  function majNoyade(v) {
+    const n = B.defs.recherche.nage;
+    if (v.def.eau || !Monde.estEau(Math.floor(v.x / TT), Math.floor(v.y / TT))) {
+      v.coule = 0;
+      return false;
+    }
+    if (!v.coule) {
+      Entites.remous(v.x, v.y, 14);
+      if (v.conducteur === 'joueur') Hud.message('IL COULE — SORS', 180);
+    }
+    // ⚠️ `(v.coule || 0) + 1`, jamais `v.coule++` : sur un char qui n'a jamais
+    // touche l'eau le compteur n'existe pas, `undefined++` rend NaN, et NaN
+    // n'est plus petit que rien — le char coulait A LA PREMIERE IMAGE, sans
+    // qu'on ait le temps d'en sortir. C'est le juge qui l'a dit.
+    v.coule = (v.coule || 0) + 1;
+    // Il s'enfonce : il ralentit vite, et l'eau bout autour.
+    v.vitesse *= 0.9; v.vx *= 0.9; v.vy *= 0.9;
+    if (B.t % 5 === 0) Entites.remous(v.x + (B.rng() - 0.5) * 10, v.y + (B.rng() - 0.5) * 6, 2);
+    if (v.coule < n.coule_s * 60) return false;
+    // Au fond. Celui qui est reste dedans se retrouve a l'eau, et il nage.
+    const j = B.joueur;
+    if (v.conducteur === 'joueur' && j && j.dansVehicule === v) {
+      descendre(j, true);
+      j.x = v.x; j.y = v.y;
+      j.nage = true;
+      Entites.remous(j.x, j.y, 16);
+      Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULE', 240);
+    }
+    Entites.remous(v.x, v.y, 18);
+    Entites.retirer(v);
+    return true;
+  }
+
   function majEtatDuChar(v) {
     const ph = physique();
     bruitDePassage(v);
+    if (majNoyade(v)) return;
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
       // ⚠️ Une carcasse fume — sauf celle qui n'avait rien a bruler. Un velo

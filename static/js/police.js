@@ -185,7 +185,12 @@ const Police = (function () {
     // Une cloture sur le chemin : il l'enjambe, et il y perd le meme temps que
     // nous. Une poursuite ne se gagne donc pas en escaladant.
     if (Entites.enjamber(a, a.vx, a.vy)) return false;
-    Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_PIETON);
+    // ⚠️ L'agent porte le masque du NAGEUR : sinon l'eau serait l'exploit
+    // anti-police le plus simple du jeu — deux pas dans la baie, et on est
+    // intouchable. Il nage a la vitesse de la nage comme tout le monde
+    // (`majPieton`), et son chemin paie l'eau au prix fort (`coutEau`).
+    a.nage = Entites.dansLEau(a);
+    Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_NAGEUR);
     Entites.dansLaCarte(a);
     a.anim.dist += vitesse;
     Entites.regarder(a, dx, dy);
