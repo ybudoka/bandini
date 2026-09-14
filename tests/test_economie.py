@@ -171,3 +171,19 @@ def test_export():
     assert len(e["amendes"]) == 5 and len(e["amendes"][0]) == economie.CASIER_MAX + 1
     assert e["amendes"][0][0] == 60
     assert e["pots_de_vin"][0][0] == economie.pot_de_vin(1, 0)
+
+
+def test_la_fourriere_laisse_le_temps_de_se_garer():
+    """⚠️ Un delai avant la remorqueuse, et il n'est pas la pour etre gentil :
+    sans lui, descendre deux secondes sur un passage pieton couterait le prix
+    d'un rachat, et plus personne n'oserait s'arreter. Assez long pour faire
+    une course, assez court pour qu'on sente qu'on est mal gare."""
+    f = economie.FOURRIERE
+    assert 15 <= f["remorquage_s"] <= 120, f["remorquage_s"]
+    # Et se faire remorquer doit couter plus cher que le temps qu'on gagne :
+    # le rachat minimum reste au-dessus d'une course de taxi type.
+    course = economie.gain_boulot(economie.BOULOTS["taxi"])
+    assert f["rachat_minimum"] > course, (
+        f"racheter ({f['rachat_minimum']} $) coute moins qu'une course ({course} $) : "
+        "se faire remorquer ne serait pas une punition"
+    )

@@ -263,6 +263,12 @@ FOURRIERE = {
     "places": 6,              # ce que le lot garde ; au-dela, le plus vieux part
     "etoiles_vol": 1,         # reprendre son char sans payer
     "gardiens": 2,            # les gars du lot, qui ripostent
+    # ⚠️ Le temps qu'on laisse a un char MAL GARE avant que la remorqueuse
+    # passe. Il n'est pas la pour etre gentil : sans delai, descendre deux
+    # secondes sur un passage pieton couterait le prix d'un rachat, et plus
+    # personne n'oserait s'arreter. Assez long pour faire une course, assez
+    # court pour qu'on sente qu'on est mal gare.
+    "remorquage_s": 45,
 }
 
 

@@ -48,7 +48,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, aToi: false, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
+      vole: false, aToi: false, laisse: false, malGareT: 0, epaveT: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
     }, options || {}));
     return v;
   }
@@ -662,6 +662,7 @@ const Vehicules = (function () {
     const r = B.recherche, deg = B.defs.recherche.deguisement;
     if (r.etoiles > 0 && r.vu > deg.vehicule_s * 60) { r.etoiles = Math.max(0, r.etoiles - deg.vehicule_etoiles); r.vu = 0; Hud.message('ILS T’ONT PERDU DE VUE'); }
     v.conducteur = j; v.etat = 'roule'; v.vole = v.vole || !!crime; v.cible = null;
+    v.laisse = false; v.malGareT = 0;              // on le reprend : le chrono repart de zero
     j.dansVehicule = v;
     // ⚠️ Le dernier char conduit, pour la fourriere : la police te SORT
     // du char avant de t'arreter, donc a l'arrestation `dansVehicule` est
@@ -707,6 +708,10 @@ const Vehicules = (function () {
     if (!pose) { j.x = v.x; j.y = v.y + v.def.largeur; }
     v.conducteur = null;
     v.etat = 'stationne';
+    // ⚠️ « Laisse » : un char que LE JOUEUR a garé. La fourriere ne remorque
+    // que ceux-la — remorquer le trafic viderait les rues sans que personne
+    // comprenne pourquoi, et le juge du trafic le verrait avant le joueur.
+    v.laisse = true;
     j.dansVehicule = null; j.dessine = true;
     // ⚠️ Le meme appui ne doit pas nous faire REMONTER dans la meme image :
     // la fin de maj() regarde aussi le bouton ACTION.

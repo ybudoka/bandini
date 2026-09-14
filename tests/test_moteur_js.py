@@ -2642,6 +2642,117 @@ def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
     assert r["ou"] and r["ou"] in r["lieux"], "le lieu de la fiche n'existe pas sur la carte : %s" % r["ou"]
 
 
+def test_mal_gare_veut_dire_quelque_chose_et_la_fourriere_passe(banc, paquet):
+    """⚠️ La fourrière promet depuis M9 qu'un char mal garé part au lot, et
+    **la règle n'existait nulle part**. Depuis que les stationnements ont de
+    vraies **cases**, la définition tombe toute seule et se teste : est mal
+    garé un char **laissé hors d'une case ET qui gêne** — la chaussée (où
+    personne ne s'arrête), un passage piéton (où les gens traversent), le
+    devant d'une porte (où les gens sortent).
+
+    Le juge tient les deux moitiés, et la seconde compte autant : un char dans
+    sa case, sur une ruelle ou sur du stationnement ne se fait **jamais**
+    remorquer — même mal aligné, même depuis trois jours. ⚠️ Et jamais celui de
+    la planque : c'est la sauvegarde de Martin."""
+    delai = paquet["economie"]["fourriere"]["remorquage_s"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(83);
+        const j = L.B.joueur, p = L.B.partie, c = L.Monde.carte;
+        p.fourriere.length = 0;
+        const out = {};
+
+        /* Pose un char au centre d'une tuile choisie par un test, et dit s'il
+           est mal gare. On le retire ensuite : un juge ne salit pas la ville. */
+        function surUneTuile(choisir, slug) {
+            for (let ty = 4; ty < c.h - 4; ty++) {
+                for (let tx = 4; tx < c.w - 4; tx++) {
+                    if (!choisir(tx, ty)) continue;
+                    const v = L.Vehicules.creer(slug || 'auto', tx * L.TT + 8, ty * L.TT + 8, 0, { etat: 'stationne' });
+                    if (!v) continue;
+                    const mal = L.Missions.malGare(v);
+                    L.Entites.retirer(v);
+                    return { tx: tx, ty: ty, mal: mal, glyphe: L.Monde.glyphe(tx, ty) };
+                }
+            }
+            return null;
+        }
+        // ⚠️ Des tuiles ENTOUREES de leur sorte : une auto fait 28 px, elle
+        // deborde sur ses voisines, et on veut juger la tuile qu'on vise.
+        function entouree(test) {
+            return function (tx, ty) {
+                for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+                    if (!test(tx + dx, ty + dy)) return false;
+                }
+                return true;
+            };
+        }
+        const M = L.Monde;
+        out.chaussee = surUneTuile(entouree(function (x, y) { return M.estChaussee(x, y); }));
+        out.case = surUneTuile(entouree(function (x, y) { return '^v<>'.indexOf(M.glyphe(x, y)) >= 0; }));
+        // ⚠️ Un VELO pour la ruelle : elle fait deux tuiles de large, et une
+        // berline de 28 px y deborde toujours sur autre chose.
+        out.ruelle = surUneTuile(function (tx, ty) { return M.glyphe(tx, ty) === 'x'; }, 'velo');
+        out.passage = surUneTuile(function (tx, ty) { return M.estPassage(tx, ty); });
+
+        // Le chrono : un char LAISSE sur la chaussee part au lot, pas avant.
+        // ⚠️ Le joueur se poste a cote : hors de sa bulle, `peupler()` oublie
+        // le char, et on mesurerait un oubli en croyant mesurer un remorquage.
+        const ch = out.chaussee;
+        j.x = ch.tx * L.TT + 8; j.y = ch.ty * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        const v = L.Vehicules.creer('auto', ch.tx * L.TT + 8, ch.ty * L.TT + 8, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        out.sansLaisser = { avant: p.fourriere.length };
+        for (let i = 0; i < (%d + 5) * 60; i++) o.frame(1);
+        out.sansLaisser.apres = p.fourriere.length;      // jamais conduit : on n'y touche pas
+        v.laisse = true;
+        let images = 0;
+        while (L.B.entites.indexOf(v) >= 0 && images < (%d + 20) * 60) { o.frame(1); images++; }
+        out.remorque = { secondes: Math.round(images / 60), lot: p.fourriere.length,
+                         slug: p.fourriere.length ? p.fourriere[p.fourriere.length - 1].slug : null };
+        // Et celui de la planque, jamais — meme au milieu de la rue.
+        const garde = { slug: 'auto', couleur: '#c0392b', vie: 90,
+                        x: ch.tx * L.TT + 8, y: ch.ty * L.TT + 8, angle: 0, vole: false };
+        p.planque.vehicule = garde;
+        const sien = L.Vehicules.creer('auto', garde.x, garde.y, 0, { etat: 'stationne' });
+        sien.laisse = true;
+        L.Entites.indexer();
+        out.planque = { malGare: L.Missions.malGare(sien) };
+        for (let i = 0; i < (%d + 10) * 60; i++) o.frame(1);
+        // ⚠️ On mesure LE LOT, pas la survie du char : le joueur est planté au
+        // milieu de la chaussée, et le trafic finit par écraser ce qui traîne
+        // là. Ce qu'on juge, c'est que la fourrière n'y a pas touché.
+        out.planque.lot = p.fourriere.length;
+        return out;
+    }""" % (delai, delai, delai))
+    assert r["chaussee"] and r["chaussee"]["mal"] is True, (
+        "un char en pleine chaussée n'est pas mal garé ? %s" % r["chaussee"]
+    )
+    assert r["case"] and r["case"]["mal"] is False, (
+        "un char DANS SA CASE ne se fait jamais remorquer : %s" % r["case"]
+    )
+    assert r["ruelle"] and r["ruelle"]["mal"] is False, (
+        "un char rangé sur une ruelle ne gêne personne : %s" % r["ruelle"]
+    )
+    assert r["passage"] and r["passage"]["mal"] is True, (
+        "un char sur un passage piéton doit être mal garé : %s" % r["passage"]
+    )
+    # ⚠️ Le trafic ne se fait PAS remorquer : seulement ce que le joueur laisse.
+    assert r["sansLaisser"]["apres"] == r["sansLaisser"]["avant"] == 0, (
+        "un char que le joueur n'a jamais conduit a été remorqué : %s" % r["sansLaisser"]
+    )
+    assert r["remorque"]["lot"] == 1 and r["remorque"]["slug"] == "auto", (
+        "le char mal garé n'est pas parti au lot : %s" % r["remorque"]
+    )
+    assert abs(r["remorque"]["secondes"] - delai) <= 3, (
+        "la remorqueuse passe après %s s au lieu de %s" % (r["remorque"]["secondes"], delai)
+    )
+    assert r["planque"] == {"malGare": False, "lot": 1}, (
+        "LE CHAR DE LA PLANQUE A ÉTÉ REMORQUÉ : c'est la sauvegarde de Martin (%s)" % r["planque"]
+    )
+
+
 def test_la_fourriere_paie_les_epaves_qu_on_lui_amene_au_crochet(banc, paquet):
     """⚠️ Le remorquage attendait la fourrière ; il l'a. C'est le seul boulot où
     ce qu'on ramasse n'est pas une personne mais ce qu'on a **au crochet** : le

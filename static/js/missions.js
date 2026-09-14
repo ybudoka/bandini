@@ -517,11 +517,7 @@ const Missions = (function () {
     const v = j.dansVehicule || j.dernierVehicule;
     if (!v || !v.def || !v.actif || v.etat === 'epave') return null;
     if (dist2(v.x, v.y, j.x, j.y) > 220 * 220) return null;
-    // ⚠️ JAMAIS celui de la planque : c'est la sauvegarde de Martin, et un
-    // char qui disparait de devant chez soi pendant qu'on dort n'est pas une
-    // regle de jeu, c'est une perte.
-    const garde = B.partie.planque.vehicule;
-    if (garde && garde.slug === v.slug && dist2(v.x, v.y, garde.x, garde.y) < 40 * 40) return null;
+    if (estDeLaPlanque(v)) return null;      // la sauvegarde de Martin, jamais
     return v;
   }
 
@@ -543,6 +539,68 @@ const Missions = (function () {
     const f = B.defs.economie.fourriere, def = Vehicules.vehiculeDef(slug);
     if (!def) return f.rachat_minimum;
     return Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction));
+  }
+
+  /*: Les cases de stationnement, par glyphe : le nez du char y pointe. Un
+    char DANS sa case n'est jamais mal gare, quoi qu'il bloque — c'est la place
+    qu'on lui a dessinee. */
+  const CASES_DE_STATIONNEMENT = { '^': 1, 'v': 1, '<': 1, '>': 1 };
+
+  /** Est-il MAL GARE ? ⚠️ La fourriere promettait cette regle depuis M9 et
+      elle n'existait nulle part.
+
+      Depuis que les stationnements ont de vraies **cases**, la definition
+      tombe toute seule et se teste : est mal gare un char **laisse hors d'une
+      case ET qui gene**. Ce qui gene, c'est la chaussee (la ou personne ne
+      s'arrete), un passage pieton (la ou les gens traversent) et le devant
+      d'une porte (la ou les gens sortent). Un char range sur une ruelle, sur
+      du stationnement, ou dans sa case, ne se fait JAMAIS remorquer — meme
+      mal aligne, meme depuis trois jours.
+
+      ⚠️ On regarde TOUTES les tuiles que le char couvre, pas son centre : un
+      char de 48 px en travers d'un passage pieton a son centre sur le
+      trottoir, et il bloque quand meme le passage. */
+  function malGare(v) {
+    if (!v || !v.def || v.conducteur || v.etat === 'epave') return false;
+    if (v.saisi !== null && v.saisi !== undefined) return false;   // deja au lot
+    if (estDeLaPlanque(v)) return false;
+    const demi = Math.max(v.def.longueur, v.def.largeur) / 2;
+    let gene = false;
+    for (let ty = Math.floor((v.y - demi) / TT); ty <= Math.floor((v.y + demi) / TT); ty++) {
+      for (let tx = Math.floor((v.x - demi) / TT); tx <= Math.floor((v.x + demi) / TT); tx++) {
+        if (CASES_DE_STATIONNEMENT[Monde.glyphe(tx, ty)]) return false;
+        if (Monde.estChaussee(tx, ty) || Monde.estPassage(tx, ty) || Monde.porteA(tx, ty + 1)) gene = true;
+      }
+    }
+    return gene;
+  }
+
+  /** Le char gare devant la planque. ⚠️ Il ne se fait JAMAIS remorquer ni
+      saisir, quoi qu'il arrive : c'est la sauvegarde de Martin, et un char qui
+      disparait de devant chez soi n'est pas une regle de jeu, c'est une perte. */
+  function estDeLaPlanque(v) {
+    const garde = B.partie.planque.vehicule;
+    return !!(garde && garde.slug === v.slug && dist2(v.x, v.y, garde.x, garde.y) < 40 * 40);
+  }
+
+  /** La remorqueuse municipale, une fois par seconde. */
+  function majMalGares() {
+    if (B.interieur || B.t % 60 !== 0) return;
+    const delai = B.defs.economie.fourriere.remorquage_s;
+    for (const v of B.entites) {
+      if (v.type !== 'vehicule' || !v.laisse) continue;
+      if (!malGare(v)) { v.malGareT = 0; continue; }
+      v.malGareT = (v.malGareT || 0) + 1;
+      // ⚠️ On PREVIENT : sans avertissement, un char qui disparait pendant
+      // qu'on fait une course passe pour un bogue, pas pour une regle.
+      if (v.malGareT === 1 && Entites.visibleAEcran(v.x, v.y, 120)) {
+        Hud.message('MAL GARÉ — LA FOURRIÈRE VA PASSER', 240);
+      }
+      if (v.malGareT < delai) continue;
+      const nom = v.def.nom.toUpperCase();
+      saisir(v);
+      Hud.message(nom + ' REMORQUÉ — À LA FOURRIÈRE', 240);
+    }
   }
 
   /** Dans la cour du lot, au pixel : c'est ce qui decide si on livre une
@@ -1250,6 +1308,7 @@ const Missions = (function () {
     }
     boulot.maj();
     majFourriere();
+    majMalGares();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -1262,7 +1321,7 @@ const Missions = (function () {
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, prendreCoupon,
-           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();
