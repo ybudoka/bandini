@@ -78,10 +78,10 @@ ne bougent pas quand l'ordre de travail change.
 | Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
 | Les armes à feu | **P4** ajout à faire | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
-| M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), et les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières** (8 répliques aujourd'hui, tirées sans mémoire) |
+| M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
-| M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **le chantier** et les nids-de-poule |
+| M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
 | M14 Meta v2 | **P4** ajout à faire (v2) | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
 | M16 Cent missions | **P4** ajout à faire (v2) | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
 | M13 Les deux fins | **P4** ajout à faire (v2) | une mission par district, Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* |
@@ -453,16 +453,16 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
 | — | **P4** Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
-| M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte (48 clips), tirage sans les quatre dernières, par `B.rng()` | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; traverser une foule sans entendre deux fois la même phrase |
+| M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte, tirage sans les quatre dernières, la rumeur qui se tait devant une arme, la police à la radio, bruits de quartier, souffle du joueur | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; sentir la rue se taire avant de voir l'étoile |
 | M11 | **P4** La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, le hacker (le pari contre la certitude de l'avocat), bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool ; payer le hacker et repartir sans savoir ce qu'il effacera |
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
-| M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, chantier du jour et nids-de-poule | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; un chantier qui force un détour sans couper la ville |
+| M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, entraves du jour (liste validée par Python), nuit de déneigement, feux clignotants la nuit, pointe directionnelle, crimes d'autrui, arrêts d'autobus, éboueurs, bêtes | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; suivre un DÉTOUR qui mène de l'autre côté ; perdre son char une nuit de déneigement |
 | M14 | **P4** Meta v2 | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
 | M16 | **P4** Cent missions | neuf types d'objectifs de plus, `exige` / `ferme` / `donne` étendu, lieux nommés, dialogues hors paquet, téléphone qui trie ; 109 missions en 9 arcs, 34 personnages, 3 piétons de mission, un chien, 5 défis | finir un arc par district au téléphone ; aucune mission morte au singe ; les deux fins atteignables par le catalogue |
 | M13 | **P4** Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, *Le Boss* et *Sacrer son camp* | atteindre les deux fins ; chaque réplique se dit à voix haute |
 
 Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
-M8 4, M9 3, M10 3, M11 2, M12 4, M13 4, M14 4, M15 3, M16 8 (v2 = 35) ;
+M8 4, M9 3, M10 3, M11 2, M12 4, M13 4, M14 4, M15 4, M16 8 (v2 = 36) ;
 hors vague, parce qu'elles se paient quand on veut : les transitions d'entrée et de
 sortie 1, le fondu de l'hôpital et de la prison 1, les clôtures 1, les toits 2, les armes à
 feu 2, le carnet 2, l'eau 3.
@@ -520,7 +520,7 @@ ordre-là.
 | **P4** | ajout | Des feux pour piétons | 2 | se décide avec la traverse d'une tuile ; ⚠️ contient un correctif (on traverse pendant l'orange) |
 | **P4** | ajout | Les terrains de banlieue | 2 | les clôtures sont livrées : les cours se traversent déjà |
 | **P4** | ajout | Les armes à feu | 2 | le marché noir de M7 leur sert de comptoir |
-| **P4** | ajout | M15 La ville te parle | 3 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
+| **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M11 La police apprend | 2 | la police de M4 suffit |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
 | **P4** | ajout | M12 La ville vit | 4 | tramway, traversier et neige touchent à la physique |
@@ -2214,7 +2214,7 @@ Ce qu'il faut décider en même temps, sinon l'ajout se retourne contre le jeu :
   l'infini, et compte comme une mort **causée par le joueur** (sinon on tue sans étoiles) ;
   et un policier abattu laisse tomber son arme — ça marche déjà, ça doit continuer.
 
-### M15 — La ville te parle (**ajout**, taille 3)
+### M15 — La ville te parle (**ajout**, taille 4)
 
 *Ce que ça donne :* le jeu cesse d'être muet entre deux répliques de mission — et il
 t'apprend enfin ce qu'il sait faire.
@@ -2276,6 +2276,32 @@ M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
   - Le compte : 4 contextes × 2 genres × 6 répliques = **48 clips**, soit environ 1,2 Mo —
     sous le plafond de 3 Mo des voix. Et la règle d'`audio.py` tient : `exporter()` ne
     déclare que les fichiers présents, une banque vide se rabat sur `normal`.
+- **Le silence quand tu sors une arme.** C'est l'ajout le moins cher de toute la vague et
+  celui qui se sent le plus. `Son.Rumeur.maj(gens)` règle déjà le volume de la foule sur le
+  nombre de personnes autour — **il ne manque qu'une raison de le faire tomber**. Une rue qui
+  se tait d'un coup dit « ils t'ont vu » mieux qu'une étoile de plus, et elle le dit avant que
+  tu regardes le HUD. Elle remonte quand la peur passe.
+  - ⚠️ Et le contraire compte autant : après un coup de feu, la rumeur ne reprend **pas** au
+    même endroit — elle revient en cris, puis se calme. Une foule qui murmure pareil avant et
+    après un mort n'est pas une foule, c'est un bruit de fond.
+- **La police se parle à la radio.** On voit les cônes, on voit les blips, on n'entend rien —
+  alors qu'une poursuite est ce qu'il y a de plus tendu dans le jeu. Cinq répliques courtes
+  suffisent : *il l'a repéré*, *la poursuite commence*, *on l'a perdu*, *un barrage se pose*,
+  *l'hélico décolle*. Filtrées comme le combiné du téléphone (le filtre existe depuis M6),
+  elles rendent la police **lisible à l'oreille** — on sait ce qui va nous tomber dessus sans
+  quitter la route des yeux.
+  - ⚠️ Elles passent **au-dessus** de la musique de poursuite dans l'échelle ci-dessus, sinon
+    elles arrivent pile quand on ne peut plus les entendre.
+- **Les bruits de quartier, ponctuels.** Distincts de la musique de district : ce ne sont pas
+  des nappes, ce sont des **événements** — une mouette et une corne de brume aux Quais, un
+  martèlement lointain à La Shop, une tondeuse et des oiseaux aux Érables, le vent dans les
+  arbres à La Pointe. Trois ou quatre par district, tirés rarement, et un quartier s'entend
+  avant de se voir. Beaucoup moins cher qu'une piste : ce sont des bruitages, pas de la
+  musique.
+- **Le souffle du joueur.** Il sprinte, il s'essouffle, et on n'entend rien. Un halètement qui
+  monte avec la dépense, et une inspiration quand le souffle repart : ça rend la barre
+  d'endurance lisible **sans la regarder**, et ça vaut double depuis que le sprint est devenu
+  une ressource qu'on dépense par bouffées.
 - **Juges** : une leçon ne se donne qu'une fois et jamais sur ce qui est déjà fait ; un clip
   de radio ne coupe jamais une réplique de mission (le ducking a déjà sa file d'attente) ;
   la pub d'un commerce possédé n'est plus celle d'un commerce à visiter ; **aucune des quatre dernières
@@ -2346,10 +2372,33 @@ M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
   dans `OBJETS`), un détour. Le trafic sait déjà se déporter dans la voie d'à côté ; ici il
   n'a plus le choix. La ville devient différente d'un jour à l'autre **sans regénérer une
   seule tuile**, et la police a enfin un endroit où se tenir sans raison.
-  - ⚠️ **Un chantier ne coupe jamais la ville en deux.** Il ferme UNE voie d'un boulevard,
-    jamais une rue à voie unique, jamais un pont, jamais la seule approche d'un croisement.
-    Le juge est celui de M1 (`voies_bloquees` : fortement connexes) rejoué **avec** le
-    chantier posé — s'il rougit, le chantier se pose ailleurs.
+  - **Pas un chantier : une famille d'entraves** (demande de Martin : « des réparations,
+    des blocages de route aléatoires, des détours »). Le même mécanisme — une surcouche au
+    champ `voie`, tirée par la graine du jour — porte plusieurs visages, et c'est la
+    variété qui fait qu'on ne s'y habitue pas :
+    - **la réparation** : une voie fermée, des cônes, un ouvrier ou deux (des piétons
+      `intouchables`, comme les enfants) et une pelle mécanique — le trafic se déporte ;
+    - **la fermeture** : la rue entière barrée par une barricade et un panneau **DÉTOUR** avec
+      sa flèche, et un itinéraire de rechange que le trafic **suit** ;
+    - **le bris d'aqueduc** : la rue inondée sur trois tuiles, roulable au ralenti — il
+      manque au Faubourg un printemps où la rue est un lac ;
+    - **le camion de déménagement** ou l'**autobus en panne** : une entrave qui n'a pas de
+      cônes parce qu'elle n'était pas prévue, et qui dure une heure de jeu, pas un jour.
+  - ⚠️ **Une entrave ne coupe jamais la ville en deux — et une FERMETURE le pourrait.** Une
+    voie fermée sur un boulevard laisse l'autre ; une rue entière barrée change le champ de
+    direction lui-même, et une fermeture tirée au hasard peut isoler un quartier. Le juge est
+    celui de M1 (`voies_bloquees` : fortement connexes), mais il ne peut pas tourner dans le
+    navigateur à chaque jour de jeu. La sortie est celle de tout le dépôt : **Python décide,
+    JS calcule**. `carte.py` calcule une fois, avec le juge, la liste des **segments qui
+    peuvent se fermer** sans casser la connexité — et le paquet la transporte. La graine du
+    jour ne tire que dans cette liste. Un pont n'y est jamais, ni la seule approche d'un
+    croisement, ni une rue à voie unique.
+  - ⚠️ **Deux entraves ne se combinent pas sans juge.** Deux fermetures prises séparément
+    dans la liste peuvent, ENSEMBLE, isoler un bloc. Soit on n'en tire qu'une par jour, soit
+    la liste est faite de **paires** validées — jamais de tirages indépendants.
+  - **Le détour se lit.** Un panneau DÉTOUR avec une flèche à chaque coin de l'itinéraire de
+    rechange, pour le joueur autant que pour le trafic : une fermeture sans détour affiché
+    n'est pas une entrave, c'est un piège.
   - **Nid-de-poule** : une tuile qui secoue la caméra et coûte deux points de carrosserie.
     Deux lignes, et toute la ville prend un accent. Jamais dans un croisement (on y freine
     déjà), jamais deux côte à côte.
@@ -2362,6 +2411,53 @@ M5, les voix de M6), et aucun ne touche à la physique ni à la carte.
   pousse la neige et les chars mal garés ; la police glisse aussi.
 - ⚠️ La neige touche à la physique **et** au rendu : elle arrive derrière une option, et la
   sonde de performance Playwright la mesure avant qu'elle soit allumée par défaut.
+- **La nuit de déneigement** — et c'est ce qui donne enfin à la fourrière une raison d'être.
+  À Québec, la veille d'une opération, un **feu orange clignote** sur le panneau de la rue :
+  interdiction de stationner cette nuit-là, et ce qui reste dans la rue part au lot. Le jeu a
+  déjà les trois morceaux — la fourrière (M9), la charrue (ci-dessus), le rythme de nuit — il
+  ne manque que le panneau qui clignote **la veille**, pour qu'on ait eu le temps de lire.
+  Laisse ton char dans la mauvaise rue, et le lendemain il est au lot : c'est la meilleure
+  façon d'apprendre ce que « mal garé » veut dire, parce que ce n'est pas une punition, c'est
+  la ville.
+- **Les feux passent au clignotant la nuit.** Vrai partout au Québec, et presque gratuit ici :
+  `feuVert()` est une pure fonction de l'heure, et la nuit vide maintenant la ville. À partir
+  d'une heure, plus de cycle — l'artère clignote orange, la rue secondaire clignote rouge (un
+  STOP), et le trafic de nuit, qui n'a plus personne à croiser, cesse d'attendre devant un
+  feu rouge pour rien. Ça se voit de loin sur une ville déserte, et c'est exactement le
+  genre de détail qui dit « c'est la nuit » mieux qu'un voile bleu.
+- **Les heures de pointe ont une direction.** Le rythme (nuit, matin, soir) règle *combien*
+  de chars roulent ; il ne dit pas *où ils vont*. Le matin, le trafic devrait **converger**
+  vers le Faubourg et les Quais, et le soir se **disperser** vers les Érables. ⚠️ Pas en
+  touchant au champ de direction, qui est fixe et jugé : en **pondérant le choix de sortie**
+  aux croisements selon l'heure. C'est trois lignes dans `prochaineCible`, et le matin a
+  soudain un sens.
+- **La ville est coupable d'elle-même.** GTA 2 le faisait déjà : des pickpockets qui
+  travaillent la foule, un vol de char sous tes yeux, deux gangs qui se battent à leur
+  frontière — **sans toi**. Le jeu a tout ce qu'il faut : le pickpocket, le carjacking, les
+  témoins, les gangs et leurs territoires. Il manque que ça arrive à d'autres qu'au joueur.
+  - ⚠️ Et ça change la police : un crime qu'on n'a pas commis peut te tomber dessus si tu es
+    au mauvais endroit — un témoin qui te confond, un agent qui arrive sur une bagarre où tu
+    passais. C'est risqué, donc c'est **rare** et **lisible** (on voit le vrai coupable), et
+    un juge vérifie qu'aucune étoile ne tombe sur un joueur immobile à plus de N tuiles.
+- **On attend l'autobus.** GTA 2 avait des piétons à l'arrêt ; ici il y a un autobus (M9) et
+  bientôt un tramway. Des gens qui attendent à l'arrêt, montent quand il s'arrête, et
+  descendent trois arrêts plus loin : c'est de la vie qui a un **but**, et c'est aussi la
+  façon la moins chère de faire entrer et sortir des piétons sans qu'ils naissent hors écran.
+- **Les éboueurs.** Un camion à bras mécanique — Québec ramasse les bacs comme ça — qui
+  s'arrête tous les vingt mètres, lève un bac, repart. Un obstacle qui **bouge** dans la
+  rue, une raison de le dépasser, et le camion de M9 qui sert à autre chose qu'à défoncer.
+- **Les goélands et les chats.** La vie qui n'est pas humaine : un goéland qui s'envole quand
+  tu passes aux Quais, un chat qui file dans une ruelle du Faubourg. Ils ne comptent pour
+  rien — ni témoins, ni victimes — et c'est précisément ce qui les rend vivants : ils ne sont
+  là que pour être là.
+- **Juges** : toute entrave du jour vient de la liste calculée par Python, jamais d'un
+  tirage libre ; la ville reste fortement connexe **avec** les entraves du jour posées (sur
+  cinq graines) ; un détour affiché mène bien de l'autre côté ; la nuit de déneigement
+  s'annonce la **veille** ou n'arrive pas ; un feu au
+  clignotant ne fait plus attendre personne pour rien ; le trafic de pointe converge et se
+  disperse (on compte les sorties choisies à un croisement, matin contre soir) ; aucun crime
+  d'autrui ne vaut une étoile à un joueur qui n'y est pour rien ; et un autobus qui s'arrête
+  fait vraiment monter quelqu'un.
 
 ### M14 — Meta v2 (**ajout**, taille 4)
 
