@@ -1,4 +1,9 @@
+import re
+from pathlib import Path
+
 from app import armes
+
+RACINE = Path(__file__).resolve().parent.parent
 
 
 def test_les_poings_d_abord_et_gratuits():
@@ -39,3 +44,70 @@ def test_chaque_arme_a_son_son():
     assert armes.par_slug("poings")["son"] == "coup", "les poings gardent le coup de poing"
     sons = [a["son"] for a in armes.CATALOGUE]
     assert len(sons) == len(set(sons)), "deux armes qui font le meme bruit : on ne sait pas laquelle on tient"
+
+
+def test_trois_armes_a_feu_qui_repondent_a_trois_questions():
+    """« Ils sont trois » : la mitraillette, la seule automatique, plus rapide
+    et moins forte par balle que le pistolet, et dont la dispersion s'ouvre.
+    « Il est loin » : la carabine, la plus longue portee, sans dispersion, un
+    passant d'une balle. « Ils sont groupes » : le Molotov, en cloche, et le
+    seul qui laisse du feu. Une arme de plus sans raison de la choisir
+    n'ajoute rien — c'est la fiche du plan."""
+    mit, car, mol, pis = (armes.par_slug(s) for s in ("mitraillette", "carabine", "molotov", "pistolet"))
+    assert [a["slug"] for a in armes.CATALOGUE if a["auto"]] == ["mitraillette"]
+    assert mit["dispersion_max"] > mit["dispersion"] > 0
+    assert mit["cadence"] < pis["cadence"] and mit["degats"] < pis["degats"]
+    tirs = [a for a in armes.CATALOGUE if a["type"] == "tir"]
+    assert car["portee"] == max(a["portee"] for a in tirs) and car["dispersion"] == 0
+    assert car["degats"] >= max(a["degats"] for a in armes.CATALOGUE if a["slug"] != "carabine")
+    assert mol["cloche"] is True and mol["feu_s"] > 0
+    assert [a["slug"] for a in armes.CATALOGUE if a["feu_s"]] == ["molotov"]
+    for a in armes.CATALOGUE:
+        if not a["auto"]:
+            assert a["dispersion_max"] == a["dispersion"], f"{a['slug']} : une dispersion qui s'ouvre sans rafale"
+    assert armes.REGLES["rafale_images"] > 0
+    assert armes.REGLES["incendie"]["rayon_px"] > 0 and armes.REGLES["incendie"]["degats_par_seconde"] > 0
+
+
+def test_aucune_portee_ne_depasse_ce_que_l_ecran_montre():
+    """La vue fait `VW` px et le joueur est au milieu : au-dela de VW/2 on tire
+    sur ce qu'on ne voit pas. ⚠️ La borne se LIT dans base.js, elle n'est pas
+    recopiee ici — le jour ou la vue change, ce juge suit."""
+    source = (RACINE / "static" / "js" / "base.js").read_text(encoding="utf-8")
+    vw = int(re.search(r"^const VW = (\d+);", source, re.M).group(1))
+    for a in armes.CATALOGUE:
+        if a["type"] == "tir":
+            assert a["portee"] <= vw // 2, f"{a['slug']} : {a['portee']} px, l'ecran en montre {vw // 2}"
+
+
+def test_un_coup_de_feu_fait_du_bruit_et_le_marche_noir_le_vend():
+    """Toute arme qui DETONE (a poudre : type tir, des etoiles a la sortir, pas
+    une bouteille) declare le rayon `bruit` que la police entend. La fronde et
+    le Molotov ne detonent pas. Et ce qui fait du bruit se vend au marche
+    noir, munitions comprises — les trois nouvelles n'ont pas de vitrine chez
+    Gus."""
+    from app import magasins
+
+    mn = magasins.MARCHE_NOIR
+    gus = magasins.par_slug("armurerie")
+    for a in armes.CATALOGUE:
+        detone = a["type"] == "tir" and a["etoiles_usage"] > 0 and not a["feu_s"]
+        if detone:
+            assert a["bruit"] > 0, a["slug"]
+            assert a["slug"] in mn["articles"] and a["slug"] in mn["munitions"], a["slug"]
+        else:
+            assert a["bruit"] == 0, f"{a['slug']} ne detone pas"
+    for slug in ("molotov", "mitraillette", "carabine"):
+        assert slug in mn["articles"] and slug in mn["munitions"]
+        assert slug not in gus["articles"] and slug not in gus["munitions"], f"{slug} : pas de vitrine"
+    assert armes.par_slug("carabine")["bruit"] > armes.par_slug("pistolet")["bruit"]
+
+
+def test_les_regles_des_armes_voyagent():
+    from app import definitions
+
+    paquet = definitions.assembler()
+    assert paquet["armes_regles"] == armes.REGLES
+    for a in paquet["armes"]:
+        for cle in ("auto", "dispersion_max", "bruit", "feu_s"):
+            assert cle in a, f"{a['slug']} : {cle}"

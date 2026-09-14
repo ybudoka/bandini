@@ -26,6 +26,7 @@ def assembler() -> dict:
         "conduite": vehicules.exporter_conduite(),
         "armes": armes.CATALOGUE,
         "ordre_armes": armes.ORDRE_CYCLE,
+        "armes_regles": armes.REGLES,
         "economie": economie.exporter(),
         "recherche": recherche.exporter(),
         "pietons": pietons.exporter(),

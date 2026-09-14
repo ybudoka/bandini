@@ -1985,6 +1985,12 @@ const OBJETS = {
   pelle: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 9, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(11, 3, 4, 6); },
   cone: function (ctx) { ctx.fillStyle = '#d98324'; ctx.fillRect(6, 2, 4, 7); ctx.fillRect(4, 8, 8, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 5, 4, 1); },
   bouteille: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); },
+  // Les trois du marche noir. A seize pixels, ce qui les nomme : le chargeur
+  // qui pend sous la mitraillette, la crosse de bois et le long canon de la
+  // carabine, le chiffon allume au goulot du Molotov.
+  mitraillette: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 11, 2); ctx.fillRect(6, 6, 2, 4); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 2, 2); },
+  carabine: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 5, 6, 2); ctx.fillRect(2, 7, 2, 2); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 4, 10, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(8, 2, 3, 1); },
+  molotov: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 0, 2, 1); ctx.fillStyle = '#ff8c1a'; ctx.fillRect(8, 0, 1, 1); ctx.fillStyle = '#ffd23a'; ctx.fillRect(9, 1, 1, 1); },
 };
 
 /* Bulles au-dessus de la tete : la peur, et le temoin qui a tout vu. */

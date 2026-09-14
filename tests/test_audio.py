@@ -55,8 +55,10 @@ def test_le_poids_audio_reste_raisonnable():
     # Puis de 650 a 800 Ko le meme jour : seize bruitages d'armes (un par arme,
     # la gachette a vide, la casse, le degainage) — un son qu'on n'avait pas,
     # pas un son qu'on a laisse grossir. Puis a 850 : les six repliques de la
-    # fille de la Brume (52 Ko). On reste sous le mega.
-    assert sum(f.stat().st_size for f in bruitages) < 850_000
+    # fille de la Brume (52 Ko). On reste sous le mega. Puis a 900 le 14 sept.
+    # 2026 : les trois armes du marche noir (quatre fichiers, 45 Ko) ont
+    # deborde de 700 octets — encore un son qu'on n'avait pas.
+    assert sum(f.stat().st_size for f in bruitages) < 900_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:

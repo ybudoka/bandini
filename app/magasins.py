@@ -250,6 +250,9 @@ def par_slug(slug: str) -> Magasin | None:
 
 
 #: Le marche noir : Josee, au bar, une fois le Faubourg libere (M5). Les
-#: memes armes que Chez Gus, mais a ce prix-la — et sans facture.
-MARCHE_NOIR: dict = {"apres": "m5", "rabais": 0.7, "articles": ["couteau", "pistolet", "fusil"],
-                     "munitions": ["pistolet", "fusil"]}
+#: armes de Chez Gus a ce prix-la, sans facture — et ⚠️ les trois qui font
+#: du bruit (Molotov, mitraillette, carabine) ne se vendent QU'ICI, munitions
+#: comprises : Gus a une vitrine, Josee n'en a pas. `test_armes` le verifie.
+MARCHE_NOIR: dict = {"apres": "m5", "rabais": 0.7,
+                     "articles": ["couteau", "pistolet", "fusil", "molotov", "mitraillette", "carabine"],
+                     "munitions": ["pistolet", "fusil", "molotov", "mitraillette", "carabine"]}

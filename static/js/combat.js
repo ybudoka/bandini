@@ -6,7 +6,14 @@
 
    ⚠️ Une attaque ne touche qu'UNE FOIS par cible : `touches` retient les
    identifiants deja frappes. Sans cela, un arc actif pendant cinq images
-   frappe cinq fois et un coup de batte tue un passant net. */
+   frappe cinq fois et un coup de batte tue un passant net.
+
+   Les armes a feu (14 sept. 2026) : une arme `auto` tire tant qu'on TIENT, la
+   cadence rythme la rafale et la dispersion s'ouvre avec elle ; un coup de
+   feu S'ENTEND (`Police.entendre`, rayon `bruit` de la fiche) ; et une
+   bouteille a `feu_s` laisse un BRASIER la ou elle casse — une entite
+   invisible qui crache des particules et mord ce qui reste dedans. ⚠️ Jamais
+   une tuile repeinte : le sol est cuit dans les morceaux. */
 
 const Combat = (function () {
   'use strict';
@@ -18,6 +25,10 @@ const Combat = (function () {
 
   function armeDef(slug) {
     return (B.defs.armes || []).find(function (a) { return a.slug === slug; }) || null;
+  }
+
+  function regles() {
+    return B.defs.armes_regles || { rafale_images: 45, incendie: { rayon_px: 20, degats_par_seconde: 12 } };
   }
 
   function armeCourante() { return armeDef(B.joueur ? B.joueur.arme : 'poings') || armeDef('poings'); }
@@ -159,6 +170,15 @@ const Combat = (function () {
     return meilleur;
   }
 
+  /** La dispersion du coup qui part. Une arme automatique s'ouvre avec la
+      RAFALE : de `dispersion` a `dispersion_max` en `rafale_images` de bouton
+      tenu, et `maj` remet `rafale` a zero des qu'on lache. */
+  function dispersionDe(e, arme) {
+    if (!arme.auto || e !== B.joueur) return arme.dispersion;
+    const part = Math.min(1, (e.rafale || 0) / regles().rafale_images);
+    return arme.dispersion + (arme.dispersion_max - arme.dispersion) * part;
+  }
+
   function tirer(e, arme) {
     const joueur = e === B.joueur;
     if (joueur) {
@@ -173,11 +193,12 @@ const Combat = (function () {
     e.phaseT = arme.cadence;
     e.touches = [];
     const angle = joueur ? viseeAssistee(e, e.angle) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
+    const dispersion = dispersionDe(e, arme);
     for (let i = 0; i < (arme.plombs || 1); i++) {
-      const devie = angle + (B.rng() - 0.5) * arme.dispersion * 2;
+      const devie = angle + (B.rng() - 0.5) * dispersion * 2;
       Entites.creer('projectile', e.x + Math.cos(angle) * 8, e.y + Math.sin(angle) * 8 - 6, {
         r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
-        saigne: arme.saigne, cloche: !!arme.cloche,
+        saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -196,9 +217,70 @@ const Combat = (function () {
       Entree.vibrer(25);
       Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
       Entites.alerter(e.x, e.y, e, 3);
+      // ⚠️ Un coup de feu s'entend : hors du cone, sans ligne de vue. Tirer
+      // de loin t'evite d'etre vu, jamais d'etre cherche.
+      if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
     }
-    Son.SFX.arme(arme);              // le coup de feu, la fronde qui claque
+    // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
+    // quand elle CASSE (`allumer`), pas quand elle part.
+    if (!arme.feu_s) Son.SFX.arme(arme);
     return true;
+  }
+
+  // --- Le feu -----------------------------------------------------------------------
+
+  /** La bouteille casse ici : un brasier de `feu_s` secondes. Sur l'eau, rien
+      qu'un remous — l'essence ne brule pas la baie. */
+  function allumer(x, y, p) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    if (Monde.estEau && Monde.estEau(tx, ty)) { Entites.remous(x, y, 8); return null; }
+    const inc = regles().incendie;
+    Son.SFX.arme(armeDef(p.arme));
+    Entites.decal(x, y, 'impact');
+    for (let i = 0; i < 10; i++) {
+      const a = B.rng() * Math.PI * 2, v = 0.6 + B.rng() * 1.4;
+      Entites.particule(x, y, Math.cos(a) * v, Math.sin(a) * v * 0.6, 14 + B.rng() * 8, i % 3 ? '#ff8c1a' : '#ffd23a', 2, 0.04);
+    }
+    return Entites.creer('brasier', x, y, {
+      r: inc.rayon_px, dessine: false, solide: false, auteur: p.tireur, reste: p.feu_s * 60,
+    });
+  }
+
+  /** Les brasiers : des flammes (particules), de la fumee, et une morsure
+      toutes les vingt images a qui reste dedans — passant, joueur, char. La
+      derniere seconde, il s'affaisse ; puis il s'eteint et laisse une tache.
+      ⚠️ Un char qui brule tombe sous `feu_sous` et continue tout seul
+      (`Vehicules`), avec le lanceur pour agresseur : s'il explose, c'est SON
+      explosion. Et une mort dans le feu est une mort du lanceur —
+      `Entites.tuer(e, auteur)` la signale comme telle. */
+  function majBrasiers() {
+    const inc = regles().incendie;
+    for (let i = B.entites.length - 1; i >= 0; i--) {
+      const f = B.entites[i];
+      if (f.type !== 'brasier') continue;
+      f.reste--;
+      const vif = Math.min(1, f.reste / 60);
+      if (B.t % 2 === 0) {
+        const a = B.rng() * Math.PI * 2, d = B.rng() * f.r * (0.4 + vif * 0.6);
+        Entites.particule(f.x + Math.cos(a) * d, f.y + Math.sin(a) * d * 0.6, (B.rng() - 0.5) * 0.3, -0.4 - B.rng() * 0.4,
+                          12 + vif * 12, B.rng() < 0.5 ? '#ff8c1a' : '#ffd23a', 2, -0.02);
+      }
+      if (B.t % 9 === 0) Entites.particule(f.x + (B.rng() - 0.5) * f.r, f.y - 4, (B.rng() - 0.5) * 0.3, -0.3, 40, '#3a3a3a', 2, -0.01);
+      if (B.t % 20 === 0) {
+        const degats = Math.max(1, Math.round(inc.degats_par_seconde / 3));
+        const dedans = Entites.autour(f.x, f.y, f.r + 12, function (q) {
+          return q.vivant && (q.type === 'pieton' || q.type === 'joueur' || q.type === 'vehicule');
+        });
+        for (const c of dedans) {
+          if (Math.hypot(c.x - f.x, (c.y - f.y) / 0.6) > f.r) continue;
+          if (c.type === 'vehicule') { Vehicules.endommager(c, degats, f.auteur); continue; }
+          if (c.z > 8 || c.dansVehicule) continue;
+          // Pousse HORS du feu, pas loin du lanceur.
+          Entites.blesser(c, degats, f.auteur, { angle: angleVers(f.x, f.y, c.x, c.y), assomme: false, renverse: false });
+        }
+      }
+      if (f.reste <= 0) { Entites.decal(f.x, f.y, 'impact'); Entites.retirer(f); }
+    }
   }
 
   function majProjectiles() {
@@ -214,6 +296,7 @@ const Combat = (function () {
         Entites.poussiere(p.x, p.y, 3);
         Entites.decal(p.x, p.y, 'impact');
         Entites.retirer(p);
+        if (p.feu_s) allumer(p.x - p.vx, p.y - p.vy, p);     // au pied du mur, pas dedans
         continue;
       }
       const touche = Entites.autour(p.x, p.y, 7, function (c) {
@@ -225,11 +308,13 @@ const Combat = (function () {
           assomme: false, renverse: false,
         });
         Entites.retirer(p);          // (la mort, s'il y en a une, est signalee par Entites.tuer)
+        if (p.feu_s) allumer(p.x, p.y, p);
         continue;
       }
       if (p.parcouru > p.portee || (p.cloche && p.z <= 0)) {
         Entites.poussiere(p.x, p.y, 2);
         Entites.retirer(p);
+        if (p.feu_s) allumer(p.x, p.y, p);
       }
     }
   }
@@ -324,6 +409,7 @@ const Combat = (function () {
   function maj() {
     const j = B.joueur;
     majProjectiles();
+    majBrasiers();
     for (const e of B.entites) {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
@@ -343,7 +429,17 @@ const Combat = (function () {
 
     // Coup fort : on MAINTIENT la frappe, on relache quand c'est charge.
     const arme = armeCourante();
-    if (Entree.bas('attaque') && arme.type === 'melee') {
+    if (arme.auto) {
+      // ⚠️ Automatique : on TIENT. `frapper` refuse tant que la cadence court,
+      // c'est elle qui rythme la rafale. Et a vide, la gachette tenue ne
+      // clique qu'a la PRESSION — pas soixante fois par seconde.
+      if (Entree.bas('attaque')) {
+        if ((munitions(arme.slug) || 0) > 0 || Entree.neuf('attaque')) frapper(j, false);
+        j.rafale = (j.rafale || 0) + 1;
+      } else {
+        j.rafale = 0;
+      }
+    } else if (Entree.bas('attaque') && arme.type === 'melee') {
       j.charge++;
     } else if (j.charge > 0) {
       frapper(j, j.charge >= CHARGE_MIN);
@@ -401,8 +497,8 @@ const Combat = (function () {
   }
 
   return {
-    CHARGE_MIN, ROULADE_IMAGES, armeDef, armeCourante, munitions, possede,
+    CHARGE_MIN, ROULADE_IMAGES, armeDef, armeCourante, munitions, possede, regles,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
-    viseeAssistee, majAttaque, majProjectiles, maj,
+    viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
   };
 })();

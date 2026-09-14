@@ -126,6 +126,25 @@ CATALOGUE: list[Echantillon] = [
               "heavy boom with a sharp crack, then the pump racked with a "
               "metallic clack-clack, short echo off the buildings, no voices, "
               "no music"),
+    # Les trois du marche noir (14 sept. 2026). ⚠️ La mitraillette joue UN coup
+    # par balle, douze fois par seconde : l'echantillon est court et sec, sinon
+    # douze queues d'echo s'empilent. Et le Molotov s'entend quand il CASSE —
+    # `combat.js` le joue a l'arrivee de la bouteille, pas au lancer.
+    # ⚠️ 0,5 s et pas moins : c'est le PLANCHER du serveur (`duration_seconds`
+    # >= 0.5), et sous lui il repond par une erreur qui n'est pas du JSON —
+    # le script de generation tombait dessus sans rien expliquer.
+    _e("mitraillette", "Coup de mitraillette", variantes=2, duree_s=0.5, volume=0.55,
+       influence=0.7,
+       prompt="a single 9mm submachine gun shot on a city street, one sharp "
+              "tight crack, very short, almost no echo, no voices, no music"),
+    _e("carabine", "Coup de carabine", duree_s=1.2, volume=0.85, influence=0.7,
+       prompt="a single bolt-action rifle shot on a city street, a loud sharp "
+              "crack with a rolling echo off the buildings, then the bolt "
+              "worked with a metallic clack, no voices, no music"),
+    _e("molotov", "Cocktail Molotov qui casse", duree_s=1.3, volume=0.7,
+       prompt="a glass bottle shattering on asphalt then a sudden whoomp of "
+              "gasoline igniting into a burst of flames with a short crackle, "
+              "dry close-up, no voices, no music"),
     # Le jet de l'extincteur tourne tant qu'on appuie : une boucle, comme le
     # moteur, allumee et eteinte par `Son.SFX.jet(actif)` a chaque image.
     _e("extincteur", "Jet d'extincteur", duree_s=2.0, volume=0.35, boucle=True,

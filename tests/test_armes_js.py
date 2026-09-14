@@ -158,3 +158,116 @@ def test_le_jet_tourne_en_boucle_ou_souffle_par_a_coups(banc):
     else:
         assert r["souffles"] >= 3, "sans echantillon, le filet doit souffler"
         assert r["pendant"] is False
+
+
+# --- Les armes a feu du marche noir (14 sept. 2026) -----------------------------------
+
+
+def test_la_mitraillette_tire_tant_qu_on_tient_et_s_arrete_a_vide(banc):
+    """Automatique : on TIENT, et la cadence rythme la rafale — une balle par
+    coup, jamais plus, et le chargeur vide arrete tout sans cliquer soixante
+    fois par seconde. La dispersion s'ouvre tant qu'on tient et se referme
+    des qu'on lache : c'est ce qui fait de la rafale courte un choix."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + _espion(["mitraillette", "vide"]) + """
+        const j = L.B.joueur, def = L.Combat.armeDef('mitraillette');
+        j.intouchable = true;
+        L.B.partie.armes.mitraillette = { mun: 8, usure: 0 }; j.arme = 'mitraillette'; L.B.partie.arme = 'mitraillette';
+        const dispersions = [];
+        o.touche('KeyJ');
+        for (let i = 0; i < 90; i++) { dispersions.push(L.Combat.dispersionDe(j, def)); o.frame(1); }
+        const tenu = { coups: compte.mitraillette || 0, vide: compte.vide || 0, mun: L.B.partie.armes.mitraillette.mun,
+                       rafale: j.rafale, debut: dispersions[0], fin: dispersions[dispersions.length - 1] };
+        o.relacher('KeyJ'); o.frame(3);
+        return { def: { cadence: def.cadence, dispersion: def.dispersion, max: def.dispersion_max },
+                 tenu: tenu, lache: { rafale: j.rafale, dispersion: L.Combat.dispersionDe(j, def) } };
+    }""")
+    assert r["tenu"]["coups"] == 8 and r["tenu"]["mun"] == 0, r
+    assert r["tenu"]["vide"] <= 1, "a vide, la gachette tenue ne doit pas cliquer a chaque image"
+    assert r["tenu"]["debut"] == r["def"]["dispersion"], "le premier coup part serre"
+    assert r["tenu"]["fin"] == r["def"]["max"], "tenue trois quarts de seconde, la rafale est grande ouverte"
+    assert r["lache"]["rafale"] == 0 and r["lache"]["dispersion"] == r["def"]["dispersion"], "lacher referme"
+
+
+def test_un_coup_de_feu_s_entend_sans_etre_vu(banc):
+    """La parade au tireur embusque : un agent qui te TOURNE LE DOS, hors de
+    son cone, entend la carabine et part voir — sans etoile, il n'a rien vu.
+    La fronde ne s'entend pas, et a trente tuiles on est hors du rayon. La
+    distance achete du temps, pas l'impunite."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        // Personne d'autre dans la rue : on juge l'ouie, pas les temoins.
+        L.B.entites.filter(function (e) { return e.type === 'pieton'; }).forEach(L.Entites.retirer);
+        const car = L.Combat.armeDef('carabine'), fronde = L.Combat.armeDef('fronde');
+        const a = L.Police.creerAgent(j.x + 12 * L.TT, j.y, 'flane');
+        L.Entites.regarder(a, 1, 0);                       // il regarde AILLEURS
+        L.Entites.indexer();
+        L.B.partie.armes.carabine = { mun: 5, usure: 0 }; L.B.partie.armes.fronde = { mun: 30, usure: 0 };
+        const voit = L.Police.voit(a, j.x, j.y, 'policier');
+        L.Combat.tirer(j, car);
+        const carabine = { etat: a.etat, but: a.but ? Math.hypot(a.but.x - j.x, a.but.y - j.y) : null, etoiles: L.B.recherche.etoiles };
+        a.etat = 'flane'; a.but = null; j.etat = 'flane'; j.phase = null;
+        L.Combat.tirer(j, fronde);
+        const apresFronde = { etat: a.etat, etoiles: L.B.recherche.etoiles };
+        const loin = L.Police.creerAgent(j.x + 30 * L.TT, j.y, 'flane');
+        L.Entites.regarder(loin, 1, 0); L.Entites.indexer();
+        j.etat = 'flane'; j.phase = null;
+        L.Combat.tirer(j, car);
+        return { voit: voit, bruit: car.bruit, carabine: carabine, fronde: apresFronde, loin: loin.etat };
+    }""")
+    assert r["voit"] is False, "l'agent tourne le dos : il ne doit rien voir"
+    assert 12 < r["bruit"] < 30, r["bruit"]
+    assert r["carabine"]["etat"] == "enquete" and r["carabine"]["but"] < 2, "il a entendu : il vient voir d'ou ca venait"
+    assert r["carabine"]["etoiles"] == 0, "entendu, pas vu : aucune etoile"
+    assert r["fronde"]["etat"] == "flane", "la fronde ne s'entend pas"
+    assert r["loin"] == "flane", "a trente tuiles, hors du rayon"
+
+
+def test_le_molotov_laisse_une_flaque_qui_brule_puis_s_eteint(banc):
+    """La bouteille part en cloche et, la ou elle casse, le feu mord `feu_s`
+    secondes puis S'ETEINT — un seul brasier, jamais deux. Un passant qui y
+    reste meurt, et c'est une mort DU JOUEUR : `mort_pieton` est signale,
+    sinon on tue sans etoiles. Et la bouteille s'entend quand elle CASSE,
+    pas quand elle part."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + _espion(["molotov"]) + """
+        const j = L.B.joueur, def = L.Combat.armeDef('molotov');
+        j.intouchable = true;
+        const crimes = [];
+        const vrai = L.Police.signalerCrime;
+        L.Police.signalerCrime = function (type, x, y, vu) { crimes.push(type); return vrai(type, x, y, vu); };
+        // Une rue droite : la bouteille ne doit pas casser sur un mur.
+        const ligne = o.ligneDroite();
+        j.x = ligne.x; j.y = ligne.y;
+        const cible = o.poser('ouvrier', 90, 0);
+        cible.vie = 40; cible.vieMax = 40; cible.etat = 'assomme'; cible.minuterie = 99999; cible.face = 'couche';
+        o.viser(cible);
+        L.B.partie.armes.molotov = { mun: 3, usure: 0 }; j.arme = 'molotov'; L.B.partie.arme = 'molotov';
+        const brasiers = function () { return L.B.entites.filter(function (e) { return e.type === 'brasier'; }).length; };
+        L.Combat.tirer(j, def);
+        const depart = { son: compte.molotov || 0, brasiers: brasiers(), mun: L.B.partie.armes.molotov.mun };
+        let max = 0, allumeA = -1, mortA = -1, distance = null;
+        for (let i = 0; i < def.feu_s * 60 + 120; i++) {
+            L.B.t++; L.Entites.indexer(); L.Combat.maj();
+            const n = brasiers(); max = Math.max(max, n);
+            if (n && allumeA < 0) {
+                allumeA = i;
+                const f = L.B.entites.find(function (e) { return e.type === 'brasier'; });
+                distance = Math.hypot(f.x - cible.x, f.y - cible.y);
+            }
+            if (!cible.vivant && mortA < 0) mortA = i;
+        }
+        return { depart: depart, max: max, allumeA: allumeA, mortA: mortA, distance: distance, fin: brasiers(),
+                 son: compte.molotov || 0, crimes: crimes, feu_s: def.feu_s };
+    }""")
+    assert r["depart"]["mun"] == 2 and r["depart"]["brasiers"] == 0 and r["depart"]["son"] == 0, "au lancer, rien ne brule et rien ne casse"
+    assert 10 < r["allumeA"] < 60, f"la bouteille doit retomber en moins d'une seconde ({r['allumeA']})"
+    assert r["distance"] < 30, "elle casse sur la cible, ou a ses pieds"
+    assert r["son"] == 1, "le verre casse une fois, a l'arrivee"
+    assert r["max"] == 1, "un brasier, jamais deux : le feu ne se propage pas"
+    assert 0 < r["mortA"] < r["feu_s"] * 60, "rester dans le feu tue avant qu'il s'eteigne"
+    assert "mort_pieton" in r["crimes"], "une mort dans le feu est une mort du joueur"
+    assert r["fin"] == 0, "le feu s'eteint"

@@ -164,6 +164,23 @@ const Police = (function () {
     a.etat = 'enquete'; a.but = { x: x, y: y }; a.chemin = null; a.enqueteT = 240;
   }
 
+  /** Un coup de feu S'ENTEND : chaque agent a moins de `rayon` px — sans cone,
+      sans ligne de vue — part voir d'ou ca venait. Sans etoile : il n'a rien
+      VU. C'est la parade au tireur embusque, la meme que pour le char rapide
+      (le cone n'est pas le seul sens) : la distance achete du temps, pas
+      l'impunite. Et si tu es deja recherche, le coup dit ou tu es. Rend le
+      nombre d'agents qui l'ont entendu. */
+  function entendre(x, y, rayon) {
+    let n = 0;
+    for (const a of agents()) {
+      if (dist2(a.x, a.y, x, y) > rayon * rayon) continue;
+      n++;
+      alerterAgent(a, x, y);
+    }
+    if (n && B.recherche.etoiles > 0) B.recherche.dernierVu = { x: x, y: y, t: B.t };
+    return n;
+  }
+
   /** Suit un chemin (liste de centres de tuiles) vers `but`. Rend true si arrive. */
   function suivre(a, but, vitesse) {
     const p = reglages();
@@ -526,7 +543,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero,
+  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

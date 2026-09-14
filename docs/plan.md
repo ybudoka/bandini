@@ -92,7 +92,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des feux pour piétons | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existait (`traverseeSure`) mais **personne ne la voyait** — et ⚠️ elle **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engageaient pile quand les chars accélèrent pour vider le croisement, **240 images sur 960**. Maintenant `Monde.feuPieton()` rend **blanc / dégage / rouge**, le blanc ne croise ni le vert des chars ni l'orange, et il s'éteint **180 images avant** que les chars repartent (dégagement 120 + orange 60). **351 poteaux** posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par tuile — avec le **sens du passage** dans la fiche ; blanc fixe, orange **clignotant** au dégagement. ⚠️ **Sans feu (un T), on traverse quand c'est libre** : sinon un côté de rue entier devient un cul-de-sac pour la foule, et aucun juge existant ne le verrait. 2 juges neufs |
 | Feux pour piétons | **P4** ajout à faire | demande de Martin : la règle existe (on traverse quand les chars ne sont pas au vert) mais **rien ne la montre**. ⚠️ Et elle se trompe d'un temps : `!feuVert()` est vrai pendant **l'orange**, donc les piétons s'engagent quand les chars accélèrent pour vider le croisement |
 | Les terrains de banlieue | **P4** ajout à faire | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
-| Les armes à feu | **P4** ajout, **en cours** (14 sept. 2026) | demande de Martin : il n'y en a que **deux** (pistolet, fusil à pompe) sur dix armes — une mitraillette (automatique), une carabine (longue, plafonnée à la largeur de l'écran) et un cocktail Molotov (en cloche, flaque de feu), vendus au marché noir |
+| Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | M15 La ville te parle | **P4** ajout à faire (v2) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -484,7 +484,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P4** La dépanneuse lève les roues | lien **rigide** au lieu d'un câble, avant levé (collé, deux pixels plus haut, l'ombre restée au sol) et **dans l'axe** ; `plateau` en fiche : moto et vélo montent en entier, dessinés par-dessus, hors des tuiles et hors des chocs ; la remorqueuse refuse d'avancer là où sa charge ne passe pas | reconnaître une dépanneuse d'une auto qui tire une corde ; ramasser une moto sans qu'elle se traîne le nez par terre |
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
-| — | **P4** Les armes à feu | mitraillette automatique, carabine, Molotov ; un coup de feu **s'entend** même sans être vu ; les munitions font l'équilibre ; vendues au marché noir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
+| — | **P4** Les armes à feu | **livré** : `auto` (tenir, la cadence rythme, la dispersion s'ouvre et se referme), `bruit` (l'agent hors du cône **entend** et vient voir, sans étoile ; recherché, le coup dit où tu es), `feu_s` (le brasier, entité invisible faite de particules, qui mord passants, joueur et chars avec le lanceur pour auteur), portée bornée à la demi-vue, marché noir seul comptoir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
 | M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte, tirage sans les quatre dernières, la rumeur qui se tait devant une arme, la police à la radio, bruits de quartier, souffle du joueur | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; sentir la rue se taire avant de voir l'étoile |
 | M11 | **P4** La police apprend | carnet du poste (portée du cône selon le casier), le stool, l'avocat du Carré, le hacker (le pari contre la certitude de l'avocat), bouclier humain | un casier épais se sent en jeu ; acheter le silence du stool ; payer le hacker et repartir sans savoir ce qu'il effacera |
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
@@ -544,7 +544,6 @@ ordre-là.
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P4** | ajout | Des feux pour piétons | 2 | se décide avec la traverse d'une tuile ; ⚠️ contient un correctif (on traverse pendant l'orange) |
 | **P4** | ajout | Les terrains de banlieue | 2 | les clôtures sont livrées : les cours se traversent déjà |
-| **P4** | ajout | Les armes à feu | 2 | le marché noir de M7 leur sert de comptoir |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M11 La police apprend | 2 | la police de M4 suffit |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
@@ -2906,7 +2905,7 @@ dix tuiles, posés au hasard. Or un terrain de banlieue est le contraire du vide
   fraction des terrains, mesurée ; et le paquet reste sous ses bornes, sinon le décor se
   dérive et ne voyage plus.
 
-### Les armes à feu (**ajout**, taille 2)
+### Les armes à feu (**ajout**, taille 2) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « je veux des armes à feu. »
 
@@ -2956,6 +2955,51 @@ Ce qu'il faut décider en même temps, sinon l'ajout se retourne contre le jeu :
   coup et s'arrête chargeur vide ; le feu d'un Molotov s'éteint, ne se propage pas à
   l'infini, et compte comme une mort **causée par le joueur** (sinon on tue sans étoiles) ;
   et un policier abattu laisse tomber son arme — ça marche déjà, ça doit continuer.
+
+**Livré le 14 sept. 2026.** Les trois armes, le comptoir, l'ouïe — et cinq choses apprises
+en chemin.
+
+- **Trois champs de fiche, pas trois cas dans le JS** : `auto`, `bruit` (tuiles) et `feu_s`
+  (secondes), plus `dispersion_max`. Le pistolet et le fusil ont reçu leur `bruit` du même
+  coup (14 et 18 tuiles) : ils détonaient déjà, personne ne les entendait. Ce qui n'est pas
+  propre à une arme (`rafale_images`, le rayon et la morsure de l'incendie) voyage dans
+  `armes_regles`.
+- **L'automatique ne demande rien de neuf à l'entrée.** `frapper` refuse déjà tant que la
+  cadence court : tenir le bouton et rappeler `frapper` à chaque image suffit, **c'est la
+  cadence qui rythme la rafale** — et le tactile suit sans un geste de plus, puisque le bouton
+  FRAPPE tenu se lit déjà comme « bas ». ⚠️ **À vide, la gâchette tenue ne clique qu'à la
+  pression** : sans ce garde, un chargeur vide cliquait soixante fois par seconde.
+- **L'ouïe, c'est `alerterAgent` sans le cône.** `Police.entendre(x, y, rayon)` envoie en
+  enquête chaque agent dans le rayon, **sans étoile** — il n'a rien vu — et, si tu es déjà
+  recherché, déplace `dernierVu` sur le coup. Mesuré au banc : un agent qui te tourne le dos à
+  douze tuiles vient voir la carabine, celui à trente reste, et la fronde ne s'entend pas.
+- ⚠️ **Le type `feu` était pris — c'est le feu de circulation.** La flaque s'appelle donc
+  `brasier` : une entité `dessine: false` qui n'existe que par ses particules (des flammes à
+  chaque deuxième image, de la fumée) et mord toutes les vingt images un tiers des dégâts de la
+  seconde — passants, joueur, chars (`Vehicules.endommager`, le lanceur pour agresseur : un
+  char qui en explose, c'est **son** explosion). Sur l'eau, un remous et rien d'autre.
+- ⚠️ **`Entites.blesser` pousse la victime loin de la SOURCE**, par défaut : dans le feu, la
+  source est le lanceur, et le passant aurait été poussé loin du joueur — donc parfois plus
+  au fond du feu. Le brasier passe son propre angle : il pousse **dehors**.
+- **La bouteille s'entend quand elle casse**, pas quand elle part : `tirer` se tait pour une
+  arme à `feu_s`, et `allumer` joue le son. Le juge compte zéro au lancer, un à l'arrivée.
+- ⚠️ **Le script de génération audio tombait sur `duree_s: 0.4`** sans rien expliquer : le
+  serveur MCP a un plancher de 0,5 s et répond alors par une erreur qui n'est pas du JSON. Le
+  catalogue dit 0,5 maintenant, et la note est dans `audio.py`. Quatre fichiers (45 Ko) ont
+  fait déborder le budget des bruitages de 700 octets : relevé à 900 Ko, encore un son qu'on
+  n'avait pas.
+- **Ce qui n'a pas bougé, et c'est voulu** : les agents gardent leur pistolet à tous les
+  paliers (donner la mitraillette au 4★ est une décision de M11, pas de cette fiche) ; et le
+  sprite en main est celui de l'objet par terre, comme pour les autres — le chargeur qui
+  pend, la crosse de bois, le chiffon allumé, c'est ce qui les nomme à seize pixels.
+- **Juges (7 neufs)** : côté Python, trois questions distinctes (une seule `auto`, la plus
+  longue portée sans dispersion, le seul `feu_s` en cloche), aucune portée au-delà de la
+  demi-vue **lue dans `base.js`**, tout ce qui détone déclare un `bruit` et se vend chez Josée
+  sans vitrine chez Gus, et les règles voyagent ; au banc, la mitraillette tenue 90 images
+  tire exactement ses huit balles, s'ouvre à `dispersion_max` et se referme quand on lâche ;
+  la carabine s'entend à douze tuiles dans le dos d'un agent, sans étoile ; le Molotov
+  n'allume qu'un brasier, tue celui qui y reste avant qu'il s'éteigne, le signale comme une
+  mort du joueur, et s'éteint.
 
 ### M15 — La ville te parle (**ajout**, taille 4)
 
