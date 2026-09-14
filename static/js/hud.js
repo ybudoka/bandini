@@ -765,12 +765,12 @@ const Hud = (function () {
                             dedans: false, angle: angle };
       }
     }
-    // Le taxi : le client (bleu) ou la destination (or) clignote.
-    const cible = Missions.taxi.etape === 'attente' ? Missions.taxi.client : Missions.taxi.destination;
+    // Le boulot : ce qu'on va chercher (bleu) ou la destination (or) clignote.
+    const cible = Missions.boulot.cible;
     if (cible && (B.image >> 4) % 2 === 0) {
       const bx = MINI.x + Math.round(cible.x / TT) - sx, by = MINI.y + Math.round(cible.y / TT) - sy;
       if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) {
-        ctx.fillStyle = Missions.taxi.etape === 'attente' ? '#6f9fd8' : '#e8b33c';
+        ctx.fillStyle = Missions.boulot.etape === 'ramasse' ? '#6f9fd8' : '#e8b33c';
         ctx.fillRect(bx - 1, by - 1, 3, 3);
         B.stats.rects++;
       }
@@ -917,12 +917,15 @@ const Hud = (function () {
       if (v) {
         const kmh = Math.round(Math.abs(v.vitesse) / v.def.vitesse_max * 120);
         texte(ctx, kmh + ' KM/H', 70, 8, '#efe6d0', 1);
-        if (Missions.taxi.etape === 'course' && Missions.taxi.destination) {
-          const d = Missions.taxi.destination;
+        // ⚠️ La ligne dit QUEL boulot : a quatre, « TAXI » en tete d'une
+        // livraison de pizza ne veut plus rien dire.
+        const nomBoulot = Missions.boulot.fiche() ? Missions.boulot.fiche().nom.toUpperCase() : '';
+        if (Missions.boulot.etape === 'route' && Missions.boulot.destination) {
+          const d = Missions.boulot.destination;
           const dist = Math.round(Math.hypot(d.x - v.x, d.y - v.y) / TT);
-          texte(ctx, 'TAXI : ' + d.nom.toUpperCase() + ' ' + dist + 'M', 70, 16, '#e8b33c', 1);
-        } else if (Missions.taxi.etape === 'attente') {
-          texte(ctx, 'TAXI : UN CLIENT ATTEND', 70, 16, '#e8b33c', 1);
+          texte(ctx, nomBoulot + ' : ' + d.nom.toUpperCase() + ' ' + dist + 'M', 70, 16, '#e8b33c', 1);
+        } else if (Missions.boulot.etape === 'ramasse') {
+          texte(ctx, nomBoulot + ' : QUELQU’UN ATTEND', 70, 16, '#e8b33c', 1);
         }
       }
       if (!B.interieur) miniCarte(ctx);

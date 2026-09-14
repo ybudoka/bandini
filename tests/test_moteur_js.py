@@ -2266,7 +2266,7 @@ def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
         L.Vehicules.monter(j, v);
         const argent0 = L.B.partie.argent;
         o.tape('Space', 2);                              // klaxon : un client
-        const t = L.Missions.taxi;
+        const t = L.Missions.boulot;
         const etape1 = t.etape, client = t.client;
         const hele = client && client.bulle ? client.bulle.texte : null;
         if (client) { v.x = client.x + 10; v.y = client.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
@@ -2275,14 +2275,128 @@ def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
         if (dest) { v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
         o.frame(3);
         return { etape1: etape1, etape2: etape2, etape3: t.etape, hele: hele,
-                 gain: L.B.partie.argent - argent0, courses: t.courses };
+                 gain: L.B.partie.argent - argent0, courses: t.faits.taxi };
     }""")
-    assert r["etape1"] == "attente" and r["etape2"] == "course" and r["etape3"] is None
+    assert r["etape1"] == "ramasse" and r["etape2"] == "route" and r["etape3"] is None
     assert r["hele"] == civil["heler"], \
         "un client qui attend un taxi sans rien dire est un passant de plus (bulle du « civil »)"
     assert r["courses"] == 1
     assert r["gain"] >= boulot["base"] + boulot["prime"], \
         "une course sans un choc doit donner le pourboire plein"
+
+
+def test_la_pizza_se_livre_trois_fois_et_refroidit(banc, paquet):
+    """⚠️ `Missions.taxi` etait le SEUL boulot : les trois autres etaient dans
+    `economie.BOULOTS`, dans le paquet, avec leurs juges Python — et le klaxon
+    d'une moto ne faisait rien. Une fiche de plus que le navigateur ne lisait
+    pas, comme `cercles` et `defonce` avant elle.
+
+    La pizza a ce que le taxi n'a pas : TROIS etapes de suite, et une prime qui
+    FOND toute seule. Le juge tient les deux — et la distance doit se payer a
+    chaque etape, sinon trois livraisons rapporteraient trois fois le premier
+    trajet."""
+    f = paquet["economie"]["boulots"]["pizza"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(51);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('moto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const b = L.Missions.boulot;
+        const argent0 = L.B.partie.argent;
+        o.tape('Space', 2);                              // klaxon : on part charge
+        // ⚠️ Pas de ramassage : la pizza part tout de suite en route.
+        const depart = { slug: b.slug, etape: b.etape, client: !!b.client };
+        const etapes = [];
+        for (let i = 0; i < 5 && b.etape; i++) {
+            const dest = b.destination;
+            v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0;
+            o.frame(3);
+            etapes.push({ faites: b.etapesFaites, encore: !!b.etape });
+        }
+        const chaud = L.B.partie.argent - argent0;
+        // Et la meme chose, mais froide : on laisse le chrono s'ecouler.
+        L.B.partie.argent = argent0;
+        o.tape('Space', 2);
+        let froid = 0;
+        for (let i = 0; i < 5 && b.etape; i++) {
+            o.frame(%d);                                  // la pizza refroidit
+            const dest = b.destination;
+            v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0;
+            o.frame(3);
+        }
+        froid = L.B.partie.argent - argent0;
+        return { depart: depart, etapes: etapes, chaud: chaud, froid: froid,
+                 faits: b.faits.pizza, taxis: b.faits.taxi };
+    }""" % (f["chrono_s"] * 60 + 10))
+    assert r["depart"] == {"slug": "pizza", "etape": "route", "client": False}, (
+        "on part avec les boites : pas d'etape de ramassage (%s)" % r["depart"]
+    )
+    assert [e["faites"] for e in r["etapes"]] == [1, 2, 3], (
+        "la pizza se livre %s fois au lieu de 3 : %s" % (f["etapes"], r["etapes"])
+    )
+    assert r["etapes"][-1]["encore"] is False, "le boulot ne se termine pas"
+    # ⚠️ Deux boulots joues (chaud puis froid) : le compteur les compte tous
+    # les deux, et AUCUN ne tombe dans celui du taxi.
+    assert r["faits"] == 2 and r["taxis"] == 0, (
+        "une pizza livree n'est pas une course de taxi : %s" % r
+    )
+    # ⚠️ La distance se paie A CHAQUE etape, donc trois trajets valent plus que
+    # trois fois la base seule.
+    assert r["chaud"] >= (f["base"] + f["prime"]) * f["etapes"], (
+        "trois livraisons chaudes rapportent %s, moins que %s" % (r["chaud"], (f["base"] + f["prime"]) * f["etapes"])
+    )
+    assert r["froid"] < r["chaud"], "une pizza froide paie autant qu'une chaude"
+    assert r["froid"] >= f["base"] * f["etapes"], "froide, il reste quand meme la base"
+
+
+def test_l_ambulance_ramasse_un_blesse_et_le_perd_si_on_traine(banc, paquet):
+    """⚠️ « Un blesse quelque part, chrono, le sortir vivant. » La prime EST sa
+    vie : passe le chrono, il ne se releve pas, et il ne reste que la base.
+
+    Le juge fait les deux trajets — a temps et trop tard — et verifie au
+    passage que la destination n'est pas tiree au hasard comme celle du taxi :
+    un blesse va A L'HOPITAL, pas au Bar Le Brouillard."""
+    f = paquet["economie"]["boulots"]["ambulance"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(53);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('ambulance', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        const b = L.Missions.boulot;
+        function course(attente) {
+            const argent0 = L.B.partie.argent;
+            o.tape('Space', 2);
+            const etape1 = b.etape;
+            const blesse = b.client;
+            const aTerre = blesse ? blesse.etat : null;
+            const part = blesse ? blesse.vie / blesse.vieMax : null;
+            if (blesse) { v.x = blesse.x + 10; v.y = blesse.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+            o.frame(3);
+            const dest = b.destination;
+            if (attente) o.frame(attente);
+            if (dest) { v.x = dest.x + 6; v.y = dest.y; j.x = v.x; j.y = v.y; v.vitesse = 0; }
+            o.frame(3);
+            return { etape1: etape1, aTerre: aTerre, part: part, dest: dest && dest.nom,
+                     gain: L.B.partie.argent - argent0, fini: b.etape };
+        }
+        const aTemps = course(0);
+        const tropTard = course(%d);
+        return { aTemps: aTemps, tropTard: tropTard, faits: b.faits.ambulance,
+                 hopital: (L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; }) || {}).nom };
+    }""" % (f["chrono_s"] * 60 + 10))
+    a, t = r["aTemps"], r["tropTard"]
+    assert a["etape1"] == "ramasse", "l'ambulance doit aller CHERCHER quelqu'un"
+    assert a["aTerre"] == "assomme", "le blesse doit etre a terre, pas debout a heler"
+    assert a["part"] is not None and a["part"] < 0.3, "un blesse a pleine vie n'est pas un blesse"
+    assert a["dest"] == r["hopital"], "un blesse va a l'hopital, pas au hasard : %s" % a["dest"]
+    assert a["gain"] >= f["base"] + f["prime"], "le transport a temps doit donner la prime pleine"
+    assert t["gain"] < a["gain"], "arriver trop tard paie autant qu'arriver a temps"
+    assert t["gain"] >= f["base"], "il reste la base, meme trop tard"
+    assert r["faits"] == 2 and a["fini"] is None
 
 
 def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):

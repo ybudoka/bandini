@@ -372,7 +372,7 @@ const Histoire = (function () {
       B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
       if (o.escorte) poserLEscorte(m, o);
     } else if (o.type === 'courses') {
-      B.mission.courses = 0; B.mission.coursesDepart = Missions.taxi.courses;
+      B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
     }
   }
 
@@ -504,8 +504,8 @@ const Histoire = (function () {
         return;
       }
       case 'courses': {
-        B.mission.courses = Missions.taxi.courses - B.mission.coursesDepart;
-        if (B.mission.courses === o.n - 1 && Missions.taxi.etape === 'course' && !B.mission.clientDit && m.dialogue.client) {
+        B.mission.courses = Missions.boulot.faits.taxi - B.mission.coursesDepart;
+        if (B.mission.courses === o.n - 1 && Missions.boulot.etape === 'route' && !B.mission.clientDit && m.dialogue.client) {
           B.mission.clientDit = true;
           dire(m, 'client', null);
         }

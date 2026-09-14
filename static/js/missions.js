@@ -168,7 +168,7 @@ const Missions = (function () {
     payer(facture, 'HOPITAL');
     B.partie.stats.hospitalisations = (B.partie.stats.hospitalisations || 0) + 1;
     Police.remiseAZero();
-    if (taxi.etape) taxi.abandonner();
+    if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'A L’HOPITAL');
     Histoire.evenement('mort');
     const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
@@ -223,7 +223,7 @@ const Missions = (function () {
     p.stats.arrestations++;
     p.armes = { poings: { mun: null } }; p.arme = 'poings'; j.arme = 'poings';
     Police.remiseAZero();
-    if (taxi.etape) taxi.abandonner();
+    if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'EN PRISON');
     Histoire.evenement('arrete');
     if (agent) { agent.etat = 'flane'; agent.but = null; }
@@ -240,73 +240,186 @@ const Missions = (function () {
   }
 
 
-  // --- Le taxi : un client, une destination, un pourboire selon la douceur ----------
 
-  const taxi = {
-    etape: null,           // null | 'attente' | 'course'
-    client: null, destination: null, distance: 0, chocsDepart: 0, t: 0, courses: 0,
+  // --- Les boulots au klaxon --------------------------------------------------------
 
-    /** Le klaxon dans un taxi : on prend un client, ou on n'a rien a faire. */
+  /*: ⚠️ UNE machine pour les quatre boulots, pas quatre machines. Le taxi de la
+    v1 avait la sienne ; a quatre, on aurait recopie quatre fois « va la, reviens
+    ici, encaisse » avec quatre facons de se tromper. Ce qui DIFFERE d'un boulot a
+    l'autre tient dans `SORTES` ci-dessous ; tout le reste est commun.
+
+    Les nombres, eux, ne sont pas ici : ils viennent de `economie.BOULOTS`, ou un
+    juge Python les compare entre eux. */
+  const SORTES = {
+    //: `ramasser` : ce qu'on va chercher avant de rouler (null = rien).
+    //: `destination` : ou l'on va, une fois charge.
+    //: `perte` : ce qui ronge la prime en route (chocs, chrono, ou les deux).
+    taxi: {
+      ramasser: 'client',
+      destination: 'ailleurs',
+      pris: 'DIRECTION : ',
+      fini: 'COURSE',
+    },
+    pizza: {
+      // ⚠️ Pas de ramassage : on part avec les boites. La seule pression du
+      // boulot, c'est que la pizza REFROIDIT — et trois livraisons de suite.
+      ramasser: null,
+      destination: 'ailleurs',
+      pris: 'LIVRAISON : ',
+      fini: 'LIVRAISON',
+    },
+    ambulance: {
+      // Le blesse se ramasse comme un client, mais lui se PERD : passe le
+      // chrono, il ne se releve pas, et il ne reste que la base.
+      ramasser: 'blesse',
+      destination: 'hopital',
+      pris: 'A L’HOPITAL, VITE',
+      fini: 'TRANSPORT',
+    },
+  };
+
+  const boulot = {
+    slug: null,            // le boulot en cours, ou null
+    etape: null,           // null | 'ramasse' | 'route'
+    client: null,          // le pieton a prendre (taxi, ambulance)
+    destination: null,     // { x, y, nom }
+    distance: 0, chocsDepart: 0, t: 0, etapesFaites: 0, gagne: 0,
+    //: Combien de fois chaque boulot a ete FINI. ⚠️ Un compteur par sorte :
+    //: le defi « trois courses » de M6 compte des courses de taxi, et une
+    //: pizza livree n'en est pas une.
+    faits: { taxi: 0, pizza: 0, ambulance: 0, remorquage: 0 },
+
+    fiche: function () { return boulot.slug ? B.defs.economie.boulots[boulot.slug] : null; },
+
+    /** Ce que le HUD doit montrer : le point vers lequel on roule. */
+    get cible() {
+      if (boulot.etape === 'ramasse') return boulot.client;
+      return boulot.etape === 'route' ? boulot.destination : null;
+    },
+
+    /** Le klaxon dans un char qui a un boulot : on le prend, ou rien. */
     klaxon: function (v) {
-      if (v.slug !== 'taxi' || taxi.etape) return false;
-      const place = Entites.placeDeNaissance();
-      const arch = Entites.archetypeDeRue();
-      const x = place ? place.x : v.x + Math.cos(v.angle) * 80, y = place ? place.y : v.y + Math.sin(v.angle) * 80;
-      const client = Entites.creerPieton(x, y, arch);
-      client.etat = 'fige'; client.cri = 9999; client.client = true;
-      // Le meme outil que les donneurs : un client qui leve le bras au bord du
-      // trottoir sans rien dire, on le prend pour un passant de plus.
-      const civil = Histoire.personnage('civil');
-      Entites.bulle(client, civil ? civil.heler : '');
-      taxi.client = client; taxi.etape = 'attente'; taxi.t = 0;
-      Hud.message('UN CLIENT ATTEND');
+      if (boulot.etape || !v || !v.def.boulot) return false;
+      const sorte = SORTES[v.def.boulot];
+      if (!sorte) return false;          // le remorquage attend sa fourriere
+      boulot.slug = v.def.boulot;
+      boulot.etape = 'ramasse';
+      boulot.t = 0; boulot.etapesFaites = 0; boulot.gagne = 0;
+      if (!sorte.ramasser) { boulot.enRoute(v); return true; }
+      boulot.client = boulot.poser(v, sorte.ramasser);
+      if (!boulot.client) { boulot.abandonner(); return false; }
+      Hud.message(sorte.ramasser === 'blesse' ? 'QUELQU’UN EST A TERRE' : 'UN CLIENT ATTEND');
       return true;
     },
 
+    /** Le quidam qu'on va chercher : un passant qui hele, ou un blesse. */
+    poser: function (v, quoi) {
+      const place = Entites.placeDeNaissance();
+      const x = place ? place.x : v.x + Math.cos(v.angle) * 80;
+      const y = place ? place.y : v.y + Math.sin(v.angle) * 80;
+      const e = Entites.creerPieton(x, y, Entites.archetypeDeRue());
+      if (!e) return null;
+      e.etat = 'fige'; e.cri = 9999; e.client = true;
+      if (quoi === 'blesse') {
+        // ⚠️ Il est A TERRE, pas debout : c'est ce qui le distingue d'un
+        // client de taxi a douze pixels de distance. Et il NE SE RELEVE PAS —
+        // un assomme se remet debout au bout de `ko_images` et s'enfuit ; un
+        // blesse attend l'ambulance. Le seul chrono qui compte est celui du
+        // boulot.
+        Entites.assommer(e);
+        e.minuterie = 99999;
+        e.vie = Math.max(1, Math.round(e.vieMax * 0.15));
+        Entites.bulle(e, '…');
+      } else {
+        const civil = Histoire.personnage('civil');
+        Entites.bulle(e, civil ? civil.heler : '');
+      }
+      return e;
+    },
+
+    /** On est charge : on choisit ou aller, et le chrono part. */
+    enRoute: function (v) {
+      const sorte = SORTES[boulot.slug];
+      let lieu = null;
+      if (sorte.destination === 'hopital') {
+        lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+      }
+      if (!lieu) {
+        const loin = Monde.carte.points.filter(function (p) { return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200; });
+        lieu = loin[Math.floor(B.rng() * loin.length)] || Monde.carte.points[0];
+      }
+      boulot.destination = { x: lieu.x * TT + 8, y: lieu.y * TT + 8, nom: lieu.nom };
+      boulot.distance = Math.hypot(boulot.destination.x - v.x, boulot.destination.y - v.y);
+      boulot.chocsDepart = v.chocs;
+      boulot.t = 0;
+      boulot.etape = 'route';
+      Hud.message(sorte.pris + (sorte.destination === 'hopital' ? '' : lieu.nom.toUpperCase()), 180);
+    },
+
+    /** Ce qui reste de la prime : les chocs la mangent, le chrono la fait
+        fondre. ⚠️ Les deux nombres viennent de la fiche du boulot — un chrono
+        a zero veut dire « rien ne fond », pas « tout est perdu ». */
+    prime: function (v) {
+      const f = boulot.fiche();
+      if (!f || !f.prime) return 0;
+      const chocs = Math.max(0, v.chocs - boulot.chocsDepart);
+      let part = Math.max(0, 1 - chocs * f.malus_choc);
+      if (f.chrono_s > 0) part *= Math.max(0, 1 - boulot.t / (f.chrono_s * 60));
+      return Math.round(f.prime * part);
+    },
+
     maj: function () {
-      if (!taxi.etape) return;
+      if (!boulot.etape) return;
       const j = B.joueur, v = j.dansVehicule;
-      taxi.t++;
-      if (!v || v.slug !== 'taxi' || v.etat === 'epave') { taxi.abandonner('COURSE PERDUE'); return; }
-      if (taxi.etape === 'attente') {
-        const c = taxi.client;
-        if (!c || !c.vivant) { taxi.abandonner('CLIENT PERDU'); return; }
+      const sorte = SORTES[boulot.slug];
+      boulot.t++;
+      if (!v || v.def.boulot !== boulot.slug || v.etat === 'epave') { boulot.abandonner('BOULOT PERDU'); return; }
+      if (boulot.etape === 'ramasse') {
+        const c = boulot.client;
+        if (!c || !c.vivant) { boulot.abandonner('IL N’EST PLUS LA'); return; }
         if (dist2(v.x, v.y, c.x, c.y) < 40 * 40 && Math.abs(v.vitesse) < 0.4) {
           Entites.retirer(c);
-          taxi.client = null;
-          const lieux = Monde.carte.points.filter(function (p) { return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200; });
-          const lieu = lieux[Math.floor(B.rng() * lieux.length)] || Monde.carte.points[0];
-          taxi.destination = { x: lieu.x * TT + 8, y: lieu.y * TT + 8, nom: lieu.nom };
-          taxi.distance = Math.hypot(taxi.destination.x - v.x, taxi.destination.y - v.y);
-          taxi.chocsDepart = v.chocs;
-          taxi.etape = 'course';
-          Hud.message('DIRECTION : ' + lieu.nom.toUpperCase(), 180);
-          Son.SFX.porte('vehicule');    // le client monte et claque la portiere
+          boulot.client = null;
+          boulot.enRoute(v);
+          Son.SFX.porte('vehicule');    // il monte et la portiere claque
         }
         return;
       }
-      const d = taxi.destination;
-      if (dist2(v.x, v.y, d.x, d.y) < 44 * 44 && Math.abs(v.vitesse) < 0.4) {
-        // ⚠️ Les trois nombres de la course viennent de la FICHE du boulot
-        // (`economie.BOULOTS`), y compris ce qu'un choc mange du pourboire :
-        // ils etaient perdus dans `tarifs`, ou rien ne les rattachait au taxi.
-        const boulot = B.defs.economie.boulots.taxi;
-        const chocs = v.chocs - taxi.chocsDepart;
-        const douceur = Math.max(0, 1 - chocs * boulot.malus_choc);
-        const prix = Math.round(boulot.base + boulot.par_tuile * (taxi.distance / TT));
-        const pourboire = Math.round(boulot.prime * douceur);
-        encaisser(prix + pourboire, pourboire ? 'COURSE + ' + pourboire + ' $ DE POURBOIRE' : 'COURSE (CONDUITE BRUTALE)');
-        taxi.courses++;
-        B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;
-        taxi.etape = null; taxi.destination = null;
+      const d = boulot.destination;
+      if (dist2(v.x, v.y, d.x, d.y) >= 44 * 44 || Math.abs(v.vitesse) >= 0.4) return;
+      const f = boulot.fiche();
+      // ⚠️ La distance se paie A CHAQUE ETAPE : trois livraisons, trois
+      // trajets. Sinon la pizza rapporterait trois fois la premiere course.
+      const prix = Math.round(f.base + f.par_tuile * (boulot.distance / TT));
+      const prime = boulot.prime(v);
+      boulot.gagne += prix + prime;
+      boulot.etapesFaites++;
+      // Le blesse qu'on n'a pas sorti a temps : il ne reste que la base.
+      const perdu = f.chrono_s > 0 && sorte.destination === 'hopital' && prime === 0;
+      if (boulot.etapesFaites < f.etapes) {
+        encaisser(prix + prime, sorte.fini + ' ' + boulot.etapesFaites + '/' + f.etapes);
+        boulot.enRoute(v);
+        return;
       }
+      encaisser(prix + prime, perdu ? sorte.fini + ' — TROP TARD' : (prime ? sorte.fini + ' + ' + prime + ' $' : sorte.fini));
+      boulot.faits[boulot.slug]++;
+      B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;
+      boulot.fin();
+    },
+
+    /** Range la machine sans rien dire : le boulot est fini, ou il n'y en a pas. */
+    fin: function () {
+      boulot.slug = null; boulot.etape = null; boulot.destination = null; boulot.client = null;
     },
 
     abandonner: function (raison) {
-      // Sans course en cours, il n'y a rien a abandonner : on se tait.
-      const encours = !!taxi.etape;
-      if (taxi.client) { taxi.client.etat = 'flane'; taxi.client.cri = 0; taxi.client.client = false; Entites.taire(taxi.client); }
-      taxi.client = null; taxi.destination = null; taxi.etape = null;
+      // Sans boulot en cours, il n'y a rien a abandonner : on se tait.
+      const encours = !!boulot.etape;
+      if (boulot.client) {
+        boulot.client.etat = 'flane'; boulot.client.cri = 0; boulot.client.client = false;
+        Entites.taire(boulot.client);
+      }
+      boulot.fin();
       if (raison && encours) Hud.message(raison);
     },
   };
@@ -881,7 +994,7 @@ const Missions = (function () {
     // Le cafe est une minuterie, pas une depense : il s'ecoule aussi au volant
     // et dans une piece, la ou `majJoueur` ne passe pas.
     if (B.joueur && B.joueur.cafeine > 0) B.joueur.cafeine--;
-    taxi.maj();
+    boulot.maj();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -893,7 +1006,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           taxi, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           boulot, arrestation, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
 })();

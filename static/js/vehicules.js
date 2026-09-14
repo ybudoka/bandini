@@ -710,7 +710,7 @@ const Vehicules = (function () {
     Son.Radio.arreter();
     Son.Ambiance.jouer();
     if (!force) bruitDeMontee(v);
-    if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.abandonner('SORTI DU TAXI');
+    if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.abandonner('BOULOT ABANDONNE');
     return true;
   }
 
@@ -1135,7 +1135,7 @@ const Vehicules = (function () {
       // ⚠️ Sur la remorqueuse, le meme bouton accroche et decroche : le boulot
       // de remorquage EST le crochet, il n'y a pas deux gestes a apprendre.
       if (v.def.crochet) basculerCrochet(v);
-      if (typeof Missions !== 'undefined' && Missions.taxi) Missions.taxi.klaxon(v);
+      if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.klaxon(v);
     }
     if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {
