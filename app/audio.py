@@ -115,9 +115,7 @@ CATALOGUE: list[Echantillon] = [
               "stairwell, no voices, no music"),
     # ⚠️ Deuxieme recette (Martin a ecoute la premiere et l'a renvoyee) : plus
     # de ferme-porte « qui siffle » — un souffle d'air, le modele en fait
-    # n'importe quoi. La clochette au-dessus de la porte est LE sujet, la
-    # porte n'est que ce qui la fait tinter ; et l'influence monte, parce
-    # qu'une clochette de depanneur est une chose exacte.
+    # n'importe quoi.  
     _e("porte_commerce", "Porte de commerce", duree_s=1.5, volume=0.6, influence=0.7,
        prompt="a shop metalic sliding door opens as a small store's "
               "clacks softly shut, close-up, "
