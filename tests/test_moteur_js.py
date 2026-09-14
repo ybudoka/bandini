@@ -1802,7 +1802,14 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
           const depart = { x: j.x, y: j.y };
           let n = 0;
           o.touche('ShiftLeft'); o.touche('KeyA');
-          while (j.endurance > 0 && n < 2000) { o.frame(1); n++; }
+          while (j.endurance > 0 && n < 2000) {
+            // ⚠️ On mesure le JOUEUR, pas la foule : une flaneuse plantee sur
+            // le trajet coutait 44 images de bousculade (mesure du 13 sept.
+            // 2026, le jour ou huit enseignes de plus ont deplace les portes
+            // par ou les passants naissent) et la vitesse tombait de 5 %.
+            for (const e of L.Entites.pietonsAutour(j.x, j.y, 60)) L.Entites.retirer(e);
+            o.frame(1); n++;
+          }
           o.relacher('KeyA'); o.relacher('ShiftLeft');
           return { images: n, px: Math.hypot(j.x - depart.x, j.y - depart.y) };
         }
@@ -2492,6 +2499,141 @@ def test_la_fourriere_saisit_le_char_et_le_revend_plus_cher_qu_il_ne_vaut(banc, 
             "%s : rachat %s $ contre revente %s $ — la fourriere devient une machine a argent"
             % (v["slug"], rachat, revente)
         )
+
+
+def test_le_carnet_rappelle_la_mission_sans_rien_inventer(banc, paquet):
+    """⚠️ Demande de Martin : « un rappel de la mission en cours dans le menu.
+    Un journal et un bestiaire avec les personnages connus. »
+
+    Le carnet **n'invente aucune donnée** : tout ce qu'il montre était déjà
+    dans la partie et n'était montré nulle part. Le juge tient donc la seule
+    chose qui compte — **trois endroits, une seule vérité** : la page EN COURS
+    dit la même mission que la ligne du HUD (`ligneObjectif`) et que le GPS
+    (`cible`), et elle barre exactement les objectifs déjà faits."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie;
+        const vide = L.Hud.menuCarnetEnCours();
+        L.Histoire.commencer('m1');
+        const m = L.Histoire.courante();
+        // ⚠️ La DERNIERE etape : elle a un lieu, donc un GPS — c'est la seule
+        // facon de comparer les trois sources d'un coup.
+        p.mission.etape = m.objectifs.length - 1;
+        const menu = L.Hud.menuCarnetEnCours();
+        const lignes = menu.items.map(function (i) { return { l: i.libelle, d: i.detail || '' }; });
+        const gps = L.Histoire.cible();
+        return { vide: vide.items.map(function (i) { return i.libelle; }),
+                 titre: menu.titre, attendu: m.titre.toUpperCase(), etape: p.mission.etape,
+                 lignes: lignes, objectifs: m.objectifs.map(function (o) { return o.texte; }),
+                 hud: L.Histoire.ligneObjectif(), gps: gps && gps.nom,
+                 donneur: L.Histoire.personnage(m.donneur).nom.toUpperCase(),
+                 recompense: m.recompense };
+    }""")
+    assert any("AUCUNE MISSION" in ligne for ligne in r["vide"]), "sans mission, la page doit le dire : %s" % r["vide"]
+    assert r["titre"] == r["attendu"], "la page ne porte pas le titre de la mission"
+    details = {e["l"]: e["d"] for e in r["lignes"]}
+    assert details.get("DONNÉE PAR") == r["donneur"], "le donneur n'est pas nommé : %s" % r["lignes"]
+    assert details.get("RÉCOMPENSE") == "%s $" % r["recompense"], "la récompense n'est pas dite"
+    # ⚠️ Les objectifs : tous listés, les faits marqués d'un point, celui du
+    # moment d'un chevron — et c'est le MEME texte que la ligne du HUD.
+    faits = [e["l"][2:] for e in r["lignes"] if e["l"].startswith("\u00b7 ")]
+    encours = [e["l"][2:] for e in r["lignes"] if e["l"].startswith("> ")]
+    assert faits == r["objectifs"][:r["etape"]], "les objectifs faits ne sont pas barrés : %s" % faits
+    assert encours == [r["objectifs"][r["etape"]]] == [r["hud"]], (
+        "la page et la ligne du HUD ne disent pas la même chose : %s / %s" % (encours, r["hud"])
+    )
+    # ⚠️ Trois endroits, une seule vérité : la page, le HUD et le GPS.
+    assert r["gps"], "le GPS doit pointer quelque part pendant la mission"
+    assert details.get("OÙ") == r["gps"].upper(), (
+        "la page n'envoie pas où le GPS envoie : %s / %s" % (details.get("OÙ"), r["gps"])
+    )
+
+
+def test_le_journal_du_carnet_s_ecrit_tout_seul_et_reste_sous_son_plafond(banc):
+    """⚠️ Le journal s'écrit **à partir de ce que le jeu émet déjà** : le jour où
+    c'est une deuxième comptabilité tenue à la main, elle dérive de la première
+    et plus personne ne sait laquelle a raison. Ici : une mission réussie, une
+    arrestation, un séjour à l'hôpital — trois choses qu'aucune ligne de code
+    du carnet ne déclenche.
+
+    Et il est **plafonné**. Une partie de cent jours accumulerait des dizaines
+    d'entrées, et la partie voyagera par le réseau en M14. ⚠️ On jette le
+    quotidien **avant** les jalons : on veut pouvoir relire quand on a
+    rencontré Marco, pas ce qu'on a mangé."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie, H = L.Histoire;
+        p.carnet.length = 0;
+        // 1. Rien n'est ecrit a la main : on joue les evenements du jeu.
+        H.rencontrer('ti_guy');
+        H.commencer('m1');
+        H.reussir();
+        H.evenement('mort');
+        H.evenement('arrete');
+        const apres = p.carnet.map(function (e) { return { t: e.t, jalon: e.jalon, j: e.j }; });
+        // 2. Le plafond : cent jours de quotidien ne doivent pas chasser les
+        //    jalons ni faire deborder le carnet.
+        const jalonsAvant = p.carnet.filter(function (e) { return e.jalon; }).length;
+        for (let i = 0; i < 300; i++) H.noter('BOUCHEE ' + i, false);
+        const plein = { n: p.carnet.length, max: H.CARNET_MAX,
+                        jalons: p.carnet.filter(function (e) { return e.jalon; }).length };
+        // 3. Et quand il n'y a plus que des jalons, ils cedent aussi : rien ne
+        //    grossit sans fin.
+        p.carnet.length = 0;
+        for (let i = 0; i < 300; i++) H.noter('JALON ' + i, true);
+        const jalons = p.carnet.length;
+        return { apres: apres, plein: plein, jalons: jalons, jalonsAvant: jalonsAvant };
+    }""")
+    textes = [e["t"] for e in r["apres"]]
+    assert any("MISSION" in t for t in textes), "une mission reussie doit laisser une trace : %s" % textes
+    assert any("HÔPITAL" in t for t in textes), "l'hopital doit laisser une trace : %s" % textes
+    assert any("ARRÊTÉ" in t for t in textes), "une arrestation doit laisser une trace : %s" % textes
+    assert all(e["j"] >= 1 for e in r["apres"]), "chaque entree est datee au jour de jeu"
+    assert r["plein"]["n"] == r["plein"]["max"], (
+        "le journal deborde : %s entrees pour un plafond de %s" % (r["plein"]["n"], r["plein"]["max"])
+    )
+    assert r["plein"]["jalons"] == r["jalonsAvant"], (
+        "le quotidien a chassé des jalons : %s au lieu de %s" % (r["plein"]["jalons"], r["jalonsAvant"])
+    )
+    assert r["jalons"] == r["plein"]["max"], "meme les jalons cedent quand il n'y a qu'eux"
+
+
+def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
+    """⚠️ Un répertoire qui montre la fin est pire que pas de répertoire. Rien
+    ne disait, avant, qu'on avait rencontré quelqu'un : `p.appels` et
+    `p.missionsFaites` le disent à moitié. `p.connus` s'écrit la **première
+    fois qu'on parle**, et le répertoire ne montre que lui — sinon il
+    divulgâche Josée, Marco qui te vend, et le Dr Lachance de M13."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie, H = L.Histoire;
+        const neuve = L.Hud.menuCarnetRepertoire().items.map(function (i) { return i.libelle; });
+        const tous = (L.B.defs.personnages || []).length;
+        // On parle a Ti-Guy : lui seul entre au repertoire.
+        H.parler('ti_guy');
+        L.Hud.fermerMenu(); L.B.dialogue = null; L.B.cinema = null;
+        const un = L.Hud.menuCarnetRepertoire().items.map(function (i) { return i.libelle; });
+        const deux = H.rencontrer('ti_guy');          // deux fois : rien de plus
+        const connus = Object.keys(p.connus);
+        // La fiche : son visage se dessine, et elle liste SES missions.
+        const fiche = L.Hud.menuCarnetFiche('ti_guy');
+        let dessine = 0;
+        const faux = { imageSmoothingEnabled: false, drawImage: function () { dessine++; },
+                       fillRect: function () {}, fillStyle: '' };
+        fiche.dessiner(faux, 0, 0, 320, 200);
+        return { neuve: neuve, un: un, deux: deux, connus: connus, tous: tous,
+                 titre: fiche.titre, dessine: dessine,
+                 fiches: fiche.items.map(function (i) { return i.libelle; }) };
+    }""")
+    assert [x for x in r["neuve"] if x != "RETOUR"] == ["TU N’AS ENCORE PARLÉ À PERSONNE"], (
+        "une partie neuve ne connait personne : %s" % r["neuve"]
+    )
+    assert r["connus"] == ["ti_guy"], "seul celui a qui on a parle entre au repertoire : %s" % r["connus"]
+    assert r["deux"] is False, "on n'entre au repertoire qu'une fois"
+    assert r["tous"] > 1, "le catalogue a plus d'un personnage — c'est tout l'interet du juge"
+    assert len([x for x in r["un"] if x != "RETOUR"]) == 1, "le repertoire montre quelqu'un d'autre : %s" % r["un"]
+    assert r["titre"] == "TI-GUY" and r["dessine"] == 1, "la fiche doit dessiner son visage : %s" % r
+    assert any("RENCONTRÉ" in x for x in r["fiches"])
 
 
 def test_la_fourriere_paie_les_epaves_qu_on_lui_amene_au_crochet(banc, paquet):

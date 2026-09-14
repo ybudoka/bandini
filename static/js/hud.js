@@ -76,6 +76,37 @@ const Hud = (function () {
   }
 
   /** Navigation : haut/bas (clavier, stick, joystick), ACTION choisit, FRAPPE ou annuler ferme. */
+  /** Combien de lignes tiennent dans la boite. ⚠️ Un menu qui tient au
+      complet rend exactement son nombre d'items : le defilement ne se
+      declenche que quand la hauteur bute sur l'ecran (`VH - 30`), donc aucun
+      menu existant ne change d'allure. */
+  /** Un petit triangle de defilement, trois rangees de pixels. */
+  function fleche(ctx, x, y, sens) {
+    ctx.fillStyle = '#8a8698';
+    for (let i = 0; i < 3; i++) {
+      const larg = sens < 0 ? 1 + i * 2 : 5 - i * 2;
+      ctx.fillRect(x + (5 - larg) / 2, y + i, larg, 1);
+    }
+    B.stats.rects += 3;
+  }
+
+  function fenetreMenu(m) {
+    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    return Math.max(1, Math.floor((h - 28 - (m.aide ? 16 : 6)) / 14));
+  }
+
+  /** Garde le curseur dans la fenetre. Rend le premier item visible. */
+  function hautDuMenu(m) {
+    const f = fenetreMenu(m), n = m.items.length;
+    let haut = m.haut || 0;
+    if (haut > n - f) haut = n - f;
+    if (haut < 0) haut = 0;
+    if (m.curseur < haut) haut = m.curseur;
+    if (m.curseur >= haut + f) haut = m.curseur - f + 1;
+    m.haut = haut;
+    return haut;
+  }
+
   function majMenu() {
     const m = B.menu;
     if (!m) return;
@@ -114,7 +145,12 @@ const Hud = (function () {
     // curseur et choisir — sinon un joueur qui n'a QUE sa manette resterait
     // enferme — mais elle ne FERME plus l'ecran sous ses doigts.
     const ferme = m.manetteInerte ? Entree.neufSansManette : Entree.neuf;
-    if (!m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) fermerMenu();
+    if (!m.obligatoire && (ferme('annuler') || ferme('attaque') || ferme('pause'))) {
+      // ⚠️ `retour` : une page d'un carnet recule d'un cran au lieu de rendre
+      // la main au jeu. Sans ca, sortir du JOURNAL relancait la partie, et il
+      // fallait remettre PAUSE pour lire la page d'a cote.
+      if (m.retour) { const r = m.retour; Son.SFX.menu(); r(); } else fermerMenu();
+    }
   }
 
   function dessinerMenu(ctx) {
@@ -129,8 +165,10 @@ const Hud = (function () {
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1);
     texte(ctx, m.titre, x + 8, y + 7, '#e8b33c', 2);
     if (m.sur) texte(ctx, m.sur, x + l - 8 - Atlas.largeurTexte(m.sur, 1), y + 10, '#cdc6e6', 1);
-    m.items.forEach(function (item, i) {
-      const yy = y + 28 + i * 14;
+    const f = fenetreMenu(m), haut = hautDuMenu(m);
+    m.items.slice(haut, haut + f).forEach(function (item, k) {
+      const i = haut + k;
+      const yy = y + 28 + k * 14;
       const choisi = i === m.curseur;
       const actif = item.actif !== false;
       if (choisi) { ctx.fillStyle = 'rgba(232,179,60,0.18)'; ctx.fillRect(x + 4, yy - 3, (m.colonne || l) - 8, 12); }
@@ -138,6 +176,12 @@ const Hud = (function () {
       const bord = x + (m.colonne || l);
       if (item.detail) texte(ctx, item.detail, bord - 8 - Atlas.largeurTexte(item.detail, 1), yy, actif ? '#e8b33c' : '#6a6678', 1);
     });
+    // Les fleches de defilement : on doit voir qu'il y a autre chose au-dessus
+    // et en dessous, sinon une page longue a l'air d'etre toute la page.
+    // ⚠️ Dessinees, pas ecrites : la police pixel n'a que des lettres, des
+    // chiffres et un peu de ponctuation — un « ▲ » y tomberait sur un « ? ».
+    if (haut > 0) fleche(ctx, x + l - 12, y + 29, -1);
+    if (haut + f < m.items.length) fleche(ctx, x + l - 12, y + 30 + (f - 1) * 14, 1);
     if (m.aide) texte(ctx, m.aide, x + 8, y + h - 12, '#8a8698', 1);
     if (m.dessiner) m.dessiner(ctx, x, y, l, h);
     B.stats.rects += 4;
@@ -428,10 +472,132 @@ const Hud = (function () {
                { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
   }
 
+  // --- Le carnet : la mission, le journal, le repertoire ---------------------------
+
+  /*: ⚠️ Le carnet N'INVENTE AUCUNE DONNEE. Tout ce qu'il montre est deja dans
+    la partie et n'etait montre nulle part : l'objectif que le HUD ecrit en
+    trente caracteres, les evenements que `Histoire.noter` pose, les gens que
+    `p.connus` retient. C'est une FENETRE, pas une comptabilite.
+
+    ⚠️ Et « journal » est pris deux fois dans ce depot : `journal.py` est Le
+    Clairon (la manchette du matin), M11 prevoit le carnet du POSTE (le dossier
+    de la police sur toi). Ici, c'est la page du joueur, dans LE CARNET. */
+  function menuCarnet() {
+    const p = B.partie;
+    const connus = Object.keys(p.connus || {}).length;
+    return { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
+      { libelle: 'EN COURS', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
+        faire: function () { ouvrirMenu(menuCarnetEnCours()); return false; } },
+      { libelle: 'JOURNAL', detail: (p.carnet || []).length + ' ENTRÉES',
+        faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
+      { libelle: 'RÉPERTOIRE', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
+        faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
+      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
+    ] };
+  }
+
+  //: Une ligne qu'on lit, qu'on ne choisit pas.
+  function ligne(libelle, detail) { return { libelle: libelle, detail: detail || '', actif: false }; }
+
+  /** EN COURS : le titre, le donneur, les objectifs — barres pour ce qui est
+      fait —, la recompense et ou c'est.
+
+      ⚠️ Ca RAPPELLE ce qu'il faut faire, ca ne raconte pas l'histoire :
+      quelqu'un qui rouvre le jeu apres trois jours doit savoir ou aller en
+      deux secondes. */
+  function menuCarnetEnCours() {
+    const p = B.partie, m = Histoire.courante();
+    const items = [];
+    if (B.defi) {
+      const l = Histoire.ligneObjectif();
+      items.push(ligne('DÉFI EN COURS'), ligne(l || ''));
+    } else if (!m) {
+      items.push(ligne('AUCUNE MISSION EN COURS'));
+      const gps = Histoire.cible();
+      if (gps) items.push(ligne('ON T’ATTEND :', (gps.nom || '').toUpperCase()));
+      else items.push(ligne('PERSONNE NE T’ATTEND'));
+    } else {
+      const perso = Histoire.personnage(m.donneur);
+      items.push(ligne('DONNÉE PAR', perso ? perso.nom.toUpperCase() : m.donneur.toUpperCase()));
+      items.push(ligne('RÉCOMPENSE', m.recompense + ' $'));
+      items.push(ligne(''));
+      m.objectifs.forEach(function (o, i) {
+        const fait = i < p.mission.etape;
+        // ⚠️ « Barre » en police 5x7 : on ne peut pas rayer un texte, alors on
+        // le marque et on l'eteint. Une coche, un point, et la couleur fait
+        // le reste (`actif: false` grise deja tout).
+        items.push({ libelle: (fait ? '\u00B7 ' : i === p.mission.etape ? '> ' : '  ') + o.texte,
+                     actif: false });
+      });
+      const gps = Histoire.cible();
+      if (gps) { items.push(ligne('')); items.push(ligne('OÙ', (gps.nom || '').toUpperCase())); }
+    }
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    return { titre: m ? m.titre.toUpperCase() : 'EN COURS', largeur: 320, curseur: items.length - 1,
+             items: items, retour: function () { ouvrirMenu(menuCarnet()); } };
+  }
+
+  /** JOURNAL : ce qui s'est passe, le plus recent en haut, date au jour. */
+  function menuCarnetJournal() {
+    const lignes = (B.partie.carnet || []).slice().reverse();
+    const items = lignes.map(function (e) { return ligne(e.t, 'J' + e.j); });
+    if (!items.length) items.push(ligne('RIEN ENCORE'));
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    return { titre: 'JOURNAL', largeur: 320, hauteur: VH - 30, curseur: 0, items: items,
+             aide: 'HAUT/BAS : LIRE · FRAPPE : RETOUR',
+             retour: function () { ouvrirMenu(menuCarnet()); } };
+  }
+
+  /** RÉPERTOIRE : les gens qu'on a RENCONTRES, et eux seuls. */
+  function menuCarnetRepertoire() {
+    const p = B.partie;
+    const items = (B.defs.personnages || [])
+      .filter(function (q) { return p.connus && p.connus[q.slug]; })
+      .map(function (q) {
+        return { libelle: q.nom.toUpperCase(), detail: 'J' + p.connus[q.slug],
+                 faire: function () { ouvrirMenu(menuCarnetFiche(q.slug)); return false; } };
+      });
+    if (!items.length) items.push(ligne('TU N’AS ENCORE PARLÉ À PERSONNE'));
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    return { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
+             aide: 'ACTION : LA FICHE · FRAPPE : RETOUR',
+             retour: function () { ouvrirMenu(menuCarnet()); } };
+  }
+
+  /** La fiche d'un personnage : son visage, ou il se tient, ce qu'il a dit. */
+  function menuCarnetFiche(slug) {
+    const p = B.partie, q = Histoire.personnage(slug);
+    const items = [ligne('RENCONTRÉ', 'JOUR ' + (p.connus[slug] || '?'))];
+    if (q && q.ou) items.push(ligne('ON LE TROUVE', String(q.ou).toUpperCase()));
+    // Les missions qu'il a données, et ce qu'on en a fait.
+    const siennes = (B.defs.missions || []).filter(function (m) { return m.donneur === slug; });
+    siennes.forEach(function (m) {
+      items.push(ligne('\u00B7 ' + m.titre.toUpperCase(), p.missionsFaites[m.slug] ? 'FAITE' : ''));
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } });
+    return { titre: q ? q.nom.toUpperCase() : slug.toUpperCase(), largeur: 320, colonne: 250,
+             curseur: items.length - 1, items: items,
+             retour: function () { ouvrirMenu(menuCarnetRepertoire()); },
+             // ⚠️ Le visage se cuit avec SES couleurs de palette — celles que
+             // `Entites.creerPieton` donne deja a son sosie dans la rue. Rien
+             // de neuf a dessiner : on agrandit le meme sprite de 10 x 13.
+             dessiner: function (ctx, x, y, l) {
+               if (!q || !q.couleurs || typeof SPRITES === 'undefined' || !SPRITES.joueur) return;
+               const cuit = Atlas.cuire('joueur', SPRITES.joueur, q.couleurs);
+               const img = cuit.poses.bas && cuit.poses.bas[0];
+               if (!img) return;
+               ctx.imageSmoothingEnabled = false;
+               ctx.drawImage(img, 0, 0, img.width, img.height,
+                             x + l - 46, y + 26, img.width * 3, img.height * 3);
+               B.stats.images++;
+             } };
+  }
+
   function menuPause() {
     return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
+      { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
       { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
       { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDEE'); return false; } },
@@ -1024,7 +1190,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },

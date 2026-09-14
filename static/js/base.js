@@ -68,6 +68,16 @@ function etatInitial(defs) {
     //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
     //: quand il deborde — un ordre, donc, pas un sac.
     fourriere: [],
+    //: Les gens qu'on a RENCONTRES (slug -> jour). ⚠️ Sans ca, le repertoire
+    //: du carnet montrerait des personnages qu'on n'a jamais vus — et il
+    //: divulgacherait l'histoire : Josee, le Dr Lachance de M13, Marco qui te
+    //: vend. Un repertoire qui montre la fin est pire que pas de repertoire.
+    connus: {},
+    //: Le JOURNAL du carnet : ce qui s'est passe, en ordre, date au jour de
+    //: jeu. ⚠️ Ce n'est ni `journal.py` (Le Clairon, la manchette du matin) ni
+    //: le carnet du poste de M11 (le dossier de la police sur toi). Trois
+    //: choses, trois noms.
+    carnet: [],
     proprietes: {},
     missionsFaites: {},
     mission: null,        // { slug, etape } — la mission en cours
@@ -252,7 +262,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
@@ -260,6 +270,7 @@ const Sauvegarde = (function () {
     // partie d'avant la fourriere arriverait avec `undefined`, et le comptoir
     // planterait au premier clic.
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
+    if (!Array.isArray(out.carnet)) out.carnet = [];
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     return out;

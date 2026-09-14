@@ -17,6 +17,43 @@ const Histoire = (function () {
   const RAYON_PARLER = 22;          // a cette distance d'un personnage, ACTION = lui parler
 
   function defs() { return B.defs.missions || []; }
+  // --- Le carnet : ce qui s'ecrit tout seul -------------------------------------
+
+  /*: Le plafond du journal. ⚠️ Une partie de cent jours accumule des dizaines
+    d'entrees, et la partie voyagera par le reseau en M14. On jette donc les
+    plus vieilles — mais les JALONS en dernier : on veut pouvoir relire quand
+    on a rencontre Marco trois heures plus tot, pas ce qu'on a mange. */
+  const CARNET_MAX = 60;
+
+  /** Une ligne au journal du carnet. `jalon` : ce qu'on garde le plus
+      longtemps (une mission, une rencontre), par opposition au quotidien.
+
+      ⚠️ Il s'ecrit A PARTIR DE CE QUE LE JEU EMET DEJA. Le jour ou c'est une
+      deuxieme comptabilite tenue a la main, elle derive de la premiere et plus
+      personne ne sait laquelle a raison. */
+  function noter(texte, jalon) {
+    const p = B.partie;
+    if (!p || !texte) return null;
+    if (!Array.isArray(p.carnet)) p.carnet = [];
+    const ligne = { j: p.jour, t: String(texte).toUpperCase(), jalon: !!jalon };
+    p.carnet.push(ligne);
+    // On coupe par le bas, et le quotidien part avant les jalons.
+    while (p.carnet.length > CARNET_MAX) {
+      const i = p.carnet.findIndex(function (q) { return !q.jalon; });
+      p.carnet.splice(i >= 0 ? i : 0, 1);
+    }
+    return ligne;
+  }
+
+  /** On a parle a quelqu'un : le repertoire s'en souvient, une seule fois. */
+  function rencontrer(slug) {
+    const p = B.partie, perso = personnage(slug);
+    if (!perso || !p || p.connus[slug]) return false;
+    p.connus[slug] = p.jour;
+    noter('RENCONTRÉ ' + perso.nom, true);
+    return true;
+  }
+
   function personnages() { return B.defs.personnages || []; }
   function personnage(slug) { return personnages().find(function (p) { return p.slug === slug; }) || null; }
   function mission(slug) { return defs().find(function (m) { return m.slug === slug; }) || null; }
@@ -304,6 +341,7 @@ const Histoire = (function () {
   function parler(slug) {
     const p = personnage(slug);
     if (!p || B.cinema) return false;
+    rencontrer(slug);
     const enCours = courante();
     if (enCours && enCours.donneur === slug) {
       const o = objectif();
@@ -551,6 +589,7 @@ const Histoire = (function () {
     if (d.faubourg_libere) p.faubourgLibere = true;
     if (d.manchette) p.manchetteForcee = d.manchette;
     p.stats.missions = (p.stats.missions || 0) + 1;
+    noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
     Son.SFX.mission();
     dire(m, 'fin', function () {
@@ -567,6 +606,7 @@ const Histoire = (function () {
     B.partie.mission = null;
     B.mission = null;
     Hud.message('MISSION RATÉE — ' + m.titre.toUpperCase(), 200);
+    noter('MISSION RATÉE : ' + m.titre, true);
     Son.SFX.erreur();
     B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
     dire(m, 'echec', null);
@@ -586,7 +626,17 @@ const Histoire = (function () {
   }
 
   /** Les echecs qui viennent d'ailleurs : la prison, l'hopital. */
+  //: Ce qu'un evenement laisse au journal. ⚠️ La table est ici et nulle part
+  //: ailleurs : `missions.js` emet deja `mort` et `arrete` pour faire echouer
+  //: une mission, et le carnet se sert de la MEME emission — il n'y a pas deux
+  //: endroits qui decident qu'on est alle a l'hopital.
+  const AU_CARNET = {
+    mort: 'Réveil à l’hôpital',
+    arrete: 'Arrêté par la police',
+  };
+
   function evenement(nom) {
+    if (AU_CARNET[nom]) noter(AU_CARNET[nom], false);
     const m = courante();
     if (!m) return;
     if (m.echec.indexOf(nom) >= 0) echouer(nom);
@@ -688,11 +738,12 @@ const Histoire = (function () {
   function finirDefi(reussi, raison) {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
     B.defi = null;
-    if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); return; }
+    if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
     B.partie.defisFaits[d.slug] = { jour: B.partie.jour, temps: f.t };
     if (premiere) Missions.encaisser(d.prime, d.titre.toUpperCase());
     else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
+    noter('DÉFI RÉUSSI : ' + d.titre + (premiere ? ' — ' + d.prime + ' $' : ''), true);
     Son.SFX.mission();
   }
 
@@ -782,5 +833,6 @@ const Histoire = (function () {
   return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
+           noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
 })();

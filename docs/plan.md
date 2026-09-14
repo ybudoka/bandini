@@ -69,11 +69,12 @@ ne bougent pas quand l'ordre de travail change.
 | Clôture nord-sud trop large | **livré** (13 sept. 2026) | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **livré** (13 sept. 2026) | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
+| Fruits de mer, hommes-sandwichs et des comptoirs garnis | **livré** (13 sept. 2026) | demande de Martin (« ajoute des commerces de fruits de mer et des solliciteurs hommes-sandwichs », puis « ajoute aussi plus de bouffe et de choses à manger et à boire dans tous les magasins, où ça fit »). **Les fruits de mer** : une **cabane** de trottoir (`fruits_de_mer`, guédille au homard, toit de tôles rayées, deux homards sur la glace, l'enseigne HOMARD au pied) que le générateur ne pose **qu'aux Quais et à La Pointe** — `AMBULANTS[].districts` enferme un commerce chez lui comme `pietons.districts` enferme un passant, et un juge vérifie que c'est le port qu'on mange ; huit enseignes de plus (FRUITS DE MER, HOMARD VIVANT, CRABE DES NEIGES…) dans les deux districts qui touchent l'eau ; la poissonnerie sert guédille, crevettes de Matane et chaudrée. ⚠️ Le toit de la cabane s'arrête à la rangée 3 : le marchand a les pieds 11 px au-dessus de l'ancre, ses yeux tombent à la rangée 5 — un toit plus bas les cachait et on se faisait servir par un chapeau (le camion-restaurant avait eu la même leçon, avec son guichet troué). **L'homme-sandwich** (`pietons.homme_sandwich`, métier `reclame`) : un **solliciteur**. `carte.reclames` lui donne un **poste** de trottoir à 5–14 tuiles du kiosque pour lequel il crie (le hot-dog, la poutine, la guédille — pas le journal ni le café : `AMBULANTS[].reclame` est son boniment, None = personne), tiré dans **son propre dé** (`des_reclame`) pour ne pas déplacer un paquet caché à l'autre bout de la ville ; il naît à son poste, le jour, hors champ (`naitreLesHommesSandwichs`), il fait les cent pas dans un rayon de six tuiles (le `poste` de la Brume, plus large), et quand il te voit à six tuiles il **vient vers toi** (`aborde`, à la vitesse d'un piéton, jamais en courant), s'arrête à 22 px, te regarde et **crie son boniment** dans une bulle pendant trois secondes (`boniment`, voix ElevenLabs « Approchez, approchez ! » — genre `crieur`) ; ACTION devant lui donne un **coupon** : la prochaine bouchée à SON kiosque à moitié prix, **une fois**, et il expire au bout de trois minutes (`RECLAME`, sur le joueur comme la caféine — trois minutes ne méritent pas une sauvegarde) ; l'invite le dit (« KIOSQUE À HOT-DOGS — 5 $ (COUPON) ») et la caisse le fait, même calcul (`prixAmbulant`). ⚠️ **Un solliciteur n'est pas un mur ni un radar** : il regarde une image sur dix, il n'aborde **que celui qui flâne** (au-dessus de la marche, il te laisse : un homme-sandwich qui se jetait dans les jambes du joueur au sprint le ralentissait de 10 % — le juge du café l'a mesuré, la police rattrapait à cause d'une pancarte), il lâche prise si tu cours, si la chaussée ou un mur barre le chemin ou si ça fait quatre secondes qu'il n'arrive pas, et une fois son boniment fait il te laisse **vingt secondes de paix** (`repos_images`) — sans ça il te suivait d'un bout à l'autre de la rue en répétant la même phrase, et un personnage qu'on veut frapper n'est pas de la vie de rue, c'est une plaie. ⚠️ **Deuxième archétype à avoir son propre sprite** (`homme_sandwich`, 14 × 16) : une pancarte plus large que les épaules, bande rouge et deux lignes d'écriture, un « A » de deux planches vu de côté — même leçon que la Brume, un contour se lit là où une couleur ne dit rien ; son `c` est la pancarte, pas un chandail. **Les comptoirs garnis** : de quoi manger et boire dans **toutes** les familles où ça a du sens — soupe aux pois, pâté chinois, pointe de tarte et liqueur au dépanneur ; beigne et liqueur au comptoir de service ; liqueur et barre de chocolat à la quincaillerie (le présentoir à côté de la caisse) ; ailes de poulet, chips et shooter de rye au bar ; chips, chocolat et liqueur au magasin ; sandwich et liqueur à la cantine de la shop ; jus d'orange et chocolat à la pharmacie ; poutine, soupe et liqueur au casse-croûte garanti. La **friperie n'en vend pas** : ça ne fitte pas, et un comptoir qui vend n'importe quoi ne dit plus où l'on est. ⚠️ Toujours la même borne, et un juge fait la division : **au dollar, rien ne bat le hot-dog** (6,5 points par dollar) — ce qu'on achète au comptoir, on l'achète parce qu'on est devant. 14 juges Python (`test_reclame.py`) + 5 de banc (`test_reclame_js.py` : il naît à son poste le jour et pas la nuit, il vient et il parle sans courir puis se tait, le coupon rabat le prix une fois et expire, la cabane sert une guédille, les comptoirs et le casse-croûte ont de quoi manger) |
 | Le décor se brise | **P2** **correctif** à faire | demande de Martin (poteaux, bancs, arbres, tout ce qui se brise). ⚠️ Aujourd'hui les chars **traversent** tout le décor sans ralentir, et le lampadaire est fantôme même à pied. Deux familles par la fiche — ce qui arrête, ce qui casse — des débris, un poteau à terre qui s'éteint, et la ville qui se souvient jusqu'au lendemain |
 | Les portes s'ouvrent | **P2** ajout à faire | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
-| Le carnet | **P2** ajout, **en cours** (13 sept. 2026) | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
-| Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
+| Le carnet | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« un rappel de la mission en cours dans le menu, un journal et un bestiaire avec les personnages connus ») : **LE CARNET** au menu Pause, trois pages — **EN COURS** (donneur, récompense, objectifs faits marqués, celui du moment, et où), **JOURNAL** (écrit tout seul depuis ce que le jeu émet déjà, daté au jour, plafonné — le quotidien cède avant les jalons), **RÉPERTOIRE** (⚠️ `p.connus` seulement : un répertoire qui montre la fin est pire que pas de répertoire). Les menus savent maintenant **défiler**, et une page recule d'un cran au lieu de rendre la main au jeu |
 | Des sons pour les armes | **P2** ajout, **en cours** (13 sept. 2026) | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouent le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appellent `SFX.coup`), le jet d'extincteur ne fait aucun bruit, et un chargeur vide comme une arme qui casse font le **buzzer de refus** des menus. Un échantillon ElevenLabs par arme (`armes.py`, champ `son`), le jet en boucle, un clic à vide, une casse et un dégainage — chacun avec son repli synthétisé |
+| Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **P3** **correctif** à faire | demande de Martin, mesurée : **les 41 intérieurs** dépassent l'empreinte de leur bâtiment — un logement de banlieue de 3 × 3 ouvre sur une pièce de 16 × 9. Une porte doit imposer une taille minimale au bâtiment, et il faut de **petites** pièces |
 | L'eau n'est plus un mur | **P3** **correctif** à faire | demande de Martin : l'eau bloque tout (`MASQUE_PIETON` la compte comme un mur) — il faut pouvoir y nager, s'y noyer à bout de souffle, et y couler en char. ⚠️ Le juge du pont de M8 se reformule : seul lien **carrossable** |
@@ -224,8 +225,12 @@ travaillent la nuit près du bar et du port : on paie, l'écran fond au noir, la
 rien ne se montre, et elles refusent quand la police te cherche. Ce sont les **seules à avoir
 leur propre sprite** (jupe évasée, jambes nues, blond platine) et elles **tiennent leur coin**
 au lieu de flâner : c'est à ça qu'on les reconnaît, pas à la couleur de leur robe. Les **commerces ambulants**
-(kiosque à hot-dogs, kiosque à journaux, roulotte à café, camion-restaurant) sont posés par
-le générateur sur les trottoirs et les stationnements, avec un marchand derrière.
+(kiosque à hot-dogs, kiosque à journaux, roulotte à café, camion-restaurant, **cabane à fruits
+de mer** aux Quais et à La Pointe) sont posés par le générateur sur les trottoirs et les
+stationnements, avec un marchand derrière. Les **hommes-sandwichs** (13 sept. 2026) crient pour
+un kiosque : un poste à quelques tuiles, une pancarte plus large que les épaules, ils viennent
+vers celui qui flâne, lui tiennent le crachoir dans une bulle et lui glissent un **coupon** —
+moitié prix, une fois, trois minutes.
 
 **Donneurs** : Ti-Guy Lelièvre (receleur du garage), Mme Thibodeau (kiosque, potins),
 Sgt Réjean Bouchard (mange au casse-croûte, prend 20 %), Josée « La Chef » (Morues),
@@ -320,8 +325,8 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) | contigus, monotones, palier 0 sans réponse |
 | `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `o` place, `q` quai, `~` eau, majuscules = bâtiment spécial garanti, `<` et `^` = bloc **avalé** par son voisin) + `COLONNES`/`RANGEES`/`RUES_V`/`RUES_H` (aucune égale à sa voisine) ; `generer(plan, graine)` produit tuiles (`sol`, `voie` = champ de direction + lignes d'arrêt), intersections (avec leurs bras), portes, lampes, décor, zones, apparitions ; intérieurs en ASCII. **Trois sources d'irrégularité** : la trame, les superblocs (une rue qui n'existe pas → des T), et le découpage BSP en parcelles inégales (bâtiments en U ou en L, dents creuses, terrains vagues, stationnements). Un **stationnement est dessiné**, pas rayé au hasard : des rangées de cases de 1 × 2 tuiles (le gabarit exact de l'auto, glyphes `^ v < >` = où pointe le **nez**), des allées de manœuvre — toute rangée en touche une —, des rangées **dos à dos** dès qu'il y a douze tuiles de creux, des îlots de béton (`I`) et un lampadaire au bout des rangées. Un **filet** bouche les poches injoignables au lieu de livrer un îlot muré. Deux **couches peintes** par-dessus, qui ne touchent à aucune solidité : les **devantures** (bandeau, nom, vitrines, pancarte) et les **résidences** (étages de fenêtres, balcon, escalier de fer) — `_a_quoi_sert()` décide, par bâtiment, commerce ou logement. Les **intérieurs sont dessinés à la main** (`_piece`, un plan par pièce, l'espace = le plancher, meubles en glyphes) et **jugés à l'import** : une porte, un plancher d'un seul tenant, des points atteignables | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), un seul îlot marchable **sur cinq graines**, portes ⇔ intérieurs, aucun gabarit sur une rue **qui existe**, un superbloc avale bien sa rue, **toute rangée de stationnement touche une allée** et toute case fait deux tuiles de creux, **juge d'asymétrie**, déterministe |
 | `missions.py` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues | prérequis sans cycle, cibles sur tuile marchable, références existantes |
-| `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue |
-| `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`) | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille |
+| `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) ; les **métiers** qui ne naissent pas au hasard (la Brume, le marchand, le commis, l'agent, l'**homme-sandwich** et ses heures) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue, un métier a ses heures |
+| `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`), leurs `districts` (la cabane à fruits de mer ne quitte pas le port) et leur `reclame` ; `RECLAME` : l'homme-sandwich (portée, boniment, repos, coupon) ; `COMPTOIRS` : de quoi manger et boire par famille de commerce | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille, rien ne bat le hot-dog au dollar, un solliciteur n'est pas un mur |
 | `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
 | `journal.py` | *Le Clairon de la Baie* : la manchette du matin, une règle par gravité — la première qui passe gagne, la dernière est le repli ; lue par le narrateur (M7) | règles ordonnées et repli ; `test_audio.py`, `test_histoire_js.py` |
 | `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
@@ -418,6 +423,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py
+        test_reclame.py test_reclame_js.py
         test_navigateur.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py audio_elevenlabs.py musique_apercu.py
           git-hooks/post-commit
@@ -1969,7 +1975,7 @@ qui justifie qu'une porte s'ouvre. D'où une seule fiche.
   laisse entrer personne ; le cache de morceaux **ne bouge pas** quand une porte s'ouvre
   (`stats.morceaux` le mesure) ; et le va-et-vient ne fait pas déborder le plafond de piétons.
 
-### Le carnet : la mission, le journal, le répertoire (**ajout**, taille 2)
+### Le carnet : la mission, le journal, le répertoire (**ajout**, taille 2) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « je veux pouvoir avoir un rappel de la mission en cours dans le menu.
 Un journal et un "bestiaire" avec les personnages connus. »
@@ -2018,6 +2024,42 @@ gardent leur nom. Trois choses, trois noms — écrit ici pour qu'on arrête de 
   émis, jamais recalculés ; le répertoire ne montre **que** `p.connus`, et un test rejoue une
   partie neuve pour vérifier qu'aucun personnage non rencontré n'y apparaît ; le carnet reste
   sous son plafond après cent jours de jeu simulés.
+
+**Livré le 13 sept. 2026 :**
+
+- **Le défilement manquait à TOUS les menus**, et c'est ce qui bloquait la page de texte
+  annoncée plus haut. `dessinerMenu` dessinait ses items du premier au dernier : au-delà de
+  quatorze lignes, ils sortaient de la boîte. Une **fenêtre** suit maintenant le curseur, avec
+  deux petites flèches. ⚠️ Elles sont **dessinées**, pas écrites : la police pixel n'a que des
+  lettres, des chiffres et un peu de ponctuation — un « ▲ » y tomberait sur un « ? », comme
+  les accents avant qu'on les normalise. ⚠️ Et un menu qui tient au complet ne change pas
+  d'allure : le calcul rend exactement son nombre d'items tant que la hauteur ne bute pas sur
+  l'écran.
+- **`m.retour`** : sortir d'une page recule d'un cran au lieu de rendre la main au jeu. Sans
+  ça, quitter le JOURNAL relançait la partie et il fallait remettre PAUSE pour lire la page
+  d'à côté.
+- **EN COURS** donne le donneur, la récompense, **tous** les objectifs — celui du moment
+  marqué d'un chevron, les faits d'un point — et **où**. ⚠️ « Barré » n'existe pas en 5×7 :
+  on marque et on éteint, et `actif: false` grise le reste.
+- **JOURNAL** : le plus récent en haut, daté au jour de jeu. ⚠️ Il s'écrit depuis ce que le
+  jeu **émet déjà** — `Histoire.evenement('mort')` et `('arrete')` sont les mêmes émissions
+  qui font échouer une mission ; il n'y a pas deux endroits qui décident qu'on est allé à
+  l'hôpital.
+- **RÉPERTOIRE** : `p.connus`, écrit à la **première parole** (`Histoire.parler`), et sa fiche
+  cuit le visage avec **ses** couleurs de palette — les mêmes que celles de son sosie dans la
+  rue, rien de neuf à dessiner.
+- **Le plafond** jette le quotidien **avant** les jalons, et quand il n'y a plus que des
+  jalons, ils cèdent aussi : rien ne grossit sans fin, ce qui comptera double en M14.
+- ⚠️ **Ce qui manque encore au journal** : les manchettes du matin et les propriétés
+  achetées. Elles s'émettent dans `missions.js`, qu'une autre session réécrivait au même
+  moment — c'est **une ligne chacune** le jour où ce fichier est libre (`Histoire.noter(...)`
+  est exporté pour ça).
+- **Juges (3 neufs)** : la page EN COURS dit la même mission que `ligneObjectif()` **et** que
+  `cible()` (trois endroits, une seule vérité) et barre exactement les objectifs faits ; le
+  journal retient une mission réussie, une arrestation et un séjour à l'hôpital **sans qu'une
+  ligne du carnet ne les déclenche**, reste sous son plafond après 300 entrées et n'y perd
+  aucun jalon ; le répertoire est **vide** dans une partie neuve, ne prend Ti-Guy qu'après lui
+  avoir parlé, ne le prend **qu'une fois**, et sa fiche dessine bien un visage.
 
 ### Le trottoir et les traverses font deux tuiles, ils devraient en faire une (**correctif**, taille 2)
 
