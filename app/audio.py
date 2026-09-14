@@ -113,11 +113,17 @@ CATALOGUE: list[Echantillon] = [
               "the knob clicking, the door swinging open on a slightly creaky "
               "hinge and shutting with a solid wooden thump, small echoing "
               "stairwell, no voices, no music"),
-    _e("porte_commerce", "Porte de commerce", duree_s=1.4, volume=0.6,
-       prompt="a corner store glass door with an aluminum frame pushed open, "
-              "a small brass shop bell jingling above it, then the pneumatic "
-              "closer hissing and the door clacking shut, close-up, no voices, "
-              "no music"),
+    # ⚠️ Deuxieme recette (Martin a ecoute la premiere et l'a renvoyee) : plus
+    # de ferme-porte « qui siffle » — un souffle d'air, le modele en fait
+    # n'importe quoi. La clochette au-dessus de la porte est LE sujet, la
+    # porte n'est que ce qui la fait tinter ; et l'influence monte, parce
+    # qu'une clochette de depanneur est une chose exacte.
+    _e("porte_commerce", "Porte de commerce", duree_s=1.5, volume=0.6, influence=0.7,
+       prompt="a bright brass shop doorbell jingling loudly as a small store's "
+              "glass door is pushed open: the little bell above the door rings "
+              "ding-a-ling with a shimmering high-pitched tail, then the door "
+              "clacks softly shut and the bell tinkles once more, close-up, "
+              "no voices, no music"),
     _e("porte_vehicule", "Portière", duree_s=1.0, volume=0.66, influence=0.7,
        prompt="an old sedan car door: the handle clicking, the door swinging "
               "and slamming shut with a solid metallic thunk and a short "
