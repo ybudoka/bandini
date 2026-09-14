@@ -281,6 +281,11 @@ def generer_station(style: Style) -> Morceau:
     return {
         "slug": style["slug"],
         "nom": style["nom"],
+        # ⚠️ `station` distingue une RADIO d'un theme : le menu joue `titre`,
+        # le bouton RADIO d'un char ne doit jamais tomber dessus. C'est Python
+        # qui le dit — le navigateur n'a pas a reconnaitre une station a son
+        # slug.
+        "station": True,
         "bpm": style["bpm"],
         "pas_par_temps": PAS_PAR_TEMPS,
         "pas": STATION_MESURES * PAS_PAR_MESURE,

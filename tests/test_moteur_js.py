@@ -2292,7 +2292,15 @@ def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
 
 
 def test_la_radio_suit_le_char(banc, paquet):
-    stations = [r["slug"] for r in paquet["audio"]["radios"]]
+    """⚠️ Le bouton RADIO parcourt DEUX SOURCES depuis M9 : les stations
+    enregistrees (des mp3 ElevenLabs) et les stations PROCEDURALES, ecrites par
+    une graine et jouees par le sequenceur du theme du menu. Avant, `station()`
+    ne cherchait que dans les mp3 : le bouton RADIO du camion ne faisait
+    strictement rien, et sa toune, pourtant dans le paquet, n'etait jamais
+    jouable."""
+    enregistrees = [r["slug"] for r in paquet["audio"]["radios"]]
+    procedurales = [m["slug"] for m in paquet["audio"]["musiques"] if m.get("station")]
+    stations = enregistrees + procedurales
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
@@ -2302,16 +2310,22 @@ def test_la_radio_suit_le_char(banc, paquet):
         o.tape('Tab', 2);
         const suivante = L.Son.Radio.demandee;
         const parcours = [suivante];
-        for (let i = 0; i < 4; i++) { L.Son.Radio.suivante(); parcours.push(L.Son.Radio.demandee); }
+        // Tout le tour, jusqu'au silence : le cycle compte les deux sources.
+        const combien = L.Son.Radio.stations().length;
+        for (let i = 0; i < combien; i++) { L.Son.Radio.suivante(); parcours.push(L.Son.Radio.demandee); }
         L.Vehicules.descendre(j, true);
         return { auVolant: auVolant, suivante: suivante, parcours: parcours, apres: L.Son.Radio.demandee,
-                 defaut: v.def.radio };
+                 defaut: v.def.radio, stations: L.Son.Radio.stations().map(function (q) { return q.slug; }) };
     }""")
     assert r["auVolant"] == r["defaut"] == "la_brume", "l'auto doit allumer La Brume"
     assert r["suivante"] != r["auVolant"], "le bouton RADIO ne change pas de station"
     assert None in r["parcours"], "le cycle doit passer par le silence"
     assert set(s for s in r["parcours"] if s) <= set(stations)
     assert r["apres"] is None, "la radio joue encore une fois descendu"
+    assert set(r["stations"]) == set(stations), \
+        "le bouton RADIO ne voit pas les deux sources"
+    assert set(procedurales) & set(s for s in r["parcours"] if s), \
+        "le cycle n'atteint aucune station procedurale : elles restent injouables"
 
 
 # --- La rue dans la vraie vie : trottoirs, passages, feux, stops, velos ----

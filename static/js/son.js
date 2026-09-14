@@ -396,6 +396,7 @@ const Son = (function () {
 
     /** Le ducking : les boucles de musique (radio, ambiance) au quart pendant qu'on parle. */
     baisserLeReste: function (actif) {
+      Mus.attenuation = actif ? 0.25 : 1;
       boucles.forEach(function (courante, slug) {
         if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0) return;
         if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
@@ -470,8 +471,22 @@ const Son = (function () {
     demandee: null,          // slug demande pendant que le fichier arrive
     chargees: new Map(),     // slug -> AudioBuffer
 
-    stations: function () { return (B.defs && B.defs.audio && B.defs.audio.radios) || []; },
+    /** ⚠️ DEUX SOURCES, une seule liste. Une station est soit un mp3 genere par
+        ElevenLabs (`audio.radios`), soit une station PROCEDURALE : un morceau
+        de `audio.musiques` marque `station` par Python, joue par le sequenceur
+        qui fait deja le theme du menu. Le camion et la remorqueuse ont la
+        leur, ecrite par une graine — sans ca, leur bouton RADIO ne faisait
+        rien du tout, parce que `station()` ne cherchait que dans les mp3. */
+    stations: function () {
+      const mp3 = (B.defs && B.defs.audio && B.defs.audio.radios) || [];
+      return mp3.concat(Mus.morceaux().filter(function (m) { return m.station; }));
+    },
     station: function (slug) { return Radio.stations().find(function (r) { return r.slug === slug; }) || null; },
+    /** Une station sans fichier : c'est le sequenceur qui la joue. */
+    estProcedurale: function (slug) {
+      const s = Radio.station(slug);
+      return !!(s && !s.fichier);
+    },
 
     /** Allume une station. Le fichier se telecharge la premiere fois : la
         musique arrive une seconde apres le demarrage, comme une vraie radio. */
@@ -480,7 +495,11 @@ const Son = (function () {
       Radio.arreter();
       if (!station) return false;
       Radio.demandee = slug;
-      if (!ctx || !station.fichier) return true;           // pas d'audio : on garde l'etat
+      // Une station procedurale n'a rien a telecharger : le sequenceur la joue
+      // note par note, comme le theme du menu. Elle demarre donc tout de suite,
+      // meme hors ligne — c'est le meme filet que partout dans `audio.py`.
+      if (!station.fichier) { Radio.courante = slug; Mus.jouer(slug); return true; }
+      if (!ctx) return true;                               // pas d'audio : on garde l'etat
       if (tampons.has('radio-' + slug)) { Radio._demarrer(slug); return true; }
       if (Radio.chargees.get(slug) === 'en cours') return true;
       Radio.chargees.set(slug, 'en cours');
@@ -503,7 +522,10 @@ const Son = (function () {
     },
 
     arreter: function () {
-      if (Radio.courante) boucle('radio-' + Radio.courante, false);
+      // ⚠️ On n'arrete le sequenceur QUE s'il jouait une station : au titre il
+      // joue le theme du menu, et descendre d'un char ne doit pas l'eteindre.
+      if (Radio.courante && Radio.estProcedurale(Radio.courante)) Mus.arreter();
+      else if (Radio.courante) boucle('radio-' + Radio.courante, false);
       Radio.courante = null;
       Radio.demandee = null;
     },
@@ -533,6 +555,13 @@ const Son = (function () {
 
   const Mus = {
     courante: null,     // slug du morceau demande
+    // ⚠️ Le ducking passe par ici pour une station PROCEDURALE : elle ne
+    // traverse aucune boucle (`boucles`), donc `baisserLeReste` ne pouvait pas
+    // l'atteindre — la radio du camion aurait couvert la voix au telephone.
+    // Le changement met jusqu'a HORIZON_S a s'entendre : les notes deja
+    // programmees gardent leur volume, et c'est bien ainsi (couper net une
+    // mesure s'entend plus qu'un quart de seconde de trop).
+    attenuation: 1,
     pas: 0,             // ou l'on en est, en pas (avance meme sans audio)
     debutT: 0,          // l'instant audio du pas 0 ; 0 = pas encore demarre
     prochain: 0,        // le prochain pas a programmer
@@ -566,7 +595,8 @@ const Son = (function () {
         for (let n = 0; n < voix.notes.length; n++) {
           const note = voix.notes[n];
           if (note[0] !== dans) continue;
-          const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3]) * (def.volume || 1);
+          const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3])
+                       * (def.volume || 1) * Mus.attenuation;
           if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1]);
           // ⚠️ 0.92 : la note s'arrete juste avant la suivante. Sans ce blanc,
           // deux notes voisines de meme hauteur n'en font plus qu'une longue.

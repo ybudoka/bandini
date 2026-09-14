@@ -555,3 +555,60 @@ def test_apres_fermeture_le_son_peut_repartir(banc):
     assert r["etat"] == "actif"
     assert r["rejoue"] is True, "le son ne repart pas apres une fermeture"
     assert r["relie"] is True
+
+
+def test_la_station_procedurale_du_camion_joue_vraiment(banc):
+    """⚠️ M9 avait mis la toune du camion dans le paquet et personne ne pouvait
+    l'entendre : `Radio.station()` ne cherchait que dans les mp3, donc
+    `Radio.jouer('station_camion')` rendait faux et le bouton RADIO du camion
+    ne faisait strictement rien.
+
+    Une station procedurale n'a pas de fichier : c'est le sequenceur qui la
+    joue, note par note, comme le theme du menu. Elle demarre donc tout de
+    suite — meme hors ligne, meme avant qu'un seul mp3 soit arrive.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const camion = o.char('camion', 24, 0, 0);
+        L.Vehicules.monter(j, camion);
+        const auVolant = { radio: L.Son.Radio.courante, sequenceur: L.Son.Mus.courante };
+        L.Vehicules.descendre(j, true);
+        const apres = { radio: L.Son.Radio.courante, sequenceur: L.Son.Mus.courante };
+        // Un mp3, lui, ne passe pas par le sequenceur.
+        const auto = o.char('auto', 48, 0, 0);
+        L.Vehicules.monter(j, auto);
+        const enregistree = { radio: L.Son.Radio.courante, sequenceur: L.Son.Mus.courante };
+        L.Vehicules.descendre(j, true);
+        return { auVolant: auVolant, apres: apres, enregistree: enregistree,
+                 defaut: camion.def.radio,
+                 procedurale: L.Son.Radio.estProcedurale('station_camion'),
+                 enregistreeEstProc: L.Son.Radio.estProcedurale('la_brume'),
+                 titreEstStation: L.Son.Radio.stations().some(function (s) { return s.slug === 'titre'; }) };
+    }""")
+    assert r["defaut"] == "station_camion", "le camion doit avoir sa station"
+    assert r["procedurale"] is True and r["enregistreeEstProc"] is False
+    assert r["auVolant"]["sequenceur"] == "station_camion", \
+        "le sequenceur ne joue pas la station du camion : le bouton RADIO ne fait rien"
+    assert r["apres"]["sequenceur"] is None, "la station continue une fois descendu du camion"
+    assert r["apres"]["radio"] is None
+    assert r["enregistree"]["sequenceur"] is None, \
+        "un mp3 n'a rien a faire dans le sequenceur"
+    assert r["titreEstStation"] is False, \
+        "le theme du menu est dans le cycle de la radio : le bouton RADIO tomberait dessus"
+
+
+def test_une_station_procedurale_baisse_quand_quelqu_un_parle(banc):
+    """⚠️ Le ducking passait par les BOUCLES (`radio-*`, `ambiance-*`), et une
+    station procedurale n'en traverse aucune : elle aurait couvert la voix au
+    telephone sans que rien ne baisse."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const avant = L.Son.Mus.attenuation;
+        L.Son.Voix.baisserLeReste(true);
+        const pendant = L.Son.Mus.attenuation;
+        L.Son.Voix.baisserLeReste(false);
+        return { avant: avant, pendant: pendant, apres: L.Son.Mus.attenuation };
+    }""")
+    assert r["avant"] == 1 and r["apres"] == 1
+    assert 0 < r["pendant"] < 1, "le sequenceur ne baisse pas pendant une replique"
