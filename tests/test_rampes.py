@@ -214,8 +214,11 @@ def test_le_panneau_du_grand_saut_se_pose_sur_une_rampe(banc):
     assert r["trouve"], "aucun panneau pour Le Grand Saut : le defi est injouable"
     assert r["colle"] <= 5 * 16, f"le panneau est a {r['colle']} px de la rampe la plus proche"
     assert r["pourLeDefi"], "aucune rampe ne recoit une moto : le Grand Saut est injouable"
-    assert r["pourLeDefi"] < r["total"], \
-        "toutes les rampes recoivent une moto — le marquage ne distingue plus rien"
+    # ⚠️ Ce juge-ci ne demande plus que toutes les rampes ne soient pas
+    # marquees : c'est une propriete de la CARTE, pas du panneau, et elle se
+    # juge une fois pour toutes dans
+    # `test_au_moins_une_rampe_recoit_la_moto_du_defi`. Ici, ce qui compte est
+    # que le panneau se pose sur la bonne rampe.
     assert r["sienne"] == r["plusProche"], \
         "le panneau n'est pas sur la rampe a moto la plus proche du depart"
 
@@ -270,7 +273,34 @@ def test_on_retombe_sur_la_route_et_pas_dans_un_mur(rampe):
 
 
 def test_au_moins_une_rampe_recoit_la_moto_du_defi():
+    """⚠️ Et le marquage doit POUVOIR distinguer — ce qui n'est pas la meme
+    chose que « il distingue sur la graine livree ».
+
+    Le juge exigeait `marquees < total` sur la seule graine du jeu. Mais `defi`
+    est un drapeau de SECURITE (« cette rampe-ci recoit une moto lancee »), pas
+    de rarete : une ville ou toutes les rampes sont prenables en moto est une
+    BONNE ville, et c'est exactement ce qui est arrive le jour ou la recherche
+    de tremplin s'est mise a chercher mieux. Le juge tombait alors sur le
+    succes.
+
+    Ce qu'il faut tenir, c'est que le drapeau soit CALCULE et non constant :
+    la moto exige plus de reception que l'auto de reference, et sur plusieurs
+    graines il se trouve des rampes qui n'en recoivent pas."""
     marquees = [r for r in RAMPES if r["defi"]]
     assert marquees, "aucune rampe ne recoit une moto lancee : Le Grand Saut est injouable"
-    assert len(marquees) < len(RAMPES), \
-        "toutes les rampes recoivent la moto — le marquage ne distingue plus rien"
+    # ⚠️ La regle, d'abord : une moto vole plus loin qu'une auto, donc elle
+    # exige plus. Si les deux seuils se rejoignent, le drapeau ne peut PLUS
+    # rien distinguer, quelle que soit la carte.
+    assert carte.RECEPTION_DEFI > carte.RECEPTION_RAMPE, (
+        f"reception moto {carte.RECEPTION_DEFI} <= auto {carte.RECEPTION_RAMPE} : "
+        "le marquage ne peut plus rien dire"
+    )
+    # ⚠️ Et la mesure : sur six graines, il se trouve des rampes NON marquees.
+    # Un drapeau qui serait vrai partout et toujours serait un drapeau mort.
+    refusees = 0
+    for graine in (carte.GRAINE, 1, 2, 3, 4, 5):
+        rampes = carte.generer(graine=graine)["rampes"]
+        refusees += sum(1 for r in rampes if not r["defi"])
+    assert refusees > 0, (
+        "aucune rampe refusee sur six graines : `defi` est vrai partout, il ne mesure rien"
+    )

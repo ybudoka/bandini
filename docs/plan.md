@@ -90,7 +90,7 @@ ne bougent pas quand l'ordre de travail change.
 | La dépanneuse lève les roues | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « la dépanneuse devrait embarquer les roues avant des véhicules qu'elle remorque, sauf les motos et vélos qu'elle embarque complètement sur sa plateforme ». C'était une **corde** : le char roulait à plat au bout d'un élastique, pointé **vers** elle, et le lien lâchait quand on l'étirait. Maintenant une **fourche** — écart fixe, **dans l'axe**, avant **levé de deux pixels** (l'ombre restée au sol, sans un seul cap de sprite en plus) — et un **plateau** pour ce que `vehicules.py` déclare `plateau` (la moto, le vélo) : elles montent **en entier**, ne heurtent plus rien, et se peignent **après** la remorqueuse. ⚠️ La remorqueuse **refuse d'avancer** là où sa charge ne passe pas (sans le garde-fou, elle reculait de 22 px dans la façade), et on **ne monte plus** dans un char remorqué. 2 juges neufs, 2 réécrits |
 | Le taxi de Marco n'est pas à vendre | **P1** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « il ne faut pas pouvoir vendre le taxi de Marco ». Le garage de Ti-Guy achète **n'importe quel char garé devant sa porte**, et M3 pose le taxi à `porte:garage` — cette porte-là. Vendu, il sort du monde, et ⚠️ **la mission ne rate même pas** (`monter` et `livrer` n'échouent que sur une **épave**) : elle reste prise, le téléphone ne sonne plus jamais. `aQui` — le contraire de `aToi` — dit à qui est le char, vient de la fiche (`prete` dans `missions.py`) et **ne s'efface jamais** : le taxi est à Marco avant, pendant et après. Le menu le dit au lieu de le cacher : « IL EST À MARCO ». 2 juges |
 | Des feux pour piétons | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « pour les piétons, il faut ajouter des lumières de priorité, et sinon ils ne passent pas ». La règle existait (`traverseeSure`) mais **personne ne la voyait** — et ⚠️ elle **se trompait d'un temps** : `!feuVert(...)` est vrai pendant l'**orange** aussi, donc les piétons s'engageaient pile quand les chars accélèrent pour vider le croisement, **240 images sur 960**. Maintenant `Monde.feuPieton()` rend **blanc / dégage / rouge**, le blanc ne croise ni le vert des chars ni l'orange, et il s'éteint **180 images avant** que les chars repartent (dégagement 120 + orange 60). **351 poteaux** posés par `carte.py` **sur la traverse** — un à chaque bout, jamais un par tuile — avec le **sens du passage** dans la fiche ; blanc fixe, orange **clignotant** au dégagement. ⚠️ **Sans feu (un T), on traverse quand c'est libre** : sinon un côté de rue entier devient un cul-de-sac pour la foule, et aucun juge existant ne le verrait. 2 juges neufs |
-| Les terrains de banlieue | **P4** ajout, **en cours** (14 sept. 2026) | demande de Martin : `_jardin()` ne pose que du gazon et un arbre par dix tuiles. Entrée de voiture **en case de stationnement** (donc l'auto s'y gare toute seule), sentier de la porte à la rue, piscine en eau basse, grillage entre les cours, cabanon, corde à linge |
+| Les terrains de banlieue | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : « les terrains des résidences doivent être plus fournis ». `_jardin()` ne posait que du gazon et un arbre par dix tuiles — or un terrain de banlieue est le **contraire du vide**. Maintenant : **38 entrées de voiture** qui vont jusqu'à la chaussée (une sur trois porte une **case**, donc une auto — mesuré 28 %), un **sentier de la porte à la rue** pour 100 % des portes, une **piscine ronde** (quatre tuiles, chacune son quart du disque), **cabanon / corde à linge / BBQ**. Le paquet passe de 410 à **413 Ko** bruts, 52 Ko gzip (plafonds 600 / 70). ⚠️ Trois défauts trouvés en chemin : une **plage qui suivait la boîte au lieu de la côte** (bancs de sable isolés en pleine baie), un **char plus long que sa case** qui finissait à cheval sur ses lignes, et un **témoin qui déréférençait `e.vers` après l'avoir mis à zéro** — le jeu plantait. 8 juges neufs |
 | Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **livré** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
 | Les feux s'allument pour vrai | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». Une ampoule allumée est de la **peinture** : `dessinerFeu` pose un carré vert, et le voile de nuit de `Base.fin` le **multiplie** comme un mur. À minuit, le vert (46, 204, 113) tombe à (16, 76, 57), et le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122) — **plus sombre qu'un trottoir de midi**. Le seul feu de la ville qui éclaire vraiment, c'est le lampadaire, parce que lui a une entrée dans `carte.lampes`. Chaque ampoule allumée doit en poser une, **de la couleur de sa phase** |
@@ -434,7 +434,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
-        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py
+        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py
         test_reclame.py test_reclame_js.py
         test_navigateur.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py audio_elevenlabs.py musique_apercu.py
@@ -544,7 +544,6 @@ ordre-là.
 | **P2** | ajout | Des sortes de gens — le réservoir | 3 | ⚠️ **deux vagues livrées** (les trois de Martin, puis cinq des sept « qui viennent avec »). Reste le réservoir, où l'on pige par vagues — plus la **personne âgée** (attend les feux pour piétons) et le **pickpocket** (M12) |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P4** | ajout | Des feux pour piétons | 2 | se décide avec la traverse d'une tuile ; ⚠️ contient un correctif (on traverse pendant l'orange) |
-| **P4** | ajout | Les terrains de banlieue | 2 | les clôtures sont livrées : les cours se traversent déjà |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M11 La police apprend | 2 | la police de M4 suffit |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
@@ -2854,7 +2853,7 @@ ligne grise **qui donne sa raison**, plutôt qu'une vente disparue sans explicat
   qu'on t'a confié. `aQui` donne de quoi le corriger en une ligne — mais c'est un choix de
   jeu, pas un bogue à trancher tout seul.
 
-### Les terrains de banlieue (**ajout**, taille 2) — **en cours** (14 sept. 2026)
+### Les terrains de banlieue (**ajout**, taille 2) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « les terrains des résidences doivent être plus fournis — jardin,
 piscine, sentier vers la rue, entrée de voiture, voiture, et autres idées. »
@@ -2905,6 +2904,56 @@ dix tuiles, posés au hasard. Or un terrain de banlieue est le contraire du vide
   banlieue à la rue, sans passer par une piscine ; une case d'entrée n'apparaît que sur une
   fraction des terrains, mesurée ; et le paquet reste sous ses bornes, sinon le décor se
   dérive et ne voyage plus.
+
+**Livré le 14 sept. 2026.** Le terrain se meuble **après la porte**, et c'est tout le
+travail : le sentier part d'elle, la piscine et le cabanon se posent après le sentier. Posé
+dans l'autre sens, un cabanon se retrouve sur le pas de la porte.
+
+- **38 entrées de voiture**, et chacune **va jusqu'à la chaussée**. ⚠️ La parcelle ne touche
+  pas la rue : entre les deux il y a la bande de devant, deux rangées de **gazon** en
+  banlieue. Une entrée qui s'arrête au bord de la parcelle s'arrête dans l'herbe — ce n'est
+  pas une entrée, c'est un carré d'asphalte.
+- **Une sur trois porte une case**, donc une auto garée : **28 % mesuré**, et le juge mesure
+  au lieu de croire. Si chaque bungalow en portait une, la banlieue se remplirait de chars.
+- **Un sentier pour 100 % des portes.** ⚠️ La fenêtre de recherche était à six rangées, et
+  les marges de banlieue vont jusqu'à cinq, plus deux de bande et deux de trottoir : quinze
+  portes sur vingt-sept restaient sans sentier, et **rien ne le disait** sinon le juge.
+- **La piscine est ronde**, et c'est un retour de Martin en regardant l'écran : « piscine
+  ronde stp et pas 4 carrés ». Chaque tuile porte un **quart du disque** et sait lequel en
+  lisant ses voisines (`bloc`) — peintes chacune pour soi, les quatre montraient quatre
+  margelles. Elle est de solidité 3 : un piéton la traverse, une auto non, et **on ne s'y
+  noie pas** — une piscine de banlieue n'est pas la baie, et la couleur le dit avant le
+  joueur.
+- **Le paquet** passe de 410 à **413 Ko** bruts et de 51 à **52 Ko** gzip, pour des plafonds
+  de 600 et 70. La fiche craignait qu'il faille dériver le décor de la position : ce n'est
+  pas nécessaire, et **c'est la mesure qui le dit**.
+
+⚠️ **Trois défauts trouvés en chemin, dont deux qui n'ont rien à voir avec la banlieue** —
+c'est le décalage des dés qui les a mis sous le nez des juges :
+
+- **Une plage suivait la boîte, pas la côte.** `_terre_a_cote` promet « on ne dessine une
+  rive que là où il y a un rivage », et ne tenait la promesse qu'à l'échelle du bord : une
+  seule tuile de terre quelque part le long du côté, et le sable courait sur **toute** sa
+  longueur, y compris là où le voisin est de l'eau. D'où des bancs de sable isolés en pleine
+  baie, que `boucher_les_poches` doit noyer un à un. Le rivage se vérifie maintenant **rangée
+  par rangée**.
+- **Un char plus long que sa case.** Une case fait deux tuiles, 32 px ; la remorqueuse en
+  fait 36. Garée là, elle dépassait, le garde-fou la poussait hors des tuiles qu'elle
+  chevauche, et elle finissait **à cheval sur ses lignes** — à un centième de pixel près, ce
+  qu'un juge voit et qu'un œil ne voit pas.
+- ⚠️ **Le jeu plantait.** Un témoin qui court vers un agent met `e.vers` à zéro quand sa
+  minuterie tombe — et la ligne suivante lisait `e.vers.x`. Une seule image sur des milliers,
+  celle où il finit sa course pendant qu'il court : invisible jusqu'à ce qu'un singe tombe
+  dessus.
+- **Et les Skateux tiennent enfin tout leur stationnement.** Leur bande ne se découpe plus :
+  c'est une **piste**. Un terrain de sept tuiles tiré au sort n'en laisse que cinq d'élan une
+  fois la rampe posée, et il en faut sept — La Pointe se retrouvait sans tremplin dès que le
+  découpage bougeait d'une tuile.
+
+**Ce qui n'est pas livré, et pourquoi** : la **pancarte À VENDRE** et le **chien attaché**.
+La fiche dit du chien qu'il faut trancher franchement — « soit il alerte pour vrai, soit il
+ne fait qu'un bruit, mais pas *un peu* » — et un témoin de plus dans chaque cour est une
+décision de jeu, pas de décor. Les deux restent au réservoir.
 
 ### Les armes à feu (**ajout**, taille 2) — **livré le 14 sept. 2026**
 

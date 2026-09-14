@@ -102,6 +102,11 @@ const Vehicules = (function () {
       fond (celle contre la ligne de nez) qui a le reste de sa case derriere
       elle, et l'auto se pose a cheval sur les deux — elle fait deux tuiles de
       long, la case aussi. */
+  //: La longueur d'une case de stationnement, en pixels : deux tuiles, le
+  //: gabarit d'une auto. ⚠️ Elle vient de la carte (`CASE_CREUX`), et tout ce
+  //: qui la depasse ne se gare pas dedans.
+  const CASE_PX = 2 * TT;
+
   function placeStationnee() {
     const t = trafic(), c = Monde.carte, j = B.joueur;
     for (let essai = 0; essai < 20; essai++) {
@@ -150,7 +155,16 @@ const Vehicules = (function () {
       }
     } else if (stationnes < t.stationnes_max && B.t % 40 === 0) {
       const place = placeStationnee();
-      if (place) { const type = typeDeRue(zone); if (type) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' }); }
+      // ⚠️ IL FAUT QUE LE CHAR RENTRE DANS LA CASE. Une case fait deux tuiles,
+      // soit 32 px ; la remorqueuse en fait 36. Garee la, elle depassait, le
+      // garde-fou (`degager`) la poussait hors des tuiles qu'elle chevauche, et
+      // elle finissait A CHEVAL SUR SES LIGNES — a un centieme de pixel pres,
+      // ce qui est exactement ce qu'un juge voit et qu'un oeil ne voit pas.
+      if (place) {
+        let type = typeDeRue(zone);
+        for (let essai = 0; essai < 6 && type && type.longueur > CASE_PX; essai++) type = typeDeRue(zone);
+        if (type && type.longueur <= CASE_PX) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
+      }
     }
   }
 

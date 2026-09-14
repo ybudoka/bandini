@@ -131,6 +131,15 @@ LEGENDE: dict[str, dict] = {
     "s": {"nom": "sable"},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
+    # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre
+    # debout et on ne s'y noie pas : solidite 3, comme un meuble — un pieton la
+    # traverse, une auto non, et aucun juge de connexite ne s'en emeut. Elle
+    # n'est donc PAS de l'eau au sens de `MASQUE_NAGEUR` : on n'y nage pas, on
+    # y barbote, et c'est tout ce qu'on lui demande.
+    # ⚠️ `bloc` : chaque tuile lit ses voisines pour savoir quel QUART de la
+    # piscine elle porte. Sans ca, quatre tuiles font quatre carres avec quatre
+    # margelles — ce que Martin a vu tout de suite — au lieu d'un seul rond.
+    "o": {"nom": "piscine hors terre", "solide": 3, "piscine": True, "bloc": True},
     "#": {"nom": "asphalte", "route": True},
     "-": {"nom": "ligne de voie est-ouest", "route": True},
     "|": {"nom": "ligne de voie nord-sud", "route": True},
@@ -718,6 +727,8 @@ class _Chantier:
         self.fourriere: dict | None = None
         #: L'empreinte du dernier batiment pose (voir `_pose_batiment`).
         self.empreinte_du_batiment = 0
+        #: Sa boite (x, y, largeur, hauteur) — voir `_terrain_de_banlieue`.
+        self.boite_du_batiment = (0, 0, 0, 0)
         #: Les pieces qui ont deja une porte quelque part (voir
         #: `premiere_du_genre`) : c'est ce qui garantit qu'aucune famille de
         #: commerce ne reste une enseigne sans interieur.
@@ -1578,6 +1589,17 @@ class _Chantier:
         bandes = list(self._bandes(y, hauteur, genre))
         bande_vedette = (max(range(len(bandes)), key=lambda k: bandes[k][1])
                          if special and bandes else -1)
+        # ⚠️ LES SKATEUX TIENNENT LE STATIONNEMENT — tout entier, pas un coin.
+        # Leur bande ne se decoupe donc pas : c'est une PISTE. Un terrain de
+        # sept tuiles tire au sort n'en laisse que cinq d'elan une fois la
+        # rampe posee, et il en faut sept : La Pointe se retrouvait sans
+        # tremplin des que le decoupage bougeait d'une tuile, et « il y en a un
+        # a tout coup » redevenait une legende — celle-la meme que M8 avait
+        # deja corrigee une fois.
+        bande_skateux = (max(range(len(bandes)), key=lambda k: bandes[k][1])
+                         if genre == "gang" and bandes and self.district_en(x, y) == "pointe"
+                         else -1)
+        parcelle_skateux = -1
         for k, (by, bh) in enumerate(bandes):
             self.rect(x, by, largeur, 2, "x")                      # ruelle derriere
             self.rect(x, by + bh - 2, largeur, 2, devant)           # devant
@@ -1599,8 +1621,12 @@ class _Chantier:
                 if largeur - large >= mini:
                     parcelles.append(((x + large, zy, largeur - large, zh), True))
                 continue
-            for parcelle in self._parcelles(x, zy, largeur, zh, mini):
-                parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
+            if k == bande_skateux:
+                parcelle_skateux = len(parcelles)
+                parcelles.append(((x, zy, largeur, zh), True))
+            else:
+                for parcelle in self._parcelles(x, zy, largeur, zh, mini):
+                    parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
             if genre == "gang":
                 # Une cour cloturee, avec une entree pour les chars.
                 # ⚠️ Du BARBELE : c'est la cour d'un gang, quelqu'un a paye pour
@@ -1620,9 +1646,8 @@ class _Chantier:
         # que La Pointe n'en avait pas UNE tuile : la phrase etait une legende.
         # Leur bloc en porte donc un pour de bon, et c'est la que se pose leur
         # tremplin (`_tremplin_de_stationnement`).
-        if genre == "gang" and parcelles and self.district_en(x, y) == "pointe":
-            contenus[max(range(len(parcelles)),
-                         key=lambda k: parcelles[k][0][2] * parcelles[k][0][3])] = "stationnement"
+        if parcelle_skateux >= 0:
+            contenus[parcelle_skateux] = "stationnement"
         if special and parcelles and vedette < 0:
             # ⚠️ Le batiment garanti ne peut pas dependre d'un tirage : sans
             # cette ligne, un ilot de neuf tuiles tire « terrain vague » et
@@ -1640,10 +1665,11 @@ class _Chantier:
             if contenu == "bati":
                 facades = self._pose_batiment(px, py, pl, ph, genre, force=(k == vedette))
                 empreinte = self.empreinte_du_batiment
+                boite = self.boite_du_batiment
                 if facades and k == vedette:
                     facades_vedette = facades
                 elif facades:
-                    batiments.append((facades, devant_rue, empreinte))
+                    batiments.append((facades, devant_rue, empreinte, (px, py, pl, ph), boite))
             elif contenu == "vague":
                 self._terrain_vague(px, py, pl, ph)
             elif contenu == "stationnement":
@@ -1654,7 +1680,7 @@ class _Chantier:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
                 self.poser_devanture(facades_vedette, porte, genre, special)
-        for facades, _, empreinte in batiments:
+        for facades, _, empreinte, parcelle, boite in batiments:
             ancre = self._ancre_devanture(facades)
             quoi, enseigne = self._a_quoi_sert(genre, ancre)
             visite = None
@@ -1690,6 +1716,11 @@ class _Chantier:
                 self.poser_devanture(facades, ancre, genre, enseigne=enseigne)
             elif quoi == "logement":
                 self.poser_residence(facades, ancre, genre)
+            # ⚠️ APRES LA PORTE : le sentier part d'elle. Le terrain se meuble
+            # une fois qu'on sait par ou l'on entre — sinon le cabanon se pose
+            # sur le pas de la porte, et la piscine coupe le chemin.
+            if genre == "banlieue":
+                self._terrain_de_banlieue(parcelle, boite, porte)
         for _ in range(max(1, largeur // 10)):
             self.poser_decor("poubelle", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, 1))
@@ -1816,6 +1847,9 @@ class _Chantier:
             coin = bx if self.des.chance(0.5) else bx + bl - cl
             tuiles -= {(coin + i, by + bh - 1 - j) for j in range(ch) for i in range(cl)}
         self.empreinte_du_batiment = len(tuiles)
+        #: Et sa BOITE : c'est elle qui dit ou passe l'entree de voiture et ou
+        #: tient la piscine. L'empreinte dit combien, la boite dit ou.
+        self.boite_du_batiment = (bx, by, bl, bh)
         vitrines = {"commerces": 0.5, "maisons": 0.12, "banlieue": 0.10,
                     "hangars": 0.03, "industriel": 0.05, "gang": 0.08}.get(genre, 0.3)
         if force:
@@ -1951,6 +1985,119 @@ class _Chantier:
             cx = x + largeur // 2
             self.proposer_rampe([(cx, y + hauteur // 2, None)],
                                 cloture=(cx, y + hauteur - 1))
+
+    #: Une entree de voiture sur trois porte une CASE, donc une auto garee.
+    #: ⚠️ Pas toutes : si chaque bungalow en porte une, la banlieue se remplit
+    #: de chars stationnes et le budget d'entites y passe. Les autres restent de
+    #: l'asphalte nu — ce qui est aussi la vraie vie.
+    PART_ENTREE_AVEC_CASE = 0.33
+
+    def _terrain_de_banlieue(self, parcelle: tuple[int, int, int, int],
+                             boite: tuple[int, int, int, int],
+                             porte: tuple[int, int] | None) -> None:
+        """Un terrain de banlieue : une entree, un sentier, une cour derriere.
+
+        ⚠️ M8 a eu raison sur le principe — « la banlieue se reconnait au VIDE
+        autour des maisons » — et ce vide etait litteralement vide : du gazon,
+        un arbre par dix tuiles, pose au sort. Or un terrain de banlieue est le
+        CONTRAIRE du vide : il est plein des traces de la vie de quelqu'un.
+
+        ⚠️ L'ORDRE compte, et c'est tout le travail : le sentier part de la
+        PORTE, donc il se trace apres elle ; la piscine et le cabanon se posent
+        apres le sentier, donc ils ne le coupent pas. Pose dans l'autre sens, un
+        cabanon se retrouve sur le pas de la porte.
+        """
+        px, py, pl, ph = parcelle
+        bx, by, bl, bh = boite
+        if bl <= 0 or bh <= 0:
+            return
+        occupe: set[tuple[int, int]] = set()
+
+        def jusqu_a_la_rue(x: int, depart: int) -> list[int]:
+            """Les rangees a paver depuis `depart` jusqu'a la chaussee, exclue.
+
+            ⚠️ LA PARCELLE NE TOUCHE PAS LA RUE. Entre les deux il y a la bande
+            de devant — deux rangees de GAZON en banlieue, parce que « la
+            banlieue se reconnait au vide ». Un sentier qui s'arrete au bord de
+            la parcelle s'arrete donc dans l'herbe, a deux tuiles de la rue :
+            il ne mene nulle part, et une entree qui fait pareil n'est pas une
+            entree, c'est un carre d'asphalte. On va jusqu'a la chaussee.
+            """
+            # ⚠️ DIX rangees, pas six : les marges de banlieue vont jusqu'a
+            # cinq tuiles, plus deux de bande de devant et deux de trottoir. A
+            # six, la fenetre s'arretait juste avant la chaussee et rendait la
+            # liste vide — quinze portes sur vingt-sept restaient sans sentier,
+            # et rien ne le disait sinon le juge.
+            rangees = []
+            for y in range(depart, min(self.hauteur, depart + 10)):
+                glyphe = self.sol[y][x]
+                if LEGENDE[glyphe].get("route"):
+                    return rangees                # arrive : la rue est la
+                if glyphe not in (",", "."):
+                    return []                     # du bati, une cloture : pas de passage
+                rangees.append(y)
+            return []
+
+        # --- Le sentier de la porte a la rue --------------------------------
+        # ⚠️ Sans lui, on marche sur le gazon pour entrer chez les gens — et
+        # c'est precisement ce qui donne l'impression du « pas fini ».
+        if porte:
+            sx = porte[0]
+            for sy in jusqu_a_la_rue(sx, porte[1] + 1):
+                if self.sol[sy][sx] == ",":
+                    self.sol[sy][sx] = "."
+                occupe.add((sx, sy))
+
+        # --- L'entree de voiture, et l'auto dedans --------------------------
+        # ⚠️ Une entree TOUCHE LA RUE, toujours. Meme regle que « toute rangee
+        # de stationnement touche une allee » : une entree qui ne rejoint pas la
+        # chaussee n'est pas une entree, c'est un carre d'asphalte.
+        cotes = [x for x in (bx - 1, bx + bl) if px <= x < px + pl]
+        cotes = [x for x in cotes if not any((x, y) in occupe for y in range(by, py + ph + 4))]
+        if cotes:
+            ex = self.des.choix(cotes)
+            hautes = [y for y in range(by, py + ph) if self.sol[y][ex] == ","]
+            basses = jusqu_a_la_rue(ex, py + ph)
+            # ⚠️ Rien si le chemin ne va pas jusqu'au bout : une entree qui ne
+            # rejoint pas la chaussee n'est pas une entree.
+            if hautes and basses and hautes[-1] == py + ph - 1:
+                bande = [(ex, y) for y in hautes + basses]
+                for (x, y) in bande:
+                    self.sol[y][x] = "p"
+                    occupe.add((x, y))
+                # La case regarde la maison : le nez au NORD.
+                if len(bande) >= CASE_CREUX and self.des.chance(self.PART_ENTREE_AVEC_CASE):
+                    for (x, y) in bande[:CASE_CREUX]:
+                        self.sol[y][x] = "^"
+
+        # --- La cour derriere : piscine, cabanon, corde a linge -------------
+        cour = [(x, y) for y in range(py, by) for x in range(px, px + pl)
+                if self.sol[y][x] == "," and (x, y) not in occupe and (x, y) not in self.reserve]
+        if len(cour) >= 6 and self.des.chance(0.30):
+            # ⚠️ Une piscine se pose d'un bloc de deux sur deux, jamais en L :
+            # une piscine en L n'est pas une piscine, c'est une flaque.
+            for (x, y) in cour:
+                carre = [(x + i, y + j) for j in (0, 1) for i in (0, 1)]
+                if all(c in cour for c in carre):
+                    for (cx, cy) in carre:
+                        self.sol[cy][cx] = "o"
+                        occupe.add((cx, cy))
+                    break
+        for quoi, chance in (("cabanon", 0.45), ("corde_a_linge", 0.35)):
+            libres = [c for c in cour if c not in occupe]
+            if libres and self.des.chance(chance):
+                x, y = self.des.choix(libres)
+                if self.poser_decor(quoi, x, y):
+                    occupe.add((x, y))
+
+        # --- Le BBQ, devant, du cote de la porte ----------------------------
+        devanture = [(x, y) for y in range(by + bh, py + ph) for x in range(px, px + pl)
+                     if self.sol[y][x] == "," and (x, y) not in occupe
+                     and (x, y) not in self.reserve]
+        if devanture and self.des.chance(0.30):
+            x, y = self.des.choix(devanture)
+            if self.poser_decor("bbq", x, y):
+                occupe.add((x, y))
 
     def _jardin(self, x: int, y: int, largeur: int, hauteur: int,
                 genre: str = "commerces") -> None:
@@ -2413,20 +2560,32 @@ class _Chantier:
         sable_h = min(4, hauteur // 3)
         sable_v = min(3, largeur // 3)
         profondeur = min(2, sable_h)
+        # ⚠️ ET LE RIVAGE SE VERIFIE RANGEE PAR RANGEE, pas une fois pour tout
+        # le cote. `_terre_a_cote` promet « on ne dessine une rive que la ou il
+        # y a un rivage », et il ne tenait la promesse qu'a l'echelle du bord :
+        # une seule tuile de terre quelque part le long du cote, et le sable
+        # courait sur TOUTE sa longueur, y compris la ou le voisin est de l'eau.
+        # Resultat : des bancs de sable isoles en pleine baie, que
+        # `boucher_les_poches` doit noyer un a un — douze tuiles sur la graine
+        # livree. Une plage suit la cote ; elle ne suit pas une boite.
         for i in range(largeur):
             profondeur = max(0, min(sable_h, profondeur + self.des.entier(-1, 1)))
+            au_nord = nord and self._terre_a_cote([(x + i, y - 1)])
+            au_sud = sud and self._terre_a_cote([(x + i, y + hauteur)])
             for j in range(profondeur):
-                if nord:
+                if au_nord:
                     self.sol[y + j][x + i] = "s"
-                if sud:
+                if au_sud:
                     self.sol[y + hauteur - 1 - j][x + i] = "s"
         profondeur = min(2, sable_v)
         for j in range(hauteur):
             profondeur = max(0, min(sable_v, profondeur + self.des.entier(-1, 1)))
+            a_l_ouest = ouest and self._terre_a_cote([(x - 1, y + j)])
+            a_l_est = est and self._terre_a_cote([(x + largeur, y + j)])
             for i in range(profondeur):
-                if ouest:
+                if a_l_ouest:
                     self.sol[y + j][x + i] = "s"
-                if est:
+                if a_l_est:
                     self.sol[y + j][x + largeur - 1 - i] = "s"
 
     # --- Decor de rue et finitions -----------------------------------------

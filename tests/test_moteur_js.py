@@ -1754,26 +1754,28 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
 
         // 3. L'IVROGNE : il zigzague, il ne fuit pas, et il finit par tomber.
         j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
-        function virages(e) {
-            let somme = 0, a0 = null;
+        // ⚠️ ON NE COMPARE PAS DEUX PROMENADES. Additionner les virages de
+        // deux marches au hasard, c'est mesurer le terrain autant que la
+        // demarche : un passant coince entre deux clotures tourne beaucoup, et
+        // le juge devenait une loterie. Ce qui distingue vraiment l'ivrogne est
+        // GEOMETRIQUE : un pieton ordinaire suit l'un des QUATRE axes, donc une
+        // de ses deux vitesses est toujours nulle ; l'ivrogne, lui, a sa
+        // direction tournee par un sinus — ses deux vitesses sont non nulles
+        // presque tout le temps. C'est la regle elle-meme, pas son ombre.
+        function deTravers(e) {
+            let bouge = 0, obliques = 0;
             for (let i = 0; i < 240; i++) {
                 o.frame(1);
                 if (Math.hypot(e.vx, e.vy) < 0.1) continue;
-                const a = Math.atan2(e.vy, e.vx);
-                if (a0 !== null) {
-                    let dd = a - a0;
-                    while (dd > Math.PI) dd -= 2 * Math.PI;
-                    while (dd < -Math.PI) dd += 2 * Math.PI;
-                    somme += Math.abs(dd);
-                }
-                a0 = a;
+                bouge++;
+                if (Math.abs(e.vx) > 0.05 && Math.abs(e.vy) > 0.05) obliques++;
             }
-            return Math.round(somme * 100) / 100;
+            return bouge ? Math.round(100 * obliques / bouge) : 0;
         }
         const soul = o.poser('ivrogne', 40, 0); soul.etat = 'flane';
         const sobre = o.poser('passant', -40, 0); sobre.etat = 'flane';
         L.Entites.indexer();
-        const vireSoul = virages(soul), vireSobre = virages(sobre);
+        const vireSoul = deTravers(soul), vireSobre = deTravers(sobre);
         // Une arme sous le nez : tout le monde fuit, lui repond.
         sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
         L.Entites.alerter(soul.x, soul.y, j, 2);
@@ -1791,11 +1793,19 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         const flaneur = o.poser('passant', -40, 0); flaneur.etat = 'flane';
         L.Entites.indexer();
         let pauses = 0, pausesFlaneur = 0;
-        const depart = { x: jog.x, y: jog.y }, departF = { x: flaneur.x, y: flaneur.y };
         let routeJ = 0, routeF = 0;
         let avantJ = { x: jog.x, y: jog.y }, avantF = { x: flaneur.x, y: flaneur.y };
         for (let i = 0; i < 900; i++) {
             o.frame(1);
+            // ⚠️ ON FORCE LA DECISION, on ne l'attend pas. Un flaneur ne
+            // decide de s'arreter que lorsque son `butT` tombe — une fois par
+            // cinq secondes environ, et une fois sur trois seulement. Attendre
+            // que le hasard le fasse, c'est jouer a pile ou face avec son
+            // temoin : le juge est tombe le jour ou le passant n'a pas fait UNE
+            // pause en neuf cents images. En remettant `butT` a zero a chaque
+            // image, les deux passent par la meme porte, des centaines de fois.
+            if (jog.etat === 'flane') jog.butT = 0;
+            if (flaneur.etat === 'flane') flaneur.butT = 0;
             if (jog.etat === 'arret') pauses++;
             if (flaneur.etat === 'arret') pausesFlaneur++;
             routeJ += Math.hypot(jog.x - avantJ.x, jog.y - avantJ.y);
@@ -1851,7 +1861,13 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
 
     # --- L'ivrogne ------------------------------------------------------------
     i = r["ivrogne"]
-    assert i["zigzag"] > i["droit"] * 2, "l'ivrogne marche aussi droit qu'un passant : %s" % i
+    # ⚠️ L'ivrogne est de travers presque tout le temps ; un passant suit un
+    # axe, donc jamais. La marge est énorme parce que la règle est nette.
+    assert i["zigzag"] >= 70, "l'ivrogne marche droit : %s %% de pas obliques" % i["zigzag"]
+    assert i["droit"] <= 10, (
+        "le décor du juge est faux : un passant ordinaire ne marche pas en biais (%s %%)"
+        % i["droit"]
+    )
     assert i["fuit"] is False, "l'ivrogne fuit devant une arme : %s" % i
     assert i["lAutreFuit"] is True, "le décor du juge est faux : le passant, lui, doit réagir"
     assert i["repond"] == mots["ivrogne"]["sans_peur"], "il ne répond pas : %s" % i
@@ -1901,7 +1917,14 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
             for (let x = 4; x < c.w - 10; x++) {
                 if (!L.Monde.marchablePieton(x, y) || L.Monde.estEau(x, y)) continue;
                 let eau = true;
-                for (let k = 1; k <= 9; k++) if (!L.Monde.estEau(x + k, y)) eau = false;
+                // ⚠️ DE L'EAU SUR TROIS RANGEES, pas un filet d'une tuile. Sur
+                // un chenal haut d'une seule rangee, l'agent longe la berge au
+                // sec et arrive a portee d'arrestation sans se mouiller : le
+                // juge mesurait alors un agent qui contourne, pas un agent qui
+                // refuse de nager.
+                for (let k = 1; k <= 9; k++) {
+                    for (const dy of [-1, 0, 1]) if (!L.Monde.estEau(x + k, y + dy)) eau = false;
+                }
                 if (eau) { rive = { x: x, y: y }; break; }
             }
         }

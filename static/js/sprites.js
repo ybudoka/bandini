@@ -1036,6 +1036,29 @@ const TUILES = (function () {
     'J': rampe,
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
     's': function (ctx, v, T) { plein(ctx, '#d8c48a', T); points(ctx, v, T, '#c9b576', 10, 4); },
+    // ⚠️ QUATRE TUILES FONT UN ROND, pas quatre carres. Chaque tuile porte un
+    // QUART du disque, et elle sait lequel en lisant ses voisines (`bloc` dans
+    // LEGENDE, bits 1/2/4/8 = nord/est/sud/ouest) : le centre du cercle est du
+    // cote ou les voisines se trouvent. Peintes chacune pour soi, les quatre
+    // tuiles montraient quatre margelles et quatre bassins — c'est la premiere
+    // chose que Martin a vue.
+    //
+    // ⚠️ Et une piscine n'est pas la baie : une eau plus CLAIRE, une margelle
+    // pale. Le meme bleu que la baie, et le joueur se demanderait s'il peut s'y
+    // noyer — la reponse est non, et l'image doit le dire avant lui.
+    'o': function (ctx, v, T) {
+      plein(ctx, '#4f8d3e', T); points(ctx, v, T, '#427a33', 8, 60);     // le gazon dessous
+      const cx = (v & 2) ? T : 0, cy = (v & 4) ? T : 0;                  // est / sud
+      const bord = T - 0.5, eau = T - 2.5;
+      for (let y = 0; y < T; y++) {
+        for (let x = 0; x < T; x++) {
+          const d = Math.hypot(x + 0.5 - cx, y + 0.5 - cy);
+          if (d > bord) continue;
+          ctx.fillStyle = d > eau ? '#e8e2cf' : (((x + y + (v >> 4)) % 7) ? '#3fa7c4' : '#5cc3dc');
+          ctx.fillRect(x, y, 1, 1);
+        }
+      }
+    },
     '~': function (ctx, v, T) { plein(ctx, '#2c5f8a', T); ctx.fillStyle = '#3b73a3'; ctx.fillRect(2 + (v % 5), 4, 6, 1); ctx.fillRect(7 - (v % 4), 11, 5, 1); },
     'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_TOLE); },
     'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_ARDOISE); },
@@ -1839,6 +1862,29 @@ const DECORS = {
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(1, 3, 14, 8); ctx.fillRect(3, 1, 10, 3);
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 3, 5, 4); ctx.fillRect(9, 5, 4, 3);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(2, 8, 12, 3);
+  } },
+  // --- Les traces de la vie de quelqu'un, dans une cour de banlieue --------
+  // ⚠️ Un terrain de banlieue est le CONTRAIRE du vide. Ces trois-la le disent
+  // en trois formes qu'on reconnait de haut : le TOIT EN PENTE du cabanon, la
+  // LIGNE tendue de la corde a linge, le COUVERCLE ROND du BBQ.
+  cabanon: { casse: 0.75, w: 20, h: 20, ancre: [10, 19], r: 7, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 16, 13);
+    ctx.fillStyle = '#8a6a42'; ctx.fillRect(3, 7, 14, 11);
+    ctx.fillStyle = '#4a3a28'; ctx.fillRect(0, 2, 20, 5); ctx.fillRect(9, 0, 2, 3);
+    ctx.fillStyle = '#3a2a1a'; ctx.fillRect(8, 10, 5, 9);
+    ctx.fillStyle = '#c9a227'; ctx.fillRect(11, 14, 1, 2);
+  } },
+  corde_a_linge: { casse: 0.9, w: 22, h: 18, ancre: [11, 17], r: 3, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(1, 2, 2, 15); ctx.fillRect(19, 2, 2, 15);
+    ctx.fillStyle = '#9aa0a6'; ctx.fillRect(2, 3, 18, 1);
+    ctx.fillStyle = '#e8e2cf'; ctx.fillRect(4, 4, 3, 5); ctx.fillRect(12, 4, 4, 6);
+    ctx.fillStyle = '#7fb3d8'; ctx.fillRect(8, 4, 3, 4);
+  } },
+  bbq: { casse: 0.85, w: 14, h: 14, ancre: [7, 13], r: 5, sol: [6, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 9, 2, 5); ctx.fillRect(8, 9, 2, 5);
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 4, 12, 6);
+    ctx.fillStyle = '#4a4d54'; ctx.fillRect(2, 2, 10, 3); ctx.fillRect(1, 1, 12, 2);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(6, 0, 2, 1);
   } },
   debris: { w: 14, h: 10, ancre: [7, 9], r: 4, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b6258'; ctx.fillRect(1, 5, 12, 5);

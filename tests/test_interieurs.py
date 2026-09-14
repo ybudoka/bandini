@@ -312,8 +312,16 @@ def _blocs(sol: list[str], g: str):
 
 def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     """La liste est courte a dessein : un glyphe `bloc` a un peintre qui lit le
-    masque, et un peintre qui l'ignore prendrait le masque pour du bruit."""
-    assert BLOCS == {"l", "a", "y", "m"}
+    masque, et un peintre qui l'ignore prendrait le masque pour du bruit.
+
+    ⚠️ La PISCINE (« o ») est la cinquieme, et la premiere qui vit DEHORS :
+    quatre tuiles qui font un rond, chacune peignant son quart, le centre du
+    cercle du cote de ses voisines. Elle est ici pour la meme raison que les
+    quatre autres — son peintre lit le masque — et ce juge est le rappel qu'on
+    n'ajoute pas un `bloc` sans lui donner un peintre qui le lise. Peintes
+    chacune pour soi, les quatre tuiles montraient quatre carres avec quatre
+    margelles : c'est la premiere chose que Martin a vue a l'ecran."""
+    assert BLOCS == {"l", "a", "y", "m", "o"}
 
 
 @pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))

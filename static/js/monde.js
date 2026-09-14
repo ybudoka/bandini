@@ -979,7 +979,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },

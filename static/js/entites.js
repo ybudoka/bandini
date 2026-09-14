@@ -1357,11 +1357,20 @@ const Entites = (function () {
     if (e.etat === 'temoin' && e.vers && e.vers.vivant) {
       // Le temoin court VERS l'agent qu'il a repere, pour lui raconter.
       vitesse = v.pieton_course * e.allure;
-      if (--e.minuterie <= 0) { e.etat = 'flane'; e.cri = 0; e.vers = null; }
-      const dx = e.vers.x - e.x, dy = e.vers.y - e.y;
-      const norme = Math.hypot(dx, dy) || 1;
-      e.vx = dx / norme * vitesse;
-      e.vy = dy / norme * vitesse;
+      // ⚠️ IL FAUT S'ARRETER LA quand la minuterie tombe : la ligne suivante
+      // lisait `e.vers.x` sur le `e.vers` qu'on venait de mettre a zero, et le
+      // jeu plantait. Une seule image sur des milliers — celle ou le temoin
+      // finit sa course exactement pendant qu'il court — donc invisible jusqu'a
+      // ce qu'un singe tombe dessus.
+      if (--e.minuterie <= 0) {
+        e.etat = 'flane'; e.cri = 0; e.vers = null;
+        e.vx = 0; e.vy = 0;
+      } else {
+        const dx = e.vers.x - e.x, dy = e.vers.y - e.y;
+        const norme = Math.hypot(dx, dy) || 1;
+        e.vx = dx / norme * vitesse;
+        e.vy = dy / norme * vitesse;
+      }
     } else if (e.etat === 'fuit' || e.etat === 'temoin') {
       vitesse = v.pieton_course * e.allure;
       if (--e.minuterie <= 0) { e.etat = 'flane'; e.cri = 0; }
