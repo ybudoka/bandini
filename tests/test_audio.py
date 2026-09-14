@@ -54,8 +54,9 @@ def test_le_poids_audio_reste_raisonnable():
     # tiers du megaoctet ; la prochaine fois, on compresse avant de relever.
     # Puis de 650 a 800 Ko le meme jour : seize bruitages d'armes (un par arme,
     # la gachette a vide, la casse, le degainage) — un son qu'on n'avait pas,
-    # pas un son qu'on a laisse grossir. On reste sous le mega.
-    assert sum(f.stat().st_size for f in bruitages) < 800_000
+    # pas un son qu'on a laisse grossir. Puis a 850 : les six repliques de la
+    # fille de la Brume (52 Ko). On reste sous le mega.
+    assert sum(f.stat().st_size for f in bruitages) < 850_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
@@ -386,3 +387,15 @@ def test_chaque_arme_a_son_effet_dans_le_navigateur():
     for a in armes.CATALOGUE:
         assert a["son"] in effets, f"{a['slug']} : pas d'effet SFX.{a['son']} dans son.js"
     assert {"vide", "casse", "degainer", "arme", "jet"} <= effets
+
+
+def test_la_fille_de_la_brume_a_plusieurs_repliques():
+    """Martin (13 sept. 2026) : « la prostituée aussi doit parler, avec plusieurs
+    dialogues différents ». Un genre a elle — une passante qu'on frole ne dit
+    pas ca — et une voix qui n'est celle de personne d'autre."""
+    brume = [v for v in audio.VOIX if v["genre"] == "brume"]
+    assert len(brume) >= 5, "il lui faut plusieurs dialogues differents"
+    assert len({v["texte"] for v in brume}) == len(brume), "deux repliques pareilles"
+    assert all(v["voix"] == audio.VOIX_BRUME for v in brume)
+    autres = {audio.VOIX_PAR_GENRE["homme"], audio.VOIX_PAR_GENRE["femme"], audio.VOIX_CRIEUR}
+    assert audio.VOIX_BRUME not in autres, "sa voix doit se distinguer des passantes et du crieur"

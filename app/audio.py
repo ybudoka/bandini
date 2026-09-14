@@ -418,6 +418,11 @@ VOIX_PAR_GENRE = {"homme": "Felix Tabarnak - Confident and Witty", "femme": "Am�
 #: commerciaux »), poussee au style et laissee libre de varier.
 VOIX_CRIEUR = "Léo - Français québécois"
 
+#: La fille de la Brume : Julia — quebecoise, rauque et chaude, la seule voix
+#: de femme du compte qui ne sonne pas comme une passante ou une institutrice.
+#: Poussee au style et laissee varier : elle n'annonce pas, elle accoste.
+VOIX_BRUME = "Julia"
+
 #: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
 #: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
 VOIX: list[Voix] = [
@@ -435,6 +440,17 @@ VOIX: list[Voix] = [
     {"slug": "approchez_c", "texte": "Approchez, approchez, venez voir!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
     {"slug": "special_c", "texte": "Le spécial du jour, c'est icitte!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
     {"slug": "moitie_prix_c", "texte": "Moitié prix, moitié prix, aujourd'hui!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    # La fille de la Brume (13 sept. 2026, demande de Martin : « la prostituée
+    # aussi doit parler, avec plusieurs dialogues différents »). Un genre a
+    # elle : une passante qu'on frole ne dit pas ca, et elle ne dit pas
+    # « Excusez-moi ». `entites.accosterDepuisLaBrume` en tire une quand on
+    # passe pres de son coin — jamais deux fois de suite la meme.
+    {"slug": "compagnie_b", "texte": "Tu cherches de la compagnie, mon beau?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "beau_bonhomme_b", "texte": "Heille, beau bonhomme! Viens icitte.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "frette_b", "texte": "Fait frette, hein? Viens te réchauffer.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "du_feu_b", "texte": "T'as du feu, mon chou?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "tout_seul_b", "texte": "Reste pas tout seul à soir, là.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "ca_te_tente_b", "texte": "Ça te tente-tu, un peu de compagnie?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
 ]
 
 

@@ -446,10 +446,24 @@ const Son = (function () {
       Voix.ducking = !!actif;
     },
 
-    /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug. */
-    dire: function (genre, x, y) {
+    /** Une replique du catalogue, au hasard, pour ce genre — SANS regarder si
+        sa voix est chargee : le texte se montre toujours (une bulle), la voix
+        s'ajoute. `sauf` : la derniere dite, pour ne pas la redire tout de
+        suite. Tire dans le de du jeu : la bulle est un etat visible. */
+    choisir: function (genre, sauf) {
+      const toutes = Voix.liste().filter(function (v) { return v.genre === genre; });
+      const choix = toutes.length > 1 ? toutes.filter(function (v) { return v.slug !== sauf; }) : toutes;
+      if (!choix.length) return null;
+      return choix[Math.floor(B.rng() * choix.length)];
+    },
+
+    /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug.
+        `slug` : cette replique-la (choisie par `choisir`), sinon une au hasard. */
+    dire: function (genre, x, y, slug) {
       if (B.t - Voix.dernierT < 240) return null;
-      const choix = Voix.liste().filter(function (v) { return v.genre === genre && tampons.has('voix-' + v.slug); });
+      const choix = Voix.liste().filter(function (v) {
+        return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
+      });
       if (!choix.length) return null;
       const v = choix[Math.floor(Math.random() * choix.length)];
       Voix.dernierT = B.t;

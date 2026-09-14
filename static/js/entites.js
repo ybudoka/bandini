@@ -1187,11 +1187,40 @@ const Entites = (function () {
     }
   }
 
+  // La fille de la Brume t'accoste de plus loin qu'un passant qui te frole
+  // (trois tuiles), et pas deux fois en moins d'une demi-minute.
+  const BRUME_PORTEE = 48, BRUME_REPOS = 1800, BRUME_BULLE = 150;
+
+  /** La fille de la Brume t'accoste quand tu passes pres de son coin : un mot
+      dans une bulle, et sa voix. Jamais deux fois de suite la meme replique,
+      jamais quand elle fuit ou qu'elle est assommee, jamais en char.
+
+      ⚠️ Elle a un `metier`, et `rumeurEtRepliques` saute tout piéton qui en a
+      un : c'est pour ca qu'elle n'a jamais rien dit avant le 13 sept. 2026
+      (demande de Martin), alors que la regex des voix de femmes la nommait.
+      Rend vrai si elle a parle. */
+  function accosterDepuisLaBrume(j) {
+    for (const e of pietonsAutour(j.x, j.y, BRUME_PORTEE)) {
+      if (e.metier !== 'compagnie' || !e.vivant || e.etat === 'fuit' || e.etat === 'assomme') continue;
+      if (e.accosteT !== undefined && B.t - e.accosteT < BRUME_REPOS) continue;
+      const replique = Son.Voix.choisir('brume', e.derniereReplique);
+      if (!replique) return false;
+      e.accosteT = B.t;
+      e.derniereReplique = replique.slug;
+      regarder(e, j.x - e.x, j.y - e.y);
+      bulle(e, replique.texte, { duree: BRUME_BULLE });
+      Son.Voix.dire('brume', e.x, e.y, replique.slug);
+      return true;
+    }
+    return false;
+  }
+
   /** La foule qu'on entend, et le passant qui nous dit un mot en nous frolant. */
   function rumeurEtRepliques() {
     const j = B.joueur;
     if (B.t % 15 === 0) Son.Rumeur.maj(pietonsAutour(j.x, j.y, 200).filter(function (e) { return !e.metier; }).length);
     if (j.dansVehicule) return;
+    if (accosterDepuisLaBrume(j)) return;
     for (const e of pietonsAutour(j.x, j.y, 30)) {
       if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
       e.aParle = true;
