@@ -191,6 +191,68 @@ const Vehicules = (function () {
     return out;
   }
 
+  /** Le decor sur le chemin : ce qui ARRETE, ce qui CASSE, et ce qui n'est
+      rien pour un char.
+
+      ⚠️ Avant, le decor etait solide pour les pietons et FANTOME pour les
+      chars : un autobus traversait un arbre, un kiosque et une fontaine sans
+      ralentir. C'est la moitie d'un monde — et le lampadaire, lui, etait
+      fantome pour tout le monde.
+
+      Rend `'arrete'`, `'casse'` ou null. C'est la FICHE qui decide, pas le
+      slug : `arrete` est la masse au-dela de laquelle ca cede, `casse` la
+      fraction de vitesse qu'on garde en passant au travers. */
+  function decorDevant(v, x, y) {
+    const ph = physique();
+    if (Math.hypot(v.vx, v.vy) < ph.choc_vitesse_min) return null;
+    for (const c of cercles(v, x, y)) {
+      for (const d of Entites.decorAutour(c.x, c.y, c.r + 14)) {
+        if (d.brise) continue;
+        const fiche = DECORS[d.decor] || {};
+        if (!fiche.arrete && !fiche.casse) continue;
+        if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + (d.r || 4)) continue;
+        // ⚠️ Un lourd deracine ce qu'un leger ne fait qu'accrocher : c'est la
+        // MASSE qui tranche, pas la vitesse — sinon une berline lancee
+        // renverserait une fontaine.
+        if (fiche.arrete && v.def.masse < fiche.arrete) return { quoi: 'arrete', d: d };
+        return { quoi: 'casse', d: d, garde: fiche.casse || v.def.defonce || 0.55 };
+      }
+    }
+    return null;
+  }
+
+  /** Ce qui arrive quand un char rencontre du decor. Rend vrai si la voie
+      s'ouvre (le decor a cede), faux s'il faut s'arreter dessus. */
+  function heurterDecor(v, x, y) {
+    const rencontre = decorDevant(v, x, y);
+    if (!rencontre) return true;
+    if (rencontre.quoi === 'arrete') {
+      // ⚠️ Le REBOND se pose ici, pas dans `heurterMur` : celui-ci ne touche
+      // qu'a `v.vitesse`, et c'est l'appelant qui renverse `vx`/`vy` — pour
+      // les tuiles, c'est fait axe par axe. Sans ca, le char s'ecrase sur
+      // l'arbre en gardant sa vitesse reelle et le traverse quand meme.
+      const ph = physique();
+      heurterMur(v, Math.hypot(v.vx, v.vy));
+      v.vx = -v.vx * ph.choc_rebond; v.vy = -v.vy * ph.choc_rebond;
+      return false;
+    }
+    v.vitesse *= rencontre.garde;
+    v.vx *= rencontre.garde; v.vy *= rencontre.garde;
+    endommager(v, physique().defonce_degats, v.agresseur);
+    Entites.briser(rencontre.d);
+    Son.SFX.choc();
+    if (v.conducteur === B.joueur) {
+      B.cam.secousse = Math.max(B.cam.secousse, 0.45);
+      Entree.vibrer(90);
+      // ⚠️ Casser est un DELIT. Sans ca, defoncer devient gratuit, et un char
+      // lourd vaut plus qu'un char rapide : la taxonomie a deja « conduite
+      // dangereuse », avec son temoin qui rapporte.
+      Police.signalerCrime('conduite_dangereuse', rencontre.d.x, rencontre.d.y,
+                           Police.quelqu_un_voit(rencontre.d.x, rencontre.d.y, null));
+    }
+    return true;
+  }
+
   /** Un lourd lance passe AU TRAVERS de ce qui est bas. Rend vrai si la voie
       s'est ouverte.
 
@@ -407,6 +469,9 @@ const Vehicules = (function () {
         heurterMur(v, choc);
         break;
       }
+      // ⚠️ Le decor APRES les tuiles : un arbre planté contre un mur ne doit
+      // pas etre « casse » par un char qui bute deja sur la facade.
+      if (!heurterDecor(v, v.x, v.y)) break;
       if (choc > 0) v.vitesse *= 0.5;
     }
     Entites.dansLaCarte(v);
@@ -1548,7 +1613,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

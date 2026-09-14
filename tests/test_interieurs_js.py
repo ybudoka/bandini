@@ -325,3 +325,61 @@ def test_une_piece_se_peint_sans_planter(banc):
     }""")
     assert r["vues"] >= 30, r["vues"]
     assert r["etat"] == "jeu"
+
+
+def test_un_lit_de_quatre_tuiles_est_un_seul_lit(banc):
+    """Retour de Martin (13 sept. 2026) : « les lits doivent vraiment avoir l'air
+    de lits, juste un set d'oreillers et des couvertes ; actuellement c'est 2 ou
+    4 cases avec chacune leur oreiller ». Le peintre du lit ne savait pas qu'il
+    avait des voisines : un lit de 2 × 2 etait quatre lits d'une place colles.
+
+    ⚠️ Le remede etait deja ecrit pour la cloture et le toit : la variante vient
+    des voisines (`varianteDeLit`). Le juge lit les quatre variantes du lit de la
+    planque, cuit les quatre tuiles avec, et regarde les traces : l'oreiller n'est
+    qu'en tete et il court d'une tuile a l'autre, la couverture aussi — et le
+    cadre ne se ferme, avec son pixel de plancher, que la ou le lit s'arrete."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.interieur === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.entrer(porte);
+        // Le lit de la planque : nord-ouest, nord-est, sud-ouest, sud-est.
+        const variantes = [[1, 1], [2, 1], [1, 2], [2, 2]].map(function (t) { return L.Monde.varianteDeLit(t[0], t[1]); });
+        o.sortir();
+        function peindre(variante) {
+            const ctx = L.Base.nouveauCanvas(L.TT, L.TT).getContext('2d');
+            ctx.traces = [];
+            L.TUILES['l'](ctx, variante, L.TT);
+            return ctx.traces;
+        }
+        const OREILLER = '#efeae0', COUVERTURE = '#3f6b8a', BOIS = '#5b3f26';
+        function rects(traces, couleur) { return traces.filter(function (t) { return t[4] === couleur; }); }
+        // L'oreiller fait quatre pixels de haut ; le drap rabattu, de la meme couleur, deux.
+        function oreiller(traces) { return rects(traces, OREILLER).filter(function (t) { return t[3] >= 3; }); }
+        function boite(t) { return [t[0], t[1], t[0] + t[2], t[1] + t[3]]; }
+        const tuiles = variantes.map(peindre);
+        const NO = tuiles[0], NE = tuiles[1], SO = tuiles[2], SE = tuiles[3];
+        return {
+            variantes: variantes,
+            oreillers: tuiles.map(function (t) { return oreiller(t).length; }),
+            // Un seul oreiller, a cheval sur la couture : il touche l'est de la tuile
+            // nord-ouest et part de l'ouest de la nord-est.
+            oreillerContinu: oreiller(NO).some(function (t) { return t[0] + t[2] === L.TT; })
+                && oreiller(NE).some(function (t) { return t[0] === 0; }),
+            // Et il laisse voir le matelas au bord exterieur : il ne touche pas le cadre.
+            oreillerDedans: oreiller(NO).every(function (t) { return t[0] >= 3; }),
+            // La couverture va jusqu'au bas des tuiles de tete et part du haut de celles du pied.
+            couvertureContinue: rects(NO, COUVERTURE).some(function (t) { return t[1] + t[3] === L.TT; })
+                && rects(SO, COUVERTURE).some(function (t) { return t[1] === 0; }),
+            cadreNO: rects(NO, BOIS).map(boite), cadreSE: rects(SE, BOIS).map(boite),
+        };
+    }""")
+    assert r["variantes"] == [2 | 4, 8 | 4, 1 | 2, 1 | 8], f"les voisines ne sont pas lues : {r['variantes']}"
+    assert r["oreillers"] == [1, 1, 0, 0], f"l'oreiller n'est qu'en tete du lit : {r['oreillers']}"
+    assert r["oreillerContinu"], "l'oreiller est coupe a la couture des deux tuiles de tete"
+    assert r["oreillerDedans"], "l'oreiller touche le cadre"
+    assert r["couvertureContinue"], "la couverture est coupee entre la tete et le pied"
+    # Un pixel de plancher au nord et a l'ouest, le cadre plein jusqu'a la couture a l'est et au sud.
+    assert r["cadreNO"] == [[1, 1, 16, 16]], r["cadreNO"]
+    assert r["cadreSE"] == [[0, 0, 15, 15]], r["cadreSE"]

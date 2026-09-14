@@ -526,6 +526,22 @@ const Monde = (function () {
       | (estCloture(tx, ty + 1) ? 4 : 0) | (estCloture(tx - 1, ty) ? 8 : 0);
   }
 
+  /** La variante d'un lit : le masque des cotes ou le lit CONTINUE — 1 nord,
+      2 est, 4 sud, 8 ouest — la meme lecture que la cloture.
+
+      ⚠️ Un lit fait deux tuiles sur deux, et son peintre ne savait pas qu'il
+      avait des voisines : chaque tuile dessinait son oreiller et sa
+      couverture, donc un lit etait quatre lits d'une place colles (« 2 ou 4
+      cases avec chacune leur oreiller »). Avec le masque, la tete de lit et
+      l'oreiller ne vont qu'aux tuiles sans lit au nord, la couverture court
+      d'une tuile a l'autre, et le cadre ne se ferme que la ou le lit s'arrete.
+      Le corollaire, garde par un juge des plans : deux lits ne se touchent
+      jamais — colles, ils seraient peints comme un seul. */
+  function varianteDeLit(tx, ty) {
+    return (glyphe(tx, ty - 1) === 'l' ? 1 : 0) | (glyphe(tx + 1, ty) === 'l' ? 2 : 0)
+      | (glyphe(tx, ty + 1) === 'l' ? 4 : 0) | (glyphe(tx - 1, ty) === 'l' ? 8 : 0);
+  }
+
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
       voisines. Passage pieton, case de stationnement, rampe et cloture en ont
       une ; les autres se contentent d'un bruit stable. */
@@ -533,6 +549,7 @@ const Monde = (function () {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
+    if (g === 'l') return varianteDeLit(tx, ty);
     const p = carte.legende[g];
     if (p && p.cloture) return varianteDeCloture(tx, ty);
     if (p && p.pente) return varianteDePente(g, tx, ty);
@@ -813,6 +830,7 @@ const Monde = (function () {
     const out = [];
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const l of carte.lampes) {
+      if (l.eteinte) continue;             // son poteau est a terre
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });
       if (out.length >= 25) break;
@@ -822,7 +840,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_VEHICULE, MASQUE_A_PIED, MORCEAUX_MAX,
-    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable, estCloture, estToit, varianteDeCloture, varianteDeLit, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, estRampe, varianteDePassage, varianteDeCase, varianteDeRampe,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

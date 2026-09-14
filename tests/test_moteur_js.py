@@ -1119,7 +1119,143 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     assert versants.count(1) <= 1, f"une seule ligne de faite : {versants}"
 
 
+def test_le_decor_arrete_ou_casse_sous_un_char_et_la_ville_se_repare(banc):
+    """⚠️ Demande de Martin : « une interaction réaliste avec le décor — les bris
+    de poteau, de banc de parc et d'arbre. »
+
+    Le décor était **solide pour les piétons et fantôme pour les chars** : un
+    autobus traversait un arbre, un kiosque et une fontaine sans ralentir. Le
+    défonçage de M9 ne cassait que des **tuiles** (clôtures, bornes) ; le décor
+    n'était ni un obstacle ni une chose qui casse. C'est la moitié d'un monde.
+
+    Deux familles, et **c'est la fiche qui décide** : ce qui **arrête** un char
+    (un arbre, une fontaine — sauf au-dessus d'une masse) et ce qui **casse**
+    sous lui (un banc, un lampadaire). Le juge lance une berline puis un camion
+    sur les deux, vérifie que le bris laisse des **débris**, éteint la lampe du
+    poteau tombé, compte une **conduite dangereuse**, et que tout est debout le
+    lendemain."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(91);
+        const j = L.B.joueur;
+        const out = {};
+
+        /* Lance `slug` sur le premier decor de ce type, et dit ce qui s'est
+           passe. Le char arrive par le sud, a pleine vitesse. */
+        function foncer(slug, type) {
+            // ⚠️ Un decor avec DE LA PLACE AU SUD : sinon le char bute sur la
+            // facade d'a cote avant d'atteindre l'arbre, et on mesurerait un
+            // mur en croyant mesurer un arbre.
+            const d = L.B.entites.find(function (e) {
+                if (e.decor !== type || e.brise) return false;
+                const tx = Math.floor(e.x / L.TT);
+                for (let k = 1; k <= 6; k++) {
+                    const ty = Math.floor(e.y / L.TT) + k;
+                    for (let dx = -1; dx <= 1; dx++) {
+                        if (L.Monde.bloque(tx + dx, ty, L.Monde.MASQUE_VEHICULE)) return false;
+                    }
+                }
+                return true;
+            });
+            if (!d) return null;
+            j.x = d.x; j.y = d.y + 70;
+            L.Monde.centrerCamera(j.x, j.y);
+            const v = L.Vehicules.creer(slug, d.x, d.y + 70, -Math.PI / 2, { etat: 'roule' });
+            L.Vehicules.monter(j, v);
+            v.vitesse = v.def.vitesse_max; v.vx = 0; v.vy = -v.def.vitesse_max;
+            const crimes0 = L.B.partie.stats.crimes;
+            // ⚠️ On ne force PAS la vitesse a chaque image : un arbre qui
+            // arrete doit pouvoir renvoyer le char. Le forcer, ce serait
+            // pousser soi-meme le char au travers et croire que l'arbre est
+            // fantome.
+            for (let i = 0; i < 60; i++) L.Vehicules.avancer(v);
+            const r = { brise: !!d.brise, passe: v.y < d.y,
+                        // ⚠️ Seulement les debris NES D'UN BRIS (`e.debris` porte
+                        // l'image) : la ville en pose deja 88 a la main, dans la
+                        // cour de la fourriere et les terrains vagues.
+                        debris: L.B.entites.filter(function (e) { return e.debris; }).length,
+                        crimes: L.B.partie.stats.crimes - crimes0,
+                        solide: d.solide };
+            L.Vehicules.descendre(j, true);
+            L.Entites.retirer(v);
+            return r;
+        }
+
+        out.berlineArbre = foncer('auto', 'arbre');          // un arbre arrete une berline
+        out.camionArbre = foncer('camion', 'arbre');         // un camion le deracine
+        out.berlineBanc = foncer('auto', 'banc');            // un banc cede sous n'importe quoi
+
+        // Le lampadaire : son poteau tombe, SA LUMIERE S'ETEINT.
+        const lampe = L.B.entites.find(function (e) { return e.decor === 'lampadaire' && !e.brise; });
+        const avant = L.Monde.carte.lampes.filter(function (l) { return l.eteinte; }).length;
+        L.Entites.briser(lampe);
+        out.lampe = { eteintes: L.Monde.carte.lampes.filter(function (l) { return l.eteinte; }).length - avant,
+                      solide: lampe.solide, brise: lampe.brise };
+
+        // Le plafond des debris : une nuit a tout casser doit tenir le rythme.
+        const cassables = L.B.entites.filter(function (e) {
+            const f = L.DECORS[e.decor] || {};
+            return e.type === 'decor' && !e.brise && (f.casse || f.arrete);
+        });
+        for (const d of cassables) L.Entites.briser(d);
+        out.plafond = { debris: L.B.entites.filter(function (e) { return e.debris; }).length,
+                        max: L.Entites.DEBRIS_MAX, casses: cassables.length };
+
+        // Et le lendemain, tout est debout — par `nouveauJour()`, pas en
+        // appelant la reparation a la main : c'est le lever du jour qui repare,
+        // et c'est ce lien-la qu'il faut juger.
+        // ⚠️ On compte les brises AVANT :
+        // le camion en a couche d'autres sur son passage, et une soustraction
+        // faite en Python se tromperait de ce qu'elle mesure.
+        const brisesAvant = L.B.entites.filter(function (e) { return e.type === 'decor' && e.brise; }).length;
+        const brisesRestants = function () { return L.B.entites.filter(function (e) { return e.type === 'decor' && e.brise; }).length; };
+        L.B.partie.jour++;
+        L.Missions.nouveauJour();
+        const remis = brisesAvant - brisesRestants();
+        out.lendemain = { remis: remis, brisesAvant: brisesAvant,
+                          // ⚠️ Seulement les debris NES D'UN BRIS (`e.debris` porte
+                        // l'image) : la ville en pose deja 88 a la main, dans la
+                        // cour de la fourriere et les terrains vagues.
+                        debris: L.B.entites.filter(function (e) { return e.debris; }).length,
+                          brises: L.B.entites.filter(function (e) { return e.type === 'decor' && e.brise; }).length,
+                          eteintes: L.Monde.carte.lampes.filter(function (l) { return l.eteinte; }).length };
+        return out;
+    }""")
+    a, c, b = r["berlineArbre"], r["camionArbre"], r["berlineBanc"]
+    assert a and c and b, "il manque un arbre ou un banc dans la ville"
+    assert a["brise"] is False and a["passe"] is False, (
+        "une berline traverse un arbre : %s" % a
+    )
+    assert c["brise"] is True and c["passe"] is True, (
+        "un camion doit déraciner l'arbre et passer : %s" % c
+    )
+    assert b["brise"] is True and b["passe"] is True, "un banc doit céder sous une berline : %s" % b
+    assert b["solide"] is False, "un décor cassé reste solide : on bute sur des planches"
+    assert b["debris"] >= 1, "le bris ne laisse aucun débris : c'est une disparition, pas un bris"
+    # ⚠️ Casser est un délit : sinon défoncer est gratuit, et un char lourd
+    # vaut plus qu'un char rapide.
+    assert c["crimes"] >= 1, "déraciner un arbre au camion n'est pas un délit : %s" % c
+    assert r["lampe"] == {"eteintes": 1, "solide": False, "brise": True}, (
+        "un lampadaire à terre continue d'éclairer : %s" % r["lampe"]
+    )
+    assert r["plafond"]["casses"] > r["plafond"]["max"], "pas assez de décor cassé pour tester le plafond"
+    assert r["plafond"]["debris"] <= r["plafond"]["max"], (
+        "%s débris pour un plafond de %s" % (r["plafond"]["debris"], r["plafond"]["max"])
+    )
+    matin = r["lendemain"]
+    assert matin["remis"] == matin["brisesAvant"] > 0, (
+        "tout ce qui était cassé n'a pas été remis : %s" % matin
+    )
+    assert (matin["debris"], matin["brises"], matin["eteintes"]) == (0, 0, 0), (
+        "le lendemain, la ville doit être debout, déblayée et rallumée : %s" % matin
+    )
+
+
 def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
+    """⚠️ Le lampadaire BLOQUE maintenant, et c'est le correctif : il était
+    `solide: false`, donc fantôme pour tout le monde — on le traversait à pied
+    comme en char. Un poteau de deux pixels de rayon qu'on traverse, c'est la
+    moitié d'un monde."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
@@ -1135,7 +1271,7 @@ def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     }""")
     assert r["arbre"] is not None and r["arbre"] > 0, "on traverse les arbres"
     assert r["buisson"] is not None and r["buisson"] <= 0, "un buisson ne doit pas bloquer"
-    assert r["lampadaire"] <= 0, "un lampadaire ne doit pas bloquer"
+    assert r["lampadaire"] is not None and r["lampadaire"] > 0, "on traverse les lampadaires"
 
 
 def test_on_ne_se_tient_pas_DANS_le_decor(banc):
@@ -2820,29 +2956,44 @@ def test_mal_gare_veut_dire_quelque_chose_et_la_fourriere_passe(banc, paquet):
         L.Monde.centrerCamera(j.x, j.y);
         const v = L.Vehicules.creer('auto', ch.tx * L.TT + 8, ch.ty * L.TT + 8, 0, { etat: 'stationne' });
         L.Entites.indexer();
+        // ⚠️ Court, et sur un char NEUF ensuite : le joueur est plante au milieu
+        // de la chaussee, et le trafic finit par demolir ce qui traine la — on
+        // mesurerait une epave en croyant mesurer un remorquage.
         out.sansLaisser = { avant: p.fourriere.length };
-        for (let i = 0; i < (%d + 5) * 60; i++) o.frame(1);
+        for (let i = 0; i < 10 * 60; i++) o.frame(1);
         out.sansLaisser.apres = p.fourriere.length;      // jamais conduit : on n'y touche pas
-        v.laisse = true;
+        L.Entites.retirer(v);
+        // ⚠️ On coupe le trafic pour la phase chronometree : le joueur est
+        // plante au milieu de la chaussee, et une berline laissee la se fait
+        // demolir en dix secondes. On mesurerait une epave en croyant mesurer
+        // un remorquage.
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule' || e.conducteur !== 'trafic'; });
+        const w = L.Vehicules.creer('auto', ch.tx * L.TT + 8, ch.ty * L.TT + 8, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        w.laisse = true;
         let images = 0;
-        while (L.B.entites.indexOf(v) >= 0 && images < (%d + 20) * 60) { o.frame(1); images++; }
+        while (L.B.entites.indexOf(w) >= 0 && images < (%d + 20) * 60) { o.frame(1); images++; }
         out.remorque = { secondes: Math.round(images / 60), lot: p.fourriere.length,
                          slug: p.fourriere.length ? p.fourriere[p.fourriere.length - 1].slug : null };
-        // Et celui de la planque, jamais — meme au milieu de la rue.
+        // Et celui de la planque, JAMAIS — meme pose en pleine chaussee.
+        // ⚠️ On mesure la REGLE, pas cinquante secondes : l'exemption se juge
+        // contre `p.planque.vehicule`, que `sauvegarderPartie()` recalcule
+        // toutes les dix secondes depuis la porte de la planque. Laisser
+        // tourner testerait la sauvegarde, pas la fourriere.
         const garde = { slug: 'auto', couleur: '#c0392b', vie: 90,
                         x: ch.tx * L.TT + 8, y: ch.ty * L.TT + 8, angle: 0, vole: false };
         p.planque.vehicule = garde;
         const sien = L.Vehicules.creer('auto', garde.x, garde.y, 0, { etat: 'stationne' });
         sien.laisse = true;
         L.Entites.indexer();
-        out.planque = { malGare: L.Missions.malGare(sien) };
-        for (let i = 0; i < (%d + 10) * 60; i++) o.frame(1);
-        // ⚠️ On mesure LE LOT, pas la survie du char : le joueur est planté au
-        // milieu de la chaussée, et le trafic finit par écraser ce qui traîne
-        // là. Ce qu'on juge, c'est que la fourrière n'y a pas touché.
-        out.planque.lot = p.fourriere.length;
+        // Le MEME endroit, le meme etat : seul le lien avec la planque change.
+        p.planque.vehicule = null;
+        const sansPlanque = L.Missions.malGare(sien);
+        p.planque.vehicule = garde;
+        out.planque = { malGare: L.Missions.malGare(sien), sansPlanque: sansPlanque };
         return out;
-    }""" % (delai, delai, delai))
+    }""" % delai)
     assert r["chaussee"] and r["chaussee"]["mal"] is True, (
         "un char en pleine chaussée n'est pas mal garé ? %s" % r["chaussee"]
     )
@@ -2865,8 +3016,10 @@ def test_mal_gare_veut_dire_quelque_chose_et_la_fourriere_passe(banc, paquet):
     assert abs(r["remorque"]["secondes"] - delai) <= 3, (
         "la remorqueuse passe après %s s au lieu de %s" % (r["remorque"]["secondes"], delai)
     )
-    assert r["planque"] == {"malGare": False, "lot": 1}, (
-        "LE CHAR DE LA PLANQUE A ÉTÉ REMORQUÉ : c'est la sauvegarde de Martin (%s)" % r["planque"]
+    # ⚠️ Le MEME char, au MEME endroit : mal garé s'il n'est à personne, jamais
+    # s'il est celui de la planque. C'est la sauvegarde de Martin.
+    assert r["planque"] == {"malGare": False, "sansPlanque": True}, (
+        "le char de la planque n'est pas protégé (ou l'exemption protège tout) : %s" % r["planque"]
     )
 
 

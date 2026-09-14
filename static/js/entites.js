@@ -226,6 +226,80 @@ const Entites = (function () {
   }
 
   /** Rebatit l'index fixe a partir des entites presentes (retour de l'interieur). */
+  //: Le plafond de debris. ⚠️ Ce sont des ENTITES : elles comptent dans le
+  //: budget d'image comme tout le reste. Une nuit a tout casser doit tenir le
+  //: rythme, donc les plus vieux debris disparaissent en premier.
+  const DEBRIS_MAX = 40;
+
+  /** Casser un decor : il tombe, il laisse des debris, et il sort de l'index
+      fixe.
+
+      ⚠️ `grilleFixe` est l'index « qui ne bouge jamais » — c'est ce qui rend
+      le decor gratuit par image. Casser, c'est l'en sortir : on reindexe AU
+      BRIS, jamais par image.
+
+      ⚠️ Et un lampadaire a terre NE S'ALLUME PLUS. Sa lumiere vit dans
+      `carte.lampes`, a part de son poteau : casser l'un sans eteindre l'autre
+      donnerait un halo qui flotte au-dessus de rien — exactement le genre de
+      chose qu'on ne voit qu'en jouant, la nuit. */
+  function briser(e) {
+    if (!e || e.type !== 'decor' || e.brise) return false;
+    e.brise = true;
+    e.solide = false;
+    e.dessine = false;
+    eteindreLaLampe(e);
+    const d = creer('decor', e.x, e.y, {
+      // ⚠️ `debris: true` ET `ne: B.t` separes : l'image de naissance vaut
+      // ZERO au premier instant d'une partie, et `if (e.debris)` laissait
+      // alors passer le premier morceau casse du jeu.
+      decor: 'debris', r: (DECORS.debris || {}).r || 4, solide: false, dessine: true,
+      debris: true, ne: B.t,
+    });
+    // Les plus vieux debris s'en vont : le plafond tient le budget d'image.
+    const tous = B.entites.filter(function (q) { return q.type === 'decor' && q.debris; });
+    if (tous.length > DEBRIS_MAX) {
+      tous.sort(function (a, b) { return a.ne - b.ne; });
+      for (let i = 0; i < tous.length - DEBRIS_MAX; i++) retirer(tous[i]);
+    }
+    reindexerDecor();
+    poussiere(e.x, e.y, 8);
+    void d;
+    return true;
+  }
+
+  /** La lampe d'un poteau tombe : on la coupe, sans la perdre. */
+  function eteindreLaLampe(e) {
+    const c = Monde.carte;
+    if (!c || !c.lampes) return;
+    for (const l of c.lampes) {
+      if (l.eteinte) continue;
+      if (Math.abs(l.x - e.x) <= 10 && Math.abs(l.y - e.y) <= 22) { l.eteinte = true; break; }
+    }
+  }
+
+  /** Le lendemain, la ville est reparee. ⚠️ Rien ne repousse dans la minute :
+      ce qu'on a casse reste casse jusqu'a `nouveauJour()`, et le quartier
+      porte ses blessures — c'est ce qui fait qu'une nuit de folie SE VOIT le
+      matin. */
+  function reparerLeDecor() {
+    let remis = 0;
+    for (let i = B.entites.length - 1; i >= 0; i--) {
+      const e = B.entites[i];
+      if (e.type !== 'decor') continue;
+      if (e.debris) { retirer(e); continue; }
+      if (!e.brise) continue;
+      const fiche = DECORS[e.decor] || {};
+      e.brise = false;
+      e.dessine = true;
+      e.solide = !!fiche.solide;
+      remis++;
+    }
+    const c = Monde.carte;
+    if (c && c.lampes) for (const l of c.lampes) l.eteinte = false;
+    reindexerDecor();
+    return remis;
+  }
+
   function reindexerDecor() {
     grilleFixe.clear();
     for (const e of B.entites) if ((e.type === 'decor' || e.type === 'ambulant') && e.solide) ajouterA(grilleFixe, e);
@@ -1446,6 +1520,7 @@ const Entites = (function () {
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
+    briser, reparerLeDecor, DEBRIS_MAX,
     peuplerInterieur,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, peupler, peuplerDabord,

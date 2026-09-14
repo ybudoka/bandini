@@ -281,3 +281,36 @@ def test_chaque_piece_dit_quelle_porte_on_pousse():
     # Et chaque porte de la ville mene a une piece qui sait ce qu'elle est.
     for porte in VILLE["portes"]:
         assert VILLE["interieurs"][porte["interieur"]]["porte"] in carte.GENRES_DE_PORTE, porte
+
+
+@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+def test_un_lit_est_un_bloc_et_deux_lits_ne_se_touchent_pas(slug):
+    """Retour de Martin (13 sept. 2026) : « les lits doivent vraiment avoir l'air
+    de lits, juste un set d'oreillers et des couvertes ; actuellement c'est 2 ou
+    4 cases avec chacune leur oreiller ». Le lit se PEINT maintenant PAR SES
+    VOISINES (`varianteDeLit`, monde.js) : une tuile `l` qui en touche une autre
+    continue le meme lit — une seule tete, un seul oreiller, une couverture d'un
+    tenant.
+
+    ⚠️ Le corollaire : deux lits colles seraient peints comme UN lit de quatre
+    de large, et un lit en L n'aurait pas de tete. Un lit est donc un rectangle
+    plein d'au plus deux tuiles de cote, et il ne touche aucun autre."""
+    sol = carte.INTERIEURS[slug]["sol"]
+    lits = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne) if g == "l"}
+    vus: set[tuple[int, int]] = set()
+    for depart in sorted(lits):
+        if depart in vus:
+            continue
+        bloc, front = set(), [depart]
+        while front:
+            x, y = front.pop()
+            if (x, y) in bloc:
+                continue
+            bloc.add((x, y))
+            front.extend(v for v in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)) if v in lits)
+        vus |= bloc
+        xs, ys = [x for x, _ in bloc], [y for _, y in bloc]
+        large, haut = max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+        assert large <= 2 and haut <= 2, (
+            f"{slug} : un lit de {large} × {haut} tuiles en {min(xs)},{min(ys)} — deux lits qui se touchent ?")
+        assert len(bloc) == large * haut, f"{slug} : un lit en L en {min(xs)},{min(ys)}"

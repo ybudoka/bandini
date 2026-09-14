@@ -950,17 +950,42 @@ const TUILES = (function () {
       ctx.fillStyle = '#ab7b4c';
       ctx.fillRect(5, 7, 6, 3);
     },
-    // Le lit : matelas, oreiller au nord, couverture au sud.
+    /* Le lit : UN lit, pas une tuile.
+
+       ⚠️ `v` est le masque des cotes ou le lit CONTINUE (`varianteDeLit`,
+       monde.js) — 1 nord, 2 est, 4 sud, 8 ouest. Sans lui, chaque tuile
+       dessinait son oreiller et sa couverture, et un lit de deux tuiles sur
+       deux etait quatre lits d'une place colles (« 2 ou 4 cases avec chacune
+       leur oreiller »). Ici la tete de lit et l'oreiller ne vont qu'aux tuiles
+       sans lit au nord, l'oreiller et la couverture courent d'une tuile a
+       l'autre sans couture, et le cadre ne se ferme que la ou le lit s'arrete
+       — avec un pixel de plancher devant, comme tous les meubles. */
     'l': function (ctx, v, T) {
-      plein(ctx, '#d8d2c4', T);
-      ctx.fillStyle = '#efeae0';
-      ctx.fillRect(1, 1, T - 2, 5);                    // l'oreiller
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou le lit S'ARRETE
+      const x0 = ouest ? 1 : 0, x1 = est ? T - 1 : T;   // le cadre, un pixel de plancher devant
+      const y0 = nord ? 1 : 0, y1 = sud ? T - 1 : T;
+      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x0, T - 1, x1 - x0, 1); }   // l'ombre au pied
+      ctx.fillStyle = '#5b3f26';                        // le bois du cadre
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      const mx0 = ouest ? 2 : 0, mx1 = est ? T - 2 : T; // le matelas, dans le cadre
+      const my0 = nord ? 3 : 0, my1 = sud ? T - 2 : T;  // la tete de lit prend deux pixels
+      ctx.fillStyle = '#d8d2c4';
+      ctx.fillRect(mx0, my0, mx1 - mx0, my1 - my0);
+      if (nord) {
+        const ox0 = ouest ? 3 : 0, ox1 = est ? T - 3 : T;
+        ctx.fillStyle = '#efeae0';                      // l'oreiller : un seul, d'un bord a l'autre
+        ctx.fillRect(ox0, 4, ox1 - ox0, 4);
+        ctx.fillStyle = '#c9c2b2';
+        ctx.fillRect(ox0, 7, ox1 - ox0, 1);             // son ombre, pour le volume
+        ctx.fillStyle = '#efeae0';                      // le drap rabattu sur la couverture
+        ctx.fillRect(mx0, 9, mx1 - mx0, 2);
+      }
+      const cy0 = nord ? 11 : 0, cy1 = sud ? T - 3 : T; // la couverture, jusqu'au pied
       ctx.fillStyle = '#3f6b8a';
-      ctx.fillRect(0, 7, T, T - 7);                    // la couverture
-      ctx.fillStyle = '#4d7ea3';
-      ctx.fillRect(0, 8, T, 1); ctx.fillRect(0, 12, T, 1);
-      ctx.fillStyle = 'rgba(0,0,0,0.18)';
-      ctx.fillRect(0, T - 1, T, 1);
+      ctx.fillRect(mx0, cy0, mx1 - mx0, cy1 - cy0);
+      ctx.fillStyle = '#4d7ea3';                        // le pique, continu d'une tuile a l'autre
+      for (let y = nord ? 14 : 2; y < cy1; y += 4) ctx.fillRect(mx0, y, mx1 - mx0, 1);
+      if (sud) { ctx.fillStyle = '#2f5670'; ctx.fillRect(mx0, T - 3, mx1 - mx0, 1); }   // l'ourlet du pied
     },
     // Le frigo (ou la vitrine refrigeree) : blanc, une poignee, un reflet.
     'j': function (ctx, v, T) {
@@ -1543,34 +1568,49 @@ const GRILLE_CAMION_CUISINE = [
   '......ttttt.......................ttttt.....',
 ];
 
+/* ⚠️ `arrete` et `casse` : c'est LA FICHE qui decide ce qu'un char fait d'un
+   decor, comme `vehicules.py` decide ce qu'un char sait faire. Avant, le decor
+   etait solide pour les pietons et FANTOME pour les chars : un autobus
+   traversait un arbre, un kiosque et une fontaine sans ralentir, et le
+   lampadaire etait fantome pour tout le monde.
+
+     `arrete: n`  il ARRETE un char, comme un mur — sauf au-dessus de la masse
+                  `n` : un camion (3,0) deracine un arbre, une berline (1,0)
+                  s'y ecrase.
+     `casse: f`   il CEDE sous n'importe quel char lance, qui garde la
+                  fraction `f` de sa vitesse. Un banc, un cone, un lampadaire.
+
+   Un decor sans l'un ni l'autre reste ce qu'il etait : solide pour les gens,
+   invisible pour les chars (les feux, les panneaux — on ne renverse pas la
+   signalisation, sinon un croisement se demonte au premier virage rate). */
 const DECORS = {
-  arbre: { w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
+  arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(2, 4, 14, 13); ctx.fillRect(5, 1, 8, 3); ctx.fillRect(0, 7, 18, 7);
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(4, 3, 6, 5); ctx.fillRect(2, 9, 5, 4);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(10, 10, 6, 6); ctx.fillRect(6, 14, 8, 3);
   } },
-  lampadaire: { w: 8, h: 30, ancre: [3, 29], r: 2, solide: false, peindre: function (ctx, w, h) {
+  lampadaire: { casse: 0.7, w: 8, h: 30, ancre: [3, 29], r: 2, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 2, 26); ctx.fillRect(0, 28, 6, 2);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(2, 2, 6, 2);
     ctx.fillStyle = '#ffe9a8'; ctx.fillRect(6, 3, 2, 3);
   } },
-  poubelle: { w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
+  poubelle: { casse: 0.85, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
-  banc: { w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
+  banc: { casse: 0.8, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 3); ctx.fillRect(1, 0, 16, 3);
     ctx.fillStyle = '#523a22'; ctx.fillRect(2, 7, 2, 5); ctx.fillRect(14, 7, 2, 5);
     ctx.fillStyle = '#7d5a36'; ctx.fillRect(1, 4, 16, 1);
   } },
-  caisse: { w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
+  caisse: { casse: 0.8, w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 14, 14);
     ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 3, 12, 5);
     ctx.fillStyle = '#6e5330'; ctx.fillRect(1, 8, 14, 1); ctx.fillRect(7, 2, 2, 14);
   } },
-  buisson: { w: 16, h: 12, ancre: [8, 11], r: 5, solide: false, peindre: function (ctx, w, h) {
+  buisson: { casse: 0.9, w: 16, h: 12, ancre: [8, 11], r: 5, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(1, 3, 14, 8); ctx.fillRect(3, 1, 10, 3);
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 3, 5, 4); ctx.fillRect(9, 5, 4, 3);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(2, 8, 12, 3);
@@ -1580,7 +1620,7 @@ const DECORS = {
     ctx.fillStyle = '#807768'; ctx.fillRect(3, 2, 4, 4); ctx.fillRect(8, 4, 3, 3);
     ctx.fillStyle = '#544c44'; ctx.fillRect(2, 7, 3, 2); ctx.fillRect(9, 7, 4, 2);
   } },
-  fontaine: { w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
+  fontaine: { arrete: 9, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);
     ctx.fillStyle = '#a5a194'; ctx.fillRect(4, 12, 26, 3);
     ctx.fillStyle = '#2c5f8a'; ctx.fillRect(6, 14, 22, 11);
@@ -1588,7 +1628,7 @@ const DECORS = {
     ctx.fillStyle = '#9a9689'; ctx.fillRect(15, 2, 4, 14);
     ctx.fillStyle = '#cfe6f5'; ctx.fillRect(14, 0, 6, 3); ctx.fillRect(13, 3, 2, 4); ctx.fillRect(19, 3, 2, 4);
   } },
-  kiosque_hotdog: { w: 26, h: 26, ancre: [13, 25], r: 10, sol: [9, 3], solide: true, peindre: function (ctx, w, h) {
+  kiosque_hotdog: { arrete: 2.2, w: 26, h: 26, ancre: [13, 25], r: 10, sol: [9, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 2, 24, 5);              // parasol
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 2, 4, 5); ctx.fillRect(13, 2, 4, 5);
     ctx.fillStyle = '#7a7d82'; ctx.fillRect(12, 7, 2, 6);              // mat
@@ -1597,7 +1637,7 @@ const DECORS = {
     ctx.fillStyle = '#d98324'; ctx.fillRect(7, 16, 5, 2); ctx.fillRect(14, 16, 5, 2);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 22, 3, 4); ctx.fillRect(18, 22, 3, 4);
   } },
-  kiosque_journaux: { w: 24, h: 26, ancre: [12, 25], r: 9, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
+  kiosque_journaux: { casse: 0.6, w: 24, h: 26, ancre: [12, 25], r: 9, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2f6b8a'; ctx.fillRect(2, 4, 20, 18);
     ctx.fillStyle = '#24506f'; ctx.fillRect(2, 4, 20, 3);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 9, 7, 9); ctx.fillRect(13, 9, 7, 9);
@@ -1605,7 +1645,7 @@ const DECORS = {
     ctx.fillRect(14, 11, 5, 1); ctx.fillRect(14, 13, 5, 1);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 22, 18, 4);
   } },
-  roulotte_cafe: { w: 28, h: 24, ancre: [14, 23], r: 11, sol: [12, 3], solide: true, peindre: function (ctx, w, h) {
+  roulotte_cafe: { arrete: 2.6, w: 28, h: 24, ancre: [14, 23], r: 11, sol: [12, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(2, 4, 24, 14);
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 4, 24, 3);
     ctx.fillStyle = '#2c2c2c'; ctx.fillRect(6, 9, 16, 6);
@@ -1614,7 +1654,7 @@ const DECORS = {
     ctx.fillStyle = '#101018'; ctx.fillRect(6, 20, 3, 3); ctx.fillRect(19, 20, 3, 3);
   } },
   // La boite au sol n'a pas bouge : la caisse va toujours de x 2 a 42.
-  camion_cuisine: { w: 44, h: 35, ancre: [22, 34], r: 16, sol: [20, 4], solide: true, peindre: function (ctx, w, h) {
+  camion_cuisine: { arrete: 3.4, w: 44, h: 35, ancre: [22, 34], r: 16, sol: [20, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(0,0,0,0.28)'; ctx.fillRect(3, 32, 38, 3);     // l'ombre sous la caisse
     peindreGrilleDecor(ctx, PAL_CAMION_CUISINE, GRILLE_CAMION_CUISINE);
     // ⚠️ Des lettres NOIRES : en rouge sur le creme, a 3 px de large, le mot
@@ -1627,7 +1667,7 @@ const DECORS = {
   // le marchand a les pieds 11 px au-dessus de l'ancre (`creerAmbulants`),
   // ses yeux tombent donc a la rangee 5 — un toit plus bas les cachait, et on
   // se faisait servir par un chapeau. Le comptoir, lui, couvre ses jambes.
-  cabane_fruits_de_mer: { w: 30, h: 28, ancre: [15, 27], r: 11, sol: [13, 3], solide: true, peindre: function (ctx, w, h) {
+  cabane_fruits_de_mer: { arrete: 2.6, w: 30, h: 28, ancre: [15, 27], r: 11, sol: [13, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#1d666d'; ctx.fillRect(0, 0, 30, 4);                                   // le toit
     ctx.fillStyle = '#c2f0ea'; for (let x = 2; x < 30; x += 6) ctx.fillRect(x, 0, 3, 4);     // ses rayures
     ctx.fillStyle = '#14454a'; ctx.fillRect(0, 4, 30, 1);

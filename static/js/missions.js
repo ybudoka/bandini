@@ -1180,6 +1180,10 @@ const Missions = (function () {
   }
 
   function nouveauJour() {
+    // ⚠️ La ville se repare AU LEVER DU JOUR, pas dans la minute : ce qu'on a
+    // casse reste casse, et le quartier porte ses blessures jusqu'au matin.
+    // C'est ce qui fait qu'une nuit de folie SE VOIT.
+    Entites.reparerLeDecor();
     revenusDuJour();
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
