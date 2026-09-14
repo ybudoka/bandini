@@ -151,7 +151,10 @@ def test_une_entree_sur_trois_porte_une_auto(graine):
 
     carte._Chantier._terrain_de_banlieue = espion
     try:
-        chantier.eaux(); chantier.rues(); chantier.croisements(); chantier.ilots()
+        chantier.eaux()
+        chantier.rues()
+        chantier.croisements()
+        chantier.ilots()
     finally:
         carte._Chantier._terrain_de_banlieue = vrai
     assert vues["entrees"] >= 15, f"{vues['entrees']} entrées seulement (graine {graine})"
