@@ -3687,3 +3687,54 @@ def test_le_velo_sonne_au_bouton_du_klaxon(banc):
     }""")
     assert r["velo"] == {"etiquette": "SONNETTE", "sons": ["sonnette"]}, r["velo"]
     assert r["auto"] == {"etiquette": "KLAXON", "sons": ["klaxon"]}, r["auto"]
+
+
+def test_les_etoiles_de_recherche_se_lisent(banc):
+    """⚠️ Demande de Martin : « les étoiles de police plus grosses, jaunes et
+    au centre de l'écran. » Elles etaient des caracteres « ★ » de la police
+    5 x 7 tires a l'echelle 1, dans la colonne du coin haut-droit — SOUS un
+    montant d'argent trace a l'echelle 2. La chose la plus importante d'une
+    poursuite etait le plus petit element de l'ecran, dans un coin, en blanc.
+
+    Trois regles tiennent maintenant : elles sont plus grandes que le texte du
+    HUD, elles sont en haut au centre, et une allumee se distingue d'une
+    eteinte sans compter (l'eteinte est CREUSE, pas un point).
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.recherche.etoiles = 3;
+        L.Jeu.rendre();
+        const ancres = L.Hud.ancres();
+        const etoiles = ancres.find(function (a) { return a.nom === 'etoiles'; });
+        const objectif = ancres.find(function (a) { return a.nom === 'objectif'; });
+        return {
+            etoiles: etoiles, objectif: objectif || null, VW: L.VW,
+            hauteurTexte: 7,
+                sousEtoiles: objectif ? objectif.y >= etoiles.y + etoiles.h : null,
+            largeurEtoile: L.ETOILE[0].length, hauteurEtoile: L.ETOILE.length,
+            creuse: L.ETOILE.join('').indexOf('c') >= 0 && L.ETOILE.join('').indexOf('k') >= 0,
+        };
+    }""")
+    e = r["etoiles"]
+    assert e, "aucune ancre d'etoiles : le HUD ne les dessine plus"
+    assert e["h"] > r["hauteurTexte"], \
+        f"les etoiles font {e['h']} px de haut, le texte du HUD en fait {r['hauteurTexte']}"
+    centre = e["x"] + e["l"] / 2
+    assert abs(centre - r["VW"] / 2) <= 1, f"les etoiles ne sont pas centrees ({centre} pour {r['VW'] / 2})"
+    assert e["y"] < 12, "les etoiles ne sont pas en haut"
+    assert r["creuse"], "l'etoile n'a ni corps ni contour : allumee et eteinte se confondraient"
+    if r.get("objectif"):
+        assert r["sousEtoiles"], "la ligne d'objectif chevauche les etoiles"
+
+
+def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):
+    """⚠️ Le dore #e8b33c est deja celui de l'argent et de « ce qui est a toi »
+    sur la carte. Deux choses differentes de la meme couleur dans le meme coin
+    ne se lisent plus — c'est aussi pour ca que les etoiles ont demenage."""
+    import pathlib
+
+    racine = pathlib.Path(__file__).resolve().parent.parent
+    source = (racine / "static" / "js" / "hud.js").read_text(encoding="utf-8")
+    bloc = source[source.index("const ETOILE_ALLUMEE"):source.index("const ETOILE_L")]
+    assert "#e8b33c" not in bloc, "l'etoile reprend le dore de l'argent"
+    assert "ETOILE_FLASH" in source, "le clignotement rouge du changement de palier a disparu"

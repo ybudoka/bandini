@@ -575,6 +575,53 @@ const Hud = (function () {
     return Atlas.texte(ctx, s, x, y, couleur, echelle);
   }
 
+  //: Les trois palettes de l'etoile de recherche. ⚠️ Le jaune est a ELLE : le
+  //: dore #e8b33c est deja celui de l'argent et de « ce qui est a toi » sur la
+  //: carte, et deux choses differentes de la meme couleur ne se lisent plus.
+  //: L'eteinte est CREUSE (un contour, pas de corps) : on doit lire « trois
+  //: sur cinq » d'un coup d'oeil, sans compter.
+  const ETOILE_ALLUMEE = { p: '#fff3a8', c: '#ffd21e', k: '#6b4a00' };
+  const ETOILE_ETEINTE = { p: '#3a3a48', c: null, k: '#4a4a5c' };
+  const ETOILE_FLASH = { p: '#ffd9d2', c: '#ff5a4e', k: '#6b1008' };
+  const ETOILE_L = ETOILE[0].length;
+  const ETOILE_H = ETOILE.length;
+
+  /** Une etoile cuite une fois par palette : un seul `drawImage` ensuite. */
+  function etoileCuite(cle, pal) {
+    return Atlas.cuirePeintre('etoile|' + cle, ETOILE_L, ETOILE_H, function (c) {
+      for (let y = 0; y < ETOILE_H; y++) {
+        const ligne = ETOILE[y];
+        let x = 0;
+        while (x < ligne.length) {
+          const ch = ligne[x];
+          let fin = x + 1;
+          while (fin < ligne.length && ligne[fin] === ch) fin++;
+          if (ch !== '.' && pal[ch]) { c.fillStyle = pal[ch]; c.fillRect(x, y, fin - x, 1); }
+          x = fin;
+        }
+      }
+    });
+  }
+
+  /** La rangee d'etoiles, en haut au centre. Rend sa boite, pour que la ligne
+      d'objectif sache descendre dessous. */
+  function dessinerEtoiles(ctx) {
+    const max = B.defs.recherche.etoiles_max;
+    const flash = B.recherche.flash > 0 && (B.recherche.flash >> 2) % 2 === 0;
+    const pas = ETOILE_L + 2;
+    const l = max * pas - 2;
+    const x0 = Math.round((VW - l) / 2);
+    for (let i = 0; i < max; i++) {
+      const allumee = i < B.recherche.etoiles;
+      const pal = !allumee ? ETOILE_ETEINTE : (flash ? ETOILE_FLASH : ETOILE_ALLUMEE);
+      const cle = !allumee ? 'eteinte' : (flash ? 'flash' : 'allumee');
+      ctx.drawImage(etoileCuite(cle, pal), x0 + i * pas, 4);
+      B.stats.images++;
+    }
+    noter('etoiles', x0, 4, l, ETOILE_H);
+    return { x: x0, y: 4, l: l, h: ETOILE_H };
+  }
+
   function barre(ctx, x, y, l, h, frac, couleur) {
     ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 1, l + 2, h + 2);
     ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x, y, l, h);
@@ -888,14 +935,14 @@ const Hud = (function () {
       const largeurArgent = Atlas.largeurTexte(argent, 2);
       texte(ctx, argent, VW - marge - largeurArgent, 6, '#e8b33c', 2);
       noter('argent', VW - marge - largeurArgent, 6, largeurArgent, 10);
-      let etoiles = '';
-      for (let i = 0; i < B.defs.recherche.etoiles_max; i++) etoiles += i < B.recherche.etoiles ? '★' : '.';
-      const flash = B.recherche.flash > 0 && (B.recherche.flash >> 2) % 2 === 0;
-      texte(ctx, etoiles, VW - marge - Atlas.largeurTexte(etoiles, 1), 20, flash ? '#ff5a4e' : (B.recherche.etoiles ? '#ffffff' : '#8a8698'), 1);
+      // ⚠️ Les etoiles ont quitte cette colonne pour le HAUT AU CENTRE : en
+      // poursuite, c'est L'information, et elle etait deux fois plus petite
+      // que le montant d'argent juste au-dessus.
+      const boiteEtoiles = dessinerEtoiles(ctx);
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
-      texte(ctx, heure, VW - marge - largeurHeure, 28, '#cdc6e6', 1);
-      noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 13);
+      texte(ctx, heure, VW - marge - largeurHeure, 20, '#cdc6e6', 1);
+      noter('heure', VW - marge - largeurHeure, 20, largeurHeure, 7);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;
       if (!B.interieur) noter('minicarte', MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
@@ -927,8 +974,11 @@ const Hud = (function () {
       const ligne = !B.interieur ? Histoire.ligneObjectif() : null;
       if (ligne) {
         const l = Atlas.largeurTexte(ligne, 1);
-        texte(ctx, ligne, (VW - l) / 2, 6, B.defi ? '#7fc4ff' : '#e8b33c', 1);
-        noter('objectif', (VW - l) / 2, 6, l, 7);
+        // ⚠️ Sous les etoiles, jamais dessus : les deux se disputaient le haut
+        // au centre, et c'est le niveau de recherche qui doit gagner.
+        const y = boiteEtoiles.y + boiteEtoiles.h + 2;
+        texte(ctx, ligne, (VW - l) / 2, y, B.defi ? '#7fc4ff' : '#e8b33c', 1);
+        noter('objectif', (VW - l) / 2, y, l, 7);
       }
       const gps = !B.interieur && j ? Histoire.cible() : null;
       if (gps) {

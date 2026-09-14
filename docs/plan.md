@@ -64,7 +64,7 @@ ne bougent pas quand l'ordre de travail change.
 | Rampes vraiment prenables | **livré** (13 sept. 2026) | demande de Martin : `ELAN` et `RECEPTION` sont des nombres de tuiles, alors que la portée d'un saut est **quadratique en vitesse**. La moto vole **126 px** pour 96 px de réception exigée — et c'est le char du *Grand Saut*. Il manque aussi le **freinage** (75 px de plus) |
 | Un saut qu'on ne voit pas | **livré** (13 sept. 2026) | bug de Martin (« les rampes n'ont pas l'air de fonctionner »). ⚠️ Elles fonctionnent : le saut mesure **7,8 px** pour une berline (2,0 px pour un vélo) et dure **0,3 s**, sur des tuiles de 16 px. Et l'ombre est un rectangle **fixe** de 20 × 10 qui ne rétrécit ni ne s'éloigne — elle ne raconte aucune hauteur |
 | L'endurance du Faubourg | **P2** **correctif** à faire | demande de Martin : la course doit être **gratuite**, le sprint seul coûte. ⚠️ Mesuré : un souffle vaut **4,2 s** (33 tuiles) sur une ville de **421**, et la vitesse soutenable (1,54) est **sous** celle du policier (1,9). Trois vitesses, et le policier remonte à la course — sinon on s'échappe à pied pour toujours |
-| Étoiles de recherche illisibles | **P2** **correctif** à faire | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
+| Étoiles de recherche illisibles | **livré** (13 sept. 2026) | demande de Martin : plus grosses, jaunes, au centre. ⚠️ Ce sont des `★` de texte à l'échelle **1** dans un coin, sous un montant d'argent à l'échelle **2** — la chose la plus importante d'une poursuite est le plus petit élément de l'écran |
 | Clôture nord-sud trop large | **livré** (13 sept. 2026) | demande de Martin : elles ont été redressées **par une rotation**, donc le nord-sud est un panneau de 7 px vu à plat. Vue d'en haut, une clôture nord-sud se voit **par la tranche** — la règle est déjà écrite pour les façades et les meubles. ⚠️ Le juge actuel exige la rotation : il verrouille le défaut |
 | La nuit ne se vide pas | **livré** (13 sept. 2026) | demande de Martin. ⚠️ Le rythme de nuit existe depuis M8 mais ne fait presque rien : le Faubourg garde **9 véhicules sur 9** (12 × 0,75 = 9, pile le plafond) et **19 piétons sur 26**. Le plafond s'applique **après** le rythme au lieu d'avant, et la police n'en suit aucun |
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
@@ -435,7 +435,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | Rampes vraiment prenables | **livré** : élan, portée et freinage **calculés** depuis la fiche du char au lieu d'être écrits en tuiles ; la trajectoire rejouée par un test pour chaque rampe posée | réussir Le Grand Saut en moto et retomber sur la rue, pas dans un mur |
 | — | Un saut qu'on ne voit pas | **livré** : impulsion et gravité réglées **avec** la réception, le vélo qui ne décolle plus, ombre à la taille du char qui s'éloigne et pâlit avec l'altitude (comme celle de l'hélico) | voir un char quitter le sol et retomber, et savoir de combien |
 | — | **P2** L'endurance du Faubourg | trois vitesses (marche / course gratuite / sprint coûteux), policier aligné sur la course, renommage `joueur_course`, barre qui s'efface quand elle est pleine | traverser la ville sans gérer une barre ; ne plus semer un agent en marchant vite |
-| — | **P2** Étoiles de recherche illisibles | étoile **dessinée** (pas un caractère agrandi), jaune à elle, en haut au centre avec la ligne d'objectif qui descend, étoiles éteintes **creuses**, clignotement rouge gardé, ancre tactile réenregistrée | lire son niveau de recherche sans quitter la route des yeux |
+| — | Étoiles de recherche illisibles | **livré** : étoile **dessinée** (pas un caractère agrandi), jaune à elle, en haut au centre avec la ligne d'objectif qui descend, étoiles éteintes **creuses**, clignotement rouge gardé, ancre tactile réenregistrée | lire son niveau de recherche sans quitter la route des yeux |
 | — | Clôture nord-sud trop large | **livré** : brin nord-sud réduit à son épaisseur (trait, chapeaux de poteaux, liseré d'ombre), poteau à la jointure des coins, juge retourné : le nord-sud est **plus mince**, pas une rotation | une clôture verticale qui a l'air debout, pas couchée |
 | — | La nuit ne se vide pas | **livré** : rythmes de nuit abaissés, plafond appliqué **avant** le rythme, police soumise au rythme, chars stationnés redistribués | rouler dix secondes sans croiser personne à 3 h du matin |
 | — | Arbres dans les sentiers | **livré** : une allée se **réserve** en se traçant (arbres, bancs et buissons réglés d'un coup), et le futur sentier de banlieue aussi | traverser un parc en ligne droite par son allée, sans contourner un tronc |
@@ -504,7 +504,6 @@ ordre-là.
 |---|---|---|---|---|
 | **P1** | ajout | M9 Le parc et les boulots | 2 | ⚠️ **Les sprites sont livrés — le catalogue ne ment plus.** ⚠️ **Toutes les fiches sont lues.** Restent les boulots au klaxon, le comptoir de fourrière, la radio du camion, et le sport et le luxe. Prérequis de M10 |
 | **P2** | **correctif** | L'endurance est restée celle du Faubourg | 2 | ⚠️ M8 a **quintuplé la ville** sans y revenir : un souffle vaut 33 tuiles sur 421, et le policier court plus vite que la vitesse qu'on peut tenir |
-| **P2** | **correctif** | Les étoiles de recherche, grosses, jaunes et au centre | 1 | ⚠️ l'argent est dessiné **deux fois plus gros** que le niveau de recherche, qui est la seule chose qui compte en poursuite |
 | **P2** | ajout | Le carnet (mission, journal, répertoire) | 2 | **personne ne sait ce que le jeu sait faire** ; toutes les données existent déjà |
 | **P2** | ajout | La musique par district, en poursuite et en bagarre | 3 | une seule musique de fond pour cinq districts ; ⚠️ le vrai travail est **l'échelle de qui gagne**, pas les pistes |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
@@ -1463,7 +1462,7 @@ armes à feu : **la vitesse achète de la distance, jamais l'impunité**.
   un écart **borné** (le même calcul que pour le char rapide) ; et la durée d'un souffle se
   compare à la **taille de la ville**, pas à un nombre choisi une fois pour toutes.
 
-### Les étoiles de recherche, grosses, jaunes et au centre (**correctif**, taille 1)
+### Les étoiles de recherche, grosses, jaunes et au centre (**correctif**, taille 1) — **livré le 13 sept. 2026**
 
 *Demande de Martin :* « je veux les étoiles de police plus grosses, jaunes et au centre de
 l'écran. »

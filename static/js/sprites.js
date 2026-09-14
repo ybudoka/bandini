@@ -1357,6 +1357,32 @@ function peindreGrilleDecor(ctx, pal, grille) {
   }
 }
 
+/* L'etoile de recherche, DESSINEE et non ecrite.
+
+   ⚠️ C'etait un caractere « ★ » de la police 5 x 7 tire a l'echelle 1, range
+   dans la colonne du coin haut-droit — sous un montant d'argent trace a
+   l'echelle 2. La chose la plus importante d'une poursuite etait donc le plus
+   petit element de l'ecran, dans un coin, en blanc. C'etait a l'envers.
+
+   Un « ★ » agrandi donne une bouillie de blocs : il faut une vraie grille.
+   `p` est la pointe (le clair), `c` le corps, `k` le contour — trois lettres
+   pour qu'une etoile ALLUMEE et une etoile ETEINTE partagent le meme dessin
+   et ne different que par leur palette. On doit lire « trois sur cinq » d'un
+   coup d'oeil, sans compter : l'eteinte est donc CREUSE, pas un point. */
+const ETOILE = [
+  '.....k.....',
+  '....kpk....',
+  '....kpk....',
+  '...kkpkk...',
+  'kkkkccckkkk',
+  '.kccccccck.',
+  '..kccccck..',
+  '...kccck...',
+  '..kcckcck..',
+  '.kck...kck.',
+  'kk.......kk',
+];
+
 /* Le camion-restaurant, vu de trois quarts : un fourgon a caisse, l'enseigne
    sur le toit, la cheminee de la hotte qui fume, l'auvent raye au-dessus du
    guichet, le menu a la craie, le comptoir avec les frites et le gobelet, la

@@ -496,6 +496,7 @@ if (typeof window !== 'undefined') {
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
     Vehicules: Vehicules, Police: Police, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
+    ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,
     etatInitial: etatInitial, mulberry: mulberry, hash2: hash2,
     graine: function (n) { B.graine = n; B.rng = mulberry(n); },
