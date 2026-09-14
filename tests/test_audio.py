@@ -341,3 +341,25 @@ def test_un_bruitage_bref_ne_souffle_pas(echantillon, indice):
     rsb = float(pic.group(1)) - float(plancher.group(1))
     assert rsb >= audio.RSB_PLANCHER_DB, \
         f"{chemin.name} : {rsb:.0f} dB de rapport signal/bruit, ca souffle"
+
+
+def test_la_reserve_ne_compte_pas_comme_un_orphelin():
+    """Une generation ratee mais bonne se garde — sans etre chargee.
+
+    ⚠️ Ce juge tient un INVARIANT, pas un comportement : `orphelins()` liste
+    le dossier avec `iterdir()`, qui ne descend pas dans les sous-dossiers.
+    C'est la seule chose qui laisse vivre `static/audio/reserve/`. Le jour ou
+    quelqu'un passera a `rglob()` pour de bonnes raisons, ce juge tombera au
+    lieu de laisser `test_aucun_fichier_orphelin` reclamer la suppression de
+    toute la reserve.
+    """
+    reserve = audio.RACINE_STATIQUE / audio.DOSSIER / "reserve"
+    if not reserve.is_dir():
+        pytest.skip("pas de reserve pour l'instant")
+    gardes = {f.name for f in reserve.glob("*.mp3")}
+    assert gardes, "une reserve vide se supprime"
+    assert not (gardes & set(audio.orphelins())), \
+        "la reserve est reclamee comme orpheline : orphelins() descend-il dans les sous-dossiers ?"
+    # ⚠️ Et le jeu ne la telecharge pas : rien dans ce qu'on exporte ne la nomme.
+    declares = {nom for e in audio.exporter()["echantillons"] for nom in e["fichiers"]}
+    assert not (gardes & declares)

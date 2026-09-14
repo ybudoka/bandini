@@ -154,9 +154,16 @@ CATALOGUE: list[Echantillon] = [
        prompt="a car driving past at city speed on wet asphalt, tyre roar "
               "swelling and falling away with a doppler shift, close, "
               "no horn, no music"),
-    _e("passage_moto", "Moto qui passe", duree_s=2.0, volume=0.68, influence=0.45,
-       prompt="a motorcycle accelerating past on a city street, exhaust bark "
-              "with a doppler drop, close, no music"),
+    # ⚠️ Ce prompt disait « exhaust BARK », et le modele a rendu un CHIEN —
+    # Martin l'a entendu tout de suite. Un mot d'argot de sonorisation
+    # (« bark », « growl », « scream », « chirp ») est d'abord un cri d'animal :
+    # dans une description de bruitage, on ecrit ce qu'on veut entendre, pas le
+    # mot du metier. Le chien est garde dans `static/audio/reserve/`, et
+    # `influence` remonte a 0,6 : sur ce son-la, on ne laisse plus de place.
+    _e("passage_moto", "Moto qui passe", duree_s=2.0, volume=0.68, influence=0.6,
+       prompt="a motorcycle riding past at speed on a city street, deep engine "
+              "roar rising then falling away with a doppler drop, close, "
+              "no music, no voices, no animals"),
     _e("sonnette", "Sonnette de vélo", duree_s=1.0, volume=0.11, influence=0.75,
        prompt="a bicycle bell struck twice, bright ringing brass with a "
               "shimmering tail, close, no music"),
@@ -446,7 +453,13 @@ def manquants() -> list[tuple[Echantillon, int]]:
 
 
 def orphelins() -> list[str]:
-    """Les fichiers du dossier que plus personne ne reclame."""
+    """Les fichiers du dossier que plus personne ne reclame.
+
+    ⚠️ `iterdir()` NE DESCEND PAS dans les sous-dossiers, et c'est ce qui rend
+    `static/audio/reserve/` possible : une generation ratee mais bonne y est
+    gardee sans etre reclamee par le catalogue, ni chargee par le jeu. Passer
+    a `rglob()` exigerait de supprimer toute la reserve — voir son LISEZMOI.
+    """
     dossier = RACINE_STATIQUE / DOSSIER
     if not dossier.is_dir():
         return []
