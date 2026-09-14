@@ -12,20 +12,23 @@ def test_le_paquet_est_deterministe():
 
 
 def test_le_paquet_reste_leger():
-    """⚠️ Budget releve a 400 Ko bruts pour les cinq districts (M8).
+    """⚠️ Budget releve a 600 Ko bruts le 13 sept. 2026 (demande de Martin).
 
-    Mesure du 13 sept. 2026, avant M8 : 101 Ko bruts / 17 Ko gzip, dont 64 Ko
-    de carte pour 17 584 tuiles. La ville complete en fait 89 673 — d'ou les
-    ~315 Ko bruts d'aujourd'hui, et toujours moins de 70 Ko sur le fil, parce
-    que `sol` et `voie` sont des suites de glyphes que gzip adore.
+    Mesure du 13 sept. 2026 : 370 Ko bruts / 43 Ko gzip, dont 306 Ko de carte
+    pour 89 673 tuiles — et la carte ne pese que 26 Ko sur le fil, parce que
+    `sol` et `voie` sont des suites de glyphes que gzip adore.
 
-    C'est le gzip qui voyage : c'est donc lui qui a le budget serre. Si le brut
-    approche des 400 Ko, la carte sort du paquet (`/api/carte`, districts
-    charges autour du joueur) — pas avant : personne n'a encore prouve le
-    besoin de cette machinerie.
+    Le brut n'est qu'un INDICATEUR : ce qui coute, c'est le gzip qui voyage
+    et le temps de JSON.parse sur le telephone. Le plafond de 400 Ko etait a
+    30 Ko d'etre touche par n'importe quel ajout ; il ne mesurait plus rien.
+    Le gzip garde ses 70 Ko, et c'est lui le juge. Si le fil deborde, la
+    carte sort du paquet (`/api/carte`, districts charges autour du joueur)
+    — pas avant : personne n'a encore prouve le besoin de cette machinerie.
+    Et ce qui n'est pas de la geographie (les dialogues de M16) n'entre pas
+    ici du tout : une requete par mission, quand le telephone sonne.
     """
     paquet = definitions.construire()
-    assert paquet.taille < 400_000, f"{paquet.taille} octets : la carte enfle"
+    assert paquet.taille < 600_000, f"{paquet.taille} octets : le paquet enfle"
     sur_le_fil = len(gzip.compress(paquet.corps, 6))
     assert sur_le_fil < 70_000, f"{sur_le_fil} octets gzip : le telephone va sentir passer"
 
