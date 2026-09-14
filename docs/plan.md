@@ -71,7 +71,7 @@ ne bougent pas quand l'ordre de travail change.
 | Arbres dans les sentiers | **livré** (13 sept. 2026) | demande de Martin : `_parc()` sème arbres, bancs et buissons sur tout le rectangle, et une allée n'est ni solide ni routière — rien ne la protège. Or un arbre est **solide** : il barre le sentier qu'on a dessiné pour y passer |
 | Le décor se brise | **P2** **correctif** à faire | demande de Martin (poteaux, bancs, arbres, tout ce qui se brise). ⚠️ Aujourd'hui les chars **traversent** tout le décor sans ralentir, et le lampadaire est fantôme même à pied. Deux familles par la fiche — ce qui arrête, ce qui casse — des débris, un poteau à terre qui s'éteint, et la ville qui se souvient jusqu'au lendemain |
 | Les portes s'ouvrent | **P2** ajout à faire | demande de Martin : les piétons entrent et sortent des commerces, et les portes s'ouvrent pour de vrai. ⚠️ `placeDeNaissance` fait déjà sortir un piéton sur trois d'une porte — mais refuse la place si elle est **visible à l'écran**. Personne n'entre, et aucun battant ne bouge |
-| Le carnet | **P2** ajout à faire | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
+| Le carnet | **P2** ajout, **en cours** (13 sept. 2026) | demande de Martin : un rappel de la mission en cours, un journal de ce qui s'est passé, et un répertoire des personnages **rencontrés** — au menu Pause. ⚠️ « Journal » est déjà pris deux fois (Le Clairon, le carnet du poste de M11) |
 | Une seule musique pour toute la ville | **P2** ajout à faire | demande de Martin : une ambiance **par district**, un vrai enregistrement pour le titre (le thème en notes devient le filet, comme `musique.py` l'avait prévu), et des musiques d'**état** — poursuite à partir de 2★, bagarre de gang. ⚠️ Huit pistes = ~4 Mo : chargement paresseux obligatoire, et une échelle de priorité à écrire |
 | Trottoir et traverses de deux tuiles | **P3** **correctif** à faire | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **P3** **correctif** à faire | demande de Martin, mesurée : **les 41 intérieurs** dépassent l'empreinte de leur bâtiment — un logement de banlieue de 3 × 3 ouvre sur une pièce de 16 × 9. Une porte doit imposer une taille minimale au bâtiment, et il faut de **petites** pièces |
@@ -322,6 +322,10 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue |
 | `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`) | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille |
 | `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
+| `journal.py` | *Le Clairon de la Baie* : la manchette du matin, une règle par gravité — la première qui passe gagne, la dernière est le repli ; lue par le narrateur (M7) | règles ordonnées et repli ; `test_audio.py`, `test_histoire_js.py` |
+| `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
+| `musique.py` | la musique **écrite en notes** (thème du menu : notes, tempo, formes d'onde), jouée par `son.js` ; `scripts/musique_apercu.py` la rend en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix) |
+| `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
 | `definitions.py` | `assembler()` → `Paquet(corps, etag, taille)` construit une fois au démarrage | déterministe, < 200 Ko |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
@@ -393,23 +397,29 @@ La suite — 109 missions, 34 personnages, les cinq districts — est en **M16**
 ## Arborescence du dépôt `ybudoka/bandini`
 
 ```
-run.py  config.py  pyproject.toml (name bandini, version 0.0.0)  requirements.txt  uv.lock
+run.py  config.py  pyproject.toml (name bandini, version posée par le crochet post-commit)  requirements.txt  uv.lock
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
+.claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
+.vscode/  launch.json settings.json tasks.json
+docs/plan.md (ce document : la vision, les jalons, et cette carte)
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py
       bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/img/favicon.svg  static/js/ (14 fichiers ci-dessus)
+static/audio/  bruitages, radios, ambiances et voix (.mp3 ElevenLabs, recette dans app/audio.py)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette/audio,
         frame(n), touches, singe)  test_routes.py test_scores.py test_definitions.py
         test_vehicules.py test_armes.py test_economie.py test_recherche.py test_carte.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
-        test_musique.py test_devantures.py test_devantures_js.py
+        test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
+        test_interieurs_js.py test_rampes.py test_carte_du_depot.py
         test_navigateur.py
-scripts/  verifier_dependances.py  git-hooks/post-commit
+scripts/  verifier_dependances.py verifier_carte_du_depot.py audio_elevenlabs.py musique_apercu.py
+          git-hooks/post-commit
 deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
          systemd/bandini-gestiondojo.service.example nginx/bandini-gestiondojo.conf.example caddy/README.md
 .github/workflows/ci.yml
@@ -3018,6 +3028,7 @@ points dans les bois < 1:00) · *Le port à port* (n'importe quoi, du quai au ph
 - **JS déterministe via pytest + Node** (`harnais_js.py` + `banc.js`, `ENTREE` = le paquet Python réel) : intégrité des sprites, cercle-vs-tuiles, cône de vision, décroissance des ★, amendes, monter/descendre, trafic, physique, missions, sauvegarde v0 → repli, budget de rendu, singe (3 000 pas en CI, `BANDINI_SINGE_PAS=50000` en local).
 - **Playwright** (`test_navigateur.py`, fixture `serveur`) : 4 écrans (1280×720, 1024×768, 390×844, 844×390) ; aucune erreur console ; Jouer → état `jeu` ; clavier déplace ; tactile : commandes ≥ 64 px (pause 44), dans l'écran, sans chevauchement, glisser sur `#croix` déplace ; envoi de score.
 - **CI** (dépôt public) : job `rapide` (uv sync, dépendances synchronisées, ruff, pytest sans navigateur, `BANDINI_TESTS_OBLIGATOIRES=1`) puis `navigateur` (cache Chromium sur `uv.lock`), < 3 min.
+- **La carte du dépôt** (l'arborescence ci-dessus et les tableaux « Côté Python » / « Côté JS ») : `scripts/verifier_carte_du_depot.py` la compare aux fichiers que git suit, `tests/test_carte_du_depot.py` fait échouer la CI quand un fichier n'y est pas — et deux **gardes Claude Code** (`.claude/settings.json`) le rappellent plus tôt, là où corriger ne coûte rien : à l'écriture d'un fichier (PostToolUse `Write|Edit`) et avant `git commit` (PreToolUse `Bash`, qui lit le plan de l'**index**, pas celui de l'arbre — sinon la carte corrigée resterait sur le bureau). ⚠️ Pourquoi une garde et pas seulement un test : le 13 sept. 2026, trois tests, deux scripts et quatre modules existaient sans y être, et personne ne relit l'arborescence avant de committer. Un fichier **à venir** se note avec son jalon entre parenthèses sur sa ligne (`bd.py comptes.py (M14 — …)`) : c'est ce qui l'excuse d'être absent ; `static/audio/` se couvre d'un seul trait.
 
 ## Vérification de bout en bout
 
