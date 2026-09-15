@@ -306,21 +306,42 @@ const Son = (function () {
     plongeon: function () { if (!joue('plongeon')) { bruit(0.45, 0.5, 2500, 250); ton(300, 0.22, 'sine', 0.14, 0.25); bruit(0.16, 0.14, 9000, 4000); } },
     // La brassee : elle part a la DISTANCE parcourue, comme un pas.
     nage: function () { if (!joue('nage')) bruit(0.2, 0.14, 1300, 350); },
-    //: La borne defoncee : le CLAC du metal, puis de l'eau sous pression — un
-    //: bruit large et continu, tenu bas. ⚠️ Sans le clac, un jet qui demarre
-    //: n'a pas de cause ; sans le souffle, c'est un choc de plus.
-    //: La borne defoncee : le CLAC du metal, puis l'eau sous pression — un
-    //: bruit large et continu, tenu bas. ⚠️ Sans le clac, un jet qui demarre
-    //: n'a pas de cause ; sans le souffle, c'est un choc de plus.
+    //: La borne qui saute : le BOUCHON qui part, la tole qui cede, et l'eau
+    //: qui s'ouvre d'un coup. Une seule fois, a l'instant du bris.
     //:
-    //: ⚠️ ELLE N'A PAS SON PROPRE ECHANTILLON, et c'est un choix de budget :
-    //: le seau des bruitages est a 14 Ko de son plafond (voir le plan). Le
-    //: clac emprunte donc `choc`, qui est deja la et qui est exactement ca,
-    //: et l'eau est synthetisee. Le jour d'une seance ElevenLabs, un vrai
-    //: `borne_fontaine` prendra la place des deux lignes ci-dessous.
-    borne_fontaine: function () {
-      SFX.choc();
-      bruit(0.5, 0.45, 3200, 900);
+    //: ⚠️ **PAS LE `choc` D'UN ACCIDENT DE CHAR** (retour de Martin, 15 sept.
+    //: 2026 : « le son des bornes-fontaines brisées n'est pas correct »). Elle
+    //: jouait `SFX.choc()` — la tole froissee d'une collision — au bris ET
+    //: toutes les 24 images pendant les dix secondes du jet : **dix-sept
+    //: accidents de char pour une borne defoncee**. Et le premier etait un
+    //: doublon, parce que le char qui la renverse joue deja `choc` a la meme
+    //: image (`Vehicules.heurterDecor`). Le bruit de l'impact appartient a ce
+    //: qui a defonce ; la borne, elle, n'a que son bouchon et son eau.
+    //:
+    //: ⚠️ Elle n'a pas son propre echantillon, et c'est un choix de budget :
+    //: le seau des bruitages est a 14 Ko de son plafond (voir le plan). Ces
+    //: deux-la sont donc ENTIEREMENT synthetises — et ils ne reclament rien au
+    //: catalogue : le navigateur ne demande un echantillon que pour un slug
+    //: que Python declare, et un juge le tient. Le jour d'une seance
+    //: ElevenLabs, la fiche gagnera ses deux entrees et ces fonctions leur
+    //: repli, ensemble.
+    borne_cassee: function () {
+      ton(760, 0.05, 'square', 0.14, 2.6);        // le bouchon qui saute
+      bruit(0.12, 0.28, 5200, 1400);              // la tole qui cede
+      bruit(0.55, 0.40, 2400, 800);               // l'eau qui s'ouvre d'un coup
+    },
+    /** Le jet, TENU tant que la gerbe vit : un souffle large et continu dont
+        le volume suit la distance (`force`, 0 = on se tait).
+
+        ⚠️ **Un jet est un son CONTINU, pas un son rejoue.** C'est le meme
+        patron que `jet()` pour l'extincteur : appele A CHAQUE IMAGE avec la
+        verite du moment — plus de gerbe, trop loin, dans une piece : toutes
+        les raisons de se taire passent par la. Faute d'echantillon, la
+        continuite se fait par recouvrement : un souffle de 0,2 s toutes les
+        0,1 s, donc jamais de trou. */
+    borne_jet: function (force) {
+      const f = Math.max(0, Math.min(1, force || 0));
+      if (f > 0 && B.t % 6 === 0) bruit(0.2, 0.1 * f, 2000, 700);
     },
     // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
     couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },

@@ -5731,7 +5731,7 @@ def test_une_borne_defoncee_crache_et_ca_s_entend(banc):
                  fiche: { casse: fiche.casse, solide: fiche.solide },
                  jet: !!jet, gouttes: apres - avant, encore: encore,
                  tari: !L.B.entites.find(function (e) { return e.type === 'jet_eau'; }),
-                 son: !!(L.Son && L.Son.SFX && L.Son.SFX.borne_fontaine) };
+                 son: !!(L.Son && L.Son.SFX && L.Son.SFX.borne_cassee && L.Son.SFX.borne_jet) };
     }""")
     assert r["bornes"] > 0, "aucune borne-fontaine dans la ville"
     assert r["fiche"]["casse"] and r["fiche"]["solide"],         "une borne qu'on ne peut pas defoncer n'est qu'une tache de peinture"
@@ -5740,7 +5740,11 @@ def test_une_borne_defoncee_crache_et_ca_s_entend(banc):
     assert r["gouttes"] > 0, f"le jet ne fait aucune goutte : {r['gouttes']}"
     assert r["encore"] is True, "le jet s'arrete dans la seconde"
     assert r["tari"] is True, "⚠️ le jet ne tarit jamais : la rue reste une fontaine"
-    assert r["son"] is True, "le jet n'a pas de bruit"
+    # ⚠️ DEUX sons, et c'est le correctif du 15 sept. 2026 : le bouchon qui
+    # saute (une fois) et le souffle qui se TIENT. Un seul, et c'est le défaut
+    # qu'on vient de réparer — le choc d'un accident de char rejoué seize fois.
+    # Ce qu'ils jouent vraiment est jugé dans `test_son_js.py`.
+    assert r["son"] is True, "le bris et le jet n'ont pas chacun leur bruit"
 
 
 def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):

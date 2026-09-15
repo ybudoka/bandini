@@ -290,6 +290,8 @@ const Entites = (function () {
   //: reste une fontaine jusqu'au lendemain — le decor, lui, ne repousse qu'au
   //: `nouveauJour()`, mais l'eau, elle, s'arrete.
   const JET_EAU_IMAGES = 600;
+  //: Jusqu'ou une gerbe de borne s'entend. C'est fort, une borne ouverte.
+  const JET_EAU_PORTEE = 260;
 
   const DEBRIS_MAX = 40;
 
@@ -364,7 +366,9 @@ const Entites = (function () {
     // : on ne repeint pas une tuile a chaque image pour un effet qui passe.
     if (e.decor === 'borne_fontaine') {
       creer('jet_eau', e.x, e.y, { minuterie: JET_EAU_IMAGES, dessine: false, solide: false, r: 0 });
-      Son.SFX.borne_fontaine();
+      // ⚠️ Le bouchon et l'eau qui s'ouvre — PAS le choc : celui-la appartient
+      // a ce qui l'a defoncee, et le char le joue deja a la meme image.
+      Son.SFX.borne_cassee();
     }
     void d;
     return true;
@@ -2659,6 +2663,11 @@ const Entites = (function () {
   function maj() {
     indexer();
     let actifs = 0;
+    //: La gerbe la plus proche, en force (0 = aucune a portee). ⚠️ Le souffle
+    //: d'une borne est un son CONTINU : on le TIENT apres la boucle, une fois
+    //: par image, au lieu de le rejouer — il rejouait le choc d'un accident de
+    //: char toutes les 24 images pendant dix secondes.
+    let jetProche = 0;
     for (let i = B.entites.length - 1; i >= 0; i--) {
       const e = B.entites[i];
       if (!e.actif) continue;
@@ -2675,13 +2684,17 @@ const Entites = (function () {
           particule(e.x + (B.rng() - 0.5) * 4, e.y - 4, Math.sin(a) * 1.1, -0.35 - B.rng() * 0.3,
                     18 + B.rng() * 14, B.rng() < 0.4 ? '#cfe6f5' : '#7fb6d9', 2, 0.16);
         }
-        if (e.t % 24 === 0) Son.SFX.borne_fontaine();
+        // ⚠️ Le souffle ne se REJOUE pas : il se TIENT (`Son.SFX.borne_jet`,
+        // une fois par image, apres la boucle). Ici on ne fait que dire
+        // laquelle des gerbes s'entend le plus fort.
+        jetProche = Math.max(jetProche, 1 - Math.hypot(e.x - B.joueur.x, e.y - B.joueur.y) / JET_EAU_PORTEE);
       }
       else if (e.type === 'ramassage'
                && (e.t > 3600 || dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI)) {
         retirer(e);
       }
     }
+    Son.SFX.borne_jet(jetProche);
     // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
     // date du debut de l'image, et demeler la foule sur des positions perimees
     // laisse passer exactement les paires qui viennent de se rejoindre.

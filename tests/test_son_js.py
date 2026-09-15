@@ -899,3 +899,94 @@ def test_le_musicien_de_rue_ne_se_coupe_pas_a_chaque_image(banc):
     assert r["coupures"] == 0, \
         "le musicien est coupe %d image(s) sur 11 alors qu'on demande a chaque image" % r["coupures"]
     assert r["laissee"] is None, "la toune continue toute seule une fois le gars laisse derriere"
+
+
+# --- La borne-fontaine defoncee ----------------------------------------------
+
+
+def test_une_borne_defoncee_ne_joue_pas_un_accident_de_char(banc):
+    """⚠️ **Retour de Martin : « le son des bornes-fontaines brisées n'est pas
+    correct ».** Mesuré : la borne jouait `SFX.choc` — la tôle froissée d'une
+    collision — au bris **et toutes les 24 images pendant les dix secondes du
+    jet**. Dix-sept accidents de char pour une borne. Et le premier était un
+    doublon : le char qui la renverse joue déjà `choc` à la même image.
+
+    Le bruit de l'impact appartient à ce qui a défoncé. La borne, elle, n'a que
+    son bouchon et son eau — et **une seule fois**."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(17);
+        const j = L.B.joueur;
+        const borne = L.B.entites.find(function (e) { return e.type === 'decor' && e.decor === 'borne_fontaine' && !e.brise; });
+        if (!borne) return { pasDeBorne: true };
+        j.x = borne.x; j.y = borne.y + 20; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // On compte ce que le jeu DEMANDE a jouer, sans toucher au son.
+        const compte = {};
+        ['choc', 'borne_cassee', 'borne_jet'].forEach(function (nom) {
+            const vrai = L.Son.SFX[nom];
+            L.Son.SFX[nom] = function () { compte[nom] = (compte[nom] || 0) + 1; return vrai.apply(null, arguments); };
+        });
+        L.Entites.briser(borne);
+        const auBris = { choc: compte.choc || 0, casse: compte.borne_cassee || 0 };
+        // Toute la vie de la gerbe, et un peu plus.
+        o.frame(660);
+        const jets = L.B.entites.filter(function (e) { return e.type === 'jet_eau'; }).length;
+        return { auBris: auBris, choc: compte.choc || 0, casse: compte.borne_cassee || 0, jets: jets };
+    }""")
+    assert not r.get("pasDeBorne"), "la ville n'a pas de borne-fontaine"
+    assert r["auBris"]["casse"] == 1, "la borne ne fait aucun bruit en sautant : %s" % r
+    assert r["auBris"]["choc"] == 0, "casser une borne joue le choc d'un accident de char : %s" % r
+    assert r["casse"] == 1, "le bouchon saute plus d'une fois : %s" % r
+    assert r["choc"] == 0, "le jet rejoue un choc de tôle pendant qu'il coule : %s" % r
+    assert r["jets"] == 0, "la gerbe ne s'arrête jamais : %s" % r
+
+
+def test_le_jet_d_une_borne_est_tenu_et_suit_la_distance(banc):
+    """⚠️ Un jet est un son **continu**, pas un son rejoué : il se tient à
+    chaque image avec la vérité du moment (plus de gerbe, trop loin, dans une
+    pièce), exactement comme celui de l'extincteur. Et il se tait quand la
+    gerbe meurt — sans ça, une borne cassée en début de partie sifflerait
+    jusqu'à la fin."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(17);
+        const j = L.B.joueur;
+        const borne = L.B.entites.find(function (e) { return e.type === 'decor' && e.decor === 'borne_fontaine' && !e.brise; });
+        if (!borne) return { pasDeBorne: true };
+        j.x = borne.x; j.y = borne.y + 20; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        const forces = [];
+        const vrai = L.Son.SFX.borne_jet;
+        L.Son.SFX.borne_jet = function (f) { forces.push(f); return vrai.apply(null, arguments); };
+        o.frame(10);
+        const avant = forces.slice();
+        L.Entites.briser(borne);
+        forces.length = 0;
+        o.frame(30);
+        const pres = forces.slice();
+        // On s'eloigne : le souffle baisse, puis se tait.
+        forces.length = 0;
+        j.x = borne.x + 200; j.y = borne.y; L.Monde.centrerCamera(j.x, j.y);
+        o.frame(5);
+        const loin = forces.slice();
+        forces.length = 0;
+        j.x = borne.x + 900; L.Monde.centrerCamera(j.x, j.y);
+        o.frame(5);
+        const tresLoin = forces.slice();
+        // La gerbe meurt : plus un souffle.
+        j.x = borne.x; j.y = borne.y + 20; L.Monde.centrerCamera(j.x, j.y);
+        o.frame(640);
+        forces.length = 0;
+        o.frame(5);
+        return { avant: avant, pres: pres, loin: loin, tresLoin: tresLoin, apres: forces.slice() };
+    }""")
+    assert not r.get("pasDeBorne")
+    # ⚠️ « À chaque image, à une près » : une image peut se perdre dans un
+    # fondu ou un menu, et ce n'est pas ce qu'on mesure. Ce qu'on mesure, c'est
+    # la différence entre un son TENU (trente fois) et un son REJOUÉ (l'ancien :
+    # une fois toutes les 24 images, donc une ou deux).
+    assert max(r["avant"]) == 0, "ça souffle sans qu'aucune borne soit cassée : %s" % r["avant"][:4]
+    assert len(r["pres"]) >= 29, "le souffle n'est pas tenu à chaque image : %s appels pour 30 images" % len(r["pres"])
+    assert min(r["pres"]) > 0.5, "on est sur la borne et on ne l'entend presque pas : %s" % r["pres"][:4]
+    assert 0 < max(r["loin"]) < min(r["pres"]), "le souffle ne baisse pas avec la distance : %s" % r["loin"][:4]
+    assert max(r["tresLoin"]) == 0, "on entend la borne à neuf cents pixels : %s" % r["tresLoin"][:4]
+    assert max(r["apres"]) == 0, "la gerbe est morte et le souffle continue : %s" % r["apres"]
