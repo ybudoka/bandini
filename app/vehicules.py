@@ -2,7 +2,7 @@
 
 Le navigateur ne connait aucune de ces valeurs : il recoit ce catalogue et
 conduit avec. Les unites sont celles du moteur : pixels par image (60 images
-par seconde), radians par image pour le braquage, points de vie.
+par seconde), pixels pour le rayon de braquage, points de vie.
 
 `phase` : 1 = present dans la premiere version (le navigateur a son sprite),
 2 = vague suivante. Un test verifie que chaque vehicule de phase 1 a un sprite.
@@ -49,7 +49,7 @@ class Vehicule(TypedDict):
     acceleration: float
     frein: float
     friction: float
-    braquage: float
+    rayon_braquage: int
     adherence: float
     adherence_frein: float
     masse: float
@@ -92,7 +92,7 @@ CLASSES_A_PORTIERES = ("auto", "camion")
 AVERTISSEURS = ("klaxon", "sonnette")
 
 
-def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, freq, couleurs,
+def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
@@ -101,8 +101,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
         frein=round(accel * 2, 3), friction=0.995 if eau else 0.985,
-        braquage=braquage,
-        adherence=adherence if adherence is not None else (0.12 if not eau else 0.05),
+        rayon_braquage=rayon,
+        adherence=adherence if adherence is not None else (0.30 if not eau else 0.05),
         adherence_frein=0.035,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
@@ -117,14 +117,14 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, braquage, vie, places, prix, fr
 #: clandestin de Ti-Guy pour un vehicule PROPRE ; la revente d'un vehicule vole
 #: rapporte `economie.VENTE_FRACTION` de ce prix.
 CATALOGUE: list[Vehicule] = [
-    _v("auto", "Berline", "auto", 28, 14, 4.0, 0.06, 0.045, 100, 4, 600, 0.40,
+    _v("auto", "Berline", "auto", 28, 14, 4.0, 0.06, 22, 100, 4, 600, 0.40,
        ["#c0392b", "#2c3e50", "#ecf0f1", "#27ae60", "#8e44ad", "#d35400"], "auto",
        alarme=False, radio="la_brume"),
-    _v("taxi", "Taxi", "auto", 28, 14, 3.8, 0.058, 0.047, 110, 4, 700, 0.12,
+    _v("taxi", "Taxi", "auto", 28, 14, 3.8, 0.058, 21, 110, 4, 700, 0.12,
        ["#f1c40f"], "taxi", boulot="taxi", radio="taxi_radio"),
     # ⚠️ La pizza se livre en moto, et c'est ce qui fait le boulot : le char le
     # plus rapide du jeu est aussi celui dont on tombe au premier choc.
-    _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 0.07, 40, 2, 450, 0.15,
+    _v("moto", "Moto", "moto", 20, 8, 5.2, 0.09, 14, 40, 2, 450, 0.15,
        ["#1a1a1a", "#c0392b", "#2980b9"], "moto", ejecte=True, boulot="pizza",
        radio="le_choc", plateau=True),
     # ⚠️ Le velo est un vehicule comme un autre : il suit la rue, on peut le
@@ -132,10 +132,10 @@ CATALOGUE: list[Vehicule] = [
     # ⚠️ `reservoir=False` : un velo n'a pas d'essence, donc il ne brule pas et
     # n'explose pas. C'est le SEUL du catalogue dans ce cas, et c'est le seul
     # endroit ou ca se decide.
-    _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 0.085, 30, 1, 120, 0.18,
+    _v("velo", "Vélo", "velo", 16, 8, 2.0, 0.05, 12, 30, 1, 120, 0.18,
        ["#2980b9", "#c0392b", "#27ae60", "#f1c40f"], "velo", ejecte=True, reservoir=False,
        klaxon="sonnette", plateau=True),
-    _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 0.05, 150, 4, 2500, 0.0,
+    _v("police", "Auto-patrouille", "auto", 28, 14, 4.4, 0.07, 20, 150, 4, 2500, 0.0,
        ["#ffffff"], "police", police=True, sirene=True, alarme=True, radio="dix_quatre"),
     # --- M9, le parc automobile ------------------------------------------
     # ⚠️ `cercles` n'est pas un reglage de confort : la chaine doit COUVRIR la
@@ -143,18 +143,18 @@ CATALOGUE: list[Vehicule] = [
     # moto entre dans l'autobus. Il en faut au moins `longueur / largeur`
     # (juge `test_la_chaine_de_cercles_ne_laisse_aucun_trou`) — d'ou les cinq
     # de l'autobus, « deux de plus » que les trois de tout le monde.
-    _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 0.03, 300, 2, 1200, 0.08,
+    _v("camion", "Camion", "camion", 40, 16, 2.8, 0.03, 33, 300, 2, 1200, 0.08,
        ["#7f8c8d", "#c0392b", "#2c3e50"], "camion", masse=3.0, cercles=4,
-       defonce=0.75, radio="station_camion"),
-    _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 0.025, 250, 12, 1500, 0.04,
-       ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7),
+       defonce=0.75, radio="station_camion", adherence=0.22),
+    _v("autobus", "Autobus", "camion", 48, 16, 2.6, 0.028, 40, 250, 12, 1500, 0.04,
+       ["#2980b9"], "autobus", masse=3.2, cercles=5, defonce=0.7, adherence=0.22),
     # ⚠️ L'ambulance SOIGNE (2 PV par seconde au volant) — elle ne ressuscite
     # personne : un blesse mort reste mort, et le boulot est perdu.
-    _v("ambulance", "Ambulance", "auto", 32, 15, 3.6, 0.05, 0.04, 180, 3, 1400, 0.04,
+    _v("ambulance", "Ambulance", "auto", 32, 15, 3.6, 0.05, 25, 180, 3, 1400, 0.04,
        ["#ffffff"], "ambulance", sirene=True, alarme=True, masse=1.4, soigne=2.0,
        boulot="ambulance"),
-    _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 0.035, 220, 2, 1300, 0.05,
-       ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4,
+    _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
+       ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),
     # --- Le haut de gamme : deux chars qu'on vole EXPRES ------------------
     # ⚠️ Tout le reste du parc est utilitaire — on le prend parce qu'il sert.
@@ -164,24 +164,24 @@ CATALOGUE: list[Vehicule] = [
     #
     # ⚠️ `rare=True` : ils ne naissent que dans les districts qui les
     # declarent. C'est la, et pas dans ces nombres, que se joue leur rarete.
-    _v("sport", "Coupé sport", "auto", 26, 13, 4.8, 0.085, 0.055, 75, 2, 3200, 0.02,
+    _v("sport", "Coupé sport", "auto", 26, 13, 4.8, 0.085, 18, 75, 2, 3200, 0.02,
        ["#c0392b", "#ecf0f1", "#f1c40f", "#16a085"], "sport",
        alarme=True, rare=True, masse=0.85,
        # L'adherence basse est TOUT le caractere du char : il part en travers
        # au frein a main la ou une berline se contente de ralentir.
-       adherence=0.055),
-    _v("luxe", "Berline de luxe", "auto", 32, 15, 3.6, 0.042, 0.038, 220, 4, 5200, 0.02,
+       adherence=0.18),
+    _v("luxe", "Berline de luxe", "auto", 32, 15, 3.6, 0.042, 26, 220, 4, 5200, 0.02,
        ["#101014", "#2c3e50", "#6b4b2c"], "luxe",
        alarme=True, rare=True, masse=1.8,
        # ⚠️ Elle encaisse ET elle colle a la route : elle ne recompense pas la
        # conduite, elle recompense le vol. C'est la meilleure revente du jeu,
        # et `economie.prix_vente` le fait toute seule — le prix neuf suffit.
-       adherence=0.16, alarme_s=30.0),
+       adherence=0.40, alarme_s=30.0),
     # ⚠️ Le bateau reste en phase 2 : il demande une physique a part (l'eau n'a
     # ni voie ni trottoir) et des quais ou embarquer. Le plan le dit lui-meme —
     # « s'il coute plus qu'il ne donne, il tombe en v3 » — et le traversier de
     # M12 suffit a l'eau. Il garde donc sa fiche, sans sprite et sans trafic.
-    _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 0.025, 120, 4, 2000, 0.05,
+    _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 40, 120, 4, 2000, 0.05,
        ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=2),
 ]
 
@@ -253,6 +253,40 @@ PHYSIQUE = {
     # choisit pas.
     "saut_hauteur_min": 8,
     "portee_monter_px": 30,       # a quelle distance on peut ouvrir une portiere
+    # ⚠️ **LE BRAQUAGE EST UN RAYON, PAS UNE VITESSE DE ROTATION** (15 sept.
+    # 2026, demande de Martin : « ameliore les virages »). Le char tournait de
+    # `braquage` RADIANS PAR IMAGE, quelle que soit sa vitesse : le rayon du
+    # cercle qu'il decrit valait donc `vitesse / braquage` — il GRANDISSAIT
+    # avec la vitesse. Mesure sur une berline : 1,7 tuile au pas, **DIX TUILES
+    # a fond**. Un coin de rue en demande une et demie ; a pleine vitesse le
+    # coin etait tout simplement impossible, et `majTrafic` l'ecrivait deja
+    # noir sur blanc (« il ratait son virage et finissait sur le trottoir d'en
+    # face »).
+    #
+    # Une vraie auto ne marche pas comme ca : a volant fixe, elle decrit
+    # TOUJOURS LE MEME CERCLE, vite ou lentement. La rotation est donc
+    # proportionnelle a la vitesse (`vitesse / rayon_braquage`), et le rayon
+    # est ce que la fiche declare — en pixels, un nombre qu'on peut se figurer
+    # (22 px pour une berline : une tuile et demie).
+    #
+    # ⚠️ Le volant garde un peu plus de prise au pas (`braquage_lent`) et en
+    # perd a fond (`braquage_vite`) — c'est vrai d'une vraie auto, et c'est ce
+    # qui empeche la pleine vitesse de devenir un pivot.
+    "braquage_plein_a": 0.35,     # la fraction de vitesse ou le volant donne tout
+    "braquage_lent": 1.15,        # ce qu'il a de prise en plus, au pas
+    "braquage_vite": 0.42,        # ... et ce qu'il en reste a fond
+    # ⚠️ **UN VOLANT SE TOURNE, il ne se claque pas.** La direction passait de
+    # 0 a 1 en une image : au clavier, chaque appui etait un coup de butee a
+    # butee. Il prend (`volant_prise`), il se recentre quand on lache
+    # (`volant_retour`) — un dixieme de seconde, et la courbe devient une courbe.
+    "volant_prise": 0.22,
+    "volant_retour": 0.30,
+    # ⚠️ **UN CHAR PIVOTE SUR SON ARRIERE**, pas sur son nombril. En tournant
+    # autour de son centre, il balayait son coffre dans le mur derriere lui et
+    # le nez ne « rentrait » jamais dans le virage. Le point de pivot recule
+    # d'une fraction de la longueur : le nez balaie, le train arriere suit.
+    # ⚠️ Et jamais dans un mur : le decalage n'est pris que s'il est libre.
+    "pivot_arriere": 0.28,
     # ⚠️ Ce qu'un lourd defonce : les obstacles BAS (cloture, borne-fontaine,
     # poubelle, caisse) et eux seuls. Jamais une facade : la ville tient par
     # ses murs — les juges de connexite, les interieurs et les devantures en

@@ -9,7 +9,10 @@ def test_slugs_uniques_et_classes_connues():
         assert 0 <= v["frequence"] <= 1
         assert v["prix"] > 0 and v["vie"] > 0 and v["places"] >= 1
         assert 0 < v["vitesse_max"] <= 8
-        assert 0 < v["braquage"] < 0.2
+        # ⚠️ Le braquage est un RAYON, en pixels : le cercle le plus serré que
+        # le char décrit. Une tuile fait 16 px — un rayon de 22 px, c'est une
+        # tuile et demie ; au-delà de six tuiles, plus aucun coin ne passe.
+        assert 8 <= v["rayon_braquage"] <= 96, v["slug"]
         assert v["couleurs"] and all(c.startswith("#") for c in v["couleurs"])
         assert v["phase"] in (1, 2)
 
@@ -36,6 +39,17 @@ def test_la_moto_est_la_plus_rapide_et_le_velo_le_plus_fragile():
         assert moto["vitesse_max"] >= v["vitesse_max"], v["slug"]
         assert velo["vie"] <= v["vie"], v["slug"]
     assert velo["vitesse_max"] < moto["vitesse_max"] / 2, "un velo ne suit pas une moto"
+    # ⚠️ Et le rayon de braquage suit la silhouette : ce qui est court tourne
+    # court. Un autobus qui vire comme un vélo, c'est une ville sans poids.
+    for v in vehicules.CATALOGUE:
+        assert velo["rayon_braquage"] <= v["rayon_braquage"], v["slug"]
+    autobus, auto = vehicules.par_slug("autobus"), vehicules.par_slug("auto")
+    assert autobus["rayon_braquage"] > auto["rayon_braquage"] * 1.5, "un autobus vire comme une berline"
+    for v in vehicules.CATALOGUE:
+        # Un coin de rue demande une tuile et demie : tout ce qui roule en ville
+        # doit pouvoir en prendre un AU PAS, sinon il n'a rien à y faire.
+        if v["classe"] not in ("camion",) and not v["eau"]:
+            assert v["rayon_braquage"] <= 32, f"{v['slug']} ne prend pas un coin de rue"
 
 
 def test_le_trafic_et_la_physique_sont_bornes():
@@ -56,6 +70,14 @@ def test_le_trafic_et_la_physique_sont_bornes():
     assert 0 < ph["feu_sous"] < ph["fumee_sous"] < 1
     assert ph["explosion_degats"] >= 50 and ph["explosion_rayon_px"] >= 32
     assert 0 < ph["choc_rebond"] < 1
+    # ⚠️ Le braquage : le volant garde de la prise au pas et en perd à fond —
+    # jamais l'inverse, sinon la pleine vitesse devient un pivot.
+    assert ph["braquage_lent"] >= 1 > ph["braquage_vite"] > 0
+    assert 0 < ph["braquage_plein_a"] < 1
+    # Un volant se tourne : il prend, il se recentre, et il se recentre au
+    # moins aussi vite qu'il prend — sinon on reste braqué après avoir lâché.
+    assert 0 < ph["volant_prise"] <= ph["volant_retour"] <= 1
+    assert 0 <= ph["pivot_arriere"] < 0.5, "le pivot est DERRIERE le centre, pas derriere le char"
 
 
 def test_le_sous_pas_ne_traverse_jamais_un_char():

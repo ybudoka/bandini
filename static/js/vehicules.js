@@ -23,11 +23,33 @@ const Vehicules = (function () {
   const PAS_FLECHE = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] };
   const FLECHE_DE = { '1,0': '>', '-1,0': '<', '0,-1': '^', '0,1': 'v' };
 
-  /** Facteur de braquage selon la vitesse relative (0 a l'arret, plein vers 0,3). */
+  /** Ce que le volant a de PRISE selon la vitesse relative : un peu plus au
+      pas (`braquage_lent`), plein vers `braquage_plein_a`, et ce qu'il en
+      reste a fond (`braquage_vite`).
+
+      ⚠️ Ce n'est plus la vitesse de rotation, c'est un facteur sur le RAYON :
+      le char tournait d'un nombre fixe de radians par image, donc le cercle
+      qu'il decrivait grandissait avec la vitesse — 1,7 tuile au pas, DIX a
+      fond. Une vraie auto decrit toujours le meme cercle a volant fixe ; la
+      rotation est donc `vitesse / rayon_braquage`, et ceci n'ajuste que le
+      rayon. */
   function courbeBraquage(t) {
+    const ph = physique();
     t = borner(Math.abs(t), 0, 1);
-    if (t < 0.3) return t / 0.3;
-    return 1 - (t - 0.3) * 0.65;
+    const plein = ph.braquage_plein_a;
+    if (t <= plein) return ph.braquage_lent + (1 - ph.braquage_lent) * (t / plein);
+    return 1 + (ph.braquage_vite - 1) * (t - plein) / (1 - plein);
+  }
+
+  /** Le char pivote sur son ARRIERE, pas sur son nombril : le nez balaie, le
+      train arriere suit. Le centre se deplace donc quand le cap tourne — et
+      seulement si la place est libre, sinon on tournerait dans un mur. */
+  function pivoterSurLArriere(v, ancien) {
+    const a = v.def.longueur * physique().pivot_arriere;
+    const x = v.x + (Math.cos(v.angle) - Math.cos(ancien)) * a;
+    const y = v.y + (Math.sin(v.angle) - Math.sin(ancien)) * a;
+    if (bloqueParLesTuiles(v, x, y)) return;
+    v.x = x; v.y = y;
   }
 
   function vehiculeDef(slug) {
@@ -484,8 +506,21 @@ const Vehicules = (function () {
     v.vitesse = borner(v.vitesse, -d.vitesse_recul, d.vitesse_max);
     if (Math.abs(v.vitesse) < 0.02 && !cmd.gaz && !cmd.frein) v.vitesse = 0;
     const t = v.vitesse / d.vitesse_max;
-    if (cmd.direction) {
-      v.angle += cmd.direction * d.braquage * courbeBraquage(t) * (v.vitesse < 0 ? -1 : 1) * (cmd.freinMain ? 1.35 : 1);
+    // ⚠️ LE VOLANT SE TOURNE, il ne se claque pas : il prend vers la consigne
+    // et se recentre quand on lache. Au clavier, sans ca, chaque appui etait
+    // un coup de butee a butee.
+    const ph = physique();
+    const consigne = borner(cmd.direction || 0, -1, 1);
+    v.volant = (v.volant || 0) + (consigne - (v.volant || 0)) * (consigne ? ph.volant_prise : ph.volant_retour);
+    if (Math.abs(v.volant) < 0.01) v.volant = 0;
+    if (v.volant) {
+      // ⚠️ `vitesse / rayon` : a volant fixe, le char decrit TOUJOURS le meme
+      // cercle — c'est ce qui rend un coin de rue franchissable a toute
+      // vitesse. En marche arriere, le volant s'inverse, comme une vraie auto.
+      const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (cmd.freinMain ? 1.35 : 1);
+      const ancien = v.angle;
+      v.angle += v.volant * omega * (v.vitesse < 0 ? -1 : 1);
+      pivoterSurLArriere(v, ancien);
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     const adh = cmd.freinMain ? d.adherence_frein : d.adherence;
@@ -978,6 +1013,8 @@ const Vehicules = (function () {
 
   function monter(j, v) {
     if (!v || v.etat === 'epave' || j.dansVehicule) return false;
+    // Le volant part droit : on n'herite pas du braquage de celui d'avant.
+    v.volant = 0;
     // ⚠️ ON NE MONTE PAS DANS UN CHAR REMORQUE. Rien ne l'interdisait, et ce
     // serait la facon la plus courte de casser la physique : deux conducteurs,
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne

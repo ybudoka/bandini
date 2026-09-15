@@ -3903,6 +3903,224 @@ def test_la_vitesse_max_et_la_marche_arriere(banc, paquet):
     assert r["sol"] == 0
 
 
+def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
+    """⚠️ **Demande de Martin : « améliore les virages ».** Le char tournait
+    d'un nombre fixe de radians par image, quelle que soit sa vitesse : le
+    cercle qu'il décrivait valait donc `vitesse / braquage`, et il GRANDISSAIT
+    avec elle. Mesuré sur une berline : 1,4 tuile au pas, **dix tuiles à fond**.
+    Un coin de rue en demande une et demie — à pleine vitesse, le coin était
+    impossible, et `majTrafic` l'écrivait déjà (« il ratait son virage et
+    finissait sur le trottoir d'en face »).
+
+    Une vraie auto décrit **toujours le même cercle** à volant fixe. Le juge
+    mesure le cercle réellement parcouru — pas la formule — à quatre vitesses,
+    et exige qu'il ne double jamais entre le pas et le plein régime."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer(); L.graine(7);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        function ecart(a, b) { let e = b - a; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return e; }
+        const out = {};
+        ['auto', 'moto', 'autobus'].forEach(function (slug) {
+            const v = o.char(slug, 0, 0, 0);
+            const cercles = [], glisses = [];
+            [0.25, 1.0].forEach(function (part) {
+                v.x = 0; v.y = 0; v.angle = 0; v.z = 0; v.volant = 0;
+                const vise = v.def.vitesse_max * part;
+                v.vitesse = vise; v.vx = vise; v.vy = 0;
+                let n = 0, x0 = 0, x1 = 0, y0 = 0, y1 = 0, tourne = 0, prec = 0;
+                while (tourne < Math.PI * 2 && n < 3000) {
+                    L.Vehicules.majPhysique(v, { gaz: v.vitesse < vise ? 1 : 0,
+                                                 frein: v.vitesse > vise * 1.02 ? 0.4 : 0,
+                                                 direction: 1, freinMain: false });
+                    v.x += v.vx; v.y += v.vy; n++;
+                    tourne += Math.abs(ecart(prec, v.angle)); prec = v.angle;
+                    x0 = Math.min(x0, v.x); x1 = Math.max(x1, v.x);
+                    y0 = Math.min(y0, v.y); y1 = Math.max(y1, v.y);
+                }
+                cercles.push(+(((x1 - x0) + (y1 - y0)) / 4).toFixed(1));
+                glisses.push(+(Math.abs(ecart(v.angle, Math.atan2(v.vy, v.vx))) * 180 / Math.PI).toFixed(1));
+                if (tourne < Math.PI * 2) cercles.push('jamais bouclé');
+            });
+            out[slug] = { rayon: v.def.rayon_braquage, cercles: cercles, glisses: glisses };
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    for slug, m in r.items():
+        lent, vite = m["cercles"]
+        assert isinstance(lent, (int, float)) and isinstance(vite, (int, float)), (slug, m)
+        # Au pas, le cercle est celui de la fiche, à la glisse près.
+        assert abs(lent - m["rayon"]) <= m["rayon"] * 0.35, f"{slug} : {lent} px au pas pour {m['rayon']} px de fiche"
+        # ⚠️ LE DÉFAUT, MESURÉ : à fond, le cercle ne fait pas plus de deux fois
+        # et demie celui du pas — c'est ce que la fiche concède au volant qui
+        # perd de la prise (`braquage_vite`). Avant, une berline passait de
+        # 22 px à 163 : SEPT fois.
+        assert vite <= lent * 2.6, f"{slug} : le cercle passe de {lent} à {vite} px avec la vitesse"
+        # Et il reste franchissable : un coin de rue fait une tuile et demie,
+        # une intersection quatre.
+        assert vite <= 16 * 4.5, f"{slug} : {vite / 16:.1f} tuiles de rayon à fond, aucun coin ne passe"
+    # La berline glisse un peu, jamais en travers : c'est le caractère de la
+    # sport, pas celui d'une auto de tous les jours.
+    assert max(r["auto"]["glisses"]) < 20, r["auto"]
+
+
+def test_le_volant_se_tourne_et_se_recentre(banc):
+    """⚠️ La direction passait de 0 à 1 en une image : au clavier, chaque appui
+    était un coup de butée à butée. Le volant prend, et il se recentre quand on
+    lâche — c'est ce qui fait qu'une courbe est une courbe."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        v.vitesse = 2; v.vx = 2; v.vy = 0;
+        const neuf = v.volant;
+        const prise = [];
+        for (let i = 0; i < 6; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); prise.push(+v.volant.toFixed(3)); }
+        const plein = [];
+        for (let i = 0; i < 60; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 1 }); }
+        plein.push(+v.volant.toFixed(3));
+        const relache = [];
+        for (let i = 0; i < 30; i++) { L.Vehicules.majPhysique(v, { gaz: 0, frein: 0, direction: 0 }); relache.push(+v.volant.toFixed(3)); }
+        return { neuf: neuf, prise: prise, plein: plein[0], relache: relache };
+    }""")
+    assert r["neuf"] == 0, "on hérite du volant de celui d'avant"
+    assert 0 < r["prise"][0] < 0.5, "le volant claque à la butée en une image : %s" % r["prise"]
+    assert r["prise"] == sorted(r["prise"]), "il ne prend pas régulièrement : %s" % r["prise"]
+    assert r["plein"] > 0.95, "il n'atteint jamais la butée : %s" % r["plein"]
+    assert r["relache"] == sorted(r["relache"], reverse=True), "il ne se recentre pas : %s" % r["relache"]
+    assert r["relache"][-1] == 0, "il reste braqué après qu'on a lâché : %s" % r["relache"]
+
+
+def test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril(banc):
+    """⚠️ En tournant autour de son centre, le char balayait son coffre dans le
+    mur derrière lui, et le nez ne « rentrait » jamais dans le virage. Le juge
+    mesure les deux bouts : dans un quart de tour, le nez parcourt plus de
+    chemin que le train arrière."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const v = o.char('auto', 0, 0, 0);
+        v.vitesse = 1.2; v.vx = 1.2; v.vy = 0; v.volant = 0;
+        const demi = v.def.longueur / 2;
+        const bout = function (signe) { return { x: v.x + Math.cos(v.angle) * demi * signe, y: v.y + Math.sin(v.angle) * demi * signe }; };
+        const nez0 = bout(1), cul0 = bout(-1);
+        let n = 0;
+        while (v.angle < Math.PI / 2 && n < 600) { L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 1 }); v.x += v.vx; v.y += v.vy; n++; }
+        const nez1 = bout(1), cul1 = bout(-1);
+        return { nez: +Math.hypot(nez1.x - nez0.x, nez1.y - nez0.y).toFixed(1),
+                 cul: +Math.hypot(cul1.x - cul0.x, cul1.y - cul0.y).toFixed(1), images: n };
+    }""")
+    assert r["images"] < 600, "le char n'a pas bouclé son quart de tour : %s" % r
+    assert r["nez"] > r["cul"], (
+        "le nez et le coffre parcourent le même chemin : le char pivote sur son nombril (%s)" % r
+    )
+
+
+def test_les_phares_pointent_ou_le_char_va(banc, paquet):
+    """⚠️ **Demande de Martin : « valide la direction des phares quand je
+    pilote ».** Un char debout n'a plus 32 caps cuits : il a trois poses, et
+    c'est `faceDe` qui choisit. Si la règle se décale d'un quadrant, on voit
+    les phares blancs d'un char qui s'éloigne et ses feux rouges quand il
+    arrive — et personne ne s'en rend compte avant de jouer de nuit.
+
+    Le juge lit la grille du sprite (le blanc `l` est un phare, le rouge `t`
+    un feu arrière) et exige, pour chaque véhicule et tout autour du cadran :
+    **de dos, aucun phare blanc ; de face, aucun feu rouge ; de profil, le
+    blanc devant et le rouge derrière.** ⚠️ Les gyrophares de l'ambulance et de
+    la remorqueuse sont sur le TOIT — ils se voient de partout, et c'est la
+    seule exception, écrite ici."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer(); L.graine(7);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        const out = {};
+        L.B.defs.vehicules.forEach(function (def) {
+            const s = L.SPRITES[def.sprite];
+            if (!s || s.rotations) return;
+            // Où sont les lampes dans chaque pose du sprite (colonnes peintes) ?
+            const lampes = {};
+            for (const nom in s.poses) {
+                const g = s.poses[nom][0], l = [], t = [];
+                g.forEach(function (ligne, y) {
+                    ligne.split('').forEach(function (ch, x) {
+                        if (ch === 'l') l.push([x, y]);
+                        if (ch === 't') t.push([x, y]);
+                    });
+                });
+                lampes[nom] = { l: l, t: t, w: g[0].length, h: g.length };
+            }
+            // Et quelle pose chaque cap choisit-il ?
+            const v = o.char(def.slug, 0, 0, 0);
+            const caps = [];
+            for (let deg = 0; deg < 360; deg += 5) {
+                v.angle = deg * Math.PI / 180;
+                caps.push([deg, L.Vehicules.debout(v).pose]);
+            }
+            L.Entites.retirer(v);
+            out[def.slug] = { lampes: lampes, caps: caps, ancre: s.ancre, w: s.w };
+        });
+        return out;
+    }""")
+    assert len(r) >= 10, "trop peu de véhicules debout : %s" % list(r)
+    # ⚠️ Les deux seuls véhicules à porter une lampe SUR LE TOIT : elle se voit
+    # de partout, y compris de dos, et c'est la seule raison d'écrire une
+    # exception. Elle est toujours au MILIEU du dessin — un gyrophare est sur
+    # l'axe —, et c'est ce que le juge vérifie au lieu de l'exempter en bloc.
+    GYRO = {"ambulance", "remorqueuse"}
+    for slug, m in r.items():
+        lampes, w = m["lampes"], m["w"]
+        # ⚠️ L'ancre est au MILIEU : sinon le miroir (`cote` → `gauche`)
+        # décalerait le char dès qu'il roule vers l'ouest.
+        assert m["ancre"][0] * 2 == w, f"{slug} : ancre {m['ancre'][0]} pour {w} px de large"
+
+        def au_milieu(lampe, large=w):
+            """Sur l'axe du dessin — c'est là qu'est un gyrophare, et nulle part ailleurs."""
+            return all(abs(q[0] - large / 2) <= large / 6 for q in lampe)
+
+        # De dos, aucun phare blanc ; de face, aucun feu rouge — sauf le
+        # gyrophare, sur l'axe.
+        for pose, couleur, quoi in (("haut", "l", "des phares blancs sur un char qui s’éloigne"),
+                                    ("bas", "t", "des feux rouges sur un char qui arrive")):
+            lampe = lampes[pose][couleur]
+            if slug in GYRO:
+                assert au_milieu(lampe), f"{slug} : {quoi} (et ce n’est pas son gyrophare)"
+            else:
+                assert not lampe, f"{slug} : {quoi}"
+        assert lampes["bas"]["l"], f"{slug} : aucun phare quand il vient vers nous"
+        assert lampes["haut"]["t"], f"{slug} : aucun feu arrière quand il s’éloigne"
+        # De profil, la grille n'est PAS miroitée : elle regarde l'est. Le point
+        # le plus à l'AVANT qui s'allume est donc blanc, le plus à l'ARRIÈRE rouge.
+        blancs, rouges = lampes["cote"]["l"], lampes["cote"]["t"]
+        assert blancs, f"{slug} : aucun phare de profil"
+        avant = max([q[0] for q in blancs] + [q[0] for q in rouges])
+        assert avant in [q[0] for q in blancs], f"{slug} : de profil, sa lampe la plus avancée est rouge"
+        if rouges:
+            arriere = min([q[0] for q in blancs] + [q[0] for q in rouges])
+            assert arriere in [q[0] for q in rouges], f"{slug} : de profil, sa lampe la plus reculée est blanche"
+        # Et le cadran : un quadrant par pose, et la pose de profil qui regarde
+        # l'est couvre l'est. ⚠️ « droite » est la grille NON miroitée (Atlas).
+        poses = dict(m["caps"])
+        assert poses[0] == "droite" and poses[180] == "gauche", f"{slug} : {poses[0]} vers l'est, {poses[180]} vers l'ouest"
+        assert poses[90] == "bas" and poses[270] == "haut", f"{slug} : {poses[90]} vers le sud, {poses[270]} vers le nord"
+        # ⚠️ Chaque pose couvre son quadrant, centré sur son cap. Les quatre
+        # DIAGONALES pures sont la frontière : elles peuvent tomber d'un côté
+        # comme de l'autre (`Entites.regarder` tranche `|dx| >= |dy|`, et c'est
+        # la même règle que la face d'un passant — un seul code pour les deux).
+        quadrant = {0: "droite", 90: "bas", 180: "gauche", 270: "haut"}
+        for deg, pose in m["caps"]:
+            if deg % 90 == 45:
+                continue
+            attendu = quadrant[(deg + 45) // 90 % 4 * 90]
+            assert pose == attendu, f"{slug} : à {deg}° il est dessiné « {pose} », pas « {attendu} »"
+        for deg in (45, 135, 225, 315):
+            voisins = {quadrant[(deg - 45) % 360], quadrant[(deg + 45) % 360]}
+            assert poses[deg] in voisins, f"{slug} : à {deg}° il est dessiné « {poses[deg]} », ni {voisins}"
+
+
 def test_le_frein_a_main_fait_deriver(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
