@@ -274,30 +274,6 @@ CATALOGUE: list[Echantillon] = [
     _e("sonnette", "Sonnette de vélo", duree_s=1.0, volume=0.11, influence=0.75,
        prompt="a bicycle bell struck twice, bright ringing brass with a "
               "shimmering tail, close, no music"),
-    # --- L'eau ---------------------------------------------------------------
-    # ⚠️ Depuis « L'eau n'est plus un mur », on entrait dans la baie sur
-    # `choc` — la TOLE FROISSEE, le son d'un accident de char — et on nageait
-    # dans le silence complet, les pas coupes et rien a la place. Trois sons,
-    # et chacun repond a un moment que le jeu produisait deja sans le dire :
-    # on entre, on avance, on coule.
-    _e("plongeon", "Plongeon dans l'eau", variantes=2, duree_s=1.4, volume=0.55,
-       influence=0.5,
-       prompt="a person jumping feet first into cold sea water, one heavy "
-              "splash, a mass of water thrown up then falling back, scattered "
-              "droplets, close-up, outdoors, no voices, no music"),
-    # ⚠️ TROIS variantes, comme les pas : une brassee revient une fois et
-    # demie par seconde, et c'est la que l'oreille s'agace le plus vite.
-    # ⚠️ Et ce n'est PAS une boucle : elle se joue a la distance parcourue
-    # (`son.js`, `SFX.nage`), sans quoi un nageur immobile sonnerait comme une
-    # fontaine.
-    _e("nage", "Brassée", variantes=3, duree_s=0.8, volume=0.2, influence=0.5,
-       prompt="a single swimmer arm stroke through open water, a short wet "
-              "swirl and churn, water sliding off skin, close-up, no "
-              "breathing, no voices, no music"),
-    _e("couler", "On coule", duree_s=1.8, volume=0.7, influence=0.45,
-       prompt="a head going under water, one gulp as the surface closes over, "
-              "muffled bubbles rising, the sound turning dull and distant, "
-              "close-up, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -466,30 +442,6 @@ VOIX_CRIEUR = "Léo - Français québécois"
 #: Poussee au style et laissee varier : elle n'annonce pas, elle accoste.
 VOIX_BRUME = "Julia"
 
-#: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
-#: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
-VOIX: list[Voix] = [
-    {"slug": "salut_h", "texte": "Salut!", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "frette_h", "texte": "Fait frette, hein?", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "tasse_toi_h", "texte": "Heille ! Tâsse-toi don !", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.75},
-    {"slug": "bonne_journee_h", "texte": "Bonne journée, là.", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
-    {"slug": "salut_f", "texte": "Salut!", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "excusez_f", "texte": "Excusez-moi.", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "belle_journee_f", "texte": "Belle journée, hein?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    {"slug": "ca_va_f", "texte": "Ça va, toi?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
-    # Le crieur : ce que lance l'homme-sandwich quand il vient vers toi
-    # (`pietons.homme_sandwich`, `magasins.RECLAME`). Un genre a part : un
-    # passant qu'on frole ne crie pas « approchez ».
-    {"slug": "approchez_c", "texte": "Approchez, approchez, venez voir!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
-    {"slug": "special_c", "texte": "Le spécial du jour, c'est icitte!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
-    {"slug": "moitie_prix_c", "texte": "Moitié prix, moitié prix, aujourd'hui!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
-    # La fille de la Brume (13 sept. 2026, demande de Martin : « la prostituée
-    # aussi doit parler, avec plusieurs dialogues différents »). Un genre a
-    # elle : une passante qu'on frole ne dit pas ca, et elle ne dit pas
-    # « Excusez-moi ». `entites.accosterDepuisLaBrume` en tire une quand on
-    # passe pres de son coin — jamais deux fois de suite la meme.
-    {"slug": "compagnie_b", "texte": "Tu cherches de la compagnie, mon beau?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
-    {"slug": "beau_bonhomme_b", "texte": "Heille, beau bonhomme! Viens icitte.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
 #: COMMENT LA RUE PARLE — et c'est ici, pas dans le JS, parce que ce sont trois
 #: reglages qui se decident ensemble.
 #:
@@ -516,6 +468,30 @@ PAROLE = {
     "memoire": 2,
 }
 
+#: Ce que disent les gens quand on les frole. Court, quebecois, jamais deux
+#: fois de suite le meme (le moteur tire au hasard, avec un temps mort).
+VOIX: list[Voix] = [
+    {"slug": "salut_h", "texte": "Salut!", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "frette_h", "texte": "Fait frette, hein?", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "tasse_toi_h", "texte": "Heille ! Tâsse-toi don !", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.75},
+    {"slug": "bonne_journee_h", "texte": "Bonne journée, là.", "genre": "homme", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.7},
+    {"slug": "salut_f", "texte": "Salut!", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "excusez_f", "texte": "Excusez-moi.", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "belle_journee_f", "texte": "Belle journée, hein?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    {"slug": "ca_va_f", "texte": "Ça va, toi?", "genre": "femme", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.7},
+    # Le crieur : ce que lance l'homme-sandwich quand il vient vers toi
+    # (`pietons.homme_sandwich`, `magasins.RECLAME`). Un genre a part : un
+    # passant qu'on frole ne crie pas « approchez ».
+    {"slug": "approchez_c", "texte": "Approchez, approchez, venez voir!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    {"slug": "special_c", "texte": "Le spécial du jour, c'est icitte!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    {"slug": "moitie_prix_c", "texte": "Moitié prix, moitié prix, aujourd'hui!", "genre": "crieur", "voix": VOIX_CRIEUR, "volume": 0.8, "style": 0.7, "stabilite": 0.3},
+    # La fille de la Brume (13 sept. 2026, demande de Martin : « la prostituée
+    # aussi doit parler, avec plusieurs dialogues différents »). Un genre a
+    # elle : une passante qu'on frole ne dit pas ca, et elle ne dit pas
+    # « Excusez-moi ». `entites.accosterDepuisLaBrume` en tire une quand on
+    # passe pres de son coin — jamais deux fois de suite la meme.
+    {"slug": "compagnie_b", "texte": "Tu cherches de la compagnie, mon beau?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    {"slug": "beau_bonhomme_b", "texte": "Heille, beau bonhomme! Viens icitte.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "frette_b", "texte": "Fait frette, hein? Viens te réchauffer.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "du_feu_b", "texte": "T'as du feu, mon chou?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "tout_seul_b", "texte": "Reste pas tout seul à soir, là.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
@@ -665,30 +641,6 @@ def orphelins() -> list[str]:
                   if f.is_file() and f.suffix == ".mp3" and f.name not in attendus)
 
 
-def exporter() -> dict:
-    """⚠️ Ne declare QUE les fichiers presents : le navigateur ne demande jamais
-    un son qui n'existe pas, et se rabat sur la synthese sans un 404."""
-    return {
-        "dossier": DOSSIER,
-        # La musique ecrite en notes (aucun fichier) : voir `app/musique.py`.
-        "musiques": musique.exporter(),
-        # ⚠️ L'ECHELLE de qui gagne, et les reglages de la musique d'etat. Ils
-        # sont ECRITS UNE FOIS, en Python : le navigateur lit sa priorite, il
-        # ne l'invente pas. Sans ca, chaque endroit du JS aurait la sienne.
-        "echelle": dict(musique.ECHELLE),
-        "musique": dict(musique.MUSIQUE),
-        "ambiances_de_district": dict(musique.AMBIANCES_DE_DISTRICT),
-        "echantillons": [
-            {**echantillon, "fichiers": fichiers_presents(echantillon)}
-            for echantillon in CATALOGUE
-        ],
-        # Les radios se chargent au premier tour de cle, jamais au demarrage.
-        "radios": [
-            {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
-             "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
-            for r in RADIOS
-        ],
-        "ambiances": [
 #: LA RUMEUR DE LA FOULE — et ce qui la fait taire.
 #:
 #: ⚠️ Une rue qui se tait d'un coup dit « ils t'ont vu » mieux qu'une etoile de
@@ -711,13 +663,37 @@ RUMEUR = {
 }
 
 
+def exporter() -> dict:
+    """⚠️ Ne declare QUE les fichiers presents : le navigateur ne demande jamais
+    un son qui n'existe pas, et se rabat sur la synthese sans un 404."""
+    return {
+        "dossier": DOSSIER,
+        "parole": dict(PAROLE),
+        "rumeur": dict(RUMEUR),
+        # La musique ecrite en notes (aucun fichier) : voir `app/musique.py`.
+        "musiques": musique.exporter(),
+        # ⚠️ L'ECHELLE de qui gagne, et les reglages de la musique d'etat. Ils
+        # sont ECRITS UNE FOIS, en Python : le navigateur lit sa priorite, il
+        # ne l'invente pas. Sans ca, chaque endroit du JS aurait la sienne.
+        "echelle": dict(musique.ECHELLE),
+        "musique": dict(musique.MUSIQUE),
+        "ambiances_de_district": dict(musique.AMBIANCES_DE_DISTRICT),
+        "echantillons": [
+            {**echantillon, "fichiers": fichiers_presents(echantillon)}
+            for echantillon in CATALOGUE
+        ],
+        # Les radios se chargent au premier tour de cle, jamais au demarrage.
+        "radios": [
+            {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
+             "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
+            for r in RADIOS
+        ],
+        "ambiances": [
             {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
              "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
             for r in AMBIANCES
         ],
         # Les repliques des passants : quelques mots, deux voix, en francais.
-        "parole": dict(PAROLE),
-        "rumeur": dict(RUMEUR),
         "voix": [
             {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
