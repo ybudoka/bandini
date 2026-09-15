@@ -543,6 +543,65 @@ GRAINE = 20260912
 #: la rangee (ou la colonne) qu'il longe — ici le seul lien vers La Pointe.
 PONTS: frozenset = frozenset({("v", 17, 6)})
 
+#: Les zones conditionnelles. ⚠️ **UNE BARRIERE EST UNE FICHE, PAS UN CAS.** La
+#: ville est ouverte en entier depuis M1 et elle le restera : ce qu'une
+#: barriere ajoute n'est pas une cloture, c'est une RAISON — un endroit qu'on
+#: regarde trois jours avant d'y entrer. Chaque entree dit :
+#:
+#:   `ou`        un rectangle de tuiles, resolu par le chantier : le tablier
+#:               d'un `pont`, la `grille` d'un lot, le batiment d'un `lieu`
+#:               garanti (plus `marge` tuiles de cour), le `quai` qui porte un
+#:               ambulant ;
+#:   `arrete`    ce qu'elle arrete — `pieton`, `vehicule`, ou les deux. ⚠️ C'est
+#:               la cle qui evite la moitie des pieges : un pont ferme aux
+#:               CHARS mais pas aux JAMBES bloque sans jamais enfermer ;
+#:   `condition` quand elle est FERMEE : `apres` (fermee tant qu'une mission
+#:               n'est pas faite), `heure` (« jour » = ouverte le jour, fermee
+#:               la nuit ; « nuit » l'inverse), `jour_tire` (la graine du jour,
+#:               par ou les entraves de M12 entreront), `payer` (le comptoir
+#:               d'un lieu — la guerite, deja ecrite) ;
+#:   `forcer`    ce que ca coute de passer quand meme : `etoiles`, `degats` ;
+#:               `None` pour ce qui ne se force pas ;
+#:   `raison`    la ligne, en majuscules, qui s'affiche quand on s'y bute — et
+#:               que le carnet liste.
+#:
+#: Seule la couronne du rectangle arrete, et seulement QUAND ON VIENT DE
+#: L'EXTERIEUR : qui est dedans quand elle se ferme en sort librement. Un char
+#: lance pousse les cones (`forcer.degats`) ; a pied, pousser une seconde puis
+#: enjamber, et l'etoile tombe a la retombee. Le navigateur lit tout ca dans le
+#: paquet (`Monde.barriereBloque`) ; rien n'y est ecrit en dur.
+#:
+#: ⚠️ Le juge qui compte (`test_barrieres`) : aucune combinaison de barrieres
+#: fermees n'enferme la planque ni ne rend un lieu de mission inatteignable a
+#: pied. ⚠️ `existant` : la guerite de la fourriere est deja jouee par
+#: `majFourriere` (la geometrie du lot suffit) — la fiche la DECLARE, un juge
+#: tient ses etoiles d'accord avec `economie.FOURRIERE`, et le navigateur ne la
+#: rejoue pas une deuxieme fois.
+#:
+#: ⚠️ Le pont attend p02 (M16) : en attendant, il s'ouvre apres m2 — le fuyard
+#: qu'on rattrape est deja une affaire de La Pointe. Les zones de gang et les
+#: barrages a 5★ ne sont PAS ici : l'un est une menace, l'autre un char en
+#: travers — ni l'un ni l'autre n'est un mur a condition.
+BARRIERES: tuple[dict, ...] = (
+    {"slug": "pont", "nom": "Le pont de La Pointe", "ou": {"pont": ("v", 17, 6)},
+     "arrete": ("vehicule",), "condition": {"apres": "m2"},
+     "forcer": {"degats": 12, "etoiles": 0}, "raison": "LES SKATEUX TIENNENT LE PONT",
+     "decor": "cones"},
+    {"slug": "fourriere", "nom": "La guérite de la fourrière", "ou": {"grille": "fourriere"},
+     "arrete": ("vehicule",), "condition": {"payer": "fourriere"},
+     "forcer": {"etoiles": economie.FOURRIERE["etoiles_vol"]}, "raison": "ON PAIE AU COMPTOIR",
+     "decor": None, "existant": True},
+    # ⚠️ `marge: 2` : la couronne passe a DEUX tuiles du mur, pour que la cour
+    # (la ruelle devant, l'abord a cote) soit DEDANS — c'est la qu'on retombe
+    # quand on enjambe, et c'est de la qu'on pousse la porte.
+    {"slug": "usine", "nom": "La cour de l'usine Prévost", "ou": {"lieu": "usine", "marge": 2},
+     "arrete": ("pieton", "vehicule"), "condition": {"heure": "jour"},
+     "forcer": {"etoiles": 1}, "raison": "L’USINE EST FERMÉE LA NUIT", "decor": "chaine"},
+    {"slug": "cargo", "nom": "Le quai du cargo", "ou": {"quai": "contrebande"},
+     "arrete": ("pieton", "vehicule"), "condition": {"heure": "nuit"},
+     "forcer": {"etoiles": 1}, "raison": "LE QUAI DÉCHARGE LA NUIT", "decor": "chaine"},
+)
+
 #: Les batiments garantis : un par majuscule du plan. `interieur` doit exister
 #: dans INTERIEURS (juge `test_les_portes_menent_a_un_interieur`).
 #: Les familles de lieux : une couleur, et le mot qui l'explique sur la carte.
@@ -800,6 +859,8 @@ class _Chantier:
         self.des = Des(graine)
         self.portes: list[dict] = []
         self.points: list[dict] = []
+        #: La boite (x, y, largeur, hauteur) du batiment de chaque lieu garanti — pour `barrieres`.
+        self.lots: dict[str, tuple[int, int, int, int]] = {}
         self.decor: list[dict] = []
         self.fourriere: dict | None = None
         #: L'empreinte du dernier batiment pose (voir `_pose_batiment`).
@@ -2133,6 +2194,8 @@ class _Chantier:
                 boite = self.boite_du_batiment
                 if facades and k == vedette:
                     facades_vedette = facades
+                    if special:
+                        self.lots[special["slug"]] = boite
                 elif facades:
                     batiments.append((facades, devant_rue, tuiles, (px, py, pl, ph), boite))
             elif contenu == "vague":
@@ -3311,6 +3374,37 @@ class _Chantier:
                 poses.append((x, y))
         return len(poses)
 
+    def barrieres(self, ambulants: list[dict], ponts: list[dict]) -> list[dict]:
+        """Chaque barriere de `BARRIERES`, resolue en rectangle de tuiles."""
+        sortie = []
+        for fiche in BARRIERES:
+            ou = fiche["ou"]
+            if "pont" in ou:
+                sens, i, j = ou["pont"]
+                pont = next(p for p in ponts if p["sens"] == sens and (p["x"], p["y"]) == (
+                    (self.xr[i], self.yb[j]) if sens == "v" else (self.xb[i], self.yr[j])))
+                rect = (pont["x"], pont["y"], pont["l"], pont["h"])
+            elif "grille" in ou:
+                g = self.fourriere["grille"]
+                rect = (g["x"], g["y"], g["largeur"], 1)
+            elif "lieu" in ou:
+                bx, by, bl, bh = self.lots[ou["lieu"]]
+                m = ou.get("marge", 1)
+                rect = (bx - m, by - m, bl + 2 * m, bh + 2 * m)
+            elif "quai" in ou:
+                a = next(a for a in ambulants if a["slug"] == ou["quai"])
+                rect = next((rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
+                            if g == "q" and rx <= a["x"] < rx + rl and ry <= a["y"] < ry + rh)
+            else:  # pragma: no cover - garde-fou de relecture de la fiche
+                raise ValueError(f"barriere sans lieu : {fiche['slug']}")
+            x, y, largeur, hauteur = rect
+            sortie.append({"slug": fiche["slug"], "nom": fiche["nom"], "x": x, "y": y, "l": largeur, "h": hauteur,
+                           "arrete": list(fiche["arrete"]), "condition": dict(fiche["condition"]),
+                           "forcer": dict(fiche["forcer"]) if fiche["forcer"] else None,
+                           "raison": fiche["raison"], "decor": fiche.get("decor"),
+                           "existant": bool(fiche.get("existant"))})
+        return sortie
+
     def reclames(self, ambulants: list[dict]) -> list[dict]:
         """Le poste de chaque homme-sandwich : un bout de trottoir a quelques
         tuiles du kiosque pour lequel il crie (`magasins.RECLAME`).
@@ -3661,6 +3755,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # Les guichets AVANT les kiosques : une place prise ne se prend pas deux fois.
     chantier.guichets()
     ambulants = chantier.ambulants()
+    barrieres = chantier.barrieres(ambulants, ponts)
     reclames = chantier.reclames(ambulants)
     # ⚠️ Apres les ambulants et la reclame : une scene se veut DEGAGEE, et un
     # kiosque pose apres coup au milieu d'un attroupement en ferait un couloir.
@@ -3701,6 +3796,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "residences": chantier.residences,
         "graffitis": chantier.graffitis,
         "fourriere": chantier.fourriere,
+        "barrieres": barrieres,
         "ambulants": ambulants,
         "reclames": reclames,
         # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere

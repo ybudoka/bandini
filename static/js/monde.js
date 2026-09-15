@@ -279,6 +279,98 @@ const Monde = (function () {
   /** Une cloture qui s'enjambe a cette tuile — grillage ou palissade de bois
       (voir `Entites.enjamber`). Le barbele, lui, ne s'enjambe pas. */
   function estEnjambable(tx, ty) { return solidite(tx, ty) === 4; }
+
+  // --- Les zones conditionnelles : une porte, une condition, un prix ---------------------
+  //: ⚠️ Tout vient de la fiche (`carte.BARRIERES`, dans le paquet). Seule la
+  //: COURONNE du rectangle arrete, et seulement quand on vient de l'exterieur :
+  //: qui est dedans quand elle se ferme en sort librement — c'est ce qui fait
+  //: qu'une barriere bloque sans jamais enfermer.
+
+  function barrieres() { return (carte && carte.def && carte.def.barrieres) || []; }
+
+  /** Fermee MAINTENANT ? La condition se lit dans la partie, jamais ici. */
+  function barriereFermee(b) {
+    if (b.existant) return false;                     // jouee ailleurs (la guerite : `majFourriere`)
+    const c = b.condition || {}, p = B.partie;
+    if (c.apres) return !(p && p.missionsFaites && p.missionsFaites[c.apres]);
+    if (c.heure === 'jour') return estNuit();
+    if (c.heure === 'nuit') return !estNuit();
+    if (c.jour_tire) return (hash2(p ? p.jour : 0, c.jour_tire.sel || 7) % 100) < (c.jour_tire.chance || 0) * 100;
+    return false;
+  }
+
+  function dansLeRect(b, tx, ty) { return tx >= b.x && tx < b.x + b.l && ty >= b.y && ty < b.y + b.h; }
+  function surLaCouronne(b, tx, ty) {
+    return dansLeRect(b, tx, ty) && (tx === b.x || tx === b.x + b.l - 1 || ty === b.y || ty === b.y + b.h - 1);
+  }
+
+  /** La barriere fermee dont la couronne couvre cette tuile et qui arrete
+      cette sorte (`pieton` / `vehicule`) — ou null. */
+  function barriereA(tx, ty, sorte) {
+    for (const b of barrieres()) {
+      if (b.arrete.indexOf(sorte) < 0 || !surLaCouronne(b, tx, ty) || !barriereFermee(b)) continue;
+      return b;
+    }
+    return null;
+  }
+
+  /** Cette entite, en voulant entrer sur cette tuile, se bute-t-elle a une
+      barriere ? Dedans, ou en train de la forcer (`forceT`), non. Le joueur
+      qui se bute lit la raison, et pousse (`buteT`) : c'est ce qui ouvre
+      l'enjambee. */
+  function barriereBloque(e, tx, ty) {
+    if (!e || !barrieres().length || e.forceT > 0) return false;
+    const sorte = e.type === 'vehicule' ? 'vehicule' : 'pieton';
+    const b = barriereA(tx, ty, sorte);
+    if (!b || dansLeRect(b, Math.floor(e.x / TT), Math.floor(e.y / TT))) return false;
+    e.bute = b;
+    if (e.buteImage !== B.t) { e.buteImage = B.t; e.buteT = (e.buteT || 0) + 1; }
+    if ((e === B.joueur || e.conducteur === B.joueur) && typeof Hud !== 'undefined' && B.t - (B.buteMsgT || -999) >= 90) {
+      B.buteMsgT = B.t;
+      Hud.message(b.raison, 90);
+    }
+    return true;
+  }
+
+  /** La barriere qu'un pieton peut enjamber ici : fermee, forcable, devant
+      lui depuis l'exterieur — et seulement apres avoir POUSSE une seconde
+      (`buteT`), le temps de lire la raison. Une etoile ne tombe pas par
+      accident. */
+  function barriereEnjambable(e, tx, ty) {
+    if (!e || e.type === 'vehicule' || !(e.buteT >= 45)) return null;
+    const b = barriereA(tx, ty, 'pieton');
+    if (!b || !b.forcer || dansLeRect(b, Math.floor(e.x / TT), Math.floor(e.y / TT))) return null;
+    return b;
+  }
+
+  function barrieresFermees() { return barrieres().filter(barriereFermee); }
+
+  /** Ce qui ferme se VOIT : des cones sur la couronne d'un pont, une chaine
+      sur des poteaux autour d'une cour. Rien sur ce qui est deja un mur. */
+  function dessinerBarrieres(ctx, cam) {
+    for (const b of barrieresFermees()) {
+      if (!b.decor) continue;
+      for (let ty = b.y; ty < b.y + b.h; ty++) {
+        for (let tx = b.x; tx < b.x + b.l; tx++) {
+          if (!surLaCouronne(b, tx, ty) || solidite(tx, ty)) continue;
+          const px = tx * TT - cam.x, py = ty * TT - cam.y;
+          if (px < -TT || py < -TT || px > cam.w + TT || py > cam.h + TT) continue;
+          if (b.decor === 'cones') {
+            for (const ox of [2, 9]) {
+              ctx.fillStyle = '#d98324'; ctx.fillRect(px + ox + 1, py + 5, 3, 7); ctx.fillRect(px + ox, py + 11, 5, 2);
+              ctx.fillStyle = '#efe6d0'; ctx.fillRect(px + ox + 1, py + 8, 3, 1);
+            }
+          } else {
+            const horizontal = ty === b.y || ty === b.y + b.h - 1;
+            ctx.fillStyle = '#3a3d44';
+            if (horizontal) ctx.fillRect(px, py + 9, TT, 1); else ctx.fillRect(px + 7, py, 1, TT);
+            ctx.fillStyle = '#5a5d64'; ctx.fillRect(px + 6, py + 4, 3, 8);
+            ctx.fillStyle = '#8b8f96'; ctx.fillRect(px + 6, py + 4, 3, 1);
+          }
+        }
+      }
+    }
+  }
   function estRoute(tx, ty) {
     if (!carte || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return false;
     return carte.route[ty * carte.w + tx] === 1;
@@ -1073,6 +1165,7 @@ const Monde = (function () {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
+    barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,

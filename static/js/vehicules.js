@@ -211,7 +211,7 @@ const Vehicules = (function () {
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
-          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE)) out.push([tx, ty]);
+          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.barriereBloque(v, tx, ty)) out.push([tx, ty]);
         }
       }
     }
@@ -296,6 +296,30 @@ const Vehicules = (function () {
       Le `defonce` de la fiche dit ce qu'il RESTE de vitesse une fois passé au
       travers : 0,75 pour le camion, 0,6 pour la remorqueuse. Un mur de clôture
       coûte donc quelque chose, sinon on le franchit sans le sentir. */
+  /** Un char LANCE pousse les cones d'une barriere fermee : il passe, il y
+      laisse `forcer.degats`, et l'etoile de la fiche tombe s'il y en a une.
+      ⚠️ Seulement si TOUT ce qui bloque est une barriere forcable — un vrai
+      mur derriere les cones reste un mur — et seulement le joueur : le trafic
+      fait demi-tour (`prochaineCible`). Rend vrai si la voie s'est ouverte. */
+  function forcerBarriere(v, x, y) {
+    if (v.conducteur !== B.joueur || Math.hypot(v.vx, v.vy) < physique().defonce_vitesse_min) return false;
+    let barriere = null;
+    for (const t of tuilesQuiBloquent(v, x, y)) {
+      if (Monde.bloque(t[0], t[1], Monde.MASQUE_VEHICULE)) return false;
+      const b = Monde.barriereA(t[0], t[1], 'vehicule');
+      if (!b || !b.forcer) return false;
+      barriere = b;
+    }
+    if (!barriere) return false;
+    v.forceT = 240;                                   // le temps de traverser, sans repayer a l'autre bout
+    if (barriere.forcer.degats) endommager(v, barriere.forcer.degats, null);
+    if (barriere.forcer.etoiles) Police.etoilesAuMoins(barriere.forcer.etoiles);
+    Hud.message(barriere.raison + ' — FORCÉ', 150);
+    Son.SFX.choc();
+    B.cam.secousse = Math.max(B.cam.secousse, 0.3);
+    return true;
+  }
+
   function defoncerDevant(v, x, y) {
     const ph = physique();
     if (!v.def.defonce || B.interieur) return false;
@@ -328,7 +352,7 @@ const Vehicules = (function () {
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
-          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE)) return true;
+          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.barriereBloque(v, tx, ty)) return true;
         }
       }
     }
@@ -486,13 +510,13 @@ const Vehicules = (function () {
       let choc = 0;
       if (px !== 0) {
         if (bloqueParLesTuiles(v, v.x + px, v.y) || chargeBloquee(v, v.x + px, v.y)) {
-          if (defoncerDevant(v, v.x + px, v.y)) v.x += px;
+          if (forcerBarriere(v, v.x + px, v.y) || defoncerDevant(v, v.x + px, v.y)) v.x += px;
           else { choc = Math.max(choc, Math.abs(v.vx)); v.vx = -v.vx * ph.choc_rebond; }
         } else v.x += px;
       }
       if (py !== 0) {
         if (bloqueParLesTuiles(v, v.x, v.y + py) || chargeBloquee(v, v.x, v.y + py)) {
-          if (defoncerDevant(v, v.x, v.y + py)) v.y += py;
+          if (forcerBarriere(v, v.x, v.y + py) || defoncerDevant(v, v.x, v.y + py)) v.y += py;
           else { choc = Math.max(choc, Math.abs(v.vy)); v.vy = -v.vy * ph.choc_rebond; }
         } else v.y += py;
       }
@@ -735,6 +759,7 @@ const Vehicules = (function () {
   function majEtatDuChar(v) {
     const ph = physique();
     bruitDePassage(v);
+    if (v.forceT > 0) v.forceT--;
     if (majNoyade(v)) return;
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
@@ -1088,6 +1113,25 @@ const Vehicules = (function () {
     return false;
   }
 
+  /** Le trafic devant une barriere fermee fait DEMI-TOUR : la voie d'en face
+      la plus proche, ou l'arret sur place s'il n'y en a pas. ⚠️ Sans ca, les
+      chars s'empilaient devant les cones du pont jusqu'a la fin des temps. */
+  function demiTour(v, tx, ty, p) {
+    const arriere = FLECHE_DE[(-p[0]) + ',' + (-p[1])];
+    let meilleur = null, coutMin = Infinity;
+    for (let dy = -3; dy <= 3; dy++) {
+      for (let dx = -3; dx <= 3; dx++) {
+        if (Monde.fleche(tx + dx, ty + dy) !== arriere) continue;
+        const cout = dx * dx + dy * dy;
+        if (cout < coutMin) { coutMin = cout; meilleur = centre(tx + dx, ty + dy); }
+      }
+    }
+    v.sortie = null;
+    if (!meilleur) { v.attendFeu = true; return centre(tx, ty); }
+    v.sens = arriere;
+    return meilleur;
+  }
+
   function prochaineCible(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const f = Monde.fleche(tx, ty);
@@ -1096,12 +1140,14 @@ const Vehicules = (function () {
       v.sens = f; v.sortie = null;
       v.enBoite = null;                              // on rend le croisement
       const p = PAS_FLECHE[f];
+      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) return demiTour(v, tx, ty, p);
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === 'S') {
       const sens = Monde.sensArret(tx, ty) || v.sens;
       v.sens = sens;
       const p = PAS_FLECHE[sens];
+      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) return demiTour(v, tx, ty, p);
       const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
       if (v.poursuite) {                             // sirene : feux, stops et boite, on brule tout
         v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;

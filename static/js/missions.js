@@ -1018,7 +1018,11 @@ const Missions = (function () {
       { libelle: 'CRIMES VUS', detail: '' + p.stats.crimes, actif: false },
       { libelle: 'CHARS VOLES', detail: '' + p.stats.volees, actif: false },
       { libelle: 'LA PROCHAINE AMENDE', detail: amende(p.argent, 1, p.casier) + ' $', actif: false },
-    ], aide: 'UN DOSSIER EPAIS COUTE PLUS CHER, ET SE VOIT DE PLUS LOIN' };
+    ].concat(
+      // Ce qui est ferme en ville, et pourquoi : la ville est ouverte, mais
+      // elle a ses raisons — le carnet les liste.
+      Monde.barrieresFermees().map(function (b) { return { libelle: 'FERMÉ — ' + b.nom.toUpperCase(), detail: b.raison, actif: false }; })
+    ), aide: 'UN DOSSIER EPAIS COUTE PLUS CHER, ET SE VOIT DE PLUS LOIN' };
   }
 
   /** Fouiller les tiroirs d'un logement : une fois par adresse et par etage.

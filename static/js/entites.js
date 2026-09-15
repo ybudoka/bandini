@@ -1580,6 +1580,10 @@ const Entites = (function () {
   // --- Deplacement avec collisions --------------------------------------------------
 
   /** Deplace un cercle (approche par boite) contre les tuiles, axe par axe. */
+  /** Une tuile qui arrete CETTE entite : le sol, ou une barriere fermee
+      qu'elle aborde de l'exterieur (`Monde.barriereBloque`). */
+  function bloquePour(e, tx, ty, masque) { return Monde.bloque(tx, ty, masque) || Monde.barriereBloque(e, tx, ty); }
+
   function deplacerCercle(e, dx, dy, masque) {
     const r = e.r;
     if (dx !== 0) {
@@ -1587,10 +1591,10 @@ const Entites = (function () {
       const ty0 = Math.floor((e.y - r) / TT), ty1 = Math.floor((e.y + r - 0.01) / TT);
       if (dx > 0) {
         const tx = Math.floor((e.x + r) / TT);
-        for (let ty = ty0; ty <= ty1; ty++) if (Monde.bloque(tx, ty, masque)) { e.x = tx * TT - r - 0.01; break; }
+        for (let ty = ty0; ty <= ty1; ty++) if (bloquePour(e, tx, ty, masque)) { e.x = tx * TT - r - 0.01; break; }
       } else {
         const tx = Math.floor((e.x - r) / TT);
-        for (let ty = ty0; ty <= ty1; ty++) if (Monde.bloque(tx, ty, masque)) { e.x = (tx + 1) * TT + r + 0.01; break; }
+        for (let ty = ty0; ty <= ty1; ty++) if (bloquePour(e, tx, ty, masque)) { e.x = (tx + 1) * TT + r + 0.01; break; }
       }
     }
     if (dy !== 0) {
@@ -1598,10 +1602,10 @@ const Entites = (function () {
       const tx0 = Math.floor((e.x - e.r) / TT), tx1 = Math.floor((e.x + e.r - 0.01) / TT);
       if (dy > 0) {
         const ty = Math.floor((e.y + r) / TT);
-        for (let tx = tx0; tx <= tx1; tx++) if (Monde.bloque(tx, ty, masque)) { e.y = ty * TT - r - 0.01; break; }
+        for (let tx = tx0; tx <= tx1; tx++) if (bloquePour(e, tx, ty, masque)) { e.y = ty * TT - r - 0.01; break; }
       } else {
         const ty = Math.floor((e.y - r) / TT);
-        for (let tx = tx0; tx <= tx1; tx++) if (Monde.bloque(tx, ty, masque)) { e.y = (ty + 1) * TT + r + 0.01; break; }
+        for (let tx = tx0; tx <= tx1; tx++) if (bloquePour(e, tx, ty, masque)) { e.y = (ty + 1) * TT + r + 0.01; break; }
       }
     }
     bloquerParDecor(e);
@@ -1774,12 +1778,15 @@ const Entites = (function () {
     const sx = Math.abs(dx) >= Math.abs(dy) ? Math.sign(dx) : 0;
     const sy = sx === 0 ? Math.sign(dy) : 0;
     const tx = Math.floor((e.x + sx * (e.r + 2)) / TT), ty = Math.floor((e.y + sy * (e.r + 2)) / TT);
-    if (!Monde.estEnjambable(tx, ty)) return null;
+    // Une barriere fermee s'enjambe aussi — apres avoir pousse une seconde,
+    // et l'etoile tombe a la retombee (`majEnjambe`).
+    const barriere = Monde.barriereEnjambable(e, tx, ty);
+    if (!Monde.estEnjambable(tx, ty) && !barriere) return null;
     // Derriere la cloture : une tuile ou l'on peut retomber. Deux grillages
     // colles ne s'enjambent pas d'un coup — on en franchit un, puis l'autre.
     const ax = tx + sx, ay = ty + sy;
     if (Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) return null;
-    return { sx: sx, sy: sy, tx: tx, ty: ty, ax: ax, ay: ay };
+    return { sx: sx, sy: sy, tx: tx, ty: ty, ax: ax, ay: ay, barriere: barriere };
   }
 
   /** Commence l'enjambee si une cloture est devant. Rend true si elle commence. */
@@ -1796,7 +1803,7 @@ const Entites = (function () {
     const x1 = c.sx ? cx : borner(e.x, cx - marge, cx + marge);
     const y1 = c.sy ? cy : borner(e.y, cy - marge, cy + marge);
     e.enjambe = { t: 0, duree: regles.enjambe_images, haut: regles.hauteur_px,
-                  x0: e.x, y0: e.y, x1: x1, y1: y1 };
+                  x0: e.x, y0: e.y, x1: x1, y1: y1, barriere: c.barriere || null };
     e.vx = 0; e.vy = 0;
     e.charge = 0;
     if (e.etat === 'attaque') { e.etat = 'flane'; e.phase = null; }
@@ -1819,7 +1826,17 @@ const Entites = (function () {
     // que le corps est EN HAUT de quelque chose.
     e.z = Math.round(Math.sin(part * Math.PI) * en.haut);
     e.vx = 0; e.vy = 0;
-    if (part >= 1) { e.enjambe = null; e.z = 0; Son.SFX.pas(); }
+    if (part >= 1) {
+      e.enjambe = null; e.z = 0; Son.SFX.pas();
+      // La retombee de l'autre cote d'une barriere : c'est la que ca se paie.
+      if (en.barriere) {
+        e.forceT = 30; e.buteT = 0;
+        if (e === B.joueur) {
+          if (en.barriere.forcer && en.barriere.forcer.etoiles) Police.etoilesAuMoins(en.barriere.forcer.etoiles);
+          Hud.message(en.barriere.raison + ' — FRANCHI', 150);
+        }
+      }
+    }
     return true;
   }
 
@@ -1928,6 +1945,8 @@ const Entites = (function () {
     const avant = { x: j.x, y: j.y };
     deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
     dansLaCarte(j);
+    if (j.buteImage !== B.t) j.buteT = 0;              // on a lache la barriere
+    if (j.forceT > 0) j.forceT--;
     const d = Math.hypot(j.x - avant.x, j.y - avant.y);
     j.anim.dist += d;
     j.pasDist += d;

@@ -88,6 +88,10 @@ def test_on_traverse_le_pont_en_char(banc):
     La Pointe, sans chargement et sans tomber a l'eau."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ Le pont est une BARRIERE tant que m2 n'est pas faite (les
+        // Skateux le tiennent) : ici on juge la traversee, pas la barriere —
+        // `test_barrieres_js` juge celle-la.
+        L.B.partie.missionsFaites.m2 = true;
         const pont = L.Monde.carte.def.ponts[0];
         // Sur la voie de droite, EN AMONT du tablier : on part de La Shop, du
         // bon bord du chenal, et on descend.
