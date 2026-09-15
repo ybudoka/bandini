@@ -122,8 +122,6 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
         // ⚠️ 30 px, pas 64 : a l'est du terminus Ti-Guy attend a 32 px, et
         // depuis que la foule ne se traverse plus, l'agent lance a 64 px vient
         // buter sur lui et n'arrive jamais — exactement comme sur un arbre.
-        // C'est la seule direction ou un agent qui FLANE repere le joueur :
-        // ailleurs sa ronde lui fait tourner la tete avant qu'il regarde.
         // ⚠️ ET IL EST LANCE, pas en ronde (14 sept. 2026) : il flanait, et ce
         // juge tenait alors a ce qu'un flaneur regarde dans la bonne direction
         // au bon moment — vrai a l'est du terminus jusqu'au jour ou les
