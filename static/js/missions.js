@@ -220,6 +220,9 @@ const Missions = (function () {
     if (crieur) return prendreCoupon(j, crieur);
     const fille = filleSousLaMain(j);
     if (fille) return compagnie(j, fille);
+    // Le guichet : poser un skimmer, ou le vider. ⚠️ Seulement s'il y a
+    // quelque chose a y faire — sinon le bouton reste a ce qui suit.
+    if (inviteGuichet(j)) return utiliserGuichet(j);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -1155,6 +1158,17 @@ const Missions = (function () {
       Police.remiseAZero();
       return true;
     } });
+    // L'assurance : Ti-Guy couvre ce qui est gare devant, sans demander a qui
+    // c'est. La prime, la valeur couverte, et « deja assure » — une fois.
+    const prime = primeAssurance(v), couvre = valeurAssuree(v);
+    items.push({ libelle: 'ASSURER ' + v.def.nom.toUpperCase(),
+                 detail: v.assure ? 'DÉJÀ ASSURÉ' : (enqueteEnCours() ? 'L’ASSUREUR ENQUÊTE' : prime + ' $ / COUVRE ' + couvre + ' $'),
+                 actif: !v.assure && !proprio && !enqueteEnCours() && p.argent >= prime,
+                 faire: function () { return assurer(v); } });
+    if (p.assurance.du > 0) {
+      items.push({ libelle: 'ENCAISSER L’ASSURANCE', detail: p.assurance.du + ' $', actif: true,
+                   faire: function () { encaisserAssurance(); return true; } });
+    }
     return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
   }
 
@@ -1276,6 +1290,8 @@ const Missions = (function () {
 
   function nouveauJour() {
     nuitDeLaDette();
+    nuitDesSkimmers();
+    nuitDeLAssurance();
     // ⚠️ La ville se repare AU LEVER DU JOUR, pas dans la minute : ce qu'on a
     // casse reste casse, et le quartier porte ses blessures jusqu'au matin.
     // C'est ce qui fait qu'une nuit de folie SE VOIT.
@@ -1637,6 +1653,160 @@ const Missions = (function () {
              aide: 'UN ACOMPTE LES RENVOIE POUR AUJOURD’HUI' };
   }
 
+  // --- Les guichets : au camion, ou au skimmer ---------------------------------------------
+
+  /** Le guichet a portee de main — debout, dehors, et pas deja defonce. */
+  function guichetSousLaMain(j) {
+    if (B.interieur || j.dansVehicule) return null;
+    return Entites.decorAutour(j.x, j.y, 22).find(function (d) { return d.decor === 'guichet' && !d.brise; }) || null;
+  }
+
+  function tuileDe(e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); }
+
+  function skimmerA(g) {
+    const cle = tuileDe(g);
+    return B.partie.skimmers.find(function (s) { return s.cle === cle; }) || null;
+  }
+
+  /** Ce qu'ACTION ferait a ce guichet — le libelle de l'invite, ou null s'il
+      n'y a rien a y faire. ⚠️ UNE SEULE fonction pour l'invite et le geste :
+      une invite qui annonce autre chose que ce qu'ACTION va faire est pire
+      que pas d'invite du tout. */
+  function inviteGuichet(j) {
+    const g = guichetSousLaMain(j);
+    if (!g) return null;
+    const p = B.partie, fiche = B.defs.economie.guichet.skimmer, s = skimmerA(g);
+    if (s && s.pret) return 'VIDER LE SKIMMER — ' + s.monte + ' $';
+    if (s) return 'SKIMMER POSÉ — REVIENS DEMAIN';
+    if ((p.objets.skimmer || 0) > 0 && p.skimmers.length < fiche.max_poses) return 'POSER UN SKIMMER';
+    return null;
+  }
+
+  function utiliserGuichet(j) {
+    const g = guichetSousLaMain(j);
+    if (!g) return false;
+    const p = B.partie, fiche = B.defs.economie.guichet.skimmer, s = skimmerA(g);
+    j.animT = 10; j.animType = 'ramasse';
+    if (s && s.pret) {
+      encaisser(s.monte, 'SKIMMER');
+      p.skimmers.splice(p.skimmers.indexOf(s), 1);
+      return true;
+    }
+    if (s) { Hud.message('REVIENS DEMAIN'); return true; }
+    if ((p.objets.skimmer || 0) <= 0 || p.skimmers.length >= fiche.max_poses) return false;
+    p.objets.skimmer -= 1;
+    p.skimmers.push({ cle: tuileDe(g), x: g.x, y: g.y, jour: p.jour, monte: 0, pret: false });
+    Hud.message('SKIMMER POSÉ — REVIENS DEMAIN', 180);
+    return true;
+  }
+
+  /** La nuit des skimmers : chacun lit, ou se fait trouver. Rend combien
+      ont ete trouves. ⚠️ Les des viennent de la fiche, pas d'ici. */
+  function nuitDesSkimmers() {
+    const p = B.partie, fiche = B.defs.economie.guichet.skimmer;
+    let trouves = 0;
+    for (let i = p.skimmers.length - 1; i >= 0; i--) {
+      const s = p.skimmers[i];
+      if (s.pret) continue;
+      if (B.rng() < fiche.trouve) { p.skimmers.splice(i, 1); trouves++; continue; }
+      s.monte = fiche.rendement[0] + Math.floor(B.rng() * (fiche.rendement[1] - fiche.rendement[0] + 1));
+      s.pret = true;
+    }
+    if (trouves) Hud.message(trouves > 1 ? trouves + ' SKIMMERS ONT ÉTÉ TROUVÉS' : 'UN SKIMMER A ÉTÉ TROUVÉ', 180);
+    return trouves;
+  }
+
+  /** Un guichet qui cede : la caisse par terre, en liasses, un delit a deux
+      etoiles — et le skimmer qui y etait est parti avec la caisse. Appele par
+      `Entites.briser`, quoi que ce soit qui l'ait ouvert. */
+  function guichetCasse(g) {
+    const fiche = B.defs.economie.guichet, p = B.partie;
+    const total = fiche.caisse[0] + Math.floor(B.rng() * (fiche.caisse[1] - fiche.caisse[0] + 1));
+    let reste = total;
+    for (let i = 0; i < fiche.liasses; i++) {
+      const part = i === fiche.liasses - 1 ? reste : Math.round(total / fiche.liasses);
+      reste -= part;
+      const a = B.rng() * Math.PI * 2, d = 6 + B.rng() * 14;
+      Entites.creer('ramassage', g.x + Math.cos(a) * d, g.y + 4 + Math.sin(a) * d * 0.6,
+                    { r: 4, objet: 'billets', montant: part, t: 0, solide: false });
+    }
+    const cle = tuileDe(g);
+    p.skimmers = p.skimmers.filter(function (s) { return s.cle !== cle; });
+    Police.signalerCrime('guichet', g.x, g.y, Police.quelqu_un_voit(g.x, g.y, null));
+    Son.SFX.argent();
+    return total;
+  }
+
+  /** Les liasses se ramassent en passant dessus, comme les paquets. */
+  function ramasserLesBillets(j) {
+    for (const e of Entites.autour(j.x, j.y, 14, function (q) { return q.type === 'ramassage' && q.objet === 'billets'; })) {
+      encaisser(e.montant, 'LIASSE');
+      Entites.retirer(e);
+    }
+  }
+
+  // --- L'assurance : la fraude, et l'assureur qui enquete ----------------------------------
+
+  function valeurAssuree(v) {
+    const a = B.defs.economie.assurance;
+    return Math.min(a.valeur_max, Math.round(v.def.prix * a.valeur_fraction));
+  }
+
+  function primeAssurance(v) { return Math.round(valeurAssuree(v) * B.defs.economie.assurance.prime_fraction); }
+
+  function enqueteEnCours() {
+    const p = B.partie;
+    return p.assurance.enquete > 0 && p.jour < p.assurance.enquete;
+  }
+
+  /** Ti-Guy couvre ce char : la prime part, la valeur couverte reste sur le
+      char. ⚠️ Pas deux fois, pas un char prete ou de mission, pas pendant
+      une enquete. */
+  function assurer(v) {
+    if (!v || v.assure || aQui(v) || enqueteEnCours()) return false;
+    const prime = primeAssurance(v);
+    if (!payer(prime, 'PRIME')) return false;
+    v.assure = { valeur: valeurAssuree(v), jour: B.partie.jour };
+    return true;
+  }
+
+  /** Un char assure qui disparait : la reclamation s'ouvre, a encaisser au
+      garage. ⚠️ A la `reclamations_max`-ieme, l'assureur enquete : plus de
+      police jusqu'au jour dit, et une page au casier. */
+  function charPerdu(v) {
+    const p = B.partie, a = B.defs.economie.assurance;
+    if (!v.assure) return false;
+    p.assurance.du += v.assure.valeur;
+    p.assurance.reclamations += 1;
+    v.assure = null;
+    if (p.assurance.reclamations >= a.reclamations_max) {
+      p.assurance.enquete = p.jour + a.enquete_jours;
+      p.casier = Math.min(B.defs.economie.casier_max, p.casier + a.enquete_pages);
+      Hud.message('L’ASSUREUR ENQUÊTE', 240);
+    } else {
+      Hud.message('CHAR ASSURÉ — PASSE AU GARAGE', 180);
+    }
+    return true;
+  }
+
+  function encaisserAssurance() {
+    const p = B.partie;
+    if (p.assurance.du <= 0) return false;
+    encaisser(p.assurance.du, 'ASSURANCE');
+    p.assurance.du = 0;
+    return true;
+  }
+
+  /** Le dossier se classe le jour dit : on repart a zero. */
+  function nuitDeLAssurance() {
+    const p = B.partie;
+    if (p.assurance.enquete > 0 && p.jour >= p.assurance.enquete) {
+      p.assurance.enquete = 0;
+      p.assurance.reclamations = 0;
+      Hud.message('L’ASSUREUR A CLASSÉ LE DOSSIER', 180);
+    }
+  }
+
   // --- Le marche noir : Josee, une fois le Faubourg libere --------------------------------
 
   function menuMarcheNoir() {
@@ -1655,6 +1825,13 @@ const Missions = (function () {
       const prix = Math.round(arme.prix_munitions * mn.rabais), pleine = p.armes[slug].mun >= arme.munitions_max;
       items.push({ libelle: 'MUNITIONS ' + arme.nom.toUpperCase(), detail: pleine ? 'PLEIN' : prix + ' $', actif: !pleine && p.argent >= prix,
                    faire: function () { payer(prix, 'MUNITIONS'); Combat.ramasserArme(slug, arme.chargeur); return false; } });
+    });
+    // Ce qui n'est pas une arme : le skimmer, par nombre en poche.
+    (mn.objets || []).forEach(function (slug) {
+      if (slug !== 'skimmer') return;
+      const prix = B.defs.economie.guichet.skimmer.prix, n = p.objets.skimmer || 0;
+      items.push({ libelle: 'SKIMMER', detail: prix + ' $' + (n ? ' (' + n + ' EN POCHE)' : ''), actif: p.argent >= prix,
+                   faire: function () { payer(prix, 'SKIMMER'); p.objets.skimmer = (p.objets.skimmer || 0) + 1; return false; } });
     });
     return { titre: 'MARCHÉ NOIR', sur: p.argent + ' $', refaire: menuMarcheNoir,
              aide: 'SANS FACTURE. ' + Math.round((1 - mn.rabais) * 100) + ' % DE MOINS QUE CHEZ GUS.', items: items };
@@ -1720,6 +1897,8 @@ const Missions = (function () {
     // Brume et pas une passante — le HUD la nomme.
     const fille = filleSousLaMain(j);
     if (fille) { B.invite = 'LA BRUME — ' + B.defs.economie.tarifs.compagnie + ' $'; return; }
+    const guichet = inviteGuichet(j);
+    if (guichet) { B.invite = guichet; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
@@ -1775,6 +1954,8 @@ const Missions = (function () {
     if (B.joueur && !B.interieur) {
       for (const e of Entites.autour(B.joueur.x, B.joueur.y, 12, function (q) { return q.type === 'paquet'; })) ramasserPaquet(e);
     }
+    // Les liasses d'un guichet aussi — a pied : on ne ramasse pas au volant.
+    if (B.joueur && !B.interieur && !B.joueur.dansVehicule) ramasserLesBillets(B.joueur);
     if (B.t % 600 === 0 && B.etat === 'jeu') sauvegarderPartie();
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
@@ -1786,5 +1967,7 @@ const Missions = (function () {
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
-           nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette, maj };
+           nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
+           guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,
+           valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance, maj };
 })();

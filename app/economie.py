@@ -172,6 +172,83 @@ def revenu_honnete_par_jour() -> int:
     return sum(p["revenu_par_jour"] for p in PROPRIETES)
 
 
+# --- Les guichets : au camion, ou au skimmer -------------------------------
+
+#: ⚠️ **Un guichet, c'est la caisse d'une banque posee dans la rue.** Deux
+#: facons d'y toucher, et elles se repondent comme l'avocat et le hacker : le
+#: CAMION est bruyant et immediat (deux etoiles, la caisse par terre, tout le
+#: monde a vu) ; le SKIMMER est silencieux et lent (on paie d'avance chez
+#: Josee, on revient le lendemain, et il peut avoir ete trouve entre-temps).
+#:
+#: ⚠️ `lourd` : il ne cede qu'a un char d'AU MOINS cette masse. Un camion (3,0)
+#: ou un autobus (3,2) le defonce ; une berline (1,0), une luxe (1,8) et meme
+#: la remorqueuse (2,2) s'y arretent — `test_argent_sale` tient la fiche des
+#: chars et celle-ci d'accord. Sans cette borne, la premiere auto volee du
+#: coin ouvrait un guichet, et « au camion » ne voulait plus rien dire.
+#:
+#: ⚠️ **Et ni l'un ni l'autre ne bat le taxi a l'heure** (`test_argent_sale`) :
+#: la caisse d'un guichet vaut moins qu'une journee de travail honnete, et
+#: trois skimmers poses ne rapportent pas, en moyenne, ce que le taxi fait
+#: dans la meme journee. Sinon le jeu se joue tout seul.
+GUICHET: dict = {
+    "caisse": (300, 900),       # ce qui tombe par terre quand il cede
+    "liasses": 6,               # ... en combien de liasses
+    "lourd": 2.5,               # la masse qu'il faut pour le defoncer
+    "ecart": 18,                # deux guichets ne se voisinent pas (tuiles)
+    "par_ville": (10, 28),      # ce qu'une ville en pose — un juge le compte
+    "skimmer": {
+        "prix": 350,            # au marche noir, chez Josee
+        "rendement": (350, 900),   # ce qu'il a lu pendant la nuit
+        "trouve": 0.30,         # ... s'il n'a pas ete trouve entre-temps
+        "max_poses": 3,         # pas plus a la fois : c'est un pari, pas un parc
+    },
+}
+
+
+def esperance_skimmer() -> float:
+    """Ce qu'un skimmer rapporte EN MOYENNE, prix paye et risque compris."""
+    s = GUICHET["skimmer"]
+    return (1 - s["trouve"]) * (s["rendement"][0] + s["rendement"][1]) / 2 - s["prix"]
+
+
+# --- L'assurance : la fraude, et l'assureur qui enquete --------------------
+
+#: Ti-Guy assure ce qui est gare devant sa porte, sans demander a qui c'est.
+#: On paie la prime, le char disparait — brule, plie, coule — et on revient
+#: ENCAISSER AU GARAGE : la fraude est une scene en trois actes, pas un menu.
+#:
+#: ⚠️ **Trois reclamations et l'assureur enquete** : plus de police pendant
+#: `enquete_jours`, et une page au casier. C'est ce qui empeche la boucle
+#: « voler, assurer, bruler » de tourner toute la journee.
+#:
+#: ⚠️ **La valeur couverte est BORNEE** (`valeur_max`) : sans ce plafond, une
+#: luxe volee et assuree rapportait plus a l'heure que n'importe quel boulot
+#: honnete. Et elle reste SOUS le prix neuf : frauder avec un char qu'on a
+#: paye perd de l'argent — ce n'est payant qu'avec un char vole, et c'est
+#: exactement ce qu'on veut dire. `cycle_s` est ce qu'une fraude prend AU
+#: MOINS (voler, se rendre au garage, faire disparaitre, revenir) : c'est
+#: l'horloge du juge, pas celle du jeu.
+ASSURANCE: dict = {
+    "valeur_fraction": 0.5,     # ce que la police couvre : la moitie du prix neuf...
+    "valeur_max": 900,          # ... et jamais plus que ca
+    "prime_fraction": 0.3,      # la prime, sur la valeur couverte
+    "reclamations_max": 3,      # a la troisieme, l'assureur enquete
+    "enquete_jours": 4,         # ... pendant ce temps, personne n'assure rien
+    "enquete_pages": 1,         # ... et ca s'ecrit au casier
+    "cycle_s": 300,             # ce qu'une fraude prend au moins (le juge)
+}
+
+
+def valeur_assuree(prix_neuf: int) -> int:
+    """Ce que la police couvre, plafond compris."""
+    return int(min(ASSURANCE["valeur_max"], round(prix_neuf * ASSURANCE["valeur_fraction"])))
+
+
+def prime_assurance(prix_neuf: int) -> int:
+    """Ce que Ti-Guy demande pour couvrir ce char."""
+    return int(round(valeur_assuree(prix_neuf) * ASSURANCE["prime_fraction"]))
+
+
 # --- Effacer le casier : la certitude, ou le pari -------------------------
 
 #: ⚠️ **Deux comptoirs qui n'ont de sens que l'un contre l'autre.** Un seul
@@ -583,6 +660,9 @@ def exporter() -> dict:
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
         "dette": dict(DETTE),
+        "guichet": {**GUICHET, "caisse": list(GUICHET["caisse"]), "par_ville": list(GUICHET["par_ville"]),
+                    "skimmer": {**GUICHET["skimmer"], "rendement": list(GUICHET["skimmer"]["rendement"])}},
+        "assurance": dict(ASSURANCE),
         "paliers": {slug: [dict(p) for p in liste] for slug, liste in PALIERS.items()},
         # dettes[n] = ce que la dette vaut apres n nuits sans payer — le
         # navigateur n'a plus qu'a indexer, et la borne est deja dedans.

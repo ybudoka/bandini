@@ -53,6 +53,7 @@ from __future__ import annotations
 import math
 
 from . import devantures as devantures_mod
+from . import economie
 from . import magasins
 from . import missions
 from . import vehicules
@@ -862,6 +863,8 @@ class _Chantier:
         #: Les hommes-sandwichs, meme regle : un solliciteur de plus ne doit pas
         #: deplacer un paquet cache a l'autre bout de la ville.
         self.des_reclame = Des(graine ^ 0x5A4D1)
+        # Les guichets tirent dans le leur : en poser un de plus ne deplace pas un arbre.
+        self.des_guichet = Des(graine ^ 0x6C1C4E7)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3272,6 +3275,36 @@ class _Chantier:
                 places.append((x, y))
         return places
 
+    def guichets(self) -> int:
+        """Les guichets automatiques : SOUS UNE VITRINE, sur l'abord, servis
+        depuis la dalle (`economie.GUICHET`). Rend combien on en a pose.
+
+        ⚠️ Sous une vitrine, pas n'importe ou contre un mur : un guichet est
+        encastre dans la devanture d'un commerce, c'est ce qui le fait lire
+        comme un guichet et pas comme une boite grise. Et sur l'abord, comme
+        les kiosques : la dalle reste la dalle. Ils s'espacent (`ecart`) —
+        deux guichets au meme coin, c'est un mur de banque, pas une ville.
+        Ils tirent dans LEUR de : un guichet de plus ne deplace rien d'autre.
+        """
+        fiche = economie.GUICHET
+        vitrines = {(d["x"] + i, d["y"])
+                    for d in self.devantures for i, m in enumerate(d["motifs"]) if m == "W"}
+        candidats = sorted(
+            (x, y + 1) for x, y in vitrines
+            if y + 2 < self.hauteur and self.sol[y + 1][x] == "_" and self.sol[y + 2][x] == "."
+            and (x, y + 1) not in self.occupe and (x, y + 1) not in self.reserve
+        )
+        poses: list[tuple[int, int]] = []
+        for _essai in range(400):
+            if not candidats or len(poses) >= fiche["par_ville"][1]:
+                break
+            x, y = candidats[self.des_guichet.suivant() % len(candidats)]
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                continue
+            if self.poser_decor("guichet", x, y):
+                poses.append((x, y))
+        return len(poses)
+
     def reclames(self, ambulants: list[dict]) -> list[dict]:
         """Le poste de chaque homme-sandwich : un bout de trottoir a quelques
         tuiles du kiosque pour lequel il crie (`magasins.RECLAME`).
@@ -3619,6 +3652,8 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # cloture. Ce que la ville a mange des enceintes se voit maintenant, et ce
     # qui n'enferme plus rien s'enleve avant que quiconque le juge.
     chantier.elaguer_les_clotures()
+    # Les guichets AVANT les kiosques : une place prise ne se prend pas deux fois.
+    chantier.guichets()
     ambulants = chantier.ambulants()
     reclames = chantier.reclames(ambulants)
     # ⚠️ Apres les ambulants et la reclame : une scene se veut DEGAGEE, et un

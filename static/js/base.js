@@ -77,6 +77,14 @@ function etatInitial(defs) {
     //: ⚠️ La commande est DANS LA SAUVEGARDE : on a paye hier, on apprend
     //: aujourd'hui, et il n'y a pas de retour en arriere.
     nettoyage: { avocatJour: 0, commande: null, provision: false },
+    //: M10, 2e vague — ce qu'on a en poche qui n'est pas une arme (le
+    //: skimmer, par nombre), les skimmers POSES sur les guichets de la ville
+    //: (cle = la tuile ; `pret` quand la nuit a lu), et le dossier
+    //: d'assurance : ce qu'elle nous doit, combien de fois on a reclame, et
+    //: jusqu'a quel jour l'assureur enquete (0 = il ne fait rien).
+    objets: {},
+    skimmers: [],
+    assurance: { du: 0, reclamations: 0, enquete: 0 },
     //: M10 — la dette de Rocco, celle dont on herite avec le garage. Elle
     //: MONTE chaque nuit et elle est BORNEE : une dette qui double pendant
     //: qu'on dort n'est plus une pression, c'est une partie perdue au reveil.
@@ -318,7 +326,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
@@ -327,6 +335,7 @@ const Sauvegarde = (function () {
     // planterait au premier clic.
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
     if (!Array.isArray(out.carnet)) out.carnet = [];
+    if (!Array.isArray(out.skimmers)) out.skimmers = [];
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     return out;

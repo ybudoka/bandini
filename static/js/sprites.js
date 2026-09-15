@@ -2906,6 +2906,24 @@ const DECORS = {
     ctx.fillStyle = '#e8e6de'; ctx.fillRect(3, 9, 4, 1);                  // la bande claire
     ctx.fillStyle = '#5c1410'; ctx.fillRect(3, 13, 4, 1);                 // le pied
   } },
+  // ⚠️ UN GUICHET EST UNE CAISSE DE BANQUE POSEE DANS LA RUE : gris acier,
+  // un ecran qui luit, le clavier, la fente des billets, le lisere de la
+  // banque. `lourd: 2.5` — il ne cede qu'a un camion ou un autobus, une
+  // berline s'y arrete (`Vehicules.decorDevant`) ; `pv: 240`, huit balles de
+  // pistolet : blinde, pas eternel, et un char qui explose a cote l'ouvre
+  // aussi. Ce qu'il fait en cedant est dans `Missions.guichetCasse`.
+  guichet: { casse: 0.5, pv: 240, lourd: 2.5, w: 14, h: 20, ancre: [7, 19], r: 5, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(1, 2, 12, 18);                 // la caisse, dans l'ombre
+    ctx.fillStyle = '#8b8f96'; ctx.fillRect(1, 2, 11, 17);                 // sa face eclairee du nord-ouest
+    ctx.fillStyle = '#a6aab0'; ctx.fillRect(1, 1, 12, 2);                  // le chapeau
+    ctx.fillStyle = '#1b2a3a'; ctx.fillRect(3, 4, 8, 5);                   // l'ecran
+    ctx.fillStyle = '#4fe38a'; ctx.fillRect(4, 5, 5, 1); ctx.fillRect(4, 7, 3, 1);   // ce qu'il affiche
+    ctx.fillStyle = '#d9dbdf';                                             // le clavier
+    for (let i = 0; i < 3; i++) for (let k = 0; k < 3; k++) ctx.fillRect(3 + i * 3, 11 + k * 2, 2, 1);
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(3, 17, 8, 1);                  // la fente des billets
+    ctx.fillStyle = '#2f6fb5'; ctx.fillRect(11, 4, 1, 12);                 // le lisere de la banque
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(1, 19, 12, 1);                 // le pied
+  } },
   poubelle: { casse: 0.85, pv: 25, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
@@ -3138,6 +3156,9 @@ const OBJETS = {
   mitraillette: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 11, 2); ctx.fillRect(6, 6, 2, 4); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 2, 2); },
   carabine: function (ctx) { ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 5, 6, 2); ctx.fillRect(2, 7, 2, 2); ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 4, 10, 2); ctx.fillStyle = '#9aa0a8'; ctx.fillRect(8, 2, 3, 1); },
   molotov: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 3, 4, 6); ctx.fillRect(6, 1, 2, 2); ctx.fillStyle = '#efe6d0'; ctx.fillRect(6, 0, 2, 1); ctx.fillStyle = '#ff8c1a'; ctx.fillRect(8, 0, 1, 1); ctx.fillStyle = '#ffd23a'; ctx.fillRect(9, 1, 1, 1); },
+  // La liasse d'un guichet defonce : du vert, une bande de papier, une
+  // deuxieme liasse qui depasse — a seize pixels, c'est la couleur qui la nomme.
+  billets: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 2, 9, 5); ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 4, 9, 5); ctx.fillStyle = '#9adf7a'; ctx.fillRect(4, 5, 7, 1); ctx.fillStyle = '#e8e6de'; ctx.fillRect(7, 4, 2, 5); },
 };
 
 /* Bulles au-dessus de la tete : la peur, et le temoin qui a tout vu. */

@@ -353,6 +353,10 @@ const Entites = (function () {
     }
     reindexerDecor();
     poussiere(e.x, e.y, 8);
+    // ⚠️ UN GUICHET DEFONCE REPAND SA CAISSE — et c'est un delit a deux
+    // etoiles, quoi qu'il l'ait ouvert (un camion, l'explosion d'a cote, un
+    // chargeur entier) : la caisse est par terre, tout le monde l'a vu.
+    if (e.decor === 'guichet' && typeof Missions !== 'undefined' && Missions.guichetCasse) Missions.guichetCasse(e);
     // ⚠️ UNE BORNE-FONTAINE DEFONCEE CRACHE. C'est la seule raison d'en avoir
     // fait un decor cassable : une tuile ne peut ni tomber ni gicler. Le jet
     // est une ENTITE INVISIBLE qui vit ses dix secondes et crache des
@@ -2847,6 +2851,12 @@ const Entites = (function () {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);
         ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + Math.sin(e.t / 14) * 1.5 - cy));
+        B.stats.images++;
+        continue;
+      }
+      if (e.type === 'ramassage' && e.objet === 'billets') {
+        const c = Atlas.cuirePeintre('objet|billets', 16, 10, function (g, w, h) { OBJETS.billets(g, w, h); });
+        ctx.drawImage(c, Math.round(e.x - 8 - cx), Math.round(e.y - 8 + Math.sin(e.t / 14) * 1.5 - cy));
         B.stats.images++;
         continue;
       }

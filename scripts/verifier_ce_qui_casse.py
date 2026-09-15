@@ -11,6 +11,8 @@ lui faire. Trois mots, et ils se tiennent :
                  vitesse — un banc, une poubelle, un lampadaire.
     `pv: n`      ce qu'il faut lui mettre a l'ARME pour l'abattre : balles,
                  explosion, feu.
+    `lourd: m`   il ne cede qu'a un char d'AU MOINS cette masse — un guichet
+                 s'ouvre au camion, pas a la berline. Va toujours AVEC `casse`.
 
 ⚠️ **Pourquoi ce juge existe.** Jusqu'au 15 sept. 2026, `Entites.briser` n'avait
 qu'UN SEUL appelant — le char lance (`Vehicules.heurterDecor`). Les balles
@@ -266,6 +268,18 @@ def juger_le_catalogue(source: str) -> list[str]:
                 f"{SPRITES} : `DECORS.{nom}` porte `arrete` ET `pv`.\n"
                 "  Ce qui arrête un char ENCAISSE : il ne tombe jamais. Sinon la rue se\n"
                 "  démonte au pistolet et il ne reste plus un seul abri."
+            )
+        lourd = _nombre(fiche.get("lourd"))
+        if lourd is not None and casse is None:
+            reproches.append(
+                f"{SPRITES} : `DECORS.{nom}` porte `lourd` sans `casse`.\n"
+                "  `lourd` dit A PARTIR DE QUELLE MASSE un char le fait céder : sans `casse`,\n"
+                "  rien ne cède jamais et le mot ne veut rien dire."
+            )
+        if lourd is not None and lourd <= 0:
+            reproches.append(
+                f"{SPRITES} : `DECORS.{nom}` a `lourd: {fiche.get('lourd')}`.\n"
+                "  Une masse nulle, c'est un décor que le vélo défonce."
             )
         if pv is not None and pv <= 0:
             reproches.append(

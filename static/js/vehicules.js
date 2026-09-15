@@ -238,6 +238,10 @@ const Vehicules = (function () {
         const fiche = DECORS[d.decor] || {};
         if (!fiche.arrete && !fiche.casse) continue;
         if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + (d.r || 4)) continue;
+        // ⚠️ `lourd` : il ne cede qu'a un char d'AU MOINS cette masse — le
+        // guichet s'ouvre au camion, pas a la berline volee du coin. Pour
+        // tout ce qui est plus leger, c'est un mur.
+        if (fiche.lourd && v.def.masse < fiche.lourd) return { quoi: 'arrete', d: d };
         // ⚠️ Un lourd deracine ce qu'un leger ne fait qu'accrocher : c'est la
         // MASSE qui tranche, pas la vitesse — sinon une berline lancee
         // renverserait une fontaine.
@@ -611,6 +615,13 @@ const Vehicules = (function () {
 
   // --- Degats, feu, explosion ------------------------------------------------------
 
+  /** Un char ASSURE qui disparait — brule, plie, coule — ouvre une
+      reclamation (`Missions.charPerdu`). Ecrit une fois : les trois sorties
+      du monde passent ici, sinon la fraude ne marcherait qu'a l'explosion. */
+  function perdu(v) {
+    if (v.assure && typeof Missions !== 'undefined' && Missions.charPerdu) Missions.charPerdu(v);
+  }
+
   function endommager(v, degats, source) {
     if (v.etat === 'epave' || degats <= 0) return;
     v.vie -= degats;
@@ -628,6 +639,7 @@ const Vehicules = (function () {
       pour une explosion a deux etoiles. */
   function plier(v) {
     v.etat = 'epave';
+    perdu(v);
     // ⚠️ Le cable lache : sans ca, un char reste accroche a une carcasse
     // que plus personne ne met a jour, et le trafic ne l'oublie jamais.
     if (v.remorque) decrocher(v);
@@ -715,6 +727,7 @@ const Vehicules = (function () {
       Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULE', 240);
     }
     Entites.remous(v.x, v.y, 18);
+    perdu(v);
     Entites.retirer(v);
     return true;
   }
@@ -869,6 +882,7 @@ const Vehicules = (function () {
   function exploser(v) {
     const ph = physique();
     v.etat = 'epave';
+    perdu(v);
     // ⚠️ Le cable lache : sans ca, un char reste accroche a une carcasse
     // que plus personne ne met a jour, et le trafic ne l'oublie jamais.
     if (v.remorque) decrocher(v);
