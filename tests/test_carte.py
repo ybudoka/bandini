@@ -649,7 +649,7 @@ def test_les_commerces_ambulants_ont_leur_place():
         # ⚠️ **Reformule le 15 sept. 2026, le trottoir a une tuile.** Un kiosque
         # POSE SUR la dalle la bouchait : il se range sur l'ABORD, contre le mur,
         # et il est SERVI DEPUIS LA DALLE — la tuile au sud est le trottoir.
-        attendu = "_" if commerce["sur"] == "trottoir" else "p"
+        attendu = {"trottoir": "_", "stationnement": "p", "quai": "Q"}[commerce["sur"]]
         assert glyphe == attendu, f"{pose['slug']} pose sur « {glyphe} »"
         devant = CARTE["sol"][pose["y"] + 1][pose["x"]]
         assert carte.marchable(devant), f"{pose['slug']} : on ne peut pas se placer devant"

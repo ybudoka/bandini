@@ -101,6 +101,9 @@ const Missions = (function () {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
     if (!ouvert(commerce)) { Hud.message('FERME'); Son.SFX.erreur(); return true; }
+    // La cale n'est pas une bouchee : c'est un comptoir, et les caisses vont
+    // dans le char d'a cote.
+    if (commerce.service === 'contrebande') { Hud.ouvrirMenu(menuContrebande(j, etal)); return true; }
     const prix = prixAmbulant(j, commerce);
     if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
     payer(prix, commerce.nom.toUpperCase());
@@ -309,6 +312,8 @@ const Missions = (function () {
     // ⚠️ Le char part au lot AVANT la remise a zero : apres, la police lache
     // le morceau et on n'a plus de raison de savoir ce qu'on conduisait.
     const saisi = charSaisissable(j);
+    // ⚠️ La police FOUILLE : arrete avec des caisses, on les perd en entier.
+    if (saisi) confisquerLaCargaison(saisi);
     if (saisi) { const nom = saisi.def.nom.toUpperCase(); saisir(saisi); Hud.message(nom + ' A LA FOURRIERE', 240); }
     Police.remiseAZero();
     if (boulot.etape) boulot.abandonner();
@@ -847,6 +852,8 @@ const Missions = (function () {
     const items = [];
     const caisse = itemCaisse(piece.slug);
     if (caisse) items.push(caisse);
+    // La run : le prix du jour, et « vendre » ce qu'il y a dans le char devant.
+    itemsRevente(piece).forEach(function (i) { items.push(i); });
     switch (point.type) {
       case 'lit':
         items.push({ libelle: 'DORMIR JUSQU’AU MATIN', detail: 'SAUVEGARDE', faire: function () { dormir(); return true; } });
@@ -1807,6 +1814,122 @@ const Missions = (function () {
     }
   }
 
+  // --- La run : la contrebande de Sven, d'un district a l'autre ----------------------------
+
+  /** Le char a portee de la cale : le plus proche dans `rayon` px, pas une
+      epave, pas conduit par le trafic. ⚠️ C'est LUI qui porte les caisses :
+      la cale ne se porte pas, et un char qui brule brule la run avec. */
+  function charPres(x, y, rayon) {
+    let meilleur = null, dMin = rayon * rayon;
+    for (const e of B.entites) {
+      if (e.type !== 'vehicule' || !e.actif || e.etat === 'epave' || e.conducteur === 'trafic') continue;
+      const d = dist2(e.x, e.y, x, y);
+      if (d < dMin) { dMin = d; meilleur = e; }
+    }
+    return meilleur;
+  }
+
+  function caissesDe(v) {
+    let n = 0;
+    if (v && v.cargaison) for (const m in v.cargaison) n += v.cargaison[m];
+    return n;
+  }
+
+  /** Ce qu'on a deja achete AUJOURD'HUI : le prix monte avec, et le compteur
+      repart chaque matin. */
+  function acheteesAujourdhui() {
+    const p = B.partie;
+    if (p.contrebande.jour !== p.jour) { p.contrebande.jour = p.jour; p.contrebande.achetees = 0; }
+    return p.contrebande.achetees;
+  }
+
+  function prixAchat(slug) {
+    const c = B.defs.economie.contrebande, m = c.marchandises[slug];
+    return Math.round(m.achat * (1 + c.hausse * acheteesAujourdhui()));
+  }
+
+  /** Le prix du jour d'une marchandise dans un district : entre `facteur[0]`
+      et `facteur[1]` fois le prix de vente, tire du JOUR et du district — le
+      meme pour tous les comptoirs du district, et il bouge chaque nuit.
+      ⚠️ `hash2`, pas `B.rng()` : un prix affiche ne consomme pas un de. */
+  function facteurDuJour(district, slug) {
+    const c = B.defs.economie.contrebande;
+    const districts = (Monde.carte && Monde.carte.def.districts) || [];
+    const di = Math.max(0, districts.findIndex(function (d) { return d.slug === district; }));
+    const mi = Object.keys(c.marchandises).sort().indexOf(slug);   // stable, quel que soit l'ordre du paquet
+    const h = hash2(B.partie.jour * 131 + di, 977 + mi) % 1000;
+    return c.facteur[0] + (c.facteur[1] - c.facteur[0]) * h / 1000;
+  }
+
+  function prixDuJour(district, slug) {
+    return Math.round(B.defs.economie.contrebande.marchandises[slug].vente * facteurDuJour(district, slug));
+  }
+
+  function districtDe(x, y) {
+    const z = Monde.zoneA(x, y);
+    return z ? z.district : null;
+  }
+
+  /** Le comptoir de la cale : une caisse dans le coffre du char d'a cote. */
+  function menuContrebande(j, etal) {
+    const p = B.partie, c = B.defs.economie.contrebande, items = [];
+    const v = charPres(etal.x, etal.y, c.rayon_px);
+    if (!v) items.push({ libelle: 'VIENS EN CHAR — LA CALE NE SE PORTE PAS', actif: false });
+    const dedans = caissesDe(v);
+    Object.keys(c.marchandises).sort().forEach(function (slug) {
+      const m = c.marchandises[slug], prix = prixAchat(slug);
+      items.push({ libelle: 'CAISSE DE ' + m.nom.toUpperCase(), detail: prix + ' $',
+                   actif: !!v && dedans < c.caisses_max && p.argent >= prix,
+                   faire: function () {
+                     if (!v || caissesDe(v) >= c.caisses_max || !payer(prix, m.nom.toUpperCase())) return false;
+                     v.cargaison = v.cargaison || {};
+                     v.cargaison[slug] = (v.cargaison[slug] || 0) + 1;
+                     acheteesAujourdhui();
+                     p.contrebande.achetees += 1;
+                     Son.SFX.argent();
+                     return false;
+                   } });
+    });
+    return { titre: c.nom.toUpperCase(), items: items, sur: p.argent + ' $',
+             refaire: function () { return menuContrebande(j, etal); },
+             aide: (v ? dedans + '/' + c.caisses_max + ' CAISSES DANS LE COFFRE · ' : '') + 'LE PRIX MONTE AVEC CE QU’ON A DÉJÀ PRIS AUJOURD’HUI' };
+  }
+
+  /** Au comptoir d'un commerce qui en prend : le prix du jour du district, et
+      « vendre » chaque marchandise qu'on a dans le char gare devant. */
+  function itemsRevente(piece) {
+    const c = B.defs.economie.contrebande, items = [];
+    if (!piece || c.comptoirs.indexOf(piece.slug) < 0 || !B.exterieur) return items;
+    const district = districtDe(B.exterieur.x, B.exterieur.y);
+    if (!district) return items;
+    const prix = {}, affiche = [];
+    Object.keys(c.marchandises).sort().forEach(function (slug) {
+      prix[slug] = prixDuJour(district, slug);
+      affiche.push(c.marchandises[slug].nom.toUpperCase() + ' ' + prix[slug] + ' $');
+    });
+    items.push({ libelle: 'PRIX DU JOUR — ' + affiche.join(' · '), actif: false });
+    const v = charDevant();
+    if (!v || !v.cargaison) return items;
+    Object.keys(c.marchandises).sort().forEach(function (slug) {
+      const n = v.cargaison[slug] || 0;
+      if (!n) return;
+      const total = n * prix[slug];
+      items.push({ libelle: 'VENDRE ' + n + ' CAISSE' + (n > 1 ? 'S' : '') + ' DE ' + c.marchandises[slug].nom.toUpperCase(),
+                   detail: total + ' $', actif: true,
+                   faire: function () { encaisser(total, 'LA RUN'); v.cargaison[slug] = 0; return false; } });
+    });
+    return items;
+  }
+
+  /** La police FOUILLE : arrete avec des caisses, on les perd en entier. */
+  function confisquerLaCargaison(v) {
+    const n = caissesDe(v);
+    if (!n) return 0;
+    v.cargaison = null;
+    Hud.message('LA POLICE A TROUVÉ LES ' + n + ' CAISSES', 240);
+    return n;
+  }
+
   // --- Le marche noir : Josee, une fois le Faubourg libere --------------------------------
 
   function menuMarcheNoir() {
@@ -1875,6 +1998,11 @@ const Missions = (function () {
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) {
       const c = commerceDe(etal.slug);
+      if (c && c.service === 'contrebande') {
+        const cf = B.defs.economie.contrebande, v = charPres(etal.x, etal.y, cf.rayon_px);
+        B.invite = c.nom.toUpperCase() + (v ? ' — ' + caissesDe(v) + '/' + cf.caisses_max + ' CAISSES' : ' — VIENS EN CHAR');
+        return;
+      }
       B.invite = c ? c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $' + (coupon(j, c.slug) < 1 ? ' (COUPON)' : '') : 'ACHETER';
       return;
     }
@@ -1969,5 +2097,6 @@ const Missions = (function () {
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,
-           valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance, maj };
+           valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance,
+           charPres, caissesDe, prixAchat, facteurDuJour, prixDuJour, menuContrebande, itemsRevente, confisquerLaCargaison, maj };
 })();

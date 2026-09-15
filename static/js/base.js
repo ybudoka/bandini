@@ -85,6 +85,9 @@ function etatInitial(defs) {
     objets: {},
     skimmers: [],
     assurance: { du: 0, reclamations: 0, enquete: 0 },
+    //: La run : ce qu'on a achete a la cale AUJOURD'HUI (le prix monte avec).
+    //: Les caisses, elles, sont dans le coffre du char — pas dans la partie.
+    contrebande: { jour: 0, achetees: 0 },
     //: M10 — la dette de Rocco, celle dont on herite avec le garage. Elle
     //: MONTE chaque nuit et elle est BORNEE : une dette qui double pendant
     //: qu'on dort n'est plus une pression, c'est une partie perdue au reveil.
@@ -326,7 +329,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

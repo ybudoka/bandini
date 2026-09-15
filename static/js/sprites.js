@@ -2924,6 +2924,21 @@ const DECORS = {
     ctx.fillStyle = '#2f6fb5'; ctx.fillRect(11, 4, 1, 12);                 // le lisere de la banque
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(1, 19, 12, 1);                 // le pied
   } },
+  // La cale du Norvegien : trois caisses empilees sous un bout de bache
+  // bleue, une corde autour. Un comptoir de contrebande n'a pas d'enseigne —
+  // c'est la bache qui le nomme. Il ARRETE, comme les kiosques.
+  cale: { arrete: 9, w: 22, h: 18, ancre: [11, 17], r: 9, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6e5330'; ctx.fillRect(1, 8, 20, 10);                 // les deux caisses du bas, dans l'ombre
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 8, 9, 9); ctx.fillRect(12, 8, 9, 9);
+    ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 9, 7, 3); ctx.fillRect(13, 9, 7, 3);
+    ctx.fillStyle = '#6e5330'; ctx.fillRect(5, 8, 1, 9); ctx.fillRect(16, 8, 1, 9);   // les planches
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(6, 1, 10, 8);                  // celle du dessus
+    ctx.fillStyle = '#a07c4b'; ctx.fillRect(7, 2, 8, 3);
+    ctx.fillStyle = '#2f5f8a'; ctx.fillRect(4, 0, 9, 4); ctx.fillRect(2, 2, 5, 5);    // la bache
+    ctx.fillStyle = '#3f78ad'; ctx.fillRect(5, 1, 6, 1);
+    ctx.fillStyle = '#d9c9a0'; ctx.fillRect(1, 12, 20, 1);                 // la corde
+    ctx.fillStyle = '#4a3a28'; ctx.fillRect(1, 17, 20, 1);                 // le pied
+  } },
   poubelle: { casse: 0.85, pv: 25, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);

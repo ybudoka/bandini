@@ -3270,6 +3270,12 @@ class _Chantier:
                         continue
                     if not marchable(self.sol[y + 1][x]):
                         continue
+                elif sur == "quai":
+                    # Sur les planches, avec deux tuiles de quai devant pour s'y
+                    # tenir et y garer un char — pas au bord de l'eau : on ne
+                    # vend pas les pieds dans la baie.
+                    if glyphe != "Q" or self.sol[y + 1][x] != "Q" or self.sol[y + 2][x] != "Q":
+                        continue
                 else:  # pragma: no cover - garde-fou de relecture du catalogue
                     raise ValueError(f"support inconnu : {sur!r}")
                 places.append((x, y))

@@ -48,6 +48,15 @@ AMBULANTS: list[dict] = [
      "gain_souffle": "guedille_souffle", "effet": None,
      "nombre": 3, "sur": "trottoir", "heures": [0.3, 0.85], "phase": 1,
      "districts": ("quais", "pointe"), "reclame": "GUÉDILLE MOITIÉ PRIX"},
+    # La cale du Norvegien : la contrebande de Sven, aux Quais seulement. Pas
+    # une bouchee — un COMPTOIR (`service: "contrebande"`, ses prix dans
+    # `economie.CONTREBANDE`) : les caisses vont dans le coffre du char gare a
+    # cote, et se revendent au prix du jour dans quatre commerces de la ville.
+    {"slug": "contrebande", "nom": "La cale du Norvégien", "sprite": "cale",
+     "service": "contrebande", "tarif": None, "gain_pv": None,
+     "gain_souffle": None, "effet": None,
+     "nombre": 1, "sur": "quai", "heures": None, "phase": 1,
+     "districts": ("quais",), "reclame": None},
 ]
 
 #: L'homme-sandwich : un SOLLICITEUR. Il porte l'enseigne d'un kiosque sur le

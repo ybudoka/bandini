@@ -27,8 +27,12 @@ def test_les_ambulants_pointent_vers_des_tarifs_qui_existent():
     from app import economie
 
     for commerce in magasins.AMBULANTS:
-        assert commerce["tarif"] in economie.TARIFS, commerce["slug"]
-        assert economie.TARIFS[commerce["tarif"]] > 0
+        if commerce["service"] == "contrebande":
+            # La cale n'a pas UN tarif : ses prix vivent dans `economie.CONTREBANDE`.
+            assert commerce["tarif"] is None
+        else:
+            assert commerce["tarif"] in economie.TARIFS, commerce["slug"]
+            assert economie.TARIFS[commerce["tarif"]] > 0
         if commerce["gain_pv"]:
             assert commerce["gain_pv"] in economie.TARIFS
             assert 0 < economie.TARIFS[commerce["gain_pv"]] <= 100
@@ -36,7 +40,7 @@ def test_les_ambulants_pointent_vers_des_tarifs_qui_existent():
             assert commerce["gain_souffle"] in economie.TARIFS
             assert 0 < economie.TARIFS[commerce["gain_souffle"]] <= recherche.VITESSES["endurance"]
         assert commerce["effet"] in (None, *magasins.EFFETS)
-        assert commerce["sur"] in ("trottoir", "stationnement")
+        assert commerce["sur"] in ("trottoir", "stationnement", "quai")
         assert 1 <= commerce["nombre"] <= 6
         if commerce["districts"]:
             from app import carte

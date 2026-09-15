@@ -249,6 +249,60 @@ def prime_assurance(prix_neuf: int) -> int:
     return int(round(valeur_assuree(prix_neuf) * ASSURANCE["prime_fraction"]))
 
 
+# --- La run : la contrebande de Sven, d'un district a l'autre -------------
+
+#: ⚠️ **Acheter bas, vendre haut — c'est le coeur de Chinatown Wars**, et ici
+#: il ne demande ni marchandise neuve ni personnage neuf : des caisses de
+#: cigarettes et de boisson (⚠️ pas de drogue : le jeu se moque de la ville,
+#: il ne vend pas ca), achetees a la cale du Norvegien sur les Quais et
+#: revendues au comptoir de quatre commerces de la ville, au PRIX DU JOUR de
+#: leur district — tire du jour et du district, le meme pour tous les
+#: comptoirs d'un district, et il bouge chaque nuit.
+#:
+#: ⚠️ **Les caisses vont dans le COFFRE du char gare a cote** (`rayon_px`) :
+#: la cale ne se porte pas, un char qui brule brule la run avec, et un char
+#: saisi part au lot fouille — arrete avec des caisses, on les perd en entier.
+#:
+#: ⚠️ **Ce qui empeche la machine a argent** (`test_contrebande`) : le prix
+#: d'achat MONTE avec ce qu'on a deja pris dans la journee (`hausse`), le
+#: mauvais district fait PERDRE de l'argent (`facteur[0]` fois le prix de
+#: vente reste sous le prix d'achat), et la marge d'une run complete — le
+#: coffre plein, vendu au meilleur prix possible — reste sous la prime de la
+#: plus grosse mission de l'arc, et sous le taxi a l'heure sur les `cycle_s`
+#: qu'une run prend au moins. Un commerce qui paie mieux que l'histoire vide
+#: l'histoire.
+CONTREBANDE: dict = {
+    "nom": "La cale du Norvégien",
+    "marchandises": {
+        "cigarettes": {"nom": "Cigarettes", "achat": 120, "vente": 170},
+        "boisson": {"nom": "Boisson", "achat": 80, "vente": 110},
+    },
+    "hausse": 0.10,             # +10 % par caisse deja achetee dans la journee
+    "caisses_max": 8,           # ce qu'un coffre prend
+    "facteur": (0.7, 1.3),      # le prix du jour, en fraction du prix de vente
+    "comptoirs": ("depanneur", "bar", "cantine", "casse_croute"),   # qui en prend
+    "rayon_px": 90,             # le char doit etre gare a ca de la cale
+    "cycle_s": 240,             # ce qu'une run prend au moins (le juge)
+}
+
+
+def prix_achat(slug: str, deja: int) -> int:
+    """Le prix d'une caisse a la cale, `deja` caisses achetees aujourd'hui."""
+    m = CONTREBANDE["marchandises"][slug]
+    return int(round(m["achat"] * (1 + CONTREBANDE["hausse"] * max(0, deja))))
+
+
+def marge_max_run() -> int:
+    """La meilleure run possible : le coffre plein d'une seule marchandise,
+    vendu au meilleur prix du jour qui existe."""
+    haut, meilleur = CONTREBANDE["facteur"][1], 0
+    for slug, m in CONTREBANDE["marchandises"].items():
+        gain = sum(int(round(m["vente"] * haut)) - prix_achat(slug, k)
+                   for k in range(CONTREBANDE["caisses_max"]))
+        meilleur = max(meilleur, gain)
+    return meilleur
+
+
 # --- Effacer le casier : la certitude, ou le pari -------------------------
 
 #: ⚠️ **Deux comptoirs qui n'ont de sens que l'un contre l'autre.** Un seul
@@ -663,6 +717,9 @@ def exporter() -> dict:
         "guichet": {**GUICHET, "caisse": list(GUICHET["caisse"]), "par_ville": list(GUICHET["par_ville"]),
                     "skimmer": {**GUICHET["skimmer"], "rendement": list(GUICHET["skimmer"]["rendement"])}},
         "assurance": dict(ASSURANCE),
+        "contrebande": {**CONTREBANDE, "facteur": list(CONTREBANDE["facteur"]),
+                        "comptoirs": list(CONTREBANDE["comptoirs"]),
+                        "marchandises": {k: dict(v) for k, v in CONTREBANDE["marchandises"].items()}},
         "paliers": {slug: [dict(p) for p in liste] for slug, liste in PALIERS.items()},
         # dettes[n] = ce que la dette vaut apres n nuits sans payer — le
         # navigateur n'a plus qu'a indexer, et la borne est deja dedans.

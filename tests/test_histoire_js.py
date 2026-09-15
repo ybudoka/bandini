@@ -244,7 +244,12 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
         const defi = L.B.defi && L.B.defi.slug;
         const ligne = L.Histoire.ligneObjectif();
         const gps = L.Histoire.cible();
-        o.frame(120 * 60 + 5);                                // le chrono file, a pied
+        // ⚠️ Sans char, le defi rate A L'INSTANT — pas au bout du chrono. Le
+        // juge laissait filer les deux minutes et lisait le DERNIER message du
+        // HUD : le jour ou un facteur en colere a trouve le joueur plante la,
+        // c'est la facture de l'hopital qu'il a lue. On lit le verdict tout
+        // de suite, et on ne mesure que lui.
+        o.frame(30);
         return { panneaux: panneaux, invite: invite, menu: menu, defi: defi, ligne: ligne, gps: gps && gps.nom,
                  apres: L.B.defi, msg: L.B.msg };
     }""")
