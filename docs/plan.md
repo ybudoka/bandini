@@ -459,8 +459,9 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py
         test_eau_son_js.py test_amuseurs_js.py
         test_reclame.py test_reclame_js.py
-        test_navigateur.py
-scripts/  verifier_dependances.py verifier_carte_du_depot.py audio_elevenlabs.py musique_apercu.py
+        test_table_des_jalons.py test_navigateur.py
+scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
+          audio_elevenlabs.py musique_apercu.py
           git-hooks/post-commit
 deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
          systemd/bandini-gestiondojo.service.example nginx/bandini-gestiondojo.conf.example caddy/README.md
@@ -4283,6 +4284,7 @@ _Ce que ça donne :_ une histoire qui se termine, de deux façons.
 - **Playwright** (`test_navigateur.py`, fixture `serveur`) : 4 écrans (1280×720, 1024×768, 390×844, 844×390) ; aucune erreur console ; Jouer → état `jeu` ; clavier déplace ; tactile : commandes ≥ 64 px (pause 44), dans l'écran, sans chevauchement, glisser sur `#croix` déplace ; envoi de score.
 - **CI** (dépôt public) : job `rapide` (uv sync, dépendances synchronisées, ruff, pytest sans navigateur, `BANDINI_TESTS_OBLIGATOIRES=1`) puis `navigateur` (cache Chromium sur `uv.lock`), < 3 min.
 - **La carte du dépôt** (l'arborescence ci-dessus et les tableaux « Côté Python » / « Côté JS ») : `scripts/verifier_carte_du_depot.py` la compare aux fichiers que git suit, `tests/test_carte_du_depot.py` fait échouer la CI quand un fichier n'y est pas — et deux **gardes Claude Code** (`.claude/settings.json`) le rappellent plus tôt, là où corriger ne coûte rien : à l'écriture d'un fichier (PostToolUse `Write|Edit`) et avant `git commit` (PreToolUse `Bash`, qui lit le plan de l'**index**, pas celui de l'arbre — sinon la carte corrigée resterait sur le bureau). ⚠️ Pourquoi une garde et pas seulement un test : le 13 sept. 2026, trois tests, deux scripts et quatre modules existaient sans y être, et personne ne relit l'arborescence avant de committer. Un fichier **à venir** se note avec son jalon entre parenthèses sur sa ligne (`bd.py comptes.py (M14 — …)`) : c'est ce qui l'excuse d'être absent ; `static/audio/` se couvre d'un seul trait.
+- **La table des jalons** (« État des jalons », tout en haut) : `scripts/verifier_table_des_jalons.py` vérifie qu'elle garde ses **six colonnes** (`Jalon | État | Date | Prio | Genre | Notes`) et que chaque cellule dit ce qu'elle doit dire — un état connu, une date `14 sept. 2026` ou `—`, une prio `P1`–`P4` ou `—`, un genre `ajout` ou `correctif`. `tests/test_table_des_jalons.py` fait échouer la CI, et les deux mêmes **gardes Claude Code** que la carte du dépôt le rappellent à l'écriture et avant `git commit`. ⚠️ Pourquoi : la table a été divisée le 14 sept. 2026, et le jour même une session qui n'avait pas vu passer le changement a rajouté sa ligne dans l'**ancienne forme à trois colonnes** (`| Un poteau par coin | **P2** **correctif**, **en cours** (14 sept. 2026) | … |`). Markdown ne s'en plaint pas : il avale la ligne et la rend de travers, et la division se perd sans qu'un test rougisse. C'est le risque propre à un fichier que **plusieurs sessions écrivent en même temps** — la forme doit se défendre toute seule, parce que personne ne relit l'en-tête avant d'ajouter sa ligne.
 
 ## Vérification de bout en bout
 
