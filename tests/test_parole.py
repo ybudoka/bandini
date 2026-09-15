@@ -128,44 +128,52 @@ def test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu(banc):
     plus — et elle le dit **avant** que tu regardes le HUD."""
     r = banc("""function (L, o) {
         const R = function () { return L.Son.Rumeur; };
+        // ⚠️ `L.Jeu.commencer()` D'ABORD : le joueur n'existe pas avant, et
+        // `L.B.joueur` vaut null.
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ ON MESURE CONTRE LA FOULE DU MOMENT, jamais contre une lecture
+        // d'il y a dix secondes : le volume voulu suit le nombre de gens
+        // autour, et ce nombre bouge pendant qu'on marche. Comparer « revenue »
+        // a un « calme » pris quatre cents images plus tot, c'est mesurer la
+        // densite du quartier, pas la rumeur.
+        const mesure = function () {
+            const gens = L.Entites.pietonsAutour(j.x, j.y, 200)
+              .filter(function (e) { return !e.metier; }).length;
+            return { v: +R().volume.toFixed(3), voulu: +Math.min(1, gens / 10).toFixed(3) };
+        };
         j.arme = 'poings';
         for (let i = 0; i < 300; i++) o.frame(1);
-        const calme = R().volume;
+        const calme = mesure();
         // Une arme au poing : la rue tombe.
         j.arme = 'batte';
         for (let i = 0; i < 60; i++) o.frame(1);
-        const peur = R().volume;
+        const peur = mesure();
         // On la range : elle remonte, mais pas d'un coup.
         j.arme = 'poings';
         o.frame(30);
-        const juste_apres = R().volume;
+        const justeApres = mesure();
         for (let i = 0; i < 400; i++) o.frame(1);
-        const revenue = R().volume;
+        const revenue = mesure();
         // Un coup de feu : elle ne murmure pas, elle CRIE.
         R().crier();
         o.frame(15);
-        const cri = R().volume;
-        return { calme: +calme.toFixed(3), peur: +peur.toFixed(3),
-                 justeApres: +juste_apres.toFixed(3), revenue: +revenue.toFixed(3),
-                 cri: +cri.toFixed(3) };
+        const cri = mesure();
+        return { calme: calme, peur: peur, justeApres: justeApres, revenue: revenue, cri: cri };
     }""")
-    assert r["calme"] > 0.05, "la rue est déjà muette : le juge ne prouve rien (%s)" % r
-    assert r["peur"] < r["calme"] * 0.5, "la rue ne se tait pas devant une arme : %s" % r
+    assert r["calme"]["v"] > 0.05, "la rue est déjà muette : le juge ne prouve rien (%s)" % r
+    # Au calme, la rumeur colle à la foule du moment.
+    assert abs(r["calme"]["v"] - r["calme"]["voulu"]) < 0.06, "la rumeur ne suit pas la foule : %s" % r
+    assert r["peur"]["v"] < r["peur"]["voulu"] * 0.5, "la rue ne se tait pas devant une arme : %s" % r
     # ⚠️ Elle TOMBE d'un coup et REMONTE doucement.
-    assert r["justeApres"] < r["calme"], (
+    assert r["justeApres"]["v"] < r["justeApres"]["voulu"] * 0.9, (
         "elle a retrouvé son murmure en une demi-seconde : elle n'a pas eu peur (%s)" % r
     )
-    assert r["revenue"] >= r["calme"] * 0.8, "elle ne revient jamais : %s" % r
-    # ⚠️ Et après un coup de feu, elle crie — plus fort que son murmure DU
-    # MOMENT. ⚠️ Pas plus fort que le murmure du début : le volume suit le
-    # nombre de gens autour, et huit cents images plus tard il n'y a plus tout
-    # à fait la même foule sur le trottoir (0,60 contre 0,70 le 14 sept. 2026,
-    # après que la ville a bougé). Comparer au départ, c'était mesurer la
-    # densité du quartier ; ce qu'on juge, c'est que le coup de feu FAIT monter
-    # la rumeur.
-    assert r["cri"] > r["revenue"], (
+    assert r["revenue"]["v"] >= r["revenue"]["voulu"] * 0.8, "elle ne revient jamais : %s" % r
+    # ⚠️ Et après un coup de feu, elle crie — plus fort que le murmure que CETTE
+    # foule-là mérite. Comparer au volume du début, c'était comparer deux
+    # quartiers ; comparer au voulu du moment, c'est juger la règle.
+    assert r["cri"]["v"] > r["cri"]["voulu"], (
         "une foule qui murmure pareil avant et après un coup de feu n'est pas une foule, "
         "c'est un bruit de fond (%s)" % r
     )
