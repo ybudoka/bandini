@@ -4928,53 +4928,17 @@ def test_les_feux_et_les_stops_sont_poses(banc):
     assert r["stopSansOuest"] == "<", "le STOP est pour ceux qui arrivent par la tige"
 
 
-def test_un_feu_peint_ses_lanternes_et_pas_seulement_son_poteau(banc):
-    """⚠️ **LE JUGE QUI MANQUAIT.** Les feux ont été **muets** du jour où on
-    les a posés : l'entité portait `decor: 'feu'`, et `Entites.dessiner` teste
-    `if (e.decor)` **avant** `if (e.type === 'feu')` — la branche générique
-    peignait le boîtier cuit et s'en allait. Ni rouge, ni vert, ni blanc : un
-    poteau noir à chaque coin, aux 482 poteaux de la ville.
-
-    Et rien ne le disait, parce que **tous les juges des feux parlaient de
-    l'horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement) et aucun
-    du **dessin**. Celui-ci compte les rectangles peints, en plein jour, là où
-    aucune lampe ne vient aider.
-    """
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const inter = L.Monde.carte.intersections.find(function (i) { return i.feux; });
-        const feu = L.B.entites.find(function (e) { return e.type === 'feu' && e.inter === inter; });
-        const pieton = L.B.entites.find(function (e) { return e.type === 'feu_pieton' && e.inter === inter; });
-        const t = L.B.defs.conduite.trafic;
-        const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
-        L.B.joueur.x = feu.x; L.B.joueur.y = feu.y;
-        L.B.partie.heure = 0.5;                                   // plein midi : aucune lampe
-        L.B.t = ((Math.floor(t.feu_vert_images / 2) - inter.decalage) % cycle + cycle) % cycle - 1;
-        L.Monde.centrerCamera(feu.x, feu.y);
-        const c = L.Base.debut();                                 // le contexte 1x, celui ou tout se peint
-        c.traces = [];
-        o.frame(1);
-        const traces = c.traces; c.traces = null;
-        const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
-        function chez(e, d, dx, dy, w, h) {
-            const x = Math.round(e.x - d.ancre[0] - cx) + dx, y = Math.round(e.y - d.ancre[1] - cy) + dy;
-            const r = traces.find(function (q) { return q[0] === x && q[1] === y && q[2] === w && q[3] === h; });
-            return r ? r[4] : null;
+# ⚠️ Ou tombe l'ampoule d'une tete pieton, en pixels ecran. Le calcul refait
+# celui de `tetesDeTraverse` : a DEUX tetes les ampoules retrecissent a trois
+# pixels et se decalent, a une elle en fait quatre et se centre. Les juges
+# d'en dessous cherchent une lampe ou un rectangle A SA PLACE — sans quoi
+# « il y a du vert quelque part » passerait au vert du poteau d'en face.
+TETES_JS = """
+        function tete(cx, i, n) {            // milieu du mat, rang de la tete, combien
+            const deux = n > 1, l = deux ? 3 : 4;
+            return { x: deux ? (i === 0 ? cx - 4 : cx + 1) : cx - 2, l: l };
         }
-        const df = L.DECORS.feu, dp = L.DECORS.feu_pieton;
-        return { ns: chez(feu, df, 1, 2, 3, 3), eo: chez(feu, df, 6, 2, 3, 3),
-                 coeurNS: chez(feu, df, 2, 3, 1, 1),
-                 pieton: pieton ? chez(pieton, dp, 1, 1, 4, 5) : 'aucun poteau',
-                 lampes: L.Vehicules.lampesDesFeux().length,
-                 etatPieton: pieton ? L.Monde.feuPieton(pieton.inter, pieton.sens === '=' ? '>' : '^') : null };
-    }""")
-    assert r["ns"] == "#2ecc71", f"la lanterne du sens qui roule n'est pas verte : {r['ns']}"
-    assert r["eo"] == "#e74c3c", f"la lanterne de l'autre sens n'est pas rouge : {r['eo']}"
-    assert r["coeurNS"] and r["coeurNS"] != r["ns"], \
-        "une ampoule sans coeur plus pale est une pastille peinte : rien ne dit qu'elle est allumee"
-    assert r["pieton"] == {"blanc": "#f2f2f2", "degage": "#f39c12", "rouge": "#c0392b"}[r["etatPieton"]], \
-        f"le feu pieton est {r['etatPieton']} et peint {r['pieton']}"
-    assert r["lampes"] == 0, "un feu qui eclaire en plein midi"
+"""
 
 
 def test_une_ampoule_allumee_pose_une_lampe_de_la_couleur_de_sa_phase(banc):
@@ -4995,9 +4959,10 @@ def test_une_ampoule_allumee_pose_une_lampe_de_la_couleur_de_sa_phase(banc):
         const t = L.B.defs.conduite.trafic, d = L.DECORS.feu;
         const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
         L.B.joueur.x = feu.x; L.B.joueur.y = feu.y;
-        // Les deux ampoules du poteau, retrouvees A LEUR PLACE A L'ECRAN : les
-        // poteaux voisins en posent d'autres, et un juge qui lirait « il y a du
-        // vert quelque part » passerait au vert du poteau d'en face.
+        // Les deux ampoules des CHARS, retrouvees a leur place a l'ecran : le
+        // mat en porte d'autres (les tetes pieton) et les poteaux voisins
+        // aussi, et un juge qui lirait « il y a du vert quelque part »
+        // passerait au vert du coin d'en face.
         function releve(heure, phase) {
             L.B.partie.heure = heure;
             L.B.t = ((phase - inter.decalage) % cycle + cycle) % cycle;
@@ -5037,12 +5002,12 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
     l'ampoule est éteinte, c'est un clignotant qui ne clignote plus — on le
     verrait battre à l'œil et briller en continu sur le trottoir.
     """
-    r = banc("""function (L, o) {
+    r = banc("""function (L, o) {""" + TETES_JS + """
         L.Jeu.commencer();
         const t = L.B.defs.conduite.trafic, d = L.DECORS.feu_pieton;
         const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
         const poteau = L.B.entites.find(function (e) { return e.type === 'feu_pieton'; });
-        const inter = poteau.inter, sens = poteau.sens === '=' ? '>' : '^';
+        const inter = poteau.inter, sens = poteau.traverses[0] === '=' ? '>' : '^';
         L.B.joueur.x = poteau.x; L.B.joueur.y = poteau.y;
         L.B.partie.heure = 0.0;
         // Deux images du MEME degagement (il dure 120 images), de parite
@@ -5060,7 +5025,10 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
             o.frame(1);
             const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
             const x = Math.round(poteau.x - d.ancre[0] - cx), y = Math.round(poteau.y - d.ancre[1] - cy);
-            const l = L.Vehicules.lampesDesFeux().find(function (q) { return q.x === x + 3 && q.y === y + 3.5; });
+            const a = tete(x + 3, 0, poteau.traverses.length);
+            const l = L.Vehicules.lampesDesFeux().find(function (q) {
+                return q.x === a.x + a.l / 2 && q.y === y + 3.5;
+            });
             return { eteint: c.eteint, vise: c.phase, t: L.B.t,
                      etat: L.Monde.feuPieton(inter, sens), lampe: l ? l.c : null };
         });
@@ -5074,6 +5042,122 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
     allume = next(x for x in r if not x["eteint"])
     assert eteint["lampe"] is None, "l'ampoule est eteinte et le trottoir reste eclaire"
     assert allume["lampe"], "l'ampoule est allumee et n'eclaire rien"
+
+
+def test_un_feu_peint_ses_lanternes_et_pas_seulement_son_poteau(banc):
+    """⚠️ **LE JUGE QUI MANQUAIT.** Les feux ont été **muets** du jour où on
+    les a posés : l'entité portait `decor: 'feu'`, et `Entites.dessiner` teste
+    `if (e.decor)` **avant** `if (e.type === 'feu')` — la branche générique
+    peignait le boîtier cuit et s'en allait. Ni rouge, ni vert, ni blanc : un
+    poteau noir à chaque coin de la ville.
+
+    Et rien ne le disait, parce que **tous les juges des feux parlaient de
+    l'horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement) et aucun
+    du **dessin**. Celui-ci compte les rectangles peints, en plein jour, là où
+    aucune lampe ne vient aider.
+    """
+    r = banc("""function (L, o) {""" + TETES_JS + """
+        L.Jeu.commencer();
+        const inter = L.Monde.carte.intersections.find(function (i) { return i.feux; });
+        const feu = L.B.entites.find(function (e) { return e.type === 'feu' && e.inter === inter; });
+        const pieton = L.B.entites.find(function (e) { return e.type === 'feu_pieton' && e.inter === inter; });
+        const t = L.B.defs.conduite.trafic;
+        const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
+        L.B.joueur.x = feu.x; L.B.joueur.y = feu.y;
+        L.B.partie.heure = 0.5;                                   // plein midi : aucune lampe
+        L.B.t = ((Math.floor(t.feu_vert_images / 2) - inter.decalage) % cycle + cycle) % cycle - 1;
+        L.Monde.centrerCamera(feu.x, feu.y);
+        const c = L.Base.debut();                                 // le contexte 1x, celui ou tout se peint
+        c.traces = [];
+        o.frame(1);
+        const traces = c.traces; c.traces = null;
+        const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
+        function coin(e, d) {
+            return [Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] - cy)];
+        }
+        function rect(x, y, w, h) {
+            const r = traces.find(function (q) { return q[0] === x && q[1] === y && q[2] === w && q[3] === h; });
+            return r ? r[4] : null;
+        }
+        const df = L.DECORS.feu, dp = L.DECORS.feu_pieton;
+        const [fx, fy] = coin(feu, df);
+        const out = { ns: rect(fx + 1, fy + 2, 3, 3), eo: rect(fx + 6, fy + 2, 3, 3),
+                      coeurNS: rect(fx + 2, fy + 3, 1, 1), lampes: L.Vehicules.lampesDesFeux().length,
+                      traversesDuMat: feu.traverses.length, pieton: null, etatPieton: null };
+        // La premiere tete du mat des chars, puis celle du poteau isole.
+        if (feu.traverses.length) {
+            const a = tete(fx + 5, 0, feu.traverses.length);
+            out.surLeMat = rect(a.x, fy + 9, a.l, 5);
+            out.etatSurLeMat = L.Monde.feuPieton(inter, feu.traverses[0] === '=' ? '>' : '^');
+        }
+        if (pieton) {
+            const [px, py] = coin(pieton, dp);
+            const a = tete(px + 3, 0, pieton.traverses.length);
+            out.pieton = rect(a.x, py + 1, a.l, 5);
+            out.etatPieton = L.Monde.feuPieton(inter, pieton.traverses[0] === '=' ? '>' : '^');
+        }
+        return out;
+    }""")
+    couleur = {"blanc": "#f2f2f2", "degage": "#f39c12", "rouge": "#c0392b"}
+    assert r["ns"] == "#2ecc71", f"la lanterne du sens qui roule n'est pas verte : {r['ns']}"
+    assert r["eo"] == "#e74c3c", f"la lanterne de l'autre sens n'est pas rouge : {r['eo']}"
+    assert r["coeurNS"] and r["coeurNS"] != r["ns"], \
+        "une ampoule sans coeur plus pale est une pastille peinte : rien ne dit qu'elle est allumee"
+    assert r["traversesDuMat"], "le mat des chars ne porte aucune traverse : il en porte toujours"
+    assert r["surLeMat"] == couleur[r["etatSurLeMat"]], \
+        f"la tete pieton du mat est {r['etatSurLeMat']} et peint {r['surLeMat']}"
+    if r["pieton"] is not None or r["etatPieton"]:
+        assert r["pieton"] == couleur[r["etatPieton"]], \
+            f"le poteau isole est {r['etatPieton']} et peint {r['pieton']}"
+    assert r["lampes"] == 0, "un feu qui eclaire en plein midi"
+
+
+def test_un_seul_mat_par_coin_et_jamais_un_poteau_dans_un_autre(banc):
+    """⚠️ **Retour de Martin : « il y en a trop ».** Mesuré, et c'était pire
+    que trop : les **124 feux de chars étaient plantés DANS un poteau piéton**,
+    à la tuile près — 124 sur 124. `coinLibre` vise les coins nord-est et
+    sud-ouest, exactement les bouts de traverse où `carte.py` pose ses
+    poteaux, et il ne les voyait pas : il n'écarte que le décor **solide**
+    (`grilleFixe`), où un feu n'entre jamais. Tant que les lanternes n'étaient
+    pas peintes, deux poteaux noirs l'un dans l'autre ne se voyaient pas.
+
+    ⚠️ **Et les écarter d'une tuile aurait fait un poteau de plus, pas un de
+    moins.** Les poteaux se groupaient par deux à **une tuile** d'écart (174
+    paires, pas une seule à deux) : c'est le même coin de rue. Un vrai
+    carrefour met ces têtes-là sur **le même mât**.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const TT = L.TT;
+        const poteaux = L.B.entites.filter(function (e) { return e.type === 'feu' || e.type === 'feu_pieton'; });
+        const tuile = function (e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); };
+        const vues = {}, empiles = [];
+        for (const e of poteaux) {
+            const k = tuile(e);
+            if (vues[k]) empiles.push(k); else vues[k] = true;
+        }
+        // Deux mats du MEME croisement a une tuile l'un de l'autre : un coin
+        // pour deux poteaux, ce qui est precisement ce qu'on vient de defaire.
+        let colles = 0;
+        for (const a of poteaux) for (const b of poteaux) {
+            if (a.id >= b.id || a.inter !== b.inter) continue;
+            if (Math.abs(a.x - b.x) <= TT && Math.abs(a.y - b.y) <= TT) colles++;
+        }
+        const traverses = poteaux.reduce(function (s, e) { return s + e.traverses.length; }, 0);
+        return { poteaux: poteaux.length, empiles: empiles.length, colles: colles,
+                 traverses: traverses, posees: (L.Monde.carte.def.feux_pietons || []).length,
+                 troisTetes: poteaux.filter(function (e) { return e.traverses.length > 2; }).length,
+                 croisements: L.Monde.carte.intersections.filter(function (i) { return i.feux; }).length };
+    }""")
+    assert r["empiles"] == 0, f"{r['empiles']} poteaux plantes dans un autre"
+    assert r["colles"] == 0, f"{r['colles']} paires de mats a une tuile : c'est un seul coin"
+    assert r["troisTetes"] == 0, "un mat porte plus de deux traverses : ce n'est plus un coin"
+    assert r["traverses"] == r["posees"], \
+        f"{r['posees']} traverses posees par la carte, {r['traverses']} montrees : une tete s'est perdue"
+    # ⚠️ Le compte, pas seulement la regle : trois mats par croisement, la ou
+    # il y en avait huit. Sans cette borne, un jour ou l'autre on en remet.
+    assert r["poteaux"] <= r["croisements"] * 3, \
+        f"{r['poteaux']} poteaux pour {r['croisements']} croisements, soit plus de trois par coin"
 
 
 def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):

@@ -1664,52 +1664,107 @@ const Vehicules = (function () {
   // --- Les feux et les stops, comme du mobilier ---------------------------------------
 
   /** Le coin de trottoir libre le plus proche : pas la borne-fontaine, pas le
-      pied du lampadaire. On s'ecarte d'une tuile s'il le faut. */
-  function coinLibre(tx, ty) {
+      pied du lampadaire, et — si on lui passe la carte des poteaux — pas dans
+      un poteau deja plante.
+
+      ⚠️ `decorAutour` ne voit QUE le decor solide (`grilleFixe`) : un feu n'y
+      entre jamais. C'est pour ca que les 124 feux de chars se sont retrouves
+      a la tuile pres dans un poteau pieton. Le decor solide ne suffit pas a
+      dire « la place est prise ». */
+  function coinLibre(tx, ty, poteaux) {
     const essais = [[tx, ty], [tx + 1, ty], [tx, ty - 1], [tx - 1, ty], [tx, ty + 1], [tx + 1, ty - 1]];
     for (const c of essais) {
       if (Monde.glyphe(c[0], c[1]) !== '.') continue;
+      if (poteaux && poteaux.has(c[0] + ',' + c[1])) continue;
       if (Entites.decorAutour(c[0] * TT + 8, c[1] * TT + 8, 10).length) continue;
       return c;
     }
     return [tx, ty];
   }
 
+  //: Combien de traverses un seul mat porte : DEUX, celles qui se croisent a
+  //: son coin. Au-dela, c'est que la grappe n'est pas un coin.
+  const TRAVERSES_PAR_MAT = 2;
+
+  //: A quelle distance deux poteaux sont « le meme coin » : UNE tuile.
+  //: ⚠️ Ce n'est pas un reglage de gout, c'est une MESURE : a chaque
+  //: croisement de la ville, les poteaux se groupaient par deux, et les 174
+  //: paires etaient a une tuile l'une de l'autre — pas une seule a deux. Une
+  //: tuile, c'est deux metres et demi : dans la vraie vie, ces deux tetes-la
+  //: sont sur le meme mat, et c'est ce qui faisait « trop de poteaux ».
+  const MEME_COIN = 1;
+
+  /** Le mat du coin `tx, ty` qui peut encore prendre une traverse, ou null.
+      La tuile elle-meme d'abord — un feu de chars y est deja — puis l'anneau
+      d'une tuile autour. */
+  function matDuCoin(poteaux, inter, tx, ty) {
+    for (let d = 0; d <= MEME_COIN; d++) {
+      for (let dy = -d; dy <= d; dy++) {
+        for (let dx = -d; dx <= d; dx++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== d) continue;
+          const e = poteaux.get((tx + dx) + ',' + (ty + dy));
+          if (e && e.inter === inter && e.traverses && e.traverses.length < TRAVERSES_PAR_MAT) return e;
+        }
+      }
+    }
+    return null;
+  }
+
   function creerSignalisation() {
     const carte = Monde.carte;
+    // ⚠️ LES POTEAUX DES CHARS D'ABORD, et c'est ce qui empeche d'en planter
+    // deux au meme endroit. `coinLibre` vise le coin nord-est et le coin
+    // sud-ouest du croisement — precisement les bouts de traverse ou
+    // `carte.py` a deja pose un feu pieton — et il ne les voit pas, parce
+    // qu'il n'ecarte que le decor SOLIDE (`grilleFixe`), ou un feu n'entre
+    // jamais. Les 124 feux de chars etaient donc plantes DANS un poteau
+    // pieton, a la tuile pres : 124 sur 124. Tant que les lanternes n'etaient
+    // pas peintes, deux poteaux noirs l'un dans l'autre ne se voyaient pas.
+    const poteaux = new Map();
+    carte.intersections.forEach(function (inter) {
+      if (inter.feux) {
+        // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
+        for (const coin of [[inter.x + inter.l, inter.y - 1], [inter.x - 1, inter.y + inter.h]]) {
+          const c = coinLibre(coin[0], coin[1]);
+          const e = Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15,
+                                  { inter: inter, traverses: [], r: 2, solide: false });
+          poteaux.set(c[0] + ',' + c[1], e);
+        }
+      } else if (inter.stop) {
+        const coins = { '<': [inter.x + inter.l, inter.y - 1], '>': [inter.x - 1, inter.y + inter.h],
+                        'v': [inter.x - 1, inter.y - 1], '^': [inter.x + inter.l, inter.y + inter.h] };
+        const c = coinLibre(coins[inter.stop][0], coins[inter.stop][1]);
+        poteaux.set(c[0] + ',' + c[1], Entites.creer('stop', c[0] * TT + 8, c[1] * TT + 15,
+                                                     { inter: inter, decor: 'stop', r: 2, solide: false }));
+      }
+    });
     // ⚠️ LES FEUX PIETONS VIENNENT DE LA CARTE, pas d'un coin devine ici. Leur
     // place se lit sur la TRAVERSE — un a chaque bout, et le sens du passage
     // avec (`carte.py`, `feux_pietons`). Les deviner depuis la boite du
     // croisement, comme on le fait pour les feux des chars, c'est se tromper
     // des que la traverse ne tombe pas ou l'on croit.
     //
+    // ⚠️ ET LA TETE SE POSE SUR LE MAT QUI EST DEJA LA. Un vrai carrefour ne
+    // plante pas deux poteaux a un metre l'un de l'autre : la tete des chars
+    // regarde la rue, celle des pietons regarde la traverse, et elles
+    // partagent le mat. Ecarter le feu des chars d'une tuile aurait fait un
+    // poteau DE PLUS a regarder, au lieu d'un de moins.
+    //
     // ⚠️ ET PAS DE CHAMP `decor` SUR UN FEU. Il y en avait un, et il a rendu
     // les feux MUETS depuis le jour ou on les a poses : `Entites.dessiner`
     // teste `if (e.decor)` AVANT `if (e.type === 'feu')`, donc la branche
-    // generique gagnait, peignait le boitier cuit — et s'en allait. Aucune
-    // lanterne n'a jamais ete peinte : ni rouge, ni vert, ni blanc, un poteau
-    // noir a chaque coin. Le champ ne servait a rien d'autre (un feu n'est pas
-    // solide, il n'entre donc jamais dans `grilleFixe`, et `dessinerFeu` nomme
-    // sa propre fiche) : il ne faisait que masquer le peintre.
+    // generique gagnait, peignait le boitier cuit — et s'en allait. Le champ
+    // ne servait a rien d'autre (un feu n'est pas solide, il n'entre donc
+    // jamais dans `grilleFixe`, et `dessinerFeu` nomme sa propre fiche) : il
+    // ne faisait que masquer le peintre.
     (carte.def.feux_pietons || []).forEach(function (f) {
       const inter = Monde.intersectionA(f.x, f.y);
       if (!inter || !inter.feux) return;
-      Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
-                    { inter: inter, sens: f.sens, r: 1, solide: false });
-    });
-    carte.intersections.forEach(function (inter) {
-      if (inter.feux) {
-        // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
-        for (const coin of [[inter.x + inter.l, inter.y - 1], [inter.x - 1, inter.y + inter.h]]) {
-          const c = coinLibre(coin[0], coin[1]);
-          Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, r: 2, solide: false });
-        }
-      } else if (inter.stop) {
-        const coins = { '<': [inter.x + inter.l, inter.y - 1], '>': [inter.x - 1, inter.y + inter.h],
-                        'v': [inter.x - 1, inter.y - 1], '^': [inter.x + inter.l, inter.y + inter.h] };
-        const c = coinLibre(coins[inter.stop][0], coins[inter.stop][1]);
-        Entites.creer('stop', c[0] * TT + 8, c[1] * TT + 15, { inter: inter, decor: 'stop', r: 2, solide: false });
-      }
+      const mat = matDuCoin(poteaux, inter, f.x, f.y);
+      if (mat) { mat.traverses.push(f.sens); return; }
+      poteaux.set(f.x + ',' + f.y,
+                  Entites.creer('feu_pieton', f.x * TT + 8, f.y * TT + 15,
+                                { inter: inter, traverses: [f.sens], r: 1, solide: false }));
     });
   }
 
@@ -1800,7 +1855,53 @@ const Vehicules = (function () {
     B.stats.rects += 2;
   }
 
-  /** Un feu : un poteau cuit, deux ampoules peintes a la volee selon la phase. */
+  //: Ou pend la tete pieton sur le MAT DES CHARS : la hauteur du haut de son
+  //: boitier. ⚠️ Deux rangees de vide la separent du boitier des chars (qui
+  //: finit a la rangee 5) — collees, les deux tetes ne font qu'un seul bloc
+  //: noir et on ne voit plus qu'il y en a deux. Et c'est la hauteur du poteau
+  //: isole a un pixel pres : la meme tete, au meme niveau, qu'elle ait son
+  //: mat ou qu'elle le partage.
+  const TETE_SUR_MAT = 8;
+
+  /** Les tetes pieton d'un mat : une, ou DEUX cote a cote quand le coin sert
+      deux traverses. `cx` est le milieu du mat, `y` le haut du boitier.
+
+      ⚠️ A deux, les ampoules retrecissent a trois pixels et se posent aux
+      MEMES COLONNES que celles des chars, juste au-dessus : un mat devient
+      une pile de boitiers dont les feux s'alignent, et c'est ce qui le fait
+      lire comme UN poteau plutot que comme deux collos. A quatre pixels
+      chacune, elles se toucheraient — et deux rouges qui se touchent, c'est
+      un seul rectangle rouge.
+
+      ⚠️ Le SENS DES CHARS de la rue qu'on traverse, lu comme `traverseeSure`
+      le lit : « = » barre une rue est-ouest. Deux endroits qui traduisent le
+      meme glyphe, c'etait un endroit de trop — il n'y en a plus qu'un.
+
+      `boitierCuit` : le poteau isole a le sien dans sa fiche, mais il est
+      taille pour UNE tete. */
+  function tetesDeTraverse(ctx, cx, y, inter, traverses, boitierCuit) {
+    const deux = traverses.length > 1;
+    if (deux || !boitierCuit) {
+      ctx.fillStyle = '#2c2c30';
+      ctx.fillRect(cx - (deux ? 5 : 3), y, deux ? 10 : 6, 7);
+      B.stats.rects++;
+    }
+    for (let i = 0; i < traverses.length; i++) {
+      const etat = Monde.feuPieton(inter, traverses[i] === '=' ? '>' : '^');
+      // Le degagement CLIGNOTE : un orange fixe se lit comme « attends », un
+      // orange qui bat se lit comme « finis, mais ne pars plus ». ⚠️ Et la
+      // LAMPE S'ETEINT AVEC L'AMPOULE, puisqu'on saute avant de la poser : un
+      // orange qui bat a l'oeil et brille en continu au sol, c'est pire qu'un
+      // clignotant qui ne clignote pas.
+      if (etat === 'degage' && (B.t >> 3) % 2 === 0) continue;
+      const x = deux ? (i === 0 ? cx - 4 : cx + 1) : cx - 2;
+      ampoule(ctx, x, y + 1, deux ? 3 : 4, 5, PHASES_FEU_PIETON[etat] || PHASES_FEU_PIETON.rouge);
+    }
+  }
+
+  /** Un feu : un poteau cuit, deux ampoules peintes a la volee selon la
+      phase — et, quand le coin sert aussi des traverses, leurs tetes sur le
+      MEME MAT (voir `creerSignalisation`). */
   function dessinerFeu(ctx, e, cx, cy) {
     const d = DECORS.feu;
     const poteau = Atlas.cuirePeintre('decor|feu', d.w, d.h, d.peindre);
@@ -1814,6 +1915,12 @@ const Vehicules = (function () {
     // c'est le coeur de chaque ampoule — d'ou `RAYON_LAMPE`.
     ampoule(ctx, x + 1, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (ns ? 'vert' : 'rouge')]);   // nord-sud
     ampoule(ctx, x + 6, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (eo ? 'vert' : 'rouge')]);   // est-ouest
+    // ⚠️ Le boitier des tetes pieton se peint ICI, pas dans la fiche cuite :
+    // un mat n'en porte pas toujours, et une boite noire pendue a un poteau
+    // qui n'a pas de traverse est un defaut qu'on ne voit qu'au bon coin de
+    // la ville. Le milieu du mat tombe a x + 5 (`DECORS.feu` : le poteau va
+    // de 4 a 6).
+    if (e.traverses.length) tetesDeTraverse(ctx, x + 5, y + TETE_SUR_MAT, e.inter, e.traverses, false);
     B.stats.images++;
   }
 
@@ -1822,18 +1929,8 @@ const Vehicules = (function () {
     const poteau = Atlas.cuirePeintre('decor|feu_pieton', d.w, d.h, d.peindre);
     const x = Math.round(e.x - d.ancre[0] - cx), y = Math.round(e.y - d.ancre[1] - cy);
     ctx.drawImage(poteau, x, y);
-    // ⚠️ Le SENS DES CHARS de la rue qu'on traverse, lu comme `traverseeSure`
-    // le lit : « = » barre une rue est-ouest. Deux endroits qui traduisent le
-    // meme glyphe, c'est un endroit de trop — mais celui-ci est a six lignes
-    // de l'autre, et un juge tient les deux ensemble.
-    const etat = Monde.feuPieton(e.inter, e.sens === '=' ? '>' : '^');
-    // Le degagement CLIGNOTE : un orange fixe se lit comme « attends », un
-    // orange qui bat se lit comme « finis, mais ne pars plus ». ⚠️ Et la
-    // LAMPE S'ETEINT AVEC L'AMPOULE, puisqu'on sort avant de la poser : un
-    // orange qui bat a l'oeil et brille en continu au sol, c'est pire qu'un
-    // clignotant qui ne clignote pas.
-    if (etat === 'degage' && (B.t >> 3) % 2 === 0) { B.stats.images++; return; }
-    ampoule(ctx, x + 1, y + 1, 4, 5, PHASES_FEU_PIETON[etat] || PHASES_FEU_PIETON.rouge);
+    // Le milieu du mat : `DECORS.feu_pieton` pose son poteau de 2 a 4.
+    tetesDeTraverse(ctx, x + 3, y, e.inter, e.traverses, true);
     B.stats.images++;
   }
 
