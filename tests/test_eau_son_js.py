@@ -14,16 +14,24 @@ reste.
 
 import pytest
 
-#: Une rive avec neuf tuiles d'eau plein est, sur trois rangees.
+#: Une rive avec seize tuiles d'eau plein est, sur trois rangees.
 #: ⚠️ Trois rangees et pas une : sur un filet d'une tuile de haut, un corps
 #: longe la berge au sec et le juge mesure quelqu'un qui contourne.
+#: ⚠️ Seize tuiles et pas neuf : la reserve doit etre plus large que la plus
+#: longue traversee qu'un juge d'ici demande. Celui de la nage tient 180 images
+#: a 1 px, soit DOUZE tuiles — il en reclamait neuf. Il a donc suffi que la carte
+#: bouge (`l'interieur a la mesure du batiment`, qui n'a pourtant touche que
+#: `carte.py`) pour que la premiere rive trouvee soit une anse de douze tuiles :
+#: le nageur ressortait sur l'autre berge a la derniere image, `j.nage` etait
+#: faux, et le juge disait « on n'a pas nage » d'une nage complete. Au large, la
+#: baie en offre 195 : la marge ne coute rien.
 RIVE = """
         let rive = null;
         for (let y = 4; y < c.h - 4 && !rive; y++) {
-            for (let x = 4; x < c.w - 10; x++) {
+            for (let x = 4; x < c.w - 17; x++) {
                 if (!L.Monde.marchablePieton(x, y) || L.Monde.estEau(x, y)) continue;
                 let eau = true;
-                for (let k = 1; k <= 9; k++) {
+                for (let k = 1; k <= 16; k++) {
                     for (const dy of [-1, 0, 1]) if (!L.Monde.estEau(x + k, y + dy)) eau = false;
                 }
                 if (eau) { rive = { x: x, y: y }; break; }
