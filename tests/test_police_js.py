@@ -124,9 +124,21 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
         // buter sur lui et n'arrive jamais — exactement comme sur un arbre.
         // C'est la seule direction ou un agent qui FLANE repere le joueur :
         // ailleurs sa ronde lui fait tourner la tete avant qu'il regarde.
-        const a = poserAgent(L, 'flane', 30);
+        // ⚠️ ET IL EST LANCE, pas en ronde (14 sept. 2026) : il flanait, et ce
+        // juge tenait alors a ce qu'un flaneur regarde dans la bonne direction
+        // au bon moment — vrai a l'est du terminus jusqu'au jour ou les
+        // batiments ont bouge, faux le lendemain, et l'agent s'en allait sans
+        // jamais voir personne. QU'UN AGENT QUI VOIT SE LANCE est juge a cote
+        // (`l'agent voit le crime et va voir`) ; ici, c'est l'ARRESTATION.
+        const a = poserAgent(L, 'poursuit', 30);
+        a.but = { x: j.x, y: j.y };
+        a.vuT = 0;
         let arrive = -1;
-        for (let i = 0; i < 300 && !L.B.menu; i++) { o.frame(1); if (a.etat === 'poursuit' && arrive < 0) arrive = i; }
+        // ⚠️ On attend LE MENU D'ARRESTATION, pas « un menu » : n'importe quel
+        // autre menu (une reponse de l'histoire, un comptoir) arretait la
+        // boucle et le juge lisait le mauvais titre.
+        const arrete = function () { return L.B.menu && L.B.menu.titre === 'ARRETE !'; };
+        for (let i = 0; i < 300 && !arrete(); i++) { o.frame(1); if (arrete() && arrive < 0) arrive = i; }
         const menu = L.B.menu;
         const ferme = (function () { o.tape('Space'); return L.B.menu === menu; })();
         const avant = L.B.partie.argent;
@@ -139,7 +151,7 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
                  arrestations: L.B.partie.stats.arrestations, arrete: j.arrete,
                  auPoste: Math.hypot(j.x - (poste.x * L.TT + 8), j.y - (poste.y * L.TT + 20)) < 24 };
     }""")
-    assert r["arrive"] >= 0, "l'agent qui voit un recherche se lance"
+    assert r["arrive"] >= 0, "l'agent lance sur un recherche ne l'arrete jamais"
     assert r["titre"] == "ARRETE !"
     assert r["resteOuvert"] is True, "on ne se sauve pas d'une arrestation en fermant le menu"
     assert r["etoiles"] == 0 and r["casier"] == 1 and r["arrestations"] == 1

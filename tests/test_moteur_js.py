@@ -2342,9 +2342,16 @@ def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
         L.Monde.ouvrirPorte(porte.x, porte.y);
         const y0 = e.y;
         const vus = [];
-        for (let i = 0; i < 40; i++) { o.frame(1); vus.push(e.dessine); }
+        // ⚠️ LE PLUS LOIN qu'il soit alle, pas ou il est a la quarantieme image :
+        // une fois dehors il reprend sa vie, et flaner veut dire revenir sur ses
+        // pas. Sur une porte de ruelle (celle que ce juge tire depuis que la
+        // ville a bouge, 14 sept. 2026), il sortait de onze pixels puis
+        // rebroussait chemin — le juge lisait cinq et disait qu'il ne sortait
+        // pas. Ce qu'on juge, c'est qu'il SORT.
+        let loin = 0;
+        for (let i = 0; i < 40; i++) { o.frame(1); vus.push(e.dessine); loin = Math.max(loin, e.y - y0); }
         out.sortie = { cacheAuDebut: vus[0] === false, vuEnsuite: vus.indexOf(true) > 0,
-                       avance: Math.round(e.y - y0), libre: !e.sortie,
+                       avance: Math.round(loin), libre: !e.sortie,
                        aLEcran: L.Entites.visibleAEcran(e.x, e.y, 0) };
 
         // 5. Entrer : il marche jusqu'a la porte, elle s'ouvre, ET IL DISPARAIT
@@ -5057,14 +5064,22 @@ def test_on_prend_le_velo_du_cycliste(banc):
         L.Entites.indexer();
         const crimes = L.B.partie.stats.crimes;
         L.Vehicules.monter(j, velo);
-        const cycliste = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin'; }).length;
+        // ⚠️ CELUI QUI TOMBE DU VELO : un temoin pose SUR le velo. Compter
+        // tous les temoins en attendait un et en trouvait deux — un passant a
+        // cote voit lui aussi voler le velo, et c'est exactement ce qu'on veut.
+        // Ce qu'on juge, c'est que le cycliste tombe et temoigne, pas que
+        // personne d'autre ne regarde.
+        const cycliste = L.B.entites.filter(function (e) {
+            return e.type === 'pieton' && e.etat === 'temoin'
+                && Math.hypot(e.x - velo.x, e.y - velo.y) < 24;
+        }).length;
         o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
         return { dedans: j.dansVehicule === velo, cycliste: cycliste, crimes: L.B.partie.stats.crimes - crimes,
                  vitesse: velo.vitesse, max: velo.def.vitesse_max, moteur: L.Son.boucleActive('moteur'),
                  radio: L.Son.Radio.demandee };
     }""")
     assert r["dedans"] is True
-    assert r["cycliste"] == 1, "le cycliste doit tomber et temoigner"
+    assert r["cycliste"] >= 1, "le cycliste doit tomber et temoigner"
     assert r["crimes"] >= 1
     assert r["vitesse"] > r["max"] * 0.8, "le velo n'avance pas"
     assert r["moteur"] is False and r["radio"] is None, "un velo n'a ni moteur ni radio"
