@@ -1,4 +1,4 @@
-from app import recherche
+from app import economie, recherche
 
 
 def test_paliers_contigus_et_monotones():
@@ -53,3 +53,38 @@ def test_la_police_de_terrain_est_bornee():
     assert police["tir_cadence_s"] > 0 and police["tir_portee_tuiles"] <= recherche.VISION["policier"]["jour"]
     assert 1 <= police["prison_heures"] <= 12
     assert recherche.PALIERS[3]["tirent"] and not recherche.PALIERS[2]["tirent"], "on tire a partir de 3 etoiles"
+
+
+def test_un_casier_epais_se_voit_de_loin_mais_pas_a_l_infini():
+    """⚠️ M11 : « plus le dossier est épais, plus les agents te reconnaissent de
+    loin ». C'est la seule façon de faire PESER un casier autrement qu'au
+    comptoir des amendes — vingt pages ne changent rien à ce qu'on lit dans le
+    HUD, elles changent la distance à laquelle on se fait reconnaître.
+
+    ⚠️ **Le plafond est la règle, pas le détail.** Sans lui, vingt pages
+    feraient voir la police à seize tuiles en pleine nuit, et il n'y aurait plus
+    une ruelle où souffler. Le juge le tient à casier absurde : la portée reste
+    bornée quel que soit le dossier."""
+    v = recherche.VISION
+    par_page, plafond = v["casier_portee_par_page"], v["casier_portee_max"]
+    assert 0 < par_page < 0.2, par_page
+    assert 1 < plafond <= 2, plafond
+
+    def portee(casier: int) -> float:
+        return min(plafond, 1 + par_page * max(0, casier))
+
+    assert portee(0) == 1.0, "un casier vierge ne change rien"
+    assert portee(1) > 1.0, "la première page ne se voit pas"
+    # ⚠️ Le plafond DOIT mordre à casier plein, sinon il ne protège de rien.
+    assert portee(economie.CASIER_MAX) == plafond, (
+        f"à {economie.CASIER_MAX} pages la portée vaut {portee(economie.CASIER_MAX)} : "
+        f"le plafond de {plafond} ne sert à rien"
+    )
+    for absurde in (100, 10_000, 10**9):
+        assert portee(absurde) == plafond, f"casier {absurde} : {portee(absurde)}"
+    # Et la portée de nuit reste sous celle du jour, même au plafond : la nuit
+    # protège toujours quelqu'un.
+    for genre in ("policier", "auto_police"):
+        cone = v[genre]
+        assert cone["nuit"] * plafond <= cone["jour"] * plafond * 1.01
+        assert cone["nuit"] < cone["jour"], genre

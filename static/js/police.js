@@ -28,10 +28,32 @@ const Police = (function () {
     return Math.abs(ecartAngle(angle, angleVers(ax, ay, x, y))) <= demiAngleRad;
   }
 
-  function voit(agent, x, y, genre) {
+  /** De combien la portee s'allonge quand on cherche LE JOUEUR.
+
+      ⚠️ Un casier epais se voit de loin — c'est la premiere ligne de M11, et la
+      seule facon de faire peser un casier autrement qu'au comptoir des
+      amendes. Vingt pages ne changent rien a ce qu'on lit dans le HUD ; elles
+      changent la distance a laquelle on se fait reconnaitre.
+
+      ⚠️ ET SEULEMENT POUR LUI : un casier epais n'aide pas la police a voir les
+      passants. C'est un signalement, une photo au mur, pas une paire de
+      jumelles.
+
+      ⚠️ Le plafond vient de la fiche et il est la REGLE, pas le detail : sans
+      lui, vingt pages feraient voir la police a seize tuiles en pleine nuit, et
+      il n'y aurait plus une ruelle ou souffler. */
+  function porteeDuCasier() {
+    const v = defs().vision;
+    const casier = (B.partie && B.partie.casier) || 0;
+    const plafond = v.casier_portee_max === undefined ? 1.5 : v.casier_portee_max;
+    const parPage = v.casier_portee_par_page || 0;
+    return Math.min(plafond, 1 + parPage * Math.max(0, casier));
+  }
+
+  function voit(agent, x, y, genre, reconnait) {
     const vision = defs().vision[genre || 'policier'];
     const nuit = Monde.estNuit();
-    const portee = (nuit ? vision.nuit : vision.jour) * TT;
+    const portee = (nuit ? vision.nuit : vision.jour) * TT * (reconnait ? porteeDuCasier() : 1);
     if (!dansLeCone(agent.x, agent.y, agent.angle, vision.angle * Math.PI / 180, portee, x, y)) return false;
     return Monde.ligneLibre(agent.x, agent.y, x, y);
   }
@@ -225,7 +247,7 @@ const Police = (function () {
     // Regarder : une image sur trois, c'est le budget.
     if ((B.t + a.id) % p.regarde_toutes_les_images === 0) {
       const cible = j.dansVehicule ? j.dansVehicule : j;
-      if (voit(a, cible.x, cible.y, 'policier')) {
+      if (voit(a, cible.x, cible.y, 'policier', true)) {
         a.vuT = 0;
         if (r.etoiles > 0) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; if (a.etat !== 'poursuit') { a.etat = 'poursuit'; a.chemin = null; a.cheminT = 0; } }
         else if (j.flagrant > 0 && a.etat !== 'poursuit') { ajouterChaleur(1); a.etat = 'poursuit'; a.chemin = null; a.cheminT = 0; }
@@ -330,7 +352,7 @@ const Police = (function () {
     if (r.etoiles <= 0) { v.surRails = false; return { gaz: 0, frein: 1, direction: 0, freinMain: false }; }
     const cible = j.dansVehicule ? j.dansVehicule : j;
     const d = Math.hypot(cible.x - v.x, cible.y - v.y);
-    if (voit(v, cible.x, cible.y, 'auto_police') || d < 60) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
+    if (voit(v, cible.x, cible.y, 'auto_police', true) || d < 60) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
     if (!j.dansVehicule && (d < p.auto_sortent_px || (v.descendus && d < p.auto_sortent_px * 2.5))) {
       // Tu es a pied : les agents descendent, et l'auto reste la (pas de va-et-vient).
       if (!v.descendus) { v.descendus = true; creerAgent(v.x + 14, v.y, 'poursuit'); creerAgent(v.x - 14, v.y, 'poursuit'); }
@@ -543,7 +565,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
+  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

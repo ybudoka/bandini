@@ -943,13 +943,20 @@ const Missions = (function () {
   /** Le carnet du poste : ce que la police sait de toi. M11 l'etoffera. */
   function menuCasier() {
     const p = B.partie, eco = B.defs.economie;
+    // ⚠️ LE CARNET DOIT DIRE CE QUE LE CASIER COUTE. Il pesait deja sur
+    // l'amende et le pot-de-vin ; depuis M11 il allonge aussi la portee du
+    // cone des agents — et une regle qu'on subit sans jamais la lire n'est pas
+    // une regle, c'est une malchance. Le pourcentage est donc ici, a cote du
+    // dossier qui le produit.
+    const vu = Math.round((Police.porteeDuCasier() - 1) * 100);
     return { titre: 'LE CARNET', items: [
       { libelle: 'DOSSIER', detail: p.casier + ' / ' + eco.casier_max, actif: false },
+      { libelle: 'ON TE RECONNAIT', detail: vu > 0 ? '+' + vu + ' % DE LOIN' : 'PAS ENCORE', actif: false },
       { libelle: 'ARRESTATIONS', detail: '' + p.stats.arrestations, actif: false },
       { libelle: 'CRIMES VUS', detail: '' + p.stats.crimes, actif: false },
       { libelle: 'CHARS VOLES', detail: '' + p.stats.volees, actif: false },
       { libelle: 'LA PROCHAINE AMENDE', detail: amende(p.argent, 1, p.casier) + ' $', actif: false },
-    ], aide: 'PLUS LE DOSSIER EST EPAIS, PLUS L\u2019AMENDE MONTE' };
+    ], aide: 'UN DOSSIER EPAIS COUTE PLUS CHER, ET SE VOIT DE PLUS LOIN' };
   }
 
   /** Fouiller les tiroirs d'un logement : une fois par adresse et par etage.

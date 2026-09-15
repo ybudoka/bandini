@@ -440,3 +440,64 @@ def test_a_cinq_etoiles_un_barrage_se_dresse_devant_le_char(banc):
     assert r["travers"] is True, "en travers de la voie"
     assert r["agents"] == 2, "deux agents derriere"
     assert r["apres"] == 0, "la chasse finie et hors de vue, le barrage se leve"
+
+
+def test_un_casier_epais_te_fait_reconnaitre_de_plus_loin(banc, paquet):
+    """⚠️ M11, première ligne : « le carnet du poste — plus il est épais, plus
+    les agents te reconnaissent de loin ».
+
+    Le casier pesait déjà sur l'amende et le pot-de-vin, c'est-à-dire **au
+    comptoir, après coup**. Il fallait qu'il se sente **dans la rue** : c'est la
+    différence entre un chiffre dans un menu et une règle de jeu.
+
+    ⚠️ Et il ne vaut **que pour le joueur** : un casier épais n'aide pas la
+    police à voir les passants. C'est un signalement, une photo au mur, pas une
+    paire de jumelles."""
+    v = paquet["recherche"]["vision"]
+    plein = paquet["economie"]["casier_max"]
+    r = banc(AGENT + """
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        L.B.partie.heure = 0.5;                      // plein jour : la portée du jour
+        const a = poserAgent(L, 'flane', 0);
+        a.x = 400; a.y = 400; a.angle = 0;           // planté, le regard vers l'est
+        L.Entites.indexer();
+        const PLEIN = L.B.defs.economie.casier_max;
+        // Jusqu'où il voit le JOUEUR (`reconnait`), et jusqu'où il voit
+        // n'importe qui d'autre à la même place.
+        const limite = function (casier, reconnait) {
+            L.B.partie.casier = casier;
+            let loin = 0;
+            for (let d = 8; d < 40 * L.TT; d += 4) {
+                j.x = a.x + d; j.y = a.y;
+                if (!L.Police.voit(a, j.x, j.y, 'policier', reconnait)) break;
+                loin = d;
+            }
+            return loin;
+        };
+        const out = { vierge: limite(0, true), une: limite(1, true), plein: limite(PLEIN, true),
+                      absurde: limite(100000, true),
+                      anonymeVierge: limite(0, false), anonymePlein: limite(PLEIN, false) };
+        L.B.partie.casier = PLEIN;
+        out.facteur = L.Police.porteeDuCasier();
+        L.B.partie.casier = 0;
+        out.facteurVierge = L.Police.porteeDuCasier();
+        return out;
+    }""")
+
+    assert r["vierge"] > 0, "le décor du juge est faux : l'agent ne voit rien du tout"
+    assert r["une"] > r["vierge"], "la première page du casier ne se voit pas"
+    assert r["plein"] > r["vierge"], "un casier plein ne change rien : %s" % r
+    # ⚠️ LE PLAFOND MORD : au-delà du casier maximum, plus rien ne bouge. Sans
+    # lui, la police verrait à seize tuiles en pleine nuit et il n'y aurait plus
+    # une ruelle où souffler.
+    assert r["absurde"] == r["plein"], "un casier absurde allonge encore le cône : %s" % r
+    attendu = min(v["casier_portee_max"], 1 + v["casier_portee_par_page"] * plein)
+    assert abs(r["facteur"] - attendu) < 0.001, "le facteur ne suit pas la fiche : %s" % r
+    assert r["facteurVierge"] == 1, "un casier vierge change déjà la portée : %s" % r
+    # ⚠️ Et un passant reste vu à la même distance, casier plein ou vierge.
+    assert r["anonymeVierge"] == r["anonymePlein"], (
+        "un casier épais fait voir les PASSANTS de plus loin : c'est une paire de "
+        "jumelles, pas un signalement (%s)" % r
+    )
+    assert r["anonymeVierge"] == r["vierge"], "le juge mesure deux choses différentes : %s" % r

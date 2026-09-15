@@ -83,6 +83,22 @@ VISION = {
     "alarme_rayon": 12,
     "explosion_rayon": 15,
     "delai_reperage_s": 0.6,
+    # ⚠️ UN CASIER EPAIS SE VOIT DE LOIN. C'est la premiere ligne de M11 — « le
+    # carnet du poste : plus il est epais, plus les agents te reconnaissent de
+    # loin » — et c'est la seule facon de faire PESER un casier autrement qu'au
+    # comptoir des amendes. Vingt pages ne changent rien a ce qu'on voit du
+    # HUD ; elles changent la distance a laquelle on se fait reconnaitre.
+    #
+    # ⚠️ Et ca ne s'applique qu'au JOUEUR. Un casier epais n'aide pas la police
+    # a voir les passants : c'est un signalement, une photo au mur, pas une
+    # paire de jumelles.
+    #
+    # ⚠️ LE PLAFOND EST LA REGLE, pas le detail. A 4 % la page et vingt pages,
+    # le cone ferait 1,8 fois sa portee : la police verrait a seize tuiles en
+    # pleine nuit, et il n'y aurait plus de ruelle ou souffler. Un casier plein
+    # ajoute donc la moitie, jamais plus — et un juge le tient a casier absurde.
+    "casier_portee_par_page": 0.04,
+    "casier_portee_max": 1.5,
 }
 
 TEMOINS = {
