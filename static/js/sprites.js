@@ -206,6 +206,86 @@ const GRILLE_AUTO = [
       '.....rrrr.............rrrr......',
       '.....rrrr.............rrrr......',
     ];
+/* --- Le parc DEBOUT : trois poses, comme un passant -------------------------
+
+   ⚠️ Tout ce qui est debout dans Bandini est dessine debout — le passant ancre
+   a ses pieds, l'arbre, le lampadaire, le banc, le feu et son poteau, les
+   clotures nord-sud vues par la tranche. Le char etait la derniere chose
+   regardee d'aplomb. Il ne l'est plus.
+
+   Le vocabulaire est celui du passant, pas un nouveau : `cote` (miroite en
+   `gauche` et `droite` par `Atlas.cuire`), `haut` = il s'ELOIGNE, donc on voit
+   son dos, `bas` = il VIENT, donc sa face. La pose se choisit avec la meme
+   regle que la face d'un corps, et c'est le meme code (`Vehicules.faceDe`).
+
+   ⚠️ **Le nez pointe a DROITE**, comme dans les anciennes grilles vues d'en
+   haut (les phares `l` y etaient au bord droit). ⚠️ **L'ancre est la ligne de
+   sol** — le bas des pneus — et elle est la meme pour les trois poses, sinon
+   le char saute d'un pixel en tournant. ⚠️ **De dos et de face, la caisse fait
+   la largeur du catalogue** (14 px pour l'auto), centree dans la grille : les
+   pixels perdus ne coutent rien, l'atlas est cuit une fois.
+
+   ⚠️ Et le char est TRAPU, et il faut le vouloir : a l'echelle du passant
+   (9,1 px/m), un toit d'auto de 1,45 m fait 13 px de haut pour 28 de long. On
+   ne peut pas l'allonger — c'est la rue qui tient la longueur. Donc un char
+   court et haut, et un passant plus grand que le toit d'une auto : ce qui est
+   vrai dans la vie. */
+
+const AUTO_COTE = [
+      '................................',
+      '................................',
+      '...........kkkkkkkkkk...........',
+      '.........kvvvvvkvvvvvvk.........',
+      '.........kvvvvvkvvvvvvk.........',
+      '....kkkkkcccccccccccccckkkkk....',
+      '..kttccccccccccccccccccccccllk..',
+      '..kcccccccccccccccccccccccccck..',
+      '..kcccccccccccccccccccccccccck..',
+      '..kckkkkkkkkccccccckkkkkkkkcck..',
+      '......kkkk...........kkkk.......',
+      '.....krrrrk.........krrrrk......',
+      '.....krrrrk.........krrrrk......',
+      '......kkkk...........kkkk.......',
+      '................................',
+      '................................',
+    ];
+const AUTO_HAUT = [
+      '................................',
+      '................................',
+      '...........kkkkkkkkkk...........',
+      '..........kvvvvvvvvvvk..........',
+      '..........kvvvvvvvvvvk..........',
+      '........kcccccccccccccck........',
+      '........ktttcccccccctttk........',
+      '........ktttcccccccctttk........',
+      '........kcccccccccccccck........',
+      '........kcccccccccccccck........',
+      '........kkkkkkkkkkkkkkkk........',
+      '.........krrrrk..krrrrk.........',
+      '.........krrrrk..krrrrk.........',
+      '..........kkkk....kkkk..........',
+      '................................',
+      '................................',
+    ];
+const AUTO_BAS = [
+      '................................',
+      '................................',
+      '...........kkkkkkkkkk...........',
+      '..........kvvvvvvvvvvk..........',
+      '..........kvvvvvvvvvvk..........',
+      '........kcccccccccccccck........',
+      '........klllckkkkkkclllk........',
+      '........klllckkkkkkclllk........',
+      '........kcccccccccccccck........',
+      '........kcccccccccccccck........',
+      '........kkkkkkkkkkkkkkkk........',
+      '.........krrrrk..krrrrk.........',
+      '.........krrrrk..krrrrk.........',
+      '..........kkkk....kkkk..........',
+      '................................',
+      '................................',
+    ];
+
 const GRILLE_MOTO = [
       '....................',
       '....................',
@@ -593,19 +673,19 @@ SPRITES.pickpocket = {
 };
 
 SPRITES.auto = {
-  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  w: 32, h: 16, ancre: [16, 13],
   pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' },
-  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
 };
 SPRITES.taxi = {
-  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  w: 32, h: 16, ancre: [16, 13],
   pal: { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', s: '#00000030' },
-  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
 };
 SPRITES.police = {
-  w: 32, h: 16, ancre: [16, 8], rotations: 32,
+  w: 32, h: 16, ancre: [16, 13],
   pal: { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' },
-  swaps: ['c'], poses: { base: [GRILLE_AUTO] },
+  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
 };
 SPRITES.velo = {
   w: 16, h: 8, ancre: [8, 4], rotations: 32,

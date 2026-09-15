@@ -51,13 +51,19 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
     r = banc("""function (L, o) {
         const manquants = [];
         const tailles = {};
+        const poses = {};
         for (const v of L.B.defs.vehicules) {
             if (v.phase !== 1) continue;
             const def = L.SPRITES[v.sprite];
             if (!def) { manquants.push(v.slug + ' -> ' + v.sprite); continue; }
             tailles[v.slug] = [def.w, def.h, v.longueur, v.largeur, def.rotations || 0];
+            // ⚠️ La refonte : un char se dessine soit en 32 caps (l'ancienne
+            // voie), soit en TROIS POSES debout — et il faut les trois, plus
+            // l'ancre a la ligne de sol.
+            poses[v.slug] = { a: Object.keys(def.poses || {}).sort().join(','),
+                              ancre: def.ancre || null, h: def.h };
         }
-        return { manquants: manquants, tailles: tailles,
+        return { manquants: manquants, tailles: tailles, poses: poses,
                  phase2: L.B.defs.vehicules.filter(function (v) { return v.phase !== 1; }).map(function (v) { return v.slug; }) };
     }""")
     assert r["manquants"] == [], "des chars de phase 1 sans sprite : %s" % r["manquants"]
@@ -70,7 +76,27 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
         assert h >= lat, "%s : sprite de %s px pour %s px de large" % (slug, h, lat)
         # … sans etre une affiche : la marge sert aux roues, pas a rien.
         assert w <= lon + 6 and h <= lat + 4, "%s : %sx%s pour %sx%s" % (slug, w, h, lon, lat)
-        assert rotations == 32, "%s se dessine en %s caps" % (slug, rotations)
+        # ⚠️ **Reformule le 15 sept. 2026.** Il exigeait 32 caps pour tout le
+        # monde — c'etait la regle d'AVANT, et la refonte des vehicules la
+        # remplace : un char se dessine comme un passant, trois poses choisies
+        # par la meme regle que sa face. Ce qui compte n'est pas LAQUELLE des
+        # deux voies, c'est qu'elle soit COMPLETE : un char a moitie converti
+        # (deux poses sur trois, ou une ancre restee au centre) se dessinerait
+        # a cote de lui-meme.
+        pose = r["poses"][slug]
+        if rotations:
+            assert rotations == 32, "%s se dessine en %s caps" % (slug, rotations)
+            assert pose["a"] == "base", "%s garde 32 caps mais a des poses : %s" % (slug, pose["a"])
+        else:
+            assert pose["a"] == "bas,cote,haut", (
+                "%s est debout mais il lui manque une pose : %s" % (slug, pose["a"])
+            )
+            # ⚠️ L'ANCRE EST LA LIGNE DE SOL, pas le centre : un char debout
+            # ancre au milieu flotte au-dessus de la rue.
+            assert pose["ancre"] and pose["ancre"][1] >= pose["h"] - 4, (
+                "%s : ancre %s pour une grille de %s de haut — ce n'est pas la ligne de sol"
+                % (slug, pose["ancre"], pose["h"])
+            )
     assert r["phase2"] == ["bateau"], (
         "la phase 2 a change : ce juge doit suivre (%s)" % r["phase2"]
     )

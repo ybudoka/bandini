@@ -2046,12 +2046,54 @@ const Vehicules = (function () {
     };
   }
 
+  //: ⚠️ UN SEUL OBJET, reutilise a chaque image : `faceDe` est appele pour
+  //: chaque char visible, soixante fois par seconde. Un objet neuf par appel,
+  //: c'est du ramassage de miettes pour rien.
+  const _cap = { angle: 0, face: 'bas' };
+
+  /** La pose d'un char : de profil, de dos ou de face.
+
+      ⚠️ **LA MEME REGLE QUE LA FACE D'UN PASSANT, ET LE MEME CODE.** `regarder`
+      porte deja le seuil (`Math.abs(dx) >= Math.abs(dy)`) ; deux jeux de
+      seuils auraient fini par diverger, et le char aurait change de pose a un
+      cap ou le passant a cote de lui n'en change pas.
+
+      ⚠️ Et le vocabulaire est celui du passant, pas un nouveau : `haut` veut
+      dire « il s'eloigne » (on voit son dos) et `bas` « il vient » (on voit sa
+      face) — exactement ce que ces mots veulent dire pour quelqu'un qui
+      marche. `Atlas.cuire` fait le reste : il miroite `cote` en `gauche` et
+      `droite` tout seul, comme pour un corps. */
+  function faceDe(v) {
+    Entites.regarder(_cap, Math.cos(v.angle), Math.sin(v.angle));
+    return _cap.face;
+  }
+
+  /** Le dessin d'un char DEBOUT : la pose, et l'image a poser.
+
+      ⚠️ Rend `null` pour un sprite encore cuit en rotations — la voie d'avant
+      reste vivante tant que les douze vehicules ne sont pas passes. */
+  function debout(v) {
+    const def = SPRITES[v.sprite];
+    if (!def || def.rotations) return null;
+    const cuit = Atlas.cuire(v.sprite, def, v.swaps);
+    // ⚠️ Une epave est COUCHEE, elle ne roule plus. C'est la pose qui le dit,
+    // pas une rotation libre : un dessin debout qu'on fait pivoter de 40
+    // degres redevient une vue d'en haut de travers.
+    const voulu = (v.etat === 'epave' && cuit.poses.couche) ? 'couche' : faceDe(v);
+    const nom = cuit.poses[voulu] ? voulu : 'bas';
+    return { canvas: cuit.poses[nom][0], ancre: cuit.ancre, pose: nom };
+  }
+
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
-    const rot = Atlas.cuireRotations(v.sprite, def, v.swaps, ROTATIONS);
-    let i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
-    if (i < 0) i += ROTATIONS;
+    const pose = debout(v);
+    const rot = pose ? null : Atlas.cuireRotations(v.sprite, def, v.swaps, ROTATIONS);
+    let i = 0;
+    if (rot) {
+      i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
+      if (i < 0) i += ROTATIONS;
+    }
     const ombre = ombreDe(v);
     if (ombre) {
       // ⚠️ ORIENTEE COMME LE CHAR. Une tache alignee sur les axes ne dit rien
@@ -2066,7 +2108,16 @@ const Vehicules = (function () {
       ctx.restore();
       B.stats.rects++;
     }
-    ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
+    if (pose) {
+      // ⚠️ ANCRE A LA LIGNE DE SOL, comme un passant : `v.y` reste le centre
+      // physique, et c'est la ou les pneus touchent. Le tri du nord au sud s'y
+      // retrouve sans rien changer — un char et un passant se rangent
+      // maintenant par la meme regle.
+      ctx.drawImage(pose.canvas, Math.round(v.x - pose.ancre[0] - cx),
+                    Math.round(v.y - v.z - pose.ancre[1] - cy));
+    } else {
+      ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
+    }
     B.stats.images++;
   }
 
@@ -2076,7 +2127,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe,
+    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();
