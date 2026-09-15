@@ -361,13 +361,6 @@ PAROLES: dict[str, dict] = {
     # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
     # doit entendre, sinon le vol n'est qu'une animation.
     "pickpocket": {"au_voleur": "AU VOLEUR!"},
-    # ⚠️ Ce qu'il crie VRAIMENT, c'est la manchette du Clairon ; celle-ci n'est
-    # que son appel, pour les matins où il n'y a rien à signaler.
-    "crieur": {"appel": "LE CLAIRON DE LA BAIE!"},
-    "laveur": {"propose": "UN COUP DE CHIFFON?", "merci": "MERCI M'SIEUR"},
-    # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
-    # doit entendre, sinon le vol n'est qu'une animation.
-    "pickpocket": {"au_voleur": "AU VOLEUR!"},
 }
 
 #: Un piéton assomme rapporte ses poches ; un mort ne rapporte rien de plus.
