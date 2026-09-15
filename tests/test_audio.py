@@ -58,7 +58,12 @@ def test_le_poids_audio_reste_raisonnable():
     # fille de la Brume (52 Ko). On reste sous le mega. Puis a 900 le 14 sept.
     # 2026 : les trois armes du marche noir (quatre fichiers, 45 Ko) ont
     # deborde de 700 octets — encore un son qu'on n'avait pas.
-    assert sum(f.stat().st_size for f in bruitages) < 900_000
+    # Puis a 950 le 14 sept. 2026 : les trois sons de l'eau (six fichiers,
+    # 83 Ko) — l'eau n'en avait AUCUN, on y entrait sur de la tole froissee et
+    # on nageait en silence. Encore un son qu'on n'avait pas, pas un son qu'on
+    # a laisse grossir. On reste sous le mega ; la prochaine fois, on compresse
+    # avant de relever.
+    assert sum(f.stat().st_size for f in bruitages) < 950_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
@@ -178,6 +183,30 @@ def test_la_rumeur_et_les_passages_existent():
         assert audio.par_slug(slug), slug
     assert audio.par_slug("foule")["boucle"] is True, "la rumeur doit boucler"
     assert audio.par_slug("passage_auto")["variantes"] >= 2
+
+
+def test_l_eau_a_ses_trois_sons():
+    """⚠️ Avant le 14 sept. 2026, l'eau n'avait AUCUN son : on entrait dans la
+    baie sur `choc` — la tole froissee d'un accident de char — et on nageait
+    dans le silence. Trois sons, un par moment que l'eau produit."""
+    for slug in ("plongeon", "nage", "couler"):
+        assert audio.par_slug(slug), slug
+    # ⚠️ La brassee revient une fois et demie par seconde : c'est la que
+    # l'oreille s'agace le plus vite, comme pour les pas.
+    assert audio.par_slug("nage")["variantes"] >= 3, "une seule brassée s'entend comme un bug"
+    assert audio.par_slug("plongeon")["variantes"] >= 2
+    # ⚠️ Et ce n'est PAS une boucle : elle se joue a la distance parcourue, sans
+    # quoi un nageur immobile sonnerait comme une fontaine.
+    assert audio.par_slug("nage")["boucle"] is False
+    # Plus fort que la brassee : on entre dans l'eau une fois, on nage cent fois.
+    assert audio.par_slug("plongeon")["volume"] > audio.par_slug("nage")["volume"]
+
+
+def test_le_navigateur_joue_les_trois_sons_de_l_eau():
+    """Le cablage, la ou il se lit : `son.js` doit nommer les trois."""
+    source = (RACINE_JS / "son.js").read_text(encoding="utf-8")
+    for slug in ("plongeon", "nage", "couler"):
+        assert f"joue('{slug}')" in source, slug
 
 
 def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
@@ -301,8 +330,14 @@ def test_les_bruitages_ont_de_l_aigu():
     tomber le juge sur des fichiers parfaits. ⚠️ La sonnette de velo est
     dehors elle aussi, pour la raison inverse : c'est le seul son que le
     22 kHz n'avait pas trop abime (-16 dB), donc il ne separe rien.
+
+    ⚠️ Le PLONGEON est entre dans la liste le 14 sept. 2026, et il y a sa
+    place : ce qui fait entendre l'eau, ce sont les GOUTTES — un plongeon sans
+    aigu est un bruit sourd. Mesure : -10 dB, quatre de marge. `couler`, lui,
+    reste dehors et doit le rester : une tete qui passe sous l'eau est SOURDE
+    par definition (-47 dB), et c'est le signe que le son est le bon.
     """
-    for slug in ("argent", "ramasse", "choc", "porte_commerce", "menu"):
+    for slug in ("argent", "ramasse", "choc", "porte_commerce", "menu", "plongeon"):
         echantillon = audio.par_slug(slug)
         chemin = audio.chemin(echantillon, 1)
         if not chemin.is_file():
