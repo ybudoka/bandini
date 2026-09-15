@@ -119,8 +119,11 @@ const Monde = (function () {
       apparition: def.apparition,
       pxW: w * TT, pxH: h * TT,
       devantures: indexerParMorceau(def.devantures || [], function (d) {
-        // Le mur ET la tuile de trottoir sous lui (la pancarte y pend).
-        return [d.x, d.y, d.l, 2];
+        // ⚠️ TROIS rangees : la tuile de toit AU-DESSUS du mur (l'enseigne y
+        // monte, voir FACADES.enseigne), le mur, et le trottoir sous lui (la
+        // pancarte y pend). Sans la premiere, une enseigne assise sur la
+        // premiere rangee d'un morceau perdait sa moitie haute a la couture.
+        return [d.x, d.y - 1, d.l, 3];
       }),
       // Les logements : meme regle, l'escalier de fer descend sur le trottoir.
       residences: indexerParMorceau(def.residences || [], function (r) {
@@ -598,7 +601,13 @@ const Monde = (function () {
   //: (glyphe, variante) : sans un grain DANS la variante, toutes les tuiles d'un
   //: toit etaient rigoureusement identiques — c'est une moitie de ce qui faisait
   //: « une texture, pas un toit ».
-  const GRAINS_DE_TOIT = 4;
+  //: ⚠️ HUIT, pas quatre. Quatre suffisaient a casser l'uniformite d'un toit
+  //: de commerce ; un entrepot de La Shop, lui, en couvre trois cents tuiles
+  //: d'un seul tenant, et quatre grains sur trois cents font un papier peint
+  //: qu'on lit d'un bout a l'autre du quartier. Les quatre grains de plus
+  //: portent l'USURE (`toitPlat`) : une membrane rapiecee, une flaque, une
+  //: coulee de rouille sous un event.
+  const GRAINS_DE_TOIT = 8;
 
   /** La variante d'un toit plat : les quatre bits des cotes ou il S'ARRETE
       (1 nord, 2 est, 4 sud, 8 ouest), et le grain par-dessus.
@@ -678,12 +687,43 @@ const Monde = (function () {
       | 16 * (hash2(tx, ty) % 4);
   }
 
+  //: Combien d'usures differentes pour un SOL D'ILOT. ⚠️ SEIZE, et c'est la
+  //: meme lecon que l'asphalte du stationnement deux ecrans plus haut : « une
+  //: fissure est un dessin, pas du bruit ; avec quatre variantes on la
+  //: reconnait d'une tuile a l'autre ». Sauf qu'ici ca porte bien plus loin :
+  //: le trottoir, l'herbe et la ruelle font 43 % de la ville a eux trois
+  //: (28 %, 10,5 %, 4,7 %) et ils se peignaient avec QUATRE tuiles de seize
+  //: pixels, repetees d'un bout a l'autre du Faubourg. De loin, ce n'etait pas
+  //: un sol, c'etait du papier peint.
+  const USURES_DE_SOL = 16;
+
+  //: Les sols qui font le dedans d'un pate de maisons — plus le sable de la
+  //: greve, qui s'aplatissait de la meme facon et pour la meme raison.
+  const SOLS_D_ILOT = { '.': true, ',': true, 'x': true, 'g': true, 's': true };
+
+  /** La variante d'un sol d'ilot : son usure, et — pour le trottoir — la place
+      de la tuile dans sa DALLE.
+
+      ⚠️ Le trottoir peignait son joint sur CHAQUE tuile, en haut et a gauche :
+      un trait tous les seize pixels dans les deux sens, sur le quart de la
+      ville. Ce qu'on lisait alors, c'etait la grille de la carte. Une dalle de
+      beton fait deux tuiles de cote ; chaque tuile lit sa parite pour savoir de
+      quel coin de dalle elle est, et ne peint que les joints qui la regardent —
+      la meme regle que la case de stationnement, qui ne peint que sa ligne de
+      gauche pour ne pas doubler celle de sa voisine. */
+  function varianteDeSol(g, tx, ty) {
+    const usure = hash2(tx, ty) % USURES_DE_SOL;
+    if (g !== '.') return usure;
+    return (tx & 1) | ((ty & 1) << 1) | (usure << 2);
+  }
+
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
       voisines. Passage pieton, case de stationnement, rampe et cloture en ont
       une ; les autres se contentent d'un bruit stable. */
   function varianteDeTuile(g, tx, ty) {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
+    if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
     const p = carte.legende[g];
     if (p && p.bloc) return varianteDeBloc(g, tx, ty);
@@ -979,7 +1019,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDePassage, varianteDeCase, varianteDeRampe,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },

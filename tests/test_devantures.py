@@ -473,3 +473,42 @@ def test_les_logements_tiennent_sur_d_autres_graines(graine):
         assert set(r["motifs"]) & PORTES_VISIBLES, (graine, r)
         for i in range(r["l"]):
             assert sol[r["y"]][r["x"] + i] in MURS_DEVANTURE, (graine, r)
+
+
+#: Les quatre couvertures (`carte.TOITS`). Une enseigne se dresse par-dessus.
+TOITS = frozenset(carte.TOITS)
+
+
+def test_une_enseigne_a_du_toit_au_dessus_d_elle(ville, sol):
+    """⚠️ Demande de Martin : « les affiches des commerçants doivent être
+    au-dessus du mur ». Le panneau ne tient plus dans les 16 px de la tuile de
+    façade — il MONTE de douze pixels sur la tuile d'au-dessus (`FACADES.enseigne`,
+    `ENSEIGNE_Y` est négatif), ce qui libère le mur pour un auvent et une vitrine
+    trois fois plus hautes.
+
+    Tout ça repose sur un invariant de la carte, et il n'était écrit nulle part :
+    **au-dessus d'une devanture, sur toute sa largeur, il y a du TOIT**. Mesuré
+    le 15 sept. 2026, c'était vrai 105 fois sur 105 — par construction
+    (`decouper_la_facade` prend la rangée la plus au sud d'un bâtiment, et ce
+    qu'il y a au nord d'une façade sud, c'est le bâtiment). Ce juge le dit tout
+    haut : le jour où un gabarit en L mettra une façade sud avec du trottoir
+    au-dessus, l'enseigne se coucherait à plat sur une ruelle, et c'est ici
+    qu'on l'apprendra — pas dans une capture d'écran.
+    """
+    for d in ville["devantures"]:
+        au_dessus = [sol[d["y"] - 1][d["x"] + i] for i in range(d["l"])]
+        assert set(au_dessus) <= TOITS, (
+            f"« {d['texte'] } » en ({d['x']}, {d['y']}) a « {''.join(au_dessus)} » "
+            "au-dessus d'elle : son enseigne ne se poserait pas sur un toit"
+        )
+
+
+@pytest.mark.parametrize("graine", [1, 7, 99, 777])
+def test_l_enseigne_a_son_toit_sur_d_autres_graines(graine):
+    """La même règle, sur des villes qu'on n'a jamais regardées."""
+    ville = carte.generer(graine=graine)
+    sol = ville["sol"]
+    assert ville["devantures"], graine
+    for d in ville["devantures"]:
+        au_dessus = {sol[d["y"] - 1][d["x"] + i] for i in range(d["l"])}
+        assert au_dessus <= TOITS, (graine, d["texte"], d["x"], d["y"], sorted(au_dessus))

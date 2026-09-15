@@ -1853,9 +1853,17 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // biais ». C'etait vrai, et ca ne disait rien de l'ivrogne. Ce qui
         // distingue l'ivrogne, c'est que sa FLANERIE est tordue — alors on
         // ne mesure que la flanerie.
+        // ⚠️ ON COMPTE DES PAS, PAS DES IMAGES. A 240 images fixes, ce qu'on
+        // mesure depend de ce que le flaneur a fait de sa journee : s'il rentre
+        // chez lui, s'il se fait pousser sur la chaussee ou s'il s'arrete, la
+        // moitie des images ne compte pas. Le plancher de l'echantillon
+        // (« personne n'a marche ») est tombe a 58 pour 60 demandes le jour ou
+        // les cours arriere se sont cloturees — pour deux pas, et sans que rien
+        // de l'ivrogne ait change. On marche donc jusqu'a EN AVOIR ASSEZ.
+        const PAS_VOULUS = 160, IMAGES_MAX = 900;
         function deTravers(e) {
             let bouge = 0, obliques = 0;
-            for (let i = 0; i < 240; i++) {
+            for (let i = 0; i < IMAGES_MAX && bouge < PAS_VOULUS; i++) {
                 o.frame(1);
                 if (e.porteBut) continue;                       // il rentre chez lui
                 if (e.recul > 0) continue;                      // il vient d'encaisser
@@ -1988,7 +1996,7 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
     # ⚠️ Et le decor doit AVOIR FLANE : sans ces deux lignes, un temoin qui
     # passe ses 240 images a rentrer chez lui donne « 0 % de pas obliques » et
     # le juge passe au vert en n'ayant rien mesure du tout.
-    assert i["pasSoul"] >= 60 and i["pasSobre"] >= 60, (
+    assert i["pasSoul"] >= 120 and i["pasSobre"] >= 120, (
         "le décor du juge est faux : personne n'a marché sur le trottoir (%s)" % i
     )
     assert i["zigzag"] >= 70, "l'ivrogne marche droit : %s %% de pas obliques" % i["zigzag"]
@@ -2444,6 +2452,15 @@ def test_les_portes_s_ouvrent_et_les_gens_les_passent(banc):
 
         // 4. Sortir : ne DANS la porte, invisible tant qu'elle s'ouvre, puis
         //    dehors — et VISIBLE, meme en plein ecran.
+        // ⚠️ ON REMET LA GRAINE ICI. Les soixante images du battant plus haut
+        // font vivre toute la ville, et elles puisent dans `B.rng` un nombre de
+        // fois qui depend d'elle : deux tuiles de cloture de plus a l'autre bout
+        // du Faubourg, et l'archetype tire ici n'est plus le meme, ni sa vitesse.
+        // La marge etait d'UN pixel (« avance > 8 » pour douze mesures), alors le
+        // juge tombait sur des changements qui n'ont rien a voir avec les portes —
+        // c'est deja arrive le 14 sept. 2026. Ce qu'on mesure ici ne doit dependre
+        // que de la porte et de celui qui en sort.
+        L.graine(97);
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 6) * L.TT + 8;
         L.Monde.centrerCamera(j.x, j.y);
         // ⚠️ On DEGAGE LE PAS DE PORTE : ce qu'on juge ici, c'est le battant et
@@ -2672,8 +2689,20 @@ def test_le_decor_solide_arrete_le_joueur_mais_pas_un_buisson(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ PAS LE PREMIER VENU : celui qui a LE PAS LIBRE AU SUD. On pose le
+        // joueur vingt pixels sous le decor et on pousse vers le nord ; si cette
+        // tuile-la est une cloture ou un mur, on ne mesure plus le decor, on
+        // mesure son voisinage. Le juge est tombe le jour ou les cours arriere
+        // se sont cloturees pour de bon : le premier buisson de la liste avait
+        // une palissade juste en dessous, et « un buisson ne doit pas bloquer »
+        // accusait le buisson.
         function pousser(type) {
-            const d = L.B.entites.find(function (e) { return e.decor === type; });
+            const d = L.B.entites.find(function (e) {
+                if (e.decor !== type) return false;
+                const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
+                return !L.Monde.bloque(tx, ty, L.Monde.MASQUE_PIETON)
+                    && !L.Monde.bloque(tx, ty + 1, L.Monde.MASQUE_PIETON);
+            });
             if (!d) return null;
             j.x = d.x; j.y = d.y + 20; j.vx = 0; j.vy = 0;
             for (let i = 0; i < 30; i++) L.Entites.deplacerCercle(j, 0, -1.2, L.Monde.MASQUE_PIETON);
@@ -6894,3 +6923,73 @@ def test_un_char_pris_dans_un_mur_en_ressort_toujours(banc, paquet):
     assert 0 < t["deplace"] <= ph["degagement_px"] + 1, "posé hors de portée : %s" % t
     assert t["vitesse"] == 0 and t["vx"] == 0 and t["vy"] == 0, "un char posé garde son élan : %s" % t
     assert t["degagements"] == 1
+
+
+def test_le_sol_d_un_ilot_ne_se_repete_plus_toutes_les_quatre_tuiles(banc):
+    """⚠️ Demande de Martin : « fais une passe visuelle d'amélioration de tous
+    les pâtés de maison ».
+
+    Le trottoir, l'herbe et la ruelle font **43 % de la ville** à eux trois
+    (28 %, 10,5 %, 4,7 % des tuiles) — c'est de loin la plus grande surface
+    qu'elle ait. Les trois se peignaient avec **quatre** tuiles de 16 px,
+    tirées sur `hash2 % 4`, répétées d'un bout à l'autre du Faubourg. De loin,
+    ce n'était pas un sol, c'était du papier peint.
+
+    ⚠️ Et le trottoir faisait pire : il peignait son **joint de dalle sur chaque
+    tuile**, en haut et à gauche. Un trait tous les seize pixels dans les deux
+    sens, sur le quart de la ville — ce qu'on lisait alors, c'était la grille de
+    la carte. Une dalle de béton fait maintenant DEUX tuiles de côté, et chaque
+    tuile lit sa parité pour savoir de quel coin de dalle elle est (la même
+    règle que la case de stationnement, qui ne peint que sa ligne de gauche pour
+    ne pas doubler celle de sa voisine).
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function peindre(g, v) {
+            const ctx = L.Base.nouveauCanvas(L.TT, L.TT).getContext('2d');
+            ctx.traces = [];
+            L.TUILES[g](ctx, v, L.TT);
+            return JSON.stringify(ctx.traces);
+        }
+        // Combien de tuiles DIFFERENTES un carre de 8 x 8 donne, par sol.
+        const distinctes = {};
+        for (const g of ['.', ',', 'x']) {
+            const vues = {};
+            for (let y = 40; y < 48; y++) {
+                for (let x = 40; x < 48; x++) vues[peindre(g, L.Monde.varianteDeSol(g, x, y))] = 1;
+            }
+            distinctes[g] = Object.keys(vues).length;
+        }
+        // La dalle : les quatre parites d'un carre de 2 x 2, sans l'usure.
+        const dalle = [[0, 0], [1, 0], [0, 1], [1, 1]].map(function (p) {
+            return L.Monde.varianteDeSol('.', 100 + p[0], 100 + p[1]) & 3;
+        });
+        // Qui peint un joint : une bande de 1 px sur tout un cote de la tuile.
+        function joints(v) {
+            const ctx = L.Base.nouveauCanvas(L.TT, L.TT).getContext('2d');
+            ctx.traces = [];
+            L.TUILES['.'](ctx, v, L.TT);
+            const t = ctx.traces;
+            return {
+                ouest: t.some(function (q) { return q[0] === 0 && q[1] === 0 && q[2] === 1 && q[3] === L.TT; }),
+                nord: t.some(function (q) { return q[0] === 0 && q[1] === 0 && q[2] === L.TT && q[3] === 1; }),
+            };
+        }
+        return { distinctes: distinctes, dalle: dalle, usures: L.Monde.USURES_DE_SOL,
+                 joints: [0, 1, 2, 3].map(joints) };
+    }""")
+    for glyphe, combien in r["distinctes"].items():
+        assert combien > 4, (
+            f"le sol « {glyphe} » ne donne que {combien} tuiles differentes sur 64 : "
+            "c'est du papier peint"
+        )
+    assert r["usures"] >= 8, "moins de huit usures, et on reconnait la tuile d'a cote"
+    assert sorted(r["dalle"]) == [0, 1, 2, 3], (
+        f"les quatre coins d'une dalle ne se distinguent pas : {r['dalle']}")
+    # ⚠️ UNE dalle sur quatre porte ses deux joints, une seule n'en porte aucun :
+    # c'est ca, une dalle de deux tuiles de cote. Quatre tuiles qui peignent
+    # chacune ses deux joints, c'est un quadrillage de seize pixels.
+    j = r["joints"]
+    assert sum(1 for q in j if q["ouest"] and q["nord"]) == 1, j
+    assert sum(1 for q in j if not q["ouest"] and not q["nord"]) == 1, j
+    assert sum(1 for q in j if q["ouest"]) == 2 and sum(1 for q in j if q["nord"]) == 2, j

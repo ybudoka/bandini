@@ -129,6 +129,17 @@ LEGENDE: dict[str, dict] = {
     ",": {"nom": "herbe", "herbe": True},
     "x": {"nom": "ruelle", "ruelle": True},
     "s": {"nom": "sable"},
+    # ⚠️ La POUSSIERE DE PIERRE d'une allee de parc, et pas du trottoir. Un
+    # parc de ville se peignait avec le beton de la rue : quatre allees de
+    # deux tuiles et une place de 5 x 5 au coeur, ca fait pres de la moitie
+    # d'un ilot — vu d'en haut, ce n'etait pas un parc avec des sentiers,
+    # c'etait une dalle avec du gazon dessus. Ce n'est pas non plus du sable
+    # (`s`) : la plage borde l'eau, l'allee traverse la pelouse, et les
+    # confondre mettrait une plage au milieu du Faubourg.
+    # ⚠️ `g` minuscule — `G` majuscule est une porte de garage. Meme piege
+    # que `w` / `W` deux ecrans plus bas, et meme parade : les deux ne vivent
+    # jamais dans le meme genre de plan (l'un est du SOL, l'autre du BATI).
+    "g": {"nom": "allée de poussière de pierre"},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
     # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre
@@ -645,6 +656,25 @@ class Des:
 
     def choix(self, options):
         return options[self.suivant() % len(options)]
+
+    def brule(self, combien: int) -> None:
+        """Avance le de de `combien` tirages, sans rien en faire.
+
+        ⚠️ Ce n'est pas du remplissage : c'est ce qui permet de changer une
+        decision sans DECALER tout ce qui vient apres. Le de principal porte
+        toute la suite du hasard (`batiment_forme` l'ecrit deja : « un tirage de
+        moins (ou de plus) dans ce de-la decalerait toute la suite ») : qui cesse de
+        tirer decale les gabarits, les parcelles et le decor de TOUT ce qui se
+        genere apres lui, a l'autre bout de la ville. Mesure a l'appui, en
+        supprimant les tirages du barbele et du terrain vague : douze scenes
+        d'amuseur disparaissaient du Faubourg et le juge « un amuseur nait au
+        centre-ville » tombait — pour une histoire de cloture.
+
+        On brule donc ce qu'on ne tire plus, et on le dit ici plutot que de
+        laisser une boucle morte sur place.
+        """
+        for _ in range(combien):
+            self.suivant()
 
 
 def _coupe(largeur: int, vertical: bool) -> list[tuple[str, str]]:
@@ -1504,21 +1534,190 @@ class _Chantier:
         rangee = sorted(c for c in candidats if c[1] == bas)
         return rangee[len(rangee) // 2]
 
-    def poser_cloture(self, x: int, y: int, glyphe: str) -> bool:
-        """Une tuile de cloture — sauf devant une facade ou un devant de porte.
+    def cloture_possible(self, x: int, y: int) -> bool:
+        """Si une tuile de cloture a le droit de se poser ici.
 
         ⚠️ Une porte se pose sur la facade SUD d'un batiment et exige du
         marchable devant elle. Une cloture peinte la (une cour arriere qui touche
         le mur du voisin) fait rater `poser_porte` : le batiment perd sa porte,
         son enseigne et son commerce, et personne ne le voit avant de chercher
         une boutique qui n'existe plus.
+
+        ⚠️ Et une cloture ne remplace NI UN MUR NI UNE CHAUSSEE. Tant qu'elle ne
+        se posait qu'a la tuile, personne n'en avait besoin ; du jour ou l'on
+        ceinture un terrain (`clore`), l'enceinte passe la ou il y a deja
+        quelque chose — et elle l'ecrasait. Mesure a l'appui : le barbele de la
+        cour des Skateux mangeait deux colonnes de leur stationnement, et « il y
+        a un tremplin a La Pointe a tout coup » redevenait une legende. On ne
+        cloture donc que du SOL : ni bati, ni eau, ni asphalte, ni case.
         """
         if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
             return False
         if (x, y) in self.reserve or (y > 0 and solidite(self.sol[y - 1][x]) == 1):
             return False
+        # ⚠️ NI PAR-DESSUS UN DECOR. Le decor n'est pas une tuile, c'est une
+        # entite (`occupe`), donc `solidite` ne le voit pas : une palissade de
+        # cour arriere se peignait a travers un cabanon, et le juge « le decor
+        # ne bouche ni la rue ni les portes » l'a attrape — un cabanon pose sur
+        # une tuile qu'on ne foule pas.
+        if (x, y) in self.occupe:
+            return False
+        glyphe = self.sol[y][x]
+        return not (solidite(glyphe) or routier(glyphe))
+
+    def poser_cloture(self, x: int, y: int, glyphe: str) -> bool:
+        """Une tuile de cloture — sauf devant une facade ou un devant de porte."""
+        if not self.cloture_possible(x, y):
+            return False
         self.sol[y][x] = glyphe
         return True
+
+    #: Ce qu'il faut pouvoir poser d'une enceinte pour que ca vaille la peine de
+    #: la poser. ⚠️ En dessous, on n'en pose AUCUNE tuile : trois quarts d'une
+    #: cloture, c'est une cloture ; la moitie, c'est une barre sur un terrain.
+    PART_ENCEINTE = 0.75
+
+    #: Les quatre cotes d'un rectangle, par leur lettre.
+    COTES = "NSEO"
+
+    def clore(self, x: int, y: int, largeur: int, hauteur: int, glyphe: str, *,
+              cotes: str = COTES, ouverture: int = 2, cote_ouvert: str = "S") -> int:
+        """Ceinture un terrain de cloture, avec une TROUEE. Rend le nombre de
+        tuiles posees — zero si l'enceinte n'a pas pu se faire.
+
+        ⚠️ **Une cloture cloture un terrain, ou elle n'est pas la.** C'est la
+        regle entiere, et le depot la violait partout : le terrain vague peignait
+        UN cote, UNE tuile sur deux ; la cour de `_jardin` posait son U tuile par
+        tuile et `poser_cloture` en refusait en silence. Mesure a l'appui, sur la
+        ville livree : 361 tuiles de cloture en 80 morceaux, dont **69 sans un
+        seul coin** (216 tuiles de barre droite) et **24 toutes seules**. Vu du
+        jeu, ce n'etait pas une banlieue cloturee, c'etait des palissades posees
+        sur du gazon — ce que Martin a nomme d'un coup d'oeil.
+
+        Trois regles, et elles se tiennent :
+
+        1. **Tout ou rien.** On regarde d'abord ce que `cloture_possible` accepte
+           de l'enceinte entiere. En dessous de `PART_ENCEINTE`, on ne pose rien
+           du tout : mieux vaut un terrain ouvert qu'un moignon de cloture.
+        2. **Une trouee, toujours.** Sans elle, une enceinte fermee est une poche
+           que `boucher_les_poches` murerait — et le terrain disparait avec.
+        3. **Aucune tuile seule.** Ce que les refus laissent d'isole s'enleve
+           apres coup, jusqu'a ce qu'il ne reste que des courses qui se tiennent.
+        """
+        if largeur < 2 or hauteur < 2:
+            return 0
+        voulues: list[tuple[int, int]] = []
+        if "N" in cotes:
+            voulues += [(x + i, y) for i in range(largeur)]
+        if "S" in cotes:
+            voulues += [(x + i, y + hauteur - 1) for i in range(largeur)]
+        haut = 0 if "N" in cotes else 1
+        bas = hauteur - 1 if "S" in cotes else hauteur
+        if "O" in cotes:
+            voulues += [(x, y + j) for j in range(haut, bas)]
+        if "E" in cotes:
+            voulues += [(x + largeur - 1, y + j) for j in range(haut, bas)]
+        if not voulues:
+            return 0
+
+        # La trouee : `ouverture` tuiles d'affilee sur un cote. ⚠️ Elle s'ouvre
+        # sur du MARCHABLE quand c'est possible — une barriere qui donne sur le
+        # mur du voisin n'est pas une barriere, et une cour dont la seule sortie
+        # est murée redevient la poche que `boucher_les_poches` efface.
+        def tuile(k: int) -> tuple[int, int]:
+            if cote_ouvert == "N":
+                return (x + k, y)
+            if cote_ouvert == "S":
+                return (x + k, y + hauteur - 1)
+            if cote_ouvert == "O":
+                return (x, y + k)
+            return (x + largeur - 1, y + k)
+
+        dehors = {"N": (0, -1), "S": (0, 1), "O": (-1, 0), "E": (1, 0)}[cote_ouvert]
+        long_cote = largeur if cote_ouvert in "NS" else hauteur
+        ouverture = min(ouverture, max(1, long_cote - 2))
+        departs = list(range(max(1, long_cote - ouverture)))
+        donnent = [d for d in departs
+                   if all(self.marchable_en(tuile(d + k)[0] + dehors[0],
+                                            tuile(d + k)[1] + dehors[1])
+                          for k in range(ouverture))]
+        depart = self.des_cloture.choix(donnent or departs)
+        trouee = {tuile(depart + k) for k in range(ouverture)}
+        voulues = [t for t in voulues if t not in trouee]
+
+        possibles = [t for t in voulues if self.cloture_possible(*t)]
+        if not voulues or len(possibles) < self.PART_ENCEINTE * len(voulues):
+            return 0
+
+        # ⚠️ On ENLEVE avant de poser : une tuile sans voisine ne se rattrape
+        # pas apres coup, elle se retire. La boucle tourne jusqu'a ce que plus
+        # rien ne tombe — retirer une tuile peut en isoler une autre.
+        garde = set(possibles)
+        while True:
+            seules = {t for t in garde
+                      if not any((t[0] + dx, t[1] + dy) in garde
+                                 for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
+            if not seules:
+                break
+            garde -= seules
+        for tx, ty in sorted(garde):
+            self.poser_cloture(tx, ty, glyphe)
+        return len(garde)
+
+    #: Ce qu'on remet a la place d'une cloture qu'on enleve. ⚠️ Jamais de la
+    #: route : une palissade effacee qui laisserait de l'asphalte ferait rouler
+    #: des chars au milieu d'une cour.
+    SOLS_NUS = (",", ".", "x")
+
+    def elaguer_les_clotures(self) -> int:
+        """Enleve ce qui reste d'une cloture quand elle ne cloture plus rien.
+
+        ⚠️ C'est le DERNIER MOT de la regle de `clore` — « une cloture cloture un
+        terrain, ou elle n'est pas la ». `clore` la tient a la pose ; ce qu'elle
+        ne peut pas tenir, c'est ce que la ville mange ENSUITE : un batiment qui
+        avale un coin, une rampe qui coupe une course en deux, une rue qui passe
+        par la. Ce qui survit en BARRE DROITE n'enferme plus rien, et une barre
+        droite au milieu d'un gazon est exactement ce que Martin a nomme.
+
+        Le critere tient en une phrase : **une course de cloture qui ne tourne
+        jamais ne cloture rien**. Une tuile seule n'a meme pas de course.
+
+        ⚠️ Avant `boucher_les_poches` : on n'enleve que de la solidite, donc ca
+        n'ouvre que des chemins — mais le juge des poches doit voir la ville
+        telle qu'on la livre, pas telle qu'elle etait deux passes plus tot.
+        """
+        tuiles = {(x, y) for y in range(self.hauteur) for x in range(self.largeur)
+                  if self.sol[y][x] in CLOTURES}
+        vus: set[tuple[int, int]] = set()
+        enleves = 0
+        for depart in sorted(tuiles):
+            if depart in vus:
+                continue
+            course, pile = [], [depart]
+            vus.add(depart)
+            while pile:
+                x, y = pile.pop()
+                course.append((x, y))
+                for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                    voisine = (x + dx, y + dy)
+                    if voisine in tuiles and voisine not in vus:
+                        vus.add(voisine)
+                        pile.append(voisine)
+            dedans = set(course)
+            tourne = any(
+                (((x + 1, y) in dedans or (x - 1, y) in dedans)
+                 and ((x, y + 1) in dedans or (x, y - 1) in dedans))
+                for x, y in course)
+            if tourne:
+                continue
+            for x, y in course:
+                voisins = [self.sol[y + dy][x + dx]
+                           for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                           if 0 <= x + dx < self.largeur and 0 <= y + dy < self.hauteur]
+                nus = [g for g in voisins if g in self.SOLS_NUS]
+                self.sol[y][x] = max(set(nus), key=nus.count) if nus else ","
+                enleves += 1
+        return enleves
 
     def poser_decor(self, type_: str, x: int, y: int) -> bool:
         """Du decor seulement sur une tuile libre, hors route et hors devant de porte."""
@@ -1769,6 +1968,12 @@ class _Chantier:
                          if genre == "gang" and bandes and self.district_en(x, y) == "pointe"
                          else -1)
         parcelle_skateux = -1
+        #: Les bandes a ceinturer de barbele (`genre == "gang"`). ⚠️ On les met
+        #: de cote au lieu de les clore tout de suite : les batiments se posent
+        #: APRES la boucle des bandes, et ils ecrasaient les colonnes est et
+        #: ouest de l'enceinte — il en restait deux bouts verticaux de deux
+        #: tuiles, exactement le genre de moignon qu'on vient de bannir.
+        cours: list[tuple[int, int, int, int]] = []
         for k, (by, bh) in enumerate(bandes):
             self.rect(x, by, largeur, 2, "x")                      # ruelle derriere
             self.rect(x, by + bh - 2, largeur, 2, devant)           # devant
@@ -1812,15 +2017,8 @@ class _Chantier:
                 for parcelle in self._parcelles(x, zy, largeur, zh, mini):
                     parcelles.append((parcelle, parcelle[1] + parcelle[3] >= zy + zh))
             if genre == "gang":
-                # Une cour cloturee, avec une entree pour les chars.
-                # ⚠️ Du BARBELE : c'est la cour d'un gang, quelqu'un a paye pour
-                # que personne n'entre. On y passe par l'entree des chars, pas
-                # par-dessus — et cette entree est ce qui garantit que la cour
-                # n'est jamais une poche fermee (juge : un seul ilot marchable).
-                ouverture = self.des.entier(2, max(3, largeur - 7))
-                for i in range(largeur):
-                    if not ouverture <= i < ouverture + 5 and self.des.chance(0.8):
-                        self.sol[by + bh - 1][x + i] = BARBELE
+                cours.append((x, by, largeur, bh))
+                self.des.brule(1 + max(0, largeur - 5))   # l'ouverture, puis quatre tuiles sur cinq
                 for _ in range(3):
                     self.poser_decor("caisse", x + self.des.entier(0, largeur - 1),
                                      by + self.des.entier(0, 1))
@@ -1915,6 +2113,15 @@ class _Chantier:
             # sur le pas de la porte, et la piscine coupe le chemin.
             if genre == "banlieue":
                 self._terrain_de_banlieue(parcelle, boite, porte_du_batiment)
+        # ⚠️ Le barbele des cours de gang EN DERNIER, une fois les batiments
+        # poses : c'est la seule place ou l'enceinte ne se fait pas manger. Du
+        # BARBELE, et sur TROIS cotes — quelqu'un a paye pour que personne
+        # n'entre, et une ligne pointillee sur la seule rangee du sud (ce
+        # qu'elle etait) laissait entrer par les cotes sans rien enjamber. Le
+        # NORD reste ouvert sur la ruelle : c'est par la que la cour respire, et
+        # c'est ce qui garantit qu'elle n'est jamais une poche fermee.
+        for cx, cy, cl, ch in cours:
+            self.clore(cx, cy, cl, ch, BARBELE, cotes="SEO", ouverture=5)
         for _ in range(max(1, largeur // 10)):
             self.poser_decor("poubelle", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, 1))
@@ -2200,17 +2407,20 @@ class _Chantier:
         # cloture qu'on enjambe, ca ne dit rien ; derriere du barbele, ca dit
         # « quelqu'un a paye pour que personne n'entre ». Ailleurs, c'est du
         # grillage — un terrain vague de quartier, on y passe.
-        # ⚠️ Et le barbele laisse TOUJOURS une trouee : la cloture n'est qu'a
-        # demi peinte (une tuile sur deux), mais « a demi » n'est pas un juge.
-        # Sans trouee garantie, un terrain vague ferme devient une poche que
-        # `boucher_les_poches` mure — et la ferraille disparait sans un mot.
+        # ⚠️ ET IL EST CEINTURE, pas borde. Le terrain vague peignait UN cote —
+        # le sud — et encore, une tuile sur deux : une ligne pointillee d'ou
+        # rien ne suivait, et c'est elle qui faisait le gros des 216 tuiles de
+        # barre droite mesurees dans `clore`. Un terrain vague, c'est justement
+        # ce qu'on a ferme et laisse a l'abandon ; sans les quatre cotes, rien
+        # ne dit qu'il est a quelqu'un. La trouee, elle, reste garantie : sans
+        # elle, l'enceinte fermee devient une poche que `boucher_les_poches`
+        # mure, et la ferraille disparait sans un mot.
         cloture = BARBELE if self.district_en(x, y) == "shop" else GRILLAGE
-        troue = self.des_cloture.entier(0, max(0, largeur - 2))
-        for i in range(largeur):
-            if i in (troue, troue + 1):
-                continue
-            if self.des.chance(0.5):
-                self.poser_cloture(x + i, y + hauteur - 1, cloture)
+        # ⚠️ TROIS COTES, ouvert au NORD sur la ruelle : c'est par la qu'on
+        # entre dans un terrain vague, et c'est aussi ce qui garantit qu'il
+        # n'est jamais une poche.
+        self.clore(x, y, largeur, hauteur, cloture, cotes="SEO")
+        self.des.brule(max(0, largeur - 2))   # une tuile sur deux hors trouee, autrefois
         for _ in range(max(1, largeur * hauteur // 12)):
             self.poser_decor("debris", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, hauteur - 1))
@@ -2329,6 +2539,18 @@ class _Chantier:
                     occupe.add((x, y))
 
         # --- Le BBQ, devant, du cote de la porte ----------------------------
+        # --- Et la cour arriere se CLOTURE ---------------------------------
+        # ⚠️ « Des cours delimitees » : le plan le promet depuis M8, et seuls les
+        # terrains VIDES le tenaient (`_jardin`). Une banlieue ou les maisons
+        # n'ont pas de cour cloturee et ou les terrains vacants en ont une, c'est
+        # l'inverse de ce qu'on voit par la fenetre. Trois cotes — le sud reste
+        # ouvert sur la maison, et c'est ce qui garantit qu'une cour arriere
+        # n'est jamais une poche. La barriere, elle, donne sur la ruelle.
+        # ⚠️ APRES la piscine et le cabanon : `cloture_possible` refuse ce qui
+        # est deja solide, donc une palissade ne peut pas leur passer dessus.
+        if by - py >= 3 and pl >= 3 and self.des_cloture.chance(0.55):
+            self.clore(px, py, pl, by - py, BOIS, cotes="NEO", cote_ouvert="N", ouverture=1)
+
         devanture = [(x, y) for y in range(by + bh, py + ph) for x in range(px, px + pl)
                      if self.sol[y][x] == "," and (x, y) not in occupe
                      and (x, y) not in self.reserve]
@@ -2372,13 +2594,11 @@ class _Chantier:
         sorties = [i for i in range(1, largeur - 1) if self.marchable_en(x + i, y + hauteur)]
         if (genre == "banlieue" and largeur >= 3 and hauteur >= 3
                 and sorties and self.des_cloture.chance(0.7)):
-            barriere = self.des_cloture.choix(sorties)
-            for i in range(largeur):
-                if i != barriere:
-                    self.poser_cloture(x + i, y + hauteur - 1, BOIS)
-            for j in range(hauteur - 1):
-                self.poser_cloture(x, y + j, BOIS)
-                self.poser_cloture(x + largeur - 1, y + j, BOIS)
+            # ⚠️ Trois cotes, et `clore` decide : le U se posait tuile par tuile
+            # et `poser_cloture` en refusait en silence — il en restait des bouts
+            # qui ne se rejoignaient pas, « trois palissades sur un gazon ». Ou
+            # la cour se cloture, ou elle reste ouverte ; pas de moignon.
+            self.clore(x, y, largeur, hauteur, BOIS, cotes="SEO", ouverture=1)
         for _ in range(max(1, largeur * hauteur // 10)):
             self.poser_decor(self.des.choix(("arbre", "buisson")),
                              x + self.des.entier(0, largeur - 1),
@@ -2657,7 +2877,9 @@ class _Chantier:
               sauvage: bool = False) -> None:
         """Un parc de ville, ou — `sauvage` — le bois de La Pointe : les memes
         allees, mais en terre battue, et des arbres au lieu des bancs."""
-        pave = "s" if sauvage else "."
+        # ⚠️ Le bois de La Pointe garde son SABLE (des sentiers de plage, on y
+        # arrive par la greve) ; un parc de ville a de la poussiere de pierre.
+        pave = "s" if sauvage else "g"
         self.bouchon_rect(x, y, largeur, hauteur, "~")
         self.rect(x, y, largeur, hauteur, ",")
         centre = (x + largeur // 2, y + hauteur // 2)
@@ -3236,6 +3458,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # FINIE. Avant les paquets et les ambulants, pour que la piste d'elan soit
     # reservee quand ils cherchent leur place.
     chantier.poser_les_rampes()
+    # ⚠️ ICI et pas plus tot : la rampe est la derniere chose qui COUPE une
+    # cloture. Ce que la ville a mange des enceintes se voit maintenant, et ce
+    # qui n'enferme plus rien s'enleve avant que quiconque le juge.
+    chantier.elaguer_les_clotures()
     ambulants = chantier.ambulants()
     reclames = chantier.reclames(ambulants)
     # ⚠️ Apres les ambulants et la reclame : une scene se veut DEGAGEE, et un

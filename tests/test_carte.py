@@ -893,3 +893,99 @@ def test_une_facade_se_coupe_en_commerces_sauf_un_entrepot():
     # Une facade a trous (un batiment en L) : une suite, une coupe.
     troue = [(x, 10) for x in list(range(6)) + list(range(20, 26))]
     assert chantier.decouper_la_facade(troue, "commerces") == [(0, 6, 10), (20, 6, 10)]
+
+
+# --- Une cloture cloture un terrain -----------------------------------------
+
+def _courses_de_cloture(sol) -> list[list[tuple[int, int]]]:
+    """Les morceaux de clôture d'une carte, en 4-connexité (une clôture est
+    orthogonale : deux tuiles en diagonale ne se tiennent pas)."""
+    tuiles = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne)
+              if g in carte.CLOTURES}
+    vus: set[tuple[int, int]] = set()
+    courses = []
+    for depart in sorted(tuiles):
+        if depart in vus:
+            continue
+        pile, course = [depart], []
+        vus.add(depart)
+        while pile:
+            x, y = pile.pop()
+            course.append((x, y))
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                voisine = (x + dx, y + dy)
+                if voisine in tuiles and voisine not in vus:
+                    vus.add(voisine)
+                    pile.append(voisine)
+        courses.append(course)
+    return courses
+
+
+def _tourne(course) -> bool:
+    """Une course qui fait au moins un COIN : une tuile qui a une voisine
+    horizontale ET une voisine verticale. C'est ce qui sépare une clôture d'une
+    barre posée sur un gazon."""
+    dedans = set(course)
+    return any(
+        (((x + 1, y) in dedans or (x - 1, y) in dedans)
+         and ((x, y + 1) in dedans or (x, y - 1) in dedans))
+        for x, y in course)
+
+
+@pytest.mark.parametrize("ville", [CARTE] + [carte.generer(graine=g) for g in (1, 7, 99, 777)])
+def test_une_cloture_cloture_un_terrain(ville):
+    """⚠️ Demande de Martin : « les clôtures doivent clôturer les terrains, pas
+    juste être là seules ». Il regardait le jeu, et la mesure lui donnait raison
+    trois fois : sur la ville livrée, **361 tuiles de clôture en 80 morceaux,
+    dont 69 sans un seul coin** (216 tuiles de barre droite) et **24 toutes
+    seules**. Un piquet planté au milieu d'une pelouse n'enferme rien.
+
+    Trois sources, et chacune avait sa raison d'avoir tort : le terrain vague ne
+    peignait qu'UN côté, et une tuile sur deux ; la cour de gang ne peignait que
+    la rangée du sud ; la cour arrière de `_jardin` posait son U tuile par tuile
+    et `poser_cloture` en refusait en silence. `clore` pose des enceintes (tout
+    ou rien, une trouée garantie) et `elaguer_les_clotures` enlève ce que la
+    ville leur mange ensuite.
+
+    Le juge tient la règle telle qu'elle se dit : **une clôture tourne, ou elle
+    n'est pas là**.
+    """
+    courses = _courses_de_cloture(ville["sol"])
+    assert courses, "plus une seule clôture dans la ville"
+    droites = [c for c in courses if not _tourne(c)]
+    assert not droites, (
+        f"{len(droites)} clôtures ne tournent jamais "
+        f"({sum(len(c) for c in droites)} tuiles) : "
+        f"{[sorted(c)[0] for c in droites[:5]]}"
+    )
+    seules = [c for c in courses if len(c) == 1]
+    assert not seules, f"{len(seules)} tuiles de clôture toutes seules : {seules[:5]}"
+
+
+def test_une_cloture_ne_remplace_ni_un_mur_ni_une_chaussee():
+    """⚠️ `clore` passe là où il y a déjà quelque chose — c'est tout l'objet
+    d'une enceinte. Sans ce garde-fou, le barbelé de la cour des Skateux
+    mangeait deux colonnes de leur stationnement et « il y a un tremplin à La
+    Pointe à tout coup » redevenait une légende."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.rect(0, 0, 8, 8, ",")
+    chantier.sol[4][3] = "F"                     # un mur
+    chantier.sol[4][4] = "#"                     # de la chaussée
+    chantier.sol[4][5] = "^"                     # une case de stationnement
+    assert not chantier.cloture_possible(3, 4)
+    assert not chantier.cloture_possible(4, 4)
+    assert not chantier.cloture_possible(5, 4)
+    assert chantier.cloture_possible(6, 4)
+
+
+def test_une_enceinte_garde_toujours_une_trouee():
+    """⚠️ Sans trouée, une enceinte fermée est une poche que
+    `boucher_les_poches` murerait — et le terrain disparaîtrait avec."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.rect(0, 0, 20, 20, ",")
+    posees = chantier.clore(2, 2, 10, 8, carte.GRILLAGE)
+    tour = 2 * (10 + 8) - 4
+    assert 0 < posees < tour, f"{posees} tuiles pour un tour de {tour}"
+    dedans = [(x, y) for y in range(3, 9) for x in range(3, 11)
+              if chantier.sol[y][x] in carte.CLOTURES]
+    assert not dedans, f"une enceinte a peint dans son terrain : {dedans}"

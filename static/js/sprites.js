@@ -898,11 +898,155 @@ const TUILES = (function () {
     }
     if (fond) butoir(ctx, T, cote);
   }
+  /* --- Le sol d'un pate de maisons ---------------------------------------
+
+     Trottoir, herbe, ruelle : 43 % de la ville a eux trois, et la plus grande
+     surface qu'elle ait. Les trois se peignaient pareil — un aplat, quelques
+     points de bruit, quatre variantes — et c'est ce qui donnait a la ville son
+     air de papier peint des qu'on prenait de la hauteur.
+
+     ⚠️ Deux regles tiennent tout ce bloc, et elles viennent du stationnement,
+     qui les a apprises avant :
+       1. AUCUNE USURE NE TOUCHE LE BORD DE LA TUILE. Une fissure ou une tache
+          coupee net au seizieme pixel redessine la grille, et la ville entiere
+          redevient un quadrillage.
+       2. L'usure est un DESSIN, pas du bruit : elle ne vient que d'une variante
+          sur quatre ou cinq (`Monde.USURES_DE_SOL` en compte seize). Un
+          trottoir dont chaque dalle est fendue n'est pas un vieux trottoir,
+          c'est un motif. */
+
+  /** Une fissure fine dans une dalle : une ligne qui se promene, et qui
+      s'arrete a trois pixels du bord. */
+  function fendillement(ctx, v, T, couleur) {
+    ctx.fillStyle = couleur;
+    let x = 4 + Math.floor(bruit(v, 3) * 7);
+    for (let y = 3; y < T - 3; y++) {
+      ctx.fillRect(x, y, 1, 1);
+      if (bruit(v, 20 + y) < 0.4) x += bruit(v, 40 + y) < 0.5 ? -1 : 1;
+      x = Math.max(3, Math.min(T - 4, x));
+    }
+  }
+
+  /** Un rapiecage : quelqu'un a ouvert le sol et l'a referme autrement. Deux
+      rectangles decales, parce qu'un seul se lit comme une boite. */
+  function rapiecage(ctx, v, T, couleur) {
+    const x = 3 + Math.floor(bruit(v, 5) * 3), y = 3 + Math.floor(bruit(v, 6) * 3);
+    ctx.fillStyle = couleur;
+    ctx.fillRect(x, y, Math.min(7 + Math.floor(bruit(v, 7) * 3), T - 3 - x),
+                 Math.min(4 + Math.floor(bruit(v, 8) * 3), T - 3 - y));
+    ctx.fillRect(x + 1, y + 2, Math.min(5 + Math.floor(bruit(v, 9) * 4), T - 4 - x),
+                 Math.min(4 + Math.floor(bruit(v, 10) * 3), T - 5 - y));
+  }
+
+  /** Une tache : deux barres croisees, comme l'huile du stationnement mais
+      seche et pale — de l'eau de lavage, du cafe renverse, du sel. */
+  function souillure(ctx, v, T, couleur) {
+    const cx = 5 + Math.floor(bruit(v, 11) * 5), cy = 5 + Math.floor(bruit(v, 12) * 5);
+    ctx.fillStyle = couleur;
+    ctx.fillRect(cx - 2, cy - 1, 5, 3);
+    ctx.fillRect(cx - 1, cy - 2, 3, 5);
+  }
+
+  //: Le beton du trottoir. `joint` est le creux entre deux dalles, `arete` le
+  //: chant qui prend le jour juste a cote.
+  const BETON = { fond: '#9a9689', joint: '#8a8578', arete: '#a7a396', grain: '#8f8b7f',
+                  fissure: '#7f7b70', rapiece: '#827e74', tache: '#8c8879', mousse: '#6c7c58' };
+
+  /** Le trottoir : la plus grande surface de la ville.
+
+      `v` porte la place de la tuile dans sa DALLE (bit 0 = elle est a l'est de
+      son joint, bit 1 = au sud) et son usure au-dessus — voir
+      `Monde.varianteDeSol`. Une dalle fait DEUX tuiles de cote : c'est ce qui
+      enleve a la ville le quadrillage de seize pixels qu'elle portait. */
   function trottoir(ctx, v, T) {
-    plein(ctx, '#9a9689', T);
-    ctx.fillStyle = '#8b877b'; ctx.fillRect(0, 0, T, 1); ctx.fillRect(0, 0, 1, T);
-    ctx.fillStyle = '#a5a194'; ctx.fillRect(1, 1, T - 2, 1);
-    points(ctx, v, T, '#8f8b7f', 5, 7);
+    const joinOuest = (v & 1) === 0, joinNord = (v & 2) === 0;
+    const usure = v >> 2;
+    plein(ctx, BETON.fond, T);
+    points(ctx, usure + 1, T, BETON.grain, 6, 7);
+    points(ctx, usure + 1, T, BETON.arete, 4, 41);
+    if (usure === 13) fendillement(ctx, usure + 1, T, BETON.fissure);
+    else if (usure === 14) rapiecage(ctx, usure + 1, T, BETON.rapiece);
+    else if (usure === 15) souillure(ctx, usure + 1, T, BETON.tache);
+    // Les joints, EN DERNIER : rien ne passe par-dessus le bord d'une dalle.
+    if (joinOuest) {
+      ctx.fillStyle = BETON.joint; ctx.fillRect(0, 0, 1, T);
+      ctx.fillStyle = BETON.arete; ctx.fillRect(1, 0, 1, T);
+      // Un peu de mousse dans le joint, une dalle sur huit : c'est elle qui dit
+      // qu'il y a de la terre dessous et que personne ne passe le balai.
+      if (usure === 12) { ctx.fillStyle = BETON.mousse; for (let y = 3; y < T - 3; y += 4) ctx.fillRect(0, y, 1, 1); }
+    }
+    if (joinNord) {
+      ctx.fillStyle = BETON.joint; ctx.fillRect(0, 0, T, 1);
+      ctx.fillStyle = BETON.arete; ctx.fillRect(0, 1, T, 1);
+      if (usure === 12) { ctx.fillStyle = BETON.mousse; for (let x = 3; x < T - 3; x += 4) ctx.fillRect(x, 0, 1, 1); }
+    }
+  }
+
+  //: Le gazon. ⚠️ Il couvre les cours, les parcs et toute la banlieue : c'est
+  //: le vert qu'on voit le plus, et il etait rigoureusement uniforme.
+  const GAZON = { fond: '#4f8d3e', clair: '#5a9c47', sombre: '#427a33',
+                  brin: '#6aad55', terre: '#6d5c3e', terre2: '#7d6c4c', fleur: '#cfc95c' };
+
+  function herbe(ctx, v, T) {
+    plein(ctx, GAZON.fond, T);
+    points(ctx, v + 1, T, GAZON.clair, 12, 3);
+    points(ctx, v + 1, T, GAZON.sombre, 8, 60);
+    if (v === 12 || v === 13) {
+      // Des touffes : trois brins debout, et c'est tout ce qu'il faut pour que
+      // le gazon cesse d'etre un aplat.
+      ctx.fillStyle = GAZON.brin;
+      for (let i = 0; i < 3; i++) {
+        const x = 3 + Math.floor(bruit(v + 1, 13 + i) * (T - 6));
+        const y = 3 + Math.floor(bruit(v + 1, 23 + i) * (T - 7));
+        ctx.fillRect(x, y, 1, 3);
+        ctx.fillRect(x + 1, y + 1, 1, 2);
+      }
+    } else if (v === 14) {
+      // Le gazon a pele : de la terre, la ou l'on coupe toujours au meme
+      // endroit. Jamais jusqu'au bord — sinon c'est un carre de terre.
+      const x = 4 + Math.floor(bruit(v + 1, 33) * 4), y = 4 + Math.floor(bruit(v + 1, 34) * 4);
+      ctx.fillStyle = GAZON.terre;
+      ctx.fillRect(x, y, 6, 4); ctx.fillRect(x + 1, y - 1, 4, 6);
+      ctx.fillStyle = GAZON.terre2;
+      ctx.fillRect(x + 2, y + 1, 3, 2);
+    } else if (v === 15) {
+      // Des pissenlits : TROIS, et jamais alignes — quatre points tires dans
+      // la meme suite se rangeaient en diagonale, et une pelouse entiere de
+      // diagonales jaunes n'est pas une pelouse (c'est la lecon du bruit, deja
+      // apprise en haut de ce fichier pour l'asphalte).
+      ctx.fillStyle = GAZON.fleur;
+      for (let i = 0; i < 3; i++) {
+        ctx.fillRect(3 + Math.floor(bruit(v + 1, 43 + i * 7) * (T - 6)),
+                     3 + Math.floor(bruit(v + 1, 91 - i * 5) * (T - 6)), 1, 1);
+      }
+    }
+  }
+
+  //: La ruelle : deux tuiles derriere chaque bande d'ilot, sur toute sa
+  //: largeur — le fond de cour de la ville entiere. ⚠️ C'etait un aplat gris
+  //: avec huit points dessus, d'un bout a l'autre de Baie-des-Brumes. Un fond
+  //: de cour, c'est justement l'endroit qu'on ne refait jamais : de l'asphalte
+  //: rapiece, du gravier, de l'huile et des fissures.
+  const RUELLE = { fond: '#4e4b45', clair: '#5b5851', sombre: '#403d38',
+                   goudron: '#37342f', gravier: '#6a665d', fissure: '#35322d' };
+
+  function ruelle(ctx, v, T) {
+    plein(ctx, RUELLE.fond, T);
+    points(ctx, v + 1, T, RUELLE.clair, 7, 9);
+    points(ctx, v + 1, T, RUELLE.sombre, 9, 70);
+    if (v === 12) {
+      // Un rapiecage de goudron : la tranchee qu'on a rebouchee. ⚠️ Un JOINT
+      // d'un bord a l'autre de la tuile aurait ete plus juste — sauf qu'il ne
+      // se raccorde pas a celui de la voisine, et une ville de bouts de joint
+      // qui s'arretent tous les seize pixels, c'est la grille de la carte.
+      rapiecage(ctx, v + 1, T, RUELLE.goudron);
+    } else if (v === 13) {
+      tacheDHuile(ctx, v + 1, T);
+    } else if (v === 14) {
+      fendillement(ctx, v + 1, T, RUELLE.fissure);
+    } else if (v === 15) {
+      points(ctx, v + 1, T, RUELLE.gravier, 9, 81);    // du gravier qui remonte
+    }
   }
   /* La rampe : DEUX tuiles, le pied et la levre. La variante porte le sens ou
      ca grimpe (0 est, 1 sud, 2 ouest, 3 nord) et laquelle des deux moities on
@@ -1141,8 +1285,43 @@ const TUILES = (function () {
     }
   }
 
+  /** L'usure d'un toit plat : ce qui l'empeche d'etre une couleur.
+
+      ⚠️ Un toit se voit d'aussi loin qu'une rue et il en couvre autant : les
+      entrepots de La Shop font trois cents tuiles d'un seul tenant. Le champ et
+      le bord suffisaient pour un toit de commerce de vingt tuiles ; a cette
+      taille-la, il fallait que quelque chose ARRIVE dessus. Trois choses, et
+      toutes les trois sont vraies d'un vrai toit plat : la membrane qu'on a
+      rapiecee, l'eau qui ne s'est jamais rendue au drain, et la rouille qui
+      coule sous un event.
+
+      ⚠️ Comme toute usure de ce fichier : jamais au bord de la tuile. */
+  function usureDeToit(ctx, v, T, style) {
+    if (v === 5) {
+      // Un rapiecage de membrane. ⚠️ EN CROIX, pas en rectangle : un carre
+      // sombre pose au milieu d'une tuile de seize pixels, repete une tuile sur
+      // huit, dessine la grille au lieu de l'effacer — c'est tout le contraire
+      // de ce qu'une usure doit faire, et ca se voyait d'un bout a l'autre de
+      // La Shop.
+      souillure(ctx, v + 1, T, style.sombre);
+      souillure(ctx, v + 9, T, style.sombre);
+    } else if (v === 6) {                        // une flaque qui ne part pas
+      const x = 3 + Math.floor(bruit(v + 1, 17) * 4), y = 4 + Math.floor(bruit(v + 1, 18) * 4);
+      ctx.fillStyle = 'rgba(28,36,48,0.30)';
+      ctx.fillRect(x, y, 9, 5); ctx.fillRect(x + 2, y - 1, 6, 7);
+      ctx.fillStyle = 'rgba(160,190,220,0.14)';  // le ciel dedans
+      ctx.fillRect(x + 2, y, 5, 1);
+    } else if (v === 7) {                        // une coulee de rouille
+      ctx.fillStyle = 'rgba(122,72,40,0.34)';
+      const x = 4 + Math.floor(bruit(v + 1, 19) * 8);
+      for (let y = 3; y < T - 3; y++) ctx.fillRect(x + (bruit(v + 1, 30 + y) < 0.3 ? 1 : 0), y, 2, 1);
+    }
+  }
+
   function toitPlat(ctx, v, T, style) {
-    champDeToit(ctx, (v >> 4) + 1, T, style);
+    const grain = v >> 4;
+    champDeToit(ctx, grain + 1, T, style);
+    usureDeToit(ctx, grain, T, style);
     bordDeToit(ctx, v & 15, T, style);
   }
 
@@ -1170,9 +1349,9 @@ const TUILES = (function () {
   }
 
   return {
-    ',': function (ctx, v, T) { plein(ctx, '#4f8d3e', T); points(ctx, v, T, '#5a9c47', 12, 3); points(ctx, v, T, '#427a33', 8, 60); },
+    ',': herbe,
     '.': trottoir,
-    'x': function (ctx, v, T) { plein(ctx, '#55524c', T); points(ctx, v, T, '#4a4741', 8, 9); },
+    'x': ruelle,
     '#': asphalte,
     // ⚠️ Le marquage se peint sur le BORD NORD (ou OUEST) de la tuile, jamais au
     // milieu : une ligne centrale doit tomber ENTRE les deux sens, sinon elle a
@@ -1216,7 +1395,21 @@ const TUILES = (function () {
     'R': rampe,
     'J': rampe,
     'Q': function (ctx, v, T) { plein(ctx, '#8a6a3f', T); ctx.fillStyle = '#6e5330'; for (let y = 0; y < T; y += 4) ctx.fillRect(0, y, T, 1); },
-    's': function (ctx, v, T) { plein(ctx, '#d8c48a', T); points(ctx, v, T, '#c9b576', 10, 4); },
+    's': function (ctx, v, T) {
+      plein(ctx, '#d8c48a', T);
+      points(ctx, v + 1, T, '#c9b576', 10, 4);
+      points(ctx, v + 1, T, '#e3d29d', 6, 47);
+      if (v === 15) points(ctx, v + 1, T, '#b2a06a', 7, 88);        // des galets
+    },
+    // L'allee de parc : de la poussiere de pierre, plus grise et plus grenue
+    // que le sable de la greve — on doit pouvoir dire d'un coup d'oeil si l'on
+    // marche au bord de l'eau ou au milieu d'une pelouse.
+    'g': function (ctx, v, T) {
+      plein(ctx, '#c3b492', T);
+      points(ctx, v + 1, T, '#b2a381', 12, 4);
+      points(ctx, v + 1, T, '#d2c5a6', 8, 55);
+      if (v === 14 || v === 15) points(ctx, v + 1, T, '#9c8e70', 6, 96);   // du gravier plus gros
+    },
     // ⚠️ QUATRE TUILES FONT UN ROND, pas quatre carres. Chaque tuile porte un
     // QUART du disque, et elle sait lequel en lisant ses voisines (`bloc` dans
     // LEGENDE, bits 1/2/4/8 = nord/est/sud/ouest) : le centre du cercle est du
@@ -1512,12 +1705,25 @@ const FACADES = (function () {
 
   const T = 16;
 
-  //: Hauteurs, sur les 16 px du mur vu d'en haut. Le bandeau prend la moitie
-  //: haute (le nom doit se lire sans s'arreter de rouler), l'auvent la fait
-  //: reculer, et la vitre au pied du mur est ce qui s'allume la nuit.
-  const BANDEAU_Y = 1, BANDEAU_H = 8;
-  const AUVENT_Y = 9, AUVENT_H = 4;
-  const VITRE_Y = 13, VITRE_H = 3;
+  //: Hauteurs, comptees depuis le HAUT de la tuile de facade.
+  //:
+  //: ⚠️ L'ENSEIGNE EST AU-DESSUS DU MUR, et c'est pour ca que son `y` est
+  //: NEGATIF : le panneau monte sur la tuile de toit. Tant qu'il tenait dans
+  //: les 16 px du mur, le nom, l'auvent et la vitre se partageaient UNE tuile —
+  //: cinq pixels pour le nom, quatre pour l'auvent, trois pour la vitrine. Un
+  //: commerce se reconnait de loin a son enseigne : c'est elle qui doit avoir
+  //: la place, et vu d'en haut la hauteur va vers le NORD (c'est deja ce que
+  //: dit le toit, peint au-dessus de son mur).
+  //:
+  //: ⚠️ Ca tient a un invariant de la carte : au-dessus d'une devanture, sur
+  //: toute sa largeur, il y a du TOIT — jamais du trottoir. Un juge Python le
+  //: verifie (`test_une_enseigne_a_du_toit_au-dessus_d_elle`) ; sans lui, une
+  //: enseigne finirait un jour posee a plat sur une ruelle.
+  const ENSEIGNE_Y = -12, ENSEIGNE_H = 12;
+  //: Et le mur, degage, se partage entre l'auvent et la vitrine — qui triple.
+  //: Les deux premiers pixels restent au mur : c'est le dessous du panneau.
+  const AUVENT_Y = 2, AUVENT_H = 5;
+  const VITRE_Y = 7, VITRE_H = 9;
 
   function eclaircir(couleur, dose) {
     const n = parseInt(couleur.slice(1), 16);
@@ -1527,25 +1733,14 @@ const FACADES = (function () {
     return 'rgb(' + r + ',' + v + ',' + b + ')';
   }
 
-  /** Le bandeau, le nom, l'auvent raye, la vitre et la pancarte.
+  /** L'enseigne, le nom, l'auvent raye, la vitre et la pancarte.
       `d` = { x, y, l, genre, texte, pancarte, porte }, `g` = le genre. */
   function devanture(ctx, d, g, ox, oy) {
     const large = d.l * T;
 
-    // Le bandeau : fond sombre, une arete claire en haut pour le detacher du toit.
-    ctx.fillStyle = g.bandeau;
-    ctx.fillRect(ox, oy + BANDEAU_Y, large, BANDEAU_H);
-    ctx.fillStyle = eclaircir(g.bandeau, 26);
-    ctx.fillRect(ox, oy + BANDEAU_Y, large, 1);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)';
-    ctx.fillRect(ox, oy + BANDEAU_Y + BANDEAU_H - 1, large, 1);
+    enseigne(ctx, d, g, ox, oy, large);
 
-    // Le nom, centre. ⚠️ Arrondi a l'entier : un texte pose sur un demi-pixel
-    // est floute par le canvas, et a cinq pixels de haut il devient illisible.
-    const larg = Atlas.largeurTexte(d.texte, 1);
-    Atlas.texte(ctx, d.texte, Math.round(ox + (large - larg) / 2), oy + BANDEAU_Y + 2, g.lettres, 1);
-
-    // ⚠️ Sous le bandeau, chaque tuile est ce que `motifs` dit qu'elle est.
+    // ⚠️ Sous l'enseigne, chaque tuile est ce que `motifs` dit qu'elle est.
     // Une porte NE PREND PAS l'auvent et la vitrine : elle garde toute sa
     // hauteur, sinon on lit le nom du commerce sans voir par ou entrer.
     const motifs = d.motifs || '';
@@ -1557,6 +1752,38 @@ const FACADES = (function () {
     }
 
     if (d.pancarte) pancarte(ctx, d, g, ox, oy);
+  }
+
+  /** Le panneau du commerce, POSE SUR LE HAUT DU MUR et debordant sur le toit.
+
+      ⚠️ Trois choses le decollent du toit, et il les faut toutes les trois :
+      l'arete claire en haut (le jour vient du nord, comme pour l'ombre des
+      murs), les joues sombres sur les cotes, et le DESSOUS pose sur le mur.
+      Sans elles, un rectangle de couleur au ras d'un toit se lit comme une
+      trappe peinte dessus. */
+  function enseigne(ctx, d, g, ox, oy, large) {
+    const y = oy + ENSEIGNE_Y;
+
+    ctx.fillStyle = g.bandeau;
+    ctx.fillRect(ox, y, large, ENSEIGNE_H);
+    ctx.fillStyle = eclaircir(g.bandeau, 30);
+    ctx.fillRect(ox, y, large, 1);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';           // les joues du panneau
+    ctx.fillRect(ox, y, 1, ENSEIGNE_H);
+    ctx.fillRect(ox + large - 1, y, 1, ENSEIGNE_H);
+    ctx.fillStyle = 'rgba(0,0,0,0.38)';
+    ctx.fillRect(ox, y + ENSEIGNE_H - 1, large, 1);
+
+    // Le nom, centre. ⚠️ Arrondi a l'entier : un texte pose sur un demi-pixel
+    // est floute par le canvas, et a cinq pixels de haut il devient illisible.
+    const larg = Atlas.largeurTexte(d.texte, 1);
+    Atlas.texte(ctx, d.texte, Math.round(ox + (large - larg) / 2), y + 4, g.lettres, 1);
+
+    // Le dessous du panneau, sur le mur : c'est ce qui dit qu'il est DEVANT.
+    ctx.fillStyle = 'rgba(11,10,18,0.42)';
+    ctx.fillRect(ox, oy, large, 1);
+    ctx.fillStyle = 'rgba(11,10,18,0.20)';
+    ctx.fillRect(ox, oy + 1, large, 1);
   }
 
   function auvent(ctx, g, x, oy) {
