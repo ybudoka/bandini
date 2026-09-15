@@ -178,8 +178,26 @@ STOOL = {
 #: ⚠️ **Et la police ne se contente pas de ne plus tirer : elle RECULE**
 #: (`police.bouclier_recul_px`). Sans ca, les agents cessaient de tirer et
 #: venaient te cueillir a la main — le bouclier ne servait a rien du tout.
+#:
+#: ⚠️ **Et elle se TIENT** (`saisie_s`) : c'est le seul geste d'ACTION qui
+#: demande qu'on insiste, parce que c'est le dernier de la chaine — celui que
+#: le bouton faisait quand il n'avait rien trouve d'autre a faire, donc par
+#: accident.
 BOUCLIER = {
     "portee_px": 26,           # a bout portant, pas a travers la rue
+    # ⚠️ ON TIENT LE BOUTON, on ne le tape pas. Remarque de Martin en jouant :
+    # une pression suffisait, et le bouclier est LE DERNIER de la chaine
+    # d'ACTION — celui que le bouton fait quand il n'a rien trouve d'autre.
+    # On visait une porte d'un pas trop loin, une arme par terre, un char, et
+    # on se retrouvait avec un bonhomme dans les bras et DEUX ETOILES qu'on
+    # n'avait pas demandees. Le geste le plus grave que ce bouton sache faire
+    # est maintenant le seul qui demande qu'on insiste.
+    #
+    # La demi-seconde se juge des deux cotes : plus longue qu'une pression (le
+    # coup fort, l'autre bouton qu'on tient, en demande un tiers) et plus
+    # courte que la cadence de tir de la police (1,2 s) — une sortie de secours
+    # doit s'ouvrir avant la deuxieme balle.
+    "saisie_s": 0.5,
     "devant_px": 13,           # ou il se tient : DEVANT toi, entre toi et eux
     "debat_s": 3,              # il commence a se debattre au bout de ce temps
     "tenue_max_s": 12,         # ... et il se degage pour de bon a celui-la

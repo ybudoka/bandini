@@ -25,6 +25,23 @@ def test_tenir_quelqu_un_coute_plus_que_ca_ne_rapporte():
     assert 0 < b["debat_s"] < b["tenue_max_s"], "il ne se debat jamais avant de se degager"
 
 
+def test_la_prise_se_tient_sans_se_faire_attendre():
+    """⚠️ Le geste le plus grave d'ACTION est le seul qui demande qu'on insiste
+    — parce qu'il est LE DERNIER de la chaine, donc celui qu'on faisait par
+    accident. La demi-seconde se juge des deux cotes : assez longue pour
+    n'etre plus une pression, assez courte pour qu'une sortie de secours
+    s'ouvre AVANT la deuxieme balle."""
+    b = recherche.BOUCLIER
+    assert b["saisie_s"] >= 0.35, "une pression le declenche encore : ce n'est pas un maintien"
+    assert b["saisie_s"] < recherche.POLICE["tir_cadence_s"], (
+        "on mange une deuxieme balle avant d'avoir son bouclier : la sortie de secours est fermee"
+    )
+    # Et ce qu'on passe a l'attraper doit rester petit devant ce qu'on passe a
+    # le tenir, sinon la prise mange la sortie qu'elle ouvre.
+    assert b["saisie_s"] * 8 <= b["tenue_max_s"], "on l'attrape presque aussi longtemps qu'on le tient"
+    assert b["saisie_s"] < b["debat_s"], "il se debat avant meme d'etre pris"
+
+
 def test_le_bouclier_est_un_delit_bruyant():
     """⚠️ `temoin: False` — un bouclier humain se voit de l'autre bout de la
     rue, et c'est tout son interet. Inutile de convaincre un temoin de quelque
@@ -67,11 +84,28 @@ DECOR = """
     L.Entites.regarder(j, 1, 0);
     L.Combat.ramasserArme('pistolet', 12);
     j.arme = 'pistolet';                  // ramasser ne dit pas qu'on la sort
+    // ⚠️ ON LE LAISSE FIGE, comme `o.poser` le rend — le decor le remettait a
+    // `flane`, et depuis que la prise se tient une demi-seconde ca ne
+    // mesurait plus le bouclier. `o.ligneDroite` pose le joueur AU MILIEU DE
+    // LA CHAUSSEE, et un pieton sur la chaussee court vers le trottoir le
+    // plus proche a `pieton_course` — il sortait des vingt-six pixels de la
+    // fiche a la vingt-cinquieme image et la prise tombait avec lui. Ce n'est
+    // pas une victime qui s'echappe, c'est un passant qui n'a rien a faire
+    // dans la rue : ceux du jeu sont sur le trottoir. Ce qu'on juge ici est
+    // le bouclier, pas l'IA des pietons.
     const victime = function () {
         const p = o.poser('passant', 14, 0);
-        p.etat = 'flane'; p.porteBut = null;
+        p.porteBut = null;
         L.Entites.indexer();
         return p;
+    };
+    // ⚠️ ON TIENT ACTION. Le juge fait le geste que le joueur fait : la
+    // pression ARME la prise, c'est le maintien qui la prend. Appeler
+    // `Missions.interagir` ne suffit plus — et c'est tout le sujet.
+    const saisir = function (images) {
+        o.touche('KeyE');
+        for (let i = 0; i < (images || Math.round(f.saisie_s * 60) + 2); i++) o.frame(1);
+        o.relacher('KeyE');
     };
 """
 
@@ -93,6 +127,52 @@ def test_a_mains_nues_on_ne_prend_personne(banc):
     assert r["aMainsNues"] is False, "on prend un otage à mains nues : %s" % r
 
 
+def test_une_pression_ne_prend_personne_un_maintien_oui(banc):
+    """⚠️ **LE JUGE DE LA DEMANDE DE MARTIN** : « il faudrait tenir le bouton
+    plus longtemps pour eviter de le faire par accident ». Le bouclier est le
+    DERNIER de la chaine d'ACTION — ce que le bouton fait quand il n'a rien
+    trouve d'autre a faire. Une pression suffisait : on visait une porte d'un
+    pas trop loin, une arme par terre, et on repartait avec un bonhomme dans
+    les bras et deux etoiles.
+
+    On mesure les deux cotes dans le meme decor : taper ne prend personne,
+    tenir prend — et l'invite du HUD dit qu'il faut tenir."""
+    r = banc("""function (L, o) {
+        %s
+        const p = victime();
+        o.frame(1);
+        const invite = L.B.invite;               // ce que le HUD promet ici
+        // Taper : une fois, puis trois de plus comme on tape sur un bouton qui
+        // ne repond pas. ⚠️ La premiere se lit SEULE : quatre pressions d'un
+        // coup prenaient l'otage puis le lachaient, et « pas d'otage » etait
+        // vrai a la fin pour la mauvaise raison.
+        o.tape('KeyE', 4);
+        const uneFois = !!j.otage;
+        for (let i = 0; i < 3; i++) o.tape('KeyE', 4);
+        const tape = { otage: uneFois || !!j.otage,
+                       pression: L.B.recherche.chaleur + L.B.recherche.etoiles };
+        // Tenir, mais pas assez longtemps : toujours personne. ⚠️ Dix images
+        // de marge, pas deux : le banc avance la simulation par pas variables
+        // (une image en vaut parfois deux), et un juge qui frole la borne
+        // rougit un jour sur deux sans que rien n'ait change.
+        saisir(Math.round(f.saisie_s * 60) - 10);
+        const presque = !!j.otage;
+        saisir();
+        return { tape: tape, presque: presque, tenu: j.otage === p, invite: invite,
+                 images: Math.round(f.saisie_s * 60) };
+    }""" % DECOR)
+    assert r["images"] > 8, "le décor du juge est faux : la fiche ne demande presque rien (%s)" % r
+    assert r["tape"]["otage"] is False, (
+        "une pression prend encore quelqu'un en otage : c'est le bug de Martin (%s)" % r
+    )
+    assert r["tape"]["pression"] == 0, "taper le bouton a suffi à se faire chercher : %s" % r
+    assert r["presque"] is False, "un maintien trop court le prend quand même : %s" % r
+    assert r["tenu"] is True, "on tient le bouton et rien ne se passe : %s" % r
+    assert "TENIR" in (r["invite"] or ""), (
+        "le HUD promet un bouclier sans dire qu'il faut tenir : %s" % r
+    )
+
+
 def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(banc):
     """⚠️ On gagne du temps, on ne gagne pas la partie : le compteur monte tant
     qu'on le tient. C'est la seule chose qui empeche le bouclier d'etre un abri."""
@@ -109,7 +189,7 @@ def test_le_prendre_coute_deux_etoiles_et_le_tenir_en_coute_plus(banc):
             return r.etoiles * L.B.defs.recherche.chaleur_etoile + r.chaleur;
         };
         const avant = pression();
-        L.Missions.interagir(j);
+        saisir();
         const pris = { otage: j.otage === p, pression: pression(),
                        dit: p.bulle ? p.bulle.texte : null };
         for (let i = 0; i < 120; i++) o.frame(1);   // deux secondes
@@ -136,7 +216,7 @@ def test_il_se_debat_et_finit_par_se_degager(banc):
     r = banc("""function (L, o) {
         %s
         const p = victime();
-        L.Missions.interagir(j);
+        saisir();
         let images = 0;
         while (j.otage && images < 60 * 60) { o.frame(1); images++; }
         return { images: images, libre: !j.otage, encoreOtage: !!p.otage,
@@ -176,20 +256,25 @@ def test_la_police_ne_tire_plus_et_recule(banc):
             }
             return { tirs: tirs, dFin: Math.round(Math.hypot(a.x - j.x, a.y - j.y)) };
         };
-        const sansOtage = mesurer(90);
-        // ⚠️ ON POSE LA VICTIME APRES LE TEMOIN, pas avant : pendant les
-        // quatre-vingt-dix images sans otage, l'agent tire vingt balles vers
-        // le joueur — et celui qu'on voulait prendre en otage se tenait
-        // exactement dans la trajectoire. Il mourait, et le juge accusait « il
-        // tire malgre l'otage » alors qu'il n'y avait pas d'otage du tout.
+        // ⚠️ L'OTAGE D'ABORD, ET ON LE LACHE ENSUITE — l'ordre inverse de
+        // celui que ce juge avait, et c'est la prise qui se TIENT qui l'a
+        // impose. La victime se tient a quatorze pixels DEVANT un joueur que
+        // vingt balles cherchent : les quatre-vingt-dix images sans otage la
+        // tuaient (c'etait deja ecrit ici), et la demi-seconde de saisie la
+        // tuait a son tour. On mesure donc le recul d'abord, on le lache, et
+        // on remesure : le meme agent, la meme distance de depart, seul
+        // l'otage change.
         const p = victime();
-        L.Missions.interagir(j);
+        saisir();
         const avecOtage = mesurer(90);
+        const tenaitEncore = !!j.otage;          // il ne s'est pas degage pendant la mesure
+        L.Combat.lacherOtage(false);
+        const sansOtage = mesurer(90);
         return { sansOtage: sansOtage, avecOtage: avecOtage,
-                 tientEncore: !!j.otage,
+                 tenaitEncore: tenaitEncore,
                  recul: L.B.defs.recherche.police.bouclier_recul_px };
     }""" % DECOR)
-    assert r["tientEncore"] is True, "le décor du juge est faux : l'otage a lâché (%s)" % r
+    assert r["tenaitEncore"] is True, "le décor du juge est faux : l'otage a lâché (%s)" % r
     assert r["sansOtage"]["tirs"] > 0, (
         "le décor du juge est faux : l'agent ne tirait pas même sans otage (%s)" % r
     )
@@ -209,7 +294,7 @@ def test_il_reste_devant_toi_entre_toi_et_eux(banc):
     r = banc("""function (L, o) {
         %s
         const p = victime();
-        L.Missions.interagir(j);
+        saisir();
         const mesures = [];
         [[1, 0], [0, 1], [-1, 0], [0, -1]].forEach(function (dir) {
             L.Entites.regarder(j, dir[0], dir[1]);
@@ -251,7 +336,7 @@ def test_on_marche_moins_vite_avec_quelqu_un_dans_les_bras(banc):
         j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         L.Entites.regarder(j, 1, 0);
         const p = victime();
-        L.Missions.interagir(j);
+        saisir();
         const pris = !!j.otage;
         const charge = course(60);
         return { libre: Math.round(libre), charge: Math.round(charge), pris: pris,

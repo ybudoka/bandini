@@ -231,8 +231,15 @@ const Missions = (function () {
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
     // porte, le char et l'arme par terre — eux sont servis par l'appelant,
     // APRES nous, et on leur volerait le bouton.
+    //
+    // ⚠️ Et c'est PRECISEMENT parce qu'il est le dernier qu'il se TIENT : la
+    // pression arme la prise, le maintien la prend (`Combat.majSaisie`). Etre
+    // au bout de la chaine, c'est etre ce que le bouton fait quand on ne lui
+    // demandait rien — donc par accident, deux etoiles comprises. On rend
+    // `true` quand meme : la pression est DEPENSEE, sinon elle irait faire les
+    // poches du passant qu'on vient de mettre en joue.
     const otage = Combat.otageSousLaMain(j);
-    if (otage) return Combat.prendreEnOtage(j, otage);
+    if (otage) return Combat.viserOtage(j);
     return false;
   }
 
@@ -2043,7 +2050,10 @@ const Missions = (function () {
     if (v) { B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase(); return; }
     // ⚠️ Au bout de la chaine, comme dans `interagir` : le bouclier humain est
     // ce qu'ACTION fait quand il n'avait rien d'autre a faire.
-    if (Combat.otageSousLaMain(j)) B.invite = 'BOUCLIER HUMAIN';
+    // ⚠️ « TENIR » est dans l'invite parce que la prise se tient : un bouton
+    // qui demande qu'on insiste sans le dire n'est pas un bouton qui resiste,
+    // c'est un bouton brise. Le HUD la remplit pendant qu'on insiste.
+    if (Combat.otageSousLaMain(j)) B.invite = 'BOUCLIER HUMAIN — TENIR';
   }
 
   function sauvegarderPartie() {

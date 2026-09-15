@@ -531,6 +531,39 @@ const Combat = (function () {
     return true;
   }
 
+  /** ⚠️ **LA PRISE SE TIENT.** Remarque de Martin en jouant : une pression
+      d'ACTION suffisait, et le bouclier est LE DERNIER de la chaine
+      (`Missions.interagir`) — celui que le bouton fait quand il n'a rien
+      trouve d'autre. On visait une porte d'un pas trop loin, une arme par
+      terre, et on repartait avec un bonhomme dans les bras et deux etoiles
+      qu'on n'avait pas demandees. La pression ARME la prise (`viserOtage`),
+      c'est le maintien qui la prend.
+
+      ⚠️ Et on rejuge `otageSousLaMain` a CHAQUE image, plutot que de garder la
+      personne visee : c'est « qui est sous la main », pas « qui l'etait il y a
+      une demi-seconde ». Un passant qui s'eloigne pendant qu'on insiste, une
+      porte ou un char qui entre a portee — et l'invite du HUD annonce autre
+      chose : la prise doit tomber avec elle, sinon le bouton ferait une chose
+      quand l'ecran en promet une autre. */
+  function viserOtage(j) {
+    j.saisie = 1;
+    return true;
+  }
+
+  function majSaisie(j) {
+    if (!j || !j.saisie) return;
+    // ⚠️ `j.vivant` et `j.enjambe` ici, et pas dans `otageSousLaMain` : en haut
+    // d'une cloture on ne fait RIEN, et un compteur laisse en l'air se
+    // rallumerait tout seul a la prochaine pression sur ACTION — sans
+    // nouvelle pression.
+    const cible = j.vivant && !j.enjambe && !B.cinema && Entree.bas('action')
+      ? otageSousLaMain(j) : null;
+    if (!cible) { j.saisie = 0; return; }
+    if (++j.saisie < Math.round(ficheBouclier().saisie_s * 60)) return;
+    j.saisie = 0;
+    prendreEnOtage(j, cible);
+  }
+
   /** On le lache — de son plein gre, ou parce qu'il s'est degage. */
   function lacherOtage(deLuiMeme) {
     const j = B.joueur, e = j && j.otage;
@@ -584,6 +617,10 @@ const Combat = (function () {
     majProjectiles();
     majBrasiers();
     majOtage();
+    // ⚠️ AVANT les gardes du bas (char, mort, cloture) et avant la lecture
+    // d'ACTION : la prise doit pouvoir RETOMBER dans les images ou le reste du
+    // bouton ne se lit pas, sinon son compteur survit a un tour de char.
+    majSaisie(j);
     for (const e of B.entites) {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
@@ -674,6 +711,6 @@ const Combat = (function () {
     CHARGE_MIN, ROULADE_IMAGES, armeDef, armeCourante, munitions, possede, regles,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
-    otageSousLaMain, prendreEnOtage, lacherOtage, majOtage,
+    otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };
 })();

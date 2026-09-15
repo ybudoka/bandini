@@ -638,6 +638,18 @@ const Hud = (function () {
     const t = 'ACTION : ' + B.invite;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
+    // ⚠️ La prise du bouclier humain se TIENT, et c'est L'INVITE qui se
+    // remplit — pas une jauge de plus dans un coin. Le bouton qui resiste et
+    // la phrase qui l'annonce sont la meme chose : sans ce remplissage, une
+    // demi-seconde de maintien ressemblait a un bouton qui ne repond pas, et
+    // c'est exactement ce qu'on venait de reparer a l'envers.
+    const saisie = j.saisie || 0;
+    if (saisie > 0) {
+      const part = Math.min(1, saisie / Math.round(B.defs.recherche.bouclier.saisie_s * 60));
+      ctx.fillStyle = 'rgba(196,54,47,0.55)';
+      ctx.fillRect((VW - l) / 2 - 4, VH - 26, Math.round((l + 8) * part), 11);
+      B.stats.rects++;
+    }
     texte(ctx, t, (VW - l) / 2, VH - 24, '#efe6d0', 1);
     noter('invite', (VW - l) / 2 - 4, VH - 26, l + 8, 11);
   }
