@@ -552,6 +552,29 @@ PONTS: frozenset = frozenset({("v", 17, 6)})
 #: sur une ligne d'arret non plus : c'est la qu'on est immobile. Et jamais deux
 #: cote a cote (`ecart`) : deux nids colles ne font pas un nid-de-poule, ils
 #: font une rue defoncee, et le joueur croit a un chantier.
+#: **LES ENTRAVES DU JOUR.** ⚠️ La ville change d'un jour a l'autre sans qu'on
+#: regenere une seule tuile : Python calcule UNE FOIS la liste des entraves
+#: possibles, le paquet la transporte, et la graine du jour en tire une.
+#:
+#: ⚠️ **Une entrave ne coupe jamais la ville en deux**, et c'est la seule chose
+#: qui compte. Celle-ci ne le peut pas PAR CONSTRUCTION : elle ferme UNE VOIE
+#: d'une rue qui en a deux dans le meme sens — le champ de direction ne bouge
+#: pas d'une fleche, donc `voies_bloquees` rend exactement ce qu'il rendait.
+#: C'est ce qui permet de s'en passer ici : le juge de connexite coute 14 ms,
+#: et en valider cent doublerait le temps de construction de la ville. La rue
+#: ENTIERE barrée, elle, l'exigera — elle viendra avec son panneau DETOUR.
+#:
+#: ⚠️ Jamais dans un croisement ni sur une ligne d'arret : on y freine deja, et
+#: des cones au milieu d'une boite se lisent comme un accident, pas comme un
+#: chantier.
+ENTRAVES: dict = {
+    "longueur": (3, 6),      # ce qu'une voie fermee couvre, en tuiles
+    "par_ville": (10, 60),   # les CANDIDATES ; la graine du jour en tire une
+    "ecart": 20,             # deux chantiers ne se voisinent pas
+    "raison": "TRAVAUX — UNE VOIE FERMÉE",
+    "degats": 8,             # ce qu'on laisse en poussant les cones
+}
+
 NIDS_DE_POULE: dict = {
     "par_ville": (30, 90),   # ce qu'une ville en compte — un juge le compte
     "ecart": 7,              # en tuiles, entre deux nids
@@ -946,6 +969,7 @@ class _Chantier:
         self.des_guichet = Des(graine ^ 0x6C1C4E7)
         # Les nids tirent dans le leur : en creuser un de plus ne deplace pas un arbre.
         self.des_nid = Des(graine ^ 0x141D5)
+        self.des_entrave = Des(graine ^ 0xE47A7E)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3524,6 +3548,58 @@ class _Chantier:
                 poses.append((x, y))
         return len(poses)
 
+    def entraves(self) -> list[dict]:
+        """Les voies qu'on peut fermer un jour sans couper la ville.
+
+        Une candidate : `longueur` tuiles d'affilee sur la MEME fleche, dont
+        chacune a une voisine PARALLELE qui va dans le meme sens — c'est elle
+        qui restera ouverte, et c'est pour ca que le champ de direction ne
+        bouge pas. Hors croisement, hors ligne d'arret, et espacees.
+        """
+        fiche = ENTRAVES
+        voie, arrets = self.voie, {tuple(int(n) for n in c.split(",")) for c in self.arrets}
+        boites = [(i["x"], i["y"], i["l"], i["h"]) for i in self.intersections]
+        pas = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
+
+        def libre(x: int, y: int, fleche: str) -> bool:
+            if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+                return False
+            if voie[y][x] != fleche or (x, y) in arrets:
+                return False
+            if any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites):
+                return False
+            # Une voisine parallele qui va dans le meme sens : la voie d'a cote.
+            dx, dy = pas[fleche]
+            return any(0 <= x + nx < self.largeur and 0 <= y + ny < self.hauteur
+                       and voie[y + ny][x + nx] == fleche
+                       for nx, ny in ((-dy, dx), (dy, -dx)))
+
+        mini, maxi = fiche["longueur"]
+        candidats: list[dict] = []
+        for y in range(self.hauteur):
+            for x in range(self.largeur):
+                fleche = voie[y][x]
+                if fleche not in pas:
+                    continue
+                dx, dy = pas[fleche]
+                n = 0
+                while n < maxi and libre(x + dx * n, y + dy * n, fleche):
+                    n += 1
+                if n < mini:
+                    continue
+                candidats.append({"x": min(x, x + dx * (n - 1)), "y": min(y, y + dy * (n - 1)),
+                                  "l": abs(dx) * (n - 1) + 1, "h": abs(dy) * (n - 1) + 1,
+                                  "sens": fleche})
+        poses: list[dict] = []
+        for _essai in range(6000):
+            if not candidats or len(poses) >= fiche["par_ville"][1]:
+                break
+            c = candidats[self.des_entrave.suivant() % len(candidats)]
+            if any(abs(p["x"] - c["x"]) + abs(p["y"] - c["y"]) < fiche["ecart"] for p in poses):
+                continue
+            poses.append(c)
+        return sorted(poses, key=lambda c: (c["y"], c["x"]))
+
     def nids_de_poule(self) -> list[dict]:
         """Les tuiles defoncees : de la chaussee, hors croisement, espacees."""
         fiche = NIDS_DE_POULE
@@ -3973,6 +4049,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fourriere": chantier.fourriere,
         "barrieres": barrieres,
         "nids_de_poule": chantier.nids_de_poule(),
+        "entraves": chantier.entraves(),
+        # ⚠️ La fiche A COTE de la liste : « entraves » est ce que la ville
+        # PEUT fermer, « entrave » est ce qu'une entrave coute et ce qu'elle
+        # dit. Deux noms, deux choses — le navigateur lisait la liste en
+        # croyant y trouver la raison.
+        "entrave": {"raison": ENTRAVES["raison"], "degats": ENTRAVES["degats"]},
         "ambulants": ambulants,
         "reclames": reclames,
         # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere

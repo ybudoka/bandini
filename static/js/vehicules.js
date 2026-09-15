@@ -1215,14 +1215,28 @@ const Vehicules = (function () {
       v.sens = f; v.sortie = null;
       v.enBoite = null;                              // on rend le croisement
       const p = PAS_FLECHE[f];
-      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) return demiTour(v, tx, ty, p);
+      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) {
+        // ⚠️ **On SE DEPORTE avant de faire demi-tour.** Une voie fermee laisse
+        // sa voisine ouverte : y faire demi-tour serait absurde, et toute la
+        // rue rebrousserait chemin pour trois cones. C'est la voie d'a cote qui
+        // tranche, pas le genre de la barriere — un pont barre n'en a pas.
+        if (changerDeVoie(v)) return v.cible;
+        return demiTour(v, tx, ty, p);
+      }
       return centre(tx + p[0], ty + p[1]);
     }
     if (f === 'S') {
       const sens = Monde.sensArret(tx, ty) || v.sens;
       v.sens = sens;
       const p = PAS_FLECHE[sens];
-      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) return demiTour(v, tx, ty, p);
+      if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) {
+        // ⚠️ **On SE DEPORTE avant de faire demi-tour.** Une voie fermee laisse
+        // sa voisine ouverte : y faire demi-tour serait absurde, et toute la
+        // rue rebrousserait chemin pour trois cones. C'est la voie d'a cote qui
+        // tranche, pas le genre de la barriere — un pont barre n'en a pas.
+        if (changerDeVoie(v)) return v.cible;
+        return demiTour(v, tx, ty, p);
+      }
       const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
       if (v.poursuite) {                             // sirene : feux, stops et boite, on brule tout
         v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;
@@ -1416,6 +1430,10 @@ const Vehicules = (function () {
     for (const q of [[p[1], -p[0]], [-p[1], p[0]]]) {
       if (Monde.fleche(tx + q[0], ty + q[1]) !== v.sens) continue;
       if (Monde.fleche(tx + q[0] + p[0], ty + q[1] + p[1]) !== v.sens) continue;
+      // ⚠️ Une voie BARREE n'est pas une voie ou se deporter : sans ca, un char
+      // quitte le chantier pour entrer dans le chantier d'a cote.
+      if (Monde.barriereBloque(v, tx + q[0], ty + q[1])) continue;
+      if (Monde.barriereBloque(v, tx + q[0] + p[0], ty + q[1] + p[1])) continue;
       if (!voieLibre(v, tx + q[0], ty + q[1], p)) continue;
       return q;
     }

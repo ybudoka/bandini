@@ -263,3 +263,129 @@ def test_un_nid_secoue_et_coute_deux_points_une_seule_fois(banc, paquet):
     assert abs(r["roule"]["secousse"] - ph["nid_secousse"]) < 1e-9, r["roule"]
     assert r["roule"]["repit"] > 0, "aucun répit : le nid se paie à chaque image"
     assert r["encore"] == ph["nid_degats"], "le répit passé, le nid ne se sent plus : %s" % r
+
+
+# --- Les entraves du jour ----------------------------------------------------
+
+
+def test_une_entrave_ferme_une_voie_et_jamais_la_rue(ville):
+    """⚠️ **Une entrave ne coupe jamais la ville en deux**, et c'est la seule
+    chose qui compte. Celle-ci ne le peut pas **par construction** : elle ferme
+    UNE voie d'une rue qui en a deux dans le même sens — le champ de direction
+    ne bouge pas d'une flèche, donc `voies_bloquees` rend exactement ce qu'il
+    rendait. C'est ce qui permet de se passer du juge de connexité à la
+    construction (il coûte 14 ms, et en valider cent doublerait le temps de
+    bâtir la ville)."""
+    fiche = carte.ENTRAVES
+    liste = ville["entraves"]
+    lo, hi = fiche["par_ville"]
+    assert lo <= len(liste) <= hi, f"{len(liste)} entraves possibles"
+    voie = ville["voie"]
+    boites = [(i["x"], i["y"], i["l"], i["h"]) for i in ville["intersections"]]
+    arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville["arrets"]}
+    pas = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
+    mini, maxi = fiche["longueur"]
+    for e in liste:
+        assert e["sens"] in pas, e
+        dx, dy = pas[e["sens"]]
+        n = max(e["l"], e["h"])
+        assert mini <= n <= maxi, f"une entrave de {n} tuiles : {e}"
+        assert (e["l"] == 1) != (e["h"] == 1), f"une entrave qui n'est pas une voie : {e}"
+        for k in range(n):
+            x, y = e["x"] + (0 if dy else k), e["y"] + (0 if dx else k)
+            assert voie[y][x] == e["sens"], f"{e} : la tuile {x},{y} ne va pas dans son sens"
+            assert (x, y) not in arrets, f"une entrave sur une ligne d'arrêt : {e}"
+            for bx, by, bl, bh in boites:
+                assert not (bx <= x < bx + bl and by <= y < by + bh), f"une entrave dans un croisement : {e}"
+            # ⚠️ LA VOIE D'À CÔTÉ : c'est elle qui reste ouverte, et c'est
+            # pour ça que fermer celle-ci ne coupe rien.
+            assert any(voie[y + ny][x + nx] == e["sens"] for nx, ny in ((-dy, dx), (dy, -dx))), (
+                f"{e} : la tuile {x},{y} n'a pas de voie parallèle — la fermer couperait la rue"
+            )
+    for a, b in itertools.combinations(liste, 2):
+        assert abs(a["x"] - b["x"]) + abs(a["y"] - b["y"]) >= fiche["ecart"], f"deux chantiers collés : {a} et {b}"
+    # Et la ville reste fortement connexe, entraves comprises : elles ne
+    # touchent à aucune flèche, donc la mesure est la même qu'avant.
+    sans_aller, sans_retour = carte.voies_bloquees(ville)
+    assert not sans_aller and not sans_retour
+
+
+def test_la_ville_change_de_chantier_chaque_jour(banc, paquet):
+    """⚠️ La graine du JOUR, jamais `B.rng()` : un décor qui change la ville ne
+    consomme pas un dé du jeu — c'est la leçon des pilotes de deux-roues. Et le
+    chantier est une **barrière** comme les autres : il bloque les chars et pas
+    les jambes, il se force en poussant les cônes, il se voit, et le carnet le
+    liste. Rien de neuf dans le mécanisme, seulement dans le choix."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie;
+        const jours = [];
+        for (let j = 1; j <= 12; j++) {
+            p.jour = j;
+            const e = L.Monde.entraveDuJour();
+            jours.push(e ? e.x + ',' + e.y : null);
+        }
+        p.jour = 1;
+        const e = L.Monde.entraveDuJour();
+        // Le meme jour rend le meme chantier, et sans tirer un seul de.
+        const avant = L.B.rng();
+        const encore = L.Monde.entraveDuJour();
+        p.jour = 2; L.Monde.entraveDuJour(); p.jour = 1;
+        const rejoue = L.Monde.entraveDuJour();
+        const fermees = L.Monde.barrieresFermees().filter(function (b) { return b.slug === 'entrave'; });
+        const carnet = L.Missions.menuCasier().items.some(function (i) { return i.detail === e.raison; });
+        return { jours: jours, distincts: new Set(jours).size,
+                 stable: encore === e && rejoue.x === e.x && rejoue.y === e.y,
+                 arrete: e.arrete, forcer: e.forcer, decor: e.decor, raison: e.raison,
+                 fermees: fermees.length, carnet: carnet,
+                 bloqueLesChars: L.Monde.barriereBloque({ type: 'vehicule', x: (e.x - 3) * 16, y: (e.y - 3) * 16 }, e.x, e.y),
+                 bloquePasLesJambes: L.Monde.barriereBloque({ type: 'pieton', x: (e.x - 3) * 16, y: (e.y - 3) * 16 }, e.x, e.y) };
+    }""")
+    fiche = carte.ENTRAVES
+    assert None not in r["jours"], "il n'y a pas de chantier : %s" % r["jours"]
+    assert r["distincts"] >= 5, "la ville a le même chantier tous les jours : %s" % r["jours"]
+    assert r["stable"] is True, "le chantier bouge dans la journée"
+    assert r["arrete"] == ["vehicule"], "un chantier qui barre le trottoir : %s" % r["arrete"]
+    assert r["bloqueLesChars"] is True and r["bloquePasLesJambes"] is False
+    assert r["forcer"]["degats"] == fiche["degats"], r["forcer"]
+    assert r["decor"] == "cones" and r["raison"] == fiche["raison"]
+    assert r["fermees"] == 1, "le chantier du jour n'est pas fermé : %s" % r["fermees"]
+    assert r["carnet"] is True, "le carnet ne dit pas ce qui est fermé en ville"
+
+
+def test_devant_un_chantier_le_trafic_se_deporte_au_lieu_de_rebrousser(banc, paquet):
+    """⚠️ **Une voie fermée laisse sa voisine ouverte** : y faire demi-tour
+    serait absurde, et toute la rue rebrousserait chemin pour trois cônes. On
+    se déporte d'abord, on ne fait demi-tour que s'il n'y a pas de voisine —
+    c'est la voie d'à côté qui tranche, pas le genre de la barrière."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(61);
+        const j = L.B.joueur, TT = L.TT, p = L.B.partie;
+        const e = L.Monde.entraveDuJour();
+        const pas = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[e.sens || L.Monde.fleche(e.x, e.y)];
+        // On se met a cote du chantier et on lache un char du trafic en amont.
+        j.x = (e.x + 6) * TT; j.y = (e.y + 6) * TT; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        const amont = { x: (e.x - pas[0] * 5) * TT + 8, y: (e.y - pas[1] * 5) * TT + 8 };
+        const v = L.Vehicules.creer('auto', amont.x, amont.y, Math.atan2(pas[1], pas[0]),
+                                    { conducteur: 'trafic', etat: 'roule', sens: e.sens });
+        L.Entites.indexer();
+        const voie0 = pas[0] ? Math.floor(v.y / TT) : Math.floor(v.x / TT);
+        let plante = 0, pire = 0, passe = false, changeDeVoie = false;
+        for (let i = 0; i < 700; i++) {
+            o.frame(1);
+            if (L.B.entites.indexOf(v) < 0) break;
+            plante = Math.abs(v.vitesse) < 0.05 ? plante + 1 : 0;
+            if (plante > pire) pire = plante;
+            const voie = pas[0] ? Math.floor(v.y / TT) : Math.floor(v.x / TT);
+            if (voie !== voie0) changeDeVoie = true;
+            const long = pas[0] ? Math.floor(v.x / TT) : Math.floor(v.y / TT);
+            const bout = pas[0] ? e.x + pas[0] * (e.l + 1) : e.y + pas[1] * (e.h + 1);
+            if (pas[0] > 0 || pas[1] > 0 ? long > bout : long < bout) passe = true;
+        }
+        return { changeDeVoie: changeDeVoie, passe: passe, pire: pire,
+                 cycle: 2 * (L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images) };
+    }""")
+    assert r["changeDeVoie"] is True, "le trafic ne se déporte pas devant le chantier : %s" % r
+    assert r["passe"] is True, "le trafic ne passe jamais le chantier : %s" % r
+    assert r["pire"] < r["cycle"], "un char reste planté %s images devant les cônes : %s" % (r["pire"], r)

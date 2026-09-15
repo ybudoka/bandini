@@ -305,12 +305,45 @@ const Monde = (function () {
   //: qui est dedans quand elle se ferme en sort librement — c'est ce qui fait
   //: qu'une barriere bloque sans jamais enfermer.
 
-  function barrieres() { return (carte && carte.def && carte.def.barrieres) || []; }
+  //: **L'ENTRAVE DU JOUR.** Python a calcule la liste des voies qu'on peut
+  //: fermer sans couper la ville ; la graine du JOUR en tire une, et la ville
+  //: change d'un jour a l'autre sans qu'on regenere une seule tuile.
+  //:
+  //: ⚠️ `hash2(jour, ...)`, jamais `B.rng()` : un decor qui change la ville ne
+  //: consomme pas un de du jeu — c'est la lecon des pilotes de deux-roues.
+  //: ⚠️ Et elle se garde pour la journee : `barrieres()` est relu a chaque
+  //: deplacement de chaque char, et rebatir l'objet a chaque appel coute plus
+  //: cher que tout le reste du mecanisme.
+  let entraveJour = { jour: -1, b: null };
+  function entraveDuJour() {
+    const liste = (carte && carte.def && carte.def.entraves) || [];
+    const jour = B.partie ? B.partie.jour : 0;
+    if (!liste.length) return null;
+    if (entraveJour.jour !== jour) {
+      const c = liste[hash2(jour, 9173) % liste.length];
+      const f = (carte.def && carte.def.entrave) || {};
+      entraveJour = { jour: jour, b: {
+        slug: 'entrave', nom: 'Un chantier', x: c.x, y: c.y, l: c.l, h: c.h,
+        arrete: ['vehicule'], condition: { toujours: true },
+        forcer: { degats: f.degats || 8 },
+        raison: f.raison || 'TRAVAUX', decor: 'cones', existant: false,
+      } };
+    }
+    return entraveJour.b;
+  }
+
+  function barrieres() {
+    const fixes = (carte && carte.def && carte.def.barrieres) || [];
+    const jour = entraveDuJour();
+    return jour ? fixes.concat([jour]) : fixes;
+  }
 
   /** Fermee MAINTENANT ? La condition se lit dans la partie, jamais ici. */
   function barriereFermee(b) {
     if (b.existant) return false;                     // jouee ailleurs (la guerite : `majFourriere`)
     const c = b.condition || {}, p = B.partie;
+    // L'entrave du jour est, par definition, celle d'aujourd'hui : elle est fermee.
+    if (c.toujours) return true;
     if (c.apres) return !(p && p.missionsFaites && p.missionsFaites[c.apres]);
     if (c.heure === 'jour') return estNuit();
     if (c.heure === 'nuit') return !estNuit();
@@ -1215,7 +1248,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
-    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille,
+    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
