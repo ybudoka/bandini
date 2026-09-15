@@ -46,9 +46,11 @@ def test_le_poids_audio_reste_raisonnable():
     loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
-    bruitages = [f for f in fichiers if not f.name.startswith(("radio-", "histoire-"))]
+    bruitages = [f for f in fichiers
+                 if not f.name.startswith(("radio-", "histoire-", "musique-"))]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
     histoire = [f for f in fichiers if f.name.startswith("histoire-")]
+    musiques = [f for f in fichiers if f.name.startswith("musique-")]
     # ⚠️ Budget releve de 600 a 650 Ko le 13 sept. 2026 : les trois cris de
     # l'homme-sandwich (22 Ko) l'ont fait deborder de 6 Ko. On reste a un
     # tiers du megaoctet ; la prochaine fois, on compresse avant de relever.
@@ -75,6 +77,17 @@ def test_le_poids_audio_reste_raisonnable():
     for fichier in histoire:
         assert fichier.stat().st_size < 150_000, fichier.name
     assert sum(f.stat().st_size for f in histoire) < 3_000_000
+    # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
+    # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
+    # exactement comme les radios. Une ambiance de district arrive quand on
+    # entre dans le district, une station au premier tour de cle, la toune du
+    # musicien quand on s'en approche — une seule piste a la fois sur le fil.
+    # Quinze morceaux, 641 s a 64 kbit/s : 5,2 Mo dans le depot. La borne dit
+    # « quinze morceaux, pas trente » ; le jour ou elle deborde, c'est qu'on en
+    # a ajoute, et c'est une decision, pas un debordement.
+    for fichier in musiques:
+        assert fichier.stat().st_size < 700_000, fichier.name
+    assert sum(f.stat().st_size for f in musiques) < 6_000_000
 
 
 @pytest.mark.parametrize("radio", audio.RADIOS, ids=lambda r: r["slug"])

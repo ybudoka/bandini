@@ -435,6 +435,184 @@ AMBIANCES: list[Radio] = [
        "no drums, no vocals, seamless loop", duree_s=60, volume=0.3),
 ]
 
+#: --- LA MUSIQUE, JOUEE PLUTOT QU'ECRITE ------------------------------------
+#:
+#: ⚠️ Demande de Martin (14 sept. 2026) : « je veux que toutes les musiques
+#: soient des musiques generees par IA ». `musique.py` ecrit quinze pieces en
+#: NOTES — le theme du menu, deux stations de char, cinq ambiances de district,
+#: la poursuite, la bagarre et les cinq pieces du musicien de rue — et il
+#: annonce cette porte depuis le premier jour, mot pour mot : « le jour ou
+#: Martin veut une vraie piece jouee par de vrais instruments, elle se posera
+#: PAR-DESSUS comme les radios ». C'est ce qui se passe ici.
+#:
+#: ⚠️ Les notes ne DISPARAISSENT pas, et ce n'est pas de la sentimentalite :
+#: c'est la regle 1 de ce fichier. Un depot frais, une generation ratee, un
+#: reseau coupe — `exporter()` ne declare que les fichiers presents, et le
+#: sequenceur reprend le morceau exactement la ou il est ecrit. Le jeu n'a
+#: jamais de trou de musique.
+#:
+#: ⚠️ Le `slug` est celui du morceau de `musique.py`, pas un nom neuf : c'est
+#: ce qui fait que le chef d'orchestre, le bouton RADIO du camion, l'hysteresis
+#: aux frontieres et l'echelle de priorite n'apprennent RIEN. Ils demandent
+#: `amb_quais` comme avant ; c'est `son.js` qui sait si ca sort d'un fichier ou
+#: d'un oscillateur. Un juge exige que les deux listes se recouvrent exactement.
+#:
+#: ⚠️ `volume` ne peut pas etre celui du morceau ecrit. Dans le sequenceur, le
+#: volume du morceau MULTIPLIE celui de chaque voix (0,11 a 0,45) : `titre` a
+#: 0,85 sort a un dixieme de l'echelle. Un mp3, lui, arrive normalise. Les deux
+#: chiffres vivent donc cote a cote (`volume` pour les notes, celui-ci pour le
+#: fichier) et le navigateur prend celui de la source qui joue.
+
+
+class Piece(TypedDict):
+    slug: str
+    prompt: str
+    duree_s: int
+    volume: float
+
+
+def _m(slug: str, prompt: str, *, duree_s: int, volume: float) -> Piece:
+    return Piece(slug=slug, prompt=prompt, duree_s=duree_s, volume=volume)
+
+
+#: ⚠️ Chaque prompt REPREND la fiche du morceau ecrit : meme tonalite, meme
+#: tempo, meme intention. Sans ca on ne remplace pas une musique, on en met une
+#: autre — et l'hysteresis, la queue et l'echelle ont ete reglees sur celles-la.
+MUSIQUES: list[Piece] = [
+    # Le menu. La grille de jazz la plus banale du monde, et c'est voulu : elle
+    # doit tourner sous un menu sans jamais accrocher l'oreille.
+    _m("titre",
+       "slow smoky jazz trio at 92 bpm in A minor, walking upright bass, brushed "
+       "snare, muted trumpet melody over warm electric piano chords, foggy "
+       "harbour town at night, melancholic but calm, no vocals, seamless loop",
+       duree_s=45, volume=0.5),
+
+    # --- Les deux stations de char (le bouton RADIO peut tomber dessus) ------
+    _m("station_camion",
+       "mid-tempo country rock instrumental at 104 bpm in C major, twangy "
+       "telecaster, pedal steel, steady trucker backbeat, upright bass, the kind "
+       "of tune a long-haul radio plays at 4 in the morning, no vocals, loopable",
+       duree_s=45, volume=0.45),
+    _m("station_remorqueuse",
+       "slow dirty blues instrumental at 84 bpm in A minor, dry slide guitar, "
+       "brushed drums, walking bass, hammond organ pad, scrapyard at dusk, "
+       "no vocals, loopable",
+       duree_s=45, volume=0.42),
+
+    # --- Les cinq ambiances de district (ce qu'on entend a pied) ------------
+    # ⚠️ Elles jouent SOUS la rumeur de la foule, les moteurs et les voix : pas
+    # de batterie, pas de melodie qui accroche. Une musique de district qu'on
+    # remarque est une musique de district ratee.
+    _m("amb_faubourg",
+       "sparse melancholic ambient score at 68 bpm in A minor, soft felt piano "
+       "notes, low analog synth pad, distant foghorn, wet streets of an old "
+       "working-class neighbourhood, no drums, no vocals, seamless loop",
+       duree_s=60, volume=0.3),
+    _m("amb_erables",
+       "calm warm ambient score at 74 bpm in D major, gentle acoustic guitar "
+       "harmonics, soft strings pad, lazy sunday morning in a quiet leafy "
+       "suburb, nothing happens, no drums, no vocals, seamless loop",
+       duree_s=60, volume=0.28),
+    _m("amb_shop",
+       "cold industrial ambient drone at 88 bpm in D minor, low detuned synth "
+       "bass, distant metal clangs, hum of empty factories, bleak and hard, "
+       "no melody, no drums, no vocals, seamless loop",
+       duree_s=60, volume=0.3),
+    _m("amb_quais",
+       "wide slow maritime ambient score at 64 bpm in F minor, deep foghorn "
+       "notes, creaking ropes, low cello drone, mist over harbour water, "
+       "no drums, no vocals, seamless loop",
+       duree_s=60, volume=0.3),
+    _m("amb_pointe",
+       "airy open ambient score at 80 bpm in E major, bright sustained strings, "
+       "soft wind chimes, wind through trees on a headland above the sea, "
+       "hopeful, no drums, no vocals, seamless loop",
+       duree_s=60, volume=0.3),
+
+    # --- Les deux musiques d'ETAT -------------------------------------------
+    # ⚠️ Le seul moment ou la musique a le droit de prendre toute la place. Elle
+    # doit s'entendre SOUS les sirenes : c'est pour ca qu'elle est rythmique et
+    # basse plutot que melodique.
+    _m("mus_poursuite",
+       "urgent driving chase instrumental at 148 bpm in E minor, relentless "
+       "sixteenth-note synth bass, hard kick and snare, stabbing brass, police "
+       "pursuit through a city at night, tense, no vocals, seamless loop",
+       duree_s=40, volume=0.5),
+    _m("mus_bagarre",
+       "heavy aggressive fight instrumental at 132 bpm in G minor, distorted "
+       "guitar riff, pounding toms, dirty bass, street brawl, raw and physical, "
+       "no vocals, seamless loop",
+       duree_s=40, volume=0.48),
+
+    # --- Les cinq pieces du musicien de rue ---------------------------------
+    # ⚠️ UN SEUL HOMME AVEC UNE GUITARE. La fiche du morceau ecrit le dit en
+    # majuscules — « deux voix, pas quatre » : un gars tout seul sur un trottoir
+    # n'a pas de batteur derriere lui. Un prompt qui laisse arriver un groupe
+    # donne une musique qui ne colle plus a ce qu'on VOIT, et c'est tout
+    # l'interet du musicien de rue.
+    _m("rue_complainte",
+       "solo acoustic nylon guitar lament at 76 bpm in E minor, one street "
+       "busker playing alone, fingerpicked chords and a sad simple melody, "
+       "close mic, no other instruments, no drums, no vocals, loopable",
+       duree_s=30, volume=0.5),
+    _m("rue_reel",
+       "solo acoustic steel string guitar reel at 132 bpm in G major, one busker "
+       "playing fast flatpicked quebecois dance tune, foot tapping on pavement, "
+       "no other instruments, no drums, no vocals, loopable",
+       duree_s=30, volume=0.5),
+    _m("rue_blues",
+       "solo acoustic resonator guitar twelve-bar blues at 92 bpm in A minor, "
+       "one busker playing alone on a sidewalk, thumb bass and slide licks, "
+       "no other instruments, no drums, no vocals, loopable",
+       duree_s=36, volume=0.5),
+    _m("rue_valse",
+       "solo acoustic guitar waltz in three four time at 116 bpm in D major, one "
+       "busker playing alone, bass note on one and two strums after, old "
+       "european fairground feel, no other instruments, no drums, no vocals, "
+       "loopable",
+       duree_s=30, volume=0.5),
+    _m("rue_ballade",
+       "very slow solo acoustic guitar ballad at 68 bpm in A minor, one busker "
+       "playing alone, few notes, long silences, heard from around a corner, "
+       "no other instruments, no drums, no vocals, loopable",
+       duree_s=30, volume=0.46),
+]
+
+
+def nom_fichier_musique(slug: str) -> str:
+    return f"musique-{slug}.mp3"
+
+
+def chemin_musique(slug: str) -> Path:
+    return RACINE_STATIQUE / DOSSIER / nom_fichier_musique(slug)
+
+
+def piece_par_slug(slug: str) -> Piece | None:
+    for piece in MUSIQUES:
+        if piece["slug"] == slug:
+            return piece
+    return None
+
+
+def slugs_de_musique() -> set[str]:
+    """Les morceaux que le jeu joue VRAIMENT, tels que `musique.py` les rend."""
+    return {m["slug"] for m in musique.exporter()}
+
+
+def musiques_manquantes() -> list[Piece]:
+    """Les pieces qu'il reste a faire jouer par l'IA. Tant qu'une manque, son
+    morceau ecrit en notes la remplace — le jeu n'attend rien.
+
+    ⚠️ ON NE GENERE QUE CE QUE LE JEU JOUE. Une piece dont le slug ne
+    correspond a aucun morceau de `musique.py` — une faute de frappe, un
+    morceau renomme, une piece ecrite en avance pendant qu'une autre session
+    ecrit encore le morceau — serait un fichier PAYE que personne ne jouerait
+    jamais. Le filtre coute une ligne ; la generation coute des credits."""
+    connus = slugs_de_musique()
+    return [p for p in MUSIQUES
+            if p["slug"] in connus and not chemin_musique(p["slug"]).is_file()]
+
+
 class Voix(TypedDict, total=False):
     slug: str
     texte: str
@@ -660,6 +838,7 @@ def orphelins() -> list[str]:
         return []
     attendus = {nom_fichier(e, i) for e in CATALOGUE for i in range(1, e["variantes"] + 1)}
     attendus |= {nom_fichier_radio(r) for r in RADIOS + AMBIANCES}
+    attendus |= {nom_fichier_musique(p["slug"]) for p in MUSIQUES}
     attendus |= {nom_fichier_voix(v) for v in toutes_les_voix()}
     return sorted(f.name for f in dossier.iterdir()
                   if f.is_file() and f.suffix == ".mp3" and f.name not in attendus)
@@ -694,8 +873,17 @@ def exporter() -> dict:
         "dossier": DOSSIER,
         "parole": dict(PAROLE),
         "rumeur": dict(RUMEUR),
-        # La musique ecrite en notes (aucun fichier) : voir `app/musique.py`.
-        "musiques": musique.exporter(),
+        # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
+        # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
+        # le volume qui va AVEC ce fichier, qui n'est pas celui des notes.
+        # ⚠️ `fichier: null` n'est pas un manque : c'est le sequenceur qui
+        # joue, et le navigateur ne demande jamais un mp3 qui n'existe pas.
+        "musiques": [
+            {**m, "fichier": nom_fichier_musique(m["slug"])
+                             if chemin_musique(m["slug"]).is_file() else None,
+             "volume_fichier": (piece_par_slug(m["slug"]) or {}).get("volume")}
+            for m in musique.exporter()
+        ],
         # ⚠️ L'ECHELLE de qui gagne, et les reglages de la musique d'etat. Ils
         # sont ECRITS UNE FOIS, en Python : le navigateur lit sa priorite, il
         # ne l'invente pas. Sans ca, chaque endroit du JS aurait la sienne.

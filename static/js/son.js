@@ -276,6 +276,15 @@ const Son = (function () {
 
   function boucleActive(slug) { return boucles.has(slug); }
 
+  /** Le volume d'une boucle en marche, ou null. Le pendant en LECTURE de
+      `reglerBoucle` : c'est ce qui permet de juger qu'un son pose dans le monde
+      suit vraiment la distance, sans aller fouiller le graphe audio a la main
+      (et sans confondre sa source avec le dernier bruitage qui a joue). */
+  function volumeBoucle(slug) {
+    const courante = boucles.get(slug);
+    return courante ? courante.gain.gain.value : null;
+  }
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -469,7 +478,13 @@ const Son = (function () {
       // telephone, exactement comme la radio du camion le faisait avant elle.
       Rue.attenuation = actif ? 0.25 : 1;
       boucles.forEach(function (courante, slug) {
-        if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0) return;
+        // ⚠️ `musique-` aussi, depuis que les quinze morceaux sont des mp3 :
+        // sans lui, l'ambiance du district et la musique de poursuite
+        // couvraient la replique, exactement comme la radio du camion le
+        // faisait avant elles. (`rue-` est absent expres : le musicien de rue
+        // repose son gain a chaque image, attenuation comprise.)
+        if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0
+            && slug.indexOf('musique-') !== 0) return;
         if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
         else if (!actif && courante.avant !== undefined) { courante.gain.gain.value = courante.avant; delete courante.avant; }
       });
@@ -754,10 +769,15 @@ const Son = (function () {
       return mp3.concat(Mus.morceaux().filter(function (m) { return m.station; }));
     },
     station: function (slug) { return Radio.stations().find(function (r) { return r.slug === slug; }) || null; },
-    /** Une station sans fichier : c'est le sequenceur qui la joue. */
+    /** Une station de `audio.musiques` plutot qu'un mp3 de `audio.radios`.
+        ⚠️ Elle a MAINTENANT un fichier elle aussi (toute la musique est
+        generee) : ce qui la distingue n'est donc plus `!fichier` mais d'ou
+        elle vient — un morceau porte ses `voix`, une station enregistree
+        n'en a pas. C'est `Mus` qui choisit ensuite entre le mp3 et les notes,
+        et la radio n'a pas a le savoir. */
     estProcedurale: function (slug) {
       const s = Radio.station(slug);
-      return !!(s && !s.fichier);
+      return !!(s && s.voix);
     },
 
     /** Allume une station. Le fichier se telecharge la premiere fois : la
@@ -774,10 +794,10 @@ const Son = (function () {
       // chevauchent le temps du telechargement.
       Ambiance.arreter();
       Radio.demandee = slug;
-      // Une station procedurale n'a rien a telecharger : le sequenceur la joue
-      // note par note, comme le theme du menu. Elle demarre donc tout de suite,
-      // meme hors ligne — c'est le meme filet que partout dans `audio.py`.
-      if (!station.fichier) { Radio.courante = slug; Mus.jouer(slug); return true; }
+      // Une station de `musiques` passe par `Mus`, qui sait s'il faut jouer son
+      // mp3 ou la reprendre note par note. C'est le meme filet que partout dans
+      // `audio.py` : sans fichier, elle demarre tout de suite, meme hors ligne.
+      if (Radio.estProcedurale(slug)) { Radio.courante = slug; Mus.jouer(slug); return true; }
       if (!ctx) return true;                               // pas d'audio : on garde l'etat
       if (tampons.has('radio-' + slug)) { Radio._demarrer(slug); return true; }
       if (Radio.chargees.get(slug) === 'en cours') return true;
@@ -821,6 +841,71 @@ const Son = (function () {
     },
   };
 
+  // --- La musique : le fichier d'abord, les notes en filet --------------------
+  //
+  /*: ⚠️ Demande de Martin (14 sept. 2026) : « je veux que toutes les musiques
+    soient des musiques generees par IA ». Les quinze morceaux de `musique.py`
+    — le theme du menu, les deux stations de char, les cinq ambiances de
+    district, la poursuite, la bagarre et les cinq pieces du musicien de rue —
+    ont chacun leur mp3. Ce qui suit decide, morceau par morceau, si c'est le
+    FICHIER ou le SEQUENCEUR qui joue ; `musique.py` annoncait cette porte
+    depuis le premier jour, mot pour mot : « elle se posera PAR-DESSUS comme
+    les radios ».
+
+    ⚠️ Rien d'autre n'apprend quoi que ce soit. Le chef d'orchestre demande
+    `amb_quais` comme avant, le bouton RADIO du camion demande
+    `station_camion`, l'hysteresis et l'echelle de priorite ne bougent pas :
+    le slug est le meme des deux cotes, et c'est tout l'interet.
+
+    ⚠️ TROIS etats, pas deux. « en cours » n'est pas « ratee » : pendant le
+    telechargement on se TAIT quelques centaines de millisecondes, comme une
+    vraie radio qu'on allume, plutot que de lancer un bout de sequenceur qu'il
+    faudrait couper net a l'arrivee du fichier. « ratee » (404, decodage
+    refuse, reseau coupe) rend la main aux notes pour de bon — c'est la regle 1
+    d'`audio.py` : le jeu marche sans les fichiers. */
+  const morceauxCharges = new Map();   // cle de tampon -> 'en cours' | 'prete' | 'ratee'
+
+  /** Telecharge et decode un morceau une seule fois. Rend son etat. */
+  function chargerMorceau(cle, fichier, ensuite) {
+    if (tampons.has(cle)) { ensuite(); return 'prete'; }
+    const etat = morceauxCharges.get(cle);
+    if (etat === 'ratee' || etat === 'en cours') return etat;
+    // ⚠️ Pas encore d'audio (avant le premier geste du joueur) : on ne marque
+    // RIEN et on repartira au prochain tour. Poser « en cours » ici laisserait
+    // le morceau en attente d'un telechargement qui n'a jamais commence — et
+    // le menu, qui demande sa musique bien avant le premier clic, resterait
+    // muet pour toujours.
+    if (!ctx || !fenetre || !fenetre.fetch) return 'en cours';
+    morceauxCharges.set(cle, 'en cours');
+    fenetre.fetch(base + B.defs.audio.dossier + '/' + fichier)
+      .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+      .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+      .then(function (tampon) {
+        tampons.set(cle, [tampon]);
+        morceauxCharges.set(cle, 'prete');
+        ensuite();
+      })
+      .catch(function () { morceauxCharges.set(cle, 'ratee'); });
+    return 'en cours';
+  }
+
+  /** Le volume du morceau quand c'est le FICHIER qui joue. ⚠️ Ce n'est pas
+      celui des notes et ca ne peut pas l'etre : dans le sequenceur, le volume
+      du morceau multiplie celui de chaque voix (0,11 a 0,45), donc `titre` a
+      0,85 sort a un dixieme de l'echelle. Un mp3 arrive normalise. Python
+      declare les deux (`musique.py` pour les notes, `audio.MUSIQUES` pour le
+      fichier) et on prend celui de la source qui joue. */
+  function volumeFichier(def) {
+    const v = def.volume_fichier;
+    return (v === undefined || v === null) ? (def.volume || 1) : v;
+  }
+
+  /** Ce morceau-la joue-t-il en NOTES ? Oui s'il n'a pas de mp3, ou si son mp3
+      n'arrivera jamais. */
+  function enNotes(def, cle) {
+    return !def.fichier || morceauxCharges.get(cle) === 'ratee';
+  }
+
   // --- La musique : un sequenceur, un catalogue de notes (app/musique.py) ------
 
   //: On programme toujours un quart de seconde d'avance. En dessous, un a-coup
@@ -858,11 +943,27 @@ const Son = (function () {
     jouer: function (slug) {
       if (Mus.courante === slug) return true;
       if (!Mus.def(slug)) { Mus.arreter(); return false; }
+      Mus.arreter();
       Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
       return true;
     },
 
-    arreter: function () { Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; },
+    /** La cle du tampon de ce morceau. ⚠️ Le musicien de rue a la sienne
+        (`rue-`) : il joue PAR-DESSUS cette piste-ci, les deux boucles doivent
+        pouvoir tourner en meme temps. */
+    cle: function (slug) { return 'musique-' + slug; },
+
+    /** Le mp3 est la : on le met en boucle. */
+    _demarrer: function () {
+      const def = Mus.def(Mus.courante);
+      if (!def || !def.fichier) return;
+      boucle(Mus.cle(Mus.courante), true, volumeFichier(def));
+    },
+
+    arreter: function () {
+      if (Mus.courante) boucle(Mus.cle(Mus.courante), false);
+      Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+    },
     stop: function () { Mus.arreter(); },       // l'ancien nom, garde par prudence
 
     /** Pose toutes les notes d'un pas, a l'instant `t`. */
@@ -888,6 +989,19 @@ const Son = (function () {
     tick: function () {
       const def = Mus.def(Mus.courante);
       if (!def) return;
+      // ⚠️ Un morceau qui sort d'un mp3 n'a RIEN a programmer : la boucle tourne
+      // toute seule dans le graphe audio. Sans ce retour, le sequenceur poserait
+      // ses notes PAR-DESSUS le fichier — les deux versions du meme morceau
+      // ensemble, decalees d'un temps.
+      // ⚠️ Et on redemande le chargement a CHAQUE image tant qu'il n'est pas
+      // parti : le menu reclame sa musique avant le premier geste du joueur,
+      // donc avant qu'il y ait un AudioContext. Un seul essai au moment du
+      // `jouer()` et le theme n'arriverait jamais.
+      const cle = Mus.cle(Mus.courante);
+      if (!enNotes(def, cle)) {
+        if (!boucles.has(cle)) chargerMorceau(cle, def.fichier, Mus._demarrer);
+        return;
+      }
       // ⚠️ Tant que le son n'est pas accorde (banc sans audio, ou navigateur qui
       // attend un geste), on avance un simple compteur : l'horloge audio est
       // figee, et programmer dedans ferait sortir toute la boucle d'un coup au
@@ -935,8 +1049,30 @@ const Son = (function () {
     demandeT: -1,       // la derniere image ou quelqu'un a demande a jouer
     pas: 0, debutT: 0, prochain: 0,
     sortie: null,       // le gain qui porte la distance
+    g: 0,               // ce gain-la, calcule cette image : distance × ducking × etat
 
     def: function (slug) { return Mus.def(slug); },
+
+    /** ⚠️ SA cle a lui, pas celle de `Mus` : le musicien joue PAR-DESSUS
+        l'ambiance du district, donc deux boucles tournent en meme temps et
+        deux boucles ne peuvent pas partager une entree. */
+    cle: function (slug) { return 'rue-' + slug; },
+
+    /** Sa toune sort-elle d'un mp3 ? */
+    surFichier: function () {
+      const def = Rue.def(Rue.jouee);
+      return !!(def && !enNotes(def, Rue.cle(Rue.jouee)));
+    },
+
+    /** Le mp3 est arrive : on le met en boucle, au volume de la distance. */
+    _demarrer: function () {
+      const def = Rue.def(Rue.jouee);
+      if (!def || !def.fichier) return;
+      boucle(Rue.cle(Rue.jouee), true, volumeFichier(def) * Rue.g);
+      // ⚠️ L'instant ou la boucle part : c'est LUI qui fait gratter la main en
+      // mesure quand c'est un fichier qui joue (voir `surLeTemps`).
+      Rue.debutT = ctx ? ctx.currentTime : 0;
+    },
 
     /** Le musicien le plus proche reclame sa toune, a ce volume-la. A appeler
         a chaque image tant qu'il joue ; des qu'on cesse, la musique s'arrete. */
@@ -949,7 +1085,8 @@ const Son = (function () {
     },
 
     arreter: function () {
-      Rue.courante = null; Rue.jouee = null; Rue.volume = 0;
+      if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
+      Rue.courante = null; Rue.jouee = null; Rue.volume = 0; Rue.g = 0;
       Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
     },
 
@@ -961,24 +1098,45 @@ const Son = (function () {
 
     /** Une image de musique de rue. Appelee a chaque image, comme `Mus.tick`. */
     tick: function () {
-      // ⚠️ Personne n'a demande cette image-ci : le musicien est mort, assomme,
-      // hors de portee ou hors de la bulle. On se tait — et c'est ce qui evite
-      // qu'une toune continue toute seule a l'autre bout de la ville.
-      if (Rue.demandeT !== B.t) Rue.courante = null;
+      // ⚠️ Plus personne ne demande : le musicien est mort, assomme, hors de
+      // portee ou hors de la bulle. On se tait — et c'est ce qui evite qu'une
+      // toune continue toute seule a l'autre bout de la ville.
+      //
+      // ⚠️ UNE image de retard est NORMALE, et exiger la meme couperait le son
+      // a CHAQUE tour. Dans `jeu.js`, `Son.Rue.tick()` passe en tete de `maj()`
+      // et `Entites.maj()` — celui qui DEMANDE — tout a la fin, juste avant
+      // `B.t++` : la demande qu'on lit ici porte donc toujours le numero de
+      // l'image precedente. Avec `!==`, le musicien etait reduit au silence a
+      // l'image suivant chacune de ses demandes, sans arret, et sa toune ne
+      // demarrait jamais. Au-dela d'une image, la, plus personne ne joue.
+      if (B.t - Rue.demandeT > 1) Rue.courante = null;
       const def = Rue.def(Rue.courante);
       if (!def) { if (Rue.jouee) Rue.arreter(); return; }
       if (Rue.jouee !== Rue.courante) {
+        // ⚠️ On eteint l'ancienne AVANT de changer de toune : `Rue.cle` suit
+        // `Rue.jouee`, et une boucle qu'on oublie de nommer joue pour toujours.
+        if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
         Rue.jouee = Rue.courante; Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
       }
       if (etatSon() !== 'actif') { Rue.pas++; Rue.debutT = 0; Rue.prochain = 0; return; }
-      const sortie = Rue._sortie();
-      if (!sortie) return;
       // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
       // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
       // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
       const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
       const etat = Chef.piste === 'mus_poursuite' || Chef.piste === 'mus_bagarre';
-      sortie.gain.value = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
+      Rue.g = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
+      // LE FICHIER, quand il y en a un. ⚠️ Le volume se REPOSE a chaque image :
+      // c'est la distance, et elle change a chaque pas du joueur. Une boucle
+      // reglee une fois au depart resterait forte a l'autre bout de la rue.
+      const cle = Rue.cle(Rue.jouee);
+      if (!enNotes(def, cle)) {
+        if (boucles.has(cle)) reglerBoucle(cle, volumeFichier(def) * Rue.g);
+        else chargerMorceau(cle, def.fichier, Rue._demarrer);
+        return;
+      }
+      const sortie = Rue._sortie();
+      if (!sortie) return;
+      sortie.gain.value = Rue.g;
       const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
       if (!Rue.debutT) { Rue.debutT = ctx.currentTime + 0.08; Rue.prochain = 0; }
       const limite = ctx.currentTime + HORIZON_S;
@@ -1013,6 +1171,19 @@ const Son = (function () {
     surLeTemps: function () {
       const def = Rue.def(Rue.jouee);
       if (!def) return 0;
+      // ⚠️ Un mp3 n'a pas de « pas » : la mesure se compte sur l'horloge audio
+      // depuis le depart de la boucle, au tempo que Python declare. Sans ca, la
+      // main du musicien gratterait a un rythme invente par le dessin pendant
+      // que le haut-parleur joue autre chose — et c'est exactement ce que cette
+      // fonction existe pour empecher.
+      if (Rue.surFichier()) {
+        // ⚠️ « La boucle tourne-t-elle ? », pas « `debutT` est-il pose ? » :
+        // une horloge audio peut valoir zero (elle vaut zero au banc), et un
+        // instant de depart legitime serait alors pris pour une absence.
+        if (!ctx || !boucles.has(Rue.cle(Rue.jouee))) return 0;
+        const t = (ctx.currentTime - Rue.debutT) * (def.bpm || 90) / 60;
+        return t - Math.floor(t);
+      }
       const parTemps = def.pas_par_temps || 1;
       return ((Rue.pas % parTemps) + parTemps) % parTemps / parTemps;
     },
@@ -1020,7 +1191,7 @@ const Son = (function () {
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus, Chef, Rue,
-    chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle, volumeBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs

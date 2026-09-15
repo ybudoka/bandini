@@ -8,6 +8,7 @@ celui qu'on utilise a la main depuis l'agent.
 
     uv run python scripts/audio_elevenlabs.py --essai     # ce qui serait genere
     uv run python scripts/audio_elevenlabs.py             # genere ce qui manque
+    uv run python scripts/audio_elevenlabs.py --musiques   # les 15 musiques du jeu
     uv run python scripts/audio_elevenlabs.py --refaire coup pas
     uv run python scripts/audio_elevenlabs.py --refaire pas-2   # cette variante-la
 
@@ -264,7 +265,10 @@ def _demande(nom: str) -> tuple[str, int | None]:
 def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
     if not refaire:
         return audio.manquants()
-    connus = set(audio.SLUGS) | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES} | {v["slug"] for v in audio.toutes_les_voix()}
+    connus = (set(audio.SLUGS)
+              | {r["slug"] for r in audio.RADIOS + audio.AMBIANCES}
+              | {m["slug"] for m in audio.MUSIQUES}
+              | {v["slug"] for v in audio.toutes_les_voix()})
     demandes = [_demande(nom) for nom in refaire]
     inconnus = [nom for nom, (slug, _) in zip(refaire, demandes) if slug not in connus]
     if inconnus:
@@ -286,6 +290,17 @@ def radios_a_faire(refaire: list[str]) -> list[dict]:
     return [r for r in audio.RADIOS + audio.AMBIANCES if r["slug"] in refaire]
 
 
+def musiques_a_faire(refaire: list[str]) -> list[dict]:
+    """Les pieces de `musique.py` a faire jouer par l'IA.
+
+    ⚠️ Rien n'est jamais refait sans `--refaire <slug>` : une piece est deja
+    payee, et une seconde generation ne donne PAS la meme — on perdrait celle
+    que Martin a ecoutee et acceptee."""
+    if not refaire:
+        return audio.musiques_manquantes()
+    return [m for m in audio.MUSIQUES if m["slug"] in refaire]
+
+
 def main() -> int:
     argus = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     argus.add_argument("--essai", action="store_true", help="dire quoi generer, sans rien depenser")
@@ -294,6 +309,9 @@ def main() -> int:
                             "les quatre variantes, « pas-2 » refait celle-la seule")
     argus.add_argument("--radios", action="store_true",
                        help="generer aussi les stations de radio (musique : CHER)")
+    argus.add_argument("--musiques", action="store_true",
+                       help="generer aussi les 15 musiques du jeu (menu, districts, "
+                            "poursuite, bagarre, musicien de rue — musique : CHER)")
     argus.add_argument("--voix", action="store_true",
                        help="generer aussi les repliques des passants et de l'histoire (voix : au caractere)")
     options = argus.parse_args()
@@ -305,9 +323,11 @@ def main() -> int:
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
     radios = [r for r in radios if options.radios or r["slug"] in options.refaire]
+    musiques = musiques_a_faire(options.refaire) if (options.musiques or options.refaire) else []
+    musiques = [m for m in musiques if options.musiques or m["slug"] in options.refaire]
     voix = [v for v in (audio.toutes_les_voix() if options.refaire else audio.voix_manquantes())
             if options.voix or v["slug"] in options.refaire]
-    if not travail and not radios and not voix:
+    if not travail and not radios and not musiques and not voix:
         print("Rien a generer : les", sum(e["variantes"] for e in audio.CATALOGUE),
               "fichiers sont la.")
         orphelins = audio.orphelins()
@@ -315,7 +335,8 @@ def main() -> int:
             print("Fichiers que le catalogue ne reclame plus :", ", ".join(orphelins))
         return 0
 
-    print(f"{len(travail) + len(radios) + len(voix)} fichier(s) a generer dans static/{audio.DOSSIER}/ :")
+    print(f"{len(travail) + len(radios) + len(musiques) + len(voix)} fichier(s) a generer "
+          f"dans static/{audio.DOSSIER}/ :")
     for echantillon, indice in travail:
         print(f"  {audio.nom_fichier(echantillon, indice):>22}  "
               f"{echantillon['duree_s']:>4} s  {'boucle  ' if echantillon['boucle'] else '        '}"
@@ -323,6 +344,9 @@ def main() -> int:
     for radio in radios:
         print(f"  {audio.nom_fichier_radio(radio):>22}  {radio['duree_s']:>4} s  MUSIQUE  "
               f"{radio['style']} — {radio['prompt'][:48]}…")
+    for piece in musiques:
+        print(f"  {audio.nom_fichier_musique(piece['slug']):>28}  {piece['duree_s']:>4} s  MUSIQUE  "
+              f"{piece['prompt'][:52]}…")
     for ligne in voix:
         print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(ligne['texte']):>4} c  VOIX     "
               f"{ligne['voix'][:22]} — « {ligne['texte'][:60]} »")
@@ -402,6 +426,30 @@ def main() -> int:
             else:
                 rates.append((nom, reponse.get("erreur")))
                 print(f"  ✗ {nom:>22}  {reponse.get('erreur')}")
+        # ⚠️ Les musiques du jeu passent par le MEME outil que les radios
+        # (ElevenLabs Music) et par le meme format : une piece de district est
+        # une boucle de fond, exactement comme une station. Et comme une
+        # boucle, elle ne se rogne ni ne se fond — voir la note de `finir()` :
+        # la couture est precisement ce qu'un rognage abime.
+        for piece in musiques:
+            nom = audio.nom_fichier_musique(piece["slug"])
+            cible = audio.chemin_musique(piece["slug"])
+            if cible.exists():
+                cible.unlink()          # --refaire : le serveur n'ecrase jamais
+            reponse = client.appeler("elevenlabs_music", {
+                "prompt": piece["prompt"],
+                "music_length_ms": piece["duree_s"] * 1000,
+                "force_instrumental": True,
+                "output_format": audio.FORMAT_RADIO,
+                "output_dir": dossier,
+                "nom": nom[:-4],
+            })
+            if reponse.get("ok"):
+                faits += 1
+                print(f"  ✓ {nom:>28}  {reponse['octets']:>7} octets")
+            else:
+                rates.append((nom, reponse.get("erreur")))
+                print(f"  ✗ {nom:>28}  {reponse.get('erreur')}")
         for radio in radios:
             nom = audio.nom_fichier_radio(radio)
             cible = audio.chemin_radio(radio)

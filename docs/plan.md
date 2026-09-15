@@ -99,7 +99,7 @@ ne bougent pas quand l'ordre de travail change.
 | M15 La ville te parle | **P4** ajout, **1re vague livrée** (14 sept. 2026) | tout ce qui ne demandait **aucun son neuf**. ⚠️ **La rue se tait quand tu sors une arme** — `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour, il ne manquait qu'une **raison** de le faire tomber ; elle tombe d'un coup, remonte en quatre secondes, et **crie** après un coup de feu. ⚠️ **Les répliques : moins souvent et jamais les mêmes** — `audio.VOIX` promettait « jamais deux fois de suite le même » et le moteur tirait par `Math.random()` **sans mémoire** ; le tirage passe maintenant par `B.rng()` (donc reproductible, donc jugeable) et écarte les dernières. **Parler devient une chance** (35 %), pas une certitude. ⚠️ **Le repli du Clairon enseigne** : un matin calme apprend une chose que tu n'as **pas encore faite**, jamais deux fois la même, et quand il n'y a plus rien à apprendre il redevient « rien à signaler ». **Reste à générer** (crédits + une oreille) : la radio qui parle, la police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques par contexte. 11 juges neufs |
 | Les amuseurs de rue font un vrai spectacle | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
 | L'intérieur à la mesure du bâtiment | **P3** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur, tu avais mal compris ». La fiche d'hier n'a tenu que la moitié de la promesse — elle interdisait à la pièce de **dépasser** son bâtiment, rien ne l'obligeait à le **remplir** : 13 % pour un bloc de 59 × 8, et une pièce de six tuiles de profond dans un bâtiment qui en fait quatre. Maintenant : le plancher fait **exactement** la boîte du bâtiment au-dessus de sa vitrine, à toutes les portes et sur cinq graines ; une longue façade se **coupe en vitrines de huit tuiles**, chacune sa porte, son enseigne et sa pièce ; les commerces et logements ordinaires sont **posés** à la mesure (`MOBILIER`, dix palettes) et les seize lieux garantis gardent leur plan dessiné — c'est leur bâtiment qui se taille à eux |
-| Toute la musique générée par IA | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que toutes les musiques soient des musiques générées par IA ». Les **15 pièces écrites en notes** (thème du menu, 2 stations de char, 5 ambiances de district, poursuite, bagarre, 5 pièces du musicien de rue) deviennent des mp3 ElevenLabs Music — c'est la porte que `musique.py` annonce depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». La synthèse reste le **filet** : un fichier absent, et le séquenceur reprend |
+| Toute la musique générée par IA | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que toutes les musiques soient des musiques générées par IA ». Les **15 pièces écrites en notes** (thème du menu, 2 stations de char, 5 ambiances de district, poursuite, bagarre, 5 pièces du musicien de rue) deviennent des mp3 ElevenLabs Music — c'est la porte que `musique.py` annonce depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». La synthèse reste le **filet** : un fichier absent, et le séquenceur reprend. 641 s de musique, **5,2 Mo**, 30 crédits la seconde ; rien ne se charge au démarrage. Un défaut trouvé en chemin : `Son.Rue.tick()` exigeait la demande de l'image **courante** alors qu'`Entites.maj()` la pose après lui — le musicien de rue était réduit au silence à chaque image et sa toune ne démarrait **jamais**. 11 juges Python + 6 de banc |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
@@ -145,14 +145,17 @@ uv run python scripts/audio_elevenlabs.py --essai       # ce qui serait génér�
 uv run python scripts/audio_elevenlabs.py               # génère les bruitages qui manquent
 uv run python scripts/audio_elevenlabs.py --radios      # … et les stations de radio (musique : cher)
 uv run python scripts/audio_elevenlabs.py --voix        # … et les voix (passants + histoire, au caractère)
-uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume ti_guy-m1-1
+uv run python scripts/audio_elevenlabs.py --musiques    # … et les 15 musiques du jeu (30 crédits/seconde)
+uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume titre amb_quais ti_guy-m1-1
 ```
 
-La musique, elle, ne se génère pas : elle s'écrit en notes dans `app/musique.py`
-et se rend en WAV pour l'oreille, gratuitement et hors ligne :
+La musique se génère **et** s'écrit. Les quinze morceaux sont des mp3 ElevenLabs
+(recette dans `audio.MUSIQUES`) **et** restent écrits en notes dans
+`app/musique.py` : le fichier joue, les notes sont le **filet**. Elles se rendent
+en WAV pour l'oreille, gratuitement et hors ligne :
 
 ```bash
-uv run python scripts/musique_apercu.py                       # le thème du menu
+uv run python scripts/musique_apercu.py                       # le thème du menu, en notes
 uv run python scripts/musique_apercu.py titre --tours 2 --normaliser --sortie /tmp/t.wav
 ```
 
@@ -347,7 +350,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
 | `journal.py` | _Le Clairon de la Baie_ : la manchette du matin, une règle par gravité — la première qui passe gagne, la dernière est le repli ; lue par le narrateur (M7) | règles ordonnées et repli ; `test_audio.py`, `test_histoire_js.py` |
 | `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
-| `musique.py` | la musique **écrite en notes** (thème du menu : notes, tempo, formes d'onde), jouée par `son.js` ; `scripts/musique_apercu.py` la rend en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix) |
+| `musique.py` | la musique **écrite en notes** (notes, tempo, formes d'onde) — le **filet** depuis que les quinze morceaux sont des mp3 générés (`audio.MUSIQUES` en porte la recette) ; `scripts/musique_apercu.py` rend les notes en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix, et la couverture : aucun morceau sans musique générée) |
 | `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
 | `definitions.py` | `assembler()` → `Paquet(corps, etag, taille)` construit une fois au démarrage | déterministe, < 200 Ko |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
@@ -1973,6 +1976,74 @@ mouettes des Quais, le vent et les arbres de La Pointe.
   deux étoiles ; la queue tient ses sept secondes puis rend la main au district ; un **zigzag
   de quarante images sur une frontière ne change de piste qu'une fois**, et s'enfoncer pour de
   bon la change ; à pied c'est l'ambiance du district, au volant la radio, et jamais les deux.
+
+### Toute la musique est générée par IA (**correctif**, taille 2) — **livré le 14 sept. 2026**
+
+_Demande de Martin :_ « je veux que toutes les musiques soient des musiques générées par IA. »
+
+Il en restait **quinze écrites en notes** : le thème du menu, les deux stations de char du
+camion et de la remorqueuse, les cinq ambiances de district, la poursuite, la bagarre et les
+cinq pièces du musicien de rue. Elles sont maintenant **quinze mp3 ElevenLabs Music** —
+641 secondes, **5,2 Mo**, 30 crédits la seconde (mesuré : 1 350 crédits pour les 45 s du thème).
+
+**La porte était écrite depuis le premier jour, mot pour mot.** `musique.py` s'explique en
+tête de fichier depuis M7 : « le jour où Martin veut une vraie pièce jouée par de vrais
+instruments, elle se posera **par-dessus** comme les radios — c'est la même règle que partout
+dans `audio.py` : l'échantillon quand il existe, la synthèse sinon ». C'est exactement ce qui a
+été fait, et c'est pour ça que la fiche est petite : rien n'a été remplacé, un étage a été posé.
+
+- **Les notes restent, et ce n'est pas de la sentimentalité** — c'est la règle 1 d'`audio.py`.
+  `exporter()` ne déclare que les fichiers **réellement présents** ; un dépôt frais, une
+  génération ratée, un réseau coupé, et le séquenceur reprend le morceau exactement là où il
+  est écrit. Le joueur n'a jamais un trou de musique. Un juge remet le cas : mp3 introuvable →
+  les oscillateurs repartent.
+- ⚠️ **Le slug ne change pas, et c'est tout l'intérêt.** Le chef d'orchestre demande
+  `amb_quais` comme avant, le bouton RADIO du camion demande `station_camion`, l'hystérésis aux
+  frontières, la queue des musiques d'état et l'échelle de priorité **n'apprennent rien**.
+  Seul `son.js` sait, morceau par morceau, si c'est le fichier ou le séquenceur qui joue.
+- ⚠️ **Deux volumes par morceau, et il en fallait deux.** Dans le séquenceur, le volume du
+  morceau **multiplie** celui de chaque voix (0,11 à 0,45) : `titre` à 0,85 sort à un dixième
+  de l'échelle. Un mp3, lui, arrive normalisé à −1 dBFS — le même chiffre saturerait. Python
+  déclare les deux (`musique.py` pour les notes, `audio.MUSIQUES` pour le fichier) et le
+  navigateur prend celui de la source qui joue.
+- ⚠️ **Trois états de chargement, pas deux.** « en cours » n'est pas « ratée » : pendant le
+  téléchargement on se **tait** quelques centaines de millisecondes, comme une vraie radio
+  qu'on allume, plutôt que de lancer un bout de séquenceur qu'il faudrait couper net à
+  l'arrivée du fichier. « ratée » rend la main aux notes pour de bon.
+- ⚠️ **Deux clés de tampon** (`musique-` et `rue-`) : le musicien de rue joue **par-dessus**
+  l'ambiance du district, comme un moteur de char — deux boucles tournent donc en même temps,
+  et une clé partagée ferait que l'une chasserait l'autre. Son volume vient de la **distance**
+  et se repose à chaque image (`Son.volumeBoucle` le rend lisible pour un juge) ; sa main
+  gratte **en mesure** sur l'horloge audio, au tempo que Python déclare, puisqu'un mp3 n'a pas
+  de « pas ».
+- ⚠️ **Rien ne se charge au démarrage.** Une ambiance arrive quand on entre dans son district,
+  une station au premier tour de clé, la toune du musicien quand on s'en approche. Le dépôt,
+  lui, porte les 5,2 Mo.
+- ⚠️ **On ne génère que ce que le jeu joue.** Une pièce dont le slug ne correspond à aucun
+  morceau de `musique.py` serait un fichier **payé** que personne ne jouerait jamais :
+  `musiques_manquantes()` filtre sur ce que `musique.exporter()` rend vraiment.
+
+**Et un vrai défaut trouvé en chemin, qui ne touchait pas qu'au mp3.** `Son.Rue.tick()` passe
+en tête de `maj()` dans `jeu.js`, alors qu'`Entites.maj()` — celui qui **demande** la toune du
+musicien le plus proche — tourne tout à la fin, juste avant `B.t++`. La demande que le tick lit
+porte donc **toujours** le numéro de l'image précédente, et le test d'égalité stricte
+(`demandeT !== B.t`) réduisait le musicien au silence à l'image suivant chacune de ses
+demandes, sans arrêt : sa musique ne démarrait **jamais**, ni en notes ni en fichier, et rien
+ne le disait — `Entites` continuait sagement à la demander. Une image de retard est désormais
+normale ; au-delà, plus personne ne joue. Le bug a été remis exprès pour vérifier que le juge
+tombe.
+
+⚠️ **Ce qu'aucun test ne dit** : si c'est beau. Quatre masters sortent à 0,0 dBFS (poursuite,
+bagarre, le reel du trottoir) — au plafond, comme les radios de M3, et tenus en dessous par le
+`volume` du catalogue. C'est l'oreille de Martin qui tranche, et `--refaire <slug>` qui refait.
+
+**Juges** : 11 Python (`test_musique.py` — couverture : aucun morceau sans musique générée ;
+aucune pièce payée pour un morceau qui n'existe pas ; le musicien de rue reste **un homme seul
+avec une guitare** ; aucune batterie sous un district ; aucune voix chantée ; la boucle tient
+24 s ; le budget du dépôt) et 6 de banc (`test_son_js.py` — le mp3 boucle **et** le séquenceur
+se tait ; un mp3 qui n'arrive pas rend la main aux notes ; le ducking atteint les musiques en
+mp3 ; le musicien suit la distance et s'arrête quand on le laisse derrière ; le musicien et le
+district jouent ensemble ; le musicien n'est pas coupé à chaque image).
 
 ### Le décor se brise (**correctif**, taille 2) — **livré le 13 sept. 2026**
 

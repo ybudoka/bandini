@@ -125,9 +125,12 @@ def test_la_melodie_commence_et_finit_dans_le_ton(theme):
 
 
 def test_la_musique_ne_reclame_aucun_fichier(theme):
-    """Tout l'interet : le theme ne coute ni octet a telecharger, ni credit a
-    generer. Le jour ou l'on pose un vrai enregistrement, ce sera un ajout
-    explicite — pas un fichier qui se serait glisse la."""
+    """⚠️ Ce juge dit encore exactement ce qu'il disait, et il compte PLUS
+    depuis que toute la musique est generee par IA (14 sept. 2026) : `musique.py`
+    reste le FILET, et un filet ne telecharge rien. Le mp3 se pose a cote, dans
+    `audio.MUSIQUES`, et `audio.exporter()` les marie. Le jour ou ce juge
+    tombe, c'est que le fichier s'est glisse dans les notes — et qu'un depot
+    frais, une generation ratee ou un reseau coupe rendraient le jeu muet."""
     assert "fichier" not in theme
     for voix in theme["voix"]:
         assert voix["forme"] in ("sine", "square", "triangle", "sawtooth", "bruit"), voix["forme"]
@@ -203,3 +206,116 @@ def test_deux_stations_ne_sonnent_pas_pareil(stations):
     chants = [tuple(n[1] for n in next(v for v in s["voix"] if v["role"] == "chant")["notes"])
               for s in stations]
     assert len(set(chants)) == len(chants)
+
+
+# --- Toute la musique est generee par IA (14 sept. 2026) --------------------
+#
+# ⚠️ Demande de Martin : « je veux que toutes les musiques soient des musiques
+# generees par IA ». Ce qui se juge ici n'est evidemment pas la musique — c'est
+# l'oreille de Martin qui le fait — mais les trois choses qui la rendraient
+# fausse sans qu'on s'en apercoive : un morceau qu'on aurait OUBLIE de generer
+# (il resterait synthetise, et personne ne l'entendrait comme un manque), une
+# piece PAYEE que le jeu ne joue pas, et un prompt qui ne decrit plus ce qu'on
+# VOIT a l'ecran.
+
+
+def test_chaque_morceau_du_jeu_a_sa_musique_generee():
+    """LA demande, en un juge : plus un seul morceau ne reste en synthese."""
+    oublies = sorted(audio.slugs_de_musique() - {p["slug"] for p in audio.MUSIQUES})
+    assert not oublies, (
+        f"ces morceaux n'ont aucune musique generee : {oublies} — ils resteraient "
+        "joues par les oscillateurs, et rien ne le dirait")
+
+
+def test_on_ne_genere_que_la_musique_que_le_jeu_joue():
+    """⚠️ Une piece dont le slug ne correspond a aucun morceau serait un fichier
+    PAYE que personne ne jouerait jamais. Le filtre coute une ligne."""
+    connus = audio.slugs_de_musique()
+    for piece in audio.musiques_manquantes():
+        assert piece["slug"] in connus, f"{piece['slug']} : paye pour rien"
+
+
+def test_chaque_piece_nomme_un_morceau_une_seule_fois():
+    slugs = [p["slug"] for p in audio.MUSIQUES]
+    assert len(slugs) == len(set(slugs)), f"deux pieces du meme nom : {slugs}"
+
+
+def test_chaque_piece_a_un_volume_qui_va_avec_un_mp3():
+    """⚠️ Le volume d'un mp3 n'est PAS celui des notes : dans le sequenceur, le
+    volume du morceau multiplie celui de chaque voix (0,11 a 0,45), donc
+    `titre` a 0,85 sort a un dixieme de l'echelle. Un fichier arrive normalise
+    a -1 dBFS ; le meme chiffre saturerait."""
+    for piece in audio.MUSIQUES:
+        v = piece["volume"]
+        assert 0 < v <= 0.6, (
+            f"{piece['slug']} : volume {v} — au-dela de 0,6 un mp3 normalise "
+            "couvre les moteurs, les sirenes et les voix")
+
+
+def test_chaque_boucle_dure_assez_pour_ne_pas_se_mordre_la_queue():
+    """⚠️ Sous vingt-quatre secondes, on entend la boucle recommencer : on
+    s'arrete devant un musicien plus longtemps que ca, et on traverse un
+    district bien plus longtemps encore."""
+    for piece in audio.MUSIQUES:
+        assert 24 <= piece["duree_s"] <= 90, f"{piece['slug']} : {piece['duree_s']} s"
+
+
+def test_aucune_musique_ne_chante():
+    """Une voix chantee par-dessus une sirene : on n'entend plus ni l'une ni
+    l'autre. C'est la meme regle que pour les radios depuis M3."""
+    for piece in audio.MUSIQUES:
+        assert "no vocals" in piece["prompt"], f"{piece['slug']} : le prompt laisse chanter"
+
+
+def test_le_musicien_de_rue_reste_un_homme_seul():
+    """⚠️ La fiche du morceau ecrit le dit en majuscules — « DEUX VOIX, PAS
+    QUATRE » : un gars tout seul sur un trottoir n'a pas de batteur derriere
+    lui. Un prompt qui laisse arriver un groupe donne une musique qui ne colle
+    plus a ce qu'on VOIT, et le musicien de rue n'a plus aucun interet."""
+    rues = [p for p in audio.MUSIQUES if p["slug"].startswith("rue_")]
+    assert len(rues) == 5, "les cinq pieces du musicien de rue : %s" % [p["slug"] for p in rues]
+    for piece in rues:
+        assert "solo" in piece["prompt"], f"{piece['slug']} : rien ne dit qu'il est seul"
+        assert "guitar" in piece["prompt"], f"{piece['slug']} : il a une guitare dans les mains"
+        assert "no drums" in piece["prompt"], f"{piece['slug']} : il n'a pas de batteur"
+        assert "no other instruments" in piece["prompt"], f"{piece['slug']} : un groupe arriverait"
+
+
+def test_les_ambiances_de_district_ne_battent_pas_la_mesure():
+    """Elles jouent SOUS la rumeur, les moteurs et les voix. Une ambiance de
+    district qu'on remarque est une ambiance de district ratee."""
+    for slug in musique.AMBIANCES_DE_DISTRICT.values():
+        piece = audio.piece_par_slug(slug)
+        assert piece is not None, slug
+        assert "no drums" in piece["prompt"], f"{slug} : une batterie sous un district"
+
+
+def test_le_paquet_marie_les_notes_et_le_fichier():
+    """Le navigateur recoit les deux et choisit : le mp3 s'il est la, les notes
+    sinon. ⚠️ `fichier` ne se declare que si le fichier est VRAIMENT sur le
+    disque — sinon le navigateur irait chercher un 404."""
+    for morceau in audio.exporter()["musiques"]:
+        assert morceau["voix"], f"{morceau['slug']} : plus de filet"
+        assert "fichier" in morceau and "volume_fichier" in morceau, morceau["slug"]
+        if morceau["fichier"] is not None:
+            assert audio.chemin_musique(morceau["slug"]).is_file(), morceau["slug"]
+            assert morceau["volume_fichier"], f"{morceau['slug']} : un mp3 sans volume"
+
+
+def test_les_musiques_ne_marchent_pas_sur_les_radios():
+    """Deux catalogues, deux prefixes : `musique-*.mp3` et `radio-*.mp3`. Un
+    nom partage ferait qu'une station ecraserait un district sur le disque."""
+    noms = ([audio.nom_fichier_musique(p["slug"]) for p in audio.MUSIQUES]
+            + [audio.nom_fichier_radio(r) for r in audio.RADIOS + audio.AMBIANCES])
+    assert len(noms) == len(set(noms)), "deux musiques ecrivent dans le meme fichier"
+
+
+def test_la_musique_generee_tient_dans_le_budget():
+    """⚠️ Ce que ca PESE, et c'est le vrai prix de la demande. A 64 kbit/s, une
+    seconde fait 8 Ko : les quinze pieces sont le plus gros poste du dossier
+    audio. Elles ne se chargent JAMAIS au demarrage — une ambiance arrive quand
+    on entre dans son district, une station au premier tour de cle — mais le
+    depot, lui, les porte toutes."""
+    secondes = sum(p["duree_s"] for p in audio.MUSIQUES)
+    ko = secondes * 8
+    assert ko < 6000, f"{secondes} s de musique, soit {ko} Ko : le depot enfle"

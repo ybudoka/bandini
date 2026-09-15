@@ -160,6 +160,12 @@ def test_sans_son_accorde_la_musique_ne_pose_aucune_note(banc):
     r = banc("""function (L, o) {
         const joues = o.brancherAudio(false);
         L.Son.sonder();
+        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
+        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
+        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
+        // note, ni derive : il resterait vert en ne gardant plus rien, et le
+        // filet ne serait plus garde par personne.
+        delete L.Son.Mus.def('titre').fichier;
         o.frame(120);
         return { notes: joues.length, pas: L.Son.Mus.pas, debutT: L.Son.Mus.debutT };
     }""")
@@ -172,6 +178,12 @@ def test_le_theme_joue_des_que_le_son_est_accorde(banc):
     r = banc("""function (L, o) {
         const joues = o.brancherAudio(true);
         L.Son.sonder();
+        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
+        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
+        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
+        // note, ni derive : il resterait vert en ne gardant plus rien, et le
+        // filet ne serait plus garde par personne.
+        delete L.Son.Mus.def('titre').fichier;
         o.frame(200);
         const tons = joues.filter(function (n) { return n.quoi === 'ton'; });
         return { total: joues.length, tons: tons.length,
@@ -193,6 +205,12 @@ def test_les_notes_tombent_en_mesure(banc):
     r = banc("""function (L, o) {
         const joues = o.brancherAudio(true);
         L.Son.sonder();
+        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
+        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
+        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
+        // note, ni derive : il resterait vert en ne gardant plus rien, et le
+        // filet ne serait plus garde par personne.
+        delete L.Son.Mus.def('titre').fichier;
         o.frame(400);
         const basse = joues.filter(function (n) { return n.quoi === 'ton' && n.forme === 'triangle'; });
         const ecarts = [];
@@ -215,6 +233,12 @@ def test_la_boucle_reboucle_sur_elle_meme(banc):
     r = banc("""function (L, o) {
         const joues = o.brancherAudio(true);
         L.Son.sonder();
+        // ⚠️ EN NOTES, expres. Ce juge parle du SEQUENCEUR — devenu le FILET
+        // le 14 sept. 2026, quand les quinze morceaux sont passes en mp3. Sans
+        // cette ligne il jugerait la boucle d'un fichier, qui n'a ni pas, ni
+        // note, ni derive : il resterait vert en ne gardant plus rien, et le
+        // filet ne serait plus garde par personne.
+        delete L.Son.Mus.def('titre').fichier;
         const def = L.Son.Mus.def('titre');
         const pasS = 60 / def.bpm / def.pas_par_temps;
         // Un tour complet de la BASSE (son motif, pas celui du morceau) + un peu.
@@ -669,3 +693,209 @@ def test_une_station_procedurale_baisse_quand_quelqu_un_parle(banc):
     }""")
     assert r["avant"] == 1 and r["apres"] == 1
     assert 0 < r["pendant"] < 1, "le sequenceur ne baisse pas pendant une replique"
+
+
+# --- Toute la musique est generee par IA (14 sept. 2026) --------------------
+#
+# ⚠️ Demande de Martin : « je veux que toutes les musiques soient des musiques
+# generees par IA ». Les quinze morceaux de `musique.py` ont chacun leur mp3, et
+# `musique.py` annoncait cette porte depuis le premier jour : « elle se posera
+# PAR-DESSUS comme les radios ».
+#
+# ⚠️ CES JUGES POSENT LE `fichier` EUX-MEMES, dans les definitions du banc. Ils
+# doivent dire la meme chose avec ou sans mp3 dans `static/audio/` : autrement
+# ils ne jugeraient pas le CABLAGE mais l'etat d'un dossier, et ils
+# deviendraient verts ou rouges au gre des generations.
+
+
+def test_la_musique_sort_du_mp3_et_le_sequenceur_se_tait(banc):
+    """Les deux ensemble, ce serait le meme morceau joue deux fois, decale d'un
+    temps. Le juge exige donc les deux moities : le fichier boucle ET plus une
+    seule note d'oscillateur."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const def = L.Son.Mus.def('titre');
+        def.fichier = 'musique-titre.mp3'; def.volume_fichier = 0.5;
+        L.Son.Mus.jouer('titre');
+        o.frame(2); await o.attendre(); await o.attendre(); o.frame(4);
+        const ctx = L.Son.contexte;
+        return { boucle: L.Son.boucleActive('musique-titre'),
+                 muettes: ctx.sourcesMuettes(),
+                 notes: joues.filter(function (x) { return x.quoi === 'ton'; }).length };
+    }""")
+    assert r["boucle"] is True, "le mp3 du theme ne tourne pas : le morceau est muet"
+    assert r["notes"] == 0, \
+        "le sequenceur pose ses notes PAR-DESSUS le mp3 : on entend le morceau deux fois"
+    assert r["muettes"] == 0, "une source joue sans atteindre la sortie"
+
+
+def test_un_mp3_qui_n_arrive_pas_rend_la_main_aux_notes(banc):
+    """⚠️ LE FILET, et c'est la regle 1 d'`audio.py` : le jeu marche sans les
+    fichiers. Un depot frais, une generation ratee, un reseau coupe — le
+    sequenceur reprend le morceau exactement la ou il est ecrit, et le joueur
+    n'a pas un trou de musique."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        // Un fichier que le faux reseau ne sait pas servir : le chargement rate.
+        const def = L.Son.Mus.def('titre');
+        def.fichier = 'musique-titre.introuvable'; def.volume_fichier = 0.5;
+        L.Son.Mus.jouer('titre');
+        o.frame(2); await o.attendre(); await o.attendre(); o.frame(6);
+        return { boucle: L.Son.boucleActive('musique-titre'),
+                 notes: joues.filter(function (x) { return x.quoi === 'ton'; }).length,
+                 muettes: L.Son.contexte.sourcesMuettes() };
+    }""")
+    assert r["boucle"] is False, "une boucle tourne sur un fichier qui n'est jamais arrive"
+    assert r["notes"] > 0, "le mp3 a rate ET le sequenceur se tait : plus aucune musique"
+    assert r["muettes"] == 0
+
+
+def test_la_musique_en_mp3_baisse_quand_quelqu_un_parle(banc):
+    """⚠️ Le ducking passait par les boucles `radio-*` et `ambiance-*`. Sans
+    `musique-*`, l'ambiance du district et la musique de poursuite couvriraient
+    la replique — exactement le bug que la station procedurale avait deja."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        const def = L.Son.Mus.def('titre');
+        def.fichier = 'musique-titre.mp3'; def.volume_fichier = 0.5;
+        L.Son.Mus.jouer('titre');
+        o.frame(2); await o.attendre(); await o.attendre(); o.frame(2);
+        function volume() {
+            const ctx = L.Son.contexte;
+            const g = ctx.sources.filter(function (s) { return s.__demarree; });
+            return g.length ? g[g.length - 1].__vers[0].gain.value : null;
+        }
+        const avant = volume();
+        L.Son.Voix.baisserLeReste(true);
+        const pendant = volume();
+        L.Son.Voix.baisserLeReste(false);
+        return { avant: avant, pendant: pendant, apres: volume() };
+    }""")
+    assert r["avant"] and r["avant"] > 0, "le mp3 ne joue pas : %s" % r
+    assert r["pendant"] < r["avant"], "la musique ne baisse pas pendant la replique : %s" % r
+    assert abs(r["apres"] - r["avant"]) < 1e-9, "la musique ne remonte pas apres : %s" % r
+
+
+def test_le_musicien_de_rue_joue_son_mp3_et_sa_guitare_suit_la_distance(banc):
+    """⚠️ CE N'EST PAS UNE PISTE, C'EST UN SON DU MONDE : son volume vient de la
+    DISTANCE, et il change a chaque image. Une boucle reglee une fois au depart
+    resterait forte a l'autre bout de la rue.
+
+    ⚠️ Le juge pose SON morceau dans les definitions et tourne la manivelle
+    lui-meme : il ne depend ainsi ni du catalogue du jour, ni de ce qui traine
+    dans `static/audio/`, ni de la place de `Son.Rue.tick()` dans `jeu.js`."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const piece = JSON.parse(JSON.stringify(L.Son.Mus.def('titre')));
+        piece.slug = 'essai_rue';
+        piece.fichier = 'musique-essai_rue.mp3';
+        piece.volume_fichier = 0.5;
+        L.B.defs.audio.musiques.push(piece);
+        const slug = piece.slug;
+        // ⚠️ L'ORDRE EXACT DE `jeu.js` : `Son.Rue.tick()` passe en tete de
+        // `maj()`, `Entites.maj()` — celui qui DEMANDE — tout a la fin, et
+        // `B.t++` juste apres lui. La demande que le tick lit porte donc
+        // toujours le numero de l'image precedente.
+        function image(volume) {
+            L.Son.Rue.tick();
+            if (volume !== null) L.Son.Rue.demander(slug, volume);
+            L.B.t++;
+        }
+        image(1); image(1);
+        await o.attendre(); await o.attendre();      // le fichier arrive
+        image(1); image(1);
+        const fort = L.Son.volumeBoucle('rue-' + slug);
+        image(0.2); image(0.2);                      // on s'eloigne
+        const loin = L.Son.volumeBoucle('rue-' + slug);
+        for (let i = 0; i < 5; i++) image(null);     // on le laisse derriere
+        return { fort: fort, loin: loin,
+                 arretee: !L.Son.boucleActive('rue-' + slug),
+                 muettes: L.Son.contexte.sourcesMuettes() };
+    }""")
+    assert r["fort"] and r["fort"] > 0, "le musicien ne joue pas son mp3 : %s" % r
+    assert r["loin"] < r["fort"], "le volume ne suit pas la distance : %s" % r
+    assert r["arretee"] is True, "la toune continue une fois le musicien laisse derriere"
+    assert r["muettes"] == 0
+
+
+def test_le_musicien_et_le_district_jouent_en_meme_temps(banc):
+    """⚠️ Deux cles de tampon differentes (`musique-` et `rue-`), et c'est tout
+    l'interet : le musicien de rue joue PAR-DESSUS l'ambiance du district, comme
+    un moteur de char. Une cle partagee ferait que l'un chasserait l'autre."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const amb = L.Son.Mus.def('amb_faubourg');
+        amb.fichier = 'musique-amb_faubourg.mp3'; amb.volume_fichier = 0.3;
+        const piece = JSON.parse(JSON.stringify(amb));
+        piece.slug = 'essai_rue';
+        piece.fichier = 'musique-essai_rue.mp3';
+        piece.volume_fichier = 0.5;
+        L.B.defs.audio.musiques.push(piece);
+        function image() {
+            L.Son.Mus.tick();
+            L.Son.Rue.tick();
+            L.Son.Rue.demander('essai_rue', 0.8);
+            L.B.t++;
+        }
+        L.Son.Mus.jouer('amb_faubourg');
+        image(); image();
+        await o.attendre(); await o.attendre();
+        image(); image();
+        return { district: L.Son.boucleActive('musique-amb_faubourg'),
+                 musicien: L.Son.boucleActive('rue-essai_rue'),
+                 muettes: L.Son.contexte.sourcesMuettes() };
+    }""")
+    assert r["district"] is True and r["musicien"] is True, \
+        "les deux doivent jouer ensemble : %s" % r
+    assert r["muettes"] == 0
+
+
+def test_le_musicien_de_rue_ne_se_coupe_pas_a_chaque_image(banc):
+    """⚠️ Trouve en branchant le mp3 du musicien, et ca ne touchait PAS qu'au
+    mp3 : `Son.Rue.tick()` passe en tete de `maj()` dans `jeu.js`, alors
+    qu'`Entites.maj()` — celui qui DEMANDE — tourne tout a la fin, juste avant
+    `B.t++`. La demande que le tick lit porte donc toujours le numero de
+    l'image precedente ; avec l'egalite stricte d'avant, le musicien etait
+    reduit au silence a l'image suivant chacune de ses demandes, sans arret. Sa
+    toune ne demarrait JAMAIS — ni en notes, ni en fichier — et rien ne le
+    disait, parce qu'`Entites` continuait sagement a la demander.
+
+    Le juge est EN NOTES : ce n'est pas un defaut du mp3, c'est un defaut de la
+    cadence, et il doit tomber meme sans un seul fichier sur le disque."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const piece = JSON.parse(JSON.stringify(L.Son.Mus.def('titre')));
+        piece.slug = 'essai_rue';
+        delete piece.fichier;
+        L.B.defs.audio.musiques.push(piece);
+        const vus = [];
+        for (let i = 0; i < 12; i++) {
+            L.Son.Rue.tick();                    // le tick AVANT la demande
+            L.Son.Rue.demander('essai_rue', 0.9);
+            L.B.t++;
+            if (i) vus.push(L.Son.Rue.jouee);    // la 1re image n'a rien a jouer
+        }
+        // Puis on le laisse derriere nous : elle doit bel et bien s'arreter.
+        for (let i = 0; i < 5; i++) { L.Son.Rue.tick(); L.B.t++; }
+        return { coupures: vus.filter(function (x) { return x === null; }).length,
+                 fin: vus[vus.length - 1], laissee: L.Son.Rue.jouee };
+    }""")
+    assert r["fin"], "la toune n'a jamais demarre : %s" % r
+    assert r["coupures"] == 0, \
+        "le musicien est coupe %d image(s) sur 11 alors qu'on demande a chaque image" % r["coupures"]
+    assert r["laissee"] is None, "la toune continue toute seule une fois le gars laisse derriere"
