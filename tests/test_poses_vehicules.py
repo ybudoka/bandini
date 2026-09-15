@@ -176,3 +176,92 @@ def test_l_atlas_du_parc_a_maigri(banc):
     assert r["debout"] * 6 <= r["caps"], (
         "l'atlas n'a pas maigri : %s canevas debout contre %s en caps" % (r["debout"], r["caps"])
     )
+
+
+# --- Le modelé : rehaut, ombre, moyeu, chrome, reflet -------------------------
+
+
+def test_les_nuances_sont_les_memes_a_la_naissance_et_dans_la_palette(banc):
+    """⚠️ UNE SEULE FORMULE, dans `base.js`. Les palettes de `sprites.js` en
+    tirent leurs tons par défaut, et `vehicules.js` les tire pour chaque couleur
+    du catalogue à la naissance d'un char. Deux formules auraient divergé : un
+    taxi jaune neuf aurait eu un toit d'une autre teinte qu'un taxi jaune garé
+    depuis le début. On vérifie qu'un char né avec la couleur par défaut de sa
+    palette est cuit EXACTEMENT comme la palette."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const def = L.SPRITES.auto;
+        // ⚠️ ON NE FORCE RIEN : `creer` tire une couleur du catalogue et pose
+        // les swaps lui-meme. On verifie que CES swaps-la sortent de la formule
+        // partagee, et que la palette aussi. Un juge qui poserait les swaps a
+        // la main prouverait seulement que la formule existe.
+        const v = o.char('auto', 0, 0, 0);
+        const attendu = L.nuances(v.couleur), pal = L.nuances(def.pal.c);
+        return { pal: { c: def.pal.c, C: def.pal.C, D: def.pal.D },
+                 palAttendue: pal,
+                 nes: v.swaps, attendu: attendu,
+                 fixes: { M: def.pal.M, B: def.pal.B, G: def.pal.G, E: def.pal.E },
+                 monotone: attendu.C === attendu.c && attendu.D === attendu.c };
+    }""")
+    assert r["nes"], "le décor du juge est faux : le char n'a pas de swaps (%s)" % r
+    assert r["nes"] == r["attendu"], (
+        "à la naissance, les swaps ne sortent pas de `nuances` : %s" % r
+    )
+    assert r["pal"] == r["palAttendue"], (
+        "la palette ne tire pas ses tons de `nuances` : %s" % r
+    )
+    assert r["monotone"] is False, "le rehaut et l'ombre valent la couleur : il n'y a pas de modelé (%s)" % r
+    for cle, val in r["fixes"].items():
+        assert val, "le ton fixe « %s » manque à la palette" % cle
+
+
+def test_chaque_char_debout_se_sert_de_ses_tons(banc):
+    """Un ton déclaré et jamais posé n'est qu'une couleur de plus dans une
+    palette. ⚠️ On regarde les GRILLES : chaque char debout doit poser un rehaut
+    `C`, une ombre `D` et un moyeu `M` — sinon il est revenu au slab d'une seule
+    couleur que Martin a demandé de raffiner."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        ['auto', 'sport', 'luxe', 'ambulance', 'camion', 'remorqueuse', 'autobus'].forEach(function (slug) {
+            const p = L.SPRITES[slug].poses;
+            const tout = p.cote[0].join('') + p.haut[0].join('') + p.bas[0].join('');
+            out[slug] = { C: (tout.match(/C/g) || []).length, D: (tout.match(/D/g) || []).length,
+                          M: (tout.match(/M/g) || []).length, G: (tout.match(/G/g) || []).length,
+                          B: (tout.match(/B/g) || []).length };
+        });
+        return out;
+    }""")
+    for slug, n in r.items():
+        for ton in ("C", "D", "M", "G", "B"):
+            assert n[ton] > 0, f"{slug} ne pose jamais le ton « {ton} » : {n}"
+
+
+def test_le_taxi_et_la_police_ont_retrouve_leur_livree(banc):
+    """⚠️ Les premières grilles debout avaient PERDU les bandes `x` et `y` : le
+    taxi et la police se dessinaient comme une auto repeinte. La carrosserie
+    commune porte maintenant une bande `y` et un damier `x` — invisibles sur
+    l'auto (où ils valent la couleur de caisse), noirs sur le taxi, bleu et
+    rouge sur la police. On cuit les trois et on compare pixel à pixel."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const pix = function (slug) {
+            const def = L.SPRITES[slug];
+            const cuit = L.Atlas.cuire(slug, def, null);
+            const c = cuit.poses.cote[0];
+            const ctx = c.getContext && c.getContext('2d');
+            return { pal: def.pal, grille: def.poses.cote[0].join('') };
+        };
+        const a = pix('auto'), t = pix('taxi'), p = pix('police');
+        return { memeGrille: a.grille === t.grille && a.grille === p.grille,
+                 aXY: [a.pal.x === a.pal.c, a.pal.y === a.pal.c],
+                 tX: t.pal.x, tC: t.pal.c, pY: p.pal.y, pC: p.pal.c,
+                 grilleAY: (a.grille.match(/y/g) || []).length, grilleAX: (a.grille.match(/x/g) || []).length };
+    }""")
+    assert r["memeGrille"] is True, "les trois ne partagent plus la carrosserie"
+    assert r["grilleAY"] > 0 and r["grilleAX"] > 0, "la carrosserie ne porte plus de livrée : %s" % r
+    assert r["aXY"] == [True, True], "sur l'auto, la livrée doit être invisible : %s" % r
+    assert r["tX"] != r["tC"], "le taxi n'a pas de damier : %s" % r
+    assert r["pY"] != r["pC"], "la police n'a pas sa bande : %s" % r

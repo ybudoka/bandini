@@ -45,7 +45,7 @@ const Vehicules = (function () {
     const couleur = def.couleurs[Math.floor(B.rng() * def.couleurs.length)];
     const v = Entites.creer('vehicule', x, y, Object.assign({
       slug: slug, def: def, angle: angle || 0, vitesse: 0, vx: 0, vy: 0, z: 0, vz: 0,
-      r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: { c: couleur },
+      r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: nuances(couleur),
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
       vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
@@ -622,7 +622,7 @@ const Vehicules = (function () {
     v.vie = 0;
     v.vitesse = 0; v.vx = 0; v.vy = 0;
     v.plie = true;
-    v.swaps = { c: '#4a4a52' };
+    v.swaps = nuances('#4a4a52');
     v.angle += (B.rng() - 0.5) * 1.6;      // il gît de travers : on voit qu'il est tombe
     v.epaveT = physique().epave_secondes * 60;
     v.alarme = 0;
@@ -862,7 +862,7 @@ const Vehicules = (function () {
     if (v.remorqueePar) decrocher(v.remorqueePar);
     v.vie = 0;
     v.vitesse = 0; v.vx = 0; v.vy = 0;
-    v.swaps = { c: '#2a2a2a', v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a' };
+    v.swaps = Object.assign(nuances('#2a2a2a'), { v: '#1a1a1e', l: '#2a2a2a', t: '#2a2a2a', x: '#2a2a2a', y: '#2a2a2a', G: '#1a1a1e', B: '#2a2a2a', M: '#2a2a2a' });
     v.epaveT = ph.epave_secondes * 60;
     v.alarme = 0;
     for (let i = 0; i < 40; i++) {

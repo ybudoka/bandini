@@ -156,6 +156,24 @@ function hash2(x, y) {
   h = (h ^ (h >>> 13)) * 1274126177;
   return (h ^ (h >>> 16)) >>> 0;
 }
+/** Les trois tons d'une carrosserie a partir d'UNE couleur : la couleur,
+    son rehaut (`C`, la ou la lumiere tombe — le toit, le capot) et son ombre
+    (`D`, le bas de caisse, dessous le pare-chocs).
+
+    ⚠️ ICI, et une seule fois. Les palettes de `sprites.js` en ont besoin pour
+    leurs tons par defaut, et `vehicules.js` pour chaque couleur du catalogue
+    tiree a la naissance d'un char (les 32 variantes). Deux formules pour un
+    meme rehaut auraient fini par diverger : un taxi jaune neuf aurait eu un
+    toit d'une autre teinte qu'un taxi jaune gare depuis le debut. */
+function nuances(hex) {
+  const n = parseInt(String(hex).replace('#', '').slice(0, 6), 16);
+  const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+  const mix = function (a, cible, part) { return Math.round(a + (cible - a) * part); };
+  const h = function (r2, g2, b2) { return '#' + ((1 << 24) | (r2 << 16) | (g2 << 8) | b2).toString(16).slice(1); };
+  return { c: '#' + ('000000' + n.toString(16)).slice(-6),
+           C: h(mix(r, 255, 0.34), mix(g, 255, 0.34), mix(b, 255, 0.34)),
+           D: h(mix(r, 0, 0.32), mix(g, 0, 0.32), mix(b, 0, 0.32)) };
+}
 /** Generateur deterministe (mulberry32). */
 function mulberry(graine) {
   let a = graine >>> 0;
