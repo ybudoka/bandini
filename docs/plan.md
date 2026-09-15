@@ -99,6 +99,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des sons pour les armes | **livré** | 13 sept. 2026 | — | ajout | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouaient le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appelaient `SFX.coup`), le jet d'extincteur ne faisait aucun bruit, et un chargeur vide comme une arme qui casse faisaient le **buzzer de refus** des menus. Chaque arme porte maintenant son `son` (`armes.py`) et le combat passe par `SFX.arme(def)` ; **16 échantillons ElevenLabs** (batte ×2, couteau ×2, pelle, cône, bouteille, fronde, pistolet ×2, fusil ×2, le **jet en boucle** tenu par `SFX.jet(actif)` à chaque image, la gâchette **à vide**, la **casse**, le **dégainage**), ≈ 141 Ko, chacun avec son repli synthétisé ; budget des bruitages relevé à 800 Ko. ⚠️ Au passage, un **hoquet** au départ du jet : la première pression partait par le chemin de la mêlée (anticipation, quatre images de jet, deux de repos) avant que le maintien ne prenne le relais — invisible, mais audible avec une boucle. ⚠️ **Martin n'a pas encore écouté** : `batte-1` et `batte-2` sont sortis très courts (0,18 et 0,26 s), à refaire s'ils ne sonnent pas (`--refaire batte`) |
 | La fille de la Brume parle | **livré** | 13 sept. 2026 | — | ajout | demande de Martin (« la prostituée aussi doit parler, avec plusieurs dialogues différents ») : `rumeurEtRepliques` saute tout piéton qui a un `metier`, et elle en a un (`compagnie`) — elle ne disait jamais rien, alors que la regex des voix de femmes la nommait déjà. **Six répliques à elle** (genre `brume`, voix **Julia**, québécoise et rauque, poussée au style), dites par `Entites.accosterDepuisLaBrume` quand on passe à trois tuiles de son coin : une **bulle** avec le texte, la voix par-dessus, **jamais deux fois de suite la même** (`Son.Voix.choisir(genre, sauf)`, tiré dans le dé du jeu), pas deux fois en moins d'une demi-minute, jamais en char, jamais quand elle fuit. Le chemin des passants ne bouge pas. Budget des bruitages à 850 Ko (+52 Ko). ⚠️ Martin n'a pas encore écouté |
 | Une seule musique pour toute la ville | **livré** | 14 sept. 2026 | **P2** | ajout | demande de Martin (« des musiques différentes par district, et des musiques pour quand on se bat avec des gangs, et quand on a plusieurs étoiles ») : il y en avait **une**, la même de La Pointe aux Quais. ⚠️ Le vrai travail n'était pas les pistes, c'était **qui gagne** — l'échelle est maintenant **écrite une fois en Python** et le navigateur la lit. Cinq ambiances de district + poursuite + bagarre, **écrites en notes** (aucun mp3, aucun crédit : `musique.py` promettait cette porte depuis le premier jour), avec **hystérésis** aux frontières et **queue** sur les musiques d'état — c'est elle qui fait qu'on souffle |
+| Les véhicules vus de profil | **à faire** | — | **P2** | **correctif** | demande de Martin : « une refonte complète des véhicules. Je les veux comme les piétons, de profil ». Tout ce qui est **debout** dans le jeu est dessiné debout — le passant ancré à ses pieds, l'arbre, le lampadaire, le banc, le feu et son poteau, les clôtures nord-sud vues par la tranche — et le char est la **dernière chose regardée d'aplomb**. Trois poses (profil miroité, dos, face) choisies comme la face d'un passant, au lieu de 32 caps cuites : l'atlas du parc passe de **1 024 canevas et 6 Mo à 96 et 0,3 Mo**. ⚠️ Mesuré : **94,5 %** des chars en marche sont à moins de 2° d'un cap cardinal — la rotation libre coûte 6 Mo pour 3 % du temps. ⚠️ De dos, les 28 px de longueur ne se voient plus : l'ombre au sol permanente est le filet |
 | Trottoir et traverses de deux tuiles | **à faire** — ⚠️ **essayé et annulé** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js` |
 | Pièces plus grandes que leur maison | **livré** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin, mesurée : **35 des 45 portes** de la graine livrée ouvraient sur plus grand que leur bâtiment, jusqu'à **onze fois** (9 tuiles dehors, 98 dedans). Maintenant la pièce **se choisit à la taille du bâtiment** — la plus grande qui tienne, et rien du tout si même la plus petite déborde : la porte reste alors condamnée. **Quatre petites pièces neuves** (deux de 9 tuiles de plancher, une de 18, une de 21) et **26 pièces redessinées** plus petites ; la **parcelle d'un lieu garanti se taille à la mesure de sa pièce** au lieu d'espérer que le découpage au sort en fasse une de la bonne taille ; et **chaque famille de commerce ouvre au moins une porte**, parce que « tirer l'enseigne × être assez grand × gagner le dé » laissait quatre familles sur dix sans un seul intérieur. **0 débordement sur 5 graines**, contre 34 à 46 avant. 12 juges neufs |
 | L'eau n'est plus un mur | **livré** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin : l'eau était **littéralement un mur** (`MASQUE_PIETON` la comptait comme une façade). Maintenant : un **masque de nageur** pour le joueur et les agents (les passants, eux, n'y entrent jamais), le **souffle qui décide** — 8 points par tuile, le chenal du pont en coûte 88 sur 100 : un **pari** —, la **noyade par `Missions.hopital`** (une seule façon de perdre connaissance), le **char qui coule et qui est perdu** (jamais à la fourrière : couler ne doit pas devenir un remboursement d'épave ; le **bateau** flotte, et c'est sa fiche qui le dit), et la **police qui nage** au prix fort dans l'A\*. ⚠️ Le juge du pont est **reformulé, pas affaibli** : le pont est le seul lien **carrossable**. Le large de la baie est à **73 tuiles** de toute terre pour **40** au plafond absolu (café + estomac plein) : on n'y va pas. 6 juges neufs |
@@ -459,7 +460,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
-        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py
+        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py
         test_eau_son_js.py test_amuseurs_js.py
         test_reclame.py test_reclame_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py
@@ -507,6 +508,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P2** Les portes s'ouvrent | battant dessiné **par-dessus** la tuile (le sol est cuit dans le morceau), sortie visible, entrée qui remplace une part de l'oubli, portes triées par ce qu'elles valent, rythme matin/soir | voir quelqu'un sortir du dépanneur et y entrer, sans que le cache de morceaux bouge |
 | — | **P2** Le carnet | page EN COURS (objectifs barrés, donneur, récompense), page JOURNAL (écrite par les événements déjà émis, plafonnée), page RÉPERTOIRE (`p.connus` seulement) | retrouver quoi faire en deux secondes après trois jours sans jouer ; aucun personnage non rencontré dans le répertoire |
 | — | **P2** Une seule musique pour toute la ville | cinq ambiances de district (fondu + hystérésis aux frontières), thème du titre enregistré par-dessus la synthèse, musique de poursuite et de bagarre avec durée minimale et queue, échelle de priorité écrite une fois | entendre qu'on a changé de quartier ; entendre que ça tourne mal avant de le voir |
+| — | **P2** Les véhicules vus de profil | trois poses par véhicule (profil miroité, dos, face) au lieu de 32 rotations cuites, pose choisie par la même règle que la face d'un passant, ancre posée sur la ligne de sol, ombre au sol **permanente** à l'empreinte du catalogue, pose couchée pour l'épave et le vélo plié, conducteur sorti du sprite du deux-roues | l'atlas du parc entier sous 0,5 Mo (6 Mo aujourd'hui), aucune pose manquante ni empruntée, un char au sol qui ne flotte pas d'un pixel, et le tri par y qui range le char avec les passants |
 | — | **P3** Trottoir et traverses de deux tuiles | `TROTTOIR = 1` (trottoirs **et** traverses), rues rétrécies pour garder leurs voies, tout ce qui vivait sur le trottoir relogé, le littéral `2` de `monde.js` remplacé par `grille.trottoir`, juges de géométrie rejoués | une rue qui a l'air d'une rue ; aucun bouchon de piétons devant un commerce ni à une traverse |
 | — | **P3** Pièces plus grandes que leur maison | **livré** : plancher de la pièce ≤ empreinte du bâtiment, à toutes les portes ; pièces **par tranche de taille** et la porte prend la plus grande qui tienne (sinon elle reste condamnée) ; parcelle d'un lieu garanti taillée à la mesure de sa pièce ; chaque famille de commerce ouvre au moins une porte | sortir d'un dépanneur sans avoir l'impression d'être sorti d'une cabane |
 | — | **P3** L'eau n'est plus un mur | **livré** : masque de nageur (joueur et agents), souffle qui décide (8 points la tuile), noyade par `Missions.hopital`, char qui coule et qui est perdu, bateau qui flotte par sa fiche, police qui nage, juge du pont reformulé en **carrossable** | traverser le chenal de justesse ; ne jamais atteindre le large ; un char noyé ne revient pas |
@@ -569,6 +571,7 @@ ordre-là.
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
 | **P2** | ajout | Des sortes de gens — le réservoir | 3 | ⚠️ **deux vagues livrées** (les trois de Martin, puis cinq des sept « qui viennent avec »). Reste le réservoir, où l'on pige par vagues — plus la **personne âgée** (attend les feux pour piétons) et le **pickpocket** (M12) |
+| **P2** | **correctif** | Les véhicules vus **de profil**, comme les piétons | 5 | ⚠️ **avant tout véhicule de plus** — le tramway et le traversier de M12, le sprite du bateau en dette : chaque char dessiné avant la refonte se dessine deux fois. Ne touche **qu'au dessin** (la physique voit toujours un rectangle vu d'en haut), et jette les quatre toits de M9 |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
@@ -2551,6 +2554,106 @@ gardent leur nom. Trois choses, trois noms — écrit ici pour qu'on arrête de 
   ligne du carnet ne les déclenche**, reste sous son plafond après 300 entrées et n'y perd
   aucun jalon ; le répertoire est **vide** dans une partie neuve, ne prend Ti-Guy qu'après lui
   avoir parlé, ne le prend **qu'une fois**, et sa fiche dessine bien un visage.
+
+### Les véhicules vus de profil, comme les piétons (**correctif**, taille 5)
+
+_Demande de Martin :_ « une refonte complète des véhicules. Je les veux comme les piétons,
+de profil. »
+
+**Tout ce qui est debout dans Bandini est dessiné debout — sauf le char.** Le passant fait
+12 × 16 et il est ancré à ses **pieds** (`ancre: [6, 15]`) ; l'arbre fait 18 × 26, le tronc
+en bas ; le lampadaire, 8 × 30 ; le banc se voit de côté, avec ses pattes ; le feu de
+circulation a son poteau (13 × 24) ; et les clôtures nord-sud ont été refaites **vues par la
+tranche** le 13 septembre, parce que Martin l'a demandé en disant déjà exactement ça. La
+ville, elle, est un **sol** : de l'asphalte, des toits, et l'ombre d'un mur qui tombe vers le
+sud. Le char est la **dernière chose que le jeu regarde d'aplomb** — et le code le dit
+lui-même, en toutes lettres, dans M9 : « Vu d'en haut, un char est un TOIT (…) ce n'est pas
+le pare-brise qui nomme un véhicule à douze pixels de large, c'est ce qu'il porte sur le
+dos. » C'était vrai. Ça cesse de l'être le jour où on ne le regarde plus d'en haut.
+
+⚠️ **C'est un correctif, pas un ajout** : rien de neuf n'apparaît dans le jeu. Les mêmes
+douze véhicules, redessinés pour qu'ils regardent dans le même sens que tout le reste.
+
+**Mesuré avant d'écrire :**
+
+- **12 véhicules, 32 variantes de couleur, 1 900 lignes** de grilles de pixels dans
+  `sprites.js`. C'est ça qu'on jette et qu'on redessine.
+- Le char tourne par **32 caps cuites** (`Atlas.cuireRotations`), une tous les 11,25°. Le
+  parc entier, cuit, pèse **1 024 canevas — 6 Mo**.
+- Et il ne s'en sert presque jamais : sur **3 129 relevés** de chars en marche (600 images de
+  trafic), **94,5 % sont à moins de 2° d'un cap cardinal**, 97 % à moins de 10°. La rotation
+  libre coûte six mégaoctets pour **3 % du temps**.
+
+**La règle : une vue = un dessin, pas une rotation.** Le char choisit sa pose comme le
+passant choisit sa face — `regarder()` tient déjà la règle en une ligne
+(`Math.abs(dx) >= Math.abs(dy)`). Trois dessins par véhicule : **de profil** (miroité pour
+l'autre sens), **de dos** (il s'éloigne), **de face** (il vient). L'atlas tombe de 1 024 caps
+à **96**, et de 6 Mo à **0,3 Mo**.
+
+**⚠️ Et voici ce que ça coûte, dans l'ordre où ça fait mal.**
+
+1. ⚠️ **Le dessin cesse de dire l'encombrement.** Un char fait 28 px de long ; de profil, ces
+   28 px se voient. **De dos, non** : il devient un objet de 14 px de large, et ses 28 px
+   d'asphalte disparaissent de l'écran. Or se garer dans une case, juger l'espace entre deux
+   chars, reculer dans une ruelle, tout ça se joue **à l'œil**. C'est le vrai prix de la
+   demande, et il se paie en jeu, pas en pixels. Deux parades, à décider :
+   - **l'ombre au sol permanente**, à l'empreinte exacte du catalogue, sous tous les chars,
+     tout le temps — elle n'existe aujourd'hui qu'en vol (`v.z > 0`). Dix lignes, et elle
+     rend à l'œil la longueur que le dessin ne montre plus ;
+   - le **trois-quarts** au lieu du profil pur pour les vues de dos et de face : on voit
+     alors un bout du toit qui fuit, donc un bout de la longueur.
+   - **Recommandation : les deux, l'ombre d'abord** — c'est elle le filet, et elle se mesure.
+2. ⚠️ **L'ancre change de sens.** Un char est cuit **centré** (`ancre: [16, 8]`) ; un passant
+   est ancré à ses pieds, et c'est ce qui le pose au sol et le trie par y (`y de tri = y`,
+   `y de dessin = y - z`). Un char debout s'ancre pareil, à sa ligne de sol, sinon il flotte.
+   Ça touche le tri, l'ombre, le saut de rampe, et **la remorqueuse**, qui pose sa charge au
+   pixel et dans l'axe.
+3. ⚠️ **Les 3 % obliques sont exactement les virages** — le seul moment où l'on regarde
+   vraiment un char tourner. Trois poses y font donc un **saut**. Le passant a le même défaut
+   et personne ne le voit : il tourne en un pas, le char met une seconde et demie. Les
+   parades, par prix croissant : accepter le saut ; ajouter deux poses de trois-quarts (**5
+   poses, 160 caps, 0,5 Mo**) ; ou **pencher** le dessin de quelques degrés pendant le virage
+   — ⚠️ mais au-delà d'une quinzaine de degrés, un profil penché redevient une vue d'en haut
+   de travers, et on a refait le problème qu'on venait de régler.
+4. ⚠️ **Le char sera TRAPU, et il faut le vouloir.** Le passant est dessiné à **9,1 px/m**
+   (16 px pour 1,75 m) ; le char à **6,2 px/m** (28 px pour 4,5 m). À l'échelle du passant,
+   un toit d'auto (1,45 m) fait **13 px de haut pour 28 px de long** — un vrai char en ferait
+   41 de long. **On ne peut pas l'allonger : c'est la rue qui tient la longueur** (les voies,
+   les cases de stationnement, les lignes d'arrêt, tout le trafic). Donc un char court et
+   haut, comme dans les jeux de petites autos. Et un passant plus grand que le toit d'une
+   auto, ce qui est vrai dans la vie.
+5. ⚠️ **Les quatre dessins de M9 sont à jeter**, et c'est le gros du travail. Le camion,
+   l'autobus, l'ambulance et la remorqueuse ont été dessinés **pour être des toits** : les
+   nervures de la caisse, les trappes, la croix rouge, le bras de levage. De profil, ce qui
+   nomme un véhicule est sa **silhouette** — la caisse haute, les fenêtres en bande de
+   l'autobus, le gyrophare, le bras qui dépasse à l'arrière.
+6. ⚠️ **Le conducteur cesse d'être peint dans le véhicule, et c'est un cadeau.** La palette du
+   vélo porte déjà une peau (`s`) et des cheveux (`h`) : le cycliste est **cuit dans le
+   vélo**, de la même couleur pour toujours. De profil, il redevient ce qu'il aurait dû être
+   — un passant **assis dessus**, avec ses propres couleurs, ce qui applique aux deux-roues
+   le correctif des « sortes de gens ». Et dans une auto, on verra enfin **une tête derrière
+   la vitre**.
+7. ⚠️ **L'épave et le vélo plié se servent de la rotation libre** pour dire « il est tombé »
+   (`v.angle += (rng - 0.5) * 1.6`). Debout, ça demande une pose de plus : **couchée** —
+   exactement ce que le passant a déjà (`couche` : une image, pas un canevas qui tourne).
+8. ⚠️ **La physique ne bouge pas d'un pixel**, et c'est ce qui rend la fiche faisable :
+   `cercles()`, les masques, les voies, les cases de stationnement, le crochet, les défonces,
+   le trafic — tout continue de voir un rectangle vu d'en haut. On ne touche **qu'au
+   dessin**. En revanche, les juges qui mesurent des **pixels** changent (l'ombre en vol, le
+   « nez » du char) ; ceux qui mesurent des **positions** — la charge de la remorqueuse collée
+   et dans l'axe — tiennent tels quels.
+9. ⚠️ **Ça se fait AVANT d'ajouter des véhicules.** M12 promet un tramway et un traversier, et
+   le bateau attend son sprite en dette. Chaque véhicule dessiné avant la refonte se dessine
+   deux fois.
+
+**Juges** : chaque véhicule a ses trois poses, aucune manquante et aucune empruntée à un
+autre ; la pose suit le cap avec **la même règle que la face d'un passant** (un seul code,
+pas deux jeux de seuils) ; l'ancre est la ligne de sol, mesurée — un char au sol ne flotte
+pas d'un pixel ; l'ombre au sol a l'empreinte du catalogue, pour tous les chars, tout le
+temps ; le tri par y met le char devant le passant qu'il dépasse et derrière celui qu'il
+croise ; une épave et un vélo plié ont leur pose couchée ; la remorqueuse pose toujours sa
+charge au pixel et dans l'axe ; et **l'atlas du parc entier reste sous 0,5 Mo** (mesuré :
+6 Mo aujourd'hui).
 
 ### Le trottoir et les traverses font deux tuiles, ils devraient en faire une (**correctif**, taille 2)
 
