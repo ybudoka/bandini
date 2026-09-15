@@ -289,6 +289,10 @@ const Monde = (function () {
   }
   /** La chaussee nue : la ou un pieton n'a rien a faire. */
   function estChaussee(tx, ty) { return estRoute(tx, ty) && !estPassage(tx, ty); }
+  /** L'abord : la couronne d'un bloc, entre ses murs et le trottoir. On y
+      marche, mais c'est un debordement — la dalle est prioritaire. */
+  function estAbord(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).abord); }
+  function estTrottoir(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).trottoir) && !estRoute(tx, ty); }
   /** Une tuile qu'un pieton peut fouler en flanant : ni mur, ni eau, ni chaussee.
       ⚠️ Elle garde l'eau MEME depuis qu'on nage : ce qui flane ne se baigne
       pas, et les juges de connexite s'appuient dessus — si l'eau reliait les
@@ -939,6 +943,7 @@ const Monde = (function () {
     if (p.cloture) return p.cloture === 'barbele' ? '#8a5b5b' : '#7d7a6a';
     if (p.route) return '#34373d';
     if (p.trottoir) return '#8a877c';
+    if (p.abord) return '#6d665a';
     if (p.herbe) return '#3f6b33';
     if (p.ruelle) return '#4a4741';
     return '#6b5a3a';
@@ -1068,7 +1073,7 @@ const Monde = (function () {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

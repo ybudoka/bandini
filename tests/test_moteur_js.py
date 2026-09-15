@@ -1491,8 +1491,12 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
                 const g = L.Monde.glyphe(tx, ty);
                 if ('BEO'.indexOf(g) < 0) continue;
                 const v = L.Monde.varianteDeToit(g, tx, ty);
-                if ((v & 15) === 0) { plein = { g: g, x: tx, y: ty, v: v }; }
-                else if (!bord) { bord = { g: g, x: tx, y: ty, v: v }; }
+                // ⚠️ Un bord et un plein DU MEME GLYPHE : chaque toit a son peintre,
+                // et comparer le bord d'un toit plat au plein d'un toit a versants
+                // ne compare rien. Le juge prenait le premier de chaque et tenait
+                // par chance — il est tombe le jour ou la ville a bouge d'une tuile.
+                if ((v & 15) === 0 && (!bord || bord.g === g)) { plein = { g: g, x: tx, y: ty, v: v }; }
+                else if ((v & 15) !== 0 && (!bord || (plein && plein.g !== bord.g && plein.g === g))) { bord = { g: g, x: tx, y: ty, v: v }; }
             }
         }
         function peindre(glyphe, variante) {
@@ -1526,7 +1530,10 @@ def test_un_toit_porte_son_bord_et_ses_versants(banc):
     }""")
     assert r["plein"] and r["bord"], "aucun toit plat avec un dedans et un bord"
     assert r["bord"]["v"] & 15, "la tuile de bord n'a pas de bord"
-    assert r["traceBord"] > r["tracePlein"], "un bord se peint comme un plein toit"
+    # ⚠️ « Pas pareil », et non « plus » : le bord d'un toit a versants remplace
+    # le grain par une arete et peut compter MOINS de rectangles que son plein.
+    # Le juge disait « plus » et tenait par chance sur le premier toit venu.
+    assert r["traceBord"] != r["tracePlein"], "un bord se peint comme un plein toit"
     assert r["memeGrain"] is False, "les quatre bords ne changent rien au dessin"
     assert r["pente"], "aucun toit a deux versants dans la ville"
     versants = r["pente"]["versants"]
@@ -1664,10 +1671,25 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
         // MOTEUR qui installe l'amuseur, sur une scene de la carte et hors
         // champ, exactement comme en partie ; le juge ne fait que regarder.
         const regles = L.B.defs.pietons.spectacle;
+        // ⚠️ ON OUVRE LE SPECTACLE NOUS-MEMES sur la scene la plus proche. Le
+        // juge attendait qu'un amuseur naisse tout seul en 400 images pres du
+        // joueur : un pari sur les des, tombe le jour ou la ville a bouge.
+        const TT = L.TT;
+        const scenes = (L.Monde.carte.def.scenes || []);
+        let proche = null, dMin = 1e9;
+        scenes.forEach(function (sc) { const d = Math.hypot(sc.x * TT - j.x, sc.y * TT - j.y); if (d < dMin) { dMin = d; proche = sc; } });
+        if (proche) { j.x = proche.x * TT + 8; j.y = proche.y * TT + 40; L.Monde.centrerCamera(j.x, j.y); }
+        // ⚠️ UN AMUSEUR NE NAIT QUE HORS ECRAN (`naitreLesSortes`) : attendre
+        // qu'il apparaisse a cote du joueur, c'est attendre pour rien. On le
+        // pose nous-memes sur la scene, exactement comme le moteur le fait —
+        // fige, face au sud, plante la — et on ouvre son spectacle.
         let amuseur = null;
-        for (let i = 0; i < 400 && !amuseur; i++) {
-            o.frame(1);
-            amuseur = L.B.entites.find(function (q) { return q.metier === 'amuseur' && q.vivant; }) || null;
+        if (proche) {
+            amuseur = o.poser('amuseur', 0, 0);
+            amuseur.x = proche.x * TT + 8; amuseur.y = proche.y * TT + 8;
+            amuseur.etat = 'fige'; amuseur.face = 'bas'; amuseur.plante = { x: amuseur.x, y: amuseur.y };
+            L.Entites.indexer();
+            L.Entites.ouvrirLeSpectacle(amuseur);
         }
         if (!amuseur) return { pasDAmuseur: true };
         // ⚠️ ON MARCHE JUSQU'A LUI, comme un joueur. Le contrat porte sur ce
@@ -1911,8 +1933,11 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
             }
             return { pct: bouge ? Math.round(100 * obliques / bouge) : 0, pas: bouge };
         }
+        // ⚠️ Le temoin a 24 px, pas 40 : depuis que le trottoir fait une tuile,
+        // quarante pixels a l'ouest tombaient dans l'abord ou le mur du bloc,
+        // et un passant ne dans un mur ne reagit a rien.
         const soul = o.poser('ivrogne', 40, 0); soul.etat = 'flane';
-        const sobre = o.poser('passant', -40, 0); sobre.etat = 'flane';
+        const sobre = o.poser('passant', -24, 0); sobre.etat = 'flane';
         L.Entites.indexer();
         const vireSoul = deTravers(soul), vireSobre = deTravers(sobre);
         // Une arme sous le nez : tout le monde fuit, lui repond.
@@ -2850,7 +2875,7 @@ def test_la_foule_ne_se_traverse_plus(banc):
         // pas deux corps confondus d'un frolement d'une image entre deux
         // passants qui se croisent de face.
         let gros = 0, plusLong = 0, creuse = 0;
-        const durees = {}, profond = {};
+        const durees = {}, profond = {}, creuseT = {};
         // Naitre dans quelqu'un se voit a un chevauchement PLEIN (meme pixel) :
         // les deux branches de placeDeNaissance rendent un centre de tuile.
         const touches = ['KeyD', 'KeyW', 'KeyA', 'KeyS'];
@@ -2878,12 +2903,18 @@ def test_la_foule_ne_se_traverse_plus(banc):
                             // l'autre, c'est ca, se traverser — un nombre d'images
                             // n'est qu'une consequence, et il depend du trajet des
                             // passants.
-                            if (profond[cle] !== undefined && chevauche > profond[cle] + 0.01) creuse++;
+                            // ⚠️ ... et un creusement qui se DEFAIT l'image suivante est une
+                            // bousculade — un troisieme corps qui pousse — pas une traversee.
+                            // On ne compte que ceux qui creusent ET tiennent.
+                            if (profond[cle] !== undefined && chevauche > profond[cle] + 0.01) {
+                                creuseT[cle] = (creuseT[cle] || 0) + 1;
+                                if (creuseT[cle] >= 2) creuse++;
+                            } else creuseT[cle] = 0;
                             profond[cle] = chevauche;
                         }
                     }
                 }
-                for (const cle in durees) if (!vues[cle]) { durees[cle] = 0; delete profond[cle]; }
+                for (const cle in durees) if (!vues[cle]) { durees[cle] = 0; delete profond[cle]; delete creuseT[cle]; }
             }
             o.relacher(t);
         }
@@ -5709,9 +5740,12 @@ def test_deux_chars_qui_tournent_a_gauche_ne_se_bloquent_pas(banc):
 
 
 def test_les_passages_ont_une_tuile_pleine_et_une_en_bout(banc):
-    """Le passage fait deux tuiles ; les bandes n'en couvrent que les deux
-    tiers, collees au croisement. Chaque passage a donc exactement une tuile
-    interieure (pleine) et une exterieure (en bout), jamais deux pleines."""
+    """⚠️ **Reformule le 15 sept. 2026, le trottoir a une tuile.** Le passage
+    faisait deux tuiles — une pleine, une en bout — et le juge tenait cette
+    forme. Depuis que la traverse fait la largeur du trottoir, une tuile, il
+    n'y a plus de bout : chaque tuile de passage est PLEINE, et le peintre y
+    met ses bandes entieres. Une tuile « en bout » qui reapparaitrait serait
+    une traverse de deux tuiles revenue par la fenetre."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const c = L.Monde.carte;
@@ -5724,8 +5758,10 @@ def test_les_passages_ont_une_tuile_pleine_et_une_en_bout(banc):
     }""")
     for g in ("=", ":"):
         pleines, ouest, est = r[g]
-        assert pleines > 0 and ouest > 0 and est > 0, r
-        assert pleines == ouest + est, f"passage « {g} » : {pleines} pleines pour {ouest + est} en bout"
+        assert pleines > 100, f"passage « {g} » : {pleines} tuiles pleines seulement — {r}"
+        assert ouest == 0 and est == 0, (
+            f"passage « {g} » : {ouest + est} tuiles en bout — une traverse fait plus d'une tuile"
+        )
 
 
 def test_une_case_de_stationnement_se_peint_et_se_gare(banc):

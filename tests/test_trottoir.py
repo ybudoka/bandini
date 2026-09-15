@@ -124,3 +124,143 @@ def test_le_navigateur_lit_la_largeur_au_lieu_de_l_ecrire(banc):
     )
     assert r["aUne"]["dedans"] < r["aDeux"]["dedans"], r
     assert r["vrai"] == carte.TROTTOIR, "le paquet ne porte plus la largeur : %s" % r
+
+
+# --- Le trottoir a une tuile : ce que la fiche exige --------------------------
+
+
+def test_la_largeur_de_la_ville_suit_sa_trame():
+    """La ville fait exactement la somme de ses blocs et de ses rues, dans les
+    deux sens. ⚠️ C'est ce qui a permis de rétrécir les rues et d'élargir les
+    blocs sans rien casser : un juge de trame ne dit rien de la beauté, mais il
+    dit tout de suite si une rue a été comptée deux fois."""
+    ville = carte.exporter()
+    assert ville["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
+    assert ville["hauteur"] == sum(carte.RANGEES) + sum(carte.RUES_H)
+
+
+def test_une_rue_garde_deux_voies_et_un_boulevard_quatre():
+    """⚠️ Les deux tuiles que chaque rue a perdues ne sont PAS revenues aux
+    voies : c'était l'option que la fiche refusait (« ce n'est pas ce qui a été
+    demandé »). Une rue fait deux voies, un boulevard quatre — comme avant."""
+    voies = {largeur - 2 * carte.TROTTOIR for largeur in carte.RUES_V + carte.RUES_H}
+    assert voies == {2, 4}, f"des rues à {sorted(voies)} voies"
+    coupe = carte._coupe(min(carte.RUES_V), True)
+    assert coupe[0] == (".", ".") and coupe[-1] == (".", "."), "la rue ne commence pas par son trottoir"
+    assert sum(1 for g, _ in coupe if g == ".") == 2 * carte.TROTTOIR, "plus d'une tuile de trottoir par bord"
+
+
+def test_aucune_tuile_reservee_ne_tombe_sur_la_chaussee():
+    """`poser_porte` réserve deux tuiles devant chaque porte (le pas, puis la
+    dalle). ⚠️ Avec un trottoir d'une tuile, la deuxième réservée pouvait tomber
+    sur la chaussée — la fiche le prévoyait. Ce n'est pas le cas parce que
+    l'abord s'est glissé entre le bâtiment et la dalle, et ce juge le tient."""
+    ville = carte.exporter()
+    sol = ville["sol"]
+    for porte in ville["portes"]:
+        for j in (1, 2):
+            y = porte["y"] + j
+            if y >= ville["hauteur"]:
+                continue
+            glyphe = sol[y][porte["x"]]
+            fiche = carte.LEGENDE[glyphe]
+            # ⚠️ La CHAUSSEE, pas un stationnement : la guerite de la fourriere
+            # ouvre sur la cour d'asphalte du lot, et c'est voulu — on y entre
+            # pour racheter son char. Ce qu'on interdit, c'est une porte qui
+            # ouvre sur les voies, la ou les chars roulent.
+            assert not (fiche.get("route") and not fiche.get("stationnement")), (
+                f"devant la porte {porte.get('lieu', porte.get('interieur'))} en "
+                f"({porte['x']},{porte['y']}), la tuile {j} est de la chaussée : « {glyphe} »"
+            )
+
+
+def test_rien_ne_bouche_la_seule_tuile_de_trottoir_devant_une_porte():
+    """⚠️ Le trottoir ne fait plus qu'une tuile : un kiosque, une borne ou un
+    lampadaire posé dessus devant une porte en ferait une impasse. Le mobilier
+    de rue vit sur l'ABORD (la couronne du bloc) ; la dalle devant une porte
+    reste libre."""
+    ville = carte.exporter()
+    sol = ville["sol"]
+    occupe = {(d["x"], d["y"]) for d in ville["decor"]}
+    occupe |= {(a["x"], a["y"]) for a in ville.get("ambulants", [])}
+    bouches = []
+    for porte in ville["portes"]:
+        x = porte["x"]
+        for j in range(1, 6):
+            y = porte["y"] + j
+            if y >= ville["hauteur"] or carte.routier(sol[y][x]):
+                break
+            if sol[y][x] == "." and (x, y) in occupe:
+                bouches.append((x, y))
+    assert not bouches, f"du mobilier sur la dalle devant une porte : {bouches[:5]}"
+
+
+def test_aucune_largeur_de_trottoir_n_est_ecrite_en_dur():
+    """⚠️ Ni en Python ni en JS : le paquet est la seule source. Côté Python, la
+    traverse et la coupe lisent `TROTTOIR` ; côté JS, `test_le_navigateur_lit_la
+    _largeur_au_lieu_de_l_ecrire` le prouve en jeu. Ici, on vérifie que le
+    nombre de tuiles de dalle de chaque côté d'une rue EST la constante — pour
+    toutes les largeurs de rue de la trame, pas seulement une."""
+    for largeur in sorted(set(carte.RUES_V + carte.RUES_H)):
+        for vertical in (True, False):
+            coupe = carte._coupe(largeur, vertical)
+            bord = 0
+            while bord < len(coupe) and coupe[bord][0] == ".":
+                bord += 1
+            assert bord == carte.TROTTOIR, f"rue de {largeur} : {bord} tuiles de trottoir au bord"
+
+
+def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
+    """⚠️ La troisième décision de Martin : « priorité de marcher sur le
+    trottoir ». L'abord se foule, mais c'est un débordement. On mesure la règle
+    comme une DÉCISION, pas comme une promenade : un flâneur posé sur la dalle,
+    face à l'abord, une image — a-t-il fait demi-tour ? Cent essais avec le
+    taux de la fiche (`pietons.REACTIONS.abord_renonce`), cent à zéro comme
+    témoin. (Une promenade de mille images ne prouvait rien : en le faisant
+    redécider à chaque image, il piétinait sur place et n'atteignait jamais
+    l'abord, renoncement ou pas.)"""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte;
+        // Une dalle qui longe un abord au NORD, avec de la dalle des deux cotes.
+        let place = null;
+        for (let y = 8; y < c.h - 8 && !place; y++) for (let x = 8; x < c.w - 8 && !place; x++) {
+            if (L.Monde.estTrottoir(x, y) && L.Monde.estAbord(x, y - 1)
+                && L.Monde.estTrottoir(x - 1, y) && L.Monde.estTrottoir(x + 1, y)) place = { x: x, y: y };
+        }
+        if (!place) return { place: null };
+        const j = L.B.joueur; j.x = place.x * L.TT + 8; j.y = place.y * L.TT + 8;
+        L.Monde.centrerCamera(j.x, j.y);
+        const essais = function (renonce, graine) {
+            L.graine(graine);
+            L.B.defs.pietons.reactions.abord_renonce = renonce;
+            let demiTours = 0, avances = 0;
+            for (let n = 0; n < 100; n++) {
+                const p = o.poser('passant', 0, 0);
+                p.etat = 'flane'; p.porteBut = null; p.intouchable = true;
+                p.dir = 3; p.butT = 5;                     // face au nord, l'abord devant, decide
+                p.y = place.y * L.TT + 8;
+                L.Entites.indexer();
+                o.frame(1);
+                if (p.dir === 1 && p.vx === 0 && p.vy === 0) demiTours++;
+                else if (p.vy < 0) avances++;
+                L.Entites.retirer(p);
+            }
+            return { demiTours: demiTours, avances: avances };
+        };
+        const vraiTaux = L.B.defs.pietons.reactions.abord_renonce;
+        const avec = essais(vraiTaux, 41), sans = essais(0, 41);
+        L.B.defs.pietons.reactions.abord_renonce = vraiTaux;
+        return { place: place, avec: avec, sans: sans, taux: vraiTaux };
+    }""")
+    assert r["place"], "le décor du juge est faux : aucune dalle ne longe un abord"
+    assert 0 < r["taux"] < 1, "le renoncement n'est pas une chance : %s" % r
+    # ⚠️ Le témoin est indispensable : sans renoncement, il AVANCE sur l'abord.
+    assert r["sans"]["demiTours"] == 0 and r["sans"]["avances"] >= 90, (
+        "le décor du juge est faux : sans renoncement, il n'avance pas vers l'abord (%s)" % r
+    )
+    part = r["avec"]["demiTours"] / 100
+    assert abs(part - r["taux"]) < 0.15, (
+        "il ne renonce pas au taux de la fiche : %s demi-tours sur cent pour %s (%s)"
+        % (r["avec"]["demiTours"], r["taux"], r)
+    )

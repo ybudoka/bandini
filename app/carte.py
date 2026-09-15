@@ -126,6 +126,15 @@ PART_RAMPE_VAGUE = 0.5
 #: 3 basse (bloque les vehicules, pas les pietons).
 LEGENDE: dict[str, dict] = {
     ".": {"nom": "trottoir", "trottoir": True},
+    # ⚠️ L'ABORD : la couronne d'un bloc bati, entre ses murs et le trottoir. Ni
+    # route ni obstacle, donc un pieton y marche — mais c'est un DEBORDEMENT,
+    # pas un deuxieme trottoir : le flaneur prefere la dalle, et c'est ici que
+    # le mobilier (lampadaires, bornes, kiosques) se range pour laisser la
+    # seule tuile de trottoir libre. Il est ne le jour ou le trottoir est passe
+    # a une tuile : deux passants de 12 px ne se croisent pas sur 16, et Martin a
+    # tranche qu'on se croise en debordant sur le terrain plutot qu'en
+    # elargissant la rue.
+    "_": {"nom": "abord", "abord": True},
     # ⚠️ `terre` : on peut y planter un arbre sans rien decouper. C'est ce qui
     # decide, dans le navigateur, si un arbre a besoin d'une FOSSE a son pied
     # (`Monde.carte.fosses`) — un arbre plante dans le beton en a une, un arbre
@@ -491,21 +500,41 @@ DISTRICTS: tuple[dict, ...] = (
 #: la sienne : c'est la premiere source d'irregularite, et la moins chere. Les
 #: largeurs sont groupees par district — la banlieue et le port ont des blocs
 #: larges, le Faubourg les siens (inchanges), l'industriel les plus gros.
-COLONNES = (16, 13, 18, 14, 17,              # Les Érables / Les Quais
-            13, 9, 12, 16, 10, 14, 9, 12,    # Le Faubourg (v1, intact)
-            17, 13, 19, 14, 12, 16, 13)      # La Shop / La Pointe
-RANGEES = (9, 12, 8, 11, 9, 13,              # la bande nord
-           11, 12, 9, 11, 8, 10)             # la bande sud
+#: ⚠️ Chaque bloc a GRANDI DE DEUX TUILES le 15 sept. 2026 : ce sont les deux
+#: tuiles de trottoir que chaque rue a perdues (une par cote). Martin a tranche
+#: « on agrandit les terrains et non les rues » — le nombre de voies ne bouge
+#: pas, la ville garde sa taille a deux tuiles pres, et la couronne de chaque
+#: bloc devient un abord ou l'on marche.
+COLONNES = (18, 15, 20, 16, 19,              # Les Érables / Les Quais
+            15, 11, 14, 18, 12, 16, 11, 14,  # Le Faubourg (v1, elargi de 2)
+            19, 15, 21, 16, 14, 18, 15)      # La Shop / La Pointe
+#: ⚠️ SAUF LA RANGEE DU PONT (la premiere de la bande sud) : elle est restee a
+#: 11, et ses deux tuiles sont allees a la suivante. Le chenal que le pont
+#: enjambe est de l'eau, pas un terrain — a treize tuiles, il coutait 104
+#: points de souffle sur 100 et l'eau redevenait un mur (`test_eau`). Le pari
+#: de la traversee ne bouge donc pas, et la trame garde sa somme.
+RANGEES = (11, 14, 10, 13, 11, 15,           # la bande nord
+           11, 16, 11, 13, 10, 12)           # la bande sud
 
-#: La largeur de chaque rue, trottoirs compris. 8 = boulevard (4 voies),
-#: 6 = rue (2 voies). Il y a une rue de plus que de blocs dans chaque sens.
-RUES_V = (8, 6, 6, 8, 6,
-          8, 6, 8, 6, 6, 8, 6, 6, 8,
-          6, 8, 6, 6, 8, 6, 8)
-RUES_H = (8, 6, 8, 6, 8, 6, 8,
-          6, 8, 6, 6, 6, 8)
+#: La largeur de chaque rue, trottoirs compris. 6 = boulevard (4 voies),
+#: 4 = rue (2 voies). Il y a une rue de plus que de blocs dans chaque sens.
+#: ⚠️ Deux de moins qu'avant, exactement ce que `TROTTOIR` a perdu de chaque
+#: cote : une rue de 6 fait toujours deux voies, un boulevard de 8 toujours
+#: quatre. Un juge le tient (`test_trottoir`).
+RUES_V = (6, 4, 4, 6, 4,
+          6, 4, 6, 4, 4, 6, 4, 4, 6,
+          4, 6, 4, 4, 6, 4, 6)
+RUES_H = (6, 4, 6, 4, 6, 4, 6,
+          4, 6, 4, 4, 4, 6)
 
-TROTTOIR = 2
+#: ⚠️ UNE TUILE, et ce n'est pas un reglage : `_coupe()` la lit pour decouper
+#: chaque rue, la traverse d'un croisement en fait la profondeur, et les
+#: croisements se calculent avec. Passee de 2 a 1 le 15 sept. 2026 (demande de
+#: Martin : « les trottoirs ne devraient etre que d'une tuile de large »). Les
+#: deux tuiles liberees par chaque rue ne reviennent PAS aux voies : elles vont
+#: aux blocs (`COLONNES` et `RANGEES` ont grandi d'autant), et la couronne de
+#: chaque bloc bati devient un ABORD marchable — voir `ilots()`.
+TROTTOIR = 1
 GRAINE = 20260912
 
 #: Les ponts : les seules rues qu'on construit PAR-DESSUS l'eau. Un pont est
@@ -1167,6 +1196,22 @@ class _Chantier:
             # ne voit qu'en restant coince contre sa propre porte.
             self.occupe.discard((px, py + j))
             self.decor = [d for d in self.decor if (d["x"], d["y"]) != (px, py + j)]
+        # ⚠️ ET LA MARCHE PAVE L'ABORD JUSQU'A LA DALLE. Depuis le trottoir a une
+        # tuile, la couronne du bloc se glisse entre le devant du batiment et le
+        # trottoir : sans ca, on sortait d'un commerce sur deux dalles, puis une
+        # tuile de paves, puis le trottoir — et le juge des sentiers de banlieue
+        # s'arretait sur les paves. On pave jusqu'a la chaussee, et rien d'autre
+        # que l'abord : l'herbe d'une cour reste de l'herbe.
+        for j in range(1, 12):
+            if py + j >= self.hauteur:
+                break
+            glyphe = self.sol[py + j][px]
+            if LEGENDE[glyphe].get("route"):
+                break
+            if glyphe == "_":
+                self.sol[py + j][px] = "."
+            elif glyphe not in (",", "."):
+                break
         return px, py
 
     # --- Les devantures ------------------------------------------------------
@@ -1671,7 +1716,7 @@ class _Chantier:
     #: Ce qu'on remet a la place d'une cloture qu'on enleve. ⚠️ Jamais de la
     #: route : une palissade effacee qui laisserait de l'asphalte ferait rouler
     #: des chars au milieu d'une cour.
-    SOLS_NUS = (",", ".", "x")
+    SOLS_NUS = (",", ".", "x", "_")
 
     def elaguer_les_clotures(self) -> int:
         """Enleve ce qui reste d'une cloture quand elle ne cloture plus rien.
@@ -1849,9 +1894,24 @@ class _Chantier:
 
     # --- Les ilots ----------------------------------------------------------
 
+    #: Les blocs qui recoivent une couronne d'abord : tout ce qui se BATIT. Un
+    #: parc, une place, un quai ou l'eau se foulent (ou se longent) deja.
+    #: ⚠️ La fourriere (`Y`) aussi : c'est une cour cloturee avec une guerite,
+    #: et sa porte ouvrait droit sur la chaussee sans sa couronne.
+    A_ABORD = frozenset("chmwig") | frozenset(SPECIAUX)
+
     def ilots(self) -> None:
         kiosque_pose = False
         for glyphe, x, y, largeur, hauteur in self.regions():
+            # ⚠️ LA COURONNE D'ABORD, avant de batir : une tuile tout autour du
+            # bloc, et le bloc se batit A L'INTERIEUR. C'est la ou sont allees
+            # les deux tuiles que chaque rue a perdues — pas aux voies, aux
+            # terrains, et on y marche. Sans elle, un batiment pose au bord du
+            # bloc ne laisserait qu'une tuile de trottoir entre son mur et la
+            # chaussee, et deux passants ne s'y croiseraient plus.
+            if glyphe in self.A_ABORD and largeur > 4 and hauteur > 4:
+                self.rect(x, y, largeur, hauteur, "_")
+                x, y, largeur, hauteur = x + 1, y + 1, largeur - 2, hauteur - 2
             if glyphe == "Y":
                 self._fourriere(x, y, largeur, hauteur, SPECIAUX["Y"])
             elif glyphe in SPECIAUX:
@@ -2501,7 +2561,11 @@ class _Chantier:
                 glyphe = self.sol[y][x]
                 if LEGENDE[glyphe].get("route"):
                     return rangees                # arrive : la rue est la
-                if glyphe not in (",", "."):
+                # ⚠️ L'ABORD AUSSI : depuis le trottoir a une tuile, la couronne
+                # du bloc se glisse entre la bande de devant et la dalle. Il se
+                # foule comme l'herbe ; l'exclure rendait la liste vide, et plus
+                # une seule cour de banlieue n'avait d'entree ni de sentier.
+                if glyphe not in (",", ".", "_"):
                     return []                     # du bati, une cloture : pas de passage
                 rangees.append(y)
             return []
@@ -2512,7 +2576,10 @@ class _Chantier:
         if porte:
             sx = porte[0]
             for sy in jusqu_a_la_rue(sx, porte[1] + 1):
-                if self.sol[sy][sx] == ",":
+                # ⚠️ L'abord se pave comme l'herbe : le sentier traverse la
+                # couronne du bloc jusqu'a la dalle, sinon il s'arrete une tuile
+                # avant le trottoir — et un juge le suivait a la trace.
+                if self.sol[sy][sx] in (",", "_"):
                     self.sol[sy][sx] = "."
                 occupe.add((sx, sy))
 
@@ -3139,7 +3206,10 @@ class _Chantier:
                     continue
                 if (cx, cy) in reserves:
                     continue
-                if self.sol[cy][cx] != "." or not self.poser_decor("lampadaire", cx, cy):
+                # ⚠️ SUR L'ABORD, jamais sur la seule tuile de trottoir : un poteau
+                # plante sur une dalle d'une tuile de large la bouche entierement,
+                # et le coin de rue devient un cul-de-sac pour la foule.
+                if self.sol[cy][cx] != "_" or not self.poser_decor("lampadaire", cx, cy):
                     continue
                 self.lampes.append({"x": cx, "y": cy})
                 return True
@@ -3185,11 +3255,12 @@ class _Chantier:
                     continue
                 glyphe = self.sol[y][x]
                 if sur == "trottoir":
-                    if glyphe != "." or not marchable(self.sol[y + 1][x]):
-                        continue
-                    voisins = (self.sol[y][x - 1], self.sol[y][x + 1],
-                               self.sol[y - 1][x], self.sol[y + 1][x])
-                    if not any(routier(v) for v in voisins):
+                    # ⚠️ SUR L'ABORD, contre le mur, et SERVI DEPUIS LA DALLE : la
+                    # tuile au sud est le trottoir, et c'est la que le client se
+                    # tient. Un kiosque pose sur la seule tuile de trottoir la
+                    # bouchait — la fiche du trottoir a une tuile le disait
+                    # (« les kiosques et roulottes cherchent du '.' »).
+                    if glyphe != "_" or self.sol[y + 1][x] != ".":
                         continue
                 elif sur == "stationnement":
                     if glyphe != "p" or self.sol[y][x + 1] != "p":

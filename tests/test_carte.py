@@ -444,13 +444,33 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     poteaux = [lampe for lampe in CARTE["lampes"]
                if lampe.get("c") not in ("vitrine", "fenetre")]
     assert len(poteaux) >= 40
-    trottoirs = 0
+    # ⚠️ **Reformule le 15 sept. 2026, le jour du trottoir a une tuile.** Il
+    # exigeait que 80 % des poteaux soient SUR le trottoir. Depuis que la dalle
+    # ne fait qu'une tuile, un poteau plante dessus la bouche entierement : les
+    # lampadaires sont sur l'ABORD, la couronne du bloc, une tuile derriere.
+    # Ce qui reste vrai, c'est ce que le juge voulait dire : un poteau ECLAIRE
+    # UNE RUE — a deux tuiles au plus d'une chaussee (abord, trottoir, route).
+    # Et ce qui devient vrai : aucun ne se plante sur la seule tuile de dalle.
+    sol = CARTE["sol"]
+    pres_d_une_rue, sur_la_dalle = 0, 0
     for lampe in poteaux:
         assert (lampe["x"], lampe["y"]) in positions, "une lampe sans poteau"
-        glyphe = CARTE["sol"][lampe["y"]][lampe["x"]]
+        x, y = lampe["x"], lampe["y"]
+        glyphe = sol[y][x]
         assert carte.marchable(glyphe) and not carte.routier(glyphe), glyphe
-        trottoirs += glyphe == "."
-    assert trottoirs > len(poteaux) * 0.8, "la plupart des poteaux bordent une rue"
+        colles = [sol[y + dy][x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                  if 0 <= x + dx < len(sol[0]) and 0 <= y + dy < len(sol)]
+        # ⚠️ Une dalle QUI BORDE UNE CHAUSSEE est un trottoir d'une tuile : un
+        # poteau dessus la bouche. Une dalle de place, elle, en a vingt autour.
+        sur_la_dalle += glyphe == "." and any(carte.routier(g) for g in colles)
+        autour = [sol[y + dy][x + dx]
+                  for dx in range(-2, 3) for dy in range(-2, 3)
+                  if 0 <= x + dx < len(sol[0]) and 0 <= y + dy < len(sol)]
+        pres_d_une_rue += any(carte.routier(g) for g in autour)
+    assert pres_d_une_rue > len(poteaux) * 0.8, "la plupart des poteaux eclairent une rue"
+    assert sur_la_dalle == 0, (
+        f"{sur_la_dalle} lampadaires plantes sur la seule tuile de trottoir : ils la bouchent"
+    )
 
 
 def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
@@ -626,10 +646,15 @@ def test_les_commerces_ambulants_ont_leur_place():
         commerce = magasins.ambulant(pose["slug"])
         assert commerce, pose["slug"]
         glyphe = CARTE["sol"][pose["y"]][pose["x"]]
-        attendu = "." if commerce["sur"] == "trottoir" else "p"
+        # ⚠️ **Reformule le 15 sept. 2026, le trottoir a une tuile.** Un kiosque
+        # POSE SUR la dalle la bouchait : il se range sur l'ABORD, contre le mur,
+        # et il est SERVI DEPUIS LA DALLE — la tuile au sud est le trottoir.
+        attendu = "_" if commerce["sur"] == "trottoir" else "p"
         assert glyphe == attendu, f"{pose['slug']} pose sur « {glyphe} »"
-        assert carte.marchable(CARTE["sol"][pose["y"] + 1][pose["x"]]), \
-            f"{pose['slug']} : on ne peut pas se placer devant"
+        devant = CARTE["sol"][pose["y"] + 1][pose["x"]]
+        assert carte.marchable(devant), f"{pose['slug']} : on ne peut pas se placer devant"
+        if commerce["sur"] == "trottoir":
+            assert devant == ".", f"{pose['slug']} n'est pas servi depuis le trottoir : « {devant} »"
         assert (pose["x"], pose["y"]) not in devants, "un kiosque bouche une porte"
         assert (pose["x"], pose["y"]) not in vus, "deux commerces sur la meme tuile"
         vus.add((pose["x"], pose["y"]))

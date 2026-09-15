@@ -335,6 +335,13 @@ REACTIONS = {
     # 1500 images, une sur cinq de n'en voir aucune). En fiche, il la met a 1
     # et mesure la REGLE au lieu d'esperer le hasard.
     "ivrogne_chute": 0.06,
+    # ⚠️ LA DALLE EST PRIORITAIRE (Martin, le trottoir a une tuile : « priorite
+    # de marcher sur le trottoir »). L'abord — la couronne d'un bloc — se foule,
+    # mais c'est un DEBORDEMENT : un flaneur sur la dalle qui s'apprete a en
+    # descendre vers l'abord y renonce le plus souvent et se retourne. Il y va
+    # quand meme une fois sur quatre — sinon la dalle d'une tuile serait une
+    # file indienne, et c'est justement pour se croiser que l'abord existe.
+    "abord_renonce": 0.75,
 }
 
 #: LE SPECTACLE DE RUE — ce que Martin a demandé : « qu'ils soient animés, et

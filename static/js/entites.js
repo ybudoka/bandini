@@ -2258,6 +2258,18 @@ const Entites = (function () {
           e.vx = 0; e.vy = 0;
           return;
         }
+        // ⚠️ LA DALLE EST PRIORITAIRE : sur le trottoir, on renonce le plus
+        // souvent a en descendre vers l'abord (la couronne du bloc) — c'est un
+        // debordement, pas un deuxieme trottoir. Le taux est dans la fiche
+        // (`pietons.REACTIONS.abord_renonce`) ; on y va quand meme parfois,
+        // sinon une dalle d'une tuile serait une file indienne.
+        if (Monde.estAbord(ax, ay) && Monde.estTrottoir(tx, ty) && !e.porteBut
+            && B.rng() < reactions.abord_renonce) {
+          e.dir = (e.dir + 2) % 4;                              // demi-tour, on reste sur la dalle
+          e.butT = 30 + Math.floor(B.rng() * 60);
+          e.vx = 0; e.vy = 0;
+          return;
+        }
         if (Monde.estPassage(ax, ay) && !Monde.estPassage(tx, ty) && !traverseeSure(ax, ay, dir)) {
           e.vx = 0; e.vy = 0;                                   // on attend au bord
           e.anim.dist = 0;

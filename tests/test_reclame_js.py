@@ -20,6 +20,11 @@ def test_l_homme_sandwich_nait_a_son_poste_le_jour_et_pas_la_nuit(banc, paquet):
         j.x = poste.x * 16 + 8 + 360; j.y = poste.y * 16 + 8; L.Monde.centrerCamera(j.x, j.y);
         L.B.partie.heure = %(jour)s;
         for (const e of L.B.entites.slice()) if (e.metier === 'reclame') L.Entites.retirer(e);
+        // ⚠️ `retirer` ote de la liste, pas de la GRILLE : en partie, `indexer`
+        // la refait a chaque image. Sans lui ici, le crieur qu'on vient d'oter
+        // tient encore sa place aux yeux de `placeLibre`, et personne ne nait.
+        // Le juge a tenu tant que le poste 0 etait hors de la bulle du depart.
+        L.Entites.indexer();
         const nes = L.Entites.naitreLesHommesSandwichs(false);
         const crieurs = L.B.entites.filter(function (e) { return e.metier === 'reclame'; });
         const c = crieurs[0];

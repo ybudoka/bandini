@@ -144,7 +144,9 @@ def test_chaque_homme_sandwich_a_un_poste_pres_de_son_kiosque(ville):
         k = (poste["kiosque"]["x"], poste["kiosque"]["y"])
         assert kiosques.get(k) == poste["commerce"], f"{poste} : ce kiosque n'existe pas"
         glyphe = ville["sol"][poste["y"]][poste["x"]]
-        assert glyphe == ".", f"un homme-sandwich sur « {glyphe} »"
+        # ⚠️ Sur l'ABORD (`_`), comme son kiosque : le trottoir d'une tuile
+        # est la dalle prioritaire, on n'y plante personne en travers.
+        assert glyphe == "_", f"un homme-sandwich sur « {glyphe} »"
         ecart = abs(poste["x"] - k[0]) + abs(poste["y"] - k[1])
         assert mini <= ecart <= maxi, f"{poste['commerce']} : a {ecart} tuiles de son kiosque"
         assert chantier.district_en(poste["x"], poste["y"]) == chantier.district_en(*k)

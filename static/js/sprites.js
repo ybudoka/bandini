@@ -1885,9 +1885,30 @@ const TUILES = (function () {
     bordDeToit(ctx, v & 15, T, style);
   }
 
+  /* --- L'abord ----------------------------------------------------------------
+
+     ⚠️ La couronne d'un bloc bati, entre ses murs et le trottoir : ni beton
+     coule (le trottoir) ni gazon (la cour). Des PAVES, plus sombres et plus
+     chauds que la dalle, avec leurs joints — de quoi lire d'un coup d'oeil que
+     ce n'est pas le trottoir, sans que ca ait l'air d'un obstacle. C'est un
+     debordement : on y marche quand la dalle est pleine, on y range les
+     lampadaires et les kiosques, et le flaneur prefere la dalle. */
+  function abord(ctx, v, T) {
+    plein(ctx, '#6d665a', T);
+    // Les paves : quatre rangees de deux, decalees une rangee sur deux.
+    ctx.fillStyle = '#7a7266';
+    for (let r = 0; r < 4; r++) {
+      const dec = (r % 2) * 4;
+      for (let x = -4 + dec; x < T; x += 8) ctx.fillRect(Math.max(0, x + 1), r * 4 + 1, Math.min(T, x + 7) - Math.max(0, x + 1), 2);
+    }
+    points(ctx, (v >> 2) + 1, T, '#5c5549', 5, 23);
+    points(ctx, (v >> 2) + 1, T, '#847c6f', 3, 61);
+  }
+
   return {
     ',': herbe,
     '.': trottoir,
+    '_': abord,
     'x': ruelle,
     '#': asphalte,
     // ⚠️ Le marquage se peint sur le BORD NORD (ou OUEST) de la tuile, jamais au
