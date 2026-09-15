@@ -99,7 +99,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des sons pour les armes | **livré** | 13 sept. 2026 | — | ajout | demande de Martin (« fait moi des sons pour les armes ») : toutes les armes jouaient le **coup de poing** — la batte, le couteau, le pistolet et le fusil aussi (`majAttaque` et `tirer` appelaient `SFX.coup`), le jet d'extincteur ne faisait aucun bruit, et un chargeur vide comme une arme qui casse faisaient le **buzzer de refus** des menus. Chaque arme porte maintenant son `son` (`armes.py`) et le combat passe par `SFX.arme(def)` ; **16 échantillons ElevenLabs** (batte ×2, couteau ×2, pelle, cône, bouteille, fronde, pistolet ×2, fusil ×2, le **jet en boucle** tenu par `SFX.jet(actif)` à chaque image, la gâchette **à vide**, la **casse**, le **dégainage**), ≈ 141 Ko, chacun avec son repli synthétisé ; budget des bruitages relevé à 800 Ko. ⚠️ Au passage, un **hoquet** au départ du jet : la première pression partait par le chemin de la mêlée (anticipation, quatre images de jet, deux de repos) avant que le maintien ne prenne le relais — invisible, mais audible avec une boucle. ⚠️ **Martin n'a pas encore écouté** : `batte-1` et `batte-2` sont sortis très courts (0,18 et 0,26 s), à refaire s'ils ne sonnent pas (`--refaire batte`) |
 | La fille de la Brume parle | **livré** | 13 sept. 2026 | — | ajout | demande de Martin (« la prostituée aussi doit parler, avec plusieurs dialogues différents ») : `rumeurEtRepliques` saute tout piéton qui a un `metier`, et elle en a un (`compagnie`) — elle ne disait jamais rien, alors que la regex des voix de femmes la nommait déjà. **Six répliques à elle** (genre `brume`, voix **Julia**, québécoise et rauque, poussée au style), dites par `Entites.accosterDepuisLaBrume` quand on passe à trois tuiles de son coin : une **bulle** avec le texte, la voix par-dessus, **jamais deux fois de suite la même** (`Son.Voix.choisir(genre, sauf)`, tiré dans le dé du jeu), pas deux fois en moins d'une demi-minute, jamais en char, jamais quand elle fuit. Le chemin des passants ne bouge pas. Budget des bruitages à 850 Ko (+52 Ko). ⚠️ Martin n'a pas encore écouté |
 | Une seule musique pour toute la ville | **livré** | 14 sept. 2026 | **P2** | ajout | demande de Martin (« des musiques différentes par district, et des musiques pour quand on se bat avec des gangs, et quand on a plusieurs étoiles ») : il y en avait **une**, la même de La Pointe aux Quais. ⚠️ Le vrai travail n'était pas les pistes, c'était **qui gagne** — l'échelle est maintenant **écrite une fois en Python** et le navigateur la lit. Cinq ambiances de district + poursuite + bagarre, **écrites en notes** (aucun mp3, aucun crédit : `musique.py` promettait cette porte depuis le premier jour), avec **hystérésis** aux frontières et **queue** sur les musiques d'état — c'est elle qui fait qu'on souffle |
-| Les véhicules vus de profil | **en cours** (les dessins) | 15 sept. 2026 | **P2** | **correctif** | demande de Martin : « une refonte complète des véhicules. Je les veux comme les piétons, de profil ». Tout ce qui est **debout** dans le jeu est dessiné debout — le passant ancré à ses pieds, l'arbre, le lampadaire, le banc, le feu et son poteau, les clôtures nord-sud vues par la tranche — et le char est la **dernière chose regardée d'aplomb**. Trois poses (profil miroité, dos, face) choisies comme la face d'un passant, au lieu de 32 caps cuites : l'atlas du parc passe de **1 024 canevas et 6 Mo à 96 et 0,3 Mo**. ⚠️ Mesuré : **94,5 %** des chars en marche sont à moins de 2° d'un cap cardinal — la rotation libre coûte 6 Mo pour 3 % du temps. ⚠️ De dos, les 28 px de longueur ne se voient plus : l'ombre au sol permanente est le filet. **1re vague livrée : cette ombre** — permanente, à l'empreinte du catalogue, orientée comme le char, ses nombres descendus en fiche. C'est la fiche qui la mettait en premier (« l'ombre d'abord — c'est elle le filet, et elle se mesure »), et elle vaut déjà aujourd'hui. **Reste le dessin**, et c'est la seule partie où l'œil de Martin est le vrai juge : la direction est tracée dans la fiche (nez à droite, ancre à la ligne de sol, caisse à la largeur du catalogue) avec la pose de profil de l'auto en référence d'échelle |
+| Les véhicules vus de profil | **à faire** | — | **P2** | **correctif** | demande de Martin : « une refonte complète des véhicules. Je les veux comme les piétons, de profil ». Tout ce qui est **debout** dans le jeu est dessiné debout — le passant ancré à ses pieds, l'arbre, le lampadaire, le banc, le feu et son poteau, les clôtures nord-sud vues par la tranche — et le char est la **dernière chose regardée d'aplomb**. Trois poses (profil miroité, dos, face) choisies comme la face d'un passant, au lieu de 32 caps cuites : l'atlas du parc passe de **1 024 canevas et 6 Mo à 96 et 0,3 Mo**. ⚠️ Mesuré : **94,5 %** des chars en marche sont à moins de 2° d'un cap cardinal — la rotation libre coûte 6 Mo pour 3 % du temps. ⚠️ De dos, les 28 px de longueur ne se voient plus : l'ombre au sol permanente est le filet |
 | Trottoir et traverses de deux tuiles | **à faire** — ⚠️ **essayé et annulé** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin : `TROTTOIR = 2` construit chaque rue **et la profondeur des passages piétons** — une seule constante pour les deux. Le passer à 1 demande de rétrécir les rues de deux tuiles (sinon elles gagnent deux voies), de reloger lampadaires, bornes, kiosques et la réserve devant les portes, de trancher sur la foule, et ⚠️ de sortir le **2 écrit en dur** dans `monde.js`. ✅ **Le prérequis est payé** (15 sept. 2026) : `monde.js` lit `grille.trottoir`, et trois juges le tiennent — dont un qui donne au navigateur un paquet à une tuile et compte ce qu'il range comme croisement, et un qui mesure que **toutes les traverses font exactement la largeur du trottoir**. Il rougira le jour où la constante bougera sans elles. Les trois questions ouvertes sont tranchées par Martin : on se croise, les tuiles libérées vont **aux terrains** (dont la bordure devient marchable), et la dalle reste prioritaire. Reste le gros œuvre : `TROTTOIR = 1`, les abords, le relogement du mobilier, et les neuf juges à rejouer **un par un** |
 | Pièces plus grandes que leur maison | **livré** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin, mesurée : **35 des 45 portes** de la graine livrée ouvraient sur plus grand que leur bâtiment, jusqu'à **onze fois** (9 tuiles dehors, 98 dedans). Maintenant la pièce **se choisit à la taille du bâtiment** — la plus grande qui tienne, et rien du tout si même la plus petite déborde : la porte reste alors condamnée. **Quatre petites pièces neuves** (deux de 9 tuiles de plancher, une de 18, une de 21) et **26 pièces redessinées** plus petites ; la **parcelle d'un lieu garanti se taille à la mesure de sa pièce** au lieu d'espérer que le découpage au sort en fasse une de la bonne taille ; et **chaque famille de commerce ouvre au moins une porte**, parce que « tirer l'enseigne × être assez grand × gagner le dé » laissait quatre familles sur dix sans un seul intérieur. **0 débordement sur 5 graines**, contre 34 à 46 avant. 12 juges neufs |
 | L'eau n'est plus un mur | **livré** | 14 sept. 2026 | **P3** | **correctif** | demande de Martin : l'eau était **littéralement un mur** (`MASQUE_PIETON` la comptait comme une façade). Maintenant : un **masque de nageur** pour le joueur et les agents (les passants, eux, n'y entrent jamais), le **souffle qui décide** — 8 points par tuile, le chenal du pont en coûte 88 sur 100 : un **pari** —, la **noyade par `Missions.hopital`** (une seule façon de perdre connaissance), le **char qui coule et qui est perdu** (jamais à la fourrière : couler ne doit pas devenir un remboursement d'épave ; le **bateau** flotte, et c'est sa fiche qui le dit), et la **police qui nage** au prix fort dans l'A\*. ⚠️ Le juge du pont est **reformulé, pas affaibli** : le pont est le seul lien **carrossable**. Le large de la baie est à **73 tuiles** de toute terre pour **40** au plafond absolu (café + estomac plein) : on n'y va pas. 6 juges neufs |
@@ -119,13 +119,12 @@ ne bougent pas quand l'ordre de travail change.
 | Toute la musique générée par IA | **livré** | 14 sept. 2026 | **P2** | **correctif** | demande de Martin : « je veux que toutes les musiques soient des musiques générées par IA ». Les **15 pièces écrites en notes** (thème du menu, 2 stations de char, 5 ambiances de district, poursuite, bagarre, 5 pièces du musicien de rue) deviennent des mp3 ElevenLabs Music — c'est la porte que `musique.py` annonce depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». La synthèse reste le **filet** : un fichier absent, et le séquenceur reprend |
 | M11 La police apprend | **livré** (3 vagues) | 15 sept. 2026 | **P4** | ajout | ⚠️ **LE CASIER PÈSE**, et c'est tout le jalon : chacune des trois vagues en tire une conséquence. **1.** Il allonge la portée du cône des agents (+4 % la page, **plafonné à +50 %** — sans ce plafond, vingt pages feraient voir la police à seize tuiles en pleine nuit et il n'y aurait plus une ruelle où souffler). Pour le joueur seulement : c'est un signalement, pas une paire de jumelles. Et le carnet du poste le **dit** — une règle qu'on subit sans jamais la lire n'est pas une règle, c'est une malchance. **2.** On peut effacer une page, et c'est un **choix** : **Me Desjardins** (table du fond du Brouillard) vend la certitude — une page tout de suite, cher, jamais deux fois le même jour — ou une **provision** qui efface l'amende de la prochaine arrestation ; ⚠️ *sans amende, pas innocent* : la page s'ajoute, les armes partent, le char va au lot. **Électronique Turcotte** (La Shop, le seul lieu neuf) vend le **pari** : on paie d'avance, on revient le lendemain, et on ne sait pas ce qu'on a acheté — rien une fois sur trois, jusqu'à trois pages d'un coup, et **une page DE PLUS** une fois sur cinq. ⚠️ *L'espérance du pari reste sous la certitude à prix égal, à dossier mince comme à dossier épais* — sinon l'avocat ne sert plus à rien et le choix disparaît. **3.** Il transforme les passants en délateurs : **le stool** n'a rien vu, il a reconnu ta FACE, il va téléphoner, et ce qu'il donne au poste est un **plancher** d'étoiles, pas de la chaleur. On le paie, on l'assomme, ou **on change de tête** — le seul levier gratuit, puisque le casier ne redescend qu'en payant. ⚠️ *Il ne naît jamais dans ton dos.* Et **le bouclier humain** : la police ne tire plus **et recule**, mais il se débat, il se dégage à douze secondes, et le compteur monte tant qu'on le tient. ⚠️ *Une sortie de secours, jamais un abri.* 26 juges neufs |
 | Une passe visuelle sur les pâtés de maison | **livré** | 15 sept. 2026 | **P2** | **correctif** | demande de Martin : « fais une passe visuelle d'amélioration de tous les pâtés de maison », puis « les affiches des commerçants doivent être au-dessus du mur » et « les clôtures doivent clôturer les terrains, pas juste être là seules ». Quatre morceaux, un seul sujet : ce qu'on voit d'un îlot. **Le sol** — trottoir, herbe, ruelle font **43 % de la ville** (28 %, 10,5 %, 4,7 %) et se peignaient avec **quatre** tuiles de 16 px tirées sur `hash2 % 4` ; seize usures maintenant (`Monde.USURES_DE_SOL`, la leçon de l'asphalte du stationnement appliquée à trente fois la surface) et, sur le trottoir, une **dalle de deux tuiles de côté** : il peignait son joint sur *chaque* tuile, en haut et à gauche — un trait tous les seize pixels sur le quart de la ville, et ce qu'on lisait c'était la grille de la carte. Fissures, rapiéçages, taches, mousse au joint ; touffes, plaques de terre et pissenlits dans le gazon ; goudron, huile, gravier dans la ruelle ; et **huit grains de toit** au lieu de quatre, avec membrane rapiécée, flaque et coulée de rouille — un entrepôt de La Shop couvre trois cents tuiles d'un seul tenant, quatre grains dessus font un papier peint. ⚠️ Deux règles tiennent tout le bloc, et elles viennent du stationnement : **aucune usure ne touche le bord de la tuile** (sinon on redessine la grille), et **une usure est un dessin, pas du bruit** (trois ou quatre variantes sur seize). **Les allées de parc** : glyphe `g`, de la **poussière de pierre**. Quatre allées de deux tuiles et une place de 5 × 5 au cœur, ça fait près de la moitié d'un îlot — peintes avec le béton de la rue, nos parcs étaient des dalles avec du gazon dessus. Ce n'est pas du sable non plus : la plage borde l'eau, l'allée traverse la pelouse. **L'enseigne** monte **au-dessus du mur** (`ENSEIGNE_Y` négatif : elle déborde de 12 px sur la tuile de toit) ; le bandeau, l'auvent et la vitre se partageaient les 16 px d'*une* tuile — cinq pixels pour le nom, quatre pour l'auvent, trois pour la vitrine. Le mur dégagé donne un auvent de 5 px et une **vitrine de 9** (elle triple, et c'est elle qui s'allume la nuit). Ça tient à un invariant que personne n'avait écrit — **au-dessus d'une devanture il y a du toit, sur toute sa largeur**, vrai 105 fois sur 105 — et un juge le dit maintenant tout haut, sur cinq graines. **Les clôtures** : mesuré sur la ville livrée, **361 tuiles en 80 morceaux, dont 69 sans un seul coin** (216 tuiles de barre droite) et **24 toutes seules**. Trois sources, trois torts : le terrain vague ne peignait qu'**un** côté et **une tuile sur deux** (le code le disait : « à demi n'est pas un juge »), la cour de gang que la rangée du sud, et le U de `_jardin` se posait tuile par tuile pendant que `poser_cloture` en refusait **en silence**. `clore()` pose des **enceintes** — tout ou rien à 75 %, une trouée garantie qui donne sur du marchable, aucune tuile laissée seule — et `elaguer_les_clotures()` enlève après coup ce que la ville leur mange (le glyphe de remplacement se lit dans les voisines, comme `defoncer`). ⚠️ **Une clôture ne remplace ni un mur ni une chaussée** : sans ce garde-fou, le barbelé de la cour des Skateux mangeait deux colonnes de leur stationnement et « il y a un tremplin à La Pointe à tout coup » redevenait une légende. Et la **cour arrière d'un bungalow se clôture** enfin — la banlieue clôturait ses terrains *vides* et pas ses maisons, l'inverse de ce qu'on voit par la fenêtre. Résultat : **483 tuiles en 41 enceintes, zéro barre droite, zéro tuile seule**. ⚠️ **`Des.brule()`** : le barbelé et le terrain vague tiraient dans le dé PRINCIPAL, un coup par tuile. Cesser de tirer décale toute la suite du hasard (`batiment_forme` l'écrivait déjà) — mesuré, douze scènes d'amuseur disparaissaient du Faubourg et « un amuseur naît au centre-ville » tombait, pour une histoire de clôture. On brûle ce qu'on ne tire plus, et on le dit. **Et un rond de terre au pied des arbres de trottoir** (retour de Martin, une fois la passe vue) : un arbre planté dans le béton sans rien à son pied n'est pas planté, il est *posé* — la place publique du Faubourg en portait quatre debout sur des dalles. C'est la **légende** qui décide (`terre` sur l'herbe, le sable et l'allée de parc), pas le dessin, et c'est une **couche peinte** cuite avec le morceau : rien ne s'y cogne, et elle passe sous les entités — repeinte à chaque image, elle recouvrirait les pieds de qui marche juste au nord de l'arbre. ⚠️ C'est la **bordure** d'un pixel qui fait la fosse, pas la terre : sans la coupe dans le béton, le rond brun se lit comme une tache. 583 arbres sur 596 sont sur du gazon — le jour où l'on plantera des arbres de rue pour de bon, chacun aura sa fosse sans qu'on touche à une ligne. ⚠️ Trois juges de banc tenaient à **un pixel**, au **premier décor de la liste** et à **deux pas près** : re-semés et resserrés sur ce qu'ils mesurent vraiment. 11 juges neufs |
-| La ville n'était pas reproductible | **livré** | 15 sept. 2026 | **P1** | **correctif** | ⚠️ **Une seule ligne, et elle rendait la CI PILE OU FACE.** `max(set(nus), key=nus.count)` dans `carte.py` : sur une égalité entre deux glyphes voisins, `max` rend le premier que l'ensemble lui donne — et un ensemble de **chaînes** s'itère dans l'ordre de leurs empreintes, **que Python randomise à chaque processus**. Une poignée de tuiles changeaient d'un lancement à l'autre, et avec elles le décor, les kiosques, les feux piétons et les paquets cachés. ⚠️ Ce n'était pas qu'une affaire de juges : **une sauvegarde ne retrouvait pas son monde** — position, char garé, paquets ramassés, tout est rangé en coordonnées. Trois juges du banc tombaient une fois sur deux sans qu'aucune ligne n'ait bougé, et chaque session les mettait sur le dos des autres. Trouvé en traçant les 14 291 coups de dés (tous identiques), puis les 115 885 écritures de tuile — la divergence était à la 115 835ᵉ. `sorted` tranche l'égalité toujours pareil. Un juge lance **deux processus** avec deux `PYTHONHASHSEED` différents : dans un seul, le défaut est invisible, et c'est pour ça qu'il a vécu si longtemps |
 | M10 L'argent sale | **en cours** (1re vague) | 15 sept. 2026 | **P4** | ajout | **1re vague : la dette de Rocco**, celle qui donne une raison de se lever le matin. ⚠️ **Aucun lieu neuf, et c'est un choix de design, pas une économie** : un shylock ne tient pas un comptoir où l'on vient payer, il **envoie du monde**. Les rappels arrivent, puis les hommes de main te trouvent où que tu sois — et c'est À EUX qu'on paie. La collecte devient une scène au lieu d'un menu. Restent en 2e vague : guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **à faire** (v2) | — | **P4** | ajout | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
-| M14 Meta v2 | **à faire** (v2) | — | **P4** | ajout | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
+| M14 Meta v2 | **à faire** (v2) | — | **P4** | ajout | **un compte et une base de données** (demande de Martin, précisée le 15 sept. 2026) : **les parties vivent sur le serveur** (SQLite, trois emplacements, un **compteur** par partie — jamais une horloge — et le joueur tranche quand deux appareils divergent), **session longue durée** par jeton d'appareil **tournant** (cookie d'un an, haché en base, un jeton périmé qui revient coupe tous les appareils), et **ouverture par NIP** — ⚠️ le NIP rouvre une session sur un appareil déjà lié, il n'ouvre **pas** un compte : il déchiffre le jeton localement, cinq essais et le jeton s'efface, le compte ne se bloque pas. Mesuré : une partie pèse 790 o à 4,5 Ko. Plus le défi du jour à graine serveur (reporté de M7), le mode photo, la coop locale |
 | Les zones conditionnelles | **à faire** | — | **P4** | ajout | demande de Martin : « certaines zones pourraient être bloquées conditionnellement à des missions ou prérequis ». Le jeu a déjà **trois** barrières écrites chacune à sa façon (la guérite de la fourrière, les zones de gang, les barrages à 5★) et M12 en promet une quatrième : une seule fiche `carte.BARRIERES` — où, ce qu'elle arrête (piéton / véhicule / les deux), à quelle condition, ce que coûte de forcer, et la **raison** qui s'affiche. ⚠️ Le juge qui compte : aucune combinaison de barrières fermées n'enferme la planque ni ne rend un lieu de mission inatteignable |
 | L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
-| Quatre activités que le jeu n'a pas | **en cours** (paliers livrés) | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (12 ambulances → +25 % de vie, 50 courses → le taxi rapide), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables. **Les paliers sont livrés** (15 sept.) : trois par boulot (10, 25, 50), et ce qu'on y gagne n'est presque jamais de l'argent — +25 % de vie à force de transporter des blessés, le lot qui ne prend plus rien au remorqueur, l'hôpital à moitié prix pour le livreur, un char garé à la planque au bout de chaque cinquantaine. ⚠️ **Un seul type touche à l'argent** (la prime), borné par les mêmes juges que les boulots — et le juge d'équilibrage regarde le joueur QUI A TOUT DÉBLOQUÉ, pas le débutant : un déséquilibre qu'on met cinquante courses à fabriquer ne se verrait nulle part autrement. ⚠️ **Le plus fort gagne, ils ne s'additionnent pas.** Défaut trouvé en chemin : **le compte des boulots ne survivait pas à un rechargement** — il vivait sur le module, et `histoire.js` comptait les courses de la session au lieu de celles du joueur. **Restent** : deux boulots de plus (patrouille, pompier volontaire), la liste du quai, et les frénésies — à trancher par Martin |
+| Quatre activités que le jeu n'a pas | **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (**livrés le 15 sept.**, `aee8543` : +25 % de vie à 25 ambulances, le char à la planque à 50), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | M16 Cent missions | **à faire** (v2) | — | **P4** | ajout | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
 | M13 Les deux fins | **à faire** (v2) | — | **P4** | ajout | une mission par district, Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ |
 
@@ -142,7 +141,7 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Le **découpage du paquet** (`/api/carte`, ETag, districts chargés autour du joueur) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
-| `SECRET_KEY` vaut encore `cle-de-developpement-a-changer` par défaut | Sans compte ni session, une clé faible ne protège rien | **M14** : le jour où une session vaut une partie. `installer.sh` devra la générer et refuser de démarrer sans elle |
+| `SECRET_KEY` vaut `cle-de-developpement-a-changer` **par défaut** — ⚠️ mais `installer.sh` en génère déjà une vraie (`token_hex(32)`) dans le `.env` partagé, depuis M0 : ce qui reste, c'est que l'application **refuse de démarrer** avec la clé de développement quand `FLASK_DEBUG` est faux | Sans compte ni session, une clé faible ne protège rien | **M14** : le jour où une session vaut une partie |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
 exclu de la commande locale ci-dessous parce qu'il monte un Chromium et prend des minutes —
@@ -518,7 +517,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P3** L'eau n'est plus un mur | **livré** : masque de nageur (joueur et agents), souffle qui décide (8 points la tuile), noyade par `Missions.hopital`, char qui coule et qui est perdu, bateau qui flotte par sa fiche, police qui nage, juge du pont reformulé en **carrossable** | traverser le chenal de justesse ; ne jamais atteindre le large ; un char noyé ne revient pas |
 | — | **P4** Les zones conditionnelles | une fiche `carte.BARRIERES` (où, ce qu'elle arrête, la condition, le prix de forcer, la raison affichée) qui avale les trois barrières déjà écrites et les entraves de M12 ; huit barrières de départ, dont le pont fermé aux chars mais jamais aux jambes | aucune combinaison fermée n'enferme la planque ni un lieu de mission, le trafic ne s'empile pas devant une grille, et une zone fermée ne fabrique pas de piétons dedans |
 | — | **P4** L'Île-aux-Corneilles | une île de 40 × 24 dans l'eau qui existe déjà, sans un pont : quai, chapelle (deuxième sauvegarde), usine à poisson, hangar de Sven, **pas de police** ; huit missions (arc I) et la dernière image de _Le dernier traversier_ | l'île ne touche aucune rive, aucune route ne la relie, les étoiles y descendent, chaque terre ferme reste un seul îlot marchable, et le paquet tient sous son plafond |
-| — | **P4** Quatre activités de plus | paliers de boulot à récompense permanente, boulots patrouille et pompier volontaire, la liste du quai, les frénésies | un palier ne se donne qu'une fois et sa récompense existe vraiment ; aucun ne paie mieux à l'heure qu'une mission ; une frénésie ne touche jamais un intouchable |
+| — | **P4** Quatre activités de plus | paliers de boulot à récompense permanente (**livrés**), boulots patrouille et pompier volontaire, la liste du quai, les frénésies | un palier ne se donne qu'une fois et sa récompense existe vraiment ; aucun ne paie mieux à l'heure qu'une mission ; une frénésie ne touche jamais un intouchable |
 | — | **P4** La dépanneuse lève les roues | lien **rigide** au lieu d'un câble, avant levé (collé, deux pixels plus haut, l'ombre restée au sol) et **dans l'axe** ; `plateau` en fiche : moto et vélo montent en entier, dessinés par-dessus, hors des tuiles et hors des chocs ; la remorqueuse refuse d'avancer là où sa charge ne passe pas | reconnaître une dépanneuse d'une auto qui tire une corde ; ramasser une moto sans qu'elle se traîne le nez par terre |
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
@@ -583,7 +582,7 @@ ordre-là.
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
 | **P4** | ajout | M12 La ville vit | 4 | tramway, traversier et neige touchent à la physique |
-| **P4** | ajout | M14 Meta v2 | 4 | de l'**infrastructure** (serveur, BD, comptes) : un autre métier que le reste |
+| **P4** | ajout | M14 Meta v2 | 4 | de l'**infrastructure** (serveur, BD, comptes, sessions, NIP) : un autre métier que le reste. ⚠️ Rien n'en dépend, et rien n'en doit dépendre : un compte est un **confort**, le jeu se joue serveur éteint |
 | **P4** | ajout | Les zones conditionnelles | 3 | avant l'île et avant les entraves de M12 : c'est le mécanisme qu'elles partagent toutes les deux |
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
@@ -2656,47 +2655,6 @@ l'autre sens), **de dos** (il s'éloigne), **de face** (il vient). L'atlas tombe
    le bateau attend son sprite en dette. Chaque véhicule dessiné avant la refonte se dessine
    deux fois.
 
-**⚠️ Ce qui est déjà fait, et ce qui reste** (15 sept. 2026) :
-
-- ✅ **L'ombre au sol est posée** — le filet, et la fiche le mettait en premier. Permanente,
-  à l'empreinte du catalogue, **orientée comme le char**, et ses nombres descendus en fiche
-  (`vehicules.OMBRE`) au lieu d'être écrits dans `dessinerUn`. Six juges. Elle vaut le jour
-  où le dessin cessera de dire la longueur, et elle vaut déjà aujourd'hui.
-- ⬜ **Les dessins.** C'est le gros, et c'est **la seule partie où l'œil de Martin est le
-  vrai juge** — d'où l'arrêt ici plutôt qu'une flotte entière redessinée sans qu'il l'ait vue.
-  La direction est tracée et mesurée, à reprendre telle quelle :
-  - **le nez pointe à droite**, comme dans la grille vue d'en haut (les phares `l` y sont au
-    bord droit, les feux `t` au bord gauche). « Gauche » est le miroir, exactement comme un
-    passant ;
-  - **l'ancre est la ligne de sol** — le bas des pneus —, la même pour les trois poses d'un
-    même véhicule, sinon le char saute d'un pixel en tournant ;
-  - **de dos et de face, la caisse fait la largeur du catalogue** (14 px pour l'auto)
-    centrée dans la grille de 32 : les pixels perdus ne coûtent rien, l'atlas est cuit une
-    fois ;
-  - ⚠️ **ces grilles se construisent par index, pas à la main.** Écrites au jugé, elles
-    sortent asymétriques d'un pixel et l'erreur ne se voit qu'en jeu. Un petit rendu ASCII
-    avant de coudre, comme pour la piscine ronde.
-
-  Voici la pose de profil de l'auto, mesurée et vérifiée — elle sert de référence d'échelle
-  aux onze autres (un passant plus grand que le toit d'une auto, ce qui est vrai dans la vie) :
-
-  ```
-  ..........kkkkkkkkkkkk..........
-  .........kkvvvvvkkvvvvkk........
-  ........kcvvvvvvkkvvvvvvck......
-  ...kkkkkkcvvvvvvkkvvvvvvcckkkk..
-  ..kttcccccccccccccccccccccccllk.
-  ..ktcccccccccccccccccccccccccck.
-  ..kcccccccccccccccccccccccccck..
-  ..kkccrrrrrcckcccckkcrrrrrcckk..
-  ....kkrrrrrkk.....kkrrrrrkk.....
-  .....krrrrrk.......krrrrrk......
-  .....kkkkkkk.......kkkkkkk......
-  ```
-
-- ⬜ Restent aussi : la pose **couchée** de l'épave et du vélo plié, le conducteur **dessiné
-  par-dessus** au lieu d'être cuit dedans, et le passage de `cuireRotations` à `cuire`.
-
 **Juges** : chaque véhicule a ses trois poses, aucune manquante et aucune empruntée à un
 autre ; la pose suit le cap avec **la même règle que la face d'un passant** (un seul code,
 pas deux jeux de seuils) ; l'ancre est la ligne de sol, mesurée — un char au sol ne flotte
@@ -4211,10 +4169,14 @@ _Ce que ça donne :_ une ville qui bouge toute seule, avec ou sans toi.
 
 ### M14 — Meta v2 (**ajout**, taille 4)
 
-- **Un compte et une base de données** (demande de Martin). Aujourd'hui la partie vit dans
-  le `localStorage` du navigateur : elle ne traverse pas. Vingt minutes au téléphone, puis
-  on s'assoit à l'ordi, et on recommence. Un compte règle ça, et il porte aussi le défi du
-  jour et le classement — qui ont besoin d'un serveur de toute façon.
+- **Un compte et une base de données** (demande de Martin, précisée le 15 sept. 2026 :
+  « des sauvegardes sur le serveur dans une base de données, connexion par compte avec
+  session ouverte longue durée avec option d'ouverture par NIP »). Aujourd'hui la partie vit
+  dans le `localStorage` du navigateur : elle ne traverse pas. Vingt minutes au téléphone,
+  puis on s'assoit à l'ordi, et on recommence. Un compte règle ça, et il porte aussi le défi
+  du jour et le classement — qui ont besoin d'un serveur de toute façon. ⚠️ **Le détail de la
+  sauvegarde, de la session longue et du NIP est plus bas**, dans sa propre partie : c'est
+  là que se trouvent les chiffres et les pièges.
   - **`app/bd.py` + SQLite**, sous `DONNEES_DIR`. Une seule machine, deux workers gunicorn,
     quelques dizaines de joueurs : un serveur de base de données serait une pièce de plus à
     installer, à surveiller et à redémarrer pour rien. ⚠️ **WAL et un `timeout`**, sinon les
@@ -4248,6 +4210,104 @@ _Ce que ça donne :_ une ville qui bouge toute seule, avec ou sans toi.
   - **Une BD, c'est quelque chose à sauvegarder.** `deploy/installer.sh` pose un vidage
     quotidien (`.backup`, pas une copie du fichier à chaud) et une rétention de sept jours.
     Une base de données sans copie de sûreté est une perte de données qui attend sa date.
+
+#### Les parties vivent sur le serveur — compte, session longue, NIP (15 sept. 2026)
+
+_Demande de Martin :_ « je veux des sauvegardes sur le serveur dans une base de données.
+Connexion par compte avec session ouverte longue durée avec option d'ouverture par NIP. »
+
+**Mesuré d'abord, parce que les chiffres tranchent la moitié des questions :**
+
+- une partie neuve pèse **790 octets** ; une partie bien avancée (toutes les armes, vingt
+  paquets, cinq missions, quarante lignes de journal, vingt personnages connus, les paliers de
+  boulot) pèse **4,5 Ko**, en 39 champs. Mille joueurs avec trois parties chacune : **13 Mo**.
+  SQLite n'a pas à réfléchir, et le débat « vraie base de données ou non » n'existe pas ;
+- le jeu se sauvegarde **tout seul toutes les dix secondes** (`B.t % 600`, dans `Missions.maj`).
+  ⚠️ **Ce chiffre-là décide du reste** : on ne poste pas six fois par minute par joueur ;
+- l'installeur **génère déjà** une vraie `SECRET_KEY` (`secrets.token_hex(32)` dans le `.env`
+  partagé, depuis M0). La dette qui reste n'est donc pas de la générer, c'est de **refuser de
+  démarrer** avec la clé de développement quand `FLASK_DEBUG` est faux.
+
+**La règle : le local joue, le serveur se souvient.** Le `localStorage` reste la vérité pendant
+qu'on joue — c'est déjà la promesse de M14, et c'est ce qui permet de jouer dans l'autobus. Le
+serveur reçoit des **instantanés**, jamais chaque image.
+
+- **Quand un instantané monte** : à la sauvegarde volontaire (le lit de la planque, le menu),
+  au changement de jour, à la fin d'une mission, quand l'onglet part en arrière-plan — et au
+  plus **une fois par minute** le reste du temps. ⚠️ `beforeunload` ne se déclenche pas de
+  façon fiable sur téléphone : c'est `visibilitychange` qui compte, avec `sendBeacon`, la
+  seule requête qui survit à la fermeture de l'onglet.
+- ⚠️ **Le conflit est la vraie question, et il se règle par un compteur, jamais par une
+  horloge.** Deux appareils n'ont pas la même heure ; un compteur qui monte à chaque écriture,
+  oui. Le serveur **refuse** un instantané dont le compteur est plus petit ou égal au sien et
+  renvoie ce qu'il a. Le jeu pose alors la question en clair — « LA PARTIE DU SERVEUR EST PLUS
+  AVANCÉE : JOUR 12, 4 300 $. GARDER CELLE-CI / PRENDRE CELLE-LÀ » — et **ne fusionne jamais
+  rien** : deux parties ne se fusionnent pas, et un jeu qui tranche tout seul efface la soirée
+  de quelqu'un.
+- **Trois emplacements** par compte. Ça ne coûte qu'une colonne, et ça évite la question
+  « j'ai fini le jeu, est-ce que je perds ma partie si j'en recommence une ? ».
+
+**La base** — quatre tables, et elles tiennent en une page :
+
+| Table | Ce qu'elle garde |
+|---|---|
+| `comptes` | pseudo (unique, les mêmes règles que le pseudo des scores), empreinte du mot de passe (`generate_password_hash`, scrypt), courriel **facultatif**, date de création |
+| `parties` | compte, emplacement (1–3), **compteur**, le JSON de la partie (4,5 Ko), version du schéma, empreinte des définitions, date |
+| `appareils` | compte, **empreinte** du jeton (jamais le jeton), nom donné par le joueur (« le téléphone »), dernière visite, date de péremption |
+| `scores` | le tableau des scores, déménagé du fichier JSON (M14 le dit déjà), avec un compte **facultatif** |
+
+**La session longue durée** — c'est un **jeton d'appareil**, pas un mot de passe qu'on retape :
+
+- 32 octets aléatoires, posés en cookie `httpOnly; Secure; SameSite=Lax; Max-Age=1 an`, et
+  ⚠️ **hachés en base comme un mot de passe** : une base volée ne doit pas ouvrir les comptes.
+- **Il tourne** : chaque usage en émet un nouveau et périme l'ancien. ⚠️ Et c'est ce qui donne
+  la détection de vol gratuitement — si un jeton **déjà périmé** revient, c'est que deux
+  appareils portent la même session : on coupe tous les appareils du compte et on redemande le
+  mot de passe. C'est la seule façon simple de réagir à un vol de cookie.
+- Le mot de passe ne sert donc qu'à **lier un appareil**, une fois. C'est tout ce qu'on tape.
+
+**Le NIP** — et ⚠️ **il faut dire tout de suite ce qu'il n'est pas** : le NIP **n'ouvre pas un
+compte**, il rouvre une session sur un appareil **déjà lié**. Quatre chiffres, c'est 10 000
+possibilités : inacceptable comme secret de compte, parfait comme verrou d'écran.
+
+- À l'ouverture, si l'appareil porte un jeton, le jeu ne demande **que le NIP**.
+- Le NIP **déchiffre le jeton localement** : ce qui dort dans le navigateur est le jeton
+  **chiffré** par une clé dérivée du NIP (WebCrypto, PBKDF2 — présent dans tous les
+  navigateurs visés). Sans le NIP, le contenu du stockage ne vaut rien à lui seul.
+- **Cinq essais**, puis le jeton chiffré est **effacé** et il faut le mot de passe. ⚠️ Le
+  **compte**, lui, ne se bloque pas : bloquer un compte parce qu'un inconnu a tapé cinq fois
+  sur un téléphone perdu punirait exactement la mauvaise personne.
+- ⚠️ **Ce qu'un NIP promet, et rien de plus** : il arrête quelqu'un qui emprunte le téléphone
+  deux minutes. Il n'arrête pas quelqu'un qui l'emporte chez lui et prend son temps — 10 000
+  candidats, ça s'essaie hors ligne. La vraie protection est ailleurs et elle existe déjà : le
+  jeton **tourne**, le serveur peut le révoquer, et ce qu'il y a à voler est une partie de jeu
+  vidéo. C'est écrit ici pour que personne ne prenne le NIP pour ce qu'il n'est pas.
+- **Facultatif**, et il ne remplace jamais le mot de passe : sans NIP, la session longue
+  s'ouvre toute seule, comme sur un site où l'on reste connecté. Avec NIP, elle demande quatre
+  chiffres. ⚠️ Et on refuse les vingt NIP les plus tapés de la Terre (0000, 1234, 1111,
+  l'année en cours) — c'est une liste, pas un algorithme.
+
+**Ce qui ne doit jamais arriver**, et chacun a son juge :
+
+- ⚠️ **Le serveur en panne ne doit pas empêcher de jouer.** Toute la synchronisation est
+  « au mieux » : un appel raté se retente plus tard, et rien dans la boucle de jeu n'attend une
+  réponse. Un compte est un **confort**, jamais une condition.
+- ⚠️ **Une partie plus vieille ne peut pas écraser une plus neuve** — c'est le compteur, et
+  c'est le juge le plus important de la fiche.
+- ⚠️ **Effacer un compte efface pour vrai** : les parties disparaissent, les appareils sont
+  révoqués, et les scores restent sous un pseudo sans compte. Un bouton, une confirmation, et
+  une page qui dit ce qui est gardé.
+- ⚠️ **Le mot de passe perdu sans courriel est un compte perdu**, et c'est écrit à
+  l'inscription, pas découvert après.
+
+**Juges** : un instantané au compteur plus petit ou égal est refusé et rend celui du serveur ;
+un jeton périmé qui revient coupe tous les appareils du compte ; cinq NIP ratés effacent le
+jeton local sans toucher au compte ; les vingt NIP interdits le sont ; le jeton n'existe en
+clair nulle part dans la base ; une partie de 4,5 Ko ne monte pas plus d'une fois par minute
+hors des moments déclarés ; le jeu démarre et se joue avec l'API des comptes éteinte ; effacer
+un compte efface ses parties et révoque ses appareils ; et l'application **refuse de démarrer**
+en production avec la clé de développement.
+
 - **Défi du jour** à graine serveur (reporté de M7) : `/api/defi` donne la graine du jour,
   le classement est celui du jour, tout le monde joue la même ville.
 - **Mode photo** : le jeu se fige, la caméra se détache, quelques filtres, et l'image se
@@ -4388,13 +4448,12 @@ paquets cachés (20), les défis de saut (3, cinq de plus dans M16), quatre boul
 les propriétés, le marché noir. Quatre choses manquent, et chacune se paie en données, pas en
 moteur.
 
-1. **Les boulots montent en grade.** Dans les GTA, le taxi, l'ambulance et les pompiers
-   donnent des **récompenses permanentes** (de la vie, une immunité, un char à la planque),
-   par paliers ; ici, un boulot paie et c'est tout. Trois paliers par boulot (10, 25, 50),
-   comptés dans `p.stats`, et une récompense qui **change la partie** : 12 ambulances →
-   +25 % de vie ; 50 courses de taxi → le taxi rapide à la planque ; 25 remorquages → le lot
-   ne te fait plus payer. ⚠️ Et la borne du plan tient : une récompense de boulot ne doit
-   jamais payer mieux **à l'heure** qu'une mission, sinon le jeu se joue tout seul.
+1. **Les boulots montent en grade** — **livré le 15 sept. 2026**, quelques heures après
+   l'écriture de cette fiche (`aee8543`). Trois paliers par boulot (10, 25, 50) et une
+   récompense qui **change la partie**, presque jamais de l'argent : +10 % puis +25 % de vie
+   pour l'ambulance, le rachat au lot à moitié puis gratuit pour le remorquage, l'hôpital à
+   moitié prix pour la pizza, et à 50 le **char à la planque** dans les quatre cas. ⚠️ Quand
+   deux paliers portent le même type, c'est le **plus fort** qui compte, pas la somme.
 2. **Deux boulots de plus**, et aucun ne demande un véhicule neuf (⚠️ la refonte des
    véhicules passe avant tout char de plus) :
    - **La patrouille** — dans une auto-patrouille **volée**, un point rouge sur la mini-carte :
