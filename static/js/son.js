@@ -94,7 +94,7 @@ const Son = (function () {
   /** La meme note, mais POSEE a un instant de l'horloge audio. C'est ce qu'il
       faut a un sequenceur : on programme la mesure suivante pendant que la
       mesure courante joue, et le rythme ne depend plus du rythme des images. */
-  function tonA(t0, freq, duree, forme, volume, glisse) {
+  function tonA(t0, freq, duree, forme, volume, glisse, sortie) {
     if (!pret()) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -104,7 +104,13 @@ const Son = (function () {
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.exponentialRampToValueAtTime(volume || 0.4, t0 + 0.01);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duree);
-    osc.connect(gain).connect(maitre);
+    // ⚠️ `sortie` : ou la note aboutit. Par defaut le maitre, comme tout le
+    // reste — mais le musicien de rue a besoin d'un gain a LUI, parce que son
+    // volume suit la distance et change a chaque image. Sans ce parametre, il
+    // aurait fallu recalculer le volume de chaque note au moment de la poser,
+    // c'est-a-dire un quart de seconde EN AVANCE (voir HORIZON_S) : on
+    // l'aurait entendu jouer fort une fraction de seconde apres etre parti.
+    osc.connect(gain).connect(sortie || maitre);
     osc.start(t0);
     osc.stop(t0 + duree + 0.02);
   }
@@ -144,7 +150,7 @@ const Son = (function () {
   }
 
   /** Un « tss » pose a un instant : bruit filtre, enveloppe courte. */
-  function bruitA(t0, duree, volume, coupure) {
+  function bruitA(t0, duree, volume, coupure, sortie) {
     if (!pret()) return;
     const src = ctx.createBufferSource();
     src.buffer = tamponDeBruit();
@@ -155,7 +161,7 @@ const Son = (function () {
     gain.gain.setValueAtTime(0.0001, t0);
     gain.gain.exponentialRampToValueAtTime(Math.max(0.0002, volume), t0 + 0.004);
     gain.gain.exponentialRampToValueAtTime(0.0001, t0 + duree);
-    src.connect(filtre).connect(gain).connect(maitre);
+    src.connect(filtre).connect(gain).connect(sortie || maitre);
     src.start(t0);
     src.stop(t0 + duree + 0.02);
   }
@@ -458,6 +464,10 @@ const Son = (function () {
     /** Le ducking : les boucles de musique (radio, ambiance) au quart pendant qu'on parle. */
     baisserLeReste: function (actif) {
       Mus.attenuation = actif ? 0.25 : 1;
+      // ⚠️ Le musicien de rue AUSSI : il ne traverse ni `boucles` ni `Mus`, il
+      // a sa propre sortie — sans cette ligne, sa guitare couvrait la voix au
+      // telephone, exactement comme la radio du camion le faisait avant elle.
+      Rue.attenuation = actif ? 0.25 : 1;
       boucles.forEach(function (courante, slug) {
         if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0) return;
         if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
@@ -898,8 +908,118 @@ const Son = (function () {
     },
   };
 
+  // --- Le musicien de rue : une musique qui sort de QUELQU'UN ------------------
+  //
+  /*: ⚠️ La fiche « des sortes de gens » promettait un musicien qui « joue — et
+    CA S'ENTEND ». Ce qui a ete livre, c'est un corps avec une guitare dessinee
+    dessus et ZERO note : le jeu avait deja un sequenceur, dix morceaux ecrits
+    en notes et un chef d'orchestre, et l'homme a la guitare etait muet.
+
+    ⚠️ CE N'EST PAS UNE PISTE, C'EST UN SON DU MONDE. Il ne passe donc pas par
+    `Chef` et ne prend la place de rien : il joue PAR-DESSUS l'ambiance du
+    district, comme un moteur de char, et son volume vient de la DISTANCE. On
+    l'entend d'un coin de rue, on l'a dans les oreilles devant lui, il s'eteint
+    quand on s'en va. C'est pour ca qu'il lui faut son propre sequenceur : le
+    volume change a chaque image, et `Mus` pose ses notes un quart de seconde en
+    avance (HORIZON_S) — a volume fixe, on l'aurait entendu jouer fort une
+    fraction de seconde apres qu'on soit parti.
+
+    ⚠️ UN SEUL A LA FOIS, le plus proche : dix musiciens feraient dix
+    sequenceurs, et deux tounes differentes a trente pixels l'une de l'autre ne
+    font pas de la musique, elles font du bruit. */
+  const Rue = {
+    courante: null,     // le slug du morceau demande cette image
+    jouee: null,        // celui qui tourne pour de vrai
+    volume: 0,          // 0..1, la distance
+    attenuation: 1,     // le ducking (une voix, une poursuite)
+    demandeT: -1,       // la derniere image ou quelqu'un a demande a jouer
+    pas: 0, debutT: 0, prochain: 0,
+    sortie: null,       // le gain qui porte la distance
+
+    def: function (slug) { return Mus.def(slug); },
+
+    /** Le musicien le plus proche reclame sa toune, a ce volume-la. A appeler
+        a chaque image tant qu'il joue ; des qu'on cesse, la musique s'arrete. */
+    demander: function (slug, volume) {
+      if (!Rue.def(slug)) return false;
+      Rue.courante = slug;
+      Rue.volume = Math.max(0, Math.min(1, volume));
+      Rue.demandeT = B.t;
+      return true;
+    },
+
+    arreter: function () {
+      Rue.courante = null; Rue.jouee = null; Rue.volume = 0;
+      Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
+    },
+
+    /** Le gain a LUI : cree une fois, garde, et regle a chaque image. */
+    _sortie: function () {
+      if (!Rue.sortie && ctx) { Rue.sortie = ctx.createGain(); Rue.sortie.connect(maitre); }
+      return Rue.sortie;
+    },
+
+    /** Une image de musique de rue. Appelee a chaque image, comme `Mus.tick`. */
+    tick: function () {
+      // ⚠️ Personne n'a demande cette image-ci : le musicien est mort, assomme,
+      // hors de portee ou hors de la bulle. On se tait — et c'est ce qui evite
+      // qu'une toune continue toute seule a l'autre bout de la ville.
+      if (Rue.demandeT !== B.t) Rue.courante = null;
+      const def = Rue.def(Rue.courante);
+      if (!def) { if (Rue.jouee) Rue.arreter(); return; }
+      if (Rue.jouee !== Rue.courante) {
+        Rue.jouee = Rue.courante; Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
+      }
+      if (etatSon() !== 'actif') { Rue.pas++; Rue.debutT = 0; Rue.prochain = 0; return; }
+      const sortie = Rue._sortie();
+      if (!sortie) return;
+      // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
+      // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
+      // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
+      const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
+      const etat = Chef.piste === 'mus_poursuite' || Chef.piste === 'mus_bagarre';
+      sortie.gain.value = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
+      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
+      if (!Rue.debutT) { Rue.debutT = ctx.currentTime + 0.08; Rue.prochain = 0; }
+      const limite = ctx.currentTime + HORIZON_S;
+      const retard = (ctx.currentTime - Rue.debutT) / pasS - Rue.prochain;
+      if (retard > 32) { Rue.prochain = Math.floor((ctx.currentTime - Rue.debutT) / pasS); }
+      while (Rue.debutT + Rue.prochain * pasS < limite) {
+        Rue.poser(def, Rue.prochain, Rue.debutT + Rue.prochain * pasS, pasS, sortie);
+        Rue.prochain++;
+      }
+      Rue.pas = Math.max(0, Math.floor((ctx.currentTime - Rue.debutT) / pasS));
+    },
+
+    /** Les notes d'un pas, dans SA sortie. Meme calcul que `Mus.poser` — le
+        volume de la distance est sur le gain, pas sur chaque note. */
+    poser: function (def, p, t, pasS, sortie) {
+      for (let v = 0; v < def.voix.length; v++) {
+        const voix = def.voix[v];
+        const motif = voix.motif || def.pas;
+        const dans = ((p % motif) + motif) % motif;
+        for (let n = 0; n < voix.notes.length; n++) {
+          const note = voix.notes[n];
+          if (note[0] !== dans) continue;
+          const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3]) * (def.volume || 1);
+          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1], sortie);
+          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume, 0, sortie);
+        }
+      }
+    },
+
+    /** Ou en est la mesure, de 0 a 1 : c'est ce qui fait gratter la main du
+        musicien EN MESURE plutot qu'a un rythme invente par le dessin. */
+    surLeTemps: function () {
+      const def = Rue.def(Rue.jouee);
+      if (!def) return 0;
+      const parTemps = def.pas_par_temps || 1;
+      return ((Rue.pas % parTemps) + parTemps) % parTemps / parTemps;
+    },
+  };
+
   return {
-    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus, Chef,
+    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },

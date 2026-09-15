@@ -263,35 +263,6 @@ CATALOGUE: list[Pieton] = [
        argent=(20, 80), metier="pickpocket", frequence=0.0,
        districts=("faubourg", "quais")),
 
-    # --- Troisieme vague : trois qui gagnent leur vie dans la rue ----------
-    # ⚠️ Choisies pour leur CROCHET, pas pour leur costume — c'est la seule
-    # regle du reservoir, et c'est celle qui fait qu'une sorte n'est pas un
-    # figurant de plus.
-
-    # ⚠️ IL HURLE CE QUE TU AS FAIT HIER. La manchette vient du Clairon
-    # (`journal.py`), qui compare les statistiques d'aujourd'hui a celles
-    # d'hier : tuer trois personnes un soir, c'est l'entendre crie au coin de
-    # la rue le lendemain matin. C'est la boucle la moins chere du jeu, et la
-    # seule qui te renvoie ton propre reflet sans menu.
-    _p("crieur", "Crieur de journaux", "#c0392b", "#3a2a1a", "#e8b088", "#3a3a4a",
-       sprite="crieur", vitesse=0.0, courage=0.2, temoin=0.7, vie=65,
-       argent=(8, 35), metier="crieur", frequence=0.0,
-       heures=(0.25, 0.55), districts=("faubourg", "shop")),
-    # ⚠️ IL TRAVAILLE AU FEU ROUGE : il ne s'approche que des chars ARRETES.
-    # Les feux pour pietons viennent d'etre livres — c'est la meme horloge, et
-    # c'est elle qui lui donne ses quinze secondes de travail.
-    _p("laveur", "Laveur de vitres", "#2f6b8a", "#2a2a2a", "#c98d66", "#3a4450",
-       sprite="laveur", vitesse=0.95, courage=0.3, temoin=0.5, vie=70,
-       argent=(3, 20), metier="laveur", frequence=0.0,
-       districts=("shop", "faubourg")),
-    # ⚠️ IL VOLE LES AUTRES. La ville coupable d'elle-meme : un crime que tu
-    # n'as pas commis, une victime qui crie, et un agent qui arrete QUELQU'UN
-    # D'AUTRE que toi. C'est le deuxieme apres l'homme au manteau, et les deux
-    # ensemble disent la meme chose — la police n'existe pas que pour toi.
-    _p("pickpocket", "Pickpocket", "#3a4450", "#1a1a1a", "#d8a878", "#26262e",
-       sprite="pickpocket", vitesse=1.1, courage=0.2, temoin=0.1, vie=65,
-       argent=(20, 80), metier="pickpocket", frequence=0.0,
-       districts=("faubourg", "quais")),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.
