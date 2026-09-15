@@ -163,7 +163,11 @@ def test_l_atlas_du_parc_a_maigri(banc):
             for (const nom in p) n += p[nom].length;
             return n;
         };
-        return { debout: compter('auto'), caps: compter('camion') };
+        // ⚠️ Le temoin en caps est la MOTO : elle porte son conducteur cuit
+        // dans le dessin, donc elle attend la vague du passant assis. Le jour
+        // ou elle passera debout, ce juge devra prendre un autre temoin — ou
+        // disparaitre, parce qu'il n'y aura plus rien a comparer.
+        return { debout: compter('auto'), caps: compter('moto') };
     }""")
     assert r["caps"] == 32, "le décor du juge est faux : %s" % r
     # Cinq noms de pose, mais `droite` est le MÊME canevas que `cote` : trois

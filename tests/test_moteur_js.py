@@ -73,9 +73,20 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
         # ⚠️ Le sprite doit COUVRIR la carrosserie, sinon un char de 48 px
         # dessine sur 32 laisse deux capots dans le vide a chaque bout.
         assert w >= lon, "%s : sprite de %s px pour %s px de long" % (slug, w, lon)
-        assert h >= lat, "%s : sprite de %s px pour %s px de large" % (slug, h, lat)
-        # … sans etre une affiche : la marge sert aux roues, pas a rien.
-        assert w <= lon + 6 and h <= lat + 4, "%s : %sx%s pour %sx%s" % (slug, w, h, lon, lat)
+        # ⚠️ **ET LA HAUTEUR NE SE MESURE PLUS PAREIL DES DEUX COTES** (15 sept.
+        # 2026). Vu d'en haut, `h` etait la LARGEUR du char, d'ou « h <= lat+4 ».
+        # Debout, `h` est sa HAUTEUR, et elle n'a rien a voir avec sa largeur :
+        # un autobus fait 16 px de large et se dresse sur 21. Ce qui reste vrai
+        # des deux cotes : le dessin couvre la carrosserie sans etre une
+        # affiche, et rien dans cette ville n'est plus haut que long.
+        if rotations:
+            assert h >= lat, "%s : sprite de %s px pour %s px de large" % (slug, h, lat)
+            assert w <= lon + 6 and h <= lat + 4, "%s : %sx%s pour %sx%s" % (slug, w, h, lon, lat)
+        else:
+            # La marge laisse la place aux roues — et au BRAS de la remorqueuse,
+            # qui depasse derriere et qui est ce qui la nomme de profil.
+            assert w <= lon + 12, "%s : sprite de %s px pour %s px de long" % (slug, w, lon)
+            assert lat <= h <= lon, "%s : %s px de haut pour %sx%s" % (slug, h, lon, lat)
         # ⚠️ **Reformule le 15 sept. 2026.** Il exigeait 32 caps pour tout le
         # monde — c'etait la regle d'AVANT, et la refonte des vehicules la
         # remplace : un char se dessine comme un passant, trois poses choisies
