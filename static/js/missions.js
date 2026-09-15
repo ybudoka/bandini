@@ -259,7 +259,13 @@ const Missions = (function () {
   /** La prison prend l'amende, les armes, quelques heures, et note le casier. */
   function prison(agent) {
     const j = B.joueur, r = B.recherche, p = B.partie;
-    const fine = amende(p.argent, Math.max(1, r.etoiles), p.casier);
+    // ⚠️ La provision de Me Desjardins efface l'AMENDE, et rien d'autre : la
+    // page s'ajoute quand meme, les armes partent quand meme, le char va
+    // quand meme au lot et la nuit passe quand meme. Un avocat sort son
+    // client de prison ; il ne le rend pas innocent.
+    const retenu = !!p.nettoyage.provision;
+    const fine = retenu ? 0 : amende(p.argent, Math.max(1, r.etoiles), p.casier);
+    if (retenu) p.nettoyage.provision = false;
     payer(fine, 'AMENDE');
     p.casier = Math.min(B.defs.economie.casier_max, p.casier + 1);
     p.stats.arrestations++;
@@ -282,7 +288,8 @@ const Missions = (function () {
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
       sauvegarderPartie();
-    }, 'PRISON — ' + fine + ' $, ARMES CONFISQUEES');
+    }, retenu ? 'PRISON — TON AVOCAT T’A SORTI, ARMES CONFISQUEES'
+              : 'PRISON — ' + fine + ' $, ARMES CONFISQUEES');
   }
 
 
@@ -1268,6 +1275,25 @@ const Missions = (function () {
         p.nettoyage.avocatJour = p.jour;
         Son.SFX.argent();
         Hud.message('UNE PAGE DE MOINS — DOSSIER ' + pages(p.casier));
+        return true;
+      }
+    });
+    // ⚠️ L'AUTRE MOITIE DE CE QU'IL VEND. Une provision retenue d'avance :
+    // la prochaine arrestation ne coute pas d'amende. Elle ne touche a rien
+    // d'autre — la page s'ajoute, les armes partent, le char va au lot — et
+    // elle prend SA JOURNEE, comme l'effacement : on choisit lequel des deux
+    // on lui achete aujourd'hui, et c'est ce choix-la qui fait le comptoir.
+    const provision = B.defs.economie.prix_provision[borner(p.casier, 0, B.defs.economie.casier_max)];
+    items.push({
+      libelle: 'RETENIR SES SERVICES',
+      detail: p.nettoyage.provision ? 'DEJA RETENU' : (occupe ? 'PAS AVANT DEMAIN' : provision + ' $'),
+      actif: !occupe && !p.nettoyage.provision && p.argent >= provision,
+      faire: function () {
+        payer(provision, 'ME DESJARDINS');
+        p.nettoyage.provision = true;
+        p.nettoyage.avocatJour = p.jour;
+        Son.SFX.argent();
+        Hud.message('IL SERA LA — LA PROCHAINE SANS AMENDE');
         return true;
       }
     });

@@ -269,3 +269,80 @@ def test_le_tirage_du_comptoir_du_fond_suit_la_table_du_serveur(banc):
             f"{pages} page(s) sort {vu:.0%} du temps, la fiche dit {chance:.0%} — "
             f"le navigateur ne lit pas la table ({r['compte']})"
         )
+
+
+# --- L'autre moitie de l'avocat : sortir de prison ---------------------------
+
+
+def test_la_provision_coute_plus_cher_qu_une_arrestation_ordinaire():
+    """⚠️ Une assurance qui rapporte TOUJOURS n'est pas une assurance, c'est un
+    salaire. La provision doit couter plus qu'une arrestation ordinaire (trois
+    etoiles) a dossier egal : elle n'est payante que pour les grosses nuits,
+    celles ou l'on sort a quatre ou cinq etoiles — et il faut avoir DECIDE, le
+    matin, qu'on allait en faire une."""
+    fortune = economie.FORTUNE_MAX
+    for casier in range(0, economie.CASIER_MAX + 1, 5):
+        provision = economie.prix_provision(casier)
+        ordinaire = economie.amende(fortune, 3, casier)
+        assert provision > ordinaire, (
+            f"casier {casier} : la provision coute {provision} $ et l'amende ordinaire "
+            f"{ordinaire} $ — on la prendrait tous les matins"
+        )
+    # ... et elle doit tout de même pouvoir payer : sans ça, personne ne la prend.
+    assert economie.prix_provision(0) < economie.amende(fortune, 5, 0) * 2, (
+        "même une nuit à cinq étoiles ne la rentabilise pas : c'est un article mort"
+    )
+
+
+def test_la_provision_efface_l_amende_et_rien_d_autre(banc):
+    """⚠️ « Il te sort de prison sans amende » — SANS AMENDE, pas innocent. La
+    page s'ajoute quand meme, les armes partent quand meme : sans ca, se faire
+    arreter expres deviendrait un trajet gratuit vers le poste, et la police
+    ne serait plus qu'un taxi."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        const p = L.B.partie, menu = allerAu('avocat');
+        p.casier = 3; p.argent = 50000; p.jour = 5;
+        const prix = L.B.defs.economie.prix_provision[3];
+        item(menu(), 'RETENIR').faire();
+        const apresAchat = { argent: p.argent, retenu: p.nettoyage.provision };
+        // ⚠️ Il a donne sa journee : on ne peut pas AUSSI lui faire effacer
+        // une page aujourd'hui. C'est le choix, et c'est tout le comptoir.
+        const effacerAussi = item(menu(), 'EFFACER').actif;
+        o.sortir();
+        p.argent = 9000; L.B.recherche.etoiles = 5;
+        p.armes = { poings: { mun: null }, pistolet: { mun: 10 } };
+        const casierAvant = p.casier;
+        L.Missions.prison(null);
+        o.fondu();
+        return { prix: prix, paye: 50000 - apresAchat.argent, retenu: apresAchat.retenu,
+                 effacerAussi: effacerAussi,
+                 argentApres: p.argent, casierApres: p.casier, casierAvant: casierAvant,
+                 armes: Object.keys(p.armes), provisionApres: p.nettoyage.provision };
+    }""" % ALLER)
+    assert r["paye"] == r["prix"], "il ne prend pas le prix de la fiche : %s" % r
+    assert r["retenu"] is True
+    assert r["effacerAussi"] is False, "il retient ET efface le même jour : %s" % r
+    assert r["argentApres"] == 9000, "l'amende a été prélevée malgré la provision : %s" % r
+    assert r["casierApres"] == r["casierAvant"] + 1, (
+        "la page ne s'ajoute pas : l'arrestation devient gratuite (%s)" % r
+    )
+    assert r["armes"] == ["poings"], "les armes ne sont pas confisquées : %s" % r
+    assert r["provisionApres"] is False, "la provision sert deux fois : %s" % r
+
+
+def test_sans_provision_l_amende_tombe(banc):
+    """Le temoin du juge d'a cote : sans provision, la meme arrestation coute.
+    Sans cette mesure-la, « l'argent n'a pas bouge » ne prouverait rien."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie;
+        p.casier = 3; p.argent = 9000; p.nettoyage.provision = false;
+        L.B.recherche.etoiles = 5;
+        L.Missions.prison(null);
+        o.fondu();
+        return { argent: p.argent, attendu: L.B.defs.economie.amendes[4][3] };
+    }""")
+    assert r["argent"] < 9000, "une arrestation à cinq étoiles ne coûte rien : %s" % r
+    assert r["argent"] == 9000 - min(9000, r["attendu"]), r

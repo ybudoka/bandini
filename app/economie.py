@@ -63,6 +63,22 @@ EFFACER: dict = {
         "par_page": 400,
         "pages": 1,
         "par_jour": 1,
+        # ⚠️ L'AUTRE MOITIE DE CE QU'IL VEND : « il efface une page du casier
+        # OU te sort de prison sans amende ». Une provision retenue d'avance,
+        # qui efface l'amende de la PROCHAINE arrestation — une seule.
+        #
+        # ⚠️ Elle ne touche a rien d'autre : la page s'ajoute quand meme, les
+        # armes partent quand meme, le char va quand meme au lot, et la nuit
+        # passe quand meme. Un avocat sort son client de prison ; il ne le
+        # rend pas innocent. Sans ca, se faire arreter exprès deviendrait un
+        # trajet gratuit vers le poste.
+        #
+        # ⚠️ Et elle coute plus cher qu'une arrestation ordinaire (`test_effacer`) :
+        # elle n'est payante que pour les grosses nuits, celles a quatre ou
+        # cinq etoiles. Une assurance qui rapporte toujours n'est pas une
+        # assurance, c'est un salaire.
+        "provision": 800,
+        "provision_par_page": 300,
     },
     # Le hacker de La Shop. Le tirage se lit « autant de pages, autant de
     # chances » — un nombre NEGATIF est une page de PLUS au dossier.
@@ -87,6 +103,13 @@ def prix_effacer(quoi: str, casier: int) -> int:
     fiche = EFFACER[quoi]
     casier = max(0, min(CASIER_MAX, casier))
     return max(0, round(fiche["prix"] + fiche["par_page"] * casier))
+
+
+def prix_provision(casier: int) -> int:
+    """Ce que l'avocat demande pour etre la a la prochaine arrestation."""
+    fiche = EFFACER["avocat"]
+    casier = max(0, min(CASIER_MAX, casier))
+    return max(0, round(fiche["provision"] + fiche["provision_par_page"] * casier))
 
 
 def esperance_hacker() -> float:
@@ -420,6 +443,7 @@ def exporter() -> dict:
             if "tirage" in fiche else dict(fiche)
             for quoi, fiche in EFFACER.items()
         },
+        "prix_provision": [prix_provision(c) for c in range(CASIER_MAX + 1)],
         # prix_effacer[quoi][casier] — deja calcule, le navigateur indexe.
         "prix_effacer": {
             quoi: [prix_effacer(quoi, c) for c in range(CASIER_MAX + 1)]

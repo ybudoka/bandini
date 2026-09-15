@@ -76,7 +76,7 @@ function etatInitial(defs) {
     //: La Shop, qui ne donne de nouvelles que le lendemain.
     //: ⚠️ La commande est DANS LA SAUVEGARDE : on a paye hier, on apprend
     //: aujourd'hui, et il n'y a pas de retour en arriere.
-    nettoyage: { avocatJour: 0, commande: null },
+    nettoyage: { avocatJour: 0, commande: null, provision: false },
     //: Les gens qu'on a RENCONTRES (slug -> jour). ⚠️ Sans ca, le repertoire
     //: du carnet montrerait des personnages qu'on n'a jamais vus — et il
     //: divulgacherait l'histoire : Josee, le Dr Lachance de M13, Marco qui te
