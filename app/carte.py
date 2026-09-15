@@ -886,6 +886,10 @@ class _Chantier:
         self.arrets: dict[str, str] = {}
         self.reserve: set[tuple[int, int]] = set()
         self.occupe: set[tuple[int, int]] = set()
+        #: Les tuiles d'ENTREE percees vers un stationnement enclave
+        #: (`_percer_l_entree`) : de l'asphalte comme le lot, mais qui n'est pas
+        #: le lot — on y entre, on ne s'y gare pas.
+        self.entrees: set[tuple[int, int]] = set()
         #: Les devantures (bandeau + nom + vitrines + pancarte) et les tags.
         #: ⚠️ Ce sont des COUCHES PEINTES : elles ne changent aucune solidite,
         #: donc aucun juge de circulation ni de connexite ne depend d'elles.
@@ -2184,6 +2188,56 @@ class _Chantier:
         if vedette >= 0:
             contenus[vedette] = "bati"
 
+        def entree_du_lot(px: int, py: int, pl: int, ph: int) -> list[list] | None:
+            """Par ou l'on entre dans un stationnement : une liste VIDE s'il
+            donne deja sur la rue, les chemins a paver s'il faut lui percer une
+            entree, `None` s'il n'y a pas moyen d'y entrer du tout.
+
+            Un terrain donne sur la rue s'il touche un BORD de sa bande : la
+            ruelle derriere, la couronne d'abord a gauche ou a droite, le
+            trottoir du devant. Au milieu d'une bande, il n'a que des voisins.
+            """
+            # La couronne d'abord : des paves qui bordent le trottoir, et l'on
+            # entre dans le lot de plain-pied depuis la rue.
+            if px == x or px + pl == x + largeur:
+                return []
+            for by, bh in bandes:
+                zy, zh = by + 2, bh - 4
+                if not zy <= py < zy + zh:
+                    continue
+                if py == zy:
+                    return []                     # la ruelle derriere : on y roule
+                if py + ph < zy + zh:
+                    return None                   # au milieu de la bande : rien que des voisins
+                if devant == ".":
+                    return []                     # le trottoir du devant
+                # ⚠️ Le devant d'un bloc de maisons est du GAZON, et un lot qui
+                # s'arrete dans l'herbe ne mene nulle part. Celui-la se perce
+                # d'une entree jusqu'a la rue, comme une cour de banlieue.
+                chemins = [self._chemin_vers_la_rue(cx, py + ph, 0, 1, self.RUE_DU_LOT)
+                           for cx in range(px, px + pl)]
+                return [chemin for chemin in chemins if chemin] or None
+            return None
+
+        # ⚠️ UN STATIONNEMENT TOUCHE LA RUE, AU MOINS UNE FOIS — demande de
+        # Martin, et c'est la regle du dessin d'un lot (« toute rangee touche
+        # une allee ») d'un cran plus haut : un terrain ou aucune auto ne peut
+        # entrer n'est pas un stationnement, c'est un carre d'asphalte. Sur la
+        # graine livree, un terrain de 4 x 4 tirait « stationnement » au milieu
+        # des cours arriere d'un bloc de maisons du Faubourg — quatre cases, une
+        # allee, un ilot, et rien que du gazon tout autour.
+        # ⚠️ Et le terrain ou meme l'entree ne passe pas redevient ce que son
+        # genre aurait dessine a la place : on ne laisse pas un lot mure.
+        entrees: dict[int, list[list]] = {}
+        for k, contenu in enumerate(contenus):
+            if contenu != "stationnement":
+                continue
+            chemins = entree_du_lot(*parcelles[k][0])
+            if chemins is None:
+                contenus[k] = "jardin" if genre in ("maisons", "banlieue") else "vague"
+            elif chemins:
+                entrees[k] = chemins
+
         batiments: list[tuple[list, bool, set, tuple, tuple]] = []
         facades_vedette = None
         for k, ((px, py, pl, ph), devant_rue) in enumerate(parcelles):
@@ -2202,6 +2256,9 @@ class _Chantier:
                 self._terrain_vague(px, py, pl, ph)
             elif contenu == "stationnement":
                 self._stationnement(px, py, pl, ph, genre)
+                # ⚠️ APRES le lot : l'entree sort d'une ALLEE, et les allees
+                # n'existent qu'une fois les rangees posees.
+                self._percer_l_entree(entrees.get(k), (px, py, pl, ph))
             else:
                 self._jardin(px, py, pl, ph, genre)
         if facades_vedette:
@@ -2580,6 +2637,59 @@ class _Chantier:
             self.proposer_rampe([(cx, y + hauteur // 2, None)],
                                 cloture=(cx, y + hauteur - 1))
 
+    #: Ce qu'un chemin TRAVERSE pour rejoindre la rue : de l'herbe, la dalle,
+    #: la couronne d'abord. ⚠️ L'ABORD AUSSI : depuis le trottoir a une tuile, la
+    #: couronne du bloc se glisse entre la bande de devant et la dalle. Il se
+    #: foule comme l'herbe ; l'exclure rendait la liste vide, et plus une seule
+    #: cour de banlieue n'avait d'entree ni de sentier. Tout le reste — du bati,
+    #: une cloture, une piscine — arrete.
+    VERS_LA_RUE = (",", ".", "_")
+
+    #: Jusqu'ou l'on va la chercher. ⚠️ DIX tuiles, pas six : les marges de
+    #: banlieue vont jusqu'a cinq tuiles, plus deux de bande de devant, la
+    #: couronne et le trottoir. A six, la fenetre s'arretait juste avant la
+    #: chaussee et rendait la liste vide — quinze portes sur vingt-sept
+    #: restaient sans sentier, et rien ne le disait sinon le juge.
+    PORTEE_VERS_LA_RUE = 10
+
+    #: Ce qui compte comme LA RUE quand on y rattache un STATIONNEMENT : ce sur
+    #: quoi on roule (la chaussee, la ruelle) et ce sur quoi on marche depuis la
+    #: rue (le trottoir, et la couronne d'abord qui le borde — des paves, pas
+    #: une cour). ⚠️ Une entree de cour, elle, ne vise que la chaussee : on
+    #: arrive chez les gens par la rue, pas par le fond du terrain.
+    RUE_DU_LOT = ("route", "ruelle", "trottoir", "abord")
+
+    def _chemin_vers_la_rue(self, x: int, y: int, dx: int, dy: int,
+                            arrivee: tuple[str, ...] = ("route",)) -> list[tuple[int, int]]:
+        """Les tuiles a paver depuis (x, y) — comprise — jusqu'a la rue, exclue.
+
+        ⚠️ UN TERRAIN NE TOUCHE PAS LA RUE : entre les deux il y a la bande de
+        devant — deux rangees de GAZON en banlieue, parce que « la banlieue se
+        reconnait au vide » — puis la couronne d'abord et le trottoir. Un chemin
+        qui s'arrete au bord du terrain s'arrete donc dans l'herbe, a trois
+        tuiles de la rue : il ne mene nulle part, et une entree qui fait pareil
+        n'est pas une entree, c'est un carre d'asphalte. On va jusqu'a la rue,
+        ou on ne fait rien — c'est ce que dit la liste vide.
+
+        `arrivee` : ce qui compte comme la rue, en champs de la LEGENDE. Une
+        entree de cour ne vise que la chaussee ; un stationnement se contente de
+        tout ce qui borde la rue (`RUE_DU_LOT`) — ce qu'il vise en premier, il
+        le traverserait sinon, et l'entree mangerait la dalle.
+        """
+        chemin: list[tuple[int, int]] = []
+        for _ in range(self.PORTEE_VERS_LA_RUE):
+            if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+                return []
+            glyphe = self.sol[y][x]
+            fiche = LEGENDE[glyphe]
+            if any(fiche.get(quoi) for quoi in arrivee):
+                return chemin                     # arrive : la rue est la
+            if glyphe not in self.VERS_LA_RUE:
+                return []                         # du bati, une cloture : pas de passage
+            chemin.append((x, y))
+            x, y = x + dx, y + dy
+        return []
+
     #: Une entree de voiture sur trois porte une CASE, donc une auto garee.
     #: ⚠️ Pas toutes : si chaque bungalow en porte une, la banlieue se remplit
     #: de chars stationnes et le budget d'entites y passe. Les autres restent de
@@ -2610,31 +2720,13 @@ class _Chantier:
         def jusqu_a_la_rue(x: int, depart: int) -> list[int]:
             """Les rangees a paver depuis `depart` jusqu'a la chaussee, exclue.
 
-            ⚠️ LA PARCELLE NE TOUCHE PAS LA RUE. Entre les deux il y a la bande
-            de devant — deux rangees de GAZON en banlieue, parce que « la
-            banlieue se reconnait au vide ». Un sentier qui s'arrete au bord de
-            la parcelle s'arrete donc dans l'herbe, a deux tuiles de la rue :
-            il ne mene nulle part, et une entree qui fait pareil n'est pas une
-            entree, c'est un carre d'asphalte. On va jusqu'a la chaussee.
+            ⚠️ La ruelle ne compte PAS : une entree de cour va au chemin par ou
+            l'on arrive chez les gens, pas au fond du terrain. Le reste de la
+            regle — ce qu'on traverse, jusqu'ou l'on cherche, et pourquoi une
+            liste vide vaut « pas d'entree » — vit dans `_chemin_vers_la_rue`,
+            ou le stationnement la lit aussi.
             """
-            # ⚠️ DIX rangees, pas six : les marges de banlieue vont jusqu'a
-            # cinq tuiles, plus deux de bande de devant et deux de trottoir. A
-            # six, la fenetre s'arretait juste avant la chaussee et rendait la
-            # liste vide — quinze portes sur vingt-sept restaient sans sentier,
-            # et rien ne le disait sinon le juge.
-            rangees = []
-            for y in range(depart, min(self.hauteur, depart + 10)):
-                glyphe = self.sol[y][x]
-                if LEGENDE[glyphe].get("route"):
-                    return rangees                # arrive : la rue est la
-                # ⚠️ L'ABORD AUSSI : depuis le trottoir a une tuile, la couronne
-                # du bloc se glisse entre la bande de devant et la dalle. Il se
-                # foule comme l'herbe ; l'exclure rendait la liste vide, et plus
-                # une seule cour de banlieue n'avait d'entree ni de sentier.
-                if glyphe not in (",", ".", "_"):
-                    return []                     # du bati, une cloture : pas de passage
-                rangees.append(y)
-            return []
+            return [y for _, y in self._chemin_vers_la_rue(x, depart, 0, 1)]
 
         # --- Le sentier de la porte a la rue --------------------------------
         # ⚠️ Sans lui, on marche sur le gazon pour entrer chez les gens — et
@@ -2866,6 +2958,43 @@ class _Chantier:
         return True
 
     # --- Stationnements -----------------------------------------------------
+
+    def _percer_l_entree(self, chemins: list[list] | None,
+                         parcelle: tuple[int, int, int, int]) -> None:
+        """L'ENTREE d'un lot enclave : de l'asphalte, du bord du terrain
+        jusqu'a la rue, large d'une allee.
+
+        ⚠️ ELLE SORT D'UNE ALLEE quand le lot en offre une sur ce bord-la :
+        debouchant sur le fond d'une case, elle ferait entrer les autos par le
+        pare-chocs de celle qui est deja garee. Quand le bord n'est qu'une
+        rangee, on perce quand meme — on traverse une place pour entrer, ce qui
+        vaut toujours mieux qu'un lot ou personne n'entre.
+
+        ⚠️ Elle fait DEUX tuiles, comme une allee (de quoi se croiser), et
+        tombe le plus pres possible du milieu du lot : c'est la que sa
+        circulation passe.
+        """
+        if not chemins:
+            return
+        px, py, pl, ph = parcelle
+        par_colonne = {chemin[0][0]: chemin for chemin in chemins}
+        bord = py + ph - 1                              # la derniere rangee du lot
+        allees = [cx for cx in par_colonne if self.sol[bord][cx] == "p"]
+        colonnes = sorted(allees or par_colonne)
+        paires = [(cx, cx + 1) for cx in colonnes if cx + 1 in colonnes]
+        milieu = px + (pl - 1) / 2
+        entree = min(paires or [(cx,) for cx in colonnes],
+                     key=lambda p: abs(sum(p) / len(p) - milieu))
+        for cx in entree:
+            for (ex, ey) in par_colonne[cx]:
+                self.sol[ey][ex] = "p"
+                # ⚠️ RESERVEE, donc libre pour toujours : une entree large de
+                # deux tuiles est aussi une place de camion-restaurant aux yeux
+                # des `ambulants`, et un camion gare dans l'entree referme le
+                # lot qu'on vient d'ouvrir. Meme raison pour un lampadaire ou
+                # une borne — rien ne se pose sur le seul chemin qui entre.
+                self.entrees.add((ex, ey))
+                self.reserver(ex, ey, 1, 1)
 
     def _bandes_stationnement(self, creux: int) -> list[tuple[str, int]]:
         """Decoupe l'axe PROFOND d'un stationnement en bandes : « R » une
@@ -3332,6 +3461,11 @@ class _Chantier:
                     if glyphe != "p" or self.sol[y][x + 1] != "p":
                         continue
                     if not marchable(self.sol[y + 1][x]):
+                        continue
+                    # ⚠️ PAS DANS L'ENTREE d'un lot : une entree large de deux
+                    # tuiles ressemble a une place de camion, et un camion gare
+                    # dedans referme le seul chemin par ou l'on entre.
+                    if (x, y) in self.entrees or (x + 1, y) in self.entrees:
                         continue
                 elif sur == "quai":
                     # Sur les planches, avec deux tuiles de quai devant pour s'y

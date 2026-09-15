@@ -633,6 +633,122 @@ def test_les_ilots_de_stationnement_sont_au_bout_des_rangees():
     assert ilots >= 8, f"seulement {ilots} tuiles d'ilot"
 
 
+#: Les glyphes d'un stationnement : l'asphalte, les quatre cases, et l'îlot de
+#: béton qui ferme une rangée. Ils forment le LOT — ce qu'on cherche autour de
+#: lui, c'est la rue.
+LOT = set("p^v<>I")
+
+#: Ce qui compte comme « la rue » quand on demande si un lot y touche. La
+#: chaussée et la ruelle sont ce sur quoi on ROULE ; le trottoir et l'abord, ce
+#: sur quoi on MARCHE depuis la rue — la couronne d'abord, ce sont les pavés qui
+#: bordent la dalle, et un lot qui les touche est sur la rue, pas au fond d'une
+#: cour.
+def _sur_la_rue(glyphe: str) -> bool:
+    fiche = carte.LEGENDE[glyphe]
+    return bool(fiche.get("route") or fiche.get("ruelle")
+                or fiche.get("trottoir") or fiche.get("abord"))
+
+
+def _lots(sol) -> list[set[tuple[int, int]]]:
+    """Les stationnements d'une carte, en 4-connexité : un lot, un morceau."""
+    tuiles = {(x, y) for y, ligne in enumerate(sol) for x, g in enumerate(ligne)
+              if g in LOT}
+    vus: set[tuple[int, int]] = set()
+    lots = []
+    for depart in sorted(tuiles):
+        if depart in vus:
+            continue
+        pile, lot = [depart], set()
+        vus.add(depart)
+        while pile:
+            x, y = pile.pop()
+            lot.add((x, y))
+            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+                voisine = (x + dx, y + dy)
+                if voisine in tuiles and voisine not in vus:
+                    vus.add(voisine)
+                    pile.append(voisine)
+        lots.append(lot)
+    return lots
+
+
+@pytest.mark.parametrize("graine", [1, 7, 12345, 20260912, 99999999])
+def test_tout_stationnement_touche_la_rue(graine):
+    """⚠️ LA RÈGLE DE MARTIN : « les stationnements doivent absolument être
+    rattachés à la route ou collés à un trottoir au moins une fois ». Un lot
+    qu'aucune rue ne touche est un carré d'asphalte au fond d'une cour : on y
+    peint des cases, on y range des chars, et aucun char ne peut y entrer.
+
+    Elle ne se voit pas sur une capture d'écran — les lignes sont peintes
+    pareil — et c'est exactement pour ça qu'un juge la tient. Rouge avant le
+    correctif sur la graine livrée : un lot de 4 × 4 au milieu des cours
+    arrière d'un bloc de maisons du Faubourg (219, 28), entouré de gazon sur
+    ses quatre côtés.
+    """
+    sol = carte.generer(graine=graine)["sol"] if graine != carte.GRAINE else CARTE["sol"]
+    orphelins = []
+    for lot in _lots(sol):
+        voisines = {sol[y + dy][x + dx]
+                    for (x, y) in lot for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    if 0 <= y + dy < len(sol) and 0 <= x + dx < len(sol[0])}
+        if not any(_sur_la_rue(g) for g in voisines - LOT):
+            orphelins.append((min(sorted(lot)), len(lot), sorted(voisines - LOT)))
+    assert not orphelins, f"{len(orphelins)} stationnements sans rue : {orphelins[:3]}"
+
+
+def test_l_entree_d_un_lot_va_de_son_allee_jusqu_a_la_chaussee():
+    """L'entrée percée par `_percer_l_entree` : deux tuiles de large comme une
+    allée, sortie de l'ALLÉE du lot et non du fond d'une case, et poussée à
+    travers le gazon jusqu'à ce qui borde la rue — ici la couronne d'abord.
+
+    ⚠️ Elle s'ARRÊTE là : l'abord, le trottoir et la chaussée sont déjà la rue,
+    et une entrée qui les pave ne rattache rien de plus — elle mange la dalle.
+    Une entrée qui s'arrête dans l'herbe, elle, n'est pas une entrée : c'est un
+    carré d'asphalte, la même phrase que pour l'entrée d'une cour de banlieue,
+    et c'est `_chemin_vers_la_rue` qui la tient pour les deux.
+    """
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.rect(0, 0, 14, 14, ",")
+    chantier.rect(0, 10, 14, 1, "_")             # la couronne du bloc
+    chantier.rect(0, 11, 14, 1, ".")             # le trottoir
+    chantier.rect(0, 12, 14, 2, "#")             # la chaussée
+    chantier._stationnement(3, 2, 6, 4)
+    chemins = [chantier._chemin_vers_la_rue(cx, 6, 0, 1, carte._Chantier.RUE_DU_LOT) for cx in range(3, 9)]
+    chantier._percer_l_entree([c for c in chemins if c], (3, 2, 6, 4))
+    entree = [x for x in range(3, 9) if chantier.sol[6][x] == "p"]
+    assert len(entree) == 2 and entree[1] == entree[0] + 1, \
+        f"l'entrée fait {len(entree)} tuiles : {entree}"
+    for x in entree:
+        assert chantier.sol[5][x] == "p", "l'entrée ne sort pas de l'allée du lot"
+        for y in range(6, 10):
+            assert chantier.sol[y][x] == "p", \
+                f"l'entrée s'arrête en ({x},{y}) : « {chantier.sol[y][x]} »"
+        assert chantier.sol[10][x] == "_", "l'entrée a mangé la couronne d'abord"
+        assert (x, 9) in chantier.reserve and (x, 9) in chantier.entrees, \
+            "l'entrée n'est pas réservée : un kiosque peut s'y garer"
+
+
+def test_un_lot_ou_l_entree_ne_passe_pas_n_est_pas_un_lot():
+    """⚠️ Le dernier recours : un terrain enclavé — pas de bord de bande, pas
+    d'entrée possible — ne reste pas un stationnement muré. Il redevient ce que
+    son genre aurait dessiné à la place, et c'est le juge du dessus qui dit
+    pourquoi.
+    """
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chantier.rect(0, 0, 14, 14, ",")
+    chantier.rect(4, 6, 6, 1, "F")               # un mur en travers du chemin
+    assert chantier._chemin_vers_la_rue(5, 3, 0, 1, carte._Chantier.RUE_DU_LOT) == []
+    chantier.rect(4, 6, 6, 1, ",")
+    # Sans mur, le chemin sort du terrain — mais il ne mène toujours nulle part
+    # tant qu'aucune rue ne l'attend au bout.
+    assert chantier._chemin_vers_la_rue(5, 3, 0, 1, carte._Chantier.RUE_DU_LOT) == []
+    chantier.rect(0, 9, 14, 1, "x")              # une ruelle : on y roule
+    assert chantier._chemin_vers_la_rue(5, 3, 0, 1, carte._Chantier.RUE_DU_LOT) == [(5, y) for y in range(3, 9)]
+    # ⚠️ Et pas pour une cour de banlieue : son entrée va au chemin par où l'on
+    # arrive chez les gens, pas au fond du terrain.
+    assert chantier._chemin_vers_la_rue(5, 3, 0, 1) == []
+
+
 def test_les_commerces_ambulants_ont_leur_place():
     """Un kiosque se pose sur un trottoir au bord de la rue, un camion sur un
     stationnement — et jamais devant une porte."""
