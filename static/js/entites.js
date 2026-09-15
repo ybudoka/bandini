@@ -427,7 +427,8 @@ const Entites = (function () {
     faisaient quelque chose : les autres etaient des nombres. Une sorte qui ne
     fait rien est un costume, et le depot a deja paye ce defaut une fois. */
   const SORTES = ['musicien', 'amuseur', 'exhibitionniste',
-                  'contractuelle', 'touriste', 'ivrogne', 'jogger', 'facteur'];
+                  'contractuelle', 'touriste', 'ivrogne', 'jogger', 'facteur',
+                  'crieur', 'laveur', 'pickpocket'];
 
   //: Combien de chaque sorte vivent dans la bulle du joueur, au plus.
   const SORTES_MAX = 2;
@@ -490,6 +491,9 @@ const Entites = (function () {
       else if (e.metier === 'touriste') majPhoto(e);
       else if (e.metier === 'ivrogne') majIvrogne(e);
       else if (e.metier === 'facteur') majTournee(e);
+      else if (e.metier === 'crieur') majCrieur(e);
+      else if (e.metier === 'laveur') majLaveur(e);
+      else if (e.metier === 'pickpocket') majPickpocket(e);
     }
   }
 
@@ -713,6 +717,134 @@ const Entites = (function () {
     e.porteTournee = porte;
     e.cap = { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8 };
     e.capT = 0; e.etat = 'cap';
+  }
+
+  /** IL HURLE CE QUE TU AS FAIT HIER.
+
+      ⚠️ C'est tout l'interet du personnage, et ca ne coute rien : la manchette
+      du Clairon existe deja (`journal.py` compare les statistiques du jour a
+      celles d'hier), elle est calculee au reveil et gardee dans la partie. Le
+      crieur ne fait que la dire tout haut, au coin de la rue. Tuer trois
+      personnes un soir, c'est l'entendre le lendemain matin.
+
+      ⚠️ Il LIT `derniereManchette`, il ne la recalcule pas : `manchetteDuJour`
+      remet le compteur d'hier a zero au passage. Un crieur qui l'appellerait
+      effacerait la memoire du journal a chaque cri. */
+  function majCrieur(e) {
+    if (e.crieT > 0) { e.crieT -= 15; return; }
+    if (e.etat !== 'fige') return;
+    const m = B.partie && B.partie.derniereManchette;
+    const mot = (m && m.titre) || paroles('crieur').appel;
+    if (!mot) return;
+    e.crieT = 300;
+    bulle(e, mot, { duree: 210 });
+  }
+
+  /** Le char arrete le plus proche : c'est la que le laveur travaille. */
+  function charArrete(e) {
+    let meilleur = null, dMin = PORTEE_SORTE * PORTEE_SORTE;
+    for (const v of B.entites) {
+      if (v.type !== 'vehicule' || v.etat === 'epave' || v.lave) continue;
+      if (Math.abs(v.vitesse) > 0.25) continue;                 // il roule : pas touche
+      if (!Monde.estRoute(Math.floor(v.x / TT), Math.floor(v.y / TT))) continue;
+      const d = dist2(v.x, v.y, e.x, e.y);
+      if (d < dMin) { dMin = d; meilleur = v; }
+    }
+    return meilleur;
+  }
+
+  /** IL TRAVAILLE AU FEU ROUGE.
+
+      ⚠️ C'est son crochet, et c'est la meme horloge que les feux pour pietons :
+      un char ARRETE, c'est quinze secondes de travail, et un char qui repart le
+      laisse le chiffon en l'air. Sans cette contrainte, il laverait des chars
+      en pleine rue a soixante kilometres a l'heure — ce serait une animation,
+      pas un metier. */
+  function majLaveur(e) {
+    if (e.laveT > 0) {
+      e.laveT -= 15;
+      // Le feu passe au vert, le char s'en va : on n'a pas fini, tant pis.
+      if (e.laveT <= 0 || !e.charLave || Math.abs(e.charLave.vitesse) > 0.4) {
+        if (e.charLave) e.charLave.lave = true;
+        e.laveT = 0; e.charLave = null; e.etat = 'flane'; e.repos = 600;
+      } else if (e.laveT % 30 === 0) {
+        mousse(e.charLave.x, e.charLave.y - 4);
+      }
+      return;
+    }
+    if (e.repos > 0) { e.repos -= 15; return; }
+    if (e.etat !== 'flane' && e.etat !== 'cap') return;
+    const v = charArrete(e);
+    if (!v) { if (e.etat === 'cap') { e.etat = 'flane'; e.cap = null; } return; }
+    if (Math.hypot(v.x - e.x, v.y - e.y) > 24) {
+      e.etat = 'cap'; e.cap = { x: v.x, y: v.y }; e.capT = 0;
+      return;
+    }
+    e.etat = 'arret'; e.minuterie = 240; e.cap = null;
+    e.laveT = 240; e.charLave = v; e.vx = 0; e.vy = 0;
+    regarder(e, v.x - e.x, v.y - e.y);
+    bulle(e, paroles('laveur').propose, { duree: 150 });
+    mousse(v.x, v.y - 4);
+  }
+
+  /** L'eau savonneuse sur le pare-brise. */
+  function mousse(x, y) {
+    for (let i = 0; i < 5; i++) {
+      const a = B.rng() * Math.PI * 2, v = 0.2 + B.rng() * 0.7;
+      particule(x, y, Math.cos(a) * v, Math.sin(a) * v * 0.6, 14 + B.rng() * 8, '#eef6fb', 1, 0.03);
+    }
+  }
+
+  /** IL VOLE LES AUTRES — la ville coupable d'elle-meme.
+
+      ⚠️ Un crime que TU n'as pas commis, une victime qui crie, et un agent qui
+      arrete quelqu'un d'autre que toi. C'est le deuxieme apres l'homme au
+      manteau, et les deux ensemble disent la meme chose : la police n'existe
+      pas que pour le joueur.
+
+      ⚠️ Il vole DANS LE DOS, comme le joueur le fait (`pickpocket_dos_degres`
+      dans la fiche) : de face, on se ferait prendre. Et la victime perd son
+      argent POUR DE VRAI — sinon le vol n'est qu'une animation, et fouiller le
+      corps d'un vole rapporterait quand meme. */
+  function majPickpocket(e) {
+    if (e.voleT > 0) { e.voleT -= 15; if (e.voleT <= 0) { e.voleT = 0; e.etat = 'flane'; } return; }
+    if (e.repos > 0) { e.repos -= 15; return; }
+    // Un agent a cote : on ne travaille pas sous le nez de la police.
+    if (pietonsAutour(e.x, e.y, 80).some(function (q) { return q.agent && q.vivant; })) {
+      if (e.etat === 'cap') { e.etat = 'flane'; e.cap = null; }
+      e.repos = 300;
+      return;
+    }
+    if (e.etat !== 'flane' && e.etat !== 'cap') return;
+    const cible = pietonsAutour(e.x, e.y, PORTEE_SORTE).find(function (q) {
+      return q !== e && q.vivant && !q.metier && !q.agent && !q.intouchable
+        && q.argent > 0 && (q.etat === 'flane' || q.etat === 'arret');
+    });
+    if (!cible) { if (e.etat === 'cap') { e.etat = 'flane'; e.cap = null; } return; }
+    if (Math.hypot(cible.x - e.x, cible.y - e.y) > 14) {
+      e.etat = 'cap'; e.cap = { x: cible.x, y: cible.y }; e.capT = 0; e.capVite = true;
+      return;
+    }
+    e.capVite = false;
+    // ⚠️ DANS LE DOS : le meme angle que pour le joueur, lu dans la fiche.
+    const dos = B.defs.pietons.reactions.pickpocket_dos_degres * Math.PI / 180;
+    const vers = Math.atan2(e.y - cible.y, e.x - cible.x);
+    const regarde = { bas: Math.PI / 2, haut: -Math.PI / 2, gauche: Math.PI, droite: 0 }[cible.face] || 0;
+    let ecart = vers - regarde;
+    while (ecart > Math.PI) ecart -= 2 * Math.PI;
+    while (ecart < -Math.PI) ecart += 2 * Math.PI;
+    if (Math.abs(ecart) < Math.PI - dos / 2) return;            // il me verrait
+    e.argent = (e.argent || 0) + cible.argent;
+    cible.argent = 0;
+    e.voleT = 90; e.etat = 'arret'; e.minuterie = 90; e.cap = null; e.repos = 900;
+    poussiere(cible.x, cible.y - 4, 3);
+    // La victime s'en apercoit : elle crie, elle fuit, et c'est LUI la menace.
+    cible.etat = 'fuit'; cible.menace = e; cible.minuterie = 300; cible.cri = 120;
+    bulle(cible, paroles('pickpocket').au_voleur, { duree: 120 });
+    // ⚠️ Et un agent qui passe l'arrete, LUI : c'est le meme gag que l'homme
+    // au manteau, et c'est lui qui rend la police credible.
+    const agent = pietonsAutour(e.x, e.y, 120).find(function (q) { return q.agent && q.vivant; });
+    if (agent) { e.etat = 'fuit'; e.menace = agent; e.minuterie = 600; e.cri = 90; agent.but = { x: e.x, y: e.y }; }
   }
 
   /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
@@ -1429,8 +1561,14 @@ const Entites = (function () {
       // On renonce : trop loin, ou ca fait dix secondes qu'on n'y arrive pas.
       // Meme filet que `majPorte`, et pour la meme raison — un pieton coince
       // contre un banc ne doit pas y rester pour toujours.
-      if (norme > 340 || ++e.capT > 600) { e.etat = 'flane'; e.cap = null; e.vx = 0; e.vy = 0; }
-      else { e.vx = dx / norme * vitesse; e.vy = dy / norme * vitesse; }
+      // ⚠️ `capVite` : celui qui RATTRAPE quelqu'un doit aller plus vite que
+      // lui. Le pickpocket marche 10 % plus vite qu'un passant — a ce
+      // rythme-la, il gagne cinq centiemes de pixel par image et met une
+      // minute et demie a couvrir trente pixels. Il ne volait jamais personne,
+      // et rien ne le disait : on le voyait suivre.
+      const pas = e.capVite ? v.pieton_course * e.allure : vitesse;
+      if (norme > 340 || ++e.capT > 600) { e.etat = 'flane'; e.cap = null; e.capVite = false; e.vx = 0; e.vy = 0; }
+      else { e.vx = dx / norme * pas; e.vy = dy / norme * pas; }
     } else if (e.etat === 'arret') {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
       e.vx = 0; e.vy = 0;
@@ -2114,7 +2252,7 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
-    bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe,
+    bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
   };

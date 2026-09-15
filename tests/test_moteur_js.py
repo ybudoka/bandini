@@ -2056,6 +2056,140 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
     )
 
 
+def test_les_trois_de_la_rue_ont_chacune_leur_crochet(banc, paquet):
+    """⚠️ Troisième vague des « sortes de gens », et la même règle : une sorte =
+    un corps + une routine. Celles-ci ont été choisies pour leur **crochet** :
+
+    - le **crieur** hurle ce que **tu** as fait hier — la manchette du Clairon
+      (`journal.py`) compare tes statistiques du jour à celles d'hier ;
+    - le **laveur** ne travaille qu'au **feu rouge** : il ne s'approche que des
+      chars **arrêtés** — la même horloge que les feux pour piétons ;
+    - le **pickpocket** vole les **autres** : un crime que tu n'as pas commis,
+      une victime qui crie, et un agent qui arrête quelqu'un d'autre que toi.
+    """
+    mots = paquet["pietons"]["paroles"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(88);
+        const j = L.B.joueur, TT = L.TT, out = {};
+        const d = o.ligneDroite();
+
+        // 1. LE CRIEUR hurle la manchette — celle du Clairon, pas une phrase à lui.
+        j.x = d.x; j.y = d.y - 3 * TT; L.Monde.centrerCamera(j.x, j.y);
+        L.B.partie.derniereManchette = { slug: 'nuit_rouge', titre: 'NUIT ROUGE AU FAUBOURG' };
+        const cri = o.poser('crieur', 20, 0);
+        cri.etat = 'fige'; cri.plante = { x: cri.x, y: cri.y };
+        L.Entites.indexer();
+        let dit = null, bouge = 0;
+        const poste = { x: cri.x, y: cri.y };
+        for (let i = 0; i < 120 && !dit; i++) { o.frame(1); if (cri.bulle) dit = cri.bulle.texte; }
+        for (let i = 0; i < 60; i++) { o.frame(1); bouge = Math.max(bouge, Math.hypot(cri.x - poste.x, cri.y - poste.y)); }
+        out.crieur = { dit: dit, corps: cri.sprite, bouge: Math.round(bouge),
+                       vitesse: L.Entites.archetype('crieur').vitesse };
+        L.Entites.retirer(cri);
+
+        // 2. LE LAVEUR : il laisse passer un char qui ROULE, il lave celui qui est ARRETE.
+        // ⚠️ SUR LA CHAUSSEE : un laveur de vitres travaille dans la rue, et
+        // `charArrete` ne regarde que les chars qui sont sur la route — sinon
+        // il laverait les autos garees dans les cours.
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const roule = o.char('auto', 30, 0, 0);
+        roule.vitesse = 3; roule.vx = 3;
+        const lav = o.poser('laveur', 0, 0);
+        lav.etat = 'flane';
+        L.Entites.indexer();
+        let versLeRoulant = false;
+        for (let i = 0; i < 60; i++) { o.frame(1); roule.vitesse = 3; if (lav.etat === 'cap') versLeRoulant = true; }
+        out.laveur = { suitUnRoulant: versLeRoulant };
+        L.Entites.retirer(roule);
+        // Et maintenant un char a l'arret, pile devant lui.
+        j.x = d.x; j.y = d.y;
+        const arrete = o.char('auto', 26, 0, 0);
+        arrete.vitesse = 0; arrete.vx = 0; arrete.vy = 0;
+        L.Entites.indexer();
+        let lave = -1, propose = null;
+        for (let i = 0; i < 300 && lave < 0; i++) {
+            o.frame(1);
+            arrete.vitesse = 0; arrete.vx = 0; arrete.vy = 0;
+            if (lav.bulle && !propose) propose = lav.bulle.texte;
+            if (lav.laveT > 0) lave = i;
+        }
+        out.laveur.lave = lave >= 0;
+        out.laveur.propose = propose;
+        out.laveur.corps = lav.sprite;
+        out.laveur.surLeChar = lave >= 0 ? Math.round(Math.hypot(lav.x - arrete.x, lav.y - arrete.y)) : null;
+        L.Entites.retirer(lav); L.Entites.retirer(arrete);
+
+        // 3. LE PICKPOCKET vole un passant — dans le dos, et l'argent CHANGE de poche.
+        j.x = d.x; j.y = d.y - 3 * TT; L.Monde.centrerCamera(j.x, j.y);
+        for (const q of L.B.entites.slice()) {
+            if (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 160) L.Entites.retirer(q);
+        }
+        L.Entites.indexer();
+        const voleur = o.poser('pickpocket', 0, 0);
+        voleur.etat = 'flane'; voleur.argent = 0;
+        const victime = o.poser('passant', 40, 0);
+        victime.etat = 'flane'; victime.argent = 37; victime.face = 'droite';
+        L.Entites.indexer();
+        let vole = -1;
+        for (let i = 0; i < 400 && vole < 0; i++) {
+            o.frame(1);
+            victime.face = 'droite';                    // il regarde a l'oppose : on l'aborde de dos
+            if (voleur.voleT > 0) vole = i;
+        }
+        out.vol = { vole: vole >= 0, poches: victime.argent, butin: voleur.argent,
+                    crie: victime.cri > 0, fuit: victime.etat === 'fuit',
+                    menace: victime.menace === voleur,
+                    dit: victime.bulle ? victime.bulle.texte : null,
+                    corps: voleur.sprite };
+        // ⚠️ Et un agent l'arrete, LUI.
+        voleur.voleT = 0; voleur.etat = 'flane'; voleur.repos = 0;
+        const agent = L.Police.creerAgent(voleur.x + 30, voleur.y, 'flane');
+        L.Entites.indexer();
+        o.frame(30);
+        out.vol.police = { neVolePlus: voleur.repos > 0 || voleur.etat === 'fuit' };
+        return out;
+    }""")
+
+    c = r["crieur"]
+    # ⚠️ Il dit LA MANCHETTE, pas une phrase à lui : c'est tout le personnage.
+    assert c["dit"] == "NUIT ROUGE AU FAUBOURG", (
+        "le crieur ne hurle pas la manchette du Clairon : %s" % c
+    )
+    assert c["corps"] == "crieur"
+    assert c["vitesse"] == 0.0 and c["bouge"] <= 2, (
+        "un crieur de journaux tient son coin : %s px parcourus" % c["bouge"]
+    )
+
+    lv = r["laveur"]
+    # ⚠️ AU FEU ROUGE : il ne court pas après un char qui roule.
+    assert lv["suitUnRoulant"] is False, (
+        "il s'approche d'un char qui roule : ce n'est plus un métier, c'est un accident"
+    )
+    assert lv["lave"] is True, "il ne lave jamais un char arrêté : %s" % lv
+    assert lv["surLeChar"] is not None and lv["surLeChar"] <= 26, (
+        "il lave de loin : %s px du char" % lv["surLeChar"]
+    )
+    assert lv["propose"] == mots["laveur"]["propose"], "il ne dit pas ce que la fiche dit : %s" % lv
+    assert lv["corps"] == "laveur"
+
+    v = r["vol"]
+    assert v["vole"] is True, "le pickpocket ne vole personne : %s" % v
+    # ⚠️ L'argent CHANGE de poche : sinon le vol n'est qu'une animation, et
+    # fouiller le volé rapporterait quand même.
+    assert v["poches"] == 0 and v["butin"] == 37, (
+        "l'argent n'a pas changé de poche : %s" % v
+    )
+    assert v["crie"] is True and v["fuit"] is True, "la victime ne réagit pas : %s" % v
+    assert v["menace"] is True, "la victime en veut à quelqu'un d'autre que son voleur : %s" % v
+    assert v["dit"] == mots["pickpocket"]["au_voleur"], "elle ne crie pas au voleur : %s" % v
+    assert v["corps"] == "pickpocket"
+    assert v["police"]["neVolePlus"] is True, (
+        "il vole sous le nez d'un agent : la police n'existe pas que pour le joueur, "
+        "mais elle existe quand même (%s)" % v["police"]
+    )
+
+
 def test_la_porte_s_ouvre_pour_le_joueur_aussi(banc):
     """⚠️ Retour de Martin : « les portes doivent ouvrir quand j'entre aussi. »
     Elles s'ouvraient pour les piétons et **pas pour lui** — il traversait un

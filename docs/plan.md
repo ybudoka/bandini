@@ -78,7 +78,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le décor se brise | **P2** **correctif**, **livré** (13 sept. 2026) | demande de Martin (« les bris de poteau, de banc de parc et d'arbre ») : le décor était **solide pour les piétons et fantôme pour les chars** — un autobus traversait un arbre, un kiosque et une fontaine sans ralentir, et le **lampadaire était fantôme pour tout le monde**. La **fiche décide** maintenant : `arrete` (un arbre stoppe une berline, un camion le déracine) ou `casse` (un banc, un poteau, un cône cèdent sous n'importe quoi lancé). Le bris laisse des **débris** plafonnés, **éteint la lampe** du poteau tombé, compte une **conduite dangereuse**, et la ville se **répare au lever du jour** — pas dans la minute : le quartier porte ses blessures |
 | Des sortes de gens | **P2** ajout, **première vague livrée** (14 sept. 2026) | demande de Martin (« des amuseurs publics, des musiciens de rue, des exhibitionnistes ») : la ville avait **24 archétypes pour 4 corps** — vingt et un portaient celui du joueur repeint — et sur six `metier`, **deux** faisaient quelque chose. Une sorte était une couleur et trois chiffres. Règle posée : **une sorte = un corps + une routine**. Les trois que Martin a nommées ont chacune son sprite 12×13 et sa routine : le **musicien** et l'**amuseur** tiennent un poste et **attroupent** (et un attroupement est une **foule de témoins**), l'**homme au manteau** l'ouvre au passage d'une dame — qui crie et fuit — et ⚠️ **un agent l'arrête, lui**. Le réservoir de la fiche reste à piger, par vagues |
 | Des sortes de gens — deuxième vague | **P2** ajout, **livré** (14 sept. 2026) | **cinq des sept**, celles dont la routine se branche sur ce qui est déjà livré : la **contractuelle** (elle va au char mal garé, elle verbalise, et « mal garé » cesse d'être un message venu de nulle part), le **touriste** (`temoin: 1.0`, le seul — il lève la tête devant une vitrine et il photographie), l'**ivrogne** (il zigzague, il tombe tout seul, et **il ne fuit pas** devant une arme : il répond), le **jogger** (il ne s'arrête **jamais** — une routine en creux — et ne témoigne de rien), le **facteur** (de porte en porte, il fait battre le battant et **n'entre pas**). Un corps 12×13 chacune, ses **quartiers** déclarés, et ses **mots en Python** (`pietons.PAROLES`). Restent la **personne âgée** (elle attend les feux pour piétons, P4) et le **pickpocket** (M12). 3 juges neufs |
-| Des sortes de gens — troisième vague | **P2** ajout, **en cours** (14 sept. 2026) | trois du réservoir, choisies pour leur **crochet** et pas pour leur costume : le **crieur de journaux** (il hurle la manchette de `journal.py` — donc ce que **tu** as fait hier), le **laveur de vitres** au feu rouge (il s'approche des chars **arrêtés** — ce sont les feux qu'on vient de livrer), et le **pickpocket** (il vole les autres passants : la ville coupable d'elle-même) |
+| Des sortes de gens — troisième vague | **P2** ajout, **livré** (14 sept. 2026) | trois du réservoir, choisies pour leur **crochet** : le **crieur de journaux** hurle la manchette du Clairon — donc **ce que tu as fait hier** (`journal.py` compare tes statistiques du jour à celles de la veille : trois morts un soir, et tu l'entends crier au coin de la rue le lendemain) ; le **laveur de vitres** ne s'approche que des chars **arrêtés** — la même horloge que les feux, et un char qui repart le laisse le chiffon en l'air ; le **pickpocket** vole **les autres**, dans le dos et au même angle que le joueur, l'argent change de poche pour de vrai, la victime crie AU VOLEUR et un agent l'arrête **lui**. 1 juge neuf |
 | Les portes s'ouvrent | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« les piétons devraient aussi sortir et entrer dans les commerces ; profites-en pour faire ouvrir concrètement les portes ») : ⚠️ un piéton sur trois sortait **déjà** d'une porte — mais `placeDeNaissance()` refusait la place si elle était **visible à l'écran**. Ce n'était pas une sortie, c'était une naissance déguisée en sortie, dont le seul intérêt aurait été d'être vue. Maintenant : un **battant** qui s'ouvre, tient et se referme — posé **par-dessus** le sol, jamais dans le morceau cuit —, on naît **dans** la porte et on en sort à l'écran, et un flâneur se choisit une porte et **rentre**, ce qui remplace une part de l'oubli par distance. ⚠️ Jamais la planque, ni le poste, ni l'hôpital ; un commerce pas la nuit — sauf le bar |
 | La porte s'ouvre pour le joueur aussi | **livré** (14 sept. 2026) | retour de Martin (« les portes doivent ouvrir quand j'entre aussi ») : le battant s'ouvrait pour les piétons et **pas pour lui** — d'autant plus voyant que les passants, eux, attendaient poliment l'ouverture. ⚠️ Le piège était dans l'ordre : le jeu est **figé** pendant un fondu de porte, donc un battant ouvert au départ y restait au premier pixel. Les battants battent maintenant **pendant** la transition — la seule chose qui bouge quand tout le reste est arrêté. La porte s'ouvre **avant** de noircir (c'est là qu'on la voit), et au retour c'est celle de la **rue** qui s'ouvre, une fois la ville restaurée |
 | Le carnet | **P2** ajout, **livré** (13 sept. 2026) | demande de Martin (« un rappel de la mission en cours dans le menu, un journal et un bestiaire avec les personnages connus ») : **LE CARNET** au menu Pause, trois pages — **EN COURS** (donneur, récompense, objectifs faits marqués, celui du moment, et où), **JOURNAL** (écrit tout seul depuis ce que le jeu émet déjà, daté au jour, plafonné — le quotidien cède avant les jalons), **RÉPERTOIRE** (⚠️ `p.connus` seulement : un répertoire qui montre la fin est pire que pas de répertoire). Les menus savent maintenant **défiler**, et une page recule d'un cran au lieu de rendre la main au jeu |
@@ -2194,6 +2194,32 @@ la suivante : l'exiger sous un pixel revenait à exiger que personne ne se crois
 face. Il mesure maintenant ce que « se traverser » veut dire — la **durée** d'un chevauchement
 (jamais plus d'une image) et **combien** dépassent le pixel (au plus cinq en 960 images) —
 et le défaut d'origine (1032 paires, 9,9 px, tenues) le fait rougir des trois côtés.
+
+**Troisième vague livrée le 14 sept. 2026** — trois de ceux qui « gagnent leur vie dans la
+rue », prises pour leur **crochet** et pas pour leur costume :
+
+- **Le crieur de journaux** hurle la manchette du Clairon. ⚠️ C'est **ce que tu as fait
+  hier** : `journal.py` compare tes statistiques du jour à celles de la veille, et trois
+  morts un soir s'entendent crier au coin de la rue le lendemain matin. La boucle la moins
+  chère du jeu, et la seule qui te renvoie ton reflet sans passer par un menu. ⚠️ Il **lit**
+  `derniereManchette` et ne la recalcule pas : `manchetteDuJour()` remet le compteur d'hier à
+  zéro au passage, et un crieur qui l'appellerait effacerait la mémoire du journal à chaque
+  cri.
+- **Le laveur de vitres** ne s'approche que des chars **arrêtés**, sur la chaussée. Même
+  horloge que les feux qu'on vient de livrer : un feu rouge, c'est quinze secondes de
+  travail ; un char qui repart le laisse le chiffon en l'air. Sans cette contrainte, il
+  laverait des pare-brise à soixante à l'heure — une animation, pas un métier.
+- **Le pickpocket** vole **les autres**. ⚠️ **L'argent change de poche pour de vrai** — sinon
+  le vol n'est qu'une animation, et fouiller le volé rapporterait quand même. Il aborde
+  **dans le dos**, au même angle que le joueur (`pickpocket_dos_degres`, lu dans la fiche),
+  la victime crie AU VOLEUR et le désigne **lui** comme menace, et un agent qui passe
+  l'arrête. C'est le deuxième après l'homme au manteau, et les deux disent la même chose :
+  **la police n'existe pas que pour toi**.
+
+⚠️ **Un défaut qu'on n'aurait pas vu** : le pickpocket marche 10 % plus vite qu'un passant,
+donc il gagnait **cinq centièmes de pixel par image** et mettait une minute et demie à
+couvrir trente pixels. Il ne volait jamais personne — et de loin, ça ressemblait à quelqu'un
+qui suit. Celui qui **rattrape** quelqu'un court (`capVite`).
 
 **Le réservoir** — « je veux plein d'idées ». Chacune avec ce qu'elle _fait_ ; celles qui
 n'ont qu'un costume n'y sont pas. On y pige par vagues, jamais tout d'un coup.

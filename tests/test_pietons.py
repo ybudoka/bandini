@@ -5,14 +5,17 @@ import pytest
 from app import armes, carte, pietons
 
 
-#: Les metiers qui se tiennent quelque part au lieu de marcher.
-POSTES = {"ambulant", "musicien", "amuseur"}
+#: Les metiers qui se tiennent quelque part au lieu de marcher. ⚠️ Le CRIEUR
+#: en est : un crieur de journaux tient un coin de rue — c'est meme tout son
+#: metier, et un crieur qui se promene ne crie a personne.
+POSTES = {"ambulant", "musicien", "amuseur", "crieur"}
 
 #: Les SORTES : celles qui ont un corps a elles et une routine a elles. ⚠️ La
 #: liste est ici et pas dans le juge, parce que trois juges la lisent — et une
 #: liste recopiee trois fois finit par ne plus dire la meme chose aux trois.
 SORTES = {"musicien", "amuseur", "exhibitionniste",
-          "contractuelle", "touriste", "ivrogne", "jogger", "facteur"}
+          "contractuelle", "touriste", "ivrogne", "jogger", "facteur",
+          "crieur", "laveur", "pickpocket"}
 
 
 @pytest.mark.parametrize("pieton", pietons.CATALOGUE, ids=lambda p: p["slug"])
@@ -173,7 +176,8 @@ def test_les_sortes_qui_viennent_avec_ont_leurs_quartiers():
     Un quartier se reconnait a ses enseignes, a ses toits et a sa gang ; il doit
     aussi se reconnaitre a QUI Y MARCHE."""
     districts = {d["slug"] for d in carte.DISTRICTS}
-    deuxieme = {"contractuelle", "touriste", "ivrogne", "jogger", "facteur"}
+    deuxieme = {"contractuelle", "touriste", "ivrogne", "jogger", "facteur",
+                "crieur", "laveur", "pickpocket"}
     for slug in sorted(deuxieme):
         p = pietons.par_slug(slug)
         assert p is not None, f"{slug} n'est pas au catalogue"

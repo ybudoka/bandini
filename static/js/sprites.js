@@ -411,6 +411,81 @@ SPRITES.facteur = {
   },
 };
 
+
+/* --- Trois qui gagnent leur vie dans la rue ----------------------------------
+
+   ⚠️ Troisieme vague, et la meme regle depuis la premiere : une sorte = un
+   corps + une routine. Celles-ci ont ete choisies pour leur CROCHET — le
+   crieur hurle ce que TU as fait hier (`journal.py`), le laveur ne travaille
+   qu'au feu rouge (les feux qu'on vient de livrer), et le pickpocket vole les
+   AUTRES : un crime que tu n'as pas commis. */
+
+// ⚠️ LA LIASSE BRANDIE (`o`, en dehors de la silhouette) et la casquette
+// de gavroche : a douze pixels, c'est le bras tendu qui le nomme. Un
+// crieur les bras le long du corps est un passant en rouge.
+SPRITES.crieur = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#c0392b', p: '#3a3a4a', o: '#f4f0e4', v: '#7a2a20', b: '#7a2a20' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['..kvvvvk....', '.kcccccck...', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '.okcccccck..', 'ookcccccckoo', '.okcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['..kvvvvk....', '.kcccccck...', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '.okcccccck..', 'ookcccccckoo', '.okcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['..kvvvvk....', '.kcccccck...', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['..kvvvvk....', '.kcccccck...', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kvvvvk...', '..kcccccck..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '..okccccck..', '.ookccccck..', '..okccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+// ⚠️ LA RACLETTE EN TRAVERS, plus large que lui, et le SEAU jaune au
+// pied. Deux formes qui sortent de la silhouette — c'est la seule facon
+// de nommer un metier a cette taille-la.
+SPRITES.laveur = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#c98d66', h: '#2a2a2a', c: '#2f6b8a', p: '#3a4450', o: '#ffffff', l: '#9aa0a6', g: '#d8b83a', b: '#3a4450' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', 'lllllllllll.', '..kcccccck..', '..kcccccck..', '..kppppppk..', '.gkpp..ppkg.', '.gkk....kkg.'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', 'lllllllllll.', '..kcccccck..', '..kcccccck..', '..kppppppk..', '.gkpp..ppkg.', '.gkk....kkg.'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kppppppk..', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kppppppk..', '..kpp..ppk..', '..kk....kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..lllllll...', '...kccccck..', '...kccccck..', '...kppppk...', '..gkppk.kk..', '..gkkk......'],
+    ],
+  },
+};
+// Le capuchon qui mange le visage et les mains DANS les poches : une
+// silhouette qui ne montre rien, et c'est exactement ce qu'on lui demande.
+SPRITES.pickpocket = {
+  w: 12, h: 13, ancre: [6, 12],
+  pal: { k: '#101018', s: '#d8a878', h: '#1a1a1a', c: '#3a4450', p: '#26262e', o: '#2a2f38', b: '#26262e' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhsshhk..', '..khsossk...', '..khssssk...', '...kssssk...', '..kcccccck..', '..kcooocck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhsshhk..', '..khsossk...', '..khssssk...', '...kssssk...', '..kcccccck..', '..kcooocck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '...kssssk...', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
+      ['...kkkkkk...', '...khhhhhk..', '...khhssok..', '...khsssk...', '...khssk....', '....kssk....', '...kccccck..', '...kcoock...', '...kccccck..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+    ],
+  },
+};
+
 SPRITES.auto = {
   w: 32, h: 16, ancre: [16, 8], rotations: 32,
   pal: { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' },
