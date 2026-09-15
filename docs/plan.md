@@ -95,9 +95,10 @@ ne bougent pas quand l'ordre de travail change.
 | Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **livré** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
 | Les feux s'allument pour vrai | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
-| Le son de l'eau | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». On y entrait sur un bruit de **tôle froissée** (`SFX.choc`, le son d'un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule ne faisait **aucun bruit** |
+| Le son de l'eau | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». Il n'y avait **rien à améliorer** : on y entrait sur de la **tôle froissée** (`SFX.choc`, un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule était muet de bout en bout. Trois bruitages neufs (`plongeon` ×2, `nage` ×3, `couler`) et le câblage des six moments que l'eau produit. ⚠️ **Et un cul-de-sac trouvé en chemin** : `v.conducteur === 'joueur'` — la chaîne — n'était **jamais vrai**, donc « IL COULE — SORS » ne s'affichait jamais et le joueur restait dans un char **retiré des entités**, immobile pour toujours au fond de la baie. 6 juges neufs |
 | M15 La ville te parle | **P4** ajout, **1re vague livrée** (14 sept. 2026) | tout ce qui ne demandait **aucun son neuf**. ⚠️ **La rue se tait quand tu sors une arme** — `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour, il ne manquait qu'une **raison** de le faire tomber ; elle tombe d'un coup, remonte en quatre secondes, et **crie** après un coup de feu. ⚠️ **Les répliques : moins souvent et jamais les mêmes** — `audio.VOIX` promettait « jamais deux fois de suite le même » et le moteur tirait par `Math.random()` **sans mémoire** ; le tirage passe maintenant par `B.rng()` (donc reproductible, donc jugeable) et écarte les dernières. **Parler devient une chance** (35 %), pas une certitude. ⚠️ **Le repli du Clairon enseigne** : un matin calme apprend une chose que tu n'as **pas encore faite**, jamais deux fois la même, et quand il n'y a plus rien à apprendre il redevient « rien à signaler ». **Reste à générer** (crédits + une oreille) : la radio qui parle, la police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques par contexte. 11 juges neufs |
 | Les amuseurs de rue font un vrai spectacle | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
+| L'intérieur à la mesure du bâtiment | **P3** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur, tu avais mal compris ». La fiche d'hier n'a tenu que la moitié de la promesse — elle interdisait à la pièce de **dépasser** son bâtiment, rien ne l'obligeait à le **remplir** : 13 % pour un bloc de 59 × 8, et une pièce de six tuiles de profond dans un bâtiment qui en fait quatre |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
@@ -2666,6 +2667,70 @@ Et **deux vrais défauts** sont tombés avec eux :
   positions le long de l'allée — les meilleures d'abord, les recours **après**, pour ne pas
   déplacer un tremplin qui tient très bien.
 
+### L'intérieur à la mesure du bâtiment (**correctif**, taille 3) — **en cours le 14 sept. 2026**
+
+_Demande de Martin :_ « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur,
+tu avais mal compris. »
+
+⚠️ **La fiche du dessus n'a tenu que la moitié de la promesse.** « Une pièce plus grande que
+sa maison » a posé une **inégalité** — le plancher ne dépasse jamais l'empreinte — et une
+inégalité se satisfait très bien d'une pièce minuscule dans un immeuble immense. Mesuré sur
+la ville livrée, aujourd'hui :
+
+| Dehors | Dedans | |
+|---|---|---|
+| 59 × 8 (328 tuiles) | 9 × 8 (42 de plancher) | **13 %** |
+| 58 × 7 (380) | 14 × 9 (84) | 22 % |
+| 35 × 5 (153) | 17 × 10 (120) | la pièce est **deux fois plus profonde** que le bâtiment |
+| 14 × 4 (56) | 11 × 8 (54) | la surface est juste, et il y a **six tuiles de profond dans un bâtiment qui en fait quatre** |
+
+Médiane du rapport plancher / empreinte : **0,64 à 0,75** selon la graine. Et la **forme** ne
+suit jamais : les pièces dessinées font toutes autour de 9 × 8, les bâtiments vont de 3 × 3 à
+59 × 8.
+
+**La règle, et elle remplace celle d'hier** : _la pièce a les **mesures** de son bâtiment._
+Son plancher fait la boîte de ce qu'on voit de la rue — large et plat dehors, large et plat
+dedans — et jamais plus de tuiles que l'empreinte.
+
+Deux décisions de Martin, le 14 sept. :
+
+1. **« les mesures du bâtiment »**, pas seulement la surface ;
+2. **une longue façade se découpe en plusieurs vitrines** : soixante tuiles de large, ce
+   n'est pas un commerce, c'est une **rangée** de commerces — chacun sa porte, son enseigne
+   et sa pièce à sa mesure.
+
+Ce qui suit de la règle :
+
+- **La façade se découpe en vitrines.** Une bande de façade se coupe en segments de la
+  largeur d'un commerce ; chaque segment tire son enseigne, sa famille et sa porte, et
+  **possède les tuiles de bâtiment au-dessus de lui** — c'est sa part de l'empreinte, et
+  c'est elle qui donne les mesures de sa pièce. Un bâtiment en L ou en U se partage tout
+  seul, colonne par colonne.
+- **La pièce se pose à la mesure.** Trois tailles dessinées ne peuvent pas couvrir des
+  bâtiments qui vont de neuf tuiles à trois cent quatre-vingts, dans toutes les formes. Les
+  commerces et logements **ordinaires** se posent donc à la mesure de leur part, meublés par
+  **famille** (l'épicerie a ses frigos et ses allées, l'atelier ses machines, le logement son
+  lit et son poêle) — la famille dit **quoi**, la mesure dit **combien**.
+- ⚠️ **Les seize lieux garantis gardent leur plan dessiné à la main** : le billard du bar, les
+  lits de l'hôpital et les ponts du garage ne se génèrent pas. C'est leur **bâtiment** qui se
+  taille à eux — en largeur **et** en profondeur, alors qu'hier seule la surface était visée
+  (la cantine se retrouvait dans 58 × 7).
+- ⚠️ **On compare toujours les planchers**, et la convention d'hier tient : le plancher d'une
+  pièce fait la **boîte** du bâtiment (une cabane de 3 × 3 ouvre sur 3 × 3 de plancher, donc
+  une pièce de 5 × 5 murs compris). Les murs de la pièce sont ceux du bâtiment.
+- ⚠️ **La ville va bouger** : tailler les parcelles des lieux garantis change le nombre de
+  tuiles de façade, donc le nombre de tirages, donc la suite du hasard. C'est arrivé hier
+  pour la même raison ; les juges de géométrie sont là pour ça et se rejouent tous.
+- ⚠️ **Le mur ne bouge pas pour une porte.** Les vitrines, les portes et les pièces sont une
+  **couche peinte** : elles tirent leurs décisions du dé des devantures, jamais du dé commun
+  (celui qui pose les murs). Une porte de plus ne déplace pas un bâtiment à l'autre bout de
+  la ville.
+- **Juges** : pour chaque porte et sur cinq graines, le plancher de la pièce a **les mesures**
+  de sa part de bâtiment (et plus seulement « pas plus ») ; chaque pièce **posée** passe les
+  mêmes juges que les pièces dessinées (une porte, plancher d'un seul tenant, points
+  atteignables qui ne volent pas la porte, un dixième de meubles au minimum, lits en blocs qui
+  ne se touchent pas) ; et une longue façade porte **plusieurs** enseignes.
+
 ### L'eau n'est plus un mur (**correctif**, taille 3) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « l'eau ne doit plus être un mur, mais qu'on puisse soit y nager ou
@@ -3178,7 +3243,7 @@ n'avaient **jamais été appelés une seule fois** depuis qu'on a posé les feux
   cuites dans le morceau de 256 px), et les feux ne passent pas au **clignotant la nuit** — c'est
   M12, « la ville vit ».
 
-### Le son de l'eau (**correctif**, taille 1) — **en cours le 14 sept. 2026**
+### Le son de l'eau (**correctif**, taille 1) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « améliore le son de quand on va dans l'eau. »
 
@@ -3225,6 +3290,40 @@ pas un son qu'on a laissé grossir. On reste sous le mégaoctet, et la finition 
   brassées et **aucun pas** ; à bout de souffle, on entend `couler` ; un char qui entre dans
   l'eau plonge, puis fait du bruit en coulant ; et le filet synthétisé des trois **atteint la
   sortie**, comme pour tous les autres effets.
+
+**Livré le 14 sept. 2026.** Six fichiers (83 Ko), six moments qui ne s'entendaient pas, et un
+cul-de-sac trouvé en chemin.
+
+- **Les trois sons sont générés et mesurés.** `plongeon` et `nage` **brillent** (‑10 dB au-dessus
+  de 8 kHz : ce qui fait entendre l'eau, ce sont les gouttes — le plongeon entre donc dans le
+  juge de l'aigu), et `couler` est **sourd** (‑47 dB), ce qui est le signe que le son est le
+  bon : une tête qui passe sous l'eau n'a plus d'aigu. ⚠️ **Martin ne les a pas encore
+  écoutés** — c'est la seule chose qu'aucun juge ne remplace ; `--refaire plongeon` est là pour
+  ça.
+- **Six moments câblés**, et chacun existait déjà sans bruit : on entre (plongeon), on avance
+  (brassée à la distance, comme un pas), on sort (une dernière brassée), on coule (`couler`),
+  un autre corps entre (`jouerA`, donc plus faible de loin), un char plonge et s'enfonce.
+- ⚠️ **Une seule porte pour entrer dans l'eau** (`Entites.mouiller`). `police.js` posait lui
+  aussi `a.nage` avant de déplacer son agent : deux endroits qui lisent la même transition, et
+  le premier la mange. Tant que la transition se lisait à deux endroits, le son de l'agent
+  dépendait de **l'ordre d'appel** — le genre de dépendance qu'on ne voit pas et qui se casse
+  au prochain remaniement.
+- ⚠️ **LE défaut trouvé en chemin, et il vaut plus que le son** : `v.conducteur === 'joueur'`
+  — la chaîne — n'était **jamais vrai**. Partout ailleurs le conducteur est l'**entité**
+  (`v.conducteur = j` dans `monter`) ; seul le trafic porte une chaîne. Trois lignes en
+  dépendaient, et le silence était la moins grave : « IL COULE — SORS » **ne s'affichait
+  jamais**, et surtout le joueur restait `dansVehicule` un char **retiré des entités** —
+  mesure du banc : `nage` faux, et **0 px en 60 images de touche**. Couler dans son char était
+  un **cul-de-sac**, et personne ne l'avait vu parce que le juge de « L'eau n'est plus un mur »
+  poussait un char **vide** à l'eau.
+- ⚠️ **Le juge de l'agent se trompait d'une image**, et c'est instructif : la police pose
+  `a.nage` **avant** de déplacer son agent, donc l'image où `dansLEau` devient vrai est celle
+  où il entre — le plongeon part à la suivante. Un juge qui s'arrête pile à la première mesure
+  un silence qui n'existe pas.
+- **Ce qui reste ouvert** : le **sable** (`s`) borde l'eau mais ne sonne pas encore comme une
+  rive (l'eau basse où l'on entre debout, cf. « L'eau n'est plus un mur ») ; et rien ne dit
+  encore, à l'oreille, qu'on **manque de souffle** dans l'eau — c'est le souffle du joueur de
+  M15, qui attend ses clips.
 
 ### Les amuseurs de rue font un vrai spectacle (**correctif**, taille 3) — **en cours le 14 sept. 2026**
 
