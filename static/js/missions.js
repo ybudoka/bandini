@@ -195,6 +195,10 @@ const Missions = (function () {
     if (panneau) return Histoire.proposerDefi(panneau.defi);
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) return acheterAmbulant(j, etal);
+    // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
+    // n'y a rien d'autre a faire de ce bouton-la.
+    const homme = collecteurSousLaMain(j);
+    if (homme) { B.menu = menuDette(homme); return true; }
     // ⚠️ LE STOOL AVANT LE TEMOIN : lui est en route vers un telephone, l'autre
     // cherche encore un agent. Quand les deux sont a portee, c'est le plus
     // presse qu'on paie.
@@ -1258,6 +1262,7 @@ const Missions = (function () {
   }
 
   function nouveauJour() {
+    nuitDeLaDette();
     // ⚠️ La ville se repare AU LEVER DU JOUR, pas dans la minute : ce qu'on a
     // casse reste casse, et le quartier porte ses blessures jusqu'au matin.
     // C'est ce qui fait qu'une nuit de folie SE VOIT.
@@ -1393,6 +1398,162 @@ const Missions = (function () {
     return true;
   }
 
+  // --- La dette de Rocco : une raison de se lever le matin -------------------------------
+
+  /** ⚠️ **Elle ne se rembourse pas a un comptoir**, et ce n'est pas une
+      economie de geographie : un shylock n'attend pas derriere une caisse, il
+      ENVOIE DU MONDE. Les rappels arrivent au telephone, puis les hommes de
+      Sal te trouvent ou que tu sois — et c'est a eux qu'on paie. La collecte
+      est une scene, pas un menu de plus dans une piece. */
+  function ficheDette() { return B.defs.economie.dette || null; }
+
+  /** La nuit passe : la dette monte, et elle s'arrete au plafond.
+
+      ⚠️ Le navigateur n'a rien a calculer — le serveur descend `dettes[n]`,
+      la borne comprise. On cherche donc la case suivante plutot que de refaire
+      l'interet ici : deux formules pour un seul nombre finissent toujours par
+      diverger. */
+  function detteDuLendemain(dette) {
+    const table = B.defs.economie.dettes || [];
+    if (!table.length || dette <= 0) return Math.max(0, dette);
+    for (let i = 0; i < table.length - 1; i++) {
+      if (dette <= table[i]) return Math.min(table[i + 1], table[table.length - 1]);
+    }
+    return table[table.length - 1];
+  }
+
+  function nuitDeLaDette() {
+    const p = B.partie, f = ficheDette();
+    if (!f || p.dette <= 0) return;
+    const avant = p.dette;
+    p.dette = detteDuLendemain(p.dette);
+    // Le telephone commence a sonner avant que les hommes ne viennent : on a
+    // le temps de faire quelque chose, et c'est ce qui en fait une pression
+    // plutot qu'une embuscade.
+    if (p.jour >= f.rappel_jour && p.rappelJour !== p.jour && p.jour < f.collecte_jour) {
+      p.rappelJour = p.jour;
+      Son.SFX.telephone();
+      Hud.message('SAL : « TU ME DOIS ' + p.dette + ' $ »', 240);
+    } else if (p.dette > avant) {
+      Hud.message('LA DETTE MONTE — ' + p.dette + ' $', 180);
+    }
+  }
+
+  function collecteurs() {
+    return B.entites.filter(function (e) { return e.collecteur && e.vivant; });
+  }
+
+  /** Les hommes de Sal. ⚠️ Ils NAISSENT HORS CHAMP et viennent vers toi : on
+      ne les voit pas apparaitre, on les voit arriver. Et une seule visite par
+      jour — sans ca, la dette n'est plus une pression, c'est un harcelement
+      dont on ne peut rien faire. */
+  function envoyerLesCollecteurs() {
+    const p = B.partie, f = ficheDette();
+    if (!f || p.dette <= 0 || B.interieur) return;
+    if (p.jour < f.collecte_jour || p.collecteJour === p.jour) return;
+    if (collecteurs().length) return;
+    if (B.t < (p.collecteT || 0)) return;
+    const arch = Entites.archetype('cravate');
+    if (!arch) return;
+    let nes = 0;
+    for (let i = 0; i < f.hommes; i++) {
+      const place = Entites.placeDeNaissance();
+      if (!place) continue;
+      const e = Entites.creerPieton(place.x, place.y, arch);
+      e.collecteur = true;
+      // ⚠️ `mission` : ils ne s'oublient pas hors de la bulle. « Ils te
+      // trouvent ou que tu sois » n'est pas une figure de style.
+      e.mission = true;
+      e.etat = 'attaque_joueur';
+      e.cri = 90;
+      nes++;
+    }
+    if (!nes) return;
+    p.collecteJour = p.jour;
+    Hud.message('LES HOMMES DE SAL SONT LA', 240);
+  }
+
+  /** Ils te suivent tant que la dette court. ⚠️ `attaque_joueur` abandonne a
+      260 px ; eux, non — c'est toute la difference entre une gang de rue et
+      un recouvrement. */
+  function majCollecteurs() {
+    const p = B.partie, f = ficheDette();
+    if (!f) return;
+    const gens = collecteurs();
+    if (p.dette <= 0) {
+      gens.forEach(function (e) { e.collecteur = false; e.mission = false; e.etat = 'flane'; });
+      return;
+    }
+    if (!gens.length) { envoyerLesCollecteurs(); return; }
+    const j = B.joueur;
+    for (const e of gens) {
+      if (e.etat === 'flane' || e.etat === 'arret') e.etat = 'attaque_joueur';
+      // Au contact, ils se servent. ⚠️ ET CA COMPTE SUR LA DETTE : des hommes
+      // de main qui volent sans rien effacer seraient un impot, pas un
+      // recouvrement — et le joueur n'aurait aucune raison de les laisser
+      // approcher plutot que de fuir chaque fois.
+      if (e.preleveT > 0) { e.preleveT--; continue; }
+      if (!j || j.dansVehicule || B.interieur) continue;
+      if (Math.hypot(e.x - j.x, e.y - j.y) > 22) continue;
+      const pris = Math.min(p.argent, Math.round(p.argent * f.prend));
+      e.preleveT = 180;
+      if (pris <= 0) continue;
+      p.argent -= pris;
+      rembourser(pris, 'ILS SE SERVENT');
+    }
+  }
+
+  /** Payer. ⚠️ La dette ne descend jamais sous zero, et le jour ou elle y
+      arrive les hommes rentrent chez eux — c'est la seule chose qui les fait
+      partir pour de bon. */
+  function rembourser(montant, raison) {
+    const p = B.partie;
+    montant = Math.max(0, Math.min(p.dette, Math.round(montant)));
+    if (!montant) return 0;
+    p.dette -= montant;
+    Hud.message((raison || 'SUR LA DETTE') + ' — ' + montant + ' $, RESTE ' + p.dette + ' $', 200);
+    if (p.dette <= 0) {
+      p.dette = 0;
+      collecteurs().forEach(function (e) { e.collecteur = false; e.mission = false; e.etat = 'flane'; });
+      B.partie.collecteT = B.t + (ficheDette().repit_s || 120) * 60;
+      Hud.message('LA DETTE DE ROCCO EST REGLEE', 300);
+      Son.SFX.argent();
+      Histoire.evenement && Histoire.evenement('dette_reglee');
+    }
+    return montant;
+  }
+
+  function collecteurSousLaMain(j) {
+    if (!j || B.interieur) return null;
+    return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
+      return e.collecteur && e.vivant;
+    }) || null;
+  }
+
+  /** Ce qu'on peut leur donner, en main propre. */
+  function menuDette(e) {
+    const p = B.partie, f = ficheDette();
+    const items = [];
+    items.push({ libelle: 'LA DETTE', detail: p.dette + ' $', actif: false });
+    [f.acompte_min, f.acompte_min * 4, p.dette].forEach(function (montant, i) {
+      const m = Math.min(p.dette, Math.round(montant));
+      if (!m || (i === 2 && m <= f.acompte_min * 4)) return;
+      if (items.some(function (q) { return q.montant === m; })) return;
+      items.push({ libelle: i === 2 ? 'TOUT REGLER' : 'DONNER ' + m + ' $', montant: m,
+                   detail: m + ' $', actif: p.argent >= m,
+                   faire: function () {
+                     payer(m, 'SUR LA DETTE');
+                     rembourser(m, 'A SES HOMMES');
+                     B.partie.collecteT = B.t + (f.repit_s || 120) * 60;
+                     collecteurs().forEach(function (q) { q.collecteur = false; q.mission = false; q.etat = 'flane'; });
+                     Son.SFX.argent();
+                     return true;
+                   } });
+    });
+    return { titre: 'LES HOMMES DE SAL', items: items, sur: p.argent + ' $',
+             aide: 'UN ACOMPTE LES RENVOIE POUR AUJOURD’HUI' };
+  }
+
   // --- Le marche noir : Josee, une fois le Faubourg libere --------------------------------
 
   function menuMarcheNoir() {
@@ -1460,6 +1621,7 @@ const Missions = (function () {
     // ⚠️ Meme ordre que `interagir`, toujours : une invite qui annonce autre
     // chose que ce qu'ACTION va faire est pire que pas d'invite du tout.
     if (j.otage) { B.invite = 'LE LACHER'; return; }
+    if (collecteurSousLaMain(j)) { B.invite = 'PAYER SAL — ' + B.partie.dette + ' $'; return; }
     const stool = stoolSousLaMain(j);
     if (stool) { B.invite = 'ACHETER SON SILENCE — ' + Police.prixDuStool() + ' $'; return; }
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
@@ -1522,6 +1684,7 @@ const Missions = (function () {
       for (const slug in B.joueur.coupons) if (--B.joueur.coupons[slug] <= 0) delete B.joueur.coupons[slug];
     }
     boulot.maj();
+    if (B.t % 30 === 0) majCollecteurs();
     majFourriere();
     majMalGares();
     majInvite(B.joueur);
@@ -1538,5 +1701,6 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
-           revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
+           revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
+           nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette, maj };
 })();

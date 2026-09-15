@@ -36,6 +36,63 @@ POT_DE_VIN_AMI_MAX = 2
 
 HOPITAL = {"fraction": 0.10, "minimum": 30, "maximum": 500}
 
+# --- La dette de Rocco : une raison de se lever le matin -------------------
+
+#: ⚠️ **Elle ne se rembourse pas a un comptoir**, et ce n'est pas une economie
+#: de geographie : un shylock n'attend pas derriere une caisse, il ENVOIE DU
+#: MONDE. Les rappels arrivent au telephone, puis les hommes de Sal te trouvent
+#: ou que tu sois — et c'est a eux qu'on paie. La collecte est une scene, pas
+#: un menu de plus dans une piece.
+#:
+#: ⚠️ **Deux bornes, et elles se tiennent.** La dette MONTE (sinon elle n'est
+#: pas une dette, c'est une facture qu'on oublie) mais elle ne monte pas
+#: indefiniment (`plafond`) : une dette qui double pendant qu'on dort n'est
+#: plus une pression, c'est une partie perdue au reveil. Et l'interet d'une
+#: seule journee doit rester sous ce qu'une journee de travail honnete
+#: rapporte (`test_dette`) — sinon le taxi ne sert plus a rien et il n'y a
+#: plus de decision, seulement une descente.
+DETTE = {
+    "montant": 15000,          # ce que Rocco devait a Sal « Le Barbier »
+    "interet_par_jour": 0.02,  # 2 % par nuit, compose
+    "plafond": 1.5,            # ... et jamais plus d'une fois et demie le capital
+    "rappel_jour": 3,          # le telephone commence a sonner
+    "collecte_jour": 6,        # ... puis ils viennent, et ils reviennent
+    "hommes": 2,               # combien se presentent a la fois
+    "prend": 0.30,             # ce qu'ils prennent dans tes poches s'ils t'attrapent
+    "acompte_min": 500,        # le plus petit versement qu'ils acceptent
+    "repit_s": 120,            # apres une visite, deux minutes de paix
+}
+
+
+def dette_du_lendemain(dette: int) -> int:
+    """Ce que la nuit ajoute. ⚠️ Bornee : `plafond` fois le capital, jamais plus."""
+    if dette <= 0:
+        return 0
+    plafond = round(DETTE["montant"] * DETTE["plafond"])
+    return max(0, min(plafond, round(dette * (1 + DETTE["interet_par_jour"]))))
+
+
+def jours_avant_le_plafond() -> int:
+    """Combien de nuits il faut pour que la dette atteigne son plafond.
+
+    ⚠️ Un juge exige que ce soit LONG : la dette doit peser sur une partie
+    entiere, pas sur une nuit. Sinon ce n'est pas une raison de se lever le
+    matin, c'est une partie perdue au reveil."""
+    dette, plafond, jours = DETTE["montant"], round(DETTE["montant"] * DETTE["plafond"]), 0
+    while dette < plafond and jours < 1000:
+        dette = dette_du_lendemain(dette)
+        jours += 1
+    return jours
+
+
+#: Ce que les proprietes rapportent en une journee, toutes reunies. ⚠️ C'est
+#: l'etalon du travail honnete : le juge de la dette s'y compare, parce que
+#: c'est le seul revenu du jeu qui se compte en dollars PAR JOUR et qui ne
+#: depend pas de l'habilete du joueur.
+def revenu_honnete_par_jour() -> int:
+    return sum(p["revenu_par_jour"] for p in PROPRIETES)
+
+
 # --- Effacer le casier : la certitude, ou le pari -------------------------
 
 #: ⚠️ **Deux comptoirs qui n'ont de sens que l'un contre l'autre.** Un seul
@@ -409,6 +466,14 @@ def retour_sur_investissement_min(p: Propriete) -> float:
     return p["prix"] / p["revenu_par_jour"] * JOUR_SECONDES / 60
 
 
+def _table_des_dettes() -> list[int]:
+    table, dette = [DETTE["montant"]], DETTE["montant"]
+    for _ in range(jours_avant_le_plafond() + 2):
+        dette = dette_du_lendemain(dette)
+        table.append(dette)
+    return table
+
+
 def exporter() -> dict:
     return {
         "argent_depart": ARGENT_DEPART,
@@ -438,6 +503,10 @@ def exporter() -> dict:
         "repeinte": REPEINTE,
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
+        "dette": dict(DETTE),
+        # dettes[n] = ce que la dette vaut apres n nuits sans payer — le
+        # navigateur n'a plus qu'a indexer, et la borne est deja dedans.
+        "dettes": _table_des_dettes(),
         "effacer": {
             quoi: {**fiche, "tirage": [list(t) for t in fiche["tirage"]]}
             if "tirage" in fiche else dict(fiche)

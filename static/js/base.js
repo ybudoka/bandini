@@ -77,6 +77,14 @@ function etatInitial(defs) {
     //: ⚠️ La commande est DANS LA SAUVEGARDE : on a paye hier, on apprend
     //: aujourd'hui, et il n'y a pas de retour en arriere.
     nettoyage: { avocatJour: 0, commande: null, provision: false },
+    //: M10 — la dette de Rocco, celle dont on herite avec le garage. Elle
+    //: MONTE chaque nuit et elle est BORNEE : une dette qui double pendant
+    //: qu'on dort n'est plus une pression, c'est une partie perdue au reveil.
+    //: `collecteJour` est le dernier jour ou les hommes de Sal se sont
+    //: presentes — ils ne viennent qu'une fois par jour.
+    dette: (eco.dette && eco.dette.montant) || 0,
+    collecteJour: 0,
+    rappelJour: 0,
     //: Les gens qu'on a RENCONTRES (slug -> jour). ⚠️ Sans ca, le repertoire
     //: du carnet montrerait des personnages qu'on n'a jamais vus — et il
     //: divulgacherait l'histoire : Josee, le Dr Lachance de M13, Marco qui te
