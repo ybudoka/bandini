@@ -87,8 +87,17 @@ const Monde = (function () {
         const manquant = 'NSOE'.split('').find(function (b) { return inter.bras.indexOf(b) < 0; });
         inter.stop = { N: '^', S: 'v', O: '<', E: '>' }[manquant];   // bras manquant N → la tige est S → on arrive en montant
       }
-      for (let y = inter.y - 2; y < inter.y + inter.h + 2; y++) {
-        for (let x = inter.x - 2; x < inter.x + inter.l + 2; x++) croisements.set(x + ',' + y, inter);
+      // ⚠️ LA LARGEUR DU TROTTOIR VIENT DU PAQUET, elle ne s'ecrit pas ici.
+      // C'etait deux litteraux — « pour inclure les passages pietons, deux
+      // tuiles de chaque cote » — alors que la traverse fait exactement
+      // `TROTTOIR` tuiles de large, par construction : c'est la meme
+      // constante des deux cotes. Le jour ou elle bougera, Python dessinera
+      // des traverses d'une tuile et ce JS en aurait reclame deux : un pieton
+      // demanderait a quel feu obeir en se tenant sur la chaussee, et un char
+      // lirait un croisement la ou il n'y en a plus.
+      const bord = (def.grille && def.grille.trottoir) || 2;
+      for (let y = inter.y - bord; y < inter.y + inter.h + bord; y++) {
+        for (let x = inter.x - bord; x < inter.x + inter.l + bord; x++) croisements.set(x + ',' + y, inter);
       }
     });
     carte = {
