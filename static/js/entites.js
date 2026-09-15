@@ -273,6 +273,12 @@ const Entites = (function () {
   //: Le plafond de debris. ⚠️ Ce sont des ENTITES : elles comptent dans le
   //: budget d'image comme tout le reste. Une nuit a tout casser doit tenir le
   //: rythme, donc les plus vieux debris disparaissent en premier.
+  //: Combien de temps une borne defoncee crache : dix secondes. ⚠️ Assez pour
+  //: qu'on la voie de loin et qu'on revienne voir, pas assez pour que la rue
+  //: reste une fontaine jusqu'au lendemain — le decor, lui, ne repousse qu'au
+  //: `nouveauJour()`, mais l'eau, elle, s'arrete.
+  const JET_EAU_IMAGES = 600;
+
   const DEBRIS_MAX = 40;
 
   /** Une ARME mord le decor : la balle, l'explosion, le feu. Rend vrai s'il
@@ -335,6 +341,15 @@ const Entites = (function () {
     }
     reindexerDecor();
     poussiere(e.x, e.y, 8);
+    // ⚠️ UNE BORNE-FONTAINE DEFONCEE CRACHE. C'est la seule raison d'en avoir
+    // fait un decor cassable : une tuile ne peut ni tomber ni gicler. Le jet
+    // est une ENTITE INVISIBLE qui vit ses dix secondes et crache des
+    // particules — le meme patron que le brasier du Molotov, et la meme raison
+    // : on ne repeint pas une tuile a chaque image pour un effet qui passe.
+    if (e.decor === 'borne_fontaine') {
+      creer('jet_eau', e.x, e.y, { minuterie: JET_EAU_IMAGES, dessine: false, solide: false, r: 0 });
+      Son.SFX.borne_fontaine();
+    }
     void d;
     return true;
   }
@@ -2605,6 +2620,16 @@ const Entites = (function () {
       if (e.bulle) majBulle(e);
       if (e.type === 'joueur') majJoueur(e);
       else if (e.type === 'pieton') { majPieton(e); actifs++; }
+      else if (e.type === 'jet_eau') {
+        // La gerbe : deux gouttes par image, vers le haut, qui retombent.
+        if (e.minuterie-- <= 0) { retirer(e); continue; }
+        for (let k = 0; k < 2; k++) {
+          const a = (B.rng() - 0.5) * 1.6;
+          particule(e.x + (B.rng() - 0.5) * 4, e.y - 4, Math.sin(a) * 1.1, -0.35 - B.rng() * 0.3,
+                    18 + B.rng() * 14, B.rng() < 0.4 ? '#cfe6f5' : '#7fb6d9', 2, 0.16);
+        }
+        if (e.t % 24 === 0) Son.SFX.borne_fontaine();
+      }
       else if (e.type === 'ramassage'
                && (e.t > 3600 || dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI)) {
         retirer(e);

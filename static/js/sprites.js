@@ -1365,16 +1365,27 @@ const TUILES = (function () {
     // l'envers — Martin l'a vu du premier coup d'oeil.
     // La variante vient de Monde.varianteDePassage : 0 pleine, 1 exterieure
     // ouest/nord (un bout de 5 px du cote est/sud), 2 exterieure est/sud.
-    // Deux tiers de 32 px = 21 px de bandes : Martin les trouvait trop larges.
+    //
+    // ⚠️ TROIS DE BANDE, CINQ DE VIDE, et les deux chiffres viennent de la
+    // norme, pas du gout : une bande de passage fait 0,50 m et l'interdistance
+    // 0,50 a 0,80 m — le VIDE est plus large que la bande. Ici c'etait
+    // l'inverse (3 de bande, 2 de vide), et un passage se lisait comme un mur
+    // blanc. A l'echelle du jeu (une tuile de 16 px pour une voie d'environ
+    // 3 m, donc 1 px ≈ 0,20 m), 3 px font 0,60 m et 5 px font 1 m.
+    //
+    // ⚠️ Et le PAS DIVISE LA TUILE. A 5, les bandes tombaient a 1, 6, 11 : deux
+    // pixels de vide dedans, TROIS a la couture entre deux tuiles. Le motif
+    // boitait a chaque tuile sans qu'on sache pourquoi. A 8, elles tombent a 1
+    // et 9, et le vide fait cinq partout — y compris par-dessus la couture.
     '=': function (ctx, v, T) {
       asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de';
       const x0 = v === 1 ? T - 5 : 0, l = v === 0 ? T : 5;
-      for (let y = 1; y < T; y += 5) ctx.fillRect(x0, y, l, 3);
+      for (let y = 1; y < T; y += 8) ctx.fillRect(x0, y, l, 3);
     },
     ':': function (ctx, v, T) {
       asphalte(ctx, v, T); ctx.fillStyle = '#e8e6de';
       const y0 = v === 1 ? T - 5 : 0, h = v === 0 ? T : 5;
-      for (let x = 1; x < T; x += 5) ctx.fillRect(x, y0, 3, h);
+      for (let x = 1; x < T; x += 8) ctx.fillRect(x, y0, 3, h);
     },
     // L'allee de manoeuvre : de l'asphalte pale et fendu, sans une ligne.
     'p': function (ctx, v, T) { bitume(ctx, v, T); if (v === 7) fissure(ctx, v, T); },
@@ -1443,7 +1454,6 @@ const TUILES = (function () {
     'D': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(4, 3, 8, 13); ctx.fillStyle = '#d8b83a'; ctx.fillRect(10, 9, 1, 1); },
     'd': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#2e2118'; ctx.fillRect(4, 4, 8, 12); ctx.fillStyle = '#3a2a1e'; ctx.fillRect(5, 5, 6, 10); ctx.fillStyle = '#6b5a48'; ctx.fillRect(4, 8, 8, 1); },
     'G': function (ctx, v, T) { facade(ctx, v, T); ctx.fillStyle = '#7a7d82'; ctx.fillRect(1, 3, 14, 13); ctx.fillStyle = '#5f6267'; for (let y = 5; y < 16; y += 3) ctx.fillRect(1, y, 14, 1); },
-    'b': function (ctx, v, T) { trottoir(ctx, v, T); ctx.fillStyle = '#d8b83a'; ctx.fillRect(6, 4, 4, 10); ctx.fillStyle = '#101018'; ctx.fillRect(6, 8, 4, 1); },
     'f': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_GRILLAGE); },
     'w': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BOIS); },
     'X': function (ctx, v, T) { clotureTuile(ctx, v, T, CLOTURE_BARBELE); },
@@ -2285,6 +2295,27 @@ const GRILLE_CAMION_CUISINE = [
    ⚠️ L'echelle des `pv` se lit en balles de PISTOLET (30 points) : une poubelle
    part au premier coup, un lampadaire au deuxieme, un kiosque au troisieme. La
    fronde (10) et la mitraillette (9) usent, la carabine (60) couche. */
+/** Le mat d'un feu, tout entier, « bras vers l'est » quand `vers` vaut 1 et
+    par MIROIR quand il vaut -1. ⚠️ Un seul jeu de nombres pour les deux sens :
+    `m()` retourne une abscisse et sa largeur d'un coup. */
+function peindreFeu(ctx, w, vers) {
+  const f = DECORS.feu;
+  const m = function (x, l) { return vers > 0 ? x : w - x - l; };
+  ctx.fillStyle = '#2c2c30';
+  ctx.fillRect(m(f.boitier.x, f.boitier.l), f.boitier.y, f.boitier.l, f.boitier.h);
+  const douilles = ['#3d1a16', '#3d3013', '#12331f'];        // rouge, jaune, vert eteints
+  for (let i = 0; i < 3; i++) {
+    ctx.fillStyle = douilles[i];
+    ctx.fillRect(m(f.lentilles[i], f.lentilleCote), f.lentilleY, f.lentilleCote, f.lentilleCote);
+  }
+  // Le mat : il monte jusque SOUS le boitier, et son pied deborde d'un pixel
+  // de chaque cote — sans ce pied, un poteau de trois pixels a l'air pose sur
+  // rien.
+  ctx.fillStyle = '#3a3d44';
+  ctx.fillRect(m(f.mat.x, f.mat.l), f.boitier.y + 1, f.mat.l, 21);
+  ctx.fillRect(m(f.mat.x - 1, f.mat.l + 2), 22, f.mat.l + 2, 2);
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -2296,6 +2327,26 @@ const DECORS = {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 2, 26); ctx.fillRect(0, 28, 6, 2);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(2, 2, 6, 2);
     ctx.fillStyle = '#ffe9a8'; ctx.fillRect(6, 3, 2, 3);
+  } },
+  // ⚠️ ROUGE, et c'est la couleur qu'on attend d'une borne-fontaine — elle
+  // etait jaune, et une tache jaune au coin d'une rue se lit comme une borne
+  // de stationnement ou un poteau de chantier, pas comme de l'eau. Deux
+  // bouchons lateraux, un chapeau, une bande claire : a douze pixels, c'est la
+  // SILHOUETTE qui la nomme, la couleur ne fait que la confirmer.
+  //
+  // ⚠️ `casse` : elle CEDE sous un char lance, et c'est tout l'interet — une
+  // borne qu'on ne peut pas defoncer n'est qu'une tache de peinture.
+  // ⚠️ `pv: 40`, moins qu'un lampadaire (60), et c'est la VRAIE borne qui le
+  // dit : elle est boulonnee sur des vis qui CASSENT expres, pour qu'un char
+  // l'arrache au lieu de se plier autour. Elle cede plus vite que le poteau
+  // d'a cote, c'est fait pour.
+  borne_fontaine: { casse: 0.75, pv: 40, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#8e1f16'; ctx.fillRect(3, 2, 4, 11);                 // le corps, dans l'ombre
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(3, 2, 3, 11);                 // sa face eclairee du nord-ouest
+    ctx.fillStyle = '#8e1f16'; ctx.fillRect(1, 5, 2, 3); ctx.fillRect(7, 5, 2, 3);   // les deux bouchons
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(2, 0, 6, 2);                  // le chapeau
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(3, 9, 4, 1);                  // la bande claire
+    ctx.fillStyle = '#5c1410'; ctx.fillRect(3, 13, 4, 1);                 // le pied
   } },
   poubelle: { casse: 0.85, pv: 25, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
@@ -2407,10 +2458,48 @@ const DECORS = {
     ctx.fillStyle = '#14454a'; ctx.fillRect(2, 22, 26, 1);
     Atlas.texte(ctx, 'HOMARD', 4, 23, '#7a2420', 1);                                         // 6 lettres = 23 px
   } },
-  feu: { w: 10, h: 24, ancre: [5, 23], r: 2, solide: false, peindre: function (ctx, w, h) {
-    ctx.fillStyle = '#2c2c30'; ctx.fillRect(0, 1, 10, 5);         // boitier, deux lanternes peintes a la volee
-    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 6, 2, 17); ctx.fillRect(2, 22, 6, 2);
-  } },
+  /* ⚠️ UN FEU QUEBECOIS SUR SA POTENCE.
+
+     HORIZONTAL, et ses lentilles ont des FORMES — le rouge CARRE, le jaune en
+     LOSANGE, le vert ROND. Ce n'est pas une licence de pixel art, c'est la
+     signalisation d'ici : le Quebec la pose depuis des decennies (le
+     Nouveau-Brunswick, la Nouvelle-Ecosse, l'Ile-du-Prince-Edouard et l'est de
+     l'Ontario ont suivi), et la forme est la pour qui ne distingue pas le
+     rouge du vert. Elle rend un service de plus a 480 x 270 : a TROIS PIXELS,
+     une forme se lit quand une teinte se devine.
+
+     ⚠️ ET LE MAT NE PORTE PAS SES TETES SUR LA TETE. Il les tient PAR UN
+     BOUT, et le reste porte a faux AU-DESSUS DE LA CHAUSSEE — c'est une
+     potence, et c'est ce qui fait qu'un feu se voit du milieu de la rue et pas
+     seulement du trottoir. Le poteau est donc a une extremite, jamais au
+     milieu, et le bras part vers le croisement (`COINS`, dans vehicules.js).
+
+     ⚠️ UN SEUL GABARIT, ET UN MIROIR. Tout est ecrit « bras vers l'est » ; un
+     mat tourne vers l'ouest se peint avec les memes nombres passes par
+     `miroir()`. Deux jeux de coordonnees, c'est un jeu qui derive le jour ou
+     l'on bouge une lentille.
+
+     ⚠️ Et le miroir RETOURNE L'ORDRE DES LENTILLES — rouge a droite au lieu de
+     gauche. C'est juste : le rouge est a gauche DU CONDUCTEUR, et deux tetes
+     qui regardent des sens opposes se voient a l'envers l'une de l'autre vues
+     d'en haut. Les douilles eteintes suivent, donc chaque tete reste lisible
+     pour elle-meme.
+
+     La fiche ne cuit que le mat, le boitier et les TROIS DOUILLES ETEINTES,
+     chacune dans un ton tres sombre de sa couleur : c'est ce qui fait qu'on
+     voit qu'il y a trois feux, et laquelle est allumee. La lentille vive, elle,
+     se peint a la volee (`dessinerFeu`) — un seul feu a la fois. */
+  feu: {
+    w: 17, h: 24, ancre: [2, 23], ancreMiroir: [14, 23], r: 2, solide: false,
+    //: Le gabarit, en « bras vers l'est ». `dessinerFeu` et son juge le LISENT
+    //: ici : personne ne recopie ces nombres.
+    mat: { x: 1, l: 3 },
+    boitier: { x: 4, y: 1, l: 13, h: 5 },
+    lentilles: [5, 9, 13], lentilleY: 2, lentilleCote: 3,
+    tete: { x: 4, y: 8, h: 7 },          // la tete pieton, sous le bras, meme bord
+    peindre: function (ctx, w, h) { peindreFeu(ctx, w, 1); },
+    peindreMiroir: function (ctx, w, h) { peindreFeu(ctx, w, -1); },
+  },
   // ⚠️ PLUS PETIT QUE LE FEU DES CHARS, et c'est voulu : a 480 x 270 il se lit
   // par sa COULEUR et sa FORME, jamais par son detail. Un boitier haut comme
   // celui des autos, trois cent cinquante fois dans la ville, mangerait la rue.

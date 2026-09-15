@@ -3665,7 +3665,22 @@ def test_la_fille_de_la_brume_a_une_silhouette_a_elle(banc):
 
 def test_la_fille_de_la_brume_tient_son_coin(banc):
     """Le deuxieme signe, celui qu'on lit avant meme la robe : elle ATTEND.
-    Elle flanait comme tout le monde dix secondes apres etre apparue."""
+    Elle flanait comme tout le monde dix secondes apres etre apparue.
+
+    ⚠️ **On mesure jusqu'a sa premiere FUITE, pas au-dela.** Le juge prenait
+    son écart maximum sur quarante secondes, fuite comprise : une fille qui
+    détale d'un coup de feu court 240 px — et c'est exactement ce qu'elle doit
+    faire. Une fois partie, elle ne revient pas : la fuite lui fait traverser
+    une rue, et un passant ne remet pas le pied sur la chaussée hors d'un
+    passage. Le juge a donc rougi le jour où les lampadaires ont bougé de trois
+    tuiles ; aucune ligne de *son* code n'avait changé, mais la ville autour
+    d'elle oui, et avec elle ce qui l'effraie. Il tenait par chance.
+
+    Ce que le poste promet, et la seule chose : **tant que rien ne lui fait
+    peur, elle ne flâne pas au loin.** Le juge le dit maintenant, et il exige
+    aussi d'avoir eu de quoi regarder — sinon une fuite à la troisième seconde
+    le ferait passer sans rien mesurer.
+    """
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(34);
@@ -3673,26 +3688,48 @@ def test_la_fille_de_la_brume_tient_son_coin(banc):
         const passante = o.poser('passante', -20, 0);
         fille.etat = 'flane'; passante.etat = 'flane';
         const p0 = { x: fille.x, y: fille.y };
-        let ecartFille = 0, cheminPassante = 0, arrets = 0;
-        let px = passante.x, py = passante.y;
+        let ecartFille = 0, cheminFille = 0, cheminPassante = 0, arrets = 0, calmes = 0;
+        let px = passante.x, py = passante.y, fx = fille.x, fy = fille.y, fuite = false;
         for (let i = 0; i < 80; i++) {
             o.frame(30);
-            if (fille.etat === 'arret') arrets++;
-            ecartFille = Math.max(ecartFille, Math.hypot(fille.x - p0.x, fille.y - p0.y));
-            cheminPassante += Math.hypot(passante.x - px, passante.y - py);
+            if (fille.etat === 'fuit') fuite = true;
+            if (!fuite) {
+                calmes++;
+                if (fille.etat === 'arret') arrets++;
+                ecartFille = Math.max(ecartFille, Math.hypot(fille.x - p0.x, fille.y - p0.y));
+                cheminFille += Math.hypot(fille.x - fx, fille.y - fy);
+                // ⚠️ La passante se mesure SUR LA MEME FENETRE : comparer 40 s
+                // de flanerie a 13 s de faction ne compare rien.
+                cheminPassante += Math.hypot(passante.x - px, passante.y - py);
+            }
+            fx = fille.x; fy = fille.y;
             px = passante.x; py = passante.y;
         }
-        return { poste: !!fille.poste, arrets: arrets,
-                 fille: Math.round(ecartFille), passante: Math.round(cheminPassante) };
+        return { poste: !!fille.poste, arrets: arrets, calmes: calmes,
+                 fille: Math.round(ecartFille), chemin: Math.round(cheminFille),
+                 passante: Math.round(cheminPassante) };
     }""")
     assert r["poste"] is True, "elle n'a pas de coin a tenir"
-    assert r["fille"] < 80, "en 40 s elle a quitte son coin"
-    # ⚠️ On mesure le CHEMIN de la passante, pas son ecart au depart : une
-    # flaneuse qui revient sur ses pas fait un long chemin et un petit ecart.
-    # L'ecart tombait a 113 px sur certaines graines — le seuil jugeait le
-    # hasard du trajet, pas le fait qu'elle flane.
-    assert r["passante"] > 400, "⚠️ une passante, elle, doit continuer de flaner"
-    assert r["arrets"] > 30, "elle marche plus qu'elle n'attend"
+    # ⚠️ VINGT RELEVES, soit dix secondes : c'est exactement la fenetre que la
+    # fiche nomme — « elle se remettait a flaner au bout de dix secondes ». En
+    # deca, le juge n'aurait rien vu et passerait pour rien.
+    assert r["calmes"] >= 20, \
+        f"seulement {r['calmes']} releves avant qu'elle prenne peur : le juge n'a rien mesure"
+    assert r["fille"] < 80, "tant que rien ne l'effraie, elle ne doit pas quitter son coin"
+    # ⚠️ On mesure le CHEMIN, pas l'ecart au depart : une flaneuse qui revient
+    # sur ses pas fait un long chemin et un petit ecart. L'ecart tombait a
+    # 113 px sur certaines graines — le seuil jugeait le hasard du trajet, pas
+    # le fait qu'elle flane.
+    assert r["passante"] > 100, "⚠️ une passante, elle, doit continuer de flaner"
+    # ⚠️ ET C'EST LE CONTRASTE QUI COMPTE, pas un seuil absolu. Un seuil en
+    # pixels juge le trajet qu'une graine a tire ; un rapport juge la REGLE —
+    # a fenetre egale, celle qui tient un coin marche bien moins que celle qui
+    # flane. C'est ce qui manquait le jour ou les deux seuils absolus de ce
+    # juge (80 px d'ecart, 400 px de chemin) ont rougi parce que des
+    # lampadaires avaient bouge de trois tuiles.
+    assert r["chemin"] * 3 < r["passante"], \
+        f"elle marche presque autant qu'une passante : {r['chemin']} px contre {r['passante']}"
+    assert r["arrets"] > r["calmes"] * 0.4, "elle marche plus qu'elle n'attend"
 
 
 def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
@@ -5017,21 +5054,37 @@ def test_les_feux_et_les_stops_sont_poses(banc):
         return { feux: feux.length, croix: croix, stops: stops.length, tes: tes,
                  bienPlaces: bienPlaces, stopSansOuest: sansOuest ? sansOuest.stop : null };
     }""")
-    assert r["feux"] == r["croix"] * 2 > 0
+    # ⚠️ QUATRE, un par coin : un tricolore ne montre qu'une rue, il en faut
+    # donc un en face de chaque approche. A deux, il manquait un feu a deux
+    # coins sur quatre.
+    assert r["feux"] == r["croix"] * 4 > 0
     assert r["stops"] == r["tes"] > 0
     assert r["bienPlaces"] == r["feux"] + r["stops"], "un feu ou un stop est sur la route ou dans un mur"
     assert r["stopSansOuest"] == "<", "le STOP est pour ceux qui arrivent par la tige"
 
 
-# ⚠️ Ou tombe l'ampoule d'une tete pieton, en pixels ecran. Le calcul refait
-# celui de `tetesDeTraverse` : a DEUX tetes les ampoules retrecissent a trois
-# pixels et se decalent, a une elle en fait quatre et se centre. Les juges
-# d'en dessous cherchent une lampe ou un rectangle A SA PLACE — sans quoi
-# « il y a du vert quelque part » passerait au vert du poteau d'en face.
-TETES_JS = """
-        function tete(cx, i, n) {            // milieu du mat, rang de la tete, combien
-            const deux = n > 1, l = deux ? 3 : 4;
-            return { x: deux ? (i === 0 ? cx - 4 : cx + 1) : cx - 2, l: l };
+# ⚠️ Le gabarit du mat se LIT dans `DECORS.feu`, il ne se recopie pas ici — et
+# le miroir avec. Un mat dont le bras part vers l'ouest peint tout a l'envers ;
+# un juge qui chercherait la lentille a sa place « de droite » ne verrait rien
+# et dirait « le feu est eteint » alors qu'il brille.
+GABARIT_JS = """
+        const F = L.DECORS.feu;
+        function miroir(x, l, bras) { return bras > 0 ? x : F.w - x - l; }
+        function ancre(e) { return e.bras > 0 ? F.ancre : F.ancreMiroir; }
+        function coin(e, cx, cy) {                       // le coin haut-gauche du sprite
+            return [Math.round(e.x - ancre(e)[0] - cx), Math.round(e.y - ancre(e)[1] - cy)];
+        }
+        function lentilleDe(e, rang) {                   // le coin de la lentille du rang
+            return miroir(F.lentilles[rang], F.lentilleCote, e.bras);
+        }
+        function boiteDesTetes(e) {                      // [bord gauche, largeur] du boitier pieton
+            const large = e.traverses.length > 1 ? F.boitier.l : 7;
+            return [miroir(F.tete.x, large, e.bras), large];
+        }
+        function teteDe(e, i) {                          // le coin de la i-e ampoule pieton
+            const [bord, large] = boiteDesTetes(e), deux = e.traverses.length > 1;
+            const cote = deux ? 3 : 4;
+            return [deux ? (i === 0 ? bord + 1 : bord + large - 1 - cote) : bord + ((large - cote) >> 1), cote];
         }
 """
 
@@ -5043,19 +5096,21 @@ def test_une_ampoule_allumee_pose_une_lampe_de_la_couleur_de_sa_phase(banc):
     recevait donc que la multiplication — comme une brique. À minuit, le vert
     (46, 204, 113) tombait à (16, 76, 57).
 
-    Chaque ampoule allumée pose maintenant sa lampe, **de la couleur de sa
-    phase** : verte pour le sens qui roule, rouge pour l'autre, orange pour les
-    deux quand le croisement se vide. Et **rien du tout en plein jour**.
+    La lentille allumée pose maintenant sa lampe, **de la couleur de sa
+    phase** — et elle seule, puisqu'un tricolore n'en allume qu'une. Et **rien
+    du tout en plein jour**.
     """
-    r = banc("""function (L, o) {
+    r = banc("""function (L, o) {""" + GABARIT_JS + """
         L.Jeu.commencer();
         const inter = L.Monde.carte.intersections.find(function (i) { return i.feux; });
         const feu = L.B.entites.find(function (e) { return e.type === 'feu' && e.inter === inter; });
-        const t = L.B.defs.conduite.trafic, d = L.DECORS.feu;
+        const t = L.B.defs.conduite.trafic;
         const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
+        const sens = feu.axe === 'ns' ? '^' : '>';
         L.B.joueur.x = feu.x; L.B.joueur.y = feu.y;
-        // Les deux ampoules des CHARS, retrouvees a leur place a l'ecran : le
-        // mat en porte d'autres (les tetes pieton) et les poteaux voisins
+        const RANG = { rouge: 0, jaune: 1, vert: 2 };
+        // La lampe de la lentille des CHARS, retrouvee a sa place a l'ecran :
+        // le mat en porte d'autres (les tetes pieton) et les trois autres coins
         // aussi, et un juge qui lirait « il y a du vert quelque part »
         // passerait au vert du coin d'en face.
         function releve(heure, phase) {
@@ -5064,28 +5119,35 @@ def test_une_ampoule_allumee_pose_une_lampe_de_la_couleur_de_sa_phase(banc):
             L.Monde.centrerCamera(feu.x, feu.y);
             o.frame(1);
             const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
-            const x = Math.round(feu.x - d.ancre[0] - cx), y = Math.round(feu.y - d.ancre[1] - cy);
+            const [x, y] = coin(feu, cx, cy);
+            const couleur = L.Monde.feuDeCirculation(inter, sens);
+            const lx = x + lentilleDe(feu, RANG[couleur]) + 1.5, ly = y + F.lentilleY + 1.5;
             const lampes = L.Vehicules.lampesDesFeux();
-            function a(lx) {
-                const l = lampes.find(function (q) { return q.x === lx && q.y === y + 3.5; });
-                return l ? l.c : null;
-            }
-            return { total: lampes.length, ns: a(x + 2.5), eo: a(x + 7.5) };
+            const l = lampes.find(function (q) { return q.x === lx && q.y === ly; });
+            // ⚠️ « Ailleurs » veut dire DANS CE BOITIER-CI, pas n'importe ou sur
+            // la rangee : les quatre mats d'un croisement sont a la meme
+            // hauteur d'ecran, et le juge accusait le feu d'en face.
+            return { total: lampes.length, couleur: couleur, c: l ? l.c : null,
+                     ailleurs: lampes.filter(function (q) {
+                         return q.y === ly && q.x !== lx && q.x >= x && q.x < x + F.w;
+                     }).length };
         }
         const milieuVert = Math.floor(t.feu_vert_images / 2);
-        return { nsVert: releve(0.0, milieuVert),
-                 eoVert: releve(0.0, cycle / 2 + milieuVert),
-                 orange: releve(0.0, t.feu_vert_images + Math.floor(t.feu_orange_images / 2)),
+        return { vert: releve(0.0, milieuVert),
+                 rouge: releve(0.0, cycle / 2 + milieuVert),
+                 jaune: releve(0.0, t.feu_vert_images + Math.floor(t.feu_orange_images / 2)),
                  midi: releve(0.5, milieuVert) };
     }""")
-    vert, rouge, orange = r["nsVert"]["ns"], r["nsVert"]["eo"], r["orange"]["ns"]
-    assert vert and rouge and orange, f"une ampoule n'eclaire pas la nuit : {r}"
-    assert vert != rouge, "le vert et le rouge jettent la meme lumiere"
-    assert r["eoVert"]["ns"] == rouge and r["eoVert"]["eo"] == vert, \
-        "la lumiere ne suit pas la phase : les deux sens ont garde leur couleur"
-    assert r["orange"]["eo"] == orange, "un seul des deux sens passe a l'orange"
-    assert orange not in (vert, rouge), "l'orange se confond avec le vert ou le rouge"
-    assert r["midi"] == {"total": 0, "ns": None, "eo": None}, \
+    couleurs = {}
+    for nom in ("vert", "rouge", "jaune"):
+        x = r[nom]
+        assert x["couleur"] == nom, f"la phase visee n'est pas la bonne : {x}"
+        assert x["c"], f"la lentille {nom} n'eclaire pas la nuit : {x}"
+        assert x["ailleurs"] == 0, \
+            f"une autre lentille du meme boitier eclaire aussi : un tricolore n'en allume qu'une ({x})"
+        couleurs[nom] = x["c"]
+    assert len(set(couleurs.values())) == 3, f"deux phases jettent la meme lumiere : {couleurs}"
+    assert r["midi"]["total"] == 0 and r["midi"]["c"] is None, \
         f"un feu qui eclaire en plein soleil : {r['midi']}"
 
 
@@ -5097,13 +5159,13 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
     l'ampoule est éteinte, c'est un clignotant qui ne clignote plus — on le
     verrait battre à l'œil et briller en continu sur le trottoir.
     """
-    r = banc("""function (L, o) {""" + TETES_JS + """
+    r = banc("""function (L, o) {""" + GABARIT_JS + """
         L.Jeu.commencer();
-        const t = L.B.defs.conduite.trafic, d = L.DECORS.feu_pieton;
+        const t = L.B.defs.conduite.trafic;
         const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
-        const poteau = L.B.entites.find(function (e) { return e.type === 'feu_pieton'; });
-        const inter = poteau.inter, sens = poteau.traverses[0] === '=' ? '>' : '^';
-        L.B.joueur.x = poteau.x; L.B.joueur.y = poteau.y;
+        const mat = L.B.entites.find(function (e) { return e.type === 'feu' && e.traverses.length; });
+        const inter = mat.inter, sens = mat.traverses[0] === '=' ? '>' : '^';
+        L.B.joueur.x = mat.x; L.B.joueur.y = mat.y;
         L.B.partie.heure = 0.0;
         // Deux images du MEME degagement (il dure 120 images), de parite
         // contraire au clignotant (il bat aux 8).
@@ -5116,13 +5178,13 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
         }
         return cibles.map(function (c) {
             L.B.t = c.phase - 1;                       // `o.frame` avance l'horloge d'une image
-            L.Monde.centrerCamera(poteau.x, poteau.y);
+            L.Monde.centrerCamera(mat.x, mat.y);
             o.frame(1);
             const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
-            const x = Math.round(poteau.x - d.ancre[0] - cx), y = Math.round(poteau.y - d.ancre[1] - cy);
-            const a = tete(x + 3, 0, poteau.traverses.length);
+            const [x, y] = coin(mat, cx, cy);
+            const [col, cote] = teteDe(mat, 0);
             const l = L.Vehicules.lampesDesFeux().find(function (q) {
-                return q.x === a.x + a.l / 2 && q.y === y + 3.5;
+                return q.x === x + col + cote / 2 && q.y === y + F.tete.y + 3.5;
             });
             return { eteint: c.eteint, vise: c.phase, t: L.B.t,
                      etat: L.Monde.feuPieton(inter, sens), lampe: l ? l.c : null };
@@ -5139,120 +5201,260 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
     assert allume["lampe"], "l'ampoule est allumee et n'eclaire rien"
 
 
-def test_un_feu_peint_ses_lanternes_et_pas_seulement_son_poteau(banc):
-    """⚠️ **LE JUGE QUI MANQUAIT.** Les feux ont été **muets** du jour où on
-    les a posés : l'entité portait `decor: 'feu'`, et `Entites.dessiner` teste
-    `if (e.decor)` **avant** `if (e.type === 'feu')` — la branche générique
-    peignait le boîtier cuit et s'en allait. Ni rouge, ni vert, ni blanc : un
-    poteau noir à chaque coin de la ville.
+def test_un_tricolore_n_allume_qu_une_lentille_a_la_fois(banc):
+    """⚠️ **LE JUGE QUI MANQUAIT**, et il a servi deux fois. Les feux ont
+    d'abord été **muets** du jour où on les a posés (l'entité portait
+    `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant**
+    `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et
+    s'en allait) ; rien ne le disait, parce que **tous les juges des feux
+    parlaient de l'horloge** et aucun du **dessin**.
 
-    Et rien ne le disait, parce que **tous les juges des feux parlaient de
-    l'horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement) et aucun
-    du **dessin**. Celui-ci compte les rectangles peints, en plein jour, là où
+    Il tient maintenant la promesse d'un tricolore : à chaque instant du
+    cycle, **une seule lentille allumée**, à la colonne de sa couleur, et de
+    **sa forme** — le rouge carré, le jaune en losange, le vert rond, comme un
+    vrai feu québécois. On mesure les rectangles peints, en plein jour, là où
     aucune lampe ne vient aider.
     """
-    r = banc("""function (L, o) {""" + TETES_JS + """
+    r = banc("""function (L, o) {""" + GABARIT_JS + """
         L.Jeu.commencer();
         const inter = L.Monde.carte.intersections.find(function (i) { return i.feux; });
         const feu = L.B.entites.find(function (e) { return e.type === 'feu' && e.inter === inter; });
-        const pieton = L.B.entites.find(function (e) { return e.type === 'feu_pieton' && e.inter === inter; });
         const t = L.B.defs.conduite.trafic;
         const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
         L.B.joueur.x = feu.x; L.B.joueur.y = feu.y;
         L.B.partie.heure = 0.5;                                   // plein midi : aucune lampe
-        L.B.t = ((Math.floor(t.feu_vert_images / 2) - inter.decalage) % cycle + cycle) % cycle - 1;
-        L.Monde.centrerCamera(feu.x, feu.y);
-        const c = L.Base.debut();                                 // le contexte 1x, celui ou tout se peint
-        c.traces = [];
-        o.frame(1);
-        const traces = c.traces; c.traces = null;
-        const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
-        function coin(e, d) {
-            return [Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] - cy)];
+        const sens = feu.axe === 'ns' ? '^' : '>';
+        const releves = [];
+        for (const phase of [0, t.feu_vert_images - 5, t.feu_vert_images + 5, cycle / 2 + 5,
+                             cycle / 2 + t.feu_vert_images + 5]) {
+            L.B.t = ((phase - inter.decalage) % cycle + cycle) % cycle - 1;
+            L.Monde.centrerCamera(feu.x, feu.y);
+            const c = L.Base.debut();
+            c.traces = [];
+            o.frame(1);
+            const traces = c.traces; c.traces = null;
+            const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
+            const [x, y] = coin(feu, cx, cy);
+            // Tout ce qui a ete peint DANS le boitier des chars : le reste du
+            // mat est cuit dans la fiche, donc un rectangle ici est forcement
+            // une lentille vive.
+            const dans = traces.filter(function (q) {
+                return q[0] >= x && q[0] < x + F.w
+                    && q[1] >= y + F.lentilleY && q[1] < y + F.lentilleY + F.lentilleCote;
+            });
+            // A quelle lentille (rang 0, 1, 2) chaque pixel peint touche-t-il ?
+            const rangs = {};
+            for (const q of dans) {
+                for (let px = q[0]; px < q[0] + q[2]; px++) {
+                    for (let rang = 0; rang < 3; rang++) {
+                        const c0 = x + lentilleDe(feu, rang);
+                        if (px >= c0 && px < c0 + F.lentilleCote) rangs[rang] = true;
+                    }
+                }
+            }
+            releves.push({ couleur: L.Monde.feuDeCirculation(inter, sens),
+                           vert: L.Monde.feuVert(inter, sens),
+                           rangs: Object.keys(rangs).map(Number).sort(),
+                           pleins: dans.filter(function (q) { return q[2] === 3 && q[3] === 3; }).length,
+                           barres: dans.filter(function (q) { return q[2] === 1 && q[3] === 3; }).length,
+                           coins: dans.filter(function (q) { return q[2] === 1 && q[3] === 1; }).length });
         }
-        function rect(x, y, w, h) {
-            const r = traces.find(function (q) { return q[0] === x && q[1] === y && q[2] === w && q[3] === h; });
-            return r ? r[4] : null;
-        }
-        const df = L.DECORS.feu, dp = L.DECORS.feu_pieton;
-        const [fx, fy] = coin(feu, df);
-        const out = { ns: rect(fx + 1, fy + 2, 3, 3), eo: rect(fx + 6, fy + 2, 3, 3),
-                      coeurNS: rect(fx + 2, fy + 3, 1, 1), lampes: L.Vehicules.lampesDesFeux().length,
-                      traversesDuMat: feu.traverses.length, pieton: null, etatPieton: null };
-        // La premiere tete du mat des chars, puis celle du poteau isole.
-        if (feu.traverses.length) {
-            const a = tete(fx + 5, 0, feu.traverses.length);
-            out.surLeMat = rect(a.x, fy + 9, a.l, 5);
-            out.etatSurLeMat = L.Monde.feuPieton(inter, feu.traverses[0] === '=' ? '>' : '^');
-        }
-        if (pieton) {
-            const [px, py] = coin(pieton, dp);
-            const a = tete(px + 3, 0, pieton.traverses.length);
-            out.pieton = rect(a.x, py + 1, a.l, 5);
-            out.etatPieton = L.Monde.feuPieton(inter, pieton.traverses[0] === '=' ? '>' : '^');
-        }
-        return out;
+        return releves;
     }""")
-    couleur = {"blanc": "#f2f2f2", "degage": "#f39c12", "rouge": "#c0392b"}
-    assert r["ns"] == "#2ecc71", f"la lanterne du sens qui roule n'est pas verte : {r['ns']}"
-    assert r["eo"] == "#e74c3c", f"la lanterne de l'autre sens n'est pas rouge : {r['eo']}"
-    assert r["coeurNS"] and r["coeurNS"] != r["ns"], \
-        "une ampoule sans coeur plus pale est une pastille peinte : rien ne dit qu'elle est allumee"
-    assert r["traversesDuMat"], "le mat des chars ne porte aucune traverse : il en porte toujours"
-    assert r["surLeMat"] == couleur[r["etatSurLeMat"]], \
-        f"la tete pieton du mat est {r['etatSurLeMat']} et peint {r['surLeMat']}"
-    if r["pieton"] is not None or r["etatPieton"]:
-        assert r["pieton"] == couleur[r["etatPieton"]], \
-            f"le poteau isole est {r['etatPieton']} et peint {r['pieton']}"
-    assert r["lampes"] == 0, "un feu qui eclaire en plein midi"
+    rang = {"rouge": 0, "jaune": 1, "vert": 2}
+    vus = set()
+    for x in r:
+        vus.add(x["couleur"])
+        assert x["rangs"] == [rang[x["couleur"]]], \
+            f"feu {x['couleur']} : lentilles allumees aux rangs {x['rangs']}, il en faut UNE, la {rang[x['couleur']]}e"
+        assert x["vert"] == (x["couleur"] == "vert"), \
+            "ce que le feu MONTRE et ce que le char RESPECTE ne disent pas la meme chose"
+        # La forme : le carre est plein, le losange est une croix (une barre
+        # verticale + une horizontale), le cercle est un plein aux coins adoucis.
+        if x["couleur"] == "rouge":
+            assert x["pleins"] == 1 and x["barres"] == 0, f"le rouge n'est pas un carre plein : {x}"
+            assert x["coins"] == 1, f"le rouge n'a que son coeur comme pixel isole : {x}"
+        elif x["couleur"] == "jaune":
+            assert x["pleins"] == 0 and x["barres"] == 1, f"le jaune n'est pas un losange : {x}"
+        else:
+            assert x["pleins"] == 1 and x["coins"] == 5, \
+                f"le vert n'est pas un cercle (un plein + quatre coins adoucis + le coeur) : {x}"
+    assert vus == {"rouge", "jaune", "vert"}, f"le cycle n'a pas montre les trois couleurs : {vus}"
 
 
-def test_un_seul_mat_par_coin_et_jamais_un_poteau_dans_un_autre(banc):
-    """⚠️ **Retour de Martin : « il y en a trop ».** Mesuré, et c'était pire
-    que trop : les **124 feux de chars étaient plantés DANS un poteau piéton**,
-    à la tuile près — 124 sur 124. `coinLibre` vise les coins nord-est et
-    sud-ouest, exactement les bouts de traverse où `carte.py` pose ses
-    poteaux, et il ne les voyait pas : il n'écarte que le décor **solide**
-    (`grilleFixe`), où un feu n'entre jamais. Tant que les lanternes n'étaient
-    pas peintes, deux poteaux noirs l'un dans l'autre ne se voyaient pas.
+def test_de_chaque_approche_un_feu_de_son_axe_est_en_face(banc):
+    """Un tricolore ne montre **qu'une rue** — c'est ce qu'est un tricolore.
+    Il faut donc qu'en arrivant à un croisement, un feu de **son** axe soit
+    dans le champ, sinon on ne sait pas si c'est à soi de passer.
 
-    ⚠️ **Et les écarter d'une tuile aurait fait un poteau de plus, pas un de
-    moins.** Les poteaux se groupaient par deux à **une tuile** d'écart (174
-    paires, pas une seule à deux) : c'est le même coin de rue. Un vrai
-    carrefour met ces têtes-là sur **le même mât**.
+    ⚠️ Ça tient à une diagonale : nord-est et sud-ouest portent le nord-sud,
+    nord-ouest et sud-est l'est-ouest. Qui arrive du sud a les deux coins nord
+    devant lui, donc un de chaque diagonale, donc un « ns ». Le juge le
+    vérifie **pour les quatre approches, à tous les croisements de la ville**
+    — c'est la propriété qui justifie l'assignation, pas le goût.
     """
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const TT = L.TT;
-        const poteaux = L.B.entites.filter(function (e) { return e.type === 'feu' || e.type === 'feu_pieton'; });
-        const tuile = function (e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); };
-        const vues = {}, empiles = [];
-        for (const e of poteaux) {
-            const k = tuile(e);
-            if (vues[k]) empiles.push(k); else vues[k] = true;
+        const manque = [], sansAxe = [];
+        const feux = L.B.entites.filter(function (e) { return e.type === 'feu'; });
+        const parInter = new Map();
+        for (const e of feux) {
+            if (!e.axe) sansAxe.push(e.id);
+            if (!parInter.has(e.inter)) parInter.set(e.inter, []);
+            parInter.get(e.inter).push(e);
         }
-        // Deux mats du MEME croisement a une tuile l'un de l'autre : un coin
-        // pour deux poteaux, ce qui est precisement ce qu'on vient de defaire.
-        let colles = 0;
-        for (const a of poteaux) for (const b of poteaux) {
-            if (a.id >= b.id || a.inter !== b.inter) continue;
-            if (Math.abs(a.x - b.x) <= TT && Math.abs(a.y - b.y) <= TT) colles++;
+        for (const [inter, mats] of parInter) {
+            const haut = inter.y * TT, bas = (inter.y + inter.h) * TT;
+            const gauche = inter.x * TT, droite = (inter.x + inter.l) * TT;
+            // Les deux coins « en face » de chaque approche, et l'axe qu'il faut y voir.
+            const approches = [['^', 'ns', function (e) { return e.y < haut; }],
+                               ['v', 'ns', function (e) { return e.y > bas; }],
+                               ['>', 'eo', function (e) { return e.x > droite; }],
+                               ['<', 'eo', function (e) { return e.x < gauche; }]];
+            for (const [sens, axe, enFace] of approches) {
+                if (!mats.some(function (e) { return enFace(e) && e.axe === axe; }))
+                    manque.push(inter.i + ':' + sens);
+            }
         }
-        const traverses = poteaux.reduce(function (s, e) { return s + e.traverses.length; }, 0);
-        return { poteaux: poteaux.length, empiles: empiles.length, colles: colles,
-                 traverses: traverses, posees: (L.Monde.carte.def.feux_pietons || []).length,
-                 troisTetes: poteaux.filter(function (e) { return e.traverses.length > 2; }).length,
-                 croisements: L.Monde.carte.intersections.filter(function (i) { return i.feux; }).length };
+        return { feux: feux.length, sansAxe: sansAxe.length, manque: manque.length,
+                 exemples: manque.slice(0, 5),
+                 axes: { ns: feux.filter(function (e) { return e.axe === 'ns'; }).length,
+                         eo: feux.filter(function (e) { return e.axe === 'eo'; }).length } };
     }""")
-    assert r["empiles"] == 0, f"{r['empiles']} poteaux plantes dans un autre"
-    assert r["colles"] == 0, f"{r['colles']} paires de mats a une tuile : c'est un seul coin"
-    assert r["troisTetes"] == 0, "un mat porte plus de deux traverses : ce n'est plus un coin"
-    assert r["traverses"] == r["posees"], \
-        f"{r['posees']} traverses posees par la carte, {r['traverses']} montrees : une tete s'est perdue"
-    # ⚠️ Le compte, pas seulement la regle : trois mats par croisement, la ou
-    # il y en avait huit. Sans cette borne, un jour ou l'autre on en remet.
-    assert r["poteaux"] <= r["croisements"] * 3, \
-        f"{r['poteaux']} poteaux pour {r['croisements']} croisements, soit plus de trois par coin"
+    assert r["sansAxe"] == 0, f"{r['sansAxe']} mats sans axe : ils ne savent pas quelle rue ils montrent"
+    assert r["manque"] == 0, \
+        f"{r['manque']} approches sans feu de leur axe en face (ex. {r['exemples']})"
+    assert r["axes"]["ns"] == r["axes"]["eo"] == r["feux"] // 2, \
+        f"les deux axes ne se partagent pas les mats : {r['axes']}"
+
+
+def test_un_char_respecte_le_feu_qu_on_lui_montre_sauf_la_sirene(banc):
+    """« Les véhicules le respectent, sauf exception. » Le char du trafic lit
+    **`Monde.feuVert`**, qui découle de **`feuDeCirculation`**, qui est ce que
+    le mât **peint** : une seule phrase, lue deux fois.
+
+    ⚠️ Et le **jaune n'est pas vert** : un char qui arrive à la ligne d'arrêt
+    sur le jaune s'arrête. Sans ça, le dégagement du feu piéton ne servirait à
+    rien — le croisement ne se viderait jamais.
+
+    ⚠️ **L'exception, c'est la sirène** : en poursuite, on brûle le feu, le
+    STOP et la boîte. Une auto-patrouille qui attend au rouge pendant que le
+    joueur s'enfuit n'est pas une poursuite.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, t = L.B.defs.conduite.trafic;
+        const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
+        // Une ligne d'arret ('S') qui donne sur un croisement a feux.
+        let arret = null;
+        for (const k in c.arrets) {
+            const [tx, ty] = k.split(',').map(Number), sens = c.arrets[k];
+            const p = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[sens];
+            const inter = L.Monde.intersectionA(tx + p[0], ty + p[1]);
+            if (inter && inter.feux) { arret = { tx: tx, ty: ty, sens: sens, inter: inter }; break; }
+        }
+        const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[arret.sens];
+        function essai(couleurVoulue, sirene) {
+            // On se cale sur la phase voulue, puis on pose un char sur la ligne d'arret.
+            let phase = 0;
+            for (; phase < cycle; phase++) {
+                L.B.t = phase;
+                if (L.Monde.feuDeCirculation(arret.inter, arret.sens) === couleurVoulue) break;
+            }
+            const v = L.Vehicules.creer('auto', arret.tx * L.TT + 8, arret.ty * L.TT + 8, angle,
+                                        { conducteur: 'trafic', etat: 'roule', sens: arret.sens,
+                                          poursuite: sirene || undefined });
+            const depart = { x: v.x, y: v.y };
+            for (let i = 0; i < 90; i++) { L.B.t = phase; o.frame(1); }   // l'horloge du feu FIGEE
+            const avance = Math.hypot(v.x - depart.x, v.y - depart.y);
+            const dedans = !!L.Monde.intersectionA(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT));
+            L.Entites.retirer(v);
+            return { couleur: L.Monde.feuDeCirculation(arret.inter, arret.sens),
+                     vert: L.Monde.feuVert(arret.inter, arret.sens),
+                     avance: Math.round(avance), dedans: dedans };
+        }
+        return { rouge: essai('rouge', false), jaune: essai('jaune', false),
+                 vert: essai('vert', false), sirene: essai('rouge', true) };
+    }""")
+    assert r["rouge"]["couleur"] == "rouge" and r["rouge"]["vert"] is False
+    assert r["rouge"]["avance"] <= 8, f"un char a franchi le rouge : {r['rouge']['avance']} px"
+    assert r["jaune"]["couleur"] == "jaune" and r["jaune"]["vert"] is False, \
+        "le jaune compte comme vert : le croisement ne se viderait jamais"
+    assert r["jaune"]["avance"] <= 8, f"un char est parti sur le jaune : {r['jaune']['avance']} px"
+    assert r["vert"]["avance"] > 16, f"un char est reste plante au vert : {r['vert']['avance']} px"
+    assert r["sirene"]["avance"] > 16, \
+        f"une sirene a attendu au rouge : {r['sirene']['avance']} px — l'exception n'en est plus une"
+
+
+def test_une_borne_defoncee_crache_et_ca_s_entend(banc):
+    """⚠️ **Retour de Martin : « les trucs jaunes ne sont pas prioritaires aux
+    feux » · « mets-les rouges, les bornes » · « et un jet d'eau avec son si on
+    les défonce ».**
+
+    La borne-fontaine était une **tuile** (`'b'`, solide), et une tuile ne se
+    casse pas : elle ne pouvait ni tomber sous un char, ni gicler. C'est
+    maintenant un **décor** avec sa fiche — donc une masse, une résistance, un
+    bris. Le jet est une **entité invisible** qui vit ses dix secondes et crache
+    des particules : le patron du brasier du Molotov, et la même raison — on ne
+    repeint pas une tuile à chaque image pour un effet qui passe.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const borne = L.B.entites.find(function (e) { return e.decor === 'borne_fontaine'; });
+        const fiche = L.DECORS.borne_fontaine;
+        L.B.joueur.x = borne.x + 30; L.B.joueur.y = borne.y;
+        const avant = L.B.particules.length;
+        const casse = L.Entites.briser(borne);
+        o.frame(1);
+        const jet = L.B.entites.find(function (e) { return e.type === 'jet_eau'; });
+        const apres = L.B.particules.length;
+        o.frame(40);
+        const encore = !!L.B.entites.find(function (e) { return e.type === 'jet_eau'; });
+        if (jet) jet.minuterie = 1;
+        o.frame(3);
+        return { bornes: L.B.entites.filter(function (e) { return e.decor === 'borne_fontaine'; }).length,
+                 casse: casse, brise: borne.brise, solide: borne.solide,
+                 fiche: { casse: fiche.casse, solide: fiche.solide },
+                 jet: !!jet, gouttes: apres - avant, encore: encore,
+                 tari: !L.B.entites.find(function (e) { return e.type === 'jet_eau'; }),
+                 son: !!(L.Son && L.Son.SFX && L.Son.SFX.borne_fontaine) };
+    }""")
+    assert r["bornes"] > 0, "aucune borne-fontaine dans la ville"
+    assert r["fiche"]["casse"] and r["fiche"]["solide"],         "une borne qu'on ne peut pas defoncer n'est qu'une tache de peinture"
+    assert r["casse"] is True and r["brise"] is True and r["solide"] is False
+    assert r["jet"] is True, "une borne defoncee ne crache pas"
+    assert r["gouttes"] > 0, f"le jet ne fait aucune goutte : {r['gouttes']}"
+    assert r["encore"] is True, "le jet s'arrete dans la seconde"
+    assert r["tari"] is True, "⚠️ le jet ne tarit jamais : la rue reste une fontaine"
+    assert r["son"] is True, "le jet n'a pas de bruit"
+
+
+def test_aucune_borne_fontaine_ne_prend_le_coin_d_un_feu(racine):
+    """Même règle que pour les lampadaires : le coin d'un croisement à feux est
+    la place du **mât**. Une borne plantée dessus, c'est le feu qu'on ne voit
+    pas en arrivant."""
+    import json
+
+    from app import carte as c
+
+    ville = c.generer()
+    reserves = set()
+    for inter in ville["intersections"]:
+        if len(inter["bras"]) < 4:
+            continue
+        for cx, cy in ((inter["x"] + inter["l"], inter["y"] - 1),
+                       (inter["x"] - 1, inter["y"] + inter["h"]),
+                       (inter["x"] - 1, inter["y"] - 1),
+                       (inter["x"] + inter["l"], inter["y"] + inter["h"])):
+            for ix in (-1, 0, 1):
+                for iy in (-1, 0, 1):
+                    reserves.add((cx + ix, cy + iy))
+    bornes = [(d["x"], d["y"]) for d in ville["decor"] if d["type"] == "borne_fontaine"]
+    assert len(bornes) >= 10, f"{len(bornes)} bornes-fontaines : la ville n'en a presque pas"
+    dessus = [b for b in bornes if b in reserves]
+    assert not dessus, f"{len(dessus)} bornes sur un coin reserve au feu (ex. {dessus[:4]})"
+    assert json.dumps(bornes[:1])          # la ville se serialise, comme le reste du decor
 
 
 def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):

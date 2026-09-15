@@ -306,6 +306,22 @@ const Son = (function () {
     plongeon: function () { if (!joue('plongeon')) { bruit(0.45, 0.5, 2500, 250); ton(300, 0.22, 'sine', 0.14, 0.25); bruit(0.16, 0.14, 9000, 4000); } },
     // La brassee : elle part a la DISTANCE parcourue, comme un pas.
     nage: function () { if (!joue('nage')) bruit(0.2, 0.14, 1300, 350); },
+    //: La borne defoncee : le CLAC du metal, puis de l'eau sous pression — un
+    //: bruit large et continu, tenu bas. ⚠️ Sans le clac, un jet qui demarre
+    //: n'a pas de cause ; sans le souffle, c'est un choc de plus.
+    //: La borne defoncee : le CLAC du metal, puis l'eau sous pression — un
+    //: bruit large et continu, tenu bas. ⚠️ Sans le clac, un jet qui demarre
+    //: n'a pas de cause ; sans le souffle, c'est un choc de plus.
+    //:
+    //: ⚠️ ELLE N'A PAS SON PROPRE ECHANTILLON, et c'est un choix de budget :
+    //: le seau des bruitages est a 14 Ko de son plafond (voir le plan). Le
+    //: clac emprunte donc `choc`, qui est deja la et qui est exactement ca,
+    //: et l'eau est synthetisee. Le jour d'une seance ElevenLabs, un vrai
+    //: `borne_fontaine` prendra la place des deux lignes ci-dessous.
+    borne_fontaine: function () {
+      SFX.choc();
+      bruit(0.5, 0.45, 3200, 900);
+    },
     // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
     couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },
     // ⚠️ Le char n'a PAS son propre fichier, et c'est voulu : c'est la meme

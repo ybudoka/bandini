@@ -90,7 +90,7 @@ const Monde = (function () {
       // ⚠️ LA LARGEUR DU TROTTOIR VIENT DU PAQUET, elle ne s'ecrit pas ici.
       // C'etait deux litteraux — « pour inclure les passages pietons, deux
       // tuiles de chaque cote » — alors que la traverse fait exactement
-      // `TROTTOIR` tuiles de large, par construction : c'est la meme
+      // `TROTTOIR` tuiles de profond, par construction : c'est la meme
       // constante des deux cotes. Le jour ou elle bougera, Python dessinera
       // des traverses d'une tuile et ce JS en aurait reclame deux : un pieton
       // demanderait a quel feu obeir en se tenant sur la chaussee, et un char
@@ -400,20 +400,37 @@ const Monde = (function () {
 
   function intersectionA(tx, ty) { return carte.croisements.get(tx + ',' + ty) || null; }
 
-  /** Le feu est-il vert pour qui roule dans ce sens vers ce croisement ?
-      ⚠️ Un croisement en T ou en L n'a pas de feu : on y passe a vue. */
-  function feuVert(inter, sens) {
-    if (!inter || !inter.feux) return true;
+  /** De quelle couleur est le feu pour qui roule dans ce sens vers ce
+      croisement : 'vert', 'jaune' ou 'rouge'.
+
+      ⚠️ C'EST LA SEULE SOURCE, et c'est voulu. `feuVert` en decoule, le
+      DESSIN du tricolore en decoule, et le trafic obeit a `feuVert` : une
+      lanterne ne peut donc pas montrer une couleur que le char ne respecte
+      pas. Le jour ou ca fera deux fonctions, elles divergeront — c'est
+      exactement ce qui etait arrive au feu pieton, qui relisait `!feuVert`
+      au lieu d'avoir sa propre regle et se trompait d'un temps.
+
+      ⚠️ Un croisement en T ou en L n'a pas de feu : on y passe a vue, donc
+      'vert'. */
+  function feuDeCirculation(inter, sens) {
+    if (!inter || !inter.feux) return 'vert';
     const t = B.defs.conduite.trafic;
     const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
     const phase = (B.t + inter.decalage) % cycle;
     const nordSud = sens === '^' || sens === 'v';
     const moitie = phase < cycle / 2;
-    // Premiere moitie : nord-sud roule. L'orange ferme la fin de chaque moitie.
+    // Premiere moitie : nord-sud roule. Ce n'est pas mon tour : rouge, tout du long.
+    if (nordSud !== moitie) return 'rouge';
+    // Mon tour : vert, puis le jaune qui ferme la moitie.
     const dansMoitie = moitie ? phase : phase - cycle / 2;
-    if (dansMoitie >= t.feu_vert_images) return false;
-    return nordSud === moitie;
+    return dansMoitie >= t.feu_vert_images ? 'jaune' : 'vert';
   }
+
+  /** Le feu est-il vert pour qui roule dans ce sens vers ce croisement ?
+      ⚠️ Le JAUNE n'est pas vert : un char qui arrive a la ligne d'arret sur
+      le jaune s'arrete. C'est ce qui donne au degagement du feu pieton son
+      sens — sans ca, le croisement ne se viderait jamais. */
+  function feuVert(inter, sens) { return feuDeCirculation(inter, sens) === 'vert'; }
 
   /** Le feu PIETON d'un croisement, pour qui traverse la rue ou les chars
       vont dans le sens `sens`. Rend 'blanc' (on s'engage), 'degage' (on ne
@@ -1052,7 +1069,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
+    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },

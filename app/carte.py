@@ -196,7 +196,6 @@ LEGENDE: dict[str, dict] = {
     "D": {"nom": "porte", "solide": 1, "porte": True},
     "d": {"nom": "porte condamnée", "solide": 1},
     "G": {"nom": "porte de garage", "solide": 1, "garage": True},
-    "b": {"nom": "borne-fontaine", "solide": 3},
     # --- Les deux clotures --------------------------------------------------
     # ⚠️ Une cloture n'arretait QUE les chars : `f` etait solide 3, donc le
     # masque des pietons ne la voyait pas et on la traversait en COURANT. C'est
@@ -3059,8 +3058,39 @@ class _Chantier:
     #: d'abord, puis ses voisines, les plus proches en premier.
     AUTOUR = ((0, 0), (1, 0), (-1, 0), (0, 1), (0, -1), (1, 1), (-1, -1), (1, -1), (-1, 1))
 
+    #: A quelle distance du coin un lampadaire se plante, en tuiles.
+    #: ⚠️ ZERO, AVANT : il se plantait SUR le coin — exactement la ou va le mat
+    #: du feu. Tant qu'il n'y avait que deux mats par croisement et qu'aucune
+    #: lanterne n'etait peinte, ca ne se voyait pas ; depuis qu'un tricolore ne
+    #: montre qu'une rue, il y a QUATRE mats, un par coin, et le lampadaire
+    #: leur disputait la place. Le coin d'un croisement est la place du FEU :
+    #: c'est lui qu'on doit voir en arrivant. Le lampadaire s'ecarte le long du
+    #: trottoir — ou il eclaire d'ailleurs mieux, entre deux croisements
+    #: plutot que dessus.
+    ECART_LAMPADAIRE = 3
+
+    def _coins_reserves_aux_feux(self) -> set[tuple[int, int]]:
+        """Les tuiles que les mats des feux se gardent : les quatre coins de
+        chaque croisement a feux, et l'anneau d'une tuile autour — `coinLibre`,
+        cote navigateur, peut ecarter un mat d'une tuile quand le coin est pris.
+        """
+        pris: set[tuple[int, int]] = set()
+        for inter in self.intersections:
+            if len(inter["bras"]) < 4:
+                continue
+            coins = ((inter["x"] + inter["l"], inter["y"] - 1),
+                     (inter["x"] - 1, inter["y"] + inter["h"]),
+                     (inter["x"] - 1, inter["y"] - 1),
+                     (inter["x"] + inter["l"], inter["y"] + inter["h"]))
+            for cx, cy in coins:
+                for ix in (-1, 0, 1):
+                    for iy in (-1, 0, 1):
+                        pris.add((cx + ix, cy + iy))
+        return pris
+
     def lampadaires(self) -> None:
-        """Deux coins opposes par croisement : de la lumiere ou l'on tourne.
+        """Deux coins opposes par croisement, mais A L'ECART du coin : de la
+        lumiere le long de la rue, et le coin laisse au feu.
 
         ⚠️ Un poteau se plante sur un TROTTOIR, jamais sur un parterre. Le coin
         d'un croisement n'en est pas toujours un : devant une maison, la bande
@@ -3068,18 +3098,36 @@ class _Chantier:
         alors le trottoir a cote. Sans ca, le juge ne tenait que par chance —
         il suffisait qu'un arbre libere le coin pour qu'une lampe pousse dans
         une pelouse.
+
+        ⚠️ On s'eloigne LE LONG DE LA RUE, pas n'importe ou : d'abord dans le
+        sens nord-sud, puis est-ouest. Un lampadaire qui recule en diagonale
+        finit au milieu d'un parterre, loin des deux trottoirs qu'il devait
+        eclairer.
         """
+        reserves = self._coins_reserves_aux_feux()
         for inter in self.intersections:
             for dx, dy in ((-1, -1), (inter["l"], inter["h"])):
                 x, y = inter["x"] + dx, inter["y"] + dy
-                for ix, iy in self.AUTOUR:
-                    cx, cy = x + ix, y + iy
-                    if not (0 <= cx < self.largeur and 0 <= cy < self.hauteur):
-                        continue
-                    if self.sol[cy][cx] != "." or not self.poser_decor("lampadaire", cx, cy):
-                        continue
-                    self.lampes.append({"x": cx, "y": cy})
-                    break
+                ecart = self.ECART_LAMPADAIRE
+                loin_x = x + (-ecart if dx < 0 else ecart)
+                loin_y = y + (-ecart if dy < 0 else ecart)
+                if self._poser_un_lampadaire(((x, loin_y), (loin_x, y)), reserves):
+                    continue
+
+    def _poser_un_lampadaire(self, departs, reserves) -> bool:
+        """Essaie chaque depart, et autour de lui, jusqu'a une place tenable."""
+        for bx, by in departs:
+            for ix, iy in self.AUTOUR:
+                cx, cy = bx + ix, by + iy
+                if not (0 <= cx < self.largeur and 0 <= cy < self.hauteur):
+                    continue
+                if (cx, cy) in reserves:
+                    continue
+                if self.sol[cy][cx] != "." or not self.poser_decor("lampadaire", cx, cy):
+                    continue
+                self.lampes.append({"x": cx, "y": cy})
+                return True
+        return False
 
     def ambulants(self) -> list[dict]:
         """Les commerces sans porte : kiosques sur le trottoir, camions au
@@ -3336,12 +3384,29 @@ class _Chantier:
         return feux
 
     def bornes(self) -> None:
+        """Une borne-fontaine sur trois coins de rue environ.
+
+        ⚠️ C'ETAIT UNE TUILE, ce sont maintenant des DECORS. Une tuile ne se
+        casse pas : elle ne pouvait ni tomber sous un char, ni cracher son eau.
+        En decor, elle a une fiche (`DECORS.borne_fontaine`), donc une masse,
+        une resistance et un bris — et le jet avec.
+
+        ⚠️ Et elle ne prend plus le coin du croisement : c'est la place du mat
+        du feu, comme pour le lampadaire. Elle se pose une tuile plus loin, le
+        long du trottoir.
+        """
+        reserves = self._coins_reserves_aux_feux()
         for inter in self.intersections:
             if not self.des.chance(0.30):
                 continue
             x, y = inter["x"] + inter["l"], inter["y"] - 1
-            if 0 <= x < self.largeur and 0 <= y < self.hauteur and self.sol[y][x] == ".":
-                self.sol[y][x] = "b"
+            for dy in (-1, -2, 1):
+                cx, cy = x, y + dy
+                if (cx, cy) in reserves:
+                    continue
+                if 0 <= cx < self.largeur and 0 <= cy < self.hauteur and self.sol[cy][cx] == ".":
+                    if self.poser_decor("borne_fontaine", cx, cy):
+                        break
 
     def boucher_les_poches(self, depart: tuple[int, int]) -> int:
         """Bouche toute poche marchable qu'on ne peut pas rejoindre a pied.

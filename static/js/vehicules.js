@@ -1691,6 +1691,30 @@ const Vehicules = (function () {
     return [tx, ty];
   }
 
+  /** Les QUATRE coins d'un croisement a feux, et l'axe que chacun montre.
+
+      ⚠️ Un tricolore ne montre qu'UNE rue — c'est ce qu'est un tricolore. Il
+      faut donc que de n'importe quelle approche, un feu de SON axe soit en
+      face. L'astuce tient a une diagonale : nord-est et sud-ouest portent le
+      nord-sud, nord-ouest et sud-est l'est-ouest. Qui arrive du sud a le
+      nord-est et le nord-ouest devant lui — donc un « ns » ; qui arrive de
+      l'ouest a le nord-est et le sud-est — donc un « eo ». Les deux coins
+      d'en face sont toujours d'une diagonale et de l'autre, et un juge le
+      verifie pour les quatre approches.
+
+      ⚠️ Et c'est aussi ce qui donne au croisement son QUATRIEME poteau. On
+      n'en posait que deux (« les lampadaires ont les autres »), et il
+      manquait donc un feu a deux coins sur quatre. */
+  function COINS(inter) {
+    // ⚠️ Le BRAS part vers le croisement, donc AU-DESSUS DE LA CHAUSSEE : les
+    // coins de l'est le tendent vers l'ouest, ceux de l'ouest vers l'est. Une
+    // potence qui porte a faux au-dessus du trottoir ne sert a personne.
+    return [[inter.x + inter.l, inter.y - 1, 'ns', -1],          // nord-est
+            [inter.x - 1, inter.y + inter.h, 'ns', 1],           // sud-ouest
+            [inter.x - 1, inter.y - 1, 'eo', 1],                 // nord-ouest
+            [inter.x + inter.l, inter.y + inter.h, 'eo', -1]];   // sud-est
+  }
+
   //: Combien de traverses un seul mat porte : DEUX, celles qui se croisent a
   //: son coin. Au-dela, c'est que la grappe n'est pas un coin.
   const TRAVERSES_PAR_MAT = 2;
@@ -1732,11 +1756,16 @@ const Vehicules = (function () {
     const poteaux = new Map();
     carte.intersections.forEach(function (inter) {
       if (inter.feux) {
-        // Deux feux, aux coins nord-est et sud-ouest (les lampadaires ont les autres).
-        for (const coin of [[inter.x + inter.l, inter.y - 1], [inter.x - 1, inter.y + inter.h]]) {
+        for (const coin of COINS(inter)) {
           const c = coinLibre(coin[0], coin[1]);
-          const e = Entites.creer('feu', c[0] * TT + 8, c[1] * TT + 15,
-                                  { inter: inter, traverses: [], r: 2, solide: false });
+          // ⚠️ LE MAT SE PLANTE AU BORD DE SA TUILE, DU COTE DE LA RUE, pas en
+          // son milieu. Le bras porte a faux sur 13 px ; depuis le centre
+          // (+8), dix de ces treize restaient au-dessus du TROTTOIR et la tete
+          // n'etait pas sur la chaussee — elle etait a cote. Colle au bord, le
+          // bras passe la bordure a trois pixels et pend au-dessus de la voie,
+          // ce qu'une potence est censee faire.
+          const e = Entites.creer('feu', c[0] * TT + (coin[3] > 0 ? TT - 3 : 3), c[1] * TT + 15,
+                                  { inter: inter, axe: coin[2], bras: coin[3], traverses: [], r: 2, solide: false });
           poteaux.set(c[0] + ',' + c[1], e);
         }
       } else if (inter.stop) {
@@ -1787,13 +1816,17 @@ const Vehicules = (function () {
   //: ⚠️ Sans elle, un feu ne recoit que la MULTIPLICATION du voile de nuit,
   //: comme une brique : a minuit le vert (46, 204, 113) tombe a (16, 76, 57),
   //: et le blanc qui dit MARCHE (242, 242, 242) a (86, 90, 122) — plus sombre
-  //: qu'un trottoir de midi. Le seul objet qui eclairait, c'etait le
-  //: lampadaire, et sa seule raison, c'est d'avoir une entree dans
-  //: `carte.lampes`.
+  //: qu'un trottoir de midi.
+  //:
+  //: ⚠️ Et une phase a une FORME, parce qu'un feu quebecois en a une : le
+  //: rouge est CARRE, le jaune un LOSANGE, le vert un CERCLE (voir
+  //: `DECORS.feu`). `rang` est sa place dans le boitier horizontal, de gauche
+  //: a droite — l'ordre est celui de la rue, pas celui du code.
   const PHASES_FEU = {
-    vert:   { ampoule: '#2ecc71', coeur: '#ccffdf', lumiere: 'rgba(110,255,165,0.50)' },
-    orange: { ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.52)' },
-    rouge:  { ampoule: '#e74c3c', coeur: '#ffc9bd', lumiere: 'rgba(255,105,85,0.50)' },
+    rouge: { rang: 0, forme: 'carre',   ampoule: '#e74c3c', coeur: '#ffc9bd', lumiere: 'rgba(255,105,85,0.50)' },
+    jaune: { rang: 1, forme: 'losange', ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.52)' },
+    vert:  { rang: 2, forme: 'cercle',  ampoule: '#2ecc71', coeur: '#ccffdf', lumiere: 'rgba(110,255,165,0.50)',
+             coin: '#1d7a45' },
   };
 
   //: De quelle couleur se lit chaque etat du feu pieton. ⚠️ LE BLANC QUI
@@ -1864,37 +1897,27 @@ const Vehicules = (function () {
     B.stats.rects += 2;
   }
 
-  //: Ou pend la tete pieton sur le MAT DES CHARS : la hauteur du haut de son
-  //: boitier. ⚠️ Deux rangees de vide la separent du boitier des chars (qui
-  //: finit a la rangee 5) — collees, les deux tetes ne font qu'un seul bloc
-  //: noir et on ne voit plus qu'il y en a deux. Et c'est la hauteur du poteau
-  //: isole a un pixel pres : la meme tete, au meme niveau, qu'elle ait son
-  //: mat ou qu'elle le partage.
-  const TETE_SUR_MAT = 8;
+  /** Les tetes pieton d'un boitier : une, ou DEUX cote a cote quand le coin
+      sert deux traverses. `x` est le BORD GAUCHE du boitier et `large` sa
+      largeur — c'est l'appelant qui les calcule, parce qu'une potence et un
+      poteau isole ne les posent pas au meme endroit.
 
-  /** Les tetes pieton d'un mat : une, ou DEUX cote a cote quand le coin sert
-      deux traverses. `cx` est le milieu du mat, `y` le haut du boitier.
-
-      ⚠️ A deux, les ampoules retrecissent a trois pixels et se posent aux
-      MEMES COLONNES que celles des chars, juste au-dessus : un mat devient
-      une pile de boitiers dont les feux s'alignent, et c'est ce qui le fait
-      lire comme UN poteau plutot que comme deux collos. A quatre pixels
-      chacune, elles se toucheraient — et deux rouges qui se touchent, c'est
-      un seul rectangle rouge.
+      ⚠️ A deux, les ampoules retrecissent a trois pixels et tombent a un
+      pixel de chaque bord. Sur une potence, ca les met AUX MEMES COLONNES que
+      les lentilles des chars juste au-dessus : le mat devient une pile de
+      boitiers dont les feux s'alignent, et c'est ce qui le fait lire comme UN
+      poteau plutot que comme deux colles. A quatre pixels chacune, elles se
+      toucheraient — et deux rouges qui se touchent, c'est un seul rectangle
+      rouge.
 
       ⚠️ Le SENS DES CHARS de la rue qu'on traverse, lu comme `traverseeSure`
       le lit : « = » barre une rue est-ouest. Deux endroits qui traduisent le
-      meme glyphe, c'etait un endroit de trop — il n'y en a plus qu'un.
-
-      `boitierCuit` : le poteau isole a le sien dans sa fiche, mais il est
-      taille pour UNE tete. */
-  function tetesDeTraverse(ctx, cx, y, inter, traverses, boitierCuit) {
-    const deux = traverses.length > 1;
-    if (deux || !boitierCuit) {
-      ctx.fillStyle = '#2c2c30';
-      ctx.fillRect(cx - (deux ? 5 : 3), y, deux ? 10 : 6, 7);
-      B.stats.rects++;
-    }
+      meme glyphe, c'etait un endroit de trop — il n'y en a plus qu'un. */
+  function tetesDeTraverse(ctx, x, y, large, inter, traverses) {
+    ctx.fillStyle = '#2c2c30';
+    ctx.fillRect(x, y, large, 7);
+    B.stats.rects++;
+    const deux = traverses.length > 1, cote = deux ? 3 : 4;
     for (let i = 0; i < traverses.length; i++) {
       const etat = Monde.feuPieton(inter, traverses[i] === '=' ? '>' : '^');
       // Le degagement CLIGNOTE : un orange fixe se lit comme « attends », un
@@ -1903,33 +1926,73 @@ const Vehicules = (function () {
       // orange qui bat a l'oeil et brille en continu au sol, c'est pire qu'un
       // clignotant qui ne clignote pas.
       if (etat === 'degage' && (B.t >> 3) % 2 === 0) continue;
-      const x = deux ? (i === 0 ? cx - 4 : cx + 1) : cx - 2;
-      ampoule(ctx, x, y + 1, deux ? 3 : 4, 5, PHASES_FEU_PIETON[etat] || PHASES_FEU_PIETON.rouge);
+      const col = deux ? (i === 0 ? x + 1 : x + large - 1 - cote) : x + ((large - cote) >> 1);
+      ampoule(ctx, col, y + 1, cote, 5, PHASES_FEU_PIETON[etat] || PHASES_FEU_PIETON.rouge);
     }
   }
 
-  /** Un feu : un poteau cuit, deux ampoules peintes a la volee selon la
-      phase — et, quand le coin sert aussi des traverses, leurs tetes sur le
-      MEME MAT (voir `creerSignalisation`). */
+  /** Une abscisse du gabarit, retournee quand le bras part vers l'ouest.
+      ⚠️ Le MEME calcul que `peindreFeu` dans sprites.js, et c'est voulu : le
+      boitier est cuit, la lentille vive se peint par-dessus, et si les deux ne
+      retournaient pas pareil elle s'allumerait a cote de son trou. */
+  function miroir(x, l, bras) { return bras > 0 ? x : DECORS.feu.w - x - l; }
+
+  /** LA lentille allumee — il n'y en a qu'une a la fois, c'est tout l'objet
+      d'un tricolore. `x, y` : son coin.
+
+      ⚠️ La FORME se peint ici, pas dans la fiche : c'est elle qui change. Le
+      carre est plein, le losange est une croix (cinq pixels sur neuf : a
+      trois pixels, c'est tout ce qu'un losange peut etre), et le cercle est
+      un carre dont les QUATRE COINS sont adoucis vers un vert sombre — c'est
+      la facon dont le pixel art arrondit, et la seule qui distingue un rond
+      d'un carre a cette taille. */
+  function lentille(ctx, x, y, phase) {
+    ctx.fillStyle = phase.ampoule;
+    if (phase.forme === 'losange') {
+      ctx.fillRect(x + 1, y, 1, 3); ctx.fillRect(x, y + 1, 3, 1);
+      B.stats.rects += 2;
+    } else {
+      ctx.fillRect(x, y, 3, 3);
+      B.stats.rects++;
+    }
+    if (phase.forme === 'cercle') {
+      ctx.fillStyle = phase.coin;
+      ctx.fillRect(x, y, 1, 1); ctx.fillRect(x + 2, y, 1, 1);
+      ctx.fillRect(x, y + 2, 1, 1); ctx.fillRect(x + 2, y + 2, 1, 1);
+      B.stats.rects += 4;
+    }
+    // Le coeur : c'est lui qui dit « allumee », la couleur ne dit que laquelle.
+    ctx.fillStyle = phase.coeur; ctx.fillRect(x + 1, y + 1, 1, 1);
+    B.stats.rects++;
+    allumerLaLampe(x + 1.5, y + 1.5, phase.lumiere);
+  }
+
+  /** Un feu : un boitier cuit avec ses trois douilles eteintes, UNE lentille
+      allumee par-dessus — et, quand le coin sert aussi des traverses, leurs
+      tetes sur le MEME MAT (voir `creerSignalisation`).
+
+      ⚠️ La couleur vient de `Monde.feuDeCirculation`, celle-la meme dont
+      `feuVert` decoule et a laquelle le trafic obeit (`prochaineCible`). Le
+      feu ne peut donc pas montrer une couleur qu'un char ne respecte pas :
+      c'est la meme phrase lue deux fois, jamais deux phrases. */
   function dessinerFeu(ctx, e, cx, cy) {
-    const d = DECORS.feu;
-    const poteau = Atlas.cuirePeintre('decor|feu', d.w, d.h, d.peindre);
-    const x = Math.round(e.x - d.ancre[0] - cx), y = Math.round(e.y - d.ancre[1] - cy);
+    const d = DECORS.feu, droite = e.bras > 0;
+    const poteau = droite
+      ? Atlas.cuirePeintre('decor|feu', d.w, d.h, d.peindre)
+      : Atlas.cuirePeintre('decor|feu|miroir', d.w, d.h, d.peindreMiroir);
+    const ancre = droite ? d.ancre : d.ancreMiroir;
+    const x = Math.round(e.x - ancre[0] - cx), y = Math.round(e.y - ancre[1] - cy);
     ctx.drawImage(poteau, x, y);
-    const ns = Monde.feuVert(e.inter, '^'), eo = Monde.feuVert(e.inter, '>');
-    const orange = !ns && !eo;
-    // ⚠️ Deux ampoules a CINQ PIXELS l'une de l'autre : leurs halos se
-    // melangent, et au rouge-vert la flaque au sol tire vers le jaune. C'est
-    // ce que fait un vrai croisement vu d'en haut ; ce qui doit rester NET,
-    // c'est le coeur de chaque ampoule — d'ou `RAYON_LAMPE`.
-    ampoule(ctx, x + 1, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (ns ? 'vert' : 'rouge')]);   // nord-sud
-    ampoule(ctx, x + 6, y + 2, 3, 3, PHASES_FEU[orange ? 'orange' : (eo ? 'vert' : 'rouge')]);   // est-ouest
+    const phase = PHASES_FEU[Monde.feuDeCirculation(e.inter, e.axe === 'ns' ? '^' : '>')];
+    lentille(ctx, x + miroir(d.lentilles[phase.rang], d.lentilleCote, e.bras), y + d.lentilleY, phase);
     // ⚠️ Le boitier des tetes pieton se peint ICI, pas dans la fiche cuite :
-    // un mat n'en porte pas toujours, et une boite noire pendue a un poteau
-    // qui n'a pas de traverse est un defaut qu'on ne voit qu'au bon coin de
-    // la ville. Le milieu du mat tombe a x + 5 (`DECORS.feu` : le poteau va
-    // de 4 a 6).
-    if (e.traverses.length) tetesDeTraverse(ctx, x + 5, y + TETE_SUR_MAT, e.inter, e.traverses, false);
+    // un mat n'en porte pas toujours, et une boite noire pendue a une potence
+    // qui n'a pas de traverse est un defaut qu'on ne voit qu'au bon coin de la
+    // ville. Elles pendent du MEME BORD que le bras, sous lui.
+    if (e.traverses.length) {
+      const large = e.traverses.length > 1 ? d.boitier.l : 7;
+      tetesDeTraverse(ctx, x + miroir(d.tete.x, large, e.bras), y + d.tete.y, large, e.inter, e.traverses);
+    }
     B.stats.images++;
   }
 
@@ -1938,8 +2001,11 @@ const Vehicules = (function () {
     const poteau = Atlas.cuirePeintre('decor|feu_pieton', d.w, d.h, d.peindre);
     const x = Math.round(e.x - d.ancre[0] - cx), y = Math.round(e.y - d.ancre[1] - cy);
     ctx.drawImage(poteau, x, y);
-    // Le milieu du mat : `DECORS.feu_pieton` pose son poteau de 2 a 4.
-    tetesDeTraverse(ctx, x + 3, y, e.inter, e.traverses, true);
+    // ⚠️ LE RECOURS, et il sert rarement : une traverse dont aucun coin n'a de
+    // mat a portee plante son propre poteau. Il est plus petit qu'une potence
+    // et sa tete est CENTREE sur lui — c'est un poteau, pas un bras.
+    const large = e.traverses.length > 1 ? 10 : d.w;
+    tetesDeTraverse(ctx, x + ((d.w - large) >> 1), y, large, e.inter, e.traverses);
     B.stats.images++;
   }
 

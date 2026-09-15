@@ -453,6 +453,41 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     assert trottoirs > len(poteaux) * 0.8, "la plupart des poteaux bordent une rue"
 
 
+def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
+    """⚠️ **Retour de Martin : « ne mets pas de lampadaire aux intersections,
+    déplace-les — ça va laisser la place libre aux feux ».**
+
+    `lampadaires()` plantait ses poteaux **sur les coins** du croisement, et
+    c'est exactement là que va le mât d'un feu. Tant qu'il n'y avait que deux
+    mâts et qu'aucune lanterne n'était peinte, les deux cohabitaient sans
+    qu'on le voie ; depuis qu'un tricolore ne montre qu'une rue, il y a
+    **quatre mâts par croisement, un par coin**, et le lampadaire leur
+    disputait la place au vu de tous.
+
+    Le coin d'un croisement à feux est la place du **feu**. Le lampadaire
+    s'écarte le long du trottoir — où il éclaire d'ailleurs mieux, entre deux
+    croisements plutôt que dessus.
+    """
+    reserves = set()
+    for inter in CARTE["intersections"]:
+        if len(inter["bras"]) < 4:
+            continue
+        for cx, cy in ((inter["x"] + inter["l"], inter["y"] - 1),
+                       (inter["x"] - 1, inter["y"] + inter["h"]),
+                       (inter["x"] - 1, inter["y"] - 1),
+                       (inter["x"] + inter["l"], inter["y"] + inter["h"])):
+            for ix in (-1, 0, 1):
+                for iy in (-1, 0, 1):
+                    reserves.add((cx + ix, cy + iy))
+    poteaux = [lampe for lampe in CARTE["lampes"]
+               if lampe.get("c") not in ("vitrine", "fenetre")]
+    dessus = [(lampe["x"], lampe["y"]) for lampe in poteaux if (lampe["x"], lampe["y"]) in reserves]
+    assert not dessus, f"{len(dessus)} lampadaires sur un coin reserve au feu (ex. {dessus[:4]})"
+    # ⚠️ Et il en reste : ecarter n'est pas supprimer. Sans cette borne, la
+    # regle serait tenue par une ville sans lampadaires.
+    assert len(poteaux) >= 40, f"{len(poteaux)} lampadaires : la rue est noire"
+
+
 def test_les_lieux_des_magasins_et_des_proprietes_existent():
     lieux = {p["slug"] for p in CARTE["points_interet"]}
     for magasin in magasins.CATALOGUE:
