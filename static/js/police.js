@@ -147,6 +147,104 @@ const Police = (function () {
     return true;
   }
 
+  // --- Le stool : celui qui n'a rien vu, et qui te reconnait quand meme ------
+
+  /** ⚠️ **Ce n'est pas un temoin, et la difference est tout le personnage.** Le
+      temoin porte un CRIME : il a vu quelque chose, il court le raconter, son
+      silence vaut vingt piastres. Le stool n'a rien vu — il a reconnu ta FACE,
+      parce que ta face est dans le journal et sur les affiches. Il n'a besoin
+      d'aucun delit, il va telephoner, et ce qu'il donne au poste n'est pas de
+      la chaleur : c'est un SIGNALEMENT, donc un PLANCHER d'etoiles.
+
+      C'est ce qui referme M11 : la premiere vague a fait que le dossier allonge
+      le cone des agents, celle-ci fait qu'il transforme les passants en
+      delateurs. */
+  function ficheStool() { return defs().stool; }
+
+  /** Un stool en route, c'est un stool qui a une porte. Assomme, il perd sa
+      porte (`majPorte`) — et il cesse donc d'en etre un. */
+  function estStool(e) { return !!(e && e.stool && e.vivant && e.porteBut); }
+
+  function leStool() { return B.entites.find(estStool) || null; }
+
+  /** Ce que coute son silence. ⚠️ Il sait ce que tu vaux : le prix monte avec
+      le dossier, comme l'amende, comme l'avocat, comme tout ce qui touche au
+      casier. */
+  function prixDuStool() {
+    const f = ficheStool(), eco = B.defs.economie;
+    const casier = Math.max(0, Math.min(eco.casier_max, B.partie.casier));
+    return Math.round(f.prix + f.prix_par_page * casier);
+  }
+
+  /** ⚠️ IL NE NAIT JAMAIS DANS TON DOS. Il faut pouvoir le voir se retourner et
+      partir : une denonciation qu'on ne peut pas voir venir n'est pas une
+      regle, c'est une taxe. Et un seul a la fois — sans ca, la rue entiere se
+      relaie au telephone et le casier devient une condamnation. */
+  function majStools() {
+    const f = ficheStool(), j = B.joueur, r = B.recherche;
+    if (!j || !j.vivant || B.interieur || j.dansVehicule) return;
+    if (B.partie.casier < f.casier_minimum) return;
+    if (B.t < (r.stoolT || 0) || B.t % f.occasion_images !== 0) return;
+    if (leStool()) return;
+    if (B.rng() >= Math.min(f.chance_max, f.chance_par_page * B.partie.casier)) return;
+    const portee = f.rayon_tuiles * TT, demi = f.devant_degres * Math.PI / 360;
+    const gens = Entites.pietonsAutour(j.x, j.y, portee).filter(function (e) {
+      return e.vivant && !e.agent && !e.metier && !e.personnage && !e.mission
+        && !e.intouchable && !e.petit && !e.suit && !e.gang && !e.porteBut
+        && (e.etat === 'flane' || e.etat === 'arret')
+        && dansLeCone(j.x, j.y, j.angle, demi, portee, e.x, e.y)
+        && Monde.ligneLibre(j.x, j.y, e.x, e.y);
+    });
+    if (!gens.length) return;
+    const e = gens[Math.floor(B.rng() * gens.length)];
+    // Pas de porte a portee : pas de telephone, donc pas de stool.
+    if (!Entites.envoyerAUnePorte(e)) return;
+    e.stool = true;
+    e.etat = 'flane';
+    Entites.bulle(e, ficheStool().dit.reconnait, { duree: 150 });
+    Hud.message('QUELQU’UN T’A RECONNU');
+  }
+
+  /** Il a passe la porte : le poste a ton signalement. ⚠️ `dernierVu` tombe SUR
+      LE SEUIL, pas sur toi — c'est ce qu'il a donne, et c'est la que les autos
+      vont chercher. On a donc encore quelques secondes pour ne plus y etre. */
+  function appelDuStool(e) {
+    const f = ficheStool();
+    e.stool = false;
+    B.recherche.stoolT = B.t + f.repit_s * 60;
+    B.recherche.dernierVu = { x: e.x, y: e.y, t: B.t };
+    etoilesAuMoins(f.etoiles);
+    Hud.message('ON T’A DÉNONCÉ');
+  }
+
+  /** Du linge neuf, une coupe : on ne te reconnait plus pendant un moment.
+
+      ⚠️ C'est le SEUL levier que le joueur ait vraiment contre le stool — le
+      casier, lui, ne redescend qu'en payant l'avocat ou le comptoir du fond.
+      Sans ca, un gros dossier n'etait plus une regle : c'etait une taxe qu'on
+      paie jusqu'a la fin de la partie. Et celui qui etait deja en route
+      raccroche : il cherchait une tete qui n'existe plus. */
+  function onNeTeReconnaitPlus() {
+    const f = ficheStool();
+    B.recherche.stoolT = B.t + f.repit_deguisement_s * 60;
+    const e = leStool();
+    if (e) { e.stool = false; e.porteBut = null; e.porteT = 0; }
+  }
+
+  /** On l'achete. ⚠️ Plus cher que le silence d'un temoin, et c'est voulu : le
+      temoin marchande ce qu'il a vu, le stool marchande QUI TU ES. */
+  function acheterLeStool(j, stool) {
+    if (!estStool(stool)) return false;
+    const prix = prixDuStool();
+    if (B.partie.argent < prix) { Hud.message(prix + ' $ — PAS ASSEZ'); Son.SFX.erreur(); return true; }
+    Missions.payer(prix, 'SILENCE');
+    stool.stool = false; stool.porteBut = null; stool.porteT = 0;
+    B.recherche.stoolT = B.t + ficheStool().repit_s * 60;
+    Entites.bulle(stool, ficheStool().dit.achete, { duree: 120 });
+    Son.SFX.argent();
+    return true;
+  }
+
   function remiseAZero() { const r = B.recherche; r.etoiles = 0; r.chaleur = 0; r.vu = 0; }
 
   /** Un PLANCHER d'etoiles, tout de suite.
@@ -548,6 +646,7 @@ const Police = (function () {
     const h = helico();
     if (h) majHelico(h);
     majBarrages();
+    majStools();
     // Les temoins qui courent vers un agent : arrives, ils racontent. Loin de
     // tout agent, ils telephonent au bout du delai.
     const t = defs().temoins;
@@ -566,6 +665,7 @@ const Police = (function () {
   }
 
   return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
+           estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

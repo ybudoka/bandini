@@ -112,6 +112,55 @@ TEMOINS = {
     "delai_depeche_s": 8,
 }
 
+#: LE STOOL — celui qui n'a RIEN VU, et qui te reconnait quand meme.
+#:
+#: ⚠️ **Ce n'est pas un temoin, et la difference est tout le personnage.** Le
+#: temoin a vu un delit : il porte un crime, il court le raconter, et son
+#: silence s'achete vingt piastres. Le stool, lui, n'a rien vu — il a reconnu
+#: ta FACE, parce que ta face est dans le journal et sur les affiches. Il n'a
+#: besoin d'aucun crime, il part telephoner, et ce qu'il donne au poste n'est
+#: pas de la chaleur : c'est un SIGNALEMENT, donc un PLANCHER d'etoiles
+#: (`etoilesAuMoins`). La difference entre « quelqu'un a vu » et « quelqu'un a
+#: appele » etait deja ecrite dans `police.js` ; il lui manquait un corps.
+#:
+#: ⚠️ **C'est le casier qui le fait naitre**, et c'est ce qui referme M11 :
+#: la premiere vague a fait que le dossier allonge le cone des agents, la
+#: troisieme fait qu'il transforme les passants en delateurs. Un dossier mince
+#: (`casier_minimum`) ne dit rien a personne — on n'est pas encore quelqu'un.
+#:
+#: ⚠️ **Il ne naît jamais dans le dos d'un joueur immobile** (`devant_degres`,
+#: juge de la fiche M11) : il faut qu'on PUISSE le voir se retourner et partir.
+#: Une denonciation qu'on ne peut pas voir venir n'est pas une regle, c'est une
+#: taxe. Et `repit_s` empeche la rue entiere de se relayer au telephone.
+STOOL = {
+    "casier_minimum": 3,       # en dessous, personne ne te connait
+    "chance_par_page": 0.02,   # par page au dossier, a chaque occasion
+    "chance_max": 0.20,
+    "occasion_images": 300,    # une occasion toutes les cinq secondes
+    "rayon_tuiles": 7,         # d'ou il te reconnait
+    "devant_degres": 100,      # ... et il doit etre DEVANT toi
+    "etoiles": 2,              # le plancher que son appel pose
+    "prix": 300,               # ce que coute son silence
+    "prix_par_page": 120,      # ... et il sait ce que tu vaux
+    "repit_s": 90,             # apres un appel ou un achat, la rue se tait
+    # ⚠️ ET CHANGER DE TETE FAIT PLUS QUE CALMER LA POLICE. Le stool reconnait
+    # une FACE ; du linge neuf et une coupe, c'est exactement ce qui la defait
+    # — et c'est le seul levier que le joueur ait vraiment contre lui, puisque
+    # le casier, lui, ne redescend qu'en payant. Sans ca, un gros dossier
+    # n'etait plus une regle : c'etait une taxe qu'on paie jusqu'a la fin de la
+    # partie. La friperie et le barbier s'en trouvent doublement utiles.
+    "repit_deguisement_s": 240,
+    # ⚠️ SES MOTS SONT ICI, ET PAS DANS `pietons.PAROLES`. Cette table-la range
+    # ce qu'une SORTE de gens dit — un metier, un corps, une routine. Le stool
+    # n'est aucune sorte : c'est un ETAT que n'importe quel passant peut
+    # prendre, et c'est precisement ce qui le rend inquietant. Ses deux
+    # repliques vivent donc avec la regle qui les produit.
+    #
+    # ⚠️ Et « reconnait » doit se lire comme une RECONNAISSANCE, pas comme une
+    # accusation : c'est ce qui fait froid dans le dos.
+    "dit": {"reconnait": "AH BEN, TOÉ...", "achete": "J'AI RIEN VU"},
+}
+
 #: Changer de vehicule hors de vue pendant ce temps : -1 etoile. Changer de
 #: linge : remise a zero jusqu'a `vetements_remise_max`, sinon -2.
 DEGUISEMENT = {"vehicule_s": 3, "vehicule_etoiles": 1, "vetements_remise_max": 3,
@@ -218,6 +267,7 @@ def exporter() -> dict:
         "delits": DELITS,
         "vision": VISION,
         "temoins": TEMOINS,
+        "stool": dict(STOOL),
         "deguisement": DEGUISEMENT,
         "vitesses": VITESSES,
         "clotures": CLOTURES,

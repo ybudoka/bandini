@@ -177,6 +177,13 @@ const Missions = (function () {
   }
 
   /** Ce qu'on peut faire la ou l'on est (bouton ACTION). */
+  /** Le stool a portee de main. Meme rayon que le temoin : on n'achete pas un
+      silence a travers la rue. */
+  function stoolSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px)
+      .find(Police.estStool) || null;
+  }
+
   function interagir(j) {
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
     const perso = Histoire.personnageSousLaMain(j);
@@ -185,6 +192,11 @@ const Missions = (function () {
     if (panneau) return Histoire.proposerDefi(panneau.defi);
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) return acheterAmbulant(j, etal);
+    // ⚠️ LE STOOL AVANT LE TEMOIN : lui est en route vers un telephone, l'autre
+    // cherche encore un agent. Quand les deux sont a portee, c'est le plus
+    // presse qu'on paie.
+    const stool = stoolSousLaMain(j);
+    if (stool) return Police.acheterLeStool(j, stool);
     // Un temoin qui court raconter : on lui achete le silence.
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
@@ -944,6 +956,8 @@ const Missions = (function () {
                      p.cheveux = c.couleur;
                      B.joueur.swaps = apparenceDuJoueur(p, B.defs);
                      Police.remiseAZero();
+                     // ⚠️ Le stool reconnait une FACE : une coupe neuve la defait.
+                     Police.onNeTeReconnaitPlus();
                      return true;
                    } });
     });
@@ -1013,6 +1027,7 @@ const Missions = (function () {
     B.joueur.swaps = apparenceDuJoueur(B.partie, B.defs);
     // Changer de linge, c'est devenir quelqu'un d'autre pour la police (M4 affinera).
     Police.remiseAZero();
+    Police.onNeTeReconnaitPlus();
     return true;
   }
 
@@ -1432,6 +1447,10 @@ const Missions = (function () {
       B.invite = c ? c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $' + (coupon(j, c.slug) < 1 ? ' (COUPON)' : '') : 'ACHETER';
       return;
     }
+    // ⚠️ Meme ordre que `interagir`, toujours : une invite qui annonce autre
+    // chose que ce qu'ACTION va faire est pire que pas d'invite du tout.
+    const stool = stoolSousLaMain(j);
+    if (stool) { B.invite = 'ACHETER SON SILENCE — ' + Police.prixDuStool() + ' $'; return; }
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
       return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
     });
@@ -1502,7 +1521,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           coupon, prixAmbulant, crieurSousLaMain, prendreCoupon,
+           coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais, maj };
