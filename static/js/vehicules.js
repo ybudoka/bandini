@@ -791,9 +791,28 @@ const Vehicules = (function () {
     return true;
   }
 
+  /** Un NID-DE-POULE sous les roues : ca secoue, ca coute deux points de
+      carrosserie, et on l'entend. ⚠️ Un repit apres chaque nid : sans lui, un
+      char lent le paie a chaque image de la tuile, et un nid devient un piege
+      au lieu d'un cahot. */
+  function majNidDePoule(v) {
+    const ph = physique();
+    if (v.nidT > 0) { v.nidT--; return; }
+    if (v.z > 2 || Math.hypot(v.vx, v.vy) < 0.8 || B.interieur) return;
+    if (!Monde.nidDePoule(Math.floor(v.x / TT), Math.floor(v.y / TT))) return;
+    v.nidT = ph.nid_repit_images;
+    endommager(v, ph.nid_degats, null);
+    Son.SFX.nid_de_poule();
+    if (v.conducteur === B.joueur) {
+      B.cam.secousse = Math.max(B.cam.secousse, ph.nid_secousse);
+      Entree.vibrer(60);
+    }
+  }
+
   function majEtatDuChar(v) {
     const ph = physique();
     bruitDePassage(v);
+    majNidDePoule(v);
     if (v.forceT > 0) v.forceT--;
     if (majNoyade(v)) return;
     if (v.etat === 'epave') {
@@ -1138,11 +1157,19 @@ const Vehicules = (function () {
   /** Peut-on sortir du croisement dans ce sens depuis cette tuile ? On avance
       tant qu'on est sur du '+' (le carrefour, ses passages pietons) et on veut
       trouver une voie dont la fleche va dans NOTRE sens — pas a contresens. */
-  function peutSortir(tx, ty, sens) {
+  function peutSortir(tx, ty, sens, v) {
     const pas = PAS_FLECHE[sens];
     let x = tx, y = ty;
     for (let i = 0; i < 9; i++) {
       x += pas[0]; y += pas[1];
+      // ⚠️ **UNE SORTIE BARREE N'EST PAS UNE SORTIE** (15 sept. 2026). Une
+      // barriere fermee n'etait consultee que sur les voies : un char qui
+      // abordait le pont DEPUIS LA BOITE du croisement sortait dessus sans
+      // que rien ne le lui demande — et une fois sur le tablier il etait
+      // DEDANS, donc exempte, et il traversait tout du long. Le juge du
+      // demi-tour l'a attrape le jour ou les des ont change sa route ; le
+      // trou, lui, etait la depuis le premier jour des barrieres.
+      if (v && Monde.barriereBloque(v, x, y)) return false;
       const f = Monde.fleche(x, y);
       if (f === sens) return true;
       if (f !== '+') return false;
@@ -1169,6 +1196,17 @@ const Vehicules = (function () {
     return meilleur;
   }
 
+  /** Le penchant de l'heure : positif le matin (on converge vers le coeur),
+      negatif le soir (on s'en disperse), zero le reste du temps. */
+  function pointeDuMoment() {
+    const p = trafic().pointe;
+    if (!p) return 0;
+    const h = B.partie ? B.partie.heure : 0.5;
+    if (h >= p.matin[0] && h < p.matin[1]) return p.penchant;
+    if (h >= p.soir[0] && h < p.soir[1]) return -p.penchant;
+    return 0;
+  }
+
   function prochaineCible(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const f = Monde.fleche(tx, ty);
@@ -1190,9 +1228,12 @@ const Vehicules = (function () {
         v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;
         return centre(tx + p[0], ty + p[1]);
       }
-      if (inter && !Monde.feuVert(inter, sens)) { v.attendFeu = true; v.attenteBoite = 0; return centre(tx, ty); }
-      // Un STOP : on s'immobilise d'abord.
-      if (inter && inter.stop === sens) {
+      const feu = inter ? Monde.feuDeCirculation(inter, sens) : 'vert';
+      if (feu === 'rouge' || feu === 'jaune') { v.attendFeu = true; v.attenteBoite = 0; return centre(tx, ty); }
+      // Un STOP : le panneau — ou, la nuit, le feu qui CLIGNOTE ROUGE. On
+      // s'immobilise d'abord, puis on repart : un clignotant n'est pas un mur,
+      // et sans cette ligne le trafic de nuit attendait la fin des temps.
+      if (inter && (inter.stop === sens || feu === 'clignote_rouge')) {
         if (v.stopT === undefined) v.stopT = trafic().arret_images;
         // ⚠️ Le compte ne tourne qu'a l'ARRET complet : sinon on comptait le
         // freinage et le char repartait sans s'etre vraiment immobilise.
@@ -1236,8 +1277,27 @@ const Vehicules = (function () {
             return signe * (dist2((tx + qa[0] * 4) * TT, (ty + qa[1] * 4) * TT, j.x, j.y) - dist2((tx + qb[0] * 4) * TT, (ty + qb[1] * 4) * TT, j.x, j.y));
           });
         } else {
-          const tirage = B.rng();
-          ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+          // ⚠️ LES HEURES DE POINTE ONT UNE DIRECTION. Le rythme dit COMBIEN de
+          // chars roulent, jamais OU ils vont. Le matin on converge vers le
+          // coeur, le soir on s'en disperse — en PONDERANT la sortie, jamais en
+          // touchant au champ de direction, qui est fixe et juge.
+          //
+          // ⚠️ `penchant` est la PART des chars qui suivent le mouvement : le
+          // reste tire au sort comme toujours. Sans ce partage, toute la ville
+          // roule dans le meme sens et ce n'est plus une heure de pointe, c'est
+          // une evacuation.
+          const penchant = pointeDuMoment();
+          if (penchant && B.rng() < Math.abs(penchant)) {
+            const c = Monde.coeurDeLaVille(), signe = penchant > 0 ? 1 : -1;
+            ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) {
+              const qa = PAS_FLECHE[vers[a]], qb = PAS_FLECHE[vers[b]];
+              return signe * (dist2((tx + qa[0] * 6) * TT, (ty + qa[1] * 6) * TT, c.x, c.y)
+                            - dist2((tx + qb[0] * 6) * TT, (ty + qb[1] * 6) * TT, c.x, c.y));
+            });
+          } else {
+            const tirage = B.rng();
+            ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+          }
         }
         v.sortie = ordre.map(function (choix) { return vers[choix]; });
       }
@@ -1245,7 +1305,7 @@ const Vehicules = (function () {
       //    tout droit jusqu'a la voie d'ou elle part : un virage a droite se
       //    prend a l'entree de la boite, un virage a gauche au fond.
       const voulu = v.sortie[0];
-      if (peutSortir(tx, ty, voulu)) {
+      if (peutSortir(tx, ty, voulu, v)) {
         const q = PAS_FLECHE[voulu];
         v.sens = voulu;
         return centre(tx + q[0], ty + q[1]);
@@ -1253,7 +1313,7 @@ const Vehicules = (function () {
       if (Monde.fleche(tx + p[0], ty + p[1]) === '+') return centre(tx + p[0], ty + p[1]);
       // 2. Au fond de la boite sans la sortie voulue : les autres, dans l'ordre.
       for (const sens of v.sortie.slice(1)) {
-        if (peutSortir(tx, ty, sens)) {
+        if (peutSortir(tx, ty, sens, v)) {
           const q = PAS_FLECHE[sens];
           v.sens = sens;
           return centre(tx + q[0], ty + q[1]);
@@ -1261,7 +1321,7 @@ const Vehicules = (function () {
       }
       // 3. N'importe quelle sortie d'ici fera (a droite, a gauche du cap).
       for (const sens of [droite, gauche]) {
-        if (peutSortir(tx, ty, sens)) {
+        if (peutSortir(tx, ty, sens, v)) {
           const q = PAS_FLECHE[sens];
           v.sens = sens; v.sortie = null;
           return centre(tx + q[0], ty + q[1]);
@@ -1943,7 +2003,17 @@ const Vehicules = (function () {
     jaune: { rang: 1, forme: 'losange', ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.52)' },
     vert:  { rang: 2, forme: 'cercle',  ampoule: '#2ecc71', coeur: '#ccffdf', lumiere: 'rgba(110,255,165,0.50)',
              coin: '#1d7a45' },
+    // ⚠️ La nuit : la MEME lentille, mais qui pulse. C'est la seule difference
+    // — un clignotant qui changerait aussi de place dans le boitier ne se
+    // lirait plus comme le feu qu'on connait.
+    clignote_jaune: { rang: 1, forme: 'losange', ampoule: '#f39c12', coeur: '#ffe3a6', lumiere: 'rgba(255,190,90,0.52)', clignote: true },
+    clignote_rouge: { rang: 0, forme: 'carre',   ampoule: '#e74c3c', coeur: '#ffc9bd', lumiere: 'rgba(255,105,85,0.50)', clignote: true },
   };
+
+  /** Une lampe qui clignote est-elle ALLUMEE en ce moment ? */
+  function pulse() {
+    return Math.floor(B.t / trafic().clignotant_images) % 2 === 0;
+  }
 
   //: De quelle couleur se lit chaque etat du feu pieton. ⚠️ LE BLANC QUI
   //: MARCHE, L'ORANGE QUI ARRETE : deux couleurs qu'on distingue d'un coup
@@ -2100,7 +2170,11 @@ const Vehicules = (function () {
     const x = Math.round(e.x - ancre[0] - cx), y = Math.round(e.y - ancre[1] - cy);
     ctx.drawImage(poteau, x, y);
     const phase = PHASES_FEU[Monde.feuDeCirculation(e.inter, e.axe === 'ns' ? '^' : '>')];
-    lentille(ctx, x + miroir(d.lentilles[phase.rang], d.lentilleCote, e.bras), y + d.lentilleY, phase);
+    // Le clignotant s'eteint une pulsation sur deux : la douille reste, la
+    // lumiere part — c'est ce qui se voit de loin sur une ville deserte.
+    if (!phase.clignote || pulse()) {
+      lentille(ctx, x + miroir(d.lentilles[phase.rang], d.lentilleCote, e.bras), y + d.lentilleY, phase);
+    }
     // ⚠️ Le boitier des tetes pieton se peint ICI, pas dans la fiche cuite :
     // un mat n'en porte pas toujours, et une boite noire pendue a une potence
     // qui n'a pas de traverse est un defaut qu'on ne voit qu'au bon coin de la
@@ -2297,7 +2371,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

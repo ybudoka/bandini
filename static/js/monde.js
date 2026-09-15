@@ -49,8 +49,27 @@ const Monde = (function () {
 
   let carte = null;
 
+  //: Les nids-de-poule, indexes une fois : « x,y » -> vrai. Les lire dans un
+  //: tableau a chaque image pour chaque char, c'est quatre-vingt-dix
+  //: comparaisons par char et par image, pour une tuile.
+  let nids = new Set();
+  function nidDePoule(tx, ty) { return nids.has(tx + ',' + ty); }
+
+  //: Le coeur de la ville — la zone vers laquelle le trafic du matin converge
+  //: (`trafic.pointe.vers`). Cherche une fois : les zones ne bougent pas.
+  let coeur = null;
+  function coeurDeLaVille() {
+    if (coeur) return coeur;
+    const slug = B.defs.conduite.trafic.pointe.vers;
+    const z = (carte.zones || []).find(function (q) { return q.slug === slug; });
+    coeur = z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT } : { x: carte.pxW / 2, y: carte.pxH / 2 };
+    return coeur;
+  }
+
   function charger(def) {
     const w = def.largeur, h = def.hauteur;
+    nids = new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; }));
+    coeur = null;
     const solide = new Uint8Array(w * h);
     const route = new Uint8Array(w * h);
     const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
@@ -508,8 +527,29 @@ const Monde = (function () {
 
       ⚠️ Un croisement en T ou en L n'a pas de feu : on y passe a vue, donc
       'vert'. */
+  /** La nuit, les feux CLIGNOTENT. ⚠️ C'est une pure fonction de l'HEURE,
+      comme le reste du cycle : rien a garder, et trois cent cinquante poteaux
+      ne coutent pas une image de plus. */
+  function feuxClignotent() {
+    const t = B.defs.conduite.trafic;
+    const h = B.partie ? B.partie.heure : 0.5;
+    const a = t.clignotant_depuis, b = t.clignotant_jusqu_a;
+    return a < b ? (h >= a && h < b) : (h >= a || h < b);
+  }
+
+  /** Qui passe et qui s'arrete quand ca clignote : **l'ARTERE passe**, et
+      l'artere est la rue la plus LARGE du croisement — `l` est la largeur de
+      la rue nord-sud, `h` celle de l'est-ouest. A egalite c'est le nord-sud
+      qui tranche : il faut une reponse, et la meme a chaque image. */
+  function arterePasse(inter, sens) {
+    return (sens === '^' || sens === 'v') === (inter.l >= inter.h);
+  }
+
   function feuDeCirculation(inter, sens) {
     if (!inter || !inter.feux) return 'vert';
+    // ⚠️ La nuit : l'artere clignote jaune (on passe), la rue secondaire
+    // clignote rouge (un STOP — `prochaineCible` le traite comme le panneau).
+    if (feuxClignotent()) return arterePasse(inter, sens) ? 'clignote_jaune' : 'clignote_rouge';
     const t = B.defs.conduite.trafic;
     const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
     const phase = (B.t + inter.decalage) % cycle;
@@ -526,7 +566,12 @@ const Monde = (function () {
       ⚠️ Le JAUNE n'est pas vert : un char qui arrive a la ligne d'arret sur
       le jaune s'arrete. C'est ce qui donne au degagement du feu pieton son
       sens — sans ca, le croisement ne se viderait jamais. */
-  function feuVert(inter, sens) { return feuDeCirculation(inter, sens) === 'vert'; }
+  function feuVert(inter, sens) {
+    const c = feuDeCirculation(inter, sens);
+    // Le jaune CLIGNOTANT laisse passer ; le jaune fixe, non. Ce n'est pas la
+    // meme phrase : l'un dit « attention », l'autre « ca ferme ».
+    return c === 'vert' || c === 'clignote_jaune';
+  }
 
   /** Le feu PIETON d'un croisement, pour qui traverse la rue ou les chars
       vont dans le sens `sens`. Rend 'blanc' (on s'engage), 'degage' (on ne
@@ -543,6 +588,10 @@ const Monde = (function () {
       rien de plus qu'un. */
   function feuPieton(inter, sens) {
     if (!inter || !inter.feux) return 'aucun';
+    // ⚠️ La nuit, le bonhomme s'eteint avec le cycle : plus de signal, on
+    // traverse a vue (`traverseeSure` reprend la main). Un feu pieton qui
+    // continuerait son cycle pendant que les chars clignotent mentirait.
+    if (feuxClignotent()) return 'aucun';
     const t = B.defs.conduite.trafic;
     const cycle = 2 * (t.feu_vert_images + t.feu_orange_images);
     const phase = (B.t + inter.decalage) % cycle;
@@ -1166,6 +1215,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
+    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,

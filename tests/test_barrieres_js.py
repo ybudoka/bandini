@@ -123,22 +123,33 @@ def test_le_trafic_fait_demi_tour_devant_les_cones(banc, paquet):
         const v = L.Vehicules.creer('auto', x, (b.y - 6) * TT + 8, Math.PI / 2, { conducteur: 'trafic', etat: 'roule', sens: 'v' });
         L.Entites.indexer();
         let plusBas = v.y, entre = false;
+        // ⚠️ « S'empiler », ce n'est pas « être arrêté » : devant la couronne
+        // il y a un FEU, et s'arrêter au rouge est ce qu'on attend d'eux. Ce
+        // qu'on mesure, c'est qui reste PLANTÉ — on compte, pour chaque char,
+        // ses images d'affilée à l'arrêt dans l'approche, et on garde le pire.
+        const plantes = new Map();
+        let pire = 0;
         for (let i = 0; i < 600; i++) {
             o.frame(1);
+            for (const e of L.B.entites) {
+                if (e.type !== 'vehicule' || e.conducteur !== 'trafic') continue;
+                const dansLApproche = Math.abs(e.x - x) < TT && e.y > (b.y - 6) * TT && e.y < b.y * TT;
+                const n = (dansLApproche && Math.abs(e.vitesse) < 0.05) ? (plantes.get(e) || 0) + 1 : 0;
+                plantes.set(e, n);
+                if (n > pire) pire = n;
+            }
             if (!v.actif || L.B.entites.indexOf(v) < 0) break;
             plusBas = Math.max(plusBas, v.y);
             if (v.y >= b.y * TT - 4) entre = true;
         }
         const encore = L.B.entites.indexOf(v) >= 0;
-        // Personne d'empile devant les cones : aucun char du trafic a l'arret
-        // dans les cinq rangees qui precedent la couronne.
-        const empiles = L.B.entites.filter(function (e) {
-            return e.type === 'vehicule' && e.conducteur === 'trafic' && Math.abs(e.x - x) < TT
-                && e.y > (b.y - 5) * TT && e.y < b.y * TT && Math.abs(e.vitesse) < 0.05;
-        }).length;
-        return { entre: entre, plusBas: plusBas / TT, encore: encore, y: v.y / TT, sens: v.sens, vitesse: v.vitesse, empiles: empiles, bY: b.y };
+        const t = L.B.defs.conduite.trafic;
+        return { entre: entre, plusBas: plusBas / TT, encore: encore, y: v.y / TT, sens: v.sens,
+                 vitesse: v.vitesse, pire: pire, cycle: 2 * (t.feu_vert_images + t.feu_orange_images), bY: b.y };
     }""")
     assert r["entre"] is False, f"le trafic est entre sur le pont ferme : {r}"
-    assert r["empiles"] == 0, f"le trafic s'empile devant les cones : {r}"
+    # Un cycle de feu complet, et de la marge : au-dela, ce n'est plus un feu
+    # qu'on attend, c'est un mur devant lequel on a renonce.
+    assert r["pire"] < r["cycle"], f"un char reste plante {r['pire']} images devant les cones : {r}"
     if r["encore"]:
         assert r["sens"] == "^" or r["y"] < r["bY"] - 4, f"le char n'a pas fait demi-tour : {r}"

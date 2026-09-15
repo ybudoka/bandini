@@ -343,6 +343,14 @@ const Son = (function () {
       const f = Math.max(0, Math.min(1, force || 0));
       if (f > 0 && B.t % 6 === 0) bruit(0.2, 0.1 * f, 2000, 700);
     },
+    //: Le nid-de-poule : le COUP SEC de la suspension qui talonne, puis la
+    //: tole qui resonne une demi-seconde. Synthetise, comme la borne : le seau
+    //: des bruitages est plein, et un cahot n'a pas besoin d'un fichier.
+    nid_de_poule: function () {
+      ton(90, 0.07, 'square', 0.22, 0.45);          // le talonnage
+      bruit(0.1, 0.16, 1100, 300);                  // le gravier
+      ton(320, 0.14, 'triangle', 0.07, 0.7, 0.04);  // la tole qui resonne
+    },
     // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
     couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },
     // ⚠️ Le char n'a PAS son propre fichier, et c'est voulu : c'est la meme

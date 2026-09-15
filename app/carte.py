@@ -543,6 +543,20 @@ GRAINE = 20260912
 #: la rangee (ou la colonne) qu'il longe — ici le seul lien vers La Pointe.
 PONTS: frozenset = frozenset({("v", 17, 6)})
 
+#: Les nids-de-poule. ⚠️ **Deux lignes, et toute la ville prend un accent** :
+#: une tuile de chaussee qui secoue la camera et coute deux points de
+#: carrosserie (`vehicules.PHYSIQUE`). C'est du decor qu'on SENT, pas un piege.
+#:
+#: ⚠️ **Jamais dans un croisement** — on y freine deja, on y regarde le feu, et
+#: une secousse au milieu d'un virage se lit comme un bogue de collision. Jamais
+#: sur une ligne d'arret non plus : c'est la qu'on est immobile. Et jamais deux
+#: cote a cote (`ecart`) : deux nids colles ne font pas un nid-de-poule, ils
+#: font une rue defoncee, et le joueur croit a un chantier.
+NIDS_DE_POULE: dict = {
+    "par_ville": (30, 90),   # ce qu'une ville en compte — un juge le compte
+    "ecart": 7,              # en tuiles, entre deux nids
+}
+
 #: Les zones conditionnelles. ⚠️ **UNE BARRIERE EST UNE FICHE, PAS UN CAS.** La
 #: ville est ouverte en entier depuis M1 et elle le restera : ce qu'une
 #: barriere ajoute n'est pas une cloture, c'est une RAISON — un endroit qu'on
@@ -930,6 +944,8 @@ class _Chantier:
         self.des_reclame = Des(graine ^ 0x5A4D1)
         # Les guichets tirent dans le leur : en poser un de plus ne deplace pas un arbre.
         self.des_guichet = Des(graine ^ 0x6C1C4E7)
+        # Les nids tirent dans le leur : en creuser un de plus ne deplace pas un arbre.
+        self.des_nid = Des(graine ^ 0x141D5)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3508,6 +3524,31 @@ class _Chantier:
                 poses.append((x, y))
         return len(poses)
 
+    def nids_de_poule(self) -> list[dict]:
+        """Les tuiles defoncees : de la chaussee, hors croisement, espacees."""
+        fiche = NIDS_DE_POULE
+        boites = [(i["x"], i["y"], i["l"], i["h"]) for i in self.intersections]
+        # ⚠️ `self.arrets` est indexe par "x,y" : le lire comme un ensemble de
+        # couples ne trouvait jamais rien, et on creusait des nids sur les lignes d'arret.
+        arrets = {tuple(int(n) for n in cle.split(",")) for cle in self.arrets}
+        candidats = [
+            (x, y)
+            for y in range(1, self.hauteur - 1)
+            for x in range(1, self.largeur - 1)
+            if LEGENDE[self.sol[y][x]].get("route") and not LEGENDE[self.sol[y][x]].get("trottoir")
+            and (x, y) not in arrets
+            and not any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites)
+        ]
+        poses: list[tuple[int, int]] = []
+        for _essai in range(4000):
+            if not candidats or len(poses) >= fiche["par_ville"][1]:
+                break
+            x, y = candidats[self.des_nid.suivant() % len(candidats)]
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                continue
+            poses.append((x, y))
+        return [{"x": x, "y": y} for x, y in sorted(poses)]
+
     def barrieres(self, ambulants: list[dict], ponts: list[dict]) -> list[dict]:
         """Chaque barriere de `BARRIERES`, resolue en rectangle de tuiles."""
         sortie = []
@@ -3931,6 +3972,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "graffitis": chantier.graffitis,
         "fourriere": chantier.fourriere,
         "barrieres": barrieres,
+        "nids_de_poule": chantier.nids_de_poule(),
         "ambulants": ambulants,
         "reclames": reclames,
         # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere

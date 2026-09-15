@@ -210,6 +210,34 @@ TRAFIC = {
     # Deux secondes : la traverse fait deux tuiles, on marche a 0,45 px par
     # image, il en faut 71 pour la franchir.
     "feu_pieton_degagement_images": 120,
+    # ⚠️ **LA NUIT, LES FEUX CLIGNOTENT.** Vrai partout au Quebec, et presque
+    # gratuit ici : `feuDeCirculation` est une pure fonction de l'heure, et
+    # tout en decoule (le dessin de la lanterne, ce que le trafic respecte).
+    # A partir de `clignotant_depuis`, l'ARTERE clignote jaune (on passe sans
+    # s'arreter) et la rue secondaire clignote rouge (un STOP). Le trafic de
+    # nuit, qui n'a plus personne a croiser, cesse d'attendre devant un feu
+    # rouge pour rien — et sur une ville deserte, ca se voit de loin.
+    #
+    # ⚠️ Les deux heures tombent DANS la nuit du rythme (`DISTRICTS[].rythme`,
+    # 0,82 → 0,25) : un juge le tient. Des feux qui clignotent pendant que la
+    # rue est encore pleine, ce n'est pas la nuit, c'est une panne.
+    "clignotant_depuis": 0.86,     # ~20 h 40
+    "clignotant_jusqu_a": 0.25,    # 6 h
+    "clignotant_images": 36,       # une pulsation : on la voit sans qu'elle agace
+    # ⚠️ **LES HEURES DE POINTE ONT UNE DIRECTION.** Le rythme dit COMBIEN de
+    # chars roulent ; il ne dit pas OU ils vont. Le matin le trafic converge
+    # vers le coeur de la ville, le soir il s'en disperse. ⚠️ Et pas en touchant
+    # au champ de direction, qui est fixe et juge : en PONDERANT le choix de
+    # sortie aux croisements. `penchant` est la part des chars qui suivent le
+    # mouvement — le reste tire au sort comme toujours, sinon la ville entiere
+    # roule dans le meme sens et ce n'est plus une heure de pointe, c'est une
+    # evacuation.
+    "pointe": {
+        "matin": [0.27, 0.42],     # 6 h 30 → 10 h : on rentre travailler
+        "soir": [0.68, 0.84],      # 16 h 20 → 20 h : on en sort
+        "penchant": 0.45,
+        "vers": "faubourg",        # le coeur : le district ou l'on converge
+    },
     "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle
     "oubli_px": 560,
 }
@@ -253,6 +281,13 @@ PHYSIQUE = {
     # choisit pas.
     "saut_hauteur_min": 8,
     "portee_monter_px": 30,       # a quelle distance on peut ouvrir une portiere
+    # ⚠️ **UN NID-DE-POULE**, et toute la ville prend un accent. La carte dit
+    # OU ils sont (`carte.NIDS_DE_POULE`) ; ici, ce qu'ils coutent. Deux points
+    # de carrosserie : on les sent, on ne les craint pas — c'est du decor
+    # sonore et tactile, pas un piege.
+    "nid_degats": 2,
+    "nid_secousse": 0.35,
+    "nid_repit_images": 30,       # on ne le paie pas deux fois en le traversant
     # ⚠️ **LE BRAQUAGE EST UN RAYON, PAS UNE VITESSE DE ROTATION** (15 sept.
     # 2026, demande de Martin : « ameliore les virages »). Le char tournait de
     # `braquage` RADIANS PAR IMAGE, quelle que soit sa vitesse : le rayon du

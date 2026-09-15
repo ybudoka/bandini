@@ -5452,9 +5452,15 @@ def test_une_ampoule_allumee_pose_une_lampe_de_la_couleur_de_sa_phase(banc):
                      }).length };
         }
         const milieuVert = Math.floor(t.feu_vert_images / 2);
-        return { vert: releve(0.0, milieuVert),
-                 rouge: releve(0.0, cycle / 2 + milieuVert),
-                 jaune: releve(0.0, t.feu_vert_images + Math.floor(t.feu_orange_images / 2)),
+        // ⚠️ **PAS MINUIT** (15 sept. 2026) : a minuit, les feux CLIGNOTENT
+        // maintenant, et un clignotant n'a pas de cycle a viser. Ce qu'il faut
+        // ici, c'est l'heure ou il fait assez sombre pour que les lampes
+        // s'allument ET ou le tricolore tourne encore — juste avant que la
+        // ville bascule (`trafic.clignotant_depuis`).
+        const nuit = t.clignotant_depuis - 0.02;
+        return { vert: releve(nuit, milieuVert),
+                 rouge: releve(nuit, cycle / 2 + milieuVert),
+                 jaune: releve(nuit, t.feu_vert_images + Math.floor(t.feu_orange_images / 2)),
                  midi: releve(0.5, milieuVert) };
     }""")
     couleurs = {}
@@ -5485,7 +5491,9 @@ def test_l_orange_qui_clignote_n_eclaire_pas_pendant_qu_il_est_eteint(banc):
         const mat = L.B.entites.find(function (e) { return e.type === 'feu' && e.traverses.length; });
         const inter = mat.inter, sens = mat.traverses[0] === '=' ? '>' : '^';
         L.B.joueur.x = mat.x; L.B.joueur.y = mat.y;
-        L.B.partie.heure = 0.0;
+        // ⚠️ Pas minuit : les feux y clignotent depuis le 15 sept. 2026, et un
+        // feu pieton s'eteint avec eux. On se met juste avant la bascule.
+        L.B.partie.heure = t.clignotant_depuis - 0.02;
         // Deux images du MEME degagement (il dure 120 images), de parite
         // contraire au clignotant (il bat aux 8).
         const cibles = [];
