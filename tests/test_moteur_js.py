@@ -2540,6 +2540,25 @@ def test_le_decor_arrete_ou_casse_sous_un_char_et_la_ville_se_repare(banc):
             // ⚠️ Un decor avec DE LA PLACE AU SUD : sinon le char bute sur la
             // facade d'a cote avant d'atteindre l'arbre, et on mesurerait un
             // mur en croyant mesurer un arbre.
+            //
+            // ⚠️ Et de la place VIDE DE DECOR, pas seulement de tuiles. Le
+            // 15 sept. 2026, un buisson est entre dans l'index du decor — il
+            // portait `casse` depuis toujours mais `solide: false` l'en tenait
+            // dehors, et rien ne pouvait le toucher. Des qu'un char a pu le
+            // coucher, celui du couloir d'approche a mange une part de l'elan
+            // de la berline : elle finissait a UN pixel de l'ancre de l'arbre
+            // au lieu d'un cheveu avant, et le juge criait « une berline
+            // traverse un arbre » alors qu'elle s'arretait dessus. On mesurait
+            // un buisson en croyant mesurer un arbre.
+            const corridorLibre = function (e) {
+                return !L.B.entites.some(function (q) {
+                    if (q === e || q.type !== 'decor' || q.brise) return false;
+                    const f = L.DECORS[q.decor] || {};
+                    if (!f.casse && !f.arrete) return false;
+                    const dy = q.y - e.y;
+                    return Math.abs(q.x - e.x) < 24 && dy > 0 && dy < 90;
+                });
+            };
             const d = L.B.entites.find(function (e) {
                 if (e.decor !== type || e.brise) return false;
                 const tx = Math.floor(e.x / L.TT);
@@ -2549,7 +2568,7 @@ def test_le_decor_arrete_ou_casse_sous_un_char_et_la_ville_se_repare(banc):
                         if (L.Monde.bloque(tx + dx, ty, L.Monde.MASQUE_VEHICULE)) return false;
                     }
                 }
-                return true;
+                return corridorLibre(e);
             });
             if (!d) return null;
             j.x = d.x; j.y = d.y + 70;

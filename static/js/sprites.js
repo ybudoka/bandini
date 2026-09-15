@@ -2008,10 +2008,24 @@ const GRILLE_CAMION_CUISINE = [
                   s'y ecrase.
      `casse: f`   il CEDE sous n'importe quel char lance, qui garde la
                   fraction `f` de sa vitesse. Un banc, un cone, un lampadaire.
+     `pv: n`      ce qu'il faut lui mettre a l'ARME pour l'abattre : balles,
+                  explosion, feu. Un char le couche d'un coup, une arme l'use.
 
    Un decor sans l'un ni l'autre reste ce qu'il etait : solide pour les gens,
    invisible pour les chars (les feux, les panneaux — on ne renverse pas la
-   signalisation, sinon un croisement se demonte au premier virage rate). */
+   signalisation, sinon un croisement se demonte au premier virage rate).
+
+   ⚠️ `casse` et `pv` vont ENSEMBLE, et `arrete` n'a jamais de `pv`. Ce qui
+   tombe sous un char doit tomber sous une arme — sinon un lampadaire encaisse
+   un chargeur entier sans bouger, ce qui a ete le cas jusqu'au 15 sept. 2026 :
+   `Entites.briser` n'avait qu'un seul appelant, le char. Et l'inverse tient
+   aussi : un arbre, une fontaine, un camion-restaurant ARRETENT — ils encaissent
+   la balle, ils ne tombent jamais, sinon la rue se demonte au pistolet.
+   `scripts/verifier_ce_qui_casse.py` tient les deux regles.
+
+   ⚠️ L'echelle des `pv` se lit en balles de PISTOLET (30 points) : une poubelle
+   part au premier coup, un lampadaire au deuxieme, un kiosque au troisieme. La
+   fronde (10) et la mitraillette (9) usent, la carabine (60) couche. */
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -2019,27 +2033,27 @@ const DECORS = {
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(4, 3, 6, 5); ctx.fillRect(2, 9, 5, 4);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(10, 10, 6, 6); ctx.fillRect(6, 14, 8, 3);
   } },
-  lampadaire: { casse: 0.7, w: 8, h: 30, ancre: [3, 29], r: 2, solide: true, peindre: function (ctx, w, h) {
+  lampadaire: { casse: 0.7, pv: 60, w: 8, h: 30, ancre: [3, 29], r: 2, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(2, 4, 2, 26); ctx.fillRect(0, 28, 6, 2);
     ctx.fillStyle = '#4a4d55'; ctx.fillRect(2, 2, 6, 2);
     ctx.fillStyle = '#ffe9a8'; ctx.fillRect(6, 3, 2, 3);
   } },
-  poubelle: { casse: 0.85, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
+  poubelle: { casse: 0.85, pv: 25, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
-  banc: { casse: 0.8, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
+  banc: { casse: 0.8, pv: 40, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 3); ctx.fillRect(1, 0, 16, 3);
     ctx.fillStyle = '#523a22'; ctx.fillRect(2, 7, 2, 5); ctx.fillRect(14, 7, 2, 5);
     ctx.fillStyle = '#7d5a36'; ctx.fillRect(1, 4, 16, 1);
   } },
-  caisse: { casse: 0.8, w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
+  caisse: { casse: 0.8, pv: 20, w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 14, 14);
     ctx.fillStyle = '#a07c4b'; ctx.fillRect(2, 3, 12, 5);
     ctx.fillStyle = '#6e5330'; ctx.fillRect(1, 8, 14, 1); ctx.fillRect(7, 2, 2, 14);
   } },
-  buisson: { casse: 0.9, w: 16, h: 12, ancre: [8, 11], r: 5, solide: false, peindre: function (ctx, w, h) {
+  buisson: { casse: 0.9, pv: 15, w: 16, h: 12, ancre: [8, 11], r: 5, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2f6b2a'; ctx.fillRect(1, 3, 14, 8); ctx.fillRect(3, 1, 10, 3);
     ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 3, 5, 4); ctx.fillRect(9, 5, 4, 3);
     ctx.fillStyle = '#204d1e'; ctx.fillRect(2, 8, 12, 3);
@@ -2048,20 +2062,20 @@ const DECORS = {
   // ⚠️ Un terrain de banlieue est le CONTRAIRE du vide. Ces trois-la le disent
   // en trois formes qu'on reconnait de haut : le TOIT EN PENTE du cabanon, la
   // LIGNE tendue de la corde a linge, le COUVERCLE ROND du BBQ.
-  cabanon: { casse: 0.75, w: 20, h: 20, ancre: [10, 19], r: 7, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
+  cabanon: { casse: 0.75, pv: 80, w: 20, h: 20, ancre: [10, 19], r: 7, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 6, 16, 13);
     ctx.fillStyle = '#8a6a42'; ctx.fillRect(3, 7, 14, 11);
     ctx.fillStyle = '#4a3a28'; ctx.fillRect(0, 2, 20, 5); ctx.fillRect(9, 0, 2, 3);
     ctx.fillStyle = '#3a2a1a'; ctx.fillRect(8, 10, 5, 9);
     ctx.fillStyle = '#c9a227'; ctx.fillRect(11, 14, 1, 2);
   } },
-  corde_a_linge: { casse: 0.9, w: 22, h: 18, ancre: [11, 17], r: 3, solide: false, peindre: function (ctx, w, h) {
+  corde_a_linge: { casse: 0.9, pv: 10, w: 22, h: 18, ancre: [11, 17], r: 3, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6f757c'; ctx.fillRect(1, 2, 2, 15); ctx.fillRect(19, 2, 2, 15);
     ctx.fillStyle = '#9aa0a6'; ctx.fillRect(2, 3, 18, 1);
     ctx.fillStyle = '#e8e2cf'; ctx.fillRect(4, 4, 3, 5); ctx.fillRect(12, 4, 4, 6);
     ctx.fillStyle = '#7fb3d8'; ctx.fillRect(8, 4, 3, 4);
   } },
-  bbq: { casse: 0.85, w: 14, h: 14, ancre: [7, 13], r: 5, sol: [6, 3], solide: true, peindre: function (ctx, w, h) {
+  bbq: { casse: 0.85, pv: 30, w: 14, h: 14, ancre: [7, 13], r: 5, sol: [6, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 9, 2, 5); ctx.fillRect(8, 9, 2, 5);
     ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 4, 12, 6);
     ctx.fillStyle = '#4a4d54'; ctx.fillRect(2, 2, 10, 3); ctx.fillRect(1, 1, 12, 2);
@@ -2089,7 +2103,7 @@ const DECORS = {
     ctx.fillStyle = '#d98324'; ctx.fillRect(7, 16, 5, 2); ctx.fillRect(14, 16, 5, 2);
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(5, 22, 3, 4); ctx.fillRect(18, 22, 3, 4);
   } },
-  kiosque_journaux: { casse: 0.6, w: 24, h: 26, ancre: [12, 25], r: 9, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
+  kiosque_journaux: { casse: 0.6, pv: 90, w: 24, h: 26, ancre: [12, 25], r: 9, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#2f6b8a'; ctx.fillRect(2, 4, 20, 18);
     ctx.fillStyle = '#24506f'; ctx.fillRect(2, 4, 20, 3);
     ctx.fillStyle = '#efe6d0'; ctx.fillRect(4, 9, 7, 9); ctx.fillRect(13, 9, 7, 9);

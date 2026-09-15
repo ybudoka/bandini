@@ -282,9 +282,83 @@ const Combat = (function () {
           // Pousse HORS du feu, pas loin du lanceur.
           Entites.blesser(c, degats, f.auteur, { angle: angleVers(f.x, f.y, c.x, c.y), assomme: false, renverse: false });
         }
+        // ⚠️ Et le DECOR, que `q.vivant` ne prend pas : un banc au milieu d'une
+        // flaque de feu qui brule cinq secondes et qui en ressort intact, c'est
+        // la meme panne que la balle qui traversait le lampadaire.
+        for (const d of Entites.decorAutour(f.x, f.y, f.r + 12)) {
+          if (d.brise) continue;
+          if (Math.hypot(d.x - f.x, (d.y - f.y) / 0.6) > f.r) continue;
+          Entites.endommagerDecor(d, degats);
+        }
       }
       if (f.reste <= 0) { Entites.decal(f.x, f.y, 'impact'); Entites.retirer(f); }
     }
+  }
+
+  //: Le canon crache a `y - 6` — hauteur de poitrine — alors qu'un decor est
+  //: ancre a ses PIEDS. On compare donc la balle au decor A LA MEME HAUTEUR,
+  //: plutot que d'elargir la cible jusqu'a rattraper l'ecart.
+  //:
+  //: ⚠️ C'est la difference entre un banc et un BOUCLIER. Elargir de sept
+  //: pixels — le chiffre du test des gens — donnait au banc une prise de douze
+  //: pixels de rayon, plus large que celle d'un passant : la balle s'arretait
+  //: sur le banc avant d'atteindre quelqu'un qui se tenait A COTE. A la bonne
+  //: hauteur, deux pixels de marge suffisent — et le banc reste un abri pour
+  //: qui se tient VRAIMENT derriere, dans son axe. Les deux moities se jugent
+  //: ensemble (`test_un_banc_est_un_abri_sans_etre_un_bouclier`) : l'une ou
+  //: l'autre toute seule se regle en tordant le chiffre.
+  const HAUTEUR_CANON = 6;
+  const MARGE_DECOR = 2;
+
+  /** La distance du decor au TRAJET de l'image, pas au point d'arrivee.
+
+      ⚠️ Une balle de carabine avance de dix pixels par image et un lampadaire
+      en fait huit de large : juger sur le point d'arrivee la fait TRAVERSER le
+      poteau une fois sur deux, sans rien toucher, et le bogue ne se voit qu'a
+      l'arme rapide. Le segment, lui, ne saute rien. */
+  function distanceAuTrajet(p, px, py) {
+    const ax = p.x - p.vx, ay = p.y - p.vy;
+    const long2 = p.vx * p.vx + p.vy * p.vy;
+    let t = long2 > 0 ? ((px - ax) * p.vx + (py - ay) * p.vy) / long2 : 0;
+    t = Math.max(0, Math.min(1, t));
+    return Math.hypot(px - (ax + p.vx * t), py - (ay + p.vy * t));
+  }
+
+  /** La balle mord le decor qu'elle traverse. Rend vrai si elle s'y ARRETE.
+
+      Ce qui porte `pv` s'use et finit par tomber ; ce qui porte `arrete` (un
+      arbre, une fontaine, un camion-restaurant) encaisse sans jamais tomber —
+      et c'est ce qui fait un abri dans une fusillade. Ce qui n'est ni l'un ni
+      l'autre (un feu de circulation, un panneau) se traverse comme avant : on
+      ne demonte pas la signalisation a la balle.
+
+      ⚠️ **Appele APRES le test des gens**, jamais avant : a egalite, c'est la
+      personne qui prend la balle, pas le mobilier.
+
+      ⚠️ Un buisson et une corde a linge s'effeuillent mais n'arretent RIEN :
+      c'est `solide` qui tranche, pas la presence dans l'index — depuis qu'il
+      porte aussi le non-solide qui casse (voir `Entites.estIndexable`). */
+  function mordreLeDecor(p) {
+    if (p.z > 8) return false;             // ce qui part en cloche passe au-dessus
+    const pas = Math.hypot(p.vx, p.vy);
+    let arrete = false;
+    for (const d of Entites.decorAutour(p.x, p.y, pas + 24)) {
+      if (d.brise) continue;
+      const fiche = DECORS[d.decor] || {};
+      if (!fiche.pv && !fiche.arrete) continue;
+      if (distanceAuTrajet(p, d.x, d.y - HAUTEUR_CANON) > (d.r || 4) + MARGE_DECOR) continue;
+      // ⚠️ UNE BALLE, UNE MORSURE. Ce qui n'arrete pas la balle (un buisson,
+      // une corde a linge) la laisse filer — et elle repassait a portee du MEME
+      // decor a l'image suivante, lui remettant ses degats une seconde fois. Un
+      // buisson de 15 PV tombait d'une seule balle de mitraillette a 9. C'est
+      // le meme `e.touches` que la melee, pour la meme raison.
+      if (!p.mordus) p.mordus = [];
+      if (p.mordus.indexOf(d.id) >= 0) continue;
+      p.mordus.push(d.id);
+      Entites.endommagerDecor(d, p.degats);
+      if (d.solide) arrete = true;
+    }
+    return arrete;
   }
 
   function majProjectiles() {
@@ -312,6 +386,13 @@ const Combat = (function () {
           assomme: false, renverse: false,
         });
         Entites.retirer(p);          // (la mort, s'il y en a une, est signalee par Entites.tuer)
+        if (p.feu_s) allumer(p.x, p.y, p);
+        continue;
+      }
+      if (mordreLeDecor(p)) {
+        Entites.poussiere(p.x, p.y, 3);
+        Entites.decal(p.x, p.y, 'impact');
+        Entites.retirer(p);
         if (p.feu_s) allumer(p.x, p.y, p);
         continue;
       }

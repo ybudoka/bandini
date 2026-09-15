@@ -882,6 +882,15 @@ const Vehicules = (function () {
         Entites.blesser(e, Math.round(ph.explosion_degats * part), coupable || v, { renverse: true, angle: angleVers(v.x, v.y, e.x, e.y), saigne: 120 });
       }
     }
+    // ⚠️ Le DECOR aussi. `Entites.autour(..., q.vivant)` ne le voit pas — le
+    // decor ne vit pas — et une explosion qui laisse le lampadaire debout au
+    // milieu du cratere ne se croit pas une seconde.
+    for (const d of Entites.decorAutour(v.x, v.y, ph.explosion_rayon_px)) {
+      if (d.brise) continue;
+      const part = 1 - Math.hypot(d.x - v.x, d.y - v.y) / ph.explosion_rayon_px;
+      if (part <= 0) continue;
+      Entites.endommagerDecor(d, Math.round(ph.explosion_degats * part));
+    }
     if (v.conducteur && v.conducteur !== 'trafic') descendre(v.conducteur, true);
     if (v.conducteur === 'trafic') { v.conducteur = null; }
     if (coupable) {

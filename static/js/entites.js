@@ -162,7 +162,12 @@ const Entites = (function () {
         decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
         dessine: true,
       });
-      if (e.solide) ajouterA(grilleFixe, e);
+      // ⚠️ `estIndexable`, PAS `e.solide` : c'etait le second exemplaire de la
+      // regle, et il a survecu au premier correctif. Un buisson restait hors
+      // de l'index a la construction de la ville — donc invisible au char
+      // comme a la balle — alors que `reindexerDecor` l'y remettait apres le
+      // premier bris. Deux copies d'une regle, c'est une regle qui derive.
+      if (estIndexable(e)) ajouterA(grilleFixe, e);
     });
   }
 
@@ -270,6 +275,34 @@ const Entites = (function () {
   //: rythme, donc les plus vieux debris disparaissent en premier.
   const DEBRIS_MAX = 40;
 
+  /** Une ARME mord le decor : la balle, l'explosion, le feu. Rend vrai s'il
+      est tombe de ce coup-ci.
+
+      ⚠️ C'est le SECOND chemin vers `briser`, et il a manque longtemps. Jusqu'au
+      15 sept. 2026, `briser` n'avait qu'un seul appelant — le char lance
+      (`Vehicules.heurterDecor`) — et un lampadaire encaissait un chargeur entier
+      sans bouger : la balle traversait le decor, l'explosion d'un char ne
+      filtrait que `q.vivant`, le brasier non plus. Un char couche d'un coup ;
+      une arme USE, et c'est `pv` qui dit combien.
+
+      ⚠️ Ce qui porte `arrete` (un arbre, une fontaine, un camion-restaurant) n'a
+      PAS de `pv` et ne tombe donc jamais : il encaisse. C'est voulu — une rue
+      qu'on demonte au pistolet n'offre plus un seul abri, et les kiosques
+      ambulants sont des commerces, pas des cibles. `scripts/verifier_ce_qui_casse.py`
+      tient les deux moities de cette regle.
+
+      ⚠️ Les PV vivent sur l'ENTITE, pas sur la fiche : deux poubelles de la meme
+      rue s'usent chacune de son cote, et `reparerLeDecor` les oublie au matin. */
+  function endommagerDecor(e, degats) {
+    if (!e || e.type !== 'decor' || e.brise) return false;
+    const fiche = DECORS[e.decor] || {};
+    if (!fiche.pv) return false;
+    if (e.pv === undefined) e.pv = fiche.pv;
+    e.pv -= Math.max(1, Math.round(degats));
+    if (e.pv > 0) { poussiere(e.x, e.y, 2); return false; }
+    return briser(e);
+  }
+
   /** Casser un decor : il tombe, il laisse des debris, et il sort de l'index
       fixe.
 
@@ -326,6 +359,12 @@ const Entites = (function () {
       const e = B.entites[i];
       if (e.type !== 'decor') continue;
       if (e.debris) { retirer(e); continue; }
+      // ⚠️ Ce qu'une arme a ENTAME sans l'abattre se referme aussi. Le test
+      // `if (!e.brise) continue` sautait ces decors-la : un poteau a demi
+      // troue par une balle du mardi serait tombe d'une seule balle le
+      // vendredi, et le quartier se serait use tout seul, sans que personne
+      // n'y touche.
+      e.pv = undefined;
       if (!e.brise) continue;
       const fiche = DECORS[e.decor] || {};
       e.brise = false;
@@ -339,9 +378,22 @@ const Entites = (function () {
     return remis;
   }
 
+  /** ⚠️ L'index fixe prend le decor solide ET ce qui CASSE sans etre solide.
+      Un buisson et une corde a linge declarent `casse` depuis toujours, mais
+      `solide: false` les tenait HORS de l'index — et `decorDevant` comme la
+      balle cherchent la-dedans. Resultat : deux fiches qui se disaient
+      destructibles et que rien au monde ne pouvait toucher. Ce qui traverse un
+      buisson, ce n'est pas l'index qui le dit, c'est `bloquerParDecor`, qui
+      relit `solide` juste apres. */
+  function estIndexable(e) {
+    if (e.type !== 'decor' && e.type !== 'ambulant') return false;
+    if (e.solide) return true;
+    return !e.brise && !!(DECORS[e.decor] || {}).casse;
+  }
+
   function reindexerDecor() {
     grilleFixe.clear();
-    for (const e of B.entites) if ((e.type === 'decor' || e.type === 'ambulant') && e.solide) ajouterA(grilleFixe, e);
+    for (const e of B.entites) if (estIndexable(e)) ajouterA(grilleFixe, e);
   }
 
   /** Y a-t-il deja quelqu'un debout ici ? ⚠️ Les deux branches de
@@ -1426,6 +1478,18 @@ const Entites = (function () {
     });
     if (!flaneurs.length) return null;
     const e = flaneurs[Math.floor(B.rng() * flaneurs.length)];
+    return envoyerAUnePorte(e) ? e : null;
+  }
+
+  /** Envoie quelqu'un vers la porte ouvrable la plus proche. Rend faux s'il n'y
+      en a aucune a portee.
+
+      ⚠️ Extrait de `quelquUnRentre` pour LE STOOL : lui ne rentre pas souper,
+      il va se servir du telephone — mais c'est exactement le meme trajet, et
+      deux facons de marcher vers une porte auraient fini par diverger. */
+  function envoyerAUnePorte(e) {
+    const carte = Monde.carte;
+    if (!e || !carte.portesFermees || !carte.portesFermees.length) return false;
     let meilleure = null, dMin = 260 * 260;
     for (const porte of carte.portesFermees) {
       const d = dist2(porte.x * TT + 8, (porte.y + 1) * TT + 8, e.x, e.y);
@@ -1433,9 +1497,9 @@ const Entites = (function () {
       if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
       dMin = d; meilleure = porte;
     }
-    if (!meilleure) return null;
+    if (!meilleure) return false;
     e.porteBut = meilleure; e.porteT = 0; e.porteBloque = 0;
-    return e;
+    return true;
   }
 
   /** Les paquets caches qu'on n'a pas encore ramasses. */
@@ -1515,6 +1579,9 @@ const Entites = (function () {
   function bloquerParDecor(e) {
     for (const d of decorAutour(e.x, e.y, e.r + PORTEE_DECOR)) {
       if (d === e) continue;
+      // ⚠️ L'index porte maintenant du NON solide (voir `estIndexable`) : on
+      // traverse un buisson comme avant, on ne se cogne que sur du solide.
+      if (!d.solide) continue;
       const fiche = DECORS[d.decor];
       const dx = e.x - d.x, dy = e.y - d.y;
       const sol = fiche && fiche.sol;
@@ -1900,6 +1967,11 @@ const Entites = (function () {
       return true;
     }
     if (!e.porteBut) return false;
+    // ⚠️ UN HOMME ASSOMME NE CONTINUE PAS SON CHEMIN. Ca ne comptait guere tant
+    // qu'il s'agissait de rentrer souper ; depuis le stool, c'est la seule
+    // facon de l'arreter avant le telephone — et il marchait jusqu'a la porte
+    // les yeux fermes.
+    if (e.etat === 'assomme') { e.porteBut = null; return false; }
     const p = e.porteBut;
     const cible = { x: p.x * TT + 8, y: (p.y + 1) * TT + 8 };
     const d = Math.hypot(cible.x - e.x, cible.y - e.y);
@@ -1917,6 +1989,10 @@ const Entites = (function () {
     // Arrive : la porte s'ouvre, ET IL DISPARAIT SEULEMENT UNE FOIS OUVERTE.
     Monde.ouvrirPorte(p.x, p.y);
     if (Monde.battant(p.x, p.y) < 0.9) { e.vx = 0; e.vy = 0; return true; }
+    // ⚠️ C'est ICI que le telephone du stool sonne au poste : sur le seuil, une
+    // fois la porte ouverte, pas une image avant. Tant qu'on le voit encore,
+    // on peut encore le payer ou l'assommer.
+    if (e.stool) Police.appelDuStool(e);
     retirer(e);
     return true;
   }
@@ -2770,10 +2846,10 @@ const Entites = (function () {
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
-    briser, reparerLeDecor, DEBRIS_MAX,
+    briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
     peuplerInterieur,
     archetype, archetypeDeRue,
-    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, peupler, peuplerDabord,
+    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
