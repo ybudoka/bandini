@@ -42,7 +42,20 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         L.Jeu.commencer();
         L.graine(4);
         const j = L.B.joueur;
-        const argent0 = L.B.partie.argent;
+        // ⚠️ ON ECOUTE CE QUE LA MISSION PAIE, pas ce que le portefeuille
+        // gagne. Le juge mesurait `argent - argent0` et appelait ca « la prime
+        // de la mission » : tout ce qui entre dans les poches pendant le trajet
+        // y entrait aussi. En route vers le garage, le cousin renverse
+        // quelqu'un une fois sur deux et lui fait les poches — cinquante et une
+        // piastres, et le juge accusait la recompense. C'est de la que venait
+        // une CI a pile ou face, jusqu'a ce que la ville redevienne
+        // reproductible et que ce cote-la tombe tout le temps.
+        const paiements = [];
+        const vraiEncaisser = L.Missions.encaisser;
+        L.Missions.encaisser = function (montant, raison) {
+            paiements.push({ montant: montant, raison: raison || null });
+            return vraiEncaisser.apply(null, arguments);
+        };
         const t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
         L.Missions.interagir(j);
@@ -75,9 +88,9 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         while (L.B.cinema && passes < 30) { o.tape('KeyE', 2); passes++; }
         return { passes: passes, commencee: commencee, etape0: etape0, objectif0: objectif0, gps0: gps0 && gps0.nom,
                  etape1: etape1, ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
-                 voixFin: voixFin, gain: L.B.partie.argent - argent0, mission: L.B.partie.mission,
+                 voixFin: voixFin, mission: L.B.partie.mission,
                  dansVehicule: !!j.dansVehicule, tiGuy: L.Histoire.donneur('ti_guy') && L.Histoire.donneur('ti_guy').etat,
-                 missions: L.B.partie.stats.missions };
+                 missions: L.B.partie.stats.missions, paiements: paiements };
     }""")
     assert r["commencee"] == "m1" and r["etape0"] == 0
     assert r["objectif0"] == m1["objectifs"][0]["texte"] and r["gps0"] == "Garage Rocco Bandini"
@@ -86,7 +99,13 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
     assert r["etape2"] == 2 and r["objectif2"] == m1["objectifs"][2]["texte"]
     assert r["finie"] is True and r["finDite"] is True, "la mission finie, Ti-Guy conclut"
     assert r["voixFin"] == "ti_guy-m1-5", "la replique de fin demande sa voix (n continue apres l'intro)"
-    assert r["gain"] == m1["recompense"] + m1["recompense"] // 2, "sans bosse : la prime et demie"
+    # ⚠️ La prime de la MISSION, retrouvee par son libelle : c'est elle qu'on
+    # juge, pas la somme de tout ce qui est entre dans les poches en chemin.
+    prime = [p for p in r["paiements"] if p["raison"] == m1["titre"].upper()]
+    assert len(prime) == 1, "la mission n'a pas paye une fois et une seule : %s" % r["paiements"]
+    assert prime[0]["montant"] == m1["recompense"] + m1["recompense"] // 2, (
+        "sans bosse : la prime et demie (%s)" % prime[0]
+    )
     assert r["mission"] is None and r["dansVehicule"] is False and r["missions"] == 1
     assert r["tiGuy"] == "entre", "Ti-Guy s'en va une fois le cousin lance"
 

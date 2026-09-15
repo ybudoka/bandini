@@ -1719,7 +1719,23 @@ class _Chantier:
                            for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
                            if 0 <= x + dx < self.largeur and 0 <= y + dy < self.hauteur]
                 nus = [g for g in voisins if g in self.SOLS_NUS]
-                self.sol[y][x] = max(set(nus), key=nus.count) if nus else ","
+                # ⚠️ `sorted`, ET C'EST TOUT LE CONTRAIRE D'UN DETAIL. C'etait
+                # `max(set(nus), key=nus.count)` : sur une EGALITE — deux
+                # voisines de glyphes differents, une chacune — `max` rend la
+                # premiere que l'ensemble lui donne, et un ensemble de CHAINES
+                # s'itere dans l'ordre de leurs empreintes, que Python
+                # randomise a chaque processus. La ville n'etait donc pas
+                # reproductible : une poignee de tuiles changeaient d'un
+                # lancement a l'autre, et avec elles le decor, les kiosques,
+                # les feux pietons et les paquets caches.
+                #
+                # ⚠️ Ce n'est pas qu'une curiosite : c'est ce qui rendait la CI
+                # PILE OU FACE. Trois juges du banc tombaient une fois sur deux
+                # sans qu'aucune ligne n'ait bouge, et chaque session les
+                # mettait sur le dos des autres. `sorted` tranche l'egalite
+                # toujours pareil, et ne coute rien : `nus` fait quatre
+                # elements au plus.
+                self.sol[y][x] = max(sorted(set(nus)), key=nus.count) if nus else ","
                 enleves += 1
         return enleves
 
