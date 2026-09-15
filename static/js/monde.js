@@ -129,6 +129,21 @@ const Monde = (function () {
       residences: indexerParMorceau(def.residences || [], function (r) {
         return [r.x, r.y, r.l, 2];
       }),
+      // ⚠️ LA FOSSE D'UN ARBRE DE RUE. Demande de Martin : « les arbres qui
+      // sont sur un trottoir doivent avoir un petit rond de terre à leur
+      // pied ». Un arbre planté dans le béton sans rien à son pied, c'est un
+      // arbre POSÉ sur le trottoir — et c'est ce qu'on voyait sur la place
+      // publique du Faubourg. C'est la LÉGENDE qui décide (`terre`), pas le
+      // dessin : le gazon, le sable et l'allée de parc n'ont rien à découper.
+      // ⚠️ Et c'est une COUCHE PEINTE, pas un décor de plus : elle se cuit avec
+      // le morceau, sous tout le reste, et rien ne s'y cogne. Un rond de terre
+      // redessiné à chaque image sous chaque arbre de rue coûterait cher pour
+      // ce qu'il dit — et il passerait par-dessus les pieds de celui qui
+      // marche juste au nord de l'arbre.
+      fosses: indexerParMorceau((def.decor || []).filter(function (d) {
+        if (d.type !== 'arbre') return false;
+        return !(def.legende[def.sol[d.y][d.x]] || {}).terre;
+      }), function (d) { return [d.x, d.y, 1, 2]; }),
       graffitis: indexerParMorceau(def.graffitis || [], function () { return [0, 0, 1, 1]; }),
       // Ce qu'un toit porte : une tuile chacun, meme regle d'index.
       toits: indexerParMorceau(def.toits || [], function () { return [0, 0, 1, 1]; }),
@@ -800,7 +815,16 @@ const Monde = (function () {
   function peindreDevantures(ctx, mx, my) {
     const cle = mx + ',' + my;
     const ox = mx * MORCEAU, oy = my * MORCEAU;
-    // ⚠️ L'ombre des murs d'abord : elle se peint SOUS les enseignes (une ombre
+    // Les fosses d'arbre AVANT tout : c'est du sol. L'ombre d'un mur tombe
+    // dessus comme sur le reste du trottoir, elle ne passe pas dessous.
+    const fosses = carte.fosses && carte.fosses.get(cle);
+    if (fosses) {
+      fosses.forEach(function (f) {
+        FACADES.fosseDArbre(ctx, (f.x - ox) * TT + 8, (f.y - oy) * TT + 15);
+      });
+    }
+
+    // ⚠️ L'ombre des murs ENSUITE : elle se peint SOUS les enseignes (une ombre
     // par-dessus une pancarte donnerait une pancarte sale) et sous tout le
     // reste. Un batiment ne projetait rien, et une ville sans ombre est plate.
     // ⚠️ On commence a j = -1, une rangee AU-DESSUS du morceau : l'ombre d'un mur

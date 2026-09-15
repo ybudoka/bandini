@@ -6993,3 +6993,59 @@ def test_le_sol_d_un_ilot_ne_se_repete_plus_toutes_les_quatre_tuiles(banc):
     assert sum(1 for q in j if q["ouest"] and q["nord"]) == 1, j
     assert sum(1 for q in j if not q["ouest"] and not q["nord"]) == 1, j
     assert sum(1 for q in j if q["ouest"]) == 2 and sum(1 for q in j if q["nord"]) == 2, j
+
+
+def test_un_arbre_plante_dans_le_beton_a_une_fosse(banc):
+    """⚠️ Demande de Martin : « les arbres qui sont sur un trottoir doivent avoir
+    un petit rond de terre à leur pied ». Un arbre planté dans le béton sans rien
+    à son pied n'est pas planté, il est **posé** — et c'est ce qu'on voyait sur
+    la place publique du Faubourg, quatre arbres debout sur des dalles.
+
+    ⚠️ C'est la **légende** qui décide, pas le dessin : `terre` dit d'un sol
+    qu'on peut y planter sans rien découper (le gazon, le sable, l'allée de
+    parc). Le jour où l'on plantera des arbres de rue pour de bon — il n'y en a
+    que quatre aujourd'hui, 583 sur 596 sont sur du gazon — chacun aura sa fosse
+    sans qu'on touche à une ligne.
+
+    ⚠️ Et c'est une **couche peinte**, cuite avec le morceau : rien ne s'y cogne,
+    et elle passe sous les entités. Peinte à chaque image sous chaque arbre, elle
+    recouvrirait les pieds de celui qui marche juste au nord.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const c = L.Monde.carte, def = c.def;
+        const arbres = (def.decor || []).filter(function (d) { return d.type === 'arbre'; });
+        const dansLeBeton = arbres.filter(function (d) {
+            return !(def.legende[def.sol[d.y][d.x]] || {}).terre;
+        });
+        // Les fosses indexees, sans les doublons de morceau.
+        const vues = {};
+        c.fosses.forEach(function (liste) {
+            liste.forEach(function (f) { vues[f.x + ',' + f.y] = def.sol[f.y][f.x]; });
+        });
+        // Ce que le peintre pose AU PIED du tronc (l'ancre est en (8, 15)).
+        const ctx = L.Base.nouveauCanvas(L.TT, 2 * L.TT).getContext('2d');
+        ctx.traces = [];
+        L.FACADES.fosseDArbre(ctx, 8, 15);
+        const terre = ctx.traces.filter(function (t) { return t[4] === '#4f4030'; });
+        const large = Math.max.apply(null, terre.map(function (t) { return t[2]; }));
+        return {
+            arbres: arbres.length, dansLeBeton: dansLeBeton.length,
+            fosses: Object.keys(vues).length,
+            sols: Object.keys(vues).map(function (k) { return vues[k]; }),
+            rangees: terre.length, large: large,
+            hautes: terre.map(function (t) { return t[1]; }),
+            centrees: terre.every(function (t) { return t[0] + t[2] / 2 === 8; }),
+        };
+    }""")
+    assert r["arbres"] > 100, "il n'y a presque pas d'arbres : le juge ne mesure rien"
+    assert r["dansLeBeton"] > 0, "aucun arbre de rue dans la ville livrée"
+    assert r["fosses"] == r["dansLeBeton"], (
+        f"{r['fosses']} fosses pour {r['dansLeBeton']} arbres plantés dans le béton")
+    assert "," not in r["sols"], f"une fosse creusée dans le gazon : {r['sols']}"
+    # Un ROND : plusieurs rangées, plus large au milieu qu'aux bouts, centré sur
+    # le tronc. ⚠️ Une seule rangée pleine largeur serait une barre, pas un rond.
+    assert r["rangees"] >= 5, f"la fosse n'a que {r['rangees']} rangées : ce n'est pas un rond"
+    assert r["large"] >= 10 and r["large"] <= 16, f"fosse large de {r['large']} px"
+    assert r["centrees"], "la fosse n'est pas centrée sur le tronc"
+    assert max(r["hautes"]) - min(r["hautes"]) + 1 == r["rangees"], "la fosse a un trou"

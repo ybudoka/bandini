@@ -126,9 +126,14 @@ PART_RAMPE_VAGUE = 0.5
 #: 3 basse (bloque les vehicules, pas les pietons).
 LEGENDE: dict[str, dict] = {
     ".": {"nom": "trottoir", "trottoir": True},
-    ",": {"nom": "herbe", "herbe": True},
+    # ⚠️ `terre` : on peut y planter un arbre sans rien decouper. C'est ce qui
+    # decide, dans le navigateur, si un arbre a besoin d'une FOSSE a son pied
+    # (`Monde.carte.fosses`) — un arbre plante dans le beton en a une, un arbre
+    # sur le gazon n'en a pas. La liste vit ICI et pas dans le dessin : c'est
+    # une propriete du SOL, pas une couleur.
+    ",": {"nom": "herbe", "herbe": True, "terre": True},
     "x": {"nom": "ruelle", "ruelle": True},
-    "s": {"nom": "sable"},
+    "s": {"nom": "sable", "terre": True},
     # ⚠️ La POUSSIERE DE PIERRE d'une allee de parc, et pas du trottoir. Un
     # parc de ville se peignait avec le beton de la rue : quatre allees de
     # deux tuiles et une place de 5 x 5 au coeur, ca fait pres de la moitie
@@ -139,7 +144,7 @@ LEGENDE: dict[str, dict] = {
     # ⚠️ `g` minuscule — `G` majuscule est une porte de garage. Meme piege
     # que `w` / `W` deux ecrans plus bas, et meme parade : les deux ne vivent
     # jamais dans le meme genre de plan (l'un est du SOL, l'autre du BATI).
-    "g": {"nom": "allée de poussière de pierre"},
+    "g": {"nom": "allée de poussière de pierre", "terre": True},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
     # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre

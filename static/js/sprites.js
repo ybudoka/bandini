@@ -2094,6 +2094,37 @@ const FACADES = (function () {
     peintre(ctx, ox, oy, hash(t.x, t.y));
   }
 
+  /* --- La fosse d'un arbre de rue ---------------------------------------
+
+     ⚠️ Demande de Martin : « les arbres qui sont sur un trottoir doivent avoir
+     un petit rond de terre à leur pied ». Un arbre planté dans le béton sans
+     rien à son pied n'est pas planté, il est POSÉ — et c'est exactement ce
+     qu'on voyait sur la place publique du Faubourg.
+
+     ⚠️ C'est la BORDURE qui fait la fosse, pas la terre : sans le liseré de
+     béton clair d'un pixel tout autour, le rond brun se lit comme une tache
+     sur le trottoir. Un vrai carré d'arbre, c'est du trottoir qu'on a
+     DÉCOUPÉ, et il faut voir la coupe. */
+
+  //: Les demi-largeurs du rond, de haut en bas — un rond, pas un carré. La
+  //: bordure prend une rangée de plus en haut et en bas.
+  const FOSSE = [3, 5, 6, 6, 6, 5, 3];
+  const BORDURE = [2, 4, 6, 7, 7, 7, 6, 4, 2];
+
+  function fosseDArbre(ctx, x, y) {
+    const haut = y - 5;
+    ctx.fillStyle = '#8a8578';                       // la coupe dans le beton
+    for (let i = 0; i < BORDURE.length; i++) ctx.fillRect(x - BORDURE[i], haut - 1 + i, BORDURE[i] * 2, 1);
+    ctx.fillStyle = '#4f4030';                       // la terre
+    for (let i = 0; i < FOSSE.length; i++) ctx.fillRect(x - FOSSE[i], haut + i, FOSSE[i] * 2, 1);
+    ctx.fillStyle = '#5f4d3a';                       // remuee
+    ctx.fillRect(x - 4, haut + 1, 3, 1); ctx.fillRect(x + 1, haut + 4, 3, 1);
+    ctx.fillStyle = '#3d3125';
+    ctx.fillRect(x - 1, haut + 3, 2, 1); ctx.fillRect(x + 2, haut + 1, 2, 1);
+    ctx.fillStyle = '#4a7a3a';                       // ce qui pousse quand meme
+    ctx.fillRect(x - 5, haut + 4, 1, 1); ctx.fillRect(x + 4, haut + 2, 1, 1);
+  }
+
   /** L'ombre d'un batiment sur la rue : une bande sombre au sud d'une facade.
 
       ⚠️ C'est ce qui donne de la HAUTEUR a toute la ville d'un coup — sans elle,
@@ -2110,7 +2141,8 @@ const FACADES = (function () {
   }
 
   return { devanture: devanture, residence: residence, graffiti: graffiti,
-           toiture: toiture, ombreDeMur: ombreDeMur, TOITURES: TOITURES, T: T };
+           toiture: toiture, ombreDeMur: ombreDeMur, fosseDArbre: fosseDArbre,
+           TOITURES: TOITURES, T: T };
 })();
 
 /* Decor procedural : (ctx, w, h). `r` = rayon au sol, `solide` = on s'y cogne.
