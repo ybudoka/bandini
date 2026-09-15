@@ -325,31 +325,62 @@ def test_la_ville_change_de_chantier_chaque_jour(banc, paquet):
             const e = L.Monde.entraveDuJour();
             jours.push(e ? e.x + ',' + e.y : null);
         }
-        p.jour = 1;
+        // Un jour de CHANTIER (une voie fermee) et un jour de RUE BARREE : les
+        // deux genres sortent de la meme liste, et un seul par jour.
+        let jourVoie = 0, jourRue = 0;
+        for (let j = 1; j <= 60; j++) {
+            p.jour = j;
+            const b = L.Monde.entraveDuJour();
+            if (b.slug === 'entrave' && !jourVoie) jourVoie = j;
+            if (b.slug === 'rue_barree' && !jourRue) jourRue = j;
+        }
+        p.jour = jourVoie || 1;
         const e = L.Monde.entraveDuJour();
         // Le meme jour rend le meme chantier, et sans tirer un seul de.
         const avant = L.B.rng();
         const encore = L.Monde.entraveDuJour();
-        p.jour = 2; L.Monde.entraveDuJour(); p.jour = 1;
+        p.jour = (jourVoie || 1) + 1; L.Monde.entraveDuJour(); p.jour = jourVoie || 1;
         const rejoue = L.Monde.entraveDuJour();
-        const fermees = L.Monde.barrieresFermees().filter(function (b) { return b.slug === 'entrave'; });
+        const fermees = L.Monde.barrieresFermees().filter(function (b) { return b.slug === 'entrave' || b.slug === 'rue_barree'; });
         const carnet = L.Missions.menuCasier().items.some(function (i) { return i.detail === e.raison; });
-        return { jours: jours, distincts: new Set(jours).size,
+        p.jour = jourRue || 1;
+        const rue = L.Monde.entraveDuJour();
+        p.jour = jourVoie || 1;
+        return { jours: jours, distincts: new Set(jours).size, jourVoie: jourVoie, jourRue: jourRue,
                  stable: encore === e && rejoue.x === e.x && rejoue.y === e.y,
-                 arrete: e.arrete, forcer: e.forcer, decor: e.decor, raison: e.raison,
+                 arrete: e.arrete, forcer: e.forcer, decor: e.decor, raison: e.raison, slug: e.slug,
+                 rue: jourRue ? { slug: rue.slug, decor: rue.decor, plein: !!rue.plein,
+                                  forcer: rue.forcer, raison: rue.raison, arrete: rue.arrete,
+                                  l: rue.l, h: rue.h } : null,
                  fermees: fermees.length, carnet: carnet,
                  bloqueLesChars: L.Monde.barriereBloque({ type: 'vehicule', x: (e.x - 3) * 16, y: (e.y - 3) * 16 }, e.x, e.y),
                  bloquePasLesJambes: L.Monde.barriereBloque({ type: 'pieton', x: (e.x - 3) * 16, y: (e.y - 3) * 16 }, e.x, e.y) };
     }""")
-    fiche = carte.ENTRAVES
+    fiche, ferme = carte.ENTRAVES, carte.FERMETURES
     assert None not in r["jours"], "il n'y a pas de chantier : %s" % r["jours"]
     assert r["distincts"] >= 5, "la ville a le même chantier tous les jours : %s" % r["jours"]
     assert r["stable"] is True, "le chantier bouge dans la journée"
+    # ⚠️ LES DEUX GENRES SORTENT, et un seul par jour : c'est ce qui évite
+    # d'avoir à juger les COMBINAISONS — deux fermetures prises séparément dans
+    # une liste valide peuvent, ensemble, isoler un bloc. Une seule, et la
+    # question ne se pose pas.
+    assert r["jourVoie"] and r["jourRue"], "un seul genre d'entrave sort jamais : %s" % r
+    assert r["fermees"] == 1, "il n'y a pas exactement une entrave fermée : %s" % r["fermees"]
+    assert r["slug"] == "entrave" and r["decor"] == "cones"
     assert r["arrete"] == ["vehicule"], "un chantier qui barre le trottoir : %s" % r["arrete"]
     assert r["bloqueLesChars"] is True and r["bloquePasLesJambes"] is False
     assert r["forcer"]["degats"] == fiche["degats"], r["forcer"]
-    assert r["decor"] == "cones" and r["raison"] == fiche["raison"]
-    assert r["fermees"] == 1, "le chantier du jour n'est pas fermé : %s" % r["fermees"]
+    assert r["raison"] == fiche["raison"]
+    # La rue barrée : sa barricade, son prix plus lourd, et surtout elle bloque
+    # TOUT son rectangle — une chaussée de quatre tuiles de large aurait laissé
+    # passer le monde par le milieu.
+    rue = r["rue"]
+    assert rue["slug"] == "rue_barree" and rue["decor"] == "barricade"
+    assert rue["plein"] is True, "une rue barrée qu'on traverse par le milieu"
+    assert rue["arrete"] == ["vehicule"], "une rue barrée qui barre aussi le trottoir"
+    assert rue["forcer"]["degats"] == ferme["degats"] > fiche["degats"], rue["forcer"]
+    assert rue["raison"] == ferme["raison"]
+    assert max(rue["l"], rue["h"]) >= 6, "une « rue barrée » de trois tuiles : %s" % rue
     assert r["carnet"] is True, "le carnet ne dit pas ce qui est fermé en ville"
 
 
@@ -362,7 +393,15 @@ def test_devant_un_chantier_le_trafic_se_deporte_au_lieu_de_rebrousser(banc, paq
         L.Jeu.commencer();
         L.graine(61);
         const j = L.B.joueur, TT = L.TT, p = L.B.partie;
-        const e = L.Monde.entraveDuJour();
+        // ⚠️ On veut un jour de CHANTIER (une voie fermee) : c'est la qu'il y a
+        // une voisine ou se deporter. Devant une rue barree, on tourne avant.
+        let e = null;
+        for (let jour = 1; jour <= 60 && !e; jour++) {
+            p.jour = jour;
+            const b = L.Monde.entraveDuJour();
+            if (b.slug === 'entrave') e = b;
+        }
+        if (!e) return { pasDeChantier: true };
         const pas = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[e.sens || L.Monde.fleche(e.x, e.y)];
         // On se met a cote du chantier et on lache un char du trafic en amont.
         j.x = (e.x + 6) * TT; j.y = (e.y + 6) * TT; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
@@ -386,6 +425,48 @@ def test_devant_un_chantier_le_trafic_se_deporte_au_lieu_de_rebrousser(banc, paq
         return { changeDeVoie: changeDeVoie, passe: passe, pire: pire,
                  cycle: 2 * (L.B.defs.conduite.trafic.feu_vert_images + L.B.defs.conduite.trafic.feu_orange_images) };
     }""")
+    assert not r.get("pasDeChantier"), "aucun jour ne donne une voie fermée"
     assert r["changeDeVoie"] is True, "le trafic ne se déporte pas devant le chantier : %s" % r
     assert r["passe"] is True, "le trafic ne passe jamais le chantier : %s" % r
     assert r["pire"] < r["cycle"], "un char reste planté %s images devant les cônes : %s" % (r["pire"], r)
+
+
+def test_une_rue_barree_couvre_tout_son_troncon_et_la_ville_reste_connexe(ville):
+    """⚠️ **Mesuré, et c'est ce qui a tout décidé** : barrer la MOITIÉ d'un
+    tronçon laisse l'autre moitié en cul-de-sac **dans les deux sens** — la voie
+    qui monte n'a plus d'entrée, celle qui descend n'a plus de sortie. Le juge
+    de connexité refusait les vingt-six premières candidates, toutes pour cette
+    raison. Fermée en entier, la rue disparaît du graphe et la grille route
+    autour : c'est d'ailleurs ce que « rue barrée » veut dire.
+
+    Ce juge rejoue ce que la construction a promis : chaque fermeture, prise
+    seule, laisse les rues **fortement connexes**."""
+    fiche = carte.FERMETURES
+    liste = ville["fermetures"]
+    lo, hi = fiche["par_ville"]
+    assert lo <= len(liste) <= hi, f"{len(liste)} rues barrables"
+    boites = [(i["x"], i["y"], i["l"], i["h"]) for i in ville["intersections"]]
+    ponts = [(p["x"], p["y"], p["l"], p["h"]) for p in ville["ponts"]]
+    voie = ville["voie"]
+    for f in liste:
+        assert max(f["l"], f["h"]) <= fiche["long_max"], f"une fermeture de {max(f['l'], f['h'])} tuiles : {f}"
+        tuiles = [(x, y) for y in range(f["y"], f["y"] + f["h"]) for x in range(f["x"], f["x"] + f["l"])]
+        for x, y in tuiles:
+            assert voie[y][x] != ".", f"{f} : la tuile {x},{y} n'est pas une chaussée"
+            for bx, by, bl, bh in boites:
+                assert not (bx <= x < bx + bl and by <= y < by + bh), f"une fermeture dans un croisement : {f}"
+            for px, py, pl, ph in ponts:
+                assert not (px <= x < px + pl and py <= y < py + ph), f"une fermeture SUR LE PONT : {f}"
+        # ⚠️ LE JUGE DE M1, rejoué : on retire ses flèches, et les rues doivent
+        # rester fortement connexes.
+        grille = [list(ligne) for ligne in voie]
+        for x, y in tuiles:
+            grille[y][x] = "."
+        sans_aller, sans_retour = carte.voies_bloquees(
+            {"voie": ["".join(ligne) for ligne in grille], "arrets": ville["arrets"]})
+        assert not sans_aller and not sans_retour, (
+            f"{f} coupe la ville : {len(sans_aller)} tuiles inatteignables, "
+            f"{len(sans_retour)} d'où l'on ne revient pas"
+        )
+    for a, b in itertools.combinations(liste, 2):
+        assert abs(a["x"] - b["x"]) + abs(a["y"] - b["y"]) >= fiche["ecart"], f"deux rues barrées collées : {a} et {b}"

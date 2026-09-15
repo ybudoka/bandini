@@ -575,6 +575,35 @@ ENTRAVES: dict = {
     "degats": 8,             # ce qu'on laisse en poussant les cones
 }
 
+#: **LA RUE BARREE.** L'autre visage de l'entrave, et le seul qui PEUT couper
+#: la ville : on ferme la chaussee ENTIERE sur quelques tuiles. Le champ de
+#: direction perd donc des fleches, et `voies_bloquees` doit encore rendre deux
+#: ensembles vides — c'est le juge de M1, et il tranche ici, une fois, a la
+#: construction.
+#:
+#: ⚠️ **Elle couvre TOUT LE TRONCON, d'un croisement a l'autre** — et ce n'est
+#: pas une largesse de dessin, c'est la seule forme qui marche. Mesure : barrer
+#: la moitie d'un troncon laisse l'autre moitie en CUL-DE-SAC dans les deux
+#: sens (la voie qui monte n'a plus d'entree, celle qui descend n'a plus de
+#: sortie) — le juge de connexite refusait les vingt-six premieres candidates,
+#: toutes pour cette raison. Fermee en entier, la rue disparait du graphe et la
+#: grille route autour : c'est d'ailleurs ce que « rue barree » veut dire.
+#:
+#: ⚠️ Elle part donc d'un croisement, ce qui fait aussi que **le trafic n'y
+#: entre jamais** : une sortie barree n'est pas une sortie (`peutSortir`), donc
+#: les chars tournent AVANT, au croisement, comme devant un vrai detour.
+#:
+#: ⚠️ `candidates` borne ce qu'on ESSAIE : le juge de connexite coute 14 ms, et
+#: en tester deux cents doublerait le temps de batir la ville.
+FERMETURES: dict = {
+    "long_max": 26,          # au-dela, ce n'est plus une rue barree, c'est un quartier
+    "candidates": 20,        # ce qu'on soumet au juge, au plus
+    "par_ville": (1, 8),     # ce qu'on en garde
+    "ecart": 40,
+    "raison": "RUE BARRÉE — DÉTOUR",
+    "degats": 14,            # une barricade, ca coute plus cher que des cones
+}
+
 NIDS_DE_POULE: dict = {
     "par_ville": (30, 90),   # ce qu'une ville en compte — un juge le compte
     "ecart": 7,              # en tuiles, entre deux nids
@@ -970,6 +999,7 @@ class _Chantier:
         # Les nids tirent dans le leur : en creuser un de plus ne deplace pas un arbre.
         self.des_nid = Des(graine ^ 0x141D5)
         self.des_entrave = Des(graine ^ 0xE47A7E)
+        self.des_fermeture = Des(graine ^ 0xFE47E3)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3600,6 +3630,77 @@ class _Chantier:
             poses.append(c)
         return sorted(poses, key=lambda c: (c["y"], c["x"]))
 
+    def fermetures(self, ponts: list[dict]) -> list[dict]:
+        """Les rues qu'on peut barrer en entier sans couper la ville.
+
+        Chacune part d'un croisement et court sur `longueur` tuiles ; on retire
+        ses fleches et on redemande au juge de M1 (`voies_bloquees`) si les rues
+        sont encore fortement connexes. ⚠️ Jamais un pont : c'est le seul lien
+        carrossable vers La Pointe, et le juge le dirait — autant ne pas le
+        proposer.
+        """
+        fiche = FERMETURES
+        tabliers = [(p["x"], p["y"], p["l"], p["h"]) for p in ponts]
+        boites = [(i["x"], i["y"], i["l"], i["h"]) for i in self.intersections]
+
+        def dans_une_boite(x: int, y: int) -> bool:
+            return any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites)
+        vers = {"N": (0, -1), "S": (0, 1), "O": (-1, 0), "E": (1, 0)}
+        carte = {"voie": self.voie, "arrets": self.arrets}
+
+        def sur_un_pont(x: int, y: int) -> bool:
+            return any(px <= x < px + pl and py <= y < py + ph for px, py, pl, ph in tabliers)
+
+        candidats: list[dict] = []
+        for inter in self.intersections:
+            for bras, (dx, dy) in vers.items():
+                if bras not in inter["bras"]:
+                    continue
+                # Le bord de la boite, du bon cote, puis on s'eloigne.
+                x0 = inter["x"] + (inter["l"] if dx > 0 else -1 if dx < 0 else 0)
+                y0 = inter["y"] + (inter["h"] if dy > 0 else -1 if dy < 0 else 0)
+                large = inter["l"] if dx == 0 else inter["h"]
+                # ⚠️ ON VA JUSQU'AU BOUT : le troncon court jusqu'au croisement
+                # suivant (ou jusqu'a ce que la rue s'arrete). S'arreter avant,
+                # c'est laisser un cul-de-sac derriere soi.
+                tuiles: list[tuple[int, int]] = []
+                for n in range(fiche["long_max"]):
+                    bande = [(x0 + dx * n + (k if dx == 0 else 0), y0 + dy * n + (k if dy == 0 else 0))
+                             for k in range(large)]
+                    if any(dans_une_boite(x, y) for x, y in bande):
+                        break                      # le croisement suivant : le troncon est complet
+                    if not all(0 <= x < self.largeur and 0 <= y < self.hauteur
+                               and self.voie[y][x] != "." and not sur_un_pont(x, y)
+                               for x, y in bande):
+                        tuiles = []                # un pont, un bord de carte : on laisse
+                        break
+                    tuiles.extend(bande)
+                if len(tuiles) < large * 3:
+                    continue
+                candidats.append({"x": min(t[0] for t in tuiles), "y": min(t[1] for t in tuiles),
+                                  "l": max(t[0] for t in tuiles) - min(t[0] for t in tuiles) + 1,
+                                  "h": max(t[1] for t in tuiles) - min(t[1] for t in tuiles) + 1,
+                                  "tuiles": list(tuiles)})
+        gardees: list[dict] = []
+        essais = 0
+        while candidats and essais < fiche["candidates"] and len(gardees) < fiche["par_ville"][1]:
+            c = candidats[self.des_fermeture.suivant() % len(candidats)]
+            if any(abs(g["x"] - c["x"]) + abs(g["y"] - c["y"]) < fiche["ecart"] for g in gardees):
+                candidats.remove(c)
+                continue
+            essais += 1
+            # ⚠️ LE JUGE DE M1, ici, une fois : on retire les fleches et on
+            # redemande si les rues sont encore fortement connexes.
+            voie = [list(ligne) for ligne in self.voie]
+            for x, y in c["tuiles"]:
+                voie[y][x] = "."
+            carte["voie"] = ["".join(ligne) for ligne in voie]
+            sans_aller, sans_retour = voies_bloquees(carte)
+            if not sans_aller and not sans_retour:
+                gardees.append({k: v for k, v in c.items() if k != "tuiles"})
+            candidats.remove(c)
+        return sorted(gardees, key=lambda c: (c["y"], c["x"]))
+
     def nids_de_poule(self) -> list[dict]:
         """Les tuiles defoncees : de la chaussee, hors croisement, espacees."""
         fiche = NIDS_DE_POULE
@@ -4055,6 +4156,8 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         # dit. Deux noms, deux choses — le navigateur lisait la liste en
         # croyant y trouver la raison.
         "entrave": {"raison": ENTRAVES["raison"], "degats": ENTRAVES["degats"]},
+        "fermetures": chantier.fermetures(ponts),
+        "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
         "ambulants": ambulants,
         "reclames": reclames,
         # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere

@@ -316,17 +316,34 @@ const Monde = (function () {
   //: cher que tout le reste du mecanisme.
   let entraveJour = { jour: -1, b: null };
   function entraveDuJour() {
-    const liste = (carte && carte.def && carte.def.entraves) || [];
+    const def = carte && carte.def;
+    const voies = (def && def.entraves) || [];        // une voie fermee
+    const rues = (def && def.fermetures) || [];       // la rue entiere barree
+    const total = voies.length + rues.length;
+    if (!total) return null;
     const jour = B.partie ? B.partie.jour : 0;
-    if (!liste.length) return null;
     if (entraveJour.jour !== jour) {
-      const c = liste[hash2(jour, 9173) % liste.length];
-      const f = (carte.def && carte.def.entrave) || {};
+      // ⚠️ UNE SEULE PAR JOUR, et c'est ce qui evite d'avoir a juger les
+      // COMBINAISONS : deux fermetures prises separement dans une liste valide
+      // peuvent, ensemble, isoler un bloc. Une seule, et la question ne se pose
+      // pas.
+      const i = hash2(jour, 9173) % total;
+      const rue = i >= voies.length;
+      const c = rue ? rues[i - voies.length] : voies[i];
+      const f = (rue ? def.fermeture : def.entrave) || {};
       entraveJour = { jour: jour, b: {
-        slug: 'entrave', nom: 'Un chantier', x: c.x, y: c.y, l: c.l, h: c.h,
+        slug: rue ? 'rue_barree' : 'entrave',
+        nom: rue ? 'Une rue barrée' : 'Un chantier',
+        x: c.x, y: c.y, l: c.l, h: c.h, sens: c.sens || null,
         arrete: ['vehicule'], condition: { toujours: true },
         forcer: { degats: f.degats || 8 },
-        raison: f.raison || 'TRAVAUX', decor: 'cones', existant: false,
+        raison: f.raison || 'TRAVAUX',
+        decor: rue ? 'barricade' : 'cones',
+        // ⚠️ Une rue barree bloque TOUT son rectangle, pas sa seule couronne :
+        // une chaussee de quatre tuiles de large aurait laisse passer le monde
+        // par le milieu. Une cour, elle, garde sa couronne — on y circule une
+        // fois dedans.
+        plein: rue, existant: false,
       } };
     }
     return entraveJour.b;
@@ -360,7 +377,8 @@ const Monde = (function () {
       cette sorte (`pieton` / `vehicule`) — ou null. */
   function barriereA(tx, ty, sorte) {
     for (const b of barrieres()) {
-      if (b.arrete.indexOf(sorte) < 0 || !surLaCouronne(b, tx, ty) || !barriereFermee(b)) continue;
+      if (b.arrete.indexOf(sorte) < 0 || !barriereFermee(b)) continue;
+      if (!(b.plein ? dansLeRect(b, tx, ty) : surLaCouronne(b, tx, ty))) continue;
       return b;
     }
     return null;
@@ -404,10 +422,25 @@ const Monde = (function () {
       if (!b.decor) continue;
       for (let ty = b.y; ty < b.y + b.h; ty++) {
         for (let tx = b.x; tx < b.x + b.l; tx++) {
-          if (!surLaCouronne(b, tx, ty) || solidite(tx, ty)) continue;
+          if (solidite(tx, ty)) continue;
+          // Une rue barree porte sa barricade AUX DEUX BOUTS, pas sur toute sa
+          // longueur : on ferme une rue par ses extremites, on ne la cloture pas.
+          const bout = b.h >= b.l ? (ty === b.y || ty === b.y + b.h - 1)
+                                  : (tx === b.x || tx === b.x + b.l - 1);
+          if (b.plein ? !bout : !surLaCouronne(b, tx, ty)) continue;
           const px = tx * TT - cam.x, py = ty * TT - cam.y;
           if (px < -TT || py < -TT || px > cam.w + TT || py > cam.h + TT) continue;
-          if (b.decor === 'cones') {
+          if (b.decor === 'barricade') {
+            // Une barricade : deux traverses barrees d'orange et de blanc, sur
+            // deux pieds. Elle se lit en travers de la rue, de loin.
+            ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 2, py + 9, 2, 5); ctx.fillRect(px + 12, py + 9, 2, 5);
+            for (let k = 0; k < 4; k++) {
+              ctx.fillStyle = k % 2 ? '#efe6d0' : '#d98324';
+              ctx.fillRect(px + k * 4, py + 4, 4, 3);
+              ctx.fillStyle = k % 2 ? '#d98324' : '#efe6d0';
+              ctx.fillRect(px + k * 4, py + 8, 4, 2);
+            }
+          } else if (b.decor === 'cones') {
             for (const ox of [2, 9]) {
               ctx.fillStyle = '#d98324'; ctx.fillRect(px + ox + 1, py + 5, 3, 7); ctx.fillRect(px + ox, py + 11, 5, 2);
               ctx.fillStyle = '#efe6d0'; ctx.fillRect(px + ox + 1, py + 8, 3, 1);
