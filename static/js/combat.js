@@ -192,6 +192,10 @@ const Combat = (function () {
     e.phase = 'repos';
     e.phaseT = arme.cadence;
     e.touches = [];
+    // ⚠️ APRES UN COUP DE FEU, LA RUE NE REPREND PAS SON MURMURE : elle revient
+    // en CRIS, puis se calme. Une foule qui murmure pareil avant et apres un
+    // coup de feu n'est pas une foule, c'est un bruit de fond.
+    Son.Rumeur.crier();
     const angle = joueur ? viseeAssistee(e, e.angle) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
     const dispersion = dispersionDe(e, arme);
     for (let i = 0; i < (arme.plombs || 1); i++) {

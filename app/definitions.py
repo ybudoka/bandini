@@ -39,6 +39,7 @@ def assembler() -> dict:
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
         "journal_speciales": journal.SPECIALES,
+        "journal_lecons": journal.LECONS,
         "marche_noir": magasins.MARCHE_NOIR,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,

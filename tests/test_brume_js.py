@@ -105,9 +105,16 @@ def test_en_char_elle_ne_dit_rien(banc):
 
 def test_une_passante_parle_toujours_comme_avant(banc):
     """Le chemin des passants n'a pas bouge : on frole une passante, elle dit un
-    mot de femme — et la Brume ne se met pas devant elle quand elle n'est pas la."""
+    mot de femme — et la Brume ne se met pas devant elle quand elle n'est pas la.
+
+    ⚠️ PARLER EST UNE CHANCE depuis M15 : la plupart des gens qu'on croise ne
+    disent rien, parce qu'un passant qui parle chaque fois qu'on le frole rend
+    huit repliques fatigantes bien avant qu'elles soient usees. Le juge met donc
+    la chance a 1 : ce qu'il mesure, c'est le CHEMIN de la parole, pas le de.
+    Le de, lui, se juge dans `test_moteur_js.py`."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        L.B.defs.audio.parole.chance = 1;
         """ + ESPION + """
         o.poser('passante', 20, 0);
         o.frame(3);

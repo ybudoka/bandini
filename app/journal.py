@@ -46,6 +46,43 @@ REGLES: list[Regle] = [
      "lu": "Brume sur le bassin. Le traversier a pris du retard. Rien à signaler."},
 ]
 
+#: CE QUE LE JEU T'APPREND, un matin a la fois.
+#:
+#: ⚠️ Le jeu a des boulots au klaxon, une fourriere, un marche noir, des
+#: proprietes, trois defis — et RIEN N'EXPLIQUE RIEN. M1 apprend a marcher et a
+#: voler un char, et apres ca le joueur est tout seul. Le repli du Clairon
+#: (« rien a signaler ») etait la place libre : un matin ou il ne s'est rien
+#: passe, le journal enseigne une chose. Sans une seule fenetre de plus.
+#:
+#: ⚠️ `cle` est la statistique qui PROUVE qu'on sait deja : on n'enseigne que ce
+#: que le joueur n'a pas encore fait. Un jeu qui explique le taxi a quelqu'un
+#: qui a fait trente courses n'explique rien, il agace.
+#:
+#: ⚠️ Et jamais deux fois la meme : la partie retient ce qui a ete lu. Quand il
+#: n'y a plus rien a apprendre, le repli redevient « rien a signaler » — et
+#: c'est une bonne nouvelle.
+LECONS: list[dict] = [
+    {"slug": "lecon_klaxon", "cle": "courses", "titre": "LE SAVIEZ-VOUS?",
+     "texte": "UN COUP DE KLAXON DANS UN TAXI VOUS TROUVE UN CLIENT.",
+     "lu": "Le saviez-vous ? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza, l'ambulance et la remorqueuse."},
+    {"slug": "lecon_fourriere", "cle": "saisies", "titre": "VOTRE CHAR A DISPARU?",
+     "texte": "MAL GARE, IL EST A LA FOURRIERE. ON PEUT L'Y RACHETER.",
+     "lu": "Votre char a disparu ? Mal garé, il est à la fourrière municipale. On peut l'y racheter, à un prix qui dépend de ce qu'il vaut."},
+    {"slug": "lecon_cafe", "cle": "cafes", "titre": "LE CAFE DU MATIN",
+     "texte": "UN CAFE, ET VOUS COUREZ DEUX FOIS PLUS LONGTEMPS.",
+     "lu": "Le café du matin. Un café au comptoir, et vous sprintez deux fois plus longtemps pendant une minute et demie."},
+    {"slug": "lecon_garage", "cle": "reparations", "titre": "LE GARAGE DE ROCCO",
+     "texte": "ON Y REPARE, ON Y REPEINT — ET UNE PEINTURE FAIT OUBLIER UN CHAR.",
+     "lu": "Le garage de Rocco. On y répare, on y repeint — et une peinture neuve fait oublier un char que la police cherche."},
+    {"slug": "lecon_proprietes", "cle": "proprietes", "titre": "DEVENIR PROPRIETAIRE",
+     "texte": "CERTAINS COMMERCES SE VENDENT. ILS RAPPORTENT CHAQUE JOUR.",
+     "lu": "Devenir propriétaire. Certains commerces de la ville se vendent, et ils rapportent tous les jours, que vous y soyez ou non."},
+    {"slug": "lecon_cloture", "cle": "clotures", "titre": "LES RACCOURCIS DU FAUBOURG",
+     "texte": "UNE CLOTURE S'ENJAMBE. LA POLICE AUSSI, MAIS ELLE Y PERD LE MEME TEMPS.",
+     "lu": "Les raccourcis du Faubourg. Une clôture se franchit à pied — la police aussi, mais elle y perd le même temps que vous."},
+]
+
+
 #: Les manchettes que l'histoire impose (une mission finie fait la une, une fois).
 SPECIALES: list[dict] = [
     {"slug": "cravates_chassees", "titre": "LES CRAVATES CHASSEES DU FAUBOURG",

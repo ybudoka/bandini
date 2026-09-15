@@ -466,6 +466,32 @@ VOIX: list[Voix] = [
     # passe pres de son coin — jamais deux fois de suite la meme.
     {"slug": "compagnie_b", "texte": "Tu cherches de la compagnie, mon beau?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "beau_bonhomme_b", "texte": "Heille, beau bonhomme! Viens icitte.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+#: COMMENT LA RUE PARLE — et c'est ici, pas dans le JS, parce que ce sont trois
+#: reglages qui se decident ensemble.
+#:
+#: ⚠️ « Jamais deux fois de suite le meme » etait ECRIT et FAUX. Le moteur
+#: tirait au hasard sans aucune memoire : sur quatre repliques par genre, une
+#: chance sur quatre de repeter la precedente — dans une rue passante, on
+#: entendait « Fait frette, hein? » trois fois en vingt secondes. Un tirage au
+#: hasard PEUT sortir deux fois le meme ; c'est meme sa definition.
+#:
+#: ⚠️ Et le vrai coupable n'etait pas le tirage, c'etait la FREQUENCE : un
+#: passant qui parle chaque fois qu'on le frole rend huit repliques fatigantes
+#: bien avant qu'elles soient usees. La plupart des gens qu'on croise ne disent
+#: rien, comme dans la vraie vie.
+PAROLE = {
+    "temps_mort_images": 420,   # 7 s entre deux repliques, partout dans la ville
+    "chance": 0.35,             # ... et parler reste une CHANCE, pas une certitude
+    # ⚠️ Combien de repliques on refuse de repeter. DEUX, et pas quatre comme
+    # la fiche l'annonce — parce que la plus petite banque en compte TROIS (le
+    # crieur). Pour en exclure quatre, il en faudrait au moins six par banque :
+    # ce nombre-la monte le jour ou les banques montent, et un juge tient les
+    # deux ensemble (`test_parole.py`) pour qu'on ne puisse pas bouger l'un
+    # sans l'autre. Sinon la regle se retourne contre elle-meme : on exclut
+    # tout, il ne reste rien a tirer, et plus personne ne parle.
+    "memoire": 2,
+}
+
     {"slug": "frette_b", "texte": "Fait frette, hein? Viens te réchauffer.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "du_feu_b", "texte": "T'as du feu, mon chou?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "tout_seul_b", "texte": "Reste pas tout seul à soir, là.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
@@ -502,7 +528,12 @@ def voix_journal() -> list[dict]:
     return [{"slug": f"narrateur-journal-{r['slug']}", "texte": r["lu"], "genre": perso["genre"], "voix": perso["voix"],
              "volume": 0.85, "histoire": True, "qui": "narrateur", "mission": "journal", "partie": "journal",
              "telephone": False}
-            for r in journal.REGLES + journal.SPECIALES]
+            # ⚠️ Les LECONS y sont aussi : le narrateur les lit comme une
+            # manchette. Tant que leurs mp3 n'existent pas, `exporter()` ne les
+            # declare pas et l'encadre s'affiche sans voix — c'est la regle de
+            # ce fichier, et c'est elle qui permet d'ecrire le texte avant de
+            # depenser un credit.
+            for r in journal.REGLES + journal.SPECIALES + journal.LECONS]
 
 
 def toutes_les_voix() -> list[dict]:
@@ -634,11 +665,35 @@ def exporter() -> dict:
             for r in RADIOS
         ],
         "ambiances": [
+#: LA RUMEUR DE LA FOULE — et ce qui la fait taire.
+#:
+#: ⚠️ Une rue qui se tait d'un coup dit « ils t'ont vu » mieux qu'une etoile de
+#: plus, et elle le dit AVANT qu'on regarde le HUD. Le volume suivait deja le
+#: nombre de gens autour ; il ne manquait qu'une raison de le faire tomber.
+#:
+#: ⚠️ Et le contraire compte autant : apres un coup de feu, la rumeur ne
+#: reprend PAS au meme endroit — elle revient en cris, puis se calme. Une foule
+#: qui murmure pareil avant et apres un mort n'est pas une foule, c'est un
+#: bruit de fond.
+RUMEUR = {
+    "peur_images": 240,        # combien de temps la rue reste basse
+    "peur_part": 0.18,         # ce qu'il reste du volume quand elle a peur
+    "cri_images": 150,         # apres un coup de feu : elle crie
+    "cri_part": 1.7,           # ... et plus fort que d'habitude
+    # ⚠️ Quatre secondes pour retrouver son plein volume. C'est la CHUTE qui se
+    # remarque, et c'est la remontee lente qui fait qu'on se sent surveille
+    # encore un moment apres avoir range l'arme.
+    "retour_par_image": 0.004,
+}
+
+
             {"slug": r["slug"], "nom": r["nom"], "style": r["style"], "volume": r["volume"],
              "fichier": nom_fichier_radio(r) if chemin_radio(r).is_file() else None}
             for r in AMBIANCES
         ],
         # Les repliques des passants : quelques mots, deux voix, en francais.
+        "parole": dict(PAROLE),
+        "rumeur": dict(RUMEUR),
         "voix": [
             {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}

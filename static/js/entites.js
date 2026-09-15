@@ -196,6 +196,15 @@ const Entites = (function () {
     // Une mere ne sort pas sans son petit : il la suit, et il detale avec elle.
     if (p.accompagne) {
       const petit = creerPieton(x + 10, y + 4, archetype(p.accompagne));
+      // ⚠️ IL NAIT A COTE D'ELLE, ET PERSONNE NE VERIFIAIT LA TUILE. Une mere
+      // nee au ras d'un mur posait son enfant DANS le mur — et de la, il ne
+      // pouvait plus sortir : le masque du pieton ne laisse pas sortir d'une
+      // facade plus qu'il n'y laisse entrer. On le remet alors SUR sa mere,
+      // qui est sur une tuile valable par construction ; la foule les demele a
+      // l'image suivante.
+      if (Monde.bloque(Math.floor(petit.x / TT), Math.floor(petit.y / TT), Monde.MASQUE_PIETON)) {
+        petit.x = x; petit.y = y;
+      }
       petit.suit = e;
       e.petit = petit;
     }
@@ -659,7 +668,8 @@ const Entites = (function () {
     e.soulT = (e.soulT || 0) + 15;
     if (e.soulT < 60) return;
     e.soulT = 0;
-    if (B.rng() < 0.06) {
+    const chute = B.defs.pietons.reactions.ivrogne_chute;
+    if (B.rng() < (chute === undefined ? 0.06 : chute)) {
       // Il tombe. Personne ne l'a touche.
       e.etat = 'assomme';
       e.minuterie = 120 + Math.floor(B.rng() * 180);
@@ -821,7 +831,12 @@ const Entites = (function () {
         && q.argent > 0 && (q.etat === 'flane' || q.etat === 'arret');
     });
     if (!cible) { if (e.etat === 'cap') { e.etat = 'flane'; e.cap = null; } return; }
-    if (Math.hypot(cible.x - e.x, cible.y - e.y) > 14) {
+    // ⚠️ DIX-HUIT PIXELS, pas quatorze : `demeler` ecarte deux corps de dix
+    // pixels de rayon, et la victime marche. A quatorze, il restait a treize ou
+    // quinze pendant trois cents images sans jamais passer sous la barre — il
+    // suivait sa victime sans jamais la voler, et de loin ca ressemblait a un
+    // vol qui n'arrive pas.
+    if (Math.hypot(cible.x - e.x, cible.y - e.y) > 18) {
       e.etat = 'cap'; e.cap = { x: cible.x, y: cible.y }; e.capT = 0; e.capVite = true;
       return;
     }
@@ -1596,6 +1611,13 @@ const Entites = (function () {
         }
       } else {
         if (e.butT-- <= 0) {
+      // ⚠️ ARRIVE, ON S'ARRETE. Sans ce palier, le pickpocket poussait dans sa
+      // victime image apres image : `cap` le ramenait dedans, `demeler` le
+      // ressortait, et les deux corps restaient enfonces l'un dans l'autre
+      // trois images d'affilee. Douze pixels, c'est sous le seuil de toutes les
+      // routines (le facteur a 14, la contractuelle 22, le laveur 24) : chacune
+      // se declenche quand meme, a la prochaine image de `majSortes`.
+      else if (norme <= 12) { e.vx = 0; e.vy = 0; }
           // Celle qui tient un poste (la Brume) s'arrete deux fois plus
           // souvent, et repart vers son lampadaire des qu'elle s'en eloigne.
           const rayonPoste = e.posteRayon || POSTE_RAYON;
@@ -1973,7 +1995,14 @@ const Entites = (function () {
   /** La foule qu'on entend, et le passant qui nous dit un mot en nous frolant. */
   function rumeurEtRepliques() {
     const j = B.joueur;
-    if (B.t % 15 === 0) Son.Rumeur.maj(pietonsAutour(j.x, j.y, 200).filter(function (e) { return !e.metier; }).length);
+    if (B.t % 15 === 0) {
+      // ⚠️ LA RUE SE TAIT DEVANT UNE ARME, et c'est l'ajout le moins cher de
+      // toute la vague : `Son.Rumeur` reglait deja son volume sur le nombre de
+      // gens autour — il ne manquait qu'une RAISON de le faire tomber. Au
+      // volant, non : on ne voit pas ce que tu tiens.
+      if (!j.dansVehicule && j.arme && j.arme !== 'poings') Son.Rumeur.taire();
+      Son.Rumeur.maj(pietonsAutour(j.x, j.y, 200).filter(function (e) { return !e.metier; }).length);
+    }
     if (j.dansVehicule) return;
     if (accosterDepuisLaBrume(j)) return;
     for (const e of pietonsAutour(j.x, j.y, 30)) {
@@ -2004,9 +2033,14 @@ const Entites = (function () {
       }
     }
     // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
+    // ⚠️ PARLER EST UNE CHANCE, PAS UNE CERTITUDE. Un passant qui parle chaque
+    // fois qu'on le frole rend huit repliques fatigantes bien avant qu'elles
+    // soient usees — la plupart des gens qu'on croise ne disent rien.
+    const chance = ((B.defs.audio && B.defs.audio.parole) || {}).chance;
     // date du debut de l'image, et demeler la foule sur des positions perimees
     // laisse passer exactement les paires qui viennent de se rejoindre.
     indexer();
+      if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
     demeler();
     majParticules();
     if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }

@@ -466,18 +466,52 @@ const Son = (function () {
     /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug.
         `slug` : cette replique-la (choisie par `choisir`), sinon une au hasard. */
     dire: function (genre, x, y, slug) {
-      if (B.t - Voix.dernierT < 240) return null;
-      const choix = Voix.liste().filter(function (v) {
+      const reglages = (B.defs && B.defs.audio && B.defs.audio.parole) || {};
+      const mort = reglages.temps_mort_images || 420;
+      if (B.t - Voix.dernierT < mort) return null;
+      const tous = Voix.liste().filter(function (v) {
         return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
       });
-      if (!choix.length) return null;
-      const v = choix[Math.floor(Math.random() * choix.length)];
+      const v = Voix.tirer(tous);
+      if (!v) return null;
       Voix.dernierT = B.t;
       const j = B.joueur;
       echantillon('voix-' + v.slug, { volume: v.volume, pan: j ? (x - j.x) / 200 : 0 });
       return v.slug;
     },
   };
+
+    //: Les dernieres repliques dites, toutes voix confondues : on ne les
+    //: retire pas du tirage par politesse, on les retire parce que « jamais
+    //: deux fois de suite la meme » etait ECRIT dans la fiche et FAUX dans le
+    //: code. Un tirage au hasard peut sortir deux fois le meme : c'est sa
+    //: definition.
+    dernieres: [],
+
+    /** LE CHOIX, separe du son — et c'est lui, la regle.
+
+        ⚠️ `dire` a besoin de tampons charges, donc de fichiers ; la REGLE
+        (« jamais une des dernieres, et par le hasard DU JEU ») n'a besoin de
+        rien. Les deux melanges, elle n'etait jugeable que par un navigateur
+        avec ses mp3 — c'est-a-dire nulle part.
+
+        ⚠️ On ecarte les dernieres, MAIS on retombe sur la liste entiere s'il ne
+        reste rien : une banque de trois dont on exclut trois n'en laisserait
+        aucune, et la regle se retournerait contre elle-meme — plus personne ne
+        parlerait. */
+    tirer: function (liste) {
+      if (!liste || !liste.length) return null;
+      const reglages = (B.defs && B.defs.audio && B.defs.audio.parole) || {};
+      const frais = liste.filter(function (v) { return Voix.dernieres.indexOf(v.slug) < 0; });
+      const choix = frais.length ? frais : liste;
+      // ⚠️ `B.rng()`, jamais `Math.random()` : tout le hasard du jeu y passe, et
+      // c'est ce qui rend le banc reproductible — donc juge. Cette ligne-la lui
+      // echappait, et c'etait precisement celle qu'on voulait pouvoir tester.
+      const v = choix[Math.floor(B.rng() * choix.length)];
+      Voix.dernieres.push(v.slug);
+      while (Voix.dernieres.length > (reglages.memoire || 2)) Voix.dernieres.shift();
+      return v;
+    },
 
   // --- L'ambiance : la musique de fond, a pied ---------------------------------------
 
@@ -626,12 +660,26 @@ const Son = (function () {
 
   const Rumeur = {
     /** Le volume suit le nombre de gens autour : rien dans une ruelle vide,
-        un brouhaha sur la place. */
+        un brouhaha sur la place — et la peur par-dessus. */
     maj: function (gens) {
-      const voulu = Math.min(1, gens / 10);
-      if (voulu <= 0.02) { boucle('foule', false); return; }
-      if (!boucleActive('foule')) boucle('foule', true, voulu);
-      reglerBoucle('foule', voulu);
+      const r = (B.defs && B.defs.audio && B.defs.audio.rumeur) || {};
+      const pas = r.retour_par_image || 0.004;
+      let voulu = Math.min(1, gens / 10);
+      if (B.t < Rumeur.criT) voulu = Math.min(1, voulu * (r.cri_part || 1.7));
+      else if (B.t < Rumeur.peurT) voulu *= (r.peur_part || 0.18);
+      // ⚠️ Elle TOMBE d'un coup et REMONTE doucement : c'est la chute qui se
+      // remarque, et c'est la remontee lente qui fait qu'on se sent surveille
+      // encore un moment apres avoir rangé l'arme.
+      // ⚠️ `pas * 15` : `maj` ne tourne qu'une image sur quinze, et le pas de
+      // la fiche est par IMAGE. Sans ce facteur, la remontee est quinze fois
+      // trop lente — ce qui ne se voit pas, ca ressemble juste a une rue qui
+      // ne revient pas.
+      Rumeur.volume = voulu < Rumeur.volume
+        ? voulu
+        : Math.min(voulu, Rumeur.volume + pas * 15);
+      if (Rumeur.volume <= 0.02) { boucle('foule', false); return; }
+      if (!boucleActive('foule')) boucle('foule', true, Rumeur.volume);
+      reglerBoucle('foule', Rumeur.volume);
     },
   };
 
@@ -639,6 +687,35 @@ const Son = (function () {
 
   const Radio = {
     courante: null,          // slug de la station qui joue
+    //: JUSQU'A QUAND la rue se tait, et jusqu'a quand elle crie — en `B.t`, pas
+    //: en images restantes. ⚠️ `maj` ne tourne qu'une image sur quinze : un
+    //: compteur qu'on decremente de un a chaque appel met quinze fois trop
+    //: longtemps a s'epuiser, et la rue ne revenait jamais. Une echeance ne se
+    //: trompe pas de cadence.
+    peurT: 0,
+    criT: 0,
+    //: Le volume rendu a la derniere image : la rumeur remonte DOUCEMENT, elle
+    //: ne revient jamais d'un coup. Une foule qui reprend son murmure a la
+    //: seconde ou l'arme rentre dans la poche n'a pas eu peur.
+    volume: 0,
+
+    /** ⚠️ LA RUE SE TAIT QUAND TU SORS UNE ARME. Une rue qui se tait d'un coup
+        dit « ils t'ont vu » mieux qu'une etoile de plus, et elle le dit AVANT
+        que tu regardes le HUD. */
+    taire: function () {
+      const r = (B.defs && B.defs.audio && B.defs.audio.rumeur) || {};
+      Rumeur.peurT = B.t + (r.peur_images || 240);
+    },
+
+    /** ⚠️ Et apres un coup de feu, elle ne reprend PAS au meme endroit : elle
+        revient en CRIS, puis se calme. Une foule qui murmure pareil avant et
+        apres un mort n'est pas une foule, c'est un bruit de fond. */
+    crier: function () {
+      const r = (B.defs && B.defs.audio && B.defs.audio.rumeur) || {};
+      Rumeur.criT = B.t + (r.cri_images || 150);
+      Rumeur.peurT = 0;
+    },
+
     demandee: null,          // slug demande pendant que le fichier arrive
     chargees: new Map(),     // slug -> AudioBuffer
 

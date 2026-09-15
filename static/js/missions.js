@@ -1181,6 +1181,23 @@ const Missions = (function () {
       if (choisie) break;
       if (delta(r.cle) >= r.min) { choisie = r; break; }
     }
+    // ⚠️ LE REPLI « RIEN A SIGNALER » DEVIENT UNE LECON. Le jeu a des boulots
+    // au klaxon, une fourriere, un marche noir, des proprietes — et rien
+    // n'explique rien : M1 apprend a marcher et a voler un char, apres quoi le
+    // joueur est tout seul. Un matin ou il ne s'est rien passe est exactement
+    // la place libre, et elle ne coute pas une fenetre de plus.
+    //
+    // ⚠️ On n'enseigne QUE ce qu'il n'a pas encore fait (`cle`), et jamais deux
+    // fois la meme (`leconsLues`, gardee dans la partie). Quand il n'y a plus
+    // rien a apprendre, le repli redevient « rien a signaler » — et c'est une
+    // bonne nouvelle.
+    if (choisie === regles[regles.length - 1]) {
+      if (!p.leconsLues) p.leconsLues = [];
+      const lecon = (B.defs.journal_lecons || []).find(function (l) {
+        return p.leconsLues.indexOf(l.slug) < 0 && !(s[l.cle] > 0);
+      });
+      if (lecon) { p.leconsLues.push(lecon.slug); choisie = lecon; }
+    }
     p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0 };
     return choisie || regles[regles.length - 1] || null;
   }

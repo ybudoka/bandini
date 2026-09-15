@@ -92,6 +92,11 @@ function etatInitial(defs) {
     manchetteForcee: null,
     paquets: {},
     journal: null,
+    // ⚠️ Les lecons du Clairon deja lues. Elles vivent dans la PARTIE, pas
+    // dans le moteur : une lecon relue dix parties de suite n'apprend rien la
+    // dixieme fois, mais une nouvelle partie recommence a zero — et c'est la
+    // qu'on en a besoin.
+    leconsLues: [],
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };

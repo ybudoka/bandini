@@ -1784,9 +1784,18 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
                         fuit: soul.etat === 'fuit', repond: soul.bulle ? soul.bulle.texte : null,
                         lAutreFuit: sobre.etat === 'fuit' || sobre.etat === 'temoin' };
         soul.etat = 'flane';
+        // ⚠️ ON FORCE LA REGLE, on ne joue pas sa probabilite. A six pour cent
+        // par seconde, 1500 images donnent vingt-cinq occasions : une sur cinq
+        // de n'en voir aucune, et le juge devient une loterie. On met la chance
+        // a 1 dans la fiche et on mesure qu'il tombe ; le taux livre, lui, se
+        // juge a part (`test_pietons.py`).
+        const vraiTaux = L.B.defs.pietons.reactions.ivrogne_chute;
+        L.B.defs.pietons.reactions.ivrogne_chute = 1;
         let tombe = false;
-        for (let i = 0; i < 1500 && !tombe; i++) { o.frame(1); if (soul.etat === 'assomme') tombe = true; }
+        for (let i = 0; i < 180 && !tombe; i++) { o.frame(1); if (soul.etat === 'assomme') tombe = true; }
+        L.B.defs.pietons.reactions.ivrogne_chute = vraiTaux;
         out.ivrogne.tombe = tombe;
+        out.ivrogne.taux = vraiTaux;
         L.Entites.retirer(soul); L.Entites.retirer(sobre);
 
         // 4. LE JOGGER : il ne s'arrete JAMAIS, et il ne temoigne de rien.
@@ -1873,6 +1882,8 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
     assert i["lAutreFuit"] is True, "le décor du juge est faux : le passant, lui, doit réagir"
     assert i["repond"] == mots["ivrogne"]["sans_peur"], "il ne répond pas : %s" % i
     assert i["tombe"] is True, "il ne tombe jamais tout seul : %s" % i
+    # Et le taux livré reste celui d'un ivrogne, pas d'un pantin.
+    assert 0.01 <= i["taux"] <= 0.2, "il tombe %s fois par seconde" % i["taux"]
     assert i["corps"] == "ivrogne"
 
     # --- Le jogger ------------------------------------------------------------
@@ -2132,8 +2143,16 @@ def test_les_trois_de_la_rue_ont_chacune_leur_crochet(banc, paquet):
         victime.etat = 'flane'; victime.argent = 37; victime.face = 'droite';
         L.Entites.indexer();
         let vole = -1;
-        for (let i = 0; i < 400 && vole < 0; i++) {
+        for (let i = 0; i < 900 && vole < 0; i++) {
             o.frame(1);
+            // ⚠️ ON TIENT LA RUE VIDE PENDANT TOUTE LA MESURE. `peupler()`
+            // repose des passants a chaque seconde, et le voleur prend le
+            // PREMIER qui passe : le juge voyait alors un vol — le bon geste,
+            // la bonne bulle — sur quelqu'un d'autre, et concluait que sa
+            // victime n'avait rien perdu.
+            for (const q of L.B.entites.slice()) {
+                if (q.type === 'pieton' && q !== voleur && q !== victime) L.Entites.retirer(q);
+            }
             victime.face = 'droite';                    // il regarde a l'oppose : on l'aborde de dos
             if (voleur.voleT > 0) vole = i;
         }
@@ -5888,21 +5907,73 @@ def test_les_paquets_caches_se_ramassent_et_paient(banc, paquet):
     assert r["sauves"] == 10, "les paquets ramasses doivent etre sauvegardes"
 
 
-def test_le_journal_du_matin_raconte_hier(banc):
+def test_le_journal_du_matin_raconte_hier_et_enseigne_les_matins_calmes(banc, paquet):
+    """⚠️ Le repli « rien à signaler » ENSEIGNE maintenant une chose.
+
+    Le jeu a des boulots au klaxon, une fourrière, un marché noir, des
+    propriétés — et rien n'expliquait rien : M1 apprend à marcher et à voler un
+    char, après quoi le joueur est tout seul. Un matin où il ne s'est rien passé
+    est exactement la place libre, et elle ne coûte pas une fenêtre de plus.
+
+    Le juge tient les trois règles qui comptent : **on enseigne ce qu'il n'a pas
+    fait**, **jamais deux fois la même**, et quand il n'y a plus rien à
+    apprendre le repli **redevient** « rien à signaler » — ce qui est une bonne
+    nouvelle, pas une panne."""
+    lecons = paquet["journal_lecons"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        L.B.partie.stats.tues = 0;
+        const p = L.B.partie;
+        // 1. Un matin calme : il enseigne.
+        p.stats.tues = 0;
         L.Missions.nouveauJour();
-        const calme = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
+        const premiere = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
         L.B.dialogue = null;
-        L.B.partie.stats.tues = 2;
+        // 2. Jamais deux fois la meme : le lendemain, une autre.
+        const lues = [];
+        for (let jour = 0; jour < 4; jour++) {
+            L.Missions.nouveauJour();
+            lues.push(L.B.dialogue ? L.B.dialogue.lignes[1] : null);
+            L.B.dialogue = null;
+        }
+        // 3. ⚠️ On n'enseigne QUE ce qu'il n'a pas fait : on remet a zero les
+        //    lecons lues, mais on declare avoir tout fait.
+        for (const l of (L.B.defs.journal_lecons || [])) p.stats[l.cle] = 9;
+        // ⚠️ UN JOUR POUR RIEN D'ABORD : `nouveauJour` compare a HIER, et l'on
+        // vient de faire neuf courses d'un coup — ce qui est une manchette, pas
+        // un matin calme. Ce premier passage absorbe l'ecart ; le suivant est
+        // le vrai matin calme de quelqu'un qui sait deja tout.
+        L.Missions.nouveauJour();
+        L.B.dialogue = null;
+        p.leconsLues = [];
+        L.Missions.nouveauJour();
+        const toutSu = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
+        L.B.dialogue = null;
+        // 4. Et le sang passe AVANT la lecon : une manchette est une manchette.
+        p.stats.tues = 2;
         L.Missions.nouveauJour();
         const sang = L.B.dialogue ? L.B.dialogue.lignes[0] : null;
-        return { calme: calme, sang: sang, qui: L.B.dialogue.qui };
+        return { premiere: premiere, lues: lues, toutSu: toutSu, sang: sang,
+                 qui: L.B.dialogue.qui, retenues: p.leconsLues.length };
     }""")
     assert r["qui"] == "LE CLAIRON DE LA BAIE"
-    assert r["calme"] == "BRUME SUR LE BASSIN"
-    assert r["sang"] == "UN MORT DANS LA RUE"
+    assert r["premiere"] == "LE SAVIEZ-VOUS?", (
+        "un matin calme n'enseigne rien : %s" % r["premiere"]
+    )
+    # ⚠️ Jamais deux fois la même — et c'est la règle qui manquait partout
+    # ailleurs dans ce dépôt, répliques des passants comprises.
+    dites = [x for x in r["lues"] if x]
+    assert len(dites) == len(set(dites)), "le journal enseigne deux fois la même chose : %s" % dites
+    assert len(dites) >= 3, "le journal cesse d'enseigner après deux jours : %s" % dites
+    # ⚠️ Tout su : le repli redevient « rien à signaler », et c'est une bonne
+    # nouvelle.
+    assert r["toutSu"] == "BRUME SUR LE BASSIN", (
+        "il enseigne encore à quelqu'un qui sait déjà tout : %s" % r["toutSu"]
+    )
+    assert r["sang"] == "UN MORT DANS LA RUE", "une leçon passe avant un mort : %s" % r["sang"]
+    # ⚠️ `retenues` est mesuré APRÈS qu'on l'a remis à zéro dans le banc : ce
+    # qui compte ici, c'est qu'il ait grandi pendant les quatre premiers jours,
+    # et les quatre leçons distinctes ci-dessus le prouvent déjà.
+    assert len(lecons) >= 4, "moins de quatre leçons : le journal a vite fini d'enseigner"
 
 
 # --- Les gestes : le corps bouge quand on agit ----------------------------

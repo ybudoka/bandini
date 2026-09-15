@@ -96,7 +96,7 @@ ne bougent pas quand l'ordre de travail change.
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **livré** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
 | Les feux s'allument pour vrai | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
 | Le son de l'eau | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». On y entrait sur un bruit de **tôle froissée** (`SFX.choc`, le son d'un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule ne faisait **aucun bruit** |
-| M15 La ville te parle | **P4** ajout, **1re vague en cours** (14 sept. 2026) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
+| M15 La ville te parle | **P4** ajout, **1re vague livrée** (14 sept. 2026) | tout ce qui ne demandait **aucun son neuf**. ⚠️ **La rue se tait quand tu sors une arme** — `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour, il ne manquait qu'une **raison** de le faire tomber ; elle tombe d'un coup, remonte en quatre secondes, et **crie** après un coup de feu. ⚠️ **Les répliques : moins souvent et jamais les mêmes** — `audio.VOIX` promettait « jamais deux fois de suite le même » et le moteur tirait par `Math.random()` **sans mémoire** ; le tirage passe maintenant par `B.rng()` (donc reproductible, donc jugeable) et écarte les dernières. **Parler devient une chance** (35 %), pas une certitude. ⚠️ **Le repli du Clairon enseigne** : un matin calme apprend une chose que tu n'as **pas encore faite**, jamais deux fois la même, et quand il n'y a plus rien à apprendre il redevient « rien à signaler ». **Reste à générer** (crédits + une oreille) : la radio qui parle, la police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques par contexte. 11 juges neufs |
 | Les amuseurs de rue font un vrai spectacle | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -437,7 +437,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
-        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py
+        test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py
         test_reclame.py test_reclame_js.py
         test_navigateur.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py audio_elevenlabs.py musique_apercu.py
@@ -3314,10 +3314,58 @@ pièce écrite en notes pèse 1,6 Ko, une minute de mp3 en pèse 500.
   loin, et **se tait** quand on s'éloigne ; et un musicien du Faubourg ne naît ni à La Shop ni
   aux Quais.
 
-### M15 — La ville te parle (**ajout**, taille 4)
+### M15 — La ville te parle (**ajout**, taille 4) — **1re vague livrée le 14 sept. 2026**
 
 _Ce que ça donne :_ le jeu cesse d'être muet entre deux répliques de mission — et il
 t'apprend enfin ce qu'il sait faire.
+
+**Première vague livrée le 14 sept. 2026** — et la vague se prend en deux, pour une raison
+simple : la moitié de M15 demande des **clips ElevenLabs**, donc des crédits, donc une oreille
+que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
+
+- **La rue se tait quand tu sors une arme.** L'ajout le moins cher de toute la vague, et celui
+  qui se sent le plus : `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour — il
+  ne manquait qu'une **raison** de le faire tomber. Elle tombe d'un coup à 18 % et remonte en
+  quatre secondes. ⚠️ Et **après un coup de feu, elle ne reprend pas au même endroit** : elle
+  revient en **cris** (1,7 fois son volume), puis se calme. Une foule qui murmure pareil avant
+  et après un mort n'est pas une foule, c'est un bruit de fond. Au volant, rien : on ne voit
+  pas ce que tu tiens.
+- **Les répliques : moins souvent, et jamais les mêmes.** ⚠️ `audio.VOIX` promettait « jamais
+  deux fois de suite le même » — **c'était faux, et ça l'a toujours été** : le moteur tirait
+  par `Math.random()` sans aucune mémoire. Sur quatre répliques par genre, une chance sur
+  quatre de répéter la précédente. Le tirage écarte maintenant les dernières, **et passe par
+  `B.rng()`** : tout le hasard du jeu y passe déjà, c'est ce qui rend le banc reproductible —
+  donc juge. Cette ligne-là lui échappait, et c'était précisément celle qu'on voulait pouvoir
+  tester.
+  - ⚠️ **La mémoire est à DEUX, pas à quatre** comme la fiche l'annonçait : la plus petite
+    banque en compte **trois** (le crieur). Pour en exclure quatre, il en faudrait six par
+    banque — ce nombre monte le jour où les banques montent, et **un juge tient les deux
+    ensemble** pour qu'on ne puisse pas bouger l'un sans l'autre.
+  - **Parler devient une chance** (35 %), pas une certitude : un passant qui parle chaque fois
+    qu'on le frôle rend huit répliques fatigantes bien avant qu'elles soient usées.
+- **Le repli du Clairon enseigne.** Six leçons, une par matin calme : le klaxon des boulots,
+  la fourrière, le café, le garage, les propriétés, les clôtures qui s'enjambent. ⚠️ **On
+  n'enseigne que ce que le joueur n'a pas fait** (chaque leçon dit par quelle statistique on
+  prouve qu'on sait déjà), **jamais deux fois la même** (la partie retient), et quand il n'y a
+  plus rien à apprendre le repli **redevient** « rien à signaler » — ce qui est une bonne
+  nouvelle. Le narrateur les lit comme une manchette ; tant que les mp3 n'existent pas,
+  `exporter()` ne les déclare pas et l'encadré s'affiche sans voix.
+
+⚠️ **Deux défauts trouvés en chemin, et le second ne se voyait pas du tout :**
+
+- **Un enfant naissait dans le mur.** Le petit d'une mère naît à côté d'elle (`x + 10`), et
+  **personne ne vérifiait la tuile** : une mère née au ras d'une façade posait son enfant
+  dedans — et de là il ne pouvait plus sortir, le masque du piéton ne laissant pas sortir d'un
+  mur plus qu'il n'y laisse entrer.
+- **`Rumeur.maj` ne tourne qu'une image sur quinze**, et le compteur de peur se décrémentait
+  de **un** par appel : 240 images de peur en duraient 3 600. La rue ne revenait jamais — et
+  ça ne se voit pas, ça ressemble juste à une ville silencieuse. Les deux minuteries sont
+  maintenant des **échéances** en `B.t` : une échéance ne se trompe pas de cadence.
+
+**Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
+police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
+par contexte — une cinquantaine de clips ElevenLabs. C'est la deuxième vague, et elle demande
+les crédits de Martin **et son oreille** : aucun juge ne dit qu'un son est le BON son.
 
 ⚠️ **Cette vague ne dépend de rien.** C'est celle qu'on prend quand on veut un gain rapide :
 les trois morceaux passent par des pièces déjà en place (le narrateur de M7, le journal de
