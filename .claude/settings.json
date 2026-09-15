@@ -31,19 +31,19 @@
         "hooks": [
           {
             "type": "command",
-            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_carte_du_depot.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*|*'git -'*' commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_carte_du_depot.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
             "timeout": 15,
             "statusMessage": "Garde « ce commit emporte-t-il la carte du dépôt ? »…"
           },
           {
             "type": "command",
-            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_table_des_jalons.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*|*'git -'*' commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_table_des_jalons.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
             "timeout": 15,
             "statusMessage": "Garde « ce commit casse-t-il la table des jalons ? »…"
           },
           {
             "type": "command",
-            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_ce_qui_casse.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
+            "command": "j=$(cat); c=$(printf '%s' \"$j\" | jq -r '.tool_input.command // empty'); case \"$c\" in *'git commit'*|*'git -'*' commit'*) ;; *) exit 0 ;; esac; d=$(printf '%s' \"$j\" | jq -r '.cwd // empty'); r=\"${CLAUDE_PROJECT_DIR:-.}\"; s=\"$r/scripts/verifier_ce_qui_casse.py\"; [ -f \"$s\" ] || exit 0; p=\"$r/.venv/bin/python\"; [ -x \"$p\" ] || p=python3; out=$(\"$p\" \"$s\" --commit ${d:+--cwd \"$d\"} 2>&1) || { printf '%s\\n' \"$out\" >&2; exit 2; }",
             "timeout": 15,
             "statusMessage": "Garde « ce qui se dit destructible l'est-il ? »…"
           }

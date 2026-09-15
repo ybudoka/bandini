@@ -59,6 +59,14 @@ import subprocess
 import sys
 from pathlib import Path
 
+#: ⚠️ La racine s'ancre sur CE FICHIER, pas sur le dossier courant. Mesure du
+#: 15 sept. 2026 : lance depuis `/tmp`, le juge calculait `racine = /private/tmp`,
+#: n'y trouvait aucun des quatre fichiers, n'avait donc rien a reprocher — et
+#: sortait VERT. Un juge qui approuve tout des qu'on l'appelle d'ailleurs est
+#: pire que pas de juge : il a l'air d'un filet. `--cwd` reste la pour viser un
+#: autre exemplaire du depot, mais ce n'est plus le defaut.
+RACINE = Path(__file__).resolve().parent.parent
+
 SPRITES = "static/js/sprites.js"
 ENTITES = "static/js/entites.js"
 COMBAT = "static/js/combat.js"
@@ -318,7 +326,24 @@ def juger_le_cablage(sources: dict[str, str]) -> list[str]:
 
 
 def juger(sources: dict[str, str]) -> list[str]:
-    reproches = []
+    """⚠️ Un juge muet passe pour un juge content. Tout ce qui l'empeche de LIRE
+    se dit ici : sans ca, un mauvais dossier, un fichier renomme ou un depot a
+    moitie extrait le rendaient vert sans qu'il ait ouvert quoi que ce soit."""
+    manquants = [c for c in SURVEILLES if c not in sources]
+    if len(manquants) == len(SURVEILLES):
+        return [
+            "aucun des fichiers surveillés n'a pu être lu.\n"
+            "  Le juge n'a rien ouvert — il ne peut donc rien garantir. Mauvaise racine\n"
+            "  (voir `--cwd`), dépôt à moitié extrait, ou les quatre fichiers ont bougé :\n"
+            "  " + ", ".join(SURVEILLES)
+        ]
+
+    reproches = [
+        f"{c} : introuvable.\n"
+        "  Le juge ne peut pas vérifier ce fichier — a-t-il été renommé ou déplacé ?\n"
+        "  Tant qu'il manque, la moitié de la règle n'est plus tenue."
+        for c in manquants
+    ]
     if SPRITES in sources:
         reproches += juger_le_catalogue(sources[SPRITES])
     reproches += juger_le_cablage(sources)
@@ -366,10 +391,10 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(description=__doc__)
     analyseur.add_argument("--fichier", help="ne juge que si ce fichier est en cause")
     analyseur.add_argument("--commit", action="store_true", help="juge l'index, pas le disque")
-    analyseur.add_argument("--cwd", default=".", help="où chercher le dépôt")
+    analyseur.add_argument("--cwd", default=None, help="où chercher le dépôt (défaut : le sien)")
     args = analyseur.parse_args()
 
-    racine = _racine(Path(args.cwd).resolve())
+    racine = _racine(Path(args.cwd).resolve()) if args.cwd else RACINE
 
     if args.fichier:
         vise = Path(args.fichier).resolve()

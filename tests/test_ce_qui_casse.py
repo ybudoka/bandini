@@ -55,6 +55,42 @@ def test_le_juge_lit_vraiment_le_catalogue(racine):
     assert fiches["arbre"]["arrete"] == "2.0"
 
 
+def test_un_juge_qui_ne_lit_rien_ne_passe_pas_pour_content():
+    """⚠️ LA PANNE LA PLUS TRAÎTRE D'UN GARDE : approuver en silence.
+
+    Mesure du 15 sept. 2026 : lancé depuis `/tmp`, le juge calculait sa racine
+    à partir du **dossier courant**, n'y trouvait aucun des quatre fichiers,
+    n'avait donc rien à reprocher — et sortait **vert**. Il avait l'air d'un
+    filet et n'en était plus un. Un juge qui n'a rien ouvert doit le DIRE."""
+    reproches = juge.juger({})
+    assert reproches, "un juge qui n'a lu aucun fichier se dit content"
+    assert "aucun" in reproches[0].lower()
+
+
+def test_le_juge_trouve_le_depot_depuis_n_importe_ou(racine):
+    """Il s'ancre sur **lui-même** (`__file__`), comme `verifier_carte_du_depot.py`
+    — pas sur le dossier d'où on l'appelle. Une garde Claude Code ne promet pas
+    dans quel dossier elle tourne."""
+    assert juge.RACINE == racine
+    sortie = subprocess.run(
+        [sys.executable, str(racine / "scripts/verifier_ce_qui_casse.py")],
+        cwd="/tmp",
+        capture_output=True,
+        text=True,
+    )
+    assert sortie.returncode == 0, sortie.stderr
+    # Et il a VRAIMENT lu, il ne s'est pas contenté de ne rien trouver.
+    assert len(juge.sources(juge.RACINE, False)) == len(juge.SURVEILLES)
+
+
+def test_un_fichier_surveille_qui_disparait_est_vu(racine):
+    """Renommer `combat.js` ne doit pas rendre le juge muet sur la moitié qu'il
+    surveillait."""
+    sources = _sources(racine)
+    del sources[juge.COMBAT]
+    assert any(juge.COMBAT in r and "introuvable" in r for r in juge.juger(sources))
+
+
 def _sources(racine):
     return {c: (racine / c).read_text(encoding="utf-8") for c in juge.SURVEILLES}
 
