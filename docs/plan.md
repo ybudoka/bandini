@@ -111,7 +111,7 @@ ne bougent pas quand l'ordre de travail change.
 | L'objectif écrit par-dessus la course | **livré** | 14 sept. 2026 | **P4** | **correctif** | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
 | Les feux s'allument pour vrai | **livré** | 14 sept. 2026 | **P2** | **correctif** | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
 | Un poteau par coin, pas quatre | **livré** | 14 sept. 2026 | **P2** | **correctif** | retour de Martin, une fois les feux visibles : « il y en a trop, il faut que ce soit plus réaliste ». Mesuré, et c'était pire que trop : **les 124 feux de chars étaient plantés DANS un poteau piéton**, à la tuile près — 124 sur 124. `coinLibre` vise les coins nord-est et sud-ouest du croisement, exactement les bouts de traverse où `carte.py` pose ses poteaux, et il ne les voyait pas : il n'écarte que le décor **solide** (`grilleFixe`), où un feu n'entre jamais. ⚠️ **Et les écarter d'une tuile aurait fait un poteau de PLUS.** Le reste se groupait par deux à **une tuile** d'écart — 174 paires, pas une seule à deux : c'est le même coin de rue, et un vrai carrefour met ces têtes-là sur **le même mât**. Un mât porte donc la tête des chars **et** jusqu'à deux têtes de traverse, alignées sous elle. **484 poteaux → 186** (−61 %), **3 par croisement au lieu de 8**, et **les 360 traverses sont toujours montrées** : on a retiré des poteaux, pas de l'information. 2 juges neufs |
-| Des feux tricolores, à la québécoise | **en cours** | 15 sept. 2026 | **P2** | **correctif** | demande de Martin : « les feux pourraient être mieux — cherche sur le web des représentations visuelles. Assure-toi que les feux et les voitures suivent la même logique. Je veux des feux tricolores et un seul allumé à la fois. Les feux piétons sont à part, mais les piétons le respectent (sauf exception) et les véhicules aussi (sauf exception) ». La recherche donne mieux qu'une image : au **Québec les feux sont HORIZONTAUX**, et leurs lentilles ont des **formes** — **carré** rouge, **losange** jaune, **cercle** vert — pour qui ne distingue pas le rouge du vert. À 480 × 270, une forme se lit là où une teinte se devine : la vraie signalisation d'ici est aussi la plus lisible. Donc un **vrai tricolore par mât, une seule lentille allumée**, les deux autres en douilles éteintes ; un mât à **chacun des quatre coins** (ce qui règle le coin manquant) ; et l'axe d'un mât suit sa **diagonale**, pour que de n'importe quelle approche un feu de son axe soit en face. ⚠️ **Une seule source** : `Monde.feuDeCirculation()` rend la couleur, `feuVert` en découle, le dessin en découle, le trafic obéit à `feuVert` — une lanterne ne peut plus montrer ce qu'un char ne respecte pas |
+| Des feux tricolores, à la québécoise | **livré** | 15 sept. 2026 | **P2** | **correctif** | demande de Martin : « les feux pourraient être mieux — cherche sur le web des représentations visuelles. Assure-toi que les feux et les voitures suivent la même logique. Je veux des feux tricolores et un seul allumé à la fois », puis « mets les lumières qui tiennent d'un seul bout sur le poteau et la partie dans le vide au-dessus de la route », « moins de lignes pour les traverses piétons », « ne mets pas de lampadaire aux intersections, déplace-les ». La recherche donne mieux qu'une image : au **Québec les feux sont HORIZONTAUX**, et leurs lentilles ont des **formes** — **carré** rouge, **losange** jaune, **cercle** vert — pour qui ne distingue pas le rouge du vert. À 480 × 270, une forme se lit là où une teinte se devine. Donc : un **vrai tricolore par mât, une seule lentille allumée** ; un mât à **chacun des quatre coins** (ce qui règle le coin manquant), l'axe suivant sa **diagonale** pour que de n'importe quelle approche un feu de son axe soit en face ; une **potence** — le poteau planté au bord du trottoir, la tête en porte-à-faux **au-dessus de la voie**, et un seul gabarit lu par **miroir** ; les **bandes des traverses** ramenées à la norme (bande 0,50 m, vide 0,50 à 0,80 m : le vide est plus large que la bande, c'était l'inverse), avec un pas qui **divise la tuile** — le motif boitait à chaque couture ; et les **lampadaires écartés des coins**, qui sont la place du feu. ⚠️ **Une seule source** : `Monde.feuDeCirculation()` rend la couleur, `feuVert` en découle, le dessin en découle, le trafic obéit à `feuVert` — une lanterne ne peut plus montrer ce qu'un char ne respecte pas. 5 juges neufs |
 | Le son de l'eau | **livré** | 14 sept. 2026 | **P2** | **correctif** | demande de Martin : « améliore le son de quand on va dans l'eau ». Il n'y avait **rien à améliorer** : on y entrait sur de la **tôle froissée** (`SFX.choc`, un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule était muet de bout en bout. Trois bruitages neufs (`plongeon` ×2, `nage` ×3, `couler`) et le câblage des six moments que l'eau produit. ⚠️ **Et un cul-de-sac trouvé en chemin** : `v.conducteur === 'joueur'` — la chaîne — n'était **jamais vrai**, donc « IL COULE — SORS » ne s'affichait jamais et le joueur restait dans un char **retiré des entités**, immobile pour toujours au fond de la baie. 6 juges neufs |
 | M15 La ville te parle | **livré** (1re vague) | 14 sept. 2026 | **P4** | ajout | tout ce qui ne demandait **aucun son neuf**. ⚠️ **La rue se tait quand tu sors une arme** — `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour, il ne manquait qu'une **raison** de le faire tomber ; elle tombe d'un coup, remonte en quatre secondes, et **crie** après un coup de feu. ⚠️ **Les répliques : moins souvent et jamais les mêmes** — `audio.VOIX` promettait « jamais deux fois de suite le même » et le moteur tirait par `Math.random()` **sans mémoire** ; le tirage passe maintenant par `B.rng()` (donc reproductible, donc jugeable) et écarte les dernières. **Parler devient une chance** (35 %), pas une certitude. ⚠️ **Le repli du Clairon enseigne** : un matin calme apprend une chose que tu n'as **pas encore faite**, jamais deux fois la même, et quand il n'y a plus rien à apprendre il redevient « rien à signaler ». **Reste à générer** (crédits + une oreille) : la radio qui parle, la police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques par contexte. 11 juges neufs |
 | Les amuseurs de rue font un vrai spectacle | **livré** | 14 sept. 2026 | **P2** | **correctif** | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
@@ -119,9 +119,12 @@ ne bougent pas quand l'ordre de travail change.
 | Toute la musique générée par IA | **livré** | 14 sept. 2026 | **P2** | **correctif** | demande de Martin : « je veux que toutes les musiques soient des musiques générées par IA ». Les **15 pièces écrites en notes** (thème du menu, 2 stations de char, 5 ambiances de district, poursuite, bagarre, 5 pièces du musicien de rue) deviennent des mp3 ElevenLabs Music — c'est la porte que `musique.py` annonce depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». La synthèse reste le **filet** : un fichier absent, et le séquenceur reprend |
 | M11 La police apprend | **livré** (3 vagues) | 15 sept. 2026 | **P4** | ajout | ⚠️ **LE CASIER PÈSE**, et c'est tout le jalon : chacune des trois vagues en tire une conséquence. **1.** Il allonge la portée du cône des agents (+4 % la page, **plafonné à +50 %** — sans ce plafond, vingt pages feraient voir la police à seize tuiles en pleine nuit et il n'y aurait plus une ruelle où souffler). Pour le joueur seulement : c'est un signalement, pas une paire de jumelles. Et le carnet du poste le **dit** — une règle qu'on subit sans jamais la lire n'est pas une règle, c'est une malchance. **2.** On peut effacer une page, et c'est un **choix** : **Me Desjardins** (table du fond du Brouillard) vend la certitude — une page tout de suite, cher, jamais deux fois le même jour — ou une **provision** qui efface l'amende de la prochaine arrestation ; ⚠️ *sans amende, pas innocent* : la page s'ajoute, les armes partent, le char va au lot. **Électronique Turcotte** (La Shop, le seul lieu neuf) vend le **pari** : on paie d'avance, on revient le lendemain, et on ne sait pas ce qu'on a acheté — rien une fois sur trois, jusqu'à trois pages d'un coup, et **une page DE PLUS** une fois sur cinq. ⚠️ *L'espérance du pari reste sous la certitude à prix égal, à dossier mince comme à dossier épais* — sinon l'avocat ne sert plus à rien et le choix disparaît. **3.** Il transforme les passants en délateurs : **le stool** n'a rien vu, il a reconnu ta FACE, il va téléphoner, et ce qu'il donne au poste est un **plancher** d'étoiles, pas de la chaleur. On le paie, on l'assomme, ou **on change de tête** — le seul levier gratuit, puisque le casier ne redescend qu'en payant. ⚠️ *Il ne naît jamais dans ton dos.* Et **le bouclier humain** : la police ne tire plus **et recule**, mais il se débat, il se dégage à douze secondes, et le compteur monte tant qu'on le tient. ⚠️ *Une sortie de secours, jamais un abri.* 26 juges neufs |
 | Une passe visuelle sur les pâtés de maison | **livré** | 15 sept. 2026 | **P2** | **correctif** | demande de Martin : « fais une passe visuelle d'amélioration de tous les pâtés de maison », puis « les affiches des commerçants doivent être au-dessus du mur » et « les clôtures doivent clôturer les terrains, pas juste être là seules ». Quatre morceaux, un seul sujet : ce qu'on voit d'un îlot. **Le sol** — trottoir, herbe, ruelle font **43 % de la ville** (28 %, 10,5 %, 4,7 %) et se peignaient avec **quatre** tuiles de 16 px tirées sur `hash2 % 4` ; seize usures maintenant (`Monde.USURES_DE_SOL`, la leçon de l'asphalte du stationnement appliquée à trente fois la surface) et, sur le trottoir, une **dalle de deux tuiles de côté** : il peignait son joint sur *chaque* tuile, en haut et à gauche — un trait tous les seize pixels sur le quart de la ville, et ce qu'on lisait c'était la grille de la carte. Fissures, rapiéçages, taches, mousse au joint ; touffes, plaques de terre et pissenlits dans le gazon ; goudron, huile, gravier dans la ruelle ; et **huit grains de toit** au lieu de quatre, avec membrane rapiécée, flaque et coulée de rouille — un entrepôt de La Shop couvre trois cents tuiles d'un seul tenant, quatre grains dessus font un papier peint. ⚠️ Deux règles tiennent tout le bloc, et elles viennent du stationnement : **aucune usure ne touche le bord de la tuile** (sinon on redessine la grille), et **une usure est un dessin, pas du bruit** (trois ou quatre variantes sur seize). **Les allées de parc** : glyphe `g`, de la **poussière de pierre**. Quatre allées de deux tuiles et une place de 5 × 5 au cœur, ça fait près de la moitié d'un îlot — peintes avec le béton de la rue, nos parcs étaient des dalles avec du gazon dessus. Ce n'est pas du sable non plus : la plage borde l'eau, l'allée traverse la pelouse. **L'enseigne** monte **au-dessus du mur** (`ENSEIGNE_Y` négatif : elle déborde de 12 px sur la tuile de toit) ; le bandeau, l'auvent et la vitre se partageaient les 16 px d'*une* tuile — cinq pixels pour le nom, quatre pour l'auvent, trois pour la vitrine. Le mur dégagé donne un auvent de 5 px et une **vitrine de 9** (elle triple, et c'est elle qui s'allume la nuit). Ça tient à un invariant que personne n'avait écrit — **au-dessus d'une devanture il y a du toit, sur toute sa largeur**, vrai 105 fois sur 105 — et un juge le dit maintenant tout haut, sur cinq graines. **Les clôtures** : mesuré sur la ville livrée, **361 tuiles en 80 morceaux, dont 69 sans un seul coin** (216 tuiles de barre droite) et **24 toutes seules**. Trois sources, trois torts : le terrain vague ne peignait qu'**un** côté et **une tuile sur deux** (le code le disait : « à demi n'est pas un juge »), la cour de gang que la rangée du sud, et le U de `_jardin` se posait tuile par tuile pendant que `poser_cloture` en refusait **en silence**. `clore()` pose des **enceintes** — tout ou rien à 75 %, une trouée garantie qui donne sur du marchable, aucune tuile laissée seule — et `elaguer_les_clotures()` enlève après coup ce que la ville leur mange (le glyphe de remplacement se lit dans les voisines, comme `defoncer`). ⚠️ **Une clôture ne remplace ni un mur ni une chaussée** : sans ce garde-fou, le barbelé de la cour des Skateux mangeait deux colonnes de leur stationnement et « il y a un tremplin à La Pointe à tout coup » redevenait une légende. Et la **cour arrière d'un bungalow se clôture** enfin — la banlieue clôturait ses terrains *vides* et pas ses maisons, l'inverse de ce qu'on voit par la fenêtre. Résultat : **483 tuiles en 41 enceintes, zéro barre droite, zéro tuile seule**. ⚠️ **`Des.brule()`** : le barbelé et le terrain vague tiraient dans le dé PRINCIPAL, un coup par tuile. Cesser de tirer décale toute la suite du hasard (`batiment_forme` l'écrivait déjà) — mesuré, douze scènes d'amuseur disparaissaient du Faubourg et « un amuseur naît au centre-ville » tombait, pour une histoire de clôture. On brûle ce qu'on ne tire plus, et on le dit. **Et un rond de terre au pied des arbres de trottoir** (retour de Martin, une fois la passe vue) : un arbre planté dans le béton sans rien à son pied n'est pas planté, il est *posé* — la place publique du Faubourg en portait quatre debout sur des dalles. C'est la **légende** qui décide (`terre` sur l'herbe, le sable et l'allée de parc), pas le dessin, et c'est une **couche peinte** cuite avec le morceau : rien ne s'y cogne, et elle passe sous les entités — repeinte à chaque image, elle recouvrirait les pieds de qui marche juste au nord de l'arbre. ⚠️ C'est la **bordure** d'un pixel qui fait la fosse, pas la terre : sans la coupe dans le béton, le rond brun se lit comme une tache. 583 arbres sur 596 sont sur du gazon — le jour où l'on plantera des arbres de rue pour de bon, chacun aura sa fosse sans qu'on touche à une ligne. ⚠️ Trois juges de banc tenaient à **un pixel**, au **premier décor de la liste** et à **deux pas près** : re-semés et resserrés sur ce qu'ils mesurent vraiment. 11 juges neufs |
-| M10 L'argent sale | **livré** (1re vague) | 15 sept. 2026 | **P4** | ajout | **1re vague : la dette de Rocco**, celle qui donne une raison de se lever le matin. ⚠️ **Aucun lieu neuf, et c'est un choix de design, pas une économie** : un shylock ne tient pas un comptoir où l'on vient payer, il **envoie du monde**. Les rappels arrivent, puis les hommes de main te trouvent où que tu sois — et c'est À EUX qu'on paie. La collecte devient une scène au lieu d'un menu. Les hommes de Sal **prennent de force** si on les laisse approcher, et ⚠️ **ça compte sur la dette** : des hommes de main qui volent sans rien effacer seraient un impôt, pas un recouvrement. Une seule visite par jour, un acompte les renvoie. ⚠️ **Deux bornes qui se tiennent** : elle plafonne à une fois et demie le capital (21 nuits pour y arriver — près de trois heures de partie), et l'intérêt d'une nuit au pire moment reste **sous ce qu'une journée rapporte honnêtement** (450 $ contre 1 230 $, l'étalon étant `PROPRIETES`) — sinon le taxi ne sert plus à rien et il n'y a plus de décision, seulement une descente. Elle se lit dans le carnet et en disparaît une fois réglée. Restent en 2e vague : guichets au camion, skimmers, assurance et fraude |
+| M10 L'argent sale | **en cours** (1re vague) | 15 sept. 2026 | **P4** | ajout | **1re vague : la dette de Rocco**, celle qui donne une raison de se lever le matin. ⚠️ **Aucun lieu neuf, et c'est un choix de design, pas une économie** : un shylock ne tient pas un comptoir où l'on vient payer, il **envoie du monde**. Les rappels arrivent, puis les hommes de main te trouvent où que tu sois — et c'est À EUX qu'on paie. La collecte devient une scène au lieu d'un menu. Restent en 2e vague : guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **à faire** (v2) | — | **P4** | ajout | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
 | M14 Meta v2 | **à faire** (v2) | — | **P4** | ajout | **un compte et une base de données** (la partie voyage du téléphone à l'ordi), défi du jour à graine serveur (reporté de M7), mode photo, coop locale |
+| Les zones conditionnelles | **à faire** | — | **P4** | ajout | demande de Martin : « certaines zones pourraient être bloquées conditionnellement à des missions ou prérequis ». Le jeu a déjà **trois** barrières écrites chacune à sa façon (la guérite de la fourrière, les zones de gang, les barrages à 5★) et M12 en promet une quatrième : une seule fiche `carte.BARRIERES` — où, ce qu'elle arrête (piéton / véhicule / les deux), à quelle condition, ce que coûte de forcer, et la **raison** qui s'affiche. ⚠️ Le juge qui compte : aucune combinaison de barrières fermées n'enferme la planque ni ne rend un lieu de mission inatteignable |
+| L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
+| Quatre activités que le jeu n'a pas | **à faire** | — | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (12 ambulances → +25 % de vie, 50 courses → le taxi rapide), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | M16 Cent missions | **à faire** (v2) | — | **P4** | ajout | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
 | M13 Les deux fins | **à faire** (v2) | — | **P4** | ajout | une mission par district, Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ |
 
@@ -512,6 +515,9 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P3** Trottoir et traverses de deux tuiles | `TROTTOIR = 1` (trottoirs **et** traverses), rues rétrécies pour garder leurs voies, tout ce qui vivait sur le trottoir relogé, le littéral `2` de `monde.js` remplacé par `grille.trottoir`, juges de géométrie rejoués | une rue qui a l'air d'une rue ; aucun bouchon de piétons devant un commerce ni à une traverse |
 | — | **P3** Pièces plus grandes que leur maison | **livré** : plancher de la pièce ≤ empreinte du bâtiment, à toutes les portes ; pièces **par tranche de taille** et la porte prend la plus grande qui tienne (sinon elle reste condamnée) ; parcelle d'un lieu garanti taillée à la mesure de sa pièce ; chaque famille de commerce ouvre au moins une porte | sortir d'un dépanneur sans avoir l'impression d'être sorti d'une cabane |
 | — | **P3** L'eau n'est plus un mur | **livré** : masque de nageur (joueur et agents), souffle qui décide (8 points la tuile), noyade par `Missions.hopital`, char qui coule et qui est perdu, bateau qui flotte par sa fiche, police qui nage, juge du pont reformulé en **carrossable** | traverser le chenal de justesse ; ne jamais atteindre le large ; un char noyé ne revient pas |
+| — | **P4** Les zones conditionnelles | une fiche `carte.BARRIERES` (où, ce qu'elle arrête, la condition, le prix de forcer, la raison affichée) qui avale les trois barrières déjà écrites et les entraves de M12 ; huit barrières de départ, dont le pont fermé aux chars mais jamais aux jambes | aucune combinaison fermée n'enferme la planque ni un lieu de mission, le trafic ne s'empile pas devant une grille, et une zone fermée ne fabrique pas de piétons dedans |
+| — | **P4** L'Île-aux-Corneilles | une île de 40 × 24 dans l'eau qui existe déjà, sans un pont : quai, chapelle (deuxième sauvegarde), usine à poisson, hangar de Sven, **pas de police** ; huit missions (arc I) et la dernière image de _Le dernier traversier_ | l'île ne touche aucune rive, aucune route ne la relie, les étoiles y descendent, chaque terre ferme reste un seul îlot marchable, et le paquet tient sous son plafond |
+| — | **P4** Quatre activités de plus | paliers de boulot à récompense permanente, boulots patrouille et pompier volontaire, la liste du quai, les frénésies | un palier ne se donne qu'une fois et sa récompense existe vraiment ; aucun ne paie mieux à l'heure qu'une mission ; une frénésie ne touche jamais un intouchable |
 | — | **P4** La dépanneuse lève les roues | lien **rigide** au lieu d'un câble, avant levé (collé, deux pixels plus haut, l'ombre restée au sol) et **dans l'axe** ; `plateau` en fiche : moto et vélo montent en entier, dessinés par-dessus, hors des tuiles et hors des chocs ; la remorqueuse refuse d'avancer là où sa charge ne passe pas | reconnaître une dépanneuse d'une auto qui tire une corde ; ramasser une moto sans qu'elle se traîne le nez par terre |
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
@@ -577,6 +583,9 @@ ordre-là.
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
 | **P4** | ajout | M12 La ville vit | 4 | tramway, traversier et neige touchent à la physique |
 | **P4** | ajout | M14 Meta v2 | 4 | de l'**infrastructure** (serveur, BD, comptes) : un autre métier que le reste |
+| **P4** | ajout | Les zones conditionnelles | 3 | avant l'île et avant les entraves de M12 : c'est le mécanisme qu'elles partagent toutes les deux |
+| **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
+| **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
 | **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) ; ⚠️ les dialogues sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
@@ -3751,6 +3760,79 @@ Il avait raison, et la mesure a trouvé pire que « trop ».
   refusé par `carte.py` quand le trottoir y est déjà pris. Ça se voit peu, et ça se corrigerait
   côté carte, pas côté dessin.
 
+### Des feux tricolores, à la québécoise (**correctif**, taille 2) — **livré le 15 sept. 2026**
+
+_Demandes de Martin, dans l'ordre :_ « les feux pourraient être mieux, cherche sur le web des
+représentations visuelles » · « assure-toi que les feux et les voitures suivent la même logique »
+· « je veux des feux tricolores et un seul allumé à la fois » · « les feux piétons sont à part
+mais les piétons le respectent (sauf exception) et les véhicules aussi (sauf exception) » · « mets
+les lumières qui tiennent d'un seul bout sur le poteau et la partie dans le vide au-dessus de la
+route » · « moins de lignes pour les traverses piétons » · « ne mets pas de lampadaire aux
+intersections, déplace-les, ça va laisser la place libre aux feux ».
+
+⚠️ **La recherche a donné mieux qu'une référence de pixel art.** Au **Québec**, les feux sont
+**horizontaux**, et leurs lentilles ont des **formes** : le rouge **carré**, le jaune en
+**losange**, le vert **rond**. Ce n'est pas un détail pittoresque — c'est fait pour qui ne
+distingue pas le rouge du vert (le Nouveau-Brunswick, la Nouvelle-Écosse, l'Île-du-Prince-Édouard
+et l'est de l'Ontario ont suivi). Et ça règle du même coup le problème de lisibilité du jeu : **à
+trois pixels, une forme se lit quand une teinte se devine**. La signalisation d'ici était déjà la
+réponse.
+
+- **Un vrai tricolore, une seule lentille allumée.** Avant, un boîtier portait **deux** lanternes,
+  une par axe, chacune changeant de couleur : ce n'était pas un feu, c'était deux témoins. Un mât
+  montre maintenant **une rue** et **une couleur** ; les deux autres lentilles sont des **douilles
+  éteintes**, cuites dans la fiche, chacune dans un ton très sombre de sa couleur — c'est ce qui
+  fait qu'on voit qu'il y en a trois, et laquelle brille.
+- ⚠️ **Une seule source pour la couleur.** `Monde.feuDeCirculation()` rend `vert`, `jaune` ou
+  `rouge` ; `feuVert` en **découle** (`=== 'vert'`), le **dessin** en découle, et le trafic obéit à
+  `feuVert`. Un feu ne peut donc plus montrer une couleur qu'un char ne respecte pas : c'est la
+  même phrase lue deux fois, jamais deux phrases. Le feu piéton s'était trompé d'un temps
+  exactement parce qu'il relisait `!feuVert` au lieu d'avoir sa règle — on ne recommence pas.
+- ⚠️ **Le jaune n'est pas vert.** Un char qui arrive à la ligne d'arrêt sur le jaune s'arrête.
+  Sans ça, le dégagement du feu piéton ne servirait à rien : le croisement ne se viderait jamais.
+- **L'exception, c'est la sirène.** En poursuite, un char brûle le feu, le STOP et la boîte — une
+  auto-patrouille qui attend au rouge pendant que le joueur s'enfuit n'est pas une poursuite. Un
+  juge neuf pose un char sur une ligne d'arrêt et mesure : il ne bouge pas au rouge, pas au jaune,
+  il part au vert, et il passe au rouge sirène allumée.
+- **Quatre mâts, un par coin** — ce qui règle le coin manquant laissé ouvert la veille. ⚠️ Et
+  l'**axe suit la diagonale** : nord-est et sud-ouest portent le nord-sud, nord-ouest et sud-est
+  l'est-ouest. Qui arrive du sud a les deux coins nord devant lui, donc un de chaque diagonale,
+  donc un feu de **son** axe. Ce n'est pas une convention de goût : c'est une propriété, et un
+  juge la vérifie **pour les quatre approches, à tous les croisements de la ville**.
+- **Une potence, pas un poteau.** Le mât est planté au **bord du trottoir**, côté rue, et la tête
+  porte à faux **au-dessus de la voie**. ⚠️ Planté au **centre** de sa tuile — ce qu'il était —,
+  dix des treize pixels du bras restaient au-dessus du **trottoir** : la tête n'était pas sur la
+  chaussée, elle était à côté. Collé au bord, le bras passe la bordure à trois pixels.
+- ⚠️ **Un seul gabarit, et un miroir.** Tout est écrit « bras vers l'est » ; un mât tourné vers
+  l'ouest se peint avec les **mêmes nombres** passés par `miroir()`, des deux côtés (la fiche cuite
+  **et** la lentille vive — si les deux ne retournaient pas pareil, elle s'allumerait à côté de son
+  trou). Et le miroir **retourne l'ordre des lentilles**, ce qui est juste : le rouge est à gauche
+  **du conducteur**, et deux têtes qui se regardent en sens opposés se voient à l'envers l'une de
+  l'autre, vues d'en haut.
+- **Moins de lignes aux traverses, et la norme dit combien.** Une bande de passage fait **0,50 m**
+  et l'interdistance **0,50 à 0,80 m** : le **vide est plus large que la bande**. Ici c'était
+  l'inverse (3 px de bande, 2 de vide) et un passage se lisait comme un mur blanc. À l'échelle du
+  jeu (1 px ≈ 0,20 m), c'est **3 de bande, 5 de vide**. ⚠️ **Et le pas divise la tuile** : à 5, les
+  bandes tombaient à 1, 6, 11 — deux pixels de vide dedans, **trois à la couture** entre deux
+  tuiles. Le motif boitait à chaque tuile sans qu'on sache pourquoi. À 8, elles tombent à 1 et 9 et
+  le vide fait cinq **partout**, couture comprise.
+- **Les lampadaires quittent les coins.** `lampadaires()` les plantait **sur** les coins du
+  croisement — la place du mât. Tant qu'il n'y avait que deux mâts et aucune lanterne peinte, ça ne
+  se voyait pas ; à quatre mâts peints, ils se disputaient la tuile au vu de tous. Ils s'écartent
+  de **trois tuiles le long de la rue** (jamais en diagonale : un poteau qui recule de biais finit
+  au milieu d'un parterre), et **316 lampadaires, zéro sur un coin réservé**. Ils éclairent
+  d'ailleurs mieux là : entre deux croisements plutôt que dessus.
+- **Juges (5 neufs)** : un tricolore n'allume **qu'une** lentille, à la colonne de sa couleur et de
+  sa **forme**, à cinq instants du cycle ; ce qu'il **montre** et ce que le char **respecte** ne
+  peuvent pas diverger ; de chacune des quatre approches un feu de son axe est en face ; un char
+  s'arrête au rouge et au jaune, part au vert, et brûle le rouge sirène allumée ; aucun lampadaire
+  sur un coin réservé au feu. Les deux juges du dessin **lisent le gabarit dans `DECORS.feu`** au
+  lieu de le recopier — et le miroir avec, sans quoi ils chercheraient la lentille du mauvais côté
+  et diraient « le feu est éteint » alors qu'il brille.
+- **Ce qui reste ouvert** : les quatre bras d'un croisement portent tous au-dessus de la rue
+  **nord-sud** (c'est la géométrie des coins), jamais au-dessus de l'est-ouest. Ça ne se voit pas,
+  mais un vrai carrefour les alterne.
+
 ### M15 — La ville te parle (**ajout**, taille 4) — **1re vague livrée le 14 sept. 2026**
 
 _Ce que ça donne :_ le jeu cesse d'être muet entre deux répliques de mission — et il
@@ -3942,6 +4024,20 @@ _Ce que ça donne :_ une raison de se lever le matin — la dette de Rocco.
   **skimmer** et revenir le lendemain (silencieux, lent, il peut être trouvé).
 - **Assurance et fraude** : assurer un char au garage, le faire disparaître, encaisser —
   trois fois de suite et l'assureur enquête.
+- **La run** (ajouté le 15 sept. 2026, de la tournée du net) : le commerce d'un district à
+  l'autre — acheter bas, vendre haut. C'est le cœur de Chinatown Wars, et ici il ne demande
+  ni marchandise neuve ni personnage neuf : **la contrebande de Sven** (caisses de cigarettes
+  et de boisson) s'achète au quai et se revend au dépanneur, à la taverne, au bar, à la
+  cantine. Un prix par district qui **bouge chaque jour** (la graine du jour, comme les
+  entraves), affiché au comptoir ; le stock se transporte dans le coffre, donc un char qui
+  brûle brûle la run avec.
+  - ⚠️ **Ce qui empêche la machine à argent** : la police **fouille**. Se faire arrêter avec
+    des caisses, c'est les perdre en entier (et c'est pour ça que l'île — pas de police — vaut
+    le détour). Le prix d'achat monte avec ce qu'on a déjà acheté dans la journée, et la
+    marge d'une run complète reste **sous celle d'une mission de l'arc où on se trouve** :
+    un commerce qui paie mieux que l'histoire vide l'histoire.
+  - ⚠️ **Et un garde-fou de ton, tranché ici** : de la boisson et du tabac de contrebande,
+    pas de la drogue. Le jeu se moque de la ville, il ne vend pas ça.
 - `economie.py` : dette, intérêts **bornés**, primes, seuils de suspicion.
 - **Juges** : la dette ne dépasse jamais son plafond ; un joueur qui ne fait rien ne devient
   pas insolvable en une nuit ; la fraude rapporte **moins à l'heure** que le travail honnête
@@ -4090,6 +4186,173 @@ _Ce que ça donne :_ une ville qui bouge toute seule, avec ou sans toi.
 - **Coop locale** (risqué) : deux manettes, une caméra qui tient les deux joueurs, zoom
   arrière quand ils s'éloignent. ⚠️ 480 × 270 n'est pas grand : à décider **après un essai**,
   pas avant.
+
+### Les zones conditionnelles : une porte, une condition, un prix (**ajout**, taille 3)
+
+_Demande de Martin (15 sept. 2026) :_ « certaines zones pourraient être bloquées
+conditionnellement à des missions ou prérequis. »
+
+⚠️ **La ville est ouverte en entier depuis M1, et elle le restera** — c'est la promesse de la
+vision. Ce qui manque n'est pas une clôture, c'est une **raison** : un endroit qu'on regarde
+trois jours avant d'y entrer vaut mieux qu'un endroit qu'on traverse sans le voir. Les jeux
+qui ont posé la question avant nous répondent toujours pareil : la barrière doit avoir une
+**cause dans la fiction** (un pont qu'on répare, un gang qui tient un coin) et non un mur
+invisible, et le joueur doit **voir** ce qui le bloque.
+
+Or le jeu a déjà **trois barrières**, chacune écrite à sa façon, et aucune ne se déclare :
+la **guérite de la fourrière** (une grille de 4 tuiles, un comptoir, `etoiles_vol` si on
+force), les **zones de gang** (`hostile_toujours`, `hostile_si_arme` : ce n'est pas un mur,
+c'est une menace) et les **barrages de police** à 5★. M12 en promet une quatrième famille
+(les entraves du jour). Quatre mécanismes pour la même idée, c'est trois de trop.
+
+**La règle : une barrière est une fiche, pas un cas.** `carte.BARRIERES` en Python, lue par
+le navigateur comme le reste :
+
+- **où** : un rectangle de tuiles, ou la grille d'un lieu spécial ;
+- **quoi** : ce qu'elle arrête — `pieton`, `vehicule`, ou les deux. ⚠️ C'est la clé qui évite
+  la moitié des pièges : un pont fermé aux **chars** mais pas aux **jambes** bloque sans
+  jamais enfermer ;
+- **quand** : la condition — `apres: "<mission>"`, `exige: {...}` (le même objet que M16),
+  `heure: "jour"|"nuit"`, ou `jour_tire` (la graine du jour : c'est ainsi que les entraves de
+  M12 entrent dans le même mécanisme) ;
+- **combien** : `forcer` — ce que ça coûte de passer quand même (`etoiles`, `degats`,
+  `payer`), ou `null` pour les deux seules qui ne se forcent pas : le barbelé et l'eau ;
+- **quoi dire** : `raison`, une ligne en majuscules — « LES SKATEUX TIENNENT LE PONT ». Elle
+  s'affiche quand on s'y bute, et le carnet la liste.
+
+**Les huit barrières de départ** (les trois qui existent y rentrent, cinq sont neuves) :
+
+| Barrière | Où | Arrête | Condition | Forcer |
+|---|---|---|---|---|
+| Le pont de La Pointe | l'unique pont de la carte (`PONTS`) | **véhicules** | ouvert par p02 | passer à pied, ou pousser les cônes au char (dégâts) |
+| La guérite de la fourrière | lot de La Shop (existe) | véhicules | payer au comptoir | 1★ (`etoiles_vol`, déjà écrit) |
+| La cour de l'usine Prévost | La Shop | les deux | ouverte le **jour** | 1★ et deux gardiens |
+| La cour à ferraille de Ti-Loup | La Shop | les deux | après s02 | 1★ |
+| L'allée de la villa du maire | Les Érables | véhicules | après e07 (la clé) | 2★ et deux gardiens |
+| Le quai du cargo | Les Quais | les deux | ouvert la **nuit** (déchargement) | 1★ et les matelots |
+| Les entraves du jour | n'importe quelle rue | véhicules | `jour_tire` (M12) | dégâts, et un détour existe toujours |
+| Le traversier | quai → l'Île | — | un horaire, un billet | aucun : c'est de l'eau (voir la fiche de l'Île) |
+
+**⚠️ Les quatre pièges, et ils sont tous du même genre : enfermer quelqu'un.**
+
+1. ⚠️ **Une barrière fermée ne doit jamais couper un chemin de retour.** Le juge se calcule :
+   pour **chaque combinaison** de barrières fermées, la composante marchable qui contient la
+   planque doit contenir tous les lieux des missions alors disponibles. `composantes_marchables()`
+   existe depuis M1, le juge est une boucle par-dessus.
+2. ⚠️ **Le trafic doit la voir**, sinon les chars s'empilent devant une grille qu'ils ne
+   connaissent pas. Une barrière écrit dans les **masques de tuiles** (comme les entraves de
+   M12), pas seulement dans le dessin — et le chien de garde du trafic (dix secondes sans
+   bouger) dira tout de suite si on s'est trompé.
+3. ⚠️ **Une zone fermée ne se peuple pas.** Les piétons et les chars naissent dans une bulle
+   autour du joueur : une cour fermée qui en fabrique quand même donne des gens enfermés qui
+   tournent en rond. Ce que la barrière ferme, elle le vide.
+4. ⚠️ **On doit voir pourquoi.** La barrière se dessine (une grille, des cônes, une guérite),
+   la mini-carte la marque, et `raison` s'affiche quand on s'y bute. Une porte fermée sans
+   raison lisible est un bogue, même quand c'est voulu.
+
+**Juges** : aucune combinaison de barrières n'enferme la planque ni ne rend un lieu de mission
+inatteignable ; chaque barrière déclare son `arrete`, sa condition, son `forcer` et sa
+`raison` ; aucune ne bloque un **piéton** sans qu'un autre chemin existe (seul le barbelé en a
+le droit) ; le trafic ne s'empile pas devant une barrière fermée (le chien de garde ne mord
+pas plus qu'avant) ; et une zone fermée ne contient aucun piéton ni char né après sa
+fermeture.
+
+### L'Île-aux-Corneilles : la ville a une île et ne le sait pas (**ajout**, taille 3)
+
+_Demande de Martin (15 sept. 2026) :_ « tu peux extensionner la carte au besoin. »
+
+⚠️ **Mesuré d'abord : le besoin est plus petit qu'il en a l'air.** La carte fait 421 × 213
+tuiles, et **21 % en sont déjà de l'eau** — 18 675 tuiles. Au milieu de la baie il y a un
+rectangle de **40 × 24 tuiles d'eau pleine** (à partir de 158, 116) qui ne touche aucune
+rive. On n'agrandit donc **rien** : on pose une île dans ce qui existe, et la carte garde sa
+taille, son paquet et tous ses juges de géométrie.
+
+**Pourquoi une île, et pas un quartier de plus.** Depuis que l'eau n'est plus un mur (livré le
+14 sept.), la baie est **traversable** — à la nage, en chaloupe, et un char y coule. La ville
+a donc un cinquième de sa surface qui ne sert qu'à se noyer. Et deux choses du plan pointent
+déjà vers un ailleurs sans l'avoir : le **traversier** de M12, qui ne va nulle part, et
+_Le dernier traversier_ (m99), la fin où l'on sacre son camp — aujourd'hui un fondu au noir
+sur un quai. L'île leur donne une destination.
+
+**Ce qu'elle est.** Un quai de bois, une **chapelle** et son couvent à moitié vide, une
+**usine à poisson** fermée depuis quinze ans, six maisons, un hangar sans nom au bout du
+chemin. Trente habitants l'hiver. Pas de gang. Et surtout :
+
+- ⚠️ **Pas de police.** C'est la seule idée mécanique de la fiche, et elle vaut toutes les
+  autres : on peut y **laisser refroidir** un char et un casier. Les étoiles tombent à quai
+  et ne remontent pas — mais l'île n'a qu'un chemin de retour, et Roy finit par le savoir
+  (M11). Un endroit sûr qui n'a qu'une porte n'est pas un endroit sûr, c'est un piège qu'on
+  choisit.
+- **On y va comme on veut** : à la nage (long, et on arrive les mains vides), en chaloupe
+  (celle du capitaine, gagnée en q08), en bateau volé, ou par le **traversier** quand M12 le
+  fera rouler. C'est la barrière la plus honnête du jeu : elle n'est pas fermée, elle est
+  **loin**.
+- **Un char sur l'île y reste** : rien n'y roule qui n'ait été débarqué. Le premier char que
+  tu y emmènes par le traversier est un événement.
+
+**⚠️ Ce que coûte un septième district**, et il faut le dire avant de dessiner :
+
+- **une ambiance de plus** (la musique par district est livrée) — ou elle emprunte celle de La
+  Pointe, et ça s'entend ;
+- **un rythme de population** (`DISTRICTS`), une couleur de légende, une ligne de mini-carte ;
+- ⚠️ **les juges de géométrie ne parlent pas de l'eau** : « un seul îlot marchable » deviendrait
+  faux le jour où l'île existe. Il devient « **un îlot par terre ferme**, et chacun atteignable
+  par l'eau » — c'est une ligne de juge, mais il faut la changer **exprès**, pas la découvrir ;
+- ⚠️ **le paquet** : 40 × 24 tuiles de plus, plus une chapelle et un hangar en intérieurs. On
+  mesure avant (370 Ko bruts sur 600).
+
+**L'arc de l'île est dans M16** (arc I, huit missions), et _Le dernier traversier_ y gagne sa
+dernière image : le traversier passe devant l'île, et la ville rapetisse derrière.
+
+**Juges** : l'île ne touche aucune rive (une ceinture d'eau d'au moins quatre tuiles tout
+autour) ; on ne peut y arriver qu'à la nage, par un bateau ou par le traversier — aucun pont,
+aucune tuile de route ne la relie ; la police n'y patrouille pas et les étoiles y descendent ;
+chaque terre ferme reste un seul îlot marchable ; et le paquet reste sous son plafond.
+
+### Ce que le net apprend : quatre activités que le jeu n'a pas (**ajout**, taille 2)
+
+_Demande de Martin (15 sept. 2026) :_ « regarde sur le net pour des idées de missions ».
+
+En comparant Bandini aux classiques vus d'en haut (GTA 1 et 2, Chinatown Wars) et aux
+inventaires de « tout ce qu'il y a à faire » des GTA 3D, **la ville a déjà presque tout** : les
+paquets cachés (20), les défis de saut (3, cinq de plus dans M16), quatre boulots au klaxon,
+les propriétés, le marché noir. Quatre choses manquent, et chacune se paie en données, pas en
+moteur.
+
+1. **Les boulots montent en grade.** Dans les GTA, le taxi, l'ambulance et les pompiers
+   donnent des **récompenses permanentes** (de la vie, une immunité, un char à la planque),
+   par paliers ; ici, un boulot paie et c'est tout. Trois paliers par boulot (10, 25, 50),
+   comptés dans `p.stats`, et une récompense qui **change la partie** : 12 ambulances →
+   +25 % de vie ; 50 courses de taxi → le taxi rapide à la planque ; 25 remorquages → le lot
+   ne te fait plus payer. ⚠️ Et la borne du plan tient : une récompense de boulot ne doit
+   jamais payer mieux **à l'heure** qu'une mission, sinon le jeu se joue tout seul.
+2. **Deux boulots de plus**, et aucun ne demande un véhicule neuf (⚠️ la refonte des
+   véhicules passe avant tout char de plus) :
+   - **La patrouille** — dans une auto-patrouille **volée**, un point rouge sur la mini-carte :
+     un fuyard à rattraper avant la fin du chrono. C'est la _vigilante_ des GTA, et Bandini lui
+     donne ce qu'elle n'a nulle part ailleurs : tu fais la police **avec un casier**, dans un
+     char qui n'est pas à toi. Récompense de palier : `casier −1` tous les cinq (M11).
+   - **Pompier volontaire** — au Québec, les pompiers d'un village sont des volontaires qu'on
+     appelle chez eux. Un feu quelque part, un extincteur, un chrono (`eteindre` arrive avec
+     M16). Pas de camion à dessiner : ce qui compte, c'est d'arriver.
+3. **La liste du quai** (le _wheeler-dealing_ de GTA 2, le quai d'exportation de GTA III) :
+   Sven — ou Ti-Loup si on l'a brûlé — affiche **quatre modèles** sur une ardoise au quai. Les
+   livrer, sans bosse, un par jour. La liste se renouvelle. ⚠️ C'est l'activité qui donne enfin
+   une raison de **regarder** le parc automobile : aujourd'hui un coupé sport et une berline
+   valent pareil dès qu'ils roulent.
+4. **Les frénésies** (les _rampages_). Une icône cachée, une arme, un chrono, un compte à
+   faire. C'est le classique du genre, et c'est trois lignes de données : `tuer` + `chrono_s`
+   + une arme imposée. ⚠️ Deux garde-fous, et ils ne sont pas négociables : **les enfants
+   restent intouchables** (ils le sont déjà, dans le code, pour tout le monde), et une frénésie
+   se déclenche **exprès** — jamais un objectif qu'on reçoit au téléphone. C'est la seule
+   activité du jeu qui ne prétend pas être autre chose que du chaos, et c'est à Martin de dire
+   si la ville en veut.
+
+**Juges** : un palier de boulot ne se donne qu'une fois et sa récompense existe (un char à la
+planque est vraiment garé) ; aucun palier ne paie mieux à l'heure qu'une mission ; la
+patrouille ne compte que les vrais fuyards ; la liste du quai ne demande que des modèles qui
+existent au catalogue et qu'on peut trouver dans la ville ; une frénésie ne touche jamais un
+intouchable.
 
 ### M16 — Cent missions (**ajout**, taille 8, en quatre tranches de 2)
 
@@ -4406,14 +4669,97 @@ des Érables_ (vélo, du dépanneur à la villa < 0:45, sans tomber) · _Le drif
 points dans les bois < 1:00) · _Le port à port_ (n'importe quoi, du quai au phare < 1:20).
 250 $ chacun.
 
+#### Ajouté le 15 sept. 2026 — vingt missions de plus, après une tournée du net
+
+_Demande de Martin :_ « regarde sur le net pour des idées de missions et tu peux en ajouter ou
+modifier ce qui est dans le plan. »
+
+Ce qui est ressorti de la comparaison avec les classiques vus d'en haut (GTA 1 et 2,
+Chinatown Wars) : le catalogue d'ici **couvre déjà leurs verbes** — voler un véhicule précis,
+filer quelqu'un, protéger, détruire, livrer au chrono, tenir un siège. Trois formes leur
+appartiennent encore, et les voici. Les activités qui n'en sont pas (frénésies, liste du quai,
+boulots gradés) ont leur propre fiche, plus haut.
+
+**Arc I — L'Île-aux-Corneilles** (8) — la fiche de l'île est plus haut ; voici ce qu'on y
+fait. Deux personnages de plus : **Sœur Jeanne** (`jeanne`, la dernière religieuse de la
+chapelle) et **Léo Cyr** (`leo`, l'insulaire qui garde le hangar et ne pose pas de questions).
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| i01 | Le moteur tourne | Capitaine Bérubé | q08 | la chaloupe marche enfin : lui porter sa caisse d'outils **sur l'île**, et y mettre le pied pour la première fois | 120 ; l'île au carnet, contact Léo |
+| i02 | La cloche de Sœur Jeanne | Sœur Jeanne | i01 | la cloche de la chapelle a fini chez Ti-Loup : la racheter (_payer_ 200) ou la reprendre, et la ramener par l'eau (lourde, on marche) | 150 ; **on dort à la chapelle** — une deuxième sauvegarde, à l'autre bout de la baie |
+| i03 | Le hangar sans nom | Josée | q04, i01 | de nuit, `sans_etoile` : deux caisses à ramasser dans le hangar de Sven et à charger sur le bateau | 400 |
+| i04 | Laisser refroidir | Léo | i01 | y amener un char **chaud** (3★ au départ), le laisser une journée entière, revenir le chercher | 0 ; le char repeint, les plaques changées — et la règle de l'île comprise |
+| i05 | L'usine à poisson | Sœur Jeanne | i02 | des squatteurs ont mis le feu à l'ancienne usine : _eteindre_, puis en coucher trois | 200 |
+| i06 | Le dernier bateau du Norvégien | Josée | i03, q11 | _detruire_ le bateau de Sven à quai, 3★ **sur l'eau** — et la police ne nage pas vite | 500 |
+| i07 | Le tour de l'île | Léo | i04 | _course_ en bateau autour de l'île `contre` Léo, six points ⏳ bateau (repli : à la nage, trois points) | 200 |
+| i08 | La cache de Rocco | Ti-Guy | i01, d05 | les papiers du coffre parlaient d'une île : ramasser la cache sous la chapelle, 2★ (quelqu'un d'autre la cherchait) | 1 200 |
+
+**Le casse — arc X, _Le coup de la Caisse populaire_** (4) — la forme que le plan n'avait pas :
+**trois préparatifs, puis le coup, et ce qu'on a préparé change le coup**. C'est le patron des
+casses modernes, et il ne demande **aucun type neuf** : `exige` fait tout le travail.
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| x01 | Le repérage | Josée | d06, q11 ou q10 | la caisse populaire du Faubourg : y aller à trois heures différentes (matin, midi, soir) et _suivre_ le convoyeur jusqu'à son camion | 0 ; **ouvre x02, x03, x04** |
+| x02 | Le char qui part vite | Josée | x01 | voler un **coupé sport**, le faire repeindre au garage, le garer à la planque | 0 ; le char à la planque (`exige` de x04) |
+| x03 | Le linge propre | Rosa | x01 | une tenue de livreur oubliée à la boutique : la prendre et la porter | 0 ; la tenue (`exige` de x04) |
+| x04 | Le coup | Josée | x01 [ce qu'on a préparé] | entrer à la caisse, _survivre_ 60 s, ramasser les sacs, semer 4★, livrer au bar | 2 500 ; **ferme d08** (Sal prend sa part) |
+
+⚠️ **Sans les préparatifs, x04 se joue quand même — plus mal**, et c'est tout l'intérêt : sans
+la tenue, on entre à 2★ au lieu de 0 ; sans le coupé sport, la police tient la poursuite ; sans
+arme à feu, les 60 secondes se font aux poings. Le juge : la mission est **finissable** dans
+les quatre combinaisons, et chaque préparatif manquant se **dit** à l'intro.
+
+⚠️ **La caisse populaire est un cinquième lieu spécial** — le plan s'en tenait à quatre
+exprès (une pièce à dessiner, une porte, un juge). Celui-là se paie : c'est le seul intérieur
+où l'on se bat contre le temps.
+
+**Huit missions de plus dans les arcs existants** — chacune vient d'un verbe des classiques
+que Bandini n'utilisait pas encore :
+
+| # | Titre | Donneur | Après | Ce qu'on fait | Paie |
+|---|---|---|---|---|---|
+| f13 | Les volontaires | Mado | f11 | trois feux dans la nuit, aux quatre coins du Faubourg : _eteindre_ chacun avant qu'il gagne la façade | 200 ; **le boulot pompier volontaire** |
+| q14 | La liste du Norvégien | Sven (ou Ti-Loup si q11) | q10 ou q11 | quatre modèles sur l'ardoise du quai, à livrer sans bosse, un par jour | 250 ; **la liste du quai** (l'activité) |
+| e14 | C'était un accident | Diane | e07 | la berline du maire doit finir dans sa propre piscine, et personne ne doit t'avoir vu (`sans_etoile`) | 300 ; Louise a sa photo |
+| s14 | La casse à Ti-Loup | Ti-Loup | s02 | trois **autos-patrouilles** au compacteur dans la même nuit — chacune coûte au moins 1★, et il faut semer entre les deux | 450 |
+| p12 | Le radeau de Zed | Zed | p04, i01 | les Skateux veulent l'île : leur amener un bateau au quai de La Pointe, sans le couler | 150 |
+| h08 | La traverse de l'urgence | Dr Lachance | h04, i01 | quelqu'un s'est blessé sur l'île : y aller, le ramasser, le ramener à l'hôpital, chrono 200 s ⏳ traversier (repli : la chaloupe) | 250 |
+| r08 | La patrouille de Roy | Inspectrice Roy | r03 | cinq fuyards rattrapés en auto-patrouille, en une semaine de jeu — le boulot patrouille, avec sa bénédiction | 250 ; casier −2 |
+| d09 | Un compte sur l'île | Sal | d04, i01 | Léo doit 800 à Sal : _parler_, puis choisir — le coucher, ou payer pour lui | 250, ou dette −800 |
+
+**Et deux choses qui changent dans ce qui existait :**
+
+- **m99 _Le dernier traversier_ a enfin une dernière image.** Le traversier ne s'en va plus
+  dans un fondu au noir : il **passe devant l'île**, Sœur Jeanne sonne sa cloche si on la lui a
+  rendue (i02), et la ville rapetisse derrière. Rien de neuf à écrire — un trajet, et la caméra
+  qui reste sur le quai.
+- **p02 _Le pont est bloqué_ cesse d'être une fiction.** Les cônes des Skateux deviennent une
+  **vraie barrière** du catalogue (fiche des zones conditionnelles) : fermée aux chars, jamais
+  aux jambes, et forçable en défonçant. La mission ne pose plus le décor, elle **ouvre la
+  barrière**.
+
 #### Le compte, et l'équilibre
 
-- **114 missions** (5 + 109), **8 défis**, **9 arcs**, **34 personnages**, 3 piétons de
-  mission et un chien. Les missions **paient 28 620 $** si l'on additionne tout, un peu
+- **134 missions** (5 + 109 + 20), **8 défis**, **11 arcs**, **36 personnages**, 3 piétons de
+  mission et un chien. Les missions **paient 35 990 $** si l'on additionne tout, un peu
   moins dans une vraie partie (les choix en ferment) — de quoi rembourser Rocco (15 000)
   **ou** acheter les quatre propriétés (17 800), jamais les deux : le reste vient des
-  boulots, des propriétés et de ce qu'on vole. C'est voulu, et c'est un juge : la somme
-  reste entre 24 000 et 32 000.
+  boulots, des propriétés et de ce qu'on vole.
+  - ⚠️ **Et voilà exactement ce que vingt missions de plus coûtent à l'équilibre**, compté :
+    elles paient **7 370 $** (368 en moyenne, contre 340 pour les 109 — les deux gros coups,
+    le casse et la cache, en portent la moitié à eux seuls). La somme passe donc de 28 620 à
+    **35 990**, soit **2,4 fois la dette** : la borne absolue du juge (24 000–32 000) ne
+    survit pas à un catalogue qui grossit, et il faut le dire au lieu de le découvrir.
+    - Ce qui la remplace est un **rapport**, parce que c'est lui qui porte le sens :
+      **la somme reste sous 2,4 fois la dette**, et surtout **une vraie partie reste sous
+      32 800** — le prix des deux fins ensemble (15 000 de dette + 17 800 de propriétés).
+    - Et c'est tenable sans rien couper, parce que les **choix ferment** : q10/q11, r03/r04,
+      d07/d08, e11, et maintenant x04 qui ferme d08. Une partie qui va au bout en perd
+      environ 3 000 en chemin — donc ≈ 33 000 encaissés pour 32 800 à dépenser. ⚠️ **C'est
+      serré exprès**, et c'est le juge à écrire : la partie la plus gourmande possible ne doit
+      pas dépasser le prix des deux fins de plus de 5 %.
 - **Chaque type d'objectif est utilisé au moins trois fois**, sinon il ne valait pas un
   type. Chaque district a **au moins dix missions** qui s'y passent, et chaque heure
   (jour, soir, nuit) en a.
@@ -4441,6 +4787,10 @@ points dans les bois < 1:00) · _Le port à port_ (n'importe quoi, du quai au ph
 4. **Les petites jobs, les défis et les fins** (taille 2) : arc T, les cinq défis, m97 à
    m99 — cette tranche-là **est** M13, qui garde les génériques et la ville qui change de
    couleur.
+5. **L'île et le casse** (taille 2, ajoutée le 15 sept. 2026) : l'île et ses barrières
+   d'abord (les deux fiches plus haut), puis l'arc I, l'arc X et les huit missions des autres
+   arcs. ⚠️ Elle vient **en dernier** et elle ne bloque rien : aucune mission des quatre
+   premières tranches n'en dépend, et les deux fins tiennent sans elle.
 
 #### Juges
 
