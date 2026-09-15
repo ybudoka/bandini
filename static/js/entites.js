@@ -1092,27 +1092,6 @@ const Entites = (function () {
     }
   }
 
-  /** Met `e.nage` a jour, et fait le bruit et les remous a l'image ou il ENTRE
-      dans l'eau. Rend true cette image-la.
-
-      ⚠️ UN SEUL ENDROIT, et c'est tout l'interet : `police.js` pose lui aussi
-      `a.nage` avant de deplacer son agent (il lui faut le masque du nageur tout
-      de suite). Quand chacun lisait la transition de son cote, le premier la
-      mangeait — et l'agent qui se jetait a l'eau derriere toi le faisait sans
-      un bruit.
-
-      ⚠️ Le son est POSE dans le monde (`jouerA`) : celui qui plonge a dix
-      tuiles ne s'entend pas comme celui qui plonge a tes pieds. Le joueur, lui,
-      a son propre plongeon dans `majJoueur` — avec son filet synthetise. */
-  function mouiller(e) {
-    const avant = e.nage;
-    e.nage = dansLEau(e);
-    if (!e.nage || avant) return false;
-    remous(e.x, e.y, 8);
-    Son.jouerA('plongeon', e.x, e.y);
-    return true;
-  }
-
   function deboutDansLaFoule(e) {
     return e.actif && e.vivant && !e.dansVehicule && e.etat !== 'assomme'
       && (e.type === 'pieton' || e.type === 'joueur');
@@ -1279,8 +1258,6 @@ const Entites = (function () {
       l'une des deux change, l'autre ment. */
   function noyade(j) {
     remous(j.x, j.y, 16);
-    // Le moment le plus grave que l'eau produit : il ne peut pas etre muet.
-    Son.SFX.couler();
     j.vx = 0; j.vy = 0;
     Missions.hopital(null);
   }
@@ -1300,12 +1277,7 @@ const Entites = (function () {
     // geographie, pas au gout.
     const nageait = j.nage;
     j.nage = dansLEau(j);
-    // ⚠️ On entre ET on sort. L'entree jouait `choc` — la TOLE FROISSEE d'un
-    // accident de char, le seul son d'eau que le jeu ait jamais eu — et la
-    // sortie ne jouait rien du tout. C'est le meme plongeon des deux cotes ;
-    // en sortant, une brassee suffit : on quitte l'eau, on ne la frappe pas.
-    if (j.nage && !nageait) { remous(j.x, j.y, 10); Son.SFX.plongeon(); }
-    else if (!j.nage && nageait) { remous(j.x, j.y, 6); Son.SFX.nage(); }
+    if (j.nage && !nageait) { remous(j.x, j.y, 10); Son.SFX.choc && Son.SFX.choc(); }
     if (j.roule > 0) {                       // roulade : on ne se dirige plus
       j.roule--;
       deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
@@ -1364,10 +1336,8 @@ const Entites = (function () {
     const d = Math.hypot(j.x - avant.x, j.y - avant.y);
     j.anim.dist += d;
     j.pasDist += d;
-    // Un pas sur le trottoir, une BRASSEE dans l'eau — et la brassee est plus
-    // longue : a 1 px par image, une toutes les 14 px sonnerait comme une
-    // machine a laver. A 34, il en part une et demie par seconde.
-    if (j.pasDist > (j.nage ? 34 : 14)) { j.pasDist = 0; if (j.nage) Son.SFX.nage(); else Son.SFX.pas(); }
+    // On ne fait pas de pas dans l'eau.
+    if (j.pasDist > 14) { j.pasDist = 0; if (!j.nage) Son.SFX.pas(); }
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
@@ -1473,7 +1443,9 @@ const Entites = (function () {
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
-    mouiller(e);
+    const nageait = e.nage;
+    e.nage = dansLEau(e);
+    if (e.nage && !nageait) remous(e.x, e.y, 8);
     if (e.saigne > 0) saigner(e);
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
@@ -1611,6 +1583,13 @@ const Entites = (function () {
       // et rien ne le disait : on le voyait suivre.
       const pas = e.capVite ? v.pieton_course * e.allure : vitesse;
       if (norme > 340 || ++e.capT > 600) { e.etat = 'flane'; e.cap = null; e.capVite = false; e.vx = 0; e.vy = 0; }
+      // ⚠️ ARRIVE, ON S'ARRETE. Sans ce palier, le pickpocket poussait dans sa
+      // victime image apres image : `cap` le ramenait dedans, `demeler` le
+      // ressortait, et les deux corps restaient enfonces l'un dans l'autre
+      // trois images d'affilee. Douze pixels, c'est sous le seuil de toutes les
+      // routines (le facteur a 14, la contractuelle 22, le laveur 24) : chacune
+      // se declenche quand meme, a la prochaine image de `majSortes`.
+      else if (norme <= 12) { e.vx = 0; e.vy = 0; }
       else { e.vx = dx / norme * pas; e.vy = dy / norme * pas; }
     } else if (e.etat === 'arret') {
       // On s'arrete : on regarde une vitrine, on attend quelqu'un, on respire.
@@ -1639,13 +1618,6 @@ const Entites = (function () {
         }
       } else {
         if (e.butT-- <= 0) {
-      // ⚠️ ARRIVE, ON S'ARRETE. Sans ce palier, le pickpocket poussait dans sa
-      // victime image apres image : `cap` le ramenait dedans, `demeler` le
-      // ressortait, et les deux corps restaient enfonces l'un dans l'autre
-      // trois images d'affilee. Douze pixels, c'est sous le seuil de toutes les
-      // routines (le facteur a 14, la contractuelle 22, le laveur 24) : chacune
-      // se declenche quand meme, a la prochaine image de `majSortes`.
-      else if (norme <= 12) { e.vx = 0; e.vy = 0; }
           // Celle qui tient un poste (la Brume) s'arrete deux fois plus
           // souvent, et repart vers son lampadaire des qu'elle s'en eloigne.
           const rayonPoste = e.posteRayon || POSTE_RAYON;
@@ -2033,9 +2005,14 @@ const Entites = (function () {
     }
     if (j.dansVehicule) return;
     if (accosterDepuisLaBrume(j)) return;
+    // ⚠️ PARLER EST UNE CHANCE, PAS UNE CERTITUDE. Un passant qui parle chaque
+    // fois qu'on le frole rend huit repliques fatigantes bien avant qu'elles
+    // soient usees — la plupart des gens qu'on croise ne disent rien.
+    const chance = ((B.defs.audio && B.defs.audio.parole) || {}).chance;
     for (const e of pietonsAutour(j.x, j.y, 30)) {
       if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
       e.aParle = true;
+      if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
       const femme = /passante|dame|mere|racoleuse/.test(e.arch);
       Son.Voix.dire(femme ? 'femme' : 'homme', e.x, e.y);
       break;
@@ -2061,14 +2038,9 @@ const Entites = (function () {
       }
     }
     // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
-    // ⚠️ PARLER EST UNE CHANCE, PAS UNE CERTITUDE. Un passant qui parle chaque
-    // fois qu'on le frole rend huit repliques fatigantes bien avant qu'elles
-    // soient usees — la plupart des gens qu'on croise ne disent rien.
-    const chance = ((B.defs.audio && B.defs.audio.parole) || {}).chance;
     // date du debut de l'image, et demeler la foule sur des positions perimees
     // laisse passer exactement les paires qui viennent de se rejoindre.
     indexer();
-      if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
     demeler();
     majParticules();
     if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
@@ -2311,7 +2283,7 @@ const Entites = (function () {
     naitreLesSortes, majSortes, SORTES, ATTROUPEMENT_PX,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
-    deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
+    deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,

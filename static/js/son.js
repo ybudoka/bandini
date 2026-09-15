@@ -283,20 +283,6 @@ const Son = (function () {
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
-    // --- L'eau ---------------------------------------------------------------
-    // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
-    // accident de char — et nager ne jouait rien du tout : les pas sont coupes
-    // dans l'eau, et rien ne les remplacait. Trois sons pour les trois moments
-    // que l'eau produit deja : on entre, on avance, on coule.
-    plongeon: function () { if (!joue('plongeon')) { bruit(0.45, 0.5, 2500, 250); ton(300, 0.22, 'sine', 0.14, 0.25); bruit(0.16, 0.14, 9000, 4000); } },
-    // La brassee : elle part a la DISTANCE parcourue, comme un pas.
-    nage: function () { if (!joue('nage')) bruit(0.2, 0.14, 1300, 350); },
-    // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
-    couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },
-    // ⚠️ Le char n'a PAS son propre fichier, et c'est voulu : c'est la meme
-    // eau, avec plus de masse. Le plongeon plus un coup de grave — ce qui
-    // manque a un corps de 80 kg, c'est le poids, pas la matiere.
-    char_a_l_eau: function () { if (!joue('plongeon')) bruit(0.6, 0.6, 2200, 200); ton(55, 0.5, 'sine', 0.3, 0.5); },
     // ⚠️ Trois portes : le bois et la serrure d'un logement, la vitre et la
     // porte d'un commerce, la portiere d'un char. Le jeu appelle
     // `porte(genre)` ; le genre vient de la fiche — de la piece (`carte._piece`,
@@ -479,22 +465,6 @@ const Son = (function () {
 
     /** Un passant parle, si personne n'a parle depuis un moment. Rend le slug.
         `slug` : cette replique-la (choisie par `choisir`), sinon une au hasard. */
-    dire: function (genre, x, y, slug) {
-      const reglages = (B.defs && B.defs.audio && B.defs.audio.parole) || {};
-      const mort = reglages.temps_mort_images || 420;
-      if (B.t - Voix.dernierT < mort) return null;
-      const tous = Voix.liste().filter(function (v) {
-        return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
-      });
-      const v = Voix.tirer(tous);
-      if (!v) return null;
-      Voix.dernierT = B.t;
-      const j = B.joueur;
-      echantillon('voix-' + v.slug, { volume: v.volume, pan: j ? (x - j.x) / 200 : 0 });
-      return v.slug;
-    },
-  };
-
     //: Les dernieres repliques dites, toutes voix confondues : on ne les
     //: retire pas du tirage par politesse, on les retire parce que « jamais
     //: deux fois de suite la meme » etait ECRIT dans la fiche et FAUX dans le
@@ -526,6 +496,22 @@ const Son = (function () {
       while (Voix.dernieres.length > (reglages.memoire || 2)) Voix.dernieres.shift();
       return v;
     },
+
+    dire: function (genre, x, y, slug) {
+      const reglages = (B.defs && B.defs.audio && B.defs.audio.parole) || {};
+      const mort = reglages.temps_mort_images || 420;
+      if (B.t - Voix.dernierT < mort) return null;
+      const tous = Voix.liste().filter(function (v) {
+        return v.genre === genre && (!slug || v.slug === slug) && tampons.has('voix-' + v.slug);
+      });
+      const v = Voix.tirer(tous);
+      if (!v) return null;
+      Voix.dernierT = B.t;
+      const j = B.joueur;
+      echantillon('voix-' + v.slug, { volume: v.volume, pan: j ? (x - j.x) / 200 : 0 });
+      return v.slug;
+    },
+  };
 
   // --- L'ambiance : la musique de fond, a pied ---------------------------------------
 
@@ -673,34 +659,6 @@ const Son = (function () {
   // --- La rumeur : la foule qu'on entend sans la voir ----------------------------------
 
   const Rumeur = {
-    /** Le volume suit le nombre de gens autour : rien dans une ruelle vide,
-        un brouhaha sur la place — et la peur par-dessus. */
-    maj: function (gens) {
-      const r = (B.defs && B.defs.audio && B.defs.audio.rumeur) || {};
-      const pas = r.retour_par_image || 0.004;
-      let voulu = Math.min(1, gens / 10);
-      if (B.t < Rumeur.criT) voulu = Math.min(1, voulu * (r.cri_part || 1.7));
-      else if (B.t < Rumeur.peurT) voulu *= (r.peur_part || 0.18);
-      // ⚠️ Elle TOMBE d'un coup et REMONTE doucement : c'est la chute qui se
-      // remarque, et c'est la remontee lente qui fait qu'on se sent surveille
-      // encore un moment apres avoir rangé l'arme.
-      // ⚠️ `pas * 15` : `maj` ne tourne qu'une image sur quinze, et le pas de
-      // la fiche est par IMAGE. Sans ce facteur, la remontee est quinze fois
-      // trop lente — ce qui ne se voit pas, ca ressemble juste a une rue qui
-      // ne revient pas.
-      Rumeur.volume = voulu < Rumeur.volume
-        ? voulu
-        : Math.min(voulu, Rumeur.volume + pas * 15);
-      if (Rumeur.volume <= 0.02) { boucle('foule', false); return; }
-      if (!boucleActive('foule')) boucle('foule', true, Rumeur.volume);
-      reglerBoucle('foule', Rumeur.volume);
-    },
-  };
-
-  // --- La radio : une station par char, chargee au premier tour de cle ---------
-
-  const Radio = {
-    courante: null,          // slug de la station qui joue
     //: JUSQU'A QUAND la rue se tait, et jusqu'a quand elle crie — en `B.t`, pas
     //: en images restantes. ⚠️ `maj` ne tourne qu'une image sur quinze : un
     //: compteur qu'on decremente de un a chaque appel met quinze fois trop
@@ -730,6 +688,34 @@ const Son = (function () {
       Rumeur.peurT = 0;
     },
 
+    /** Le volume suit le nombre de gens autour : rien dans une ruelle vide,
+        un brouhaha sur la place — et la peur par-dessus. */
+    maj: function (gens) {
+      const r = (B.defs && B.defs.audio && B.defs.audio.rumeur) || {};
+      const pas = r.retour_par_image || 0.004;
+      let voulu = Math.min(1, gens / 10);
+      if (B.t < Rumeur.criT) voulu = Math.min(1, voulu * (r.cri_part || 1.7));
+      else if (B.t < Rumeur.peurT) voulu *= (r.peur_part || 0.18);
+      // ⚠️ Elle TOMBE d'un coup et REMONTE doucement : c'est la chute qui se
+      // remarque, et c'est la remontee lente qui fait qu'on se sent surveille
+      // encore un moment apres avoir rangé l'arme.
+      // ⚠️ `pas * 15` : `maj` ne tourne qu'une image sur quinze, et le pas de
+      // la fiche est par IMAGE. Sans ce facteur, la remontee est quinze fois
+      // trop lente — ce qui ne se voit pas, ca ressemble juste a une rue qui
+      // ne revient pas.
+      Rumeur.volume = voulu < Rumeur.volume
+        ? voulu
+        : Math.min(voulu, Rumeur.volume + pas * 15);
+      if (Rumeur.volume <= 0.02) { boucle('foule', false); return; }
+      if (!boucleActive('foule')) boucle('foule', true, Rumeur.volume);
+      reglerBoucle('foule', Rumeur.volume);
+    },
+  };
+
+  // --- La radio : une station par char, chargee au premier tour de cle ---------
+
+  const Radio = {
+    courante: null,          // slug de la station qui joue
     demandee: null,          // slug demande pendant que le fichier arrive
     chargees: new Map(),     // slug -> AudioBuffer
 
