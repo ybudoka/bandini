@@ -176,6 +176,14 @@ def test_chacun_des_quatre_fait_un_numero_qui_bouge(banc, spectacle):
             const images = new Set(), poses = new Set();
             for (let i = 0; i < 600; i++) {
                 o.frame(1);
+                // ⚠️ **ON LE TIENT SUR SA SCENE.** Ce juge mesure le GESTE, et
+                // il le disait deja — mais il le mesurait dans une ville
+                // vivante : il a suffi qu'un camion tombe en panne au bout de
+                // la rue pour que le jongleur devienne TEMOIN, s'en aille, et
+                // ne montre plus que deux dessins. Un amuseur qui regarde un
+                // accident ne joue pas ; ce n'est pas son numero qu'on
+                // mesurait alors, c'est le hasard de la rue.
+                e.etat = 'fige'; e.plante = { x: e.x, y: e.y };
                 images.add(e.poseFixe);
                 const img = L.Entites.imageDe ? L.Entites.imageDe(e) : null;
                 if (img) poses.add(img.canvas);

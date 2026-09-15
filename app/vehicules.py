@@ -232,6 +232,22 @@ TRAFIC = {
     # mouvement — le reste tire au sort comme toujours, sinon la ville entiere
     # roule dans le meme sens et ce n'est plus une heure de pointe, c'est une
     # evacuation.
+    # ⚠️ **LE CHAR EN PANNE** — une entrave qui n'etait PAS prevue, et c'est
+    # tout son interet : elle n'a ni cones, ni panneau, ni liste validee par
+    # Python. Un camion s'arrete en travers d'une voie, ses feux de detresse
+    # battent, et il repart au bout d'une heure de jeu. Le trafic sait deja
+    # quoi en faire : il se deporte (`obstacleDevant`), exactement comme
+    # devant un pieton plante sur la chaussee.
+    #
+    # ⚠️ Elle dure UNE HEURE, pas un jour : une entrave du jour change la
+    # ville, une panne ne fait que la contrarier. Et elle ne se tire qu'une
+    # fois par heure de jeu — sinon la ville est un garage.
+    "panne": {
+        "chance_par_heure": 0.35,
+        "minutes": 40,             # en minutes de jeu
+        "slugs": ["camion", "autobus", "remorqueuse", "auto"],
+        "detresse_images": 26,     # ses feux battent a ce rythme
+    },
     "pointe": {
         "matin": [0.27, 0.42],     # 6 h 30 → 10 h : on rentre travailler
         "soir": [0.68, 0.84],      # 16 h 20 → 20 h : on en sort

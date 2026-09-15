@@ -588,3 +588,105 @@ def test_le_chantier_a_ses_ouvriers_et_on_ne_les_fauche_pas(banc, paquet):
     assert r["archIntouchable"] is False and r["passantIntouchable"] is False, (
         "tous les ouvriers de la ville sont devenus intouchables : %s" % r
     )
+
+
+# --- Le char en panne --------------------------------------------------------
+
+
+def test_la_fiche_de_la_panne_se_tient():
+    """Une entrave qu'on n'a **pas** vue venir : ni cônes, ni panneau, ni liste
+    validée par Python. Elle dure une **heure**, pas un jour — une entrave du
+    jour change la ville, une panne ne fait que la contrarier."""
+    f = vehicules.TRAFIC["panne"]
+    assert 0 < f["chance_par_heure"] <= 1
+    assert 0 < f["minutes"] < 24 * 60, "une panne qui dure plus qu'une journée n'est plus une panne"
+    assert f["detresse_images"] > 0
+    slugs = {v["slug"] for v in vehicules.de_phase(1)}
+    assert f["slugs"] and set(f["slugs"]) <= slugs, f["slugs"]
+
+
+def test_un_char_en_panne_bat_ses_feux_repart_et_n_est_pas_mal_gare(banc, paquet):
+    """⚠️ **`laisse` veut dire « le JOUEUR l'a abandonné ici »**, et c'est lui
+    seul que la fourrière suit. Marquer la panne ainsi la faisait déclarer MAL
+    GARÉE : le HUD nageait dans « la fourrière va passer » pendant qu'un camion
+    battait ses feux de détresse. Un char en panne n'est pas mal garé — il est
+    en panne."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(31);
+        const p = L.B.partie, f = L.B.defs.conduite.trafic.panne;
+        // On cherche une heure ou la panne tombe : elle se tire du JOUR et de
+        // l'HEURE, donc elle est la meme a chaque partie — c'est voulu.
+        let v = null;
+        for (let h = 0; h < 24 && !v; h++) {
+            p.heure = (h + 0.5) / 24;
+            B_panne_reset(L);
+            L.Vehicules.majPanne();
+            v = L.B.entites.find(function (q) { return q.panneT > 0; }) || null;
+        }
+        function B_panne_reset(L) { L.B.panneHeure = -1; }
+        if (!v) return { pasDePanne: true };
+        // ⚠️ On mesure ce que la FOURRIERE fait, pas ce que `malGare` rend :
+        // un camion arrete sur la chaussee EST sur la chaussee — la question
+        // est de savoir si le lot le suit, et il ne suit que ce que le joueur
+        // a laisse (`laisse`).
+        L.B.msg = null;
+        v.malGareT = 0;
+        for (let i = 0; i < 4; i++) { L.B.t += 60; L.Missions.majMalGares(); }
+        const out = { slug: v.slug, arret: Math.abs(v.vitesse) < 0.01, laisse: !!v.laisse,
+                      suivi: v.malGareT > 0, msg: L.B.msg, duree: v.panneT,
+                      conducteur: v.conducteur, etat: v.etat };
+        // Elle ne compte pas dans les places de stationnement de la ville.
+        const stationnes = L.B.entites.filter(function (q) {
+            return q.type === 'vehicule' && !q.conducteur && q.etat !== 'epave' && !(q.panneT > 0);
+        }).length;
+        out.stationnesSansElle = stationnes;
+        // Et elle s'en va quand son heure est finie.
+        v.panneT = 2;
+        o.frame(4);
+        out.partie = L.B.entites.indexOf(v) < 0;
+        return out;
+    }""")
+    assert not r.get("pasDePanne"), "aucune heure de la journée ne donne une panne"
+    f = vehicules.TRAFIC["panne"]
+    assert r["slug"] in f["slugs"], r["slug"]
+    assert r["arret"] is True and r["conducteur"] is None and r["etat"] == "stationne"
+    assert r["laisse"] is False, "la panne est marquée comme abandonnée par le joueur"
+    assert r["suivi"] is False, "la fourrière suit un char en panne : %s" % r
+    assert "MAL GARÉ" not in (r["msg"] or ""), "le HUD annonce la fourrière devant un char en panne : %s" % r["msg"]
+    assert r["duree"] > 0
+    assert r["partie"] is True, "la panne ne repart jamais"
+
+
+def test_une_panne_ne_tire_pas_un_seul_de_du_jeu(banc, paquet):
+    """⚠️ **La leçon du pilote des deux-roues, rejouée.** Ce qui naît pour le
+    DÉCOR ne doit pas décaler le hasard du jeu : chaque dé tiré déplace tous
+    ceux qui suivent. Une panne qui prenait un dé au passage (sa couleur, sa
+    place) a fait tomber quatre juges d'un coup — et aucun ne parlait de
+    pannes. Le juge compte les dés, six cents images durant, panne ou pas."""
+    def compter(chance):
+        return banc("""function (L, o) {
+            L.Jeu.commencer();
+            L.graine(5);
+            // ⚠️ On eteint la panne PAR SA FICHE, pas par un drapeau interne :
+            // c'est la seule facon d'etre sur que les deux parties ne different
+            // QUE par la panne.
+            L.B.defs.conduite.trafic.panne.chance_par_heure = %s;
+            const vrai = L.B.rng;
+            let n = 0;
+            L.B.rng = function () { n++; return vrai(); };
+            o.frame(600);
+            const pannes = L.B.entites.filter(function (q) { return q.panneT > 0; }).length;
+            L.B.rng = vrai;
+            L.B.defs.conduite.trafic.panne.chance_par_heure = %s;
+            return { des: n, pannes: pannes };
+        }""" % (chance, vehicules.TRAFIC["panne"]["chance_par_heure"]))
+
+    avec, sans = compter(1), compter(0)
+    r = {"avec": avec, "sans": sans}
+    assert r["avec"]["pannes"] >= 1, "aucune panne n'est tombée : le juge ne mesure rien (%s)" % r
+    assert r["sans"]["pannes"] == 0, "la panne est tombée quand même : %s" % r
+    assert r["avec"]["des"] == r["sans"]["des"], (
+        "la panne a tiré %s dés du jeu : tout ce qui suit est décalé"
+        % (r["avec"]["des"] - r["sans"]["des"])
+    )

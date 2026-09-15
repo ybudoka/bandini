@@ -64,7 +64,13 @@ const Vehicules = (function () {
   function creer(slug, x, y, angle, options) {
     const def = vehiculeDef(slug);
     if (!def) return null;
-    const couleur = def.couleurs[Math.floor(B.rng() * def.couleurs.length)];
+    // ⚠️ **UNE COULEUR DONNEE NE TIRE PAS DE DE.** Ce qui nait pour le DECOR —
+    // un char en panne, demain une charrue — ne doit pas decaler le hasard du
+    // jeu : chaque de tire deplace tous ceux qui suivent, et quatre juges sont
+    // tombes le jour ou une panne a pris un de au passage. C'est la meme lecon
+    // que le pilote des deux-roues, et c'est la seule ligne qui la tient.
+    const couleur = (options && options.couleur)
+      || def.couleurs[Math.floor(B.rng() * def.couleurs.length)];
     const v = Entites.creer('vehicule', x, y, Object.assign({
       slug: slug, def: def, angle: angle || 0, vitesse: 0, vx: 0, vy: 0, z: 0, vz: 0,
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: nuances(couleur),
@@ -161,6 +167,67 @@ const Vehicules = (function () {
   }
 
   /** Comme les pietons : naitre hors champ, s'oublier hors de la bulle. */
+  /** **Le char en panne** : une entrave qu'on n'a pas vue venir. Il s'arrete
+      en travers d'une voie, ses feux de detresse battent, et il repart au bout
+      d'une heure de jeu.
+
+      ⚠️ Rien de neuf pour le trafic : un char arrete sur la chaussee, il sait
+      deja — il se deporte (`obstacleDevant`), comme devant un pieton plante au
+      milieu de la rue. C'est la difference avec le chantier du jour : celui-la
+      a ses cones et sa liste validee, celle-ci n'a que ses feux.
+
+      ⚠️ Une fois par HEURE de jeu, pas une fois par image : `B.partie.heure`
+      avance de 1/`jour_secondes` par seconde, et on ne tire qu'au changement
+      d'heure — sinon la ville est un garage. */
+  /** Une place pour un char en panne, tiree d'une EMPREINTE et non du de du
+      jeu : on tourne autour du joueur jusqu'a trouver une voie hors ecran. */
+  function placeDeLaPanne(graine) {
+    const t = trafic(), j = B.joueur;
+    for (let essai = 0; essai < 24; essai++) {
+      const h = hash2(graine, essai);
+      const a = (h % 3600) / 3600 * Math.PI * 2;
+      const d = t.naissance_px + ((h >> 12) % 100) / 100 * (t.oubli_px - t.naissance_px - 80);
+      const x = j.x + Math.cos(a) * d, y = j.y + Math.sin(a) * d;
+      const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+      const f = Monde.fleche(tx, ty);
+      if (!PAS_FLECHE[f]) continue;
+      const p = PAS_FLECHE[f];
+      return { x: tx * TT + 8, y: ty * TT + 8, angle: Math.atan2(p[1], p[0]), sens: f };
+    }
+    return null;
+  }
+
+  function majPanne() {
+    const f = trafic().panne;
+    if (!f || !B.joueur || B.interieur || !B.partie) return;
+    const heure = Math.floor(B.partie.heure * 24);
+    if (B.panneHeure === heure) return;
+    B.panneHeure = heure;
+    // ⚠️ `hash2` du JOUR et de l'HEURE, pas `B.rng()` : une panne est un decor,
+    // et un decor ne consomme pas un de du jeu.
+    if (hash2(B.partie.jour * 31 + heure, 0x9A44E) / 4294967296 >= f.chance_par_heure) return;
+    if (B.entites.some(function (e) { return e.panneT > 0; })) return;
+    // ⚠️ La PLACE aussi se tire au jour et a l'heure, pas au de du jeu :
+    // `placeDansLeTrafic` en consomme deux, et deux des pris pour un decor
+    // decalent toute la ville.
+    const place = placeDeLaPanne(hash2(B.partie.jour, heure * 7 + 3));
+    if (!place || Entites.visibleAEcran(place.x, place.y, 40)) return;
+    const slug = f.slugs[hash2(heure, B.partie.jour) % f.slugs.length];
+    const def = vehiculeDef(slug);
+    const v = creer(slug, place.x, place.y, place.angle, {
+      etat: 'stationne', sens: place.sens,
+      couleur: def.couleurs[hash2(B.partie.jour * 13, heure) % def.couleurs.length],
+    });
+    if (!v) return;
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    v.panneT = Math.round(f.minutes / (24 * 60) * B.defs.economie.jour_secondes * 60);
+    // ⚠️ **PAS `laisse`.** Ce mot-la veut dire « le JOUEUR l'a abandonne ici »,
+    // et c'est lui seul que la fourriere suit (`majMalGares`) : marquer la
+    // panne ainsi la faisait declarer MAL GAREE — le HUD nageait dans « la
+    // fourriere va passer » pendant qu'un camion avait ses feux de detresse.
+    // Un char en panne n'est pas mal gare : il est en panne.
+  }
+
   function peupler() {
     const t = trafic(), j = B.joueur;
     let roulent = 0, stationnes = 0;
@@ -170,6 +237,11 @@ const Vehicules = (function () {
       const loin = dist2(v.x, v.y, j.x, j.y) > t.oubli_px * t.oubli_px;
       if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
       if (v.etat === 'epave') continue;
+      // ⚠️ **UNE PANNE N'EST PAS UN CHAR GARE** : la compter dans les places
+      // de stationnement prenait une place au parc normal, donc la ville
+      // faisait naitre un char de moins — et chaque naissance evitee decale
+      // tous les des qui suivent. Un juge d'amuseur est tombe pour ca.
+      if (v.panneT > 0) continue;
       if (v.conducteur === 'trafic') roulent++; else if (v.conducteur !== j) stationnes++;
     }
     if (B.t % 20 !== 0) return;
@@ -814,6 +886,7 @@ const Vehicules = (function () {
     bruitDePassage(v);
     majNidDePoule(v);
     if (v.forceT > 0) v.forceT--;
+    if (v.panneT > 0) { v.panneT--; if (!v.panneT) Entites.retirer(v); }
     if (majNoyade(v)) return;
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
@@ -1712,6 +1785,7 @@ const Vehicules = (function () {
   }
 
   function maj() {
+    majPanne();
     const j = B.joueur;
     if (!j || B.interieur) { majSirenes(); return; }
     for (let i = B.entites.length - 1; i >= 0; i--) {
@@ -2340,6 +2414,19 @@ const Vehicules = (function () {
       i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
       if (i < 0) i += ROTATIONS;
     }
+    // ⚠️ **LES FEUX DE DETRESSE** d'un char en panne : deux ambres qui battent
+    // aux quatre coins de sa caisse. C'est tout ce qui le distingue d'un char
+    // mal gare — et c'est exactement ce qu'on veut dire.
+    if (v.panneT > 0 && Math.floor(B.t / trafic().panne.detresse_images) % 2 === 0) {
+      const demi = v.def.longueur / 2, cote = v.def.largeur / 2;
+      const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
+      ctx.fillStyle = '#ffb02e';
+      for (const [dx, dy] of [[demi, cote], [demi, -cote], [-demi, cote], [-demi, -cote]]) {
+        ctx.fillRect(Math.round(v.x + dx * ca - dy * sa - cx) - 1,
+                     Math.round(v.y + dx * sa + dy * ca - v.z - cy) - 1, 2, 2);
+      }
+      B.stats.rects += 4;
+    }
     const ombre = ombreDe(v);
     if (ombre) {
       // ⚠️ ORIENTEE COMME LE CHAR. Une tache alignee sur les axes ne dit rien
@@ -2389,7 +2476,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();
