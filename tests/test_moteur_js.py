@@ -1842,15 +1842,29 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // de ses deux vitesses est toujours nulle ; l'ivrogne, lui, a sa
         // direction tournee par un sinus — ses deux vitesses sont non nulles
         // presque tout le temps. C'est la regle elle-meme, pas son ombre.
+        // ⚠️ ON NE MESURE QUE LA FLANERIE LIBRE, et c'est la moitie du juge.
+        // Le passant ordinaire a DEUX autres facons de marcher, toutes deux
+        // obliques et toutes deux legitimes : pousse sur la chaussee, il
+        // regagne le trottoir le plus proche en diagonale ; et une fois sur
+        // douze, `quelquUnRentre()` lui donne une porte et il y va tout
+        // droit — `etat` reste « flane » pendant ce temps-la. Le temoin du
+        // juge est tombe sur la deuxieme : cent dix-neuf images a marcher
+        // vers sa porte, et le juge a accuse « un passant ordinaire marche en
+        // biais ». C'etait vrai, et ca ne disait rien de l'ivrogne. Ce qui
+        // distingue l'ivrogne, c'est que sa FLANERIE est tordue — alors on
+        // ne mesure que la flanerie.
         function deTravers(e) {
             let bouge = 0, obliques = 0;
             for (let i = 0; i < 240; i++) {
                 o.frame(1);
+                if (e.porteBut) continue;                       // il rentre chez lui
+                if (e.recul > 0) continue;                      // il vient d'encaisser
+                if (L.Monde.estChaussee(Math.floor(e.x / TT), Math.floor(e.y / TT))) continue;
                 if (Math.hypot(e.vx, e.vy) < 0.1) continue;
                 bouge++;
                 if (Math.abs(e.vx) > 0.05 && Math.abs(e.vy) > 0.05) obliques++;
             }
-            return bouge ? Math.round(100 * obliques / bouge) : 0;
+            return { pct: bouge ? Math.round(100 * obliques / bouge) : 0, pas: bouge };
         }
         const soul = o.poser('ivrogne', 40, 0); soul.etat = 'flane';
         const sobre = o.poser('passant', -40, 0); sobre.etat = 'flane';
@@ -1859,7 +1873,8 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // Une arme sous le nez : tout le monde fuit, lui repond.
         sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
         L.Entites.alerter(soul.x, soul.y, j, 2);
-        out.ivrogne = { zigzag: vireSoul, droit: vireSobre, corps: soul.sprite,
+        out.ivrogne = { zigzag: vireSoul.pct, droit: vireSobre.pct,
+                        pasSoul: vireSoul.pas, pasSobre: vireSobre.pas, corps: soul.sprite,
                         fuit: soul.etat === 'fuit', repond: soul.bulle ? soul.bulle.texte : null,
                         lAutreFuit: sobre.etat === 'fuit' || sobre.etat === 'temoin' };
         soul.etat = 'flane';
@@ -1880,6 +1895,14 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // 4. LE JOGGER : il ne s'arrete JAMAIS, et il ne temoigne de rien.
         const jog = o.poser('jogger', 40, 0); jog.etat = 'flane';
         const flaneur = o.poser('passant', -40, 0); flaneur.etat = 'flane';
+        // ⚠️ LE TRAFIC NE DOIT PAS DECIDER DU RESULTAT. On pose les deux a une
+        // distance fixe du joueur, sans regarder ce qui roule : le temoin s'est
+        // fait ecraser par une moto a la HUITIEME image sur neuf cents, le juge
+        // a compte zero pause et a accuse « un flaneur ne s'arrete jamais ».
+        // `intouchable` est le drapeau des enfants : le char ne les renverse
+        // pas. Il ne touche NI aux pauses NI a la marche — les deux seules
+        // choses qu'on mesure ici — et il rend le decor reproductible.
+        jog.intouchable = true; flaneur.intouchable = true;
         L.Entites.indexer();
         let pauses = 0, pausesFlaneur = 0;
         let routeJ = 0, routeF = 0;
@@ -1894,6 +1917,15 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
             // image, les deux passent par la meme porte, des centaines de fois.
             if (jog.etat === 'flane') jog.butT = 0;
             if (flaneur.etat === 'flane') flaneur.butT = 0;
+            // ⚠️ ET ON LES GARDE DEHORS. `quelquUnRentre()` donne une porte a
+            // un flaneur une fois sur douze, et `porteBut` court-circuite
+            // toute la flanerie : il marche vers chez lui, il ne s'arrete
+            // plus, et `butT` ne sert plus a rien. Le temoin y est parti, et
+            // le juge a dit « un flaneur ne fait jamais de pause » — ce qui
+            // est faux de la flanerie et vrai de celui qui rentre souper.
+            // Rentrer chez soi est une TROISIEME routine ; elle ne repond ni
+            // a la question du jogger ni a celle de l'ivrogne.
+            jog.porteBut = null; flaneur.porteBut = null;
             o.frame(1);
             if (jog.etat === 'arret') pauses++;
             if (flaneur.etat === 'arret') pausesFlaneur++;
@@ -1902,6 +1934,7 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
             avantJ = { x: jog.x, y: jog.y }; avantF = { x: flaneur.x, y: flaneur.y };
         }
         out.jogger = { pauses: pauses, pausesFlaneur: pausesFlaneur, corps: jog.sprite,
+                       vivants: jog.vivant && flaneur.vivant,
                        route: Math.round(routeJ), routeFlaneur: Math.round(routeF),
                        temoin: L.Entites.archetype('jogger').temoin };
         L.Entites.retirer(jog); L.Entites.retirer(flaneur);
@@ -1952,10 +1985,15 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
     i = r["ivrogne"]
     # ⚠️ L'ivrogne est de travers presque tout le temps ; un passant suit un
     # axe, donc jamais. La marge est énorme parce que la règle est nette.
+    # ⚠️ Et le decor doit AVOIR FLANE : sans ces deux lignes, un temoin qui
+    # passe ses 240 images a rentrer chez lui donne « 0 % de pas obliques » et
+    # le juge passe au vert en n'ayant rien mesure du tout.
+    assert i["pasSoul"] >= 60 and i["pasSobre"] >= 60, (
+        "le décor du juge est faux : personne n'a marché sur le trottoir (%s)" % i
+    )
     assert i["zigzag"] >= 70, "l'ivrogne marche droit : %s %% de pas obliques" % i["zigzag"]
     assert i["droit"] <= 10, (
-        "le décor du juge est faux : un passant ordinaire ne marche pas en biais (%s %%)"
-        % i["droit"]
+        "le décor du juge est faux : un passant ordinaire ne marche pas en biais (%s)" % i
     )
     assert i["fuit"] is False, "l'ivrogne fuit devant une arme : %s" % i
     assert i["lAutreFuit"] is True, "le décor du juge est faux : le passant, lui, doit réagir"
@@ -1968,7 +2006,8 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
     # --- Le jogger ------------------------------------------------------------
     g = r["jogger"]
     assert g["pauses"] == 0, "le jogger s'arrête : %s" % g
-    assert g["pausesFlaneur"] > 0, "le décor du juge est faux : un flâneur, lui, fait des pauses"
+    assert g["vivants"] is True, "le décor du juge est faux : le trafic a tué un des deux (%s)" % g
+    assert g["pausesFlaneur"] > 0, "le décor du juge est faux : un flâneur, lui, fait des pauses (%s)" % g
     assert g["route"] > g["routeFlaneur"], "le jogger ne court pas plus loin qu'un flâneur : %s" % g
     assert g["temoin"] == 0.0, "le jogger ne témoigne de rien : %s" % g
     assert g["corps"] == "jogger"
@@ -3074,13 +3113,20 @@ def test_la_bagarre_tient_le_budget(banc):
         L.graine(13);
         o.singe(2500, 3, ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'Space', 'ShiftLeft', 'KeyE', 'Tab']);
         const s = L.B.stats;
-        let flaneurs = 0, metiers = 0;
+        // ⚠️ `vivant` : un CADAVRE n'est pas un flaneur. `peupler()` compte
+        // « e.vivant && !e.metier » — c'est SA definition du budget, et c'est
+        // elle qu'on juge. Un corps laisse par terre par le singe faisait
+        // compter vingt-neuf personnes pour vingt-huit vivantes : le moteur
+        // tenait son budget et le juge accusait un emballement.
+        let flaneurs = 0, metiers = 0, morts = 0;
         for (const e of L.B.entites) {
             if (e.type !== 'pieton' || !e.actif) continue;
+            if (!e.vivant) { morts++; continue; }
             if (e.metier || e.personnage) metiers++; else flaneurs++;
         }
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
-                 flaneurs: flaneurs, metiers: metiers, budget: L.Entites.MAX_PIETONS,
+                 flaneurs: flaneurs, metiers: metiers, morts: morts,
+                 budget: L.Entites.MAX_PIETONS,
                  particules: L.B.particules.length, decals: L.B.decals.length,
                  images: s.images, morceaux: s.morceaux,
                  nan: isNaN(L.B.joueur.x) || isNaN(L.B.joueur.y) };
@@ -3104,7 +3150,8 @@ def test_la_bagarre_tient_le_budget(banc):
     # n'a pas dit « le budget a change », il a dit « emballement ». Un plafond
     # recopie dans un juge finit toujours par juger l'ancien.
     assert r["flaneurs"] <= r["budget"], (
-        f"{r['flaneurs']} flaneurs, le budget est de {r['budget']}"
+        f"{r['flaneurs']} flaneurs vivants, le budget est de {r['budget']} "
+        f"({r['morts']} corps par terre, qui ne comptent pas)"
     )
     assert r["actifs"] <= r["budget"] + 28, (
         f"{r['actifs']} pietons actifs ({r['metiers']} a un metier)"

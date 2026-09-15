@@ -427,7 +427,7 @@ DISTRICTS: tuple[dict, ...] = (
      "rares": (),
      "plan": ("U<i<i<p",
               "^<^<^<^",
-              "i<g<i<i",
+              "i<g<E<i",
               "^<^<^<^",
               "i<Y<i<c",
               "^<^<^<^")},
@@ -557,6 +557,13 @@ SPECIAUX: dict[str, dict] = {
     # v2 / M9 — le lot de la fourriere. Ce n'est pas un ilot bati : c'est une
     # cour d'asphalte cloturee avec une guerite, et `_fourriere()` la pose.
     "Y": {"slug": "fourriere", "nom": "Fourrière municipale", "interieur": "fourriere",
+          "genre": "industriel", "famille": "service"},
+    # v2 / M11 — le seul lieu neuf de la deuxieme vague. Une reparation de
+    # televisions sur un lot d'entrepot de La Shop, avec une arriere-boutique.
+    # ⚠️ C'est le TRAJET qui fait le risque : La Shop tombe a 0,15 la nuit, et
+    # y aller quand il travaille, c'est y aller seul. Un comptoir de plus au
+    # bar n'aurait rien coute a personne.
+    "E": {"slug": "electronique", "nom": "Électronique Turcotte", "interieur": "electronique",
           "genre": "industriel", "famille": "service"},
 }
 
@@ -3522,7 +3529,7 @@ B ah  ah   B
 B          B
 Baaaa    ahB
 BBBBWWDWWBBB
-""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7)),
+""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7), _pt("avocat", 2, 5)),
      gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 5))),
 
     # Le casse-croute : la cuisine, les tabourets, les banquettes du fond.
@@ -3618,6 +3625,23 @@ BBBBBBWWDWWBBBBBB
      gens=_gens(("commis", 2, 6), ("client", 10, 3))),
 
     # La fourriere : un comptoir, un classeur, et la cour derriere la vitre.
+    # Electronique Turcotte : la vitrine repare des televisions ; l'arriere-
+    # boutique fait autre chose. ⚠️ Le mur du fond n'est pas de la decoration :
+    # on ne voit pas de la rue ce qui se passe derriere, et c'est tout le
+    # personnage.
+    _piece("electronique", "Électronique Turcotte", plan="""
+BBBBBBBBBBB
+Bm  k  m  B
+B         B
+BBBBB BBBBB
+B         B
+Beee   eeeB
+B ccccc  nB
+Bn        B
+BBBWWDWWBBB
+""", points=(_pt("hacker", 1, 1),),
+     gens=_gens(("commis", 5, 5),)),
+
     _piece("fourriere", "Fourrière municipale", sol="u", plan="""
 BBBWWWBB
 Bkk   nB

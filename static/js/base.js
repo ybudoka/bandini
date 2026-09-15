@@ -70,6 +70,13 @@ function etatInitial(defs) {
     //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
     //: quand il deborde — un ordre, donc, pas un sac.
     fourriere: [],
+    //: M11 — ce qu'on a entrepris pour faire maigrir son casier. `avocatJour`
+    //: est le jour ou Me Desjardins a travaille (il ne travaille pas deux fois
+    //: le meme) ; `commande` est la job payee d'avance au comptoir du fond de
+    //: La Shop, qui ne donne de nouvelles que le lendemain.
+    //: ⚠️ La commande est DANS LA SAUVEGARDE : on a paye hier, on apprend
+    //: aujourd'hui, et il n'y a pas de retour en arriere.
+    nettoyage: { avocatJour: 0, commande: null },
     //: Les gens qu'on a RENCONTRES (slug -> jour). ⚠️ Sans ca, le repertoire
     //: du carnet montrerait des personnages qu'on n'a jamais vus — et il
     //: divulgacherait l'histoire : Josee, le Dr Lachance de M13, Marco qui te
@@ -278,7 +285,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

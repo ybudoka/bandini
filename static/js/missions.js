@@ -730,7 +730,7 @@ const Missions = (function () {
     repeindre: 'REPEINDRE', acheter: 'ACHETER', hotdog: 'MANGER', soigner: 'SE FAIRE SOIGNER', caisse: 'LA CAISSE',
     journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', casier: 'LE CARNET',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
-    fourriere: 'LE LOT',
+    fourriere: 'LE LOT', avocat: 'PARLER A L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
@@ -847,6 +847,10 @@ const Missions = (function () {
         return menuCasier();
       case 'fourriere':
         return menuFourriere(items);
+      case 'avocat':
+        return menuAvocat();
+      case 'hacker':
+        return menuHacker();
       default:
         return null;
     }
@@ -1230,6 +1234,112 @@ const Missions = (function () {
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
     else Hud.message('JOUR ' + B.partie.jour);
+  }
+
+  // --- Effacer le casier : la certitude, ou le pari ---------------------------------------
+
+  /** Ce que le comptoir demande, dossier en main. ⚠️ Rien ne se calcule ici :
+      le serveur descend la table `prix_effacer[quoi][casier]`, et le prix monte
+      avec l'epaisseur du dossier comme l'amende. */
+  function prixEffacer(quoi) {
+    const eco = B.defs.economie;
+    const table = (eco.prix_effacer || {})[quoi] || [];
+    return table[borner(B.partie.casier, 0, eco.casier_max)] || 0;
+  }
+
+  function pages(n) { return n + ' PAGE' + (n > 1 ? 'S' : ''); }
+
+  /** Me Desjardins, au fond du Brouillard : cher, sur, une page, une fois par
+      jour. ⚠️ C'est la MOITIE d'un choix — l'autre est au comptoir du fond de
+      La Shop, et aucun des deux n'a de sens sans l'autre. Seul, l'un ou
+      l'autre serait un bouton « annuler la partie ». */
+  function menuAvocat() {
+    const p = B.partie, fiche = B.defs.economie.effacer.avocat;
+    const prix = prixEffacer('avocat'), items = [];
+    const occupe = p.nettoyage.avocatJour === p.jour;
+    items.push({ libelle: 'TON DOSSIER', detail: pages(p.casier), actif: false });
+    items.push({
+      libelle: 'EFFACER ' + pages(fiche.pages),
+      detail: occupe ? 'PAS AVANT DEMAIN' : (p.casier ? prix + ' $' : 'RIEN A EFFACER'),
+      actif: !occupe && p.casier > 0 && p.argent >= prix,
+      faire: function () {
+        payer(prix, 'ME DESJARDINS');
+        p.casier = Math.max(0, p.casier - fiche.pages);
+        p.nettoyage.avocatJour = p.jour;
+        Son.SFX.argent();
+        Hud.message('UNE PAGE DE MOINS — DOSSIER ' + pages(p.casier));
+        return true;
+      }
+    });
+    return { titre: 'ME DESJARDINS', items: items, sur: p.argent + ' $',
+             aide: 'CHER, SUR, ET JAMAIS DEUX FOIS LE MEME JOUR' };
+  }
+
+  /** Le comptoir du fond, chez Turcotte. ⚠️ On paie D'AVANCE et on revient
+      LE LENDEMAIN : le tirage n'a lieu qu'a la deuxieme visite, et le trajet
+      de nuit jusqu'a La Shop fait partie du prix. */
+  function menuHacker() {
+    const p = B.partie, fiche = B.defs.economie.effacer.hacker;
+    const prix = prixEffacer('hacker'), items = [], cmd = p.nettoyage.commande;
+    items.push({ libelle: 'TON DOSSIER', detail: pages(p.casier), actif: false });
+    if (cmd && p.jour < cmd.jour) {
+      items.push({ libelle: 'IL Y TRAVAILLE', detail: 'REVIENS DEMAIN', actif: false });
+      return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
+               aide: 'TU AS PAYE ' + cmd.paye + ' $ — TU SAURAS DEMAIN' };
+    }
+    if (cmd) {
+      items.push({ libelle: 'PRENDRE LES NOUVELLES', faire: nouvellesDuHacker });
+      return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
+               aide: 'IL A FINI — RESTE A SAVOIR CE QU’IL A FAIT' };
+    }
+    items.push({
+      libelle: 'ENTRER DANS LE FICHIER',
+      detail: p.casier ? prix + ' $ D’AVANCE' : 'RIEN A EFFACER',
+      actif: p.casier > 0 && p.argent >= prix,
+      faire: function () {
+        payer(prix, 'LE COMPTOIR DU FOND');
+        p.nettoyage.commande = { jour: p.jour + fiche.delai_jours, paye: prix };
+        Son.SFX.argent();
+        Hud.message('IL Y TRAVAILLE — REVIENS DEMAIN');
+        return true;
+      }
+    });
+    return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
+             aide: 'MOINS CHER QUE L’AVOCAT, ET TU NE SAIS PAS CE QUE TU ACHETES' };
+  }
+
+  /** Le tirage : autant de pages, autant de chances. ⚠️ Un nombre NEGATIF est
+      une page DE PLUS — il s'est fait prendre les doigts dans le fichier, et
+      c'est ce qui empeche le comptoir du fond de devenir un bouton « annuler
+      la partie ». La table vient du serveur ; le navigateur n'invente rien. */
+  function tirerLeHacker() {
+    const tirage = B.defs.economie.effacer.hacker.tirage;
+    let r = B.rng(), somme = 0;
+    for (let i = 0; i < tirage.length; i++) {
+      somme += tirage[i][1];
+      if (r < somme) return tirage[i][0];
+    }
+    return tirage[tirage.length - 1][0];
+  }
+
+  function nouvellesDuHacker() {
+    const p = B.partie, eco = B.defs.economie;
+    p.nettoyage.commande = null;
+    const n = tirerLeHacker();
+    if (n > 0) {
+      const avant = p.casier;
+      p.casier = Math.max(0, p.casier - n);
+      Hud.message(pages(avant - p.casier) + ' DE MOINS — DOSSIER ' + pages(p.casier));
+      Son.SFX.argent();
+    } else if (n < 0) {
+      p.casier = Math.min(eco.casier_max, p.casier + 1);
+      Hud.message('IL S’EST FAIT PRENDRE — UNE PAGE DE PLUS');
+      Son.SFX.erreur();
+    } else {
+      Hud.message('IL N’A RIEN PU FAIRE');
+      Son.SFX.erreur();
+    }
+    return true;
   }
 
   // --- Le marche noir : Josee, une fois le Faubourg libere --------------------------------

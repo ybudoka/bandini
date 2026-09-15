@@ -36,6 +36,64 @@ POT_DE_VIN_AMI_MAX = 2
 
 HOPITAL = {"fraction": 0.10, "minimum": 30, "maximum": 500}
 
+# --- Effacer le casier : la certitude, ou le pari -------------------------
+
+#: ⚠️ **Deux comptoirs qui n'ont de sens que l'un contre l'autre.** Un seul
+#: serait un bouton « annuler la partie » ; deux, c'est un choix, et c'est le
+#: choix qui est le jeu. L'avocat est LEGAL, CHER, SUR : une page, tout de
+#: suite, une fois par jour. Le hacker est LE PARI : moins cher a sortir de
+#: sa poche, mais on paie D'AVANCE, on revient LE LENDEMAIN, et on ne sait
+#: pas ce qu'on aura achete — de rien du tout a trois pages d'un coup, et
+#: parfois une page DE PLUS parce qu'il s'est fait prendre les doigts dedans.
+#:
+#: ⚠️ **Le prix monte avec l'epaisseur du dossier** (`par_page`) : sans ca,
+#: un casier de vingt pages se nettoyait au meme tarif qu'un casier de deux,
+#: et les vingt pages ne voulaient plus rien dire. C'est la meme regle que
+#: l'amende, et c'est voulu : tout ce qui touche au casier se paie au poids.
+#:
+#: ⚠️ **Et effacer coute TOUJOURS plus cher que ce que la page coute**
+#: (`test_effacer`) : le jour ou nettoyer son dossier revient moins cher que
+#: de le porter, plus personne ne le porte, et tout M11 tombe avec.
+EFFACER: dict = {
+    # Me Desjardins, au fond du Brouillard. Il ne travaille pas deux fois le
+    # meme jour — c'est ce qui empeche d'acheter vingt pages d'affilee.
+    "avocat": {
+        "nom": "ME DESJARDINS",
+        "prix": 1200,
+        "par_page": 400,
+        "pages": 1,
+        "par_jour": 1,
+    },
+    # Le hacker de La Shop. Le tirage se lit « autant de pages, autant de
+    # chances » — un nombre NEGATIF est une page de PLUS au dossier.
+    "hacker": {
+        "nom": "LA SHOP",
+        "prix": 700,
+        # ⚠️ Une pente PLUS RAIDE que celle de l'avocat, et ce n'est pas un
+        # detail de tarif : a 200 $ la page, le rapport se retournait vers le
+        # haut du dossier — a vingt pages le pari devenait la meilleure affaire
+        # au dollar, et l'avocat ne servait plus a rien pile au moment ou l'on
+        # a le plus besoin de lui. Plus le dossier est epais, plus la certitude
+        # vaut son prix : c'est ce que dit cette pente.
+        "par_page": 260,
+        "delai_jours": 1,
+        "tirage": ((-1, 0.20), (0, 0.32), (1, 0.28), (2, 0.14), (3, 0.06)),
+    },
+}
+
+
+def prix_effacer(quoi: str, casier: int) -> int:
+    """Ce que le comptoir demande, dossier en main. Jamais negatif."""
+    fiche = EFFACER[quoi]
+    casier = max(0, min(CASIER_MAX, casier))
+    return max(0, round(fiche["prix"] + fiche["par_page"] * casier))
+
+
+def esperance_hacker() -> float:
+    """Les pages qu'il efface EN MOYENNE — la page ajoutee comptee en moins."""
+    return sum(pages * chance for pages, chance in EFFACER["hacker"]["tirage"])
+
+
 
 def amende(argent: int, etoiles: int, casier: int) -> int:
     """Ce que la prison prend. Jamais plus que ce qu'on a, jamais negatif."""
@@ -357,4 +415,14 @@ def exporter() -> dict:
         "repeinte": REPEINTE,
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
+        "effacer": {
+            quoi: {**fiche, "tirage": [list(t) for t in fiche["tirage"]]}
+            if "tirage" in fiche else dict(fiche)
+            for quoi, fiche in EFFACER.items()
+        },
+        # prix_effacer[quoi][casier] — deja calcule, le navigateur indexe.
+        "prix_effacer": {
+            quoi: [prix_effacer(quoi, c) for c in range(CASIER_MAX + 1)]
+            for quoi in EFFACER
+        },
     }

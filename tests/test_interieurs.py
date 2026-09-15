@@ -41,6 +41,10 @@ TYPES_SERVIS = frozenset({
     "lit", "coffre", "garde_robe", "vendre", "reparer", "repeindre", "acheter",
     "hotdog", "soigner", "caisse", "journal", "contact", "sergent", "casier",
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
+    # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
+    # cher, une fois par jour (l'avocat) ou payer d'avance et revenir demain
+    # sans savoir ce qu'on a achete (le comptoir du fond de La Shop).
+    "avocat", "hacker",
 })
 
 
