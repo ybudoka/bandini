@@ -470,3 +470,121 @@ def test_une_rue_barree_couvre_tout_son_troncon_et_la_ville_reste_connexe(ville)
         )
     for a, b in itertools.combinations(liste, 2):
         assert abs(a["x"] - b["x"]) + abs(a["y"] - b["y"]) >= fiche["ecart"], f"deux rues barrées collées : {a} et {b}"
+
+
+def test_une_rue_barree_montre_son_detour(banc, paquet):
+    """⚠️ **Une fermeture sans détour affiché n'est pas une entrave, c'est un
+    piège** : on arrive, on ne passe pas, et rien ne dit par où aller. Le
+    panneau se pose au-dessus de la barricade, et sa flèche montre le côté où
+    la rue continue — jamais un côté au hasard : il cherche la chaussée la plus
+    proche, et il se tait plutôt que de mentir."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie;
+        let rue = null;
+        for (let jour = 1; jour <= 60 && !rue; jour++) {
+            p.jour = jour;
+            const b = L.Monde.entraveDuJour();
+            if (b.slug === 'rue_barree') rue = b;
+        }
+        if (!rue) return { pasDeRue: true };
+        const vertical = rue.h >= rue.l;
+        // Les deux bouts de la rue barree : c'est la que se pose le panneau.
+        const bouts = [];
+        for (let ty = rue.y; ty < rue.y + rue.h; ty++) {
+            for (let tx = rue.x; tx < rue.x + rue.l; tx++) {
+                const bout = vertical ? (ty === rue.y || ty === rue.y + rue.h - 1)
+                                      : (tx === rue.x || tx === rue.x + rue.l - 1);
+                if (!bout) continue;
+                const vers = L.Monde.cotePourLeDetour(rue, tx, ty);
+                // ⚠️ ET ON VERIFIE QUE LE PANNEAU DIT VRAI : du cote montre, il
+                // doit y avoir une chaussee QUI N'EST PAS la rue barree
+                // elle-meme. Sans ca, le panneau montre la voie d'a cote du
+                // chantier et envoie droit dans la barricade.
+                let mene = false;
+                if (vers) {
+                    const sortie = vertical ? (ty === rue.y ? -1 : 1) : (tx === rue.x ? -1 : 1);
+                    const ox = vertical ? tx : tx + sortie * 3;
+                    const oy = vertical ? ty + sortie * 3 : ty;
+                    for (let d = 1; d <= 6 && !mene; d++) {
+                        const cx = vertical ? ox + vers * d : ox;
+                        const cy = vertical ? oy : oy + vers * d;
+                        const dedans = cx >= rue.x && cx < rue.x + rue.l && cy >= rue.y && cy < rue.y + rue.h;
+                        if (L.Monde.estRoute(cx, cy) && !dedans) mene = true;
+                    }
+                }
+                bouts.push({ tx: tx, ty: ty, vers: vers, mene: mene });
+            }
+        }
+        // Et au MILIEU, il n'y a pas de panneau : on ferme une rue par ses
+        // extremites, on ne la cloture pas.
+        const milieu = { tx: rue.x + Math.floor(rue.l / 2), ty: rue.y + Math.floor(rue.h / 2) };
+        const auMilieu = vertical ? (milieu.ty === rue.y || milieu.ty === rue.y + rue.h - 1)
+                                  : (milieu.tx === rue.x || milieu.tx === rue.x + rue.l - 1);
+        return { bouts: bouts, auMilieu: auMilieu, vertical: vertical,
+                 rue: { x: rue.x, y: rue.y, l: rue.l, h: rue.h } };
+    }""")
+    assert not r.get("pasDeRue"), "aucun jour ne donne une rue barrée"
+    assert r["auMilieu"] is False, "la rue est barrée sur toute sa longueur : %s" % r["rue"]
+    assert len(r["bouts"]) >= 2, "une rue barrée sans bouts : %s" % r
+    # ⚠️ **CHAQUE bout parle.** Une rue barrée part d'un croisement et finit à
+    # un autre : il y a donc une rue qui croise à ses deux extrémités, et un
+    # bout muet est un automobiliste qu'on laisse devant une barricade sans
+    # rien lui dire.
+    muets = [b for b in r["bouts"] if not b["vers"]]
+    assert not muets, "des bouts de la rue barrée ne montrent aucun détour : %s" % muets
+    for b in r["bouts"]:
+        assert b["vers"] in (-1, 1), b
+        # ⚠️ **Le panneau dit VRAI** : du côté montré il y a une chaussée, et
+        # ce n'est pas la voie d'à côté du chantier — sinon la flèche envoie
+        # droit dans la barricade.
+        assert b["mene"] is True, "le panneau montre un côté sans rue : %s" % b
+
+
+def test_le_chantier_a_ses_ouvriers_et_on_ne_les_fauche_pas(banc, paquet):
+    """⚠️ **Intouchables, comme les enfants.** Un chantier où l'on fauche
+    l'équipe au premier passage n'est pas un chantier, c'est une cible. Et
+    c'est une propriété de l'ENTITÉ, pas de l'archétype : un ouvrier qui rentre
+    chez lui, lui, est un passant comme un autre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(77);
+        const p = L.B.partie, j = L.B.joueur, TT = L.TT;
+        let e = null;
+        for (let jour = 1; jour <= 60 && !e; jour++) {
+            p.jour = jour;
+            const b = L.Monde.entraveDuJour();
+            if (b.slug === 'entrave') e = b;
+        }
+        if (!e) return { pasDeChantier: true };
+        // Dans la bulle, mais hors champ : c'est la qu'ils naissent.
+        j.x = (e.x + 18) * TT; j.y = (e.y + 18) * TT;
+        L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        const nes = L.Entites.naitreLesOuvriers();
+        const encore = L.Entites.naitreLesOuvriers();
+        const gars = L.B.entites.filter(function (q) { return q.chantier; });
+        // Un ouvrier ORDINAIRE, lui, reste un passant : l'archetype n'a pas bouge.
+        const arch = L.Entites.archetype('ouvrier');
+        const passant = L.Entites.creerPieton(j.x + 40, j.y, arch);
+        return { nes: nes, encore: encore, combien: gars.length,
+                 intouchables: gars.every(function (q) { return q.intouchable; }),
+                 figes: gars.every(function (q) { return q.etat === 'fige' && q.plante; }),
+                 metier: gars.length ? gars[0].metier : null,
+                 surLaVoie: gars.every(function (q) {
+                     const tx = Math.floor(q.x / TT), ty = Math.floor(q.y / TT);
+                     return tx >= e.x - 1 && tx <= e.x + e.l && ty >= e.y - 1 && ty <= e.y + e.h;
+                 }),
+                 archIntouchable: !!arch.intouchable, passantIntouchable: !!passant.intouchable };
+    }""")
+    assert not r.get("pasDeChantier"), "aucun jour ne donne une voie fermée"
+    assert r["nes"] >= 1, "personne ne travaille au chantier : %s" % r
+    assert r["combien"] <= 2, "toute une équipe de voirie : %s" % r["combien"]
+    assert r["encore"] == 0, "les ouvriers se dédoublent à chaque ronde"
+    assert r["intouchables"] is True, "on peut faucher l'équipe du chantier"
+    assert r["figes"] is True and r["metier"] == "chantier", r
+    assert r["surLaVoie"] is True, "les ouvriers travaillent à côté du chantier : %s" % r
+    # ⚠️ L'archétype n'a PAS bougé : un ouvrier qui rentre chez lui est un
+    # passant comme un autre, et la ville n'est pas devenue intouchable.
+    assert r["archIntouchable"] is False and r["passantIntouchable"] is False, (
+        "tous les ouvriers de la ville sont devenus intouchables : %s" % r
+    )

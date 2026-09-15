@@ -349,6 +349,45 @@ const Monde = (function () {
     return entraveJour.b;
   }
 
+  /** De quel cote envoyer celui qui se bute a une rue barree : on cherche, a
+      gauche puis a droite de son axe, la chaussee la plus proche. Rend -1, 1
+      ou 0 (aucune — le panneau se tait plutot que de mentir). */
+  function cotePourLeDetour(b, tx, ty) {
+    const vertical = b.h >= b.l;
+    // ⚠️ ON REGARDE AU CROISEMENT, PAS DANS L'AXE DE LA RUE BARREE. La rue qui
+    // sert de detour ne passe pas a cote du chantier : elle croise la rue
+    // barree a son bout. On sort donc du rectangle par le bon bout, puis on
+    // cherche la chaussee de part et d'autre — chercher sur place ne trouvait
+    // jamais rien, et le panneau se taisait partout.
+    const sortie = vertical ? (ty === b.y ? -1 : 1) : (tx === b.x ? -1 : 1);
+    const ox = vertical ? tx : tx + sortie * 3;
+    const oy = vertical ? ty + sortie * 3 : ty;
+    for (let d = 1; d <= 6; d++) {
+      const gauche = vertical ? estRoute(ox - d, oy) : estRoute(ox, oy - d);
+      const droite = vertical ? estRoute(ox + d, oy) : estRoute(ox, oy + d);
+      // ⚠️ A un CARREFOUR, les deux cotes se valent — et une fleche qui se
+      // tait parce qu'elle hesite est un panneau pour rien. Quand les deux
+      // mènent quelque part, on montre la DROITE : c'est le detour le plus sur
+      // qu'on puisse conseiller sans connaitre ou va celui qui lit.
+      if (gauche || droite) return gauche && !droite ? -1 : 1;
+    }
+    return 0;
+  }
+
+  /** Le panneau : une plaque orange sur son piquet, et la fleche du detour. */
+  function panneauDetour(ctx, px, py, vers) {
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 7, py - 2, 2, 8);      // le piquet
+    ctx.fillStyle = '#101018'; ctx.fillRect(px + 1, py - 10, 14, 9);    // le fond
+    ctx.fillStyle = '#d98324'; ctx.fillRect(px + 2, py - 9, 12, 7);     // la plaque
+    ctx.fillStyle = '#101018';
+    // La fleche, dans le sens du detour : une hampe et une pointe.
+    const x0 = vers > 0 ? px + 4 : px + 7;
+    ctx.fillRect(x0, py - 6, 5, 2);
+    for (let k = 0; k < 3; k++) {
+      ctx.fillRect(vers > 0 ? px + 10 - k : px + 4 + k, py - 7 - k + 1, 1, 1 + k * 2);
+    }
+  }
+
   function barrieres() {
     const fixes = (carte && carte.def && carte.def.barrieres) || [];
     const jour = entraveDuJour();
@@ -431,6 +470,12 @@ const Monde = (function () {
           const px = tx * TT - cam.x, py = ty * TT - cam.y;
           if (px < -TT || py < -TT || px > cam.w + TT || py > cam.h + TT) continue;
           if (b.decor === 'barricade') {
+            // ⚠️ **LE DETOUR SE LIT.** Une rue barree sans detour affiche n'est
+            // pas une entrave, c'est un piege : on arrive, on ne passe pas, et
+            // rien ne dit par ou aller. Le panneau se pose au-dessus de la
+            // barricade et sa fleche montre le cote ou la rue continue.
+            const vers = cotePourLeDetour(b, tx, ty);
+            if (vers) panneauDetour(ctx, px, py, vers);
             // Une barricade : deux traverses barrees d'orange et de blanc, sur
             // deux pieds. Elle se lit en travers de la rue, de loin.
             ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 2, py + 9, 2, 5); ctx.fillRect(px + 12, py + 9, 2, 5);
@@ -1281,7 +1326,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
-    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour,
+    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,

@@ -1422,6 +1422,44 @@ const Entites = (function () {
     return nes;
   }
 
+  /** Les ouvriers du chantier du jour : un ou deux, plantes sur la voie
+      fermee, dans la bulle du joueur.
+
+      ⚠️ **INTOUCHABLES, comme les enfants.** Un chantier ou l'on fauche
+      l'equipe au premier passage n'est pas un chantier, c'est une cible — et
+      la ville n'a rien a gagner a ca. C'est une propriete de l'ENTITE, pas de
+      l'archetype : un ouvrier qui rentre chez lui, lui, est un passant comme
+      un autre.
+
+      ⚠️ Et ils ne comptent pas dans la foule : ils ont un poste, comme
+      l'homme-sandwich. */
+  function naitreLesOuvriers() {
+    const b = Monde.entraveDuJour && Monde.entraveDuJour();
+    const arch = archetype('ouvrier');
+    if (!b || b.slug !== 'entrave' || !arch || !B.joueur || B.interieur) return 0;
+    const x = (b.x + b.l / 2) * TT, y = (b.y + b.h / 2) * TT;
+    if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) return 0;
+    const deja = B.entites.filter(function (q) { return q.chantier && q.vivant; }).length;
+    if (deja >= 2) return 0;
+    let nes = 0;
+    for (let k = deja; k < 2; k++) {
+      // Le long de la voie fermee, un par bout.
+      const px = b.l > b.h ? (b.x + (k ? b.l - 1 : 0)) * TT + 8 : (b.x + b.l / 2) * TT;
+      const py = b.h > b.l ? (b.y + (k ? b.h - 1 : 0)) * TT + 8 : (b.y + b.h / 2) * TT;
+      if (visibleAEcran(px, py, 24)) continue;
+      const e = creerPieton(px, py, arch);
+      e.chantier = true;
+      e.intouchable = true;
+      e.metier = 'chantier';
+      e.etat = 'fige';
+      e.face = 'bas';
+      e.plante = { x: e.x, y: e.y };
+      nes++;
+    }
+    if (nes) indexer();
+    return nes;
+  }
+
   /** Combien de flaneurs la rue veut, ici et maintenant.
 
       ⚠️ ECRIT UNE FOIS. `peupler` avait son calcul ; l'attroupement, qui fait
@@ -1458,6 +1496,7 @@ const Entites = (function () {
     }
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
+    if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 90 === 0) naitreLesSortes();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
@@ -2950,7 +2989,7 @@ const Entites = (function () {
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
