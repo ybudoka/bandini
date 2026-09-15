@@ -188,24 +188,6 @@ SPRITES.homme_sandwich = {
    dessin par type : l'atlas le fait tourner en 32 caps a la cuisson. `c` est
    la carrosserie (echangee par couleur), `x`/`y` les accents de toit (enseigne
    du taxi, gyrophare de la police), `l` les phares, `t` les feux arriere. */
-const GRILLE_AUTO = [
-      '.....rrrr.............rrrr......',
-      '.....rrrr.............rrrr......',
-      '..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
-      '.kcccccccccccccccccccccccssssck.',
-      '.ktccccvvkccccccccccvvvkccccclk.',
-      '.ktccccvvkccccccccccvvvkccccclk.',
-      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
-      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
-      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
-      '.kcccccvvkcxxxcyyyccvvvkcccccck.',
-      '.ktccccvvkccccccccccvvvkccccclk.',
-      '.ktccccvvkccccccccccvvvkccccclk.',
-      '.kcccccccccccccccccccccccssssck.',
-      '..kkkkkkkkkkkkkkkkkkkkkkkkkkkk..',
-      '.....rrrr.............rrrr......',
-      '.....rrrr.............rrrr......',
-    ];
 /* --- Le parc DEBOUT : trois poses, comme un passant -------------------------
 
    ⚠️ Tout ce qui est debout dans Bandini est dessine debout — le passant ancre
@@ -296,35 +278,204 @@ const AUTO_BAS = [
       '................................',
       '................................',
     ];
+const VELO_COTE = [
+      '....................',
+      '....................',
+      '....................',
+      '.............kkk....',
+      '.......kkk.....k....',
+      '.....k...cc....kl...',
+      '...krrrcccccccrrrk..',
+      '..krrrcccc.ccccrrrk.',
+      '..krrMrrk...krrMrrk.',
+      '..krrrrrk...krrrrrk.',
+      '...krrrk.....krrrk..',
+      '.....k.........k....',
+      '....................',
+      '....................',
+    ];
+const VELO_HAUT = [
+      '....................',
+      '....................',
+      '....................',
+      '......kkkkkkkkk.....',
+      '.........ccc........',
+      '........kkkkk.......',
+      '.........ktk........',
+      '.........krk........',
+      '.........kMk........',
+      '.........krk........',
+      '.........krk........',
+      '.........krk........',
+      '....................',
+      '....................',
+    ];
+const VELO_BAS = [
+      '....................',
+      '....................',
+      '....................',
+      '......kkkkkkkkk.....',
+      '.........ccc........',
+      '........kkkkk.......',
+      '.........klk........',
+      '.........krk........',
+      '.........kMk........',
+      '.........krk........',
+      '.........krk........',
+      '.........krk........',
+      '....................',
+      '....................',
+    ];
+const MOTO_COTE = [
+      '........................',
+      '........................',
+      '........................',
+      '........................',
+      '...............kkkkk....',
+      '..................kll...',
+      '.....k.kkkkk....kk.k....',
+      '...krrrtkCCCCCCk.kkrrk..',
+      '..krrrrrkcccccckkrkrrrk.',
+      '..krrMrrkDDDDDDkkrrMrrk.',
+      '..krrrrrMMMMMMM.krrrrrk.',
+      '...krrrk.........krrrk..',
+      '.....k.............k....',
+      '........................',
+      '........................',
+    ];
+const MOTO_HAUT = [
+      '........................',
+      '........................',
+      '........................',
+      '.......kkkkkkkkkkk......',
+      '...........ccc..........',
+      '.........kkkkkkk........',
+      '..........CCCCC.........',
+      '...........ttt..........',
+      '...........krk..........',
+      '...........kMk..........',
+      '...........krk..........',
+      '...........krk..........',
+      '...........krk..........',
+      '........................',
+      '........................',
+    ];
+const MOTO_BAS = [
+      '........................',
+      '........................',
+      '........................',
+      '.......kkkkkkkkkkk......',
+      '...........ccc..........',
+      '.........kkkkkkk........',
+      '..........CCCCC.........',
+      '...........lll..........',
+      '...........krk..........',
+      '...........kMk..........',
+      '...........krk..........',
+      '...........krk..........',
+      '...........krk..........',
+      '........................',
+      '........................',
+    ];
+const ASSIS_COTE = [
+      '............',
+      '............',
+      '....kkkk....',
+      '...khhhhk...',
+      '...khhhhhk..',
+      '...khssosk..',
+      '...khssssk..',
+      '...khsssk...',
+      '....kssk....',
+      '...kcccck...',
+      '...kccccskk.',
+      '...kcccccss.',
+      '...kppppppk.',
+      '...kpkkkppk.',
+      '.......kbbk.',
+      '.......kkk..',
+    ];
+const ASSIS_HAUT = [
+      '............',
+      '............',
+      '....kkkk....',
+      '...khhhhk...',
+      '..khhhhhhk..',
+      '..khhhhhhk..',
+      '..khhhhhhk..',
+      '..khsssshk..',
+      '...kssssk...',
+      '..kcccccck..',
+      '.kckccccckc.',
+      '.kskccccksk.',
+      '..kppppppk..',
+      '..kppkkppk..',
+      '..kbbk.kbbk.',
+      '..kkkk.kkkk.',
+    ];
+const ASSIS_BAS = [
+      '............',
+      '............',
+      '....kkkk....',
+      '...khhhhk...',
+      '..khhhhhhk..',
+      '..khsssshk..',
+      '..ksossosk..',
+      '..kssssssk..',
+      '...kssssk...',
+      '..kcccccck..',
+      '.kckccccckc.',
+      '.kskccccksk.',
+      '..kppppppk..',
+      '..kppkkppk..',
+      '..kbbk.kbbk.',
+      '..kkkk.kkkk.',
+    ];
+
+/* --- Le passant ASSIS ---------------------------------------------------------
+
+   ⚠️ Le cycliste etait CUIT DANS LE VELO : la palette du velo portait une peau
+   (`s`) et des cheveux (`h`), et tous les cyclistes de la ville avaient la meme
+   tete pour toujours. Debout, le conducteur redevient ce qu'il aurait du etre :
+   un passant assis dessus, avec ses propres couleurs — c'est le correctif des
+   « sortes de gens » applique aux deux-roues. `Vehicules.dessinerUn` le pose
+   sur la selle (`selle`, par pose) avec les couleurs du joueur quand c'est lui,
+   celles d'un archetype de rue quand c'est le trafic.
+
+   Une pose de plus sur le corps du joueur, et une seule : `assis_cote` se
+   miroite en `assis_gauche` / `assis_droite` par le suffixe, comme la marche. */
+SPRITES.joueur.poses.assis_cote = [ASSIS_COTE];
+SPRITES.joueur.poses.assis_haut = [ASSIS_HAUT];
+SPRITES.joueur.poses.assis_bas = [ASSIS_BAS];
 const SPORT_COTE = [
       '..............................',
-      '............kCCCCCk...........',
-      '...........kGGvvkGGk..........',
-      '..........kkvvvEkvEk..........',
-      '....kCCCCCCcccccccccCCCCCk....',
-      '..kttcccccccccccccDccccccllk..',
-      '..kcccccccccccccccDcccccccck..',
-      '..kcccccccccccccccDcccccccck..',
-      '..kBBBkkkkkDDDDDDDDkkkkkBBBk..',
-      '.......kkk..........kkk.......',
-      '......krMrk........krMrk......',
-      '......krrrk........krrrk......',
-      '.......kkk..........kkk.......',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '............kCCCCCCCk.........',
+      '..........kkGGvvvvvvEk........',
+      '...kCCCCCCCcccccccccccCCCCk...',
+      '..kttccccccccccccccccccccllk..',
+      '..kBBkrrrkDDDDDDDDDDkrrrkBBk..',
+      '.....krMrk..........krMrk.....',
+      '.....krrrk..........krrrk.....',
+      '......kkk............kkk......',
       '..............................',
       '..............................',
     ];
 const SPORT_HAUT = [
       '..............................',
-      '...........kCCCCCCk...........',
-      '..........kGGGvvvvvk..........',
-      '.........kkvvvvvvEEkk.........',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '............kCCCCk............',
+      '..........kkGvvvvEkk..........',
       '........kCCCCCCCCCCCCk........',
-      '........ktttcccccctttk........',
-      '........ktttcccccctttk........',
+      '........kttccccccccttk........',
       '........kDDDDDDDDDDDDk........',
       '........kBBBBBBBBBBBBk........',
-      '..........kkk....kkk..........',
-      '.........krMrk..krMrk.........',
       '.........krrrk..krrrk.........',
       '..........kkk....kkk..........',
       '..............................',
@@ -332,16 +483,16 @@ const SPORT_HAUT = [
     ];
 const SPORT_BAS = [
       '..............................',
-      '...........kCCCCCCk...........',
-      '..........kGGGvvvvvk..........',
-      '.........kkvvvvvvEEkk.........',
+      '..............................',
+      '..............................',
+      '..............................',
+      '..............................',
+      '............kCCCCk............',
+      '..........kkGvvvvEkk..........',
       '........kCCCCCCCCCCCCk........',
-      '........klllckkkkclllk........',
-      '........klllckkkkclllk........',
+      '........kllckkkkkkcllk........',
       '........kDDDDDDDDDDDDk........',
       '........kBBBBBBBBBBBBk........',
-      '..........kkk....kkk..........',
-      '.........krMrk..krMrk.........',
       '.........krrrk..krrrk.........',
       '..........kkk....kkk..........',
       '..............................',
@@ -705,18 +856,6 @@ const AUTOBUS_BAS = [
       '......................................................',
     ];
 
-const GRILLE_MOTO = [
-      '....................',
-      '....................',
-      '........hhh..k......',
-      '.rrrrkkkpppkkklrrrr.',
-      '.rrrrtccpppcckcrrrr.',
-      '.rrrrtccpppcckcrrrr.',
-      '.rrrrkkkpppkkklrrrr.',
-      '........hhh..k......',
-      '....................',
-      '....................',
-    ];
 
 /* --- Trois sortes de gens, pas trois palettes -------------------------------
 
@@ -1107,23 +1246,24 @@ SPRITES.police = {
   swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
 };
 SPRITES.velo = {
-  w: 16, h: 8, ancre: [8, 4], rotations: 32,
-  pal: { k: '#101018', c: '#2980b9', r: '#2a2a2e', h: '#3a2a1a', p: '#c0392b', s: '#e8b088', l: '#fff3b0', t: '#ff4b3e' },
-  swaps: ['c'], poses: { base: [[
-    '................',
-    '......hhh.......',
-    '.kk...sss...kk..',
-    'krrk.kpppk.krrk.',
-    'krrkcccccccrrkl.',
-    'krrk.kpppk.krrk.',
-    '.kk...sss...kk..',
-    '................',
-  ]] },
+  w: 20, h: 14, ancre: [10, 11],
+  // Ou l'ANCRE du passant assis se pose, par pose : [dx, dy] depuis (x, y).
+  // Ses hanches sont trois pixels au-dessus de ses pieds : a dy = -3, elles
+  // tombent sur la selle et ses pieds sur les repose-pieds.
+  selle: { cote: [-1, -3], haut: [0, -3], bas: [0, -3] },
+  pal: nuancer({ k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' }),
+  swaps: ['c'],
+  poses: { cote: [VELO_COTE], haut: [VELO_HAUT], bas: [VELO_BAS] },
 };
 SPRITES.moto = {
-  w: 20, h: 10, ancre: [10, 5], rotations: 32,
-  pal: { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', h: '#2c2c2c', p: '#3a3a4a', l: '#fff3b0', t: '#ff4b3e' },
-  swaps: ['c'], poses: { base: [GRILLE_MOTO] },
+  w: 24, h: 15, ancre: [12, 12],
+  // Ou l'ANCRE du passant assis se pose, par pose : [dx, dy] depuis (x, y).
+  // Ses hanches sont trois pixels au-dessus de ses pieds : a dy = -3, elles
+  // tombent sur la selle et ses pieds sur les repose-pieds.
+  selle: { cote: [-2, -4], haut: [0, -4], bas: [0, -4] },
+  pal: nuancer({ k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' }),
+  swaps: ['c'],
+  poses: { cote: [MOTO_COTE], haut: [MOTO_HAUT], bas: [MOTO_BAS] },
 };
 
 /* --- M9, le parc automobile ---------------------------------------------------

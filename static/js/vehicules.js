@@ -50,6 +50,19 @@ const Vehicules = (function () {
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
       vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
     }, options || {}));
+    // ⚠️ UN DEUX-ROUES DU TRAFIC A UN PILOTE, et il a ses propres couleurs. Le
+    // cycliste etait cuit dans le velo — la meme tete pour toute la ville. Un
+    // sprite qui declare une `selle` prend un passant assis dessus, tire des
+    // archetypes de rue comme n'importe quel passant. Un deux-roues STATIONNE
+    // n'a personne dessus : c'est ce qui le distingue d'un char qui roule.
+    const sprite = SPRITES[v.sprite];
+    if (sprite && sprite.selle && v.conducteur === 'trafic') {
+      // ⚠️ SANS TOUCHER AUX DES DU JEU : la tete du pilote se tire de sa
+      // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
+      // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
+      const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
+      v.pilote = arch ? { swaps: arch.couleurs } : null;
+    }
     return v;
   }
 
@@ -934,7 +947,13 @@ const Vehicules = (function () {
     let crime = null, vu = false;
     if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
       // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
-      const cycliste = Entites.creerPieton(v.x, v.y + 10, Entites.archetypeDeRue());
+      // ⚠️ C'est CELUI QUI ETAIT DESSUS qui tombe : il garde ses couleurs. Un
+      // cycliste tire au hasard a la chute aurait change de tete en touchant
+      // le sol.
+      const arch = Entites.archetypeDeRue(v.x, v.y, hash2(Math.round(v.x), Math.round(v.y)) / 4294967296);
+      const cycliste = Entites.creerPieton(v.x, v.y + 10,
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+      v.pilote = null;
       cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
       cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
       crime = 'vol_vehicule'; vu = true;
@@ -2068,6 +2087,31 @@ const Vehicules = (function () {
     return _cap.face;
   }
 
+  /** Les couleurs de celui qui est SUR le deux-roues, ou null s'il n'y a
+      personne : le joueur quand c'est lui, le pilote du trafic sinon. Une
+      epave n'a personne dessus — il est tombe. */
+  function cavalierDe(v) {
+    const def = SPRITES[v.sprite];
+    if (!def || !def.selle || v.etat === 'epave' || v.plie) return null;
+    if (v.conducteur === B.joueur) return B.joueur.swaps || null;
+    return (v.pilote && v.pilote.swaps) || null;
+  }
+
+  /** Le passant assis sur ce deux-roues, dans la pose du deux-roues, et ou
+      le poser. `assis_cote` se miroite en `assis_gauche` / `assis_droite`
+      comme la marche : la pose du corps est « assis_ » + celle de la machine,
+      et les deux tournent ensemble. */
+  function imageDuCavalier(def, pose, swaps) {
+    const corps = SPRITES.joueur;
+    const cuit = Atlas.cuire('joueur', corps, swaps);
+    const poses = cuit.poses['assis_' + pose.pose] || cuit.poses.assis_bas;
+    if (!poses) return null;
+    const cle = (pose.pose === 'gauche' || pose.pose === 'droite') ? 'cote' : pose.pose;
+    const selle = def.selle[cle] || [0, 0];
+    const dx = (pose.pose === 'gauche' ? -selle[0] : selle[0]) - cuit.ancre[0];
+    return { canvas: poses[0], dx: dx, dy: selle[1] - cuit.ancre[1] };
+  }
+
   /** Le dessin d'un char DEBOUT : la pose, et l'image a poser.
 
       ⚠️ Rend `null` pour un sprite encore cuit en rotations — la voie d'avant
@@ -2113,8 +2157,19 @@ const Vehicules = (function () {
       // physique, et c'est la ou les pneus touchent. Le tri du nord au sud s'y
       // retrouve sans rien changer — un char et un passant se rangent
       // maintenant par la meme regle.
+      const swaps = cavalierDe(v);
+      const cavalier = swaps ? imageDuCavalier(def, pose, swaps) : null;
+      // ⚠️ Celui qui VIENT vers nous a sa machine devant lui : le pilote se
+      // peint d'abord, la machine par-dessus. Dans les trois autres poses, la
+      // machine d'abord et lui dessus.
+      const poserCavalier = function () {
+        ctx.drawImage(cavalier.canvas, Math.round(v.x + cavalier.dx - cx), Math.round(v.y - v.z + cavalier.dy - cy));
+        B.stats.images++;
+      };
+      if (cavalier && pose.pose === 'bas') poserCavalier();
       ctx.drawImage(pose.canvas, Math.round(v.x - pose.ancre[0] - cx),
                     Math.round(v.y - v.z - pose.ancre[1] - cy));
+      if (cavalier && pose.pose !== 'bas') poserCavalier();
     } else {
       ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
     }
@@ -2127,7 +2182,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout,
+    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

@@ -187,13 +187,20 @@ const Entites = (function () {
       ⚠️ Les passants de QUARTIER (`districts`) ne naissent que chez eux : un
       debardeur sur les quais, un banlieusard aux Erables. Sans cela les cinq
       districts sont le meme district repeint cinq fois. */
-  function archetypeDeRue(x, y) {
+  /** `hasard` (optionnel, dans [0, 1[) remplace le de du jeu. ⚠️ Pour un
+      choix COSMETIQUE — la tete du pilote d'une moto du trafic — on ne
+      consomme pas `B.rng()` : chaque de tire pour un decor decale tous ceux
+      qui suivent, et une auto-patrouille naissait ailleurs parce qu'un motard
+      avait choisi ses cheveux. `hash2` de la position fait un tirage stable et
+      gratuit. */
+  function archetypeDeRue(x, y, hasard) {
     const zone = Monde.zoneA(x, y);
     const district = zone ? zone.district : null;
     const ordinaires = B.defs.pietons.catalogue.filter(function (p) {
       return p.frequence > 0 && !p.gang && (!p.districts || p.districts.indexOf(district) >= 0);
     });
-    let tirage = B.rng() * ordinaires.reduce(function (s, p) { return s + p.frequence; }, 0);
+    const de = (hasard === undefined || hasard === null) ? B.rng() : hasard;
+    let tirage = de * ordinaires.reduce(function (s, p) { return s + p.frequence; }, 0);
     for (const p of ordinaires) {
       tirage -= p.frequence;
       if (tirage <= 0) return p;

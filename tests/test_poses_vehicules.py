@@ -149,33 +149,31 @@ def test_l_atlas_du_parc_a_maigri(banc):
     1 024 canevas et 6 Mo pour trois pour cent du temps (94,5 % des chars en
     marche sont à moins de 2° d'un cap cardinal). Trois poses en pèsent trois.
 
-    On mesure les canevas d'une carrosserie convertie contre ceux d'une qui
-    tient encore ses rotations : le rapport est ce qui compte."""
+    ⚠️ **Reformulé quand le dernier char est passé debout** : il n'y a plus de
+    témoin en caps à qui comparer. On compte donc les canevas de TOUTE la
+    flotte cuite, et on la compare au parc d'avant — 32 par véhicule, un nombre
+    qui ne peut plus se mesurer, donc qui s'écrit ici en toutes lettres."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const compter = function (slug) {
-            const def = L.SPRITES[slug];
-            if (def.rotations) {
-                return L.Atlas.cuireRotations(slug, def, null, L.Vehicules.ROTATIONS).images.length;
-            }
-            const p = L.Atlas.cuire(slug, def, null).poses;
-            let n = 0;
-            for (const nom in p) n += p[nom].length;
-            return n;
-        };
-        // ⚠️ Le temoin en caps est la MOTO : elle porte son conducteur cuit
-        // dans le dessin, donc elle attend la vague du passant assis. Le jour
-        // ou elle passera debout, ce juge devra prendre un autre temoin — ou
-        // disparaitre, parce qu'il n'y aura plus rien a comparer.
-        return { debout: compter('auto'), caps: compter('moto') };
+        const out = {};
+        L.B.defs.vehicules.forEach(function (v) {
+            const def = L.SPRITES[v.sprite];
+            if (!def) return;
+            const p = L.Atlas.cuire(v.sprite, def, null).poses;
+            let n = 0; for (const nom in p) n += p[nom].length;
+            out[v.slug] = { canevas: n, caps: def.rotations || 0 };
+        });
+        return out;
     }""")
-    assert r["caps"] == 32, "le décor du juge est faux : %s" % r
-    # Cinq noms de pose, mais `droite` est le MÊME canevas que `cote` : trois
-    # dessins cuits, pas cinq. C'est ça, l'économie.
-    assert r["debout"] <= 5, "une carrosserie debout cuit %s canevas" % r["debout"]
-    assert r["debout"] * 6 <= r["caps"], (
-        "l'atlas n'a pas maigri : %s canevas debout contre %s en caps" % (r["debout"], r["caps"])
-    )
+    assert len(r) >= 10, "le décor du juge est faux : %s" % list(r)
+    total = sum(d["canevas"] for d in r.values())
+    for slug, d in r.items():
+        assert d["caps"] == 0, f"{slug} cuit encore des rotations"
+        # Cinq noms de pose, mais `droite` est le MÊME canevas que `cote` :
+        # trois dessins cuits, pas cinq. C'est ça, l'économie.
+        assert d["canevas"] <= 5, f"{slug} cuit {d['canevas']} canevas"
+    avant = 32 * len(r)
+    assert total * 6 <= avant, f"l'atlas n'a pas maigri : {total} canevas contre {avant} en caps"
 
 
 # --- Le modelé : rehaut, ombre, moyeu, chrome, reflet -------------------------
@@ -265,3 +263,146 @@ def test_le_taxi_et_la_police_ont_retrouve_leur_livree(banc):
     assert r["aXY"] == [True, True], "sur l'auto, la livrée doit être invisible : %s" % r
     assert r["tX"] != r["tC"], "le taxi n'a pas de damier : %s" % r
     assert r["pY"] != r["pC"], "la police n'a pas sa bande : %s" % r
+
+
+
+# --- Le passant assis : le conducteur n'est plus cuit dans le deux-roues -----
+
+
+def test_le_velo_et_la_moto_ne_portent_plus_leur_conducteur_cuit(banc):
+    """⚠️ La palette du vélo portait une peau (`s`) et des cheveux (`h`) : tous
+    les cyclistes de la ville avaient la même tête pour toujours. Debout, le
+    conducteur est un passant posé dessus — donc le deux-roues n'a plus AUCUN
+    pixel de corps, et il déclare où sa selle est, pose par pose."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        ['velo', 'moto'].forEach(function (slug) {
+            const def = L.SPRITES[slug];
+            const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
+            out[slug] = { corps: (tout.match(/[hsp]/g) || []).length,
+                          selle: def.selle ? Object.keys(def.selle).sort() : null,
+                          palette: Object.keys(def.pal).filter(function (k) { return 'hsp'.indexOf(k) >= 0; }) };
+        });
+        const j = L.Atlas.cuire('joueur', L.SPRITES.joueur, null).poses;
+        out.assis = ['assis_bas', 'assis_cote', 'assis_droite', 'assis_gauche', 'assis_haut']
+            .filter(function (n) { return !!j[n]; });
+        return out;
+    }""")
+    for slug in ("velo", "moto"):
+        assert r[slug]["corps"] == 0, f"{slug} porte encore un corps cuit dedans : {r[slug]}"
+        assert r[slug]["palette"] == [], f"{slug} garde une peau ou des cheveux en palette : {r[slug]}"
+        assert r[slug]["selle"] == ["bas", "cote", "haut"], f"{slug} : selle {r[slug]['selle']}"
+    assert r["assis"] == ["assis_bas", "assis_cote", "assis_droite", "assis_gauche", "assis_haut"], (
+        "la pose assise manque, ou ne se miroite pas comme la marche : %s" % r["assis"]
+    )
+
+
+def test_le_pilote_du_trafic_a_ses_propres_couleurs_et_un_deux_roues_gare_n_a_personne(banc):
+    """⚠️ C'est le correctif des « sortes de gens » appliqué aux deux-roues :
+    deux motos du trafic ne portent pas la même tête. Et un deux-roues
+    STATIONNÉ n'a personne dessus — c'est ce qui le distingue d'un char qui
+    roule."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(3);
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const tetes = [];
+        for (let i = 0; i < 12; i++) {
+            const v = L.Vehicules.creer('moto', j.x + 40 * (i + 1), j.y, 0, { conducteur: 'trafic', etat: 'roule' });
+            tetes.push(JSON.stringify(L.Vehicules.cavalierDe(v)));
+        }
+        const gare = o.char('moto', 0, 40, 0);
+        return { tetes: tetes, distinctes: new Set(tetes).size,
+                 personneSurLeGare: L.Vehicules.cavalierDe(gare) === null, gareA: !!gare.pilote };
+    }""")
+    assert all(t != "null" for t in r["tetes"]), "une moto du trafic roule sans personne dessus : %s" % r
+    assert r["distinctes"] >= 3, "tous les motards ont la même tête : %s" % r["distinctes"]
+    assert r["personneSurLeGare"] is True and r["gareA"] is False, (
+        "une moto stationnée a quelqu'un dessus : %s" % r
+    )
+
+
+def test_le_joueur_sur_sa_moto_est_peint_avec_ses_couleurs_et_en_deux_images(banc):
+    """⚠️ Au volant, `j.dessine = false` : c'est le véhicule qui doit peindre
+    le pilote, et avec les couleurs DU JOUEUR — sinon on change de tête en
+    enfourchant. On compte les images : une moto avec quelqu'un dessus, c'est
+    la machine ET le passant assis."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const v = o.char('moto', 0, 0, 0);
+        const images = function () {
+            const ctx = L.Base.ecran(); let n = 0;
+            ctx.drawImage = function () { n++; };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            return n;
+        };
+        const seule = images();
+        L.Vehicules.monter(j, v);
+        const montee = { images: images(), cavalier: L.Vehicules.cavalierDe(v) === j.swaps,
+                         joueurCache: j.dessine === false };
+        L.Vehicules.descendre(j, true);
+        return { seule: seule, montee: montee, apres: images() };
+    }""")
+    assert r["seule"] == 1, "une moto stationnée se peint en %s images" % r["seule"]
+    assert r["montee"]["joueurCache"] is True, "le décor du juge est faux : le joueur reste dessiné (%s)" % r
+    assert r["montee"]["cavalier"] is True, "le pilote n'a pas les couleurs du joueur : %s" % r
+    assert r["montee"]["images"] == 2, "le joueur sur sa moto ne se peint pas : %s" % r
+    assert r["apres"] == 1, "descendu, il reste peint sur la moto : %s" % r
+
+
+def test_celui_qu_on_jette_a_terre_garde_ses_couleurs(banc):
+    """Voler un vélo fait tomber son cycliste. ⚠️ C'est CELUI QUI ÉTAIT DESSUS
+    qui tombe : un cycliste tiré au hasard à la chute aurait changé de tête en
+    touchant le sol."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const v = L.Vehicules.creer('velo', j.x + 10, j.y, 0, { conducteur: 'trafic', etat: 'roule' });
+        const avant = JSON.stringify(v.pilote && v.pilote.swaps);
+        const gens0 = L.B.entites.filter(function (e) { return e.type === 'pieton'; }).length;
+        L.Vehicules.monter(j, v);
+        const tombes = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin' && e.menace === j; });
+        return { avant: avant, tombe: tombes.length ? JSON.stringify(tombes[tombes.length - 1].swaps) : null,
+                 pilote: v.pilote, monte: j.dansVehicule === v };
+    }""")
+    assert r["monte"] is True, "le décor du juge est faux : le vol n'a pas eu lieu (%s)" % r
+    assert r["avant"] and r["avant"] != "null", "le vélo du trafic n'avait pas de cycliste : %s" % r
+    assert r["tombe"] == r["avant"], "le cycliste jeté à terre a changé de tête : %s" % r
+    assert r["pilote"] is None, "le vélo volé garde son pilote : %s" % r
+
+
+def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
+    """Retour de Martin : « la voiture sport devrait être basse, les roues plus
+    dans les ailes ». ⚠️ Deux mesures, pas une impression : de profil, sa
+    caisse est plus courte que celle de l'auto (toit plus bas pour un même sol),
+    et la rangée de bas de caisse passe PAR-DESSUS le haut des pneus — on y
+    trouve du pneu là où l'auto n'a que de la tôle."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        // ⚠️ ON MESURE LE DESSIN, pas la fiche : la hauteur va du premier
+        // pixel au dernier DE LA GRILLE. Mesuree depuis l'ancre declaree, une
+        // grille etrangere d'une autre taille passait au travers du juge.
+        const mesure = function (slug) {
+            const def = L.SPRITES[slug], g = def.poses.cote[0];
+            let haut = -1, sol = -1;
+            for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { if (haut < 0) haut = y; sol = y; }
+            const large = Math.max.apply(null, g.map(function (l) { return l.replace(/[.]/g, ' ').trim().length; }));
+            // La rangee du bas de caisse : la premiere rangee, en montant depuis le
+            // sol, qui traverse la caisse d'un bout a l'autre.
+            let bas = -1;
+            for (let y = sol; y >= 0; y--) {
+                const l = g[y].replace(/[.]/g, ' ').trim();
+                if (l.length >= large * 0.9) { bas = y; break; }
+            }
+            return { hauteur: sol - haut, pneuDansLaCaisse: (g[bas].match(/r/g) || []).length, bas: bas, sol: sol };
+        };
+        return { sport: mesure('sport'), auto: mesure('auto') };
+    }""")
+    assert r["sport"]["hauteur"] < r["auto"]["hauteur"], "la sport n'est pas plus basse que l'auto : %s" % r
+    assert r["sport"]["pneuDansLaCaisse"] > 0, "les roues de la sport pendent sous la caisse : %s" % r
+    assert r["auto"]["pneuDansLaCaisse"] == 0, "le décor du juge est faux : l'auto aussi a ses roues dans les ailes (%s)" % r
