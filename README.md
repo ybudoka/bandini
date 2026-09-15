@@ -30,6 +30,16 @@ uv run python run.py
 
 → http://127.0.0.1:5400
 
+Le serveur de développement écoute **tout le réseau local** (`APP_HOST=0.0.0.0`,
+le défaut) : le terminal imprime aussi une adresse `http://192.168.x.x:5400` —
+c'est celle à taper sur le téléphone, la tablette ou l'autre ordinateur de la
+maison, sur le même wifi. ⚠️ L'adresse à lire est **celle-là**, pas le
+`Running on http://…` de Werkzeug juste au-dessus : celui-là annonce la route
+par défaut, donc le tunnel quand un VPN est monté. `APP_HOST=127.0.0.1` referme
+le serveur sur la machine (et c'est le seul cas où la console interactive de
+Werkzeug s'allume). Si l'appareil ne trouve rien : le pare-feu de macOS demande
+une fois l'autorisation d'accepter les connexions entrantes pour Python.
+
 ## Tests
 
 ```bash

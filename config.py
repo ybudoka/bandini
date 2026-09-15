@@ -8,6 +8,7 @@ que le tableau des scores, dans un fichier JSON sous `DONNEES_DIR`.
 from __future__ import annotations
 
 import os
+import socket
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -30,6 +31,51 @@ def port_de_dev() -> int:
             return port
 
     return 5400
+
+
+def hote_est_local(hote: str) -> bool:
+    """Vrai si le serveur n'ecoute que la machine.
+
+    ⚠️ C'est la seule condition qui allume la console interactive de Werkzeug
+    (`use_debugger`) : un shell Python ouvert a tout le reseau de la maison
+    n'a rien a faire la. Depuis que `APP_HOST` vaut `0.0.0.0` par defaut, cette
+    reponse est `False` la plupart du temps — c'est voulu.
+    """
+    return hote.strip().strip("[]") in ("127.0.0.1", "localhost", "::1")
+
+
+def adresses_du_reseau_local() -> list[str]:
+    """Les adresses IPv4 de cette machine sur le reseau de la maison, sans le loopback.
+
+    ⚠️ Werkzeug en annonce une seule, et elle peut mentir : il la trouve en
+    ouvrant une socket vers une adresse privee quelconque (`get_interface_ip`),
+    donc c'est l'adresse de la route par defaut. Avec un VPN monte, c'est celle
+    du tunnel (`10.x`) qu'il imprime — que le telephone du salon ne joint
+    **pas**. Le nom de la machine, lui, resout vers les vraies interfaces.
+    """
+    adresses: list[str] = []
+    try:
+        _, _, trouvees = socket.gethostbyname_ex(socket.gethostname())
+    except OSError:  # pas de resolution du nom de la machine (docker, CI)
+        trouvees = []
+
+    for adresse in trouvees:
+        # 127.x : la machine elle-meme ; 169.254.x : une interface sans bail DHCP.
+        if not adresse.startswith(("127.", "169.254.")) and adresse not in adresses:
+            adresses.append(adresse)
+
+    if adresses:
+        return adresses
+
+    # Repli : l'adresse source que le systeme choisit pour sortir. C'est le
+    # coup de Werkzeug — faute de mieux quand le nom ne resout rien.
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as prise:
+        try:
+            prise.connect(("10.253.155.219", 58162))
+        except OSError:
+            return []
+        adresse = prise.getsockname()[0]
+    return [adresse] if not adresse.startswith("127.") else []
 
 
 def _flag(name: str, default: bool = False) -> bool:

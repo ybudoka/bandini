@@ -4,9 +4,10 @@
   "version": "0.2.0",
   "configurations": [
     {
-      // F5 : demarre Flask (run.py lit le .env, port 5400) puis ouvre le jeu
-      // dans Chrome avec le debogueur JS branche sur static/js. Le bouton
-      // Stop ferme Chrome ET coupe le serveur (postDebugTask).
+      // F5 : demarre Flask (run.py lit le .env, port 5400, ouvert au reseau
+      // local) puis ouvre le jeu dans Chrome avec le debogueur JS branche sur
+      // static/js. Le bouton Stop ferme Chrome ET coupe le serveur
+      // (postDebugTask).
       "name": "Jouer (serveur + Chrome)",
       "type": "chrome",
       "request": "launch",
@@ -31,11 +32,11 @@
       "env": { "FLASK_DEBUG": "true" }
     },
     {
-      // Le meme serveur, ouvert au RESEAU LOCAL : pour jouer sur le telephone
-      // ou la tablette de la maison (meme wifi). Le terminal imprime l'adresse
-      // « Running on http://192.168.x.x:5400 » a taper sur l'appareil.
-      // La console Werkzeug est coupee des que l'hote n'est plus local (run.py).
-      "name": "Serveur Flask (reseau local — telephone, manette)",
+      // Le meme serveur, REFERME sur la machine (127.0.0.1) : toutes les
+      // autres facons de lancer ecoutent le reseau local, celle-ci est la
+      // seule qui ne le fait pas. C'est aussi la seule ou la console
+      // interactive de Werkzeug s'allume (run.py la coupe hors de localhost).
+      "name": "Serveur Flask (local seulement — console Werkzeug)",
       "type": "debugpy",
       "request": "launch",
       "program": "${workspaceFolder}/run.py",
@@ -43,15 +44,16 @@
       "console": "integratedTerminal",
       "justMyCode": false,
       "jinja": true,
-      "env": { "FLASK_DEBUG": "true", "APP_HOST": "0.0.0.0" }
+      "env": { "FLASK_DEBUG": "true", "APP_HOST": "127.0.0.1" }
     },
     {
       // Sans rechargement : un seul processus, plus confortable pas a pas.
+      // --host 0.0.0.0 : joignable du telephone comme les autres.
       "name": "Serveur Flask (sans rechargement, pour deboguer)",
       "type": "debugpy",
       "request": "launch",
       "module": "flask",
-      "args": ["--app", "run", "run", "--no-reload", "--host", "127.0.0.1", "--port", "5400"],
+      "args": ["--app", "run", "run", "--no-reload", "--host", "0.0.0.0", "--port", "5400"],
       "cwd": "${workspaceFolder}",
       "console": "integratedTerminal",
       "justMyCode": false,
