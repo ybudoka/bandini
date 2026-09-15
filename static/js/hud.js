@@ -492,8 +492,14 @@ const Hud = (function () {
         faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
       { libelle: 'RÉPERTOIRE', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
         faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
+      // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
+      // même règle que le carnet du poste : une pression qu'on subit sans
+      // jamais pouvoir la regarder n'est pas une pression, c'est une
+      // malchance. Elle disparaît de la page le jour où elle est réglée —
+      // une ligne à zéro serait une dette qu'on traîne pour rien.
+      p.dette > 0 ? { libelle: 'LA DETTE DE ROCCO', detail: p.dette + ' $', actif: false } : null,
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
-    ] };
+    ].filter(Boolean) };
   }
 
   //: Une ligne qu'on lit, qu'on ne choisit pas.

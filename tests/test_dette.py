@@ -210,3 +210,26 @@ def test_ce_qu_ils_prennent_de_force_compte_sur_la_dette(banc):
     assert r["detteAvant"] - r["dette"] == pris, (
         "ce qu'ils prennent ne compte pas sur la dette : c'est un impôt (%s)" % r
     )
+
+
+def test_la_dette_se_lit_dans_le_carnet(banc):
+    """⚠️ Une pression qu'on subit sans jamais pouvoir la regarder n'est pas une
+    pression, c'est une malchance — la même règle que le carnet du poste. Et
+    elle **disparaît** de la page le jour où elle est réglée : une ligne à zéro
+    serait une dette qu'on traîne pour rien."""
+    r = banc("""function (L, o) {
+        %s
+        const lire = function () {
+            const m = L.Hud.menuCarnet();
+            const l = m.items.find(function (q) { return q.libelle === 'LA DETTE DE ROCCO'; });
+            return l ? l.detail : null;
+        };
+        const due = lire();
+        L.Missions.rembourser(999999, 'TOUT');
+        return { due: due, reglee: lire(), dette: p.dette };
+    }""" % DECOR)
+    assert r["due"] == "%s $" % economie.DETTE["montant"], (
+        "le carnet ne dit pas ce qu'on doit : %s" % r
+    )
+    assert r["dette"] == 0
+    assert r["reglee"] is None, "la dette réglée traîne encore dans le carnet : %s" % r
