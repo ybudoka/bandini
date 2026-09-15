@@ -406,3 +406,66 @@ def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
     assert r["sport"]["hauteur"] < r["auto"]["hauteur"], "la sport n'est pas plus basse que l'auto : %s" % r
     assert r["sport"]["pneuDansLaCaisse"] > 0, "les roues de la sport pendent sous la caisse : %s" % r
     assert r["auto"]["pneuDansLaCaisse"] == 0, "le décor du juge est faux : l'auto aussi a ses roues dans les ailes (%s)" % r
+
+
+def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
+    """⚠️ **Retour de Martin : « les voitures de face et de dos devraient être
+    vues à 45 degrés, pas de face, vu la carte » · « vue plongeante ».**
+
+    Les poses `haut` et `bas` étaient des **élévations au ras du sol** : on
+    voyait la face arrière bien à plat et presque pas de toit. Sur une carte
+    qu'on regarde d'en haut, un char qui roule vers le nord ne montrait donc
+    **rien de ses 28 px de longueur** — mesuré, 12 rangées peintes pour un char
+    long de 28.
+
+    À 45°, une longueur `L` se projette en `L·sin45` et une hauteur `H` en
+    `H·cos45` ; pour nos proportions la somme vaut à peu près `L`. La règle est
+    donc simple et elle se mesure : **de dos comme de face, un char occupe à
+    l'écran sa longueur** — exactement ce que son ombre au sol annonce déjà.
+    Et de profil, rien ne bouge : c'est sa hauteur qu'on y voit."""
+    r = banc("""function (L, o) {
+        const out = {};
+        L.B.defs.vehicules.forEach(function (v) {
+            const def = L.SPRITES[v.sprite];
+            if (!def || def.rotations) return;
+            const mesure = function (nom) {
+                const g = def.poses[nom][0];
+                let premier = -1, dernier = -1, large = 0;
+                for (let y = 0; y < g.length; y++) {
+                    if (!/[^.]/.test(g[y])) continue;
+                    if (premier < 0) premier = y;
+                    dernier = y;
+                    const peints = g[y].split('').filter(function (c) { return c !== '.'; }).length;
+                    if (peints > large) large = peints;
+                }
+                return { haut: dernier - premier + 1, large: large };
+            };
+            out[v.slug] = { cote: mesure('cote'), dos: mesure('haut'), face: mesure('bas'),
+                            longueur: v.longueur, largeur: v.largeur };
+        });
+        return out;
+    }""")
+    assert len(r) >= 10, "trop peu de véhicules debout : %s" % list(r)
+    for slug, m in r.items():
+        lon, lat = m["longueur"], m["largeur"]
+        for nom, pose in (("de dos", m["dos"]), ("de face", m["face"])):
+            # ⚠️ LE DÉFAUT, MESURÉ : une pose plongeante fait la LONGUEUR du
+            # char, pas sa hauteur. Avant, une berline de 28 px en montrait 12.
+            assert abs(pose["haut"] - lon) <= 5, (
+                f"{slug} {nom} : {pose['haut']} rangées pour un char long de {lon} — "
+                "il est dessiné de face, pas vu d'en haut"
+            )
+            # ... et sa largeur reste sa largeur : une pose plongeante ne
+            # s'étale pas sur la voie d'à côté.
+            assert pose["large"] <= lat + 6, f"{slug} {nom} : {pose['large']} px de large pour {lat}"
+        # Le profil, lui, montre la HAUTEUR du char : il n'a pas bougé, et il
+        # est forcément bien plus plat que les deux autres.
+        # ⚠️ Le profil montre la HAUTEUR du char, la plongée sa LONGUEUR : la
+        # seconde est donc toujours plus haute que le premier. Un vélo, court et
+        # haut sur ses roues, tient de justesse — c'est pour ça que la règle se
+        # dit « plus haute », et pas « deux fois plus haute ».
+        assert m["cote"]["haut"] < m["dos"]["haut"], (
+            f"{slug} : le profil fait {m['cote']['haut']} rangées et le dos {m['dos']['haut']} — "
+            "l'un des deux ne regarde pas d'où il devrait"
+        )
+        assert abs(m["cote"]["large"] - lon) <= 8, f"{slug} de profil : {m['cote']['large']} px pour {lon}"

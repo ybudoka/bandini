@@ -86,7 +86,13 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
             # La marge laisse la place aux roues — et au BRAS de la remorqueuse,
             # qui depasse derriere et qui est ce qui la nomme de profil.
             assert w <= lon + 12, "%s : sprite de %s px pour %s px de long" % (slug, w, lon)
-            assert lat <= h <= lon, "%s : %s px de haut pour %sx%s" % (slug, h, lon, lat)
+            # ⚠️ **Reformulé le 15 sept. 2026, la vue plongeante.** La règle
+            # disait « rien n'est plus haut que long » : elle datait du dessin
+            # de dos À PLAT, où la toile ne portait que la HAUTEUR du char. Vu
+            # d'en haut à 45°, la pose de dos porte sa LONGUEUR — la toile fait
+            # donc la longueur, à la marge de la ligne de sol près. Ce qui reste
+            # vrai : elle ne fait pas PLUS, sinon c'est une affiche.
+            assert lat <= h <= lon + 4, "%s : %s px de haut pour %sx%s" % (slug, h, lon, lat)
         # ⚠️ **Reformule le 15 sept. 2026.** Il exigeait 32 caps pour tout le
         # monde — c'etait la regle d'AVANT, et la refonte des vehicules la
         # remplace : un char se dessine comme un passant, trois poses choisies

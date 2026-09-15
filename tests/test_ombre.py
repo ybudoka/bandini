@@ -165,8 +165,13 @@ def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):
     que le char n'est haut — et on la lisait comme une remorque.
 
     La règle, et elle vaut pour tous les caps : **une ombre ne dépasse jamais
-    la ligne de sol de plus que la hauteur du dessin qui la jette.** L'ancre du
-    sprite (`ancre[1]`) est cette hauteur : c'est de là que le dessin monte."""
+    la ligne de sol de plus que la hauteur du dessin qui la jette.**
+
+    ⚠️ Cette hauteur se mesure sur le dessin DE PROFIL, pas sur l'ancre. Depuis
+    la vue plongeante (15 sept. 2026), la toile monte jusqu'à la LONGUEUR du
+    char pour porter sa pose de dos, et l'ancre avec elle : la prendre pour la
+    hauteur du char relâcherait la borne de vingt pixels sans que personne ne
+    le dise. C'est le flanc qui dit ce qu'un char a de haut."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(31);
@@ -180,7 +185,14 @@ def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):
             // pas mesurer la hauteur d'un dessin qui n'existe pas.
             const sprite = L.SPRITES[v.sprite];
             const cuit = sprite ? L.Atlas.cuire(v.sprite, sprite, v.swaps) : null;
-            const hauteur = cuit && !sprite.rotations ? cuit.ancre[1] : null;
+            // Ce que le FLANC monte au-dessus de la ligne de sol.
+            let hauteur = null;
+            if (cuit && !sprite.rotations) {
+                const g = sprite.poses.cote[0];
+                let premier = g.length;
+                for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { premier = y; break; }
+                hauteur = cuit.ancre[1] - premier + 1;
+            }
             const caps = {};
             [['est', 0], ['nord', -Math.PI / 2], ['sud', Math.PI / 2], ['biais', Math.PI / 4]].forEach(function (c) {
                 v.angle = c[1];
