@@ -3361,7 +3361,7 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
         function tenir() {
           j.endurance = 100;
           const depart = { x: j.x, y: j.y };
-          let n = 0;
+          let n = 0, parcouru = 0;
           o.touche('ShiftLeft'); o.touche('KeyA');
           while (j.endurance > 0 && n < 2000) {
             // ⚠️ On mesure le JOUEUR, pas la foule : une flaneuse plantee sur
@@ -3369,10 +3369,19 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
             // 2026, le jour ou huit enseignes de plus ont deplace les portes
             // par ou les passants naissent) et la vitesse tombait de 5 %.
             for (const e of L.Entites.pietonsAutour(j.x, j.y, 60)) L.Entites.retirer(e);
+            // ⚠️ ET ON MESURE SUR PLACE, depuis que « l'eau n'est plus un mur » :
+            // deux mille images de course vers l'ouest finissent dans la baie,
+            // et le joueur n'y bute plus — il NAGE, a la moitie de sa vitesse.
+            // Le juge mesurait donc de la nage et concluait que le cafe
+            // ralentit. Ce qu'il veut savoir n'a rien a voir avec la
+            // geographie : combien de pixels par image, et combien d'images.
+            const avant = { x: j.x, y: j.y };
             o.frame(1); n++;
+            parcouru += Math.hypot(j.x - avant.x, j.y - avant.y);
+            j.x = depart.x; j.y = depart.y;
           }
           o.relacher('KeyA'); o.relacher('ShiftLeft');
-          return { images: n, px: Math.hypot(j.x - depart.x, j.y - depart.y) };
+          return { images: n, px: parcouru };
         }
         const ajeun = tenir();
         L.Missions.cafeine(j);
