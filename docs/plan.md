@@ -97,6 +97,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les feux s'allument pour vrai | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
 | Le son de l'eau | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». On y entrait sur un bruit de **tôle froissée** (`SFX.choc`, le son d'un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule ne faisait **aucun bruit** |
 | M15 La ville te parle | **P4** ajout, **1re vague en cours** (14 sept. 2026) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
+| Les amuseurs de rue font un vrai spectacle | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
 | M12 La ville vit | **P4** ajout à faire (v2) | tramway, traversier à l'heure, tempête de neige et charrue, **une famille d'entraves** (réparations, fermetures avec DÉTOUR, bris d'aqueduc, pannes) tirées d'une liste que Python valide, nids-de-poule, nuit de déneigement qui envoie les chars au lot, feux au clignotant la nuit, heures de pointe qui ont une direction, la ville coupable d'elle-même, l'arrêt d'autobus, les éboueurs, goélands et chats |
@@ -3224,6 +3225,94 @@ pas un son qu'on a laissé grossir. On reste sous le mégaoctet, et la finition 
   brassées et **aucun pas** ; à bout de souffle, on entend `couler` ; un char qui entre dans
   l'eau plonge, puis fait du bruit en coulant ; et le filet synthétisé des trois **atteint la
   sortie**, comme pour tous les autres effets.
+
+### Les amuseurs de rue font un vrai spectacle (**correctif**, taille 3) — **en cours le 14 sept. 2026**
+
+_Demande de Martin :_ « je veux que les amuseurs de rue soient animés et qu'il y ait toujours
+entre 3 et 5 personnes autour. Présentement ils ne font rien et sont ennuyants. Je veux que le
+musicien fasse vraiment de la musique, 5 musiques différentes, je veux des jongleurs et des
+échassiers. » Et : « ils doivent toujours être dans le centre-ville, où il y a plus de gens.
+Tu peux aussi mettre plus de gens en centre-ville et moins en périphérie. »
+
+⚠️ **Martin a raison, et la fiche d'origine le disait déjà.** « Des sortes de gens » promettait
+un musicien qui « joue — et **ça s'entend** » ; ce qui a été livré, c'est un corps avec une
+guitare dessinée dessus et **zéro note**. Le jeu a un séquenceur (`Son.Mus`), dix morceaux
+écrits en notes, un chef d'orchestre — et l'homme à la guitare est muet. C'est la neuvième fois
+que le dépôt paie « une fiche que le navigateur ne lisait pas », et la première où c'est
+l'**oreille** qui le dit.
+
+Ce qui ne va pas, mesuré :
+
+- **Ils ne font rien.** `majSortes` envoie le musicien et l'amuseur dans la même fonction,
+  `attrouper`, qui ne touche **qu'aux badauds** : elle ne change rien à l'artiste. Ils sont
+  `vitesse: 0`, donc `bouge` est faux, donc `imageDe` tombe sur **l'image zéro** — la même,
+  toujours, pour toute la partie. Le mime n'a jamais bougé un doigt.
+- **L'attroupement est un hasard, pas une foule.** `attrouper` attend qu'un passant entre dans
+  les 46 px et qu'il soit en `flane` ou `arret`. Dans une rue vide, il n'y a **personne** ; et
+  une fois attroupés, leur `minuterie` de 4 à 8 s les renvoie ailleurs sans que rien ne les
+  remplace. Le juge du banc pose lui-même quatre badauds avant de mesurer — c'est-à-dire qu'il
+  mesure l'attroupement d'une foule qu'il a fabriquée.
+- **Ils naissent partout.** `musicien` et `amuseur` n'ont pas de `districts` : un mime dans une
+  cour à ferraille de La Shop à 3 h du matin, devant personne.
+- **Il n'y a qu'un genre d'amuseur** : le mime. Pas de jongleur, pas d'échassier.
+
+**Ce qu'on fait.**
+
+- **Quatre corps, quatre spectacles.** Le musicien et le mime gagnent de vraies images de
+  spectacle ; le **jongleur** et l'**échassier** sont deux sortes neuves, avec leur corps à
+  elles (règle du dépôt : une sorte = un corps + une routine, et un juge Python refuse une
+  sorte qui porte le corps d'une autre).
+  - le **musicien** gratte : la main descend et remonte **en mesure**, sur le tempo du morceau
+    qu'il joue ;
+  - le **mime** enferme le vide : mur invisible, boîte, salut — des poses, pas des pas ;
+  - le **jongleur** a **trois balles dans les airs**, et elles sont dans le sprite : quatre
+    images, la balle monte, tourne, retombe. ⚠️ Dessiner les balles à part aurait voulu dire
+    un deuxième chemin de dessin pour une seule sorte — le sprite les porte, l'atlas les cuit
+    une fois, et le tri par `y` reste le seul tri ;
+  - l'**échassier** est **plus haut que tout le monde** : son sprite fait 26 px au lieu de 13,
+    il dépasse la foule, et il tangue doucement — c'est précisément ce qui le rend visible de
+    loin, par-dessus l'attroupement.
+- **Toujours 3 à 5 personnes autour**, et c'est une **règle**, pas une chance : si le cercle
+  est en dessous du minimum, un badaud **naît hors champ** et vient se planter dedans ; au
+  maximum, on n'en prend plus. Les spectateurs **tournent** — un qui s'en va est remplacé — et
+  ils **applaudissent**. ⚠️ Les chiffres (3, 5, le rayon du cercle, la patience) vivent dans
+  `pietons.py` : le navigateur les lit, il ne les invente pas.
+- **Le musicien joue vraiment, et cinq morceaux.** Cinq pièces de rue **écrites en notes**
+  (`musique.py`), comme le thème du menu et les radios — deux voix, une guitare qui gratte et
+  une mélodie, pas un orchestre : ⚠️ un homme seul sur un trottoir n'a ni basse ni batterie, et
+  une station de radio à quatre voix sous un mime aurait sonné comme un haut-parleur.
+  - **La complainte du Faubourg**, **Le reel du trottoir**, **Le blues du coin**, **La valse de
+    la Baie** (à trois temps — la seule du jeu) et **La ballade des brumes**. Chaque musicien
+    en tire une **à la naissance** et la garde.
+  - ⚠️ **Elle se joue DANS LA RUE, pas dans le casque** : un deuxième séquenceur (`Son.Rue`)
+    avec sa propre sortie, et **le volume suit la distance** — on l'entend d'un coin de rue, on
+    l'a dans les oreilles devant lui, et elle s'éteint quand on s'en va. Un seul musicien
+    sonne à la fois (le plus proche) : dix musiciens auraient fait dix séquenceurs.
+  - ⚠️ Elle passe **sous** la voix (le ducking l'atteint, comme la radio) et **sous** la musique
+    d'état : quand la police te court après, la toune du guitariste n'a plus d'importance.
+    L'échelle de `musique.py` ne change pas — la rue s'ajoute **en dessous**.
+- **Ils tiennent le centre-ville.** Les quatre sortes déclarent `districts: ("faubourg",)` —
+  c'est le centre-ville ouvrier (`devantures.py` le dit déjà en toutes lettres) et c'est le
+  district le plus peuplé. Un amuseur joue là où il y a du monde ; ailleurs, il joue pour les
+  goélands.
+- **Et il y a plus de monde au centre, moins en périphérie.** `carte.py` donne à chaque
+  district son nombre de piétons : le Faubourg monte, les Érables, La Shop et La Pointe
+  baissent. ⚠️ Le plafond de la bulle (`MAX_PIETONS`) ne bouge pas : c'est la **répartition**
+  qu'on change, pas le budget d'image — un quartier plus dense doit se payer avec la foule d'un
+  quartier plus vide.
+
+⚠️ **Le budget du paquet.** Cinq morceaux de plus, c'est le catalogue de musique qui passe de
+25 à ~33 Ko — le plafond du juge est à 48 Ko, et aucun fichier audio n'est téléchargé : une
+pièce écrite en notes pèse 1,6 Ko, une minute de mp3 en pèse 500.
+
+- **Juges** : côté Python, chaque sorte a son corps, son métier et ses quartiers ; les cinq
+  pièces de rue ont toutes leurs notes **dans leur gamme**, aucune ne déborde de sa boucle, et
+  deux n'ont ni le même tempo ni la même mélodie. Au banc : le cercle reste **entre 3 et 5**
+  sur 1500 images, dans une rue qu'on n'a pas garnie à la main ; les quatre artistes
+  **changent d'image** pendant qu'ils tiennent leur poste (l'image zéro figée les fait
+  rougir) ; le musicien **pose des notes** dans le contexte audio, plus fort de près que de
+  loin, et **se tait** quand on s'éloigne ; et un musicien du Faubourg ne naît ni à La Shop ni
+  aux Quais.
 
 ### M15 — La ville te parle (**ajout**, taille 4)
 
