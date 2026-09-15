@@ -737,78 +737,159 @@ def _empreinte(sol: list[str], x: int, y: int) -> int:
 GRAINES = (carte.GRAINE, 1, 2, 3, 4)
 
 
+def _part_de_la_vitrine(sol: list[str], porte: dict) -> set[tuple[int, int]]:
+    """Les tuiles de batiment qu'on voit AU-DESSUS d'une vitrine.
+
+    C'est la part de batiment qui appartient a cette porte-la, donc ce a quoi sa
+    piece doit ressembler. ⚠️ On monte tant que le TOIT ne change pas : deux
+    batiments colles n'ont jamais la meme couverture (`batiment_forme` y veille,
+    « ma voisine n'est pas le meme toit »), et c'est ce qui permet de mesurer un
+    commerce sans avaler celui d'a cote ni celui de derriere.
+    """
+    x0, large = porte["vitrine"]
+    part = set()
+    for x in range(x0, x0 + large):
+        if not (0 <= x < len(sol[0])) or sol[porte["y"]][x] not in CARCASSE:
+            continue
+        part.add((x, porte["y"]))
+        toit, y = None, porte["y"] - 1
+        while y >= 0:
+            glyphe = sol[y][x]
+            if glyphe not in CARCASSE or (toit is not None and glyphe != toit):
+                break
+            toit = glyphe
+            part.add((x, y))
+            y -= 1
+    return part
+
+
 @pytest.mark.parametrize("graine", GRAINES)
-def test_aucune_piece_ne_depasse_l_empreinte_de_sa_maison(graine):
-    """Martin : « les interieurs ne devraient pas etre plus petits que l'exterieur ».
+def test_la_piece_a_les_mesures_de_son_batiment(graine):
+    """Martin : « je veux que l'interieur soit PROPORTIONNE a l'exterieur ».
 
-    Les 41 interieurs de la ville debordaient, et parfois de seize fois : un
-    logement de banlieue de 3 x 3 ouvrait sur un 16 x 9. La cause tenait en une
-    phrase — `_pose_batiment` tire ses marges au sort, `INTERIEURS` declare des
-    pieces ecrites a la main, et personne ne comparait.
+    ⚠️ La regle d'avant etait une INEGALITE — le plancher ne depasse pas
+    l'empreinte — et une inegalite se satisfait tres bien d'une piece minuscule
+    dans un immeuble immense : un bloc de 59 x 8 ouvrait sur un 9 x 8, treize
+    pour cent, et un batiment de quatre tuiles de profond sur une piece qui en
+    fait six. Ce juge-ci mesure les DEUX cotes de la proportion.
 
-    ⚠️ On compare les PLANCHERS, pas les boites : une piece de 15 x 10 n'a que
-    13 x 8 tuiles de plancher une fois ses murs deduits. Et on compare a
-    l'EMPREINTE (ce qu'on voit de la rue), pas a la parcelle — la parcelle
-    ment de trois fois la surface.
+    On compare le PLANCHER (murs deduits) a la part de batiment que la vitrine
+    possede, parce que c'est la convention du jeu : une cabane de 3 x 3 ouvre
+    sur 3 x 3 de plancher, donc une piece de 5 x 5 murs compris — les murs de la
+    piece SONT ceux du batiment.
     """
     ville = carte.generer(graine=graine)
-    sol = ville["sol"]
-    debords = []
+    sol, pieces = ville["sol"], ville["interieurs"]
+    faux = []
     for porte in ville["portes"]:
-        plancher = carte.plancher_de_la_suite(porte["interieur"])
-        empreinte = _empreinte(sol, porte["x"], porte["y"])
-        if plancher > empreinte:
-            debords.append((porte["interieur"], empreinte, plancher))
-    assert not debords, (
-        f"{len(debords)} portes ouvrent sur plus grand que leur batiment "
-        f"(graine {graine}) : " + ", ".join(
-            f"{slug} {emp} tuiles dehors, {pl} dedans" for slug, emp, pl in debords[:5]))
+        largeur, hauteur = carte.mesures_de_la_suite(porte["interieur"], pieces)
+        part = _part_de_la_vitrine(sol, porte)
+        xs = [x for x, _ in part]
+        ys = [y for _, y in part]
+        boite = (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1)
+        if (largeur, hauteur) != boite or largeur * hauteur > len(part):
+            faux.append((porte["interieur"], f"{boite[0]}x{boite[1]}", f"{largeur}x{hauteur}"))
+    assert not faux, (
+        f"{len(faux)} portes ouvrent sur une piece qui n'a pas les mesures de son "
+        f"batiment (graine {graine}) : " + ", ".join(
+            f"{slug} {dehors} dehors, {dedans} dedans" for slug, dehors, dedans in faux[:5]))
 
 
 @pytest.mark.parametrize("graine", GRAINES)
-def test_les_petites_maisons_ouvrent_sur_de_petites_pieces(graine):
+def test_les_portes_s_ouvrent_quand_meme(graine):
     """Le juge du dessus passerait aussi si PLUS AUCUNE porte ne s'ouvrait.
 
     C'est la moitie qu'on oublie : condamner les quarante portes serait une
-    facon de ne jamais mentir. Alors on exige l'inverse — les petites pieces
-    existent, elles servent, et la ville garde ses portes ouvertes.
+    facon de ne jamais mentir. On exige donc l'inverse — la ville garde ses
+    portes, les petites maisons ouvrent sur de petites pieces (elles ne
+    s'ouvraient pas du tout avant qu'on descende a trois sur trois), et les
+    grandes sur des grandes.
     """
     ville = carte.generer(graine=graine)
-    pieces = [porte["interieur"] for porte in ville["portes"]]
-    assert len(pieces) >= 25, f"seulement {len(pieces)} portes s'ouvrent (graine {graine})"
-    petites = [p for p in pieces if p in ("logement_petit", "boutique_petite")]
-    assert petites, (
-        "aucune petite piece ne sert : la ville n'a plus que des grands batiments, "
-        "ou bien les petites portes ont toutes ete condamnees")
+    pieces = ville["interieurs"]
+    planchers = [carte.mesures_de_la_suite(p["interieur"], pieces) for p in ville["portes"]]
+    assert len(planchers) >= 25, f"seulement {len(planchers)} portes s'ouvrent (graine {graine})"
+    petites = [m for m in planchers if m[0] * m[1] <= 16]
+    grandes = [m for m in planchers if m[0] * m[1] >= 50]
+    assert petites, "aucune petite piece : les petites maisons ont toutes ete condamnees"
+    assert grandes, "aucune grande piece : les grands batiments ouvrent sur des cabanes"
 
 
-def test_une_porte_prend_la_plus_grande_piece_qui_tienne():
+@pytest.mark.parametrize("graine", GRAINES)
+def test_une_longue_facade_porte_plusieurs_vitrines(graine):
+    """Soixante tuiles de large, ce n'est pas un commerce : c'est une rangee.
+
+    ⚠️ L'autre moitie de la demande de Martin, et celle qui rend la premiere
+    tenable : sans decouper les facades, « proportionne » voudrait dire une
+    piece de cinquante tuiles de large derriere une seule porte. Ici on juge la
+    ville finie — deux vitrines ne se marchent jamais dessus, et il y a bien des
+    facades qui en portent plusieurs ; la COUPE elle-meme se juge juste en
+    dessous, sans generer quoi que ce soit.
+    """
+    ville = carte.generer(graine=graine)
+    par_rangee: dict[int, list[tuple[int, int]]] = {}
+    for porte in ville["portes"]:
+        par_rangee.setdefault(porte["y"], []).append(tuple(porte["vitrine"]))
+    for rangee, vitrines in par_rangee.items():
+        bornes = sorted(vitrines)
+        for (x0, l0), (x1, _) in zip(bornes, bornes[1:]):
+            assert x0 + l0 <= x1, f"deux vitrines se chevauchent en rangee {rangee}"
+    assert [v for v in par_rangee.values() if len(v) > 1], \
+        "aucune facade ne porte deux commerces : le decoupage ne sert a rien"
+
+
+def test_une_part_de_batiment_donne_les_mesures_de_sa_piece():
     """La regle, en trois lignes, sans generer la ville.
 
-    ⚠️ `None` est un RESULTAT, pas un echec : un bungalow de neuf tuiles garde
-    sa porte, elle ne s'ouvre simplement pas. Une porte qui donne sur une piece
-    plus grande que la maison est un mensonge ; une porte qu'on ne pousse pas
-    n'en est pas un.
+    ⚠️ `None` est un RESULTAT, pas un echec : un bout de batiment trop petit
+    garde sa porte, elle ne s'ouvre simplement pas. Une porte qui donne sur plus
+    grand que la maison est un mensonge ; une porte qu'on ne pousse pas n'en est
+    pas un.
     """
-    tranches = carte.LOGEMENTS_PAR_TAILLE
-    planchers = [carte.plancher_de_la_suite(t) for t in tranches]
-    assert planchers == sorted(planchers) and len(set(planchers)) == len(planchers), \
-        f"les « tranches » ne vont pas de la plus petite a la plus grande : {planchers}"
-    assert carte.interieur_qui_tient(tranches, planchers[0] - 1) is None
-    for rang, plancher in enumerate(planchers):
-        assert carte.interieur_qui_tient(tranches, plancher) == tranches[rang]
-        if rang:
-            assert carte.interieur_qui_tient(tranches, plancher - 1) == tranches[rang - 1]
+    plein = {(x, y) for x in range(10) for y in range(4)}
+    assert carte.mesures_de_la_part(plein) == (10, 4), "un batiment plein donne sa boite"
+    # Un L : la boite ment de six tuiles, et c'est la PROFONDEUR qui cede — la
+    # largeur d'une vitrine est ce que le joueur compare en poussant la porte.
+    en_l = plein - {(x, 0) for x in range(6)}
+    assert carte.mesures_de_la_part(en_l) == (10, 3)
+    assert carte.mesures_de_la_part({(0, 0), (1, 0), (0, 1), (1, 1)}) is None
+    assert carte.mesures_de_la_part(set()) is None
 
 
-def test_le_plancher_dit_toute_la_suite():
-    """Une porte ne donne pas sur une piece : sur tout ce qu'elle ouvre.
+def test_un_etage_est_une_piece_de_plus_pas_une_piece_plus_grande():
+    """La nuance des plex : N etages, c'est N pieces de l'empreinte.
 
-    `logement` a un escalier qui monte vers `logement_haut` ; les deux doivent
-    tenir dans le batiment. C'est la nuance des etages : N etages, c'est N
-    pieces de son empreinte, jamais UNE piece N fois plus grande.
+    ⚠️ Et les deux escaliers ou aucun — un escalier qui ne redescend pas laisse
+    le joueur pris en haut, la porte du bas etant la seule sortie.
     """
-    assert carte.INTERIEURS["logement"]["points"], "l'escalier du logement a disparu"
-    assert (carte.plancher_de_la_suite("logement")
-            >= carte.plancher_de(carte.INTERIEURS["logement_haut"])), \
-        "l'etage ne compte pas dans la suite : un logement pourrait cacher un etage plus grand"
+    bas = carte.piece_de_logement("essai", 8, 5, 4, etage="essai_haut")
+    haut = carte.piece_de_logement("essai_haut", 8, 5, 4, etage="essai", haut=True)
+    assert (bas["largeur"], bas["hauteur"]) == (haut["largeur"], haut["hauteur"])
+    assert carte.mesures_de_la_suite("essai", {"essai": bas, "essai_haut": haut}) == (8, 5)
+    for piece, vers in ((bas, "essai_haut"), (haut, "essai")):
+        marches = [p for p in piece["points"] if p["type"] == "escalier"]
+        assert marches and marches[0]["vers"] == vers, \
+            f"{piece['slug']} : l'escalier ne mene pas a {vers}"
+
+
+def test_une_facade_se_coupe_en_commerces_sauf_un_entrepot():
+    """La coupe, mesuree sur une facade de soixante tuiles.
+
+    ⚠️ L'entrepot est l'exception, et c'est la MEME regle de proportion : un
+    hangar est une seule affaire, sa facade porte un nom et une porte, et
+    derriere il y a un entrepot de toute sa largeur. Le decouper en sept
+    magasins de huit serait inventer une rue commercante dans La Shop.
+    """
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)      # tout est gazon : on voit partout
+    facade = [(x, 10) for x in range(60)]
+    vitrines = chantier.decouper_la_facade(facade, "commerces")
+    assert len(vitrines) == 8, f"{len(vitrines)} vitrines pour soixante tuiles"
+    assert sum(v[1] for v in vitrines) == 60, "la facade n'est pas entierement partagee"
+    assert all(carte._Chantier.VITRINE_MIN <= v[1] <= 2 * carte._Chantier.VITRINE
+               for v in vitrines), f"des vitrines hors mesure : {vitrines}"
+    assert [v[0] for v in vitrines] == sorted(v[0] for v in vitrines)
+    entrepot = chantier.decouper_la_facade(facade, "hangars")
+    assert entrepot == [(0, 60, 10)], f"un entrepot s'est fait couper en {len(entrepot)}"
+    # Une facade a trous (un batiment en L) : une suite, une coupe.
+    troue = [(x, 10) for x in list(range(6)) + list(range(20, 26))]
+    assert chantier.decouper_la_facade(troue, "commerces") == [(0, 6, 10), (20, 6, 10)]

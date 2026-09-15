@@ -98,7 +98,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le son de l'eau | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». Il n'y avait **rien à améliorer** : on y entrait sur de la **tôle froissée** (`SFX.choc`, un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule était muet de bout en bout. Trois bruitages neufs (`plongeon` ×2, `nage` ×3, `couler`) et le câblage des six moments que l'eau produit. ⚠️ **Et un cul-de-sac trouvé en chemin** : `v.conducteur === 'joueur'` — la chaîne — n'était **jamais vrai**, donc « IL COULE — SORS » ne s'affichait jamais et le joueur restait dans un char **retiré des entités**, immobile pour toujours au fond de la baie. 6 juges neufs |
 | M15 La ville te parle | **P4** ajout, **1re vague livrée** (14 sept. 2026) | tout ce qui ne demandait **aucun son neuf**. ⚠️ **La rue se tait quand tu sors une arme** — `Son.Rumeur` réglait déjà son volume sur le nombre de gens autour, il ne manquait qu'une **raison** de le faire tomber ; elle tombe d'un coup, remonte en quatre secondes, et **crie** après un coup de feu. ⚠️ **Les répliques : moins souvent et jamais les mêmes** — `audio.VOIX` promettait « jamais deux fois de suite le même » et le moteur tirait par `Math.random()` **sans mémoire** ; le tirage passe maintenant par `B.rng()` (donc reproductible, donc jugeable) et écarte les dernières. **Parler devient une chance** (35 %), pas une certitude. ⚠️ **Le repli du Clairon enseigne** : un matin calme apprend une chose que tu n'as **pas encore faite**, jamais deux fois la même, et quand il n'y a plus rien à apprendre il redevient « rien à signaler ». **Reste à générer** (crédits + une oreille) : la radio qui parle, la police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques par contexte. 11 juges neufs |
 | Les amuseurs de rue font un vrai spectacle | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « les amuseurs de rue ne font rien et sont ennuyants ; je veux qu'ils soient animés, qu'il y ait toujours entre 3 et 5 personnes autour, que le musicien fasse vraiment de la musique (5 musiques différentes), et des jongleurs et des échassiers ». Ils tiennent leur coin **au centre-ville**, là où il y a du monde — et la ville y met plus de passants, la périphérie moins |
-| L'intérieur à la mesure du bâtiment | **P3** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur, tu avais mal compris ». La fiche d'hier n'a tenu que la moitié de la promesse — elle interdisait à la pièce de **dépasser** son bâtiment, rien ne l'obligeait à le **remplir** : 13 % pour un bloc de 59 × 8, et une pièce de six tuiles de profond dans un bâtiment qui en fait quatre |
+| L'intérieur à la mesure du bâtiment | **P3** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur, tu avais mal compris ». La fiche d'hier n'a tenu que la moitié de la promesse — elle interdisait à la pièce de **dépasser** son bâtiment, rien ne l'obligeait à le **remplir** : 13 % pour un bloc de 59 × 8, et une pièce de six tuiles de profond dans un bâtiment qui en fait quatre. Maintenant : le plancher fait **exactement** la boîte du bâtiment au-dessus de sa vitrine, à toutes les portes et sur cinq graines ; une longue façade se **coupe en vitrines de huit tuiles**, chacune sa porte, son enseigne et sa pièce ; les commerces et logements ordinaires sont **posés** à la mesure (`MOBILIER`, dix palettes) et les seize lieux garantis gardent leur plan dessiné — c'est leur bâtiment qui se taille à eux |
 | Toute la musique générée par IA | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « je veux que toutes les musiques soient des musiques générées par IA ». Les **15 pièces écrites en notes** (thème du menu, 2 stations de char, 5 ambiances de district, poursuite, bagarre, 5 pièces du musicien de rue) deviennent des mp3 ElevenLabs Music — c'est la porte que `musique.py` annonce depuis le premier jour : « le jour où Martin veut une vraie pièce jouée par de vrais instruments, elle se posera **par-dessus** comme les radios ». La synthèse reste le **filet** : un fichier absent, et le séquenceur reprend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -2669,7 +2669,7 @@ Et **deux vrais défauts** sont tombés avec eux :
   positions le long de l'allée — les meilleures d'abord, les recours **après**, pour ne pas
   déplacer un tremplin qui tient très bien.
 
-### L'intérieur à la mesure du bâtiment (**correctif**, taille 3) — **en cours le 14 sept. 2026**
+### L'intérieur à la mesure du bâtiment (**correctif**, taille 3) — **livré le 14 sept. 2026**
 
 _Demande de Martin :_ « je veux que l'intérieur de bâtiment soit proportionné à l'extérieur,
 tu avais mal compris. »
@@ -2732,6 +2732,77 @@ Ce qui suit de la règle :
   mêmes juges que les pièces dessinées (une porte, plancher d'un seul tenant, points
   atteignables qui ne volent pas la porte, un dixième de meubles au minimum, lits en blocs qui
   ne se touchent pas) ; et une longue façade porte **plusieurs** enseignes.
+
+**Livré le 14 sept. 2026.** Sur cinq graines, **toutes les portes** : le plancher de la pièce
+fait **exactement** la boîte du bâtiment qu'on voit au-dessus de sa vitrine — largeur ET
+profondeur, à la tuile près. Mesuré avant : rapport médian **0,64 à 0,75**, le pire à
+**0,07**.
+
+- **Une vitrine, un commerce, une pièce.** `decouper_la_facade()` coupe la rangée de façade
+  en morceaux de **huit tuiles** (la largeur d'un magasin de rue : une enseigne, une porte,
+  deux vitrines), et chaque morceau **possède les tuiles de bâtiment au-dessus de lui** —
+  c'est sa part, et c'est elle qui donne les mesures de sa pièce. Un bâtiment en L ou en U se
+  partage tout seul, colonne par colonne. ⚠️ **Sauf un entrepôt** : un hangar est une seule
+  affaire, sa façade porte un nom et une porte, et derrière il y a un entrepôt de toute sa
+  largeur. Le découper en sept magasins aurait inventé une rue commerçante dans La Shop.
+- **La pièce se POSE.** `piece_de_commerce()` et `piece_de_logement()` construisent un plan à
+  la mesure et le font passer par `_piece()` — même validation que les plans dessinés, donc
+  une pièce impossible lève **pendant la génération**. Un commerce, c'est trois rangées qui
+  ne changent jamais (le **fond** contre le mur du fond, le **comptoir** à l'avant-dernière,
+  la dernière **libre** — c'est celle où l'on entre) et une **allée une rangée sur deux** ;
+  un logement, c'est des **coins meublés** de deux tuiles sur deux, tous les cinq tuiles.
+- ⚠️ **Les dix boutiques dessinées d'hier sont supprimées**, avec les deux logements et les
+  quatre petites pièces : elles répondaient à la règle d'hier par des **tailles**, et trois
+  tailles ne couvrent pas des bâtiments qui vont de 9 à 380 tuiles dans toutes les formes. Ce
+  qu'elles disaient de bon — une épicerie a des frigos et des allées, une taverne des tables,
+  un atelier des machines — est passé dans **`MOBILIER`**, dix palettes de deux motifs. **La
+  famille dit quoi, la mesure dit combien.** Les **seize lieux garantis** gardent leur plan
+  dessiné à la main : le billard du Brouillard et les lits de l'hôpital sont des endroits,
+  pas des gabarits.
+- **Et leur bâtiment se taille à eux**, en largeur **et** en profondeur — hier seule la
+  surface était visée, et la cantine se retrouvait dans un 58 × 7 pour une pièce de 14 × 9.
+  ⚠️ **La bande aussi** : un îlot se partage en bandes égales (ruelle, bâtiments, devant), et
+  la plus profonde de l'îlot qui porte l'hôtel en fait **neuf**, dont quatre pour la ruelle
+  et le devant. Un lieu garanti **occupe son terrain** — c'est vrai d'un poste de police
+  comme d'une usine — et sa façade donne alors sur le trottoir, ce qui est bien où l'on veut
+  une porte.
+- ⚠️ **Le dé commun ne décide plus des portes.** Une porte — vraie ou condamnée — est une
+  **couche peinte** ; elle se tirait au dé commun (celui qui pose les murs) quand il y avait
+  une porte par bâtiment, et depuis qu'il y en a une par vitrine, ce serait le nombre de
+  commerces d'une rue qui déplacerait les bâtiments de l'autre bout de la ville.
+- **Ce qui a bougé, et qu'aucune capture n'aurait montré :**
+  - **Deux enseignes pareilles à trente tuiles.** La Shop a **vingt-six noms pour trente-six
+    murs** (c'était déjà 31 pour 26 hier) : passé le vingt-septième, la question n'est plus
+    « lequel est libre » mais « lequel a sa copie **la plus loin** ». `choisir_enseigne` rend
+    maintenant le plus éloigné au lieu du tirage — deux pareilles restent à **40 tuiles au
+    minimum** sur les cinq graines, la règle du quartier.
+  - **Des débris sur un pas de porte.** `poser_decor` refuse une tuile réservée, mais le
+    décor d'un terrain vague se sème **avant** les portes de l'îlot : une porte **dégage**
+    désormais son devant. Deux par ville, et c'est le genre de chose qu'on ne voit qu'en
+    restant coincé contre sa propre porte.
+  - **Un point d'action ne creuse plus un meuble en bloc** (un lit à qui l'on enlève un coin
+    n'est plus un lit) **ni l'escalier** — il restait un point « escalier » sur du plancher
+    nu, et la pièce n'avait plus qu'une sorte de meuble.
+- **Mesure.** Ville livrée : **56 portes** (45 hier), **106 enseignes** (94), **49 pièces
+  posées** + 16 dessinées. Planchers de 9 à 120 tuiles, **médiane 32** — au lieu de 41 pièces
+  toutes autour de 54. Paquet : +11 Ko d'intérieurs (23 Ko en tout), 445 Ko au total.
+- **Juges.** `test_interieurs.py` ne lisait que le **catalogue du module** : les 49 pièces
+  posées — la grande majorité — échappaient à tout. Elles passent maintenant **les mêmes
+  juges** que les dessinées (une porte, plancher d'un seul tenant, un dixième de meubles et
+  deux sortes, points atteignables qui ne volent pas la porte, blocs rectangulaires qui ne se
+  touchent pas), et sur la ville livrée : **421 cas** au lieu de 265. Six juges neufs pour la
+  règle elle-même — les mesures à chaque porte sur cinq graines, les portes qui s'ouvrent
+  quand même (condamner les quarante serait une façon de ne jamais mentir), les vitrines qui
+  ne se chevauchent pas, la coupe d'une façade de soixante tuiles, la part qui donne les
+  mesures, et l'étage qui est une pièce de **plus**.
+- ⚠️ **Deux juges d'à côté sont tombés avec la ville, et aucun ne mesurait ce qu'il croyait** :
+  « la banlieue a des entrées » comptait les blocs d'asphalte de **huit tuiles au plus** —
+  huit, c'était une entrée **sans case**, et trente-cinq entrées sur trente-six ont dépassé
+  le seuil d'une ou deux tuiles ; il mesure maintenant ce qu'on dessine (une allée jusqu'à
+  six tuiles **plus** une case de huit). Et « l'eau n'est plus un mur » cherchait une rive
+  avec **trois** rangées d'eau : la première rive de la ville neuve est une langue de sable
+  que l'agent contournait par une rangée sèche quatre tuiles plus haut — hors de la fenêtre
+  que le juge regardait. Sept rangées, et la ville en offre trente-quatre.
 
 ### L'eau n'est plus un mur (**correctif**, taille 3) — **livré le 14 sept. 2026**
 

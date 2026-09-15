@@ -19,6 +19,17 @@ from app import armes, carte, devantures, economie, magasins, missions, pietons
 
 VILLE = carte.exporter()
 
+#: ⚠️ TOUTES LES PIECES DE LA VILLE, dessinees et posees. Les juges d'a cote ne
+#: lisaient que `carte.INTERIEURS` — le catalogue du module — et depuis que les
+#: commerces et les logements se POSENT a la mesure de leur batiment, c'est la
+#: moitie la plus nombreuse qui echappait a tout : quarante-sept pieces sur
+#: soixante-quatre. Elles passent maintenant les memes juges que les seize
+#: dessinees, et sur la ville livree.
+PIECES: dict[str, dict] = VILLE["interieurs"]
+
+#: Les pieces POSEES seules (le reste est dessine a la main).
+POSEES = {s: p for s, p in PIECES.items() if s not in carte.INTERIEURS}
+
 #: Les meubles : tout ce qui n'est ni plancher, ni mur, ni porte.
 MEUBLES = frozenset(g for g, p in carte.LEGENDE.items() if p.get("meuble"))
 
@@ -33,7 +44,7 @@ TYPES_SERVIS = frozenset({
 })
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+@pytest.mark.parametrize("slug", sorted(PIECES))
 def test_aucun_comptoir_ne_vole_la_porte(slug):
     """⚠️ Le bloquant du 13 sept. 2026 : « chez Ti-Paul, il est impossible de
     sortir ». Six pieces etaient sans issue, et la cause tenait a deux rayons qui
@@ -46,7 +57,7 @@ def test_aucun_comptoir_ne_vole_la_porte(slug):
     la porte de sortie libre, pour que le piege ne se redessine pas. ⚠️ Il
     rougissait six fois le jour ou il a ete ecrit. C'est le genre de regle qu'on
     ne voit qu'en jouant et qui se verifie en trois lignes."""
-    piece = carte.INTERIEURS[slug]
+    piece = PIECES[slug]
     sortie = piece["apparition"]
     for point in piece["points"]:
         ecart = math.hypot(point["x"] - sortie["x"], point["y"] - sortie["y"])
@@ -56,14 +67,14 @@ def test_aucun_comptoir_ne_vole_la_porte(slug):
         )
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+@pytest.mark.parametrize("slug", sorted(PIECES))
 def test_une_piece_est_meublee(slug):
     """⚠️ LE juge de la demande de Martin. Une piece de quinze tuiles sur neuf
     avec un comptoir de sept tuiles, c'est 5 % de meubles : on entre, on voit
     du plancher. Un dixieme de la piece, au minimum, doit etre quelque chose —
     et il faut au moins deux SORTES de meubles, sinon c'est le comptoir vide
     d'avant avec un comptoir plus long."""
-    piece = carte.INTERIEURS[slug]
+    piece = PIECES[slug]
     tuiles = "".join(piece["sol"])
     meubles = [g for g in tuiles if g in MEUBLES]
     aire = piece["largeur"] * piece["hauteur"]
@@ -71,21 +82,21 @@ def test_une_piece_est_meublee(slug):
     assert len(set(meubles)) >= 2, f"{slug} : un seul genre de meuble ({set(meubles)})"
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+@pytest.mark.parametrize("slug", sorted(PIECES))
 def test_une_piece_donne_quelque_chose_a_faire(slug):
     """Un comptoir qui ne donne rien est une porte qu'on ouvre pour rien."""
-    piece = carte.INTERIEURS[slug]
+    piece = PIECES[slug]
     assert piece["points"], f"{slug} : aucun point d'action"
     for point in piece["points"]:
         assert point["type"] in TYPES_SERVIS, f"{slug} : « {point['type']} » n'est servi nulle part"
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+@pytest.mark.parametrize("slug", sorted(PIECES))
 def test_une_piece_dit_quel_plancher_elle_a(slug):
     """⚠️ Un meuble ne couvre pas toute sa tuile : le peintre doit savoir quoi
     mettre DESSOUS. Sans `plancher`, chaque table etait un trou noir dans le
     plancher — et rien, cote Python, ne s'en serait apercu."""
-    piece = carte.INTERIEURS[slug]
+    piece = PIECES[slug]
     plancher = piece["plancher"]
     assert carte.solidite(plancher) == 0, f"{slug} : on ne marche pas sur « {plancher} »"
     assert carte.LEGENDE[plancher].get("dedans"), f"{slug} : « {plancher} » n'est pas un plancher"
@@ -94,7 +105,7 @@ def test_une_piece_dit_quel_plancher_elle_a(slug):
 def test_deux_points_ne_se_marchent_pas_dessus():
     """⚠️ `pointSousLaMain` prend le plus proche dans un rayon d'une tuile et
     demie : deux points colles, et l'un des deux est injoignable a jamais."""
-    for slug, piece in carte.INTERIEURS.items():
+    for slug, piece in PIECES.items():
         for i, a in enumerate(piece["points"]):
             for b in piece["points"][i + 1:]:
                 ecart = max(abs(a["x"] - b["x"]), abs(a["y"] - b["y"]))
@@ -104,21 +115,25 @@ def test_deux_points_ne_se_marchent_pas_dessus():
 def test_l_escalier_monte_et_redescend():
     """Un escalier qui ne ramene pas est un cul-de-sac : on serait pris en haut
     (la porte du haut sort dehors, mais on ne l'a pas choisie)."""
-    for slug, piece in carte.INTERIEURS.items():
+    escaliers = 0
+    for slug, piece in PIECES.items():
         for point in piece["points"]:
             if point["type"] != "escalier":
                 continue
+            escaliers += 1
             cible = point.get("vers")
-            assert cible in carte.INTERIEURS, f"{slug} : l'escalier mene a « {cible} »"
-            retours = [q for q in carte.INTERIEURS[cible]["points"]
+            assert cible in PIECES, f"{slug} : l'escalier mene a « {cible} »"
+            retours = [q for q in PIECES[cible]["points"]
                        if q["type"] == "escalier" and q.get("vers") == slug]
             assert retours, f"{cible} : aucun escalier ne redescend vers {slug}"
+    assert escaliers, "aucun escalier de toute la ville : les plex n'ont plus d'etage"
+    assert escaliers, "aucun escalier dans toute la ville : les plex n'ont plus d'etage"
 
 
 def test_chaque_comptoir_ordinaire_vend_quelque_chose():
     """Un point `emplettes` nomme une famille de commerce ; cette famille doit
     avoir un comptoir, et chaque article doit pointer sur quelque chose."""
-    for slug, piece in carte.INTERIEURS.items():
+    for slug, piece in PIECES.items():
         for point in piece["points"]:
             if point["type"] != "emplettes":
                 continue
@@ -170,13 +185,35 @@ def test_ce_qui_se_mange_au_comptoir_nourrit_moins_que_le_kiosque():
                 f"{genre}/{article['slug']} : meilleur que le kiosque a hot-dogs"
 
 
-def test_chaque_famille_de_commerce_ouvre_sur_une_piece():
-    """Un genre sans interieur, et toutes les portes de cette couleur-la
-    ouvriraient sur rien."""
+def test_chaque_famille_de_commerce_sait_se_meubler():
+    """Une famille sans mobilier, et toutes les portes de cette couleur-la
+    ouvriraient sur rien.
+
+    ⚠️ C'est le contrat qui a remplace « une piece dessinee par famille » : la
+    famille dit QUOI meubler (les frigos de l'epicerie, les machines de
+    l'atelier), la mesure du batiment dit combien. Un genre de devanture ajoute
+    sans sa palette leve ici, pas en jouant.
+    """
     for genre in devantures.GENRES:
-        slug = carte.INTERIEUR_DE_GENRE.get(genre["slug"])
-        assert slug in carte.INTERIEURS, f"{genre['slug']} : pas de piece"
-    assert carte.INTERIEUR_LOGEMENT in carte.INTERIEURS
+        fiche = carte.MOBILIER.get(genre["slug"])
+        assert fiche, f"{genre['slug']} : pas de mobilier"
+        assert fiche["fond"].strip() and fiche["allee"].strip(), f"{genre['slug']} : motifs vides"
+        type_, sorte = fiche["point"]
+        assert type_ in TYPES_SERVIS, f"{genre['slug']} : « {type_} » n'est servi nulle part"
+        if type_ == "emplettes":
+            assert sorte in magasins.COMPTOIRS, f"{genre['slug']} : pas de comptoir « {sorte} »"
+
+
+def test_chaque_famille_de_commerce_ouvre_une_porte():
+    """⚠️ Il faut qu'un batiment tire cette enseigne-la, qu'il soit assez grand
+    ET qu'il gagne le de : trois chances qui se multiplient, et quatre familles
+    sur dix restaient des couleurs d'enseigne qui ne menent jamais a rien
+    (`premiere_du_genre`). Le de decide du NOMBRE de portes, pas de l'existence
+    d'un pan entier de la ville."""
+    ouvertes = {p["lieu"].rsplit("_", 1)[0] for p in VILLE["portes"] if p.get("nom")}
+    manquantes = [g["slug"] for g in devantures.GENRES if g["slug"] not in ouvertes]
+    assert not manquantes, f"des familles qui n'ouvrent nulle part : {manquantes}"
+    assert "logement" in ouvertes, "aucun logement ne s'ouvre dans toute la ville"
 
 
 def test_les_meubles_restent_dedans():
@@ -191,9 +228,8 @@ def test_les_meubles_restent_dedans():
 def test_toutes_les_portes_de_la_ville_menent_quelque_part():
     """Y compris les nouvelles : un commerce ordinaire qui s'ouvre, un logement."""
     for porte in VILLE["portes"]:
-        assert porte["interieur"] in carte.INTERIEURS, porte
-        piece = carte.INTERIEURS[porte["interieur"]]
-        assert piece["points"], f"{porte['lieu']} ouvre sur une piece vide"
+        assert porte["interieur"] in PIECES, porte
+        assert PIECES[porte["interieur"]]["points"], f"{porte['lieu']} ouvre sur une piece vide"
 
 
 def test_les_commerces_ordinaires_s_ouvrent_pour_de_vrai():
@@ -254,17 +290,17 @@ def test_les_gens_des_pieces_existent():
     """Un commis qui n'est pas au catalogue des pietons ne naîtrait jamais."""
     slugs = {p["slug"] for p in pietons.CATALOGUE}
     assert "commis" in slugs, "le commis doit exister pour tenir les comptoirs"
-    for slug, piece in carte.INTERIEURS.items():
+    for slug, piece in PIECES.items():
         for gens in piece["gens"]:
             assert gens["qui"] in carte.QUI_DEDANS, f"{slug} : « {gens['qui']} »"
 
 
 def test_les_commerces_ont_quelqu_un_derriere_le_comptoir():
     """Une boutique vide a minuit, passe ; une boutique vide tout le temps, non."""
-    boutiques = [s for s in carte.INTERIEURS if s.startswith("boutique_")]
+    boutiques = [s for s, p in POSEES.items() if p["porte"] == "commerce"]
     assert boutiques, "aucune piece de commerce ordinaire"
     for slug in boutiques:
-        gens = carte.INTERIEURS[slug]["gens"]
+        gens = PIECES[slug]["gens"]
         assert any(g["qui"] == "commis" for g in gens), f"{slug} : personne au comptoir"
 
 
@@ -272,12 +308,18 @@ def test_chaque_piece_dit_quelle_porte_on_pousse():
     """Le bruit de la porte vient de la piece : le bois d'un logement, la
     vitre et la porte metalique d'un commerce. ⚠️ Un logement qui sonne comme un
     depanneur, c'est ce qu'on entendait avant — et le taxi aussi."""
-    for slug, piece in carte.INTERIEURS.items():
+    for slug, piece in PIECES.items():
         assert piece["porte"] in carte.GENRES_DE_PORTE, slug
-    for slug in ("logement", "logement_haut", "planque", "hotel_chambre"):
+    for slug in ("planque", "hotel_chambre"):
         assert carte.INTERIEURS[slug]["porte"] == "maison", slug
-    for slug in ("depanneur", "bar", "boutique_bouffe", "hotel", "terminus"):
+    for slug in ("depanneur", "bar", "hotel", "terminus"):
         assert carte.INTERIEURS[slug]["porte"] == "commerce", slug
+    # ⚠️ Et les pieces POSEES le disent aussi : un logement sonne comme une
+    # maison, un commerce comme une vitrine. C'est `piece_de_logement` qui le
+    # pose, et rien d'autre ne le dirait.
+    logements = [s for s, p in POSEES.items() if "logement" in s]
+    assert logements, "aucun logement pose dans la ville"
+    assert all(POSEES[s]["porte"] == "maison" for s in logements)
     # Et chaque porte de la ville mene a une piece qui sait ce qu'elle est.
     for porte in VILLE["portes"]:
         assert VILLE["interieurs"][porte["interieur"]]["porte"] in carte.GENRES_DE_PORTE, porte
@@ -324,7 +366,7 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     assert BLOCS == {"l", "a", "y", "m", "o"}
 
 
-@pytest.mark.parametrize("slug", sorted(carte.INTERIEURS))
+@pytest.mark.parametrize("slug", sorted(PIECES))
 def test_un_bloc_est_un_rectangle_plein_et_deux_blocs_ne_se_touchent_pas(slug):
     """⚠️ Le corollaire du dessin par les voisines : une tuile `l` qui en touche
     une autre continue le MEME lit — une seule tete, un seul oreiller, une
@@ -335,7 +377,7 @@ def test_un_bloc_est_un_rectangle_plein_et_deux_blocs_ne_se_touchent_pas(slug):
     ⚠️ Il a rougi une fois le jour ou il a ete ecrit : dans la taverne, la table
     de gauche touchait le billard, et les deux faisaient un meuble en L de
     quatre tuiles sur quatre."""
-    sol = carte.INTERIEURS[slug]["sol"]
+    sol = PIECES[slug]["sol"]
     for g in sorted(BLOCS):
         for x0, y0, large, haut, bloc in _blocs(sol, g):
             nom = carte.LEGENDE[g]["nom"]

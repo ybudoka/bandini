@@ -26,6 +26,17 @@ ZONE = {z["slug"]: z for z in CARTE["zones"]}["erables"]
 #: une ligne de code de plus.
 ENTREE = set("p^v<>")
 
+#: La taille d'un bloc d'asphalte au-dela de laquelle ce n'est plus une entree
+#: mais un STATIONNEMENT (il y en a dans la banlieue aussi). ⚠️ Huit jusqu'au
+#: 14 sept. 2026, et huit etait la taille d'une entree SANS case : le jour ou
+#: les batiments ont bouge (« l'interieur a la mesure du batiment » : les
+#: parcelles des lieux garantis ont change, donc toute la suite du hasard),
+#: trente-cinq entrees sur trente-six ont depasse le seuil d'une ou deux tuiles
+#: et le juge a compte huit entrees dans un quartier qui en a trente-six. Une
+#: entree, c'est une allee (jusqu'a six tuiles) plus une case (huit) : le seuil
+#: se mesure sur ce qu'on dessine, pas sur ce qu'une graine donnait.
+ENTREE_MAX = 14
+
 
 def _dans_les_erables(x: int, y: int) -> bool:
     return (ZONE["x"] <= x < ZONE["x"] + ZONE["l"]
@@ -55,7 +66,7 @@ def _blocs(glyphes: set[str]) -> list[set[tuple[int, int]]]:
 
 def test_la_banlieue_a_des_entrees_et_des_piscines():
     """Le décor du juge : sans ça, tout ce qui suit passerait pour rien."""
-    entrees = [b for b in _blocs(ENTREE) if len(b) <= 8]
+    entrees = [b for b in _blocs(ENTREE) if len(b) <= ENTREE_MAX]
     assert len(entrees) >= 15, f"{len(entrees)} entrées de voiture dans Les Érables"
     piscines = _blocs({"o"})
     assert piscines, "aucune piscine dans toute la banlieue"
@@ -73,7 +84,7 @@ def test_toute_entree_de_voiture_rejoint_la_chaussee():
     d'asphalte. Et une auto garée dedans n'en sortirait jamais."""
     orphelines = []
     for bloc in _blocs(ENTREE):
-        if len(bloc) > 8:
+        if len(bloc) > ENTREE_MAX:
             continue                      # un vrai stationnement, pas une entrée
         touche = False
         for (x, y) in bloc:

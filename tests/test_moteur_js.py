@@ -1928,14 +1928,20 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
         for (let y = 4; y < c.h - 4 && !rive; y++) {
             for (let x = 4; x < c.w - 10; x++) {
                 if (!L.Monde.marchablePieton(x, y) || L.Monde.estEau(x, y)) continue;
-                // ⚠️ DE L'EAU SUR TROIS RANGEES, pas un filet d'une tuile. Sur
-                // un chenal haut d'une seule rangee, l'agent longe la berge au
-                // sec et arrive a portee d'arrestation sans se mouiller : le
-                // juge mesurait alors un agent qui contourne, pas un agent qui
-                // refuse de nager.
+                // ⚠️ DE L'EAU SUR SEPT RANGEES, pas un filet d'une tuile. Sur
+                // un chenal mince, l'agent longe la berge au sec et arrive a
+                // portee d'arrestation sans se mouiller : le juge mesurait
+                // alors un agent qui contourne, pas un agent qui refuse de
+                // nager. ⚠️ Trois rangees ont suffi jusqu'au 14 sept. 2026 et
+                // ne suffisent plus : la ville a bouge (« l'interieur a la
+                // mesure du batiment »), la premiere rive trouvee est devenue
+                // une langue de sable, et l'agent la contournait par une
+                // rangee seche QUATRE tuiles plus haut — hors de la fenetre
+                // que ce juge regardait. La ville en offre trente-quatre a
+                // sept rangees : on prend celles-la.
                 let eau = true;
                 for (let k = 1; k <= 9; k++) {
-                    for (const dy of [-1, 0, 1]) if (!L.Monde.estEau(x + k, y + dy)) eau = false;
+                    for (let dy = -3; dy <= 3; dy++) if (!L.Monde.estEau(x + k, y + dy)) eau = false;
                 }
                 if (eau) { rive = { x: x, y: y }; break; }
             }

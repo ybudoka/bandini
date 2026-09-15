@@ -391,7 +391,13 @@ DISTRICTS: tuple[dict, ...] = (
     # la cour des Cravates au centre. C'est ici qu'on debarque de l'autobus.
     {"slug": "faubourg", "nom": "Le Faubourg", "bx": 5, "by": 0,
      "gang": "cravates", "gang_nom": "Les Cravates", "brume": True,
-     "pietons": 26, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
+     # ⚠️ LE CENTRE-VILLE EST LE PLUS PEUPLE, ET IL DOIT SE SENTIR (demande de
+     # Martin : « plus de gens en centre-ville et moins en peripherie »). Il
+     # demande PLUS que la bulle ne peut tenir (`MAX_PIETONS`), et c'est voulu :
+     # c'est le seul quartier de la ville a etre plein a ras bord a toute heure
+     # du jour. Les quatre autres ont baisse pour le payer — le budget d'image
+     # n'a pas bouge, c'est la REPARTITION qui change.
+     "pietons": 34, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
      "rares": ("sport", "luxe"),
      "plan": ("Tccchhhh",
               "cMck<hAh",
@@ -404,7 +410,7 @@ DISTRICTS: tuple[dict, ...] = (
     # char le soir faute de mieux.
     {"slug": "erables", "nom": "Les Érables", "bx": 0, "by": 0,
      "gang": "chevreuils", "gang_nom": "Les Chevreuils", "brume": False,
-     "pietons": 14, "vehicules": 7, "police": 1, "rythme": (0.25, 1.1, 0.9),
+     "pietons": 10, "vehicules": 7, "police": 1, "rythme": (0.25, 1.1, 0.9),
      "rares": ("luxe",),
      "plan": ("mmmpm",
               "m<m^m",
@@ -417,7 +423,7 @@ DISTRICTS: tuple[dict, ...] = (
     # Deserte la nuit, et c'est exactement ce qui la rend inquietante.
     {"slug": "shop", "nom": "La Shop", "bx": 13, "by": 0,
      "gang": "boulonneux", "gang_nom": "Les Boulonneux", "brume": False,
-     "pietons": 11, "vehicules": 9, "police": 1, "rythme": (0.15, 1.3, 0.6),
+     "pietons": 8, "vehicules": 9, "police": 1, "rythme": (0.15, 1.3, 0.6),
      "rares": (),
      "plan": ("U<i<i<p",
               "^<^<^<^",
@@ -430,7 +436,7 @@ DISTRICTS: tuple[dict, ...] = (
     # ca se vide a la noirceur — sauf la Brume.
     {"slug": "quais", "nom": "Les Quais", "bx": 0, "by": 6,
      "gang": "morues", "gang_nom": "Les Morues", "brume": True,
-     "pietons": 20, "vehicules": 8, "police": 1, "rythme": (0.4, 1.4, 0.9),
+     "pietons": 18, "vehicules": 8, "police": 1, "rythme": (0.4, 1.4, 0.9),
      "rares": (),
      "plan": ("cc<c<<c",
               "w<<w<<c",
@@ -456,7 +462,7 @@ DISTRICTS: tuple[dict, ...] = (
     # maisons au bout, et les Skateux qui tiennent le stationnement.
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
-     "pietons": 12, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
+     "pietons": 9, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
      "rares": ("sport",),
      "plan": ("~<<<<<",
               "n<<<nc",
@@ -729,6 +735,16 @@ class _Chantier:
         self.empreinte_du_batiment = 0
         #: Sa boite (x, y, largeur, hauteur) — voir `_terrain_de_banlieue`.
         self.boite_du_batiment = (0, 0, 0, 0)
+        #: Et ses TUILES : c'est d'elles que chaque vitrine tire sa part, et de
+        #: sa part que sa piece tire ses mesures (`poser_la_piece`).
+        self.tuiles_du_batiment: set[tuple[int, int]] = set()
+        #: Les pieces POSEES a la mesure des batiments, par slug. ⚠️ Elles
+        #: voyagent avec la ville (`generer`), pas avec le module : deux villes
+        #: de graines differentes n'ont pas les memes commerces.
+        self.pieces: dict[str, dict] = {}
+        #: Combien de pieces posees — c'est ce qui rend leur slug unique, et ce
+        #: qui decale leur mobilier pour que deux voisines ne soient pas la meme.
+        self.posees = 0
         #: Les pieces qui ont deja une porte quelque part (voir
         #: `premiere_du_genre`) : c'est ce qui garantit qu'aucune famille de
         #: commerce ne reste une enseigne sans interieur.
@@ -776,6 +792,11 @@ class _Chantier:
         #: Les hommes-sandwichs, meme regle : un solliciteur de plus ne doit pas
         #: deplacer un paquet cache a l'autre bout de la ville.
         self.des_reclame = Des(graine ^ 0x5A4D1)
+        # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
+        # ce qui vient apres — la ville livree changerait de gabarits, et le
+        # depanneur perdrait son enseigne (la lecon est ecrite dans
+        # `batiment_forme` depuis M8).
+        self.des_scene = Des(graine ^ 0x5CE4E)
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -1022,14 +1043,24 @@ class _Chantier:
             self.toits.append({"x": x, "y": y, "type": fiche["type"]})
 
     def poser_porte(self, facades: list[tuple[int, int]], special: dict | None = None,
-                    proba: float = 0.65, visite: dict | None = None) -> tuple[int, int] | None:
+                    proba: float = 0.65, visite: dict | None = None,
+                    bande: tuple[int, int, int] | None = None) -> tuple[int, int] | None:
         """Une porte sur la facade la plus au sud QUI DONNE SUR DU MARCHABLE.
 
         ⚠️ A appeler apres avoir pose TOUS les batiments de l'ilot : une facade
         peut se retrouver nez a nez avec le toit du voisin, et une porte qui
         ouvre sur un mur est une promesse qu'on ne tient pas.
+
+        ⚠️ `bande` restreint la porte a UNE VITRINE (`decouper_la_facade`) : un
+        batiment a autant de portes que sa facade porte de commerces, et chacune
+        doit tomber chez elle. Sans bande, c'est toute la facade — le kiosque et
+        les lieux garantis, qui n'ont qu'une entree.
         """
         candidats = [(tx, ty) for tx, ty in facades if self.marchable_en(tx, ty + 1)]
+        if bande:
+            x0, large, rangee = bande
+            candidats = [(tx, ty) for tx, ty in candidats
+                         if ty == rangee and x0 <= tx < x0 + large]
         if not candidats and special:
             # Un batiment garanti DOIT s'ouvrir : on lui degage son devant.
             tx, ty = max(facades, key=lambda t: (t[1], t[0]))
@@ -1043,8 +1074,11 @@ class _Chantier:
         px, py = rangee[len(rangee) // 2]
         if special:
             self.sol[py][px] = "D"
+            bande_speciale = bande or (min(t[0] for t in facades),
+                                       max(t[0] for t in facades) - min(t[0] for t in facades) + 1)
             self.portes.append({"x": px, "y": py, "interieur": special["interieur"],
-                                "lieu": special["slug"]})
+                                "lieu": special["slug"],
+                                "vitrine": [bande_speciale[0], bande_speciale[1]]})
             # ⚠️ La FAMILLE voyage avec le point : c'est elle qui donne sa
             # couleur au blip et sa ligne a la legende de la carte. Un lieu sans
             # famille n'est pas une couleur par defaut, c'est un test rouge.
@@ -1054,14 +1088,13 @@ class _Chantier:
             if special.get("porte_garage") and (px - 2, py) in facades:
                 self.sol[py][px - 2] = "G"
         else:
-            # ⚠️ Le de se tire TOUJOURS, meme quand la porte s'ouvre pour de
-            # vrai : c'est le de COMMUN (celui qui pose les murs). S'il ne
-            # tombait que dans une branche, decider qu'un commerce se visite —
-            # decision prise avec le de des devantures — decalerait toute la
-            # suite du hasard et deplacerait des batiments a l'autre bout de la
-            # ville. Une couche peinte ne bouge pas un mur : c'est la meme
-            # regle qu'en haut du fichier, et c'est ici qu'elle se joue.
-            condamnee = self.des.chance(proba)
+            # ⚠️ LE DE DES DEVANTURES, et pas le de commun. Une porte — vraie ou
+            # condamnee — est une COUCHE PEINTE : elle ne deplace pas un mur.
+            # Elle se tirait au de commun quand il y avait une porte par
+            # batiment ; depuis qu'il y en a une par VITRINE, ce serait le
+            # nombre de commerces d'une rue qui deciderait ou tombent les
+            # batiments de l'autre bout de la ville.
+            condamnee = self.des_devanture.chance(proba)
             if visite:
                 # Une porte ordinaire qui s'ouvre : pas de point d'interet (ce
                 # sont les reperes de la ville, et quarante de plus n'en
@@ -1071,15 +1104,28 @@ class _Chantier:
                 # piece est partagee, l'enseigne au-dessus ne l'est pas.
                 self.visites += 1
                 self.sol[py][px] = "D"
+                # ⚠️ La porte transporte SA VITRINE (x, largeur) : c'est la part
+                # de batiment qui lui appartient, et donc les mesures de la
+                # piece derriere. Sans elle, personne — pas meme un juge — ne
+                # peut plus dire de quel morceau de mur cette porte-la repond.
                 self.portes.append({"x": px, "y": py, "interieur": visite["interieur"],
                                     "lieu": f"{visite['slug']}_{self.visites}",
-                                    "nom": visite["nom"]})
+                                    "nom": visite["nom"],
+                                    "vitrine": [bande[0], bande[1]] if bande else [px, 1]})
             elif condamnee:
                 self.sol[py][px] = "d"
             else:
                 return None
         for j in (1, 2):
             self.reserve.add((px, py + j))
+            # ⚠️ ET ON DEGAGE CE QUI Y ETAIT DEJA. `poser_decor` refuse une tuile
+            # reservee, mais le decor d'un terrain vague se seme AVANT que les
+            # portes de l'ilot ne soient posees : une poubelle ou des debris
+            # tombaient donc sur un pas de porte, et rien ne les enlevait. Deux
+            # par ville — c'est peu, et c'est exactement le genre de chose qu'on
+            # ne voit qu'en restant coince contre sa propre porte.
+            self.occupe.discard((px, py + j))
+            self.decor = [d for d in self.decor if (d["x"], d["y"]) != (px, py + j)]
         return px, py
 
     # --- Les devantures ------------------------------------------------------
@@ -1127,16 +1173,28 @@ class _Chantier:
         """
         catalogue = devantures_mod.commerces_du_district(self.district_en(x, y))
         depart = self.des_devanture.entier(0, len(catalogue) - 1)
+
+        def plus_proche(texte: str) -> int:
+            return min((max(abs(px - x), abs(py - y))
+                        for px, py in self.enseignes_posees.get(texte, ())), default=10 ** 6)
+
         for k in range(len(catalogue)):
             texte, famille = catalogue[(depart + k) % len(catalogue)]
-            if all(max(abs(px - x), abs(py - y)) >= devantures_mod.DISTANCE_DOUBLON
-                   for px, py in self.enseignes_posees.get(texte, ())):
+            if plus_proche(texte) >= devantures_mod.DISTANCE_DOUBLON:
                 return texte, famille
-        return catalogue[depart]
+        # ⚠️ ET QUAND LE CATALOGUE EST EPUISE, le plus LOIN — pas celui du
+        # tirage. La Shop a vingt-six noms pour trente-six murs : a partir du
+        # vingt-septieme, la question n'est plus « lequel est libre » mais
+        # « lequel a sa copie la plus loin d'ici ». Rendre le nom tire au sort
+        # posait deux « FERRAILLE » a trente tuiles l'une de l'autre alors
+        # qu'un autre nom en offrait cent vingt.
+        return max((catalogue[(depart + k) % len(catalogue)] for k in range(len(catalogue))),
+                   key=lambda nom: plus_proche(nom[0]))
 
     def poser_devanture(self, facades: list[tuple[int, int]], ancre: tuple[int, int],
                         genre: str, special: dict | None = None,
-                        enseigne: tuple[str, str] | None = None) -> bool:
+                        enseigne: tuple[str, str] | None = None,
+                        bande: tuple[int, int] | None = None) -> bool:
         """Un bandeau, un nom, des vitrines et une pancarte. Rend True si pose.
 
         ⚠️ Les tuiles du bandeau deviennent des VITRINES (`W`) : meme solidite
@@ -1145,7 +1203,10 @@ class _Chantier:
         """
         ax, ay = ancre
         ensemble = set(facades)
-        depart, dispo = self._bande_de_facade(ensemble, ax, ay)
+        # ⚠️ L'enseigne reste CHEZ ELLE : sans la bande de sa vitrine, elle
+        # prendrait toute la facade d'un seul tenant et deborderait sur le
+        # commerce d'a cote — deux noms pour un mur, ou un nom sur deux portes.
+        depart, dispo = bande or self._bande_de_facade(ensemble, ax, ay)
         if dispo < self.ENSEIGNE_MIN:
             return False
         large = min(self.ENSEIGNE_MAX, dispo)
@@ -1241,7 +1302,8 @@ class _Chantier:
     PART_COMMERCE_VISITABLE = 0.20
 
     def poser_residence(self, facades: list[tuple[int, int]], ancre: tuple[int, int],
-                        genre: str) -> bool:
+                        genre: str, bande: tuple[int, int] | None = None,
+                        etages: int | None = None) -> bool:
         """Des etages, des fenetres, un escalier : un batiment ou l'on HABITE.
 
         ⚠️ Meme contrat que la devanture : une COUCHE PEINTE. Elle ne deplace
@@ -1253,13 +1315,14 @@ class _Chantier:
         """
         ax, ay = ancre
         ensemble = set(facades)
-        depart, dispo = self._bande_de_facade(ensemble, ax, ay)
+        depart, dispo = bande or self._bande_de_facade(ensemble, ax, ay)
         if dispo < 2:
             return False
         large = min(4, dispo)
         x0 = min(max(ax - large // 2, depart), depart + dispo - large)
-        bas, haut = self.ETAGES.get(genre, (1, 2))
-        etages = self.des_devanture.entier(bas, haut)
+        if etages is None:
+            bas, haut = self.ETAGES.get(genre, (1, 2))
+            etages = self.des_devanture.entier(bas, haut)
 
         motifs = "".join(self.sol[ay][x0 + i] for i in range(large))
         porte = None
@@ -1356,6 +1419,73 @@ class _Chantier:
                     "penche": self.des_devanture.entier(0, 1),
                 })
                 self.murs_tagges.add((x, y))
+
+    #: La largeur d'une VITRINE, en tuiles. ⚠️ Une facade de soixante tuiles
+    #: n'est pas un commerce, c'est une rangee de commerces — et une seule porte
+    #: pour toute une face de bloc obligeait la piece derriere a faire cinquante
+    #: tuiles de large, ou bien a mentir de treize pour cent (demande de Martin,
+    #: 14 sept. 2026 : « plusieurs portes, plusieurs commerces »). Huit tuiles,
+    #: c'est la largeur d'un magasin de rue : de quoi poser une enseigne, une
+    #: porte et deux vitrines.
+    VITRINE = 8
+    #: Et jamais plus etroit que ca : en dessous, l'enseigne ne tient plus et la
+    #: piece derriere n'est plus qu'un couloir.
+    VITRINE_MIN = 4
+
+    #: Ce qui ne se decoupe PAS : un entrepot est une seule affaire, pas une
+    #: rangee de commerces. Sa facade de vingt tuiles porte un nom et une porte,
+    #: et derriere il y a un entrepot de vingt tuiles de large — c'est la meme
+    #: regle de proportion, appliquee a un batiment qui n'a qu'un occupant.
+    D_UN_SEUL_TENANT = frozenset({"hangars", "industriel"})
+
+    def decouper_la_facade(self, facades: list[tuple[int, int]],
+                           genre: str = "commerces") -> list[tuple[int, int, int]]:
+        """Les vitrines d'un batiment : (x, largeur, rangee), d'ouest en est.
+
+        La rangee la plus au sud qui donne sur du marchable — la meme que celle
+        ou `poser_porte` posait son unique porte — coupee en morceaux de la
+        largeur d'un commerce. ⚠️ Les morceaux se prennent sur les suites
+        CONTIGUES : une facade en L a des trous, et une vitrine a cheval sur un
+        trou vendrait a travers le mur du voisin.
+        """
+        candidats = [(tx, ty) for tx, ty in facades if self.marchable_en(tx, ty + 1)]
+        if not candidats:
+            return []
+        bas = max(ty for _, ty in candidats)
+        rangee = sorted(tx for tx, ty in candidats if ty == bas)
+        suites: list[tuple[int, int]] = []
+        debut = precedent = rangee[0]
+        for tx in rangee[1:]:
+            if tx != precedent + 1:
+                suites.append((debut, precedent - debut + 1))
+                debut = tx
+            precedent = tx
+        suites.append((debut, precedent - debut + 1))
+        vitrines = []
+        for x0, long_ in suites:
+            if genre in self.D_UN_SEUL_TENANT:
+                vitrines.append((x0, long_, bas))
+                continue
+            combien = max(1, min(round(long_ / self.VITRINE), long_ // self.VITRINE_MIN))
+            base, reste = divmod(long_, combien)
+            x = x0
+            for i in range(combien):
+                large = base + (1 if i < reste else 0)
+                vitrines.append((x, large, bas))
+                x += large
+        return vitrines
+
+    def part_du_batiment(self, bande: tuple[int, int, int]) -> set[tuple[int, int]]:
+        """Les tuiles de batiment qu'une vitrine POSSEDE : celles au-dessus
+        d'elle.
+
+        ⚠️ C'est la regle qui partage un batiment entre ses commerces, et elle
+        tient en une phrase : chacun a ce qu'on voit depuis sa vitrine. Un
+        batiment en L ou en U se partage donc tout seul, colonne par colonne, et
+        une colonne dont la facade regarde ailleurs n'appartient a personne.
+        """
+        x0, large, _ = bande
+        return {(tx, ty) for tx, ty in self.tuiles_du_batiment if x0 <= tx < x0 + large}
 
     def _ancre_devanture(self, facades: list[tuple[int, int]]) -> tuple[int, int] | None:
         """Ou irait la porte si ce batiment en avait une : le milieu de sa
@@ -1571,6 +1701,27 @@ class _Chantier:
         return (self._parcelles(x, y, largeur, coupe, mini, profondeur + 1)
                 + self._parcelles(x, y + coupe, largeur, hauteur - coupe, mini, profondeur + 1))
 
+    #: Le fond d'une bande ordinaire : deux tuiles de ruelle, deux de devant, et
+    #: trois de batiment. En dessous, `_pose_batiment` rend `None`.
+    BANDE_MIN = 7
+
+    def _bande_a_la_mesure(self, y: int, hauteur: int, bandes: list[tuple[int, int]],
+                           vedette: int, voulu: int) -> list[tuple[int, int]]:
+        """Rend les bandes avec celle du lieu garanti assez profonde pour lui."""
+        autres = len(bandes) - 1
+        voulu = max(bandes[vedette][1], min(voulu, hauteur - autres * self.BANDE_MIN))
+        if voulu <= bandes[vedette][1] or not autres:
+            return [(y, hauteur)] if not autres and voulu > bandes[vedette][1] else bandes
+        base, reste = divmod(hauteur - voulu, autres)
+        neuves, cy, k = [], y, 0
+        for i in range(len(bandes)):
+            h = voulu if i == vedette else base + (1 if k < reste else 0)
+            if i != vedette:
+                k += 1
+            neuves.append((cy, h))
+            cy += h
+        return neuves
+
     def _ilot_bati(self, x: int, y: int, largeur: int, hauteur: int, *,
                    genre: str = "commerces", special: dict | None = None) -> None:
         devant = {"maisons": ",", "banlieue": ","}.get(genre, ".")
@@ -1589,6 +1740,17 @@ class _Chantier:
         bandes = list(self._bandes(y, hauteur, genre))
         bande_vedette = (max(range(len(bandes)), key=lambda k: bandes[k][1])
                          if special and bandes else -1)
+        if bande_vedette >= 0:
+            # ⚠️ ET LA BANDE SE TAILLE AUSSI. Les bandes se partagent l'ilot en
+            # parts egales ; la plus profonde d'un ilot de seize tuiles en fait
+            # huit, dont quatre de ruelle et de devant — quatre tuiles de fond
+            # pour l'hotel Bandini, qui en veut huit. Le lieu garanti prend donc
+            # la profondeur de sa piece, et ce qui reste se partage entre les
+            # autres bandes (jamais moins de sept : une ruelle, un devant, et
+            # trois tuiles de batiment).
+            bandes = self._bande_a_la_mesure(
+                y, hauteur, bandes, bande_vedette,
+                mesures_de_la_suite(special["interieur"])[1] + 4)
         # ⚠️ LES SKATEUX TIENNENT LE STATIONNEMENT — tout entier, pas un coin.
         # Leur bande ne se decoupe donc pas : c'est une PISTE. Un terrain de
         # sept tuiles tire au sort n'en laisse que cinq d'elan une fois la
@@ -1608,10 +1770,25 @@ class _Chantier:
                 continue
             self.rect(x, zy, largeur, zh, "," if genre in ("maisons", "banlieue") else ".")
             if k == bande_vedette:
-                besoin = plancher_de_la_suite(special["interieur"])
-                large = min(largeur, max(3, -(-besoin // zh)))
+                # ⚠️ A LA BOITE DE SA PIECE, pas seulement a sa surface. Viser
+                # la surface donnait a la cantine un batiment de 58 x 7 pour une
+                # piece de 14 x 9 : la bonne quantite de tuiles, la mauvaise
+                # forme, et une piece deux fois plus profonde que le batiment
+                # qui la porte. Un lieu garanti garde son plan dessine a la
+                # main — c'est son BATIMENT qui se taille a lui.
+                besoin_l, besoin_h = mesures_de_la_suite(special["interieur"])
+                large = min(largeur, max(3, besoin_l))
+                # ⚠️ ET IL MANGE SON DEVANT, ET SA RUELLE S'IL LE FAUT. Une
+                # bande garde quatre tuiles pour elles deux ; les ilots qui
+                # portent l'hotel et le depanneur font neuf et huit tuiles de
+                # fond, donc quatre ou cinq de batiment pour des pieces qui en
+                # veulent huit et six. Un lieu garanti occupe son terrain —
+                # c'est vrai d'un poste de police comme d'une usine — et sa
+                # facade donne alors sur le trottoir, ce qui est bien ou l'on
+                # veut une porte.
+                profond = min(bh, max(3, besoin_h))
                 vedette = len(parcelles)
-                parcelles.append(((x, zy, large, zh), True))
+                parcelles.append(((x, by + bh - profond, large, profond), True))
                 # ⚠️ Et le reste de la bande fait UN SEUL batiment, pas une
                 # rangee de petits. Le decoupage recursif, lui, laissait entre
                 # ses parcelles des cours de deux tuiles que le lieu garanti —
@@ -1658,18 +1835,18 @@ class _Chantier:
         if vedette >= 0:
             contenus[vedette] = "bati"
 
-        batiments: list[tuple[list, bool, int]] = []
+        batiments: list[tuple[list, bool, set, tuple, tuple]] = []
         facades_vedette = None
         for k, ((px, py, pl, ph), devant_rue) in enumerate(parcelles):
             contenu = contenus[k]
             if contenu == "bati":
                 facades = self._pose_batiment(px, py, pl, ph, genre, force=(k == vedette))
-                empreinte = self.empreinte_du_batiment
+                tuiles = self.tuiles_du_batiment
                 boite = self.boite_du_batiment
                 if facades and k == vedette:
                     facades_vedette = facades
                 elif facades:
-                    batiments.append((facades, devant_rue, empreinte, (px, py, pl, ph), boite))
+                    batiments.append((facades, devant_rue, tuiles, (px, py, pl, ph), boite))
             elif contenu == "vague":
                 self._terrain_vague(px, py, pl, ph)
             elif contenu == "stationnement":
@@ -1680,53 +1857,106 @@ class _Chantier:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
                 self.poser_devanture(facades_vedette, porte, genre, special)
-        for facades, _, empreinte, parcelle, boite in batiments:
-            ancre = self._ancre_devanture(facades)
-            quoi, enseigne = self._a_quoi_sert(genre, ancre)
-            visite = None
-            # ⚠️ La piece se choisit A LA TAILLE DU BATIMENT : la plus grande
-            # qui tienne dans son empreinte, et RIEN du tout si meme la petite
-            # deborde — la porte reste alors condamnee. Les deux cotes ne se
-            # parlaient pas : un bungalow de neuf tuiles ouvrait sur un
-            # seize-par-neuf, seize fois sa surface. Le joueur, lui, compare a
-            # chaque porte.
-            if quoi == "commerce" and enseigne:
-                ouvre = self.des_devanture.chance(self.PART_COMMERCE_VISITABLE)
-                dedans = interieur_qui_tient(BOUTIQUES_PAR_TAILLE[enseigne[1]], empreinte)
-                if self.premiere_du_genre(dedans):
-                    ouvre = True
-                if ouvre and dedans:
-                    visite = {"slug": enseigne[1], "nom": enseigne[0], "interieur": dedans}
-            elif quoi == "logement":
-                ouvre = self.des_devanture.chance(self.PART_LOGEMENT_VISITABLE)
-                dedans = interieur_qui_tient(LOGEMENTS_PAR_TAILLE, empreinte)
-                if self.premiere_du_genre(dedans):
-                    ouvre = True
-                if ouvre and dedans:
-                    visite = {"slug": "logement", "nom": "LOGEMENT", "interieur": dedans}
-            porte = self.poser_porte(facades, visite=visite)
-            ancre = porte or ancre
-            if not ancre:
-                continue
-            # ⚠️ Une devanture ne suit pas la porte : un commerce a pignon sur
-            # rue qu'on ne peut pas visiter reste un commerce, et une rue ou
-            # seuls les trois batiments visitables ont une enseigne n'a l'air
-            # d'une rue commercante nulle part.
-            if quoi == "commerce":
-                self.poser_devanture(facades, ancre, genre, enseigne=enseigne)
-            elif quoi == "logement":
-                self.poser_residence(facades, ancre, genre)
+        for facades, _, tuiles, parcelle, boite in batiments:
+            self.tuiles_du_batiment = tuiles
+            porte_du_batiment = None
+            # ⚠️ UNE VITRINE, UN COMMERCE, UNE PIECE. Un batiment n'a plus une
+            # porte au milieu de sa facade : il a autant de vitrines que sa
+            # facade porte de commerces, et chacune possede les tuiles au-dessus
+            # d'elle. C'est cette PART qui donne ses mesures a la piece — la
+            # piece a la taille de ce qu'on voit de la rue, ni plus (ce serait
+            # un mensonge) ni beaucoup moins (c'etait treize pour cent).
+            for bande in self.decouper_la_facade(facades, genre):
+                x0, large, ay = bande
+                part = self.part_du_batiment(bande)
+                ancre = (x0 + large // 2, ay)
+                quoi, enseigne = self._a_quoi_sert(genre, ancre)
+                visite = None
+                if quoi == "commerce" and enseigne:
+                    famille = enseigne[1]
+                    ouvre = self.des_devanture.chance(self.PART_COMMERCE_VISITABLE)
+                    if mesures_de_la_part(part) and self.premiere_du_genre(famille):
+                        ouvre = True
+                    dedans = self.poser_la_piece(famille, part, ancre) if ouvre else None
+                    if dedans:
+                        visite = {"slug": famille, "nom": enseigne[0], "interieur": dedans}
+                elif quoi == "logement":
+                    bas, haut = self.ETAGES.get(genre, (1, 2))
+                    etages = self.des_devanture.entier(bas, haut)
+                    ouvre = self.des_devanture.chance(self.PART_LOGEMENT_VISITABLE)
+                    if mesures_de_la_part(part) and self.premiere_du_genre("logement"):
+                        ouvre = True
+                    dedans = (self.poser_la_piece("logement", part, ancre, etages=etages)
+                              if ouvre else None)
+                    if dedans:
+                        visite = {"slug": "logement", "nom": "LOGEMENT", "interieur": dedans}
+                porte = self.poser_porte(facades, visite=visite, bande=bande)
+                repere = porte or ancre
+                porte_du_batiment = porte_du_batiment or porte
+                # ⚠️ Une devanture ne suit pas la porte : un commerce a pignon
+                # sur rue qu'on ne peut pas visiter reste un commerce, et une
+                # rue ou seuls les trois batiments visitables ont une enseigne
+                # n'a l'air d'une rue commercante nulle part.
+                if quoi == "commerce":
+                    self.poser_devanture(facades, repere, genre, enseigne=enseigne,
+                                         bande=(x0, large))
+                elif quoi == "logement":
+                    self.poser_residence(facades, repere, genre, bande=(x0, large),
+                                         etages=etages)
             # ⚠️ APRES LA PORTE : le sentier part d'elle. Le terrain se meuble
             # une fois qu'on sait par ou l'on entre — sinon le cabanon se pose
             # sur le pas de la porte, et la piscine coupe le chemin.
             if genre == "banlieue":
-                self._terrain_de_banlieue(parcelle, boite, porte)
+                self._terrain_de_banlieue(parcelle, boite, porte_du_batiment)
         for _ in range(max(1, largeur // 10)):
             self.poser_decor("poubelle", x + self.des.entier(0, largeur - 1),
                              y + self.des.entier(0, 1))
 
-    def premiere_du_genre(self, interieur: str | None) -> bool:
-        """Cette piece-la n'a encore ouvert NULLE PART : alors celle-ci ouvre.
+    def poser_la_piece(self, quoi: str, part: set[tuple[int, int]],
+                       ancre: tuple[int, int], *, etages: int = 1) -> str | None:
+        """Une piece aux mesures de cette part de batiment. `None` si trop petit.
+
+        ⚠️ `None` est un RESULTAT, pas un echec : un bout de batiment de six
+        tuiles garde sa porte, elle ne s'ouvre simplement pas. Une porte qui
+        donne sur plus grand que la maison est un mensonge ; une porte qu'on ne
+        pousse pas n'en est pas un.
+        """
+        mesures = mesures_de_la_part(part)
+        if not mesures:
+            return None
+        largeur, hauteur = mesures
+        # ⚠️ La porte tombe DEDANS la ou elle est DEHORS : on entre par la meme
+        # place qu'on a poussee. Une porte au milieu du mur alors que la vitrine
+        # est au bout de la facade se sent, meme sans savoir pourquoi.
+        porte = min(max(ancre[0] - min(x for x, _ in part) + 1, 1), largeur)
+        self.posees += 1
+        slug = f"{quoi}_{self.posees}"
+        if quoi == "logement":
+            #: Un etage, c'est une piece de plus de la MEME empreinte — jamais
+            #: une piece plus grande (voir `piece_de_logement`).
+            en_haut = f"{slug}_haut" if etages >= 2 else None
+            if en_haut:
+                bas = piece_de_logement(slug, largeur, hauteur, porte,
+                                        etage=en_haut, variante=self.posees)
+                haut = piece_de_logement(en_haut, largeur, hauteur, porte, etage=slug,
+                                         haut=True, variante=self.posees)
+                # ⚠️ LES DEUX ESCALIERS OU AUCUN : un escalier qui ne redescend
+                # pas laisse le joueur pris en haut (la porte du bas est la
+                # seule sortie). Une piece trop petite pour poser une marche
+                # hors de portee de sa porte n'a donc pas d'etage du tout.
+                if all(any(pt["type"] == "escalier" for pt in piece["points"])
+                       for piece in (bas, haut)):
+                    self.pieces[slug], self.pieces[en_haut] = bas, haut
+                    return slug
+            self.pieces[slug] = piece_de_logement(slug, largeur, hauteur, porte,
+                                                  variante=self.posees)
+        else:
+            self.pieces[slug] = piece_de_commerce(
+                slug, quoi, largeur, hauteur, porte, variante=self.posees)
+        return slug
+
+    def premiere_du_genre(self, famille: str | None) -> bool:
+        """Cette famille-la n'a encore ouvert NULLE PART : alors celle-ci ouvre.
 
         ⚠️ Sans cette regle, une famille de commerce peut n'ouvrir aucune porte
         de toute la ville : il faut qu'un batiment tire cette enseigne-la, qu'il
@@ -1736,9 +1966,9 @@ class _Chantier:
         qui s'ouvrent ; il n'a pas a decider qu'un pan entier de la ville
         n'existe pas. La premiere qui peut, ouvre.
         """
-        if not interieur or interieur in self.genres_ouverts:
+        if not famille or famille in self.genres_ouverts:
             return False
-        self.genres_ouverts.add(interieur)
+        self.genres_ouverts.add(famille)
         return True
 
     def _a_quoi_sert(self, genre: str, ancre: tuple[int, int] | None) -> tuple[str | None, tuple | None]:
@@ -1855,6 +2085,7 @@ class _Chantier:
         if force:
             # Un batiment garanti garde sa masse : ni cour ni coin mordu.
             tuiles = {(bx + i, by + j) for j in range(bh) for i in range(bl)}
+        self.tuiles_du_batiment = tuiles
         return self.batiment_forme(tuiles, vitrines, genre)
 
     # --- La fourriere (M9) --------------------------------------------------
@@ -2704,6 +2935,90 @@ class _Chantier:
                            "kiosque": {"x": pose["x"], "y": pose["y"]}})
         return postes
 
+    #: OU UN AMUSEUR S'INSTALLE, par ordre de preference. ⚠️ Un amuseur ne
+    #: choisit pas un coin de rue au hasard : il se met LA OU LE MONDE PASSE ET
+    #: S'ARRETE. Jusqu'ici, `naitreLesSortes` le posait sur la premiere tuile
+    #: marchable venue hors de l'ecran — c'est-a-dire souvent dans une ruelle,
+    #: devant un mur de hangar, entre deux poubelles. Le numero etait bon,
+    #: l'endroit ne l'etait pas, et personne ne venait le voir.
+    #:
+    #: `genre` de l'ilot -> ce que ca vaut. La PLACE d'abord (c'est fait pour
+    #: ca : du pave, une fontaine, des bancs), le parc ensuite, puis le
+    #: terminus d'autobus — ou tout le monde debarque — et enfin le trottoir
+    #: devant les commerces.
+    SCENES_PAR_ILOT: dict[str, int] = {"o": 4, "p": 3, "T": 3, "c": 1}
+
+    #: De combien de tuiles LIBRES un numero a besoin autour de lui. ⚠️ Trois a
+    #: cinq spectateurs font un cercle d'une tuile et demie de rayon ; une scene
+    #: sans cette place est une scene ou l'attroupement se met dans le mur, et
+    #: `placeDansLeCercle` renonce tuile apres tuile.
+    SCENE_DEGAGEMENT = 2
+
+    #: A quelle distance minimale deux scenes se posent, en tuiles. ⚠️ Sans
+    #: ecart, un parc de vingt tuiles en donnerait deux cents collees, et deux
+    #: amuseurs poses dessus joueraient coude a coude — deux numeros a trois
+    #: tuiles l'un de l'autre ne font pas deux spectacles, ils font une cohue,
+    #: et leurs deux cercles se disputent les memes passants.
+    SCENES_ECART = 7
+    #: Combien de scenes au plus par ilot : une place en merite plusieurs, une
+    #: bande de trottoir une seule. ⚠️ C'est aussi ce qui tient le paquet : la
+    #: liste brute en faisait NEUF CENTS, soit cinquante kilo-octets pour dire
+    #: cinquante fois le meme coin de parc.
+    SCENES_PAR_REGION = 3
+
+    def scenes(self) -> list[dict]:
+        """Les endroits ou un amuseur de rue peut planter son numero.
+
+        ⚠️ Une scene n'est pas une tuile marchable de plus : c'est une tuile
+        DEGAGEE sur deux tuiles a la ronde, dans un ilot ou les gens passent, et
+        A L'ECART des autres scenes. Sans le degagement, le cercle de badauds
+        n'a nulle part ou se mettre — et « toujours entre 3 et 5 personnes
+        autour » devient un voeu.
+        """
+        sortie: list[dict] = []
+        for glyphe, x0, y0, largeur, hauteur in self.regions():
+            valeur = self.SCENES_PAR_ILOT.get(glyphe)
+            if not valeur:
+                continue
+            district = self.district_en(x0, y0)
+            candidats = [(x, y)
+                         for y in range(y0, y0 + hauteur)
+                         for x in range(x0, x0 + largeur)
+                         if self._scene_possible(x, y)]
+            if not candidats:
+                continue
+            # ⚠️ Tirees, pas prises dans l'ordre : les premieres d'une liste
+            # balayee du nord-ouest au sud-est sont toutes dans le meme coin.
+            posees: list[tuple[int, int]] = []
+            for _ in range(self.SCENES_PAR_REGION):
+                libres = [c for c in candidats
+                          if all(abs(c[0] - p[0]) + abs(c[1] - p[1]) >= self.SCENES_ECART
+                                 for p in posees)]
+                if not libres:
+                    break
+                posees.append(libres[self.des_scene.suivant() % len(libres)])
+            for x, y in posees:
+                sortie.append({"x": x, "y": y, "district": district,
+                               "ilot": glyphe, "valeur": valeur})
+        return sortie
+
+    def _scene_possible(self, x: int, y: int) -> bool:
+        """Degage sur `SCENE_DEGAGEMENT` tuiles, et jamais sur la chaussee."""
+        if (x, y) in self.occupe or (x, y) in self.reserve:
+            return False
+        marge = self.SCENE_DEGAGEMENT
+        for j in range(y - marge, y + marge + 1):
+            for i in range(x - marge, x + marge + 1):
+                if not self.marchable_en(i, j):
+                    return False
+                # ⚠️ Un amuseur au milieu de la rue se fait faucher, et son
+                # public avec. `routier` couvre la chaussee ET les traverses :
+                # une scene au bord d'un passage clouté bloquerait le seul
+                # endroit ou l'on traverse.
+                if routier(self.sol[j][i]):
+                    return False
+        return True
+
     def paquets(self, nombre: int = 20) -> list[dict]:
         """Vingt paquets caches dans les recoins : ruelles, terrains vagues,
         coins de parc, quais. Jamais sur une rue, jamais devant une porte,
@@ -2916,6 +3231,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier.poser_les_rampes()
     ambulants = chantier.ambulants()
     reclames = chantier.reclames(ambulants)
+    # ⚠️ Apres les ambulants et la reclame : une scene se veut DEGAGEE, et un
+    # kiosque pose apres coup au milieu d'un attroupement en ferait un couloir.
+    scenes = chantier.scenes()
     paquets = chantier.paquets()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
     # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
@@ -2954,12 +3272,21 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fourriere": chantier.fourriere,
         "ambulants": ambulants,
         "reclames": reclames,
+        # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere
+        # tuile marchable venue hors de l'ecran — c'est-a-dire souvent dans une
+        # ruelle, devant un mur de hangar. Le numero etait bon, l'endroit ne
+        # l'etait pas, et personne ne venait le voir.
+        "scenes": scenes,
         "paquets": paquets,
         "zones": chantier.zones(),
         "points_interet": chantier.points,
         "toits": chantier.toits,
         "apparition": {"joueur": {"x": depart[0], "y": depart[1]}},
-        "interieurs": INTERIEURS,
+        # ⚠️ LES PIECES DESSINEES **ET** LES POSEES. Les seize lieux garantis
+        # sont les memes d'une graine a l'autre (on ecrit des missions dedans) ;
+        # les commerces et logements ordinaires, eux, sont poses aux mesures de
+        # leur batiment et n'existent que dans CETTE ville-la.
+        "interieurs": {**INTERIEURS, **chantier.pieces},
         "tuiles_bouchees": bouchees,
     }
 
@@ -3313,288 +3640,412 @@ BBBWWDWWBBB
      gens=_gens(("commis", 8, 4),)),
 )
 
-#: ⚠️ Les commerces ORDINAIRES : une piece par famille de devanture. Sans
-#: elles, les cent seize enseignes de la ville etaient des decors — une seule
-#: sur sept menait quelque part, et les autres montraient une poignee doree
-#: sur un mur plein. `INTERIEUR_DE_GENRE` dit quelle piece ouvre derriere
-#: quelle enseigne ; le NOM affiche, lui, est celui de l'enseigne (il voyage
-#: sur la porte), et c'est ce qui fait qu'on entre chez « TABAGIE DUBOIS » et
-#: pas dans « Boutique ».
-_BOUTIQUES: tuple[dict, ...] = (
-    _piece("boutique_bouffe", "L'épicerie", plan="""
-BBBBBBBBB
-Bjjj eeeB
-B       B
-B eee eeB
-B       B
-Bcccc  nB
-B       B
-BBWWDWWBB
-""", points=(_pt("emplettes", 2, 5, genre="bouffe"),), gens=_gens(("commis", 2, 4),)),
-
-    _piece("boutique_service", "Le salon", plan="""
-BBBWWWWBB
-Be     nB
-B       B
-B hh hh B
-B yy yy B
-Bcccc   B
-B       B
-BBWWDWWBB
-""", points=(_pt("salon", 2, 4),),
-     gens=_gens(("commis", 5, 5), ("client", 4, 3))),
-
-    _piece("boutique_artisan", "L'atelier", plan="""
-BBBBBBBBB
-BeeeeeeeB
-B       B
-B ee mm B
-B       B
-Bccccc nB
-B       B
-BBBWWDWBB
-""", points=(_pt("emplettes", 3, 5, genre="artisan"),), gens=_gens(("commis", 3, 4),)),
-
-    _piece("boutique_nuit", "La taverne", plan="""
-BBBBBBBBB
-Bj     nB
-B ccccc B
-B       B
-B ah ah B
-B ah ah B
-B     aaB
-BBWWDWWBB
-""", points=(_pt("emplettes", 3, 2, genre="nuit"),),
-     gens=_gens(("commis", 3, 1), ("client", 4, 4), ("client", 7, 5))),
-
-    _piece("boutique_commerce", "Le magasin", plan="""
-BBBWWWWBB
-Be e e nB
-Be e e  B
-B       B
-B ccccc B
-B       B
-Bn     yB
-BBWWDWWBB
-""", points=(_pt("emplettes", 3, 4, genre="commerce"),), gens=_gens(("commis", 3, 3),)),
-
-    _piece("boutique_marine", "La criée", sol="u", plan="""
-BBBBBBBBB
-Bjjjj  eB
-B       B
-Bccccc  B
-B       B
-B     anB
-B     a B
-BBWWDWWBB
-""", points=(_pt("emplettes", 3, 3, genre="marine"),), gens=_gens(("commis", 3, 2),)),
-
-    _piece("boutique_industrie", "La quincaillerie", sol="u", plan="""
-BBBBBBBBB
-Bmmm mmeB
-Bmmm mm B
-B       B
-B mmm   B
-Bcccc  nB
-B       B
-BBBWWDWBB
-""", points=(_pt("emplettes", 2, 5, genre="industrie"),), gens=_gens(("commis", 1, 4),)),
-
-    _piece("boutique_sante", "La pharmacie", sol="u", plan="""
-BBBWWWWBB
-BeeeeeenB
-B       B
-B ee ee B
-B       B
-B ccccc B
-B      nB
-BBWWDWWBB
-""", points=(_pt("emplettes", 2, 5, genre="sante"),),
-     gens=_gens(("commis", 3, 4), ("client", 4, 3))),
-
-    _piece("boutique_mode", "La boutique", plan="""
-BBBWWWWBB
-Be e e nB
-Be e e  B
-Be e e  B
-B       B
-Bcccc yyB
-B     yyB
-BBWWDWWBB
-""", points=(_pt("emplettes", 2, 5, genre="mode"),), gens=_gens(("commis", 3, 4),)),
-
-    _piece("boutique_savoir", "Le kiosque à journaux", plan="""
-BBBBBBBBB
-BeeeeeeeB
-B       B
-B eeeee B
-B       B
-Bcccc ahB
-B      nB
-BBBWWDWBB
-""", points=(_pt("journal", 2, 5),),
-     gens=_gens(("commis", 2, 4), ("client", 4, 2))),
-)
-
-#: Le logement d'un plex : celui du bas donne sur la rue, celui du haut se
-#: gagne par l'escalier. ⚠️ On n'est PAS chez soi : il n'y a rien a acheter
-#: ici, seulement des tiroirs a fouiller — et une seule fois par adresse.
-_LOGEMENTS: tuple[dict, ...] = (
-    _piece("logement", "Un logement", porte="maison", plan="""
-BBBWWWWBBB
-Bll    j B
-Bll      B
-B aah   /B
-B aah  yyB
-Bz    nyyB
-BBBWWDWWBB
-""", points=(_pt("fouiller", 7, 1), _pt("escalier", 8, 3, vers="logement_haut")),
-     gens=_gens(("client", 3, 1),)),
-
-    _piece("logement_haut", "Un logement, en haut", porte="maison", plan="""
-BBBWWWWBBB
-Bll   ll B
-Bll   ll B
-B        B
-B e a e /B
-Bn      nB
-BBBBBDBBBB
-""", points=(_pt("fouiller", 2, 4), _pt("escalier", 8, 4, vers="logement")),
-     gens=()),
-)
-
-#: ⚠️ LES PETITES PIECES. Les 41 interieurs de la ville etaient tous autour de
-#: 14 x 9, et les batiments qui les portent vont de NEUF tuiles a 252 : un
-#: logement de banlieue de 3 x 3 ouvrait sur un 16 x 9, seize fois sa surface.
-#: Les deux cotes ne se parlaient pas — `_pose_batiment` tire ses marges au
-#: sort, `INTERIEURS` declare des pieces ecrites a la main, et personne ne
-#: comparait. Le joueur, lui, compare a chaque porte.
-#:
-#: Il faut donc des pieces PAR TRANCHE, et la porte prend la plus grande QUI
-#: TIENNE (voir `interieur_qui_tient`).
-_PETITES: tuple[dict, ...] = (
-    # ⚠️ LA PLUS PETITE DE TOUTES, et il en faut une : vingt-sept batiments
-    # ordinaires de la ville livree ne font que NEUF tuiles. Sans elle, leurs
-    # portes restaient toutes condamnees et la ville perdait un tiers de ses
-    # entrees. Trois tuiles sur trois, un lit, un poele : c'est une cabane, et
-    # c'est exactement ce qu'on voit du dehors.
-    _piece("logement_minuscule", "Une chambre", porte="maison", plan="""
-BBWBB
-Bl jB
-Bl  B
-B  zB
-BBDBB
-""", points=(_pt("fouiller", 1, 1),), gens=()),
-
-    _piece("boutique_minuscule", "Le comptoir", plan="""
-BBBBB
-Bcc B
-B  nB
-Be  B
-BWDWB
-""", points=(_pt("caisse", 1, 1),), gens=_gens(("commis", 2, 2),)),
-
-    # Un logement d'une piece : le lit, le frigo, la table. C'est tout, et
-    # c'est ce qu'il y a derriere une porte de bungalow.
-    _piece("logement_petit", "Un petit logement", porte="maison", plan="""
-BBBWWWBB
-Bll   jB
-Bll    B
-Ba    nB
-BBBWDWBB
-""", points=(_pt("fouiller", 5, 1),), gens=()),
-
-    # Une boutique d'une allee : un comptoir, une etagere, le commis derriere.
-    _piece("boutique_petite", "Le petit commerce", plan="""
-BBBBBBBBB
-Beeeee  B
-B      nB
-Bccccc  B
-BBBWWDWBB
-""", points=(_pt("caisse", 2, 3),), gens=_gens(("commis", 2, 2),)),
-)
-
-INTERIEURS: dict[str, dict] = {p["slug"]: p for p in _PIECES + _BOUTIQUES + _LOGEMENTS + _PETITES}
+#: ⚠️ LES PIECES DESSINEES, et elles seules. Les dix boutiques de famille, les
+#: deux logements et les quatre petites pieces ont vecu une journee : ils
+#: repondaient a « une piece ne depasse pas son batiment » par des TAILLES, et
+#: trois tailles ne couvrent pas des batiments allant de neuf tuiles a trois
+#: cent quatre-vingts dans toutes les formes. Ce qu'ils disaient de bon — une
+#: epicerie a des frigos et des allees, une taverne des tables — est passe dans
+#: `MOBILIER`, et les pieces se POSENT maintenant a la mesure (voir plus bas).
+#: Restent ici les endroits qui ne se generent pas : les lieux garantis et les
+#: pieces ou se tiennent les donneurs de mission.
+INTERIEURS: dict[str, dict] = {p["slug"]: p for p in _PIECES}
 
 
-def plancher_de(piece: dict) -> int:
-    """Les tuiles ou l'on POSE LE PIED dans cette piece, murs deduits.
+def mesures_de(piece: dict) -> tuple[int, int]:
+    """Les mesures du PLANCHER d'une piece, murs deduits."""
+    return max(0, piece["largeur"] - 2), max(0, piece["hauteur"] - 2)
 
-    ⚠️ On compare les planchers, pas les boites. Une piece de 15 x 10 a 13 x 8
-    tuiles de plancher une fois ses murs deduits ; un batiment de 4 x 3 n'en a
-    douze en tout. Comparer les boites, ou pire la PARCELLE, c'est se mentir de
-    trois fois la surface : c'est le plancher contre l'empreinte qui dit la
-    verite, et c'est lui que le juge mesure.
+
+def suite_de(slug: str, pieces: dict[str, dict] | None = None) -> list[str]:
+    """La piece et tout ce qu'on atteint en poussant sa porte (les etages).
+
+    ⚠️ `pieces` permet de lire les pieces d'UNE VILLE (dessinees et posees
+    melees) et pas seulement le catalogue du module : un logement pose a la
+    mesure d'un plex n'est pas dans `INTERIEURS`, il n'existe que la-bas.
     """
-    return max(0, piece["largeur"] - 2) * max(0, piece["hauteur"] - 2)
-
-
-def plancher_de_la_suite(slug: str) -> int:
-    """Le plus grand plancher de la SUITE — la piece et ses etages.
-
-    ⚠️ Une porte ne donne pas sur une piece, elle donne sur tout ce qu'on peut
-    atteindre en la poussant : `logement` a un escalier qui monte vers
-    `logement_haut`, et les deux doivent tenir. C'est la nuance des etages :
-    un batiment de N etages contient N PIECES DE SON EMPREINTE, jamais UNE
-    piece N fois plus grande. C'est le nombre de pieces qui se multiplie, pas
-    la surface au sol — alors on prend la PLUS GRANDE de la suite, pas la
-    somme.
-    """
+    catalogue = INTERIEURS if pieces is None else pieces
     vus: set[str] = set()
     a_voir = [slug]
-    grand = 0
     while a_voir:
         courant = a_voir.pop()
-        if courant in vus or courant not in INTERIEURS:
+        if courant in vus or courant not in catalogue:
             continue
         vus.add(courant)
-        piece = INTERIEURS[courant]
-        grand = max(grand, plancher_de(piece))
-        a_voir += [pt["vers"] for pt in piece["points"] if pt.get("vers")]
-    return grand
+        a_voir += [pt["vers"] for pt in catalogue[courant]["points"] if pt.get("vers")]
+    return sorted(vus)
 
 
-def interieur_qui_tient(slugs: tuple[str, ...], empreinte: int) -> str | None:
-    """La plus grande piece de la liste dont la suite tient dans le batiment.
+def mesures_de_la_suite(slug: str, pieces: dict[str, dict] | None = None) -> tuple[int, int]:
+    """La boite qu'il faut au BATIMENT pour porter cette piece et ses etages.
 
-    Rend `None` quand meme la plus petite deborde — et c'est un resultat, pas
-    un echec : un bungalow de trois tuiles sur trois garde sa porte, elle ne
-    s'ouvre simplement pas (`poser_porte` la condamne). Une porte qui donne sur
-    une piece plus grande que la maison est un mensonge ; une porte qu'on ne
-    pousse pas n'en est pas un.
+    ⚠️ La plus grande largeur et la plus grande profondeur de la suite, pas leur
+    somme : un batiment de N etages contient N pieces de son empreinte, jamais
+    UNE piece N fois plus grande. Et c'est la BOITE, pas la surface — viser la
+    surface donnait a la cantine 58 x 7 pour une piece de 14 x 9.
     """
-    tiennent = [s for s in slugs
-                if s in INTERIEURS and plancher_de_la_suite(s) <= empreinte]
-    if not tiennent:
+    catalogue = INTERIEURS if pieces is None else pieces
+    mesures = [mesures_de(catalogue[s]) for s in suite_de(slug, catalogue)] or [(0, 0)]
+    return max(m[0] for m in mesures), max(m[1] for m in mesures)
+
+
+# --- Les pieces POSEES A LA MESURE ------------------------------------------
+
+#: ⚠️ CE QUI SE DESSINE, ET CE QUI SE POSE. Les seize lieux garantis et les
+#: pieces de mission se DESSINENT (plus haut) : le billard du Brouillard, les
+#: lits de l'hopital et les ponts du garage sont des endroits, pas des gabarits.
+#: Les commerces et les logements ORDINAIRES, eux, se POSENT aux mesures de
+#: leur batiment. Trois tailles dessinees ne peuvent pas couvrir des batiments
+#: qui vont de neuf tuiles a trois cent quatre-vingts dans toutes les formes :
+#: on ouvrait un bloc de 59 x 8 sur une piece de 9 x 8 — treize pour cent — et
+#: un batiment de quatre tuiles de profond sur une piece qui en fait six.
+#:
+#: La FAMILLE dit quoi meubler, la MESURE dit combien. Une piece posee passe
+#: par `_piece()` comme les autres : meme validation, memes juges, et une piece
+#: impossible leve PENDANT la generation au lieu de s'ouvrir en jeu.
+
+#: Le mobilier d'une famille de commerce : le motif du FOND (le mur du fond),
+#: celui des ALLEES, le plancher, le nom generique et ce que sert le comptoir.
+#: ⚠️ Un motif se lit comme un bout de plan et se repete sur la largeur — ses
+#: TROUS sont ce qui fait qu'une allee est une allee et pas un mur de meubles.
+#: Et un motif ne colle jamais deux tuiles d'un meme `bloc` (`a` la table, `y`
+#: le tapis, `m` la machine) autrement qu'en rectangle : c'est la regle des
+#: meubles peints par leurs voisines, et elle se juge sur les pieces posees
+#: comme sur les dessinees.
+MOBILIER: dict[str, dict] = {
+    "bouffe": {"nom": "L'épicerie", "sol": "t", "fond": "jjj ", "allee": "eee ",
+               "point": ("emplettes", "bouffe")},
+    "service": {"nom": "Le salon", "sol": "t", "fond": "ee n", "allee": "hh yy ",
+                "point": ("salon", None)},
+    "artisan": {"nom": "L'atelier", "sol": "t", "fond": "eeee ", "allee": "mm ee ",
+                "point": ("emplettes", "artisan")},
+    "nuit": {"nom": "La taverne", "sol": "t", "fond": "cc j ", "allee": "ah ",
+             "point": ("emplettes", "nuit")},
+    "commerce": {"nom": "Le magasin", "sol": "t", "fond": "e e n", "allee": "ee ee ",
+                 "point": ("emplettes", "commerce")},
+    "marine": {"nom": "La criée", "sol": "u", "fond": "jjjj ", "allee": "ee aa ",
+               "point": ("emplettes", "marine")},
+    "industrie": {"nom": "La quincaillerie", "sol": "u", "fond": "mm mm ",
+                  "allee": "ee mm ", "point": ("emplettes", "industrie")},
+    "sante": {"nom": "La pharmacie", "sol": "u", "fond": "eeeee ", "allee": "ee ee ",
+              "point": ("emplettes", "sante")},
+    "mode": {"nom": "La boutique", "sol": "t", "fond": "e e e ", "allee": "ee yy ",
+             "point": ("emplettes", "mode")},
+    "savoir": {"nom": "Le kiosque à journaux", "sol": "t", "fond": "eeeee ",
+               "allee": "ee ee ", "point": ("journal", None)},
+}
+
+#: Le plus petit plancher qu'on ose ouvrir : trois sur trois. En dessous, la
+#: porte reste condamnee — c'etait deja la regle, et elle ne change pas.
+PLANCHER_MIN = 3
+
+
+def mesures_de_la_part(tuiles: set[tuple[int, int]]) -> tuple[int, int] | None:
+    """Les mesures du plancher qu'on peut poser derriere cette part de batiment.
+
+    La boite de ce qu'on VOIT de la rue, ramenee au besoin sous l'empreinte —
+    un batiment en L ne remplit pas sa boite, et une piece ne ment pas.
+
+    ⚠️ C'est la PROFONDEUR qui cede la premiere : la largeur d'une vitrine est
+    ce que le joueur compare en poussant la porte, la profondeur est ce qu'il ne
+    pouvait pas voir du trottoir.
+    """
+    if not tuiles:
         return None
-    return max(tiennent, key=plancher_de_la_suite)
+    xs = [x for x, _ in tuiles]
+    ys = [y for _, y in tuiles]
+    largeur, hauteur = max(xs) - min(xs) + 1, max(ys) - min(ys) + 1
+    empreinte = len(tuiles)
+    while largeur * hauteur > empreinte and hauteur > PLANCHER_MIN:
+        hauteur -= 1
+    while largeur * hauteur > empreinte and largeur > PLANCHER_MIN:
+        largeur -= 1
+    if largeur < PLANCHER_MIN or hauteur < PLANCHER_MIN or largeur * hauteur > empreinte:
+        return None
+    return largeur, hauteur
 
 
-#: Derriere quelle enseigne on entre dans quelle piece. ⚠️ Chaque famille de
-#: `devantures.GENRES` doit etre ici : un genre oublie, et toutes les portes
-#: de cette couleur-la ne menent nulle part (juge dans les tests).
-INTERIEUR_DE_GENRE: dict[str, str] = {
-    genre["slug"]: f"boutique_{genre['slug']}" for genre in devantures_mod.GENRES
-}
+def _mur_de_devant(largeur: int, porte: int) -> str:
+    """Le mur de la rue : la porte, et des vitrines de chaque cote."""
+    lettres = []
+    for i in range(largeur + 2):
+        if i == porte:
+            lettres.append("D")
+        elif 1 <= i <= largeur and 1 <= abs(i - porte) <= 2:
+            lettres.append("W")
+        else:
+            lettres.append("B")
+    return "".join(lettres)
 
-#: Les pieces qui ouvrent derriere une enseigne, de la plus petite a la plus
-#: grande. ⚠️ La petite est la MEME pour tous les genres, et c'est voulu :
-#: l'identite du commerce voyage sur la PORTE (`visite["nom"]`), pas dans les
-#: murs. Une boucherie de neuf tuiles reste une boucherie sur son enseigne et
-#: dans le carnet ; elle a juste un comptoir au lieu de trois allees. Douze
-#: petits plans de plus auraient dit la meme chose douze fois.
-BOUTIQUES_PAR_TAILLE: dict[str, tuple[str, ...]] = {
-    slug: ("boutique_minuscule", "boutique_petite", grand)
-    for slug, grand in INTERIEUR_DE_GENRE.items()
-}
 
-#: Les pieces qui ouvrent derriere une porte de residence, de la plus petite a
-#: la plus grande. ⚠️ `interieur_qui_tient` prend la plus grande QUI TIENNE
-#: dans l'empreinte du batiment — c'est ca, « la porte prend la plus grande qui
-#: tienne ».
-INTERIEUR_LOGEMENT = "logement"
-LOGEMENTS_PAR_TAILLE: tuple[str, ...] = (
-    "logement_minuscule", "logement_petit", "logement")
+def _plan_de(grille: list[list[str]], porte: int) -> str:
+    """Les murs autour d'un interieur meuble, et la porte au bon rang."""
+    largeur = len(grille[0])
+    lignes = ["B" * (largeur + 2)]
+    lignes += ["B" + "".join(rangee) + "B" for rangee in grille]
+    lignes.append(_mur_de_devant(largeur, porte))
+    return "\n".join(lignes)
+
+
+def _repeter(motif: str, largeur: int, decalage: int = 0) -> list[str]:
+    """Un motif repete sur toute la largeur, a partir d'un cran donne."""
+    return [motif[(i + decalage) % len(motif)] for i in range(largeur)]
+
+
+def _libre(grille: list[list[str]], x: int, y: int) -> bool:
+    return grille[y][x] == " "
+
+
+def _poser_le_point(grille: list[list[str]], type_: str, genre: str | None,
+                    porte: int, prefere: list[tuple[int, int]],
+                    garder: tuple = (), **extra) -> dict:
+    """Un point d'action sur un meuble — le plus LOIN possible de la sortie.
+
+    ⚠️ Deux regles s'affrontent, et c'est ici qu'on les tient toutes les deux :
+    un comptoir pose a moins de `RAYON_POINT` de la tuile d'entree VOLE ACTION a
+    la porte (« chez Ti-Paul, il est impossible de sortir »), et un point qu'on
+    ne peut pas toucher n'est pas un comptoir. On prend donc le meuble le plus
+    loin qui ait une tuile de plancher a cote — et s'il n'en a pas, on lui en
+    degage une plutot que de reculer.
+    """
+    largeur, hauteur = len(grille[0]), len(grille)
+    sortie = (porte - 1, hauteur - 1)
+
+    def du_plus_loin(tuiles):
+        return sorted((c for c in dict.fromkeys(tuiles) if grille[c[1]][c[0]] != " "),
+                      key=lambda c: -math.hypot(c[0] - sortie[0], c[1] - sortie[1]))
+
+    # ⚠️ Le comptoir D'ABORD, le reste en recours : un point `emplettes` pose
+    # sur l'etagere du fond parce qu'elle est plus loin ne serait plus un
+    # comptoir, et le commis se retrouverait a servir de dos.
+    reste = [(x, y) for y in range(hauteur) for x in range(largeur)]
+    for x, y in du_plus_loin(prefere) + du_plus_loin(reste):
+        if math.hypot(x - sortie[0], y - sortie[1]) < RAYON_POINT:
+            continue
+        voisines = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                    if 0 <= x + dx < largeur and 0 <= y + dy < hauteur]
+        if not any(_libre(grille, *v) for v in voisines):
+            # ⚠️ On DEGAGE une voisine plutot que de reculer — reculer d'un
+            # meuble donnerait un point plus pres de la porte, et c'est l'autre
+            # regle qu'on casserait. Mais jamais la tuile d'un BLOC : un lit a
+            # qui l'on enleve un coin n'est plus un rectangle, donc plus un lit.
+            # ⚠️ Ni un BLOC, ni une tuile qui porte deja un point : degager
+            # l'escalier pour atteindre un tiroir, c'est effacer l'escalier —
+            # il restait un point `escalier` sur une tuile de plancher nu.
+            degageables = [v for v in voisines
+                           if not LEGENDE[grille[v[1]][v[0]]].get("bloc") and v not in garder]
+            if not degageables:
+                continue
+            vx, vy = max(degageables, key=lambda v: math.hypot(v[0] - sortie[0],
+                                                               v[1] - sortie[1]))
+            grille[vy][vx] = " "
+        return _pt(type_, x + 1, y + 1, **({"genre": genre} if genre else {}), **extra)
+    raise ValueError(f"aucune place pour un point {type_} dans {largeur} x {hauteur}")
+
+
+#: Ce qu'une piece doit montrer de meubles : un dixieme de sa boite, et deux
+#: SORTES (juge `une piece est meublee` — « on ouvre une porte et il n'y a
+#: jamais rien »). On vise un peu au-dessus pour ne pas raser le seuil.
+PART_MEUBLEE = 0.12
+
+
+def _completer_les_meubles(grille: list[list[str]], porte: int, petits: str,
+                           proteges: tuple = ()) -> None:
+    """Ajoute de petits meubles tant que la piece a l'air vide.
+
+    ⚠️ Les petites pieces sont celles qui en ont besoin : une chambre de trois
+    sur trois n'a qu'UN coin, et si le sort lui donne le tapis elle n'a aucun
+    meuble du tout (un tapis ne compte pas — on marche dessus). On remplit
+    depuis le FOND : ce qu'on ajoute doit se voir en entrant, pas barrer la
+    porte.
+    """
+    largeur, hauteur = len(grille[0]), len(grille)
+    boite = (largeur + 2) * (hauteur + 2)
+    libres = sorted(((x, y) for y in range(hauteur) for x in range(largeur)
+                     if _libre(grille, x, y) and (x, y) != (porte - 1, hauteur - 1)),
+                    key=lambda t: -math.hypot(t[0] - (porte - 1), t[1] - (hauteur - 1)))
+    #: ⚠️ Ce qui ne doit JAMAIS se retrouver mure : les tuiles qui portent un
+    #: point d'action. Un point sans une tuile de plancher a cote est
+    #: injoignable — `_verifier_piece` le refuse, et il a raison : on verrait le
+    #: comptoir sans pouvoir le toucher.
+    def enferme(x: int, y: int) -> bool:
+        for mx, my in proteges:
+            if abs(mx - x) + abs(my - y) != 1:
+                continue
+            autour = [(mx + dx, my + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                      if 0 <= mx + dx < largeur and 0 <= my + dy < hauteur]
+            if sum(1 for v in autour if _libre(grille, *v)) <= 1:
+                return True
+        return False
+
+    poses = 0
+    for x, y in libres:
+        meubles = [g for ligne in grille for g in ligne if LEGENDE.get(g, {}).get("meuble")]
+        if len(meubles) >= boite * PART_MEUBLEE and len(set(meubles)) >= 2:
+            return
+        if enferme(x, y):
+            continue
+        grille[y][x] = petits[poses % len(petits)]
+        poses += 1
+
+
+def _quelqu_un(grille: list[list[str]], qui: str, autour: tuple[int, int],
+               porte: int, pris: set[tuple[int, int]]) -> tuple | None:
+    """Une tuile de PLANCHER libre pres d'un endroit — personne ne nait dans un
+    meuble, ni sur le pas de la porte."""
+    largeur, hauteur = len(grille[0]), len(grille)
+    places = sorted(((x, y) for y in range(hauteur) for x in range(largeur)
+                     if _libre(grille, x, y) and (x, y) not in pris
+                     and (x, y) != (porte - 1, hauteur - 1)),
+                    key=lambda p: math.hypot(p[0] - autour[0], p[1] - autour[1]))
+    if not places:
+        return None
+    pris.add(places[0])
+    return (qui, places[0][0] + 1, places[0][1] + 1)
+
+
+def piece_de_commerce(slug: str, famille: str, largeur: int, hauteur: int,
+                      porte: int, variante: int = 0) -> dict:
+    """Un commerce POSE : le fond, les allees, le comptoir, et du monde dedans.
+
+    Trois rangees qui ne changent pas, quelle que soit la taille : le FOND
+    contre le mur du fond, le COMPTOIR a l'avant-derniere rangee, et la derniere
+    rangee LIBRE — c'est celle ou l'on entre, et un comptoir colle a la porte se
+    sert tout seul. Entre les deux, une allee une rangee sur deux : c'est ce qui
+    fait qu'un magasin de dix de profond est un magasin, et pas un hangar avec
+    un comptoir au fond.
+    """
+    fiche = MOBILIER[famille]
+    grille = [[" "] * largeur for _ in range(hauteur)]
+    for x, glyphe in enumerate(_repeter(fiche["fond"], largeur, variante)):
+        grille[0][x] = glyphe
+    for k, y in enumerate(range(2, hauteur - 3, 2)):
+        for x, glyphe in enumerate(_repeter(fiche["allee"], largeur, variante + k)):
+            grille[y][x] = glyphe
+    # Le comptoir : la moitie de la largeur, du cote oppose a la porte.
+    rangee = hauteur - 2
+    long_ = max(2, min(largeur - 1, (largeur + 1) // 2))
+    debut = 0 if porte > largeur / 2 else largeur - long_
+    comptoir = [(x, rangee) for x in range(debut, debut + long_)]
+    for x, y in comptoir:
+        grille[y][x] = "c"
+    # Une plante a l'entree, du cote ou il reste de la place.
+    for x in (0, largeur - 1):
+        if abs(x + 1 - porte) >= 2 and _libre(grille, x, hauteur - 1):
+            grille[hauteur - 1][x] = "n"
+            break
+    type_, genre = fiche["point"]
+    points = [_poser_le_point(grille, type_, genre, porte, list(reversed(comptoir)))]
+    _completer_les_meubles(grille, porte, "enk",
+                           tuple((p["x"] - 1, p["y"] - 1) for p in points))
+    pris: set[tuple[int, int]] = set()
+    gens = [_quelqu_un(grille, "commis", (comptoir[0][0], rangee - 1), porte, pris)]
+    for k in range(min(2, (largeur * hauteur) // 30)):
+        gens.append(_quelqu_un(grille, "client", (largeur // 2, max(0, hauteur - 2 - 2 * k)),
+                               porte, pris))
+    return _piece(slug, fiche["nom"], _plan_de(grille, porte), sol=fiche["sol"],
+                  points=tuple(points), gens=_gens(*[g for g in gens if g]))
+
+
+#: Les coins d'un logement, dans l'ordre ou on les pose. ⚠️ Un grand logement
+#: n'est pas un grand vide : c'est PLUS de coins meubles, pas un lit perdu au
+#: milieu de vingt-quatre tuiles. Chacun tient dans deux tuiles sur deux, et les
+#: coins sont assez espaces pour que deux blocs du meme meuble ne se touchent
+#: jamais (un lit colle a un lit serait peint comme UN lit de quatre de large —
+#: voir `varianteDeLit`).
+COINS_DE_LOGEMENT = ("lit", "table", "cuisine", "tapis", "rangement")
+
+#: Le pas des coins : deux tuiles de meuble, et de quoi passer entre.
+COIN_L, COIN_H = 5, 3
+
+
+def _meubler_le_coin(grille: list[list[str]], x0: int, y0: int, quoi: str) -> None:
+    """Un coin de logement dans son carre de deux sur deux."""
+    largeur, hauteur = len(grille[0]), len(grille)
+    place = [(x, y) for y in range(y0, min(y0 + 2, hauteur - 1))
+             for x in range(x0, min(x0 + 2, largeur))]
+    if not place:
+        return
+    if quoi in ("lit", "table", "tapis"):
+        glyphe = {"lit": "l", "table": "a", "tapis": "y"}[quoi]
+        for x, y in place:
+            grille[y][x] = glyphe
+        if quoi == "table":
+            for _, y in place:
+                cx = x0 + 2
+                if cx < largeur and _libre(grille, cx, y):
+                    grille[y][cx] = "h"
+        return
+    meubles = {"cuisine": "jze", "rangement": "kee"}[quoi]
+    for i, (x, y) in enumerate(place):
+        grille[y][x] = meubles[i % len(meubles)]
+
+
+def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
+                      *, etage: str | None = None, haut: bool = False,
+                      variante: int = 0) -> dict:
+    """Un logement POSE : des coins meubles, et de quoi fouiller.
+
+    ⚠️ L'ETAGE est la nuance des plex : un batiment de N etages contient N
+    pieces de son EMPREINTE, jamais UNE piece N fois plus grande. Celle du haut
+    a donc les memes mesures que celle du bas, d'autres coins (on y dort), et un
+    escalier qui redescend — sans quoi on serait pris en haut.
+    """
+    grille = [[" "] * largeur for _ in range(hauteur)]
+    #: ⚠️ La derniere rangee reste LIBRE : c'est celle ou l'on entre, et un
+    #: meuble devant la porte se lit comme une piece ou l'on ne rentre pas.
+    coins = [(x, y) for y in range(0, hauteur - 1, COIN_H)
+             for x in range(0, largeur, COIN_L)]
+    for x0, y0 in coins:
+        # ⚠️ Le rang tient compte de la RANGEE de coins, sinon un logement large
+        # de vingt tuiles montre quatre fois la meme colonne de meubles : le pas
+        # des coins et la longueur du cycle tombent juste, et ca se voit.
+        k = x0 // COIN_L + 2 * (y0 // COIN_H)
+        # ⚠️ LE PREMIER COIN EST TOUJOURS LE LIT. Sans ca, un logement d'une
+        # seule piece tirait « la table » et on entrait chez quelqu'un qui n'a
+        # pas de lit — c'est la premiere chose qu'on regarde en poussant la
+        # porte d'un appartement. La variante ne fait tourner que la SUITE.
+        rang = "lit" if k == 0 else COINS_DE_LOGEMENT[(k + variante) % len(COINS_DE_LOGEMENT)]
+        if haut:
+            # En haut, on dort : un lit un coin sur deux.
+            rang = "lit" if k % 2 == 0 else COINS_DE_LOGEMENT[(k // 2 + 1) % len(COINS_DE_LOGEMENT)]
+        _meubler_le_coin(grille, x0, y0, rang)
+    for x in (largeur - 1, 0):
+        if _libre(grille, x, hauteur - 1) and abs(x + 1 - porte) >= 2:
+            grille[hauteur - 1][x] = "n"
+            break
+    points = []
+    if etage:
+        # ⚠️ L'escalier prend une tuile LIBRE, jamais un coin de bloc (un lit a
+        # qui l'on enleve un coin n'est plus un lit), et jamais a portee de la
+        # sortie — il volerait ACTION a la porte. Dans une cabane de trois sur
+        # trois il n'y a pas de place pour les deux : la piece n'a alors PAS
+        # d'etage, et c'est `poser_la_piece` qui s'en apercoit.
+        marches = [(x, y) for y in range(hauteur - 1) for x in range(largeur)
+                   if _libre(grille, x, y)
+                   and math.hypot(x - (porte - 1), y - (hauteur - 1)) >= RAYON_POINT]
+        if marches:
+            marche = max(marches, key=lambda t: math.hypot(t[0] - (porte - 1),
+                                                           t[1] - (hauteur - 1)))
+            grille[marche[1]][marche[0]] = "/"
+            points.append(_pt("escalier", marche[0] + 1, marche[1] + 1, vers=etage))
+    fouille = [(x, y) for y in range(hauteur) for x in range(largeur)
+               if grille[y][x] in ("l", "k", "e", "j", "z")]
+    points.append(_poser_le_point(grille, "fouiller", None, porte, fouille,
+                                  garder=tuple((p["x"] - 1, p["y"] - 1) for p in points)))
+    # ⚠️ Deux points ne se marchent pas dessus : `pointSousLaMain` prend le plus
+    # proche dans une tuile et demie, et l'un des deux serait injoignable.
+    if len(points) == 2 and max(abs(points[0]["x"] - points[1]["x"]),
+                                abs(points[0]["y"] - points[1]["y"])) < 2:
+        points.pop()
+    _completer_les_meubles(grille, porte, "jznk",
+                           tuple((p["x"] - 1, p["y"] - 1) for p in points))
+    gens = []
+    if not haut and largeur * hauteur >= 24:
+        gens.append(_quelqu_un(grille, "client", (largeur // 2, 1), porte, set()))
+    nom = "Un logement, en haut" if haut else "Un logement"
+    return _piece(slug, nom, _plan_de(grille, porte), sol="t", porte="maison",
+                  points=tuple(points), gens=_gens(*[g for g in gens if g]))
 
 
 def exporter() -> dict:

@@ -23,7 +23,13 @@ SANS_MENU = ("sergent", "contact", "escalier", "fouiller")
 #: Vide depuis le 13 sept. 2026 : le lot de la fourriere a recu son menu.
 EN_CHANTIER: dict[str, str] = {}
 
-TYPES = sorted({p["type"] for piece in carte.INTERIEURS.values() for p in piece["points"]})
+#: ⚠️ LES POINTS DE LA VILLE LIVREE, pas ceux du catalogue du module. Depuis
+#: que les commerces et les logements se POSENT a la mesure de leur batiment,
+#: `emplettes`, `salon`, `journal` et `fouiller` ne vivent plus dans
+#: `carte.INTERIEURS` : ils naissent avec la ville. Lire le catalogue seul
+#: laissait la moitie du contrat hors du juge.
+TYPES = sorted({p["type"] for piece in carte.exporter()["interieurs"].values()
+                for p in piece["points"]})
 
 
 def test_chaque_comptoir_dessine_est_servi_par_le_jeu(banc):
@@ -68,17 +74,21 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        // ⚠️ Un logement a trois tailles depuis qu'une piece ne depasse plus
-        // son batiment (`logement_minuscule`, `logement_petit`, `logement`) :
-        // nommer la grande ne suffit plus a les ecarter toutes.
-        const porte = c.portes.find(function (p) { return p.nom && p.interieur.indexOf('logement') < 0; });
+        // ⚠️ On cherche une porte par ce qu'il y a DERRIERE, pas par un slug :
+        // chaque commerce a maintenant sa piece a lui, posee a la mesure de son
+        // batiment (« bouffe_12 »), et plus une piece partagee par dix-huit
+        // tabagies. C'est la porte de la piece qui dit ce qu'on pousse.
+        const porte = c.portes.find(function (p) {
+            const piece = c.def.interieurs[p.interieur];
+            return p.nom && piece.porte === 'commerce';
+        });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         o.entrer(porte);
         const gens = L.B.entites.filter(function (e) { return e.type === 'pieton'; });
         const commis = gens.filter(function (e) { return e.arch === 'commis'; });
-        const dedans = { nom: L.B.interieur.nom, slug: L.B.interieur.slug, gens: gens.length,
+        const dedans = { nom: L.B.interieur.nom, genre: L.B.interieur.porte, gens: gens.length,
                          commis: commis.length, poste: commis.length ? !!commis[0].poste : false,
                          points: L.B.interieur.points.length };
         o.sortir();
@@ -87,7 +97,7 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
     }""")
     assert r["invite"] == "ENTRER"
     assert r["dedans"]["nom"] == r["porte"]["nom"], "la piece n'a pas pris le nom de l'enseigne"
-    assert r["dedans"]["slug"].startswith("boutique_")
+    assert r["dedans"]["genre"] == "commerce", "on a pousse une porte de maison"
     assert r["dedans"]["commis"] >= 1, "personne au comptoir"
     assert r["dedans"]["poste"] is True, "le commis doit tenir son poste"
     assert r["dedans"]["points"] >= 1
@@ -100,7 +110,11 @@ def test_le_comptoir_d_un_commerce_ordinaire_vend(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.interieur === 'boutique_bouffe'; });
+        const porte = c.portes.find(function (p) {
+            return (c.def.interieurs[p.interieur].points || []).some(function (q) {
+                return q.type === 'emplettes' && q.genre === 'bouffe';
+            });
+        });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'emplettes'; });
@@ -129,7 +143,12 @@ def test_l_escalier_monte_a_l_etage_et_redescend(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.interieur === 'logement'; });
+        // Un logement a etage : sa piece porte un escalier.
+        const porte = c.portes.find(function (p) {
+            return (c.def.interieurs[p.interieur].points || []).some(function (q) {
+                return q.type === 'escalier';
+            });
+        });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         o.entrer(porte);
         const bas = { slug: L.B.interieur.slug, dehors: !!L.B.exterieur };
@@ -151,12 +170,12 @@ def test_l_escalier_monte_a_l_etage_et_redescend(banc):
         return { bas: bas, invite: invite, haut: haut, revenu: revenu,
                  sorti: L.B.interieur, pres: Math.hypot(j.x - porte.x * L.TT - 8, j.y - (porte.y + 1) * L.TT - 10) };
     }""")
-    assert r["bas"]["slug"] == "logement" and r["bas"]["dehors"] is True
+    assert r["bas"]["dehors"] is True
     assert r["invite"] == "MONTER"
-    assert r["haut"]["slug"] == "logement_haut", "l'escalier n'a pas change de plancher"
+    assert r["haut"]["slug"] != r["bas"]["slug"], "l'escalier n'a pas change de plancher"
     assert r["haut"]["dehors"] is True, "monter a oublie par ou l'on est entre"
     assert r["haut"]["sol"] != 1, "on arrive dans un mur"
-    assert r["revenu"] == "logement", "on reste pris en haut"
+    assert r["revenu"] == r["bas"]["slug"], "on reste pris en haut"
     assert r["sorti"] is None and r["pres"] < 20, "on ressort par la porte d'en bas"
 
 
@@ -165,7 +184,11 @@ def test_les_tiroirs_d_un_logement_ne_se_fouillent_qu_une_fois(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        const portes = c.portes.filter(function (p) { return p.interieur === 'logement'; });
+        const portes = c.portes.filter(function (p) {
+            return (c.def.interieurs[p.interieur].points || []).some(function (q) {
+                return q.type === 'fouiller';
+            });
+        });
         function fouiller(porte) {
             if (L.B.interieur) o.sortir();
             j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
@@ -196,7 +219,11 @@ def test_le_barbier_change_la_tete_et_fait_oublier_la_tienne(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.interieur === 'boutique_service'; });
+        const porte = c.portes.find(function (p) {
+            return (c.def.interieurs[p.interieur].points || []).some(function (q) {
+                return q.type === 'salon';
+            });
+        });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         o.entrer(porte);
         const point = L.B.interieur.points.find(function (p) { return p.type === 'salon'; });
