@@ -85,6 +85,13 @@ function etatInitial(defs) {
     dette: (eco.dette && eco.dette.montant) || 0,
     collecteJour: 0,
     rappelJour: 0,
+    //: Combien de fois chaque boulot a ete fait, et quels paliers sont
+    //: debloques. ⚠️ CA VIT DANS LA PARTIE, pas dans le module : le compte
+    //: etait garde sur l'objet `boulot` de `missions.js`, donc remis a zero a
+    //: chaque rechargement. « Cinquante courses » n'aurait jamais voulu dire
+    //: quoi que ce soit.
+    boulots: { taxi: 0, pizza: 0, ambulance: 0, remorquage: 0 },
+    paliers: {},
     //: Les gens qu'on a RENCONTRES (slug -> jour). ⚠️ Sans ca, le repertoire
     //: du carnet montrerait des personnages qu'on n'a jamais vus — et il
     //: divulgacherait l'histoire : Josee, le Dr Lachance de M13, Marco qui te
@@ -293,7 +300,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

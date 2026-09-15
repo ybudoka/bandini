@@ -147,7 +147,12 @@ const Entites = (function () {
     const p = B.partie;
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
-      vie: p.vie, vieMax: 100, endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
+      // ⚠️ `vieMax` N'EST PLUS UN LITTERAL : les paliers d'ambulance le font
+      // monter (+10 % a dix transports, +25 % a vingt-cinq). C'est le seul
+      // avantage de palier qui ne se lise pas au moment de s'en servir — une
+      // barre de vie se decide a la naissance.
+      vie: p.vie, vieMax: Math.round(100 * Missions.avantage('vie', 1)),
+      endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
     });
     B.joueur = j;

@@ -44,7 +44,8 @@ const Missions = (function () {
   function factureHopital(argent) {
     const h = B.defs.economie.hopital;
     const m = Math.round(argent * h.fraction);
-    return Math.max(0, Math.min(argent, Math.max(h.minimum, Math.min(h.maximum, m))));
+    const facture = Math.max(0, Math.min(argent, Math.max(h.minimum, Math.min(h.maximum, m))));
+    return Math.round(facture * avantage('hopital', 1));
   }
 
   // --- Les commerces de trottoir ---------------------------------------------------
@@ -113,7 +114,13 @@ const Missions = (function () {
   }
 
   /** Un rabais gagne dans l'histoire (1 = plein prix). */
-  function rabais(cle) { return (B.partie && B.partie.rabais && B.partie.rabais[cle]) || 1; }
+  function rabais(cle) {
+    const histoire = (B.partie && B.partie.rabais && B.partie.rabais[cle]) || 1;
+    // ⚠️ Le rabais de l'histoire et celui d'un palier se MULTIPLIENT : ce sont
+    // deux choses qu'on a gagnees separement, et les additionner aurait pu
+    // donner un prix negatif.
+    return histoire * avantage('rabais', 1);
+  }
 
   // --- L'homme-sandwich et son coupon --------------------------------------------
 
@@ -377,7 +384,11 @@ const Missions = (function () {
     //: Combien de fois chaque boulot a ete FINI. ⚠️ Un compteur par sorte :
     //: le defi « trois courses » de M6 compte des courses de taxi, et une
     //: pizza livree n'en est pas une.
-    faits: { taxi: 0, pizza: 0, ambulance: 0, remorquage: 0 },
+    //: ⚠️ Lecture seule, et elle vient de la PARTIE : le compte vivait ici et
+    //: repartait de zero a chaque rechargement. `histoire.js` la lit pour la
+    //: mission des courses, et elle comptait les courses de la session, pas
+    //: celles du joueur.
+    get faits() { return B.partie.boulots; },
 
     fiche: function () { return boulot.slug ? B.defs.economie.boulots[boulot.slug] : null; },
 
@@ -469,7 +480,8 @@ const Missions = (function () {
       const chocs = Math.max(0, v.chocs - boulot.chocsDepart);
       let part = Math.max(0, 1 - chocs * f.malus_choc);
       if (f.chrono_s > 0) part *= Math.max(0, 1 - boulot.t / (f.chrono_s * 60));
-      return Math.round(f.prime * part);
+      // Le palier de pourboire : le meilleur debloque, jamais la somme.
+      return Math.round(f.prime * part * avantage('prime', 1));
     },
 
     maj: function () {
@@ -517,7 +529,7 @@ const Missions = (function () {
         return;
       }
       encaisser(prix + prime, perdu ? sorte.fini + ' — TROP TARD' : (prime ? sorte.fini + ' + ' + prime + ' $' : sorte.fini));
-      boulot.faits[boulot.slug]++;
+      compterLeBoulot(boulot.slug);
       B.partie.stats.courses = (B.partie.stats.courses || 0) + 1;
       boulot.fin();
     },
@@ -570,8 +582,9 @@ const Missions = (function () {
       meme char au garage, sinon la fourriere devient une machine a argent. */
   function prixRachat(slug) {
     const f = B.defs.economie.fourriere, def = Vehicules.vehiculeDef(slug);
-    if (!def) return f.rachat_minimum;
-    return Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction));
+    const part = avantage('fourriere', 1);     // les gars du lot te connaissent
+    if (!def) return Math.round(f.rachat_minimum * part);
+    return Math.round(Math.max(f.rachat_minimum, Math.round(def.prix * f.rachat_fraction)) * part);
   }
 
   /*: Les cases de stationnement, par glyphe : le nez du char y pointe. Un
@@ -1398,6 +1411,76 @@ const Missions = (function () {
     return true;
   }
 
+  // --- Les boulots montent en grade ------------------------------------------------------
+
+  /** ⚠️ **Un boulot qui paie et rien d'autre n'est pas une activite, c'est un
+      distributeur.** Les paliers transforment « je fais trois courses pour
+      manger » en « j'en fais cinquante parce qu'au bout il y a quelque
+      chose » — et ce qu'on gagne n'est presque jamais de l'argent : des points
+      de vie, un char gare a la planque, un lot qui ne fait plus payer. */
+  function paliersDe(slug) { return (B.defs.economie.paliers || {})[slug] || []; }
+
+  function palierDebloque(slug, palier) {
+    return !!(B.partie.paliers && B.partie.paliers[slug + ':' + palier.compte]);
+  }
+
+  /** La force d'un avantage, tous boulots confondus. ⚠️ **Le PLUS FORT gagne,
+      les paliers ne s'additionnent pas** : sans cette regle, « +10 % puis
+      +25 % de vie » ferait +35 %, et la fiche dirait une chose pendant que le
+      jeu en ferait une autre. */
+  function avantage(type, defaut) {
+    const paliers = B.defs.economie.paliers || {};
+    let valeur = null;
+    for (const slug in paliers) {
+      for (const palier of paliers[slug]) {
+        if (palier.type !== type || !palierDebloque(slug, palier)) continue;
+        // `fourriere` et `hopital` sont des RABAIS : le meilleur est le plus
+        // petit. Tout le reste monte.
+        if (valeur === null) valeur = palier.valeur;
+        else if (type === 'fourriere' || type === 'hopital' || type === 'rabais') valeur = Math.min(valeur, palier.valeur);
+        else valeur = Math.max(valeur, palier.valeur);
+      }
+    }
+    return valeur === null ? defaut : valeur;
+  }
+
+  /** Un boulot de plus au compteur : on regarde si un palier tombe.
+
+      ⚠️ Un palier ne se donne QU'UNE FOIS, et il est marque dans la partie
+      avant que sa recompense soit posee : sinon un char a la planque se
+      regarait a chaque sauvegarde. */
+  function compterLeBoulot(slug) {
+    const p = B.partie;
+    p.boulots[slug] = (p.boulots[slug] || 0) + 1;
+    for (const palier of paliersDe(slug)) {
+      if (p.boulots[slug] !== palier.compte || palierDebloque(slug, palier)) continue;
+      p.paliers[slug + ':' + palier.compte] = 1;
+      donnerLePalier(palier);
+      Hud.message(palier.nom + ' — ' + palier.detail, 300);
+      Son.SFX.etoile();
+      Histoire.evenement && Histoire.evenement('palier');
+    }
+  }
+
+  /** Ce qu'un palier POSE tout de suite. Les autres types (prime, rabais,
+      fourriere, hopital, vie) ne posent rien : ils se lisent au moment ou
+      l'on s'en sert, ce qui evite qu'un avantage vive en deux endroits. */
+  function donnerLePalier(palier) {
+    if (palier.type !== 'char') return;
+    const def = Vehicules.vehiculeDef(palier.valeur);
+    if (!def) return;
+    const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;
+    const point = (planque.points || []).find(function (q) { return q.slug === 'planque'; });
+    // ⚠️ Il se GARE VRAIMENT : un palier qui promet un char et n'en pose
+    // aucun est pire que pas de palier du tout. On le range dans la partie,
+    // la ou `Jeu` va le chercher au chargement — comme le char qu'on y laisse.
+    B.partie.planque.vehicule = {
+      slug: palier.valeur, couleur: def.couleurs ? def.couleurs[0] : null,
+      vie: 100, x: point ? point.x * TT + 8 : 0, y: point ? (point.y + 2) * TT : 0,
+      angle: 0, vole: false,
+    };
+  }
+
   // --- La dette de Rocco : une raison de se lever le matin -------------------------------
 
   /** ⚠️ **Elle ne se rembourse pas a un comptoir**, et ce n'est pas une
@@ -1699,6 +1782,7 @@ const Missions = (function () {
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
+           paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
            dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,

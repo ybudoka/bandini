@@ -36,6 +36,85 @@ POT_DE_VIN_AMI_MAX = 2
 
 HOPITAL = {"fraction": 0.10, "minimum": 30, "maximum": 500}
 
+# --- Les boulots montent en grade -----------------------------------------
+
+#: ⚠️ **Un boulot qui paie et rien d'autre n'est pas une activite, c'est un
+#: distributeur.** Dans les classiques vus d'en haut, le taxi, l'ambulance et
+#: les pompiers donnent des recompenses PERMANENTES par paliers : c'est ce qui
+#: transforme « je fais trois courses pour manger » en « je fais cinquante
+#: courses parce qu'au bout il y a quelque chose ».
+#:
+#: ⚠️ **Et les recompenses ne sont presque jamais de l'argent.** Un palier qui
+#: paie mieux rend le boulot meilleur que la mission, et le jeu se joue tout
+#: seul (`test_paliers`). Ce qu'on gagne ici, ce sont des CAPACITES : des
+#: points de vie, un char gare a la planque, un lot qui ne te fait plus payer,
+#: une facture d'hopital coupee en deux. Un seul palier touche a l'argent — la
+#: prime du boulot — et il est borne par les memes juges que les boulots
+#: eux-memes.
+#:
+#: `type` dit ce que le navigateur doit faire, `valeur` avec quelle force.
+#: ⚠️ Quand deux paliers portent le meme `type`, c'est le PLUS FORT qui compte
+#: — ils ne s'additionnent pas. Sans cette regle, « +10 % puis +25 % de vie »
+#: ferait +35 %, et la fiche dirait une chose pendant que le jeu en ferait une
+#: autre.
+PALIERS_TYPES = ("prime", "vie", "char", "fourriere", "hopital", "rabais")
+
+PALIERS: dict[str, tuple[dict, ...]] = {
+    "taxi": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "ON TE RECONNAIT", "detail": "+30 % DE POURBOIRE"},
+        {"compte": 25, "type": "rabais", "valeur": 0.75, "cle": "kiosque",
+         "nom": "LE CAFE DU CHAUFFEUR", "detail": "-25 % AUX KIOSQUES"},
+        {"compte": 50, "type": "char", "valeur": "taxi",
+         "nom": "TON PROPRE TAXI", "detail": "GARE A LA PLANQUE"},
+    ),
+    "pizza": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "LIVREUR DU MOIS", "detail": "+30 % DE PRIME"},
+        {"compte": 25, "type": "hopital", "valeur": 0.5,
+         "nom": "TU CONNAIS TOUT LE MONDE", "detail": "HOPITAL A MOITIE PRIX"},
+        {"compte": 50, "type": "char", "valeur": "moto",
+         "nom": "LA MOTO DU LIVREUR", "detail": "GAREE A LA PLANQUE"},
+    ),
+    "ambulance": (
+        {"compte": 10, "type": "vie", "valeur": 1.10,
+         "nom": "TU AS VU PIRE", "detail": "+10 % DE VIE"},
+        {"compte": 25, "type": "vie", "valeur": 1.25,
+         "nom": "PLUS RIEN NE T'ECOEURE", "detail": "+25 % DE VIE"},
+        {"compte": 50, "type": "char", "valeur": "ambulance",
+         "nom": "L'AMBULANCE EST A TOI", "detail": "GAREE A LA PLANQUE"},
+    ),
+    "remorquage": (
+        {"compte": 10, "type": "fourriere", "valeur": 0.5,
+         "nom": "LES GARS DU LOT TE CONNAISSENT", "detail": "RACHAT A MOITIE PRIX"},
+        {"compte": 25, "type": "fourriere", "valeur": 0.0,
+         "nom": "LE LOT NE TE FAIT PLUS PAYER", "detail": "RACHAT GRATUIT"},
+        {"compte": 50, "type": "char", "valeur": "remorqueuse",
+         "nom": "LA DEPANNEUSE EST A TOI", "detail": "GAREE A LA PLANQUE"},
+    ),
+}
+
+
+def palier_prime(slug: str) -> float:
+    """Le meilleur multiplicateur de prime qu'un boulot puisse donner."""
+    return max([1.0] + [p["valeur"] for p in PALIERS.get(slug, ()) if p["type"] == "prime"])
+
+
+def gain_avec_paliers(slug: str, tuiles: float | None = None) -> int:
+    """Ce que le boulot rapporte a quelqu'un qui a TOUT debloque.
+
+    ⚠️ C'est ce nombre-la que les juges d'equilibrage doivent regarder, pas
+    celui du debutant : un palier qui fait passer un boulot devant tous les
+    autres est un desequilibre qu'on a mis cinquante courses a fabriquer, et
+    il ne se verrait nulle part si on ne mesurait que le premier jour.
+    """
+    boulot = BOULOTS[slug]
+    if tuiles is None:
+        tuiles = TUILES_TYPE
+    par_etape = boulot["base"] + boulot["par_tuile"] * tuiles + boulot["prime"] * palier_prime(slug)
+    return round(par_etape * boulot["etapes"])
+
+
 # --- La dette de Rocco : une raison de se lever le matin -------------------
 
 #: ⚠️ **Elle ne se rembourse pas a un comptoir**, et ce n'est pas une economie
@@ -504,6 +583,7 @@ def exporter() -> dict:
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
         "dette": dict(DETTE),
+        "paliers": {slug: [dict(p) for p in liste] for slug, liste in PALIERS.items()},
         # dettes[n] = ce que la dette vaut apres n nuits sans payer — le
         # navigateur n'a plus qu'a indexer, et la borne est deja dedans.
         "dettes": _table_des_dettes(),
