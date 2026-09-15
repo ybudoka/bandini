@@ -356,6 +356,20 @@ const Police = (function () {
       if (a.vuT > p.poursuite_abandon_s * 60) { a.etat = 'enquete'; a.but = r.dernierVu || { x: j.x, y: j.y }; a.enqueteT = 180; a.chemin = null; return true; }
       const but = a.vuT === 0 ? { x: j.x, y: j.y } : (r.dernierVu || { x: j.x, y: j.y });
       const d = Math.hypot(j.x - a.x, j.y - a.y);
+      // ⚠️ UN OTAGE DEVANT TOI, ET ILS S'ARRETENT NET. Ils ne tirent plus, ils
+      // n'arretent plus, et ils RECULENT a `bouclier_recul_px`. Sans le recul,
+      // le bouclier ne servait a rien : ils cessaient de tirer et venaient te
+      // cueillir a la main, ce qui est pire que de tirer.
+      if (j.otage && !j.dansVehicule) {
+        if (d < p.bouclier_recul_px) {
+          const n = Math.hypot(a.x - j.x, a.y - j.y) || 1;
+          a.vx = (a.x - j.x) / n * p.auto_vitesse;
+          a.vy = (a.y - j.y) / n * p.auto_vitesse;
+          Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_NAGEUR);
+        } else { a.vx = 0; a.vy = 0; }
+        Entites.regarder(a, j.x - a.x, j.y - a.y);
+        return true;
+      }
       // A trois etoiles, on tire.
       if (palier().tirent && a.vuT === 0 && d < p.tir_portee_tuiles * TT) {
         if (a.tirT-- <= 0) { a.tirT = p.tir_cadence_s * 60; Entites.regarder(a, j.x - a.x, j.y - a.y); Combat.tirer(a, Combat.armeDef('pistolet')); }

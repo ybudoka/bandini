@@ -1883,6 +1883,10 @@ const Entites = (function () {
       j.endurance = Math.min(v.endurance, j.endurance + v.endurance_par_image * 0.6);
     }
     if (j.etat === 'attaque' && !j.nage) vitesse *= 0.45;    // on frappe en marchant, pas en courant
+    // ⚠️ On ne court pas avec quelqu'un dans les bras. Sans ca, le bouclier
+    // humain devenait la meilleure facon de traverser la ville : plus vite que
+    // la police et a l'abri de ses balles.
+    if (j.otage) vitesse *= B.defs.recherche.bouclier.vitesse;
     const mag = axe.source === 'clavier' ? axe.mag : Math.min(1, axe.mag * 1.15);
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;

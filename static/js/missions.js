@@ -185,6 +185,9 @@ const Missions = (function () {
   }
 
   function interagir(j) {
+    // ⚠️ On ne magasine pas avec quelqu'un dans les bras : tant qu'on tient un
+    // otage, ACTION ne fait qu'une chose — le lacher.
+    if (j.otage) return Combat.lacherOtage(false);
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) return Histoire.parler(perso.personnage);
@@ -206,6 +209,13 @@ const Missions = (function () {
     if (crieur) return prendreCoupon(j, crieur);
     const fille = filleSousLaMain(j);
     if (fille) return compagnie(j, fille);
+    // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
+    // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
+    // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
+    // porte, le char et l'arme par terre — eux sont servis par l'appelant,
+    // APRES nous, et on leur volerait le bouton.
+    const otage = Combat.otageSousLaMain(j);
+    if (otage) return Combat.prendreEnOtage(j, otage);
     return false;
   }
 
@@ -1449,6 +1459,7 @@ const Missions = (function () {
     }
     // ⚠️ Meme ordre que `interagir`, toujours : une invite qui annonce autre
     // chose que ce qu'ACTION va faire est pire que pas d'invite du tout.
+    if (j.otage) { B.invite = 'LE LACHER'; return; }
     const stool = stoolSousLaMain(j);
     if (stool) { B.invite = 'ACHETER SON SILENCE — ' + Police.prixDuStool() + ' $'; return; }
     const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
@@ -1473,7 +1484,10 @@ const Missions = (function () {
       return;
     }
     const v = Vehicules.vehiculeSousLaMain(j);
-    if (v) B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase();
+    if (v) { B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase(); return; }
+    // ⚠️ Au bout de la chaine, comme dans `interagir` : le bouclier humain est
+    // ce qu'ACTION fait quand il n'avait rien d'autre a faire.
+    if (Combat.otageSousLaMain(j)) B.invite = 'BOUCLIER HUMAIN';
   }
 
   function sauvegarderPartie() {

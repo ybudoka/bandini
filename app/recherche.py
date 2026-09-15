@@ -72,6 +72,10 @@ DELITS: dict[str, dict] = {
     # nombre d'etoiles est celui de `economie.FOURRIERE["etoiles_vol"]`, et un
     # juge tient les deux d'accord.
     "fourriere": {"etoiles": 1, "temoin": False},
+    # Prendre quelqu'un en otage. ⚠️ BRUYANT : un bouclier humain se voit de
+    # l'autre bout de la rue, et c'est tout l'interet — inutile de convaincre
+    # un temoin de quelque chose que tout le monde regarde.
+    "otage": {"etoiles": 2, "temoin": False},
 }
 
 #: Cones de vision : demi-angle en degres et portee en tuiles, jour / nuit.
@@ -159,6 +163,31 @@ STOOL = {
     # ⚠️ Et « reconnait » doit se lire comme une RECONNAISSANCE, pas comme une
     # accusation : c'est ce qui fait froid dans le dos.
     "dit": {"reconnait": "AH BEN, TOÉ...", "achete": "J'AI RIEN VU"},
+}
+
+#: LE BOUCLIER HUMAIN — la sortie de secours qui coute cher.
+#:
+#: ⚠️ **Elle doit rester une SORTIE, jamais un abri.** Un otage qu'on tient
+#: indefiniment, c'est l'invincibilite : on traverse la ville derriere un
+#: bonhomme et la police regarde. Trois choses l'en empechent, et elles vont
+#: ensemble : il SE DEBAT (`debat_s`), il se degage tout seul au bout de
+#: `tenue_max_s`, et le compteur MONTE tant qu'on le tient (`chaleur_par_s`).
+#: On gagne du temps, on ne gagne pas la partie — et on ressort plus recherche
+#: qu'on est entre.
+#:
+#: ⚠️ **Et la police ne se contente pas de ne plus tirer : elle RECULE**
+#: (`police.bouclier_recul_px`). Sans ca, les agents cessaient de tirer et
+#: venaient te cueillir a la main — le bouclier ne servait a rien du tout.
+BOUCLIER = {
+    "portee_px": 26,           # a bout portant, pas a travers la rue
+    "devant_px": 13,           # ou il se tient : DEVANT toi, entre toi et eux
+    "debat_s": 3,              # il commence a se debattre au bout de ce temps
+    "tenue_max_s": 12,         # ... et il se degage pour de bon a celui-la
+    "chaleur_par_s": 1.2,      # le compteur monte tant qu'on le tient
+    "vitesse": 0.75,           # on marche moins vite avec quelqu'un dans les bras
+    # ⚠️ Ses mots sont ici pour la meme raison que ceux du stool : ce n'est pas
+    # une SORTE de gens, c'est ce qui arrive a n'importe qui.
+    "dit": {"pris": "LÂCHE-MOÉ!", "libre": "AU S'COURS!"},
 }
 
 #: Changer de vehicule hors de vue pendant ce temps : -1 etoile. Changer de
@@ -253,6 +282,10 @@ POLICE = {
     "affiches_max": 6,              # affiches « Recherche » dans la bulle a partir de 2 etoiles
     "prison_heures": 6,             # le temps que la prison prend, en heures de jeu
     "silence_rayon_px": 30,         # a quelle distance on achete le silence d'un temoin
+    # ⚠️ Avec un otage devant toi, l'agent ne tire plus ET N'ARRETE PLUS : il
+    # se tient a cette distance. Sans le deuxieme, le bouclier ne servait a
+    # rien — ils cessaient de tirer et venaient te cueillir a la main.
+    "bouclier_recul_px": 90,
 }
 
 
@@ -268,6 +301,7 @@ def exporter() -> dict:
         "vision": VISION,
         "temoins": TEMOINS,
         "stool": dict(STOOL),
+        "bouclier": dict(BOUCLIER),
         "deguisement": DEGUISEMENT,
         "vitesses": VITESSES,
         "clotures": CLOTURES,

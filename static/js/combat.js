@@ -491,10 +491,99 @@ const Combat = (function () {
 
   // --- Boucle ---------------------------------------------------------------------
 
+  // --- Le bouclier humain : une sortie de secours, jamais un abri -----------
+
+  /** ⚠️ **Elle doit rester une SORTIE.** Un otage qu'on tient indefiniment,
+      c'est l'invincibilite : on traverse la ville derriere un bonhomme et la
+      police regarde. Trois choses l'en empechent, et elles vont ensemble : il
+      SE DEBAT, il se degage tout seul au bout de `tenue_max_s`, et le compteur
+      MONTE tant qu'on le tient. On gagne du temps, on ne gagne pas la partie —
+      et on ressort plus recherche qu'on est entre. */
+  function ficheBouclier() { return B.defs.recherche.bouclier; }
+
+  /** Qui peut servir de bouclier. ⚠️ Pas un enfant, pas un agent, pas un
+      personnage de l'histoire : les trois feraient du geste autre chose que ce
+      qu'il est. Et A BOUT PORTANT — pas a travers la rue. */
+  function otageSousLaMain(j) {
+    if (!j || j.otage || j.dansVehicule || j.arme === 'poings' || B.interieur) return null;
+    // ⚠️ Ce qu'ACTION sert APRES `interagir` passe avant nous : une arme par
+    // terre, une porte, un char. Sans ca, s'arreter a cote de son char dans
+    // une rue passante prenait un passant en otage au lieu de monter.
+    if (objetSousLaMain(j) || Monde.porteDevant(j) || Vehicules.vehiculeSousLaMain(j)) return null;
+    return Entites.pietonsAutour(j.x, j.y, ficheBouclier().portee_px).find(function (e) {
+      return e.vivant && !e.agent && !e.intouchable && !e.petit && !e.commerce
+        && !e.personnage && !e.mission && e.etat !== 'assomme';
+    }) || null;
+  }
+
+  /** ⚠️ IL FAUT UNE ARME. A mains nues, « prendre en otage » n'est qu'une
+      prise : rien ne dit a la police pourquoi elle devrait s'arreter, et le
+      geste n'aurait aucune lecture a l'ecran. */
+  function prendreEnOtage(j, e) {
+    if (!e) return false;
+    j.otage = e;
+    e.otage = true; e.otageT = 0;
+    e.vx = 0; e.vy = 0;
+    e.etat = 'flane'; e.cri = 0; e.vers = null; e.crime = null; e.porteBut = null;
+    Police.signalerCrime('otage', j.x, j.y, true);
+    Entites.bulle(e, ficheBouclier().dit.pris, { duree: 120 });
+    Hud.message('BOUCLIER HUMAIN — LA POLICE N’OSE PLUS TIRER');
+    return true;
+  }
+
+  /** On le lache — de son plein gre, ou parce qu'il s'est degage. */
+  function lacherOtage(deLuiMeme) {
+    const j = B.joueur, e = j && j.otage;
+    j.otage = null;
+    if (!e) return false;
+    e.otage = false; e.otageT = 0;
+    if (e.vivant) {
+      e.etat = 'fuit';
+      e.menace = j;
+      e.minuterie = B.defs.recherche.temoins.oubli_s * 60;
+      e.cri = 120;
+      Entites.bulle(e, ficheBouclier().dit.libre, { duree: 120 });
+    }
+    if (deLuiMeme) Hud.message('IL S’EST DÉGAGÉ');
+    return true;
+  }
+
+  function majOtage() {
+    const j = B.joueur;
+    if (!j || !j.otage) return;
+    const e = j.otage, f = ficheBouclier();
+    // Mort, assomme, entre dans une piece, monte en char : on n'a plus d'otage.
+    if (!e.vivant || e.etat === 'assomme' || B.interieur || j.dansVehicule || !j.vivant) {
+      lacherOtage(false);
+      return;
+    }
+    e.otageT++;
+    // ⚠️ DEVANT, ENTRE TOI ET EUX — c'est ce qui fait de lui un bouclier et
+    // pas un prisonnier qu'on traine. On le POUSSE (`deplacerCercle`) au lieu
+    // de le poser : sinon on le glisse dans un mur et il y reste.
+    const bx = j.x + Math.cos(j.angle) * f.devant_px;
+    const by = j.y + Math.sin(j.angle) * f.devant_px;
+    Entites.deplacerCercle(e, bx - e.x, by - e.y, Monde.MASQUE_PIETON);
+    Entites.regarder(e, j.x - e.x, j.y - e.y);
+    e.anim.dist += 0.6;
+    // Le compteur monte tant qu'on le tient.
+    Police.ajouterChaleur(f.chaleur_par_s / 60);
+    // Il se debat : d'abord il gigote et il crie, puis il se degage.
+    if (e.otageT === Math.round(f.debat_s * 60)) {
+      Entites.bulle(e, f.dit.pris, { duree: 90 });
+    }
+    if (e.otageT > f.debat_s * 60) {
+      const tremble = (e.otageT % 8 < 4) ? 1.5 : -1.5;
+      Entites.deplacerCercle(e, 0, tremble, Monde.MASQUE_PIETON);
+    }
+    if (e.otageT >= f.tenue_max_s * 60) lacherOtage(true);
+  }
+
   function maj() {
     const j = B.joueur;
     majProjectiles();
     majBrasiers();
+    majOtage();
     for (const e of B.entites) {
       if (e.etat === 'attaque') { majAttaque(e); majJet(e); }
       if (e.aveugle > 0) e.aveugle--;
@@ -585,5 +674,6 @@ const Combat = (function () {
     CHARGE_MIN, ROULADE_IMAGES, armeDef, armeCourante, munitions, possede, regles,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
+    otageSousLaMain, prendreEnOtage, lacherOtage, majOtage,
   };
 })();
