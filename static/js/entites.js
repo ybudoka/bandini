@@ -1395,6 +1395,70 @@ const Entites = (function () {
     if (agent) { e.etat = 'fuit'; e.menace = agent; e.minuterie = 600; e.cri = 90; agent.but = { x: e.x, y: e.y }; }
   }
 
+  /** Il ouvre la portiere et il s'en va avec. ⚠️ Le voleur DISPARAIT dans le
+      char : le jeu ne sait pas dessiner quelqu'un au volant d'un char du
+      trafic, et un conducteur invisible est exactement ce que le trafic est
+      deja. Ce qui reste, c'est un char qui demarre tout seul sous les yeux de
+      la rue — et c'est ca qu'on voulait voir. */
+  function emporterLeChar(e, v) {
+    const f = B.defs.pietons.vol_de_char;
+    v.conducteur = 'trafic';
+    v.etat = 'roule';
+    v.vole = true;
+    v.sens = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT)) || v.sens;
+    v.alarme = 0;
+    // ⚠️ La rue le voit partir — et c'est LUI la menace, pas le joueur. On
+    // n'appelle PAS `Police.signalerCrime` : la police du jeu est centree sur
+    // le joueur, et signaler le geste d'un autre lui mettrait une etoile.
+    const vu = pietonsAutour(v.x, v.y, 120).filter(function (q) { return q !== e && q.vivant && !q.metier; });
+    if (vu.length) bulle(vu[0], paroles('pickpocket').au_voleur, { duree: 120 });
+    alerter(v.x, v.y, e, f.peur);
+    Son.SFX.porte('vehicule');
+    retirer(e);
+  }
+
+  /** **Un vol de char sous tes yeux.** ⚠️ Il se voit, ou il n'a pas lieu : un
+      vol hors champ est du travail qu'on fait pour personne. On ne le tente
+      donc que sur un char A L'ECRAN, avec un passant ordinaire a portee.
+
+      ⚠️ Le tirage se fait a l'EMPREINTE de la minute, jamais au de du jeu :
+      c'est la lecon du pilote des deux-roues et celle du char en panne — un
+      de pris ici decale tout ce qui suit, et quatre juges tombent. */
+  function majVolDeChar() {
+    const f = B.defs.pietons && B.defs.pietons.vol_de_char;
+    if (!f || !B.joueur || B.interieur || !B.partie) return 0;
+    const minute = Math.floor(B.partie.heure * 24 * 60);
+    if (B.volMinute === minute) return 0;
+    B.volMinute = minute;
+    if (hash2(B.partie.jour * 1441 + minute, 0x5C0F) / 4294967296 >= f.chance_par_minute) return 0;
+    if (B.entites.some(function (q) { return q.etat === 'vole_un_char'; })) return 0;
+    // Un char gare, a portee de vue, que personne ne conduit — et pas celui du
+    // joueur : se faire voler le sien sans un mot serait une punition, pas une
+    // scene de rue.
+    const chars = B.entites.filter(function (q) {
+      return q.type === 'vehicule' && !q.conducteur && q.etat !== 'epave' && !q.mission
+        // ⚠️ Ni celui du joueur, ni celui qu'il a LAISSE quelque part : un char
+        // abandonne appartient a la fourriere, pas aux voleurs — deux systemes
+        // qui se disputent le meme char, c'est l'un des deux qui ment.
+        && q !== B.joueur.dernierVehicule && !q.laisse && !(q.panneT > 0)
+        && dist2(q.x, q.y, B.joueur.x, B.joueur.y) < f.rayon_px * f.rayon_px
+        && visibleAEcran(q.x, q.y, 0);
+    });
+    if (!chars.length) return 0;
+    const char = chars[0];
+    // Le voleur : un passant ORDINAIRE a portee — pas un agent, pas un
+    // marchand, pas quelqu'un de l'histoire.
+    const voleur = pietonsAutour(char.x, char.y, f.rayon_px).find(function (q) {
+      return q.vivant && !q.metier && !q.gang && !q.personnage && !q.mission
+        && !q.intouchable && q.etat === 'flane';
+    });
+    if (!voleur) return 0;
+    voleur.etat = 'vole_un_char';
+    voleur.charVise = char;
+    voleur.voleChar = f.marche_images;
+    return 1;
+  }
+
   /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
       bulle du joueur. Il nait A SON POSTE et hors champ — sauf au premier
       instant d'une partie (`dabord`), ou personne ne regarde encore — et il
@@ -1497,6 +1561,7 @@ const Entites = (function () {
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     if (B.t % 45 === 0) naitreLesOuvriers();
+    if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 90 === 0) naitreLesSortes();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
@@ -2200,6 +2265,21 @@ const Entites = (function () {
       e.vx = dx / norme * vitesse;
       e.vy = dy / norme * vitesse;
       if (norme < 18 && e.t % 40 === 0) Combat.frapper(e);
+    } else if (e.etat === 'vole_un_char') {
+      // Il marche droit sur le char qu'il a repere, d'un pas presse. ⚠️ Il
+      // RENONCE : le char peut partir, exploser, ou quelqu'un monter dedans —
+      // et un voleur qui poursuit un char pour l'eternite n'est pas un voleur,
+      // c'est un bogue qui marche.
+      const f = B.defs.pietons.vol_de_char, cible = e.charVise;
+      if (!cible || !cible.actif || cible.conducteur || cible.etat === 'epave' || --e.voleChar <= 0) {
+        e.etat = 'flane'; e.charVise = null; e.vx = 0; e.vy = 0;
+        return;
+      }
+      vitesse = v.pieton_course * e.allure * 0.9;
+      const dx = cible.x - e.x, dy = cible.y - e.y, norme = Math.hypot(dx, dy) || 1;
+      e.vx = dx / norme * vitesse;
+      e.vy = dy / norme * vitesse;
+      if (norme < f.portee_px) emporterLeChar(e, cible);
     } else if (e.etat === 'aborde') {
       // Le solliciteur vient vers toi, d'un pas decide — jamais en courant :
       // on doit pouvoir le semer en marchant, sinon c'est une poursuite.
@@ -2989,7 +3069,7 @@ const Entites = (function () {
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

@@ -10,7 +10,7 @@ import itertools
 
 import pytest
 
-from app import carte, vehicules
+from app import carte, pietons, vehicules
 
 
 def dans(h, debut, fin):
@@ -690,3 +690,95 @@ def test_une_panne_ne_tire_pas_un_seul_de_du_jeu(banc, paquet):
         "la panne a tiré %s dés du jeu : tout ce qui suit est décalé"
         % (r["avec"]["des"] - r["sans"]["des"])
     )
+
+
+# --- La ville coupable d'elle-même : le vol de char --------------------------
+
+
+def test_la_fiche_du_vol_de_char_se_tient():
+    """⚠️ **Il se voit, ou il n'a pas lieu** : un vol hors champ est du travail
+    qu'on fait pour personne. La portée doit donc rester dans ce qu'un écran
+    montre, et le voleur doit avoir le temps d'atteindre le char sans le
+    poursuivre pour l'éternité."""
+    f = pietons.VOL_DE_CHAR
+    assert 0 < f["chance_par_minute"] <= 1
+    assert 0 < f["portee_px"] < f["rayon_px"] <= 400
+    assert 0 < f["marche_images"] <= 60 * 30, "un voleur qui poursuit un char une demi-heure"
+    assert f["peur"] >= 1
+    assert pietons.exporter()["vol_de_char"] == f, "une fiche que le navigateur ne lirait pas"
+
+
+def test_un_char_se_fait_voler_sous_tes_yeux(banc, paquet):
+    """⚠️ **Ce n'est PAS le joueur qui le paie.** La police du jeu est centrée
+    sur lui : signaler le geste d'un autre lui mettrait une étoile. Les
+    passants s'écartent, le voleur part avec le char, et c'est tout.
+
+    ⚠️ Et il ne touche ni au char du joueur, ni à celui qu'il a **laissé**
+    quelque part : un char abandonné appartient à la fourrière, pas aux
+    voleurs — deux systèmes qui se disputent le même char, c'est l'un des deux
+    qui ment."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const j = L.B.joueur, f = L.B.defs.pietons.vol_de_char;
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y + 40; L.Monde.centrerCamera(j.x, j.y);
+        // Un char gare sous les yeux du joueur, et un passant a cote.
+        const v = o.char('auto', 30, 0, 0);
+        const arch = L.Entites.archetype('passant');
+        const voleur = L.Entites.creerPieton(j.x + 60, j.y + 20, arch);
+        voleur.etat = 'flane';
+        L.Entites.indexer();
+        const etoiles0 = L.B.recherche.etoiles;
+        // On force la minute a tomber : la fiche tire a l'empreinte.
+        let parti = false, essais = 0;
+        for (let m = 0; m < 400 && !parti; m++) {
+            L.B.volMinute = -1;
+            L.B.partie.heure = (m % 1440) / 1440;
+            essais += L.Entites.majVolDeChar();
+            if (voleur.etat === 'vole_un_char') parti = true;
+        }
+        const viseLeBon = voleur.charVise === v;
+        // Il marche jusqu'au char et il s'en va avec.
+        for (let i = 0; i < 400 && L.B.entites.indexOf(voleur) >= 0; i++) o.frame(1);
+        return { essais: essais, parti: parti, viseLeBon: viseLeBon,
+                 voleurPartiAvec: L.B.entites.indexOf(voleur) < 0,
+                 charRoule: v.conducteur === 'trafic' && v.etat === 'roule', vole: !!v.vole,
+                 etoiles: L.B.recherche.etoiles - etoiles0,
+                 crimes: L.B.crimes.filter(function (c) { return c.t > 0; }).length };
+    }""")
+    assert r["parti"] is True, "personne ne vole jamais rien : %s" % r
+    assert r["viseLeBon"] is True, "le voleur vise un autre char que celui qu'on voit"
+    assert r["voleurPartiAvec"] is True, "le voleur reste planté à côté du char"
+    assert r["charRoule"] is True and r["vole"] is True, "le char ne part pas : %s" % r
+    # ⚠️ LE POINT QUI COMPTE : aucune étoile pour le joueur. Le geste d'un
+    # autre ne se paie pas sur son dossier.
+    assert r["etoiles"] == 0, "le joueur écope de %s étoile(s) pour un vol qu'il n'a pas commis" % r["etoiles"]
+
+
+def test_un_voleur_ne_touche_ni_au_char_du_joueur_ni_a_celui_qu_il_a_laisse(banc, paquet):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y + 40; L.Monde.centrerCamera(j.x, j.y);
+        // On ecarte les chars du decor : il ne doit rester que les deux nôtres.
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const sien = o.char('auto', 30, 0, 0);
+        j.dernierVehicule = sien;
+        const laisse = o.char('taxi', -30, 0, 0);
+        laisse.laisse = true;
+        const arch = L.Entites.archetype('passant');
+        const voleur = L.Entites.creerPieton(j.x + 60, j.y + 20, arch);
+        voleur.etat = 'flane';
+        L.Entites.indexer();
+        let commence = 0;
+        for (let m = 0; m < 400; m++) {
+            L.B.volMinute = -1;
+            L.B.partie.heure = (m % 1440) / 1440;
+            commence += L.Entites.majVolDeChar();
+        }
+        return { commence: commence, etat: voleur.etat, vise: voleur.charVise ? voleur.charVise.slug : null };
+    }""")
+    assert r["commence"] == 0, "un voleur s'en prend au char du joueur ou à celui qu'il a laissé : %s" % r
+    assert r["etat"] == "flane" and r["vise"] is None

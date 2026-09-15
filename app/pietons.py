@@ -318,6 +318,31 @@ GANGS: list[dict] = [
 ]
 
 #: Ce qui arrive a un pieton qu'on frappe, en images (60 par seconde).
+#: **LA VILLE EST COUPABLE D'ELLE-MEME.** GTA 2 le faisait deja : des choses
+#: arrivent a d'AUTRES qu'au joueur, et c'est ce qui fait la difference entre
+#: une ville et un decor qui attend. Le vol a la tire entre passants existe
+#: depuis les sortes de gens (`majPickpocket`) ; voici le **vol de char**.
+#:
+#: ⚠️ **Il se voit, ou il n'a pas lieu.** Un vol hors champ est du travail
+#: qu'on fait pour personne : on n'en declenche un que sur un char que le
+#: joueur a sous les yeux. Rare, donc, et jamais deux a la fois.
+#:
+#: ⚠️ **Et ce n'est PAS le joueur qui le paie.** La police du jeu est centree
+#: sur lui : signaler ce vol comme un crime lui mettrait une etoile pour le
+#: geste d'un autre. Les passants s'ecartent, le voleur part avec le char, et
+#: c'est tout — « ca peut te tomber dessus » est une autre histoire, et elle
+#: se fera avec son propre juge.
+#:
+#: ⚠️ Le tirage se fait a l'EMPREINTE de la minute (`hash2`), pas au de du jeu :
+#: la lecon du pilote des deux-roues, et celle du char en panne.
+VOL_DE_CHAR: dict = {
+    "chance_par_minute": 0.30,   # qu'un vol commence, par minute de jeu
+    "rayon_px": 240,             # le char vole est a portee de vue
+    "marche_images": 420,        # le temps qu'il a pour l'atteindre, sinon il renonce
+    "portee_px": 20,             # ou il ouvre la portiere
+    "peur": 1,                   # la gravite de ce que voient les passants
+}
+
 REACTIONS = {
     "recul_images": 12,          # il titube
     "ko_images": 300,            # assomme : il se releve apres 5 s
@@ -448,6 +473,10 @@ PAROLES: dict[str, dict] = {
     "laveur": {"propose": "UN COUP DE CHIFFON?", "merci": "MERCI M'SIEUR"},
     # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
     # doit entendre, sinon le vol n'est qu'une animation.
+    # ⚠️ Le VOL DE CHAR dit le meme mot : c'est la rue qui parle, pas le
+    # voleur, et « au voleur » est deja exactement ce qu'elle crie. Une
+    # replique de plus pour le meme cri serait une replique que personne ne
+    # peut relier a une sorte — et un juge l'interdit.
     "pickpocket": {"au_voleur": "AU VOLEUR!"},
     # --- Les amuseurs de rue ----------------------------------------------
     # ⚠️ C'est LA FOULE qui parle, pas l'artiste — et c'est exactement ce qui
@@ -499,6 +528,7 @@ def exporter() -> dict:
         "catalogue": CATALOGUE,
         "gangs": GANGS,
         "reactions": dict(REACTIONS),
+        "vol_de_char": dict(VOL_DE_CHAR),
         # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
         # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
         # peut relire ni juger depuis la source de verite.
