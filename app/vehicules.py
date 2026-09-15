@@ -365,11 +365,33 @@ def elan_pour_voler(vehicule: Vehicule, vol_px: float) -> int:
 #: ⚠️ Les nombres etaient ECRITS EN DUR dans `dessinerUn` (0,30, 0,14, 0,35,
 #: 30). Une ombre qu'on ne peut pas regler depuis la fiche est un dessin qui
 #: decide de lui-meme comment la ville est eclairee.
+#: ⚠️ **LE SOL SE VOIT DE BIAIS** (`profondeur`, 15 sept. 2026, retour de
+#: Martin : « corrige les ombres pour les vehicules en nord-sud »). L'empreinte
+#: est celle du catalogue — 28 px de long pour une berline —, mais un char
+#: DEBOUT ne montre plus sa longueur quand il roule vers le nord : son dessin
+#: fait 16 px de large et 11 px de haut. L'ombre, elle, s'etalait sur les 28 px
+#: pleins : une langue noire de QUINZE pixels devant un char haut de onze, qu'on
+#: lisait comme une remorque. Une ombre ne peut pas etre plus longue que ce qui
+#: la jette.
+#:
+#: La regle est celle que le jeu applique deja a tout ce qui se tient debout :
+#: l'axe qui S'ENFONCE dans l'ecran (le nord-sud) est ECRASE. L'ombre d'un
+#: passant le disait depuis toujours — `DECORS.ombre` fait 12 x 6 pour un corps
+#: rond — et un juge de banc tient maintenant les deux d'accord : un seul biais
+#: pour toute la ville. L'empreinte en X, elle, ne bouge pas d'un pixel : c'est
+#: l'axe que le dessin montre.
+#:
+#: ⚠️ Et l'ecart a DEUX composantes depuis le meme retour. La lumiere vient du
+#: nord-ouest, donc l'ombre tombe vers l'EST ; vers le SUD, elle ne tombe pas
+#: au sol — un char pose n'a rien devant ses roues —, elle ne s'echappe qu'en
+#: MONTANT (`ecart_par_z`), et c'est exactement ce qui fait qu'un saut se voit.
 OMBRE = {
     "part": 0.28,          # sa noirceur, pose au sol
     "part_en_vol": 0.14,   # ce qu'elle perd en montant, au plus haut
-    "ecart_sol": 1,        # de combien elle deborde au sud-est, au sol
-    "ecart_par_z": 0.35,   # ... et de combien de plus par pixel d'altitude
+    "profondeur": 0.5,     # l'ecrasement de l'axe nord-sud — le sol vu de biais
+    "ecart_est": 2,        # ou elle tombe au sol : a l'est (la lumiere est au nord-ouest)
+    "ecart_sud": 0,        # ... et pas au sud : rien ne depasse devant les roues
+    "ecart_par_z": 0.35,   # ce qu'elle s'echappe en plus, par pixel d'altitude
     "retrait_max": 0.35,   # ce qu'elle retrecit tout en haut
     "z_haut": 30,          # l'altitude ou elle est « tout en haut »
 }

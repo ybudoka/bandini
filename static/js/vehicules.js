@@ -2107,20 +2107,33 @@ const Vehicules = (function () {
       ecrits en dur ici, et une ombre qu'on ne peut pas regler depuis la fiche
       est un dessin qui decide de lui-meme comment la ville est eclairee.
 
-      En montant, elle RETRECIT, elle S'ECARTE vers le sud-est (la lumiere
+      ⚠️ **LE SOL SE VOIT DE BIAIS** (`profondeur`) : un char debout ne montre
+      plus sa longueur quand il roule vers le nord — son dessin fait 16 px de
+      large et 11 px de haut — et l'ombre s'etalait sur les 28 px pleins de
+      l'empreinte : une langue noire de quinze pixels devant lui, qu'on lisait
+      comme une remorque. L'axe qui s'enfonce dans l'ecran est donc ECRASE, du
+      meme biais que l'ombre d'un passant (`DECORS.ombre`, 12 x 6 pour un corps
+      rond) — un seul biais pour toute la ville, et un juge tient les deux
+      d'accord. L'empreinte en X ne bouge pas : c'est l'axe que le dessin
+      montre. L'ecrasement est applique AU DESSIN (`dessinerUn`), apres la
+      rotation : `l` et `h` restent l'empreinte du catalogue.
+
+      En montant, elle RETRECIT, elle S'ECHAPPE vers le sud-est (la lumiere
       vient du nord-ouest, comme pour les facades) et elle palit — c'est elle
-      qui RACONTE la hauteur, et c'est pour ca qu'un saut se voit. */
+      qui RACONTE la hauteur, et c'est pour ca qu'un saut se voit. Au sol, elle
+      ne tombe QU'A L'EST : rien ne depasse devant les roues d'un char pose. */
   function ombreDe(v) {
     if (!v || !v.def) return null;
     const f = (B.defs.conduite && B.defs.conduite.ombre) || null;
     if (!f) return null;
     const z = Math.max(0, v.z || 0);
     const haut = Math.min(1, z / f.z_haut);              // 0 au sol, 1 tres haut
-    const ecart = f.ecart_sol + z * f.ecart_par_z;
+    const fuite = z * f.ecart_par_z;
     return {
-      x: v.x + ecart, y: v.y + ecart, angle: v.angle || 0,
+      x: v.x + f.ecart_est + fuite, y: v.y + f.ecart_sud + fuite, angle: v.angle || 0,
       l: Math.max(4, Math.round(v.def.longueur * (1 - haut * f.retrait_max))),
       h: Math.max(3, Math.round(v.def.largeur * (1 - haut * f.retrait_max))),
+      profondeur: f.profondeur,
       part: Math.max(0, f.part - haut * f.part_en_vol),
     };
   }
@@ -2204,8 +2217,13 @@ const Vehicules = (function () {
       // de la place qu'il prend : c'est justement l'encombrement qu'on rend a
       // l'oeil, et un autobus en travers de la rue n'a pas la meme empreinte
       // qu'un autobus dans sa voie.
+      // ⚠️ ET ECRASEE SUR L'AXE NORD-SUD : le sol se voit de biais. L'ordre
+      // compte — on ECRASE APRES avoir tourne (`scale` avant `rotate` dans la
+      // pile, donc applique apres elle), sinon un char en diagonale verrait son
+      // empreinte cisaillee au lieu d'etre posee a plat.
       ctx.save();
       ctx.translate(Math.round(ombre.x - cx), Math.round(ombre.y - cy));
+      ctx.scale(1, ombre.profondeur);
       ctx.rotate(ombre.angle);
       ctx.fillStyle = 'rgba(0,0,0,' + ombre.part.toFixed(2) + ')';
       ctx.fillRect(-ombre.l / 2, -ombre.h / 2, ombre.l, ombre.h);

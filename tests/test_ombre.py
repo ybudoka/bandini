@@ -25,7 +25,13 @@ def test_la_fiche_de_l_ombre_tient_ensemble():
     )
     assert 0 < o["retrait_max"] < 1, "elle s'annulerait en l'air, ou ne rétrécirait jamais"
     assert o["ecart_par_z"] > 0 and o["z_haut"] > 0
-    assert o["ecart_sol"] >= 0
+    # ⚠️ Au sol elle tombe À L'EST et pas au sud : rien ne dépasse devant les
+    # roues d'un char posé — ce qui s'échappe vers le sud-est, c'est l'altitude.
+    assert o["ecart_est"] > 0 and o["ecart_sud"] == 0
+    assert 0 < o["profondeur"] < 1, (
+        "le sol se voit de biais : l'axe nord-sud est écrasé, sinon un char qui "
+        "roule vers le nord traîne toute sa longueur en ombre devant lui"
+    )
 
 
 def test_la_fiche_descend_au_navigateur():
@@ -134,3 +140,69 @@ def test_en_montant_elle_retrecit_s_ecarte_et_palit(banc):
     # ⚠️ Et jamais au-delà du plafond : à cinquante pixels d'altitude elle ne
     # doit pas devenir un point, ni disparaître.
     assert haut["l"] >= 4 and haut["part"] > 0, "elle s'annule en l'air : %s" % r
+
+
+def test_le_sol_se_voit_du_meme_biais_pour_un_passant_et_pour_un_char(banc):
+    """⚠️ **Un seul biais pour toute la ville.** L'ombre d'un passant le disait
+    depuis toujours — `DECORS.ombre` fait 12 × 6 pour un corps rond, donc le
+    sol est écrasé de moitié — et le char, lui, posait son empreinte à plat :
+    deux conventions dans le même écran, et c'est la deuxième qui a fait la
+    langue noire des chars nord-sud. Les deux sont d'accord, et ce juge est ce
+    qui les empêche de re-diverger."""
+    r = banc("""function (L, o) {
+        const p = L.DECORS.ombre;
+        return { passant: p.h / p.w, char: L.B.defs.conduite.ombre.profondeur };
+    }""")
+    assert abs(r["passant"] - r["char"]) < 0.01, (
+        "le passant et le char ne posent pas leur ombre sur le même sol : %s" % r
+    )
+
+
+def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):
+    """⚠️ **Le retour de Martin, mesuré.** Un char debout qui roule vers le nord
+    montre 16 px de large et 11 px de haut ; son empreinte, elle, fait 28 px de
+    long. À plat, l'ombre débordait de **quinze** pixels devant ses roues — plus
+    que le char n'est haut — et on la lisait comme une remorque.
+
+    La règle, et elle vaut pour tous les caps : **une ombre ne dépasse jamais
+    la ligne de sol de plus que la hauteur du dessin qui la jette.** L'ancre du
+    sprite (`ancre[1]`) est cette hauteur : c'est de là que le dessin monte."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(31);
+        const j = L.B.joueur, d = o.ligneDroite();
+        j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const out = {};
+        L.B.defs.vehicules.forEach(function (def) {
+            const v = o.char(def.slug, 0, 0, 0);
+            if (!v) return;
+            // ⚠️ Le bateau n'a pas encore de sprite (dette connue) : on ne peut
+            // pas mesurer la hauteur d'un dessin qui n'existe pas.
+            const sprite = L.SPRITES[v.sprite];
+            const cuit = sprite ? L.Atlas.cuire(v.sprite, sprite, v.swaps) : null;
+            const hauteur = cuit && !sprite.rotations ? cuit.ancre[1] : null;
+            const caps = {};
+            [['est', 0], ['nord', -Math.PI / 2], ['sud', Math.PI / 2], ['biais', Math.PI / 4]].forEach(function (c) {
+                v.angle = c[1];
+                const q = L.Vehicules.ombreDe(v);
+                // Le point le plus au sud de l'empreinte tournee PUIS ecrasee.
+                const demi = (Math.abs(Math.sin(q.angle)) * q.l + Math.abs(Math.cos(q.angle)) * q.h) / 2;
+                caps[c[0]] = +((q.y - v.y) + demi * q.profondeur).toFixed(2);
+            });
+            out[def.slug] = { caps: caps, hauteur: hauteur, longueur: def.longueur };
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    assert len(r) >= 8, "le décor du juge est faux : trop peu de véhicules (%s)" % list(r)
+    debout = 0
+    for slug, m in r.items():
+        if m["hauteur"] is None:
+            continue           # un sprite encore en rotations : il montre sa longueur
+        debout += 1
+        for cap, sous in m["caps"].items():
+            assert sous <= m["hauteur"], (
+                f"{slug} vers le {cap} : l'ombre traîne {sous} px sous ses roues, "
+                f"et le dessin n'est haut que de {m['hauteur']} px"
+            )
+    assert debout >= 8, "presque aucun véhicule n'est debout : le juge ne mesure rien"
