@@ -95,6 +95,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les armes à feu | **P4** ajout, **livré** (14 sept. 2026) | demande de Martin : il n'y en avait que **deux** (pistolet, fusil à pompe) sur dix armes. Trois de plus, chacune pour une question : la **mitraillette** (automatique — on tient, la cadence rythme la rafale, la dispersion s'ouvre en 45 images et se referme quand on lâche), la **carabine** (230 px, un passant d'une balle, bornée par un juge à la demi-vue lue dans `base.js`) et le **cocktail Molotov** (en cloche, et un **brasier** de 5 s là où il casse — une entité invisible qui crache des particules, jamais une tuile repeinte). **Un coup de feu s'entend** : `Police.entendre`, rayon `bruit` de la fiche, l'agent hors du cône vient voir sans étoile. Vendues au marché noir seulement, munitions comprises. 4 juges Python + 3 au banc |
 | L'objectif écrit par-dessus la course | **P4** **correctif**, **livré** (14 sept. 2026) | bug de Martin, capture à l'appui (« bug de hoverlap en haut ») : en taxi, « COURSE : POSTE DE POLICE 51M » et « FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT 0/3 » étaient écrits l'un **dans** l'autre, tous les deux dorés, à un pixel de hauteur près. ⚠️ Rien n'était cassé : chaque ligne était à sa place. La ligne de boulot est collée sous le compteur (x 70, y 16) et la ligne d'objectif tombait sous les étoiles (4 + 11 + 2 = y 17) — mais elle est **centrée**, et une phrase de soixante-dix caractères centrée commence bien avant le milieu de l'écran (x 144 pour la course de Marco, en plein dans une ligne de boulot qui court de 70 à 181). Deux mises en page qui ne se connaissaient pas. La ligne de boulot, l'argent et l'heure **rendent leur boîte** au lieu de s'écrire et de s'oublier (et le boulot devient une ancre, donc le juge tactile de `test_navigateur.py` le voit aussi) ; à la place d'un `y` fixe, **une seule règle** : toute boîte du bandeau du haut que la ligne d'objectif chevauche **en largeur** la pousse d'une rangée vers le bas. C'est toujours elle qui cède, comme elle cédait déjà aux étoiles. 1 juge — la règle entière, pas le seul cas de la capture : la ligne d'objectif ne chevauche **aucune** autre ancre du HUD |
 | Les feux s'allument pour vrai | **P2** **correctif**, **livré** (14 sept. 2026) | demande de Martin : « je veux que les feux de circulation et de piéton allument pour vrai ». ⚠️ **Ils n'ont jamais été allumés du tout, et personne ne l'a vu.** L'entité portait `decor: 'feu'`, et `Entites.dessiner` teste `if (e.decor)` **avant** `if (e.type === 'feu')` : la branche générique peignait le boîtier cuit et s'en allait. `dessinerFeu` n'a **jamais** été appelé — ni rouge, ni vert, ni blanc, un poteau noir à chacun des **482** coins de la ville. Aucun juge ne le voyait : ils parlent tous de l'**horloge** (`feuVert`, `feuPieton`, l'alternance, le dégagement), aucun du **dessin**. Et la nuit s'ajoutait à ça : sans lampe à elle, une ampoule ne reçoit que la **multiplication** du voile — le vert (46, 204, 113) tombe à (16, 76, 57), le blanc qui dit MARCHE (242, 242, 242) à (86, 90, 122), **plus sombre qu'un trottoir de midi**. Maintenant : les peintres nommés passent **avant** la branche générique, chaque ampoule a un **cœur** plus pâle qui la dit allumée, et elle **pose sa lampe** à la brune, de la couleur de sa phase, ramassée **en dessinant**. 5 juges neufs |
+| Le son de l'eau | **P2** **correctif**, **en cours** (14 sept. 2026) | demande de Martin : « améliore le son de quand on va dans l'eau ». On y entrait sur un bruit de **tôle froissée** (`SFX.choc`, le son d'un accident de char), on nageait dans le **silence complet** — pas même un pas — et un char qui coule ne faisait **aucun bruit** |
 | M15 La ville te parle | **P4** ajout, **1re vague en cours** (14 sept. 2026) | le journal du matin t'apprend à jouer, la radio parle (animateur, pubs, bulletin), les passants disent **plus de choses, moins souvent, et jamais une des quatre dernières**, la rue **se tait** quand tu sors une arme, la police se parle à la radio, des bruits de quartier ponctuels, et le souffle du joueur qui s'entend |
 | M11 La police apprend | **P4** ajout à faire (v2) | carnet du poste (le casier se voit de loin), le stool, l'avocat du Carré, **un hacker dans La Shop** qui efface du casier de façon variable contre paiement, bouclier humain |
 | M10 L'argent sale | **P4** ajout à faire (v2) | le shylock et la dette de Rocco, guichets au camion, skimmers, assurance et fraude |
@@ -3175,6 +3176,54 @@ n'avaient **jamais été appelés une seule fois** depuis qu'on a posé les feux
 - **Ce qui reste ouvert, inchangé** : la traverse elle-même ne s'éclaire toujours pas (tuiles
   cuites dans le morceau de 256 px), et les feux ne passent pas au **clignotant la nuit** — c'est
   M12, « la ville vit ».
+
+### Le son de l'eau (**correctif**, taille 1) — **en cours le 14 sept. 2026**
+
+_Demande de Martin :_ « améliore le son de quand on va dans l'eau. »
+
+Il n'y a **rien à améliorer** : il n'y a pas de son d'eau dans le jeu. Ce qu'on entend en
+entrant dans la baie, c'est `SFX.choc` — « Tôle froissée », le son d'un **accident de
+char** (`app/audio.py` : deux variantes de carrosserie qui se plie). C'est la seule ligne de
+son que « L'eau n'est plus un mur » a posée, et elle l'a été faute de mieux.
+
+Le reste est du silence, et c'est pire que le mauvais son :
+
+- **On nage sans rien entendre.** `majJoueur` coupe les pas dans l'eau (« On ne fait pas de
+  pas dans l'eau ») et ne met rien à la place : onze tuiles de chenal, 88 points de souffle,
+  et pas un bruit.
+- **On sort de l'eau sans un bruit** non plus : le drapeau `j.nage` retombe, les remous
+  s'arrêtent, rien ne se fait entendre.
+- **On coule en silence.** `noyade()` fait seize remous et appelle l'hôpital — le moment le
+  plus grave que l'eau peut produire ne s'entend pas.
+- **Un char qui coule est muet de bout en bout.** `majNoyade` écrit « IL COULE — SORS » au
+  HUD, fait bouillir l'eau autour pendant trois secondes, et on n'entend **rien** : ni la
+  plongée, ni les bulles, ni le dernier glouglou. Le HUD dit ce que l'oreille aurait dû dire
+  la première.
+
+**Ce qu'on fait.** Trois bruitages ElevenLabs de plus, et le câblage qui manque :
+
+- `plongeon` (2 variantes) — un corps qui entre dans l'eau. Il remplace la tôle froissée à
+  l'entrée, **et** sert à la sortie de l'eau, à l'entrée des piétons et des agents
+  (`Son.jouerA`, donc plus faible de loin) et au char qui plonge.
+- `nage` (3 variantes) — la brassée. Elle se joue **à la distance parcourue**, exactement
+  comme `pas` : c'est le même geste et le même besoin. Une boucle tenue sous un nageur
+  immobile sonnerait comme une fontaine. ⚠️ Trois variantes et pas une : une brassée revient
+  une fois et demie par seconde, c'est là que l'oreille s'agace le plus vite.
+- `couler` (1) — la tête qui passe sous l'eau : le glouglou et les bulles. Il joue à la
+  noyade du joueur **et** quand le char touche le fond.
+
+⚠️ **Le char n'a pas son propre fichier, et c'est voulu** : c'est la même eau, avec plus de
+masse. Il joue `plongeon` **plus un coup de grave synthétisé** — le poids, c'est ce qui
+manque à un corps de 80 kg, pas la matière. Un quatrième fichier aurait coûté 20 Ko pour
+dire la même chose.
+
+⚠️ **Le budget des bruitages doit monter** (900 → 950 Ko) : c'est un son qu'on n'avait pas,
+pas un son qu'on a laissé grossir. On reste sous le mégaoctet, et la finition ne change pas.
+
+- **Juges** : entrer dans l'eau joue le plongeon et **plus jamais la tôle** ; nager fait des
+  brassées et **aucun pas** ; à bout de souffle, on entend `couler` ; un char qui entre dans
+  l'eau plonge, puis fait du bruit en coulant ; et le filet synthétisé des trois **atteint la
+  sortie**, comme pour tous les autres effets.
 
 ### M15 — La ville te parle (**ajout**, taille 4)
 
