@@ -283,6 +283,20 @@ const Son = (function () {
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },
     choc: function () { if (!joue('choc')) bruit(0.4, 0.5, 1200, 100); },
     explosion: function () { if (!joue('explosion')) { bruit(0.9, 0.8, 600, 40); ton(60, 0.6, 'sine', 0.5, 0.5); } },
+    // --- L'eau ---------------------------------------------------------------
+    // ⚠️ Jusqu'ici, entrer dans l'eau jouait `choc` — la TOLE FROISSEE d'un
+    // accident de char — et nager ne jouait rien du tout : les pas sont coupes
+    // dans l'eau, et rien ne les remplacait. Trois sons pour les trois moments
+    // que l'eau produit deja : on entre, on avance, on coule.
+    plongeon: function () { if (!joue('plongeon')) { bruit(0.45, 0.5, 2500, 250); ton(300, 0.22, 'sine', 0.14, 0.25); bruit(0.16, 0.14, 9000, 4000); } },
+    // La brassee : elle part a la DISTANCE parcourue, comme un pas.
+    nage: function () { if (!joue('nage')) bruit(0.2, 0.14, 1300, 350); },
+    // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
+    couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },
+    // ⚠️ Le char n'a PAS son propre fichier, et c'est voulu : c'est la meme
+    // eau, avec plus de masse. Le plongeon plus un coup de grave — ce qui
+    // manque a un corps de 80 kg, c'est le poids, pas la matiere.
+        char_a_l_eau: function () { if (!joue('plongeon')) bruit(0.6, 0.6, 2200, 200); ton(55, 0.5, 'sine', 0.3, 0.5); },
     // ⚠️ Trois portes : le bois et la serrure d'un logement, la vitre et la
     // porte d'un commerce, la portiere d'un char. Le jeu appelle
     // `porte(genre)` ; le genre vient de la fiche — de la piece (`carte._piece`,

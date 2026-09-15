@@ -206,7 +206,7 @@ const Police = (function () {
     // anti-police le plus simple du jeu — deux pas dans la baie, et on est
     // intouchable. Il nage a la vitesse de la nage comme tout le monde
     // (`majPieton`), et son chemin paie l'eau au prix fort (`coutEau`).
-    a.nage = Entites.dansLEau(a);
+    Entites.mouiller(a);
     Entites.deplacerCercle(a, a.vx, a.vy, Monde.MASQUE_NAGEUR);
     Entites.dansLaCarte(a);
     a.anim.dist += vitesse;

@@ -274,6 +274,30 @@ CATALOGUE: list[Echantillon] = [
     _e("sonnette", "Sonnette de vélo", duree_s=1.0, volume=0.11, influence=0.75,
        prompt="a bicycle bell struck twice, bright ringing brass with a "
               "shimmering tail, close, no music"),
+    # --- L'eau ---------------------------------------------------------------
+    # ⚠️ Depuis « L'eau n'est plus un mur », on entrait dans la baie sur
+    # `choc` — la TOLE FROISSEE, le son d'un accident de char — et on nageait
+    # dans le silence complet, les pas coupes et rien a la place. Trois sons,
+    # et chacun repond a un moment que le jeu produisait deja sans le dire :
+    # on entre, on avance, on coule.
+    _e("plongeon", "Plongeon dans l'eau", variantes=2, duree_s=1.4, volume=0.55,
+       influence=0.5,
+       prompt="a person jumping feet first into cold sea water, one heavy "
+              "splash, a mass of water thrown up then falling back, scattered "
+              "droplets, close-up, outdoors, no voices, no music"),
+    # ⚠️ TROIS variantes, comme les pas : une brassee revient une fois et
+    # demie par seconde, et c'est la que l'oreille s'agace le plus vite.
+    # ⚠️ Et ce n'est PAS une boucle : elle se joue a la distance parcourue
+    # (`son.js`, `SFX.nage`), sans quoi un nageur immobile sonnerait comme une
+    # fontaine.
+    _e("nage", "Brassée", variantes=3, duree_s=0.8, volume=0.2, influence=0.5,
+       prompt="a single swimmer arm stroke through open water, a short wet "
+              "swirl and churn, water sliding off skin, close-up, no "
+              "breathing, no voices, no music"),
+    _e("couler", "On coule", duree_s=1.8, volume=0.7, influence=0.45,
+       prompt="a head going under water, one gulp as the surface closes over, "
+              "muffled bubbles rising, the sound turning dull and distant, "
+              "close-up, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------

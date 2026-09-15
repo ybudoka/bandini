@@ -663,7 +663,12 @@ const Vehicules = (function () {
     }
     if (!v.coule) {
       Entites.remous(v.x, v.y, 14);
-      if (v.conducteur === 'joueur') Hud.message('IL COULE — SORS', 180);
+      // ⚠️ Il entrait dans l'eau SANS UN BRUIT : le HUD ecrivait « IL COULE —
+      // SORS » et l'oreille n'avait rien entendu — or c'est l'oreille qui
+      // aurait du le dire la premiere. Le char du joueur a droit au son avec
+      // son filet ; celui du voisin est POSE dans le monde, comme un passage.
+      if (v.conducteur === B.joueur) { Son.SFX.char_a_l_eau(); Hud.message('IL COULE — SORS', 180); }
+      else Son.jouerA('plongeon', v.x, v.y, 420);
     }
     // ⚠️ `(v.coule || 0) + 1`, jamais `v.coule++` : sur un char qui n'a jamais
     // touche l'eau le compteur n'existe pas, `undefined++` rend NaN, et NaN
@@ -673,10 +678,23 @@ const Vehicules = (function () {
     // Il s'enfonce : il ralentit vite, et l'eau bout autour.
     v.vitesse *= 0.9; v.vx *= 0.9; v.vy *= 0.9;
     if (B.t % 5 === 0) Entites.remous(v.x + (B.rng() - 0.5) * 10, v.y + (B.rng() - 0.5) * 6, 2);
+    // L'eau bout autour pendant qu'il s'enfonce — trois secondes, et on les
+    // entend : c'est le temps qu'on a pour sortir.
+    if (B.t % 20 === 0) Son.jouerA('nage', v.x, v.y, 300);
     if (v.coule < n.coule_s * 60) return false;
-    // Au fond. Celui qui est reste dedans se retrouve a l'eau, et il nage.
+    // Au fond, et le dernier glouglou avec.
+    //
+    // ⚠️ `v.conducteur === 'joueur'` — la chaîne — N'ETAIT JAMAIS VRAI : partout
+    // ailleurs le conducteur est l'ENTITE (`v.conducteur = j` dans `monter`), et
+    // seul le trafic porte une chaîne. Trois lignes en dependaient, et le
+    // silence n'etait pas la pire : « IL COULE — SORS » ne s'affichait jamais,
+    // et surtout le joueur reste dans un char RETIRE des entites — sonde du
+    // 14 sept. 2026 : `dansVehicule` pointe un char absent, `nage` est faux, et
+    // il ne bouge plus d'un pixel. Couler dans son char etait un cul-de-sac.
     const j = B.joueur;
-    if (v.conducteur === 'joueur' && j && j.dansVehicule === v) {
+    if (v.conducteur === B.joueur) Son.SFX.couler();
+    else Son.jouerA('couler', v.x, v.y, 420);
+    if (j && j.dansVehicule === v) {
       descendre(j, true);
       j.x = v.x; j.y = v.y;
       j.nage = true;
