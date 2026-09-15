@@ -24,6 +24,7 @@ morceau : la basse tourne sur huit mesures, la batterie sur une seule, et on
 ne recopie pas quatre-vingt-seize fois le meme charleston.
 """
 
+import math
 from typing import NotRequired, TypedDict
 
 #: 8 pas par mesure : la croche est notre plus petite unite.
@@ -151,10 +152,25 @@ MORCEAUX: list[Morceau] = [
 
 
 def par_slug(slug: str) -> Morceau | None:
+    """N'importe quel morceau du jeu, ecrit a la main ou genere.
+
+    ⚠️ Il ne cherchait que dans `MORCEAUX` — c'est-a-dire le seul theme ecrit a
+    la main. Les stations, les ambiances et les pieces de rue etaient donc
+    INECOUTABLES avec `scripts/musique_apercu.py`, alors que c'est exactement ce
+    a quoi il sert : juger une musique a l'oreille avant de la deployer. Cinq
+    pieces de rue qu'on ne peut pas ecouter, ce sont cinq pieces qu'on livre en
+    esperant.
+    """
     for morceau in MORCEAUX:
         if morceau["slug"] == slug:
             return morceau
-    return None
+    for style in STATIONS:
+        if style["slug"] == slug:
+            return generer_station(style)
+    for style in AMBIANCES:
+        if style["slug"] == slug:
+            return generer_station(style, station=False)
+    return rue_par_slug(slug)
 
 
 def duree_s(morceau: Morceau) -> float:
@@ -163,7 +179,8 @@ def duree_s(morceau: Morceau) -> float:
 
 
 def exporter() -> list[Morceau]:
-    return [dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
+    return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
+            + rues())
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -305,6 +322,168 @@ def generer_station(style: Style, station: bool = True) -> Morceau:
     }
 
 
+# --- Les cinq pieces du musicien de rue -------------------------------------
+
+#: ⚠️ Demande de Martin : « je veux que le musicien fasse vraiment de la
+#: musique, 5 musiques differentes ». La fiche « des sortes de gens » le
+#: promettait deja — « il joue, et CA S'ENTEND » — et ce qui a ete livre est un
+#: corps avec une guitare dessinee dessus et ZERO note. Le jeu a un sequenceur,
+#: dix morceaux ecrits en notes et un chef d'orchestre ; l'homme a la guitare
+#: est muet depuis le premier jour.
+#:
+#: ⚠️ DEUX VOIX, PAS QUATRE. Une station de radio a une basse, une nappe, un
+#: chant et une batterie — c'est un groupe dans un studio. Un gars tout seul sur
+#: un trottoir a SIX CORDES : il gratte un accord de la main droite et chante la
+#: melodie par-dessus. `generer_rue` ne produit donc que l'accompagnement et le
+#: chant, et le morceau sonne comme ce qu'on voit.
+#:
+#: `mesure` : combien de croches dans une mesure. C'est ce qui donne la VALSE —
+#: six croches au lieu de huit, trois temps au lieu de quatre. Aucune autre
+#: musique du jeu n'est a trois temps, et c'est ce qui la fait reconnaitre en
+#: deux secondes.
+class StyleRue(TypedDict):
+    slug: str
+    nom: str
+    graine: int
+    bpm: int
+    tonique: int
+    gamme: tuple[int, ...]
+    grille: tuple[int, ...]
+    mesure: int
+    forme_chant: str
+    forme_gratte: str
+    volume: float
+
+
+#: ⚠️ CINQ TONALITES, CINQ TEMPOS, CINQ GRILLES. Deux pieces qui partagent
+#: l'un des trois se ressemblent assez pour que le joueur croie en entendre une
+#: seule — et cinq morceaux qu'on prend pour un seul, c'est quatre morceaux
+#: payes pour rien. Un juge le verifie.
+RUE: list[StyleRue] = [
+    # La plainte du gars qui joue pour manger : mineure, lente, quatre accords
+    # qui tournent sans jamais se resoudre.
+    {"slug": "rue_complainte", "nom": "La complainte du Faubourg", "graine": 19610223,
+     "bpm": 76, "tonique": 52, "gamme": MINEURE, "grille": (0, 5, 3, 4), "mesure": 8,
+     "forme_chant": "triangle", "forme_gratte": "sine", "volume": 0.52},
+    # Le reel : majeure, vite, et ca tape du pied. La seule des cinq ou la
+    # melodie court en croches — c'est ce qui fait un reel.
+    {"slug": "rue_reel", "nom": "Le reel du trottoir", "graine": 19340708,
+     "bpm": 132, "tonique": 55, "gamme": MAJEURE, "grille": (0, 0, 4, 0), "mesure": 8,
+     "forme_chant": "square", "forme_gratte": "triangle", "volume": 0.48},
+    # Le blues du coin : douze mesures, la vraie grille (I-I-I-I IV-IV-I-I
+    # V-IV-I-V). ⚠️ C'est la SEULE du jeu a ne pas tourner sur quatre mesures,
+    # et c'est ce qui l'empeche de sonner comme les quatre autres.
+    {"slug": "rue_blues", "nom": "Le blues du coin", "graine": 19490915,
+     "bpm": 92, "tonique": 45, "gamme": MINEURE,
+     "grille": (0, 0, 0, 0, 3, 3, 0, 0, 4, 3, 0, 4), "mesure": 8,
+     "forme_chant": "sawtooth", "forme_gratte": "triangle", "volume": 0.5},
+    # ⚠️ LA SEULE A TROIS TEMPS DE TOUT LE JEU (`mesure: 6`). Six croches par
+    # mesure : la basse sur le 1, deux grattes sur le 2 et le 3. Un joueur qui
+    # ne connait rien a la musique entend qu'elle n'est pas comme les autres.
+    {"slug": "rue_valse", "nom": "La valse de la Baie", "graine": 19271104,
+     "bpm": 116, "tonique": 50, "gamme": MAJEURE, "grille": (0, 4, 5, 4), "mesure": 6,
+     "forme_chant": "sine", "forme_gratte": "triangle", "volume": 0.5},
+    # La ballade : la plus lente, la plus haute, et presque rien dedans — c'est
+    # celle qu'on entend d'un coin de rue sans savoir d'ou elle vient.
+    {"slug": "rue_ballade", "nom": "La ballade des brumes", "graine": 20050612,
+     "bpm": 68, "tonique": 57, "gamme": MINEURE, "grille": (0, 6, 3, 5), "mesure": 8,
+     "forme_chant": "sine", "forme_gratte": "sine", "volume": 0.46},
+]
+
+#: Combien de temps la boucle doit tenir avant de se mordre la queue, en
+#: secondes. ⚠️ CE N'EST PAS UN NOMBRE DE TOURS, et c'est la difference qui
+#: compte : a deux tours fixes, le reel (132 a la noire) bouclait en 14 s et la
+#: valse en 12 — on s'arrete devant un musicien plus longtemps que ca, et on
+#: l'entend recommencer. Le nombre de tours se CALCULE donc a partir du tempo.
+RUE_SECONDES_MIN = 24
+#: ⚠️ Deux tours au moins, meme pour le blues qui dure deja une minute : c'est
+#: le deuxieme tour qui porte une AUTRE melodie sur la meme grille. Sans lui, on
+#: entend la melodie tourner deux fois plus souvent que les accords.
+RUE_TOURS_MIN = 2
+
+
+def generer_rue(style: StyleRue) -> Morceau:
+    """Une piece de rue : une gratte et une melodie, rien d'autre.
+
+    Deux appels sur la meme graine donnent la meme piece — c'est ce qui permet
+    de la corriger, et c'est ce qui garde l'ETag du paquet stable.
+    """
+    des = _Des(style["graine"])
+    grille = style["grille"]
+    mesure = style["mesure"]
+    pas_grille = len(grille) * mesure
+    tour_s = pas_grille * 60.0 / style["bpm"] / PAS_PAR_TEMPS
+    tours = max(RUE_TOURS_MIN, math.ceil(RUE_SECONDES_MIN / tour_s))
+    gratte: list[list[float]] = []
+    chant: list[list[float]] = []
+    for m, racine in enumerate(grille):
+        depart = m * mesure
+        # LA GRATTE. ⚠️ Un accord plaque sur chaque temps, pas une basse qui
+        # marche : une main droite sur six cordes ne fait pas de walking bass.
+        # La fondamentale en bas, la tierce et la quinte au-dessus.
+        temps = [0, 2, 4] if mesure == 6 else [0, 2, 4, 6]
+        for i, t in enumerate(temps):
+            # Le 1 est plein (trois notes), les autres sont plus legers : c'est
+            # ce qui fait entendre le DEBUT de la mesure, donc la mesure.
+            degres = (racine - 7, racine - 3, racine) if i == 0 else (racine - 3, racine)
+            for degre in degres:
+                gratte.append([depart + t, _hauteur(style, degre), 2 if i == 0 else 1,
+                               1.0 if i == 0 else 0.7])
+    # LA MELODIE, sur les deux tours : elle ne se repete pas, sinon on entend la
+    # boucle deux fois plus souvent que la grille.
+    for tour in range(tours):
+        for m, racine in enumerate(grille):
+            depart = (tour * len(grille) + m) * mesure
+            combien = des.entier(3, 5) if mesure == 8 else des.entier(2, 3)
+            occupe: set[int] = set()
+            for _ in range(combien):
+                pas = des.entier(0, mesure - 1)
+                if pas in occupe:
+                    continue
+                occupe.add(pas)
+                # Les notes de l'accord, plus ses voisines : tout sort de la
+                # gamme par construction, une fausse note est impossible.
+                degre = racine + des.choix((7, 9, 11, 7, 8, 10, 12))
+                duree = des.choix((1, 2, 2, 3))
+                chant.append([depart + pas, _hauteur(style, degre), duree,
+                              1.0 if des.chance(0.65) else 0.65])
+    chant.sort(key=lambda n: (n[0], n[1]))
+    # ⚠️ On raccourcit les notes qui se mordent : un oscillateur par note, deux
+    # notes qui se recouvrent dans la MEME voix sonnent comme un accord qu'on
+    # n'a pas ecrit (le juge du theme le refuse depuis le premier jour).
+    for avant, apres in zip(chant, chant[1:]):
+        avant[2] = min(avant[2], apres[0] - avant[0])
+    chant = [n for n in chant if n[2] > 0]
+    return {
+        "slug": style["slug"],
+        "nom": style["nom"],
+        # ⚠️ Pas une station : le bouton RADIO d'un char ne doit jamais tomber
+        # sur le gars du trottoir.
+        "station": False,
+        "bpm": style["bpm"],
+        "pas_par_temps": PAS_PAR_TEMPS,
+        "pas": tours * pas_grille,
+        "volume": style["volume"],
+        "voix": [
+            {"role": "gratte", "forme": style["forme_gratte"], "volume": 0.16,
+             "motif": pas_grille, "notes": gratte},
+            {"role": "chant", "forme": style["forme_chant"], "volume": 0.15, "notes": chant},
+        ],
+    }
+
+
+def rues() -> list[Morceau]:
+    """Les cinq pieces du musicien de rue."""
+    return [generer_rue(style) for style in RUE]
+
+
+def rue_par_slug(slug: str) -> Morceau | None:
+    for style in RUE:
+        if style["slug"] == slug:
+            return generer_rue(style)
+    return None
+
+
 #: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------
 #:
 #: ⚠️ ECRITES EN NOTES, comme le theme du menu et les stations du camion — et
@@ -385,6 +564,16 @@ MUSIQUE = {
     "bagarre_queue_s": 5,
     "fondu_s": 2,
     "hysteresis_px": 96,        # six tuiles a franchir avant de changer de piste
+    # ⚠️ LE MUSICIEN DE RUE N'EST PAS DANS L'ECHELLE, et c'est voulu : ce n'est
+    # pas une piste, c'est un SON DU MONDE — il sort d'un gars qu'on voit, comme
+    # un moteur sort d'un char. Il joue donc PAR-DESSUS l'ambiance du district,
+    # et son volume vient de la distance, pas d'un rang.
+    #
+    # Mais il se tasse quand la musique d'ETAT prend toute la place : quand la
+    # police te court apres, la toune du guitariste n'a plus d'importance. C'est
+    # la seule regle de priorite dont il a besoin, et elle est ecrite ici comme
+    # les autres.
+    "rue_sous_etat": 0.25,
 }
 
 

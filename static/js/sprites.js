@@ -231,43 +231,69 @@ const GRILLE_MOTO = [
    routine, ce ne serait qu'un costume de plus. */
 // ⚠️ La GUITARE en travers du corps (`g`) : a douze pixels, c'est elle
 // qui le nomme, pas sa palette.
+//
+// ⚠️ TROIS IMAGES QUI NE SONT PAS UNE MARCHE : la main qui gratte, en haut, au
+// milieu, en bas. Il est a `vitesse: 0` — `imageDe` choisit son image d'apres
+// la DISTANCE PARCOURUE, il n'en parcourt aucune, et il tombait donc sur
+// l'image zero toute la partie. Les deux images qu'il avait etaient deux pas ;
+// un musicien plante a un coin de rue n'a jamais eu de pas a faire. C'est
+// `poseFixe` qui les choisit maintenant, AU TEMPO du morceau qu'il joue.
 SPRITES.musicien = {
   w: 12, h: 13, ancre: [6, 12],
   pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#6b4b8a', p: '#2a2a3a', o: '#ffffff', g: '#c98d3a', b: '#3a2a1a' },
   swaps: ['c', 'h', 's', 'p'],
   poses: {
     bas: [
-      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcggggggck.', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
-      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcggggggck.', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcgggssck..', '.kcggggggck.', '..kcggggck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcgggssck..', '..kcggggck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...', '..kcccccck..', '.kcggggggck.', '.kcggggggck.', '..kcgssgck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
     ],
     haut: [
       ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcgggggck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
-      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcgggggck..', '..kcccccck..', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcggggsck..', '..kcccccck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcgggggck..', '..kccsscck..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
     ],
     cote: [
-      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kccccck..', '....kppppk..', '...kppk.kk..', '...kkk......'],
-      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kccccck..', '....kppppk..', '....kpk.kk..', '....kk......'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgssggk..', '..kcgggggk..', '...kcgggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgssggk..', '...kcgggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
+      ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '..kcgggggk..', '..kcgggggk..', '...kssggk...', '....kppppk..', '...kpp.ppk..', '...kk...kk..'],
     ],
   },
 };
 // Le mime : chapeau melon, visage blanc, chandail raye. Trois formes
 // qu'aucun autre corps de la ville n'a.
+//
+// ⚠️ QUATRE NUMEROS, PAS DEUX PAS. Ses deux images etaient une marche — et il
+// ne marche pas : il tenait donc l'image zero toute la partie, bras le long du
+// corps, immobile au milieu de son attroupement. Un mime qui ne mime rien est
+// un homme en chapeau. Les quatre : repos, LE MUR invisible (les deux mains a
+// plat devant lui), LA BOITE (les mains en l'air, de chaque cote de la tete),
+// LE SALUT (il se plie en deux, le bras qui balaie). `poseFixe` les enchaine.
 SPRITES.amuseur = {
   w: 12, h: 13, ancre: [6, 12],
-  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#efe6d0', p: '#1a1a22', o: '#ffffff', d: '#1a1a22', b: '#1a1a22' },
+  // ⚠️ Le `d` est le BLEU MARINE de la mariniere, pas le noir du contour : a
+  // douze pixels, une raie noire sur du creme se confond avec le contour et le
+  // mime redevient une silhouette blanche.
+  pal: { k: '#101018', s: '#e8b088', h: '#2a2a2a', c: '#efe6d0', p: '#1a1a22', o: '#ffffff', d: '#2b3a6b', b: '#1a1a22' },
   swaps: ['c', 'h', 's', 'p'],
   poses: {
     bas: [
-      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...koooook..', '....kook....', '.kkcccccckk.', 'kckdcdcdckck', 'kckcdcdcdckc', '.kkcdcdckkk.', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
-      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...koooook..', '....kook....', '.kckccccckk.', '.kkdcdcdck..', 'kckcdcdcdck.', '.kkcdcdckkk.', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooooko..', '....kook....', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooooko..', '....kook....', 'sskcccccckss', 'kkkddddddkkk', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', 's..koooook.s', 's..kokkook.s', 'k..kooooko.k', 'k...kook...k', '.kkcccccckk.', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['............', '...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooooko..', '..kcccccck..', '..kddddddk..', 'sskcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
     ],
     haut: [
-      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', '.kkcccccckk.', 'kckdcdcdckck', 'kckcdcdcdckc', '.kkcdcdckkk.', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
-      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', '.kckccccckk.', '.kkdcdcdck..', 'kckcdcdcdck.', '.kkcdcdckkk.', '...kppppk...', '..kppk.kpk..', '..kkk...kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '....kook....', 'sskcccccckss', 'kkkddddddkkk', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['...kkkkkk...', '..kkkkkkkk..', 's..khhhhhk.s', 's..khhhhhk.s', 'k..khhhhhk.k', 'k...kook...k', '.kkcccccckk.', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
+      ['............', '...kkkkkk...', '..kkkkkkkk..', '...khhhhhk..', '...khhhhhk..', '...khhhhhk..', '..kcccccck..', '..kddddddk..', 'sskcccccck..', '..kddddddk..', '...kppppk...', '..kpp..ppk..', '..kk....kk..'],
     ],
     cote: [
-      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccck..', '.kcdcdcdck..', '.kcdcdcdck..', '..kcdcdck...', '...kppppk...', '..kppk.kk...', '..kkk.......'],
-      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccck..', '.kcdcdcdck..', '.kcdcdcdck..', '..kcdcdck...', '...kppppk...', '...kpk.kk...', '...kk.......'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '....kok.....', '..kcccccckss', '..kddddddkkk', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
+      ['...kkkkkk...', '..kkkkkkkk..', '...koooook.s', '...kokkook.s', '...kooook..k', '....kok....k', '..kcccccck..', '..kddddddk..', '..kcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
+      ['............', '...kkkkkk...', '..kkkkkkkk..', '...koooook..', '...kokkook..', '...kooook...', '..kcccccck..', '..kddddddk..', 'sskcccccck..', '..kddddddk..', '...kppppk...', '..kpp.ppk...', '..kk...kk...'],
     ],
   },
 };
@@ -290,6 +316,86 @@ SPRITES.exhibitionniste = {
     cote: [
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....kk.k....'],
       ['...kkkkkk...', '...khhhhhk..', '...khsssok..', '...khssssk..', '...khsssk...', '....kssk....', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '...kccccck..', '....kbbbk...', '....k.kk....'],
+    ],
+  },
+};
+
+
+// --- Deux amuseurs de plus (demande de Martin) -------------------------------
+//
+// ⚠️ « Ils ne font rien et sont ennuyants. » Le mime etait le SEUL genre
+// d'amuseur de la ville, et il tenait l'image zero de son sprite du debut a la
+// fin de la partie (`imageDe` choisit son image d'apres la DISTANCE PARCOURUE,
+// et un corps a `vitesse: 0` n'en parcourt aucune). Ces deux-la ne sont pas
+// deux costumes de plus : ce sont deux spectacles qu'on reconnait DE LOIN,
+// avant meme de voir l'artiste. C'est tout ce qu'on demande a un amuseur.
+
+// LE JONGLEUR — et les balles sont DANS LE SPRITE. ⚠️ Les dessiner a part
+// aurait voulu dire un deuxieme chemin de dessin pour une seule sorte, trois
+// objets de plus a trier par `y`, et un decalage d'une image entre le corps et
+// ses balles des que la camera bouge. Ici, l'atlas cuit les quatre images une
+// fois : trois balles sur quatre positions de l'arc, decalees d'un cran — la
+// case vide tourne, et c'est ce qui donne le mouvement.
+// Le sprite fait 14 x 19 : deux colonnes et six rangees de plus que les autres,
+// pour l'arc au-dessus de sa tete.
+SPRITES.jongleur = {
+  w: 14, h: 19, ancre: [7, 18],
+  pal: { k: '#101018', s: '#e8b088', h: '#3a2a1a', c: '#d4442e', p: '#f2c94c', o: '#ffffff',
+         d: '#f2c94c', b: '#3a2a1a',
+         // ⚠️ Les trois balles ne sont PAS echangeables (`swaps` ne les
+         // contient pas) : c'est a leurs trois couleurs qu'on reconnait le
+         // numero d'un coin de rue a l'autre.
+         j: '#f7e04a', v: '#3fae5a', r: '#e8453c' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['.......rr.....', '.......rr.....', '....vv........', '....vv........', '..jj..........', '..jj..........', '....kkkkkk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '..skccccccks..', '.sskcdddckss..', '..kcdddddck...', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['.......vv.....', '.......vv.....', '....jj....rr..', '....jj....rr..', '..............', '..............', '....kkkkkk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '..skccccccks..', '.sskcdddckss..', '..kcdddddck...', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['.......jj.....', '.......jj.....', '..........vv..', '..........vv..', '..rr..........', '..rr..........', '....kkkkkk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '..skccccccks..', '.sskcdddckss..', '..kcdddddck...', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['..............', '..............', '....rr....jj..', '....rr....jj..', '..vv..........', '..vv..........', '....kkkkkk....', '...khhhhhhk...', '...khsssshk...', '...ksossosk...', '...kssssssk...', '....kssssk....', '..skccccccks..', '.sskcdddckss..', '..kcdddddck...', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+    ],
+    haut: [
+      ['.......rr.....', '.......rr.....', '....vv........', '....vv........', '..jj..........', '..jj..........', '....kkkkkk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '..skccccccks..', '.sskccccccss..', '..kcccccccck..', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['.......vv.....', '.......vv.....', '....jj....rr..', '....jj....rr..', '..............', '..............', '....kkkkkk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '..skccccccks..', '.sskccccccss..', '..kcccccccck..', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['.......jj.....', '.......jj.....', '..........vv..', '..........vv..', '..rr..........', '..rr..........', '....kkkkkk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '..skccccccks..', '.sskccccccss..', '..kcccccccck..', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+      ['..............', '..............', '....rr....jj..', '....rr....jj..', '..vv..........', '..vv..........', '....kkkkkk....', '...khhhhhhk...', '...khhhhhhk...', '...khhhhhhk...', '...khsssshk...', '....kssssk....', '..skccccccks..', '.sskccccccss..', '..kcccccccck..', '...kcccccck...', '....kppppk....', '...kpp..ppk...', '...kk....kk...'],
+    ],
+    cote: [
+      ['.......rr.....', '.......rr.....', '....vv........', '....vv........', '..jj..........', '..jj..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
+      ['.......vv.....', '.......vv.....', '....jj....rr..', '....jj....rr..', '..............', '..............', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
+      ['.......jj.....', '.......jj.....', '..........vv..', '..........vv..', '..rr..........', '..rr..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
+      ['..............', '..............', '....rr....jj..', '....rr....jj..', '..vv..........', '..vv..........', '....kkkkkk....', '....khhhhhk...', '....khsssok...', '....khssssk...', '....khsssk....', '.....kssk.....', '...skcccccks..', '..sskcdddcks..', '....kcdddck...', '....kccccck...', '.....kppppk...', '....kppk.kk...', '....kkk.......'],
+    ],
+  },
+};
+// L'ECHASSIER — ⚠️ LE SEUL CORPS DE LA VILLE A DEPASSER LA FOULE : 26 pixels
+// de haut au lieu de 13. C'est exactement pour ca qu'il existe — on le voit
+// PAR-DESSUS son propre attroupement, de l'autre bout de la rue, et c'est la
+// seule chose qu'un echassier fait qu'un homme ne fait pas. Un echassier a
+// hauteur d'homme serait un homme.
+// Il tangue : trois images, et les PIEDS NE BOUGENT PAS — c'est le haut qui
+// penche. Un corps qui glisse d'un pixel avec ses echasses n'est pas un
+// echassier qui se rattrape, c'est un dessin qu'on a pousse.
+SPRITES.echassier = {
+  w: 12, h: 26, ancre: [6, 25],
+  pal: { k: '#101018', s: '#e8b088', h: '#5a3a1a', c: '#2f7f6f', p: '#c94f3a', o: '#ffffff',
+         b: '#3a2a1a', e: '#9a6b3a' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['...kkkkkk...', '..kcccccck..', '..kcccccck..', '.kkkkkkkkkk.', '...ksssssk..', '...ksossok..', '...kssssk...', '..kcccccck..', '.kcccccccck.', '.kcccccccck.', '..kcccccck..', '..kppppppk..', '..kppppppk..', '..kppkkppk..', '..kppkkppk..', '..kkkkkkkk..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['..kkkkkk....', '.kcccccck...', '.kcccccck...', 'kkkkkkkkkk..', '..ksssssk...', '..ksossok...', '..kssssk....', '.kcccccck...', 'kcccccccck..', 'kcccccccck..', '.kcccccck...', '.kppppppk...', '.kppppppk...', '.kppkkppk...', '.kppkkppk...', '.kkkkkkkk...', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['....kkkkkk..', '...kcccccck.', '...kcccccck.', '..kkkkkkkkkk', '....ksssssk.', '....ksossok.', '....kssssk..', '...kcccccck.', '..kcccccccck', '..kcccccccck', '...kcccccck.', '...kppppppk.', '...kppppppk.', '...kppkkppk.', '...kppkkppk.', '...kkkkkkkk.', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+    ],
+    haut: [
+      ['...kkkkkk...', '..kcccccck..', '..kcccccck..', '.kkkkkkkkkk.', '...khhhhhk..', '...khhhhhk..', '...khhhhk...', '..kcccccck..', '.kcccccccck.', '.kcccccccck.', '..kcccccck..', '..kppppppk..', '..kppppppk..', '..kppkkppk..', '..kppkkppk..', '..kkkkkkkk..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['..kkkkkk....', '.kcccccck...', '.kcccccck...', 'kkkkkkkkkk..', '..khhhhhk...', '..khhhhhk...', '..khhhhk....', '.kcccccck...', 'kcccccccck..', 'kcccccccck..', '.kcccccck...', '.kppppppk...', '.kppppppk...', '.kppkkppk...', '.kppkkppk...', '.kkkkkkkk...', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['....kkkkkk..', '...kcccccck.', '...kcccccck.', '..kkkkkkkkkk', '....khhhhhk.', '....khhhhhk.', '....khhhhk..', '...kcccccck.', '..kcccccccck', '..kcccccccck', '...kcccccck.', '...kppppppk.', '...kppppppk.', '...kppkkppk.', '...kppkkppk.', '...kkkkkkkk.', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+    ],
+    cote: [
+      ['...kkkkkk...', '...kccccck..', '...kccccck..', '..kkkkkkkk..', '...ksssssk..', '...kssssok..', '....ksssk...', '...kccccck..', '..kcccccck..', '..kcccccck..', '...kccccck..', '...kppppk...', '...kppppk...', '..kppkkppk..', '..kppkkppk..', '..kkkkkkkk..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['..kkkkkk....', '..kccccck...', '..kccccck...', '.kkkkkkkk...', '..ksssssk...', '..kssssok...', '...ksssk....', '..kccccck...', '.kcccccck...', '.kcccccck...', '..kccccck...', '..kppppk....', '..kppppk....', '.kppkkppk...', '.kppkkppk...', '.kkkkkkkk...', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '..ee..ee....', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
+      ['....kkkkkk..', '....kccccck.', '....kccccck.', '...kkkkkkkk.', '....ksssssk.', '....kssssok.', '.....ksssk..', '....kccccck.', '...kcccccck.', '...kcccccck.', '....kccccck.', '....kppppk..', '....kppppk..', '...kppkkppk.', '...kppkkppk.', '...kkkkkkkk.', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '....ee..ee..', '...ee..ee...', '...ee..ee...', '...ee..ee...', '...ee..ee...', '..kkkkkkkk..'],
     ],
   },
 };

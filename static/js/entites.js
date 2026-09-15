@@ -472,13 +472,32 @@ const Entites = (function () {
   //: Combien de chaque sorte vivent dans la bulle du joueur, au plus.
   const SORTES_MAX = 2;
 
+  /** L'ordre dans lequel on essaie de faire naitre les sortes, les AMUSEURS
+      MELANGES.
+
+      ⚠️ Ils partagent un plafond de deux : pris dans l'ordre de la liste, ce
+      seraient toujours les deux premiers — le musicien et le mime — et le
+      jongleur comme l'echassier ne naitraient JAMAIS. Quatre sortes dessinees,
+      deux qu'on voit : c'est exactement le defaut qu'on repare. */
+  function ordreDesSortes() {
+    const amuseurs = SPECTACLES.slice();
+    for (let i = amuseurs.length - 1; i > 0; i--) {
+      const k = Math.floor(B.rng() * (i + 1));
+      const t = amuseurs[i]; amuseurs[i] = amuseurs[k]; amuseurs[k] = t;
+    }
+    let n = 0;
+    return SORTES.map(function (slug) {
+      return SPECTACLES.indexOf(slug) >= 0 ? amuseurs[n++] : slug;
+    });
+  }
+
   /** Elles naissent aux coins de rue, pas dans la foule : `frequence` vaut
       zero au catalogue, exactement comme l'homme-sandwich. */
   function naitreLesSortes() {
     if (!B.joueur || B.interieur) return 0;
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
     let nes = 0;
-    for (const slug of SORTES) {
+    for (const slug of ordreDesSortes()) {
       const arch = archetype(slug);
       if (!arch || arch.slug !== slug) continue;
       // ⚠️ CHACUNE A SES QUARTIERS, et c'est la fiche qui le dit. Un touriste
@@ -500,7 +519,14 @@ const Entites = (function () {
       const deja = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === slug && q.vivant; }).length;
       if (deja >= combien) continue;
       if (spectacle && artistes() >= reglesSpectacle().artistes_max) continue;
-      const place = placeDeNaissance();
+      // ⚠️ UN AMUSEUR NE SE POSE PAS N'IMPORTE OU. `placeDeNaissance` rend la
+      // premiere tuile marchable venue hors de l'ecran — c'est-a-dire souvent
+      // une ruelle, un devant de hangar, un bout de trottoir entre deux
+      // poubelles. Le numero etait bon, l'endroit ne l'etait pas, et personne
+      // ne venait le voir. `carte.scenes` donne les endroits ou le monde PASSE
+      // ET S'ARRETE : la place publique, les parcs, le terminus d'autobus, le
+      // trottoir devant les commerces.
+      const place = spectacle ? sceneLibre(zone) : placeDeNaissance();
       if (!place || visibleAEcran(place.x, place.y, 24)) continue;
       const e = creerPieton(place.x, place.y, arch);
       if (!e) continue;
@@ -532,6 +558,38 @@ const Entites = (function () {
     qui s'arretaient repartaient au bout de quelques secondes sans etre
     remplaces. Le juge du banc posait lui-meme quatre badauds avant de mesurer —
     c'est-a-dire qu'il mesurait l'attroupement d'une foule qu'il avait fabriquee. */
+
+  /** Une scene libre du quartier ou l'on est, hors champ, dans la bulle.
+
+      ⚠️ On prefere la MEILLEURE (`valeur` : la place publique avant le
+      trottoir), et on ne reprend pas celle d'un artiste deja installe — deux
+      numeros a trois tuiles l'un de l'autre ne font pas deux spectacles, ils
+      font une cohue, et leurs deux cercles se disputent les memes passants. */
+  function sceneLibre(zone) {
+    const scenes = (B.defs.carte && B.defs.carte.scenes) || [];
+    if (!scenes.length || !zone) return null;
+    const ecart = (B.defs.pietons.spectacle && B.defs.pietons.spectacle.rayon_px) || 46;
+    let meilleure = null, valeurMax = -1;
+    for (const s of scenes) {
+      if (s.district !== zone.district) continue;
+      const x = s.x * TT + 8, y = s.y * TT + 8;
+      const d2 = dist2(x, y, B.joueur.x, B.joueur.y);
+      if (d2 > BULLE_OUBLI * BULLE_OUBLI || d2 < 48 * 48) continue;
+      if (visibleAEcran(x, y, 24)) continue;
+      if (!placeLibre(x, y)) continue;
+      let prise = false;
+      for (const q of B.entites) {
+        if (q.type !== 'pieton' || !q.vivant || SPECTACLES.indexOf(q.metier) < 0) continue;
+        if (dist2(q.x, q.y, x, y) < (ecart * 2) * (ecart * 2)) { prise = true; break; }
+      }
+      if (prise) continue;
+      // ⚠️ A valeur egale, la plus proche : on veut le spectacle du coin de
+      // rue ou l'on est, pas celui de l'autre bout du quartier.
+      const note = s.valeur * 1e9 - d2;
+      if (note > valeurMax) { valeurMax = note; meilleure = { x: x, y: y }; }
+    }
+    return meilleure;
+  }
 
   /** Les reglages du spectacle, lus dans la fiche (`pietons.SPECTACLE`).
       ⚠️ Jamais ecrits ici : « toujours entre 3 et 5 » est une demande de
@@ -567,7 +625,15 @@ const Entites = (function () {
       if (pieces.length) e.toune = pieces[Math.floor(B.rng() * pieces.length)].slug;
     }
     const r = reglesSpectacle();
-    for (let i = 0; i < (r.minimum || 3); i++) garnirLeCercle(e, true);
+    const mini = r.minimum || 3;
+    // ⚠️ `badauds`, pas `cercleEtChemin` : a l'ouverture on veut des gens
+    // ASSIS, pas des gens en route. Compter les seconds faisait ouvrir le
+    // numero devant deux personnes en attendant le troisieme — et le joueur
+    // qui marchait droit vers l'artiste arrivait pile pendant ces trois
+    // secondes-la.
+    for (let i = 0; i < mini * 3 && badauds(e).length < mini; i++) {
+      if (!garnirLeCercle(e, true)) break;
+    }
   }
 
   /** Une place libre dans le cercle, autour de l'artiste. Rend null s'il n'y a
@@ -598,6 +664,21 @@ const Entites = (function () {
     return out;
   }
 
+  /** Le cercle PLUS ceux qui marchent vers lui.
+
+      ⚠️ C'est ce compte-la qui decide s'il faut recruter, et pas `badauds` :
+      quelqu'un qui traverse la rue pour venir voir est deja invite. Sans lui,
+      on en appelait un de plus a chaque image de `majSortes` tant que le
+      premier n'etait pas arrive — six personnes convoquees pour trois places,
+      et la rue se vidait autour. */
+  function cercleEtChemin(e) {
+    let n = badauds(e).length;
+    for (const q of B.entites) {
+      if (q.versLeCercle === e && q.vivant && q.etat === 'cap') n++;
+    }
+    return n;
+  }
+
   /** Un spectateur de plus. `force` : on le FAIT NAITRE s'il n'y en a pas a
       recruter — sinon « toujours 3 a 5 » redevient un voeu.
 
@@ -612,25 +693,63 @@ const Entites = (function () {
     for (const q of pietonsAutour(e.x, e.y, portee)) {
       if (!recrutable(q, e)) continue;
       if (!Monde.ligneLibre(q.x, q.y, e.x, e.y)) continue;
-      asseoir(q, e);
-      return true;
+      return asseoir(q, e);
     }
-    // 2. Personne tout pres : on va chercher un peu plus loin, et il MARCHE.
     const place = placeDansLeCercle(e);
     if (!place) return false;
-    for (const q of pietonsAutour(e.x, e.y, portee * 3)) {
+    // 2. A L'OUVERTURE, ON INSTALLE. ⚠️ Un artiste nait toujours hors champ
+    // (`naitreLesSortes` le refuse a l'ecran), donc son cercle l'est aussi :
+    // on peut y poser quelqu'un qui passait plus loin sans que personne ne le
+    // voie se deplacer. Sans ce raccourci, le premier joueur a tourner le coin
+    // trouvait un jongleur tout seul — le public mettait les quatre secondes
+    // qu'il faut pour traverser cent trente pixels a pied, et « toujours »
+    // devenait « au bout d'un moment ».
+    if (force) {
+      // ⚠️ DANS TOUTE LA BULLE, pas seulement dans le coin. Sur cent trente
+      // pixels a la ronde il n'y a souvent qu'une ou deux personnes de libres
+      // — les autres regardent deja le numero d'a cote — et l'artiste ouvrait
+      // devant une personne. On va chercher plus loin : ca ne coute rien (le
+      // budget de la foule ne bouge pas, on DEPLACE quelqu'un) et personne ne
+      // le voit, puisqu'on ne prend que ceux qui sont hors champ.
+      for (const q of pietonsAutour(e.x, e.y, BULLE_OUBLI)) {
+        if (!recrutable(q, e) || visibleAEcran(q.x, q.y, 16)) continue;
+        q.x = place.x; q.y = place.y;
+        ajouterA(grille, q);          // il a change de case : l'index doit le savoir
+        return asseoir(q, e);
+      }
+    }
+    // 3. Sinon il MARCHE jusqu'au cercle — quelques secondes, et c'est bien
+    // mieux qu'un corps qui se materialise a trois tuiles du joueur.
+    // ⚠️ SAUF A L'OUVERTURE : un badaud en chemin n'est pas un badaud assis, et
+    // l'artiste ouvrirait devant deux personnes en attendant le troisieme.
+    // Hors champ, on n'a pas a faire marcher qui que ce soit.
+    if (!force) for (const q of pietonsAutour(e.x, e.y, portee * 3)) {
       if (!recrutable(q, e)) continue;
       q.etat = 'cap'; q.cap = { x: place.x, y: place.y }; q.capT = 0;
-      q.attroupe = null;                 // il quitte le numero d'a cote
       q.versLeCercle = e;
       return true;
     }
-    // 3. La rue est vide : il en NAIT un. Hors champ, toujours.
+    // 4. La rue est vide : il en NAIT un. Hors champ, toujours.
+    // ⚠️ ET DANS LE BUDGET DE LA FOULE. Un badaud est un passant comme un
+    // autre : le faire naitre hors du compte, c'est deux artistes qui ajoutent
+    // dix personnes par-dessus le plafond du quartier. Quand le budget est
+    // plein, il y a par definition du monde a recruter — les etapes 1 a 3
+    // trouvent quelqu'un, et cette derniere ne sert plus a rien.
+    if (foule() >= fouleVoulue()) return false;
     if (!force && visibleAEcran(place.x, place.y, 16)) return false;
-    const ne = creerPieton(place.x, place.y, archetypeDeRue(place.x, place.y));
+    // ⚠️ JAMAIS QUELQU'UN QUI VIENT AVEC. `archetypeDeRue` peut rendre la mere,
+    // et une mere fait naitre son petit avec elle : le badaud qu'on ajoutait
+    // pour tenir le budget en ajoutait DEUX, et la foule passait le plafond du
+    // quartier. Un spectateur est quelqu'un qui s'arrete, et quelqu'un qui
+    // s'arrete ne traine pas un enfant par la main.
+    let arch = archetypeDeRue(place.x, place.y);
+    for (let essai = 0; essai < 6 && arch && arch.accompagne; essai++) {
+      arch = archetypeDeRue(place.x, place.y);
+    }
+    if (!arch || arch.accompagne) return false;
+    const ne = creerPieton(place.x, place.y, arch);
     if (!ne) return false;
-    asseoir(ne, e);
-    return true;
+    return asseoir(ne, e);
   }
 
   /** Peut-on l'arracher a ce qu'il fait pour le planter devant un numero ?
@@ -639,16 +758,36 @@ const Entites = (function () {
       seul, et celui qui trainait deja a cote du jongleur restait le seul de la
       rue a ne pas le regarder. ⚠️ Et jamais quelqu'un qui a un METIER — le
       jogger a des ecouteurs, la contractuelle a un char a verbaliser, et un
-      artiste ne va pas regarder le voisin. */
+      artiste ne va pas regarder le voisin.
+
+      ⚠️ ET ON NE VOLE PAS LE PUBLIC DU VOISIN (`!q.attroupe`). C'etait permis,
+      et ca ne se voyait pas : deux artistes naissent dans le meme quartier, le
+      second n'a personne de libre a portee, alors il recrutait les trois
+      badauds du premier — qui se retrouvait SEUL au milieu de sa scene, et n'en
+      retrouvait plus jamais. Un numero sans personne, c'est exactement ce que
+      Martin a signale ; le faire arriver a coups de regles neuves aurait ete
+      une belle facon de ne rien reparer du tout. */
   function recrutable(q, e) {
     return q !== e && q.vivant && !q.metier && !q.personnage && !q.mission && !q.porteBut
-      && !q.suit && !q.petit && q.attroupe !== e && !q.versLeCercle
+      && !q.suit && !q.petit && !q.attroupe && !q.versLeCercle
       && (q.etat === 'flane' || q.etat === 'arret');
   }
 
-  /** Il se plante et il regarde. */
+  /** Il se plante et il regarde. Rend faux si le cercle est deja plein.
+
+      ⚠️ LE MAXIMUM SE TIENT ICI, a l'unique endroit ou quelqu'un entre dans un
+      cercle. `garnirLeCercle` comptait deja avant d'appeler du monde, mais
+      celui qui MARCHE vers le cercle arrive plus tard — et s'il arrive apres
+      que deux autres se soient assis, il faisait un sixieme. « Entre 3 et 5 »
+      a deux bouts, et le second est aussi une demande de Martin : au-dela, on
+      ne voit plus le numero, on voit un dos. */
   function asseoir(q, e) {
     const r = reglesSpectacle();
+    if (badauds(e).length >= (r.maximum || 5)) {
+      q.versLeCercle = null;
+      if (q.etat === 'cap') { q.etat = 'flane'; q.cap = null; }
+      return false;
+    }
     const patience = r.patience_images || [420, 1080];
     q.etat = 'arret';
     q.attroupe = e;
@@ -661,6 +800,7 @@ const Entites = (function () {
     // meme passant qui marchait en pensant a autre chose. C'est ce qui fait de
     // l'attroupement l'endroit de la rue ou il ne faut pas sortir une arme.
     q.probaTemoin = Math.min(1, (q.probaTemoin || 0.3) + (r.temoin_bonus || 0.4));
+    return true;
   }
 
   /** Il en a assez vu : il applaudit, laisse une piece, et s'en va. */
@@ -709,15 +849,33 @@ const Entites = (function () {
       if (Math.hypot(q.x - e.x, q.y - e.y) <= arrive) asseoir(q, e);
     }
     const vus = badauds(e);
+    const attendus = cercleEtChemin(e);
     const mini = r.minimum || 3, maxi = r.maximum || 5;
-    if (vus.length < mini) garnirLeCercle(e, false);
+    // ⚠️ ON APPELLE LA RELEVE AVANT QUE LA PLACE SE LIBERE. Un remplacant met
+    // deux a quatre secondes a traverser la rue : attendre que le cercle tombe
+    // a deux pour l'appeler, c'est deux secondes a deux — et « toujours entre
+    // 3 et 5 » devient « la plupart du temps ». On compte donc ceux qui seront
+    // ENCORE LA quand il arrivera, plus ceux qui sont deja en chemin.
+    const releve = r.releve_images || 200;
+    let tiennent = 0;
+    for (const q of vus) if (q.minuterie > releve) tiennent++;
+    if (attendus - vus.length + tiennent < mini) garnirLeCercle(e, false);
+    // ⚠️ ET LE DERNIER NE PART PAS AVANT QUE LA RELEVE SOIT LA. C'est ce qui
+    // fait la difference entre « presque toujours trois » et TOUJOURS : la
+    // releve met deux a quatre secondes a traverser la rue, parfois n'arrive
+    // jamais (une ruelle vide), et sans cette regle le cercle tombait a deux
+    // une fois sur seize. Quelqu'un qui reste un peu plus longtemps parce
+    // qu'ils ne sont plus que trois, c'est exactement ce que fait une vraie
+    // foule — on ne laisse pas un artiste tout seul.
+    if (vus.length <= mini) {
+      for (const q of vus) if (q.minuterie <= 30) q.minuterie += releve;
+    }
     // ⚠️ On n'en prend un de plus au-dela du minimum qu'a l'occasion : sans ce
     // frein, le cercle collait au maximum en permanence et la rue se vidait de
     // ses passants pour remplir quatre cercles.
-    else if (vus.length < maxi && B.rng() < 0.2) garnirLeCercle(e, false);
+    else if (attendus < maxi && B.rng() < 0.2) garnirLeCercle(e, false);
     animerLArtiste(e, vus.length);
     if (e.chapeauT > 0) e.chapeauT -= 15;
-    if (e.metier === 'musicien') majMusique(e);
   }
 
   /** Il BOUGE. ⚠️ Le defaut que Martin a vu, et le plus simple a dire :
@@ -742,25 +900,38 @@ const Entites = (function () {
     if (e.metier === 'amuseur' && combien < 1 && e.poseFixe === 3) e.poseFixe = 1;
   }
 
-  /** Sa toune, et elle sort DE LUI : plus on s'approche, plus c'est fort.
+  /** La musique de la rue, UNE FOIS PAR IMAGE.
 
-      ⚠️ Un seul musicien sonne a la fois — le plus proche. Dix musiciens
+      ⚠️ PAS dans `majSortes`, qui ne tourne qu'une image sur quinze. Deux
+      raisons, et les deux s'entendent : le volume suit la DISTANCE, et un
+      volume qui ne se recalcule que quatre fois par seconde saute par marches
+      quand on marche vers le musicien ; surtout, `Son.Rue` se tait des que
+      plus personne ne demande — a une demande sur quinze images, la toune
+      s'arretait et repartait sans arret.
+
+      ⚠️ Un seul musicien sonne a la fois — LE PLUS PROCHE. Dix musiciens
       feraient dix sequenceurs, et deux tounes a trente pixels l'une de l'autre
-      ne font pas de la musique, elles font du bruit. */
-  function majMusique(e) {
+      ne font pas de la musique, elles font du bruit. On le cherche donc ici,
+      une fois, plutot que de laisser chaque musicien se comparer aux autres. */
+  function laMusiqueDeLaRue() {
     const j = B.joueur;
-    if (!j || !e.toune || typeof Son === 'undefined' || B.interieur) return;
+    if (!j || typeof Son === 'undefined' || B.interieur) return;
+    let proche = null, dMin = Infinity;
+    for (const q of B.entites) {
+      if (q.type !== 'pieton' || q.metier !== 'musicien' || !q.vivant || !q.toune) continue;
+      if (q.etat !== 'fige') continue;              // assomme, il ne joue plus
+      const d = Math.hypot(q.x - j.x, q.y - j.y);
+      if (d < dMin) { dMin = d; proche = q; }
+    }
+    if (proche) majMusique(proche, dMin);
+  }
+
+  /** Sa toune, et elle sort DE LUI : plus on s'approche, plus c'est fort. */
+  function majMusique(e, d) {
+    const j = B.joueur;
     const r = (B.defs.pietons && B.defs.pietons.musicien) || {};
     const portee = r.portee_px || 260, plein = r.plein_px || 40;
-    const d = Math.hypot(e.x - j.x, e.y - j.y);
     if (d >= portee) return;
-    // ⚠️ Le plus proche gagne : si un autre musicien joue deja plus pres, on se
-    // tait. Sans ce test, celui qu'on appelle en dernier gagnait — c'est-a-dire
-    // le hasard de l'ordre du tableau d'entites.
-    for (const q of B.entites) {
-      if (q === e || q.metier !== 'musicien' || !q.vivant || !q.toune) continue;
-      if (Math.hypot(q.x - j.x, q.y - j.y) < d) return;
-    }
     const proche = d <= plein ? 1 : 1 - (d - plein) / (portee - plein);
     Son.Rue.demander(e.toune, proche * (r.volume === undefined ? 0.75 : r.volume));
     // Le titre, quand on s'arrete devant lui. ⚠️ Sans ca, cinq morceaux
@@ -1164,6 +1335,26 @@ const Entites = (function () {
     return nes;
   }
 
+  /** Combien de flaneurs la rue veut, ici et maintenant.
+
+      ⚠️ ECRIT UNE FOIS. `peupler` avait son calcul ; l'attroupement, qui fait
+      NAITRE des badauds quand la rue est vide, aurait eu le sien — et deux
+      regles qui disent « combien de monde » se contredisent le jour ou l'une
+      bouge. Le juge de la foule (`test_la_rue_se_peuple_puis_s_oublie`) a
+      attrape exactement ca : trente et une personnes pour un plafond de
+      vingt-huit, parce que le cercle naissait EN DEHORS du budget. */
+  function fouleVoulue() {
+    const zone = B.joueur ? Monde.zoneA(B.joueur.x, B.joueur.y) : null;
+    return Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone);
+  }
+
+  /** Combien de flaneurs vivent dans la bulle en ce moment. */
+  function foule() {
+    let n = 0;
+    for (const e of B.entites) if (e.type === 'pieton' && e.vivant && !e.metier) n++;
+    return n;
+  }
+
   /** Garde la rue peuplee : on nait hors champ, on s'oublie hors de la bulle. */
   function peupler() {
     let vivants = 0;
@@ -1187,8 +1378,7 @@ const Entites = (function () {
     // animation. Un flaneur sur le retour se choisit une porte et rentre.
     if (B.t % 45 === 0) quelquUnRentre();
     const zone = Monde.zoneA(B.joueur.x, B.joueur.y);
-    const voulu = Math.min(MAX_PIETONS, zone ? zone.pietons : 12) * Monde.rythme(zone);
-    if (vivants >= voulu || B.t % 12 !== 0) return;
+    if (vivants >= fouleVoulue() || B.t % 12 !== 0) return;
     const place = placeDeNaissance();
     if (!place) return;
     // ⚠️ Ne dans la porte : le battant s'ouvre AVANT qu'on le voie sortir.
@@ -2347,6 +2537,7 @@ const Entites = (function () {
     demeler();
     majParticules();
     if (B.joueur && !B.interieur) { peupler(); semerDesArmesDeFortune(); rumeurEtRepliques(); }
+    laMusiqueDeLaRue();
     B.stats.actifs = actifs;
   }
 
@@ -2583,7 +2774,7 @@ const Entites = (function () {
     peuplerInterieur,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, peupler, peuplerDabord,
-    naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes,
+    naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,

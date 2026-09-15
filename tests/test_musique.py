@@ -208,6 +208,152 @@ def test_deux_stations_ne_sonnent_pas_pareil(stations):
     assert len(set(chants)) == len(chants)
 
 
+# --- Les cinq pieces du musicien de rue -------------------------------------
+
+
+@pytest.fixture(scope="module")
+def rues():
+    return musique.rues()
+
+
+def test_le_musicien_a_cinq_pieces(rues):
+    """⚠️ Demande de Martin : « je veux que le musicien fasse vraiment de la
+    musique, 5 musiques differentes ».
+
+    La fiche « des sortes de gens » le promettait deja — « il joue, et CA
+    S'ENTEND » — et ce qui a ete livre est un corps avec une guitare dessinee
+    dessus et ZERO note. Le jeu avait le sequenceur, dix morceaux et un chef
+    d'orchestre ; l'homme a la guitare etait muet."""
+    assert len(rues) == 5, "cinq, pas quatre et pas six"
+    slugs = {m["slug"] for m in rues}
+    assert slugs == {s["slug"] for s in musique.RUE}
+    assert all(m["nom"] for m in rues), "une piece sans titre ne s'annonce pas"
+    # ⚠️ Le bouton RADIO d'un char ne doit JAMAIS tomber sur le gars du
+    # trottoir : c'est ce que dit `station`, et c'est Python qui le dit.
+    assert all(m["station"] is False for m in rues)
+    # Et le paquet les porte.
+    portees = {m["slug"] for m in audio.exporter()["musiques"]}
+    assert slugs <= portees, f"le navigateur ne les verrait pas : {slugs - portees}"
+
+
+def test_la_meme_graine_donne_la_meme_piece():
+    """⚠️ Meme raison que pour les stations : une toune qui change a chaque
+    demarrage du serveur, c'est un ETag qui bouge sans raison, un paquet qui ne
+    se met jamais en cache, et une piece qu'on ne peut plus corriger."""
+    for style in musique.RUE:
+        assert musique.generer_rue(style) == musique.generer_rue(style), style["slug"]
+
+
+def test_toutes_les_notes_d_une_piece_de_rue_sont_dans_sa_gamme(rues):
+    for piece, style in zip(rues, musique.RUE, strict=True):
+        for voix in piece["voix"]:
+            for note in voix["notes"]:
+                demi = (int(note[1]) - style["tonique"]) % 12
+                assert demi in style["gamme"], \
+                    f"{piece['slug']} / {voix['role']} : {note} hors de la gamme"
+                assert MIDI_MIN <= note[1] <= MIDI_MAX, note
+
+
+def test_une_piece_de_rue_est_UN_GARS_AVEC_UNE_GUITARE(rues):
+    """⚠️ DEUX VOIX, PAS QUATRE. Une station de radio a une basse, une nappe, un
+    chant et une batterie — c'est un groupe dans un studio. Un gars tout seul
+    sur un trottoir a six cordes : il gratte un accord de la main droite et
+    chante la melodie par-dessus. Quatre voix sous un mime auraient sonne comme
+    un haut-parleur, pas comme un musicien."""
+    for piece in rues:
+        roles = [v["role"] for v in piece["voix"]]
+        assert roles == ["gratte", "chant"], f"{piece['slug']} : {roles}"
+        assert all(v["forme"] != "bruit" for v in piece["voix"]), \
+            f"{piece['slug']} : une batterie sur le trottoir"
+
+
+def test_aucune_piece_de_rue_ne_deborde_de_sa_boucle(rues):
+    for piece in rues:
+        for voix in piece["voix"]:
+            motif = voix.get("motif", piece["pas"])
+            assert piece["pas"] % motif == 0, f"{piece['slug']} / {voix['role']}"
+            for note in voix["notes"]:
+                assert 0 <= note[0] < motif, \
+                    f"{piece['slug']} / {voix['role']} : pas {note[0]} hors du motif {motif}"
+
+
+def test_la_melodie_d_une_piece_de_rue_ne_se_mord_pas(rues):
+    """Un oscillateur par note : deux notes du chant qui se recouvrent sonnent
+    comme un accord qu'on n'a pas ecrit."""
+    for piece in rues:
+        chant = next(v for v in piece["voix"] if v["role"] == "chant")
+        notes = sorted(chant["notes"], key=lambda n: n[0])
+        for avant, apres in zip(notes, notes[1:]):
+            assert avant[0] + avant[2] <= apres[0], \
+                f"{piece['slug']} : la note du pas {avant[0]} mord sur {apres[0]}"
+
+
+def test_une_piece_de_rue_tourne_assez_longtemps(rues):
+    """⚠️ On s'arrete devant un musicien plus longtemps qu'une boucle de douze
+    secondes. Le nombre de tours se CALCULE sur le tempo (`RUE_SECONDES_MIN`) :
+    a deux tours fixes, le reel bouclait en 14 s et la valse en 12, et on
+    entendait la couture avant d'avoir fini de regarder."""
+    for piece in rues:
+        duree = musique.duree_s(piece)
+        assert musique.RUE_SECONDES_MIN <= duree <= 90, f"{piece['slug']} : {duree:.1f} s"
+
+
+def test_les_cinq_pieces_ne_sonnent_pas_pareil(rues):
+    """⚠️ Cinq morceaux qu'on prend pour un seul, ce sont quatre morceaux payes
+    pour rien. Cinq tempos, cinq tonalites, cinq melodies — et une seule a
+    TROIS TEMPS, ce qui s'entend meme sans rien connaitre a la musique."""
+    assert len({m["bpm"] for m in rues}) == 5, "deux pieces au meme tempo"
+    assert len({s["tonique"] for s in musique.RUE}) == 5, "deux pieces dans le meme ton"
+    chants = [tuple(n[1] for n in next(v for v in m["voix"] if v["role"] == "chant")["notes"])
+              for m in rues]
+    assert len(set(chants)) == 5, "deux pieces avec la meme melodie"
+    valses = [s for s in musique.RUE if s["mesure"] == 6]
+    assert len(valses) == 1, f"il faut une valse, et une seule : {[s['slug'] for s in valses]}"
+
+
+def test_le_volume_d_une_piece_de_rue_ne_sature_pas(rues):
+    """Les deux voix passent dans le meme gain, et ce gain est DEJA multiplie
+    par la distance : au plus fort, on est colle sur le musicien."""
+    for piece in rues:
+        pire = 0.0
+        for pas in range(piece["pas"]):
+            total = 0.0
+            for voix in piece["voix"]:
+                motif = voix.get("motif", piece["pas"])
+                for note in voix["notes"]:
+                    if note[0] != pas % motif:
+                        continue
+                    relatif = note[3] if len(note) > 3 else 1
+                    total += voix["volume"] * relatif * piece["volume"]
+            pire = max(pire, total)
+        assert pire <= 1.0, f"{piece['slug']} : {pire:.2f}"
+
+
+def test_le_musicien_de_rue_se_tasse_sous_une_poursuite():
+    """⚠️ Ce n'est pas une piste, c'est un SON DU MONDE : il joue par-dessus
+    l'ambiance du district, comme un moteur de char, et son volume vient de la
+    distance. Il n'a qu'une regle de priorite — quand la police te court apres,
+    la toune du guitariste n'a plus d'importance — et elle est ecrite ici,
+    comme le reste de l'echelle."""
+    assert "rue" not in musique.ECHELLE, "le musicien de rue n'est pas une piste"
+    sous = musique.MUSIQUE["rue_sous_etat"]
+    assert 0 < sous < 1, sous
+    assert audio.exporter()["musique"]["rue_sous_etat"] == sous, "le navigateur ne le lirait pas"
+
+
+def test_n_importe_quel_morceau_s_ecoute_avant_d_etre_livre():
+    """⚠️ `par_slug` ne cherchait que dans `MORCEAUX` — le seul theme ecrit a la
+    main. Les stations, les ambiances et les pieces de rue etaient donc
+    INECOUTABLES avec `scripts/musique_apercu.py`, alors que c'est exactement a
+    ca qu'il sert : juger une musique a l'oreille avant de la deployer. Cinq
+    pieces de rue qu'on ne peut pas ecouter, ce sont cinq pieces qu'on livre en
+    esperant."""
+    for morceau in audio.exporter()["musiques"]:
+        trouve = musique.par_slug(morceau["slug"])
+        assert trouve is not None, f"{morceau['slug']} ne s'ecoute pas"
+        assert trouve["slug"] == morceau["slug"]
+
+
 # --- Toute la musique est generee par IA (14 sept. 2026) --------------------
 #
 # ⚠️ Demande de Martin : « je veux que toutes les musiques soient des musiques

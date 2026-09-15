@@ -312,6 +312,12 @@ const Jeu = (function () {
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();
+    // ⚠️ ICI AUSSI, et pas dans `Entites` : le musicien de rue DEMANDE sa toune
+    // pendant la simulation, mais c'est l'horloge audio qui la joue — au menu,
+    // en pause, dans un magasin, il faut quand meme venir couper le son du gars
+    // qu'on a laisse sur le trottoir. Une musique qu'on n'arrete que la ou on
+    // la demarre est une musique qui reste allumee.
+    Son.Rue.tick();
     if (Entree.neuf('muet')) {
       B.options.muet = !B.options.muet;
       Son.majVolume();

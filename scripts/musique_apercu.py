@@ -136,7 +136,7 @@ def main() -> int:
 
     morceau = musique.par_slug(args.slug)
     if morceau is None:
-        connus = ", ".join(m["slug"] for m in musique.MORCEAUX)
+        connus = ", ".join(m["slug"] for m in musique.exporter())
         print(f"morceau inconnu : {args.slug} (connus : {connus})", file=sys.stderr)
         return 1
 

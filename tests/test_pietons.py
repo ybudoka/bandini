@@ -8,12 +8,12 @@ from app import armes, carte, pietons
 #: Les metiers qui se tiennent quelque part au lieu de marcher. ⚠️ Le CRIEUR
 #: en est : un crieur de journaux tient un coin de rue — c'est meme tout son
 #: metier, et un crieur qui se promene ne crie a personne.
-POSTES = {"ambulant", "musicien", "amuseur", "crieur"}
+POSTES = {"ambulant", "musicien", "amuseur", "jongleur", "echassier", "crieur"}
 
 #: Les SORTES : celles qui ont un corps a elles et une routine a elles. ⚠️ La
 #: liste est ici et pas dans le juge, parce que trois juges la lisent — et une
 #: liste recopiee trois fois finit par ne plus dire la meme chose aux trois.
-SORTES = {"musicien", "amuseur", "exhibitionniste",
+SORTES = {"musicien", "amuseur", "jongleur", "echassier", "exhibitionniste",
           "contractuelle", "touriste", "ivrogne", "jogger", "facteur",
           "crieur", "laveur", "pickpocket"}
 

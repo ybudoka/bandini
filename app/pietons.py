@@ -170,16 +170,47 @@ CATALOGUE: list[Pieton] = [
     #
     # `frequence=0` : elles ne naissent pas au hasard dans la foule, on les
     # POSE aux coins de rue, comme l'homme-sandwich.
+    #
+    # ⚠️ LES QUATRE ARTISTES TIENNENT LE CENTRE-VILLE (`districts`), et c'est
+    # une demande de Martin qui repare un defaut : ils naissaient PARTOUT, donc
+    # un mime dans une cour a ferraille de La Shop a 3 h du matin, devant
+    # personne. Le Faubourg est le centre-ville ouvrier (`devantures.py` le dit
+    # deja en toutes lettres) et le district le plus peuple de la ville. Un
+    # amuseur joue la ou il y a du monde ; ailleurs, il joue pour les goelands.
     _p("musicien", "Musicien de rue", "#6b4b8a", "#3a2a1a", "#e8b088", "#2a2a3a",
        sprite="musicien", vitesse=0.0, courage=0.2, temoin=0.6, vie=70,
-       argent=(15, 60), metier="musicien", frequence=0.0),
+       argent=(15, 60), metier="musicien", frequence=0.0,
+       districts=("faubourg",)),
     # ⚠️ L'amuseur attire un ATTROUPEMENT, et un attroupement est une foule de
     # temoins : faire un coup devant lui, c'est dix temoins d'un seul geste.
     # Ce n'est pas du decor, c'est l'endroit de la rue ou il ne faut pas
     # sortir une arme.
     _p("amuseur", "Amuseur public", "#efe6d0", "#2a2a2a", "#e8b088", "#1a1a22",
        sprite="amuseur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
-       argent=(10, 45), metier="amuseur", frequence=0.0),
+       argent=(10, 45), metier="amuseur", frequence=0.0,
+       districts=("faubourg",)),
+    # --- Deux amuseurs de plus (demande de Martin) -------------------------
+    # ⚠️ « Ils ne font rien et sont ennuyants » : le mime etait le SEUL genre
+    # d'amuseur, et il tenait l'image zero de son sprite du debut a la fin de
+    # la partie. Le jongleur et l'echassier ne sont pas deux costumes de plus —
+    # ce sont deux spectacles qu'on reconnait DE LOIN, et c'est tout leur
+    # interet : on voit le spectacle avant de voir l'artiste.
+    #
+    # Le jongleur a TROIS BALLES DANS LES AIRS, et elles sont dans le sprite :
+    # les dessiner a part aurait voulu dire un deuxieme chemin de dessin pour
+    # une seule sorte, et un objet de plus a trier par `y`.
+    _p("jongleur", "Jongleur", "#d4442e", "#3a2a1a", "#e8b088", "#f2c94c",
+       sprite="jongleur", vitesse=0.0, courage=0.3, temoin=0.8, vie=70,
+       argent=(10, 50), metier="jongleur", frequence=0.0,
+       districts=("faubourg",)),
+    # ⚠️ ET LUI DEPASSE LA FOULE. Son corps fait 26 pixels de haut au lieu de
+    # 13 : c'est la seule sorte de la ville qu'on voit PAR-DESSUS son propre
+    # attroupement, et c'est exactement pour ca qu'il existe. Un echassier a
+    # hauteur d'homme serait un homme.
+    _p("echassier", "Échassier", "#2f7f6f", "#5a3a1a", "#e8b088", "#c94f3a",
+       sprite="echassier", vitesse=0.0, courage=0.3, temoin=0.9, vie=70,
+       argent=(10, 50), metier="echassier", frequence=0.0,
+       districts=("faubourg",)),
     # ⚠️ Et lui, LA POLICE L'ARRETE. C'est la seule fois ou elle s'occupe de
     # quelqu'un d'autre que le joueur — et c'est ce gag qui la rend credible :
     # elle n'existe pas que pour toi.
@@ -233,6 +264,7 @@ CATALOGUE: list[Pieton] = [
        sprite="facteur", vitesse=1.0, courage=0.3, temoin=0.5, vie=70,
        argent=(5, 25), metier="facteur", frequence=0.0,
        districts=("erables", "faubourg")),
+
     # --- Troisieme vague : trois qui gagnent leur vie dans la rue ----------
     # ⚠️ Choisies pour leur CROCHET, pas pour leur costume — c'est la seule
     # regle du reservoir, et c'est celle qui fait qu'une sorte n'est pas un
@@ -262,7 +294,6 @@ CATALOGUE: list[Pieton] = [
        sprite="pickpocket", vitesse=1.1, courage=0.2, temoin=0.1, vie=65,
        argent=(20, 80), metier="pickpocket", frequence=0.0,
        districts=("faubourg", "quais")),
-
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.
@@ -306,6 +337,85 @@ REACTIONS = {
     "ivrogne_chute": 0.06,
 }
 
+#: LE SPECTACLE DE RUE — ce que Martin a demandé : « qu'ils soient animés, et
+#: qu'il y ait TOUJOURS entre 3 et 5 personnes autour ».
+#:
+#: ⚠️ « Toujours » est le mot qui change tout : jusqu'ici l'attroupement était
+#: une CHANCE, pas une règle. `attrouper` attendait qu'un passant entre dans le
+#: cercle et soit en train de flâner — dans une rue vide, il n'y avait personne,
+#: et ceux qui s'arrêtaient repartaient au bout de quelques secondes sans que
+#: rien ne les remplace. Le juge du banc posait lui-même quatre badauds avant de
+#: mesurer, c'est-à-dire qu'il mesurait l'attroupement d'une foule qu'il avait
+#: fabriquée. Un minimum est une règle : en dessous, un badaud NAÎT hors champ
+#: et vient se planter dans le cercle.
+#:
+#: ⚠️ Et les chiffres vivent ICI, pas dans `entites.js` : le navigateur les lit,
+#: il ne les invente pas. C'est ce qui permet à un juge de les relire — et à
+#: Martin de dire « plutôt 6 » sans ouvrir une ligne de JavaScript.
+SPECTACLE = {
+    "minimum": 3,               # jamais moins de monde autour d'un artiste
+    "maximum": 5,               # ni plus : au-delà, on ne voit plus le numéro
+    "rayon_px": 46,             # qui, en passant, se fait prendre par le numéro
+    "cercle_px": 24,            # à quelle distance du poste on se plante
+    "cercle_jeu_px": 8,         # de combien le cercle est irrégulier
+    "patience_images": (420, 1080),   # 7 à 18 s de spectacle, puis on repart
+    # ⚠️ LA RELEVE PART AVANT QUE L'AUTRE S'EN AILLE. Un remplacant met deux a
+    # quatre secondes a traverser la rue ; si on ne l'appelle qu'une fois la
+    # place vide, le cercle tombe a deux le temps qu'il arrive — et « toujours
+    # entre 3 et 5 » devient « la plupart du temps ». On compte donc ceux qui
+    # seront ENCORE LA dans autant d'images, et on appelle du monde des que ce
+    # compte-la passe sous le minimum.
+    "releve_images": 240,
+    "applaudit_images": 40,     # le temps d'un bravo
+    "applaudit_chance": 0.5,    # un spectateur sur deux applaudit en partant
+    "piece_chance": 0.45,       # et il laisse une pièce dans le chapeau
+    "piece": (1, 5),            # combien il laisse — c'est la paye de l'artiste
+    # ⚠️ Un badaud qui regarde un spectacle REGARDE : il témoigne mieux que le
+    # même passant qui marchait en pensant à autre chose.
+    "temoin_bonus": 0.4,
+    # Le rythme du numéro, en images par pose. ⚠️ Le mime, le jongleur et
+    # l'échassier ne marchent pas : leur animation ne peut pas venir de la
+    # distance parcourue (elle est nulle), elle vient d'ICI. C'est tout le
+    # défaut que Martin a vu — `imageDe` tombe sur l'image zéro pour un corps
+    # immobile, et le mime a tenu la même pose toute la partie.
+    # ⚠️ Le MUSICIEN n'est là qu'en repli : sa main suit le TEMPO du morceau
+    # qu'il joue (`Son.Rue.surLeTemps`), pas un compteur d'images. Ces
+    # chiffres-là servent quand le son est coupé ou que le navigateur retient
+    # encore l'audio — il gratte quand même, et c'est ce qu'il faut : un
+    # musicien immobile dans une partie muette serait le défaut d'origine.
+    "images_par_pose": {"musicien": 12, "amuseur": 34, "jongleur": 7, "echassier": 26},
+    # L'ENCHAINEMENT des images, par métier. ⚠️ Le jongleur fait une ronde
+    # (0-1-2-3 : la case vide de l'arc tourne) ; l'échassier TANGUE, et un
+    # tangage revient sur lui-même — c'est le même 0-1-0-2 que la marche du
+    # jeu, et pour la même raison : il faut repasser par le milieu.
+    "poses": {
+        # La main descend, gratte, remonte — et repasse par le milieu.
+        "musicien": [0, 1, 2, 1],
+        "amuseur": [0, 1, 2, 3],
+        "jongleur": [0, 1, 2, 3],
+        "echassier": [0, 1, 0, 2],
+    },
+    # ⚠️ COMBIEN D'ARTISTES DANS LA BULLE, TOUTES SORTES CONFONDUES. C'est ce
+    # qui rend « toujours 3 à 5 autour » tenable : quatre sortes à deux
+    # exemplaires feraient huit artistes, donc de 24 à 40 spectateurs, pour un
+    # budget de foule de 28 — la rue n'aurait plus eu un seul passant qui passe.
+    # Deux, c'est aussi ce qui les garde rares, donc remarqués.
+    "artistes_max": 2,
+}
+
+#: Ce que le musicien joue, et ce que le chapeau rapporte. ⚠️ Les cinq morceaux
+#: sont dans `musique.py` (RUE) : ici, seulement ce qui regarde le passant.
+MUSICIEN = {
+    "portee_px": 260,           # d'où on commence à l'entendre
+    "plein_px": 40,             # à partir d'où il joue à plein volume
+    "volume": 0.75,
+    # Le titre s'affiche quand on s'arrête devant lui. ⚠️ Sans ça, cinq
+    # morceaux différents et rien pour dire qu'ils le sont : on n'entend pas
+    # un catalogue, on entend une toune.
+    "titre_px": 56,
+    "titre_images": 180,
+}
+
 #: CE QUE LES SORTES DISENT — et ça vit ICI, pas dans le JavaScript.
 #:
 #: ⚠️ Le dépôt a payé huit fois le même défaut : « une fiche que le navigateur
@@ -332,6 +442,15 @@ PAROLES: dict[str, dict] = {
     # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
     # doit entendre, sinon le vol n'est qu'une animation.
     "pickpocket": {"au_voleur": "AU VOLEUR!"},
+    # --- Les amuseurs de rue ----------------------------------------------
+    # ⚠️ C'est LA FOULE qui parle, pas l'artiste — et c'est exactement ce qui
+    # manquait : un numéro sans un bravo n'est pas un spectacle, c'est un
+    # personnage debout. `bravo` est dit par un spectateur qui s'en va content.
+    "musicien": {"bravo": ["BRAVO!", "ENCORE!", "C'EST BEAU!"],
+                 "chapeau": "MERCI M'SIEUR-DAME"},
+    "amuseur": {"bravo": ["BRAVO!", "HA!", "IL EST BON"]},
+    "jongleur": {"bravo": ["BRAVO!", "OH!", "HOP LÀ!"], "numero": "ET HOP!"},
+    "echassier": {"bravo": ["BRAVO!", "R'GARDE EN HAUT!", "IL EST GRAND!"]},
 }
 
 #: Un piéton assomme rapporte ses poches ; un mort ne rapporte rien de plus.
@@ -373,6 +492,15 @@ def exporter() -> dict:
         "catalogue": CATALOGUE,
         "gangs": GANGS,
         "reactions": dict(REACTIONS),
+        # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
+        # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
+        # peut relire ni juger depuis la source de verite.
+        "spectacle": {**SPECTACLE,
+                      "patience_images": list(SPECTACLE["patience_images"]),
+                      "piece": list(SPECTACLE["piece"]),
+                      "images_par_pose": dict(SPECTACLE["images_par_pose"]),
+                      "poses": {m: list(p) for m, p in SPECTACLE["poses"].items()}},
+        "musicien": dict(MUSICIEN),
         "paroles": {slug: dict(mots) for slug, mots in PAROLES.items()},
         "poids_total": round(sum(p["frequence"] for p in ordinaires()), 3),
     }

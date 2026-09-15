@@ -1619,35 +1619,78 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
         }
 
         // 1. L'AMUSEUR attroupe — et un attroupement est une FOULE DE TEMOINS.
-        const amuseur = poser('amuseur', 30, 0);
-        const badauds = [];
-        for (let k = 0; k < 4; k++) {
-            const b = o.poser('passant', 30 + (k - 2) * 8, 14);
-            b.etat = 'flane'; b.probaTemoin = 0.2;
-            badauds.push(b);
+        // ⚠️ ON NE GARNIT PLUS LE CERCLE A LA MAIN, ET ON NE POSE PLUS
+        // L'ARTISTE A LA MAIN NON PLUS. L'ancien juge posait lui-meme quatre
+        // badauds avant de mesurer : il mesurait donc l'attroupement d'une
+        // foule qu'il avait fabriquee, et la vraie regle — « toujours entre 3
+        // et 5 personnes autour » — n'etait jugee nulle part. Ici c'est le
+        // MOTEUR qui installe l'amuseur, sur une scene de la carte et hors
+        // champ, exactement comme en partie ; le juge ne fait que regarder.
+        const regles = L.B.defs.pietons.spectacle;
+        let amuseur = null;
+        for (let i = 0; i < 400 && !amuseur; i++) {
+            o.frame(1);
+            amuseur = L.B.entites.find(function (q) { return q.metier === 'amuseur' && q.vivant; }) || null;
         }
-        L.Entites.indexer();
-        const avant = badauds.map(function (b) { return { etat: b.etat, t: b.probaTemoin }; });
-        o.frame(30);
+        if (!amuseur) return { pasDAmuseur: true };
+        // ⚠️ ON MARCHE JUSQU'A LUI, comme un joueur. Le contrat porte sur ce
+        // qu'on VOIT : un artiste ne d'un coup a l'autre bout du quartier met
+        // quelques secondes a rassembler son monde (les badauds traversent la
+        // rue a pied, ils ne se materialisent pas), et personne ne regarde ces
+        // secondes-la. Ce qui doit etre vrai, et l'est a chaque image, c'est :
+        // quand il est A L'ECRAN, il y a entre 3 et 5 personnes autour.
+        const cercles = [], temoinsFaibles = [];
+        let vuImages = 0, images = new Set();
+        for (let i = 0; i < 1200; i++) {
+            const dx = amuseur.x - j.x, dy = amuseur.y - j.y, n = Math.hypot(dx, dy) || 1;
+            if (n > 44) { j.x += dx / n * 0.9; j.y += dy / n * 0.9; L.Monde.centrerCamera(j.x, j.y); }
+            o.frame(1);
+            if (!amuseur.vivant) break;
+            images.add(amuseur.poseFixe);
+            if (!L.Entites.visibleAEcran(amuseur.x, amuseur.y, 0)) continue;
+            vuImages++;
+            const cercle = L.Entites.badauds(amuseur);
+            cercles.push(cercle.length);
+            for (const q of cercle) {
+                const arch = L.B.defs.pietons.catalogue.find(function (p) { return p.slug === q.arch; });
+                if (arch && q.probaTemoin <= arch.temoin) temoinsFaibles.push(q.arch);
+            }
+        }
         out.attroupement = {
-            arretes: badauds.filter(function (b) { return b.etat === 'arret'; }).length,
-            temoinsMieux: badauds.filter(function (b, i) { return b.probaTemoin > avant[i].t; }).length,
-            avant: avant[0].etat,
+            vuImages: vuImages,
+            mini: regles.minimum, maxi: regles.maximum,
+            plusPetit: cercles.length ? Math.min.apply(null, cercles) : null,
+            plusGrand: cercles.length ? Math.max.apply(null, cercles) : null,
+            temoinsFaibles: temoinsFaibles.length,
         };
-        for (const b of badauds) L.Entites.retirer(b);
+        // Et il BOUGE : c'etait tout le defaut. Un corps a `vitesse: 0` tombait
+        // sur l'image zero de son sprite du debut a la fin de la partie.
+        out.mime = { images: images.size, corps: amuseur.sprite };
         L.Entites.retirer(amuseur);
 
-        // 2. Le MUSICIEN attroupe aussi, et il tient son poste.
-        const mus = poser('musicien', 30, 0);
-        const passant = o.poser('passant', 34, 12);
-        passant.etat = 'flane';
-        L.Entites.indexer();
+        // 2. Le MUSICIEN attroupe aussi, il tient son poste, et IL JOUE.
+        // ⚠️ On le fait naitre par le moteur lui aussi — mais l'amuseur qu'on
+        // vient de retirer laisse la place a n'importe lequel des quatre, et
+        // l'ordre est tire au sort (sans quoi les deux premiers de la liste
+        // seraient les seuls a jamais naitre). On attend donc le musicien.
+        let mus = null;
+        for (let i = 0; i < 900 && !mus; i++) {
+            o.frame(1);
+            mus = L.B.entites.find(function (q) { return q.metier === 'musicien' && q.vivant; }) || null;
+            if (!mus) {
+                const autre = L.B.entites.find(function (q) {
+                    return q.vivant && L.Entites.SPECTACLES.indexOf(q.metier) >= 0; });
+                if (autre) L.Entites.retirer(autre);
+            }
+        }
+        if (!mus) return { pasDeMusicien: true };
         const poste = { x: mus.x, y: mus.y };
-        o.frame(40);
-        out.musicien = { arrete: passant.etat === 'arret',
+        o.frame(120);
+        out.musicien = { cercle: L.Entites.badauds(mus).length,
+                         toune: mus.toune,
                          bouge: Math.round(Math.hypot(mus.x - poste.x, mus.y - poste.y)),
                          corps: mus.sprite };
-        L.Entites.retirer(passant); L.Entites.retirer(mus);
+        L.Entites.retirer(mus);
 
         // 3. L'EXHIBITIONNISTE ouvre son manteau : elle crie et fuit.
         // ⚠️ On vide la rue d'abord : il ouvre son manteau AU PREMIER QUI
@@ -1676,14 +1719,39 @@ def test_une_sorte_de_gens_est_un_corps_et_une_routine(banc, paquet):
         return out;
     }""")
     a = r["attroupement"]
-    assert a["avant"] == "flane", "le décor du juge est faux : les badauds doivent flâner au départ"
-    assert a["arretes"] >= 3, "l'amuseur n'attroupe personne : %s" % a
+    assert a["vuImages"] > 300, "le juge n'a jamais vu l'amuseur à l'écran : %s" % a
+    # ⚠️ « Je veux qu'il y ait TOUJOURS entre 3 et 5 personnes autour »
+    # (Martin) — mesuré à CHAQUE IMAGE où on le voit, et les deux bornes
+    # viennent de la fiche, pas du juge.
+    assert a["plusPetit"] >= a["mini"], (
+        "l'amuseur s'est retrouvé devant %s personne(s) (la fiche en demande %s)"
+        % (a["plusPetit"], a["mini"])
+    )
+    assert a["plusGrand"] <= a["maxi"], (
+        "%s personnes autour : au-delà de %s on ne voit plus le numéro"
+        % (a["plusGrand"], a["maxi"])
+    )
     # ⚠️ Un badaud qui regarde un spectacle REGARDE : il témoigne mieux que le
     # même passant qui marchait en pensant à autre chose.
-    assert a["temoinsMieux"] >= 3, "l'attroupement ne fait pas de meilleurs témoins : %s" % a
-    assert r["musicien"]["arrete"] is True, "personne ne s'arrête pour le musicien"
-    assert r["musicien"]["bouge"] <= 2, "le musicien quitte son coin de rue : %s px" % r["musicien"]["bouge"]
-    assert r["musicien"]["corps"] == "musicien", "le musicien porte le corps commun"
+    assert a["temoinsFaibles"] == 0, (
+        "l'attroupement ne fait pas de meilleurs témoins : %s" % a
+    )
+    # ⚠️ ET IL BOUGE. C'est le retour de Martin, et c'est ce qu'aucun juge ne
+    # regardait : `imageDe` choisit son image d'après la distance parcourue, un
+    # corps à `vitesse: 0` n'en parcourt aucune, et le mime tenait l'image zéro
+    # toute la partie. Une seule image, c'est un mannequin.
+    assert r["mime"]["images"] >= 3, (
+        "le mime ne fait aucun numéro : %s image(s) en 300" % r["mime"]["images"]
+    )
+    assert r["mime"]["corps"] == "amuseur"
+    m = r["musicien"]
+    assert m["cercle"] >= 1, "personne ne s'arrête pour le musicien : %s" % m
+    # ⚠️ Et il a une TOUNE À LUI, tirée à la naissance parmi les cinq. Sans
+    # elle, le sprite porte une guitare et il ne sort pas une note — ce qui
+    # était exactement le cas jusqu'ici.
+    assert m["toune"] and m["toune"].startswith("rue_"), "le musicien ne joue rien : %s" % m
+    assert m["bouge"] <= 2, "le musicien quitte son coin de rue : %s px" % m["bouge"]
+    assert m["corps"] == "musicien", "le musicien porte le corps commun"
     m = r["manteau"]
     assert m["ouvert"] is True and m["image"] == 1, (
         "le manteau ne s'ouvre pas, ou sur la mauvaise image : %s" % m
@@ -1746,8 +1814,19 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         t.etat = 'flane';
         L.Entites.indexer();
         L.B.particules.length = 0;
-        let arrete = false;
-        for (let i = 0; i < 90 && !arrete; i++) { o.frame(1); if (t.etat === 'arret') arrete = true; }
+        // ⚠️ ON ATTEND LA PHOTO, PAS LE PREMIER ARRET. Le juge sortait de sa
+        // boucle des que le touriste s'arretait — or un flaneur s'arrete AUSSI
+        // tout seul (une fois sur trois, `majPieton`), et `majPhoto` ne part
+        // que depuis `flane`. Le juge lisait donc parfois une pause ordinaire
+        // et concluait « il ne regarde pas la vitrine ». Il ne tenait que tant
+        // que le de tombait bien, et il est tombe le jour ou une routine de
+        // plus a decale le hasard.
+        let arrete = false, photo = false;
+        for (let i = 0; i < 400 && !photo; i++) {
+            o.frame(1);
+            if (t.etat === 'arret') arrete = true;
+            if (t.face === 'haut' && L.B.particules.length > 0) photo = true;
+        }
         out.photo = { arrete: arrete, leveLaTete: t.face === 'haut',
                       flash: L.B.particules.length > 0, corps: t.sprite,
                       temoin: L.Entites.archetype('touriste').temoin };
@@ -3001,25 +3080,35 @@ def test_la_bagarre_tient_le_budget(banc):
             if (e.metier || e.personnage) metiers++; else flaneurs++;
         }
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
-                 flaneurs: flaneurs, metiers: metiers,
+                 flaneurs: flaneurs, metiers: metiers, budget: L.Entites.MAX_PIETONS,
                  particules: L.B.particules.length, decals: L.B.decals.length,
                  images: s.images, morceaux: s.morceaux,
                  nan: isNaN(L.B.joueur.x) || isNaN(L.B.joueur.y) };
     }""")
     assert r["etat"] in ("jeu", "pause")
     assert not r["nan"]
-    # ⚠️ LE BUDGET, C'EST CELUI DES FLANEURS, et il vaut `MAX_PIETONS` (22,
-    # entites.js) : c'est le seul nombre que `peupler()` tienne. Le reste de la
-    # figuration ne se regule pas par la foule — les douze vendeurs des kiosques
-    # de la ville naissent avec elle et ne dorment jamais, les six amuseurs, les
-    # trois personnages de l'histoire et les agents de patrouille s'ajoutent
+    # ⚠️ LE BUDGET, C'EST CELUI DES FLANEURS, et il vaut `MAX_PIETONS` : c'est
+    # le seul nombre que `peupler()` tienne. Le reste de la figuration ne se
+    # regule pas par la foule — les douze vendeurs des kiosques de la ville
+    # naissent avec elle et ne dorment jamais, les amuseurs, les trois
+    # personnages de l'histoire et les agents de patrouille s'ajoutent
     # par-dessus. Le juge disait `actifs <= 30` : arithmetiquement intenable
     # (22 + 12 font deja 34), il ne tenait que tant que le singe ne traversait
     # pas un quartier dense, et il est tombe le jour ou la ville a bouge d'une
     # tuile. On mesure donc les deux separement, et on garde un plafond sur le
     # total pour attraper un emballement.
-    assert r["flaneurs"] <= 22, f"{r['flaneurs']} flaneurs, le budget est de 22"
-    assert r["actifs"] <= 50, f"{r['actifs']} pietons actifs ({r['metiers']} a un metier)"
+    #
+    # ⚠️ ET LE CHIFFRE SE LIT DANS LE MOTEUR, il ne se recopie pas ici. Il
+    # etait ecrit « 22 » en dur : le jour ou le centre-ville a demande plus de
+    # monde (demande de Martin) et ou `MAX_PIETONS` est passe a 28, le juge
+    # n'a pas dit « le budget a change », il a dit « emballement ». Un plafond
+    # recopie dans un juge finit toujours par juger l'ancien.
+    assert r["flaneurs"] <= r["budget"], (
+        f"{r['flaneurs']} flaneurs, le budget est de {r['budget']}"
+    )
+    assert r["actifs"] <= r["budget"] + 28, (
+        f"{r['actifs']} pietons actifs ({r['metiers']} a un metier)"
+    )
     assert r["particules"] <= 300 and r["decals"] <= 150
     assert r["images"] <= 160, f"{r['images']} drawImage par image"
 
@@ -3374,7 +3463,7 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
         function tenir() {
           j.endurance = 100;
           const depart = { x: j.x, y: j.y };
-          let n = 0, parcouru = 0;
+          let n = 0;
           o.touche('ShiftLeft'); o.touche('KeyA');
           while (j.endurance > 0 && n < 2000) {
             // ⚠️ On mesure le JOUEUR, pas la foule : une flaneuse plantee sur
@@ -3382,19 +3471,10 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
             // 2026, le jour ou huit enseignes de plus ont deplace les portes
             // par ou les passants naissent) et la vitesse tombait de 5 %.
             for (const e of L.Entites.pietonsAutour(j.x, j.y, 60)) L.Entites.retirer(e);
-            // ⚠️ ET ON MESURE SUR PLACE, depuis que « l'eau n'est plus un mur » :
-            // deux mille images de course vers l'ouest finissent dans la baie,
-            // et le joueur n'y bute plus — il NAGE, a la moitie de sa vitesse.
-            // Le juge mesurait donc de la nage et concluait que le cafe
-            // ralentit. Ce qu'il veut savoir n'a rien a voir avec la
-            // geographie : combien de pixels par image, et combien d'images.
-            const avant = { x: j.x, y: j.y };
             o.frame(1); n++;
-            parcouru += Math.hypot(j.x - avant.x, j.y - avant.y);
-            j.x = depart.x; j.y = depart.y;
           }
           o.relacher('KeyA'); o.relacher('ShiftLeft');
-          return { images: n, px: parcouru };
+          return { images: n, px: Math.hypot(j.x - depart.x, j.y - depart.y) };
         }
         const ajeun = tenir();
         L.Missions.cafeine(j);
@@ -5063,15 +5143,22 @@ def test_on_prend_le_velo_du_cycliste(banc):
         velo.conducteur = 'trafic'; velo.etat = 'roule';
         L.Entites.indexer();
         const crimes = L.B.partie.stats.crimes;
+        // ⚠️ ON REPERE CELUI QUI EST NE, pas « combien de temoins il y a dans la
+        // ville ». Le juge comptait tous les `temoin` de la carte et en
+        // attendait UN : un deuxieme passant qui voit voler un velo sous son
+        // nez est pourtant exactement ce qu'on veut, et le jour ou le
+        // centre-ville a eu plus de monde (demande de Martin), le juge a dit
+        // « le cycliste ne temoigne pas » alors qu'ils etaient deux a le faire.
+        const avant = new Set(L.B.entites);
         L.Vehicules.monter(j, velo);
-        // ⚠️ CELUI QUI TOMBE DU VELO : un temoin pose SUR le velo. Compter
-        // tous les temoins en attendait un et en trouvait deux — un passant a
-        // cote voit lui aussi voler le velo, et c'est exactement ce qu'on veut.
-        // Ce qu'on juge, c'est que le cycliste tombe et temoigne, pas que
-        // personne d'autre ne regarde.
-        const cycliste = L.B.entites.filter(function (e) {
-            return e.type === 'pieton' && e.etat === 'temoin'
-                && Math.hypot(e.x - velo.x, e.y - velo.y) < 24;
+        const neufs = L.B.entites.filter(function (e) { return e.type === 'pieton' && !avant.has(e); });
+        // ⚠️ CELUI QUI TOMBE DU VELO : un temoin neuf pose SUR le velo. Compter
+        // tous les temoins neufs en attendait un et en trouvait deux — un
+        // passant ne a la meme image a cote de nous voit lui aussi voler le
+        // velo, et c'est exactement ce qu'on veut. Ce qu'on juge, c'est que le
+        // cycliste tombe et temoigne, pas que personne d'autre ne regarde.
+        const cycliste = neufs.filter(function (e) {
+            return e.etat === 'temoin' && Math.hypot(e.x - velo.x, e.y - velo.y) < 24;
         }).length;
         o.touche('KeyW'); o.frame(120); o.relacher('KeyW');
         return { dedans: j.dansVehicule === velo, cycliste: cycliste, crimes: L.B.partie.stats.crimes - crimes,
@@ -5079,7 +5166,7 @@ def test_on_prend_le_velo_du_cycliste(banc):
                  radio: L.Son.Radio.demandee };
     }""")
     assert r["dedans"] is True
-    assert r["cycliste"] >= 1, "le cycliste doit tomber et temoigner"
+    assert r["cycliste"] >= 1, "le cycliste doit tomber et temoigner"   # celui qui vient de tomber
     assert r["crimes"] >= 1
     assert r["vitesse"] > r["max"] * 0.8, "le velo n'avance pas"
     assert r["moteur"] is False and r["radio"] is None, "un velo n'a ni moteur ni radio"
@@ -5227,6 +5314,17 @@ def test_une_case_de_stationnement_se_peint_et_se_gare(banc):
             if (p > n) { n = p; mieux = cases[i]; }
         }
         L.B.joueur.x = mieux[0] * L.TT; L.B.joueur.y = mieux[1] * L.TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+        // ⚠️ ON FORCE LA REGLE, on ne joue pas sa probabilite — c'est la meme
+        // lecon que la chute de l'ivrogne. Un char ne se gare que lorsque le
+        // trafic ROULANT est au complet (`roulent >= voulu`, `vehicules.js`) :
+        // le juge esperait donc qu'en 900 images le quartier finisse par
+        // remplir ses rues, ce qui depend de trois tirages de de. Il a tenu
+        // jusqu'au jour ou une routine de plus a decale le hasard. On met le
+        // trafic voulu a zero : la condition est vraie tout de suite, et on
+        // mesure ce qu'on veut mesurer — OU se gare un char, pas QUAND.
+        const zone = L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y);
+        if (zone) zone.vehicules = 0;
         o.frame(900);
         const gares = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.etat === 'stationne'; });
         const poses = gares.map(function (v) {
