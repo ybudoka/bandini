@@ -348,8 +348,36 @@ def elan_pour_voler(vehicule: Vehicule, vol_px: float) -> int:
     raise ValueError(f"{vehicule['slug']} ne volera jamais {vol_px} px")
 
 
+#: L'OMBRE AU SOL — le filet de la refonte des vehicules.
+#:
+#: ⚠️ **Elle existe des maintenant, avant que les dessins changent**, et c'est
+#: voulu : le jour ou le char sera dessine de profil, il ne montrera plus ses
+#: 28 px de longueur quand il s'eloignera — un objet de 14 px de large, et son
+#: encombrement disparait de l'ecran. Or se garer dans une case, juger l'espace
+#: entre deux chars, reculer dans une ruelle, tout ca se joue A L'OEIL. L'ombre
+#: rend a l'oeil la longueur que le dessin ne montrera plus.
+#:
+#: ⚠️ Et elle a l'EMPREINTE DU CATALOGUE, orientee comme le char : une tache
+#: ronde ou carree ne dirait rien de ce qu'il prend comme place. C'est la meme
+#: empreinte que la physique (`longueur` x `largeur`), donc ce qu'on voit est
+#: exactement ce qui bloque.
+#:
+#: ⚠️ Les nombres etaient ECRITS EN DUR dans `dessinerUn` (0,30, 0,14, 0,35,
+#: 30). Une ombre qu'on ne peut pas regler depuis la fiche est un dessin qui
+#: decide de lui-meme comment la ville est eclairee.
+OMBRE = {
+    "part": 0.28,          # sa noirceur, pose au sol
+    "part_en_vol": 0.14,   # ce qu'elle perd en montant, au plus haut
+    "ecart_sol": 1,        # de combien elle deborde au sud-est, au sol
+    "ecart_par_z": 0.35,   # ... et de combien de plus par pixel d'altitude
+    "retrait_max": 0.35,   # ce qu'elle retrecit tout en haut
+    "z_haut": 30,          # l'altitude ou elle est « tout en haut »
+}
+
+
 def exporter_conduite() -> dict:
     return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE),
+            "ombre": dict(OMBRE),
             "saut_vitesse_min": saut_vitesse_min()}
 
 

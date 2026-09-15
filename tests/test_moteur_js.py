@@ -6778,21 +6778,36 @@ def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
     ombre collee sous le char ne dit aucune altitude, et c'est pour ca qu'un
     saut de sept pixels avait l'air de ne pas exister.
 
-    Le juge mesure ce qu'elle raconte : elle existe des le premier pixel de
-    vol, elle a la taille du char, elle retrecit et elle s'ecarte en montant.
+    Le juge mesure ce qu'elle raconte : elle a la taille du char, elle
+    retrecit et elle s'ecarte en montant.
+
+    ⚠️ **Reformule le 15 sept. 2026** : il exigeait qu'un char POSE AU SOL n'ait
+    AUCUNE ombre. C'etait la regle d'avant, et la refonte des vehicules la
+    change — l'ombre au sol permanente est le filet de la vue de profil, parce
+    qu'un char vu de dos ne montrera plus ses 28 px de longueur. Ce que le juge
+    voulait vraiment dire survit intact et se mesure mieux : au sol, l'ombre est
+    SOUS le char, pas detachee de lui. C'est l'ecart qui raconte l'altitude, et
+    a zero il doit etre nul ou d'un pixel.
     """
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ DEUX MESURES, ET IL FAUT LES DEUX. La TRACE dit ce qui est
+        // vraiment peint a l'ecran (une regle qui ne se dessinerait pas ne
+        // vaudrait rien) ; `ombreDe` dit OU l'ombre tombe — depuis qu'elle est
+        // tournee comme le char, l'ecart passe par le `translate` et la trace
+        // du rectangle ne le porte plus.
         function ombre(slug, z) {
             const v = o.char(slug, 0, 0, 0);
             v.z = z;
             const ctx = L.Base.ecran();
             ctx.traces = [];
             L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            const q = L.Vehicules.ombreDe(v);
             L.Entites.retirer(v);
             // L'ombre est le seul rectangle plein : le char, lui, est une image.
             const t = ctx.traces[0];
-            return t ? { x: t[0], y: t[1], l: t[2], h: t[3], couleur: t[4] } : null;
+            return t ? { l: t[2], h: t[3], couleur: t[4],
+                         ecart: +(q.x - v.x).toFixed(2), part: q.part } : null;
         }
         return {
             auSol: ombre('auto', 0),
@@ -6802,10 +6817,18 @@ def test_l_ombre_d_un_saut_raconte_la_hauteur(banc):
             autobus: ombre('autobus', 10),
         };
     }""")
-    assert r["auSol"] is None, "un char pose au sol ne projette pas d'ombre detachee"
+    assert r["auSol"], "un char pose au sol n'a plus d'ombre du tout"
+    # ⚠️ SOUS le char, pas a cote : au sol, l'ombre ne doit pas se detacher.
+    assert r["auSol"]["ecart"] <= 2, (
+        "l'ombre d'un char pose au sol est detachee de lui : %s" % r
+    )
     assert r["basse"], "une ombre qui n'arrive qu'au-dessus d'un seuil rate le debut du vol"
+    assert r["basse"]["ecart"] > r["auSol"]["ecart"], (
+        "l'ombre ne bouge pas des le premier pixel de vol : %s" % r
+    )
     assert r["haute"]["l"] < r["basse"]["l"], "l'ombre ne retrecit pas quand le char monte"
-    assert r["haute"]["x"] > r["basse"]["x"], "l'ombre ne s'ecarte pas quand le char monte"
+    assert r["haute"]["ecart"] > r["basse"]["ecart"], "l'ombre ne s'ecarte pas quand le char monte"
+    assert r["haute"]["part"] < r["auSol"]["part"], "l'ombre ne palit pas quand le char monte"
     assert r["autobus"]["l"] > r["moto"]["l"], \
         "l'autobus fait 48 px et la moto 20 : leur ombre ne peut pas etre la meme"
 

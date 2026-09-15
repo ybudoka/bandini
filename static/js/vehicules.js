@@ -2011,29 +2011,59 @@ const Vehicules = (function () {
 
   // --- Dessin --------------------------------------------------------------------------
 
+  /** L'ombre au sol d'un char : ou elle tombe, quelle taille elle fait,
+      comment elle est tournee et a quel point elle est noire.
+
+      ⚠️ **Elle existe TOUT LE TEMPS, pas seulement en vol** — c'est le filet
+      de la refonte des vehicules. Le jour ou le char sera dessine de profil,
+      il ne montrera plus ses 28 px de longueur en s'eloignant : un objet de
+      14 px de large, et son encombrement disparait de l'ecran. Or se garer
+      dans une case, juger l'espace entre deux chars, reculer dans une ruelle,
+      tout ca se joue A L'OEIL.
+
+      ⚠️ Et elle a l'EMPREINTE DU CATALOGUE, la meme que la physique : ce qu'on
+      voit est exactement ce qui bloque.
+
+      ⚠️ Les nombres viennent de la fiche (`vehicules.OMBRE`) : ils etaient
+      ecrits en dur ici, et une ombre qu'on ne peut pas regler depuis la fiche
+      est un dessin qui decide de lui-meme comment la ville est eclairee.
+
+      En montant, elle RETRECIT, elle S'ECARTE vers le sud-est (la lumiere
+      vient du nord-ouest, comme pour les facades) et elle palit — c'est elle
+      qui RACONTE la hauteur, et c'est pour ca qu'un saut se voit. */
+  function ombreDe(v) {
+    if (!v || !v.def) return null;
+    const f = (B.defs.conduite && B.defs.conduite.ombre) || null;
+    if (!f) return null;
+    const z = Math.max(0, v.z || 0);
+    const haut = Math.min(1, z / f.z_haut);              // 0 au sol, 1 tres haut
+    const ecart = f.ecart_sol + z * f.ecart_par_z;
+    return {
+      x: v.x + ecart, y: v.y + ecart, angle: v.angle || 0,
+      l: Math.max(4, Math.round(v.def.longueur * (1 - haut * f.retrait_max))),
+      h: Math.max(3, Math.round(v.def.largeur * (1 - haut * f.retrait_max))),
+      part: Math.max(0, f.part - haut * f.part_en_vol),
+    };
+  }
+
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
     const rot = Atlas.cuireRotations(v.sprite, def, v.swaps, ROTATIONS);
     let i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
     if (i < 0) i += ROTATIONS;
-    // ⚠️ L'ombre est ce qui RACONTE la hauteur. Avant, c'etait un rectangle de
-    // 20 x 10 fixe, pose des que `z > 2` : la meme tache pour une moto et pour
-    // un autobus de 48 px, qui ne retrecissait pas, ne s'ecartait pas et ne
-    // palissait pas. Une ombre collee sous le char ne dit aucune altitude —
-    // c'est pour ca qu'un saut avait l'air de ne pas exister.
-    //
-    // Elle fait donc la taille du char, elle RETRECIT en montant, elle
-    // S'ECARTE vers le sud-est (la lumiere vient du nord-ouest, comme pour les
-    // facades) et elle palit. Et elle existe des le premier pixel de vol,
-    // jamais a partir d'un seuil.
-    if (v.z > 0) {
-      const haut = Math.min(1, v.z / 30);                 // 0 au sol, 1 tres haut
-      const l = Math.max(4, Math.round(v.def.longueur * (1 - haut * 0.35)));
-      const h = Math.max(3, Math.round(v.def.largeur * (1 - haut * 0.35)));
-      const ecart = Math.round(v.z * 0.35);
-      ctx.fillStyle = 'rgba(0,0,0,' + (0.30 - haut * 0.14).toFixed(2) + ')';
-      ctx.fillRect(Math.round(v.x - l / 2 + ecart - cx), Math.round(v.y - h / 2 + ecart - cy), l, h);
+    const ombre = ombreDe(v);
+    if (ombre) {
+      // ⚠️ ORIENTEE COMME LE CHAR. Une tache alignee sur les axes ne dit rien
+      // de la place qu'il prend : c'est justement l'encombrement qu'on rend a
+      // l'oeil, et un autobus en travers de la rue n'a pas la meme empreinte
+      // qu'un autobus dans sa voie.
+      ctx.save();
+      ctx.translate(Math.round(ombre.x - cx), Math.round(ombre.y - cy));
+      ctx.rotate(ombre.angle);
+      ctx.fillStyle = 'rgba(0,0,0,' + ombre.part.toFixed(2) + ')';
+      ctx.fillRect(-ombre.l / 2, -ombre.h / 2, ombre.l, ombre.h);
+      ctx.restore();
       B.stats.rects++;
     }
     ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
@@ -2046,7 +2076,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn,
+    croisementLibre, creerSignalisation, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();
