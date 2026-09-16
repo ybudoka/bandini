@@ -213,6 +213,10 @@ SPRITES.homme_sandwich = {
 
 /* --- Le parc : trois dessins, et c'est LE TOIT QUI ROULE ---------------------
 
+   ⚠️ **Sauf la berline** (l'auto, le taxi, la police) et les deux-roues : ils
+   sont EN VOLUME et se projettent au cap (`MACHINE_BERLINE`, plus bas). Ce qui
+   suit vaut pour le reste du parc, qui attend son tour.
+
    ⚠️ **Le dessin qui roule dans la rue est `haut` — le char vu d'en haut, nez
    au NORD — et il TOURNE**, cap par cap, comme son ombre (`Atlas.toitDe` et
    `Atlas.cuireCap`, 32 crans). C'est la lecon du 15 septembre 2026 : un char
@@ -262,52 +266,6 @@ function nuancer(pal) {
   return Object.assign({ M: '#9a9ea6', B: '#c9ccd1', G: '#e6f6ff', E: '#3b556c' }, pal, nuances(pal.c));
 }
 
-const AUTO_COTE = [
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '............kCCCCCCk............',
-      '...........kGGvvkGGvk...........',
-      '..........kkvvvEkvvEk...........',
-      '....kCCCCCCccccccccccCCCCCCk....',
-      '..kttcccccccccccccDccccccccllk..',
-      '..kcccyyyyyyyyyyyyDyyyyyyyccck..',
-      '..kcccxcxcxcxcxcxcDcxcxcxcccck..',
-      '..kBBBkkkkkDDDDDDDDDDkkkkkBBBk..',
-      '.......kkk............kkk.......',
-      '......krMrk..........krMrk......',
-      '......krrrk..........krrrk......',
-      '.......kkk............kkk.......',
-      '................................',
-      '................................',
-    ];
-/* LA CHALOUPE — la dette nommee depuis M3, payee le 16 sept. 2026.
-
-   ⚠️ `phase: 2` voulait dire « sans sprite et sans trafic » : `vehicules.py`
-   declarait la coque depuis M3 (eau, friction 0,995, adherence 0,05, trois
-   cercles) et personne ne l'avait jamais dessinee. Ce qui la nomme vu d'en
-   haut : la PROUE POINTUE au nord, le tableau carre au sud, et le hors-bord
-   qui depasse derriere — une coque au trait droit se lit comme une caisse.
-
-   ⚠️ `cote` est dessinee comme pour tous les autres, et NON DESSINEE comme
-   pour tous les autres : depuis la refonte, c'est `haut` qui tourne (32 caps)
-   et l'elevation ne sert plus qu'a etre mesuree. Le juge du parc la lit pour
-   chaque vehicule — une coque sans profil le faisait planter, et « tous sauf
-   un » est exactement le genre d'exception qui se paie plus tard. */
 const BATEAU_COTE = [
       '................................',
       '................................',
@@ -417,72 +375,83 @@ const BATEAU_BAS = [
       '................................',
 ];
 
-const AUTO_HAUT = [
-      '................................',
-      '............kBBBBBBk............',
-      '...........kCccccccDk...........',
-      '..........kCccccccccDk..........',
-      '.........kCccccccccccDk.........',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '.......rkCccccccccccccDkr.......',
-      '.......rkCccccccccccccDkr.......',
-      '........kDDDDDDDDDDDDDDk........',
-      '........kCcDGvvvvvvEDcDk........',
-      '........kCcDvvvvvvvvDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDvvvvvvvvDcDk........',
-      '........kCcDGvvvvvvEDcDk........',
-      '........kDDDDDDDDDDDDDDk........',
-      '.......rkCccccccccccccDkr.......',
-      '.......rkCccccccccccccDkr.......',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '.........kCccccccccccDk.........',
-      '.........kttccccccccttk.........',
-      '..........ktkkkkkkkktk..........',
-      '...........kBBBBBBBBk...........',
-      '................................',
-      '................................',
-    ];
-const AUTO_BAS = [
-      '................................',
-      '............kBBBBBBk............',
-      '...........kCccccccDk...........',
-      '..........kCccccccccDk..........',
-      '.........kCccccccccccDk.........',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '.......rkCccccccccccccDkr.......',
-      '.......rkCccccccccccccDkr.......',
-      '........kDDDDDDDDDDDDDDk........',
-      '........kCcDGvvvvvvEDcDk........',
-      '........kCcDvvvvvvvvDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDCCCCCCCCDcDk........',
-      '........kCcDvvvvvvvvDcDk........',
-      '........kCcDGvvvvvvEDcDk........',
-      '........kDDDDDDDDDDDDDDk........',
-      '.......rkCccccccccccccDkr.......',
-      '.......rkCccccccccccccDkr.......',
-      '........kCccccccccccccDk........',
-      '........kCccccccccccccDk........',
-      '.........kCccccccccccDk.........',
-      '.........kllccccccccllk.........',
-      '..........klkkkkkkkklk..........',
-      '...........kBBBBBBBBk...........',
-      '................................',
-      '................................',
-    ];
+/* --- La berline : la carrosserie de l'auto, du taxi et de la police, EN VOLUME -
+
+   ⚠️ **Demande de Martin, apres le velo : « je veux que tu fasses une belle job
+   comme ca avec les voitures, commence par une ».** Le char qui roulait etait
+   son TOIT tourne (la pose `haut`) : vers l'est, un toit couche sur le flanc,
+   pas une auto de profil. Comme le velo, la berline est maintenant une machine
+   decrite dans l'espace, et `Atlas.projeter` la dessine au cap ou elle roule :
+   de profil ses quatre roues dans leurs passages, ses vitres et sa ceinture ;
+   de trois quarts son capot, son pare-brise et son flanc ; de dos son coffre et
+   ses feux. Les 32 caps suivent toujours l'ombre au cran pres.
+
+   A l'echelle du passant (9,1 px/m) : 28 px de long pour 3 m, 14 de large, un
+   toit a 11 px (1,20 m) et des roues de 6 — c'est ce qui la pose a cote d'un
+   passant de 16 sans en faire un jouet ni un autobus.
+
+   ⚠️ **Le profil est une SILHOUETTE EXTRUDEE** (`profil`), pas une boite : un
+   capot et un pare-brise en pente, et des passages de roue — une boite ne sait
+   faire ni l'un ni l'autre. L'habitacle est une deuxieme silhouette, plus
+   etroite et posee en arriere du milieu, comme sur les grilles d'avant.
+
+   ⚠️ `contour` : la silhouette est cernee de `k`, comme tout ce qui est dessine
+   a la main dans la ville. Le velo n'en a pas — ses tubes d'un pixel en
+   feraient des barres. */
+const MACHINE_BERLINE = {
+  profondeur: 0.5,
+  contour: true,
+  pieces: [
+    ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, 6.2],
+    ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, -6.2],
+    ['roue', -8.6, 3.0, 'r', 'M', 'M', 2, 6.2],
+    ['roue', -8.6, 3.0, 'r', 'M', 'M', 2, -6.2],
+    // La caisse : le nez, le capot, le coffre, et les deux passages de roue.
+    ['profil', [[14, 1.6], [14, 4.4], [12.8, 5.8], [-12.6, 6.0], [-14, 5.0], [-14, 1.6],
+                [-12.0, 1.6], [-11.8, 3.4], [-10.6, 4.6], [-8.6, 5.0], [-6.6, 4.6], [-5.4, 3.4], [-5.2, 1.6],
+                [5.2, 1.6], [5.4, 3.4], [6.6, 4.6], [8.6, 5.0], [10.6, 4.6], [11.8, 3.4], [12.0, 1.6]],
+     [-7, 7], 'c', 'DcccDDkkkkkkkkkkkkkkk'],
+    // L'habitacle : le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
+    ['profil', [[5.0, 5.9], [1.4, 11.0], [-6.2, 11.0], [-9.4, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
+    ['tube', [4.2, -5.0, 7.0], [4.2, 5.0, 7.0], 'G', 0.3],                // le reflet du pare-brise
+    ['tube', [12.8, 7, 5.9], [-12.6, 7, 6.0], 'C', 0.05],                 // la ligne de ceinture
+    ['tube', [12.8, -7, 5.9], [-12.6, -7, 6.0], 'C', 0.05],
+    ['tube', [5.0, 5.9, 5.9], [1.4, 5.9, 11.0], 'D', 0.05],               // les montants
+    ['tube', [5.0, -5.9, 5.9], [1.4, -5.9, 11.0], 'D', 0.05],
+    ['tube', [-1.8, 5.9, 6.0], [-1.8, 5.9, 11.0], 'D', 0.05],
+    ['tube', [-1.8, -5.9, 6.0], [-1.8, -5.9, 11.0], 'D', 0.05],
+    ['tube', [-6.2, 5.9, 11.0], [-9.4, 5.9, 6.0], 'D', 0.05],
+    ['tube', [-6.2, -5.9, 11.0], [-9.4, -5.9, 6.0], 'D', 0.05],
+    ['tube', [1.4, 5.9, 11.0], [-6.2, 5.9, 11.0], 'D', 0.05],
+    ['tube', [1.4, -5.9, 11.0], [-6.2, -5.9, 11.0], 'D', 0.05],
+    ['tube', [-0.2, 7.03, 1.8], [-0.2, 7.03, 5.6], 'D', 0.03],            // la fente des portieres
+    ['tube', [-0.2, -7.03, 1.8], [-0.2, -7.03, 5.6], 'D', 0.03],
+    ['bloc', [13.8, 14.5], [-6.8, 6.8], [1.6, 2.8], 'B', 'B', 'B', 0.1],  // pare-chocs
+    ['bloc', [-14.5, -13.8], [-6.8, 6.8], [1.6, 2.8], 'B', 'B', 'B', 0.1],
+    // ⚠️ Phares et feux ENVELOPPENT le coin : poses dans la caisse, ils ne se
+    // voyaient que de face ou de dos (4 caps sur 32), et un char de profil
+    // roulait tous feux eteints.
+    ['bloc', [12.9, 14.3], [4.0, 7.1], [3.4, 4.5], 'l', 'l', 'l', 0.2],   // phares
+    ['bloc', [12.9, 14.3], [-7.1, -4.0], [3.4, 4.5], 'l', 'l', 'l', 0.2],
+    ['bloc', [-14.3, -12.9], [4.0, 7.1], [3.6, 4.7], 't', 't', 't', 0.2], // feux
+    ['bloc', [-14.3, -12.9], [-7.1, -4.0], [3.6, 4.7], 't', 't', 't', 0.2],
+  ],
+};
+/* ⚠️ **LA LIVREE N'EST PAS DE LA CARROSSERIE.** Elle etait peinte dans la grille
+   commune, en `x` et `y`, et l'auto les rendait invisibles en les mettant a SA
+   couleur de palette — le rouge. Mais une auto nait de n'importe quelle couleur
+   du catalogue, et seul `c` change avec elle : une berline bleu marine aurait
+   roule avec une bande et un damier ROUGES sur le flanc (ca ne se voyait pas
+   tant que le flanc ne se dessinait pas). Le taxi et la police AJOUTENT donc
+   leur livree a la carrosserie ; l'auto n'en porte pas. */
+const LIVREE = [
+  ['tube', [12.4, 7.02, 5.2], [-12.4, 7.02, 5.2], 'y', 0.03],             // la bande, sous la ceinture
+  ['tube', [12.4, -7.02, 5.2], [-12.4, -7.02, 5.2], 'y', 0.03],
+  ['damier', [4.8, -4.8], 4.4, 7.02, 'x'],                                // le damier, entre les roues
+  ['damier', [4.8, -4.8], 4.4, -7.02, 'x'],
+];
+const MACHINE_BERLINE_LIVREE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE) });
+
 /* --- Les deux-roues : decrits EN VOLUME, et projetes au cap -------------------
 
    ⚠️ **Retour de Martin, capture a l'appui : « il faut ameliorer ca ».** Le
@@ -1760,50 +1729,47 @@ SPRITES.pickpocket = {
   },
 };
 
-SPRITES.auto = {
-  w: 32, h: 31, ancre: [16, 28],
-  pal: nuancer({ k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' }),
-  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
-};
+// ⚠️ Les trois de la carrosserie commune sont declares APRES les fonctions de
+// fiche (`enVolume`), plus bas : c'est la qu'ils prennent leur machine.
 SPRITES.bateau = {
   w: 32, h: 34, ancre: [16, 31],
   pal: nuancer({ k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030' }),
   swaps: ['c'], poses: { cote: [BATEAU_COTE], haut: [BATEAU_HAUT], bas: [BATEAU_BAS] },
 };
-SPRITES.taxi = {
-  w: 32, h: 31, ancre: [16, 28],
-  pal: nuancer({ k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', s: '#00000030' }),
-  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
-};
-SPRITES.police = {
-  w: 32, h: 31, ancre: [16, 28],
-  pal: nuancer({ k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' }),
-  swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
-};
-/** Une fiche de deux-roues : sa machine, et TROIS poses qui en sont tirees.
+/** Une fiche EN VOLUME : sa machine, et TROIS poses qui en sont tirees.
 
     ⚠️ Les poses `cote`, `haut`, `bas` ne sont plus dessinees a la main : ce
     sont les projections de la machine a l'est, au nord et au sud. Deux
-    dessins d'un meme velo, c'est deux velos qui finissent par diverger.
+    dessins d'un meme char, c'est deux chars qui finissent par diverger.
 
     ⚠️ La grille est CARREE et le point de sol est en son centre — c'est ce qui
     fait tourner le dessin sur son empreinte, comme l'ombre. L'`ancre` en est
     tiree pour que `Vehicules.centreDuToit` tombe au meme endroit : une demi-
     longueur sous le centre, la ou serait la ligne de sol d'un char. */
-function deuxRoues(machine, longueur, pal) {
-  const cote = 32;
+function enVolume(machine, longueur, cote, pal) {
   const vue = function (angle) { return [Atlas.projeter(machine, angle, cote)]; };
   return {
-    w: cote, h: cote, ancre: [cote / 2, cote / 2 - 1 + longueur / 2],
+    w: cote, h: cote, ancre: [cote / 2, cote / 2 - 1 + longueur / 2], machine: machine, pal: nuancer(pal), swaps: ['c'],
+    poses: { cote: vue(0), haut: vue(-Math.PI / 2), bas: vue(Math.PI / 2) },
+  };
+}
+/** Un deux-roues : une fiche en volume, et la selle ou le passant s'assoit. */
+function deuxRoues(machine, longueur, pal) {
+  return Object.assign(enVolume(machine, longueur, 32, pal), {
     // LA SELLE, en [dx, dy] depuis la ligne de sol du dessin vu d'en haut : la
     // ou l'ANCRE du passant assis se pose. ⚠️ Elle est TIREE de l'`assise` de
     // la machine — deux nombres pour un meme siege finissent par diverger — et
     // c'est un point DE LA MACHINE : elle tourne avec elle
     // (`Vehicules.imageDuCavalier`).
-    machine: machine, selle: [0, -machine.assise[0] - longueur / 2], pal: nuancer(pal), swaps: ['c'],
-    poses: { cote: vue(0), haut: vue(-Math.PI / 2), bas: vue(Math.PI / 2) },
-  };
+    selle: [0, -machine.assise[0] - longueur / 2],
+  });
 }
+// La berline : 28 px de long, sur une toile de 44 (sa diagonale, et le toit qui
+// monte au-dessus). ⚠️ Les trois ont la MEME carrosserie ; le taxi et la police
+// y ajoutent leur livree, `x` le damier et `y` la bande.
+SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.taxi = enVolume(MACHINE_BERLINE_LIVREE, 28, 44, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018' });
+SPRITES.police = enVolume(MACHINE_BERLINE_LIVREE, 28, 44, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8' });
 SPRITES.velo = deuxRoues(MACHINE_VELO, 16, { k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' });
 // ⚠️ LES PEDALES : un demi-tour tous les `pedale` pixels roules. C'est la fiche
 // qui dit qu'on pedale, pas un `slug === 'velo'` — la moto n'en a pas, et son

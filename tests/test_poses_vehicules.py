@@ -90,10 +90,15 @@ def test_l_ancre_est_la_ligne_de_sol_et_la_meme_pour_les_trois(banc):
     tournant — ce qui se voit à chaque coin de rue.
 
     On vérifie aussi que le bas du dessin **touche** cette ligne : une ancre
-    posée au bon endroit sur un dessin qui flotte ne vaut rien."""
+    posée au bon endroit sur un dessin qui flotte ne vaut rien.
+
+    ⚠️ Il se juge sur la **sport**, une grille dessinée à la main : depuis le
+    16 sept. 2026 la carrosserie de l'auto est EN VOLUME, ses poses sont tirées
+    d'une projection centrée sur son empreinte, et elle n'a plus de ligne de sol
+    à tenir (« la machine se projette au cap et suit son ombre »)."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const def = L.SPRITES.auto;
+        const def = L.SPRITES.sport;
         const bas = {};
         ['cote', 'haut', 'bas'].forEach(function (nom) {
             const g = def.poses[nom][0];
@@ -221,7 +226,9 @@ def test_le_toit_qui_tourne_porte_les_phares_ET_les_feux(banc):
         });
         return out;
     }""")
-    assert len(r) >= 9, "le décor du juge est faux : %s" % list(r)
+    # ⚠️ Sept chars roulent encore sur leur toit ; la berline et les deux-roues
+    # sont en volume, et leurs lampes se jugent cap par cap.
+    assert len(r) >= 6, "le décor du juge est faux : %s" % list(r)
     for sprite, m in r.items():
         if not m["dansBas"]:
             continue                      # un vélo n'a pas de phare : rien à porter
@@ -261,6 +268,9 @@ def test_l_atlas_ne_cuit_que_les_caps_qu_on_a_montres(banc):
         L.Vehicules.dessinerUn(ctx, v, 0, 0);
         L.Vehicules.dessinerUn(ctx, v, 0, 0);          // deux fois : la cuisson ne se refait pas
         const unCap = L.Atlas.taille - vide;
+        v.angle = 2 * Math.PI / n;
+        L.Vehicules.dessinerUn(ctx, v, 0, 0);
+        const parCap = L.Atlas.taille - vide - unCap;
         for (let i = 0; i < n; i++) { v.angle = i * 2 * Math.PI / n; L.Vehicules.dessinerUn(ctx, v, 0, 0); }
         const tour = L.Atlas.taille - vide;
         // Et la flotte entiere, chacun a l'arret, chacun de sa couleur.
@@ -274,15 +284,18 @@ def test_l_atlas_ne_cuit_que_les_caps_qu_on_a_montres(banc):
             flotte.push(def.slug);
             L.Entites.retirer(c);
         });
-        return { unCap: unCap, tour: tour, n: n, flotte: L.Atlas.taille, chars: flotte.length };
+        return { unCap: unCap, parCap: parCap, tour: tour, n: n, flotte: L.Atlas.taille, chars: flotte.length };
     }""")
     n = r["n"]
-    # Un char a l'arret : sa grille de toit, son toit peint, son cap. Trois.
+    # Un char a l'arret : sa grille de toit, son toit peint, son cap — trois ;
+    # en volume, la grille projetee de son cap et son canevas — deux.
     assert r["unCap"] <= 3, "un char à l'arrêt cuit %s entrées d'atlas" % r["unCap"]
+    # ⚠️ Un cap de plus coûte un canevas (le toit tourné), ou une grille et un
+    # canevas (la projection, cuite une fois par cap et peinte par couleur).
+    assert 1 <= r["parCap"] <= 2, "un cap de plus cuit %s entrées" % r["parCap"]
     # Un tour complet : les 32 caps, et rien de plus.
-    assert r["tour"] == r["unCap"] + n - 1, (
-        "un tour complet cuit %s entrées au lieu de %s" % (r["tour"], r["unCap"] + n - 1)
-    )
+    attendu = r["unCap"] + (n - 1) * r["parCap"]
+    assert r["tour"] == attendu, "un tour complet cuit %s entrées au lieu de %s" % (r["tour"], attendu)
     assert r["chars"] >= 10, "le décor du juge est faux : %s chars" % r["chars"]
     # ⚠️ Et la flotte à l'arrêt ne paie pas les caps qu'elle ne montre pas :
     # 32 d'avance par véhicule, c'était le millier de canevas d'avant.
@@ -353,30 +366,39 @@ def test_chaque_char_debout_se_sert_de_ses_tons(banc):
             assert n[ton] > 0, f"{slug} ne pose jamais le ton « {ton} » : {n}"
 
 
-def test_le_taxi_et_la_police_ont_retrouve_leur_livree(banc):
+def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(banc):
     """⚠️ Les premières grilles debout avaient PERDU les bandes `x` et `y` : le
     taxi et la police se dessinaient comme une auto repeinte. La carrosserie
     commune porte maintenant une bande `y` et un damier `x` — invisibles sur
     l'auto (où ils valent la couleur de caisse), noirs sur le taxi, bleu et
-    rouge sur la police. On cuit les trois et on compare pixel à pixel."""
+    rouge sur la police.
+
+    ⚠️ **Refait le 16 sept. 2026, la berline en volume.** « Invisibles sur
+    l'auto » ne tenait que pour une auto ROUGE : la palette mettait `x` et `y`
+    au rouge par défaut, et seul `c` change à la naissance — une berline bleu
+    marine aurait roulé avec une bande et un damier rouges sur le flanc, le jour
+    où son flanc s'est dessiné. La livrée s'AJOUTE donc à la carrosserie : le
+    taxi et la police portent toutes les pièces de l'auto, plus leur livrée, et
+    l'auto n'en porte pas."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const pix = function (slug) {
+        const machine = function (slug) { return L.SPRITES[slug].machine.pieces.map(function (p) { return JSON.stringify(p); }); };
+        const a = machine('auto'), t = machine('taxi'), p = machine('police');
+        const dedans = function (petit, grand) { return petit.every(function (q) { return grand.indexOf(q) >= 0; }); };
+        const lettres = function (slug) {
             const def = L.SPRITES[slug];
-            const cuit = L.Atlas.cuire(slug, def, null);
-            const c = cuit.poses.cote[0];
-            const ctx = c.getContext && c.getContext('2d');
-            return { pal: def.pal, grille: def.poses.cote[0].join('') };
+            const tout = ['cote', 'haut', 'bas'].map(function (n) { return def.poses[n][0].join(''); }).join('');
+            return { x: (tout.match(/x/g) || []).length, y: (tout.match(/y/g) || []).length };
         };
-        const a = pix('auto'), t = pix('taxi'), p = pix('police');
-        return { memeGrille: a.grille === t.grille && a.grille === p.grille,
-                 aXY: [a.pal.x === a.pal.c, a.pal.y === a.pal.c],
-                 tX: t.pal.x, tC: t.pal.c, pY: p.pal.y, pC: p.pal.c,
-                 grilleAY: (a.grille.match(/y/g) || []).length, grilleAX: (a.grille.match(/x/g) || []).length };
+        const tp = L.SPRITES.taxi.pal, pp = L.SPRITES.police.pal;
+        return { carrosserie: dedans(a, t) && dedans(a, p) && t.length > a.length && t.join() === p.join(),
+                 auto: lettres('auto'), taxi: lettres('taxi'), police: lettres('police'),
+                 tX: tp.x, tC: tp.c, pY: pp.y, pC: pp.c };
     }""")
-    assert r["memeGrille"] is True, "les trois ne partagent plus la carrosserie"
-    assert r["grilleAY"] > 0 and r["grilleAX"] > 0, "la carrosserie ne porte plus de livrée : %s" % r
-    assert r["aXY"] == [True, True], "sur l'auto, la livrée doit être invisible : %s" % r
+    assert r["carrosserie"] is True, "le taxi et la police ne sont plus la carrosserie de l'auto plus une livrée : %s" % r
+    assert r["auto"] == {"x": 0, "y": 0}, "l'auto porte une livrée, qui ne suit pas sa couleur : %s" % r["auto"]
+    for slug in ("taxi", "police"):
+        assert r[slug]["x"] > 0 and r[slug]["y"] > 0, f"{slug} ne montre pas sa livrée : {r[slug]}"
     assert r["tX"] != r["tC"], "le taxi n'a pas de damier : %s" % r
     assert r["pY"] != r["pC"], "la police n'a pas sa bande : %s" % r
 
@@ -566,7 +588,10 @@ def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
     }""")
     assert r["sport"]["hauteur"] < r["auto"]["hauteur"], "la sport n'est pas plus basse que l'auto : %s" % r
     assert r["sport"]["pneuDansLaCaisse"] > 0, "les roues de la sport pendent sous la caisse : %s" % r
-    assert r["auto"]["pneuDansLaCaisse"] == 0, "le décor du juge est faux : l'auto aussi a ses roues dans les ailes (%s)" % r
+    # ⚠️ Le décor d'avant disait « l'auto, elle, n'a pas ses roues dans les
+    # ailes ». Depuis qu'elle est EN VOLUME (16 sept. 2026), ses roues sont dans
+    # de vrais passages : la sport se juge sur sa propre grille, et l'auto ne
+    # sert plus que de toise.
 
 
 def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
@@ -588,7 +613,10 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
         const out = {};
         L.B.defs.vehicules.forEach(function (v) {
             const def = L.SPRITES[v.sprite];
-            if (!def || def.rotations) return;
+            // ⚠️ Une machine EN VOLUME n'a pas de pose de dos dessinée : la sienne
+            // est sa projection, qui montre sa longueur au biais du sol, comme son
+            // ombre (« la machine se projette au cap et suit son ombre »).
+            if (!def || def.rotations || def.machine) return;
             const mesure = function (nom) {
                 const g = def.poses[nom][0];
                 let premier = -1, dernier = -1, large = 0;
@@ -606,7 +634,7 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
         });
         return out;
     }""")
-    assert len(r) >= 10, "trop peu de véhicules debout : %s" % list(r)
+    assert len(r) >= 6, "trop peu de véhicules debout : %s" % list(r)
     for slug, m in r.items():
         lon, lat = m["longueur"], m["largeur"]
         for nom, pose in (("de dos", m["dos"]), ("de face", m["face"])):
@@ -681,7 +709,7 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
         return out;
     }""")
     assert len(r) >= 10, "trop peu de véhicules : %s" % list(r)
-    assert {s for s, m in r.items() if m["machine"]} == {"velo", "moto"}, "le décor du juge est faux : %s" % r.keys()
+    assert {"velo", "moto", "auto"} <= {s for s, m in r.items() if m["machine"]}, "le décor du juge est faux : %s" % r.keys()
     for slug, m in r.items():
         for i, (dx, dy) in enumerate(m["poses"]):
             assert (dx, dy) == (0, 0), (
@@ -783,7 +811,7 @@ TRACER = """
 """
 
 
-def test_de_profil_un_deux_roues_montre_ses_deux_roues(banc):
+def test_de_profil_une_machine_montre_ses_roues(banc):
     """⚠️ **Retour de Martin, capture à l'appui : « il faut améliorer ça ».**
 
     Le vélo qui roulait était son TOIT, tourné comme celui d'un char — et vu
@@ -795,11 +823,15 @@ def test_de_profil_un_deux_roues_montre_ses_deux_roues(banc):
     chars en marche roulent à moins de 2° d'un cap cardinal) : sa rangée la plus
     basse — le sol — touche **deux roues séparées**, et il monte d'au moins un
     diamètre de roue. Une machine vue d'en haut n'a qu'un point au sol, là où
-    finit la barre de son guidon."""
+    finit la barre de son guidon.
+
+    ⚠️ Et la berline (16 sept. 2026) : vers l'est, on voyait son toit couché sur
+    le flanc. De profil, elle touche le sol par ses deux roues du côté qu'on
+    voit."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const n = L.Vehicules.ROTATIONS, out = {};
-        ['velo', 'moto'].forEach(function (slug) {
+        Object.keys(L.SPRITES).filter(function (s) { return L.SPRITES[s].machine; }).forEach(function (slug) {
             const def = L.SPRITES[slug];
             const g = L.Atlas.projeter(def.machine, L.Vehicules.capDe(0) * 2 * Math.PI / n - Math.PI / 2, def.w);
             const peintes = [];
@@ -813,6 +845,7 @@ def test_de_profil_un_deux_roues_montre_ses_deux_roues(banc):
         });
         return out;
     }""")
+    assert {"velo", "moto", "auto", "taxi", "police"} <= set(r), "le décor du juge est faux : %s" % list(r)
     for slug, m in r.items():
         assert m["touches"] == 2, (
             f"{slug} de profil : sa rangée de sol touche {m['touches']} fois ({m['sol']!r}) — "
@@ -840,7 +873,7 @@ def test_la_machine_se_projette_au_cap_et_suit_son_ombre(banc, paquet):
         L.Jeu.commencer();
         """ + TRACER + """
         const n = L.Vehicules.ROTATIONS, out = {};
-        ['velo', 'moto'].forEach(function (slug) {
+        Object.keys(L.SPRITES).filter(function (s) { return L.SPRITES[s].machine; }).forEach(function (slug) {
             const def = L.SPRITES[slug], K = def.machine.profondeur;
             const dessins = {}, faux = [], envers = [];
             let deux = 0;
@@ -872,6 +905,7 @@ def test_la_machine_se_projette_au_cap_et_suit_son_ombre(banc, paquet):
     }""")
     n = r.pop("n")
     biais = paquet["conduite"]["ombre"]["profondeur"]
+    assert {"velo", "moto", "auto", "taxi", "police"} <= set(r), "le décor du juge est faux : %s" % list(r)
     for slug, m in r.items():
         assert m["faux"] == [], f"{slug} : aux caps {m['faux']}, ce qui se peint n'est pas sa projection"
         assert m["dessins"] == n, f"{slug} : {m['dessins']} dessins pour {n} caps — il claque au lieu de tourner"

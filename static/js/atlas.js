@@ -180,16 +180,58 @@ const Atlas = (function () {
     }
     for (const p of machine.pieces) {
       if (p[0] === 'roue') {
-        // [u, rayon, pneu, jante, moyeu, largeur] — le pneu en deux passes pour
-        // qu'il reste plein dans ses ellipses, `largeur` > 1 pour une moto.
-        const u = p[1], r = p[2], larges = p[6] || 1;
+        // [u, rayon, pneu, jante, moyeu, largeur, w] — le pneu en deux passes
+        // pour qu'il reste plein dans ses ellipses, `largeur` > 1 pour une moto
+        // ou un char, `w` pour une roue qui n'est pas dans l'axe.
+        const u = p[1], r = p[2], larges = p[6] || 1, w0 = p[7] || 0;
         for (let e = 0; e < larges; e++) {
-          const w = larges > 1 ? (e - (larges - 1) / 2) * 0.8 : 0;
+          const w = w0 + (larges > 1 ? (e - (larges - 1) / 2) * 0.8 : 0);
           anneau(u, w, r, r - 0.1, p[3]);
           anneau(u, w, r, r - 0.7, p[3]);
         }
-        if (p[4]) anneau(u, 0, r, r - 1.4, p[4], 0.01);
-        if (p[5]) point(u, 0, r, p[5], 0.3);
+        // ⚠️ La jante et le moyeu sur la face du DEHORS : un char a une roue de
+        // chaque cote, et de chacune on ne voit que l'exterieur.
+        const dehors = w0 + Math.sign(w0) * (larges - 1) * 0.4;
+        if (p[4]) anneau(u, dehors, r, r - 1.4, p[4], 0.01);
+        if (p[5]) point(u, dehors, r, p[5], 0.3);
+      } else if (p[0] === 'profil') {
+        // [[[u, z], ...], [w0, w1], flanc, aretes, avance] : une SILHOUETTE DE
+        // PROFIL extrudee sur la largeur — un capot et un pare-brise en pente,
+        // des passages de roue, ce qu'une boite ne sait pas faire. Les deux
+        // flancs se remplissent de `flanc` ; l'arete k -> k+1 balaie la largeur
+        // avec la lettre `aretes[k]` ('.' : rien, elle ne se voit pas).
+        const P = p[1], W = p[2], av = p[5], pas = 0.25;
+        let u0 = Infinity, u1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+        P.forEach(function (q) { u0 = Math.min(u0, q[0]); u1 = Math.max(u1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); });
+        const dedans = function (u, z) {
+          let c = false;
+          for (let k = 0, m = P.length - 1; k < P.length; m = k++) {
+            const a = P[k], b = P[m];
+            if ((a[1] > z) !== (b[1] > z) && u < (b[0] - a[0]) * (z - a[1]) / (b[1] - a[1]) + a[0]) c = !c;
+          }
+          return c;
+        };
+        for (let u = u0; u <= u1 + 1e-6; u += pas) {
+          for (let z = z0; z <= z1 + 1e-6; z += pas) {
+            if (dedans(u, z)) { point(u, W[0], z, p[3], av); point(u, W[1], z, p[3], av); }
+          }
+        }
+        for (let k = 0; k < P.length; k++) {
+          const ch = p[4][k];
+          if (!ch || ch === '.') continue;
+          const a = P[k], b = P[(k + 1) % P.length];
+          const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / pas));
+          for (let t = 0; t <= n; t++) {
+            const u = a[0] + (b[0] - a[0]) * t / n, z = a[1] + (b[1] - a[1]) * t / n;
+            for (let w = W[0]; w <= W[1] + 1e-6; w += pas) point(u, w, z, ch, av);
+          }
+        }
+      } else if (p[0] === 'damier') {
+        // [[u0, u1], z, w, lettre] : un pixel sur deux, sur deux rangees
+        // decalees — le damier d'un taxi, a l'echelle d'une portiere.
+        for (let u = p[1][0]; u >= p[1][1] - 1e-6; u -= 1) {
+          point(u, p[3], Math.round(p[1][0] - u) % 2 === 0 ? p[2] : p[2] - 1, p[4], 0.03);
+        }
       } else if (p[0] === 'tube') {
         tube(p[1], p[2], p[3], p[4]);
       } else if (p[0] === 'point') {
@@ -204,6 +246,21 @@ const Atlas = (function () {
         }
         for (let w = W[0]; w <= W[1] + 1e-6; w += pas) {
           for (let z = Z[0]; z <= Z[1] + 1e-6; z += pas) { point(U[0], w, z, p[6], av); point(U[1], w, z, p[6], av); }
+        }
+      }
+    }
+    // LE CONTOUR : la silhouette cernee de `k`, comme tout ce qui est dessine
+    // a la main dans la ville. Seulement le DEHORS — un trait sur les aretes
+    // du dedans ferait des vitres en vitrail. Un velo n'en veut pas : ses
+    // tubes d'un pixel deviendraient des barres de trois.
+    if (machine.contour) {
+      const peint = lettres.slice();
+      for (let y = 0; y < cote; y++) {
+        for (let x = 0; x < cote; x++) {
+          const i = y * cote + x;
+          if (peint[i] !== '.') continue;
+          if ((x > 0 && peint[i - 1] !== '.') || (x < cote - 1 && peint[i + 1] !== '.') ||
+              (y > 0 && peint[i - cote] !== '.') || (y < cote - 1 && peint[i + cote] !== '.')) lettres[i] = 'k';
         }
       }
     }

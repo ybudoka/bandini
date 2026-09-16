@@ -4180,7 +4180,9 @@ def test_les_phares_pointent_ou_le_char_va(banc, paquet):
         });
         return out;
     }""")
-    assert len(r) >= 10, "trop peu de véhicules : %s" % list(r)
+    # ⚠️ Sept chars roulent encore sur leur toit ; la berline et les deux-roues
+    # sont en volume, et leurs lampes se jugent cap par cap.
+    assert len(r) >= 6, "trop peu de véhicules : %s" % list(r)
     GYRO = {"ambulance", "remorqueuse"}
     for slug, m in r.items():
         # ⚠️ L'ancre est au MILIEU : un dessin qui tourne autour d'un point
