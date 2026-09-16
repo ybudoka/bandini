@@ -2845,6 +2845,22 @@ const Entites = (function () {
       alerter(e.x, e.y, source, 1);
       return false;
     }
+    // ⚠️ RIEN N'ATTEINT QUI EST ASSIS DANS UN CHAR — retour de Martin : « quand
+    // on est dans un voiture ou autre, il ne faut pas que les pietons puisse
+    // nous faire du domage ». Un passant cognait a travers la portiere et une
+    // balle traversait la tole comme si elle n'etait pas la.
+    //
+    // ⚠️ LA REGLE EXISTAIT DEJA, ecrite une fois pour le feu : un brasier mord
+    // le CHAR et saute qui est dedans (`Combat.majBrasiers`). Elle vit
+    // desormais ICI, au seul endroit par ou passe toute blessure du jeu,
+    // plutot qu'en trois exemplaires dans `Combat` — un poing, une balle, une
+    // grenaille, et le prochain qui s'ajoutera.
+    //
+    // ⚠️ Ce qui SORT du char descend AVANT de blesser, et c'est ce qui rend la
+    // ligne sans danger : l'explosion fait `descendre` celui qui est dedans
+    // avant de le souffler, l'ejection aussi, et le char qui renverse quelqu'un
+    // ne regarde que ceux qui marchent.
+    if (e.dansVehicule) return false;
     e.vie -= degats;
     e.menace = source || e.menace;
     e.recul = Math.max(e.recul, opts.renverse ? 22 : 8);

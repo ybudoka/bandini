@@ -685,7 +685,11 @@ const Hud = (function () {
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
     if (d.qui) texte(ctx, d.qui.toUpperCase(), 18, VH - h - 2, '#e8b33c', 1);
     d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, 18, VH - h + 8 + i * 9, '#efe6d0', 1); });
-    if (B.cinema && (B.t >> 4) % 2 === 0) {
+    // ⚠️ L'HORLOGE DE L'OEIL (`B.image`), PAS CELLE DU MONDE (`B.t`) : depuis
+    // qu'un dialogue fige la ville (`Jeu.maj`), `B.t` ne bouge plus pendant
+    // qu'on lit — et « ACTION > » serait reste eteint (ou allume) tout l'appel,
+    // c'est-a-dire au seul moment ou il a quelque chose a dire.
+    if (B.cinema && (B.image >> 4) % 2 === 0) {
       const suite = B.cinema.i < B.cinema.lignes.length - 1 ? 'ACTION >' : 'ACTION > FIN';
       texte(ctx, suite, VW - 18 - Atlas.largeurTexte(suite, 1), VH - 16, '#8a8698', 1);
     }

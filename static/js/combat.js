@@ -397,7 +397,17 @@ const Combat = (function () {
         return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
       })[0];
       if (touche && (!p.cloche || p.z < 14)) {
-        Entites.blesser(touche, p.degats, p.tireur, {
+        // ⚠️ DANS UN CHAR, C'EST LA TOLE QUI PREND. `Entites.blesser` refuse
+        // qui est assis dans un char — c'est la qu'est la regle — et sans cette
+        // ligne, le seul effet de l'abri serait de faire DISPARAITRE la balle :
+        // la police aurait pu vider ses chargeurs sur une carrosserie sans
+        // jamais rien obtenir, et un char serait devenu le seul endroit du jeu
+        // ou l'on ne risque rien. C'est le meme geste que le brasier, qui
+        // endommage le char plutot que son conducteur.
+        // ⚠️ Seule la balle qui aurait touche LE CONDUCTEUR mord la tole : tirer
+        // sur le capot d'un char vide ne fait toujours rien.
+        if (touche.dansVehicule) Vehicules.endommager(touche.dansVehicule, p.degats, p.tireur);
+        else Entites.blesser(touche, p.degats, p.tireur, {
           saigne: p.saigne, angle: Math.atan2(p.vy, p.vx),
           assomme: false, renverse: false,
         });

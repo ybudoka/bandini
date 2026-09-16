@@ -362,6 +362,29 @@ const Jeu = (function () {
     if (B.etat === 'jeu') {
       if (Entree.neuf('pause')) { pause(); Entree.videPresse(); return; }
       if (Entree.neuf('carte')) { ouvrirCarte(); Entree.videPresse(); return; }
+      // ⚠️ UN DIALOGUE OU L'ON NE PEUT PAS BOUGER FIGE LA VILLE — demande de
+      // Martin : « il faut aussi figer tout lors qu'on est au telephone et
+      // qu'on ne peut pas bouger ». Le telephone sonne n'importe ou, en pleine
+      // rue : `Entites.majJoueur` clouait le joueur sur place (`vx = vy = 0`)
+      // pendant que le trafic, la foule et la police continuaient — on encaisse
+      // des coups qu'on ne peut pas rendre, et c'est la seule chose qu'un jeu
+      // ne doit jamais faire. Un menu fige deja tout (« le temps ne passe pas
+      // au comptoir »), un fondu de porte aussi : un appel est de la meme
+      // famille.
+      //
+      // ⚠️ SAUF AU VOLANT, et c'est la moitie qui compte autant : au volant on
+      // PEUT encore bouger (`Vehicules.majJoueur` lit toujours le gaz pendant
+      // un dialogue). Figer un char lance parce que le telephone sonne, ce
+      // serait poser un mur au milieu de la rue.
+      //
+      // ⚠️ `Histoire.maj` reste appele : c'est lui qui fait avancer la
+      // replique (`majCinema` compte ses propres images) et qui raccroche. Le
+      // figer, ce serait un appel dont on ne sort jamais.
+      if (B.cinema && B.joueur && !B.joueur.dansVehicule) {
+        Histoire.maj();
+        Entree.videPresse();
+        return;
+      }
       Monde.majHeure();
       Monde.majBattants();
       // La musique suit ce qui t'arrive : district, poursuite, bagarre.
