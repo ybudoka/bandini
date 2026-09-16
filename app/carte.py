@@ -755,25 +755,55 @@ FERMETURES: dict = {
 
 #: **LA FOIRE DE LA POINTE.** ⚠️ On n'agrandit pas la grille : la lecon de l'ile
 #: vaut ici aussi — la ville a la place, il faut la DEPENSER. La foire prend une
-#: des taches de bois du district-parc (un glyphe `n` du plan devient `f`), et la
-#: greve est juste a cote.
+#: des taches de bois du district-parc (un glyphe `n` du plan devient `f`).
 #:
-#: ⚠️ **Une foire est une ALLEE bordee de choses, pas une place.** C'est ce qui
-#: la distingue du parc, qui est un centre avec des allees en baionnette : on
-#: marche entre deux rangs de manèges, et la grande roue est au bout — on la voit
-#: de l'entree, et c'est elle qui dit ou l'on va.
+#: ⚠️ **UNE FOIRE, C'EST BEAUCOUP DE CHOSES ET BEAUCOUP DE MONDE** — retour de
+#: Martin, capture a l'appui (« c'est assez decevant », « plein de kiosques, de
+#: vendeurs, de mascottes », « de l'exageration »). La premiere version posait
+#: SEPT objets tires au hasard sur 80 x 33 tuiles de gazon : elle ecrivait « une
+#: allee bordee de choses » dans son commentaire et faisait l'inverse dans son
+#: code. Ce qu'on voyait etait un terrain vague avec une roue perdue au milieu.
+#:
+#: ⚠️ Ce qui fait une foire, dans l'ordre ou l'oeil le lit :
+#:   1. **l'allee BORDEE des deux cotes**, un kiosque tous les `pas_kiosque` pas,
+#:      sans un trou — c'est la densite qui dit « foire », pas les objets ;
+#:   2. **un vendeur derriere CHAQUE comptoir** — peint dans le kiosque, pas une
+#:      entite : trente vendeurs a trente entites mangeraient le budget d'images
+#:      de toute la rue pour des gens qui ne bougent pas ;
+#:   3. **les manèges EN DOUBLE** derriere les kiosques, et la grande roue en
+#:      point de repere au bout de l'allee ;
+#:   4. **la lumiere la nuit** : une guirlande a chaque kiosque, et chaque manège
+#:      eclaire — une foire eteinte a 21 h 50 est exactement la capture de Martin ;
+#:   5. **la foule et les mascottes** (`pietons.FOIRE`), qui naissent DANS la
+#:      foire au lieu d'y passer par hasard.
 FOIRE: dict = {
     "allee": 3,               # la largeur de l'allee centrale, en tuiles
-    "ecart": 6,               # deux manèges ne se collent pas
-    "arbres": 14,             # ce qui reste du bois
+    # ⚠️ COMPACTE : l'enceinte ne prend pas le bloc entier (80 x 33), elle en
+    # prend le milieu — le reste redevient le bois de La Pointe.
+    # ⚠️ Mesure a l'ecran, pas au gout : a 54 x 24 le fond nord restait un grand
+    # gazon noir derriere les kiosques. A 50 x 21, les manèges sont JUSTE
+    # derriere les comptoirs, et l'ecran (30 x 17 tuiles) montre la foire entiere.
+    "enceinte": (50, 21),
+    "marge_ouest": 5,         # l'enceinte se cale a l'ouest : l'est est l'elan du pont
+    "pas_kiosque": 3,         # un kiosque tous les trois pas, des deux cotes
+    # ⚠️ Neuf kiosques a manger ou a gagner, et les trois jeux d'adresse. La
+    # POUTINE et les QUEUES DE CASTOR ne sont pas du decor exotique : c'est ce
+    # qu'on mange dans une foire au Quebec.
+    "kiosques": ("barbe_a_papa", "hot_dogs", "pop_corn", "limonade", "poutine",
+                 "queues_de_castor", "ballons", "peluches", "lance_anneaux"),
+    "jeux": ("galerie_tir", "marteau_force", "peche_canards"),
     # ⚠️ Du DECOR ANIME, et on n'y monte PAS : un manège ou l'on monte et qui ne
     # donne rien est un decor cher ; un manège qui tourne avec du monde dessus
-    # est une ville qui vit.
-    "manèges": ("carrousel", "tasses", "chaises_volantes"),
-    # ⚠️ Un jeu d'adresse est un DEFI, pas un moteur : un lieu, un compte, un
-    # chrono, une prime, un texte en majuscules — les memes rails que les trois
-    # defis de la v1.
-    "jeux": ("galerie_tir", "marteau_force", "peche_canards"),
+    # est une ville qui vit. EN DOUBLE : l'exageration est le propos.
+    "manèges": ("carrousel", "tasses", "chaises_volantes",
+                "chaises_volantes", "carrousel", "tasses"),
+    "pas_manege": 7,          # l'espacement des manèges, juste derriere les kiosques
+    "tables": 9,              # la cour a manger, pres de l'arche
+    "arbres": 40,             # ce qui reste du bois, autour de la palissade
+    # Les guirlandes : trois couleurs qui alternent d'un kiosque a l'autre.
+    "lampes": ("foire_jaune", "foire_rose", "foire_bleue"),
+    "rayon_lampe": 56,
+    "rayon_manege": 58,
 }
 
 #: **LES AMARRAGES.** Ou une chaloupe attend. ⚠️ La coque est passee en phase 1
@@ -875,6 +905,9 @@ DECOR_SOLIDE = frozenset({
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
     "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
     "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
+    # Les neuf kiosques de la foire : un comptoir, ca arrete un pieton.
+    "ballons", "barbe_a_papa", "hot_dogs", "lance_anneaux", "limonade", "peluches",
+    "pop_corn", "poutine", "queues_de_castor",
 })
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
@@ -970,6 +1003,16 @@ BARRIERES: tuple[dict, ...] = (
     {"slug": "cargo", "nom": "Le quai du cargo", "ou": {"quai": "contrebande"},
      "arrete": ("pieton", "vehicule"), "condition": {"heure": "nuit"},
      "forcer": {"etoiles": 1}, "raison": "LE QUAI DÉCHARGE LA NUIT", "decor": "chaine"},
+    # ⚠️ **L'ARCHE DE LA FOIRE** — Martin : « une entree avec une arche, et ca
+    # doit couter quelque chose d'entrer ». Le billet vaut pour la JOURNEE
+    # (`B.partie.billets`), et on ressort librement (`dedans` : le cote nord de
+    # l'ouverture est la foire). Resquiller par la palissade coute l'etoile de
+    # `forcer` a la retombee — la palissade s'enjambe comme les autres clotures.
+    {"slug": "foire", "nom": "L'arche de la foire", "ou": {"foire": "entree"},
+     "arrete": ("pieton", "vehicule"), "condition": {"payer": "foire"},
+     "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
+     "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTREE",
+     "decor": None, "prix": economie.FOIRE["entree"], "dedans": "N"},
 )
 
 #: Les batiments garantis : un par majuscule du plan. `interieur` doit exister
@@ -1329,6 +1372,9 @@ class _Chantier:
         self.roue: dict | None = None
         self.foire: dict | None = None
         self.jeux: list[dict] = []
+        self.kiosques: list[dict] = []
+        self.foire_entree: tuple[int, int, int, int] | None = None
+        self.foire_enclos: list[list[int]] = []
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3959,72 +4005,270 @@ class _Chantier:
                 self.reserve.add((i, j))
 
     def _foire(self, x: int, y: int, largeur: int, hauteur: int) -> None:
-        """**LA FOIRE DE LA POINTE.** Une des taches de bois du district-parc,
-        dépensée au lieu d'agrandir la grille — la lecon de l'ile vaut ici
-        aussi : la ville a la place, il faut la DEPENSER.
+        """**LA FOIRE DE LA POINTE** — voir `FOIRE` pour ce qui la fait.
 
-        ⚠️ **Une foire est une ALLEE bordee de choses, pas une place** : c'est
-        ce qui la distingue du parc d'a cote, qui est un centre avec des allees
-        en baionnette. On marche entre deux rangs de manèges, et la grande roue
-        est au bout — on la voit de l'entree, et c'est elle qui dit ou l'on va.
+        ⚠️ **COMPACTE, DANS UNE ENCEINTE** — Martin : « la foire doit etre plus
+        compacte », « cloturee, pas un carre, des clotures asymetriques, et une
+        entree avec une arche ». Elle ne remplit plus le bloc : elle tient dans
+        une palissade EN ESCALIER posee au milieu, et le reste du bloc redevient
+        le bois de La Pointe. Une foire qu'on voit de l'exterieur, derriere sa
+        palissade, est une foire ou l'on a envie d'entrer.
+
+        ⚠️ Tout se pose sur une GRILLE DE CASES, jamais au hasard : c'etait le
+        defaut de la premiere version (sept objets tires uniformement sur 80 x 33
+        tuiles). Le de de la foire ne decide que de l'ORDRE des kiosques et des
+        marches de la palissade — jamais de la place d'une chose.
         """
         fiche = FOIRE
-        # ⚠️ Elle DECLARE son rectangle : le navigateur en aura besoin (les trois
-        # defis y posent leur panneau, et l'orgue de manège est une musique qui
-        # sort d'un ENDROIT). Le deviner ailleurs serait une deuxieme verite.
-        self.foire = {"x": x, "y": y, "l": largeur, "h": hauteur}
+        des = self.des_foire
         self.bouchon_rect(x, y, largeur, hauteur, "~")
         self.rect(x, y, largeur, hauteur, ",")
-        # L'allee centrale, en terre battue, dans le sens du long.
-        long_horizontal = largeur >= hauteur
-        if long_horizontal:
-            ay = y + hauteur // 2 - fiche["allee"] // 2
-            self.rect(x + 1, ay, largeur - 2, fiche["allee"], "g")
-        else:
-            ax = x + largeur // 2 - fiche["allee"] // 2
-            self.rect(ax, y + 1, fiche["allee"], hauteur - 2, "g")
-        # ⚠️ LA GRANDE ROUE AU BOUT DE L'ALLEE, et son pied est RESERVE : c'est
-        # un belvedere, pas un manège, et on doit pouvoir s'en approcher. Le
-        # reste du semis (`reserve`) s'en tient a l'ecart tout seul.
-        if long_horizontal:
-            rx, ry = x + largeur - 4, y + hauteur // 2
-        else:
-            rx, ry = x + largeur // 2, y + hauteur - 4
-        # ⚠️ ON LA POSE D'ABORD, ON RESERVE ENSUITE : `poser_decor` refuse une
-        # tuile reservee, et reserver son pied avant elle revenait a lui
-        # interdire sa propre place — la roue ne se posait jamais, en silence.
+
+        # --- 0. L'enceinte, au milieu du bloc, plus petite que lui.
+        el = min(largeur - 12, fiche["enceinte"][0])
+        eh = min(hauteur - 5, fiche["enceinte"][1])
+        # ⚠️ A L'OUEST DU BLOC, et pas au milieu. Le pont de La Pointe atterrit a
+        # l'EST de ce bloc : centree, l'enceinte tombait pile dans l'axe de sa
+        # sortie, et un char lance qui descendait du pont filait douze tuiles
+        # sur le gazon et s'ecrasait dans la cloture — le juge du pont a vu sa
+        # carrosserie tomber a 60 sur 100 apres l'ouverture du pont. On ne pose
+        # pas un mur dans l'elan d'un pont.
+        ex = x + fiche["marge_ouest"]
+        ey = y + (hauteur - eh) // 2
+        self.foire = {"x": ex, "y": ey, "l": el, "h": eh}
+        allee = fiche["allee"]
+        a0 = ey + eh // 2 - allee // 2                 # la premiere rangee de l'allee
+        a1 = a0 + allee - 1                            # la derniere
+        gx = ex + el // 3                              # l'arche, sur la palissade sud
+
+        # ⚠️ LA PALISSADE EN ESCALIER : chaque cote rentre de 0 a 2 tuiles par
+        # marches de quelques pas. C'est ce qui la rend ASYMETRIQUE — un
+        # rectangle avec des coins mordus, jamais deux fois le meme — sans
+        # jamais mordre sur l'allee ni sur un kiosque (les marches restent dans
+        # la bande de 3 tuiles du pourtour).
+        def marches(n: int, pas: int) -> list[int]:
+            out, v = [], 0
+            for i in range(n):
+                if i % pas == 0:
+                    v = des.suivant() % 3
+                out.append(v)
+            return out
+        nord, sud = marches(el, 7), marches(el, 9)
+        ouest, est = marches(eh, 5), marches(eh, 6)
+        for i in range(max(0, gx - ex - 4), min(el, gx - ex + 5)):
+            sud[i] = 0                                 # la palissade est droite a l'arche
+
+        def dedans(tx: int, ty: int) -> bool:
+            if not (ex <= tx < ex + el and ey <= ty < ey + eh):
+                return False
+            return (ty >= ey + nord[tx - ex] and ty <= ey + eh - 1 - sud[tx - ex]
+                    and tx >= ex + ouest[ty - ey] and tx <= ex + el - 1 - est[ty - ey])
+
+        # ⚠️ L'ANNEAU DE LA PALISSADE EST RESERVE AVANT TOUT LE RESTE. Premiere
+        # version : la palissade se posait en dernier et SAUTAIT toute tuile
+        # deja occupee par un decor — une table de la cour a manger posee sur le
+        # bord laissait un TROU d'une tuile dans la cloture, et on entrait dans
+        # la foire sans passer par l'arche. Un juge l'a trouve en cherchant ou
+        # sauter ; personne ne l'aurait vu a l'oeil. On reserve donc le pourtour
+        # d'abord (`poser_decor` refuse une tuile reservee), sauf l'ouverture.
+        bas_arche = ey + eh - 1
+        ouverture = {(gx - 1, bas_arche), (gx, bas_arche), (gx + 1, bas_arche)}
+        # ⚠️ L'ANNEAU TIENT D'UN SEUL MORCEAU, ET FAIT UNE TUILE D'EPAIS — les deux
+        # a la fois, et il a fallu deux essais pour l'apprendre :
+        #   - en 8-voisinage, il epaississait certains coins en carres de 2 x 2
+        #     (un juge du depot tient qu'une cloture fait UNE tuile d'epais) ;
+        #   - en 4-voisinage, les marches ne se touchaient plus que par un COIN,
+        #     et `elaguer_les_clotures` coupait chaque morceau droit comme « une
+        #     barre qui ne clot rien » : il restait 78 tuiles sur 159, et des trous.
+        # On prend donc le 4-voisinage, et a chaque marche on pose UN raccord en
+        # L — celui qui ne ferme pas un carre de 2 x 2.
+        anneau: set[tuple[int, int]] = set()
+        for ty in range(ey, ey + eh):
+            for tx in range(ex, ex + el):
+                if not dedans(tx, ty) or (tx, ty) in ouverture:
+                    continue
+                if any(not dedans(tx + dx, ty + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    anneau.add((tx, ty))
+
+        def carre(t: tuple[int, int], tuiles: set[tuple[int, int]]) -> bool:
+            x0, y0 = t
+            return any(all((x0 + ox + i, y0 + oy + j) in tuiles for i in (0, 1) for j in (0, 1))
+                       for ox in (-1, 0) for oy in (-1, 0))
+        for tx, ty in sorted(anneau):
+            for dx, dy in ((1, 1), (1, -1), (-1, 1), (-1, -1)):
+                if (tx + dx, ty + dy) not in anneau:
+                    continue
+                a, b = (tx + dx, ty), (tx, ty + dy)
+                if a in anneau or b in anneau:
+                    continue                          # deja raccordes
+                choix = [t for t in (a, b) if dedans(*t) and t not in ouverture]
+                choix.sort(key=lambda t: carre(t, anneau | {t}))
+                if choix:
+                    anneau.add(choix[0])
+        # ⚠️ ET ON AMINCIT CE QUI RESTE EN CARRE. Une marche qui tombe pile sur
+        # le bord sud (mesure : graine 1, une seule fois) fait encore un carre de
+        # 2 x 2. On y retire une tuile — mais SEULEMENT si la cloture reste
+        # etanche : un amincissement qui rouvre un passage est pire que le carre.
+        def fuit(tuiles: set[tuple[int, int]]) -> bool:
+            depart = next((t for t in ((tx, ty) for ty in range(ey, ey + eh)
+                                       for tx in range(ex, ex + el))
+                           if dedans(*t) and t not in tuiles and t not in ouverture), None)
+            if depart is None:
+                return False
+            vus, pile = {depart}, [depart]
+            while pile:
+                cx, cy = pile.pop()
+                for vx, vy in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    v = (vx, vy)
+                    if v in vus or v in tuiles or v in ouverture:
+                        continue
+                    if not dedans(vx, vy):
+                        return True
+                    vus.add(v)
+                    pile.append(v)
+            return False
+        for _passe in range(8):
+            carres = [(cx, cy) for cx, cy in anneau
+                      if all((cx + i, cy + j) in anneau for i in (0, 1) for j in (0, 1))]
+            if not carres:
+                break
+            cx, cy = carres[0]
+            for t in ((cx, cy), (cx + 1, cy), (cx, cy + 1), (cx + 1, cy + 1)):
+                if not fuit(anneau - {t}):
+                    anneau.discard(t)
+                    break
+            else:
+                break
+        pourtour = sorted(anneau)
+        for tx, ty in pourtour:
+            self.reserver(tx, ty, 1, 1)
+
+        # Le sol de la foire : de la terre battue a l'interieur de l'enceinte.
+        for ty in range(ey, ey + eh):
+            for tx in range(ex, ex + el):
+                if dedans(tx, ty):
+                    self.sol[ty][tx] = ","
+        self.rect(ex + 1, a0, el - 2, allee, "g")
+        # L'allee d'entree, de l'arche jusqu'a l'allee centrale.
+        self.rect(gx - 1, a1 + 1, 3, bas_arche - a1, "g")
+        # Une traverse au milieu : on passe entre les rangs pour aller aux manèges.
+        tv = ex + el // 2 + 3
+        self.rect(tv, ey + 2, 2, eh - 4, "g")
+        interdits = {tv - 1, tv, tv + 1, tv + 2}
+
+        # --- 1. La grande roue, au bout de l'allee, cote nord.
+        rx, ry = ex + el - 7, a0 - 1
         self.roue = {"x": rx, "y": ry}
         self.poser_decor("grande_roue", rx, ry)
-        self.reserver(rx - 1, ry - 1, 3, 3)
-        # Les manèges, de part et d'autre de l'allee. ⚠️ Du DECOR ANIME : on n'y
-        # monte pas. Un manège ou l'on monte et qui ne donne rien est un decor
-        # cher ; un manège qui tourne avec du monde dessus est une ville qui vit.
-        poses: list[tuple[int, int]] = []
-        for quoi in fiche["manèges"]:
-            for _essai in range(60):
-                mx = x + self.des_foire.suivant() % max(1, largeur - 4) + 2
-                my = y + self.des_foire.suivant() % max(1, hauteur - 4) + 2
-                if any(abs(px - mx) + abs(py - my) < fiche["ecart"] for px, py in poses):
+        self.lampes.append({"x": rx, "y": ry - 3, "r": fiche["rayon_manege"] + 20, "c": "foire_jaune"})
+        self.reserver(rx - 3, ry - 5, 7, 6)
+
+        # --- 2. L'allee bordee des DEUX cotes, serree. Le de ne choisit que l'ordre.
+        sortes = list(fiche["kiosques"]) + list(fiche["jeux"])
+        melange: list[str] = []
+        restant = sortes[:]
+        while restant:
+            melange.append(restant.pop(des.suivant() % len(restant)))
+        n = 0
+        jeux_poses: set[str] = set()
+        for kx in range(ex + 4, ex + el - 5, fiche["pas_kiosque"]):
+            if kx in interdits:
+                continue
+            for ky in (a0 - 1, a1 + 2):
+                if ky == a1 + 2 and abs(kx - gx) <= 2:
+                    continue                           # on ne bouche pas l'entree
+                if ky == a0 - 1 and kx >= rx - 3:
+                    continue                           # ni le pied de la roue
+                quoi = melange[n % len(melange)]
+                n += 1
+                if quoi in fiche["jeux"] and quoi in jeux_poses:
+                    quoi = fiche["kiosques"][n % len(fiche["kiosques"])]
+                if not self.poser_decor(quoi, kx, ky):
                     continue
-                if self.poser_decor(quoi, mx, my):
-                    poses.append((mx, my))
-                    break
-        # Les kiosques des trois jeux d'adresse, le long de l'allee.
-        for quoi in fiche["jeux"]:
-            for _essai in range(60):
-                kx = x + self.des_foire.suivant() % max(1, largeur - 4) + 2
-                ky = y + self.des_foire.suivant() % max(1, hauteur - 4) + 2
-                if any(abs(px - kx) + abs(py - ky) < fiche["ecart"] for px, py in poses):
-                    continue
-                if self.poser_decor(quoi, kx, ky):
-                    poses.append((kx, ky))
+                self.kiosques.append({"slug": quoi, "x": kx, "y": ky, "nord": ky < a0})
+                if quoi in fiche["jeux"]:
+                    jeux_poses.add(quoi)
                     self.jeux.append({"slug": quoi, "x": kx, "y": ky})
+                # ⚠️ Une guirlande tous les DEUX kiosques, au halo plus large : le
+                # rendu tient un plafond de 50 lumieres (lampadaires + feux de
+                # circulation + projecteur), et une lampe par comptoir les
+                # depassait — les feux du carrefour d'a cote se seraient eteints.
+                # ⚠️ EN DAMIER, pas une sur deux dans l'ordre de pose : on pose
+                # nord puis sud a chaque colonne, et la parite de l'ordre allumait
+                # TOUT le rang sud et AUCUN kiosque du nord — un juge l'a vu.
+                case = (kx - ex) // fiche["pas_kiosque"] + (0 if ky < a0 else 1)
+                if case % 2 == 0:
+                    lampe = fiche["lampes"][(case // 2) % len(fiche["lampes"])]
+                    self.lampes.append({"x": kx, "y": ky - 1, "r": fiche["rayon_lampe"], "c": lampe})
+
+        # --- 3. Les manèges en double, JUSTE derriere les kiosques.
+        # ⚠️ La rangee sud est a `a1 + 6` et non plus `+ 7` : depuis que l'anneau
+        # de la palissade est reserve d'abord, `+ 7` tombait dessus et deux
+        # manèges sur six ne se posaient plus. Et on laisse la place de la cour a
+        # manger de part et d'autre de l'allee d'entree (`abs(mx - gx) <= 10`).
+        m = 0
+        for ligne, depart in ((a0 - 5, ex + 5), (a1 + 6, ex + 5)):
+            for mx in range(depart, ex + el - 9, fiche["pas_manege"]):
+                if m >= len(fiche["manèges"]):
                     break
-        # Quelques arbres au pourtour : on sort d'un bois, il en reste.
-        for _essai in range(fiche["arbres"]):
-            ax2 = x + self.des_foire.suivant() % largeur
-            ay2 = y + self.des_foire.suivant() % hauteur
-            self.poser_decor("arbre", ax2, ay2)
+                if any(abs(mx - t) <= 2 for t in interdits):
+                    continue
+                if ligne == a1 + 6 and abs(mx - gx) <= 10:
+                    continue
+                if ligne == a0 - 5 and mx >= rx - 4:
+                    continue
+                if not dedans(mx, ligne) or not self.poser_decor(fiche["manèges"][m], mx, ligne):
+                    continue
+                self.lampes.append({"x": mx, "y": ligne - 1, "r": fiche["rayon_manege"],
+                                    "c": fiche["lampes"][m % len(fiche["lampes"])]})
+                m += 1
+
+        # --- 4. La cour a manger, de part et d'autre de l'allee d'entree : c'est
+        # la premiere chose qu'on voit en passant l'arche.
+        for i in range(fiche["tables"]):
+            cote = 1 if i % 2 == 0 else -1
+            tx = gx + cote * (3 + (i // 2) * 3)
+            ty = a1 + 4
+            if dedans(tx, ty):
+                self.poser_decor("table_pique_nique", tx, ty)
+
+        # --- 5. LA CLOTURE, sur l'anneau reserve au depart. ⚠️ Du GRILLAGE et
+        # non de la palissade : la palissade de bois est l'image de la banlieue
+        # des Erables (un juge le tient), et une foire se clot de panneaux de
+        # grillage temporaires — c'est ce qu'on voit autour d'une vraie. Posee
+        # DIRECTEMENT : `poser_cloture` refuse certaines tuiles sans rien dire
+        # (le defaut des terrains de banlieue, « le U de `_jardin` se posait
+        # pendant que `poser_cloture` en refusait en silence ») — ici, un refus
+        # silencieux est une entree gratuite.
+        for tx, ty in pourtour:
+            self.sol[ty][tx] = "f"
+        self.foire_entree = (gx - 1, bas_arche, 3, 1)
+        # L'arche, a cheval sur l'ouverture ; elle ne bloque rien.
+        self.poser_decor("portique_foire", gx, bas_arche)
+        self.lampes.append({"x": gx, "y": bas_arche - 2, "r": fiche["rayon_lampe"] + 10, "c": "foire_rose"})
+        # L'interieur, en bandes par rangee, pour le navigateur.
+        for ty in range(ey, ey + eh):
+            debut = None
+            for tx in range(ex, ex + el + 1):
+                libre = tx < ex + el and dedans(tx, ty) and self.sol[ty][tx] != "f"
+                if libre and debut is None:
+                    debut = tx
+                elif not libre and debut is not None:
+                    self.foire_enclos.append([ty, debut, tx - 1])
+                    debut = None
+
+        # --- 6. Un liseré de bois AUTOUR de la cloture, et pas sur tout le bloc :
+        # la foire est dans un parc, mais la pelouse de l'est reste degagee — un
+        # arbre plante dans l'elan du pont serait le meme piege que la cloture.
+        for i in range(fiche["arbres"]):
+            u = des.suivant()
+            tx = ex - 3 + u % (el + 6)
+            ty = ey - 3 + (u >> 8) % (eh + 6)
+            if ex - 1 <= tx <= ex + el and ey - 1 <= ty <= ey + eh:
+                continue
+            if not (x < tx < x + largeur - 1 and y < ty < y + hauteur - 1):
+                continue
+            self.poser_decor("arbre", tx, ty)
 
     def _place(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         """Une place publique : du pave, une fontaine, des bancs. Pas une rue."""
@@ -4893,6 +5137,10 @@ class _Chantier:
                 bx, by, bl, bh = self.lots[ou["lieu"]]
                 m = ou.get("marge", 1)
                 rect = (bx - m, by - m, bl + 2 * m, bh + 2 * m)
+            elif "foire" in ou:
+                if not self.foire_entree:
+                    continue
+                rect = self.foire_entree
             elif "quai" in ou:
                 a = next(a for a in ambulants if a["slug"] == ou["quai"])
                 g, rx, ry, rl, rh = next((g, rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
@@ -4912,7 +5160,8 @@ class _Chantier:
                            "arrete": list(fiche["arrete"]), "condition": dict(fiche["condition"]),
                            "forcer": dict(fiche["forcer"]) if fiche["forcer"] else None,
                            "raison": fiche["raison"], "decor": fiche.get("decor"),
-                           "existant": bool(fiche.get("existant"))})
+                           "existant": bool(fiche.get("existant")),
+                           "prix": fiche.get("prix"), "dedans": fiche.get("dedans")})
         return sortie
 
     def reclames(self, ambulants: list[dict]) -> list[dict]:
@@ -5336,6 +5585,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "foire": chantier.foire,
         "roue": chantier.roue,
         "jeux_de_foire": chantier.jeux,
+        "kiosques_de_foire": chantier.kiosques,
+        # ⚠️ L'INTERIEUR de la palissade, en bandes par rangee [y, x0, x1] : la
+        # foule y nait et y reste, et resquiller se juge a la retombee DEDANS.
+        "foire_enclos": chantier.foire_enclos,
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],

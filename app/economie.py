@@ -651,6 +651,17 @@ def gain_boulot(boulot: Boulot, tuiles: float = TUILES_TYPE, parfait: bool = Tru
 #: ⚠️ Le rachat DOIT couter plus cher que la revente du meme char au garage
 #: (`VENTE_FRACTION`), sinon la fourriere devient une machine a argent : on y
 #: fait saisir un char pour le racheter moins cher qu'il ne se revend.
+#: **LE BILLET DE LA FOIRE** — Martin : « ca doit couter quelque chose entrer ».
+#: ⚠️ Un billet par JOUR, pas par passage : on paie a l'arche, on ressort, on
+#: revient — une foire qui te refacture chaque fois que tu vas acheter un hot-dog
+#: dehors n'est pas une foire, c'est un peage. Et ⚠️ on peut RESQUILLER : la
+#: palissade s'enjambe comme toutes les clotures du jeu, mais la retombee dans la
+#: foire coute l'etoile de la barriere — c'est le prix de ne pas payer le prix.
+FOIRE = {
+    "entree": 15,
+    "etoiles_resquille": 1,
+}
+
 FOURRIERE = {
     "rachat_fraction": 0.40,
     "rachat_minimum": 150,

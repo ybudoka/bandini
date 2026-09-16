@@ -65,7 +65,13 @@ def test_tout_ce_qui_meuble_la_greve_est_au_bord_de_l_eau(ville, plage):
     Le semis marche tuile par tuile : un parasol planté au milieu d'un sentier
     du bois dit le contraire de ce qu'on veut."""
     portee = carte.GREVE["bord"] + 1
+    # ⚠️ Sauf la cour a manger de la foire : les memes tables de pique-nique,
+    # mais la foire ne les a pas semees sur une greve.
+    f = ville["foire"]
     for d in plage:
+        if (d["type"] == "table_pique_nique" and f["x"] <= d["x"] < f["x"] + f["l"]
+                and f["y"] <= d["y"] < f["y"] + f["h"]):
+            continue
         assert eau_a_portee(ville, d["x"], d["y"], portee), (
             f"un {d['type']} en ({d['x']}, {d['y']}) est loin de toute eau")
 

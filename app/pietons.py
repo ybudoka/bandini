@@ -137,6 +137,21 @@ CATALOGUE: list[Pieton] = [
     # SPRITE (`homme_sandwich`) : une pancarte plus large que les epaules est un
     # contour, et c'est un contour qui se lit a douze pixels — pas une couleur.
     # Son `c` est la pancarte, pas un chandail.
+    # ⚠️ LES MASCOTTES DE LA FOIRE — Martin : « plein de kiosques, de vendeurs,
+    # de mascottes ». Un seul CORPS (`mascotte` : une grosse tete d'ours, des
+    # oreilles rondes, un noeud papillon) et trois PELAGES — c'est la palette
+    # qui en fait trois, comme les seize silhouettes du corps commun. Elles ne
+    # naissent que dans la foire (frequence 0), et leur routine est d'y
+    # deambuler et de SALUER : les bras leves, deux images qui alternent.
+    _p("mascotte", "Mascotte (ours)", "#c0392b", "#8a5a2b", "#efe0c0", "#4a3320",
+       sprite="mascotte", vitesse=0.7, vie=80, argent=(0, 10), temoin=0.2,
+       metier="mascotte", frequence=0.0, districts=("pointe",)),
+    _p("mascotte_bleue", "Mascotte (bleue)", "#efd06a", "#3f7fc0", "#e6f0f8", "#1f3f66",
+       sprite="mascotte", vitesse=0.7, vie=80, argent=(0, 10), temoin=0.2,
+       metier="mascotte", frequence=0.0, districts=("pointe",)),
+    _p("mascotte_rose", "Mascotte (rose)", "#2f8d6a", "#e87aa8", "#fbe3ee", "#8e3a64",
+       sprite="mascotte", vitesse=0.7, vie=80, argent=(0, 10), temoin=0.2,
+       metier="mascotte", frequence=0.0, districts=("pointe",)),
     _p("homme_sandwich", "Homme-sandwich", "#f4ead2", "#4a3320", "#e8b088", "#4a4a5a",
        sprite="homme_sandwich", vitesse=0.85, vie=65, argent=(5, 30), temoin=0.35,
        metier="reclame", heures=(0.3, 0.85), frequence=0.0),
@@ -488,6 +503,28 @@ BETES: dict = {
     "oubli_px": 460,
 }
 
+#: **LA FOULE DE LA FOIRE.** ⚠️ « Une foire, c'est beaucoup de choses et BEAUCOUP
+#: DE MONDE » — Martin, devant une foire a trois passants. La foule de la rue ne
+#: suffit pas : elle nait au hasard dans la bulle du joueur et PASSE par la foire
+#: sans s'y arreter. Celle-ci nait DANS la foire, y reste, et y fait ce qu'on fait
+#: dans une foire : aller d'un kiosque a l'autre, s'arreter devant, regarder.
+#:
+#: ⚠️ **Jouer, c'est un `metier`, pas un costume** : `forain` a une routine (le
+#: kiosque, l'arret, le kiosque suivant), et `mascotte` aussi (deambuler, saluer).
+#: Ils ne comptent pas dans la foule de la rue — ils ont un poste, comme l'ouvrier
+#: a son chantier — sinon trente forains de plus passeraient par-dessus le
+#: plafond de passants de tout le quartier.
+FOULE_DE_FOIRE: dict = {
+    # ⚠️ Mesure a l'ecran : a trente, la foule s'etalait sur toute l'enceinte et
+    # l'ecran n'en montrait qu'une dizaine — « beaucoup de monde » se voyait peu.
+    "forains": 45,               # l'exageration est le propos
+    "mascottes": 4,
+    "par_battement": 6,          # combien en naissent a la fois : la foire se remplit vite
+    "rayon_px": 620,             # a quelle distance du bord de la foire elle se peuple
+    "arret_images": (100, 320),  # le temps qu'on reste devant un kiosque
+    "salut_images": 14,          # la cadence du salut d'une mascotte
+}
+
 REACTIONS = {
     "recul_images": 12,          # il titube
     "ko_images": 300,            # assomme : il se releve apres 5 s
@@ -737,6 +774,8 @@ def exporter() -> dict:
         "reactions": dict(REACTIONS),
         "vol_de_char": dict(VOL_DE_CHAR),
         "bagarre": dict(BAGARRE),
+        "foule_de_foire": {**FOULE_DE_FOIRE,
+                           "arret_images": list(FOULE_DE_FOIRE["arret_images"])},
         "betes": {"rayon_px": BETES["rayon_px"], "oubli_px": BETES["oubli_px"],
                   "goeland": {**BETES["goeland"],
                               "picore_images": list(BETES["goeland"]["picore_images"]),

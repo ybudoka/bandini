@@ -148,6 +148,33 @@ SPRITES.racoleuse = {
    d'habitude ; `r` la bande rouge et `d` l'encre sont a lui et ne se
    troquent pas. Pas de pose de coup : il crie, il ne frappe pas ; `couche`
    est celle du joueur, un corps par terre est un corps par terre. */
+SPRITES.mascotte = {
+  w: 16, h: 20, ancre: [8, 19],
+  pal: { k: '#101018', h: '#8a5a2b', s: '#efe0c0', c: '#c0392b', p: '#4a3320', o: '#ffffff' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', '..khsssssssshk..', '..khhsksskshhk..', '...khhskkshhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskhhhhhhhhksk.', '..kkppphhpppkk..', '...kpppkkpppk...', '....kkk..kkk....'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', '..khsssssssshk..', '..khhsksskshhk..', '...khhskkshhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskppphhhhhksk.', '..kkppphhpppkk..', '....kkkkkpppk...', '.........kkk....'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', '..khsssssssshk..', '..khhsksskshhk..', '...khhskkshhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskhhhhhpppksk.', '..kkppphhpppkk..', '...kpppkkkkk....', '....kkk.........'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', 'kskhsssssssshksk', 'khkhhsksskshhkhk', 'khkkhhskkshhkkhk', 'khk.khhhhhhk.khk', '.k.khhcccchhk.k.', '..khhhhcchhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...kppphhhhhk...', '...kppphhpppk...', '....kkkkkpppk...', '.........kkk....'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhshhhhhhhhshhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhohhhhohhhk.', '.khhhksssskhhhk.', '.khhhsskksshhhk.', 'kskhsssssssshksk', 'khkhhsksskshhkhk', 'khkkhhskkshhkkhk', 'khk.khhhhhhk.khk', '.k.khhcccchhk.k.', '..khhhhcchhhhk..', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhpppk...', '...kppphhpppk...', '...kpppkkkkk....', '....kkk.........'],
+    ],
+    haut: [
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhhhhhhhhhhhhhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhhhhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskhhhhhhhhksk.', '..kkppphhpppkk..', '...kpppkkpppk...', '....kkk..kkk....'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhhhhhhhhhhhhhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhhhhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskppphhhhhksk.', '..kkppphhpppkk..', '....kkkkkpppk...', '.........kkk....'],
+      ['..khk.kkkk.khk..', '.khhhkhhhhkhhhk.', 'khhhhhhhhhhhhhhk', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '..khhhhhhhhhhk..', '..khhhhhhhhhhk..', '...khhhhhhhhk...', '....khhhhhhk....', '..kkhhcccchhkk..', '.khhhhhcchhhhhk.', '.khhhhhhhhhhhhk.', '.khhhhhhhhhhhhk.', '.kskhhhhhpppksk.', '..kkppphhpppkk..', '...kpppkkkkk....', '....kkk.........'],
+    ],
+    cote: [
+      ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '....kpppppk.....', '....kpppppk.....', '.....kkkkk......'],
+      ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '...kppphhppk....', '...kpppkkppk....', '....kkk..kk.....'],
+      ['.....khkk.......', '...kkhhhhkk.....', '..khhhhhhhhk....', '.khhhhhhhhhhk...', '.khhhhhhhhhhk...', '.khhhhhhhhohk...', 'khhhhhhhhskssk..', '.khhhhhhsssssk..', '.khhhhhhssssssk.', '.khhhhhhhssksk..', '..khhhhhhhhkk...', '...kkhhhhhk.....', '...khhhhhcck....', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '..khhhhhhhhhk...', '...khhhhhhhk....', '....kpphpppk....', '....kppkpppk....', '.....kk.kkk.....'],
+    ],
+    couche: [
+      ['................', '................', '................', '................', '................', '................', '................', '................', '................', '..kkkkkk........', '.khhhhhhk.kk....', 'khhhhhhhhkhhkkk.', 'khhkhhhhhhhhhhhk', 'khhhshhhhhhhhhhk', 'khhhhhhhhhhhhhhk', '.khhhhhhhhhhhhhk', '..kkkkkkkkhhkkk.', '..........kk....', '................', '................'],
+    ],
+  },
+};
 SPRITES.homme_sandwich = {
   w: 14, h: 16, ancre: [7, 15],
   pal: { k: '#101018', s: '#e8b088', h: '#4a3320', c: '#f4ead2', p: '#4a4a5a', o: '#ffffff', b: '#3a2a1a', r: '#c0392b', d: '#1a1a22' },
@@ -3563,6 +3590,50 @@ function peindreFeu(ctx, w, vers) {
   ctx.fillRect(m(f.mat.x - 1, f.mat.l + 2), 22, f.mat.l + 2, 2);
 }
 
+/* --- LES KIOSQUES DE LA FOIRE ---------------------------------------------
+   ⚠️ **UN SEUL PEINTRE POUR TOUS, ET UN VENDEUR DERRIERE CHAQUE COMPTOIR.**
+   Retour de Martin : « plein de kiosques, de vendeurs ». Le vendeur est PEINT
+   dans le kiosque, pas pose comme une entite : trente vendeurs a trente entites
+   mangeraient le budget d'images de toute la rue pour des gens qui ne bougent
+   pas. `variantes` choisit son visage (peau, cheveux, chandail) a l'empreinte
+   de la tuile — deux kiosques voisins n'ont pas le meme vendeur.
+
+   Ce qui distingue un kiosque de l'autre tient en deux couleurs d'auvent et un
+   PRODUIT sur le comptoir ; tout le reste — la boite, les poteaux, les festons,
+   le vendeur — est ecrit une fois. */
+const VENDEURS = {
+  peau: ['#e8b088', '#c98d66', '#8d5a3b', '#f0c098'],
+  cheveux: ['#3a2a1a', '#1a1a1a', '#8a5a2b', '#d9b36a'],
+  chandail: ['#efe6d0', '#c0392b', '#2f6fb5', '#2f8d6a'],
+};
+function peindreKiosque(ctx, v, auvent, auvent2, produit) {
+  const peau = VENDEURS.peau[v % 4], cheveux = VENDEURS.cheveux[(v >> 2) % 4];
+  const chandail = VENDEURS.chandail[(v * 3 + 1) % 4];
+  ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(2, 26, 25, 4);        // l'ombre
+  // Le vendeur, DERRIERE le comptoir : on le peint avant la boite.
+  ctx.fillStyle = chandail; ctx.fillRect(10, 13, 9, 5);
+  ctx.fillStyle = peau; ctx.fillRect(11, 8, 6, 5);                           // la tete
+  ctx.fillStyle = cheveux; ctx.fillRect(11, 7, 6, 2); ctx.fillRect(11, 9, 1, 2);
+  ctx.fillStyle = '#1b1b1f'; ctx.fillRect(12, 10, 1, 1); ctx.fillRect(15, 10, 1, 1);
+  ctx.fillStyle = peau; ctx.fillRect(8, 14, 2, 3); ctx.fillRect(19, 14, 2, 3);   // les bras sur le comptoir
+  // La boite du comptoir, aux couleurs de l'auvent.
+  ctx.fillStyle = auvent; ctx.fillRect(2, 17, 25, 10);
+  ctx.fillStyle = 'rgba(0,0,0,0.22)'; ctx.fillRect(2, 23, 25, 4);
+  ctx.fillStyle = auvent2;
+  for (let x = 4; x < 26; x += 5) ctx.fillRect(x, 18, 2, 8);                 // les planches peintes
+  ctx.fillStyle = '#b89060'; ctx.fillRect(1, 16, 27, 2);                     // le dessus du comptoir
+  ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 17, 27, 1);
+  // Les deux poteaux et l'auvent raye, festonne.
+  ctx.fillStyle = '#5a3f26'; ctx.fillRect(2, 5, 2, 12); ctx.fillRect(25, 5, 2, 12);
+  for (let x = 0; x < 29; x++) {
+    ctx.fillStyle = (Math.floor(x / 4) % 2) ? auvent2 : auvent;
+    ctx.fillRect(x, 2, 1, 4);
+    if (x % 4 !== 3) ctx.fillRect(x, 6, 1, 1);                               // le feston
+  }
+  ctx.fillStyle = 'rgba(0,0,0,0.25)'; ctx.fillRect(0, 5, 29, 1);
+  if (produit) produit(ctx);
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -3700,47 +3771,198 @@ const DECORS = {
   //: peintes par-dessus a chaque image (`variantes` sert de POSE, comme pour les
   //: betes).
 
-  // LA GRANDE ROUE. ⚠️ **Ce n'est pas un manège, c'est un BELVEDERE QUI TOURNE** :
-  // on la voit du bout de l'allee, et c'est elle qui dit ou l'on va. Vue d'en
-  // haut, ce qui la nomme est la ROUE elle-meme — un anneau de nacelles autour
-  // d'un moyeu — et les deux jambages du portique qui la tiennent.
-  // ⚠️ Son empreinte au sol est celle de son PORTIQUE, pas celle de sa jante :
-  // la roue est EN L'AIR, et on passe dessous. Un carre de 38 px de cote aurait
-  // fait d'un belvedere un bloc de beton — et le juge de `PORTEE_DECOR` l'a dit
-  // avant nous : son coin tombait a 29 px pour une portee de recherche de 24,
-  // donc on serait entre dedans sans que rien ne le voie.
-  grande_roue: { anime: 26, arrete: 14, w: 44, h: 46, ancre: [22, 42], r: 16, sol: [16, 8], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
-    const cx = 22, cy = 21, R = 19;
-    ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(6, 40, 32, 5);       // son ombre
-    ctx.fillStyle = '#4a4d55';                                               // les deux jambages
-    ctx.fillRect(9, 20, 3, 21); ctx.fillRect(32, 20, 3, 21);
-    ctx.fillStyle = '#5e626a'; ctx.fillRect(9, 20, 2, 21); ctx.fillRect(32, 20, 2, 21);
-    ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 40, 10, 3); ctx.fillRect(28, 40, 10, 3);   // les socles
-    // La jante, en anneau de pixels.
-    for (let a = 0; a < 64; a++) {
-      const t = a / 64 * Math.PI * 2;
-      const px = Math.round(cx + Math.cos(t) * R), py = Math.round(cy + Math.sin(t) * R);
-      ctx.fillStyle = (a % 8 < 4) ? '#c0392b' : '#efe6d0';
-      ctx.fillRect(px, py, 2, 2);
+  // --- LES NEUF KIOSQUES DE LA FOIRE (voir `peindreKiosque`) ---------------
+  barbe_a_papa: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#e87aa8', '#fbe3ee', function (c) {
+      for (const [x, y] of [[4, 11], [22, 10], [7, 12]]) {                     // les nuages roses sur leur baton
+        c.fillStyle = '#f7a8cc'; c.fillRect(x - 2, y - 2, 5, 4); c.fillRect(x - 1, y - 3, 3, 1);
+        c.fillStyle = '#fcd2e4'; c.fillRect(x - 1, y - 2, 2, 2);
+        c.fillStyle = '#efe6d0'; c.fillRect(x, y + 2, 1, 3);
+      }
+    });
+  } },
+  hot_dogs: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#c0392b', '#efd06a', function (c) {
+      c.fillStyle = '#d9a35a'; c.fillRect(9, 0, 11, 3);                         // l'enseigne : un pain...
+      c.fillStyle = '#b8452e'; c.fillRect(8, 1, 13, 1);                         // ...et sa saucisse
+      c.fillStyle = '#efd06a'; c.fillRect(11, 1, 7, 1);                         // la moutarde
+      c.fillStyle = '#d9a35a'; c.fillRect(3, 14, 5, 2); c.fillRect(21, 14, 5, 2);
+      c.fillStyle = '#b8452e'; c.fillRect(3, 14, 5, 1); c.fillRect(21, 14, 5, 1);
+    });
+  } },
+  pop_corn: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#c0392b', '#ffffff', function (c) {
+      for (const x of [3, 21]) {                                               // les boites rayees
+        c.fillStyle = '#ffffff'; c.fillRect(x, 11, 5, 5);
+        c.fillStyle = '#c0392b'; c.fillRect(x + 1, 11, 1, 5); c.fillRect(x + 3, 11, 1, 5);
+        c.fillStyle = '#fff6c8'; c.fillRect(x - 1, 9, 7, 2); c.fillRect(x, 8, 5, 1);   // le mais qui deborde
+        c.fillStyle = '#efd06a'; c.fillRect(x + 1, 9, 1, 1); c.fillRect(x + 4, 10, 1, 1);
+      }
+    });
+  } },
+  limonade: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#efd06a', '#ffffff', function (c) {
+      c.fillStyle = '#cfe6f5'; c.fillRect(3, 9, 5, 7);                          // le pichet
+      c.fillStyle = '#f6e27a'; c.fillRect(3, 11, 5, 5);
+      c.fillStyle = '#cfe6f5'; c.fillRect(8, 11, 1, 3);
+      for (const x of [21, 24]) {                                              // les verres
+        c.fillStyle = '#f6e27a'; c.fillRect(x, 12, 2, 4);
+        c.fillStyle = '#5fb87a'; c.fillRect(x + 1, 10, 1, 2);
+      }
+    });
+  } },
+  poutine: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    // ⚠️ Bleu et blanc : c'est une foire au Quebec, et la poutine est son drapeau.
+    peindreKiosque(ctx, v, '#2f6fb5', '#ffffff', function (c) {
+      for (const x of [3, 21]) {
+        c.fillStyle = '#efe6d0'; c.fillRect(x, 13, 6, 3);                       // le casseau
+        c.fillStyle = '#e8c56a'; c.fillRect(x, 11, 6, 2);                       // les frites
+        c.fillStyle = '#7a4a26'; c.fillRect(x + 1, 11, 4, 1);                   // la sauce
+        c.fillStyle = '#fff6e0'; c.fillRect(x + 1, 12, 1, 1); c.fillRect(x + 4, 12, 1, 1);   // le fromage en grains
+      }
+      c.fillStyle = '#ffffff'; c.fillRect(10, 0, 9, 2);                         // la fleur de lys, simplifiee
+      c.fillStyle = '#2f6fb5'; c.fillRect(14, 0, 1, 2);
+    });
+  } },
+  queues_de_castor: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#8a5a2b', '#efe6d0', function (c) {
+      for (const x of [2, 21]) {                                               // la pate aplatie, sucree
+        c.fillStyle = '#b87a3a'; c.fillRect(x, 12, 7, 4); c.fillRect(x + 1, 11, 5, 1);
+        c.fillStyle = '#d9a35a'; c.fillRect(x + 1, 12, 5, 2);
+        c.fillStyle = '#7a4a26'; c.fillRect(x + 2, 13, 1, 1); c.fillRect(x + 4, 12, 1, 1);
+      }
+    });
+  } },
+  ballons: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#9b59b6', '#efd06a', function (c) {
+      // Les ballons flottent PAR-DESSUS l'auvent : c'est eux qu'on voit de loin.
+      const couleurs = ['#e0574f', '#4fa3d1', '#efd06a', '#5fb87a', '#e87aa8', '#f39c12'];
+      [[2, 0], [7, 1], [21, 0], [25, 2], [11, 0], [17, 1]].forEach(function (p, i) {
+        c.fillStyle = couleurs[i]; c.fillRect(p[0], p[1], 3, 4);
+        c.fillStyle = 'rgba(255,255,255,0.5)'; c.fillRect(p[0], p[1], 1, 1);
+        c.fillStyle = '#efe6d0'; c.fillRect(p[0] + 1, p[1] + 4, 1, 3);
+      });
+    });
+  } },
+  peluches: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#8e44ad', '#f1c40f', function (c) {
+      // Les toutous accroches sous l'auvent : les prix qu'on ne gagne jamais.
+      [[2, '#e87aa8'], [6, '#4fa3d1'], [21, '#5fb87a'], [25, '#f39c12']].forEach(function (p) {
+        c.fillStyle = p[1]; c.fillRect(p[0], 8, 3, 3); c.fillRect(p[0] - 1, 7, 1, 1); c.fillRect(p[0] + 3, 7, 1, 1);
+        c.fillStyle = '#1b1b1f'; c.fillRect(p[0], 9, 1, 1); c.fillRect(p[0] + 2, 9, 1, 1);
+        c.fillStyle = p[1]; c.fillRect(p[0], 11, 3, 3);
+      });
+    });
+  } },
+  lance_anneaux: { arrete: 8, variantes: 16, w: 29, h: 30, ancre: [14, 27], r: 10, sol: [11, 5], solide: true, peindre: function (ctx, w, h, v) {
+    peindreKiosque(ctx, v, '#2f8d6a', '#ffffff', function (c) {
+      for (let i = 0; i < 6; i++) {                                            // les bouteilles
+        const x = i < 3 ? 2 + i * 2 : 20 + (i - 3) * 2;
+        c.fillStyle = '#2f6b2a'; c.fillRect(x, 11, 1, 5); c.fillRect(x, 10, 1, 1);
+      }
+      c.fillStyle = '#e8a33a'; c.fillRect(1, 9, 4, 1); c.fillRect(21, 9, 4, 1);   // les anneaux lances
+    });
+  } },
+
+  // L'ARCHE DE LA FOIRE — Martin : « une entree avec une arche ». ⚠️ Elle est a
+  // CHEVAL sur l'ouverture de la palissade : ses deux piliers se posent sur les
+  // tuiles de cloture de part et d'autre, et l'arc passe au-dessus de l'allee
+  // d'entree. Pas solide : c'est la barriere de l'arche (`carte.BARRIERES`,
+  // `payer`) qui arrete — et laisse passer qui a son billet.
+  portique_foire: { solide: false, r: 0, variantes: 2, anime: 18, w: 72, h: 66, ancre: [36, 62], peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(2, 60, 20, 5); ctx.fillRect(50, 60, 20, 5);
+    // Les deux piliers, rayes rouge et blanc, coiffes d'or.
+    for (const px of [4, 56]) {
+      ctx.fillStyle = '#8e1f16'; ctx.fillRect(px, 22, 12, 40);
+      for (let y = 22; y < 62; y += 8) { ctx.fillStyle = '#c0392b'; ctx.fillRect(px, y, 11, 4); ctx.fillStyle = '#efe6d0'; ctx.fillRect(px, y + 4, 11, 4); }
+      ctx.fillStyle = '#e8a33a'; ctx.fillRect(px - 2, 18, 16, 5);
+      ctx.fillStyle = '#c08a20'; ctx.fillRect(px - 2, 22, 16, 1);
+      ctx.fillStyle = '#5e4a2a'; ctx.fillRect(px - 1, 60, 14, 3);
     }
-    // Les rayons, et le moyeu.
-    ctx.fillStyle = '#8b8f96';
-    for (let k = 0; k < 8; k++) {
-      const t = (k / 8 + v / 32) * Math.PI * 2;
-      for (let d = 4; d < R; d += 2) {
-        ctx.fillRect(Math.round(cx + Math.cos(t) * d), Math.round(cy + Math.sin(t) * d), 1, 1);
+    // L'arc : une demi-couronne epaisse, bleue, bordee d'ampoules.
+    const cx = 36, cy = 30, R = 30;
+    for (let a = 0; a <= 180; a += 1) {
+      const t = Math.PI + a / 180 * Math.PI;
+      for (let e = 0; e < 7; e++) {
+        const px = Math.round(cx + Math.cos(t) * (R - e)), py = Math.round(cy + Math.sin(t) * (R - e));
+        ctx.fillStyle = e === 0 || e === 6 ? '#1f4d80' : '#2f6fb5';
+        ctx.fillRect(px, py, 1, 1);
       }
     }
-    ctx.fillStyle = '#5e626a'; ctx.fillRect(cx - 3, cy - 3, 6, 6);
-    ctx.fillStyle = '#a6aab0'; ctx.fillRect(cx - 2, cy - 3, 4, 4);
-    // ⚠️ LES NACELLES TOURNENT, et c'est la seule articulation : `v` les fait
-    // avancer d'un huitieme de tour. Le reste est cuit une fois.
-    for (let k = 0; k < 8; k++) {
-      const t = (k / 8 + v / 32) * Math.PI * 2;
+    for (let a = 0; a <= 180; a += 12) {
+      const t = Math.PI + a / 180 * Math.PI;
+      const px = Math.round(cx + Math.cos(t) * (R + 1)), py = Math.round(cy + Math.sin(t) * (R + 1));
+      ctx.fillStyle = ((a / 12 + v) % 2) ? '#ffe58a' : '#b8862a';
+      ctx.fillRect(px - 1, py - 1, 3, 3);
+    }
+    // L'enseigne dans la cle de voute : « FOIRE » en lettres doublees.
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(15, 6, 42, 16);
+    ctx.fillStyle = '#8e1f16'; ctx.fillRect(15, 19, 42, 3);
+    const LETTRES = {
+      F: ['111', '100', '110', '100', '100'], O: ['111', '101', '101', '101', '111'],
+      I: ['111', '010', '010', '010', '111'], R: ['110', '101', '110', '101', '101'],
+      E: ['111', '100', '110', '100', '111'],
+    };
+    let lx = 17;
+    for (const l of 'FOIRE') {
+      LETTRES[l].forEach(function (rangee, ry) {
+        for (let rx = 0; rx < 3; rx++) {
+          if (rangee[rx] !== '1') continue;
+          ctx.fillStyle = '#ffe58a'; ctx.fillRect(lx + rx * 2, 8 + ry * 2, 2, 2);
+        }
+      });
+      lx += 8;
+    }
+    // Les fanions qui pendent sous l'arc.
+    for (let x = 20; x < 54; x += 5) {
+      ctx.fillStyle = ['#efd06a', '#5fb87a', '#e87aa8', '#4fa3d1'][(x / 5) % 4];
+      ctx.fillRect(x, 24, 3, 2); ctx.fillRect(x + 1, 26, 1, 1);
+    }
+  } },
+
+  // LA GRANDE ROUE. ⚠️ **Ce n'est pas un manège, c'est un BELVEDERE QUI TOURNE**,
+  // et c'est le POINT DE REPERE de la foire : on la voit du bout de l'allee et
+  // c'est elle qui dit ou l'on va. ⚠️ Premiere version jetee : 44 px de haut,
+  // perdue au milieu d'un champ — Martin la cherchait sur sa capture. Elle
+  // double : 84 x 92, douze nacelles, une jante d'ampoules.
+  // ⚠️ Son empreinte au sol reste celle de son PORTIQUE, pas de sa jante : la
+  // roue est EN L'AIR, on passe dessous. Le juge de `PORTEE_DECOR` le tient.
+  grande_roue: { anime: 22, arrete: 14, w: 84, h: 92, ancre: [42, 88], r: 16, sol: [16, 8], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
+    const cx = 42, cy = 40, R = 36, N = 12;
+    ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(12, 84, 60, 7);      // son ombre
+    // Le portique : deux jambes en A de chaque cote du moyeu.
+    ctx.fillStyle = '#4a4d55';
+    for (let t = 0; t <= 1; t += 0.02) {
+      ctx.fillRect(Math.round(cx - 3 + (18 - 3) * -t), Math.round(cy + t * 46), 3, 2);
+      ctx.fillRect(Math.round(cx + 1 + 18 * t), Math.round(cy + t * 46), 3, 2);
+    }
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(18, 85, 16, 4); ctx.fillRect(50, 85, 16, 4);
+    // Les rayons, qui tournent avec les nacelles.
+    ctx.fillStyle = '#9aa0a8';
+    for (let k = 0; k < N; k++) {
+      const t = (k / N + v / (N * 6)) * Math.PI * 2;
+      for (let d = 5; d < R; d += 2) ctx.fillRect(Math.round(cx + Math.cos(t) * d), Math.round(cy + Math.sin(t) * d), 1, 1);
+    }
+    // La jante, une couronne d'ampoules qui s'allument une sur deux.
+    for (let a = 0; a < 120; a++) {
+      const t = a / 120 * Math.PI * 2;
+      const px = Math.round(cx + Math.cos(t) * R), py = Math.round(cy + Math.sin(t) * R);
+      ctx.fillStyle = (a % 6 === (v % 2) * 3) ? '#ffe58a' : ((a % 12 < 6) ? '#c0392b' : '#efe6d0');
+      ctx.fillRect(px, py, 2, 2);
+    }
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(cx - 5, cy - 5, 10, 10);         // le moyeu
+    ctx.fillStyle = '#a6aab0'; ctx.fillRect(cx - 3, cy - 4, 6, 6);
+    ctx.fillStyle = '#ffe58a'; ctx.fillRect(cx - 1, cy - 2, 2, 2);
+    // ⚠️ LES NACELLES TOURNENT, et c'est la seule articulation : `v` les avance
+    // d'un sixieme d'intervalle. Elles pendent TOUJOURS vers le bas.
+    const couleurs = ['#2f6fb5', '#d98324', '#2f8d6a', '#c0392b', '#9b59b6', '#efd06a'];
+    for (let k = 0; k < N; k++) {
+      const t = (k / N + v / (N * 6)) * Math.PI * 2;
       const nx = Math.round(cx + Math.cos(t) * R), ny = Math.round(cy + Math.sin(t) * R);
-      ctx.fillStyle = ['#2f6fb5', '#d98324', '#2f8d6a', '#c0392b'][k % 4];
-      ctx.fillRect(nx - 2, ny - 1, 5, 4);
-      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(nx - 2, ny + 3, 5, 1);
+      ctx.fillStyle = '#5e626a'; ctx.fillRect(nx, ny, 1, 3);
+      ctx.fillStyle = couleurs[k % couleurs.length]; ctx.fillRect(nx - 3, ny + 3, 7, 5);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(nx - 3, ny + 3, 7, 1);
+      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(nx - 2, ny + 5, 5, 1);
     }
   } },
 

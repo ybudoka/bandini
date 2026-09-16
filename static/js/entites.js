@@ -1144,6 +1144,8 @@ const Entites = (function () {
       else if (e.metier === 'laveur') majLaveur(e);
       else if (e.metier === 'pickpocket') majPickpocket(e);
       else if (e.metier === 'baigneur') majPlage(e);
+      else if (e.metier === 'forain') majForain(e);
+      else if (e.metier === 'mascotte') majMascotte(e);
     }
   }
 
@@ -1722,6 +1724,157 @@ const Entites = (function () {
     if (e.fuite <= 0) oublier(e);
   }
 
+  // --- La foule de la foire ------------------------------------------------
+  //: ⚠️ « UNE FOIRE, C'EST BEAUCOUP DE CHOSES ET BEAUCOUP DE MONDE » — Martin,
+  //: devant une foire a trois passants. La foule de la rue nait au hasard dans
+  //: la bulle du joueur et TRAVERSE la foire ; celle-ci nait DANS la foire, y
+  //: reste, et y fait ce qu'on fait dans une foire : aller d'un kiosque a
+  //: l'autre, s'arreter devant, regarder. Les mascottes, elles, deambulent et
+  //: saluent.
+  //:
+  //: ⚠️ Rien ne se tire au de du jeu ICI : la place se trouve en balayant le
+  //: rectangle de la foire, le kiosque vise se tire a l'empreinte du passant et
+  //: de l'instant. (`creerPieton` en tire deux pour la bourse et la direction —
+  //: comme pour les enfants de la greve, ca ne joue qu'a portee de la foire.)
+
+  /** Une tuile marchable de la foire, hors champ et libre. On balaie le
+      rectangle depuis un point de depart qui tourne avec le temps : la foule ne
+      nait pas toujours au meme coin. */
+  function placeDansLaFoire(r, k) {
+    const n = r.l * r.h, depart = hash2(B.t, 0xF0 + k) % n;
+    for (let i = 0; i < n; i += 3) {
+      const c = (depart + i * 7) % n;
+      const tx = r.x + (c % r.l), ty = r.y + Math.floor(c / r.l);
+      if (!Monde.marchablePieton(tx, ty) || !Monde.dansLaFoire(tx, ty)) continue;
+      const x = tx * TT + 8, y = ty * TT + 8;
+      // ⚠️ A PORTEE DU JOUEUR : `peupler` oublie tout passant au-dela de la bulle
+      // (520 px). Nee au bout de la foire, la foule etait effacee a l'image
+      // suivante — la capture ne comptait que six forains sur trente voulus.
+      if (dist2(x, y, B.joueur.x, B.joueur.y) > 470 * 470) continue;
+      if (visibleAEcran(x, y, 20) || !placeLibre(x, y)) continue;
+      return { x: x, y: y };
+    }
+    return null;
+  }
+
+  function naitreLaFoire() {
+    const f = B.defs.pietons && B.defs.pietons.foule_de_foire;
+    const def = Monde.carte && Monde.carte.def;
+    const r = def && def.foire;
+    const j = B.joueur;
+    if (!f || !r || !j || B.interieur) return 0;
+    // La distance du joueur au BORD de la foire, pas a son centre : elle fait
+    // quatre-vingts tuiles de long, et on doit la trouver pleine en y arrivant.
+    const bx = Math.max(r.x * TT, Math.min(j.x, (r.x + r.l) * TT));
+    const by = Math.max(r.y * TT, Math.min(j.y, (r.y + r.h) * TT));
+    if (dist2(bx, by, j.x, j.y) > f.rayon_px * f.rayon_px) return 0;
+    let forains = 0, mascottes = 0;
+    for (const q of B.entites) {
+      if (q.type !== 'pieton' || !q.vivant) continue;
+      if (q.metier === 'forain') forains++;
+      else if (q.metier === 'mascotte') mascottes++;
+    }
+    const costumes = B.defs.pietons.catalogue.filter(function (p) { return p.metier === 'mascotte'; });
+    let nes = 0;
+    for (let k = 0; k < f.par_battement; k++) {
+      const mascotte = k === 0 && mascottes < f.mascottes && costumes.length > 0;
+      if (!mascotte && forains >= f.forains) break;
+      const place = placeDansLaFoire(r, k);
+      if (!place) break;
+      const arch = mascotte ? costumes[mascottes % costumes.length]
+        : archetypeDeRue(place.x, place.y, hash2(place.x * 31 + place.y, B.t) / 4294967296);
+      const e = creerPieton(place.x, place.y, arch);
+      if (!e) continue;
+      // ⚠️ Un METIER, pas un costume : chacun a sa routine (`majForain`,
+      // `majMascotte`), et il ne compte pas dans la foule de la rue.
+      e.metier = mascotte ? 'mascotte' : 'forain';
+      e.foire = true;
+      ajouterA(grille, e);
+      if (mascotte) mascottes++; else forains++;
+      nes++;
+    }
+    return nes;
+  }
+
+  /** Arrive a destination : on s'arrete, et on regarde ce qu'on est venu voir. */
+  function arriveALaFoire(e, f) {
+    if (e.etat !== 'cap' || !e.cap) return false;
+    if (dist2(e.x, e.y, e.cap.x, e.cap.y) > 14 * 14 && e.capT < 540) return false;
+    const t = hash2(e.id * 2654435761 + B.t, 0xF0A1E);
+    e.etat = 'arret';
+    e.minuterie = f.arret_images[0] + t % (f.arret_images[1] - f.arret_images[0]);
+    e.vx = 0; e.vy = 0;
+    e.cap = null;
+    if (e.regarde) regarder(e, e.regarde.x - e.x, e.regarde.y - e.y);
+    return true;
+  }
+
+  /** Un point de la foire ou aller, a portee de marche (`cap` renonce au-dela
+      de 340 px). Pour un forain : le comptoir d'un kiosque proche, trois fois
+      sur quatre ; sinon un bout d'allee. */
+  function destinationDeFoire(e, versUnKiosque) {
+    const def = Monde.carte.def, r = def.foire;
+    const t = hash2(e.id * 2654435761 + B.t, 0xF0A1D);
+    if (versUnKiosque) {
+      const proches = (def.kiosques_de_foire || []).filter(function (k) {
+        return dist2(k.x * TT + 8, k.y * TT + 8, e.x, e.y) < 280 * 280;
+      });
+      if (proches.length) {
+        const k = proches[t % proches.length];
+        // ⚠️ DEVANT le comptoir : il est toujours peint face au sud, donc on se
+        // tient sur la tuile du dessous — pour un kiosque du rang nord, c'est
+        // l'allee elle-meme, et c'est la que la foule s'amasse.
+        const decale = ((t >>> 8) % 21) - 10;
+        return { x: k.x * TT + 8 + decale, y: (k.y + 1) * TT + 8,
+                 regarde: { x: k.x * TT + 8, y: k.y * TT } };
+      }
+    }
+    for (let essai = 0; essai < 12; essai++) {
+      const u = hash2(t, essai);
+      const tx = Math.floor(e.x / TT) + (u % 31) - 15;
+      const ty = Math.floor(e.y / TT) + ((u >>> 8) % 11) - 5;
+      if (tx < r.x || tx >= r.x + r.l || ty < r.y || ty >= r.y + r.h) continue;
+      if (Monde.glyphe(tx, ty) !== 'g' || !Monde.marchablePieton(tx, ty) || !Monde.dansLaFoire(tx, ty)) continue;
+      return { x: tx * TT + 8, y: ty * TT + 8, regarde: null };
+    }
+    return null;
+  }
+
+  function allerA(e, d) {
+    e.cap = { x: d.x, y: d.y };
+    e.regarde = d.regarde;
+    e.capT = 0; e.capVite = false;
+    e.etat = 'cap';
+    e.poseFixe = null;
+  }
+
+  /** LE FORAIN : un kiosque, un arret devant, le kiosque suivant. */
+  function majForain(e) {
+    const f = B.defs.pietons.foule_de_foire;
+    if (!Monde.carte.def.foire) return;
+    if (arriveALaFoire(e, f)) return;
+    if (e.etat !== 'flane') return;          // il regarde, il a peur, il temoigne
+    const t = hash2(e.id * 2654435761 + B.t, 0xF0A1C);
+    const d = destinationDeFoire(e, (t & 3) !== 0);
+    if (d) allerA(e, d);
+  }
+
+  /** LA MASCOTTE : elle deambule dans l'allee, s'arrete, et SALUE — les bras
+      leves, deux images qui alternent (`mascotte`, poses 3 et 4 de `bas`). */
+  function majMascotte(e) {
+    const f = B.defs.pietons.foule_de_foire;
+    if (!Monde.carte.def.foire) return;
+    if (e.etat === 'arret') {
+      e.face = 'bas';
+      e.poseFixe = 3 + (Math.floor(e.t / f.salut_images) % 2);
+      return;
+    }
+    if (arriveALaFoire(e, f)) { e.face = 'bas'; return; }
+    if (e.etat !== 'flane') { e.poseFixe = null; return; }
+    const d = destinationDeFoire(e, false);
+    if (d) allerA(e, d);
+  }
+
   // --- Les enfants de la greve ---------------------------------------------
   //: ⚠️ **JOUER, C'EST UN `metier`, PAS UN COSTUME.** La regle des sortes de
   //: gens est ecrite trois fois dans `pietons.py`, et le depot l'a deja payee
@@ -2257,6 +2410,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
+    if (B.t % 30 === 0) naitreLaFoire();
     if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
@@ -2587,12 +2741,15 @@ const Entites = (function () {
     const tx = Math.floor((e.x + sx * (e.r + 2)) / TT), ty = Math.floor((e.y + sy * (e.r + 2)) / TT);
     // Une barriere fermee s'enjambe aussi — apres avoir pousse une seconde,
     // et l'etoile tombe a la retombee (`majEnjambe`).
-    const barriere = Monde.barriereEnjambable(e, tx, ty);
+    let barriere = Monde.barriereEnjambable(e, tx, ty);
     if (!Monde.estEnjambable(tx, ty) && !barriere) return null;
     // Derriere la cloture : une tuile ou l'on peut retomber. Deux grillages
     // colles ne s'enjambent pas d'un coup — on en franchit un, puis l'autre.
     const ax = tx + sx, ay = ty + sy;
     if (Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) return null;
+    // ⚠️ RESQUILLER : enjamber la palissade de la foire sans billet coute ce que
+    // coute de forcer l'arche, a la retombee (`majEnjambe`).
+    if (!barriere && e === B.joueur && Monde.resquille) barriere = Monde.resquille(tx, ty, ax, ay);
     return { sx: sx, sy: sy, tx: tx, ty: ty, ax: ax, ay: ay, barriere: barriere };
   }
 
@@ -3961,6 +4118,7 @@ const Entites = (function () {
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
+    naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

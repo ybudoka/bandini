@@ -45,6 +45,11 @@ const Monde = (function () {
     poteau: { dy: 2, c: 'rgba(255,214,130,0.55)' },
     vitrine: { dy: 6, c: 'rgba(255,226,170,0.34)' },
     fenetre: { dy: 8, c: 'rgba(255,212,150,0.22)' },
+    // ⚠️ LA FOIRE LA NUIT. Une guirlande a chaque kiosque, en trois couleurs qui
+    // alternent — une foire eteinte a 21 h 50, c'etait la capture de Martin.
+    foire_jaune: { dy: 0, c: 'rgba(255,214,110,0.62)' },
+    foire_rose: { dy: 0, c: 'rgba(255,120,190,0.52)' },
+    foire_bleue: { dy: 0, c: 'rgba(120,190,255,0.50)' },
   };
 
   let carte = null;
@@ -481,7 +486,30 @@ const Monde = (function () {
     if (c.heure === 'jour') return estNuit();
     if (c.heure === 'nuit') return !estNuit();
     if (c.jour_tire) return (hash2(p ? p.jour : 0, c.jour_tire.sel || 7) % 100) < (c.jour_tire.chance || 0) * 100;
+    // ⚠️ UNE BARRIERE QUI SE PAIE (l'arche de la foire) : fermee tant qu'on n'a
+    // pas son billet DU JOUR. Un billet par journee, pas par passage — une foire
+    // qui refacture chaque aller-retour au hot-dog d'en face est un peage.
+    if (c.payer) return !(p && p.billets && p.billets[c.payer] === p.jour);
     return false;
+  }
+
+  /** Cette tuile est-elle DANS l'enceinte de la foire (a l'interieur de sa
+      palissade) ? Les bandes viennent de Python (`foire_enclos`). */
+  function dansLaFoire(tx, ty) {
+    const bandes = (carte && carte.def && carte.def.foire_enclos) || [];
+    for (const b of bandes) if (b[0] === ty && tx >= b[1] && tx <= b[2]) return true;
+    return false;
+  }
+
+  /** ⚠️ RESQUILLER. La palissade de la foire s'enjambe comme toutes les clotures
+      du jeu — on ne l'a pas rendue infranchissable, ce serait un mur qui ment.
+      Mais la retombee DANS la foire sans billet coute ce que coute de forcer
+      l'arche : c'est le prix de ne pas payer le prix. Rend la barriere de la
+      foire, ou null (on a son billet, ou on retombe dehors). */
+  function resquille(tx, ty, ax, ay) {
+    if (!dansLaFoire(ax, ay) || dansLaFoire(tx, ty)) return null;
+    const b = barrieres().find(function (q) { return q.condition && q.condition.payer === 'foire'; });
+    return b && barriereFermee(b) ? b : null;
   }
 
   function dansLeRect(b, tx, ty) { return tx >= b.x && tx < b.x + b.l && ty >= b.y && ty < b.y + b.h; }
@@ -509,6 +537,20 @@ const Monde = (function () {
     const sorte = e.type === 'vehicule' ? 'vehicule' : 'pieton';
     const b = barriereA(tx, ty, sorte);
     if (!b || dansLeRect(b, Math.floor(e.x / TT), Math.floor(e.y / TT))) return false;
+    if (b.condition && b.condition.payer) {
+      // ⚠️ ON RESSORT LIBREMENT : `dedans` dit de quel cote est la foire, et qui
+      // en vient passe sans rien payer — une barriere qui se paie ne doit pas
+      // enfermer celui qui a resquille, seulement lui faire payer l'entree.
+      const ligne = Math.floor(e.y / TT);
+      if ((b.dedans === 'N' && ligne < b.y) || (b.dedans === 'S' && ligne >= b.y + b.h)) return false;
+      // Le JOUEUR a pied paie en passant : pas de menu, pas d'arret — on se bute
+      // a l'arche et le billet se prend, comme a un tourniquet.
+      if (e === B.joueur && typeof Missions !== 'undefined' && Missions.payer(b.prix || 0, 'BILLET DE FOIRE')) {
+        B.partie.billets = B.partie.billets || {};
+        B.partie.billets[b.condition.payer] = B.partie.jour;
+        return false;
+      }
+    }
     e.bute = b;
     if (e.buteImage !== B.t) { e.buteImage = B.t; e.buteT = (e.buteT || 0) + 1; }
     if ((e === B.joueur || e.conducteur === B.joueur) && typeof Hud !== 'undefined' && B.t - (B.buteMsgT || -999) >= 90) {
@@ -1433,7 +1475,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
-    brisDAqueduc,
+    brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,

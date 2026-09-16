@@ -449,7 +449,9 @@ def test_les_lampadaires_eclairent_depuis_un_trottoir():
     #: au pied d'un commerce) et la FENETRE allumee d'un logement. Seul le
     #: premier a un poteau plante dans le sol.
     poteaux = [lampe for lampe in CARTE["lampes"]
-               if lampe.get("c") not in ("vitrine", "fenetre")]
+               # ⚠️ Ni les guirlandes de la foire : elles pendent a un KIOSQUE,
+               # pas a un poteau plante — la raison de la vitrine et de la fenetre.
+               if lampe.get("c") not in ("vitrine", "fenetre", *carte.FOIRE["lampes"])]
     assert len(poteaux) >= 40
     # ⚠️ **Reformule le 15 sept. 2026, le jour du trottoir a une tuile.** Il
     # exigeait que 80 % des poteaux soient SUR le trottoir. Depuis que la dalle
@@ -507,7 +509,9 @@ def test_aucun_lampadaire_ne_prend_le_coin_d_un_feu():
                 for iy in (-1, 0, 1):
                     reserves.add((cx + ix, cy + iy))
     poteaux = [lampe for lampe in CARTE["lampes"]
-               if lampe.get("c") not in ("vitrine", "fenetre")]
+               # ⚠️ Ni les guirlandes de la foire : elles pendent a un KIOSQUE,
+               # pas a un poteau plante — la raison de la vitrine et de la fenetre.
+               if lampe.get("c") not in ("vitrine", "fenetre", *carte.FOIRE["lampes"])]
     dessus = [(lampe["x"], lampe["y"]) for lampe in poteaux if (lampe["x"], lampe["y"]) in reserves]
     assert not dessus, f"{len(dessus)} lampadaires sur un coin reserve au feu (ex. {dessus[:4]})"
     # ⚠️ Et il en reste : ecarter n'est pas supprimer. Sans cette borne, la
