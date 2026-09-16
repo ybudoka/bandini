@@ -22,7 +22,8 @@ TYPES_OBJECTIFS = (
                    # `prete` : a QUI il est — un char prete ne se vend pas
     "livrer",      # amener le vehicule de la mission a un lieu ; `sans_degats` : prime
     "ramasser",    # ramasser un objet — `cible: fuyard` : le rattraper d'abord
-    "tuer",        # mettre KO (ou pire) `n` membres d'un `groupe`, `chef` pour le boss
+    "tuer",        # mettre KO (ou pire) `n` membres d'un `groupe`, `chef` pour le boss ;
+                   # `arme` et `vie` remplacent la fiche de l'archetype (voir ci-dessous)
     "survivre",    # tenir `secondes`
     "course",      # passer des points de passage dans l'ordre, chrono
     "courses",     # `n` courses de taxi (le klaxon prend un client)
@@ -30,6 +31,19 @@ TYPES_OBJECTIFS = (
     "retourner",   # revenir au donneur
 )
 
+#: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
+#: pose des membres d'un `groupe` : ils sortent de l'archetype (`pietons.py`),
+#: avec sa vie et son arme. Deux cles facultatives passent par-dessus, et
+#: seulement pour CES hommes-la :
+#:
+#:   `arme` — ce qu'ils tiennent ; `""` veut dire les poings. ⚠️ Un homme sans
+#:            arme ne peut pas non plus en LACHER une en tombant.
+#:   `vie`  — leurs points de vie.
+#:
+#: ⚠️ **On ne touche pas a l'archetype pour regler une bagarre.** Une Cravate de
+#: rue doit rester ce qu'elle est : c'est elle qui tient le Faubourg (M5), c'est
+#: elle qui vient encaisser la dette de Rocco, et l'affaiblir pour arranger M2
+#: rendrait tout le reste du jeu mou. Ce qui change, c'est QUI on envoie.
 ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono")
 
 
@@ -124,7 +138,18 @@ CATALOGUE: list[Mission] = [
         "recompense": 150, "phase": 1, "echec": ["mort", "arrete"],
         "donne": {"arme": "batte", "rabais": {"kiosque": 0.75}, "message": "LE BÂTON, ET −25 % AU KIOSQUE"},
         "objectifs": [
-            {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "texte": "METS LES DEUX CRAVATES K.-O."},
+            # ⚠️ **LA PREMIERE BAGARRE DU JEU, ET ELLE SE GAGNE AUX POINGS.** Ces
+            # deux-la sont venus racketter une dame au kiosque, pas casser un
+            # homme : ils arrivent LES MAINS VIDES, comme Madame Thibodeau le
+            # promet deux lignes plus bas (« Avec tes poings, pas plus »).
+            # Mesure d'avant : ils portaient le baton de l'archetype — 18 de
+            # degats et `renverse`, contre 100 PV et des poings a 8. Un joueur
+            # passif tombait en 3 s, et les coucher demandait 4,3 s de coups
+            # sans une image perdue : la premiere bagarre exigeait un jeu
+            # parfait. ⚠️ Et le baton est la RECOMPENSE de cette mission-ci :
+            # on le rencontrait avant de l'avoir.
+            {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "arme": "", "vie": 55,
+             "texte": "METS LES DEUX CRAVATES K.-O."},
             {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO"},
             {"type": "retourner", "texte": "RAPPORTE LA CAISSE À MADAME THIBODEAU"},
         ],

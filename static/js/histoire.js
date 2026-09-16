@@ -433,6 +433,15 @@ const Histoire = (function () {
         if (!place) continue;
         const e = Entites.creerPieton(place.x, place.y, arch);
         e.cible = true; e.mission = m.slug; e.courage = 1; e.etat = 'flane';
+        // ⚠️ CE QUE PORTE UN HOMME DE MISSION VIENT DE LA FICHE, pas de
+        // l'archetype. `arme` et `vie` sont facultatives (`missions.py`) et ne
+        // valent que pour CES hommes-la : la Cravate de rue reste ce qu'elle
+        // est — elle tient le Faubourg en M5 et vient encaisser la dette de
+        // Rocco. ⚠️ `''` veut dire les poings, et il faut donc tester
+        // `!== undefined` : un `||` rendrait le baton a qui vient les mains
+        // vides, ce qui est exactement le bogue qu'on repare.
+        if (o.arme !== undefined) e.arme = o.arme || null;
+        if (o.vie) { e.vie = e.vieMax = o.vie; }
         if (o.chef) { e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' }); }
         B.mission.entites.push(e);
         if (B.mission.entites.filter(function (q) { return q.cible && q.mission === m.slug && q.vivant && q.etat !== 'assomme'; }).length >= o.n) break;

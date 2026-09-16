@@ -411,3 +411,69 @@ def test_le_donneur_qui_a_une_job_pour_toi_t_interpelle(banc, paquet):
     assert r["sergent"] == heler["bouchard"], "M3 faite : le sergent t'attend dans sa piece"
     assert r["bouge"] is True, "une bulle reposee chaque image resterait figee a sa premiere image"
     assert r["dessine"] is True, "la bulle ne pose aucun pixel"
+
+
+def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
+    """M2 est la PREMIERE bagarre du jeu, et elle doit se gagner aux poings.
+
+    ⚠️ **Rouge avant le correctif, deux fois** : les deux Cravates sortaient de
+    l'archetype avec le BATON (18 de degats, `renverse`) et 90 PV, contre 100 PV
+    et des poings a 8 — et le joueur qui les laisse cogner tombait en **2,8 s**,
+    la ou ce juge en demande plus de quatre. Le dialogue promet pourtant le
+    contraire (« Avec tes poings, pas plus »), et le baton est la RECOMPENSE de
+    cette mission-ci : on le rencontrait avant de l'avoir.
+
+    ⚠️ **La moitie « il gagne » est un garde-fou, pas une mesure** — elle etait
+    VERTE avant, et il faut le dire : un banc qui cogne toutes les dix images
+    sans jamais rater ni tourner le dos chancelle ses deux hommes en continu
+    (`recul`), et gagnait deja. Ce que le banc ne sait pas jouer, c'est le
+    joueur qui se deplace, qui en a un dans le dos, qui rate — celui-la
+    encaissait 18 par coup. Cette moitie tient l'autre bord : deux hommes
+    qu'on peut ignorer ne seraient plus une bagarre.
+    """
+    r = banc("""function (L, o) {
+        function bagarre(riposte) {
+            L.Jeu.commencer();
+            L.graine(6);
+            const j = L.B.joueur;
+            L.B.partie.missionsFaites.m1 = 1;
+            const t = L.Histoire.donneur('thibodeau');
+            j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+            L.Histoire.commencer('m2');
+            L.B.cinema = null; L.B.dialogue = null;      // on a raccroche : la bagarre commence
+            const cibles = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
+            const fiches = cibles.map(function (e) { return { vie: e.vie, arme: e.arme }; });
+            let i = 0, mort = false, creux = j.vie;
+            for (; i < 1800; i++) {
+                const debout = cibles.filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
+                if (!debout.length) break;
+                if (j.vie <= 0 || L.B.transition) { mort = true; break; }   // l'hopital l'a repris
+                creux = Math.min(creux, j.vie);
+                // ⚠️ UN COUP SUR DIX IMAGES, pas un par image : le juge doit
+                // mesurer une bagarre jouable, pas un joueur parfait. C'est
+                // justement le jeu parfait qu'on ne veut plus exiger.
+                if (riposte && i % 10 === 0) {
+                    let c = debout[0], d = 1e9;
+                    debout.forEach(function (e) { const q = Math.hypot(e.x - j.x, e.y - j.y); if (q < d) { d = q; c = e; } });
+                    j.angle = Math.atan2(c.y - j.y, c.x - j.x);
+                    L.Combat.frapper(j);
+                }
+                o.frame(1);
+            }
+            return { fiches: fiches, s: i / 60, mort: mort, restant: mort ? 0 : creux };
+        }
+        const bat = bagarre(true), subit = bagarre(false);
+        // L'archetype, lui, n'a pas bouge : une Cravate de rue garde son baton.
+        const arch = L.Entites.archetype('cravate');
+        return { fiches: bat.fiches, gagne: bat, subit: subit,
+                 arch: { vie: arch.vie, arme: arch.arme } };
+    }""")
+    objectif = paquet["missions"][1]["objectifs"][0]
+    assert objectif["arme"] == "" and objectif["vie"] == 55, "la fiche des deux hommes vit dans missions.py"
+    assert r["fiches"] == [{"vie": 55, "arme": None}] * 2, "ils arrivent les mains vides, avec la vie de la fiche"
+    assert r["gagne"]["mort"] is False, "un joueur qui riposte gagne la premiere bagarre"
+    assert r["gagne"]["s"] < 5, f"{r['gagne']['s']:.1f} s : la bagarre doit se conclure"
+    assert r["gagne"]["restant"] >= 20, f"il reste {r['gagne']['restant']} PV : trop juste pour une premiere"
+    assert r["subit"]["mort"] is True, "mais deux hommes qu'on laisse cogner ont encore raison de toi"
+    assert r["subit"]["s"] > 4, f"{r['subit']['s']:.1f} s a encaisser : moins, et on n'a pas le temps de reagir"
+    assert r["arch"] == {"vie": 90, "arme": "batte"}, "la Cravate de rue, elle, garde son baton (M5, la dette)"
