@@ -72,6 +72,11 @@ const Combat = (function () {
     const arme = armeDef(e.arme || 'poings') || armeDef('poings');
     if (!arme || e.etat === 'attaque' || e.roule > 0) return false;
     if (arme.type === 'tir') return tirer(e, arme);
+    // ⚠️ ON SE SOUVIENT DE CE QU'ON FAISAIT. `e.etat` est ecrase par 'attaque'
+    // le temps des trois temps du coup ; sans memoire, la seule sortie ecrite
+    // etait « attaquer le joueur », et un Cravate qui se battait avec une Morue
+    // se retournait contre lui des le premier coup porte.
+    e.avantLeCoup = e.etat;
     e.etat = 'attaque';
     e.arc = arme;
     e.fort = !!fort && arme.type === 'melee';
@@ -102,9 +107,14 @@ const Combat = (function () {
       e.phase = 'repos';
       e.phaseT = Math.max(2, arme.cadence - arme.anticipation - arme.actif);
     } else {
-      e.etat = e.type === 'joueur' ? 'flane' : e.etat;
       e.phase = null;
-      if (e.type !== 'joueur' && e.etat === 'attaque') e.etat = 'attaque_joueur';
+      if (e.type === 'joueur') { e.etat = 'flane'; return; }
+      // On reprend ce qu'on faisait avant de frapper — se battre avec l'autre
+      // gang, le plus souvent s'en prendre au joueur. Le repli reste `blesser`
+      // ou `alerter`, qui ont deja change l'etat pendant le coup : dans ce
+      // cas-la ils ont efface la memoire, et c'est eux qui tranchent.
+      e.etat = e.avantLeCoup || 'attaque_joueur';
+      e.avantLeCoup = null;
     }
   }
 
@@ -117,7 +127,13 @@ const Combat = (function () {
     });
     for (const c of cibles) {
       if (e.touches.indexOf(c.id) >= 0) continue;
-      if (e.type === 'pieton' && c.type === 'pieton') continue;    // ils ne se battent pas entre eux
+      // ⚠️ LES PASSANTS NE SE BATTENT PAS ENTRE EUX — sauf deux gangs, et
+      // seulement l'une contre l'autre. C'est la seule inimitie que la ville
+      // connaisse, et elle est ecrite ici plutot que dans l'etat `bagarre` pour
+      // une raison : un coup perdu dans une rixe ne doit pas faucher le passant
+      // qui regardait, et c'est le meme test qui l'en protege.
+      if (e.type === 'pieton' && c.type === 'pieton'
+          && !(e.gang && c.gang && e.gang !== c.gang)) continue;
       const ecart = Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, c.x, c.y)));
       if (ecart > demi) continue;
       if (!Monde.ligneLibre(e.x, e.y, c.x, c.y)) continue;

@@ -1459,6 +1459,146 @@ const Entites = (function () {
     return 1;
   }
 
+  // --- La bagarre de gangs a leur frontiere ------------------------------------------------
+  //: ⚠️ L'AUTRE MOITIE DE « LA VILLE EST COUPABLE D'ELLE-MEME ». Le vol de char
+  //: se passe de travers du joueur ; celui-ci se passe SANS lui. Deux gangs se
+  //: tombent dessus la ou leurs districts se touchent — `pietons.frontieres()`
+  //: donne la ligne, le navigateur y trouve les deux trottoirs.
+  //:
+  //: ⚠️ Ce qui a coute cher n'est pas la rixe : c'est que TROIS mecanismes du
+  //: depot ne connaissaient qu'une seule reponse a la violence, « s'en prendre
+  //: au joueur ». `alerter` retournait contre lui toute gang a portee, `blesser`
+  //: faisait de meme du blesse, et `majAttaque` y ramenait tout pieton qui
+  //: finissait son coup. Chacun a maintenant son juge.
+
+  /** Est-il en train de se battre avec l'autre gang, en ce moment meme ?
+
+      ⚠️ Le coup lui-meme est un ETAT ('attaque', les trois temps de `Combat`) :
+      ne tester que 'bagarre' aurait laisse passer les images ou l'homme frappe
+      — et ce sont justement celles-la qui appellent `alerter`. */
+  function enPleineRixe(e) {
+    return e.etat === 'bagarre' || (e.etat === 'attaque' && e.avantLeCoup === 'bagarre');
+  }
+
+  /** Le rival le plus proche : quelqu'un de l'AUTRE gang, venu pour la meme
+      rixe, encore debout. */
+  function rivalDe(e, f) {
+    let meilleur = null, dMin = f.rival_px * f.rival_px;
+    for (const q of pietonsAutour(e.x, e.y, f.rival_px)) {
+      if (!q.bagarre || !q.vivant || q.etat === 'assomme' || !q.gang || q.gang === e.gang) continue;
+      const d = dist2(e.x, e.y, q.x, q.y);
+      if (d < dMin) { dMin = d; meilleur = q; }
+    }
+    return meilleur;
+  }
+
+  /** Le trottoir le plus proche de la ligne, du cote demande : -1 vers l'ouest
+      (ou le nord), +1 vers l'est (ou le sud).
+
+      ⚠️ On cherche EN TRAVERS et pas en couronne : la frontiere passe au milieu
+      d'une rue, et `trottoirLePlusProche` aurait aussi bien rendu le trottoir
+      d'en face — les deux camps seraient nes du meme bord. */
+  function bordDeLaFrontiere(ligne, le, sens, recul) {
+    const vertical = ligne.axe === 'v';
+    for (let k = 1; k <= recul; k++) {
+      const tx = vertical ? ligne.x + sens * k : le;
+      const ty = vertical ? le : ligne.y + sens * k;
+      if (Monde.marchablePieton(tx, ty)) return { tx: tx, ty: ty };
+    }
+    return null;
+  }
+
+  /** Une frontiere a portee de vue, avec un trottoir de chaque bord. */
+  function frontiereProche(x, y, f) {
+    const lignes = (B.defs.pietons && B.defs.pietons.frontieres) || [];
+    const jx = Math.floor(x / TT), jy = Math.floor(y / TT);
+    for (const ligne of lignes) {
+      const vertical = ligne.axe === 'v';
+      const debut = vertical ? ligne.y : ligne.x;
+      // Le point de la ligne le plus proche du joueur, sans sortir du segment.
+      const le = Math.min(debut + ligne.long - 1, Math.max(debut, vertical ? jy : jx));
+      const cx = (vertical ? ligne.x : le) * TT + 8, cy = (vertical ? le : ligne.y) * TT + 8;
+      const d = Math.hypot(cx - x, cy - y);
+      // ⚠️ Assez pres pour qu'on la voie se battre, assez loin pour que
+      // personne n'apparaisse sous les yeux du joueur : une rixe hors champ est
+      // du travail fait pour personne (la lecon du vol de char), une rixe qui
+      // se materialise dans son dos est un bogue qu'il voit.
+      if (d > f.rayon_px || d < f.trop_pres_px) continue;
+      const a = bordDeLaFrontiere(ligne, le, -1, f.recul_tuiles);
+      const b = bordDeLaFrontiere(ligne, le, 1, f.recul_tuiles);
+      if (a && b) return { ligne: ligne, a: a, b: b };
+    }
+    return null;
+  }
+
+  /** Deux gangs se tombent dessus a leur frontiere. Rend le nombre d'hommes nes. */
+  function allumerLaBagarre(f) {
+    const lieu = frontiereProche(B.joueur.x, B.joueur.y, f);
+    if (!lieu) return 0;
+    const gangs = (B.defs.pietons && B.defs.pietons.gangs) || [];
+    const vertical = lieu.ligne.axe === 'v';
+    let nes = 0;
+    for (const cote of ['a', 'b']) {
+      const slug = lieu.ligne[cote];
+      const bande = gangs.find(function (q) { return q.slug === slug; });
+      const arch = bande && archetype(bande.pieton);
+      if (!arch) continue;
+      const bord = lieu[cote];
+      for (let k = 0; k < f.membres; k++) {
+        // Ils s'etalent LE LONG de la rue, pas en travers : un camp est une
+        // ligne qui fait face a l'autre, pas une grappe.
+        const glisse = (k - (f.membres - 1) / 2) * f.ecart_px;
+        const px = bord.tx * TT + 8 + (vertical ? 0 : glisse);
+        const py = bord.ty * TT + 8 + (vertical ? glisse : 0);
+        if (!Monde.marchablePieton(Math.floor(px / TT), Math.floor(py / TT))) continue;
+        // ⚠️ PERSONNE N'APPARAIT A L'ECRAN. La fenetre de la fiche l'assure
+        // depuis la LIGNE, mais on nait sur le trottoir — jusqu'a six tuiles en
+        // deca —, et c'est cet ecart-la qui ramenerait un homme dans la vue.
+        if (visibleAEcran(px, py, 24)) continue;
+        const e = creerPieton(px, py, arch);
+        if (!e) continue;
+        e.bagarre = true;
+        // ⚠️ ILS NE SONT PAS LA FOULE : ils sont venus pour ca, comme l'ouvrier
+        // a son chantier et l'homme-sandwich a son poste. Sans cette marque, six
+        // hommes de plus passent par-dessus le plafond de passants — et le juge
+        // de la foule a deja attrape exactement cette faute, une fois.
+        e.metier = 'bagarre';
+        e.etat = 'bagarre';
+        e.bagarreT = f.duree_images;
+        e.rival = null;
+        e.cri = 90;
+        nes++;
+      }
+    }
+    if (nes) indexer();
+    return nes;
+  }
+
+  /** Il n'y a plus personne en face, ou le temps est fait : on s'en va. */
+  function finirLaBagarre(e) {
+    e.etat = 'flane';
+    e.rival = null;
+    e.vx = 0; e.vy = 0;
+  }
+
+  /** Une rixe par minute de jeu, au plus, et jamais deux a la fois.
+
+      ⚠️ Le tirage se fait a l'EMPREINTE de la minute, jamais au de du jeu : un
+      decor qui consomme `B.rng()` decale tous les des qui suivent, et cette
+      lecon-la a fait tomber quatre juges sans rapport le jour du char en panne. */
+  function majBagarre() {
+    const f = B.defs.pietons && B.defs.pietons.bagarre;
+    if (!f || !B.joueur || B.interieur || !B.partie) return 0;
+    const minute = Math.floor(B.partie.heure * 24 * 60);
+    if (B.rixeMinute === minute) return 0;
+    B.rixeMinute = minute;
+    // Une seule a la fois : deux rixes dans la meme rue, ce n'est plus une ville
+    // qui vit, c'est une ville en guerre.
+    if (B.entites.some(function (q) { return q.bagarre && q.vivant; })) return 0;
+    if (hash2(B.partie.jour * 1451 + minute, 0xBA6A) / 4294967296 >= f.chance_par_minute) return 0;
+    return allumerLaBagarre(f);
+  }
+
   /** Les hommes-sandwichs : un par poste (`carte.reclames`), le jour, dans la
       bulle du joueur. Il nait A SON POSTE et hors champ — sauf au premier
       instant d'une partie (`dabord`), ou personne ne regarde encore — et il
@@ -1562,6 +1702,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 30 === 0) majVolDeChar();
+    if (B.t % 30 === 0) majBagarre();
     if (B.t % 90 === 0) naitreLesSortes();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
@@ -2280,6 +2421,45 @@ const Entites = (function () {
       e.vx = dx / norme * vitesse;
       e.vy = dy / norme * vitesse;
       if (norme < f.portee_px) emporterLeChar(e, cible);
+    } else if (e.etat === 'bagarre') {
+      // ⚠️ IL VISE QUELQU'UN D'AUTRE QUE LE JOUEUR, et c'est tout ce qui
+      // manquait a la ville : `attaque_joueur` ne savait viser que lui. Il
+      // marche sur son rival, s'arrete a portee de poing, et cogne a la cadence
+      // de la fiche.
+      //
+      // ⚠️ ET LA RIXE FINIT — au bout de son temps, ou des qu'il ne reste plus
+      // personne debout en face. Deux survivants qui se tapent dessus jusqu'a la
+      // fin des temps ne sont pas une bagarre : c'est un decor qui grince.
+      const f = B.defs.pietons.bagarre;
+      if (--e.bagarreT <= 0) { finirLaBagarre(e); return; }
+      if (!e.rival || !e.rival.vivant || e.rival.etat === 'assomme'
+          || dist2(e.x, e.y, e.rival.x, e.rival.y) > f.rival_px * f.rival_px) {
+        e.rival = rivalDe(e, f);
+      }
+      if (!e.rival) { finirLaBagarre(e); return; }
+      vitesse = v.pieton_course * e.allure;
+      const dx = e.rival.x - e.x, dy = e.rival.y - e.y, norme = Math.hypot(dx, dy) || 1;
+      if (norme > f.portee_px) {
+        e.vx = dx / norme * vitesse;
+        e.vy = dy / norme * vitesse;
+      } else {
+        e.vx = 0; e.vy = 0;
+        regarder(e, dx, dy);
+        if (e.t % f.cadence_images === 0) Combat.frapper(e, false);
+      }
+    } else if (e.etat === 'attaque') {
+      // ⚠️ ON NE FLANE PAS PENDANT QU'ON FRAPPE — et c'est un vrai trou, pas un
+      // detail de la rixe. `Combat.frapper` ecrase l'etat par 'attaque' le temps
+      // des trois temps du coup ; faute d'une branche a lui, le frappeur tombait
+      // dans le DERNIER `else`, celui qui flane, et pouvait decider de s'arreter
+      // en plein geste. `majAttaque` refuse alors de continuer (l'etat n'est plus
+      // 'attaque') : le coup reste en suspens pour toujours, et l'homme repart
+      // faire autre chose. Une gang qui attaquait le joueur le faisait deja —
+      // elle ne le montrait pas, parce qu'elle y revenait toute seule.
+      // Ici on ne fait que tenir sa place : les trois temps appartiennent a
+      // `Combat.majAttaque`, et on plante ses pieds pour cogner.
+      e.vx = 0; e.vy = 0;
+      return;
     } else if (e.etat === 'aborde') {
       // Le solliciteur vient vers toi, d'un pas decide — jamais en courant :
       // on doit pouvoir le semer en marchant, sinon c'est une poursuite.
@@ -2561,6 +2741,11 @@ const Entites = (function () {
       const rayon = (e.intouchable ? reactions.enfant_peur_tuiles : reactions.peur_rayon_tuiles) * TT;
       if (dist2(e.x, e.y, x, y) > rayon * rayon) continue;
       if (e === menace || e.etat === 'assomme' || e.agent) continue;   // l'agent ne fuit pas : la police le dirige
+      // ⚠️ CEUX QUI SE BATTENT DEJA NE LEVENT PAS LA TETE. Chaque coup d'une
+      // rixe passe par ici, et la seule reponse qu'`alerter` connaisse pour une
+      // gang est « attaquer le joueur » : sans cette ligne, six hommes qui se
+      // tapaient dessus se retournaient tous contre lui au premier poing.
+      if (enPleineRixe(e)) continue;
       if (!Monde.ligneLibre(e.x, e.y, x, y)) continue;
       // ⚠️ L'IVROGNE NE FUIT PAS. Il n'a pas peur : il n'a rien compris, et il
       // repond. C'est le seul de la ville — une rue ou tout le monde detale de
@@ -2575,8 +2760,15 @@ const Entites = (function () {
         e.etat = 'fuit'; e.menace = menace; e.minuterie = reactions.fuite_secondes * 90; e.cri = 120;
         continue;
       }
-      if (e.gang && gravite >= 1) { e.etat = 'attaque_joueur'; e.cri = 90; continue; }
-      if (e.courage > 0 && B.rng() < e.courage * 0.5 && gravite >= 2) {
+      // ⚠️ ON NE RIPOSTE QUE CONTRE LE JOUEUR, parce que `attaque_joueur` ne
+      // sait viser que lui. Quand la menace est quelqu'un d'AUTRE — une rixe
+      // entre gangs, un voleur qui part avec un char, un char du trafic qui
+      // renverse un passant —, le courage ne peut pas se traduire en riposte :
+      // se jeter sur le joueur pour un coup qu'il n'a pas donne n'est pas du
+      // courage, c'est un bogue. On s'ecarte, comme les autres.
+      const contreLeJoueur = menace === B.joueur;
+      if (e.gang && gravite >= 1 && contreLeJoueur) { e.etat = 'attaque_joueur'; e.cri = 90; continue; }
+      if (e.courage > 0 && B.rng() < e.courage * 0.5 && gravite >= 2 && contreLeJoueur) {
         e.etat = 'attaque_joueur'; e.cri = 90; continue;
       }
       if (e.etat !== 'fuit' && e.etat !== 'temoin') {
@@ -2630,9 +2822,14 @@ const Entites = (function () {
       else tuer(e, source);
     } else if (e.type === 'pieton') {
       alerter(e.x, e.y, source, 2);
-      if (e.etat !== 'attaque_joueur') {
+      // ⚠️ CELUI QUI SE BAT DEJA NE SE RETOURNE PAS CONTRE LE JOUEUR : le
+      // premier coup d'une rixe envoyait les deux camps sur lui, et il n'avait
+      // rien fait — il passait par la. Mais si c'est LUI qui cogne, la regle
+      // ordinaire reprend, et la gang lui tombe dessus comme chez elle.
+      if (e.etat !== 'attaque_joueur' && !(enPleineRixe(e) && source !== B.joueur)) {
         e.etat = (e.courage > 0 && B.rng() < e.courage) ? 'attaque_joueur' : 'fuit';
         e.minuterie = B.defs.pietons.reactions.fuite_secondes * 60;
+        e.avantLeCoup = null;      // il ne reprendra pas ce qu'il faisait
       }
     }
     return true;
@@ -2658,7 +2855,12 @@ const Entites = (function () {
     sang(e.x, e.y, 14);
     if (e.arme) lacherArme(e);
     if (e.type === 'pieton') {
-      B.partie.stats.tues++;
+      // ⚠️ LE COMPTEUR EST CELUI DU JOUEUR, pas celui de la ville. `stats.tues`
+      // tire la manchette du Clairon (`journal.REGLES` : « UN MORT DANS LA
+      // RUE », « NUIT ROUGE AU FAUBOURG ») et le bilan de fin de mission :
+      // creditier le joueur d'une rixe qu'il a regardee de loin — ou d'un
+      // passant qu'un char du trafic a fauche — est un mensonge imprime.
+      if (source === B.joueur) B.partie.stats.tues++;
       alerter(e.x, e.y, source, 3);
       if (source === B.joueur) {
         if (e.agent) Police.signalerCrime('mort_policier', e.x, e.y, true);
@@ -3070,6 +3272,7 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
+    majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

@@ -343,6 +343,48 @@ VOL_DE_CHAR: dict = {
     "peur": 1,                   # la gravite de ce que voient les passants
 }
 
+#: LA BAGARRE DE GANGS — l'autre moitie de « la ville est coupable d'elle-meme ».
+#:
+#: ⚠️ **A LEUR FRONTIERE, ET NULLE PART AILLEURS.** Une gang savait deja se
+#: battre chez elle CONTRE LE JOUEUR (`attaque_joueur`, livre avec M6) ; ce
+#: qu'elle ne savait pas faire, c'est se battre contre UNE AUTRE. Le seul
+#: endroit ou ca a un sens est la ligne ou deux districts tenus se touchent —
+#: `frontieres()` la calcule a partir des rectangles de la carte, et il n'y en a
+#: qu'une poignee sur toute la ville.
+#:
+#: ⚠️ **Le joueur n'est ni la cause ni la cible**, et c'est ce qui a coute le
+#: plus cher a ecrire : trois mecanismes du depot ne connaissaient qu'une seule
+#: reponse a la violence, « s'en prendre au joueur ». `alerter` retournait
+#: toute gang a portee contre lui, `blesser` faisait de meme du blesse, et
+#: `majAttaque` ramenait tout piton qui finissait son coup a `attaque_joueur`.
+#: Les trois sont corriges, chacun sous son juge.
+#:
+#: ⚠️ Le tirage se fait a l'EMPREINTE de la minute (`hash2`), jamais au de du
+#: jeu : la lecon du char en panne, qui avait fait tomber quatre juges d'un
+#: coup.
+BAGARRE: dict = {
+    "chance_par_minute": 0.12,   # qu'une rixe commence, par minute de jeu
+    "membres": 3,                # de chaque cote — six hommes, pas une emeute
+    # ⚠️ LA FENETRE EST CALEE SUR CELLE DE LA VILLE, et les deux bornes sont
+    # des mesures, pas des gouts. En dessous de `trop_pres_px` on serait a
+    # l'ECRAN (la vue fait 480 x 270, donc tout ce qui est a plus de 276 px du
+    # joueur est forcement dehors) : on verrait six hommes se materialiser.
+    # Au-dela de `rayon_px` on serait hors de la BULLE D'OUBLI (520 px) : ils
+    # naitraient pour etre effaces a l'image suivante.
+    "rayon_px": 500,             # la frontiere est a portee, et la rixe survit
+    "trop_pres_px": 300,         # mais personne n'apparait sous les yeux du joueur
+    "ecart_px": 26,              # de combien les hommes d'un camp s'etalent
+    "recul_tuiles": 6,           # jusqu'ou chercher le trottoir, depuis la ligne
+    "duree_images": 1500,        # 25 s : apres, les debout s'en vont
+    "rival_px": 400,             # jusqu'ou on cherche quelqu'un a qui en vouloir
+    "portee_px": 22,             # a quelle distance on cesse d'avancer et on frappe
+    "cadence_images": 38,        # un coup toutes les 0,6 s
+    "peur": 2,                   # la gravite de ce que voient les passants
+    # Deux districts qui ne se touchent que par un coin n'ont pas de rue
+    # mitoyenne : ce n'est pas une frontiere, c'est un point.
+    "frontiere_min_tuiles": 16,
+}
+
 REACTIONS = {
     "recul_images": 12,          # il titube
     "ko_images": 300,            # assomme : il se releve apres 5 s
@@ -523,12 +565,69 @@ def travaille_a(pieton: Pieton, heure: float) -> bool:
     return debut <= heure < fin if debut < fin else (heure >= debut or heure < fin)
 
 
+def _mitoyenne(ra: dict, rb: dict, minimum: int) -> dict | None:
+    """Le segment de tuiles que deux rectangles partagent, bord a bord.
+
+    `inverse` dit que c'est `rb` qui est du petit cote (ouest ou nord) : celui
+    qui appelle s'en sert pour ranger les deux gangs dans le bon ordre.
+    """
+    for gauche, droit, inverse in ((ra, rb, False), (rb, ra, True)):
+        if gauche["x"] + gauche["l"] != droit["x"]:
+            continue
+        y0 = max(gauche["y"], droit["y"])
+        y1 = min(gauche["y"] + gauche["h"], droit["y"] + droit["h"])
+        if y1 - y0 >= minimum:
+            return {"axe": "v", "x": droit["x"], "y": y0, "long": y1 - y0, "inverse": inverse}
+    for haut, bas, inverse in ((ra, rb, False), (rb, ra, True)):
+        if haut["y"] + haut["h"] != bas["y"]:
+            continue
+        x0 = max(haut["x"], bas["x"])
+        x1 = min(haut["x"] + haut["l"], bas["x"] + bas["l"])
+        if x1 - x0 >= minimum:
+            return {"axe": "h", "x": x0, "y": bas["y"], "long": x1 - x0, "inverse": inverse}
+    return None
+
+
+def frontieres(ville: dict) -> list[dict]:
+    """La ou DEUX gangs se touchent : la ligne qui separe leurs districts.
+
+    ⚠️ Elle tient des DEUX fiches et d'aucune seule. Les rectangles viennent de
+    `carte`, qui ne sait pas qui tient quoi ; les gangs viennent d'ici, qui ne
+    sait pas ou sont les rectangles. C'est `definitions.assembler` qui les marie,
+    une fois, au demarrage — et le navigateur n'a plus qu'a lire.
+
+    Une frontiere est une ligne de tuiles : `axe` 'v' (verticale, a la colonne
+    `x`, depuis la rangee `y`, sur `long` tuiles) ou 'h' (horizontale, a la
+    rangee `y`, depuis la colonne `x`). ⚠️ `a` est TOUJOURS la gang du petit
+    cote — l'ouest pour une verticale, le nord pour une horizontale — et `b`
+    celle du grand : le navigateur pose chaque camp sur SON bord de la rue, et
+    sans cette convention il aurait fallu qu'il le devine a chaque fois.
+
+    ⚠️ Une frontiere trop courte n'en est pas une : deux districts qui ne se
+    touchent que par un coin de quelques tuiles n'ont pas de rue mitoyenne, et
+    on n'y ferait naitre personne.
+    """
+    minimum = BAGARRE["frontiere_min_tuiles"]
+    rects = {z["slug"]: z for z in ville.get("zones", ()) if not z.get("gang")}
+    tenus = [(g["slug"], rects[g["district"]]) for g in GANGS if g["district"] in rects]
+    sortie: list[dict] = []
+    for rang, (premier, ra) in enumerate(tenus):
+        for second, rb in tenus[rang + 1:]:
+            ligne = _mitoyenne(ra, rb, minimum)
+            if ligne is None:
+                continue
+            petit, grand = (second, premier) if ligne.pop("inverse") else (premier, second)
+            sortie.append({"a": petit, "b": grand, **ligne})
+    return sortie
+
+
 def exporter() -> dict:
     return {
         "catalogue": CATALOGUE,
         "gangs": GANGS,
         "reactions": dict(REACTIONS),
         "vol_de_char": dict(VOL_DE_CHAR),
+        "bagarre": dict(BAGARRE),
         # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
         # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
         # peut relire ni juger depuis la source de verite.

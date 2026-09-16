@@ -18,6 +18,15 @@ from .version import VERSION
 
 
 def assembler() -> dict:
+    # ⚠️ Les frontieres de gangs tiennent des DEUX fiches et d'aucune seule :
+    # les rectangles de districts viennent de `carte`, qui ne sait pas qui tient
+    # quoi ; les gangs viennent de `pietons`, qui ne sait pas ou sont les
+    # rectangles. On les marie ICI, une fois, et le navigateur lit le resultat
+    # au lieu de le recalculer — « une fiche que le navigateur ne lisait pas »
+    # a son symetrique, « un calcul que Python ne pouvait pas juger ».
+    ville = carte.exporter()
+    gens = pietons.exporter()
+    gens["frontieres"] = pietons.frontieres(ville)
     return {
         "version": VERSION,
         "tuile_px": carte.TUILE_PX,
@@ -29,10 +38,10 @@ def assembler() -> dict:
         "armes_regles": armes.REGLES,
         "economie": economie.exporter(),
         "recherche": recherche.exporter(),
-        "pietons": pietons.exporter(),
+        "pietons": gens,
         "manettes": manettes.exporter(),
         "devantures": devantures.exporter(),
-        "carte": carte.exporter(),
+        "carte": ville,
         "missions": missions.CATALOGUE,
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
