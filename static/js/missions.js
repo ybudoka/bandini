@@ -252,7 +252,8 @@ const Missions = (function () {
 
   // --- L'hopital : on ne meurt pas, on paie ------------------------------------------
 
-  /** Le joueur tombe : fondu, reveil a l'hopital, facture, armes gardees. */
+  /** Le joueur tombe : fondu, reveil DANS un lit de l'hopital, facture, armes
+      gardees. */
   function hopital(source) {
     const j = B.joueur;
     if (!j || j.hospitalise) return;
@@ -266,13 +267,19 @@ const Missions = (function () {
     if (boulot.etape) boulot.abandonner();
     if (B.defi) Histoire.finirDefi(false, 'A L’HOPITAL');
     Histoire.evenement('mort');
-    const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
     Jeu.transiter(FONDU_ELLIPSE, function () {
-      if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
-      j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
+      j.vie = j.vieMax; j.saigne = 0; j.endurance = 100; j.cafeine = 0;
       j.surplus = 0;                  // le surplus est passager : il ne survit pas a l'hopital
-      Entites.dansLaCarte(j);
-      Monde.centrerCamera(j.x, j.y);
+      // Dans un lit de l'urgence (`Jeu.coucherALHopital`). ⚠️ Une ville sans
+      // hopital ou sans lit : devant la porte, comme avant, et un moment
+      // d'invincibilite parce qu'on se releve en pleine rue.
+      if (!Jeu.coucherALHopital()) {
+        const lieu = Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        if (lieu) { j.x = lieu.x * TT + 8; j.y = lieu.y * TT + 20; }
+        j.invincible = 90;
+        Entites.dansLaCarte(j);
+        Monde.centrerCamera(j.x, j.y);
+      }
       j.hospitalise = false;
     }, 'REVEIL A L’HOPITAL — ' + facture + ' $');
   }
@@ -337,6 +344,11 @@ const Missions = (function () {
     const heures = B.defs.recherche.police.prison_heures / 24;
     p.heure += heures; while (p.heure >= 1) { p.heure -= 1; p.jour += 1; nouveauJour(); }
     Jeu.transiter(FONDU_ELLIPSE, function () {
+      // ⚠️ Arrete pendant le fondu de l'hopital, on est deja couche dans son
+      // lit (`finirTransition` a fini le reveil) : on se leve, on sort de la
+      // piece, et c'est au poste qu'on se reveille — pas dans la piece d'avant.
+      if (j.alite) Entites.seLever(j, 0, 0);
+      Jeu.quitterLaPiece();
       const poste = Monde.carte.points.find(function (q) { return q.slug === 'poste'; });
       if (poste) { j.x = poste.x * TT + 8; j.y = poste.y * TT + 20; }
       j.vie = j.vieMax; j.invincible = 90; j.saigne = 0; j.arrete = false; j.surplus = 0;

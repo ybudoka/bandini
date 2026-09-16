@@ -597,7 +597,7 @@ const Combat = (function () {
     const j = B.joueur;
     // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
     // d'une cloture on ne fait rien du tout.
-    if (!j || j.dansVehicule || !j.vivant || j.enjambe || B.cinema) {
+    if (!j || j.dansVehicule || !j.vivant || j.enjambe || j.alite || B.cinema) {
       fermerRoue(false);
       tenu = 0;
       return;
@@ -728,7 +728,7 @@ const Combat = (function () {
     // que la frappe (voir la porte de `maj`). Elle ne se met pas en pause, elle
     // RETOMBE — comme sous un char ou en haut d'une cloture : on lache pour
     // choisir son arme.
-    const cible = j.vivant && !j.enjambe && !B.cinema && !B.roue && Entree.bas('action')
+    const cible = j.vivant && !j.enjambe && !j.alite && !B.cinema && !B.roue && Entree.bas('action')
       ? otageSousLaMain(j) : null;
     if (!cible) { j.saisie = 0; return; }
     if (++j.saisie < Math.round(ficheBouclier().saisie_s * 60)) return;
@@ -805,7 +805,10 @@ const Combat = (function () {
     // ⚠️ En haut d'une cloture, on ne fait RIEN : ni frapper, ni tirer, ni
     // rouler, ni ouvrir une porte. C'est ce prix-la qui fait d'une cloture un
     // choix plutot qu'un raccourci gratuit.
-    if (!j || j.dansVehicule || !j.vivant || j.enjambe) return;
+    // ⚠️ Couche dans un lit non plus : c'est le stick qui leve
+    // (`Entites.majJoueur`), et un coup de poing donne depuis l'oreiller
+    // partirait d'un corps qui n'est pas debout.
+    if (!j || j.dansVehicule || !j.vivant || j.enjambe || j.alite) return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
     // viser tranquillement, tirer. On choisit son arme OU on se bat.

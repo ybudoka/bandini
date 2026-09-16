@@ -194,25 +194,75 @@ const Jeu = (function () {
     // voir le battant bouger. Au noir, il n'y aurait rien a voir.
     Monde.ouvrirPorte(porte.x, porte.y);
     transiter(FONDU_ENTREE, function () {
-      const piece = Monde.entrer(porte);
+      const piece = chargerPiece(porte);
       if (!piece) return;
-      B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
-      B.entites = [j];
-      B.particules.length = 0;
-      B.interieur = piece.interieur;
-      Entites.reindexerDecor();
-      Entites.peuplerInterieur(piece.interieur);
-      Histoire.creerDonneursDedans(piece.interieur);
       j.x = piece.interieur.apparition.x * TT + 8;
       j.y = piece.interieur.apparition.y * TT + 8;
       poserDansLaPorte(j, 'haut');
       Son.SFX.porte(piece.interieur.porte);   // la porte s'entend AU NOIR : c'est la qu'on la passe
-      // ⚠️ La toune du commerce demarre AU NOIR elle aussi : la porte se ferme,
-      // la rue se tait, et ce qu'on entend en ouvrant les yeux est deja celle
-      // d'ici. Une piece qui n'est pas un commerce reste silencieuse.
-      Son.Radio.dedans(piece.interieur.slug);
       Hud.message(piece.interieur.nom.toUpperCase(), 120);
     });
+    return true;
+  }
+
+  /** La piece derriere une porte, chargee AU NOIR : la rue mise de cote (c'est
+      par cette porte-la qu'on ressortira), les gens de dedans, la toune. Le
+      joueur, lui, n'est pas encore pose — c'est a l'appelant de dire ou.
+
+      ⚠️ UNE SEULE FACON D'ENTRER. Le reveil a l'hopital entre sans pousser la
+      porte ; s'il chargeait la piece a sa facon, le jour ou l'entree change
+      (un donneur de plus, une toune), l'hopital l'oublierait. */
+  function chargerPiece(porte) {
+    const piece = Monde.entrer(porte);
+    if (!piece) return null;
+    B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
+    B.entites = [B.joueur];
+    B.particules.length = 0;
+    B.interieur = piece.interieur;
+    Entites.reindexerDecor();
+    Entites.peuplerInterieur(piece.interieur);
+    Histoire.creerDonneursDedans(piece.interieur);
+    // ⚠️ La toune du commerce demarre AU NOIR elle aussi : la porte se ferme,
+    // la rue se tait, et ce qu'on entend en ouvrant les yeux est deja celle
+    // d'ici. Une piece qui n'est pas un commerce reste silencieuse.
+    Son.Radio.dedans(piece.interieur.slug);
+    return piece;
+  }
+
+  /** Le reveil a l'hopital : DEDANS, couche dans le lit de l'urgence — demande
+      de Martin. On se reveillait sur le trottoir devant la porte, comme si
+      personne ne nous avait ramasses.
+
+      AU NOIR : la piece de l'hopital se charge comme par sa porte, et le joueur
+      prend le lit du MALADE de l'urgence — sa tuile de tete, la ou le plan le
+      couche (`carte.ASSIS_OU_COUCHE`). Le malade n'y est pas cette fois : c'est
+      nous qu'on a mis dans son lit. La premiere poussee du stick nous leve
+      (`Entites.majJoueur`), et la porte d'en bas mene devant l'hopital.
+
+      ⚠️ Tombe DANS une piece (un comptoir, l'hopital lui-meme), on en ressort
+      d'abord : `Monde.entrer` part de la VILLE, et une piece chargee par-dessus
+      une piece perdrait le chemin du retour.
+
+      Rend faux quand la ville n'a pas d'hopital ou que sa piece n'a pas de lit :
+      on se reveille alors devant la porte, comme avant. */
+  function coucherALHopital() {
+    const j = B.joueur;
+    quitterLaPiece();
+    const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'hopital' && q.interieur; });
+    const commune = porte && ((Monde.carte.def.interieurs || {})[porte.interieur]);
+    const lit = commune && (commune.gens || []).find(function (g) { return g.qui === 'malade'; });
+    if (!lit) return false;
+    const piece = chargerPiece(porte);
+    if (!piece) return false;
+    for (const e of B.entites.slice()) {
+      if (e.alite && Math.floor(e.x / TT) === lit.x && Math.floor(e.y / TT) === lit.y) Entites.retirer(e);
+    }
+    Entites.coucher(j, lit.x, lit.y);
+    Entites.indexer();
+    // ⚠️ Pas de clignotement : il n'y a personne a craindre dans un lit
+    // d'hopital, et un corps qui clignote sous sa couverture a l'air d'un bogue.
+    j.invincible = 0;
+    Monde.centrerCamera(j.x, j.y);
     return true;
   }
 
@@ -257,14 +307,7 @@ const Jeu = (function () {
     if (!B.interieur || !ext) return false;
     transiter(FONDU_SORTIE, function () {
       const genre = B.interieur ? B.interieur.porte : undefined;   // la porte qu'on a poussee en entrant
-      Monde.restaurer(ext.carte);
-      B.entites = ext.entites;
-      if (B.entites.indexOf(j) < 0) B.entites.push(j);
-      B.particules.length = 0;
-      B.interieur = null;
-      Son.Radio.dedans(null);                 // on ressort : la toune du commerce s'arrete
-      B.exterieur = null;
-      Entites.reindexerDecor();
+      quitterLaPiece();
       // ⚠️ La tuile devant la porte, au pixel : entrer puis sortir doit ramener
       // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
       j.x = ext.x; j.y = ext.y;
@@ -276,6 +319,23 @@ const Jeu = (function () {
       Son.SFX.porte(genre);
     });
     return true;
+  }
+
+  /** La ville reprend sa place, AU NOIR, sans bruit de porte : c'est l'appelant
+      qui dit ou poser le joueur. Rend ce qu'on savait du dehors, ou null quand
+      on n'etait dans aucune piece. */
+  function quitterLaPiece() {
+    const j = B.joueur, ext = B.exterieur;
+    if (!B.interieur || !ext) return null;
+    Monde.restaurer(ext.carte);
+    B.entites = ext.entites;
+    if (B.entites.indexOf(j) < 0) B.entites.push(j);
+    B.particules.length = 0;
+    B.interieur = null;
+    Son.Radio.dedans(null);                 // on ressort : la toune du commerce s'arrete
+    B.exterieur = null;
+    Entites.reindexerDecor();
+    return ext;
   }
 
   function pause() {
@@ -616,7 +676,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, entrer, sortir, changerEtage, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

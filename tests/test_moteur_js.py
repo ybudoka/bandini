@@ -2215,7 +2215,12 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
         let noye = -1;
         for (let i = 0; i < 120 && noye < 0; i++) { o.frame(1); if (L.B.transition) noye = i; }
         o.fondu();
-        out.noyade = { noye: noye >= 0,
+        // ⚠️ On se reveille DANS un lit de l'hopital, plus sur son trottoir : on se
+        // leve et on ressort — c'est le pas de sa porte qui dit ou l'on etait.
+        const lit = { piece: L.B.interieur && L.B.interieur.slug, alite: !!j.alite, nage: !!j.nage };
+        L.Entites.seLever(j, 0, 1);
+        o.sortir();
+        out.noyade = { noye: noye >= 0, lit: lit,
                        auSec: !L.Entites.dansLEau(j),
                        souffle: Math.round(j.endurance),
                        pres: hopital ? Math.round(Math.hypot(j.x - (hopital.x * TT + 8), j.y - (hopital.y * TT + 8))) : null };
@@ -2299,7 +2304,10 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
     assert no["noye"] is True, "à bout de souffle, on ne coule pas : %s" % no
     assert no["auSec"] is True, "on se réveille dans l'eau : %s" % no
     assert no["souffle"] >= 100, "on se réveille sans souffle : %s" % no
-    assert no["pres"] is not None and no["pres"] < 64, "on ne se réveille pas à l'hôpital : %s" % no
+    assert no["lit"] == {"piece": "hopital", "alite": True, "nage": False}, (
+        "on ne se réveille pas couché dans un lit de l'hôpital — ou encore en train de nager : %s" % no
+    )
+    assert no["pres"] is not None and no["pres"] < 64, "on ne ressort pas devant l'hôpital : %s" % no
     ch = r["char"]
     assert ch["sombre"] is True, "un char dans l'eau flotte : %s" % ch
     assert ch["images"] >= ch["coule_s"] * 60 * 0.8, (
@@ -5172,17 +5180,22 @@ def test_l_hopital_ramasse_le_joueur_et_le_facture(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         L.B.partie.argent = 400;
+        // ⚠️ Le point se lit AVANT : au reveil, `Monde.carte` est la piece de l'hopital.
+        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
         L.Entites.blesser(j, 9999, null, {});
         const pendant = { vivant: j.vivant, fondu: !!L.B.transition };
         o.fondu();
-        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        // On se reveille dans la piece, et sa porte mene devant l'hopital.
+        const dehors = L.B.exterieur || { x: j.x, y: j.y };
         return { pendant: pendant, vie: j.vie, max: j.vieMax, argent: L.B.partie.argent,
-                 loin: Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT), etat: L.B.etat };
+                 piece: L.B.interieur && L.B.interieur.slug,
+                 loin: Math.hypot(dehors.x - hopital.x * L.TT, dehors.y - hopital.y * L.TT), etat: L.B.etat };
     }""")
     assert r["pendant"]["vivant"] is True and r["pendant"]["fondu"] is True
     assert r["vie"] == r["max"], "le joueur ne s'est pas reveille en pleine forme"
     assert r["argent"] < 400, "l'hopital n'a pas facture"
-    assert r["loin"] < 48, "le joueur ne s'est pas reveille a l'hopital"
+    assert r["piece"] == "hopital", "le joueur ne s'est pas reveille DANS l'hopital"
+    assert r["loin"] < 48, "la porte de la piece ne mene pas devant l'hopital"
     assert r["etat"] == "jeu"
 
 
@@ -6324,10 +6337,12 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
         L.Atlas.texte = vraiTexte;
         const apres = { t: L.B.t, heure: L.B.partie.heure, px: passant.x, cx: char.x };
         o.frame(5);
-        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
+        // ⚠️ On arrive DANS la piece de l'hopital, couche : on juge ou sa porte mene.
+        const hopital = L.B.exterieur.carte.points.find(function (p) { return p.slug === 'hopital'; });
         return { lance: lance, images: images, ecrits: ecrits, avant: avant, apres: apres,
                  repart: L.B.t - apres.t, vie: j.vie, max: j.vieMax,
-                 arrive: Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT) };
+                 piece: L.B.interieur && L.B.interieur.slug,
+                 arrive: Math.hypot(L.B.exterieur.x - hopital.x * L.TT, L.B.exterieur.y - hopital.y * L.TT) };
     }""")
     assert r["lance"]["fondu"] is True, "tomber doit lancer un fondu de `Jeu.transiter`"
     assert r["lance"]["tient"] > 0, "une ellipse tient le noir : c'est la que le temps passe"
@@ -6354,7 +6369,7 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
     assert r["apres"]["px"] == r["avant"]["px"], "un passant a marche pendant le fondu"
     assert r["apres"]["cx"] == r["avant"]["cx"], "un char a roule pendant le fondu"
     assert r["repart"] == 5, "le jeu n'est pas reparti apres le fondu"
-    assert r["vie"] == r["max"] and r["arrive"] < 48
+    assert r["vie"] == r["max"] and r["piece"] == "hopital" and r["arrive"] < 48
 
 
 def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(banc):
@@ -6375,13 +6390,15 @@ def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(
         L.B.recherche.etoiles = 3;
         L.Missions.prison(null);
         const repart = { t: L.B.transition.t, fait: L.B.transition.fait };
-        const hopital = L.Monde.carte.points.find(function (p) { return p.slug === 'hopital'; });
-        const auHopital = Math.hypot(j.x - hopital.x * L.TT, j.y - hopital.y * L.TT) < 48;
+        // ⚠️ Le reveil fini, on est couche dans un lit de l'hopital — et c'est de
+        // LA que la prison doit nous sortir, pas nous laisser dans la piece.
+        const auHopital = !!L.B.interieur && L.B.interieur.slug === 'hopital' && !!j.alite;
         o.fondu();
         const poste = L.Monde.carte.points.find(function (p) { return p.slug === 'poste'; });
         return { pendant: pendant, repart: repart, auHopital: auHopital,
                  auPoste: Math.hypot(j.x - poste.x * L.TT, j.y - poste.y * L.TT),
-                 fondus: !!L.B.transition, arrete: !!j.arrete, vie: j.vie, max: j.vieMax };
+                 fondus: !!L.B.transition, arrete: !!j.arrete, vie: j.vie, max: j.vieMax,
+                 dehors: !L.B.interieur && !L.B.exterieur, alite: !!j.alite };
     }""")
     assert r["pendant"]["fait"] is False and r["pendant"]["t"] > 0, "le premier fondu doit etre en cours"
     assert r["auHopital"] is True, (
@@ -6392,6 +6409,9 @@ def test_se_faire_arreter_pendant_le_fondu_de_l_hopital_n_empile_pas_deux_noirs(
     )
     assert r["fondus"] is False, "il reste un fondu ouvert"
     assert r["auPoste"] < 48 and r["arrete"] is False and r["vie"] == r["max"]
+    assert r["dehors"] is True and r["alite"] is False, (
+        "sorti de prison encore couche, ou encore dans la piece de l'hopital : %s" % r
+    )
 
 
 def test_on_entre_dans_la_planque_et_on_en_ressort(banc):

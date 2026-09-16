@@ -272,6 +272,11 @@ const Entites = (function () {
     return e;
   }
 
+  //: Ou un corps couche dans un lit pose ses PIEDS (l'ancre), depuis le haut de
+  //: la tuile de tete : au bas de la tuile, pour que sa tete tombe sur
+  //: l'oreiller. Le malade et le joueur reveille a l'hopital, le meme chiffre.
+  const PIEDS_ALITE = 15;
+
   /** Les gens d'une piece : le commis a son poste, les clients qui flanent.
 
       ⚠️ Ils naissent a l'entree et meurent a la sortie — `B.entites` est
@@ -292,7 +297,7 @@ const Entites = (function () {
       // et pas au centre de la tuile : un corps couche pose ses PIEDS (l'ancre)
       // au bas de la tuile de tete, pour que sa tete tombe sur l'oreiller ; un
       // corps assis pose les siens au bord de l'assise, sa tete devant le dossier.
-      const y = g.y * TT + (couche ? 15 : (assis ? 14 : 8));
+      const y = g.y * TT + (couche ? PIEDS_ALITE : (assis ? 14 : 8));
       const e = creerPieton(g.x * TT + 8, y, arch);
       e.face = 'bas';
       // Le commis ne quitte pas sa caisse, la soignante son triage ; le client, lui, magasine.
@@ -2660,6 +2665,9 @@ const Entites = (function () {
       s'en trouve deja trop loin : passe ECART_PLANTE, il devient un mur — sans
       quoi on pourrait promener un personnage d'histoire jusqu'au port. */
   function cede(e) {
+    // ⚠️ Couche dans son lit, le joueur ne se fait pas sortir du lit a coups
+    // d'epaule : c'est lui qui se leve, et seulement quand il pousse le stick.
+    if (e.alite && e.type === 'joueur') return false;
     if (e.etat !== 'fige') return true;
     if (!e.plante) return true;
     return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
@@ -2831,6 +2839,55 @@ const Entites = (function () {
 
   // --- Joueur ---------------------------------------------------------------------------
 
+  /** Couche le joueur dans un lit, la tete sur l'oreiller de la tuile (tx, ty) —
+      la tuile de TETE, celle ou naît le malade (`carte.ASSIS_OU_COUCHE`).
+
+      ⚠️ C'est le corps du malade, trait pour trait : la pose `alite`, les pieds
+      a `PIEDS_ALITE`, pas d'ombre sur la couverture (`dessiner`), et personne ne
+      le pousse hors du lit (`cede`). Ce qui le leve, c'est `majJoueur`. */
+  function coucher(j, tx, ty) {
+    j.x = tx * TT + 8; j.y = ty * TT + PIEDS_ALITE;
+    j.vx = 0; j.vy = 0; j.roule = 0;
+    // ⚠️ Le coup qui nous a mis a terre laisse un `recul`, et le joueur ne le
+    // decompte nulle part : couche avec, on dormait PENCHE de 0,22 rad,
+    // en travers de l'oreiller.
+    j.recul = 0;
+    j.nage = false;                    // on a coule : le remous resterait sous le lit
+    j.face = 'alite';
+    j.alite = { x: tx, y: ty };
+  }
+
+  /** Se lever : les pieds A COTE du lit, du cote ou l'on pousse (dx, dy).
+
+      ⚠️ Un meuble n'arrete personne (`Monde.estMeuble` : on PASSE dessus). Sans
+      ce pas de cote, on se levait debout sur l'oreiller et on quittait le lit en
+      marchant sur la couverture. On prend donc, autour des tuiles du lit, la
+      tuile de plancher la plus avancee dans le sens de la poussee — a egalite,
+      la premiere, pour que le banc ne tire pas a pile ou face.
+
+      ⚠️ Seulement si l'on est ENCORE dans ce lit : ailleurs (la piece a change
+      sous nous), les tuiles autour de `lit` sont celles d'une autre carte. */
+  function seLever(j, dx, dy) {
+    const lit = j.alite;
+    j.alite = null;
+    j.face = 'bas';
+    if (!lit || Math.floor(j.x / TT) !== lit.x || Math.floor(j.y / TT) !== lit.y) return;
+    const glyphe = Monde.glyphe(lit.x, lit.y);
+    let pied = lit.y;
+    while (Monde.estMeuble(lit.x, pied + 1) && Monde.glyphe(lit.x, pied + 1) === glyphe) pied++;
+    const cx = (lit.x + 0.5) * TT, cy = (lit.y + pied + 1) / 2 * TT;
+    let place = null, meilleur = -Infinity;
+    function essayer(tx, ty) {
+      if (Monde.bloque(tx, ty, Monde.MASQUE_PIETON) || Monde.estMeuble(tx, ty)) return;
+      const s = ((tx + 0.5) * TT - cx) * dx + ((ty + 0.5) * TT - cy) * dy;
+      if (s > meilleur) { meilleur = s; place = { x: tx, y: ty }; }
+    }
+    for (let ty = lit.y; ty <= pied; ty++) { essayer(lit.x - 1, ty); essayer(lit.x + 1, ty); }
+    essayer(lit.x, pied + 1);
+    if (place) { j.x = place.x * TT + 8; j.y = place.y * TT + 8; }
+    regarder(j, dx, dy);
+  }
+
   function majJoueur(j) {
     if (j.dansVehicule) return;
     if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
@@ -2839,6 +2896,13 @@ const Entites = (function () {
     // MARCHER le personnage vers son choix, au ralenti et sans le vouloir.
     // C'est aussi ce qui fait le prix de la roue : on est debout, immobile.
     if (B.cinema || B.roue) { j.vx = 0; j.vy = 0; return; }   // on ecoute, ou on choisit
+    // ⚠️ COUCHE DANS UN LIT — le reveil a l'hopital : rien ne bouge tant qu'on
+    // ne pousse pas, et la PREMIERE poussee leve. On marche dans la meme image,
+    // depuis le pas de cote que `seLever` vient de poser.
+    if (j.alite) {
+      if (!(Entree.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
+      seLever(j, Entree.axe.x, Entree.axe.y);
+    }
     const v = B.defs.recherche.vitesses;
     const eau = B.defs.recherche.nage;
     const axe = Entree.axe;
@@ -4073,7 +4137,7 @@ const Entites = (function () {
       if (e.vivant && e.nage) {
         ctx.drawImage(eauRemous, Math.round(e.x - 7 - cx), Math.round(e.y - 3 - cy));
         B.stats.images++;
-      } else if (e.vivant && !(e.alite && e.etat === 'fige')) {
+      } else if (e.vivant && !(e.alite && (e.etat === 'fige' || e.type === 'joueur'))) {
         // ⚠️ Pas d'ombre sous un malade couche : elle tomberait au milieu de la
         // couverture, une tache grise en travers du lit.
         ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
@@ -4106,7 +4170,7 @@ const Entites = (function () {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
-    peuplerInterieur,
+    peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,

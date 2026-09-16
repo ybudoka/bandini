@@ -1,6 +1,7 @@
 """Les machines distributrices et l'hopital, cote navigateur : on achete, la
-spirale garde la canette, on brasse, la machine cede et crache sa monnaie ; et a
-l'hopital, les malades restent couches et les patients restent assis."""
+spirale garde la canette, on brasse, la machine cede et crache sa monnaie ; a
+l'hopital, les malades restent couches et les patients restent assis ; et quand
+on tombe, on se reveille dans un de ses lits."""
 
 from app import economie, magasins
 
@@ -197,3 +198,170 @@ def test_a_l_hopital_les_malades_restent_couches_et_les_patients_assis(banc):
     # ⚠️ Trois cents images plus tard, personne ne s'est leve ni retourne.
     assert r["apres"]["places"] == u["places"], "un malade ou un patient a bouge"
     assert r["invite"] == cafe and r["titre"] == cafe
+
+
+# --- Le reveil a l'hopital : dans un lit ----------------------------------------------
+
+#: La porte de l'hopital dans la ville, et le pas devant elle — la ou l'on ressort.
+PORTE_HOPITAL = """
+        const porte = L.Monde.carte.portes.find(function (p) { return p.lieu === 'hopital' && p.interieur; });
+        const devant = [porte.x * L.TT + 8, (porte.y + 1) * L.TT + 10];
+"""
+
+
+def test_on_se_reveille_couche_dans_un_lit_de_l_hopital(banc):
+    """Martin : « pour le reveil a l'hopital, je veux qu'on se reveille a
+    l'interieur et dans un lit, couche, des le premier deplacement on se leve et
+    on peut partir. »
+
+    On se reveillait DEHORS, sur le trottoir devant la porte. Ce juge tient le
+    lit : la piece est l'hopital, le joueur est dans la tuile de TETE d'un lit
+    d'hopital, dessine couche (`alite`) et droit — le coup qui l'a mis a terre
+    le laissait penche de 0,22 rad —, seul dans ce lit (le malade de l'urgence
+    lui a cede sa place), sans clignoter, et la porte d'en bas mene devant
+    l'hopital. ⚠️ Et RIEN d'autre que le stick ne le sort du lit : ni FRAPPE, ni
+    SPRINT, ni ACTION, ni cinq secondes a attendre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, T = L.TT;""" + PORTE_HOPITAL + """
+        L.B.partie.argent = 400;
+        L.Entites.blesser(j, 9999, null, {});
+        o.fondu();
+        const tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
+        const reveil = {
+            piece: L.B.interieur && L.B.interieur.slug,
+            lit: L.Monde.glyphe(tx, ty), tete: L.Monde.glyphe(tx, ty - 1) !== 'r',
+            pose: L.Entites.imageDe(j).pose, penche: L.Entites.pose(j).rot,
+            ombre: L.Entites.imageDe(j).pose === 'alite' && !!j.alite,
+            partage: L.B.entites.filter(function (e) {
+                return e !== j && e.alite && Math.floor(e.x / T) === tx && Math.floor(e.y / T) === ty;
+            }).length,
+            clignote: j.invincible > 0,
+            dehors: L.B.exterieur ? [L.B.exterieur.x, L.B.exterieur.y] : null, devant: devant,
+            vie: j.vie, max: j.vieMax, argent: L.B.partie.argent,
+        };
+        // Chaque geste se guette IMAGE PAR IMAGE : le poing part au relacher et il
+        // est fini en trente images — lu apres coup, il n'a jamais existe.
+        const x0 = j.x, y0 = j.y, gestes = {};
+        for (const [touche, nom] of [['Space', 'frappe'], ['ShiftLeft', 'sprint'], ['KeyE', 'action']]) {
+            const vu = { attaque: false, charge: false, roule: false, menu: false, fondu: false };
+            o.touche(touche);
+            for (let i = 0; i < 40; i++) {
+                if (i === 10) o.relacher(touche);
+                o.frame(1);
+                vu.attaque = vu.attaque || j.etat === 'attaque';
+                vu.charge = vu.charge || j.charge > 0;
+                vu.roule = vu.roule || j.roule > 0;
+                vu.menu = vu.menu || !!L.B.menu;
+                vu.fondu = vu.fondu || !!L.B.transition;
+            }
+            gestes[nom] = vu;
+        }
+        o.frame(120);
+        const reste = { bouge: Math.hypot(j.x - x0, j.y - y0), alite: !!j.alite, gestes: gestes,
+                        pose: L.Entites.imageDe(j).pose, piece: L.B.interieur && L.B.interieur.slug };
+        // Un passant qui passe PAR le lit (un meuble ne l'arrete pas) se cogne
+        // au dormeur : c'est lui qui s'ecarte.
+        const intrus = o.poser('flaneur', 3, 0);
+        intrus.etat = 'flane';
+        o.frame(30);
+        reste.bouscule = Math.hypot(j.x - x0, j.y - y0);
+        return { reveil: reveil, reste: reste };
+    }""")
+    v = r["reveil"]
+    assert v["piece"] == "hopital", "on ne se reveille pas DANS l'hopital : %s" % v
+    assert v["lit"] == "r" and v["tete"], "on ne se reveille pas dans la tuile de tete d'un lit : %s" % v
+    assert v["pose"] == "alite" and v["penche"] == 0, "on ne se reveille pas couche, droit : %s" % v
+    assert v["partage"] == 0, "le malade est reste dans le lit avec nous : %s" % v
+    assert not v["clignote"], "un corps qui clignote sous sa couverture : %s" % v
+    assert v["dehors"] == v["devant"], "la porte de la piece ne mene pas devant l'hopital : %s" % v
+    assert v["vie"] == v["max"] and v["argent"] < 400, "le reveil ne soigne pas ou ne facture pas : %s" % v
+    s = r["reste"]
+    assert s["alite"] and s["pose"] == "alite" and s["bouge"] == 0, (
+        "frapper, sprinter, ACTION ou attendre a sorti le joueur du lit : %s" % s
+    )
+    assert s["bouscule"] == 0, "un passant a pousse le joueur hors de son lit : %s" % s
+    for nom, g in s["gestes"].items():
+        assert not any(g.values()), (
+            "%s part depuis le lit : %s" % (nom, g)
+        )
+    assert s["piece"] == "hopital", s
+
+
+def test_la_premiere_poussee_leve_a_cote_du_lit_et_on_ressort_devant_l_hopital(banc):
+    """« Des le premier deplacement on se leve et on peut partir. »
+
+    ⚠️ Un meuble n'arrete personne : se lever sur place, c'etait se tenir DEBOUT
+    SUR L'OREILLER et quitter le lit en marchant sur la couverture. La poussee
+    choisit son cote — vers le bas, le pied du lit ; a gauche, le flanc gauche ;
+    a droite, le droit — et on marche dans la meme image. Puis ACTION a la porte
+    d'en bas : on est dans la rue, devant l'hopital."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, T = L.TT;""" + PORTE_HOPITAL + """
+        L.Entites.blesser(j, 9999, null, {});
+        o.fondu();
+        const lit = { x: Math.floor(j.x / T), y: Math.floor(j.y / T) };
+        const cotes = {};
+        for (const [touche, sens] of [['KeyS', 'bas'], ['KeyA', 'gauche'], ['KeyD', 'droite']]) {
+            L.Entites.coucher(j, lit.x, lit.y);
+            const y0 = j.y;
+            o.touche(touche); o.frame(1);
+            const tx = Math.floor(j.x / T), ty = Math.floor(j.y / T);
+            cotes[sens] = { alite: !!j.alite, pose: L.Entites.imageDe(j).pose, dx: tx - lit.x, dy: ty - lit.y,
+                            meuble: L.Monde.estMeuble(tx, ty), plancher: !L.Monde.bloque(tx, ty, L.Monde.MASQUE_PIETON) };
+            const x1 = j.x, y1 = j.y;
+            o.frame(15); o.relacher(touche); o.frame(1);
+            cotes[sens].marche = Math.round(Math.hypot(j.x - x1, j.y - y1));
+        }
+        const sortie = L.B.interieur.sortie;
+        j.x = sortie.x * T + 8; j.y = (sortie.y - 1) * T + 8; j.face = 'bas';
+        L.Entites.indexer();
+        o.tape('KeyE', 2);
+        o.fondu();
+        return { cotes: cotes, sorti: !L.B.interieur,
+                 loin: Math.hypot(j.x - devant[0], j.y - devant[1]) };
+    }""")
+    c = r["cotes"]
+    # Du cote ou l'on pousse, colle au lit : au flanc (une colonne a cote) ou au
+    # pied (la meme colonne, plus bas que la tete).
+    cote = {"bas": lambda dx, dy: dx == 0 and dy > 0,
+            "gauche": lambda dx, dy: dx == -1, "droite": lambda dx, dy: dx == 1}
+    for sens, bon in cote.items():
+        v = c[sens]
+        assert not v["alite"] and v["pose"] != "alite", "pousser vers %s ne leve pas : %s" % (sens, v)
+        assert bon(v["dx"], v["dy"]), "pousser vers %s ne leve pas de ce cote : %s" % (sens, v)
+        assert v["plancher"] and not v["meuble"], "on se leve sur un meuble ou dans un mur : %s" % v
+        assert v["marche"] > 8, "debout, on ne marche pas vers %s : %s" % (sens, v)
+    assert r["sorti"] is True and r["loin"] < 4, "on ne ressort pas devant l'hopital : %s" % r
+
+
+def test_tomber_dans_une_piece_reveille_quand_meme_a_l_hopital(banc):
+    """⚠️ `Monde.entrer` part de la VILLE. Tomber dans une piece (ici la planque)
+    et charger l'hopital par-dessus perdait le chemin du retour : on doit se
+    reveiller dans le lit de l'hopital, et ressortir devant L'HOPITAL, dans la
+    vraie ville — pas devant la planque, pas dans une piece fantome."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, T = L.TT;""" + PORTE_HOPITAL + """
+        const planque = L.Monde.carte.portes.find(function (p) { return p.lieu === 'planque' && p.interieur; });
+        j.x = planque.x * T + 8; j.y = (planque.y + 1) * T + 10;
+        o.entrer(planque);
+        const avant = L.B.interieur && L.B.interieur.slug;
+        L.Entites.blesser(j, 9999, null, {});
+        o.fondu();
+        const reveil = { piece: L.B.interieur && L.B.interieur.slug, alite: !!j.alite,
+                         dehors: L.B.exterieur ? [L.B.exterieur.x, L.B.exterieur.y] : null };
+        L.Entites.seLever(j, 0, 1);
+        o.sortir();
+        return { avant: avant, reveil: reveil, devant: devant, sorti: !L.B.interieur && !L.Monde.carte.interieur,
+                 decor: L.B.entites.filter(function (e) { return e.type === 'decor'; }).length, large: L.Monde.carte.w,
+                 loin: Math.hypot(j.x - devant[0], j.y - devant[1]) };
+    }""")
+    assert r["avant"] and r["avant"] != "hopital", "le juge ne tombe pas dans une autre piece : %s" % r
+    assert r["reveil"]["piece"] == "hopital" and r["reveil"]["alite"], r["reveil"]
+    assert r["reveil"]["dehors"] == r["devant"], "la piece ne mene pas devant l'hopital : %s" % r
+    assert r["sorti"] and r["decor"] > 0 and r["large"] > 100, (
+        "on ressort dans une piece fantome, pas dans la ville : %s" % r
+    )
+    assert r["loin"] < 4, "on ressort ailleurs que devant l'hopital : %s" % r
