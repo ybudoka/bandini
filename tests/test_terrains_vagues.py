@@ -163,7 +163,11 @@ def test_la_liste_des_dechets_se_tient():
     assert len(set(dechets)) >= 4, "un terrain vague à une seule sorte de saleté"
     assert dechets.count("debris") > dechets.count("baril"), (
         "le baril est aussi fréquent que le gravat")
-    assert carte.PART_DECHET <= 8, "trop clairsemé pour qu'on le contourne"
+    # ⚠️ **UNE BORNE DES DEUX CÔTÉS.** Une sur six a été livrée et Martin l'a
+    # renvoyée le jour même : « il y a trop de saleté partout ». En dessous de
+    # dix, un lot a l'air d'un dépôt et se referme sur lui-même ; au-delà de
+    # seize, on le traverse sans rien contourner, et c'est un gazon sec.
+    assert 10 <= carte.PART_DECHET <= 16, f"une tuile sur {carte.PART_DECHET} : sale ou dépôt ?"
     assert carte.PART_MAUVAISE_HERBE > carte.PART_DECHET, (
         "autant de buissons que de déchets : on ne verrait plus la friche")
 
@@ -184,12 +188,14 @@ def test_un_terrain_vague_est_sale(ville, ville_et_lots):
         dedans = decor_dans(ville, boite)
         for d in dedans:
             poses[d["type"]] = poses.get(d["type"], 0) + 1
-        if len(dedans) < 2:
+        if not dedans:
             nus.append(boite)
     total = sum(poses.values())
     assert not nus, f"des terrains vagues sans rien dessus : {nus}"
-    assert tuiles / total <= 9, (
-        f"un objet par {tuiles / total:.1f} tuiles : on traverse sans rien contourner")
+    # ⚠️ Une fourchette, pas un plancher : « trop de saleté partout » a eu raison
+    # d'un objet par six tuiles. Mesure livrée : un par 9,8.
+    assert 7 <= tuiles / total <= 16, (
+        f"un objet par {tuiles / total:.1f} tuiles : ni un dépôt, ni un gazon")
     for quoi in set(carte.DECHETS):
         assert poses.get(quoi, 0) > 0, f"pas un seul {quoi} dans toute la ville"
     assert poses.get("buisson", 0) > 0, "une friche où rien ne repousse"

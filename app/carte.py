@@ -138,15 +138,22 @@ DECHETS = ("debris", "debris", "debris", "debris",
 #: Une tuile sur COMBIEN porte un dechet. ⚠️ Mesure du 16 sept. 2026 : le terrain
 #: vague semait un gravat par douze tuiles et n'en posait qu'un par DIX-SEPT (le
 #: reste tombait sur du reserve ou de l'occupe) — 53 objets sur 922 tuiles, et
-#: treize lots sur quatorze qu'on traversait sans rien contourner. A une sur six,
-#: on ne coupe plus par un terrain vague sans zigzaguer, et c'est exactement ce
-#: qui le rend sale.
-PART_DECHET = 6
+#: treize lots sur quatorze qu'on traversait sans rien contourner.
+#: ⚠️ **DIX, PAS SIX.** Une sur six a ete essaye et Martin l'a renvoye : « il y
+#: a trop de salete partout ». C'est vrai en deux sens — a l'oeil, un lot ou
+#: l'on contourne quelque chose a chaque pas n'a plus l'air abandonne, il a
+#: l'air d'un depot ; et au pied, la moitie de ces objets ARRETENT un pieton
+#: (`DECOR_SOLIDE`), donc a cette densite-la un terrain vague se referme sur
+#: lui-meme. Une sur dix se traverse en zigzaguant, ce qui etait tout ce qu'on
+#: voulait.
+PART_DECHET = 10
 
 #: Et les mauvaises herbes, qui sont l'autre moitie de l'abandon : ce qui pousse
 #: quand plus personne ne tond. Moins denses que les dechets — un buisson est
 #: large (16 px), et une friche qu'on ne voit plus n'est plus une friche.
-PART_MAUVAISE_HERBE = 14
+#: ⚠️ Un buisson, lui, ne ferme rien : on passe dessus. Il baisse quand meme,
+#: parce qu'a l'oeil il compte autant que le reste.
+PART_MAUVAISE_HERBE = 18
 
 #: --- Le port ----------------------------------------------------------------
 #: La profondeur du TABLIER d'un quai sur l'eau, en tuiles ; ce qui depasse dans
@@ -168,15 +175,43 @@ APPONTEMENT = {"largeur": (2, 3), "longueur": (5, 10), "ecart": 11}
 #: L'ECART entre deux bornes d'amarrage, en tuiles. ⚠️ Un ECART, pas « une tuile
 #: sur six » : la levre d'un quai n'est pas une ligne droite (elle contourne les
 #: appontements et les darses), et compter une tuile sur six le long d'une liste
-#: posait deux bornes COLLEES des que la levre tournait le coin — (110, 189) et
-#: (110, 190) sur la graine livree. C'est aussi la borne d'amarrage qui manquait
-#: le plus au port : on ne peut pas amarrer a un quai qui ne touche pas l'eau.
-ECART_BORNE_AMARRAGE = 6
+#: posait deux bornes COLLEES des que la levre tournait le coin.
+#: ⚠️ **ONZE, PAS SIX.** Retour de Martin : « impossible d'aller sur une partie
+#: du quai, il est **cloture** ». Une borne d'amarrage ARRETE un pieton, et la
+#: rangee du bord donnait `QpQQAQQAQQQpQQQQQAQQpQQpQQAQQA` — une borne ou un
+#: pneu tous les trois pas sur soixante tuiles. Vu d'en haut, ce n'est plus un
+#: quai, c'est une palissade. Un vrai quai amarre tous les dix a vingt metres.
+ECART_BORNE_AMARRAGE = 11
 #: Les pneus en DEFENSE, pendus au bord pour que la coque ne cogne pas le bois.
-#: Entre deux bornes, et jamais colles a rien (`GREVE["ecart"]`).
-CHANCE_DEFENSE = 0.16
-#: Ce qui attend d'etre charge, EN ARRIERE de la levre : caisses et barils.
-PART_CARGAISON = 10
+#: ⚠️ Ils ne sont PAS solides (on marche dessus) — ils ne ferment donc rien, et
+#: c'est ce qui permet d'en garder. Ils restent rares : une defense tous les
+#: trois pas est un mur de pneus.
+CHANCE_DEFENSE = 0.10
+
+#: L'APRON : la bande du bord de l'eau ou l'on TRAVAILLE. ⚠️ C'est la que se
+#: joue tout le reste : elle reste degagee de cargaison, parce que c'est par la
+#: qu'on longe le quai a pied et qu'on decharge. Une caisse posee sur l'apron,
+#: c'est une caisse entre le bateau et le camion.
+QUAI_APRON = 2
+#: Le FOND : la bande du cote de la rue, ou la cargaison s'empile — c'est de la
+#: que les camions arrivent. ⚠️ **Elle etait semee sur TOUT le tablier** (une
+#: caisse par dix tuiles d'arriere, soit une soixantaine de caisses SOLIDES sur
+#: dix rangees de profondeur) : un plancher d'entrepot, pas un quai. Tout ce qui
+#: est entre l'apron et le fond reste vide, et c'est ce vide qui se marche.
+QUAI_FOND = 3
+#: Une tuile de fond sur combien porte quelque chose.
+PART_CARGAISON = 7
+
+#: Le MOUILLAGE du cargo : la part du quai que ferme sa barriere (`BARRIERES`,
+#: « le quai du cargo »), en demi-largeur et en profondeur depuis la rue.
+#: ⚠️ **UN MOUILLAGE, PAS UN QUAI.** La barriere prenait toute la region de quai
+#: ou se tient le contrebandier — et depuis que le quai a avale la baie, cette
+#: region faisait 61 x 26 tuiles, eau comprise. De jour, tout le quai ouest etait
+#: donc sous la chaine. Retour de Martin : « impossible d'aller sur une partie du
+#: quai, il est cloture, sans chemin a pied ». Elle ferme maintenant l'enclos ou
+#: l'on decharge, et ⚠️ **jamais l'apron** : on longe le quai par le bord de
+#: l'eau, cargo ou pas.
+MOUILLAGE = {"demi_largeur": 7, "profondeur": 6}
 
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
 #: 3 basse (bloque les vehicules, pas les pietons).
@@ -785,6 +820,26 @@ GREVE: dict = {
 #: est tombe sur une paire dont personne n'etait responsable.
 MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
                    "poteau_amarrage", "bouee", "belvedere", "pneu")
+
+#: Le decor qui ARRETE UN PIETON. ⚠️ La solidite d'un decor vit dans sa fiche de
+#: DESSIN (`DECORS`, sprites.js) — le generateur, lui, ne la connaissait pas, et
+#: c'est ce qui lui a permis de murer une partie de la ville sans s'en
+#: apercevoir : 191 tuiles de quai inatteignables a pied, en une quarantaine de
+#: poches, derriere des caisses et des bornes d'amarrage. Retour de Martin :
+#: « impossible d'aller sur une partie du quai, il est cloture, sans chemin a
+#: pied ».
+#:
+#: ⚠️ **DEUX VERITES, DONC UN JUGE** — meme parade que `FLOTTANTS` : la liste
+#: vit ici, le paquet la porte, et un juge de banc verifie qu'elle dit
+#: exactement ce que disent les fiches de dessin. Une liste qu'on oublie de
+#: tenir a jour est pire que pas de liste : elle laisserait `degager_le_decor`
+#: croire qu'on passe la ou l'on ne passe pas.
+DECOR_SOLIDE = frozenset({
+    "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
+    "caisse", "carrousel", "chaises_volantes", "fontaine", "galerie_tir",
+    "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
+    "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
+})
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
 #: soit ni prevu ni pose par personne : une conduite lache sous la chaussee, la
@@ -2262,6 +2317,76 @@ class _Chantier:
                 enleves += 1
         return enleves
 
+    def retirer_decor(self, x: int, y: int) -> bool:
+        """Enleve le decor pose sur cette tuile, et la rend libre."""
+        for i, d in enumerate(self.decor):
+            if (d["x"], d["y"]) == (x, y):
+                del self.decor[i]
+                self.occupe.discard((x, y))
+                return True
+        return False
+
+    def degager_le_decor(self, x: int, y: int, largeur: int, hauteur: int) -> int:
+        """Aucune tuile de cette boite ne reste enfermee par du DECOR.
+
+        ⚠️ **Le pendant de `boucher_les_poches`, pour le mobilier.** Celui-la
+        mure les poches du SOL ; personne ne regardait celles que le decor
+        SOLIDE referme — et un semis un peu genereux suffit a couper un quai en
+        quarante morceaux. Mesure du 16 sept. 2026 : **191 tuiles de quai
+        inatteignables a pied**, derriere des caisses et une ligne de bornes
+        d'amarrage. Retour de Martin : « impossible d'aller sur une partie du
+        quai, il est cloture, sans chemin a pied ».
+
+        ⚠️ **On ENLEVE, on ne deplace pas.** Un decor qu'on decale se retrouve a
+        fermer autre chose, et il faudrait recommencer ; un decor qu'on enleve
+        ne ferme plus rien. C'est aussi ce qui rend la boucle finie : chaque
+        tour en retire au moins un.
+
+        ⚠️ Et on part de DEHORS : une boite dont tout l'interieur communique
+        mais dont aucune entree n'est libre est murée tout autant. Rend le
+        nombre de decors retires.
+        """
+        boite = {(i, j)
+                 for j in range(max(0, y - 1), min(self.hauteur, y + hauteur + 1))
+                 for i in range(max(0, x - 1), min(self.largeur, x + largeur + 1))
+                 if self.marchable_en(i, j)}
+        dedans = {(i, j) for i, j in boite if x <= i < x + largeur and y <= j < y + hauteur}
+        dehors = boite - dedans
+        enleves = 0
+        for _ in range(len(dedans) + 1):
+            bloque = {(d["x"], d["y"]) for d in self.decor
+                      if d["type"] in DECOR_SOLIDE and (d["x"], d["y"]) in boite}
+            libres = boite - bloque
+            departs = [t for t in sorted(dehors - bloque)] or [t for t in sorted(libres)]
+            if not departs:
+                return enleves
+            vus = {departs[0]}
+            pile = [departs[0]]
+            for d in departs:                      # toutes les entrees a la fois
+                if d not in vus:
+                    vus.add(d)
+                    pile.append(d)
+            while pile:
+                i, j = pile.pop()
+                for voisin in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)):
+                    if voisin in libres and voisin not in vus:
+                        vus.add(voisin)
+                        pile.append(voisin)
+            poches = (dedans - bloque) - vus
+            if not poches:
+                return enleves
+            # Le decor qui touche la poche : c'est lui qui la ferme.
+            i, j = min(poches)
+            ferme = [v for v in ((i + 1, j), (i - 1, j), (i, j + 1), (i, j - 1)) if v in bloque]
+            if not ferme:
+                # La poche ne touche aucun decor : c'est le SOL qui l'enferme,
+                # et `boucher_les_poches` a deja son mot a dire la-dessus.
+                return enleves
+            for v in ferme:
+                if self.retirer_decor(*v):
+                    enleves += 1
+        return enleves
+
     def poser_decor(self, type_: str, x: int, y: int, sur_eau: bool = False) -> bool:
         """Du decor seulement sur une tuile libre, hors route et hors devant de porte.
 
@@ -3125,6 +3250,10 @@ class _Chantier:
             cx = x + largeur // 2
             self.proposer_rampe([(cx, y + hauteur // 2, None)],
                                 cloture=(cx, y + hauteur - 1))
+        # ⚠️ **ET ON DEGAGE** : la moitie de ce qu'on vient de jeter la arrete un
+        # pieton (`DECOR_SOLIDE`), et un lot qu'on ne traverse pas est un lot
+        # qui n'existe pas.
+        self.degager_le_decor(x, y, largeur, hauteur)
 
     #: Ce qu'un chemin TRAVERSE pour rejoindre la rue : de l'herbe, la dalle,
     #: la couronne d'abord. ⚠️ L'ABORD AUSSI : depuis le trottoir a une tuile, la
@@ -3945,7 +4074,7 @@ class _Chantier:
         bornes se retrouvaient au milieu du quai — une borne d'amarrage a six
         tuiles de l'eau ne veut rien dire.
         """
-        levre, arriere = [], []
+        levre, fond, apron = [], [], set()
         for cy in range(y, min(y + hauteur, self.hauteur)):
             for cx in range(x, min(x + largeur, self.largeur)):
                 if self.sol[cy][cx] != "Q":
@@ -3953,8 +4082,19 @@ class _Chantier:
                 if any(self.eau_en(cx + dx, cy + dy)
                        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
                     levre.append((cx, cy))
-                else:
-                    arriere.append((cx, cy))
+        # ⚠️ L'apron se mesure DEPUIS LA LEVRE, pas depuis le bord de la boite :
+        # un appontement avance dans la baie, et son apron avance avec lui.
+        for cx, cy in levre:
+            for j in range(-QUAI_APRON, QUAI_APRON + 1):
+                for i in range(-QUAI_APRON, QUAI_APRON + 1):
+                    if abs(i) + abs(j) <= QUAI_APRON:
+                        apron.add((cx + i, cy + j))
+        for cy in range(y, min(y + hauteur, self.hauteur)):
+            for cx in range(x, min(x + largeur, self.largeur)):
+                if self.sol[cy][cx] != "Q" or (cx, cy) in apron:
+                    continue
+                if cy - y < QUAI_FOND:                 # la bande du cote de la rue
+                    fond.append((cx, cy))
         poses: list[tuple[int, int]] = []
 
         def assez_loin(cx: int, cy: int, combien: int) -> bool:
@@ -3969,11 +4109,14 @@ class _Chantier:
                 continue
             if self.poser_decor(quoi, cx, cy):
                 poses.append((cx, cy))
-        for _ in range(len(arriere) // PART_CARGAISON):
-            if not arriere:
+        for _ in range(len(fond) // PART_CARGAISON):
+            if not fond:
                 break
-            cx, cy = arriere[self.des_port.suivant() % len(arriere)]
+            cx, cy = fond[self.des_port.suivant() % len(fond)]
             self.poser_decor(self.des_port.choix(self.CARGAISON), cx, cy)
+        # ⚠️ **ET ON DEGAGE.** Le semis ne sait pas ce qu'il referme ; cette
+        # ligne-la est la garantie, et pas un reglage de plus.
+        self.degager_le_decor(x, y, largeur, hauteur)
 
     def eau_en(self, x: int, y: int) -> bool:
         """De l'eau, ou hors carte — le large compte comme de l'eau. Sans ca,
@@ -4454,7 +4597,16 @@ class _Chantier:
                     if not self._eau_a_portee(x, y, 1):
                         continue
                     # Le poteau tient sur les planches ; la bouee flotte a cote.
-                    if self.des_greve.chance(fiche["quai_poteau"]) and assez_loin(x, y, fiche["ecart"]):
+                    # ⚠️ **SAUF SUR LE QUAI, QUI AMARRE CHEZ LUI** (`_meubler_le_quai`).
+                    # Depuis qu'il touche l'eau il a six cents tuiles de levre, et
+                    # les DEUX semis y posaient des bornes — le quai a onze tuiles
+                    # d'ecart, la greve a trois : une borne ou un pneu tous les
+                    # trois pas. Une borne ARRETE un pieton ; ce n'etait plus un
+                    # quai, c'etait une palissade. Le tirage reste, pour que le de
+                    # de la greve ne se decale pas ; seule la pose saute. La greve
+                    # garde le reste de la rive, et ses bouees au pied du quai.
+                    amarre = self.des_greve.chance(fiche["quai_poteau"])
+                    if amarre and self.sol[y][x] != "Q" and assez_loin(x, y, fiche["ecart"]):
                         if self.poser_decor("poteau_amarrage", x, y):
                             poses.append((x, y))
                             continue
@@ -4600,8 +4752,16 @@ class _Chantier:
                 rect = (bx - m, by - m, bl + 2 * m, bh + 2 * m)
             elif "quai" in ou:
                 a = next(a for a in ambulants if a["slug"] == ou["quai"])
-                rect = next((rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
-                            if g in QUAIS and rx <= a["x"] < rx + rl and ry <= a["y"] < ry + rh)
+                g, rx, ry, rl, rh = next((g, rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
+                                         if g in QUAIS and rx <= a["x"] < rx + rl
+                                         and ry <= a["y"] < ry + rh)
+                # ⚠️ Le tablier seulement : un quai sur l'eau porte la baie sous
+                # lui, et une chaine tendue dans la baie ne ferme rien.
+                tablier = QUAI_TABLIER if g == "j" else rh
+                profondeur = min(MOUILLAGE["profondeur"], tablier - QUAI_APRON - 1)
+                x0 = max(rx, a["x"] - MOUILLAGE["demi_largeur"])
+                x1 = min(rx + rl, a["x"] + MOUILLAGE["demi_largeur"] + 1)
+                rect = (x0, ry, x1 - x0, profondeur)
             else:  # pragma: no cover - garde-fou de relecture de la fiche
                 raise ValueError(f"barriere sans lieu : {fiche['slug']}")
             x, y, largeur, hauteur = rect
@@ -5025,6 +5185,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fermetures": chantier.fermetures(ponts),
         "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
         "flottants": list(FLOTTANTS),
+        "decor_solide": sorted(DECOR_SOLIDE),
         "amarrages": chantier.amarrages(),
         "foire": chantier.foire,
         "roue": chantier.roue,

@@ -118,7 +118,9 @@ def test_on_amarre_au_quai(ville):
     sol, L, H = ville["sol"], ville["largeur"], ville["hauteur"]
     bornes = [d for d in ville["decor"] if d["type"] == "poteau_amarrage"
               and sol[d["y"]][d["x"]] == "Q"]
-    assert len(bornes) >= 20, f"{len(bornes)} bornes d'amarrage sur tout le port"
+    # ⚠️ Pas vingt : une borne tous les onze pas (`ECART_BORNE_AMARRAGE`). Plus
+    # serrées, elles faisaient une palissade — Martin a vu une clôture.
+    assert len(bornes) >= 8, f"{len(bornes)} bornes d'amarrage sur tout le port"
     for d in bornes:
         x, y = d["x"], d["y"]
         assert any(not (0 <= x + dx < L and 0 <= y + dy < H) or sol[y + dy][x + dx] == "~"
@@ -139,8 +141,12 @@ def test_le_quai_est_un_quai_et_pas_un_plancher(ville):
         assert dessus.get(quoi, 0) > 0, f"pas un seul {quoi} sur le port : {dessus}"
     planches = sum(ligne.count("Q") for ligne in sol)
     total = sum(dessus.values())
-    assert planches / total <= 12, (
-        f"un objet par {planches / total:.0f} tuiles de quai : c'est un plancher")
+    # ⚠️ **UNE FOURCHETTE.** Ce juge exigeait « au moins un objet par douze
+    # tuiles », et le quai l'a tenu en devenant un plancher d'entrepôt — une
+    # soixantaine de caisses solides sur dix rangées, 191 tuiles murées. Un quai
+    # porte ce qu'on y charge CONTRE LA RUE et garde son milieu pour marcher.
+    assert 12 <= planches / total <= 40, (
+        f"un objet par {planches / total:.0f} tuiles de quai : entrepôt ou plancher nu ?")
 
 
 def test_les_appontements_partent_du_quai(ville, quais):

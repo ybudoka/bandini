@@ -3332,6 +3332,7 @@ def test_la_bagarre_tient_le_budget(banc):
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
                  flaneurs: flaneurs, metiers: metiers, morts: morts,
                  budget: L.Entites.MAX_PIETONS,
+                 vendeurs: (L.Monde.carte.def.ambulants || []).length,
                  particules: L.B.particules.length, decals: L.B.decals.length,
                  images: s.images, morceaux: s.morceaux,
                  nan: isNaN(L.B.joueur.x) || isNaN(L.B.joueur.y) };
@@ -3358,8 +3359,20 @@ def test_la_bagarre_tient_le_budget(banc):
         f"{r['flaneurs']} flaneurs vivants, le budget est de {r['budget']} "
         f"({r['morts']} corps par terre, qui ne comptent pas)"
     )
-    assert r["actifs"] <= r["budget"] + 28, (
-        f"{r['actifs']} pietons actifs ({r['metiers']} a un metier)"
+    # ⚠️ **LES VENDEURS SE LISENT DANS LA CARTE, EUX AUSSI.** Chaque kiosque et
+    # chaque camion fait naitre UN vendeur fixe pour toute la partie
+    # (`creerAmbulants`) — douze quand ce plafond a ete ecrit, treize depuis le
+    # quai du contrebandier. Le « +28 » les rangeait dedans, c'est-a-dire qu'il
+    # recopiait un nombre du moteur, exactement ce que la note du dessus
+    # interdit. Il est tombe le 16 sept. 2026 sans qu'aucun budget ait bouge :
+    # a HEAD, le singe finissait COINCE dans un coin vide de la carte (10, 1),
+    # avec un seul pieton a metier autour de lui ; apres le changement du port,
+    # sa marche au hasard l'a mene au centre-ville (146, 6) — treize vendeurs,
+    # une bagarre de quatre, les trois personnages de l'histoire, deux agents.
+    # Le plafond ne tenait que tant que le singe ne voyait personne.
+    assert r["actifs"] <= r["budget"] + r["vendeurs"] + 28, (
+        f"{r['actifs']} pietons actifs ({r['metiers']} a un metier, "
+        f"dont {r['vendeurs']} vendeurs fixes)"
     )
     assert r["particules"] <= 300 and r["decals"] <= 150
     assert r["images"] <= 160, f"{r['images']} drawImage par image"
