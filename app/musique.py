@@ -170,6 +170,14 @@ def par_slug(slug: str) -> Morceau | None:
     for style in AMBIANCES:
         if style["slug"] == slug:
             return generer_station(style, station=False)
+    # ⚠️ Et les commerces AUSSI : le juge qui tient cette fonction dit exactement
+    # pourquoi — « une piece qu'on ne peut pas ecouter, c'est une piece qu'on
+    # livre en esperant ». Il a attrape les quatre tounes de boutique le jour ou
+    # elles sont nees, pour la meme raison qu'il avait attrape les cinq pieces
+    # de rue.
+    for style in COMMERCES:
+        if style["slug"] == slug:
+            return generer_station(style, station=False)
     return rue_par_slug(slug)
 
 
@@ -178,9 +186,10 @@ def duree_s(morceau: Morceau) -> float:
     return morceau["pas"] * 60.0 / morceau["bpm"] / morceau["pas_par_temps"]
 
 
+
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues())
+            + rues() + commerces())
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -496,6 +505,70 @@ def rue_par_slug(slug: str) -> Morceau | None:
 #:
 #: Un district = une ambiance, et c'est LA MUSIQUE qui connait les districts,
 #: pas l'inverse : `carte.py` n'a pas a savoir ce qu'on entend.
+#: **LA MUSIQUE DES COMMERCES** (demande de Martin, 16 sept. 2026 : « nouvelle
+#: musique pour quand on entre dans les commerces, des chansons différentes,
+#: contextuelles »).
+#:
+#: ⚠️ **C'EST LE LIEU QUI CHOISIT, PAS LE HASARD.** Entrer chez l'armurier et
+#: entrer dans une boutique de linge ne se ressemblent pas ; une seule musique
+#: « d'interieur » aurait ete un rideau tire sur seize pieces differentes. Quatre
+#: morceaux, et une fiche qui dit lequel joue ou — le navigateur lit, il ne
+#: devine pas.
+#:
+#: ⚠️ **45 s comme les autres.** J'avais d'abord ecrit 20 s pour tenir sous un
+#: plafond de 6 Mo ; Martin a tranche — ce plafond-la etait le NOTRE, pas celui
+#: du telephone. Les musiques ne se telechargent qu'a l'entree de la piece,
+#: jamais au demarrage : la seule chose qu'un plafond serre y gagnait, c'etait
+#: une boucle de 20 s qu'on entend reboucler.
+#:
+#: ⚠️ Et comme tout le reste : **le fichier d'abord, les notes en filet**. Chaque
+#: morceau a sa graine, donc sa version sequencee ; un mp3 manquant ne fait pas
+#: un silence.
+COMMERCES: list[Style] = [
+    # Chez Gus, l'armurier. Sourd, tendu, presque immobile : on n'entre pas
+    # acheter un fusil sur une valse.
+    {"slug": "com_armurerie", "nom": "Le comptoir de Gus", "graine": 19680412,
+     "bpm": 72, "tonique": 40, "gamme": MINEURE, "grille": (0, 0, 5, 5),
+     "forme_chant": "triangle", "forme_nappe": "sawtooth", "volume": 0.30},
+    # Boutique Rosa. Leger, clair, un peu chic — la radio du magasin.
+    {"slug": "com_boutique", "nom": "Boutique Rosa", "graine": 19730921,
+     "bpm": 104, "tonique": 57, "gamme": MAJEURE, "grille": (0, 3, 4, 3),
+     "forme_chant": "sine", "forme_nappe": "triangle", "volume": 0.32},
+    # Le casse-croute : le jukebox dans le coin, chaud et un peu use.
+    {"slug": "com_casse_croute", "nom": "Le jukebox du coin", "graine": 19591225,
+     "bpm": 96, "tonique": 52, "gamme": MAJEURE, "grille": (0, 5, 3, 4),
+     "forme_chant": "square", "forme_nappe": "sine", "volume": 0.33},
+    # Le garage de Rocco : le rock graisseux qui sort d'un poste tache de
+    # peinture, au fond de l'atelier.
+    {"slug": "com_garage", "nom": "Le poste de l'atelier", "graine": 19810307,
+     "bpm": 118, "tonique": 45, "gamme": MINEURE, "grille": (0, 0, 3, 4),
+     "forme_chant": "sawtooth", "forme_nappe": "square", "volume": 0.31},
+]
+
+#: Quel morceau joue dans quelle piece. ⚠️ **Une piece sans entree ici reste
+#: SILENCIEUSE**, et c'est voulu : le poste de police, l'hopital et la planque ne
+#: sont pas des commerces — on n'y met pas de musique d'ambiance, et le silence
+#: y dit quelque chose qu'aucune toune ne dirait. La chambre d'hotel non plus :
+#: c'est la qu'on sauvegarde, et le calme y a un sens.
+MUSIQUES_DE_COMMERCE: dict[str, str] = {
+    "armurerie": "com_armurerie",
+    "usine": "com_armurerie",
+    "vetements": "com_boutique",
+    "electronique": "com_boutique",
+    "kiosque": "com_boutique",
+    "casse_croute": "com_casse_croute",
+    "cantine": "com_casse_croute",
+    "depanneur": "com_casse_croute",
+    "garage": "com_garage",
+}
+
+
+def commerces() -> list[Morceau]:
+    """Les quatre musiques d'interieur, en notes. ⚠️ `station=False` : le bouton
+    RADIO d'un char ne doit jamais tomber sur la toune d'une boutique."""
+    return [generer_station(style, station=False) for style in COMMERCES]
+
+
 AMBIANCES_DE_DISTRICT: dict[str, str] = {
     "faubourg": "amb_faubourg",
     "erables": "amb_erables",

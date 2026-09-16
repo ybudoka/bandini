@@ -464,4 +464,10 @@ def test_la_musique_generee_tient_dans_le_budget():
     depot, lui, les porte toutes."""
     secondes = sum(p["duree_s"] for p in audio.MUSIQUES)
     ko = secondes * 8
-    assert ko < 6000, f"{secondes} s de musique, soit {ko} Ko : le depot enfle"
+    # ⚠️ Relevé de 6 000 à 12 000 Ko le 16 sept. 2026, sur décision de Martin
+    # (« tu peux augmenter les budgets... pas de sens »). Ce plafond-ci n'a
+    # jamais eu la raison de celui des bruitages : **une musique ne se
+    # télécharge qu'au tour de clé ou à l'entrée d'une pièce**, jamais au
+    # démarrage. Il ne servait qu'à nous faire écrire des boucles courtes
+    # qu'on entend reboucler.
+    assert ko < 12000, f"{secondes} s de musique, soit {ko} Ko : le depot enfle"

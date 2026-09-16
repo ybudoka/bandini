@@ -65,7 +65,14 @@ def test_le_poids_audio_reste_raisonnable():
     # on nageait en silence. Encore un son qu'on n'avait pas, pas un son qu'on
     # a laisse grossir. On reste sous le mega ; la prochaine fois, on compresse
     # avant de relever.
-    assert sum(f.stat().st_size for f in bruitages) < 950_000
+    # ⚠️ **Relevé de 950 Ko à 1,5 Mo le 16 sept. 2026, sur décision de Martin**
+    # (« tu peux augmenter les budgets... pas de sens »), et il a raison : ce
+    # plafond-ci a une VRAIE raison (les bruitages se téléchargent au
+    # démarrage, sur 3G), mais 950 Ko était un chiffre qu'on avait relevé
+    # cinq fois par petits bonds de 50 Ko. Un budget qu'on relève à chaque
+    # ajout n'est pas un budget, c'est une formalité : on le met à une valeur
+    # qui tient un moment, et on le défend.
+    assert sum(f.stat().st_size for f in bruitages) < 1_500_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
@@ -87,7 +94,12 @@ def test_le_poids_audio_reste_raisonnable():
     # a ajoute, et c'est une decision, pas un debordement.
     for fichier in musiques:
         assert fichier.stat().st_size < 700_000, fichier.name
-    assert sum(f.stat().st_size for f in musiques) < 6_000_000
+    # ⚠️ Relevé de 6 à 12 Mo le même jour et pour la même raison. Celui-ci
+    # n'a jamais eu la raison du précédent : **les musiques ne se
+    # téléchargent qu'à l'entrée de la pièce ou au tour de clé**, jamais au
+    # démarrage. Il ne servait qu'à nous faire écrire des boucles de 20 s
+    # qu'on entend reboucler.
+    assert sum(f.stat().st_size for f in musiques) < 12_000_000
 
 
 @pytest.mark.parametrize("radio", audio.RADIOS, ids=lambda r: r["slug"])
@@ -178,8 +190,16 @@ def test_l_ambiance_et_les_voix_sont_declarees_a_part(paquet):
     genres = {v["genre"] for v in audios["voix"]}
     assert {"homme", "femme"} <= genres, "il faut des hommes ET des femmes qui parlent"
     assert "crieur" in genres, "l'homme-sandwich n'a rien a crier"
+    # ⚠️ **La longueur se juge par GENRE, pas en bloc.** « Une réplique de passant
+    # tient en quelques mots » est vrai d'un passant qu'on frôle — et faux d'un
+    # annonceur de radio, qui a une phrase entière à dire entre deux tounes. Ce
+    # juge a raison sur le fond : ce n'est pas lui qu'on jette, c'est le genre
+    # qu'on nomme. Un passant reste à quarante caractères.
+    DIFFUSE = {"radio_brume", "radio_taxi", "pub"}
     for voix in audio.VOIX:
-        assert 2 <= len(voix["texte"]) <= 40, "une replique de passant tient en quelques mots"
+        plafond = 110 if voix["genre"] in DIFFUSE else 40
+        assert 2 <= len(voix["texte"]) <= plafond, (
+            f"{voix['slug']} : {len(voix['texte'])} caractères pour un plafond de {plafond}")
         assert voix["voix"] and not voix["voix"].startswith("__"), \
             f"{voix['slug']} : la voix ElevenLabs n'est pas nommee"
 

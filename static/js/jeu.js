@@ -183,6 +183,10 @@ const Jeu = (function () {
       j.y = piece.interieur.apparition.y * TT + 8;
       poserDansLaPorte(j, 'haut');
       Son.SFX.porte(piece.interieur.porte);   // la porte s'entend AU NOIR : c'est la qu'on la passe
+      // ⚠️ La toune du commerce demarre AU NOIR elle aussi : la porte se ferme,
+      // la rue se tait, et ce qu'on entend en ouvrant les yeux est deja celle
+      // d'ici. Une piece qui n'est pas un commerce reste silencieuse.
+      Son.Radio.dedans(piece.interieur.slug);
       Hud.message(piece.interieur.nom.toUpperCase(), 120);
     });
     return true;
@@ -234,6 +238,7 @@ const Jeu = (function () {
       if (B.entites.indexOf(j) < 0) B.entites.push(j);
       B.particules.length = 0;
       B.interieur = null;
+      Son.Radio.dedans(null);                 // on ressort : la toune du commerce s'arrete
       B.exterieur = null;
       Entites.reindexerDecor();
       // ⚠️ La tuile devant la porte, au pixel : entrer puis sortir doit ramener

@@ -878,6 +878,27 @@ const Son = (function () {
       Radio.demandee = null;
     },
 
+    /** LA MUSIQUE D'UN COMMERCE. Demande de Martin : « une nouvelle musique
+        quand on entre dans les commerces, des chansons differentes,
+        contextuelles ».
+
+        ⚠️ **C'EST LE LIEU QUI CHOISIT, PAS LE HASARD** : la carte vit en Python
+        (`musique.MUSIQUES_DE_COMMERCE`), le navigateur la LIT. Une piece absente
+        de la carte reste silencieuse, et c'est voulu — le poste de police,
+        l'hopital et la planque ne sont pas des commerces, et le silence y dit ce
+        qu'aucune toune ne dirait.
+
+        ⚠️ Elle passe par `Mus`, donc par la meme porte que tout le reste : **le
+        fichier d'abord, les notes en filet**. Un mp3 manquant ne fait pas un
+        silence, il fait jouer le sequenceur. */
+    dedans: function (slug) {
+      const carte = (B.defs && B.defs.audio && B.defs.audio.musiques_de_commerce) || {};
+      const morceau = slug ? carte[slug] : null;
+      if (!morceau) { Mus.arreter(); return null; }
+      Mus.jouer(morceau);
+      return morceau;
+    },
+
     /** Le bouton RADIO : la station suivante, puis le silence, puis la premiere. */
     suivante: function () {
       const liste = Radio.stations();

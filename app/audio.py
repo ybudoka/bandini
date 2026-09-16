@@ -584,6 +584,35 @@ MUSIQUES: list[Piece] = [
        "playing alone, few notes, long silences, heard from around a corner, "
        "no other instruments, no drums, no vocals, loopable",
        duree_s=30, volume=0.46),
+
+    # --- Les quatre musiques de commerce (M15 / demande de Martin) ----------
+    # ⚠️ 45 s comme les autres. J'avais d'abord ecrit 20 s pour tenir sous un
+    # plafond de 6 Mo ; Martin a tranche (« tu peux augmenter les budgets... pas
+    # de sens ») et il a raison — ce plafond-la etait le NOTRE, pas celui du
+    # telephone : les musiques ne se telechargent qu'a l'entree de la piece,
+    # jamais au demarrage. Une boucle de 20 s dans une boutique s'entend
+    # reboucler ; une de 45 s ne s'entend pas.
+    _m("com_armurerie",
+       "sparse tense instrumental at 72 bpm in C minor, low sustained cello drone, "
+       "muted plucked guitar notes, distant room tone, a gun shop back counter, "
+       "unsettling but quiet, no drums, no vocals, seamless loop",
+       duree_s=45, volume=0.30),
+    _m("com_boutique",
+       "light breezy instrumental at 104 bpm in A major, clean electric piano, "
+       "soft brushed drums, warm bass, the radio playing in a small clothing "
+       "boutique, cheerful and unobtrusive, no vocals, seamless loop",
+       duree_s=45, volume=0.32),
+    _m("com_casse_croute",
+       "warm vintage diner jukebox instrumental at 96 bpm in E major, reverb "
+       "electric guitar, upright bass, shuffle brushes, 1950s greasy spoon at "
+       "noon, slightly worn tape feel, no vocals, seamless loop",
+       duree_s=45, volume=0.33),
+    _m("com_garage",
+       "greasy garage rock instrumental at 118 bpm in D minor, fuzzy electric "
+       "guitar riff, dry drums, driving bass, a paint-spattered radio at the back "
+       "of a body shop, no vocals, seamless loop",
+       duree_s=45, volume=0.31),
+
 ]
 
 
@@ -706,6 +735,48 @@ VOIX: list[Voix] = [
     {"slug": "du_feu_b", "texte": "T'as du feu, mon chou?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "tout_seul_b", "texte": "Reste pas tout seul à soir, là.", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
     {"slug": "ca_te_tente_b", "texte": "Ça te tente-tu, un peu de compagnie?", "genre": "brume", "voix": VOIX_BRUME, "volume": 0.75, "style": 0.6, "stabilite": 0.35},
+    # --- LA RADIO PARLE (M15, 2e vague) -----------------------------------
+    # ⚠️ **L'AME D'UNE RADIO, C'EST CE QUI SE DIT ENTRE LES TOUNES.** Les cinq
+    # stations sont des boucles instrumentales depuis M7 ; le mecanisme pour y
+    # glisser une voix existe deja en entier — `Son.Voix`, le ducking, le filtre
+    # du combine. Il ne manquait que les clips.
+    #
+    # ⚠️ **Ce sont des VOIX, pas une troisieme sorte de son**, et c'est ce qui
+    # rend la vague petite : meme generation, meme export, meme chargement, meme
+    # ducking. Le `genre` separe deja les banques (homme, femme, crieur, brume) —
+    # il en separe simplement deux de plus.
+    #
+    # ⚠️ **Personne au Choc** : juste sa musique. C'est le PROPOS de la station,
+    # et une station qui se tait au milieu de quatre qui parlent dit quelque
+    # chose qu'aucun clip ne dirait.
+    {"slug": "brume_nuit_r", "texte": "Vous écoutez La Brume, cent trois virgule sept. Il est minuit passé sur le port.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "brume_pluie_r", "texte": "La pluie rentre par la baie. Restez au chaud, on continue.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "brume_demandes_r", "texte": "Une petite dernière avant les nouvelles, pour ceux qui travaillent de nuit.",
+     "genre": "radio_brume", "voix": VOIX_BRUME, "volume": 0.62, "style": 0.35, "stabilite": 0.6},
+    {"slug": "taxi_bonjour_r", "texte": "Taxi-Radio, votre station! On est en ondes, pis y fait beau à Baie-des-Brumes!",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_trafic_r", "texte": "Ça bouchonne su'l pont, mes amis. Prenez donc la rue des Érables.",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    {"slug": "taxi_merci_r", "texte": "Un gros merci à nos commanditaires, pis on remet ça!",
+     "genre": "radio_taxi", "voix": VOIX_CRIEUR, "volume": 0.66, "style": 0.65, "stabilite": 0.35},
+    # --- Les pubs. ⚠️ **ELLES CHANGENT QUAND TU ACHETES LE COMMERCE**, et c'est
+    # cette ligne-la qui fait que ca vaut la peine, pas une autre : entendre son
+    # propre commerce annonce a la radio, dans un char qu'on vient de voler, est
+    # exactement ce que M15 promet. Une par commerce, plus sa jumelle « a toi ».
+    {"slug": "pub_gus_r", "texte": "Chez Gus! Le meilleur smoked meat en ville, depuis mille neuf cent soixante-deux.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_gus_a_toi_r", "texte": "Chez Gus, sous nouvelle administration! Passez voir le nouveau proprio.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_rosa_r", "texte": "Boutique Rosa, rue du Faubourg. Habillez-vous comme du monde.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_rosa_a_toi_r", "texte": "Boutique Rosa a changé de mains! Venez rencontrer le nouveau proprio.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_tipaul_r", "texte": "Dépanneur Ti-Paul, ouvert tard. Bière frette, loterie, pis du bon café.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_tipaul_a_toi_r", "texte": "Le Dépanneur Ti-Paul est vendu! Le nouveau proprio vous attend.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
 ]
 
 
@@ -898,6 +969,11 @@ def exporter() -> dict:
         "echelle": dict(musique.ECHELLE),
         "musique": dict(musique.MUSIQUE),
         "ambiances_de_district": dict(musique.AMBIANCES_DE_DISTRICT),
+        # ⚠️ QUEL MORCEAU JOUE DANS QUELLE PIECE. Le navigateur lit, il ne
+        # devine pas : une piece absente de cette carte reste SILENCIEUSE, et
+        # c'est voulu — le poste, l'hopital et la planque ne sont pas des
+        # commerces, et le silence y dit ce qu'aucune toune ne dirait.
+        "musiques_de_commerce": dict(musique.MUSIQUES_DE_COMMERCE),
         "echantillons": [
             {**echantillon, "fichiers": fichiers_presents(echantillon)}
             for echantillon in CATALOGUE
