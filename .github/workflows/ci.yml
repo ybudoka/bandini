@@ -18,7 +18,13 @@ permissions:
 jobs:
   rapide:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    # ⚠️ 10 minutes ne suffisaient plus, et ca s'est vu de la pire facon : le run
+    # est mort ANNULE, ce qui se lit comme « un autre push l'a remplace » alors
+    # que c'etait le delai. La suite met 4 min 30 sur une machine de
+    # developpement et un runner est environ deux fois plus lent : on passait
+    # tout juste, un run sur deux. Elle grossit d'une dizaine de juges par
+    # vague ; 25 minutes laissent de la marge pour un bon moment.
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
