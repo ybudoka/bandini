@@ -636,8 +636,8 @@ DISTRICTS: tuple[dict, ...] = (
      "pietons": 9, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
      "rares": ("sport",),
      # ⚠️ Une des trois taches de bois devient la FOIRE (`f`) : on n'agrandit pas
-     # la grille, on la DEPENSE — la lecon de l'ile. Celle-ci borde l'eau, et la
-     # greve est juste au-dessus.
+     # la grille, on la DEPENSE — la lecon de l'ile. Celle-ci borde le chenal ;
+     # les plages sont a l'ouest et au sud, face au large (`PLAGES`).
      "plan": ("~<<<<<",
               "f<<<nc",
               "^<<<^c",
@@ -819,6 +819,36 @@ AMARRAGES: dict = {
     "ecart": 26,              # deux chaloupes ne se collent pas bord a bord
 }
 
+#: **LES PLAGES : PEU, MAIS LARGES.** Retour de Martin : « moins de plage autour,
+#: et des accessoires de plage et des gens s'il y a beaucoup de place, pas juste
+#: des petits morceaux de plage ».
+#:
+#: ⚠️ **Mesure, sur la graine livree** : 1 754 tuiles de sable en **65 morceaux**,
+#: dont **41 de moins de dix tuiles**. `_eau()` bordait CHAQUE cote de chaque
+#: bassin d'une bande de zero a quatre tuiles qui avancait et reculait au hasard
+#: — jusque dans le chenal de La Pointe, des deux rives. Ce qu'on voyait etait
+#: un liseré dechiquete autour de toute l'eau, et les 104 meubles de plage
+#: tombaient tous sur ces bandes etroites : une serviette sur trois tuiles de
+#: sable entre un trottoir et la baie n'est pas une plage.
+#:
+#: ⚠️ **Une plage demande DU LARGE devant elle** : jamais dans un chenal, ou le
+#: sable des deux rives finirait par se toucher (le pont de La Pointe doit rester
+#: le seul chemin). La profondeur qu'un bassin peut donner est donc un tiers de
+#: sa largeur quand il y a une rive en face, la moitie quand il n'y en a pas — et
+#: sous `profondeur[0]`, ce cote n'a pas de plage du tout.
+#:
+#: ⚠️ **Et du RIVAGE derriere elle** : le plus long bout de cote d'un seul tenant,
+#: pas la somme des bouts. Ailleurs, la ville touche l'eau sans sable — un
+#: trottoir au bord de l'eau, comme au quai.
+PLAGES: dict = {
+    "profondeur": (5, 8),     # en tuiles, au milieu de la plage
+    "longueur": (26, 44),     # le long de la cote
+    "rampe": 5,               # les deux bouts s'amincissent sur tant de tuiles
+    # ⚠️ Ce qu'une plage doit compter de tuiles pour exister. En dessous, le
+    # cote reste sans sable : c'est « beaucoup de place », ecrit en chiffres.
+    "place": 120,
+}
+
 #: **LA GREVE SE MEUBLE.** ⚠️ Mesure d'abord, et c'est elle qui a decide de la
 #: vague : la ville pose deja **2 507 tuiles de sable** (dont 782 touchent
 #: l'eau) et **1 818 tuiles de quai** — et personne ne s'y assoit jamais. Ce qui
@@ -847,17 +877,30 @@ AMARRAGES: dict = {
 FLOTTANTS: tuple[str, ...] = ("bouee",)
 
 GREVE: dict = {
-    "bord": 3,               # a quelle distance de l'eau le sable est une GREVE
+    # A quelle distance de l'eau le sable est une GREVE. ⚠️ Toute la profondeur
+    # d'une plage (`PLAGES`) : a trois tuiles, le fond d'une plage de huit
+    # restait nu, et on revenait aux petits morceaux par l'autre bout.
+    "bord": PLAGES["profondeur"][1],
     "ecart": 3,              # deux meubles de plage ne se collent pas
-    # Ce qu'on seme, et sa chance par tuile de greve. ⚠️ Le parasol se lit de
-    # loin, donc il est le plus rare : une grève qui en porte un tous les trois
-    # pas n'est pas une plage, c'est un stationnement de parasols.
+    # Ce qu'on seme, et sa chance par tuile de greve. ⚠️ Seulement sur une plage
+    # DECLAREE (`PLAGES`) — c'est la que Martin veut « des accessoires ». Le
+    # parasol se lit de loin, donc il ne domine pas : une grève qui en porte un
+    # tous les trois pas n'est pas une plage, c'est un stationnement de parasols.
+    # ⚠️ Le chateau PASSE EN PREMIER : il ne se tire que sur le sable mouille
+    # (`chateau_bord`), et tire en dernier il ne gagnait presque jamais — deux
+    # chateaux pour cinq plages, et les enfants n'avaient rien a rebatir.
     "chances": {
-        "parasol": 0.035,
-        "serviette": 0.045,
-        "table_pique_nique": 0.025,
-        "chateau_sable": 0.030,
+        "chateau_sable": 0.060,
+        "parasol": 0.050,
+        "serviette": 0.060,
+        "chaise_longue": 0.050,
+        "table_pique_nique": 0.030,
+        "kayak": 0.015,
     },
+    # ⚠️ LA CHAISE DU SAUVETEUR : une par plage, au milieu, et posee AVANT le
+    # semis — c'est elle qui dit « on se baigne ici » d'un bout a l'autre de
+    # l'ecran, et le semis s'en ecarte tout seul.
+    "sauveteur": "chaise_sauveteur",
     # ⚠️ Le chateau se batit AU BORD, la ou le sable est mouille — a deux
     # tuiles de l'eau, pas a huit. C'est la seule des quatre a le demander.
     "chateau_bord": 2,
@@ -866,6 +909,14 @@ GREVE: dict = {
     # ces deux chances-la ne valent que sur le BORD du quai, la ou l'eau touche.
     "quai_poteau": 0.06,
     "quai_bouee": 0.07,
+    # ⚠️ ET ESPACES, DEPUIS QUE LA RIVE EST NUE. Tant qu'une bande de sable
+    # longeait toute l'eau, presque aucun trottoir ne la touchait ; sans elle,
+    # le chenal de La Pointe s'est couvert d'un poteau tous les trois pas
+    # (mesure : (387, 121), (393, 121), (396, 121), (399, 121)) — la palissade
+    # que le quai a deja appris a ne pas planter. Une borne ARRETE un pieton,
+    # et le trottoir n'a qu'une tuile.
+    "poteau_ecart": 11,
+    "bouee_ecart": 6,
     # Le belvedere : la ou la terre DOMINE l'eau. On en veut peu, et espaces.
     "belvederes": (3, 9),
     "belvedere_ecart": 40,
@@ -884,6 +935,7 @@ GREVE: dict = {
 #: l'ait fait tout seul, et le juge « deux meubles de plage ne se collent pas »
 #: est tombe sur une paire dont personne n'etait responsable.
 MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
+                   "chaise_longue", "kayak", "chaise_sauveteur",
                    "poteau_amarrage", "bouee", "belvedere", "pneu")
 
 #: Le decor qui ARRETE UN PIETON. ⚠️ La solidite d'un decor vit dans sa fiche de
@@ -901,7 +953,7 @@ MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
 #: croire qu'on passe la ou l'on ne passe pas.
 DECOR_SOLIDE = frozenset({
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
-    "caisse", "carrousel", "chaises_volantes", "distributrice_cafe",
+    "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
     "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
     "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
@@ -1367,6 +1419,10 @@ class _Chantier:
         self.des_fermeture = Des(graine ^ 0xFE47E3)
         self.des_aqueduc = Des(graine ^ 0xA9DEC5)
         self.des_greve = Des(graine ^ 0x67EE7)
+        # ⚠️ Les plages ont LEUR de : leur forme ne doit rien deplacer d'autre
+        # dans la ville (voir `_eau`, qui brule ce que l'ancienne rive tirait).
+        self.des_plage = Des(graine ^ 0x9A6E5)
+        self.plages: list[dict] = []
         self._ponts_poses: list[dict] = []
         self.des_foire = Des(graine ^ 0xF01BE)
         self.roue: dict | None = None
@@ -4423,48 +4479,98 @@ class _Chantier:
         return False
 
     def _eau(self, x: int, y: int, largeur: int, hauteur: int) -> None:
-        """Un bassin a rive irreguliere : du sable qui avance et recule."""
+        """Un bassin, et ses plages — peu, mais larges (voir `PLAGES`)."""
         self.bouchon_rect(x, y, largeur, hauteur, "~")
         self.rect(x, y, largeur, hauteur, "~")
+        # ⚠️ ON BRULE CE QUE L'ANCIENNE RIVE TIRAIT DANS LE DE COMMUN : un tirage
+        # par colonne et par rangee du bassin. La forme des plages se tire dans
+        # `des_plage` ; sans cette brulure, tous les ilots poses apres la baie
+        # changeaient de gabarits pour une histoire de sable.
+        self.des.brule(largeur + hauteur)
         pas = max(1, largeur // 8)
         nord = self._terre_a_cote([(x + i, y - 1) for i in range(0, largeur, pas)])
         sud = self._terre_a_cote([(x + i, y + hauteur) for i in range(0, largeur, pas)])
         pas = max(1, hauteur // 8)
         ouest = self._terre_a_cote([(x - 1, y + j) for j in range(0, hauteur, pas)])
         est = self._terre_a_cote([(x + largeur, y + j) for j in range(0, hauteur, pas)])
-        # ⚠️ La rive ne mange jamais plus du tiers du bassin : sans ce plafond,
-        # le sable des deux rives se rejoint au milieu d'un chenal etroit — et
-        # La Pointe, qu'un pont devait seul relier, se traverse a pied.
-        sable_h = min(4, hauteur // 3)
-        sable_v = min(3, largeur // 3)
-        profondeur = min(2, sable_h)
-        # ⚠️ ET LE RIVAGE SE VERIFIE RANGEE PAR RANGEE, pas une fois pour tout
-        # le cote. `_terre_a_cote` promet « on ne dessine une rive que la ou il
-        # y a un rivage », et il ne tenait la promesse qu'a l'echelle du bord :
-        # une seule tuile de terre quelque part le long du cote, et le sable
-        # courait sur TOUTE sa longueur, y compris la ou le voisin est de l'eau.
-        # Resultat : des bancs de sable isoles en pleine baie, que
-        # `boucher_les_poches` doit noyer un a un — douze tuiles sur la graine
-        # livree. Une plage suit la cote ; elle ne suit pas une boite.
-        for i in range(largeur):
-            profondeur = max(0, min(sable_h, profondeur + self.des.entier(-1, 1)))
-            au_nord = nord and self._terre_a_cote([(x + i, y - 1)])
-            au_sud = sud and self._terre_a_cote([(x + i, y + hauteur)])
-            for j in range(profondeur):
-                if au_nord:
-                    self.sol[y + j][x + i] = "s"
-                if au_sud:
-                    self.sol[y + hauteur - 1 - j][x + i] = "s"
-        profondeur = min(2, sable_v)
-        for j in range(hauteur):
-            profondeur = max(0, min(sable_v, profondeur + self.des.entier(-1, 1)))
-            a_l_ouest = ouest and self._terre_a_cote([(x - 1, y + j)])
-            a_l_est = est and self._terre_a_cote([(x + largeur, y + j)])
-            for i in range(profondeur):
-                if a_l_ouest:
-                    self.sol[y + j][x + i] = "s"
-                if a_l_est:
-                    self.sol[y + j][x + largeur - 1 - i] = "s"
+        for cote, rivage, en_face in (("nord", nord, sud), ("sud", sud, nord),
+                                      ("ouest", ouest, est), ("est", est, ouest)):
+            if rivage:
+                self._plage(x, y, largeur, hauteur, cote, en_face)
+
+    def _plage(self, x: int, y: int, largeur: int, hauteur: int, cote: str,
+               en_face: bool) -> None:
+        """Une plage le long d'un cote du bassin — ou rien, s'il n'a pas la place.
+
+        ⚠️ **Une plage suit la cote ; elle ne suit pas une boite.** Le rivage se
+        verifie TUILE PAR TUILE (`_terre_a_cote`) : premiere version de la rive,
+        une seule tuile de terre quelque part le long du cote faisait courir le
+        sable sur toute sa longueur, et douze bancs de sable flottaient en pleine
+        baie. On prend donc le plus long bout de cote d'un seul tenant.
+        """
+        fiche = PLAGES
+        le_long = largeur if cote in ("nord", "sud") else hauteur
+        en_travers = hauteur if cote in ("nord", "sud") else largeur
+
+        def tuile(i: int, j: int) -> tuple[int, int]:
+            """La tuile `i` le long du cote, `j` tuiles vers le large."""
+            if cote == "nord":
+                return x + i, y + j
+            if cote == "sud":
+                return x + i, y + hauteur - 1 - j
+            if cote == "ouest":
+                return x + j, y + i
+            return x + largeur - 1 - j, y + i
+
+        def terre(i: int) -> bool:
+            tx, ty = tuile(i, 0)
+            dx, dy = {"nord": (0, -1), "sud": (0, 1), "ouest": (-1, 0), "est": (1, 0)}[cote]
+            return self._terre_a_cote([(tx + dx, ty + dy)])
+
+        # ⚠️ Du large devant : un tiers du bassin s'il y a une rive en face (le
+        # sable des deux bords ne se touche jamais), la moitie sinon.
+        fond = en_travers // (3 if en_face else 2)
+        mini, maxi = fiche["profondeur"]
+        if fond < mini:
+            return
+        rivage, debut = (0, 0), None
+        for i in range(le_long + 1):
+            if i < le_long and terre(i):
+                debut = i if debut is None else debut
+            elif debut is not None:
+                if i - debut > rivage[1]:
+                    rivage = (debut, i - debut)
+                debut = None
+        depart, place = rivage
+        court, long = fiche["longueur"]
+        if place < court:
+            return
+        longueur = min(place, self.des_plage.entier(court, long))
+        depart += self.des_plage.entier(0, place - longueur)
+        profondeur = min(fond, self.des_plage.entier(mini, maxi))
+        rampe = fiche["rampe"]
+        bruit = 0
+        profil: list[int] = []
+        for k in range(longueur):
+            # Les deux bouts s'amincissent ; le milieu avance et recule d'une
+            # tuile — c'est le bruit qui fait une ligne d'eau, pas une regle.
+            bout = min(k + 1, longueur - k)
+            base = profondeur if bout >= rampe else max(1, profondeur * bout // rampe)
+            bruit = max(-1, min(1, bruit + self.des_plage.entier(-1, 1)))
+            profil.append(max(1, min(fond, base + bruit)))
+        # ⚠️ Pas la place : pas de plage. On ne pose pas un mouchoir de sable.
+        if sum(profil) < fiche["place"]:
+            return
+        tuiles: list[tuple[int, int]] = []
+        for k, creux in enumerate(profil):
+            for j in range(creux):
+                tx, ty = tuile(depart + k, j)
+                self.sol[ty][tx] = "s"
+                tuiles.append((tx, ty))
+        xs = [t[0] for t in tuiles]
+        ys = [t[1] for t in tuiles]
+        self.plages.append({"x": min(xs), "y": min(ys), "l": max(xs) - min(xs) + 1,
+                            "h": max(ys) - min(ys) + 1, "cote": cote})
 
     # --- Decor de rue et finitions -----------------------------------------
 
@@ -4909,6 +5015,25 @@ class _Chantier:
         def assez_loin(x: int, y: int, ecart: int) -> bool:
             return all(abs(px - x) + abs(py - y) >= ecart for px, py in poses)
 
+        # ⚠️ **SEULEMENT SUR UNE PLAGE QUI A LA PLACE** (`PLAGES`). Le sable qui
+        # borde un etang de parc n'en est pas une : trois parasols autour d'une
+        # flaque, c'etait exactement « les petits morceaux de plage ».
+        sable = {(tx, ty) for p in self.plages
+                 for ty in range(p["y"], p["y"] + p["h"])
+                 for tx in range(p["x"], p["x"] + p["l"])
+                 if self.sol[ty][tx] == "s"}
+        for p in self.plages:
+            cx, cy = p["x"] + p["l"] // 2, p["y"] + p["h"] // 2
+            milieu = sorted((t for t in sable
+                             if p["x"] <= t[0] < p["x"] + p["l"] and p["y"] <= t[1] < p["y"] + p["h"]),
+                            key=lambda t: (abs(t[0] - cx) + abs(t[1] - cy), t))
+            for tx, ty in milieu:
+                if sous_un_pont(tx, ty) or not assez_loin(tx, ty, fiche["ecart"]):
+                    continue
+                if self.poser_decor(fiche["sauveteur"], tx, ty):
+                    poses.append((tx, ty))
+                    break
+
         for y in range(self.hauteur):
             for x in range(self.largeur):
                 glyphe = self.sol[y][x]
@@ -4919,7 +5044,7 @@ class _Chantier:
                 if sous_un_pont(x, y):
                     continue
                 if glyphe == "s":
-                    if not self._eau_a_portee(x, y, fiche["bord"]):
+                    if (x, y) not in sable or not self._eau_a_portee(x, y, fiche["bord"]):
                         continue
                     au_bord = self._eau_a_portee(x, y, fiche["chateau_bord"])
                     for quoi, chance in fiche["chances"].items():
@@ -4954,7 +5079,7 @@ class _Chantier:
                     # de la greve ne se decale pas ; seule la pose saute. La greve
                     # garde le reste de la rive, et ses bouees au pied du quai.
                     amarre = self.des_greve.chance(fiche["quai_poteau"])
-                    if amarre and self.sol[y][x] != "Q" and assez_loin(x, y, fiche["ecart"]):
+                    if amarre and self.sol[y][x] != "Q" and assez_loin(x, y, fiche["poteau_ecart"]):
                         if self.poser_decor("poteau_amarrage", x, y):
                             poses.append((x, y))
                             continue
@@ -4963,7 +5088,7 @@ class _Chantier:
                     for cx, cy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                         if not (0 <= cx < self.largeur and 0 <= cy < self.hauteur):
                             continue
-                        if self.sol[cy][cx] != "~" or not assez_loin(cx, cy, fiche["ecart"]):
+                        if self.sol[cy][cx] != "~" or not assez_loin(cx, cy, fiche["bouee_ecart"]):
                             continue
                         if sous_un_pont(cx, cy):
                             continue
@@ -5559,6 +5684,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "voie": ["".join(ligne) for ligne in chantier.voie],
         "arrets": chantier.arrets,
         "ponts": ponts,
+        # ⚠️ Les plages DECLARENT leur rectangle : le navigateur n'y fait naitre
+        # des baigneurs que la, et le deviner d'apres le sable serait une
+        # deuxieme verite (le sable d'un etang de parc n'est pas une plage).
+        "plages": [{k: p[k] for k in ("x", "y", "l", "h")} for p in chantier.plages],
         "intersections": chantier.intersections,
         "portes": chantier.portes,
         "lampes": chantier.lampes,

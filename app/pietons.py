@@ -114,6 +114,20 @@ CATALOGUE: list[Pieton] = [
     _p("mere", "Mère avec son petit", "#16a085", "#4a3320", "#f0c098", "#3a3a4a",
        vitesse=0.85, vie=65, argent=(10, 45), temoin=0.7, accompagne="enfant",
        frequence=1.4),
+    # ⚠️ LES BAIGNEURS — Martin : « des gens s'il y a beaucoup de place ». Des
+    # enfants seuls sur une plage, c'est une cour d'ecole. Le corps commun, et
+    # c'est la PALETTE qui les met en maillot : lui torse nu (le chandail a la
+    # couleur de la peau) et un maillot rouge, elle en maillot une piece et les
+    # jambes nues (le pantalon a la couleur de la peau). Ils ne naissent que sur
+    # une plage declaree (`carte.PLAGES`, frequence 0), et leur routine est celle
+    # des enfants de la plage, le chateau en moins et le soleil en plus.
+    # Presque rien en poche : on ne va pas a la plage avec son portefeuille.
+    _p("baigneur", "Baigneur", "#e8b088", "#4a3320", "#e8b088", "#c0392b",
+       vitesse=0.8, vie=60, argent=(0, 12), temoin=0.6, courage=0.1,
+       metier="baigneur", frequence=0.0),
+    _p("baigneuse", "Baigneuse", "#2f8fb5", "#8a5a2b", "#f0c098", "#f0c098",
+       vitesse=0.8, vie=60, argent=(0, 12), temoin=0.6, courage=0.05,
+       metier="baigneur", frequence=0.0),
     # La Brume, la nuit : elles travaillent pres du bar et du port. Elles
     # vendent de la COMPAGNIE (voir economie.TARIFS) et rien ne se montre.
     # ⚠️ SEUL ARCHETYPE A AVOIR SON PROPRE SPRITE (`racoleuse` dans
@@ -439,7 +453,17 @@ BAGARRE: dict = {
 #: bonne — le bord de l'eau devient le plus mauvais endroit de la ville pour
 #: faire un coup, exactement comme l'attroupement de l'amuseur.
 PLAGE: dict = {
-    "enfants": 4,                # combien jouent sur la greve a la fois
+    "enfants": 5,                # combien jouent sur la greve a la fois
+    # ⚠️ ET DES GRANDS, depuis que les plages ont la place (`carte.PLAGES`). Ils
+    # comptent A PART des enfants : un plafond commun laissait les premiers nes
+    # prendre toutes les places, et la plage n'avait qu'un seul age.
+    "adultes": 7,
+    "adultes_archetypes": ("baigneur", "baigneuse"),
+    # Se faire bronzer : on va a une serviette ou a une chaise longue libre, et
+    # on y reste longtemps. C'est le jeu des grands, comme le chateau est celui
+    # des petits.
+    "bronzer_px": 240,
+    "bronzer_images": (700, 1600),
     "rayon_px": 520,             # la bulle ou ils naissent et s'oublient
     "chateau_px": 220,           # jusqu'ou un enfant va chercher un chateau
     "accroupi_images": (200, 460),   # le temps qu'il passe a le rebatir
@@ -784,6 +808,8 @@ def exporter() -> dict:
                            "assis_images": list(BETES["chat"]["assis_images"]),
                            "marche_images": list(BETES["chat"]["marche_images"])}},
         "plage": {**PLAGE,
+                  "adultes_archetypes": list(PLAGE["adultes_archetypes"]),
+                  "bronzer_images": list(PLAGE["bronzer_images"]),
                   "accroupi_images": list(PLAGE["accroupi_images"]),
                   "barbote_images": list(PLAGE["barbote_images"]),
                   "jeu_images": list(PLAGE["jeu_images"])},

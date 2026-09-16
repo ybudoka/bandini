@@ -4260,6 +4260,66 @@ const DECORS = {
     ctx.fillStyle = '#8e1f16'; ctx.fillRect(8, 2, 5, 1);
   } },
 
+  // LA CHAISE LONGUE. ⚠️ Vue d'en haut, une plage se lit par ce qu'on y POSE pour
+  // rester : un parasol dit « il fait soleil », une chaise longue dit « on est la
+  // pour la journee ». Une toile rayee entre deux longerons, et le dossier releve
+  // qui prend le jour — c'est la cassure de lumiere qui la distingue d'une
+  // serviette. On passe par-dessus (`solide: false`), comme la serviette.
+  chaise_longue: { solide: false, r: 0, variantes: 3, w: 12, h: 20, ancre: [6, 15], peindre: function (ctx, w, h, v) {
+    const toile = ['#2f6fb5', '#e0574f', '#2f8d6a'][v % 3];
+    const raie = ['#eaf3f8', '#f2ded9', '#e6f2ea'][v % 3];
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(3, 7, 8, 12);        // son ombre, au sud-est
+    ctx.fillStyle = '#d8d2c0'; ctx.fillRect(1, 1, 1, 17); ctx.fillRect(9, 1, 1, 17);   // les deux longerons
+    ctx.fillStyle = toile; ctx.fillRect(2, 1, 7, 16);                        // la toile tendue
+    ctx.fillStyle = raie;                                                    // ses rayures en travers
+    for (let y = 2; y < 17; y += 3) ctx.fillRect(2, y, 7, 1);
+    ctx.fillStyle = 'rgba(255,255,255,0.30)'; ctx.fillRect(2, 1, 7, 5);      // le dossier releve prend le jour
+    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(1, 6, 9, 1);         // la cassure ou il se couche
+    ctx.fillStyle = '#9a9385'; ctx.fillRect(1, 18, 1, 2); ctx.fillRect(9, 18, 1, 2);   // les pieds
+  } },
+
+  // LE KAYAK, tire sur le sable. ⚠️ Un FUSEAU, jamais un rectangle : un rectangle
+  // de couleur couche sur la plage se lit comme une serviette de plus. Ce sont
+  // les deux pointes et le trou d'homme au milieu qui le nomment, et la pagaie
+  // couchee a cote le confirme.
+  kayak: { solide: false, r: 0, variantes: 3, w: 30, h: 12, ancre: [15, 7], peindre: function (ctx, w, h, v) {
+    const coque = ['#efc02a', '#e8742a', '#c0392b'][v % 3];
+    const flanc = ['#b88a12', '#a94f16', '#8e1f16'][v % 3];
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(4, 7, 24, 2);        // son ombre sur le sable
+    const demi = [8, 12, 13, 13, 12, 8];                                     // chaque rangee plus courte vers les pointes
+    for (let r = 0; r < demi.length; r++) {
+      ctx.fillStyle = r < 3 ? coque : flanc;
+      ctx.fillRect(15 - demi[r], 1 + r, 2 * demi[r], 1);
+    }
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(12, 2, 6, 3);                    // le trou d'homme
+    ctx.fillStyle = '#4a4a52'; ctx.fillRect(13, 2, 4, 1);
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(4, 3, 2, 1); ctx.fillRect(24, 3, 2, 1);   // les poignees de bout
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 9, 22, 1);                    // la pagaie couchee a cote
+    ctx.fillStyle = '#2f6fb5'; ctx.fillRect(1, 8, 3, 3); ctx.fillRect(26, 8, 3, 3);   // ses deux pales
+  } },
+
+  // LA CHAISE DU SAUVETEUR. ⚠️ UNE PAR PLAGE (`carte.GREVE["sauveteur"]`), au
+  // milieu, et c'est la seule chose du lot qu'on voit de l'autre bout de l'ecran :
+  // elle est HAUTE. Quatre pattes evasees, une echelle, un siege, un dossier a
+  // bande rouge, le fanion et la bouee de sauvetage accrochee. Elle arrete un
+  // passant comme un banc, et elle cede sous un char comme lui.
+  chaise_sauveteur: { casse: 0.7, pv: 40, w: 20, h: 30, ancre: [10, 28], r: 6, sol: [8, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 26, 16, 3);       // son ombre au pied
+    ctx.fillStyle = '#cfc8b4';                                               // les quatre pattes, evasees
+    ctx.fillRect(3, 14, 2, 14); ctx.fillRect(15, 14, 2, 14);
+    ctx.fillRect(6, 16, 1, 11); ctx.fillRect(13, 16, 1, 11);
+    ctx.fillStyle = '#a79f88'; ctx.fillRect(5, 20, 10, 1); ctx.fillRect(5, 24, 10, 1);   // les barreaux de l'echelle
+    ctx.fillStyle = '#efe9da'; ctx.fillRect(3, 11, 14, 4);                   // le siege
+    ctx.fillStyle = '#d8d2c0'; ctx.fillRect(3, 14, 14, 1);
+    ctx.fillStyle = '#efe9da'; ctx.fillRect(4, 4, 12, 7);                    // le dossier
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 6, 12, 3);                    // sa bande rouge
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(16, 0, 1, 7);                    // la hampe
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(17, 0, 3, 2);                    // le fanion rouge et jaune
+    ctx.fillStyle = '#efc02a'; ctx.fillRect(17, 2, 3, 1);
+    ctx.fillStyle = '#e8742a'; ctx.fillRect(0, 15, 3, 6);                    // la bouee de sauvetage accrochee
+    ctx.fillStyle = '#f7f1e2'; ctx.fillRect(1, 17, 1, 2);
+  } },
+
   // LA BOUEE. ⚠️ Le seul decor du jeu qui ait raison de FLOTTER, et `flotte` le
   // dit tout haut : `poser_decor` refuse le solide, et l'eau en est
   // (`solide: 2`). Un juge s'en sert pour verifier qu'aucun autre ne s'est mis

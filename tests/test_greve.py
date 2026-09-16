@@ -12,7 +12,13 @@ from app import carte
 
 #: Ce que la grève sème. ⚠️ `bouee` est à part : c'est le seul qui flotte.
 MEUBLES = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
+           "chaise_longue", "kayak", "chaise_sauveteur",
            "poteau_amarrage", "belvedere", "bouee")
+
+#: Ce qui ne se pose QUE sur une plage déclarée (`carte.PLAGES`). ⚠️ La table
+#: n'en est pas : le parc et la foire en posent aussi, loin de toute plage.
+DE_PLAGE = ("parasol", "serviette", "chaise_longue", "kayak", "chateau_sable",
+            "chaise_sauveteur")
 
 
 @pytest.fixture(scope="module")
@@ -172,3 +178,129 @@ def test_rien_ne_traine_au_pied_d_un_pont(ville):
             assert not (x0 <= d["x"] < x1 and y0 <= d["y"] < y1), (
                 f"un {d['type']} traîne au pied du pont {pont['sens']} "
                 f"en ({d['x']}, {d['y']})")
+
+
+# --- Les plages : peu, mais larges -------------------------------------------
+
+
+def dans_une_plage(ville, x, y):
+    return any(p["x"] <= x < p["x"] + p["l"] and p["y"] <= y < p["y"] + p["h"]
+               for p in ville["plages"])
+
+
+def eau_du_large(ville):
+    """La plus grande étendue d'eau d'un seul tenant — la baie, ses chenaux, ce
+    qui borde la carte. ⚠️ Un étang de parc n'en est pas : son liseré de sable
+    est un bord d'étang, pas une plage."""
+    sol, largeur, hauteur = ville["sol"], ville["largeur"], ville["hauteur"]
+    vus, plus = set(), set()
+    for y in range(hauteur):
+        for x in range(largeur):
+            if sol[y][x] != "~" or (x, y) in vus:
+                continue
+            morceau, pile = {(x, y)}, [(x, y)]
+            vus.add((x, y))
+            while pile:
+                cx, cy = pile.pop()
+                for nx, ny in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if (0 <= nx < largeur and 0 <= ny < hauteur and sol[ny][nx] == "~"
+                            and (nx, ny) not in vus):
+                        vus.add((nx, ny))
+                        morceau.add((nx, ny))
+                        pile.append((nx, ny))
+            if len(morceau) > len(plus):
+                plus = morceau
+    return plus
+
+
+def test_une_plage_a_la_place(ville):
+    """Retour de Martin : « pas juste des petits morceaux de plage ». Chaque plage
+    déclarée compte au moins `PLAGES["place"]` tuiles de sable — et la ville en a
+    encore : moins de plage autour ne veut pas dire plus de plage du tout."""
+    assert len(ville["plages"]) >= 3, f"{len(ville['plages'])} plages dans toute la ville"
+    for p in ville["plages"]:
+        sable = sum(1 for y in range(p["y"], p["y"] + p["h"])
+                    for x in range(p["x"], p["x"] + p["l"]) if ville["sol"][y][x] == "s")
+        assert sable >= carte.PLAGES["place"], f"une plage de {sable} tuiles en {p}"
+
+
+def test_le_sable_du_large_est_une_plage_declaree(ville):
+    """⚠️ **LE JUGE DE « MOINS DE PLAGE AUTOUR ».** Mesuré avant : 1 754 tuiles de
+    sable en 65 morceaux, dont 41 de moins de dix tuiles — une bande de zéro à
+    quatre tuiles le long de chaque côté de chaque bassin, jusque dans le chenal.
+    Aujourd'hui, tout sable qui touche le large est dans une plage déclarée ;
+    ailleurs, la ville touche l'eau sans sable."""
+    sol, largeur, hauteur = ville["sol"], ville["largeur"], ville["hauteur"]
+    egares = set()
+    for x, y in eau_du_large(ville):
+        for nx, ny in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if not (0 <= nx < largeur and 0 <= ny < hauteur) or sol[ny][nx] != "s":
+                continue
+            if not dans_une_plage(ville, nx, ny):
+                egares.add((nx, ny))
+    assert not egares, (
+        f"{len(egares)} tuiles de sable au bord du large hors plage (ex. {sorted(egares)[:4]})")
+
+
+def test_on_ne_meuble_que_les_plages(ville):
+    """Retour de Martin : des accessoires de plage « s'il y a beaucoup de place ».
+    Un parasol autour d'un étang de parc, c'était exactement le petit morceau."""
+    for d in ville["decor"]:
+        if d["type"] not in DE_PLAGE:
+            continue
+        assert ville["sol"][d["y"]][d["x"]] == "s", (
+            f"un {d['type']} hors du sable en ({d['x']}, {d['y']})")
+        assert dans_une_plage(ville, d["x"], d["y"]), (
+            f"un {d['type']} hors de toute plage en ({d['x']}, {d['y']})")
+
+
+def test_chaque_plage_est_meublee_et_a_son_sauveteur(ville):
+    """Une plage qui a la place et qu'on laisse vide est le défaut inverse. Et la
+    chaise du sauveteur, UNE par plage : c'est elle qui dit « on se baigne ici »
+    de l'autre bout de l'écran."""
+    for p in ville["plages"]:
+        dedans = [d for d in ville["decor"] if d["type"] in DE_PLAGE
+                  and p["x"] <= d["x"] < p["x"] + p["l"] and p["y"] <= d["y"] < p["y"] + p["h"]]
+        sauveteurs = [d for d in dedans if d["type"] == carte.GREVE["sauveteur"]]
+        assert len(sauveteurs) == 1, f"{len(sauveteurs)} chaises de sauveteur sur la plage {p}"
+        assert len(dedans) >= 10, f"une plage presque vide ({len(dedans)} meubles) en {p}"
+
+
+def test_pas_de_plage_dans_un_chenal():
+    """⚠️ Une plage demande DU LARGE devant elle. Dans un chenal, le sable des deux
+    rives finirait par se toucher — et La Pointe, qu'un pont doit seul relier, se
+    traverserait à pied. Le juge le vérifie sur pièce : un chenal bordé de terre
+    des deux côtés n'a pas un grain de sable ; une baie ouverte au sud en a."""
+    chenal = carte._Chantier(carte.PLAN, carte.GRAINE)
+    chenal._eau(10, 10, 60, 11)
+    sable = sum(ligne[10:70].count("s") for ligne in chenal.sol[10:21])
+    assert sable == 0, f"{sable} tuiles de sable dans un chenal de onze tuiles"
+    assert chenal.plages == []
+
+    baie = carte._Chantier(carte.PLAN, carte.GRAINE)
+    for y in range(50, 60):
+        for x in range(8, 72):
+            baie.sol[y][x] = "~"             # le large, au sud : pas de rive en face
+    baie._eau(10, 30, 60, 20)
+    assert len(baie.plages) == 1, baie.plages
+    assert baie.plages[0]["cote"] == "nord"
+    sable = sum(ligne[10:70].count("s") for ligne in baie.sol[30:50])
+    assert sable >= carte.PLAGES["place"], f"une plage de {sable} tuiles"
+
+
+def test_la_forme_des_plages_ne_touche_pas_au_de_de_la_ville():
+    """⚠️ **La leçon des dés**, encore : l'ancienne rive tirait un coup par colonne
+    et par rangée du bassin dans le dé COMMUN. Les plages tirent dans le leur, et
+    `_eau` brûle exactement ce que l'ancienne rive consommait — sinon tous les
+    îlots posés après la baie changeaient de gabarits pour une histoire de sable."""
+    chantier = carte._Chantier(carte.PLAN, carte.GRAINE)
+    temoin = carte.Des(chantier.des.etat)
+    temoin.brule(60 + 20)
+    avant_plage = chantier.des_plage.etat
+    for y in range(50, 60):
+        for x in range(8, 72):
+            chantier.sol[y][x] = "~"
+    chantier._eau(10, 30, 60, 20)
+    assert chantier.plages, "aucune plage : le juge ne mesure rien"
+    assert chantier.des.etat == temoin.etat, "les plages ont décalé le dé de la ville"
+    assert chantier.des_plage.etat != avant_plage, "les plages n'ont pas tiré leur propre dé"

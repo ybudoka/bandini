@@ -54,16 +54,23 @@ def test_des_enfants_naissent_sur_la_greve_et_jouent(banc, paquet):
           o.frame(1);
           for (const e of enfants(L)) if (e.t < 2 && L.Entites.visibleAEcran(e.x, e.y, 0)) vus++;
         }
-        const petits = enfants(L);
+        const baigneurs = enfants(L);
+        const petits = baigneurs.filter(function (e) { return e.sprite === 'enfant'; });
         const jeux = {};
-        for (const e of petits) if (e.jeu) jeux[e.jeu] = (jeux[e.jeu] || 0) + 1;
-        return { greve: true, n: petits.length, max: L.B.defs.pietons.plage.enfants,
+        for (const e of baigneurs) if (e.jeu) jeux[e.jeu] = (jeux[e.jeu] || 0) + 1;
+        const f = L.B.defs.pietons.plage;
+        return { greve: true, n: petits.length, max: f.enfants,
+                 grands: baigneurs.length - petits.length, maxGrands: f.adultes,
                  jeux: Object.keys(jeux), vus: vus,
                  intouchables: petits.every(function (e) { return e.intouchable; }) };
     }""" % POSER)
     assert r["greve"], "aucune grève trouvée sur la carte"
     assert r["n"] > 0, "pas un enfant sur la grève"
     assert r["n"] <= r["max"], "plus d'enfants que la fiche n'en veut (%s)" % r["n"]
+    # ⚠️ ET DES GRANDS — Martin : « des gens s'il y a beaucoup de place ». Deux
+    # plafonds, pas un : les enfants nés les premiers ne prennent pas leur place.
+    assert r["grands"] > 0, "pas un grand sur la plage : des enfants seuls, c'est une cour d'école"
+    assert r["grands"] <= r["maxGrands"], "plus de grands que la fiche n'en veut (%s)" % r["grands"]
     assert r["jeux"], "des enfants sur la grève, et aucun ne joue"
     assert r["vus"] == 0, "un enfant est apparu à l'écran"
     # ⚠️ Il reste un enfant : intouchable sur la grève comme ailleurs.
@@ -95,6 +102,23 @@ def test_un_enfant_ne_depasse_jamais_la_premiere_tuile_d_eau(banc, paquet):
         let auLarge = 0, dansLEau = 0, morts = 0, baigneurs = 0;
         for (let i = 0; i < 1800; i++) {
           o.frame(1);
+          // ⚠️ LE GESTE, PAS LA CHANCE — la leçon du juge du ballon, apprise ici
+          // le 16 sept. 2026. Le jeu se choisit à l'empreinte du baigneur et de
+          // l'instant, et il dure une à trois minutes : en trente secondes, chacun
+          // tire UNE fois. Le jour où la plage a gagné le soleil et la promenade,
+          // puis la foire a changé la ville ailleurs, plus personne n'a tiré la
+          // baignade, et le juge est tombé sur « il ne mesure rien ». On envoie
+          // donc chaque baigneur à l'eau, par la même porte que la routine
+          // (`bordDeLEau`) ; ce qu'on mesure ensuite — il s'arrête à la première
+          // tuile — ne dépend plus d'un tirage.
+          for (const e of enfants(L)) {
+            if (e.envoye || e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap') continue;
+            const bord = L.Entites.bordDeLEau(e);
+            if (!bord) continue;
+            e.envoye = true;
+            e.jeu = 'baignade'; e.jeuT = 400;
+            e.cap = bord; e.capT = 0; e.etat = 'cap'; e.barbote = true;
+          }
           for (const e of enfants(L)) {
             const tx = Math.floor(e.x / L.TT), ty = Math.floor(e.y / L.TT);
             if (!L.Monde.estEau(tx, ty)) continue;
@@ -248,3 +272,111 @@ def test_le_ballon_va_d_un_enfant_a_l_autre_et_ne_reste_pas_seul(banc, paquet):
     assert r["bouge"] > 50, "le ballon n'a pas bougé (%s images)" % r["bouge"]
     assert r["cotes"] == 2, "le ballon ne va que dans un sens"
     assert r["orphelins"] == 0, "un ballon vole tout seul après l'oubli des enfants"
+
+
+def test_les_baigneurs_ne_naissent_que_sur_une_plage_declaree(banc, paquet):
+    """Retour de Martin : des gens « s'il y a beaucoup de place, pas juste des
+    petits morceaux de plage ». ⚠️ Pas au bord d'un étang de parc : son liseré de
+    sable touche l'eau aussi, et la première règle (« du sable avec l'eau à trois
+    tuiles ») y faisait naître des enfants. C'est la carte qui dit où sont les
+    plages (`plages`), pas le sable."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(35);
+        %s
+        const c = L.Monde.carte, TT = L.TT, plages = c.def.plages;
+        const baigneurs = function () {
+          return L.B.entites.filter(function (e) { return e.metier === 'baigneur' && e.vivant; });
+        };
+        // Un bord d'étang : du sable qui touche l'eau, à soixante tuiles de toute plage.
+        let etang = null;
+        for (let ty = 2; ty < c.h - 2 && !etang; ty++) {
+          for (let tx = 2; tx < c.w - 2 && !etang; tx++) {
+            if (L.Monde.glyphe(tx, ty) !== 's' || !L.Monde.marchablePieton(tx, ty)) continue;
+            if (!(L.Monde.estEau(tx + 1, ty) || L.Monde.estEau(tx - 1, ty)
+                  || L.Monde.estEau(tx, ty + 1) || L.Monde.estEau(tx, ty - 1))) continue;
+            const loin = plages.every(function (p) {
+              const dx = Math.max(p.x - tx, 0, tx - (p.x + p.l));
+              const dy = Math.max(p.y - ty, 0, ty - (p.y + p.h));
+              return dx + dy > 60;
+            });
+            if (loin) etang = { x: tx * TT + 8, y: ty * TT + 8 };
+          }
+        }
+        if (!etang) return { etang: false };
+        // ⚠️ À CÔTÉ de l'étang, pas dessus : on naît HORS CHAMP, et un joueur posé
+        // sur l'étang l'avait à l'écran — personne n'y naissait de toute façon, et
+        // le juge passait même sans la règle (mesuré en la retirant).
+        let horsChamp = false;
+        for (const [dx, dy] of [[22, 0], [-22, 0], [0, 14], [0, -14]]) {
+          L.B.joueur.x = etang.x + dx * TT; L.B.joueur.y = etang.y + dy * TT;
+          L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+          if (!L.Entites.visibleAEcran(etang.x, etang.y, 24)) { horsChamp = true; break; }
+        }
+        if (!horsChamp) return { etang: true, horsChamp: false };
+        L.Entites.indexer();
+        o.frame(900);
+        const aLEtang = baigneurs().length;
+        // Puis une vraie plage : chacun y naît DEDANS.
+        const g = greve(L);
+        if (!g) return { etang: true, greve: false };
+        L.B.joueur.x = g.x; L.B.joueur.y = g.y - 5 * TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+        L.Entites.indexer();
+        let nes = 0, horsPlage = 0;
+        for (let i = 0; i < 900; i++) {
+          o.frame(1);
+          for (const e of baigneurs()) {
+            if (e.t >= 2) continue;
+            nes++;
+            if (!L.Entites.plageEn(Math.floor(e.x / TT), Math.floor(e.y / TT))) horsPlage++;
+          }
+        }
+        return { etang: true, greve: true, aLEtang: aLEtang, nes: nes, horsPlage: horsPlage };
+    }""" % POSER)
+    assert r["etang"], "aucun bord d'étang loin des plages : le juge ne mesure rien"
+    assert r.get("horsChamp", True), "l'étang reste à l'écran : le juge ne mesure rien"
+    assert r["greve"], "aucune grève trouvée"
+    assert r["aLEtang"] == 0, "%s baigneurs au bord d'un étang de parc" % r["aLEtang"]
+    assert r["nes"] > 0, "personne n'est né sur la plage : le juge ne mesure rien"
+    assert r["horsPlage"] == 0, "%s baigneurs nés hors d'une plage déclarée" % r["horsPlage"]
+
+
+def test_un_grand_se_fait_bronzer_sur_une_serviette_libre(banc, paquet):
+    """Le jeu des grands, comme le château est celui des petits : une serviette ou
+    une chaise longue LIBRE, et on y reste. ⚠️ Libre : deux baigneurs sur la même
+    serviette, c'est un corps dans l'autre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(36);
+        %s
+        const g = greve(L);
+        if (!g) return { greve: false };
+        const TT = L.TT;
+        L.B.joueur.x = g.x; L.B.joueur.y = g.y - 5 * TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+        L.Entites.indexer();
+        o.frame(900);
+        const grands = enfants(L).filter(function (e) { return e.sprite !== 'enfant'; });
+        if (grands.length < 2) return { greve: true, grands: grands.length };
+        const a = grands[0], b = grands[1];
+        // ⚠️ Le geste, pas la chance : on lui donne le jeu, comme le juge du ballon.
+        const lit = L.Entites.litLibre(a, 400);
+        if (!lit) return { greve: true, grands: grands.length, lit: false };
+        a.jeu = 'bronzer'; a.lit = lit; a.jeuT = 5000;
+        a.cap = { x: lit.x * TT + 8, y: lit.y * TT + 8 }; a.capT = 0; a.etat = 'cap';
+        const prisPourB = L.Entites.litLibre(b, 100000) === lit;
+        let auSoleil = 0;
+        for (let i = 0; i < 900; i++) {
+          o.frame(1);
+          const d = Math.hypot(a.x - (lit.x * TT + 8), a.y - (lit.y * TT + 8));
+          if (d <= 14 && a.etat === 'arret' && a.jeu === 'bronzer') auSoleil++;
+        }
+        return { greve: true, grands: grands.length, lit: true, prisPourB: prisPourB,
+                 auSoleil: auSoleil, vivant: a.vivant };
+    }""" % POSER)
+    assert r["greve"], "aucune grève trouvée"
+    assert r["grands"] >= 2, "moins de deux grands sur la plage (%s)" % r["grands"]
+    assert r["lit"], "pas une serviette ni une chaise longue à portée"
+    assert not r["prisPourB"], "la même serviette est libre pour deux baigneurs"
+    assert r["auSoleil"] > 300, "il n'est jamais resté sur sa serviette (%s images)" % r["auSoleil"]

@@ -1890,15 +1890,29 @@ const Entites = (function () {
   //: greve et y restent. Donner un `metier` a l'archetype les sortirait tous de
   //: la foule et rendrait muette la mere qui promene le sien.
 
-  /** Les enfants qui jouent sur la greve, dans la bulle du joueur. Ils naissent
-      hors champ, sur du sable qui a l'eau a portee, et s'oublient comme tout le
-      monde quand on s'eloigne. */
+  /** Les baigneurs de la plage, dans la bulle du joueur : les enfants qui jouent
+      et les grands qui se font bronzer. Ils naissent hors champ, sur une plage
+      DECLAREE (`plageEn`), et s'oublient comme tout le monde quand on s'eloigne.
+
+      ⚠️ **Deux plafonds, pas un.** Retour de Martin : « des gens s'il y a
+      beaucoup de place ». Un plafond commun laissait les premiers nes prendre
+      toutes les places, et la plage n'avait qu'un seul age. On fait naitre celui
+      des deux groupes qui est le plus loin de son compte. */
   function naitreLesEnfantsDeLaPlage() {
     const f = B.defs.pietons && B.defs.pietons.plage;
-    const arch = archetype('enfant');
-    if (!f || !arch || !B.joueur || B.interieur) return 0;
-    const deja = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; }).length;
-    if (deja >= f.enfants) return 0;
+    if (!f || !B.joueur || B.interieur) return 0;
+    const baigneurs = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; });
+    const petits = baigneurs.filter(function (q) { return q.sprite === 'enfant'; }).length;
+    const grands = baigneurs.length - petits;
+    const noms = f.adultes_archetypes || [];
+    const maxGrands = noms.length ? (f.adultes || 0) : 0;
+    const veutPetit = petits < f.enfants;
+    const veutGrand = grands < maxGrands;
+    if (!veutPetit && !veutGrand) return 0;
+    const petit = veutPetit && (!veutGrand || petits * maxGrands <= grands * f.enfants);
+    // ⚠️ Pas de de ici non plus : le grand qui nait est le suivant de la liste.
+    const arch = petit ? archetype('enfant') : archetype(noms[grands % noms.length]);
+    if (!arch) return 0;
     const place = placeDeGreve(f.rayon_px);
     if (!place) return 0;
     const e = creerPieton(place.x, place.y, arch);
@@ -1910,7 +1924,7 @@ const Entites = (function () {
     return 1;
   }
 
-  /** Une tuile de sable au bord de l'eau, dans la bulle et hors champ.
+  /** Une tuile d'une plage declaree, dans la bulle et hors champ.
 
       ⚠️ **ELLE NE TIRE PAS UN SEUL DE.** Premiere version jetee : elle tirait
       quarante couples au hasard dans `B.rng()`, et **le pickpocket a cesse de
@@ -1932,7 +1946,7 @@ const Entites = (function () {
           const x = tx * TT + 8, y = ty * TT + 8;
           if (dist2(x, y, j.x, j.y) > rayon * rayon) continue;
           if (visibleAEcran(x, y, 24) || !placeLibre(x, y)) continue;
-          if (!eauAPortee(tx, ty, 3)) continue;
+          if (!plageEn(tx, ty)) continue;
           return { x: x, y: y };
         }
       }
@@ -1940,14 +1954,73 @@ const Entites = (function () {
     return null;
   }
 
-  /** De l'eau a `portee` tuiles d'ici, en CROIX — la meme mesure que le semis
-      de la greve : une plage suit la cote. */
-  function eauAPortee(tx, ty, portee) {
-    for (let d = 1; d <= portee; d++) {
-      if (Monde.estEau(tx + d, ty) || Monde.estEau(tx - d, ty)
-          || Monde.estEau(tx, ty + d) || Monde.estEau(tx, ty - d)) return true;
+  /** La plage DECLAREE qui porte cette tuile (`carte.PLAGES`), ou null.
+
+      ⚠️ **Pas « du sable pres de l'eau »** — c'etait la premiere regle, et elle
+      faisait naitre des enfants sur le bord d'un etang de parc et sur les bandes
+      de trois tuiles qui longeaient toute la baie. La carte dit ou sont les
+      plages ; le deviner ici serait une deuxieme verite. */
+  function plageEn(tx, ty) {
+    const def = Monde.carte && Monde.carte.def;
+    for (const p of (def && def.plages) || []) {
+      if (tx >= p.x && tx < p.x + p.l && ty >= p.y && ty < p.y + p.h) return p;
     }
-    return false;
+    return null;
+  }
+
+  /** Les serviettes et les chaises longues de la ville, lues une fois dans la
+      carte. ⚠️ Pas dans l'index du decor : elles ne sont ni solides ni
+      cassables, et `estIndexable` les laisse dehors expres. */
+  let litsDeLaCarte = null, litsDe = null;
+  function lits() {
+    const def = Monde.carte && Monde.carte.def;
+    if (litsDe !== def) {
+      litsDe = def;
+      litsDeLaCarte = ((def && def.decor) || []).filter(function (d) {
+        return d.type === 'serviette' || d.type === 'chaise_longue';
+      });
+    }
+    return litsDeLaCarte;
+  }
+
+  /** La serviette ou la chaise longue libre la plus proche, a portee. */
+  function litLibre(e, portee) {
+    let meilleur = null, dMin = portee * portee;
+    for (const d of lits()) {
+      const x = d.x * TT + 8, y = d.y * TT + 8;
+      const q = dist2(e.x, e.y, x, y);
+      if (q >= dMin) continue;
+      const pris = B.entites.some(function (o) {
+        return o !== e && o.vivant && o.metier === 'baigneur' && o.lit === d;
+      });
+      if (!pris) { dMin = q; meilleur = d; }
+    }
+    return meilleur;
+  }
+
+  /** Un autre coin de la MEME plage, ou l'on arrive sans se mouiller.
+
+      ⚠️ A l'empreinte du baigneur et de l'instant, jamais au de du jeu — la
+      meme lecon que `placeDeGreve`. Et le chemin se verifie : un bout de plage
+      en pointe laisse une anse d'eau entre deux coins de sable, et y marcher
+      droit, c'est une promenade dans la baie. */
+  function coinDePlage(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    const p = plageEn(tx, ty);
+    if (!p) return null;
+    for (let k = 0; k < 6; k++) {
+      const h = hash2(e.id * 40503 + B.t + k * 7919, 0x9A6E5);
+      const cx = p.x + h % p.l, cy = p.y + (h >>> 11) % p.h;
+      if (Monde.glyphe(cx, cy) !== 's' || !Monde.marchablePieton(cx, cy)) continue;
+      const pas = Math.max(Math.abs(cx - tx), Math.abs(cy - ty)) * 2;
+      let sec = true;
+      for (let i = 1; i < pas && sec; i++) {
+        const mx = Math.floor((tx + 0.5) + (cx - tx) * i / pas), my = Math.floor((ty + 0.5) + (cy - ty) * i / pas);
+        if (Monde.glyphe(mx, my) !== 's') sec = false;
+      }
+      if (sec) return { x: cx * TT + 8, y: cy * TT + 8 };
+    }
+    return null;
   }
 
   /** La routine : trois jeux, et on en change. */
@@ -1962,11 +2035,19 @@ const Entites = (function () {
     quitterLeJeu(e);
     // ⚠️ On choisit parmi ce qui est LA : un enfant qui « joue au chateau »
     // sans chateau a portee est un enfant plante devant rien.
+    // ⚠️ Et chacun son age : le chateau est aux petits, le soleil aux grands.
+    const petit = e.sprite === 'enfant';
     const choix = [];
-    const chateau = chateauLePlusProche(e, f.chateau_px);
+    const chateau = petit ? chateauLePlusProche(e, f.chateau_px) : null;
     if (chateau) choix.push('chateau');
+    const lit = petit ? null : litLibre(e, f.bronzer_px || 0);
+    if (lit) choix.push('bronzer');
     const bord = bordDeLEau(e);
     if (bord) choix.push('baignade');
+    // Et on se promene : sans ca, un baigneur qui n'a rien a portee se remettait
+    // a flaner comme un passant, et flaner mene hors du sable.
+    const ailleurs = coinDePlage(e);
+    if (ailleurs) choix.push('promenade');
     const copain = B.entites.find(function (q) {
       if (q === e || q.metier !== 'baigneur' || !q.vivant || q.jeu) return false;
       const d = dist2(q.x, q.y, e.x, e.y);
@@ -1981,13 +2062,19 @@ const Entites = (function () {
     e.jeuT = f.jeu_images[0] + (tirage >>> 8) % (f.jeu_images[1] - f.jeu_images[0]);
     if (e.jeu === 'chateau') { e.cap = { x: chateau.x, y: chateau.y }; e.capT = 0; e.etat = 'cap'; }
     else if (e.jeu === 'baignade') { e.cap = bord; e.capT = 0; e.etat = 'cap'; e.barbote = true; }
+    else if (e.jeu === 'bronzer') {
+      e.lit = lit;
+      e.jeuT = f.bronzer_images[0] + (tirage >>> 8) % (f.bronzer_images[1] - f.bronzer_images[0]);
+      e.cap = { x: lit.x * TT + 8, y: lit.y * TT + 8 }; e.capT = 0; e.etat = 'cap';
+    }
+    else if (e.jeu === 'promenade') { e.cap = ailleurs; e.capT = 0; e.etat = 'cap'; }
     else { lancerLeBallon(e, copain, f); }
   }
 
   function quitterLeJeu(e) {
     if (e.ballon) { retirer(e.ballon); e.ballon = null; }
     if (e.copain) { e.copain.copain = null; e.copain.ballon = null; e.copain = null; }
-    e.jeu = null; e.barbote = false; e.poseFixe = null;
+    e.jeu = null; e.barbote = false; e.poseFixe = null; e.lit = null;
   }
 
   /** Le chateau de sable le plus proche, encore debout. */
@@ -2011,7 +2098,9 @@ const Entites = (function () {
   function bordDeLEau(e) {
     const f = B.defs.pietons.plage;
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
-    for (let d = 1; d <= 4; d++) {
+    // ⚠️ Toute la profondeur d'une plage (`carte.PLAGES`, huit tuiles) : a
+    // quatre, qui jouait au fond du sable ne voyait jamais l'eau.
+    for (let d = 1; d <= 9; d++) {
       for (const [cx, cy] of [[tx + d, ty], [tx - d, ty], [tx, ty + d], [tx, ty - d]]) {
         if (!Monde.estEau(cx, cy)) continue;
         // La PREMIERE : celle qui a de la terre juste derriere elle. Une tuile
@@ -2071,6 +2160,25 @@ const Entites = (function () {
       }
     } else if (e.jeu === 'ballon') {
       majBallon(e);
+    } else if (e.jeu === 'bronzer') {
+      const lit = e.lit;
+      if (!lit) { quitterLeJeu(e); return; }
+      const x = lit.x * TT + 8, y = lit.y * TT + 8;
+      if (dist2(e.x, e.y, x, y) > 14 * 14) {
+        if (e.etat !== 'cap') { e.cap = { x: x, y: y }; e.capT = 0; e.etat = 'cap'; }
+        return;
+      }
+      // Au soleil, sur sa serviette. ⚠️ Pas de pose COUCHEE : le corps commun
+      // n'en a pas, et celle de l'assomme dirait autre chose qu'une sieste.
+      e.etat = 'arret'; e.minuterie = 40; e.vx = 0; e.vy = 0;
+      regarder(e, 0, 1);
+      e.poseFixe = 0;
+    } else if (e.jeu === 'promenade') {
+      const arrive = !e.cap || dist2(e.x, e.y, e.cap.x, e.cap.y) <= 14 * 14;
+      if (e.etat === 'cap' && !arrive) return;
+      // Arrive, ou il a renonce : il regarde la mer un moment, puis il rechoisit.
+      e.etat = 'arret'; e.minuterie = 90; e.vx = 0; e.vy = 0; e.cap = null;
+      e.jeuT = Math.min(e.jeuT, 6);
     }
   }
 
@@ -4176,6 +4284,7 @@ const Entites = (function () {
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
+    plageEn, litLibre, coinDePlage,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
