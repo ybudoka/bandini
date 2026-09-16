@@ -106,7 +106,18 @@ class ClientMCP:
         self._envoyer({"jsonrpc": "2.0", "id": identifiant, "method": "tools/call",
                        "params": {"name": outil, "arguments": {"params": arguments}}})
         resultat = self._attendre(identifiant)
-        return json.loads(resultat["content"][0]["text"])
+        texte = resultat["content"][0]["text"]
+        # ⚠️ Un outil MCP qui REFUSE ne repond pas en JSON : il rend sa plainte
+        # en clair, avec `isError`. Sans ce detour, le script mourait sur un
+        # `JSONDecodeError` nu — et comme `--refaire` efface la cible AVANT
+        # d'appeler, on se retrouvait sans le vieux son ni le neuf, sans savoir
+        # pourquoi. (Vecu : `duration_seconds` a 0,4 s, le minimum est 0,5.)
+        if resultat.get("isError"):
+            return {"ok": False, "erreur": texte.strip()}
+        try:
+            return json.loads(texte)
+        except json.JSONDecodeError:
+            return {"ok": False, "erreur": texte.strip()[:400]}
 
     def fermer(self) -> None:
         self.proc.stdin.close()

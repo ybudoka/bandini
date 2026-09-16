@@ -292,7 +292,11 @@ const Son = (function () {
     ramasse: function () { if (!joue('ramasse')) { ton(880, 0.08, 'sine', 0.25); ton(1320, 0.12, 'sine', 0.2, 1, 0.07); } },
     argent: function () { if (!joue('argent')) { ton(1500, 0.06, 'sine', 0.2); ton(2000, 0.1, 'sine', 0.18, 1, 0.06); } },
     menu: function () { if (!joue('menu')) ton(660, 0.05, 'square', 0.15); },
-    erreur: function () { if (!joue('erreur')) ton(160, 0.2, 'sawtooth', 0.2, 0.7); },
+    // ⚠️ Le filet du refus suit la meme regle que l'echantillon (voir
+    // `audio.py`) : deux petites notes qui descendent, pas un buzzer. La
+    // dent de scie a 160 Hz d'avant grognait — pour dire qu'il ne se passe
+    // rien, c'est beaucoup trop.
+    erreur: function () { if (!joue('erreur')) { ton(330, 0.07, 'triangle', 0.12); ton(247, 0.11, 'triangle', 0.1, 1, 0.06); } },
     etoile: function () { if (!joue('etoile')) { ton(523, 0.15, 'square', 0.2); ton(784, 0.2, 'square', 0.2, 1, 0.12); } },
     sirene: function () { if (!joue('sirene')) ton(700, 0.4, 'square', 0.15, 1.4); },
     klaxon: function () { if (!joue('klaxon')) { ton(330, 0.25, 'sawtooth', 0.3); ton(415, 0.25, 'sawtooth', 0.3); } },

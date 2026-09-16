@@ -175,9 +175,17 @@ CATALOGUE: list[Echantillon] = [
     _e("menu", "Clic de menu", duree_s=0.5, volume=0.38, influence=0.75,
        prompt="a single short retro user interface blip, dry electronic click "
               "with a tiny pitched tail, no reverb, no music"),
-    _e("erreur", "Refus", duree_s=0.6, volume=0.56, influence=0.75,
-       prompt="a short low electronic buzzer denying an action, flat dull "
-              "tone, dry, no music"),
+    # ⚠️ Un REFUS, pas une alarme. Ce son part a chaque « PAS ASSEZ », chaque
+    # commerce ferme, chaque menu qu'on annule : c'est le bruitage d'interface
+    # qu'on entend le plus souvent apres le clic. Le buzzer electronique le
+    # disait comme une faute — retour de Martin, 15 sept. 2026 : « beaucoup
+    # trop agressif » —, et il sortait plus fort que le clic de menu (0,56
+    # contre 0,38) pour dire qu'il ne se passe RIEN. Meme famille que `menu`,
+    # une note plus bas, plus sourde, et plus courte.
+    _e("erreur", "Refus", duree_s=0.5, volume=0.3, influence=0.75,
+       prompt="a soft muted user interface refusal, two quiet low blips "
+              "descending gently, rounded and dull, very short, dry, "
+              "no buzzer, no rasp, no alarm, no distortion, no music"),
     _e("etoile", "Niveau de recherche", duree_s=1.2, volume=0.79, influence=0.75,
        prompt="a police radio alert chirp followed by a burst of squelch "
               "static, tense and short, no voices, no music"),
