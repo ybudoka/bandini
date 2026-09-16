@@ -3050,7 +3050,17 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         o.frame(2);
         const poste = { x: t.plante ? t.plante.x : t.x, y: t.plante ? t.plante.y : t.y };
         j.x = poste.x - 40; j.y = poste.y; j.vx = 0; j.vy = 0;
-        o.touche('ShiftLeft'); o.touche('KeyD'); o.frame(240);
+        // ⚠️ **ON LE POUSSE, ON NE LE CONTOURNE PAS.** Le juge courait droit
+        // vers l'est pendant 240 images et lisait le déplacement à la fin :
+        // sauf que `demeler` écarte les corps qui se touchent, donc le joueur
+        // DÉRIVE de quelques pixels, passe à côté du poste et continue sa
+        // course — mesuré le 16 sept. 2026, il finissait 228 px plus loin sans
+        // avoir bousculé personne, et le juge concluait « on ne peut pas le
+        // tasser ». Ce qu'on mesure est une POUSSÉE : on garde donc le joueur
+        // sur la ligne du poste pendant qu'il pousse. Le contournement a son
+        // propre juge ; celui-ci n'en parle pas.
+        o.touche('ShiftLeft'); o.touche('KeyD');
+        for (let i = 0; i < 240; i++) { j.y = poste.y; o.frame(1); }
         const pousse = Math.hypot(t.x - poste.x, t.y - poste.y);
         o.relacher('KeyD'); o.relacher('ShiftLeft');
         j.x = poste.x - 200; j.y = poste.y;              // on le lache
@@ -6067,7 +6077,16 @@ def test_une_case_de_stationnement_se_peint_et_se_gare(banc):
         const zone = L.Monde.zoneA(L.B.joueur.x, L.B.joueur.y);
         if (zone) zone.vehicules = 0;
         o.frame(900);
-        const gares = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.etat === 'stationne'; });
+        // ⚠️ **UNE COQUE AMARREE N'EST PAS UNE AUTO GAREE.** Depuis la 3e vague
+        // du bord de l'eau, une chaloupe nait `etat: 'stationne'` — dans la
+        // BAIE, ce qui est exactement sa place — et ce juge-ci exige que tout
+        // vehicule stationne soit dans une case peinte. Il ne s'en apercevait
+        // pas tant que le coin le plus fourni en cases tombait loin de l'eau ;
+        // le jour ou le port a touche la baie, le coin a bouge et le juge a
+        // accuse le stationnement d'un bateau au mouillage. `def.eau` dit la
+        // difference, et c'est la fiche qui la porte (`vehicules.py`).
+        const gares = L.B.entites.filter(function (e) {
+            return e.type === 'vehicule' && e.etat === 'stationne' && !(e.def && e.def.eau); });
         const poses = gares.map(function (v) {
             const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
             const g = c.sol[ty][tx], nez = NEZ[g];

@@ -97,7 +97,16 @@ def test_une_balle_mord_la_tole_pas_le_conducteur(banc):
         const v = auVolant(L, o);
         const vieChar = v.vie;
         const tireur = assaillant(L, 46, 'pistolet');
-        L.Combat.tirer(tireur, L.Combat.armeDef('pistolet'));
+        // ⚠️ **UNE RAFALE, PAS UNE BALLE.** Une arme DISPERSE — `Combat.tirer`
+        // dévie chaque balle de `(B.rng() - 0.5) * dispersion * 2` — et le juge
+        // n'en tirait qu'une : il pariait donc sur l'état du dé au moment où il
+        // arrive là, c'est-à-dire sur tout ce que la ville a tiré avant lui. Le
+        // pari s'est perdu le 16 sept. 2026, quand le port a touché l'eau : la
+        // balle est passée à côté d'un char de trente pixels à quarante-six
+        // pixels de distance, et le juge a conclu qu'elle « s'était évaporée ».
+        // Cinq balles ne changent rien à ce qu'il mesure — la tôle encaisse, le
+        // conducteur non — et elles l'enlèvent au hasard.
+        for (let k = 0; k < 5; k++) L.Combat.tirer(tireur, L.Combat.armeDef('pistolet'));
         const balles = L.B.entites.filter(function (e) { return e.type === 'projectile'; }).length;
         tourner(L, 30);
         return { balles: balles, perdu: j.vieMax - j.vie, tole: vieChar - v.vie,

@@ -960,6 +960,24 @@ def test_la_piece_a_les_mesures_de_son_batiment(graine):
     possede, parce que c'est la convention du jeu : une cabane de 3 x 3 ouvre
     sur 3 x 3 de plancher, donc une piece de 5 x 5 murs compris — les murs de la
     piece SONT ceux du batiment.
+
+    ⚠️ **UNE PART N'EST PAS TOUJOURS UN RECTANGLE**, et ce juge l'ignorait. Un
+    batiment en L, en U ou en T ne remplit pas sa boite — `mesures_de_la_part`
+    le dit noir sur blanc (« un batiment en L ne remplit pas sa boite, et une
+    piece ne ment pas ») et rogne alors la PROFONDEUR, parce que la largeur de
+    la vitrine est ce que le joueur compare en poussant la porte et que la
+    profondeur est ce qu'il ne pouvait pas voir du trottoir. Exiger la boite
+    entiere mettait donc le juge en contradiction avec le generateur : il ne
+    passait que tant qu'aucune vitrine ne possedait une part trouee. Le
+    16 sept. 2026, une carte redessinee en a fait apparaitre une — un T renverse
+    de 13 x 12 dont la part ne fait que 129 tuiles, ouvrant sur un 13 x 9
+    parfaitement juste — et le juge a accuse le generateur d'avoir raison.
+
+    Ce qu'on attend est donc la plus grande piece qui TIENNE dans la part, a la
+    largeur de la vitrine : la boite quand la part est pleine (le cas courant, et
+    l'inegalite d'avant y reste aussi serree), sa profondeur rognee sinon. Le
+    juge le calcule lui-meme — il ne rappelle pas `mesures_de_la_part`, sans quoi
+    il ne jugerait plus que sa propre copie.
     """
     ville = carte.generer(graine=graine)
     sol, pieces = ville["sol"], ville["interieurs"]
@@ -970,8 +988,10 @@ def test_la_piece_a_les_mesures_de_son_batiment(graine):
         xs = [x for x, _ in part]
         ys = [y for _, y in part]
         boite = (max(xs) - min(xs) + 1, max(ys) - min(ys) + 1)
-        if (largeur, hauteur) != boite or largeur * hauteur > len(part):
-            faux.append((porte["interieur"], f"{boite[0]}x{boite[1]}", f"{largeur}x{hauteur}"))
+        attendu = (boite[0], min(boite[1], len(part) // boite[0]))
+        if (largeur, hauteur) != attendu or largeur * hauteur > len(part):
+            faux.append((porte["interieur"], f"{boite[0]}x{boite[1]} ({len(part)} tuiles,"
+                         f" attendu {attendu[0]}x{attendu[1]})", f"{largeur}x{hauteur}"))
     assert not faux, (
         f"{len(faux)} portes ouvrent sur une piece qui n'a pas les mesures de son "
         f"batiment (graine {graine}) : " + ", ".join(

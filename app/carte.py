@@ -6,6 +6,7 @@ d'oeil valent mieux que 112 lignes de 157 glyphes.
 
     minuscule = quartier ordinaire   c commerces · h habitations · g gang
                                      p parc · o place · q quai · ~ eau
+                                     j quai SUR l'eau (il a avale la baie)
     MAJUSCULE = batiment garanti     T terminus · M armurerie · A vetements
                                      G garage · K planque · P poste · H hopital
                                      B bar · C casse-croute
@@ -146,6 +147,36 @@ PART_DECHET = 6
 #: quand plus personne ne tond. Moins denses que les dechets — un buisson est
 #: large (16 px), et une friche qu'on ne voit plus n'est plus une friche.
 PART_MAUVAISE_HERBE = 14
+
+#: --- Le port ----------------------------------------------------------------
+#: La profondeur du TABLIER d'un quai sur l'eau, en tuiles ; ce qui depasse dans
+#: la region est la baie. ⚠️ DIX, c'est-a-dire exactement ce que le quai faisait
+#: quand il etait un bloc a lui : on ne change pas la surface du port, on change
+#: ce qu'il y a devant.
+QUAI_TABLIER = 10
+
+#: Ce qu'il faut d'eau devant un quai pour qu'un bateau y vienne. En dessous, la
+#: region n'a pas avale de baie et le quai reste du plancher plein — c'est le
+#: cas des deux quais du Faubourg, qui n'ont pas la baie sous eux.
+QUAI_TIRANT_MIN = 6
+
+#: Les appontements : largeur, longueur, et l'ecart entre deux voisins. ⚠️ Ils
+#: PARTENT du tablier et avancent dans la baie ; une jetee qui ne touche pas la
+#: terre est une ile, et personne n'y va.
+APPONTEMENT = {"largeur": (2, 3), "longueur": (5, 10), "ecart": 11}
+
+#: L'ECART entre deux bornes d'amarrage, en tuiles. ⚠️ Un ECART, pas « une tuile
+#: sur six » : la levre d'un quai n'est pas une ligne droite (elle contourne les
+#: appontements et les darses), et compter une tuile sur six le long d'une liste
+#: posait deux bornes COLLEES des que la levre tournait le coin — (110, 189) et
+#: (110, 190) sur la graine livree. C'est aussi la borne d'amarrage qui manquait
+#: le plus au port : on ne peut pas amarrer a un quai qui ne touche pas l'eau.
+ECART_BORNE_AMARRAGE = 6
+#: Les pneus en DEFENSE, pendus au bord pour que la coque ne cogne pas le bois.
+#: Entre deux bornes, et jamais colles a rien (`GREVE["ecart"]`).
+CHANCE_DEFENSE = 0.16
+#: Ce qui attend d'etre charge, EN ARRIERE de la levre : caisses et barils.
+PART_CARGAISON = 10
 
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
 #: 3 basse (bloque les vehicules, pas les pietons).
@@ -501,12 +532,19 @@ DISTRICTS: tuple[dict, ...] = (
      "gang": "morues", "gang_nom": "Les Morues", "brume": True,
      "pietons": 18, "vehicules": 8, "police": 1, "rythme": (0.4, 1.4, 0.9),
      "rares": (),
+     # ⚠️ **LA RANGEE D'EAU EST AVALEE PAR LE QUAI** (`^`), et c'est tout le
+     # correctif du 16 sept. 2026. Elles etaient deux blocs separes, et la trame
+     # met une rue entre deux blocs : il y avait donc un BOULEVARD A QUATRE
+     # VOIES et une plage de sable entre le port et la baie — 16 des 1 818
+     # tuiles de quai touchaient l'eau (0,9 %). Retour de Martin, capture a
+     # l'appui : « il y a une route entre le quai et l'eau ». Le mecanisme des
+     # superblocs efface la rue ; `j` dit que la region porte la baie.
      "plan": ("cc<c<<c",
               "w<<w<<c",
               "L<g<w<c",
               "w<<N<<c",
-              "q<<q<<q",
-              "~<<~<<~")},
+              "j<<j<<j",
+              "^<<^<<^")},
     # La baie — pas un quartier : l'eau. Un seul bloc fusionne de 7 x 6, ce qui
     # efface toutes les rues qui la traverseraient. Le traversier y passera (v2,
     # M12) ; pour l'instant on la longe.
@@ -711,6 +749,17 @@ GREVE: dict = {
     "pont_ecart": 3,
 }
 
+#: Tout ce qui se pose AU BORD DE L'EAU, d'ou que ca vienne — c'est la liste que
+#: lit la regle d'ecart. ⚠️ Elle existe parce que la greve n'est plus seule a
+#: meubler la rive : depuis que le quai touche l'eau, `_meubler_le_quai` pose
+#: ses bornes d'amarrage le long de la levre bien AVANT le passage de la greve,
+#: et `greve()` ne comptait que ses propres poses. Deux bornes se sont
+#: retrouvees collees — (5, 181) et (6, 182) — sans qu'aucun des deux semis ne
+#: l'ait fait tout seul, et le juge « deux meubles de plage ne se collent pas »
+#: est tombe sur une paire dont personne n'etait responsable.
+MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
+                   "poteau_amarrage", "bouee", "belvedere", "pneu")
+
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
 #: soit ni prevu ni pose par personne : une conduite lache sous la chaussee, la
 #: rue gicle, et la ville met presque une heure a fermer la vanne.
@@ -879,7 +928,22 @@ FUSIONS = {"<": (-1, 0), "^": (0, -1)}
 
 #: Les glyphes de plan qui sont de l'eau — une rue dont TOUS les blocs voisins
 #: sont de l'eau est noyee : elle n'est pas batie, et personne n'y roule.
-EAUX = "~"
+#:
+#: ⚠️ **`j` EN FAIT PARTIE**, et ce n'est pas un abus de langage. Un quai sur
+#: l'eau a AVALE la rangee d'eau sous lui : les deux tiers de sa hauteur sont la
+#: baie, et le tiers qui reste est un TABLIER, pas une rue. Une rue qui ne
+#: longerait que des blocs `j` est donc soit dans la baie (celle du pourtour
+#: sud), soit en travers du port — et un quai ne se traverse pas en char, on y
+#: descend depuis le boulevard de service qui le borde au nord. Les rues
+#: verticales qui coupaient le quai deviennent ainsi des DARSES : de l'eau
+#: entre deux appontements, ce qui est exactement ce qu'on veut y voir.
+EAUX = "~j"
+
+#: Les glyphes de plan qui font un QUAI — le plancher plein du Faubourg (`q`) et
+#: le quai sur l'eau des Quais (`j`). ⚠️ Ce qui cherche « le quai » dans la ville
+#: (la cale du contrebandier, entre autres) doit trouver les deux : le jour ou
+#: `j` est ne, la barriere du cargo a cesse d'exister en silence.
+QUAIS = "qj"
 
 
 def _assembler(districts: tuple[dict, ...]) -> tuple[str, ...]:
@@ -1157,6 +1221,10 @@ class _Chantier:
         # que l'ancien semis tirait (`Des.brule`), et on seme ici : la ville
         # livree ne bouge que dans les lots qu'on redessine.
         self.des_dechet = Des(graine ^ 0xDEC4E7)
+        # ⚠️ Et le port le sien : le quai s'est mis a semer des bornes, des
+        # pneus et des barils la ou il ne posait que des caisses. Meme lecon,
+        # meme parade (voir `des_dechet`).
+        self.des_port = Des(graine ^ 0x9041)
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -2331,6 +2399,8 @@ class _Chantier:
                 self._place(x, y, largeur, hauteur)
             elif glyphe == "q":
                 self._quai(x, y, largeur, hauteur)
+            elif glyphe == "j":
+                self._quai(x, y, largeur, hauteur, sur_eau=True)
             elif glyphe == "~":
                 self._eau(x, y, largeur, hauteur)
             else:  # pragma: no cover - garde-fou de relecture du plan
@@ -3704,17 +3774,113 @@ class _Chantier:
         if self.poser_decor("lampadaire", fx - 2, fy - 2):
             self.lampes.append({"x": fx - 2, "y": fy - 2})
 
-    def _quai(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+    def _quai(self, x: int, y: int, largeur: int, hauteur: int,
+              sur_eau: bool = False) -> None:
+        """Le port. `sur_eau` : la region a AVALE la baie sous elle.
+
+        ⚠️ **UN QUAI TOUCHE L'EAU, OU CE N'EST PAS UN QUAI.** Retour de Martin,
+        capture a l'appui : « c'est le quai ?! je ne savais meme pas que c'etait
+        un quai — il y a une route entre le quai et l'eau ». Mesure du
+        16 sept. 2026 : **16 des 1 818 tuiles de quai touchaient l'eau (0,9 %)**,
+        et la coupe du port du nord au sud donnait un boulevard, dix tuiles de
+        planches, **un deuxieme boulevard a quatre voies**, une plage de sable,
+        puis la baie. Un debardeur traversait une autoroute et une plage pour
+        rejoindre son cargo.
+
+        ⚠️ **Et la cause n'etait pas dans cette methode, elle etait dans le
+        PLAN** : la rangee de quai et la rangee d'eau etaient deux blocs, et la
+        trame met une rue entre deux blocs. Le chiffre dormait pourtant depuis
+        la 1re vague du bord de l'eau (« le glyphe `Q` n'est pas un ponton,
+        c'est le pavage du district des Quais ») — on avait corrige le semis des
+        poteaux d'amarrage au lieu de la geographie. C'est la rangee d'eau qui
+        se fait avaler (`^`), et `j` dit que la region la porte.
+
+        La coupe, maintenant : le boulevard de service, le TABLIER, la levre,
+        la baie. Rien entre les deux.
+        """
         self.bouchon_rect(x, y, largeur, hauteur, "~")
         self.rect(x, y, largeur, hauteur, "Q")
-        for _ in range(largeur * hauteur // 14):
-            self.poser_decor("caisse", x + self.des.entier(0, largeur - 1),
-                             y + self.des.entier(0, hauteur - 1))
+        if sur_eau and hauteur >= QUAI_TABLIER + QUAI_TIRANT_MIN:
+            self.rect(x, y + QUAI_TABLIER, largeur, hauteur - QUAI_TABLIER, "~")
+            self._appontements(x, y + QUAI_TABLIER, largeur, hauteur - QUAI_TABLIER)
+        self._meubler_le_quai(x, y, largeur, hauteur)
         # Une rampe de debarquement, la ou un quai en porte vraiment une.
         # ⚠️ L'eau n'est pas roulable : `poser_rampe` ne choisira jamais l'axe
         # qui envoie au fond de la baie, le saut longe le port.
         if largeur >= 10 and hauteur >= 3 and self.des_rampe.chance(PART_RAMPE_VAGUE):
-            self.proposer_rampe([(x + largeur // 2, y + hauteur // 2, None)])
+            self.proposer_rampe([(x + largeur // 2, y + QUAI_TABLIER // 2, None)])
+
+    def _appontements(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+        """Des jetees qui avancent dans la baie, depuis la levre du tablier.
+
+        ⚠️ Elles PARTENT du quai : une jetee qui ne le touche pas est une ile,
+        et `boucher_les_poches` la murerait — ou pire, la laisserait la, hors
+        d'atteinte. Elles sont aussi ce qui donne au port sa dentelure : une
+        levre parfaitement droite sur soixante tuiles se lit comme un mur, pas
+        comme un port.
+        """
+        poses: list[int] = []
+        for _ in range(max(1, largeur // APPONTEMENT["ecart"])):
+            large = self.des_port.entier(*APPONTEMENT["largeur"])
+            longue = min(self.des_port.entier(*APPONTEMENT["longueur"]), hauteur - 2)
+            px = x + self.des_port.entier(1, max(1, largeur - large - 2))
+            if longue < 2 or any(abs(px - q) < APPONTEMENT["ecart"] for q in poses):
+                continue
+            poses.append(px)
+            self.rect(px, y, large, longue, "Q")
+
+    #: Ce qui attend d'etre charge sur un quai. ⚠️ Une liste A POIDS, comme les
+    #: dechets d'un terrain vague : ce qu'on voit d'abord sur un quai, c'est des
+    #: caisses — le baril est ce qu'on remarque parce qu'il est rare.
+    CARGAISON = ("caisse", "caisse", "caisse", "baril", "ordures")
+
+    def _meubler_le_quai(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+        """Ce qui fait qu'un quai a l'air d'un quai : ce qu'on y amarre et ce
+        qu'on y empile.
+
+        ⚠️ **La LEVRE et l'ARRIERE ne portent pas la meme chose**, et c'est tout
+        ce qui distingue un port d'un plancher : au bord, ce qui sert au bateau
+        (la borne ou l'on attache, le pneu qui amortit la coque) ; en arriere,
+        ce qui attend d'etre charge. Semees au hasard sur toute la surface, les
+        bornes se retrouvaient au milieu du quai — une borne d'amarrage a six
+        tuiles de l'eau ne veut rien dire.
+        """
+        levre, arriere = [], []
+        for cy in range(y, min(y + hauteur, self.hauteur)):
+            for cx in range(x, min(x + largeur, self.largeur)):
+                if self.sol[cy][cx] != "Q":
+                    continue
+                if any(self.eau_en(cx + dx, cy + dy)
+                       for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))):
+                    levre.append((cx, cy))
+                else:
+                    arriere.append((cx, cy))
+        poses: list[tuple[int, int]] = []
+
+        def assez_loin(cx: int, cy: int, combien: int) -> bool:
+            return all(abs(px - cx) + abs(py - cy) >= combien for px, py in poses)
+
+        for cx, cy in levre:
+            if assez_loin(cx, cy, ECART_BORNE_AMARRAGE):
+                quoi = "poteau_amarrage"
+            elif assez_loin(cx, cy, GREVE["ecart"]) and self.des_port.chance(CHANCE_DEFENSE):
+                quoi = "pneu"
+            else:
+                continue
+            if self.poser_decor(quoi, cx, cy):
+                poses.append((cx, cy))
+        for _ in range(len(arriere) // PART_CARGAISON):
+            if not arriere:
+                break
+            cx, cy = arriere[self.des_port.suivant() % len(arriere)]
+            self.poser_decor(self.des_port.choix(self.CARGAISON), cx, cy)
+
+    def eau_en(self, x: int, y: int) -> bool:
+        """De l'eau, ou hors carte — le large compte comme de l'eau. Sans ca,
+        la levre d'un quai colle au bord du monde n'en serait pas une."""
+        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+            return True
+        return self.sol[y][x] == "~"
 
     def _terre_a_cote(self, tuiles: list[tuple[int, int]]) -> bool:
         """Y a-t-il de la terre le long de ce bord ? Hors carte : non.
@@ -4038,10 +4204,23 @@ class _Chantier:
                 # suivant (ou jusqu'a ce que la rue s'arrete). S'arreter avant,
                 # c'est laisser un cul-de-sac derriere soi.
                 tuiles: list[tuple[int, int]] = []
+                #: ⚠️ **A-T-ON VRAIMENT ATTEINT LE CROISEMENT SUIVANT ?** La
+                #: boucle avait trois facons de finir et n'en distinguait
+                #: qu'une : le croisement (bien), un pont ou un bord de carte
+                #: (rejete), et `long_max` EPUISE — ce dernier gardait un
+                #: troncon qui s'arrete au milieu de la rue. Le commentaire
+                #: ci-dessous disait pourtant deja la regle : « on va jusqu'au
+                #: bout, s'arreter avant c'est laisser un cul-de-sac derriere
+                #: soi ». Un tel troncon n'a pas de rue transversale a son
+                #: extremite, donc pas de detour a montrer — et le juge « chaque
+                #: bout parle » est tombe dessus le 16 sept. 2026, des que la
+                #: carte a change et que le de est retombe ailleurs.
+                jusqu_au_croisement = False
                 for n in range(fiche["long_max"]):
                     bande = [(x0 + dx * n + (k if dx == 0 else 0), y0 + dy * n + (k if dy == 0 else 0))
                              for k in range(large)]
                     if any(dans_une_boite(x, y) for x, y in bande):
+                        jusqu_au_croisement = True
                         break                      # le croisement suivant : le troncon est complet
                     if not all(0 <= x < self.largeur and 0 <= y < self.hauteur
                                and self.voie[y][x] != "." and not sur_un_pont(x, y)
@@ -4049,7 +4228,7 @@ class _Chantier:
                         tuiles = []                # un pont, un bord de carte : on laisse
                         break
                     tuiles.extend(bande)
-                if len(tuiles) < large * 3:
+                if not jusqu_au_croisement or len(tuiles) < large * 3:
                     continue
                 candidats.append({"x": min(t[0] for t in tuiles), "y": min(t[1] for t in tuiles),
                                   "l": max(t[0] for t in tuiles) - min(t[0] for t in tuiles) + 1,
@@ -4119,7 +4298,10 @@ class _Chantier:
         distance a l'eau — jamais le rectangle d'un bassin.
         """
         fiche = GREVE
-        poses: list[tuple[int, int]] = []
+        # ⚠️ **LE QUAI S'EST DEJA MEUBLE** : on amorce la regle d'ecart avec ce
+        # qui est deja au bord (voir `MEUBLES_DU_BORD`).
+        poses: list[tuple[int, int]] = [(d["x"], d["y"]) for d in self.decor
+                                        if d["type"] in MEUBLES_DU_BORD]
         # ⚠️ **JAMAIS AU PIED D'UN PONT**, et `FERMETURES` le disait deja pour les
         # rues barrees. Mesure : une serviette et deux bouees s'etaient posees a
         # une tuile du tablier de La Pointe, et un char lance qui traversait les
@@ -4319,7 +4501,7 @@ class _Chantier:
             elif "quai" in ou:
                 a = next(a for a in ambulants if a["slug"] == ou["quai"])
                 rect = next((rx, ry, rl, rh) for g, rx, ry, rl, rh in self.regions()
-                            if g == "q" and rx <= a["x"] < rx + rl and ry <= a["y"] < ry + rh)
+                            if g in QUAIS and rx <= a["x"] < rx + rl and ry <= a["y"] < ry + rh)
             else:  # pragma: no cover - garde-fou de relecture de la fiche
                 raise ValueError(f"barriere sans lieu : {fiche['slug']}")
             x, y, largeur, hauteur = rect
