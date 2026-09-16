@@ -476,7 +476,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
         test_eau_son_js.py test_amuseurs_js.py
-        test_reclame.py test_reclame_js.py test_argent_sale.py test_argent_sale_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_abri_js.py
+        test_reclame.py test_reclame_js.py test_argent_sale.py test_argent_sale_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_abri_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py

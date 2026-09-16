@@ -604,6 +604,58 @@ FERMETURES: dict = {
     "degats": 14,            # une barricade, ca coute plus cher que des cones
 }
 
+#: **LA GREVE SE MEUBLE.** ⚠️ Mesure d'abord, et c'est elle qui a decide de la
+#: vague : la ville pose deja **2 507 tuiles de sable** (dont 782 touchent
+#: l'eau) et **1 818 tuiles de quai** — et personne ne s'y assoit jamais. Ce qui
+#: manquait n'etait pas le terrain, c'etait que le bord de l'eau soit un endroit
+#: **ou l'on va** au lieu d'un decor qu'on traverse.
+#:
+#: ⚠️ **UNE PLAGE SUIT LA COTE ; ELLE NE SUIT PAS UNE BOITE.** La phrase est
+#: deja dans `_eau()`, et elle y a coute douze bancs de sable en pleine baie. Le
+#: semis marche donc **tuile par tuile**, et il ne meuble une tuile de sable que
+#: si l'eau est a `bord` tuiles de la — jamais sur le rectangle d'un bassin. Un
+#: parasol plante au milieu d'un sentier du bois dit le contraire de ce qu'on
+#: veut.
+#:
+#: ⚠️ **Et il passe APRES `boucher_les_poches`** : on ne meuble pas un terrain
+#: que la ville va encore retirer — ce bouchage-la noie les bancs de sable
+#: isoles, un par un. Mesure : semer avant n'en noie aujourd'hui aucun (huit
+#: graines, 1 139 meubles). C'est donc une precaution, pas un correctif, et elle
+#: ne coute rien.
+#: ⚠️ **CE QUI A LE DROIT DE FLOTTER, ecrit en PYTHON.** La bouee est le premier
+#: decor du jeu pose sur l'eau, et le juge qui tient depuis M1 — « tout decor est
+#: sur une tuile marchable » — l'a arretee net. Ce juge a raison sur le fond (un
+#: decor ne bouche ni la rue ni les portes) : ce n'est pas lui qu'on jette, c'est
+#: l'exception qu'on DECLARE. Elle vit ici, le paquet la porte, et un juge de banc
+#: verifie que le `flotte` des fiches de dessin dit exactement la meme chose —
+#: sinon on aurait deux listes et, un jour, deux verites.
+FLOTTANTS: tuple[str, ...] = ("bouee",)
+
+GREVE: dict = {
+    "bord": 3,               # a quelle distance de l'eau le sable est une GREVE
+    "ecart": 3,              # deux meubles de plage ne se collent pas
+    # Ce qu'on seme, et sa chance par tuile de greve. ⚠️ Le parasol se lit de
+    # loin, donc il est le plus rare : une grève qui en porte un tous les trois
+    # pas n'est pas une plage, c'est un stationnement de parasols.
+    "chances": {
+        "parasol": 0.035,
+        "serviette": 0.045,
+        "table_pique_nique": 0.025,
+        "chateau_sable": 0.030,
+    },
+    # ⚠️ Le chateau se batit AU BORD, la ou le sable est mouille — a deux
+    # tuiles de l'eau, pas a huit. C'est la seule des quatre a le demander.
+    "chateau_bord": 2,
+    # Le quai : une bouee a l'eau, un poteau d'amarrage sur les planches.
+    # ⚠️ Un poteau tous les quelques pas n'est pas un quai, c'est une palissade :
+    # ces deux chances-la ne valent que sur le BORD du quai, la ou l'eau touche.
+    "quai_poteau": 0.06,
+    "quai_bouee": 0.07,
+    # Le belvedere : la ou la terre DOMINE l'eau. On en veut peu, et espaces.
+    "belvederes": (3, 9),
+    "belvedere_ecart": 40,
+}
+
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
 #: soit ni prevu ni pose par personne : une conduite lache sous la chaussee, la
 #: rue gicle, et la ville met presque une heure a fermer la vanne.
@@ -1032,6 +1084,7 @@ class _Chantier:
         self.des_entrave = Des(graine ^ 0xE47A7E)
         self.des_fermeture = Des(graine ^ 0xFE47E3)
         self.des_aqueduc = Des(graine ^ 0xA9DEC5)
+        self.des_greve = Des(graine ^ 0x67EE7)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -2044,14 +2097,24 @@ class _Chantier:
                 enleves += 1
         return enleves
 
-    def poser_decor(self, type_: str, x: int, y: int) -> bool:
-        """Du decor seulement sur une tuile libre, hors route et hors devant de porte."""
+    def poser_decor(self, type_: str, x: int, y: int, sur_eau: bool = False) -> bool:
+        """Du decor seulement sur une tuile libre, hors route et hors devant de porte.
+
+        ⚠️ `sur_eau` : l'eau est SOLIDE dans la legende (`solide: 2`), et c'est
+        pour ca qu'aucun decor n'a jamais flotte. La bouee est le premier qui ait
+        raison de le faire — on le lui accorde ICI, une fois et par demande
+        explicite, plutot que d'ouvrir l'eau a tout le catalogue : sinon le jour
+        ou quelqu'un seme des poubelles un peu large, elles flottent.
+        """
         if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
             return False
         if (x, y) in self.reserve or (x, y) in self.occupe:
             return False
         proprietes = LEGENDE[self.sol[y][x]]
-        if proprietes.get("solide") or proprietes.get("route"):
+        if sur_eau:
+            if self.sol[y][x] != "~":
+                return False
+        elif proprietes.get("solide") or proprietes.get("route"):
             return False
         self.occupe.add((x, y))
         self.decor.append({"type": type_, "x": x, "y": y})
@@ -3852,6 +3915,119 @@ class _Chantier:
             poses.append((x, y))
         return [{"x": x, "y": y} for x, y in sorted(poses)]
 
+    def _eau_a_portee(self, x: int, y: int, portee: int) -> bool:
+        """De l'eau a `portee` tuiles d'ici ? ⚠️ En CROIX et pas en carre : une
+        grève se mesure vers le large, et un coin de diagonale ferait passer
+        pour riverain un carre de sable qui touche l'eau par la pointe."""
+        for d in range(1, portee + 1):
+            for cx, cy in ((x + d, y), (x - d, y), (x, y + d), (x, y - d)):
+                if 0 <= cx < self.largeur and 0 <= cy < self.hauteur and self.sol[cy][cx] == "~":
+                    return True
+        return False
+
+    def greve(self) -> int:
+        """Meuble le bord de l'eau : parasols, serviettes, tables, chateaux de
+        sable, et ce qui s'amarre au quai. Rend le nombre de meubles poses.
+
+        ⚠️ **Tuile par tuile, et jamais sur une boite.** Une plage suit la cote.
+        On ne regarde donc que le SOL sous ses pieds (du sable, du quai) et la
+        distance a l'eau — jamais le rectangle d'un bassin.
+        """
+        fiche = GREVE
+        poses: list[tuple[int, int]] = []
+
+        def assez_loin(x: int, y: int, ecart: int) -> bool:
+            return all(abs(px - x) + abs(py - y) >= ecart for px, py in poses)
+
+        for y in range(self.hauteur):
+            for x in range(self.largeur):
+                glyphe = self.sol[y][x]
+                proprietes = LEGENDE[glyphe]
+                # Ni l'eau, ni un mur, ni la chaussee : le reste est de la rive.
+                if glyphe == "~" or proprietes.get("solide") or proprietes.get("route"):
+                    continue
+                if glyphe == "s":
+                    if not self._eau_a_portee(x, y, fiche["bord"]):
+                        continue
+                    au_bord = self._eau_a_portee(x, y, fiche["chateau_bord"])
+                    for quoi, chance in fiche["chances"].items():
+                        if quoi == "chateau_sable" and not au_bord:
+                            continue
+                        if self.des_greve.chance(chance) and assez_loin(x, y, fiche["ecart"]):
+                            if self.poser_decor(quoi, x, y):
+                                poses.append((x, y))
+                            break
+                else:
+                    # ⚠️ ON AMARRE SUR LA RIVE BATIE, et il a fallu la mesurer
+                    # pour le savoir : le glyphe `Q` n'est pas un ponton, c'est
+                    # le PAVAGE du district des Quais — **16 de ses 1 818 tuiles
+                    # touchent l'eau**. Un poteau seme « sur le quai » se serait
+                    # donc plante six tuiles a l'interieur des terres, ou nulle
+                    # part. Ce qui amarre un bateau n'est pas un glyphe, c'est
+                    # une rive : une tuile ou l'on marche, qui n'est ni du sable
+                    # ni de la route, avec l'eau juste devant — 222 tuiles, dont
+                    # 199 de TROTTOIR. ⚠️ Et le trottoir ne porte pas `terre` dans
+                    # la legende : tester la propriete au lieu de la marchabilite
+                    # laissait dehors 199 des 222, et il ne s'amarrait rien nulle
+                    # part.
+                    if not self._eau_a_portee(x, y, 1):
+                        continue
+                    # Le poteau tient sur les planches ; la bouee flotte a cote.
+                    if self.des_greve.chance(fiche["quai_poteau"]) and assez_loin(x, y, fiche["ecart"]):
+                        if self.poser_decor("poteau_amarrage", x, y):
+                            poses.append((x, y))
+                            continue
+                    if not self.des_greve.chance(fiche["quai_bouee"]):
+                        continue
+                    for cx, cy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                        if not (0 <= cx < self.largeur and 0 <= cy < self.hauteur):
+                            continue
+                        if self.sol[cy][cx] != "~" or not assez_loin(cx, cy, fiche["ecart"]):
+                            continue
+                        # ⚠️ `sur_eau` : `poser_decor` refuse le solide, et l'eau
+                        # en est (`solide: 2`). La bouee est le seul decor du jeu
+                        # qui ait raison de flotter — on le lui dit une fois,
+                        # explicitement, plutot que d'ouvrir l'eau a tous.
+                        if self.poser_decor("bouee", cx, cy, sur_eau=True):
+                            poses.append((cx, cy))
+                        break
+        poses += self._belvederes(poses)
+        return len(poses)
+
+    def _belvederes(self, deja: list[tuple[int, int]]) -> list[tuple[int, int]]:
+        """Un plancher de bois sur pilotis, la ou la terre DOMINE l'eau.
+
+        ⚠️ Ce n'est pas « pres de l'eau » : c'est une tuile de terre ferme — ni
+        sable, ni quai, ni route — qui a l'eau juste devant. Un belvedere pose
+        sur la grève regarde le sable ; celui qu'on veut regarde le large.
+        """
+        fiche = GREVE
+        mini, maxi = fiche["belvederes"]
+        candidats: list[tuple[int, int]] = []
+        for y in range(1, self.hauteur - 1):
+            for x in range(1, self.largeur - 1):
+                proprietes = LEGENDE[self.sol[y][x]]
+                if not proprietes.get("terre") or self.sol[y][x] == "s":
+                    continue
+                if not self._eau_a_portee(x, y, 2):
+                    continue
+                candidats.append((x, y))
+        poses: list[tuple[int, int]] = []
+        for _essai in range(2000):
+            if not candidats or len(poses) >= maxi:
+                break
+            x, y = candidats[self.des_greve.suivant() % len(candidats)]
+            if any(abs(px - x) + abs(py - y) < fiche["belvedere_ecart"] for px, py in poses):
+                continue
+            # ⚠️ ET IL SE TIENT A L'ECART DE TOUT LE RESTE, pas seulement de ses
+            # semblables : un belvedere colle a un parasol, c'est une terrasse
+            # posee sur une serviette. Le juge de l'ecart l'a attrape.
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in deja):
+                continue
+            if self.poser_decor("belvedere", x, y):
+                poses.append((x, y))
+        return poses
+
     def aqueducs(self) -> list[dict]:
         """Les tuiles ou une conduite peut lacher.
 
@@ -4284,6 +4460,16 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     bouchees = chantier.boucher_les_poches(depart)
     if bouchees > chantier.largeur * chantier.hauteur // 50:
         raise ValueError(f"{bouchees} tuiles enclavees : un gabarit enferme la ville")
+    # ⚠️ LA GREVE SE MEUBLE EN DERNIER : on ne meuble pas un terrain que la ville
+    # va encore retirer. `boucher_les_poches` NOIE les bancs de sable isoles, un
+    # par un — un parasol pose avant lui peut se retrouver sur l'eau sans que
+    # personne l'y ait mis.
+    # ⚠️ Mesure, pour ne pas faire passer une precaution pour un correctif : sur
+    # huit graines et 1 139 meubles, semer AVANT n'en noie aujourd'hui aucun. Ce
+    # qui tient l'ordre n'est donc pas un defaut observe, c'est le principe — et
+    # un juge le pin, pour que le jour ou `boucher_les_poches` noiera plus large,
+    # ca ne passe pas en silence.
+    chantier.greve()
 
     return {
         "slug": "baie_des_brumes",
@@ -4320,6 +4506,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "entrave": {"raison": ENTRAVES["raison"], "degats": ENTRAVES["degats"]},
         "fermetures": chantier.fermetures(ponts),
         "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
+        "flottants": list(FLOTTANTS),
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],

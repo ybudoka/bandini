@@ -166,6 +166,12 @@ const Entites = (function () {
       const e = creer('decor', d.x * TT + 8, d.y * TT + 15, {
         decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
         dessine: true,
+        // ⚠️ UNE VARIANTE PAR TUILE, et tiree a l'EMPREINTE de la tuile — jamais
+        // au de du jeu : un decor qui consomme `B.rng()` decale tout ce qui
+        // suit, et cette lecon-la a deja fait tomber quatre juges sans rapport.
+        // Le mecanisme existait pour les DECALS (`d.v`) ; les parasols rayes
+        // sont la premiere fiche de decor a en avoir besoin.
+        v: fiche.variantes ? hash2(d.x * 7919 + d.y, 0x5A11) % fiche.variantes : 0,
       });
       // ⚠️ `estIndexable`, PAS `e.solide` : c'etait le second exemplaire de la
       // regle, et il a survecu au premier correctif. Un buisson restait hors
@@ -3250,8 +3256,16 @@ const Entites = (function () {
       if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
         if (!d) continue;
-        const c = Atlas.cuirePeintre('decor|' + e.decor, d.w, d.h, d.peindre);
-        ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] - cy));
+        const c = d.variantes
+          ? Atlas.cuirePeintre('decor|' + e.decor + '|' + e.v, d.w, d.h,
+                               function (g, w, h) { d.peindre(g, w, h, e.v); })
+          : Atlas.cuirePeintre('decor|' + e.decor, d.w, d.h, d.peindre);
+        // ⚠️ CE QUI FLOTTE TANGUE. Un rond immobile sur l'eau se lit comme une
+        // tache de peinture ; deux pixels de houle, et c'est une bouee. Le
+        // mouvement est dans le DESSIN et pas dans `e.y` : la bouee est amarree,
+        // et ce qui la heurte doit la trouver ou elle est.
+        const houle = d.flotte ? Math.sin(e.t / 26 + e.x * 0.07) * 1.5 : 0;
+        ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + houle - cy));
         B.stats.images++;
         continue;
       }

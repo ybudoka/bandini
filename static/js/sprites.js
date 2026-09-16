@@ -3311,6 +3311,164 @@ const DECORS = {
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
+  // --- LE BORD DE L'EAU ----------------------------------------------------
+  //: ⚠️ Mesure d'abord, et c'est elle qui a decide de la vague : la ville posait
+  //: **2 507 tuiles de sable** (dont 782 touchent l'eau) et **1 818 de quai**, et
+  //: personne ne s'y asseyait jamais. Ce qui manquait n'etait pas le terrain :
+  //: c'est que le bord de l'eau etait un decor qu'on TRAVERSE. Six fiches et un
+  //: semis, aucun moteur neuf — exactement le chemin du cabanon et du BBQ.
+
+  // LA TABLE A PIQUE-NIQUE. ⚠️ Vue d'en haut, c'est un **H couche** : deux bancs
+  // paralleles et le plateau entre les deux. C'est ce dessin-la qui la nomme a
+  // douze pixels — la couleur du bois ne fait que le confirmer. `casse`, comme
+  // le banc dont elle est la cousine.
+  table_pique_nique: { casse: 0.8, pv: 40, w: 22, h: 16, ancre: [11, 14], r: 6, sol: [9, 5], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(0, 1, 22, 4); ctx.fillRect(0, 11, 22, 4);   // les deux bancs, dans l'ombre
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(0, 1, 22, 3); ctx.fillRect(0, 11, 22, 3);   // leur face eclairee du nord
+    ctx.fillStyle = '#7a5836'; ctx.fillRect(2, 5, 18, 6);                               // le plateau, dans l'ombre
+    ctx.fillStyle = '#9c7846'; ctx.fillRect(2, 5, 18, 5);                               // sa face eclairee
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 7, 18, 1); ctx.fillRect(2, 9, 18, 1);    // les joints des planches
+    ctx.fillStyle = '#4a3320'; ctx.fillRect(4, 4, 2, 8); ctx.fillRect(16, 4, 2, 8);     // les deux pietements
+  } },
+
+  // LE PARASOL. ⚠️ La seule chose du lot qui se lise **de loin**, et la seule
+  // qu'on ne heurte pas : `solide: false`, on passe DESSOUS. Vu d'en haut c'est
+  // un disque a quartiers alternes — ce sont les quartiers qui le nomment, la
+  // couleur ne fait que dire lequel. Elle se tire par tuile (`variantes`).
+  parasol: { solide: false, r: 0, variantes: 4, w: 24, h: 24, ancre: [12, 14], peindre: function (ctx, w, h, v) {
+    const toile = ['#c0392b', '#2f6fb5', '#d98324', '#2f8d6a'][v % 4];
+    const ombre = ['#8e1f16', '#1f4d80', '#9a5a12', '#1d6149'][v % 4];
+    const cx = 11.5, cy = 11.5, R = 11;
+    for (let y = 0; y < 24; y++) {
+      const dy = y - cy;
+      const demi = Math.sqrt(Math.max(0, R * R - dy * dy));
+      for (let x = Math.ceil(cx - demi); x <= Math.floor(cx + demi); x++) {
+        const dx = x - cx;
+        // Huit quartiers : un sur deux dans le ton clair. ⚠️ C'est l'ALTERNANCE
+        // qui se lit de trois ecrans, pas la teinte.
+        const quartier = Math.floor((Math.atan2(dy, dx) + Math.PI) / (Math.PI / 4)) % 2;
+        ctx.fillStyle = quartier ? toile : ombre;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    ctx.fillStyle = 'rgba(20,18,26,0.22)';                                  // la toile retombe au sud-est
+    for (let y = 14; y < 24; y++) {
+      const dy = y - cy, demi = Math.sqrt(Math.max(0, R * R - dy * dy));
+      ctx.fillRect(Math.ceil(cx - demi), y, Math.floor(2 * demi) + 1, 1);
+    }
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(11, 10, 2, 2);                   // le bouton du mat
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(11, 12, 2, 10);                  // le mat planté dans le sable
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(11, 12, 1, 10);
+  } },
+
+  // LA SERVIETTE ET SA GLACIERE. ⚠️ Le plan la voulait en DECAL ; elle est un
+  // decor `solide: false`, et la raison est mesurable : `B.decals` est un anneau
+  // PLAFONNE a 150 qui s'evide par la tete (`shift()`) pour le sang et les
+  // impacts — une serviette posee a la construction de la ville en serait
+  // chassee par la premiere fusillade. Rien ne l'arrete, rien ne la casse,
+  // et `estIndexable` la garde hors du chemin de qui marche.
+  serviette: { solide: false, r: 0, variantes: 3, w: 20, h: 14, ancre: [10, 10], peindre: function (ctx, w, h, v) {
+    const drap = ['#e0574f', '#4fa3d1', '#efd06a'][v % 3];
+    const raie = ['#f2ded9', '#eaf3f8', '#f6efd8'][v % 3];
+    ctx.fillStyle = 'rgba(20,18,26,0.14)'; ctx.fillRect(2, 3, 14, 10);       // son ombre au sol
+    ctx.fillStyle = drap; ctx.fillRect(1, 2, 14, 10);
+    ctx.fillStyle = raie;                                                    // trois raies en travers
+    for (let i = 0; i < 3; i++) ctx.fillRect(1, 3 + i * 3, 14, 1);
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 11, 14, 1);       // le pli du bas
+    ctx.fillStyle = '#2f6fb5'; ctx.fillRect(15, 5, 5, 6);                    // la glaciere, dans l'ombre
+    ctx.fillStyle = '#4a90c4'; ctx.fillRect(15, 5, 4, 5);
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(15, 5, 5, 2);                    // son couvercle
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(17, 6, 1, 1);                    // la poignee
+  } },
+
+  // LE CHATEAU DE SABLE. ⚠️ Le seul du lot qui ait une REGLE, et c'est ce qui en
+  // fait autre chose qu'un ornement : `pv: 5`, le decor le plus fragile du jeu —
+  // un char qui roule sur la greve le rase — et il **revient au matin** avec
+  // tout le reste (`reparerLeDecor`). Un enfant qui recommence son chateau tous
+  // les jours, c'est une blague que la ville raconte sans qu'on l'ecrive.
+  chateau_sable: { casse: 1.0, pv: 5, w: 16, h: 16, ancre: [8, 14], r: 4, solide: false, peindre: function (ctx, w, h) {
+    // ⚠️ LA SILHOUETTE AVANT LA COULEUR — premiere version jetee : tout etait du
+    // meme beige, tours et courtine confondues, et ce qu'on lisait a douze
+    // pixels etait une MOTTE avec un drapeau dessus. Deux tours DETACHEES, une
+    // courtine basse entre elles, et l'ombre qui creuse l'ecart : c'est le
+    // decoupe qui nomme un chateau, le sable ne fait que le confirmer.
+    ctx.fillStyle = 'rgba(90,70,36,0.30)'; ctx.fillRect(1, 13, 14, 2);       // son ombre portee au sud
+    ctx.fillStyle = '#9c7f4c'; ctx.fillRect(4, 8, 8, 6);                     // la courtine, dans l'ombre
+    ctx.fillStyle = '#c9ab72'; ctx.fillRect(4, 8, 8, 4);                     // sa face eclairee du nord
+    ctx.fillStyle = '#8a6e3e';                                               // les creneaux de la courtine
+    ctx.fillRect(5, 8, 2, 2); ctx.fillRect(9, 8, 2, 2);
+    ctx.fillStyle = '#7d6236'; ctx.fillRect(0, 4, 5, 10); ctx.fillRect(11, 4, 5, 10);   // les deux tours, dans l'ombre
+    ctx.fillStyle = '#d8bd85'; ctx.fillRect(0, 4, 4, 9); ctx.fillRect(11, 4, 4, 9);     // leur face eclairee
+    ctx.fillStyle = '#f0dcab'; ctx.fillRect(0, 4, 4, 2); ctx.fillRect(11, 4, 4, 2);     // leur couronne, au soleil
+    ctx.fillStyle = '#6b5329';                                               // leurs creneaux, en creux
+    ctx.fillRect(1, 4, 1, 2); ctx.fillRect(3, 4, 1, 2);
+    ctx.fillRect(12, 4, 1, 2); ctx.fillRect(14, 4, 1, 2);
+    ctx.fillStyle = '#6b5329'; ctx.fillRect(4, 4, 1, 10); ctx.fillRect(11, 4, 1, 10);   // le joint tour/courtine
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(7, 0, 1, 9);                     // la hampe, plantee dans la courtine
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(8, 0, 5, 3);                     // le fanion
+    ctx.fillStyle = '#8e1f16'; ctx.fillRect(8, 2, 5, 1);
+  } },
+
+  // LA BOUEE. ⚠️ Le seul decor du jeu qui ait raison de FLOTTER, et `flotte` le
+  // dit tout haut : `poser_decor` refuse le solide, et l'eau en est
+  // (`solide: 2`). Un juge s'en sert pour verifier qu'aucun autre ne s'est mis
+  // a nager. Elle tangue sur place — un rond immobile sur l'eau se lit comme
+  // une tache de peinture.
+  bouee: { solide: false, flotte: true, r: 0, w: 14, h: 14, ancre: [7, 9], peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(12,30,44,0.30)'; ctx.fillRect(2, 5, 11, 7);        // ce qu'elle assombrit sous elle
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(2, 2, 10, 9);                    // l'anneau, dans l'ombre
+    ctx.fillStyle = '#e0574f'; ctx.fillRect(2, 2, 10, 7);
+    ctx.fillStyle = '#efe6d0';                                               // quatre quartiers alternes
+    ctx.fillRect(2, 2, 4, 3); ctx.fillRect(8, 8, 4, 3);
+    ctx.fillStyle = '#f7f1e2'; ctx.fillRect(8, 2, 4, 2); ctx.fillRect(2, 8, 4, 2);
+    ctx.fillStyle = '#1d4a63'; ctx.fillRect(5, 5, 4, 3);                     // l'eau vue par le trou
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(1, 5, 1, 3); ctx.fillRect(12, 5, 1, 3);   // le cordage
+  } },
+
+  // LE POTEAU D'AMARRAGE. Un billot ceinture de fer, la boucle d'un cordage
+  // autour. ⚠️ Il est SOLIDE et petit : sur un quai, c'est exactement ce qui
+  // arrete une roue sans fermer le passage.
+  poteau_amarrage: { casse: 0.6, pv: 90, w: 12, h: 16, ancre: [6, 14], r: 4, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#4a3320'; ctx.fillRect(3, 3, 6, 12);                    // le billot, dans l'ombre
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(3, 3, 5, 11);                    // sa face eclairee du nord-ouest
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(3, 2, 6, 2);                     // le dessus, poli par les cordages
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 6, 6, 1); ctx.fillRect(3, 11, 6, 1);   // les deux ceintures de fer
+    ctx.fillStyle = '#9a8f6a'; ctx.fillRect(1, 8, 2, 1); ctx.fillRect(9, 8, 2, 1);    // la boucle du cordage
+    ctx.fillRect(0, 9, 1, 2); ctx.fillRect(11, 9, 1, 2);
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(3, 15, 6, 1);                    // son pied sur les planches
+  } },
+
+  // LE BELVEDERE. Un plancher de bois sur pilotis, une rambarde, deux marches —
+  // pose la ou la terre DOMINE l'eau. ⚠️ Il `arrete` au lieu de bloquer, comme
+  // les kiosques : on y monte, on ne le traverse pas. Et il n'a pas de `pv` —
+  // ce qui porte `arrete` encaisse et ne tombe jamais, c'est ce qui fait un abri.
+  belvedere: { arrete: 9, w: 30, h: 26, ancre: [15, 23], r: 12, sol: [13, 10], solide: true, peindre: function (ctx, w, h) {
+    // ⚠️ PREMIERE VERSION JETEE : un plancher de planches horizontales borde
+    // d'une seule lisse au nord se lisait comme une CAISSE — une palette de
+    // bois posee sur le sable. Ce qui nomme un belvedere vu d'en haut, c'est la
+    // RAMBARDE qui l'entoure sur trois cotes et la trouee du sud par ou l'on
+    // monte : un plancher ferme est une boite, un plancher ouvert d'un cote est
+    // un endroit ou l'on va.
+    ctx.fillStyle = 'rgba(30,22,12,0.34)'; ctx.fillRect(2, 21, 26, 5);       // l'ombre sous les pilotis
+    ctx.fillStyle = '#a8814e'; ctx.fillRect(3, 4, 24, 18);                   // le plancher, au soleil
+    ctx.fillStyle = '#8e6a3c';                                               // ses planches, dans le sens de la marche
+    for (let i = 0; i < 8; i++) ctx.fillRect(3 + i * 3, 4, 1, 18);
+    ctx.fillStyle = 'rgba(40,28,14,0.20)'; ctx.fillRect(3, 16, 24, 6);       // le plancher s'assombrit vers le sud
+    // La rambarde : trois cotes. Une lisse claire, des barreaux sombres, et le
+    // vide du sud ou sont les marches.
+    ctx.fillStyle = '#5a3f26';                                               // les barreaux, sous la lisse
+    for (let i = 0; i < 9; i++) ctx.fillRect(2 + i * 3, 3, 2, 3);            // ceux du nord
+    for (let j = 0; j < 5; j++) { ctx.fillRect(1, 5 + j * 3, 3, 2); ctx.fillRect(26, 5 + j * 3, 3, 2); }
+    ctx.fillStyle = '#c29a62'; ctx.fillRect(1, 1, 28, 3);                    // la lisse du nord, au soleil
+    ctx.fillStyle = '#9a7442'; ctx.fillRect(1, 3, 28, 1);
+    ctx.fillStyle = '#c29a62'; ctx.fillRect(0, 3, 3, 16); ctx.fillRect(27, 3, 3, 16);   // les deux lisses laterales
+    ctx.fillStyle = '#9a7442'; ctx.fillRect(2, 3, 1, 16); ctx.fillRect(27, 3, 1, 16);
+    // Les marches, au sud : deux paliers de plus en plus larges, hors du garde-corps.
+    ctx.fillStyle = '#b08a55'; ctx.fillRect(9, 22, 12, 2);
+    ctx.fillStyle = '#9a7442'; ctx.fillRect(7, 24, 16, 2);
+    ctx.fillStyle = '#4a3320'; ctx.fillRect(0, 19, 3, 5); ctx.fillRect(27, 19, 3, 5);   // les pilotis qu'on voit
+  } },
+
   banc: { casse: 0.8, pv: 40, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 3); ctx.fillRect(1, 0, 16, 3);
     ctx.fillStyle = '#523a22'; ctx.fillRect(2, 7, 2, 5); ctx.fillRect(14, 7, 2, 5);

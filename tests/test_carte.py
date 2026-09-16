@@ -418,7 +418,14 @@ def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
         position = (morceau["x"], morceau["y"])
         glyphe = CARTE["sol"][morceau["y"]][morceau["x"]]
         assert not carte.routier(glyphe), f"{morceau} est sur la chaussee"
-        assert carte.marchable(glyphe), morceau
+        # ⚠️ Sauf ce qui DECLARE flotter (`carte.FLOTTANTS`) : la bouee est le
+        # premier decor du jeu pose sur l'eau. L'exception est nommee en Python
+        # et portee par le paquet — une bouee qui deroge « parce qu'elle est une
+        # bouee » aurait ouvert la porte a tout le catalogue.
+        if morceau["type"] in carte.FLOTTANTS:
+            assert glyphe == "~", f"{morceau} declare flotter et est au sec"
+        else:
+            assert carte.marchable(glyphe), morceau
         assert position not in devants, f"{morceau} bouche une porte"
         assert position not in vus, f"deux decors sur {position}"
         vus.add(position)
