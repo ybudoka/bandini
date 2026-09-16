@@ -3438,6 +3438,72 @@ const DECORS = {
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
+  // --- LA VIE QUI N'EST PAS HUMAINE ----------------------------------------
+  //: ⚠️ **ILS NE COMPTENT POUR RIEN**, et c'est ce qui les rend vivants : ils ne
+  //: sont la que pour etre la. Le dessin passe par la meme porte que le ballon —
+  //: une fiche de decor, cuite par variante — et `v` n'y designe pas une couleur
+  //: mais une POSE. C'est le seul mecanisme du depot qui sache dessiner une bete
+  //: sans lui donner un corps de piéton.
+
+  // LE GOELAND, vu d'en haut. ⚠️ Ce qui le nomme a douze pixels, c'est le BLANC
+  // casse d'un corps trapu, la tache grise des ailes repliees et le point orange
+  // du bec — un oiseau gris entier se lit comme un caillou.
+  // Poses : 0 debout, 1 il picore (la tete descend), 2 ailes ouvertes (l'envol).
+  goeland: { solide: false, r: 0, variantes: 3, w: 16, h: 16, ancre: [8, 12], peindre: function (ctx, w, h, v) {
+    const envol = v === 2, picore = v === 1;
+    // ⚠️ LA TETE SORT DE LA SILHOUETTE. Premiere version jetee : elle etait
+    // posee DANS le corps, et a seize pixels l'oiseau n'etait qu'un bloc blanc
+    // avec un point orange. Ce qui nomme un goeland, c'est le cou qui depasse
+    // devant et le bec au bout — pas la couleur, qu'il partage avec un caillou.
+    ctx.fillStyle = 'rgba(20,18,26,0.16)'; ctx.fillRect(6, envol ? 14 : 12, 5, 2);
+    if (envol) {                                                            // les ailes ouvertes
+      ctx.fillStyle = '#d8d6ce'; ctx.fillRect(0, 6, 5, 3); ctx.fillRect(11, 6, 5, 3);
+      ctx.fillStyle = '#b3b8bf'; ctx.fillRect(0, 8, 5, 1); ctx.fillRect(11, 8, 5, 1);
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(0, 6, 2, 2); ctx.fillRect(14, 6, 2, 2);   // le bout noir
+    }
+    const cou = picore ? 7 : 3;                                             // il baisse la tete pour picorer
+    ctx.fillStyle = '#efeee8'; ctx.fillRect(6, cou, 4, 4);                  // la tete, DEVANT le corps
+    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(7, cou + 1, 1, 1);              // l'oeil
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(10, cou + 1, 3, 1);             // le bec, qui depasse
+    ctx.fillStyle = '#efeee8'; ctx.fillRect(5, 6, 6, 6);                    // le corps, au soleil
+    ctx.fillStyle = '#d8d6ce'; ctx.fillRect(5, 10, 6, 2);                   // son dessous, dans l'ombre
+    if (!envol) {
+      ctx.fillStyle = '#b3b8bf'; ctx.fillRect(4, 7, 8, 3);                  // les ailes repliees, en manteau
+      ctx.fillStyle = '#8f959d'; ctx.fillRect(4, 9, 8, 1);
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 11, 4, 1);                 // le bout de la queue
+      ctx.fillStyle = '#e8a33a'; ctx.fillRect(6, 12, 1, 1); ctx.fillRect(9, 12, 1, 1);   // les pattes
+    }
+  } },
+
+  // LE CHAT, vu d'en haut. ⚠️ Ce qui le nomme, c'est la QUEUE : longue, une
+  // tuile a elle seule, et c'est elle qu'on voit filer au bout d'une ruelle.
+  // Poses : 0 assis (queue enroulee), 1 en marche, 2 il detale (corps etire).
+  chat: { solide: false, r: 0, variantes: 3, w: 16, h: 16, ancre: [8, 12], peindre: function (ctx, w, h, v) {
+    const file = v === 2, marche = v === 1;
+    // ⚠️ LES OREILLES SE DETACHENT SUR LE FOND, pas sur le corps. Premiere
+    // version jetee : deux carres sombres poses sur une tete sombre, invisibles
+    // dans une ruelle. Elles sortent maintenant du crane, en pointes, et c'est
+    // avec la QUEUE ce qui nomme un chat vu d'en haut.
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(5, 12, 7, 2);        // son ombre
+    const long = file ? 9 : marche ? 7 : 5;                                  // assis, il se ramasse
+    const y0 = 12 - long;
+    ctx.fillStyle = '#3f362e'; ctx.fillRect(5, y0, 6, long);                 // le corps, dans l'ombre
+    ctx.fillStyle = '#6b5c4d'; ctx.fillRect(5, y0, 5, long - 1);             // sa face eclairee du nord-ouest
+    ctx.fillStyle = '#54483c';                                               // les rayures du dos
+    for (let i = 0; i < Math.max(2, long - 3); i += 2) ctx.fillRect(5, y0 + 2 + i, 6, 1);
+    // La queue : enroulee quand il est assis, tendue quand il file.
+    ctx.fillStyle = '#3f362e';
+    if (file) { ctx.fillRect(7, 12, 2, 4); ctx.fillRect(7, 15, 3, 1); }
+    else if (marche) { ctx.fillRect(11, 9, 3, 2); ctx.fillRect(13, 6, 2, 4); }
+    else { ctx.fillRect(11, 10, 4, 2); ctx.fillRect(14, 7, 2, 4); }
+    ctx.fillStyle = '#7d6c59'; ctx.fillRect(5, y0, 6, 3);                    // la tete, plus claire que le dos
+    ctx.fillStyle = '#3f362e';                                               // les deux oreilles, en pointes
+    ctx.fillRect(4, y0 - 2, 2, 3); ctx.fillRect(10, y0 - 2, 2, 3);
+    ctx.fillStyle = '#6b5c4d'; ctx.fillRect(5, y0 - 1, 1, 1); ctx.fillRect(10, y0 - 1, 1, 1);
+    ctx.fillStyle = '#c8d84a'; ctx.fillRect(6, y0 + 1, 1, 1); ctx.fillRect(9, y0 + 1, 1, 1);   // les yeux
+    ctx.fillStyle = '#e0b7a8'; ctx.fillRect(7, y0 + 2, 2, 1);                // le museau
+  } },
+
   // LE BALLON DE PLAGE. ⚠️ Il ne bloque rien et n'entre dans aucun index : il
   // VOLE. Un decor qui bouge se voit de trois ecrans — c'est tout ce qu'on
   // demande a deux enfants qui se le lancent.

@@ -492,6 +492,7 @@ const Jeu = (function () {
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
     if (!B.interieur) { Monde.dessinerBattants(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
+    if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
