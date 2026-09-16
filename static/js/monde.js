@@ -1387,7 +1387,10 @@ const Monde = (function () {
     return { teinte: 'rgb(' + r + ',' + g + ',' + bl + ')', alpha: lerp(a[2], b[2], t) };
   }
 
-  function estNuit() { return ambiance().alpha > 0.4; }
+  /** ⚠️ Sans argument, c'est la nuit QU'ON VOIT : dans une piece, jamais
+      (`ambiance` eclaire l'interieur). Avec une heure, c'est la nuit DEHORS —
+      ce que le lit doit savoir, lui qui est toujours dans une piece. */
+  function estNuit(heure) { return ambiance(heure).alpha > 0.4; }
 
   /** Le facteur de foule d'un quartier a cette heure-ci : (nuit, matin, soir).
 

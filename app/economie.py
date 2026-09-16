@@ -573,6 +573,18 @@ CAFE = {"duree_s": 90, "depense": 0.5}
 #: juge refait le calcul a chaque fois qu'on touche a l'un des trois nombres.
 SOUFFLE = {"surplus_max": 60, "surplus_secondes_max": 6}
 
+#: La sieste : DORMIR JUSQU'AU SOIR, sur le lit de la planque, de l'hotel ou
+#: du phare. On se reveille a `reveil` (20 h 45) le MEME jour, avec `soin` de
+#: la vie maximum en plus — une sieste n'est pas une nuit, elle ne rend pas tout.
+#:
+#: ⚠️ `reveil` tombe APRES `clignotant_depuis` (vehicules.py) : c'est l'heure ou
+#: la ville a fini de passer a la nuit — lampadaires allumes, feux au
+#: clignotant, `estNuit()` vrai. Un reveil a la brune laisserait le joueur
+#: devant « ATTENDS LA NUIT » encore une minute, et c'est exactement l'attente
+#: qu'on voulait supprimer. Trop tard, et la sieste mangerait la nuit qu'elle
+#: est venue chercher. Un juge tient les deux bouts.
+SIESTE = {"reveil": 0.865, "soin": 0.25}
+
 # --- Les boulots au klaxon (M9) -------------------------------------------
 
 #: ⚠️ UN boulot = UNE fiche. La v1 avait les trois nombres du taxi perdus dans
@@ -736,6 +748,7 @@ def exporter() -> dict:
         "tarifs": dict(TARIFS),
         "cafe": dict(CAFE),
         "souffle": dict(SOUFFLE),
+        "sieste": dict(SIESTE),
         "boulots": {k: dict(v) for k, v in BOULOTS.items()},
         "fourriere": dict(FOURRIERE),
         "tuiles_type": TUILES_TYPE,

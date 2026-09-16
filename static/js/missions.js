@@ -875,6 +875,14 @@ const Missions = (function () {
     switch (point.type) {
       case 'lit':
         items.push({ libelle: 'DORMIR JUSQU’AU MATIN', detail: 'SAUVEGARDE', faire: function () { dormir(); return true; } });
+        // ⚠️ La sieste n'est offerte que LE JOUR, et la question se pose
+        // DEHORS : dans la piece, `estNuit()` dit toujours non. Offerte le
+        // jour, elle ne passe jamais minuit — ni dette, ni revenus, ni
+        // skimmers de plus. Et elle vient APRES le matin : la main qui
+        // appuie deux fois pour dormir retrouve la ligne qu'elle connait.
+        if (!Monde.estNuit(p.heure) && p.heure < B.defs.economie.sieste.reveil) {
+          items.push({ libelle: 'DORMIR JUSQU’AU SOIR', detail: 'SAUVEGARDE', faire: function () { dormirJusquAuSoir(); return true; } });
+        }
         items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDEE'); return true; } });
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'coffre':
@@ -1133,16 +1141,38 @@ const Missions = (function () {
       const p = B.partie;
       p.jour += 1;
       p.heure = 0.30;
-      B.joueur.vie = B.joueur.vieMax;
-      B.joueur.endurance = 100;
-      B.joueur.cafeine = 0;
-      B.joueur.surplus = 0;           // une nuit reprend le souffle, pas l'avance
-
-      p.vie = B.joueur.vie;
-      Police.remiseAZero();
+      seReveiller(B.joueur.vieMax);
       nouveauJour();
       sauvegarderPartie();
     }, 'LE LENDEMAIN MATIN');
+  }
+
+  /** Dormir jusqu'au soir : on se reveille a la noirceur, le MEME jour.
+
+      C'est ce qui manquait aux missions de nuit : le lit ne menait qu'au
+      matin, et une mission `nuit` prise au reveil faisait attendre quatre
+      minutes reelles sous « ATTENDS LA NUIT ». ⚠️ Une sieste n'est pas une
+      nuit : elle rend `soin` de la vie maximum, pas tout. Et `Math.max` :
+      appelee passe l'heure du reveil, elle ne fait pas reculer le temps. */
+  function dormirJusquAuSoir() {
+    Jeu.transiter(FONDU_NUIT, function () {
+      const p = B.partie, j = B.joueur, sieste = B.defs.economie.sieste;
+      p.heure = Math.max(p.heure, sieste.reveil);
+      seReveiller(Math.min(j.vieMax, j.vie + Math.round(j.vieMax * sieste.soin)));
+      sauvegarderPartie();
+    }, 'LE SOIR VENU');
+  }
+
+  /** Ce que tout somme rend, la nuit comme la sieste : le souffle, et une
+      police qui a lache le morceau. `vie` est ce qu'on a au reveil. */
+  function seReveiller(vie) {
+    const j = B.joueur;
+    j.vie = vie;
+    j.endurance = 100;
+    j.cafeine = 0;
+    j.surplus = 0;           // un somme reprend le souffle, pas l'avance
+    B.partie.vie = j.vie;
+    Police.remiseAZero();
   }
 
   // --- Le garage de Ti-Guy --------------------------------------------------------------
@@ -2290,7 +2320,7 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
-           dormir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,
