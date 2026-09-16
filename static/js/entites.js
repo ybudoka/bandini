@@ -1528,6 +1528,13 @@ const Entites = (function () {
         // abandonne appartient a la fourriere, pas aux voleurs — deux systemes
         // qui se disputent le meme char, c'est l'un des deux qui ment.
         && q !== B.joueur.dernierVehicule && !q.laisse && !(q.panneT > 0)
+        // ⚠️ **Ni une COQUE** (retour de Martin, capture a l'appui : « un
+        // bateau sur la route ?? »). Une chaloupe amarree est `stationne` comme
+        // une auto garee, et pour un passant du quai c'etait le premier char a
+        // l'ecran : il l'emportait, le trafic la prenait en main, et le trafic
+        // roule sur des rails sans lire une tuile — elle montait sur la voie la
+        // plus proche et faisait sa tournee. On vole un char, pas un bateau.
+        && !(q.def && q.def.eau)
         && dist2(q.x, q.y, B.joueur.x, B.joueur.y) < f.rayon_px * f.rayon_px
         && visibleAEcran(q.x, q.y, 0);
     });

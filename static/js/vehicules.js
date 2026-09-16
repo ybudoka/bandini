@@ -1691,6 +1691,15 @@ const Vehicules = (function () {
   }
 
   function majConducteur(v) {
+    // ⚠️ **LE TRAFIC NE NAVIGUE PAS.** Il roule sur des rails et ne lit aucune
+    // tuile (`maj` : `v.x += v.vx`) — c'est ce qui l'empeche de couper les
+    // coins, et c'est aussi ce qui laisse passer une coque : `tuileInterdite`,
+    // la seule regle qui tient une chaloupe sur l'eau, n'est jamais consultee
+    // sur des rails. Une coque confiee au trafic montait sur la voie la plus
+    // proche (`voieLaPlusProche`, trois tuiles) et roulait dans la ville. Le
+    // voleur de char ne lui en confie plus (`Entites.majVolDeChar`) ; ceci est
+    // pour le prochain qui le ferait : elle reste la ou elle est, sans personne.
+    if (v.def.eau) { v.conducteur = null; v.etat = 'stationne'; v.vitesse = 0; v.vx = 0; v.vy = 0; return; }
     const t = trafic();
     if (debloquer(v)) return;
     if (v.deportT > 0 && --v.deportT === 0) v.deportFroid = t.depassement_images;

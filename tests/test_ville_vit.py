@@ -840,3 +840,125 @@ def test_un_voleur_ne_touche_ni_au_char_du_joueur_ni_a_celui_qu_il_a_laisse(banc
     }""")
     assert r["commence"] == 0, "un voleur s'en prend au char du joueur ou à celui qu'il a laissé : %s" % r
     assert r["etat"] == "flane" and r["vise"] is None
+
+
+#: Une tuile d'eau a trois tuiles au plus d'une voie, une rive praticable a
+#: cote : la ou une chaloupe volee trouvait une rue a prendre. ⚠️ Cherchee dans
+#: la carte, pas dans `amarrages` : les amarrages bougent avec le port, et le
+#: juge doit rester vrai le jour ou ils changent de rive.
+_EAU_PRES_D_UNE_VOIE = """
+    function eauPresDUneVoie(L) {
+        const c = L.Monde.carte, croix = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        for (let ty = 4; ty < c.h - 4; ty++) {
+            for (let tx = 4; tx < c.w - 4; tx++) {
+                if (!L.Monde.estEau(tx, ty)) continue;
+                const rive = croix.map(function (d) { return { x: tx + d[0], y: ty + d[1] }; }).find(function (r) {
+                    return !L.Monde.estEau(r.x, r.y) && !L.Monde.bloque(r.x, r.y, L.Monde.MASQUE_VEHICULE); });
+                if (!rive) continue;
+                let voie = false;
+                for (let dy = -3; dy <= 3 && !voie; dy++) {
+                    for (let dx = -3; dx <= 3 && !voie; dx++) voie = '<>^v'.indexOf(L.Monde.fleche(tx + dx, ty + dy)) >= 0;
+                }
+                if (voie) return { x: tx, y: ty, rive: rive };
+            }
+        }
+        return null;
+    }
+"""
+
+
+def test_un_voleur_ne_part_pas_avec_une_chaloupe(banc, paquet):
+    """⚠️ **Retour de Martin, capture à l'appui : « un bateau sur la route ?? »**
+    — une chaloupe arrêtée dans sa voie au passage piéton, cap à l'est.
+
+    Une coque amarrée est `stationne` comme une auto garée, et pour un passant
+    du quai c'était le premier char à l'écran. Volée, elle passait au trafic,
+    et le trafic roule sur des rails sans lire une tuile. Mesuré avant : visée,
+    emportée, puis quatre cent cinquante images sur la chaussée.
+
+    ⚠️ Le témoin compte autant que la règle : une auto garée au même endroit,
+    elle, se fait voler. Sans lui, un voleur qui ne vole plus rien du tout
+    passerait ce juge."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const TT = L.TT, j = L.B.joueur;
+        """ + _EAU_PRES_D_UNE_VOIE + """
+        const eau = eauPresDUneVoie(L);
+        if (!eau) return { eau: null };
+        j.x = eau.rive.x * TT + 8; j.y = eau.rive.y * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const coque = L.Vehicules.creer('bateau', eau.x * TT + 8, eau.y * TT + 8, 0, { etat: 'stationne' });
+        function passant() {
+            const q = L.Entites.creerPieton(j.x + 20, j.y, L.Entites.archetype('passant'));
+            q.etat = 'flane';
+            L.Entites.indexer();
+            return q;
+        }
+        function tenter(voleur) {
+            let commence = 0;
+            for (let m = 0; m < 400 && voleur.etat !== 'vole_un_char'; m++) {
+                L.B.volMinute = -1;
+                L.B.partie.heure = (m % 1440) / 1440;
+                commence += L.Entites.majVolDeChar();
+            }
+            return commence;
+        }
+        const voleur = passant();
+        const surLaCoque = tenter(voleur);
+        const viseLaCoque = voleur.charVise === coque;
+        // Et la ville vit par-dessus : il ne doit toujours pas la prendre.
+        let auSec = 0;
+        for (let i = 0; i < 1500 && L.B.entites.indexOf(coque) >= 0; i++) {
+            o.frame(1);
+            j.x = eau.rive.x * TT + 8; j.y = eau.rive.y * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+            if (!L.Monde.estEau(Math.floor(coque.x / TT), Math.floor(coque.y / TT))) auSec++;
+        }
+        const conduite = coque.conducteur;
+        // Le temoin : une auto garee sur la rive, au meme endroit, et un passant
+        // de plus (volee, la chaloupe emportait son voleur avec elle). N'importe
+        // quel passant a portee peut s'en charger : on demande si QUELQU'UN la vise.
+        const auto = o.char('auto', 0, 0, 0);
+        const temoin = passant();
+        const surLAuto = tenter(temoin);
+        const viseLAuto = L.B.entites.some(function (q) { return q.charVise === auto; });
+        return { eau: eau, surLaCoque: surLaCoque, viseLaCoque: viseLaCoque, auSec: auSec,
+                 conduite: conduite, surLAuto: surLAuto, viseLAuto: viseLAuto };
+    }""")
+    assert r["eau"], "la carte n'a plus d'eau à trois tuiles d'une voie : le juge ne mesure plus rien"
+    assert r["surLaCoque"] == 0 and not r["viseLaCoque"], "un voleur vise une chaloupe amarrée : %s" % r
+    assert r["conduite"] is None, "la chaloupe a trouvé un conducteur : %s" % r
+    assert r["auSec"] == 0, "la chaloupe a passé %s images hors de l'eau : %s" % (r["auSec"], r)
+    assert r["surLAuto"] > 0 and r["viseLAuto"], "le témoin est tombé — plus aucun vol ici : %s" % r
+
+
+def test_le_trafic_ne_conduit_pas_une_coque(banc, paquet):
+    """⚠️ **Le trafic roule sur des rails et ne lit aucune tuile** — c'est ce
+    qui l'empêche de couper les coins, et c'est aussi pourquoi `tuileInterdite`,
+    la règle qui tient une coque sur l'eau, n'y est jamais consultée. Le voleur
+    ne confie plus de chaloupe au trafic ; ce juge est pour le prochain chemin
+    qui le ferait. Mesuré avant : la coque prend la voie la plus proche."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const TT = L.TT, j = L.B.joueur;
+        """ + _EAU_PRES_D_UNE_VOIE + """
+        const eau = eauPresDUneVoie(L);
+        if (!eau) return { eau: null };
+        j.x = eau.rive.x * TT + 8; j.y = eau.rive.y * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const coque = L.Vehicules.creer('bateau', eau.x * TT + 8, eau.y * TT + 8, 0,
+                                        { conducteur: 'trafic', etat: 'roule' });
+        L.Entites.indexer();
+        let auSec = 0;
+        for (let i = 0; i < 900 && L.B.entites.indexOf(coque) >= 0; i++) {
+            o.frame(1);
+            j.x = eau.rive.x * TT + 8; j.y = eau.rive.y * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+            if (!L.Monde.estEau(Math.floor(coque.x / TT), Math.floor(coque.y / TT))) auSec++;
+        }
+        return { eau: eau, auSec: auSec, conducteur: coque.conducteur, etat: coque.etat,
+                 bouge: Math.round(Math.hypot(coque.x - (eau.x * TT + 8), coque.y - (eau.y * TT + 8))) };
+    }""")
+    assert r["eau"], "la carte n'a plus d'eau à trois tuiles d'une voie : le juge ne mesure plus rien"
+    assert r["auSec"] == 0, "le trafic a sorti une coque de l'eau (%s images au sec) : %s" % (r["auSec"], r)
+    assert r["conducteur"] is None and r["etat"] == "stationne", "le trafic garde la coque en main : %s" % r
