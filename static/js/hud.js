@@ -9,7 +9,7 @@ const Hud = (function () {
     doc = d; racine = r;
     urlScores = r.dataset.urlScores;
     ['titre', 'scores', 'score-envoi'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
-    d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Jeu.commencer(); });
+    d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Jeu.jouer(); });
     d.getElementById('bouton-scores').addEventListener('click', function () { Son.reveiller(); montrerScores(); });
     d.getElementById('bouton-fermer-scores').addEventListener('click', function () { voile('titre'); });
     d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
@@ -515,6 +515,16 @@ const Hud = (function () {
       // malchance. Elle disparaît de la page le jour où elle est réglée —
       // une ligne à zéro serait une dette qu'on traîne pour rien.
       p.dette > 0 ? { libelle: 'LA DETTE DE ROCCO', detail: p.dette + ' $', actif: false } : null,
+      // ⚠️ ON LA REVOIT QUAND ON LE DEMANDE. Elle ne joue qu'une fois par
+      // sauvegarde (sinon elle devient un peage), et une histoire qu'on ne peut
+      // plus jamais entendre est une histoire qu'on a ratee parce qu'on a appuye
+      // trop vite. C'est le carnet qui la garde : c'est deja lui qui garde le
+      // journal, le repertoire et la dette.
+      // ⚠️ Pas depuis un intérieur : la scène se joue dans la rue, et
+      // `Histoire.ouverture` refuse poliment — une ligne de menu qui ne fait
+      // rien se lit comme un bogue.
+      !B.interieur ? { libelle: "REVOIR L'OUVERTURE", faire: function () {
+          fermerMenu(); Jeu.reprendre(); Histoire.ouverture(true); return true; } } : null,
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ].filter(Boolean) };
   }
@@ -695,6 +705,43 @@ const Hud = (function () {
     }
     if (d.duree && d.t > d.duree) B.dialogue = null;
     B.stats.rects += 2;
+  }
+
+  /** L'ouverture : le noir d'ou l'on sort, et le titre qui s'inscrit.
+
+      ⚠️ Son propre noir, et pas celui de `Jeu.transiter` : un fondu de porte
+      FIGE le jeu (`B.transition` coupe la boucle), or ici c'est justement
+      pendant le noir que le car doit arriver. Deux compteurs qui ne veulent pas
+      dire la meme chose ne partagent pas une variable.
+
+      ⚠️ Le titre s'ecrit en DEUX passes (l'ombre, puis les lettres), comme tout
+      texte pose sur le jeu : sans ombre, « BANDINI » disparait sur un mur
+      clair, et c'est le nom du jeu. */
+  function dessinerOuverture(ctx) {
+    const o = B.ouverture;
+    if (!o) return;
+    if (o.noir > 0.004) {
+      ctx.fillStyle = 'rgba(11,10,18,' + o.noir.toFixed(3) + ')';
+      ctx.fillRect(0, 0, VW, VH);
+      B.stats.rects++;
+    }
+    if (o.titre > 0.004) {
+      const a = Math.min(1, o.titre);
+      const nom = 'BANDINI', sous = 'BAIE-DES-BRUMES';
+      // ⚠️ UNE BANDE SOUS LE TITRE, pas seulement une ombre d'un pixel. Mesure
+      // faite : « BAIE-DES-BRUMES » tombait pile sur l'enseigne TERMINUS et ne
+      // se lisait plus. Le nom du jeu ne peut pas dependre de ce qu'il y a
+      // derriere — et la scene se joue devant un batiment, toujours le meme.
+      ctx.fillStyle = 'rgba(11,10,18,' + (0.62 * a).toFixed(3) + ')';
+      ctx.fillRect(0, 56, VW, 56);
+      B.stats.rects++;
+      const xn = Math.round((VW - Atlas.largeurTexte(nom, 4)) / 2);
+      const xs = Math.round((VW - Atlas.largeurTexte(sous, 1)) / 2);
+      Atlas.texte(ctx, nom, xn + 2, 70, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 4);
+      Atlas.texte(ctx, nom, xn, 68, 'rgba(232,179,60,' + a.toFixed(3) + ')', 4);
+      Atlas.texte(ctx, sous, xs + 1, 103, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 1);
+      Atlas.texte(ctx, sous, xs, 102, 'rgba(239,230,208,' + a.toFixed(3) + ')', 1);
+    }
   }
 
   /** Le noir d'un changement de scene (`Jeu.transiter`) : il monte a 1 sur la
@@ -1189,7 +1236,11 @@ const Hud = (function () {
     const j = B.joueur, p = B.partie;
     if (!p) return;
     ancres = [];
-    if (B.etat === 'jeu' || B.etat === 'pause') {
+    // ⚠️ LE HUD SE TAIT PENDANT L'OUVERTURE. Vie, souffle, etoiles, argent,
+    // arme, mini-carte, heure : une barre de vie par-dessus une scene ou l'on
+    // ne joue pas encore, c'est une scene que personne ne regarde. Seule la
+    // boite de dialogue reste, plus bas — c'est elle qui porte les mots.
+    if ((B.etat === 'jeu' || B.etat === 'pause') && !B.ouverture) {
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       const v = j && j.dansVehicule;
@@ -1345,6 +1396,9 @@ const Hud = (function () {
       }
     }
     if (B.etat === 'jeu') {
+      // L'ouverture passe SOUS la boite de dialogue : le noir et le titre sont
+      // la scene, les mots sont par-dessus, toujours lisibles.
+      dessinerOuverture(ctx);
       invite(ctx);
       dessinerDialogue(ctx);
       // ⚠️ PAR-DESSUS l'invite et la bulle : la roue est ce qu'on regarde,

@@ -12,8 +12,33 @@ const Son = (function () {
   const tampons = new Map();      // slug -> [AudioBuffer]
   const boucles = new Map();      // slug -> source qui tourne
   let demandes = false;
+  const prechauffes = new Set();  // les fichiers deja tires dans le cache du navigateur
 
   function init(w, urlStatique) { fenetre = w; base = urlStatique || '/static/'; }
+
+  /** Tirer des mp3 dans le CACHE DU NAVIGATEUR avant d'en avoir besoin.
+
+      ⚠️ Ce n'est pas un chargement : rien n'est decode, rien n'est garde ici.
+      Decoder exige un `AudioContext`, et il n'y en a pas avant le premier geste
+      de la main — c'est justement la fenetre qu'on veut utiliser, pendant que
+      quelqu'un lit l'ecran titre. Au geste, `chargerMorceau` et `chargerHistoire`
+      trouvent les octets dans le cache et decodent sans un aller-retour.
+
+      ⚠️ A RESERVER A CE QUI DOIT SONNER TOUT DE SUITE. `static/audio/` pese
+      12 Mo en 166 fichiers, et tout le reste se charge a l'usage : prechauffer
+      largement, ce serait avaler la ville sur un forfait cellulaire pour une
+      partie de deux minutes. Rend le nombre de fichiers demandes. */
+  function prechauffer(fichiers) {
+    if (!fenetre || !fenetre.fetch || !B.defs || !B.defs.audio) return 0;
+    let n = 0;
+    (fichiers || []).forEach(function (f) {
+      if (!f || prechauffes.has(f)) return;
+      prechauffes.add(f);
+      n++;
+      fenetre.fetch(base + B.defs.audio.dossier + '/' + f).catch(function () { /* on jouera sans */ });
+    });
+    return n;
+  }
 
   /** Qui prevenir quand le son passe de « retenu » a « actif » (ou l'inverse). */
   function surEtat(f) { surChangement = f; }
@@ -1260,7 +1285,7 @@ const Son = (function () {
   };
 
   return {
-    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, ton, bruit, SFX, Mus, Chef, Rue,
+    init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle, volumeBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },

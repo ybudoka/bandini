@@ -108,6 +108,32 @@ def _l(qui: str, texte: str) -> dict:
     return {"qui": qui, "texte": texte}
 
 
+#: L'OUVERTURE — ce que le narrateur dit pendant que le car arrive au terminus.
+#:
+#: ⚠️ **Elle est ICI, avec les repliques de mission, et pas dans `histoire.js`.**
+#: Le texte est la source de la boite de dialogue ET de la voix generee : une
+#: premisse ecrite en JS ne se relit pas, ne se regenere pas a la ligne, et
+#: n'apparait dans aucun juge. C'est la meme regle que partout — la replique est
+#: la source.
+#:
+#: ⚠️ **Quatre phrases, pas dix.** On la passe (ACTION saute une ligne, PAUSE
+#: saute tout), mais la premiere partie de quelqu'un ne doit pas commencer par
+#: une minute ou il ne joue pas. Elles disent exactement ce que le jeu ne dit
+#: NULLE PART ailleurs : qui est mort, ce dont on herite, ce qu'on doit, et avec
+#: combien on debarque. Le reste, la ville le raconte toute seule.
+#:
+#: ⚠️ **Le narrateur est celui du Clairon**, et c'est voulu : c'est la meme voix
+#: qui lira la manchette du lendemain matin et, un jour, le generique de fin.
+#: Un homme qui ouvre le jeu et le ferme en fait une ligne ; deux voix en
+#: feraient deux animations.
+OUVERTURE: list[dict] = [
+    _l("narrateur", "Baie-des-Brumes. Un port, du brouillard, pis du monde qui se mêle de ses affaires."),
+    _l("narrateur", "Ton oncle Rocco est mort le mois passé. Il te laisse son garage, sa planque, pis son nom."),
+    _l("narrateur", "Il te laisse sa dette avec. Quinze mille piastres à Sal le Barbier, qui compte les jours."),
+    _l("narrateur", "T'arrives avec cinquante piastres pis un billet aller simple. Bonne chance, le jeune."),
+]
+
+
 CATALOGUE: list[Mission] = [
     {
         "slug": "m1", "titre": "Bienvenue en ville", "donneur": "ti_guy", "prerequis": [],
@@ -287,6 +313,22 @@ def repliques() -> list[dict]:
                                "texte": ligne["texte"], "mission": mission["slug"], "partie": partie,
                                "telephone": partie == "appel"})
     return sortie
+
+
+def repliques_ouverture() -> list[dict]:
+    """Les repliques de l'ouverture, avec leur slug de voix.
+
+    Meme forme que `repliques()`, et meme regle : le slug (`narrateur-ouverture-2`)
+    ne depend que de la PLACE de la ligne, donc changer un mot se regenere a la
+    ligne pres (`--refaire narrateur-ouverture-2`) sans toucher aux trois autres.
+
+    ⚠️ `mission` vaut `"ouverture"` : c'est ce qui la range avec le journal du
+    matin plutot qu'avec une mission, et ce qui permet au navigateur de charger
+    ses quatre voix d'un coup (`Son.Voix.chargerHistoire('ouverture')`).
+    """
+    return [{"slug": f"{ligne['qui']}-ouverture-{i}", "qui": ligne["qui"], "texte": ligne["texte"],
+             "mission": "ouverture", "partie": "ouverture", "telephone": False}
+            for i, ligne in enumerate(OUVERTURE, start=1)]
 
 
 def ordre_topologique() -> list[str]:

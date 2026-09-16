@@ -39,7 +39,7 @@ const Jeu = (function () {
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.cinema = null;
+    B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null;
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -55,6 +55,30 @@ const Jeu = (function () {
     // une ambiance ENREGISTREE joue (elle occupe la meme case de l'echelle).
     Son.Chef.maj();
     Hud.message('BAIE-DES-BRUMES', 150);
+  }
+
+  /** JOUER : la partie se pose, et l'histoire commence.
+
+      ⚠️ DEUX FONCTIONS ET PAS UNE, et c'est la moitie qui compte : `commencer()`
+      POSE une partie (la ville, le joueur, les donneurs) et ne raconte rien —
+      c'est ce qu'appellent les bancs d'essai, cent fois, pour juger autre chose.
+      `jouer()` est le GESTE : il pose la partie puis, si elle est neuve, lance
+      l'ouverture. Melanger les deux, c'est faire jouer une introduction a
+      chacun des cent tests qui voulaient seulement une ville.
+
+      ⚠️ L'ouverture ne part JAMAIS au chargement de la page : le navigateur
+      retient l'`AudioContext` tant que personne n'a touche, et une introduction
+      AUDIO muette n'est pas une introduction. JOUER est le geste qui accorde le
+      son ; l'ouverture commence juste apres.
+
+      ⚠️ Et seulement a une partie NEUVE : `p.x` nul veut dire qu'on n'a jamais
+      pose un pied dans la ville. Celui qui joue depuis trois jours n'a pas
+      besoin qu'on lui presente son oncle — il la revoit du carnet s'il veut. */
+  function jouer() {
+    const p = B.partie;
+    const neuve = (p.x === null || p.x === undefined) && !p.ouvertureVue;
+    commencer();
+    if (neuve) Histoire.ouverture(false);
   }
 
   // --- Les portes : noircir sur l'ancienne, changer au noir, eclaircir sur la nouvelle ---
@@ -340,12 +364,29 @@ const Jeu = (function () {
         && (Entree.neuf('action') || Entree.neuf('pause'))) {
       Son.reveiller();
       const sansSon = Son.enAttente();
-      commencer();
+      jouer();
       // ⚠️ Apres `commencer()`, qui pose son propre message : sinon le nôtre
       // est efface par « BAIE-DES-BRUMES » et le silence reste muet.
       // Commencer a la manette ne donne AUCUN geste au navigateur : il refuse
       // alors le son sans rien dire. On le dit a sa place.
       if (sansSon) Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      Entree.videPresse();
+      return;
+    }
+    // ⚠️ L'OUVERTURE FIGE LA VILLE, comme un dialogue et comme une porte : le
+    // trafic, la foule et la police ne tournent pas pendant qu'on la regarde.
+    // Deux raisons, et la seconde est la vraie : une scene ou un char peut
+    // entrer dans le champ n'est plus une scene, et surtout une partie jouee
+    // avec l'ouverture doit etre EXACTEMENT celle qu'on aurait jouee sans —
+    // c'est ce qu'un juge du banc verifie, tuile par tuile.
+    //
+    // ⚠️ PASSER (le bouton FRAPPE, ou PAUSE) saute TOUT, a la manette et au
+    // doigt comme au clavier. ACTION, lui, passe une replique : c'est
+    // `majCinema` qui s'en occupe, et les etiquettes tactiles le disent deja
+    // (« PASSER » et « SUIVANT », contexte `dialogue`).
+    if (B.etat === 'jeu' && B.ouverture) {
+      if (Entree.neuf('pause') || Entree.neuf('attaque')) { Histoire.passerOuverture(); Entree.videPresse(); return; }
+      Histoire.majOuverture();
       Entree.videPresse();
       return;
     }
@@ -556,6 +597,11 @@ const Jeu = (function () {
       // tant que le navigateur retient le son, `Mus.tick()` se contente
       // d'avancer son compteur. C'est le bandeau du titre qui reclame ce geste.
       Son.Mus.jouer('titre');
+      // ⚠️ L'ouverture est le SEUL son qu'il faut avoir avant de le jouer : elle
+      // commence a la seconde ou l'on presse JOUER, et un narrateur qui arrive
+      // trois phrases en retard ne raconte plus rien. Tout le reste de l'audio
+      // se charge a l'usage (12 Mo en 166 fichiers), et doit le rester.
+      Son.prechauffer(Histoire.fichiersDeLOuverture());
       const etat = d.getElementById('etat-chargement');
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie en cours, jour ' + B.partie.jour : 'nouvelle partie');
       dernier = 0; accu = 0;
@@ -569,7 +615,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, entrer, sortir, changerEtage, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, entrer, sortir, changerEtage, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

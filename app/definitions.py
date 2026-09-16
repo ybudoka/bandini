@@ -45,6 +45,9 @@ def assembler() -> dict:
         "missions": missions.CATALOGUE,
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
+        # Les quatre phrases de l'ouverture, avec leur slug de voix : le
+        # navigateur les lit, il ne refait pas la regle du slug.
+        "ouverture": missions.repliques_ouverture(),
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
         "journal_speciales": journal.SPECIALES,

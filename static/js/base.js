@@ -49,6 +49,7 @@ const B = {
              manette: null, manetteProfil: null },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
+  ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },
@@ -141,6 +142,13 @@ function etatInitial(defs) {
     // dixieme fois, mais une nouvelle partie recommence a zero — et c'est la
     // qu'on en a besoin.
     leconsLues: [],
+    //: L'ouverture a ete vue. ⚠️ Elle ne joue qu'a la PREMIERE partie d'une
+    //: sauvegarde : une introduction qu'on revoit a chaque chargement devient
+    //: un peage. Elle se revoit quand on la demande (LE CARNET > REVOIR
+    //: L'OUVERTURE), et une partie deja commencee (`x` non nul) ne la voit
+    //: jamais — celui qui joue depuis trois jours n'a pas besoin qu'on lui
+    //: presente son oncle.
+    ouvertureVue: false,
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };

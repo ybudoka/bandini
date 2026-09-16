@@ -15,14 +15,25 @@ from app import economie, vehicules
 def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     r = banc("""function (L, o) {
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
-                 carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length };
+                 carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length,
+                 ouverture: L.Histoire.fichiersDeLOuverture().length };
     }""")
     assert r["etat"] == "titre"
     for cle in ("B", "Base", "Atlas", "Entree", "Son", "Monde", "Entites", "Combat", "Vehicules",
                 "Police", "Missions", "Hud", "Jeu", "Sauvegarde", "SPRITES", "TUILES"):
         assert cle in r["cles"], cle
     assert r["carte"] == [paquet["carte"]["largeur"], paquet["carte"]["hauteur"]]
-    assert r["fetchs"] == 1
+    # ⚠️ UNE SEULE REQUETE, PLUS CELLES DE L'OUVERTURE — et pas une de plus.
+    # Le paquet de definitions, puis les mp3 de l'ouverture (sa musique et ses
+    # quatre voix) que `Son.prechauffer` tire dans le cache du navigateur
+    # pendant qu'on lit l'ecran titre : elle part a la seconde ou l'on presse
+    # JOUER, et un narrateur qui arrive en retard ne raconte plus rien. Tout le
+    # reste de l'audio (12 Mo en 166 fichiers) se charge A L'USAGE, et le
+    # chiffre ci-dessous est ce qui le garantit : il ne bouge que si quelqu'un
+    # ajoute une phrase a l'ouverture, jamais parce qu'un son de plus s'est
+    # invite au demarrage.
+    assert r["fetchs"] == 1 + r["ouverture"]
+    assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 
 def test_les_sprites_sont_integres(banc):

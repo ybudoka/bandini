@@ -248,8 +248,8 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
     cours — jamais au demarrage."""
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
-    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "journal"}, \
-        "les cinq missions, et le journal lu par le narrateur"
+    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "journal", "ouverture"}, \
+        "les cinq missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
     assert all(v["qui"] and v["partie"] for v in histoire)
     assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
     assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in histoire)

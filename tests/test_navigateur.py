@@ -46,6 +46,22 @@ def attendre_titre(page):
     page.wait_for_selector('#bandini[data-etat="titre"]', timeout=15000)
 
 
+def jouer(page):
+    """JOUER, puis PASSER l'ouverture : les juges d'ici veulent la ville, pas la scene.
+
+    ⚠️ Depuis que le jeu s'ouvre sur une scene (le car de six heures, le
+    narrateur), cliquer JOUER ne rend plus les commandes tout de suite : elle
+    fige la ville tant qu'on ne l'a pas passee, et un test qui marche au clavier
+    juste apres ne bouge pas d'un pixel. Tout ce qui veut jouer DANS la ville
+    passe donc par ici — un seul endroit a changer le jour ou l'ouverture change.
+    L'ouverture elle-meme a ses juges, plus bas et au banc.
+    """
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function("!window.BANDINI.B.ouverture")
+
+
 @pytest.mark.parametrize("ecran", list(ECRANS))
 def test_la_page_charge_sans_erreur(page, serveur, erreurs, ecran):
     page.set_viewport_size({"width": ECRANS[ecran][0], "height": ECRANS[ecran][1]})
@@ -59,7 +75,7 @@ def test_la_page_charge_sans_erreur(page, serveur, erreurs, ecran):
 def test_jouer_puis_marcher_au_clavier(page, serveur, erreurs):
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     page.keyboard.down("KeyD")
@@ -69,6 +85,45 @@ def test_jouer_puis_marcher_au_clavier(page, serveur, erreurs):
     assert x1 > x0 + 20
     page.keyboard.press("Escape")
     page.wait_for_selector('#bandini[data-etat="pause"]')
+    assert erreurs == []
+
+
+def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
+    """L'ouverture dans un vrai navigateur : elle part sur JOUER, elle parle, elle se passe.
+
+    ⚠️ C'est le SEUL endroit qui prouve qu'elle sonne. Sous Node il n'y a pas
+    d'AudioContext : le banc verifie qu'on DEMANDE la voix, jamais qu'elle se
+    decode. Et c'est aussi le seul endroit qui prouve l'autre moitie — que rien
+    n'a ete demande au son AVANT le geste, ce qui est toute la raison pour
+    laquelle l'ouverture part de JOUER et pas du chargement de la page.
+    """
+    page.goto(serveur)
+    attendre_titre(page)
+    # Avant le geste : les mp3 de l'ouverture sont deja tires dans le cache du
+    # navigateur, mais le son, lui, est encore retenu.
+    assert page.evaluate("window.BANDINI.Son.etatSon()") in ("absent", "attente")
+    page.click("#bouton-jouer")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    assert page.evaluate("!!window.BANDINI.B.ouverture"), "JOUER lance la scene"
+    assert page.evaluate("window.BANDINI.B.cinema.lignes.length") == 4
+    # La voix se DECODE et se dit : une replique muette n'est pas une narration.
+    page.wait_for_function("window.BANDINI.Son.Voix.enCours !== null", timeout=10000)
+    assert page.evaluate("window.BANDINI.Son.Voix.demandees[0]") == "narrateur-ouverture-1"
+    assert page.evaluate("window.BANDINI.Son.Mus.courante") == "ouverture"
+    # Le car arrive, et le bonhomme n'est pas encore descendu.
+    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus').length") == 1
+    # PASSER, au clavier : on tombe dans la ville, et on marche.
+    x0 = page.evaluate("window.BANDINI.B.joueur.x")
+    y0 = page.evaluate("window.BANDINI.B.joueur.y")
+    page.keyboard.press("Space")
+    page.wait_for_function("!window.BANDINI.B.ouverture")
+    assert page.evaluate("window.BANDINI.B.joueur.dessine") is True
+    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus').length") == 0
+    page.keyboard.down("KeyW")
+    page.wait_for_timeout(400)
+    page.keyboard.up("KeyW")
+    bouge = page.evaluate("window.BANDINI.B.joueur.y") != y0 or page.evaluate("window.BANDINI.B.joueur.x") != x0
+    assert bouge, "les commandes sont rendues des que la scene est passee"
     assert erreurs == []
 
 
@@ -82,6 +137,10 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     attendre_titre(page)
     page.tap("#bouton-jouer")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
+    # ⚠️ Au doigt aussi, l'ouverture fige la ville : ce juge mesure des
+    # pastilles et un joystick, pas une scene. Elle a les siens.
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function("!window.BANDINI.B.ouverture")
     assert page.evaluate("document.body.classList.contains('tactile')")
     for action, minimum in (("attaque", 64), ("action", 64), ("esquive", 64), ("arme", 64), ("pause", 44)):
         boite = page.locator(f'#tactile b[data-a="{action}"]').bounding_box()
@@ -159,7 +218,7 @@ def test_les_echantillons_se_chargent_dans_un_vrai_navigateur(page, serveur, err
     """
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")          # le clic reveille l'audio
+    jouer(page)          # le clic reveille l'audio
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     # ⚠️ Attendre l'EGALITE, pas « au moins un » : les fichiers se decodent en
     # parallele, et un test qui part au premier decode ne verrait jamais un MP3
@@ -177,7 +236,7 @@ def test_la_radio_joue_au_tour_de_cle(page, serveur, erreurs):
     seulement ici, qu'on sait que la piste de jazz se DECODE."""
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur;
@@ -198,7 +257,7 @@ def test_l_ambiance_et_les_voix_se_decodent(page, serveur, erreurs):
     l'oreille."""
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     # ⚠️ L'ambiance de la ville ne demarre plus toute seule : chaque district
     # a maintenant la sienne, ecrite en notes (`Son.Chef`). Le fichier, lui,
@@ -221,7 +280,7 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     decode — et que la musique baisse pendant qu'il parle (ducking)."""
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     # ⚠️ L'ambiance de la ville ne demarre plus toute seule : chaque district
     # a maintenant la sienne, ecrite en notes (`Son.Chef`). Le fichier, lui,
@@ -252,7 +311,7 @@ def test_la_ville_tient_le_rythme_de_nuit_a_trois_etoiles(page, serveur, erreurs
     hors de prix. Le chiffre s'imprime : c'est lui qu'on regarde."""
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur;
@@ -297,7 +356,7 @@ def test_un_vrai_geste_rend_le_son_et_efface_le_bandeau(page, serveur, erreurs):
     page.goto(serveur)
     attendre_titre(page)
     assert page.evaluate("() => window.BANDINI.Son.enAttente()") is True
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     page.wait_for_function("window.BANDINI.Son.etatSon() === 'actif'", timeout=10000)
     assert page.evaluate("() => document.getElementById('avis-son').hidden") is True
@@ -307,7 +366,7 @@ def test_un_vrai_geste_rend_le_son_et_efface_le_bandeau(page, serveur, erreurs):
 def test_les_options_disent_l_etat_du_son(page, serveur, erreurs):
     page.goto(serveur)
     attendre_titre(page)
-    page.click("#bouton-jouer")
+    jouer(page)
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     ligne = page.evaluate("""() => {
         const L = window.BANDINI;
@@ -378,7 +437,7 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
     page.add_init_script(SONDE_AUDIO)
     page.goto(serveur)
     page.wait_for_selector('#bandini[data-etat="titre"]', timeout=45000)
-    page.click("#bouton-jouer")          # un vrai geste : le son est accorde
+    jouer(page)          # un vrai geste : le son est accorde
     page.wait_for_selector('#bandini[data-etat="jeu"]', timeout=45000)
     page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=45000)
     page.wait_for_function(

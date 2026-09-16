@@ -290,7 +290,10 @@ const Histoire = (function () {
     const p = personnage(l.qui);
     c.t = 0;
     c.duree = 90 + l.texte.length * 3;                      // le temps de lire, si la voix manque
-    Hud.dialogue((p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0);
+    // ⚠️ `anonyme` : l'ouverture n'a personne au-dessus de sa boite — c'est une
+    // voix qu'on entend, pas quelqu'un a qui l'on parle. Le Clairon se
+    // presentera demain matin, avec sa manchette.
+    Hud.dialogue(c.anonyme ? '' : (p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0);
     c.voix = Son.Voix.parler(l.slug, { telephone: l.telephone, fin: function () { if (B.cinema === c && c.i === c.lignes.indexOf(l)) c.duree = Math.min(c.duree, c.t + 20); } });
   }
 
@@ -299,7 +302,10 @@ const Histoire = (function () {
     B.cinema = null;
     B.dialogue = null;
     Son.Voix.couper();
-    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+    // ⚠️ Pendant l'ouverture, la derniere replique ne rend PAS les commandes :
+    // la scene tourne encore (le car repart, le titre s'inscrit) et PASSER doit
+    // rester PASSER jusqu'au bout.
+    Entree.contexte(B.ouverture ? 'dialogue' : B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
     if (c && c.fin) c.fin();
   }
 
@@ -319,6 +325,271 @@ const Histoire = (function () {
     if (!c) return;
     c.t++;
     if (Entree.neuf('action') || Entree.neuf('attaque') || c.t > c.duree) suivante();
+  }
+
+  // --- L'OUVERTURE : le car de six heures ---------------------------------------------------
+
+  /*: LA SCENE, en images (60 = une seconde). ⚠️ Elle est plus COURTE que la
+    narration, et c'est voulu : le car arrive, on descend, il repart, et le
+    narrateur finit sa phrase sur la ville — pas sur un autobus arrete au milieu
+    de la rue. L'ouverture se termine quand les DEUX sont finis (la scene ET les
+    quatre repliques), jamais au premier des deux. */
+  const OUV = { noir: 45, arrivee: 170, porte: 70, depart: 130, titre: 30, tenu: 150 };
+
+  /*: D'ou le car arrive, et ou il s'en va, en pixels : hors champ des deux
+    cotes (l'ecran fait 480 de large). Un car qui apparait dans le cadre ne
+    s'est jamais approche, il s'est allume. */
+  const OUV_LOIN = 330;
+
+  /** L'ouverture : le car de six heures entre au terminus, le bonhomme en
+      descend, et le narrateur dit d'ou l'on vient.
+
+      ⚠️ ELLE NE TIRE AUCUN DE. Le car recoit sa couleur en clair (`creer` en
+      tirerait une), aucune particule n'est semee au hasard, et la ville est
+      figee pendant qu'elle joue : une partie jouee avec l'ouverture doit etre
+      exactement la meme qu'une partie jouee sans — c'est ce qu'un juge du banc
+      verifie, et c'est la seule facon qu'une animation ne change pas le jeu.
+
+      ⚠️ ET ELLE NE PART PAS AU CHARGEMENT DE LA PAGE : le navigateur retient le
+      son tant que personne n'a touche, et une introduction audio muette n'est
+      pas une introduction. C'est `Jeu.jouer()` qui l'appelle, apres le geste.
+
+      Rend `false` si la scene est impossible (pas de rue devant le terminus) :
+      la partie commence alors comme avant, sans rien dire. */
+  function ouverture(rejoue) {
+    const j = B.joueur;
+    if (!j || B.ouverture || B.interieur) return false;
+    const porte = lieu('terminus');
+    const arret = porte && tuileDeRue(porte.x, porte.y, 10);
+    if (!porte || !arret) return false;
+    const def = Vehicules.vehiculeDef('autobus');
+    if (!def) return false;
+    const sens = arret.sens;
+    const angle = sens === '<' ? Math.PI : sens === '^' ? -Math.PI / 2 : sens === 'v' ? Math.PI / 2 : 0;
+    const dx = Math.cos(angle), dy = Math.sin(angle);
+    // ⚠️ La couleur EN CLAIR : `Vehicules.creer` en tire une du catalogue
+    // sinon, et un de tire ici decale tous ceux qui suivent — le trafic et la
+    // foule de la partie ne seraient plus les memes selon qu'on a regarde
+    // l'ouverture ou qu'on l'a passee.
+    const car = Vehicules.creer('autobus', arret.x - dx * OUV_LOIN, arret.y - dy * OUV_LOIN, angle,
+                                { couleur: def.couleurs[0], etat: 'stationne' });
+    if (!car) return false;
+    j.dessine = false;                       // il est dans le car : on ne le voit pas encore
+    j.vx = 0; j.vy = 0;
+    // ⚠️ DEUX ENDROITS, ET ILS NE SONT LE MEME QU'AU PREMIER MATIN. `quai` est
+    // la ou l'on descend du car ; `retour` la ou l'on etait avant la scene.
+    //   - Partie neuve : on descend LA OU L'ON SERAIT NE sans l'ouverture (sa
+    //     tuile d'apparition, devant le terminus) — c'est ce qui fait qu'une
+    //     partie avec l'ouverture est exactement celle qu'on aurait sans.
+    //   - REVUE du carnet : on est peut-etre a l'autre bout de la ville. La
+    //     scene se joue quand meme au terminus (c'est la qu'est le car), le
+    //     bonhomme y est prete le temps de la revoir — il est invisible et la
+    //     ville est figee, personne ne le voit voyager — et il revient chez lui
+    //     a la derniere image. Sans `retour`, revoir l'ouverture te teleporterait
+    //     au terminus : une animation qui deplace le joueur n'est plus une
+    //     animation.
+    const chezLui = { x: j.x, y: j.y };
+    B.ouverture = {
+      t: 0, car: car, angle: angle, dx: dx, dy: dy,
+      arret: { x: arret.x, y: arret.y },
+      quai: rejoue ? { x: porte.x, y: porte.y } : chezLui,
+      retour: chezLui,
+      rejoue: !!rejoue,
+      noir: 1, titre: 0, descendu: false, parti: false, scene: false,
+    };
+    // La camera part sur la rue d'ou le car arrive, et remonte avec lui.
+    B.ouverture.vise = { x: arret.x - dx * 80, y: arret.y - dy * 80 };
+    Monde.centrerCamera(B.ouverture.vise.x, B.ouverture.vise.y);
+    Son.Voix.chargerHistoire('ouverture');
+    Son.Mus.jouer('ouverture');
+    Son.boucle('moteur', true);
+    Entree.contexte('dialogue');
+    direOuverture();
+    return true;
+  }
+
+  /** Les quatre phrases du narrateur. ⚠️ Elles viennent du PAQUET
+      (`missions.repliques_ouverture()`), avec leur slug de voix deja calcule :
+      le navigateur ne refait pas la regle du slug, il la lit. */
+  function direOuverture() {
+    const lignes = (B.defs.ouverture || []).map(function (l) {
+      return { qui: l.qui, texte: l.texte, telephone: false, slug: l.slug };
+    });
+    if (!lignes.length) return false;
+    B.cinema = { lignes: lignes, i: -1, t: 0, duree: 0, fin: null, mission: 'ouverture', partie: 'ouverture',
+                 // ⚠️ Sans nom au-dessus de la boite : c'est une voix qu'on
+                 // entend, pas quelqu'un a qui l'on parle. Le Clairon se
+                 // presentera bien assez tot, demain matin.
+                 anonyme: true };
+    suivante();
+    return true;
+  }
+
+  /** Les mp3 sans lesquels l'ouverture se joue muette : sa musique et ses
+      quatre voix. ⚠️ Lus dans le PAQUET : un fichier absent n'y est pas declare
+      (`audio.exporter`), donc on ne prechauffe jamais un 404. */
+  function fichiersDeLOuverture() {
+    const a = (B.defs && B.defs.audio) || {};
+    const sortie = [];
+    const mus = (a.musiques || []).find(function (m) { return m.slug === 'ouverture'; });
+    if (mus && mus.fichier) sortie.push(mus.fichier);
+    (a.histoire || []).forEach(function (v) { if (v.mission === 'ouverture' && v.fichier) sortie.push(v.fichier); });
+    return sortie;
+  }
+
+  /** Une image de la scene. La ville est figee (voir `Jeu.maj`) : ici bougent le
+      car, la camera, le noir, le titre — et la replique en cours. */
+  function majOuverture() {
+    const o = B.ouverture, j = B.joueur;
+    if (!o || !j) return;
+    o.t++;
+    o.noir = Math.max(0, 1 - o.t / OUV.noir);
+    const finArrivee = OUV.arrivee, finPorte = finArrivee + OUV.porte, finDepart = finPorte + OUV.depart;
+    if (o.t <= finArrivee) {
+      // Le car entre et ralentit : l'approche freine, elle ne glisse pas.
+      const u = o.t / finArrivee, k = 1 - Math.pow(1 - u, 3);
+      placerLeCar(o, -OUV_LOIN * (1 - k));
+      o.vise.x = o.arret.x - o.dx * 80 * (1 - k);
+      o.vise.y = o.arret.y - o.dy * 80 * (1 - k);
+      Monde.centrerCamera(o.vise.x, o.vise.y);
+      if (o.t === finArrivee) { Son.SFX.porte_vehicule(); fumee(o, 6); }
+    } else if (o.t <= finPorte) {
+      // Arret. Les portes s'ouvrent, et quelqu'un descend.
+      placerLeCar(o, 0);
+      // ⚠️ IL DESCEND, PUIS IL MARCHE — il n'apparait pas a la porte. Pose
+      // d'un coup sur sa tuile d'apparition (a trois tuiles de la), la scene se
+      // lisait « quelqu'un s'allume sur le trottoir » et non « quelqu'un sort du
+      // car ». Il nait donc A COTE DU CAR et rejoint le quai a pied, le temps de
+      // l'arret. C'est la scene qui bouge ses jambes (`anim.dist`, `face`) :
+      // `Entites.majJoueur` ne tourne pas pendant l'ouverture.
+      if (!o.descendu && o.t > finArrivee + 14) {
+        o.descendu = true;
+        o.marcheT = o.t;
+        j.dessine = true;
+        // ⚠️ DU BON COTE DU CAR, et ce n'est pas toujours le meme : la rue du
+        // terminus peut courir dans les quatre sens selon la carte generee. On
+        // sort donc du cote OU L'ON VA (le trottoir), jamais du cote fixe — un
+        // bonhomme qui descend dans la voie d'en face traverserait la rue a
+        // pied pendant que son car repart.
+        const px = o.dy, py = -o.dx;
+        const vers = ((o.quai.x - o.car.x) * px + (o.quai.y - o.car.y) * py) >= 0 ? 1 : -1;
+        j.x = o.car.x - o.dx * 6 + px * 12 * vers;
+        j.y = o.car.y - o.dy * 6 + py * 12 * vers;
+        o.portiere = { x: j.x, y: j.y };
+        Son.SFX.pas();
+      }
+      if (o.descendu) marcherVersLeQuai(o, j);
+      viser(o, o.descendu ? o.quai : o.arret, 0.06);
+    } else if (o.t <= finDepart) {
+      // Il repart. ⚠️ Le car s'EN VA pour de vrai (on le retire) : un autobus
+      // gare devant le terminus jusqu'a la fin des temps serait un char de plus
+      // a voler, ne au premier geste de la partie.
+      const u = (o.t - finPorte) / OUV.depart;
+      placerLeCar(o, OUV_LOIN * u * u);
+      if (o.t === finPorte + 1) { Son.SFX.porte_vehicule(); fumee(o, 10); }
+      viser(o, o.quai, 0.06);
+    } else {
+      if (!o.parti) { o.parti = true; Entites.retirer(o.car); Son.boucle('moteur', false); }
+      // ⚠️ LE TITRE MONTE, TIENT, PUIS S'EN VA. La narration dure quatre voix
+      // (une vingtaine de secondes) et la scene sept : un titre laisse allume
+      // jusqu'au bout tiendrait quinze secondes sur un ecran fixe. Il s'inscrit,
+      // on le lit, et la ville reste — c'est elle qu'on est venu voir.
+      o.titreT = (o.titreT || 0) + 1;
+      o.titre = o.titreT <= OUV.titre ? o.titreT / OUV.titre
+              : o.titreT <= OUV.titre + OUV.tenu ? 1
+              : Math.max(0, 1 - (o.titreT - OUV.titre - OUV.tenu) / OUV.titre);
+      o.scene = true;
+      viser(o, o.quai, 0.08);
+    }
+    // ⚠️ `majCinema()` ET PAS `maj()`. La replique avance, et elle SEULE :
+    // `maj()` enchaine sur les bulles, le telephone, l'objectif et les defis
+    // des que la derniere phrase est dite — c'est-a-dire au milieu de la scene.
+    // Un appel de mission qui sonne pendant l'ouverture remplacerait `B.cinema`
+    // par le sien, et la scene attendrait la fin d'un dialogue qu'elle n'a
+    // jamais demande.
+    majCinema();
+    if (o.scene && !B.cinema) finirOuverture();
+  }
+
+  /** Les quelques pas de la portiere au trottoir, en ligne droite. Le monde est
+      fige : c'est ici qu'on avance ses jambes, sinon il glisserait sans marcher. */
+  function marcherVersLeQuai(o, j) {
+    const reste = Math.max(1, OUV.porte - 14);
+    const u = Math.min(1, (o.t - o.marcheT) / reste);
+    const ax = j.x, ay = j.y;
+    j.x = o.portiere.x + (o.quai.x - o.portiere.x) * u;
+    j.y = o.portiere.y + (o.quai.y - o.portiere.y) * u;
+    const dx = j.x - ax, dy = j.y - ay;
+    j.vx = dx; j.vy = dy;
+    j.anim.dist += Math.abs(dx) + Math.abs(dy);
+    if (Math.abs(dx) + Math.abs(dy) > 0.05) {
+      j.face = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
+    } else { j.vx = 0; j.vy = 0; }
+    Entites.dansLaCarte(j);
+  }
+
+  function placerLeCar(o, avance) {
+    const v = o.car;
+    v.x = o.arret.x + o.dx * avance; v.y = o.arret.y + o.dy * avance;
+    // ⚠️ A L'ARRET AU SENS DE LA PHYSIQUE, toujours : la scene POSE le car, elle
+    // ne le conduit pas. Une vitesse ici et il continuerait tout seul l'image
+    // ou la ville se remet a tourner — au milieu de la rue, sans conducteur.
+    v.vx = 0; v.vy = 0; v.vitesse = 0; v.angle = o.angle;
+  }
+
+  /** Le pot d'echappement. ⚠️ Des angles FIXES : `Entites.poussiere` tire des
+      des, et l'ouverture n'en tire aucun. */
+  function fumee(o, n) {
+    const v = o.car, ax = -o.dx, ay = -o.dy;
+    for (let i = 0; i < n; i++) {
+      const e = (i / n - 0.5) * 0.9;
+      Entites.particule(v.x + ax * (v.def.longueur / 2), v.y + ay * (v.def.longueur / 2),
+                        ax * 0.5 + e * 0.3, ay * 0.5 + e * 0.3, 18, '#9a958c', 1, 0.02);
+    }
+  }
+
+  function viser(o, cible, part) {
+    o.vise.x += (cible.x - o.vise.x) * part;
+    o.vise.y += (cible.y - o.vise.y) * part;
+    Monde.centrerCamera(o.vise.x, o.vise.y);
+  }
+
+  /** PASSER : on saute tout, et on tombe exactement la ou l'ouverture nous
+      aurait laisses. ⚠️ Une ouverture qu'on ne peut pas passer devient une
+      punition a la deuxieme partie. */
+  function passerOuverture() {
+    if (!B.ouverture) return false;
+    Son.Voix.couper();
+    B.cinema = null; B.dialogue = null;
+    finirOuverture();
+    return true;
+  }
+
+  function finirOuverture() {
+    const o = B.ouverture, j = B.joueur;
+    if (!o) return;
+    B.ouverture = null;
+    if (!o.parti && o.car) Entites.retirer(o.car);
+    Son.boucle('moteur', false);
+    Son.Voix.couper();
+    B.cinema = null; B.dialogue = null;
+    if (j) {
+      const ou = o.rejoue ? o.retour : o.quai;
+      j.dessine = true; j.x = ou.x; j.y = ou.y; j.vx = 0; j.vy = 0;
+      Entites.dansLaCarte(j);
+      Monde.centrerCamera(j.x, j.y);
+    }
+    Entree.contexte('pied');
+    Son.Mus.arreter();                       // la ville reprend la main
+    Son.Chef.maj();
+    // ⚠️ ELLE NE SE REJOUE PAS. Le drapeau part dans la sauvegarde tout de
+    // suite : quelqu'un qui regarde l'ouverture puis ferme l'onglet ne doit pas
+    // la revoir a son retour. Il la revoit quand IL le demande (le carnet).
+    if (!o.rejoue && B.partie) {
+      B.partie.ouvertureVue = true;
+      if (typeof Missions !== 'undefined' && Missions.sauvegarderPartie) Missions.sauvegarderPartie();
+      Hud.message('BAIE-DES-BRUMES', 150);
+    }
   }
 
   // --- Le telephone ------------------------------------------------------------------------
@@ -846,6 +1117,7 @@ const Histoire = (function () {
   return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
            donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
+           ouverture, majOuverture, passerOuverture, finirOuverture, fichiersDeLOuverture, OUV,
            noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
 })();

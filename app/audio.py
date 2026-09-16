@@ -495,6 +495,16 @@ MUSIQUES: list[Piece] = [
        "harbour town at night, melancholic but calm, no vocals, seamless loop",
        duree_s=45, volume=0.5),
 
+    # L'OUVERTURE. ⚠️ Trente secondes, comme la boucle ecrite : elle joue une
+    # fois et demie pendant que le narrateur parle, puis la ville reprend. Un
+    # morceau plus long ne se serait jamais entendu en entier ; un plus court se
+    # serait entendu reboucler au milieu d'une phrase.
+    _m("ouverture",
+       "slow mournful cinematic opening at 64 bpm in A minor, long sustained "
+       "low strings, distant foghorn, sparse felt piano, a night bus arriving in "
+       "a wet harbour town, unresolved and heavy, no drums, no vocals, loopable",
+       duree_s=30, volume=0.44),
+
     # --- Les deux stations de char (le bouton RADIO peut tomber dessus) ------
     _m("station_camion",
        "mid-tempo country rock instrumental at 104 bpm in C major, twangy "
@@ -817,8 +827,28 @@ def voix_journal() -> list[dict]:
             for r in journal.REGLES + journal.SPECIALES + journal.LECONS]
 
 
+def voix_ouverture() -> list[dict]:
+    """Les quatre phrases de l'ouverture, dites par le narrateur du Clairon.
+
+    ⚠️ Exactement la meme mecanique que `voix_journal()` : le texte vit dans
+    `missions.py`, le slug suit la place de la ligne, et le mp3 manquant laisse
+    la phrase s'afficher sans voix. C'est ce qui permet d'ecrire l'ouverture,
+    de la jouer et de la juger AVANT de depenser un credit.
+    """
+    from . import missions
+    perso = missions.personnage("narrateur")
+    if perso is None:
+        raise ValueError("le narrateur manque a missions.PERSONNAGES")
+    return [{"slug": ligne["slug"], "texte": ligne["texte"], "genre": perso["genre"], "voix": perso["voix"],
+             # ⚠️ Un peu plus fort que la manchette : elle joue sur une musique,
+             # pas dans le silence d'un encadre.
+             "volume": 0.92, "histoire": True, "qui": ligne["qui"], "mission": ligne["mission"],
+             "partie": ligne["partie"], "telephone": False}
+            for ligne in missions.repliques_ouverture()]
+
+
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + voix_histoire() + voix_journal()
+    return list(VOIX) + voix_histoire() + voix_journal() + voix_ouverture()
 
 
 def voix_par_slug(slug: str) -> Voix | None:
@@ -1000,6 +1030,6 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_histoire() + voix_journal()
+            for v in voix_histoire() + voix_journal() + voix_ouverture()
         ],
     }

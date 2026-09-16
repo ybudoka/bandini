@@ -130,7 +130,65 @@ _BALAI: list[list[float]] = [
     [6, 6800, 1, 1.00],
 ]
 
+#: L'OUVERTURE — le car de six heures entre dans la ville.
+#:
+#: ⚠️ Elle n'est PAS le theme du menu ralenti : le menu tourne en rond sans
+#: accrocher l'oreille (c'est sa job), l'ouverture doit RACONTER quelque chose
+#: en trente secondes et se taire. Elle marche donc sur une grille qui ne se
+#: resout pas — Am F C G, puis Am F Dm E7, qui laisse la question ouverte au
+#: moment exact ou le bonhomme descend du car.
+#:
+#: ⚠️ Trois voix, et rien d'autre : une basse qui tient la note comme un moteur
+#: au ralenti, une nappe, et un chant de corne de brume. Une batterie ici
+#: mettrait un rythme sous une scene ou personne ne marche encore.
+_OUV_BASSE: list[list[float]] = [
+    [0, 33, 4], [4, 40, 4],      # Am  : la, mi
+    [8, 29, 4], [12, 36, 4],     # F   : fa, do
+    [16, 36, 4], [20, 43, 4],    # C   : do, sol
+    [24, 31, 4], [28, 38, 4],    # G   : sol, re
+    [32, 33, 4], [36, 40, 4],    # Am
+    [40, 29, 4], [44, 36, 4],    # F
+    [48, 38, 4], [52, 45, 4],    # Dm  : re, la
+    [56, 40, 4], [60, 47, 4],    # E7  : mi, si
+]
+
+_OUV_NAPPE = _accords(
+    (57, 60, 64),       # Am
+    (57, 60, 65),       # F
+    (55, 60, 64),       # C
+    (55, 59, 62),       # G
+    (57, 60, 64),       # Am
+    (57, 60, 65),       # F
+    (57, 62, 65),       # Dm
+    (56, 59, 64),       # E7
+)
+
+#: La corne de brume : des notes longues, peu nombreuses, et des silences. Elle
+#: ne repete pas — elle descend, exactement comme la ville qui se referme.
+_OUV_CHANT: list[list[float]] = [
+    [0, 69, 6], [8, 72, 6],
+    [16, 76, 4], [20, 72, 4],
+    [24, 71, 8],
+    [32, 69, 4], [36, 67, 4],
+    [40, 65, 8],
+    [48, 69, 6],
+    [56, 64, 8],
+]
+
 MORCEAUX: list[Morceau] = [
+    {
+        "slug": "ouverture",
+        "nom": "L'autobus de six heures",
+        "bpm": 64,
+        "pas_par_temps": PAS_PAR_TEMPS,
+        "pas": 8 * PAS_PAR_MESURE,
+        "volume": 0.85,
+        "voix": [
+            {"role": "basse", "forme": "triangle", "volume": 0.40, "notes": _OUV_BASSE},
+            {"role": "nappe", "forme": "sine", "volume": 0.12, "notes": _OUV_NAPPE},
+            {"role": "chant", "forme": "sine", "volume": 0.16, "notes": _OUV_CHANT},
+        ],
+    },
     {
         "slug": "titre",
         "nom": "Baie-des-Brumes",
