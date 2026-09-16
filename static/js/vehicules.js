@@ -61,6 +61,30 @@ const Vehicules = (function () {
 
   // --- Naissance ------------------------------------------------------------------
 
+  /** LA SILHOUETTE d'un char qui nait : celle que la fiche du catalogue
+      nomme, ou l'une de ses `variantes` (demande de Martin : « parfois des
+      différences structurelles, pas juste la couleur »).
+
+      ⚠️ **SANS TIRER DE DE**, comme la tete du pilote : la silhouette se lit
+      sur la position de naissance (`hash2`). Un `B.rng()` ici decalait tout ce
+      qui nait apres — la couleur, le pilote, l'auto-patrouille d'un juge.
+      ⚠️ Et une silhouette DONNEE est gardee (`options.sprite`) : le char de la
+      planque et ceux du lot reviennent tels qu'on les a laisses, pas tires a
+      nouveau a leur nouvelle place. Seulement si elle appartient a CE char : un
+      taxi ne revient pas en camionnette. */
+  function silhouetteDe(def, x, y, options) {
+    const base = SPRITES[def.sprite];
+    const variantes = base && base.variantes;
+    const donnee = options && options.sprite;
+    if (donnee && (donnee === def.sprite || (variantes && variantes[donnee]))) return donnee;
+    if (!variantes) return def.sprite;
+    const noms = Object.keys(variantes);
+    const total = noms.reduce(function (t, n) { return t + variantes[n]; }, 0);
+    let tirage = hash2(Math.round(y), Math.round(x)) / 4294967296 * total;
+    for (const n of noms) { tirage -= variantes[n]; if (tirage < 0) return n; }
+    return def.sprite;
+  }
+
   function creer(slug, x, y, angle, options) {
     const def = vehiculeDef(slug);
     if (!def) return null;
@@ -78,6 +102,7 @@ const Vehicules = (function () {
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
       vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null, parcouru: 0,
     }, options || {}));
+    v.sprite = silhouetteDe(def, x, y, options);
     // ⚠️ UN DEUX-ROUES DU TRAFIC A UN PILOTE, et il a ses propres couleurs. Le
     // cycliste etait cuit dans le velo — la meme tete pour toute la ville. Un
     // sprite qui declare une `selle` prend un passant assis dessus, tire des

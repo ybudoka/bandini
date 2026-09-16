@@ -749,7 +749,7 @@ const Histoire = (function () {
     const rue = tuileDeRue(j.x, j.y, 10);
     if (!rue) return;
     const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
-    const v = Vehicules.creer('auto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, escorte: true, sens: rue.sens, mission: m.slug, couleur: '#2e8b57', swaps: { c: '#2e8b57' } });
+    const v = Vehicules.creer('auto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, escorte: true, sens: rue.sens, mission: m.slug, couleur: '#2e8b57' });
     if (!v) return;
     B.mission.escorte = v; B.mission.entites.push(v);
   }

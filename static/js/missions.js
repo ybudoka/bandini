@@ -604,7 +604,7 @@ const Missions = (function () {
   function saisir(v) {
     if (!v || !v.def) return false;
     const f = B.defs.economie.fourriere, p = B.partie;
-    p.fourriere.push({ slug: v.slug, couleur: v.couleur, vie: Math.max(1, Math.round(v.vie)), vole: !!v.vole });
+    p.fourriere.push({ slug: v.slug, sprite: v.sprite, couleur: v.couleur, vie: Math.max(1, Math.round(v.vie)), vole: !!v.vole });
     while (p.fourriere.length > f.places) p.fourriere.shift();
     if (B.joueur && B.joueur.dansVehicule === v) Vehicules.descendre(B.joueur, true);
     Entites.retirer(v);
@@ -754,9 +754,12 @@ const Missions = (function () {
       const def = Vehicules.vehiculeDef(c.slug);
       if (!def) return;
       const angle = place.sens === 'N' ? -Math.PI / 2 : place.sens === 'S' ? Math.PI / 2 : place.sens === 'O' ? Math.PI : 0;
-      const v = Vehicules.creer(c.slug, place.x * TT + 8, place.y * TT + 8, angle, { etat: 'stationne' });
+      const v = Vehicules.creer(c.slug, place.x * TT + 8, place.y * TT + 8, angle, { etat: 'stationne', sprite: c.sprite });
       if (!v) return;
-      v.couleur = c.couleur; v.swaps = { c: c.couleur };
+      // ⚠️ `nuances`, pas `{ c: couleur }` : le rehaut et l'ombre suivent la
+      // couleur. Sans eux, une auto bleue revenait du lot avec le toit et le
+      // cadre des vitres de la palette — rouges.
+      v.couleur = c.couleur; v.swaps = nuances(c.couleur);
       v.vie = Math.max(1, c.vie); v.vole = !!c.vole;
       v.saisi = i;                    // son rang dans le lot : le comptoir s'y retrouve
       poses++;
@@ -1251,7 +1254,7 @@ const Missions = (function () {
       payer(eco.repeinte, 'PEINTURE');
       const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
       v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
-      v.swaps = { c: v.couleur }; v.vole = false; v.alarme = 0;
+      v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
       Police.remiseAZero();
       return true;
     } });
@@ -2294,7 +2297,7 @@ const Missions = (function () {
         const entites = B.exterieur ? B.exterieur.entites : B.entites;
         for (const e of entites) {
           if (e.type === 'vehicule' && e.etat !== 'epave' && dist2(e.x, e.y, porte.x * TT + 8, (porte.y + 1) * TT) < 100 * 100) {
-            p.planque.vehicule = { slug: e.slug, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };
+            p.planque.vehicule = { slug: e.slug, sprite: e.sprite, couleur: e.couleur, vie: e.vie, x: Math.round(e.x), y: Math.round(e.y), angle: e.angle, vole: e.vole };
             break;
           }
         }

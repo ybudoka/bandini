@@ -26,8 +26,12 @@ const Jeu = (function () {
     if (garde && Vehicules.vehiculeDef(garde.slug)) {
       const place = garde.x === null || garde.x === undefined
         ? placeDevantLaPlanque() : { x: garde.x, y: garde.y };
-      const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne' });
-      if (v) { v.couleur = garde.couleur; v.swaps = { c: garde.couleur }; v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole; }
+      const v = place && Vehicules.creer(garde.slug, place.x, place.y, garde.angle || 0, { etat: 'stationne', sprite: garde.sprite });
+      // ⚠️ `nuances` : le rehaut et l'ombre suivent la couleur (voir le lot).
+      if (v) {
+        if (garde.couleur) { v.couleur = garde.couleur; v.swaps = nuances(garde.couleur); }
+        v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
+      }
     }
     // Les chars saisis attendent dans la cour du lot, comme celui de la
     // planque attend devant sa porte.

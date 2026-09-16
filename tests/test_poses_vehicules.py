@@ -1227,3 +1227,120 @@ def test_la_berline_est_arrondie(banc):
                 f"{slug} vu de {vue} : son bout ({p['bout']} px) ne rentre que de {p['rentre']} sur une caisse de "
                 f"{p['caisse']} — elle ne se pince pas"
             )
+
+
+# --- Des autos qui ne sont pas toutes la même -----------------------------------
+
+
+def test_les_autos_ne_sont_pas_toutes_la_meme(banc):
+    """Demande de Martin : « je veux aussi avoir parfois des différences
+    structurelles, pas juste la couleur ». ⚠️ **Mesuré avant** : toutes les
+    autos de la ville étaient la même berline repeinte.
+
+    On fait naître 240 autos à 240 places : plusieurs silhouettes sortent, la
+    berline reste la plus courante, chacune est une vraie silhouette (son
+    profil diffère de celui des autres) posée sur la MÊME caisse — même
+    empreinte, mêmes roues. Le taxi et la police, eux, ne varient jamais : ce
+    sont des flottes."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const compte = {}, flottes = {};
+        for (let i = 0; i < 240; i++) {
+            const x = 120 + (i % 20) * 37, y = 120 + Math.floor(i / 20) * 23;
+            const v = L.Vehicules.creer('auto', x, y, 0, { etat: 'stationne', couleur: '#2980b9' });
+            compte[v.sprite] = (compte[v.sprite] || 0) + 1;
+            L.Entites.retirer(v);
+            ['taxi', 'police'].forEach(function (slug) {
+                const w = L.Vehicules.creer(slug, x, y, 0, { etat: 'stationne' });
+                flottes[w.sprite] = true;
+                L.Entites.retirer(w);
+            });
+        }
+        const variantes = Object.keys(L.SPRITES.auto.variantes || { auto: 1 });
+        const profils = variantes.map(function (n) { return L.SPRITES[n].poses.cote[0].join(''); });
+        const caisse = function (n) { return L.SPRITES[n].machine.pieces.slice(0, 5).map(function (p) { return JSON.stringify(p); }).join(); };
+        return { compte: compte, variantes: variantes, flottes: Object.keys(flottes).sort(),
+                 profilsDistincts: new Set(profils).size,
+                 memeCaisse: variantes.every(function (n) { return caisse(n) === caisse('auto'); }),
+                 memeToile: variantes.every(function (n) { return L.SPRITES[n].w === L.SPRITES.auto.w; }) };
+    }""")
+    compte = r["compte"]
+    assert set(compte) <= set(r["variantes"]), f"une auto est née d'une silhouette inconnue : {compte}"
+    assert len(compte) >= 3, f"les autos ne varient pas : {compte}"
+    assert max(compte, key=compte.get) == "auto", f"la berline n'est plus la plus courante : {compte}"
+    assert all(n >= 12 for n in compte.values()), f"une silhouette ne sort presque jamais : {compte}"
+    assert r["profilsDistincts"] == len(r["variantes"]), "deux silhouettes ont le même profil : %s" % r
+    assert r["memeCaisse"] and r["memeToile"], "les silhouettes ne partagent plus la caisse : %s" % r
+    assert r["flottes"] == ["police", "taxi"], f"le taxi ou la police varie : {r['flottes']}"
+
+
+def test_la_silhouette_ne_tire_pas_de_de(banc):
+    """⚠️ La leçon de la tête du pilote : chaque dé tiré décale tout ce qui
+    naît après, et quatre juges étaient tombés le jour où une panne en avait
+    pris un. Une auto dont on DONNE la couleur ne tire aucun dé — et sa
+    silhouette non plus. On compare le prochain dé avec et sans cette
+    naissance."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        L.graine(11);
+        const sans = [L.B.rng(), L.B.rng()];
+        L.graine(11);
+        const nes = [];
+        for (let i = 0; i < 12; i++) {
+            const v = L.Vehicules.creer('auto', d.x + i * 40, d.y, 0, { etat: 'stationne', couleur: '#2980b9' });
+            nes.push(v.sprite);
+            L.Entites.retirer(v);
+        }
+        const avec = [L.B.rng(), L.B.rng()];
+        return { sans: sans, avec: avec, nes: Array.from(new Set(nes)) };
+    }""")
+    assert len(r["nes"]) >= 2, "le décor du juge est faux : une seule silhouette sur douze (%s)" % r["nes"]
+    assert r["avec"] == r["sans"], f"naître auto a tiré des dés : {r['sans']} contre {r['avec']}"
+
+
+def test_la_silhouette_et_ses_tons_reviennent_du_lot_et_de_la_planque(banc):
+    """Une camionnette laissée au lot revient camionnette, une familiale garée
+    devant la planque revient familiale — pas tirée de nouveau à sa nouvelle
+    place.
+
+    ⚠️ **Et avec ses TONS.** Le lot, la planque et la peinture rendaient au
+    char sa couleur seule (`{ c: couleur }`), sans le rehaut ni l'ombre : tant
+    que le char roulait sur son toit, ça ne se voyait pas ; depuis que la
+    berline montre son toit et le cadre de ses vitres, une auto bleue revenait
+    avec les tons de la palette — rouges."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const bleu = '#2980b9', tons = L.nuances(bleu);
+        const p = L.B.partie;
+        // Le lot.
+        p.fourriere.length = 0;
+        const v = L.Vehicules.creer('auto', 300, 300, 0, { etat: 'stationne', couleur: bleu, sprite: 'auto_camionnette' });
+        L.Missions.saisir(v);
+        const entree = JSON.parse(JSON.stringify(p.fourriere[0]));
+        L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.saisi !== undefined && e.saisi !== null; })
+            .forEach(function (e) { L.Entites.retirer(e); });
+        const poses = L.Missions.garnirLaFourriere();
+        const auLot = L.B.entites.find(function (e) { return e.type === 'vehicule' && e.saisi === 0; });
+        // La planque.
+        const d = o.ligneDroite();
+        p.planque.vehicule = { slug: 'auto', sprite: 'auto_familiale', couleur: bleu, vie: 80, x: d.x, y: d.y, angle: 0, vole: false };
+        L.Jeu.commencer();
+        const garee = L.B.entites.find(function (e) { return e.type === 'vehicule' && Math.abs(e.x - d.x) < 1 && Math.abs(e.y - d.y) < 1; });
+        // Un taxi ne revient pas en camionnette.
+        const taxi = L.Vehicules.creer('taxi', 500, 500, 0, { etat: 'stationne', sprite: 'auto_camionnette' });
+        return { entree: entree, poses: poses,
+                 lot: auLot ? { sprite: auLot.sprite, C: auLot.swaps.C, D: auLot.swaps.D } : null,
+                 planque: garee ? { sprite: garee.sprite, C: garee.swaps.C, D: garee.swaps.D } : null,
+                 tons: tons, taxi: taxi.sprite };
+    }""")
+    assert r["entree"]["sprite"] == "auto_camionnette", f"le lot ne garde pas la silhouette : {r['entree']}"
+    assert r["poses"] >= 1 and r["lot"], "le décor du juge est faux : rien n'est revenu au lot (%s)" % r
+    assert r["lot"]["sprite"] == "auto_camionnette", f"la camionnette revient du lot en {r['lot']['sprite']}"
+    assert r["planque"], "le décor du juge est faux : rien devant la planque (%s)" % r
+    assert r["planque"]["sprite"] == "auto_familiale", f"la familiale revient de la planque en {r['planque']['sprite']}"
+    for ou in ("lot", "planque"):
+        assert (r[ou].get("C"), r[ou].get("D")) == (r["tons"]["C"], r["tons"]["D"]), (
+            f"l'auto bleue revient du {ou} sans ses tons : {r[ou]} au lieu de {r['tons']}"
+        )
+    assert r["taxi"] == "taxi", f"un taxi est revenu en {r['taxi']}"

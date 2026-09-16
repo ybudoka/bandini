@@ -398,15 +398,23 @@ const BATEAU_BAS = [
    ⚠️ `contour` : la silhouette est cernee de `k`, comme tout ce qui est dessine
    a la main dans la ville. Le velo n'en a pas — ses tubes d'un pixel en
    feraient des barres. */
-const MACHINE_BERLINE = {
-  profondeur: 0.5,
-  contour: true,
-  // ⚠️ ARRONDIE, et legerement (retour de Martin : « arrondit un peu (léger)
-  // les véhicules ») : un pixel de moins aux coins vifs de la silhouette, et
-  // une caisse qui se pince au nez et a la queue (le PLAN de la caisse, plus
-  // bas). Une boite a angles vifs se lisait comme un pave peint.
-  arrondi: true,
-  pieces: [
+/* --- LA CAISSE ET L'HABITACLE : une auto, c'est les deux ----------------------
+
+   ⚠️ **Demande de Martin : « je veux aussi avoir parfois des différences
+   structurelles, pas juste la couleur ».** Toutes les autos de la ville etaient
+   la meme berline repeinte. Ce qui fait la silhouette d'une auto, c'est son
+   HABITACLE — ou finit le toit, comment tombe l'arriere — bien plus que sa
+   caisse : une compacte, une familiale et une camionnette partagent le meme
+   capot, les memes roues et la meme empreinte au sol (le catalogue n'en connait
+   qu'une, `auto`, et la conduite ne change pas d'un pixel).
+
+   `CAISSE` est donc commune : roues, caisse pincee, ceinture, portieres,
+   pare-chocs, phares et feux. `habitacle` fabrique le reste d'apres quatre
+   nombres — le pied du pare-brise, le debut et la fin du toit, le pied de la
+   lunette — et tout ce qui en decoule se place tout seul : les montants, le
+   cadre des vitres, le reflet. Deux habitacles ecrits a la main, c'est deux
+   cadres a tenir d'accord. */
+const CAISSE = [
     ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, 6.2],
     ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, -6.2],
     ['roue', -8.6, 3.0, 'r', 'M', 'M', 2, 6.2],
@@ -416,35 +424,12 @@ const MACHINE_BERLINE = {
                 [-12.0, 1.6], [-11.8, 3.4], [-10.6, 4.6], [-8.6, 5.0], [-6.6, 4.6], [-5.4, 3.4], [-5.2, 1.6],
                 [5.2, 1.6], [5.4, 3.4], [6.6, 4.6], [8.6, 5.0], [10.6, 4.6], [11.8, 3.4], [12.0, 1.6]],
      [[-14.5, 5.6], [-12.8, 6.7], [-11.2, 7], [11.2, 7], [12.8, 6.7], [14.5, 5.6]], 'c', 'DcccDDkkkkkkkkkkkkkkk'],
-    // L'habitacle : le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
-    ['profil', [[5.0, 5.9], [1.4, 11.0], [-6.2, 11.0], [-9.4, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
-    ['tube', [3.8, -5.0, 7.6], [3.8, 5.0, 7.6], 'G', 0.3],                // le reflet du pare-brise
-    // ⚠️ LE CADRE DES VITRES (retour de Martin : « une légère séparation entre
-    // le pare-brise et le reste pour mieux démarquer de face et de dos »). Les
-    // montants bordaient deja les cotes ; en haut et en bas, la vitre touchait
-    // la tole — bleu pale contre le blanc de la police, on ne voyait plus ou
-    // finissait le capot. Le trait est `D`, l'ombre de la caisse, comme les
-    // montants : il ferme le cadre sans cerner la vitre de noir.
-    // ⚠️ Celui du BAS monte d'un demi-pixel sur la vitre : pose au pied du
-    // pare-brise, le capot passait devant lui au meme pixel et il disparaissait.
-    ['tube', [4.75, -5.8, 6.25], [4.75, 5.8, 6.25], 'D', 1.0],            // pied du pare-brise
-    ['tube', [1.4, -5.8, 11.0], [1.4, 5.8, 11.0], 'D', 0.6],              // haut du pare-brise
-    ['tube', [-9.15, -5.8, 6.4], [-9.15, 5.8, 6.4], 'D', 1.0],            // pied de la lunette
-    ['tube', [-6.2, -5.8, 11.0], [-6.2, 5.8, 11.0], 'D', 0.6],            // haut de la lunette
     ['tube', [11.2, 7, 5.9], [-11.2, 7, 6.0], 'C', 0.05],                 // la ligne de ceinture
     ['tube', [11.2, -7, 5.9], [-11.2, -7, 6.0], 'C', 0.05],
     ['tube', [12.8, 6.7, 5.9], [11.2, 7, 5.9], 'C', 0.05],                // ... qui suit le nez
     ['tube', [12.8, -6.7, 5.9], [11.2, -7, 5.9], 'C', 0.05],
     ['tube', [-12.6, 6.72, 6.0], [-11.2, 7, 6.0], 'C', 0.05],             // ... et la queue
     ['tube', [-12.6, -6.72, 6.0], [-11.2, -7, 6.0], 'C', 0.05],
-    ['tube', [5.0, 5.9, 5.9], [1.4, 5.9, 11.0], 'D', 0.05],               // les montants
-    ['tube', [5.0, -5.9, 5.9], [1.4, -5.9, 11.0], 'D', 0.05],
-    ['tube', [-1.8, 5.9, 6.0], [-1.8, 5.9, 11.0], 'D', 0.05],
-    ['tube', [-1.8, -5.9, 6.0], [-1.8, -5.9, 11.0], 'D', 0.05],
-    ['tube', [-6.2, 5.9, 11.0], [-9.4, 5.9, 6.0], 'D', 0.05],
-    ['tube', [-6.2, -5.9, 11.0], [-9.4, -5.9, 6.0], 'D', 0.05],
-    ['tube', [1.4, 5.9, 11.0], [-6.2, 5.9, 11.0], 'D', 0.05],
-    ['tube', [1.4, -5.9, 11.0], [-6.2, -5.9, 11.0], 'D', 0.05],
     ['tube', [-0.2, 7.03, 1.8], [-0.2, 7.03, 5.6], 'D', 0.03],            // la fente des portieres
     ['tube', [-0.2, -7.03, 1.8], [-0.2, -7.03, 5.6], 'D', 0.03],
     ['bloc', [13.8, 14.5], [-5.6, 5.6], [1.6, 2.8], 'B', 'B', 'B', 0.1],  // pare-chocs
@@ -456,7 +441,51 @@ const MACHINE_BERLINE = {
     ['bloc', [12.4, 14.4], [-6.8, -3.4], [3.2, 4.6], 'l', 'l', 'l', 0.2],
     ['bloc', [-14.4, -12.4], [3.4, 6.8], [3.4, 4.8], 't', 't', 't', 0.2], // feux
     ['bloc', [-14.4, -12.4], [-6.8, -3.4], [3.4, 4.8], 't', 't', 't', 0.2],
-  ],
+];
+/** L'habitacle d'une auto : `avant` le pied du pare-brise, `toit` son debut et
+    sa fin, `arriere` le pied de la lunette, `montant` la ou tombe le montant du
+    milieu (null : une seule portiere).
+
+    ⚠️ LE CADRE DES VITRES (retour de Martin : « une légère séparation entre le
+    pare-brise et le reste pour mieux démarquer de face et de dos »). Les
+    montants bordent les cotes ; en haut et en bas, un trait `D` — l'ombre de la
+    caisse, comme les montants — ferme le cadre sans cerner la vitre de noir.
+    ⚠️ Celui du BAS monte un peu sur la vitre (7 % de sa hauteur au pare-brise,
+    8 % a la lunette) et passe devant d'une avance de 1 : pose au pied de la
+    vitre, le capot passait devant lui au meme pixel et il disparaissait. */
+function habitacle(h) {
+  const av = h.avant, ar = h.arriere, ta = h.toit[0], tr = h.toit[1];
+  const pieces = [
+    // Le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
+    ['profil', [[av, 5.9], [ta, 11.0], [tr, 11.0], [ar, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
+    ['tube', [3.8, -5.0, 7.6], [3.8, 5.0, 7.6], 'G', 0.3],                // le reflet du pare-brise
+  ];
+  const piedAv = [av + (ta - av) * 0.07, 5.9 + 5.1 * 0.07], piedAr = [ar + (tr - ar) * 0.08, 6.0 + 5.0 * 0.08];
+  [-1, 1].forEach(function (s) {
+    if (s < 0) {
+      pieces.push(['tube', [piedAv[0], -5.8, piedAv[1]], [piedAv[0], 5.8, piedAv[1]], 'D', 1.0]);   // pied du pare-brise
+      pieces.push(['tube', [ta, -5.8, 11.0], [ta, 5.8, 11.0], 'D', 0.6]);                           // haut du pare-brise
+      pieces.push(['tube', [piedAr[0], -5.8, piedAr[1]], [piedAr[0], 5.8, piedAr[1]], 'D', 1.0]);   // pied de la lunette
+      pieces.push(['tube', [tr, -5.8, 11.0], [tr, 5.8, 11.0], 'D', 0.6]);                           // haut de la lunette
+    }
+    const w = s * 5.9;
+    pieces.push(['tube', [av, w, 5.9], [ta, w, 11.0], 'D', 0.05]);        // les montants
+    if (h.montant !== null) pieces.push(['tube', [h.montant, w, 6.0], [h.montant, w, 11.0], 'D', 0.05]);
+    (h.custode ? [h.custode] : []).forEach(function (u) { pieces.push(['tube', [u, w, 6.0], [u, w, 11.0], 'D', 0.05]); });
+    pieces.push(['tube', [tr, w, 11.0], [ar, w, 6.0], 'D', 0.05]);
+    pieces.push(['tube', [ta, w, 11.0], [tr, w, 11.0], 'D', 0.05]);
+  });
+  return pieces;
+}
+const MACHINE_BERLINE = {
+  profondeur: 0.5,
+  contour: true,
+  // ⚠️ ARRONDIE, et legerement (retour de Martin : « arrondit un peu (léger)
+  // les véhicules ») : un pixel de moins aux coins vifs de la silhouette, et
+  // une caisse qui se pince au nez et a la queue (le PLAN de la caisse, plus
+  // bas). Une boite a angles vifs se lisait comme un pave peint.
+  arrondi: true,
+  pieces: CAISSE.concat(habitacle({ avant: 5.0, toit: [1.4, -6.2], arriere: -9.4, montant: -1.8 })),
 };
 /* ⚠️ **LA LIVREE N'EST PAS DE LA CARROSSERIE.** Elle etait peinte dans la grille
    commune, en `x` et `y`, et l'auto les rendait invisibles en les mettant a SA
@@ -492,6 +521,31 @@ const RAMPE_POLICE = [
   ['bloc', [-3.0, -1.8], [0.3, 4.6], [11.0, 11.9], 'b', 'b', 'b', 0.2],
   ['bloc', [-3.0, -1.8], [-0.3, 0.3], [11.0, 11.6], 'B', 'B', 'B', 0.2],
 ];
+/* --- Les autos qui ne sont pas toutes la meme -------------------------------------
+
+   Une COMPACTE : le toit file jusqu'au hayon, qui tombe presque droit.
+   Une FAMILIALE : le toit va jusqu'au bout, une vitre de custode de plus et des
+   barres de toit. Une CAMIONNETTE : une cabine courte, et une benne ouverte
+   dont on voit le fond.
+   ⚠️ Rien d'autre ne change : la meme caisse, les memes roues, la meme empreinte
+   — c'est encore une `auto` du catalogue, et elle se conduit comme telle. */
+const MACHINE_COMPACTE = Object.assign({}, MACHINE_BERLINE, {
+  pieces: CAISSE.concat(habitacle({ avant: 5.0, toit: [1.4, -8.8], arriere: -12.2, montant: -2.2 })),
+});
+const MACHINE_FAMILIALE = Object.assign({}, MACHINE_BERLINE, {
+  pieces: CAISSE.concat(habitacle({ avant: 5.0, toit: [1.4, -11.6], arriere: -12.6, montant: -2.2, custode: -7.4 }), [
+    ['tube', [0.2, 4.8, 11.4], [-11.0, 4.8, 11.4], 'B', 0.1],           // les barres de toit
+    ['tube', [0.2, -4.8, 11.4], [-11.0, -4.8, 11.4], 'B', 0.1],
+  ]),
+});
+const MACHINE_CAMIONNETTE = Object.assign({}, MACHINE_BERLINE, {
+  pieces: CAISSE.concat(habitacle({ avant: 5.0, toit: [1.4, -2.0], arriere: -2.8, montant: null }), [
+    ['bloc', [-13.6, -3.4], [6.0, 6.8], [5.9, 7.6], 'c', 'c', 'D', 0.1],  // les ridelles
+    ['bloc', [-13.6, -3.4], [-6.8, -6.0], [5.9, 7.6], 'c', 'c', 'D', 0.1],
+    ['bloc', [-14.0, -13.4], [-6.0, 6.0], [5.9, 7.6], 'c', 'D', 'D', 0.1], // le hayon
+    ['bloc', [-13.4, -3.4], [-6.0, 6.0], [6.0, 6.2], 'D', 'D', 'D', 0.05], // le fond de la benne, dans l'ombre des ridelles
+  ]),
+});
 const MACHINE_TAXI = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, ENSEIGNE_TAXI) });
 const MACHINE_POLICE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, RAMPE_POLICE) });
 
@@ -1810,7 +1864,16 @@ function deuxRoues(machine, longueur, pal) {
 // La berline : 28 px de long, sur une toile de 44 (sa diagonale, et le toit qui
 // monte au-dessus). ⚠️ Les trois ont la MEME carrosserie ; le taxi et la police
 // y ajoutent leur livree, `x` le damier et `y` la bande.
-SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+const PALETTE_AUTO = { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' };
+SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 44, PALETTE_AUTO);
+SPRITES.auto_compacte = enVolume(MACHINE_COMPACTE, 28, 44, PALETTE_AUTO);
+SPRITES.auto_familiale = enVolume(MACHINE_FAMILIALE, 28, 44, PALETTE_AUTO);
+SPRITES.auto_camionnette = enVolume(MACHINE_CAMIONNETTE, 28, 44, PALETTE_AUTO);
+/* ⚠️ LES VARIANTES, et leur poids : une auto sur deux est une berline. Le choix
+   se fait a la naissance (`Vehicules.creer`) SANS TIRER DE DE — c'est la lecon
+   de la tete du pilote : un de de plus decale tout ce qui nait apres. Le taxi
+   et la police n'en ont pas : ce sont des flottes. */
+SPRITES.auto.variantes = { auto: 5, auto_compacte: 2, auto_familiale: 2, auto_camionnette: 1 };
 SPRITES.taxi = enVolume(MACHINE_TAXI, 28, 44, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', e: '#fff4c4', q: '#d8c37a' });
 SPRITES.police = enVolume(MACHINE_POLICE, 28, 44, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', a: '#7a2320', b: '#233f7a' });
 /* ⚠️ LES GYROPHARES : les lettres qui tournent, [allumee, eteinte], et QUAND
