@@ -3484,6 +3484,177 @@ const DECORS = {
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
+  // --- LA FOIRE DE LA POINTE -----------------------------------------------
+  //: ⚠️ **DU DECOR ANIME, ET ON N'Y MONTE PAS.** Un manège où l'on monte et qui
+  //: ne donne rien est un decor cher ; un manège qui tourne avec du monde dessus
+  //: est une ville qui vit. C'est l'etage 1 des machines de chantier, mot pour
+  //: mot : une articulation, pas dix — un socle cuit une fois, des nacelles
+  //: peintes par-dessus a chaque image (`variantes` sert de POSE, comme pour les
+  //: betes).
+
+  // LA GRANDE ROUE. ⚠️ **Ce n'est pas un manège, c'est un BELVEDERE QUI TOURNE** :
+  // on la voit du bout de l'allee, et c'est elle qui dit ou l'on va. Vue d'en
+  // haut, ce qui la nomme est la ROUE elle-meme — un anneau de nacelles autour
+  // d'un moyeu — et les deux jambages du portique qui la tiennent.
+  // ⚠️ Son empreinte au sol est celle de son PORTIQUE, pas celle de sa jante :
+  // la roue est EN L'AIR, et on passe dessous. Un carre de 38 px de cote aurait
+  // fait d'un belvedere un bloc de beton — et le juge de `PORTEE_DECOR` l'a dit
+  // avant nous : son coin tombait a 29 px pour une portee de recherche de 24,
+  // donc on serait entre dedans sans que rien ne le voie.
+  grande_roue: { anime: 26, arrete: 14, w: 44, h: 46, ancre: [22, 42], r: 16, sol: [16, 8], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+    const cx = 22, cy = 21, R = 19;
+    ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(6, 40, 32, 5);       // son ombre
+    ctx.fillStyle = '#4a4d55';                                               // les deux jambages
+    ctx.fillRect(9, 20, 3, 21); ctx.fillRect(32, 20, 3, 21);
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(9, 20, 2, 21); ctx.fillRect(32, 20, 2, 21);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(6, 40, 10, 3); ctx.fillRect(28, 40, 10, 3);   // les socles
+    // La jante, en anneau de pixels.
+    for (let a = 0; a < 64; a++) {
+      const t = a / 64 * Math.PI * 2;
+      const px = Math.round(cx + Math.cos(t) * R), py = Math.round(cy + Math.sin(t) * R);
+      ctx.fillStyle = (a % 8 < 4) ? '#c0392b' : '#efe6d0';
+      ctx.fillRect(px, py, 2, 2);
+    }
+    // Les rayons, et le moyeu.
+    ctx.fillStyle = '#8b8f96';
+    for (let k = 0; k < 8; k++) {
+      const t = (k / 8 + v / 32) * Math.PI * 2;
+      for (let d = 4; d < R; d += 2) {
+        ctx.fillRect(Math.round(cx + Math.cos(t) * d), Math.round(cy + Math.sin(t) * d), 1, 1);
+      }
+    }
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(cx - 3, cy - 3, 6, 6);
+    ctx.fillStyle = '#a6aab0'; ctx.fillRect(cx - 2, cy - 3, 4, 4);
+    // ⚠️ LES NACELLES TOURNENT, et c'est la seule articulation : `v` les fait
+    // avancer d'un huitieme de tour. Le reste est cuit une fois.
+    for (let k = 0; k < 8; k++) {
+      const t = (k / 8 + v / 32) * Math.PI * 2;
+      const nx = Math.round(cx + Math.cos(t) * R), ny = Math.round(cy + Math.sin(t) * R);
+      ctx.fillStyle = ['#2f6fb5', '#d98324', '#2f8d6a', '#c0392b'][k % 4];
+      ctx.fillRect(nx - 2, ny - 1, 5, 4);
+      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(nx - 2, ny + 3, 5, 1);
+    }
+  } },
+
+  // LE CARROUSEL : un toit conique raye, et les chevaux dessous qui tournent.
+  carrousel: { anime: 14, arrete: 10, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 12], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(4, 24, 26, 4);
+    ctx.fillStyle = '#7d848c'; ctx.fillRect(3, 14, 28, 11);                  // le plancher
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(3, 14, 27, 9);
+    // Les chevaux : quatre autour du mat, et ils avancent avec `v`.
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6 + v / 24) * Math.PI * 2;
+      const hx = Math.round(17 + Math.cos(t) * 12), hy = Math.round(19 + Math.sin(t) * 5);
+      ctx.fillStyle = ['#efe6d0', '#c98d66', '#8a6a3f'][k % 3];
+      ctx.fillRect(hx - 2, hy - 3, 4, 5);
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(hx, hy - 6, 1, 4);             // la barre
+    }
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(16, 4, 2, 12);                   // le mat
+    // Le toit conique, raye — c'est lui qui nomme un carrousel a douze pixels.
+    for (let r = 0; r < 8; r++) {
+      const demi = 3 + r * 2;
+      for (let dx = -demi; dx <= demi; dx++) {
+        ctx.fillStyle = (Math.floor((dx + demi) / 2) % 2) ? '#c0392b' : '#efe6d0';
+        ctx.fillRect(17 + dx, 3 + r, 1, 1);
+      }
+    }
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(16, 1, 3, 2);                    // l'epi
+  } },
+
+  // LES TASSES : quatre soucoupes sur un plateau qui tourne.
+  tasses: { anime: 11, arrete: 9, w: 30, h: 26, ancre: [15, 23], r: 12, sol: [13, 10], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 20, 24, 4);
+    ctx.fillStyle = '#5a4f66'; ctx.fillRect(2, 8, 26, 13);                   // le plateau
+    ctx.fillStyle = '#7a6d88'; ctx.fillRect(2, 8, 25, 11);
+    ctx.fillStyle = '#3f3748'; ctx.fillRect(2, 8, 26, 1);
+    for (let k = 0; k < 4; k++) {
+      const t = (k / 4 + v / 16) * Math.PI * 2;
+      const tx = Math.round(15 + Math.cos(t) * 9), ty = Math.round(14 + Math.sin(t) * 5);
+      ctx.fillStyle = ['#e0574f', '#4fa3d1', '#efd06a', '#5fb87a'][k];
+      ctx.fillRect(tx - 3, ty - 3, 7, 6);
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(tx - 3, ty - 3, 7, 2);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(tx - 1, ty - 1, 3, 2);         // le creux
+    }
+  } },
+
+  // LES CHAISES VOLANTES : le mat, le parasol, et les nacelles au bout de leurs
+  // chaines — ⚠️ elles s'ECARTENT quand ca tourne, et c'est ce qui se lit.
+  chaises_volantes: { anime: 13, arrete: 9, w: 34, h: 34, ancre: [17, 31], r: 13, sol: [14, 13], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.20)'; ctx.fillRect(10, 27, 14, 4);
+    ctx.fillStyle = '#4a4d55'; ctx.fillRect(15, 8, 4, 22);                   // le mat
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(15, 8, 3, 22);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(11, 28, 12, 3);                  // le socle
+    const ecart = 11 + (v % 2) * 2;
+    for (let k = 0; k < 8; k++) {
+      const t = (k / 8 + v / 32) * Math.PI * 2;
+      const nx = Math.round(17 + Math.cos(t) * ecart), ny = Math.round(15 + Math.sin(t) * 7);
+      ctx.fillStyle = '#9aa0a8';                                             // la chaine
+      ctx.fillRect(nx, Math.min(ny, 11), 1, Math.max(1, ny - 11));
+      ctx.fillStyle = ['#2f6fb5', '#d98324'][k % 2];
+      ctx.fillRect(nx - 2, ny, 4, 3);
+    }
+    // Le parasol, en dernier : il passe PAR-DESSUS les chaines.
+    for (let r = 0; r < 5; r++) {
+      const demi = 5 + r * 2;
+      for (let dx = -demi; dx <= demi; dx++) {
+        ctx.fillStyle = (Math.floor((dx + demi) / 3) % 2) ? '#2f8d6a' : '#efe6d0';
+        ctx.fillRect(17 + dx, 3 + r, 1, 1);
+      }
+    }
+  } },
+
+  // --- Les trois kiosques de jeu. ⚠️ Un jeu d'adresse est un DEFI, pas un
+  // moteur : ce qui suit n'est que le comptoir ou l'on s'arrete.
+  galerie_tir: { arrete: 8, w: 28, h: 22, ancre: [14, 19], r: 11, sol: [12, 8], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 17, 22, 4);
+    ctx.fillStyle = '#5a3f26'; ctx.fillRect(2, 6, 24, 12);                   // la baraque
+    ctx.fillStyle = '#7a5836'; ctx.fillRect(2, 6, 23, 10);
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(4, 9, 20, 6);                    // le fond noir
+    for (let k = 0; k < 3; k++) {                                            // les cibles
+      const cx = 7 + k * 7;
+      ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx - 2, 10, 5, 5);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(cx - 1, 11, 3, 3);
+      ctx.fillStyle = '#efe6d0'; ctx.fillRect(cx, 12, 1, 1);
+    }
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(1, 3, 26, 4);                    // l'auvent raye
+    ctx.fillStyle = '#efe6d0';
+    for (let dx = 1; dx < 27; dx += 6) ctx.fillRect(dx, 3, 3, 4);
+    ctx.fillStyle = '#3a2f26'; ctx.fillRect(2, 17, 24, 1);
+  } },
+
+  marteau_force: { anime: 40, arrete: 7, w: 20, h: 40, ancre: [10, 37], r: 8, sol: [8, 7], solide: true, variantes: 3, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 34, 14, 4);
+    ctx.fillStyle = '#4a4d55'; ctx.fillRect(7, 6, 6, 30);                    // la colonne
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(7, 6, 4, 30);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(4, 34, 12, 3);                   // le socle
+    // L'echelle des ampoules : `v` dit jusqu'ou la derniere frappe est montee.
+    for (let k = 0; k < 9; k++) {
+      const allumee = k >= 8 - v * 3;
+      ctx.fillStyle = allumee ? (k > 6 ? '#ff4b3e' : k > 3 ? '#e8a33a' : '#5fb87a') : '#2a2a2e';
+      ctx.fillRect(5, 9 + k * 3, 2, 2); ctx.fillRect(13, 9 + k * 3, 2, 2);
+    }
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(6, 3, 8, 3);                     // la cloche
+    ctx.fillStyle = '#c08a20'; ctx.fillRect(6, 5, 8, 1);
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(14, 28, 5, 2);                   // le maillet, appuye
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(17, 26, 3, 4);
+  } },
+
+  peche_canards: { anime: 22, arrete: 8, w: 26, h: 22, ancre: [13, 19], r: 10, sol: [11, 8], solide: true, variantes: 3, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 17, 20, 4);
+    ctx.fillStyle = '#3f6f8a'; ctx.fillRect(2, 7, 22, 11);                   // le bassin
+    ctx.fillStyle = '#5a93ad'; ctx.fillRect(3, 8, 20, 9);
+    ctx.fillStyle = '#7fb6d9'; ctx.fillRect(3, 8 + (v % 3), 20, 1);          // la ride qui tourne
+    for (let k = 0; k < 5; k++) {                                            // les canards
+      const dx = 4 + ((k * 4 + v) % 18);
+      ctx.fillStyle = '#efd06a'; ctx.fillRect(dx, 10 + (k % 2) * 3, 4, 3);
+      ctx.fillStyle = '#e8a33a'; ctx.fillRect(dx + 3, 10 + (k % 2) * 3, 2, 1);
+    }
+    ctx.fillStyle = '#5a3f26'; ctx.fillRect(1, 4, 24, 3);                    // le rebord
+    ctx.fillStyle = '#7a5836'; ctx.fillRect(1, 4, 24, 2);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(20, 1, 2, 6);                    // la canne
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(21, 6, 1, 4);
+  } },
+
   // --- LA VIE QUI N'EST PAS HUMAINE ----------------------------------------
   //: ⚠️ **ILS NE COMPTENT POUR RIEN**, et c'est ce qui les rend vivants : ils ne
   //: sont la que pour etre la. Le dessin passe par la meme porte que le ballon —

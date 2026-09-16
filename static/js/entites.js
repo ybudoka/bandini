@@ -3802,9 +3802,16 @@ const Entites = (function () {
       if (e.decor) {                 // decor ET commerces ambulants
         const d = DECORS[e.decor];
         if (!d) continue;
+        // ⚠️ `anime` : le decor qui TOURNE. `variantes` sert alors de POSE et
+        // non de couleur — la pose avance avec le temps au lieu d'etre tiree a
+        // l'empreinte de la tuile. C'est l'etage 1 des machines de chantier :
+        // une articulation, pas dix — chaque pose est cuite UNE fois et reste
+        // en cache, donc un manège qui tourne coute quatre canevas, pas un par
+        // image.
+        const pose = d.anime ? Math.floor(B.t / d.anime) % d.variantes : e.v;
         const c = d.variantes
-          ? Atlas.cuirePeintre('decor|' + e.decor + '|' + e.v, d.w, d.h,
-                               function (g, w, h) { d.peindre(g, w, h, e.v); })
+          ? Atlas.cuirePeintre('decor|' + e.decor + '|' + pose, d.w, d.h,
+                               function (g, w, h) { d.peindre(g, w, h, pose); })
           : Atlas.cuirePeintre('decor|' + e.decor, d.w, d.h, d.peindre);
         // ⚠️ CE QUI FLOTTE TANGUE. Un rond immobile sur l'eau se lit comme une
         // tache de peinture ; deux pixels de houle, et c'est une bouee. Le

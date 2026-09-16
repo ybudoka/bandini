@@ -565,8 +565,11 @@ DISTRICTS: tuple[dict, ...] = (
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
      "pietons": 9, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
      "rares": ("sport",),
+     # ⚠️ Une des trois taches de bois devient la FOIRE (`f`) : on n'agrandit pas
+     # la grille, on la DEPENSE — la lecon de l'ile. Celle-ci borde l'eau, et la
+     # greve est juste au-dessus.
      "plan": ("~<<<<<",
-              "n<<<nc",
+              "f<<<nc",
               "^<<<^c",
               "n<<<^V",
               "^<<<^g",
@@ -678,6 +681,29 @@ FERMETURES: dict = {
     "ecart": 40,
     "raison": "RUE BARRÉE — DÉTOUR",
     "degats": 14,            # une barricade, ca coute plus cher que des cones
+}
+
+#: **LA FOIRE DE LA POINTE.** ⚠️ On n'agrandit pas la grille : la lecon de l'ile
+#: vaut ici aussi — la ville a la place, il faut la DEPENSER. La foire prend une
+#: des taches de bois du district-parc (un glyphe `n` du plan devient `f`), et la
+#: greve est juste a cote.
+#:
+#: ⚠️ **Une foire est une ALLEE bordee de choses, pas une place.** C'est ce qui
+#: la distingue du parc, qui est un centre avec des allees en baionnette : on
+#: marche entre deux rangs de manèges, et la grande roue est au bout — on la voit
+#: de l'entree, et c'est elle qui dit ou l'on va.
+FOIRE: dict = {
+    "allee": 3,               # la largeur de l'allee centrale, en tuiles
+    "ecart": 6,               # deux manèges ne se collent pas
+    "arbres": 14,             # ce qui reste du bois
+    # ⚠️ Du DECOR ANIME, et on n'y monte PAS : un manège ou l'on monte et qui ne
+    # donne rien est un decor cher ; un manège qui tourne avec du monde dessus
+    # est une ville qui vit.
+    "manèges": ("carrousel", "tasses", "chaises_volantes"),
+    # ⚠️ Un jeu d'adresse est un DEFI, pas un moteur : un lieu, un compte, un
+    # chrono, une prime, un texte en majuscules — les memes rails que les trois
+    # defis de la v1.
+    "jeux": ("galerie_tir", "marteau_force", "peche_canards"),
 }
 
 #: **LES AMARRAGES.** Ou une chaloupe attend. ⚠️ La coque est passee en phase 1
@@ -1205,6 +1231,10 @@ class _Chantier:
         self.des_aqueduc = Des(graine ^ 0xA9DEC5)
         self.des_greve = Des(graine ^ 0x67EE7)
         self._ponts_poses: list[dict] = []
+        self.des_foire = Des(graine ^ 0xF01BE)
+        self.roue: dict | None = None
+        self.foire: dict | None = None
+        self.jeux: list[dict] = []
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -2395,6 +2425,8 @@ class _Chantier:
                 self._parc(x, y, largeur, hauteur)
             elif glyphe == "n":
                 self._parc(x, y, largeur, hauteur, sauvage=True)
+            elif glyphe == "f":
+                self._foire(x, y, largeur, hauteur)
             elif glyphe == "o":
                 self._place(x, y, largeur, hauteur)
             elif glyphe == "q":
@@ -3758,6 +3790,74 @@ class _Chantier:
             for i in range(max(0, x), min(self.largeur, x + largeur)):
                 self.reserve.add((i, j))
 
+    def _foire(self, x: int, y: int, largeur: int, hauteur: int) -> None:
+        """**LA FOIRE DE LA POINTE.** Une des taches de bois du district-parc,
+        dépensée au lieu d'agrandir la grille — la lecon de l'ile vaut ici
+        aussi : la ville a la place, il faut la DEPENSER.
+
+        ⚠️ **Une foire est une ALLEE bordee de choses, pas une place** : c'est
+        ce qui la distingue du parc d'a cote, qui est un centre avec des allees
+        en baionnette. On marche entre deux rangs de manèges, et la grande roue
+        est au bout — on la voit de l'entree, et c'est elle qui dit ou l'on va.
+        """
+        fiche = FOIRE
+        # ⚠️ Elle DECLARE son rectangle : le navigateur en aura besoin (les trois
+        # defis y posent leur panneau, et l'orgue de manège est une musique qui
+        # sort d'un ENDROIT). Le deviner ailleurs serait une deuxieme verite.
+        self.foire = {"x": x, "y": y, "l": largeur, "h": hauteur}
+        self.bouchon_rect(x, y, largeur, hauteur, "~")
+        self.rect(x, y, largeur, hauteur, ",")
+        # L'allee centrale, en terre battue, dans le sens du long.
+        long_horizontal = largeur >= hauteur
+        if long_horizontal:
+            ay = y + hauteur // 2 - fiche["allee"] // 2
+            self.rect(x + 1, ay, largeur - 2, fiche["allee"], "g")
+        else:
+            ax = x + largeur // 2 - fiche["allee"] // 2
+            self.rect(ax, y + 1, fiche["allee"], hauteur - 2, "g")
+        # ⚠️ LA GRANDE ROUE AU BOUT DE L'ALLEE, et son pied est RESERVE : c'est
+        # un belvedere, pas un manège, et on doit pouvoir s'en approcher. Le
+        # reste du semis (`reserve`) s'en tient a l'ecart tout seul.
+        if long_horizontal:
+            rx, ry = x + largeur - 4, y + hauteur // 2
+        else:
+            rx, ry = x + largeur // 2, y + hauteur - 4
+        # ⚠️ ON LA POSE D'ABORD, ON RESERVE ENSUITE : `poser_decor` refuse une
+        # tuile reservee, et reserver son pied avant elle revenait a lui
+        # interdire sa propre place — la roue ne se posait jamais, en silence.
+        self.roue = {"x": rx, "y": ry}
+        self.poser_decor("grande_roue", rx, ry)
+        self.reserver(rx - 1, ry - 1, 3, 3)
+        # Les manèges, de part et d'autre de l'allee. ⚠️ Du DECOR ANIME : on n'y
+        # monte pas. Un manège ou l'on monte et qui ne donne rien est un decor
+        # cher ; un manège qui tourne avec du monde dessus est une ville qui vit.
+        poses: list[tuple[int, int]] = []
+        for quoi in fiche["manèges"]:
+            for _essai in range(60):
+                mx = x + self.des_foire.suivant() % max(1, largeur - 4) + 2
+                my = y + self.des_foire.suivant() % max(1, hauteur - 4) + 2
+                if any(abs(px - mx) + abs(py - my) < fiche["ecart"] for px, py in poses):
+                    continue
+                if self.poser_decor(quoi, mx, my):
+                    poses.append((mx, my))
+                    break
+        # Les kiosques des trois jeux d'adresse, le long de l'allee.
+        for quoi in fiche["jeux"]:
+            for _essai in range(60):
+                kx = x + self.des_foire.suivant() % max(1, largeur - 4) + 2
+                ky = y + self.des_foire.suivant() % max(1, hauteur - 4) + 2
+                if any(abs(px - kx) + abs(py - ky) < fiche["ecart"] for px, py in poses):
+                    continue
+                if self.poser_decor(quoi, kx, ky):
+                    poses.append((kx, ky))
+                    self.jeux.append({"slug": quoi, "x": kx, "y": ky})
+                    break
+        # Quelques arbres au pourtour : on sort d'un bois, il en reste.
+        for _essai in range(fiche["arbres"]):
+            ax2 = x + self.des_foire.suivant() % largeur
+            ay2 = y + self.des_foire.suivant() % hauteur
+            self.poser_decor("arbre", ax2, ay2)
+
     def _place(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         """Une place publique : du pave, une fontaine, des bancs. Pas une rue."""
         self.bouchon_rect(x, y, largeur, hauteur, ".")
@@ -4926,6 +5026,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
         "flottants": list(FLOTTANTS),
         "amarrages": chantier.amarrages(),
+        "foire": chantier.foire,
+        "roue": chantier.roue,
+        "jeux_de_foire": chantier.jeux,
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],
