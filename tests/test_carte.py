@@ -431,6 +431,54 @@ def test_le_decor_ne_bouche_ni_la_rue_ni_les_portes():
         vus.add(position)
 
 
+def _portes_a_l_oeil(ville):
+    """Toutes les portes qu'on VOIT : celles du sol (poussee, condamnee, de
+    garage) et celles qu'une devanture ou un logement se peint (`P`)."""
+    portes = [(x, y, g) for y, ligne in enumerate(ville["sol"])
+              for x, g in enumerate(ligne) if g in carte.PORTES_DE_FACADE]
+    for facade in ville["devantures"] + ville["residences"]:
+        portes += [(facade["x"] + i, facade["y"], "P")
+                   for i, motif in enumerate(facade["motifs"]) if motif == "P"]
+    return portes
+
+
+@pytest.mark.parametrize("graine", [carte.GRAINE, 1, 2, 7])
+def test_rien_ne_se_tient_devant_une_porte_meme_peinte(graine):
+    """Retour de Martin, capture a l'appui (16 sept. 2026) : une machine
+    distributrice plantee devant la porte de la PIZZERIA NAPOLI — « jamais rien
+    devant la porte d'une maison, d'un commerce ou autre ».
+
+    ⚠️ Le juge du dessus ne regardait que les portes qui S'OUVRENT
+    (`ville["portes"]`). Les vraies portes tenaient toutes ; c'est la porte
+    PEINTE (`P`) qui ne reservait rien, et la machine la prenait pour une
+    vitrine. Mesure avant : 3 a 7 objets devant une porte peinte par graine —
+    des machines surtout, un BBQ, un arbre, un paquet.
+
+    ⚠️ Le juge de la ville qui ne perd rien, c'est `test_il_y_a_des_rampes` :
+    sans l'exception de la piste, la rampe du stationnement voisin de la
+    NAPOLI tombait (sa reception passe devant la porte peinte d'un logement).
+    """
+    ville = CARTE if graine == carte.GRAINE else carte.generer(graine=graine)
+    devants = {}
+    for x, y, genre in _portes_a_l_oeil(ville):
+        for j in (1, 2):
+            devants[(x, y + j)] = (genre, x, y)
+    assert any(genre == "P" for genre, _, _ in devants.values()), "aucune porte peinte : le juge ne voit rien"
+    choses = [(d["type"], d) for d in ville["decor"]]
+    for couche in ("ambulants", "reclames", "scenes", "paquets"):
+        choses += [(couche, d) for d in ville[couche]]
+    # ⚠️ Le pied et la levre d'une rampe sont poses ; sa piste, elle, se garde
+    # vide et a le droit de passer devant une porte peinte (`_roulable`).
+    for r in ville["rampes"]:
+        choses += [("rampe", {"x": r["x"], "y": r["y"]}),
+                   ("levre de rampe", {"x": r["x"] + r["dx"], "y": r["y"] + r["dy"]})]
+    bouchees = [(nom, (d["x"], d["y"]), devants[(d["x"], d["y"])])
+                for nom, d in choses if (d["x"], d["y"]) in devants]
+    assert not bouchees, (
+        f"{len(bouchees)} choses devant une porte (graine {graine}) : "
+        + ", ".join(f"{nom} en {ou} devant « {genre} » {porte[1:]}" for nom, ou, porte in bouchees[:6]))
+
+
 def test_les_lampadaires_eclairent_depuis_un_trottoir():
     """⚠️ Deux sortes de lumiere depuis les devantures : le LAMPADAIRE, qui a
     toujours son poteau planté dans du sol qu'on foule, et la VITRINE, qui n'en

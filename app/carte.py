@@ -1367,6 +1367,14 @@ class _Chantier:
         self.arrets: dict[str, str] = {}
         self.reserve: set[tuple[int, int]] = set()
         self.occupe: set[tuple[int, int]] = set()
+        #: Les portes PEINTES (`P`) des devantures et des logements. Elles ne
+        #: sont pas dans `sol` — le mur reste un mur, on ne la pousse pas — mais
+        #: a l'oeil c'est une porte, et on ne plante rien devant (`est_une_porte`).
+        self.portes_peintes: set[tuple[int, int]] = set()
+        #: Les tuiles que SEULE une porte peinte reserve. ⚠️ La piste d'une
+        #: rampe a le droit d'y passer (`_course`) : elle se garde vide, donc
+        #: elle ne bouche rien, et personne ne sort d'une porte peinte.
+        self.devants_peints: set[tuple[int, int]] = set()
         #: Les tuiles d'ENTREE percees vers un stationnement enclave
         #: (`_percer_l_entree`) : de l'asphalte comme le lot, mais qui n'est pas
         #: le lot — on y entre, on ne s'y gare pas.
@@ -1696,6 +1704,39 @@ class _Chantier:
             occupe.add((x, y))
             self.toits.append({"x": x, "y": y, "type": fiche["type"]})
 
+    def est_une_porte(self, x: int, y: int) -> bool:
+        """Une porte A L'OEIL : poussee, condamnee, de garage — ou peinte.
+
+        ⚠️ Le joueur ne distingue pas une porte peinte d'une porte condamnee.
+        Demander `sol` seulement, c'est oublier une porte sur quatre : c'est
+        comme ca qu'une distributrice s'est plantee devant la PIZZERIA NAPOLI.
+        """
+        if (x, y) in self.portes_peintes:
+            return True
+        return 0 <= x < self.largeur and 0 <= y < self.hauteur and self.sol[y][x] in PORTES_DE_FACADE
+
+    def degager_le_devant(self, px: int, py: int, peinte: bool = False) -> None:
+        """Les deux tuiles devant une porte : reservees, et videes.
+
+        Retour de Martin, capture a l'appui (16 sept. 2026) : « jamais rien
+        devant la porte d'une maison, d'un commerce ou autre ». ⚠️ Ca vaut pour
+        TOUTES les portes, peintes comprises (`est_une_porte`).
+        """
+        for j in (1, 2):
+            if peinte and (px, py + j) not in self.reserve:
+                self.devants_peints.add((px, py + j))
+            elif not peinte:
+                self.devants_peints.discard((px, py + j))
+            self.reserve.add((px, py + j))
+            # ⚠️ ET ON DEGAGE CE QUI Y ETAIT DEJA. `poser_decor` refuse une tuile
+            # reservee, mais le decor d'un terrain vague se seme AVANT que les
+            # portes de l'ilot ne soient posees : une poubelle ou des debris
+            # tombaient donc sur un pas de porte, et rien ne les enlevait. Deux
+            # par ville — c'est peu, et c'est exactement le genre de chose qu'on
+            # ne voit qu'en restant coince contre sa propre porte.
+            self.occupe.discard((px, py + j))
+            self.decor = [d for d in self.decor if (d["x"], d["y"]) != (px, py + j)]
+
     def poser_porte(self, facades: list[tuple[int, int]], special: dict | None = None,
                     proba: float = 0.65, visite: dict | None = None,
                     bande: tuple[int, int, int] | None = None) -> tuple[int, int] | None:
@@ -1770,16 +1811,7 @@ class _Chantier:
                 self.sol[py][px] = "d"
             else:
                 return None
-        for j in (1, 2):
-            self.reserve.add((px, py + j))
-            # ⚠️ ET ON DEGAGE CE QUI Y ETAIT DEJA. `poser_decor` refuse une tuile
-            # reservee, mais le decor d'un terrain vague se seme AVANT que les
-            # portes de l'ilot ne soient posees : une poubelle ou des debris
-            # tombaient donc sur un pas de porte, et rien ne les enlevait. Deux
-            # par ville — c'est peu, et c'est exactement le genre de chose qu'on
-            # ne voit qu'en restant coince contre sa propre porte.
-            self.occupe.discard((px, py + j))
-            self.decor = [d for d in self.decor if (d["x"], d["y"]) != (px, py + j)]
+        self.degager_le_devant(px, py)
         # ⚠️ ET LA MARCHE PAVE L'ABORD JUSQU'A LA DALLE. Depuis le trottoir a une
         # tuile, la couronne du bloc se glisse entre le devant du batiment et le
         # trottoir : sans ca, on sortait d'un commerce sur deux dalles, puis une
@@ -1927,6 +1959,10 @@ class _Chantier:
             visibles = [i for i in range(large) if self.marchable_en(x0 + i, ay + 1)]
             ou = visibles[len(visibles) // 2] if visibles else large // 2
             motifs = motifs[:ou] + "P" + motifs[ou + 1:]
+            # ⚠️ Peinte, mais une porte : son devant se degage comme celui d'une
+            # vraie. Sans ca, la machine distributrice la prenait pour une vitrine.
+            self.portes_peintes.add((x0 + ou, ay))
+            self.degager_le_devant(x0 + ou, ay, peinte=True)
         self.devantures.append({
             "x": x0, "y": ay, "l": large, "genre": genre_visuel,
             "texte": texte, "pancarte": pancarte, "motifs": motifs,
@@ -2003,6 +2039,8 @@ class _Chantier:
             ou = visibles[len(visibles) // 2] if visibles else large // 2
             motifs = motifs[:ou] + "P" + motifs[ou + 1:]
             porte = x0 + ou
+            self.portes_peintes.add((porte, ay))
+            self.degager_le_devant(porte, ay, peinte=True)
 
         # ⚠️ L'escalier exterieur pend du cote ou il y a du trottoir, comme la
         # pancarte d'un commerce : accroche a un mur mitoyen, il monterait dans
@@ -3667,7 +3705,7 @@ class _Chantier:
 
     # --- Les rampes ---------------------------------------------------------
 
-    def _roulable(self, x: int, y: int) -> bool:
+    def _roulable(self, x: int, y: int, piste: bool = False) -> bool:
         """Une tuile ou un char passe VRAIMENT : rien de solide, pas de decor,
         pas le devant d'une porte.
 
@@ -3676,15 +3714,21 @@ class _Chantier:
         cloture dans l'elan, c'est un elan qui n'existe pas : c'est ce qui rendait
         les rampes de la cour des gangs injouables — on les voyait, on ne pouvait
         pas les prendre.
+
+        ⚠️ `piste` : l'elan et la reception passent sur le devant d'une porte
+        PEINTE (`devants_peints`). Ils se gardent vides — rien ne s'y plante
+        apres eux —, et c'est tout ce que ce devant demande. Le pied et la
+        levre, eux, sont une chose posee : jamais devant une porte.
         """
         return (0 <= x < self.largeur and 0 <= y < self.hauteur
                 and solidite(self.sol[y][x]) == 0
-                and (x, y) not in self.occupe and (x, y) not in self.reserve)
+                and (x, y) not in self.occupe
+                and ((x, y) not in self.reserve or (piste and (x, y) in self.devants_peints)))
 
     def _course(self, x: int, y: int, dx: int, dy: int, voulu: int) -> int:
         """Combien de tuiles roulables d'affilee dans cette direction."""
         n = 0
-        while n < voulu and self._roulable(x + dx * (n + 1), y + dy * (n + 1)):
+        while n < voulu and self._roulable(x + dx * (n + 1), y + dy * (n + 1), piste=True):
             n += 1
         return n
 
@@ -4059,6 +4103,7 @@ class _Chantier:
         for j in range(max(0, y), min(self.hauteur, y + hauteur)):
             for i in range(max(0, x), min(self.largeur, x + largeur)):
                 self.reserve.add((i, j))
+                self.devants_peints.discard((i, j))
 
     def _foire(self, x: int, y: int, largeur: int, hauteur: int) -> None:
         """**LA FOIRE DE LA POINTE** — voir `FOIRE` pour ce qui la fait.
@@ -4782,7 +4827,8 @@ class _Chantier:
         for devanture in self.devantures:
             famille = devantures_mod.GENRES[devanture["genre"]]["slug"]
             for i, motif in enumerate(devanture["motifs"]):
-                if motif in ("W", "P"):
+                # ⚠️ Pas sous un « P » : une porte peinte est une porte.
+                if motif == "W":
                     familles[(devanture["x"] + i, devanture["y"] + 1)] = famille
         candidats = sorted(
             (x, y) for x, y in familles
@@ -4790,8 +4836,7 @@ class _Chantier:
             and self.sol[y + 1][x] in self.DEVANT_UNE_MACHINE
             and (x, y) not in self.occupe and (x, y) not in self.reserve
             and all(abs(gx - x) + abs(gy - y) >= fiche["ecart_guichet"] for gx, gy in guichets)
-            and not any(0 <= x + dx < self.largeur and self.sol[y - 1][x + dx] in PORTES_DE_FACADE
-                        for dx in (-1, 1))
+            and not any(self.est_une_porte(x + dx, y - 1) for dx in (-1, 1))
         )
         poses: list[tuple[int, int]] = []
         #: ⚠️ UN PLAFOND PAR DISTRICT. Sans lui, les machines suivaient les

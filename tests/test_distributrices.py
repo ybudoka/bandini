@@ -126,6 +126,9 @@ def test_une_machine_est_adossee_a_une_devanture_et_laisse_passer(ville):
     devant elle, pour qu'on l'atteigne et que la foule passe."""
     sol = ville["sol"]
     portes = {(p["x"], p["y"]) for p in ville["portes"]}
+    # ⚠️ Et les portes PEINTES : a l'oeil, c'est une porte (la PIZZERIA NAPOLI).
+    portes |= {(f["x"] + i, f["y"]) for f in ville["devantures"] + ville["residences"]
+               for i, motif in enumerate(f["motifs"]) if motif == "P"}
     for d, sorte in _machines(ville):
         x, y = d["x"], d["y"]
         assert sol[y][x] in ("_", "."), f"une machine sur « {sol[y][x]} » en {x},{y}"
