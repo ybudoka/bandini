@@ -102,6 +102,15 @@ NIVEAU_LUFS = -19.0
 #: monterait sinon au-dessus de 0 dBFS. Le gain s'arrete au premier des deux.
 PIC_MAX_DBFS = -1.0
 
+#: ⚠️ LE LIMITEUR. Une replique dite bas avec UNE consonne qui claque ne montait
+#: pas au niveau des autres : le gain s'arretait au pic. Mesure a la premiere
+#: egalisation : `bouchard-m4-2` (« [quietly] »), pic a -4,4 dBFS, sortie a -23,2
+#: LUFS — 4 dB sous le reste. Un limiteur rabat ces pics brefs a `LIMITE_DBFS`, et
+#: le gain peut pousser au plus `LIMITEUR_MAX_DB` dedans : au-dela, un limiteur
+#: s'entend. Sa marge sous `PIC_MAX_DBFS` est pour l'encodeur, qui tremble.
+LIMITE_DBFS = -3.0
+LIMITEUR_MAX_DB = 6.0
+
 #: ⚠️ LES VOIX QUI SONNENT DANS UNE PIECE — retour de Martin apres ecoute (16 sept.
 #: 2026) : « caverneuses », puis « je les veux sans reverberation ». Mesure : la
 #: vitesse de chute du son a la fin des syllabes (95e centile, dB/s) — une piece
@@ -137,6 +146,37 @@ ISOLATION_MIN_S = 4.6
 #: Ce que porte un fichier seche, dans son etiquette `comment` : c'est le fichier
 #: qui prouve qu'il est passe par l'isolateur, pas la liste qui le promet.
 MARQUE_SECHEE = "voix isolee"
+
+#: ⚠️ L'EGALISATION — retour de Martin : « caverneuses ou etouffees ». Mesure (16
+#: sept. 2026), par tiers d'octave, chaque replique v3 contre la MEME replique en
+#: v2, mediane par voix : ce n'est pas la finition (master et fichier fini ont le
+#: meme spectre a 0,3 dB pres), c'est v3 qui a deplace le timbre —
+#:   - Julia +3 a +7 dB entre 100 et 250 Hz ; en haut -4 a -9 dB avant l'isolateur,
+#:     encore -2 a -5 apres (il lui a rendu de l'air) ;
+#:   - Amelie +6 a +18 dB entre 100 et 315 Hz, et +5 a +10 au-dessus de 2 kHz ;
+#:     Jeanne Mance +6 a +11 entre 100 et 200 Hz, et +4 a +6 au-dessus de 3 kHz ;
+#:   - Leo -5 a -9 dB entre 3 et 6 kHz : etouffe ;
+#:   - Felix, le narrateur, Khaivan, Tremblay : a +-3 dB, rien a corriger.
+#: D'ou des coupes et des rehausses DE LA TAILLE DE L'ECART, jamais plus. Verifie
+#: sur dix repliques ecoutees en A/B : Mme Thibodeau repasse de 273 a 440 Hz de
+#: centroide (482 en v2), Ti-Guy et le narrateur ne bougent pas.
+#:
+#: Le passe-haut, lui, est pour tout le monde : rien d'utile ne parle sous 85 Hz
+#: chez un homme ni sous 120 Hz chez une femme, et c'est la que « caverneux » vit.
+PASSE_HAUT_HOMMES = "highpass=f=85:p=2"
+PASSE_HAUT_FEMMES = "highpass=f=120:p=2"
+EGALISATION: dict[str, str] = {
+    "Julia": PASSE_HAUT_FEMMES + ",equalizer=f=180:t=o:w=1.5:g=-5,highshelf=f=3500:g=2.5",
+    "Amélie - Young, Confident and Friendly":
+        # ⚠️ La coupe a 5 kHz est venue APRES : graves retires, Amelie ressortait a
+        # +7,7 dB au-dessus de v2 entre 4 et 8 kHz — v3 l'avait deja rendue brillante.
+        PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-8,equalizer=f=400:t=o:w=1:g=-5"
+        ",equalizer=f=5000:t=o:w=1.5:g=-4",
+    "Jeanne Mance - Charming, Clear and Young":
+        PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-6,equalizer=f=4000:t=o:w=1.5:g=-4",
+    "Léo - Français québécois": PASSE_HAUT_HOMMES + ",highshelf=f=3000:g=5",
+    "Alexandre - Authentic French Canadian": PASSE_HAUT_HOMMES + ",equalizer=f=110:t=o:w=1:g=-6",
+}
 
 #: Les balises permises. ⚠️ Une liste FERMEE : une balise que v3 ne comprend pas,
 #: il la lit a voix haute (« crochet, tristement »). On l'allonge quand on en
@@ -265,6 +305,11 @@ _BALISE = re.compile(r"\[([^\[\]]*)\]")
 
 def a_secher(voix: dict) -> bool:
     return voix["voix"] in VOIX_A_SECHER
+
+
+def egalisation(voix: dict) -> str:
+    """Le filtre ffmpeg de cette voix : sa correction, ou le passe-haut des hommes."""
+    return EGALISATION.get(voix["voix"], PASSE_HAUT_HOMMES)
 
 
 def dit(voix: dict) -> str:

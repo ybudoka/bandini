@@ -73,6 +73,24 @@ def test_les_voix_a_secher_sont_des_voix_du_jeu():
     assert not inconnues, f"ces voix a secher ne parlent nulle part : {inconnues}"
 
 
+def test_chaque_egalisation_corrige_une_voix_du_jeu():
+    """Une cle mal recopiee laisserait sa voix au passe-haut des hommes, sans un mot."""
+    utilisees = {v["voix"] for v in VOIX}
+    inconnues = sorted(set(interpretation.EGALISATION) - utilisees)
+    assert not inconnues, f"ces egalisations ne corrigent personne : {inconnues}"
+    for filtre in interpretation.EGALISATION.values():
+        assert filtre.startswith("highpass="), "le passe-haut d'abord : c'est la que « caverneux » vit"
+
+
+def test_toutes_les_finitions_egalisent():
+    """Les trois chemins qui fabriquent une voix : la generation, `--secher`, `--refinir`.
+    Un seul qui oublie l'egalisation, et la voix redevient sourde a la prochaine passe."""
+    source = (RACINE / "scripts" / "audio_elevenlabs.py").read_text(encoding="utf-8")
+    appels = source.count("bilan = finir_voix(")
+    assert appels == 3
+    assert source.count("interpretation.egalisation(ligne)") == appels
+
+
 def test_le_script_seche_avant_de_finir():
     """Le cablage, aux trois endroits ou une voix se fabrique : la generation,
     `--secher`, et `--refinir` — qui doit repartir du master SECHE."""
@@ -117,6 +135,17 @@ def test_une_voix_qui_sonnait_dans_une_piece_a_ete_sechee(voix):
 
 
 @ffmpeg_present
+@pytest.mark.parametrize("voix", [v for v in PRESENTES if not v.get("histoire")], ids=lambda v: v["slug"])
+def test_une_voix_de_la_rue_garde_ses_aigus(voix):
+    """En 22 kHz, tout ce qui depasse 8 kHz etait coupe : les passants, les radios et
+    les pubs sonnaient etouffes a cote de l'histoire, qui est en 44 kHz."""
+    frequence = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a", "-show_entries",
+                                "stream=sample_rate", "-of", "csv=p=0", str(audio.chemin_voix(voix))],
+                               capture_output=True, text=True).stdout.strip()
+    assert frequence == "44100", f"{voix['slug']} : {frequence} Hz"
+
+
+@ffmpeg_present
 @pytest.mark.parametrize("voix", PRESENTES, ids=lambda v: v["slug"])
 def test_une_voix_finit_sur_un_temps_mort(voix):
     """Mesure avant : les 19 repliques du narrateur finissaient a 10-47 ms du
@@ -154,7 +183,8 @@ def test_une_voix_est_au_niveau_des_autres(voix):
     if niveau <= -69:
         return
     au_niveau = abs(niveau - interpretation.NIVEAU_LUFS) <= 1.5
-    arretee_par_le_pic = niveau < interpretation.NIVEAU_LUFS and pic >= interpretation.PIC_MAX_DBFS - 1.5
+    # Arretee par le limiteur : il a travaille ses 6 dB, donc son pic est a la limite.
+    arretee_par_le_pic = niveau < interpretation.NIVEAU_LUFS and pic >= interpretation.LIMITE_DBFS - 1.5
     assert au_niveau or arretee_par_le_pic, (
         f"{voix['slug']} : {niveau:.1f} LUFS (pic {pic:+.1f}) pour {interpretation.NIVEAU_LUFS} visés")
 

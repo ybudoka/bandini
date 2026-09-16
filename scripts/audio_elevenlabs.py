@@ -44,11 +44,14 @@ LANCEUR = Path(os.environ.get(
     Path.home() / ".mcp-servers" / "elevenlabs" / "run.sh",
 )).expanduser()
 
-#: Les voix des passants restent en 22 kHz : une replique de deux mots a
-#: travers un haut-parleur de telephone n'a pas d'aigu a perdre.
-#: ⚠️ C'est le format du fichier FINI (comme `audio.FORMAT_HISTOIRE`) : depuis
-#: le 16 sept. 2026, une voix se genere en master et `finir_voix()` l'y ramene.
-FORMAT = "mp3_22050_32"
+#: Le format des voix des passants, des radios et des pubs, FINI (comme
+#: `audio.FORMAT_HISTOIRE`) : une voix se genere en master, `finir_voix()` l'y ramene.
+#: ⚠️ C'etait 22 kHz / 32 kbit/s, « une replique de deux mots n'a pas d'aigu a
+#: perdre » — et Martin les a trouvees ETOUFFEES. Mesure : tout ce qui depasse
+#: 8 kHz y etait coupe, alors que les masters v3 montent a 14. En 44 kHz /
+#: 48 kbit/s, les passants pesent 1,5 fois plus (+200 Ko : bruitages et passants
+#: a 1,41 Mo sur les 1,5 du budget de demarrage).
+FORMAT = "mp3_44100_48"
 
 #: ⚠️ Les BRUITAGES, eux, ne sont plus generes a leur taille finale. On
 #: demande le meilleur master (`audio.FORMAT_MASTER`) et `finir()` le ramene
@@ -310,24 +313,28 @@ def secher(client: ClientMCP, master: Path, dossier: Path) -> Path:
     return cible
 
 
-def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = None) -> dict:
+def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = None,
+               filtre: str | None = None) -> dict:
     """Mono, au niveau, un fondu sur la derniere syllabe, le temps mort, encode.
 
     ⚠️ L'ancien fichier n'est remplace qu'a la toute fin : une finition qui
     echoue laisse la replique qu'on avait, jamais un trou dans le jeu.
-    `marque` va dans l'etiquette `comment` (`interpretation.MARQUE_SECHEE`).
+    `marque` va dans l'etiquette `comment` (`interpretation.MARQUE_SECHEE`) ;
+    `filtre` est l'egalisation de la voix (`interpretation.egalisation`), posee
+    AVANT de mesurer le niveau : on regle le volume de ce qu'on entendra.
     """
     frequence, debit = (audio.FORMAT_HISTOIRE if histoire else FORMAT).split("_")[1:]
     with tempfile.TemporaryDirectory(prefix="bandini-voix-") as temporaire:
         dossier = Path(temporaire)
         mono = dossier / "mono.wav"
-        _sortie_ffmpeg(["-i", str(master), "-ac", "1", "-ar", "44100", str(mono)])
+        _sortie_ffmpeg(["-i", str(master), "-ac", "1", "-ar", "44100",
+                        *(["-af", filtre] if filtre else []), str(mono)])
         duree = _duree_s(mono)
         if duree < audio.DUREE_PLANCHER_S:
             raise RuntimeError(f"{duree:.3f} s de voix — master muet")
         niveau = _niveau_lufs(mono)
         pic = _pic_dbfs(mono)
-        gain = interpretation.PIC_MAX_DBFS - pic
+        gain = interpretation.LIMITE_DBFS + interpretation.LIMITEUR_MAX_DB - pic
         if niveau is not None:
             gain = min(gain, interpretation.NIVEAU_LUFS - niveau)
         # ⚠️ Rogner APRES le gain : le seuil est un niveau absolu, choisi sur des
@@ -341,7 +348,10 @@ def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = N
                 f"start_silence={interpretation.BORD_S}:detection=rms:window=0.02")
         rogne = dossier / "rogne.wav"
         _sortie_ffmpeg(["-i", str(mono), "-af",
-                        f"volume={gain:.2f}dB,{bord},areverse,{bord},areverse,"
+                        f"volume={gain:.2f}dB,"
+                        f"alimiter=limit={10 ** (interpretation.LIMITE_DBFS / 20):.4f}:attack=2:"
+                        "release=50:level=0:latency=1,"
+                        f"{bord},areverse,{bord},areverse,"
                         f"silenceremove=stop_periods=-1:stop_duration=0.02:stop_threshold={seuil}:"
                         f"stop_silence={interpretation.PAUSE_MAX_S}:detection=rms:window=0.02",
                         str(rogne)])
@@ -354,8 +364,12 @@ def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = N
         # -0,8 a +2,3 dB (`ti_guy-m1-2` vise a -1,9 dBFS est sorti a +0,4). On
         # remesure donc le fichier encode, et on le refait une fois, plus bas
         # de ce qu'il a depasse. Le rognage, lui, ne bouge pas : il est deja fait.
+        # ⚠️ ET LE PIC DU MP3 NE SUIT PAS LE GAIN : sur `bouchard-m4-2`, -1 dB de
+        # gain sort a -4,5 dBFS et -2 dB a -3,1 — l'encodeur tremble de 3 dB.
+        # Corriger du depassement exact oscillait (« depasse encore apres trois
+        # encodages ») : on descend du depassement, puis par quarts de dB.
         correction = 0.0
-        for _ in range(3):
+        for essai in range(12):
             _sortie_ffmpeg(["-i", str(rogne), "-af",
                             f"volume={correction:.2f}dB,"
                             f"afade=t=out:st={max(0.0, duree - fondu):.3f}:d={fondu},"
@@ -366,9 +380,9 @@ def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = N
             depasse = _pic_dbfs(fini) - interpretation.PIC_MAX_DBFS
             if depasse <= 0.1:
                 break
-            correction -= depasse
+            correction -= depasse if essai == 0 else 0.25
         else:
-            raise RuntimeError(f"le pic depasse encore de {depasse:.1f} dB apres trois encodages")
+            raise RuntimeError(f"le pic depasse encore de {depasse:.1f} dB apres douze encodages")
         gain += correction
         trous = _trous_s(fini)
         cible.parent.mkdir(parents=True, exist_ok=True)
@@ -455,8 +469,14 @@ def refinir(voix: list[dict], masters: Path) -> int:
             print(f"  ✗ {nom:>40}  pas de {master.name} dans {masters}"
                   + (" (lance --secher)" if seche else ""))
             continue
-        bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
-                           interpretation.MARQUE_SECHEE if seche else None)
+        try:
+            bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
+                               interpretation.MARQUE_SECHEE if seche else None,
+                               interpretation.egalisation(ligne))
+        except (RuntimeError, OSError) as souci:
+            rates += 1
+            print(f"  ✗ {nom:>40}  {souci}")
+            continue
         trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
         print(f"  ✓ {nom:>40}  {bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")
     return 1 if rates else 0
@@ -480,7 +500,7 @@ def secher_masters(voix: list[dict], masters: Path) -> int:
             try:
                 sec = secher(client, masters / nom, masters)
                 bilan = finir_voix(sec, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
-                                   interpretation.MARQUE_SECHEE)
+                                   interpretation.MARQUE_SECHEE, interpretation.egalisation(ligne))
             except (RuntimeError, OSError) as souci:
                 rates += 1
                 print(f"  ✗ {nom:>40}  {souci}")
@@ -633,7 +653,8 @@ def main() -> int:
                     if interpretation.a_secher(ligne):
                         master = secher(client, master, Path(masters))
                         marque = interpretation.MARQUE_SECHEE
-                    bilan = finir_voix(master, cible, bool(ligne.get("histoire")), marque)
+                    bilan = finir_voix(master, cible, bool(ligne.get("histoire")), marque,
+                                       interpretation.egalisation(ligne))
                 except (RuntimeError, OSError) as souci:
                     rates.append((nom, f"finition : {souci}"))
                     print(f"  ✗ {nom:>40}  finition : {souci}")
