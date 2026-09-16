@@ -1759,6 +1759,28 @@ class _Chantier:
         self.sol[y][x] = glyphe
         return True
 
+    def cloture_en(self, x: int, y: int) -> bool:
+        """Une tuile de cloture ici ? (hors carte : non)"""
+        return (0 <= x < self.largeur and 0 <= y < self.hauteur
+                and self.sol[y][x] in CLOTURES)
+
+    #: Ce qu'il y a DEHORS, par cote du rectangle.
+    DEHORS = {"N": (0, -1), "S": (0, 1), "O": (-1, 0), "E": (1, 0)}
+
+    def cote_deja_longe(self, t: tuple[int, int], cote: str) -> bool:
+        """Si une cloture longe DEJA ce cote-la, juste dehors.
+
+        ⚠️ Pas une tuile isolee qui passe par la : une COURSE, qui continue le
+        long du cote. Une cloture perpendiculaire qui vient buter contre le
+        terrain n'en cloture pas le flanc — elle le touche.
+        """
+        dx, dy = self.DEHORS[cote]
+        tx, ty = t[0] + dx, t[1] + dy
+        if not self.cloture_en(tx, ty):
+            return False
+        px, py = (0, 1) if cote in "OE" else (1, 0)
+        return self.cloture_en(tx + px, ty + py) or self.cloture_en(tx - px, ty - py)
+
     #: Ce qu'il faut pouvoir poser d'une enceinte pour que ca vaille la peine de
     #: la poser. ⚠️ En dessous, on n'en pose AUCUNE tuile : trois quarts d'une
     #: cloture, c'est une cloture ; la moitie, c'est une barre sur un terrain.
@@ -1794,16 +1816,25 @@ class _Chantier:
         if largeur < 2 or hauteur < 2:
             return 0
         voulues: list[tuple[int, int]] = []
+        #: Le ou les cotes du rectangle dont chaque tuile voulue fait partie —
+        #: un coin en tient deux.
+        cotes_de: dict[tuple[int, int], set[str]] = {}
+
+        def veut(tuiles: list[tuple[int, int]], cote: str) -> None:
+            voulues.extend(tuiles)
+            for tuile_ in tuiles:
+                cotes_de.setdefault(tuile_, set()).add(cote)
+
         if "N" in cotes:
-            voulues += [(x + i, y) for i in range(largeur)]
+            veut([(x + i, y) for i in range(largeur)], "N")
         if "S" in cotes:
-            voulues += [(x + i, y + hauteur - 1) for i in range(largeur)]
+            veut([(x + i, y + hauteur - 1) for i in range(largeur)], "S")
         haut = 0 if "N" in cotes else 1
         bas = hauteur - 1 if "S" in cotes else hauteur
         if "O" in cotes:
-            voulues += [(x, y + j) for j in range(haut, bas)]
+            veut([(x, y + j) for j in range(haut, bas)], "O")
         if "E" in cotes:
-            voulues += [(x + largeur - 1, y + j) for j in range(haut, bas)]
+            veut([(x + largeur - 1, y + j) for j in range(haut, bas)], "E")
         if not voulues:
             return 0
 
@@ -1820,7 +1851,7 @@ class _Chantier:
                 return (x, y + k)
             return (x + largeur - 1, y + k)
 
-        dehors = {"N": (0, -1), "S": (0, 1), "O": (-1, 0), "E": (1, 0)}[cote_ouvert]
+        dehors = self.DEHORS[cote_ouvert]
         long_cote = largeur if cote_ouvert in "NS" else hauteur
         ouverture = min(ouverture, max(1, long_cote - 2))
         departs = list(range(max(1, long_cote - ouverture)))
@@ -1832,6 +1863,26 @@ class _Chantier:
         trouee = {tuile(depart + k) for k in range(ouverture)}
         voulues = [t for t in voulues if t not in trouee]
 
+        # ⚠️ **Deux voisins, UNE cloture.** Elle se pose sur la ligne mitoyenne,
+        # pas de chaque cote d'elle. Deux cours voisines ceinturaient chacune la
+        # sienne, et il en sortait DEUX palissades collees l'une a l'autre —
+        # « je ne devrais pas voir de double clotures d'epais comme ca ». Ce
+        # n'est pas qu'une laideur : c'est deux tuiles a enjamber la ou il y en
+        # a une, donc deux secondes immobile pour passer d'une cour a l'autre,
+        # et une banlieue qu'on traverse deux fois moins vite.
+        #
+        # Un cote que LONGE DEJA une cloture est un cote cloture : on ne repose
+        # rien dessus, le terrain reste ferme par celle du voisin, une tuile
+        # plus loin. ⚠️ Les COINS se posent quand meme — un coin tient deux
+        # cotes a la fois, et c'est lui qui fait TOURNER la course que cherche
+        # `elaguer_les_clotures` ; sans lui, ce qui reste tombe a l'elagage.
+        # ⚠️ Et le compte se fait sur ce qui reste a poser : une tuile que le
+        # voisin tient deja n'est pas une tuile refusee, donc elle ne doit pas
+        # peser dans `PART_ENCEINTE` et faire renoncer a l'enceinte entiere.
+        voulues = [t for t in voulues
+                   if len(cotes_de[t]) > 1
+                   or not self.cote_deja_longe(t, next(iter(cotes_de[t])))]
+
         possibles = [t for t in voulues if self.cloture_possible(*t)]
         if not voulues or len(possibles) < self.PART_ENCEINTE * len(voulues):
             return 0
@@ -1839,10 +1890,18 @@ class _Chantier:
         # ⚠️ On ENLEVE avant de poser : une tuile sans voisine ne se rattrape
         # pas apres coup, elle se retire. La boucle tourne jusqu'a ce que plus
         # rien ne tombe — retirer une tuile peut en isoler une autre.
+        #
+        # ⚠️ « Sans voisine » se compte SUR LA VILLE, pas sur la seule enceinte
+        # qu'on pose. Du jour ou deux voisins partagent une cloture, le coin
+        # d'une cour ne touche plus rien DE SON ENCEINTE — sa suite est chez le
+        # voisin, deja au sol — et il tombait ici : la cour perdait son coin, la
+        # colonne mitoyenne n'avait plus de tournant, et `elaguer_les_clotures`
+        # l'emportait a son tour. Deux palissades collees devenaient AUCUNE.
         garde = set(possibles)
         while True:
             seules = {t for t in garde
                       if not any((t[0] + dx, t[1] + dy) in garde
+                                 or self.cloture_en(t[0] + dx, t[1] + dy)
                                  for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))}
             if not seules:
                 break
@@ -1855,6 +1914,57 @@ class _Chantier:
     #: route : une palissade effacee qui laisserait de l'asphalte ferait rouler
     #: des chars au milieu d'une cour.
     SOLS_NUS = (",", ".", "x", "_")
+
+    def rendre_au_sol(self, x: int, y: int) -> None:
+        """Remet du SOL a la place d'une cloture qu'on enleve : celui d'a cote.
+
+        ⚠️ `sorted`, ET C'EST TOUT LE CONTRAIRE D'UN DETAIL. C'etait
+        `max(set(nus), key=nus.count)` : sur une EGALITE — deux voisines de
+        glyphes differents, une chacune — `max` rend la premiere que l'ensemble
+        lui donne, et un ensemble de CHAINES s'itere dans l'ordre de leurs
+        empreintes, que Python randomise a chaque processus. La ville n'etait
+        donc pas reproductible : une poignee de tuiles changeaient d'un
+        lancement a l'autre, et avec elles le decor, les kiosques, les feux
+        pietons et les paquets caches.
+
+        ⚠️ Ce n'est pas qu'une curiosite : c'est ce qui rendait la CI PILE OU
+        FACE. Trois juges du banc tombaient une fois sur deux sans qu'aucune
+        ligne n'ait bouge, et chaque session les mettait sur le dos des autres.
+        `sorted` tranche l'egalite toujours pareil, et ne coute rien : `nus`
+        fait quatre elements au plus.
+        """
+        voisins = [self.sol[y + dy][x + dx]
+                   for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
+                   if 0 <= x + dx < self.largeur and 0 <= y + dy < self.hauteur]
+        nus = [g for g in voisins if g in self.SOLS_NUS]
+        self.sol[y][x] = max(sorted(set(nus)), key=nus.count) if nus else ","
+
+    def degager_les_doubles(self, x: int, y: int, largeur: int, hauteur: int) -> int:
+        """Enleve la cloture qui longe DEJA ce rectangle par dehors, avant d'en
+        peindre une dessus. Rend le nombre de tuiles enlevees.
+
+        ⚠️ Le pendant de `cote_deja_longe` pour une enceinte qui n'a pas le
+        choix. La fourriere DOIT avoir sa cloture entiere — elle n'a qu'UNE
+        grille, c'est tout son lot — donc elle ne peut pas partager celle du
+        voisin comme le fait une cour arriere : c'est au voisin de s'effacer.
+        Sans ca, le terrain vague d'a cote posait son barbele contre le
+        grillage du lot (`_terrain_vague` passe AVANT, par `_ilot_bati`) et
+        c'etait la meme double palissade, en pire : deux tuiles a enjamber dont
+        une qui ne s'enjambe pas.
+
+        ⚠️ On releve tout AVANT d'enlever quoi que ce soit : `cote_deja_longe`
+        demande une course, et une course qu'on defait sous ses pieds laisse sa
+        derniere tuile toute seule.
+        """
+        bords = ([((x + i, y), "N") for i in range(largeur)]
+                 + [((x + i, y + hauteur - 1), "S") for i in range(largeur)]
+                 + [((x, y + j), "O") for j in range(hauteur)]
+                 + [((x + largeur - 1, y + j), "E") for j in range(hauteur)])
+        doubles = {(t[0] + self.DEHORS[cote][0], t[1] + self.DEHORS[cote][1])
+                   for t, cote in bords if self.cote_deja_longe(t, cote)}
+        for tx, ty in sorted(doubles):
+            self.rendre_au_sol(tx, ty)
+        return len(doubles)
 
     def elaguer_les_clotures(self) -> int:
         """Enleve ce qui reste d'une cloture quand elle ne cloture plus rien.
@@ -1898,27 +2008,7 @@ class _Chantier:
             if tourne:
                 continue
             for x, y in course:
-                voisins = [self.sol[y + dy][x + dx]
-                           for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))
-                           if 0 <= x + dx < self.largeur and 0 <= y + dy < self.hauteur]
-                nus = [g for g in voisins if g in self.SOLS_NUS]
-                # ⚠️ `sorted`, ET C'EST TOUT LE CONTRAIRE D'UN DETAIL. C'etait
-                # `max(set(nus), key=nus.count)` : sur une EGALITE — deux
-                # voisines de glyphes differents, une chacune — `max` rend la
-                # premiere que l'ensemble lui donne, et un ensemble de CHAINES
-                # s'itere dans l'ordre de leurs empreintes, que Python
-                # randomise a chaque processus. La ville n'etait donc pas
-                # reproductible : une poignee de tuiles changeaient d'un
-                # lancement a l'autre, et avec elles le decor, les kiosques,
-                # les feux pietons et les paquets caches.
-                #
-                # ⚠️ Ce n'est pas qu'une curiosite : c'est ce qui rendait la CI
-                # PILE OU FACE. Trois juges du banc tombaient une fois sur deux
-                # sans qu'aucune ligne n'ait bouge, et chaque session les
-                # mettait sur le dos des autres. `sorted` tranche l'egalite
-                # toujours pareil, et ne coute rien : `nus` fait quatre
-                # elements au plus.
-                self.sol[y][x] = max(sorted(set(nus)), key=nus.count) if nus else ","
+                self.rendre_au_sol(x, y)
                 enleves += 1
         return enleves
 
@@ -2637,6 +2727,10 @@ class _Chantier:
         guerite = {(lx + 1 + i, zy + 1 + j)
                    for i in range(self.GUERITE_L) for j in range(self.GUERITE_H)}
         facades = self.batiment_forme(guerite)
+        # ⚠️ Avant la premiere tuile de grillage : ce que le voisin a deja pose
+        # le long du lot s'en va. Une cloture par ligne mitoyenne, et celle-ci
+        # n'est pas negociable.
+        self.degager_les_doubles(lx, zy, lot_l, zh)
         gx = lx + lot_l - self.GRILLE_L - 2
         for i in range(lot_l):
             if not gx <= lx + i < gx + self.GRILLE_L:

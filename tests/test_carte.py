@@ -1108,7 +1108,13 @@ def _tourne(course) -> bool:
         for x, y in course)
 
 
-@pytest.mark.parametrize("ville", [CARTE] + [carte.generer(graine=g) for g in (1, 7, 99, 777)])
+#: Les villes que les juges de clôture regardent — générées UNE fois pour les
+#: deux. ⚠️ Les graines 7 et 777 ne sont pas là par hasard : ce sont celles où
+#: le terrain vague d'à côté de la fourrière doublait son grillage.
+VILLES_CLOTUREES = [CARTE] + [carte.generer(graine=g) for g in (1, 7, 99, 777)]
+
+
+@pytest.mark.parametrize("ville", VILLES_CLOTUREES)
 def test_une_cloture_cloture_un_terrain(ville):
     """⚠️ Demande de Martin : « les clôtures doivent clôturer les terrains, pas
     juste être là seules ». Il regardait le jeu, et la mesure lui donnait raison
@@ -1136,6 +1142,31 @@ def test_une_cloture_cloture_un_terrain(ville):
     )
     seules = [c for c in courses if len(c) == 1]
     assert not seules, f"{len(seules)} tuiles de clôture toutes seules : {seules[:5]}"
+
+
+@pytest.mark.parametrize("ville", VILLES_CLOTUREES)
+def test_une_cloture_fait_une_tuile_d_epais(ville):
+    """⚠️ Demande de Martin, capture à l'appui : « je ne devrais pas voir de
+    double clôtures d'épais comme ça, seulement une d'épais ». Deux cours
+    voisines ceinturaient chacune la sienne, et la ligne mitoyenne portait DEUX
+    palissades collées l'une à l'autre — quinze colonnes doublées sur la ville
+    livrée, plus le barbelé du terrain vague contre le grillage de la fourrière.
+
+    Ce n'est pas qu'une laideur : c'est deux tuiles à enjamber là où il y en a
+    une, donc deux secondes immobile pour passer d'une cour à l'autre — et dans
+    le cas de la fourrière, une des deux ne s'enjambe même pas.
+
+    Le juge mesure l'épaisseur là où elle se voit : **un carré de 2 x 2 tuiles
+    de clôture**. Un coin en L, un T, une trouée n'en font jamais ; deux courses
+    parallèles collées en font un à chaque rangée.
+    """
+    sol = ville["sol"]
+    carres = [(x, y)
+              for y in range(ville["hauteur"] - 1)
+              for x in range(ville["largeur"] - 1)
+              if all(sol[y + j][x + i] in carte.CLOTURES for j in (0, 1) for i in (0, 1))]
+    assert not carres, (
+        f"{len(carres)} clôtures de deux tuiles d'épais, p. ex. {carres[:5]}")
 
 
 def test_une_cloture_ne_remplace_ni_un_mur_ni_une_chaussee():
