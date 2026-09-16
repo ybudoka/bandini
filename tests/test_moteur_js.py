@@ -6362,7 +6362,11 @@ def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         // Ce qui ne bouge pas : ni les pietons (oublies quand on s'eloigne), ni les
         // chars, ni les armes de fortune (semees au fil des images).
-        const fixes = function () { return L.B.entites.filter(function (e) { return ['pieton', 'vehicule', 'ramassage', 'projectile'].indexOf(e.type) < 0; }).length; };
+        // ⚠️ `bete` et `ballon` sont de la VIE DE RUE, pas du mobilier : un goéland
+        // qui se pose pendant qu'on est dans la planque n'est pas « la ville qui
+        // est entrée avec nous ». Ce juge dit que le mobilier fixe revient tel
+        // quel — on nomme donc ce qui va et vient, comme les piétons et les chars.
+        const fixes = function () { return L.B.entites.filter(function (e) { return ['pieton', 'vehicule', 'ramassage', 'projectile', 'bete', 'ballon'].indexOf(e.type) < 0; }).length; };
         const dehors = { entites: fixes(), w: c.w };
         o.tape('KeyE', 3);
         // La porte passe par un fondu : la piece se charge AU NOIR, pas au clic.

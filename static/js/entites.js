@@ -94,6 +94,7 @@ const Entites = (function () {
 
   function vider() {
     B.entites.length = 0;
+    if (B.betes) B.betes.length = 0;
     B.particules.length = 0;
     B.decals.length = 0;
     B.joueur = null;
@@ -106,7 +107,14 @@ const Entites = (function () {
   function indexer() {
     grille.clear();
     for (const e of B.entites) {
-      if (!e.actif || e.type === 'decor') continue;
+      // ⚠️ LES BETES N'ENTRENT DANS AUCUN INDEX DE PERSONNES, et ce n'est pas un
+      // detail de rangement : indexees, elles se faisaient DEMELER avec la foule
+      // (`demeler` ecarte ce qui se chevauche), les passants bougeaient
+      // autrement, et `majPieton` ne tirait plus les memes des. Trois juges sans
+      // rapport sont tombes — le pickpocket, le budget de la foule et le
+      // trottoir — alors que les betes elles-memes ne tirent pas un seul de.
+      // Un goeland n'est pas quelqu'un : on lui marche a travers.
+      if (!e.actif || e.type === 'decor' || e.type === 'bete' || e.type === 'ballon') continue;
       ajouterA(grille, e);
     }
   }
@@ -1489,6 +1497,175 @@ const Entites = (function () {
     return 1;
   }
 
+  // --- Les betes : la vie qui n'est pas humaine ----------------------------
+  //: ⚠️ **ELLES NE COMPTENT POUR RIEN.** Ni temoins, ni victimes, ni foule :
+  //: `type: 'bete'` n'est ni `pieton` ni `joueur`, donc l'arc de melee ne les
+  //: voit pas (`arcDeMelee` ne prend que ces deux-la), `alerter` et
+  //: `pietonsAutour` non plus, `foule()` ne les compte pas, et rien de ce qui
+  //: fait un crime ne peut les atteindre. Un goeland qu'on pourrait tuer serait
+  //: une CIBLE — et une cible demande un score, un crime, un juge. Un goeland
+  //: qui s'envole est un decor qui a peur de vous.
+  //:
+  //: ⚠️ Et elles partent AVANT qu'on les touche : leur distance de fuite est
+  //: plus grande que la portee de tout ce qui pourrait les atteindre. C'est ce
+  //: qui evite d'avoir a repondre a « que se passe-t-il si je lui roule dessus » :
+  //: on n'y arrive pas.
+
+  //: ⚠️ **ELLES NE SONT PAS DANS `B.entites`, et c'est la seule facon de tenir
+  //: la promesse de la fiche.** Les sortir de l'index des gens ne suffisait pas :
+  //: mesure, un juge du trottoir qui compte un TAUX sur cent essais tombait de
+  //: 75 % a 2 % rien qu'en les laissant vivre dans la liste du monde — sans
+  //: qu'aucune d'elles ne tire un seul de (verifie par attribution de pile). Une
+  //: bete qui « ne compte pour rien » ne doit pas etre dans la liste de ce qui
+  //: compte : ni parcourue, ni oubliee, ni demelee, ni indexee avec le reste.
+  let idDeBete = 0;
+  function betes() { if (!B.betes) B.betes = []; return B.betes; }
+
+  /** Chacune chez soi : le goeland au bord de l'eau, le chat dans les ruelles.
+      Sans ca ce ne sont pas deux betes, c'est deux dessins du meme animal. */
+  function chezElle(espece, tx, ty) {
+    if (!Monde.marchablePieton(tx, ty)) return false;
+    if (espece === 'chat') return Monde.glyphe(tx, ty) === 'x';          // la ruelle
+    const g = Monde.glyphe(tx, ty);
+    if (g !== 's' && g !== 'Q') return false;                            // le sable, le quai
+    for (let d = 1; d <= 3; d++) {
+      if (Monde.estEau(tx + d, ty) || Monde.estEau(tx - d, ty)
+          || Monde.estEau(tx, ty + d) || Monde.estEau(tx, ty - d)) return true;
+    }
+    return false;
+  }
+
+  /** ⚠️ Elle naissent SANS TIRER UN DE : on balaie la bulle en anneaux de tuiles,
+      du plus proche au plus loin, et la premiere case qui convient gagne. La
+      lecon a ete payee trois fois cette semaine — la derniere fois, le
+      pickpocket avait cesse de voler parce que des enfants naissaient au hasard. */
+  function naitreLesBetes() {
+    const f = B.defs.pietons && B.defs.pietons.betes;
+    if (!f || !B.joueur || B.interieur) return 0;
+    let nes = 0;
+    for (const espece of ['goeland', 'chat']) {
+      const fiche = f[espece];
+      const deja = betes().filter(function (q) { return q.espece === espece; }).length;
+      if (deja >= fiche.combien) continue;
+      const place = placeDeBete(espece, f.rayon_px);
+      if (!place) continue;
+      betes().push({
+        type: 'bete', espece: espece, decor: espece, x: place.x, y: place.y,
+        r: 0, solide: false, id: ++idDeBete, t: 0,
+        v: 0, humeur: 'pose', minuterie: 1, vx: 0, vy: 0, altitude: 0, fuite: 0,
+      });
+      nes++;
+    }
+    return nes;
+  }
+
+  function placeDeBete(espece, rayon) {
+    const j = B.joueur, t = Math.floor(rayon / TT);
+    const jx = Math.floor(j.x / TT), jy = Math.floor(j.y / TT);
+    for (let d = 3; d <= t; d++) {
+      for (let k = -d; k <= d; k++) {
+        for (const [tx, ty] of [[jx + k, jy - d], [jx + k, jy + d], [jx - d, jy + k], [jx + d, jy + k]]) {
+          if (!chezElle(espece, tx, ty)) continue;
+          const x = tx * TT + 8, y = ty * TT + 8;
+          if (dist2(x, y, j.x, j.y) > rayon * rayon) continue;
+          if (visibleAEcran(x, y, 16)) continue;
+          return { x: x, y: y };
+        }
+      }
+    }
+    return null;
+  }
+
+  function oublier(e) {
+    const i = betes().indexOf(e);
+    if (i >= 0) B.betes.splice(i, 1);
+  }
+
+  /** Toutes les betes, une image. */
+  function majLesBetes() {
+    const liste = betes();
+    for (let i = liste.length - 1; i >= 0; i--) { liste[i].t++; majBete(liste[i]); }
+  }
+
+  /** Une bete par image : elle vaque, et elle part quand on approche. */
+  function majBete(e) {
+    const f = B.defs.pietons.betes, fiche = f[e.espece];
+    const j = B.joueur;
+    if (!fiche || !j) { oublier(e); return; }
+    // Oubliee de loin, comme tout le reste — mais plus tot : une bete qu'on ne
+    // voit pas ne sert a rien, et elle ne doit pas peser sur le budget d'images.
+    if (dist2(e.x, e.y, j.x, j.y) > f.oubli_px * f.oubli_px) { oublier(e); return; }
+    if (e.fuite > 0) { majFuite(e, fiche); return; }
+    // ⚠️ ELLE PART AVANT QU'ON LA TOUCHE. Un char qui fonce compte double : ce
+    // qui arrive vite se voit venir de plus loin.
+    const menace = j.dansVehicule ? j.dansVehicule : j;
+    const portee = fiche.fuite_px * (j.dansVehicule ? 1.6 : 1);
+    if (dist2(e.x, e.y, menace.x, menace.y) < portee * portee) { sEnvoler(e, fiche, menace); return; }
+    if (--e.minuterie > 0) { avancerLaBete(e, fiche); return; }
+    // Elle change d'idee : elle se pose, ou elle fait quelques pas.
+    const tirage = hash2(e.id * 2654435761 + B.t, 0x8E7E5);
+    const bouge = e.humeur !== 'marche' && (tirage & 1) === 0;
+    if (bouge) {
+      e.humeur = 'marche';
+      const dur = e.espece === 'chat' ? fiche.marche_images : fiche.marche_images;
+      e.minuterie = dur[0] + (tirage >>> 8) % (dur[1] - dur[0]);
+      const a = ((tirage >>> 16) % 360) * Math.PI / 180;
+      e.vx = Math.cos(a) * fiche.pas; e.vy = Math.sin(a) * fiche.pas;
+      e.v = 1;
+    } else {
+      e.humeur = 'pose';
+      const dur = e.espece === 'chat' ? fiche.assis_images : fiche.picore_images;
+      e.minuterie = dur[0] + (tirage >>> 8) % (dur[1] - dur[0]);
+      e.vx = 0; e.vy = 0;
+      // Le goeland picore une image sur deux ; le chat, assis, ne bouge pas.
+      e.v = e.espece === 'goeland' ? ((B.t >> 5) & 1) : 0;
+    }
+    avancerLaBete(e, fiche);
+  }
+
+  /** Elle marche, et elle ne quitte pas son coin : le sable pour l'un, la
+      ruelle pour l'autre. Butee, elle se repose plutot que de pousser un mur. */
+  function avancerLaBete(e, fiche) {
+    if (e.humeur !== 'marche') {
+      if (e.espece === 'goeland' && e.v !== 2) e.v = ((B.t >> 5) & 1);
+      return;
+    }
+    const nx = e.x + e.vx, ny = e.y + e.vy;
+    if (!chezElle(e.espece, Math.floor(nx / TT), Math.floor(ny / TT))) {
+      e.humeur = 'pose'; e.minuterie = 60; e.vx = 0; e.vy = 0; e.v = 0;
+      return;
+    }
+    e.x = nx; e.y = ny;
+    void fiche;
+  }
+
+  /** Le depart. ⚠️ Le goeland S'ELEVE (l'altitude est un decalage de DESSIN, pas
+      une position : rien ne se cogne dans un oiseau) ; le chat file au ras du
+      sol. Tous deux s'en vont a l'oppose de ce qui les a derangés. */
+  function sEnvoler(e, fiche, menace) {
+    const dx = e.x - menace.x, dy = e.y - menace.y, norme = Math.hypot(dx, dy) || 1;
+    const vite = e.espece === 'goeland' ? fiche.envol_vitesse : fiche.detale_vitesse;
+    e.vx = dx / norme * vite; e.vy = dy / norme * vite;
+    e.fuite = e.espece === 'goeland' ? fiche.envol_images : fiche.detale_images;
+    e.humeur = 'part';
+    e.v = 2;
+  }
+
+  function majFuite(e, fiche) {
+    e.fuite--;
+    e.x += e.vx; e.y += e.vy;
+    if (e.espece === 'goeland') {
+      // Il monte, puis il plane. L'altitude ne sert qu'au dessin.
+      e.altitude = Math.min(fiche.montee_px, e.altitude + 0.5);
+      e.v = 2;
+    } else {
+      // Le chat file au sol, et il s'arrete s'il se bute a autre chose que sa ruelle.
+      if (!chezElle('chat', Math.floor(e.x / TT), Math.floor(e.y / TT))) { oublier(e); return; }
+      e.v = 2;
+    }
+    if (e.fuite <= 0) oublier(e);
+  }
+
   // --- Les enfants de la greve ---------------------------------------------
   //: ⚠️ **JOUER, C'EST UN `metier`, PAS UN COSTUME.** La regle des sortes de
   //: gens est ecrite trois fois dans `pietons.py`, et le depot l'a deja payee
@@ -2024,6 +2201,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
+    if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
     if (B.t % 30 === 0) majAqueduc();
@@ -3183,6 +3361,12 @@ const Entites = (function () {
   function blesser(e, degats, source, options) {
     const opts = options || {};
     if (!e.vivant || e.invincible > 0) return false;
+    // ⚠️ ON NE BLESSE QUE DES GENS. `creer` donne `vivant: true` a TOUT ce qu'il
+    // fabrique — c'est le defaut du constructeur — si bien qu'un goeland, un
+    // ballon ou une gerbe d'eau se laissaient « blesser » : 99 points de degats
+    // sur un oiseau qui n'a pas de vie a perdre. Un goeland qu'on peut tuer est
+    // une CIBLE, et une cible demande un score, un crime, un juge.
+    if (e.type !== 'pieton' && e.type !== 'joueur') return false;
     // ⚠️ RIEN n'atteint un enfant : ni un poing, ni une balle, ni un char. Le
     // jeu est adulte, pas ca. Il prend peur et il court, point.
     if (e.intouchable) {
@@ -3421,6 +3605,7 @@ const Entites = (function () {
       }
     }
     Son.SFX.borne_jet(jetProche);
+    majLesBetes();
     // ⚠️ Apres que tout le monde a bouge, et sur un index REFAIT : `indexer()`
     // date du debut de l'image, et demeler la foule sur des positions perimees
     // laisse passer exactement les paires qui viennent de se rejoindre.
@@ -3541,6 +3726,24 @@ const Entites = (function () {
     ctx.restore();
   }
 
+  /** Les betes se dessinent avec le decor : meme porte (une fiche de `DECORS`,
+      cuite par variante), mais leur propre liste. ⚠️ `altitude` est un decalage
+      de DESSIN : le goeland qui s'envole monte a l'ecran et reste, pour tout le
+      reste du jeu, la ou il etait. */
+  function dessinerBetes(ctx, cam) {
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const e of betes()) {
+      const d = DECORS[e.decor];
+      if (!d) continue;
+      if (e.x < cx - 40 || e.x > cx + VW + 40 || e.y < cy - 40 || e.y > cy + VH + 40) continue;
+      const c = Atlas.cuirePeintre('decor|' + e.decor + '|' + e.v, d.w, d.h,
+                                   function (g, w, h) { d.peindre(g, w, h, e.v); });
+      ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx),
+                    Math.round(e.y - d.ancre[1] - (e.altitude || 0) - cy));
+      B.stats.images++;
+    }
+  }
+
   function dessinerDecals(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const d of B.decals) {
@@ -3608,7 +3811,12 @@ const Entites = (function () {
         // mouvement est dans le DESSIN et pas dans `e.y` : la bouee est amarree,
         // et ce qui la heurte doit la trouver ou elle est.
         const houle = d.flotte ? Math.sin(e.t / 26 + e.x * 0.07) * 1.5 : 0;
-        ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + houle - cy));
+        // ⚠️ L'ALTITUDE EST UN DECALAGE DE DESSIN, pas une position : le goeland
+        // qui s'envole monte a l'ecran et reste, pour tout le reste du jeu, la ou
+        // il etait. Rien ne se cogne dans un oiseau, donc rien n'a besoin de
+        // savoir a quelle hauteur il vole.
+        const vol = e.altitude || 0;
+        ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx), Math.round(e.y - d.ancre[1] + houle - vol - cy));
         B.stats.images++;
         continue;
       }
@@ -3687,6 +3895,7 @@ const Entites = (function () {
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
+    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
