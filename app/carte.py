@@ -164,7 +164,8 @@ QUAI_TABLIER = 10
 
 #: Ce qu'il faut d'eau devant un quai pour qu'un bateau y vienne. En dessous, la
 #: region n'a pas avale de baie et le quai reste du plancher plein — c'est le
-#: cas des deux quais du Faubourg, qui n'ont pas la baie sous eux.
+#: cas des deux quais du Faubourg : la baie est dans un autre district, ils ne
+#: peuvent pas l'avaler, et c'est la RUE noyee sous eux qui leur donne l'eau.
 QUAI_TIRANT_MIN = 6
 
 #: Les appontements : largeur, longueur, et l'ecart entre deux voisins. ⚠️ Ils
@@ -551,12 +552,23 @@ DISTRICTS: tuple[dict, ...] = (
      # n'a pas bouge, c'est la REPARTITION qui change.
      "pietons": 34, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
      "rares": ("sport", "luxe"),
+     # ⚠️ **`jj`, PAS `qq`** — retour de Martin, capture a l'appui : « il y a
+     # encore des quais entre deux routes ». Les deux quais du Faubourg etaient
+     # du plancher plein ENTOURE DE RUES : une rue de chaque cote, et en
+     # dessous un boulevard a quatre voies, une plage, puis la baie — le meme
+     # defaut que les Quais, un bloc plus a l'est. Ils ne peuvent pas AVALER la
+     # baie comme ceux des Quais (elle est dans un autre district, et une
+     # fusion ne passe jamais une frontiere) ; mais `j` est de l'eau pour la
+     # trame (`EAUX`), et c'est suffisant : une rue qui ne longe que de l'eau
+     # et du quai est noyee. Le boulevard sous eux devient la baie, la rue
+     # entre eux une darse, la rue vers l'etang un bras d'eau ; celle du nord,
+     # qui longe des immeubles, reste la rue de service.
      "plan": ("Tccchhhh",
               "cMck<hAh",
               "ccGKohhh",
               "PcBcg<hh",
               "cCcc^^hH",
-              "~~qqcccc")},
+              "~~jjcccc")},
     # Les Erables — la banlieue. Colonnes larges, maisons detachees sur grandes
     # parcelles, deux parcs, un depanneur, et les Chevreuils qui tournent en
     # char le soir faute de mieux.
@@ -1044,8 +1056,9 @@ FUSIONS = {"<": (-1, 0), "^": (0, -1)}
 #: entre deux appontements, ce qui est exactement ce qu'on veut y voir.
 EAUX = "~j"
 
-#: Les glyphes de plan qui font un QUAI — le plancher plein du Faubourg (`q`) et
-#: le quai sur l'eau des Quais (`j`). ⚠️ Ce qui cherche « le quai » dans la ville
+#: Les glyphes de plan qui font un QUAI — le plancher plein (`q`, qu'aucun
+#: district n'emploie plus : un quai entoure de rues etait justement le defaut) et
+#: le quai sur l'eau (`j`). ⚠️ Ce qui cherche « le quai » dans la ville
 #: (la cale du contrebandier, entre autres) doit trouver les deux : le jour ou
 #: `j` est ne, la barriere du cargo a cesse d'exister en silence.
 QUAIS = "qj"
@@ -4754,36 +4767,75 @@ class _Chantier:
                 poses.append((x, y))
         return poses
 
+    def la_baie(self) -> set[tuple[int, int]]:
+        """Les tuiles d'eau reliees au LARGE : le plus grand plan d'eau de la
+        ville. Ce qui n'en fait pas partie est un etang, une mare de parc ou un
+        bassin ferme — de l'eau ou l'on nage, pas ou l'on navigue."""
+        vus: set[tuple[int, int]] = set()
+        plus_grand: set[tuple[int, int]] = set()
+        for y in range(self.hauteur):
+            for x in range(self.largeur):
+                if self.sol[y][x] != "~" or (x, y) in vus:
+                    continue
+                corps, pile = {(x, y)}, [(x, y)]
+                vus.add((x, y))
+                while pile:
+                    cx, cy = pile.pop()
+                    for n in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                        if (0 <= n[0] < self.largeur and 0 <= n[1] < self.hauteur
+                                and n not in vus and self.sol[n[1]][n[0]] == "~"):
+                            vus.add(n)
+                            corps.add(n)
+                            pile.append(n)
+                if len(corps) > len(plus_grand):
+                    plus_grand = corps
+        return plus_grand
+
     def amarrages(self) -> list[dict]:
         """Les tuiles d'eau ou une chaloupe peut attendre : contre la rive
         BATIE, espacees, et jamais au pied d'un pont (un char lance qui traverse
-        n'a pas a trouver une coque en travers)."""
+        n'a pas a trouver une coque en travers).
+
+        ⚠️ **DANS LA BAIE, ET D'ABORD LE LONG DES QUAIS.** Mesure du
+        16 sept. 2026 : **8 des 18 chaloupes ne mouillaient pas dans la baie** —
+        trois dans l'etang du Faubourg, trois dans le chenal de La Pointe, et
+        deux dans des MARES DE PARC de deux et six tuiles, d'ou une coque ne
+        sort jamais. La cause etait l'ORDRE : le semis parcourait la carte du
+        nord au sud et s'arretait a dix-huit, il remplissait donc les mares du
+        nord avant d'atteindre le port — le seul endroit construit pour les
+        bateaux, et depuis que le quai touche l'eau, six cents tuiles de levre.
+        L'eau doit rejoindre le large (`la_baie`), et les rives de quai passent
+        avant les autres rives baties.
+        """
         fiche = AMARRAGES
         garde = GREVE["pont_ecart"]
         tabliers = [(p["x"] - garde, p["y"] - garde, p["l"] + 2 * garde, p["h"] + 2 * garde)
                     for p in self._ponts_poses]
-        poses: list[tuple[int, int]] = []
+        baie = self.la_baie()
+        au_quai: list[tuple[int, int]] = []
+        ailleurs: list[tuple[int, int]] = []
         for y in range(1, self.hauteur - 1):
             for x in range(1, self.largeur - 1):
-                if self.sol[y][x] != "~":
+                if (x, y) not in baie or (x, y) in self.occupe:
                     continue
                 if any(px <= x < px + pl and py <= y < py + ph for px, py, pl, ph in tabliers):
                     continue
                 # Une rive batie juste a cote : ni sable, ni route, ni mur.
-                rive = False
+                rive = quai = False
                 for cx, cy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
                     glyphe = self.sol[cy][cx]
                     proprietes = LEGENDE[glyphe]
                     if glyphe in ("~", "s") or proprietes.get("solide") or proprietes.get("route"):
                         continue
                     rive = True
-                if not rive or (x, y) in self.occupe:
-                    continue
-                if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
-                    continue
-                poses.append((x, y))
-                if len(poses) >= fiche["par_ville"][1]:
-                    break
+                    quai = quai or glyphe == "Q"
+                if rive:
+                    (au_quai if quai else ailleurs).append((x, y))
+        poses: list[tuple[int, int]] = []
+        for x, y in au_quai + ailleurs:
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                continue
+            poses.append((x, y))
             if len(poses) >= fiche["par_ville"][1]:
                 break
         return [{"x": x, "y": y} for x, y in sorted(poses)]

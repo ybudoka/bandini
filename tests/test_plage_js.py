@@ -183,6 +183,38 @@ def test_le_ballon_va_d_un_enfant_a_l_autre_et_ne_reste_pas_seul(banc, paquet):
             }
           }
         }
+        // ⚠️ **ET S'ILS NE SE RAPPROCHENT PAS D'EUX-MÊMES, ON LES RAPPROCHE.** Le
+        // juge forçait déjà le jeu et lançait lui-même le ballon — « le geste, pas
+        // la chance » — mais il attendait encore que deux enfants tombent à
+        // portée par hasard. Mesuré le 16 sept. 2026 : même grève, mêmes quatre
+        // enfants, et leurs promenades changent dès que la ville change ailleurs
+        // (ce jour-là, les chaloupes ont quitté les mares du nord pour le port).
+        // On pose un second enfant à mi-portée d'un premier, sur du sol où l'on
+        // se tient (la grève borde un bout de quai et de gazon : un enfant qui
+        // joue au bord de l'eau n'a pas toujours du sable des deux côtés) ; tout
+        // ce que le juge mesure ensuite — le vol, les deux côtés, le ballon qu'on
+        // emporte — ne dépend pas de la façon dont ils se sont trouvés.
+        if (!paire) {
+          // ⚠️ Le plus PROCHE du joueur d'abord : un ballon ne vole que s'il est
+          // actif, et il ne l'est que dans la bulle de celui qui regarde.
+          const j = L.B.joueur, d = (f.ballon_min_px + f.ballon_px) / 2;
+          const petits = enfants(L).sort(function (u, v) {
+            return Math.hypot(u.x - j.x, u.y - j.y) - Math.hypot(v.x - j.x, v.y - j.y); });
+          for (let k = 0; k < petits.length && !paire; k++) {
+            const a = petits[k], b = petits[(k + 1) %% petits.length];
+            if (a === b) break;
+            for (const [dx, dy] of [[d, 0], [-d, 0], [0, d], [0, -d]]) {
+              const tx = Math.floor((a.x + dx) / L.TT), ty = Math.floor((a.y + dy) / L.TT);
+              if (L.Monde.marchablePieton(tx, ty) && !L.Monde.estEau(tx, ty)) {
+                b.x = a.x + dx; b.y = a.y + dy;
+                j.x = a.x + dx / 2; j.y = a.y + dy / 2 - 5 * L.TT;
+                L.Monde.centrerCamera(j.x, j.y);
+                L.Entites.indexer();
+                paire = [a, b]; break;
+              }
+            }
+          }
+        }
         if (!paire) return { greve: true, paire: false };
         const [a, b] = paire;
         // ⚠️ On LANCE le ballon nous-mêmes. Le choix du jeu se tire à l'empreinte

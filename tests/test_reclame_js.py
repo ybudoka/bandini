@@ -17,7 +17,13 @@ def test_l_homme_sandwich_nait_a_son_poste_le_jour_et_pas_la_nuit(banc, paquet):
         const j = L.B.joueur;
         const poste = L.Monde.carte.def.reclames[0];
         // On se met a une bulle du poste, hors ecran : il doit naitre a la prochaine ronde.
-        j.x = poste.x * 16 + 8 + 360; j.y = poste.y * 16 + 8; L.Monde.centrerCamera(j.x, j.y);
+        // ⚠️ DU COTE QUI RESTE DANS LA CARTE. Le juge se mettait toujours a l'est,
+        // et il a tenu tant que le poste 0 avait vingt-deux tuiles de ville a sa
+        // droite. Le 16 sept. 2026, les kiosques ont change d'ordre et le poste 0
+        // est tombe a vingt et une tuiles du bord est : le joueur etait pose HORS
+        // DU MONDE, et « personne n'est ne au poste » accusait l'homme-sandwich.
+        const dx = poste.x * 16 + 8 + 360 < L.Monde.carte.w * 16 ? 360 : -360;
+        j.x = poste.x * 16 + 8 + dx; j.y = poste.y * 16 + 8; L.Monde.centrerCamera(j.x, j.y);
         L.B.partie.heure = %(jour)s;
         for (const e of L.B.entites.slice()) if (e.metier === 'reclame') L.Entites.retirer(e);
         // ⚠️ `retirer` ote de la liste, pas de la GRILLE : en partie, `indexer`

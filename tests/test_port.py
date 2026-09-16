@@ -224,3 +224,94 @@ def test_la_rue_de_service_reste_derriere(ville, quais):
     assert len(route) >= len(colonnes) * 0.8, (
         f"{len(colonnes) - len(route)} colonnes de quai sur {len(colonnes)} n'ont pas "
         "de rue derrière elles")
+
+
+# --- Tous les quais de la ville, pas seulement ceux des Quais ---------------
+
+
+def _masses_de_quai(sol, largeur, hauteur):
+    vus, masses = set(), []
+    for y in range(hauteur):
+        for x in range(largeur):
+            if sol[y][x] != "Q" or (x, y) in vus:
+                continue
+            masse, pile = {(x, y)}, [(x, y)]
+            vus.add((x, y))
+            while pile:
+                cx, cy = pile.pop()
+                for n in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if (0 <= n[0] < largeur and 0 <= n[1] < hauteur
+                            and n not in vus and sol[n[1]][n[0]] == "Q"):
+                        vus.add(n)
+                        masse.add(n)
+                        pile.append(n)
+            masses.append(masse)
+    return masses
+
+
+def _la_baie(sol, largeur, hauteur):
+    vus, plus_grand = set(), set()
+    for y in range(hauteur):
+        for x in range(largeur):
+            if sol[y][x] != "~" or (x, y) in vus:
+                continue
+            corps, pile = {(x, y)}, [(x, y)]
+            vus.add((x, y))
+            while pile:
+                cx, cy = pile.pop()
+                for n in ((cx + 1, cy), (cx - 1, cy), (cx, cy + 1), (cx, cy - 1)):
+                    if (0 <= n[0] < largeur and 0 <= n[1] < hauteur
+                            and n not in vus and sol[n[1]][n[0]] == "~"):
+                        vus.add(n)
+                        corps.add(n)
+                        pile.append(n)
+            if len(corps) > len(plus_grand):
+                plus_grand = corps
+    return plus_grand
+
+
+def test_aucun_quai_de_la_ville_n_est_entre_deux_routes(ville):
+    """⚠️ **Le même défaut, un bloc plus à l'est.** Retour de Martin, capture à
+    l'appui : « il y a encore des quais entre deux routes ». Les juges d'au-dessus
+    ne regardaient que le district des Quais ; les deux quais du Faubourg étaient
+    du plancher entouré de rues, avec un boulevard à quatre voies et une plage
+    entre eux et la baie. Ce juge-ci les prend TOUS : chaque quai de la ville a
+    une lèvre sur la baie, et en descendant d'une de ses planches, la première
+    tuile qui n'est pas du quai est de l'eau."""
+    sol, L, H = ville["sol"], ville["largeur"], ville["hauteur"]
+    baie = _la_baie(sol, L, H)
+    masses = [m for m in _masses_de_quai(sol, L, H) if len(m) >= 50]
+    assert len(masses) >= 4, f"{len(masses)} quais dans la ville"
+    for masse in masses:
+        coin = min(masse)
+        levre = [(x, y) for x, y in masse
+                 if any((x + dx, y + dy) in baie for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+        assert len(levre) >= 10, (
+            f"le quai de {len(masse)} tuiles en {coin} ne touche pas la baie ({len(levre)} tuiles de lèvre)")
+        # ⚠️ Une rampe de chargement est posée SUR le tablier (`R`, `J`) : on la
+        # traverse en descendant, ce n'est pas une rue entre le quai et l'eau.
+        for x, y in masse:
+            cy = y + 1
+            while cy < H and (sol[cy][x] == "Q" or carte.LEGENDE[sol[cy][x]].get("rampe")):
+                cy += 1
+            dessous = sol[cy][x] if cy < H else "~"
+            assert dessous == "~", (
+                f"sous le quai en {(x, y)}, « {carte.LEGENDE[dessous]['nom']} » avant l'eau")
+
+
+def test_une_chaloupe_mouille_dans_la_baie(ville):
+    """⚠️ **8 des 18 chaloupes ne mouillaient pas dans la baie** — trois dans
+    l'étang du Faubourg, trois dans le chenal de La Pointe, et deux dans des
+    MARES DE PARC de deux et six tuiles. Une coque qui ne rejoint pas le large
+    est un char dans un garage muré. Et le port passe d'abord : le semis
+    parcourait la carte du nord au sud et remplissait les mares avant de
+    l'atteindre."""
+    sol, L, H = ville["sol"], ville["largeur"], ville["hauteur"]
+    baie = _la_baie(sol, L, H)
+    places = ville["amarrages"]
+    hors = [(p["x"], p["y"]) for p in places if (p["x"], p["y"]) not in baie]
+    assert not hors, f"{len(hors)} chaloupes hors de la baie : {hors}"
+    au_quai = [p for p in places
+               if any(sol[p["y"] + dy][p["x"] + dx] == "Q" for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))]
+    assert len(au_quai) * 2 >= len(places), (
+        f"{len(au_quai)} chaloupes sur {len(places)} au quai : le port est fait pour elles")
