@@ -22,10 +22,12 @@ ELEVENLABS_API_KEY. Le chemin du lanceur se change par BANDINI_MCP_ELEVENLABS.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import queue
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -35,7 +37,7 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RACINE))
 
-from app import audio  # noqa: E402
+from app import audio, interpretation  # noqa: E402
 
 LANCEUR = Path(os.environ.get(
     "BANDINI_MCP_ELEVENLABS",
@@ -44,6 +46,8 @@ LANCEUR = Path(os.environ.get(
 
 #: Les voix des passants restent en 22 kHz : une replique de deux mots a
 #: travers un haut-parleur de telephone n'a pas d'aigu a perdre.
+#: ⚠️ C'est le format du fichier FINI (comme `audio.FORMAT_HISTOIRE`) : depuis
+#: le 16 sept. 2026, une voix se genere en master et `finir_voix()` l'y ramene.
 FORMAT = "mp3_22050_32"
 
 #: ⚠️ Les BRUITAGES, eux, ne sont plus generes a leur taille finale. On
@@ -256,6 +260,95 @@ def finir(master: Path, cible: Path, boucle: bool) -> dict:
             "rsb": rsb, "souffle": rsb < audio.RSB_PLANCHER_DB}
 
 
+def _niveau_lufs(chemin: Path) -> float | None:
+    """Le niveau integre. ⚠️ `None` sous 400 ms de son : la mesure travaille par
+    blocs de 400 ms et rend -70 (« rien ») sur un « Salut! » trop bref."""
+    trouves = re.findall(r"I:\s+(-?[\d.]+) LUFS", _sortie_ffmpeg(
+        ["-i", str(chemin), "-af", "ebur128", "-f", "null", "-"]))
+    if not trouves or float(trouves[-1]) <= -69.0:
+        return None
+    return float(trouves[-1])       # le dernier : le resume, pas un bloc
+
+
+def _trous_s(chemin: Path, seuil_s: float = 1.2) -> list[float]:
+    """Les silences de plus de `seuil_s` AU MILIEU de la replique — le temps
+    mort de la fin n'en est pas un. C'est le piege mesure de v3 (voir
+    `app/interpretation.py`) : « … » + `[sighs]` y a fait un trou de 2 s."""
+    duree = _duree_s(chemin)
+    # ⚠️ -35 dB, pas -40 : dans le trou de 2 s de l'essai, un soupir a -42 dB
+    # coupait le silence en deux morceaux d'une seconde, et a -40 on ne voyait
+    # rien. A -35, le soupir compte pour du silence — c'est ce qu'il est, a
+    # l'oreille, entre deux phrases.
+    sortie = _sortie_ffmpeg(["-i", str(chemin), "-af",
+                             f"silencedetect=n=-35dB:d={seuil_s}", "-f", "null", "-"])
+    fins = re.findall(r"silence_end: ([\d.]+) \| silence_duration: ([\d.]+)", sortie)
+    return [float(d) for fin, d in fins if float(fin) < duree - 0.05]
+
+
+def finir_voix(master: Path, cible: Path, histoire: bool) -> dict:
+    """Mono, au niveau, un fondu sur la derniere syllabe, le temps mort, encode.
+
+    ⚠️ L'ancien fichier n'est remplace qu'a la toute fin : une finition qui
+    echoue laisse la replique qu'on avait, jamais un trou dans le jeu.
+    """
+    frequence, debit = (audio.FORMAT_HISTOIRE if histoire else FORMAT).split("_")[1:]
+    with tempfile.TemporaryDirectory(prefix="bandini-voix-") as temporaire:
+        dossier = Path(temporaire)
+        mono = dossier / "mono.wav"
+        _sortie_ffmpeg(["-i", str(master), "-ac", "1", "-ar", "44100", str(mono)])
+        duree = _duree_s(mono)
+        if duree < audio.DUREE_PLANCHER_S:
+            raise RuntimeError(f"{duree:.3f} s de voix — master muet")
+        niveau = _niveau_lufs(mono)
+        pic = _pic_dbfs(mono)
+        gain = interpretation.PIC_MAX_DBFS - pic
+        if niveau is not None:
+            gain = min(gain, interpretation.NIVEAU_LUFS - niveau)
+        # ⚠️ Rogner APRES le gain : le seuil est un niveau absolu, choisi sur des
+        # fichiers deja normalises (voir `interpretation.SEUIL_SILENCE_DB`).
+        # Et `stop_duration` a 0,02 : dans ffmpeg 8 c'est le DECLENCHEUR, et
+        # `stop_silence` ce qu'on garde — mesure sur un signal synthetique, une
+        # pause de 0,4 s reste entiere et une de 2 s tombe a 0,7. Avec
+        # `stop_duration` a 0,75, la pause de 2 s gardait 1,5 s.
+        seuil = f"{interpretation.SEUIL_SILENCE_DB}dB"
+        bord = (f"silenceremove=start_periods=1:start_threshold={seuil}:"
+                f"start_silence={interpretation.BORD_S}:detection=rms:window=0.02")
+        rogne = dossier / "rogne.wav"
+        _sortie_ffmpeg(["-i", str(mono), "-af",
+                        f"volume={gain:.2f}dB,{bord},areverse,{bord},areverse,"
+                        f"silenceremove=stop_periods=-1:stop_duration=0.02:stop_threshold={seuil}:"
+                        f"stop_silence={interpretation.PAUSE_MAX_S}:detection=rms:window=0.02",
+                        str(rogne)])
+        duree = _duree_s(rogne)
+        if duree < audio.DUREE_PLANCHER_S:
+            raise RuntimeError(f"il ne reste que {duree:.3f} s apres rognage")
+        fini = dossier / "fini.mp3"
+        fondu = interpretation.FONDU_FIN_S
+        # ⚠️ L'ENCODEUR DEPASSE LE PIC qu'on lui donne — mesure sur les 83 : de
+        # -0,8 a +2,3 dB (`ti_guy-m1-2` vise a -1,9 dBFS est sorti a +0,4). On
+        # remesure donc le fichier encode, et on le refait une fois, plus bas
+        # de ce qu'il a depasse. Le rognage, lui, ne bouge pas : il est deja fait.
+        correction = 0.0
+        for _ in range(3):
+            _sortie_ffmpeg(["-i", str(rogne), "-af",
+                            f"volume={correction:.2f}dB,"
+                            f"afade=t=out:st={max(0.0, duree - fondu):.3f}:d={fondu},"
+                            f"apad=pad_dur={interpretation.TEMPS_MORT_S}",
+                            "-ar", frequence, "-ac", "1", "-b:a", f"{debit}k",
+                            "-map_metadata", "-1", str(fini)])
+            depasse = _pic_dbfs(fini) - interpretation.PIC_MAX_DBFS
+            if depasse <= 0.1:
+                break
+            correction -= depasse
+        else:
+            raise RuntimeError(f"le pic depasse encore de {depasse:.1f} dB apres trois encodages")
+        gain += correction
+        trous = _trous_s(fini)
+        cible.parent.mkdir(parents=True, exist_ok=True)
+        shutil.move(str(fini), str(cible))
+    return {"duree": _duree_s(cible), "gain": gain, "niveau": niveau, "trous": trous}
+
+
 def _demande(nom: str) -> tuple[str, int | None]:
     """« pas » -> tout le son ; « pas-2 » -> cette variante-la, seule.
 
@@ -281,7 +374,11 @@ def a_faire(refaire: list[str]) -> list[tuple[dict, int]]:
               | {m["slug"] for m in audio.MUSIQUES}
               | {v["slug"] for v in audio.toutes_les_voix()})
     demandes = [_demande(nom) for nom in refaire]
-    inconnus = [nom for nom, (slug, _) in zip(refaire, demandes) if slug not in connus]
+    # ⚠️ Le NOM entier d'abord : une replique d'histoire finit par un chiffre
+    # (`ti_guy-m1-1`), et `_demande` la prend pour la variante 1 de `ti_guy-m1`
+    # — qui n'existe pas. `--refaire ti_guy-m1-1` repondait « slug inconnu ».
+    inconnus = [nom for nom, (slug, _) in zip(refaire, demandes)
+                if nom not in connus and slug not in connus]
     if inconnus:
         raise SystemExit(f"slugs inconnus : {inconnus} (voir app/audio.py)")
     hors_bornes = [f"{slug}-{indice}" for slug, indice in demandes
@@ -312,6 +409,27 @@ def musiques_a_faire(refaire: list[str]) -> list[dict]:
     return [m for m in audio.MUSIQUES if m["slug"] in refaire]
 
 
+def refinir(voix: list[dict], masters: Path) -> int:
+    """Rejoue `finir_voix()` sur des masters deja payes. ⚠️ C'est ce qui permet
+    de regler un seuil, une pause ou un niveau et de le mesurer sur les 83
+    repliques sans une seule generation — la premiere fois, on a regenere
+    toute la serie pour changer trois nombres."""
+    if not masters.is_dir():
+        raise SystemExit("--refinir veut --masters DOSSIER (les masters d'une generation)")
+    rates = 0
+    for ligne in voix:
+        nom = audio.nom_fichier_voix(ligne)
+        master = masters / nom
+        if not master.is_file():
+            rates += 1
+            print(f"  ✗ {nom:>40}  pas de master dans {masters}")
+            continue
+        bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")))
+        trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
+        print(f"  ✓ {nom:>40}  {bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")
+    return 1 if rates else 0
+
+
 def main() -> int:
     argus = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     argus.add_argument("--essai", action="store_true", help="dire quoi generer, sans rien depenser")
@@ -325,6 +443,12 @@ def main() -> int:
                             "poursuite, bagarre, musicien de rue — musique : CHER)")
     argus.add_argument("--voix", action="store_true",
                        help="generer aussi les repliques des passants et de l'histoire (voix : au caractere)")
+    argus.add_argument("--masters", metavar="DOSSIER",
+                       help="garder les masters des voix dans ce dossier (hors du depot) : "
+                            "la finition se rejoue alors sans repayer une generation")
+    argus.add_argument("--refinir", action="store_true",
+                       help="avec --masters : rejouer la finition des voix depuis leurs masters, "
+                            "sans rien generer (gratuit)")
     options = argus.parse_args()
 
     if os.environ.get("CI"):
@@ -346,6 +470,8 @@ def main() -> int:
             print("Fichiers que le catalogue ne reclame plus :", ", ".join(orphelins))
         return 0
 
+    if options.refinir:
+        return refinir(voix, Path(options.masters or ""))
     print(f"{len(travail) + len(radios) + len(musiques) + len(voix)} fichier(s) a generer "
           f"dans static/{audio.DOSSIER}/ :")
     for echantillon, indice in travail:
@@ -359,8 +485,8 @@ def main() -> int:
         print(f"  {audio.nom_fichier_musique(piece['slug']):>28}  {piece['duree_s']:>4} s  MUSIQUE  "
               f"{piece['prompt'][:52]}…")
     for ligne in voix:
-        print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(ligne['texte']):>4} c  VOIX     "
-              f"{ligne['voix'][:22]} — « {ligne['texte'][:60]} »")
+        print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(interpretation.dit(ligne)):>4} c  VOIX     "
+              f"{ligne['voix'][:22]} — « {interpretation.dit(ligne)[:60]} »")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -369,7 +495,7 @@ def main() -> int:
 
     dossier = str(audio.RACINE_STATIQUE / audio.DOSSIER)
     client = ClientMCP(LANCEUR)
-    faits, rates, faibles = 0, [], []
+    faits, rates, faibles, a_ecouter = 0, [], [], []
     try:
         etat = client.appeler("elevenlabs_status", {})
         print("\nElevenLabs :", etat.get("cle", "?"), "·", etat.get("quota", etat.get("caracteres_restants", "?")))
@@ -410,33 +536,42 @@ def main() -> int:
                       f"{'  ⚠ ca souffle' if bilan['souffle'] else ''}")
                 if bilan["souffle"]:
                     faibles.append(nom)
-        for ligne in voix:
-            nom = audio.nom_fichier_voix(ligne)
-            cible = audio.chemin_voix(ligne)
-            if cible.exists():
-                cible.unlink()
-            demande = {
-                "text": ligne["texte"],
-                "voice": ligne["voix"],
-                "model_id": "eleven_multilingual_v2",
-                "language_code": "fr",
-                "output_format": audio.FORMAT_HISTOIRE if ligne.get("histoire") else FORMAT,
-                "output_dir": dossier,
-                "nom": nom[:-4],
-            }
-            # Le rendu d'une replique qui le demande (le crieur : plus de style,
-            # moins de stabilite) — voir `audio.Voix`.
-            if ligne.get("style") is not None:
-                demande["style"] = ligne["style"]
-            if ligne.get("stabilite") is not None:
-                demande["stability"] = ligne["stabilite"]
-            reponse = client.appeler("elevenlabs_text_to_speech", demande)
-            if reponse.get("ok"):
+        # ⚠️ Une voix passe par un master, comme un bruitage : le niveau et le
+        # temps mort de la fin se posent APRES la generation (voir
+        # `app/interpretation.py`). Et on ne l'efface plus avant : c'est
+        # `finir_voix()` qui la remplace, une fois la nouvelle prete.
+        with (contextlib.nullcontext(options.masters) if options.masters
+              else tempfile.TemporaryDirectory(prefix="bandini-masters-voix-")) as masters:
+            for ligne in voix:
+                nom = audio.nom_fichier_voix(ligne)
+                cible = audio.chemin_voix(ligne)
+                avant = _duree_s(cible) if cible.exists() else None
+                reponse = client.appeler("elevenlabs_text_to_speech", {
+                    "text": interpretation.dit(ligne),
+                    "voice": ligne["voix"],
+                    "model_id": interpretation.MODELE,
+                    "language_code": "fr",
+                    "stability": interpretation.STABILITE,
+                    "output_format": audio.FORMAT_MASTER,
+                    "output_dir": masters,
+                    "nom": nom[:-4],
+                })
+                if not reponse.get("ok"):
+                    rates.append((nom, reponse.get("erreur")))
+                    print(f"  ✗ {nom:>40}  {reponse.get('erreur')}")
+                    continue
+                try:
+                    bilan = finir_voix(Path(reponse["fichier"]), cible, bool(ligne.get("histoire")))
+                except (RuntimeError, OSError) as souci:
+                    rates.append((nom, f"finition : {souci}"))
+                    print(f"  ✗ {nom:>40}  finition : {souci}")
+                    continue
                 faits += 1
-                print(f"  ✓ {nom:>22}  {reponse['octets']:>7} octets  ({reponse.get('voix')})")
-            else:
-                rates.append((nom, reponse.get("erreur")))
-                print(f"  ✗ {nom:>22}  {reponse.get('erreur')}")
+                duree = "" if avant is None else f"{avant:5.2f} s -> "
+                trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
+                print(f"  ✓ {nom:>40}  {duree}{bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")
+                if bilan["trous"]:
+                    a_ecouter.append(nom)
         # ⚠️ Les musiques du jeu passent par le MEME outil que les radios
         # (ElevenLabs Music) et par le meme format : une piece de district est
         # une boucle de fond, exactement comme une station. Et comme une
@@ -487,6 +622,9 @@ def main() -> int:
     if faibles:
         print("⚠️  Du souffle sous le son (RSB sous "
               f"{audio.RSB_PLANCHER_DB:.0f} dB) — a refaire : {' '.join(faibles)}")
+    if a_ecouter:
+        print("⚠️  Un silence de plus d'une seconde au milieu de la replique — une "
+              f"pause trop lourde, ou v3 qui a derape. A ecouter d'abord : {' '.join(a_ecouter)}")
     for nom, erreur in rates:
         print(f"  {nom} : {erreur}")
     if faits:

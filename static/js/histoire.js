@@ -324,7 +324,17 @@ const Histoire = (function () {
     const c = B.cinema;
     if (!c) return;
     c.t++;
-    if (Entree.neuf('action') || Entree.neuf('attaque') || c.t > c.duree) suivante();
+    // ⚠️ LA LIGNE ATTEND SA VOIX. `duree` est le temps de LIRE (90 + 3 par
+    // caractere) : il passait a la suivante voix ou pas, et la suivante coupe
+    // la voix. Mesure le 16 sept. 2026 : neuf repliques de mission y perdaient
+    // leur fin (`bouchard-m4-6` : 7,06 s de voix, 5,65 s de ligne) — c'etait
+    // une bonne part des « fins coupees ». `fin` rabat ensuite `duree` a la
+    // derniere syllabe. Le plafond de 15 s au-dela garde une scene de rester
+    // figee si le navigateur ne dit jamais que la voix s'est tue (onglet
+    // cache, contexte suspendu) ; ACTION passe toujours.
+    const l = c.lignes[c.i];
+    const parle = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug) && c.t < c.duree + 900;
+    if (Entree.neuf('action') || Entree.neuf('attaque') || (c.t > c.duree && !parle)) suivante();
   }
 
   // --- L'OUVERTURE : le car de six heures ---------------------------------------------------
