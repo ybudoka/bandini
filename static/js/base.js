@@ -12,6 +12,12 @@ const TT = 16;
 const B = {
   etat: 'chargement',   // chargement | titre | jeu | pause | prison | hopital | fin
   menu: null,           // objet de menu canvas ; non nul = simulation figee
+  /*: La roue d'armes OUVERTE : { armes, choix, t } — voir `Combat.majRoue`.
+    ⚠️ Elle ne fige pas le monde comme `menu`, elle le RALENTIT (une image
+    de monde sur quatre) : une roue qui fige serait une pause gratuite au
+    milieu d'une fusillade. Le joueur, lui, ne bouge plus tant qu'elle est
+    ouverte — il choisit, il ne marche pas. */
+  roue: null,
   interieur: null,      // la piece ou l'on est, ou null dehors
   exterieur: null,      // la ville mise de cote pendant qu'on est dedans
   dialogue: null,       // boite de texte en cours
@@ -65,6 +71,11 @@ function etatInitial(defs) {
     fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
     arme: 'poings',
+    //: L'arme d'AVANT — ce sur quoi retombe le RETOUR RAPIDE (une tape sur
+    //: ARME, sans tenir). Les poings pour les poches, la carabine pour le
+    //: toit : c'est le geste qu'on fait le plus souvent, et il se garde
+    //: dans la partie parce qu'il survit a une nuit de sommeil.
+    armePrecedente: 'poings',
     planque: { armes: {}, vehicule: null, coffre: 0 },
     //: Les chars saisis, du plus vieux au plus recent. ⚠️ Un TABLEAU, pas un
     //: objet : le lot a un nombre de places, et c'est le plus vieux qui part
@@ -341,6 +352,7 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.skimmers)) out.skimmers = [];
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
+    if (!out.armes[out.armePrecedente]) out.armePrecedente = 'poings';
     return out;
   }
 

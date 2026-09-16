@@ -2420,7 +2420,11 @@ const Entites = (function () {
   function majJoueur(j) {
     if (j.dansVehicule) return;
     if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
-    if (B.cinema) { j.vx = 0; j.vy = 0; return; }     // quelqu'un lui parle : il ecoute
+    // ⚠️ La ROUE D'ARMES le cloue comme un dialogue : une seule direction et
+    // un seul role a la fois — sans ca, choisir son arme au stick ferait
+    // MARCHER le personnage vers son choix, au ralenti et sans le vouloir.
+    // C'est aussi ce qui fait le prix de la roue : on est debout, immobile.
+    if (B.cinema || B.roue) { j.vx = 0; j.vy = 0; return; }   // on ecoute, ou on choisit
     const v = B.defs.recherche.vitesses;
     const eau = B.defs.recherche.nage;
     const axe = Entree.axe;

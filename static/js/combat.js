@@ -23,6 +23,29 @@ const Combat = (function () {
   const ASSIST_DEGRES = 26, ASSIST_PORTEE = 220;
   const ROULADE_IMAGES = 16, ROULADE_COUT = 25, ROULADE_VITESSE = 3.4;
 
+  //: Le selecteur d'arme. ⚠️ Le catalogue compte TREIZE armes, et jusqu'au
+  //: 16 sept. 2026 un seul bouton les parcourait d'un cran, dans un seul
+  //: sens : revenir de la carabine aux poings coutait DOUZE pressions, en
+  //: pleine fusillade, sans rien voir venir (le HUD ne montre que l'arme en
+  //: main). Deux gestes sur le meme bouton remplacent ca :
+  //:
+  //: - une TAPE (relachee avant `TENIR_IMAGES`) bascule entre les deux
+  //:   dernieres armes — les poings pour les poches, la carabine pour le
+  //:   toit. C'est le geste qu'on fait le plus souvent : il ne coute rien.
+  //: - TENIR ouvre la ROUE : les armes possedees en cercle, on choisit a la
+  //:   DIRECTION (stick, fleches, pouce), on relache pour degainer.
+  const TENIR_IMAGES = 12;        // au-dela, ARME ouvre la roue (un cinquieme de seconde)
+  //: ⚠️ La roue ne FIGE pas le monde, elle le RALENTIT : une image de monde
+  //: sur quatre. Les menus du jeu figent (« le temps ne passe pas au
+  //: comptoir ») et c'est juste pour un comptoir ; une roue qui fige, elle,
+  //: est une pause gratuite au milieu d'une fusillade. Changer d'arme sous le
+  //: feu doit couter quelque chose — comme la cloture, ou l'on ne fait rien.
+  const RALENTI = 4;
+  const ROUE_ZONE_MORTE = 0.45;   // en deca, la direction ne choisit rien
+  //: Depuis combien d'images ARME est tenu (0 = relache). Module, pas partie :
+  //: un bouton tenu ne survit pas a un rechargement.
+  let tenu = 0;
+
   function armeDef(slug) {
     return (B.defs.armes || []).find(function (a) { return a.slug === slug; }) || null;
   }
@@ -486,14 +509,132 @@ const Combat = (function () {
     return true;
   }
 
-  function cycler(e) {
+  // --- Le selecteur : une tape, ou la roue -----------------------------------------
+
+  /** Les armes possedees, dans l'ordre du catalogue. */
+  function armesDuSac() {
     const ordre = B.defs.ordre_armes || ['poings'];
-    const possedees = ordre.filter(function (s) { return B.partie.armes[s]; });
-    if (possedees.length < 2) return;
-    const i = possedees.indexOf(e.arme);
-    e.arme = possedees[(i + 1) % possedees.length];
-    B.partie.arme = e.arme;
+    return ordre.filter(function (s) { return B.partie.armes[s]; });
+  }
+
+  /** Une arme a feu a sec. La roue la montre GRISEE ; la tape et le cycle la
+      sautent — un pistolet a zero pris au passage, c'est un tour perdu. */
+  function aSec(slug) {
+    const def = armeDef(slug);
+    return !!def && def.chargeur !== null && !munitions(slug);
+  }
+
+  /** Degainer, en retenant ce qu'on tenait : c'est la memoire du retour rapide. */
+  function degainer(e, slug) {
+    if (!slug || !B.partie.armes[slug] || slug === e.arme) return false;
+    if (e === B.joueur) { B.partie.armePrecedente = e.arme; B.partie.arme = slug; }
+    e.arme = slug;
     Son.SFX.degainer();
+    return true;
+  }
+
+  /** Le RETOUR RAPIDE : l'arme d'avant. A defaut — elle a casse, on l'a vendue,
+      elle est a sec — on avance d'un cran : une tape ne reste jamais sans
+      reponse, sinon le bouton a l'air brise. */
+  function retourRapide(e) {
+    const avant = B.partie.armePrecedente;
+    if (avant && avant !== e.arme && B.partie.armes[avant] && !aSec(avant)) return degainer(e, avant);
+    return cycler(e);
+  }
+
+  /** Un cran dans l'ordre du catalogue — le repli de la tape quand l'arme
+      d'avant n'est plus prenable. ⚠️ PAS de sens inverse : la roue a rendu le
+      cycle a rebours inutile, et le depot ne garde pas une branche que rien
+      n'atteint (ni personne ne juge). */
+  function cycler(e) {
+    const possedees = armesDuSac();
+    if (possedees.length < 2) return false;
+    const i = possedees.indexOf(e.arme);
+    const cran = function (n) { return possedees[(i + n) % possedees.length]; };
+    for (let n = 1; n <= possedees.length; n++) {
+      if (!aSec(cran(n))) return degainer(e, cran(n));
+    }
+    // Tout est a sec : mieux vaut une arme vide qu'un bouton qui ne repond pas.
+    return degainer(e, cran(1));
+  }
+
+  /** Ouvrir la roue. ⚠️ Elle prend une PHOTO du sac : l'ordre ne doit pas
+      bouger sous le pouce si une bouteille casse pendant qu'on choisit. */
+  function ouvrirRoue(e) {
+    const armes = armesDuSac();
+    if (armes.length < 2) return false;
+    const i = armes.indexOf(e.arme);
+    B.roue = { armes: armes, choix: i < 0 ? 0 : i, t: 0 };
+    Son.SFX.menu();
+    return true;
+  }
+
+  /** Fermer la roue. `degaine` : on relache SUR un choix (sinon on annule —
+      la pause, la carte, un char, la mort). */
+  function fermerRoue(degaine) {
+    const r = B.roue;
+    if (!r) return false;
+    B.roue = null;
+    tenu = 0;
+    if (degaine && B.joueur) return degainer(B.joueur, r.armes[r.choix]);
+    return false;
+  }
+
+  /** Le creneau vise par la direction, ou -1 si elle ne pointe nulle part.
+      ⚠️ Creneau 0 EN HAUT, puis dans le sens des aiguilles — c'est la lecture
+      du dessin (`Hud.posteDeLaRoue`), et les deux doivent dire la meme chose. */
+  function creneauVise(axe, n) {
+    if (!axe || axe.mag <= ROUE_ZONE_MORTE || n < 1) return -1;
+    const angle = Math.atan2(axe.y, axe.x) + Math.PI / 2;
+    const i = Math.round(angle / (Math.PI * 2 / n));
+    return ((i % n) + n) % n;
+  }
+
+  /** La roue et la tape, lues A CHAQUE IMAGE — meme quand le monde rampe.
+      C'est `Jeu.maj` qui l'appelle, AVANT la simulation et hors du ralenti :
+      une roue qui ne se lit qu'une image sur quatre repond au quart. */
+  function majRoue() {
+    const j = B.joueur;
+    // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
+    // d'une cloture on ne fait rien du tout.
+    if (!j || j.dansVehicule || !j.vivant || j.enjambe || B.cinema) {
+      fermerRoue(false);
+      tenu = 0;
+      return;
+    }
+    if (B.roue) {
+      const r = B.roue;
+      r.t++;
+      // ⚠️ Le choix RESTE quand la direction revient au centre : au pouce
+      // comme au stick, on pointe, PUIS on relache le bouton — jamais les deux
+      // dans la meme image. Sans ca, chaque choix retombe sur le creneau du
+      // haut au moment ou on le valide.
+      const vise = creneauVise(Entree.axe, r.armes.length);
+      if (vise >= 0 && vise !== r.choix) { r.choix = vise; Son.SFX.menu(); }
+      if (!Entree.bas('arme')) fermerRoue(true);
+      return;
+    }
+    // ⚠️ LA PRESSION SE LATCHE, elle ne se lit pas qu'au niveau du bouton.
+    // `Jeu.boucle` avance a PAS FIXE, par accumulateur : zero a quatre `maj`
+    // par image dessinee. Une tape courte tombe donc parfois ENTIEREMENT
+    // entre deux `maj`, et `bas` ne la voit jamais — mesure : une tape d'une
+    // image se perdait une fois sur deux, et le bouton avait l'air brise.
+    // `neuf`, lui, survit jusqu'au `videPresse` qui clot le tour : c'est le
+    // seul signal qu'un pas variable ne peut pas manger.
+    if (Entree.neuf('arme') && tenu < 1) tenu = 1;
+    if (Entree.bas('arme')) {
+      tenu++;
+      if (tenu > TENIR_IMAGES) ouvrirRoue(j);
+      return;
+    }
+    // Relache apres une pression courte : c'est une tape.
+    if (tenu > 0) retourRapide(j);
+    tenu = 0;
+  }
+
+  /** Le MONDE avance-t-il a cette image ? Roue ouverte, une sur `RALENTI`. */
+  function tempsQuiPasse() {
+    return !B.roue || B.roue.t % RALENTI === 0;
   }
 
   function roulade(j) {
@@ -582,7 +723,12 @@ const Combat = (function () {
     // d'une cloture on ne fait RIEN, et un compteur laisse en l'air se
     // rallumerait tout seul a la prochaine pression sur ACTION — sans
     // nouvelle pression.
-    const cible = j.vivant && !j.enjambe && !B.cinema && Entree.bas('action')
+    // ⚠️ `B.roue` avec les autres : la roue ouverte, le monde rampe, et une
+    // prise qui MURIT au quart de vitesse serait le meme ralenti a la demande
+    // que la frappe (voir la porte de `maj`). Elle ne se met pas en pause, elle
+    // RETOMBE — comme sous un char ou en haut d'une cloture : on lache pour
+    // choisir son arme.
+    const cible = j.vivant && !j.enjambe && !B.cinema && !B.roue && Entree.bas('action')
       ? otageSousLaMain(j) : null;
     if (!cible) { j.saisie = 0; return; }
     if (++j.saisie < Math.round(ficheBouclier().saisie_s * 60)) return;
@@ -660,9 +806,14 @@ const Combat = (function () {
     // rouler, ni ouvrir une porte. C'est ce prix-la qui fait d'une cloture un
     // choix plutot qu'un raccourci gratuit.
     if (!j || j.dansVehicule || !j.vivant || j.enjambe) return;
+    // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
+    // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
+    // viser tranquillement, tirer. On choisit son arme OU on se bat.
+    // ⚠️ Et ACTION passe par ici : sans cette porte, relacher la roue devant
+    // une porte ouvrirait la porte, et devant un passant lui ferait les poches.
+    if (B.roue) return;
 
     if (Entree.neuf('esquive')) roulade(j);
-    if (Entree.neuf('arme')) cycler(j);
 
     // Coup fort : on MAINTIENT la frappe, on relache quand c'est charge.
     const arme = armeCourante();
@@ -734,7 +885,8 @@ const Combat = (function () {
   }
 
   return {
-    CHARGE_MIN, ROULADE_IMAGES, armeDef, armeCourante, munitions, possede, regles,
+    CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, munitions, possede, regles,
+    armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,

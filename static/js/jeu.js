@@ -256,6 +256,11 @@ const Jeu = (function () {
 
   function pause() {
     if (B.etat !== 'jeu') return;
+    // ⚠️ La roue d'armes se referme SANS degainer : on a appuye sur PAUSE, pas
+    // choisi une arme. Sans ca elle reste ouverte sous le menu, le monde reste
+    // au ralenti en sortant, et rien ne la ferme plus (`majRoue` ne tourne pas
+    // en pause). Meme chose pour la carte, juste en dessous.
+    Combat.fermerRoue(false);
     B.etat = 'pause';
     Hud.etat('pause');
     Missions.sauvegarderPartie();
@@ -274,6 +279,7 @@ const Jeu = (function () {
   /** La carte de la ville, plein ecran : la simulation attend. */
   function ouvrirCarte() {
     if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    Combat.fermerRoue(false);
     if (B.menu) Hud.fermerMenu();
     B.etat = 'carte';
     Hud.etat('carte');
@@ -390,19 +396,29 @@ const Jeu = (function () {
         Entree.videPresse();
         return;
       }
-      Monde.majHeure();
-      Monde.majBattants();
-      // La musique suit ce qui t'arrive : district, poursuite, bagarre.
-      Son.Chef.maj();
-      Monde.majChemins();
-      Entites.maj();
-      Combat.maj();
-      Vehicules.maj();
-      Police.maj();
-      Missions.maj();
-      Histoire.maj();
-      Monde.majCamera();
-      B.t++;
+      // ⚠️ LE SELECTEUR D'ARME SE LIT A CHAQUE IMAGE, avant tout le reste et
+      // HORS du ralenti ci-dessous : c'est lui qui decide du ralenti (roue
+      // ouverte = une image de monde sur quatre), et une roue qui ne se
+      // lirait qu'une image sur quatre repondrait au quart.
+      Combat.majRoue();
+      // Le MONDE, lui, rampe pendant qu'on choisit son arme. Tout ce qui est
+      // ici mesure le temps en IMAGES (cadences, minuteries, usure) : en
+      // sauter trois sur quatre ralentit tout d'un coup, sans un seul `dt`.
+      if (Combat.tempsQuiPasse()) {
+        Monde.majHeure();
+        Monde.majBattants();
+        // La musique suit ce qui t'arrive : district, poursuite, bagarre.
+        Son.Chef.maj();
+        Monde.majChemins();
+        Entites.maj();
+        Combat.maj();
+        Vehicules.maj();
+        Police.maj();
+        Missions.maj();
+        Histoire.maj();
+        Monde.majCamera();
+        B.t++;
+      }
     } else if (B.etat === 'carte') {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
       if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }

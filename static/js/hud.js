@@ -1106,6 +1106,79 @@ const Hud = (function () {
     });
   }
 
+  // --- La roue d'armes --------------------------------------------------------------
+  //: ⚠️ CRENEAU 0 EN HAUT, puis dans le sens des aiguilles. `Combat.creneauVise`
+  //: lit la direction avec exactement la meme regle, et les deux DOIVENT dire
+  //: la meme chose : un dessin qui tourne dans l'autre sens rend la roue
+  //: injouable sans qu'aucun test de logique ne rougisse (le pouce pointe la
+  //: carabine, le jeu degaine la pelle). Un juge compare les deux.
+  const ROUE_ECART = 27;                       // pixels d'arc entre deux creneaux, au moins
+  const ROUE_R_MIN = 40, ROUE_R_MAX = 58;      // ⚠️ 58 : au-dela, treize armes debordent du cadre
+
+  /** Le rayon de la roue — il s'ouvre avec le nombre d'armes, jamais au-dela
+      de ce que l'ecran montre. */
+  function rayonDeLaRoue(n) {
+    return Math.round(borner(ROUE_ECART * n / (Math.PI * 2), ROUE_R_MIN, ROUE_R_MAX));
+  }
+
+  /** Ou tombe le creneau `i` sur une roue de `n` armes. */
+  function posteDeLaRoue(i, n, cx, cy) {
+    const a = -Math.PI / 2 + i * (Math.PI * 2 / n);
+    const r = rayonDeLaRoue(n);
+    return { x: Math.round(cx + Math.cos(a) * r), y: Math.round(cy + Math.sin(a) * r) };
+  }
+
+  function iconeDArme(def) {
+    const sprite = def && OBJETS[def.sprite] ? def.sprite : 'defaut';
+    return Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (g, w, h) { OBJETS[sprite](g, w, h); });
+  }
+
+  function dessinerRoue(ctx) {
+    const r = B.roue;
+    if (!r || !r.armes.length) return;
+    const cx = Math.round(VW / 2), cy = Math.round(VH / 2), n = r.armes.length;
+    // ⚠️ Un voile LEGER, pas celui des menus (0,6) : la ville continue derriere
+    // — au quart de vitesse, mais elle continue — et il faut VOIR ce qui arrive
+    // sur soi pendant qu'on choisit. Une roue qui cache la rue ferait du
+    // ralenti un abri, alors qu'il est le prix.
+    ctx.fillStyle = 'rgba(11,10,18,0.45)';
+    ctx.fillRect(0, 0, VW, VH);
+    B.stats.rects++;
+    for (let i = 0; i < n; i++) {
+      const slug = r.armes[i];
+      const def = Combat.armeDef(slug);
+      if (!def) continue;
+      const p = posteDeLaRoue(i, n, cx, cy);
+      const choisi = i === r.choix;
+      const vide = Combat.aSec(slug);
+      ctx.fillStyle = choisi ? '#e8b33c' : '#3a3a48';
+      ctx.fillRect(p.x - 11, p.y - 9, 22, 18);
+      ctx.fillStyle = choisi ? '#2a2333' : '#14131d';
+      ctx.fillRect(p.x - 10, p.y - 8, 20, 16);
+      B.stats.rects += 2;
+      // ⚠️ A sec, l'icone PALIT et le compte passe au rouge : c'est tout ce
+      // que le vieux cycle ne disait pas — on degainait un pistolet a zero et
+      // on perdait le tour sans avoir rien vu venir.
+      if (vide) ctx.globalAlpha = 0.35;
+      ctx.drawImage(iconeDArme(def), p.x - 8, p.y - 7);
+      ctx.globalAlpha = 1;
+      B.stats.images++;
+      if (def.chargeur !== null) {
+        const mun = String(Combat.munitions(slug) || 0);
+        texte(ctx, mun, p.x + 9 - Atlas.largeurTexte(mun, 1), p.y + 3, vide ? '#ff5a4e' : '#cdc6e6', 1);
+      }
+    }
+    // Au centre, ce qu'on tient sous le pouce : son nom, et ce qu'il reste
+    // dedans. Sans ca, treize icones de seize pixels ne se nomment pas.
+    const def = Combat.armeDef(r.armes[r.choix]);
+    if (!def) return;
+    const nom = def.nom.toUpperCase();
+    texte(ctx, nom, Math.round(cx - Atlas.largeurTexte(nom, 1) / 2), cy - 6, '#efe6d0', 1);
+    const mun = def.chargeur === null ? '' : Combat.munitions(r.armes[r.choix]) + ' / ' + def.munitions_max;
+    const sous = mun || (def.usures ? 'SE CASSE' : '');
+    if (sous) texte(ctx, sous, Math.round(cx - Atlas.largeurTexte(sous, 1) / 2), cy + 2, '#8a8698', 1);
+  }
+
   //: Ce que la derniere image a dessine, en pixels logiques. Sert au test
   //: tactile : aucun element du HUD ne doit finir sous un bouton.
   let ancres = [];
@@ -1274,6 +1347,9 @@ const Hud = (function () {
     if (B.etat === 'jeu') {
       invite(ctx);
       dessinerDialogue(ctx);
+      // ⚠️ PAR-DESSUS l'invite et la bulle : la roue est ce qu'on regarde,
+      // et « ACTION POUR ENTRER » en travers d'une icone d'arme ne se lit plus.
+      dessinerRoue(ctx);
       // ⚠️ La rue s'efface SOUS un menu ouvert, comme en pause. La boite d'un
       // menu ne couvre qu'a 92 % : ce qui est clair derriere elle TRANSPERCE —
       // et la bulle d'un passant qui parle sous le comptoir s'imprime en
@@ -1302,6 +1378,6 @@ const Hud = (function () {
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
-           dessiner, miniCarte, MINI, montrerScores, demanderScore,
+           dessiner, dessinerRoue, rayonDeLaRoue, posteDeLaRoue, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();
