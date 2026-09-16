@@ -208,7 +208,11 @@ const Missions = (function () {
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
     // n'y a rien d'autre a faire de ce bouton-la.
     const homme = collecteurSousLaMain(j);
-    if (homme) { B.menu = menuDette(homme); return true; }
+    // ⚠️ PAR `Hud.ouvrirMenu`, jamais en posant `B.menu` a la main : c'est lui
+    // qui donne au menu son curseur. Pose directement, ce comptoir-la s'ouvrait
+    // SANS curseur — aucune ligne surlignee, HAUT et BAS le mettaient a NaN,
+    // ACTION ne choisissait rien. Le menu le plus tendu du jeu ne se jouait pas.
+    if (homme) { Hud.ouvrirMenu(menuDette(homme)); return true; }
     // ⚠️ LE STOOL AVANT LE TEMOIN : lui est en route vers un telephone, l'autre
     // cherche encore un agent. Quand les deux sont a portee, c'est le plus
     // presse qu'on paie.

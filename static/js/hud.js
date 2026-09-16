@@ -45,8 +45,25 @@ const Hud = (function () {
 
   let repetT = 0;
 
+  /** Ouvrir un menu — SUR UNE LIGNE QU'ON PEUT CHOISIR.
+
+      ⚠️ La moitie des comptoirs commencent par un en-tete qui se lit et ne se
+      choisit pas (« LA DETTE », « TON DOSSIER », « PRIX DU JOUR ») : le curseur
+      pose dessus, le menu n'a l'air d'avoir AUCUNE selection — la seule ligne
+      surlignee est grise comme tout ce qui est hors de portee, et ACTION n'y
+      repond qu'un bip. Martin l'a photographie chez les hommes de Sal. La regle
+      existait pourtant : les OPTIONS la tenaient A LA MAIN (`curseur: 1`, leur
+      premiere ligne etant un diagnostic) — mais chaque menu devait y penser
+      tout seul, et cinq l'avaient oublie. Elle se tient donc ICI, une fois.
+      ⚠️ Un menu qui SAIT ou il veut son curseur le dit (une fiche qui s'ouvre
+      sur RETOUR, le JOURNAL qui s'ouvre en haut de sa liste et s'y promene) :
+      un `curseur` donne ne se discute pas. Et un menu ou il n'y a rien a
+      choisir (le BILAN) reste en haut, comme avant. */
   function ouvrirMenu(menu) {
-    menu.curseur = menu.curseur || 0;
+    if (typeof menu.curseur !== 'number') {
+      const i = (menu.items || []).findIndex(function (item) { return !!item.faire; });
+      menu.curseur = i < 0 ? 0 : i;
+    }
     B.menu = menu;
     Entree.contexte('menu');
     Son.SFX.menu();
@@ -1250,7 +1267,19 @@ const Hud = (function () {
         dessinerMenu(ctx);
       }
     }
-    if (B.etat === 'jeu') { invite(ctx); dessinerDialogue(ctx); dessinerMenu(ctx); }
+    if (B.etat === 'jeu') {
+      invite(ctx);
+      dessinerDialogue(ctx);
+      // ⚠️ La rue s'efface SOUS un menu ouvert, comme en pause. La boite d'un
+      // menu ne couvre qu'a 92 % : ce qui est clair derriere elle TRANSPERCE —
+      // et la bulle d'un passant qui parle sous le comptoir s'imprime en
+      // travers d'une ligne, qui devient illisible (Martin a photographie
+      // « TOUT REGLER » ecrase par un « HE! LE COUSIN! »). Le voile de la
+      // pause existe deja pour ca ; un menu en jeu fige le monde autant
+      // qu'elle, il merite le meme fond.
+      if (B.menu) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
+      dessinerMenu(ctx);
+    }
     if (B.etat === 'carte') dessinerCarte(ctx);
     dessinerTransition(ctx);
     if (B.options.perf) {

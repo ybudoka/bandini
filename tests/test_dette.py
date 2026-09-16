@@ -186,6 +186,58 @@ def test_on_les_paie_en_main_propre_et_la_dette_ne_passe_jamais_sous_zero(banc):
     assert r["finale"] == 0, "la dette passe sous zéro : %s" % r
 
 
+def test_le_menu_des_hommes_se_joue_vraiment(banc):
+    """⚠️ Retour de Martin, capture à l'appui : « il n'y a pas de sélection dans
+    ce menu ». La collecte était le SEUL menu du jeu posé à la main
+    (`B.menu = menuDette(...)`) au lieu de passer par `Hud.ouvrirMenu` — donc
+    ouvert **sans curseur** : aucune ligne surlignée, HAUT et BAS le mettaient à
+    `NaN`, ACTION ne choisissait rien et les boutons de l'écran tactile
+    continuaient d'annoncer FRAPPE et ACTION au lieu de RETOUR et CHOISIR. On ne
+    pouvait pas payer, au moment le plus tendu du jeu.
+
+    ⚠️ Et il s'ouvre sur l'ACOMPTE, pas sur « LA DETTE » : la première ligne est
+    un en-tête qui se lit et ne se choisit pas. Le juge va jusqu'au bout — il
+    descend d'un cran, appuie, et regarde l'argent sortir de la poche."""
+    r = banc("""function (L, o) {
+        %s
+        p.jour = f.collecte_jour; p.argent = 2575;
+        for (let i = 0; i < 60; i++) { L.B.t += 30; L.Missions.majCollecteurs(); }
+        const homme = L.Missions.collecteurs()[0];
+        homme.x = j.x + 12; homme.y = j.y;
+        L.Entites.indexer();
+        L.Missions.interagir(j);
+        const m = L.B.menu;
+        const sous = m.items[m.curseur] || {};
+        // ⚠️ `null` plutot que `undefined` : sans ca, un menu ouvert SANS curseur
+        // (le defaut d'origine) disparait du JSON et le juge meurt d'une KeyError
+        // au lieu de dire ce qu'il a vu.
+        const ouverture = { titre: m.titre, curseur: typeof m.curseur === 'number' ? m.curseur : null,
+                            libelle: sous.libelle,
+                            montant: sous.montant || 0, choix: !!sous.faire,
+                            etiquette: o.doc.querySelector('#boutons b[data-a="action"]').textContent };
+        o.tape('KeyS', 2);                      // BAS : le curseur descend d'un cran
+        const apresBas = L.B.menu ? L.B.menu.curseur : null;
+        const detteAvant = p.dette, argentAvant = p.argent;
+        o.tape('KeyE', 2);                      // ACTION : on donne ce qui est sous le pouce
+        return { ouverture: ouverture, apresBas: apresBas, ferme: L.B.menu === null,
+                 paye: argentAvant - p.argent, efface: detteAvant - p.dette,
+                 restent: L.Missions.collecteurs().length, acompte: f.acompte_min };
+    }""" % DECOR)
+    o = r["ouverture"]
+    assert o["titre"] == "LES HOMMES DE SAL"
+    assert o["curseur"] == 1 and o["choix"] is True, (
+        "le menu s'ouvre sur une ligne qu'on ne peut pas choisir : %s" % r
+    )
+    assert o["montant"] == r["acompte"], "il doit s'ouvrir sur l'acompte : %s" % r
+    assert o["etiquette"] == "CHOISIR", (
+        "les boutons de l'écran annoncent encore le jeu, pas le menu : %s" % r
+    )
+    assert r["apresBas"] == 2, "BAS ne descend pas le curseur : %s" % r
+    assert r["paye"] == r["acompte"] * 4, "ACTION ne donne pas la ligne sous le pouce : %s" % r
+    assert r["efface"] == r["paye"], "ce qu'on donne ne descend pas la dette : %s" % r
+    assert r["restent"] == 0 and r["ferme"] is True, "l'acompte ne les renvoie pas : %s" % r
+
+
 def test_ce_qu_ils_prennent_de_force_compte_sur_la_dette(banc):
     """⚠️ Des hommes de main qui volent sans rien effacer seraient un impôt, pas
     un recouvrement — et le joueur n'aurait aucune raison de les laisser

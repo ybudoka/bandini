@@ -6390,6 +6390,74 @@ def test_le_menu_fige_le_jeu_et_se_navigue(banc):
     assert r["retour"] is True, "FRAPPE doit fermer un menu"
 
 
+def test_un_menu_s_ouvre_sur_une_ligne_qu_on_peut_choisir(banc):
+    """⚠️ Un menu qui s'ouvre sur son EN-TÊTE n'a l'air d'avoir aucune sélection :
+    la seule ligne surlignée est grise comme tout ce qui est hors de portée, et
+    ACTION n'y répond qu'un bip. La moitié des comptoirs commencent par une ligne
+    qui se lit et ne se choisit pas (« LA DETTE », « TON DOSSIER », « PRIX DU
+    JOUR ») — c'est `ouvrirMenu` qui pose le curseur, pas chaque menu à la main.
+
+    ⚠️ Mais une ligne HORS DE PORTÉE reste un choix : le curseur s'y pose, et
+    c'est le bip qui dit pourquoi elle est grise. Et un menu qui NOMME son
+    curseur (le JOURNAL s'ouvre en haut de sa liste et s'y promène) le garde."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function entete() { return { libelle: 'CE QUE TU DOIS', detail: '100 $', actif: false }; }
+        function ouvrir(deuxieme, curseur) {
+            const m = { titre: 'ESSAI', items: [entete(), deuxieme] };
+            if (curseur !== undefined) m.curseur = curseur;
+            L.Hud.ouvrirMenu(m);
+            const ou = L.B.menu.curseur;
+            L.Hud.fermerMenu();
+            return ou;
+        }
+        return {
+            surLeChoix: ouvrir({ libelle: 'DONNER 500 $', faire: function () { return true; } }),
+            surLaGrise: ouvrir({ libelle: 'TOUT REGLER', actif: false, faire: function () { return true; } }),
+            rienAChoisir: ouvrir({ libelle: 'ARRESTATIONS', detail: '3', actif: false }),
+            nomme: ouvrir({ libelle: 'RETOUR', faire: function () { return true; } }, 0),
+        };
+    }""")
+    assert r["surLeChoix"] == 1, "le curseur s'ouvre sur un en-tête qu'on ne peut pas activer : %s" % r
+    assert r["surLaGrise"] == 1, "une ligne hors de portée est un choix, pas un décor : %s" % r
+    assert r["rienAChoisir"] == 0, "un menu sans rien à choisir (le BILAN) doit rester en haut : %s" % r
+    assert r["nomme"] == 0, "un menu qui dit où il veut son curseur se le fait déplacer : %s" % r
+
+
+def test_la_rue_s_efface_sous_un_menu_ouvert(banc):
+    """⚠️ La boîte d'un menu ne couvre qu'à 92 % : ce qui est CLAIR derrière elle
+    la transperce. Une bulle de passant qui parle sous le comptoir s'imprimait en
+    travers d'une ligne — Martin a photographié « TOUT REGLER » écrasé par un
+    « HE! LE COUSIN! ». La pause pose déjà son voile avant son menu ; un menu en
+    jeu fige le monde autant qu'elle et mérite le même fond."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const ctx = L.Base.ecran();
+        function rendre() {
+            ctx.traces = [];
+            L.Hud.dessiner();
+            const t = ctx.traces;
+            ctx.traces = null;
+            return t;
+        }
+        function voiles(t) {
+            return t.filter(function (r) { return r[0] === 0 && r[1] === 0 && r[2] === L.VW && r[3] === L.VH; });
+        }
+        function boite(t) {
+            return t.findIndex(function (r) { return String(r[4]).indexOf('0.92') >= 0; });
+        }
+        const sansMenu = voiles(rendre()).length;
+        L.Hud.ouvrirMenu({ titre: 'ESSAI', items: [{ libelle: 'UN', faire: function () { return true; } }] });
+        const t = rendre();
+        const vs = voiles(t);
+        return { sansMenu: sansMenu, avecMenu: vs.length,
+                 avant: vs.length ? t.indexOf(vs[vs.length - 1]) < boite(t) : false };
+    }""")
+    assert r["sansMenu"] == 0, "la rue s'assombrit sans menu ouvert : %s" % r
+    assert r["avecMenu"] >= 1, "rien n'efface la rue sous le menu : une bulle la traverse (%s)" % r
+    assert r["avant"] is True, "le voile est posé APRÈS la boîte du menu : il l'assombrit (%s)" % r
+
+
 def test_la_planque_dort_sauve_et_garde_le_coffre(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
