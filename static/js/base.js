@@ -65,6 +65,10 @@ function etatInitial(defs) {
     casier: 0,
     jour: 1,
     heure: 0.35,
+    // ⚠️ Le jour ou les chantiers de CETTE partie ont commence : leur phase se lit
+    // du jour courant et de celui-ci, donc deux appareils qui ouvrent la meme
+    // sauvegarde voient la meme ville (voir `Chantiers.phaseVoulue`).
+    chantiers: { debut: 1 },
     vie: 100,
     tenue: 'chandail',
     tenues: ['chandail'],
@@ -358,6 +362,12 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
     if (!Array.isArray(out.carnet)) out.carnet = [];
     if (!Array.isArray(out.skimmers)) out.skimmers = [];
+    // ⚠️ Une partie d'avant les chantiers REPART de son jour : sinon elle
+    // s'ouvrirait au trentieme jour sur trois batiments neufs qu'on n'a jamais
+    // vus tomber.
+    if (!partie.chantiers || typeof partie.chantiers.debut !== 'number') {
+      out.chantiers = { debut: typeof out.jour === 'number' ? out.jour : 1 };
+    }
     if (!out.armes.poings) out.armes.poings = { mun: null };
     if (!out.armes[out.arme]) out.arme = 'poings';
     if (!out.armes[out.armePrecedente]) out.armePrecedente = 'poings';

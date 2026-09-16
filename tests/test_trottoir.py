@@ -241,6 +241,13 @@ def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
             L.B.defs.pietons.reactions.abord_renonce = renonce;
             let renoncements = 0, avances = 0;
             for (let n = 0; n < 100; n++) {
+                // ⚠️ UNE GRAINE PAR ESSAI. Posee une seule fois, elle faisait
+                // mesurer un ENCHAINEMENT et non une probabilite : entre deux
+                // decisions, toute la ville tire au sort, et le tirage qui tombe
+                // sur le flaneur depend de tout ce qui existe ailleurs. Mesure du
+                // 16 sept. 2026, sur la base : une seule caisse posee a l'autre
+                // bout de la carte faisait tomber le taux de 75 % a 2 %.
+                L.graine(graine + n);
                 const p = o.poser('passant', 0, 0);
                 p.etat = 'flane'; p.porteBut = null; p.intouchable = true;
                 p.dir = 3; p.butT = 5;                     // face au nord, l'abord devant, decide

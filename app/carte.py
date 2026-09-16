@@ -1459,6 +1459,10 @@ class _Chantier:
         # pneus et des barils la ou il ne posait que des caisses. Meme lecon,
         # meme parade (voir `des_dechet`).
         self.des_port = Des(graine ^ 0x9041)
+        #: Chaque batiment pose, tel qu'il est sorti de `batiment_forme`. ⚠️ Le
+        #: noter ne tire AUCUN de : c'est ce qui permet aux chantiers (voir
+        #: `app/chantiers.py`) de choisir ou demolir sans deplacer la ville.
+        self.batiments: list[dict] = []
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -1656,6 +1660,7 @@ class _Chantier:
         for tx, ty in facades:
             coin = (tx - 1, ty) not in tuiles or (tx + 1, ty) not in tuiles
             self.sol[ty][tx] = "W" if (not coin and self.des.chance(vitrines)) else "F"
+        self.batiments.append({"tuiles": sorted(tuiles), "genre": genre})
         return facades
 
     def _autour(self, tuiles: set[tuple[int, int]]) -> set[tuple[int, int]]:
@@ -5714,7 +5719,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     chantier._ponts_poses = ponts
     chantier.greve(ponts)
 
-    return {
+    ville = {
         "slug": "baie_des_brumes",
         "nom": "Baie-des-Brumes",
         "graine": graine,
@@ -5786,6 +5791,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "interieurs": {**INTERIEURS, **chantier.pieces},
         "tuiles_bouchees": bouchees,
     }
+    # ⚠️ LES CHANTIERS EN TOUT DERNIER, sur la ville FINIE, et dans leur propre
+    # de : ils ne choisissent que ce qui ne sert a rien d'autre, et ne deplacent
+    # ni un arbre ni une enseigne. Import paresseux : `chantiers` lit `carte`.
+    from . import chantiers as chantiers_mod
+    ville["chantiers"] = chantiers_mod.tirer(ville, chantier.batiments, graine)
+    return ville
 
 # --- Les interieurs ---------------------------------------------------------
 

@@ -59,6 +59,12 @@ const Jeu = (function () {
     // une ambiance ENREGISTREE joue (elle occupe la meme case de l'echelle).
     Son.Chef.maj();
     Hud.message('BAIE-DES-BRUMES', 150);
+    // ⚠️ LES CHANTIERS EN DERNIER. Poses au milieu, leurs machines prenaient des
+    // numeros d'entite que la foule et les donneurs auraient eus, et tout ce qui
+    // se tire a l'empreinte d'un numero changeait de tirage — trois juges sans
+    // rapport en sont tombes. Ici, rien n'est encore dessine, et personne ne peut
+    // etre ne dans une empreinte : a la premiere phase, c'est encore un mur.
+    Chantiers.demarrer();
   }
 
   /** JOUER : la partie se pose, et l'histoire commence.
@@ -520,6 +526,7 @@ const Jeu = (function () {
         Vehicules.maj();
         Police.maj();
         Missions.maj();
+        Chantiers.maj();
         Histoire.maj();
         Monde.majCamera();
         B.t++;
@@ -688,7 +695,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Police: Police, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Police: Police, Chantiers: Chantiers, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,

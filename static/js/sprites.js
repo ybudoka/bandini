@@ -4097,6 +4097,118 @@ const DECORS = {
     ctx.fillStyle = 'rgba(120,170,200,0.45)';
     ctx.fillRect(2, 2, 10, 1); ctx.fillRect(3, 4, 8, 1);
   } },
+
+  // --- Ça travaille : les machines de chantier (voir `app/chantiers.py`) -----------
+  // ⚠️ Du DECOR ANIME, pas des vehicules : la refonte des chars interdit d'en
+  // ajouter avant elle. Elles ne roulent pas, elles TRAVAILLENT — une
+  // articulation chacune, cuite une fois par pose (`anime`), exactement comme
+  // les manèges. Et elles ARRETENT un char sans jamais tomber (`arrete`) : une
+  // pelle mecanique qu'on renverse au pistolet, ce serait une farce.
+  tas_de_terre: { arrete: 3.0, w: 24, h: 14, ancre: [12, 12], r: 6, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(1, 10, 22, 4);
+    ctx.fillStyle = '#5e4128'; ctx.fillRect(1, 7, 22, 5); ctx.fillRect(3, 5, 18, 3);
+    ctx.fillStyle = '#7a5a36'; ctx.fillRect(5, 3, 14, 4); ctx.fillRect(8, 1, 8, 3);
+    ctx.fillStyle = '#8f6c44'; ctx.fillRect(9, 2, 5, 2); ctx.fillRect(6, 5, 5, 1);
+    ctx.fillStyle = '#9a9689'; ctx.fillRect(4, 9, 2, 1); ctx.fillRect(15, 8, 2, 2); ctx.fillRect(18, 10, 1, 1);
+  } },
+  // La pelle : le bras monte, le godet racle, le bras redescend. Six poses
+  // aller-retour, jamais un saut du haut au bas.
+  pelleteuse: { anime: 9, arrete: 6.0, w: 40, h: 30, ancre: [16, 26], r: 8, sol: [9, 6], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
+    const trait = function (x0, y0, x1, y1, e, c) {
+      ctx.fillStyle = c;
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let k = 0; k <= n; k++) {
+        ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
+      }
+    };
+    const leve = [0, 1, 2, 3, 2, 1][v % 6];
+    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(1, 25, 30, 5);
+    // Les chenilles.
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(2, 19, 26, 8);
+    ctx.fillStyle = '#4a4d55'; for (let x = 3; x < 28; x += 3) ctx.fillRect(x, 20, 1, 6);
+    // La caisse, le contrepoids, la cabine.
+    ctx.fillStyle = '#c8961e'; ctx.fillRect(4, 11, 20, 9);
+    ctx.fillStyle = '#e2b12c'; ctx.fillRect(4, 11, 20, 2);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(0, 13, 5, 6);
+    ctx.fillStyle = '#e2b12c'; ctx.fillRect(6, 3, 10, 9);
+    ctx.fillStyle = '#243447'; ctx.fillRect(8, 5, 6, 4);
+    ctx.fillStyle = '#7fb3d8'; ctx.fillRect(9, 5, 2, 2);
+    // Le bras : la fleche monte vers le coude, le balancier descend au godet.
+    const coudeX = 30, coudeY = 6 - leve * 2;
+    const godetX = 34, godetY = 18 - leve * 4;
+    trait(21, 13, coudeX, coudeY, 3, '#c8961e');
+    trait(coudeX, coudeY, godetX, godetY, 2, '#a87c16');
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(godetX - 3, godetY, 7, 5);
+    ctx.fillStyle = '#5f6267'; ctx.fillRect(godetX - 3, godetY + 4, 1, 2); ctx.fillRect(godetX, godetY + 4, 1, 2); ctx.fillRect(godetX + 3, godetY + 4, 1, 2);
+    if (leve === 0) { ctx.fillStyle = '#6e5330'; ctx.fillRect(godetX - 5, godetY + 5, 10, 2); }
+  } },
+  // La boule : elle se balance au bout de son cable, et c'est le mouvement qui
+  // dit « demolition » avant meme qu'on voie le mur tombe.
+  grue_a_boule: { anime: 7, arrete: 8.0, w: 50, h: 54, ancre: [14, 50], r: 8, sol: [9, 6], solide: true, variantes: 8, peindre: function (ctx, w, h, v) {
+    const trait = function (x0, y0, x1, y1, e, c) {
+      ctx.fillStyle = c;
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let k = 0; k <= n; k++) {
+        ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
+      }
+    };
+    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(1, 49, 28, 5);
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 42, 26, 9);
+    ctx.fillStyle = '#4a4d55'; for (let x = 2; x < 27; x += 3) ctx.fillRect(x, 43, 1, 7);
+    ctx.fillStyle = '#b8332a'; ctx.fillRect(3, 32, 20, 11);
+    ctx.fillStyle = '#d24a3a'; ctx.fillRect(3, 32, 20, 2);
+    ctx.fillStyle = '#243447'; ctx.fillRect(5, 34, 6, 5);
+    // La fleche en treillis : deux longerons et des diagonales.
+    const piedX = 18, piedY = 34, boutX = 42, boutY = 4;
+    trait(piedX, piedY, boutX, boutY, 2, '#d2a126');
+    trait(piedX + 3, piedY + 1, boutX + 2, boutY + 1, 1, '#a87c16');
+    for (let k = 1; k < 6; k++) {
+      const x = piedX + (boutX - piedX) * k / 6, y = piedY + (boutY - piedY) * k / 6;
+      trait(Math.round(x), Math.round(y), Math.round(x + 3), Math.round(y + 1), 1, '#a87c16');
+    }
+    // Le cable et la boule : un pendule de huit poses (±0,55 rad).
+    const angle = Math.sin(v / 8 * Math.PI * 2) * 0.55;
+    const bx = Math.round(boutX + Math.sin(angle) * 30), by = Math.round(boutY + Math.cos(angle) * 30);
+    trait(boutX, boutY, bx, by, 1, '#3a3d44');
+    ctx.fillStyle = '#2c2c30'; ctx.fillRect(bx - 3, by - 2, 7, 6); ctx.fillRect(bx - 2, by - 3, 5, 8);
+    ctx.fillStyle = '#5f6267'; ctx.fillRect(bx - 1, by - 2, 2, 2);
+  } },
+  // La grue a tour : sa fleche TOURNE, lentement, seize poses pour un tour.
+  // ⚠️ Vue de trois-quarts : un cercle couche se lit en ellipse, alors la
+  // fleche fait quatre fois moins de chemin en hauteur qu'en largeur.
+  grue: { anime: 20, arrete: 9.0, w: 112, h: 94, ancre: [56, 90], r: 7, sol: [7, 6], solide: true, variantes: 16, peindre: function (ctx, w, h, v) {
+    const trait = function (x0, y0, x1, y1, e, c) {
+      ctx.fillStyle = c;
+      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+      for (let k = 0; k <= n; k++) {
+        ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
+      }
+    };
+    const pivotX = 56, pivotY = 20;
+    const t = v / 16 * Math.PI * 2;
+    const devant = Math.sin(t) >= 0;         // la fleche passe devant ou derriere le mat
+    const bout = { x: pivotX + Math.cos(t) * 50, y: pivotY + Math.sin(t) * 12 };
+    const queue = { x: pivotX - Math.cos(t) * 18, y: pivotY - Math.sin(t) * 4 };
+    const fleche = function () {
+      trait(pivotX, pivotY, bout.x, bout.y, 2, '#e2b12c');
+      trait(pivotX, pivotY, queue.x, queue.y, 2, '#c8961e');
+      ctx.fillStyle = '#5f6267'; ctx.fillRect(Math.round(queue.x) - 3, Math.round(queue.y) - 1, 6, 5);
+      // Le chariot et son crochet, aux deux tiers de la fleche.
+      const cx = Math.round(pivotX + (bout.x - pivotX) * 0.66), cy = Math.round(pivotY + (bout.y - pivotY) * 0.66);
+      trait(cx, cy + 1, cx, cy + 16, 1, '#3a3d44');
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(cx - 1, cy + 16, 3, 2);
+    };
+    ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(46, 88, 22, 5);
+    if (!devant) fleche();
+    // Le mat en treillis et son lest de beton.
+    ctx.fillStyle = '#9a9689'; ctx.fillRect(48, 82, 16, 9);
+    ctx.fillStyle = '#b3afa2'; ctx.fillRect(48, 82, 16, 2);
+    ctx.fillStyle = '#e2b12c'; ctx.fillRect(53, 24, 2, 58); ctx.fillRect(59, 24, 2, 58);
+    for (let y = 26; y < 82; y += 6) trait(54, y, 59, y + 5, 1, '#c8961e');
+    ctx.fillStyle = '#c8961e'; ctx.fillRect(51, 16, 12, 8);
+    ctx.fillStyle = '#243447'; ctx.fillRect(53, 18, 5, 4);
+    if (devant) fleche();
+  } },
 };
 
 /* Decalques au sol : sang, gouttes, impacts. Cuits une fois par variante. */

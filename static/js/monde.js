@@ -1280,21 +1280,29 @@ const Monde = (function () {
     if (residences && murs.length) {
       const fer = ferDesEscaliers();
       residences.forEach(function (r) {
+        // ⚠️ Une facade de logement dont le batiment est en chantier : elle est
+        // tombee avec les murs (voir `Chantiers.efface`).
+        if (Chantiers.efface(r.x, r.y)) return;
         FACADES.residence(ctx, r, murs[r.mur % murs.length], fer, (r.x - ox) * TT, (r.y - oy) * TT);
       });
     }
     const toits = carte.toits && carte.toits.get(cle);
     if (toits) {
-      toits.forEach(function (t) { FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT); });
+      toits.forEach(function (t) {
+        if (!Chantiers.efface(t.x, t.y)) FACADES.toiture(ctx, t, (t.x - ox) * TT, (t.y - oy) * TT);
+      });
     }
     const tags = carte.graffitis && carte.graffitis.get(cle);
     if (tags) {
       const couleurs = couleursTag();
       tags.forEach(function (gr) {
+        if (Chantiers.efface(gr.x, gr.y)) return;
         FACADES.graffiti(ctx, gr, couleurs[gr.couleur % couleurs.length],
                          (gr.x - ox) * TT, (gr.y - oy) * TT);
       });
     }
+    // Le chantier par-dessus tout : ses planches et son panneau pendent AU MUR.
+    Chantiers.peindre(ctx, mx, my);
   }
 
   function dessinerSol(ctx, cam) {
@@ -1463,6 +1471,7 @@ const Monde = (function () {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const l of carte.lampes) {
       if (l.eteinte) continue;             // son poteau est a terre
+      if (l.demolie) continue;             // sa fenetre est tombee avec le batiment (chantier)
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });
       if (out.length >= 25) break;

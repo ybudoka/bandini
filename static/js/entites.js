@@ -522,6 +522,12 @@ const Entites = (function () {
       joueur. */
   function porteQuiSert(porte) {
     if (!porte) return false;
+    // ⚠️ LA TUILE D'ABORD. La liste des portes se lit au chargement, et depuis
+    // les chantiers le sol change en cours de partie : une maison rasee n'avale
+    // plus personne. On ne retire pas la porte de la liste — son ORDRE compte
+    // pour tout ce qui y tire au sort, et le reordonner faisait naitre la foule
+    // ailleurs, a l'autre bout de la ville (mesure : trois juges sans rapport).
+    if (Monde.glyphe(porte.x, porte.y) !== porte.glyphe) return false;
     if (porte.glyphe === 'd') return true;                 // un logement : toujours
     const p = Monde.porteA(porte.x, porte.y);
     if (!p || !p.lieu) return true;
@@ -1319,6 +1325,7 @@ const Entites = (function () {
       const x = porte.x * TT + 8, y = (porte.y + 1) * TT + 8;
       const d = dist2(x, y, e.x, e.y);
       if (d >= dMin || faites.indexOf(porte) >= 0) continue;
+      if (Monde.glyphe(porte.x, porte.y) !== porte.glyphe) continue;   // rasee (chantier)
       if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
       dMin = d; meilleure = porte;
     }
