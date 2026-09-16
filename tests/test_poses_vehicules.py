@@ -366,6 +366,46 @@ def test_chaque_char_debout_se_sert_de_ses_tons(banc):
             assert n[ton] > 0, f"{slug} ne pose jamais le ton « {ton} » : {n}"
 
 
+def test_de_face_et_de_dos_la_vitre_est_cernee(banc):
+    """Retour de Martin : « une légère séparation entre le pare-brise et le
+    reste pour mieux démarquer de face et de dos ». ⚠️ De face, le pare-brise
+    bleu pâle touchait le capot et le toit : sur la police blanche, on ne
+    voyait plus où finissait la vitre.
+
+    On regarde la projection de face (sud) et de dos (nord) de chaque machine
+    qui a des vitres : au-dessus et au-dessous de chaque pixel de vitre (`v`,
+    son reflet `G`), il n'y a jamais de tôle (`c`, son rehaut `C`) — il y a le
+    cadre, ou encore de la vitre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        Object.keys(L.SPRITES).forEach(function (slug) {
+            const def = L.SPRITES[slug];
+            if (!def.machine) return;
+            const vues = { face: Math.PI / 2, dos: -Math.PI / 2 };
+            Object.keys(vues).forEach(function (nom) {
+                const g = L.Atlas.projeter(def.machine, vues[nom], def.w);
+                const vitres = [], touches = [];
+                g.forEach(function (ligne, y) {
+                    ligne.split('').forEach(function (ch, x) {
+                        if (ch !== 'v' && ch !== 'G') return;
+                        vitres.push([x, y]);
+                        [-1, 1].forEach(function (dy) {
+                            const voisin = (g[y + dy] || '')[x];
+                            if (voisin === 'c' || voisin === 'C') touches.push([x, y, voisin]);
+                        });
+                    });
+                });
+                if (vitres.length) out[slug + ' ' + nom] = { vitres: vitres.length, touches: touches.slice(0, 6), n: touches.length };
+            });
+        });
+        return out;
+    }""")
+    assert {"auto face", "auto dos", "taxi face", "police dos"} <= set(r), "le décor du juge est faux : %s" % list(r)
+    for vue, m in r.items():
+        assert m["n"] == 0, f"{vue} : {m['n']} pixels de vitre touchent la tôle sans cadre ({m['touches']})"
+
+
 def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(banc):
     """⚠️ Les premières grilles debout avaient PERDU les bandes `x` et `y` : le
     taxi et la police se dessinaient comme une auto repeinte. La carrosserie
@@ -391,7 +431,10 @@ def test_le_taxi_et_la_police_ont_retrouve_leur_livree_et_l_auto_n_en_porte_pas(
             return { x: (tout.match(/x/g) || []).length, y: (tout.match(/y/g) || []).length };
         };
         const tp = L.SPRITES.taxi.pal, pp = L.SPRITES.police.pal;
-        return { carrosserie: dedans(a, t) && dedans(a, p) && t.length > a.length && t.join() === p.join(),
+        // ⚠️ Chacun a maintenant SON toit (l'enseigne, la rampe) : ils portent la
+        // carrosserie de l'auto et la meme livree, pas la meme machine.
+        const livree = t.filter(function (q) { return a.indexOf(q) < 0 && /"[xy]"/.test(q); });
+        return { carrosserie: dedans(a, t) && dedans(a, p) && livree.length > 0 && dedans(livree, p),
                  auto: lettres('auto'), taxi: lettres('taxi'), police: lettres('police'),
                  tX: tp.x, tC: tp.c, pY: pp.y, pC: pp.c };
     }""")
@@ -1030,3 +1073,100 @@ def test_le_cycliste_pedale_en_roulant_et_le_motard_non(banc):
     v = r["velo"]
     assert v["memeDemiTour"] and v["autreDemiTour"] and v["tourComplet"], f"les pédales ne tournent pas avec la distance : {v}"
     assert r["moto"]["pedale"] is None and r["moto"]["fige"], f"le motard pédale : {r['moto']}"
+
+
+# --- Le toit, comme en vrai : l'enseigne et les gyrophares --------------------
+
+
+def test_le_taxi_et_les_urgences_portent_leurs_lumieres_sur_le_toit(banc):
+    """Demande de Martin : « taxi et tous les véhicules qui en ont besoin doivent
+    avoir des indicateurs ou gyrophare sur leur toit. comme en vrai. »
+    ⚠️ **Mesuré avant** : aucun char n'en avait — la police n'avait jamais eu de
+    rampe, et les dessins de l'ambulance et de la remorqueuse n'avaient ni
+    gyrophare ni croix.
+
+    On regarde ce qui ROULE : la projection à chacun des 32 caps pour la
+    berline, le toit tourné pour l'ambulance et la remorqueuse. L'enseigne du
+    taxi (`e`) et la rampe de la police (`a` rouge, `b` bleu) se voient à tous
+    les caps ; l'auto n'a ni l'une ni l'autre ; l'ambulance et la remorqueuse
+    ont leur rampe sur le toit qui tourne."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const n = L.Vehicules.ROTATIONS, out = {};
+        ['auto', 'taxi', 'police'].forEach(function (slug) {
+            const def = L.SPRITES[slug], manque = { e: 0, a: 0, b: 0 }, vus = { e: 0, a: 0, b: 0 };
+            for (let i = 0; i < n; i++) {
+                const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, def.w).join('');
+                ['e', 'a', 'b'].forEach(function (ch) { if (g.indexOf(ch) >= 0) vus[ch]++; else manque[ch]++; });
+            }
+            out[slug] = vus;
+        });
+        ['ambulance', 'remorqueuse'].forEach(function (slug) {
+            const toit = L.Atlas.toitDe(slug, L.SPRITES[slug]).join('');
+            out[slug] = { a: (toit.match(/a/g) || []).length, b: (toit.match(/b/g) || []).length,
+                          gyrophares: !!L.SPRITES[slug].gyrophares };
+        });
+        out.n = n;
+        return out;
+    }""")
+    n = r["n"]
+    assert r["taxi"]["e"] == n, f"l'enseigne du taxi ne se voit qu'à {r['taxi']['e']} caps sur {n}"
+    assert r["police"]["a"] == n and r["police"]["b"] == n, f"la rampe de la police manque à des caps : {r['police']}"
+    assert r["auto"] == {"e": 0, "a": 0, "b": 0}, f"l'auto porte une enseigne ou une rampe : {r['auto']}"
+    assert r["taxi"]["a"] == 0 and r["police"]["e"] == 0, "le taxi et la police ont échangé leur toit : %s" % r
+    for slug in ("ambulance", "remorqueuse"):
+        assert r[slug]["a"] > 0 and r[slug]["b"] > 0 and r[slug]["gyrophares"], f"{slug} n'a pas de rampe sur le toit : {r[slug]}"
+
+
+def test_les_gyrophares_ne_battent_que_quand_ils_servent(banc):
+    """⚠️ Un gyrophare qui brille tout le temps ne dit plus rien : la rampe est
+    ÉTEINTE dans la palette, et elle bat — rouge puis bleu, en alternance —
+    seulement quand elle sert : la sirène de la police et de l'ambulance, le
+    remorquage de la remorqueuse. On lit les couleurs que `dessinerUn` passe à
+    l'atlas, image par image."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const ctx = L.Base.ecran(), vrai = L.Atlas.cuireCap;
+        let passees = null;
+        L.Atlas.cuireCap = function (nom, def, swaps) { passees = swaps; return vrai.apply(null, arguments); };
+        const lire = function (v, t) {
+            L.B.t = t;
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            return { a: passees && passees.a || null, b: passees && passees.b || null };
+        };
+        const battre = function (v) {
+            const pas = [];
+            for (let t = 0; t < 60; t += 7) pas.push(lire(v, t));
+            return pas;
+        };
+        const out = {};
+        [['police', 'sirene'], ['ambulance', 'sirene'], ['remorqueuse', 'remorque'], ['auto', 'sirene']].forEach(function (q) {
+            const v = o.char(q[0], 0, 0, 0);
+            const def = L.SPRITES[v.sprite];
+            const eteint = battre(v);
+            if (q[1] === 'sirene') v.sirene = true; else v.remorque = o.char('auto', 0, 40, 0);
+            const allume = battre(v);
+            out[q[0]] = { eteint: eteint, allume: allume, g: def.gyrophares || null };
+            v.sirene = false; v.remorque = null;
+        });
+        L.Atlas.cuireCap = vrai;
+        return out;
+    }""")
+    assert r["auto"]["g"] is None and all(p == {"a": None, "b": None} for p in r["auto"]["allume"]), (
+        "l'auto a des gyrophares : %s" % r["auto"]
+    )
+    for slug in ("police", "ambulance", "remorqueuse"):
+        m = r[slug]
+        allumes = [m["g"]["a"][0], m["g"]["b"][0]]
+        # Éteint : la rampe garde les couleurs de sa palette, rien n'est passé.
+        assert all(p == {"a": None, "b": None} for p in m["eteint"]), (
+            f"{slug} : ses gyrophares brillent sans sirène ni remorquage ({m['eteint'][:2]})"
+        )
+        # Allumé : ça BAT — deux états qui alternent, et dans chacun UNE lampe
+        # allumée, l'autre éteinte.
+        vus = {(p["a"], p["b"]) for p in m["allume"]}
+        assert len(vus) == 2, f"{slug} : ses gyrophares ne battent pas ({sorted(vus)})"
+        for a, b in vus:
+            assert (a == allumes[0]) != (b == allumes[1]), f"{slug} : ses deux lampes ne s'alternent pas ({a}, {b})"

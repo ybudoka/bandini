@@ -2543,6 +2543,30 @@ const Vehicules = (function () {
              y: v.y - sa * recul + ca * selle[0] - cuit.ancre[1] };
   }
 
+  //: Un battement de gyrophare, en images : un peu plus de quatre eclats par
+  //: seconde de chaque couleur. ⚠️ Plus vite qu'un feu qui clignote
+  //: (`clignotant_images`) : un gyrophare qui bat au rythme d'un feu jaune se
+  //: lit comme un feu jaune.
+  const GYROPHARE_IMAGES = 7;
+
+  /** Les couleurs d'un char A CETTE IMAGE : les siennes, et ses gyrophares
+      allumes en alternance quand ils tournent (`gyrophares` de la fiche).
+
+      ⚠️ Un seul objet par phase, garde sur le char : l'atlas range ses cuissons
+      par couleurs, et deux objets neufs a chaque image, c'est deux
+      `JSON.stringify` pour rien — le canevas, lui, est deja cuit. */
+  function swapsDuMoment(v, def) {
+    const g = def.gyrophares;
+    if (!g) return v.swaps;
+    const tourne = g.quand === 'sirene' ? !!v.sirene : g.quand === 'remorque' ? !!v.remorque : false;
+    if (!tourne) return v.swaps;
+    if (!v.gyro || v.gyro.base !== v.swaps) {
+      const phase = function (p) { return Object.assign({}, v.swaps, { a: g.a[p], b: g.b[1 - p] }); };
+      v.gyro = { base: v.swaps, phases: [phase(0), phase(1)] };
+    }
+    return v.gyro.phases[Math.floor(B.t / GYROPHARE_IMAGES) % 2];
+  }
+
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
@@ -2582,7 +2606,7 @@ const Vehicules = (function () {
     // et centre sur son empreinte — donc sur `v.x`, `v.y`, la ou l'ombre est
     // posee et la ou les cercles de collision sont. Ce qu'on voit tourner est
     // ce qui bloque.
-    const toit = Atlas.cuireCap(v.sprite, def, v.swaps, ROTATIONS, capDe(v.angle), centreDuToit(v));
+    const toit = Atlas.cuireCap(v.sprite, def, swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
     const demi = toit.width / 2;
     ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
     B.stats.images++;
@@ -2602,7 +2626,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

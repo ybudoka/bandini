@@ -413,7 +413,19 @@ const MACHINE_BERLINE = {
      [-7, 7], 'c', 'DcccDDkkkkkkkkkkkkkkk'],
     // L'habitacle : le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
     ['profil', [[5.0, 5.9], [1.4, 11.0], [-6.2, 11.0], [-9.4, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
-    ['tube', [4.2, -5.0, 7.0], [4.2, 5.0, 7.0], 'G', 0.3],                // le reflet du pare-brise
+    ['tube', [3.8, -5.0, 7.6], [3.8, 5.0, 7.6], 'G', 0.3],                // le reflet du pare-brise
+    // ⚠️ LE CADRE DES VITRES (retour de Martin : « une légère séparation entre
+    // le pare-brise et le reste pour mieux démarquer de face et de dos »). Les
+    // montants bordaient deja les cotes ; en haut et en bas, la vitre touchait
+    // la tole — bleu pale contre le blanc de la police, on ne voyait plus ou
+    // finissait le capot. Le trait est `D`, l'ombre de la caisse, comme les
+    // montants : il ferme le cadre sans cerner la vitre de noir.
+    // ⚠️ Celui du BAS monte d'un demi-pixel sur la vitre : pose au pied du
+    // pare-brise, le capot passait devant lui au meme pixel et il disparaissait.
+    ['tube', [4.75, -5.8, 6.25], [4.75, 5.8, 6.25], 'D', 1.0],            // pied du pare-brise
+    ['tube', [1.4, -5.8, 11.0], [1.4, 5.8, 11.0], 'D', 0.6],              // haut du pare-brise
+    ['tube', [-9.15, -5.8, 6.4], [-9.15, 5.8, 6.4], 'D', 1.0],            // pied de la lunette
+    ['tube', [-6.2, -5.8, 11.0], [-6.2, 5.8, 11.0], 'D', 0.6],            // haut de la lunette
     ['tube', [12.8, 7, 5.9], [-12.6, 7, 6.0], 'C', 0.05],                 // la ligne de ceinture
     ['tube', [12.8, -7, 5.9], [-12.6, -7, 6.0], 'C', 0.05],
     ['tube', [5.0, 5.9, 5.9], [1.4, 5.9, 11.0], 'D', 0.05],               // les montants
@@ -450,7 +462,29 @@ const LIVREE = [
   ['damier', [4.8, -4.8], 4.4, 7.02, 'x'],                                // le damier, entre les roues
   ['damier', [4.8, -4.8], 4.4, -7.02, 'x'],
 ];
-const MACHINE_BERLINE_LIVREE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE) });
+/* --- LE TOIT, COMME EN VRAI : l'enseigne du taxi, la rampe de la police ---------
+
+   ⚠️ **Demande de Martin : « taxi et tous les véhicules qui en ont besoin
+   doivent avoir des indicateurs ou gyrophare sur leur toit. comme en vrai. »**
+   Aucun char n'en avait : la police n'a jamais eu de rampe, et les dessins de
+   dos de l'ambulance et de la remorqueuse n'avaient ni gyrophare ni croix.
+
+   L'enseigne du taxi est ALLUMEE (`e`, et `q` pour ses flancs), avec une ligne
+   sombre en travers : a quatre pixels, c'est ce qui se lit « TAXI ». La rampe
+   de la police est rouge a gauche (`a`) et bleue a droite (`b`) — ETEINTE dans
+   la palette, et c'est la fiche (`gyrophares`) qui dit quand elle tourne. */
+const ENSEIGNE_TAXI = [
+  ['bloc', [-3.4, -1.4], [-2.6, 2.6], [11.0, 12.6], 'e', 'q', 'q', 0.2],
+  ['tube', [-3.45, 2.65, 11.8], [-1.35, 2.65, 11.8], 'k', 0.3],
+  ['tube', [-3.45, -2.65, 11.8], [-1.35, -2.65, 11.8], 'k', 0.3],
+];
+const RAMPE_POLICE = [
+  ['bloc', [-3.0, -1.8], [-4.6, -0.3], [11.0, 11.9], 'a', 'a', 'a', 0.2],
+  ['bloc', [-3.0, -1.8], [0.3, 4.6], [11.0, 11.9], 'b', 'b', 'b', 0.2],
+  ['bloc', [-3.0, -1.8], [-0.3, 0.3], [11.0, 11.6], 'B', 'B', 'B', 0.2],
+];
+const MACHINE_TAXI = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, ENSEIGNE_TAXI) });
+const MACHINE_POLICE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERLINE.pieces.concat(LIVREE, RAMPE_POLICE) });
 
 /* --- Les deux-roues : decrits EN VOLUME, et projetes au cap -------------------
 
@@ -915,8 +949,8 @@ const AMBULANCE_HAUT = [
       '.........rkCccccccccccccccDkr.........',
       '..........kDDDDDDDDDDDDDDDDk..........',
       '..........kCcDGvvvvvvvvEDcDk..........',
-      '..........kCcDCCCCCCCCCCDcDk..........',
-      '..........kCcDCCCCCCCCCCDcDk..........',
+      '..........kCcDaaaaBBbbbbDcDk..........',
+      '..........kCcDaaaaBBbbbbDcDk..........',
       '..........kDDDDDDDDDDDDDDDDk..........',
       '..........kCccccccccccccccDk..........',
       '.........rkCccccccccccccccDkr.........',
@@ -1142,8 +1176,8 @@ const REMORQUEUSE_HAUT = [
       '..............rkCccccccccccccccDkr..............',
       '...............kDDDDDDDDDDDDDDDDk...............',
       '...............kCcDGvvvvvvvvEDcDk...............',
-      '...............kCcDCCCCCCCCCCDcDk...............',
-      '...............kCcDCCCCCCCCCCDcDk...............',
+      '...............kCcDkkkkkkkkkkDcDk...............',
+      '...............kCcDaaaaBBbbbbDcDk...............',
       '...............kDDDDDDDDDDDDDDDDk...............',
       '...............kCccccccccccccccDk...............',
       '..............rkCccccccccccccccDkr..............',
@@ -1768,8 +1802,15 @@ function deuxRoues(machine, longueur, pal) {
 // monte au-dessus). ⚠️ Les trois ont la MEME carrosserie ; le taxi et la police
 // y ajoutent leur livree, `x` le damier et `y` la bande.
 SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
-SPRITES.taxi = enVolume(MACHINE_BERLINE_LIVREE, 28, 44, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018' });
-SPRITES.police = enVolume(MACHINE_BERLINE_LIVREE, 28, 44, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8' });
+SPRITES.taxi = enVolume(MACHINE_TAXI, 28, 44, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', e: '#fff4c4', q: '#d8c37a' });
+SPRITES.police = enVolume(MACHINE_POLICE, 28, 44, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', a: '#7a2320', b: '#233f7a' });
+/* ⚠️ LES GYROPHARES : les lettres qui tournent, [allumee, eteinte], et QUAND
+   elles tournent — `sirene` (la police, l'ambulance) ou `remorque` (la
+   remorqueuse, quand elle tire quelque chose). Eteints, ils gardent la couleur
+   de leur boitier : un gyrophare qui brille tout le temps ne dit plus rien.
+   C'est `Vehicules.swapsDuMoment` qui les fait battre, `a` et `b` en
+   alternance. */
+SPRITES.police.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#4a9bff', '#233f7a'] };
 SPRITES.velo = deuxRoues(MACHINE_VELO, 16, { k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' });
 // ⚠️ LES PEDALES : un demi-tour tous les `pedale` pixels roules. C'est la fiche
 // qui dit qu'on pedale, pas un `slug === 'velo'` — la moto n'en a pas, et son
@@ -1802,16 +1843,22 @@ SPRITES.autobus = {
 // ⚠️ La croix se lit d'EN HAUT : vue de dessus, c'est elle qui la nomme.
 SPRITES.ambulance = {
   w: 38, h: 30, ancre: [19, 27],
-  pal: nuancer({ k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12' }),
+  pal: nuancer({ k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' }),
   swaps: ['c'],
   poses: { cote: [AMBULANCE_COTE], haut: [AMBULANCE_HAUT], bas: [AMBULANCE_BAS] },
+  // Rouge et blanc, sur le toit de la cabine : ils tournent avec sa sirene.
+  gyrophares: { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] },
 };
 // Le bras couche sur le plateau, et le crochet qui depasse a l'arriere.
 SPRITES.remorqueuse = {
   w: 48, h: 34, ancre: [24, 31],
-  pal: nuancer({ k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44' }),
+  pal: nuancer({ k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' }),
   swaps: ['c'],
   poses: { cote: [REMORQUEUSE_COTE], haut: [REMORQUEUSE_HAUT], bas: [REMORQUEUSE_BAS] },
+  // Ambre, sur le toit de la cabine : ils tournent quand elle remorque.
+  // ⚠️ Sur une BASE SOMBRE, et d'un ambre plus jaune que la caisse : ambre sur
+  // orange, la rampe disparaissait.
+  gyrophares: { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] },
 };
 
 
