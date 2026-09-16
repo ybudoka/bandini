@@ -469,3 +469,123 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
             "l'un des deux ne regarde pas d'où il devrait"
         )
         assert abs(m["cote"]["large"] - lon) <= 8, f"{slug} de profil : {m['cote']['large']} px pour {lon}"
+
+
+def test_de_dos_un_char_se_dessine_sur_son_empreinte(banc):
+    """⚠️ **Retour de Martin, capture à l'appui : « les voitures sont mal
+    garré ».** Dans un stationnement, les chars débordaient par le nez sur le
+    trottoir et laissaient le fond de leur case vide.
+
+    La cause est dans la vue plongeante de la ligne précédente : le jour où les
+    poses `haut` et `bas` ont grandi de douze rangées à la **longueur** du char,
+    elles sont restées posées à la ligne de sol du **profil**. Or ces deux
+    lignes-là ne sont pas au même endroit. De profil, le dessin est une
+    élévation : sa dernière rangée est le **flanc**, et le flanc passe par le
+    milieu du char — l'ancre tombe sur `v.y`, comme les pieds d'un passant. De
+    dos, le dessin est le char **vu d'en haut** : sa dernière rangée est le
+    **pare-chocs arrière**, à une demi-longueur de `v.y`. Posée sur `v.y`, elle
+    mettait 28 px de caisse au nord d'un centre qui n'en compte que 14 : le
+    char se dessinait **une demi-longueur devant lui-même**, et une case de
+    stationnement (32 px de creux) le montre au premier coup d'œil.
+
+    La règle se mesure sur le DESSIN POSÉ, pas sur la fiche : **de dos comme de
+    face, la caisse tient dans son empreinte** — sa rangée la plus au sud est
+    le pare-chocs, et rien ne dépasse devant le nez. De profil, rien ne bouge :
+    la ligne de sol reste `v.y`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const ctx = L.Base.ecran(), vrai = ctx.drawImage;
+        const caps = { est: 0, nord: -Math.PI / 2, sud: Math.PI / 2, ouest: Math.PI };
+        const out = {};
+        L.B.defs.vehicules.forEach(function (def) {
+            const sprite = L.SPRITES[def.sprite];
+            if (!sprite || sprite.rotations) return;
+            const v = o.char(def.slug, 0, 0, 0);
+            if (!v) return;
+            v.x = 200; v.y = 100; v.z = 0;
+            out[def.slug] = { longueur: def.longueur, caps: {} };
+            for (const nom in caps) {
+                v.angle = caps[nom];
+                const pose = L.Vehicules.debout(v);
+                // La grille de la pose : `gauche` et `droite` sont le profil miroité.
+                const cle = (pose.pose === 'gauche' || pose.pose === 'droite') ? 'cote' : pose.pose;
+                const g = sprite.poses[cle][0];
+                let premier = -1, dernier = -1;
+                for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { if (premier < 0) premier = y; dernier = y; }
+                const mises = [];
+                ctx.drawImage = function (img, x, y) { mises.push([img.width, img.height, x, y]); };
+                L.Vehicules.dessinerUn(ctx, v, 0, 0);
+                ctx.drawImage = vrai;
+                // La MACHINE parmi les images posées : celle qui a la taille du sprite.
+                const machine = mises.filter(function (m) { return m[0] === sprite.w && m[1] === sprite.h; })[0];
+                out[def.slug].caps[nom] = { pose: pose.pose, y: machine[3],
+                                            nez: machine[3] + premier - v.y, cul: machine[3] + dernier - v.y };
+            }
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    assert len(r) >= 10, "trop peu de véhicules debout : %s" % list(r)
+    for slug, m in r.items():
+        demi = m["longueur"] / 2
+        for nom in ("nord", "sud"):
+            c = m["caps"][nom]
+            assert abs(c["cul"] - demi) <= 1, (
+                f"{slug} vers le {nom} : sa dernière rangée tombe à {c['cul']} px de son centre, "
+                f"et son pare-chocs est à {demi} — le char se dessine à côté de sa place"
+            )
+            # ... et il ne dépasse pas non plus devant : une caisse qui sort de
+            # son empreinte par le nez, c'est le même mensonge à l'envers.
+            assert c["nez"] >= -demi - 1, (
+                f"{slug} vers le {nom} : son nez sort de {-c['nez'] - demi:.0f} px devant l'empreinte"
+            )
+        # ⚠️ Et le profil ne bouge pas d'un pixel : c'est une élévation, sa
+        # ligne de sol est le flanc, et le flanc passe par `v.y`.
+        for nom in ("est", "ouest"):
+            c = m["caps"][nom]
+            assert c["cul"] == 0, (
+                f"{slug} vers l'{nom} : le profil ne pose plus sa ligne de sol sur v.y ({c['cul']})"
+            )
+
+
+def test_le_cavalier_suit_sa_machine_de_dos(banc):
+    """⚠️ Le vélo et la moto portent quelqu'un, et il est dessiné à part : si
+    la machine descend sur son empreinte et que lui reste où il était, il
+    pédale **une demi-longueur devant sa selle**. Vu d'en haut, il est assis au
+    milieu de sa machine — c'est ce qu'on mesure."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const ctx = L.Base.ecran(), vrai = ctx.drawImage;
+        const out = {};
+        ['velo', 'moto'].forEach(function (slug) {
+            const sprite = L.SPRITES[slug];
+            const v = L.Vehicules.creer(slug, j.x + 40, j.y, -Math.PI / 2, { conducteur: 'trafic', etat: 'roule' });
+            if (!v || !L.Vehicules.cavalierDe(v)) return;
+            v.x = 200; v.y = 100; v.z = 0; v.angle = -Math.PI / 2;
+            const g = sprite.poses.haut[0];
+            let premier = -1, dernier = -1;
+            for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) { if (premier < 0) premier = y; dernier = y; }
+            const mises = [];
+            ctx.drawImage = function (img, x, y) { mises.push([img.width, img.height, x, y]); };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            ctx.drawImage = vrai;
+            const machine = mises.filter(function (m) { return m[0] === sprite.w && m[1] === sprite.h; })[0];
+            const homme = mises.filter(function (m) { return m !== machine; })[0];
+            const corps = L.Atlas.cuire('joueur', L.SPRITES.joueur, null);
+            out[slug] = { milieu: machine[3] + (premier + dernier) / 2 - v.y,
+                          selle: homme ? homme[3] + corps.ancre[1] - v.y : null };
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    assert set(r) == {"velo", "moto"}, "le décor du juge est faux : %s" % list(r)
+    for slug, m in r.items():
+        assert m["selle"] is not None, "%s : personne n'est dessiné dessus" % slug
+        assert abs(m["selle"] - m["milieu"]) <= 3, (
+            f"{slug} de dos : sa selle est à {m['selle']} px du centre et sa machine à "
+            f"{m['milieu']} — le cavalier n'est pas assis dessus"
+        )

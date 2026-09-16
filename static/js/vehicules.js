@@ -2342,6 +2342,11 @@ const Vehicules = (function () {
       montre. L'ecrasement est applique AU DESSIN (`dessinerUn`), apres la
       rotation : `l` et `h` restent l'empreinte du catalogue.
 
+      ⚠️ Depuis la VUE PLONGEANTE, le dessin de dos ne fait plus 11 px de haut :
+      il porte la longueur du char. L'ecrasement de l'ombre, lui, ne bouge pas —
+      c'est le SOL qui se voit de biais, pas la caisse. Ce qui a change avec la
+      vue plongeante, c'est ou le dessin se POSE (`solDeLaPose`).
+
       En montant, elle RETRECIT, elle S'ECHAPPE vers le sud-est (la lumiere
       vient du nord-ouest, comme pour les facades) et elle palit — c'est elle
       qui RACONTE la hauteur, et c'est pour ca qu'un saut se voit. Au sol, elle
@@ -2425,6 +2430,29 @@ const Vehicules = (function () {
     return { canvas: cuit.poses[nom][0], ancre: cuit.ancre, pose: nom };
   }
 
+  /** OU TOMBE LA LIGNE DE SOL DU DESSIN, en pixels au sud de `v.y`.
+
+      ⚠️ **Les deux poses ne regardent pas le meme sol, et c'est ce qui garait
+      les chars de travers** (retour de Martin, capture a l'appui : « les
+      voitures sont mal garre »). De PROFIL, le dessin est une elevation : sa
+      ligne de sol est le flanc du char, et elle passe par son milieu — l'ancre
+      posee sur `v.y` tombe juste, comme les pieds d'un passant. De DOS et de
+      FACE, depuis la vue plongeante, le dessin porte la LONGUEUR du char : sa
+      derniere rangee n'est plus un flanc, c'est le PARE-CHOCS LE PLUS PROCHE de
+      l'oeil. Posee sur `v.y`, elle mettait les 28 px de la caisse au NORD d'un
+      centre qui n'en compte que 14 : le char se dessinait une demi-longueur
+      devant lui-meme. Dans une case de stationnement, ca se lit d'un coup —
+      le nez deborde sur le trottoir et le fond de la case reste vide.
+
+      ⚠️ L'ancre du sprite ne bouge pas (elle reste la meme pour les trois
+      poses, sinon le char saute d'un pixel en tournant) : c'est le SOL qu'on
+      va chercher la ou il est, et il vient de l'empreinte du catalogue — la
+      meme que la physique et que l'ombre. Ce qu'on voit est exactement ce qui
+      bloque. */
+  function solDeLaPose(v, pose) {
+    return (pose === 'haut' || pose === 'bas') ? v.def.longueur / 2 : 0;
+  }
+
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
@@ -2472,18 +2500,23 @@ const Vehicules = (function () {
       // physique, et c'est la ou les pneus touchent. Le tri du nord au sud s'y
       // retrouve sans rien changer — un char et un passant se rangent
       // maintenant par la meme regle.
+      // ⚠️ Et cette ligne-la n'est pas au meme endroit selon la pose
+      // (`solDeLaPose`) : de dos, elle est au pare-chocs arriere, pas au
+      // milieu. Le cavalier prend le MEME decalage — sinon il reste assis une
+      // demi-longueur devant sa machine.
+      const sol = solDeLaPose(v, pose.pose);
       const swaps = cavalierDe(v);
       const cavalier = swaps ? imageDuCavalier(def, pose, swaps) : null;
       // ⚠️ Celui qui VIENT vers nous a sa machine devant lui : le pilote se
       // peint d'abord, la machine par-dessus. Dans les trois autres poses, la
       // machine d'abord et lui dessus.
       const poserCavalier = function () {
-        ctx.drawImage(cavalier.canvas, Math.round(v.x + cavalier.dx - cx), Math.round(v.y - v.z + cavalier.dy - cy));
+        ctx.drawImage(cavalier.canvas, Math.round(v.x + cavalier.dx - cx), Math.round(v.y + sol - v.z + cavalier.dy - cy));
         B.stats.images++;
       };
       if (cavalier && pose.pose === 'bas') poserCavalier();
       ctx.drawImage(pose.canvas, Math.round(v.x - pose.ancre[0] - cx),
-                    Math.round(v.y - v.z - pose.ancre[1] - cy));
+                    Math.round(v.y + sol - v.z - pose.ancre[1] - cy));
       if (cavalier && pose.pose !== 'bas') poserCavalier();
     } else {
       ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
