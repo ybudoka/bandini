@@ -1170,3 +1170,60 @@ def test_les_gyrophares_ne_battent_que_quand_ils_servent(banc):
         assert len(vus) == 2, f"{slug} : ses gyrophares ne battent pas ({sorted(vus)})"
         for a, b in vus:
             assert (a == allumes[0]) != (b == allumes[1]), f"{slug} : ses deux lampes ne s'alternent pas ({a}, {b})"
+
+
+def test_la_berline_est_arrondie(banc):
+    """Retour de Martin : « arrondit un peu (léger) les véhicules ». ⚠️ La
+    berline en volume était une boîte : de face et de dos un rectangle à angles
+    vifs, et vue de trois quarts un pavé.
+
+    Deux mesures, sur la silhouette SANS son contour (le trait noir ne doit pas
+    faire le travail à sa place), à chacun des 32 caps :
+
+    - **aucun coin vif** : aucun pixel où deux bords droits se rencontrent à
+      angle droit (les marches d'un bord en diagonale ne comptent pas) ;
+    - **une caisse qui se pince** : de face et de dos, les trois rangées du
+      bout (le nez ou la queue, et le pare-chocs) rentrent ensemble d'au moins
+      7 pixels sur la largeur de la caisse — 8 pincée, 5 pour une caisse
+      carrée dont seul le coin est rogné."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const n = L.Vehicules.ROTATIONS, out = {};
+        ['auto', 'taxi', 'police'].forEach(function (slug) {
+            const def = L.SPRITES[slug], cote = def.w;
+            const nu = Object.assign({}, def.machine, { contour: false });
+            let vifs = 0;
+            const exemples = [];
+            for (let i = 0; i < n; i++) {
+                const g = L.Atlas.projeter(nu, i * 2 * Math.PI / n - Math.PI / 2, cote);
+                const vide = function (x, y) { return x < 0 || y < 0 || x >= cote || y >= cote || g[y][x] === '.'; };
+                for (let y = 0; y < cote; y++) for (let x = 0; x < cote; x++) {
+                    if (vide(x, y)) continue;
+                    [[-1, -1], [1, -1], [-1, 1], [1, 1]].forEach(function (d) {
+                        const dx = d[0], dy = d[1];
+                        if (vide(x + dx, y) && vide(x, y + dy) && vide(x + dx, y + dy) &&
+                            !vide(x - dx, y) && vide(x - dx, y + dy) && !vide(x, y - dy) && vide(x + dx, y - dy)) {
+                            vifs++;
+                            if (exemples.length < 4) exemples.push([i, x, y]);
+                        }
+                    });
+                }
+            }
+            const pince = {};
+            [['face', Math.PI / 2], ['dos', -Math.PI / 2]].forEach(function (q) {
+                const g = L.Atlas.projeter(nu, q[1], cote);
+                const larges = g.map(function (l) { const m = l.match(/[^.].*[^.]/); return m ? m[0].length : 0; }).filter(function (v) { return v > 0; });
+                const caisse = Math.max.apply(null, larges);
+                pince[q[0]] = { rentre: larges.slice(-3).reduce(function (t, v) { return t + caisse - v; }, 0), bout: larges.slice(-3), caisse: caisse };
+            });
+            out[slug] = { vifs: vifs, exemples: exemples, pince: pince };
+        });
+        return out;
+    }""")
+    for slug, m in r.items():
+        assert m["vifs"] == 0, f"{slug} : {m['vifs']} coins vifs sur les 32 caps (cap, x, y : {m['exemples']})"
+        for vue, p in m["pince"].items():
+            assert p["rentre"] >= 7, (
+                f"{slug} vu de {vue} : son bout ({p['bout']} px) ne rentre que de {p['rentre']} sur une caisse de "
+                f"{p['caisse']} — elle ne se pince pas"
+            )

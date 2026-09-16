@@ -401,6 +401,11 @@ const BATEAU_BAS = [
 const MACHINE_BERLINE = {
   profondeur: 0.5,
   contour: true,
+  // ⚠️ ARRONDIE, et legerement (retour de Martin : « arrondit un peu (léger)
+  // les véhicules ») : un pixel de moins aux coins vifs de la silhouette, et
+  // une caisse qui se pince au nez et a la queue (le PLAN de la caisse, plus
+  // bas). Une boite a angles vifs se lisait comme un pave peint.
+  arrondi: true,
   pieces: [
     ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, 6.2],
     ['roue', 8.6, 3.0, 'r', 'M', 'M', 2, -6.2],
@@ -410,7 +415,7 @@ const MACHINE_BERLINE = {
     ['profil', [[14, 1.6], [14, 4.4], [12.8, 5.8], [-12.6, 6.0], [-14, 5.0], [-14, 1.6],
                 [-12.0, 1.6], [-11.8, 3.4], [-10.6, 4.6], [-8.6, 5.0], [-6.6, 4.6], [-5.4, 3.4], [-5.2, 1.6],
                 [5.2, 1.6], [5.4, 3.4], [6.6, 4.6], [8.6, 5.0], [10.6, 4.6], [11.8, 3.4], [12.0, 1.6]],
-     [-7, 7], 'c', 'DcccDDkkkkkkkkkkkkkkk'],
+     [[-14.5, 5.6], [-12.8, 6.7], [-11.2, 7], [11.2, 7], [12.8, 6.7], [14.5, 5.6]], 'c', 'DcccDDkkkkkkkkkkkkkkk'],
     // L'habitacle : le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
     ['profil', [[5.0, 5.9], [1.4, 11.0], [-6.2, 11.0], [-9.4, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
     ['tube', [3.8, -5.0, 7.6], [3.8, 5.0, 7.6], 'G', 0.3],                // le reflet du pare-brise
@@ -426,8 +431,12 @@ const MACHINE_BERLINE = {
     ['tube', [1.4, -5.8, 11.0], [1.4, 5.8, 11.0], 'D', 0.6],              // haut du pare-brise
     ['tube', [-9.15, -5.8, 6.4], [-9.15, 5.8, 6.4], 'D', 1.0],            // pied de la lunette
     ['tube', [-6.2, -5.8, 11.0], [-6.2, 5.8, 11.0], 'D', 0.6],            // haut de la lunette
-    ['tube', [12.8, 7, 5.9], [-12.6, 7, 6.0], 'C', 0.05],                 // la ligne de ceinture
-    ['tube', [12.8, -7, 5.9], [-12.6, -7, 6.0], 'C', 0.05],
+    ['tube', [11.2, 7, 5.9], [-11.2, 7, 6.0], 'C', 0.05],                 // la ligne de ceinture
+    ['tube', [11.2, -7, 5.9], [-11.2, -7, 6.0], 'C', 0.05],
+    ['tube', [12.8, 6.7, 5.9], [11.2, 7, 5.9], 'C', 0.05],                // ... qui suit le nez
+    ['tube', [12.8, -6.7, 5.9], [11.2, -7, 5.9], 'C', 0.05],
+    ['tube', [-12.6, 6.72, 6.0], [-11.2, 7, 6.0], 'C', 0.05],             // ... et la queue
+    ['tube', [-12.6, -6.72, 6.0], [-11.2, -7, 6.0], 'C', 0.05],
     ['tube', [5.0, 5.9, 5.9], [1.4, 5.9, 11.0], 'D', 0.05],               // les montants
     ['tube', [5.0, -5.9, 5.9], [1.4, -5.9, 11.0], 'D', 0.05],
     ['tube', [-1.8, 5.9, 6.0], [-1.8, 5.9, 11.0], 'D', 0.05],
@@ -438,15 +447,15 @@ const MACHINE_BERLINE = {
     ['tube', [1.4, -5.9, 11.0], [-6.2, -5.9, 11.0], 'D', 0.05],
     ['tube', [-0.2, 7.03, 1.8], [-0.2, 7.03, 5.6], 'D', 0.03],            // la fente des portieres
     ['tube', [-0.2, -7.03, 1.8], [-0.2, -7.03, 5.6], 'D', 0.03],
-    ['bloc', [13.8, 14.5], [-6.8, 6.8], [1.6, 2.8], 'B', 'B', 'B', 0.1],  // pare-chocs
-    ['bloc', [-14.5, -13.8], [-6.8, 6.8], [1.6, 2.8], 'B', 'B', 'B', 0.1],
+    ['bloc', [13.8, 14.5], [-5.6, 5.6], [1.6, 2.8], 'B', 'B', 'B', 0.1],  // pare-chocs
+    ['bloc', [-14.5, -13.8], [-5.6, 5.6], [1.6, 2.8], 'B', 'B', 'B', 0.1],
     // ⚠️ Phares et feux ENVELOPPENT le coin : poses dans la caisse, ils ne se
     // voyaient que de face ou de dos (4 caps sur 32), et un char de profil
     // roulait tous feux eteints.
-    ['bloc', [12.9, 14.3], [4.0, 7.1], [3.4, 4.5], 'l', 'l', 'l', 0.2],   // phares
-    ['bloc', [12.9, 14.3], [-7.1, -4.0], [3.4, 4.5], 'l', 'l', 'l', 0.2],
-    ['bloc', [-14.3, -12.9], [4.0, 7.1], [3.6, 4.7], 't', 't', 't', 0.2], // feux
-    ['bloc', [-14.3, -12.9], [-7.1, -4.0], [3.6, 4.7], 't', 't', 't', 0.2],
+    ['bloc', [12.4, 14.4], [3.4, 6.8], [3.2, 4.6], 'l', 'l', 'l', 0.2],   // phares
+    ['bloc', [12.4, 14.4], [-6.8, -3.4], [3.2, 4.6], 'l', 'l', 'l', 0.2],
+    ['bloc', [-14.4, -12.4], [3.4, 6.8], [3.4, 4.8], 't', 't', 't', 0.2], // feux
+    ['bloc', [-14.4, -12.4], [-6.8, -3.4], [3.4, 4.8], 't', 't', 't', 0.2],
   ],
 };
 /* ⚠️ **LA LIVREE N'EST PAS DE LA CARROSSERIE.** Elle etait peinte dans la grille
@@ -457,8 +466,8 @@ const MACHINE_BERLINE = {
    tant que le flanc ne se dessinait pas). Le taxi et la police AJOUTENT donc
    leur livree a la carrosserie ; l'auto n'en porte pas. */
 const LIVREE = [
-  ['tube', [12.4, 7.02, 5.2], [-12.4, 7.02, 5.2], 'y', 0.03],             // la bande, sous la ceinture
-  ['tube', [12.4, -7.02, 5.2], [-12.4, -7.02, 5.2], 'y', 0.03],
+  ['tube', [11.2, 7.02, 5.2], [-11.2, 7.02, 5.2], 'y', 0.03],             // la bande, sous la ceinture
+  ['tube', [11.2, -7.02, 5.2], [-11.2, -7.02, 5.2], 'y', 0.03],
   ['damier', [4.8, -4.8], 4.4, 7.02, 'x'],                                // le damier, entre les roues
   ['damier', [4.8, -4.8], 4.4, -7.02, 'x'],
 ];

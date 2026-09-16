@@ -195,12 +195,26 @@ const Atlas = (function () {
         if (p[4]) anneau(u, dehors, r, r - 1.4, p[4], 0.01);
         if (p[5]) point(u, dehors, r, p[5], 0.3);
       } else if (p[0] === 'profil') {
-        // [[[u, z], ...], [w0, w1], flanc, aretes, avance] : une SILHOUETTE DE
+        // [[[u, z], ...], largeur, flanc, aretes, avance] : une SILHOUETTE DE
         // PROFIL extrudee sur la largeur — un capot et un pare-brise en pente,
         // des passages de roue, ce qu'une boite ne sait pas faire. Les deux
         // flancs se remplissent de `flanc` ; l'arete k -> k+1 balaie la largeur
         // avec la lettre `aretes[k]` ('.' : rien, elle ne se voit pas).
-        const P = p[1], W = p[2], av = p[5], pas = 0.25;
+        // ⚠️ `largeur` est [w0, w1], ou un PLAN [[u, demi-largeur], ...] : une
+        // caisse qui se pince au nez et a la queue, vue d'en haut, au lieu
+        // d'un pave aux coins vifs.
+        const P = p[1], av = p[5], pas = 0.25;
+        const plan = Array.isArray(p[2][0]) ? p[2] : null;
+        const bords = function (u) {
+          if (!plan) return p[2];
+          let d = plan[0][1];
+          for (let k = 1; k < plan.length; k++) {
+            const a = plan[k - 1], b = plan[k];
+            if (u >= a[0] && u <= b[0]) { d = a[1] + (b[1] - a[1]) * (u - a[0]) / (b[0] - a[0]); break; }
+            if (u > b[0]) d = b[1];
+          }
+          return [-d, d];
+        };
         let u0 = Infinity, u1 = -Infinity, z0 = Infinity, z1 = -Infinity;
         P.forEach(function (q) { u0 = Math.min(u0, q[0]); u1 = Math.max(u1, q[0]); z0 = Math.min(z0, q[1]); z1 = Math.max(z1, q[1]); });
         const dedans = function (u, z) {
@@ -213,7 +227,7 @@ const Atlas = (function () {
         };
         for (let u = u0; u <= u1 + 1e-6; u += pas) {
           for (let z = z0; z <= z1 + 1e-6; z += pas) {
-            if (dedans(u, z)) { point(u, W[0], z, p[3], av); point(u, W[1], z, p[3], av); }
+            if (dedans(u, z)) { const W = bords(u); point(u, W[0], z, p[3], av); point(u, W[1], z, p[3], av); }
           }
         }
         for (let k = 0; k < P.length; k++) {
@@ -222,7 +236,7 @@ const Atlas = (function () {
           const a = P[k], b = P[(k + 1) % P.length];
           const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1]) / pas));
           for (let t = 0; t <= n; t++) {
-            const u = a[0] + (b[0] - a[0]) * t / n, z = a[1] + (b[1] - a[1]) * t / n;
+            const u = a[0] + (b[0] - a[0]) * t / n, z = a[1] + (b[1] - a[1]) * t / n, W = bords(u);
             for (let w = W[0]; w <= W[1] + 1e-6; w += pas) point(u, w, z, ch, av);
           }
         }
@@ -253,6 +267,28 @@ const Atlas = (function () {
     // a la main dans la ville. Seulement le DEHORS — un trait sur les aretes
     // du dedans ferait des vitres en vitrail. Un velo n'en veut pas : ses
     // tubes d'un pixel deviendraient des barres de trois.
+    // L'ARRONDI : un pixel de moins a chaque coin VIF de la silhouette — la
+    // ou un bord droit en rencontre un autre a angle droit. ⚠️ Pas a chaque
+    // marche d'escalier : un bord en diagonale est fait de coins, et les ronger
+    // amincirait tout char de trois quarts. On ne retire un coin que si ses
+    // deux bords continuent tout droit au-dela de lui. Juge sur la silhouette
+    // d'avant (`avant`), pour qu'un coin rogne n'en fasse pas naitre un autre.
+    if (machine.arrondi) {
+      const avant = lettres.slice();
+      const vide = function (x, y) { return x < 0 || y < 0 || x >= cote || y >= cote || avant[y * cote + x] === '.'; };
+      for (let y = 0; y < cote; y++) {
+        for (let x = 0; x < cote; x++) {
+          if (vide(x, y)) continue;
+          for (const [dx, dy] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) {
+            if (vide(x + dx, y) && vide(x, y + dy) && vide(x + dx, y + dy) &&
+                !vide(x - dx, y) && vide(x - dx, y + dy) && !vide(x, y - dy) && vide(x + dx, y - dy)) {
+              lettres[y * cote + x] = '.';
+              break;
+            }
+          }
+        }
+      }
+    }
     if (machine.contour) {
       const peint = lettres.slice();
       for (let y = 0; y < cote; y++) {
