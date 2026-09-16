@@ -692,6 +692,45 @@ def test_une_panne_ne_tire_pas_un_seul_de_du_jeu(banc, paquet):
     )
 
 
+def test_une_panne_ne_s_efface_pas_sous_celui_qui_la_tient(banc, paquet):
+    """⚠️ **Un char que quelqu'un TIENT ne s'efface pas.** L'heure de la panne
+    finie, le compte à rebours retirait le char de la ville sans regarder qui
+    était dedans : on montait dans la remorqueuse en panne, et elle disparaissait
+    sous le joueur — qui restait accroché (`dansVehicule`) à une entité absente
+    de la ville, invisible et immobile, et rien ne le lui disait. La charge sur
+    la fourche s'en allait de la même façon. Tenu, le char cesse simplement
+    d'être en panne — ses feux s'éteignent — et redevient un char ordinaire :
+    c'est `peupler` qui l'oubliera, loin et hors champ, comme tous les autres."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, out = {};
+        // 1. LE JOUEUR AU VOLANT : la remorqueuse en panne, on monte dedans,
+        //    et l'heure finit pendant qu'il la conduit.
+        const rem = L.Vehicules.creer('remorqueuse', j.x + 40, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        rem.panneT = 3;
+        out.monte = L.Vehicules.monter(j, rem);
+        o.frame(8);
+        out.volant = { la: L.B.entites.indexOf(rem) >= 0, dedans: j.dansVehicule === rem, feux: rem.panneT };
+        // 2. LA CHARGE SUR LA FOURCHE : elle aussi est tenue par quelqu'un.
+        const charge = L.Vehicules.creer('auto', rem.x - Math.cos(rem.angle) * 28,
+                                         rem.y - Math.sin(rem.angle) * 28, rem.angle, { etat: 'stationne' });
+        L.Entites.indexer();
+        charge.panneT = 3;
+        out.accroche = L.Vehicules.basculerCrochet(rem);
+        o.frame(8);
+        out.fourche = { la: L.B.entites.indexOf(charge) >= 0, sur: charge.remorqueePar === rem, feux: charge.panneT };
+        return out;
+    }""")
+    assert r["monte"] is True, "le joueur n'est pas monté : le juge ne mesure rien (%s)" % r
+    assert r["volant"]["la"] is True, "la panne s'efface sous le joueur : %s" % r["volant"]
+    assert r["volant"]["dedans"] is True, r["volant"]
+    assert r["volant"]["feux"] == 0, "un char qu'on conduit bat encore ses feux de détresse : %s" % r["volant"]
+    assert r["accroche"] is True, "rien à accrocher derrière : le juge ne mesure rien (%s)" % r
+    assert r["fourche"]["la"] is True, "la panne s'efface de la fourche : %s" % r["fourche"]
+    assert r["fourche"]["sur"] is True and r["fourche"]["feux"] == 0, r["fourche"]
+
+
 # --- La ville coupable d'elle-même : le vol de char --------------------------
 
 

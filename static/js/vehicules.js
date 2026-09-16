@@ -881,12 +881,33 @@ const Vehicules = (function () {
     }
   }
 
+  /** L'heure de la panne finie, le char s'en va — il s'efface, faute de savoir
+      rentrer au garage tout seul.
+
+      ⚠️ **MAIS PAS SOUS CELUI QUI LE TIENT.** Le compte a rebours retirait le
+      char de la ville sans regarder qui etait dedans : on montait dans la
+      remorqueuse en panne, et elle disparaissait sous le joueur — qui restait
+      accroche (`dansVehicule`) a une entite absente de `B.entites`, donc plus
+      mise a jour ni dessinee : invisible, immobile, et rien pour le lui dire.
+      La charge sur la fourche et un char de mission s'en allaient pareil.
+
+      ⚠️ **Tenu, il cesse simplement d'ETRE EN PANNE** (`panneT` est deja a zero
+      ici : ses feux s'eteignent) et redevient un char ordinaire — c'est
+      `peupler` qui l'oubliera, loin et hors champ, comme tous les autres. La
+      liste est exactement la sienne, et ce n'est pas un hasard : « qui tient ce
+      char ? » n'a pas deux reponses selon qui pose la question. */
+  function majFinDePanne(v) {
+    if (--v.panneT > 0) return;
+    if (v.conducteur === B.joueur || v.remorque || v.remorqueePar || v.mission) return;
+    Entites.retirer(v);
+  }
+
   function majEtatDuChar(v) {
     const ph = physique();
     bruitDePassage(v);
     majNidDePoule(v);
     if (v.forceT > 0) v.forceT--;
-    if (v.panneT > 0) { v.panneT--; if (!v.panneT) Entites.retirer(v); }
+    if (v.panneT > 0) majFinDePanne(v);
     if (majNoyade(v)) return;
     if (v.etat === 'epave') {
       if (v.epaveT > 0) v.epaveT--;
