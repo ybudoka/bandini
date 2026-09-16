@@ -968,13 +968,36 @@ const Entites = (function () {
     // une fois sur seize. Quelqu'un qui reste un peu plus longtemps parce
     // qu'ils ne sont plus que trois, c'est exactement ce que fait une vraie
     // foule — on ne laisse pas un artiste tout seul.
-    if (vus.length <= mini) {
-      for (const q of vus) if (q.minuterie <= 30) q.minuterie += releve;
+    //
+    // ⚠️ **ON COMPTE LES PARTANTS, PAS LE CERCLE**, et c'est la correction du
+    // 16 sept. 2026. La regle ne regardait personne tant qu'ils etaient
+    // QUATRE (`vus.length <= mini`) — or `majSpectacle` ne tourne qu'une image
+    // sur quinze, et deux minuteries peuvent tomber dans le meme intervalle. A
+    // quatre, deux partants : le tour suivant trouvait le cercle a DEUX, et il
+    // etait trop tard pour retenir qui que ce soit. Mesure du banc : trente et
+    // une images a deux spectateurs sous les yeux du joueur. On retient donc
+    // les partants les plus presses, un par un, jusqu'a ce que ceux qui restent
+    // fassent le minimum — et pas un de plus : un badaud retenu pour rien est
+    // un badaud qui ne rend jamais sa place.
+    //
+    // ⚠️ Et ce n'etait PAS un defaut de la carte, meme si c'est un changement
+    // de carte qui l'a fait tomber : mesure a l'appui, le meme juge sur six
+    // graines de partie passait sur quatre AVANT le changement (77, 79, 80, 82)
+    // et sur quatre APRES (78, 79, 80, 81). Le cercle tenait par chance ; il
+    // tient maintenant par construction.
+    const sursis = r.sursis_images || 30;
+    const partants = vus.filter(function (q) { return q.minuterie <= sursis; });
+    partants.sort(function (a, b) { return a.minuterie - b.minuterie; });
+    let retenus = 0;
+    for (const q of partants) {
+      if (vus.length - partants.length + retenus >= mini) break;
+      q.minuterie += releve;
+      retenus++;
     }
     // ⚠️ On n'en prend un de plus au-dela du minimum qu'a l'occasion : sans ce
     // frein, le cercle collait au maximum en permanence et la rue se vidait de
     // ses passants pour remplir quatre cercles.
-    else if (attendus < maxi && B.rng() < 0.2) garnirLeCercle(e, false);
+    if (vus.length > mini && attendus < maxi && B.rng() < 0.2) garnirLeCercle(e, false);
     animerLArtiste(e, vus.length);
     if (e.chapeauT > 0) e.chapeauT -= 15;
   }

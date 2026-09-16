@@ -1971,12 +1971,24 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         L.Entites.indexer();
         const vireSoul = deTravers(soul), vireSobre = deTravers(sobre);
         // Une arme sous le nez : tout le monde fuit, lui repond.
+        // ⚠️ UN TEMOIN NEUF POUR L'ALERTE, pose a cote de l'ivrogne. Celui qui
+        // vient de marcher cent soixante pas pour la mesure du zigzag est, a
+        // cette image-ci, QUELQUE PART dans le quartier — le reprendre dans le
+        // rayon de l'ivrogne, c'etait parier sur sa promenade, et le pari se
+        // perd des qu'un lot de la ville change. Il s'etait deja perdu « le
+        // jour ou les cours arriere se sont cloturees » (voir plus haut), et il
+        // s'est reperdu le 16 sept. 2026 quand la palissade de banlieue est
+        // passee des lots vides aux vraies cours. Ce qu'on prouve ici n'a rien
+        // a voir avec sa marche : c'est qu'un passant ORDINAIRE, a la meme
+        // place et sous la meme arme, reagit la ou l'ivrogne repond.
         sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
+        const temoin = o.poser('passant', 16, 0); temoin.etat = 'flane';
+        L.Entites.indexer();
         L.Entites.alerter(soul.x, soul.y, j, 2);
         out.ivrogne = { zigzag: vireSoul.pct, droit: vireSobre.pct,
                         pasSoul: vireSoul.pas, pasSobre: vireSobre.pas, corps: soul.sprite,
                         fuit: soul.etat === 'fuit', repond: soul.bulle ? soul.bulle.texte : null,
-                        lAutreFuit: sobre.etat === 'fuit' || sobre.etat === 'temoin' };
+                        lAutreFuit: temoin.etat === 'fuit' || temoin.etat === 'temoin' };
         soul.etat = 'flane';
         // ⚠️ ON FORCE LA REGLE, on ne joue pas sa probabilite. A six pour cent
         // par seconde, 1500 images donnent vingt-cinq occasions : une sur cinq

@@ -529,6 +529,12 @@ SPECTACLE = {
     # seront ENCORE LA dans autant d'images, et on appelle du monde des que ce
     # compte-la passe sous le minimum.
     "releve_images": 240,
+    # ⚠️ ET LE SURSIS : en dessous de tant d'images de patience, un badaud est
+    # un PARTANT — on le retient si le cercle tomberait sous le minimum sans
+    # lui. Il vaut deux tours de `majSortes` (une image sur quinze), parce
+    # qu'une minuterie qui passe sous quinze entre deux tours s'en va sans
+    # qu'on l'ait vue venir.
+    "sursis_images": 30,
     "applaudit_images": 40,     # le temps d'un bravo
     "applaudit_chance": 0.5,    # un spectateur sur deux applaudit en partant
     "piece_chance": 0.45,       # et il laisse une pièce dans le chapeau

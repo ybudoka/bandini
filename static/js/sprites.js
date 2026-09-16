@@ -2053,7 +2053,52 @@ const TUILES = (function () {
     }
   }
 
+  //: La friche : le sol d'un TERRAIN VAGUE, et pas du gazon plus pale. ⚠️ Un
+  //: lot abandonne se peignait avec `,` — l'herbe des parcs et des cours de
+  //: banlieue — et de haut il avait donc exactement la surface d'un parterre
+  //: entretenu : Martin a appele ca un champ, et c'en etait un. Ce qui change
+  //: n'est pas le detail, c'est le FOND : kaki et desature la ou le gazon est
+  //: vert et franc. Un lot se reconnait d'un ecran de distance ou il ne se
+  //: reconnait pas.
+  const FRICHE = { fond: '#6d6845', clair: '#7b7551', sombre: '#5b5638',
+                   terre: '#7e6b49', terre2: '#8d7a57', sec: '#a4975f',
+                   gravier: '#8b8878', suie: '#43402f' };
+
+  function friche(ctx, v, T) {
+    plein(ctx, FRICHE.fond, T);
+    points(ctx, v + 1, T, FRICHE.clair, 11, 5);
+    points(ctx, v + 1, T, FRICHE.sombre, 9, 63);
+    if (v === 12 || v === 13) {
+      // La terre a perce. ⚠️ Plus large que le rond pele d'un gazon (`herbe`,
+      // v === 14), et c'est voulu : la pelouse pele la ou l'on passe toujours
+      // au meme endroit, une friche pele parce que plus rien ne la tient.
+      const x = 3 + Math.floor(bruit(v + 1, 33) * 4), y = 3 + Math.floor(bruit(v + 1, 34) * 4);
+      ctx.fillStyle = FRICHE.terre;
+      ctx.fillRect(x, y, 8, 6); ctx.fillRect(x + 1, y - 1, 6, 8);
+      ctx.fillStyle = FRICHE.terre2;
+      ctx.fillRect(x + 2, y + 1, 4, 3); ctx.fillRect(x + 3, y + 4, 2, 2);
+    } else if (v === 14) {
+      // Les herbes hautes : ce qui pousse quand plus personne ne tond. Des
+      // brins de CINQ pixels — le gazon en met trois, et c'est a peu pres
+      // toute la difference entre une pelouse et un lot laisse a lui-meme.
+      ctx.fillStyle = FRICHE.sec;
+      for (let i = 0; i < 4; i++) {
+        const x = 3 + Math.floor(bruit(v + 1, 13 + i) * (T - 6));
+        const y = 3 + Math.floor(bruit(v + 1, 23 + i) * (T - 9));
+        ctx.fillRect(x, y, 1, 5);
+        ctx.fillRect(x + 1, y + 2, 1, 3);
+      }
+    } else if (v === 15) {
+      points(ctx, v + 1, T, FRICHE.gravier, 8, 81);      // du gravat en miettes
+      points(ctx, v + 1, T, FRICHE.suie, 4, 17);         // et ce qu'on y a brule
+    }
+  }
+
   //: La ruelle : deux tuiles derriere chaque bande d'ilot, sur toute sa
+  //: largeur — le fond de cour de la ville entiere. ⚠️ C'etait un aplat gris
+  //: avec huit points dessus, d'un bout a l'autre de Baie-des-Brumes. Un fond
+  //: de cour, c'est justement l'endroit qu'on ne refait jamais : de l'asphalte
+  //: rapiece, du gravier, de l'huile et des fissures.
   //: largeur — le fond de cour de la ville entiere. ⚠️ C'etait un aplat gris
   //: avec huit points dessus, d'un bout a l'autre de Baie-des-Brumes. Un fond
   //: de cour, c'est justement l'endroit qu'on ne refait jamais : de l'asphalte
@@ -2401,6 +2446,7 @@ const TUILES = (function () {
 
   return {
     ',': herbe,
+    ';': friche,
     '.': trottoir,
     '_': abord,
     'x': ruelle,
@@ -3715,6 +3761,61 @@ const DECORS = {
     ctx.fillStyle = '#6b6258'; ctx.fillRect(1, 5, 12, 5);
     ctx.fillStyle = '#807768'; ctx.fillRect(3, 2, 4, 4); ctx.fillRect(8, 4, 3, 3);
     ctx.fillStyle = '#544c44'; ctx.fillRect(2, 7, 3, 2); ctx.fillRect(9, 7, 4, 2);
+  } },
+
+  /* --- CE QU'ON JETTE SUR UN TERRAIN VAGUE ---------------------------------
+
+     ⚠️ Demande de Martin : « des terrains vague un peu salle et avec des
+     deches ». Le lot abandonne n'avait qu'UNE sorte de decor — le gravat — et
+     un par dix-sept tuiles : de haut, du gazon avec trois points dessus. Trois
+     fiches de plus, semees avec lui (`carte.DECHETS`), et ce qui fait la
+     salete n'est pas leur nombre mais leur VARIETE : trois tas de gravats se
+     lisent comme un motif, un sac creve a cote d'un pneu se lit comme un
+     depotoir.
+
+     ⚠️ Chacune est la pour se reconnaitre a douze pixels, et chacune a donc UNE
+     silhouette : le sac est mou et bossele, le pneu est un ANNEAU (un disque
+     noir serait une flaque), le baril est un cylindre debout avec deux cercles
+     de renfort. */
+
+  // LES SACS D'ORDURES. Deux, parce qu'on ne sort jamais un sac tout seul —
+  // et l'un des deux est CREVE : ce qui en sort dit qu'il est la depuis
+  // longtemps et que personne ne le ramassera.
+  ordures: { casse: 0.9, pv: 15, w: 16, h: 14, ancre: [8, 13], r: 5, sol: [7, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.20)'; ctx.fillRect(2, 11, 12, 3);        // son ombre
+    ctx.fillStyle = '#2b2b30'; ctx.fillRect(1, 5, 8, 8); ctx.fillRect(2, 3, 6, 3);   // le gros sac
+    ctx.fillStyle = '#3b3b42'; ctx.fillRect(2, 5, 5, 4);                      // le pli qui prend le jour
+    ctx.fillStyle = '#1d1d21'; ctx.fillRect(3, 2, 3, 2);                      // le noeud, en haut
+    ctx.fillStyle = '#35402f'; ctx.fillRect(8, 7, 7, 6); ctx.fillRect(9, 5, 5, 3);   // le vert, plus petit
+    ctx.fillStyle = '#44503c'; ctx.fillRect(9, 7, 4, 3);
+    ctx.fillStyle = '#c9c3ae'; ctx.fillRect(7, 10, 3, 1); ctx.fillRect(6, 12, 2, 1); // ce qui sort du creve
+  } },
+
+  // LE PNEU, couche a plat. ⚠️ Le seul dechet du lot qui ne soit PAS solide :
+  // on marche dessus, et un pneu qui arrete un homme de 1,80 m est un pneu de
+  // camion. Un ANNEAU, jamais un disque : rempli, il se lit comme une flaque
+  // d'huile, et le trou au milieu est tout ce qui le nomme.
+  pneu: { casse: 0.95, pv: 10, w: 16, h: 12, ancre: [8, 10], r: 4, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(2, 9, 12, 2);
+    ctx.fillStyle = '#26262a'; ctx.fillRect(2, 2, 12, 7); ctx.fillRect(3, 1, 10, 9);
+    ctx.fillStyle = '#34343a'; ctx.fillRect(3, 2, 10, 2);                     // le dessus du flanc
+    ctx.fillStyle = '#4a4a52';                                                // les crampons
+    for (let x = 4; x < 13; x += 3) ctx.fillRect(x, 1, 1, 2);
+    ctx.fillStyle = '#5a5240'; ctx.fillRect(6, 4, 4, 3);                      // le trou, plein de terre
+    ctx.fillStyle = '#6d6845'; ctx.fillRect(7, 5, 2, 1);
+  } },
+
+  // LE BARIL ROUILLE, debout. Deux cercles de renfort et une coulee de
+  // rouille : sans eux, un cylindre gris est une poubelle, et la ville en a
+  // deja une.
+  baril: { casse: 0.75, pv: 45, w: 12, h: 18, ancre: [6, 17], r: 4, sol: [5, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(1, 15, 10, 3);
+    ctx.fillStyle = '#6a4a2c'; ctx.fillRect(1, 4, 10, 13);                    // la robe
+    ctx.fillStyle = '#7f5a34'; ctx.fillRect(2, 4, 5, 12);                     // eclairee du nord-ouest
+    ctx.fillStyle = '#8a6a3a'; ctx.fillRect(1, 2, 10, 3); ctx.fillRect(2, 1, 8, 2);  // le couvercle, vu d'en haut
+    ctx.fillStyle = '#9a7c48'; ctx.fillRect(3, 2, 5, 1);
+    ctx.fillStyle = '#4e3620'; ctx.fillRect(1, 7, 10, 1); ctx.fillRect(1, 13, 10, 1);  // les deux cercles
+    ctx.fillStyle = '#8f4a22'; ctx.fillRect(8, 5, 1, 7); ctx.fillRect(3, 9, 1, 5);     // la rouille qui coule
   } },
   fontaine: { arrete: 9, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);

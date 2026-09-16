@@ -1100,7 +1100,7 @@ const Monde = (function () {
 
   //: Les sols qui font le dedans d'un pate de maisons — plus le sable de la
   //: greve, qui s'aplatissait de la meme facon et pour la meme raison.
-  const SOLS_D_ILOT = { '.': true, ',': true, 'x': true, 'g': true, 's': true };
+  const SOLS_D_ILOT = { '.': true, ',': true, ';': true, 'x': true, 'g': true, 's': true };
 
   /** La variante d'un sol d'ilot : son usure, et — pour le trottoir — la place
       de la tuile dans sa DALLE.

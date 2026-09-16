@@ -123,6 +123,30 @@ PART_RAMPE_COUR = 0.45
 PART_RAMPE_STATIONNEMENT = 0.35
 PART_RAMPE_VAGUE = 0.5
 
+#: --- Ce qu'on jette sur un terrain vague ------------------------------------
+#: ⚠️ Une liste A POIDS, pas un choix uniforme : ce qu'on voit d'abord dans un
+#: lot abandonne, c'est du gravat et des sacs eventres — un baril rouille, on en
+#: voit un, pas un par dix tuiles. Un terrain ou chaque saloperie est aussi rare
+#: que les autres n'a pas l'air abandonne, il a l'air rempli.
+#: ⚠️ Le `pneu` est le seul du lot qui ne soit pas solide : il est couche, on
+#: marche dessus. Les trois autres arretent un pieton comme une caisse.
+DECHETS = ("debris", "debris", "debris", "debris",
+           "ordures", "ordures", "ordures",
+           "pneu", "pneu", "baril", "caisse")
+
+#: Une tuile sur COMBIEN porte un dechet. ⚠️ Mesure du 16 sept. 2026 : le terrain
+#: vague semait un gravat par douze tuiles et n'en posait qu'un par DIX-SEPT (le
+#: reste tombait sur du reserve ou de l'occupe) — 53 objets sur 922 tuiles, et
+#: treize lots sur quatorze qu'on traversait sans rien contourner. A une sur six,
+#: on ne coupe plus par un terrain vague sans zigzaguer, et c'est exactement ce
+#: qui le rend sale.
+PART_DECHET = 6
+
+#: Et les mauvaises herbes, qui sont l'autre moitie de l'abandon : ce qui pousse
+#: quand plus personne ne tond. Moins denses que les dechets — un buisson est
+#: large (16 px), et une friche qu'on ne voit plus n'est plus une friche.
+PART_MAUVAISE_HERBE = 14
+
 #: Solidite : 0 libre, 1 mur (bloque tout), 2 eau (bloque sauf les bateaux),
 #: 3 basse (bloque les vehicules, pas les pietons).
 LEGENDE: dict[str, dict] = {
@@ -142,6 +166,20 @@ LEGENDE: dict[str, dict] = {
     # sur le gazon n'en a pas. La liste vit ICI et pas dans le dessin : c'est
     # une propriete du SOL, pas une couleur.
     ",": {"nom": "herbe", "herbe": True, "terre": True},
+    # ⚠️ LA FRICHE D'UN TERRAIN VAGUE, ET PAS DU GAZON. Un lot laisse a
+    # l'abandon se peignait avec l'herbe des cours et des parcs : vu d'en haut,
+    # de la ferraille derriere un barbele avait exactement la surface d'un
+    # parterre de banlieue, et Martin a nomme ce qu'il voyait — un CHAMP. Ce
+    # n'est pas la meme terre : elle perce, l'herbe y est seche, et c'est cette
+    # surface-la qui dit d'un coup d'oeil que personne ne l'entretient.
+    # ⚠️ PAS DE `herbe` DANS SA FICHE, et ce n'est pas un oubli : la mini-carte
+    # peint le vert avec cette propriete-la (`couleurMini`, monde.js). Une
+    # friche verte sur la carte, c'est un parc de plus — soit l'inverse de ce
+    # qu'on vient de dessiner. Elle tombe donc dans la couleur de terre, avec le
+    # sable et l'allee de parc.
+    # ⚠️ `terre` : un arbre pousse dans une friche sans qu'on lui creuse une
+    # fosse. Une fosse de beton au milieu des gravats, c'est un arbre de rue.
+    ";": {"nom": "friche", "terre": True, "friche": True},
     "x": {"nom": "ruelle", "ruelle": True},
     "s": {"nom": "sable", "terre": True},
     # ⚠️ La POUSSIERE DE PIERRE d'une allee de parc, et pas du trottoir. Un
@@ -1108,6 +1146,17 @@ class _Chantier:
         # depanneur perdrait son enseigne (la lecon est ecrite dans
         # `batiment_forme` depuis M8).
         self.des_scene = Des(graine ^ 0x5CE4E)
+        # ⚠️ SON PROPRE DE, ET POUR LA MEME RAISON, mesuree cette fois : le
+        # terrain vague et le parc de quartier sement BIEN PLUS que le gazon nu
+        # qu'ils remplacent. Tires dans le de commun, leurs tirages de plus
+        # decalaient tout ce qui vient apres — dix juges sont tombes d'un coup,
+        # et pas un ne parle de terrain vague : une barriere d'usine dont la
+        # couronne passait sur une case de stationnement, une table a
+        # pique-nique de parc que le juge de la greve trouvait loin de l'eau,
+        # un buisson que la balle du banc ne rencontrait plus. On BRULE donc ce
+        # que l'ancien semis tirait (`Des.brule`), et on seme ici : la ville
+        # livree ne bouge que dans les lots qu'on redessine.
+        self.des_dechet = Des(graine ^ 0xDEC4E7)
         self.rampes: list[dict] = []
         self.rampes_proposees: list[dict] = []
 
@@ -2507,7 +2556,12 @@ class _Chantier:
                 continue
             chemins = entree_du_lot(*parcelles[k][0])
             if chemins is None:
-                contenus[k] = "jardin" if genre in ("maisons", "banlieue") else "vague"
+                # ⚠️ UN PARC N'A PAS BESOIN D'ENTREE DE CHAR, et c'est
+                # exactement ce qui le rend bon ici : le lot qu'on vient de
+                # refuser au stationnement est enclave au milieu d'une bande.
+                # Un terrain vague au meme endroit serait une friche cloturee
+                # que personne ne verra jamais.
+                contenus[k] = "parc" if genre in ("maisons", "banlieue") else "vague"
             elif chemins:
                 entrees[k] = chemins
 
@@ -2527,13 +2581,15 @@ class _Chantier:
                     batiments.append((facades, devant_rue, tuiles, (px, py, pl, ph), boite))
             elif contenu == "vague":
                 self._terrain_vague(px, py, pl, ph)
+            elif contenu == "parc":
+                self._parc_de_quartier(px, py, pl, ph, genre)
             elif contenu == "stationnement":
                 self._stationnement(px, py, pl, ph, genre)
                 # ⚠️ APRES le lot : l'entree sort d'une ALLEE, et les allees
                 # n'existent qu'une fois les rangees posees.
                 self._percer_l_entree(entrees.get(k), (px, py, pl, ph))
             else:
-                self._jardin(px, py, pl, ph, genre)
+                raise ValueError(f"contenu de parcelle inconnu : {contenu!r}")
         if facades_vedette:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
@@ -2682,11 +2738,30 @@ class _Chantier:
         return "commerce", self.choisir_enseigne(*ancre)
 
     def _contenu(self, genre: str) -> str:
+        """Ce qu'une parcelle porte. ⚠️ UN SEUL TIRAGE, et il ne bouge pas.
+
+        ⚠️ **`jardin` devient `parc`, UNE SORTE POUR UNE SORTE**, et pas une
+        part de plus ni de moins. Le gazon nu etait le « champ » que Martin a
+        nomme ; ce qui le remplace est un parc de quartier. La part de bati, la
+        part de stationnement, et surtout **le tirage** ne bougent pas d'un
+        centieme.
+
+        ⚠️ **Et c'est pour ca qu'on ne met pas de terrain vague a la place.**
+        Mesure du 16 sept. 2026 : en envoyant une partie de ces lots vers
+        `vague`, le semis du terrain vague (un dechet par six tuiles) remplacait
+        celui du gazon (un arbre par dix) — pas le meme nombre de tirages dans
+        le meme de, donc **toute la ville se rebattait**. Dix juges sont tombes
+        d'un coup, et pas un ne parlait de terrain vague : une barriere d'usine
+        dont la couronne passait sur une case de stationnement, un buisson que
+        la balle du banc ne rencontrait plus, deux enfants qui ne jouaient plus
+        au ballon. Les terrains vagues restent donc exactement ou ils etaient —
+        ils changent de SURFACE (de la friche, des dechets), pas de place.
+        """
         tirage = self.des.flottant()
         if genre == "maisons":
-            return "bati" if tirage < 0.74 else ("jardin" if tirage < 0.92 else "stationnement")
+            return "bati" if tirage < 0.74 else ("parc" if tirage < 0.92 else "stationnement")
         if genre == "banlieue":
-            return "bati" if tirage < 0.72 else ("jardin" if tirage < 0.94 else "stationnement")
+            return "bati" if tirage < 0.72 else ("parc" if tirage < 0.94 else "stationnement")
         if genre == "hangars":
             return "bati" if tirage < 0.80 else ("stationnement" if tirage < 0.95 else "vague")
         if genre == "industriel":
@@ -2881,8 +2956,31 @@ class _Chantier:
             "places": places,
         }
 
+    @staticmethod
+    def _tirages_de_semis(largeur: int, hauteur: int) -> int:
+        """Combien de tirages coute UNE pose au hasard dans une boite.
+
+        ⚠️ `Des.entier(a, b)` rend `a` SANS TIRER quand `b <= a` : une boite
+        large d'une tuile ne consomme pas de de pour son abscisse. Le compte
+        doit le savoir, sinon ce qu'on brule ne vaut pas ce qu'on tirait — et
+        « brule ce que tu ne tires plus » ne veut plus rien dire.
+        """
+        return (1 if largeur > 1 else 0) + (1 if hauteur > 1 else 0)
+
     def _terrain_vague(self, x: int, y: int, largeur: int, hauteur: int) -> None:
-        self.rect(x, y, largeur, hauteur, ",")
+        """Un lot laisse a l'abandon : de la friche, des dechets, une cloture.
+
+        ⚠️ **DE LA FRICHE, PAS DU GAZON** — demande de Martin (« mets des
+        terrains vague un peu salle et avec des deches »), et il a nomme un
+        vrai defaut : ce terrain-ci se peignait avec `,`, l'herbe des parcs et
+        des cours de banlieue. Mesure du 16 sept. 2026 : quatorze lots,
+        922 tuiles de pelouse, et **un gravat pose par dix-sept tuiles** — de
+        loin, un carre de gazon avec trois points dessus. On y marche
+        aujourd'hui sur de la terre seche (`;`), et ce qu'on contourne en le
+        traversant n'est plus le gravat tout seul mais tout ce que le quartier
+        y a jete (`DECHETS`).
+        """
+        self.rect(x, y, largeur, hauteur, ";")
         # ⚠️ Les cours de La Shop sont BARBELEES : de la ferraille derriere une
         # cloture qu'on enjambe, ca ne dit rien ; derriere du barbele, ca dit
         # « quelqu'un a paye pour que personne n'entre ». Ailleurs, c'est du
@@ -2901,9 +2999,21 @@ class _Chantier:
         # n'est jamais une poche.
         self.clore(x, y, largeur, hauteur, cloture, cotes="SEO")
         self.des.brule(max(0, largeur - 2))   # une tuile sur deux hors trouee, autrefois
-        for _ in range(max(1, largeur * hauteur // 12)):
-            self.poser_decor("debris", x + self.des.entier(0, largeur - 1),
-                             y + self.des.entier(0, hauteur - 1))
+        # ⚠️ ET ON BRULE LE VIEUX SEMIS : un gravat par douze tuiles, deux
+        # tirages chacun. Sans ca, la ville entiere se rebat (voir `des_dechet`).
+        self.des.brule(self._tirages_de_semis(largeur, hauteur) * max(1, largeur * hauteur // 12))
+        # ⚠️ Le TIRAGE DE LA SORTE D'ABORD, la place ensuite, et toujours les
+        # deux : `poser_decor` refuse une tuile reservee ou deja prise, et si le
+        # refus sautait le tirage de la sorte, le semis se decalerait selon ce
+        # qu'il rencontre — deux terrains vagues de la meme taille n'auraient
+        # plus le meme nombre de tirages, et le lot d'a cote changerait avec eux.
+        for _ in range(max(2, largeur * hauteur // PART_DECHET)):
+            quoi = self.des_dechet.choix(DECHETS)
+            self.poser_decor(quoi, x + self.des_dechet.entier(0, largeur - 1),
+                             y + self.des_dechet.entier(0, hauteur - 1))
+        for _ in range(max(1, largeur * hauteur // PART_MAUVAISE_HERBE)):
+            self.poser_decor("buisson", x + self.des_dechet.entier(0, largeur - 1),
+                             y + self.des_dechet.entier(0, hauteur - 1))
         # Un tremplin de planches sur les gravats : le terrain vague est
         # l'endroit ou une rampe se raconte toute seule. ⚠️ On COUPE la cloture
         # devant : sinon c'est un tremplin derriere un grillage, et on vient de
@@ -3070,7 +3180,18 @@ class _Chantier:
         # n'est jamais une poche. La barriere, elle, donne sur la ruelle.
         # ⚠️ APRES la piscine et le cabanon : `cloture_possible` refuse ce qui
         # est deja solide, donc une palissade ne peut pas leur passer dessus.
-        if by - py >= 3 and pl >= 3 and self.des_cloture.chance(0.55):
+        # ⚠️ **DEUX TUILES DE FOND SUFFISENT, ET LA CHANCE MONTE**, parce que
+        # c'est ICI que vit maintenant la palissade de bois. Mesure du
+        # 16 sept. 2026 : sur 36 terrains de banlieue, SIX seulement avaient
+        # trois tuiles derriere la maison, deux ont appele `clore`, et il
+        # restait ONZE tuiles de palissade dans toute la ville. L'image de
+        # « cours delimitees » que M8 promet tenait donc aux LOTS VIDES
+        # (l'ancien `_jardin` en cloturait un sur deux) — c'est-a-dire a
+        # l'exact inverse de ce qu'on voit par la fenetre, et son propre
+        # commentaire le disait deja. Les lots vides sont devenus des parcs, et
+        # un parc ne se cloture pas : la palissade revient donc aux cours, ou
+        # elle a toujours du etre.
+        if by - py >= 2 and pl >= 3 and self.des_cloture.chance(0.8):
             self.clore(px, py, pl, by - py, BOIS, cotes="NEO", cote_ouvert="N", ouverture=1)
 
         devanture = [(x, y) for y in range(by + bh, py + ph) for x in range(px, px + pl)
@@ -3081,50 +3202,96 @@ class _Chantier:
             if self.poser_decor("bbq", x, y):
                 occupe.add((x, y))
 
-    def _jardin(self, x: int, y: int, largeur: int, hauteur: int,
-                genre: str = "commerces") -> None:
-        """Du gazon, des arbres — et, chez le monde, une cour arriere cloturee.
+    #: Le sentier d'un parc de quartier, et sa largeur. ⚠️ UNE tuile, pas deux
+    #: (les allees de `_parc` en font deux) : un lot de 7 x 7 avec une allee de
+    #: deux tuiles, c'est 28 % du parc en poussiere de pierre — une dalle avec
+    #: du gazon autour, exactement le reproche fait au parc de ville avant lui.
+    SENTIER_DE_PARC = "g"
 
-        ⚠️ La palissade de bois est la VARIETE que demandait Martin, et c'est
-        aussi ce qui fait qu'une banlieue a l'air d'une banlieue vue d'en haut :
-        des cours delimitees. Elle s'enjambe comme un grillage (solidite 4), donc
-        elle ne peut pas enfermer une poche — on entre dans une cour arriere en
-        passant par-dessus, c'est meme tout son interet.
+    #: Une tuile de sentier sur combien porte un banc a cote. Un banc tous les
+    #: quatre pas, c'est un parc ; un banc par lot, c'est un banc.
+    PART_BANC_DE_PARC = 4
 
-        ⚠️ Une BARRIERE, toujours : un cote de la cour reste ouvert. Sans elle,
-        traverser une banlieue a pied deviendrait une suite d'escalades, et le
-        prix d'une cloture (une seconde, immobile) se paierait dix fois par rue.
+    #: Un arbre par combien de tuiles. ⚠️ Le gazon nu qu'on remplace en posait
+    #: un par DIX (arbre ou buisson, et il n'en tenait qu'un par seize) : de la
+    #: rue, on voyait trois piquets sur une pelouse. Un parc de ville en met un
+    #: par quatorze, un bois un par sept ; un parc de quartier tient entre les
+    #: deux — assez serre pour faire une masse verte, assez clair pour qu'on
+    #: voie le sentier au travers.
+    PART_ARBRE_DE_PARC = 8
+    PART_BUISSON_DE_PARC = 12
 
-        ⚠️ La BANLIEUE seulement (Les Erables), pas les quartiers de maisons du
-        Faubourg. Mesure a l'appui : en cloturant les deux, 274 tuiles de
-        palissade tombaient au milieu du vieux quartier — le carre ou l'on
-        commence la partie devenait un labyrinthe de cours, et quatre juges de
-        banc ne trouvaient plus une tuile libre autour du joueur. Une cour
-        arriere cloturee, c'est une image de banlieue ; en ville, c'est une haie
-        d'obstacles.
+    #: ⚠️ **PAS DE TABLE A PIQUE-NIQUE**, et c'est un juge qui l'a tranche :
+    #: « tout ce qui meuble la greve est au bord de l'eau » (`test_greve`) lit
+    #: le TYPE du decor, pas l'endroit — une table dans un parc de quartier, a
+    #: quatre-vingts tuiles de la baie, le fait tomber. Le juge a raison sur le
+    #: fond (une table posee loin de l'eau, sur la greve, serait un defaut), et
+    #: la table a pique-nique est aujourd'hui un meuble de PLAGE. Un banc fait
+    #: le meme travail ici, et il est deja de la ville.
 
-        ⚠️ Jamais devant une facade (`poser_cloture`) : une porte exige du
-        marchable devant elle, et une palissade collee au mur du voisin fait
-        disparaitre la porte, l'enseigne et le commerce avec elle.
+    def _parc_de_quartier(self, x: int, y: int, largeur: int, hauteur: int,
+                          genre: str = "commerces") -> None:
+        """Le lot qu'on n'a pas bati et dont le quartier a fait quelque chose.
+
+        ⚠️ **IL REMPLACE `_jardin`**, qui posait du gazon et quatre arbres —
+        et c'est de ces lots-la que Martin parlait : « au lieu des champs [...]
+        aussi des parcs ». Mesure du 16 sept. 2026 : dix lots, 406 tuiles de
+        pelouse, **25 objets en tout** (un par seize tuiles), et en banlieue une
+        palissade autour. Une cour arriere sans maison, cloturee, vide : de haut,
+        un champ.
+
+        ⚠️ **CE QUI FAIT UN PARC, C'EST LE SENTIER**, pas les arbres. Un carre
+        de gazon plante d'arbres reste un terrain ; le jour ou quelque chose le
+        TRAVERSE, c'est un endroit ou l'on va. C'est aussi lui qui range le
+        reste : les bancs le bordent (un banc au hasard sur la pelouse regarde
+        un buisson), et sa reserve garantit qu'aucun arbre ne le bouche —
+        la lecon de `_allee`, payee une fois pour toutes dans `_parc`.
+
+        ⚠️ **Et il ne se cloture pas.** Une cour se ferme, un parc s'ouvre : la
+        palissade que `_jardin` posait une fois sur deux en banlieue disait
+        « c'est a quelqu'un », ce qui est le contraire de ce qu'on veut lire ici.
         """
         self.rect(x, y, largeur, hauteur, ",")
-        # ⚠️ La barriere s'ouvre sur du MARCHABLE, et s'il n'y en a pas, la cour
-        # reste ouverte. Mesure a l'appui : une cour de 3 x 3 dont la seule sortie
-        # donnait sur le mur du voisin devenait une poche, `boucher_les_poches` la
-        # murait — huit tuiles, dont le devant d'une porte, et un commerce du
-        # quartier se retrouvait sans entree.
+        # --- Ce que le gazon nu tirait, et qu'on ne tire plus ---------------
+        # ⚠️ Il tirait UNE CLOTURE en banlieue (`des_cloture` : la chance, puis
+        # la trouee de `clore`) et un arbre ou un buisson par dix tuiles
+        # (`des` : la sorte, puis les deux coordonnees). On brule les deux dans
+        # LEUR de, exactement dans l'ordre et sous les memes conditions —
+        # autrement la palissade de la cour d'a cote change de place et la
+        # ville se rebat (voir `des_dechet`).
         sorties = [i for i in range(1, largeur - 1) if self.marchable_en(x + i, y + hauteur)]
         if (genre == "banlieue" and largeur >= 3 and hauteur >= 3
                 and sorties and self.des_cloture.chance(0.7)):
-            # ⚠️ Trois cotes, et `clore` decide : le U se posait tuile par tuile
-            # et `poser_cloture` en refusait en silence — il en restait des bouts
-            # qui ne se rejoignaient pas, « trois palissades sur un gazon ». Ou
-            # la cour se cloture, ou elle reste ouverte ; pas de moignon.
-            self.clore(x, y, largeur, hauteur, BOIS, cotes="SEO", ouverture=1)
-        for _ in range(max(1, largeur * hauteur // 10)):
-            self.poser_decor(self.des.choix(("arbre", "buisson")),
-                             x + self.des.entier(0, largeur - 1),
-                             y + self.des.entier(0, hauteur - 1))
+            self.des_cloture.brule(1)          # la trouee que `clore` aurait tiree
+        self.des.brule((1 + self._tirages_de_semis(largeur, hauteur))
+                       * max(1, largeur * hauteur // 10))
+        # --- Le sentier, d'un bord a l'autre, dans le sens long -------------
+        dans_la_largeur = largeur >= hauteur
+        if dans_la_largeur:
+            sy = y + hauteur // 2
+            sentier = [(cx, sy) for cx in range(x, x + largeur)]
+            cotes = ((0, -1), (0, 1))
+        else:
+            sx = x + largeur // 2
+            sentier = [(sx, cy) for cy in range(y, y + hauteur)]
+            cotes = ((-1, 0), (1, 0))
+        for cx, cy in sentier:
+            self.sol[cy][cx] = self.SENTIER_DE_PARC
+            self.reserver(cx, cy, 1, 1)
+        # --- Les bancs, LE LONG du sentier ----------------------------------
+        bords = [(cx + dx, cy + dy) for cx, cy in sentier for dx, dy in cotes
+                 if x <= cx + dx < x + largeur and y <= cy + dy < y + hauteur]
+        for _ in range(max(1, len(sentier) // self.PART_BANC_DE_PARC)):
+            if not bords:
+                break
+            self.poser_decor("banc", *self.des_dechet.choix(bords))
+        # --- Les arbres et les buissons, partout ailleurs -------------------
+        for _ in range(max(2, largeur * hauteur // self.PART_ARBRE_DE_PARC)):
+            self.poser_decor("arbre", x + self.des_dechet.entier(0, largeur - 1),
+                             y + self.des_dechet.entier(0, hauteur - 1))
+        for _ in range(max(1, largeur * hauteur // self.PART_BUISSON_DE_PARC)):
+            self.poser_decor("buisson", x + self.des_dechet.entier(0, largeur - 1),
+                             y + self.des_dechet.entier(0, hauteur - 1))
 
     # --- Les rampes ---------------------------------------------------------
 
