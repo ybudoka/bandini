@@ -102,6 +102,42 @@ NIVEAU_LUFS = -19.0
 #: monterait sinon au-dessus de 0 dBFS. Le gain s'arrete au premier des deux.
 PIC_MAX_DBFS = -1.0
 
+#: ⚠️ LES VOIX QUI SONNENT DANS UNE PIECE — retour de Martin apres ecoute (16 sept.
+#: 2026) : « caverneuses », puis « je les veux sans reverberation ». Mesure : la
+#: vitesse de chute du son a la fin des syllabes (95e centile, dB/s) — une piece
+#: la borne. Etalonnee en ajoutant soi-meme une reverberation a une voix seche
+#: (534 dB/s -> 315 a RT 0,4 s -> 300 a RT 0,8 s).
+#:
+#: ⚠️ REGENERER NE SECHE RIEN : sur la meme phrase de Mme Thibodeau, v3 en
+#: stabilite 0, 0,5 et 1, et avec une similarite basse, restent entre 294 et
+#: 350 ; v2 et turbo montent a 423-443 mais perdent les balises d'emotion. Ce
+#: qui seche, c'est l'ISOLATEUR d'ElevenLabs (`elevenlabs_voice_isolation`) : sur
+#: la voix seche reverberee a RT 0,4 s, il est revenu de 315 a 532 (534 avant).
+#:
+#: ⚠️ ET IL NE SECHE QUE CE QUI EST MOUILLE. Passe sur les cinq voix les plus
+#: lentes (62 repliques), mesure fichier fini contre fichier fini :
+#:   - Julia 347 -> 373 et le narrateur 428 -> 471 : la piece part, le timbre
+#:     reste (Julia gagne meme 6 dB d'air au-dessus de 8 kHz) ;
+#:   - Amelie 432 -> 432, Felix 436 -> 438, Leo 443 -> 447 : RIEN a retirer —
+#:     leur ecart avec v2 etait le debit de v3, pas une piece — et Felix et Leo
+#:     y perdaient 1,5 a 4,6 dB d'aigus. Les secher les aurait ETOUFFES.
+#: Ce qui reste a Julia (373, contre 510+ pour une voix seche) n'est pas la piece :
+#: c'est sa voix, rauque, aux fins de mots soufflees — meme v2 isolee plafonne a 441.
+#:
+#: Les noms sont ceux du catalogue (`audio.py`, `missions.PERSONNAGES`).
+VOIX_A_SECHER = frozenset({
+    "Julia",                        # Mme Thibodeau, la Brume, La Brume a la radio
+    "annonceur centre d'achat 1",   # le narrateur : ouverture et journal
+})
+
+#: L'isolateur refuse sous ce seuil (« below the minimum of 4.6 seconds », mesure) :
+#: une replique plus courte part allongee de silence, et revient recoupee.
+ISOLATION_MIN_S = 4.6
+
+#: Ce que porte un fichier seche, dans son etiquette `comment` : c'est le fichier
+#: qui prouve qu'il est passe par l'isolateur, pas la liste qui le promet.
+MARQUE_SECHEE = "voix isolee"
+
 #: Les balises permises. ⚠️ Une liste FERMEE : une balise que v3 ne comprend pas,
 #: il la lit a voix haute (« crochet, tristement »). On l'allonge quand on en
 #: essaie une nouvelle, pas en passant.
@@ -225,6 +261,10 @@ JEU: dict[str, str] = {
 }
 
 _BALISE = re.compile(r"\[([^\[\]]*)\]")
+
+
+def a_secher(voix: dict) -> bool:
+    return voix["voix"] in VOIX_A_SECHER
 
 
 def dit(voix: dict) -> str:

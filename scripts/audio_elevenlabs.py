@@ -285,11 +285,37 @@ def _trous_s(chemin: Path, seuil_s: float = 1.2) -> list[float]:
     return [float(d) for fin, d in fins if float(fin) < duree - 0.05]
 
 
-def finir_voix(master: Path, cible: Path, histoire: bool) -> dict:
+def secher(client: ClientMCP, master: Path, dossier: Path) -> Path:
+    """La voix seule du master, sans la piece (ElevenLabs Voice Isolator) :
+    `<master>-sec.wav`, dans `dossier`. Voir `interpretation.VOIX_A_SECHER`.
+
+    ⚠️ Sous `ISOLATION_MIN_S`, l'isolateur refuse : on envoie la replique
+    allongee de silence, et on recoupe le retour a sa duree d'origine — il
+    garde le minutage (mesure : 7,44 s envoyees, 7,43 rendues).
+    """
+    duree = _duree_s(master)
+    cible = dossier / f"{master.stem}-sec.wav"
+    with tempfile.TemporaryDirectory(prefix="bandini-sec-") as temporaire:
+        envoi = master
+        if duree < interpretation.ISOLATION_MIN_S + 0.1:
+            envoi = Path(temporaire) / f"{master.stem}.wav"
+            _sortie_ffmpeg(["-i", str(master), "-ac", "1", "-ar", "44100", "-af",
+                            f"apad=whole_dur={interpretation.ISOLATION_MIN_S + 0.2}", str(envoi)])
+        reponse = client.appeler("elevenlabs_voice_isolation",
+                                 {"fichier": str(envoi), "output_dir": temporaire, "nom": "isolee"})
+        if not reponse.get("ok"):
+            raise RuntimeError(f"isolation : {reponse.get('erreur')}")
+        _sortie_ffmpeg(["-i", reponse["fichier"], "-af", f"atrim=end={duree:.3f}",
+                        "-ac", "1", "-ar", "44100", str(cible)])
+    return cible
+
+
+def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = None) -> dict:
     """Mono, au niveau, un fondu sur la derniere syllabe, le temps mort, encode.
 
     ⚠️ L'ancien fichier n'est remplace qu'a la toute fin : une finition qui
     echoue laisse la replique qu'on avait, jamais un trou dans le jeu.
+    `marque` va dans l'etiquette `comment` (`interpretation.MARQUE_SECHEE`).
     """
     frequence, debit = (audio.FORMAT_HISTOIRE if histoire else FORMAT).split("_")[1:]
     with tempfile.TemporaryDirectory(prefix="bandini-voix-") as temporaire:
@@ -335,7 +361,8 @@ def finir_voix(master: Path, cible: Path, histoire: bool) -> dict:
                             f"afade=t=out:st={max(0.0, duree - fondu):.3f}:d={fondu},"
                             f"apad=pad_dur={interpretation.TEMPS_MORT_S}",
                             "-ar", frequence, "-ac", "1", "-b:a", f"{debit}k",
-                            "-map_metadata", "-1", str(fini)])
+                            "-map_metadata", "-1",
+                            *(["-metadata", f"comment={marque}"] if marque else []), str(fini)])
             depasse = _pic_dbfs(fini) - interpretation.PIC_MAX_DBFS
             if depasse <= 0.1:
                 break
@@ -419,14 +446,48 @@ def refinir(voix: list[dict], masters: Path) -> int:
     rates = 0
     for ligne in voix:
         nom = audio.nom_fichier_voix(ligne)
-        master = masters / nom
+        # ⚠️ Une voix a secher se refinit depuis son master SECHE : repartir du
+        # brut remettrait la piece autour d'elle sans que rien ne le dise.
+        seche = interpretation.a_secher(ligne)
+        master = masters / (f"{nom[:-4]}-sec.wav" if seche else nom)
         if not master.is_file():
             rates += 1
-            print(f"  ✗ {nom:>40}  pas de master dans {masters}")
+            print(f"  ✗ {nom:>40}  pas de {master.name} dans {masters}"
+                  + (" (lance --secher)" if seche else ""))
             continue
-        bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")))
+        bilan = finir_voix(master, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
+                           interpretation.MARQUE_SECHEE if seche else None)
         trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
         print(f"  ✓ {nom:>40}  {bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")
+    return 1 if rates else 0
+
+
+def secher_masters(voix: list[dict], masters: Path) -> int:
+    """Seche les masters deja payes des voix qui sonnent dans une piece, puis les
+    finit. Ne regenere AUCUNE replique : le jeu que Martin a ecoute reste le meme.
+    COUTE 1000 credits par minute envoyee a l'isolateur."""
+    if not masters.is_dir():
+        raise SystemExit("--secher veut --masters DOSSIER (les masters d'une generation)")
+    if not LANCEUR.is_file():
+        raise SystemExit(f"lanceur MCP introuvable : {LANCEUR}")
+    client = ClientMCP(LANCEUR)
+    rates = 0
+    try:
+        for ligne in voix:
+            nom = audio.nom_fichier_voix(ligne)
+            if not interpretation.a_secher(ligne):
+                continue
+            try:
+                sec = secher(client, masters / nom, masters)
+                bilan = finir_voix(sec, audio.chemin_voix(ligne), bool(ligne.get("histoire")),
+                                   interpretation.MARQUE_SECHEE)
+            except (RuntimeError, OSError) as souci:
+                rates += 1
+                print(f"  ✗ {nom:>40}  {souci}")
+                continue
+            print(f"  ✓ {nom:>40}  {bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB  (sechee)")
+    finally:
+        client.fermer()
     return 1 if rates else 0
 
 
@@ -446,6 +507,9 @@ def main() -> int:
     argus.add_argument("--masters", metavar="DOSSIER",
                        help="garder les masters des voix dans ce dossier (hors du depot) : "
                             "la finition se rejoue alors sans repayer une generation")
+    argus.add_argument("--secher", action="store_true",
+                       help="avec --masters : passer les voix qui sonnent dans une piece par "
+                            "l'isolateur ElevenLabs, puis les finir (1000 credits / minute)")
     argus.add_argument("--refinir", action="store_true",
                        help="avec --masters : rejouer la finition des voix depuis leurs masters, "
                             "sans rien generer (gratuit)")
@@ -470,6 +534,8 @@ def main() -> int:
             print("Fichiers que le catalogue ne reclame plus :", ", ".join(orphelins))
         return 0
 
+    if options.secher:
+        return secher_masters(voix, Path(options.masters or ""))
     if options.refinir:
         return refinir(voix, Path(options.masters or ""))
     print(f"{len(travail) + len(radios) + len(musiques) + len(voix)} fichier(s) a generer "
@@ -561,7 +627,13 @@ def main() -> int:
                     print(f"  ✗ {nom:>40}  {reponse.get('erreur')}")
                     continue
                 try:
-                    bilan = finir_voix(Path(reponse["fichier"]), cible, bool(ligne.get("histoire")))
+                    # ⚠️ Secher AVANT de finir : le niveau et les pauses se
+                    # mesurent sur la voix seule, pas sur la voix et sa piece.
+                    master, marque = Path(reponse["fichier"]), None
+                    if interpretation.a_secher(ligne):
+                        master = secher(client, master, Path(masters))
+                        marque = interpretation.MARQUE_SECHEE
+                    bilan = finir_voix(master, cible, bool(ligne.get("histoire")), marque)
                 except (RuntimeError, OSError) as souci:
                     rates.append((nom, f"finition : {souci}"))
                     print(f"  ✗ {nom:>40}  finition : {souci}")

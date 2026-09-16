@@ -66,6 +66,24 @@ def test_le_script_envoie_le_jeu_avec_le_modele_qui_le_lit():
     assert interpretation.MODELE == "eleven_v3"
 
 
+def test_les_voix_a_secher_sont_des_voix_du_jeu():
+    """Un nom mal recopie ne secherait personne, et rien ne le dirait."""
+    utilisees = {v["voix"] for v in VOIX}
+    inconnues = sorted(interpretation.VOIX_A_SECHER - utilisees)
+    assert not inconnues, f"ces voix a secher ne parlent nulle part : {inconnues}"
+
+
+def test_le_script_seche_avant_de_finir():
+    """Le cablage, aux trois endroits ou une voix se fabrique : la generation,
+    `--secher`, et `--refinir` — qui doit repartir du master SECHE."""
+    source = (RACINE / "scripts" / "audio_elevenlabs.py").read_text(encoding="utf-8")
+    boucle = source[source.index("for ligne in voix:", source.index("def main")):]
+    assert "interpretation.a_secher(ligne)" in boucle and "secher(client, master" in boucle
+    refinir = source[source.index("def refinir"):source.index("def secher_masters")]
+    assert "-sec.wav" in refinir and "interpretation.MARQUE_SECHEE" in refinir
+    assert '"elevenlabs_voice_isolation"' in source
+
+
 # --- Les fichiers ------------------------------------------------------------------
 
 ffmpeg_present = pytest.mark.skipif(
@@ -84,6 +102,18 @@ def _ffmpeg(chemin, filtre):
 def _duree_s(chemin):
     return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration",
                                  "-of", "csv=p=0", str(chemin)], capture_output=True, text=True).stdout)
+
+
+@ffmpeg_present
+@pytest.mark.parametrize("voix", [v for v in PRESENTES if interpretation.a_secher(v)], ids=lambda v: v["slug"])
+def test_une_voix_qui_sonnait_dans_une_piece_a_ete_sechee(voix):
+    """C'est le FICHIER qui le prouve (son etiquette `comment`) : une replique
+    regeneree par un chemin qui oublie l'isolateur reviendrait dans sa piece, et
+    la liste de `VOIX_A_SECHER` continuerait de le promettre."""
+    tags = subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format_tags=comment",
+                           "-of", "default=nw=1:nk=1", str(audio.chemin_voix(voix))],
+                          capture_output=True, text=True).stdout.strip()
+    assert tags == interpretation.MARQUE_SECHEE, f"{voix['slug']} n'est pas passee par l'isolateur"
 
 
 @ffmpeg_present
