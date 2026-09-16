@@ -133,6 +133,7 @@ ne bougent pas quand l'ordre de travail change.
 | M14 Meta v2 | **à faire** (v2) | — | **P4** | ajout | **un compte et une base de données** (demande de Martin, précisée le 15 sept. 2026) : **les parties vivent sur le serveur** (SQLite, trois emplacements, un **compteur** par partie — jamais une horloge — et le joueur tranche quand deux appareils divergent), **session longue durée** par jeton d'appareil **tournant** (cookie d'un an, haché en base, un jeton périmé qui revient coupe tous les appareils), et **ouverture par NIP** — ⚠️ le NIP rouvre une session sur un appareil déjà lié, il n'ouvre **pas** un compte : il déchiffre le jeton localement, cinq essais et le jeton s'efface, le compte ne se bloque pas. Mesuré : une partie pèse 790 o à 4,5 Ko. Plus le défi du jour à graine serveur (reporté de M7), le mode photo, la coop locale |
 | Les zones conditionnelles | **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | demande de Martin : « certaines zones pourraient être bloquées conditionnellement à des missions ou prérequis ». Le jeu a déjà **trois** barrières écrites chacune à sa façon (la guérite de la fourrière, les zones de gang, les barrages à 5★) et M12 en promet une quatrième : une seule fiche `carte.BARRIERES` — où, ce qu'elle arrête (piéton / véhicule / les deux), à quelle condition, ce que coûte de forcer, et la **raison** qui s'affiche. ⚠️ Le juge qui compte : aucune combinaison de barrières fermées n'enferme la planque ni ne rend un lieu de mission inatteignable ✅ **Livré** (15 sept. 2026) : `carte.BARRIERES`, une fiche par barrière — `ou` (résolu par le chantier en rectangle de tuiles : le tablier d'un pont, la grille d'un lot, le bâtiment d'un lieu garanti plus `marge` tuiles de cour, le quai qui porte un ambulant), `arrete` (piéton, véhicule, les deux), `condition` (`apres` une mission, `heure` jour/nuit, `jour_tire` pour les entraves de M12, `payer` pour la guérite), `forcer` (étoiles, dégâts, ou rien), `raison`. ⚠️ **Seule la couronne du rectangle arrête, et seulement quand on vient de l'extérieur** : qui est dedans quand elle se ferme en sort librement — c'est ce qui fait qu'une barrière bloque sans jamais enfermer, et c'est écrit une fois (`Monde.barriereBloque`), lu par le mouvement des piétons, des chars et du trafic. Un char lancé pousse les cônes (dégâts de la fiche, une seule fois par traversée) ; à pied, on pousse une seconde — le temps de lire la raison —, l'enjambée part, et l'étoile tombe à la retombée. **Le trafic fait demi-tour** devant une barrière fermée (la voie d'en face la plus proche) au lieu de s'empiler — un juge le tient. Ce qui ferme **se voit** : des cônes sur la couronne d'un pont, une chaîne sur des poteaux autour d'une cour ; et le carnet liste ce qui est fermé, avec sa raison. **Quatre barrières** : le pont de La Pointe (chars, fermé tant que m2 n'est pas faite — ⚠️ p02 n'existe pas encore, M16 le remplacera), la guérite de la fourrière (déclarée `existant` : `majFourriere` la joue déjà, un juge tient son étoile d'accord avec `economie.FOURRIERE`), la cour de l'usine Prévost (les deux, ouverte le jour, 1★), le quai du cargo (les deux, ouvert la nuit, 1★ — la run de Sven est une affaire de nuit). Les zones de gang et les barrages ne sont pas des barrières : une menace et un char en travers ne sont pas des murs à condition. Le juge qui compte tient : toutes fermées en même temps, la planque n'est dans aucune et chaque lieu de mission reste à portée de jambes ; ce qui ne rouvre jamais tout seul (`apres`) n'enferme aucun lieu ; une barrière d'heure ne couvre jamais un lieu de mission. 4 juges Python + 3 de banc ; 1574 tests. Restent, avec M16 : la cour à ferraille de Ti-Loup (s02), l'allée de la villa du maire (e07), et les gardiens |
 | Toutes les façons de lancer ouvrent le réseau local | **livré** | 15 sept. 2026 | **P3** | **correctif** | demande de Martin (« je veux que toutes les run soit accessible depuis mon reseau interne ») : `APP_HOST` valait `127.0.0.1` par défaut, et **une seule** des cinq façons de lancer ouvrait le wifi de la maison — la configuration VS Code « réseau local ». F5 « Jouer », la tâche `serveur`, `uv run python run.py` et Flask sans rechargement restaient sourds au téléphone. Le défaut est maintenant `0.0.0.0` (`run.py`), la configuration « sans rechargement » écoute pareil, et celle qui disait « réseau local » devient **son contraire** : « local seulement », la seule fermée — et la seule où la console interactive de Werkzeug s'allume. ⚠️ **La bannière mentait**, et c'est le vrai piège : Werkzeug annonce une adresse trouvée en ouvrant une socket vers une adresse privée quelconque (`get_interface_ip`), donc celle de la **route par défaut** — VPN monté sur le Mac de Martin, il imprimait `http://10.14.0.2:5400`, un tunnel que le téléphone du salon ne joint **pas**, pendant que le wifi répondait en `192.168.4.188`. `config.adresses_du_reseau_local()` lit plutôt ce que le nom de la machine résout (les vraies interfaces, loopback et `169.254.x` écartés), et `run.py` imprime l'adresse **en dernier**, après la bannière, dans le processus qui sert vraiment (`WERKZEUG_RUN_MAIN`) pour ne pas la dire deux fois. ⚠️ Et `APP_HOST` **reste commenté** dans `.env.example` : le `.env` est chargé avec `override=True`, donc une ligne écrite là gagnerait sur le `env` des configurations VS Code et « local seulement » mentirait à son tour. La règle de sécurité sort du bloc `__main__` où personne ne pouvait la tester — `config.hote_est_local()` décide de `use_debugger`, et un juge rougit le jour où `0.0.0.0` entrerait dans la liste des hôtes « locaux » : un shell Python ouvert à toute la maison n'a rien à faire là. La production ne bouge pas (gunicorn sur `127.0.0.1:8006` derrière nginx). 7 juges neufs, 14 cas |
+| Le bord de l'eau et la foire | **en cours** (1re vague livrée) | 16 sept. 2026 | **P4** | ajout | demande de Martin : « des belvédères, table à pic nic, des plages parasol, enfants qui joue, château de sable, etc. des sea doo, ski nautique, bateau, quai. un parc d'attraction avec grande roue, jeu d'adresse, manèges, etc. » ⚠️ **Mesuré : la plage existe déjà** — 2 507 tuiles de sable (dont 782 au bord de l'eau), 1 818 tuiles de quai, 1 701 décors de treize sortes, et pas un parasol, pas une table, pas une coque amarrée. Quatre vagues : **la grève se meuble** (six `DECORS`, aucun moteur neuf) ; **les enfants jouent** (un `metier`, trois routines — et ⚠️ un enfant ne se noie pas) ; **l'eau porte enfin quelque chose** (⚠️ **bloqué** : la chaloupe est `phase=2` et « Le char tourne comme son ombre » est P1 en cours ; le ski nautique est un `crochet`, pas un véhicule) ; **la foire de La Pointe** dans un de ses deux blocs de bois — la grande roue est un **belvédère qui tourne** (elle montre les paquets cachés), les manèges sont du décor animé qu'on ne monte pas, les jeux d'adresse sont des `DEFIS`. ✅ **1re vague livrée** (16 sept. 2026) — *la grève se meuble*, à la demande de Martin (« je veux que tu fasses la plage »). Six fiches `DECORS` et un semis, **aucun moteur neuf** : table à pique-nique (un **H couché** vu d'en haut), parasol, serviette et sa glacière, château de sable, bouée, poteau d'amarrage, belvédère — **174 meubles** sur la graine livrée. ⚠️ **Une plage suit la côte ; elle ne suit pas une boîte** : le semis marche tuile par tuile et ne meuble que du sable qui a l'eau à trois tuiles. ⚠️ **Le château est le seul du lot qui ait une règle** — `pv: 5`, le décor le plus fragile du jeu, rasé par un char et **revenu au matin**. ⚠️ **Le parasol est le seul qu'on ne heurte pas** : on passe dessous. ⚠️ **La bouée est le premier décor du jeu à flotter**, et ça a demandé deux choses : `poser_decor` refuse le solide et l'eau **en est** (`solide: 2`) — on le lui accorde par demande explicite (`sur_eau`) plutôt qu'en ouvrant l'eau à tout le catalogue ; et le juge de M1 « tout décor est sur une tuile marchable » l'a arrêtée net. **Ce juge a raison sur le fond — ce n'est pas lui qu'on jette, c'est l'exception qu'on déclare** : `carte.FLOTTANTS` vit en Python, le paquet la porte, et un juge de banc vérifie que le `flotte` des fiches de dessin dit exactement la même chose. ⚠️ **Mesure qui a tout réorienté** : le glyphe `Q` n'est pas un ponton, c'est le **pavage du district des Quais** — **16 de ses 1 818 tuiles touchent l'eau**. Un poteau semé « sur le quai » se plantait six tuiles à l'intérieur des terres, ou nulle part (0 poteau, 0 bouée au premier essai). Ce qui amarre un bateau n'est pas un glyphe, c'est une **rive** : une tuile où l'on marche, ni sable ni route, avec l'eau devant — 222 tuiles, dont **199 de trottoir**. Et le trottoir ne porte pas `terre` dans la légende : tester la propriété au lieu de la marchabilité laissait dehors 199 des 222. ⚠️ **Un crochet de variante par tuile** : le décor est cuit **une fois par type**, donc sans lui tous les parasols de la ville sont du même rouge. Le mécanisme existait pour les `DECALS` (`d.v`) ; c'est la première fiche de décor à en avoir besoin — et la variante se tire à l'**empreinte de la tuile**, jamais au dé du jeu. ⚠️ **Deux dessins jetés après les avoir REGARDÉS** (rendus au navigateur, pas devinés) : le château était une **motte beige** — tours et courtine du même sable — et le belvédère une **caisse**. Ce qui nomme un belvédère vu d'en haut, c'est la rambarde sur **trois** côtés et la trouée du sud par où l'on monte : un plancher fermé est une boîte, un plancher ouvert d'un côté est un endroit où l'on va. ⚠️ **Et une précaution nommée comme telle** : le semis passe après `boucher_les_poches` (on ne meuble pas un terrain que la ville va retirer), mais **mesuré sur huit graines et 1 139 meubles, semer avant n'en noie aujourd'hui aucun** — le juge n'y répare rien, il épingle l'ordre. 13 juges neufs, rouge-avant prouvé deux fois, et le juge de l'écart en a attrapé un troisième en vol (un belvédère posé contre un parasol) ; 1659 tests. 🔨 **2e vague en cours** (16 sept. 2026) — *les enfants jouent*. |
 | L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
 | Quatre activités que le jeu n'a pas | **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (**livrés le 15 sept.**, `aee8543` : +25 % de vie à 25 ambulances, le char à la planque à 50), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | M16 Cent missions | **à faire** (v2) | — | **P4** | ajout | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
@@ -4522,6 +4523,158 @@ inatteignable ; chaque barrière déclare son `arrete`, sa condition, son `force
 le droit) ; le trafic ne s'empile pas devant une barrière fermée (le chien de garde ne mord
 pas plus qu'avant) ; et une zone fermée ne contient aucun piéton ni char né après sa
 fermeture.
+
+### Le bord de l'eau et la foire (**ajout**, taille 4)
+
+_Demande de Martin (15 sept. 2026) :_ « je veux des belvédères, table à pic nic, des plages
+parasol, enfants qui joue, château de sable, etc. des sea doo, ski nautique, bateau, quai.
+un parc d'attraction avec grande roue, jeu d'adresse, manèges, etc. »
+
+⚠️ **Mesuré d'abord, et c'est la même surprise que pour l'île : la plage existe déjà.** Sur la
+graine livrée, le sol compte **2 507 tuiles de sable**, dont **782 touchent l'eau** — une grève
+qui court tout le long de la baie, des Quais à La Pointe — et **1 818 tuiles de quai**. La
+ville pose **1 701 décors**, de **treize** sortes : arbre (705), buisson, lampadaire, poubelle,
+caisse, banc, débris, borne-fontaine, cabanon, corde à linge, guichet, BBQ, fontaine. Aucun
+n'est une table à pique-nique, un parasol, un belvédère ou un château de sable ; **personne ne
+s'assoit jamais sur les 782 tuiles de grève**, et **aucune coque n'est amarrée aux 1 818 tuiles
+de quai**.
+
+Ce qui manque n'est donc pas le terrain : c'est que **le bord de l'eau est un décor qu'on
+traverse**, et la demande est d'en faire un endroit **où on va**.
+
+**Quatre vagues, et elles ne coûtent pas du tout la même chose.** La première ne touche à aucun
+moteur ; la deuxième non plus, mais elle décide de ce que les enfants ont le droit de vivre ;
+la troisième attend une dette nommée depuis M3 ; la quatrième est un jalon à elle seule.
+
+#### 1re vague — la grève se meuble (taille 1, aucun moteur neuf)
+
+Six fiches `DECORS` de plus et une passe de semis sur le sable — exactement le chemin des
+terrains de banlieue (cabanon, corde à linge, BBQ, livrés le 14 sept.), et rien de plus :
+
+- **la table à pique-nique** : deux bancs et un plateau ; vue d'en haut, c'est un **H couché**,
+  et c'est ce qui la nomme à douze pixels. `casse`, comme le banc ;
+- **le parasol** : la seule chose du lot qui se lise **de loin**, et la seule qu'on ne heurte
+  pas — `solide: false`, on passe dessous. Rayé, sa couleur tirée par tuile ;
+- **la serviette et sa glacière** : ⚠️ un **décal** au sol (`DECALS` existe pour ça), pas une
+  entité. Rien ne l'arrête, rien ne la casse, et elle ne pèse rien dans le hachage spatial ;
+- **le château de sable** : ⚠️ le seul du lot qui ait une **règle**. Le décor le plus fragile de
+  la table (`pv` 5) — un char qui roule sur la grève le rase — et il **revient au matin** avec
+  tout le reste (`reparerLeDecor()`). Un enfant qui recommence son château tous les jours, c'est
+  une blague que la ville raconte sans qu'on l'écrive ;
+- **la bouée** et **le poteau d'amarrage**, sur le quai ;
+- **le belvédère** : un plancher de bois sur pilotis, une rambarde, deux marches, posé là où la
+  terre domine l'eau — le bout de La Pointe, la tête du pont, la falaise des Érables. Il
+  **arrête** (comme les kiosques) au lieu de bloquer : on y monte, on ne le traverse pas.
+
+⚠️ **Une plage suit la côte ; elle ne suit pas une boîte.** La phrase est déjà dans `_eau()`, et
+elle a coûté douze bancs de sable en pleine baie : le semis doit marcher **tuile par tuile**, en
+regardant si l'eau est à deux tuiles de là — jamais sur le rectangle du bassin. Un parasol
+planté au milieu d'un sentier du bois dit le contraire de ce qu'on veut.
+
+⚠️ **`poser_decor` ne connaît pas l'eau.** Il refuse le solide, le routier, le devant de porte
+et le réservé, parce qu'aucun décor n'a jamais eu à flotter. Il faut le lui apprendre une fois —
+sinon la bouée est le seul décor du jeu à avoir raison de flotter, et tous les autres l'imitent.
+
+#### 2e vague — les enfants jouent (taille 1)
+
+L'enfant existe depuis la v1 : `intouchable`, vitesse 1,15, témoin 0,5, et il détale de **douze
+tuiles** (`enfant_peur_tuiles`). Il n'a aucune routine — il marche comme tout le monde, en plus
+petit et en plus vite.
+
+⚠️ **Jouer, c'est un `metier`, pas un costume.** La règle des « sortes de gens » est écrite trois
+fois dans `pietons.py`, et le dépôt l'a déjà payée une fois avec les filles de la Brume : une
+sorte sans routine est un déguisement. Trois routines, toutes branchées sur ce qui existe :
+
+- **le château** : il s'accroupit devant un décor `chateau_sable`, il y revient, et si le château
+  n'y est plus il en recommence un ailleurs ;
+- **la baignade** : depuis que l'eau n'est plus un mur (14 sept.), un piéton peut y entrer. Les
+  enfants pataugent dans la **première tuile** et pas plus loin. ⚠️ **Un enfant ne se noie pas** :
+  `intouchable` dit aujourd'hui « aucune arme, aucun char » ; il doit dire aussi « pas l'eau »,
+  sinon la plage est une trappe à noyade et le jeu devient autre chose ;
+- **le ballon** : deux enfants et un ballon qui va de l'un à l'autre. C'est tout, et ça suffit —
+  un décor qui bouge se voit de trois écrans.
+
+⚠️ **Une plage pleine d'enfants est une plage pleine de TÉMOINS** (0,5 chacun). C'est la seule
+conséquence mécanique de la vague, et elle est bonne : la grève devient le plus mauvais endroit
+de la ville pour faire un coup, exactement comme l'attroupement de l'amuseur.
+
+#### 3e vague — l'eau porte enfin quelque chose (taille 2, ⚠️ **bloquée**)
+
+`vehicules.py` déclare déjà **la chaloupe** : `eau=True`, friction 0,995, adhérence 0,05, trois
+cercles — et **`phase=2`**, « sans sprite et sans trafic », parce que l'eau demande une physique
+à part. Le sea-doo et le bateau de ski ne sont pas trois dettes : c'est **la même**, payée une
+fois.
+
+⚠️ **Rien ne se met à l'eau tant que le char ne tient pas son cap sur la terre ferme.** « Le char
+tourne comme son ombre » est **P1 et en cours** ; une coque qui dérape est le pire endroit du
+monde où découvrir un défaut de cap.
+
+Ce que l'eau demande une fois, et ce qui en découle ensuite :
+
+- **une coque** : pas de freins, de la dérive, un sillage, et une vitesse qui ne tient qu'au
+  moteur. La fiche de la chaloupe l'a déjà chiffrée ; il reste à la faire flotter ;
+- **la mise à l'eau** : `_quai()` pose déjà une rampe de débarquement « là où un quai en porte
+  vraiment une ». La porte entre les deux mondes existe — personne ne l'a jamais franchie ;
+- **le sea-doo** : la moto de l'eau. Il `ejecte` comme elle, il est rapide, il ne pardonne rien,
+  et c'est le seul véhicule du jeu dont la chute ne coûte que l'orgueil ;
+- **le ski nautique** : ⚠️ **c'est un crochet, pas un véhicule.** La liaison existe (`crochet`,
+  la remorqueuse de M9), avec une épave au bout ; ici c'est un piéton. Et elle donne à la baie
+  son premier **spectacle** : un bateau qui passe au large avec quelqu'un derrière ;
+- **des coques amarrées** sur les 1 818 tuiles de quai, qu'on peut prendre — et c'est ce qui rend
+  **L'Île-aux-Corneilles** (fiche suivante) atteignable autrement qu'à la nage ;
+- ⚠️ **la police n'a pas de bateau.** Deux sorties, et il faut en choisir une **exprès** : au
+  large, les étoiles **descendent** (comme sur l'île), ou la Sûreté a une vedette et c'est un
+  jalon de plus. Le plan choisit la première — et l'île a déjà écrit pourquoi : un endroit sûr
+  qui n'a qu'un chemin de retour n'est pas un endroit sûr, c'est un piège qu'on choisit.
+
+#### 4e vague — la foire de La Pointe (taille 2)
+
+**Où.** La Pointe est le district-parc, et son plan porte **deux grandes taches de bois** de
+quatre blocs de large sur deux de haut. La foire en prend **une**. ⚠️ On n'agrandit pas la
+grille : la leçon de l'île vaut ici aussi — la ville a la place, il faut la **dépenser**. Un
+glyphe de plan de plus (`f`), un `_foire()` à côté de `_parc()` et `_place()`, une allée
+centrale en terre battue, et la grève juste en dessous.
+
+- **La grande roue** — la seule vraie idée de la vague. ⚠️ **Ce n'est pas un manège, c'est un
+  belvédère qui tourne.** On paie, le fondu des portes joue (livré), la caméra monte, et la ville
+  est là, en dessous, avec ses lumières si c'est le soir. Ce qu'on redescend avec : **les paquets
+  cachés qu'on n'a pas trouvés clignotent sur la mini-carte jusqu'au soir**. Les vingt paquets
+  existent, ils ne sont marqués nulle part, et `carte.paquets()` dit en toutes lettres que « les
+  trouver doit faire visiter la ville » — un point de vue qui montre la ville est exactement la
+  bonne façon de les donner. Une fois par jour, et ça se paie.
+- **Les manèges** (carrousel, tasses, chaises volantes) : ⚠️ **du décor animé, et on n'y monte
+  pas.** Un manège où l'on monte et qui ne donne rien est un décor cher ; un manège qui tourne
+  avec du monde dessus est une ville qui vit. C'est l'étage 1 des machines de chantier, mot pour
+  mot : une articulation, pas dix — un socle cuit une fois, des nacelles peintes par-dessus à
+  chaque image.
+- **Les jeux d'adresse** : ⚠️ **un jeu d'adresse est un défi, pas un moteur.** `missions.DEFIS`
+  en porte trois depuis la v1 (le saut, le tour, la livraison) : un lieu, un compte, un chrono,
+  une prime, un texte en majuscules. Trois de plus sur les mêmes rails — **la galerie de tir**
+  (les armes existent, une cible est un décor avec des `pv`), **le marteau de force** (marteler
+  ACTION contre un chrono : aucune statistique neuve, c'est le bouton qui fait la force), et **la
+  pêche aux canards**, qu'on peut gagner mais pas voler. La prime : de l'argent, et au troisième
+  palier une **casquette de la foire** — le vestiaire existe (`magasins.TENUES`) et ne demande
+  rien à personne.
+- **Le son, et ce n'est pas un détail** : ⚠️ une foire muette est une peinture. L'orgue de manège,
+  les cris, les vagues et le moteur du sea-doo sont quatre pistes ElevenLabs de plus
+  (`app/audio.py`, `app/musique.py`). Le chemin est déjà tracé : **le musicien de rue est « une
+  musique qui sort de QUELQU'UN »**, avec son gain à lui, par-dessus l'ambiance du district et
+  sans prendre le rang de personne. L'orgue de la foire est **une musique qui sort d'un
+  ENDROIT** — le même code, une source fixe. Surtout pas une ambiance de district de plus.
+
+**Ce que ça coûte ailleurs**, et il faut le dire avant de dessiner : six à dix fiches `DECORS`
+(du JS, pas du paquet), un glyphe de plan, un `metier` de plus, trois défis, quatre pistes audio
+— et ⚠️ **aucun juge de géométrie ne parle du sable**. Un décor de plage vit à deux tuiles de
+l'eau, là où aucun décor n'allait jamais ; c'est une ligne de juge à écrire **exprès**, pas à
+découvrir.
+
+**Juges** : aucun décor de plage à plus de trois tuiles du sable, et aucun sur l'eau ; un château
+de sable se casse et revient au matin ; un enfant ne dépasse jamais la première tuile d'eau et
+rien ne le tue ; la foire tient dans son bloc et n'avale aucune rue ; on ne monte dans la grande
+roue qu'en payant, une fois par jour, et ce qu'elle révèle s'éteint le soir ; aucun manège n'est
+montable ; un défi de foire ne paie pas mieux à l'heure qu'une mission (la règle des paliers de
+boulot) ; aucune coque ne roule sur la terre et aucun char ne flotte ; et un enfant reste
+intouchable, sur la grève comme ailleurs.
 
 ### L'Île-aux-Corneilles : la ville a une île et ne le sait pas (**ajout**, taille 3)
 
