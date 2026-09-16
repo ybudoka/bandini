@@ -76,7 +76,7 @@ const Vehicules = (function () {
       r: def.largeur / 2, vie: def.vie, vieMax: def.vie, couleur: couleur, swaps: nuances(couleur),
       conducteur: null, etat: 'stationne', cible: null, sens: null, sortie: null,
       patience: 0, force: 0, deportT: 0, deportFroid: 0, alarme: 0, klaxonT: 0, chocs: 0, agresseur: null,
-      vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null,
+      vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null, parcouru: 0,
     }, options || {}));
     // ⚠️ UN DEUX-ROUES DU TRAFIC A UN PILOTE, et il a ses propres couleurs. Le
     // cycliste etait cuit dans le velo — la meme tete pour toute la ville. Un
@@ -1898,6 +1898,7 @@ const Vehicules = (function () {
       // refuse de passer la ou sa charge ne passe pas (`chargeBloquee`), pas la
       // charge qui se debat.
       if (v.remorqueePar) continue;
+      const x0 = v.x, y0 = v.y;
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
@@ -1911,6 +1912,9 @@ const Vehicules = (function () {
         if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
+      // La distance ROULEE, pas la vitesse : c'est elle qui tourne les pedales.
+      // Un velo pousse contre un mur a de la vitesse et ne pedale pas.
+      v.parcouru += Math.hypot(v.x - x0, v.y - y0);
       if (v.conducteur === j) { j.x = v.x; j.y = v.y; j.angle = v.angle; }
       // ⚠️ LA CHARGE SE POSE APRES QUE LA REMORQUEUSE A BOUGE, jamais avant.
       // Placee au debut de l'image, elle l'etait d'apres la position de
@@ -2519,16 +2523,22 @@ const Vehicules = (function () {
 
       ⚠️ Sa POSE, elle, reste en quatre faces : c'est un corps, pas une
       carrosserie. Personne n'est dessine d'en haut dans Bandini — ni le
-      joueur, ni les passants, ni celui qui pedale. */
+      joueur, ni les passants, ni celui qui pedale.
+
+      ⚠️ Et c'est la pose qui ROULE, pas la pose assise : assis sur une chaise,
+      il avait les fesses a la hauteur des moyeux, les mains sur les genoux et
+      les pieds dans le vide. Les pedales tournent avec la distance roulee
+      (`pedale` du sprite) ; sans pedales — la moto —, la premiere image. */
   function imageDuCavalier(def, v, swaps) {
     const cuit = Atlas.cuire('joueur', SPRITES.joueur, swaps);
     const face = faceDe(v);
-    const poses = cuit.poses['assis_' + face] || cuit.poses.assis_bas;
+    const poses = cuit.poses['roule_' + face] || cuit.poses['assis_' + face] || cuit.poses.assis_bas;
     if (!poses) return null;
+    const image = def.pedale ? Math.floor((v.parcouru || 0) / def.pedale) % poses.length : 0;
     const selle = def.selle || [0, 0];
     const recul = v.def.longueur / 2 + selle[1];
     const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
-    return { canvas: poses[0],
+    return { canvas: poses[image],
              x: v.x - ca * recul - sa * selle[0] - cuit.ancre[0],
              y: v.y - sa * recul + ca * selle[0] - cuit.ancre[1] };
   }

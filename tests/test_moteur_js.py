@@ -68,6 +68,7 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
             const def = L.SPRITES[v.sprite];
             if (!def) { manquants.push(v.slug + ' -> ' + v.sprite); continue; }
             tailles[v.slug] = [def.w, def.h, v.longueur, v.largeur, def.rotations || 0];
+            if (def.machine) tailles[v.slug].push(true);
             // ⚠️ La refonte : un char se dessine soit en 32 caps (l'ancienne
             // voie), soit en TROIS POSES debout — et il faut les trois, plus
             // l'ancre a la ligne de sol.
@@ -80,7 +81,22 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
     assert r["manquants"] == [], "des chars de phase 1 sans sprite : %s" % r["manquants"]
     attendus = {v["slug"] for v in paquet["vehicules"] if v["phase"] == 1}
     assert set(r["tailles"]) == attendus
-    for slug, (w, h, lon, lat, rotations) in r["tailles"].items():
+    for slug, (w, h, lon, lat, rotations, *machine) in r["tailles"].items():
+        pose = r["poses"][slug]
+        # ⚠️ **UN DEUX-ROUES N'EST PAS UNE GRILLE DESSINEE** (16 sept. 2026, « le
+        # vélo et son cycliste ») : c'est une machine en volume, projetée au cap
+        # sur une toile CARRÉE dont le centre est le milieu de son empreinte.
+        # Ses règles sont donc les siennes : la toile couvre la machine à tous
+        # les caps (sa longueur, et ce qui monte au-dessus) sans être une
+        # affiche, ses trois poses sont tirées d'elle, et son ancre met
+        # `centreDuToit` au centre de la toile — là où elle tourne.
+        if machine:
+            assert w == h and lon + 4 <= w <= 2 * lon, "%s : toile de %sx%s pour %s px de long" % (slug, w, h, lon)
+            assert pose["a"] == "bas,cote,haut", "%s : poses %s" % (slug, pose["a"])
+            assert pose["ancre"] == [w / 2, w / 2 - 1 + lon / 2], (
+                "%s : ancre %s — son centre de rotation n'est pas le centre de sa toile" % (slug, pose["ancre"])
+            )
+            continue
         # ⚠️ Le sprite doit COUVRIR la carrosserie, sinon un char de 48 px
         # dessine sur 32 laisse deux capots dans le vide a chaque bout.
         assert w >= lon, "%s : sprite de %s px pour %s px de long" % (slug, w, lon)
@@ -114,7 +130,6 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
         # LEQUEL sert, c'est que la fiche soit COMPLETE : un char a moitie
         # converti (deux dessins sur trois, ou une ancre restee au centre) se
         # dessinerait a cote de lui-meme.
-        pose = r["poses"][slug]
         if rotations:
             assert rotations == 32, "%s se dessine en %s caps" % (slug, rotations)
             assert pose["a"] == "base", "%s garde 32 caps mais a des poses : %s" % (slug, pose["a"])
@@ -4143,7 +4158,10 @@ def test_les_phares_pointent_ou_le_char_va(banc, paquet):
         const out = {};
         L.B.defs.vehicules.forEach(function (def) {
             const s = L.SPRITES[def.sprite];
-            if (!s) return;
+            // ⚠️ Un deux-roues ne fait pas tourner de toit : il se projette au
+            // cap, et ses lampes se jugent a chaque cap
+            // (`test_la_machine_se_projette_au_cap_et_suit_son_ombre`).
+            if (!s || s.machine) return;
             const v = o.char(def.slug, 0, 0, 0);
             if (!v) return;
             const centre = L.Vehicules.centreDuToit(v);

@@ -203,7 +203,10 @@ def test_le_toit_qui_tourne_porte_les_phares_ET_les_feux(banc):
         const out = {};
         L.B.defs.vehicules.forEach(function (def) {
             const sprite = L.SPRITES[def.sprite];
-            if (!sprite || out[def.sprite]) return;
+            // ⚠️ Un deux-roues n'a pas de toit qui tourne : il se projette au
+            // cap, et ses lampes se jugent cap par cap (plus bas, « la machine
+            // se projette au cap et suit son ombre »).
+            if (!sprite || out[def.sprite] || sprite.machine) return;
             const toit = L.Atlas.toitDe(def.sprite, sprite);
             let premier = -1, dernier = -1;
             toit.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) { if (premier < 0) premier = y; dernier = y; } });
@@ -218,7 +221,7 @@ def test_le_toit_qui_tourne_porte_les_phares_ET_les_feux(banc):
         });
         return out;
     }""")
-    assert len(r) >= 10, "le décor du juge est faux : %s" % list(r)
+    assert len(r) >= 9, "le décor du juge est faux : %s" % list(r)
     for sprite, m in r.items():
         if not m["dansBas"]:
             continue                      # un vélo n'a pas de phare : rien à porter
@@ -672,13 +675,23 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
                 poses.push([m[2] + m[0] / 2 - v.x, m[3] + m[1] / 2 - v.y]);
             }
             out[def.slug] = { longueur: def.longueur, nez: centre[1] - premier,
-                              cul: dernier + 1 - centre[1], poses: poses };
+                              cul: dernier + 1 - centre[1], poses: poses, machine: !!sprite.machine };
             L.Entites.retirer(v);
         });
         return out;
     }""")
     assert len(r) >= 10, "trop peu de véhicules : %s" % list(r)
+    assert {s for s, m in r.items() if m["machine"]} == {"velo", "moto"}, "le décor du juge est faux : %s" % r.keys()
     for slug, m in r.items():
+        for i, (dx, dy) in enumerate(m["poses"]):
+            assert (dx, dy) == (0, 0), (
+                f"{slug} au cap {i} : son dessin est posé à ({dx}, {dy}) de son centre"
+            )
+        # ⚠️ Un deux-roues n'a pas de toit : ses bouts ne se mesurent pas sur
+        # une grille qui tourne, mais sur sa projection (« de profil, un
+        # deux-roues montre ses deux roues »). Son dessin, lui, reste centré.
+        if m["machine"]:
+            continue
         demi = m["longueur"] / 2
         assert abs(m["cul"] - demi) <= 1, (
             f"{slug} : du centre de rotation à son pare-chocs arrière il y a {m['cul']} px, "
@@ -695,10 +708,6 @@ def test_le_char_tourne_autour_de_son_empreinte(banc):
         assert demi - 5 <= m["nez"] <= demi + 1, (
             f"{slug} : son nez est à {m['nez']} px du centre de rotation pour une demi-longueur de {demi}"
         )
-        for i, (dx, dy) in enumerate(m["poses"]):
-            assert (dx, dy) == (0, 0), (
-                f"{slug} au cap {i} : son dessin est posé à ({dx}, {dy}) de son centre"
-            )
 
 
 def test_le_cavalier_reste_assis_quand_sa_machine_tourne(banc):
@@ -757,3 +766,233 @@ def test_le_cavalier_reste_assis_quand_sa_machine_tourne(banc):
             f"{slug} : son cavalier reste au même point à tous les caps ({sorted(points)}) — "
             "sa selle ne tourne pas avec sa machine"
         )
+
+
+# --- Le vélo et son cycliste : la machine se projette, le corps s'y tient ------
+
+
+#: ⚠️ Pour juger ce qui se PEINT : le canevas du banc ne garde aucun pixel, mais
+#: il écrit ses `fillRect` dans `traces` si on lui en donne. Tout canevas créé
+#: après ce bout de code le fait — l'atlas est vidé pour qu'il recuise.
+TRACER = """
+    const fabrique = L.Base.nouveauCanvas;
+    L.Base.nouveauCanvas = function (w, h) {
+        const c = fabrique(w, h); c.getContext('2d').traces = []; return c;
+    };
+    L.Atlas.vider();
+"""
+
+
+def test_de_profil_un_deux_roues_montre_ses_deux_roues(banc):
+    """⚠️ **Retour de Martin, capture à l'appui : « il faut améliorer ça ».**
+
+    Le vélo qui roulait était son TOIT, tourné comme celui d'un char — et vu
+    d'en haut, un vélo est un bâton avec une barre en travers. Vers l'est, on
+    voyait un trait de trois pixels, le guidon dressé en travers, et le
+    cycliste de profil posé dessus : un passant sur une échasse.
+
+    On juge le dessin au cap de l'EST, celui qu'on voit le plus (94,5 % des
+    chars en marche roulent à moins de 2° d'un cap cardinal) : sa rangée la plus
+    basse — le sol — touche **deux roues séparées**, et il monte d'au moins un
+    diamètre de roue. Une machine vue d'en haut n'a qu'un point au sol, là où
+    finit la barre de son guidon."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const n = L.Vehicules.ROTATIONS, out = {};
+        ['velo', 'moto'].forEach(function (slug) {
+            const def = L.SPRITES[slug];
+            const g = L.Atlas.projeter(def.machine, L.Vehicules.capDe(0) * 2 * Math.PI / n - Math.PI / 2, def.w);
+            const peintes = [];
+            g.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) peintes.push(y); });
+            const sol = g[peintes[peintes.length - 1]];
+            const touches = sol.match(/[^.]+/g) || [];
+            const ecart = sol.replace(/^\\.*[^.]+/, '').match(/^\\.*/)[0].length;
+            const roue = def.machine.pieces.find(function (p) { return p[0] === 'roue'; });
+            out[slug] = { touches: touches.length, ecart: ecart, haut: peintes[peintes.length - 1] - peintes[0] + 1,
+                          diametre: roue ? 2 * roue[2] : null, sol: sol };
+        });
+        return out;
+    }""")
+    for slug, m in r.items():
+        assert m["touches"] == 2, (
+            f"{slug} de profil : sa rangée de sol touche {m['touches']} fois ({m['sol']!r}) — "
+            "on ne voit pas deux roues, on voit une machine d'en haut"
+        )
+        assert m["ecart"] >= 3, f"{slug} de profil : ses deux roues se touchent ({m['sol']!r})"
+        assert m["haut"] >= m["diametre"], (
+            f"{slug} de profil : {m['haut']} rangées pour des roues de {m['diametre']} px"
+        )
+
+
+def test_la_machine_se_projette_au_cap_et_suit_son_ombre(banc, paquet):
+    """⚠️ Un deux-roues ne tourne pas de toit : il se PROJETTE au cap. Ce qu'on
+    tient, c'est ce qui faisait le correctif « le char tourne comme son ombre »
+    — et rien ne doit en être perdu :
+
+    - ce qui se **peint** à chaque cap est la projection à ce cap (et pas celle
+      d'un cap voisin, ni un toit) ;
+    - les **32 caps** sont 32 dessins : aucun cran ne claque sur le précédent ;
+    - chaque dessin **pointe où il va** : là où le phare et le feu se voient
+      tous les deux, le phare est devant, dans le sens du cap à l'écran ;
+    - et le sol se voit du **même biais** que sous l'ombre — deux biais, c'est
+      une machine qui ne se pose pas sur son ombre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + TRACER + """
+        const n = L.Vehicules.ROTATIONS, out = {};
+        ['velo', 'moto'].forEach(function (slug) {
+            const def = L.SPRITES[slug], K = def.machine.profondeur;
+            const dessins = {}, faux = [], envers = [];
+            let deux = 0;
+            for (let i = 0; i < n; i++) {
+                const a = i * 2 * Math.PI / n - Math.PI / 2;
+                const g = L.Atlas.projeter(def.machine, a, def.w);
+                dessins[g.join('|')] = true;
+                const peints = g.join('').replace(/\\./g, '').length;
+                const c = L.Atlas.cuireCap(slug, def, null, n, i, [0, 0]);
+                const traces = c.getContext('2d').traces;
+                const ici = {};
+                traces.forEach(function (t) { ici[t[0] + ',' + t[1]] = true; });
+                const pareil = traces.length === peints && g.every(function (ligne, y) {
+                    return ligne.split('').every(function (ch, x) { return (ch === '.') === !ici[x + ',' + y]; });
+                });
+                if (!pareil) faux.push(i);
+                const lampes = { l: [], t: [] };
+                g.forEach(function (ligne, y) { ligne.split('').forEach(function (ch, x) { if (lampes[ch]) lampes[ch].push([x, y]); }); });
+                if (!lampes.l.length || !lampes.t.length) continue;
+                deux++;
+                const moy = function (p, k) { return p.reduce(function (s, q) { return s + q[k]; }, 0) / p.length; };
+                const avant = (moy(lampes.l, 0) - moy(lampes.t, 0)) * Math.cos(a) + (moy(lampes.l, 1) - moy(lampes.t, 1)) * Math.sin(a) * K;
+                if (avant <= 0) envers.push([i, avant]);
+            }
+            out[slug] = { dessins: Object.keys(dessins).length, faux: faux, envers: envers, deux: deux, K: K };
+        });
+        out.n = n;
+        return out;
+    }""")
+    n = r.pop("n")
+    biais = paquet["conduite"]["ombre"]["profondeur"]
+    for slug, m in r.items():
+        assert m["faux"] == [], f"{slug} : aux caps {m['faux']}, ce qui se peint n'est pas sa projection"
+        assert m["dessins"] == n, f"{slug} : {m['dessins']} dessins pour {n} caps — il claque au lieu de tourner"
+        assert m["envers"] == [], f"{slug} : son phare est derrière son feu aux caps {m['envers']}"
+        # ⚠️ Un juge qui ne regarde rien passe : les deux lampes doivent se voir
+        # ensemble à la plupart des caps (28 sur 32 le jour du correctif).
+        assert m["deux"] >= n * 3 // 4, f"{slug} : phare et feu ne se voient ensemble qu'à {m['deux']} caps sur {n}"
+        assert m["K"] == biais, f"{slug} : le sol se voit à {m['K']} sous la machine et à {biais} sous son ombre"
+
+
+def test_le_cycliste_s_assoit_sur_la_selle_et_tient_son_guidon(banc):
+    """⚠️ Le deuxième défaut de la capture : le cycliste était un passant
+    ASSIS — la pose d'un banc. Les genoux devant, les mains sur les cuisses, les
+    fesses à la hauteur des moyeux : posé sur une machine, il flottait à côté
+    d'elle.
+
+    La machine déclare trois points dans l'espace (`assise`, `guidon`,
+    `pedales`) et on mesure le corps **tel qu'il se peint** contre leur
+    projection : ses fesses sur la selle, sa main au guidon, son pied à la
+    pédale. De profil pour les trois ; de dos et de face pour la main, parce
+    que c'est là que le guidon change de place à l'écran (devant lui, donc plus
+    haut quand il s'éloigne, plus bas quand il vient)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + TRACER + """
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        // Des couleurs qu'aucune palette n'a : chaque pixel dit ce qu'il est.
+        j.swaps = { c: '#0000fe', h: '#00fe00', s: '#fe0000', p: '#fefe00' };
+        const peau = '#fe0000', pantalon = '#fefe00', soulier = L.SPRITES.joueur.pal.b;
+        const out = {};
+        ['velo', 'moto'].forEach(function (slug) {
+            const v = o.char(slug, 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            const def = L.SPRITES[slug], M = def.machine, K = M.profondeur;
+            v.x = 200; v.y = 100; v.z = 0; v.parcouru = 0;
+            const ecran = function (p, a) {
+                const ca = Math.cos(a), sa = Math.sin(a);
+                return [v.x + p[0] * ca - p[1] * sa, v.y + (p[0] * sa + p[1] * ca) * K - p[2]];
+            };
+            const mesure = function (a) {
+                v.angle = a;
+                const cav = L.Vehicules.imageDuCavalier(def, v, L.Vehicules.cavalierDe(v));
+                const x0 = Math.round(cav.x), y0 = Math.round(cav.y);
+                const px = cav.canvas.getContext('2d').traces.map(function (t) { return [x0 + t[0] + 0.5, y0 + t[1] + 0.5, t[4]]; });
+                const loin = function (p, q) { return Math.hypot(p[0] - q[0], p[1] - q[1]); };
+                const pres = function (couleur, q) {
+                    return Math.min.apply(null, px.filter(function (t) { return t[2] === couleur; }).map(function (t) { return loin(t, q); }));
+                };
+                // La main : de profil, le pixel de peau le plus en avant ; de dos et
+                // de face, la plus proche de chaque poignee.
+                const devant = Math.cos(a) >= 0 ? 1 : -1;
+                const guidons = [ecran(M.guidon, a), ecran([M.guidon[0], -M.guidon[1], M.guidon[2]], a)];
+                const res = {};
+                if (Math.abs(Math.cos(a)) > 0.9) {
+                    const peaux = px.filter(function (t) { return t[2] === peau; });
+                    const main = peaux.reduce(function (m, t) { return (t[0] - m[0]) * devant > 0 ? t : m; });
+                    res.main = Math.min(loin(main, guidons[0]), loin(main, guidons[1]));
+                    const selle = ecran(M.assise, a);
+                    const fesses = px.filter(function (t) { return t[2] === pantalon && Math.abs(t[0] - selle[0]) <= 1.5; });
+                    res.fesses = Math.min.apply(null, fesses.map(function (t) { return t[1]; })) - selle[1];
+                    res.pied = pres(soulier, ecran(M.pedales, a));
+                } else {
+                    res.main = Math.max(pres(peau, guidons[0]), pres(peau, guidons[1]));
+                }
+                return res;
+            };
+            out[slug] = { est: mesure(0), ouest: mesure(Math.PI), nord: mesure(-Math.PI / 2), sud: mesure(Math.PI / 2) };
+            L.Vehicules.descendre(j, true);
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    for slug, faces in r.items():
+        for face, m in faces.items():
+            assert m["main"] <= 2.5, (
+                f"{slug} vu {face} : sa main est à {m['main']:.1f} px de la poignée — il ne tient pas son guidon"
+            )
+            if "fesses" in m:
+                assert -1.5 <= m["fesses"] <= 1.5, (
+                    f"{slug} vu {face} : ses fesses sont à {m['fesses']:+.1f} px de la selle — "
+                    "il flotte au-dessus ou il est assis dans ses roues"
+                )
+                assert m["pied"] <= 3, f"{slug} vu {face} : son pied est à {m['pied']:.1f} px de la pédale"
+
+
+def test_le_cycliste_pedale_en_roulant_et_le_motard_non(banc):
+    """Les pédales font un demi-tour tous les `pedale` pixels ROULÉS — la
+    distance, pas la vitesse : un vélo poussé contre un mur a de la vitesse et
+    ne pédale pas. ⚠️ C'est la fiche qui dit qu'on pédale : la moto n'a pas de
+    `pedale`, son pilote garde les pieds sur les repose-pieds.
+
+    On mesure les deux bouts : ce que `Vehicules.maj` compte quand la machine
+    avance vraiment, et l'image du cavalier qui en suit."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const velo = o.char('velo', 0, 0, 0);
+        const x0 = velo.x, y0 = velo.y;
+        j.x = velo.x - 80;
+        for (let i = 0; i < 30; i++) { velo.vitesse = 1.5; L.Vehicules.maj(); }
+        const roule = { parcouru: velo.parcouru, bouge: Math.hypot(velo.x - x0, velo.y - y0) };
+        const image = function (v, parcouru) {
+            v.parcouru = parcouru;
+            return L.Vehicules.imageDuCavalier(L.SPRITES[v.sprite], v, L.SPRITES.joueur.pal).canvas;
+        };
+        const pas = L.SPRITES.velo.pedale;
+        const moto = o.char('moto', 0, 40, 0);
+        return {
+            roule: roule, pas: pas,
+            velo: { memeDemiTour: image(velo, 0) === image(velo, pas - 1), autreDemiTour: image(velo, 0) !== image(velo, pas),
+                    tourComplet: image(velo, 0) === image(velo, 2 * pas) },
+            moto: { pedale: L.SPRITES.moto.pedale || null, fige: image(moto, 0) === image(moto, 7) && image(moto, 0) === image(moto, 23) },
+        };
+    }""")
+    assert r["roule"]["bouge"] > 20, "le décor du juge est faux : le vélo n'a pas roulé (%s)" % r["roule"]
+    assert abs(r["roule"]["parcouru"] - r["roule"]["bouge"]) <= 1, (
+        "le vélo a roulé %.1f px et n'en compte que %.1f" % (r["roule"]["bouge"], r["roule"]["parcouru"])
+    )
+    assert r["pas"], "le vélo ne déclare pas ses pédales"
+    v = r["velo"]
+    assert v["memeDemiTour"] and v["autreDemiTour"] and v["tourComplet"], f"les pédales ne tournent pas avec la distance : {v}"
+    assert r["moto"]["pedale"] is None and r["moto"]["fige"], f"le motard pédale : {r['moto']}"

@@ -483,144 +483,88 @@ const AUTO_BAS = [
       '................................',
       '................................',
     ];
-const VELO_COTE = [
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '....................',
-      '.............kkk....',
-      '.......kkk.....k....',
-      '.....k...cc....kl...',
-      '...krrrcccccccrrrk..',
-      '..krrrcccc.ccccrrrk.',
-      '..krrMrrk...krrMrrk.',
-      '..krrrrrk...krrrrrk.',
-      '...krrrk.....krrrk..',
-      '.....k.........k....',
-      '....................',
-      '....................',
-    ];
-const VELO_HAUT = [
-      '....................',
-      '........krk.........',
-      '........krk.........',
-      '........kMk.........',
-      '........krk.........',
-      '.....kkkkkkkkk......',
-      '........kck.........',
-      '........kck.........',
-      '........kcck........',
-      '.......kccck........',
-      '.......kcccck.......',
-      '.......kcccck.......',
-      '........kcck........',
-      '........krk.........',
-      '........kMk.........',
-      '........krk.........',
-      '........ktk.........',
-      '....................',
-      '....................',
-    ];
-const VELO_BAS = [
-      '....................',
-      '........ktk.........',
-      '........krk.........',
-      '........kMk.........',
-      '........krk.........',
-      '........kcck........',
-      '.......kcccck.......',
-      '.......kcccck.......',
-      '.......kccck........',
-      '........kcck........',
-      '........kck.........',
-      '........kck.........',
-      '.....kkkkkkkkk......',
-      '........krk.........',
-      '........kMk.........',
-      '........krk.........',
-      '........klk.........',
-      '....................',
-      '....................',
-    ];
-const MOTO_COTE = [
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '........................',
-      '...............kkkkk....',
-      '..................kll...',
-      '.....k.kkkkk....kk.k....',
-      '...krrrtkCCCCCCk.kkrrk..',
-      '..krrrrrkcccccckkrkrrrk.',
-      '..krrMrrkDDDDDDkkrrMrrk.',
-      '..krrrrrMMMMMMM.krrrrrk.',
-      '...krrrk.........krrrk..',
-      '.....k.............k....',
-      '........................',
-      '........................',
-    ];
-const MOTO_HAUT = [
-      '........................',
-      '..........kck...........',
-      '..........krk...........',
-      '..........krk...........',
-      '..........kMk...........',
-      '..........krk...........',
-      '.......kkcccccckk.......',
-      '......kkkkkkkkkkkk......',
-      '..........kcck..........',
-      '.........kccck..........',
-      '........kccccck.........',
-      '........kCCCCCk.........',
-      '........kccccck.........',
-      '.........kcccck.........',
-      '.........kcccck.........',
-      '..........kcck..........',
-      '..........kck...........',
-      '..........krk...........',
-      '..........kMk...........',
-      '..........krk...........',
-      '..........ktk...........',
-      '........................',
-      '........................',
-    ];
-const MOTO_BAS = [
-      '........................',
-      '..........ktk...........',
-      '..........krk...........',
-      '..........kMk...........',
-      '..........krk...........',
-      '..........kck...........',
-      '..........kcck..........',
-      '.........kcccck.........',
-      '.........kcccck.........',
-      '........kccccck.........',
-      '........kCCCCCk.........',
-      '........kccccck.........',
-      '.........kccck..........',
-      '..........kcck..........',
-      '......kkkkkkkkkkkk......',
-      '.......kkcccccckk.......',
-      '..........krk...........',
-      '..........kMk...........',
-      '..........krk...........',
-      '..........krk...........',
-      '..........klk...........',
-      '........................',
-      '........................',
-    ];
+/* --- Les deux-roues : decrits EN VOLUME, et projetes au cap -------------------
+
+   ⚠️ **Retour de Martin, capture a l'appui : « il faut ameliorer ca ».** Le
+   velo qui roulait etait son TOIT, tourne comme celui d'un char — et vu d'en
+   haut, un velo est un baton avec une barre en travers. Le cycliste, lui, est
+   de profil : on lisait un passant assis sur une echasse. Un toit d'auto dit
+   ce qu'il est ; celui d'un velo ne dit rien.
+
+   Alors la machine n'est plus une grille : c'est une liste de PIECES dans
+   l'espace, et `Atlas.projeter` la dessine au cap ou elle roule. De profil,
+   deux roues rondes et un cadre ; de dos, un trait, un guidon et un feu ; entre
+   les deux, des roues en ellipse. Et elle suit toujours son ombre au cran pres.
+
+   `u` vers l'avant, `w` vers la droite, `z` en haut, en pixels, le milieu de
+   l'empreinte au sol en (0, 0, 0). ⚠️ A l'echelle du passant (9,1 px/m) : une
+   roue de 70 cm fait 6,4 px, une selle a 80 cm monte a 7. C'est ce qui pose le
+   cycliste — ses fesses sur la selle, ses mains au guidon, ses pieds aux
+   pedales — et c'est pour ca que ces nombres ne se reglent pas a l'oeil.
+
+   Les pieces :
+     ['roue',  u, rayon, pneu, jante, moyeu, largeur]
+     ['tube',  [u, w, z], [u, w, z], lettre, avance]
+     ['point', [u, w, z], lettre, avance]
+   ⚠️ Une lampe est un BLOC, pas un point : un point se cache derriere la
+   premiere roue venue, et un deux-roues sans phare ni feu ne dit plus, de
+   nuit, dans quel sens il roule. En bloc, les deux se voient a 28 caps sur 32.
+     ['bloc',  [u0, u1], [w0, w1], [z0, z1], dessus, flanc, bout, avance]
+
+   ⚠️ `profondeur` est le biais du sol, le MEME que celui de l'ombre
+   (`vehicules.OMBRE`) : un juge les tient d'accord. */
+const MACHINE_VELO = {
+  profondeur: 0.5,
+  // LES TROIS POINTS OU LE CORPS SE TIENT : ses fesses, sa main droite, son
+  // pied droit. `assise` pose le cycliste (`deuxRoues` en tire la `selle`), et
+  // les juges mesurent le corps dessine contre les trois.
+  assise: [-2, 0, 7.2],
+  guidon: [2.6, 2.6, 7.8],
+  pedales: [-0.6, 1.6, 2.6],
+  pieces: [
+    ['roue', -4.8, 3.2, 'k', 'M', 'M'],
+    ['roue', 4.8, 3.2, 'k', 'M', 'M'],
+    ['tube', [-0.6, 0, 2.6], [-2.1, 0, 6.8], 'c'],        // tube de selle
+    ['tube', [-2.0, 0, 6.3], [3.2, 0, 6.6], 'c'],         // tube horizontal
+    ['tube', [-0.6, 0, 2.6], [3.3, 0, 5.6], 'c'],         // tube diagonal
+    ['tube', [-0.6, 0, 2.6], [-4.8, 0, 3.2], 'D'],        // base
+    ['tube', [-2.0, 0, 6.2], [-4.8, 0, 3.2], 'D'],        // hauban
+    ['tube', [3.2, 0, 7.4], [4.8, 0, 3.2], 'B'],          // fourche
+    ['tube', [2.6, -2.6, 7.8], [2.6, 2.6, 7.8], 'k', 0.4], // guidon
+    ['tube', [2.6, 0, 7.8], [3.2, 0, 7.2], 'k', 0.4],     // potence
+    ['tube', [-3.2, 0, 7.2], [-1.4, 0, 7.2], 'k', 0.4],   // selle
+    ['tube', [-0.6, 0.6, 2.6], [0.6, 0.6, 1.6], 'M'],     // manivelle
+    ['bloc', [3.6, 4.2], [-0.3, 0.3], [6.4, 7.0], 'l', 'l', 'l', 0.6], // le phare
+    ['tube', [-2.2, 0, 6.4], [-5.4, 0, 6.4], 'D'],        // porte-bagages
+    ['point', [-5.8, 0, 6.4], 't', 0.6],                  // le feu, au bout du porte-bagages
+  ],
+};
+// ⚠️ La moto est plus LONGUE (20 px), pas plus haute : sa selle est a la meme
+// hauteur que celle du velo, et le meme corps s'y assoit.
+const MACHINE_MOTO = {
+  profondeur: 0.5,
+  assise: [-2, 0, 7.2],
+  guidon: [3.2, 2.8, 8.6],
+  pedales: [-1.0, 1.6, 3.0],
+  pieces: [
+    ['roue', -6.0, 3.4, 'k', 'M', 'M', 2],
+    ['roue', 6.2, 3.4, 'k', 'M', 'M', 2],
+    ['bloc', [-1.6, 2.4], [-1.2, 1.2], [2.2, 5.2], 'r', 'r', 'r'],      // moteur
+    ['tube', [-1.2, 1.3, 4.6], [2.0, 1.3, 4.6], 'M', 0.2],               // ailettes
+    ['tube', [-1.2, 1.3, 3.6], [2.0, 1.3, 3.6], 'M', 0.2],
+    ['bloc', [0.4, 4.0], [-1.4, 1.4], [5.6, 7.6], 'c', 'D', 'D'],        // reservoir
+    ['tube', [0.8, 0, 7.7], [3.6, 0, 7.7], 'C', 0.2],                    // son reflet
+    ['bloc', [-4.8, 0.4], [-1.2, 1.2], [6.4, 7.2], 'k', 'k', 'k'],       // selle
+    ['bloc', [-8.2, -4.8], [-0.9, 0.9], [5.8, 6.6], 'c', 'D', 'D'],      // queue
+    ['tube', [-1.0, 1.7, 2.8], [-7.6, 1.7, 4.4], 'B'],                   // echappement
+    ['tube', [-1.0, 1.0, 3.0], [-6.0, 0.8, 3.3], 'M'],                   // bras oscillant
+    ['tube', [3.8, 0, 8.2], [6.2, 0, 3.3], 'B'],                         // fourche
+    ['tube', [3.2, -2.8, 8.6], [3.2, 2.8, 8.6], 'k', 0.4],               // guidon
+    ['bloc', [5.2, 6.4], [-0.8, 0.8], [6.6, 7.8], 'k', 'l', 'l', 0.2],   // phare
+    ['bloc', [-8.6, -8.0], [-0.5, 0.5], [6.2, 6.8], 't', 't', 't', 0.3], // feu
+  ],
+};
+
 const ASSIS_COTE = [
       '............',
       '............',
@@ -687,10 +631,50 @@ const ASSIS_BAS = [
    joueur quand c'est lui, celles d'un archetype de rue quand c'est le trafic.
 
    Une pose de plus sur le corps du joueur, et une seule : `assis_cote` se
-   miroite en `assis_gauche` / `assis_droite` par le suffixe, comme la marche. */
+   miroite en `assis_gauche` / `assis_droite` par le suffixe, comme la marche.
+
+   ⚠️ **Ce n'est plus la pose du deux-roues** (16 sept. 2026) : assis sur une
+   chaise, il avait les fesses a la hauteur des moyeux et les pieds dans le
+   vide. Sur une machine, c'est le passant qui ROULE (plus bas). Celle-ci reste
+   la pose du patient qui attend dans une chaise. */
 SPRITES.joueur.poses.assis_cote = [ASSIS_COTE];
 SPRITES.joueur.poses.assis_haut = [ASSIS_HAUT];
 SPRITES.joueur.poses.assis_bas = [ASSIS_BAS];
+
+/* --- Le passant qui ROULE -------------------------------------------------------
+
+   ⚠️ `assis` est un corps sur une CHAISE : les genoux devant, les pieds au sol.
+   Pose sur une selle, il avait les fesses a la hauteur des moyeux et les pieds
+   dans le vide. Celui-ci se tient sur la machine aux trois points qu'elle
+   declare : les fesses sur la selle (a 7 px du sol), les mains au guidon, les
+   pieds aux pedales.
+
+   ⚠️ Le corps ne se PROJETTE pas comme la machine : c'est un corps, et il
+   garde les quatre faces du passant. Mais chaque face est dessinee LA OU la
+   projection met la selle et le guidon — de dos, le guidon est devant lui,
+   donc plus HAUT a l'ecran : ses mains sont a hauteur d'epaules ; de face, il
+   est plus BAS : ses mains tombent a la ceinture.
+
+   Deux images par face : les pedales font un demi-tour de l'une a l'autre
+   (`pedale` du sprite). La moto garde la premiere. */
+SPRITES.joueur.poses.roule_cote = [
+  ['.....kkkk...', '....khhhhk..', '....khhhhhk.', '....khhssok.', '....khssssk.', '...kkhsssk..', '..kcccckkk..', '..kccccsssk.',
+   '..kppppkkk..', '...kkpppk...', '.....kppk...', '.....kpk....', '.....kpk....', '.....kbbk...', '.....kkk....', '............'],
+  ['.....kkkk...', '....khhhhk..', '....khhhhhk.', '....khhssok.', '....khssssk.', '...kkhsssk..', '..kcccckkk..', '..kccccsssk.',
+   '..kppppkkk..', '..kpppppk...', '...kkppk....', '....kpk.....', '...kpk......', '...kbbk.....', '...kkk......', '............'],
+];
+SPRITES.joueur.poses.roule_haut = [
+  ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '.kkhhhhhhkk.', '.kskhhhhksk.', '.kckhhhhkck.', '.kckcccckck.', '..kcccccck..',
+   '..kppppppk..', '..kpk..kpk..', '..kpk..kbk..', '..kbk..kkk..', '..kkk.......', '............', '............', '............'],
+  ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '.kkhhhhhhkk.', '.kskhhhhksk.', '.kckhhhhkck.', '.kckcccckck.', '..kcccccck..',
+   '..kppppppk..', '..kpk..kpk..', '..kbk..kpk..', '..kkk..kbk..', '.......kkk..', '............', '............', '............'],
+];
+SPRITES.joueur.poses.roule_bas = [
+  ['............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '...kssssk...', '..kcccccck..',
+   '.kcccccccck.', '.ksccccccsk.', '..kppppppk..', '..kpk..kpk..', '..kpk..kbk..', '..kbk..kkk..', '..kkk.......', '............'],
+  ['............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '...kssssk...', '..kcccccck..',
+   '.kcccccccck.', '.ksccccccsk.', '..kppppppk..', '..kpk..kpk..', '..kbk..kpk..', '..kkk..kbk..', '.......kkk..', '............'],
+];
 
 /* --- Le malade ALITE -----------------------------------------------------------
 
@@ -1796,25 +1780,36 @@ SPRITES.police = {
   pal: nuancer({ k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#00000030' }),
   swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
 };
-SPRITES.velo = {
-  w: 20, h: 19, ancre: [10, 16],
-  // LA SELLE, en [dx, dy] depuis la ligne de sol du dessin vu d'en haut : la ou
-  // l'ANCRE du passant assis se pose. ⚠️ Une seule, depuis que la machine
-  // tourne : elle est un point DE LA MACHINE et elle tourne avec elle
-  // (`Vehicules.imageDuCavalier`). Trois selles, une par pose, c'etaient trois
-  // chiffres a tenir d'accord pour un seul siege.
-  selle: [0, -7],
-  pal: nuancer({ k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' }),
-  swaps: ['c'],
-  poses: { cote: [VELO_COTE], haut: [VELO_HAUT], bas: [VELO_BAS] },
-};
-SPRITES.moto = {
-  w: 24, h: 23, ancre: [12, 20],
-  selle: [0, -8],
-  pal: nuancer({ k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' }),
-  swaps: ['c'],
-  poses: { cote: [MOTO_COTE], haut: [MOTO_HAUT], bas: [MOTO_BAS] },
-};
+/** Une fiche de deux-roues : sa machine, et TROIS poses qui en sont tirees.
+
+    ⚠️ Les poses `cote`, `haut`, `bas` ne sont plus dessinees a la main : ce
+    sont les projections de la machine a l'est, au nord et au sud. Deux
+    dessins d'un meme velo, c'est deux velos qui finissent par diverger.
+
+    ⚠️ La grille est CARREE et le point de sol est en son centre — c'est ce qui
+    fait tourner le dessin sur son empreinte, comme l'ombre. L'`ancre` en est
+    tiree pour que `Vehicules.centreDuToit` tombe au meme endroit : une demi-
+    longueur sous le centre, la ou serait la ligne de sol d'un char. */
+function deuxRoues(machine, longueur, pal) {
+  const cote = 32;
+  const vue = function (angle) { return [Atlas.projeter(machine, angle, cote)]; };
+  return {
+    w: cote, h: cote, ancre: [cote / 2, cote / 2 - 1 + longueur / 2],
+    // LA SELLE, en [dx, dy] depuis la ligne de sol du dessin vu d'en haut : la
+    // ou l'ANCRE du passant assis se pose. ⚠️ Elle est TIREE de l'`assise` de
+    // la machine — deux nombres pour un meme siege finissent par diverger — et
+    // c'est un point DE LA MACHINE : elle tourne avec elle
+    // (`Vehicules.imageDuCavalier`).
+    machine: machine, selle: [0, -machine.assise[0] - longueur / 2], pal: nuancer(pal), swaps: ['c'],
+    poses: { cote: vue(0), haut: vue(-Math.PI / 2), bas: vue(Math.PI / 2) },
+  };
+}
+SPRITES.velo = deuxRoues(MACHINE_VELO, 16, { k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' });
+// ⚠️ LES PEDALES : un demi-tour tous les `pedale` pixels roules. C'est la fiche
+// qui dit qu'on pedale, pas un `slug === 'velo'` — la moto n'en a pas, et son
+// pilote garde les pieds sur les repose-pieds.
+SPRITES.velo.pedale = 7;
+SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
 
 /* --- M9, le parc automobile ---------------------------------------------------
 

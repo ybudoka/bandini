@@ -120,6 +120,98 @@ const Atlas = (function () {
     return fini;
   }
 
+  /** UNE MACHINE A DEUX ROUES, vue a un cap : la grille de lettres, `cote` x
+      `cote`, le point de sol au milieu de l'empreinte pose au CENTRE.
+
+      ⚠️ **Pourquoi pas un toit qui tourne, comme les chars.** Retour de Martin,
+      capture a l'appui : « il faut ameliorer ca ». Vu d'en haut, un velo est un
+      BATON avec une barre en travers — c'est ce qui roulait, et le cycliste de
+      profil pose dessus lisait comme un passant sur une echasse. Un toit d'auto
+      dit ce qu'il est ; celui d'un velo, non. Et une elevation ne se laisse pas
+      tourner (un flanc pivote de 40 degres, c'est une machine qui cabre).
+
+      ⚠️ **Alors la machine est decrite EN VOLUME, et elle se projette.** Un
+      deux-roues est presque plat — deux roues dans un meme plan vertical, un
+      cadre, un guidon en travers — et c'est exactement ce qu'une projection
+      rend bien : de profil, deux roues RONDES ; de dos, un trait et le guidon
+      ; entre les deux, des roues en ellipse. Les 32 caps suivent l'ombre au
+      cran pres, comme le toit des chars, et chacun est un vrai dessin.
+
+      La vue est celle de toute la ville : ce qui est debout se dessine debout
+      (`z` monte a l'ecran, un pixel pour un pixel), et le sol se voit DE BIAIS
+      — la profondeur est ecrasee par `machine.profondeur`, le meme biais que
+      l'ombre (`vehicules.OMBRE`), sinon le guidon d'un velo de profil montait
+      en antenne de cinq pixels.
+
+      ⚠️ `u` va vers l'avant, `w` vers la droite de la machine, `z` en haut. Le
+      cap `angle` est celui du moteur : 0 a l'EST. Ce qui cache quoi se decide
+      point par point — le plus pres de l'oeil gagne (le plus au sud, le plus
+      haut), et `avance` depasse d'une fraction pour qu'un phare ou un guidon
+      ne se noie pas dans ce qu'il touche. */
+  function projeter(machine, angle, cote) {
+    const K = machine.profondeur;
+    const ca = Math.cos(angle), sa = Math.sin(angle);
+    const milieu = cote / 2;
+    const prof = new Float64Array(cote * cote).fill(-Infinity);
+    const lettres = new Array(cote * cote).fill('.');
+    // ⚠️ L'epsilon : a -PI/2, cos vaut 6e-17 et non 0. Un point pile sur une
+    // arete de pixel tombait d'un cote ou de l'autre selon le cap, et le dessin
+    // du nord n'etait plus le miroir exact de celui du sud.
+    function point(u, w, z, ch, avance) {
+      const sol = u * sa + w * ca;
+      const x = Math.floor(milieu + u * ca - w * sa + 1e-6), y = Math.floor(milieu + sol * K - z + 1e-6);
+      if (x < 0 || y < 0 || x >= cote || y >= cote) return;
+      const d = sol + K * z + (avance || 0), i = y * cote + x;
+      if (d > prof[i]) { prof[i] = d; lettres[i] = ch; }
+    }
+    function tube(a, b, ch, avance) {
+      const n = Math.max(2, Math.ceil(Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]) * 5));
+      for (let k = 0; k <= n; k++) {
+        const t = k / n;
+        point(a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t, ch, avance);
+      }
+    }
+    function anneau(u, w, z, r, ch, avance) {
+      const n = Math.ceil(r * 40);
+      for (let k = 0; k < n; k++) {
+        const f = k / n * Math.PI * 2;
+        point(u + r * Math.cos(f), w, z + r * Math.sin(f), ch, avance);
+      }
+    }
+    for (const p of machine.pieces) {
+      if (p[0] === 'roue') {
+        // [u, rayon, pneu, jante, moyeu, largeur] — le pneu en deux passes pour
+        // qu'il reste plein dans ses ellipses, `largeur` > 1 pour une moto.
+        const u = p[1], r = p[2], larges = p[6] || 1;
+        for (let e = 0; e < larges; e++) {
+          const w = larges > 1 ? (e - (larges - 1) / 2) * 0.8 : 0;
+          anneau(u, w, r, r - 0.1, p[3]);
+          anneau(u, w, r, r - 0.7, p[3]);
+        }
+        if (p[4]) anneau(u, 0, r, r - 1.4, p[4], 0.01);
+        if (p[5]) point(u, 0, r, p[5], 0.3);
+      } else if (p[0] === 'tube') {
+        tube(p[1], p[2], p[3], p[4]);
+      } else if (p[0] === 'point') {
+        point(p[1][0], p[1][1], p[1][2], p[2], p[3]);
+      } else if (p[0] === 'bloc') {
+        // [[u0, u1], [w0, w1], [z0, z1], dessus, flanc, bout, avance] : une
+        // boite pleine, ses six faces echantillonnees au quart de pixel.
+        const U = p[1], W = p[2], Z = p[3], pas = 0.25, av = p[7];
+        for (let u = U[0]; u <= U[1] + 1e-6; u += pas) {
+          for (let w = W[0]; w <= W[1] + 1e-6; w += pas) { point(u, w, Z[1], p[4], av); point(u, w, Z[0], p[5], av); }
+          for (let z = Z[0]; z <= Z[1] + 1e-6; z += pas) { point(u, W[0], z, p[5], av); point(u, W[1], z, p[5], av); }
+        }
+        for (let w = W[0]; w <= W[1] + 1e-6; w += pas) {
+          for (let z = Z[0]; z <= Z[1] + 1e-6; z += pas) { point(U[0], w, z, p[6], av); point(U[1], w, z, p[6], av); }
+        }
+      }
+    }
+    const grille = [];
+    for (let y = 0; y < cote; y++) grille.push(lettres.slice(y * cote, (y + 1) * cote).join(''));
+    return grille;
+  }
+
   /** UN cap d'un char, cuit A LA DEMANDE : le toit tourne de `i / n` de tour.
 
       ⚠️ **Un cap a la fois, et seulement ceux qu'on a vraiment montres.** Les
@@ -139,6 +231,22 @@ const Atlas = (function () {
     const sel = swaps ? JSON.stringify(swaps) : '';
     const cle = 'cap|' + nom + '|' + n + '|' + i + '|' + sel;
     if (cache.has(cle)) return cache.get(cle);
+    // ⚠️ UN DEUX-ROUES NE TOURNE PAS SON TOIT : il se PROJETTE au cap (voir
+    // `projeter`). La grille de lettres ne depend pas de la couleur, elle se
+    // cuit une fois par cap ; le canevas, lui, une fois par couleur.
+    if (def.machine) {
+      const cleGrille = 'machine|' + nom + '|' + n + '|' + i;
+      let grille = cache.get(cleGrille);
+      if (!grille) {
+        grille = projeter(def.machine, i * Math.PI * 2 / n - Math.PI / 2, def.w);
+        cache.set(cleGrille, grille);
+      }
+      const c = Base.nouveauCanvas(def.w, def.w);
+      peindreGrille(c.getContext('2d'), grille, Object.assign({}, def.pal, swaps || {}), def.w, def.w, false);
+      c.cote = def.w;
+      cache.set(cle, c);
+      return c;
+    }
     const cleBase = 'toit1|' + nom + '|' + sel;
     let base = cache.get(cleBase);
     if (!base) {
@@ -229,5 +337,5 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, toitDe, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
+  return { valider, cuire, toitDe, projeter, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
 })();
