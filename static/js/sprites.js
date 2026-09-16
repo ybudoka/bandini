@@ -3311,6 +3311,17 @@ const DECORS = {
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
     ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 1, 10, 3); ctx.fillRect(4, 5, 1, 8);
   } },
+  // LE BALLON DE PLAGE. ⚠️ Il ne bloque rien et n'entre dans aucun index : il
+  // VOLE. Un decor qui bouge se voit de trois ecrans — c'est tout ce qu'on
+  // demande a deux enfants qui se le lancent.
+  ballon: { solide: false, r: 3, w: 10, h: 10, ancre: [5, 7], peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(2, 8, 6, 2);         // son ombre au sol
+    ctx.fillStyle = '#e8e6de'; ctx.fillRect(2, 1, 6, 7); ctx.fillRect(1, 2, 8, 5);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(3, 1, 2, 7);                     // les quartiers de couleur
+    ctx.fillStyle = '#2f6fb5'; ctx.fillRect(6, 2, 2, 5);
+    ctx.fillStyle = '#b8b5aa'; ctx.fillRect(1, 6, 8, 1);                     // le dessous, dans l'ombre
+  } },
+
   // --- LE BORD DE L'EAU ----------------------------------------------------
   //: ⚠️ Mesure d'abord, et c'est elle qui a decide de la vague : la ville posait
   //: **2 507 tuiles de sable** (dont 782 touchent l'eau) et **1 818 de quai**, et

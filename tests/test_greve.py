@@ -142,6 +142,27 @@ def test_la_greve_se_meuble_en_dernier():
     bouchage noiera plus large, ça ne passe pas en silence."""
     import inspect
     recette = inspect.getsource(carte.generer)
-    assert "chantier.greve()" in recette, "la grève n'est jamais semée"
-    assert recette.index("boucher_les_poches") < recette.index("chantier.greve()"), (
+    assert "chantier.greve(ponts)" in recette, "la grève n'est jamais semée"
+    assert recette.index("boucher_les_poches") < recette.index("chantier.greve(ponts)"), (
         "la grève est semée avant que la ville ne noie ses bancs de sable")
+
+
+def test_rien_ne_traine_au_pied_d_un_pont(ville):
+    """⚠️ **Un quai n'est pas une plage, et le pied d'un pont non plus** —
+    `FERMETURES` le disait déjà pour les rues barrées.
+
+    Mesuré, et trouvé par un juge qui ne parle pas de plage : une serviette et
+    deux bouées s'étaient posées à une tuile du tablier de La Pointe, et un char
+    lancé qui traversait les accrochait. Le juge du pont a vu la carrosserie
+    tomber à 90 sur 100 **après** l'ouverture du pont, et en a conclu que le pont
+    coûtait encore."""
+    garde = carte.GREVE["pont_ecart"]
+    for pont in ville["ponts"]:
+        x0, y0 = pont["x"] - garde, pont["y"] - garde
+        x1, y1 = pont["x"] + pont["l"] + garde, pont["y"] + pont["h"] + garde
+        for d in ville["decor"]:
+            if d["type"] not in MEUBLES:
+                continue
+            assert not (x0 <= d["x"] < x1 and y0 <= d["y"] < y1), (
+                f"un {d['type']} traîne au pied du pont {pont['sens']} "
+                f"en ({d['x']}, {d['y']})")

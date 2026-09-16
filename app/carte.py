@@ -654,6 +654,10 @@ GREVE: dict = {
     # Le belvedere : la ou la terre DOMINE l'eau. On en veut peu, et espaces.
     "belvederes": (3, 9),
     "belvedere_ecart": 40,
+    # ⚠️ Le pied d'un pont n'est pas une plage : un char lance qui traverse
+    # accroche ce qui traine a cote du tablier, et le juge du pont l'a vu
+    # avant nous (la carrosserie tombait a 90 apres l'ouverture du pont).
+    "pont_ecart": 3,
 }
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
@@ -3925,7 +3929,7 @@ class _Chantier:
                     return True
         return False
 
-    def greve(self) -> int:
+    def greve(self, ponts: list[dict] | None = None) -> int:
         """Meuble le bord de l'eau : parasols, serviettes, tables, chateaux de
         sable, et ce qui s'amarre au quai. Rend le nombre de meubles poses.
 
@@ -3935,6 +3939,18 @@ class _Chantier:
         """
         fiche = GREVE
         poses: list[tuple[int, int]] = []
+        # ⚠️ **JAMAIS AU PIED D'UN PONT**, et `FERMETURES` le disait deja pour les
+        # rues barrees. Mesure : une serviette et deux bouees s'etaient posees a
+        # une tuile du tablier de La Pointe, et un char lance qui traversait les
+        # accrochait — le juge du pont a vu la carrosserie tomber a 90 sur 100
+        # *apres* l'ouverture du pont, et a conclu que le pont coutait encore.
+        # Un quai n'est pas une plage, et le pied d'un pont non plus.
+        garde = fiche["pont_ecart"]
+        tabliers = [(p["x"] - garde, p["y"] - garde, p["l"] + 2 * garde, p["h"] + 2 * garde)
+                    for p in (ponts or [])]
+
+        def sous_un_pont(x: int, y: int) -> bool:
+            return any(px <= x < px + pl and py <= y < py + ph for px, py, pl, ph in tabliers)
 
         def assez_loin(x: int, y: int, ecart: int) -> bool:
             return all(abs(px - x) + abs(py - y) >= ecart for px, py in poses)
@@ -3945,6 +3961,8 @@ class _Chantier:
                 proprietes = LEGENDE[glyphe]
                 # Ni l'eau, ni un mur, ni la chaussee : le reste est de la rive.
                 if glyphe == "~" or proprietes.get("solide") or proprietes.get("route"):
+                    continue
+                if sous_un_pont(x, y):
                     continue
                 if glyphe == "s":
                     if not self._eau_a_portee(x, y, fiche["bord"]):
@@ -3984,6 +4002,8 @@ class _Chantier:
                             continue
                         if self.sol[cy][cx] != "~" or not assez_loin(cx, cy, fiche["ecart"]):
                             continue
+                        if sous_un_pont(cx, cy):
+                            continue
                         # ⚠️ `sur_eau` : `poser_decor` refuse le solide, et l'eau
                         # en est (`solide: 2`). La bouee est le seul decor du jeu
                         # qui ait raison de flotter — on le lui dit une fois,
@@ -3991,10 +4011,10 @@ class _Chantier:
                         if self.poser_decor("bouee", cx, cy, sur_eau=True):
                             poses.append((cx, cy))
                         break
-        poses += self._belvederes(poses)
+        poses += self._belvederes(poses, sous_un_pont)
         return len(poses)
 
-    def _belvederes(self, deja: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    def _belvederes(self, deja: list[tuple[int, int]], sous_un_pont) -> list[tuple[int, int]]:
         """Un plancher de bois sur pilotis, la ou la terre DOMINE l'eau.
 
         ⚠️ Ce n'est pas « pres de l'eau » : c'est une tuile de terre ferme — ni
@@ -4009,7 +4029,7 @@ class _Chantier:
                 proprietes = LEGENDE[self.sol[y][x]]
                 if not proprietes.get("terre") or self.sol[y][x] == "s":
                     continue
-                if not self._eau_a_portee(x, y, 2):
+                if not self._eau_a_portee(x, y, 2) or sous_un_pont(x, y):
                     continue
                 candidats.append((x, y))
         poses: list[tuple[int, int]] = []
@@ -4469,7 +4489,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # qui tient l'ordre n'est donc pas un defaut observe, c'est le principe — et
     # un juge le pin, pour que le jour ou `boucher_les_poches` noiera plus large,
     # ca ne passe pas en silence.
-    chantier.greve()
+    chantier.greve(ponts)
 
     return {
         "slug": "baie_des_brumes",

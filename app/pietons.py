@@ -385,6 +385,50 @@ BAGARRE: dict = {
     "frontiere_min_tuiles": 16,
 }
 
+#: **LES ENFANTS JOUENT.** ⚠️ **Jouer, c'est un `metier`, pas un costume.** La
+#: regle des sortes de gens est ecrite trois fois dans ce fichier, et le depot
+#: l'a deja payee une fois avec les filles de la Brume : une sorte sans routine
+#: est un deguisement. L'enfant existe depuis la v1 — `intouchable`, vite, temoin
+#: a 0,5 — et il n'a jamais rien fait d'autre que marcher.
+#:
+#: ⚠️ **Ce n'est PAS l'archetype qu'on change, c'est l'enfant DE LA PLAGE qu'on
+#: pose.** Donner un `metier` a tous les enfants de la ville les sortirait de la
+#: foule (`foule()` ne compte que ce qui n'en a pas) et rendrait muette la mere
+#: qui promene le sien. Ceux-ci naissent sur la greve et y restent : ils ont un
+#: poste, comme l'ouvrier a son chantier et l'homme-sandwich au sien.
+#:
+#: ⚠️ **UN ENFANT NE SE NOIE PAS.** `intouchable` veut dire aujourd'hui « aucune
+#: arme, aucun char » ; il doit dire aussi « pas l'eau ». Mesure, pour ne pas
+#: s'attribuer un correctif : **aucun pieton ne se noie dans le jeu** — le
+#: souffle et `noyade` n'existent que pour le joueur. La regle n'est donc pas
+#: une reparation, c'est une garantie qu'on EPINGLE : ils barbotent dans la
+#: PREMIERE tuile d'eau et pas plus loin, sinon la plage est une trappe a
+#: noyade le jour ou quelqu'un donnera du souffle aux passants.
+#:
+#: ⚠️ Et une greve pleine d'enfants est une greve pleine de TEMOINS (0,5
+#: chacun) : c'est la seule consequence mecanique de la vague, et elle est
+#: bonne — le bord de l'eau devient le plus mauvais endroit de la ville pour
+#: faire un coup, exactement comme l'attroupement de l'amuseur.
+PLAGE: dict = {
+    "enfants": 4,                # combien jouent sur la greve a la fois
+    "rayon_px": 520,             # la bulle ou ils naissent et s'oublient
+    "chateau_px": 220,           # jusqu'ou un enfant va chercher un chateau
+    "accroupi_images": (200, 460),   # le temps qu'il passe a le rebatir
+    # ⚠️ Jusqu'ou l'on entre dans l'eau, en tuiles. UNE, et c'est la regle qui
+    # tient tout : on barbote au bord, on ne nage pas.
+    "barbote_tuiles": 1,
+    "barbote_images": (240, 540),
+    "ballon_px": 120,            # a quelle distance deux enfants se lancent le ballon
+    # ⚠️ ET PAS PLUS PRES QUE CA : deux enfants colles l'un a l'autre ne se
+    # lancent rien — le ballon arrive avant d'etre parti, il fait la navette
+    # sur place, et ce qu'on voit est un point qui vibre. Mesure : sans ce
+    # plancher, il ne bougeait pas d'un pixel en quatre cents images.
+    "ballon_min_px": 44,
+    "ballon_vitesse": 2.4,
+    "ballon_pause": 26,          # le temps de le ramasser avant de le relancer
+    "jeu_images": (300, 720),    # puis on change de jeu
+}
+
 REACTIONS = {
     "recul_images": 12,          # il titube
     "ko_images": 300,            # assomme : il se releve apres 5 s
@@ -628,6 +672,10 @@ def exporter() -> dict:
         "reactions": dict(REACTIONS),
         "vol_de_char": dict(VOL_DE_CHAR),
         "bagarre": dict(BAGARRE),
+        "plage": {**PLAGE,
+                  "accroupi_images": list(PLAGE["accroupi_images"]),
+                  "barbote_images": list(PLAGE["barbote_images"]),
+                  "jeu_images": list(PLAGE["jeu_images"])},
         # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
         # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
         # peut relire ni juger depuis la source de verite.

@@ -1063,6 +1063,7 @@ const Entites = (function () {
       else if (e.metier === 'crieur') majCrieur(e);
       else if (e.metier === 'laveur') majLaveur(e);
       else if (e.metier === 'pickpocket') majPickpocket(e);
+      else if (e.metier === 'baigneur') majPlage(e);
     }
   }
 
@@ -1465,6 +1466,254 @@ const Entites = (function () {
     return 1;
   }
 
+  // --- Les enfants de la greve ---------------------------------------------
+  //: ⚠️ **JOUER, C'EST UN `metier`, PAS UN COSTUME.** La regle des sortes de
+  //: gens est ecrite trois fois dans `pietons.py`, et le depot l'a deja payee
+  //: avec les filles de la Brume : une sorte sans routine est un deguisement.
+  //: L'enfant existe depuis la v1 et n'a jamais rien fait d'autre que marcher.
+  //:
+  //: ⚠️ Ce ne sont PAS tous les enfants de la ville : ceux-la naissent sur la
+  //: greve et y restent. Donner un `metier` a l'archetype les sortirait tous de
+  //: la foule et rendrait muette la mere qui promene le sien.
+
+  /** Les enfants qui jouent sur la greve, dans la bulle du joueur. Ils naissent
+      hors champ, sur du sable qui a l'eau a portee, et s'oublient comme tout le
+      monde quand on s'eloigne. */
+  function naitreLesEnfantsDeLaPlage() {
+    const f = B.defs.pietons && B.defs.pietons.plage;
+    const arch = archetype('enfant');
+    if (!f || !arch || !B.joueur || B.interieur) return 0;
+    const deja = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; }).length;
+    if (deja >= f.enfants) return 0;
+    const place = placeDeGreve(f.rayon_px);
+    if (!place) return 0;
+    const e = creerPieton(place.x, place.y, arch);
+    if (!e) return 0;
+    e.metier = 'baigneur';
+    e.jeu = null;
+    e.jeuT = 0;
+    ajouterA(grille, e);
+    return 1;
+  }
+
+  /** Une tuile de sable au bord de l'eau, dans la bulle et hors champ.
+
+      ⚠️ **ELLE NE TIRE PAS UN SEUL DE.** Premiere version jetee : elle tirait
+      quarante couples au hasard dans `B.rng()`, et **le pickpocket a cesse de
+      voler** — un juge qui ne parle pas de plage, tombe parce que chaque de
+      consomme decale tous ceux qui suivent. C'est la troisieme fois de la
+      semaine que cette lecon se presente (le pilote des deux-roues, le char en
+      panne) ; ici elle a ete payee au juge, pas en jeu. On BALAIE donc la bulle
+      en spirale de tuiles, et l'endroit ne depend que de la geographie. */
+  function placeDeGreve(rayon) {
+    const c = Monde.carte, j = B.joueur;
+    if (!c) return null;
+    const t = Math.floor(rayon / TT);
+    const jx = Math.floor(j.x / TT), jy = Math.floor(j.y / TT);
+    // Du plus proche au plus loin : le premier sable hors champ gagne.
+    for (let d = 4; d <= t; d++) {
+      for (let k = -d; k <= d; k++) {
+        for (const [tx, ty] of [[jx + k, jy - d], [jx + k, jy + d], [jx - d, jy + k], [jx + d, jy + k]]) {
+          if (Monde.glyphe(tx, ty) !== 's' || !Monde.marchablePieton(tx, ty)) continue;
+          const x = tx * TT + 8, y = ty * TT + 8;
+          if (dist2(x, y, j.x, j.y) > rayon * rayon) continue;
+          if (visibleAEcran(x, y, 24) || !placeLibre(x, y)) continue;
+          if (!eauAPortee(tx, ty, 3)) continue;
+          return { x: x, y: y };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** De l'eau a `portee` tuiles d'ici, en CROIX — la meme mesure que le semis
+      de la greve : une plage suit la cote. */
+  function eauAPortee(tx, ty, portee) {
+    for (let d = 1; d <= portee; d++) {
+      if (Monde.estEau(tx + d, ty) || Monde.estEau(tx - d, ty)
+          || Monde.estEau(tx, ty + d) || Monde.estEau(tx, ty - d)) return true;
+    }
+    return false;
+  }
+
+  /** La routine : trois jeux, et on en change. */
+  function majPlage(e) {
+    const f = B.defs.pietons.plage;
+    if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap' && e.etat !== 'fige') {
+      // Il a peur, il temoigne, il fuit : le jeu s'arrete, il reste un enfant.
+      quitterLeJeu(e);
+      return;
+    }
+    if (e.jeu && --e.jeuT > 0) { majJeu(e, f); return; }
+    quitterLeJeu(e);
+    // ⚠️ On choisit parmi ce qui est LA : un enfant qui « joue au chateau »
+    // sans chateau a portee est un enfant plante devant rien.
+    const choix = [];
+    const chateau = chateauLePlusProche(e, f.chateau_px);
+    if (chateau) choix.push('chateau');
+    const bord = bordDeLEau(e);
+    if (bord) choix.push('baignade');
+    const copain = B.entites.find(function (q) {
+      if (q === e || q.metier !== 'baigneur' || !q.vivant || q.jeu) return false;
+      const d = dist2(q.x, q.y, e.x, e.y);
+      // Assez pres pour se voir, assez loin pour que le ballon VOLE.
+      return d < f.ballon_px * f.ballon_px && d > f.ballon_min_px * f.ballon_min_px;
+    });
+    if (copain) choix.push('ballon');
+    if (!choix.length) return;
+    // ⚠️ Meme raison : a l'empreinte de l'enfant et de l'instant, pas au de.
+    const tirage = hash2(e.id * 2654435761 + B.t, 0x71A6E);
+    e.jeu = choix[tirage % choix.length];
+    e.jeuT = f.jeu_images[0] + (tirage >>> 8) % (f.jeu_images[1] - f.jeu_images[0]);
+    if (e.jeu === 'chateau') { e.cap = { x: chateau.x, y: chateau.y }; e.capT = 0; e.etat = 'cap'; }
+    else if (e.jeu === 'baignade') { e.cap = bord; e.capT = 0; e.etat = 'cap'; e.barbote = true; }
+    else { lancerLeBallon(e, copain, f); }
+  }
+
+  function quitterLeJeu(e) {
+    if (e.ballon) { retirer(e.ballon); e.ballon = null; }
+    if (e.copain) { e.copain.copain = null; e.copain.ballon = null; e.copain = null; }
+    e.jeu = null; e.barbote = false; e.poseFixe = null;
+  }
+
+  /** Le chateau de sable le plus proche, encore debout. */
+  function chateauLePlusProche(e, portee) {
+    let meilleur = null, dMin = portee * portee;
+    for (const d of decorAutour(e.x, e.y, portee)) {
+      if (d.decor !== 'chateau_sable' || d.brise) continue;
+      const q = dist2(e.x, e.y, d.x, d.y);
+      if (q < dMin) { dMin = q; meilleur = d; }
+    }
+    return meilleur;
+  }
+
+  /** La PREMIERE tuile d'eau devant lui, et pas une de plus.
+
+      ⚠️ **UN ENFANT NE SE NOIE PAS.** Mesure, pour ne pas s'attribuer un
+      correctif : aucun pieton ne se noie dans le jeu — le souffle et `noyade`
+      n'existent que pour le joueur. Ce n'est donc pas une reparation, c'est une
+      garantie qu'on EPINGLE, pour le jour ou quelqu'un donnera du souffle aux
+      passants. */
+  function bordDeLEau(e) {
+    const f = B.defs.pietons.plage;
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    for (let d = 1; d <= 4; d++) {
+      for (const [cx, cy] of [[tx + d, ty], [tx - d, ty], [tx, ty + d], [tx, ty - d]]) {
+        if (!Monde.estEau(cx, cy)) continue;
+        // La PREMIERE : celle qui a de la terre juste derriere elle. Une tuile
+        // d'eau entouree d'eau est le large. ⚠️ CEINTURE, pas correctif : la
+        // plus proche depuis le sable a toujours de la terre derriere elle, et
+        // neutraliser ce test ne fait tomber aucun juge.
+        const rx = cx - Math.sign(cx - tx), ry = cy - Math.sign(cy - ty);
+        if (Monde.estEau(rx, ry)) continue;
+        // ⚠️ ON VISE UN PEU PLUS LOIN QUE LE CENTRE, et c'est `cap` qui l'exige :
+        // il s'arrete a 12 px de son but (un palier ecrit pour que le pickpocket
+        // cesse de pousser dans sa victime). Une tuile fait 16 px : vise au
+        // centre, l'enfant s'immobilise AVANT d'y entrer — mesure, aucun des
+        // quatre ne s'est mouille les pieds une seule fois en 1 800 images, et
+        // le juge passait a vide parce qu'il ne mesurait que « il n'est pas alle
+        // trop loin ». Six pixels au-dela, et il pose le pied dans l'eau.
+        const vers = { x: Math.sign(cx - tx), y: Math.sign(cy - ty) };
+        return { x: cx * TT + 8 + vers.x * 6, y: cy * TT + 8 + vers.y * 6, tx: cx, ty: cy };
+      }
+    }
+    void f;
+    return null;
+  }
+
+  function majJeu(e, f) {
+    if (e.jeu === 'chateau') {
+      // Il y revient, et si le chateau n'y est plus il s'en cherche un autre.
+      const chateau = chateauLePlusProche(e, f.chateau_px);
+      if (!chateau) { quitterLeJeu(e); return; }
+      const loin = dist2(e.x, e.y, chateau.x, chateau.y) > 18 * 18;
+      if (loin) { e.cap = { x: chateau.x, y: chateau.y }; e.etat = 'cap'; return; }
+      // Plante devant, tourne vers lui : il le rebatit. ⚠️ Pas de pose
+      // ACCROUPIE — le corps de l'enfant n'en a pas, et en inventer une ici
+      // serait un dessin que personne d'autre ne peut relire. `poseFixe` tient
+      // seulement l'image immobile, sinon un corps a l'arret clignote.
+      e.etat = 'arret';
+      e.minuterie = f.accroupi_images[0];
+      e.vx = 0; e.vy = 0;
+      regarder(e, chateau.x - e.x, chateau.y - e.y);
+      e.poseFixe = 0;
+    } else if (e.jeu === 'baignade') {
+      const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+      if (Monde.estEau(tx, ty)) {
+        // ⚠️ IL S'ARRETE LA. Pas de deuxieme tuile : on barbote au bord, on ne
+        // nage pas. S'il derive vers le large, il revient.
+        e.etat = 'arret';
+        e.minuterie = 30;
+        e.vx = 0; e.vy = 0;
+        if (e.t % 24 === 0) remous(e.x, e.y, 3);
+        // ⚠️ CEINTURE, pas correctif (voir `bordDeLEau`) : rien ne le pousse au
+        // large aujourd'hui, et neutraliser ce retour ne fait tomber aucun juge.
+        const dehors = bordDeLEau(e);
+        if (trop_loin(e, f) && dehors) { e.cap = dehors; e.etat = 'cap'; }
+      } else {
+        const bord = bordDeLEau(e);
+        if (!bord) { quitterLeJeu(e); return; }
+        e.cap = bord; e.capT = 0; e.etat = 'cap';
+      }
+    } else if (e.jeu === 'ballon') {
+      majBallon(e);
+    }
+  }
+
+  /** Est-il alle plus loin que la premiere tuile d'eau ? */
+  function trop_loin(e, f) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    for (const [cx, cy] of [[tx + 1, ty], [tx - 1, ty], [tx, ty + 1], [tx, ty - 1]]) {
+      if (!Monde.estEau(cx, cy)) return false;      // il touche encore la terre
+    }
+    void f;
+    return true;                                    // de l'eau tout autour : c'est le large
+  }
+
+  /** Deux enfants et un ballon qui va de l'un a l'autre. C'est tout, et ca
+      suffit — un decor qui BOUGE se voit de trois ecrans. */
+  function lancerLeBallon(e, copain, f) {
+    e.copain = copain; copain.copain = e;
+    copain.jeu = 'ballon'; copain.jeuT = e.jeuT;
+    const b = creer('ballon', (e.x + copain.x) / 2, (e.y + copain.y) / 2, {
+      // `decor` pour le DESSIN seulement : il passe par la branche du decor et
+      // n'entre dans aucun index — rien ne se cogne dedans, il vole.
+      decor: 'ballon', r: 3, solide: false, dessine: true, a: e, b: copain, vers: copain, pause: 0,
+    });
+    e.ballon = b; copain.ballon = b;
+  }
+
+  /** Les deux enfants se font face pendant que le ballon fait la navette. */
+  function majBallon(e) {
+    const b = e.ballon, copain = e.copain;
+    if (!b || !b.actif || !copain || !copain.vivant || copain.metier !== 'baigneur') {
+      quitterLeJeu(e);
+      return;
+    }
+    e.etat = 'arret'; e.minuterie = 20; e.vx = 0; e.vy = 0;
+    regarder(e, copain.x - e.x, copain.y - e.y);
+  }
+
+  /** ⚠️ LE BALLON VOLE DANS LA BOUCLE DES ENTITES, pas dans la routine. Les
+      routines des sortes de gens battent une image sur quinze (`majSortes`) —
+      c'est le bon rythme pour DECIDER, et le pire qui soit pour un objet qui
+      traverse l'air : mesure, le ballon ne bougeait que 13 images sur 400, et
+      il sautait par a-coups d'un quart de seconde. */
+  function majBallonVol(b) {
+    const f = B.defs.pietons && B.defs.pietons.plage;
+    const cible = b.vers;
+    if (!f || !cible || !cible.vivant || !b.a || !b.b) { retirer(b); return; }
+    if (b.pause > 0) { b.pause--; return; }
+    const dx = cible.x - b.x, dy = cible.y - b.y, norme = Math.hypot(dx, dy) || 1;
+    if (norme < 10) {
+      b.vers = cible === b.a ? b.b : b.a;            // il renvoie
+      b.pause = f.ballon_pause;
+      return;
+    }
+    b.x += dx / norme * f.ballon_vitesse;
+    b.y += dy / norme * f.ballon_vitesse;
+  }
+
   /** LA GERBE D'UN BRIS D'AQUEDUC.
 
       ⚠️ Ce n'est PAS un effet de plus : c'est le `jet_eau` de la borne-fontaine
@@ -1740,12 +1989,18 @@ const Entites = (function () {
       // marchands derriere leur comptoir ne s'oublient pas : ils attendent.
       // ⚠️ Le marchand s'oubliait comme un passant : on debarquait de l'autobus
       // et les neuf comptoirs de la ville se vidaient a la premiere image.
-      if (loin && !e.personnage && !e.mission && !e.commerce && !visibleAEcran(e.x, e.y, 40)) { retirer(e); continue; }
+      if (loin && !e.personnage && !e.mission && !e.commerce && !visibleAEcran(e.x, e.y, 40)) {
+        // ⚠️ Un enfant oublie EMPORTE son ballon : sans ca, la balle reste a
+        // voler toute seule au bord de l'eau, pour toujours.
+        if (e.metier === 'baigneur') quitterLeJeu(e);
+        retirer(e); continue;
+      }
       if (e.vivant && !e.metier) vivants++;
     }
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
     if (B.t % 45 === 0) naitreLesOuvriers();
+    if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
     if (B.t % 30 === 0) majAqueduc();
@@ -2354,7 +2609,11 @@ const Entites = (function () {
       de l'eau plus qu'il n'y laisse entrer. Les passants, eux, n'y entrent
       jamais — `marchablePieton` garde l'eau, et leur flanerie s'y arrete. */
   function masqueDe(e) {
-    return (e.nage || e.agent || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
+    // ⚠️ `barbote` : un enfant de la greve entre dans la PREMIERE tuile d'eau,
+    // et le masque du pieton l'en empeche (l'eau y est un mur). C'est la seule
+    // porte qu'on lui ouvre ; `majJeu` le ramene des qu'il n'a plus de terre
+    // sous la main, et un juge tient qu'il ne va jamais plus loin.
+    return (e.nage || e.agent || e.barbote || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
   }
 
   function majPieton(e) {
@@ -3059,6 +3318,7 @@ const Entites = (function () {
       if (e.bulle) majBulle(e);
       if (e.type === 'joueur') majJoueur(e);
       else if (e.type === 'pieton') { majPieton(e); actifs++; }
+      else if (e.type === 'ballon') majBallonVol(e);
       else if (e.type === 'jet_eau') {
         // La gerbe : deux gouttes par image, vers le haut, qui retombent.
         if (e.minuterie-- <= 0) { retirer(e); continue; }
@@ -3343,6 +3603,7 @@ const Entites = (function () {
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
+    naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

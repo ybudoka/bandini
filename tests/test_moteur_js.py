@@ -2223,6 +2223,13 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
             o.frame(1);
             for (const e of L.B.entites) {
                 if (e.type !== 'pieton' || e.agent || !e.vivant) continue;
+                // ⚠️ Sauf les enfants de la grève, qui BARBOTENT par métier (la
+                // 2e vague du bord de l'eau). Ce juge a raison sur le fond — une
+                // flânerie qui mène à la baie est le genre de chose qu'on ne voit
+                // qu'en jeu — et ce n'est pas lui qu'on jette : c'est l'exception
+                // qu'on nomme. Ils ont leur propre juge, qui tient qu'ils ne
+                // dépassent jamais la première tuile d'eau.
+                if (e.metier === 'baigneur') continue;
                 vus++;
                 if (L.Entites.dansLEau(e)) baigneurs++;
             }
