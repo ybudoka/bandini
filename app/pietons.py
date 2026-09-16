@@ -429,51 +429,6 @@ PLAGE: dict = {
     "jeu_images": (300, 720),    # puis on change de jeu
 }
 
-#: **LES GOELANDS ET LES CHATS.** La vie qui n'est pas humaine.
-#:
-#: ⚠️ **ILS NE COMPTENT POUR RIEN, et c'est precisement ce qui les rend
-#: vivants : ils ne sont la que pour etre la.** Ni temoins, ni victimes, ni
-#: foule — on ne peut pas les frapper, ils n'entrent dans aucun index de
-#: personnes, la police ne les voit pas et le journal ne les compte pas. Un
-#: goeland qu'on pourrait tuer serait une CIBLE, et une cible demande un score,
-#: un crime, un juge ; un goeland qui s'envole est un decor qui a peur de vous.
-#:
-#: ⚠️ **Chacun chez soi**, sinon ce ne sont pas deux betes mais deux sprites :
-#: le goeland vit au bord de l'eau (sable, quai, rive) — la ou la 1re vague du
-#: bord de l'eau vient de poser des serviettes et des chateaux ; le chat vit
-#: dans les RUELLES, entre les hangars.
-#:
-#: ⚠️ Et **ils partent AVANT qu'on les touche** : leur distance de fuite est
-#: plus grande que tout ce qui pourrait les atteindre. C'est ce qui evite
-#: d'avoir a repondre a la question « que se passe-t-il si je lui roule
-#: dessus » — on n'y arrive pas.
-BETES: dict = {
-    "goeland": {
-        "combien": 6,            # au plus, dans la bulle du joueur
-        "fuite_px": 90,          # il s'envole bien avant qu'on l'atteigne
-        "envol_images": 150,     # le temps qu'il met a sortir du champ
-        "envol_vitesse": 1.9,
-        "montee_px": 34,         # de combien il s'eleve pendant son envol
-        "pas": 0.22,             # sa demarche, quand il se promene
-        "picore_images": (60, 200),
-        "marche_images": (40, 140),
-    },
-    "chat": {
-        "combien": 3,
-        "fuite_px": 74,
-        "detale_images": 120,
-        "detale_vitesse": 2.6,
-        "pas": 0.5,
-        "assis_images": (120, 420),
-        "marche_images": (60, 200),
-    },
-    # ⚠️ La bulle des betes est plus PETITE que celle des gens (520) : une bete
-    # ne sert a rien qu'on ne la voie pas, et elle ne doit surtout pas peser sur
-    # le budget d'images de la rue.
-    "rayon_px": 380,
-    "oubli_px": 460,
-}
-
 REACTIONS = {
     "recul_images": 12,          # il titube
     "ko_images": 300,            # assomme : il se releve apres 5 s
@@ -723,13 +678,6 @@ def exporter() -> dict:
         "reactions": dict(REACTIONS),
         "vol_de_char": dict(VOL_DE_CHAR),
         "bagarre": dict(BAGARRE),
-        "betes": {"rayon_px": BETES["rayon_px"], "oubli_px": BETES["oubli_px"],
-                  "goeland": {**BETES["goeland"],
-                              "picore_images": list(BETES["goeland"]["picore_images"]),
-                              "marche_images": list(BETES["goeland"]["marche_images"])},
-                  "chat": {**BETES["chat"],
-                           "assis_images": list(BETES["chat"]["assis_images"]),
-                           "marche_images": list(BETES["chat"]["marche_images"])}},
         "plage": {**PLAGE,
                   "accroupi_images": list(PLAGE["accroupi_images"]),
                   "barbote_images": list(PLAGE["barbote_images"]),
