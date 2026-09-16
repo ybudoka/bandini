@@ -2455,18 +2455,31 @@ const Entites = (function () {
     // reste ce qu'il est, seule la DEPENSE baisse. La minuterie, elle,
     // s'ecoule dans `Missions.maj` — meme au volant.
     const cafe = j.cafeine > 0 ? B.defs.economie.cafe.depense : 1;
+    // ⚠️ ON A PIED DANS LA PREMIERE TUILE. Demande de Martin : « la premiere
+    // case de l'eau ne prend pas d'energie ni ne noie. » L'eau n'avait qu'une
+    // profondeur — le souffle partait au premier pixel mouille, et immobile au
+    // bord de la greve on coulait en 3,3 s. C'est un BORD qui manquait, celui
+    // que « L'eau n'est plus un mur » promettait et n'a jamais pose : un pas
+    // hors du sable ne doit pas etre un pas vers l'hopital, et l'enfant qui
+    // barbote a cote de nous ne risque rien depuis le premier jour.
+    // ⚠️ Ce n'est pas un abri : l'eau basse est un lisere d'une tuile, a un pas
+    // de la terre — la police y arrive a pied, et elle nage pour la suite.
+    const aPied = j.nage && Monde.eauBasse(Math.floor(j.x / TT), Math.floor(j.y / TT));
     if (j.nage) {
+      // On patauge : c'est lent, et ca fait des remous — mais debout.
+      vitesse = eau.vitesse;
+      if (j.t % 9 === 0) remous(j.x, j.y + 2, 1);
+    }
+    if (j.nage && !aPied) {
       // ⚠️ Nager COUTE MEME IMMOBILE : on ne fait pas la planche dans la baie
       // de Baie-des-Brumes. Sans ca, s'arreter au milieu de l'eau serait un
       // moyen de refaire son souffle a l'abri de la police.
-      vitesse = eau.vitesse;
       const cout = eau.souffle_par_image * cafe;
       const surSurplus = Math.min(j.surplus || 0, cout);
       j.surplus = (j.surplus || 0) - surSurplus;
       j.endurance = Math.max(0, j.endurance - (cout - surSurplus));
-      if (j.t % 9 === 0) remous(j.x, j.y + 2, 1);
       if (j.endurance <= 0 && (j.surplus || 0) <= 0) { noyade(j); return; }
-    } else if (veutSprinter && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
+    } else if (veutSprinter && !j.nage && axe.mag > 0 && (j.endurance > 0 || j.surplus > 0)) {
       vitesse = v.joueur_sprint;
       // ⚠️ Le SURPLUS part en premier : c'est la seule part de cette barre
       // qu'on ne peut pas reprendre en s'arretant, donc la seule qui vaille ce

@@ -2159,10 +2159,20 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
         o.touche('KeyD');
         let entre = -1;
         for (let i = 0; i < 180 && entre < 0; i++) { o.frame(1); if (j.nage) entre = i; }
+        // ⚠️ ON MESURE AU LARGE, pas au premier pixel mouille. La premiere tuile
+        // est de l'eau BASSE depuis le 16 sept. 2026 — on y a pied, elle ne
+        // coûte rien (`Monde.eauBasse`, et ses propres juges) — alors une
+        // seconde comptee depuis l'entree comptait seize images de patauge et
+        // trouvait 22 points la ou la fiche en promet 30.
+        let large = -1;
+        for (let i = 0; i < 180 && large < 0; i++) {
+            o.frame(1);
+            if (!L.Monde.eauBasse(Math.floor(j.x / TT), Math.floor(j.y / TT))) large = i;
+        }
         const souffle0 = j.endurance;
         for (let i = 0; i < 60; i++) o.frame(1);
         o.relacher('KeyD');
-        out.nage = { entre: entre >= 0, dansLEau: L.Entites.dansLEau(j),
+        out.nage = { entre: entre >= 0, large: large >= 0, dansLEau: L.Entites.dansLEau(j),
                      souffleAvant: Math.round(souffle0), souffleApres: Math.round(j.endurance),
                      tuiles: Math.round((j.x / TT) - rive.x) };
 
@@ -2245,8 +2255,9 @@ def test_l_eau_n_est_plus_un_mur(banc, paquet):
     )
     n = r["nage"]
     assert n["entre"] is True and n["dansLEau"] is True, "on ne rentre pas dans l'eau : %s" % n
+    assert n["large"] is True, "on n'a jamais quitté l'eau basse : le juge ne prouve rien (%s)" % n
     assert n["tuiles"] >= 1, "on n'avance pas dans l'eau : %s" % n
-    # Le souffle part, et il part vite : 0,5 par image.
+    # Le souffle part, et il part vite : 0,5 par image — AU LARGE.
     attendu = nage["souffle_par_image"] * 60
     assert n["souffleAvant"] - n["souffleApres"] >= attendu * 0.8, (
         "nager ne coûte presque rien : %s (attendu ~%s en une seconde)" % (n, attendu)

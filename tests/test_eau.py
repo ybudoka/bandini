@@ -72,9 +72,15 @@ def test_le_chenal_du_pont_est_un_pari_pas_une_promenade():
     """⚠️ Si l'on nage, La Pointe n'est plus une ile — sauf si la traversee se
     paie. Elle doit coûter assez pour qu'on hesite, et pas assez pour qu'elle
     soit impossible : sinon l'eau redevient un mur, avec une animation en plus.
+
+    ⚠️ **Les deux berges sont gratuites depuis le 16 sept. 2026** : la tuile
+    d'eau qui touche la terre est de l'eau BASSE, on y a pied (`Monde.eauBasse`).
+    Une traversee en paie donc deux de moins — 72 points au lieu de 88 — et ce
+    juge doit compter comme le jeu compte, sinon il garde une marge qui n'existe
+    plus et le jour ou le chenal s'elargit, il rougit trop tard.
     """
     chenal = _chenal_du_pont()
-    prix = chenal * cout_par_tuile()
+    prix = (chenal - 2) * cout_par_tuile()
     assert prix <= SOUFFLE, (
         f"le chenal fait {chenal} tuiles, soit {prix:.0f} points de souffle sur {SOUFFLE} : "
         "on ne peut pas le traverser, l'eau est redevenue un mur"
@@ -117,7 +123,9 @@ def test_on_ne_va_meme_pas_au_milieu_de_la_baie():
     """
     loin, x, y = _loin_de_toute_terre()
     plafond = tuiles_au_plus(cafe=True, surplus=True)
-    assert loin > plafond * 1.5, (
+    # ⚠️ La premiere tuile est de l'eau basse, elle ne se paie pas : on compte
+    # ce que la traversee coûte VRAIMENT, une tuile de moins.
+    assert loin - 1 > plafond * 1.5, (
         f"le large de la baie est a {loin} tuiles de la terre en {(x, y)}, et l'on peut "
         f"en nager {plafond:.0f} : la baie devient un raccourci"
     )

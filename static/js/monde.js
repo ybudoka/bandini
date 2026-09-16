@@ -602,6 +602,30 @@ const Monde = (function () {
   function marchablePieton(tx, ty) { return !bloque(tx, ty, MASQUE_PIETON) && !estChaussee(tx, ty); }
   /** De l'eau : on y nage, on y coule, et un char s'y enfonce. */
   function estEau(tx, ty) { return solidite(tx, ty) === 2; }
+  //: Les quatre voisines d'une tuile, en croix.
+  const CROIX = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  /** DE L'EAU BASSE : de l'eau qui touche la terre — la premiere tuile, celle
+      ou l'on a encore pied. On n'y depense pas son souffle et on ne s'y noie
+      pas (`majJoueur`).
+
+      ⚠️ **Elle se LIT dans la carte, elle ne se marque pas.** Un glyphe de
+      haut-fond serait une deuxieme verite a tenir a jour : la moindre retouche
+      de la cote — et la cote bouge a chaque graine — le ferait mentir sans
+      qu'aucun juge rougisse. Quatre voisines en croix, la MEME mesure que
+      l'enfant de la greve qui barbote (`Entites.trop_loin`) : si les deux
+      devaient un jour differer, c'est que l'une des deux aurait tort.
+
+      ⚠️ Hors carte n'est pas de la terre. La baie touche le bord du monde, et
+      compter le vide comme une rive ferait un haut-fond du large. */
+  function eauBasse(tx, ty) {
+    if (!estEau(tx, ty)) return false;
+    for (const [dx, dy] of CROIX) {
+      const nx = tx + dx, ny = ty + dy;
+      if (!carte || nx < 0 || ny < 0 || nx >= carte.w || ny >= carte.h) continue;
+      if (!estEau(nx, ny)) return true;
+    }
+    return false;
+  }
   /** Un meuble (table, comptoir, lit...) : un pieton PASSE dessus — la legende
       ne l'arrete pas — mais personne n'a a s'y tenir debout. */
   function estMeuble(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).meuble); }
@@ -1403,7 +1427,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
-    MASQUE_A_PIED, MORCEAUX_MAX, estEau,
+    MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc,
