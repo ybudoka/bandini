@@ -388,10 +388,87 @@ const Monde = (function () {
     }
   }
 
+  //: **LE BRIS D'AQUEDUC** — l'entrave qu'on n'a pas vue venir, deuxieme
+  //: maniere. Le char en panne s'arrete en travers d'une voie ; ici c'est la
+  //: chaussee elle-meme qui lache. Elle ne se tire pas a l'aube comme l'entrave
+  //: du jour : elle arrive a une HEURE, elle coule presque une heure, et elle
+  //: s'arrete quand la ville trouve la vanne.
+  //:
+  //: ⚠️ Le tirage se fait a l'EMPREINTE de l'heure (`hash2`), jamais au de du
+  //: jeu : la lecon du char en panne, qui avait fait tomber quatre juges.
+  //:
+  //: ⚠️ Et le trou ne fait QU'UNE TUILE. C'est ce qui le rend inoffensif pour
+  //: la connexite des rues sans avoir a rappeler le juge de M1 : la tuile a, par
+  //: construction, une voisine parallele qui va dans le meme sens (`carte.aqueducs`),
+  //: donc le champ de direction ne bouge pas d'une fleche. La flaque deborde
+  //: autour, mais elle ne fait que se VOIR.
+  let brisEnCours = { cle: null, b: null };
+  function brisDAqueduc() {
+    const def = carte && carte.def;
+    const liste = (def && def.aqueducs) || [];
+    const f = def && def.aqueduc;
+    if (!liste.length || !f || !B.partie) return null;
+    const jour = B.partie.jour, minute = B.partie.heure * 24 * 60;
+    const cle = jour * 1440 + Math.floor(minute);
+    if (brisEnCours.cle === cle) return brisEnCours.b;
+    brisEnCours = { cle: cle, b: null };
+    // ⚠️ UN BRIS NE DEBORDE PAS SUR L'HEURE SUIVANTE, et c'est la fiche qui
+    // le garantit : `minutes` vaut moins de 60, un juge Python le tient, et
+    // sans cette borne deux bris se chevaucheraient — « une conduite lache »
+    // deviendrait « la ville fuit de partout ». On ne regarde donc qu'une
+    // heure : celle-ci.
+    const heure = Math.floor(minute / 60);
+    const ecoule = minute - heure * 60;
+    if (ecoule >= f.minutes) return null;
+    const graine = jour * 1607 + heure;
+    if (hash2(graine, 0xA9DE) / 4294967296 >= f.chance_par_heure) return null;
+    const c = liste[hash2(graine, 0x5EA0) % liste.length];
+    brisEnCours.b = {
+      slug: 'aqueduc', nom: "Un bris d'aqueduc",
+      x: c.x, y: c.y, l: 1, h: 1,
+      // ⚠️ Il arrete les CHARS et pas les JAMBES : on traverse la gerbe a pied,
+      // on se mouille, et on passe. Un trou d'eau qui arreterait tout le monde
+      // serait un mur, et la ville n'en a pas.
+      arrete: ['vehicule'], condition: { toujours: true },
+      forcer: { degats: f.degats }, raison: f.raison,
+      decor: null, plein: true, existant: false, flaque: f.flaque,
+    };
+    return brisEnCours.b;
+  }
+
+  /** L'eau repandue autour d'un bris : un film sur la chaussee, plus epais au
+      centre, avec un miroitement qui avance. ⚠️ Elle ne fait que SE VOIR — seul
+      le trou arrete un char. */
+  function dessinerFlaque(ctx, cam, b) {
+    const r = b.flaque || 2;
+    ctx.save();
+    for (let ty = b.y - r; ty <= b.y + r; ty++) {
+      for (let tx = b.x - r; tx <= b.x + r; tx++) {
+        const d = Math.hypot(tx - b.x, ty - b.y);
+        if (d > r + 0.2 || !estRoute(tx, ty)) continue;
+        const px = tx * TT - cam.x, py = ty * TT - cam.y;
+        if (px < -TT || py < -TT || px > VW || py > VH) continue;
+        ctx.globalAlpha = Math.max(0.08, 0.44 - d * 0.11);
+        ctx.fillStyle = '#2a5b78';
+        ctx.fillRect(px, py, TT, TT);
+        // La ride claire qui avance : c'est elle qui fait que l'eau COULE au
+        // lieu d'etre une tache peinte sur l'asphalte.
+        const onde = Math.sin(B.t * 0.07 + (tx * 2 + ty) * 0.9);
+        if (onde > 0.55) {
+          ctx.globalAlpha = Math.max(0.05, 0.3 - d * 0.07);
+          ctx.fillStyle = '#9fd0e6';
+          ctx.fillRect(px + 2, py + (onde > 0.85 ? 9 : 5), TT - 4, 2);
+        }
+      }
+    }
+    ctx.restore();
+  }
+
   function barrieres() {
     const fixes = (carte && carte.def && carte.def.barrieres) || [];
-    const jour = entraveDuJour();
-    return jour ? fixes.concat([jour]) : fixes;
+    const jour = entraveDuJour(), bris = brisDAqueduc();
+    if (!jour && !bris) return fixes;
+    return fixes.concat(jour ? [jour] : []).concat(bris ? [bris] : []);
   }
 
   /** Fermee MAINTENANT ? La condition se lit dans la partie, jamais ici. */
@@ -458,6 +535,9 @@ const Monde = (function () {
       sur des poteaux autour d'une cour. Rien sur ce qui est deja un mur. */
   function dessinerBarrieres(ctx, cam) {
     for (const b of barrieresFermees()) {
+      // Un bris ne se pose pas : il gicle. Pas de cones, pas de barricade — de
+      // l'eau, et la gerbe que `Entites` fait cracher par-dessus.
+      if (b.slug === 'aqueduc') { dessinerFlaque(ctx, cam, b); continue; }
       if (!b.decor) continue;
       for (let ty = b.y; ty < b.y + b.h; ty++) {
         for (let tx = b.x; tx < b.x + b.l; tx++) {
@@ -1326,6 +1406,7 @@ const Monde = (function () {
     MASQUE_A_PIED, MORCEAUX_MAX, estEau,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
+    brisDAqueduc,
     feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,

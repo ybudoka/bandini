@@ -1459,6 +1459,45 @@ const Entites = (function () {
     return 1;
   }
 
+  /** LA GERBE D'UN BRIS D'AQUEDUC.
+
+      ⚠️ Ce n'est PAS un effet de plus : c'est le `jet_eau` de la borne-fontaine
+      defoncee, tel quel — il crache ses gouttes vers le haut et il TIENT son
+      souffle (`Son.SFX.borne_jet`, une fois par image, a distance). Un bris
+      d'aqueduc est cette gerbe-la, en pleine rue et pour une heure de jeu. La
+      seule chose qu'on ajoute ici est de la faire vivre tant que le bris coule.
+
+      ⚠️ Une seule a la fois, et seulement quand le joueur est a portee : une
+      gerbe qui crache deux particules par image a l'autre bout de la ville est
+      du travail qu'on fait pour personne. */
+  function majAqueduc() {
+    if (!B.joueur || B.interieur || !Monde.brisDAqueduc) return 0;
+    const b = Monde.brisDAqueduc();
+    const deja = B.entites.find(function (q) { return q.type === 'jet_eau' && q.aqueduc; });
+    if (!b) { if (deja) retirer(deja); return 0; }
+    const x = b.x * TT + 8, y = b.y * TT + 8;
+    const loin = dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI;
+    if (deja && !loin && deja.x === x && deja.y === y) {
+      // On la RENOUVELLE au lieu de la laisser mourir : le `jet_eau` de la
+      // borne s'eteint au bout de ses dix secondes, et un bris coule une heure
+      // de jeu. ⚠️ Ce n'est PAS ce qui empeche l'eau de s'arreter — la branche
+      // d'a cote en refait une a l'image meme ou l'autre meurt, et un juge qui
+      // regarde chaque image ne voit aucun creux sans cette ligne. Elle evite
+      // de jeter et refaire une entite toutes les dix secondes, rien de plus.
+      deja.minuterie = JET_EAU_IMAGES;
+    } else {
+      if (deja) retirer(deja);
+      if (loin) return 0;
+      creer('jet_eau', x, y, { minuterie: JET_EAU_IMAGES, dessine: false, solide: false, r: 0, aqueduc: true });
+    }
+    // ⚠️ Et on se mouille en passant. La gerbe se voit et s'entend de loin,
+    // mais rien ne disait qu'on avait les pieds DEDANS : c'est le seul retour
+    // qu'on ait a pied, et sans lui la flaque n'etait qu'une tache peinte.
+    const j = B.joueur, portee = ((b.flaque || 2) + 0.5) * TT;
+    if (!j.dansVehicule && j.vivant && dist2(j.x, j.y, x, y) < portee * portee) remous(j.x, j.y, 3);
+    return 1;
+  }
+
   // --- La bagarre de gangs a leur frontiere ------------------------------------------------
   //: ⚠️ L'AUTRE MOITIE DE « LA VILLE EST COUPABLE D'ELLE-MEME ». Le vol de char
   //: se passe de travers du joueur ; celui-ci se passe SANS lui. Deux gangs se
@@ -1703,6 +1742,7 @@ const Entites = (function () {
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 30 === 0) majVolDeChar();
     if (B.t % 30 === 0) majBagarre();
+    if (B.t % 30 === 0) majAqueduc();
     if (B.t % 90 === 0) naitreLesSortes();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
@@ -3272,7 +3312,7 @@ const Entites = (function () {
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
-    majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe,
+    majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
     dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,

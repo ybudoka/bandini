@@ -604,6 +604,37 @@ FERMETURES: dict = {
     "degats": 14,            # une barricade, ca coute plus cher que des cones
 }
 
+#: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
+#: soit ni prevu ni pose par personne : une conduite lache sous la chaussee, la
+#: rue gicle, et la ville met presque une heure a fermer la vanne.
+#:
+#: ⚠️ **Ce n'est pas un chantier, et c'est tout le point.** L'entrave du jour et
+#: la rue barree sont tirees a l'aube et tiennent la journee ; celui-ci arrive a
+#: une HEURE, comme le char en panne — on roulait, la rue etait libre, elle ne
+#: l'est plus. Ni cones, ni panneau DETOUR : une gerbe d'eau et un trou.
+#:
+#: ⚠️ **Un bris ne coupe jamais la ville, et il ne le peut pas PAR
+#: CONSTRUCTION** — c'est l'argument des entraves, repris tel quel. Le trou ne
+#: couvre QU'UNE tuile, et cette tuile a une voisine PARALLELE qui va dans le
+#: meme sens : le champ de direction ne bouge pas d'une fleche, `voies_bloquees`
+#: rend exactement ce qu'il rendait, et on se passe du juge de connexite (14 ms
+#: piece) a la construction. La flaque, elle, deborde sur les tuiles d'a cote —
+#: mais elle ne fait que se VOIR : on roule dedans, on marche dedans.
+#:
+#: ⚠️ Et la gerbe n'est pas un dessin de plus : c'est le `jet_eau` de la
+#: borne-fontaine defoncee, celui qui crache ses gouttes et TIENT son souffle
+#: (`Son.SFX.borne_jet`, une fois par image, a distance). Un bris d'aqueduc est
+#: cette gerbe-la, en pleine rue et pour une heure.
+AQUEDUCS: dict = {
+    "par_ville": (8, 30),      # les CANDIDATES ; la graine de l'heure en tire une
+    "ecart": 30,               # deux bris ne se voisinent pas
+    "chance_par_heure": 0.30,  # qu'une conduite lache, par heure de jeu
+    "minutes": 55,             # ce que la ville met a fermer la vanne
+    "flaque": 2,               # le rayon de l'eau repandue, en tuiles — du DESSIN
+    "raison": "BRIS D'AQUEDUC",
+    "degats": 6,               # ce qu'on laisse dans le trou en passant quand meme
+}
+
 NIDS_DE_POULE: dict = {
     "par_ville": (30, 90),   # ce qu'une ville en compte — un juge le compte
     "ecart": 7,              # en tuiles, entre deux nids
@@ -1000,6 +1031,7 @@ class _Chantier:
         self.des_nid = Des(graine ^ 0x141D5)
         self.des_entrave = Des(graine ^ 0xE47A7E)
         self.des_fermeture = Des(graine ^ 0xFE47E3)
+        self.des_aqueduc = Des(graine ^ 0xA9DEC5)
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -3820,6 +3852,42 @@ class _Chantier:
             poses.append((x, y))
         return [{"x": x, "y": y} for x, y in sorted(poses)]
 
+    def aqueducs(self) -> list[dict]:
+        """Les tuiles ou une conduite peut lacher.
+
+        De la chaussee DIRIGEE (une fleche), hors croisement, hors ligne
+        d'arret, espacees — et jamais sans voie de rechange : la tuile doit
+        avoir une voisine PARALLELE qui va dans le meme sens. C'est ce qui rend
+        le bris inoffensif pour la connexite, et c'est le meme argument que les
+        entraves du jour, a ceci pres qu'ici le trou ne fait qu'UNE tuile.
+        """
+        fiche = AQUEDUCS
+        voie = self.voie
+        arrets = {tuple(int(n) for n in cle.split(",")) for cle in self.arrets}
+        boites = [(i["x"], i["y"], i["l"], i["h"]) for i in self.intersections]
+        pas = {">": (1, 0), "<": (-1, 0), "^": (0, -1), "v": (0, 1)}
+        candidats: list[tuple[int, int]] = []
+        for y in range(1, self.hauteur - 1):
+            for x in range(1, self.largeur - 1):
+                fleche = voie[y][x]
+                if fleche not in pas or (x, y) in arrets:
+                    continue
+                if any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites):
+                    continue
+                dx, dy = pas[fleche]
+                # La voie d'a cote, dans le meme sens : celle qui restera ouverte.
+                if any(voie[y + ny][x + nx] == fleche for nx, ny in ((-dy, dx), (dy, -dx))):
+                    candidats.append((x, y))
+        poses: list[tuple[int, int]] = []
+        for _essai in range(4000):
+            if not candidats or len(poses) >= fiche["par_ville"][1]:
+                break
+            x, y = candidats[self.des_aqueduc.suivant() % len(candidats)]
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                continue
+            poses.append((x, y))
+        return [{"x": x, "y": y} for x, y in sorted(poses)]
+
     def barrieres(self, ambulants: list[dict], ponts: list[dict]) -> list[dict]:
         """Chaque barriere de `BARRIERES`, resolue en rectangle de tuiles."""
         sortie = []
@@ -4252,6 +4320,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "entrave": {"raison": ENTRAVES["raison"], "degats": ENTRAVES["degats"]},
         "fermetures": chantier.fermetures(ponts),
         "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
+        "aqueducs": chantier.aqueducs(),
+        "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
+                    "chance_par_heure": AQUEDUCS["chance_par_heure"],
+                    "minutes": AQUEDUCS["minutes"], "flaque": AQUEDUCS["flaque"]},
         "ambulants": ambulants,
         "reclames": reclames,
         # ⚠️ OU UN AMUSEUR S'INSTALLE. Jusqu'ici il naissait sur la premiere
