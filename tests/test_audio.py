@@ -72,7 +72,15 @@ def test_le_poids_audio_reste_raisonnable():
     # cinq fois par petits bonds de 50 Ko. Un budget qu'on relève à chaque
     # ajout n'est pas un budget, c'est une formalité : on le met à une valeur
     # qui tient un moment, et on le défend.
-    assert sum(f.stat().st_size for f in bruitages) < 1_500_000
+    # ⚠️ **Relevé de 1,5 à 2,5 Mo le même jour, sur décision de Martin**
+    # (« augmente la limite ») : les voix de la rue sont passées de 22 à 44 kHz
+    # — en 22 kHz tout ce qui dépassait 8 kHz était coupé, et on les entendait
+    # étouffées — et ont mangé 200 Ko : 1,41 Mo, 94 Ko de marge. Même règle que
+    # ci-dessus : pas 1,6. Et ce que ce plafond protège, c'est de la bande
+    # passante, pas un écran de chargement : `son.js` télécharge bruitages et
+    # voix de la rue EN ARRIÈRE-PLAN après le premier geste, et chaque effet
+    # garde sa synthèse en attendant.
+    assert sum(f.stat().st_size for f in bruitages) < 2_500_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
     for fichier in radios:
