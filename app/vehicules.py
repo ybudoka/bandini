@@ -177,12 +177,24 @@ CATALOGUE: list[Vehicule] = [
        # conduite, elle recompense le vol. C'est la meilleure revente du jeu,
        # et `economie.prix_vente` le fait toute seule — le prix neuf suffit.
        adherence=0.40, alarme_s=30.0),
-    # ⚠️ Le bateau reste en phase 2 : il demande une physique a part (l'eau n'a
-    # ni voie ni trottoir) et des quais ou embarquer. Le plan le dit lui-meme —
-    # « s'il coute plus qu'il ne donne, il tombe en v3 » — et le traversier de
-    # M12 suffit a l'eau. Il garde donc sa fiche, sans sprite et sans trafic.
-    _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 40, 120, 4, 2000, 0.05,
-       ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=2),
+    # ⚠️ **LA DETTE DE M3, PAYEE LE 16 SEPT. 2026.** « Phase 2 » voulait dire
+    # « sans sprite et sans trafic » : la fiche existait depuis M3 — eau,
+    # friction 0,995, adherence 0,05, trois cercles — et rien ne l'avait jamais
+    # fait flotter. Il ne manquait que deux choses, et aucune n'etait une
+    # physique a part : un DESSIN, et une regle de tuile.
+    #
+    # ⚠️ **Un char et une coque ne sont pas arretes par les memes choses**, et
+    # c'est la seule difference entre les deux mondes : le char est arrete par
+    # les murs et PASSE sur l'eau (il coule, `majNoyade` s'en charge depuis que
+    # l'eau n'est plus un mur) ; la coque est arretee par TOUT CE QUI N'EST PAS
+    # DE L'EAU. Une ligne dans `tuileInterdite`, pas une classe.
+    #
+    # ⚠️ `frequence: 0` — elle ne nait PAS dans le trafic : une chaloupe qui
+    # roule sur la rue Principale est exactement ce que la regle ci-dessus
+    # interdit, et le trafic suit des voies qui n'existent pas sur l'eau. On la
+    # trouve amarree au quai (`carte.amarrages`), et nulle part ailleurs.
+    _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 40, 120, 4, 2000, 0.0,
+       ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=1),
 ]
 
 CLASSES = ("auto", "moto", "velo", "camion", "bateau")

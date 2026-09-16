@@ -245,6 +245,7 @@ const Vehicules = (function () {
       if (v.conducteur === 'trafic') roulent++; else if (v.conducteur !== j) stationnes++;
     }
     if (B.t % 20 !== 0) return;
+    majAmarrages();
     const zone = Monde.zoneA(j.x, j.y);
     const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6) * Monde.rythme(zone);
     if (roulent < voulu) {
@@ -273,6 +274,51 @@ const Vehicules = (function () {
         if (type && type.longueur <= CASE_PX) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
       }
     }
+  }
+
+  //: La bulle des chaloupes : un peu plus large que celle des gens (520),
+  //: parce qu'une coque se voit de loin sur l'eau — rien ne la cache.
+  const AMARRAGE_OUBLI = 620;
+
+  /** LES CHALOUPES AMARREES. ⚠️ Une coque ne nait PAS dans le trafic — elle n'a
+      ni voie ni trottoir a suivre, et une chaloupe sur la rue Principale est
+      exactement ce que `tuileInterdite` interdit. On la trouve la ou Python l'a
+      mise (`carte.amarrages` : de l'eau contre une rive batie), et nulle part
+      ailleurs.
+
+      ⚠️ Elle nait HORS CHAMP et s'oublie de loin, comme le reste : une coque
+      amarree a l'autre bout de la baie ne coute rien a personne. */
+  function majAmarrages() {
+    const def = Monde.carte && Monde.carte.def;
+    const places = (def && def.amarrages) || [];
+    const j = B.joueur;
+    if (!places.length || !j || B.interieur) return 0;
+    let nees = 0;
+    for (const place of places) {
+      const x = place.x * TT + 8, y = place.y * TT + 8;
+      const d2 = (x - j.x) * (x - j.x) + (y - j.y) * (y - j.y);
+      const deja = B.entites.some(function (q) {
+        return q.type === 'vehicule' && q.amarrage === place;
+      });
+      // ⚠️ On ne l'efface PAS soi-meme : `peupler` oublie deja tout vehicule
+      // trop loin, et une deuxieme regle d'oubli aurait ete une deuxieme verite
+      // a tenir a jour. On se contente de ne pas en refaire une tant qu'elle est
+      // hors de portee — et une coque qu'on a prise et laissee ailleurs n'est
+      // plus amarree : c'est un char gare comme un autre.
+      if (d2 > AMARRAGE_OUBLI * AMARRAGE_OUBLI) continue;
+      if (deja || Entites.visibleAEcran(x, y, 24)) continue;
+      // ⚠️ **SA COULEUR SE TIRE A L'EMPREINTE DE L'AMARRAGE, jamais au de du
+      // jeu.** `creer` prend un de pour choisir dans `def.couleurs` quand on ne
+      // lui en donne pas — et onze juges sans rapport sont tombes d'un coup le
+      // jour ou dix-huit chaloupes sont nees. C'est la meme lecon que le char en
+      // panne, que le pilote des deux-roues, et que les enfants de la greve : ce
+      // qui nait pour le DECOR ne decale pas le hasard du jeu.
+      const def = vehiculeDef('bateau');
+      const couleur = def.couleurs[hash2(place.x * 7919 + place.y, 0xC0C0E) % def.couleurs.length];
+      const v = creer('bateau', x, y, place.angle || 0, { etat: 'stationne', couleur: couleur });
+      if (v) { v.amarrage = place; nees++; }
+    }
+    return nees;
   }
 
   // --- Geometrie : la chaine de cercles ------------------------------------------
@@ -305,7 +351,7 @@ const Vehicules = (function () {
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
-          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.barriereBloque(v, tx, ty)) out.push([tx, ty]);
+          if (tuileInterdite(v, tx, ty) || Monde.barriereBloque(v, tx, ty)) out.push([tx, ty]);
         }
       }
     }
@@ -399,7 +445,7 @@ const Vehicules = (function () {
     if (v.conducteur !== B.joueur || Math.hypot(v.vx, v.vy) < physique().defonce_vitesse_min) return false;
     let barriere = null;
     for (const t of tuilesQuiBloquent(v, x, y)) {
-      if (Monde.bloque(t[0], t[1], Monde.MASQUE_VEHICULE)) return false;
+      if (tuileInterdite(v, t[0], t[1])) return false;
       const b = Monde.barriereA(t[0], t[1], 'vehicule');
       if (!b || !b.forcer) return false;
       barriere = b;
@@ -437,6 +483,21 @@ const Vehicules = (function () {
     return true;
   }
 
+  /** ⚠️ **CE QUI ARRETE CETTE COQUE-CI.** Un char et un bateau ne sont pas
+      arretes par les memes choses, et c'est la seule difference qui compte
+      entre les deux mondes : le char est arrete par les murs et **passe** sur
+      l'eau (il coule, c'est son affaire, et `majNoyade` s'en charge) ; la coque
+      est arretee par **tout ce qui n'est pas de l'eau**.
+
+      ⚠️ Ecrit ICI et pas comme un masque de `Monde` : un masque est une liste
+      de ce qui bloque, et la regle du bateau est l'inverse — une liste de ce
+      qui laisse passer, et elle n'a qu'une entree. La tordre en masque aurait
+      demande un bit « terre » sur chaque tuile du jeu pour un seul vehicule. */
+  function tuileInterdite(v, tx, ty) {
+    if (v.def && v.def.eau) return !Monde.estEau(tx, ty);
+    return Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE);
+  }
+
   /** Un des cercles touche-t-il une tuile qui bloque un char ? (en l'air : non)
       `angle` : pour essayer un autre cap sans le donner au char. */
   function bloqueParLesTuiles(v, x, y, angle) {
@@ -446,7 +507,7 @@ const Vehicules = (function () {
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
-          if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.barriereBloque(v, tx, ty)) return true;
+          if (tuileInterdite(v, tx, ty) || Monde.barriereBloque(v, tx, ty)) return true;
         }
       }
     }
@@ -475,7 +536,7 @@ const Vehicules = (function () {
       const ty0 = Math.floor((c.y - c.r) / TT), ty1 = Math.floor((c.y + c.r) / TT);
       for (let ty = ty0; ty <= ty1; ty++) {
         for (let tx = tx0; tx <= tx1; tx++) {
-          if (!Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE)) continue;
+          if (!tuileInterdite(v, tx, ty)) continue;
           const gauche = c.x + c.r - tx * TT, droite = (tx + 1) * TT - (c.x - c.r);
           const haut = c.y + c.r - ty * TT, bas = (ty + 1) * TT - (c.y - c.r);
           const versGauche = gauche < droite, versLeHaut = haut < bas;
@@ -2510,7 +2571,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

@@ -604,6 +604,19 @@ FERMETURES: dict = {
     "degats": 14,            # une barricade, ca coute plus cher que des cones
 }
 
+#: **LES AMARRAGES.** Ou une chaloupe attend. ⚠️ La coque est passee en phase 1
+#: le 16 sept. 2026 (la dette de M3) : il lui fallait un endroit ou la trouver,
+#: sinon un vehicule de plus dans le catalogue ne change rien a la ville.
+#:
+#: ⚠️ **Sur l'eau, contre la rive BATIE** — pas contre le sable. On amarre a un
+#: quai, a un trottoir du port, a une allee ; on ne s'amarre pas a une plage, on
+#: y echoue. C'est la meme mesure que les poteaux d'amarrage de la greve : 222
+#: tuiles de rive batie sur toute la ville, dont 199 de trottoir.
+AMARRAGES: dict = {
+    "par_ville": (6, 18),
+    "ecart": 26,              # deux chaloupes ne se collent pas bord a bord
+}
+
 #: **LA GREVE SE MEUBLE.** ⚠️ Mesure d'abord, et c'est elle qui a decide de la
 #: vague : la ville pose deja **2 507 tuiles de sable** (dont 782 touchent
 #: l'eau) et **1 818 tuiles de quai** — et personne ne s'y assoit jamais. Ce qui
@@ -1089,6 +1102,7 @@ class _Chantier:
         self.des_fermeture = Des(graine ^ 0xFE47E3)
         self.des_aqueduc = Des(graine ^ 0xA9DEC5)
         self.des_greve = Des(graine ^ 0x67EE7)
+        self._ponts_poses: list[dict] = []
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -4048,6 +4062,40 @@ class _Chantier:
                 poses.append((x, y))
         return poses
 
+    def amarrages(self) -> list[dict]:
+        """Les tuiles d'eau ou une chaloupe peut attendre : contre la rive
+        BATIE, espacees, et jamais au pied d'un pont (un char lance qui traverse
+        n'a pas a trouver une coque en travers)."""
+        fiche = AMARRAGES
+        garde = GREVE["pont_ecart"]
+        tabliers = [(p["x"] - garde, p["y"] - garde, p["l"] + 2 * garde, p["h"] + 2 * garde)
+                    for p in self._ponts_poses]
+        poses: list[tuple[int, int]] = []
+        for y in range(1, self.hauteur - 1):
+            for x in range(1, self.largeur - 1):
+                if self.sol[y][x] != "~":
+                    continue
+                if any(px <= x < px + pl and py <= y < py + ph for px, py, pl, ph in tabliers):
+                    continue
+                # Une rive batie juste a cote : ni sable, ni route, ni mur.
+                rive = False
+                for cx, cy in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                    glyphe = self.sol[cy][cx]
+                    proprietes = LEGENDE[glyphe]
+                    if glyphe in ("~", "s") or proprietes.get("solide") or proprietes.get("route"):
+                        continue
+                    rive = True
+                if not rive or (x, y) in self.occupe:
+                    continue
+                if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                    continue
+                poses.append((x, y))
+                if len(poses) >= fiche["par_ville"][1]:
+                    break
+            if len(poses) >= fiche["par_ville"][1]:
+                break
+        return [{"x": x, "y": y} for x, y in sorted(poses)]
+
     def aqueducs(self) -> list[dict]:
         """Les tuiles ou une conduite peut lacher.
 
@@ -4489,6 +4537,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # qui tient l'ordre n'est donc pas un defaut observe, c'est le principe — et
     # un juge le pin, pour que le jour ou `boucher_les_poches` noiera plus large,
     # ca ne passe pas en silence.
+    chantier._ponts_poses = ponts
     chantier.greve(ponts)
 
     return {
@@ -4527,6 +4576,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "fermetures": chantier.fermetures(ponts),
         "fermeture": {"raison": FERMETURES["raison"], "degats": FERMETURES["degats"]},
         "flottants": list(FLOTTANTS),
+        "amarrages": chantier.amarrages(),
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],

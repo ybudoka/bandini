@@ -19,13 +19,15 @@ def test_slugs_uniques_et_classes_connues():
 
 def test_une_auto_de_police_le_parc_complet_et_le_velo():
     assert any(v["police"] for v in vehicules.CATALOGUE)
-    # M9 : le parc au complet roule. Le bateau reste en phase 2 — il demande
-    # une physique a part et des quais ou embarquer (voir la fiche).
+    # M9 : le parc au complet roule. ⚠️ Et la CHALOUPE depuis le 16 sept. 2026 —
+    # la dette de M3 est payee : il ne lui manquait ni physique a part ni quai,
+    # seulement un dessin et une regle de tuile (« la coque est arretee par tout
+    # ce qui n'est pas de l'eau »). Plus un seul vehicule en phase 2.
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
         "camion", "autobus", "ambulance", "remorqueuse",
-        "sport", "luxe"}
-    assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == {"bateau"}
+        "sport", "luxe", "bateau"}
+    assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
     assert vehicules.par_slug("velo")["radio"] is None, "un velo n'a pas de radio"

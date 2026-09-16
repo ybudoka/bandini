@@ -268,6 +268,128 @@ const AUTO_COTE = [
       '................................',
       '................................',
     ];
+/* LA CHALOUPE — la dette nommee depuis M3, payee le 16 sept. 2026.
+
+   ⚠️ `phase: 2` voulait dire « sans sprite et sans trafic » : `vehicules.py`
+   declarait la coque depuis M3 (eau, friction 0,995, adherence 0,05, trois
+   cercles) et personne ne l'avait jamais dessinee. Ce qui la nomme vu d'en
+   haut : la PROUE POINTUE au nord, le tableau carre au sud, et le hors-bord
+   qui depasse derriere — une coque au trait droit se lit comme une caisse.
+
+   ⚠️ `cote` est dessinee comme pour tous les autres, et NON DESSINEE comme
+   pour tous les autres : depuis la refonte, c'est `haut` qui tourne (32 caps)
+   et l'elevation ne sert plus qu'a etre mesuree. Le juge du parc la lit pour
+   chaque vehicule — une coque sans profil le faisait planter, et « tous sauf
+   un » est exactement le genre d'exception qui se paie plus tard. */
+const BATEAU_COTE = [
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '..............lll...............',
+      '..........kkkkkkkkkkk...........',
+      '..........vvvvvvvvvvvcccc.......',
+      '..........CCCCCCCCCCCcccc.......',
+      '....kkkkkkkkkkkkkkkkkkkkkkkk....',
+      '..kcccccccccccccccccccccccckkkk.',
+      '..kcccccccccccccccccccccccckrrr.',
+      '..kcccccccccccccccccccccccck.kk.',
+      '...kccccccccccccccccccccccck.k..',
+      '...kccccccccccccccccccccccck.r..',
+      '...kccccccccccccccccccccccck....',
+      '....kcccccccccccccccccccccck....',
+      '....kcccccccccccccccccccccck....',
+      '.....kccccccccccccccccccccck....',
+      '......kkkkkkkkkkkkkkkkkkkkkk....',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+      '................................',
+];
+const BATEAU_HAUT = [
+      '................................',
+      '..............kCCk..............',
+      '..............kllk..............',
+      '.............kCccCk.............',
+      '.............kCccCk.............',
+      '............kCccccCk............',
+      '............kCccccCk............',
+      '...........kCccccccCk...........',
+      '...........kCccccccCk...........',
+      '..........kCccccccccCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCvvvvvvvvCk..........',
+      '..........kCvvvvvvvvCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDccccDDCk..........',
+      '..........kCDDccccDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDrrDDrrDCk..........',
+      '..........kCDrrDDrrDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCttDDDDttCk..........',
+      '..........kCcckkkkccCk..........',
+      '..........kCcccrrcccCk..........',
+      '..........kCccccccccCk..........',
+      '................................',
+];
+const BATEAU_BAS = [
+      '................................',
+      '..........kCccccccccCk..........',
+      '..........kCcccrrcccCk..........',
+      '..........kCcckkkkccCk..........',
+      '..........kCttDDDDttCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDrrDDrrDCk..........',
+      '..........kCDrrDDrrDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDccccDDCk..........',
+      '..........kCDDccccDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCvvvvvvvvCk..........',
+      '..........kCvvvvvvvvCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCDDDDDDDDCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCccccccccCk..........',
+      '..........kCccccccccCk..........',
+      '...........kCccccccCk...........',
+      '...........kCccccccCk...........',
+      '............kCccccCk............',
+      '............kCccccCk............',
+      '.............kCccCk.............',
+      '.............kCccCk.............',
+      '..............kllk..............',
+      '..............kCCk..............',
+      '................................',
+];
+
 const AUTO_HAUT = [
       '................................',
       '............kBBBBBBk............',
@@ -1602,6 +1724,11 @@ SPRITES.auto = {
   w: 32, h: 31, ancre: [16, 28],
   pal: nuancer({ k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#c0392b', y: '#c0392b', s: '#00000030' }),
   swaps: ['c'], poses: { cote: [AUTO_COTE], haut: [AUTO_HAUT], bas: [AUTO_BAS] },
+};
+SPRITES.bateau = {
+  w: 32, h: 34, ancre: [16, 31],
+  pal: nuancer({ k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030' }),
+  swaps: ['c'], poses: { cote: [BATEAU_COTE], haut: [BATEAU_HAUT], bas: [BATEAU_BAS] },
 };
 SPRITES.taxi = {
   w: 32, h: 31, ancre: [16, 28],

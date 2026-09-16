@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from app import economie
+from app import economie, vehicules
 
 
 def test_le_moteur_charge_et_expose_son_api(banc, paquet):
@@ -117,7 +117,11 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
                 "%s : ancre %s pour une grille de %s de haut — ce n'est pas la ligne de sol"
                 % (slug, pose["ancre"], pose["h"])
             )
-    assert r["phase2"] == ["bateau"], (
+    # ⚠️ **Plus un seul véhicule en phase 2 depuis le 16 sept. 2026** : la
+    # chaloupe est entrée dans le parc, et la dette de M3 est payée. Ce juge
+    # gardait la liste des promesses pour qu'on ne l'oublie pas ; elle est vide,
+    # et c'est exactement ce qu'il voulait obtenir.
+    assert r["phase2"] == [], (
         "la phase 2 a change : ce juge doit suivre (%s)" % r["phase2"]
     )
 
@@ -894,7 +898,13 @@ def test_les_quatre_chars_de_m9_roulent_et_se_conduisent(banc, paquet):
         assert bilan["trou"] <= 0, (
             "%s : %s px de trou entre deux cercles — une moto y entre" % (slug, bilan["trou"])
         )
-        assert bilan["avance"] > 2, "%s ne bouge pas quand on met le gaz" % slug
+        # ⚠️ Sauf une COQUE : ce juge met le gaz sur une rue, et une chaloupe
+        # est arrêtée par tout ce qui n'est pas de l'eau — c'est exactement la
+        # règle de la 3e vague du bord de l'eau, pas un défaut. Sa géométrie se
+        # juge ici comme celle des autres ; sa marche se juge sur l'eau, dans
+        # `test_bateau.py`.
+        if not vehicules.par_slug(slug)["eau"]:
+            assert bilan["avance"] > 2, "%s ne bouge pas quand on met le gaz" % slug
     assert r["autobus"]["cercles"] == 5 and r["camion"]["cercles"] == 4, (
         "les deux longs doivent avoir leurs cercles de plus : %s" % r
     )
