@@ -218,7 +218,12 @@ def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
     taux de la fiche (`pietons.REACTIONS.abord_renonce`), cent à zéro comme
     témoin. (Une promenade de mille images ne prouvait rien : en le faisant
     redécider à chaque image, il piétinait sur place et n'atteignait jamais
-    l'abord, renoncement ou pas.)"""
+    l'abord, renoncement ou pas.)
+
+    ⚠️ Le juge comptait les DEMI-TOURS ; il compte les RENONCEMENTS. Le
+    demi-tour était l'implémentation, pas la règle — et il envoyait parfois le
+    flâneur droit sur la chaussée (le décor de ce juge-ci est exactement ça :
+    l'abord au nord, la rue au sud). Voir `versLaDalle`."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const c = L.Monde.carte;
@@ -234,7 +239,7 @@ def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
         const essais = function (renonce, graine) {
             L.graine(graine);
             L.B.defs.pietons.reactions.abord_renonce = renonce;
-            let demiTours = 0, avances = 0;
+            let renoncements = 0, avances = 0;
             for (let n = 0; n < 100; n++) {
                 const p = o.poser('passant', 0, 0);
                 p.etat = 'flane'; p.porteBut = null; p.intouchable = true;
@@ -242,11 +247,16 @@ def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
                 p.y = place.y * L.TT + 8;
                 L.Entites.indexer();
                 o.frame(1);
-                if (p.dir === 1 && p.vx === 0 && p.vy === 0) demiTours++;
+                // ⚠️ ON COMPTE LE RENONCEMENT, PAS LE DEMI-TOUR : il se
+                // detourne de l'abord — il ne bouge pas de l'image, et ce
+                // n'est plus le nord qu'il vise. VERS OU il se detourne est
+                // une autre question, et c'est `versLaDalle` qui y repond
+                // (juge : `test_le_pas_d_une_porte_n_est_pas_un_piege`).
+                if (p.dir !== 3 && p.vx === 0 && p.vy === 0) renoncements++;
                 else if (p.vy < 0) avances++;
                 L.Entites.retirer(p);
             }
-            return { demiTours: demiTours, avances: avances };
+            return { renoncements: renoncements, avances: avances };
         };
         const vraiTaux = L.B.defs.pietons.reactions.abord_renonce;
         const avec = essais(vraiTaux, 41), sans = essais(0, 41);
@@ -256,11 +266,72 @@ def test_le_flaneur_prefere_la_dalle_a_l_abord(banc):
     assert r["place"], "le décor du juge est faux : aucune dalle ne longe un abord"
     assert 0 < r["taux"] < 1, "le renoncement n'est pas une chance : %s" % r
     # ⚠️ Le témoin est indispensable : sans renoncement, il AVANCE sur l'abord.
-    assert r["sans"]["demiTours"] == 0 and r["sans"]["avances"] >= 90, (
+    assert r["sans"]["renoncements"] == 0 and r["sans"]["avances"] >= 90, (
         "le décor du juge est faux : sans renoncement, il n'avance pas vers l'abord (%s)" % r
     )
-    part = r["avec"]["demiTours"] / 100
+    part = r["avec"]["renoncements"] / 100
     assert abs(part - r["taux"]) < 0.15, (
-        "il ne renonce pas au taux de la fiche : %s demi-tours sur cent pour %s (%s)"
-        % (r["avec"]["demiTours"], r["taux"], r)
+        "il ne renonce pas au taux de la fiche : %s renoncements sur cent pour %s (%s)"
+        % (r["avec"]["renoncements"], r["taux"], r)
+    )
+
+
+def test_le_pas_d_une_porte_n_est_pas_un_piege_a_flaneur(banc):
+    """⚠️ **LE DEMI-TOUR SEUL TENAIT DES PASSANTS DEVANT LES PORTES, POUR
+    TOUJOURS.** `poser_porte` pave l'abord jusqu'à la dalle : le pas d'une porte
+    est donc UNE tuile de trottoir entre deux tuiles d'abord. Est et ouest y
+    débordent tous les deux — le flâneur renonçait des deux côtés, le demi-tour
+    le renvoyait de l'un à l'autre, et chaque renoncement remettait `butT` à
+    trente images : il ne retirait jamais sa direction au sort. Il tremblait sur
+    place à deux pixels près, le sud libre devant lui.
+
+    Mesuré avant le correctif : onze passants sur douze n'avaient pas quitté
+    leur pas de porte au bout de 1200 images — vingt secondes. Et une naissance
+    sur trois se fait sur un pas de porte (`Entites.placeDeNaissance`) : ils
+    s'y empilaient, et c'est ce qu'on voyait en jouant.
+
+    Le juge pose un flâneur sur CHAQUE pas de porte piégé, face à l'abord, et
+    exige qu'il en soit sorti."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        // Les pas de porte piegeants : une dalle entre deux abords.
+        const pieges = L.Monde.carte.portesFermees.filter(function (p) {
+            return L.Monde.estTrottoir(p.x, p.y + 1)
+                && L.Monde.estAbord(p.x - 1, p.y + 1) && L.Monde.estAbord(p.x + 1, p.y + 1);
+        });
+        const j = L.B.joueur, coinces = [];
+        for (const p of pieges) {
+            const x = p.x * L.TT + 8, y = (p.y + 1) * L.TT + 8;
+            // Le joueur a cote : sinon la ville l'oublie et le juge ne mesure rien.
+            j.x = x; j.y = y + 48;
+            L.Monde.centrerCamera(j.x, j.y);
+            const e = o.poser(null, 0, 0);
+            e.x = x; e.y = y;
+            e.etat = 'flane'; e.intouchable = true; e.porteBut = null;
+            e.dir = 0; e.butT = 90;                    // face a l'est, vers l'abord
+            L.Entites.indexer();
+            let sorti = -1;
+            for (let i = 0; i < 600 && sorti < 0; i++) {
+                o.frame(1);
+                // ⚠️ IL PEUT AUSSI RENTRER — une porte juste au nord, une
+                // flanerie sur douze, et la ville se l'avale (`etat: 'entre'`,
+                // puis `retirer`). C'est une sortie comme une autre, et le
+                // juge la manquait : `retirer` ne baisse pas `actif`, il
+                // DECROCHE de `B.entites`. On lit donc la liste.
+                if (L.B.entites.indexOf(e) < 0) { sorti = i; break; }
+                if (Math.floor(e.x / L.TT) !== p.x || Math.floor(e.y / L.TT) !== p.y + 1) sorti = i;
+            }
+            if (sorti < 0) coinces.push({ porte: p.x + ',' + p.y, etat: e.etat, dir: e.dir,
+                                          dx: Math.round((e.x - x) * 10) / 10,
+                                          dy: Math.round((e.y - y) * 10) / 10 });
+            if (L.B.entites.indexOf(e) >= 0) L.Entites.retirer(e);
+        }
+        return { pieges: pieges.length, coinces: coinces };
+    }""")
+    assert r["pieges"] >= 5, (
+        "le décor du juge est faux : la ville n'a que %s pas de porte entre deux abords" % r["pieges"]
+    )
+    assert not r["coinces"], (
+        "%s flâneurs sur %s n'ont pas quitté leur pas de porte en 600 images : %s"
+        % (len(r["coinces"]), r["pieges"], r["coinces"][:5])
     )

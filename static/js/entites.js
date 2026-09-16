@@ -2560,6 +2560,49 @@ const Entites = (function () {
     return dy > 0 ? 1 : 3;
   }
 
+  /** La dalle continue-t-elle par la ? LA TUILE VOISINE, pas un bord de corps.
+
+      ⚠️ La flanerie sonde `e.x + dir * (e.r + 4)` — le bord du corps. Pour un
+      ENFANT (r = 4), ces huit pixels depuis le milieu d'une tuile de seize
+      retombent PILE sur la bordure, et vers l'ouest ou le nord le plancher
+      rend la tuile qu'on occupe DEJA. Sondee ainsi, la dalle repondait
+      toujours oui derriere soi, le demi-tour etait toujours accepte, et deux
+      enfants sur quatorze restaient a trembler sur leur pas de porte. Un
+      voisinage se compte en tuiles. */
+  function dalleDans(tx, ty, k) {
+    const d = DIRECTIONS[k];
+    const ax = tx + d[0], ay = ty + d[1];
+    return Monde.estTrottoir(ax, ay) && !Monde.bloque(ax, ay, Monde.MASQUE_PIETON);
+  }
+
+  /** Vers ou se tourne celui qui RENONCE A DEBORDER sur l'abord : la ou la
+      dalle continue. Le demi-tour d'abord — c'est l'ancienne regle, et elle
+      vaut partout ou le trottoir continue derriere soi.
+
+      ⚠️ **LE DEMI-TOUR SEUL EST UN PIEGE**, et il tenait des passants devant
+      les portes POUR TOUJOURS. `carte.py` pave l'abord jusqu'a la dalle sous
+      chaque porte : le pas d'une porte est donc UNE tuile de trottoir entre
+      deux tuiles d'abord. Est et ouest y debordent tous les deux, le demi-tour
+      renvoyait de l'un a l'autre, et chaque renoncement remet `butT` a trente
+      images — le flaneur ne retirait donc JAMAIS sa direction au sort. Il
+      tremblait sur place a deux pixels pres, le sud libre devant lui.
+
+      Mesure : douze passants poses sur douze pas de porte, onze n'avaient pas
+      quitte leur tuile au bout de 1200 images. Et une naissance sur trois se
+      fait sur un pas de porte (`placeDeNaissance`) : ils s'y empilaient. */
+  function versLaDalle(e, tx, ty) {
+    const demiTour = (e.dir + 2) % 4;
+    if (dalleDans(tx, ty, demiTour)) return demiTour;
+    const choix = [];
+    for (let k = 0; k < 4; k++) if (k !== e.dir && k !== demiTour && dalleDans(tx, ty, k)) choix.push(k);
+    // ⚠️ **PAS UN SEUL DE.** Le hasard de la ville est une file PARTAGEE, et
+    // des juges la comptent (`test_une_panne_ne_tire_pas_un_seul_de_du_jeu`) :
+    // un de de plus tire ici decale tout ce qui le suit — l'attroupement, le
+    // budget d'une bagarre, la panne d'un char. Son age en images departage
+    // aussi bien, et il ne coute rien.
+    return choix.length ? choix[e.t % choix.length] : demiTour;
+  }
+
   //: Le va-et-vient des portes, en images.
   const SORTIE_IMAGES = 26;
 
@@ -2909,7 +2952,7 @@ const Entites = (function () {
         // sinon une dalle d'une tuile serait une file indienne.
         if (Monde.estAbord(ax, ay) && Monde.estTrottoir(tx, ty) && !e.porteBut
             && B.rng() < reactions.abord_renonce) {
-          e.dir = (e.dir + 2) % 4;                              // demi-tour, on reste sur la dalle
+          e.dir = versLaDalle(e, tx, ty);                       // on reste sur la dalle
           e.butT = 30 + Math.floor(B.rng() * 60);
           e.vx = 0; e.vy = 0;
           return;

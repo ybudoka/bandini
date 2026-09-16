@@ -663,32 +663,51 @@ def test_une_panne_ne_tire_pas_un_seul_de_du_jeu(banc, paquet):
     DÉCOR ne doit pas décaler le hasard du jeu : chaque dé tiré déplace tous
     ceux qui suivent. Une panne qui prenait un dé au passage (sa couleur, sa
     place) a fait tomber quatre juges d'un coup — et aucun ne parlait de
-    pannes. Le juge compte les dés, six cents images durant, panne ou pas."""
-    def compter(chance):
-        return banc("""function (L, o) {
-            L.Jeu.commencer();
-            L.graine(5);
-            // ⚠️ On eteint la panne PAR SA FICHE, pas par un drapeau interne :
-            // c'est la seule facon d'etre sur que les deux parties ne different
-            // QUE par la panne.
-            L.B.defs.conduite.trafic.panne.chance_par_heure = %s;
-            const vrai = L.B.rng;
-            let n = 0;
-            L.B.rng = function () { n++; return vrai(); };
-            o.frame(600);
-            const pannes = L.B.entites.filter(function (q) { return q.panneT > 0; }).length;
-            L.B.rng = vrai;
-            L.B.defs.conduite.trafic.panne.chance_par_heure = %s;
-            return { des: n, pannes: pannes };
-        }""" % (chance, vehicules.TRAFIC["panne"]["chance_par_heure"]))
+    pannes. `majPanne` tire donc tout au `hash2` du jour et de l'heure.
 
-    avec, sans = compter(1), compter(0)
-    r = {"avec": avec, "sans": sans}
-    assert r["avec"]["pannes"] >= 1, "aucune panne n'est tombée : le juge ne mesure rien (%s)" % r
-    assert r["sans"]["pannes"] == 0, "la panne est tombée quand même : %s" % r
-    assert r["avec"]["des"] == r["sans"]["des"], (
-        "la panne a tiré %s dés du jeu : tout ce qui suit est décalé"
-        % (r["avec"]["des"] - r["sans"]["des"])
+    ⚠️ **ON MESURE LA MAIN DE LA PANNE, PAS LE SILLAGE DE LA PANNE.** Le juge
+    comparait le total des dés de six cents images, avec panne et sans. C'était
+    une coïncidence de graine, pas une règle : un char en panne est une ENTRAVE
+    — c'est tout son sens — et le trafic qui cherche où faire naître le suivant
+    réessaie autour de lui, ce qui tire des dés en toute légitimité. Mesuré sur
+    dix graines de partie, la comparaison des totaux tombait déjà d'elle-même
+    sur deux d'entre elles (6 : −87 dés, 10 : −807), sans qu'aucune panne ait
+    pris quoi que ce soit. Le juge ne tenait que sur la graine 5.
+
+    On compte donc les dés tirés PENDANT `majPanne` — sa couleur, sa place, son
+    modèle. C'est la règle elle-même, et aucun remous de la ville ne la bouge."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(5);
+        // ⚠️ On l'allume PAR SA FICHE : la panne doit vraiment tomber, sinon le
+        // juge compte les des d'une chose qui n'arrive pas.
+        const garde = L.B.defs.conduite.trafic.panne.chance_par_heure;
+        L.B.defs.conduite.trafic.panne.chance_par_heure = 1;
+        const vrai = L.B.rng;
+        let total = 0, dedans = 0, sites = [];
+        L.B.rng = function () {
+            total++;
+            // ⚠️ La PILE, pas un drapeau : `majPanne` tire par la main de ce
+            // qu'elle appelle (`placeDeLaPanne`, `creer`), et c'est justement
+            // la que le de s'etait glisse la premiere fois.
+            const pile = new Error().stack;
+            if (pile.indexOf('majPanne') >= 0) {
+                dedans++;
+                if (sites.length < 5) sites.push(pile.slice(0, 200));
+            }
+            return vrai();
+        };
+        o.frame(600);
+        L.B.rng = vrai;
+        L.B.defs.conduite.trafic.panne.chance_par_heure = garde;
+        const pannes = L.B.entites.filter(function (q) { return q.panneT > 0; }).length;
+        return { total: total, dedans: dedans, sites: sites, pannes: pannes };
+    }""")
+    assert r["pannes"] >= 1, "aucune panne n'est tombée : le juge ne mesure rien (%s)" % r
+    assert r["total"] > 100, "le jeu ne tire plus de dés du tout : le juge ne mesure rien (%s)" % r
+    assert r["dedans"] == 0, (
+        "la panne a tiré %s dés du jeu — tout ce qui suit est décalé : %s"
+        % (r["dedans"], r["sites"])
     )
 
 
