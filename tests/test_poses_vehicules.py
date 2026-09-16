@@ -491,6 +491,49 @@ def test_celui_qu_on_jette_a_terre_garde_ses_couleurs(banc):
     assert r["pilote"] is None, "le vélo volé garde son pilote : %s" % r
 
 
+def test_le_motard_qu_on_fait_descendre_ne_remonte_pas_sur_sa_moto(banc):
+    """Retour de Martin : « quand on vole une moto, la personne qui était
+    dessus s'en va, mais quand on la quitte, il y a encore une personne
+    dessus ». ⚠️ Le vélo effaçait son cycliste en le jetant à terre ; la moto
+    passait par le carjacking, qui faisait sortir un passant tiré au hasard et
+    laissait le motard sur la selle — caché par le joueur tant qu'il roulait,
+    revenu dès qu'il descendait. C'est aussi CELUI QUI ÉTAIT DESSUS qui sort :
+    il garde ses couleurs. Et un deux-roues que son pilote du trafic a quitté
+    (le fuyard qui tombe de sa moto) n'a plus personne dessus."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const v = L.Vehicules.creer('moto', j.x + 10, j.y, 0, { conducteur: 'trafic', etat: 'roule' });
+        const avant = JSON.stringify(v.pilote && v.pilote.swaps);
+        const images = function () {
+            const ctx = L.Base.ecran(); let n = 0;
+            ctx.drawImage = function () { n++; };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            return n;
+        };
+        L.Vehicules.monter(j, v);
+        const sortis = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin' && e.menace === j; });
+        const monte = j.dansVehicule === v;
+        v.vitesse = 0;
+        L.Vehicules.descendre(j, true);
+        const fuyard = L.Vehicules.creer('moto', j.x + 60, j.y, 0, { conducteur: 'trafic', etat: 'roule' });
+        const fuyardA = !!(fuyard.pilote && fuyard.pilote.swaps);
+        fuyard.conducteur = null; fuyard.etat = 'stationne';
+        return { avant: avant, monte: monte, descendu: !j.dansVehicule,
+                 sorti: sortis.length ? JSON.stringify(sortis[sortis.length - 1].swaps) : null,
+                 cavalier: JSON.stringify(L.Vehicules.cavalierDe(v)), images: images(),
+                 fuyardA: fuyardA, fuyardCavalier: JSON.stringify(L.Vehicules.cavalierDe(fuyard)) };
+    }""")
+    assert r["monte"] is True and r["descendu"] is True, "le décor du juge est faux : %s" % r
+    assert r["avant"] and r["avant"] != "null", "la moto du trafic n'avait pas de motard : %s" % r
+    assert r["cavalier"] == "null", "descendu de la moto volée, le motard est encore dessus : %s" % r
+    assert r["images"] == 1, "la moto volée et quittée se peint en %s images" % r["images"]
+    assert r["sorti"] == r["avant"], "le motard qui descend a changé de tête : %s" % r
+    assert r["fuyardA"] is True, "le décor du juge est faux : la seconde moto n'a pas de motard (%s)" % r
+    assert r["fuyardCavalier"] == "null", "un deux-roues quitté par son pilote a encore quelqu'un dessus : %s" % r
+
+
 def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
     """Retour de Martin : « la voiture sport devrait être basse, les roues plus
     dans les ailes ». ⚠️ Deux mesures, pas une impression : de profil, sa

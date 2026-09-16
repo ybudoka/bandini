@@ -1210,8 +1210,14 @@ const Vehicules = (function () {
     } else if (v.conducteur === 'trafic') {
       // Carjacking : le conducteur sort, temoigne, et fuit. Pas besoin de temoin :
       // la victime en est un.
+      // ⚠️ Sur une MOTO, on VOIT celui qui est dessus : c'est lui qui descend,
+      // avec ses couleurs, et il quitte la selle. Sans `v.pilote = null`, le
+      // joueur le cachait tant qu'il roulait et il reapparaissait assis sur la
+      // moto des qu'on en descendait.
       const arch = Entites.archetypeDeRue();
-      const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14, arch);
+      const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+      v.pilote = null;
       victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
       crime = 'carjacking'; vu = true;
     } else if (v.conducteur === null && !v.vole && !v.aToi) {
@@ -2489,11 +2495,17 @@ const Vehicules = (function () {
 
   /** Les couleurs de celui qui est SUR le deux-roues, ou null s'il n'y a
       personne : le joueur quand c'est lui, le pilote du trafic sinon. Une
-      epave n'a personne dessus — il est tombe. */
+      epave n'a personne dessus — il est tombe.
+
+      ⚠️ Le pilote du trafic ne se peint que tant que le TRAFIC conduit. Un
+      deux-roues que son pilote a quitte — le fuyard qui tombe de sa moto, un
+      chemin de demain qui oublierait d'effacer `v.pilote` — n'a plus personne
+      dessus, et c'est la seule ligne qui le garantit pour tous. */
   function cavalierDe(v) {
     const def = SPRITES[v.sprite];
     if (!def || !def.selle || v.etat === 'epave' || v.plie) return null;
     if (v.conducteur === B.joueur) return B.joueur.swaps || null;
+    if (v.conducteur !== 'trafic') return null;
     return (v.pilote && v.pilote.swaps) || null;
   }
 
