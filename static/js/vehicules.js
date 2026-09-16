@@ -2372,21 +2372,49 @@ const Vehicules = (function () {
   //: c'est du ramassage de miettes pour rien.
   const _cap = { angle: 0, face: 'bas' };
 
-  /** La pose d'un char : de profil, de dos ou de face.
+  /** LE SENS OU IL REGARDE, en quatre faces. C'est la pose du CAVALIER, pas
+      celle de la caisse : la machine, elle, tourne d'un cap continu (`capDe`).
 
       ⚠️ **LA MEME REGLE QUE LA FACE D'UN PASSANT, ET LE MEME CODE.** `regarder`
       porte deja le seuil (`Math.abs(dx) >= Math.abs(dy)`) ; deux jeux de
-      seuils auraient fini par diverger, et le char aurait change de pose a un
-      cap ou le passant a cote de lui n'en change pas.
-
-      ⚠️ Et le vocabulaire est celui du passant, pas un nouveau : `haut` veut
-      dire « il s'eloigne » (on voit son dos) et `bas` « il vient » (on voit sa
-      face) — exactement ce que ces mots veulent dire pour quelqu'un qui
-      marche. `Atlas.cuire` fait le reste : il miroite `cote` en `gauche` et
-      `droite` tout seul, comme pour un corps. */
+      seuils auraient fini par diverger, et celui qui est assis sur la moto
+      aurait tourne la tete a un cap ou le passant a cote de lui ne tourne pas
+      la sienne. */
   function faceDe(v) {
     Entites.regarder(_cap, Math.cos(v.angle), Math.sin(v.angle));
     return _cap.face;
+  }
+
+  /** LE CAP DESSINE : le cran (0 a ROTATIONS - 1) le plus proche de `v.angle`.
+
+      ⚠️ **C'est ici que se joue « le char tourne comme son ombre »** (retour de
+      Martin : « le pilotage des vehicules est vraiment impossible maintenant,
+      il faut que le vehicule tourne vraiment comme l'ombre le fait »). Un char
+      DEBOUT n'avait que quatre dessins — profil, dos, face — pour un cap
+      continu : l'ombre pivotait sous lui a chaque image, le dessin attendait
+      45 degres et CLAQUAIT. Au volant, on ne voyait plus ou on pointait, on le
+      lisait sur l'ombre. Trente-deux crans, c'est moins de 6 degres d'ecart :
+      le volant se voit.
+
+      ⚠️ Le dessin de base pointe au NORD (`Atlas.toitDe`) et l'angle du moteur
+      compte 0 a l'EST : d'ou le quart de tour. */
+  function capDe(angle) {
+    let i = Math.round((angle + Math.PI / 2) / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
+    if (i < 0) i += ROTATIONS;
+    return i;
+  }
+
+  /** LE POINT AUTOUR DUQUEL LE DESSIN TOURNE, dans la grille du sprite.
+
+      ⚠️ C'est le centre de l'EMPREINTE DU CATALOGUE, pas celui de la grille :
+      l'ancre d'un sprite de char est sa ligne de sol (il reste deux rangees
+      vides sous les roues), et tourner autour du milieu de la grille aurait
+      fait tanguer le char d'un pixel a chaque cran. La meme empreinte que la
+      physique et que l'ombre — ce qui tourne a l'ecran est exactement ce qui
+      tourne dans la rue, et un char se gare toujours dans ses lignes. */
+  function centreDuToit(v) {
+    const def = SPRITES[v.sprite];
+    return [def.ancre[0], def.ancre[1] + 1 - v.def.longueur / 2];
   }
 
   /** Les couleurs de celui qui est SUR le deux-roues, ou null s'il n'y a
@@ -2399,70 +2427,33 @@ const Vehicules = (function () {
     return (v.pilote && v.pilote.swaps) || null;
   }
 
-  /** Le passant assis sur ce deux-roues, dans la pose du deux-roues, et ou
-      le poser. `assis_cote` se miroite en `assis_gauche` / `assis_droite`
-      comme la marche : la pose du corps est « assis_ » + celle de la machine,
-      et les deux tournent ensemble. */
-  function imageDuCavalier(def, pose, swaps) {
-    const corps = SPRITES.joueur;
-    const cuit = Atlas.cuire('joueur', corps, swaps);
-    const poses = cuit.poses['assis_' + pose.pose] || cuit.poses.assis_bas;
+  /** Le passant assis sur ce deux-roues, et OU le poser.
+
+      ⚠️ **Sa selle est un point de la MACHINE : elle tourne avec elle.** La
+      fiche la donne depuis la ligne de sol du dessin vu d'en haut, donc a
+      `longueur / 2 + dy` du centre, vers la queue. Posee sans tourner, elle
+      laissait le cycliste assis au nord de son velo des qu'il roulait vers le
+      sud.
+
+      ⚠️ Sa POSE, elle, reste en quatre faces : c'est un corps, pas une
+      carrosserie. Personne n'est dessine d'en haut dans Bandini — ni le
+      joueur, ni les passants, ni celui qui pedale. */
+  function imageDuCavalier(def, v, swaps) {
+    const cuit = Atlas.cuire('joueur', SPRITES.joueur, swaps);
+    const face = faceDe(v);
+    const poses = cuit.poses['assis_' + face] || cuit.poses.assis_bas;
     if (!poses) return null;
-    const cle = (pose.pose === 'gauche' || pose.pose === 'droite') ? 'cote' : pose.pose;
-    const selle = def.selle[cle] || [0, 0];
-    const dx = (pose.pose === 'gauche' ? -selle[0] : selle[0]) - cuit.ancre[0];
-    return { canvas: poses[0], dx: dx, dy: selle[1] - cuit.ancre[1] };
-  }
-
-  /** Le dessin d'un char DEBOUT : la pose, et l'image a poser.
-
-      ⚠️ Rend `null` pour un sprite encore cuit en rotations — la voie d'avant
-      reste vivante tant que les douze vehicules ne sont pas passes. */
-  function debout(v) {
-    const def = SPRITES[v.sprite];
-    if (!def || def.rotations) return null;
-    const cuit = Atlas.cuire(v.sprite, def, v.swaps);
-    // ⚠️ Une epave est COUCHEE, elle ne roule plus. C'est la pose qui le dit,
-    // pas une rotation libre : un dessin debout qu'on fait pivoter de 40
-    // degres redevient une vue d'en haut de travers.
-    const voulu = (v.etat === 'epave' && cuit.poses.couche) ? 'couche' : faceDe(v);
-    const nom = cuit.poses[voulu] ? voulu : 'bas';
-    return { canvas: cuit.poses[nom][0], ancre: cuit.ancre, pose: nom };
-  }
-
-  /** OU TOMBE LA LIGNE DE SOL DU DESSIN, en pixels au sud de `v.y`.
-
-      ⚠️ **Les deux poses ne regardent pas le meme sol, et c'est ce qui garait
-      les chars de travers** (retour de Martin, capture a l'appui : « les
-      voitures sont mal garre »). De PROFIL, le dessin est une elevation : sa
-      ligne de sol est le flanc du char, et elle passe par son milieu — l'ancre
-      posee sur `v.y` tombe juste, comme les pieds d'un passant. De DOS et de
-      FACE, depuis la vue plongeante, le dessin porte la LONGUEUR du char : sa
-      derniere rangee n'est plus un flanc, c'est le PARE-CHOCS LE PLUS PROCHE de
-      l'oeil. Posee sur `v.y`, elle mettait les 28 px de la caisse au NORD d'un
-      centre qui n'en compte que 14 : le char se dessinait une demi-longueur
-      devant lui-meme. Dans une case de stationnement, ca se lit d'un coup —
-      le nez deborde sur le trottoir et le fond de la case reste vide.
-
-      ⚠️ L'ancre du sprite ne bouge pas (elle reste la meme pour les trois
-      poses, sinon le char saute d'un pixel en tournant) : c'est le SOL qu'on
-      va chercher la ou il est, et il vient de l'empreinte du catalogue — la
-      meme que la physique et que l'ombre. Ce qu'on voit est exactement ce qui
-      bloque. */
-  function solDeLaPose(v, pose) {
-    return (pose === 'haut' || pose === 'bas') ? v.def.longueur / 2 : 0;
+    const selle = def.selle || [0, 0];
+    const recul = v.def.longueur / 2 + selle[1];
+    const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
+    return { canvas: poses[0],
+             x: v.x - ca * recul - sa * selle[0] - cuit.ancre[0],
+             y: v.y - sa * recul + ca * selle[0] - cuit.ancre[1] };
   }
 
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
-    const pose = debout(v);
-    const rot = pose ? null : Atlas.cuireRotations(v.sprite, def, v.swaps, ROTATIONS);
-    let i = 0;
-    if (rot) {
-      i = Math.round(v.angle / (Math.PI * 2) * ROTATIONS) % ROTATIONS;
-      if (i < 0) i += ROTATIONS;
-    }
     // ⚠️ **LES FEUX DE DETRESSE** d'un char en panne : deux ambres qui battent
     // aux quatre coins de sa caisse. C'est tout ce qui le distingue d'un char
     // mal gare — et c'est exactement ce qu'on veut dire.
@@ -2495,33 +2486,22 @@ const Vehicules = (function () {
       ctx.restore();
       B.stats.rects++;
     }
-    if (pose) {
-      // ⚠️ ANCRE A LA LIGNE DE SOL, comme un passant : `v.y` reste le centre
-      // physique, et c'est la ou les pneus touchent. Le tri du nord au sud s'y
-      // retrouve sans rien changer — un char et un passant se rangent
-      // maintenant par la meme regle.
-      // ⚠️ Et cette ligne-la n'est pas au meme endroit selon la pose
-      // (`solDeLaPose`) : de dos, elle est au pare-chocs arriere, pas au
-      // milieu. Le cavalier prend le MEME decalage — sinon il reste assis une
-      // demi-longueur devant sa machine.
-      const sol = solDeLaPose(v, pose.pose);
-      const swaps = cavalierDe(v);
-      const cavalier = swaps ? imageDuCavalier(def, pose, swaps) : null;
-      // ⚠️ Celui qui VIENT vers nous a sa machine devant lui : le pilote se
-      // peint d'abord, la machine par-dessus. Dans les trois autres poses, la
-      // machine d'abord et lui dessus.
-      const poserCavalier = function () {
-        ctx.drawImage(cavalier.canvas, Math.round(v.x + cavalier.dx - cx), Math.round(v.y + sol - v.z + cavalier.dy - cy));
-        B.stats.images++;
-      };
-      if (cavalier && pose.pose === 'bas') poserCavalier();
-      ctx.drawImage(pose.canvas, Math.round(v.x - pose.ancre[0] - cx),
-                    Math.round(v.y + sol - v.z - pose.ancre[1] - cy));
-      if (cavalier && pose.pose !== 'bas') poserCavalier();
-    } else {
-      ctx.drawImage(rot.images[i], Math.round(v.x - rot.cote / 2 - cx), Math.round(v.y - v.z - rot.cote / 2 - cy));
-    }
+    // ⚠️ **UN SEUL DESSIN, ET IL TOURNE** : le toit, cuit au cap le plus proche
+    // et centre sur son empreinte — donc sur `v.x`, `v.y`, la ou l'ombre est
+    // posee et la ou les cercles de collision sont. Ce qu'on voit tourner est
+    // ce qui bloque.
+    const toit = Atlas.cuireCap(v.sprite, def, v.swaps, ROTATIONS, capDe(v.angle), centreDuToit(v));
+    const demi = toit.width / 2;
+    ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
     B.stats.images++;
+    // ⚠️ Et le cavalier PAR-DESSUS, toujours : vu d'en haut, celui qui est
+    // assis sur la machine est au-dessus d'elle, quel que soit son cap.
+    const swaps = cavalierDe(v);
+    const cavalier = swaps ? imageDuCavalier(def, v, swaps) : null;
+    if (cavalier) {
+      ctx.drawImage(cavalier.canvas, Math.round(cavalier.x - cx), Math.round(cavalier.y - v.z - cy));
+      B.stats.images++;
+    }
   }
 
   return {
@@ -2530,7 +2510,7 @@ const Vehicules = (function () {
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, debout, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

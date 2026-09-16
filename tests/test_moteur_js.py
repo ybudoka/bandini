@@ -93,13 +93,16 @@ def test_chaque_char_de_phase_1_a_son_sprite(banc, paquet):
             # donc la longueur, à la marge de la ligne de sol près. Ce qui reste
             # vrai : elle ne fait pas PLUS, sinon c'est une affiche.
             assert lat <= h <= lon + 4, "%s : %s px de haut pour %sx%s" % (slug, h, lon, lat)
-        # ⚠️ **Reformule le 15 sept. 2026.** Il exigeait 32 caps pour tout le
-        # monde — c'etait la regle d'AVANT, et la refonte des vehicules la
-        # remplace : un char se dessine comme un passant, trois poses choisies
-        # par la meme regle que sa face. Ce qui compte n'est pas LAQUELLE des
-        # deux voies, c'est qu'elle soit COMPLETE : un char a moitie converti
-        # (deux poses sur trois, ou une ancre restee au centre) se dessinerait
-        # a cote de lui-meme.
+        # ⚠️ **Reformule deux fois le 15 sept. 2026.** Il exigeait 32 caps pour
+        # tout le monde ; la refonte du parc l'a remplace par trois poses ; et
+        # le soir meme, « le char tourne comme son ombre » a remis les caps —
+        # mais cuits a la demande, a partir d'UN des trois dessins. La fiche,
+        # elle, en porte toujours trois : `haut` est celui qui roule, `bas`
+        # prete ses phares au dessin qui tourne, `cote` attend qu'on montre un
+        # char de profil sans le faire rouler. Ce qui compte ici n'est pas
+        # LEQUEL sert, c'est que la fiche soit COMPLETE : un char a moitie
+        # converti (deux dessins sur trois, ou une ancre restee au centre) se
+        # dessinerait a cote de lui-meme.
         pose = r["poses"][slug]
         if rotations:
             assert rotations == 32, "%s se dessine en %s caps" % (slug, rotations)
@@ -4028,17 +4031,21 @@ def test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril(banc):
 
 def test_les_phares_pointent_ou_le_char_va(banc, paquet):
     """⚠️ **Demande de Martin : « valide la direction des phares quand je
-    pilote ».** Un char debout n'a plus 32 caps cuits : il a trois poses, et
-    c'est `faceDe` qui choisit. Si la règle se décale d'un quadrant, on voit
-    les phares blancs d'un char qui s'éloigne et ses feux rouges quand il
-    arrive — et personne ne s'en rend compte avant de jouer de nuit.
+    pilote ».** Si la règle se décale d'un demi-tour, on voit les phares blancs
+    d'un char qui s'éloigne et ses feux rouges quand il arrive — et personne ne
+    s'en rend compte avant de jouer de nuit.
 
-    Le juge lit la grille du sprite (le blanc `l` est un phare, le rouge `t`
-    un feu arrière) et exige, pour chaque véhicule et tout autour du cadran :
-    **de dos, aucun phare blanc ; de face, aucun feu rouge ; de profil, le
-    blanc devant et le rouge derrière.** ⚠️ Les gyrophares de l'ambulance et de
-    la remorqueuse sont sur le TOIT — ils se voient de partout, et c'est la
-    seule exception, écrite ici."""
+    ⚠️ **Refait le 15 sept. 2026, quand le char s'est remis à tourner.** Il n'y
+    a plus quatre poses à faire correspondre à quatre quadrants : il y a UN
+    dessin (`Atlas.toitDe`) et 32 caps. Ce qu'on juge est donc la chaîne
+    complète et rien d'autre : dans ce dessin-là, les phares sont au NORD du
+    centre de rotation et les feux au SUD — et le cap 0, celui qui montre le
+    dessin sans le tourner, est bien celui d'un char qui roule vers le NORD.
+    Les deux ensemble disent « les phares pointent où le char va », à tous les
+    caps, puisque tout le reste n'est que la rotation de ce dessin.
+
+    ⚠️ Les gyrophares de l'ambulance et de la remorqueuse sont sur le TOIT — ils
+    se voient de partout, ils sont sur l'AXE, et c'est la seule exception."""
     r = banc("""function (L, o) {
         L.Jeu.commencer(); L.graine(7);
         const j = L.B.joueur, d = o.ligneDroite();
@@ -4046,85 +4053,51 @@ def test_les_phares_pointent_ou_le_char_va(banc, paquet):
         const out = {};
         L.B.defs.vehicules.forEach(function (def) {
             const s = L.SPRITES[def.sprite];
-            if (!s || s.rotations) return;
-            // Où sont les lampes dans chaque pose du sprite (colonnes peintes) ?
-            const lampes = {};
-            for (const nom in s.poses) {
-                const g = s.poses[nom][0], l = [], t = [];
-                g.forEach(function (ligne, y) {
-                    ligne.split('').forEach(function (ch, x) {
-                        if (ch === 'l') l.push([x, y]);
-                        if (ch === 't') t.push([x, y]);
-                    });
-                });
-                lampes[nom] = { l: l, t: t, w: g[0].length, h: g.length };
-            }
-            // Et quelle pose chaque cap choisit-il ?
+            if (!s) return;
             const v = o.char(def.slug, 0, 0, 0);
-            const caps = [];
-            for (let deg = 0; deg < 360; deg += 5) {
-                v.angle = deg * Math.PI / 180;
-                caps.push([deg, L.Vehicules.debout(v).pose]);
-            }
+            if (!v) return;
+            const centre = L.Vehicules.centreDuToit(v);
+            const toit = L.Atlas.toitDe(def.sprite, s);
+            const lampes = { l: [], t: [] };
+            toit.forEach(function (ligne, y) {
+                ligne.split('').forEach(function (ch, x) {
+                    if (ch === 'l' || ch === 't') lampes[ch].push([x - centre[0], y - centre[1]]);
+                });
+            });
+            out[def.slug] = { lampes: lampes, longueur: def.longueur, ancre: s.ancre, w: s.w,
+                              capNord: L.Vehicules.capDe(-Math.PI / 2),
+                              capSud: L.Vehicules.capDe(Math.PI / 2),
+                              caps: L.Vehicules.ROTATIONS };
             L.Entites.retirer(v);
-            out[def.slug] = { lampes: lampes, caps: caps, ancre: s.ancre, w: s.w };
         });
         return out;
     }""")
-    assert len(r) >= 10, "trop peu de véhicules debout : %s" % list(r)
-    # ⚠️ Les deux seuls véhicules à porter une lampe SUR LE TOIT : elle se voit
-    # de partout, y compris de dos, et c'est la seule raison d'écrire une
-    # exception. Elle est toujours au MILIEU du dessin — un gyrophare est sur
-    # l'axe —, et c'est ce que le juge vérifie au lieu de l'exempter en bloc.
+    assert len(r) >= 10, "trop peu de véhicules : %s" % list(r)
     GYRO = {"ambulance", "remorqueuse"}
     for slug, m in r.items():
-        lampes, w = m["lampes"], m["w"]
-        # ⚠️ L'ancre est au MILIEU : sinon le miroir (`cote` → `gauche`)
-        # décalerait le char dès qu'il roule vers l'ouest.
-        assert m["ancre"][0] * 2 == w, f"{slug} : ancre {m['ancre'][0]} pour {w} px de large"
-
-        def au_milieu(lampe, large=w):
-            """Sur l'axe du dessin — c'est là qu'est un gyrophare, et nulle part ailleurs."""
-            return all(abs(q[0] - large / 2) <= large / 6 for q in lampe)
-
-        # De dos, aucun phare blanc ; de face, aucun feu rouge — sauf le
-        # gyrophare, sur l'axe.
-        for pose, couleur, quoi in (("haut", "l", "des phares blancs sur un char qui s’éloigne"),
-                                    ("bas", "t", "des feux rouges sur un char qui arrive")):
-            lampe = lampes[pose][couleur]
-            if slug in GYRO:
-                assert au_milieu(lampe), f"{slug} : {quoi} (et ce n’est pas son gyrophare)"
-            else:
-                assert not lampe, f"{slug} : {quoi}"
-        assert lampes["bas"]["l"], f"{slug} : aucun phare quand il vient vers nous"
-        assert lampes["haut"]["t"], f"{slug} : aucun feu arrière quand il s’éloigne"
-        # De profil, la grille n'est PAS miroitée : elle regarde l'est. Le point
-        # le plus à l'AVANT qui s'allume est donc blanc, le plus à l'ARRIÈRE rouge.
-        blancs, rouges = lampes["cote"]["l"], lampes["cote"]["t"]
-        assert blancs, f"{slug} : aucun phare de profil"
-        avant = max([q[0] for q in blancs] + [q[0] for q in rouges])
-        assert avant in [q[0] for q in blancs], f"{slug} : de profil, sa lampe la plus avancée est rouge"
-        if rouges:
-            arriere = min([q[0] for q in blancs] + [q[0] for q in rouges])
-            assert arriere in [q[0] for q in rouges], f"{slug} : de profil, sa lampe la plus reculée est blanche"
-        # Et le cadran : un quadrant par pose, et la pose de profil qui regarde
-        # l'est couvre l'est. ⚠️ « droite » est la grille NON miroitée (Atlas).
-        poses = dict(m["caps"])
-        assert poses[0] == "droite" and poses[180] == "gauche", f"{slug} : {poses[0]} vers l'est, {poses[180]} vers l'ouest"
-        assert poses[90] == "bas" and poses[270] == "haut", f"{slug} : {poses[90]} vers le sud, {poses[270]} vers le nord"
-        # ⚠️ Chaque pose couvre son quadrant, centré sur son cap. Les quatre
-        # DIAGONALES pures sont la frontière : elles peuvent tomber d'un côté
-        # comme de l'autre (`Entites.regarder` tranche `|dx| >= |dy|`, et c'est
-        # la même règle que la face d'un passant — un seul code pour les deux).
-        quadrant = {0: "droite", 90: "bas", 180: "gauche", 270: "haut"}
-        for deg, pose in m["caps"]:
-            if deg % 90 == 45:
-                continue
-            attendu = quadrant[(deg + 45) // 90 % 4 * 90]
-            assert pose == attendu, f"{slug} : à {deg}° il est dessiné « {pose} », pas « {attendu} »"
-        for deg in (45, 135, 225, 315):
-            voisins = {quadrant[(deg - 45) % 360], quadrant[(deg + 45) % 360]}
-            assert poses[deg] in voisins, f"{slug} : à {deg}° il est dessiné « {poses[deg]} », ni {voisins}"
+        # ⚠️ L'ancre est au MILIEU : un dessin qui tourne autour d'un point
+        # décalé se promènerait en cercle au lieu de pivoter.
+        assert m["ancre"][0] * 2 == m["w"], f"{slug} : ancre {m['ancre'][0]} pour {m['w']} px de large"
+        # ⚠️ **LE CAP 0 EST CELUI DU NORD.** C'est tout le sens du quart de tour
+        # de `capDe` : le dessin pointe au nord, l'angle du moteur compte 0 à
+        # l'est. Si les deux se décalaient, les phares partiraient de côté.
+        assert m["capNord"] == 0, f"{slug} : le dessin non tourné n'est pas celui d'un char qui monte"
+        assert m["capSud"] == m["caps"] // 2, f"{slug} : vers le sud il montre le cap {m['capSud']}"
+        # Un gyrophare est sur l'axe : on l'écarte avant de juger les phares.
+        sur_axe = m["longueur"] / 6
+        phares = [q for q in m["lampes"]["l"] if abs(q[0]) > sur_axe or abs(q[1]) > sur_axe]
+        feux = [q for q in m["lampes"]["t"] if abs(q[0]) > sur_axe or abs(q[1]) > sur_axe]
+        if slug not in GYRO:
+            assert len(phares) == len(m["lampes"]["l"]), f"{slug} : une lampe blanche traîne au milieu du toit"
+        assert phares, f"{slug} : aucun phare sur le dessin qui roule"
+        assert feux, f"{slug} : aucun feu arrière sur le dessin qui roule"
+        # ⚠️ Le nord est en HAUT et `y` descend : un phare a donc un `y` négatif.
+        assert all(q[1] < 0 for q in phares), (
+            f"{slug} : il a des phares blancs derrière lui ({phares})"
+        )
+        assert all(q[1] > 0 for q in feux), (
+            f"{slug} : il a des feux rouges sur le nez ({feux})"
+        )
 
 
 def test_le_frein_a_main_fait_deriver(banc):

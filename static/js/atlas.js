@@ -74,30 +74,90 @@ const Atlas = (function () {
     return cuit;
   }
 
-  /** Cuit les `n` rotations d'un sprite (pose `base`, image 0) : un seul
-      dessin de char, 32 caps. Le canevas est carre, de cote la diagonale du
-      dessin, pour qu'aucun cap ne soit rogne ; il est ancre a son centre.
+  /** Les rangees pleines d'une grille : [premiere, derniere]. */
+  function caisseDe(grille) {
+    let y0 = -1, y1 = -1;
+    grille.forEach(function (ligne, y) {
+      if (/[^.]/.test(ligne)) { if (y0 < 0) y0 = y; y1 = y; }
+    });
+    return [y0, y1];
+  }
+
+  /** LE DESSIN QUI TOURNE : le char vu d'en haut, nez au NORD.
+
+      C'est la pose `haut` — le toit — avec les PHARES de la pose `bas` poses
+      sur son nez. Les deux poses sont le meme toit lu dans l'autre sens :
+      `haut` ne montre que les feux arriere (le char s'eloigne), `bas` que les
+      phares (il vient). Un seul dessin qui tourne doit porter LES DEUX, sinon
+      un char qui vient vers nous roule tous phares eteints.
+
+      ⚠️ Le retournement se fait sur la CAISSE, pas sur la grille : le dessin
+      n'y est pas centre (l'ancre est la ligne de sol, et il reste deux rangees
+      vides sous les roues). Un miroir sur la grille decalerait les phares
+      d'une rangee — assez pour les poser dans le pare-chocs.
+
+      ⚠️ Et un phare ne DEBORDE pas : il ne se pose que la ou il y a deja de la
+      tole. Le nez du toit est plus etroit que sa queue, et deux pixels de
+      jaune dans le vide auraient fait des moustaches. */
+  function toitDe(nom, def) {
+    const cle = 'toit|' + nom;
+    if (cache.has(cle)) return cache.get(cle);
+    const haut = (def.poses.haut || def.poses.base)[0];
+    const grille = haut.map(function (ligne) { return ligne.split(''); });
+    const bas = def.poses.bas && def.poses.bas[0];
+    if (bas) {
+      const caisse = caisseDe(haut);
+      for (let y = 0; y < bas.length; y++) {
+        const cible = caisse[0] + caisse[1] - y;
+        if (cible < 0 || cible >= grille.length) continue;
+        for (let x = 0; x < bas[y].length; x++) {
+          if (bas[y][x] === 'l' && grille[cible][x] !== '.') grille[cible][x] = 'l';
+        }
+      }
+    }
+    const fini = grille.map(function (ligne) { return ligne.join(''); });
+    cache.set(cle, fini);
+    return fini;
+  }
+
+  /** UN cap d'un char, cuit A LA DEMANDE : le toit tourne de `i / n` de tour.
+
+      ⚠️ **Un cap a la fois, et seulement ceux qu'on a vraiment montres.** Les
+      32 caps de toute la flotte, cuits d'avance, pesaient un millier de
+      canevas pour rien : un char du trafic roule sur des rails et n'en montre
+      que quatre. Le joueur, lui, les prend tous — et c'est lui qui conduit.
+
+      ⚠️ Le canevas est CARRE, de cote la diagonale du dessin (arrondie au
+      pair), pour qu'aucun cap ne soit rogne ; son milieu tombe sur `centre`,
+      le centre de l'EMPREINTE du catalogue — pas celui de la grille. Le
+      dessin ne tourne donc pas autour d'un point a lui : il tourne autour de
+      ce qui bloque, comme l'ombre.
 
       ⚠️ Le lissage doit rester eteint sur le canevas TOURNE : un char tourne
       avec `imageSmoothingEnabled` a true devient une tache floue. */
-  function cuireRotations(nom, def, swaps, n) {
-    const cle = 'rot|' + nom + '|' + n + '|' + (swaps ? JSON.stringify(swaps) : '');
+  function cuireCap(nom, def, swaps, n, i, centre) {
+    const sel = swaps ? JSON.stringify(swaps) : '';
+    const cle = 'cap|' + nom + '|' + n + '|' + i + '|' + sel;
     if (cache.has(cle)) return cache.get(cle);
-    const base = cuire(nom, def, swaps).poses.base[0];
-    const cote = Math.ceil(Math.hypot(def.w, def.h)) + 2;
-    const images = [];
-    for (let i = 0; i < n; i++) {
-      const c = Base.nouveauCanvas(cote, cote);
-      const ctx = c.getContext('2d');
-      ctx.imageSmoothingEnabled = false;
-      ctx.translate(cote / 2, cote / 2);
-      ctx.rotate(i * Math.PI * 2 / n);
-      ctx.drawImage(base, -def.w / 2, -def.h / 2);
-      images.push(c);
+    const cleBase = 'toit1|' + nom + '|' + sel;
+    let base = cache.get(cleBase);
+    if (!base) {
+      base = Base.nouveauCanvas(def.w, def.h);
+      peindreGrille(base.getContext('2d'), toitDe(nom, def), Object.assign({}, def.pal, swaps || {}),
+                    def.w, def.h, false);
+      cache.set(cleBase, base);
     }
-    const cuit = { cote: cote, n: n, images: images };
-    cache.set(cle, cuit);
-    return cuit;
+    let cote = Math.ceil(Math.hypot(def.w, def.h)) + 2;
+    cote += cote % 2;
+    const c = Base.nouveauCanvas(cote, cote);
+    const ctx = c.getContext('2d');
+    ctx.imageSmoothingEnabled = false;
+    ctx.translate(cote / 2, cote / 2);
+    ctx.rotate(i * Math.PI * 2 / n);
+    ctx.drawImage(base, -centre[0], -centre[1]);
+    c.cote = cote;
+    cache.set(cle, c);
+    return c;
   }
 
   /** Cuit une tuile 16x16 par un peintre procedural (variante = entier stable). */
@@ -169,5 +229,5 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, cuireRotations, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
+  return { valider, cuire, toitDe, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
 })();

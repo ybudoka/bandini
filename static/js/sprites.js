@@ -184,33 +184,44 @@ SPRITES.homme_sandwich = {
   },
 };
 
-/* Les vehicules, vus de dessus, l'AVANT A DROITE (angle 0 = est). Un seul
-   dessin par type : l'atlas le fait tourner en 32 caps a la cuisson. `c` est
-   la carrosserie (echangee par couleur), `x`/`y` les accents de toit (enseigne
-   du taxi, gyrophare de la police), `l` les phares, `t` les feux arriere. */
-/* --- Le parc DEBOUT : trois poses, comme un passant -------------------------
+/* --- Le parc : trois dessins, et c'est LE TOIT QUI ROULE ---------------------
 
-   ⚠️ Tout ce qui est debout dans Bandini est dessine debout — le passant ancre
-   a ses pieds, l'arbre, le lampadaire, le banc, le feu et son poteau, les
-   clotures nord-sud vues par la tranche. Le char etait la derniere chose
-   regardee d'aplomb. Il ne l'est plus.
+   ⚠️ **Le dessin qui roule dans la rue est `haut` — le char vu d'en haut, nez
+   au NORD — et il TOURNE**, cap par cap, comme son ombre (`Atlas.toitDe` et
+   `Atlas.cuireCap`, 32 crans). C'est la lecon du 15 septembre 2026 : un char
+   qui n'a que quatre dessins pour un cap continu ne se conduit pas. Le volant
+   tourne, l'ombre pivote, et la caisse attend 45 degres avant de bouger — on
+   lisait son cap sur son ombre. Une ELEVATION (le profil) ne se laisse pas
+   tourner : un dessin de flanc pivote de 40 degres, c'est un char qui cabre.
+   Une vue d'en haut, oui — et c'est elle qu'on garde.
 
-   Le vocabulaire est celui du passant, pas un nouveau : `cote` (miroite en
-   `gauche` et `droite` par `Atlas.cuire`), `haut` = il s'ELOIGNE, donc on voit
-   son dos, `bas` = il VIENT, donc sa face. La pose se choisit avec la meme
-   regle que la face d'un corps, et c'est le meme code (`Vehicules.faceDe`).
+   `bas` sert encore, mais pour UN DETAIL : ses PHARES. Les deux vues d'en haut
+   sont le meme toit lu dans l'autre sens — `haut` ne montre que les feux
+   arriere, `bas` que les phares — et le dessin qui tourne les porte tous les
+   deux (`Atlas.toitDe` retourne les phares de `bas` sur le nez de `haut`),
+   sinon un char qui vient vers nous roule tous phares eteints.
 
-   ⚠️ **Le nez pointe a DROITE**, comme dans les anciennes grilles vues d'en
-   haut (les phares `l` y etaient au bord droit). ⚠️ **L'ancre est la ligne de
-   sol** — le bas des pneus — et elle est la meme pour les trois poses, sinon
-   le char saute d'un pixel en tournant. ⚠️ **De dos et de face, la caisse fait
-   la largeur du catalogue** (14 px pour l'auto), centree dans la grille : les
-   pixels perdus ne coutent rien, l'atlas est cuit une fois.
+   ⚠️ **`cote` n'est plus dessine dans la rue.** Il reste ici, entier : c'est
+   une belle elevation, et le jour ou un char se montre de profil sans rouler
+   (une fiche de garage, un ecran-titre), elle est prete. Mais elle ne coute
+   rien tant que personne ne l'appelle — l'atlas ne cuit que ce qu'on lui
+   demande.
+
+   ⚠️ **L'ancre est la ligne de sol** — le bas des pneus — et elle est la meme
+   pour les trois dessins. Ce n'est PAS le point autour duquel le char tourne :
+   celui-la est le centre de l'empreinte du catalogue, et c'est
+   `Vehicules.centreDuToit` qui va le chercher, a une demi-longueur au nord de
+   l'ancre. ⚠️ **La caisse fait la largeur du catalogue** (14 px pour l'auto),
+   centree dans la grille : les pixels perdus ne coutent rien.
+
+   La palette, elle, ne bouge pas : `c` est la carrosserie (echangee par
+   couleur a la naissance), `x` / `y` les accents de toit (l'enseigne du taxi,
+   le gyrophare de la police), `l` les phares, `t` les feux arriere.
 
    ⚠️ Et le char est TRAPU, et il faut le vouloir : a l'echelle du passant
    (9,1 px/m), un toit d'auto de 1,45 m fait 13 px de haut pour 28 de long. On
    ne peut pas l'allonger — c'est la rue qui tient la longueur. Donc un char
-   court et haut, et un passant plus grand que le toit d'une auto : ce qui est
+   court et large, et un passant plus grand que le toit d'une auto : ce qui est
    vrai dans la vie. */
 
 /** Les tons d'un char debout, par-dessus sa palette : le rehaut `C` et
@@ -367,7 +378,7 @@ const VELO_HAUT = [
     ];
 const VELO_BAS = [
       '....................',
-      '........klk.........',
+      '........ktk.........',
       '........krk.........',
       '........kMk.........',
       '........krk.........',
@@ -382,7 +393,7 @@ const VELO_BAS = [
       '........krk.........',
       '........kMk.........',
       '........krk.........',
-      '........krk.........',
+      '........klk.........',
       '....................',
       '....................',
     ];
@@ -438,7 +449,7 @@ const MOTO_HAUT = [
     ];
 const MOTO_BAS = [
       '........................',
-      '..........klk...........',
+      '..........ktk...........',
       '..........krk...........',
       '..........kMk...........',
       '..........krk...........',
@@ -457,7 +468,7 @@ const MOTO_BAS = [
       '..........kMk...........',
       '..........krk...........',
       '..........krk...........',
-      '..........kck...........',
+      '..........klk...........',
       '........................',
       '........................',
     ];
@@ -523,8 +534,8 @@ const ASSIS_BAS = [
    tete pour toujours. Debout, le conducteur redevient ce qu'il aurait du etre :
    un passant assis dessus, avec ses propres couleurs — c'est le correctif des
    « sortes de gens » applique aux deux-roues. `Vehicules.dessinerUn` le pose
-   sur la selle (`selle`, par pose) avec les couleurs du joueur quand c'est lui,
-   celles d'un archetype de rue quand c'est le trafic.
+   sur la selle (`selle`, qui tourne avec la machine) avec les couleurs du
+   joueur quand c'est lui, celles d'un archetype de rue quand c'est le trafic.
 
    Une pose de plus sur le corps du joueur, et une seule : `assis_cote` se
    miroite en `assis_gauche` / `assis_droite` par le suffixe, comme la marche. */
@@ -1604,20 +1615,19 @@ SPRITES.police = {
 };
 SPRITES.velo = {
   w: 20, h: 19, ancre: [10, 16],
-  // Ou l'ANCRE du passant assis se pose, par pose : [dx, dy] depuis (x, y).
-  // Ses hanches sont trois pixels au-dessus de ses pieds : a dy = -3, elles
-  // tombent sur la selle et ses pieds sur les repose-pieds.
-  selle: { cote: [-1, -3], haut: [0, -7], bas: [0, -7] },
+  // LA SELLE, en [dx, dy] depuis la ligne de sol du dessin vu d'en haut : la ou
+  // l'ANCRE du passant assis se pose. ⚠️ Une seule, depuis que la machine
+  // tourne : elle est un point DE LA MACHINE et elle tourne avec elle
+  // (`Vehicules.imageDuCavalier`). Trois selles, une par pose, c'etaient trois
+  // chiffres a tenir d'accord pour un seul siege.
+  selle: [0, -7],
   pal: nuancer({ k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' }),
   swaps: ['c'],
   poses: { cote: [VELO_COTE], haut: [VELO_HAUT], bas: [VELO_BAS] },
 };
 SPRITES.moto = {
   w: 24, h: 23, ancre: [12, 20],
-  // Ou l'ANCRE du passant assis se pose, par pose : [dx, dy] depuis (x, y).
-  // Ses hanches sont trois pixels au-dessus de ses pieds : a dy = -3, elles
-  // tombent sur la selle et ses pieds sur les repose-pieds.
-  selle: { cote: [-2, -4], haut: [0, -8], bas: [0, -8] },
+  selle: [0, -8],
   pal: nuancer({ k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' }),
   swaps: ['c'],
   poses: { cote: [MOTO_COTE], haut: [MOTO_HAUT], bas: [MOTO_BAS] },
