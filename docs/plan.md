@@ -137,6 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | L'eau basse : le premier pas ne noie pas | **livré** | 16 sept. 2026 | **P2** | **correctif** | retour de Martin : « la premiere case de l eau ne prend pas d'énergie nie ne noie ». ⚠️ **Mesuré** : l'eau n'a aujourd'hui qu'une seule profondeur — dès le premier pixel mouillé le souffle part à **0,5 par image**, et immobile les pieds dans l'eau au bord de la grève **on coule en 3,3 s** (200 images pour 100 points), avec le réveil à l'hôpital et la facture. ⚠️ **Le plan le promettait déjà** : « L'eau n'est plus un mur » écrivait noir sur blanc « **il faut un bord** — on ne doit pas passer d'un pas de la terre ferme à la noyade », et c'est le seul point de cette fiche resté ouvert. Depuis, la grève s'est meublée et un **enfant barbote** dans la première tuile sans jamais rien risquer, à côté d'un joueur qui s'y noie. La règle tient en une phrase : **l'eau qui touche la terre est de l'eau basse — on y a pied**. Elle se **lit** dans la carte (quatre voisines en croix, la même mesure que le `trop_loin` de l'enfant qui barbote), elle ne se marque pas : un glyphe de haut-fond serait une deuxième vérité à tenir à jour, et la moindre retouche de la côte la ferait mentir. **975 tuiles sur 18 778** (5 %) : un liseré, pas une plage. ⚠️ **Et la géographie de M8 tient toujours** : les deux berges du chenal deviennent gratuites, la traversée passe de 88 à **72 points sur 100** — un pari, toujours au-dessus du seuil de 60 en deçà duquel le pont ne servirait plus à rien ; le juge de `test_eau.py` refait le calcul avec les deux berges en moins. ✅ **Livré** (16 sept. 2026) : `Monde.eauBasse(tx, ty)` — de l'eau dont une des quatre voisines n'en est pas — et `majJoueur` n'en tire que deux conséquences : le souffle ne part pas, `noyade` n'est pas appelée. **On y patauge quand même** à la vitesse de la nage, avec les remous et le corps coupé à la ligne d'eau : c'est de l'eau, ça se voit et ça ralentit — ce qui change, c'est ce qu'on y risque. ⚠️ **Et la barre remonte**, comme sur le sable (la régénération ordinaire, jamais le surplus) : l'eau basse est de la terre ferme pour le souffle, pas un purgatoire où il resterait figé — sinon revenir au bord à bout de souffle laissait le joueur planté dans dix centimètres d'eau, vivant et incapable de repartir. ⚠️ **Hors carte n'est pas de la terre** : la baie touche le bord du monde, et compter le vide comme une rive aurait fait un haut-fond du large. ⚠️ **Deux juges d'à côté ont dû recompter, et c'est le vrai travail de cette fiche** : le chenal du pont paie maintenant **9 tuiles sur 11** (72 points, toujours un pari), et `test_moteur_js` mesurait « une seconde de nage » **depuis l'entrée dans l'eau** — seize images de patauge dans le compte, 22 points là où la fiche en promet 30 ; il attend désormais d'être au large pour partir sa mesure. ⚠️ **Et un juge neuf a failli passer pour la mauvaise raison** : il lisait `B.transition` **à la fin** de sa boucle, quand le fondu est retombé et qu'on s'est réveillé à l'hôpital avec 100 points tout neufs — il aurait félicité le code d'avant pour une noyade complète. La noyade se guette **pendant** la boucle. ⚠️ **Ce qui ne change pas** : un char qui touche l'eau coule, l'eau basse comprise — c'est une règle de char, pas de souffle, et elle a ses propres juges. 5 juges neufs (`test_eau_basse_js.py`), **rouge-avant prouvé sur trois** dans un worktree isolé ; 1675 tests. |
 | Le bord de l'eau et la foire | **en cours** (1re vague livrée) | 16 sept. 2026 | **P4** | ajout | demande de Martin : « des belvédères, table à pic nic, des plages parasol, enfants qui joue, château de sable, etc. des sea doo, ski nautique, bateau, quai. un parc d'attraction avec grande roue, jeu d'adresse, manèges, etc. » ⚠️ **Mesuré : la plage existe déjà** — 2 507 tuiles de sable (dont 782 au bord de l'eau), 1 818 tuiles de quai, 1 701 décors de treize sortes, et pas un parasol, pas une table, pas une coque amarrée. Quatre vagues : **la grève se meuble** (six `DECORS`, aucun moteur neuf) ; **les enfants jouent** (un `metier`, trois routines — et ⚠️ un enfant ne se noie pas) ; **l'eau porte enfin quelque chose** (⚠️ **bloqué** : la chaloupe est `phase=2` et « Le char tourne comme son ombre » est P1 en cours ; le ski nautique est un `crochet`, pas un véhicule) ; **la foire de La Pointe** dans un de ses deux blocs de bois — la grande roue est un **belvédère qui tourne** (elle montre les paquets cachés), les manèges sont du décor animé qu'on ne monte pas, les jeux d'adresse sont des `DEFIS`. ✅ **1re vague livrée** (16 sept. 2026) — *la grève se meuble*, à la demande de Martin (« je veux que tu fasses la plage »). Six fiches `DECORS` et un semis, **aucun moteur neuf** : table à pique-nique (un **H couché** vu d'en haut), parasol, serviette et sa glacière, château de sable, bouée, poteau d'amarrage, belvédère — **174 meubles** sur la graine livrée. ⚠️ **Une plage suit la côte ; elle ne suit pas une boîte** : le semis marche tuile par tuile et ne meuble que du sable qui a l'eau à trois tuiles. ⚠️ **Le château est le seul du lot qui ait une règle** — `pv: 5`, le décor le plus fragile du jeu, rasé par un char et **revenu au matin**. ⚠️ **Le parasol est le seul qu'on ne heurte pas** : on passe dessous. ⚠️ **La bouée est le premier décor du jeu à flotter**, et ça a demandé deux choses : `poser_decor` refuse le solide et l'eau **en est** (`solide: 2`) — on le lui accorde par demande explicite (`sur_eau`) plutôt qu'en ouvrant l'eau à tout le catalogue ; et le juge de M1 « tout décor est sur une tuile marchable » l'a arrêtée net. **Ce juge a raison sur le fond — ce n'est pas lui qu'on jette, c'est l'exception qu'on déclare** : `carte.FLOTTANTS` vit en Python, le paquet la porte, et un juge de banc vérifie que le `flotte` des fiches de dessin dit exactement la même chose. ⚠️ **Mesure qui a tout réorienté** : le glyphe `Q` n'est pas un ponton, c'est le **pavage du district des Quais** — **16 de ses 1 818 tuiles touchent l'eau**. Un poteau semé « sur le quai » se plantait six tuiles à l'intérieur des terres, ou nulle part (0 poteau, 0 bouée au premier essai). Ce qui amarre un bateau n'est pas un glyphe, c'est une **rive** : une tuile où l'on marche, ni sable ni route, avec l'eau devant — 222 tuiles, dont **199 de trottoir**. Et le trottoir ne porte pas `terre` dans la légende : tester la propriété au lieu de la marchabilité laissait dehors 199 des 222. ⚠️ **Un crochet de variante par tuile** : le décor est cuit **une fois par type**, donc sans lui tous les parasols de la ville sont du même rouge. Le mécanisme existait pour les `DECALS` (`d.v`) ; c'est la première fiche de décor à en avoir besoin — et la variante se tire à l'**empreinte de la tuile**, jamais au dé du jeu. ⚠️ **Deux dessins jetés après les avoir REGARDÉS** (rendus au navigateur, pas devinés) : le château était une **motte beige** — tours et courtine du même sable — et le belvédère une **caisse**. Ce qui nomme un belvédère vu d'en haut, c'est la rambarde sur **trois** côtés et la trouée du sud par où l'on monte : un plancher fermé est une boîte, un plancher ouvert d'un côté est un endroit où l'on va. ⚠️ **Et une précaution nommée comme telle** : le semis passe après `boucher_les_poches` (on ne meuble pas un terrain que la ville va retirer), mais **mesuré sur huit graines et 1 139 meubles, semer avant n'en noie aujourd'hui aucun** — le juge n'y répare rien, il épingle l'ordre. 13 juges neufs, rouge-avant prouvé deux fois, et le juge de l'écart en a attrapé un troisième en vol (un belvédère posé contre un parasol) ; 1659 tests. ✅ **2e vague livrée** (16 sept. 2026) — *les enfants jouent*. ⚠️ **Jouer, c'est un `metier`, pas un costume** : l'enfant existait depuis la v1 et n'avait jamais rien fait d'autre que marcher. Trois routines branchées sur ce qui existe — le **château** (il y revient, et s'il n'y est plus il s'en cherche un autre), la **baignade**, le **ballon** entre deux enfants. ⚠️ Ce ne sont **pas** tous les enfants de la ville : ceux-là naissent sur la grève et y restent. Donner un `metier` à l'archétype les aurait tous sortis de la foule et aurait rendu muette la mère qui promène le sien. ⚠️ **UN ENFANT NE SE NOIE PAS** — et mesure, pour ne pas s'attribuer un correctif : **aucun piéton ne se noie dans le jeu**, le souffle et `noyade` n'existent que pour le joueur. Le juge n'y répare rien, il **épingle** la garantie. ⚠️ Et ce qui la tient n'est **aucun des deux gardes écrits pour ça** : c'est qu'on ne donne jamais à un enfant de destination au-delà de la première tuile, et qu'il s'immobilise dès qu'il y a le pied — neutraliser l'un ou l'autre ne fait tomber aucun juge, et les deux sont commentés comme des **ceintures**. ⚠️ **Le juge qui passait à vide** : il annonçait « il ne dépasse jamais la première tuile » et il passait sur une plage où **personne n'entrait jamais dans l'eau** — `cap` s'arrête à 12 px de son but (un palier écrit pour le pickpocket) et une tuile en fait 16, donc l'enfant s'immobilisait *avant* de se mouiller les pieds. Une ligne de plus au juge (« il faut qu'ils y soient entrés »), et le défaut est tombé tout seul. ⚠️ **Et la leçon des dés, payée une troisième fois cette semaine** : la naissance des enfants tirait quarante couples dans `B.rng()` — **le pickpocket a cessé de voler**, et le budget de la foule a sauté. Un juge qui ne parle pas de plage, tombé parce que chaque dé consommé décale tous ceux qui suivent. Le semis balaie maintenant la bulle en spirale, le choix du jeu se tire à l'empreinte de l'enfant, et **plus un seul dé**. ⚠️ **Le ballon vole dans la boucle des entités, pas dans la routine** : les routines battent une image sur quinze — mesuré, le ballon ne bougeait que 13 images sur 400 et sautait par à-coups d'un quart de seconde. Et il lui faut de la **distance** : deux enfants collés ne se lancent rien, la balle arrive avant d'être partie. ⚠️ **Un enfant oublié emporte son ballon**, sinon la balle vole toute seule pour toujours. ⚠️ **Un juge existant resserré plutôt qu'affaibli** : « aucun passant ne se met à l'eau » a raison sur le fond — une flânerie qui mène à la baie ne se voit qu'en jeu —, donc ce n'est pas lui qu'on jette, c'est l'exception qu'on **nomme**. ⚠️ **Et un défaut de la 1re vague trouvé par le juge du PONT** : une serviette et deux bouées s'étaient posées à une tuile du tablier de La Pointe, et un char lancé les accrochait — le juge a vu la carrosserie tomber à 90 sur 100 *après* l'ouverture du pont et en a conclu que le pont coûtait encore. Un quai n'est pas une plage, et le pied d'un pont non plus (`FERMETURES` le disait déjà pour les rues barrées). 5 juges neufs, rouge-avant prouvé trois fois ; 1669 tests. 🔨 **3e vague en cours** (16 sept. 2026) — *l'eau porte enfin quelque chose* : le blocage est levé, « Le char tourne comme son ombre » a été livré. Reste ensuite la foire de La Pointe. |
 | Plus de champs : des terrains vagues et des parcs | **en cours** | 16 sept. 2026 | **P2** | ajout | demande de Martin : « au lieu des champs, mets des terrains vague un peu salle et avec des déchets, mais aussi des parcs ». ⚠️ **Mesuré, et le mot est juste** : **24 lots** de la ville — **1 328 tuiles** — se peignent avec le **gazon des parcs** (`,`), et il n'y a qu'**un objet par 17 tuiles** dessus. Dix sont des terrains nus (`_jardin`, 406 tuiles, un arbre ou un buisson par 16 tuiles, et en banlieue une palissade autour) ; quatorze sont des **terrains vagues** (922 tuiles) dont le seul décor est le gravat, semé un par 17 tuiles — sur de la pelouse. Vu d'en haut, un lot abandonné derrière son grillage a donc exactement la surface d'un parterre de banlieue : un champ. Trois choses : (1) une **friche** (`;`) dans la légende — la terre perce, l'herbe est sèche, et ⚠️ **pas de `herbe`** dans sa fiche, sinon la mini-carte la repeint en vert et c'est un parc de plus ; (2) **trois déchets** au catalogue (sacs d'ordures, pneu, baril rouillé) semés avec les gravats et les mauvaises herbes ; (3) un **parc de quartier** — un sentier de poussière de pierre, des bancs, des arbres serrés, parfois une table à pique-nique — qui remplace le gazon nu moitié-moitié avec le terrain vague. Plus un seul lot de pelouse rase. |
+| La ligne d'histoire : une ouverture et un générique | **à faire** | — | **P2** | ajout | demande de Martin : « il faut qu'il y ait une ligne d'histoire qui commence par une introduction audio et visuel au lancement du jeu... aussi une animation audio visuel à la fin ». ⚠️ **Mesuré le 16 sept. 2026 : le jeu ne dit JAMAIS sa prémisse, et il ne finit nulle part.** Le titre est un voile HTML (`voile-titre`) posé sur la ville figée au terminus — et **vide**, les entités ne naissant qu'à `Jeu.commencer()`, qui pose le bonhomme devant la porte et écrit `BAIE-DES-BRUMES` pendant 150 images. C'est tout. L'oncle Rocco, le garage, les 15 000 $ de Sal : c'est écrit **dans ce plan**, dans `economie.DETTE` et dans une réplique de Ti-Guy qu'il faut aller chercher à la porte du terminus. À l'autre bout, `B.etat` ne prend que `titre`, `jeu`, `pause` et `carte` : l'état `fin` qu'annonce la carte du dépôt (« Côté JS », `jeu.js`) **n'a jamais été écrit**, et le score ne part que d'un item du menu PAUSE. ⚠️ **Deux vagues, deux échéances** : l'**ouverture** se livre tout de suite (rien de neuf à dessiner — l'autobus, le terminus, la caméra, le fondu `Jeu.transiter()` et le cinéma `B.cinema`, qui fige la ville et dit une réplique à voix haute, existent tous), le **générique** attend une fin à laquelle arriver (**M13**, dernière tranche de M16). ⚠️ **Le son n'a pas le droit de jouer avant un geste** : le navigateur retient l'`AudioContext` tant que personne n'a touché — une ouverture partie au chargement serait muette une fois sur deux. Elle part donc sur JOUER, pas sur `demarrer()`. ⚠️ **Et on la passe** : ACTION saute une réplique, PAUSE saute l'ouverture entière, une partie en cours ne la rejoue pas, et elle se revoit depuis le carnet. Le **même narrateur** aux deux bouts (celui du Clairon) : c'est lui qui en fait une ligne et non deux animations |
 | L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
 | Quatre activités que le jeu n'a pas | **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (**livrés le 15 sept.**, `aee8543` : +25 % de vie à 25 ambulances, le char à la planque à 50), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | Installable, et jouable hors ligne | **à faire** | — | **P4** | ajout | demande de Martin : « est-ce compliqué de faire du jeu une webapp installable ? », puis « jouable hors ligne ». ⚠️ **Mesuré : sur iPhone, la moitié est déjà faite, et personne ne l'a voulu** — `base.html` porte déjà `apple-mobile-web-app-capable`, `mobile-web-app-capable`, `theme-color` et `viewport-fit=cover` : « Ajouter à l'écran d'accueil » donne **aujourd'hui** une app plein écran sans barre Safari. Il n'y manque qu'une **icône** — iOS ne prend pas un `favicon.svg` et colle une capture d'écran floue à la place. Android et Chrome bureau, eux, exigent trois choses : un `manifest.webmanifest`, des icônes PNG (192, 512, une *maskable* — Chromium est **déjà là** pour Playwright, il rend le SVG sans rien ajouter au projet) et un service worker **qui a un gestionnaire `fetch`** : sans lui, Chrome ne propose pas l'installation du tout. ⚠️ **Le worker se sert à la RACINE, et c'est le seul vrai piège** : Flask sert tout sous `/static/`, or un worker ne contrôle que son dossier — `/static/js/sw.js` ne verrait jamais `/`. Il lui faut sa route à lui dans `routes.py`, en `no-cache` : nginx met `expires 7d` sur `/static/`, et un worker figé une semaine est un piège qui se referme sur la session suivante. ⚠️ **Le poids est mesuré, et c'est lui qui décide** : la coquille pèse **300 Ko** de JS gzippé et **65 Ko** de définitions (492 Ko brut) — précachée sans y penser ; l'audio pèse **12 Mo en 166 fichiers**, chargés à la demande (`son.js` : `fetch` puis `decodeAudioData`). Avaler 12 Mo en silence sur un forfait cellulaire n'est pas une fonctionnalité : l'audio se cache **à l'usage**, et « toute la ville hors ligne » est un **bouton** qu'on choisit. ⚠️ **Le cache se nomme par l'EMPREINTE, jamais par la version** — `definitions.py` calcule déjà un sha256 du paquet, et la sauvegarde s'en sert pour oublier une position qui n'existe plus (`jeu.js`). Un paquet caché qui ne correspond plus au JS servi ne ressemble pas à un bogue de cache : il ressemble à un bogue de jeu. C'est mot pour mot ce que `version.py` dit déjà dans sa propre docstring. ⚠️ Et **un worker naïf casserait la revalidation 304** montée dans `api_definitions` — celle qui accepte l'ETag **faible** de nginx. ⚠️ **Les mp3 ne portent pas `?v=`**, contrairement au JS : un bruitage regénéré garde son nom, donc un cache d'usage servirait l'ancien pour toujours. Il faut une règle de purge, et elle n'a pas de version à quoi se raccrocher. ⚠️ **Les scores restent en ligne** : `horsLigne` existe (`jeu.js`) mais ne couvre que l'échec de chargement des définitions — l'écran des scores n'a aucun chemin hors-ligne, et un tableau vide qui ment est pire qu'un tableau qui dit « pas de réseau ». ⚠️ À **vérifier sur le serveur** : le snippet de sécurité nginx (`gestion-dojo-security-server.conf`, hors dépôt) peut porter un CSP qui bloque `worker-src` ou `manifest-src` — et ça ne se verra qu'en prod. Deux vagues : **(1) l'installation** (manifeste, icônes, worker minimal — ~2 h), **(2) le hors-ligne pour vrai** (coquille précachée, audio à l'usage, définitions par empreinte, scores qui disent la vérité — ~1 jour). Les juges ont déjà leur banc : `test_navigateur.py` lance un vrai Chromium, donc le worker se juge en coupant le réseau après le premier chargement. |
@@ -544,6 +545,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, entraves du jour (liste validée par Python), nuit de déneigement, feux clignotants la nuit, pointe directionnelle, crimes d'autrui, arrêts d'autobus, éboueurs, bêtes | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; suivre un DÉTOUR qui mène de l'autre côté ; perdre son char une nuit de déneigement |
 | M14 | **P4** Meta v2 | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
 | M16 | **P4** Cent missions | neuf types d'objectifs de plus, `exige` / `ferme` / `donne` étendu, lieux nommés, dialogues hors paquet, téléphone qui trie ; 109 missions en 9 arcs, 34 personnages, 3 piétons de mission, un chien, 5 défis | finir un arc par district au téléphone ; aucune mission morte au singe ; les deux fins atteignables par le catalogue |
+| — | **P2** Une ouverture et un générique | l'ouverture jouée au premier JOUER (l'autobus arrive au terminus, le narrateur dit la prémisse, `mus_ouverture` en mp3 **et** en notes), passable d'un bouton, rejouable du carnet, jamais rejouée sur une partie en cours ; le générique branché sur les deux fins de M13 (caméra sur la ville, chiffres de la partie, manchette du Clairon, `mus_generique`, puis l'envoi du score) | commencer une partie et savoir qui on est sans avoir lu le plan ; passer l'ouverture d'un bouton, à la manette comme au doigt ; voir une fin, envoyer son score, et retrouver la ville après |
 | M13 | **P4** Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ | atteindre les deux fins ; chaque réplique se dit à voix haute |
 
 Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
@@ -556,7 +558,8 @@ Ce qui reste, **trié par priorité** (le détail et la règle de tri sont dans 
 
 - **P1, le jeu ment** — M9 (le catalogue promet quatre chars que rien ne dessine) · la rampe
   du _Grand Saut_, qu'on ne peut pas gagner.
-- **P2, ça se sent à chaque partie** — les arbres dans les sentiers · le carnet.
+- **P2, ça se sent à chaque partie** — les arbres dans les sentiers · le carnet · la ligne d'histoire
+  (l'ouverture tout de suite, le générique avec M13).
 - **P3, ça porte le reste** — le trottoir et les traverses · les pièces plus grandes que leur
   maison · l'eau qui n'est plus un mur.
 - **P4, ça enrichit** — les feux pour piétons · les terrains de banlieue · les armes à feu ·
@@ -595,6 +598,7 @@ ordre-là.
 |---|---|---|---|---|
 | **P2** | ajout | Des sortes de gens — le réservoir | 3 | ⚠️ **deux vagues livrées** (les trois de Martin, puis cinq des sept « qui viennent avec »). Reste le réservoir, où l'on pige par vagues — plus la **personne âgée** (attend les feux pour piétons) et le **pickpocket** (M12) |
 | **P2** | **correctif** | Les véhicules vus **de profil**, comme les piétons | 5 | ⚠️ **avant tout véhicule de plus** — le tramway et le traversier de M12, le sprite du bateau en dette : chaque char dessiné avant la refonte se dessine deux fois. Ne touche **qu'au dessin** (la physique voit toujours un rectangle vu d'en haut), et jette les quatre toits de M9 |
+| **P2** | ajout | La ligne d'histoire : une ouverture et un générique | 3 | ⚠️ **l'ouverture ne dépend de rien** — le cinéma, les voix, les fondus, l'autobus et le narrateur sont livrés ; le **générique**, lui, attend **M13** : il n'y a pas de fin à filmer avant |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
@@ -5243,6 +5247,122 @@ que Bandini n'utilisait pas encore :
   (le carnet le dit) ; entendre trente-quatre personnes différentes sans qu'une seule
   paraisse en avoir la voix d'une autre.
 
+### La ligne d'histoire : une ouverture et un générique (**ajout**, taille 3)
+
+_Demande de Martin (16 sept. 2026) :_ « il faut qu'il y ait une ligne d'histoire qui
+commence par une introduction audio et visuel au lancement du jeu... aussi une animation
+audio visuel à la fin. »
+
+_Ce que ça donne :_ on **sait qui on est** avant de faire un pas, et la partie **se termine**
+au lieu de s'arrêter. L'histoire est déjà écrite partout dans le dépôt — l'oncle Rocco mort,
+le garage dont on hérite, les 15 000 $ de Sal « Le Barbier » ; ce qui manque, ce sont ses
+**deux bouts**, et le même narrateur aux deux.
+
+⚠️ **Mesuré le 16 sept. 2026, et c'est ce qui découpe les deux vagues.**
+
+- **Le lancement ne raconte rien.** Le titre est un voile HTML (`templates/index.html`,
+  `voile-titre`) : un `<h1>Bandini</h1>`, la tagline du site, deux boutons et la liste des
+  touches. Derrière, le canvas dessine **déjà** la ville figée au terminus — `rendre()`
+  tourne dès le chargement, caméra centrée sur l'apparition — mais elle est **vide** : les
+  entités ne naissent qu'à `Jeu.commencer()`. Celui-ci pose le bonhomme devant la porte,
+  coupe le thème du menu et écrit `BAIE-DES-BRUMES` pendant 150 images. **C'est tout ce que
+  le jeu dit de sa prémisse.**
+- **La prémisse existe pourtant à trois endroits, et aucun n'est le jeu** : ce plan
+  (« Prémisse »), `economie.DETTE` (15 000 $, 2 % par nuit, plafond à une fois et demie) et
+  une réplique de Ti-Guy (`missions.py`, m1 : « Heille! Le cousin de Rocco! T'as fait bon
+  voyage? ») qu'il faut **aller chercher** à la porte du terminus, et que rien n'oblige à
+  entendre. Un joueur qui part à gauche ne saura jamais pourquoi il est là.
+- **Le jeu ne finit nulle part.** `B.etat` ne prend que `titre | jeu | pause | carte` :
+  l'état `fin` qu'annonce la carte du dépôt (« Côté JS », ligne `jeu.js`) **n'a jamais été
+  écrit**, et le score ne part que d'un item du menu PAUSE (`BILAN DE LA SESSION` →
+  `ENVOYER MON SCORE`, `Hud.demanderScore`). Une partie se quitte ; elle ne se conclut pas.
+- **Le mécanisme, lui, est entièrement là** — c'est pour ça que l'ouverture est une vague de
+  taille 2 et pas un jalon : `B.cinema` fige la ville et enchaîne des répliques **dites à
+  voix haute** (`Histoire.dire` : ACTION passe, la voix finie passe toute seule, la radio et
+  l'ambiance baissent), `Jeu.transiter()` fait un fondu dans le bon ordre, `Son.Mus` tient un
+  thème avec sa queue, le **narrateur du Clairon** a déjà sa voix (`annonceur centre d'achat
+  1`) et lit des textes qui ne sont pas des répliques de mission (`audio.voix_journal`, slug
+  `narrateur-journal-…`), et l'**autobus** est un véhicule du catalogue avec son sprite,
+  devant un **terminus** qui est le point d'apparition du joueur. Aucun sprite neuf, aucun
+  moteur neuf.
+
+#### 1re vague — l'ouverture (taille 2, ⚠️ **ne dépend de rien**)
+
+- ⚠️ **Elle part sur JOUER, jamais au chargement de la page.** Le navigateur retient
+  l'`AudioContext` tant que personne n'a touché (`Son.reveiller`, `Son.enAttente`) : une
+  ouverture lancée par `Jeu.demarrer()` serait **muette une fois sur deux**, et une
+  introduction audio muette n'est pas une introduction. Le bandeau du titre reste donc ce
+  qu'il est — c'est lui qui réclame le geste — et l'ouverture commence juste après, dans
+  `commencer()`. ⚠️ **Après**, et pas avant : c'est `commencer()` qui peuple la ville, et un
+  autobus filmé sur une carte vide n'existe pas.
+- **Ce qu'on voit** (rien de neuf à dessiner) : l'autobus entre par le bord de l'écran,
+  s'arrête devant le terminus, la caméra le suit ; la portière s'ouvre, le bonhomme descend
+  avec sa valise de 50 $ ; le car repart, la caméra monte sur la ville et le titre s'inscrit.
+  Tout passe par le fondu de `Jeu.transiter()`, la même transition que les portes.
+- **Ce qu'on entend** : le narrateur dit la prémisse en trois ou quatre phrases (l'oncle, le
+  garage, la dette, les 50 $) sur `mus_ouverture` — un morceau de plus dans `audio.MUSIQUES`
+  (19 aujourd'hui, 851 s en tout) **et** écrit en notes dans `musique.py`, parce que les
+  notes restent le filet. Le moteur au ralenti, la portière et la rumeur de la rue existent
+  déjà au catalogue ; il n'y a que le soupir des portes d'air à ajouter, s'il en faut un.
+- **Le texte reste la source** : les répliques de l'ouverture vivent dans `missions.py` comme
+  toutes les autres, **jamais dans `histoire.js`**, et `audio.voix_ouverture()` les génère
+  sur le modèle exact de `voix_journal()` (`mission: 'ouverture'`, slugs
+  `narrateur-ouverture-1…n`). Une réplique dont le mp3 manque **s'affiche sans voix** : c'est
+  la règle du fichier, et c'est elle qui permet d'écrire le texte avant de dépenser un
+  crédit.
+- ⚠️ **On la passe, et on la revoit.** ACTION saute une réplique (le cinéma sait déjà le
+  faire), PAUSE saute l'ouverture entière — à la manette et au doigt comme au clavier. Une
+  ouverture qu'on ne peut pas passer devient une punition à la deuxième partie.
+- ⚠️ **Une partie en cours ne la rejoue pas.** `commencer()` reprend une sauvegarde (jour,
+  position, char devant la planque) : l'ouverture ne joue qu'à la **première** partie d'une
+  sauvegarde (drapeau `ouvertureVue`, versionné comme le reste de la sauvegarde et couvert
+  par le repli sur `etatInitial()`), et se revoit à la demande depuis le carnet.
+- ⚠️ **Le poids se surveille** : `static/audio/` pèse **12 Mo en 166 fichiers**, chargés à la
+  demande (`fetch` puis `decodeAudioData`). L'ouverture est le seul son qu'il faut avoir
+  **avant** de le jouer : elle se précharge pendant que le joueur lit l'écran titre, et si le
+  fichier n'est pas là, le texte défile quand même.
+
+#### 2e vague — le générique (taille 1, ⚠️ **attend M13**)
+
+- ⚠️ **Il n'y a pas de fin à filmer avant M13.** Les deux fins (_Le Boss_, _Sacrer son camp_)
+  sont la dernière tranche de **M16** ; cette vague est ce qui se **branche dessus**, pas ce
+  qui les écrit. Ce qu'elle apporte au moteur : l'état `fin` qui manque à `B.etat`, et un
+  enchaînement qui ne soit pas un item de menu.
+- **Ce qu'on voit** : la ville en plan large, la caméra qui traverse le district libéré — ou
+  le traversier qui s'éloigne du quai, selon la fin — puis les chiffres de la partie qui
+  montent un à un (fortune, missions, propriétés, jours, la dette de Rocco réglée ou non),
+  et la manchette du Clairon du lendemain.
+- **Ce qu'on entend** : `mus_generique`, dans `audio.MUSIQUES` et en notes comme les autres —
+  une variante de l'ouverture, même tonalité, plus lente, pas un morceau étranger. Et la
+  manchette **lue par le narrateur qui a ouvert le jeu** : c'est le même homme aux deux
+  bouts, et c'est ça qui fait une ligne plutôt que deux animations.
+- **Elle mène au score** : `Hud.demanderScore()` existe déjà et n'est appelé de nulle part
+  ailleurs qu'un menu. Le générique est le seul endroit du jeu où l'envoi s'offre tout seul.
+- ⚠️ **La partie continue après le générique** (règle de M13, inchangée) : le score part, le
+  monde reste, la sauvegarde ne se referme pas. Un générique qui verrouille la ville
+  transforme une fin en écran de défaite.
+
+**Ce que ça coûte en crédits** : deux morceaux de 45 s à **30 crédits la seconde = 2 700**
+sur les 90 000 du mois, plus quelques centaines de caractères de narration (les voix se
+paient au caractère). Même échelle que les dix-neuf morceaux déjà générés.
+
+**Juges** — la règle habituelle : on juge le **câblage**, pas la fiche.
+
+- _Python_ : chaque réplique de l'ouverture a un personnage connu et un slug de voix unique ;
+  `mus_ouverture` et `mus_generique` existent des **deux** côtés (un mp3 déclaré par
+  `exporter()` **ou** des notes dans `musique.py`) — une musique qui n'a ni fichier ni notes
+  est un silence qui se déploie.
+- _Banc_ : l'ouverture se **termine toujours** (elle ne peut pas laisser `B.cinema` ouvert),
+  PAUSE la saute à n'importe quelle réplique, et l'état de la partie après l'ouverture est
+  exactement celui qu'on aurait sans elle — joueur vivant, à sa tuile, sans étoile, sans
+  mission en cours.
+- _Banc_ : une sauvegarde qui porte `ouvertureVue` ne rejoue pas l'ouverture ; une sauvegarde
+  d'avant le drapeau ne plante pas.
+- _Navigateur_ : JOUER au clavier **et** à la manette lance l'ouverture, aucune erreur
+  console, et le son n'est jamais demandé avant le geste.
+- _Générique_ : le test qui force chacune des deux fins (déjà prévu par M13) vérifie qu'on
+  retombe sur une ville jouable, score envoyé ou non.
+
 ### M13 — Les deux fins (**ajout**, taille 4)
 
 _Ce que ça donne :_ une histoire qui se termine, de deux façons.
@@ -5257,6 +5377,9 @@ _Ce que ça donne :_ une histoire qui se termine, de deux façons.
 - **Le Boss** : les 4 propriétés **et** les 4 districts libérés → manchette, générique, la
   ville change de couleur.
 - **Sacrer son camp** : 15 000 $ en poche, traversier de nuit, 0★ → l'autre générique.
+- **Le générique** — l'animation audio-visuelle de fin, le narrateur du Clairon,
+  `mus_generique` — est décrit juste au-dessus, dans « La ligne d'histoire » : M13
+  fournit les deux fins, cette section-là fournit ce qu'on en voit et ce qu'on en entend.
 - La partie **continue après la fin** : le score part, le monde reste.
 - **Juges** : un test force chacune des deux fins (elles sont atteignables) ; la dette reste
   remboursable jusqu'au bout (aucune fin ne se referme sur un bug) ; chaque réplique
