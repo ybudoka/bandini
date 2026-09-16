@@ -285,14 +285,53 @@ const Entites = (function () {
   function peuplerInterieur(piece) {
     if (!piece || !piece.gens) return;
     for (const g of piece.gens) {
-      const arch = g.qui === 'commis' ? archetype('commis') : archetypeDeRue(g.x * TT, g.y * TT);
+      const arch = archetypeDedans(g);
       if (!arch) continue;
-      const e = creerPieton(g.x * TT + 8, g.y * TT + 8, arch);
+      const couche = g.qui === 'malade', assis = g.qui === 'patient';
+      // ⚠️ Le malade et le patient naissent DANS leur meuble (`carte.ASSIS_OU_COUCHE`),
+      // et pas au centre de la tuile : un corps couche pose ses PIEDS (l'ancre)
+      // au bas de la tuile de tete, pour que sa tete tombe sur l'oreiller ; un
+      // corps assis pose les siens au bord de l'assise, sa tete devant le dossier.
+      const y = g.y * TT + (couche ? 15 : (assis ? 14 : 8));
+      const e = creerPieton(g.x * TT + 8, y, arch);
       e.face = 'bas';
-      // Le commis ne quitte pas sa caisse ; le client, lui, magasine.
-      if (g.qui === 'commis') e.poste = { x: e.x, y: e.y };
+      // Le commis ne quitte pas sa caisse, la soignante son triage ; le client, lui, magasine.
+      if (g.qui === 'commis' || g.qui === 'soignant') e.poste = { x: e.x, y: e.y };
+      // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
+      // revient) et il ne se retourne pas — c'est ce qui garde un malade couche
+      // et un patient assis. Qu'on le frappe, et il redevient un passant : il se
+      // leve et il se sauve, en jaquette s'il le faut.
+      if (couche || assis) {
+        e.etat = 'fige';
+        e.plante = { x: e.x, y: e.y };
+        e.face = couche ? 'alite' : 'assis_bas';
+        e.alite = couche;
+      }
     }
     indexer();
+  }
+
+  /** Qui naît dans une piece, selon ce que le plan demande.
+
+      ⚠️ Le malade porte la jaquette de l'archetype `malade`, mais la TETE et la
+      PEAU d'un passant du quartier (`archetypeDeRue`, a l'empreinte de sa tuile
+      — pas au de du jeu) : six malades a la meme tete dans six lits, ce serait
+      une seule image collee six fois. Le patient, lui, attend dans son linge de
+      tous les jours ; un corps qui ne sait pas s'asseoir (l'enfant, les sortes
+      a leur sprite) cede sa chaise a un passant ordinaire. */
+  function archetypeDedans(g) {
+    if (g.qui === 'commis') return archetype('commis');
+    if (g.qui === 'soignant') return archetype('soignante');
+    const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
+    if (g.qui === 'malade') {
+      const jaquette = archetype('malade'), rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);
+      return Object.assign({}, jaquette, { couleurs: Object.assign({}, jaquette.couleurs, { h: rue.couleurs.h, s: rue.couleurs.s }) });
+    }
+    if (g.qui === 'patient') {
+      const rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);
+      return (rue.sprite === 'joueur' && !rue.accompagne) ? rue : archetype('passant');
+    }
+    return archetypeDeRue(g.x * TT, g.y * TT);
   }
 
   /** Rebatit l'index fixe a partir des entites presentes (retour de l'interieur). */
@@ -308,6 +347,10 @@ const Entites = (function () {
   const JET_EAU_PORTEE = 260;
 
   const DEBRIS_MAX = 40;
+
+  //: Ce qui se ramasse par terre et se dessine par son NOM d'objet, pas par une
+  //: arme : la liasse d'un guichet, et ce qu'une distributrice defoncee crache.
+  const OBJETS_PAR_TERRE = { billets: true, monnaie: true, canette: true, sac: true };
 
   /** Une ARME mord le decor : la balle, l'explosion, le feu. Rend vrai s'il
       est tombe de ce coup-ci.
@@ -373,6 +416,12 @@ const Entites = (function () {
     // etoiles, quoi qu'il l'ait ouvert (un camion, l'explosion d'a cote, un
     // chargeur entier) : la caisse est par terre, tout le monde l'a vu.
     if (e.decor === 'guichet' && typeof Missions !== 'undefined' && Missions.guichetCasse) Missions.guichetCasse(e);
+    // ⚠️ UNE DISTRIBUTRICE DEFONCEE CRACHE sa monnaie et ses canettes — quoi
+    // qui l'ait ouverte, comme le guichet. C'est la fiche qui le dit
+    // (`distributrice: sorte`), pas le nom du decor.
+    if ((DECORS[e.decor] || {}).distributrice && typeof Missions !== 'undefined' && Missions.distributriceCassee) {
+      Missions.distributriceCassee(e);
+    }
     // ⚠️ UNE BORNE-FONTAINE DEFONCEE CRACHE. C'est la seule raison d'en avoir
     // fait un decor cassable : une tuile ne peut ni tomber ni gicler. Le jet
     // est une ENTITE INVISIBLE qui vit ses dix secondes et crache des
@@ -3835,8 +3884,8 @@ const Entites = (function () {
         B.stats.images++;
         continue;
       }
-      if (e.type === 'ramassage' && e.objet === 'billets') {
-        const c = Atlas.cuirePeintre('objet|billets', 16, 10, function (g, w, h) { OBJETS.billets(g, w, h); });
+      if (e.type === 'ramassage' && OBJETS_PAR_TERRE[e.objet]) {
+        const c = Atlas.cuirePeintre('objet|' + e.objet, 16, 10, function (g, w, h) { OBJETS[e.objet](g, w, h); });
         ctx.drawImage(c, Math.round(e.x - 8 - cx), Math.round(e.y - 8 + Math.sin(e.t / 14) * 1.5 - cy));
         B.stats.images++;
         continue;
@@ -3860,7 +3909,9 @@ const Entites = (function () {
       if (e.vivant && e.nage) {
         ctx.drawImage(eauRemous, Math.round(e.x - 7 - cx), Math.round(e.y - 3 - cy));
         B.stats.images++;
-      } else if (e.vivant) {
+      } else if (e.vivant && !(e.alite && e.etat === 'fige')) {
+        // ⚠️ Pas d'ombre sous un malade couche : elle tomberait au milieu de la
+        // couverture, une tache grise en travers du lit.
         ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
       }
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;

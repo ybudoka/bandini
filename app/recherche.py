@@ -65,6 +65,10 @@ DELITS: dict[str, dict] = {
     "conduite_dangereuse": {"etoiles": 1, "temoin": False},
     "explosion": {"etoiles": 2, "temoin": False},
     "guichet": {"etoiles": 2, "temoin": False},
+    # Defoncer une machine distributrice. ⚠️ Pas un guichet : une etoile, et
+    # il faut qu'un passant aille le raconter — personne n'appelle la police
+    # pour trois canettes, sauf s'il a tout vu.
+    "distributrice": {"etoiles": 1, "temoin": True},
     "effraction": {"etoiles": 1, "temoin": True},
     "pot_de_vin_refuse": {"etoiles": 1, "temoin": False},
     # Sortir son char de la fourriere sans passer au comptoir. ⚠️ BRUYANT : les

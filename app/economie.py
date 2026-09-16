@@ -211,6 +211,38 @@ def esperance_skimmer() -> float:
     return (1 - s["trouve"]) * (s["rendement"][0] + s["rendement"][1]) / 2 - s["prix"]
 
 
+# --- Les machines distributrices -------------------------------------------
+
+#: ⚠️ **La petite soeur honnete du guichet.** La meme place dans la rue — contre
+#: une devanture, sur l'abord, servie depuis la dalle — mais ce qu'elle garde,
+#: c'est de la MONNAIE et des canettes, pas la caisse d'une banque. Ce qu'elle
+#: vend pointe dans `TARIFS` (`magasins.DISTRIBUTRICES`) : une liqueur coute le
+#: meme 3 $ a la machine qu'a la glaciere du depanneur, et la regle du
+#: trottoir tient toute seule — au dollar, jamais mieux que le hot-dog.
+#:
+#: ⚠️ `coincee` : la chance qu'un achat reste pris dans la spirale. On a paye,
+#: rien ne tombe, et l'invite devient BRASSER LA MACHINE — qui le fait tomber
+#: une fois sur `brasser`. C'est ca, une machine distributrice : tout le monde
+#: en a deja brasse une.
+#:
+#: ⚠️ Defoncee, elle crache sa `monnaie` en `tas` et `canettes` de sa
+#: marchandise. Un delit a UNE etoile, et seulement si quelqu'un regarde
+#: (`recherche.DELITS["distributrice"]`) : c'est du vandalisme, pas une banque.
+#: Et un juge tient qu'une nuit a defoncer TOUTES les machines de la ville
+#: rapporte moins qu'une journee honnete — la monnaie, c'est de la monnaie.
+DISTRIBUTRICE: dict = {
+    "monnaie": (4, 22),         # ce qui tombe quand elle cede, en $
+    "tas": 3,                   # ... en combien de tas
+    "canettes": 2,              # ce qu'elle recrache de sa marchandise
+    "coincee": 0.15,            # un achat sur sept reste pris
+    "brasser": 0.5,             # ... et une secousse sur deux le fait tomber
+    "ecart": 10,                # deux machines ne se voisinent pas (tuiles)
+    "ecart_guichet": 3,         # ni collees a un guichet : ACTION ne saurait pas lequel
+    "par_district": 9,          # ... et pas toutes dans le meme quartier
+    "par_ville": (16, 40),      # ce qu'une ville en pose — un juge le compte
+}
+
+
 # --- L'assurance : la fraude, et l'assureur qui enquete --------------------
 
 #: Ti-Guy assure ce qui est gare devant sa porte, sans demander a qui c'est.
@@ -716,6 +748,8 @@ def exporter() -> dict:
         "dette": dict(DETTE),
         "guichet": {**GUICHET, "caisse": list(GUICHET["caisse"]), "par_ville": list(GUICHET["par_ville"]),
                     "skimmer": {**GUICHET["skimmer"], "rendement": list(GUICHET["skimmer"]["rendement"])}},
+        "distributrice": {**DISTRIBUTRICE, "monnaie": list(DISTRIBUTRICE["monnaie"]),
+                          "par_ville": list(DISTRIBUTRICE["par_ville"])},
         "assurance": dict(ASSURANCE),
         "contrebande": {**CONTREBANDE, "facteur": list(CONTREBANDE["facteur"]),
                         "comptoirs": list(CONTREBANDE["comptoirs"]),

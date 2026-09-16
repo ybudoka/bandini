@@ -380,6 +380,27 @@ const Son = (function () {
       bruit(0.1, 0.16, 1100, 300);                  // le gravier
       ton(320, 0.14, 'triangle', 0.07, 0.7, 0.04);  // la tole qui resonne
     },
+    //: La machine distributrice. ⚠️ Synthetisee, comme la borne et le nid-de-
+    //: poule, pour la meme raison : le seau des bruitages est plein, et trois
+    //: coups de tole n'ont pas besoin de trois fichiers.
+    //: Ce qu'on achete TOMBE : le moteur de la spirale, puis la canette qui
+    //: dégringole dans la trappe.
+    distributrice: function () {
+      ton(180, 0.16, 'sawtooth', 0.05, 0.9);          // la spirale qui tourne
+      ton(140, 0.06, 'square', 0.18, 0.5, 0.18);      // le coup sourd dans la trappe
+      bruit(0.08, 0.14, 1800, 500);
+    },
+    // On la BRASSE : l'epaule dans la tole, et tout ce qu'il y a dedans qui cogne.
+    machine_brassee: function () {
+      ton(70, 0.12, 'square', 0.24, 0.6);
+      bruit(0.18, 0.22, 900, 200);
+      ton(240, 0.1, 'triangle', 0.06, 0.8, 0.08);
+    },
+    // Defoncee : la monnaie qui s'eparpille, trois tintements qui descendent.
+    monnaie: function () {
+      for (let i = 0; i < 3; i++) ton(2200 - i * 260, 0.08, 'sine', 0.12, 0.9, i * 0.07);
+      bruit(0.2, 0.18, 3200, 900);
+    },
     // La tete qui passe dessous : le glouglou, puis les bulles qui remontent.
     couler: function () { if (!joue('couler')) { bruit(0.7, 0.35, 800, 60); for (let i = 0; i < 4; i++) ton(520 - i * 90, 0.1, 'sine', 0.12, 0.45, i * 0.12); } },
     // ⚠️ Le char n'a PAS son propre fichier, et c'est voulu : c'est la meme

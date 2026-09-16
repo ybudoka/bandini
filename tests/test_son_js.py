@@ -951,7 +951,16 @@ def test_le_jet_d_une_borne_est_tenu_et_suit_la_distance(banc):
         L.Jeu.commencer();
         L.graine(17);
         const j = L.B.joueur;
-        const borne = L.B.entites.find(function (e) { return e.type === 'decor' && e.decor === 'borne_fontaine' && !e.brise; });
+        // ⚠️ UNE BORNE D'OU L'ON PEUT S'ELOIGNER de 900 px vers l'est. « La
+        // premiere borne venue » a fini un jour au coin nord-est de la carte (le
+        // 16 sept. 2026, quand l'hopital a grandi et que le tirage de la ville a
+        // glisse) : le joueur pose 200 px plus loin etait ramene dans la carte,
+        // a trois pixels de la gerbe, et le juge accusait le son de ne pas
+        // baisser avec la distance.
+        const borne = L.B.entites.find(function (e) {
+            return e.type === 'decor' && e.decor === 'borne_fontaine' && !e.brise
+                && (e.x + 900) / L.TT < L.Monde.carte.w - 2;
+        });
         if (!borne) return { pasDeBorne: true };
         j.x = borne.x; j.y = borne.y + 20; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
         const forces = [];

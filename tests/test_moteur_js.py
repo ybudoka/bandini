@@ -2395,6 +2395,14 @@ def test_les_trois_de_la_rue_ont_chacune_leur_crochet(banc, paquet):
         voleur.etat = 'flane'; voleur.argent = 0;
         const victime = o.poser('passant', 40, 0);
         victime.etat = 'flane'; victime.argent = 37; victime.face = 'droite';
+        // ⚠️ LE JOUEUR S'ECARTE. `o.poser` fait naitre le voleur SUR lui : le
+        // joueur se tenait donc entre le voleur et sa victime, et selon le tirage
+        // le voleur le poussait, qui poussait la victime — tous les trois glissaient
+        // vers l'est pendant 850 images sans que la main atteigne une poche. Le
+        // pickpocket n'y etait pour rien (mesure du 16 sept. 2026, le jour ou le
+        // tirage de la ville a glisse avec l'hopital). On le pose derriere le
+        // voleur, sur le meme trottoir : pas sur la chaussee.
+        j.x -= 3 * TT;
         L.Entites.indexer();
         let vole = -1;
         for (let i = 0; i < 900 && vole < 0; i++) {

@@ -664,6 +664,35 @@ const ASSIS_BAS = [
 SPRITES.joueur.poses.assis_cote = [ASSIS_COTE];
 SPRITES.joueur.poses.assis_haut = [ASSIS_HAUT];
 SPRITES.joueur.poses.assis_bas = [ASSIS_BAS];
+
+/* --- Le malade ALITE -----------------------------------------------------------
+
+   ⚠️ Pas `couche` : `couche` est un corps A TERRE, en travers (un KO, un mort),
+   et un malade couche en travers d'un lit d'une place deborderait des deux
+   cotes. Celui-ci est couche DANS le lit, la tete au nord sur l'oreiller : on
+   voit ses cheveux, sa figure, les epaules de sa jaquette et ses deux mains
+   posees sur la couverture — et rien en dessous, parce que c'est la COUVERTURE
+   du lit (`'r'`, plus bas) qui le couvre. Les quatre rangees du bas sont donc
+   vides a dessein : c'est le lit qu'on doit y voir. */
+const ALITE = [
+      '............',
+      '............',
+      '............',
+      '....kkkk....',
+      '...khhhhk...',
+      '...khsshk...',
+      '...kssssk...',
+      '...kssssk...',
+      '....kssk....',
+      '..kcccccck..',
+      '.kcccccccck.',
+      '.kscccccsk..',
+      '..kk....kk..',
+      '............',
+      '............',
+      '............',
+    ];
+SPRITES.joueur.poses.alite = [ALITE];
 const SPORT_COTE = [
       '..............................',
       '..............................',
@@ -2794,6 +2823,126 @@ const TUILES = (function () {
       ctx.fillStyle = '#4a3d2e';                       // les limons
       ctx.fillRect(0, 0, 2, T); ctx.fillRect(T - 2, 0, 2, T);
     },
+
+    /* --- L'hopital -------------------------------------------------------
+
+       Le lit d'hopital : UNE place, un cadre de metal, des draps blancs.
+       ⚠️ `v & 15` est le masque des cotes ou le lit CONTINUE, comme pour le lit
+       de chambre (`'l'`) : la tete de lit a barreaux et l'oreiller ne vont qu'a
+       la tuile de tete, les roulettes et le pied qu'a la tuile du bout. Le
+       MALADE n'est pas dans ce dessin : c'est une entite couchee par-dessus
+       (`alite`), et la couverture qui commence a la dixieme rangee est ce qui
+       le couvre jusqu'a la poitrine. */
+    'r': function (ctx, v, T) {
+      const nord = !(v & 1), est = !(v & 2), sud = !(v & 4), ouest = !(v & 8);   // ou le lit S'ARRETE
+      const x0 = ouest ? 2 : 0, x1 = est ? T - 2 : T;
+      const y0 = nord ? 1 : 0, y1 = sud ? T - 2 : T;
+      if (sud) { ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(x0 + 1, T - 1, x1 - x0 - 1, 1); }
+      ctx.fillStyle = '#8e969e';                        // le cadre de metal
+      ctx.fillRect(x0, y0, x1 - x0, y1 - y0);
+      const mx0 = ouest ? 3 : 0, mx1 = est ? T - 3 : T;
+      const my0 = nord ? 3 : 0, my1 = sud ? T - 3 : T;
+      ctx.fillStyle = '#eef1f2';                        // le drap
+      ctx.fillRect(mx0, my0, mx1 - mx0, my1 - my0);
+      if (nord) {
+        ctx.fillStyle = '#5f676f';                      // la tete de lit, a barreaux
+        ctx.fillRect(x0, y0, x1 - x0, 2);
+        ctx.fillStyle = '#c9ccd2';
+        for (let x = x0 + 1; x < x1 - 1; x += 3) ctx.fillRect(x, y0, 1, 2);
+        ctx.fillStyle = '#ffffff';                      // l'oreiller
+        ctx.fillRect(mx0 + 1, 4, mx1 - mx0 - 2, 4);
+        ctx.fillStyle = '#d5dadd';
+        ctx.fillRect(mx0 + 1, 7, mx1 - mx0 - 2, 1);
+      }
+      const cy0 = nord ? 10 : 0, cy1 = sud ? T - 4 : T;
+      ctx.fillStyle = '#9cc3d6';                        // la couverture d'hopital, bleu pale
+      ctx.fillRect(mx0, cy0, mx1 - mx0, cy1 - cy0);
+      if (nord) { ctx.fillStyle = '#eef1f2'; ctx.fillRect(mx0, 10, mx1 - mx0, 1); }   // le drap rabattu
+      ctx.fillStyle = '#c9ccd2';                        // les ridelles, le long des flancs
+      if (ouest) ctx.fillRect(x0, nord ? 8 : 0, 1, (sud ? T - 5 : T) - (nord ? 8 : 0));
+      if (est) ctx.fillRect(x1 - 1, nord ? 8 : 0, 1, (sud ? T - 5 : T) - (nord ? 8 : 0));
+      if (sud) {
+        ctx.fillStyle = '#5f676f'; ctx.fillRect(x0, T - 4, x1 - x0, 2);   // le pied de lit
+        ctx.fillStyle = '#2a2a2e'; ctx.fillRect(x0, T - 2, 2, 1); ctx.fillRect(x1 - 2, T - 2, 2, 1);   // les roulettes
+      }
+    },
+    /* Le solute : la potence, le sac, la tubulure. ⚠️ Il se pose a l'OUEST du
+       lit (`irq` dans les plans) et c'est pour ca que le sac pend du cote est
+       et que le tube file vers le bord est de la tuile : il va au bras du
+       malade, pas dans le mur. */
+    'i': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.18)';
+      ctx.fillRect(3, 14, 9, 2);                        // l'ombre
+      ctx.fillStyle = '#6f757c';
+      ctx.fillRect(3, 14, 9, 1); ctx.fillRect(7, 12, 2, 3);   // le pied a roulettes
+      ctx.fillStyle = '#aab1b8';
+      ctx.fillRect(7, 1, 2, 12);                        // la potence
+      ctx.fillRect(7, 1, 6, 1);                         // le crochet
+      ctx.fillStyle = '#e4f3f6';
+      ctx.fillRect(9, 2, 5, 6);                         // le sac
+      ctx.fillStyle = (v >> 4) % 2 ? '#e9d77a' : '#a9dbe6';   // ce qui coule : du serum, ou du jaune
+      ctx.fillRect(9, 4 + (v >> 5) % 2, 5, 4 - (v >> 5) % 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillRect(10, 3, 1, 3);                        // le reflet du plastique
+      ctx.fillStyle = '#dfe7ea';
+      ctx.fillRect(11, 8, 1, 3); ctx.fillRect(11, 10, 5, 1);   // la tubulure, vers le lit
+    },
+    /* Le moniteur : un ecran sur son pied, et le TRACE qui dit qu'on est vivant.
+       ⚠️ Le pic tombe ailleurs d'un ecran a l'autre (`v >> 4`) : six moniteurs
+       qui battent au meme pixel ont l'air d'une seule image collee six fois. */
+    'q': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(3, 14, 11, 2);
+      ctx.fillStyle = '#6f757c';
+      ctx.fillRect(7, 10, 2, 4); ctx.fillRect(4, 14, 8, 1);   // le pied a roulettes
+      ctx.fillStyle = '#c9ccd2';
+      ctx.fillRect(1, 1, 14, 9);                        // le boitier
+      ctx.fillStyle = '#9aa0a8';
+      ctx.fillRect(1, 8, 14, 2);                        // sa face, et ses boutons
+      ctx.fillStyle = '#0f1a14';
+      ctx.fillRect(2, 2, 12, 6);                        // l'ecran
+      const pic = 3 + (v >> 4) % 4 * 2;
+      ctx.fillStyle = '#4fe38a';                        // le trace : plat, le pic, plat
+      ctx.fillRect(2, 5, pic - 2, 1);
+      ctx.fillRect(pic, 3, 1, 2); ctx.fillRect(pic + 1, 5, 1, 2); ctx.fillRect(pic + 2, 5, 11 - pic, 1);
+      ctx.fillStyle = '#ffd23a';
+      ctx.fillRect(12, 3, 1, 1);                        // le pouls, en chiffres
+      ctx.fillStyle = '#ff6b5a';
+      ctx.fillRect(3, 9, 1, 1);                         // le voyant
+    },
+    /* La distributrice d'une salle d'attente : la meme machine que dans la rue
+       (`DECORS.distributrice_*`), vue de plus haut. La vitre, les rangees de
+       sacs, la fente a monnaie, la trappe au pied. ⚠️ Un seul dessin pour les
+       trois sortes : dedans, c'est le MENU qui dit ce qu'elle vend (la sorte est
+       sur le point), et la vitre pleine de couleurs se lit « distributrice »
+       avant de se lire « cafe » ou « chips ». */
+    'b': function (ctx, v, T) {
+      ctx.fillStyle = 'rgba(0,0,0,0.20)';
+      ctx.fillRect(2, 14, 13, 2);                       // l'ombre au pied
+      ctx.fillStyle = '#8a241e';
+      ctx.fillRect(2, 0, 12, 15);                       // la caisse
+      ctx.fillStyle = '#b8322a';
+      ctx.fillRect(2, 0, 12, 10);                       // le dessus et le haut de la face
+      ctx.fillStyle = '#1b2430';
+      ctx.fillRect(3, 2, 7, 7);                         // la vitre
+      const teintes = ['#f1c40f', '#3f7ab8', '#e8e6de', '#4f9e5a', '#c2762c'];
+      for (let r = 0; r < 3; r++) {
+        for (let c = 0; c < 3; c++) {
+          ctx.fillStyle = teintes[(v + r * 2 + c) % teintes.length];
+          ctx.fillRect(4 + c * 2, 3 + r * 2, 1, 1);
+        }
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.30)';
+      ctx.fillRect(3, 2, 1, 6);                         // le reflet de la vitre
+      ctx.fillStyle = '#e8e6de';
+      ctx.fillRect(11, 3, 2, 1); ctx.fillRect(11, 5, 2, 1);   // les boutons
+      ctx.fillStyle = '#ffd23a';
+      ctx.fillRect(12, 7, 1, 2);                        // la fente a monnaie
+      ctx.fillStyle = '#5a1712';
+      ctx.fillRect(2, 10, 12, 5);                       // la face
+      ctx.fillStyle = '#1a0e0c';
+      ctx.fillRect(4, 11, 7, 2);                        // la trappe
+    },
   };
 })();
 
@@ -3464,6 +3613,65 @@ const DECORS = {
     ctx.fillStyle = '#2f6fb5'; ctx.fillRect(11, 4, 1, 12);                 // le lisere de la banque
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(1, 19, 12, 1);                 // le pied
   } },
+  // ⚠️ LES MACHINES DISTRIBUTRICES : la petite soeur du guichet, et elle se
+  // lit pareil — une caisse haute plantee contre une devanture. Trois sortes,
+  // trois couleurs qui se reconnaissent de l'autre bord de la rue : le ROUGE
+  // de la liqueur (le logo, la canette peinte), la VITRE pleine de sacs des
+  // grignotines, le BRUN de la machine a cafe et son gobelet dans la niche.
+  // `distributrice` porte la sorte : c'est elle que lit `Missions` pour savoir
+  // quoi vendre (`magasins.DISTRIBUTRICES`), et ce qu'elle crache en cedant.
+  // `casse: 0.55` sans `lourd` — une berline la couche ; `pv: 80`, trois
+  // balles de pistolet : de la tole et une vitre, pas un blindage.
+  distributrice_liqueur: { casse: 0.55, pv: 80, w: 14, h: 22, ancre: [7, 21], r: 5, solide: true, distributrice: 'liqueur',
+    peindre: function (ctx, w, h) {
+      ctx.fillStyle = '#8a241e'; ctx.fillRect(1, 2, 12, 20);                 // la caisse, dans l'ombre
+      ctx.fillStyle = '#b8322a'; ctx.fillRect(1, 2, 11, 19);                 // sa face eclairee du nord-ouest
+      ctx.fillStyle = '#d9574a'; ctx.fillRect(1, 1, 12, 2);                  // le chapeau
+      ctx.fillStyle = '#f3efe6'; ctx.fillRect(2, 4, 8, 2); ctx.fillRect(2, 7, 8, 1);   // le logo, en bandes
+      ctx.fillStyle = '#f3efe6'; ctx.fillRect(4, 10, 4, 6);                  // la canette peinte
+      ctx.fillStyle = '#b8322a'; ctx.fillRect(4, 12, 4, 2);
+      ctx.fillStyle = '#c9ccd2'; ctx.fillRect(4, 10, 4, 1);                  // son couvercle
+      ctx.fillStyle = '#e8e6de';                                             // les boutons de selection
+      for (let k = 0; k < 5; k++) ctx.fillRect(10, 4 + k * 2, 1, 1);
+      ctx.fillStyle = '#ffd23a'; ctx.fillRect(10, 15, 1, 2);                 // la fente a monnaie
+      ctx.fillStyle = '#2a1a18'; ctx.fillRect(2, 18, 8, 2);                  // la trappe ou tombe la canette
+      ctx.fillStyle = '#3a1410'; ctx.fillRect(1, 21, 12, 1);                 // le pied
+    } },
+  distributrice_grignotines: { casse: 0.55, pv: 80, w: 14, h: 22, ancre: [7, 21], r: 5, solide: true, distributrice: 'grignotines',
+    peindre: function (ctx, w, h) {
+      ctx.fillStyle = '#2c3845'; ctx.fillRect(1, 2, 12, 20);                 // la caisse, dans l'ombre
+      ctx.fillStyle = '#3b4a5a'; ctx.fillRect(1, 2, 11, 19);                 // sa face eclairee
+      ctx.fillStyle = '#56687a'; ctx.fillRect(1, 1, 12, 2);                  // le chapeau
+      ctx.fillStyle = '#1b2430'; ctx.fillRect(2, 4, 7, 13);                  // la vitre
+      const sacs = ['#f1c40f', '#c0392b', '#3f7ab8', '#4f9e5a', '#e67e22', '#8f5fb0'];
+      for (let r = 0; r < 4; r++) {                                          // quatre spirales, trois sacs chacune
+        for (let c = 0; c < 3; c++) {
+          ctx.fillStyle = sacs[(r * 2 + c) % sacs.length];
+          ctx.fillRect(3 + c * 2, 5 + r * 3, 1, 2);
+        }
+        ctx.fillStyle = '#56687a'; ctx.fillRect(2, 7 + r * 3, 7, 1);         // la tablette
+      }
+      ctx.fillStyle = 'rgba(255,255,255,0.25)'; ctx.fillRect(2, 4, 1, 12);   // le reflet de la vitre
+      ctx.fillStyle = '#c9ccd2';                                             // le clavier
+      for (let k = 0; k < 3; k++) ctx.fillRect(10, 5 + k * 2, 1, 1);
+      ctx.fillStyle = '#ffd23a'; ctx.fillRect(10, 13, 1, 2);                 // la fente a monnaie
+      ctx.fillStyle = '#0f141a'; ctx.fillRect(2, 18, 8, 2);                  // la trappe
+      ctx.fillStyle = '#1f2830'; ctx.fillRect(1, 21, 12, 1);                 // le pied
+    } },
+  distributrice_cafe: { casse: 0.55, pv: 80, w: 14, h: 22, ancre: [7, 21], r: 5, solide: true, distributrice: 'cafe',
+    peindre: function (ctx, w, h) {
+      ctx.fillStyle = '#4f3620'; ctx.fillRect(1, 2, 12, 20);                 // la caisse, dans l'ombre
+      ctx.fillStyle = '#6b4a2e'; ctx.fillRect(1, 2, 11, 19);                 // sa face eclairee
+      ctx.fillStyle = '#8a6440'; ctx.fillRect(1, 1, 12, 2);                  // le chapeau
+      ctx.fillStyle = '#e9dcc0'; ctx.fillRect(2, 4, 8, 6);                   // l'affiche eclairee
+      ctx.fillStyle = '#6b4a2e'; ctx.fillRect(4, 7, 4, 3); ctx.fillRect(8, 8, 1, 1);   // la tasse, et son anse
+      ctx.fillStyle = '#b39a7a'; ctx.fillRect(5, 5, 1, 1); ctx.fillRect(6, 4, 1, 2);   // la vapeur
+      ctx.fillStyle = '#1a120c'; ctx.fillRect(3, 12, 6, 6);                  // la niche du gobelet
+      ctx.fillStyle = '#f3efe6'; ctx.fillRect(5, 15, 2, 3);                  // le gobelet
+      ctx.fillStyle = '#ffd23a'; ctx.fillRect(10, 5, 1, 1); ctx.fillRect(10, 7, 1, 1);   // les boutons
+      ctx.fillStyle = '#c9ccd2'; ctx.fillRect(10, 13, 1, 2);                 // la fente a monnaie
+      ctx.fillStyle = '#35240f'; ctx.fillRect(1, 21, 12, 1);                 // le pied
+    } },
   // La cale du Norvegien : trois caisses empilees sous un bout de bache
   // bleue, une corde autour. Un comptoir de contrebande n'a pas d'enseigne —
   // c'est la bache qui le nomme. Il ARRETE, comme les kiosques.
@@ -4175,6 +4383,13 @@ const OBJETS = {
   // La liasse d'un guichet defonce : du vert, une bande de papier, une
   // deuxieme liasse qui depasse — a seize pixels, c'est la couleur qui la nomme.
   billets: function (ctx) { ctx.fillStyle = '#2f6b2a'; ctx.fillRect(5, 2, 9, 5); ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 4, 9, 5); ctx.fillStyle = '#9adf7a'; ctx.fillRect(4, 5, 7, 1); ctx.fillStyle = '#e8e6de'; ctx.fillRect(7, 4, 2, 5); },
+  // Ce qu'une distributrice defoncee crache. La MONNAIE : trois pieces, de
+  // l'argent et du cuivre — surtout pas le vert d'une liasse, on la
+  // confondrait avec la caisse d'un guichet. La CANETTE couchee, et le SAC de
+  // chips froisse.
+  monnaie: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(4, 4, 4, 3); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(4, 4, 3, 2); ctx.fillStyle = '#b87333'; ctx.fillRect(8, 6, 4, 3); ctx.fillStyle = '#e0a060'; ctx.fillRect(8, 6, 3, 2); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(10, 2, 3, 3); },
+  canette: function (ctx) { ctx.fillStyle = '#8a241e'; ctx.fillRect(4, 4, 8, 4); ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 4, 8, 2); ctx.fillStyle = '#f3efe6'; ctx.fillRect(6, 5, 3, 1); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(12, 4, 1, 4); },
+  sac: function (ctx) { ctx.fillStyle = '#c79a12'; ctx.fillRect(4, 2, 8, 7); ctx.fillStyle = '#f1c40f'; ctx.fillRect(4, 2, 7, 5); ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 4, 5, 2); ctx.fillStyle = '#e8e6de'; ctx.fillRect(4, 2, 8, 1); },
 };
 
 /* Bulles au-dessus de la tete : la peur, et le temoin qui a tout vu. */

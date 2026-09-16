@@ -59,6 +59,60 @@ AMBULANTS: list[dict] = [
      "districts": ("quais",), "reclame": None},
 ]
 
+#: Les machines distributrices : trois sortes, et chacune dit ce qu'elle vend.
+#:
+#: ⚠️ `decor` est le nom de sa fiche de DESSIN (`DECORS`, sprites.js) — c'est
+#: sous ce nom qu'elle est posee dans la rue (`carte.distributrices`). Celle
+#: d'une salle d'attente est un MEUBLE (`b`) dont le point porte la sorte :
+#: meme catalogue, pas de decor.
+#:
+#: `familles` : devant quelles devantures (`devantures.GENRES`) elle se pose.
+#: Une machine a cafe devant la soudure, une machine a liqueur devant la
+#: taverne. ⚠️ Chaque famille en nomme au moins une — un juge le tient.
+#:
+#: `coincee` et `tombe` : ce que dit le HUD quand l'achat reste pris, puis
+#: quand la secousse le fait tomber. `recrache` : defoncee, elle crache sa
+#: marchandise en plus de sa monnaie (la machine a cafe, elle, ne crache que
+#: de l'eau chaude).
+DISTRIBUTRICES: dict[str, dict] = {
+    "liqueur": {"nom": "Machine à liqueur", "decor": "distributrice_liqueur", "objet": "canette",
+                "coincee": "LA CANETTE EST RESTÉE PRISE", "tombe": "LA CANETTE TOMBE",
+                "recrache": True,
+                "familles": ("bouffe", "commerce", "nuit", "marine", "mode", "savoir"),
+                "articles": [
+                    {"slug": "liqueur", "nom": "Liqueur", "tarif": "liqueur",
+                     "gain_pv": "liqueur_pv", "gain_souffle": "liqueur_souffle", "effet": None},
+                    {"slug": "jus", "nom": "Jus d'orange", "tarif": "jus",
+                     "gain_pv": "jus_pv", "gain_souffle": "jus_souffle", "effet": None},
+                ]},
+    "grignotines": {"nom": "Machine à grignotines", "decor": "distributrice_grignotines", "objet": "sac",
+                    "coincee": "LE SAC EST RESTÉ ACCROCHÉ", "tombe": "LE SAC TOMBE",
+                    "recrache": True,
+                    "familles": ("commerce", "service", "sante", "savoir", "nuit", "mode"),
+                    "articles": [
+                        {"slug": "chips", "nom": "Chips", "tarif": "chips",
+                         "gain_pv": "chips_pv", "gain_souffle": "chips_souffle", "effet": None},
+                        {"slug": "chocolat", "nom": "Barre de chocolat", "tarif": "chocolat",
+                         "gain_pv": "chocolat_pv", "gain_souffle": "chocolat_souffle", "effet": None},
+                    ]},
+    "cafe": {"nom": "Machine à café", "decor": "distributrice_cafe", "objet": None,
+             "coincee": "LA MACHINE A GARDÉ TON ARGENT", "tombe": "LE GOBELET SE REMPLIT",
+             "recrache": False,
+             "familles": ("industrie", "artisan", "service"),
+             "articles": [
+                 {"slug": "cafe", "nom": "Café", "tarif": "cafe",
+                  "gain_pv": "cafe_pv", "gain_souffle": "cafe_souffle", "effet": "cafe"},
+                 {"slug": "soupe", "nom": "Soupe en gobelet", "tarif": "soupe",
+                  "gain_pv": "soupe_pv", "gain_souffle": "soupe_souffle", "effet": None},
+             ]},
+}
+
+
+def sortes_devant(famille: str) -> tuple[str, ...]:
+    """Les sortes de machine qu'on pose devant cette famille de devanture."""
+    return tuple(s for s, fiche in DISTRIBUTRICES.items() if famille in fiche["familles"])
+
+
 #: L'homme-sandwich : un SOLLICITEUR. Il porte l'enseigne d'un kiosque sur le
 #: ventre et sur le dos, il fait les cent pas a quelques tuiles de son
 #: commerce (`poste_tuiles`) et, quand il te voit passer, il vient vers toi

@@ -230,6 +230,9 @@ const Missions = (function () {
     // Le guichet : poser un skimmer, ou le vider. ⚠️ Seulement s'il y a
     // quelque chose a y faire — sinon le bouton reste a ce qui suit.
     if (inviteGuichet(j)) return utiliserGuichet(j);
+    // La distributrice : son menu, ou la brasser si quelque chose y est reste pris.
+    const machine = distributriceSousLaMain(j);
+    if (machine) return utiliserDistributrice(j, machine);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -796,6 +799,7 @@ const Missions = (function () {
     journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', casier: 'LE CARNET',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER A L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
+    distributrice: 'LA MACHINE',
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
@@ -830,6 +834,9 @@ const Missions = (function () {
     // L'escalier et les tiroirs : un geste, pas un menu.
     if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
     if (point.type === 'fouiller') return fouiller(point);
+    // ⚠️ La machine AVANT le menu : si quelque chose y est reste pris, ACTION la
+    // brasse — l'invite l'a promis.
+    if (point.type === 'distributrice') return utiliserDistributrice(j, machineDuPoint(point));
     const menu = menuDuPoint(point);
     if (!menu) { Hud.message('PLUS TARD'); return true; }
     // Un comptoir qui reste ouvert se refait apres chaque achat : l'arme passe
@@ -918,6 +925,8 @@ const Missions = (function () {
         return menuAvocat();
       case 'hacker':
         return menuHacker();
+      case 'distributrice':
+        return menuDistributrice(machineDuPoint(point));
       default:
         return null;
     }
@@ -940,23 +949,47 @@ const Missions = (function () {
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, comptoir.marge));
       if (a.tenue) return items.push(itemTenue(a, comptoir.rabais));
-      const prix = Math.round(tarifs[a.tarif] || 0);
-      const gains = [];
-      if (a.gain_pv) gains.push('+' + tarifs[a.gain_pv] + ' PV');
-      if (a.gain_souffle) gains.push('+' + tarifs[a.gain_souffle] + ' SOUFFLE');
-      items.push({ libelle: a.nom.toUpperCase(), detail: prix + ' $' + (gains.length ? ' / ' + gains.join(' ') : ''),
-                   actif: p.argent >= prix,
-                   faire: function () {
-                     payer(prix, a.nom.toUpperCase());
-                     if (a.gain_pv) soigner(B.joueur, tarifs[a.gain_pv]);
-                     if (a.gain_souffle) nourrir(B.joueur, tarifs[a.gain_souffle]);
-                     if (a.effet === 'cafe') cafeine(B.joueur);
-                     if (a.journal) { lireLeJournal(); return true; }
-                     Son.SFX.argent();
-                     return false;
-                   } });
+      items.push(itemBouchee(a));
     });
     return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+  }
+
+  /** Une bouchee, au comptoir comme a la machine : le prix, ce qu'elle rend, le geste.
+
+      ⚠️ `servir` (facultatif) passe ENTRE la caisse et la bouche. La machine
+      distributrice s'en sert pour decider, une fois l'argent pris, si la
+      canette tombe — il rend faux quand rien n'est servi, et on a paye pour
+      rien. C'est une seule fonction pour les deux, parce que le jour ou une
+      liqueur change de prix, le comptoir et la machine doivent le dire
+      ensemble. */
+  function itemBouchee(a, servir) {
+    const p = B.partie, tarifs = B.defs.economie.tarifs;
+    const prix = Math.round(tarifs[a.tarif] || 0);
+    const gains = [];
+    if (a.gain_pv) gains.push('+' + tarifs[a.gain_pv] + ' PV');
+    if (a.gain_souffle) gains.push('+' + tarifs[a.gain_souffle] + ' SOUFFLE');
+    return { libelle: a.nom.toUpperCase(), detail: prix + ' $' + (gains.length ? ' / ' + gains.join(' ') : ''),
+             actif: p.argent >= prix,
+             faire: function () {
+               payer(prix, a.nom.toUpperCase());
+               if (servir) {
+                 if (!servir(a)) return true;
+                 manger(a);
+                 return false;
+               }
+               manger(a);
+               if (a.journal) { lireLeJournal(); return true; }
+               Son.SFX.argent();
+               return false;
+             } };
+  }
+
+  /** Ce qu'un article rend a qui le mange : la vie, le souffle, et le cafe. */
+  function manger(a) {
+    const tarifs = B.defs.economie.tarifs;
+    if (a.gain_pv) soigner(B.joueur, tarifs[a.gain_pv]);
+    if (a.gain_souffle) nourrir(B.joueur, tarifs[a.gain_souffle]);
+    if (a.effet === 'cafe') cafeine(B.joueur);
   }
 
   /** Une arme au comptoir du quincaillier : la meme que Chez Gus, avec sa marge. */
@@ -1318,6 +1351,9 @@ const Missions = (function () {
     // casse reste casse, et le quartier porte ses blessures jusqu'au matin.
     // C'est ce qui fait qu'une nuit de folie SE VOIT.
     Entites.reparerLeDecor();
+    // ⚠️ Et le livreur passe vider les machines : ce qui etait reste pris la
+    // veille est parti avec lui.
+    B.coincees = {};
     revenusDuJour();
     const m = manchetteDuJour();
     if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
@@ -1759,12 +1795,151 @@ const Missions = (function () {
     return total;
   }
 
-  /** Les liasses se ramassent en passant dessus, comme les paquets. */
+  /** Les liasses se ramassent en passant dessus, comme les paquets — et la
+      monnaie d'une distributrice aussi. Ses canettes et ses sacs, eux, se
+      mangent sur place : ce qu'ils rendent est celui de l'article. */
   function ramasserLesBillets(j) {
-    for (const e of Entites.autour(j.x, j.y, 14, function (q) { return q.type === 'ramassage' && q.objet === 'billets'; })) {
-      encaisser(e.montant, 'LIASSE');
+    for (const e of Entites.autour(j.x, j.y, 14, function (q) {
+      return q.type === 'ramassage' && (q.objet === 'billets' || q.objet === 'monnaie');
+    })) {
+      encaisser(e.montant, e.objet === 'monnaie' ? 'MONNAIE' : 'LIASSE');
       Entites.retirer(e);
     }
+    for (const e of Entites.autour(j.x, j.y, 14, function (q) {
+      return q.type === 'ramassage' && (q.objet === 'canette' || q.objet === 'sac');
+    })) {
+      const a = articleDe(e.sorte, e.article);
+      if (a) { manger(a); Hud.message(a.nom.toUpperCase()); }
+      Son.SFX.ramasse();
+      Entites.retirer(e);
+    }
+  }
+
+  // --- Les machines distributrices ----------------------------------------------------------
+
+  /** Une machine : sa sorte, sa fiche (`magasins.DISTRIBUTRICES`), et une CLE.
+
+      ⚠️ La cle, pas l'entite : dedans, la machine est un point du plan que la
+      piece refait a chaque entree ; dehors, c'est un decor que la nuit remet
+      debout. Ce qui est reste pris dans la spirale tient donc sur la cle
+      (`B.coincees`), et pas sur un objet qui ne vivra pas jusqu'a demain. */
+  function machine(sorte, cle, x, y) {
+    const fiche = (B.defs.distributrices || {})[sorte];
+    return fiche ? { sorte: sorte, fiche: fiche, cle: cle, x: x, y: y } : null;
+  }
+
+  function machineDuPoint(point) {
+    return machine(point.sorte, (B.interieur ? B.interieur.slug : 'piece') + ':' + point.x + ',' + point.y,
+                   point.x * TT + 8, point.y * TT + 8);
+  }
+
+  function articleDe(sorte, slug) {
+    const fiche = (B.defs.distributrices || {})[sorte];
+    return (fiche && fiche.articles.find(function (a) { return a.slug === slug; })) || null;
+  }
+
+  /** La distributrice a portee de main : celle de la salle d'attente (un point
+      du plan), ou celle de la rue (un decor debout et pas defonce). ⚠️ Meme
+      rayon que le guichet, et c'est pour ca que la ville ne les colle pas. */
+  function distributriceSousLaMain(j) {
+    if (!j || j.dansVehicule) return null;
+    if (B.interieur) {
+      const point = pointSousLaMain(j);
+      return point && point.type === 'distributrice' ? machineDuPoint(point) : null;
+    }
+    // ⚠️ LA PORTE D'ABORD. Une machine a moins de 22 px de la tuile ou l'on
+    // pousse une porte lui volait ACTION : l'invite disait MACHINE A CAFE devant
+    // l'entree d'un commerce. La ville ne les colle plus (`carte.distributrices`),
+    // et ceci est le filet pour tout ce qu'on posera demain a cote d'une porte.
+    if (Monde.porteDevant(j)) return null;
+    const d = Entites.decorAutour(j.x, j.y, 22).find(function (q) {
+      return !q.brise && (DECORS[q.decor] || {}).distributrice;
+    });
+    return d ? machine(DECORS[d.decor].distributrice, 'rue:' + tuileDe(d), d.x, d.y) : null;
+  }
+
+  /** Ce qui est reste pris dans cette machine-la (le slug de l'article), ou null. */
+  function coincee(m) { return (m && B.coincees && B.coincees[m.cle]) || null; }
+
+  /** ⚠️ UNE SEULE fonction pour l'invite et le geste, comme au guichet. */
+  function inviteDistributrice(m) {
+    if (!m) return null;
+    return coincee(m) ? 'BRASSER LA MACHINE' : m.fiche.nom.toUpperCase();
+  }
+
+  function utiliserDistributrice(j, m) {
+    if (!m) return false;
+    j.animT = 10; j.animType = 'ramasse';
+    if (coincee(m)) return brasser(m);
+    const menu = menuDistributrice(m);
+    menu.refaire = function () { return menuDistributrice(m); };
+    Hud.ouvrirMenu(menu);
+    return true;
+  }
+
+  /** Le menu de la machine : ses articles, au prix du comptoir. ⚠️ La spirale
+      decide APRES qu'on a paye — c'est tout le drame de la machine
+      distributrice — et une canette restee prise ferme le menu : il y a
+      maintenant une machine a brasser. */
+  function menuDistributrice(m) {
+    const items = m.fiche.articles.map(function (a) {
+      return itemBouchee(a, function () {
+        if (B.rng() < B.defs.economie.distributrice.coincee) {
+          B.coincees = B.coincees || {};
+          B.coincees[m.cle] = a.slug;
+          Hud.message(m.fiche.coincee, 180);
+          Son.SFX.erreur();
+          return false;
+        }
+        Son.SFX.distributrice();
+        return true;
+      });
+    });
+    return { titre: m.fiche.nom.toUpperCase(), items: items, sur: B.partie.argent + ' $' };
+  }
+
+  /** Brasser la machine : une fois sur `brasser`, ce qui etait pris tombe. */
+  function brasser(m) {
+    const a = articleDe(m.sorte, coincee(m));
+    Son.SFX.machine_brassee();
+    if (B.rng() >= B.defs.economie.distributrice.brasser && a) {
+      Hud.message('ÇA TIENT ENCORE');
+      return true;
+    }
+    delete B.coincees[m.cle];
+    if (a) { manger(a); Hud.message(m.fiche.tombe); Son.SFX.distributrice(); }
+    return true;
+  }
+
+  /** Une distributrice qui cede : sa monnaie par terre en tas, ses canettes
+      avec, et ce qui etait reste pris dedans part avec le reste. Un delit a une
+      etoile — et seulement si un temoin va le raconter. Appele par
+      `Entites.briser`, quoi que ce soit qui l'ait ouverte. */
+  function distributriceCassee(d) {
+    const fiche = B.defs.economie.distributrice, sorte = (DECORS[d.decor] || {}).distributrice;
+    const m = machine(sorte, 'rue:' + tuileDe(d), d.x, d.y);
+    const total = fiche.monnaie[0] + Math.floor(B.rng() * (fiche.monnaie[1] - fiche.monnaie[0] + 1));
+    // ⚠️ Vers le SUD, jamais dans le mur : la machine est adossee a une devanture.
+    function parTerre(objet, champs) {
+      const a = B.rng() * Math.PI, r = 6 + B.rng() * 12;
+      Entites.creer('ramassage', d.x + Math.cos(a) * r, d.y + 4 + Math.sin(a) * r * 0.6,
+                    Object.assign({ r: 4, objet: objet, t: 0, solide: false }, champs));
+    }
+    let reste = total;
+    for (let i = 0; i < fiche.tas; i++) {
+      const part = i === fiche.tas - 1 ? reste : Math.round(total / fiche.tas);
+      reste -= part;
+      parTerre('monnaie', { montant: part });
+    }
+    if (m && m.fiche.recrache && m.fiche.objet) {
+      for (let i = 0; i < fiche.canettes; i++) {
+        parTerre(m.fiche.objet, { sorte: sorte, article: m.fiche.articles[i % m.fiche.articles.length].slug });
+      }
+    }
+    if (m && B.coincees) delete B.coincees[m.cle];
+    Police.signalerCrime('distributrice', d.x, d.y, Police.quelqu_un_voit(d.x, d.y, null));
+    Son.SFX.monnaie();
+    return total;
   }
 
   // --- L'assurance : la fraude, et l'assureur qui enquete ----------------------------------
@@ -2000,7 +2175,9 @@ const Missions = (function () {
       const point = pointSousLaMain(j);
       if (point) {
         const assis = Histoire.personnageDuPoint(point.type);
-        B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase() : (LIBELLES[point.type] || point.type.toUpperCase());
+        B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
+          : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
+            : (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
@@ -2042,6 +2219,8 @@ const Missions = (function () {
     if (fille) { B.invite = 'LA BRUME — ' + B.defs.economie.tarifs.compagnie + ' $'; return; }
     const guichet = inviteGuichet(j);
     if (guichet) { B.invite = guichet; return; }
+    const machine = distributriceSousLaMain(j);
+    if (machine) { B.invite = inviteDistributrice(machine); return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
@@ -2115,6 +2294,8 @@ const Missions = (function () {
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,
+           itemBouchee, manger, distributriceSousLaMain, inviteDistributrice, utiliserDistributrice, menuDistributrice,
+           brasser, distributriceCassee, machineDuPoint,
            valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance,
            charPres, caissesDe, prixAchat, facteurDuJour, prixDuJour, menuContrebande, itemsRevente, confisquerLaCargaison, maj };
 })();

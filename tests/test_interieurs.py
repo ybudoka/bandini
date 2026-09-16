@@ -45,6 +45,9 @@ TYPES_SERVIS = frozenset({
     # cher, une fois par jour (l'avocat) ou payer d'avance et revenir demain
     # sans savoir ce qu'on a achete (le comptoir du fond de La Shop).
     "avocat", "hacker",
+    # La machine distributrice d'une salle d'attente : le terminus, le poste,
+    # l'urgence. Sa sorte est sur le point, son menu dans `magasins`.
+    "distributrice",
 })
 
 
@@ -366,8 +369,12 @@ def test_les_blocs_sont_le_lit_la_table_le_tapis_et_la_machine():
     quatre autres — son peintre lit le masque — et ce juge est le rappel qu'on
     n'ajoute pas un `bloc` sans lui donner un peintre qui le lise. Peintes
     chacune pour soi, les quatre tuiles montraient quatre carres avec quatre
-    margelles : c'est la premiere chose que Martin a vue a l'ecran."""
-    assert BLOCS == {"l", "a", "y", "m", "o"}
+    margelles : c'est la premiere chose que Martin a vue a l'ecran.
+
+    ⚠️ Le LIT D'HOPITAL (« r ») est le sixieme : une place, la tete au nord, et
+    son peintre lit le masque pour ne mettre la tete de lit et l'oreiller qu'a
+    la tuile de tete — c'est la que se couche le malade."""
+    assert BLOCS == {"l", "a", "y", "m", "o", "r"}
 
 
 @pytest.mark.parametrize("slug", sorted(PIECES))
@@ -388,3 +395,6 @@ def test_un_bloc_est_un_rectangle_plein_et_deux_blocs_ne_se_touchent_pas(slug):
             assert len(bloc) == large * haut, f"{slug} : un bloc de {nom} en L en {x0},{y0} — deux {nom}s qui se touchent ?"
             if g == "l":
                 assert large <= 2 and haut <= 2, f"{slug} : un lit de {large} × {haut} tuiles en {x0},{y0}"
+            if g == "r":
+                # Un lit d'hopital est un lit d'UNE place : une tuile sur deux.
+                assert (large, haut) == (1, 2), f"{slug} : un lit d'hôpital de {large} × {haut} tuiles en {x0},{y0}"

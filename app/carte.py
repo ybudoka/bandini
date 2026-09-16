@@ -358,7 +358,30 @@ LEGENDE: dict[str, dict] = {
     # quelque part (un point `escalier` par-dessus), et la barre oblique se
     # reconnait d'un coup d'oeil dans un plan de piece.
     "/": {"nom": "escalier", "solide": 3, "meuble": True},
+    # --- L'hopital, et la machine du coin -----------------------------------
+    # ⚠️ Quatre lettres, et ce sont les DERNIERES minuscules libres de la
+    # legende : `b`, `i`, `q`, `r`. L'hopital etait la chambre de la planque
+    # avec du carrelage — deux lits de bois, trois chaises — et rien dans la
+    # piece ne disait qu'on y soignait quelqu'un. Ce qui le dit, c'est le
+    # materiel : un lit a barreaux, la potence du solute, l'ecran qui trace.
+    #
+    # ⚠️ Le LIT D'HOPITAL n'est pas le lit (`l`) : un lit de chambre fait deux
+    # places et se peint en bois, celui-ci fait UNE place, un cadre de metal et
+    # des draps blancs. Il vient en bloc (une tuile sur deux, la tete au nord),
+    # et c'est dans sa tuile de tete que se couche le MALADE (`QUI_DEDANS`).
+    "r": {"nom": "lit d'hôpital", "solide": 3, "meuble": True, "bloc": True},
+    "i": {"nom": "soluté", "solide": 3, "meuble": True},
+    "q": {"nom": "moniteur", "solide": 3, "meuble": True},
+    # ⚠️ La DISTRIBUTRICE D'UNE SALLE D'ATTENTE est un meuble, pas un decor :
+    # dedans, il n'y a ni index de decor ni char pour la defoncer. Elle porte
+    # un point `distributrice` (sa sorte dit ce qu'elle vend) ; sa cousine de
+    # la rue, elle, est un DECOR cassable (`distributrices()`).
+    "b": {"nom": "distributrice", "solide": 3, "meuble": True},
 }
+
+#: Les glyphes de facade qu'on POUSSE (ou qu'on a condamnes) : une porte, une porte
+#: murée, une porte de garage. Rien ne se plante devant, ni juste a cote.
+PORTES_DE_FACADE = frozenset("DdG")
 
 #: Les trois clotures, par leur glyphe. ⚠️ Toute la difference de JEU tient dans
 #: la legende (solidite 4 contre 5) : le grillage et la palissade de bois
@@ -836,7 +859,8 @@ MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
 #: croire qu'on passe la ou l'on ne passe pas.
 DECOR_SOLIDE = frozenset({
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
-    "caisse", "carrousel", "chaises_volantes", "fontaine", "galerie_tir",
+    "caisse", "carrousel", "chaises_volantes", "distributrice_cafe",
+    "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
     "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
     "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
 })
@@ -1279,6 +1303,8 @@ class _Chantier:
         self.des_reclame = Des(graine ^ 0x5A4D1)
         # Les guichets tirent dans le leur : en poser un de plus ne deplace pas un arbre.
         self.des_guichet = Des(graine ^ 0x6C1C4E7)
+        # Les distributrices aussi : une machine de plus ne deplace pas un paquet.
+        self.des_distributrice = Des(graine ^ 0xD157B1)
         # Les nids tirent dans le leur : en creuser un de plus ne deplace pas un arbre.
         self.des_nid = Des(graine ^ 0x141D5)
         self.des_entrave = Des(graine ^ 0xE47A7E)
@@ -4361,6 +4387,71 @@ class _Chantier:
                 poses.append((x, y))
         return len(poses)
 
+    #: Ou se pose une machine, et ce qui doit rester devant elle : l'abord ou
+    #: la dalle du parvis. ⚠️ DEUX rangees, pas une : la machine prend celle du
+    #: mur et la suivante reste a la foule. Mesure du 16 sept. 2026 — sous les
+    #: 313 facades de commerce, 265 donnent sur un parvis de dalle et 35
+    #: seulement sur l'abord ; la regle du guichet (l'abord, puis la dalle) ne
+    #: laissait que cinq machines dans toute la ville.
+    DEVANT_UNE_MACHINE = frozenset("_.")
+
+    def distributrices(self) -> int:
+        """Les machines distributrices : CONTRE UNE DEVANTURE, sur l'abord, servies
+        depuis la dalle (`economie.DISTRIBUTRICE`). Rend combien on en a pose.
+
+        ⚠️ Le patron du guichet, a trois nuances pres. (1) Sous la facade d'un
+        commerce, vitrine ou mur plein — jamais sous une porte NI A COTE : une
+        machine plantee devant l'entree la bouche, et une machine collee a
+        l'entree lui VOLE ACTION (on se tient devant la porte, a moins de 22 px
+        de la machine, et l'invite disait MACHINE A CAFE au lieu d'ENTRER — un
+        juge des interieurs l'a vu le jour meme). (2) Sa SORTE vient de la devanture
+        (`magasins.sortes_devant`) : du cafe devant la soudure, de la liqueur
+        devant la taverne. (3) Pas collee a un guichet : a portee de la meme
+        main, ACTION ne saurait pas lequel on vise.
+
+        ⚠️ APRES les paquets, les scenes et la reclame, et dans son propre de :
+        elle prend des places que personne d'autre ne cherche plus, donc en
+        poser une de plus ne deplace rien d'autre dans la ville.
+        """
+        fiche = economie.DISTRIBUTRICE
+        guichets = [(d["x"], d["y"]) for d in self.decor if d["type"] == "guichet"]
+        familles: dict[tuple[int, int], str] = {}
+        for devanture in self.devantures:
+            famille = devantures_mod.GENRES[devanture["genre"]]["slug"]
+            for i, motif in enumerate(devanture["motifs"]):
+                if motif in ("W", "P"):
+                    familles[(devanture["x"] + i, devanture["y"] + 1)] = famille
+        candidats = sorted(
+            (x, y) for x, y in familles
+            if y + 1 < self.hauteur and self.sol[y][x] in self.DEVANT_UNE_MACHINE
+            and self.sol[y + 1][x] in self.DEVANT_UNE_MACHINE
+            and (x, y) not in self.occupe and (x, y) not in self.reserve
+            and all(abs(gx - x) + abs(gy - y) >= fiche["ecart_guichet"] for gx, gy in guichets)
+            and not any(0 <= x + dx < self.largeur and self.sol[y - 1][x + dx] in PORTES_DE_FACADE
+                        for dx in (-1, 1))
+        )
+        poses: list[tuple[int, int]] = []
+        #: ⚠️ UN PLAFOND PAR DISTRICT. Sans lui, les machines suivaient les
+        #: devantures : La Shop et les Quais en prenaient trente-cinq sur
+        #: quarante-huit, et les Erables une seule — « partout dans la ville »
+        #: voulait dire deux quartiers.
+        par_district: dict[str, int] = {}
+        for _essai in range(800):
+            if not candidats or len(poses) >= fiche["par_ville"][1]:
+                break
+            x, y = candidats[self.des_distributrice.suivant() % len(candidats)]
+            if any(abs(px - x) + abs(py - y) < fiche["ecart"] for px, py in poses):
+                continue
+            district = self.district_en(x, y)
+            if par_district.get(district, 0) >= fiche["par_district"]:
+                continue
+            sortes = magasins.sortes_devant(familles[(x, y)]) or tuple(magasins.DISTRIBUTRICES)
+            sorte = sortes[self.des_distributrice.suivant() % len(sortes)]
+            if self.poser_decor(magasins.DISTRIBUTRICES[sorte]["decor"], x, y):
+                poses.append((x, y))
+                par_district[district] = par_district.get(district, 0) + 1
+        return len(poses)
+
     def entraves(self) -> list[dict]:
         """Les voies qu'on peut fermer un jour sans couper la ville.
 
@@ -5128,6 +5219,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # kiosque pose apres coup au milieu d'un attroupement en ferait un couloir.
     scenes = chantier.scenes()
     paquets = chantier.paquets()
+    # ⚠️ Apres les paquets : les machines prennent ce qui reste, et une de plus
+    # ne deplace ni un paquet, ni une scene, ni un kiosque.
+    chantier.distributrices()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
     # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
     chantier.graffitis_sur_les_murs()
@@ -5232,9 +5326,18 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
 
 #: Les gens qu'on trouve dedans. `commis` tient le comptoir (il ne bouge pas
 #: de son poste) ; `client` est tire au sort dans les passants du quartier.
+#: A l'hopital : `soignant` tient le triage comme un commis, mais en blouse ;
+#: `patient` attend ASSIS sur une chaise de la salle d'attente, et `malade` est
+#: COUCHE dans un lit d'hopital (`ASSIS_OU_COUCHE`).
 #: ⚠️ Sans eux, une piece meublee reste un musee : c'est le monde qui parle au
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
-QUI_DEDANS = ("commis", "client")
+QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant")
+
+#: ⚠️ Les deux seuls gens qui naissent DANS un meuble, et chacun dans le sien :
+#: le PATIENT attend assis sur une chaise de la salle d'attente, le MALADE est
+#: couche dans la tuile de tete d'un lit d'hopital. Partout ailleurs, naitre
+#: dans un meuble reste une faute de plan — on le juge ici, au chargement.
+ASSIS_OU_COUCHE = {"patient": "h", "malade": "r"}
 
 
 def _gens(*gens: tuple[str, int, int]) -> tuple[dict, ...]:
@@ -5337,7 +5440,18 @@ def _verifier_piece(piece: dict) -> None:
     for gens in piece["gens"]:
         if gens["qui"] not in QUI_DEDANS:
             raise ValueError(f"{piece['slug']} : « {gens['qui']} » n'est pas quelqu'un")
-        if solidite(sol[gens["y"]][gens["x"]]) != 0:
+        glyphe = sol[gens["y"]][gens["x"]]
+        meuble = ASSIS_OU_COUCHE.get(gens["qui"])
+        if meuble:
+            if glyphe != meuble:
+                raise ValueError(f"{piece['slug']} : le {gens['qui']} en {gens['x']},{gens['y']} "
+                                 f"n'est pas sur « {meuble} » ({LEGENDE[meuble]['nom']})")
+            # Couche la tete au NORD : la tuile de tete d'un lit est celle qui
+            # n'a pas de lit au-dessus d'elle.
+            if gens["qui"] == "malade" and sol[gens["y"] - 1][gens["x"]] == meuble:
+                raise ValueError(f"{piece['slug']} : le malade en {gens['x']},{gens['y']} "
+                                 "est couche au pied du lit")
+        elif solidite(glyphe) != 0:
             raise ValueError(f"{piece['slug']} : quelqu'un est ne dans un meuble")
 
 
@@ -5345,16 +5459,18 @@ def _verifier_piece(piece: dict) -> None:
 _PIECES: tuple[dict, ...] = (
     # Le terminus : c'est ici qu'on debarque au premier matin. Deux rangees de
     # bancs, la consigne derriere le guichet, et un comptoir qui sert le cafe.
+    # ⚠️ Et la distributrice a liqueur dans le coin : c'est la premiere piece
+    # du jeu, et un terminus d'autobus sans machine n'en est pas un.
     _piece("terminus", "Terminus Baie-des-Brumes", sol="u", plan="""
 BBBWWWWWBBB
-Bn  kkk  nB
+Bn  kkk  bB
 B cccccc  B
 B         B
 B hhh hhh B
 B         B
 B hhh hhh B
 BBBWWDWWBBB
-""", points=(_pt("emplettes", 4, 2, genre="service"),),
+""", points=(_pt("emplettes", 4, 2, genre="service"), _pt("distributrice", 9, 1, sorte="liqueur")),
      gens=_gens(("commis", 3, 1), ("client", 2, 3), ("client", 8, 5))),
 
     # La planque de Rocco : un lit, un coffre, une garde-robe, et de quoi se
@@ -5409,31 +5525,66 @@ BBBWWDWWBBB
      gens=_gens(("commis", 4, 4), ("client", 2, 4))),
 
     # Le poste : le comptoir, les classeurs, le banc de ceux qui attendent.
+    # ⚠️ Et la machine a cafe du mur est : un poste de police sans sa machine
+    # a cafe, personne n'y croirait.
     _piece("poste", "Poste de police", sol="u", plan="""
 BBBWWWWWBBBB
 Bkkkk    n B
 B     a h  B
 B     a h  B
-Bcccccc   nB
+Bcccccc   bB
 B          B
 B hhhh     B
 Bn        nB
 BBBBWWDWWBBB
-""", points=(_pt("casier", 3, 4),),
+""", points=(_pt("casier", 3, 4), _pt("distributrice", 10, 4, sorte="cafe")),
      gens=_gens(("commis", 3, 3), ("client", 7, 6))),
 
-    # L'hopital : quatre lits, le carrelage, l'accueil.
+    # L'hopital, en bas : l'URGENCE. Le triage et ses classeurs, un lit
+    # d'examen entre son solute et son moniteur, la salle d'attente — deux
+    # rangees de chaises, du monde assis dessus — et les deux machines du mur
+    # est. L'escalier monte aux chambres.
+    # ⚠️ Plus grand en PROFONDEUR et en etage, pas en largeur : l'ilot de
+    # l'hopital fait douze tuiles de large, et une piece a exactement les
+    # mesures de son batiment (`test_la_piece_a_les_mesures_de_son_batiment`).
     _piece("hopital", "Hôpital de Baie-des-Brumes", sol="u", plan="""
-BBBWWWWWBBB
-Bll  ll  nB
-Bll  ll   B
-B         B
-B cccccc  B
-B         B
-B hhh   n B
-BBBBWWDWWBB
-""", points=(_pt("soigner", 3, 4),),
-     gens=_gens(("commis", 3, 3), ("client", 7, 6))),
+BBBWWWWBBWWWBB
+Bkk   n irq /B
+B ccccc  r   B
+B            B
+B hhhh hhhh bB
+B            B
+B hhhh hhhh bB
+B            B
+Bn          nB
+BBBBBWWDWWBBBB
+""", points=(_pt("soigner", 4, 3), _pt("escalier", 12, 1, vers="hopital_soins"),
+             _pt("distributrice", 12, 4, sorte="cafe"),
+             _pt("distributrice", 12, 6, sorte="grignotines")),
+     gens=_gens(("soignant", 4, 1), ("malade", 9, 1),
+                ("patient", 2, 4), ("patient", 4, 4), ("patient", 8, 4),
+                ("patient", 3, 6), ("patient", 9, 6), ("patient", 10, 6),
+                ("client", 6, 7))),
+
+    # L'hopital, en haut : les CHAMBRES. Six lits en deux rangees, chacun entre
+    # la potence de son solute et l'ecran de son moniteur, et un malade dans
+    # chacun. Le poste des infirmieres au milieu.
+    _piece("hopital_soins", "Hôpital — l'étage des soins", sol="u", porte="maison", plan="""
+BBWWWBBWWWBBBB
+Birqirqirq  /B
+B r  r  r    B
+B            B
+Bk  cccc    nB
+B            B
+Birqirqirq   B
+B r  r  r    B
+Bn          nB
+BBBBBBBBBBDBBB
+""", points=(_pt("soigner", 5, 5), _pt("escalier", 12, 1, vers="hopital")),
+     gens=_gens(("soignant", 5, 3),
+                ("malade", 2, 1), ("malade", 5, 1), ("malade", 8, 1),
+                ("malade", 2, 6), ("malade", 5, 6), ("malade", 8, 6),
+                ("client", 10, 3))),
 
     # Le Brouillard : le bar, les tables, le billard — et Josee au fond.
     _piece("bar", "Bar Le Brouillard", plan="""

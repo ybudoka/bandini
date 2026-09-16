@@ -155,6 +155,18 @@ def test_la_rue_se_tait_devant_une_arme_et_crie_apres_un_coup_de_feu(banc):
         const justeApres = mesure();
         for (let i = 0; i < 400; i++) o.frame(1);
         const revenue = mesure();
+        // ⚠️ UNE FOULE QUI N'EST PAS DEJA AU PLAFOND. Le murmure voulu vaut
+        // `gens / 10`, borne a 1 : a dix passants autour, il vaut deja le maximum,
+        // et un cri — qui ne peut pas depasser 1 non plus — ne peut plus etre
+        // « plus fort que le murmure ». Le juge passait tant que le depart avait
+        // moins de dix passants a cette image-la ; le 16 sept. 2026, un tirage de
+        // ville en a mis plus. On eclaircit donc a cinq, et c'est la REGLE qu'on
+        // juge, plus la densite du quartier.
+        L.Entites.pietonsAutour(j.x, j.y, 200)
+          .filter(function (e) { return !e.metier; })
+          .slice(5)
+          .forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
         // Un coup de feu : elle ne murmure pas, elle CRIE.
         R().crier();
         o.frame(15);

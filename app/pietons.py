@@ -148,6 +148,20 @@ CATALOGUE: list[Pieton] = [
     _p("commis", "Commis", "#d8d8d0", "#4a3320", "#e8b088", "#3a3a4a",
        vitesse=0.55, courage=0.3, vie=65, argent=(25, 95), temoin=0.5,
        metier="commerce", frequence=0.0),
+    # ⚠️ Les gens de l'HOPITAL, dedans seulement (frequence 0), comme le commis.
+    # La soignante tient le triage et le poste des infirmieres : la blouse
+    # blanche et le pantalon vert d'hopital, c'est ce qui dit « on est a
+    # l'hopital » avant meme le lit. Le malade porte la JAQUETTE — le seul
+    # vetement du catalogue qui soit le meme en haut et en bas — et il ne se
+    # leve pas : `entites.peuplerInterieur` le couche dans son lit (`alite`) et
+    # lui prete la tete et la peau d'un passant, pour que six malades ne soient
+    # pas six fois le meme.
+    _p("soignante", "Infirmière", "#eef3f1", "#3a2a1a", "#f0c098", "#7fbfa6",
+       vitesse=0.8, courage=0.1, vie=60, argent=(10, 45), temoin=0.6,
+       metier="soins", frequence=0.0),
+    _p("malade", "Malade", "#b9d6dc", "#5a4a3a", "#e8c0a0", "#b9d6dc",
+       vitesse=0.5, courage=0.0, vie=35, argent=(0, 4), temoin=0.0,
+       metier="malade", frequence=0.0),
     # L'agent : un pieton que la police dirige quand il poursuit. Il patrouille
     # sur les trottoirs comme tout le monde, arme au ceinturon, et ne nait
     # jamais au hasard — `police.js` en place autant que la zone en demande.

@@ -57,6 +57,7 @@ def assembler() -> dict:
         "ambulants": magasins.AMBULANTS,
         "reclame": magasins.RECLAME,
         "comptoirs": magasins.COMPTOIRS,
+        "distributrices": magasins.DISTRIBUTRICES,
         "tenues": magasins.TENUES,
         "coiffures": magasins.COIFFURES,
     }
