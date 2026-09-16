@@ -84,39 +84,44 @@ def test_les_trois_poses_existent_et_aucune_n_est_empruntee(banc):
         )
 
 
-def test_l_ancre_est_la_ligne_de_sol_et_la_meme_pour_les_trois(banc):
-    """⚠️ Un char debout ancré au centre FLOTTE au-dessus de la rue. Et l'ancre
-    doit être la même pour les trois poses, sinon il saute d'un pixel en
-    tournant — ce qui se voit à chaque coin de rue.
+def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
+    """⚠️ **Depuis le 16 sept. 2026, plus aucun char ne roule sur son toit.**
+    Ce juge-ci tenait l'ANCRE des grilles dessinées à la main — une ancre à la
+    ligne de sol, la même pour les trois poses, sinon le char flottait ou
+    sautait d'un pixel en tournant. Il n'y a plus de grille dessinée : chaque
+    véhicule du catalogue est une MACHINE projetée au cap, et ses trois poses
+    en sont tirées.
 
-    On vérifie aussi que le bas du dessin **touche** cette ligne : une ancre
-    posée au bon endroit sur un dessin qui flotte ne vaut rien.
-
-    ⚠️ Il se juge sur la **sport**, une grille dessinée à la main : depuis le
-    16 sept. 2026 la carrosserie de l'auto est EN VOLUME, ses poses sont tirées
-    d'une projection centrée sur son empreinte, et elle n'a plus de ligne de sol
-    à tenir (« la machine se projette au cap et suit son ombre »)."""
+    Ce qui peut encore mentir, c'est la TOILE : trop petite, elle rogne la
+    machine à certains caps — le toit d'un camion vu de dos, le crochet d'une
+    remorqueuse vue de face — sans que rien ne casse. On la mesure : à aucun
+    des 32 caps, aucun pixel ne touche le bord."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const def = L.SPRITES.sport;
-        const bas = {};
-        ['cote', 'haut', 'bas'].forEach(function (nom) {
-            const g = def.poses[nom][0];
-            let dernier = -1;
-            for (let y = 0; y < g.length; y++) if (/[^.]/.test(g[y])) dernier = y;
-            bas[nom] = dernier;
+        const n = L.Vehicules.ROTATIONS, out = {};
+        L.B.defs.vehicules.forEach(function (v) {
+            const def = L.SPRITES[v.sprite];
+            if (!def || out[v.sprite]) return;
+            const m = { machine: !!def.machine, bords: [] };
+            if (def.machine) {
+                const cote = def.w;
+                for (let i = 0; i < n; i++) {
+                    const g = L.Atlas.projeter(def.machine, i * 2 * Math.PI / n - Math.PI / 2, cote);
+                    const bord = g[0] + g[cote - 1] + g.map(function (l) { return l[0] + l[cote - 1]; }).join('');
+                    if (/[^.]/.test(bord)) m.bords.push(i);
+                }
+                m.posesTirees = def.poses.cote[0].join('') === L.Atlas.projeter(def.machine, 0, cote).join('');
+            }
+            out[v.sprite] = m;
         });
-        return { ancre: def.ancre, h: def.h, bas: bas };
+        return out;
     }""")
-    ligne = r["ancre"][1]
-    assert ligne == r["h"] - 3, (
-        "l'ancre n'est pas la ligne de sol : %s pour une grille de %s" % (r["ancre"], r["h"])
-    )
-    for nom, dernier in r["bas"].items():
-        assert dernier == ligne, (
-            f"la pose « {nom} » finit à la rangée {dernier} et le sol est à {ligne} : "
-            "le char flotte ou s'enfonce"
-        )
+    assert len(r) >= 12, "le décor du juge est faux : %s" % list(r)
+    dessines = sorted(s for s, m in r.items() if not m["machine"])
+    assert dessines == [], f"des véhicules roulent encore sur un dessin fait main : {dessines}"
+    for sprite, m in r.items():
+        assert m["posesTirees"], f"{sprite} : sa pose de profil n'est pas la projection de sa machine"
+        assert m["bords"] == [], f"{sprite} : sa toile rogne la machine aux caps {m['bords']}"
 
 
 def test_le_char_se_dessine_centre_sur_son_empreinte(banc):
@@ -191,55 +196,6 @@ def test_le_char_tourne_comme_son_ombre(banc):
         "le dessin s'écarte de son ombre de %.1f° — le volant ne se voit plus (un demi-cran fait %.1f°)"
         % (r["pire"], demi)
     )
-
-
-def test_le_toit_qui_tourne_porte_les_phares_ET_les_feux(banc):
-    """⚠️ `haut` et `bas` sont le **même toit lu dans l'autre sens** : l'un ne
-    montre que les feux arrière (le char s'éloigne), l'autre que les phares (il
-    vient). Un seul dessin qui tourne doit donc porter **les deux**, sinon un
-    char qui vient vers nous roule tous phares éteints — et on ne le voit plus
-    venir de nuit.
-
-    ⚠️ Et chacun à son bout : les phares dans la moitié NEZ (le nord du
-    dessin), les feux dans la moitié queue. Un retournement fait sur la grille
-    plutôt que sur la caisse les décalerait d'une rangée."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const out = {};
-        L.B.defs.vehicules.forEach(function (def) {
-            const sprite = L.SPRITES[def.sprite];
-            // ⚠️ Un deux-roues n'a pas de toit qui tourne : il se projette au
-            // cap, et ses lampes se jugent cap par cap (plus bas, « la machine
-            // se projette au cap et suit son ombre »).
-            if (!sprite || out[def.sprite] || sprite.machine) return;
-            const toit = L.Atlas.toitDe(def.sprite, sprite);
-            let premier = -1, dernier = -1;
-            toit.forEach(function (ligne, y) { if (/[^.]/.test(ligne)) { if (premier < 0) premier = y; dernier = y; } });
-            const rangees = function (lettre) {
-                const ys = [];
-                toit.forEach(function (ligne, y) { if (ligne.indexOf(lettre) >= 0) ys.push(y); });
-                return ys;
-            };
-            const dansBas = (sprite.poses.bas[0].join('').indexOf('l') >= 0);
-            out[def.sprite] = { phares: rangees('l'), feux: rangees('t'), milieu: (premier + dernier) / 2,
-                                dansBas: dansBas };
-        });
-        return out;
-    }""")
-    # ⚠️ Sept chars roulent encore sur leur toit ; la berline et les deux-roues
-    # sont en volume, et leurs lampes se jugent cap par cap.
-    assert len(r) >= 6, "le décor du juge est faux : %s" % list(r)
-    for sprite, m in r.items():
-        if not m["dansBas"]:
-            continue                      # un vélo n'a pas de phare : rien à porter
-        assert m["phares"], f"{sprite} : le dessin qui tourne a perdu ses phares"
-        assert m["feux"], f"{sprite} : le dessin qui tourne n'a plus de feux arrière"
-        assert max(m["phares"]) < m["milieu"], (
-            f"{sprite} : ses phares sont posés dans sa queue ({m['phares']} pour un milieu à {m['milieu']})"
-        )
-        assert min(m["feux"]) > m["milieu"], (
-            f"{sprite} : ses feux arrière sont posés sur son nez ({m['feux']})"
-        )
 
 
 def test_l_atlas_ne_cuit_que_les_caps_qu_on_a_montres(banc):
@@ -637,72 +593,6 @@ def test_la_sport_est_basse_et_ses_roues_sont_dans_les_ailes(banc):
     # sert plus que de toise.
 
 
-def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
-    """⚠️ **Retour de Martin : « les voitures de face et de dos devraient être
-    vues à 45 degrés, pas de face, vu la carte » · « vue plongeante ».**
-
-    Les poses `haut` et `bas` étaient des **élévations au ras du sol** : on
-    voyait la face arrière bien à plat et presque pas de toit. Sur une carte
-    qu'on regarde d'en haut, un char qui roule vers le nord ne montrait donc
-    **rien de ses 28 px de longueur** — mesuré, 12 rangées peintes pour un char
-    long de 28.
-
-    À 45°, une longueur `L` se projette en `L·sin45` et une hauteur `H` en
-    `H·cos45` ; pour nos proportions la somme vaut à peu près `L`. La règle est
-    donc simple et elle se mesure : **de dos comme de face, un char occupe à
-    l'écran sa longueur** — exactement ce que son ombre au sol annonce déjà.
-    Et de profil, rien ne bouge : c'est sa hauteur qu'on y voit."""
-    r = banc("""function (L, o) {
-        const out = {};
-        L.B.defs.vehicules.forEach(function (v) {
-            const def = L.SPRITES[v.sprite];
-            // ⚠️ Une machine EN VOLUME n'a pas de pose de dos dessinée : la sienne
-            // est sa projection, qui montre sa longueur au biais du sol, comme son
-            // ombre (« la machine se projette au cap et suit son ombre »).
-            if (!def || def.rotations || def.machine) return;
-            const mesure = function (nom) {
-                const g = def.poses[nom][0];
-                let premier = -1, dernier = -1, large = 0;
-                for (let y = 0; y < g.length; y++) {
-                    if (!/[^.]/.test(g[y])) continue;
-                    if (premier < 0) premier = y;
-                    dernier = y;
-                    const peints = g[y].split('').filter(function (c) { return c !== '.'; }).length;
-                    if (peints > large) large = peints;
-                }
-                return { haut: dernier - premier + 1, large: large };
-            };
-            out[v.slug] = { cote: mesure('cote'), dos: mesure('haut'), face: mesure('bas'),
-                            longueur: v.longueur, largeur: v.largeur };
-        });
-        return out;
-    }""")
-    assert len(r) >= 6, "trop peu de véhicules debout : %s" % list(r)
-    for slug, m in r.items():
-        lon, lat = m["longueur"], m["largeur"]
-        for nom, pose in (("de dos", m["dos"]), ("de face", m["face"])):
-            # ⚠️ LE DÉFAUT, MESURÉ : une pose plongeante fait la LONGUEUR du
-            # char, pas sa hauteur. Avant, une berline de 28 px en montrait 12.
-            assert abs(pose["haut"] - lon) <= 5, (
-                f"{slug} {nom} : {pose['haut']} rangées pour un char long de {lon} — "
-                "il est dessiné de face, pas vu d'en haut"
-            )
-            # ... et sa largeur reste sa largeur : une pose plongeante ne
-            # s'étale pas sur la voie d'à côté.
-            assert pose["large"] <= lat + 6, f"{slug} {nom} : {pose['large']} px de large pour {lat}"
-        # Le profil, lui, montre la HAUTEUR du char : il n'a pas bougé, et il
-        # est forcément bien plus plat que les deux autres.
-        # ⚠️ Le profil montre la HAUTEUR du char, la plongée sa LONGUEUR : la
-        # seconde est donc toujours plus haute que le premier. Un vélo, court et
-        # haut sur ses roues, tient de justesse — c'est pour ça que la règle se
-        # dit « plus haute », et pas « deux fois plus haute ».
-        assert m["cote"]["haut"] < m["dos"]["haut"], (
-            f"{slug} : le profil fait {m['cote']['haut']} rangées et le dos {m['dos']['haut']} — "
-            "l'un des deux ne regarde pas d'où il devrait"
-        )
-        assert abs(m["cote"]["large"] - lon) <= 8, f"{slug} de profil : {m['cote']['large']} px pour {lon}"
-
-
 def test_le_char_tourne_autour_de_son_empreinte(banc):
     """⚠️ **Retour de Martin, capture à l'appui : « les voitures sont mal
     garré ».** Dans un stationnement, les chars débordaient par le nez sur le
@@ -870,11 +760,13 @@ def test_de_profil_une_machine_montre_ses_roues(banc):
 
     ⚠️ Et la berline (16 sept. 2026) : vers l'est, on voyait son toit couché sur
     le flanc. De profil, elle touche le sol par ses deux roues du côté qu'on
-    voit."""
+    voit. Toute machine qui a des roues — la chaloupe n'en a pas."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const n = L.Vehicules.ROTATIONS, out = {};
-        Object.keys(L.SPRITES).filter(function (s) { return L.SPRITES[s].machine; }).forEach(function (slug) {
+        Object.keys(L.SPRITES).filter(function (s) {
+            return L.SPRITES[s].machine && L.SPRITES[s].machine.pieces.some(function (p) { return p[0] === 'roue'; });
+        }).forEach(function (slug) {
             const def = L.SPRITES[slug];
             const g = L.Atlas.projeter(def.machine, L.Vehicules.capDe(0) * 2 * Math.PI / n - Math.PI / 2, def.w);
             const peintes = [];
@@ -888,7 +780,8 @@ def test_de_profil_une_machine_montre_ses_roues(banc):
         });
         return out;
     }""")
-    assert {"velo", "moto", "auto", "taxi", "police"} <= set(r), "le décor du juge est faux : %s" % list(r)
+    assert {"velo", "moto", "auto", "taxi", "police", "camion", "autobus"} <= set(r), "le décor du juge est faux : %s" % list(r)
+    assert "bateau" not in r, "le décor du juge est faux : la chaloupe a des roues"
     for slug, m in r.items():
         assert m["touches"] == 2, (
             f"{slug} de profil : sa rangée de sol touche {m['touches']} fois ({m['sol']!r}) — "

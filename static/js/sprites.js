@@ -213,9 +213,11 @@ SPRITES.homme_sandwich = {
 
 /* --- Le parc : trois dessins, et c'est LE TOIT QUI ROULE ---------------------
 
-   ⚠️ **Sauf la berline** (l'auto, le taxi, la police) et les deux-roues : ils
-   sont EN VOLUME et se projettent au cap (`MACHINE_BERLINE`, plus bas). Ce qui
-   suit vaut pour le reste du parc, qui attend son tour.
+   ⚠️ **HISTOIRE, depuis le 16 sept. 2026** : plus aucun char ne roule sur son
+   toit. Tout le parc est EN VOLUME et se projette au cap (`Atlas.projeter`,
+   `MACHINE_BERLINE` et « le parc en volume », plus bas). Ce qui suit raconte
+   pourquoi le toit avait remplace le profil — et c'est ce qui a mene au volume :
+   un dessin qui tourne comme son ombre, mais qui montre un flanc de profil.
 
    ⚠️ **Le dessin qui roule dans la rue est `haut` — le char vu d'en haut, nez
    au NORD — et il TOURNE**, cap par cap, comme son ombre (`Atlas.toitDe` et
@@ -265,115 +267,6 @@ SPRITES.homme_sandwich = {
 function nuancer(pal) {
   return Object.assign({ M: '#9a9ea6', B: '#c9ccd1', G: '#e6f6ff', E: '#3b556c' }, pal, nuances(pal.c));
 }
-
-const BATEAU_COTE = [
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '..............lll...............',
-      '..........kkkkkkkkkkk...........',
-      '..........vvvvvvvvvvvcccc.......',
-      '..........CCCCCCCCCCCcccc.......',
-      '....kkkkkkkkkkkkkkkkkkkkkkkk....',
-      '..kcccccccccccccccccccccccckkkk.',
-      '..kcccccccccccccccccccccccckrrr.',
-      '..kcccccccccccccccccccccccck.kk.',
-      '...kccccccccccccccccccccccck.k..',
-      '...kccccccccccccccccccccccck.r..',
-      '...kccccccccccccccccccccccck....',
-      '....kcccccccccccccccccccccck....',
-      '....kcccccccccccccccccccccck....',
-      '.....kccccccccccccccccccccck....',
-      '......kkkkkkkkkkkkkkkkkkkkkk....',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-      '................................',
-];
-const BATEAU_HAUT = [
-      '................................',
-      '..............kCCk..............',
-      '..............kllk..............',
-      '.............kCccCk.............',
-      '.............kCccCk.............',
-      '............kCccccCk............',
-      '............kCccccCk............',
-      '...........kCccccccCk...........',
-      '...........kCccccccCk...........',
-      '..........kCccccccccCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCvvvvvvvvCk..........',
-      '..........kCvvvvvvvvCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDccccDDCk..........',
-      '..........kCDDccccDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDrrDDrrDCk..........',
-      '..........kCDrrDDrrDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCttDDDDttCk..........',
-      '..........kCcckkkkccCk..........',
-      '..........kCcccrrcccCk..........',
-      '..........kCccccccccCk..........',
-      '................................',
-];
-const BATEAU_BAS = [
-      '................................',
-      '..........kCccccccccCk..........',
-      '..........kCcccrrcccCk..........',
-      '..........kCcckkkkccCk..........',
-      '..........kCttDDDDttCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDrrDDrrDCk..........',
-      '..........kCDrrDDrrDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDccccDDCk..........',
-      '..........kCDDccccDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCvvvvvvvvCk..........',
-      '..........kCvvvvvvvvCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCDDDDDDDDCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCccccccccCk..........',
-      '..........kCccccccccCk..........',
-      '...........kCccccccCk...........',
-      '...........kCccccccCk...........',
-      '............kCccccCk............',
-      '............kCccccCk............',
-      '.............kCccCk.............',
-      '.............kCccCk.............',
-      '..............kllk..............',
-      '..............kCCk..............',
-      '................................',
-];
 
 /* --- La berline : la carrosserie de l'auto, du taxi et de la police, EN VOLUME -
 
@@ -455,25 +348,32 @@ const CAISSE = [
     vitre, le capot passait devant lui au meme pixel et il disparaissait. */
 function habitacle(h) {
   const av = h.avant, ar = h.arriere, ta = h.toit[0], tr = h.toit[1];
+  // ⚠️ Les HAUTEURS et la LARGEUR ont leurs valeurs de berline par defaut : le
+  // pied du pare-brise a 5,9, celui de la lunette un dixieme plus haut, le toit
+  // a 11, les vitres a 5,8 du milieu. Une sport est plus basse, un camion plus
+  // haut et plus large — la meme recette, d'autres nombres.
+  const bas = h.bas === undefined ? 5.9 : h.bas, haut = h.haut === undefined ? 11.0 : h.haut;
+  const demi = h.demi === undefined ? 5.8 : h.demi, basAr = bas + 0.1;
   const pieces = [
     // Le pare-brise, le toit, la lunette ; ses flancs sont les vitres.
-    ['profil', [[av, 5.9], [ta, 11.0], [tr, 11.0], [ar, 6.0]], [-5.8, 5.8], 'E', 'vCv.'],
-    ['tube', [3.8, -5.0, 7.6], [3.8, 5.0, 7.6], 'G', 0.3],                // le reflet du pare-brise
+    ['profil', [[av, bas], [ta, haut], [tr, haut], [ar, basAr]], [-demi, demi], 'E', 'vCv.'],
+    // Le reflet du pare-brise, au tiers de sa hauteur.
+    ['tube', [av + (ta - av) / 3, -(demi - 0.8), bas + (haut - bas) / 3], [av + (ta - av) / 3, demi - 0.8, bas + (haut - bas) / 3], 'G', 0.3],
   ];
-  const piedAv = [av + (ta - av) * 0.07, 5.9 + 5.1 * 0.07], piedAr = [ar + (tr - ar) * 0.08, 6.0 + 5.0 * 0.08];
+  const piedAv = [av + (ta - av) * 0.07, bas + (haut - bas) * 0.07], piedAr = [ar + (tr - ar) * 0.08, basAr + (haut - basAr) * 0.08];
   [-1, 1].forEach(function (s) {
     if (s < 0) {
-      pieces.push(['tube', [piedAv[0], -5.8, piedAv[1]], [piedAv[0], 5.8, piedAv[1]], 'D', 1.0]);   // pied du pare-brise
-      pieces.push(['tube', [ta, -5.8, 11.0], [ta, 5.8, 11.0], 'D', 0.6]);                           // haut du pare-brise
-      pieces.push(['tube', [piedAr[0], -5.8, piedAr[1]], [piedAr[0], 5.8, piedAr[1]], 'D', 1.0]);   // pied de la lunette
-      pieces.push(['tube', [tr, -5.8, 11.0], [tr, 5.8, 11.0], 'D', 0.6]);                           // haut de la lunette
+      pieces.push(['tube', [piedAv[0], -demi, piedAv[1]], [piedAv[0], demi, piedAv[1]], 'D', 1.0]);   // pied du pare-brise
+      pieces.push(['tube', [ta, -demi, haut], [ta, demi, haut], 'D', 0.6]);                           // haut du pare-brise
+      pieces.push(['tube', [piedAr[0], -demi, piedAr[1]], [piedAr[0], demi, piedAr[1]], 'D', 1.0]);   // pied de la lunette
+      pieces.push(['tube', [tr, -demi, haut], [tr, demi, haut], 'D', 0.6]);                           // haut de la lunette
     }
-    const w = s * 5.9;
-    pieces.push(['tube', [av, w, 5.9], [ta, w, 11.0], 'D', 0.05]);        // les montants
-    if (h.montant !== null) pieces.push(['tube', [h.montant, w, 6.0], [h.montant, w, 11.0], 'D', 0.05]);
-    (h.custode ? [h.custode] : []).forEach(function (u) { pieces.push(['tube', [u, w, 6.0], [u, w, 11.0], 'D', 0.05]); });
-    pieces.push(['tube', [tr, w, 11.0], [ar, w, 6.0], 'D', 0.05]);
-    pieces.push(['tube', [ta, w, 11.0], [tr, w, 11.0], 'D', 0.05]);
+    const w = s * (demi + 0.1);
+    pieces.push(['tube', [av, w, bas], [ta, w, haut], 'D', 0.05]);        // les montants
+    if (h.montant !== null) pieces.push(['tube', [h.montant, w, basAr], [h.montant, w, haut], 'D', 0.05]);
+    (h.custode ? [h.custode] : []).forEach(function (u) { pieces.push(['tube', [u, w, basAr], [u, w, haut], 'D', 0.05]); });
+    pieces.push(['tube', [tr, w, haut], [ar, w, basAr], 'D', 0.05]);
+    pieces.push(['tube', [ta, w, haut], [tr, w, haut], 'D', 0.05]);
   });
   return pieces;
 }
@@ -770,689 +670,6 @@ const ALITE = [
       '............',
     ];
 SPRITES.joueur.poses.alite = [ALITE];
-const SPORT_COTE = [
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '..............................',
-      '............kCCCCCCCk.........',
-      '..........kkGGvvvvvvEk........',
-      '...kCCCCCCCcccccccccccCCCCk...',
-      '..kttccccccccccccccccccccllk..',
-      '..kBBkrrrkDDDDDDDDDDkrrrkBBk..',
-      '.....krMrk..........krMrk.....',
-      '.....krrrk..........krrrk.....',
-      '......kkk............kkk......',
-      '..............................',
-      '..............................',
-    ];
-const SPORT_HAUT = [
-      '..............................',
-      '...........kBBBBBk............',
-      '..........kCcccccDk...........',
-      '.........kCcccccccDk..........',
-      '........kCcccccccccDk.........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '......rkCcccccccccccDkr.......',
-      '......rkCcccccccccccDkr.......',
-      '.......kDDDDDDDDDDDDDk........',
-      '.......kCcDGvvvvvEDcDk........',
-      '.......kCcDvvvvvvvDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDvvvvvvvDcDk........',
-      '.......kCcDGvvvvvEDcDk........',
-      '.......kDDDDDDDDDDDDDk........',
-      '......rkCcccccccccccDkr.......',
-      '......rkCcccccccccccDkr.......',
-      '.......kCcccccccccccDk........',
-      '........kCcccccccccDk.........',
-      '........kttcccccccttk.........',
-      '.........ktkkkkkkktk..........',
-      '..........kBBBBBBBk...........',
-      '..............................',
-      '..............................',
-    ];
-const SPORT_BAS = [
-      '..............................',
-      '...........kBBBBBk............',
-      '..........kCcccccDk...........',
-      '.........kCcccccccDk..........',
-      '........kCcccccccccDk.........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '.......kCcccccccccccDk........',
-      '......rkCcccccccccccDkr.......',
-      '......rkCcccccccccccDkr.......',
-      '.......kDDDDDDDDDDDDDk........',
-      '.......kCcDGvvvvvEDcDk........',
-      '.......kCcDvvvvvvvDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDCCCCCCCDcDk........',
-      '.......kCcDvvvvvvvDcDk........',
-      '.......kCcDGvvvvvEDcDk........',
-      '.......kDDDDDDDDDDDDDk........',
-      '......rkCcccccccccccDkr.......',
-      '......rkCcccccccccccDkr.......',
-      '.......kCcccccccccccDk........',
-      '........kCcccccccccDk.........',
-      '........kllcccccccllk.........',
-      '.........klkkkkkkklk..........',
-      '..........kBBBBBBBk...........',
-      '..............................',
-      '..............................',
-    ];
-const LUXE_COTE = [
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '....................................',
-      '............kCCCCCCCk...............',
-      '...........kGGvvvkGGvk..............',
-      '..........kkvvvvEkvvEk..............',
-      '....kCCCCCCcccccccccccCCCCCCCCCk....',
-      '..kttccccccccccccccDcccccccccccllk..',
-      '..kccccccccccccccccDccccccccccccck..',
-      '..kccccccccccccccccDccccccccccccck..',
-      '..kBBBkkkkkDDDDDDDDDDDDDDkkkkkBBBk..',
-      '.......kkk................kkk.......',
-      '......krMrk..............krMrk......',
-      '......krrrk..............krrrk......',
-      '.......kkk................kkk.......',
-      '....................................',
-      '....................................',
-    ];
-const LUXE_HAUT = [
-      '....................................',
-      '.............kBBBBBBBBk.............',
-      '............kCccccccccDk............',
-      '...........kCccccccccccDk...........',
-      '..........kCccccccccccccDk..........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '........rkCccccccccccccccDkr........',
-      '........rkCccccccccccccccDkr........',
-      '.........kDDDDDDDDDDDDDDDDk.........',
-      '.........kCcDGvvvvvvvvEDcDk.........',
-      '.........kCcDvvvvvvvvvvDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDvvvvvvvvvvDcDk.........',
-      '.........kCcDGvvvvvvvvEDcDk.........',
-      '.........kDDDDDDDDDDDDDDDDk.........',
-      '........rkCccccccccccccccDkr........',
-      '........rkCccccccccccccccDkr........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '..........kCccccccccccccDk..........',
-      '..........kttccccccccccttk..........',
-      '...........ktkkkkkkkkkktk...........',
-      '............kBBBBBBBBBBk............',
-      '....................................',
-      '....................................',
-    ];
-const LUXE_BAS = [
-      '....................................',
-      '.............kBBBBBBBBk.............',
-      '............kCccccccccDk............',
-      '...........kCccccccccccDk...........',
-      '..........kCccccccccccccDk..........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '........rkCccccccccccccccDkr........',
-      '........rkCccccccccccccccDkr........',
-      '.........kDDDDDDDDDDDDDDDDk.........',
-      '.........kCcDGvvvvvvvvEDcDk.........',
-      '.........kCcDvvvvvvvvvvDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDCCCCCCCCCCDcDk.........',
-      '.........kCcDvvvvvvvvvvDcDk.........',
-      '.........kCcDGvvvvvvvvEDcDk.........',
-      '.........kDDDDDDDDDDDDDDDDk.........',
-      '........rkCccccccccccccccDkr........',
-      '........rkCccccccccccccccDkr........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '.........kCccccccccccccccDk.........',
-      '..........kCccccccccccccDk..........',
-      '..........kllccccccccccllk..........',
-      '...........klkkkkkkkkkklk...........',
-      '............kBBBBBBBBBBk............',
-      '....................................',
-      '....................................',
-    ];
-const AMBULANCE_COTE = [
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '......................................',
-      '................kkkkkkk...............',
-      '................llttttt...............',
-      '....kkkkkkkkkkkkkkkkkkkk..............',
-      '...kCCCCCCCCCCCCCCCCCCCCk.............',
-      '...kccDccccccccccccccccck.............',
-      '...kttDcccctcccccccccccck.............',
-      '...kccDcccctcccccccccccckkkkkkkkkk....',
-      '...kccDcctttttcccccccccckCCCCCCCCCk...',
-      '...kccDcccctcccccccccccckcGGGvvvvck...',
-      '...kccDcccctcccccccccccckcvvvvvEEck...',
-      '...kccDccccccccccccccccckccccccccck...',
-      '...kDDDDDDDDDDDDDDDDDDDDkDDDDDDDDDk...',
-      '...kDDDDDDDDDDDDDDDDDDDDkDDDDDDDllk...',
-      '...kBBBkkkkkDDDDDDDDDDDDDDkkkkkBBBk...',
-      '........kkk................kkk........',
-      '.......krMrk..............krMrk.......',
-      '.......krrrk..............krrrk.......',
-      '........kkk................kkk........',
-      '......................................',
-      '......................................',
-    ];
-const AMBULANCE_HAUT = [
-      '......................................',
-      '.............kBBBBBBBBBBk.............',
-      '............kCccccccccccDk............',
-      '...........kCccccccccccccDk...........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '..........kCcDGvvvvvvvvEDcDk..........',
-      '..........kCcDaaaaBBbbbbDcDk..........',
-      '..........kCcDaaaaBBbbbbDcDk..........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kCccccccccccccccDk..........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '...........kttccccccccccttk...........',
-      '............ktkkkkkkkkkktk............',
-      '.............kBBBBBBBBBBk.............',
-      '......................................',
-      '......................................',
-    ];
-const AMBULANCE_BAS = [
-      '......................................',
-      '.............kBBBBBBBBBBk.............',
-      '............kCccccccccccDk............',
-      '...........kCccccccccccccDk...........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '..........kCcDGvvvvvvvvEDcDk..........',
-      '..........kCcDCCCCCCCCCCDcDk..........',
-      '..........kCcDCCCCCCCCCCDcDk..........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '..........kCccccccccccccccDk..........',
-      '.........rkCccccccccccccccDkr.........',
-      '.........rkCccccccccccccccDkr.........',
-      '..........kCccccccccccccccDk..........',
-      '..........kDDDDDDDDDDDDDDDDk..........',
-      '...........kllccccccccccllk...........',
-      '............klkkkkkkkkkklk............',
-      '.............kBBBBBBBBBBk.............',
-      '......................................',
-      '......................................',
-    ];
-const CAMION_COTE = [
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '..............................................',
-      '....kkkkkkkkkkkkkkkkkkkkkkkkkk................',
-      '...kCCCCCCCCCCCCCCCCCCCCCCCCCCk...............',
-      '...kccDccccccccccccccccccccccck...............',
-      '...kttDccccccccccccccccccccccck...............',
-      '...kccDccccccccccccccccccccccckkkkkkkkkkkk....',
-      '...kccDccccccccccccccccccccccckCCCCCCCCCCCk...',
-      '...kccDccccccccccccccccccccccckcGGGvvvvvvck...',
-      '...kccDccccccccccccccccccccccckcvvvvvvvEEck...',
-      '...kccDccccccccccccccccccccccckccccccccccck...',
-      '...kccDccccccccccccccccccccccckccccccccccck...',
-      '...kccDccccccccccccccccccccccckccccccccccck...',
-      '...kDDDDDDDDDDDDDDDDDDDDDDDDDDkDDDDDDDDDDDk...',
-      '...kDDDDDDDDDDDDDDDDDDDDDDDDDDkDDDDDDDDDllk...',
-      '...kBBBkkkkkDDDDDDDDDDDDDDDDDDDDDDkkkkkBBBk...',
-      '........kkk........................kkk........',
-      '.......krMrk......................krMrk.......',
-      '.......krrrk......................krrrk.......',
-      '........kkk........................kkk........',
-      '..............................................',
-      '..............................................',
-    ];
-const CAMION_HAUT = [
-      '..............................................',
-      '.................kBBBBBBBBBBk.................',
-      '................kCccccccccccDk................',
-      '...............kCccccccccccccDk...............',
-      '..............kCccccccccccccccDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '..............kCcDGvvvvvvvvEDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '..............kCccccccccccccccDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kCccccccccccccccDk..............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '...............kttccccccccccttk...............',
-      '................ktkkkkkkkkkktk................',
-      '.................kBBBBBBBBBBk.................',
-      '..............................................',
-      '..............................................',
-    ];
-const CAMION_BAS = [
-      '..............................................',
-      '.................kBBBBBBBBBBk.................',
-      '................kCccccccccccDk................',
-      '...............kCccccccccccccDk...............',
-      '..............kCccccccccccccccDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '..............kCcDGvvvvvvvvEDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kCcDCCCCCCCCCCDcDk..............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '..............kCccccccccccccccDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCccccccccccccccDk..............',
-      '..............kCCCCCCCCCCCCCCCDk..............',
-      '.............rkCccccccccccccccDkr.............',
-      '.............rkCccccccccccccccDkr.............',
-      '..............kCccccccccccccccDk..............',
-      '..............kDDDDDDDDDDDDDDDDk..............',
-      '...............kllccccccccccllk...............',
-      '................klkkkkkkkkkklk................',
-      '.................kBBBBBBBBBBk.................',
-      '..............................................',
-      '..............................................',
-    ];
-const REMORQUEUSE_COTE = [
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '................................................',
-      '.....................kkkkkkk....................',
-      '.....................llttttt....................',
-      '.......kkkkkkkkkkkkkkkkkkkkkkk..................',
-      '......kCCCCCCCCCCCCCCCCCCCCCCCk.................',
-      '.kkkkkkccDcccccccccccccccccccck.................',
-      '.kkkkkkttDcccccccccccccccccccck.................',
-      '.kk...kccDcccccccccccccccccccckkkkkkkkkkk.......',
-      '.MM...kccDcccccccccccccccccccckCCCCCCCCCCk......',
-      '......kccDcccccccccccccccccccckcGGGvvvvvck......',
-      '......kDDDDDDDDDDDDDDDDDDDDDDDkDDDDDDDDDDk......',
-      '......kDDDDDDDDDDDDDDDDDDDDDDDkDDDDDDDDllk......',
-      '......kBBBkkkkkDDDDDDDDDDDDDDDDDDkkkkkBBBk......',
-      '...........kkk....................kkk...........',
-      '..........krMrk..................krMrk..........',
-      '..........krrrk..................krrrk..........',
-      '...........kkk....................kkk...........',
-      '................................................',
-      '................................................',
-    ];
-const REMORQUEUSE_HAUT = [
-      '................................................',
-      '..................kBBBBBBBBBBk..................',
-      '.................kCccccccccccDk.................',
-      '................kCccccccccccccDk................',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '...............kCcDGvvvvvvvvEDcDk...............',
-      '...............kCcDkkkkkkkkkkDcDk...............',
-      '...............kCcDaaaaBBbbbbDcDk...............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCCCCCCCCCCCCCCCDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kCccccccccccccccDk...............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '................kttccccccccccttk................',
-      '.................ktkkkkkkkkkktk.................',
-      '..................kBBBBBBBBBBk..................',
-      '................................................',
-      '................................................',
-    ];
-const REMORQUEUSE_BAS = [
-      '................................................',
-      '..................kBBBBBBBBBBk..................',
-      '.................kCccccccccccDk.................',
-      '................kCccccccccccccDk................',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '...............kCcDGvvvvvvvvEDcDk...............',
-      '...............kCcDCCCCCCCCCCDcDk...............',
-      '...............kCcDCCCCCCCCCCDcDk...............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCCCCCCCCCCCCCCCDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '...............kCccccccccccccccDk...............',
-      '..............rkCccccccccccccccDkr..............',
-      '..............rkCccccccccccccccDkr..............',
-      '...............kCccccccccccccccDk...............',
-      '...............kDDDDDDDDDDDDDDDDk...............',
-      '................kllccccccccccllk................',
-      '.................klkkkkkkkkkklk.................',
-      '..................kBBBBBBBBBBk..................',
-      '................................................',
-      '................................................',
-    ];
-const AUTOBUS_COTE = [
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '......................................................',
-      '....kkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkkk....',
-      '...kCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCk...',
-      '...kttcccccccccccccccccccccccccccccccccccccccccccck...',
-      '...kcGGGvvvkGGGvvvkGGGvvvkGGGvvvkGGGvvvkGGckkkkkcck...',
-      '...kcvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvckGGvkcck...',
-      '...kcvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvckvvvkcck...',
-      '...kcvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvvvvvkvvckvvvkcck...',
-      '...kcvvvvEEkvvvvEEkvvvvEEkvvvvEEkvvvvEEkvEckvvEkcck...',
-      '...kccccccccccccccccccccccccccccccccccccccckkkkkcck...',
-      '...kccccccccccccccccccccccccccccccccccccccckkkkkcck...',
-      '...kDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDk...',
-      '...kDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDllk...',
-      '...kBBBDkkkkkDDDDDDDDDDDDDDDDDDDDDDDDDDDDkkkkkDBBBk...',
-      '.........kkk..............................kkk.........',
-      '........krMrk............................krMrk........',
-      '........krrrk............................krrrk........',
-      '.........kkk..............................kkk.........',
-      '......................................................',
-      '......................................................',
-    ];
-const AUTOBUS_HAUT = [
-      '......................................................',
-      '....................kCccccccccccDk....................',
-      '...................kCccccccccccccDk...................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '..................kCcDGvvvvvvvvEDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '..................kCccccccccccccccDk..................',
-      '.................rkCccccccccccccccDkr.................',
-      '.................rkCccccccccccccccDkr.................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '.................rkCccccccccccccccDkr.................',
-      '.................rkCccccccccccccccDkr.................',
-      '..................kCccccccccccccccDk..................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '...................kttccccccccccttk...................',
-      '....................ktkkkkkkkkkktk....................',
-      '......................................................',
-      '......................................................',
-    ];
-const AUTOBUS_BAS = [
-      '......................................................',
-      '....................kCccccccccccDk....................',
-      '...................kCccccccccccccDk...................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '..................kCcDGvvvvvvvvEDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kCcDCCCCCCCCCCDcDk..................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '..................kCccccccccccccccDk..................',
-      '.................rkCccccccccccccccDkr.................',
-      '.................rkCccccccccccccccDkr.................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCccccccccccccccDk..................',
-      '..................kCCCCCCCCCCCCCCCDk..................',
-      '..................kCccccccccccccccDk..................',
-      '.................rkCccccccccccccccDkr.................',
-      '.................rkCccccccccccccccDkr.................',
-      '..................kCccccccccccccccDk..................',
-      '..................kDDDDDDDDDDDDDDDDk..................',
-      '...................kllccccccccccllk...................',
-      '....................klkkkkkkkkkklk....................',
-      '......................................................',
-      '......................................................',
-    ];
-
-
 /* --- Trois sortes de gens, pas trois palettes -------------------------------
 
    ⚠️ La ville avait 24 archetypes pour QUATRE corps : vingt et un portaient
@@ -1828,11 +1045,6 @@ SPRITES.pickpocket = {
 
 // ⚠️ Les trois de la carrosserie commune sont declares APRES les fonctions de
 // fiche (`enVolume`), plus bas : c'est la qu'ils prennent leur machine.
-SPRITES.bateau = {
-  w: 32, h: 34, ancre: [16, 31],
-  pal: nuancer({ k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030' }),
-  swaps: ['c'], poses: { cote: [BATEAU_COTE], haut: [BATEAU_HAUT], bas: [BATEAU_BAS] },
-};
 /** Une fiche EN VOLUME : sa machine, et TROIS poses qui en sont tirees.
 
     ⚠️ Les poses `cote`, `haut`, `bas` ne sont plus dessinees a la main : ce
@@ -1890,73 +1102,254 @@ SPRITES.velo = deuxRoues(MACHINE_VELO, 16, { k: '#101018', c: '#2980b9', r: '#2a
 SPRITES.velo.pedale = 7;
 SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
 
-/* --- M9, le parc automobile ---------------------------------------------------
+/* --- LE PARC EN VOLUME : le reste des chars, comme la berline ---------------------
 
-   ⚠️ Vu d'en haut, un char est un TOIT. C'est ce qui decide de ces quatre
-   dessins : ce n'est pas le pare-brise qui nomme un vehicule a douze pixels de
-   large, c'est ce qu'il porte sur le dos — les nervures d'une caisse, les
-   trappes d'un autobus, une croix rouge, un bras de levage et son crochet.
-   Chacun est plus long que l'auto, et la marge reste la meme (longueur + 4,
-   largeur + 2) : le sprite depasse de deux pixels pour les roues. */
-// Une caisse a nervures et une cabine : c'est la caisse qui le nomme d'en haut.
-SPRITES.camion = {
-  w: 46, h: 40, ancre: [23, 37],
-  pal: nuancer({ k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63' }),
-  swaps: ['c'],
-  poses: { cote: [CAMION_COTE], haut: [CAMION_HAUT], bas: [CAMION_BAS] },
+   ⚠️ **Le go de Martin : « tu vas pouvoir faire pareil pour les autres types de
+   véhicule ».** Ils roulaient encore sur leur TOIT tourne, dessine a la main.
+   Chacun est maintenant une machine projetee au cap, et chacun garde ce qui le
+   nomme — c'etait la regle des dessins d'avant, et elle tient toujours :
+
+   - la SPORT est basse et DECAPOTABLE : le seul char du parc dont l'habitacle
+     est ouvert, on voit ses deux sieges ;
+   - la LUXE est l'inverse exact : longue, un toit plein, des vitres fumees, et
+     du chrome tout autour (jonc, calandre, figurine) ;
+   - l'AMBULANCE a sa caisse haute, sa croix sur les flancs ET sur le toit, sa
+     bande rouge, et une rampe devant et deux feux derriere ;
+   - la REMORQUEUSE a son plateau, le bras couche dessus et le crochet qui
+     depasse a l'arriere, et sa rampe ambre sur la cabine ;
+   - le CAMION a une cabine avancee et une caisse haute a nervures ;
+   - l'AUTOBUS est la plus longue boite, une rangee de fenetres, une porte, une
+     girouette et des trappes sur le toit ;
+   - la CHALOUPE a une coque pincee en proue, un fond, deux bancs et un moteur
+     hors-bord — et pas de roues.
+
+   Les aides ci-dessous portent la geometrie commune : les passages de roue, le
+   plan pince, les essieux, les pare-chocs, les phares et les feux. ⚠️ Leurs
+   noms sont PREFIXES : ce fichier est charge dans l'espace global, et un
+   `lampes` ou un `pince` nu finirait par croiser quelqu'un. */
+/** Le bas de caisse, de l'arriere vers l'avant, avec un passage au-dessus de
+    chaque essieu (`essieux` : les u, rayon de roue `r`, bas de caisse `bas`). */
+function passagesDeRoue(essieux, r, bas, queue, nez) {
+  const k = r / 3, pts = [];
+  essieux.slice().sort(function (a, b) { return a - b; }).forEach(function (a) {
+    [[-3.4, 0], [-3.2, 1.8], [-2.0, 3.0], [0, 3.4], [2.0, 3.0], [3.2, 1.8], [3.4, 0]].forEach(function (d) {
+      pts.push([a + d[0] * k, bas + d[1] * k]);
+    });
+  });
+  return pts.filter(function (p) { return p[0] > queue && p[0] < nez; });
+}
+/** Une caisse : sa ligne de dessus du nez a la queue, ses passages de roue, son
+    plan pince. Rend la piece `profil`. */
+function caisseDeChar(o) {
+  const nez = o.dessus[0][0], queue = o.dessus[o.dessus.length - 1][0], bas = o.bas;
+  const pts = [[nez, bas]].concat(o.dessus, [[queue, bas]], passagesDeRoue(o.essieux, o.r, bas, queue, nez));
+  let lettres = 'D';
+  for (let k = 0; k < o.dessus.length - 1; k++) lettres += (o.aretes && o.aretes[k]) || 'c';
+  lettres += 'D';
+  while (lettres.length < pts.length) lettres += 'k';
+  return ['profil', pts, o.plan, o.flanc || 'c', lettres, o.avance];
+}
+/** Un plan pince : demi-largeur `demi` au milieu, `bout` aux deux bouts. */
+function planPince(lon, demi, bout) {
+  const L = lon / 2;
+  return [[-L - 0.5, bout], [-L + 1.3, demi * 0.96], [-L + 2.9, demi], [L - 2.9, demi], [L - 1.3, demi * 0.96], [L + 0.5, bout]];
+}
+function essieuDeChar(u, r, w, larges) {
+  return [['roue', u, r, 'r', 'M', 'M', larges || 2, w], ['roue', u, r, 'r', 'M', 'M', larges || 2, -w]];
+}
+function lampesDeChar(uAv, uAr, w0, w1, z0, z1) {
+  return [
+    ['bloc', [uAv - 2.4, uAv + 0.6], [w0, w1], [z0, z1], 'l', 'l', 'l', 0.2],
+    ['bloc', [uAv - 2.4, uAv + 0.6], [-w1, -w0], [z0, z1], 'l', 'l', 'l', 0.2],
+    ['bloc', [uAr - 0.6, uAr + 2.4], [w0, w1], [z0 + 0.2, z1 + 0.2], 't', 't', 't', 0.2],
+    ['bloc', [uAr - 0.6, uAr + 2.4], [-w1, -w0], [z0 + 0.2, z1 + 0.2], 't', 't', 't', 0.2],
+  ];
+}
+function parechocsDeChar(uAv, uAr, demi) {
+  return [
+    ['bloc', [uAv - 0.2, uAv + 0.5], [-demi, demi], [1.6, 2.8], 'B', 'B', 'B', 0.1],
+    ['bloc', [uAr - 0.5, uAr + 0.2], [-demi, demi], [1.6, 2.8], 'B', 'B', 'B', 0.1],
+  ];
+}
+
+// --- La sport : basse, DECAPOTABLE — on voit ses deux sieges ------------------
+const MACHINE_SPORT = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(8.0, 3.0, 5.6), essieuDeChar(-8.4, 3.0, 5.6),
+    // ⚠️ Le dessus de l'habitacle est OUVERT ('.') : ses flancs font les
+    // portieres, et on voit dedans.
+    [caisseDeChar({ dessus: [[13, 3.2], [11.6, 4.3], [4.4, 5.0], [-7.6, 5.1], [-10.8, 5.2], [-12.4, 5.1], [-13, 4.2]], bas: 1.4,
+                    essieux: [8.0, -8.4], r: 3.0, plan: planPince(26, 6.5, 4.8), aretes: 'cc.ccc' })],
+    [
+      ['bloc', [-7.6, 4.4], [-6.0, 6.0], [3.0, 3.2], 'i', 'i', 'i', 0],                     // le plancher
+      ['bloc', [-5.2, -2.6], [-5.2, -0.8], [3.2, 4.6], 'u', 'u', 'u', 0.05],                 // les deux sieges
+      ['bloc', [-5.2, -2.6], [0.8, 5.2], [3.2, 4.6], 'u', 'u', 'u', 0.05],
+      ['bloc', [-6.4, -5.2], [-5.2, -0.8], [3.2, 7.0], 'u', 'u', 'u', 0.05],                 // et leurs dossiers
+      ['bloc', [-6.4, -5.2], [0.8, 5.2], [3.2, 7.0], 'u', 'u', 'u', 0.05],
+      ['profil', [[4.6, 5.0], [2.6, 8.0], [2.0, 8.0], [4.0, 5.0]], [-5.4, 5.4], 'D', 'v.v.', 0.1],   // le pare-brise
+      ['tube', [2.3, -5.4, 8.1], [2.3, 5.4, 8.1], 'D', 0.6],                               // son cadre
+      ['tube', [4.45, -5.4, 5.25], [4.45, 5.4, 5.25], 'D', 1.0],
+      ['tube', [3.9, -4.6, 6.0], [3.9, 4.6, 6.0], 'G', 0.3],                                // son reflet
+      ['tube', [10.4, 6.52, 4.6], [-10.4, 6.52, 5.0], 'C', 0.05], ['tube', [10.4, -6.52, 4.6], [-10.4, -6.52, 5.0], 'C', 0.05],
+      ['bloc', [-13.2, -11.2], [-5.4, 5.4], [5.9, 6.5], 'D', 'D', 'D', 0.2],                 // l'aileron
+      ['tube', [-12.2, 4.2, 5.1], [-12.2, 4.2, 5.9], 'D', 0.1], ['tube', [-12.2, -4.2, 5.1], [-12.2, -4.2, 5.9], 'D', 0.1],
+    ],
+    parechocsDeChar(13, -13, 4.6), lampesDeChar(12.8, -12.8, 2.4, 6.0, 2.7, 4.1),
+  ),
 };
-// Le plus long du parc — cinq cercles de collision, et un toit a trappes.
-SPRITES.autobus = {
-  w: 54, h: 48, ancre: [27, 45],
-  pal: nuancer({ k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b' }),
-  swaps: ['c'],
-  poses: { cote: [AUTOBUS_COTE], haut: [AUTOBUS_HAUT], bas: [AUTOBUS_BAS] },
+// --- La luxe : longue, un long capot, du chrome ---------------------------------
+const MACHINE_LUXE = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(10.4, 3.3, 6.6), essieuDeChar(-10.2, 3.3, 6.6),
+    [caisseDeChar({ dessus: [[16, 4.8], [15.0, 6.4], [-14.6, 6.6], [-16, 5.4]], bas: 1.6, essieux: [10.4, -10.2], r: 3.3,
+              plan: planPince(32, 7.5, 6.0) })],
+    habitacle({ avant: 3.2, toit: [-0.6, -8.6], arriere: -11.6, montant: -4.2, bas: 6.5, haut: 12.0, demi: 6.3 }),
+    [
+      ['tube', [14.6, 7.52, 6.4], [-14.2, 7.52, 6.6], 'B', 0.05], ['tube', [14.6, -7.52, 6.4], [-14.2, -7.52, 6.6], 'B', 0.05],  // le jonc chrome
+      ['tube', [13.2, 7.54, 3.6], [-13.2, 7.54, 3.6], 'B', 0.05], ['tube', [13.2, -7.54, 3.6], [-13.2, -7.54, 3.6], 'B', 0.05],
+      ['bloc', [15.8, 16.4], [-3.6, 3.6], [2.8, 5.2], 'B', 'M', 'B', 0.2],                 // la calandre
+      ['bloc', [15.0, 15.6], [-0.3, 0.3], [6.4, 7.2], 'B', 'B', 'B', 0.3],                 // la figurine
+      ['tube', [-1.1, 7.53, 1.8], [-1.1, 7.53, 6.2], 'D', 0.03], ['tube', [-1.1, -7.53, 1.8], [-1.1, -7.53, 6.2], 'D', 0.03],
+      ['tube', [-7.4, 7.53, 1.8], [-7.4, 7.53, 6.2], 'D', 0.03], ['tube', [-7.4, -7.53, 1.8], [-7.4, -7.53, 6.2], 'D', 0.03],
+    ],
+    parechocsDeChar(16, -16, 6.0), lampesDeChar(15.8, -15.8, 3.4, 7.1, 3.2, 4.8),
+  ),
 };
-// ⚠️ La croix se lit d'EN HAUT : vue de dessus, c'est elle qui la nomme.
-SPRITES.ambulance = {
-  w: 38, h: 30, ancre: [19, 27],
-  pal: nuancer({ k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' }),
-  swaps: ['c'],
-  poses: { cote: [AMBULANCE_COTE], haut: [AMBULANCE_HAUT], bas: [AMBULANCE_BAS] },
-  // Rouge et blanc, sur le toit de la cabine : ils tournent avec sa sirene.
-  gyrophares: { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] },
+// --- L'ambulance : une cabine, une caisse haute, la croix ------------------------
+const CROIX_ROUGE = function (u, z, w) {
+  return [['tube', [u, w, z - 2.6], [u, w, z + 2.6], 'x', 0.4], ['tube', [u - 2.6, w, z], [u + 2.6, w, z], 'x', 0.4],
+          ['tube', [u + 0.5, w, z - 2.6], [u + 0.5, w, z + 2.6], 'x', 0.4], ['tube', [u - 2.6, w, z + 0.5], [u + 2.6, w, z + 0.5], 'x', 0.4]];
 };
-// Le bras couche sur le plateau, et le crochet qui depasse a l'arriere.
-SPRITES.remorqueuse = {
-  w: 48, h: 34, ancre: [24, 31],
-  pal: nuancer({ k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' }),
-  swaps: ['c'],
-  poses: { cote: [REMORQUEUSE_COTE], haut: [REMORQUEUSE_HAUT], bas: [REMORQUEUSE_BAS] },
-  // Ambre, sur le toit de la cabine : ils tournent quand elle remorque.
-  // ⚠️ Sur une BASE SOMBRE, et d'un ambre plus jaune que la caisse : ambre sur
-  // orange, la rampe disparaissait.
-  gyrophares: { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] },
+const MACHINE_AMBULANCE = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(9.8, 3.2, 6.4), essieuDeChar(-9.6, 3.2, 6.4),
+    [caisseDeChar({ dessus: [[16, 5.4], [15.0, 7.0], [11.4, 7.3], [5.4, 7.3], [5.2, 16.6], [-15.4, 16.8], [-16, 16.0], [-16, 7.0]], bas: 1.6,
+              essieux: [9.8, -9.6], r: 3.2, plan: planPince(32, 7.5, 6.2), aretes: 'cccDCCD' })],
+    habitacle({ avant: 11.4, toit: [8.6, 5.4], arriere: 5.4, montant: null, bas: 7.3, haut: 13.0, demi: 6.4 }),
+    CROIX_ROUGE(-5.4, 11.2, 7.54), CROIX_ROUGE(-5.4, 11.2, -7.54),
+    [
+      ['tube', [4.8, 7.53, 5.6], [-15.6, 7.53, 5.6], 'x', 0.4], ['tube', [4.8, -7.53, 5.6], [-15.6, -7.53, 5.6], 'x', 0.4],  // la bande
+      ['tube', [-5.4, -3.0, 16.85], [-5.4, 3.0, 16.85], 'x', 0.1], ['tube', [-8.4, 0, 16.85], [-2.4, 0, 16.85], 'x', 0.1],       // la croix du toit
+      ['tube', [-5.8, -3.0, 16.85], [-5.8, 3.0, 16.85], 'x', 0.1], ['tube', [-8.4, 0.5, 16.85], [-2.4, 0.5, 16.85], 'x', 0.1],
+      ['bloc', [5.6, 7.4], [-5.2, -0.3], [13.0, 13.9], 'a', 'a', 'a', 0.2],                  // la rampe
+      ['bloc', [5.6, 7.4], [0.3, 5.2], [13.0, 13.9], 'b', 'b', 'b', 0.2],
+      ['bloc', [-15.8, -14.4], [-7.0, -4.6], [16.8, 17.6], 'a', 'a', 'a', 0.2],              // et deux feux au cul de la caisse
+      ['bloc', [-15.8, -14.4], [4.6, 7.0], [16.8, 17.6], 'b', 'b', 'b', 0.2],
+      ['tube', [-16.05, 0, 2.2], [-16.05, 0, 15.6], 'D', 0.05],                             // les portes arriere
+    ],
+    parechocsDeChar(16, -16, 6.2), lampesDeChar(15.8, -15.8, 3.4, 7.2, 3.4, 5.0),
+  ),
+};
+// --- La remorqueuse : une cabine, un plateau, le bras et son crochet --------------
+const MACHINE_REMORQUEUSE = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(10.6, 3.3, 6.4), essieuDeChar(-10.4, 3.3, 6.4),
+    [caisseDeChar({ dessus: [[18, 5.4], [17.0, 7.2], [12.8, 7.6], [5.6, 7.6], [5.4, 6.8], [-18, 6.8]], bas: 1.8, essieux: [10.6, -10.4], r: 3.3,
+              plan: planPince(36, 7.5, 6.2), aretes: 'cccDs' })],
+    [['profil', [[12.8, 7.6], [12.6, 9.2], [5.6, 9.2], [5.6, 7.6]], [-6.9, 6.9], 'c', 'cc.c']],   // le bas de la cabine
+    habitacle({ avant: 12.6, toit: [10.2, 5.6], arriere: 5.6, montant: null, bas: 9.2, haut: 13.6, demi: 6.4 }),
+    [
+      ['bloc', [-18, 5.0], [-7.2, 7.2], [6.8, 7.3], 'p', 's', 's', 0.05],                   // le plateau
+      ['bloc', [-15.6, 3.6], [-1.0, 1.0], [7.3, 8.8], 'h', 'h', 'h', 0.1],                   // le bras, couche
+      ['tube', [-15.4, 0, 8.4], [-19.6, 0, 6.2], 'h', 0.2], ['tube', [-15.4, 0.6, 8.4], [-19.6, 0.6, 6.2], 'h', 0.2],
+      ['tube', [-19.6, 0, 6.2], [-19.6, 0, 4.0], 'k', 0.2], ['tube', [-19.6, 0, 4.0], [-18.8, 0, 4.0], 'k', 0.2],   // le crochet
+      ['bloc', [6.0, 8.0], [-5.2, -0.3], [13.6, 14.5], 'a', 'a', 'a', 0.2],                  // la rampe ambre
+      ['bloc', [6.0, 8.0], [0.3, 5.2], [13.6, 14.5], 'b', 'b', 'b', 0.2],
+      ['bloc', [6.0, 8.0], [-5.4, 5.4], [13.55, 13.65], 'k', 'k', 'k', 0.1],
+    ],
+    parechocsDeChar(18, -18, 6.2), lampesDeChar(17.8, -17.8, 3.4, 7.2, 3.6, 5.2),
+  ),
+};
+// --- Le camion : une cabine avancee, une caisse haute a nervures -----------------
+const NERVURES_CAMION = [];
+[-18, -13.5, -9, -4.5, 0, 4.5].forEach(function (u) {
+  NERVURES_CAMION.push(['tube', [u, 8.05, 6.2], [u, 8.05, 17.8], 's', 0.05], ['tube', [u, -8.05, 6.2], [u, -8.05, 17.8], 's', 0.05],
+                ['tube', [u, -8.0, 18.25], [u, 8.0, 18.25], 's', 0.05]);
+});
+const MACHINE_CAMION = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(13.2, 3.4, 6.8), essieuDeChar(-12.2, 3.4, 6.8),
+    [caisseDeChar({ dessus: [[20, 5.6], [19.2, 8.4], [15.8, 8.8], [10.4, 8.8], [10.2, 5.6], [-20, 5.6]], bas: 1.8, essieux: [13.2, -12.2], r: 3.4,
+              plan: planPince(40, 8.0, 6.8), aretes: 'cccDs' })],
+    habitacle({ avant: 15.8, toit: [13.4, 10.4], arriere: 10.4, montant: null, bas: 8.8, haut: 15.0, demi: 7.0 }),
+    // ⚠️ La caisse a SES tons (`b`, `n` son dessus, `s` ses bouts) : avec `C` et `D`, ceux de la cabine,
+    // son toit prenait le rehaut d'une cabine rouge — rose.
+    [['profil', [[9.8, 5.6], [9.8, 18.2], [-20.2, 18.2], [-20.2, 5.6]], [-8.0, 8.0], 'b', 'sns.', 0.02]],   // la caisse
+    NERVURES_CAMION,
+    [['tube', [-20.25, 0, 6.2], [-20.25, 0, 17.6], 's', 0.05]],
+    parechocsDeChar(20, -20, 6.8), lampesDeChar(19.8, -19.8, 3.6, 8.3, 3.6, 5.2),
+  ),
+};
+// --- L'autobus : une longue boite, une rangee de fenetres, une porte ---------------
+const FENETRES_AUTOBUS = [];
+[-19.5, -14, -8.5, -3, 2.5, 8].forEach(function (u) {
+  [-1, 1].forEach(function (s) {
+    const w = s * 8.02;
+    FENETRES_AUTOBUS.push(['bloc', [u, u + 4.2], [w - 0.01, w + 0.01], [10.6, 15.0], 'v', 'v', 'v', 0.04]);
+    // ⚠️ Le cadre passe DEVANT la vitre : a la meme rangee, un pixel de vitre plus
+    // haut gagnait, et les fenetres de profil faisaient une seule bande.
+    FENETRES_AUTOBUS.push(['tube', [u - 0.4, s * 8.04, 10.3], [u + 4.6, s * 8.04, 10.3], 'D', 0.5], ['tube', [u - 0.4, s * 8.04, 15.3], [u + 4.6, s * 8.04, 15.3], 'D', 0.5]);
+    FENETRES_AUTOBUS.push(['tube', [u + 4.8, s * 8.04, 10.3], [u + 4.8, s * 8.04, 15.3], 'D', 0.5]);
+  });
+});
+const MACHINE_AUTOBUS = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [].concat(
+    essieuDeChar(15.0, 3.4, 6.8), essieuDeChar(-14.0, 3.4, 6.8),
+    [caisseDeChar({ dessus: [[24, 17.0], [23.0, 18.2], [-23.0, 18.2], [-24, 17.0]], bas: 1.8, essieux: [15.0, -14.0], r: 3.4,
+              plan: planPince(48, 8.0, 7.2), aretes: 'cCc' })],
+    FENETRES_AUTOBUS,
+    [
+      ['bloc', [24.0, 24.08], [-6.6, 6.6], [9.4, 16.0], 'v', 'v', 'v', 0.05],               // le pare-brise
+      ['tube', [24.1, -6.8, 9.2], [24.1, 6.8, 9.2], 'D', 0.5], ['tube', [24.1, -6.8, 16.2], [24.1, 6.8, 16.2], 'D', 0.5],
+      ['tube', [24.12, -5.8, 12.0], [24.12, 5.8, 12.0], 'G', 0.3],
+      ['bloc', [-24.08, -24.0], [-5.0, 5.0], [11.0, 15.4], 'v', 'v', 'v', 0.05],            // la lunette
+      ['tube', [-24.1, -5.2, 10.8], [-24.1, 5.2, 10.8], 'D', 0.5], ['tube', [-24.1, -5.2, 15.6], [-24.1, 5.2, 15.6], 'D', 0.5],
+      ['bloc', [18.2, 21.8], [8.02, 8.06], [2.4, 15.6], 'E', 'E', 'E', 0.05],               // la porte
+      ['tube', [20.0, 8.08, 2.4], [20.0, 8.08, 15.6], 'D', 0.06],
+      ['bloc', [-18, -12], [-4.2, 4.2], [18.2, 18.8], 'C', 'D', 'D', 0.1],                   // la trappe de toit
+      ['bloc', [4, 10], [-4.2, 4.2], [18.2, 18.8], 'C', 'D', 'D', 0.1],
+      ['bloc', [24.02, 24.1], [-4.4, 4.4], [16.4, 17.6], 'e', 'e', 'e', 0.1],               // la girouette
+    ],
+    parechocsDeChar(24, -24, 7.2), lampesDeChar(23.8, -23.8, 4.2, 7.9, 3.6, 5.2),
+  ),
+};
+// --- La chaloupe : une coque pincee en proue, un banc, un moteur hors-bord ---------
+const MACHINE_BATEAU = {
+  profondeur: 0.5, contour: true, arrondi: true,
+  pieces: [
+    ['profil', [[15, 5.2], [12.4, 2.4], [8.6, 0.6], [-14.4, 0.6], [-15, 1.2], [-15, 5.2]],
+     [[-15.5, 5.0], [-2, 6.0], [6, 5.6], [11, 3.6], [15.5, 0.3]], 'c', 'DDDDD.', 0],
+    ['bloc', [-14.4, 11.0], [-4.6, 4.6], [1.4, 1.6], 'r', 'r', 'r', 0],                     // le fond
+    ['bloc', [9.0, 14.6], [-2.8, 2.8], [4.8, 5.3], 'C', 'c', 'c', 0.1],                     // le pont de proue
+    ['bloc', [-1.2, 0.8], [-5.4, 5.4], [3.4, 3.9], 'u', 'u', 'u', 0.1],                     // les bancs
+    ['bloc', [-9.2, -7.2], [-5.2, 5.2], [3.4, 3.9], 'u', 'u', 'u', 0.1],
+    ['bloc', [-17.4, -15.2], [-1.2, 1.2], [4.0, 8.0], 'k', 'k', 'k', 0.2],                  // le moteur
+    ['tube', [-16.2, 0, 4.0], [-16.2, 0, 0.2], 'M', 0.2],
+    ['bloc', [12.6, 15.4], [-0.9, 0.9], [5.0, 7.0], 'l', 'l', 'l', 0.3],                     // les feux de navigation
+    ['bloc', [-15.8, -14.0], [-1.0, 1.0], [5.2, 7.2], 't', 't', 't', 0.3],
+  ],
 };
 
-
-/* --- M9, le haut de gamme : deux chars qu'on vole expres ----------------------
-
-   ⚠️ Ils doivent s'opposer JUSQUE DANS LE DESSIN, sinon ce sont deux lignes de
-   catalogue de plus. Le sport est le seul char du parc dont l'habitacle est
-   OUVERT — un trou dans le toit, deux sieges dedans ; le luxe est le seul dont
-   le toit est plein, lisse et cerne de chrome. Vu d'en haut, c'est tout ce
-   qu'on a pour les nommer, et ca suffit. */
-// ⚠️ Vu d'en haut, ce qui nomme un coupe sport c'est LE TROU : decapotable,
-// on voit les deux sieges. Aucun autre char du parc n'a d'habitacle ouvert.
-SPRITES.sport = {
-  w: 30, h: 29, ancre: [15, 26],
-  pal: nuancer({ k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' }),
-  swaps: ['c'],
-  poses: { cote: [SPORT_COTE], haut: [SPORT_HAUT], bas: [SPORT_BAS] },
-};
-// L'inverse exact du sport : rien ne depasse, rien ne s'ouvre. Un long
-// rectangle sombre, deux vitres fines et du chrome tout autour.
-SPRITES.luxe = {
-  w: 36, h: 34, ancre: [18, 31],
-  pal: nuancer({ k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' }),
-  swaps: ['c'],
-  poses: { cote: [LUXE_COTE], haut: [LUXE_HAUT], bas: [LUXE_BAS] },
-};
+// Les fiches. La toile de chacun couvre sa diagonale ET ce qui monte (juge : aucun
+// pixel sur le bord de la toile, a aucun cap).
+SPRITES.sport = enVolume(MACHINE_SPORT, 26, 40, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' });
+SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 48, { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' });
+SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 60, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
+// Rouge et blanc, devant sur la cabine et derriere sur la caisse : ils tournent avec sa sirene.
+SPRITES.ambulance.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] };
+SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 56, { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' });
+// Ambre, sur la cabine : ils tournent quand elle remorque. ⚠️ Sur une BASE SOMBRE,
+// et d'un ambre plus jaune que la caisse : ambre sur orange, la rampe disparaissait.
+SPRITES.remorqueuse.gyrophares = { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] };
+SPRITES.camion = enVolume(MACHINE_CAMION, 40, 64, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
+SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 68, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
+SPRITES.bateau = enVolume(MACHINE_BATEAU, 30, 48, { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
 
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
