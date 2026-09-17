@@ -4748,10 +4748,26 @@ const DECALS = {
 /* Objets poses par terre (armes lachees). 16x10, ancre au centre. */
 const OBJETS = {
   defaut: function (ctx) { ctx.fillStyle = '#9a9689'; ctx.fillRect(4, 4, 8, 3); },
-  // Le poing americain des hommes de Sal : quatre anneaux d'acier sur la barre
-  // qui s'arrondit sous la paume. A seize pixels, ce sont les TROUS qui le
-  // nomment — sans eux, c'est la barre grise du defaut.
-  poing_americain: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(3, 2, 12, 3); ctx.fillRect(4, 5, 10, 2); ctx.fillRect(7, 7, 4, 1); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(3, 2, 12, 1); for (let i = 0; i < 4; i++) ctx.clearRect(4 + i * 3, 3, 1, 1); },
+  // Le poing americain des hommes de Sal, PAR TERRE et dans la roue : quatre
+  // anneaux d'acier sur la barre qui s'arrondit sous la paume. A seize pixels,
+  // ce sont les TROUS qui le nomment — sans eux, c'est la barre grise du defaut.
+  // ⚠️ Cerne de noir et les trous sombres : l'acier est du gris du trottoir, et
+  // le premier dessin (12 x 6, sans contour) n'y etait qu'une dalle pale qu'on
+  // ne voyait pas tomber. Dans la main, c'est un AUTRE dessin (`EN_MAIN`).
+  poing_americain: function (ctx) {
+    peindreGrilleDecor(ctx, { k: '#24262c', m: '#9aa0a8', l: '#d9dcdf', d: '#6b7079', o: '#3a3d44' }, [
+      '................',
+      '...kk.kk.kk.kk..',
+      '..kllkllkllkllk.',
+      '.kmoomoomoomoomk',
+      '.kmoomoomoomoomk',
+      '.kmmmmmmmmmmmmmk',
+      '..kmlllllllllmk.',
+      '...kdddddddddk..',
+      '....kkkkkkkkk...',
+      '................',
+    ]);
+  },
   batte: function (ctx) { ctx.fillStyle = '#8a6a3f'; ctx.fillRect(2, 5, 12, 2); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 4, 2); },
   couteau: function (ctx) { ctx.fillStyle = '#c9cdd4'; ctx.fillRect(5, 5, 8, 2); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(2, 5, 3, 2); },
   pistolet: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 4, 8, 3); ctx.fillRect(4, 6, 3, 3); },
@@ -4777,6 +4793,17 @@ const OBJETS = {
   monnaie: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(4, 4, 4, 3); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(4, 4, 3, 2); ctx.fillStyle = '#b87333'; ctx.fillRect(8, 6, 4, 3); ctx.fillStyle = '#e0a060'; ctx.fillRect(8, 6, 3, 2); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(10, 2, 3, 3); },
   canette: function (ctx) { ctx.fillStyle = '#8a241e'; ctx.fillRect(4, 4, 8, 4); ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 4, 8, 2); ctx.fillStyle = '#f3efe6'; ctx.fillRect(6, 5, 3, 1); ctx.fillStyle = '#c9ccd2'; ctx.fillRect(12, 4, 1, 4); },
   sac: function (ctx) { ctx.fillStyle = '#c79a12'; ctx.fillRect(4, 2, 8, 7); ctx.fillStyle = '#f1c40f'; ctx.fillRect(4, 2, 7, 5); ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 4, 5, 2); ctx.fillStyle = '#e8e6de'; ctx.fillRect(4, 2, 8, 1); },
+};
+
+/* Ce qu'on voit DANS LA MAIN quand ce n'est pas l'objet du sol. Meme toile
+   16 x 10 et meme prise que `OBJETS` : le pixel (2, 5) tombe sur la main de la
+   pose (`SPRITES.joueur.mains`), et l'arme pointe vers +x. Une arme absente
+   d'ici se tient telle qu'elle se ramasse. */
+const EN_MAIN = {
+  // Le poing americain : un bout gris sur les jointures, et rien d'autre
+  // (Martin : « seulement un tip gris au bout des poings »). Tenu, le dessin du
+  // sol depassait du poing comme une planche, aussi large que le torse.
+  poing_americain: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(2, 4, 1, 3); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(3, 4, 1, 3); },
 };
 
 /* Bulles au-dessus de la tete : la peur, et le temoin qui a tout vu. */

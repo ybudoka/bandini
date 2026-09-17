@@ -4098,11 +4098,20 @@ const Entites = (function () {
   /** L'arme dans la main de la pose : `img.main` = [x, y, angle] dans la grille. */
   function dessinerArme(ctx, e, img, p, cx, cy) {
     if (!p.arme || !img.main) return;
-    const image = Atlas.cuirePeintre('objet|' + p.arme.sprite, 16, 10, function (g, w, h) {
-      OBJETS[OBJETS[p.arme.sprite] ? p.arme.sprite : 'defaut'](g, w, h);
-    });
+    // ⚠️ `EN_MAIN` d'abord : le poing americain se ramasse en arme et se tient
+    // en bout de poing. Sa propre cle au cache — jamais celle du sol.
+    const sprite = p.arme.sprite;
+    const image = EN_MAIN[sprite]
+      ? Atlas.cuirePeintre('main|' + sprite, 16, 10, EN_MAIN[sprite])
+      : Atlas.cuirePeintre('objet|' + sprite, 16, 10, function (g, w, h) {
+        OBJETS[OBJETS[sprite] ? sprite : 'defaut'](g, w, h);
+      });
     const mx = img.miroir ? (SPRITES[e.sprite].w - 1 - img.main[0]) : img.main[0];
-    const angle = img.miroir ? Math.PI - img.main[2] : img.main[2];
+    let angle = img.miroir ? Math.PI - img.main[2] : img.main[2];
+    // Un bout de trois pixels tourne de biais n'est plus qu'une tache : au
+    // repos, la main penche (0,9 rad de cote). Un dessin de main se tient donc
+    // au quart de tour le plus proche.
+    if (EN_MAIN[sprite]) angle = Math.round(angle / (Math.PI / 2)) * (Math.PI / 2);
     const x = Math.round(e.x - cx + p.dx - img.ancre[0] + mx), y = Math.round(e.y - e.z - cy + p.dy - img.ancre[1] + img.main[1]);
     ctx.save();
     ctx.translate(x, y);

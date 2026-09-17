@@ -7027,6 +7027,78 @@ def test_le_coup_a_un_elan_et_une_pose_de_coup(banc):
     assert r["images"] > 0
 
 
+def test_le_poing_americain_se_tient_en_bout_de_poing_et_se_ramasse_en_arme(banc):
+    """Martin : « l'arme poing americain devrait etre seulement un tip gris au
+    bout des poings, mais quelque chose de plus gros a ramasser ».
+
+    ⚠️ Un seul dessin servait aux deux : tenu, le 12 x 6 du sol depassait du
+    poing comme une planche, aussi large que le torse ; par terre, gris sans
+    contour, il se perdait dans le gris du trottoir. On juge ce que le VRAI
+    dessin des entites cuit pour l'arme (`Entites.dessiner`), pas le catalogue
+    des peintres : c'est ce chemin qui choisissait le mauvais."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, E = L.Entites;
+        // Le banc ne garde aucun pixel : chaque peintre d'arme repasse sur un
+        // canevas qui note ses traits, et on en garde la boite et le plus sombre.
+        const cuites = [];
+        const cuire = L.Atlas.cuirePeintre;
+        L.Atlas.cuirePeintre = function (cle, w, h, peintre) {
+            if (/^(objet|main)[|]/.test(cle)) {
+                const traits = [];
+                const t = { fillStyle: '', clearRect: function () {},
+                            fillRect: function (x, y, lw, lh) { if (lw > 0 && lh > 0) traits.push([x, y, lw, lh, String(t.fillStyle)]); } };
+                peintre(t, w, h);
+                const c = { cle: cle, x0: w, y0: h, x1: -1, y1: -1, sombre: 1 };
+                traits.forEach(function (r) {
+                    c.x0 = Math.min(c.x0, r[0]); c.y0 = Math.min(c.y0, r[1]);
+                    c.x1 = Math.max(c.x1, r[0] + r[2] - 1); c.y1 = Math.max(c.y1, r[1] + r[3] - 1);
+                    const v = parseInt(r[4].slice(1), 16);
+                    c.sombre = Math.min(c.sombre, (0.299 * (v >> 16 & 255) + 0.587 * (v >> 8 & 255) + 0.114 * (v & 255)) / 255);
+                });
+                cuites.push(c);
+            }
+            return cuire.call(this, cle, w, h, peintre);
+        };
+        function dessin(prep) {
+            cuites.length = 0;
+            const garde = B.entites;
+            B.entites = [j];
+            j.x = 3000; j.y = 3000; j.vx = 0; j.vy = 0; j.invincible = 0;
+            prep();
+            E.dessiner(o.ctx, { x: j.x - L.VW / 2, y: j.y - L.VH / 2 });
+            B.entites = garde;
+            return cuites.slice();
+        }
+        B.partie.armes.poing_americain = { mun: null, usure: 0 };
+        B.partie.armes.batte = { mun: null, usure: 0 };
+        const coup = dessin(function () { j.arme = 'poing_americain'; j.face = 'droite'; j.angle = 0; j.etat = 'attaque'; j.phase = 'actif'; });
+        const repos = dessin(function () { j.arme = 'poing_americain'; j.face = 'bas'; j.etat = 'flane'; j.phase = null; });
+        const batte = dessin(function () { j.arme = 'batte'; j.face = 'droite'; j.etat = 'attaque'; j.phase = 'actif'; });
+        const sol = dessin(function () {
+            j.arme = null; j.etat = 'flane'; j.phase = null;
+            E.creer('ramassage', j.x + 20, j.y, { r: 4, objet: 'arme', arme: 'poing_americain', munitions: null, t: 0, solide: false });
+        });
+        return { coup: coup, repos: repos, batte: batte, sol: sol };
+    }""")
+    for moment in ("coup", "repos"):
+        tenu = r[moment]
+        assert [c["cle"] for c in tenu] == ["main|poing_americain"], (
+            "au %s, la main tient le dessin du sol : %s" % (moment, tenu))
+        c = tenu[0]
+        assert c["x1"] - c["x0"] + 1 <= 2 and c["y1"] - c["y0"] + 1 <= 3, "un bout, pas une planche : %s" % c
+        # La prise est le pixel (2, 5) de la toile (`dessinerArme`) : le bout
+        # couvre la main, il ne flotte pas devant.
+        assert c["x0"] <= 2 <= c["x1"] and c["y0"] <= 5 <= c["y1"], "le bout n'est pas sur le poing : %s" % c
+    assert [c["cle"] for c in r["batte"]] == ["objet|batte"], "les autres armes se tiennent comme elles se ramassent"
+    assert [c["cle"] for c in r["sol"]] == ["objet|poing_americain"], r["sol"]
+    sol = r["sol"][0]
+    assert sol["x1"] - sol["x0"] + 1 >= 13 and sol["y1"] - sol["y0"] + 1 >= 6, "par terre, une vraie arme : %s" % sol
+    # ⚠️ Le trottoir est gris (#8f8c86), l'acier aussi : sans un trait sombre,
+    # l'arme tombee ne se voit pas.
+    assert sol["sombre"] < 0.25, "par terre, l'acier se perd dans le trottoir : %s" % sol
+
+
 def test_la_roulade_tourne_et_le_recul_chancelle(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
