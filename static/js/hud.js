@@ -323,8 +323,17 @@ const Hud = (function () {
     // a la manette cherche la panne dans ses haut-parleurs.
     const ETATS = { actif: 'ACTIF', attente: 'TOUCHE L\'ECRAN', coupe: 'COUPE', absent: 'INDISPONIBLE' };
     const etatSon = { libelle: 'SON', detail: ETATS[Son.etatSon()] || '?', actif: false };
+    // Installable, et jouable hors ligne : la ville se garde toute seule, les
+    // sons a l'usage — les 14 Mo d'un coup, seulement si on le demande.
+    HorsLigne.demanderEtat();
+    const sonsHorsLigne = { libelle: 'LES SONS HORS LIGNE', detail: HorsLigne.detail(), actif: HorsLigne.disponible,
+      faire: function (item) { HorsLigne.toutTelecharger(); item.detail = HorsLigne.detail(); return false; } };
     return { titre: 'OPTIONS', curseur: 1,
-      maj: function () { etatSon.detail = ETATS[Son.etatSon()] || '?'; }, items: [
+      maj: function () {
+        etatSon.detail = ETATS[Son.etatSon()] || '?';
+        sonsHorsLigne.detail = HorsLigne.detail();
+        sonsHorsLigne.actif = HorsLigne.disponible;
+      }, items: [
       etatSon,
       bascule('sang', 'SANG'),
       bascule('vibration', 'VIBRATION'),
@@ -333,6 +342,7 @@ const Hud = (function () {
       bascule('trace', 'TRACE DES VEHICULES'),
       // ⚠️ M12 : derriere une option tant que la sonde de performance ne l'a pas jugee.
       bascule('neige', 'TEMPETES DE NEIGE (ESSAI)'),
+      sonsHorsLigne,
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
@@ -1091,13 +1101,13 @@ const Hud = (function () {
 
   // --- Scores ---------------------------------------------------------------------
 
-  function afficherScores(scores) {
+  function afficherScores(scores, vide) {
     const liste = doc.getElementById('liste-scores');
     liste.innerHTML = '';
     if (!scores || !scores.length) {
       const li = doc.createElement('li');
       li.className = 'scores__vide';
-      li.textContent = 'Personne encore. Baie-des-Brumes t’attend.';
+      li.textContent = vide || 'Personne encore. Baie-des-Brumes t’attend.';
       liste.appendChild(li);
       return;
     }
@@ -1114,9 +1124,11 @@ const Hud = (function () {
   function montrerScores() {
     voile('scores');
     fetch(urlScores, { cache: 'no-store' })
-      .then(function (r) { return r.json(); })
+      .then(function (r) { if (!r.ok) throw new Error('scores ' + r.status); return r.json(); })
       .then(function (d) { afficherScores(d.scores); })
-      .catch(function () { afficherScores([]); });
+      // ⚠️ Pas « Personne encore » : le jeu se joue hors ligne, le tableau non,
+      // et un tableau vide qui ment est pire qu'un tableau qui le dit.
+      .catch(function () { afficherScores([], 'Pas de réseau : le tableau des scores vit en ligne.'); });
   }
 
   function envoyerScore(ev) {

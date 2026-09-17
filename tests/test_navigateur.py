@@ -26,6 +26,14 @@ ECRANS = {
 RACINE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+@pytest.fixture(scope="session")
+def browser_context_args(browser_context_args):
+    """⚠️ Sans le travailleur hors ligne : ses juges a lui sont dans
+    `test_hors_ligne.py`. Ici, il remplirait son cache pendant chaque juge, et
+    `page.route` ne voit pas ce qu'un travailleur sert (doc de Playwright)."""
+    return {**browser_context_args, "service_workers": "block"}
+
+
 @pytest.fixture(scope="session", autouse=True)
 def navigateur_installe(browser_type):
     if not os.path.exists(browser_type.executable_path):
@@ -150,7 +158,7 @@ def test_une_carte_d_une_autre_construction_est_refusee(page, serveur):
         carte["empreinte"] = "0" * 16
         route.fulfill(response=reponse, json=carte)
 
-    page.route("**/api/carte", une_autre_carte)
+    page.route("**/api/carte?*", une_autre_carte)   # `?e=` : l'empreinte, cle du cache hors ligne
     page.reload()
     page.wait_for_function(
         "() => document.getElementById('etat-chargement').textContent.indexOf('Impossible') >= 0",

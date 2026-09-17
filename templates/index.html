@@ -2,8 +2,9 @@
 
 {% block corps %}
 <main id="bandini" class="jeu" data-etat="chargement" data-scripts="{{ scripts_du_jeu }}"
-      data-url-definitions="{{ url_for('jeu.api_definitions') }}"
-      data-url-carte="{{ url_for('jeu.api_carte') }}"
+      data-url-definitions="{{ url_for('jeu.api_definitions', e=empreinte_definitions) }}"
+      data-url-carte="{{ url_for('jeu.api_carte', e=empreinte_carte) }}"
+      data-url-travailleur="{{ url_for('jeu.travailleur') }}"
       data-url-scores="{{ url_for('jeu.api_scores') }}"
       data-url-statique="{{ url_for('static', filename='') }}">
 
@@ -77,6 +78,7 @@
 {# ⚠️ L'ORDRE EST LA DEPENDANCE, et cette liste est la source unique : le banc
    d'essai (tests/banc.js) la lit pour charger les memes fichiers. #}
 <script src="{{ url_for('static', filename='js/chargement.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/hors-ligne.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>

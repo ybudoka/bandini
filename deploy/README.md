@@ -71,6 +71,8 @@ premiere requete de compte : rien a faire a la mise en ligne.
 curl -s -A navigateur --resolve bandini.gestiondojo.ca:443:103.98.215.181 https://bandini.gestiondojo.ca/sante
 curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/definitions | grep -iE 'content-encoding|etag'
 curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/carte | grep -iE 'content-encoding|etag'
+# Le travailleur hors ligne : no-cache, un ETag, et toujours pas de Content-Security-Policy qui le bloquerait.
+curl -sI -A navigateur https://bandini.gestiondojo.ca/travailleur.js | grep -iE 'cache-control|etag|content-security'
 sudo journalctl -u bandini-gestiondojo -n 50
 ```
 

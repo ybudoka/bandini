@@ -204,8 +204,8 @@ ne bougent pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (3 vagues : le standing et la saleté ; le zonage ; les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** (1re vague livrée : la police) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Qui attend l'autobus monte dedans | ⬜ **en cours** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
+| Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
-| Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
@@ -225,6 +225,7 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
+| Un **score ne s'envoie pas hors ligne** (aucune file d'attente) | La page le dit (« Pas de réseau — réessaie plus tard »), et M14 déménage les scores dans la base | Si Martin joue hors ligne et veut garder un score : une file dans le stockage, vidée au retour du réseau — avec la 4e vague de M14, pas avant |
 | **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo) |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
@@ -634,9 +635,10 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `vitrines.py` | **les commerces montent et descendent**, sur la ville finie : renomme les enseignes des blocs cossus et pauvres (même famille, même bandeau, loin de son double), placarde une vitrine sur trois en pauvre (`B`, jamais sur une machine), vide un commerce fermé sur cinq (`A LOUER`), marque le `standing` des façades — sans tirer un dé ni toucher une tuile | `test_quartiers.py` (enseignes, façades, locaux vides, rien de déplacé) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
+| `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
 | `comptes.py` | les comptes (M14) : `inscrire` (pseudo des scores, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
@@ -657,6 +659,8 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | # | Fichier | Rôle |
 |---|---|---|
 | 0 | `chargement.js` | **la barre de chargement, avant le jeu** : chargé en premier, il compte les scripts à mesure qu'ils arrivent (`data-scripts` de la page) et remplit leur part de `#chargement` (`data-part-scripts`) ; `jeu.js` reprend au-dessus |
+| 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
+| — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
@@ -722,7 +726,7 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
 docs/plan.md (ce document : la vision, les jalons, et cette carte)
-app/  __init__.py routes.py version.py scores.py definitions.py
+app/  __init__.py routes.py version.py scores.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
       chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py
@@ -732,7 +736,7 @@ static/css/styles.css  static/js/ (16 fichiers ci-dessus)
 static/img/  favicon.svg favicon.ico icone-180.png icone-192.png icone-512.png logo.svg (dessinés par scripts/icones.py)
 static/audio/  bruitages, radios, ambiances et voix (.mp3 ElevenLabs, recette dans app/audio.py)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette/audio,
-        frame(n), touches, singe)  test_routes.py test_scores.py test_definitions.py
+        frame(n), touches, singe)  test_routes.py test_hors_ligne.py test_scores.py test_definitions.py
         test_vehicules.py test_armes.py test_armes_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
@@ -11139,6 +11143,47 @@ demande de Martin (17 sept. 2026) : « ajoute toujours un stationnement au poste
 une ou des véhicules de police stationnés et aussi pour le garage, il faut une vraie porte de
 garage où on stationne pour vendre ou faire des missions. la porte ouvre seule dès qu'on est
 devant en voiture. »
+
+**Livré** (17 sept. 2026) — les deux vagues d'un coup. Un **travailleur**
+(`static/js/travailleur.js`, servi à la racine par `/travailleur.js`, `no-cache` et ETag),
+inscrit après `load` par `hors-ligne.js`, garde **la coquille** — ce que la page d'accueil
+demande, **lu dans la page rendue** (`app/hors_ligne.py`), jamais tenu à la main — et les
+sons **à l'usage**. **LES SONS HORS LIGNE**, dans les OPTIONS, dit ce qu'il reste
+(« 13 MO »), les télécharge d'un coup sur ACTION (« 42 % », puis « OUI ») et demande au
+navigateur de ne pas les effacer. Les scores disent « Pas de réseau » au lieu de
+« Personne encore ».
+
+- ⚠️ **Mesuré : le travailleur ne rend PAS le jeu installable.** Chromium le dit
+  installable avec ou sans lui (`Page.getInstallabilityErrors` vide dans les deux cas) : le
+  critère du gestionnaire `fetch` est tombé, le manifeste et les icônes du 16 sept.
+  suffisaient. Le travailleur, c'est le hors-ligne.
+- ⚠️ **Le CSP de la prod est vu : il n'y en a pas** (`curl -sI -A navigateur`, 17 sept.
+  2026 — `referrer-policy` et `x-frame-options` seulement) : rien ne bloque `worker-src` ni
+  `manifest-src`. ⚠️ Sans `-A`, la prod répond **502** : nginx ferme tout agent qui
+  contient « curl » et Caddy le rapporte comme une panne — une fausse alerte de dix
+  minutes ce jour-là.
+- ⚠️ **Une seule règle : le réseau d'abord, toujours** — le cache ne répond que quand le
+  réseau se tait **ou répond 5xx** (un déploiement qui redémarre est une ville qu'on ne peut
+  pas ouvrir, pas une ville qui n'existe pas). « Le cache d'abord » aurait servi, en dev,
+  l'ancien script sous le même `?v=` : recharger deux fois pour voir sa propre
+  modification. En ligne, le cache HTTP rend le réseau d'abord gratuit, et chaque réponse
+  remet le cache à jour (sauf si l'ETag dit que c'est la même).
+- ⚠️ **Les paquets se demandent par leur empreinte** (`/api/definitions?e=…`,
+  `/api/carte?e=…`, que le serveur ignore) : c'est la clé du cache, et une page gardée n'y
+  retrouve que la ville de SA construction. Le cache de la coquille se nomme par
+  l'empreinte du travailleur (sha256 de la coquille, des sons et de son code), et
+  l'activation efface les autres.
+- ⚠️ **La purge des mp3**, qui n'ont pas de `?v=` : la même règle — un son rejoué en ligne
+  se remplace — et un nom sorti du dossier sort du cache à l'activation.
+- ⚠️ **Tout ce qu'il ne nomme pas passe sans lui** : les scores, et ce que M14 ajoutera.
+  Rien d'autre qu'un GET.
+- ⚠️ `test_navigateur.py` tourne **sans** travailleur (`service_workers: block`) : il
+  remplirait son cache pendant chaque juge, et `page.route` ne voit pas ce qu'un
+  travailleur sert. Ses juges sont dans `test_hors_ligne.py`, sur un serveur à soi qu'on
+  coupe ou qu'on met en 502 ; chacun a son témoin sans travailleur, et quatre mutations (la
+  navigation, le 5xx, les sons, le message des scores) font chacune rougir le sien.
+- ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
+  ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
 
 ### M16 Cent missions
 

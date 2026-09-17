@@ -20,6 +20,7 @@ from flask import (
 )
 
 from . import bd, comptes
+from . import hors_ligne
 from .scores import ScoreInvalide, Tableau
 
 bp = Blueprint("jeu", __name__)
@@ -40,8 +41,18 @@ def _scripts_du_jeu(gabarit: str) -> int:
 
 @bp.route("/")
 def accueil():
+    return _page_d_accueil()
+
+
+def _page_d_accueil() -> str:
     gabarit = str(Path(current_app.root_path, current_app.template_folder, "index.html"))
-    return render_template("index.html", scripts_du_jeu=_scripts_du_jeu(gabarit))
+    # ⚠️ Les deux paquets se demandent PAR LEUR EMPREINTE (`?e=`), que le serveur
+    # ignore : c'est la cle du cache hors ligne. Une page gardee n'y retrouve que
+    # la ville de SA construction — jamais un paquet d'un autre deploiement sous
+    # des scripts qui ne le connaissent pas.
+    return render_template("index.html", scripts_du_jeu=_scripts_du_jeu(gabarit),
+                           empreinte_definitions=current_app.extensions["definitions"].etag,
+                           empreinte_carte=current_app.extensions["carte"].etag)
 
 
 def _revalide(paquet) -> Response:
@@ -247,6 +258,26 @@ def manifeste():
     }
     reponse = Response(json.dumps(corps, ensure_ascii=False, indent=2),
                        mimetype="application/manifest+json")
+    reponse.headers["Cache-Control"] = "no-cache"
+    return reponse
+
+
+@bp.route("/travailleur.js")
+def travailleur():
+    """Le travailleur hors ligne, A LA RACINE : il ne controle que son dossier.
+
+    Rien de fige : `no-cache` et un ETag (faible compris, comme `_revalide`) — le
+    navigateur le redemande a chaque visite, et un 304 ne coute rien. Voir
+    `app/hors_ligne.py`.
+    """
+    corps, empreinte = hors_ligne.travailleur(
+        _page_d_accueil(), url_for("jeu.accueil"),
+        Path(current_app.static_folder, "audio"), url_for("static", filename="audio/"))
+    if request.if_none_match.contains_weak(empreinte):
+        reponse = Response(status=304)
+    else:
+        reponse = Response(corps, mimetype="text/javascript")
+    reponse.headers["ETag"] = f'"{empreinte}"'
     reponse.headers["Cache-Control"] = "no-cache"
     return reponse
 
