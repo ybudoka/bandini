@@ -208,6 +208,7 @@ ne bougent pas quand l'ordre de travail change.
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
+| Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11104,6 +11105,13 @@ haut. L'option garde le même sens de rotation qu'en marche avant (droite = hora
 - ⚠️ Le signe de la **rotation**, pas la consigne du stick : le volant est lissé
   (`volant_prise`), inverser la consigne le ferait traverser de butée à butée au passage à
   vitesse nulle, et le char tournerait du mauvais côté au début de chaque recul.
+
+### Le poste a son stationnement, le garage sa vraie porte
+
+demande de Martin (17 sept. 2026) : « ajoute toujours un stationnement au poste de police avec
+une ou des véhicules de police stationnés et aussi pour le garage, il faut une vraie porte de
+garage où on stationne pour vendre ou faire des missions. la porte ouvre seule dès qu'on est
+devant en voiture. »
 
 ### M16 Cent missions
 
