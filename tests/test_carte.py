@@ -270,7 +270,10 @@ def test_chaque_lieu_declare_sa_famille_et_sa_couleur():
     portees = {point["famille"] for point in CARTE["points_interet"]}
     assert portees == set(carte.FAMILLES_DE_LIEU), \
         f"familles sans lieu : {set(carte.FAMILLES_DE_LIEU) - portees}"
-    assert CARTE["familles"] == carte.FAMILLES_DE_LIEU, "les familles doivent voyager dans le paquet"
+    assert {nom: {k: v for k, v in fiche.items() if k != "rang"} for nom, fiche in CARTE["familles"].items()} \
+        == carte.FAMILLES_DE_LIEU, "les familles doivent voyager dans le paquet"
+    assert sorted(CARTE["familles"], key=lambda nom: CARTE["familles"][nom]["rang"]) == list(carte.FAMILLES_DE_LIEU), \
+        "l'ordre de la table doit voyager avec elle"
 
 
 def test_la_couverture_d_un_toit_suit_le_genre_du_batiment():

@@ -1785,27 +1785,47 @@ const TUILES = (function () {
       son joint, bit 1 = au sud) et son usure au-dessus — voir
       `Monde.varianteDeSol`. Une dalle fait DEUX tuiles de cote : c'est ce qui
       enleve a la ville le quadrillage de seize pixels qu'elle portait. */
+  //: ⚠️ LE TROTTOIR DIT LE QUARTIER (des quartiers qu'on reconnait, 2e vague).
+  //: Une rue commercante chic a un granit pale et lave ; une cour d'usine, un
+  //: beton sombre qui a bu de l'huile. `Monde.varianteDeSol` porte l'usage et le
+  //: standing au-dessus de l'usure (bits 6 a 9) : c'est une couche PEINTE, le
+  //: glyphe ne change pas.
+  const BETON_CHIC = { fond: '#a9a598', joint: '#968f82', arete: '#b8b4a7', grain: '#a09c90',
+                       fissure: '#8a8679', rapiece: '#948f84', tache: '#9c988b', mousse: '#7a8a66' };
+  const BETON_USINE = { fond: '#7d7b75', joint: '#6b6963', arete: '#8a8881', grain: '#72706a',
+                        fissure: '#5f5d58', rapiece: '#6d6b65', tache: '#45434a', mousse: '#5f6752' };
+
   function trottoir(ctx, v, T) {
     const joinOuest = (v & 1) === 0, joinNord = (v & 2) === 0;
-    const usure = v >> 2;
-    plein(ctx, BETON.fond, T);
-    points(ctx, usure + 1, T, BETON.grain, 6, 7);
-    points(ctx, usure + 1, T, BETON.arete, 4, 41);
-    if (usure === 13) fendillement(ctx, usure + 1, T, BETON.fissure);
-    else if (usure === 14) rapiecage(ctx, usure + 1, T, BETON.rapiece);
-    else if (usure === 15) souillure(ctx, usure + 1, T, BETON.tache);
+    const usure = (v >> 2) & 15, usage = (v >> 6) & 3, rang = (v >> 8) & 3;
+    const pal = usage === 3 ? BETON_USINE : rang === 1 ? BETON_CHIC : BETON;
+    // ⚠️ L'USURE SE DEPLACE, comme la salete : une rue cossue n'a ni fissure ni
+    // rapiecage ; une rue pauvre en a davantage — les memes dessins, pas un motif
+    // de plus. Et le beton d'usine est tache une dalle sur quatre.
+    // ⚠️ Des FISSURES de plus, pas des rapiecages : le rapiecage est un carre, et
+    // une rue pauvre qui en montrait une dalle sur deux se lisait comme un damier.
+    let marque = usure;
+    if (rang === 1 && usure >= 12) marque = 0;
+    else if (usage === 3 && usure === 10) marque = 15;
+    else if (rang === 2 && (usure === 10 || usure === 11)) marque = 13;
+    plein(ctx, pal.fond, T);
+    points(ctx, usure + 1, T, pal.grain, 6, 7);
+    points(ctx, usure + 1, T, pal.arete, 4, 41);
+    if (marque === 13) fendillement(ctx, usure + 1, T, pal.fissure);
+    else if (marque === 14) rapiecage(ctx, usure + 1, T, pal.rapiece);
+    else if (marque === 15) souillure(ctx, usure + 1, T, pal.tache);
     // Les joints, EN DERNIER : rien ne passe par-dessus le bord d'une dalle.
     if (joinOuest) {
-      ctx.fillStyle = BETON.joint; ctx.fillRect(0, 0, 1, T);
-      ctx.fillStyle = BETON.arete; ctx.fillRect(1, 0, 1, T);
+      ctx.fillStyle = pal.joint; ctx.fillRect(0, 0, 1, T);
+      ctx.fillStyle = pal.arete; ctx.fillRect(1, 0, 1, T);
       // Un peu de mousse dans le joint, une dalle sur huit : c'est elle qui dit
       // qu'il y a de la terre dessous et que personne ne passe le balai.
-      if (usure === 12) { ctx.fillStyle = BETON.mousse; for (let y = 3; y < T - 3; y += 4) ctx.fillRect(0, y, 1, 1); }
+      if (marque === 12) { ctx.fillStyle = pal.mousse; for (let y = 3; y < T - 3; y += 4) ctx.fillRect(0, y, 1, 1); }
     }
     if (joinNord) {
-      ctx.fillStyle = BETON.joint; ctx.fillRect(0, 0, T, 1);
-      ctx.fillStyle = BETON.arete; ctx.fillRect(0, 1, T, 1);
-      if (usure === 12) { ctx.fillStyle = BETON.mousse; for (let x = 3; x < T - 3; x += 4) ctx.fillRect(x, 0, 1, 1); }
+      ctx.fillStyle = pal.joint; ctx.fillRect(0, 0, T, 1);
+      ctx.fillStyle = pal.arete; ctx.fillRect(0, 1, T, 1);
+      if (marque === 12) { ctx.fillStyle = pal.mousse; for (let x = 3; x < T - 3; x += 4) ctx.fillRect(x, 0, 1, 1); }
     }
   }
 
@@ -2228,16 +2248,59 @@ const TUILES = (function () {
      ce n'est pas le trottoir, sans que ca ait l'air d'un obstacle. C'est un
      debordement : on y marche quand la dalle est pleine, on y range les
      lampadaires et les kiosques, et le flaneur prefere la dalle. */
+  //: ⚠️ L'ABORD DIT L'USAGE (2e vague) : des paves devant les commerces, une
+  //: bande de gazon devant les maisons, de l'asphalte tache devant les usines.
+  //: `Monde.varianteDAbord` : l'usure (bits 0 a 3), l'usage (4 et 5), le
+  //: standing (6 et 7). Le port et les parcs gardent les paves.
   function abord(ctx, v, T) {
-    plein(ctx, '#6d665a', T);
-    // Les paves : quatre rangees de deux, decalees une rangee sur deux.
-    ctx.fillStyle = '#7a7266';
+    const usure = v & 15, usage = (v >> 4) & 3, rang = (v >> 6) & 3;
+    if (usage === 2) return bandeDeGazon(ctx, usure, rang, T);
+    if (usage === 3) return asphalteDUsine(ctx, usure, rang, T);
+    // Les paves : quatre rangees de deux, decalees une rangee sur deux. Plus
+    // chauds et laves en cossu.
+    plein(ctx, rang === 1 ? '#74665a' : '#6d665a', T);
+    ctx.fillStyle = rang === 1 ? '#86766a' : '#7a7266';
     for (let r = 0; r < 4; r++) {
       const dec = (r % 2) * 4;
       for (let x = -4 + dec; x < T; x += 8) ctx.fillRect(Math.max(0, x + 1), r * 4 + 1, Math.min(T, x + 7) - Math.max(0, x + 1), 2);
     }
-    points(ctx, (v >> 2) + 1, T, '#5c5549', 5, 23);
-    points(ctx, (v >> 2) + 1, T, '#847c6f', 3, 61);
+    points(ctx, usure + 1, T, '#5c5549', rang === 1 ? 2 : 5, 23);
+    points(ctx, usure + 1, T, '#847c6f', 3, 61);
+    // En pauvre, des paves manquent : un trou de terre, jamais jusqu'au bord.
+    if (rang === 2 && usure >= 10) {
+      const x = 4 + Math.floor(bruit(usure + 1, 70) * 5), y = 4 + Math.floor(bruit(usure + 1, 71) * 5);
+      ctx.fillStyle = '#5a4f40'; ctx.fillRect(x, y, 6, 3); ctx.fillRect(x + 1, y + 3, 4, 2);
+    }
+  }
+
+  /** La bande de gazon devant les maisons : tondue en rayures chez les riches,
+      brulee par plaques chez les pauvres. */
+  function bandeDeGazon(ctx, usure, rang, T) {
+    plein(ctx, rang === 2 ? '#6f8a3e' : GAZON.fond, T);
+    if (rang === 1) {
+      // Les passes de tondeuse : des bandes de quatre pixels, qui se raccordent
+      // d'une tuile a l'autre parce qu'elles tombent aux memes rangees.
+      ctx.fillStyle = GAZON.clair;
+      for (let y = 0; y < T; y += 8) ctx.fillRect(0, y, T, 4);
+      return;
+    }
+    points(ctx, usure + 1, T, GAZON.clair, 10, 3);
+    points(ctx, usure + 1, T, GAZON.sombre, 6, 60);
+    if (rang === 2 && usure >= 6) {
+      const x = 3 + Math.floor(bruit(usure + 1, 80) * 5), y = 3 + Math.floor(bruit(usure + 1, 81) * 5);
+      ctx.fillStyle = '#9a8a4a'; ctx.fillRect(x, y, 7, 5); ctx.fillRect(x + 2, y - 1, 4, 7);
+      ctx.fillStyle = '#7d6c3e'; ctx.fillRect(x + 2, y + 1, 3, 2);
+    }
+  }
+
+  /** L'abord d'une usine : de l'asphalte qui n'a jamais ete refait, et l'huile. */
+  function asphalteDUsine(ctx, usure, rang, T) {
+    plein(ctx, '#45474d', T);
+    points(ctx, usure + 1, T, '#51535a', 8, 5);
+    points(ctx, usure + 1, T, '#3a3c41', 6, 90);
+    // ⚠️ Rare, et a peine plus sombre que l'asphalte : seize usures seulement, donc
+    // seize places de tache — frequente et contrastee, elle s'alignait en pointille.
+    if (usure >= (rang === 2 ? 13 : 15)) souillure(ctx, usure + 1, T, '#393a3f');
   }
 
   return {
@@ -4479,6 +4542,65 @@ const DECORS = {
     ctx.fillStyle = '#d9486a'; ctx.fillRect(3, 2, 2, 1); ctx.fillRect(10, 1, 1, 1); ctx.fillRect(7, 3, 1, 1);
     ctx.fillStyle = '#f2c14e'; ctx.fillRect(5, 1, 1, 1); ctx.fillRect(12, 3, 1, 1);
     ctx.fillStyle = '#ffffff'; ctx.fillRect(8, 1, 1, 1);
+  } },
+  // --- LE MOBILIER QUI DIT L'USAGE (`mobilier.MEUBLES_PAR_USAGE`) ------------
+  // ⚠️ On reconnait une rue a ce qui l'encombre avant de lire une enseigne : un
+  // parcometre devant les commerces, une boite aux lettres et un bac bleu devant
+  // les maisons, des palettes et une benne devant les entrepots. Les trois premiers
+  // se frolent (des poteaux, un bac bas) ; les palettes et la benne arretent.
+
+  // LE PARCOMETRE : un poteau gris, une tete ronde, son cadran.
+  parcometre: { casse: 0.9, pv: 15, w: 8, h: 18, ancre: [4, 17], r: 2, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 16, 6, 2);         // son ombre
+    ctx.fillStyle = '#5a5f66'; ctx.fillRect(3, 7, 2, 10);                     // le poteau
+    ctx.fillStyle = '#3d4248'; ctx.fillRect(1, 1, 6, 7);                      // la tete
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(2, 0, 4, 1); ctx.fillRect(1, 1, 1, 6);
+    ctx.fillStyle = '#cfe6f5'; ctx.fillRect(2, 2, 4, 2);                      // le cadran
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(5, 3, 1, 1);                      // l'aiguille : c'est echu
+    ctx.fillStyle = '#9aa0a6'; ctx.fillRect(3, 5, 2, 1);                      // la fente
+  } },
+
+  // LA BOITE AUX LETTRES : sur son poteau de bois, le drapeau rouge leve.
+  boite_aux_lettres: { casse: 0.9, pv: 15, w: 10, h: 16, ancre: [4, 15], r: 2, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 14, 7, 2);
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(3, 6, 2, 10);                     // le poteau
+    ctx.fillStyle = '#2f5f8a'; ctx.fillRect(0, 2, 8, 5); ctx.fillRect(1, 1, 6, 1);   // la boite, bombee
+    ctx.fillStyle = '#3f78ad'; ctx.fillRect(1, 2, 6, 1);
+    ctx.fillStyle = '#1f3f5c'; ctx.fillRect(0, 6, 8, 1);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(8, 0, 1, 5); ctx.fillRect(8, 0, 2, 2);   // le drapeau leve
+  } },
+
+  // LE BAC DE RECYCLAGE : bleu, le couvercle entrouvert, du papier qui depasse.
+  bac_recyclage: { casse: 0.9, pv: 15, w: 10, h: 12, ancre: [5, 11], r: 3, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 10, 9, 2);
+    ctx.fillStyle = '#2b6cb0'; ctx.fillRect(1, 4, 8, 7);                      // la cuve
+    ctx.fillStyle = '#3b82c9'; ctx.fillRect(2, 5, 3, 5);
+    ctx.fillStyle = '#1f4f80'; ctx.fillRect(0, 2, 10, 2);                     // le couvercle, de travers
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(3, 1, 3, 2); ctx.fillRect(6, 2, 2, 1);   // le papier qui depasse
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(4, 7, 2, 2);                      // le logo
+  } },
+
+  // LES PALETTES : trois planchers empiles, les blocs qu'on voit entre deux.
+  palettes: { casse: 0.85, pv: 20, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [7, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 10, 17, 2);
+    for (let i = 0; i < 3; i++) {
+      const y = 8 - i * 3;
+      ctx.fillStyle = '#a07c4b'; ctx.fillRect(1, y, 16, 1);                   // le plancher
+      ctx.fillStyle = '#6e5330'; ctx.fillRect(1, y + 1, 3, 2); ctx.fillRect(7, y + 1, 4, 2); ctx.fillRect(14, y + 1, 3, 2);   // les blocs
+    }
+    ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 16, 1);
+  } },
+
+  // LA BENNE : l'acier vert qui arrete un char, le couvercle rabattu, la rouille.
+  benne: { arrete: 4, w: 18, h: 16, ancre: [9, 15], r: 6, sol: [8, 4], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(1, 13, 17, 3);
+    ctx.fillStyle = '#2f5a3a'; ctx.fillRect(1, 5, 16, 9);                     // la caisse
+    ctx.fillStyle = '#3d6f48'; ctx.fillRect(2, 6, 14, 3);
+    ctx.fillStyle = '#244a2e'; ctx.fillRect(0, 2, 18, 4);                     // le couvercle
+    ctx.fillStyle = '#35603f'; ctx.fillRect(1, 2, 16, 1);
+    ctx.fillStyle = '#1b1f22'; ctx.fillRect(2, 14, 2, 2); ctx.fillRect(14, 14, 2, 2);   // les roulettes
+    ctx.fillStyle = '#8f4a22'; ctx.fillRect(12, 8, 1, 5); ctx.fillRect(4, 10, 1, 3);    // la rouille
+    ctx.fillStyle = '#d9d6cc'; ctx.fillRect(6, 9, 6, 1);                      // le lettrage efface
   } },
   banc_ouest: { casse: 0.8, pv: 40, w: 10, h: 18, ancre: [5, 16], r: 5, sol: [3, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3f25'; ctx.fillRect(6, 1, 3, 13);                 // le dossier, a l'est

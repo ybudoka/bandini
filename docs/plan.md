@@ -186,7 +186,6 @@ ne bougent pas quand l'ordre de travail change.
 | Ceux qu'on a couchés restent couchés | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#ceux-quon-a-couchés-restent-couchés) |
 | Les hommes de Sal cognent à mains nues | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#les-hommes-de-sal-cognent-à-mains-nues) |
 | Un commerce s'achète au comptoir | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#un-commerce-sachète-au-comptoir) |
-| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (1re vague livrée ; la 2e : le zonage se lit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Trois sauvegardes, et on les gère | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#trois-sauvegardes-et-on-les-gère) |
 | Les chars s'arrêtent avant le passage | ⬜ **en cours** | 16 sept. 2026 | **P2** | **correctif** | [notes](#les-chars-sarrêtent-avant-le-passage) |
 | Les manettes du casque Meta Quest | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#les-manettes-du-casque-meta-quest) |
@@ -198,6 +197,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poing américain chez Gus | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#le-poing-américain-chez-gus) |
 | Les petits manèges à l'échelle de la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
+| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (2 vagues : le standing se déclare et la saleté se déplace ; le zonage se lit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -615,7 +615,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
 | `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison) |
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
-| `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
+| `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
@@ -4242,7 +4242,59 @@ _La proposition d'origine :_
   des **bancs et des arbres de rue**, en cours dans une autre session : cette vague passe
   **après** sa livraison et règle ses densités par standing, elle ne le refait pas.
 
-#### 2e vague — le zonage se lit (taille 1)
+#### 2e vague — le zonage se lit (taille 1) — **livrée le 17 sept. 2026**
+
+✅ **Ce qui est livré, et où ça s'écarte de la table ci-dessous :**
+
+- **L'usage se DÉDUIT du plan, il ne s'écrit pas.** `carte.USAGE_DU_PLAN` traduit chaque lettre
+  (la cour de gang est **industrielle** — barbelé, asphalte, ferraille ; la place et la foire
+  sont des parcs), `USAGE_DU_GENRE` traduit les lieux garantis par le genre d'îlot qui les
+  bâtit (le phare est bâti en banlieue, l'usine en industriel, le reste en commerces). Un
+  superbloc prend l'usage de son maître. `carte.USAGES` ne porte que ce qui ne se déduit pas :
+  la lettre de la grille, la couleur du calque et le mot de la légende. La grille voyage avec
+  la carte (`grille.usage`, douze lignes), `Monde.usageA` la relit avec la coupe du standing.
+- **Le sol, en couche peinte** : `Monde.varianteDeSol` (trottoir) et `Monde.varianteDAbord`
+  (abord) portent l'usage et le standing au-dessus de l'usure ; `.` et `_` restent `.` et `_`.
+  Le trottoir d'une rue chic est un granit lavé sans fissure, celui d'une usine un béton sombre
+  taché d'huile, celui d'une rue pauvre a **plus de fissures — pas plus de rapiéçages** : vu dans
+  Chromium, une dalle rapiécée sur deux se lisait comme un damier. L'abord : des pavés devant les
+  commerces (plus chauds en cossu, des trous en pauvre), une **bande de gazon** devant les maisons
+  (tondue en rayures en cossu, brûlée par plaques en pauvre), de l'asphalte devant les entrepôts
+  (l'huile rare et à peine plus sombre : seize usures, donc seize places de tache — fréquente, elle
+  s'alignait en pointillé). ⚠️ L'abord tirait `hash2 % 4` et son peintre lisait `(v >> 2) + 1`,
+  toujours 1 : tous les abords de la ville avaient le même grain.
+- **Le mobilier de l'usage** (`mobilier.MEUBLES_PAR_USAGE`, son propre dé, après les bacs à
+  fleurs) : **40 parcomètres** devant les commerces, **21 boîtes aux lettres** et **12 bacs de
+  recyclage** devant les maisons, **39 palettes** et **17 bennes** devant les entrepôts. Les palettes
+  et la benne arrêtent un piéton (`DECOR_SOLIDE`, la benne arrête un char) ; le parcomètre, la boîte
+  aux lettres et le bac se frôlent.
+- **La carte plein écran porte le calque** (`Monde.calqueDeZonage`, cuit une fois comme la
+  mini-carte) : les blocs se teignent de leur usage, la chaussée et le trottoir restent gris. Sa
+  légende tient une rangée sous le titre — le bandeau du bas porte déjà les familles de lieux.
+- ⚠️ **Les légendes de la carte étaient dans l'ordre ALPHABÉTIQUE, celle des lieux depuis
+  toujours.** Le paquet trie ses clés (`definitions._json`), `Object.keys` rendait l'alphabet —
+  MAGASINS, MANGER, REPÈRES — et le juge « la légende suit l'ordre de la table » relisait la table
+  dans ce même paquet trié. Vu sur la capture, pas par un test. Un `rang` voyage maintenant avec
+  `familles` et `zonage`, et les juges comparent à l'ordre **écrit en Python**.
+- ⚠️ **Un vélo poussait l'autobus dans le carrefour, et ce n'était pas la vague.**
+  `test_autobus_js` (« le nez hors du carrefour ») est tombé avec la ville neuve. Mesuré sur
+  20 graines : **3 échecs à la base**, 1 avec la vague — le juge tenait par sa graine. Tracé :
+  l'autobus attend son feu une tuile avant la ligne d'arrêt, son nez à **deux pixels** du
+  carrefour ; un vélo du trafic, derrière, perd patience (`force`) et le pousse. Deux chars du
+  trafic ne se poussent pas (« sur des rails »), mais l'autobus d'une ligne n'y était pas compté.
+  `Vehicules.heurterVehicules` range maintenant la ligne avec le trafic : 20 sur 20 à la base
+  comme avec la vague.
+- **Reportés, et pourquoi** : les lampadaires rapprochés (c'est la redistribution des lampes de
+  la 3e vague), la haie taillée (les rayures de tondeuse disent la même chose sans un décor de
+  plus), et tout le côté pauvre du mobilier — vitrines placardées, grillage troué, char sur des
+  blocs, ferraille et barils : c'est la 3e vague (les façades) et la 4e (ce qui est garé).
+- **Juges** (`test_quartiers.py`, 7 de plus, chacun vu rouge sans sa règle) : l'usage se déduit du
+  plan (La Shop et Les Érables écrites en toutes lettres), chaque lieu garanti a un usage, le
+  mobilier dit l'usage, **sans le mobilier de l'usage la ville est la même glyphe pour glyphe et
+  arbre pour arbre**, le sol se peint selon le quartier (le peintre appelé sur un faux contexte),
+  la carte peint le zonage et pas la chaussée, et le moteur lit la même grille d'usages.
+
+_La proposition d'origine :_
 
 Chaque usage a sa signature au sol et dans son mobilier, croisée avec le standing :
 
@@ -10172,6 +10224,24 @@ renversé**), la **poubelle déborde** en pauvre (la même, 65 sur 145).
   endroit » tombait juste après — téléporté au milieu de la voie. La ville neuve le faisait
   tomber sur la graine 5 de `test_trace_js` (2 graines sur 40, 0 sur 80 à la base) ; une
   attente légitime remet maintenant l'ancrage à zéro (`Vehicules.debloquer`), 40 graines sur 40.
+
+✅ **2e vague livrée** (17 sept. 2026) : l'usage de chaque bloc **se déduit du plan**
+(`carte.USAGES`, `grille.usage`) ; le trottoir et l'abord se peignent selon l'usage et le
+standing (granit lavé en rue chic, béton d'usine taché, **bande de gazon** tondue ou brûlée
+devant les maisons, asphalte devant les entrepôts) — une couche peinte, pas une tuile ne
+change ; **129 meubles d'usage** (40 parcomètres, 21 boîtes aux lettres, 12 bacs de recyclage,
+39 palettes, 17 bennes) ; la carte plein écran porte le **calque de zonage** et sa légende.
+
+- ⚠️ **Les légendes de la carte s'affichaient dans l'ordre alphabétique** : le paquet trie
+  ses clés, et le juge des familles relisait ce paquet trié — un `rang` voyage maintenant
+  avec chaque table.
+- ⚠️ **Un vélo poussait l'autobus dans le carrefour.** Le trafic qui perd patience force le
+  passage ; entre deux chars du trafic rien ne bouge (« sur des rails »), mais l'autobus d'une
+  ligne n'y était pas compté, et un vélo impatient le poussait pendant qu'il attendait le feu.
+  `test_autobus_js` tombait sur 3 graines sur 20 **à la base** (le nez dans le carrefour, ou
+  hors du tracé), et la ville neuve l'a fait tomber sur la sienne. Ligne et trafic ne se
+  poussent plus : 20 sur 20, à la base comme avec la vague.
+- Restent la 3e vague (les commerces montent et descendent) et la 4e (le standing se vit).
 
 ### Trois sauvegardes, et on les gère
 

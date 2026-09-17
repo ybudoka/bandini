@@ -85,10 +85,34 @@ const Monde = (function () {
     while (i + 1 < bornes.length && bornes[i + 1] <= v) i++;
     return i;
   }
-  function standingA(tx, ty) {
-    const s = carte && carte.standing;
-    if (!s || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return null;
-    return STANDINGS[s.lettres[rang(s.y, ty)][rang(s.x, tx)]] || null;
+  /** La lettre de ce bloc dans une grille du paquet (`standing`, `usage`). */
+  function lettreDuBloc(nom, tx, ty, laquelle) {
+    const k = laquelle || carte;
+    const q = k && k.quartiers;
+    if (!q || !q[nom] || tx < 0 || ty < 0 || tx >= k.w || ty >= k.h) return null;
+    return q[nom][rang(q.y, ty)][rang(q.x, tx)];
+  }
+  function standingA(tx, ty, laquelle) {
+    return STANDINGS[lettreDuBloc('standing', tx, ty, laquelle)] || null;
+  }
+
+  //: L'USAGE d'une tuile (2e vague) : 'commercial', 'residentiel', 'industriel',
+  //: 'parc', 'port', 'eau', ou null dans une piece. Meme grille, meme coupe ; la
+  //: lettre se traduit par la table du paquet (`carte.zonage`), jamais ici.
+  function usageA(tx, ty, laquelle) {
+    const k = laquelle || carte;
+    const lettre = lettreDuBloc('usage', tx, ty, k);
+    return (lettre && k.quartiers.usages[lettre]) || null;
+  }
+
+  //: Ce que le PEINTRE du sol doit savoir du quartier, en quatre bits : l'usage
+  //: (1 commercial, 2 residentiel, 3 industriel, 0 le reste) et le standing
+  //: (1 cossu, 2 pauvre, 0 ordinaire). ⚠️ Une couche PEINTE : le glyphe ne change
+  //: pas, la solidite non plus — seule la tuile cuite qu'on colle dessus.
+  const CODE_D_USAGE = { commercial: 1, residentiel: 2, industriel: 3 };
+  const CODE_DE_STANDING = { cossu: 1, pauvre: 2 };
+  function codeDeQuartier(tx, ty) {
+    return (CODE_D_USAGE[usageA(tx, ty)] || 0) | ((CODE_DE_STANDING[standingA(tx, ty)] || 0) << 2);
   }
 
   //: Le coeur de la ville — la zone vers laquelle le trafic du matin converge
@@ -165,8 +189,9 @@ const Monde = (function () {
       battants: new Map(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
-      standing: def.grille && def.grille.standing ? {
-        lettres: def.grille.standing,
+      quartiers: def.grille && def.grille.standing ? {
+        standing: def.grille.standing, usage: def.grille.usage || null,
+        usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
         x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),
       } : null,
       intersections: def.intersections || [],
@@ -1193,7 +1218,17 @@ const Monde = (function () {
   function varianteDeSol(g, tx, ty) {
     const usure = hash2(tx, ty) % USURES_DE_SOL;
     if (g !== '.') return usure;
-    return (tx & 1) | ((ty & 1) << 1) | (usure << 2);
+    // ⚠️ Le quartier AU-DESSUS de l'usure (bits 6 a 9) : le trottoir d'une rue
+    // commercante, d'une cour d'usine et d'une rue chic ne se peignent pas pareil.
+    return (tx & 1) | ((ty & 1) << 1) | (usure << 2) | (codeDeQuartier(tx, ty) << 6);
+  }
+
+  /** La variante d'un ABORD : son usure (bits 0 a 3) et son quartier (4 a 7).
+      ⚠️ Il tirait `hash2 % 4` comme un passage pieton, et son peintre lisait
+      `(v >> 2) + 1` — toujours 1 : les milliers d'abords de la ville portaient
+      exactement le meme grain. */
+  function varianteDAbord(tx, ty) {
+    return (hash2(tx, ty) % USURES_DE_SOL) | (codeDeQuartier(tx, ty) << 4);
   }
 
   /** La variante d'une tuile de VOIE (le petit train de la foire) : de quel
@@ -1219,6 +1254,7 @@ const Monde = (function () {
     if (g === 'T') return varianteDeRail(tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
+    if (g === '_') return varianteDAbord(tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
     const p = carte.legende[g];
     if (p && p.bloc) return varianteDeBloc(g, tx, ty);
@@ -1430,6 +1466,39 @@ const Monde = (function () {
     return c;
   }
 
+  /** La couleur du ZONAGE d'une tuile sur la carte plein ecran : celle de son
+      usage (`carte.zonage`), ou null sur la chaussee et le trottoir — le calque
+      teint les blocs, pas les rues, sinon on ne lit plus la trame. */
+  function couleurDeZonage(tx, ty, laquelle) {
+    const k = laquelle || carte;
+    const p = k.legende[k.sol[ty][tx]] || {};
+    if (p.route || p.trottoir) return null;
+    const usage = usageA(tx, ty, k);
+    const fiche = usage && k.def.zonage && k.def.zonage[usage];
+    return fiche ? fiche.couleur : null;
+  }
+
+  /** Le calque entier, une tuile = un pixel, cuit une fois comme la mini-carte. */
+  function calqueDeZonage(laquelle) {
+    const k = laquelle || carte;
+    if (k.calque !== undefined) return k.calque;
+    if (!k.quartiers || !k.quartiers.usage) { k.calque = null; return null; }
+    const c = Base.nouveauCanvas(k.w, k.h);
+    const ctx = c.getContext('2d');
+    for (let y = 0; y < k.h; y++) {
+      let debut = 0, couleur = couleurDeZonage(0, y, k);
+      for (let x = 1; x <= k.w; x++) {
+        const suivante = x < k.w ? couleurDeZonage(x, y, k) : undefined;
+        if (suivante !== couleur) {
+          if (couleur) { ctx.fillStyle = couleur; ctx.fillRect(debut, y, x - debut, 1); }
+          debut = x; couleur = suivante;
+        }
+      }
+    }
+    k.calque = c;
+    return c;
+  }
+
   // --- Camera ---------------------------------------------------------------------
 
   /** Une carte plus petite que l'ecran (une piece) se centre : la camera
@@ -1537,7 +1606,7 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, standingA, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,

@@ -105,14 +105,18 @@ def test_un_decor_qui_casse_sans_pv_est_vu(racine):
 
 def test_un_decor_solide_fantome_pour_les_chars_est_vu(racine):
     """Le décor qu'on ajoute un jour en oubliant sa fiche : solide pour les
-    gens, et l'autobus le traverse."""
+    gens, et l'autobus le traverse.
+
+    ⚠️ Le nom d'essai doit être un décor qui N'EXISTE PAS : il s'appelait
+    `parcometre`, et le jour où le vrai parcomètre est arrivé (17 sept. 2026), sa
+    fiche honnête masquait la fausse et le juge ne voyait plus rien."""
     sources = _sources(racine)
     sources[juge.SPRITES] = sources[juge.SPRITES].replace(
         "  poubelle: {",
-        "  parcometre: { w: 6, h: 18, ancre: [3, 17], r: 2, solide: true },\n  poubelle: {",
+        "  borne_d_essai: { w: 6, h: 18, ancre: [3, 17], r: 2, solide: true },\n  poubelle: {",
     )
     reproches = juge.juger(sources)
-    assert any("parcometre" in r for r in reproches), reproches
+    assert any("borne_d_essai" in r for r in reproches), reproches
 
 
 def test_un_arbre_qu_on_rendrait_cassable_est_vu(racine):

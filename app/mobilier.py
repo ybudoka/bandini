@@ -57,6 +57,17 @@ ARBRES_PAR_STANDING: dict[str, tuple | None] = {
 #: arbres » n'a posé que trois bacs dans toute la ville.
 PART_BAC_FLEURS = 0.5
 
+#: ⚠️ **LE MOBILIER DIT L'USAGE** (des quartiers qu'on reconnaît, 2e vague) : un
+#: parcomètre devant les commerces, une boîte aux lettres et un bac de recyclage
+#: devant les maisons, des palettes et une benne devant les entrepôts. Par bord,
+#: au milieu d'un intervalle (celui des bacs à fleurs quand un bac ne l'a pas pris),
+#: la première sorte dont la part tombe. `(sorte, part)`, dans l'ordre du tirage.
+MEUBLES_PAR_USAGE: dict[str, tuple[tuple[str, float], ...]] = {
+    "commercial": (("parcometre", 0.55),),
+    "residentiel": (("boite_aux_lettres", 0.40), ("bac_recyclage", 0.35)),
+    "industriel": (("palettes", 0.40), ("benne", 0.30)),
+}
+
 #: Un bord plus court que ça ne se plante pas : deux tuiles entre deux coins de
 #: rue, ce n'est pas une rue, c'est un bout de trottoir.
 BORD_MIN = 5
@@ -143,7 +154,8 @@ def _bords(chantier, ville: dict) -> list[dict]:
         if len(file) >= BORD_MIN:
             bords.append({"tuiles": file, "cote": cote,
                           "district": chantier.district_en(*file[len(file) // 2]),
-                          "standing": chantier.standing_en(*file[len(file) // 2])})
+                          "standing": chantier.standing_en(*file[len(file) // 2]),
+                          "usage": chantier.usage_en(*file[len(file) // 2])})
     return bords
 
 
@@ -196,8 +208,10 @@ def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
     # décalaient chaque bord qui suit, et les arbres des rues ordinaires
     # bougeaient d'un bout à l'autre de la ville sans que leur règle ait changé.
     des_bacs = carte.Des(graine ^ 0xBAC5)
+    # Et le mobilier de l'usage le sien, pour la même raison.
+    des_usage = carte.Des(graine ^ 0x05A6E)
     solides = {(d["x"], d["y"]) for d in chantier.decor if d["type"] in carte.DECOR_SOLIDE}
-    poses = {"arbres": 0, "bancs": 0, "bacs": 0}
+    poses = {"arbres": 0, "bancs": 0, "bacs": 0, "usage": 0}
     for bord in _bords(chantier, ville):
         rythme = RYTHMES.get(bord["district"])
         if rythme is None:
@@ -241,19 +255,32 @@ def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
                         poses["bancs"] += 1
                         break
                 k += pas_banc
-        if bord["standing"] != "cossu":
-            continue
         # Les bacs à fleurs : au milieu d'un intervalle sur deux, entre les
         # arbres et les bouts du bord. Là où un banc a déjà pris l'ombre,
         # `_place_libre` refuse.
         reperes = [0, *arbres, len(tuiles) - 1]
+        if bord["standing"] == "cossu":
+            for a, b in zip(reperes, reperes[1:]):
+                if not des_bacs.chance(PART_BAC_FLEURS):
+                    continue
+                if b - a < 4:
+                    continue
+                x, y = tuiles[(a + b) // 2]
+                if _place_libre(chantier, x, y, solides) and chantier.poser_decor("bac_fleurs", x, y):
+                    solides.add((x, y))
+                    poses["bacs"] += 1
+        # Le mobilier de l'usage, APRÈS les bacs : une rue cossue garde ses fleurs.
+        # ⚠️ Toutes les parts se tirent à chaque intervalle, posé ou non.
+        meubles = MEUBLES_PAR_USAGE.get(bord["usage"])
+        if not meubles:
+            continue
         for a, b in zip(reperes, reperes[1:]):
-            if not des_bacs.chance(PART_BAC_FLEURS):
-                continue
-            if b - a < 4:
+            tires = [quoi for quoi, part in meubles if des_usage.chance(part)]
+            if b - a < 4 or not tires:
                 continue
             x, y = tuiles[(a + b) // 2]
-            if _place_libre(chantier, x, y, solides) and chantier.poser_decor("bac_fleurs", x, y):
-                solides.add((x, y))
-                poses["bacs"] += 1
+            if _place_libre(chantier, x, y, solides) and chantier.poser_decor(tires[0], x, y):
+                if tires[0] in carte.DECOR_SOLIDE:
+                    solides.add((x, y))
+                poses["usage"] += 1
     return poses

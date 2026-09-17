@@ -774,8 +774,13 @@ const Vehicules = (function () {
           if (d2 >= min * min || d2 === 0) continue;
           const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, chevauche = min - d;
           const m1 = v.def.masse, m2 = autre.def.masse, total = m1 + m2;
-          const deuxDuTrafic = v.conducteur === 'trafic' && autre.conducteur === 'trafic';
-          if (deuxDuTrafic) return;                     // sur des rails : on ne se pousse pas
+          // Sur des rails : on ne se pousse pas. ⚠️ L'AUTOBUS D'UNE LIGNE AUSSI est
+          // sur des rails (`Autobus.conduire`). Il n'y etait pas : un velo du trafic
+          // qui perdait patience derriere lui (`force`) le poussait de deux pixels
+          // pendant qu'il attendait le feu — assez pour mettre son nez dans le
+          // carrefour, ou le sortir de son trace (`test_autobus_js`, 17 sept. 2026).
+          const surDesRails = function (q) { return q.conducteur === 'trafic' || q.conducteur === 'ligne'; };
+          if (surDesRails(v) && surDesRails(autre)) return;
           v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total);
           autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total);
           const relatif = (v.vx - autre.vx) * nx + (v.vy - autre.vy) * ny;

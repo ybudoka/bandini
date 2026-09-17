@@ -1248,6 +1248,11 @@ DECOR_SOLIDE = frozenset({
     # fleurs (cossu), le caddie renverse au pied des plex. Le matelas, couche a
     # plat, ne l'est pas : on marche dessus, comme sur le pneu.
     "bac_fleurs", "caddie", "poubelle_pleine",
+    # Le mobilier de l'usage (2e vague) : la benne et les palettes arretent un
+    # pieton. ⚠️ Le parcometre, la boite aux lettres et le bac de recyclage, non :
+    # des poteaux et des bacs bas qu'on frole — un abord ou l'on reste coince sur
+    # un poteau tous les huit pas n'est plus un endroit ou l'on deborde.
+    "benne", "palettes",
 })
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
@@ -1627,6 +1632,57 @@ def _assembler_le_standing(districts: tuple[dict, ...], plan: tuple[str, ...]) -
 
 STANDING: tuple[str, ...] = _assembler_le_standing(DISTRICTS, PLAN)
 
+#: Les USAGES — ce qu'on fait la (des quartiers qu'on reconnait, 2e vague). ⚠️ On
+#: n'invente pas de zonage : les lettres du `plan` en sont deja un, et l'usage
+#: d'un bloc se DEDUIT de sa lettre (`usage_du_glyphe`). Ce qui est ecrit ici, ce
+#: sont les couleurs du calque et les mots de la legende — des DONNEES qui
+#: descendent avec la carte, comme `FAMILLES_DE_LIEU`. `lettre` : ce que porte la
+#: grille du paquet (`grille.usage`), un caractere par bloc.
+USAGES: dict[str, dict] = {
+    "commercial": {"lettre": "c", "couleur": "#d0874a", "libelle": "COMMERCES"},
+    "residentiel": {"lettre": "r", "couleur": "#c9b55a", "libelle": "RÉSIDENCES"},
+    "industriel": {"lettre": "i", "couleur": "#8b8f9c", "libelle": "INDUSTRIE"},
+    "parc": {"lettre": "p", "couleur": "#4c9a4a", "libelle": "PARCS"},
+    "port": {"lettre": "q", "couleur": "#5f8fbf", "libelle": "PORT"},
+    "eau": {"lettre": "~", "couleur": "#2a5a80", "libelle": "EAU"},
+}
+
+#: L'usage de chaque lettre de plan qui n'est pas un lieu garanti. ⚠️ La cour de
+#: gang est INDUSTRIELLE : barbele, asphalte et ferraille, c'est une cour, pas une
+#: rue ou l'on habite. La place et la foire sont des parcs : on y va, on n'y vit pas.
+USAGE_DU_PLAN: dict[str, str] = {
+    "c": "commercial", "h": "residentiel", "m": "residentiel",
+    "w": "industriel", "i": "industriel", "g": "industriel",
+    "p": "parc", "k": "parc", "n": "parc", "f": "parc", "o": "parc",
+    "q": "port", "j": "port", "~": "eau",
+}
+
+#: Et celui d'un lieu garanti, par le GENRE d'ilot qui le batit (`SPECIAUX`) : le
+#: phare est bati en banlieue, l'usine en industriel, le reste en commerces.
+USAGE_DU_GENRE: dict[str, str] = {
+    "commerces": "commercial", "maisons": "residentiel", "banlieue": "residentiel",
+    "hangars": "industriel", "industriel": "industriel", "gang": "industriel",
+}
+
+
+def usage_du_glyphe(glyphe: str) -> str:
+    """L'usage d'une lettre de plan. Leve KeyError pour une lettre inconnue :
+    un bloc sans usage serait un trou dans la legende."""
+    if glyphe in SPECIAUX:
+        return USAGE_DU_GENRE[SPECIAUX[glyphe].get("genre", "commerces")]
+    return USAGE_DU_PLAN[glyphe]
+
+
+def grille_des_usages(plan: tuple[str, ...]) -> tuple[str, ...]:
+    """La lettre d'usage de chaque bloc — celle de son MAITRE : un superbloc est un lot."""
+    maitre = regions_du_plan(plan)
+    return tuple("".join(USAGES[usage_du_glyphe(plan[maitre[(bx, by)][1]][maitre[(bx, by)][0]])]["lettre"]
+                         for bx in range(len(ligne)))
+                 for by, ligne in enumerate(plan))
+
+
+USAGE_DE_LA_LETTRE: dict[str, str] = {fiche["lettre"]: usage for usage, fiche in USAGES.items()}
+
 
 class _Chantier:
     """L'echafaudage : la trame, puis les rues, puis les ilots, puis le decor."""
@@ -1637,6 +1693,7 @@ class _Chantier:
         # ou il y a du sol. La ville, elle, lit la grille de `DISTRICTS`.
         self.standing = STANDING if plan == PLAN else tuple(
             "".join(SANS_STANDING if g == "~" else "=" for g in ligne) for ligne in plan)
+        self.usage = grille_des_usages(plan)
         self.nc = len(plan[0])
         self.nr = len(plan)
         if len(COLONNES) != self.nc or len(RANGEES) != self.nr:
@@ -2196,6 +2253,15 @@ class _Chantier:
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
         return STANDINGS.get(self.standing[by][bx])
+
+    def usage_en(self, x: int, y: int) -> str | None:
+        """`commercial`, `residentiel`, `industriel`, `parc`, `port` ou `eau` —
+        avec la meme coupe au milieu des rues que `standing_en`."""
+        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+            return None
+        bx = bisect.bisect_right(self._coupes_x, x) - 1
+        by = bisect.bisect_right(self._coupes_y, y) - 1
+        return USAGE_DE_LA_LETTRE[self.usage[by][bx]]
 
     def district_en(self, x: int, y: int) -> str:
         """Le quartier d'une tuile — il decide des noms sur les enseignes."""
@@ -6159,7 +6225,7 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
                    "rues_v": list(RUES_V), "rues_h": list(RUES_H), "trottoir": TROTTOIR,
                    # ⚠️ Douze lignes de glyphes, pas un rectangle par bloc : le
                    # paquet voyage a mille octets de son plafond (`test_definitions`).
-                   "standing": list(chantier.standing)},
+                   "standing": list(chantier.standing), "usage": list(chantier.usage)},
         "sol": ["".join(ligne) for ligne in chantier.sol],
         "voie": ["".join(ligne) for ligne in chantier.voie],
         "arrets": chantier.arrets,
@@ -7138,7 +7204,12 @@ def piece_de_logement(slug: str, largeur: int, hauteur: int, porte: int,
 def exporter() -> dict:
     carte = generer()
     carte["legende"] = LEGENDE
-    carte["familles"] = FAMILLES_DE_LIEU
+    # ⚠️ L'ORDRE D'UNE TABLE VOYAGE EN CLAIR (`rang`). Le paquet trie ses cles
+    # (`definitions._json`) : une legende « dans l'ordre de la table » s'affichait
+    # dans l'ordre ALPHABETIQUE — MAGASINS, MANGER, REPERES — et le juge ne le
+    # voyait pas, parce qu'il relisait la table dans ce meme paquet trie.
+    carte["familles"] = {nom: {**fiche, "rang": i} for i, (nom, fiche) in enumerate(FAMILLES_DE_LIEU.items())}
+    carte["zonage"] = {nom: {**fiche, "rang": i} for i, (nom, fiche) in enumerate(USAGES.items())}
     return carte
 
 

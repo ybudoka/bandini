@@ -1211,6 +1211,12 @@ const Hud = (function () {
     return f ? f.couleur : '#cdc6e6';
   }
 
+  /** Les cles d'une table du paquet, dans l'ordre ou Python l'a ECRITE (`rang`) :
+      le paquet trie ses cles, et `Object.keys` rendait l'alphabet. */
+  function parRang(table) {
+    return Object.keys(table).sort(function (a, b) { return (table[a].rang || 0) - (table[b].rang || 0); });
+  }
+
   /** La legende de la carte, BATIE depuis la table des couleurs : les familles
       des lieux que cette ville porte, dans l'ordre de la table. */
   function legendeDeLaCarte(carte) {
@@ -1219,7 +1225,7 @@ const Hud = (function () {
     for (const point of (carte.points || [])) if (point.famille) portees[point.famille] = true;
     // ⚠️ L'ordre est celui de la TABLE, pas celui des lieux rencontres : sinon la
     // legende se reordonne d'une ville a l'autre, et on la relit a chaque partie.
-    return Object.keys(familles).filter(function (nom) { return portees[nom]; }).map(function (nom) {
+    return parRang(familles).filter(function (nom) { return portees[nom]; }).map(function (nom) {
       return { famille: nom, couleur: familles[nom].couleur, libelle: familles[nom].libelle };
     });
   }
@@ -1358,7 +1364,10 @@ const Hud = (function () {
     // ⚠️ La ville se dessine ENTRE le titre et la legende, pas au milieu de
     // l'ecran : centree bêtement, ses dernieres rangees finissaient sous le
     // bandeau de la legende — et c'est La Pointe qu'on ne voyait plus.
-    const yHaut = 14, yBas = VH - 38;
+    // ⚠️ Le zonage prend une rangee sous le titre : sa legende n'a pas sa place
+    // dans le bandeau du bas, qui tient deja les familles de lieux sur trois rangees.
+    const zonage = legendeDuZonage(carte);
+    const yHaut = zonage.length ? 24 : 14, yBas = VH - 38;
     const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / carte.h);
     const echelle = brut >= 1 ? Math.floor(brut) : brut;
     const l = carte.w * echelle, h = carte.h * echelle;
@@ -1366,6 +1375,15 @@ const Hud = (function () {
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
     B.stats.images++;
+    // Le calque du ZONAGE, par-dessus les tuiles et sous tout le reste : les
+    // blocs se teignent de leur usage, les rues restent grises et se lisent.
+    const calque = Monde.calqueDeZonage(carte);
+    if (calque) {
+      ctx.globalAlpha = CALQUE_ALPHA;
+      ctx.drawImage(calque, 0, 0, carte.w, carte.h, ox, oy, l, h);
+      ctx.globalAlpha = 1;
+      B.stats.images++;
+    }
     const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
     dessinerLignes(ctx, pos);
     Metro.dessinerSurLaCarte(ctx, pos);
@@ -1406,8 +1424,38 @@ const Hud = (function () {
     const titre = ville + (zone ? ' — ' + zone.nom.toUpperCase() : '');
     texte(ctx, titre, (VW - Atlas.largeurTexte(titre, 1)) / 2, 6, '#e8b33c', 1);
     dessinerLegende(ctx, carte);
+    dessinerLegendeDuZonage(ctx, zonage);
     const aide = (gps ? gps.nom.toUpperCase() + ' · ' : '') + 'N : FERMER';
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
+  }
+
+  //: La transparence du calque de zonage. ⚠️ Assez pour qu'un bloc d'usine et
+  //: un bloc de maisons ne se confondent plus, pas assez pour effacer les toits
+  //: et les cours qu'on reconnaissait deja.
+  const CALQUE_ALPHA = 0.42;
+
+  /** La legende du zonage, BATIE depuis la table (`carte.zonage`), dans son
+      ordre, et seulement les usages que cette ville porte. */
+  function legendeDuZonage(carte) {
+    const table = (carte && carte.def && carte.def.zonage) || {};
+    const lettres = ((carte && carte.def && carte.def.grille && carte.def.grille.usage) || []).join('');
+    return parRang(table).filter(function (usage) { return lettres.indexOf(table[usage].lettre) >= 0; })
+      .map(function (usage) { return { usage: usage, couleur: table[usage].couleur, libelle: table[usage].libelle }; });
+  }
+
+  /** Une rangee sous le titre, centree : une pastille et un mot par usage. */
+  function dessinerLegendeDuZonage(ctx, lignes) {
+    if (!lignes.length) return;
+    const largeurs = lignes.map(function (e) { return 8 + Atlas.largeurTexte(e.libelle, 1); });
+    const total = largeurs.reduce(function (a, b) { return a + b; }, 0) + 10 * (lignes.length - 1);
+    let x = Math.round((VW - total) / 2);
+    lignes.forEach(function (entree, i) {
+      ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, 15, 6, 6);
+      ctx.fillStyle = entree.couleur; ctx.fillRect(x, 16, 4, 4);
+      texte(ctx, entree.libelle, x + 8, 15, '#cdc6e6', 1);
+      B.stats.rects += 2;
+      x += largeurs[i] + 10;
+    });
   }
 
   /** La legende, en deux rangees en bas a gauche. ⚠️ Elle se lit dans les
@@ -1718,7 +1766,7 @@ const Hud = (function () {
 
   return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
-    legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
+    legendeDeLaCarte, legendeDuZonage, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,

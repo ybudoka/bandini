@@ -46,8 +46,11 @@ def test_la_rue_se_plante_et_se_meuble(villes):
     _avec, _sans, ajoutes = villes
     arbres = [d for d in ajoutes if d["type"] == "arbre"]
     bancs = [d for d in ajoutes if d["type"] in mobilier.BANCS_PAR_COTE.values()]
-    # ⚠️ Le bac à fleurs est du mobilier de rue cossue (`test_quartiers`).
-    assert {d["type"] for d in ajoutes} <= {"arbre", "bac_fleurs", *mobilier.BANCS_PAR_COTE.values()}
+    # ⚠️ Le bac à fleurs (rue cossue) et le mobilier de l'usage — parcomètre,
+    # boîte aux lettres, bac de recyclage, palettes, benne — sont jugés dans
+    # `test_quartiers`.
+    usage = {"parcometre", "boite_aux_lettres", "bac_recyclage", "palettes", "benne"}
+    assert {d["type"] for d in ajoutes} <= {"arbre", "bac_fleurs", *usage, *mobilier.BANCS_PAR_COTE.values()}
     assert 120 <= len(arbres) <= 400, f"{len(arbres)} arbres de rue"
     assert 25 <= len(bancs) <= 200, f"{len(bancs)} bancs de rue"
 

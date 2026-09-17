@@ -220,4 +220,6 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]
     ajoutes = {d["type"] for d in avec["decor"][len(sans["decor"]):]}
-    assert ajoutes <= {"arbre", "bac_fleurs", *autobus.ABRIS.values(), *autobus.BANCS.values(), *metro.EDICULES.values()}, ajoutes
+    usage = {"parcometre", "boite_aux_lettres", "bac_recyclage", "palettes", "benne"}   # le mobilier de l'usage
+    assert ajoutes <= {"arbre", "bac_fleurs", *usage, *autobus.ABRIS.values(), *autobus.BANCS.values(),
+                       *metro.EDICULES.values()}, ajoutes

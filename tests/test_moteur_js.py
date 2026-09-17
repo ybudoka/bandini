@@ -9,7 +9,7 @@ import re
 
 import pytest
 
-from app import economie, vehicules
+from app import carte, economie, vehicules
 
 
 def test_le_moteur_charge_et_expose_son_api(banc, paquet):
@@ -1510,7 +1510,9 @@ def test_la_legende_de_la_carte_se_derive_de_la_table_des_couleurs(banc, paquet)
         assert lieu["famille"] in attendues, lieu
         assert lieu["couleur"] == attendues[lieu["famille"]], lieu
     vues = [e["famille"] for e in r["legende"]]
-    assert vues == [f for f in familles if f in vues], "la legende doit suivre l'ordre de la table"
+    # ⚠️ L'ordre de la table ECRITE en Python, pas celui du paquet : le paquet trie
+    # ses cles, et ce juge relisait l'alphabet en croyant relire la table.
+    assert vues == [f for f in carte.FAMILLES_DE_LIEU if f in vues], "la legende doit suivre l'ordre de la table"
     assert set(vues) == {lieu["famille"] for lieu in r["couleurs"]}, (
         "la legende et les blips ne parlent pas des memes familles"
     )

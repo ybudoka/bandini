@@ -320,9 +320,10 @@ def test_une_rue_cossue_est_plantee_une_rue_pauvre_ne_l_est_pas(villes, chantier
 # --- Le moteur lit la même grille ---------------------------------------------
 
 
-def test_le_moteur_lit_le_meme_standing(banc, chantier):
-    """Python décide, JS calcule : `Monde.standingA` dit la même chose que
-    `standing_en`, tuile pour tuile — et ressorti d'une pièce, encore."""
+def test_le_moteur_lit_les_memes_grilles(banc, chantier):
+    """Python décide, JS calcule : `Monde.standingA` et `Monde.usageA` disent la
+    même chose que `standing_en` et `usage_en`, tuile pour tuile — et ressorti
+    d'une pièce, encore."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const lettre = { cossu: '+', ordinaire: '=', pauvre: '-' };
@@ -335,13 +336,20 @@ def test_le_moteur_lit_le_meme_standing(banc, chantier):
             }
             return lignes;
         };
+        const usages = [];
+        for (let y = 0; y < L.Monde.carte.h; y += 3) {
+            const l = [];
+            for (let x = 0; x < L.Monde.carte.w; x += 3) l.push(L.Monde.usageA(x, y));
+            usages.push(l);
+        }
         const dehors = carte();
         const ville = L.Monde.carte;
         const porte = ville.def.portes.find(function (p) { return p.interieur; });
         L.Monde.entrer(porte);
         const dedans = L.Monde.standingA(1, 1);
         L.Monde.restaurer(ville);
-        return { dehors: dehors, dedans: dedans, ressorti: L.Monde.standingA(10, 10) };
+        return { dehors: dehors, dedans: dedans, ressorti: L.Monde.standingA(10, 10), usages: usages,
+                 usageDedans: (L.Monde.entrer(porte), L.Monde.usageA(1, 1)) };
     }""")
     lettre = {"cossu": "+", "ordinaire": "=", "pauvre": "-", None: "~"}
     for y, ligne in enumerate(r["dehors"]):
@@ -349,3 +357,149 @@ def test_le_moteur_lit_le_meme_standing(banc, chantier):
         assert ligne == attendu, f"rangée {y} : le moteur et le générateur ne s'entendent pas"
     assert r["dedans"] is None
     assert r["ressorti"] == chantier.standing_en(10, 10)
+    for j, ligne in enumerate(r["usages"]):
+        attendu = [chantier.usage_en(3 * i, 3 * j) for i in range(len(ligne))]
+        assert ligne == attendu, f"rangée {3 * j} : l'usage du moteur n'est pas celui du générateur"
+    assert r["usageDedans"] is None
+
+
+# --- 2e vague : le zonage se lit ------------------------------------------------
+
+
+#: Ce que le plan dit, lu dans ses lettres et écrit ici en toutes lettres : La Shop
+#: est industrielle sauf son parc et son bloc de commerces, Les Érables habitent
+#: sauf leur rangée commerçante et la cour des Chevreuils (une cour, pas une rue).
+USAGES_ATTENDUS = {
+    "shop": ("iiiiiip", "iiiiiip", "iiiiiii", "iiiiiii", "iiiiiic", "iiiiiic"),
+    "erables": ("rrrpr", "rrrpr", "rrrrr", "rrrrr", "ccirr", "rrrrr"),
+    "baie": ("~~~~~~~",) * 6,
+}
+
+
+def test_l_usage_se_deduit_du_plan():
+    maitre = carte.regions_du_plan(carte.PLAN)
+    lettres = {fiche["lettre"] for fiche in carte.USAGES.values()}
+    assert len(lettres) == len(carte.USAGES), "deux usages partagent une lettre"
+    grille = carte.grille_des_usages(carte.PLAN)
+    for by, ligne in enumerate(grille):
+        for bx, lettre in enumerate(ligne):
+            mx, my = maitre[(bx, by)]
+            assert lettre in lettres, f"le bloc {(bx, by)} n'a pas d'usage"
+            assert lettre == grille[my][mx], f"{(bx, by)} ne dit pas l'usage de son maître"
+    for district in carte.DISTRICTS:
+        attendu = USAGES_ATTENDUS.get(district["slug"])
+        if attendu:
+            lu = tuple(ligne[district["bx"]:district["bx"] + len(district["plan"][0])]
+                       for ligne in grille[district["by"]:district["by"] + len(district["plan"])])
+            assert lu == attendu, f"{district['nom']} : {lu}"
+    for fiche in carte.USAGES.values():
+        assert fiche["couleur"].startswith("#") and fiche["libelle"], fiche
+
+
+def test_chaque_lieu_garanti_a_un_usage():
+    for glyphe in carte.SPECIAUX:
+        assert carte.usage_du_glyphe(glyphe) in carte.USAGES, glyphe
+
+
+#: Où chaque meuble de l'usage a le droit d'être — en toutes lettres.
+USAGE_DU_MEUBLE = {"parcometre": "commercial", "boite_aux_lettres": "residentiel",
+                   "bac_recyclage": "residentiel", "palettes": "industriel", "benne": "industriel"}
+
+
+def test_le_mobilier_dit_l_usage(villes, chantier):
+    ville, _avant, apres = villes
+    ajoutes = ville["decor"][len(apres["decor"]):]
+    compte: dict[str, int] = {}
+    for d in ajoutes:
+        if d["type"] in USAGE_DU_MEUBLE:
+            usage = chantier.usage_en(d["x"], d["y"])
+            assert usage == USAGE_DU_MEUBLE[d["type"]], f"{d['type']} en {(d['x'], d['y'])}, quartier {usage}"
+            compte[usage] = compte.get(usage, 0) + 1
+    for usage, minimum in (("commercial", 15), ("residentiel", 10), ("industriel", 15)):
+        assert compte.get(usage, 0) >= minimum, f"{compte.get(usage, 0)} meubles d'usage en {usage}"
+
+
+def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
+    """⚠️ Une couche peinte et un semis de plus, dans son propre dé : sans le
+    mobilier de l'usage, la ville est la même glyphe pour glyphe, et le décor le
+    même objet pour objet, dans le même ordre."""
+    ville, _avant, _apres = villes
+    monkeypatch.setattr(mobilier, "MEUBLES_PAR_USAGE", {})
+    sans = carte.generer()
+    for cle in ville:
+        if cle != "decor":
+            assert json.dumps(ville[cle], sort_keys=True) == json.dumps(sans[cle], sort_keys=True), cle
+    assert [d for d in ville["decor"] if d["type"] not in USAGE_DU_MEUBLE] == sans["decor"]
+
+
+def _tuile(ville, chantier, glyphe, usage, standing):
+    for y, ligne in enumerate(ville["sol"]):
+        for x, g in enumerate(ligne):
+            if g == glyphe and chantier.usage_en(x, y) == usage and chantier.standing_en(x, y) == standing:
+                return x, y
+    raise AssertionError(f"aucun « {glyphe} » {usage} {standing} dans la ville")
+
+
+def _luminance(couleur):
+    r, g, b = (int(couleur[i:i + 2], 16) for i in (1, 3, 5))
+    return 0.3 * r + 0.59 * g + 0.11 * b
+
+
+def test_le_sol_se_peint_selon_le_quartier(banc, villes, chantier):
+    """Le peintre de morceau lit l'usage et le standing : un trottoir de rue chic
+    n'a pas le béton d'une cour d'usine, l'abord d'une maison est une bande de
+    gazon, celui d'une usine de l'asphalte."""
+    ville = villes[0]
+    tuiles = {
+        "chic": (".", *_tuile(ville, chantier, ".", "commercial", "cossu")),
+        "usine": (".", *_tuile(ville, chantier, ".", "industriel", "pauvre")),
+        "maison": ("_", *_tuile(ville, chantier, "_", "residentiel", "cossu")),
+        "hangar": ("_", *_tuile(ville, chantier, "_", "industriel", "pauvre")),
+        "commerce": ("_", *_tuile(ville, chantier, "_", "commercial", "ordinaire")),
+    }
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const sortie = {};
+        for (const nom in o.tuiles) {
+            const t = o.tuiles[nom], couleurs = [];
+            const ctx = { set fillStyle(c) { couleurs.push(c); }, get fillStyle() { return couleurs[couleurs.length - 1]; },
+                          fillRect: function () {} };
+            const v = L.Monde.varianteDeTuile(t[0], t[1], t[2]);
+            L.TUILES[t[0]](ctx, v, 16);
+            sortie[nom] = { v: v, fond: couleurs[0], couleurs: couleurs, glyphe: L.Monde.glyphe(t[1], t[2]) };
+        }
+        return sortie;
+    }""".replace("o.tuiles", json.dumps(tuiles)))
+    for nom, (glyphe, _x, _y) in tuiles.items():
+        assert r[nom]["glyphe"] == glyphe, f"{nom} : le glyphe a changé"
+    assert _luminance(r["usine"]["fond"]) < _luminance(r["chic"]["fond"]) - 20, (r["usine"]["fond"], r["chic"]["fond"])
+    rv, gv, bv = (int(r["maison"]["fond"][i:i + 2], 16) for i in (1, 3, 5))
+    assert gv > rv and gv > bv, f"l'abord d'une maison n'est pas du gazon : {r['maison']['fond']}"
+    assert _luminance(r["hangar"]["fond"]) < _luminance(r["commerce"]["fond"]), (r["hangar"]["fond"], r["commerce"]["fond"])
+    assert r["commerce"]["fond"] != r["maison"]["fond"] != r["hangar"]["fond"]
+
+
+def test_la_carte_peint_le_zonage(banc, paquet, villes, chantier):
+    """La carte plein écran teint chaque bloc de son usage — pas les rues — et sa
+    légende se bâtit depuis la table, dans son ordre."""
+    ville = villes[0]
+    table = paquet["carte"]["zonage"]
+    route = next((x, y) for y, ligne in enumerate(ville["sol"]) for x, g in enumerate(ligne)
+                 if carte.LEGENDE[g].get("route") and not carte.LEGENDE[g].get("trottoir"))
+    bloc = _tuile(ville, chantier, "_", "industriel", "pauvre")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.ouvrirCarte();
+        const avant = L.B.stats.images;
+        o.frame(1);
+        return { legende: L.Hud.legendeDuZonage(L.Monde.carte), etat: L.B.etat,
+                 images: L.B.stats.images - avant, calque: !!L.Monde.calqueDeZonage(),
+                 route: L.Monde.couleurDeZonage(%d, %d), bloc: L.Monde.couleurDeZonage(%d, %d) };
+    }""" % (*route, *bloc))
+    assert r["etat"] == "carte" and r["calque"], r
+    # ⚠️ L'ordre ÉCRIT en Python, pas celui du paquet (qui trie ses clés).
+    assert [e["usage"] for e in r["legende"]] == list(carte.USAGES), "la légende ne suit pas la table"
+    for e in r["legende"]:
+        assert e["couleur"] == table[e["usage"]]["couleur"] and e["libelle"] == table[e["usage"]]["libelle"]
+    assert r["route"] is None, "le calque teint la chaussée"
+    assert r["bloc"] == table["industriel"]["couleur"]
