@@ -6709,6 +6709,41 @@ def test_l_armurerie_et_la_boutique_vendent(banc, paquet):
     assert r["argent"] == 500 - batte["prix"] - coupe_vent["prix"]
 
 
+def test_le_poing_americain_se_paie_au_comptoir_de_gus(banc, paquet):
+    """Martin : « on devrait aussi pouvoir l'acheter ». Par le vrai chemin : la
+    porte de Chez Gus, le point `acheter`, la touche ACTION — et il entre dans
+    le sac avec les autres, pret pour la roue."""
+    americain = next(a for a in paquet["armes"] if a["slug"] == "poing_americain")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte, p = L.B.partie;
+        const porte = c.portes.find(function (x) { return x.lieu === 'armurerie'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.entrer(porte);
+        const point = L.B.interieur.points.find(function (x) { return x.type === 'acheter'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        p.argent = 100;
+        L.Missions.utiliserPoint(j);
+        const menu = L.B.menu;
+        function ligne(m) { return m.items.find(function (i) { return i.libelle === 'POING AMÉRICAIN'; }) || null; }
+        const avant = ligne(menu);
+        if (!avant) return { titre: menu.titre, libelles: menu.items.map(function (i) { return i.libelle; }) };
+        const rang = menu.items.indexOf(avant);
+        menu.curseur = rang;
+        o.tape('KeyE', 2);
+        const apres = ligne(L.B.menu);
+        return { titre: menu.titre, rang: rang, avant: avant.detail, actif: avant.actif,
+                 apres: apres && apres.detail, argent: p.argent, sac: p.armes.poing_americain || null };
+    }""")
+    assert r["titre"] == "CHEZ GUS"
+    assert "avant" in r, "pas de poing americain au comptoir de Gus : %s" % r.get("libelles")
+    assert r["rang"] == 0, "en tete de vitrine, c'est le moins cher"
+    assert r["avant"] == "%d $" % americain["prix"] and r["actif"] is True
+    assert r["argent"] == 100 - americain["prix"], "le poing americain ne s'est pas paye"
+    assert r["sac"] is not None, "paye, mais pas dans le sac"
+    assert r["apres"] == "DEJA A TOI"
+
+
 def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
     """⚠️ Un menu est une PHOTO de l'etat au moment ou on l'ouvre. Le comptoir,
     lui, reste ouvert entre deux achats : sans un rafraichissement, le pistolet

@@ -292,7 +292,7 @@ COIFFURES: list[dict] = [
 
 CATALOGUE: list[Magasin] = [
     {"slug": "armurerie", "nom": "Chez Gus", "type": "armurerie", "lieu": "armurerie",
-     "articles": ["fronde", "batte", "couteau", "extincteur", "pistolet", "fusil"],
+     "articles": ["poing_americain", "fronde", "batte", "couteau", "extincteur", "pistolet", "fusil"],
      "munitions": ["fronde", "pistolet", "fusil"], "tenues": [], "services": [], "phase": 1},
     {"slug": "vetements", "nom": "Boutique Rosa", "type": "vetements", "lieu": "vetements",
      "articles": [], "munitions": [], "tenues": TENUES, "services": [], "phase": 1},

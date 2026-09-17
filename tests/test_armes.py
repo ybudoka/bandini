@@ -63,6 +63,23 @@ def test_le_poing_americain_cogne_un_peu_plus_fort_que_les_poings():
     assert not americain["usures"], "l'acier ne casse pas au quatrieme coup"
 
 
+def test_le_poing_americain_s_achete_chez_gus():
+    """Martin (17 sept. 2026) : « on devrait aussi pouvoir l'acheter ». Jusque-la
+    il valait 0 $ et ne se vendait nulle part : on ne l'avait qu'en couchant un
+    homme de Sal. Chez Gus, EN TETE de vitrine : il cogne a peine plus que les
+    poings, il coute donc moins que tout ce que Gus vend d'autre — et la vitrine
+    se lit du moins cher au plus cher, comme le catalogue."""
+    from app import magasins
+
+    americain = armes.par_slug("poing_americain")
+    gus = magasins.par_slug("armurerie")
+    assert americain in armes.achetables(), "le poing americain ne se vend pas"
+    assert gus["articles"][0] == "poing_americain", gus["articles"]
+    prix = [armes.par_slug(s)["prix"] for s in gus["articles"]]
+    assert prix == sorted(prix) and len(set(prix)) == len(prix), f"la vitrine de Gus : {prix}"
+    assert americain["prix"] == min(a["prix"] for a in armes.achetables())
+
+
 def test_chaque_arme_qu_on_tient_a_son_dessin():
     """L'arme se voit dans la main et dans la roue : `OBJETS[def.sprite]`. Une
     arme sans dessin retombe EN SILENCE sur la barre grise du `defaut` — le

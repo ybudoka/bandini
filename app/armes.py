@@ -117,9 +117,11 @@ CATALOGUE: list[Arme] = [
        assomme=True),
     # Celui des hommes de Sal (16 sept. 2026, demande de Martin : « a main nue
     # ou poing americain, un peu plus fort »). UN PEU : entre les poings et le
-    # baton. Et ca reste un coup de poing — il assomme, il ne tue pas. Il ne se
-    # vend nulle part : on le ramasse sur celui qu'on a couche.
-    _a("poing_americain", "Poing américain", "melee", 12, 12, 18, 0, anticipation=5,
+    # baton. Et ca reste un coup de poing — il assomme, il ne tue pas. On le
+    # ramasse sur celui qu'on a couche, ou on le paie chez Gus (17 sept. 2026,
+    # Martin : « on devrait aussi pouvoir l'acheter ») : la moins chere de la
+    # vitrine, sous la fronde, parce qu'elle cogne a peine plus que les poings.
+    _a("poing_americain", "Poing américain", "melee", 12, 12, 18, 25, anticipation=5,
        actif=4, assomme=True),
     _a("cone", "Cône orange", "melee", 12, 16, 22, 0, anticipation=6, actif=5, usures=4,
        sprite="cone"),
