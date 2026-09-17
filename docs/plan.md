@@ -166,6 +166,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le petit train et la montagne russe de la foire | **en cours** | 16 sept. 2026 | **P4** | ajout | demande de Martin : « ajoute un petit train qui fait le tour de la foire et une énorme montagne russe ». Suite de la foire refaite (ligne « Le bord de l'eau et la foire »). ⚠️ **Deux choses qui bougent pour de vrai, pas deux manèges de plus** : le train suit une voie fermée le long de la clôture, par l'intérieur, et **s'arrête devant quelqu'un** (un train de foire ne renverse personne) ; la montagne russe est la plus grosse chose de la ville, en l'air — on passe dessous, seuls ses pieds arrêtent — et ses chars montent lentement la côte et plongent. Sans dé (l'empreinte, jamais `B.rng()`), et on n'y monte pas, comme les manèges. |
 | Des bancs, des arbres de rue et des lignes d'autobus | **en cours** | 16 sept. 2026 | **P4** | ajout | demande de Martin : « je veux des bancs sur le bord de la rue, des arbres de temps à autre bien positionnés. Aussi des arrêts d'autobus pour se déplacer réellement d'un arrêt à l'autre selon un tracé, et des bus qui passent aux arrêts aussi ». Prend « l'arrêt d'autobus » de M12. Deux vagues : le mobilier de rue (bancs, arbres), puis les lignes (tracé et arrêts calculés par Python, des autobus qui les suivent et s'arrêtent, et le joueur qui monte, roule pour de vrai et descend où il veut). |
 | Les missions mises en scène | **à faire** | — | **P2** | ajout | demande de Martin : « je veux que chaque mission vienne avec des animations et des dialogues ». Devient une **décision** (« Contexte ») : une mission, c'est ses objectifs, ses répliques à chaque temps (appel, intro, **pendant**, fin, échec) et ses **scènes** d'intro et de fin — sinon elle n'est pas finie. ⚠️ **Mesuré le 16 sept. 2026** : les dialogues sont là sauf au milieu (le client de m3 est la seule réplique dite pendant une mission) ; les animations n'existent pas — `B.cinema` fige une boîte de texte, et la seule scène animée du jeu, l'ouverture, est écrite en dur (265 lignes pour une dizaine de secondes) ; **trois fins sur cinq sont dites par des absents** (m1, m4, m5) ; et la seule animation de fin est un `if (m.slug === 'm1')` dans `reussir()`. ⚠️ **Un vocabulaire, pas des scripts** : une scène est une liste de plans typés dans `missions.py` (`camera`, `marcher`, `conduire`, `geste`, `entrer`/`sortir`, `coupe`, `dire`, `titre`, `son`, `attendre`), six gestes dessinés une fois sur le sprite que partagent tous les personnages. Deux vagues : le metteur en scène **et l'ouverture réécrite dedans** (ses 13 juges sans retouche : la preuve que le vocabulaire suffit), puis les cinq missions de la v1. ⚠️ **Avant M16**, dont chaque mission l'écrira |
+| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | **à faire** | — | **P3** | ajout | demande de Martin : « je veux des cartiers plus reconnaissable, plus riche et propre avec des commerce plus riche, des cartiers plus pauvre et sale. commercial, indistriel, résidentiel, parc, etc.. ». ⚠️ **Mesuré (16 sept. 2026) : le zonage existe, le standing n'existe pas, et la rue ne dit ni l'un ni l'autre.** L'usage est déjà décidé au bloc par les lettres du `plan` (`c` commerces, `h` maisons, `m` banlieue, `w` hangars, `i` industriel, `p`/`k` parc, `q`/`j` quai) ; mais « riche » ou « pauvre » n'apparaît **nulle part** dans `app/`, et le contraste qu'on voit est un accident de genre : 131 sacs, pneus, barils et débris, dont **4** aux Érables et **61** à La Shop — uniformes à l'intérieur d'un district. **Un seul trottoir et un seul abord pour toute la ville** ; La Shop a 22 arbres, les Quais plus de poubelles que le centre-ville, la banlieue autant de nids-de-poule que le Faubourg. Deux axes qui se croisent : l'**usage** (ce qu'on fait là) et le **standing** (`cossu`, `ordinaire`, `pauvre` — qui en a les moyens). Quatre vagues : **le standing se déclare** (une grille écrite à la main à côté du `plan`) **et la saleté se déplace** — ⚠️ **sans que son total monte** : Martin a renvoyé « trop de saleté partout » le jour même ; **le zonage se lit** (sol et mobilier par usage en couche peinte, calque sur la carte) ; **les commerces montent et descendent** (enseignes, façades, logements et lampes par standing) ; **le standing se vit** (qui marche, ce qui est garé, la police et l'argent). ⚠️ Passe **après les bancs et les arbres de rue** (en cours) : c'est le même semis. Détail dans « Des quartiers qu'on reconnaît » plus bas. |
 | L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
 | Quatre activités que le jeu n'a pas | **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (**livrés le 15 sept.**, `aee8543` : +25 % de vie à 25 ambulances, le char à la planque à 50), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | Installable, et jouable hors ligne | **à faire** | — | **P4** | ajout | demande de Martin : « est-ce compliqué de faire du jeu une webapp installable ? », puis « jouable hors ligne ». ⚠️ **Mesuré : sur iPhone, la moitié est déjà faite, et personne ne l'a voulu** — `base.html` porte déjà `apple-mobile-web-app-capable`, `mobile-web-app-capable`, `theme-color` et `viewport-fit=cover` : « Ajouter à l'écran d'accueil » donne **aujourd'hui** une app plein écran sans barre Safari. Il n'y manque qu'une **icône** — iOS ne prend pas un `favicon.svg` et colle une capture d'écran floue à la place. Android et Chrome bureau, eux, exigent trois choses : un `manifest.webmanifest`, des icônes PNG (192, 512, une *maskable* — Chromium est **déjà là** pour Playwright, il rend le SVG sans rien ajouter au projet) et un service worker **qui a un gestionnaire `fetch`** : sans lui, Chrome ne propose pas l'installation du tout. ⚠️ **Le worker se sert à la RACINE, et c'est le seul vrai piège** : Flask sert tout sous `/static/`, or un worker ne contrôle que son dossier — `/static/js/sw.js` ne verrait jamais `/`. Il lui faut sa route à lui dans `routes.py`, en `no-cache` : nginx met `expires 7d` sur `/static/`, et un worker figé une semaine est un piège qui se referme sur la session suivante. ⚠️ **Le poids est mesuré, et c'est lui qui décide** : la coquille pèse **300 Ko** de JS gzippé et **65 Ko** de définitions (492 Ko brut) — précachée sans y penser ; l'audio pèse **12 Mo en 166 fichiers**, chargés à la demande (`son.js` : `fetch` puis `decodeAudioData`). Avaler 12 Mo en silence sur un forfait cellulaire n'est pas une fonctionnalité : l'audio se cache **à l'usage**, et « toute la ville hors ligne » est un **bouton** qu'on choisit. ⚠️ **Le cache se nomme par l'EMPREINTE, jamais par la version** — `definitions.py` calcule déjà un sha256 du paquet, et la sauvegarde s'en sert pour oublier une position qui n'existe plus (`jeu.js`). Un paquet caché qui ne correspond plus au JS servi ne ressemble pas à un bogue de cache : il ressemble à un bogue de jeu. C'est mot pour mot ce que `version.py` dit déjà dans sa propre docstring. ⚠️ Et **un worker naïf casserait la revalidation 304** montée dans `api_definitions` — celle qui accepte l'ETag **faible** de nginx. ⚠️ **Les mp3 ne portent pas `?v=`**, contrairement au JS : un bruitage regénéré garde son nom, donc un cache d'usage servirait l'ancien pour toujours. Il faut une règle de purge, et elle n'a pas de version à quoi se raccrocher. ⚠️ **Les scores restent en ligne** : `horsLigne` existe (`jeu.js`) mais ne couvre que l'échec de chargement des définitions — l'écran des scores n'a aucun chemin hors-ligne, et un tableau vide qui ment est pire qu'un tableau qui dit « pas de réseau ». ⚠️ À **vérifier sur le serveur** : le snippet de sécurité nginx (`gestion-dojo-security-server.conf`, hors dépôt) peut porter un CSP qui bloque `worker-src` ou `manifest-src` — et ça ne se verra qu'en prod. Deux vagues : **(1) l'installation** (manifeste, icônes, worker minimal — ~2 h ; ⚠️ **le manifeste et les icônes sont livrés**, 16 sept. 2026, ligne « Une icône, un favicon et un logo » : il n'en reste que le worker), **(2) le hors-ligne pour vrai** (coquille précachée, audio à l'usage, définitions par empreinte, scores qui disent la vérité — ~1 jour). Les juges ont déjà leur banc : `test_navigateur.py` lance un vrai Chromium, donc le worker se juge en coupant le réseau après le premier chargement. |
@@ -738,6 +739,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
 | — | **P4** Feux pour piétons | poteau à chaque bout de traverse (blanc/orange, lisible par la couleur), dégagement avant le vert des chars, et « sans feu, on traverse quand c'est libre » pour ne pas échouer la foule aux T | voir quand la foule va s'engager, et ne plus voir personne partir sur l'orange |
 | — | **P4** Les terrains de banlieue | entrée qui touche la rue, une case sur trois (pas plus), sentier porte→rue qui ne traverse pas la piscine, grillage mitoyen, et le paquet qui reste sous ses bornes | traverser trois cours pour semer un agent ; reconnaître une maison habitée d'un coup d'œil |
 | — | **P4** Les armes à feu | **livré** : `auto` (tenir, la cadence rythme, la dispersion s'ouvre et se referme), `bruit` (l'agent hors du cône **entend** et vient voir, sans étoile ; recherché, le coup dit où tu es), `feu_s` (le brasier, entité invisible faite de particules, qui mord passants, joueur et chars avec le lanceur pour auteur), portée bornée à la demi-vue, marché noir seul comptoir | choisir son arme selon la situation, pas selon son prix ; ne jamais gagner un 5★ en tirant hors du cône |
+| — | **P3** Des quartiers qu'on reconnaît | un **standing** par bloc écrit à côté du `plan` (cossu, ordinaire, pauvre) ; saleté, graffitis, nids-de-poule et lampes **redistribués** sans que leur total monte ; sol et mobilier par usage en couche peinte, zonage en calque sur la carte ; enseignes, façades et logements par standing ; puis qui marche, ce qui est garé, la police et l'argent | savoir sans ouvrir la carte si on est dans la rue chic ou derrière la cour des Cravates ; reconnaître un bloc industriel d'un bloc commerçant à son trottoir ; ne jamais trouver un sac d'ordures devant une bijouterie |
 | M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte, tirage sans les quatre dernières, la rumeur qui se tait devant une arme, la police à la radio, bruits de quartier, souffle du joueur | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; sentir la rue se taire avant de voir l'étoile |
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, entraves du jour (liste validée par Python), nuit de déneigement, feux clignotants la nuit, pointe directionnelle, crimes d'autrui, arrêts d'autobus, éboueurs, bêtes | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; suivre un DÉTOUR qui mène de l'autre côté ; perdre son char une nuit de déneigement |
@@ -759,7 +761,7 @@ Ce qui reste, **trié par priorité** (le détail et la règle de tri sont dans 
 - **P2, ça se sent à chaque partie** — les arbres dans les sentiers · le carnet · la ligne d'histoire
   (l'ouverture tout de suite, le générique avec M13).
 - **P3, ça porte le reste** — le trottoir et les traverses · les pièces plus grandes que leur
-  maison · l'eau qui n'est plus un mur.
+  maison · l'eau qui n'est plus un mur · les quartiers qu'on reconnaît (riches, pauvres, zonés).
 - **P4, ça enrichit** — les feux pour piétons · les terrains de banlieue · les armes à feu ·
   M15 · M10 · M12 · M14 · M16 · M13.
 
@@ -799,6 +801,7 @@ ordre-là.
 | **P2** | ajout | La ligne d'histoire : une ouverture et un générique | 3 | ⚠️ **l'ouverture est livrée** (16 sept. 2026) — elle ne dépendait de rien ; le **générique**, lui, attend **M13** : il n'y a pas de fin à filmer avant |
 | **P2** | ajout | Les missions mises en scène | 3 | ⚠️ **avant M16** : c'est le vocabulaire de plans que ses cent missions écriront, et chaque mission écrite avant lui s'écrirait deux fois. L'ouverture s'y réécrit en premier (ses 13 juges sont la preuve), puis les cinq missions de la v1 |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
+| **P3** | ajout | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | 4 | ⚠️ redessine ce qu'il y a sur chaque bloc, et **M16** (des lieux nommés dans chaque quartier), les éboueurs et les crimes d'autrui de **M12**, les lignes d'autobus et les chantiers s'y posent : faits avant, ils s'ajustent deux fois. Attend **les bancs et les arbres de rue** (en cours) — c'est le même semis, on le règle par standing au lieu de le refaire |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
 | **P4** | ajout | Ça travaille : chantiers et démolitions | 3 | ⚠️ **la refonte des véhicules d'abord** (la pelle et la grue sont du décor animé tant qu'elle n'est pas faite) ; partage son mécanisme avec les **entraves de M12**, qui s'y branchent au lieu de vivre à part |
@@ -4080,6 +4083,133 @@ réponse.
 - **Ce qui reste ouvert** : les quatre bras d'un croisement portent tous au-dessus de la rue
   **nord-sud** (c'est la géométrie des coins), jamais au-dessus de l'est-ouest. Ça ne se voit pas,
   mais un vrai carrefour les alterne.
+
+### Des quartiers qu'on reconnaît : riches, pauvres, et zonés (**ajout**, taille 4)
+
+_Demande de Martin (16 sept. 2026) :_ « je veux des cartiers plus reconnaissable, plus riche et
+propre avec des commerce plus riche, des cartiers plus pauvre et sale. commercial, indistriel,
+résidentiel, parc, etc.. »
+
+⚠️ **Mesuré d'abord (graine de la ville, 16 sept. 2026) : le zonage existe, le standing
+n'existe pas — et la rue ne dit ni l'un ni l'autre.**
+
+- **L'usage est déjà décidé, au bloc.** Chaque lettre du `plan` d'un district est un zonage :
+  `c` commerces, `h` maisons, `m` banlieue, `w` hangars, `i` industriel, `g` cour de gang,
+  `p`/`k` parc, `n` bois, `o` place, `q`/`j` quai. On n'invente donc pas de zonage : on le
+  **rend visible**.
+- **Le standing n'existe nulle part.** Ni « riche », ni « pauvre », ni rien qui en tienne lieu
+  dans `app/`. Ce qui ressemble à un contraste est un **accident de genre** : la friche tombe
+  dans l'industriel parce que `_contenu` y tire plus de terrains vagues, pas parce que
+  quelqu'un a décidé que La Shop était pauvre.
+- **Le contraste entre districts est réel, mais flou.** Sacs, pneus, barils et débris (131
+  dans la ville) : Les Érables **4**, Le Faubourg **25**, Les Quais **41**, La Shop **61**,
+  La Pointe **0** — 0,3 par mille tuiles en banlieue, 3,7 à La Shop.
+- **À l'intérieur d'un district, rien ne change.** Un bloc `c` du Faubourg ressemble au bloc
+  `c` d'à côté : la rue commerçante et le coin derrière la cour des Cravates ont le même
+  trottoir, les mêmes lampadaires, des enseignes tirées dans la même liste.
+- **La rue ne dit pas la zone.** Un seul trottoir (`.`) et un seul abord (`_`) pour toute la
+  ville. La Shop a **22 arbres** et 6 bancs ; les Quais ont **plus de poubelles (41) que le
+  centre-ville (40)** ; la banlieue a **autant de nids-de-poule (21) que le Faubourg**.
+
+**Deux axes, et ils ne se confondent pas.** L'**usage** (commercial, résidentiel, industriel,
+parc, port) dit _ce qu'on fait là_ ; le **standing** (`cossu`, `ordinaire`, `pauvre`) dit _qui
+en a les moyens_. Une rue commerçante peut être cossue (bijouterie, bistro, bacs à fleurs) ou
+pauvre (prêteur sur gages, vitrines placardées) ; un résidentiel peut être la banlieue des
+Érables ou les plex derrière le port. C'est le croisement des deux qui fait qu'on reconnaît un
+coin de ville sans lire son nom.
+
+#### 1re vague — le standing se déclare, et la saleté se déplace (taille 1)
+
+- Une **grille de standing** à côté du `plan`, une lettre par bloc (`+` cossu, `=` ordinaire,
+  `-` pauvre), **écrite à la main, pas tirée** : c'est une décision de ville, et elle doit se
+  lire dans `DISTRICTS` d'un coup d'œil comme le plan se lit. Elle descend dans le paquet
+  (`zones`) — Python décide, JS calcule.
+- Le standing **ne suit pas le district**. Proposition, à trancher par Martin au moment de
+  dessiner : Les Érables cossus, sauf leur rangée commerçante contre la cour des Chevreuils ;
+  le Faubourg avec sa rue chic entre le Terminus et la place, et son coin pauvre autour de la
+  cour des Cravates — là où Rocco a sa planque ; les Quais et La Shop pauvres presque partout,
+  avec leur rangée commerçante du nord ordinaire ; La Pointe ordinaire.
+- ⚠️ **La saleté se DÉPLACE, elle ne s'ajoute pas.** Martin a renvoyé « trop de saleté
+  partout » le 16 sept. (303 objets → 166) : le total de déchets, de graffitis et de
+  nids-de-poule **ne monte pas d'un objet**. Il se concentre : **zéro** en cossu, la densité
+  d'aujourd'hui en ordinaire, tout le reste en pauvre — trottoir compris (sacs au pied des
+  plex, un matelas, un caddie renversé).
+- **Le propre se voit aussi** : en cossu, des arbres de rue alignés, des bacs à fleurs, des
+  poubelles vidées ; en pauvre, des poubelles qui débordent et pas un arbre. ⚠️ C'est le semis
+  des **bancs et des arbres de rue**, en cours dans une autre session : cette vague passe
+  **après** sa livraison et règle ses densités par standing, elle ne le refait pas.
+
+#### 2e vague — le zonage se lit (taille 1)
+
+Chaque usage a sa signature au sol et dans son mobilier, croisée avec le standing :
+
+| Usage | Sol (trottoir et abord) | Mobilier | Cossu ↔ pauvre |
+|---|---|---|---|
+| commercial | pavés, dalles | bancs, poubelles, parcomètres, lampadaires rapprochés | pavé propre et bacs à fleurs ↔ dalles cassées, vitrines placardées |
+| résidentiel | trottoir et bande de gazon | arbres, boîtes aux lettres, bacs de recyclage, cordes à linge | haie taillée ↔ gazon brûlé, grillage troué, char sur des blocs |
+| industriel | asphalte taché, pas de gazon | conteneurs, palettes, bennes, barbelé, pas un arbre | cour rangée ↔ ferraille, barils, flaques d'huile |
+| parc | gazon, sentier | déjà lisible (parcs de quartier, livrés le 16 sept.) | fontaine et plates-bandes ↔ gazon pelé, bancs tagués |
+| port | planches, béton | bornes, cargaison (livrés) | — |
+
+- ⚠️ **Le sol neuf est une couche peinte, pas un glyphe.** Le peintre de morceau lit l'usage et
+  le standing du bloc et choisit la texture ; `.` et `_` restent `.` et `_`. Aucun juge de
+  circulation ne le voit passer — c'est la règle des devantures, et elle a tenu.
+- **La carte plein écran peint le zonage** en calque (commercial, résidentiel, industriel,
+  parc, eau), légende dérivée de la table des couleurs comme pour les lieux. C'est la seule
+  façon de voir le zonage **avant** d'y marcher.
+
+#### 3e vague — les commerces montent et descendent (taille 1)
+
+- **Des enseignes par standing**, pas seulement par district (`devantures.COMMERCES`) : en
+  cossu, BIJOUTERIE, FLEURISTE, BISTRO, GALERIE, TAILLEUR, CHOCOLATIER, BOUTIQUE DE VIN ; en
+  pauvre, PRÊT SUR GAGES, ENCAISSEMENT DE CHÈQUES, BINGO, DÉPANNEUR 24 H, À LOUER. ⚠️ Le juge
+  qui interdit de mélanger les noms entre districts s'étend au standing : aucune enseigne
+  cossue dans un bloc pauvre, et l'inverse.
+- **La façade suit** : en cossu, lettrage doré, auvent uni, vitrine éclairée toute la nuit ; en
+  pauvre, néon à moitié éteint, auvent déchiré, une vitrine sur trois placardée (le motif `d`,
+  condamnée, existe déjà), grille de fer baissée la nuit.
+- **Les logements aussi** (`residences`) : balcons fleuris et fenêtres allumées ↔ fenêtres
+  placardées, escalier de fer rouillé, drap tendu en guise de rideau.
+- **La nuit dit le standing** : en pauvre, un lampadaire sur trois éteint ; en cossu, tous
+  allumés et plus rapprochés. ⚠️ Le compte de lampes ne monte pas (361 aujourd'hui) : il se
+  redistribue, comme la saleté.
+- **Les commerces qui s'ouvrent** (un sur cinq) prennent une pièce selon le standing : un bistro
+  n'a pas le comptoir d'un prêteur sur gages.
+
+#### 4e vague — le standing se vit (taille 1)
+
+Celle qui peut attendre : les trois premières font déjà ce que Martin a demandé. Celle-ci donne
+au standing une **conséquence de jeu**.
+
+- **Qui marche dans la rue** : touristes et joggers en cossu ; ivrognes en pauvre (et le
+  pickpocket quand M12 le fera). Les sortes ont déjà leurs `districts` : elles gagnent un
+  standing.
+- **Ce qui est garé** : les `rares` passent du district au standing — une décapotable dans la
+  rue chic du Faubourg, pas devant le prêteur sur gages ; en pauvre, des chars bosselés et une
+  épave sur des blocs.
+- **La police et l'argent** : en cossu, la police arrive plus vite et la fouille d'un logement
+  rapporte plus ; en pauvre, la police tarde, la gang tient la rue et il n'y a presque rien à
+  prendre. Voler chez les riches paie, et ça se paie.
+
+⚠️ **Les leçons à relire avant d'y toucher** — toutes payées cher dans ce fichier :
+
+- **Chaque semis dans son propre dé.** Un semis de saleté qui tire un dé de plus dans le dé
+  commun rebat toute la ville (le 16 sept., dix juges sont tombés sans qu'un seul parle de
+  terrain vague — voir `des_dechet` et `Des.brule`). Le standing, lui, est **écrit** : il ne
+  consomme aucun dé.
+- **Comparer les deux villes en JSON, clé par clé**, avant et après : hors des objets semés par
+  standing, **rien** ne doit bouger. Une tuile réservée de plus fait glisser la ville.
+- **Un décor solide passe par `DECOR_SOLIDE` et `degager_le_decor`** : un trottoir pauvre plein
+  de sacs reste un trottoir qu'on marche, et un bac à fleurs ne ferme pas une porte.
+- **Une devanture reste une couche peinte** : zéro solidité touchée.
+
+**Juges** : chaque bloc bâtissable déclare son standing (pas de défaut silencieux) ; le
+Faubourg, les Quais et La Shop ont chacun au moins deux standings ; **zéro** déchet, graffiti
+et nid-de-poule en cossu, et en pauvre au moins cinq fois la densité de l'ordinaire ; le
+**total** de saleté et de lampes ne dépasse pas celui d'avant ; aucune enseigne cossue en
+pauvre, ni l'inverse ; la grille de glyphes est identique avant et après la 2e vague ; hors des
+objets semés par standing, la ville est la même tuile pour tuile ; aucune poche fermée à pied ;
+et le paquet reste sous son plafond.
 
 ### M15 — La ville te parle (**ajout**, taille 4) — **1re vague livrée le 14 sept. 2026**
 
