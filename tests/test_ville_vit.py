@@ -814,6 +814,56 @@ def test_un_char_se_fait_voler_sous_tes_yeux(banc, paquet):
     assert r["etoiles"] == 0, "le joueur écope de %s étoile(s) pour un vol qu'il n'a pas commis" % r["etoiles"]
 
 
+def test_le_voleur_de_moto_part_dessus(banc, paquet):
+    """Retour de Martin : « un voleur qui vole une moto n'apparait pas
+    dessus ». ⚠️ Dans une auto, le voleur disparaît : on ne voit pas le volant,
+    et le trafic est déjà fait de conducteurs invisibles. Mais une moto du
+    trafic **montre** son pilote — volée, elle partait vide. C'est **le voleur**
+    qui doit être en selle, avec ses couleurs, et c'est lui qui en descend si
+    le joueur la lui prend."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(19);
+        const j = L.B.joueur;
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y + 40; L.Monde.centrerCamera(j.x, j.y);
+        // Il ne reste que la moto : c'est elle qu'on veut voir partir.
+        for (const e of L.B.entites.slice()) if (e.type === 'vehicule') L.Entites.retirer(e);
+        const v = o.char('moto', 30, 0, 0);
+        const voleur = L.Entites.creerPieton(j.x + 60, j.y + 20, L.Entites.archetype('passant'));
+        voleur.etat = 'flane';
+        L.Entites.indexer();
+        const couleurs = JSON.stringify(voleur.swaps);
+        for (let m = 0; m < 400 && voleur.etat !== 'vole_un_char'; m++) {
+            L.B.volMinute = -1;
+            L.B.partie.heure = (m % 1440) / 1440;
+            L.Entites.majVolDeChar();
+        }
+        const vise = voleur.charVise === v;
+        for (let i = 0; i < 400 && L.B.entites.indexOf(voleur) >= 0; i++) o.frame(1);
+        const images = function () {
+            const ctx = L.Base.ecran(); let n = 0;
+            ctx.drawImage = function () { n++; };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            return n;
+        };
+        const out = { vise: vise, parti: L.B.entites.indexOf(voleur) < 0, roule: v.conducteur === 'trafic',
+                      couleurs: couleurs, cavalier: JSON.stringify(L.Vehicules.cavalierDe(v)), images: images() };
+        // Le joueur la lui reprend : c'est le voleur qui descend.
+        j.x = v.x; j.y = v.y + 12; v.vitesse = 0;
+        L.Vehicules.monter(j, v);
+        const sortis = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.etat === 'temoin' && e.menace === j; });
+        out.repris = j.dansVehicule === v;
+        out.sorti = sortis.length ? JSON.stringify(sortis[sortis.length - 1].swaps) : null;
+        return out;
+    }""")
+    assert r["vise"] is True and r["parti"] is True and r["roule"] is True, "le décor du juge est faux : %s" % r
+    assert r["cavalier"] == r["couleurs"], "la moto volée part sans son voleur dessus : %s" % r
+    assert r["images"] == 2, "la moto volée se peint en %s image(s) : personne en selle" % r["images"]
+    assert r["repris"] is True, "le décor du juge est faux : le joueur n'a pas repris la moto (%s)" % r
+    assert r["sorti"] == r["couleurs"], "ce n'est pas le voleur qui descend de la moto reprise : %s" % r
+
+
 def test_un_voleur_ne_touche_ni_au_char_du_joueur_ni_a_celui_qu_il_a_laisse(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

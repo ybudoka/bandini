@@ -1503,12 +1503,21 @@ const Entites = (function () {
       char : le jeu ne sait pas dessiner quelqu'un au volant d'un char du
       trafic, et un conducteur invisible est exactement ce que le trafic est
       deja. Ce qui reste, c'est un char qui demarre tout seul sous les yeux de
-      la rue — et c'est ca qu'on voulait voir. */
+      la rue — et c'est ca qu'on voulait voir.
+
+      ⚠️ **Sauf sur un DEUX-ROUES** (retour de Martin : « un voleur qui vole
+      une moto n'apparait pas dessus »). Un deux-roues du trafic MONTRE son
+      pilote (`Vehicules.cavalierDe` lit `v.pilote`) : sans lui, la moto volee
+      partait vide, ce que le trafic ne fait jamais. C'est le voleur qui monte
+      en selle, avec SES couleurs — et c'est lui qui en descend si le joueur
+      la lui prend (`Vehicules.monter`). */
   function emporterLeChar(e, v) {
     const f = B.defs.pietons.vol_de_char;
     v.conducteur = 'trafic';
     v.etat = 'roule';
     v.vole = true;
+    const selle = SPRITES[v.sprite] && SPRITES[v.sprite].selle;
+    if (selle) v.pilote = { swaps: e.swaps };
     v.sens = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT)) || v.sens;
     v.alarme = 0;
     // ⚠️ La rue le voit partir — et c'est LUI la menace, pas le joueur. On
