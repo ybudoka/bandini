@@ -713,7 +713,14 @@ const Combat = (function () {
       une demi-seconde ». Un passant qui s'eloigne pendant qu'on insiste, une
       porte ou un char qui entre a portee — et l'invite du HUD annonce autre
       chose : la prise doit tomber avec elle, sinon le bouton ferait une chose
-      quand l'ecran en promet une autre. */
+      quand l'ecran en promet une autre.
+
+      ⚠️ **ET RELACHEE AVANT L'HEURE, C'ETAIT UNE TAPE : ELLE FAIT LES POCHES**
+      (`majSaisie`). Retour de Martin : « je n'arrive plus a voler les gens ».
+      La portee du bouclier couvre celle des poches, alors l'arme a la main
+      chaque victime etait aussi un otage : la pression armait la prise, rendait
+      `true`, et `pickpocket` n'etait plus jamais atteint. Taper fait les poches,
+      tenir prend l'otage — un bouton, deux gestes. */
   function viserOtage(j) {
     j.saisie = 1;
     return true;
@@ -730,8 +737,14 @@ const Combat = (function () {
     // que la frappe (voir la porte de `maj`). Elle ne se met pas en pause, elle
     // RETOMBE — comme sous un char ou en haut d'une cloture : on lache pour
     // choisir son arme.
-    const cible = j.vivant && !j.enjambe && !j.alite && !B.cinema && !B.roue && Entree.bas('action')
-      ? otageSousLaMain(j) : null;
+    // ⚠️ `dansVehicule` et `interieur` aussi, pour la tape : `otageSousLaMain`
+    // les ecartait deja pour la prise, mais on ne fait pas les poches d'un
+    // passant depuis un char ni a travers le mur d'une piece.
+    const debout = j.vivant && !j.enjambe && !j.alite && !j.dansVehicule && !B.interieur
+      && !B.cinema && !B.roue;
+    // Relachee avant d'avoir muri : c'etait une tape (voir `viserOtage`).
+    if (debout && !Entree.bas('action')) { j.saisie = 0; pickpocket(j); return; }
+    const cible = debout && Entree.bas('action') ? otageSousLaMain(j) : null;
     if (!cible) { j.saisie = 0; return; }
     if (++j.saisie < Math.round(ficheBouclier().saisie_s * 60)) return;
     j.saisie = 0;

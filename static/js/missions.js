@@ -248,8 +248,11 @@ const Missions = (function () {
     // pression arme la prise, le maintien la prend (`Combat.majSaisie`). Etre
     // au bout de la chaine, c'est etre ce que le bouton fait quand on ne lui
     // demandait rien — donc par accident, deux etoiles comprises. On rend
-    // `true` quand meme : la pression est DEPENSEE, sinon elle irait faire les
-    // poches du passant qu'on vient de mettre en joue.
+    // `true` quand meme : la pression est DEPENSEE, et c'est au RELACHER que
+    // `Combat.majSaisie` tranche — tenue, elle prend l'otage ; relachee avant
+    // l'heure, c'etait une tape, et elle fait les poches. ⚠️ Rendre `true` sans
+    // ce relais, c'etait le bug « je n'arrive plus a voler les gens » : l'arme a
+    // la main, toute victime des poches est aussi a portee de bouclier.
     const otage = Combat.otageSousLaMain(j);
     if (otage) return Combat.viserOtage(j);
     return false;

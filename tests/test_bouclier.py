@@ -140,6 +140,10 @@ def test_une_pression_ne_prend_personne_un_maintien_oui(banc):
     r = banc("""function (L, o) {
         %s
         const p = victime();
+        // ⚠️ IL NOUS REGARDE, comme quelqu'un qu'on met en joue. Dans le dos,
+        // une tape lui fait les poches (`test_taper_fait_les_poches...`) : il
+        // s'enfuit, et la prise tenue plus bas ne trouvait plus personne.
+        L.Entites.regarder(p, -1, 0);
         o.frame(1);
         const invite = L.B.invite;               // ce que le HUD promet ici
         // Taper : une fois, puis trois de plus comme on tape sur un bouton qui
@@ -170,6 +174,52 @@ def test_une_pression_ne_prend_personne_un_maintien_oui(banc):
     assert r["tenu"] is True, "on tient le bouton et rien ne se passe : %s" % r
     assert "TENIR" in (r["invite"] or ""), (
         "le HUD promet un bouclier sans dire qu'il faut tenir : %s" % r
+    )
+
+
+def test_taper_fait_les_poches_tenir_prend_l_otage(banc):
+    """⚠️ **LE JUGE DU RETOUR DE MARTIN** : « je n'arrive plus a voler les gens ».
+    La portee du bouclier couvre celle des poches : l'arme a la main, TOUTE
+    victime des poches est aussi un otage. Depuis que la prise se tient, la
+    pression armait la prise, rendait `true`, et n'allait jamais plus loin. Le
+    juge des poches (`test_moteur_js`) appelle `Combat.pickpocket` directement :
+    il ne passait pas par le bouton, et il n'a rien vu.
+
+    On passe donc par le BOUTON, dans le dos d'un passant qui a de l'argent :
+    une tape vide ses poches et ne prend personne ; une prise tenue prend
+    l'otage et ne lui vide PAS les poches en chemin."""
+    r = banc("""function (L, o) {
+        %s
+        const dosTourne = function () {
+            const p = victime();
+            p.argent = 40;
+            L.Entites.regarder(p, 1, 0);          // il regarde ailleurs que nous
+            return p;
+        };
+        const a = dosTourne();
+        const avant = L.B.partie.argent;
+        o.tape('KeyE', 2);
+        const tape = { gain: L.B.partie.argent - avant, reste: a.argent, otage: !!j.otage };
+        // ⚠️ On RETIRE le premier : il fuit a quelques pixels, et le bouclier
+        // prend le premier passant a portee — on mesurerait le mauvais.
+        L.Entites.retirer(a);
+        L.Entites.indexer();
+        const b = dosTourne();
+        const avantPrise = L.B.partie.argent;
+        saisir();
+        return { tape: tape, arme: j.arme,
+                 prise: { otage: j.otage === b, gain: L.B.partie.argent - avantPrise,
+                          reste: b.argent } };
+    }""" % DECOR)
+    assert r["arme"] != "poings", "le décor du juge est faux : on est à mains nues (%s)" % r
+    assert r["tape"]["otage"] is False, "une tape a pris un otage : %s" % r
+    assert r["tape"]["gain"] == 40 and r["tape"]["reste"] == 0, (
+        "l'arme à la main, une tape dans le dos ne fait pas les poches : "
+        "c'est le bug de Martin (%s)" % r
+    )
+    assert r["prise"]["otage"] is True, "tenir le bouton ne prend plus personne : %s" % r
+    assert r["prise"]["gain"] == 0 and r["prise"]["reste"] == 40, (
+        "la prise tenue lui a fait les poches en chemin : %s" % r
     )
 
 
