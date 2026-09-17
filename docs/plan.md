@@ -212,6 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
+| Le dialogue attend la fin de la sonnerie | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11281,6 +11282,15 @@ pied ; en char arrêté devant la porte ; en char un peu en retrait) :
   (M4 et M3) et `test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit`. Trois mutations
   (sans `sansChar` ; l'escorte à la tuile la plus proche ; la voie à contresens préférée) font
   chacune rougir la sienne, M3 et M4 séparément.
+
+### Le dialogue attend la fin de la sonnerie
+
+demande de Martin (17 sept. 2026) : « quand on reçoit des appels, le dialogue commence après
+la fin de la sonnerie ». La première réplique partait sur le même coup d'horloge que
+`Son.SFX.telephone()` : le combine sonnait deux secondes PAR-DESSUS la voix du donneur, et on
+décrochait avant que ça ait fini de sonner.
+
+⬜ **En cours.**
 
 ### M1 : le char dort dans la ruelle avant qu'on l'y montre
 
