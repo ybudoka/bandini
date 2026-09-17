@@ -4638,6 +4638,10 @@ const DECALS = {
 /* Objets poses par terre (armes lachees). 16x10, ancre au centre. */
 const OBJETS = {
   defaut: function (ctx) { ctx.fillStyle = '#9a9689'; ctx.fillRect(4, 4, 8, 3); },
+  // Le poing americain des hommes de Sal : quatre anneaux d'acier sur la barre
+  // qui s'arrondit sous la paume. A seize pixels, ce sont les TROUS qui le
+  // nomment — sans eux, c'est la barre grise du defaut.
+  poing_americain: function (ctx) { ctx.fillStyle = '#9aa0a8'; ctx.fillRect(3, 2, 12, 3); ctx.fillRect(4, 5, 10, 2); ctx.fillRect(7, 7, 4, 1); ctx.fillStyle = '#d9dcdf'; ctx.fillRect(3, 2, 12, 1); for (let i = 0; i < 4; i++) ctx.clearRect(4 + i * 3, 3, 1, 1); },
   batte: function (ctx) { ctx.fillStyle = '#8a6a3f'; ctx.fillRect(2, 5, 12, 2); ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 5, 4, 2); },
   couteau: function (ctx) { ctx.fillStyle = '#c9cdd4'; ctx.fillRect(5, 5, 8, 2); ctx.fillStyle = '#3d2a1c'; ctx.fillRect(2, 5, 3, 2); },
   pistolet: function (ctx) { ctx.fillStyle = '#3a3d44'; ctx.fillRect(3, 4, 8, 3); ctx.fillRect(4, 6, 3, 3); },

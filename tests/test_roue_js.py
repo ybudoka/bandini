@@ -47,7 +47,9 @@ def test_le_dessin_et_la_direction_disent_le_meme_creneau(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const faux = [];
-        for (let n = 2; n <= 13; n++) {
+        // ⚠️ Jusqu'au catalogue ENTIER, pas jusqu'a treize : le poing americain
+        // en a fait quatorze, et une roue pleine se lit comme les autres.
+        for (let n = 2; n <= L.B.defs.armes.length; n++) {
             for (let i = 0; i < n; i++) {
                 const p = L.Hud.posteDeLaRoue(i, n, 240, 135);
                 const dx = p.x - 240, dy = p.y - 135;

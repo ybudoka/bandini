@@ -46,6 +46,37 @@ def test_chaque_arme_a_son_son():
     assert len(sons) == len(set(sons)), "deux armes qui font le meme bruit : on ne sait pas laquelle on tient"
 
 
+def test_le_poing_americain_cogne_un_peu_plus_fort_que_les_poings():
+    """Demande de Martin (16 sept. 2026) : « les hommes de Sal sont a main nue
+    ou poing americain (un peu plus fort) ». UN PEU : au-dessus des poings,
+    sous le baton qu'ils portaient jusque-la. Et c'est encore un coup de
+    poing — il ASSOMME, comme les poings et rien d'autre : sans ca, ramasser
+    celui d'un homme de Sal ferait d'un KO un meurtre, et la difference vaut
+    deux etoiles."""
+    poings, americain, batte = (armes.par_slug(s) for s in ("poings", "poing_americain", "batte"))
+    assert americain and americain["type"] == "melee"
+    assert poings["degats"] < americain["degats"] < batte["degats"], (
+        f"poings {poings['degats']}, poing americain {americain['degats']}, baton {batte['degats']}"
+    )
+    assert [a["slug"] for a in armes.CATALOGUE if a["assomme"]] == ["poings", "poing_americain"]
+    assert not americain["renverse"] and not americain["saigne"], "un poing ne projette ni ne coupe"
+    assert not americain["usures"], "l'acier ne casse pas au quatrieme coup"
+
+
+def test_chaque_arme_qu_on_tient_a_son_dessin():
+    """L'arme se voit dans la main et dans la roue : `OBJETS[def.sprite]`. Une
+    arme sans dessin retombe EN SILENCE sur la barre grise du `defaut` — le
+    poing americain d'un homme de Sal aurait ete le meme trait gris qu'un
+    tuyau. Les poings, eux, ne se dessinent pas : c'est la main."""
+    source = (RACINE / "static" / "js" / "sprites.js").read_text(encoding="utf-8")
+    bloc = source[source.index("const OBJETS = {"):]
+    bloc = bloc[:bloc.index("\n};")]
+    dessins = set(re.findall(r"^\s+([a-z_]+): function", bloc, re.M))
+    for a in armes.CATALOGUE:
+        if a["slug"] != "poings":
+            assert a["sprite"] in dessins, f"{a['slug']} : pas de OBJETS.{a['sprite']} dans sprites.js"
+
+
 def test_trois_armes_a_feu_qui_repondent_a_trois_questions():
     """« Ils sont trois » : la mitraillette, la seule automatique, plus rapide
     et moins forte par balle que le pistolet, et dont la dispersion s'ouvre.
@@ -109,5 +140,5 @@ def test_les_regles_des_armes_voyagent():
     paquet = definitions.assembler()
     assert paquet["armes_regles"] == armes.REGLES
     for a in paquet["armes"]:
-        for cle in ("auto", "dispersion_max", "bruit", "feu_s"):
+        for cle in ("auto", "dispersion_max", "bruit", "feu_s", "assomme"):
             assert cle in a, f"{a['slug']} : {cle}"

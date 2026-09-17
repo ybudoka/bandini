@@ -1689,6 +1689,12 @@ const Missions = (function () {
       if (!place) continue;
       const e = Entites.creerPieton(place.x, place.y, arch);
       e.collecteur = true;
+      // ⚠️ A MAINS NUES OU AU POING AMERICAIN, tour a tour — demande de
+      // Martin. Ils ont le corps d'un Cravate, et la fiche du Cravate porte
+      // un BATON : sans cette ligne, le recouvrement arrivait la batte a la
+      // main, et la laissait par terre quand on le couchait.
+      const armes = f.armes && f.armes.length ? f.armes : [''];
+      e.arme = armes[nes % armes.length] || null;
       // ⚠️ `mission` : ils ne s'oublient pas hors de la bulle. « Ils te
       // trouvent ou que tu sois » n'est pas une figure de style.
       e.mission = true;

@@ -91,6 +91,10 @@ CATALOGUE: list[Echantillon] = [
     # fusil aussi. Une arme qu'on n'entend pas, on ne sait pas qu'on la tient.
     # Le geste et l'impact sont dans le MEME echantillon (comme `coup`) : le
     # son part au debut de la phase active, avant de savoir s'il touche.
+    _e("poing_americain", "Coup de poing américain", variantes=2, duree_s=0.8, volume=0.26,
+       prompt="a single punch with brass knuckles landing hard on a body, a sharp "
+              "meaty smack with a hard metallic knock of brass on bone underneath, "
+              "dry close-up, no reverb, no voices, no music"),
     _e("batte", "Coup de bâton", variantes=2, duree_s=0.9, volume=0.32,
        prompt="a wooden baseball bat swung hard and striking a body, a quick "
               "whoosh then a deep hollow wooden thwack, dry close-up, no reverb, "

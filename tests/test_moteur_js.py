@@ -3215,12 +3215,15 @@ def test_les_poings_assomment_et_le_couteau_tue(banc):
             return etat;
         }
         const poing = cogner('poings', 'passant');
+        const americain = cogner('poing_americain', 'ouvrier');
         const lame = cogner('couteau', 'passante');
-        return { poing: poing, lame: lame, tues: L.B.partie.stats.tues,
+        return { poing: poing, americain: americain, lame: lame, tues: L.B.partie.stats.tues,
                  decals: L.B.decals.length, sang: L.B.options.sang };
     }""")
     assert r["poing"]["vivant"] is True and r["poing"]["etat"] == "assomme", \
         "les poings doivent assommer, pas tuer — c'est ce qui separe 1 etoile de 3"
+    assert r["americain"]["vivant"] is True and r["americain"]["etat"] == "assomme", \
+        "le poing americain est un poing plus lourd : il assomme aussi (%s)" % r["americain"]
     assert r["lame"]["vivant"] is False and r["lame"]["etat"] == "mort"
     assert r["tues"] == 1
     assert r["decals"] > 0, "pas une goutte de sang"

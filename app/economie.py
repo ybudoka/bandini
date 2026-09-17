@@ -137,6 +137,9 @@ DETTE = {
     "rappel_jour": 3,          # le telephone commence a sonner
     "collecte_jour": 6,        # ... puis ils viennent, et ils reviennent
     "hommes": 2,               # combien se presentent a la fois
+    # ... et ce qu'ils ont dans les mains, tour a tour (`""` = les poings).
+    # ⚠️ Pas le baton : ils ont le CORPS d'un Cravate, pas sa fiche.
+    "armes": ["", "poing_americain"],
     "prend": 0.30,             # ce qu'ils prennent dans tes poches s'ils t'attrapent
     "acompte_min": 500,        # le plus petit versement qu'ils acceptent
     "repit_s": 120,            # apres une visite, deux minutes de paix

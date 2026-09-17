@@ -238,6 +238,54 @@ def test_le_menu_des_hommes_se_joue_vraiment(banc):
     assert r["restent"] == 0 and r["ferme"] is True, "l'acompte ne les renvoie pas : %s" % r
 
 
+def test_les_hommes_de_sal_cognent_a_mains_nues_ou_au_poing_americain(banc):
+    """⚠️ Demande de Martin : « les hommes de Sal sont à main nue ou poing
+    américain (un peu plus fort) ». Ils naissent dans le corps d'un Cravate, et
+    la fiche du Cravate porte un BÂTON : le recouvrement arrivait la batte à la
+    main, et la laissait par terre quand on le couchait.
+
+    Le juge ne s'arrête pas à `e.arme` : il laisse chacun frapper le joueur et
+    compte ce que le coup enlève — c'est le coup qui dit ce qu'on a dans la
+    main. Puis il les couche, et regarde ce qui tombe."""
+    r = banc("""function (L, o) {
+        %s
+        p.jour = f.collecte_jour;
+        for (let i = 0; i < 60; i++) { L.B.t += 30; L.Missions.majCollecteurs(); }
+        const def = function (slug) {
+            return L.B.defs.armes.find(function (a) { return a.slug === slug; }) || {};
+        };
+        const hommes = L.Missions.collecteurs();
+        const coups = [];
+        for (const homme of hommes) {
+            // Les autres attendent loin : un seul coup à la fois sur le joueur.
+            hommes.forEach(function (q) { q.x = j.x + 300; q.y = j.y; });
+            homme.x = j.x - 12; homme.y = j.y;
+            homme.angle = 0;
+            j.vie = 100;
+            L.Entites.indexer();
+            L.Combat.frapper(homme, false);
+            for (let i = 0; i < 30; i++) { L.Entites.indexer(); L.Combat.maj(); }
+            coups.push(100 - j.vie);
+        }
+        const avant = L.B.entites.filter(function (e) { return e.type === 'ramassage'; }).length;
+        hommes.forEach(function (q) { L.Entites.assommer(q); });
+        const tombe = L.B.entites.filter(function (e) { return e.type === 'ramassage'; })
+            .slice(avant).map(function (e) { return e.arme; });
+        return { hommes: hommes.length, coups: coups, tombe: tombe,
+                 poings: def('poings').degats, americain: def('poing_americain').degats,
+                 batte: def('batte').degats };
+    }""" % DECOR)
+    assert r["hommes"] >= 2, "il faut deux hommes pour voir les deux mains : %s" % r
+    assert r["poings"] < r["americain"] < r["batte"], "le poing américain n'est pas « un peu plus fort » : %s" % r
+    assert r["batte"] not in r["coups"], "un homme de Sal cogne encore au bâton : %s" % r
+    assert set(r["coups"]) == {r["poings"], r["americain"]}, (
+        "ils doivent frapper à mains nues ET au poing américain, rien d'autre : %s" % r
+    )
+    assert r["tombe"] == ["poing_americain"] * r["coups"].count(r["americain"]), (
+        "couchés, ils doivent laisser leur poing américain — et rien d'autre : %s" % r
+    )
+
+
 def test_ce_qu_ils_prennent_de_force_compte_sur_la_dette(banc):
     """⚠️ Des hommes de main qui volent sans rien effacer seraient un impôt, pas
     un recouvrement — et le joueur n'aurait aucune raison de les laisser

@@ -520,6 +520,8 @@ const Son = (function () {
     // retombe sur le coup de poing quand l'arme n'en declare pas. Le geste et
     // l'impact sont dans le meme son, comme pour `coup` : il part au debut de
     // la phase active, avant de savoir si le coup touche.
+    // Le poing americain : le coup de poing, et le metal qui cogne l'os dessous.
+    poing_americain: function () { if (!joue('poing_americain')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); ton(1700, 0.06, 'triangle', 0.12, 0.8, 0.01); } },
     batte: function () { if (!joue('batte')) { bruit(0.07, 0.25, 700, 150); ton(120, 0.1, 'square', 0.3, 0.5, 0.03); } },
     couteau: function () { if (!joue('couteau')) { bruit(0.09, 0.2, 6000, 1500); ton(2400, 0.05, 'sine', 0.08, 1.3, 0.02); } },
     pelle: function () { if (!joue('pelle')) { bruit(0.08, 0.2, 800, 200); ton(1900, 0.3, 'triangle', 0.22, 0.9, 0.04); ton(2600, 0.2, 'sine', 0.12, 1, 0.04); } },

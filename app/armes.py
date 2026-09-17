@@ -25,6 +25,9 @@ Les armes a feu (14 sept. 2026) :
   detonation (la fronde, la bouteille qui part).
 - `feu_s` : ce que la bouteille laisse derriere elle, en secondes de flaque
   de feu (le Molotov). Ce que la flaque mord est dans `REGLES["incendie"]`.
+- `assomme` : ce qu'elle couche se RELEVE. Un coup de poing assomme, il ne
+  tue pas : c'est ce qui fait taire un temoin sans en faire un meurtre, et
+  la difference vaut deux etoiles.
 - ⚠️ Aucune portee ne depasse ce que l'ecran montre : la vue fait 480 px et
   le joueur est au milieu, donc 240 px devant lui. Au-dela, on tire sur ce
   qu'on ne voit pas — `test_armes` lit la borne dans `base.js`.
@@ -66,13 +69,14 @@ class Arme(TypedDict):
     dispersion_max: float
     bruit: int
     feu_s: int
+    assomme: bool
 
 
 def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation=5, actif=4,
        renverse=False, saigne=0, chargeur=None, munitions_max=None, vproj=0.0,
        dispersion=0.0, cloche=False, plombs=1, prix_munitions=None, etoiles=0, usures=0,
        sprite=None, phase=1, son=None, auto=False, dispersion_max=None, bruit=0,
-       feu_s=0) -> Arme:
+       feu_s=0, assomme=False) -> Arme:
     return Arme(
         slug=slug, nom=nom, type=type_, degats=degats, portee=portee, arc=arc,
         cadence=cadence, anticipation=anticipation, actif=actif, renverse=renverse,
@@ -81,7 +85,7 @@ def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation
         prix_munitions=prix_munitions, etoiles_usage=etoiles, usures=usures,
         sprite=sprite or slug, phase=phase, son=son or slug, auto=auto,
         dispersion_max=dispersion if dispersion_max is None else dispersion_max,
-        bruit=bruit, feu_s=feu_s,
+        bruit=bruit, feu_s=feu_s, assomme=assomme,
     )
 
 
@@ -109,7 +113,14 @@ REGLES: dict = {
 #: `test_armes` verifie que chaque son existe au catalogue audio, et
 #: `test_audio` que le navigateur a un effet (avec son repli) pour chacun.
 CATALOGUE: list[Arme] = [
-    _a("poings", "Poings", "melee", 8, 12, 18, 0, anticipation=5, actif=4, son="coup"),
+    _a("poings", "Poings", "melee", 8, 12, 18, 0, anticipation=5, actif=4, son="coup",
+       assomme=True),
+    # Celui des hommes de Sal (16 sept. 2026, demande de Martin : « a main nue
+    # ou poing americain, un peu plus fort »). UN PEU : entre les poings et le
+    # baton. Et ca reste un coup de poing — il assomme, il ne tue pas. Il ne se
+    # vend nulle part : on le ramasse sur celui qu'on a couche.
+    _a("poing_americain", "Poing américain", "melee", 12, 12, 18, 0, anticipation=5,
+       actif=4, assomme=True),
     _a("cone", "Cône orange", "melee", 12, 16, 22, 0, anticipation=6, actif=5, usures=4,
        sprite="cone"),
     _a("bouteille", "Bouteille", "melee", 14, 12, 16, 0, anticipation=5, actif=4, usures=3,

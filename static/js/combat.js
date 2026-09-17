@@ -164,13 +164,14 @@ const Combat = (function () {
       if (!Monde.ligneLibre(e.x, e.y, c.x, c.y)) continue;
       e.touches.push(c.id);
       const degats = Math.round(arme.degats * (e.fort ? COUP_FORT_DEGATS : 1));
-      const poings = arme.slug === 'poings';
       Entites.blesser(c, degats, e, {
         renverse: arme.renverse || e.fort,
         saigne: arme.saigne,
         // ⚠️ A mains nues on ASSOMME : c'est ce qui permet de faire taire un
         // temoin sans en faire un meurtre, et la difference vaut 2 etoiles.
-        assomme: poings,
+        // Le poing americain aussi (`armes.py`, champ `assomme`) : c'est
+        // un poing, plus lourd.
+        assomme: !!arme.assomme,
         angle: angleVers(e.x, e.y, c.x, c.y),
       });
       if (e === B.joueur) {
