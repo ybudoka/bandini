@@ -285,7 +285,7 @@ const Jeu = (function () {
       c'est toujours par la porte d'en bas qu'on ressortira. On arrive sur
       l'escalier qui redescend — pas au milieu de la piece : c'est ce qui dit
       au joueur par ou il est monte. */
-  function changerEtage(slug) {
+  function changerEtage(slug, ou) {
     const j = B.joueur;
     finirTransition();
     if (!B.interieur || !B.exterieur || j.dansVehicule) return false;
@@ -302,7 +302,9 @@ const Jeu = (function () {
       Entites.reindexerDecor();
       Entites.peuplerInterieur(piece.interieur);
       Histoire.creerDonneursDedans(piece.interieur);
-      const retour = (piece.interieur.points || []).find(function (p) {
+      // ⚠️ `ou` : la ou l'on arrive quand ce n'est ni un escalier ni la porte — le
+      // quai du metro, ou l'on descend de la rame et pas de l'escalier.
+      const retour = ou || (piece.interieur.points || []).find(function (p) {
         return p.type === 'escalier' && p.vers === depuis;
       }) || piece.interieur.apparition;
       j.x = retour.x * TT + 8; j.y = retour.y * TT + 8;
@@ -316,6 +318,9 @@ const Jeu = (function () {
   function sortir() {
     const j = B.joueur;
     finirTransition();
+    // ⚠️ Le metro d'abord : la porte de la rame mene au quai, et l'escalier du
+    // quai remonte a l'edicule de la station ou l'on est (`Metro.sortir`).
+    if (Metro.sortir()) return true;
     const ext = B.exterieur;
     if (!B.interieur || !ext) return false;
     transiter(FONDU_SORTIE, function () {
@@ -328,7 +333,10 @@ const Jeu = (function () {
       // ⚠️ La porte de la RUE s'ouvre ici, une fois `Monde.restaurer` fait :
       // avant, `Monde.carte` est encore la piece, et ses battants ne sont pas
       // ceux de la ville. On la trouve juste au-dessus du pas de porte.
-      Monde.ouvrirPorte(Math.floor(ext.x / TT), Math.floor(ext.y / TT) - 1);
+      // ⚠️ `ext.porte` quand la sortie n'est pas une porte de facade : un
+      // edicule dont le trottoir est au nord a la chaussee au-dessus du pas.
+      const battant = ext.porte || { x: Math.floor(ext.x / TT), y: Math.floor(ext.y / TT) - 1 };
+      Monde.ouvrirPorte(battant.x, battant.y);
       Son.SFX.porte(genre);
     });
     return true;
@@ -532,6 +540,7 @@ const Jeu = (function () {
         Missions.maj();
         Chantiers.maj();
         Foire.maj();
+        Metro.maj();
         Histoire.maj();
         Monde.majCamera();
         B.t++;
@@ -564,6 +573,9 @@ const Jeu = (function () {
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
     Monde.dessinerSol(ctx, vue);
+    // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
+    // sous les gens du quai.
+    if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
     if (!B.interieur) { Monde.dessinerBattants(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
@@ -700,7 +712,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,

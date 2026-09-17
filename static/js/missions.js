@@ -236,6 +236,9 @@ const Missions = (function () {
     // L'autobus arrete a l'abribus : on monte, on paie. ⚠️ AVANT le bouclier
     // humain et avant la portiere (`Vehicules.maj`) : devant un autobus en
     // service, ACTION veut dire « monter », pas « voler l'autobus ».
+    // L'edicule du metro : le tourniquet, puis l'escalier qui descend au quai.
+    const edicule = Metro.ediculeSousLaMain(j);
+    if (edicule) return Metro.descendre(j, edicule);
     const autobus = Autobus.autobusSousLaMain(j);
     if (autobus) return Autobus.monter(j, autobus);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
@@ -823,6 +826,8 @@ const Missions = (function () {
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER A L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
     distributrice: 'LA MACHINE',
+    // Le metro : monter dans la rame au quai, en descendre dans la rame.
+    rame: 'LA RAME',
   };
 
   /** Le libelle d'invite d'un type de point — et la preuve qu'il est servi. */
@@ -856,6 +861,7 @@ const Missions = (function () {
     if (assis) return Histoire.parler(assis.slug);
     // L'escalier et les tiroirs : un geste, pas un menu.
     if (point.type === 'escalier') return Jeu.changerEtage(point.vers);
+    if (point.type === 'rame') return Metro.utiliser(j, point);
     if (point.type === 'fouiller') return fouiller(point);
     // ⚠️ La machine AVANT le menu : si quelque chose y est reste pris, ACTION la
     // brasse — l'invite l'a promis.
@@ -2247,6 +2253,11 @@ const Missions = (function () {
     if (j && j.passager) { if (!B.menu && !B.cinema) B.invite = Autobus.invite(j); return; }
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
     if (B.interieur) {
+      // Le metro dit ce qu'ACTION fait sous terre (monter, descendre, remonter) —
+      // et se tait quand la rame n'est pas la : une invite qui promet un geste
+      // qui n'aura pas lieu se lit comme un bogue.
+      const metro = Metro.invite(j);
+      if (metro !== null) { B.invite = metro || null; return; }
       // ⚠️ Meme ordre que `utiliserPoint`, sinon le HUD promet « MANGER » et
       // ACTION parle au sergent.
       const dedans = Histoire.personnageSousLaMain(j);
@@ -2302,6 +2313,8 @@ const Missions = (function () {
     if (guichet) { B.invite = guichet; return; }
     const machine = distributriceSousLaMain(j);
     if (machine) { B.invite = inviteDistributrice(machine); return; }
+    const edicule = Metro.inviteDescendre(j);
+    if (edicule) { B.invite = edicule; return; }
     const autobus = Autobus.inviteMonter(j);
     if (autobus) { B.invite = autobus; return; }
     const objet = Combat.objetSousLaMain(j);

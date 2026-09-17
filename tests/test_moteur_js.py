@@ -3887,63 +3887,71 @@ def test_la_fille_de_la_brume_tient_son_coin(banc):
     peur, elle ne flâne pas au loin.** Le juge le dit maintenant, et il exige
     aussi d'avoir eu de quoi regarder — sinon une fuite à la troisième seconde
     le ferait passer sans rien mesurer.
+
+    ⚠️ **SIX ESSAIS, UNE GRAINE CHACUN** (16 sept. 2026, le métro). Mesuré sur
+    un seul essai, le contraste avec la passante tenait par l'ordre des dés : sur
+    la base seule, décaler TROIS dés faisait marcher la fille 554 px et la
+    passante 121 — la passante marche entre 121 et 1 383 px selon le tirage.
+    Une probabilité se mesure avec une graine par essai. Sur six : avec son
+    poste, la passante marche au moins 1,5 fois plus qu'elle (douze mesures, la
+    base et le métro, six décalages de dés) ; sans poste, le rapport tombe à
+    1,0. Et une fois sur trente-six, elle s'écarte de 510 px sans fuir — d'où
+    « cinq essais sur six », et pas six.
     """
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        L.graine(34);
-        const fille = o.poser('racoleuse', 20, 0);
-        const passante = o.poser('passante', -20, 0);
-        fille.etat = 'flane'; passante.etat = 'flane';
-        const p0 = { x: fille.x, y: fille.y };
-        let ecartFille = 0, cheminFille = 0, cheminPassante = 0, arrets = 0, calmes = 0;
-        let px = passante.x, py = passante.y, fx = fille.x, fy = fille.y, fuite = false;
-        for (let i = 0; i < 80; i++) {
-            o.frame(30);
-            if (fille.etat === 'fuit') fuite = true;
-            if (!fuite) {
-                calmes++;
-                if (fille.etat === 'arret') arrets++;
-                ecartFille = Math.max(ecartFille, Math.hypot(fille.x - p0.x, fille.y - p0.y));
-                cheminFille += Math.hypot(fille.x - fx, fille.y - fy);
-                // ⚠️ La passante se mesure SUR LA MEME FENETRE : comparer 40 s
-                // de flanerie a 13 s de faction ne compare rien.
-                cheminPassante += Math.hypot(passante.x - px, passante.y - py);
+        const essais = [];
+        for (let n = 0; n < 6; n++) {
+            L.graine(34 + n);
+            const fille = o.poser('racoleuse', 20, 0);
+            const passante = o.poser('passante', -20, 0);
+            fille.etat = 'flane'; passante.etat = 'flane';
+            const p0 = { x: fille.x, y: fille.y };
+            let ecart = 0, chemin = 0, cheminPassante = 0, arrets = 0, calmes = 0, fuite = false;
+            let px = passante.x, py = passante.y, fx = fille.x, fy = fille.y;
+            for (let i = 0; i < 80; i++) {
+                o.frame(30);
+                if (fille.etat === 'fuit') fuite = true;
+                if (!fuite) {
+                    calmes++;
+                    if (fille.etat === 'arret') arrets++;
+                    ecart = Math.max(ecart, Math.hypot(fille.x - p0.x, fille.y - p0.y));
+                    chemin += Math.hypot(fille.x - fx, fille.y - fy);
+                    // ⚠️ La passante se mesure SUR LA MEME FENETRE : comparer 40 s
+                    // de flanerie a 13 s de faction ne compare rien.
+                    cheminPassante += Math.hypot(passante.x - px, passante.y - py);
+                }
+                fx = fille.x; fy = fille.y;
+                px = passante.x; py = passante.y;
             }
-            fx = fille.x; fy = fille.y;
-            px = passante.x; py = passante.y;
+            essais.push({ poste: !!fille.poste, calmes: calmes, arrets: arrets, ecart: Math.round(ecart),
+                          chemin: Math.round(chemin), passante: Math.round(cheminPassante) });
+            L.Entites.retirer(fille); L.Entites.retirer(passante);
         }
-        return { poste: !!fille.poste, arrets: arrets, calmes: calmes,
-                 fille: Math.round(ecartFille), chemin: Math.round(cheminFille),
-                 passante: Math.round(cheminPassante) };
+        return essais;
     }""")
-    assert r["poste"] is True, "elle n'a pas de coin a tenir"
-    # ⚠️ VINGT RELEVES, soit dix secondes : c'est exactement la fenetre que la
-    # fiche nomme — « elle se remettait a flaner au bout de dix secondes ». En
-    # deca, le juge n'aurait rien vu et passerait pour rien.
-    assert r["calmes"] >= 20, \
-        f"seulement {r['calmes']} releves avant qu'elle prenne peur : le juge n'a rien mesure"
-    assert r["fille"] < 80, "tant que rien ne l'effraie, elle ne doit pas quitter son coin"
+    assert all(e["poste"] for e in r), "elle n'a pas de coin a tenir"
+    # ⚠️ VINGT RELEVES, soit dix secondes, par essai qui compte : c'est la
+    # fenetre que la fiche nomme — « elle se remettait a flaner au bout de dix
+    # secondes ». En deca, l'essai n'a rien vu.
+    vus = [e for e in r if e["calmes"] >= 20]
+    assert len(vus) >= 4, f"seulement {len(vus)} essais avant qu'elle prenne peur : le juge n'a rien mesure"
+    au_coin = sum(1 for e in vus if e["ecart"] < 80)
+    assert au_coin >= len(vus) - 1, (
+        f"tant que rien ne l'effraie, elle ne doit pas quitter son coin : {[e['ecart'] for e in vus]}")
     # ⚠️ On mesure le CHEMIN, pas l'ecart au depart : une flaneuse qui revient
-    # sur ses pas fait un long chemin et un petit ecart. L'ecart tombait a
-    # 113 px sur certaines graines — le seuil jugeait le hasard du trajet, pas
-    # le fait qu'elle flane.
-    assert r["passante"] > 100, "⚠️ une passante, elle, doit continuer de flaner"
-    # ⚠️ ET C'EST LE CONTRASTE QUI COMPTE, pas un seuil absolu. Un seuil en
-    # pixels juge le trajet qu'une graine a tire ; le contraste juge la REGLE —
-    # a fenetre egale, celle qui tient un coin marche moins que celle qui flane.
-    #
-    # ⚠️ **Mais le RAPPORT est une loterie, et le facteur 3 en etait une
-    # aussi** (15 sept. 2026). Mesure sur six graines : la fille marche entre 18
-    # et 233 px, la passante entre 252 et 747 — le rapport va donc de 1,8 a
-    # 41,5, selon l'envie de flaner de la PASSANTE. Exiger « trois fois moins »
-    # revenait a exiger que la passante se promene beaucoup, ce qui n'est pas
-    # la regle de la fille. Ce qui tient sur les six : elle marche moins qu'elle,
-    # et elle passe les deux tiers de son temps ARRETEE — c'est ce que le poste
-    # promet, et c'est le seul signe qu'on lit avant meme la robe.
-    assert r["chemin"] < r["passante"], \
-        f"elle marche autant qu'une passante : {r['chemin']} px contre {r['passante']}"
-    assert r["arrets"] > r["calmes"] * 0.5, (
-        f"elle attend {r['arrets']} releves sur {r['calmes']} : elle flane au lieu de tenir son coin"
+    # sur ses pas fait un long chemin et un petit ecart.
+    fille = sum(e["chemin"] for e in vus)
+    passante = sum(e["passante"] for e in vus)
+    assert passante > 100 * len(vus), "⚠️ une passante, elle, doit continuer de flaner"
+    # ⚠️ ET C'EST LE CONTRASTE QUI COMPTE, sur la SOMME des essais : la passante
+    # marche plus de 1,3 fois ce que marche la fille. Avec son poste, le rapport
+    # ne descend pas sous 1,5 ; sans, il est a 1,0.
+    assert passante > 1.3 * fille, f"elle marche autant qu'une passante : {fille} px contre {passante}"
+    arrets = sum(e["arrets"] for e in vus)
+    calmes = sum(e["calmes"] for e in vus)
+    assert arrets > calmes * 0.5, (
+        f"elle attend {arrets} releves sur {calmes} : elle flane au lieu de tenir son coin"
     )
 
 

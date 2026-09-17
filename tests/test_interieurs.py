@@ -48,6 +48,9 @@ TYPES_SERVIS = frozenset({
     # La machine distributrice d'une salle d'attente : le terminus, le poste,
     # l'urgence. Sa sorte est sur le point, son menu dans `magasins`.
     "distributrice",
+    # Le metro : monter dans la rame au quai, en descendre dans la rame
+    # (`Metro.utiliser`). Un geste, pas un menu.
+    "rame",
 })
 
 

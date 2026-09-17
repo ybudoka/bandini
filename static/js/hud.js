@@ -689,8 +689,9 @@ const Hud = (function () {
       un geste qui n'existe pas se lit comme un bogue. */
   function attenteALAbribus(ctx) {
     const j = B.joueur;
-    if (!j || B.invite || B.menu || B.dialogue || B.interieur) return;
-    const t = Autobus.texteDAttente(j);
+    if (!j || B.invite || B.menu || B.dialogue) return;
+    // Sous terre, le metro dit ou l'on est et quand passe la rame.
+    const t = B.interieur ? Metro.texteDInfo(j) : Autobus.texteDAttente(j);
     if (!t) return;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
@@ -1156,6 +1157,7 @@ const Hud = (function () {
     B.stats.images++;
     const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
     dessinerLignes(ctx, pos);
+    Metro.dessinerSurLaCarte(ctx, pos);
     for (const point of carte.points) {
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);

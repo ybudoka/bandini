@@ -1153,6 +1153,8 @@ MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
 #: tenir a jour est pire que pas de liste : elle laisserait `degager_le_decor`
 #: croire qu'on passe la ou l'on ne passe pas.
 DECOR_SOLIDE = frozenset({
+    # L'edicule du metro : une entree vitree sur l'abord, qu'on contourne.
+    "edicule", "edicule_nord",
     # Le mobilier de rue : un banc et un abribus REGARDENT la rue, donc ils ont
     # un dessin par cote du trottoir (`mobilier.BANCS_PAR_COTE`, `autobus.ABRIS`).
     "banc_nord", "banc_est", "banc_ouest",
@@ -6074,6 +6076,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # entraves, les rues barrees et les barrieres — il les contourne toutes.
     from . import autobus as autobus_mod
     ville["autobus"] = autobus_mod.tracer(chantier, ville)
+    # ⚠️ LE METRO, apres les autobus et avant le mobilier : ses edicules prennent
+    # leur place sur l'abord, et les arbres de rue leur laissent de l'air.
+    from . import metro as metro_mod
+    ville["metro"] = metro_mod.creuser(chantier, ville)
     # ⚠️ LE MOBILIER DE RUE EN TOUT DERNIER, dans son propre de : un arbre de
     # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
     from . import mobilier as mobilier_mod
@@ -6507,6 +6513,43 @@ Bz j    e B
 BBBWWDWWBBB
 """, points=(_pt("lit", 2, 1), _pt("journal", 3, 4)),
      gens=_gens(("commis", 8, 4),)),
+
+    # --- Le metro : un quai et une rame, pour toutes les stations -------------
+    # ⚠️ PARTAGES, comme la piece d'une porte ordinaire : ce qui change d'une
+    # station a l'autre est le NOM qu'on lit en descendant et l'edicule par ou
+    # l'on remonte (`metro.py`, `metro.js`), pas les murs.
+    #
+    # Le quai : les deux rangees du haut sont le TUNNEL et sa voie, que
+    # `metro.js` peint par-dessus a chaque image (la rame qui entre, s'arrete et
+    # repart) ; la rangee de vitres est la barriere du quai et ses portes
+    # palieres. Des bancs, deux machines, et l'escalier qui remonte a la rue.
+    _piece("metro_quai", "Métro", sol="u", plan="""
+BBBBBBBBBBBBB
+BBBBBBBBBBBBB
+BWWWWWWWWWWWB
+B           B
+B hhh   hhh B
+B           B
+Bnb   k   bnB
+Bn         nB
+BBBBBBDBBBBBB
+""", points=(_pt("rame", 6, 3), _pt("distributrice", 2, 6, sorte="cafe"),
+             _pt("distributrice", 10, 6, sorte="liqueur")),
+     gens=_gens(("client", 3, 5), ("client", 9, 3))),
+
+    # La rame : des banquettes le long des vitres, les coffres techniques aux bouts, et le
+    # tunnel qui defile dans les fenetres (`metro.js`). ⚠️ Sa porte du bas est
+    # celle de la VOITURE : elle ne s'ouvre qu'en station, et elle mene au quai,
+    # jamais a la rue.
+    _piece("metro_rame", "Rame de métro", sol="u", plan="""
+BWWWWBWWWWBWWWWB
+Bhhhh hhhh hhhhB
+Bk            kB
+B              B
+Bhhhh      hhhhB
+BBBBBBBDBBBBBBBB
+""", points=(_pt("rame", 7, 2),),
+     gens=_gens(("client", 4, 2), ("client", 11, 3))),
 )
 
 #: ⚠️ LES PIECES DESSINEES, et elles seules. Les dix boutiques de famille, les

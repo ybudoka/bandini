@@ -3478,6 +3478,41 @@ function peindreAbribus(ctx, sens) {
   poteauDArret(sens === 'est' ? 13 : 2, 7);
 }
 
+/** L'edicule du metro, ouvert vers la rue au sud (`sud`) ou vu de dos (`nord`).
+
+    ⚠️ La lumiere vient du nord-ouest, comme partout : reflet de la vitre en haut
+    a gauche, ombre au sud-est. Le « M » est a la couleur de la ligne (jaune). */
+function peindreEdicule(ctx, sens) {
+  const cadre = '#2b2e35', vitre = '#8fb4c8', reflet = '#cfe6f0', toit = '#3d424b', arete = '#646a75';
+  const marche = '#8d8f93', ombreMarche = '#55575c', jaune = '#f1c40f', plaque = '#1b1d22';
+  ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(4, 25, 20, 5);            // l'ombre
+  if (sens === 'sud') {
+    ctx.fillStyle = cadre; ctx.fillRect(2, 11, 18, 14);                        // le pavillon
+    ctx.fillStyle = vitre; ctx.fillRect(3, 12, 3, 11); ctx.fillRect(16, 12, 3, 11);   // les vitres de cote
+    ctx.fillStyle = reflet; ctx.fillRect(3, 12, 1, 5);
+    ctx.fillStyle = '#15161a'; ctx.fillRect(6, 12, 10, 13);                    // la bouche, qui descend
+    for (let k = 0; k < 5; k++) {                                              // les marches, de plus en plus sombres
+      ctx.fillStyle = k % 2 ? ombreMarche : marche;
+      ctx.fillRect(7, 23 - k * 2, 8, 1);
+    }
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(6, 13, 1, 12); ctx.fillRect(15, 13, 1, 12);   // les rampes
+  } else {
+    ctx.fillStyle = cadre; ctx.fillRect(2, 11, 18, 14);
+    ctx.fillStyle = vitre; ctx.fillRect(3, 13, 16, 11);                        // la vitre du fond, devant nous
+    ctx.fillStyle = reflet; ctx.fillRect(3, 13, 6, 1); ctx.fillRect(3, 13, 1, 5);
+    ctx.fillStyle = '#4a5560'; ctx.fillRect(7, 15, 8, 7);                      // l'escalier qu'on devine derriere
+    ctx.fillStyle = cadre; ctx.fillRect(10, 13, 1, 11);
+  }
+  ctx.fillStyle = toit; ctx.fillRect(0, 8, 22, 4);                             // le toit en auvent
+  ctx.fillStyle = arete; ctx.fillRect(0, 8, 22, 1);
+  // Le poteau et sa plaque « M », au coin nord-est.
+  ctx.fillStyle = '#9aa0a8'; ctx.fillRect(21, 6, 1, 19);
+  ctx.fillStyle = plaque; ctx.fillRect(18, 0, 7, 7);
+  ctx.fillStyle = jaune; ctx.fillRect(19, 1, 5, 5);
+  ctx.fillStyle = plaque;                                                      // le « M »
+  ctx.fillRect(20, 2, 1, 3); ctx.fillRect(22, 2, 1, 3); ctx.fillRect(21, 3, 1, 1);
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -4274,6 +4309,18 @@ const DECORS = {
   // (`abribus_nord` : la vitre du fond devant, le banc derriere) et de profil.
   // ⚠️ `casse` : c'est du verre, un char lance le traverse — et c'est une
   // cible de plus pour une ville qui se brise.
+  // ⚠️ L'EDICULE DU METRO : un pavillon vitre, son escalier qui s'enfonce, et le
+  // poteau au « M » jaune de la ligne. C'est le poteau qui le nomme de loin ;
+  // de pres, c'est l'escalier qui descend — on voit ou l'on va. Vu de face
+  // (`edicule`, on y entre depuis le trottoir au sud) ou de dos (`edicule_nord`).
+  // ⚠️ `arrete`, pas `casse` : une entree de metro ne tombe pas sous un char, et
+  // un edicule en miettes laisserait une station sans escalier.
+  edicule: { arrete: 3.0, w: 24, h: 30, ancre: [12, 23], r: 7, sol: [10, 4], solide: true, peindre: function (ctx, w, h) {
+    peindreEdicule(ctx, 'sud');
+  } },
+  edicule_nord: { arrete: 3.0, w: 24, h: 30, ancre: [12, 23], r: 7, sol: [10, 4], solide: true, peindre: function (ctx, w, h) {
+    peindreEdicule(ctx, 'nord');
+  } },
   abribus: { casse: 0.6, pv: 70, w: 26, h: 28, ancre: [13, 23], r: 6, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
     peindreAbribus(ctx, 'sud');
   } },

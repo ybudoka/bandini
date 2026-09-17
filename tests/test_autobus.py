@@ -202,15 +202,18 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     arbre, ni un paquet, ni une enseigne. Sans les lignes ni le mobilier, la ville
     est la même tuile pour tuile, et le décor d'avant est le même, dans le même
     ordre — les nouveaux meubles ne font que s'ajouter au bout."""
-    from app import mobilier
+    from app import metro, mobilier
     avec = carte.generer()
     monkeypatch.setattr(autobus, "tracer", lambda chantier, ville: {"lignes": [], "arrets": [], "horaire": {}})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
+    # ⚠️ Le metro se creuse ENTRE les lignes et le mobilier : sans les abribus, ses
+    # edicules tomberaient ailleurs. Il part donc avec eux.
+    monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})
     sans = carte.generer()
     for cle in sans:
-        if cle in ("decor", "autobus"):
+        if cle in ("decor", "autobus", "metro"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]
     ajoutes = {d["type"] for d in avec["decor"][len(sans["decor"]):]}
-    assert ajoutes <= {"arbre", *autobus.ABRIS.values(), *autobus.BANCS.values()}, ajoutes
+    assert ajoutes <= {"arbre", *autobus.ABRIS.values(), *autobus.BANCS.values(), *metro.EDICULES.values()}, ajoutes

@@ -51,7 +51,7 @@ def _empreinte(graine: str, quoi: str) -> str:
     return sortie.stdout.strip()
 
 
-@pytest.mark.parametrize("quoi", ["sol", "decor", "portes", "paquets", "ambulants", "autobus"])
+@pytest.mark.parametrize("quoi", ["sol", "decor", "portes", "paquets", "ambulants", "autobus", "metro"])
 def test_la_ville_est_la_meme_a_chaque_lancement(quoi):
     """⚠️ On lance DEUX PROCESSUS avec deux graines d'empreinte différentes. Dans
     un seul processus, `PYTHONHASHSEED` ne bouge pas : le défaut y est invisible,
