@@ -6100,16 +6100,18 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
 #: de son poste) ; `client` est tire au sort dans les passants du quartier.
 #: A l'hopital : `soignant` tient le triage comme un commis, mais en blouse ;
 #: `patient` attend ASSIS sur une chaise de la salle d'attente, et `malade` est
-#: COUCHE dans un lit d'hopital (`ASSIS_OU_COUCHE`).
+#: COUCHE dans un lit d'hopital (`ASSIS_OU_COUCHE`). Au Brouillard, `avocat` est
+#: Me Desjardins, ASSIS a la table du fond ou l'on vient lui parler.
 #: ⚠️ Sans eux, une piece meublee reste un musee : c'est le monde qui parle au
 #: comptoir qui fait qu'on a l'impression d'etre entre quelque part.
-QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant")
+QUI_DEDANS = ("commis", "client", "patient", "malade", "soignant", "avocat")
 
-#: ⚠️ Les deux seuls gens qui naissent DANS un meuble, et chacun dans le sien :
-#: le PATIENT attend assis sur une chaise de la salle d'attente, le MALADE est
-#: couche dans la tuile de tete d'un lit d'hopital. Partout ailleurs, naitre
-#: dans un meuble reste une faute de plan — on le juge ici, au chargement.
-ASSIS_OU_COUCHE = {"patient": "h", "malade": "r"}
+#: ⚠️ Les seuls gens qui naissent DANS un meuble, et chacun dans le sien : le
+#: PATIENT attend assis sur une chaise de la salle d'attente, l'AVOCAT tient la
+#: chaise de sa table, le MALADE est couche dans la tuile de tete d'un lit
+#: d'hopital. Partout ailleurs, naitre dans un meuble reste une faute de plan —
+#: on le juge ici, au chargement.
+ASSIS_OU_COUCHE = {"patient": "h", "avocat": "h", "malade": "r"}
 
 
 def _gens(*gens: tuple[str, int, int]) -> tuple[dict, ...]:
@@ -6358,7 +6360,10 @@ BBBBBBBBBBDBBB
                 ("malade", 2, 6), ("malade", 5, 6), ("malade", 8, 6),
                 ("client", 10, 3))),
 
-    # Le Brouillard : le bar, les tables, le billard — et Josee au fond.
+    # Le Brouillard : le bar, les tables, le billard — Josee au fond, et Me
+    # Desjardins assis a la table de gauche. ⚠️ Son point est SA CHAISE, pas la
+    # table : on vise l'homme qu'on voit. Pose sur la table, il ne s'attrapait
+    # pas du pas d'a cote de lui (deux tuiles, `RAYON_POINT` en tient 1,6).
     _piece("bar", "Bar Le Brouillard", plan="""
 BBBBBBBBBBBB
 Bj        eB
@@ -6369,8 +6374,8 @@ B ah  ah   B
 B          B
 Baaaa    ahB
 BBBBWWDWWBBB
-""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7), _pt("avocat", 2, 5)),
-     gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 5))),
+""", points=(_pt("caisse", 4, 2), _pt("contact", 10, 7), _pt("avocat", 3, 5)),
+     gens=_gens(("commis", 4, 1), ("client", 5, 4), ("client", 8, 5), ("avocat", 3, 5))),
 
     # Le casse-croute : la cuisine, les tabourets, les banquettes du fond.
     _piece("casse_croute", "Casse-croûte du Faubourg", sol="u", plan="""

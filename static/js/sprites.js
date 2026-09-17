@@ -679,6 +679,65 @@ const ALITE = [
       '............',
     ];
 SPRITES.joueur.poses.alite = [ALITE];
+
+/* --- L'avocat du Brouillard ------------------------------------------------------
+
+   ⚠️ Me Desjardins tient la table du fond du Brouillard, et la table etait VIDE :
+   le point `avocat` n'etait qu'un comptoir invisible, le meme defaut que Bouchard
+   et Josee avant qu'on les voie (retour de Martin : « je ne vois pas d'image de
+   l'avocat dans le bar »).
+
+   ⚠️ Un corps A LUI, et pas le corps commun repeint : un complet fonce sur le
+   corps commun, c'est une Cravate. Ce qui se lit a douze pixels, c'est le V de
+   la CHEMISE BLANCHE (`o`) et la CRAVATE ROUGE (`t`) qui le coupe — personne
+   d'autre en ville n'en porte — puis les cheveux gris et la moustache. Meme
+   alphabet que `joueur` (`c` le veston, `p` le pantalon) : les echanges du
+   catalogue marchent pareil.
+
+   Sa pose a lui est `assis_bas`, sur la chaise de sa table
+   (`carte.ASSIS_OU_COUCHE`), dessinee sur celle du patient. La marche (de face,
+   de dos, de cote) sert le jour ou on le frappe : il se leve et il se sauve.
+   Pas de pose de coup — il ne frappe personne, il poursuit. */
+SPRITES.avocat = {
+  w: 12, h: 16, ancre: [6, 15],
+  pal: { k: '#101018', s: '#e8b088', h: '#b4b4b4', c: '#3b3f4c', p: '#2c2f38', o: '#ffffff', t: '#b3262e', b: '#1c1612' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kshhhhsk..', '...kssssk...', '..kccotock..',
+       '.kckcotockc.', '.kckcctcckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kshhhhsk..', '...kssssk...', '..kccotock..',
+       '.kckcotockc.', '.kckcctcckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kppk..kpk.', '..kbbk..kbk.', '..kkkk..kk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kshhhhsk..', '...kssssk...', '..kccotock..',
+       '.kckcotockc.', '.kckcctcckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kpk..kppk.', '..kbk..kbbk.', '..kk..kkkk..'],
+    ],
+    // De dos : le col de la chemise depasse du veston.
+    haut: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kccoocck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kppk.kppk.', '..kbbk.kbbk.', '..kkkk.kkkk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kccoocck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kppk..kpk.', '..kbbk..kbk.', '..kkkk..kk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...', '..kccoocck..',
+       '.kckccccckc.', '.kckccccckc.', '.kskccccksk.', '..kppppppk..', '..kpppkpppk.', '..kpk..kppk.', '..kbk..kbbk.', '..kk..kkkk..'],
+    ],
+    cote: [
+      ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khsshhk..', '...khsssk...', '....kssk....', '...kccotk...',
+       '...kccctk...', '...kcckck...', '...kccksk...', '...kppppk...', '...kppppk...', '...kpkkpk...', '...kbk.kbk..', '...kkk.kkk..'],
+      ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khsshhk..', '...khsssk...', '....kssk....', '...kccotk...',
+       '...kccctk...', '...kcckck...', '...kccksk...', '...kppppk...', '...kppppk...', '..kpk..kpk..', '..kbk..kbk..', '..kkk..kkk..'],
+      ['....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khsshhk..', '...khsssk...', '....kssk....', '...kccotk...',
+       '...kccctk...', '...kcckck...', '...kccksk...', '...kppppk...', '...kppppk...', '....kppk....', '....kbbk....', '....kkkk....'],
+    ],
+    assis_bas: [
+      ['............', '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kshhhhsk..',
+       '...kssssk...', '..kccotock..', '.kckcotockc.', '.kskcctcksk.', '..kppppppk..', '..kppkkppk..', '..kbbk.kbbk.', '..kkkk.kkkk.'],
+    ],
+    couche: [
+      ['............', '............', '............', '............', '............', '............', '............',
+       '..kkkkkk....', '.kpppppkkkk.', 'kppppppctcos', 'kppppppcccck', '.kpppppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+    ],
+  },
+};
 /* --- Trois sortes de gens, pas trois palettes -------------------------------
 
    ⚠️ La ville avait 24 archetypes pour QUATRE corps : vingt et un portaient

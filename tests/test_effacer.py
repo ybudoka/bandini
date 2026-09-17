@@ -123,6 +123,33 @@ def test_l_avocat_tient_la_table_du_fond_du_brouillard():
     assert "contact" in types, "Josee a disparu du bar"
 
 
+def test_me_desjardins_est_assis_la_ou_l_on_vise():
+    """⚠️ Retour de Martin : « je ne vois pas d'image de l'avocat dans le bar ».
+    Le jeu promettait un avocat (« PARLER A L'AVOCAT ») et montrait une table
+    vide : le point etait un comptoir invisible. Il est maintenant ASSIS, et
+    trois choses doivent tenir ensemble, sinon le defaut revient par un autre
+    bout :
+
+    - il est sur une CHAISE, a cote d'une TABLE — un avocat qui tient salon ;
+    - son point est SA tuile : on vise l'homme qu'on voit (sur la table, le pas
+      d'a cote de lui etait a deux tuiles, hors de `RAYON_POINT`) ;
+    - il a un CORPS A LUI : un complet fonce sur le corps commun est une Cravate."""
+    from app import carte, pietons
+    bar = carte.INTERIEURS["bar"]
+    sol = bar["sol"]
+    avocats = [g for g in bar["gens"] if g["qui"] == "avocat"]
+    assert len(avocats) == 1, bar["gens"]
+    x, y = avocats[0]["x"], avocats[0]["y"]
+    assert sol[y][x] == "h", f"il n'est pas sur une chaise : « {sol[y][x]} »"
+    voisins = [sol[y + dy][x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+    assert "a" in voisins, "il est assis loin de toute table"
+    point = next(p for p in bar["points"] if p["type"] == "avocat")
+    assert (point["x"], point["y"]) == (x, y), "son point n'est pas la ou on le voit"
+    fiche = pietons.par_slug("avocat")
+    assert fiche and fiche["sprite"] == "avocat", "il porte le corps commun : c'est une Cravate"
+    assert fiche["frequence"] == 0.0, "l'avocat nait au hasard dans la rue"
+
+
 # --- Les deux comptoirs, en jeu --------------------------------------------
 
 #: Entre par la porte qui mene au comptoir demande et s'y plante. ⚠️ On rouvre
@@ -195,6 +222,52 @@ def test_l_avocat_ne_rend_jamais_un_casier_negatif(banc):
     assert r["actifAVide"] is False, "il efface une page d'un dossier blanc : %s" % r
     assert r["detail"] == "RIEN A EFFACER"
     assert r["casier"] == 0, "casier negatif : %s" % r
+
+
+def test_on_voit_l_avocat_assis_et_on_lui_parle_du_pas_d_a_cote(banc):
+    """Dans le jeu, pas seulement dans le plan : on pousse la porte du Brouillard
+    et Me Desjardins est la, dans SON corps (la cravate rouge), assis, et il y
+    reste. ⚠️ Et chaque pas libre autour de lui — a sa droite, devant lui — ouvre
+    son menu : c'est la qu'un joueur qui le VOIT va se planter pour lui parler."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        %s
+        allerAu('avocat');
+        const j = L.B.joueur, point = L.B.interieur.points.find(function (p) { return p.type === 'avocat'; });
+        const eux = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch === 'avocat'; });
+        if (eux.length !== 1) return { combien: eux.length };
+        const e = eux[0], avant = [e.x, e.y];
+        // On se tasse avant de laisser tourner : `allerAu` nous a pose sur sa chaise.
+        j.x = 6 * L.TT + 8; j.y = 6 * L.TT + 8;
+        L.Entites.indexer();
+        o.frame(300);
+        // Les pas autour de LUI, pas autour du point : c'est lui qu'on voit.
+        const ex = Math.floor(e.x / L.TT), ey = Math.floor(e.y / L.TT), pas = {};
+        [[1, 0], [0, 1], [-1, 1], [1, 1]].forEach(function (d) {
+            const tx = ex + d[0], ty = ey + d[1];
+            if (!L.Monde.marchablePieton(tx, ty) || L.Monde.estMeuble(tx, ty)) return;
+            j.x = tx * L.TT + 8; j.y = ty * L.TT + 8;
+            L.B.menu = null;
+            L.Missions.majInvite(j);
+            const invite = L.B.invite;
+            L.Missions.utiliserPoint(j);
+            pas[tx + ',' + ty] = { invite: invite, titre: L.B.menu ? L.B.menu.titre : null };
+        });
+        L.B.menu = null;
+        const def = L.SPRITES[e.sprite];
+        return { combien: 1, sprite: e.sprite, pose: L.Entites.imageDe(e).pose, etat: e.etat,
+                 tuile: [ex, ey], point: [point.x, point.y],
+                 cravate: !!(def.pal.t && def.poses.assis_bas[0].join('').indexOf('t') >= 0),
+                 bouge: Math.hypot(e.x - avant[0], e.y - avant[1]), pas: pas };
+    }""" % ALLER)
+    assert r["combien"] == 1, f"{r['combien']} avocat(s) au Brouillard : la table est vide"
+    assert r["sprite"] == "avocat" and r["cravate"], f"il n'a pas son corps a lui : {r}"
+    assert r["pose"] == "assis_bas" and r["etat"] == "fige", f"il n'est pas assis : {r}"
+    assert r["bouge"] < 1, f"trois cents images plus tard, il s'est leve : {r}"
+    assert len(r["pas"]) >= 3, f"on ne peut pas l'approcher : {r['pas']}"
+    for tuile, vu in r["pas"].items():
+        assert vu["invite"] == "PARLER A L’AVOCAT", f"a {tuile}, le HUD promet {vu['invite']!r}"
+        assert vu["titre"] == "ME DESJARDINS", f"a {tuile}, ACTION n'ouvre pas son menu : {vu}"
 
 
 def test_le_comptoir_du_fond_se_paie_d_avance_et_repond_le_lendemain(banc):

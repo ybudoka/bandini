@@ -294,8 +294,8 @@ const Entites = (function () {
     for (const g of piece.gens) {
       const arch = archetypeDedans(g);
       if (!arch) continue;
-      const couche = g.qui === 'malade', assis = g.qui === 'patient';
-      // ⚠️ Le malade et le patient naissent DANS leur meuble (`carte.ASSIS_OU_COUCHE`),
+      const couche = g.qui === 'malade', assis = g.qui === 'patient' || g.qui === 'avocat';
+      // ⚠️ Le malade, le patient et l'avocat naissent DANS leur meuble (`carte.ASSIS_OU_COUCHE`),
       // et pas au centre de la tuile : un corps couche pose ses PIEDS (l'ancre)
       // au bas de la tuile de tete, pour que sa tete tombe sur l'oreiller ; un
       // corps assis pose les siens au bord de l'assise, sa tete devant le dossier.
@@ -306,8 +306,8 @@ const Entites = (function () {
       if (g.qui === 'commis' || g.qui === 'soignant') e.poste = { x: e.x, y: e.y };
       // ⚠️ `fige`, la regle du donneur : il TIENT sa place (on le bouscule, il y
       // revient) et il ne se retourne pas — c'est ce qui garde un malade couche
-      // et un patient assis. Qu'on le frappe, et il redevient un passant : il se
-      // leve et il se sauve, en jaquette s'il le faut.
+      // et un patient ou un avocat assis. Qu'on le frappe, et il redevient un
+      // passant : il se leve et il se sauve, en jaquette s'il le faut.
       if (couche || assis) {
         e.etat = 'fige';
         e.plante = { x: e.x, y: e.y };
@@ -329,6 +329,7 @@ const Entites = (function () {
   function archetypeDedans(g) {
     if (g.qui === 'commis') return archetype('commis');
     if (g.qui === 'soignant') return archetype('soignante');
+    if (g.qui === 'avocat') return archetype('avocat');
     const hasard = (hash2(g.x * 131 + g.y, 0xD0C) % 1000) / 1000;
     if (g.qui === 'malade') {
       const jaquette = archetype('malade'), rue = archetypeDeRue(g.x * TT, g.y * TT, hasard);

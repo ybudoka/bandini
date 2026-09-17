@@ -191,6 +191,20 @@ CATALOGUE: list[Pieton] = [
     _p("malade", "Malade", "#b9d6dc", "#5a4a3a", "#e8c0a0", "#b9d6dc",
        vitesse=0.5, courage=0.0, vie=35, argent=(0, 4), temoin=0.0,
        metier="malade", frequence=0.0),
+    # ⚠️ L'AVOCAT DU BROUILLARD, dedans seulement (frequence 0), comme le commis.
+    # Me Desjardins tient la table du fond et on vient lui PARLER
+    # (`missions.menuAvocat`) — mais la table etait vide : le jeu promettait un
+    # avocat et montrait deux chaises (retour de Martin : « je ne vois pas
+    # d'image de l'avocat dans le bar »). `entites.peuplerInterieur` l'assoit sur
+    # sa chaise, comme le patient de l'hopital.
+    # ⚠️ UN CORPS A LUI (`avocat` dans sprites.js), et pas le corps commun : un
+    # complet fonce sur le corps commun, c'est une CRAVATE — la gang du Faubourg
+    # assise a la table ou l'on vient nettoyer son dossier. Ce qui le nomme a
+    # douze pixels, c'est la chemise blanche, la cravate rouge et les cheveux gris.
+    # Frappe, il se sauve et il temoigne : c'est un avocat.
+    _p("avocat", "Me Desjardins", "#3b3f4c", "#b4b4b4", "#e8b088", "#2c2f38",
+       sprite="avocat", vitesse=0.8, courage=0.0, vie=60, argent=(40, 160), temoin=0.9,
+       metier="avocat", frequence=0.0),
     # L'agent : un pieton que la police dirige quand il poursuit. Il patrouille
     # sur les trottoirs comme tout le monde, arme au ceinturon, et ne nait
     # jamais au hasard — `police.js` en place autant que la zone en demande.
