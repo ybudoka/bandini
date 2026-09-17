@@ -11,7 +11,7 @@
 
     {# Voiles DOM : seulement la ou il faut un champ texte ou une liste. #}
     <section class="voile" id="voile-titre">
-      <h1 class="titre">Bandini</h1>
+      <h1 class="titre titre--logo"><img class="logo" src="{{ url_for('static', filename='img/logo.svg') }}?v={{ version }}" alt="Bandini" width="71" height="15"></h1>
       <p class="sous-titre">{{ SITE_TAGLINE }}</p>
       <div class="boutons">
         <button class="bouton bouton--principal" id="bouton-jouer" type="button">Jouer</button>

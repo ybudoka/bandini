@@ -10,7 +10,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="{{ SITE_NAME }}">
-  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}" type="image/svg+xml">
+  <link rel="icon" href="{{ url_for('jeu.favicon') }}" sizes="16x16 32x32 48x48">
+  <link rel="icon" href="{{ url_for('static', filename='img/favicon.svg') }}?v={{ version }}" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="{{ url_for('static', filename='img/icone-180.png') }}?v={{ version }}">
+  <link rel="manifest" href="{{ url_for('jeu.manifeste') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v={{ version }}">
 </head>
 <body>
