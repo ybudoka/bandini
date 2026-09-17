@@ -212,7 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
-| Le dialogue attend la fin de la sonnerie | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
+| Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (1re vague livrée : l'appel d'une mission ; la 2e : la sonnerie baisse, et le Clairon l'attend) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11417,7 +11417,23 @@ la fin de la sonnerie ». La première réplique partait sur le même coup d'hor
 `Son.SFX.telephone()` : le combine sonnait deux secondes PAR-DESSUS la voix du donneur, et on
 décrochait avant que ça ait fini de sonner.
 
-⬜ **En cours.**
+**1re vague livrée** (17 sept. 2026) : l'appel d'une mission. `Son.SFX.telephone()` rend ce
+qu'elle dure (le `duree_s` du catalogue quand le mp3 joue, 0,37 s pour les trois bips de la
+synthèse) et `B.sonnerie` tient qui appelle et à quelle image on décroche. `p.appels` ne se
+marque plus qu'au **décrochage** : fermer l'onglet pendant que ça sonne refait sonner l'appel
+plus tard au lieu de le perdre. Juge : `test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie`
+(deux mutations le font rougir).
+
+⬜ **2e vague en cours** — retour de Martin, sur le narrateur : « il y a une sonnerie trop
+forte avant qu'il parle ». Deux choses, et les deux sont mesurées :
+
+- **Elle sort au niveau d'un klaxon.** `ffmpeg ebur128` sur le fichier, fois le volume du
+  catalogue : téléphone −14,3 LUFS, klaxon −13,1, **la voix −20,8** — la sonnerie passe 6,5 dB
+  AU-DESSUS de la voix qui la suit, et c'est un aigu électronique, ce qui perce encore plus.
+- **Le Clairon part dans la même image que la sonnerie de Sal.** Au lever du jour,
+  `nuitDeLaDette()` fait sonner le rappel du shylock et `nouveauJour()` enchaîne aussitôt sur
+  la manchette lue par le narrateur : le combine sonne par-dessus ses premiers mots. Même
+  règle que l'appel — la manchette attend la fin de la sonnerie.
 
 ### M1 : le char dort dans la ruelle avant qu'on l'y montre
 
