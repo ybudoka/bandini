@@ -212,7 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (les 4 vagues) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
-| Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (2 vagues livrées : l'appel d'une mission ; la sonnerie baisse et le Clairon l'attend — la 3e : plus de sonnerie du tout quand le narrateur parle) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
+| Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
@@ -11506,12 +11506,22 @@ le volume du catalogue — le `volume` seul ne dit rien : la sonnerie est à 0,2
   maintenant les images de sa sonnerie, et la manchette attend dans `B.manchette` que le
   combiné se taise (`Missions.maj`). Juge :
   `test_le_narrateur_du_matin_attend_la_fin_de_la_sonnerie`.
-⬜ **3e vague en cours** — Martin, en réponse à la 2e : « enlève complètement la sonnerie
-quand le narrateur parle ». Attendre ne suffit pas : au lever du jour, le rappel de Sal ne
-sonne plus du tout. Le message « SAL : TU ME DOIS X $ » reste — c'est lui qui porte la
-pression, pas le combiné — et le Clairon lit sa manchette dans le silence. ⚠️ L'appel d'une
-mission, lui, GARDE sa sonnerie (1re vague) : elle annonce quelqu'un au bout du fil, et le
-donneur attend qu'elle se taise.
+**3e vague livrée** (17 sept. 2026) — Martin, en réponse à la 2e : « enlève complètement la
+sonnerie quand le narrateur parle ». Attendre ne suffisait pas : le rappel de Sal tombe au
+**lever du jour**, dans la même image que la manchette. `nuitDeLaDette` ne fait plus sonner le
+téléphone du tout — le message « SAL : TU ME DOIS X $ » reste, c'est lui qui porte la pression
+du shylock, et le matin appartient à celui qui lit le journal. `B.manchette` et son attente
+s'en vont avec.
+
+- ⚠️ **L'appel d'une mission GARDE sa sonnerie** (1re vague) : elle annonce quelqu'un au bout
+  du fil, et le donneur attend qu'elle se taise. Elle descend à **0,26** (−21,8 LUFS) : la
+  voix la plus basse des 58 générées (`civil-m3-4`) sort à −21,3, et 0,28 la dépassait de deux
+  dixièmes de dB. Le juge compare donc à TOUTES les voix — donneurs, manchette, ouverture — et
+  c'est la plus basse qui décide.
+- Juge : `test_le_rappel_de_sal_ne_sonne_pas_quand_le_narrateur_parle`. Il **espionne**
+  `Son.SFX.telephone` : au banc il n'y a pas d'`AudioContext`, donc compter les sources jouées
+  ne dirait rien — ce qu'on veut savoir, c'est si le jeu a DEMANDÉ la sonnerie. Remettre le
+  `Son.SFX.telephone()` de Sal le fait rougir.
 
 - ⚠️ **Ce qui n'est PAS corrigé, et qui se mesure aussi** : l'encadré du Clairon tient 420
   images (7 s) alors que 7 des 15 manchettes lues durent plus longtemps — jusqu'à 9,7 s pour
