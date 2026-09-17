@@ -199,6 +199,7 @@ ne bougent pas quand l'ordre de travail change.
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
+| Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10727,6 +10728,16 @@ son décor (`sprites.js`), et la 4e vague de la foire avait tranché « on n'y m
 Deux choses à livrer : **le style des véhicules** (le volume, à la manière de `enVolume`)
 pour les trois, et **un tour** — monter à la touche ACTION, rester assis le temps d'une
 boucle, redescendre où l'on est monté.
+
+### Le client du taxi attend au bord de la route, et une flèche y mène
+
+Demande de Martin (17 sept. 2026) : « pour la mission du taxi et tout ce qui est taxi, il
+faut que les clients attendent sur le bord de la route. et je veux les flèches pour savoir
+où trouver le client. » Mesuré avant : le client naît par `Entites.placeDeNaissance()` — un
+pas de porte une fois sur trois, sinon n'importe quelle tuile marchable hors route (un parc,
+une arrière-cour), à 40 px près d'une chaussée ou à dix tuiles. Et la flèche au bord de
+l'écran comme celle de la mini-carte ne suivent que `Histoire.cible()` : le boulot n'a qu'un
+point qui clignote sur la mini-carte, et seulement s'il tombe dans son cadre.
 
 ### Quatre activités que le jeu n'a pas
 
