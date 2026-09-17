@@ -831,3 +831,97 @@ def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
         assert m["etat"] == "epave", f"{slug} : le char a saute sous le joueur et n'est pas une epave ({m['etat']})"
         assert m["ratee"] is True and m["dit"] == "echec", f"{slug} : le char a saute et la mission continue ({m})"
         assert m["msg"] == "MISSION RATÉE — " + titre
+
+
+def test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur(banc):
+    """⚠️ Rouge avant (17 sept. 2026), 8 graines sur 8. « L'auto-patrouille
+    n'apparaît pas toujours » : arrivé au poste EN CHAR, on s'arrête dans la rue
+    devant la porte — et l'auto-patrouille naissait sur cette tuile-là, aux mêmes
+    x et y que notre char, cachée dessous. ACTION nous remettait dans le nôtre.
+    Le taxi de Marco (M3) naît par le même chemin, devant le garage."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, M = L.Monde;
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        function essai(slug, faites, lieu, nuit) {
+            if (j.dansVehicule) L.Vehicules.descendre(j, true);
+            j.invincible = 1e6;
+            // On s'arrete dans la rue, devant la porte : la tuile de rue la plus
+            // proche. Le taxi de M3 se pose des qu'on la prend, l'auto-patrouille
+            // de M4 quand on arrive au poste : le char est la avant les deux.
+            const porte = L.Histoire.lieu(lieu);
+            const arret = L.Histoire.tuileDeRue(porte.x, porte.y, 8);
+            const mien = L.Vehicules.creer('auto', arret.x, arret.y, CAP[arret.sens], {});
+            L.Vehicules.monter(j, mien); L.Entites.indexer();
+            if (nuit) { let h = B.partie.heure; for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1; B.partie.heure = h; }
+            B.partie.missionsFaites = faites;
+            L.Histoire.commencer(slug); B.cinema = null;
+            for (let n = 0; n < 30 && !B.mission.vehicule; n++) o.frame(1);
+            const v = B.mission.vehicule;
+            if (!v) return { etape: B.partie.mission.etape };
+            const ecart = Math.hypot(v.x - mien.x, v.y - mien.y);
+            L.Vehicules.descendre(j, true); o.frame(2);
+            const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
+            for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+            o.tape('KeyE', 2);
+            const rec = { slug: v.slug, ecart: Math.round(ecart), monte: j.dansVehicule === v, etape: B.partie.mission.etape };
+            L.Histoire.echouer('arrete'); B.cinema = null; B.dialogue = null; B.recherche.etoiles = 0;
+            L.Entites.retirer(mien);
+            return rec;
+        }
+        return { m4: essai('m4', { m1: 1, m2: 1, m3: 1 }, 'poste', true),
+                 m3: essai('m3', { m1: 1, m2: 1 }, 'garage', false) };
+    }""")
+    # M3 monte au premier objectif, M4 au deuxième (il faut d'abord aller au poste).
+    for slug, vehicule, nom, apres in (("m4", "police", "l'auto-patrouille", 2), ("m3", "taxi", "le taxi", 1)):
+        m = r[slug]
+        assert m.get("slug") == vehicule, f"{slug} : pas de {nom} ({m})"
+        assert m["ecart"] >= 28, f"{slug} : {nom} naît dans le char du joueur ({m['ecart']} px, un char en fait 28)"
+        assert m["monte"] is True and m["etape"] == apres, f"{slug} : ACTION ne fait pas monter dans {nom} ({m})"
+
+
+def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
+    """⚠️ Rouge avant (17 sept. 2026), 24 essais sur 24. « Celui qui doit nous
+    suivre apparaît en avant » : Ti-Guy naissait sur la tuile de rue la plus
+    proche, 28 px DEVANT l'auto-patrouille, dans sa voie. L'escorte s'arrête à
+    70 px du joueur : il restait planté là, et on n'avançait que de 42 px en une
+    seconde et demie, le pare-chocs dans le sien."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(4);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
+        L.Histoire.commencer('m4'); B.cinema = null;
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        j.invincible = 1e6;
+        const poste = L.Histoire.lieu('poste');
+        j.x = poste.x; j.y = poste.y + 20; L.Entites.indexer();
+        for (let n = 0; n < 30 && B.partie.mission.etape < 1; n++) o.frame(1);
+        const v = B.mission.vehicule;
+        const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
+        for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+        o.tape('KeyE', 2);
+        o.frame(2);
+        const e = B.mission.escorte;
+        const out = { monte: j.dansVehicule === v, etape: B.partie.mission.etape, escorte: !!e };
+        if (!e || !out.monte) return out;
+        // Devant, c'est le nez de l'auto-patrouille.
+        const hx = Math.cos(v.angle), hy = Math.sin(v.angle);
+        out.devant = Math.round((e.x - v.x) * hx + (e.y - v.y) * hy);
+        out.cote = Math.round(Math.abs(-(e.x - v.x) * hy + (e.y - v.y) * hx));
+        out.memeSens = Math.cos(e.angle - v.angle) > 0.7;
+        // La replique de Ti-Guy, au bouton, puis on roule tout droit.
+        for (let k = 0; k < 20 && B.cinema; k++) o.tape('KeyE', 2);
+        const ex = e.x, ey = e.y, vx = v.x, vy = v.y;
+        o.touche('KeyW'); o.frame(90); o.relacher('KeyW'); o.frame(60);
+        out.joueur = Math.round((v.x - vx) * hx + (v.y - vy) * hy);
+        out.suit = Math.round((e.x - ex) * hx + (e.y - ey) * hy);
+        return out;
+    }""")
+    assert r["monte"] is True and r["etape"] == 2 and r["escorte"] is True, r
+    assert r["devant"] <= -40, f"Ti-Guy naît devant l'auto-patrouille ({r['devant']} px devant son nez)"
+    assert r["cote"] <= 24 and r["memeSens"] is True, f"Ti-Guy n'est pas dans une voie qui va où l'on va ({r})"
+    assert r["joueur"] > 150, f"l'auto-patrouille n'avance que de {r['joueur']} px : quelqu'un lui bouche la rue"
+    assert r["suit"] > 60, f"Ti-Guy ne suit pas ({r['suit']} px pendant qu'on en roule {r['joueur']})"

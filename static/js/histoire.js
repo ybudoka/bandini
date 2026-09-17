@@ -99,17 +99,36 @@ const Histoire = (function () {
     return null;
   }
 
-  /** Une tuile de rue (avec une fleche) pres d'un pixel : la ou un char peut naitre. */
-  function tuileDeRue(x, y, rayonMax) {
+  /** Une tuile de rue (avec une fleche) pres d'un pixel : la ou un char peut naitre.
+      `accepte(place)`, facultatif, ecarte celles qui ne font pas l'affaire. */
+  function tuileDeRue(x, y, rayonMax, accepte) {
     const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
     for (let r = 1; r <= (rayonMax || 8); r++) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
         const f = Monde.fleche(tx + dx, ty + dy);
-        if (f === '>' || f === '<' || f === '^' || f === 'v') return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8, sens: f };
+        if (f !== '>' && f !== '<' && f !== '^' && f !== 'v') continue;
+        const place = { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8, sens: f };
+        if (!accepte || accepte(place)) return place;
       }
     }
     return null;
+  }
+
+  const CAP_DE_FLECHE = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+
+  /** Une place ou poser un char SANS le poser dans un autre.
+
+      ⚠️ Arrive au poste EN CHAR, on s'arrete devant la porte — sur la tuile de
+      rue la plus proche, celle-la meme ou naissait l'auto-patrouille de M4 : elle
+      naissait DANS notre char, aux memes x et y, cachee dessous, et ACTION nous
+      remettait au volant du notre. « L'auto-patrouille n'apparait pas. » Un char
+      fait 28 px de long : rien a moins de 32 px, ni personne sur la tuile. */
+  function sansChar(place) {
+    return !B.entites.some(function (e) {
+      if (e.type === 'vehicule') return dist2(e.x, e.y, place.x, place.y) < 32 * 32;
+      return e.type === 'joueur' && dist2(e.x, e.y, place.x, place.y) < 20 * 20;
+    });
   }
 
   /** La ruelle (glyphe `x`) la plus proche d'un lieu, a `loin` tuiles au moins —
@@ -628,14 +647,14 @@ const Histoire = (function () {
     if (!o) return;
     if (o.type === 'monter') {
       const ou = resoudre(o.ou, m);
-      const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : tuileDeRue(ou.x, ou.y, 8)) : null;
+      const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
       const place = rue || ou;
       if (place) {
         // ⚠️ `aQui` vient de la fiche (`prete` dans `missions.py`), et il ne
         // s'efface JAMAIS : le taxi de Marco est a Marco avant, pendant et
         // apres — c'est lui qui l'empeche d'etre vendu au garage de Ti-Guy,
         // qui est a deux pas de la ou il dort.
-        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
+        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
         if (v) { B.mission.vehicule = v; B.mission.entites.push(v); }
       }
     } else if (o.type === 'tuer') {
@@ -702,11 +721,40 @@ const Histoire = (function () {
     Hud.message('LE FUYARD FILE EN MOTO !', 150);
   }
 
+  /** Ti-Guy (M4) « te suit en char » : il nait DERRIERE le char du joueur, dans
+      une voie qui roule dans le meme sens que lui.
+
+      ⚠️ La tuile de rue la plus proche du joueur etait le plus souvent celle de
+      DEVANT : il naissait 28 px devant l'auto-patrouille, dans sa voie, le nez
+      dans le meme sens — et comme l'escorte s'arrete a 70 px du joueur
+      (`Vehicules.majConducteur`), il restait plante la, a boucher la rue qu'il
+      devait couvrir. Derriere, dans une voie qui va ou l'on va, il n'a qu'a
+      rouler : le trafic en poursuite choisit ses sorties vers le joueur. */
+  function placeDerriere(j) {
+    const c = j.dansVehicule;
+    if (!c) return null;
+    const hx = Math.cos(c.angle), hy = Math.sin(c.angle);
+    let meilleure = null, note = Infinity;
+    const tx = Math.floor(c.x / TT), ty = Math.floor(c.y / TT);
+    for (let dy = -10; dy <= 10; dy++) for (let dx = -10; dx <= 10; dx++) {
+      const f = Monde.fleche(tx + dx, ty + dy);
+      if (CAP_DE_FLECHE[f] === undefined) continue;
+      const place = { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8, sens: f };
+      const ox = place.x - c.x, oy = place.y - c.y;
+      const recul = -(ox * hx + oy * hy), cote = Math.abs(-ox * hy + oy * hx);
+      if (recul < 40 || !sansChar(place)) continue;
+      const memeSens = Math.cos(CAP_DE_FLECHE[f] - c.angle) > 0.7;
+      const n = (memeSens ? 0 : 1000) + Math.abs(recul - 72) + cote * 2;
+      if (n < note) { note = n; meilleure = place; }
+    }
+    return meilleure;
+  }
+
   function poserLEscorte(m, o) {
     const j = B.joueur;
-    const rue = tuileDeRue(j.x, j.y, 10);
+    const rue = placeDerriere(j) || tuileDeRue(j.x, j.y, 10, sansChar) || tuileDeRue(j.x, j.y, 10);
     if (!rue) return;
-    const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
+    const angle = CAP_DE_FLECHE[rue.sens];
     const v = Vehicules.creer('auto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, escorte: true, sens: rue.sens, mission: m.slug, couleur: '#2e8b57' });
     if (!v) return;
     B.mission.escorte = v; B.mission.entites.push(v);
