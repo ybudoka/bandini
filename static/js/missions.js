@@ -888,9 +888,46 @@ const Missions = (function () {
     } };
   }
 
+  /** La propriete de ce lieu si elle se vend aujourd'hui, sinon null. */
+  function aVendre(lieu) {
+    const prop = proprieteDe(lieu);
+    return prop && prop.phase === 1 && !possede(prop) ? prop : null;
+  }
+
+  /** L'entree de menu « acheter » d'une propriete a vendre.
+
+      ⚠️ DEDANS, au comptoir (retour de Martin : « pour acheter un commerce
+      c'est a l'interieur »). La porte ouvrait un menu ACHETER / ENTRER sur le
+      trottoir ; elle n'est plus qu'une porte. */
+  function itemAchat(prop) {
+    const p = B.partie;
+    return { libelle: 'ACHETER LE COMMERCE', detail: prop.prix + ' $', actif: p.argent >= prop.prix, faire: function () {
+      payer(prop.prix, prop.nom.toUpperCase());
+      p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
+      Hud.message(prop.nom.toUpperCase() + ' EST A TOI', 180);
+      return true;
+    } };
+  }
+
   function menuDuPoint(point) {
-    const piece = B.interieur, p = B.partie, tarifs = B.defs.economie.tarifs;
     const items = [];
+    const menu = menuDuComptoir(point, items);
+    const prop = aVendre(B.interieur.slug);
+    // L'achat se fait la ou la caisse se prendra une fois le commerce a soi :
+    // dans les menus batis sur `items` (l'avocat a sa table n'en est pas un).
+    // ⚠️ EN DERNIER : le curseur s'ouvre sur la premiere ligne qui se choisit,
+    // et au garage, deux pressions d'ACTION pour vendre un char auraient paye
+    // le garage 4500 $.
+    if (menu && prop && menu.items === items) {
+      items.push(itemAchat(prop));
+      menu.aide = menu.aide || prop.revenu_par_jour + ' $ PAR JOUR, A RAMASSER SUR PLACE';
+      menu.sur = menu.sur || B.partie.argent + ' $';
+    }
+    return menu;
+  }
+
+  function menuDuComptoir(point, items) {
+    const piece = B.interieur, p = B.partie, tarifs = B.defs.economie.tarifs;
     const caisse = itemCaisse(piece.slug);
     if (caisse) items.push(caisse);
     // La run : le prix du jour, et « vendre » ce qu'il y a dans le char devant.
@@ -938,7 +975,7 @@ const Missions = (function () {
         return { titre: 'HOPITAL DE BAIE-DES-BRUMES', items: items, sur: p.argent + ' $' };
       }
       case 'caisse':
-        if (!caisse) items.push({ libelle: 'CE N’EST PAS A TOI', actif: false });
+        if (!caisse && !aVendre(piece.slug)) items.push({ libelle: 'CE N’EST PAS A TOI', actif: false });
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'journal':
         items.push({ libelle: 'LE CLAIRON DE LA BAIE', detail: tarifs.journal + ' $', actif: p.argent >= tarifs.journal,
@@ -1320,25 +1357,6 @@ const Missions = (function () {
   }
 
   // --- Les proprietes -------------------------------------------------------------------
-
-  /** A la porte d'une propriete a vendre : acheter ou entrer. Rend true si un menu s'ouvre. */
-  function acheterPropriete(porte) {
-    const prop = proprieteDe(porte.lieu);
-    if (!prop || prop.phase !== 1 || possede(prop)) return false;
-    const p = B.partie;
-    Hud.ouvrirMenu({ titre: prop.nom.toUpperCase(), sur: p.argent + ' $',
-      aide: prop.revenu_par_jour + ' $ PAR JOUR, A RAMASSER SUR PLACE',
-      items: [
-        { libelle: 'ACHETER', detail: prop.prix + ' $', actif: p.argent >= prop.prix, faire: function () {
-          payer(prop.prix, prop.nom.toUpperCase());
-          p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
-          Hud.message(prop.nom.toUpperCase() + ' EST A TOI', 180);
-          return true;
-        } },
-        { libelle: 'ENTRER', faire: function () { Jeu.entrer(porte); return true; } },
-      ] });
-    return true;
-  }
 
   function revenusDuJour() {
     const eco = B.defs.economie, p = B.partie;
@@ -2230,7 +2248,9 @@ const Missions = (function () {
       const point = pointSousLaMain(j);
       if (point) {
         const assis = Histoire.personnageDuPoint(point.type);
+        const vente = point.type === 'caisse' && aVendre(B.interieur.slug);
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
+          : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
             : (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
@@ -2281,11 +2301,7 @@ const Missions = (function () {
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);
-    if (porte) {
-      const prop = proprieteDe(porte.lieu);
-      B.invite = (prop && prop.phase === 1 && !possede(prop)) ? 'ACHETER ' + prop.nom.toUpperCase() : 'ENTRER';
-      return;
-    }
+    if (porte) { B.invite = 'ENTRER'; return; }
     const v = Vehicules.vehiculeSousLaMain(j);
     if (v) { B.invite = (v.conducteur === 'trafic' ? 'VOLER ' : 'MONTER : ') + v.def.nom.toUpperCase(); return; }
     // ⚠️ Au bout de la chaine, comme dans `interagir` : le bouclier humain est
@@ -2346,7 +2362,7 @@ const Missions = (function () {
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
-           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, acheterPropriete, proprieteDe, possede,
+           boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
            dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,

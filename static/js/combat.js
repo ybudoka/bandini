@@ -896,7 +896,8 @@ const Combat = (function () {
         Entites.retirer(objet);
       } else {
         const porte = Monde.porteDevant(j);
-        if (porte) { if (!Missions.acheterPropriete(porte)) Jeu.entrer(porte); }
+        // Une porte ne vend rien : un commerce s'achete au comptoir, dedans.
+        if (porte) Jeu.entrer(porte);
         else pickpocket(j);
       }
     }

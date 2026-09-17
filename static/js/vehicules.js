@@ -1978,11 +1978,10 @@ const Vehicules = (function () {
     // ⚠️ LA PORTE GAGNE SUR LA PORTIERE (bug de Martin : devant le garage,
     // avec un char gare devant, « ENTRER » faisait monter dans le char). La
     // meme pression d'ACTION est lue ici APRES `Combat.maj`, dans la meme
-    // image : si elle a deja ouvert un menu (ACHETER / ENTRER d'une
-    // propriete) ou lance le fondu d'une porte, elle est depensee. Un menu
-    // et un fondu figent tout le jeu (`Jeu.maj`) ; la portiere d'a cote ne
-    // fait pas exception — sinon, au moment de choisir ENTRER, `Jeu.entrer`
-    // refusait parce qu'on etait deja au volant.
+    // image : si elle a deja ouvert un menu ou lance le fondu d'une porte,
+    // elle est depensee. Un menu et un fondu figent tout le jeu (`Jeu.maj`) ;
+    // la portiere d'a cote ne fait pas exception — sinon on passait la porte
+    // deja au volant, et `Jeu.entrer` refusait.
     if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema && !B.menu && !B.transition) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);

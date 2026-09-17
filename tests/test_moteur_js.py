@@ -6740,94 +6740,123 @@ def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
     assert r["mun"] == pistolet["chargeur"], "l'arme achetee doit venir avec son chargeur"
 
 
-def test_une_propriete_s_achete_et_rapporte(banc, paquet):
+def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
+    """Retour de Martin : « pour acheter un commerce c'est a l'interieur ».
+
+    La porte du kiosque ouvrait un menu ACHETER / ENTRER sur le trottoir. Elle
+    n'est plus qu'une porte : on entre, on va a la caisse, et c'est la qu'on
+    achete — puis la meme caisse se vide dans nos poches. Tout par le bouton."""
     kiosque = next(p for p in paquet["economie"]["proprietes"] if p["slug"] == "kiosque")
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
+        const libelles = function () { return L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null; };
+        const choisi = function () { return L.B.menu ? L.B.menu.items[L.B.menu.curseur].libelle : null; };
+        L.B.partie.argent = 2000;
         const porte = c.portes.find(function (p) { return p.lieu === 'kiosque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
         L.Missions.majInvite(j);
-        const invite = L.B.invite;
-        L.B.partie.argent = 2000;
-        const ouvert = L.Missions.acheterPropriete(porte);
-        L.B.menu.items[0].faire();
-        L.Hud.fermerMenu();
-        const achete = !!L.B.partie.proprietes.kiosque;
-        L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour(); L.Missions.revenusDuJour();
-        const caisse = L.B.partie.proprietes.kiosque.caisse;
-        // Dedans, on ramasse la caisse.
-        o.entrer(porte);
+        const dehors = L.B.invite;
+        o.tape('KeyE', 1);
+        const aLaPorte = { menu: libelles(), fondu: !!L.B.transition };
+        o.fondu();
+        const dedans = L.B.interieur && L.B.interieur.slug;
         const point = L.B.interieur.points.find(function (p) { return p.type === 'caisse'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
-        L.Missions.utiliserPoint(j);
-        const avant = L.B.partie.argent;
-        L.B.menu.items[0].faire();
         L.Missions.majInvite(j);
-        return { invite: invite, ouvert: ouvert, achete: achete, caisse: caisse, gain: L.B.partie.argent - avant,
-                 reste: L.B.partie.proprietes.kiosque.caisse, deuxieme: L.Missions.acheterPropriete(porte) };
+        const inviteCaisse = L.B.invite;
+        o.tape('KeyE', 2);
+        const comptoir = { menu: libelles(), choisi: choisi(), aide: L.B.menu && L.B.menu.aide };
+        o.tape('KeyE', 2);
+        const achete = { ouvert: !!L.B.menu, a_soi: !!L.B.partie.proprietes.kiosque, argent: L.B.partie.argent };
+        for (let i = 0; i < 4; i++) L.Missions.revenusDuJour();
+        const caisse = L.B.partie.proprietes.kiosque.caisse;
+        L.Missions.majInvite(j);
+        const inviteApres = L.B.invite;
+        o.tape('KeyE', 2);
+        const aSoi = { menu: libelles(), choisi: choisi() };
+        const avant = L.B.partie.argent;
+        o.tape('KeyE', 2);
+        return { dehors: dehors, aLaPorte: aLaPorte, dedans: dedans, inviteCaisse: inviteCaisse,
+                 comptoir: comptoir, achete: achete, caisse: caisse, inviteApres: inviteApres, aSoi: aSoi,
+                 gain: L.B.partie.argent - avant, reste: L.B.partie.proprietes.kiosque.caisse };
     }""")
-    assert r["invite"].startswith("ACHETER"), r["invite"]
-    assert r["ouvert"] is True and r["achete"] is True
+    assert r["dehors"] == "ENTRER", "la porte promet encore un achat sur le trottoir"
+    assert r["aLaPorte"]["menu"] is None, "la porte ouvre encore un menu : %s" % r["aLaPorte"]["menu"]
+    assert r["aLaPorte"]["fondu"] is True and r["dedans"] == "kiosque"
+    assert r["inviteCaisse"] == "ACHETER " + kiosque["nom"].upper()
+    assert r["comptoir"]["menu"] == ["ACHETER LE COMMERCE"], r["comptoir"]["menu"]
+    assert r["comptoir"]["choisi"] == "ACHETER LE COMMERCE"
+    assert str(kiosque["revenu_par_jour"]) in r["comptoir"]["aide"], "le comptoir ne dit pas ce que ca rapporte"
+    assert r["achete"] == {"ouvert": False, "a_soi": True, "argent": 2000 - kiosque["prix"]}
     assert r["caisse"] == kiosque["revenu_par_jour"] * paquet["economie"]["caisse_jours_max"], "la caisse doit plafonner"
+    assert r["inviteApres"] == "LA CAISSE"
+    assert r["aSoi"]["menu"] == ["PRENDRE LA CAISSE"], "un commerce a soi ne se rachete pas : %s" % r["aSoi"]["menu"]
     assert r["gain"] == r["caisse"] and r["reste"] == 0
-    assert r["deuxieme"] is False, "une propriete a soi ne se rachete pas"
 
 
-def test_devant_le_garage_la_porte_gagne_sur_le_char_gare_devant(banc):
+def test_au_garage_deux_pressions_vendent_le_char_et_n_achetent_pas_le_garage(banc, paquet):
+    """Le garage n'a pas de caisse : l'achat passe dans le menu du comptoir,
+    comme PRENDRE LA CAISSE une fois le garage a soi. ⚠️ EN DERNIER — le
+    curseur s'ouvre sur la premiere ligne qui se choisit, et la main qui
+    appuie deux fois pour vendre un char aurait paye le garage."""
+    garage = next(p for p in paquet["economie"]["proprietes"] if p["slug"] == "garage")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        L.B.partie.argent = 2 * %d;
+        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.char('auto', 20, 0, 0);
+        o.tape('KeyE', 1);
+        o.fondu();
+        const point = L.B.interieur.points.find(function (p) { return p.type === 'vendre'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        o.tape('KeyE', 2);
+        const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
+        const choisi = L.B.menu ? L.B.menu.items[L.B.menu.curseur].libelle : null;
+        const avant = L.B.partie.argent;
+        o.tape('KeyE', 2);
+        return { dedans: L.B.interieur.slug, menu: menu, choisi: choisi,
+                 a_soi: !!L.B.partie.proprietes.garage, depense: avant - L.B.partie.argent };
+    }""" % garage["prix"])
+    assert r["dedans"] == "garage"
+    assert r["menu"] and r["menu"][-1] == "ACHETER LE COMMERCE", r["menu"]
+    assert r["choisi"].startswith("VENDRE"), r["choisi"]
+    assert r["a_soi"] is False, "deux pressions au comptoir ont achete le garage"
+    assert r["depense"] <= 0
+
+
+@pytest.mark.parametrize("a_soi", [False, True], ids=["a_vendre", "a_soi"])
+def test_devant_le_garage_la_porte_gagne_sur_le_char_gare_devant(banc, a_soi):
     """Bug de Martin : devant le garage, un char gare devant la porte, et
     « ENTRER » faisait monter dans le char au lieu d'entrer dans le batiment.
 
     Une seule pression d'ACTION, deux lecteurs dans la meme image :
-    `Combat.maj` ouvre le menu ACHETER / ENTRER de la propriete, puis
-    `Vehicules.maj` relisait la meme pression et prenait la portiere d'a cote.
-    Au moment de choisir ENTRER, `Jeu.entrer` refusait : deja au volant."""
+    `Combat.maj` passe la porte, puis `Vehicules.maj` relisait la meme
+    pression et prenait la portiere d'a cote — on se reveillait dans la piece
+    au volant. A vendre ou a soi, la porte ne demande rien : elle s'ouvre."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
+        if (%s) L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 };
+        L.B.partie.argent = 99999;             // de quoi acheter : la porte ne doit pas le proposer
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        L.B.partie.argent = 0;                 // pas de quoi acheter : seul ENTRER compte
         const v = o.char('auto', 20, 0, 0);    // gare devant, a portee de portiere
         const pres = L.Vehicules.vehiculeSousLaMain(j) === v, devant = L.Monde.porteDevant(j) === porte;
-        o.tape('KeyE', 2);                     // UNE pression
-        const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
-        const auVolant = !!j.dansVehicule;
-        if (L.B.menu) { L.B.menu.curseur = 1; o.tape('KeyE', 1); }   // ENTRER
-        o.fondu();
-        return { pres: pres, devant: devant, menu: menu, auVolant: auVolant,
-                 dedans: L.B.interieur ? L.B.interieur.slug : null, attendu: porte.interieur,
-                 encoreAuVolant: !!j.dansVehicule, conducteur: v.conducteur === j };
-    }""")
-    assert r["pres"] is True and r["devant"] is True, "le decor du test : un char a portee ET la porte devant"
-    assert r["menu"] == ["ACHETER", "ENTRER"], r["menu"]
-    assert r["auVolant"] is False, "la meme pression d'ACTION a ouvert le menu ET pris la portiere"
-    assert r["dedans"] == r["attendu"], "ENTRER n'a pas mene dans le garage"
-    assert r["encoreAuVolant"] is False and r["conducteur"] is False
-
-
-def test_a_une_porte_sans_menu_le_fondu_gagne_aussi_sur_la_portiere(banc):
-    """Meme pression, meme porte, mais la propriete est a soi : plus de menu,
-    `Combat.maj` lance le fondu tout de suite — et `Vehicules.maj` ne doit pas
-    prendre le char pendant qu'on passe la porte, sinon on se reveille dans
-    la piece au volant."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const j = L.B.joueur, c = L.Monde.carte;
-        const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
-        L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 };   // a soi : la porte s'ouvre sans menu
-        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        const v = o.char('auto', 20, 0, 0);
-        o.tape('KeyE', 1);
+        o.tape('KeyE', 1);                     // UNE pression
         const fondu = !!L.B.transition, menu = !!L.B.menu, auVolant = !!j.dansVehicule;
         o.fondu();
-        return { fondu: fondu, menu: menu, auVolant: auVolant,
+        return { pres: pres, devant: devant, fondu: fondu, menu: menu, auVolant: auVolant,
                  dedans: L.B.interieur ? L.B.interieur.slug : null, attendu: porte.interieur,
-                 encoreAuVolant: !!j.dansVehicule };
-    }""")
-    assert r["menu"] is False and r["fondu"] is True, "la porte d'une propriete a soi s'ouvre sans menu"
-    assert r["auVolant"] is False, "la meme pression a passe la porte ET pris la portiere"
-    assert r["dedans"] == r["attendu"] and r["encoreAuVolant"] is False
+                 encoreAuVolant: !!j.dansVehicule, conducteur: v.conducteur === j };
+    }""" % ("true" if a_soi else "false"))
+    assert r["pres"] is True and r["devant"] is True, "le decor du test : un char a portee ET la porte devant"
+    assert r["menu"] is False and r["fondu"] is True, "la porte d'un commerce ouvre un menu au lieu de s'ouvrir"
+    assert r["auVolant"] is False, "la meme pression d'ACTION a passe la porte ET pris la portiere"
+    assert r["dedans"] == r["attendu"], "ENTRER n'a pas mene dans le garage"
+    assert r["encoreAuVolant"] is False and r["conducteur"] is False
 
 
 def test_les_paquets_caches_se_ramassent_et_paient(banc, paquet):
