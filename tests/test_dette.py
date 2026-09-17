@@ -116,6 +116,38 @@ def test_la_nuit_fait_monter_la_dette_et_le_plafond_la_retient(banc):
     assert r["apresCent"] == r["plafond"], "le plafond ne retient rien : %s" % r
 
 
+def test_le_narrateur_du_matin_attend_la_fin_de_la_sonnerie(banc):
+    """Retour de Martin (17 sept. 2026) : « il y a une sonnerie trop forte avant
+    qu'il parle ». Le rappel de Sal et la manchette du Clairon partaient dans la
+    MEME image : le combiné sonnait par-dessus les premiers mots du narrateur.
+
+    ⚠️ Au banc, aucun mp3 n'est décodé : la sonnerie est celle de la synthèse
+    (0,37 s, soit 22 images). C'est cet écart-là qu'on mesure."""
+    r = banc("""function (L, o) {
+        %s
+        p.jour = f.rappel_jour; p.rappelJour = -1; p.dette = 15000;
+        L.B.dialogue = null;
+        L.Missions.nouveauJour();
+        const sonne = { attend: !!L.B.manchette, images: L.B.manchette && L.B.manchette.t - L.B.t,
+                        dialogue: L.B.dialogue && L.B.dialogue.qui, voix: L.Son.Voix.demandees.length,
+                        msg: L.B.msg };
+        let dit = -1;
+        for (let i = 0; i < 120 && dit < 0; i++) { o.frame(1); if (!L.B.manchette) dit = i; }
+        return { sonne: sonne, dit: dit, dialogue: L.B.dialogue && L.B.dialogue.qui,
+                 voix: L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1],
+                 duree: L.Son.SFX.telephone() };
+    }""" % DECOR)
+    assert r["sonne"]["attend"] is True, "la manchette ne s'est pas mise en attente : %s" % r["sonne"]
+    assert r["sonne"]["dialogue"] is None, "le Clairon parle par-dessus la sonnerie : %s" % r["sonne"]
+    assert r["sonne"]["voix"] == 0, "la voix du narrateur est demandée pendant que ça sonne"
+    assert "SAL" in (r["sonne"]["msg"] or ""), "le rappel de Sal ne s'affiche plus : %s" % r["sonne"]
+    images = round(r["duree"] * 60)                      # 60 images font une seconde
+    assert images <= r["dit"] + 1 <= images + 2, (
+        "la manchette part %s images après la sonnerie, qui en dure %s" % (r["dit"] + 1, images))
+    assert r["dialogue"] == "LE CLAIRON DE LA BAIE", "la manchette ne se dit jamais : %s" % r
+    assert (r["voix"] or "").startswith("narrateur-journal-"), "le narrateur ne lit pas la manchette : %s" % r
+
+
 def test_personne_ne_vient_avant_le_jour_dit_puis_ils_viennent(banc):
     """⚠️ Le téléphone d'abord, les hommes ensuite. Et **une seule visite par
     jour** : sans ça, la dette n'est plus une pression, c'est un harcèlement dont

@@ -252,7 +252,15 @@ CATALOGUE: list[Echantillon] = [
        influence=0.75,
        prompt="a police helicopter hovering overhead, rotor blades thumping "
               "steadily, seamless loop, no music, no voices, no siren"),
-    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.62,
+    # ⚠️ **0,28, et pas 0,62.** Retour de Martin (17 sept. 2026), sur le
+    # narrateur du Clairon : « il y a une sonnerie trop forte avant qu'il
+    # parle ». Mesuré à l'`ebur128`, fichier × volume : la sonnerie sortait à
+    # −14,3 LUFS — le niveau du KLAXON (−13,1), et 6,5 dB AU-DESSUS de la voix
+    # qui la suit (−20,8). Un combiné dans sa poche n'est pas un klaxon de char,
+    # et un aigu électronique perce plus qu'une voix à niveau égal. À 0,28 elle
+    # tombe à −21,2 : juste sous la voix, bien au-dessus d'une porte de commerce
+    # (−22,9).
+    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.28,
        influence=0.75,
        prompt="an old flip phone ringing twice on a table, thin electronic "
               "ringtone with a faint buzz of vibration, close, no voices, "

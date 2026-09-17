@@ -1,5 +1,6 @@
 """Le catalogue des sons — et le fait que le jeu sonne meme sans les fichiers."""
 
+import math
 import re
 import shutil
 import subprocess
@@ -429,6 +430,53 @@ def test_un_bruitage_bref_ne_souffle_pas(echantillon, indice):
     rsb = float(pic.group(1)) - float(plancher.group(1))
     assert rsb >= audio.RSB_PLANCHER_DB, \
         f"{chemin.name} : {rsb:.0f} dB de rapport signal/bruit, ca souffle"
+
+
+def _lufs(chemin):
+    """Le niveau INTEGRE du fichier (EBU R128), en LUFS.
+
+    ⚠️ Pas le pic : deux fichiers normalises au meme pic (`PIC_VISE_DBFS`) ne
+    s'entendent pas du tout au meme volume — une sonnerie qui tape trois coups
+    secs et une voix qui parle six secondes le montrent bien. C'est le niveau
+    percu qui dit lequel couvre l'autre, et c'est celui-la qu'on mesure."""
+    fait = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(chemin),
+                           "-filter_complex", "ebur128", "-f", "null", "-"],
+                          capture_output=True, text=True)
+    trouve = re.search(r"Integrated loudness:\s+I:\s+(-?[\d.]+) LUFS", fait.stderr)
+    assert trouve, f"pas de niveau mesurable dans {chemin.name}"
+    return float(trouve.group(1))
+
+
+def _melange(chemin, volume):
+    """Ce qui sort vraiment : le fichier, plus le volume du catalogue (en dB)."""
+    return _lufs(chemin) + 20 * math.log10(volume)
+
+
+@ffmpeg_present
+def test_la_sonnerie_du_telephone_ne_couvre_pas_la_voix_qui_la_suit():
+    """Retour de Martin (17 sept. 2026), sur le narrateur du Clairon : « il y a
+    une sonnerie trop forte avant qu'il parle ».
+
+    ⚠️ Le `volume` du catalogue ne se juge pas tout seul : la sonnerie est a
+    0,28 et la voix a 0,85, et c'est pourtant la sonnerie qui sortait 6,5 dB
+    au-dessus — son fichier est 9 dB plus haut. Le juge mesure donc le
+    MELANGE (fichier x volume), le seul nombre qui dise lequel couvre l'autre.
+    """
+    sonnerie = next(e for e in audio.CATALOGUE if e["slug"] == "telephone")
+    fichier = audio.chemin(sonnerie, 1)
+    if not fichier.is_file():
+        pytest.skip("la sonnerie n'est pas generee sur ce poste")
+    # ⚠️ Le narrateur vit dans `voix_journal` et `voix_ouverture`, pas dans
+    # `voix_histoire` : la manchette du matin et les quatre phrases du car.
+    voix = [v for v in audio.voix_journal() + audio.voix_ouverture() if audio.chemin_voix(v).is_file()]
+    if not voix:
+        pytest.skip("les voix du narrateur ne sont pas generees sur ce poste")
+    combine = _melange(fichier, sonnerie["volume"])
+    # La plus BASSE : la sonnerie ne doit en couvrir aucune.
+    narrateur = min(_melange(audio.chemin_voix(v), v["volume"]) for v in voix)
+    assert combine <= narrateur, (
+        f"la sonnerie sort a {combine:.1f} LUFS et la voix a {narrateur:.1f} : "
+        "le combine passe par-dessus celui qui parle")
 
 
 def test_la_reserve_ne_compte_pas_comme_un_orphelin():
