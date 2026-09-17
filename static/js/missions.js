@@ -420,6 +420,36 @@ const Missions = (function () {
     },
   };
 
+  //: A cette distance de sa destination, un boulot est arrive.
+  const ARRIVEE_PX = 44;
+
+  /** Ce qu'un char atteint en roulant depuis `v` : rend `(x, y, r)`, vrai si une
+      tuile ou il roule est a moins de `r` px de ce pixel. ⚠️ L'eau n'y est pas :
+      un char y entre, et il coule. */
+  function atteignableEnChar(v) {
+    const c = Monde.carte, W = c.w, H = c.h, vu = new Uint8Array(W * H), file = [];
+    const roule = function (tx, ty) { return !Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) && !Monde.estEau(tx, ty); };
+    const sx = Math.floor(v.x / TT), sy = Math.floor(v.y / TT);
+    if (sx >= 0 && sy >= 0 && sx < W && sy < H) { vu[sy * W + sx] = 1; file.push(sy * W + sx); }
+    for (let i = 0; i < file.length; i++) {
+      const k = file[i], x = k % W, y = (k - x) / W;
+      if (x > 0 && !vu[k - 1] && roule(x - 1, y)) { vu[k - 1] = 1; file.push(k - 1); }
+      if (x < W - 1 && !vu[k + 1] && roule(x + 1, y)) { vu[k + 1] = 1; file.push(k + 1); }
+      if (y > 0 && !vu[k - W] && roule(x, y - 1)) { vu[k - W] = 1; file.push(k - W); }
+      if (y < H - 1 && !vu[k + W] && roule(x, y + 1)) { vu[k + W] = 1; file.push(k + W); }
+    }
+    return function (px, py, r) {
+      const rt = Math.ceil(r / TT);
+      const cx = Math.floor(px / TT), cy = Math.floor(py / TT);
+      for (let y = Math.max(0, cy - rt); y <= Math.min(H - 1, cy + rt); y++) {
+        for (let x = Math.max(0, cx - rt); x <= Math.min(W - 1, cx + rt); x++) {
+          if (vu[y * W + x] && dist2(x * TT + 8, y * TT + 8, px, py) < r * r) return true;
+        }
+      }
+      return false;
+    };
+  }
+
   const boulot = {
     slug: null,            // le boulot en cours, ou null
     etape: null,           // null | 'ramasse' | 'route'
@@ -505,7 +535,16 @@ const Missions = (function () {
         lieu = { x: g.x + Math.floor(g.largeur / 2), y: g.y, nom: 'Fourrière municipale' };
       }
       if (!lieu) {
-        const loin = Monde.carte.points.filter(function (p) { return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200; });
+        // ⚠️ SEULEMENT LA OU UN CHAR SE REND. Depuis l'ile, la chapelle
+        // Sainte-Anne est un point de la carte comme un autre, et on ne
+        // l'atteint qu'a la nage : une course sur dix-sept ne se finissait
+        // jamais. La regle est ce dont le boulot a besoin — une route depuis la
+        // ou l'on est — et pas « hors de l'ile » : le prochain lieu coupe de la
+        // ville s'ecartera tout seul.
+        const atteint = atteignableEnChar(v);
+        const loin = Monde.carte.points.filter(function (p) {
+          return dist2(p.x * TT, p.y * TT, v.x, v.y) > 200 * 200 && atteint(p.x * TT + 8, p.y * TT + 8, ARRIVEE_PX);
+        });
         lieu = loin[Math.floor(B.rng() * loin.length)] || Monde.carte.points[0];
       }
       boulot.destination = { x: lieu.x * TT + 8, y: lieu.y * TT + 8, nom: lieu.nom };
@@ -551,7 +590,7 @@ const Missions = (function () {
       // ⚠️ Au lot, on livre DANS LA COUR, pas a 44 px d'un point : la grille
       // est une ouverture de quatre tuiles, et une remorqueuse de 36 px avec
       // son epave au bout ne s'arrete pas au pixel pres dessus.
-      const arrive = sorte.destination === 'fourriere' ? dansLaCour(v) : dist2(v.x, v.y, d.x, d.y) < 44 * 44;
+      const arrive = sorte.destination === 'fourriere' ? dansLaCour(v) : dist2(v.x, v.y, d.x, d.y) < ARRIVEE_PX * ARRIVEE_PX;
       if (!arrive || Math.abs(v.vitesse) >= 0.4) return;
       if (sorte.ramasser === 'crochet') {
         // L'epave part a la ferraille : le lot la prend, il ne la range pas.

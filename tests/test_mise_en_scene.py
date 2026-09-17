@@ -109,6 +109,10 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
                     if not isinstance(nom, str) or ":" not in nom:
                         continue
                     forme, suite = nom.split(":", 1)
+                    # `ruelle:garage:24` : la ruelle a vingt-quatre tuiles au moins.
+                    if forme == "ruelle" and ":" in suite:
+                        suite, tuiles = suite.split(":", 1)
+                        assert tuiles.isdigit(), (m["slug"], partie, nom)
                     if forme in ("porte", "ruelle"):
                         assert suite in lieux, (m["slug"], partie, nom)
                     elif forme == "zone":

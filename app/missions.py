@@ -19,7 +19,8 @@ TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
     "parler",      # toucher un personnage
     "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`) ;
-                   # `prete` : a QUI il est — un char prete ne se vend pas
+                   # `prete` : a QUI il est — un char prete ne se vend pas ;
+                   # `ou: ruelle:<lieu>:<n>` : la ruelle la plus proche a n tuiles au moins
     "livrer",      # amener le vehicule de la mission a un lieu ; `sans_degats` : prime
     "ramasser",    # ramasser un objet — `cible: fuyard` : le rattraper d'abord
     "tuer",        # mettre KO (ou pire) `n` membres d'un `groupe`, `chef` pour le boss ;
@@ -272,6 +273,15 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
     return erreurs
 
 
+#: Ou dort le char de M1. ⚠️ Demande de Martin (17 sept. 2026) : la ruelle la
+#: plus proche du garage est a six tuiles — le char naissait DANS l'ecran, sous
+#: les yeux du joueur, et le ramener tenait en trois secondes. A vingt-quatre, il
+#: faut le chercher au GPS et rouler pour de vrai. ⚠️ UNE constante, parce que
+#: DEUX lecteurs : l'objectif qui y pose le char, et la coupe de l'intro qui va
+#: le montrer. Deux chaines, et la camera filmerait une ruelle vide.
+RUELLE_DU_CHAR_DE_M1 = "ruelle:garage:24"
+
+
 CATALOGUE: list[Mission] = [
     {
         "slug": "m1", "titre": "Bienvenue en ville", "donneur": "ti_guy", "prerequis": [],
@@ -279,7 +289,7 @@ CATALOGUE: list[Mission] = [
         "donne": {"message": "LA CLÉ DE LA PLANQUE"},
         "objectifs": [
             {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"},
-            {"type": "monter", "vehicule": "auto", "ou": "ruelle:garage", "texte": "PRENDS LE CHAR DANS LA RUELLE"},
+            {"type": "monter", "vehicule": "auto", "ou": RUELLE_DU_CHAR_DE_M1, "texte": "PRENDS LE CHAR DANS LA RUELLE"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "sans_degats": True, "texte": "RAMÈNE-LE AU GARAGE, SANS BOSSE"},
         ],
         # Ti-Guy montre le garage, et la caméra va voir la ruelle où dort le char —
@@ -293,7 +303,7 @@ CATALOGUE: list[Mission] = [
                  "ensemble": True},
                 {"type": "dire", "repliques": [3, 4], "ensemble": True},
                 {"type": "attendre", "duree": 30},
-                {"type": "coupe", "vers": "ruelle:garage", "ferme": 20, "ouvre": 20, "tient": 150},
+                {"type": "coupe", "vers": RUELLE_DU_CHAR_DE_M1, "ferme": 20, "ouvre": 20, "tient": 150},
             ],
             "fin": [
                 {"type": "sortir", "acteur": "ti_guy", "de": "porte:garage", "vers": "joueur"},

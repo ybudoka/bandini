@@ -4290,6 +4290,39 @@ def test_un_char_explose_et_brule_ce_qui_l_entoure(banc, paquet):
     assert r["crimes"] >= 1, "faire exploser un char n'est pas un crime ?"
 
 
+def test_une_epave_reste_une_epave_quand_on_etait_au_volant(banc):
+    """⚠️ Rouge avant (17 sept. 2026). `exploser` (et `plier`, pour le velo)
+    posent l'epave PUIS font descendre celui qui etait au volant — et
+    `descendre()` ecrivait `stationne` par-dessus. La carcasse d'un char qui
+    venait de sauter sous le joueur redevenait un char : on y remontait, et elle
+    sautait une deuxieme fois. Tout au bouton."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur;
+        j.invincible = 1e6;
+        const route = o.ligneDroite();
+        function essai(slug, dx) {
+            j.x = route.x + dx; j.y = route.y; L.Entites.indexer();
+            const v = o.char(slug, 0, 16, 0);
+            o.tape('KeyE', 2);
+            const monte = j.dansVehicule === v;
+            L.Vehicules.endommager(v, 9999, null);
+            const apres = { etat: v.etat, dedans: !!j.dansVehicule, laisse: !!v.laisse };
+            o.frame(5);
+            j.x = v.x; j.y = v.y - 16; L.Entites.indexer();
+            o.tape('KeyE', 2);
+            return { monte: monte, apres: apres, remonte: j.dansVehicule === v, etat: v.etat };
+        }
+        return { auto: essai('auto', 0), velo: essai('velo', 160) };
+    }""")
+    for slug in ("auto", "velo"):
+        e = r[slug]
+        assert e["monte"] is True, f"{slug} : on n'a pas pu monter"
+        assert e["apres"] == {"etat": "epave", "dedans": False, "laisse": False}, (
+            f"{slug} : detruit sous le joueur, ce n'est plus une epave : {e['apres']}")
+        assert e["remonte"] is False and e["etat"] == "epave", f"{slug} : on remonte dans la carcasse : {e}"
+
+
 def test_un_velo_ne_saute_pas_il_se_plie(banc, paquet):
     """⚠️ Retour de Martin : un velo EXPLOSE. Il a 30 PV, le plus fragile du
     jeu ; deux coups de batte et il partait en boule de feu — quarante
@@ -4426,6 +4459,60 @@ def test_le_taxi_paie_la_course_selon_la_douceur(banc, paquet):
     assert r["courses"] == 1
     assert r["gain"] >= boulot["base"] + boulot["prime"], \
         "une course sans un choc doit donner le pourboire plein"
+
+
+def test_le_taxi_n_envoie_personne_ou_un_char_ne_va_pas(banc):
+    """⚠️ Rouge avant (17 sept. 2026) : depuis l'ile, la chapelle Sainte-Anne est
+    un point de la carte comme un autre, et le taxi (la pizza aussi) l'y tirait
+    au sort — on ne l'atteint qu'a la nage. La regle est ce dont la course a
+    besoin, une route depuis le char : la route est donc ecrite ICI, pas relue
+    dans `missions.js`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, M = L.Monde, TT = L.TT, W = M.carte.w, H = M.carte.h;
+        const g = L.Histoire.lieu('garage');
+        let depart = null;
+        for (let r = 0; r <= 4 && !depart; r++) for (let dy = -r; dy <= r && !depart; dy++) for (let dx = -r; dx <= r; dx++) {
+            const tx = Math.floor(g.x / TT) + dx, ty = Math.floor(g.y / TT) + dy;
+            if (!M.bloque(tx, ty, M.MASQUE_VEHICULE) && !M.estEau(tx, ty)) { depart = { x: tx * TT + 8, y: ty * TT + 8 }; break; }
+        }
+        const vus = new Uint8Array(W * H), file = [];
+        const s0 = Math.floor(depart.y / TT) * W + Math.floor(depart.x / TT);
+        vus[s0] = 1; file.push(s0);
+        for (let i = 0; i < file.length; i++) {
+            const k = file[i], x = k % W, y = (k - x) / W;
+            [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+                const nx = x + d[0], ny = y + d[1], nk = ny * W + nx;
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H || vus[nk]) return;
+                if (M.bloque(nx, ny, M.MASQUE_VEHICULE) || M.estEau(nx, ny)) return;
+                vus[nk] = 1; file.push(nk);
+            });
+        }
+        function enChar(px, py) {
+            for (let y = Math.floor(py / TT) - 3; y <= Math.floor(py / TT) + 3; y++) {
+                for (let x = Math.floor(px / TT) - 3; x <= Math.floor(px / TT) + 3; x++) {
+                    if (x >= 0 && y >= 0 && x < W && y < H && vus[y * W + x] && Math.hypot(x * TT + 8 - px, y * TT + 8 - py) < 44) return true;
+                }
+            }
+            return false;
+        }
+        const coupes = M.carte.points.filter(function (p) { return !enChar(p.x * TT + 8, p.y * TT + 8); }).map(function (p) { return p.slug; });
+        const v = L.Vehicules.creer('taxi', depart.x, depart.y, 0, { etat: 'stationne' });
+        const tires = {};
+        let horsRoute = 0;
+        for (let i = 0; i < 300; i++) {
+            L.Missions.boulot.slug = 'taxi';
+            L.Missions.boulot.enRoute(v);
+            const d = L.Missions.boulot.destination;
+            tires[d.nom] = (tires[d.nom] || 0) + 1;
+            if (!enChar(d.x, d.y)) horsRoute++;
+        }
+        L.Missions.boulot.fin();
+        return { coupes: coupes, tires: tires, horsRoute: horsRoute };
+    }""")
+    assert r["coupes"], "aucun point de la carte n'est coupe de la route : ce juge ne mord plus sur rien"
+    assert r["horsRoute"] == 0, f"{r['horsRoute']} courses sur 300 vers un lieu sans route ({r['coupes']}) : {r['tires']}"
+    assert len(r["tires"]) >= 10, f"le taxi ne va plus que dans {len(r['tires'])} lieux : {r['tires']}"
 
 
 def test_la_pizza_se_livre_trois_fois_et_refroidit(banc, paquet):

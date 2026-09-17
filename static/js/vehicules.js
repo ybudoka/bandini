@@ -1322,11 +1322,18 @@ const Vehicules = (function () {
     }
     if (!pose) { j.x = v.x; j.y = v.y + v.def.largeur; }
     v.conducteur = null;
-    v.etat = 'stationne';
-    // ⚠️ « Laisse » : un char que LE JOUEUR a garé. La fourriere ne remorque
-    // que ceux-la — remorquer le trafic viderait les rues sans que personne
-    // comprenne pourquoi, et le juge du trafic le verrait avant le joueur.
-    v.laisse = true;
+    // ⚠️ UNE EPAVE RESTE UNE EPAVE. `exploser` et `plier` posent l'epave PUIS
+    // font descendre celui qui etait au volant : ecrire `stationne` ici rendait
+    // une carcasse. On y remontait, elle sautait une deuxieme fois, et une
+    // mission dont le char venait d'exploser sous le joueur ne le voyait pas.
+    if (v.etat !== 'epave') {
+      v.etat = 'stationne';
+      // ⚠️ « Laisse » : un char que LE JOUEUR a garé. La fourriere ne remorque
+      // que ceux-la — remorquer le trafic viderait les rues sans que personne
+      // comprenne pourquoi, et le juge du trafic le verrait avant le joueur.
+      // Une epave, elle, n'est garee par personne.
+      v.laisse = true;
+    }
     j.dansVehicule = null; j.dessine = true;
     // ⚠️ Le meme appui ne doit pas nous faire REMONTER dans la meme image :
     // la fin de maj() regarde aussi le bouton ACTION.

@@ -112,15 +112,27 @@ const Histoire = (function () {
     return null;
   }
 
-  /** La ruelle (glyphe `x`) la plus proche d'un lieu — la ou dort le char de M1. */
-  function ruellePres(slug) {
+  /** La ruelle (glyphe `x`) la plus proche d'un lieu, a `loin` tuiles au moins —
+      la ou dort le char de M1.
+
+      ⚠️ `loin` vient du lieu (`ruelle:garage:24`, dans `missions.py`) : sans
+      lui, c'est la plus proche.
+      ⚠️ Seulement une tuile dont les DEUX voisines, dans le sens de la ruelle,
+      sont de la ruelle : un char fait deux tuiles, et pose au bout d'une impasse
+      il nait le nez dans un mur. `sens` dit dans quel sens le tourner (`poser`). */
+  function ruellePres(slug, loin) {
     const p = point(slug), c = Monde.carte;
     if (!p) return null;
+    const min2 = (loin || 0) * (loin || 0);
     let meilleur = null, dMin = Infinity;
     for (let ty = 1; ty < c.h - 1; ty++) for (let tx = 1; tx < c.w - 1; tx++) {
       if (Monde.glyphe(tx, ty) !== 'x') continue;
       const d = dist2(tx, ty, p.x, p.y);
-      if (d < dMin) { dMin = d; meilleur = { x: tx * TT + 8, y: ty * TT + 8 }; }
+      if (d < min2 || d >= dMin) continue;
+      const long = Monde.glyphe(tx - 1, ty) === 'x' && Monde.glyphe(tx + 1, ty) === 'x';
+      const large = Monde.glyphe(tx, ty - 1) === 'x' && Monde.glyphe(tx, ty + 1) === 'x';
+      if (!long && !large) continue;
+      dMin = d; meilleur = { x: tx * TT + 8, y: ty * TT + 8, sens: long ? '>' : 'v' };
     }
     return meilleur;
   }
@@ -131,7 +143,7 @@ const Histoire = (function () {
     if (ou === 'donneur') return ouTrouver(m.donneur);
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
-    if (deux[0] === 'ruelle') return ruellePres(deux[1]);
+    if (deux[0] === 'ruelle') return ruellePres(deux[1], Number(deux[2]) || 0);   // `ruelle:garage:24`
     if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
     if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
     return lieu(ou);
@@ -720,6 +732,16 @@ const Histoire = (function () {
     const m = courante(), p = B.partie.mission, j = B.joueur;
     const o = m.objectifs[p.etape];
     if (!o) return;
+    // ⚠️ LE CHAR DE LA MISSION A SAUTE : c'est rate, QUEL QUE SOIT l'objectif.
+    // Seuls `monter` et `livrer` le regardaient : le taxi de Marco explosait
+    // pendant les courses, l'auto-patrouille de M4 pendant qu'on semait, et la
+    // mission continuait sans char jusqu'a la livraison. Le fuyard de M2 n'en
+    // est pas un (on le casse expres), ni un char deja livre (`mission: null`).
+    const mv = B.mission.vehicule;
+    if (mv && mv.etat === 'epave' && mv.mission === m.slug && !mv.fuyard && m.echec.indexOf('vehicule_detruit') >= 0) {
+      echouer('vehicule_detruit');
+      return;
+    }
     switch (o.type) {
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
@@ -960,18 +982,42 @@ const Histoire = (function () {
     return true;
   }
 
+  //: Le temps qu'on a, le panneau lu, pour monter dans le char du defi.
+  //: ⚠️ LE PANNEAU SE LIT A PIED (au volant, ACTION fait descendre) : le tour et
+  //: la livraison, qui ratent sans char, ratent donc a l'image suivante — ni
+  //: l'un ni l'autre ne s'etait jamais gagne. Le Grand Saut avait deja ses dix
+  //: secondes pour trouver sa moto ; les deux autres les ont aussi, et leur
+  //: chrono ne part qu'au volant.
+  const ATTENTE_CHAR = 600;
+
   function commencerDefi(d) {
     const j = B.joueur;
-    B.defi = { slug: d.slug, t: 0, etape: 0, tours: 0, vol: 0, chocs: j.dansVehicule ? j.dansVehicule.chocs : 0, vie: j.dansVehicule ? j.dansVehicule.vie : 0 };
+    B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0 };
+    Son.SFX.mission();
+    // Le Grand Saut compte ses dix secondes lui-meme (`majDefi`) : il part tout de suite.
+    if (d.vehicule || j.dansVehicule) { partir(d, j.dansVehicule); return; }
+    Hud.message(d.titre.toUpperCase() + ' — MONTE DANS UN CHAR', 150);
+  }
+
+  /** Le chrono part. ⚠️ La police aux fesses et la reference « sans bosse » se
+      prennent ICI, au volant, et pas au panneau : sinon on se ferait arreter en
+      marchant jusqu'a son char, et on comparerait ses bosses a celles d'aucun. */
+  function partir(d, v) {
+    const f = B.defi;
+    f.parti = true; f.t = 0;
+    f.chocs = v ? v.chocs : 0; f.vie = v ? v.vie : 0;
     if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
     Hud.message(d.titre.toUpperCase() + ' — GO !', 120);
-    Son.SFX.mission();
   }
 
   function majDefi() {
     const f = B.defi, j = B.joueur;
     if (!f) return;
     const d = defis().find(function (q) { return q.slug === f.slug; });
+    if (!f.parti) {
+      if (!j.dansVehicule) { if (++f.attente > ATTENTE_CHAR) finirDefi(false, 'IL FAUT UN CHAR'); return; }
+      partir(d, j.dansVehicule);
+    }
     f.t++;
     if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
     const v = j.dansVehicule;
@@ -1046,6 +1092,7 @@ const Histoire = (function () {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
       const reste = d.chrono_s ? Math.max(0, d.chrono_s * 60 - B.defi.t) : null;
       const chrono = reste === null ? '' : ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
+      if (!B.defi.parti) return d.titre.toUpperCase() + chrono + ' — MONTE DANS UN CHAR';
       const compte = d.points ? ' TOUR ' + (B.defi.tours + 1) + '/' + d.tours : d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
       return d.titre.toUpperCase() + chrono + compte;
     }

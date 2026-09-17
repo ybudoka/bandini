@@ -263,26 +263,87 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
         j.x = p.x; j.y = p.y + 8; L.Entites.indexer();
         L.Missions.majInvite(j);
         const invite = L.B.invite;
-        L.Missions.interagir(j);
+        o.tape('KeyE', 2);                                // le panneau, au bouton
         const menu = L.B.menu && L.B.menu.titre;
-        L.B.menu.items[0].faire(); L.Hud.fermerMenu();
+        o.tape('KeyE', 2);                                // COMMENCER
         const defi = L.B.defi && L.B.defi.slug;
         const ligne = L.Histoire.ligneObjectif();
         const gps = L.Histoire.cible();
-        // ⚠️ Sans char, le defi rate A L'INSTANT — pas au bout du chrono. Le
-        // juge laissait filer les deux minutes et lisait le DERNIER message du
-        // HUD : le jour ou un facteur en colere a trouve le joueur plante la,
-        // c'est la facture de l'hopital qu'il a lue. On lit le verdict tout
-        // de suite, et on ne mesure que lui.
-        o.frame(30);
+        // ⚠️ A PIED, LE DEFI ATTEND SON CHAR. Il ratait a l'image suivante
+        // (« SANS CHAR, PAS DE TOUR ») — et comme le panneau ne se lit qu'a
+        // pied, le tour ne s'etait jamais gagne.
+        o.frame(300);
+        const attend = { defi: L.B.defi && L.B.defi.slug, ligne: L.Histoire.ligneObjectif() };
+        // ⚠️ Le verdict se lit A L'IMAGE OU IL TOMBE. Le juge laissait filer le
+        // temps et lisait le DERNIER message du HUD : le jour ou un facteur en
+        // colere a trouve le joueur plante la, c'est la facture de l'hopital
+        // qu'il a lue.
+        let n = 300;
+        while (L.B.defi && n < 1200) { o.frame(1); n++; }
         return { panneaux: panneaux, invite: invite, menu: menu, defi: defi, ligne: ligne, gps: gps && gps.nom,
-                 apres: L.B.defi, msg: L.B.msg };
+                 attend: attend, rateA: n, apres: L.B.defi, msg: L.B.msg };
     }""")
     assert r["panneaux"] == ["livraison", "saut", "tour"]
     assert r["invite"] == "DÉFI" and r["menu"] == "TOUR DU FAUBOURG"
-    assert r["defi"] == "tour" and r["ligne"].startswith("TOUR DU FAUBOURG 2:00 TOUR 1/3")
+    assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"
     assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]
-    assert r["apres"] is None and "RATÉ" in r["msg"], "sans char, le tour rate"
+    assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"}, (
+        "a pied, le defi attend son char et le chrono ne court pas : %s" % r["attend"])
+    assert r["apres"] is None and r["msg"] == "DÉFI RATÉ — IL FAUT UN CHAR"
+    assert 590 <= r["rateA"] <= 610, f"{r['rateA']} images : dix secondes pour monter, pas plus"
+
+
+def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
+    """⚠️ Rouge avant (17 sept. 2026) : « DÉFI RATÉ — SANS CHAR, PAS DE
+    LIVRAISON » a l'image qui suivait COMMENCER. Le panneau ne se lit qu'a pied
+    (au volant, ACTION fait descendre) : ni le tour ni la livraison ne s'etaient
+    jamais gagnes. Tout au bouton, sauf le trajet jusqu'au bar."""
+    liv = next(d for d in paquet["defis"] if d["slug"] == "livraison")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, M = L.Monde, TT = L.TT;
+        function roule(tx, ty) { return !M.bloque(tx, ty, M.MASQUE_VEHICULE) && !M.estEau(tx, ty); }
+        function pres(p) {
+            const tx = Math.floor(p.x / TT), ty = Math.floor(p.y / TT);
+            for (let r = 0; r <= 4; r++) for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
+                if (Math.max(Math.abs(dx), Math.abs(dy)) === r && roule(tx + dx, ty + dy)) return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+            }
+            return null;
+        }
+        const p = B.entites.find(function (e) { return e.type === 'panneau' && e.defi === 'livraison'; });
+        j.x = p.x; j.y = p.y + 8; L.Entites.indexer();
+        const place = pres({ x: p.x, y: p.y + 40 });
+        const v = L.Vehicules.creer('auto', place.x, place.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        o.tape('KeyE', 2);                                // le panneau
+        o.tape('KeyE', 2);                                // COMMENCER
+        const commence = B.defi && B.defi.slug;
+        const aPied = { t: B.defi && B.defi.t, etoiles: B.recherche.etoiles };
+        o.frame(60);                                      // on marche jusqu'au char
+        const unPeuPlusTard = { t: B.defi && B.defi.t, etoiles: B.recherche.etoiles };
+        const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
+        for (const c of cotes) {
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
+        }
+        o.tape('KeyE', 2);                                // on monte
+        const auVolant = { dedans: j.dansVehicule === v, etoiles: B.recherche.etoiles, ligne: L.Histoire.ligneObjectif() };
+        const bar = pres(L.Histoire.lieu('bar'));
+        v.x = bar.x; v.y = bar.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y;
+        L.Entites.indexer();
+        let n = 0;
+        while (B.defi && n < 30) { o.frame(1); n++; }
+        return { commence: commence, aPied: aPied, unPeuPlusTard: unPeuPlusTard, auVolant: auVolant,
+                 reussi: !!B.partie.defisFaits.livraison, msg: B.msg, encore: B.defi && B.defi.slug };
+    }""")
+    assert r["commence"] == "livraison"
+    assert r["aPied"] == {"t": 0, "etoiles": 0} and r["unPeuPlusTard"] == {"t": 0, "etoiles": 0}, (
+        "a pied, ni chrono ni police : on marche jusqu'a son char (%s)" % r["unPeuPlusTard"])
+    assert r["auVolant"]["dedans"] is True
+    assert r["auVolant"]["etoiles"] >= liv["etoiles"], "au volant, la police aux fesses"
+    assert r["auVolant"]["ligne"].startswith("LIVRAISON SANS BOSSE 1:"), r["auVolant"]
+    assert r["reussi"] is True, f"la livraison ne se gagne pas : {r['msg']} (encore : {r['encore']})"
+    assert str(liv["prime"]) in r["msg"]
 
 
 def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paquet):
@@ -581,3 +642,136 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
         "les trois coins sont vides : la reprise va droit au chef, seul debout")
     assert r["etapeApres"] == 2, "le chef couche, on seme la police"
     assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
+
+
+def test_le_char_de_m1_dort_loin_du_garage(banc):
+    """Demande de Martin (17 sept. 2026) : « déplacer plus loin la voiture de la
+    premiere mission ». La ruelle la plus proche du garage est a six tuiles : le
+    char naissait dans l'ecran, sous les yeux du joueur arrive au garage, et le
+    ramener tenait en trois secondes. ⚠️ Plus loin, il doit rester un char qu'on
+    peut prendre : dans la ruelle par ses deux bouts, relie au garage par la
+    route, il en sort sans toucher un mur — et la coupe de l'intro, qui va le
+    montrer, filme SA ruelle et pas la plus proche."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, M = L.Monde, TT = L.TT;
+        L.Histoire.commencer('m1');
+        B.cinema = null;
+        const garage = L.Histoire.lieu('garage');
+        j.x = garage.x; j.y = garage.y; L.Entites.indexer();
+        M.centrerCamera(j.x, j.y);
+        o.frame(3);
+        const v = B.mission.vehicule;
+        M.centrerCamera(j.x, j.y);
+        const vu = L.Entites.visibleAEcran(v.x, v.y, 0);
+        // La coupe de l'intro va MONTRER ce char : elle doit tomber sur sa ruelle.
+        const coupe = ((B.defs.missions[0].scenes || {}).intro || []).find(function (q) { return q.type === 'coupe'; });
+        const filme = coupe ? L.Histoire.resoudre(coupe.vers, L.Histoire.courante()) : null;
+        const ecartCoupe = filme ? Math.hypot(filme.x - v.x, filme.y - v.y) : null;
+        const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
+        const bouts = [12, -12].map(function (d) { return M.glyphe(Math.floor((v.x + ca * d) / TT), Math.floor((v.y + sa * d) / TT)); });
+        // La route, ecrite ici : du char, les tuiles ou un char roule.
+        const W = M.carte.w, H = M.carte.h, vus = new Uint8Array(W * H), file = [];
+        const s0 = Math.floor(v.y / TT) * W + Math.floor(v.x / TT);
+        vus[s0] = 1; file.push(s0);
+        for (let i = 0; i < file.length; i++) {
+            const k = file[i], x = k % W, y = (k - x) / W;
+            [[1, 0], [-1, 0], [0, 1], [0, -1]].forEach(function (d) {
+                const nx = x + d[0], ny = y + d[1], nk = ny * W + nx;
+                if (nx < 0 || ny < 0 || nx >= W || ny >= H || vus[nk]) return;
+                if (M.bloque(nx, ny, M.MASQUE_VEHICULE) || M.estEau(nx, ny)) return;
+                vus[nk] = 1; file.push(nk);
+            });
+        }
+        let relie = false;
+        for (let y = Math.floor(garage.y / TT) - 4; y <= Math.floor(garage.y / TT) + 4; y++) {
+            for (let x = Math.floor(garage.x / TT) - 4; x <= Math.floor(garage.x / TT) + 4; x++) if (vus[y * W + x]) relie = true;
+        }
+        const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
+        for (const c of cotes) {
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
+        }
+        o.tape('KeyE', 2);
+        const monte = j.dansVehicule === v;
+        const x0 = v.x, y0 = v.y;
+        o.touche('KeyW'); o.frame(50); o.relacher('KeyW'); o.frame(1);
+        return { tuiles: Math.hypot(v.x - garage.x, v.y - garage.y) / TT, depart: Math.hypot(x0 - garage.x, y0 - garage.y) / TT,
+                 glyphe: M.glyphe(Math.floor(x0 / TT), Math.floor(y0 / TT)), bouts: bouts, vu: vu, relie: relie, ecartCoupe: ecartCoupe,
+                 monte: monte, roule: Math.hypot(v.x - x0, v.y - y0), chocs: v.chocs, etape: B.partie.mission.etape };
+    }""")
+    assert r["depart"] >= 20, f"le char dort a {r['depart']:.0f} tuiles du garage : pas plus loin qu'avant (6)"
+    assert r["vu"] is False, "le char nait dans l'ecran, sous les yeux du joueur arrive au garage"
+    assert r["ecartCoupe"] is not None and r["ecartCoupe"] < 16, (
+        f"la coupe de l'intro filme une ruelle a {r['ecartCoupe']} px de celle ou dort le char")
+    assert r["glyphe"] == "x" and r["bouts"] == ["x", "x"], f"le char deborde de sa ruelle : {r['bouts']}"
+    assert r["relie"] is True, "aucune route ne ramene ce char au garage"
+    assert r["monte"] is True and r["etape"] == 2
+    assert r["roule"] > 30 and r["chocs"] == 0, f"le char ne sort pas de sa ruelle ({r['roule']:.0f} px, {r['chocs']} chocs)"
+
+
+def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
+    """⚠️ Rouge avant (17 sept. 2026), deux fois. Le taxi de Marco explosait
+    pendant les courses et M3 continuait a « 0/3 » ; l'auto-patrouille de M4
+    sautait pendant qu'on semait et M4 attendait qu'on la livre. `descendre()`
+    rendait la carcasse `stationne`, et seuls `monter` et `livrer` regardaient
+    l'epave."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, M = L.Monde;
+        function monter(v) {
+            const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
+            for (const c of cotes) {
+                j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+                if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
+            }
+            o.tape('KeyE', 2);
+            return j.dansVehicule === v;
+        }
+        function sauter(v) {
+            j.invincible = 1e6;                       // on juge la mission, pas la brulure
+            // ⚠️ La replique « pendant » de l'objectif d'abord, au bouton : tant
+            // qu'elle se dit, l'objectif attend (`Histoire.maj`).
+            for (let k = 0; k < 20 && B.cinema; k++) o.tape('KeyE', 2);
+            const pret = { etape: B.partie.mission && B.partie.mission.etape, cinema: !!B.cinema };
+            L.Vehicules.endommager(v, 9999, null);
+            let n = 0;
+            while (B.partie.mission && n < 10) { o.frame(1); n++; }
+            const rec = { pret: pret, etat: v.etat, ratee: !B.partie.mission, dit: B.cinema && B.cinema.partie, msg: B.msg };
+            B.cinema = null; B.dialogue = null;
+            B.recherche.etoiles = 0;
+            return rec;
+        }
+        const out = {};
+        // M3, pendant les courses.
+        B.partie.missionsFaites = { m1: 1, m2: 1 };
+        L.Histoire.commencer('m3'); B.cinema = null;
+        o.frame(2);
+        const taxi = B.mission.vehicule;
+        out.m3 = { monte: monter(taxi) };
+        o.frame(2);
+        out.m3.etape = B.partie.mission.etape;
+        Object.assign(out.m3, sauter(taxi));
+        // M4, pendant qu'on seme.
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
+        L.Histoire.commencer('m4'); B.cinema = null;
+        let h = B.partie.heure;
+        for (let k = 0; k < 200 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        const poste = L.Histoire.lieu('poste');
+        j.x = poste.x; j.y = poste.y; L.Entites.indexer();
+        o.frame(3);
+        const patrouille = B.mission.vehicule;
+        out.m4 = { monte: monter(patrouille) };
+        o.frame(2);
+        out.m4.etape = B.partie.mission.etape;
+        Object.assign(out.m4, sauter(patrouille));
+        return out;
+    }""")
+    for slug, titre, etape in (("m3", "LE TAXI DE MARCO", 1), ("m4", "LE LUNCH DU SERGENT", 2)):
+        m = r[slug]
+        assert m["monte"] is True and m["etape"] == etape, m
+        assert m["pret"] == {"etape": etape, "cinema": False}, m
+        assert m["etat"] == "epave", f"{slug} : le char a saute sous le joueur et n'est pas une epave ({m['etat']})"
+        assert m["ratee"] is True and m["dit"] == "echec", f"{slug} : le char a saute et la mission continue ({m})"
+        assert m["msg"] == "MISSION RATÉE — " + titre
