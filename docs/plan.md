@@ -155,7 +155,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le port du Faubourg touche l'eau, et les chaloupes mouillent dans la baie | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#le-port-du-faubourg-touche-leau-et-les-chaloupes-mouillent-dans-la-baie) |
 | Une chaloupe sur la route | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#une-chaloupe-sur-la-route) |
 | Le motard revient sur la moto volée | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#le-motard-revient-sur-la-moto-volée) |
-| Quelqu'un dans la chaloupe | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quelquun-dans-la-chaloupe) |
+| Quelqu'un dans la chaloupe | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quelquun-dans-la-chaloupe) |
 | De vraies plages, pas des bouts de sable | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#de-vraies-plages-pas-des-bouts-de-sable) |
 | Se réveiller dans un lit d’hôpital | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#se-réveiller-dans-un-lit-dhôpital) |
 | Des voix qui jouent, et qui finissent leurs phrases | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#des-voix-qui-jouent-et-qui-finissent-leurs-phrases) |
@@ -9160,9 +9160,35 @@ quand on la quitte, il y a encore une personne dessus ».
 ### Quelqu'un dans la chaloupe
 
 retour de Martin : « on devrait pouvoir voir le personnage ou un voleur assis dans la
-chaloupe ». La coque se conduit depuis le 16 sept., mais on y monte et **elle part vide** :
-seuls le vélo et la moto déclarent une `selle`, et `Vehicules.cavalierDe` ne peint personne
-ailleurs.
+chaloupe ».
+
+- ⚠️ **Mesuré** : on y montait et elle partait **vide**, aux 32 caps et pour les deux
+  silhouettes. Le joueur n'est plus dessiné une fois à bord, et `Vehicules.cavalierDe` ne
+  peint que ce qui déclare une `selle` — seuls le vélo et la moto en avaient une.
+
+✅ **Livré** (17 sept. 2026). **La coque déclare où le corps se tient**, comme le vélo : ses
+fesses sur le banc de poupe (`assise`), sa main au bout de la **barre franche** (`barre`,
+une pièce de plus, du haut du moteur vers le banc). Le bateau à console a les siens : assis
+sur son siège, les mains au **volant** (une pièce de plus sur la console). `assisDedans` en
+tire la `selle` par la même formule qu'un deux-roues.
+
+- ⚠️ **Une posture, pas la pose de la moto** (`posture` de la fiche) : six poses neuves du
+  passant, `barre_*` et `volant_*`. On ne voit de lui que ce qui dépasse du plat-bord — la
+  tête, les épaules, les bras, les genoux — et les rangées du bas sont **vides** à dessein,
+  comme celles du malade alité : c'est la coque qu'on doit y voir, pas des souliers.
+- ⚠️ **Le banc est écrasé comme la coque** (`profondeur`) dans `imageDuCavalier`. La selle
+  d'un vélo est à deux pixels du milieu et le biais du sol n'y changeait rien ; le banc de
+  poupe est à huit : posé sans lui, le barreur vu de dos s'asseyait **2,0 px** derrière son
+  banc (mesuré par le juge, rouge sans la correction).
+- ⚠️ **Le voleur** : aucun ne monte dans une coque aujourd'hui, et c'est voulu — c'est le
+  correctif « Une chaloupe sur la route » (le trafic roule sur des rails et emmenait la
+  coque dans la rue). Le dessin, lui, ne choisit pas : `cavalierDe` peint celui qui la mène,
+  joueur ou pilote. Le jour où une coque a un autre barreur, c'est son chemin sur l'eau
+  qu'il faudra écrire, pas son dessin.
+
+2 juges neufs (`test_poses_vehicules.py`), **rouges avant** : personne à bord à 32 caps sur
+32 ; et l'ancre du barreur à 2,0 px de son banc sans le biais du sol. Vu en jeu
+(Playwright), aux quatre caps et en diagonale, pour les deux silhouettes.
 
 ### De vraies plages, pas des bouts de sable
 

@@ -673,6 +673,37 @@ SPRITES.joueur.poses.roule_bas = [
    '.kcccccccck.', '.ksccccccsk.', '..kppppppk..', '..kpk..kpk..', '..kbk..kpk..', '..kkk..kbk..', '.......kkk..', '............'],
 ];
 
+/* --- Le passant qui MENE UNE COQUE ---------------------------------------------
+
+   ⚠️ Retour de Martin : « on devrait pouvoir voir le personnage ou un voleur assis
+   dans la chaloupe ». Assis au fond d'une coque, on ne voit de lui que ce qui
+   depasse du plat-bord : la tete, les epaules, les bras, les genoux. Les rangees du
+   bas sont VIDES a dessein, comme celles du malade alite — c'est la coque qu'on
+   doit y voir.
+
+   Deux postures, dictees par la fiche (`posture`) : `barre`, la main derriere lui
+   sur la barre franche du hors-bord ; `volant`, les deux mains devant, au volant
+   de la console. Les fesses sur le banc, la main a la barre : les juges les
+   mesurent contre les points que la coque declare (`assise`, `barre`). */
+SPRITES.joueur.poses.barre_cote = [[
+  '............', '....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....',
+  '..kkcccck...', '.kskcccck...', '..kkcccck...', '...kppppppk.', '...kkkkkkk..', '............', '............', '............']];
+SPRITES.joueur.poses.barre_haut = [[
+  '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khsssshk..', '...kssssk...',
+  '..kcccccck..', '.kckcccckck.', '.kskccccckk.', '..kccccsk...', '..kppppppk..', '............', '............', '............']];
+SPRITES.joueur.poses.barre_bas = [[
+  '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...',
+  '..kcccccck..', '.kckcccckk..', '.kskcccck...', '..kcccccck..', '.kppppppppk.', '.kkkkkkkkkk.', '............', '............']];
+SPRITES.joueur.poses.volant_cote = [[
+  '............', '....kkkk....', '...khhhhk...', '...khhhhhk..', '...khssosk..', '...khssssk..', '...khsssk...', '....kssk....',
+  '...kcccckk..', '...kcccccsk.', '...kcccckk..', '...kppppppk.', '...kkkkkkk..', '............', '............', '............']];
+SPRITES.joueur.poses.volant_haut = [[
+  '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '.kkhhhhhhkk.', '.kckhhhhkck.', '.kckssssksk.', '.kckcccckck.',
+  '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kcccccck..', '..kppppppk..', '............', '............', '............']];
+SPRITES.joueur.poses.volant_bas = [[
+  '............', '....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..kssssssk..', '...kssssk...',
+  '..kcccccck..', '.kcccccccck.', '.kcccccccck.', '..kssccssk..', '.kppppppppk.', '.kkkkkkkkkk.', '............', '............']];
+
 /* --- Le malade ALITE -----------------------------------------------------------
 
    ⚠️ Pas `couche` : `couche` est un corps A TERRE, en travers (un KO, un mort),
@@ -1163,6 +1194,13 @@ function deuxRoues(machine, longueur, cote, pal) {
     selle: [0, -machine.assise[0] - longueur / 2],
   });
 }
+/** Une coque : une fiche en volume, le siege de celui qui la mene, et la POSTURE
+    de son corps (`barre` ou `volant`, des poses du passant). ⚠️ La selle se tire
+    de l'`assise` comme celle d'un deux-roues — la meme formule, pour le meme point
+    qui tourne avec la machine (`Vehicules.imageDuCavalier`). */
+function assisDedans(machine, longueur, cote, posture, pal) {
+  return Object.assign(deuxRoues(machine, longueur, cote, pal), { posture: posture });
+}
 // La berline : 28 px de long, sur une toile de 44 (sa diagonale, et le toit qui
 // monte au-dessus). ⚠️ Les trois ont la MEME carrosserie ; le taxi et la police
 // y ajoutent leur livree, `x` le damier et `y` la bande.
@@ -1410,8 +1448,18 @@ const MACHINE_AUTOBUS = {
   ),
 };
 // --- La chaloupe : une coque pincee en proue, un banc, un moteur hors-bord ---------
+// ⚠️ **Quelqu'un la mene** (retour de Martin : « on devrait pouvoir voir le
+// personnage ou un voleur assis dans la chaloupe »). On y montait et elle partait
+// VIDE : seuls le velo et la moto declaraient une selle. Comme eux, la coque
+// declare ou le corps se tient — ses fesses sur le banc de poupe (`assise`), sa
+// main au bout de la barre franche (`barre`) — et les juges mesurent le corps
+// dessine contre les deux.
+// La barre franche : du haut du moteur vers le banc de poupe, jusqu'a la main.
+const BARRE_FRANCHE = ['tube', [-15.4, 0, 7.4], [-11.8, 0, 6.6], 'M', 0.4];
 const MACHINE_BATEAU = {
   profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  assise: [-8.2, 0, 3.9],
+  barre: [-11.8, 0, 6.6],
   pieces: [
     ['profil', [[15, 5.2], [12.4, 2.4], [8.6, 0.6], [-14.4, 0.6], [-15, 1.2], [-15, 5.2]],
      [[-15.5, 5.0], [-2, 6.0], [6, 5.6], [11, 3.6], [15.5, 0.3]], 'c', 'DDDDD.', 0],
@@ -1421,6 +1469,7 @@ const MACHINE_BATEAU = {
     ['bloc', [-9.2, -7.2], [-5.2, 5.2], [3.4, 3.9], 'u', 'u', 'u', 0.1],
     ['bloc', [-17.4, -15.2], [-1.2, 1.2], [4.0, 8.0], 'k', 'k', 'k', 0.2],                  // le moteur
     ['tube', [-16.2, 0, 4.0], [-16.2, 0, 0.2], 'M', 0.2],
+    BARRE_FRANCHE,
     ['bloc', [12.6, 15.4], [-0.9, 0.9], [5.0, 7.0], 'l', 'l', 'l', 0.3],                     // les feux de navigation
     ['bloc', [-15.8, -14.0], [-1.0, 1.0], [5.2, 7.2], 't', 't', 't', 0.3],
   ],
@@ -1439,7 +1488,7 @@ SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 60, { k: '#101018', c: '
 SPRITES.remorqueuse.gyrophares = { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] };
 SPRITES.camion = enVolume(MACHINE_CAMION, 40, 76, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
 SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 80, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
-SPRITES.bateau = enVolume(MACHINE_BATEAU, 30, 48, { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
+SPRITES.bateau = assisDedans(MACHINE_BATEAU, 30, 48, 'barre', { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
 
 /* --- Les variantes du parc : la meme empreinte, une autre silhouette ------------------
 
@@ -1540,9 +1589,14 @@ const MACHINE_LUXE_VUS = Object.assign({}, MACHINE_LUXE, {
 });
 
 // Le bateau a console : la meme coque, une console et son pare-brise, un siege derriere.
+// ⚠️ Ni bancs ni barre franche : on le mene assis sur son siege (`assise`), les
+// mains au volant de la console (`barre`).
 const MACHINE_BATEAU_CONSOLE = Object.assign({}, MACHINE_BATEAU, {
-  pieces: MACHINE_BATEAU.pieces.filter(function (p) { return !(p[0] === 'bloc' && p[5] === 'u'); }).concat([
+  assise: [-6.1, 0, 4.4],
+  barre: [-3.8, 0, 6.4],
+  pieces: MACHINE_BATEAU.pieces.filter(function (p) { return !(p[0] === 'bloc' && p[5] === 'u') && p !== BARRE_FRANCHE; }).concat([
     ['bloc', [-3.4, 0.8], [-2.4, 2.4], [1.6, 5.6], 'D', 'c', 'D', 0.1],                      // la console, son tableau de bord sombre
+    ['bloc', [-3.9, -3.4], [-1.2, 1.2], [5.6, 6.8], 'k', 'k', 'k', 0.3],                     // son volant
     ['profil', [[0.8, 5.6], [-0.6, 7.6], [-1.0, 7.6], [0.4, 5.6]], [-2.4, 2.4], 'D', 'v.v.', 0.2], // son pare-brise
     ['tube', [0.6, -2.4, 5.8], [0.6, 2.4, 5.8], 'D', 1.0], ['tube', [-0.8, -2.4, 7.7], [-0.8, 2.4, 7.7], 'D', 1.0],
     ['bloc', [-7.2, -5.0], [-2.6, 2.6], [1.6, 4.4], 'u', 'u', 'u', 0.1],                     // le siege
@@ -1561,7 +1615,7 @@ SPRITES.autobus_scolaire.couleur = '#f5b400';
 SPRITES.autobus.variantes = { autobus: 3, autobus_scolaire: 2 };
 SPRITES.luxe_vus = enVolume(MACHINE_LUXE_VUS, 32, 56, SPRITES.luxe.pal);
 SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
-SPRITES.bateau_console = enVolume(MACHINE_BATEAU_CONSOLE, 30, 48, SPRITES.bateau.pal);
+SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);
 SPRITES.bateau.variantes = { bateau: 3, bateau_console: 2 };
 
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,

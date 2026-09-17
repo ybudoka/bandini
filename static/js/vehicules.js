@@ -2552,9 +2552,11 @@ const Vehicules = (function () {
     return [def.ancre[0], def.ancre[1] + 1 - v.def.longueur / 2];
   }
 
-  /** Les couleurs de celui qui est SUR le deux-roues, ou null s'il n'y a
-      personne : le joueur quand c'est lui, le pilote du trafic sinon. Une
-      epave n'a personne dessus — il est tombe.
+  /** Les couleurs de celui qui est SUR le deux-roues — ou DANS la chaloupe —,
+      ou null s'il n'y a personne : le joueur quand c'est lui, le pilote du
+      trafic sinon. Une epave n'a personne dessus — il est tombe. ⚠️ C'est la
+      `selle` de la fiche qui dit qu'on voit celui qui la mene, pas sa classe :
+      un char ferme la cache, une coque la declare.
 
       ⚠️ Le pilote du trafic ne se peint que tant que le TRAFIC conduit. Un
       deux-roues que son pilote a quitte — le fuyard qui tombe de sa moto, un
@@ -2587,15 +2589,21 @@ const Vehicules = (function () {
   function imageDuCavalier(def, v, swaps) {
     const cuit = Atlas.cuire('joueur', SPRITES.joueur, swaps);
     const face = faceDe(v);
-    const poses = cuit.poses['roule_' + face] || cuit.poses['assis_' + face] || cuit.poses.assis_bas;
+    // ⚠️ La POSTURE est celle de la fiche : on ne mene pas une chaloupe comme on
+    // enfourche une moto — assis au fond, la main a la barre (`posture`).
+    const poses = cuit.poses[(def.posture || 'roule') + '_' + face] || cuit.poses['assis_' + face] || cuit.poses.assis_bas;
     if (!poses) return null;
     const image = def.pedale ? Math.floor((v.parcouru || 0) / def.pedale) % poses.length : 0;
     const selle = def.selle || [0, 0];
     const recul = v.def.longueur / 2 + selle[1];
     const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
+    // ⚠️ **ECRASE SUR L'AXE NORD-SUD, comme la machine** (`profondeur`) : le banc
+    // de poupe est a 8 px du milieu de la coque, et pose sans le biais du sol,
+    // le barreur vu de dos s'asseyait deux pixels derriere son banc.
+    const K = (def.machine && def.machine.profondeur) || 1;
     return { canvas: poses[image],
              x: v.x - ca * recul - sa * selle[0] - cuit.ancre[0],
-             y: v.y - sa * recul + ca * selle[0] - cuit.ancre[1] };
+             y: v.y + (-sa * recul + ca * selle[0]) * K - cuit.ancre[1] };
   }
 
   //: Un battement de gyrophare, en images : un peu plus de quatre eclats par

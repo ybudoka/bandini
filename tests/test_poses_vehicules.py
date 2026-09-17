@@ -976,6 +976,150 @@ def test_le_cycliste_pedale_en_roulant_et_le_motard_non(banc):
     assert r["moto"]["pedale"] is None and r["moto"]["fige"], f"le motard pédale : {r['moto']}"
 
 
+# --- Quelqu'un dans la chaloupe : la coque montre celui qui la mène ----------
+
+
+def test_on_voit_celui_qui_mene_la_chaloupe(banc):
+    """Retour de Martin : « on devrait pouvoir voir le personnage ou un voleur
+    assis dans la chaloupe ». ⚠️ **Mesuré avant** : on y montait et elle partait
+    VIDE, à tous les caps et pour les deux silhouettes. Le joueur n'est plus
+    dessiné une fois à bord (`dessine = false`), et `cavalierDe` ne peint que ce
+    qui déclare une `selle` — seuls le vélo et la moto en avaient une.
+
+    On juge par le DESSIN : `dessinerUn` peint la coque, puis par-dessus la pose
+    de SA posture (la barre franche, le volant de la console) aux couleurs de
+    celui qui la mène. Amarrée, personne ; descendu, personne."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        const ctx = L.Base.ecran(), vrai = ctx.drawImage;
+        const images = function (v) {
+            const mises = [];
+            ctx.drawImage = function (img) { mises.push(img); };
+            L.Vehicules.dessinerUn(ctx, v, 0, 0);
+            ctx.drawImage = vrai;
+            return mises;
+        };
+        const out = {};
+        ['bateau', 'bateau_console'].forEach(function (sprite) {
+            const v = L.Vehicules.creer('bateau', j.x + 40, j.y, 0, { etat: 'stationne', sprite: sprite });
+            L.Entites.indexer();
+            const amarree = images(v).length;
+            L.Vehicules.monter(j, v);
+            const corps = L.Atlas.cuire('joueur', L.SPRITES.joueur, j.swaps);
+            const posture = L.SPRITES[sprite].posture;
+            let vus = 0, bonnePose = 0;
+            for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {
+                v.angle = i * 2 * Math.PI / L.Vehicules.ROTATIONS;
+                const m = images(v);
+                if (m.length === 2) vus++;
+                const poses = corps.poses[posture + '_' + L.Vehicules.faceDe(v)];
+                if (m.length === 2 && poses && poses.indexOf(m[1]) >= 0) bonnePose++;
+            }
+            const aBord = { cache: j.dessine === false, couleurs: L.Vehicules.cavalierDe(v) === j.swaps };
+            L.Vehicules.descendre(j, true);
+            out[sprite] = { amarree: amarree, vus: vus, bonnePose: bonnePose, posture: posture, aBord: aBord,
+                            descendu: images(v).length, apres: L.Vehicules.cavalierDe(v) };
+            L.Entites.retirer(v);
+        });
+        return { caps: L.Vehicules.ROTATIONS, out: out };
+    }""")
+    postures = {"bateau": "barre", "bateau_console": "volant"}
+    for sprite, m in r["out"].items():
+        assert m["amarree"] == 1, f"{sprite} amarrée : quelqu'un est assis dedans ({m})"
+        assert m["aBord"]["cache"], f"le décor du juge est faux : le joueur est encore dessiné à bord ({m})"
+        assert m["vus"] == r["caps"], f"{sprite} : personne n'est dessiné à bord à {r['caps'] - m['vus']} caps sur {r['caps']}"
+        assert m.get("posture") == postures[sprite], f"{sprite} n'a pas sa posture : {m}"
+        assert m["bonnePose"] == r["caps"], f"{sprite} : celui qui la mène n'a pas la pose « {m['posture']} » à tous les caps ({m})"
+        assert m["aBord"]["couleurs"], f"{sprite} : celui qui la mène n'a pas les couleurs du joueur ({m})"
+        assert m["descendu"] == 1 and m["apres"] is None, f"{sprite} : descendu, quelqu'un est encore assis dedans ({m})"
+
+
+def test_le_barreur_s_assoit_sur_son_banc_et_tient_la_barre(banc):
+    """Le corps se tient sur la coque aux points qu'elle déclare, comme le
+    cycliste sur son vélo : les fesses sur le banc (`assise`), la main à la barre
+    (`barre` — le bout de la barre franche, ou le volant de la console). De
+    profil pour les deux ; de face aussi pour la console, où ses mains tombent
+    sur le volant devant lui.
+
+    ⚠️ **Et le banc est ÉCRASÉ comme la coque** (`profondeur`). Celui d'un vélo
+    est à deux pixels du milieu et le biais du sol n'y changeait rien ; le banc
+    de poupe est à huit : posé sans lui, le barreur vu de dos s'asseyait deux
+    pixels derrière son banc. On mesure donc aussi, aux 32 caps, que l'ancre du
+    corps tombe sur la projection du banc.
+
+    ⚠️ Assis au fond, on ne voit pas ses pieds : c'est la coque qu'on doit voir
+    sous le plat-bord, pas des souliers."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + TRACER + """
+        const d = o.ligneDroite();
+        const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
+        j.swaps = { c: '#0000fe', h: '#00fe00', s: '#fe0000', p: '#fefe00' };
+        const peau = '#fe0000', pantalon = '#fefe00', soulier = L.SPRITES.joueur.pal.b;
+        const out = {};
+        ['bateau', 'bateau_console'].forEach(function (sprite) {
+            const v = L.Vehicules.creer('bateau', j.x + 40, j.y, 0, { etat: 'stationne', sprite: sprite });
+            L.Entites.indexer();
+            L.Vehicules.monter(j, v);
+            const def = L.SPRITES[sprite], M = def.machine, K = M.profondeur;
+            v.x = 200; v.y = 100; v.z = 0;
+            const ecran = function (p, a) {
+                const ca = Math.cos(a), sa = Math.sin(a);
+                return [v.x + p[0] * ca - p[1] * sa, v.y + (p[0] * sa + p[1] * ca) * K - p[2]];
+            };
+            const loin = function (p, q) { return Math.hypot(p[0] - q[0], p[1] - q[1]); };
+            const peint = function (a) {
+                v.angle = a;
+                const cav = L.Vehicules.imageDuCavalier(def, v, L.Vehicules.cavalierDe(v));
+                const x0 = Math.round(cav.x), y0 = Math.round(cav.y);
+                return { cav: cav, px: cav.canvas.getContext('2d').traces.map(function (t) { return [x0 + t[0] + 0.5, y0 + t[1] + 0.5, t[4]]; }) };
+            };
+            const main = function (a) {
+                const px = peint(a).px, barre = ecran(M.barre, a);
+                return Math.min.apply(null, px.filter(function (t) { return t[2] === peau; }).map(function (t) { return loin(t, barre); }));
+            };
+            const fesses = function (a) {
+                const px = peint(a).px, banc = ecran(M.assise, a);
+                const p = px.filter(function (t) { return t[2] === pantalon && Math.abs(t[0] - banc[0]) <= 1.5; });
+                return Math.min.apply(null, p.map(function (t) { return t[1]; })) - banc[1];
+            };
+            let ecart = 0, souliers = 0;
+            const corps = L.Atlas.cuire('joueur', L.SPRITES.joueur, j.swaps);
+            for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {
+                const a = i * 2 * Math.PI / L.Vehicules.ROTATIONS, pe = peint(a);
+                const sol = ecran([M.assise[0], M.assise[1], 0], a);
+                ecart = Math.max(ecart, loin([pe.cav.x + corps.ancre[0], pe.cav.y + corps.ancre[1]], sol));
+                souliers += pe.px.filter(function (t) { return t[2] === soulier; }).length;
+            }
+            out[sprite] = { est: { main: main(0), fesses: fesses(0) }, ouest: { main: main(Math.PI), fesses: fesses(Math.PI) },
+                            sud: { main: main(Math.PI / 2) }, ecart: ecart, souliers: souliers };
+            L.Vehicules.descendre(j, true);
+            L.Entites.retirer(v);
+        });
+        return out;
+    }""")
+    assert set(r) == {"bateau", "bateau_console"}, "le décor du juge est faux : %s" % list(r)
+    for sprite, m in r.items():
+        for face in ("est", "ouest"):
+            assert m[face]["main"] <= 2.5, (
+                f"{sprite} vu {face} : sa main est à {m[face]['main']:.1f} px de la barre — il ne la tient pas"
+            )
+            assert -1.5 <= m[face]["fesses"] <= 1.5, (
+                f"{sprite} vu {face} : ses fesses sont à {m[face]['fesses']:+.1f} px du banc — "
+                "il flotte au-dessus ou il est assis sous la coque"
+            )
+        assert m["ecart"] <= 1, (
+            f"{sprite} : l'ancre du barreur tombe à {m['ecart']:.1f} px de son banc — "
+            "le banc n'est pas écrasé comme la coque"
+        )
+        assert m["souliers"] == 0, f"{sprite} : on voit ses souliers à travers la coque ({m['souliers']} px)"
+    assert r["bateau_console"]["sud"]["main"] <= 2.5, (
+        "la console vue de face : ses mains ne sont pas sur le volant (%.1f px)" % r["bateau_console"]["sud"]["main"]
+    )
+
+
 # --- Le toit, comme en vrai : l'enseigne et les gyrophares --------------------
 
 
