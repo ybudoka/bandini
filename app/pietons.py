@@ -36,6 +36,7 @@ class Pieton(TypedDict):
     metier: str | None
     heures: tuple[float, float] | None
     districts: tuple[str, ...] | None
+    standings: tuple[str, ...] | None
     frequence: float
     phase: int
 
@@ -43,13 +44,13 @@ class Pieton(TypedDict):
 def _p(slug, nom, chandail, cheveux, peau, pantalon, *, sprite="joueur", vitesse=1.0,
        courage=0.0, temoin=0.3, vie=60, argent=(2, 20), arme=None, gang=None,
        intouchable=False, accompagne=None, metier=None, heures=None, districts=None,
-       frequence=1.0, phase=1) -> Pieton:
+       standings=None, frequence=1.0, phase=1) -> Pieton:
     return Pieton(
         slug=slug, nom=nom, sprite=sprite,
         couleurs={"c": chandail, "h": cheveux, "s": peau, "p": pantalon},
         vitesse=vitesse, courage=courage, temoin=temoin, vie=vie, argent=argent,
         arme=arme, gang=gang, intouchable=intouchable, accompagne=accompagne,
-        metier=metier, heures=heures, districts=districts,
+        metier=metier, heures=heures, districts=districts, standings=standings,
         frequence=frequence, phase=phase,
     )
 
@@ -296,24 +297,28 @@ CATALOGUE: list[Pieton] = [
     # ⚠️ LE MEILLEUR TEMOIN DE LA VILLE (`temoin=1.0`, le seul) : il regarde,
     # c'est tout ce qu'il fait. Faire un coup devant lui, c'est se faire voir a
     # coup sur — et il est lent, alors on ne le seme pas en marchant.
+    # ⚠️ `standings` : QUI MARCHE DANS LA RUE dit aussi le standing (4e vague des
+    # quartiers). Un touriste ne se promene pas au pied des plex du port, un
+    # ivrogne ne dort pas dans la rue chic. Ca se croise avec `districts` : la
+    # sorte nait la ou les DEUX sont vrais, et une sorte sans standing va partout.
     _p("touriste", "Touriste", "#f2e2a8", "#8a6a3a", "#e8b088", "#8a7a5a",
        sprite="touriste", vitesse=0.7, courage=0.0, temoin=1.0, vie=55,
        argent=(30, 90), metier="touriste", frequence=0.0,
-       districts=("quais", "pointe")),
+       districts=("quais", "pointe"), standings=("cossu", "ordinaire")),
     # ⚠️ LE SEUL QUI NE FUIT PAS devant une arme — il insulte. Ce qui le rend
     # dangereux pour lui-meme, et c'est le but : une rue ou tout le monde
     # detale de la meme facon n'a qu'une reaction.
     _p("ivrogne", "Ivrogne", "#6a5a4a", "#8a8a8a", "#d8a878", "#4a4438",
        sprite="ivrogne", vitesse=0.7, courage=1.0, temoin=0.05, vie=70,
        argent=(2, 18), metier="ivrogne", frequence=0.0,
-       districts=("quais", "faubourg")),
+       districts=("quais", "faubourg"), standings=("pauvre",)),
     # Ecouteurs sur les oreilles : il ne temoigne de RIEN (`temoin=0.0`, le
     # seul avec l'agent) et il ne s'arrete jamais — ni pour un amuseur, ni
     # pour une pause.
     _p("jogger", "Joggeuse", "#e04a3a", "#2a2a2a", "#e8b088", "#2a2a2a",
        sprite="jogger", vitesse=1.45, courage=0.2, temoin=0.0, vie=75,
        argent=(0, 8), metier="jogger", frequence=0.0,
-       districts=("erables", "pointe")),
+       districts=("erables", "pointe"), standings=("cossu", "ordinaire")),
     # Sa tournee fait battre les portes de la rue une a une — et il n'ENTRE
     # jamais. C'est toute la difference avec le flaneur qui rentre chez lui :
     # celui-la disparait derriere le battant, le facteur reste dehors.
@@ -350,7 +355,7 @@ CATALOGUE: list[Pieton] = [
     _p("pickpocket", "Pickpocket", "#3a4450", "#1a1a1a", "#d8a878", "#26262e",
        sprite="pickpocket", vitesse=1.1, courage=0.2, temoin=0.1, vie=65,
        argent=(20, 80), metier="pickpocket", frequence=0.0,
-       districts=("faubourg", "quais")),
+       districts=("faubourg", "quais"), standings=("pauvre",)),
 ]
 
 #: Les gangs : leur archetype, leur territoire (zone de la carte), leur humeur.

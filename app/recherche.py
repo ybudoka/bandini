@@ -330,9 +330,21 @@ POLICE = {
 }
 
 
+#: ⚠️ **LA POLICE ET LE STANDING** (4e vague des quartiers) : « en cossu, la police
+#: arrive plus vite ; en pauvre, elle tarde ». `patrouille` multiplie le nombre
+#: d'agents que la zone veut ; `depeche` multiplie le delai au bout duquel un temoin
+#: qui ne trouve pas d'agent TELEPHONE. Voler chez les riches paie, et ca se paie.
+STANDING: dict[str, dict] = {
+    "cossu": {"patrouille": 1.5, "depeche": 0.6},
+    "ordinaire": {"patrouille": 1.0, "depeche": 1.0},
+    "pauvre": {"patrouille": 0.6, "depeche": 1.7},
+}
+
+
 def exporter() -> dict:
     return {
         "tuile_px": TUILE_PX,
+        "standing": {nom: dict(fiche) for nom, fiche in STANDING.items()},
         "police": dict(POLICE),
         "paliers": PALIERS,
         "etoiles_max": ETOILES_MAX,

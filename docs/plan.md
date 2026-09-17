@@ -201,7 +201,6 @@ ne bougent pas quand l'ordre de travail change.
 | Le client du taxi attend au bord de la route, et une flèche y mène | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
-| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
@@ -212,6 +211,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
+| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (les 4 vagues) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (2 vagues livrées : l'appel d'une mission ; la sonnerie baisse et le Clairon l'attend — la 3e : plus de sonnerie du tout quand le narrateur parle) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -614,13 +614,13 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 
 | Module | Contenu | Tests pytest |
 |---|---|---|
-| `vehicules.py` | 8 types : vitesse, accélération, virage, PV, places, prix, fréquence, couleurs, `sprite` | slugs uniques, bornes, une auto `police`, sprite existe (harnais Node) |
+| `vehicules.py` | 8 types : vitesse, accélération, virage, PV, places, prix, fréquence, couleurs, `sprite` ; `STANDING_DU_PARC` (pas de char rare en rue pauvre, une minoune y perd 40 % de sa tôle) | slugs uniques, bornes, une auto `police`, sprite existe (harnais Node) |
 | `armes.py` | poings + 9 armes : dégâts, portée, cadence, chargeur, prix, `etoiles_usage`, `son` (le bruitage de l'arme, un slug de `audio.CATALOGUE`) | première = poings à 0 $, prix croissants, chaque `son` existe au catalogue audio |
-| `economie.py` | `ARGENT_DEPART`, `amende(etoiles, casier)` = `min(argent, base[★] × (1 + 0,5 × casier))`, pots-de-vin `40 × ★ × (1 + 0,5 × casier)`, hôpital `clamp(10 %, 30, 500)`, propriétés, `FORTUNE_MAX`, ce que la bouffe rend (`*_pv` et `*_souffle`) et `CAFE` (durée + dépense du sprint) | jamais négatif, monotone, plafonné, retour sur investissement 10–60 min, coordonnées sur une porte, le café n'achète que de la **durée** et dure plus qu'un plein de souffle |
-| `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) | contigus, monotones, palier 0 sans réponse |
+| `economie.py` | `ARGENT_DEPART`, `amende(etoiles, casier)` = `min(argent, base[★] × (1 + 0,5 × casier))`, pots-de-vin `40 × ★ × (1 + 0,5 × casier)`, hôpital `clamp(10 %, 30, 500)`, propriétés, `FORTUNE_MAX`, ce que la bouffe rend (`*_pv` et `*_souffle`) et `CAFE` (durée + dépense du sprint) ; `FOUILLE_PAR_STANDING` (ce qu'il y a dans les tiroirs, par quartier) | jamais négatif, monotone, plafonné, retour sur investissement 10–60 min, coordonnées sur une porte, le café n'achète que de la **durée** et dure plus qu'un plein de souffle |
+| `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) ; `STANDING` (la patrouille et le téléphone du témoin par standing) | contigus, monotones, palier 0 sans réponse |
 | `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `o` place, `q` quai, `~` eau, majuscules = bâtiment spécial garanti, `<` et `^` = bloc **avalé** par son voisin) + `COLONNES`/`RANGEES`/`RUES_V`/`RUES_H` (aucune égale à sa voisine) ; `generer(plan, graine)` produit tuiles (`sol`, `voie` = champ de direction + lignes d'arrêt), intersections (avec leurs bras), portes, lampes, décor, zones, apparitions ; intérieurs en ASCII. **Trois sources d'irrégularité** : la trame, les superblocs (une rue qui n'existe pas → des T), et le découpage BSP en parcelles inégales (bâtiments en U ou en L, dents creuses, terrains vagues, stationnements). Un **stationnement est dessiné**, pas rayé au hasard : des rangées de cases de 1 × 2 tuiles (le gabarit exact de l'auto, glyphes `^ v < >` = où pointe le **nez**), des allées de manœuvre — toute rangée en touche une —, des rangées **dos à dos** dès qu'il y a douze tuiles de creux, des îlots de béton (`I`) et un lampadaire au bout des rangées. Un **filet** bouche les poches injoignables au lieu de livrer un îlot muré. Deux **couches peintes** par-dessus, qui ne touchent à aucune solidité : les **devantures** (bandeau, nom, vitrines, pancarte) et les **résidences** (étages de fenêtres, balcon, escalier de fer) — `_a_quoi_sert()` décide, par bâtiment, commerce ou logement. Les **intérieurs sont dessinés à la main** (`_piece`, un plan par pièce, l'espace = le plancher, meubles en glyphes) et **jugés à l'import** : une porte, un plancher d'un seul tenant, des points atteignables | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), un seul îlot marchable **sur cinq graines**, portes ⇔ intérieurs, aucun gabarit sur une rue **qui existe**, un superbloc avale bien sa rue, **toute rangée de stationnement touche une allée** et toute case fait deux tuiles de creux, **juge d'asymétrie**, déterministe |
 | `missions.py` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues ; les **scènes**, en plans (`TYPES_PLANS`, `SCENE_OUVERTURE`, `erreurs_de_scene`, six `GESTES`) | prérequis sans cycle, cibles sur tuile marchable, références existantes |
-| `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) ; les **métiers** qui ne naissent pas au hasard (la Brume, le marchand, le commis, l'agent, l'**homme-sandwich** et ses heures) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue, un métier a ses heures |
+| `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) ; les **métiers** qui ne naissent pas au hasard (la Brume, le marchand, le commis, l'agent, l'**homme-sandwich** et ses heures) ; le `standings` des sortes (4e vague des quartiers) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue, un métier a ses heures |
 | `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`), leurs `districts` (la cabane à fruits de mer ne quitte pas le port) et leur `reclame` ; `RECLAME` : l'homme-sandwich (portée, boniment, repos, coupon) ; `COMPTOIRS` : de quoi manger et boire par famille de commerce ; `DISTRIBUTRICES` : les trois sortes de machine, leurs articles au prix du comptoir et les familles de devanture devant lesquelles elles se posent (`sortes_devant`) | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille, rien ne bat le hot-dog au dollar, un solliciteur n'est pas un mur |
 | `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
 | `interpretation.py` | comment une réplique se **dit** : le texte joué qu'ElevenLabs **v3** reçoit (balises d'émotion en anglais `[sighs]`, pauses « … »), une par voix, qui dit **les mêmes mots** que la boîte ; le temps mort ajouté à la fin (0,35 s), le niveau commun (−19 LUFS) et le pic — `scripts/audio_elevenlabs.py` les pose après la génération (`finir_voix`) | chaque voix a son jeu, mêmes mots que la boîte (attrape un slug décalé), balises connues de v3, chaque fichier finit sur un temps mort et au niveau, **la ligne de dialogue attend sa voix** (banc) |
@@ -4399,7 +4399,56 @@ _La proposition d'origine :_
 - **Les commerces qui s'ouvrent** (un sur cinq) prennent une pièce selon le standing : un bistro
   n'a pas le comptoir d'un prêteur sur gages.
 
-#### 4e vague — le standing se vit (taille 1)
+#### 4e vague — le standing se vit (taille 1) — **livrée le 17 sept. 2026**
+
+✅ **Ce qui est livré, et où ça s'écarte de la proposition ci-dessous :**
+
+- **Qui marche** : `pietons.Pieton.standings` (une sorte sans standing va partout) se croise avec
+  `districts` — touriste et joggeuse en cossu et ordinaire, ivrogne et pickpocket en pauvre.
+  ⚠️ Le district se lit au JOUEUR (c'est sa bulle), le standing à la TUILE où la sorte se pose :
+  deux blocs voisins n'ont pas le même. Et un juge exige que le croisement des deux existe
+  quelque part — une sorte qui ne peut naître nulle part est une sorte morte (le premier essai
+  mettait le touriste en cossu seul : ses quartiers sont les Quais et La Pointe, il n'y serait
+  jamais né).
+- **Ce qui est garé** : `vehicules.STANDING_DU_PARC` — `rares` (le haut de gamme peut-il naître
+  ici ?) et `usure` (la carrosserie qu'il lui reste). Pas un char rare dans une rue pauvre ; les
+  chars qui y naissent gardent 60 % de leur tôle, et le char porte sa marque (`usure`), ce qui
+  distingue un char né minoune d'un char défoncé depuis.
+- **La police** : `recherche.STANDING` — `patrouille` multiplie ce que la zone veut d'agents
+  (1,5 en cossu, 0,6 en pauvre), `depeche` le délai au bout duquel un témoin qui ne trouve pas
+  d'agent téléphone (0,6 en cossu, 1,7 en pauvre).
+- **L'argent** : `economie.FOUILLE_PAR_STANDING` — les tiroirs d'un logement rapportent 2,2 fois
+  plus en cossu, 0,4 fois en pauvre. Le standing se lit DEHORS (`B.exterieur`) : dedans, on est
+  dans une pièce, et une pièce n'a pas de quartier.
+- ⚠️ **Pas d'épave sur des blocs** : une épave s'efface au bout de quarante secondes.
+- **Reporté** : « la gang tient la rue ». Le territoire des gangs est une carte à part
+  (`pietons.frontieres`) ; décider qui gagne entre elle et le standing vaut sa propre ligne.
+- ⚠️ **QUATRE JUGES VOISINS NE TENAIENT QUE PAR LES DÉS**, et changer qui marche dans la rue les a
+  fait tomber. Aucun ne parlait de standing, et chacun avait un vrai défaut :
+  - « les cinq qui viennent avec » posait le témoin **par rapport au joueur** alors que son propre
+    commentaire dit « à côté de l'ivrogne » — l'ivrogne venait de marcher cent soixante pas, il
+    était à 191 px, hors du rayon de peur (sept tuiles). Le juge notait « le passant ne réagit
+    pas » alors que le passant n'était pas là. Il le pose maintenant à côté de l'ivrogne.
+  - « une rixe qu'on ne voit pas ne s'entend pas » laissait la bagarre sept secondes hors champ :
+    **un camp entier y passait** (trois morts sur six), les survivants n'avaient plus d'adversaire,
+    et le juge mesurait le silence d'une bagarre finie. Cent cinquante images, et il écoute
+    jusqu'à entendre.
+  - « les cinq qui viennent avec » encore, par l'autre bout : il forçait la chance de chute de
+    l'ivrogne à 1 et lui donnait 180 images pour tomber — mais un flâneur s'arrête tout seul une
+    fois sur trois, pour 50 à 209 images, et `majIvrogne` ne regarde qu'un ivrogne **qui flâne**.
+    Sa halte a duré 195 images, son compte a gelé à 45 — **une coche avant la chute**. Le juge le
+    remet debout quand il s'arrête : ce qu'il prouve, c'est qu'il tombe en marchant.
+  - « le pont arrête les chars » conduisait à fond dans une ville vivante : **une seule caisse
+    lointaine** suffisait à le faire rougir à la base (un char du trafic sur le pont, et les dégâts
+    comptés étaient les siens). Il dégage son corridor, comme le juge de la cour d'usine. Et il
+    relisait `forcer.degats` pour son attendu : une fiche à zéro le rendait vert — il exige
+    maintenant qu'elle coûte quelque chose.
+- **Juges** (`test_quartiers.py`, 6 de plus, huit mutations toutes rouges) : qui marche dit le
+  standing (et peut naître quelque part), l'ivrogne ne dort pas dans la rue chic, pas un char rare
+  dans une rue pauvre, une minoune a moins de carrosserie (et le char cossu toute la sienne), la
+  police arrive plus vite chez les riches, les tiroirs disent le quartier.
+
+_La proposition d'origine :_
 
 Celle qui peut attendre : les trois premières font déjà ce que Martin a demandé. Celle-ci donne
 au standing une **conséquence de jeu**.
@@ -10574,6 +10623,22 @@ qui s'ouvre a un comptoir qui barre la pièce, un cossu deux plantes à l'entré
   ville, et le juge d'autobus « qui attend monte » est tombé — il ne tient que par sa graine
   (voir « Qui attend l'autobus monte dedans »).
 - Reste la 4e vague : le standing se vit (qui marche, ce qui est garé, la police et l'argent).
+
+✅ **4e vague livrée — le jalon est complet** (17 sept. 2026) : le standing a des
+conséquences de jeu. **Qui marche** : touristes et joggers en cossu et ordinaire, ivrognes et
+pickpockets en pauvre (`pietons.Pieton.standings`, croisé avec `districts`, lu à la TUILE où la
+sorte se pose). **Ce qui est garé** : pas un char rare dans une rue pauvre, et les chars qui y
+naissent sont des minounes (60 % de carrosserie — ça se sent au premier poteau).
+**La police et l'argent** : une patrouille et demie en cossu contre six dixièmes en pauvre, un
+témoin qui téléphone presque deux fois plus tard en pauvre, et les tiroirs d'un logement qui
+rapportent 2,2 fois plus en cossu, 0,4 fois en pauvre. Voler chez les riches paie, et ça se paie.
+
+- ⚠️ **Pas d'épave sur des blocs** (le plan la proposait) : une épave s'efface au bout de
+  quarante secondes dans ce moteur (`PHYSIQUE["epave_secondes"]`) — elle ne peut pas décorer
+  une rue. La minoune dit la même chose et tient.
+- **Reporté** : « la gang tient la rue » en pauvre. Le territoire des gangs est déjà une carte
+  à part (`pietons.frontieres`) ; l'y mêler demande de décider ce qui gagne, et ça vaut sa
+  propre ligne.
 
 ### Qui attend l'autobus monte dedans
 

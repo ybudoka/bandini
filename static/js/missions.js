@@ -1198,14 +1198,27 @@ const Missions = (function () {
       ⚠️ La cle est celle de la PORTE, pas de la piece : les vingt logements de
       la ville partagent le meme plan, et sans ca le premier fouille les aurait
       tous vides. L'etage compte a part — deux planchers, deux commodes. */
+  /** ⚠️ CE QU'IL Y A DANS LES TIROIRS DIT LE QUARTIER (4e vague) : la part de
+      `fouille_min`/`fouille_max` qu'on trouve, selon le standing de l'adresse. Le
+      standing se lit DEHORS, sur la carte de la ville — dedans, on est dans une
+      piece qui n'a pas de quartier. */
+  function gainDeFouille(standing) {
+    const tarifs = B.defs.economie.tarifs;
+    const table = B.defs.economie.fouille_standing || {};
+    const part = table[standing] === undefined ? 1 : table[standing];
+    const brut = tarifs.fouille_min + B.rng() * (tarifs.fouille_max - tarifs.fouille_min);
+    return Math.max(1, Math.round(brut * part));
+  }
+
   function fouiller(point) {
-    const p = B.partie, tarifs = B.defs.economie.tarifs;
+    const p = B.partie;
     const porte = Monde.carte.porte;
     const cle = (porte ? porte.lieu : 'ici') + ':' + B.interieur.slug + ':' + point.x + ',' + point.y;
     p.fouilles = p.fouilles || {};
     if (p.fouilles[cle]) { Hud.message('LES TIROIRS SONT VIDES'); return true; }
     p.fouilles[cle] = 1;
-    const gain = Math.round(tarifs.fouille_min + B.rng() * (tarifs.fouille_max - tarifs.fouille_min));
+    const dehors = B.exterieur && B.exterieur.carte;
+    const gain = gainDeFouille(porte && dehors ? Monde.standingA(porte.x, porte.y, dehors) : null);
     encaisser(gain, 'DANS LES TIROIRS');
     Son.SFX.argent();
     return true;
@@ -2525,5 +2538,5 @@ const Missions = (function () {
            itemBouchee, manger, distributriceSousLaMain, inviteDistributrice, utiliserDistributrice, menuDistributrice,
            brasser, distributriceCassee, machineDuPoint,
            valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance,
-           charPres, caissesDe, prixAchat, facteurDuJour, prixDuJour, menuContrebande, itemsRevente, confisquerLaCargaison, maj };
+           charPres, caissesDe, prixAchat, facteurDuJour, prixDuJour, menuContrebande, itemsRevente, confisquerLaCargaison, gainDeFouille, maj };
 })();

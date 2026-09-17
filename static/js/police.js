@@ -481,16 +481,33 @@ const Police = (function () {
     return null;
   }
 
+  /** ⚠️ LA POLICE ET LE STANDING (4e vague des quartiers) : `patrouille` multiplie
+      ce que la zone veut d'agents, `depeche` le delai du temoin qui telephone. Une
+      ville ou l'on vole aussi tranquillement chez les riches que derriere le port
+      n'a pas de quartiers — elle a des couleurs. */
+  function standingIci(x, y) {
+    const table = (defs().standing) || {};
+    return table[Monde.standingA(Math.floor(x / TT), Math.floor(y / TT))]
+      || { patrouille: 1, depeche: 1 };
+  }
+
+  /** Combien d'agents a pied cette zone veut, a cette heure et a ce standing. */
+  function agentsVoulus(zone, standing) {
+    const p = reglages(), table = (defs().standing) || {};
+    const f = (table[standing] || { patrouille: 1 }).patrouille;
+    return Math.round(Math.min(p.patrouille_par_zone_max, zone ? zone.police : 1)
+                      * Monde.rythme(zone) * f) + palier().agents_pied;
+  }
+
   function peuplerAgents() {
-    const j = B.joueur, r = B.recherche, p = reglages();
+    const j = B.joueur, r = B.recherche;
     if (B.t % 30 !== 0) return;
     const zone = Monde.zoneA(j.x, j.y);
     // ⚠️ La police suit le rythme comme le reste : autant d'agents a 4 h du
     // matin qu'a midi, dans une ville desertee, ca se remarque tout de suite.
     // Les renforts d'un palier de recherche, eux, ne dorment pas : on te
     // cherche autant la nuit.
-    const voulu = Math.round(Math.min(p.patrouille_par_zone_max, zone ? zone.police : 1)
-                             * Monde.rythme(zone)) + palier().agents_pied;
+    const voulu = agentsVoulus(zone, Monde.standingA(Math.floor(j.x / TT), Math.floor(j.y / TT)));
     const presents = agents().length;
     if (presents >= voulu) return;
     const place = placeAgent(r.etoiles > 0 ? (r.dernierVu || j) : null);
@@ -753,7 +770,8 @@ const Police = (function () {
       if (proche) {
         e.menace = null; e.vers = proche;
         if (dMin < 20) { rapporter(e.crime, proche); e.etat = 'fuit'; e.minuterie = 300; }
-      } else if (B.t - e.crime.t > t.delai_depeche_s * 60 && B.rng() < t.proba_telephone / 60) {
+      } else if (B.t - e.crime.t > t.delai_depeche_s * 60 * standingIci(e.x, e.y).depeche
+                 && B.rng() < t.proba_telephone / 60) {
         rapporter(e.crime, null);
         e.etat = 'fuit'; e.minuterie = 300;
       }
@@ -762,6 +780,6 @@ const Police = (function () {
 
   return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
-           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
+           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, agentsVoulus, standingIci,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();
