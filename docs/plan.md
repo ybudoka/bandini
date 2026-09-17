@@ -143,7 +143,7 @@ ne bougent pas quand l'ordre de travail change.
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
 | L'eau basse : le premier pas ne noie pas | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#leau-basse--le-premier-pas-ne-noie-pas) |
-| Le bord de l'eau et la foire | ⬜ **en cours** (1re vague livrée) | 16 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
+| Le bord de l'eau et la foire | ⬜ **en cours** (3 vagues livrées : la grève se meuble ; les enfants jouent ; l'eau porte quelque chose — la 4e, la foire de La Pointe, est refaite : restent les trois défis et l'audio) | 16 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
 | Plus de champs : des terrains vagues et des parcs | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#plus-de-champs--des-terrains-vagues-et-des-parcs) |
 | La roue d'armes | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#la-roue-darmes) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [notes](#la-ligne-dhistoire--une-ouverture-et-un-générique) |
@@ -205,7 +205,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
-| Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
+| Quatre activités que le jeu n'a pas | ⬜ **en cours** (1 des 4 livrée : les paliers de boulot ; restent la patrouille, le pompier volontaire, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
