@@ -207,7 +207,7 @@ ne bougent pas quand l'ordre de travail change.
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
-| Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
+| Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -11152,6 +11152,19 @@ haut. L'option garde le même sens de rotation qu'en marche avant (droite = hora
 - ⚠️ Le signe de la **rotation**, pas la consigne du stick : le volant est lissé
   (`volant_prise`), inverser la consigne le ferait traverser de butée à butée au passage à
   vitesse nulle, et le char tournerait du mauvais côté au début de chaque recul.
+
+**Livré le 17 sept. 2026.**
+
+- `B.options.reculCommeEnAvant` (NON par défaut), sauvegardée avec les autres options ; la
+  ligne « VOLANT EN MARCHE ARRIÈRE » des OPTIONS dit `COMME UNE AUTO` ou `COMME EN AVANT`.
+- `commandesJoueur` passe l'option à `majPhysique`, qui ne retourne plus le signe de la
+  rotation quand elle est là. La police et le trafic appellent `majPhysique` sans elle.
+- **Juges** : `test_le_volant_en_marche_arriere_se_choisit_dans_les_options` conduit **au
+  clavier** dans la boucle (D tenu, W puis S) et mesure la rotation image par image dans les
+  deux réglages, plus un char qui n'est pas au joueur ;
+  `test_l_option_du_volant_en_marche_arriere_se_bascule_et_se_garde` passe par le menu. Rouges
+  sur trois mutations : l'option ignorée, la consigne retournée au lieu du signe (une image à
+  rebours au passage à zéro, −0,002 rad), l'option lue pour tous les chars.
 
 ### Le poste a son stationnement, le garage sa vraie porte
 

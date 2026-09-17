@@ -46,7 +46,7 @@ const B = {
   msg: null, msgT: 0,
   partie: null,         // ce qui se sauvegarde (voir etatInitial)
   options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, neige: false,
-             manette: null, manetteProfil: null },
+             reculCommeEnAvant: false, manette: null, manetteProfil: null },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
   ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)

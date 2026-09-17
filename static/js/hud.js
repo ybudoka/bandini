@@ -342,6 +342,16 @@ const Hud = (function () {
       bascule('trace', 'TRACE DES VEHICULES'),
       // ⚠️ M12 : derriere une option tant que la sonde de performance ne l'a pas jugee.
       bascule('neige', 'TEMPETES DE NEIGE (ESSAI)'),
+      // ⚠️ Retour de Martin : vue de dessus, on n'est pas assis dans l'auto. Le
+      // volant d'une vraie auto (l'arriere part du cote ou l'on tourne) ne colle
+      // a l'ecran que nez en haut ; COMME EN AVANT, droite tourne toujours dans
+      // le sens des aiguilles d'une montre. Au choix, et l'auto par defaut.
+      { libelle: 'VOLANT EN MARCHE ARRIÈRE', detail: o.reculCommeEnAvant ? 'COMME EN AVANT' : 'COMME UNE AUTO', faire: function (item) {
+        o.reculCommeEnAvant = !o.reculCommeEnAvant;
+        item.detail = o.reculCommeEnAvant ? 'COMME EN AVANT' : 'COMME UNE AUTO';
+        Sauvegarde.ecrireOptions(o);
+        return false;
+      } },
       sonsHorsLigne,
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },

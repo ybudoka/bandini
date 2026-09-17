@@ -4128,6 +4128,90 @@ def test_le_volant_se_tourne_et_se_recentre(banc):
     assert r["relache"][-1] == 0, "il reste braqué après qu'on a lâché : %s" % r["relache"]
 
 
+def test_le_volant_en_marche_arriere_se_choisit_dans_les_options(banc):
+    """Retour de Martin : vue de dessus, le volant d'une vraie auto en marche
+    arrière (droite fait tourner le char à rebours) ne colle à l'écran que nez en
+    haut. L'option COMME EN AVANT garde droite = sens des aiguilles d'une montre.
+
+    Jugé AU CLAVIER, dans la boucle du jeu : D tenu tout du long, W pour partir,
+    puis S jusqu'à reculer. ⚠️ Et image par image : c'est le signe de la rotation
+    qui change, pas la consigne — une consigne retournée au passage à vitesse
+    nulle ferait traverser le volant lissé de butée à butée, et le char
+    tournerait à rebours au début de chaque recul, option ou pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        function manoeuvre(option) {
+            L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(function (e) { L.Entites.retirer(e); });
+            const j = L.B.joueur, d = o.ligneDroite();
+            if (j.dansVehicule) L.Vehicules.descendre(j, true);
+            j.x = d.x; j.y = d.y;
+            const v = o.char('auto', 0, 0, 0);
+            L.Vehicules.monter(j, v);
+            L.B.options.reculCommeEnAvant = option;
+            let avant = v.angle, avance = 0, recule = 0, pire = 0, reculMax = 0;
+            function image() {
+                o.frame(1);
+                const pas = v.angle - avant; avant = v.angle;
+                if (v.vitesse > 0.3) avance += pas;
+                if (v.vitesse < -0.3) recule += pas;
+                pire = Math.min(pire, pas);
+                reculMax = Math.min(reculMax, v.vitesse);
+            }
+            o.touche('KeyD'); o.touche('KeyW');
+            for (let i = 0; i < 20; i++) image();
+            o.relacher('KeyW'); o.touche('KeyS');
+            for (let i = 0; i < 90; i++) image();
+            o.relacher('KeyS'); o.relacher('KeyD'); o.frame(1);
+            return { avance: +avance.toFixed(3), recule: +recule.toFixed(3), pire: +pire.toFixed(4), reculMax: +reculMax.toFixed(2) };
+        }
+        const auto = manoeuvre(false), commeEnAvant = manoeuvre(true);
+        // La police et le trafic ne lisent pas l'option : ils gardent l'auto.
+        L.B.options.reculCommeEnAvant = true;
+        const p = o.char('auto', 0, 40, 0);
+        p.vitesse = -1; p.vx = -1; p.vy = 0; p.volant = 1;
+        const cap = p.angle;
+        L.Vehicules.majPhysique(p, { gaz: 0, frein: 1, direction: 1 });
+        return { auto: auto, commeEnAvant: commeEnAvant, police: +(p.angle - cap).toFixed(4) };
+    }""")
+    for cle in ("auto", "commeEnAvant"):
+        m = r[cle]
+        assert m["reculMax"] < -0.3, "le char n'a jamais reculé (%s) : %s" % (cle, m)
+        assert m["avance"] > 0, "en avançant, droite ne tourne pas à droite (%s) : %s" % (cle, m)
+    assert r["auto"]["recule"] < 0, "COMME UNE AUTO : en reculant, droite doit tourner à rebours : %s" % r["auto"]
+    assert r["commeEnAvant"]["recule"] > 0, (
+        "COMME EN AVANT : en reculant, droite doit tourner dans le sens des aiguilles d'une montre : %s" % r["commeEnAvant"]
+    )
+    assert r["commeEnAvant"]["pire"] >= 0, (
+        "COMME EN AVANT : le char a tourné à rebours pendant une image — le volant a traversé "
+        "de butée à butée au passage à vitesse nulle : %s" % r["commeEnAvant"]
+    )
+    assert r["police"] < 0, "l'option du joueur a changé le volant d'un char qu'il ne conduit pas : %s" % r["police"]
+
+
+def test_l_option_du_volant_en_marche_arriere_se_bascule_et_se_garde(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        o.tape('Escape', 2);
+        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        const ligne = function () { return L.B.menu.items.find(function (i) { return i.libelle === 'VOLANT EN MARCHE ARRIÈRE'; }); };
+        const avant = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant };
+        ligne().faire(ligne());
+        const apres = { detail: ligne().detail, option: L.B.options.reculCommeEnAvant,
+                        sauvee: JSON.parse(o.store[L.Sauvegarde.CLE_OPTIONS]).reculCommeEnAvant };
+        // Rouvrir les options : la ligne dit ce qui est choisi, pas le defaut.
+        L.B.menu.items.find(function (i) { return i.libelle === 'RETOUR'; }).faire();
+        L.B.menu.items.find(function (i) { return i.libelle === 'OPTIONS'; }).faire();
+        const rouvert = ligne().detail;
+        ligne().faire(ligne());
+        return { avant: avant, apres: apres, rouvert: rouvert, retour: { detail: ligne().detail, option: L.B.options.reculCommeEnAvant } };
+    }""")
+    assert r["avant"] == {"detail": "COMME UNE AUTO", "option": False}, "par défaut, rien ne doit changer : %s" % r
+    assert r["apres"] == {"detail": "COMME EN AVANT", "option": True, "sauvee": True}, r
+    assert r["rouvert"] == "COMME EN AVANT", r
+    assert r["retour"] == {"detail": "COMME UNE AUTO", "option": False}, r
+
+
 def test_un_char_pivote_sur_son_arriere_pas_sur_son_nombril(banc):
     """⚠️ En tournant autour de son centre, le char balayait son coffre dans le
     mur derrière lui, et le nez ne « rentrait » jamais dans le virage. Le juge

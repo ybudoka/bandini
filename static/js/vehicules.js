@@ -662,7 +662,8 @@ const Vehicules = (function () {
 
   // --- Physique -------------------------------------------------------------------
 
-  /** Une image de conduite : gaz, frein, direction (-1..1), frein a main. */
+  /** Une image de conduite : gaz, frein, direction (-1..1), frein a main, et
+      `reculCommeEnAvant` (l'option du joueur, voir `commandesJoueur`). */
   function majPhysique(v, cmd) {
     const d = v.def;
     if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
@@ -685,10 +686,15 @@ const Vehicules = (function () {
     if (v.volant) {
       // ⚠️ `vitesse / rayon` : a volant fixe, le char decrit TOUJOURS le meme
       // cercle — c'est ce qui rend un coin de rue franchissable a toute
-      // vitesse. En marche arriere, le volant s'inverse, comme une vraie auto.
+      // vitesse. En marche arriere, le volant s'inverse, comme une vraie auto —
+      // sauf `reculCommeEnAvant` : droite reste le sens des aiguilles d'une montre.
+      // ⚠️ C'est le signe de la ROTATION qui change, pas la consigne : le volant
+      // est lisse, et une consigne retournee au passage a vitesse nulle le
+      // faisait traverser de butee a butee — le char tournait du mauvais cote
+      // au debut de chaque recul.
       const omega = Math.abs(v.vitesse) / d.rayon_braquage * courbeBraquage(t) * (cmd.freinMain ? 1.35 : 1);
       const ancien = v.angle;
-      v.angle += v.volant * omega * (v.vitesse < 0 ? -1 : 1);
+      v.angle += v.volant * omega * (v.vitesse < 0 && !cmd.reculCommeEnAvant ? -1 : 1);
       pivoterSurLArriere(v, ancien);
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
@@ -1880,7 +1886,9 @@ const Vehicules = (function () {
     if (axe.source !== 'clavier') { if (axe.y < -0.2) gaz = Math.max(gaz, -axe.y); if (axe.y > 0.2) frein = Math.max(frein, axe.y); }
     gaz = Math.max(gaz, Entree.gaz); frein = Math.max(frein, Entree.frein);
     const direction = axe.source === 'clavier' ? (Entree.bas('droite') ? 1 : 0) - (Entree.bas('gauche') ? 1 : 0) : borner(axe.x * 1.3, -1, 1);
-    return { gaz: gaz, frein: frein, direction: direction, freinMain: Entree.bas('esquive') };
+    // L'option ne vaut que pour le joueur : la police et le trafic gardent l'auto.
+    return { gaz: gaz, frein: frein, direction: direction, freinMain: Entree.bas('esquive'),
+             reculCommeEnAvant: !!B.options.reculCommeEnAvant };
   }
 
   function majJoueur(j) {
