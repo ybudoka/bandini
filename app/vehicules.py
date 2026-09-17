@@ -212,6 +212,24 @@ TRAFIC = {
     "patience_images": 200,       # bloque plus longtemps : il force le passage
     "arret_images": 45,           # au STOP : on s'immobilise ce temps-la
     "priorite_pieton_px": 70,     # un pieton engage sur le passage : on attend
+    # ⚠️ **LE NEZ A LA LIGNE, PAS LE CENTRE.** Depuis `TROTTOIR = 1`, la traverse
+    # fait UNE tuile, toute peinte, collee a la ligne d'arret. Un char qui
+    # attend LE CENTRE sur la ligne mord donc dans les bandes de tout ce qui
+    # depasse ses huit pixels d'avant : 4,9 px pour une berline, 10 pour une
+    # remorqueuse, 12 pour un camion, et l'autobus couvre la traverse entiere.
+    # Il attend maintenant la ou son NEZ touche la ligne — ce qui oblige un long
+    # char a freiner UNE TUILE PLUS TOT, exactement ce que l'autobus de M9
+    # faisait deja tout seul (sa caisse fait trois tuiles, et l'arret au centre
+    # de la tuile d'avant lui posait le nez pile sur la ligne : c'est cette
+    # trouvaille-la qui est ici generalisee a tout le parc).
+    #
+    # ⚠️ Et on ne freine pas SEC a la vue du rouge : la vitesse voulue fond avec
+    # ce qui reste a parcourir (`approche_part` de la distance, au plus
+    # `approche_vitesse`). Sans ca, un char qui voit le feu une tuile avant la
+    # ligne s'arreterait la ou il l'a vu — au milieu de la rue, a une tuile de
+    # la ligne — et la file entiere reculerait d'autant.
+    "approche_vitesse": 1.1,      # au plus, en glissant vers la ligne d'arret
+    "approche_part": 0.25,        # ... et on ne comble que cette part du reste
     "feu_vert_images": 420,
     "feu_orange_images": 60,
     # ⚠️ LE DEGAGEMENT : le blanc du pieton s'eteint AVANT que les chars
@@ -259,6 +277,14 @@ TRAFIC = {
         "minutes": 40,             # en minutes de jeu
         "slugs": ["camion", "autobus", "remorqueuse", "auto"],
         "detresse_images": 26,     # ses feux battent a ce rythme
+        # ⚠️ **JAMAIS CONTRE UNE TRAVERSE.** Une panne se pose sur une voie, donc
+        # jamais sur la ligne d'arret ni dans le croisement — mais la voie qui
+        # PRECEDE un passage cloute est une voie comme une autre, et la caisse,
+        # elle, deborde : l'autobus fait 48 px, trois tuiles. Un char qui attend
+        # au feu repart ; celui-la reste quarante minutes de jeu en travers du
+        # seul endroit ou l'on traverse. Deux tuiles de degagement de chaque
+        # bord couvrent le plus long de la liste.
+        "ecart_traverse_tuiles": 2,
     },
     "pointe": {
         "matin": [0.27, 0.42],     # 6 h 30 → 10 h : on rentre travailler

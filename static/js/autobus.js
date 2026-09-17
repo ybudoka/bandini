@@ -303,10 +303,20 @@ const Autobus = (function () {
       // centre sur la ligne ; un autobus fait trois tuiles, et son nez depassait
       // alors de vingt-quatre pixels dans le carrefour — les chars qui tournaient
       // l'accrochaient, le faisaient pivoter, et il restait pris huit cents images.
+      // ⚠️ Et il attend au POINT D'ARRET, pas au centre de la tuile ou il se
+      // trouve : sa caisse fait pile trois tuiles, donc les deux tombaient au
+      // meme endroit — mais le camion-benne, lui, fait 40 px, et le centre de
+      // la tuile d'avant lui posait quatre pixels de nez dans la traverse.
+      // C'est `Vehicules.pointDArret` qui tranche, pour eux comme pour le trafic.
       if (Monde.fleche(suivante[0], suivante[1]) === 'S') {
         const apres = L.tuiles[(ici + 2) % L.n];
         const sens = FLECHE_DE[(apres[0] - suivante[0]) + ',' + (apres[1] - suivante[1])];
-        if (!peutEntrer(v, suivante[0], suivante[1], sens)) { v.attendFeu = true; v.cible = cible; Vehicules.rouler(v, 0); return; }
+        if (!peutEntrer(v, suivante[0], suivante[1], sens)) {
+          v.attendFeu = true;
+          v.cible = Vehicules.pointDArret(v, suivante[0], suivante[1], PAS[sens] || [0, 0]);
+          Vehicules.rouler(v, Vehicules.approcheDeLaLigne(v));
+          return;
+        }
       }
       v.attendFeu = false;
       v.etape = (ici + 1) % L.n;

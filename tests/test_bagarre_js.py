@@ -347,6 +347,15 @@ def test_une_rixe_qu_on_ne_voit_pas_ne_s_entend_pas(banc):
         %s
         const trouve = allumer(L);
         if (!trouve) return { trouve: false };
+        // ⚠️ **DE QUOI TENIR TOUT LE JUGE.** Six hommes qui se tapent dessus
+        // pendant 420 images hors champ finissent par s'entretuer, et il n'en
+        // reste plus assez pour se battre quand on arrive : le 17 sept. 2026,
+        // un simple changement de rythme du trafic (« Les chars s'arretent
+        // avant le passage ») a suffi a faire tomber un homme de plus, et ce
+        // juge est tombe avec — sur `debout`, pas sur une seule de ses
+        // assertions de son. Il mesure ce qu'on ENTEND, pas qui gagne : on leur
+        // donne de la vie, et l'attrition cesse de decider a sa place.
+        for (const e of rixeurs(L)) e.vie = 900;
         const vrai = L.Son.depuis, appels = [];
         L.Son.depuis = function (qui, effet) {
             const n = joues.length;
