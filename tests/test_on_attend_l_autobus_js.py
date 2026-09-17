@@ -74,13 +74,22 @@ def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc):
     r = banc("function (L, o) {" + PREPARER + """
         const p = preparer(L, o);
         for (let i = 0; i < 40; i++) { o.frame(1); tenir(L, p); }
-        const attendaient = L.Autobus.quiAttend(p.a.id);
-        const ids = attendaient.map(function (e) { return e.id; });
+        // ⚠️ **QUI ATTEND QUAND L'AUTOBUS ARRIVE**, pas qui attendait a la 40e
+        // image. L'abribus se remplit par QUART D'HEURE, et l'autobus met ce
+        // qu'il met pour venir : compter au depart, c'etait comparer la file
+        // d'un quart d'heure aux montees d'un autre. Le 17 sept. 2026, un
+        // changement de rythme du trafic a decale son arrivee, et le juge a dit
+        // « quatre sont montes pour deux qui attendaient » — alors que les
+        // quatre attendaient bel et bien quand il a ouvert ses portes.
+        let ids = L.Autobus.quiAttend(p.a.id).map(function (e) { return e.id; });
         let bus = null, arretVu = null;
         for (let i = 0; i < 9000 && !bus; i++) {
+            const avant = L.Autobus.quiAttend(p.a.id).map(function (e) { return e.id; });
             o.frame(1); tenir(L, p);
             for (const v of L.B.entites) {
-                if (v.conducteur === 'ligne' && v.arretT > 0 && v.arret === p.a.id) { bus = v; arretVu = { visible: L.Entites.visibleAEcran(v.x, v.y, 0) }; }
+                if (v.conducteur === 'ligne' && v.arretT > 0 && v.arret === p.a.id) {
+                    bus = v; arretVu = { visible: L.Entites.visibleAEcran(v.x, v.y, 0) }; ids = avant;
+                }
             }
         }
         if (!bus) return { attendaient: ids.length, bus: false };

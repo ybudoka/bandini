@@ -459,7 +459,16 @@ def test_devant_un_chantier_le_trafic_se_deporte_au_lieu_de_rebrousser(banc, paq
             const voie = pas[0] ? Math.floor(v.y / TT) : Math.floor(v.x / TT);
             if (voie !== voie0) changeDeVoie = true;
             const long = pas[0] ? Math.floor(v.x / TT) : Math.floor(v.y / TT);
-            const bout = pas[0] ? e.x + pas[0] * (e.l + 1) : e.y + pas[1] * (e.h + 1);
+            // ⚠️ **LE BOUT DU CHANTIER, PAS CINQ TUILES PLUS LOIN.** La marge
+            // etait asymetrique — deux tuiles au-dela du rectangle vers l'est,
+            // CINQ vers l'ouest — et « avoir passe les cones » finissait par
+            // vouloir dire « avoir continue tout droit au croisement suivant ».
+            // Le 17 sept. 2026, un changement de rythme du trafic a fait tourner
+            // ce char au lieu de continuer : il avait double le chantier dans la
+            // voie d'a cote des la 75e image, et le juge le declarait bloque. On
+            // mesure le bord du rectangle, et rien d'autre.
+            const bout = pas[0] > 0 ? e.x + e.l - 1 : pas[0] < 0 ? e.x
+                       : pas[1] > 0 ? e.y + e.h - 1 : e.y;
             if (pas[0] > 0 || pas[1] > 0 ? long > bout : long < bout) passe = true;
         }
         return { changeDeVoie: changeDeVoie, passe: passe, pire: pire,

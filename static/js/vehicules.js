@@ -223,6 +223,18 @@ const Vehicules = (function () {
       const f = Monde.fleche(tx, ty);
       if (!PAS_FLECHE[f]) continue;
       const p = PAS_FLECHE[f];
+      // ⚠️ **JAMAIS CONTRE UNE TRAVERSE.** La voie qui precede un passage
+      // cloute est une voie comme une autre, mais une caisse de 48 px posee la
+      // couvre les bandes — et elle y reste quarante minutes de jeu, la ou un
+      // char au feu repart. C'est l'autre moitie de « les chars s'arretent
+      // avant le passage » : le trafic n'y attend plus, encore faut-il que
+      // personne n'y campe.
+      const ecart = t.panne.ecart_traverse_tuiles;
+      let contreUnPassage = false;
+      for (let k = -ecart; k <= ecart && !contreUnPassage; k++) {
+        contreUnPassage = Monde.estPassage(tx + p[0] * k, ty + p[1] * k);
+      }
+      if (contreUnPassage) continue;
       return { x: tx * TT + 8, y: ty * TT + 8, angle: Math.atan2(p[1], p[0]), sens: f };
     }
     return null;
@@ -1425,10 +1437,103 @@ const Vehicules = (function () {
     return 0;
   }
 
+  /** Ou attendre pour que le NEZ touche la ligne d'arret, et pas un pixel de
+      plus loin.
+
+      ⚠️ **C'EST TOUTE LA FICHE « Les chars s'arretent avant le passage ».**
+      La cible d'attente etait le CENTRE de la tuile de la ligne ; depuis que le
+      trottoir fait une tuile, la traverse est collee a cette ligne, et tout ce
+      qui depasse les huit pixels d'avant du char etait peint sur les bandes —
+      mesure : 4,9 px pour une berline, 10 pour une remorqueuse, 12 pour un
+      camion, et l'autobus couvrait la traverse entiere. On vise donc la ligne
+      elle-meme (le bord LOIN de la tuile d'arret) moins la demi-longueur.
+
+      ⚠️ **Jamais derriere soi** : arrive trop vite, ou surpris par un feu qui
+      tourne, un char s'arrete OU IL EST. Un char qui recule devant un feu
+      rouge n'existe pas dans la vraie rue, et il reculerait dans celui qui le
+      suit. */
+  function pointDArret(v, sx, sy, p) {
+    const demi = v.def.longueur / 2;
+    let x = sx * TT + 8 + p[0] * (8 - demi), y = sy * TT + 8 + p[1] * (8 - demi);
+    if ((x - v.x) * p[0] + (y - v.y) * p[1] < 0) { x = v.x; y = v.y; }
+    return { x: x, y: y, tx: sx, ty: sy };
+  }
+
+  /** On ne freine pas SEC a la vue du rouge : on GLISSE jusqu'a la ligne. La
+      vitesse voulue fond avec ce qui reste a parcourir — sans elle, un long
+      char, qui voit le feu une tuile avant la ligne, s'arreterait la ou il l'a
+      vu, et la file entiere reculerait d'une tuile. */
+  function approcheDeLaLigne(v) {
+    if (!v.cible) return 0;
+    const t = trafic();
+    // ⚠️ **ET ON NE PEUT PAS DEPASSER LA LIGNE EN GLISSANT** : `rouler` avance
+    // de `min(distance, vitesse)`, et la cible est le point d'arret lui-meme.
+    // C'est ce qui a permis de JETER le garde qu'on avait ecrit ici (« ne pas
+    // glisser dans le char d'en avant ») : aucune mutation ne le rougissait, et
+    // pour cause — deux chars ne visent jamais le meme point d'arret, la
+    // distance de securite les separe d'une tuile et demie bien avant.
+    const reste = Math.hypot(v.cible.x - v.x, v.cible.y - v.y);
+    // ⚠️ **SOUS LE PIXEL, ON EST ARRIVE.** Une vitesse proportionnelle au reste
+    // ne l'atteint jamais tout a fait : elle le divise par quatre a chaque
+    // image, et le char rampe des centiemes de pixel pour toujours. Or « a
+    // l'arret complet » est ce qui fait tourner le compte du STOP
+    // (`vitesse < 0,05`) — le char repartait donc six images trop tot, et le
+    // juge du STOP de M3 l'a attrape. Un pixel, c'est arrive.
+    if (reste < 1) return 0;
+    return Math.min(t.approche_vitesse, reste * t.approche_part);
+  }
+
+  /** Faut-il attendre avant d'entrer dans le croisement ? Le feu, le panneau
+      STOP (ou le clignotant rouge de la nuit), puis la boite libre — dans cet
+      ordre, et c'est la SEULE lecture des trois. La ligne d'arret la fait sous
+      ses roues ; la tuile d'avant la fait pour les longs chars, qui doivent
+      freiner plus tot. */
+  function attendreALaLigne(v, sens, inter) {
+    const feu = inter ? Monde.feuDeCirculation(inter, sens) : 'vert';
+    if (feu === 'rouge' || feu === 'jaune') { v.attenteBoite = 0; return true; }
+    // Un STOP : le panneau — ou, la nuit, le feu qui CLIGNOTE ROUGE. On
+    // s'immobilise d'abord, puis on repart : un clignotant n'est pas un mur,
+    // et sans cette ligne le trafic de nuit attendait la fin des temps.
+    if (inter && (inter.stop === sens || feu === 'clignote_rouge')) {
+      if (v.stopT === undefined) v.stopT = trafic().arret_images;
+      // ⚠️ Le compte ne tourne qu'a l'ARRET complet : sinon on comptait le
+      // freinage et le char repartait sans s'etre vraiment immobilise.
+      if (Math.abs(v.vitesse) < 0.05) v.stopT = Math.max(0, v.stopT - 1);
+      if (v.stopT > 0) return true;
+    }
+    // ⚠️ Feu vert ou stop, on ne S'ENGAGE que si la boite est libre : deux
+    // chars qui tournent a gauche de bouts opposes se retrouvaient nez a nez
+    // au milieu, chacun attendant l'autre. Un croisement, un char a la fois.
+    // Passe un long moment (un char stationne dans la boite), on y va quand meme.
+    if (inter && !croisementLibre(inter, v)) {
+      v.attenteBoite = (v.attenteBoite || 0) + 1;
+      if (v.attenteBoite < trafic().patience_images * 2) return true;
+    }
+    return false;
+  }
+
+  /** La ligne d'arret de la tuile suivante, si elle est POUR NOUS — avec le
+      croisement qu'elle garde. C'est elle qui permet de freiner AVANT d'entrer
+      sur la ligne, et donc a un autobus de 48 px de s'y arreter le nez dessus.
+
+      ⚠️ **UNE TUILE SUFFIT, ET C'EST MESURE — parce que le feu se relit a chaque
+      image.** Le plus long du parc fait 48 px : son point d'arret tombe pile au
+      centre de la tuile d'avant, donc il le voit venir des qu'il y met les
+      roues. On a essaye d'en guetter deux ; aucune mutation ne rougissait, et
+      une regle qu'aucun juge ne tient est une regle qu'on ne garde pas. Le jour
+      ou un char plus long arrivera, c'est le juge du catalogue entier
+      (`test_chaque_char_du_catalogue_s_arrete_le_nez_a_la_ligne`) qui le dira. */
+  function ligneDevant(v, tx, ty, p) {
+    const sx = tx + p[0], sy = ty + p[1];
+    if (Monde.fleche(sx, sy) !== 'S' || Monde.sensArret(sx, sy) !== v.sens) return null;
+    return { tx: sx, ty: sy, inter: Monde.intersectionA(sx + p[0], sy + p[1]) };
+  }
+
   function prochaineCible(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const f = Monde.fleche(tx, ty);
     v.attendFeu = false;
+    v.guetteLigne = false;
     if (PAS_FLECHE[f]) {
       v.sens = f; v.sortie = null;
       v.enBoite = null;                              // on rend le croisement
@@ -1440,6 +1545,19 @@ const Vehicules = (function () {
         // tranche, pas le genre de la barriere — un pont barre n'en a pas.
         if (changerDeVoie(v)) return v.cible;
         return demiTour(v, tx, ty, p);
+      }
+      // ⚠️ **LA LIGNE SE GUETTE UNE TUILE EN AVANCE.** Un char de 48 px a deja
+      // couvert la traverse quand son centre arrive sur la ligne : il doit
+      // s'arreter AVANT d'y entrer. L'autobus de M9 le faisait deja pour lui
+      // seul ; c'est la meme regle, pour tout le parc, et elle ne coute rien
+      // aux courts (leur point d'arret tombe dans la tuile d'arret).
+      const ligne = !v.poursuite && ligneDevant(v, tx, ty, p);
+      if (ligne) {
+        v.guetteLigne = true;                        // on relit le feu a chaque image
+        if (attendreALaLigne(v, v.sens, ligne.inter)) {
+          v.attendFeu = true;
+          return pointDArret(v, ligne.tx, ligne.ty, p);
+        }
       }
       return centre(tx + p[0], ty + p[1]);
     }
@@ -1460,26 +1578,7 @@ const Vehicules = (function () {
         v.attenteBoite = 0; v.stopT = undefined; v.enBoite = inter || null;
         return centre(tx + p[0], ty + p[1]);
       }
-      const feu = inter ? Monde.feuDeCirculation(inter, sens) : 'vert';
-      if (feu === 'rouge' || feu === 'jaune') { v.attendFeu = true; v.attenteBoite = 0; return centre(tx, ty); }
-      // Un STOP : le panneau — ou, la nuit, le feu qui CLIGNOTE ROUGE. On
-      // s'immobilise d'abord, puis on repart : un clignotant n'est pas un mur,
-      // et sans cette ligne le trafic de nuit attendait la fin des temps.
-      if (inter && (inter.stop === sens || feu === 'clignote_rouge')) {
-        if (v.stopT === undefined) v.stopT = trafic().arret_images;
-        // ⚠️ Le compte ne tourne qu'a l'ARRET complet : sinon on comptait le
-        // freinage et le char repartait sans s'etre vraiment immobilise.
-        if (Math.abs(v.vitesse) < 0.05) v.stopT = Math.max(0, v.stopT - 1);
-        if (v.stopT > 0) { v.attendFeu = true; return centre(tx, ty); }
-      }
-      // ⚠️ Feu vert ou stop, on ne S'ENGAGE que si la boite est libre : deux
-      // chars qui tournent a gauche de bouts opposes se retrouvaient nez a nez
-      // au milieu, chacun attendant l'autre. Un croisement, un char a la fois.
-      // Passe un long moment (un char stationne dans la boite), on y va quand meme.
-      if (inter && !croisementLibre(inter, v)) {
-        v.attenteBoite = (v.attenteBoite || 0) + 1;
-        if (v.attenteBoite < trafic().patience_images * 2) { v.attendFeu = true; return centre(tx, ty); }
-      }
+      if (attendreALaLigne(v, sens, inter)) { v.attendFeu = true; return pointDArret(v, tx, ty, p); }
       v.attenteBoite = 0;
       v.stopT = undefined;
       v.enBoite = inter || null;                     // on prend le croisement
@@ -1725,8 +1824,16 @@ const Vehicules = (function () {
     if (v.attenteBoite > 0) return v.attenteBoite < trafic().patience_images * 2;
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const p = PAS_FLECHE[v.sens] || [0, 0];
-    const inter = Monde.intersectionA(tx + p[0], ty + p[1]);
-    return !!inter && !Monde.feuVert(inter, v.sens);
+    // ⚠️ **A UNE TUILE OU A DEUX.** Depuis que le nez s'arrete a la ligne, un
+    // long char attend sur la tuile d'AVANT la ligne d'arret : le croisement
+    // est alors deux tuiles plus loin. Cherche a une seule, cette fonction
+    // rendait faux, l'attente au feu rouge cessait d'etre legitime, et le chien
+    // de garde teleportait un autobus parfaitement poli.
+    for (let k = 1; k <= 2; k++) {
+      const inter = Monde.intersectionA(tx + p[0] * k, ty + p[1] * k);
+      if (inter) return !Monde.feuVert(inter, v.sens);
+    }
+    return false;
   }
 
   function debloquer(v) {
@@ -1779,10 +1886,17 @@ const Vehicules = (function () {
     if (v.escorte && B.joueur && dist2(v.x, v.y, B.joueur.x, B.joueur.y) < 70 * 70) { rouler(v, 0); return; }
     if (!v.cible || (v.attendFeu && !v.cible.tx)) v.cible = prochaineCible(v);
     if (!v.cible) { majPhysique(v, { gaz: 0, frein: 1, direction: 0 }); return; }
-    if (v.attendFeu) {
-      // On attend (feu rouge, stop) : on redemande chaque image, sans bouger.
+    // On attend (feu rouge, stop), ou la ligne est en vue : on redemande chaque
+    // image, et on glisse jusqu'a elle — le nez dessus, pas un pixel de plus loin.
+    // ⚠️ **LA LIGNE EN VUE SE RELIT A CHAQUE IMAGE**, et pas seulement au centre
+    // de chaque tuile. Entre deux lectures il se passe une tuile entiere : la
+    // boite se fermait dans cet intervalle, le char etait deja engage quand il
+    // l'apprenait, et il s'arretait ou il etait — quatre pixels de traverse pour
+    // une remorqueuse, mesures. Un conducteur regarde le feu, il ne le consulte
+    // pas tous les seize pixels.
+    if (v.attendFeu || v.guetteLigne) {
       v.cible = prochaineCible(v);
-      if (v.attendFeu) { rouler(v, 0); return; }
+      if (v.attendFeu) { rouler(v, approcheDeLaLigne(v)); return; }
       if (!v.cible) return;
     }
     const dx = v.cible.x - v.x, dy = v.cible.y - v.y;
@@ -1792,6 +1906,10 @@ const Vehicules = (function () {
       if (v.deportT > 0) { v.deportT = 0; v.deportFroid = t.depassement_images; }
       v.cible = prochaineCible(v);
       if (!v.cible) return;
+      // ⚠️ L'IMAGE OU L'ON VOIT LE ROUGE COMPTE. Elle tombait dans la conduite
+      // ordinaire et le char avancait encore d'un pas plein — assez pour poser
+      // le nez dans la traverse qu'on vient de decider de ne pas mordre.
+      if (v.attendFeu) { rouler(v, approcheDeLaLigne(v)); return; }
     }
     const voulu = angleVers(v.x, v.y, v.cible.x, v.cible.y);
     const ecart = ecartAngle(v.angle, voulu);
@@ -2700,6 +2818,7 @@ const Vehicules = (function () {
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
+    pointDArret, approcheDeLaLigne, placeDeLaPanne,
     voieDeDepassement, voieLibre, changerDeVoie,
     croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
