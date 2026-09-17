@@ -347,6 +347,25 @@ def test_les_manèges_tournent_et_on_n_y_monte_pas(banc, paquet):
         assert d["arrete"] > 0 and d["pv"] == 0 and d["solide"], nom
 
 
+def test_les_manèges_sont_a_l_echelle_de_la_grande_roue():
+    """Retour de Martin, captures à l'appui : « grossis ça pour que ce soit
+    proportionnel avec les autres manèges ». À 30 et 34 px de large, les tasses
+    et les chaises volantes avaient la taille d'un kiosque à limonade, posées
+    entre la grande roue (84 × 92) et la montagne russe.
+
+    ⚠️ Et la BOÎTE AU SOL suit le plancher : un carrousel qui ne grandit qu'à
+    l'écran, on marche sur ses chevaux. Les chaises volantes en sont dispensées
+    — elles tournent en l'air, comme la roue."""
+    roue_l, roue_h = mesure_de_dessin("grande_roue", "w"), mesure_de_dessin("grande_roue", "h")
+    for nom in MANEGES:
+        large = mesure_de_dessin(nom, "w")
+        assert large >= 0.65 * roue_l, f"{nom} : {large} px de large, un jouet à côté de la roue ({roue_l})"
+    assert mesure_de_dessin("chaises_volantes", "h") >= 0.7 * roue_h, "les chaises volantes tournent au ras du sol"
+    for nom in ("carrousel", "tasses"):
+        demi = boite_de_dessin(nom)[0]
+        assert 2 * demi >= 0.8 * mesure_de_dessin(nom, "w"), f"{nom} : on marche sur le plancher"
+
+
 def test_chaque_kiosque_a_un_vendeur_peint(banc, paquet):
     """« Plein de vendeurs. » ⚠️ Peints dans le kiosque, pas posés comme des
     entités — et deux kiosques voisins n'ont pas le même visage : la variante
@@ -377,6 +396,28 @@ def hauteur_de_dessin(nom):
     from pathlib import Path
     source = (Path(__file__).resolve().parent.parent / "static/js/sprites.js").read_text(encoding="utf-8")
     return int(re.search(nom + r": \{[^}]*?\bh: (\d+)", source).group(1))
+
+
+def _fiche_de_dessin(nom):
+    """La ligne de la fiche d'un décor dans `sprites.js`. ⚠️ `(?<!\\w)` : sans
+    lui, `tasses` trouverait n'importe quel `…_tasses: {` plus haut."""
+    import re
+    from pathlib import Path
+    source = (Path(__file__).resolve().parent.parent / "static/js/sprites.js").read_text(encoding="utf-8")
+    return re.search(r"(?<!\w)" + nom + r": \{[^\n]*", source).group(0)
+
+
+def mesure_de_dessin(nom, cle):
+    """`w` ou `h` d'un décor, lu dans sa fiche."""
+    import re
+    return int(re.search(r"\b" + cle + r": (\d+)", _fiche_de_dessin(nom)).group(1))
+
+
+def boite_de_dessin(nom):
+    """La demi-boîte au sol (`sol`) d'un décor."""
+    import re
+    m = re.search(r"\bsol: \[(\d+), (\d+)\]", _fiche_de_dessin(nom))
+    return int(m.group(1)), int(m.group(2))
 
 
 def test_le_petit_train_fait_le_tour_de_la_foire(ville):

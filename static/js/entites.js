@@ -34,7 +34,9 @@ const Entites = (function () {
   //: plus grosse, sinon le camion-restaurant n'est meme pas trouve et on lui
   //: passe au travers sans un seul test. Un juge refait le calcul sur chaque
   //: decor solide — ajouter un decor plus large sans monter ce chiffre tombe.
-  const PORTEE_DECOR = 24;
+  //: 30 depuis les manèges de la foire a l'echelle de la grande roue (le
+  //: plancher du carrousel : 26 x 8 de demi-boite).
+  const PORTEE_DECOR = 30;
   //: Se demeler de la foule : jusqu'ou chercher ses voisins (le plus gros
   //: rayon humain est 5 : 12 couvre large). Le pas, lui, se calcule — voir
   //: `pasDeDemele`, il depend de la vitesse des jambes les plus rapides.

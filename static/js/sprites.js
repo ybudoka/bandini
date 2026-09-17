@@ -3579,6 +3579,15 @@ function peindreEdicule(ctx, sens) {
   ctx.fillRect(20, 2, 1, 3); ctx.fillRect(22, 2, 1, 3); ctx.fillRect(21, 3, 1, 1);
 }
 
+/** Un ovale plein, rangee par rangee : le plancher d'un manège vu de trois
+    quarts. `cx` entier : l'ovale fait `2 * rx + 1` pixels de large. */
+function ovaleDeManege(ctx, cx, cy, rx, ry) {
+  for (let dy = -ry; dy <= ry; dy++) {
+    const demi = Math.round(rx * Math.sqrt(Math.max(0, 1 - (dy / ry) * (dy / ry))));
+    ctx.fillRect(cx - demi, cy + dy, demi * 2 + 1, 1);
+  }
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -3924,71 +3933,166 @@ const DECORS = {
     ctx.fillStyle = '#a3a6ac'; ctx.fillRect(8, 0, 1, 3);
   } },
 
+  // ⚠️ LES TROIS MANÈGES A L'ECHELLE DE LA GRANDE ROUE. Premiere version
+  // jetee : 30 a 34 px, la taille d'un kiosque a limonade — sur la capture de
+  // Martin, les tasses et les chaises volantes avaient l'air de jouets poses
+  // entre la roue (84 x 92) et la montagne russe. Ils doublent : le carrousel
+  // et les tasses prennent presque la largeur de la roue, les chaises volantes
+  // les trois quarts de sa hauteur. Le pas des manèges (7 tuiles, 112 px)
+  // laisse encore une allee entre deux voisins.
+  // ⚠️ `r` reste a 14 : c'est le cercle des balles et des chars, et ils ne
+  // cherchent le decor qu'a 24 et `c.r + 14` pixels. C'est la BOITE `sol` qui
+  // grandit — le plancher entier arrete le pieton — et `PORTEE_DECOR` avec elle.
+
   // LE CARROUSEL : un toit conique raye, et les chevaux dessous qui tournent.
-  carrousel: { anime: 14, arrete: 10, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 12], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
-    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(4, 24, 26, 4);
-    ctx.fillStyle = '#7d848c'; ctx.fillRect(3, 14, 28, 11);                  // le plancher
-    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(3, 14, 27, 9);
-    // Les chevaux : quatre autour du mat, et ils avancent avec `v`.
-    for (let k = 0; k < 6; k++) {
-      const t = (k / 6 + v / 24) * Math.PI * 2;
-      const hx = Math.round(17 + Math.cos(t) * 12), hy = Math.round(19 + Math.sin(t) * 5);
-      ctx.fillStyle = ['#efe6d0', '#c98d66', '#8a6a3f'][k % 3];
-      ctx.fillRect(hx - 2, hy - 3, 4, 5);
-      ctx.fillStyle = '#3a3d44'; ctx.fillRect(hx, hy - 6, 1, 4);             // la barre
+  // ⚠️ Huit chevaux de DEUX robes, et la pose avance d'un quart de tour en six
+  // images : deux chevaux, une robe entiere — la boucle ne saute pas.
+  carrousel: { anime: 12, arrete: 14, w: 60, h: 58, ancre: [30, 46], r: 14, sol: [26, 8], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ovaleDeManege(ctx, 30, 50, 29, 6);   // son ombre
+    ctx.fillStyle = '#8e2d23'; ovaleDeManege(ctx, 30, 47, 27, 8);               // la jupe du plancher
+    ctx.fillStyle = '#e8a33a'; ovaleDeManege(ctx, 30, 46, 27, 8);
+    ctx.fillStyle = '#cfc2a4'; ovaleDeManege(ctx, 30, 44, 27, 8);               // le plancher
+    ctx.fillStyle = '#bfb193'; ovaleDeManege(ctx, 30, 44, 20, 5);
+    const chevaux = [];
+    for (let k = 0; k < 8; k++) {
+      const t = (k / 8 + v / 24) * Math.PI * 2;
+      chevaux.push({ k: k, x: Math.round(30 + Math.cos(t) * 21), y: Math.round(43 + Math.sin(t) * 6),
+                     devant: Math.sin(t) >= 0, sens: Math.sin(t) >= 0 ? -1 : 1, saute: (k + v) % 2 });
     }
-    ctx.fillStyle = '#c0392b'; ctx.fillRect(16, 4, 2, 12);                   // le mat
-    // Le toit conique, raye — c'est lui qui nomme un carrousel a douze pixels.
-    for (let r = 0; r < 8; r++) {
-      const demi = 3 + r * 2;
+    function cheval(c) {
+      const x = c.x, y = c.y - c.saute;
+      ctx.fillStyle = '#e8a33a'; ctx.fillRect(x, y - 22, 1, 20);                // la barre doree
+      ctx.fillStyle = c.k % 2 ? '#c98d66' : '#efe6d0';
+      ctx.fillRect(x - 4, y - 3, 8, 3);                                         // le corps
+      ctx.fillRect(x + c.sens * 3 - (c.sens < 0 ? 1 : 0), y - 6, 2, 4);         // l'encolure
+      ctx.fillRect(x + c.sens * 4 - (c.sens < 0 ? 2 : 0), y - 6, 3, 2);         // la tete
+      ctx.fillRect(x - 3, y, 1, 2); ctx.fillRect(x + 2, y, 1, 2);               // les pattes
+      ctx.fillStyle = '#3a2a1a'; ctx.fillRect(c.sens > 0 ? x - 5 : x + 4, y - 3, 1, 3);                // la queue
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(x - 1, y - 4, 3, 1);              // la selle
+    }
+    chevaux.filter(function (c) { return !c.devant; }).forEach(cheval);
+    // Le fut du milieu, rouge et or, entre les chevaux du fond et ceux de devant.
+    ctx.fillStyle = '#a8322a'; ctx.fillRect(25, 22, 10, 22);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(26, 22, 7, 22);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(27, 27, 5, 6); ctx.fillRect(27, 36, 5, 5);   // les miroirs
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(25, 25, 10, 1); ctx.fillRect(25, 34, 10, 1);
+    chevaux.filter(function (c) { return c.devant; }).forEach(cheval);
+    // Le toit conique, raye en quartiers qui montent a l'epi — c'est lui qui
+    // nomme un carrousel du bout de l'allee.
+    for (let r = 0; r < 19; r++) {
+      const demi = 2 + Math.round(r * 27 / 18);
       for (let dx = -demi; dx <= demi; dx++) {
-        ctx.fillStyle = (Math.floor((dx + demi) / 2) % 2) ? '#c0392b' : '#efe6d0';
-        ctx.fillRect(17 + dx, 3 + r, 1, 1);
+        const quartier = Math.floor((dx + demi) / (2 * demi + 1) * 10);
+        ctx.fillStyle = quartier % 2 ? '#c0392b' : '#efe6d0';
+        ctx.fillRect(30 + dx, 4 + r, 1, 1);
       }
     }
-    ctx.fillStyle = '#e8a33a'; ctx.fillRect(16, 1, 3, 2);                    // l'epi
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(31, 4, 1, 19);          // l'arete a l'ombre
+    // La frange festonnee, et ses ampoules qui s'allument une sur deux.
+    for (let x = 1; x < 60; x++) {
+      const feston = (x - 1) % 6;
+      ctx.fillStyle = Math.floor((x - 1) / 6) % 2 ? '#c0392b' : '#e8a33a';
+      ctx.fillRect(x, 23, 1, feston > 0 && feston < 5 ? 3 : 2);
+    }
+    for (let x = 4; x < 58; x += 6) {
+      ctx.fillStyle = ((x / 6) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
+      ctx.fillRect(x, 23, 1, 1);
+    }
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(29, 1, 3, 3);                       // l'epi
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(32, 0, 4, 2);                       // son fanion
   } },
 
-  // LES TASSES : quatre soucoupes sur un plateau qui tourne.
-  tasses: { anime: 11, arrete: 9, w: 30, h: 26, ancre: [15, 23], r: 12, sol: [13, 10], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
-    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 20, 24, 4);
-    ctx.fillStyle = '#5a4f66'; ctx.fillRect(2, 8, 26, 13);                   // le plateau
-    ctx.fillStyle = '#7a6d88'; ctx.fillRect(2, 8, 25, 11);
-    ctx.fillStyle = '#3f3748'; ctx.fillRect(2, 8, 26, 1);
-    for (let k = 0; k < 4; k++) {
-      const t = (k / 4 + v / 16) * Math.PI * 2;
-      const tx = Math.round(15 + Math.cos(t) * 9), ty = Math.round(14 + Math.sin(t) * 5);
-      ctx.fillStyle = ['#e0574f', '#4fa3d1', '#efd06a', '#5fb87a'][k];
-      ctx.fillRect(tx - 3, ty - 3, 7, 6);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(tx - 3, ty - 3, 7, 2);
-      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(tx - 1, ty - 1, 3, 2);         // le creux
+  // LES TASSES : six tasses sur un grand plateau qui tourne, et du monde dedans.
+  // ⚠️ Trois couleurs et six tasses : un demi-tour en huit poses remet
+  // chaque couleur a la place de la meme couleur — la boucle ne saute pas.
+  tasses: { anime: 10, arrete: 12, w: 58, h: 40, ancre: [29, 28], r: 14, sol: [25, 9], solide: true, variantes: 8, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ovaleDeManege(ctx, 29, 30, 28, 9);   // son ombre
+    ctx.fillStyle = '#3f3748'; ovaleDeManege(ctx, 29, 27, 26, 10);              // le bord du plateau
+    ctx.fillStyle = '#7a6d88'; ovaleDeManege(ctx, 29, 25, 26, 10);              // le plateau
+    ctx.fillStyle = '#8c7f9a'; ovaleDeManege(ctx, 29, 25, 20, 7);
+    ctx.fillStyle = '#7a6d88'; ovaleDeManege(ctx, 29, 25, 14, 5);
+    const tasses = [];
+    for (let k = 0; k < 6; k++) {
+      const t = (k / 6 + v / 16) * Math.PI * 2;
+      tasses.push({ k: k, x: Math.round(29 + Math.cos(t) * 17), y: Math.round(25 + Math.sin(t) * 7), devant: Math.sin(t) >= 0 });
     }
+    function tasse(c) {
+      const x = c.x, y = c.y;
+      ctx.fillStyle = '#efe6d0'; ovaleDeManege(ctx, x, y + 2, 6, 2);            // la soucoupe
+      ctx.fillStyle = ['#e0574f', '#4fa3d1', '#efd06a'][c.k % 3];
+      ctx.fillRect(x - 5, y - 4, 11, 5);                                        // la tasse
+      ctx.fillRect(x - 4, y + 1, 9, 1);
+      ctx.fillRect(x + 6, y - 3, 2, 1); ctx.fillRect(x + 7, y - 3, 1, 3);       // l'anse
+      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(x - 5, y - 4, 11, 1);
+      ctx.fillStyle = '#2a2a2e'; ctx.fillRect(x - 4, y - 3, 9, 1);              // le creux
+      // Deux tetes qui depassent — une tasse vide ne tourne pour personne.
+      ctx.fillStyle = '#e8b088'; ctx.fillRect(x - 3, y - 6, 2, 2); ctx.fillRect(x + 1, y - 6, 2, 2);
+      ctx.fillStyle = ['#3a2a1a', '#c98d66', '#1b1b1f'][c.k % 3];
+      ctx.fillRect(x - 3, y - 7, 2, 1); ctx.fillRect(x + 1, y - 7, 2, 1);
+    }
+    tasses.filter(function (c) { return !c.devant; }).forEach(tasse);
+    // Le sucrier du milieu : un fut creme coiffe d'un dome rouge.
+    ctx.fillStyle = '#d9cfb8'; ctx.fillRect(25, 15, 9, 11);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(25, 15, 6, 11);
+    ctx.fillStyle = '#c0392b'; ovaleDeManege(ctx, 29, 14, 6, 3);
+    ctx.fillStyle = '#e0574f'; ctx.fillRect(26, 12, 4, 1);
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(28, 9, 3, 3);                       // le bouton
+    ctx.fillStyle = v % 2 ? '#ffe58a' : '#e8a33a'; ctx.fillRect(29, 9, 1, 1);
+    tasses.filter(function (c) { return c.devant; }).forEach(tasse);
   } },
 
   // LES CHAISES VOLANTES : le mat, le parasol, et les nacelles au bout de leurs
   // chaines — ⚠️ elles s'ECARTENT quand ca tourne, et c'est ce qui se lit.
-  chaises_volantes: { anime: 13, arrete: 9, w: 34, h: 34, ancre: [17, 31], r: 13, sol: [14, 13], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
-    ctx.fillStyle = 'rgba(20,18,26,0.20)'; ctx.fillRect(10, 27, 14, 4);
-    ctx.fillStyle = '#4a4d55'; ctx.fillRect(15, 8, 4, 22);                   // le mat
-    ctx.fillStyle = '#5e626a'; ctx.fillRect(15, 8, 3, 22);
-    ctx.fillStyle = '#3a3d44'; ctx.fillRect(11, 28, 12, 3);                  // le socle
-    const ecart = 11 + (v % 2) * 2;
-    for (let k = 0; k < 8; k++) {
-      const t = (k / 8 + v / 32) * Math.PI * 2;
-      const nx = Math.round(17 + Math.cos(t) * ecart), ny = Math.round(15 + Math.sin(t) * 7);
-      ctx.fillStyle = '#9aa0a8';                                             // la chaine
-      ctx.fillRect(nx, Math.min(ny, 11), 1, Math.max(1, ny - 11));
-      ctx.fillStyle = ['#2f6fb5', '#d98324'][k % 2];
-      ctx.fillRect(nx - 2, ny, 4, 3);
+  // ⚠️ Comme la roue, elles tournent EN L'AIR : la boite au sol est l'enclos
+  // qu'elles balaient, pas leur dessin.
+  chaises_volantes: { anime: 13, arrete: 14, w: 72, h: 70, ancre: [36, 64], r: 14, sol: [24, 8], solide: true, variantes: 4, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = 'rgba(20,18,26,0.20)'; ovaleDeManege(ctx, 36, 65, 30, 5);   // son ombre
+    ctx.fillStyle = '#3a3d44'; ovaleDeManege(ctx, 36, 63, 13, 4);               // le socle
+    ctx.fillStyle = '#5e626a'; ovaleDeManege(ctx, 36, 62, 13, 4);
+    const ecart = 26 + (v % 2) * 2;
+    const chaises = [];
+    for (let k = 0; k < 12; k++) {
+      const t = (k / 12 + v / 24) * Math.PI * 2;
+      chaises.push({ k: k, hx: 36 + Math.cos(t) * 18, hy: 18 + Math.sin(t) * 4,
+                     x: Math.round(36 + Math.cos(t) * ecart), y: Math.round(36 + Math.sin(t) * 8),
+                     devant: Math.sin(t) >= 0 });
     }
+    function chaise(c) {
+      ctx.fillStyle = '#9aa0a8';                                                // la chaine
+      for (let i = 0; i <= 16; i++) {
+        ctx.fillRect(Math.round(c.hx + (c.x - c.hx) * i / 16), Math.round(c.hy + (c.y - 2 - c.hy) * i / 16), 1, 1);
+      }
+      ctx.fillStyle = '#e8b088'; ctx.fillRect(c.x - 1, c.y - 3, 2, 2);          // qui est assis
+      ctx.fillStyle = c.k % 2 ? '#2f6fb5' : '#d98324';
+      ctx.fillRect(c.x - 2, c.y - 1, 5, 3);                                     // la nacelle
+      ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(c.x - 2, c.y + 1, 5, 1);
+      ctx.fillStyle = '#3a3d44'; ctx.fillRect(c.x - 1, c.y + 2, 1, 2); ctx.fillRect(c.x + 1, c.y + 2, 1, 2);   // les jambes
+    }
+    chaises.filter(function (c) { return !c.devant; }).forEach(chaise);
+    ctx.fillStyle = '#4a4d55'; ctx.fillRect(33, 16, 6, 47);                     // le mat
+    ctx.fillStyle = '#6f737a'; ctx.fillRect(34, 16, 2, 47);
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(33, 34, 6, 2); ctx.fillRect(33, 50, 6, 2);
+    chaises.filter(function (c) { return c.devant; }).forEach(chaise);
     // Le parasol, en dernier : il passe PAR-DESSUS les chaines.
-    for (let r = 0; r < 5; r++) {
-      const demi = 5 + r * 2;
+    for (let r = 0; r < 12; r++) {
+      const demi = 3 + Math.round(r * 19 / 11);
       for (let dx = -demi; dx <= demi; dx++) {
-        ctx.fillStyle = (Math.floor((dx + demi) / 3) % 2) ? '#2f8d6a' : '#efe6d0';
-        ctx.fillRect(17 + dx, 3 + r, 1, 1);
+        const quartier = Math.floor((dx + demi) / (2 * demi + 1) * 8);
+        ctx.fillStyle = quartier % 2 ? '#2f8d6a' : '#efe6d0';
+        ctx.fillRect(36 + dx, 6 + r, 1, 1);
       }
     }
+    for (let x = 14; x <= 58; x++) {                                            // la frange
+      const feston = (x - 14) % 5;
+      ctx.fillStyle = Math.floor((x - 14) / 5) % 2 ? '#2f8d6a' : '#e8a33a';
+      ctx.fillRect(x, 18, 1, feston > 0 && feston < 4 ? 3 : 2);
+    }
+    for (let x = 16; x <= 56; x += 5) {
+      ctx.fillStyle = ((x / 5) | 0) % 2 === v % 2 ? '#ffe58a' : '#efe6d0';
+      ctx.fillRect(x, 18, 1, 1);
+    }
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(35, 1, 2, 5);                       // la hampe
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(37, 1, 5, 2);                       // le fanion
   } },
 
   // --- Les trois kiosques de jeu. ⚠️ Un jeu d'adresse est un DEFI, pas un
