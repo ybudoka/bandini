@@ -215,7 +215,10 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})
     sans = carte.generer()
     for cle in sans:
-        if cle in ("decor", "autobus", "metro"):
+        # ⚠️ La tournée des éboueurs se trace APRÈS tout le reste, sur les voies et
+        # loin des abribus et du décor : sans eux, ses bacs tombent ailleurs. Elle ne
+        # pose rien dans la ville (`test_eboueurs.py`), elle en dépend seulement.
+        if cle in ("decor", "autobus", "metro", "eboueurs"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]

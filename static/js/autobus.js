@@ -78,7 +78,19 @@ const Autobus = (function () {
         arretA: arretA, ordre: l.arrets.map(function (c) { return { arret: c[0], i: c[1] }; }),
       };
     });
-    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null };
+    // ⚠️ LA TOURNEE DES EBOUEURS (M12) roule comme une ligne : meme boucle, memes
+    // feux, memes arrets en file — ses « arrets » sont les bacs du bord du trottoir.
+    const e = def.eboueurs;
+    let tournee = null;
+    if (e) {
+      const tuiles = derouler(e.trace);
+      const arretA = new Map();
+      e.points.forEach(function (pt, k) { arretA.set(pt[0], k); });
+      tournee = { numero: 'tournee', nom: 'Les éboueurs', tuiles: tuiles, n: tuiles.length, longueurPx: tuiles.length * TT,
+                  arretA: arretA, ordre: [], autobus: 1, horaire: e.horaire,
+                  points: e.points.map(function (pt, k) { return { k: k, i: pt[0], x: pt[1], y: pt[2] }; }) };
+    }
+    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null, tournee: tournee };
     return prepare;
   }
 
@@ -96,7 +108,9 @@ const Autobus = (function () {
 
   function ligne(numero) {
     const d = donnees();
-    return d ? d.lignes.find(function (l) { return l.numero === numero; }) || null : null;
+    if (!d) return null;
+    if (numero === 'tournee') return d.tournee;
+    return d.lignes.find(function (l) { return l.numero === numero; }) || null;
   }
 
   function arret(id) { const d = donnees(); return d ? d.arrets[id] || null : null; }
@@ -210,6 +224,14 @@ const Autobus = (function () {
     if (!L) { v.conducteur = null; v.etat = 'stationne'; Vehicules.rouler(v, 0); return; }
     const t = B.defs.conduite.trafic, h = donnees().horaire;
     if (v.arretT > 0) {
+      if (v.collecte) {
+        v.arretT--;
+        v.attendFeu = true;
+        Vehicules.rouler(v, 0);
+        majCollecte(v, v.arretT);
+        if (v.arretT === 0) v.attendFeu = false;
+        return;
+      }
       v.arretT--;
       v.attendFeu = true;
       Vehicules.rouler(v, 0);
@@ -225,12 +247,12 @@ const Autobus = (function () {
       // L'abribus : on s'arrete, portes ouvertes, une fois par passage.
       if (L.arretA.has(ici) && v.servi !== ici) {
         v.servi = ici;
-        const duree = dureeDArret(v, L.arretA.get(ici));
+        const duree = v.collecte ? dureeDeCollecte(L.arretA.get(ici)) : dureeDArret(v, L.arretA.get(ici));
         if (duree > 0) {
           v.arret = L.arretA.get(ici);
           v.arretT = duree;
           v.attendFeu = true;
-          if (Entites.visibleAEcran(v.x, v.y, 40) || v.passager) Son.SFX.porte_vehicule();
+          if (!v.collecte && (Entites.visibleAEcran(v.x, v.y, 40) || v.passager)) Son.SFX.porte_vehicule();
           Vehicules.rouler(v, 0);
           return;
         }
@@ -294,7 +316,7 @@ const Autobus = (function () {
     const r = d.horaire.rayon_monter_px;
     let meilleur = null, dMin = Infinity;
     for (const v of Entites.autour(j.x, j.y, r + 30, function (q) { return q.type === 'vehicule'; })) {
-      if (v.conducteur !== 'ligne' || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
+      if (v.conducteur !== 'ligne' || v.collecte || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
       const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
       const long = borner((j.x - v.x) * cx + (j.y - v.y) * cy, -v.def.longueur / 2, v.def.longueur / 2);
       const px = v.x + cx * long, py = v.y + cy * long;
@@ -617,8 +639,137 @@ const Autobus = (function () {
     Entites.indexer();
   }
 
+  // --- Les eboueurs (M12) -------------------------------------------------------------
+  //
+  // ⚠️ Un camion a bras mecanique qui s'arrete a chaque bac, le leve, le vide, le
+  // repose et repart : un obstacle qui BOUGE dans la rue, et une raison de le
+  // depasser. PYTHON TRACE LA TOURNEE (`eboueurs.py`), ICI ON ROULE — comme un
+  // autobus : sa place sur la boucle ne depend que de l'heure, il ne devient un
+  // char qu'en entrant dans la bulle hors de l'ecran, et rien ne tire un de.
+
+  const BACS_REGARD = 30, BACS_DECALAGE = 17, TOURNEE_DECALAGE = 3;
+  //: Au-dela, un bac qu'on ne voit plus rentre (il sera ressorti par l'horaire).
+  const BACS_OUBLI_PX = 600;
+
+  function dansLaFenetre(heure, debut, fin) { return heure >= debut && heure < fin; }
+
+  /** Ou en est le camion sur sa tournee : les pixels parcourus depuis le debut
+      de la collecte, ou null hors des heures. */
+  function parcoursDuJour() {
+    const T = donnees() && donnees().tournee, p = B.partie;
+    if (!T || !p) return null;
+    const h = T.horaire;
+    if (!dansLaFenetre(p.heure, h.debut, h.fin)) return null;
+    return (p.heure - h.debut) * B.defs.economie.jour_secondes * 60 * h.vitesse_px;
+  }
+
+  /** Le bac de ce point a-t-il deja ete vide aujourd'hui ? */
+  function dejaVide(pt) {
+    const T = donnees().tournee, p = B.partie;
+    if (p.heure >= T.horaire.fin) return true;
+    const s = parcoursDuJour();
+    return s !== null && s >= pt.i * TT;
+  }
+
+  /** La place d'un bac sur sa tuile de trottoir : au centre en largeur, le pied a
+      `BAC_PIED_Y`. ⚠️ Pas plus pres de la rue : un char de la voie d'a cote passe a
+      seize pixels du centre de la tuile, et le camion (rayon 8) touche un bac
+      (rayon 4) a douze. Le pied au bas de la tuile (y + 13) mettait les bacs des
+      trottoirs NORD a onze pixels de la voie — le premier char venu les
+      defoncait en passant. */
+  const BAC_PIED_Y = 10;
+  function placeDuBac(pt) {
+    return { x: pt.x * TT + 8, y: pt.y * TT + BAC_PIED_Y };
+  }
+
+  function bacDe(k) {
+    for (const e of B.entites) if (e.bac && e.point === k) return e;
+    return null;
+  }
+
+  /** Les bacs du bord du trottoir : sortis le matin, rentres l'apres-midi — et
+      toujours hors de l'ecran, qu'ils sortent ou qu'ils rentrent. */
+  function majLesBacs() {
+    const d = donnees(), T = d && d.tournee, j = B.joueur, p = B.partie;
+    if (!T || !j || !p || B.interieur || (B.t % BACS_REGARD) !== BACS_DECALAGE) return;
+    const h = T.horaire, sortis = dansLaFenetre(p.heure, h.sortis_des, h.rentres_a);
+    let change = false;
+    for (const pt of T.points) {
+      const place = placeDuBac(pt), x = place.x, y = place.y, d2 = dist2(x, y, j.x, j.y);
+      const bac = bacDe(pt.k);
+      if (bac) {
+        if ((!sortis || d2 > BACS_OUBLI_PX * BACS_OUBLI_PX) && !Entites.visibleAEcran(bac.x, bac.y, 40)) { Entites.retirer(bac); change = true; }
+        continue;
+      }
+      if (!sortis || d2 < h.naissance_min_px * h.naissance_min_px || d2 > h.naissance_max_px * h.naissance_max_px) continue;
+      if (Entites.visibleAEcran(x, y, 40)) continue;
+      // ⚠️ Pas SUR quelqu'un : la lecon des voyageurs de l'abribus, que le juge de
+      // la foule a vus naitre dans un passant.
+      if (Entites.autour(x, y, 10, Entites.deboutDansLaFoule).length) continue;
+      const fiche = DECORS.bac;
+      // ⚠️ PAS SOLIDE. Le trottoir de la banlieue fait UNE tuile : un bac solide
+      // tous les cinq pas en faisait une suite de cages, et les passants
+      // rebroussaient chemin devant chacun. On le traverse a pied comme un buisson ;
+      // un char, lui, le defonce (`casse`, voir DECORS).
+      Entites.creer('decor', x, y, { decor: 'bac', r: fiche.r, solide: false, dessine: true, v: 0,
+                                     bac: true, point: pt.k, vide: dejaVide(pt), altitude: 0 });
+      change = true;
+    }
+    if (change) Entites.reindexerDecor();
+  }
+
+  /** Le camion, s'il est en service et que sa place entre dans la bulle. */
+  function faireNaitreLaTournee() {
+    const d = donnees(), T = d && d.tournee, j = B.joueur;
+    if (!T || !j || B.interieur || (B.t % REGARD_IMAGES) !== TOURNEE_DECALAGE) return;
+    const s = parcoursDuJour();
+    if (s === null || enService('tournee', 0)) return;
+    const k = (s % T.longueurPx) / TT, i = Math.floor(k) % T.n, f = k - Math.floor(k);
+    const a = T.tuiles[i], b = T.tuiles[(i + 1) % T.n];
+    const x = (a[0] + (b[0] - a[0]) * f) * TT + 8, y = (a[1] + (b[1] - a[1]) * f) * TT + 8;
+    const h = T.horaire, d2 = dist2(x, y, j.x, j.y);
+    if (d2 < h.naissance_min_px * h.naissance_min_px || d2 > h.naissance_max_px * h.naissance_max_px) return;
+    if (Entites.visibleAEcran(x, y, 60)) return;
+    if (Entites.autour(x, y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) return;
+    const t = B.defs.conduite.trafic;
+    // ⚠️ La silhouette et la couleur DONNEES : `creer` ne tire alors aucun de.
+    const v = Vehicules.creer('camion', x, y, Math.atan2(b[1] - a[1], b[0] - a[0]), {
+      conducteur: 'ligne', etat: 'roule', sprite: 'camion_benne', couleur: '#e6e1d3',
+      sens: FLECHE_DE[(b[0] - a[0]) + ',' + (b[1] - a[1])],
+      ligne: 'tournee', collecte: true, rang: 0, etape: (i + 1) % T.n, servi: -1, arretT: 0, arret: null,
+      passager: null, demande: false, bloqueT: 0,
+    });
+    if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.4;
+  }
+
+  /** Combien d'images le camion reste a ce point : le temps d'un bac, s'il y en a
+      un plein ; sinon il passe. */
+  function dureeDeCollecte(k) {
+    const T = donnees().tournee, bac = bacDe(k);
+    return bac && !bac.vide && !bac.brise ? T.horaire.arret_images : 0;
+  }
+
+  /** Le bras : le bac monte du trottoir au-dessus de la benne, se vide, redescend,
+      et se repose EXACTEMENT ou il etait. `reste` = images d'arret restantes. */
+  function majCollecte(v, reste) {
+    const T = donnees().tournee, h = T.horaire, bac = bacDe(v.arret);
+    if (!bac || bac.brise) return;
+    const ecoule = h.arret_images - reste, debut = Math.round((h.arret_images - h.leve_images) / 2);
+    const u = (ecoule - debut) / h.leve_images;
+    if (!bac.pied) bac.pied = { x: bac.x, y: bac.y };
+    if (ecoule === debut) Son.SFX.chantier('benne', bac.x, bac.y, 360);
+    if (u <= 0 || u >= 1) { bac.altitude = 0; bac.x = bac.pied.x; bac.y = bac.pied.y; if (u >= 1) bac.vide = true; return; }
+    const haut = Math.sin(u * Math.PI);                      // monte, tient, redescend
+    bac.altitude = Math.round(haut * 22);
+    bac.x = bac.pied.x + (v.x - bac.pied.x) * haut * 0.45;
+    bac.y = bac.pied.y + (v.y - bac.pied.y) * haut * 0.45;
+    if (u > 0.45 && u < 0.55) bac.vide = true;
+  }
+
   function maj() {
     faireNaitre();
+    faireNaitreLaTournee();
+    majLesBacs();
     naitreALAbribus();
     majPassager();
   }
@@ -628,5 +779,6 @@ const Autobus = (function () {
     conduire, peutEntrer, autobusSousLaMain, prochainArret, monter, descendre, majPassager,
     invite, inviteMonter, ligneDuHud, abribusIci, attenteDe, texteDAttente, maj,
     quiAttend, combienAttendent, naitreALAbribus, porteDe, quartDHeure, dureeDArret, naitreUnVoyageur,
+    parcoursDuJour, dejaVide, bacDe, placeDuBac, majLesBacs, faireNaitreLaTournee, dureeDeCollecte,
   };
 })();

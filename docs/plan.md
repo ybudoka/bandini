@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (dix vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : les éboueurs, le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (onze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -616,6 +616,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison) |
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
+| `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
@@ -709,7 +710,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py
       bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
@@ -728,7 +729,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8442,6 +8443,41 @@ sans qu'il naisse sous les yeux. Python règle (`autobus.ATTENTE`), `autobus.js`
   quart d'heure avait changé pendant l'attente, et le nouveau ne voulait personne). 9 juges
   neufs (`test_on_attend_l_autobus.py`, `test_on_attend_l_autobus_js.py`), **13 mutations
   toutes rouges**.
+
+✅ **11e vague livrée** (17 sept. 2026) — *les éboueurs*. Un camion-benne fait sa tournée du
+matin dans Les Érables : il s'arrête à chaque bac vert sorti au bord du trottoir, le lève,
+le vide au-dessus de la benne, le repose **exactement** où il était et repart — un obstacle
+qui bouge dans la rue, et une raison de le dépasser.
+
+- ⚠️ **Python trace, le navigateur roule — avec la machinerie des autobus** (`eboueurs.py`
+  appelle `autobus._Reseau` et `autobus._boucle`) : la tournée passe par les quatre coins
+  des maisons du quartier, obéit aux flèches, ne tourne qu'une fois par boîte et ne passe
+  jamais où la ville peut fermer. Sur la graine livrée : **576 tuiles et 71 bacs**, un tous
+  les cinq pas au plus, jamais à moins de trois tuiles d'une boîte, ni sur un meuble, un
+  abribus ou le pas d'une porte.
+- ⚠️ **Rien ne se pose dans la ville** : la tournée se calcule en tout dernier sur la ville
+  finie, ne tire aucun dé et ne touche pas à ce qu'elle lit — un juge compare la ville avec
+  et sans. Les bacs naissent dans le navigateur : sortis de 5 h à 15 h, **hors de l'écran**
+  (même quand la caméra a pris de l'avance), jamais sur un passant, et rentrés hors de vue
+  l'après-midi.
+- ⚠️ **Le camion roule comme un autobus de ligne** (`conducteur: 'ligne'`, marqué
+  `collecte`) : il hérite des feux, des boîtes, du déport du trafic et de tout ce que le jeu
+  fait déjà pour un autobus, et seuls les gestes de l'autobus l'excluent (on n'y monte pas).
+  Sa place est une fonction de l'heure ; il naît de 6 h à midi, hors de l'écran, avec sa
+  silhouette et sa couleur **données** — `creer` ne tire alors aucun dé. ⚠️ Il s'appelait
+  d'abord `tournee`, **comme le champ du facteur** (la liste de ses portes) : le juge de
+  l'après-midi a pris un facteur pour un camion.
+- ⚠️ **Un bac ne barre rien.** Solide, il faisait du trottoir d'une tuile de la banlieue une
+  suite de cages : deux juges des passants sans rapport sont tombés (le musicien seul devant
+  personne, le passant témoin de l'ivrogne qui ne marchait plus). On le traverse à pied
+  comme un buisson ; un char le défonce, et le camion ne s'arrête pas devant un bac défoncé.
+  Et son pied est à **quatorze pixels** au moins du centre de la voie : posé au bas de la
+  tuile, un bac de trottoir nord était à onze, et le camion (rayon 8) touche un bac (rayon
+  4) à douze.
+- Le son du bras est ElevenLabs (`benne`), avec son repli synthétisé. **11 juges neufs**
+  (`test_eboueurs.py`, `test_eboueurs_js.py`), **19 mutations toutes rouges** — deux d'entre
+  elles restaient vertes avant qu'on ajoute la caméra en avance et le camion de l'après-midi
+  là où l'horaire le mettrait.
 
 ### M14 Meta
 

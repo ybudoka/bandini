@@ -348,6 +348,13 @@ CATALOGUE: list[Echantillon] = [
        prompt="a circular saw spinning up and cutting through a wooden plank, "
               "high whining buzz, then spinning down, outdoors, no voices, "
               "no music"),
+    # Les éboueurs (M12) : le bras du camion lève le bac, le secoue au-dessus de la
+    # benne, le repose. Posé dans le monde comme les sons de chantier.
+    _e("benne", "Bras du camion à ordures", duree_s=3.0, volume=0.35, influence=0.55,
+       prompt="a garbage truck automated side arm lifting a plastic wheeled bin, "
+              "hydraulic whine, the bin shaken and trash tumbling into the metal "
+              "hopper, then the bin set back down on the curb, outdoors, "
+              "no voices, no music"),
     # La rumeur : une BOUCLE, dont le volume suit la distance au chantier le
     # plus proche. C'est elle qui dit « il y a un chantier par là » avant qu'on
     # le voie.

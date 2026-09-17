@@ -6325,6 +6325,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
     from . import mobilier as mobilier_mod
     mobilier_mod.semer(chantier, ville, graine)
+    # ⚠️ LA TOURNEE DES EBOUEURS, sur la ville FINIE (M12) : elle lit le decor, les
+    # abribus et les portes pour poser ses bacs a cote, et ne pose RIEN — les bacs
+    # naissent dans le navigateur. Aucun de.
+    from . import eboueurs as eboueurs_mod
+    ville["eboueurs"] = eboueurs_mod.tracer(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

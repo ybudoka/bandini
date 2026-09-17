@@ -379,6 +379,8 @@ const Son = (function () {
       for (let k = 0; k < 3; k++) { tonA(t0 + k * 0.22, 420, 0.06, 'triangle', 0.22 * v, 0.7); bruitA(t0 + k * 0.22, 0.05, 0.2 * v, 2500); }
     },
     scie: function (v) { ton(1800, 1.4, 'sawtooth', 0.04 * v, 1.15); bruit(1.2, 0.08 * v, 5000, 2500); },
+    // Le bras du camion a ordures : le moteur hydraulique, puis ce qui degringole.
+    benne: function (v) { ton(160, 1.1, 'sawtooth', 0.05 * v, 1.5); bruit(0.8, 0.25 * v, 1400, 200); },
   };
 
   const SFX = {

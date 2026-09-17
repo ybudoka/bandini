@@ -3775,6 +3775,18 @@ const DECORS = {
     ctx.fillStyle = '#d9c9a0'; ctx.fillRect(1, 12, 20, 1);                 // la corde
     ctx.fillStyle = '#4a3a28'; ctx.fillRect(1, 17, 20, 1);                 // le pied
   } },
+  // Le BAC ROULANT des éboueurs (M12) : vert, sa poignée et ses deux roues du côté
+  // de la rue. Sorti le matin de la collecte, levé par le bras du camion — c'est le
+  // navigateur qui le fait naître et rentrer (`Autobus`, la tournée).
+  bac: { casse: 0.8, pv: 20, w: 10, h: 14, ancre: [5, 13], r: 4, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(1, 11, 9, 3);
+    ctx.fillStyle = '#23572e'; ctx.fillRect(1, 3, 8, 9);
+    ctx.fillStyle = '#2e7d3c'; ctx.fillRect(2, 4, 6, 7);
+    ctx.fillStyle = '#1b4323'; ctx.fillRect(0, 1, 10, 3);
+    ctx.fillStyle = '#3a9a4b'; ctx.fillRect(1, 1, 8, 1);
+    ctx.fillStyle = '#16181c'; ctx.fillRect(1, 11, 2, 3); ctx.fillRect(7, 11, 2, 3);
+    ctx.fillStyle = '#9aa0a6'; ctx.fillRect(3, 6, 4, 1);
+  } },
   poubelle: { casse: 0.85, pv: 25, w: 10, h: 14, ancre: [5, 13], r: 4, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#3f4a3c'; ctx.fillRect(1, 3, 8, 11);
     ctx.fillStyle = '#4c5a48'; ctx.fillRect(2, 4, 6, 9);
