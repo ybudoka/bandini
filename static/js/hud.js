@@ -755,7 +755,8 @@ const Hud = (function () {
     return logoTitre && logoTitre.complete && logoTitre.naturalWidth > 0 ? logoTitre : null;
   }
 
-  /** L'ouverture : le noir d'ou l'on sort, et le titre qui s'inscrit.
+  /** Une scene (`Scenes`) : son noir, et le carton qui s'inscrit — le logo de
+      l'accueil pour l'ouverture, un texte pour une mission.
 
       ⚠️ Son propre noir, et pas celui de `Jeu.transiter` : un fondu de porte
       FIGE le jeu (`B.transition` coupe la boucle), or ici c'est justement
@@ -771,17 +772,17 @@ const Hud = (function () {
       ⚠️ Tant que l'image n'est pas la (ou au banc, qui n'a pas de page), le
       nom s'ecrit en lettres, en DEUX passes (l'ombre, puis les lettres) : sans
       ombre, « BANDINI » disparait sur un mur clair, et c'est le nom du jeu. */
-  function dessinerOuverture(ctx) {
-    const o = B.ouverture;
+  function dessinerScene(ctx) {
+    const o = B.scene;
     if (!o) return;
     if (o.noir > 0.004) {
       ctx.fillStyle = 'rgba(11,10,18,' + o.noir.toFixed(3) + ')';
       ctx.fillRect(0, 0, VW, VH);
       B.stats.rects++;
     }
-    if (o.titre > 0.004) {
+    if (o.titre > 0.004 && o.carton) {
       const a = Math.min(1, o.titre);
-      const nom = 'BANDINI', sous = 'BAIE-DES-BRUMES';
+      const nom = o.carton.logo ? 'BANDINI' : o.carton.texte, sous = o.carton.sous || '';
       // ⚠️ UNE BANDE SOUS LE TITRE, pas seulement une ombre d'un pixel. Mesure
       // faite : « BAIE-DES-BRUMES » tombait pile sur l'enseigne TERMINUS et ne
       // se lisait plus. Le nom du jeu ne peut pas dependre de ce qu'il y a
@@ -789,7 +790,7 @@ const Hud = (function () {
       ctx.fillStyle = 'rgba(11,10,18,' + (0.62 * a).toFixed(3) + ')';
       ctx.fillRect(0, BANDE_TITRE.y, VW, BANDE_TITRE.h);
       B.stats.rects++;
-      const logo = logoCharge();
+      const logo = o.carton.logo ? logoCharge() : null;
       if (logo) {
         const w = logo.naturalWidth * LOGO_ECHELLE, h = logo.naturalHeight * LOGO_ECHELLE;
         ctx.save();
@@ -1302,11 +1303,11 @@ const Hud = (function () {
     const j = B.joueur, p = B.partie;
     if (!p) return;
     ancres = [];
-    // ⚠️ LE HUD SE TAIT PENDANT L'OUVERTURE. Vie, souffle, etoiles, argent,
+    // ⚠️ LE HUD SE TAIT PENDANT UNE SCENE (l'ouverture la premiere). Vie, souffle, etoiles, argent,
     // arme, mini-carte, heure : une barre de vie par-dessus une scene ou l'on
     // ne joue pas encore, c'est une scene que personne ne regarde. Seule la
     // boite de dialogue reste, plus bas — c'est elle qui porte les mots.
-    if ((B.etat === 'jeu' || B.etat === 'pause') && !B.ouverture) {
+    if ((B.etat === 'jeu' || B.etat === 'pause') && !B.scene) {
       // Vie et endurance, en haut a gauche.
       barre(ctx, 6, 6, 60, 5, j ? j.vie / j.vieMax : 1, '#c4362f');
       const v = j && j.dansVehicule;
@@ -1466,7 +1467,7 @@ const Hud = (function () {
     if (B.etat === 'jeu') {
       // L'ouverture passe SOUS la boite de dialogue : le noir et le titre sont
       // la scene, les mots sont par-dessus, toujours lisibles.
-      dessinerOuverture(ctx);
+      dessinerScene(ctx);
       invite(ctx);
       attenteALAbribus(ctx);
       dessinerDialogue(ctx);

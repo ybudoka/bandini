@@ -50,6 +50,7 @@ const B = {
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
   ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)
+  scene: null,          // la scene qui joue, quelle qu'elle soit (voir Scenes)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },

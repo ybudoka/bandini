@@ -89,9 +89,12 @@ def test_le_titre_de_l_ouverture_est_le_logo(page, serveur, erreurs):
         const x0 = Math.round((L.VW - img.naturalWidth * H.LOGO_ECHELLE) / 2), y0 = H.LOGO_Y;
         // ⚠️ Tout dans le meme tour de JS : une image de jeu entre la pose et la
         // lecture ferait avancer cette fausse ouverture, qui n'a pas de car.
-        L.B.ouverture = { noir: 0, titre: 1 };
+        // ⚠️ C'est une SCENE qu'on fabrique (`Scenes`, depuis le 16 sept. 2026) :
+        // le HUD dessine le carton de la scene qui joue, et celui de l'ouverture
+        // est le logo (`missions.SCENE_OUVERTURE`, plan `titre`).
+        L.B.scene = { noir: 0, titre: 1, carton: { logo: true, texte: '', sous: 'BAIE-DES-BRUMES' } };
         H.dessiner();
-        L.B.ouverture = null;
+        L.B.scene = null;
         const ctx = document.getElementById('toile').getContext('2d');
         function lire(gx, gy) {
             const x = (x0 + gx * H.LOGO_ECHELLE + 1) * S + 1, y = (y0 + gy * H.LOGO_ECHELLE + 1) * S + 1;

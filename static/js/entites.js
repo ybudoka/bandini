@@ -4027,6 +4027,9 @@ const Entites = (function () {
   /** Le nom de la pose a dessiner : la marche, ou le coup qui part. */
   function nomDePose(e) {
     if (e.etat === 'attaque' && e.phase && e.phase !== 'anticipation') return 'frappe_' + e.face;
+    // Un GESTE de scene (`Scenes`) : `geste_montrer_bas`, `geste_donner_droite`...
+    // Un sprite qui ne l'a pas retombe sur sa face (`imageDe`).
+    if (e.geste) return 'geste_' + e.geste + '_' + e.face;
     return e.face;
   }
 

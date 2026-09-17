@@ -43,7 +43,7 @@ const Jeu = (function () {
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
-    B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null;
+    B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null;
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -446,7 +446,8 @@ const Jeu = (function () {
       Entree.videPresse();
       return;
     }
-    // ⚠️ L'OUVERTURE FIGE LA VILLE, comme un dialogue et comme une porte : le
+    // ⚠️ UNE SCENE FIGE LA VILLE (l'ouverture, et toute scene de `Scenes`),
+    // comme un dialogue et comme une porte : le
     // trafic, la foule et la police ne tournent pas pendant qu'on la regarde.
     // Deux raisons, et la seconde est la vraie : une scene ou un char peut
     // entrer dans le champ n'est plus une scene, et surtout une partie jouee
@@ -457,9 +458,9 @@ const Jeu = (function () {
     // doigt comme au clavier. ACTION, lui, passe une replique : c'est
     // `majCinema` qui s'en occupe, et les etiquettes tactiles le disent deja
     // (« PASSER » et « SUIVANT », contexte `dialogue`).
-    if (B.etat === 'jeu' && B.ouverture) {
-      if (Entree.neuf('pause') || Entree.neuf('attaque')) { Histoire.passerOuverture(); Entree.videPresse(); return; }
-      Histoire.majOuverture();
+    if (B.etat === 'jeu' && B.scene) {
+      if (Entree.neuf('pause') || Entree.neuf('attaque')) { Scenes.passer(); Entree.videPresse(); return; }
+      Scenes.maj();
       Entree.videPresse();
       return;
     }
@@ -699,7 +700,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,

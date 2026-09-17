@@ -134,6 +134,126 @@ OUVERTURE: list[dict] = [
 ]
 
 
+# --- Les scènes : un vocabulaire de plans ----------------------------------------------------
+#
+# Décision du 16 sept. 2026 (« Les missions mises en scène », docs/plan.md) : une
+# scène est une LISTE DE PLANS, typés comme les objectifs, et `static/js/scenes.js`
+# les joue sans connaître aucune scène par son nom. Si une scène ne s'écrit pas
+# avec ces types, on ajoute UN TYPE — jamais un `if (slug === 'q07')`.
+#
+# ⚠️ Les plans se jouent l'un après l'autre : chacun attend que le précédent soit
+# fini, SAUF s'il porte `ensemble` — il part alors, et le suivant part avec lui.
+# ⚠️ `fond` : un plan qui ne retient pas la scène. Elle se termine quand ses autres
+# plans ET ses répliques sont finis, même s'il joue encore (le titre de l'ouverture
+# s'éteint avec elle).
+# ⚠️ Un lieu : un nom que la scène reçoit (`arret`, `quai`), un acteur (sa
+# position), ou tout ce que `Histoire.resoudre` connaît (`porte:garage`,
+# `ruelle:garage`, `donneur`). Un plan dont le lieu ou l'acteur ne se trouve pas
+# est SAUTÉ, jamais attendu : une scène se termine toujours.
+
+#: Les types de plan, et les clés que chacun accepte (les deux dernières, partout).
+#: `courbe` : `droite`, `freine` (l'approche ralentit) ou `accelere` (le départ).
+TYPES_PLANS: dict[str, tuple[str, ...]] = {
+    # Aller voir un lieu. Sans `duree` ni `lissage`, la caméra y SAUTE ; avec
+    # `duree`, elle y va ; avec `lissage`, elle le suit jusqu'au plan caméra suivant.
+    # `recul` : tant de pixels en amont de la rue du lieu (il faut qu'il en ait une).
+    "camera": ("vers", "recul", "duree", "courbe", "lissage"),
+    # Un acteur va à un lieu, à pied, les jambes animées, en `duree` images.
+    "marcher": ("acteur", "vers", "duree"),
+    # Un char de la scène : il ENTRE par la rue (`vehicule` le crée, `depuis` pixels
+    # en amont de `vers`), ou il PART (`part` pixels en aval). `fumee` : les bouffées
+    # du pot, `portiere` : le claquement à l'arrêt et au départ, `retirer` : il
+    # quitte la ville au bout du plan.
+    "conduire": ("acteur", "vehicule", "couleur", "vers", "depuis", "part", "duree", "courbe",
+                 "fumee", "portiere", "retirer"),
+    # Un geste dessiné sur le sprite que partagent tous les personnages.
+    "geste": ("acteur", "geste", "duree", "vers"),
+    # Un acteur passe une porte : `entrer` y marche puis disparaît ; `sortir` en
+    # apparaît — d'une porte, ou du côté trottoir d'un char de la scène (`de`),
+    # tourné vers `vers`.
+    "entrer": ("acteur", "dans", "duree"),
+    "sortir": ("acteur", "de", "vers"),
+    # Le noir : `ferme` images pour y tomber, la caméra saute à `vers`, `ouvre`
+    # images pour en sortir, `tient` images là-bas. ⚠️ Son PROPRE noir : un fondu de
+    # porte fige la boucle, et la scène doit continuer pendant.
+    "coupe": ("vers", "ferme", "ouvre", "tient"),
+    # Des répliques de la scène (`repliques`, comptées à partir de 1 ; toutes par
+    # défaut). La scène se joue SOUS elles.
+    "dire": ("repliques",),
+    # Le carton : `logo` (celui de l'accueil) ou `texte`, `sous` en petit.
+    "titre": ("texte", "sous", "logo", "monte", "tenu", "descend"),
+    # Un bruitage du catalogue (`sfx`), un morceau (`musique`), une boucle (`boucle`).
+    "son": ("sfx", "musique", "boucle"),
+    "attendre": ("duree",),
+}
+CLES_DE_TOUS_LES_PLANS = ("type", "ensemble", "fond")
+COURBES = ("droite", "freine", "accelere")
+GESTES = ("montrer", "donner", "prendre", "bras_croises", "hausser", "telephone")
+
+#: L'OUVERTURE, MISE EN SCÈNE : le car de six heures entre au terminus, le
+#: bonhomme en descend et marche jusqu'au quai, le car repart, le titre s'inscrit
+#: — et le narrateur dit ses quatre phrases par-dessus. ⚠️ Elle était écrite EN DUR
+#: dans `histoire.js` (265 lignes) ; la réécrire dans le vocabulaire, sans toucher
+#: un seul de ses treize juges, est la preuve que les plans suffisent.
+#:
+#: `arret` (la rue devant le terminus, avec son sens) et `quai` (où l'on descend)
+#: sont les deux lieux que `Histoire.ouverture` lui donne. Les temps sont ceux de
+#: l'ancienne scène, en images (60 = une seconde) : 170 d'arrivée, 70 d'arrêt,
+#: 130 de départ, et le titre 30 + 150 + 30.
+SCENE_OUVERTURE: list[dict] = [
+    {"type": "coupe", "ferme": 0, "ouvre": 45, "ensemble": True},
+    {"type": "son", "musique": "ouverture"},
+    {"type": "dire", "ensemble": True},
+    {"type": "camera", "vers": "arret", "recul": 80},
+    {"type": "conduire", "acteur": "car", "vehicule": "autobus", "vers": "arret", "depuis": 330,
+     "duree": 170, "courbe": "freine", "fumee": 6, "portiere": True, "ensemble": True},
+    {"type": "camera", "vers": "arret", "duree": 170, "courbe": "freine"},
+    {"type": "attendre", "duree": 15},
+    {"type": "sortir", "acteur": "joueur", "de": "car", "vers": "quai"},
+    {"type": "marcher", "acteur": "joueur", "vers": "quai", "duree": 56, "ensemble": True},
+    {"type": "camera", "vers": "quai", "lissage": 0.06},
+    {"type": "attendre", "duree": 55},
+    {"type": "conduire", "acteur": "car", "part": 330, "duree": 130, "courbe": "accelere",
+     "fumee": 10, "portiere": True, "retirer": True},
+    {"type": "camera", "vers": "quai", "lissage": 0.08},
+    {"type": "titre", "logo": True, "sous": "BAIE-DES-BRUMES", "monte": 30, "tenu": 150, "descend": 30,
+     "fond": True},
+]
+
+
+def erreurs_de_scene(scene: list[dict]) -> list[str]:
+    """Ce qui ne va pas dans une scène, en clair (vide si elle se joue)."""
+    erreurs = []
+    if not scene:
+        return ["scène vide"]
+    for i, plan in enumerate(scene):
+        genre = plan.get("type")
+        if genre not in TYPES_PLANS:
+            erreurs.append(f"plan {i} : type inconnu {genre!r}")
+            continue
+        inconnues = set(plan) - set(TYPES_PLANS[genre]) - set(CLES_DE_TOUS_LES_PLANS)
+        if inconnues:
+            erreurs.append(f"plan {i} ({genre}) : clés inconnues {sorted(inconnues)}")
+        for cle in ("duree", "ferme", "ouvre", "tient", "monte", "tenu", "descend", "depuis", "part", "recul", "fumee"):
+            if cle in plan and (not isinstance(plan[cle], int) or plan[cle] < 0):
+                erreurs.append(f"plan {i} ({genre}) : {cle} doit être un entier positif")
+        if "lissage" in plan and not (isinstance(plan["lissage"], float) and 0 < plan["lissage"] <= 1):
+            erreurs.append(f"plan {i} ({genre}) : lissage entre 0 et 1")
+        if "courbe" in plan and plan["courbe"] not in COURBES:
+            erreurs.append(f"plan {i} ({genre}) : courbe inconnue {plan['courbe']!r}")
+        if genre == "geste" and plan.get("geste") not in GESTES:
+            erreurs.append(f"plan {i} : geste inconnu {plan.get('geste')!r}")
+        if genre in ("marcher", "geste", "entrer", "sortir", "conduire") and not plan.get("acteur"):
+            erreurs.append(f"plan {i} ({genre}) : sans acteur")
+        if genre == "conduire" and ("vers" in plan) == ("part" in plan):
+            erreurs.append(f"plan {i} : un char ENTRE (`vers`) ou PART (`part`), pas les deux")
+        if genre == "son" and sum(k in plan for k in ("sfx", "musique", "boucle")) != 1:
+            erreurs.append(f"plan {i} : un son, et un seul")
+        if genre == "titre" and not (plan.get("logo") or plan.get("texte")):
+            erreurs.append(f"plan {i} : un titre sans texte ni logo")
+    return erreurs
+
+
 CATALOGUE: list[Mission] = [
     {
         "slug": "m1", "titre": "Bienvenue en ville", "donneur": "ti_guy", "prerequis": [],

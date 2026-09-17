@@ -48,6 +48,10 @@ def assembler() -> dict:
         # Les quatre phrases de l'ouverture, avec leur slug de voix : le
         # navigateur les lit, il ne refait pas la regle du slug.
         "ouverture": missions.repliques_ouverture(),
+        # Les scènes, en plans (voir `missions.TYPES_PLANS`) : `scenes.js` les joue
+        # sans en connaître aucune par son nom.
+        "scenes": {"ouverture": missions.SCENE_OUVERTURE},
+        "types_plans": {genre: list(cles) for genre, cles in missions.TYPES_PLANS.items()},
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,
         "journal_speciales": journal.SPECIALES,
