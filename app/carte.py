@@ -900,15 +900,24 @@ FOIRE: dict = {
     # d'entree — la premiere chose qu'on voit en passant l'arche, c'est le train.
     # ⚠️ Il S'ARRETE devant quelqu'un et siffle : un train de foire ne renverse
     # personne. Et on ne passe pas A TRAVERS un wagon (`Foire.bloquer`).
-    # ⚠️ On n'y monte pas, comme les manèges.
+    # ⚠️ **ON Y MONTE** (Martin : « qu'on puisse y faire un tour ») : il marque
+    # l'arret a sa GARE a chaque tour, le quai au nord de la voie, a l'ouest de
+    # l'allee d'entree — la locomotive s'arrete `gare_recul` tuiles a l'ouest de
+    # l'arche, et son dernier wagon reste hors de l'allee. On monte a ACTION,
+    # on fait le tour, on descend au meme quai.
     "train": {
         "retrait": 3,
         "wagons": 4,
         "vitesse": 0.8,         # px par image : le pas d'un enfant qui court
         "reprise": 0.02,        # ce qu'il reprend par image apres un arret
-        "ecart_px": 15,         # d'un wagon au suivant, attelage compris
-        "regard_px": 26,        # ce que la locomotive surveille devant elle
+        # ⚠️ 20 et non plus 15 : les wagons sont des machines de 16 px de long
+        # (la locomotive 20), plus des grilles de 12 — a 15, ils se chevauchaient.
+        "ecart_px": 20,         # d'un wagon au suivant, attelage compris
+        "regard_px": 34,        # ce que la locomotive surveille devant elle
         "sifflet_images": 150,  # pas deux coups de sifflet en deux secondes et demie
+        "gare_recul": 9,        # la locomotive en gare, en tuiles a l'ouest de l'arche
+        "gare_images": 360,     # six secondes a quai : le temps de monter
+        "rayon_monter_px": 22,  # d'un wagon arrete, on y monte
     },
     # ⚠️ **L'ENORME MONTAGNE RUSSE** — Martin. La plus haute chose de la ville :
     # la grande roue fait 92 px de haut, le sommet de la chaine en fait 150, et
@@ -927,7 +936,13 @@ FOIRE: dict = {
         "pied_px": 32,          # un pied tous les deux metres de voie en l'air
         "pied_des_px": 14,      # sous cette hauteur, la voie pose sur son lit
         "chariots": 4,
-        "ecart_px": 13,
+        # ⚠️ 17 et non plus 13 : les chariots sont des machines de 14 px de long
+        # (`FOIRE_EN_VOLUME.chariot`), plus des grilles de 11 — et cernes de noir, a
+        # 16 ils se touchaient et le train se lisait comme une seule bete.
+        "ecart_px": 17,
+        # ⚠️ **ON Y MONTE** (Martin : « pareil pour la montagne russe ») : a quai,
+        # a ACTION pres d'un chariot, pour un tour complet — et on descend a la gare.
+        "rayon_monter_px": 22,
         # ⚠️ Des px par image, et la gravite en px par image au carre :
         # v²/2 + g·z se conserve. Du sommet (150) au creux (26), elle file a
         # plus de quatre px et demi par image — huit fois la chaine.
@@ -4720,7 +4735,20 @@ class _Chantier:
         # la premiere chose qu'on voit en passant l'arche.
         for tx, ty in voie:
             self.sol[ty][tx] = "T"
-        self.train_de_foire = {"voie": [[tx, ty] for tx, ty in voie]}
+        # ⚠️ LA GARE DU PETIT TRAIN, sur la ligne sud, ou il roule vers l'ouest :
+        # la locomotive s'arrete a `gare_recul` tuiles de l'arche, ses quatre
+        # wagons derriere elle, a l'est — et le dernier ne mord pas l'allee
+        # d'entree. Le QUAI est une allee de pierre le long de la voie, au nord,
+        # qui part de l'allee d'entree : on voit ou l'on attend le train.
+        gare_x = gx - fiche["train"]["gare_recul"]
+        if (gare_x, vy1) not in voie or gare_x - 2 < vx0:
+            raise ValueError(f"la gare du petit train tombe hors de la ligne sud en ({gare_x}, {vy1})")
+        quai = [gare_x + 1, gx - 2, vy1 - 1]
+        for tx in range(quai[0], quai[1] + 1):
+            if not dedans(tx, quai[2]) or self.sol[quai[2]][tx] != ",":
+                raise ValueError(f"le quai du petit train tombe sur ({tx}, {quai[2]})")
+            self.sol[quai[2]][tx] = "g"
+        self.train_de_foire = {"voie": [[tx, ty] for tx, ty in voie], "gare": voie.index((gare_x, vy1)), "quai": quai}
 
         # --- 1. La grande roue, au bout de l'allee, cote nord.
         rx, ry = vx1 - 4, a0 - 1
@@ -6271,7 +6299,8 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
             **chantier.montagne_russe,
             **{k: v for k, v in FOIRE["montagne_russe"].items()
                if k in ("pas_px", "chariots", "ecart_px", "vitesse_chaine", "depart", "gravite",
-                        "frottement", "vitesse_min", "vitesse_max", "gare_images", "hauteur_px")}},
+                        "frottement", "vitesse_min", "vitesse_max", "gare_images", "hauteur_px",
+                        "rayon_monter_px")}},
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],

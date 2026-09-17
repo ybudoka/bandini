@@ -1,4 +1,5 @@
-/* Bandini — la foire qui roule : le petit train et la montagne russe.
+/* Bandini — la foire qui roule : le petit train, la montagne russe et les
+   nacelles de la grande roue.
 
    Martin : « ajoute un petit train qui fait le tour de la foire et une énorme
    montagne russe ».
@@ -15,7 +16,21 @@
    ce qui ne compte pour rien ne doit pas être dans la liste de ce qui compte (ni
    parcouru par la foule, ni indexé, ni oublié). Ils se TRIENT pourtant avec le
    reste au dessin (`ajouterVisibles`) : un wagon passe devant un passant ou
-   derrière, selon sa rangée. */
+   derrière, selon sa rangée.
+
+   ⚠️ **EN VOLUME, COMME LES VÉHICULES** (Martin : « dans le même style que les
+   véhicules ») : wagons, chariots et nacelles sont des machines (`FOIRE_EN_VOLUME`,
+   `sprites.js`) cuites au cap par `Atlas.cuireCap` — et un chariot PENCHE.
+
+   ⚠️ **ON Y FAIT UN TOUR** (« qu'on puisse y faire un tour », « pareil pour la
+   montagne russe et la grande roue »). Le petit train et le Colosse marquent
+   l'arrêt à leur gare à chaque tour, la grande roue ne s'arrête pas ; à ACTION
+   près d'un siège, on s'y assoit (`j.manege`), on fait un tour complet, et on
+   descend là où l'on est monté. Assis, le joueur n'est pas « dans un véhicule » : il ne
+   conduit rien, la police ne le sort de rien — il est À PIED ET PORTÉ, comme à
+   bord du traversier (`j.aBord`), et c'est `Foire` qui le pose à chaque image
+   là où est son siège. On ne monte pas recherché : un manège où la police ne
+   peut pas te suivre serait la meilleure cachette du jeu. */
 
 const Foire = (function () {
   'use strict';
@@ -25,13 +40,29 @@ const Foire = (function () {
   //: Ce qu'un wagon repousse : les gens à pied (un char a sa propre physique).
   const PIETONS = { joueur: 1, pieton: 1, agent: 1 };
   //: Les demi-mesures d'un wagon, vu d'en haut : la locomotive est plus longue.
-  const LOCO = { l: 7, w: 5 };
-  const WAGON = { l: 6, w: 5 };
+  //: ⚠️ Celles des MACHINES (`FOIRE_EN_VOLUME`) : 20 px et 16 de long, 10 de large.
+  const LOCO = { l: 10, w: 5 };
+  const WAGON = { l: 8, w: 5 };
+  //: Qui est assis dans le train quand on n'y est pas, banc par banc (un indice de
+  //: `VOYAGEURS`, ou null : banc vide). ⚠️ Écrit à la main, jamais tiré au dé.
+  const PLACES = [[0, 1], [2, null], [null, 3], [4, 5]];
+  //: Des gens de la foire : les couleurs d'un passant (`pietons.py`).
+  const VOYAGEURS = [
+    { c: '#d9534a', h: '#3b2a20', s: '#e8b088', p: '#2a2a3a' },
+    { c: '#f2d34f', h: '#d8b36a', s: '#f0c9a0', p: '#3a4a6a' },
+    { c: '#3f7fc4', h: '#1b1b1f', s: '#8d5a3b', p: '#2a2a3a' },
+    { c: '#5fb87a', h: '#a0522d', s: '#e8b088', p: '#5a4a3a' },
+    { c: '#9b59b6', h: '#1b1b1f', s: '#c68a5e', p: '#2a2a3a' },
+    { c: '#efe6d0', h: '#7a4a2a', s: '#f0c9a0', p: '#3a4a6a' },
+  ];
+  //: Le machiniste, sa casquette de toile bleue.
+  const MACHINISTE = { c: '#2c4a78', h: '#2c4a78', s: '#e8b088', p: '#1f2a3a' };
   //: Un numéro de tri hors de portée de celui des entités (`creer` compte de 1).
   const ID_TRI = 900000000;
 
   let train = null;
   let mr = null;
+  let roue = null;
 
   // --- Le petit train -----------------------------------------------------------------
 
@@ -40,7 +71,10 @@ const Foire = (function () {
       courbe que peint la tuile (`TUILES.T`). */
   function construireTrain(d) {
     const tuiles = d.voie, n = tuiles.length, xs = [], ys = [];
+    let sGare = null;
     for (let i = 0; i < n; i++) {
+      // ⚠️ La gare est une tuile DROITE : son milieu est à huit pixels de son entrée.
+      if (i === d.gare) sGare = xs.length + 8;
       const p = tuiles[(i + n - 1) % n], c = tuiles[i], s = tuiles[(i + 1) % n];
       const cx = c[0] * TT + 8, cy = c[1] * TT + 8;
       const ax = cx + (p[0] - c[0]) * 8, ay = cy + (p[1] - c[1]) * 8;   // l'entrée
@@ -64,7 +98,10 @@ const Foire = (function () {
       x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); y0 = Math.min(y0, ys[i]); y1 = Math.max(y1, ys[i]);
     }
     return { def: d, xs: xs, ys: ys, n: xs.length, s: 0, v: d.vitesse, sifflet: 0, bloque: false,
-             boite: [x0 - 16, y0 - 16, x1 + 16, y1 + 16] };
+             boite: [x0 - 16, y0 - 16, x1 + 16, y1 + 16],
+             // La gare : où la locomotive s'arrête, combien de temps il reste à quai,
+             // combien de fois il y est passé, et le wagon où le joueur est assis.
+             sGare: sGare, attente: 0, tours: 0, passager: null };
   }
 
   /** Le point de la voie à l'abscisse `s` (en px, modulo la boucle), et le cap. */
@@ -98,30 +135,242 @@ const Foire = (function () {
     return null;
   }
 
+  function siffler() {
+    const j = B.joueur, loco = pointDuTrain(train.s);
+    train.sifflet = train.def.sifflet_images;
+    if (j && dist2(j.x, j.y, loco.x, loco.y) < 260 * 260) Son.SFX.sifflet_train();
+  }
+
   function majTrain() {
     const d = train.def;
     if (train.sifflet > 0) train.sifflet--;
+    // ⚠️ À QUAI : il attend qu'on monte, puis il siffle et repart. Le compte se
+    // fait ici, pas au départ : quelqu'un planté devant lui le retient ensuite
+    // comme n'importe où sur la voie.
+    if (train.attente > 0) {
+      train.v = 0;
+      train.bloque = false; train.bloquePar = null;
+      if (--train.attente === 0) siffler();
+      return;
+    }
     const devant = quelquUnDevant();
     train.bloque = !!devant;
+    train.bloquePar = devant;                // qui : la foule marche aussi sur la voie
     if (devant) {
       train.v = 0;
       // Il siffle, et il resiffle tant qu'on reste planté là.
-      if (train.sifflet <= 0) {
-        train.sifflet = d.sifflet_images;
-        const j = B.joueur, loco = pointDuTrain(train.s);
-        if (j && dist2(j.x, j.y, loco.x, loco.y) < 260 * 260) Son.SFX.sifflet_train();
-      }
+      if (train.sifflet <= 0) siffler();
     } else {
       train.v = Math.min(d.vitesse, train.v + d.reprise);
     }
+    const avant = train.s;
     train.s = (train.s + train.v) % train.n;
+    // La gare : la locomotive passe son point d'arrêt dans cette image, elle s'y pose.
+    if (train.sGare !== null && train.v > 0) {
+      const ecart = (train.sGare - avant + train.n) % train.n;
+      if (ecart > 0 && ecart <= train.v) {
+        train.s = train.sGare; train.v = 0; train.attente = d.gare_images; train.tours++;
+      }
+    }
+  }
+
+  // --- Faire un tour ------------------------------------------------------------------
+
+  //: Ce que dit chaque manège : l'invite, le refus (recherché), l'accueil, l'arrivée.
+  const TOURS = {
+    train: { invite: 'UN TOUR DE PETIT TRAIN', refus: 'LE MACHINISTE NE T’ATTEND PAS',
+             accueil: 'LE PETIT TRAIN — UN TOUR DE LA FOIRE', arrivee: 'TERMINUS — TOUT LE MONDE DESCEND' },
+    montagne: { invite: 'UN TOUR DE MONTAGNE RUSSE', refus: 'LE COLOSSE NE T’ATTEND PAS',
+                accueil: 'LE COLOSSE — ACCROCHE-TOI', arrivee: 'LE COLOSSE — ON RECOMMENCE ?' },
+    roue: { invite: 'UN TOUR DE GRANDE ROUE', refus: 'LE FORAIN NE T’OUVRE PAS',
+            accueil: 'LA GRANDE ROUE — REGARDE LA BAIE', arrivee: 'LA GRANDE ROUE — UN TOUR COMPLET' },
+  };
+
+  /** Debout, libre de ses mouvements, dehors : quelqu'un qui peut monter. */
+  function libre(j) {
+    return !!j && j.vivant && !j.manege && !j.dansVehicule && !j.aBord && !j.enjambe && !B.interieur;
+  }
+
+  function machineDe(quoi) { return quoi === 'train' ? train : quoi === 'roue' ? roue : mr; }
+
+  /** Où est assis celui du siège `m` : { x, y } au sol, et `z` sa hauteur. ⚠️ Dans
+      la roue, le « sol » est devant le portique, là où l'on descend : la nacelle
+      monte et descend AU-DESSUS de lui, et la caméra la suit par `z`. */
+  function siege(m) {
+    if (m.quoi === 'train') { const p = wagons()[m.k]; return { x: p.x, y: p.y, z: 0 }; }
+    if (m.quoi === 'roue') {
+      const a = attache(m.k), y = roue.y + roue.devant;
+      return { x: a.x, y: y, z: y - (a.y + 8) };
+    }
+    const p = pointDeMontagne(mr.s - m.k * mr.def.ecart_px);
+    return { x: p.x, y: p.y, z: p.z };
+  }
+
+  /** Le wagon arrêté en gare dont on est assez près pour y monter : `{ quoi, k }`,
+      ou null. Jamais la locomotive — c'est la place du machiniste. */
+  function trainSousLaMain(j) {
+    if (!train || !(train.attente > 0) || train.passager !== null || !libre(j)) return null;
+    const liste = wagons(), r = train.def.rayon_monter_px;
+    let meilleur = null, dMin = r;
+    for (let k = 1; k < liste.length; k++) {
+      const e = Math.hypot(liste[k].x - j.x, liste[k].y - j.y);
+      if (e <= dMin) { dMin = e; meilleur = k; }
+    }
+    return meilleur === null ? null : { quoi: 'train', k: meilleur };
+  }
+
+  /** Le chariot arrêté en gare au pied du Colosse : on s'y assoit depuis le quai. */
+  function montagneSousLaMain(j) {
+    if (!mr || !(mr.attente > 0) || mr.passager !== null || !libre(j)) return null;
+    const d = mr.def;
+    let meilleur = null, dMin = d.rayon_monter_px;
+    for (let k = 0; k < d.chariots; k++) {
+      const p = pointDeMontagne(mr.s - k * d.ecart_px);
+      const e = Math.hypot(p.x - j.x, p.y - j.y);
+      if (e <= dMin) { dMin = e; meilleur = k; }
+    }
+    return meilleur === null ? null : { quoi: 'montagne', k: meilleur };
+  }
+
+  /** Au pied de la grande roue, devant son portique : la nacelle la plus basse.
+      ⚠️ Une grande roue ne s'arrête pas pour qu'on monte — elle tourne au pas. */
+  function roueSousLaMain(j) {
+    if (!roue || roue.passager !== null || !libre(j)) return null;
+    if (Math.hypot(j.x - roue.x, j.y - (roue.y + roue.devant)) > roue.rayonMonter) return null;
+    let meilleur = 0, dMin = Infinity;
+    for (let k = 0; k < roue.n; k++) {
+      const e = Math.abs(ecartAngle(angleDeNacelle(k), Math.PI / 2));
+      if (e < dMin) { dMin = e; meilleur = k; }
+    }
+    return { quoi: 'roue', k: meilleur };
+  }
+
+  function sousLaMain(j) { return trainSousLaMain(j) || montagneSousLaMain(j) || roueSousLaMain(j); }
+
+  function inviteMonter(j) {
+    const m = sousLaMain(j);
+    return m ? TOURS[m.quoi].invite : null;
+  }
+
+  /** Monter : rend vrai, la pression d'ACTION est dépensée même quand on refuse. */
+  function monter(j, m) {
+    if (B.recherche && B.recherche.etoiles > 0) {
+      Hud.message(TOURS[m.quoi].refus);
+      Son.SFX.erreur();
+      return true;
+    }
+    const machine = machineDe(m.quoi);
+    machine.passager = m.k;
+    // ⚠️ `cran` : la roue ne marque pas d'arrêt, elle compte ses crans — un tour,
+    // c'est `n * 6` crans depuis celui où l'on est monté.
+    j.manege = { quoi: m.quoi, k: m.k, tours: machine.tours, cran: cranDeRoue(), monteT: B.t, z: 0 };
+    j.dessine = false; j.vx = 0; j.vy = 0;
+    const s = siege(j.manege);
+    j.x = s.x; j.y = s.y; j.manege.z = s.z;
+    Hud.message(TOURS[m.quoi].accueil);
+    return true;
+  }
+
+  /** Descendre, de retour en gare : sur le quai, à côté de son siège — celui du
+      petit train au nord de la voie, celui du Colosse au sud (ses planches).
+      `force` : ailleurs qu'en gare (le joueur est mort, on l'a sorti de la carte)
+      — on le lâche où il est. */
+  function descendre(j, force) {
+    const m = j && j.manege;
+    if (!m) return false;
+    const machine = machineDe(m.quoi);
+    if (machine) machine.passager = null;
+    if (!force && machine) {
+      const s = siege(m);
+      j.x = m.quoi === 'roue' ? roue.x : s.x;
+      j.y = m.quoi === 'train' ? train.def.quai[2] * TT + 8 : m.quoi === 'roue' ? s.y : s.y + 12;
+    }
+    j.manege = null;
+    j.dessine = true; j.vx = 0; j.vy = 0;
+    j.descenduT = B.t;
+    Entites.dansLaCarte(j);
+    if (!force) Hud.message(TOURS[m.quoi].arrivee);
+    return true;
+  }
+
+  /** Assis, à chaque image : on suit son siège, et on descend de retour en gare. */
+  function majPassager() {
+    const j = B.joueur, m = j && j.manege;
+    if (!m) return;
+    const machine = machineDe(m.quoi);
+    if (!j.vivant || B.interieur || !machine) { descendre(j, true); return; }
+    const s = siege(m);
+    j.x = s.x; j.y = s.y; m.z = s.z; j.vx = 0; j.vy = 0;
+    if (m.quoi === 'roue') { if (cranDeRoue() - m.cran >= roue.n * roue.variantes) descendre(j, false); return; }
+    if (machine.attente > 0 && machine.tours > m.tours) descendre(j, false);
+  }
+
+  // --- La grande roue -----------------------------------------------------------------
+
+  /** La roue, lue dans son décor : où elle est, et comment elle tourne. ⚠️ Elle
+      tourne par CRANS, ceux de son dessin (`DECORS.grande_roue` : un cran toutes
+      les `anime` images, `variantes` crans d'une nacelle à l'autre) — une nacelle
+      peinte entre deux crans décrocherait du bout de son rayon. */
+  function construireRoue(tuile) {
+    const f = DECORS.grande_roue;
+    return { x: tuile.x * TT + 8, y: tuile.y * TT + 15, f: f, n: f.nacelles, variantes: f.variantes,
+             devant: f.sol[1] + 6, rayonMonter: 26, passager: null };
+  }
+
+  //: `t` : l'image (par défaut, celle-ci). ⚠️ `Foire.maj` tourne AVANT que l'image
+  //: n'avance (`B.t++`, à la fin de `Jeu.maj`) : un juge qui mesure après doit
+  //: demander l'image d'avant.
+  function cranDeRoue(t) { return roue ? Math.floor((t === undefined ? B.t : t) / roue.f.anime) : 0; }
+
+  function angleDeNacelle(k, t) {
+    return (k / roue.n + cranDeRoue(t) / (roue.n * roue.variantes)) * Math.PI * 2;
+  }
+
+  function ecartAngle(a, b) { return ((a - b) % (Math.PI * 2) + Math.PI * 3) % (Math.PI * 2) - Math.PI; }
+
+  /** L'attache de la nacelle `k` dans le monde : le bout de son rayon. */
+  function attache(k, image) {
+    const f = roue.f, t = angleDeNacelle(k, image);
+    return { x: Math.round(roue.x - f.ancre[0] + f.moyeu[0] + Math.cos(t) * f.rayon),
+             y: Math.round(roue.y - f.ancre[1] + f.moyeu[1] + Math.sin(t) * f.rayon) };
+  }
+
+  //: Les couleurs des nacelles (celles du dessin d'avant), et qui y est assis : un
+  //: rang de `RANGEES`, ou null pour une nacelle vide. ⚠️ Écrit à la main.
+  const COULEURS_NACELLES = ['#2f6fb5', '#d98324', '#2f8d6a', '#c0392b', '#9b59b6', '#efd06a'].map(nuances);
+  const OCCUPEES = [0, null, 1, 2, null, 3, 0, 2, null, 1, 3, null];
+
+  /** Les couleurs d'une nacelle : sa caisse, et ses deux passagers s'il y en a.
+      ⚠️ Gardées, comme celles d'un chariot : un objet neuf par image, c'est un
+      `JSON.stringify` de plus par nacelle pour une cuisson déjà faite. */
+  function couleursDeNacelle(k, rang, lui) {
+    const caisse = COULEURS_NACELLES[k % COULEURS_NACELLES.length];
+    if (rang === null) return caisse;
+    const cache = (roue.couleurs || (roue.couleurs = {}));
+    const cle = rang + (lui ? '|' + JSON.stringify(B.joueur.swaps || null) : '');
+    if (!cache[k] || cache[k].cle !== cle) cache[k] = { cle: cle, swaps: Object.assign({}, caisse, passagers(RANGEES[rang], lui)) };
+    return cache[k].swaps;
+  }
+
+  function peindreNacelles(ctx, cx, cy) {
+    const j = B.joueur, fiche = FOIRE_EN_VOLUME.nacelle, vide = FOIRE_EN_VOLUME.nacelle_vide;
+    const cap = Vehicules.capDe(Math.PI / 2);
+    for (let k = 0; k < roue.n; k++) {
+      const a = attache(k), lui = j && j.manege && j.manege.quoi === 'roue' && j.manege.k === k;
+      const rang = lui ? 0 : OCCUPEES[k % OCCUPEES.length];
+      const couleurs = couleursDeNacelle(k, rang, lui);
+      const nom = rang === null ? 'foire_nacelle_vide' : 'foire_nacelle';
+      const image = Atlas.cuireCap(nom, rang === null ? vide : fiche, couleurs, Vehicules.ROTATIONS, cap, [0, 0]);
+      ctx.drawImage(image, Math.round(a.x - image.width / 2 - cx), Math.round(a.y - image.height / 2 - cy));
+      B.stats.images++;
+    }
   }
 
   /** ⚠️ ON NE PASSE PAS À TRAVERS UN WAGON. Appelé à la fin de chaque pas d'un
       piéton (`Entites.bloquerParDecor`) : une boîte orientée par wagon, et on
       ressort par le côté le moins enfoncé — la même règle que le décor. */
   function bloquer(e) {
-    if (!train || B.interieur || !PIETONS[e.type]) return;
+    if (!train || B.interieur || !PIETONS[e.type] || e.manege) return;
     const b = train.boite;
     if (e.x < b[0] || e.x > b[2] || e.y < b[1] || e.y > b[3]) return;
     const liste = wagons();
@@ -151,7 +400,11 @@ const Foire = (function () {
     const z = d.zone;
     return {
       def: d, n: v.length, L: v.length * pas, s: d.gare[1] * pas, v: 0, attente: d.gare_images,
-      sGare: d.gare[1] * pas, parcouru: 0, tours: 0,
+      sGare: d.gare[1] * pas, parcouru: 0, tours: 0, passager: null,
+      // Le cap du looping : celui de la voie qui y entre. ⚠️ Dans le looping, la
+      // voie avance dans un plan vertical et son cap au sol RETOURNE au sommet —
+      // le chariot, lui, garde celui de l'entrée et PENCHE jusqu'à la tête en bas.
+      capBoucle: Math.atan2(v[d.boucle[0]][1] - v[d.boucle[0] - 1][1], v[d.boucle[0]][0] - v[d.boucle[0] - 1][0]),
       ox: ox, oy: oy, w: Math.ceil(x1) + 24 - ox, h: Math.ceil(y1) + 24 - oy,
       // ⚠️ DEUX MOITIÉS, triées chacune à sa rangée : l'aller (au sud) passe
       // DEVANT quelqu'un qui marche entre les deux lignes, le retour (au nord)
@@ -206,99 +459,80 @@ const Foire = (function () {
     const def = Monde.carte && Monde.carte.def;
     train = def && def.train_de_foire ? construireTrain(def.train_de_foire) : null;
     mr = def && def.montagne_russe ? construireMontagne(def.montagne_russe) : null;
+    roue = def && def.roue && typeof DECORS !== 'undefined' && DECORS.grande_roue ? construireRoue(def.roue) : null;
   }
 
   function maj() {
     if (train) majTrain();
     if (mr) majMontagne();
+    // ⚠️ APRÈS les machines : le joueur assis prend la place de son banc de CETTE
+    // image, et la caméra (`Monde.majCamera`, plus loin dans la boucle) le suit.
+    majPassager();
   }
 
   // --- Le dessin ----------------------------------------------------------------------
 
-  //: Vu d'en haut, le nez vers l'est (+x) : la rotation se fait à la cuisson.
-  const GRILLE_LOCO = [
-    '.kkkkk.........',
-    'kRRRRRkkkkkkkk.',
-    'kRrrrRkgGgggGgk',
-    'kRrrrRkgGgcgGgky',
-    'kRrrrRkgGgcgGgky',
-    'kRrrrRkgGgggGgk',
-    'kRRRRRkkkkkkkk.',
-    '.kkkkk.........',
-  ];
-  const GRILLE_WAGON = [
-    '.kkkkkkkkkk.',
-    'kccccccccccK',
-    'kcsh1scsh2ck',
-    'kcsh1scsh2ck',
-    'kccccccccccK',
-    '.kkkkkkkkkk.',
-  ];
-  //: Un chariot de montagne russe : deux rangées, deux têtes, et des bras levés
-  //: quand ça plonge (la variante `bras`).
-  const GRILLE_CHARIOT = [
-    '..kkkkkkkk.',
-    '.krrrrrrrrk',
-    'krh1rh2rrrk',
-    'krh1rh2rrrk',
-    '.krrrrrrrrk',
-    '..kkkkkkkk.',
-  ];
-  const GRILLE_CHARIOT_BRAS = [
-    '..kakkkakk.',
-    '.krrrrrrrrk',
-    'krh1rh2rrrk',
-    'krh1rh2rrrk',
-    '.krrrrrrrrk',
-    '..kakkkakk.',
-  ];
-  const PALETTE = {
-    k: '#2a1a14', K: '#1b1210', R: '#b3342a', r: '#d9534a', g: '#2f7d4f', G: '#e2b33c',
-    c: '#3f7fc4', y: '#f2d34f', s: '#6b4a2e', h: '#f0c9a0', a: '#f0c9a0',
-    '1': '#3b2a20', '2': '#d8b36a',
-  };
-  const COULEURS_WAGONS = ['#e8a33a', '#d9534a', '#3f7fc4', '#5fb87a'];
-  const CHEVEUX = [['#3b2a20', '#d8b36a'], ['#1b1b1f', '#a0522d'], ['#d8b36a', '#3b2a20'], ['#7a4a2a', '#1b1b1f']];
-
-  /** Une grille tournée à `cap` seizièmes de tour, cuite une fois : rotation au
-      plus proche voisin, sans flou et sans trou (on part de chaque pixel
-      d'ARRIVÉE et on remonte à la grille). */
-  function tournee(cle, grille, pal, cap) {
-    const h = grille.length, w = grille[0].length;
-    const cote = Math.ceil(Math.hypot(w, h)) + 2;
-    return Atlas.cuirePeintre(cle + '|' + cap, cote, cote, function (g) {
-      const a = cap * Math.PI / 8, c = Math.cos(a), s = Math.sin(a), m = cote / 2;
-      for (let y = 0; y < cote; y++) {
-        for (let x = 0; x < cote; x++) {
-          const dx = x + 0.5 - m, dy = y + 0.5 - m;
-          const gx = Math.floor(dx * c + dy * s + w / 2), gy = Math.floor(-dx * s + dy * c + h / 2);
-          if (gy < 0 || gy >= h || gx < 0 || gx >= grille[gy].length) continue;
-          const ch = grille[gy][gx];
-          if (ch === '.' || !pal[ch]) continue;
-          g.fillStyle = pal[ch];
-          g.fillRect(x, y, 1, 1);
-        }
-      }
+  //: La caisse de chaque wagon, et ses deux tons (`nuances`, comme un char du trafic).
+  const COULEURS_WAGONS = ['#e8a33a', '#d9534a', '#3f7fc4', '#5fb87a'].map(nuances);
+  //: Chaque banc, prêt pour `Vehicules.imageDuCavalier` : la selle se tire du banc
+  //: comme celle d'un deux-roues (`deuxRoues`), et la posture est celle de la
+  //: chaloupe — assis au fond, les mains devant.
+  function assises(fiche, longueur) {
+    return fiche.machine.bancs.map(function (b) {
+      return { u: b[0], def: { selle: [b[1], -b[0] - longueur / 2], posture: 'volant', machine: fiche.machine } };
     });
   }
+  let ASSISES = null;
 
-  function capDe(a) { return ((Math.round(a / (Math.PI / 8)) % 16) + 16) % 16; }
-
+  /** Un wagon (k > 0) ou la locomotive (k = 0) : son ombre orientée, la machine
+      cuite au cap, et ceux qui y sont assis — le joueur à sa place s'il y est. */
   function peindreWagon(ctx, p, k, cx, cy) {
+    const loco = k === 0, fiche = loco ? FOIRE_EN_VOLUME.loco : FOIRE_EN_VOLUME.wagon;
+    const m = loco ? LOCO : WAGON;
+    if (!ASSISES) ASSISES = { loco: assises(FOIRE_EN_VOLUME.loco, 20), wagon: assises(FOIRE_EN_VOLUME.wagon, 16) };
+    // L'ombre, orientée comme la machine et écrasée comme le sol (`Vehicules.dessinerUn`).
+    ctx.save();
+    ctx.translate(Math.round(p.x - cx), Math.round(p.y - cy));
+    ctx.scale(1, fiche.machine.profondeur);
+    ctx.rotate(p.a);
     ctx.fillStyle = 'rgba(20,18,26,0.25)';
-    ctx.fillRect(Math.round(p.x - 6 - cx), Math.round(p.y + 2 - cy), 12, 4);
-    const cap = capDe(p.a);
-    let image;
-    if (k === 0) {
-      image = tournee('foire|loco', GRILLE_LOCO, PALETTE, cap);
-    } else {
-      const pal = Object.assign({}, PALETTE, {
-        c: COULEURS_WAGONS[(k - 1) % COULEURS_WAGONS.length],
-        '1': CHEVEUX[(k - 1) % CHEVEUX.length][0], '2': CHEVEUX[(k - 1) % CHEVEUX.length][1],
-      });
-      image = tournee('foire|wagon' + ((k - 1) % COULEURS_WAGONS.length), GRILLE_WAGON, pal, cap);
+    ctx.fillRect(-m.l - 1, -m.w - 1, 2 * m.l + 2, 2 * m.w + 2);
+    ctx.restore();
+    const swaps = loco ? null : COULEURS_WAGONS[(k - 1) % COULEURS_WAGONS.length];
+    const image = Atlas.cuireCap(loco ? 'foire_loco' : 'foire_wagon', fiche, swaps, Vehicules.ROTATIONS, Vehicules.capDe(p.a), [0, 0]);
+    ctx.drawImage(image, Math.round(p.x - image.width / 2 - cx), Math.round(p.y - image.height / 2 - cy));
+    B.stats.images++;
+    // Les gens assis, du banc du fond au banc de devant — de devant, c'est le plus
+    // au SUD qui cache l'autre.
+    const bancs = loco ? ASSISES.loco : ASSISES.wagon;
+    const j = B.joueur, lui = j && j.manege && j.manege.quoi === 'train' && j.manege.k === k;
+    const faux = { x: p.x, y: p.y, angle: p.a, def: { longueur: loco ? 20 : 16 } };
+    const ordre = bancs.map(function (b, i) { return i; }).sort(function (a, b) {
+      return (bancs[a].u - bancs[b].u) * Math.sin(p.a);
+    });
+    for (const i of ordre) {
+      let tenue;
+      if (loco) tenue = MACHINISTE;
+      else if (lui && i === 0) tenue = j.swaps || {};
+      else if (PLACES[(k - 1) % PLACES.length][i] !== null) tenue = VOYAGEURS[PLACES[(k - 1) % PLACES.length][i]];
+      else continue;
+      const assis = Vehicules.imageDuCavalier(bancs[i].def, faux, tenue);
+      if (!assis) continue;
+      ctx.drawImage(assis.canvas, Math.round(assis.x - cx), Math.round(assis.y - cy));
+      B.stats.images++;
     }
-    ctx.drawImage(image, Math.round(p.x - image.width / 2 - cx), Math.round(p.y - image.height / 2 - 1 - cy));
+  }
+
+  /** La gare du petit train : une pancarte sur deux poteaux, au bout du quai. */
+  function peindreGare(ctx, cx, cy) {
+    const q = train.def.quai, TEXTE = 'PETIT TRAIN';
+    const large = Atlas.largeurTexte(TEXTE) + 6;
+    const x0 = Math.round((q[0] + q[1] + 1) / 2 * TT - large / 2 - cx), y0 = Math.round(q[2] * TT + 2 - cy);
+    ctx.fillStyle = '#5e626a';
+    ctx.fillRect(x0 + 2, y0 - 16, 1, 17); ctx.fillRect(x0 + large - 3, y0 - 16, 1, 17);
+    ctx.fillStyle = '#1b1b1f'; ctx.fillRect(x0, y0 - 22, large, 9);
+    ctx.fillStyle = '#2f7d4f'; ctx.fillRect(x0 + 1, y0 - 21, large - 2, 7);
+    Atlas.texte(ctx, TEXTE, x0 + 3, y0 - 20, '#ffe58a');
     B.stats.images++;
   }
 
@@ -384,22 +618,57 @@ const Foire = (function () {
     }
   }
 
+  //: Un cran de tangage sur 32, comme le cap (`Atlas.cuireCap`).
+  function cranDeTangage(a) { const n = Vehicules.ROTATIONS; return ((Math.round(a / (Math.PI * 2) * n) % n) + n) % n; }
+
+  /** Le cap et le tangage d'un chariot à l'abscisse `s` : la voie vue en 3D. */
+  function allureDuChariot(s) {
+    const d = mr.def, p = pointDeMontagne(s), av = pointDeMontagne(s + 2), ar = pointDeMontagne(s - 2);
+    const dx = av.x - ar.x, dy = av.y - ar.y, dz = av.z - ar.z;
+    if (dans(d.boucle, p.i)) {
+      const c = mr.capBoucle;
+      return { p: p, cap: c, tangage: Math.atan2(dz, dx * Math.cos(c) + dy * Math.sin(c)) };
+    }
+    return { p: p, cap: Math.atan2(dy, dx), tangage: Math.atan2(dz, Math.hypot(dx, dy)) };
+  }
+
+  //: Qui est assis dans chaque chariot : deux passants, gauche et droite (`VOYAGEURS`).
+  const RANGEES = [[0, 1], [2, 3], [4, 5], [1, 2]];
+
+  /** Les lettres de deux passagers côte à côte (`a` `b` `g` à gauche, `d` `e` `f`
+      à droite, voir `chariotDeMontagne`) — le joueur à gauche quand c'est lui. */
+  function passagers(rang, lui) {
+    const g = lui ? Object.assign({}, SPRITES.joueur.pal, B.joueur.swaps || {}) : VOYAGEURS[rang[0]];
+    const dr = VOYAGEURS[rang[1]];
+    return { a: g.c, b: g.h, g: g.s, d: dr.c, e: dr.h, f: dr.s };
+  }
+
+  /** Les couleurs d'un chariot : ses deux passagers. ⚠️ Un seul objet par chariot,
+      gardé : l'atlas range ses cuissons par couleurs (`JSON.stringify`). */
+  function couleursDuChariot(k) {
+    const j = B.joueur, lui = !!(j && j.manege && j.manege.quoi === 'montagne' && j.manege.k === k);
+    const cache = (mr.couleurs || (mr.couleurs = {}));
+    const cle = lui ? JSON.stringify(j.swaps || null) : '';
+    if (!cache[k] || cache[k].cle !== cle) cache[k] = { cle: cle, swaps: passagers(RANGEES[k % RANGEES.length], lui) };
+    return cache[k].swaps;
+  }
+
   function peindreChariots(ctx, moitie, cx, cy) {
     const d = mr.def;
     for (let k = 0; k < d.chariots; k++) {
-      const s = mr.s - k * d.ecart_px, p = pointDeMontagne(s);
+      const s = mr.s - k * d.ecart_px, al = allureDuChariot(s), p = al.p;
       if ((p.y < mr.ymid) !== (moitie === 0)) continue;
-      const av = pointDeMontagne(s + 2), ar = pointDeMontagne(s - 2);
-      const a = Math.atan2((av.y - av.z) - (ar.y - ar.z), av.x - ar.x);
       // Les bras se lèvent quand ça PLONGE, et tout le long du looping.
+      const av = pointDeMontagne(s + 2), ar = pointDeMontagne(s - 2);
       const bras = (av.z - ar.z) < -1.2 || dans(d.boucle, p.i);
-      const pal = Object.assign({}, PALETTE, { '1': CHEVEUX[k % 4][0], '2': CHEVEUX[k % 4][1] });
-      const image = tournee('foire|chariot' + k + (bras ? 'b' : ''), bras ? GRILLE_CHARIOT_BRAS : GRILLE_CHARIOT, pal, capDe(a));
+      const fiche = bras ? FOIRE_EN_VOLUME.chariot_bras : FOIRE_EN_VOLUME.chariot;
       if (p.z > 8) {
         ctx.fillStyle = 'rgba(20,18,26,0.22)';
-        ctx.fillRect(Math.round(p.x - 4 - cx), Math.round(p.y + 1 - cy), 8, 3);
+        ctx.fillRect(Math.round(p.x - 6 - cx), Math.round(p.y + 1 - cy), 12, 3);
       }
-      ctx.drawImage(image, Math.round(p.x - image.width / 2 - cx), Math.round(p.y - p.z - image.height / 2 - 1 - cy));
+      const image = Atlas.cuireCap(bras ? 'foire_chariot_bras' : 'foire_chariot', fiche, couleursDuChariot(k),
+                                   Vehicules.ROTATIONS, Vehicules.capDe(al.cap), [0, 0], cranDeTangage(al.tangage));
+      ctx.drawImage(image, Math.round(p.x - image.width / 2 - cx), Math.round(p.y - p.z - image.height / 2 - cy));
       B.stats.images++;
     }
   }
@@ -420,7 +689,23 @@ const Foire = (function () {
       visibles.push({ id: ID_TRI, vivant: true, x: mr.ox, y: mr.yNord, peindreFoire: function (ctx) { peindreMoitie(ctx, 0, cx, cy); } });
       visibles.push({ id: ID_TRI + 1, vivant: true, x: mr.ox, y: mr.ySud, peindreFoire: function (ctx) { peindreMoitie(ctx, 1, cx, cy); } });
     }
+    if (roue) {
+      const f = roue.f, x0 = roue.x - f.ancre[0], y0 = roue.y - f.ancre[1];
+      if (x0 < cx + VW && x0 + f.w > cx && y0 < cy + VH && y0 + f.h + 12 > cy) {
+        // ⚠️ Un cheveu plus au sud que la roue : ses nacelles pendent DEVANT ses rayons.
+        visibles.push({ id: ID_TRI + 60, vivant: true, x: roue.x, y: roue.y + 0.5, peindreFoire: function (ctx) { peindreNacelles(ctx, cx, cy); } });
+      }
+    }
     if (train) {
+      const q = train.def.quai;
+      if (q) {
+        const gx = (q[0] + q[1] + 1) / 2 * TT, gy = q[2] * TT + 2;
+        if (gx > cx - 40 && gx < cx + VW + 40 && gy > cy - 8 && gy < cy + VH + 30) {
+          // ⚠️ Un numéro à part des wagons (`+ 2 + k`), et au-delà des deux moitiés
+          // de la montagne : un juge compte celles-ci par `id < ID_TRI + 2`.
+          visibles.push({ id: ID_TRI + 50, vivant: true, x: gx, y: gy, peindreFoire: function (ctx) { peindreGare(ctx, cx, cy); } });
+        }
+      }
       const liste = wagons();
       liste.forEach(function (p, k) {
         if (p.x < cx - 16 || p.x > cx + VW + 16 || p.y < cy - 16 || p.y > cy + VH + 16) return;
@@ -432,6 +717,8 @@ const Foire = (function () {
 
   return {
     demarrer, maj, bloquer, ajouterVisibles, wagons, pointDuTrain, pointDeMontagne,
-    get train() { return train; }, get montagne() { return mr; },
+    sousLaMain, inviteMonter, monter, descendre,
+    MACHINES: FOIRE_EN_VOLUME,
+    get train() { return train; }, get montagne() { return mr; }, get roue() { return roue; }, attache,
   };
 })();

@@ -600,7 +600,7 @@ const Combat = (function () {
     const j = B.joueur;
     // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
     // d'une cloture on ne fait rien du tout.
-    if (!j || j.dansVehicule || !j.vivant || j.enjambe || j.alite || B.cinema) {
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || B.cinema) {
       fermerRoue(false);
       tenu = 0;
       return;
@@ -824,7 +824,8 @@ const Combat = (function () {
     // ⚠️ Couche dans un lit non plus : c'est le stick qui leve
     // (`Entites.majJoueur`), et un coup de poing donne depuis l'oreiller
     // partirait d'un corps qui n'est pas debout.
-    if (!j || j.dansVehicule || !j.vivant || j.enjambe || j.alite) return;
+    // ⚠️ Assis dans un manège (`j.manege`), on ne frappe pas et on ne ramasse rien.
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite) return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
     // viser tranquillement, tirer. On choisit son arme OU on se bat.

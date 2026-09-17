@@ -239,6 +239,9 @@ const Missions = (function () {
     // L'edicule du metro : le tourniquet, puis l'escalier qui descend au quai.
     const edicule = Metro.ediculeSousLaMain(j);
     if (edicule) return Metro.descendre(j, edicule);
+    // Le petit train arrêté en gare : on monte faire un tour.
+    const manege = Foire.sousLaMain(j);
+    if (manege) return Foire.monter(j, manege);
     const autobus = Autobus.autobusSousLaMain(j);
     if (autobus) return Autobus.monter(j, autobus);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
@@ -2290,6 +2293,9 @@ const Missions = (function () {
     B.invite = null;
     // A bord d'un autobus : ACTION demande l'arret, ou descend.
     if (j && j.passager) { if (!B.menu && !B.cinema) B.invite = Autobus.invite(j); return; }
+    // ⚠️ Assis dans un manège, ACTION ne fait rien : pas d'invite, une invite qui
+    // promet un geste qui n'aura pas lieu se lit comme un bogue.
+    if (j && j.manege) return;
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
     if (B.interieur) {
       // Le metro dit ce qu'ACTION fait sous terre (monter, descendre, remonter) —
@@ -2354,6 +2360,8 @@ const Missions = (function () {
     if (machine) { B.invite = inviteDistributrice(machine); return; }
     const edicule = Metro.inviteDescendre(j);
     if (edicule) { B.invite = edicule; return; }
+    const manege = Foire.inviteMonter(j);
+    if (manege) { B.invite = manege; return; }
     const autobus = Autobus.inviteMonter(j);
     if (autobus) { B.invite = autobus; return; }
     const objet = Combat.objetSousLaMain(j);

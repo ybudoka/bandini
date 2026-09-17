@@ -1662,6 +1662,148 @@ SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
 SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);
 SPRITES.bateau.variantes = { bateau: 3, bateau_console: 2 };
 
+/* --- LA FOIRE QUI ROULE, EN VOLUME ------------------------------------------------
+
+   ⚠️ **Demande de Martin : « je veux aussi que le petit train soit dans le même
+   style que les véhicules et qu'on puisse y faire un tour ».** Ses wagons étaient
+   des grilles plates de 12 px tournées par seizièmes de tour — un jouet posé à
+   côté d'une auto qui se projette à 32 caps. Ce sont maintenant des machines
+   comme les chars : les mêmes pièces, le même biais du sol, le même contour, le
+   même arrondi, et `Foire` les cuit au cap par `Atlas.cuireCap`.
+
+   ⚠️ **PAS DANS `SPRITES`.** Ce ne sont pas des chars du catalogue : on ne les
+   vole pas, ils n'ont ni phare ni feu à voir à 24 caps sur 32, et les juges du
+   parc (`test_poses_vehicules.py`) les prendraient pour des autos ratées. Ils
+   vivent à part, et `Foire` est le seul à les lire.
+
+   À l'échelle du passant (9,1 px/m) : une locomotive de 2,2 m fait 20 px, un
+   wagon 16, et 10 de large — deux bancs, et ceux qui y sont assis dépassent du
+   bord comme dans la chaloupe (posture `volant`, les mains sur la barre de
+   devant). `bancs` : où ils s'assoient, d'avant en arrière. */
+const MACHINE_LOCO_FOIRE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  bancs: [[-6.2, 0, 4.4]],                                                                  // le machiniste
+  pieces: [
+    ['roue', 6.0, 2.4, 'r', 'x', 'M', 1, 4.4], ['roue', 6.0, 2.4, 'r', 'x', 'M', 1, -4.4],
+    ['roue', -5.2, 2.4, 'r', 'x', 'M', 1, 4.4], ['roue', -5.2, 2.4, 'r', 'x', 'M', 1, -4.4],
+    ['bloc', [-10.2, 10.2], [-3.4, 3.4], [2.0, 3.2], 'k', 'k', 'k', 0],                     // le chassis
+    ['bloc', [-10.4, 10.4], [-4.8, 4.8], [3.2, 4.2], 'x', 'x', 'x', 0.02],                  // le tablier rouge
+    // La chaudiere : un cylindre couche, en deux etages qui s'arrondissent.
+    ['bloc', [-1.6, 8.2], [-3.2, 3.2], [4.2, 8.0], 'C', 'c', 'D', 0.03],
+    ['bloc', [-1.6, 8.2], [-2.2, 2.2], [8.0, 9.0], 'C', 'C', 'c', 0.03],
+    ['tube', [1.8, 3.25, 4.4], [1.8, 3.25, 8.0], 'y', 0.05], ['tube', [1.8, -3.25, 4.4], [1.8, -3.25, 8.0], 'y', 0.05],   // les cerclages
+    ['tube', [5.4, 3.25, 4.4], [5.4, 3.25, 8.0], 'y', 0.05], ['tube', [5.4, -3.25, 4.4], [5.4, -3.25, 8.0], 'y', 0.05],
+    ['bloc', [8.2, 9.8], [-3.0, 3.0], [4.2, 8.6], 'k', 'k', 'k', 0.04],                     // la boite a fumee
+    ['bloc', [5.2, 7.0], [-1.0, 1.0], [9.0, 12.6], 'k', 'k', 'k', 0.05],                    // la cheminee
+    ['bloc', [4.8, 7.4], [-1.4, 1.4], [12.6, 13.6], 'y', 'y', 'y', 0.05],                   // son chapeau
+    ['bloc', [1.2, 3.0], [-1.0, 1.0], [9.0, 10.4], 'y', 'y', 'y', 0.05],                    // le dome
+    ['bloc', [9.8, 10.6], [-0.9, 0.9], [6.0, 7.6], 'l', 'l', 'l', 0.3],                     // le fanal
+    ['bloc', [10.4, 11.8], [-3.4, 3.4], [2.4, 3.2], 'B', 'B', 'B', 0.1],                    // le chasse-pierres
+    // La cabine, ouverte : trois cotes a mi-hauteur, on voit qui la mene.
+    ['bloc', [-10.2, -1.6], [4.2, 4.8], [4.2, 7.6], 'C', 'c', 'D', 0.02],
+    ['bloc', [-10.2, -1.6], [-4.8, -4.2], [4.2, 7.6], 'C', 'c', 'D', 0.02],
+    ['bloc', [-10.4, -9.8], [-4.8, 4.8], [4.2, 7.6], 'C', 'D', 'D', 0.02],
+    ['bloc', [-10.6, -10.0], [-0.8, 0.8], [5.2, 6.4], 't', 't', 't', 0.3],                  // le feu de queue
+    ['bloc', [-11.8, -10.4], [-0.6, 0.6], [2.4, 3.0], 'k', 'k', 'k', 0],                    // l'attelage
+  ],
+};
+const MACHINE_WAGON_FOIRE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  bancs: [[2.6, 0, 4.2], [-4.2, 0, 4.2]],
+  pieces: [
+    ['roue', 5.0, 2.2, 'r', 'x', 'M', 1, 4.4], ['roue', 5.0, 2.2, 'r', 'x', 'M', 1, -4.4],
+    ['roue', -5.0, 2.2, 'r', 'x', 'M', 1, 4.4], ['roue', -5.0, 2.2, 'r', 'x', 'M', 1, -4.4],
+    ['bloc', [-8.2, 8.2], [-3.4, 3.4], [1.8, 3.0], 'k', 'k', 'k', 0],                       // le chassis
+    ['bloc', [-8.0, 8.0], [-4.8, 4.8], [3.0, 3.6], 'u', 'u', 'u', 0.01],                    // le plancher
+    ['bloc', [-8.0, 8.0], [4.2, 4.8], [3.6, 6.4], 'C', 'c', 'D', 0.02],                     // les flancs
+    ['bloc', [-8.0, 8.0], [-4.8, -4.2], [3.6, 6.4], 'C', 'c', 'D', 0.02],
+    ['bloc', [7.4, 8.0], [-4.8, 4.8], [3.6, 6.4], 'C', 'D', 'D', 0.02],                     // les bouts
+    ['bloc', [-8.0, -7.4], [-4.8, 4.8], [3.6, 6.4], 'C', 'D', 'D', 0.02],
+    ['tube', [-7.8, 4.85, 5.2], [7.8, 4.85, 5.2], 'y', 0.05], ['tube', [-7.8, -4.85, 5.2], [7.8, -4.85, 5.2], 'y', 0.05],   // le filet dore
+    ['bloc', [1.6, 3.8], [-4.0, 4.0], [3.6, 4.6], 'u', 'u', 'u', 0.02],                     // les bancs
+    ['bloc', [-5.2, -3.0], [-4.0, 4.0], [3.6, 4.6], 'u', 'u', 'u', 0.02],
+    ['bloc', [8.0, 9.6], [-0.6, 0.6], [2.4, 3.0], 'k', 'k', 'k', 0],                        // l'attelage
+  ],
+};
+/* LE CHARIOT DE LA MONTAGNE RUSSE : une caisse basse au nez arrondi, un dossier,
+   la barre de securite, et DEUX passagers cote a cote.
+
+   ⚠️ **Ses passagers sont DANS la machine**, pas des passants poses dessus comme
+   dans le petit train : un chariot PENCHE (`Atlas.projeter`, `tangage`) — il
+   grimpe la chaine, il plonge, il passe le looping la tete en bas — et un passant
+   dessine debout resterait debout. Buste, tete et cheveux en blocs, chacun sa
+   lettre (`a` `b` `g` a gauche, `d` `e` `f` a droite) : `Foire` y met les couleurs
+   de qui est assis, le joueur compris. `bras` : les bras leves, quand ca plonge. */
+function chariotDeMontagne(bras) {
+  const pieces = [
+    // Les roues, sur le rail. ⚠️ Gris et étroites : noires et de toute la largeur, la
+    // tête en bas au looping on ne voyait plus qu'elles.
+    ['bloc', [-4.6, 4.6], [-1.6, 1.6], [0.0, 1.4], 'r', 'r', 'r', 0],
+    ['profil', [[7.2, 1.4], [7.4, 3.0], [5.6, 5.0], [-6.2, 5.0], [-7.0, 4.2], [-7.0, 1.4]],
+     [[-7.2, 4.0], [-5.6, 4.5], [5.0, 4.5], [7.6, 2.8]], 'c', 'DCCCDD', 0],
+    ['tube', [6.6, 4.55, 2.8], [-6.6, 4.55, 2.8], 'y', 0.05], ['tube', [6.6, -4.55, 2.8], [-6.6, -4.55, 2.8], 'y', 0.05],
+    ['bloc', [-6.4, -5.2], [-4.0, 4.0], [5.0, 8.6], 'D', 'D', 'D', 0.02],                    // le dossier
+    ['tube', [1.0, -3.8, 7.4], [1.0, 3.8, 7.4], 'M', 0.3],                                   // la barre
+    ['bloc', [6.2, 7.4], [-0.8, 0.8], [3.2, 4.2], 'l', 'l', 'l', 0.3],                       // le fanal du nez
+  ];
+  [[-2.1, 'a', 'b', 'g'], [2.1, 'd', 'e', 'f']].forEach(function (p) {
+    const w = p[0];
+    pieces.push(['bloc', [-3.6, -1.4], [w - 1.3, w + 1.3], [5.0, 8.0], p[1], p[1], p[1], 0.05]);   // le buste
+    pieces.push(['bloc', [-3.2, -1.2], [w - 1.0, w + 1.0], [8.0, 10.0], p[3], p[3], p[3], 0.06]);  // la tete
+    pieces.push(['bloc', [-3.4, -1.0], [w - 1.1, w + 1.1], [10.0, 10.8], p[2], p[2], p[2], 0.07]); // les cheveux
+    if (bras) {
+      pieces.push(['tube', [-2.2, w - 1.4, 7.6], [-1.6, w - 2.2, 12.6], p[3], 0.08]);
+      pieces.push(['tube', [-2.2, w + 1.4, 7.6], [-1.6, w + 2.2, 12.6], p[3], 0.08]);
+    }
+  });
+  return { profondeur: BIAIS_DU_SOL, contour: true, arrondi: true, pieces: pieces };
+}
+/* LA NACELLE DE LA GRANDE ROUE : un baquet pendu a son attache par deux bras, et
+   deux passagers cote a cote, face a nous. ⚠️ Son point de sol est l'ATTACHE, en
+   haut : tout le reste pend en dessous (`z` negatif), et elle ne tourne jamais —
+   une nacelle pend toujours droite, c'est la roue qui tourne. Les passagers sont
+   dans la machine, comme dans le chariot, et pour la meme raison d'echelle : la
+   roue fait 72 px de diametre, un passant debout en ferait le sixieme. `vide` :
+   sans personne. */
+function nacelleDeRoue(vide) {
+  const pieces = [
+    // La tige, et la barre ou pend le baquet. ⚠️ Deux bras en V faisaient, cernes de
+    // noir, une pointe de cloche sur chaque nacelle.
+    ['tube', [0, 0, 0], [-2.6, 0, -4.8], 'M', 0.1],
+    ['tube', [-2.6, -3.6, -4.8], [-2.6, 3.6, -4.8], 'M', 0.1],
+    ['bloc', [-3.0, 3.0], [-4.0, 4.0], [-10.4, -9.6], 'D', 'D', 'D', 0],                    // le fond
+    ['bloc', [-3.0, 3.0], [3.4, 4.0], [-9.6, -5.6], 'C', 'c', 'D', 0.02],                   // les flancs
+    ['bloc', [-3.0, 3.0], [-4.0, -3.4], [-9.6, -5.6], 'C', 'c', 'D', 0.02],
+    ['bloc', [2.4, 3.0], [-4.0, 4.0], [-9.6, -6.6], 'C', 'c', 'D', 0.02],                   // devant, plus bas
+    ['bloc', [-3.0, -2.4], [-4.0, 4.0], [-9.6, -5.0], 'C', 'D', 'D', 0.02],                 // le dossier
+    ['tube', [3.05, -4.0, -6.8], [3.05, 4.0, -6.8], 'y', 0.05],                             // le filet
+  ];
+  if (!vide) {
+    [[-1.8, 'a', 'b', 'g'], [1.8, 'd', 'e', 'f']].forEach(function (p) {
+      const w = p[0];
+      pieces.push(['bloc', [-1.8, 0.2], [w - 1.2, w + 1.2], [-9.6, -6.8], p[1], p[1], p[1], 0.04]);  // le buste
+      pieces.push(['bloc', [-1.6, 0.0], [w - 0.9, w + 0.9], [-6.8, -4.8], p[3], p[3], p[3], 0.05]);  // la tete
+      pieces.push(['bloc', [-1.8, 0.2], [w - 1.0, w + 1.0], [-4.8, -4.2], p[2], p[2], p[2], 0.06]);  // les cheveux
+    });
+  }
+  return { profondeur: BIAIS_DU_SOL, contour: true, arrondi: true, pieces: pieces };
+}
+
+const PALETTE_CHARIOT = { k: '#101018', c: '#c0392b', y: '#e2b33c', l: '#fff3b0', r: '#5e626a',
+                          a: '#3f7fc4', b: '#3b2a20', g: '#e8b088', d: '#f2d34f', e: '#d8b36a', f: '#f0c9a0' };
+
+//: Les machines de la foire, cuites comme un char (`enVolume`) — et lues par `Foire` seul.
+const FOIRE_EN_VOLUME = {
+  loco: enVolume(MACHINE_LOCO_FOIRE, 20, 40, { k: '#101018', c: '#2f7d4f', r: '#1a1a1e', x: '#c0392b', y: '#e2b33c', l: '#fff3b0', t: '#ff4b3e' }),
+  wagon: enVolume(MACHINE_WAGON_FOIRE, 16, 32, { k: '#101018', c: '#e8a33a', r: '#1a1a1e', x: '#c0392b', y: '#e2b33c', u: '#8a6a44' }),
+  // ⚠️ Une toile de 36 : le chariot pivote sur son rail dans tous les sens, bras leves compris.
+  chariot: enVolume(chariotDeMontagne(false), 14, 36, PALETTE_CHARIOT),
+  chariot_bras: enVolume(chariotDeMontagne(true), 14, 36, PALETTE_CHARIOT),
+  // ⚠️ Une toile de 28 : l'attache au milieu, le baquet dix pixels plus bas.
+  nacelle: enVolume(nacelleDeRoue(false), 6, 28, PALETTE_CHARIOT),
+  nacelle_vide: enVolume(nacelleDeRoue(true), 6, 28, PALETTE_CHARIOT),
+};
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {
@@ -4000,8 +4142,13 @@ const DECORS = {
   // double : 84 x 92, douze nacelles, une jante d'ampoules.
   // ⚠️ Son empreinte au sol reste celle de son PORTIQUE, pas de sa jante : la
   // roue est EN L'AIR, on passe dessous. Le juge de `PORTEE_DECOR` le tient.
-  grande_roue: { anime: 22, arrete: 14, w: 84, h: 92, ancre: [42, 88], r: 16, sol: [16, 8], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
-    const cx = 42, cy = 40, R = 36, N = 12;
+  // ⚠️ **SES NACELLES NE SONT PLUS ICI** (Martin : « pareil pour la grande roue » —
+  // le style des véhicules, et un tour) : ce sont des machines en volume que
+  // `Foire` peint par-dessus, à l'angle même de ces rayons (`moyeu`, `rayon`,
+  // `nacelles`, et la pose qui avance d'un sixième d'intervalle) — c'est ce qui
+  // permet de s'asseoir dans l'une d'elles et de faire le tour avec elle.
+  grande_roue: { anime: 22, arrete: 14, w: 84, h: 92, ancre: [42, 88], r: 16, sol: [16, 8], solide: true, variantes: 6, moyeu: [42, 40], rayon: 36, nacelles: 12, peindre: function (ctx, w, h, v) {
+    const f = DECORS.grande_roue, cx = f.moyeu[0], cy = f.moyeu[1], R = f.rayon, N = f.nacelles;
     ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(12, 84, 60, 7);      // son ombre
     // Le portique : deux jambes en A de chaque cote du moyeu.
     ctx.fillStyle = '#4a4d55';
@@ -4026,16 +4173,12 @@ const DECORS = {
     ctx.fillStyle = '#5e626a'; ctx.fillRect(cx - 5, cy - 5, 10, 10);         // le moyeu
     ctx.fillStyle = '#a6aab0'; ctx.fillRect(cx - 3, cy - 4, 6, 6);
     ctx.fillStyle = '#ffe58a'; ctx.fillRect(cx - 1, cy - 2, 2, 2);
-    // ⚠️ LES NACELLES TOURNENT, et c'est la seule articulation : `v` les avance
-    // d'un sixieme d'intervalle. Elles pendent TOUJOURS vers le bas.
-    const couleurs = ['#2f6fb5', '#d98324', '#2f8d6a', '#c0392b', '#9b59b6', '#efd06a'];
+    // ⚠️ Les attaches des nacelles, au bout des rayons : les nacelles elles-memes
+    // pendent de la, peintes par `Foire` (voir plus haut).
+    ctx.fillStyle = '#5e626a';
     for (let k = 0; k < N; k++) {
       const t = (k / N + v / (N * 6)) * Math.PI * 2;
-      const nx = Math.round(cx + Math.cos(t) * R), ny = Math.round(cy + Math.sin(t) * R);
-      ctx.fillStyle = '#5e626a'; ctx.fillRect(nx, ny, 1, 3);
-      ctx.fillStyle = couleurs[k % couleurs.length]; ctx.fillRect(nx - 3, ny + 3, 7, 5);
-      ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(nx - 3, ny + 3, 7, 1);
-      ctx.fillStyle = '#1b1b1f'; ctx.fillRect(nx - 2, ny + 5, 5, 1);
+      ctx.fillRect(Math.round(cx + Math.cos(t) * R) - 1, Math.round(cy + Math.sin(t) * R) - 1, 3, 3);
     }
   } },
 

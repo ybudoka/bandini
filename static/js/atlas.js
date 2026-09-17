@@ -147,10 +147,17 @@ const Atlas = (function () {
       cap `angle` est celui du moteur : 0 a l'EST. Ce qui cache quoi se decide
       point par point — le plus pres de l'oeil gagne (le plus au sud, le plus
       haut), et `avance` depasse d'une fraction pour qu'un phare ou un guidon
-      ne se noie pas dans ce qu'il touche. */
-  function projeter(machine, angle, cote) {
+      ne se noie pas dans ce qu'il touche.
+
+      ⚠️ `tangage` (facultatif, en radians) : la machine PENCHE avant de tourner,
+      le nez vers le haut quand il est positif — un chariot de montagne russe qui
+      grimpe la chaine, qui plonge, et qui passe le looping LA TETE EN BAS (a pi,
+      son dessus est dessous). Elle pivote autour de son point de sol, la ou elle
+      tient au rail. Absent, rien ne change pour le parc. */
+  function projeter(machine, angle, cote, tangage) {
     const K = machine.profondeur;
     const ca = Math.cos(angle), sa = Math.sin(angle);
+    const penche = !!tangage, ct = Math.cos(tangage || 0), st = Math.sin(tangage || 0);
     const milieu = cote / 2;
     const prof = new Float64Array(cote * cote).fill(-Infinity);
     const lettres = new Array(cote * cote).fill('.');
@@ -158,6 +165,7 @@ const Atlas = (function () {
     // arete de pixel tombait d'un cote ou de l'autre selon le cap, et le dessin
     // du nord n'etait plus le miroir exact de celui du sud.
     function point(u, w, z, ch, avance) {
+      if (penche) { const u2 = u * ct - z * st; z = u * st + z * ct; u = u2; }
       const sol = u * sa + w * ca;
       const x = Math.floor(milieu + u * ca - w * sa + 1e-6), y = Math.floor(milieu + sol * K - z + 1e-6);
       if (x < 0 || y < 0 || x >= cote || y >= cote) return;
@@ -320,18 +328,21 @@ const Atlas = (function () {
 
       ⚠️ Le lissage doit rester eteint sur le canevas TOURNE : un char tourne
       avec `imageSmoothingEnabled` a true devient une tache floue. */
-  function cuireCap(nom, def, swaps, n, i, centre) {
+  function cuireCap(nom, def, swaps, n, i, centre, tangage) {
+    // ⚠️ `tangage` : un cran sur `n`, comme le cap (voir `projeter`) — seulement
+    // pour une machine. Les cles d'avant restent les memes quand il est absent.
+    const t = tangage ? ((tangage % n) + n) % n : 0;
     const sel = swaps ? JSON.stringify(swaps) : '';
-    const cle = 'cap|' + nom + '|' + n + '|' + i + '|' + sel;
+    const cle = 'cap|' + nom + '|' + n + '|' + i + (t ? '|t' + t : '') + '|' + sel;
     if (cache.has(cle)) return cache.get(cle);
     // ⚠️ UN DEUX-ROUES NE TOURNE PAS SON TOIT : il se PROJETTE au cap (voir
     // `projeter`). La grille de lettres ne depend pas de la couleur, elle se
     // cuit une fois par cap ; le canevas, lui, une fois par couleur.
     if (def.machine) {
-      const cleGrille = 'machine|' + nom + '|' + n + '|' + i;
+      const cleGrille = 'machine|' + nom + '|' + n + '|' + i + (t ? '|t' + t : '');
       let grille = cache.get(cleGrille);
       if (!grille) {
-        grille = projeter(def.machine, i * Math.PI * 2 / n - Math.PI / 2, def.w);
+        grille = projeter(def.machine, i * Math.PI * 2 / n - Math.PI / 2, def.w, t * Math.PI * 2 / n);
         cache.set(cleGrille, grille);
       }
       const c = Base.nouveauCanvas(def.w, def.w);

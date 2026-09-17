@@ -3034,6 +3034,8 @@ const Entites = (function () {
     // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
     // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).
     if (j.aBord) { j.vx = 0; j.vy = 0; j.nage = false; return; }
+    // ⚠️ Assis dans un manège, c'est lui qui nous porte (`Foire.maj`).
+    if (j.manege) { j.vx = 0; j.vy = 0; return; }
     if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
     // ⚠️ La ROUE D'ARMES le cloue comme un dialogue : une seule direction et
     // un seul role a la fois — sans ca, choisir son arme au stick ferait

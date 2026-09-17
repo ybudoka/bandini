@@ -2025,7 +2025,7 @@ const Vehicules = (function () {
     // elle est depensee. Un menu et un fondu figent tout le jeu (`Jeu.maj`) ;
     // la portiere d'a cote ne fait pas exception — sinon on passait la porte
     // deja au volant, et `Jeu.entrer` refusait.
-    if (!j.dansVehicule && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema && !B.menu && !B.transition) {
+    if (!j.dansVehicule && !j.manege && Entree.neuf('action') && !j.roule && j.descenduT !== B.t && !B.cinema && !B.menu && !B.transition) {
       const v = vehiculeSousLaMain(j);
       if (v && !Missions.interagir(j)) monter(j, v);
     }

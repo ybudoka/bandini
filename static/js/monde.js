@@ -1523,6 +1523,9 @@ const Monde = (function () {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);
       avanceX = Math.cos(v.angle) * 48 * f; avanceY = Math.sin(v.angle) * 48 * f;
     } else { avanceX = j.vx * 14; avanceY = j.vy * 14; }
+    // ⚠️ Assis dans un manège qui MONTE (la montagne russe), on regarde le chariot,
+    // pas le sol sous lui : cent cinquante pixels, c'est plus de la moitié de l'écran.
+    if (j.manege) avanceY -= j.manege.z || 0;
     const cible = cibleCamera(j.x + avanceX, j.y + avanceY);
     B.cam.x += (cible.x - B.cam.x) * 0.12;
     B.cam.y += (cible.y - B.cam.y) * 0.12;

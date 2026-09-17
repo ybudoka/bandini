@@ -730,3 +730,379 @@ def test_la_voie_se_peint_droite_en_courbe_et_en_passage_a_niveau(banc, paquet):
     assert all(r["masques"][k] == 1 for k in ("3", "6", "12", "9")), "une boucle a quatre coins"
     assert r["planches"] == 3, "l'allée d'entrée (trois tuiles) ne croise pas la voie sur des planches"
     assert r["differents"] == 6 and r["planche"]
+
+
+# --- On fait un tour : le petit train ----------------------------------------------
+#: Martin : « je veux aussi que le petit train soit dans le même style que les
+#: véhicules et qu'on puisse y faire un tour ».
+
+#: Le train posé en gare, à quai, et le joueur debout sur le quai à côté du wagon `k`.
+EN_GARE = """
+    function enGare(L, k) {
+      const F = L.Foire, t = F.train, j = L.B.joueur, TT = L.TT;
+      t.s = t.sGare; t.v = 0; t.attente = t.def.gare_images;
+      const w = F.wagons()[k];
+      j.x = w.x + 2; j.y = t.def.quai[2] * TT + 8; j.vx = 0; j.vy = 0; j.invincible = 999999;
+      L.Monde.centrerCamera(j.x, j.y);
+      L.Entites.indexer();
+      return w;
+    }
+"""
+
+
+def test_le_petit_train_a_sa_gare_et_son_quai(ville):
+    """La gare est sur la ligne sud, où il roule vers l'ouest : la locomotive
+    s'y arrête, ses wagons derrière elle — et le dernier ne mord pas l'allée
+    d'entrée, qu'un train à quai boucherait. Le quai longe la voie au nord, en
+    allée de pierre, sous chaque wagon : on sait où l'attendre."""
+    t, sol = ville["train_de_foire"], ville["sol"]
+    voie = [tuple(c) for c in t["voie"]]
+    gx, gy = voie[t["gare"]]
+    y1 = max(y for _x, y in voie)
+    assert gy == y1, "la gare n'est pas sur la ligne sud"
+    assert voie[(t["gare"] + 1) % len(voie)] == (gx - 1, gy), "le train ne roule pas vers l'ouest en gare"
+    b = next(x for x in ville["barrieres"] if x["slug"] == "foire")
+    queue_px = gx * 16 + 8 + t["wagons"] * t["ecart_px"] + 8
+    assert queue_px < b["x"] * 16, f"le dernier wagon à quai bouche l'allée d'entrée ({queue_px} px, allée à {b['x'] * 16})"
+    x0, x1, qy = t["quai"]
+    assert qy == gy - 1
+    occupees = {(d["x"], d["y"]) for d in ville["decor"]}
+    for x in range(x0, x1 + 1):
+        assert sol[qy][x] == "g" and (x, qy) not in occupees, f"le quai est pris en ({x}, {qy})"
+    for k in range(1, t["wagons"] + 1):
+        wx = (gx * 16 + 8 + k * t["ecart_px"]) // 16
+        assert x0 <= wx <= x1, f"le wagon {k} s'arrête hors du quai (tuile {wx})"
+    assert t["gare_images"] >= 240, "on n'a pas le temps de monter"
+
+
+def test_le_petit_train_marque_l_arret_en_gare_a_chaque_tour(banc, paquet):
+    """Il s'arrête à la gare, la locomotive sur sa tuile, le temps qu'on dit —
+    puis il siffle et repart. Deux tours, deux arrêts."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const F = L.Foire, t = F.train, d = t.def, TT = L.TT;
+        let sifflets = 0;
+        L.Son.SFX.sifflet_train = function () { sifflets++; };
+        L.B.joueur.x = t.xs[t.sGare]; L.B.joueur.y = t.ys[t.sGare] - 40;
+        const arrets = [], tuiles = [];
+        let images = 0, aQuai = 0;
+        const tours0 = t.tours;
+        while (t.tours < tours0 + 2 || t.attente > 0) {
+          F.maj(); images++;
+          if (t.attente > 0) { aQuai++; if (aQuai === 1) { const p = F.pointDuTrain(t.s); tuiles.push([Math.floor(p.x / TT), Math.floor(p.y / TT)]); } }
+          else if (aQuai) { arrets.push(aQuai); aQuai = 0; }
+          if (images > 9000) break;
+        }
+        return { arrets: arrets, tuiles: tuiles, gare: d.voie[d.gare], attendu: d.gare_images, images: images, sifflets: sifflets };
+    }""")
+    assert len(r["arrets"]) == 2, f"il ne marque pas l'arrêt à chaque tour : {r}"
+    assert all(a >= r["attendu"] - 1 for a in r["arrets"]), r["arrets"]
+    assert all(tuile == r["gare"] for tuile in r["tuiles"]), f"la locomotive s'arrête hors de sa gare : {r['tuiles']}"
+    assert r["sifflets"] >= 2, "il repart sans siffler"
+
+
+def test_on_fait_un_tour_de_petit_train(banc, paquet):
+    """Sur le quai, à côté d'un wagon arrêté : l'invite le dit, ACTION nous y
+    assoit. Assis, on suit son banc à chaque image, on ne se dessine plus soi-même
+    (c'est le wagon qui nous peint) et le train ne nous attend pas comme quelqu'un
+    planté sur la voie. Un tour complet, et on descend sur le quai, debout, entier."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + EN_GARE + """
+        const F = L.Foire, t = F.train, j = L.B.joueur, TT = L.TT;
+        L.B.partie.billets = { foire: L.B.partie.jour };
+        enGare(L, 2);
+        o.frame(1);
+        const invite = L.B.invite;
+        o.tape('KeyE', 1);
+        const assis = { manege: j.manege && j.manege.quoi, k: j.manege && j.manege.k, dessine: j.dessine, passager: t.passager };
+        const vie = j.vie, tours0 = t.tours;
+        let decroche = 0, images = 0, bloque = 0, bouge = 0, avant = null;
+        o.touche('KeyA');
+        while (j.manege && images < 6000) {
+          o.frame(1); images++;
+          if (!j.manege) break;
+          const w = F.wagons()[j.manege.k];
+          if (Math.hypot(w.x - j.x, w.y - j.y) > 0.01) decroche++;
+          if (t.bloquePar === j) bloque++;
+          if (avant && Math.hypot(j.x - avant[0], j.y - avant[1]) > 0) bouge++;
+          avant = [j.x, j.y];
+        }
+        o.relacher('KeyA');
+        const quai = t.def.quai;
+        return { invite: invite, assis: assis, images: images, decroche: decroche, bloque: bloque, bouge: bouge,
+                 tours: t.tours - tours0, apres: { manege: j.manege, dessine: j.dessine, passager: t.passager,
+                 tx: Math.floor(j.x / TT), ty: Math.floor(j.y / TT) }, quai: quai, n: t.n, vie: vie, vieApres: j.vie };
+    }""")
+    assert r["invite"] == "UN TOUR DE PETIT TRAIN", f"l'invite ne propose pas le tour : {r['invite']!r}"
+    assert r["assis"] == {"manege": "train", "k": 2, "dessine": False, "passager": 2}, r["assis"]
+    assert r["decroche"] == 0, f"{r['decroche']} images où l'on n'était pas sur son banc"
+    assert r["bouge"] > r["n"] * 0.8, "le train ne nous a pas fait faire le tour"
+    assert r["bloque"] == 0, "le train s'est arrêté devant nous, assis dedans"
+    assert r["tours"] == 1, f"on descend après {r['tours']} tours"
+    a = r["apres"]
+    assert a["manege"] is None and a["dessine"] and a["passager"] is None, a
+    assert a["ty"] == r["quai"][2] and r["quai"][0] - 1 <= a["tx"] <= r["quai"][1] + 1, f"on descend hors du quai : {a}"
+    assert r["vieApres"] == r["vie"]
+
+
+def test_assis_dans_le_train_on_ne_fait_rien_d_autre(banc, paquet):
+    """Assis : la direction ne nous fait pas marcher, FRAPPE ne frappe pas, ACTION
+    ne nous fait ni descendre en marche ni monter dans un char, et l'invite se
+    tait. Et recherché, le machiniste ne nous attend pas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + EN_GARE + """
+        const F = L.Foire, t = F.train, j = L.B.joueur;
+        L.B.recherche.etoiles = 1;
+        enGare(L, 1);
+        o.tape('KeyE', 1);
+        const recherche = !!j.manege;
+        L.B.recherche.etoiles = 0;
+        enGare(L, 1);
+        o.tape('KeyE', 1);
+        t.attente = 1;
+        o.frame(40);
+        const x0 = j.x;
+        // Un coup de poing part au RELÂCHER (la frappe se charge tant qu'on tient).
+        o.touche('KeyJ'); o.frame(3); o.relacher('KeyJ'); o.frame(1);
+        const frappe = j.etat === 'attaque';
+        o.tape('KeyE', 2);
+        return { recherche: recherche, assis: !!j.manege, frappe: frappe, invite: L.B.invite, roule: j.x !== x0 };
+    }""")
+    assert not r["recherche"], "on monte dans le petit train avec la police aux trousses"
+    assert r["assis"], f"ACTION nous fait descendre en marche : {r}"
+    assert not r["frappe"], "on frappe depuis son banc"
+    assert r["invite"] is None, f"l'invite promet un geste : {r['invite']!r}"
+
+
+def test_le_train_est_en_volume_et_nous_y_assoit(banc, paquet):
+    """⚠️ « Dans le même style que les véhicules » : la locomotive et les wagons
+    sont des MACHINES cuites au cap par `Atlas.cuireCap` — le biais du sol du parc,
+    un dessin par cap —, et chacun porte ceux qui y sont assis, le joueur à sa place
+    dans le sien, avec ses couleurs."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        """ + EN_GARE + """
+        const F = L.Foire, t = F.train, j = L.B.joueur, A = L.Atlas, V = L.Vehicules;
+        j.swaps = { c: '#123456', h: '#654321' };
+        enGare(L, 3);
+        o.tape('KeyE', 1);
+        const caps = [], assis = [];
+        const vraiCap = A.cuireCap, vraiCav = V.imageDuCavalier;
+        A.cuireCap = function (nom, def) { caps.push([nom, def.machine ? def.machine.profondeur : null]); return vraiCap.apply(null, arguments); };
+        V.imageDuCavalier = function (def, v, swaps) { assis.push(swaps); return vraiCav.apply(null, arguments); };
+        const vus = [];
+        F.ajouterVisibles(vus, L.B.cam.x, L.B.cam.y);
+        vus.forEach(function (e) { e.peindreFoire(L.Base.nouveauCanvas(8, 8).getContext('2d')); });
+        A.cuireCap = vraiCap; V.imageDuCavalier = vraiCav;
+        const dessins = new Set();
+        const fiche = F.MACHINES.wagon;
+        for (let i = 0; i < V.ROTATIONS; i++) dessins.add(A.projeter(fiche.machine, i * 2 * Math.PI / V.ROTATIONS - Math.PI / 2, fiche.w).join('|'));
+        return { caps: caps, lui: assis.filter(function (s) { return s === j.swaps; }).length, assis: assis.length,
+                 biais: L.B.defs.conduite.ombre.profondeur, dessins: dessins.size, n: V.ROTATIONS };
+    }""")
+    noms = [c[0] for c in r["caps"]]
+    assert noms.count("foire_loco") == 1 and noms.count("foire_wagon") == 4, f"le train ne se cuit pas au cap : {noms}"
+    assert all(k == r["biais"] for _n, k in r["caps"]), "le train ne voit pas le sol du biais du parc"
+    assert r["dessins"] == r["n"], f"{r['dessins']} dessins pour {r['n']} caps"
+    assert r["lui"] == 1, "le joueur n'est pas assis dans son wagon, à ses couleurs"
+    assert r["assis"] >= 6, "le train roule vide"
+
+
+# --- On fait un tour : la montagne russe et la grande roue ---------------------------
+#: Martin : « pareil pour la montagne russe et la grande roue ».
+
+
+def test_on_descend_du_colosse_et_de_la_roue_sur_un_sol_libre(ville):
+    """On descend du Colosse sur ses planches, au sud de la gare, et de la roue
+    devant son portique : un sol où l'on tient debout, sans décor dessus — sinon
+    on descend dans un mur."""
+    legende = carte.LEGENDE
+    mr = ville["montagne_russe"]
+    occupees = {(d["x"], d["y"]) for d in ville["decor"]}
+    g0, g1 = mr["gare"]
+    for i in range(g0, g1 + 1):
+        x, y, _z = mr["voie"][i]
+        t = (int(x // 16), int((y + 12) // 16))
+        assert not legende[ville["sol"][t[1]][t[0]]].get("solide") and t not in occupees, f"on descend du Colosse sur {t}"
+    roue = ville["roue"]
+    t = (roue["x"], roue["y"] + 1)
+    assert not legende[ville["sol"][t[1]][t[0]]].get("solide") and t not in occupees, f"on descend de la roue sur {t}"
+
+
+def test_on_fait_un_tour_de_montagne_russe(banc, paquet):
+    """À quai, près d'un chariot : ACTION nous y assoit. On monte la chaîne, on
+    plonge, on passe le looping — assis à sa place à chaque image — et la caméra
+    regarde le chariot, pas le sol sous lui. De retour en gare, on descend sur ses
+    planches."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const F = L.Foire, m = F.montagne, d = m.def, j = L.B.joueur, B = L.B, VH = L.VH;
+        B.partie.billets = { foire: B.partie.jour };
+        m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
+        const p = F.pointDeMontagne(m.s - d.ecart_px);
+        j.x = p.x + 1; j.y = p.y + 12; j.invincible = 999999;
+        L.Monde.centrerCamera(j.x, j.y);
+        o.frame(1);
+        const invite = B.invite;
+        o.tape('KeyE', 1);
+        const assis = j.manege && { quoi: j.manege.quoi, k: j.manege.k };
+        const tours0 = m.tours, vie = j.vie;
+        let images = 0, decroche = 0, zMax = 0, camera = 0, boucle = false;
+        while (j.manege && images < 8000) {
+          o.frame(1); images++;
+          if (!j.manege) break;
+          const q = F.pointDeMontagne(m.s - j.manege.k * d.ecart_px);
+          if (Math.hypot(q.x - j.x, q.y - j.y) > 0.01 || Math.abs(q.z - j.manege.z) > 0.01) decroche++;
+          if (q.i >= d.boucle[0] && q.i <= d.boucle[1]) boucle = true;
+          if (q.z > zMax) { zMax = q.z; camera = j.y - (B.cam.y + VH / 2); }
+        }
+        const g = F.pointDeMontagne(m.sGare);
+        return { invite: invite, assis: assis, images: images, decroche: decroche, zMax: zMax, camera: camera,
+                 boucle: boucle, tours: m.tours - tours0, haut: d.hauteur_px, vie: vie, vieApres: j.vie,
+                 apres: { manege: j.manege, dessine: j.dessine, passager: m.passager, dy: j.y - g.y } };
+    }""")
+    assert r["invite"] == "UN TOUR DE MONTAGNE RUSSE", f"l'invite ne propose pas le tour : {r['invite']!r}"
+    assert r["assis"] == {"quoi": "montagne", "k": 1}, r["assis"]
+    assert r["decroche"] == 0, f"{r['decroche']} images hors de son chariot"
+    assert r["zMax"] >= 0.8 * r["haut"] and r["boucle"], f"on n'a pas fait le tour : {r}"
+    assert r["camera"] >= 0.5 * r["zMax"], f"au sommet, la caméra regarde le sol ({r['camera']:.0f} px pour {r['zMax']:.0f} de haut)"
+    assert r["tours"] == 1
+    a = r["apres"]
+    assert a["manege"] is None and a["dessine"] and a["passager"] is None, a
+    assert 8 <= a["dy"] <= 16, f"on ne descend pas sur les planches de la gare : {a}"
+    assert r["vieApres"] == r["vie"]
+
+
+def test_le_chariot_penche_et_passe_le_looping_la_tete_en_bas(banc, paquet):
+    """⚠️ En volume, un chariot ne se tourne pas seulement : il PENCHE. Il grimpe
+    la chaîne le nez en l'air, plonge le nez en bas, et au sommet du looping il est
+    à l'envers — ses passagers aussi, puisqu'ils sont dans la machine. Et le joueur
+    est assis dans le sien, à ses couleurs."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const F = L.Foire, m = F.montagne, d = m.def, A = L.Atlas, V = L.Vehicules, j = L.B.joueur, n = V.ROTATIONS;
+        j.swaps = { c: '#123456', h: '#654321' };
+        m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
+        const p = F.pointDeMontagne(m.s - 2 * d.ecart_px);
+        j.x = p.x; j.y = p.y + 12;
+        o.tape('KeyE', 1);
+        const crans = {}, couleurs = [];
+        const vrai = A.cuireCap;
+        A.cuireCap = function (nom, def, swaps, nn, i, centre, t) {
+          if (nom.indexOf('foire_chariot') === 0) { crans[t || 0] = true; if (swaps && swaps.a === '#123456') couleurs.push(swaps.b); }
+          return vrai.apply(null, arguments);
+        };
+        for (let i = 0; i < 4000 && j.manege; i++) {
+          L.Foire.maj();
+          const vus = [];
+          L.Foire.ajouterVisibles(vus, m.ox, m.oy);
+          vus.forEach(function (e) { if (e.id < 900000002) e.peindreFoire(L.Base.nouveauCanvas(8, 8).getContext('2d')); });
+        }
+        A.cuireCap = vrai;
+        // Le même chariot, droit puis à l'envers : où sont les cheveux par rapport à la caisse ?
+        const fiche = F.MACHINES.chariot;
+        function hauteurs(t) {
+          // Les cheveux des deux passagers (`b`, `e`) : l'un cache parfois l'autre.
+          const g = A.projeter(fiche.machine, 0, fiche.w, t), ys = { b: [], e: [], c: [] };
+          g.forEach(function (ligne, y) { ligne.split('').forEach(function (ch) { if (ys[ch]) ys[ch].push(y); }); });
+          return { cheveux: Math.min.apply(null, ys.b.concat(ys.e)), caisse: Math.min.apply(null, ys.c) };
+        }
+        return { crans: Object.keys(crans).map(Number), n: n, couleurs: couleurs.slice(0, 3), droit: hauteurs(0), envers: hauteurs(Math.PI) };
+    }""")
+    n = r["n"]
+    crans = set(r["crans"])
+    assert any(0 < c <= n // 4 for c in crans), f"il ne grimpe jamais le nez en l'air : {sorted(crans)}"
+    assert any(3 * n // 4 <= c < n for c in crans), f"il ne plonge jamais le nez en bas : {sorted(crans)}"
+    assert any(abs(c - n // 2) <= 1 for c in crans), f"il ne passe jamais le looping la tête en bas : {sorted(crans)}"
+    assert r["droit"]["cheveux"] < r["droit"]["caisse"], "droit, les passagers ne dépassent pas de la caisse"
+    assert r["envers"]["cheveux"] > r["envers"]["caisse"], "à l'envers, les passagers restent la tête en haut"
+    assert r["couleurs"] and all(c == "#654321" for c in r["couleurs"]), "le joueur n'est pas dans son chariot, à ses couleurs"
+
+
+def test_on_fait_un_tour_de_grande_roue(banc, paquet):
+    """Au pied de la roue : ACTION nous assoit dans la nacelle du bas — elle ne
+    s'arrête pas pour nous, elle tourne au pas. Un tour complet, jusqu'en haut, et
+    on descend devant le portique quand notre nacelle est revenue en bas."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const F = L.Foire, R = F.roue, j = L.B.joueur, B = L.B, VH = L.VH;
+        j.x = R.x; j.y = R.y + R.devant; j.invincible = 999999;
+        L.Monde.centrerCamera(j.x, j.y);
+        o.frame(1);
+        const invite = B.invite;
+        o.tape('KeyE', 1);
+        const m = j.manege, k = m && m.k;
+        const bas = function (kk) { const a = F.attache(kk); return a.y; };
+        const enBasAuDepart = m && [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].every(function (q) { return bas(q) <= bas(k); });
+        let images = 0, decroche = 0, zMax = 0, camera = 0;
+        while (j.manege && images < 4000) {
+          o.frame(1); images++;
+          if (!j.manege) break;
+          // ⚠️ `Foire.maj` a posé le joueur AVANT que l'image n'avance.
+          const a = F.attache(k, B.t - 1);
+          if (Math.abs(a.x - j.x) > 0.01) decroche++;
+          if (j.manege.z > zMax) { zMax = j.manege.z; camera = j.y - (B.cam.y + VH / 2); }
+        }
+        const a = F.attache(k);
+        return { invite: invite, quoi: m && m.quoi, enBas: enBasAuDepart, images: images, decroche: decroche,
+                 zMax: zMax, camera: camera, tour: R.n * R.variantes * R.f.anime, rayon: R.f.rayon,
+                 apres: { manege: j.manege, dessine: j.dessine, passager: R.passager, dx: j.x - R.x, dy: j.y - R.y },
+                 finEnBas: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11].every(function (q) { return F.attache(q).y <= a.y + 3; }) };
+    }""")
+    assert r["invite"] == "UN TOUR DE GRANDE ROUE", f"l'invite ne propose pas le tour : {r['invite']!r}"
+    assert r["quoi"] == "roue" and r["enBas"], f"on ne monte pas dans la nacelle du bas : {r}"
+    assert r["decroche"] == 0, f"{r['decroche']} images hors de sa nacelle"
+    assert r["zMax"] >= 1.6 * r["rayon"], f"on n'est pas monté en haut de la roue : {r['zMax']} px"
+    assert r["camera"] >= 0.5 * r["zMax"], "en haut, la caméra regarde le sol"
+    assert r["tour"] - 30 <= r["images"] <= r["tour"] + 30, f"un tour de roue dure {r['tour']} images, on en a fait {r['images']}"
+    a = r["apres"]
+    assert a["manege"] is None and a["dessine"] and a["passager"] is None, a
+    assert a["dx"] == 0 and 8 < a["dy"] <= 20, f"on ne descend pas devant le portique : {a}"
+    assert r["finEnBas"], "on descend d'une nacelle qui n'est pas revenue en bas"
+
+
+def test_les_nacelles_sont_en_volume_au_bout_de_leurs_rayons(banc, paquet):
+    """⚠️ Les nacelles ne sont plus peintes dans le décor : ce sont des machines
+    que `Foire` pend au bout des rayons. Elles doivent y RESTER — l'attache que la
+    roue peint à chaque cran est exactement là où la nacelle pend. Douze nacelles,
+    le joueur dans la sienne à ses couleurs."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const F = L.Foire, R = F.roue, A = L.Atlas, j = L.B.joueur, B = L.B, f = R.f;
+        j.swaps = { c: '#123456', h: '#654321' };
+        j.x = R.x; j.y = R.y + R.devant;
+        o.tape('KeyE', 1);
+        const ecarts = [];
+        for (let pas = 0; pas < f.variantes; pas++) {
+          B.t = pas * f.anime + 3;
+          // Le dessin du décor à ce cran : ses attaches (des carrés de 3).
+          const ctx = L.Base.nouveauCanvas(f.w, f.h).getContext('2d');
+          ctx.traces = [];
+          f.peindre(ctx, f.w, f.h, L.Entites.poseDuDecor ? L.Entites.poseDuDecor(f, B.t) : pas);
+          const carres = ctx.traces.filter(function (t) { return t[2] === 3 && t[3] === 3 && t[4] === '#5e626a'; });
+          for (let k = 0; k < R.n; k++) {
+            const a = F.attache(k), lx = a.x - (R.x - f.ancre[0]) - 1, ly = a.y - (R.y - f.ancre[1]) - 1;
+            ecarts.push(Math.min.apply(null, carres.map(function (c) { return Math.hypot(c[0] - lx, c[1] - ly); })));
+          }
+        }
+        // ⚠️ Assis dans CHACUNE des douze : une nacelle vide ailleurs se remplit du joueur.
+        const noms = [], lui = [];
+        let nom0 = null;
+        const vrai = A.cuireCap;
+        for (let k = 0; k < R.n; k++) {
+          j.manege.k = k; R.passager = k;
+          let ici = 0;
+          A.cuireCap = function (nom, def, swaps) { noms.push(nom); if (swaps && swaps.a === '#123456') { ici++; lui.push(swaps.b); } return vrai.apply(null, arguments); };
+          const vus = [];
+          F.ajouterVisibles(vus, R.x - 200, R.y - 150);
+          vus.forEach(function (e) { if (e.id === 900000060) e.peindreFoire(L.Base.nouveauCanvas(8, 8).getContext('2d')); });
+          A.cuireCap = vrai;
+          if (ici !== 1) lui.push('nacelle ' + k + ' : ' + ici);
+        }
+        return { ecartMax: Math.max.apply(null, ecarts), n: R.n, noms: noms.slice(0, R.n), lui: lui };
+    }""")
+    assert r["ecartMax"] <= 1.01, f"une nacelle pend à {r['ecartMax']:.1f} px du bout de son rayon"
+    assert len([x for x in r["noms"] if x.startswith("foire_nacelle")]) == r["n"] == 12, r["noms"]
+    assert r["lui"] == ["#654321"] * 12, f"le joueur n'est pas dans sa nacelle, à ses couleurs : {r['lui']}"
