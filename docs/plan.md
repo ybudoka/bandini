@@ -201,6 +201,7 @@ ne bougent pas quand l'ordre de travail change.
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
+| Un kiosque fermé n'a personne derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10750,6 +10751,17 @@ même image et passe à la deuxième — on ne lit jamais « Heille! Le cousin d
 phrase qui explique la mission. Et Ti-Guy dit encore « la ruelle derrière le garage » alors
 que le char dort à vingt-quatre tuiles : la réplique change, et sa voix (`ti_guy-m1-3`) se
 régénère.
+
+### Un kiosque fermé n'a personne derrière
+
+Retour de Martin (17 sept. 2026), capture à l'appui — la cabane à fruits de mer, un marchand
+derrière le comptoir : « cantine, restaurant ou commerce fermé, il ne faut pas qu'il y ait
+quelqu'un ». Mesuré avant : `Entites.creerAmbulants` pose un vendeur `fige` derrière chaque
+comptoir au chargement, et il ne s'en va jamais. Trois kiosques ont des heures
+(`magasins.AMBULANTS` : journaux 6 h–18 h, café 4 h 48–14 h 24, fruits de mer 7 h 12–20 h 24) ;
+hors de ces heures ACTION répond « FERME », mais l'invite annonce encore le prix et le
+marchand attend au comptoir. Les intérieurs, eux, n'ont pas d'heures : leur commis est là
+parce qu'ils sont ouverts.
 
 ### Quatre activités que le jeu n'a pas
 
