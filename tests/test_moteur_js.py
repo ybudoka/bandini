@@ -7258,7 +7258,8 @@ def test_la_roulade_tourne_et_le_recul_chancelle(banc):
 
 def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
     """Un glyphe absent tombe sur « ? » : HÔPITAL, CASSE-CROÛTE, BÂTON… Martin
-    l'a vu a l'ecran. Chaque nom du jeu doit se normaliser en glyphes connus."""
+    l'a vu a l'ecran. Chaque nom du jeu doit se normaliser en glyphes connus —
+    une lettre accentuee l'est par sa lettre de base (`Atlas.connait`)."""
     r = banc("""function (L, o) {
         const d = L.B.defs;
         const textes = [];
@@ -7280,7 +7281,7 @@ def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
         textes.push((1078).toLocaleString('fr-CA') + ' $', (1250000).toLocaleString('fr-CA') + ' $');
         const inconnus = {};
         textes.forEach(function (t) {
-            for (const ch of L.Atlas.normaliser(t)) if (ch !== ' ' && !L.POLICE_PIXEL[ch]) inconnus[ch] = (inconnus[ch] || 0) + 1;
+            for (const ch of L.Atlas.normaliser(t)) if (ch !== ' ' && !L.Atlas.connait(ch)) inconnus[ch] = (inconnus[ch] || 0) + 1;
         });
         return { n: textes.length, inconnus: inconnus, hopital: L.Atlas.normaliser('Hôpital de Baie-des-Brumes'),
                  largeur: L.Atlas.largeurTexte('Œuvre', 1),
@@ -7288,9 +7289,59 @@ def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
     }""")
     assert r["n"] > 40
     assert r["inconnus"] == {}, f"glyphes que la police ne sait pas ecrire : {r['inconnus']}"
-    assert r["hopital"] == "HOPITAL DE BAIE-DES-BRUMES"
+    assert r["hopital"] == "HÔPITAL DE BAIE-DES-BRUMES", "la police garde les accents"
     assert r["argent"] == "1 078 $", "le separateur des milliers doit devenir une vraie espace"
     assert r["largeur"] == 6 * 4 - 1, "la largeur doit compter le OE en deux lettres"
+
+
+def test_la_police_dessine_l_accent_au_dessus_de_la_lettre(banc):
+    """Martin (17 sept. 2026) : « le jeu doit supporter les accents ». Longtemps
+    la police ramenait « É » a « E » avant de dessiner.
+
+    Le juge compte les pixels peints : « É » peint ceux de « E », PLUS l'aigu
+    trois rangs au-dessus, un rang vide entre les deux ; « Ç » peint sa cedille
+    SOUS la lettre ; « È », « Ê » et « Ë » ne se peignent pas pareil. La largeur
+    d'une ligne ne bouge pas, et un accent decompose (« E » + U+0301) donne le
+    meme dessin qu'un « É » compose."""
+    r = banc("""function (L, o) {
+        function peindre(s, e) {
+            const px = [];
+            const ctx = { set fillStyle(v) {}, fillRect: function (x, y, w, h) { px.push([x, y, w, h]); } };
+            L.Atlas.texte(ctx, s, 0, 10, '#fff', e || 1);
+            return px;
+        }
+        const e = peindre('E'), eAigu = peindre('É');
+        const sans = function (a, b) { const k = b.map(String); return a.filter(function (p) { return k.indexOf(String(p)) < 0; }); };
+        return {
+            e: e.length, eAigu: eAigu.length,
+            accent: sans(eAigu, e),
+            garde: sans(e, eAigu).length,
+            grave: sans(peindre('È'), e), circ: sans(peindre('Ê'), e), trema: sans(peindre('Ë'), e),
+            cedille: sans(peindre('Ç'), peindre('C')),
+            decompose: JSON.stringify(peindre('E\u0301')) === JSON.stringify(eAigu),
+            minuscule: JSON.stringify(peindre('é')) === JSON.stringify(eAigu),
+            double: sans(peindre('É', 2), peindre('E', 2)),
+            largeur: [L.Atlas.largeurTexte('HÔPITAL', 1), L.Atlas.largeurTexte('HOPITAL', 1),
+                      L.Atlas.largeurTexte('E\u0301TE\u0301', 1)],
+            ntilde: JSON.stringify(peindre('Ñ')) === JSON.stringify(peindre('N')),
+            inconnu: JSON.stringify(peindre('Ñ')) === JSON.stringify(peindre('?')),
+            marques: Object.keys(L.MARQUES_PIXEL).map(function (k) { return L.MARQUES_PIXEL[k].bits.length; }),
+        };
+    }""")
+    assert r["garde"] == 0, "l'accent s'ajoute a la lettre, il ne la remplace pas"
+    assert r["eAigu"] > r["e"], "« É » doit peindre plus que « E »"
+    assert r["accent"] == [[2, 7, 1, 1], [1, 8, 1, 1]], "l'aigu : deux rangs au-dessus, un rang vide avant la lettre (y = 10)"
+    assert r["grave"] and r["circ"] and r["trema"]
+    assert len({str(r["accent"]), str(r["grave"]), str(r["circ"]), str(r["trema"])}) == 4, "quatre accents, quatre dessins"
+    assert r["cedille"] and all(y >= 15 for _, y, _, _ in r["cedille"]), "la cedille pend SOUS la lettre"
+    assert all(y < 10 for _, y, _, _ in r["accent"] + r["grave"] + r["circ"] + r["trema"]), "les accents sont au-dessus"
+    assert r["decompose"], "« E » + U+0301 se dessine comme « É »"
+    assert r["minuscule"], "« é » s'ecrit « É »"
+    assert r["double"] == [[4, 4, 2, 2], [2, 6, 2, 2]], "a l'echelle 2, l'accent grandit avec la lettre"
+    assert r["largeur"][0] == r["largeur"][1] == 7 * 4 - 1, "un accent n'elargit pas sa lettre"
+    assert r["largeur"][2] == 3 * 4 - 1, "un accent decompose ne prend pas une case a lui"
+    assert r["ntilde"] and not r["inconnu"], "une lettre dont l'accent n'est pas dessine garde sa base, pas « ? »"
+    assert set(r["marques"]) == {6}
 
 
 def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):

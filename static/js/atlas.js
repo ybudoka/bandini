@@ -391,12 +391,14 @@ const Atlas = (function () {
     return c;
   }
 
-  //: ⚠️ A cinq pixels de haut, un accent ne se lit pas ; et un glyphe absent
-  //: tombait sur « ? » (HÔPITAL, CASSE-CROÛTE, BÂTON, l'apostrophe courbe…).
-  //: On ramene donc chaque lettre a sa base AVANT de la dessiner.
+  //: ⚠️ Un glyphe absent tombe sur « ? » (l'apostrophe courbe, le tiret
+  //: cadratin, les guillemets…). Ceux-ci se ramenent a ce que la police sait
+  //: ecrire AVANT le dessin. Les LETTRES ACCENTUEES n'y sont plus : longtemps
+  //: HÔPITAL s'est ecrit HOPITAL (« a cinq pixels de haut, un accent ne se lit
+  //: pas »), jusqu'a la demande de Martin du 17 sept. 2026 — « le jeu doit
+  //: supporter les accents ». Elles gardent leur accent et `lettre` le dessine.
   const SANS_ACCENT = {
-    'À': 'A', 'Â': 'A', 'Ä': 'A', 'É': 'E', 'È': 'E', 'Ê': 'E', 'Ë': 'E', 'Î': 'I', 'Ï': 'I',
-    'Ô': 'O', 'Ö': 'O', 'Ù': 'U', 'Û': 'U', 'Ü': 'U', 'Ç': 'C', 'Œ': 'OE', 'Æ': 'AE', 'Ÿ': 'Y',
+    'Œ': 'OE', 'Æ': 'AE',
     '’': "'", '‘': "'", '«': '"', '»': '"', '“': '"', '”': '"', '—': '-', '–': '-', '…': '...',
   };
 
@@ -406,14 +408,49 @@ const Atlas = (function () {
   //: (fine, insecable, tabulation, saut de ligne) redevient donc une espace.
   const ESPACES = /\s/;
 
-  /** Majuscules sans accent ni ponctuation courbe : ce que la police sait ecrire. */
+  //: Un accent qui ne s'est pas compose a sa lettre (« E » suivi de U+0301,
+  //: tel quel apres NFC parce que la paire n'existe pas en un caractere) ne
+  //: prend pas une case a lui : il tomberait sur « ? » et decalerait la ligne.
+  const COMBINANT = /\p{M}/u;
+
+  /** Majuscules, accents compris, sans ponctuation courbe : ce que la police sait ecrire.
+      ⚠️ Une lettre accentuee reste UN caractere (NFC) : `largeurTexte` compte
+      les caracteres, et un accent n'elargit pas sa lettre. */
   function normaliser(s) {
     let out = '';
-    for (const ch of String(s).toUpperCase()) {
+    for (const ch of String(s).normalize('NFC').toUpperCase()) {
       if (ch in SANS_ACCENT) out += SANS_ACCENT[ch];
+      else if (COMBINANT.test(ch)) continue;
       else out += ESPACES.test(ch) ? ' ' : ch;
     }
     return out;
+  }
+
+  //: Chaque caractere se decompose une fois : le glyphe de sa lettre de base
+  //: et ses accents (`MARQUES_PIXEL`). « É » donne le « E » de la police et
+  //: l'aigu ; « Ñ », sans tilde dessine, garde au moins son « N » au lieu d'un
+  //: « ? ». Le cache tient : il n'y a pas cent caracteres dans tout le jeu.
+  const LETTRES = new Map();
+  function lettre(ch) {
+    let l = LETTRES.get(ch);
+    if (l) return l;
+    const police = POLICE_PIXEL;
+    const marques = (typeof MARQUES_PIXEL !== 'undefined') ? MARQUES_PIXEL : {};
+    let glyphe = police[ch] || null;
+    const accents = [];
+    if (!glyphe) {
+      const nfd = ch.normalize('NFD');
+      glyphe = police[nfd[0]] || null;
+      if (glyphe) for (const m of nfd.slice(1)) if (marques[m]) accents.push(marques[m]);
+    }
+    l = { glyphe: glyphe, accents: accents };
+    LETTRES.set(ch, l);
+    return l;
+  }
+
+  /** La police sait-elle ecrire ce caractere (deja normalise) ? Sa lettre de base suffit. */
+  function connait(ch) {
+    return typeof POLICE_PIXEL !== 'undefined' && lettre(ch).glyphe !== null;
   }
 
   /** Texte en police pixel 3x5 (majuscules, chiffres, ponctuation). */
@@ -425,10 +462,18 @@ const Atlas = (function () {
     let cx = x;
     s = normaliser(s);
     for (const ch of s) {
-      const g = police[ch] || police['?'];
+      const l = lettre(ch);
+      const g = l.glyphe || police['?'];
       if (ch !== ' ' && g) {
         for (let i = 0; i < 15; i++) {
           if (g[i] === '1') ctx.fillRect(cx + (i % 3) * e, y + Math.floor(i / 3) * e, e, e);
+        }
+        // L'accent prend l'interligne : trois rangs au-dessus de la lettre
+        // (la cedille, deux dessous). Ni la largeur ni la ligne ne bougent.
+        for (const a of l.accents) {
+          for (let i = 0; i < 6; i++) {
+            if (a.bits[i] === '1') ctx.fillRect(cx + (i % 3) * e, y + (a.dy + Math.floor(i / 3)) * e, e, e);
+          }
         }
       }
       cx += 4 * e;
@@ -441,5 +486,5 @@ const Atlas = (function () {
 
   function vider() { cache.clear(); }
 
-  return { valider, cuire, toitDe, projeter, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, vider, get taille() { return cache.size; } };
+  return { valider, cuire, toitDe, projeter, cuireCap, cuireTuile, cuirePeintre, texte, largeurTexte, normaliser, connait, vider, get taille() { return cache.size; } };
 })();

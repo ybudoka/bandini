@@ -5324,8 +5324,21 @@ const POLICE_PIXEL = {
   '!': '010010010000010', '?': '110001010000010', '-': '000000111000000', '/': '001001010100100',
   '$': '011110011011110', '+': '000010111010000', '*': '101010111010101', '(': '010100100100010',
   ')': '010001001001010', "'": '010010000000000', '"': '101101000000000', '%': '101001010100101',
-  'É': '111100110100111', 'È': '111100110100111', 'À': '010101111101101', 'Ç': '011100100100011',
   '★': '010111111011101', '♥': '101111111010000',
   '>': '100010001010100', '<': '001010100010001', '·': '000000010000000', '=': '000111000111000',
   '|': '010010010010010', '_': '000000000000111', '[': '110100100100110', ']': '011001001001011',
+};
+
+/* Les accents de la police pixel : deux rangs de 3 (6 bits, ligne par ligne),
+   poses sur la lettre de BASE a `dy` rangs de son haut. Au-dessus, `dy` = -3 :
+   un rang vide separe l'accent de la lettre — colle, un Ê se lisait comme un E
+   plus grand et un Î comme un I plus haut. Dessous, la cedille (`dy` = 5).
+   La cle est le caractere COMBINANT de la decomposition (NFD) : « É » = « E »
+   + U+0301. Une marque absente d'ici tombe, et la lettre reste. */
+const MARQUES_PIXEL = {
+  '\u0301': { dy: -3, bits: '001010' },   // aigu        É
+  '\u0300': { dy: -3, bits: '100010' },   // grave       À È Ù
+  '\u0302': { dy: -3, bits: '010101' },   // circonflexe Â Ê Î Ô Û
+  '\u0308': { dy: -2, bits: '101000' },   // trema       Ë Ï Ü Ÿ
+  '\u0327': { dy: 5, bits: '010110' },    // cedille     Ç
 };

@@ -202,7 +202,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le client du taxi attend au bord de la route, et une flèche y mène | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
-| Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
+| Le jeu écrit avec ses accents | ⬜ **en cours** (1re vague livrée : la police) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
@@ -10926,6 +10926,31 @@ LACHE »), côté JS comme côté Python.
   (panneau de chantier, bulle) se vérifient sur capture.
 - **2e vague — les textes** : remettre les accents dans tout ce qui s'affiche, fichier par
   fichier, et un juge qui refuse un mot connu sans son accent.
+
+**1re vague livrée le 17 sept. 2026 — la police dessine les accents.**
+
+- `Atlas.normaliser` garde les lettres accentuées (NFC, un caractère chacune) ; `lettre`
+  décompose chaque caractère une fois (NFD) en glyphe de base + marques de `MARQUES_PIXEL`
+  (aigu, grave, circonflexe, tréma au-dessus, cédille dessous). Les quatre faux « É È À Ç »
+  de `POLICE_PIXEL`, copies de la lettre nue, sont partis. Une lettre dont la marque n'est
+  pas dessinée (« Ñ ») garde sa base au lieu d'un « ? ».
+- ⚠️ **La forme a été choisie sur capture, entre trois** : un accent d'un seul pixel ne se
+  lisait pas ; collé à la lettre, « Ê » se lisait comme un E plus grand et « Î » comme un I
+  plus haut. Retenu : **deux rangs, et un rang vide avant la lettre** (rangs −3 et −2). Ni la
+  largeur d'une lettre ni la hauteur d'une ligne ne changent : l'accent prend l'interligne.
+- ⚠️ **Trois endroits collaient le texte au bord du haut**, et l'accent tombait dans le cadre :
+  la bulle (11 → 12 de haut, texte à 4 du haut — l'accent touchait le trait, de la même
+  encre), le panneau de chantier (9 → 12, grandi vers le haut : son bas reste où il pendait)
+  et la plaque de la station de métro (11 → 13). Menus (14 px par ligne), boîte de dialogue
+  (9) et enseignes (texte à 4 du haut) avaient déjà la place.
+- Tout ce qui était déjà accentué à la source s'affiche maintenant avec ses accents : les
+  noms de quartier (« LES ÉRABLES »), les répliques des passants (« HÉ! LE COUSIN! »), les
+  messages récents (« CHAR ASSURÉ »).
+- **Juges** : `test_la_police_dessine_l_accent_au_dessus_de_la_lettre` compte les pixels
+  peints (l'aigu à sa place exacte, à l'échelle 1 et 2 ; quatre accents, quatre dessins ; la
+  cédille dessous ; « E » + U+0301 = « É » ; « é » = « É » ; la largeur ne bouge pas) — rouge
+  quand on retire la boucle des marques ; le juge « la police sait écrire tout ce que le jeu
+  affiche » passe par `Atlas.connait` et attend « HÔPITAL ».
 
 ### Quatre activités que le jeu n'a pas
 

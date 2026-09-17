@@ -355,9 +355,13 @@ const Chantiers = (function () {
   function panneau(ctx, texte, cx, y) {
     const larg = Atlas.largeurTexte(texte, 1) + 6;
     const x = Math.round(cx - larg / 2);
-    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 1, y + 1, larg, 9);
-    ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, larg, 9);
-    ctx.fillStyle = '#1a1712'; ctx.fillRect(x, y, larg, 1); ctx.fillRect(x, y + 8, larg, 1);
+    // ⚠️ 12 de haut, pas 9 : l'accent de « À DÉMOLIR » se dessine trois rangs
+    // au-dessus de la lettre, et tombait dans le liseré noir. Le panneau
+    // grandit VERS LE HAUT : son bas et son mot restent où ils pendaient.
+    const haut = y - 3;
+    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fillRect(x + 1, haut + 1, larg, 12);
+    ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, haut, larg, 12);
+    ctx.fillStyle = '#1a1712'; ctx.fillRect(x, haut, larg, 1); ctx.fillRect(x, haut + 11, larg, 1);
     Atlas.texte(ctx, texte, x + 3, y + 2, '#1a1712', 1);
   }
 

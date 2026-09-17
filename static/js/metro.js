@@ -329,10 +329,12 @@ const Metro = (function () {
     // La plaque de la station, au mur du fond.
     const nom = d.stations[B.metro.station].nom.toUpperCase();
     const l = Atlas.largeurTexte(nom, 1);
-    ctx.fillStyle = '#1b1d22'; ctx.fillRect(x0 + (largeur - l) / 2 - 4, y0 + 6, l + 8, 11);
+    // ⚠️ Treize de haut, le nom un rang plus bas : l'accent se dessine trois
+    // rangs au-dessus de la lettre, et sur une plaque de onze il en depassait.
+    ctx.fillStyle = '#1b1d22'; ctx.fillRect(x0 + (largeur - l) / 2 - 4, y0 + 5, l + 8, 13);
     if (!vue2) {
-      ctx.fillStyle = d.couleur; ctx.fillRect(x0 + (largeur - l) / 2 - 4, y0 + 16, l + 8, 1);
-      Atlas.texte(ctx, nom, Math.round(x0 + (largeur - l) / 2), y0 + 8, '#f4f1e6', 1);
+      ctx.fillStyle = d.couleur; ctx.fillRect(x0 + (largeur - l) / 2 - 4, y0 + 17, l + 8, 1);
+      Atlas.texte(ctx, nom, Math.round(x0 + (largeur - l) / 2), y0 + 9, '#f4f1e6', 1);
     }
     B.stats.rects += 8;
   }

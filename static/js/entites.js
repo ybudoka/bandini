@@ -3747,7 +3747,10 @@ const Entites = (function () {
   //: ⚠️ Le texte ne s'invente PAS ici : il descend de `missions.py` comme
   //: toutes les repliques du jeu (`personnages[].heler`). Cette fonction-ci ne
   //: sait que dessiner.
-  const BULLE_H = 11;                    // 5 px de police + 3 de marge en haut et en bas
+  // ⚠️ 12 et pas 11 : l'accent se dessine trois rangs AU-DESSUS de la lettre.
+  // A 11 (texte a 3 du haut), il touchait le trait de la boite, de la meme
+  // encre, et « DÉJÀ » portait deux bosses sur le cadre.
+  const BULLE_H = 12;                    // 5 px de police, 4 de marge en haut (l'accent), 3 en bas
   const BULLE_QUEUE = 3;                 // la pointe qui designe celui qui parle
   const BULLE_DESSUS = 30;               // du sol de l'entite au haut de la boite
   const BULLE_FOND = '#efe6d0', BULLE_ENCRE = '#1a1a22';
@@ -3763,8 +3766,7 @@ const Entites = (function () {
     if (!e) return null;
     const o = options || {};
     // ⚠️ Le mot est garde TEL QU'IL EST ECRIT dans `missions.py`, accents
-    // compris : c'est la police 3x5 qui ne sait pas les dessiner, pas le jeu
-    // qui ne sait pas les dire — et `Atlas.texte` s'en charge au dessin.
+    // compris : `Atlas.texte` les dessine au-dessus de la lettre.
     const mot = String(texte || '').trim();
     if (!mot) { e.bulle = null; return null; }
     if (e.bulle && e.bulle.texte === mot) { e.bulle.duree = o.duree || 0; return e.bulle; }
@@ -3807,7 +3809,7 @@ const Entites = (function () {
     ctx.fillStyle = b.fond;
     ctx.fillRect(x, y, large, BULLE_H);
     for (let i = 0; i < BULLE_QUEUE - 1; i++) ctx.fillRect(qx + 1, y + BULLE_H + i, BULLE_QUEUE - 1 - i, 1);
-    Atlas.texte(ctx, b.texte, x + 4, y + 3, b.encre, 1);
+    Atlas.texte(ctx, b.texte, x + 4, y + 4, b.encre, 1);
     B.stats.rects += 5;
   }
 
