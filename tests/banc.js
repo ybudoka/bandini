@@ -94,7 +94,7 @@ function banc(corps) {
   elements.croix = croix;
   ['voile-titre', 'voile-scores', 'voile-score-envoi', 'bouton-jouer', 'bouton-scores', 'bouton-fermer-scores',
    'bouton-annuler-score', 'score-form', 'pseudo', 'score-etat', 'liste-scores', 'etat-chargement',
-   'avis-son'].forEach(function (id) {
+   'avis-son', 'bouton-casque'].forEach(function (id) {
     elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : id === 'pseudo' ? 'input' : 'div', id);
   });
   const body = faireElement('body');

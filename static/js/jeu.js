@@ -693,6 +693,14 @@ const Jeu = (function () {
 
   function boucle(t) {
     fenetre.requestAnimationFrame(boucle);
+    // ⚠️ Dans le casque, c'est la SESSION WebXR qui cadence le jeu (voir
+    // `Casque`) : la fenetre se tait, sinon le monde avancerait deux fois.
+    if (typeof Casque !== 'undefined' && Casque.actif) return;
+    avancer(t);
+  }
+
+  /** Une image : les pas fixes de la simulation, puis le rendu. */
+  function avancer(t) {
     const debut = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     const dt = Math.min(60, t - dernier);
     dernier = t;
@@ -771,7 +779,11 @@ const Jeu = (function () {
     w.addEventListener('resize', redim);
     w.addEventListener('orientationchange', function () { setTimeout(redim, 120); });
     if (w.visualViewport) w.visualViewport.addEventListener('resize', redim);
-    d.addEventListener('visibilitychange', function () { if (d.hidden) { pause(); Son.suspendre(); } });
+    // ⚠️ Sauf dans le casque : la page 2D peut s'y dire cachee pendant qu'on joue
+    // dedans. C'est alors la session qui dit si on la regarde (`Casque`).
+    d.addEventListener('visibilitychange', function () {
+      if (d.hidden && !(typeof Casque !== 'undefined' && Casque.actif)) { pause(); Son.suspendre(); }
+    });
     // ⚠️ La page s'en va : on rend la carte son — mais SEULEMENT si elle ne peut
     // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
     // le geste le plus banal sur telephone : changer d'application). Fermer
@@ -806,6 +818,9 @@ const Jeu = (function () {
       // trois phrases en retard ne raconte plus rien. Tout le reste de l'audio
       // se charge a l'usage (12 Mo en 166 fichiers), et doit le rester.
       Son.prechauffer(Histoire.fichiersDeLOuverture());
+      // Le bouton JOUER DANS LE CASQUE : seulement une fois la ville chargee, et
+      // seulement si le navigateur ouvre une session immersive.
+      Casque.init(d, w, w.navigator);
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -824,7 +839,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */
@@ -832,7 +847,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,

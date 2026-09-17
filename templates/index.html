@@ -17,6 +17,9 @@
       <div class="boutons">
         <button class="bouton bouton--principal" id="bouton-jouer" type="button">Jouer</button>
         <button class="bouton" id="bouton-scores" type="button">Meilleurs scores</button>
+        {# Seulement la ou le navigateur ouvre une session immersive (un Meta Quest) :
+           ses manettes Touch ne se lisent que la-dedans. Voir static/js/casque.js. #}
+        <button class="bouton" id="bouton-casque" type="button" hidden>Jouer dans le casque</button>
       </div>
       <p class="aide">
         <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action ·
@@ -84,5 +87,6 @@
 <script src="{{ url_for('static', filename='js/scenes.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/histoire.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/hud.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/casque.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/jeu.js') }}?v={{ version }}"></script>
 {% endblock %}

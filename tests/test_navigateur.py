@@ -595,3 +595,98 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
     print("\n[audio] " + " · ".join(f"{nom} {v:.4f}" for nom, v in niveaux.items()))
     assert not muets, f"ca « joue » mais on n'entend rien : {muets} (niveaux {niveaux})"
     assert erreurs == []
+
+
+#: Un faux casque pour un VRAI WebGL : la session ne fait que cadencer (sur
+#: l'horloge de la fenetre, comme un Quest), une seule vue droit devant en
+#: perspective, et le framebuffer par defaut du canevas en guise d'oeil.
+FAUX_CASQUE = """
+(function () {
+  const etat = { images: 0, gl: null };
+  window.__casque = etat;
+  const getContext = HTMLCanvasElement.prototype.getContext;
+  HTMLCanvasElement.prototype.getContext = function (type, opts) {
+    if (type !== 'webgl') return getContext.call(this, type, opts);
+    return (etat.gl = getContext.call(this, type, Object.assign({}, opts, { preserveDrawingBuffer: true })));
+  };
+  const f = 1 / Math.tan(Math.PI / 4), n = 0.1, l = 100;
+  const vue = {
+    projectionMatrix: new Float32Array([f, 0, 0, 0, 0, f, 0, 0, 0, 0, (l + n) / (n - l), -1, 0, 0, 2 * l * n / (n - l), 0]),
+    transform: { inverse: { matrix: new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]) } },
+  };
+  const cadre = { getViewerPose: function () { return { views: [vue] }; } };
+  const ecouteurs = {};
+  const session = {
+    inputSources: [], visibilityState: 'visible',
+    addEventListener: function (t, g) { (ecouteurs[t] = ecouteurs[t] || []).push(g); },
+    updateRenderState: function () {},
+    requestReferenceSpace: function () { return Promise.resolve({}); },
+    requestAnimationFrame: function (cb) {
+      return window.requestAnimationFrame(function (t) { etat.images++; cb(t, cadre); });
+    },
+    end: function () { (ecouteurs.end || []).forEach(function (g) { g({}); }); return Promise.resolve(); },
+  };
+  Object.defineProperty(navigator, 'xr', { configurable: true, value: {
+    isSessionSupported: function (mode) { return Promise.resolve(mode === 'immersive-vr'); },
+    requestSession: function () { return Promise.resolve(session); },
+  } });
+  window.XRWebGLLayer = function (s, gl) {
+    this.framebuffer = null;
+    this.getViewport = function () { return { x: 0, y: 0, width: gl.drawingBufferWidth, height: gl.drawingBufferHeight }; };
+  };
+  etat.lire = function () {
+    const gl = etat.gl, w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+    // Un point de la vue en coordonnees normalisees (-1..1, y vers le haut).
+    function px(x, y) {
+      const b = new Uint8Array(4);
+      gl.readPixels(Math.round((x + 1) / 2 * w), Math.round((y + 1) / 2 * h), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, b);
+      return [b[0], b[1], b[2]];
+    }
+    return { erreur: gl.getError(), coin: px(-0.98, -0.98),
+             hautGauche: px(-0.3, 0.15), hautDroite: px(0.3, 0.15),
+             basGauche: px(-0.3, -0.3), basDroite: px(0.3, -0.3) };
+  };
+})();
+"""
+
+
+def test_le_casque_montre_la_toile_dans_un_vrai_webgl(page, serveur, erreurs):
+    """⚠️ Le banc Node n'a qu'un faux WebGL qui COMPTE ses appels : il ne compile
+    aucun nuanceur et n'echantillonne aucune texture. Une texture incomplete, un
+    attribut mal decale ou une matrice dans le mauvais ordre y restent verts — et
+    dans le casque, Martin verrait du noir. Ici c'est Chromium qui dessine.
+
+    La toile est repeinte en quatre quarts de couleur apres chaque image du jeu :
+    chaque quart doit sortir a SA place dans la vue (une image a l'envers ou en
+    miroir passerait partout ailleurs), et le coin de la vue — a cote de
+    l'ecran — garder le noir du fond."""
+    page.add_init_script(FAUX_CASQUE)
+    page.goto(serveur)
+    attendre_titre(page)
+    assert page.is_visible("#bouton-casque"), "un navigateur qui ouvre une session immersive doit voir le bouton"
+    if not page.evaluate("!!document.createElement('canvas').getContext('webgl')"):
+        pytest.skip("ce Chromium n'a pas de WebGL")
+    page.evaluate("""() => {
+        const J = window.BANDINI.Jeu, avancer = J.avancer;
+        J.avancer = function (t) {
+            avancer(t);
+            const toile = document.getElementById('toile'), c = toile.getContext('2d');
+            const w = toile.width / 2, h = toile.height / 2;
+            c.setTransform(1, 0, 0, 1, 0, 0);
+            [['#ff00ff', 0, 0], ['#ffff00', w, 0], ['#00ffff', 0, h], ['#00ff00', w, h]].forEach(function (q) {
+                c.fillStyle = q[0]; c.fillRect(q[1], q[2], w, h);
+            });
+        };
+    }""")
+    page.click("#bouton-casque")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.wait_for_function("window.__casque.images >= 10")
+    r = page.evaluate("window.__casque.lire()")
+    assert r["erreur"] == 0, f"WebGL a leve l'erreur {r['erreur']}"
+    vu = {q: r[q] for q in ("hautGauche", "hautDroite", "basGauche", "basDroite")}
+    assert vu == {"hautGauche": [255, 0, 255], "hautDroite": [255, 255, 0],
+                  "basGauche": [0, 255, 255], "basDroite": [0, 255, 0]}, \
+        f"l'ecran du casque ne montre pas la toile a l'endroit : {vu}"
+    assert r["coin"] == [11, 10, 18], f"autour de l'ecran, le fond doit etre le noir du jeu : {r['coin']}"
+    assert page.evaluate("window.BANDINI.Base.SCALE") == 3
+    assert erreurs == []

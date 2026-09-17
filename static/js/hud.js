@@ -34,6 +34,9 @@ const Hud = (function () {
   function voile(nom) {
     voileCourant = nom;
     for (const n in voiles) voiles[n].hidden = (n !== nom);
+    // ⚠️ Une voile est du DOM, et le casque n'affiche que la toile : on en
+    // sort pour la montrer (le titre, le nom pour le tableau des scores).
+    if (nom && typeof Casque !== 'undefined' && Casque.actif) Casque.sortir();
   }
 
   function etat(nom) { if (racine) racine.dataset.etat = nom; }

@@ -232,6 +232,9 @@ const Base = (function () {
   'use strict';
 
   let cv = null, ctx = null, SCALE = 1;
+  //: L'echelle que le CASQUE impose (`Casque.ECHELLE`) : la fenetre n'y a plus
+  //: rien a dire, c'est la texture de l'ecran virtuel qu'on dessine.
+  let echelleImposee = null;
   const cible = { cv: null, ctx: null };   // rendu 1x, puis un seul drawImage a l'ecran
   let fabrique = null;                      // (w, h) => canvas, injecte par jeu.js ou le banc
 
@@ -252,7 +255,7 @@ const Base = (function () {
     const dispoW = (fenetre.innerWidth - margeH) * dpr;
     const dispoH = (fenetre.innerHeight - margeV) * dpr;
     const z = Math.min(dispoW / VW, dispoH / VH);
-    SCALE = Math.max(1, Math.min(8, Math.floor(z)));
+    SCALE = echelleImposee || Math.max(1, Math.min(8, Math.floor(z)));
     cv.width = VW * SCALE;
     cv.height = VH * SCALE;
     // ⚠️ Sur un telephone, l'echelle entiere peut laisser un tiers de l'ecran
@@ -317,8 +320,11 @@ const Base = (function () {
 
   function nouveauCanvas(w, h) { return fabrique(w, h); }
 
+  /** `n` : l'echelle a tenir quelle que soit la fenetre ; null la rend a la fenetre. */
+  function imposerEchelle(n) { echelleImposee = n || null; }
+
   return {
-    initCanvas, redimensionner, debut, fin, ecran, nouveauCanvas,
+    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas,
     get SCALE() { return SCALE; },
   };
 })();

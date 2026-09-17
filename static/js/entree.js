@@ -56,6 +56,9 @@ const Entree = (function () {
   //: ignorer la manette (on y appuie sur ses boutons pour les VOIR, pas pour
   //: commander) sans devenir injouable au doigt.
   const vNeufTact = {};
+  //: Le quatrieme sac : les manettes Touch d'un casque Meta Quest (voir
+  //: `lireCasque`), et ses nouveautes a part pour la meme raison que le tactile.
+  const vCasque = {}, vNeufCasque = {};
   const axe = { x: 0, y: 0, mag: 0, source: 'clavier' };
   const stick = { x: 0, y: 0, mag: 0 };
   const pouce = { x: 0, y: 0, mag: 0, actif: false };
@@ -79,29 +82,33 @@ const Entree = (function () {
     if (v && !sac[a]) {
       vNeuf[a] = true;
       if (sac === vTact) vNeufTact[a] = true;
+      if (sac === vCasque) vNeufCasque[a] = true;
     }
     sac[a] = v;
   }
 
   function bas(a) {
-    return !!vPad[a] || !!vTact[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
   }
   function neuf(a) {
     return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
-  /** Comme `neuf`, mais la manette ne compte pas — le clavier et le doigt, oui. */
+  /** Comme `neuf`, mais la manette ne compte pas — le clavier, le doigt et les
+      mains du casque, oui : l'ecran MANETTE montre la manette Bluetooth, pas elles. */
   function neufSansManette(a) {
-    return !!vNeufTact[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
     for (const a in vNeufTact) vNeufTact[a] = false;
+    for (const a in vNeufCasque) vNeufCasque[a] = false;
   }
   function toutRelacher() {
     for (const k in enfonce) enfonce[k] = false;
     for (const a in vPad) vPad[a] = false;
     for (const a in vTact) vTact[a] = false;
+    for (const a in vCasque) vCasque[a] = false;
     videPresse();
   }
 
@@ -364,12 +371,8 @@ const Entree = (function () {
         const actions = parIndice[b];
         if (actions && v > GESTE) for (const a of actions) etat[a] = true;
       }
-      const ax = p.axes[profil.axes[0]] || 0, ay = p.axes[profil.axes[1]] || 0;
-      const h = Math.hypot(ax, ay);
-      if (h > ZONE_MORTE) {
-        const m = borner((h - ZONE_MORTE) / (ZONE_PLEINE - ZONE_MORTE), 0, 1);
-        sx = ax / h * m; sy = ay / h * m;
-      }
+      const s = zoneMorte(p.axes[profil.axes[0]] || 0, p.axes[profil.axes[1]] || 0);
+      if (s.mag > 0) { sx = s.x; sy = s.y; }
       lireCroix(p, etat);
       if (!apprentissage) suivreRepos(p);
       g = Math.max(g, lirePedale(p, profil.gaz));
@@ -385,10 +388,66 @@ const Entree = (function () {
     gaz = g; frein = f;
   }
 
+  /** Zone morte RADIALE : sous `ZONE_MORTE` rien, au-dela le module repart de
+      zero jusqu'a `ZONE_PLEINE` — la direction, elle, est gardee telle quelle. */
+  function zoneMorte(ax, ay) {
+    const h = Math.hypot(ax, ay);
+    if (h <= ZONE_MORTE) return { x: 0, y: 0, mag: 0 };
+    const m = borner((h - ZONE_MORTE) / (ZONE_PLEINE - ZONE_MORTE), 0, 1);
+    return { x: ax / h * m, y: ay / h * m, mag: m };
+  }
+
+  // --- Casque (les manettes Touch d'un Meta Quest) ----------------------------------
+
+  //: ⚠️ Un sac a part, et pas une manette de plus dans `lireManette` : les Touch
+  //: n'ont qu'UNE disposition, connue d'avance. `casque.js` les rend comme une
+  //: manette Xbox et on la lit TOUJOURS avec la disposition par defaut — le
+  //: profil reappris est celui d'une manette Bluetooth, il n'a rien a dire des
+  //: Touch. Et elles restent vivantes pendant un apprentissage : dans le casque,
+  //: ce sont les seules mains qui peuvent encore l'annuler.
+  const stickCasque = { x: 0, y: 0, mag: 0 };
+  let gazCasque = 0, freinCasque = 0, padCasque = null, lireSourceCasque = null, vibreurCasque = null;
+
+  /** `lire()` rend la manette du casque (`{ id, mapping, buttons, axes }`), ou
+      null hors du casque ; `vibrer(ms)` fait trembler les mains. */
+  function brancherCasque(lire, vibrer) {
+    lireSourceCasque = lire || null;
+    vibreurCasque = vibrer || null;
+  }
+
+  function lireCasque() {
+    const p = lireSourceCasque ? lireSourceCasque() : null;
+    if (!p && !padCasque) return;
+    padCasque = p;
+    const etat = {};
+    let s = { x: 0, y: 0, mag: 0 };
+    if (p) {
+      for (const a in MANETTE_DEFAUT) {
+        if (MANETTE_DEFAUT[a].some(function (i) { return valeurBouton(p, i) > GESTE; })) etat[a] = true;
+      }
+      s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
+    }
+    for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
+    stickCasque.x = s.x; stickCasque.y = s.y; stickCasque.mag = s.mag;
+    gazCasque = p ? lirePedale(p, PEDALES_DEFAUT.gaz) : 0;
+    freinCasque = p ? lirePedale(p, PEDALES_DEFAUT.frein) : 0;
+  }
+
   /** Ce que la manette dit d'elle-meme — l'ecran MANETTE le montre tel quel.
       `mapping` vide = le navigateur ne la reconnait pas, ses numeros de
       boutons ne veulent rien dire, il faut les reapprendre. */
   function manetteInfo() {
+    // ⚠️ Dans le casque, les Touch ne sont pas dans `getGamepads()` : sans ce
+    // repli, l'ecran MANETTE dirait AUCUNE MANETTE a qui en tient deux.
+    if (!info.branchee && padCasque) {
+      const p = padCasque;
+      return { branchee: true, id: p.id, mapping: p.mapping,
+               boutons: p.buttons.map(function (_, i) { return i; })
+                 .filter(function (i) { return valeurBouton(p, i) > GESTE; }),
+               axes: p.axes.map(function (v) { return Math.round((v || 0) * 100) / 100; }),
+               apprend: apprentissage ? apprentissage.quoi : null,
+               attend: !!(apprentissage && apprentissage.attend) };
+    }
     return { branchee: info.branchee, id: info.id, mapping: info.mapping,
              boutons: info.boutons.slice(), axes: info.axes.slice(),
              apprend: apprentissage ? apprentissage.quoi : null,
@@ -472,7 +531,10 @@ const Entree = (function () {
   }
 
   function vibrer(ms) {
-    if (!B.options.vibration || !nav || !nav.vibrate) return;
+    if (!B.options.vibration) return;
+    // Dans le casque, ce sont les mains qui tremblent.
+    if (padCasque && vibreurCasque) { vibreurCasque(ms); return; }
+    if (!nav || !nav.vibrate) return;
     try { nav.vibrate(ms); } catch (e) { /* rien */ }
   }
 
@@ -500,10 +562,15 @@ const Entree = (function () {
   /** Calcule l'axe analogique. Priorite : doigt, puis stick, puis clavier. */
   function debutImage() {
     lireManette();
+    lireCasque();
+    // Le stick d'une manette Bluetooth et celui du casque : le plus pousse
+    // gagne, et c'est un stick de MANETTE dans les deux cas (marcher a mi-course,
+    // promener un menu).
+    const st = stickCasque.mag > stick.mag ? stickCasque : stick;
     if (pouce.actif && pouce.mag > 0) {
       axe.x = pouce.x; axe.y = pouce.y; axe.mag = pouce.mag; axe.source = 'tactile';
-    } else if (stick.mag > 0) {
-      axe.x = stick.x; axe.y = stick.y; axe.mag = stick.mag; axe.source = 'manette';
+    } else if (st.mag > 0) {
+      axe.x = st.x; axe.y = st.y; axe.mag = st.mag; axe.source = 'manette';
     } else {
       let x = 0, y = 0;
       if (bas('gauche')) x -= 1; if (bas('droite')) x += 1;
@@ -554,9 +621,10 @@ const Entree = (function () {
     init, debutImage, bas, neuf, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
-    annulerApprentissage, oublierRepos, manetteInfo,
-    get axe() { return axe; }, get gaz() { return gaz; }, get frein() { return frein; },
+    annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,
+    get axe() { return axe; },
+    get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },
-    _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, pouce: pouce, stick: stick }; },
+    _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, vCasque: vCasque, pouce: pouce, stick: stick, stickCasque: stickCasque }; },
   };
 })();
