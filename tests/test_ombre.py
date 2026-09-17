@@ -142,20 +142,27 @@ def test_en_montant_elle_retrecit_s_ecarte_et_palit(banc):
     assert haut["l"] >= 4 and haut["part"] > 0, "elle s'annule en l'air : %s" % r
 
 
-def test_le_sol_se_voit_du_meme_biais_pour_un_passant_et_pour_un_char(banc):
-    """⚠️ **Un seul biais pour toute la ville.** L'ombre d'un passant le disait
-    depuis toujours — `DECORS.ombre` fait 12 × 6 pour un corps rond, donc le
-    sol est écrasé de moitié — et le char, lui, posait son empreinte à plat :
-    deux conventions dans le même écran, et c'est la deuxième qui a fait la
-    langue noire des chars nord-sud. Les deux sont d'accord, et ce juge est ce
-    qui les empêche de re-diverger."""
+def test_le_sol_se_voit_du_meme_biais_sous_un_char_et_dans_son_dessin(banc):
+    """⚠️ **Un seul biais pour un char : celui de son dessin.** Ce juge comparait
+    l'ombre d'un char à celle d'un passant (`DECORS.ombre`, 12 × 6 : le sol
+    écrasé de moitié) — c'était la seule référence le jour où le char était une
+    élévation plate. Depuis que le parc est EN VOLUME, la référence est le char
+    lui-même : son dessin se projette avec un biais (`machine.profondeur`), et
+    son ombre doit poser l'empreinte sur ce MÊME sol, sinon elle dépasse de son
+    nez ou reste en deçà de son pare-chocs.
+
+    ⚠️ Et le parc a quitté le biais du passant (16 sept. 2026, retour de Martin :
+    « oui plus long ») : à 0,5, une berline vue de dos occupait 21 rangées pour
+    28 px de long ; à 0,75, sa longueur. L'ombre d'un passant, elle, reste une
+    tache sous ses pieds — un corps rond, pas une empreinte."""
     r = banc("""function (L, o) {
-        const p = L.DECORS.ombre;
-        return { passant: p.h / p.w, char: L.B.defs.conduite.ombre.profondeur };
+        const biais = {};
+        Object.keys(L.SPRITES).forEach(function (s) { if (L.SPRITES[s].machine) biais[s] = L.SPRITES[s].machine.profondeur; });
+        return { biais: biais, ombre: L.B.defs.conduite.ombre.profondeur };
     }""")
-    assert abs(r["passant"] - r["char"]) < 0.01, (
-        "le passant et le char ne posent pas leur ombre sur le même sol : %s" % r
-    )
+    assert len(r["biais"]) >= 12, "le décor du juge est faux : %s" % r
+    autres = {s: k for s, k in r["biais"].items() if abs(k - r["ombre"]) >= 0.01}
+    assert autres == {}, f"ces chars ne posent pas leur ombre sur le sol de leur dessin ({r['ombre']}) : {autres}"
 
 
 def test_l_ombre_ne_traine_pas_devant_un_char_qui_roule_vers_le_nord(banc):

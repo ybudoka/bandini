@@ -244,7 +244,7 @@ const Atlas = (function () {
         // [[u0, u1], z, w, lettre] : un pixel sur deux, sur deux rangees
         // decalees — le damier d'un taxi, a l'echelle d'une portiere.
         for (let u = p[1][0]; u >= p[1][1] - 1e-6; u -= 1) {
-          point(u, p[3], Math.round(p[1][0] - u) % 2 === 0 ? p[2] : p[2] - 1, p[4], 0.03);
+          point(u, p[3], Math.round(p[1][0] - u) % 2 === 0 ? p[2] : p[2] - 1, p[4], 1.0);
         }
       } else if (p[0] === 'tube') {
         tube(p[1], p[2], p[3], p[4]);

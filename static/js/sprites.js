@@ -268,6 +268,15 @@ function nuancer(pal) {
   return Object.assign({ M: '#9a9ea6', B: '#c9ccd1', G: '#e6f6ff', E: '#3b556c' }, pal, nuances(pal.c));
 }
 
+/* ⚠️ LE BIAIS DU SOL de tout le parc : de combien l'axe nord-sud est ecrase quand
+   une machine se projette. C'est le MEME que celui de son ombre
+   (`vehicules.OMBRE.profondeur`), et un juge les tient d'accord.
+   ⚠️ **0,75, pas 0,5** (retour de Martin : « oui plus long »). A 0,5, une berline
+   vue de dos occupait 21 rangees pour 28 px de long — plus courte que ce qui la
+   bloque, et plus courte que le toit tourne qu'elle remplacait. A 0,75, elle en
+   occupe 28 : sa longueur, a la rangee pres. */
+const BIAIS_DU_SOL = 0.75;
+
 /* --- La berline : la carrosserie de l'auto, du taxi et de la police, EN VOLUME -
 
    ⚠️ **Demande de Martin, apres le velo : « je veux que tu fasses une belle job
@@ -360,12 +369,12 @@ function habitacle(h) {
     // Le reflet du pare-brise, au tiers de sa hauteur.
     ['tube', [av + (ta - av) / 3, -(demi - 0.8), bas + (haut - bas) / 3], [av + (ta - av) / 3, demi - 0.8, bas + (haut - bas) / 3], 'G', 0.3],
   ];
-  const piedAv = [av + (ta - av) * 0.07, bas + (haut - bas) * 0.07], piedAr = [ar + (tr - ar) * 0.08, basAr + (haut - basAr) * 0.08];
+  const piedAv = [av + (ta - av) * 0.07, bas + (haut - bas) * 0.07], piedAr = [ar + (tr - ar) * 0.03, basAr + (haut - basAr) * 0.03];
   [-1, 1].forEach(function (s) {
     if (s < 0) {
       pieces.push(['tube', [piedAv[0], -demi, piedAv[1]], [piedAv[0], demi, piedAv[1]], 'D', 1.0]);   // pied du pare-brise
       pieces.push(['tube', [ta, -demi, haut], [ta, demi, haut], 'D', 0.6]);                           // haut du pare-brise
-      pieces.push(['tube', [piedAr[0], -demi, piedAr[1]], [piedAr[0], demi, piedAr[1]], 'D', 1.0]);   // pied de la lunette
+      pieces.push(['tube', [piedAr[0], -demi, piedAr[1]], [piedAr[0], demi, piedAr[1]], 'D', 1.6]);   // pied de la lunette
       pieces.push(['tube', [tr, -demi, haut], [tr, demi, haut], 'D', 0.6]);                           // haut de la lunette
     }
     const w = s * (demi + 0.1);
@@ -378,7 +387,7 @@ function habitacle(h) {
   return pieces;
 }
 const MACHINE_BERLINE = {
-  profondeur: 0.5,
+  profondeur: BIAIS_DU_SOL,
   contour: true,
   // ⚠️ ARRONDIE, et legerement (retour de Martin : « arrondit un peu (léger)
   // les véhicules ») : un pixel de moins aux coins vifs de la silhouette, et
@@ -480,7 +489,7 @@ const MACHINE_POLICE = Object.assign({}, MACHINE_BERLINE, { pieces: MACHINE_BERL
    ⚠️ `profondeur` est le biais du sol, le MEME que celui de l'ombre
    (`vehicules.OMBRE`) : un juge les tient d'accord. */
 const MACHINE_VELO = {
-  profondeur: 0.5,
+  profondeur: BIAIS_DU_SOL,
   // LES TROIS POINTS OU LE CORPS SE TIENT : ses fesses, sa main droite, son
   // pied droit. `assise` pose le cycliste (`deuxRoues` en tire la `selle`), et
   // les juges mesurent le corps dessine contre les trois.
@@ -508,9 +517,9 @@ const MACHINE_VELO = {
 // ⚠️ La moto est plus LONGUE (20 px), pas plus haute : sa selle est a la meme
 // hauteur que celle du velo, et le meme corps s'y assoit.
 const MACHINE_MOTO = {
-  profondeur: 0.5,
+  profondeur: BIAIS_DU_SOL,
   assise: [-2, 0, 7.2],
-  guidon: [3.2, 2.8, 8.6],
+  guidon: [2.8, 2.8, 8.2],
   pedales: [-1.0, 1.6, 3.0],
   pieces: [
     ['roue', -6.0, 3.4, 'k', 'M', 'M', 2],
@@ -524,8 +533,8 @@ const MACHINE_MOTO = {
     ['bloc', [-8.2, -4.8], [-0.9, 0.9], [5.8, 6.6], 'c', 'D', 'D'],      // queue
     ['tube', [-1.0, 1.7, 2.8], [-7.6, 1.7, 4.4], 'B'],                   // echappement
     ['tube', [-1.0, 1.0, 3.0], [-6.0, 0.8, 3.3], 'M'],                   // bras oscillant
-    ['tube', [3.8, 0, 8.2], [6.2, 0, 3.3], 'B'],                         // fourche
-    ['tube', [3.2, -2.8, 8.6], [3.2, 2.8, 8.6], 'k', 0.4],               // guidon
+    ['tube', [3.4, 0, 7.8], [6.2, 0, 3.3], 'B'],                         // fourche
+    ['tube', [2.8, -2.8, 8.2], [2.8, 2.8, 8.2], 'k', 0.4],               // guidon
     ['bloc', [5.2, 6.4], [-0.8, 0.8], [6.6, 7.8], 'k', 'l', 'l', 0.2],   // phare
     ['bloc', [-8.6, -8.0], [-0.5, 0.5], [6.2, 6.8], 't', 't', 't', 0.3], // feu
   ],
@@ -1063,8 +1072,8 @@ function enVolume(machine, longueur, cote, pal) {
   };
 }
 /** Un deux-roues : une fiche en volume, et la selle ou le passant s'assoit. */
-function deuxRoues(machine, longueur, pal) {
-  return Object.assign(enVolume(machine, longueur, 32, pal), {
+function deuxRoues(machine, longueur, cote, pal) {
+  return Object.assign(enVolume(machine, longueur, cote, pal), {
     // LA SELLE, en [dx, dy] depuis la ligne de sol du dessin vu d'en haut : la
     // ou l'ANCRE du passant assis se pose. ⚠️ Elle est TIREE de l'`assise` de
     // la machine — deux nombres pour un meme siege finissent par diverger — et
@@ -1077,17 +1086,17 @@ function deuxRoues(machine, longueur, pal) {
 // monte au-dessus). ⚠️ Les trois ont la MEME carrosserie ; le taxi et la police
 // y ajoutent leur livree, `x` le damier et `y` la bande.
 const PALETTE_AUTO = { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' };
-SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 44, PALETTE_AUTO);
-SPRITES.auto_compacte = enVolume(MACHINE_COMPACTE, 28, 44, PALETTE_AUTO);
-SPRITES.auto_familiale = enVolume(MACHINE_FAMILIALE, 28, 44, PALETTE_AUTO);
-SPRITES.auto_camionnette = enVolume(MACHINE_CAMIONNETTE, 28, 44, PALETTE_AUTO);
+SPRITES.auto = enVolume(MACHINE_BERLINE, 28, 48, PALETTE_AUTO);
+SPRITES.auto_compacte = enVolume(MACHINE_COMPACTE, 28, 48, PALETTE_AUTO);
+SPRITES.auto_familiale = enVolume(MACHINE_FAMILIALE, 28, 48, PALETTE_AUTO);
+SPRITES.auto_camionnette = enVolume(MACHINE_CAMIONNETTE, 28, 48, PALETTE_AUTO);
 /* ⚠️ LES VARIANTES, et leur poids : une auto sur deux est une berline. Le choix
    se fait a la naissance (`Vehicules.creer`) SANS TIRER DE DE — c'est la lecon
    de la tete du pilote : un de de plus decale tout ce qui nait apres. Le taxi
    et la police n'en ont pas : ce sont des flottes. */
 SPRITES.auto.variantes = { auto: 5, auto_compacte: 2, auto_familiale: 2, auto_camionnette: 1 };
-SPRITES.taxi = enVolume(MACHINE_TAXI, 28, 44, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', e: '#fff4c4', q: '#d8c37a' });
-SPRITES.police = enVolume(MACHINE_POLICE, 28, 44, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', a: '#7a2320', b: '#233f7a' });
+SPRITES.taxi = enVolume(MACHINE_TAXI, 28, 48, { k: '#101018', c: '#f1c40f', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#101018', y: '#101018', e: '#fff4c4', q: '#d8c37a' });
+SPRITES.police = enVolume(MACHINE_POLICE, 28, 48, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', a: '#7a2320', b: '#233f7a' });
 /* ⚠️ LES GYROPHARES : les lettres qui tournent, [allumee, eteinte], et QUAND
    elles tournent — `sirene` (la police, l'ambulance) ou `remorque` (la
    remorqueuse, quand elle tire quelque chose). Eteints, ils gardent la couleur
@@ -1095,12 +1104,12 @@ SPRITES.police = enVolume(MACHINE_POLICE, 28, 44, { k: '#101018', c: '#ffffff', 
    C'est `Vehicules.swapsDuMoment` qui les fait battre, `a` et `b` en
    alternance. */
 SPRITES.police.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#4a9bff', '#233f7a'] };
-SPRITES.velo = deuxRoues(MACHINE_VELO, 16, { k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.velo = deuxRoues(MACHINE_VELO, 16, 32, { k: '#101018', c: '#2980b9', r: '#2a2a2e', l: '#fff3b0', t: '#ff4b3e' });
 // ⚠️ LES PEDALES : un demi-tour tous les `pedale` pixels roules. C'est la fiche
 // qui dit qu'on pedale, pas un `slug === 'velo'` — la moto n'en a pas, et son
 // pilote garde les pieds sur les repose-pieds.
 SPRITES.velo.pedale = 7;
-SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
+SPRITES.moto = deuxRoues(MACHINE_MOTO, 20, 36, { k: '#101018', c: '#1a1a1a', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e' });
 
 /* --- LE PARC EN VOLUME : le reste des chars, comme la berline ---------------------
 
@@ -1174,7 +1183,7 @@ function parechocsDeChar(uAv, uAr, demi) {
 
 // --- La sport : basse, DECAPOTABLE — on voit ses deux sieges ------------------
 const MACHINE_SPORT = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(8.0, 3.0, 5.6), essieuDeChar(-8.4, 3.0, 5.6),
     // ⚠️ Le dessus de l'habitacle est OUVERT ('.') : ses flancs font les
@@ -1200,7 +1209,7 @@ const MACHINE_SPORT = {
 };
 // --- La luxe : longue, un long capot, du chrome ---------------------------------
 const MACHINE_LUXE = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(10.4, 3.3, 6.6), essieuDeChar(-10.2, 3.3, 6.6),
     [caisseDeChar({ dessus: [[16, 4.8], [15.0, 6.4], [-14.6, 6.6], [-16, 5.4]], bas: 1.6, essieux: [10.4, -10.2], r: 3.3,
@@ -1223,29 +1232,29 @@ const CROIX_ROUGE = function (u, z, w) {
           ['tube', [u + 0.5, w, z - 2.6], [u + 0.5, w, z + 2.6], 'x', 0.4], ['tube', [u - 2.6, w, z + 0.5], [u + 2.6, w, z + 0.5], 'x', 0.4]];
 };
 const MACHINE_AMBULANCE = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(9.8, 3.2, 6.4), essieuDeChar(-9.6, 3.2, 6.4),
-    [caisseDeChar({ dessus: [[16, 5.4], [15.0, 7.0], [11.4, 7.3], [5.4, 7.3], [5.2, 16.6], [-15.4, 16.8], [-16, 16.0], [-16, 7.0]], bas: 1.6,
+    [caisseDeChar({ dessus: [[16, 5.4], [15.0, 7.0], [11.4, 7.3], [5.4, 7.3], [5.2, 15.8], [-15.4, 16.0], [-16, 15.2], [-16, 7.0]], bas: 1.6,
               essieux: [9.8, -9.6], r: 3.2, plan: planPince(32, 7.5, 6.2), aretes: 'cccDCCD' })],
     habitacle({ avant: 11.4, toit: [8.6, 5.4], arriere: 5.4, montant: null, bas: 7.3, haut: 13.0, demi: 6.4 }),
     CROIX_ROUGE(-5.4, 11.2, 7.54), CROIX_ROUGE(-5.4, 11.2, -7.54),
     [
       ['tube', [4.8, 7.53, 5.6], [-15.6, 7.53, 5.6], 'x', 0.4], ['tube', [4.8, -7.53, 5.6], [-15.6, -7.53, 5.6], 'x', 0.4],  // la bande
-      ['tube', [-5.4, -3.0, 16.85], [-5.4, 3.0, 16.85], 'x', 0.1], ['tube', [-8.4, 0, 16.85], [-2.4, 0, 16.85], 'x', 0.1],       // la croix du toit
-      ['tube', [-5.8, -3.0, 16.85], [-5.8, 3.0, 16.85], 'x', 0.1], ['tube', [-8.4, 0.5, 16.85], [-2.4, 0.5, 16.85], 'x', 0.1],
+      ['tube', [-5.4, -3.0, 16.05], [-5.4, 3.0, 16.05], 'x', 0.1], ['tube', [-8.4, 0, 16.05], [-2.4, 0, 16.05], 'x', 0.1],       // la croix du toit
+      ['tube', [-5.8, -3.0, 16.05], [-5.8, 3.0, 16.05], 'x', 0.1], ['tube', [-8.4, 0.5, 16.05], [-2.4, 0.5, 16.05], 'x', 0.1],
       ['bloc', [5.6, 7.4], [-5.2, -0.3], [13.0, 13.9], 'a', 'a', 'a', 0.2],                  // la rampe
       ['bloc', [5.6, 7.4], [0.3, 5.2], [13.0, 13.9], 'b', 'b', 'b', 0.2],
-      ['bloc', [-15.8, -14.4], [-7.0, -4.6], [16.8, 17.6], 'a', 'a', 'a', 0.2],              // et deux feux au cul de la caisse
-      ['bloc', [-15.8, -14.4], [4.6, 7.0], [16.8, 17.6], 'b', 'b', 'b', 0.2],
-      ['tube', [-16.05, 0, 2.2], [-16.05, 0, 15.6], 'D', 0.05],                             // les portes arriere
+      ['bloc', [-15.8, -14.4], [-7.0, -4.6], [16.0, 16.8], 'a', 'a', 'a', 0.2],              // et deux feux au cul de la caisse
+      ['bloc', [-15.8, -14.4], [4.6, 7.0], [16.0, 16.8], 'b', 'b', 'b', 0.2],
+      ['tube', [-16.05, 0, 2.2], [-16.05, 0, 14.8], 'D', 0.05],                             // les portes arriere
     ],
     parechocsDeChar(16, -16, 6.2), lampesDeChar(15.8, -15.8, 3.4, 7.2, 3.4, 5.0),
   ),
 };
 // --- La remorqueuse : une cabine, un plateau, le bras et son crochet --------------
 const MACHINE_REMORQUEUSE = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(10.6, 3.3, 6.4), essieuDeChar(-10.4, 3.3, 6.4),
     [caisseDeChar({ dessus: [[18, 5.4], [17.0, 7.2], [12.8, 7.6], [5.6, 7.6], [5.4, 6.8], [-18, 6.8]], bas: 1.8, essieux: [10.6, -10.4], r: 3.3,
@@ -1261,7 +1270,7 @@ const MACHINE_REMORQUEUSE = {
       ['bloc', [6.0, 8.0], [0.3, 5.2], [13.6, 14.5], 'b', 'b', 'b', 0.2],
       ['bloc', [6.0, 8.0], [-5.4, 5.4], [13.55, 13.65], 'k', 'k', 'k', 0.1],
     ],
-    parechocsDeChar(18, -18, 6.2), lampesDeChar(17.8, -17.8, 3.4, 7.2, 3.6, 5.2),
+    parechocsDeChar(18, -18, 6.2), lampesDeChar(17.8, -17.8, 3.2, 7.6, 3.4, 5.4),
   ),
 };
 // --- Le camion : une cabine avancee, une caisse haute a nervures -----------------
@@ -1271,7 +1280,7 @@ const NERVURES_CAMION = [];
                 ['tube', [u, -8.0, 18.25], [u, 8.0, 18.25], 's', 0.05]);
 });
 const MACHINE_CAMION = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(13.2, 3.4, 6.8), essieuDeChar(-12.2, 3.4, 6.8),
     [caisseDeChar({ dessus: [[20, 5.6], [19.2, 8.4], [15.8, 8.8], [10.4, 8.8], [10.2, 5.6], [-20, 5.6]], bas: 1.8, essieux: [13.2, -12.2], r: 3.4,
@@ -1298,7 +1307,7 @@ const FENETRES_AUTOBUS = [];
   });
 });
 const MACHINE_AUTOBUS = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [].concat(
     essieuDeChar(15.0, 3.4, 6.8), essieuDeChar(-14.0, 3.4, 6.8),
     [caisseDeChar({ dessus: [[24, 17.0], [23.0, 18.2], [-23.0, 18.2], [-24, 17.0]], bas: 1.8, essieux: [15.0, -14.0], r: 3.4,
@@ -1321,7 +1330,7 @@ const MACHINE_AUTOBUS = {
 };
 // --- La chaloupe : une coque pincee en proue, un banc, un moteur hors-bord ---------
 const MACHINE_BATEAU = {
-  profondeur: 0.5, contour: true, arrondi: true,
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
   pieces: [
     ['profil', [[15, 5.2], [12.4, 2.4], [8.6, 0.6], [-14.4, 0.6], [-15, 1.2], [-15, 5.2]],
      [[-15.5, 5.0], [-2, 6.0], [6, 5.6], [11, 3.6], [15.5, 0.3]], 'c', 'DDDDD.', 0],
@@ -1338,17 +1347,17 @@ const MACHINE_BATEAU = {
 
 // Les fiches. La toile de chacun couvre sa diagonale ET ce qui monte (juge : aucun
 // pixel sur le bord de la toile, a aucun cap).
-SPRITES.sport = enVolume(MACHINE_SPORT, 26, 40, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' });
-SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 48, { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' });
-SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 60, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
+SPRITES.sport = enVolume(MACHINE_SPORT, 26, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' });
+SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 52, { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' });
+SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 64, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
 // Rouge et blanc, devant sur la cabine et derriere sur la caisse : ils tournent avec sa sirene.
 SPRITES.ambulance.gyrophares = { quand: 'sirene', a: ['#ff4a3d', '#7a2320'], b: ['#ffffff', '#8e9299'] };
-SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 56, { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' });
+SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 60, { k: '#101018', c: '#d98324', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', h: '#6b7078', p: '#c9cdd4', y: '#f39c12', s: '#3a3d44', a: '#6a4812', b: '#6a4812' });
 // Ambre, sur la cabine : ils tournent quand elle remorque. ⚠️ Sur une BASE SOMBRE,
 // et d'un ambre plus jaune que la caisse : ambre sur orange, la rampe disparaissait.
 SPRITES.remorqueuse.gyrophares = { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] };
-SPRITES.camion = enVolume(MACHINE_CAMION, 40, 64, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
-SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 68, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
+SPRITES.camion = enVolume(MACHINE_CAMION, 40, 76, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
+SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 80, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
 SPRITES.bateau = enVolume(MACHINE_BATEAU, 30, 48, { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
 
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,

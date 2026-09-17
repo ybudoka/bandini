@@ -1237,3 +1237,34 @@ def test_la_silhouette_et_ses_tons_reviennent_du_lot_et_de_la_planque(banc):
             f"l'auto bleue revient du {ou} sans ses tons : {r[ou]} au lieu de {r['tons']}"
         )
     assert r["taxi"] == "taxi", f"un taxi est revenu en {r['taxi']}"
+
+
+def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
+    """⚠️ **Retour de Martin : « oui plus long ».** La règle date de la vue
+    plongeante (« de dos comme de face, un char occupe à l'écran sa longueur »)
+    et elle mesurait un toit tourné ; le parc en volume l'avait perdue sans que
+    rien ne le dise : le sol écrasé de moitié (0,5), une berline vue de dos
+    occupait **21 rangées pour 28 px de long** — plus courte que ce qui la
+    bloque.
+
+    On la mesure à nouveau, sur la projection de chaque machine du catalogue,
+    de dos et de face : jamais moins que sa longueur (à une rangée près). Les
+    plus hauts en prennent davantage — un autobus monte, et c'est vrai."""
+    r = banc("""function (L, o) {
+        const out = {};
+        L.B.defs.vehicules.forEach(function (v) {
+            const def = L.SPRITES[v.sprite];
+            if (!def || !def.machine || out[v.slug]) return;
+            const rangees = function (a) {
+                return L.Atlas.projeter(def.machine, a, def.w).filter(function (l) { return /[^.]/.test(l); }).length;
+            };
+            out[v.slug] = { longueur: v.longueur, dos: rangees(-Math.PI / 2), face: rangees(Math.PI / 2) };
+        });
+        return out;
+    }""")
+    assert len(r) >= 12, "le décor du juge est faux : %s" % list(r)
+    for slug, m in r.items():
+        for vue in ("dos", "face"):
+            assert m[vue] >= m["longueur"] - 1, (
+                f"{slug} vu de {vue} : {m[vue]} rangées pour {m['longueur']} px de long — il ne montre pas sa longueur"
+            )

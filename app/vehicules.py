@@ -485,7 +485,7 @@ def elan_pour_voler(vehicule: Vehicule, vol_px: float) -> int:
 OMBRE = {
     "part": 0.28,          # sa noirceur, pose au sol
     "part_en_vol": 0.14,   # ce qu'elle perd en montant, au plus haut
-    "profondeur": 0.5,     # l'ecrasement de l'axe nord-sud — le sol vu de biais
+    "profondeur": 0.75,    # l'ecrasement de l'axe nord-sud — le MEME que le dessin (`BIAIS_DU_SOL`)
     "ecart_est": 2,        # ou elle tombe au sol : a l'est (la lumiere est au nord-ouest)
     "ecart_sud": 0,        # ... et pas au sud : rien ne depasse devant les roues
     "ecart_par_z": 0.35,   # ce qu'elle s'echappe en plus, par pixel d'altitude
