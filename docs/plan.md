@@ -213,6 +213,7 @@ ne bougent pas quand l'ordre de travail change.
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (1re vague livrée : l'appel d'une mission ; la 2e : la sonnerie baisse, et le Clairon l'attend) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
+| La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11465,6 +11466,11 @@ afficherScores`, le pseudo de la partie, et le `scores.json` du serveur. Un juge
   de M13 mène au BILAN, et la **4e vague de M14** perd son déménagement
 - ⚠️ Le `voile()` du HUD ne sert plus qu'au **titre** — c'est lui, et lui seul, qui fait
   sortir du casque Quest (`casque.js`)
+
+### La Pointe s'éloigne : le pont s'allonge
+
+demande de Martin (17 sept. 2026) : « aggrandit la carte vers le bas et déplace l'ile ou est la
+foire vers le bas pour allonger le pont et l'éloigner du reste de la ville ».
 
 ### M16 Cent missions
 
