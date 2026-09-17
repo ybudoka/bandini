@@ -46,7 +46,7 @@ def _plan_d_essai(*lignes: str) -> str:
     )
 
 
-BONNE = "| M9 Le parc | **livré** | 13 sept. 2026 | **P1** | ajout | ce qu'il y a dedans |"
+BONNE = "| M9 Le parc | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | ce qu'il y a dedans |"
 
 
 # --- le vrai plan ---------------------------------------------------------
@@ -73,7 +73,9 @@ def test_une_ligne_bien_formee_ne_reproche_rien():
 
 def test_l_ancienne_forme_a_trois_colonnes_est_attrapee():
     """Le cas qui a coute la division : l'etat, la date, la prio et le genre en un."""
-    vieille = "| Un poteau par coin | **P2** **correctif**, **en cours** (14 sept. 2026) | les notes |"
+    vieille = (
+        "| Un poteau par coin | **P2** **correctif**, ⬜ **en cours** (14 sept. 2026) | les notes |"
+    )
     reproches = juges.juger(_plan_d_essai(BONNE, vieille))
     assert len(reproches) == 1
     assert "3 colonnes" in reproches[0]
@@ -81,7 +83,7 @@ def test_l_ancienne_forme_a_trois_colonnes_est_attrapee():
 
 
 def test_une_colonne_de_trop_est_attrapee():
-    trop = "| M9 | **livré** | 13 sept. 2026 | **P1** | ajout | notes | de trop |"
+    trop = "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | notes | de trop |"
     reproches = juges.juger(_plan_d_essai(trop))
     assert len(reproches) == 1
     assert "7 colonnes" in reproches[0]
@@ -89,7 +91,7 @@ def test_une_colonne_de_trop_est_attrapee():
 
 def test_la_date_restee_collee_dans_l_etat_est_attrapee():
     """Une ligne peut mériter deux reproches ; celui-là doit y être."""
-    collee = "| M11 | **livré** (14 sept. 2026) | 14 sept. 2026 | **P4** | ajout | notes |"
+    collee = "| M11 | ✅ **livré** (14 sept. 2026) | 14 sept. 2026 | **P4** | ajout | notes |"
     reproches = juges.juger(_plan_d_essai(collee))
     assert len(reproches) == 1
     assert "garde sa date dans l'état" in reproches[0]
@@ -97,41 +99,82 @@ def test_la_date_restee_collee_dans_l_etat_est_attrapee():
 
 def test_un_etat_qui_ne_commence_pas_par_l_etat_est_attrape_deux_fois():
     """« **1re vague livrée** (14 sept.) » : l'état n'est pas lisible, et la date traîne."""
-    collee = "| M11 | **1re vague livrée** (14 sept. 2026) | 14 sept. 2026 | **P4** | ajout | notes |"
+    collee = (
+        "| M11 | ✅ **1re vague livrée** (14 sept. 2026) | 14 sept. 2026 | **P4** | ajout | notes |"
+    )
     reproches = juges.juger(_plan_d_essai(collee))
     assert len(reproches) == 2
     assert any("Les états connus" in r for r in reproches)
     assert any("garde sa date dans l'état" in r for r in reproches)
 
 
+def test_un_etat_sans_son_icone_est_attrape():
+    nue = "| M9 | **livré** | 13 sept. 2026 | **P1** | ajout | notes |"
+    reproches = juges.juger(_plan_d_essai(nue))
+    assert len(reproches) == 1
+    assert "sans son icône" in reproches[0]
+    assert "✅ **livré**" in reproches[0]
+
+
+def test_le_message_nomme_l_etat_tel_qu_il_est_ecrit():
+    nue = "| **v1 complète** | **livrée** | 13 sept. 2026 | — | — | notes |"
+    reproches = juges.juger(_plan_d_essai(nue))
+    assert len(reproches) == 1
+    assert "✅ **livrée**" in reproches[0]
+
+
+def test_une_icone_qui_ment_est_attrapee():
+    """Le crochet sur une ligne en cours, la case vide sur une ligne livrée."""
+    for ligne, attendue in (
+        ("| M16 | ✅ **en cours** | 17 sept. 2026 | **P4** | ajout | notes |", "⬜ **en cours**"),
+        (
+            "| M9 | ⬜ **livré** (1re vague) | 13 sept. 2026 | **P1** | ajout | notes |",
+            "✅ **livré**",
+        ),
+    ):
+        reproches = juges.juger(_plan_d_essai(ligne))
+        assert len(reproches) == 1, ligne
+        assert "mauvaise icône" in reproches[0]
+        assert attendue in reproches[0]
+
+
+def test_la_case_vide_va_devant_tout_ce_qui_n_est_pas_livre():
+    a_faire = "| M13 | ⬜ **à faire** | — | **P4** | ajout | notes |"
+    en_cours = (
+        "| M12 | ⬜ **en cours** (huit vagues livrées) | 15 sept. 2026 | **P4** | ajout | notes |"
+    )
+    livree = "| **v1 complète** | ✅ **livrée** | 13 sept. 2026 | — | — | notes |"
+    assert juges.juger(_plan_d_essai(a_faire, en_cours, livree)) == []
+
+
 def test_un_etat_inconnu_est_attrape():
-    inconnu = "| M9 | **peut-être** | 13 sept. 2026 | **P1** | ajout | notes |"
+    inconnu = "| M9 | ⬜ **peut-être** | 13 sept. 2026 | **P1** | ajout | notes |"
     reproches = juges.juger(_plan_d_essai(inconnu))
     assert len(reproches) == 1
     assert "état" in reproches[0]
 
 
 def test_une_date_mal_ecrite_est_attrapee():
-    mauvaise = "| M9 | **livré** | 2026-09-13 | **P1** | ajout | notes |"
+    mauvaise = "| M9 | ✅ **livré** | 2026-09-13 | **P1** | ajout | notes |"
     reproches = juges.juger(_plan_d_essai(mauvaise))
     assert len(reproches) == 1
     assert "date" in reproches[0]
 
 
 def test_le_tiret_est_une_date_une_prio_et_un_genre_valables():
-    vide = "| M13 Les deux fins | **à faire** (v2) | — | — | — | notes |"
+    vide = "| M13 Les deux fins | ⬜ **à faire** | — | — | — | notes |"
     assert juges.juger(_plan_d_essai(vide)) == []
 
 
 def test_une_prio_hors_echelle_est_attrapee():
-    hors = "| M9 | **livré** | 13 sept. 2026 | **P5** | ajout | notes |"
+    hors = "| M9 | ✅ **livré** | 13 sept. 2026 | **P5** | ajout | notes |"
     reproches = juges.juger(_plan_d_essai(hors))
     assert len(reproches) == 1
     assert "prio" in reproches[0]
 
 
 def test_un_genre_invente_est_attrape():
-    invente = "| M9 | **livré** | 13 sept. 2026 | **P1** | amélioration | notes |"
+    invente = "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | amélioration | notes |"
     reproches = juges.juger(_plan_d_essai(invente))
     assert len(reproches) == 1
     assert "genre" in reproches[0]

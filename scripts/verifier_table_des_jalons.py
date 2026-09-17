@@ -16,7 +16,8 @@ Il juge la FORME, jamais le fond : ni l'ordre des lignes, ni les dates, ni qui a
 raison sur une priorite. Ce qu'il exige :
 
 1. six colonnes par ligne, pas une de plus, pas une de moins ;
-2. un etat connu (`livré`, `livrée`, `en cours`, `à faire`) ;
+2. un etat connu (`livré`, `livrée`, `en cours`, `à faire`), precede de son icone :
+   ✅ pour ce qui est livre, ⬜ pour tout le reste ;
 3. une date `JJ mois AAAA` ou `—`, et jamais une date restee collee dans l'etat ;
 4. une prio `P1` a `P4` ou `—` ;
 5. un genre `ajout`, `correctif` ou `—`.
@@ -43,6 +44,10 @@ ENTETE = "| Jalon | État | Date | Prio | Genre | Notes |"
 COLONNES = 6
 
 ETATS = ("livré", "livrée", "en cours", "à faire")
+# L'icone devant l'etat (demande de Martin, 17 sept. 2026) : un crochet pour ce qui
+# est livre, une case vide pour le reste — la colonne se lit d'un coup d'oeil.
+ICONE_LIVRE = "✅"
+ICONE_AUTRE = "⬜"
 MOIS = (
     "janv.",
     "févr.",
@@ -68,6 +73,14 @@ DATE_COLLEE = re.compile(r"\(\s*\d{1,2} (?:" + "|".join(map(re.escape, MOIS)) + 
 def _dedans(texte: str) -> str:
     """Le corps d'une cellule, sans le gras ni les espaces."""
     return texte.strip().strip("*").strip()
+
+
+def _icone(etat: str) -> tuple[str | None, str]:
+    """L'icone en tete de la cellule d'etat (ou None), et ce qui la suit."""
+    for icone in (ICONE_LIVRE, ICONE_AUTRE):
+        if etat.startswith(icone):
+            return icone, etat[len(icone) :].strip()
+    return None, etat
 
 
 def table(corps: str) -> list[tuple[int, str]]:
@@ -130,11 +143,26 @@ def juger(corps: str) -> list[str]:
 
         _, etat, date, prio, genre, _ = cols
 
-        if not any(_dedans(etat).startswith(e) for e in ETATS):
+        icone, sans_icone = _icone(etat)
+        # le plus long d'abord : « livrée » commence aussi par « livré »
+        connu = next(
+            (e for e in sorted(ETATS, key=len, reverse=True) if _dedans(sans_icone).startswith(e)),
+            None,
+        )
+        if connu is None:
             reproches.append(
                 f"{PLAN}:{numero} : « {jalon} » a l'état « {etat} ».\n"
                 f"  Les états connus : {', '.join(ETATS)}."
             )
+        else:
+            attendue = ICONE_LIVRE if connu.startswith("livr") else ICONE_AUTRE
+            if icone != attendue:
+                manque = "sans son icône" if icone is None else "avec la mauvaise icône"
+                reproches.append(
+                    f"{PLAN}:{numero} : « {jalon} » a l'état « {etat} », {manque}.\n"
+                    f"  {ICONE_LIVRE} devant « livré », {ICONE_AUTRE} devant « en cours » et « à faire » :"
+                    f" « {attendue} **{connu}** »."
+                )
         if DATE_COLLEE.search(etat):
             reproches.append(
                 f"{PLAN}:{numero} : « {jalon} » garde sa date dans l'état (« {etat} »).\n"
