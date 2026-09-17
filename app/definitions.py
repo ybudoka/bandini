@@ -1,9 +1,23 @@
-"""Le paquet de definitions — tout ce que le navigateur recoit, en une requete.
+"""Le paquet de definitions et la carte — ce que le navigateur recoit, en DEUX requetes.
 
-Construit UNE fois au demarrage : les catalogues ne changent pas sous un
+Construits UNE fois au demarrage : les catalogues ne changent pas sous un
 processus lance. L'`etag` est une empreinte du contenu : un navigateur qui a
 deja le paquet revalide gratuitement (304), et sa sauvegarde locale sait si le
 catalogue a change depuis (un vehicule possede qui n'existe plus, par exemple).
+
+⚠️ **LA CARTE SORT DU PAQUET** (16 sept. 2026, decision de Martin). Avec
+L'Ile-aux-Corneilles, le paquet passait a 75,3 Ko gzip sur un plafond de 75 ;
+la carte en faisait plus de la moitie, et `test_definitions` ecrivait d'avance
+que c'est a ce plafond-la qu'on la sortirait plutot que de relever encore. Elle
+part donc sur `/api/carte`, avec son propre ETag, et le navigateur la remet
+dans `defs.carte` en arrivant : aucun lecteur de la carte ne change, et
+`assembler()` rend toujours le tout, tel que le navigateur le tient.
+
+⚠️ **Les definitions portent l'empreinte de la carte** (`carte_empreinte`), et
+c'est ce qui garde la sauvegarde honnete : elle oublie une position quand
+`empreinte` change, et `empreinte` change donc des que la CARTE change — meme
+si pas un catalogue n'a bouge. C'est aussi ce qui dit au navigateur que les
+deux reponses vont ensemble.
 """
 
 from __future__ import annotations
@@ -81,11 +95,31 @@ class Paquet:
         return len(self.corps)
 
 
-def construire() -> Paquet:
-    donnees = assembler()
-    # Sans l'empreinte d'abord : elle depend du reste, on l'ajoute apres.
-    brut = json.dumps(donnees, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    etag = empreinte(brut.encode("utf-8"))
+@dataclass(frozen=True)
+class Paquets:
+    """Les deux reponses : les definitions (`/api/definitions`) et la carte (`/api/carte`)."""
+
+    definitions: Paquet
+    carte: Paquet
+
+
+def _json(donnees: dict) -> bytes:
+    return json.dumps(donnees, ensure_ascii=False, separators=(",", ":"), sort_keys=True).encode("utf-8")
+
+
+def _signer(donnees: dict) -> Paquet:
+    """Pose `empreinte` dans les donnees et rend le paquet.
+
+    Sans l'empreinte d'abord : elle depend du reste, on l'ajoute apres."""
+    etag = empreinte(_json(donnees))
     donnees["empreinte"] = etag
-    corps = json.dumps(donnees, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
-    return Paquet(corps=corps.encode("utf-8"), etag=etag)
+    return Paquet(corps=_json(donnees), etag=etag)
+
+
+def construire() -> Paquets:
+    donnees = assembler()
+    # ⚠️ UNE SEULE ville generee pour les deux : `generer` coute une seconde et
+    # demie, et deux villes batties separement pourraient ne pas etre la meme.
+    carte = _signer(donnees.pop("carte"))
+    donnees["carte_empreinte"] = carte.etag
+    return Paquets(definitions=_signer(donnees), carte=carte)

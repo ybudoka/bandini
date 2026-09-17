@@ -58,7 +58,9 @@ niveau de recherche, amendes, sauvegarde, et un singe qui tape au hasard.
 Le serveur **décide**, le navigateur **calcule**. Les catalogues (véhicules,
 armes), l'économie (amendes, pots-de-vin, hôpital, propriétés), la police
 (paliers, délits, cônes de vision), la carte, les missions et les magasins
-vivent dans `app/` et partent en un seul paquet `/api/definitions` (ETag).
+vivent dans `app/` et partent en deux requêtes, chacune revalidée par ETag :
+`/api/definitions` (les catalogues) et `/api/carte` (la ville, à part depuis
+qu'elle pesait plus de la moitié du paquet).
 
 ## Mise en ligne
 

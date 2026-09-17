@@ -619,10 +619,35 @@ const Jeu = (function () {
     return c;
   }
 
-  function chargerDefinitions(url) {
+  function chargerJson(url, quoi) {
     return fenetre.fetch(url).then(function (r) {
-      if (!r.ok) throw new Error('definitions ' + r.status);
+      if (!r.ok) throw new Error(quoi + ' ' + r.status);
       return r.json();
+    });
+  }
+
+  /** Les definitions et la carte : DEUX requetes, lancees ensemble, et la carte
+      remise dans `defs.carte` — tout ce qui lit la carte la lit la ou elle a
+      toujours ete.
+
+      ⚠️ La carte est sortie du paquet le 16 sept. 2026 (le paquet touchait son
+      plafond de 75 Ko gzip, et elle en faisait plus de la moitie).
+      ⚠️ Les deux reponses doivent etre de la MEME construction : les
+      definitions nomment l'empreinte de leur carte. Un deploiement tombe entre
+      les deux requetes donnerait une carte d'une autre ville — des portes et
+      des missions qui ne se parlent plus. On refuse, et la page dit de
+      recharger. */
+  function chargerDefinitions(racine) {
+    return Promise.all([
+      chargerJson(racine.dataset.urlDefinitions, 'definitions'),
+      chargerJson(racine.dataset.urlCarte, 'carte'),
+    ]).then(function (reponses) {
+      const defs = reponses[0], carte = reponses[1];
+      if (carte.empreinte !== defs.carte_empreinte) {
+        throw new Error('carte ' + carte.empreinte + ' au lieu de ' + defs.carte_empreinte);
+      }
+      defs.carte = carte;
+      return defs;
     });
   }
 
@@ -664,7 +689,7 @@ const Jeu = (function () {
     Hud.majAvisSon();
     redim();
 
-    return chargerDefinitions(racine.dataset.urlDefinitions).then(function (defs) {
+    return chargerDefinitions(racine).then(function (defs) {
       B.defs = defs;
       Monde.charger(defs.carte);
       B.partie = Sauvegarde.completer(Sauvegarde.lire(), defs);

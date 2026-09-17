@@ -23,8 +23,9 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
                 "Police", "Missions", "Hud", "Jeu", "Sauvegarde", "SPRITES", "TUILES"):
         assert cle in r["cles"], cle
     assert r["carte"] == [paquet["carte"]["largeur"], paquet["carte"]["hauteur"]]
-    # ⚠️ UNE SEULE REQUETE, PLUS CELLES DE L'OUVERTURE — et pas une de plus.
-    # Le paquet de definitions, puis les mp3 de l'ouverture (sa musique et ses
+    # ⚠️ DEUX REQUETES, PLUS CELLES DE L'OUVERTURE — et pas une de plus.
+    # Le paquet de definitions et la carte (a part depuis le 16 sept. 2026 :
+    # elle faisait plus de la moitie du poids), puis les mp3 de l'ouverture (sa musique et ses
     # quatre voix) que `Son.prechauffer` tire dans le cache du navigateur
     # pendant qu'on lit l'ecran titre : elle part a la seconde ou l'on presse
     # JOUER, et un narrateur qui arrive en retard ne raconte plus rien. Tout le
@@ -32,7 +33,7 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # chiffre ci-dessous est ce qui le garantit : il ne bouge que si quelqu'un
     # ajoute une phrase a l'ouverture, jamais parce qu'un son de plus s'est
     # invite au demarrage.
-    assert r["fetchs"] == 1 + r["ouverture"]
+    assert r["fetchs"] == 2 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 

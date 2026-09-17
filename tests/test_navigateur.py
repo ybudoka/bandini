@@ -108,6 +108,29 @@ def test_le_titre_de_l_ouverture_est_le_logo(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_une_carte_d_une_autre_construction_est_refusee(page, serveur):
+    """⚠️ La carte voyage a part depuis le 16 sept. 2026 (`/api/carte`), et les
+    deux reponses doivent etre de la MEME construction : un deploiement tombe
+    entre les deux requetes donnerait une ville dont les portes et les missions
+    ne se parlent plus. Le jeu refuse, reste au chargement, et dit de recharger.
+    Le temoin : la meme page, sans la carte truquee, arrive au titre."""
+    page.goto(serveur)
+    attendre_titre(page)
+
+    def une_autre_carte(route):
+        reponse = route.fetch()
+        carte = reponse.json()
+        carte["empreinte"] = "0" * 16
+        route.fulfill(response=reponse, json=carte)
+
+    page.route("**/api/carte", une_autre_carte)
+    page.reload()
+    page.wait_for_function(
+        "() => document.getElementById('etat-chargement').textContent.indexOf('Impossible') >= 0",
+        timeout=15000)
+    assert page.locator("#bandini").get_attribute("data-etat") == "chargement"
+
+
 def test_jouer_puis_marcher_au_clavier(page, serveur, erreurs):
     page.goto(serveur)
     attendre_titre(page)

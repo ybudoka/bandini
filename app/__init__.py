@@ -23,9 +23,11 @@ def create_app(config_object: type[Config] = Config) -> Flask:
 
     app.extensions["tableau_scores"] = Tableau(app.config["DONNEES_DIR"])
     app.extensions["version"] = VERSION
-    # Le paquet de definitions est construit UNE fois : les catalogues ne
-    # changent pas sous un processus lance.
-    app.extensions["definitions"] = construire()
+    # Le paquet de definitions et la carte sont construits UNE fois : les
+    # catalogues ne changent pas sous un processus lance.
+    paquets = construire()
+    app.extensions["definitions"] = paquets.definitions
+    app.extensions["carte"] = paquets.carte
 
     from .routes import bp
 

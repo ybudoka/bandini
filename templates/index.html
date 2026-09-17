@@ -3,6 +3,7 @@
 {% block corps %}
 <main id="bandini" class="jeu" data-etat="chargement"
       data-url-definitions="{{ url_for('jeu.api_definitions') }}"
+      data-url-carte="{{ url_for('jeu.api_carte') }}"
       data-url-scores="{{ url_for('jeu.api_scores') }}"
       data-url-statique="{{ url_for('static', filename='') }}">
 

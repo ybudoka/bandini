@@ -6,9 +6,10 @@ from app import definitions
 
 def test_le_paquet_est_deterministe():
     a, b = definitions.construire(), definitions.construire()
-    assert a.corps == b.corps
-    assert a.etag == b.etag
-    assert len(a.etag) == 16
+    for nom in ("definitions", "carte"):
+        assert getattr(a, nom).corps == getattr(b, nom).corps, nom
+        assert getattr(a, nom).etag == getattr(b, nom).etag, nom
+        assert len(getattr(a, nom).etag) == 16, nom
 
 
 def test_le_paquet_reste_leger():
@@ -36,17 +37,50 @@ def test_le_paquet_reste_leger():
     une image de kiosque sur le fil, une fois, puis le cache de l'empreinte.
     Le remede du debordement reste celui d'au-dessus — la carte sort du paquet
     —, et c'est a ce plafond-ci qu'on le prendra.
+
+    ⚠️ **LA CARTE EST SORTIE DU PAQUET le 16 sept. 2026** — decision de Martin,
+    et c'est ce plafond-ci qui l'a demandee : avec L'Ile-aux-Corneilles, le paquet
+    passait a 75 307 octets gzip (la ville seule 74 472, l'ile 835). Mesure au
+    decoupage : les definitions 32 975 octets gzip (140 Ko bruts), la carte
+    41 269 (374 Ko bruts). Chacune a desormais SON plafond.
+
+    ⚠️ **Ce que le decoupage n'achete pas, et il faut le dire** : au premier
+    chargement, le telephone recoit a peu pres autant d'octets qu'avant, en deux
+    requetes paralleles au lieu d'une. Ce qu'il achete : un deploiement qui ne
+    touche que les catalogues revalide la carte par un 304 (et l'inverse), deux
+    `JSON.parse` plus petits, et un budget par sujet — la carte ne mange plus la
+    marge des missions. Le vrai remede au poids du demarrage reste la dette des
+    districts charges autour du joueur, avec son declencheur (« Dettes »).
     """
-    paquet = definitions.construire()
-    assert paquet.taille < 600_000, f"{paquet.taille} octets : le paquet enfle"
-    sur_le_fil = len(gzip.compress(paquet.corps, 6))
-    assert sur_le_fil < 75_000, f"{sur_le_fil} octets gzip : le telephone va sentir passer"
+    paquets = definitions.construire()
+    for nom, brut_max, fil_max in (("definitions", 200_000, 40_000), ("carte", 450_000, 48_000)):
+        paquet = getattr(paquets, nom)
+        assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
+        sur_le_fil = len(gzip.compress(paquet.corps, 6))
+        assert sur_le_fil < fil_max, f"{nom} : {sur_le_fil} octets gzip, le telephone va sentir passer"
 
 
 def test_l_empreinte_change_avec_le_contenu(monkeypatch):
-    avant = definitions.construire().etag
+    avant = definitions.construire()
     monkeypatch.setattr(definitions.economie, "ARGENT_DEPART", 51)
-    assert definitions.construire().etag != avant
+    apres = definitions.construire()
+    assert apres.definitions.etag != avant.definitions.etag
+    assert apres.carte.etag == avant.carte.etag, "un catalogue qui change ne doit pas faire retelecharger la ville"
+
+
+def test_l_empreinte_des_definitions_suit_la_carte(monkeypatch):
+    """⚠️ La sauvegarde oublie une position quand `empreinte` change
+    (`Jeu.demarrer`). Depuis que la carte voyage a part, ce n'est vrai que parce
+    que les definitions portent l'empreinte de leur carte : une ville redessinee
+    sans qu'un seul catalogue bouge doit quand meme faire oublier la position."""
+    from app import carte
+
+    avant = definitions.construire()
+    monkeypatch.setattr(carte, "GRAINE", carte.GRAINE + 1)
+    monkeypatch.setattr(carte.generer, "__defaults__", (carte.PLAN, carte.GRAINE))
+    apres = definitions.construire()
+    assert apres.carte.etag != avant.carte.etag, "la carte n'a pas change : le juge ne mesure rien"
+    assert apres.definitions.etag != avant.definitions.etag, "la carte a change et la sauvegarde ne le saura pas"
 
 
 def test_le_paquet_contient_tout(paquet):
@@ -54,3 +88,16 @@ def test_le_paquet_contient_tout(paquet):
                 "recherche", "carte", "missions", "defis", "types_objectifs", "magasins", "tenues"):
         assert cle in paquet, cle
     assert json.dumps(paquet)  # serialisable
+
+
+def test_la_carte_voyage_a_part_et_se_reconnait():
+    """Les definitions ne portent plus la carte, seulement son empreinte ; la
+    carte porte la sienne, et c'est la meme. C'est ce que le navigateur verifie
+    avant de les remettre ensemble."""
+    paquets = definitions.construire()
+    defs = json.loads(paquets.definitions.corps)
+    carte = json.loads(paquets.carte.corps)
+    assert "carte" not in defs, "la carte est encore dans le paquet"
+    assert defs["carte_empreinte"] == carte["empreinte"] == paquets.carte.etag
+    assert defs["empreinte"] == paquets.definitions.etag
+    assert carte["largeur"] > 0 and carte["sol"]

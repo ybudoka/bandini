@@ -49,6 +49,7 @@ ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 \
 # ⚠️ --resolve tant que le cache DNS local ne connait pas encore le nom.
 curl -s -A navigateur --resolve bandini.gestiondojo.ca:443:103.98.215.181 https://bandini.gestiondojo.ca/sante
 curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/definitions | grep -iE 'content-encoding|etag'
+curl -sI -A navigateur -H 'Accept-Encoding: gzip' https://bandini.gestiondojo.ca/api/carte | grep -iE 'content-encoding|etag'
 sudo journalctl -u bandini-gestiondojo -n 50
 ```
 

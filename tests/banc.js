@@ -80,7 +80,7 @@ function banc(corps) {
   toile.id = 'toile';
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
-  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlScores: '/api/scores' };
+  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte', urlScores: '/api/scores' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
   const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
@@ -138,6 +138,9 @@ function banc(corps) {
     fetch: function (url, opts) {
       fetchs.push({ url: url, opts: opts });
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
+      // ⚠️ La carte a sa requete depuis qu'elle est sortie du paquet : le banc
+      // la sert comme le serveur, a part, et le jeu la remet dans `defs.carte`.
+      if (String(url).indexOf('/api/carte') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs.carte); } });
       // Les sons : de quoi suivre TOUT le chemin d'un echantillon, du
       // telechargement au branchement sur la sortie.
       if (/\.mp3($|\?)/.test(String(url))) {

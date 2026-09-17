@@ -1,4 +1,4 @@
-"""Les routes : une page, un paquet de definitions, les scores, un healthcheck, les icones."""
+"""Les routes : une page, un paquet de definitions et sa carte, les scores, un healthcheck, les icones."""
 
 from __future__ import annotations
 
@@ -29,10 +29,8 @@ def accueil():
     return render_template("index.html")
 
 
-@bp.route("/api/definitions")
-def api_definitions():
-    """Tout ce que le navigateur doit savoir, en une requete, revalidee par ETag."""
-    paquet = current_app.extensions["definitions"]
+def _revalide(paquet) -> Response:
+    """Un paquet JSON revalide par son ETag : 304 si le navigateur l'a deja."""
     etag = f'"{paquet.etag}"'
     # ⚠️ `contains_weak`, pas `contains` : nginx compresse la reponse et marque
     # l'ETag faible (W/"...") en passant ; le navigateur le renvoie tel quel.
@@ -45,6 +43,24 @@ def api_definitions():
     reponse.headers["ETag"] = etag
     reponse.headers["Cache-Control"] = "no-cache"
     return reponse
+
+
+@bp.route("/api/definitions")
+def api_definitions():
+    """Tout ce que le navigateur doit savoir, sauf la carte, revalide par ETag."""
+    return _revalide(current_app.extensions["definitions"])
+
+
+@bp.route("/api/carte")
+def api_carte():
+    """La ville, a part : la moitie du poids, et elle ne change pas au meme rythme.
+
+    ⚠️ La meme revalidation que les definitions, ETag faible compris (nginx le
+    marque faible en compressant). Les definitions nomment l'empreinte de la
+    carte qui va avec elles (`carte_empreinte`) : le navigateur verifie que les
+    deux reponses sont de la meme construction.
+    """
+    return _revalide(current_app.extensions["carte"])
 
 
 @bp.route("/api/scores", methods=["GET"])

@@ -4,6 +4,7 @@ def test_accueil(client):
     html = reponse.get_data(as_text=True)
     assert 'id="toile"' in html
     assert "/api/definitions" in html
+    assert "/api/carte" in html
     assert 'id="tactile"' in html
     assert 'data-etat="chargement"' in html
 
@@ -23,7 +24,7 @@ def test_definitions_avec_etag(client):
     paquet = reponse.get_json()
     assert paquet["empreinte"] == etag.strip('"')
     assert len(paquet["vehicules"]) >= 4
-    assert paquet["carte"]["largeur"] > 0
+    assert "carte" not in paquet, "la carte voyage a part (/api/carte)"
 
     revalide = client.get("/api/definitions", headers={"If-None-Match": etag})
     assert revalide.status_code == 304
@@ -33,6 +34,22 @@ def test_definitions_avec_etag(client):
     assert faible.status_code == 304
     autre = client.get("/api/definitions", headers={"If-None-Match": '"autre"'})
     assert autre.status_code == 200
+
+
+def test_carte_avec_etag(client):
+    """La ville, a part : la meme revalidation que les definitions, ETag faible
+    compris, et l'empreinte que les definitions annoncent."""
+    reponse = client.get("/api/carte")
+    assert reponse.status_code == 200
+    assert reponse.mimetype == "application/json"
+    etag = reponse.headers["ETag"]
+    carte = reponse.get_json()
+    assert carte["empreinte"] == etag.strip('"')
+    assert carte["largeur"] > 0
+    assert client.get("/api/definitions").get_json()["carte_empreinte"] == carte["empreinte"]
+    assert client.get("/api/carte", headers={"If-None-Match": etag}).status_code == 304
+    assert client.get("/api/carte", headers={"If-None-Match": "W/" + etag}).status_code == 304
+    assert client.get("/api/carte", headers={"If-None-Match": '"autre"'}).status_code == 200
 
 
 def test_api_scores(client):

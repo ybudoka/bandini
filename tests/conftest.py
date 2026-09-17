@@ -48,7 +48,13 @@ def racine():
 @pytest.fixture(scope="session")
 def paquet():
     """Le paquet de definitions tel que le navigateur le recoit."""
-    return json.loads(construire().corps.decode("utf-8"))
+    # ⚠️ Tel que le navigateur le TIENT : les definitions, et la carte remise
+    # dedans a son arrivee (`Jeu.chargerDefinitions`). Elle voyage a part depuis
+    # le 16 sept. 2026, mais aucun lecteur ne la cherche ailleurs.
+    paquets = construire()
+    donnees = json.loads(paquets.definitions.corps.decode("utf-8"))
+    donnees["carte"] = json.loads(paquets.carte.corps.decode("utf-8"))
+    return donnees
 
 
 @pytest.fixture(scope="session")
