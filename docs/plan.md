@@ -197,7 +197,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poing américain chez Gus | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#le-poing-américain-chez-gus) |
 | Les petits manèges à l'échelle de la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
-| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (2 vagues : le standing se déclare et la saleté se déplace ; le zonage se lit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
+| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
