@@ -95,6 +95,11 @@ const Entree = (function () {
   }
   /** Comme `neuf`, mais la manette ne compte pas — le clavier, le doigt et les
       mains du casque, oui : l'ecran MANETTE montre la manette Bluetooth, pas elles. */
+  /** Le DOIGT seul : dans un menu, les boutons ARME et COURS deviennent HAUT et
+      BAS (voir `contexte`). A la manette et au clavier, ces boutons-la gardent
+      leur sens — le bouton de droite d'une manette est aussi RETOUR. */
+  function basTactile(a) { return !!vTact[a]; }
+  function neufTactile(a) { return !!vNeufTact[a]; }
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
@@ -485,9 +490,13 @@ const Entree = (function () {
       const m = borner((Math.hypot(dx, dy) - 8) / (max - 8), 0, 1);
       const h = Math.hypot(dx, dy) || 1;
       pouce.x = dx / h * m; pouce.y = dy / h * m; pouce.mag = m; pouce.actif = true;
-      poser(vTact, 'gauche', pouce.x < -0.5); poser(vTact, 'droite', pouce.x > 0.5);
-      poser(vTact, 'haut', pouce.y < -0.5); poser(vTact, 'bas', pouce.y > 0.5);
+      direction('gauche', -pouce.x); direction('droite', pouce.x);
+      direction('haut', -pouce.y); direction('bas', pouce.y);
     }
+    //: ⚠️ Un seuil qui ENTRE a 0.5 et qui ne SORT que sous 0.35 : un pouce pose
+    //: sur la vitre tremble, et autour d'un seuil unique chaque tremblement
+    //: etait un nouvel appui — une ligne de menu de plus, sans rien demander.
+    function direction(a, v) { poser(vTact, a, v > (vTact[a] ? 0.35 : 0.5)); }
     function lacher(ev) {
       if (doigt !== null && ev.pointerId !== doigt) return;
       doigt = null;
@@ -618,7 +627,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,

@@ -110,7 +110,27 @@ const Hud = (function () {
   //: `refaire()` rend un menu NEUF : un menu qui reste ouvert se refait apres
   //: chaque achat (voir `rafraichirMenu`).
 
-  let repetT = 0;
+  //: La repetition d'un menu tenu, en images (60 par seconde) : un cran tout de
+  //: suite, le suivant apres `REPETE_PREMIER`, puis un tous les `REPETE_ENSUITE`.
+  //: ⚠️ Elle partait apres 12 images (200 ms) — moins qu'un appui ordinaire du
+  //: pouce sur la croix tactile : au telephone, le menu sautait de deux lignes.
+  const REPETE_PREMIER = 27, REPETE_ENSUITE = 9;
+  let repetT = 0, sensTenu = 0;
+
+  /** Le sens qu'on TIENT dans un menu : -1 vers le haut, 1 vers le bas, 0 rien.
+      La croix, les fleches, le pouce, le stick — et au doigt, HAUT et BAS. */
+  function sensDuMenu() {
+    let s = 0;
+    if (Entree.bas('haut') || Entree.basTactile('arme')) s -= 1;
+    if (Entree.bas('bas') || Entree.basTactile('esquive')) s += 1;
+    if (s) return s;
+    // Le stick : pris a 0.6, lache sous 0.35, sinon un stick qui tremble autour
+    // du seuil compte deux fois.
+    const axe = Entree.axe, y = axe.y;
+    if (axe.source !== 'manette') return 0;
+    if (Math.abs(y) > 0.6 || (sensTenu && Math.sign(y) === sensTenu && Math.abs(y) > 0.35)) return y < 0 ? -1 : 1;
+    return 0;
+  }
 
   /** Ouvrir un menu — SUR UNE LIGNE QU'ON PEUT CHOISIR.
 
@@ -132,6 +152,11 @@ const Hud = (function () {
       menu.curseur = i < 0 ? 0 : i;
     }
     B.menu = menu;
+    // ⚠️ Un menu qui s'ouvre sous un pouce DEJA pousse (on marchait vers le
+    // comptoir) ne bouge pas tant qu'on ne l'a pas lache : sans ca, le curseur
+    // filait dans la liste avant qu'on l'ait seulement lue.
+    sensTenu = sensDuMenu();
+    repetT = Infinity;
     Entree.contexte('menu');
     Son.SFX.menu();
   }
@@ -203,15 +228,24 @@ const Hud = (function () {
       if (Entree.neuf('pause') || Entree.neuf('annuler')) { Entree.annulerApprentissage(); Son.SFX.erreur(); }
       return;
     }
-    const axe = Entree.axe;
-    let sens = 0;
-    if (Entree.neuf('haut')) sens = -1;
-    if (Entree.neuf('bas')) sens = 1;
-    if (!sens && axe.source !== 'clavier' && Math.abs(axe.y) > 0.6) {
-      if (repetT <= 0) { sens = axe.y < 0 ? -1 : 1; repetT = 12; } else repetT--;
-    } else if (axe.mag < 0.3) repetT = 0;
+    // ⚠️ UN appui, UNE ligne. Le pouce sur la croix donnait les deux a la fois :
+    // son « haut » neuf bougeait le curseur, puis, a l'image suivante, l'axe
+    // analogique du meme pouce le rebougeait, la repetition n'etant pas armee.
+    // L'appui neuf (meme tape entre deux images) et le sens tenu (le stick, qui
+    // n'a pas d'appui neuf) arment maintenant la MEME repetition.
+    let sens = 0, repete = false;
+    if (Entree.neuf('haut') || Entree.neufTactile('arme')) sens = -1;
+    if (Entree.neuf('bas') || Entree.neufTactile('esquive')) sens = 1;
+    const tenu = sensDuMenu();
+    if (sens) repetT = REPETE_PREMIER;
+    else if (tenu && tenu !== sensTenu) { sens = tenu; repetT = REPETE_PREMIER; }
+    else if (tenu && --repetT <= 0) { sens = tenu; repetT = REPETE_ENSUITE; repete = true; }
+    sensTenu = tenu;
+    // Tenu, le curseur s'arrete au bout de la liste ; un appui neuf, lui, en
+    // fait le tour — sinon un pouce qui s'attarde tourne en rond.
+    const n = m.items.length;
+    if (repete && (m.curseur + sens < 0 || m.curseur + sens >= n)) sens = 0;
     if (sens) {
-      const n = m.items.length;
       m.curseur = (m.curseur + sens + n) % n;
       Son.SFX.menu();
     }

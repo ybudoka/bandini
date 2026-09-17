@@ -206,7 +206,7 @@ ne bougent pas quand l'ordre de travail change.
 | Qui attend l'autobus monte dedans | ⬜ **en cours** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
-| Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
+| Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -736,7 +736,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_vehicules.py test_armes.py test_armes_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
-        test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_son_js.py
+        test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_menus_au_doigt_js.py test_son_js.py
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
         test_eau_son_js.py test_eau_basse_js.py test_amuseurs_js.py test_roue_js.py test_sieste_js.py
@@ -11089,7 +11089,34 @@ demande de Martin : « est-ce compliqué de faire du jeu une webapp installable 
 ### Les menus au doigt avancent d'une ligne à la fois
 
 retour de Martin : « améliore les contrôles sur mobile, surtout dans les menus. il déplace
-souvent de 2 menus à la fois vers le haut et le bas. »
+souvent de 2 menus à la fois vers le haut et le bas. » Mesuré au banc avant de toucher à
+quoi que ce soit : un appui du pouce de **100 ms** descendait de **2 lignes**, un de 330 ms
+de **3**, un pouce qui tremble sur la vitre de **6**, et un menu ouvert sous un pouce qui
+marchait encore filait de **8 lignes** en une seconde et demie.
+
+- ⚠️ **Deux lecteurs pour un seul pouce.** `Hud.majMenu` bougeait sur le « haut » NEUF du
+  pouce (`vTact`, seuil 0.5), puis, l'image suivante, sur l'axe analogique du MÊME pouce
+  (`axe.y > 0.6`) — la répétition n'était armée que par l'axe, jamais par l'appui. Le
+  clavier et la croix de manette y échappaient (leur axe est `clavier`) ; le stick aussi
+  (il ne pose pas de « haut ») : **seul le doigt** avait les deux. Maintenant l'appui neuf
+  et le sens tenu arment la même répétition.
+- **La répétition** partait après 12 images (200 ms), moins qu'un appui ordinaire du pouce :
+  elle part après **27 images (450 ms)**, puis une ligne toutes les **9 (150 ms)**. Tenue,
+  elle s'arrête au bout de la liste ; un appui neuf, lui, en fait encore le tour. Les
+  flèches du clavier et la croix de la manette répètent aussi, maintenant.
+- **Un seuil qui entre à 0.5 et ne sort que sous 0.35** (`entree.js`, `direction`), et pareil
+  pour le stick dans un menu (0.6 / 0.35) : autour d'un seuil unique, chaque tremblement
+  était un nouvel appui. Effet de bord connu : au volant, le pouce qui relâche garde le gaz
+  plein jusqu'à 0.35 au lieu de 0.5 (7 px de course sur la croix).
+- **Un menu qui s'ouvre sous un pouce déjà poussé** attend qu'on le lâche (`ouvrirMenu`) : on
+  marche vers le comptoir, ACTION, et le curseur ne file plus avant qu'on ait lu la liste.
+- **Les boutons HAUT et BAS** : le contexte `menu` renomme ARME et COURS en HAUT et BAS
+  depuis M5, mais `majMenu` ne les a jamais lus — deux boutons qui mentaient. Ils marchent,
+  **au doigt seulement** (`Entree.basTactile` / `neufTactile`) : à la manette, le bouton de
+  droite est aussi RETOUR, et il ne doit pas descendre d'une ligne en fermant.
+
+Juges : `tests/test_menus_au_doigt_js.py` (six), rouges tous les six sur le code d'avant,
+avec les chiffres ci-dessus.
 
 ### Le volant en marche arrière, au choix
 
