@@ -79,9 +79,12 @@ def test_a_chaque_phase_la_ville_reste_d_un_seul_tenant(numero):
     for ch in VILLE["chantiers"]:
         phase = ch["phases"][numero]
         sol = _machines_en_murs(chantiers.appliquer(VILLE["sol"], ch, numero), phase["machines"])
-        groupes = carte.composantes_marchables(_ville_a(sol))
+        # ⚠️ Un îlot PAR TERRE FERME : l'île n'a pas de chantier, et elle est
+        # un îlot à elle (`carte.composantes_par_terre`).
+        terres = carte.composantes_par_terre(_ville_a(sol))
+        groupes = terres["ville"]
         assert len(groupes) == 1, f"chantier {ch['id']}, phase {numero} : {len(groupes)} îlots"
-        principal = groupes[0]
+        principal = groupes[0] | terres["ile"][0]
         assert (depart["x"], depart["y"]) in principal
         for point in VILLE["points_interet"]:
             assert (point["x"], point["y"]) in principal, (ch["id"], numero, point)
@@ -96,7 +99,7 @@ def test_au_premier_matin_tous_les_chantiers_ensemble_tiennent():
     for ch in VILLE["chantiers"]:
         numero = chantiers.phase_du_jour(ch, 1, 1)
         sol = _machines_en_murs(chantiers.appliquer(sol, ch, numero), ch["phases"][numero]["machines"])
-    assert len(carte.composantes_marchables(_ville_a(sol))) == 1
+    assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(_ville_a(sol)).values())
 
 
 def test_les_phases_sont_des_rectangles_de_glyphes_connus():
@@ -295,7 +298,7 @@ def test_les_regles_tiennent_sur_d_autres_graines(graine):
         assert not set(chantiers.tuiles(ch)) & sert, (graine, ch["id"])
         for numero, phase in enumerate(ch["phases"]):
             sol = _machines_en_murs(chantiers.appliquer(ville["sol"], ch, numero), phase["machines"])
-            groupes = carte.composantes_marchables({**ville, "sol": sol})
+            groupes = carte.composantes_par_terre({**ville, "sol": sol})["ville"]
             assert len(groupes) == 1, (graine, ch["id"], numero, len(groupes))
 
 

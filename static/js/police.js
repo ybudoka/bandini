@@ -84,7 +84,29 @@ const Police = (function () {
     return false;
   }
 
+  /** Le joueur est-il sur l'ile — dehors, ou dans une de ses pieces ?
+
+      ⚠️ `refuge` est une propriete de la ZONE (`ile.zone()`), pas un slug : le
+      jour ou un autre endroit echappe a la police, c'est sa fiche qui le dit.
+      ⚠️ Dedans, la carte active est la piece, et une piece n'a pas de zones :
+      on lit la rue qu'on a laissee derriere la porte. */
+  function auRefuge() {
+    const j = B.joueur, ext = B.exterieur;
+    if (!j) return false;
+    const carte = ext ? ext.carte : Monde.carte;
+    const x = ext ? ext.x : j.x, y = ext ? ext.y : j.y;
+    let trouvee = null;
+    for (const z of (carte && carte.zones) || []) {
+      if (x >= z.x * TT && x < (z.x + z.l) * TT && y >= z.y * TT && y < (z.y + z.h) * TT) trouvee = z;
+    }
+    return !!(trouvee && trouvee.refuge);
+  }
+
   function ajouterChaleur(gravite) {
+    // ⚠️ SUR L'ILE, RIEN NE FAIT MONTER LES ETOILES : ni un crime vu, ni un
+    // temoin qui appelle. C'est la seule regle de l'ile, et elle vaut tout le
+    // reste de sa fiche — on peut y laisser refroidir un char et un casier.
+    if (auRefuge()) return;
     const r = B.recherche, d = defs();
     r.chaleur += gravite * d.chaleur_par_gravite;
     while (r.chaleur >= d.chaleur_etoile && r.etoiles < d.etoiles_max) {
@@ -256,6 +278,7 @@ const Police = (function () {
       l'ambiance, elle donne un signalement. Le plancher est la difference
       entre « quelqu'un a vu » et « quelqu'un a appele ». */
   function etoilesAuMoins(n) {
+    if (auRefuge()) return false;                 // personne n'appelle la police de l'ile
     const r = B.recherche, d = defs();
     const voulu = Math.min(n, d.etoiles_max);
     if (r.etoiles >= voulu) return false;
@@ -342,6 +365,15 @@ const Police = (function () {
     if (a.etat === 'attaque') { a.vx = 0; a.vy = 0; return true; }        // il tire : Combat mene la phase
     if (a.etat === 'attaque_joueur') a.etat = 'poursuit';                 // Combat rend la main : on reprend la chasse
     if (a.etat === 'fuit' || a.etat === 'temoin') a.etat = 'poursuit';    // un agent ne fuit pas
+    // ⚠️ L'AGENT QUI T'A SUIVI JUSQU'A L'ILE NE TE CHERCHE PLUS. Il ne te voit
+    // pas, n'arrete personne, et redevient un passant qu'on retire hors de
+    // l'ecran (`maj`). Sans ca, il suffisait d'etre nage de pres pour qu'un
+    // agent remette `vu` a zero a chaque regard, et les etoiles ne tombaient
+    // jamais sur l'ile.
+    if (auRefuge()) {
+      if (a.etat !== 'flane') { a.etat = 'flane'; a.but = null; a.chemin = null; }
+      return false;
+    }
     // Regarder : une image sur trois, c'est le budget.
     if ((B.t + a.id) % p.regarde_toutes_les_images === 0) {
       const cible = j.dansVehicule ? j.dansVehicule : j;
@@ -648,6 +680,16 @@ const Police = (function () {
     if (!j) return;
     if (r.flash > 0) r.flash--;
     if (B.interieur) { decroitre(); return; }     // dedans, on se fait oublier ; personne ne patrouille les salons
+    // ⚠️ L'ILE : on s'y fait oublier comme dans une piece, et la police s'en
+    // va — aucun agent n'y nait, l'helico repart, et ce qui patrouillait hors
+    // de l'ecran ne revient pas. Les temoins attendront qu'on rentre en ville.
+    if (auRefuge()) {
+      decroitre();
+      const h = helico();
+      if (h) { h.part = true; majHelico(h); }
+      agents().concat(autos()).forEach(function (e) { if (!Entites.visibleAEcran(e.x, e.y, 60)) Entites.retirer(e); });
+      return;
+    }
     peuplerAgents();
     decroitre();
     if (r.etoiles > 0) {
@@ -678,7 +720,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
+  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };

@@ -3097,6 +3097,18 @@ const FACADES = (function () {
       ctx.fillRect(x + 3, y + 4, 10, 1); ctx.fillRect(x + 3, y + 9, 10, 1);
       ctx.fillStyle = '#3f3226'; ctx.fillRect(x + 4, y + 13, 2, 2); ctx.fillRect(x + 10, y + 13, 2, 2);
     },
+    // ⚠️ Le CLOCHER de la chapelle de l'ile : une tour d'ardoise vue d'en haut,
+    // sa fleche en pointe de diamant et la croix. Sans lui, la chapelle est une
+    // maison de plus avec un toit d'ardoise — c'est lui qu'on reconnait du quai.
+    clocher: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.4)'; ctx.fillRect(x + 5, y + 6, 11, 10);
+      ctx.fillStyle = '#d8d2c4'; ctx.fillRect(x + 2, y + 3, 12, 11);        // la tour, blanchie a la chaux
+      ctx.fillStyle = '#4a4f5c'; ctx.fillRect(x + 3, y + 4, 10, 9);          // la fleche d'ardoise
+      ctx.fillStyle = '#626878'; ctx.fillRect(x + 3, y + 4, 5, 4); ctx.fillRect(x + 8, y + 9, 5, 4);
+      ctx.fillStyle = '#2f333d'; ctx.fillRect(x + 7, y + 4, 2, 9); ctx.fillRect(x + 3, y + 8, 10, 1);
+      ctx.fillStyle = '#e8c35a';                                            // la croix, doree
+      ctx.fillRect(x + 7, y, 2, 8); ctx.fillRect(x + 5, y + 2, 6, 2);
+    },
     antenne: function (ctx, x, y, h) {
       ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 8, y + 8, 5, 1);
       ctx.fillStyle = '#b4b0a8';

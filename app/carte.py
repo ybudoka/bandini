@@ -483,6 +483,28 @@ def composantes_marchables(carte: dict) -> list[set[tuple[int, int]]]:
     return groupes
 
 
+def composantes_par_terre(carte: dict) -> dict[str, list[set[tuple[int, int]]]]:
+    """Les groupes marchables, rangés par TERRE FERME : `ville`, et l'île.
+
+    ⚠️ « Un seul îlot marchable » était le juge de toute la géographie — la
+    preuve qu'aucun trottoir n'est enclavé. Le jour où l'île existe, il devient
+    faux sans que rien ne soit cassé : l'île est un îlot, et c'est tout son
+    sens. Il devient donc « **un îlot par terre ferme** », et il faut le changer
+    EXPRÈS, pas le découvrir. Un groupe est de l'île s'il tient entier dans son
+    rectangle (`carte["ile"]`) ; tout le reste est la ville — et une poche
+    enclavée en ville reste un deuxième groupe de la ville, donc un juge rouge.
+    """
+    ile = carte.get("ile")
+    terres: dict[str, list[set[tuple[int, int]]]] = {"ville": []}
+    if ile:
+        terres[ile["slug"]] = []
+    for groupe in composantes_marchables(carte):
+        dedans = ile and all(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
+                             for x, y in groupe)
+        terres[ile["slug"] if dedans else "ville"].append(groupe)
+    return terres
+
+
 
 VOIES = {".", ">", "<", "^", "v", "+", "S"}
 
@@ -524,6 +546,10 @@ EQUIPEMENTS_DE_TOIT = (
     {"type": "cage", "poids": 26, "genres": ("commerces", "industriel", "hangars")},
     {"type": "reservoir", "poids": 30, "genres": ("commerces", "industriel")},
     {"type": "antenne", "poids": 16, "genres": ()},
+    # ⚠️ Le clocher n'est JAMAIS tire : aucun ilot n'est du genre « chapelle ».
+    # Il est pose a la main sur la chapelle de l'ile (`ile.BATIMENTS`), et il est
+    # ici pour que le juge des toits le connaisse.
+    {"type": "clocher", "poids": 1, "genres": ("chapelle",)},
 )
 
 #: ⚠️ Les genres d'ilot qui ont pignon sur rue. Pas les maisons ni la banlieue
@@ -6203,6 +6229,13 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "interieurs": {**INTERIEURS, **chantier.pieces},
         "tuiles_bouchees": bouchees,
     }
+    # ⚠️ L'ILE APRES LA VILLE, AVANT LES CHANTIERS. Apres le filet, qui la
+    # noierait (on ne la rejoint pas a pied) ; apres les amarrages et les zones,
+    # auxquels elle s'ajoute au bout sans rien deplacer ; et avant les chantiers,
+    # les autobus et le mobilier, qui posent leur decor APRES le sien — leurs
+    # juges comparent la ville avec et sans eux par le debut de la liste.
+    from . import ile as ile_mod
+    ville["ile"] = ile_mod.poser(chantier, ville)
     # ⚠️ LES CHANTIERS EN TOUT DERNIER, sur la ville FINIE, et dans leur propre
     # de : ils ne choisissent que ce qui ne sert a rien d'autre, et ne deplacent
     # ni un arbre ni une enseigne. Import paresseux : `chantiers` lit `carte`.

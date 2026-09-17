@@ -136,7 +136,10 @@ def test_l_eau_ne_relie_aucun_trottoir():
     continue d'ignorer l'eau : il sert a prouver qu'aucun trottoir n'est
     enclave, et si l'eau reliait les rives, il ne dirait plus rien du tout."""
     assert not carte.marchable("~"), "l'eau est devenue marchable : tous les juges de connexite mentent"
-    assert len(carte.composantes_marchables(CARTE)) == 1
+    # ⚠️ L'île est un deuxième îlot, et c'est ce juge qui le prouve : si l'eau
+    # reliait les rives, la ville et l'île n'en feraient plus qu'un.
+    terres = carte.composantes_par_terre(CARTE)
+    assert len(terres["ville"]) == 1 and len(terres["ile"]) == 1, {t: len(g) for t, g in terres.items()}
 
 
 def test_le_bateau_est_le_seul_a_flotter():

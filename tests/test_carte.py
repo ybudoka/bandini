@@ -136,15 +136,20 @@ def _empreintes_de_batiments(plan_carte):
 
 
 def test_tout_ce_qui_est_marchable_est_relie():
-    groupes = carte.composantes_marchables(CARTE)
-    assert len(groupes) == 1, f"{len(groupes)} ilots marchables : un trottoir est enclave"
-    principal = groupes[0]
+    """⚠️ Un îlot PAR TERRE FERME depuis l'île (`carte.composantes_par_terre`) :
+    la ville d'un seul tenant, l'île d'un seul tenant, et chaque repère sur
+    l'une des deux."""
+    terres = carte.composantes_par_terre(CARTE)
+    for terre, groupes in terres.items():
+        assert len(groupes) == 1, f"{terre} : {len(groupes)} ilots marchables, un trottoir est enclave"
+    principal = terres["ville"][0]
     depart = CARTE["apparition"]["joueur"]
     assert (depart["x"], depart["y"]) in principal
+    ferme = set().union(*(groupes[0] for groupes in terres.values()))
     for point in CARTE["points_interet"]:
-        assert (point["x"], point["y"]) in principal, point
+        assert (point["x"], point["y"]) in ferme, point
     for porte in CARTE["portes"]:
-        assert (porte["x"], porte["y"] + 1) in principal, porte
+        assert (porte["x"], porte["y"] + 1) in ferme, porte
 
 
 def test_les_trois_clotures_disent_ce_qu_elles_font():
@@ -213,9 +218,10 @@ def test_un_barbele_ne_referme_jamais_une_poche():
     Le juge est double : la ville reste d'un seul tenant a pied en comptant le
     barbele comme un mur (c'est ce que fait `composantes_marchables`), et la
     graine livree ne fait boucher aucune tuile."""
-    assert len(carte.composantes_marchables(CARTE)) == 1
+    terres = carte.composantes_par_terre(CARTE)
+    assert len(terres["ville"]) == 1 and len(terres["ile"]) == 1
     assert CARTE["tuiles_bouchees"] == 0
-    principal = carte.composantes_marchables(CARTE)[0]
+    principal = terres["ville"][0]
     for y, ligne in enumerate(CARTE["sol"]):
         for x, glyphe in enumerate(ligne):
             if glyphe != carte.BARBELE:
@@ -600,7 +606,7 @@ def test_une_autre_graine_redecore_la_meme_ossature():
     assert {p["lieu"] for p in autre["portes"]} >= LIEUX_GARANTIS, \
         "un batiment garanti a disparu avec la graine"
     assert autre["portes"] != CARTE["portes"], "les batiments ne bougent pas du tout ?"
-    assert len(carte.composantes_marchables(autre)) == 1
+    assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(autre).values())
     # ⚠️ Le filet a le droit de servir, pas de porter la ville. Deux batiments
     # tires au sort qui se rejoignent laissent parfois une cour de six tuiles,
     # et `boucher_les_poches` la rebatit — c'est exactement son role. Ce qui
@@ -618,7 +624,7 @@ def test_n_importe_quelle_graine_donne_une_ville_jouable(graine):
     """⚠️ Le decoupage en parcelles tire beaucoup de des : une seule graine
     verte ne prouve rien. Cinq villes entieres, cinq fois les memes juges."""
     ville = carte.generer(graine=graine)
-    assert len(carte.composantes_marchables(ville)) == 1
+    assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(ville).values())
     sans_aller, sans_retour = carte.voies_bloquees(ville)
     assert not sans_aller and not sans_retour
     assert {p["lieu"] for p in ville["portes"]} >= LIEUX_GARANTIS

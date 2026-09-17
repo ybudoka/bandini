@@ -28,7 +28,13 @@ def test_la_ville_a_des_amarrages_et_ils_sont_sur_l_eau():
     ville = carte.exporter()
     places = ville["amarrages"]
     mini, maxi = carte.AMARRAGES["par_ville"]
-    assert mini <= len(places) <= maxi, f"{len(places)} amarrages"
+    # ⚠️ Le plafond est celui de la VILLE : les chaloupes de l'île s'ajoutent
+    # par-dessus, déclarées (`ile.AMARRE`) — une île sans bateau à quai est une
+    # île d'où l'on revient à la nage.
+    ile = ville["ile"]
+    en_ville = [p for p in places if not (ile["x"] <= p["x"] < ile["x"] + ile["l"]
+                                          and ile["y"] <= p["y"] < ile["y"] + ile["h"])]
+    assert mini <= len(en_ville) <= maxi, f"{len(en_ville)} amarrages"
     sol = ville["sol"]
     for p in places:
         assert sol[p["y"]][p["x"]] == "~", f"un amarrage au sec en ({p['x']}, {p['y']})"

@@ -634,6 +634,9 @@ AMBIANCES_DE_DISTRICT: dict[str, str] = {
     "quais": "amb_quais",
     "pointe": "amb_pointe",
     "baie": "amb_quais",        # l'eau : la meme corne que le port
+    # ⚠️ L'ile EMPRUNTE le vent de La Pointe, et ca s'entend : c'est le choix
+    # d'une premiere vague, pas une musique a elle (trente credits la seconde).
+    "ile": "amb_pointe",
 }
 
 AMBIANCES: list[Style] = [

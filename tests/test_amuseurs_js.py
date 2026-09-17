@@ -137,6 +137,19 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
                     return q.vivant && L.Entites.SPECTACLES.indexOf(q.metier) >= 0; }) || null;
             }
             if (!a) break;
+            // ⚠️ LES SECONDES OU IL RASSEMBLE SON MONDE NE SE JUGENT PAS, et c'est
+            // ce que dit la docstring depuis le debut : un artiste ne hors champ met
+            // quelques secondes a reunir son public. Le juge les jugeait quand meme
+            // des que le numero SUIVANT naissait assez pres pour entrer vite a
+            // l'ecran — deux badauds assis, le troisieme encore en chemin. Mesure
+            // le 17 sept. 2026 : 4 graines sur 40 tombaient ainsi sans rien changer
+            // au jeu, et les quarante decors de l'Ile-aux-Corneilles (d'autres
+            // numeros d'entite, donc d'autres cadences) en changeaient seulement
+            // lesquelles. On juge donc un numero a partir du moment ou son cercle
+            // s'est forme une fois ; un cercle qui ne se forme jamais ne donne
+            // aucune image vue, et `vues` le dit.
+            let rassemble = false;
+            const mini = L.B.defs.pietons.spectacle.minimum;
             for (let i = 0; i < 900 && a.vivant; i++) {
                 const dx = a.x - j.x, dy = a.y - j.y, n = Math.hypot(dx, dy) || 1;
                 if (n > 44) { j.x += dx / n * 0.9; j.y += dy / n * 0.9; L.Monde.centrerCamera(j.x, j.y); }
@@ -149,8 +162,10 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
                 if (L.Entites.pietonsAutour(a.x, a.y, rayonPeur).some(function (q) {
                     return q.vivant && (q.etat === 'fuit' || q.etat === 'temoin'); })) break;
                 if (!L.Entites.visibleAEcran(a.x, a.y, 0)) continue;
-                vues++;
                 const cercle = L.Entites.badauds(a).length;
+                if (cercle >= mini) rassemble = true;
+                if (!rassemble) continue;
+                vues++;
                 releves.push({ metier: a.metier, n: cercle });
                 if (cercle === 0) seuls++;
             }

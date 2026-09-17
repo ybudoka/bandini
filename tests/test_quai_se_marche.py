@@ -33,11 +33,19 @@ def ville():
 
 def atteignables(ville) -> set[tuple[int, int]]:
     """Ce qu'un piéton atteint depuis l'autobus, sans enjamber une clôture, en
-    contournant tout le décor SOLIDE (`carte.DECOR_SOLIDE`)."""
+    contournant tout le décor SOLIDE (`carte.DECOR_SOLIDE`).
+
+    ⚠️ **Et depuis le quai de l'île** : on y arrive par l'eau, jamais à pied,
+    et une planche de son quai n'est pas « enfermée » pour autant — c'est
+    l'autre terre ferme, et elle se juge depuis sa chaloupe."""
     sol, L, H = ville["sol"], ville["largeur"], ville["hauteur"]
     bloque = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
-    depart = (ville["apparition"]["joueur"]["x"] // 16, ville["apparition"]["joueur"]["y"] // 16)
-    vus, pile = {depart}, [depart]
+    departs = [(ville["apparition"]["joueur"]["x"] // 16, ville["apparition"]["joueur"]["y"] // 16)]
+    for amarre in ville["ile"]["amarrages"]:
+        departs += [n for n in ((amarre["x"] + 1, amarre["y"]), (amarre["x"] - 1, amarre["y"]),
+                                (amarre["x"], amarre["y"] + 1), (amarre["x"], amarre["y"] - 1))
+                    if sol[n[1]][n[0]] == "Q" and n not in bloque]
+    vus, pile = set(departs), list(departs)
     while pile:
         x, y = pile.pop()
         for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):

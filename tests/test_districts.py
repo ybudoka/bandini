@@ -153,9 +153,14 @@ def test_le_pont_est_le_seul_lien_CARROSSABLE_vers_la_pointe():
 
 
 def test_la_baie_n_a_ni_rue_ni_batiment():
-    z = ZONES["baie"]
+    """⚠️ Hors de l'île, qui a sa chapelle et ses maisons, et ses juges à elle
+    (`test_ile`) : aucune rue ne la relie, et c'est là que ça se juge."""
+    z, ile = ZONES["baie"], CARTE["ile"]
     for y in range(z["y"] + 4, z["y"] + z["h"] - 4):
         for x in range(z["x"] + 4, z["x"] + z["l"] - 4):
+            if ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]:
+                assert CARTE["voie"][y][x] == ".", f"une rue traverse l'ile en {(x, y)}"
+                continue
             assert CARTE["voie"][y][x] == ".", f"une rue traverse la baie en {(x, y)}"
             assert CARTE["sol"][y][x] in "~s", f"du bati dans la baie en {(x, y)}"
 
@@ -190,7 +195,7 @@ def test_les_zones_de_district_ne_se_chevauchent_pas():
 @pytest.mark.parametrize("graine", [3, 777, 20260913])
 def test_une_autre_graine_garde_la_ville_d_un_seul_tenant(graine):
     ville = carte.generer(graine=graine)
-    assert len(carte.composantes_marchables(ville)) == 1
+    assert all(len(groupes) == 1 for groupes in carte.composantes_par_terre(ville).values())
     sans_aller, sans_retour = carte.voies_bloquees(ville)
     assert not sans_aller and not sans_retour
     # ⚠️ Le filet, pas un echec : une cour refermee par deux gabarits redevient

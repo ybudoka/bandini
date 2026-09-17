@@ -5988,6 +5988,14 @@ def test_deux_chars_qui_tournent_a_gauche_ne_se_bloquent_pas(banc):
         const boite = function (v) { return v.x >= inter.x * T && v.x < (inter.x + inter.l) * T && v.y >= inter.y * T && v.y < (inter.y + inter.h) * T; };
         let dansLaBoiteEnsemble = 0, sortis = 0;
         for (let i = 0; i < 2400; i++) {
+            // ⚠️ LE JOUEUR NE SE FAIT PAS RENVERSER : il regarde a une tuile de la
+            // boite, un des deux chars pouvait le faucher, et il se reveillait a
+            // l'hopital — `Monde.carte` devenait la PIECE, `estRoute` repondait non
+            // sur de l'asphalte, et le juge accusait le trafic. Mesure le 17 sept.
+            // 2026 : 1 graine sur 40 tombait deja ainsi, et l'Ile-aux-Corneilles
+            // (quarante decors de plus, donc d'autres numeros d'entite) en changeait
+            // seulement laquelle. C'est la parade du juge des amuseurs.
+            j.invincible = 60;
             o.frame(1);
             if (boite(a) && boite(b)) dansLaBoiteEnsemble++;
         }

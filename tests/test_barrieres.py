@@ -135,7 +135,12 @@ def test_aucune_barriere_n_enferme_la_planque_ni_un_lieu_de_mission(ville):
     # Et ce qui ne rouvre jamais tout seul (`apres`) n'enferme AUCUN lieu.
     fixes = [b for b in pietons if "apres" in b["condition"]]
     vus = atteignables(ville, fixes)
+    ile = ville["ile"]
     for slug, p in points.items():
+        # ⚠️ Sauf l'île : on n'y va pas à pied, par construction, et aucune
+        # barrière ne la touche (`test_ile`).
+        if ile["x"] <= p["x"] < ile["x"] + ile["l"] and ile["y"] <= p["y"] < ile["y"] + ile["h"]:
+            continue
         assert (p["x"], p["y"]) in vus, f"{slug} attend une mission pour etre atteignable a pied"
     # Un lieu enferme par une barriere d'heure rouvre le jour ou la nuit : on
     # le tolere, sauf pour un lieu de mission.
