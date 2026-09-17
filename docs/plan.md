@@ -212,7 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
-| Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (1re vague livrée : l'appel d'une mission ; la 2e : la sonnerie baisse, et le Clairon l'attend) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
+| Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
@@ -11425,16 +11425,27 @@ marque plus qu'au **décrochage** : fermer l'onglet pendant que ça sonne refait
 plus tard au lieu de le perdre. Juge : `test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie`
 (deux mutations le font rougir).
 
-⬜ **2e vague en cours** — retour de Martin, sur le narrateur : « il y a une sonnerie trop
-forte avant qu'il parle ». Deux choses, et les deux sont mesurées :
+**2e vague livrée** (17 sept. 2026) — retour de Martin, sur le narrateur : « il y a une
+sonnerie trop forte avant qu'il parle ». Deux choses, mesurées à l'`ebur128` (le fichier, fois
+le volume du catalogue — le `volume` seul ne dit rien : la sonnerie est à 0,28 et la voix à
+0,85, et c'est pourtant la sonnerie qui sortait plus fort, son fichier étant 9 dB plus haut) :
 
-- **Elle sort au niveau d'un klaxon.** `ffmpeg ebur128` sur le fichier, fois le volume du
-  catalogue : téléphone −14,3 LUFS, klaxon −13,1, **la voix −20,8** — la sonnerie passe 6,5 dB
-  AU-DESSUS de la voix qui la suit, et c'est un aigu électronique, ce qui perce encore plus.
-- **Le Clairon part dans la même image que la sonnerie de Sal.** Au lever du jour,
-  `nuitDeLaDette()` fait sonner le rappel du shylock et `nouveauJour()` enchaîne aussitôt sur
-  la manchette lue par le narrateur : le combine sonne par-dessus ses premiers mots. Même
-  règle que l'appel — la manchette attend la fin de la sonnerie.
+- **Elle sortait au niveau d'un klaxon.** Téléphone −14,3 LUFS, klaxon −13,1, **la voix
+  −20,8** : 6,5 dB AU-DESSUS de celui qui parle ensuite, et c'est un aigu électronique, ce qui
+  perce encore plus. À **0,28** elle tombe à −21,2 — juste sous la voix, bien au-dessus d'une
+  porte de commerce (−22,9). Juge :
+  `test_la_sonnerie_du_telephone_ne_couvre_pas_la_voix_qui_la_suit`.
+- **Le Clairon partait dans la même image que la sonnerie de Sal.** Au lever du jour,
+  `nuitDeLaDette()` fait sonner le rappel du shylock et `nouveauJour()` enchaînait aussitôt sur
+  la manchette : le combiné sonnait par-dessus ses premiers mots. `nuitDeLaDette` rend
+  maintenant les images de sa sonnerie, et la manchette attend dans `B.manchette` que le
+  combiné se taise (`Missions.maj`). Juge :
+  `test_le_narrateur_du_matin_attend_la_fin_de_la_sonnerie`.
+- ⚠️ **Ce qui n'est PAS corrigé, et qui se mesure aussi** : l'encadré du Clairon tient 420
+  images (7 s) alors que 7 des 15 manchettes lues durent plus longtemps — jusqu'à 9,7 s pour
+  la leçon du klaxon. Le narrateur finit donc sa phrase sans texte à l'écran. À reprendre le
+  jour où la boîte de dialogue saura attendre la voix, comme une réplique de mission le fait
+  déjà (`Histoire.majCinema`).
 
 ### M1 : le char dort dans la ruelle avant qu'on l'y montre
 
