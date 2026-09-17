@@ -198,6 +198,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les petits manèges à l'échelle de la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (2 vagues : le standing se déclare et la saleté se déplace ; le zonage se lit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
+| On fait un tour dans le petit train, la montagne russe et la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10715,6 +10716,17 @@ Juges, chacun vu rouge sans sa règle : `test_les_defis_ont_un_panneau_et_un_chr
 - ⚠️ Trouvé le même jour et pas dans cette ligne : l'appui d'ACTION qui lance une intro
   saute sa première réplique (`Combat.maj` ouvre le dialogue, `Histoire.maj` relit le même
   appui dans la même image).
+
+### On fait un tour dans le petit train, la montagne russe et la grande roue
+
+demande de Martin : « je veux aussi que le petit train soit dans le même style que les
+véhicules et qu'on puisse y faire un tour. pareil pour la montagne russe et la grande roue
+». Aujourd'hui, les wagons du petit train et les chariots de la montagne russe sont des
+grilles plates qu'on fait pivoter (`foire.js`), les nacelles de la roue sont peintes dans
+son décor (`sprites.js`), et la 4e vague de la foire avait tranché « on n'y monte pas ».
+Deux choses à livrer : **le style des véhicules** (le volume, à la manière de `enVolume`)
+pour les trois, et **un tour** — monter à la touche ACTION, rester assis le temps d'une
+boucle, redescendre où l'on est monté.
 
 ### Quatre activités que le jeu n'a pas
 
