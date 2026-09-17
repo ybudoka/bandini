@@ -204,6 +204,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (3 vagues : le standing et la saleté ; le zonage ; les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
+| Le tableau des scores s'en va | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
@@ -11279,6 +11280,17 @@ pied ; en char arrêté devant la porte ; en char un peu en retrait) :
   (M4 et M3) et `test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit`. Trois mutations
   (sans `sansChar` ; l'escorte à la tuile la plus proche ; la voie à contresens préférée) font
   chacune rougir la sienne, M3 et M4 séparément.
+
+### Le tableau des scores s'en va
+
+demande de Martin (17 sept. 2026), en réponse à la dette « un score ne s'envoie pas hors
+ligne » : « le score pourrait être complètement enlevé ». **Tout** s'en va — le bouton
+MEILLEURS SCORES du titre, la ligne ENVOYER MON SCORE du bilan, l'écran du pseudo,
+`/api/scores`, `app/scores.py` et son fichier JSON, le pseudo de la partie. La 4e vague de
+M14 (« les scores déménagent dans la base ») tombe avec, et la dette aussi.
+
+- ⚠️ Les **règles du pseudo** (`pseudo_propre`, `PSEUDO_MAX`) vivaient dans `scores.py` et
+  servent aux **comptes de M14** : elles déménagent chez eux avant la suppression
 
 ### M16 Cent missions
 
