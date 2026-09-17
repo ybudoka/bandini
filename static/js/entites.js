@@ -3027,6 +3027,9 @@ const Entites = (function () {
 
   function majJoueur(j) {
     if (j.dansVehicule) return;
+    // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
+    // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).
+    if (j.aBord) { j.vx = 0; j.vy = 0; j.nage = false; return; }
     if (majEnjambe(j)) return;                        // en haut d'une cloture : rien d'autre
     // ⚠️ La ROUE D'ARMES le cloue comme un dialogue : une seule direction et
     // un seul role a la fois — sans ca, choisir son arme au stick ferait
@@ -4237,7 +4240,7 @@ const Entites = (function () {
     // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
     // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
     // a l'ecran, et chacun porte son peintre.
-    if (!B.interieur) Foire.ajouterVisibles(visibles, cx, cy);
+    if (!B.interieur) { Foire.ajouterVisibles(visibles, cx, cy); Traversier.ajouterVisibles(visibles, cx, cy); }
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;

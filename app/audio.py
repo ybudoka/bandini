@@ -355,6 +355,12 @@ CATALOGUE: list[Echantillon] = [
               "hydraulic whine, the bin shaken and trash tumbling into the metal "
               "hopper, then the bin set back down on the curb, outdoors, "
               "no voices, no music"),
+    # Le traversier (M12) : sa corne au départ et à l'arrivée. Posée dans le monde,
+    # on l'entend de loin sur l'eau.
+    _e("corne", "Corne du traversier", duree_s=4.0, volume=0.45, influence=0.6,
+       prompt="a large car ferry ship horn sounding two long deep blasts across a "
+              "calm harbour, low booming tone echoing over the water, outdoors, "
+              "no voices, no music"),
     # La rumeur : une BOUCLE, dont le volume suit la distance au chantier le
     # plus proche. C'est elle qui dit « il y a un chantier par là » avant qu'on
     # le voie.

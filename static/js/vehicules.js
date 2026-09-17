@@ -1953,6 +1953,9 @@ const Vehicules = (function () {
     for (let i = B.entites.length - 1; i >= 0; i--) {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
+      // ⚠️ A BORD DU TRAVERSIER, un char ne roule pas, ne brule pas et ne coule pas :
+      // la coque le porte au-dessus de l'eau (`Traversier.maj` le pose au pixel).
+      if (v.aBord) continue;
       majEtatDuChar(v);
       if (v.etat === 'epave') { if (v.epaveT <= 0 && !Entites.visibleAEcran(v.x, v.y, 40)) Entites.retirer(v); continue; }
       // ⚠️ UNE CHARGE NE CONDUIT PAS. `majCrochet` vient de la POSER, au pixel

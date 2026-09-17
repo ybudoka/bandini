@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (onze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (douze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -617,6 +617,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
 | `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
+| `traversier.py` | le **traversier** (M12) : les deux quais (une coque de 8 × 3 dans l'eau profonde, des tuiles de rive carrossables qui touchent le pont, une rue à côté) et le couloir d'eau libre qui les relie, hors de la ceinture de l'île et loin des amarrages ; l'**horaire** (départ à l'heure juste) ; ne pose rien, ne tire aucun dé | `test_traversier.py`, `test_traversier_js.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
@@ -655,6 +656,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9 | `vehicules.js` | physique arcade (accélération, friction, braquage selon vitesse, adhérence/dérive, frein à main), **chaîne de cercles** pour les collisions (tuiles, véhicules, piétons), sous-pas au-dessus de 3 px/image, monter/descendre/éjecter, trafic sur le champ de direction (regard devant, feux, choix de sortie **par la voie qui va dans son sens** — d'où le virage à gauche après le croisement —, ralentissement avant le coin, **déport dans la voie d'à côté** sur un boulevard pour dépasser ou contourner un piéton, déblocage par patience), dégâts/fumée/feu/explosion, rampes (`z`), alarmes, klaxon. Sprites : **un seul dessin** par char, 32 caps cuits par rotation |
 | 9b | `autobus.js` | les **lignes d'autobus** : l'horaire (la place de chaque autobus sur sa boucle ne dépend que de l'heure de la partie), la naissance **hors de l'écran** sans un dé du jeu, le conducteur `'ligne'` (le tracé tuile par tuile, le feu guetté une tuile avant la ligne d'arrêt, l'abribus servi si quelqu'un attend, si on l'a demandé ou si ça se voit) ; le **passager** (`j.passager` + `j.dansVehicule` sans le volant) : monter et payer à l'arrêt, demander l'arrêt, descendre sur le trottoir de l'abri ; l'attente affichée à l'abribus |
 | 9c | `metro.js` | le **métro** : l'horaire des rames (une boucle, la place de chaque rame ne dépend que de l'heure), la descente par l'édicule (3 $, refusée si recherché), la rame qui entre, s'arrête et repart au quai (peinte par-dessus les deux rangées de tunnel de `metro_quai`), le tunnel qui défile dans les fenêtres de la rame, les portes qui ne s'ouvrent qu'en station, et `B.exterieur` recalé sur l'édicule de la station où l'on est — on remonte ailleurs qu'on est descendu ; la ligne en pointillé sur la grande carte |
+| 9d | `traversier.js` | le **traversier** : sa place ne dépend que de l'heure (`placeA`, un trapèze de vitesse), le pont posé dans la carte à quai (`poser`/`lever`, chaque octet rendu), l'embarquement de ce qui est sur le pont au départ (`aBord` : les chars et le joueur suivent la coque au pixel, un passant égaré est remis sur le quai), Radio-Traversier à bord, la corne, la ligne du HUD, la coque et les panneaux triés avec les passants (comme la foire), le pointillé de la grande carte |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A\*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital, le **refuge** (`auRefuge` : sur l'île, aucun agent, l'hélico repart, rien ne fait monter les étoiles) |
 | 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce |
 | 12 | `foire.js` | la foire qui roule : **le petit train** (sa voie en pixels depuis les tuiles `T`, l'arrêt devant quelqu'un, `bloquer` — on ne traverse pas un wagon) et **la montagne russe** (la voie 3D tracée par Python, conduite par l'énergie, deux moitiés cuites) ; rien dans `B.entites`, trié au dessin par `ajouterVisibles` |
@@ -710,7 +712,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py
       bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
@@ -729,7 +731,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8478,6 +8480,46 @@ qui bouge dans la rue, et une raison de le dépasser.
   (`test_eboueurs.py`, `test_eboueurs_js.py`), **19 mutations toutes rouges** — deux d'entre
   elles restaient vertes avant qu'on ajoute la caméra en avance et le camion de l'après-midi
   là où l'horaire le mettrait.
+
+✅ **12e vague livrée** (17 sept. 2026) — *le traversier*. Les Quais ↔ La Pointe, à l'heure :
+départ des Quais aux heures paires, de La Pointe aux impaires, douze secondes de traversée
+au nord de l'île et sept à quai. On y monte **en roulant** — en char ou à pied, par le bout
+de rue qui touche le pont — et à l'heure dite, tout ce qui est sur le pont part avec lui. Ce
+qui n'y est pas reste à quai : il part sans toi.
+
+- ⚠️ **Python trouve les quais, le navigateur traverse** (`traversier.py`, `traversier.js`)
+  : sur la ville finie, une coque de 8 × 3 tuiles (deux voies de pont, la cabine au sud)
+  cherche où accoster — de l'eau profonde dessous, au moins deux tuiles de rive carrossables
+  qui touchent le PONT (jamais la cabine), une rue à côté, le quartier à trois tuiles — puis
+  la traversée la plus courte dont le couloir est de l'eau libre, hors de la ceinture de
+  l'île et à plus d'une tuile d'un amarrage. Sur la graine livrée : **(154, 117) → (278,
+  121)**, 124 tuiles, et une chaloupe amarrée à La Pointe a repoussé le quai de trois
+  rangées. Aucun dé ; la ville est la même avec ou sans (un juge compare).
+- ⚠️ **À quai, le pont est une vraie tuile.** `poser` marque la coque dans la carte (le pont
+  sol carrossable ET chaussée — un flâneur de la rive n'y descend pas se promener —, la
+  cabine un mur), `lever` rend chaque octet noté : un juge compare `solide`, `route` et
+  `passage` avant et après deux allers-retours. Au départ, les chars et le joueur sur le
+  pont passent **à bord** (`aBord`) : `Vehicules.maj` et `Entites.majJoueur` les sautent, la
+  coque les porte au pixel — le char ne coule pas, le joueur ne nage pas. Un passant égaré
+  sur le pont est remis sur le quai. Une pièce où l'on entre pendant le départ ne laisse pas
+  de pont fantôme sur l'eau.
+- À bord, **Radio-Traversier** joue enfin — la station qui attendait le traversier depuis
+  M9, « sa musique de pont » ; descendu à pied, elle se tait, au volant, la radio du char
+  reprend. La corne (ElevenLabs, `corne`, avec son repli synthétisé) sonne au départ et à
+  l'arrivée, de loin sur l'eau. Au bout du quai, un panneau bleu et la ligne du bas : «
+  TRAVERSIER POUR LA POINTE · DÉPART 14:00 », « DÉPART DANS 5 S » à quai, « LA POINTE DANS
+  12 S » à bord ; la grande carte trace la traversée en pointillé.
+- ⚠️ **Il ne double pas les chars** : la vitesse de pointe (un trapèze — il prend de l'élan
+  et freine en arrivant) est jugée sous celle d'une berline. ⚠️ Et le banc avance à **pas
+  fixe** : une image du banc peut n'en faire aucun, et le juge lisait la carte d'avant le
+  départ — deux images après chaque réglage d'heure. ⚠️ Le filtre « la coque dans l'eau »
+  est redondant avec le couloir mais c'est celui de la vitesse (20 ms au lieu de 3 min 30) :
+  un juge de durée le tient.
+- **Ce qu'il ne fait pas encore** : il ne s'arrête pas à L'Île-aux-Corneilles (c'est la 2e
+  vague de l'île), pas de billet, et le pont ne porte que ce qu'on y amène — aucun char du
+  trafic ne prend le traversier. **15 juges neufs** (`test_traversier.py`,
+  `test_traversier_js.py`), **22 mutations toutes rouges** — celle de la coque posée sur la
+  terre ne l'est que par le juge de durée.
 
 ### M14 Meta
 

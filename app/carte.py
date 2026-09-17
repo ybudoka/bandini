@@ -6330,6 +6330,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # naissent dans le navigateur. Aucun de.
     from . import eboueurs as eboueurs_mod
     ville["eboueurs"] = eboueurs_mod.tracer(ville)
+    # ⚠️ LE TRAVERSIER, sur la ville FINIE lui aussi (M12) : il cherche deux quais et
+    # le couloir d'eau libre entre eux, et ne pose rien. Aucun de.
+    from . import traversier as traversier_mod
+    ville["traversier"] = traversier_mod.tracer(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

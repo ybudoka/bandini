@@ -462,6 +462,18 @@ const Son = (function () {
     /** La rumeur du chantier le plus proche, TENUE a chaque image comme le jet
         d'une borne : `volume` 0 = on se tait. Faute de fichier, un grondement
         sourd toutes les quinze images, qui se recouvre. */
+    /** La corne du traversier, posee en (x, y) : l'echantillon s'il est charge, sinon
+        deux longs coups graves. Rend le volume (0 = trop loin). */
+    corne: function (x, y, portee) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = portee || 900;
+      const v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge('corne')) return jouerA('corne', x, y, p);
+      for (let k = 0; k < 2; k++) { ton(98, 1.1, 'sawtooth', 0.09 * v, 1, k * 1.5); ton(147, 1.1, 'square', 0.03 * v, 1, k * 1.5); }
+      return v;
+    },
     rumeur_chantier: function (volume) {
       const v = Math.max(0, Math.min(1, volume || 0));
       if (!estCharge('chantier')) {

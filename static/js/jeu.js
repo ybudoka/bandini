@@ -49,6 +49,7 @@ const Jeu = (function () {
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
     B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
+    Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -631,6 +632,7 @@ const Jeu = (function () {
         Entites.maj();
         Combat.maj();
         Vehicules.maj();
+        Traversier.maj();                 // apres les chars : ce qui est a bord suit la coque
         Police.maj();
         Missions.maj();
         Chantiers.maj();
@@ -894,7 +896,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,
