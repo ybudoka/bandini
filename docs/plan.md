@@ -203,7 +203,7 @@ ne bougent pas quand l'ordre de travail change.
 | Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (3 vagues : le standing et la saleté ; le zonage ; les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** (1re vague livrée : la police) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
-| Qui attend l'autobus monte dedans | ⬜ **à faire** | — | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
+| Qui attend l'autobus monte dedans | ⬜ **en cours** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
