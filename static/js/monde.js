@@ -57,8 +57,11 @@ const Monde = (function () {
   //: Les nids-de-poule, indexes une fois : « x,y » -> vrai. Les lire dans un
   //: tableau a chaque image pour chaque char, c'est quatre-vingt-dix
   //: comparaisons par char et par image, pour une tuile.
-  let nids = new Set();
-  function nidDePoule(tx, ty) { return nids.has(tx + ',' + ty); }
+  //: ⚠️ L'index vit SUR LA CARTE (`carte.nids`), pas dans le module. Une piece
+  //: passe par `charger`, qui le remplacait par le sien (vide), et `restaurer` ne
+  //: rend que la carte : jusqu'au 17 sept. 2026, entrer dans n'importe quel
+  //: batiment effacait tous les nids de la ville jusqu'au rechargement.
+  function nidDePoule(tx, ty) { return !!(carte && carte.nids && carte.nids.has(tx + ',' + ty)); }
 
   //: Le STANDING d'une tuile (des quartiers qu'on reconnait) : 'cossu',
   //: 'ordinaire', 'pauvre', ou null sur l'eau et dans une piece. ⚠️ Python l'a
@@ -90,19 +93,19 @@ const Monde = (function () {
 
   //: Le coeur de la ville — la zone vers laquelle le trafic du matin converge
   //: (`trafic.pointe.vers`). Cherche une fois : les zones ne bougent pas.
-  let coeur = null;
+  //: ⚠️ Toujours celui de la VILLE, et garde sur elle : demande depuis une
+  //: piece, il se cherchait dans la piece (aucune zone) et y restait.
   function coeurDeLaVille() {
-    if (coeur) return coeur;
+    const ville = carte.ville || carte;
+    if (ville.coeur) return ville.coeur;
     const slug = B.defs.conduite.trafic.pointe.vers;
-    const z = (carte.zones || []).find(function (q) { return q.slug === slug; });
-    coeur = z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT } : { x: carte.pxW / 2, y: carte.pxH / 2 };
-    return coeur;
+    const z = (ville.zones || []).find(function (q) { return q.slug === slug; });
+    ville.coeur = z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT } : { x: ville.pxW / 2, y: ville.pxH / 2 };
+    return ville.coeur;
   }
 
   function charger(def) {
     const w = def.largeur, h = def.hauteur;
-    nids = new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; }));
-    coeur = null;
     const solide = new Uint8Array(w * h);
     const route = new Uint8Array(w * h);
     const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
@@ -161,6 +164,7 @@ const Monde = (function () {
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
+      nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
       standing: def.grille && def.grille.standing ? {
         lettres: def.grille.standing,
         x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),

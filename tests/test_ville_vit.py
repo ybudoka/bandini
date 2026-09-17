@@ -265,6 +265,46 @@ def test_un_nid_secoue_et_coute_deux_points_une_seule_fois(banc, paquet):
     assert r["encore"] == ph["nid_degats"], "le répit passé, le nid ne se sent plus : %s" % r
 
 
+def test_un_nid_secoue_encore_apres_une_porte(banc, paquet):
+    """⚠️ Vu le 16 sept. 2026 : après être entré dans n'importe quel bâtiment et
+    ressorti, plus un seul nid ne secouait la ville jusqu'au rechargement. Les
+    nids vivaient dans le MODULE de `monde.js` ; une pièce passe par `charger`,
+    qui les remplaçait par les siens (aucun), et `restaurer` ne rendait que la
+    carte. Le cœur de la ville, pareil : demandé depuis une pièce, il restait au
+    milieu de la pièce. On passe par la vraie porte, fondus compris."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, TT = L.TT, c = L.Monde.carte;
+        const nid = c.def.nids_de_poule[0];
+        const coeur = L.Monde.coeurDeLaVille();
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * TT + 8; j.y = (porte.y + 1) * TT + 10;
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Jeu.entrer(porte);
+        o.fondu();
+        const out = { dedans: !!L.B.interieur, coeurDedans: L.Monde.coeurDeLaVille() };
+        L.Jeu.sortir();
+        o.fondu();
+        out.dehors = L.B.interieur === null;
+        out.indexe = L.Monde.nidDePoule(nid.x, nid.y);
+        const apres = L.Monde.coeurDeLaVille();
+        out.memeCoeur = apres.x === coeur.x && apres.y === coeur.y;
+        out.coeurDedansEstLeSien = out.coeurDedans.x === coeur.x && out.coeurDedans.y === coeur.y;
+        // Et un char qui roule dessus le sent.
+        const v = o.char('auto', 0, 0, 0);
+        v.x = nid.x * TT + 8; v.y = nid.y * TT + 8; v.vitesse = 2; v.vx = 2; v.vy = 0; v.nidT = 0;
+        const vie = v.vie;
+        L.Vehicules.majNidDePoule(v);
+        out.perdu = vie - v.vie;
+        return out;
+    }""")
+    assert r["dedans"] and r["dehors"], f"l'aller-retour par la porte n'a pas marché : {r}"
+    assert r["indexe"] is True, "ressorti d'une pièce, la ville n'a plus de nids-de-poule"
+    assert r["perdu"] == vehicules.PHYSIQUE["nid_degats"], f"le nid ne se sent plus : {r}"
+    assert r["memeCoeur"], "le cœur de la ville est resté dans la pièce"
+    assert r["coeurDedansEstLeSien"], "demandé depuis une pièce, le cœur de la ville est celui de la pièce"
+
+
 # --- Les entraves du jour ----------------------------------------------------
 
 
