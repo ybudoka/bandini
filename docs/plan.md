@@ -197,6 +197,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le serveur ne redémarre plus pour un test | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#le-serveur-ne-redémarre-plus-pour-un-test) |
 | Le poing américain chez Gus | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#le-poing-américain-chez-gus) |
 | Les petits manèges à l'échelle de la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
+| Quatre trous dans les missions | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10277,6 +10278,22 @@ point `acheter`, la touche ACTION, le sac, puis « DEJA A TOI »).
 retour de Martin, captures à l'appui : « grossis ça pour que ce soit proportionnel avec les
 autres manèges ». Les tasses (30 × 26 px), les chaises volantes (34 × 34) et le carrousel
 (34 × 30) ont l'air de jouets à côté de la grande roue (84 × 92) et de la montagne russe.
+
+### Quatre trous dans les missions
+
+demande de Martin (17 sept. 2026), après une vérification des cinq missions et des trois
+défis joués de bout en bout au banc, au bouton. Quatre correctifs. Tour du Faubourg et
+Livraison sans bosse ne se gagnaient jamais : le panneau ne s'ouvre qu'à pied, et sans char
+ces défis ratent à l'image suivante (« SANS CHAR, PAS DE TOUR ») — le chrono ne partira
+qu'une fois dans le char. Un char qui explose avec le joueur au volant restait `stationne` :
+`exploser()` pose l'épave, puis `descendre()` réécrit l'état ; la carcasse se remontait et
+explosait une deuxième fois, et M3 et M4 ne rataient pas quand leur char sautait. Depuis
+l'île, la chapelle Sainte-Anne est une destination possible du taxi et de la pizza, et on ne
+l'atteint qu'à la nage. Le char de M1 dort à six tuiles du garage : il dormira plus loin.
+
+- ⚠️ Trouvé le même jour et pas dans cette ligne : l'appui d'ACTION qui lance une intro
+  saute sa première réplique (`Combat.maj` ouvre le dialogue, `Histoire.maj` relit le même
+  appui dans la même image).
 
 ### Quatre activités que le jeu n'a pas
 
