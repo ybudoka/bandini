@@ -199,7 +199,7 @@ ne bougent pas quand l'ordre de travail change.
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
-| Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
+| Le client du taxi attend au bord de la route, et une flèche y mène | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
@@ -739,7 +739,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -10780,6 +10780,32 @@ pas de porte une fois sur trois, sinon n'importe quelle tuile marchable hors rou
 une arrière-cour), à 40 px près d'une chaussée ou à dix tuiles. Et la flèche au bord de
 l'écran comme celle de la mini-carte ne suivent que `Histoire.cible()` : le boulot n'a qu'un
 point qui clignote sur la mini-carte, et seulement s'il tombe dans son cadre.
+
+**Livré.** Le client naît sur un **trottoir collé à une voie** où roule un char, et que CE
+char rejoint (`Entites.placeAuBordDeLaRoute`, la route de `atteignableEnChar`) : tiré parmi
+toutes les places de la couronne de naissance, hors de l'écran, sans bloquer une porte ni
+tomber sur un meuble ; deux fois plus loin si la couronne n'en a pas. Il regarde la rue et
+hèle. Le blessé de l'ambulance aussi, par la même machine. Un taxi sur l'île ne trouve
+personne et le dit (« PERSONNE N'ATTEND DANS LE COIN ») au lieu de poser un client de
+l'autre côté de l'eau. Le client ne s'oublie plus quand on s'éloigne (`peupler`) : prendre
+le mauvais coin de rue faisait tomber la course. Les flèches : au bord de l'écran, la flèche
+et ses mètres vont au **boulot** quand il y en a un (bleu vers le client, or vers la course)
+— l'objectif de l'histoire reste sur la mini-carte ; au bord de la mini-carte, une flèche
+quand le client ou la course sort du cadre ; sur la carte plein écran, un pointeur qui
+oscille au-dessus (`Hud.cibleDuBoulot`, lu par `Hud.marqueurs()`). Regardé dans Chromium.
+
+Juges (`test_client_au_bord_de_la_route_js.py`), chacun vu rouge sans sa règle : le client
+attend sur le trottoir d'une rue que le char rejoint (seize départs, taxi et ambulance) ; il
+naît hors de l'écran et regarde la rue ; il attend quand on prend le mauvais coin de rue ;
+sur l'île, personne n'attend (sans la règle de la route, il naissait à 766 px, sur le
+continent) ; une flèche mène au client puis à la course (mutations : la flèche de l'écran
+rendue à l'histoire, la flèche de la mini-carte retirée).
+
+- ⚠️ Au bord de l'écran, UNE flèche : deux de deux couleurs, chacune avec ses mètres, se
+  marcheraient dessus au même bord. Un boulot pris pendant une mission cache donc la flèche
+  de la mission à l'écran, pas sur la mini-carte.
+- ⚠️ Sur la carte plein écran, pas de carré : les lieux sont des carrés, et ceux de « TES
+  PLACES » sont dorés comme la course — la capture l'a montré, pas un juge.
 
 ### La première réplique, et la ruelle de Ti-Guy
 

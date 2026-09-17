@@ -1199,7 +1199,24 @@ const Hud = (function () {
   /*: Ce que la derniere image a dessine pour se reperer : le joueur, l'objectif,
     et leur FORME. ⚠️ C'est la seule facon de juger un clignotement sans
     regarder l'ecran — les juges lisent ca, pas des pixels. */
-  let marqueurs = { joueur: null, cible: null };
+  let marqueurs = { joueur: null, cible: null, boulot: null, ecran: null };
+
+  //: Ce qu'on va chercher (le client, le blesse) : bleu. La destination : or.
+  const COULEUR_RAMASSE = '#6f9fd8', COULEUR_DESTINATION = '#e8b33c';
+
+  /** Le boulot en cours, comme un GPS : ou est le client, ou va la course.
+
+      ⚠️ Demande de Martin (17 sept. 2026) : « je veux les fleches pour savoir
+      ou trouver le client ». Le client n'avait qu'un point bleu qui clignotait
+      sur la mini-carte, et seulement s'il tombait dans son cadre : ni fleche au
+      bord de l'ecran, ni fleche au bord de la mini-carte — alors qu'un
+      objectif de mission avait les deux. */
+  function cibleDuBoulot() {
+    const b = Missions.boulot, c = b.cible;
+    if (!c) return null;
+    const ramasse = b.etape === 'ramasse';
+    return { x: c.x, y: c.y, nom: ramasse ? 'CLIENT' : (c.nom || ''), couleur: ramasse ? COULEUR_RAMASSE : COULEUR_DESTINATION };
+  }
 
   /** La couleur d'un lieu, prise dans les DONNEES (`carte.familles`).
 
@@ -1257,6 +1274,16 @@ const Hud = (function () {
       ctx.fillRect(x - demi, y + i, demi * 2 + 1, 1);
     }
     B.stats.rects += r * 2 + 1;
+  }
+
+  /** Un pointeur qui descend sur (x, y) : sa pointe y touche, un lisere sombre
+      autour pour qu'il se lise sur le bleu de l'eau comme sur le gris des blocs. */
+  function pointeur(ctx, x, y, couleur) {
+    ctx.fillStyle = '#101018';
+    for (let i = 0; i <= 4; i++) ctx.fillRect(x - 4 + i, y - 5 + i, 9 - 2 * i, 1);
+    ctx.fillStyle = couleur;
+    for (let i = 0; i <= 3; i++) ctx.fillRect(x - 3 + i, y - 4 + i, 7 - 2 * i, 1);
+    B.stats.rects += 9;
   }
 
   /** Une fleche qui POINTE, pour une cible hors du cadre. */
@@ -1325,13 +1352,28 @@ const Hud = (function () {
       }
     }
     // Le boulot : ce qu'on va chercher (bleu) ou la destination (or) clignote.
-    const cible = Missions.boulot.cible;
-    if (cible && (B.image >> 4) % 2 === 0) {
-      const bx = MINI.x + Math.round(cible.x / TT) - sx, by = MINI.y + Math.round(cible.y / TT) - sy;
+    // ⚠️ Hors du cadre, une FLECHE, comme l'objectif : un client ou une course
+    // hors de la mini-carte n'y laissait rien, pas meme de quel cote chercher.
+    const boulot = cibleDuBoulot();
+    marqueurs.boulot = null;
+    if (boulot) {
+      const bx = MINI.x + Math.round(boulot.x / TT) - sx, by = MINI.y + Math.round(boulot.y / TT) - sy;
       if (bx >= MINI.x && bx < MINI.x + MINI.l && by >= MINI.y && by < MINI.y + MINI.h) {
-        ctx.fillStyle = Missions.boulot.etape === 'ramasse' ? '#6f9fd8' : '#e8b33c';
-        ctx.fillRect(bx - 1, by - 1, 3, 3);
-        B.stats.rects++;
+        const bat = (B.image >> 4) % 2 === 0;
+        if (bat) {
+          ctx.fillStyle = boulot.couleur;
+          ctx.fillRect(bx - 1, by - 1, 3, 3);
+          B.stats.rects++;
+        }
+        marqueurs.boulot = { x: bx, y: by, forme: 'carre', visible: bat, dedans: true, couleur: boulot.couleur };
+      } else {
+        const cx = MINI.x + MINI.l / 2, cy = MINI.y + MINI.h / 2;
+        const angle = Math.atan2(by - cy, bx - cx);
+        const fx = borner(cx + Math.cos(angle) * MINI.l, MINI.x + 4, MINI.x + MINI.l - 5);
+        const fy = borner(cy + Math.sin(angle) * MINI.h, MINI.y + 4, MINI.y + MINI.h - 5);
+        flecheDeCarte(ctx, fx, fy, angle, boulot.couleur);
+        marqueurs.boulot = { x: Math.round(fx), y: Math.round(fy), forme: 'fleche', visible: true,
+                             dedans: false, angle: angle, couleur: boulot.couleur };
       }
     }
     // Le joueur par-dessus tout le reste : c'est lui qu'on cherche des yeux.
@@ -1413,6 +1455,19 @@ const Hud = (function () {
       const bat = (B.image % BATTEMENT_CIBLE) < BATTEMENT_CIBLE / 2;
       if (bat) losange(ctx, p.x, p.y, 3, gps.couleur || '#e8b33c');
       marqueurs.cible = { x: p.x, y: p.y, forme: 'losange', visible: bat, dedans: true };
+    }
+    // Le boulot : un POINTEUR pose au-dessus du client ou de la course.
+    // ⚠️ Pas un carre, comme sur la mini-carte : ici les lieux SONT des carres,
+    // et ceux de « TES PLACES » sont dores comme la course — le repere se
+    // perdait dans la legende. Il oscille d'un pixel au lieu de clignoter : on
+    // ne cache pas ce qu'on cherche.
+    const boulot = cibleDuBoulot();
+    marqueurs.boulot = null;
+    if (boulot) {
+      const p = pos(boulot.x, boulot.y);
+      const y = p.y - 4 - ((B.image >> 4) % 2);
+      pointeur(ctx, p.x, y, boulot.couleur);
+      marqueurs.boulot = { x: p.x, y: y, forme: 'pointeur', visible: true, dedans: true, couleur: boulot.couleur };
     }
     // Le joueur : le meme anneau que sur la mini-carte, en plus large — a un
     // demi-pixel par tuile, un carre blanc de 4 px se perd dans la ville.
@@ -1702,7 +1757,13 @@ const Hud = (function () {
         texte(ctx, ligne, x, y, B.defi ? '#7fc4ff' : '#e8b33c', 1);
         noter('objectif', x, y, l, 7);
       }
-      const gps = !B.interieur && j ? Histoire.cible() : null;
+      // ⚠️ UNE fleche au bord de l'ecran, et c'est le BOULOT qui la prend quand
+      // il y en a un : on a klaxonne pour ce client, c'est lui qu'on cherche.
+      // Deux fleches de deux couleurs, chacune avec ses metres, se marcheraient
+      // dessus au meme bord. L'objectif reste sur la mini-carte.
+      const boulotEcran = !B.interieur && j ? cibleDuBoulot() : null;
+      const gps = boulotEcran || (!B.interieur && j ? Histoire.cible() : null);
+      marqueurs.ecran = null;
       if (gps) {
         const dx = gps.x - j.x, dy = gps.y - j.y, d = Math.hypot(dx, dy);
         const sx = gps.x - B.cam.x, sy = gps.y - B.cam.y;
@@ -1715,6 +1776,8 @@ const Hud = (function () {
           ctx.lineTo(fx + Math.cos(a - 2.5) * 5, fy + Math.sin(a - 2.5) * 5); ctx.closePath(); ctx.fill();
           const m = Math.round(d / TT) + 'M';
           texte(ctx, m, borner(fx - Atlas.largeurTexte(m, 1) / 2, 2, VW - 20), borner(fy + 8, 30, VH - 20), gps.couleur || '#e8b33c', 1);
+          marqueurs.ecran = { x: Math.round(fx), y: Math.round(fy), angle: a, metres: Math.round(d / TT),
+                              couleur: gps.couleur || '#e8b33c', quoi: boulotEcran ? 'boulot' : 'histoire' };
         }
       }
       // Message.
@@ -1770,7 +1833,7 @@ const Hud = (function () {
 
   return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
-    legendeDeLaCarte, legendeDuZonage, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
+    legendeDeLaCarte, legendeDuZonage, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,

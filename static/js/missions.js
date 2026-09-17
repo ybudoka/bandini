@@ -496,19 +496,26 @@ const Missions = (function () {
       boulot.t = 0; boulot.etapesFaites = 0; boulot.gagne = 0;
       if (!sorte.ramasser || sorte.ramasser === 'crochet') { boulot.enRoute(v); return true; }
       boulot.client = boulot.poser(v, sorte.ramasser);
-      if (!boulot.client) { boulot.abandonner(); return false; }
+      if (!boulot.client) { boulot.abandonner('PERSONNE N’ATTEND DANS LE COIN'); return false; }
       Hud.message(sorte.ramasser === 'blesse' ? 'QUELQU’UN EST A TERRE' : 'UN CLIENT ATTEND');
       return true;
     },
 
-    /** Le quidam qu'on va chercher : un passant qui hele, ou un blesse. */
+    /** Le quidam qu'on va chercher : un passant qui hele, ou un blesse.
+
+        ⚠️ AU BORD DE LA ROUTE, sur le trottoir d'une voie que ce char rejoint
+        (`Entites.placeAuBordDeLaRoute`) — pas n'importe ou dans la bulle : on
+        le ramasse au volant, a 40 px, et un client dans un parc ne se ramasse
+        pas. Le blesse aussi : l'ambulance vient par la rue. Et plus de repli
+        « a 80 px devant le capot » : c'etait sur la chaussee, sous les roues. */
     poser: function (v, quoi) {
-      const place = Entites.placeDeNaissance();
-      const x = place ? place.x : v.x + Math.cos(v.angle) * 80;
-      const y = place ? place.y : v.y + Math.sin(v.angle) * 80;
-      const e = Entites.creerPieton(x, y, Entites.archetypeDeRue());
+      const atteint = atteignableEnChar(v);
+      const place = Entites.placeAuBordDeLaRoute(function (tx, ty) { return atteint(tx * TT + 8, ty * TT + 8, 1); });
+      if (!place) return null;
+      const e = Entites.creerPieton(place.x, place.y, Entites.archetypeDeRue());
       if (!e) return null;
       e.etat = 'fige'; e.cri = 9999; e.client = true;
+      e.plante = { x: e.x, y: e.y };
       if (quoi === 'blesse') {
         // ⚠️ Il est A TERRE, pas debout : c'est ce qui le distingue d'un
         // client de taxi a douze pixels de distance. Et il NE SE RELEVE PAS —
@@ -522,6 +529,7 @@ const Missions = (function () {
       } else {
         const civil = Histoire.personnage('civil');
         Entites.bulle(e, civil ? civil.heler : '');
+        Entites.regarder(e, place.rue.x - e.x, place.rue.y - e.y);     // il guette la rue
       }
       return e;
     },

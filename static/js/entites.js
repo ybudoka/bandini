@@ -580,6 +580,58 @@ const Entites = (function () {
     return null;
   }
 
+  //: Les voies ou un char roule droit : ni le carrefour (`+`), ni la ligne d'arret.
+  const VOIES_DROITES = { '<': 1, '>': 1, '^': 1, 'v': 1 };
+
+  /** Une place AU BORD DE LA ROUTE, hors ecran : une tuile de trottoir collee a
+      une voie ou roule un char. C'est la qu'on attend un taxi.
+
+      ⚠️ Demande de Martin (17 sept. 2026) : « il faut que les clients attendent
+      sur le bord de la route ». Le client naissait par `placeDeNaissance` — un
+      pas de porte, ou n'importe quelle tuile marchable hors route : un parc,
+      une ruelle, une arriere-cour. Le taxi klaxonnait pour quelqu'un qu'il ne
+      pouvait pas aller chercher.
+
+      `atteint(tx, ty)` dit si le char qui vient chercher le client rejoint
+      cette voie : depuis l'ile, le trottoir d'en face est a portee de klaxon et
+      pas de roues. Le tirage se fait sur TOUTES les places de la couronne, pas
+      au hasard d'un angle : une rue entre les blocs est une ligne mince, et un
+      angle tire au hasard tombe le plus souvent dans un bloc. Si la couronne de
+      naissance n'en a pas, on cherche deux fois plus loin — le client ne
+      s'oublie pas (`peupler`).
+      Rend `{ x, y, rue: { x, y } }` (le centre de la voie), ou null. */
+  function placeAuBordDeLaRoute(atteint) {
+    const carte = Monde.carte, j = B.joueur;
+    const couronnes = [[BULLE_NAISSANCE, BULLE_OUBLI - 60], [BULLE_NAISSANCE, 2 * BULLE_OUBLI]];
+    for (const c of couronnes) {
+      const rt = Math.ceil(c[1] / TT), jx = Math.floor(j.x / TT), jy = Math.floor(j.y / TT);
+      const places = [];
+      for (let ty = Math.max(1, jy - rt); ty <= Math.min(carte.h - 2, jy + rt); ty++) {
+        for (let tx = Math.max(1, jx - rt); tx <= Math.min(carte.w - 2, jx + rt); tx++) {
+          const x = tx * TT + 8, y = ty * TT + 8, d2 = dist2(x, y, j.x, j.y);
+          if (d2 < c[0] * c[0] || d2 > c[1] * c[1]) continue;
+          if (!Monde.estTrottoir(tx, ty) || !Monde.marchablePieton(tx, ty)) continue;
+          const rue = [[1, 0], [-1, 0], [0, 1], [0, -1]].find(function (d) {
+            const nx = tx + d[0], ny = ty + d[1];
+            return VOIES_DROITES[Monde.fleche(nx, ny)] && Monde.estChaussee(nx, ny) && atteint(nx, ny);
+          });
+          if (!rue) continue;
+          if (Monde.porteA(tx, ty - 1)) continue;             // on ne bouche pas une porte
+          places.push({ x: x, y: y, rue: { x: (tx + rue[0]) * TT + 8, y: (ty + rue[1]) * TT + 8 } });
+        }
+      }
+      // ⚠️ Les tests couteux APRES le tirage : l'ecran, la foule, le decor.
+      while (places.length) {
+        const k = Math.floor(B.rng() * places.length), p = places[k];
+        places[k] = places[places.length - 1]; places.pop();
+        if (visibleAEcran(p.x, p.y, 24) || !placeLibre(p.x, p.y)) continue;
+        if (decorAutour(p.x, p.y, 8).some(function (d) { return d.solide && !d.brise; })) continue;
+        return p;
+      }
+    }
+    return null;
+  }
+
   function visibleAEcran(x, y, marge) {
     const m = marge || 0;
     return x > B.cam.x - m && x < B.cam.x + VW + m && y > B.cam.y - m && y < B.cam.y + VH + m;
@@ -2537,11 +2589,13 @@ const Entites = (function () {
       const e = B.entites[i];
       if (e.type !== 'pieton') continue;
       const loin = dist2(e.x, e.y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI;
-      // Les personnages de l'histoire, les figurants d'une mission et les
-      // marchands derriere leur comptoir ne s'oublient pas : ils attendent.
+      // Les personnages de l'histoire, les figurants d'une mission, les
+      // marchands derriere leur comptoir et le client d'un boulot ne s'oublient
+      // pas : ils attendent. ⚠️ Le client s'oubliait : on prenait le mauvais
+      // coin de rue pour le rejoindre, et la course tombait « IL N'EST PLUS LA ».
       // ⚠️ Le marchand s'oubliait comme un passant : on debarquait de l'autobus
       // et les neuf comptoirs de la ville se vidaient a la premiere image.
-      if (loin && !e.personnage && !e.mission && !e.commerce && !visibleAEcran(e.x, e.y, 40)) {
+      if (loin && !e.personnage && !e.mission && !e.commerce && !e.client && !visibleAEcran(e.x, e.y, 40)) {
         // ⚠️ Un enfant oublie EMPORTE son ballon : sans ca, la balle reste a
         // voler toute seule au bord de l'eau, pour toujours.
         if (e.metier === 'baigneur') quitterLeJeu(e);
@@ -4363,7 +4417,7 @@ const Entites = (function () {
     briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,
-    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,
+    indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, placeAuBordDeLaRoute, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,
     naitreLesSortes, majSortes, SORTES, SPECTACLES, badauds, artistes, ouvrirLeSpectacle,
     naitreLesHommesSandwichs, enService, solliciter,
     semerDesArmesDeFortune, visibleAEcran,
