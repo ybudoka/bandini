@@ -7,6 +7,8 @@ et redescendent à l'arrêt qu'ils ont en tête ; à bord, l'autobus ne s'arrêt
 pour qui descend ; et pas un dé du jeu tiré dans tout ça.
 """
 
+import pytest
+
 #: Un arrêt au milieu de la ligne 2, une heure de jour où quelqu'un y attend, et le
 #: joueur à vingt et une tuiles du trottoir : hors de l'écran, dans la bulle.
 PREPARER = """
@@ -67,15 +69,24 @@ def test_des_gens_attendent_a_l_abribus_et_personne_ne_nait_sous_les_yeux(banc):
         assert r["attente"]["naissance_min_px"] - 40 <= n["distance"] <= r["attente"]["naissance_max_px"] + 40, n
 
 
-def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc):
+@pytest.mark.parametrize("graine", [None, 1, 2, 3, 4, 5])
+def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc, graine):
     """⚠️ Sans personne pour le voir : l'autobus s'arrête parce que quelqu'un attend,
     pas parce que le joueur regarde. Et ceux qui montent redescendent à l'arrêt
-    qu'ils ont en tête, deux à quatre arrêts plus loin."""
-    r = banc("function (L, o) {" + PREPARER + """
+    qu'ils ont en tête, deux à quatre arrêts plus loin.
+
+    ⚠️ **SUR PLUSIEURS GRAINES** (17 sept. 2026). Sur la seule graine du banc, ce
+    juge passait ; sur onze autres sur douze, il tombait — et presque toujours par
+    sa propre faute : il comptait ceux qui attendaient à l'image 40 (d'autres
+    arrivent pendant les deux minutes où l'autobus se fait attendre), gardait une
+    copie de surface de la liste des passagers (un passager dévié à l'arrêt suivant
+    modifiait l'objet copié), comptait un mort, et les descendus d'un autre arrêt.
+    Le seul vrai défaut était dans le jeu : un voyageur bousculé ne montait plus et
+    gardait sa marque (`Autobus.renoncerALAttente`)."""
+    reglage = "" if graine is None else "L.graine(%d);" % graine
+    r = banc("function (L, o) {" + PREPARER.replace("L.Jeu.commencer();", "L.Jeu.commencer();" + reglage) + """
         const p = preparer(L, o);
         for (let i = 0; i < 40; i++) { o.frame(1); tenir(L, p); }
-        const attendaient = L.Autobus.quiAttend(p.a.id);
-        const ids = attendaient.map(function (e) { return e.id; });
         let bus = null, arretVu = null;
         for (let i = 0; i < 9000 && !bus; i++) {
             o.frame(1); tenir(L, p);
@@ -83,48 +94,58 @@ def test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin(banc):
                 if (v.conducteur === 'ligne' && v.arretT > 0 && v.arret === p.a.id) { bus = v; arretVu = { visible: L.Entites.visibleAEcran(v.x, v.y, 0) }; }
             }
         }
-        if (!bus) return { attendaient: ids.length, bus: false };
-        let bord0 = bus.bord.length;
+        if (!bus) return { attendaient: 0, bus: false };
+        // Ceux qui attendent QUAND il s'arrête.
+        const ids = L.Autobus.quiAttend(p.a.id).map(function (e) { return e.id; });
+        const quartArrivee = L.Autobus.quartDHeure();
         for (let i = 0; i < 160 && bus.arretT > 0; i++) { o.frame(1); tenir(L, p); }
-        const restent = L.B.entites.filter(function (e) { return ids.indexOf(e.id) >= 0; }).length;
-        const montes = bus.bord.slice();
+        // Qui attend encore, vivant, alors qu'il est reparti.
+        const restent = L.B.entites.filter(function (e) { return ids.indexOf(e.id) >= 0 && e.vivant && e.attend === p.a.id; }).length;
+        // ⚠️ Des VALEURS, pas les objets : un passager dévié à l'arrêt suivant modifie le sien.
+        const montes = bus.bord.filter(function (b) { return b.depuis === p.a.id; }).map(function (b) { return { arret: b.arret, qui: b.qui }; });
+        // ⚠️ Ceux qui ont quitté leur poste pendant l'arrêt (bousculés) ne montent pas.
+        const renonce = ids.filter(function (id) {
+            const e = L.B.entites.find(function (q) { return q.id === id; });
+            return e && e.attend === undefined;
+        });
         // ⚠️ L'abribus ne se remplit pas derrière l'autobus dans le même quart d'heure :
         // l'autobus le marque servi.
-        const vide = { servi: (L.B.abribusServis || {})[p.a.id], quart: L.Autobus.quartDHeure() };
+        const vide = { servi: (L.B.abribusServis || {})[p.a.id], avant: quartArrivee, apres: L.Autobus.quartDHeure() };
         // On suit l'autobus jusqu'à ce que ceux d'ICI soient tous descendus (d'autres
         // montent en route : ils ne sont pas le sujet).
         const descentes = [];
-        const pietons0 = new Set(L.B.entites.filter(function (e) { return e.type === 'pieton'; }));
         const dIci = function () { return bus.bord.filter(function (b) { return b.depuis === p.a.id; }).length; };
         for (let i = 0; i < 12000 && dIci() && L.B.entites.indexOf(bus) >= 0; i++) {
             const avant = dIci();
             const attendus = bus.bord.filter(function (b) { return b.depuis === p.a.id; }).map(function (b) { return b.arret; });
+            // ⚠️ Les passants d'avant CETTE image : un descendu à un autre arrêt n'est pas le sujet.
+            const pietons0 = new Set(L.B.entites.filter(function (e) { return e.type === 'pieton'; }));
             p.j.x = bus.x; p.j.y = bus.y + 3 * 16; L.Monde.centrerCamera(p.j.x, p.j.y);
             o.frame(1);
             if (dIci() < avant) {
                 const a = L.Autobus.arret(bus.arret);
                 const nes = L.B.entites.filter(function (e) { return e.type === 'pieton' && e.descenduDe !== undefined && !pietons0.has(e); });
-                nes.forEach(function (e) { pietons0.add(e); });
                 descentes.push({ arret: bus.arret, attendu: attendus,
                                  nes: nes.map(function (e) { return Math.round(Math.hypot(e.x - (a.quai[0] * 16 + 8), e.y - (a.quai[1] * 16 + 8))); }) });
             }
         }
         const ordre = p.ligne.ordre.map(function (x) { return x.arret; });
-        return { attendaient: ids.length, bus: true, arretVu: arretVu, bord0: bord0, restent: restent, vide: vide,
-                 montes: montes.filter(function (b) { return b.depuis === p.a.id; }).map(function (b) { return b.arret; }),
-                 descentes: descentes, ordre: ordre, depart: p.a.id,
+        return { attendaient: ids.length, ids: ids, bus: true, arretVu: arretVu, restent: restent, vide: vide,
+                 montes: montes, renonce: renonce, descentes: descentes, ordre: ordre, depart: p.a.id,
                  attente: p.d.attente, resteABord: dIci() };
     }""")
-    assert r["attendaient"] >= 1
     assert r["bus"], "aucun autobus ne s'est arrêté à l'abribus où l'on attendait"
+    assert r["attendaient"] >= 1, "personne n'attendait quand l'autobus s'est arrêté : le juge ne mesure rien"
     assert r["arretVu"]["visible"] is False, "le juge doit regarder un arrêt HORS de l'écran"
     assert r["restent"] == 0, "l'autobus est reparti et il reste du monde sur le trottoir"
-    assert r["vide"]["servi"] == r["vide"]["quart"], "l'autobus n'a pas marqué l'abribus servi"
-    assert len(r["montes"]) == r["attendaient"], f"{r['attendaient']} attendaient, {len(r['montes'])} sont montés"
+    assert r["vide"]["avant"] <= r["vide"]["servi"] <= r["vide"]["apres"], f"l'autobus n'a pas marqué l'abribus servi : {r['vide']}"
+    montes = {m["qui"] for m in r["montes"]}
+    for qui in r["ids"]:
+        assert qui in montes or qui in r["renonce"], f"{qui} attendait et n'est pas monté ({r['montes']})"
     ordre, depart = r["ordre"], r["depart"]
-    for sortie in r["montes"]:
-        ecart = (ordre.index(sortie) - ordre.index(depart)) % len(ordre)
-        assert r["attente"]["arrets_min"] <= ecart <= r["attente"]["arrets_max"], (sortie, ecart)
+    for m in r["montes"]:
+        ecart = (ordre.index(m["arret"]) - ordre.index(depart)) % len(ordre)
+        assert r["attente"]["arrets_min"] <= ecart <= r["attente"]["arrets_max"], (m, ecart)
     assert r["resteABord"] == 0, f"personne n'est descendu : {r['descentes']}"
     for d in r["descentes"]:
         assert d["arret"] in d["attendu"], d

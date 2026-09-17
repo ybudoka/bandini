@@ -556,8 +556,21 @@ const Autobus = (function () {
 
   function quiAttend(id) {
     const out = [];
-    for (const e of B.entites) if (e.attend === id && e.type === 'pieton' && e.vivant) out.push(e);
+    for (const e of B.entites) if (e.attend === id && e.type === 'pieton' && e.vivant && e.etat === 'fige') out.push(e);
     return out;
+  }
+
+  /** Qui a quitte son poste — bouscule, il a fui, on l'a frappe — n'attend plus :
+      il redevient un passant. ⚠️ Il gardait sa marque : il errait avec, l'autobus
+      repartait sans lui, et l'abribus ne faisait naitre personne a sa place
+      (graines 1 et 5 du juge « qui attend monte », 17 sept. 2026). */
+  function renoncerALAttente() {
+    for (const e of B.entites) {
+      if (e.attend === undefined || e.type !== 'pieton' || (e.vivant && e.etat === 'fige')) continue;
+      delete e.attend;
+      e.metier = null;
+      e.plante = null;
+    }
   }
 
   /** Combien de gens attendent a cet arret, a ce quart d'heure. ⚠️ Zero s'il vient
@@ -611,6 +624,7 @@ const Autobus = (function () {
   function naitreALAbribus() {
     const d = donnees(), j = B.joueur, r = d && d.attente;
     if (!r || !j || B.interieur || (B.t % ATTENTE_REGARD) !== ATTENTE_DECALAGE) return;
+    renoncerALAttente();
     let nes = 0;
     for (const a of d.arrets) {
       const x = a.quai[0] * TT + 8, y = a.quai[1] * TT + 8, d2 = dist2(x, y, j.x, j.y);
@@ -662,7 +676,9 @@ const Autobus = (function () {
     const k = r.arrets_min + (hash2(e.id, v.arret) % (r.arrets_max - r.arrets_min + 1));
     const sortie = L.ordre[(rang + k) % L.ordre.length].arret;
     v.bord = v.bord || [];
-    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, graine: hash2(e.id, sortie) });
+    // `qui` : le passant qui est monte — c'est par lui qu'on sait que CELUI qui
+    // attendait est bien a bord, et pas un autre arrive entre-temps.
+    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, graine: hash2(e.id, sortie), qui: e.id });
     B.abribusServis = B.abribusServis || {};
     B.abribusServis[v.arret] = quartDHeure();
     Entites.retirer(e);
