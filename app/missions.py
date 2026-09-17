@@ -320,7 +320,7 @@ CATALOGUE: list[Mission] = [
             "intro": [
                 _l("ti_guy", "Heille! Le cousin de Rocco! T'as fait bon voyage?"),
                 _l("ti_guy", "Rocco est parti se faire oublier. Le garage, c'est toi qui le tiens, astheure."),
-                _l("ti_guy", "Y a un char qui traîne dans la ruelle derrière le garage. Personne va s'en ennuyer."),
+                _l("ti_guy", "Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer."),
                 _l("ti_guy", "Ramène-le au garage sans le bosser, pis sans que personne te voie."),
             ],
             "fin": [

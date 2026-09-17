@@ -387,7 +387,14 @@ const Histoire = (function () {
     // cache, contexte suspendu) ; ACTION passe toujours.
     const l = c.lignes[c.i];
     const parle = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug) && c.t < c.duree + 900;
-    if (Entree.neuf('action') || Entree.neuf('attaque') || (c.t > c.duree && !parle)) suivante();
+    // ⚠️ PAS DE BOUTON A LA PREMIERE IMAGE D'UNE LIGNE. L'appui d'ACTION qui
+    // OUVRE la conversation (`Combat.maj` → `parler`) est encore « neuf » quand
+    // `Histoire.maj` passe ici, dans la MEME image : il sautait la premiere
+    // replique de chaque intro — les cinq donneurs, clavier et manette, et la
+    // voix demandee puis coupee aussitot. `c.t` compte les images de la ligne ;
+    // `B.t` ne servirait pas, il s'arrete pendant une scene.
+    const bouton = c.t > 1 && (Entree.neuf('action') || Entree.neuf('attaque'));
+    if (bouton || (c.t > c.duree && !parle)) suivante();
   }
 
   // --- L'OUVERTURE : le car de six heures ---------------------------------------------------

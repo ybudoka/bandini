@@ -644,6 +644,62 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
     assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
 
 
+def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
+    """⚠️ Rouge avant (17 sept. 2026), chez les cinq donneurs : l'appui d'ACTION
+    qui ouvre la conversation etait relu par `Histoire.majCinema` dans la MEME
+    image, et passait a la deuxieme replique. La voix de la premiere etait
+    demandee, puis coupee. Les juges d'avant ne le voyaient pas : ils ouvraient
+    la conversation par `Missions.interagir`, jamais par le bouton.
+
+    On appuie comme un joueur (clavier, puis manette pour Ti-Guy), on laisse
+    jouer l'intro — scene comprise — sans rien toucher, et on releve les
+    repliques affichees."""
+    premieres = {}
+    for m in paquet["missions"]:
+        n = len(m["dialogue"].get("appel", []))
+        premieres[m["donneur"]] = f"{m['dialogue']['intro'][0]['qui']}-{m['slug']}-{n + 1}"
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, M = L.Monde, out = {};
+        const avant = { ti_guy: [], thibodeau: ['m1'], marco: ['m1', 'm2'], bouchard: ['m1', 'm2', 'm3'], josee: ['m1', 'm2', 'm3', 'm4'] };
+        const pieces = { bouchard: 'casse_croute', josee: 'bar' };
+        function essai(slug, manette) {
+            B.partie.missionsFaites = {};
+            avant[slug].forEach(function (s) { B.partie.missionsFaites[s] = 1; });
+            B.partie.appels = { m2: true, m3: true, m4: true, m5: true };
+            if (pieces[slug]) o.entrer(M.carte.portes.find(function (p) { return p.lieu === pieces[slug]; }));
+            const d = L.Histoire.donneur(slug);
+            if (!d) return { absent: true };
+            j.x = d.x - 14; j.y = d.y; L.Entites.indexer();
+            L.Son.Voix.demandees.length = 0;
+            if (manette) { o.pad([0, 0, 0, 0], [1]); o.frame(1); o.pad([0, 0, 0, 0], [0]); o.frame(1); }
+            else { o.touche('KeyE'); o.frame(1); o.relacher('KeyE'); o.frame(1); }
+            const vues = [];
+            for (let k = 0; k < 2400 && (B.cinema || B.scene); k++) {
+                const c = B.cinema;
+                const s = c && c.lignes[c.i] ? c.lignes[c.i].slug : null;
+                if (s && vues[vues.length - 1] !== s) vues.push(s);
+                o.frame(1);
+            }
+            const rec = { vues: vues, voix: L.Son.Voix.demandees[0] || null, mission: B.partie.mission && B.partie.mission.slug };
+            if (B.partie.mission) { L.Histoire.echouer('juge'); B.cinema = null; B.scene = null; }
+            if (B.interieur) o.sortir();
+            o.pad(null);
+            return rec;
+        }
+        ['ti_guy', 'thibodeau', 'marco', 'bouchard', 'josee'].forEach(function (s) { out[s] = essai(s, false); });
+        out.manette = essai('ti_guy', true);
+        return out;
+    }""")
+    for qui, e in r.items():
+        attendue = premieres["ti_guy" if qui == "manette" else qui]
+        assert not e.get("absent"), f"{qui} : pas la"
+        assert e["mission"], f"{qui} : parler au bouton n'a rien commence ({e})"
+        assert e["vues"] and e["vues"][0] == attendue, (
+            f"{qui} : la premiere replique affichee est {e['vues'][:1]}, pas {attendue} — l'appui qui ouvre l'a sautee")
+        assert e["voix"] == attendue
+
+
 def test_le_char_de_m1_dort_loin_du_garage(banc):
     """Demande de Martin (17 sept. 2026) : « déplacer plus loin la voiture de la
     premiere mission ». La ruelle la plus proche du garage est a six tuiles : le

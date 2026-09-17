@@ -200,7 +200,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
-| La première réplique, et la ruelle de Ti-Guy | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
+| La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
@@ -10791,6 +10791,20 @@ même image et passe à la deuxième — on ne lit jamais « Heille! Le cousin d
 phrase qui explique la mission. Et Ti-Guy dit encore « la ruelle derrière le garage » alors
 que le char dort à vingt-quatre tuiles : la réplique change, et sa voix (`ti_guy-m1-3`) se
 régénère.
+
+**Livré.** `Histoire.majCinema` n'écoute plus les boutons à la première image d'une ligne :
+l'appui qui ouvre la conversation ne la saute plus. Le compte est celui de la ligne (`c.t`),
+pas `B.t`, qui s'arrête pendant une scène — on passe toujours une réplique au bouton dès
+l'image suivante. Ti-Guy dit « Y a un char qui traîne dans une ruelle, un peu plus loin.
+Personne va s'en ennuyer. » (`missions.py` et son jeu dans `interpretation.py`), et
+`histoire-ti_guy-m1-3.mp3` est régénéré en v3 (99 crédits, 4,98 s, −19,3 LUFS comme
+l'ancienne, master gardé dans `~/elevenlabs-audio/bandini-voix-v3-masters-2026-09-16/`).
+Juge : `test_la_premiere_replique_se_dit_quand_on_parle_au_bouton` (`test_histoire_js.py`) —
+les cinq donneurs au clavier, Ti-Guy à la manette, l'intro jouée scène comprise ; rouge sans
+la garde (« `ti_guy-m1-2`, pas `ti_guy-m1-1` »).
+
+- ⚠️ Personne d'autre que Martin ne peut juger la nouvelle voix : elle a le niveau et le
+  temps mort de l'ancienne, pas forcément le même ton.
 
 ### Un kiosque fermé n'a personne derrière
 

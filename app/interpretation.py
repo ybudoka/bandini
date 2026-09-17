@@ -236,7 +236,7 @@ JEU: dict[str, str] = {
     # --- M1, Ti-Guy : content de te voir, puis complice.
     "ti_guy-m1-1": "[excited] Heille! Le cousin de Rocco! [warmly] T'as fait bon voyage?",
     "ti_guy-m1-2": "[quietly] Rocco est parti se faire oublier. Le garage… c'est toi qui le tiens, astheure.",
-    "ti_guy-m1-3": "[mischievously] Y a un char qui traîne dans la ruelle derrière le garage. Personne va s'en ennuyer.",
+    "ti_guy-m1-3": "[mischievously] Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer.",
     "ti_guy-m1-4": "[serious] Ramène-le au garage sans le bosser… pis sans que personne te voie.",
     "ti_guy-m1-5": "[laughs] Pas une bosse! T'es ben le cousin de Rocco.",
     "ti_guy-m1-6": "[warmly] Tiens, la clé de la planque. Dors là… pis fais-toi pas pogner.",
