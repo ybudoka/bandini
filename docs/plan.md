@@ -209,6 +209,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
+| M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11184,6 +11185,11 @@ navigateur de ne pas les effacer. Les scores disent « Pas de réseau » au lieu
   navigation, le 5xx, les sons, le message des scores) font chacune rougir le sien.
 - ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
   ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
+
+### M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière
+
+demande de Martin (17 sept. 2026) : « la mission de Bouchard ne fonctionne pas toujours, le
+véhicule de police n'apparaît pas toujours et celui qui doit nous suivre apparaît en avant. »
 
 ### M16 Cent missions
 
