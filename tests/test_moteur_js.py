@@ -1289,10 +1289,13 @@ def test_le_singe_ne_casse_rien(banc, graine):
         const j = L.B.joueur, c = L.Monde.carte;
         const tx = Math.floor(j.x / L.TT), ty = Math.floor(j.y / L.TT);
         return { etat: L.B.etat, dedans: j.x >= 0 && j.y >= 0 && j.x <= c.pxW && j.y <= c.pxH,
-                 sol: L.Monde.solidite(tx, ty), t: L.B.t, argent: L.B.partie.argent, nan: isNaN(j.x) || isNaN(j.y) };
+                 sol: L.Monde.solidite(tx, ty), nage: !!j.nage, t: L.B.t, argent: L.B.partie.argent, nan: isNaN(j.x) || isNaN(j.y) };
     }""" % graine)
     assert r["etat"] in ("jeu", "pause")
-    assert r["dedans"] and r["sol"] in (0, 3) and not r["nan"]
+    # ⚠️ L'eau (2) est permise EN NAGEANT : le joueur nage depuis le 15 sept. 2026,
+    # et un singe qui marche assez longtemps finit parfois dans l'etang d'un parc.
+    # Ce que le juge refuse, c'est un mur (1), une cloture ou un NaN.
+    assert r["dedans"] and (r["sol"] in (0, 3) or (r["sol"] == 2 and r["nage"])) and not r["nan"]
     assert r["argent"] >= 0
     assert r["t"] > 1000
 

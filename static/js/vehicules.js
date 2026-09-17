@@ -273,6 +273,9 @@ const Vehicules = (function () {
       // faisait naitre un char de moins — et chaque naissance evitee decale
       // tous les des qui suivent. Un juge d'amuseur est tombe pour ca.
       if (v.panneT > 0) continue;
+      // ⚠️ Un autobus de ligne n'est ni du trafic ni un char gare : c'est l'horaire
+      // qui le fait naitre (`Autobus.faireNaitre`), il ne prend la place de personne.
+      if (v.conducteur === 'ligne') continue;
       if (v.conducteur === 'trafic') roulent++; else if (v.conducteur !== j) stationnes++;
     }
     if (B.t % 20 !== 0) return;
@@ -1238,7 +1241,7 @@ const Vehicules = (function () {
       cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
       cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
       crime = 'vol_vehicule'; vu = true;
-    } else if (v.conducteur === 'trafic') {
+    } else if (v.conducteur === 'trafic' || v.conducteur === 'ligne') {
       // Carjacking : le conducteur sort, temoigne, et fuit. Pas besoin de temoin :
       // la victime en est un.
       // ⚠️ Sur une MOTO, on VOIT celui qui est dessus : c'est lui qui descend,
@@ -1297,6 +1300,9 @@ const Vehicules = (function () {
 
   /** Descendre : a gauche si c'est libre, sinon a droite, sinon derriere. */
   function descendre(j, force) {
+    // ⚠️ UN PASSAGER DESCEND D'UN AUTOBUS, IL NE LE GARE PAS : la suite met le
+    // char a l'arret, « laisse » pour la fourriere, et abandonne le boulot.
+    if (j && j.passager) return Autobus.descendre(j, force);
     const v = j.dansVehicule;
     if (!v) return false;
     if (!force && Math.abs(v.vitesse) > 1.2) { v.vitesse *= 0.8; return false; }
@@ -1577,7 +1583,9 @@ const Vehicules = (function () {
     const rayon = Math.max(inter.l, inter.h) * TT / 2 + 2 * TT + 12;      // la boite ET ses passages
     for (const e of Entites.autour(cx, cy, rayon + 40, function (q) { return q.type === 'vehicule' && q !== v && q.etat !== 'epave'; })) {
       if (e.enBoite === inter) return false;
-      if (e.conducteur !== 'trafic' && dist2(e.x, e.y, cx, cy) < rayon * rayon) return false;   // le joueur, un char stationne
+      // ⚠️ Un autobus de ligne attend a la ligne d'arret comme le trafic : il n'est
+      // pas « un char stationne dans la boite », sinon tout le carrefour l'attend.
+      if (e.conducteur !== 'trafic' && e.conducteur !== 'ligne' && dist2(e.x, e.y, cx, cy) < rayon * rayon) return false;   // le joueur, un char stationne
     }
     return true;
   }
@@ -1932,11 +1940,12 @@ const Vehicules = (function () {
       const x0 = v.x, y0 = v.y;
       if (v.conducteur === j) majJoueur(j);
       else if (v.conducteur === 'trafic') majConducteur(v);
+      else if (v.conducteur === 'ligne') Autobus.conduire(v);
       else if (v.conducteur === 'police') { const c = Police.commandes(v); if (c === 'rails') majConducteur(v); else majPhysique(v, c); }
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
       if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
-      if (v.conducteur === 'trafic' || (v.conducteur === 'police' && v.surRails)) {
+      if (v.conducteur === 'trafic' || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);
@@ -1954,6 +1963,8 @@ const Vehicules = (function () {
       // le jeu qu'une corde a et qu'une fourche n'a pas. Le juge l'a vu.
       majCrochet(v);
     }
+    // Les autobus : ceux que l'horaire fait naitre, et le passager qui suit le sien.
+    Autobus.maj();
     peupler();
     majSirenes();
     // ⚠️ LA PORTE GAGNE SUR LA PORTIERE (bug de Martin : devant le garage,

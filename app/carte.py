@@ -1153,6 +1153,10 @@ MEUBLES_DU_BORD = ("parasol", "serviette", "table_pique_nique", "chateau_sable",
 #: tenir a jour est pire que pas de liste : elle laisserait `degager_le_decor`
 #: croire qu'on passe la ou l'on ne passe pas.
 DECOR_SOLIDE = frozenset({
+    # Le mobilier de rue : un banc et un abribus REGARDENT la rue, donc ils ont
+    # un dessin par cote du trottoir (`mobilier.BANCS_PAR_COTE`, `autobus.ABRIS`).
+    "banc_nord", "banc_est", "banc_ouest",
+    "abribus", "abribus_nord", "abribus_est", "abribus_ouest",
     "arbre", "banc", "baril", "bbq", "belvedere", "borne_fontaine", "cabanon",
     "caisse", "carrousel", "chaise_sauveteur", "chaises_volantes", "distributrice_cafe",
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
@@ -6065,6 +6069,15 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ni un arbre ni une enseigne. Import paresseux : `chantiers` lit `carte`.
     from . import chantiers as chantiers_mod
     ville["chantiers"] = chantiers_mod.tirer(ville, chantier.batiments, graine)
+    # ⚠️ LES LIGNES D'AUTOBUS, APRES LES CHANTIERS : leurs abribus se posent
+    # sur la ville finie et ne deplacent rien de ce qui precede. Le trace lit les
+    # entraves, les rues barrees et les barrieres — il les contourne toutes.
+    from . import autobus as autobus_mod
+    ville["autobus"] = autobus_mod.tracer(chantier, ville)
+    # ⚠️ LE MOBILIER DE RUE EN TOUT DERNIER, dans son propre de : un arbre de
+    # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
+    from . import mobilier as mobilier_mod
+    mobilier_mod.semer(chantier, ville, graine)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

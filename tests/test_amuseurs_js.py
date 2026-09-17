@@ -140,6 +140,10 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
             for (let i = 0; i < 900 && a.vivant; i++) {
                 const dx = a.x - j.x, dy = a.y - j.y, n = Math.hypot(dx, dy) || 1;
                 if (n > 44) { j.x += dx / n * 0.9; j.y += dy / n * 0.9; L.Monde.centrerCamera(j.x, j.y); }
+                // ⚠️ On traverse les rues EN LIGNE DROITE : sans ca, un char du trafic
+                // renverse le joueur, qui se reveille a l'hopital a l'autre bout de la
+                // ville — et le juge mesure l'hopital, pas le spectacle.
+                j.invincible = 60;
                 o.frame(1);
                 // ⚠️ LA RUE A EU PEUR : son public s'est sauvé, et c'est voulu.
                 if (L.Entites.pietonsAutour(a.x, a.y, rayonPeur).some(function (q) {

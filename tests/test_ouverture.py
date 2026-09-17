@@ -117,7 +117,8 @@ def test_jouer_lance_l_ouverture_et_commencer_ne_la_lance_pas(banc):
         L.B.partie.x = null; L.B.partie.y = null; L.B.partie.ouvertureVue = false;
         L.Jeu.jouer();
         const o1 = L.B.ouverture;
-        const car = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'autobus'; });
+        // ⚠️ Le car de la SCENE : les autobus de ligne passent aussi au terminus.
+        const car = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'autobus' && e.conducteur !== 'ligne'; });
         return { sansOuverture: sansOuverture, avec: !!o1, etat: L.B.etat,
                  cars: car.length, loin: car.length ? Math.hypot(car[0].x - o1.arret.x, car[0].y - o1.arret.y) : 0,
                  cache: L.B.joueur.dessine, lignes: L.B.cinema ? L.B.cinema.lignes.length : 0,
@@ -144,7 +145,7 @@ def test_l_ouverture_se_termine_toute_seule_et_rend_la_ville(banc):
         const quai = { x: L.B.ouverture.quai.x, y: L.B.ouverture.quai.y };
         let images = 0;
         while (L.B.ouverture && images < 3000) { o.frame(1); images++; }
-        const cars = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'autobus'; }).length;
+        const cars = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.slug === 'autobus' && e.conducteur !== 'ligne'; }).length;
         return { images: images, reste: !!L.B.ouverture, cinema: !!L.B.cinema, etat: L.B.etat,
                  cars: cars, dessine: L.B.joueur.dessine, vivant: L.B.joueur.vivant,
                  ecart: Math.hypot(L.B.joueur.x - quai.x, L.B.joueur.y - quai.y),
@@ -175,7 +176,7 @@ def test_on_passe_l_ouverture_et_on_tombe_au_meme_endroit(banc):
         o.tape('Space', 2);                       // FRAPPE = PASSER
         const apresFrappe = { ouverture: !!L.B.ouverture, cinema: !!L.B.cinema,
                               x: L.B.joueur.x, y: L.B.joueur.y, dessine: L.B.joueur.dessine,
-                              cars: L.B.entites.filter(function (e) { return e.slug === 'autobus'; }).length };
+                              cars: L.B.entites.filter(function (e) { return e.slug === 'autobus' && e.conducteur !== 'ligne'; }).length };
         neuve();
         o.frame(30);
         o.tape('Escape', 2);                      // PAUSE aussi

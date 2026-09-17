@@ -233,6 +233,11 @@ const Missions = (function () {
     // La distributrice : son menu, ou la brasser si quelque chose y est reste pris.
     const machine = distributriceSousLaMain(j);
     if (machine) return utiliserDistributrice(j, machine);
+    // L'autobus arrete a l'abribus : on monte, on paie. ⚠️ AVANT le bouclier
+    // humain et avant la portiere (`Vehicules.maj`) : devant un autobus en
+    // service, ACTION veut dire « monter », pas « voler l'autobus ».
+    const autobus = Autobus.autobusSousLaMain(j);
+    if (autobus) return Autobus.monter(j, autobus);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -2211,6 +2216,8 @@ const Missions = (function () {
   /** L'invite ACTION du HUD : ce qu'on ferait ici, maintenant. */
   function majInvite(j) {
     B.invite = null;
+    // A bord d'un autobus : ACTION demande l'arret, ou descend.
+    if (j && j.passager) { if (!B.menu && !B.cinema) B.invite = Autobus.invite(j); return; }
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
     if (B.interieur) {
       // ⚠️ Meme ordre que `utiliserPoint`, sinon le HUD promet « MANGER » et
@@ -2266,6 +2273,8 @@ const Missions = (function () {
     if (guichet) { B.invite = guichet; return; }
     const machine = distributriceSousLaMain(j);
     if (machine) { B.invite = inviteDistributrice(machine); return; }
+    const autobus = Autobus.inviteMonter(j);
+    if (autobus) { B.invite = autobus; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);

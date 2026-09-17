@@ -143,14 +143,14 @@ def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
     assert page.evaluate("window.BANDINI.Son.Voix.demandees[0]") == "narrateur-ouverture-1"
     assert page.evaluate("window.BANDINI.Son.Mus.courante") == "ouverture"
     # Le car arrive, et le bonhomme n'est pas encore descendu.
-    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus').length") == 1
+    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus' && e.conducteur !== 'ligne').length") == 1
     # PASSER, au clavier : on tombe dans la ville, et on marche.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     y0 = page.evaluate("window.BANDINI.B.joueur.y")
     page.keyboard.press("Space")
     page.wait_for_function("!window.BANDINI.B.ouverture")
     assert page.evaluate("window.BANDINI.B.joueur.dessine") is True
-    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus').length") == 0
+    assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus' && e.conducteur !== 'ligne').length") == 0
     page.keyboard.down("KeyW")
     page.wait_for_timeout(400)
     page.keyboard.up("KeyW")

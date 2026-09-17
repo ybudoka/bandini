@@ -662,7 +662,9 @@ const Hud = (function () {
   /** L'invite du bas : ce que fera ACTION ici. */
   function invite(ctx) {
     const j = B.joueur;
-    if (!j || j.dansVehicule || !B.invite || B.menu) return;   // un menu ouvert : l'invite se tait
+    // ⚠️ A bord d'un autobus, on est « dans un vehicule » et l'invite parle quand
+    // meme : c'est elle qui dit ou l'on descend.
+    if (!j || (j.dansVehicule && !j.passager) || !B.invite || B.menu) return;   // un menu ouvert : l'invite se tait
     const t = 'ACTION : ' + B.invite;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
@@ -680,6 +682,38 @@ const Hud = (function () {
     }
     texte(ctx, t, (VW - l) / 2, VH - 24, '#efe6d0', 1);
     noter('invite', (VW - l) / 2 - 4, VH - 26, l + 8, 11);
+  }
+
+  /** A l'abribus, sans rien a faire du bouton : quand passe le prochain. ⚠️ Pas
+      d'« ACTION : » devant — le bouton n'y fait rien, et une invite qui promet
+      un geste qui n'existe pas se lit comme un bogue. */
+  function attenteALAbribus(ctx) {
+    const j = B.joueur;
+    if (!j || B.invite || B.menu || B.dialogue || B.interieur) return;
+    const t = Autobus.texteDAttente(j);
+    if (!t) return;
+    const l = Atlas.largeurTexte(t, 1);
+    ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
+    texte(ctx, t, (VW - l) / 2, VH - 24, '#cfe3ee', 1);
+    noter('attente', (VW - l) / 2 - 4, VH - 26, l + 8, 11);
+  }
+
+  /** Les lignes d'autobus sur la grande carte : le trace de chacune dans sa
+      couleur, et un point blanc par abribus. */
+  function dessinerLignes(ctx, pos) {
+    const d = Autobus.donnees();
+    if (!d) return;
+    for (const L of d.lignes) {
+      ctx.fillStyle = L.couleur;
+      for (const t of L.tuiles) { const p = pos(t[0] * TT, t[1] * TT); ctx.fillRect(p.x, p.y, 1, 1); }
+      B.stats.rects += L.n;
+    }
+    for (const a of d.arrets) {
+      const p = pos(a.x * TT, a.y * TT);
+      ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(p.x, p.y, 1, 1);
+      B.stats.rects += 2;
+    }
   }
 
   /** Une boite de texte : une ou deux lignes, qui se ferme au bouton. */
@@ -1120,6 +1154,7 @@ const Hud = (function () {
     ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
     B.stats.images++;
     const pos = function (x, y) { return { x: ox + Math.round(x / TT * echelle), y: oy + Math.round(y / TT * echelle) }; };
+    dessinerLignes(ctx, pos);
     for (const point of carte.points) {
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
@@ -1322,6 +1357,8 @@ const Hud = (function () {
           ligneBoulot = nomBoulot + ' : ' + d.nom.toUpperCase() + ' ' + dist + 'M';
         } else if (Missions.boulot.etape === 'ramasse') {
           ligneBoulot = nomBoulot + ' : QUELQU’UN ATTEND';
+        } else if (j.passager) {
+          ligneBoulot = Autobus.ligneDuHud(j);
         }
         if (ligneBoulot) {
           texte(ctx, ligneBoulot, 70, 16, '#e8b33c', 1);
@@ -1431,6 +1468,7 @@ const Hud = (function () {
       // la scene, les mots sont par-dessus, toujours lisibles.
       dessinerOuverture(ctx);
       invite(ctx);
+      attenteALAbribus(ctx);
       dessinerDialogue(ctx);
       // ⚠️ PAR-DESSUS l'invite et la bulle : la roue est ce qu'on regarde,
       // et « ACTION POUR ENTRER » en travers d'une icone d'arme ne se lit plus.

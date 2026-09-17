@@ -3343,6 +3343,60 @@ function peindreGrueABoule(ctx, w, h, v) {
   ctx.fillStyle = '#5f6267'; ctx.fillRect(bx - 1, by - 2, 2, 2);
 }
 
+/** L'abribus, dans l'un de ses quatre sens : `sud` (ouvert vers nous), `nord`
+    (vu de dos), `est` et `ouest` (de profil, le long d'une avenue).
+
+    ⚠️ La lumiere vient du nord-ouest, comme partout : la vitre prend son reflet
+    en haut a gauche, et l'ombre de l'abri tombe au sud-est. */
+function peindreAbribus(ctx, sens) {
+  const cadre = '#2f3238', vitre = '#8fb4c8', reflet = '#c9e2ee', toit = '#3a3d44', arete = '#5b606a';
+  const reclame = '#e8b33c', poteau = '#9aa0a8', plaque = '#f4f1e6', picto = '#2471a3', bois = '#6b4b2c';
+  const poteauDArret = function (x, y) {
+    ctx.fillStyle = poteau; ctx.fillRect(x, y + 5, 1, 18);
+    ctx.fillStyle = plaque; ctx.fillRect(x - 2, y, 5, 6);
+    ctx.fillStyle = picto; ctx.fillRect(x - 1, y + 1, 3, 3);
+    ctx.fillStyle = plaque; ctx.fillRect(x, y + 2, 1, 1);
+  };
+  if (sens === 'sud' || sens === 'nord') {
+    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(3, 22, 22, 4);        // l'ombre
+    if (sens === 'sud') {
+      ctx.fillStyle = cadre; ctx.fillRect(1, 8, 22, 12);                     // le fond, derriere
+      ctx.fillStyle = vitre; ctx.fillRect(2, 9, 13, 10);
+      ctx.fillStyle = reflet; ctx.fillRect(2, 9, 5, 1); ctx.fillRect(2, 9, 1, 5);
+      ctx.fillStyle = reclame; ctx.fillRect(16, 9, 6, 10);                   // la reclame lumineuse
+      ctx.fillStyle = '#b8862a'; ctx.fillRect(17, 11, 4, 1); ctx.fillRect(17, 14, 3, 1);
+      ctx.fillStyle = bois; ctx.fillRect(3, 16, 12, 2);                      // le banc sous l'abri
+      ctx.fillStyle = cadre; ctx.fillRect(1, 8, 1, 15); ctx.fillRect(22, 8, 1, 15);   // les montants
+      ctx.fillStyle = vitre; ctx.fillRect(2, 20, 2, 3);                      // le bout des vitres de cote
+    } else {
+      ctx.fillStyle = bois; ctx.fillRect(3, 10, 12, 2);                      // le banc, derriere la vitre
+      ctx.fillStyle = cadre; ctx.fillRect(1, 8, 22, 15);
+      ctx.fillStyle = vitre; ctx.fillRect(2, 12, 20, 10);                    // la vitre du fond, devant nous
+      ctx.fillStyle = reflet; ctx.fillRect(2, 12, 7, 1); ctx.fillRect(2, 12, 1, 4);
+      ctx.fillStyle = reclame; ctx.fillRect(15, 13, 6, 8);
+      ctx.fillStyle = '#b8862a'; ctx.fillRect(16, 15, 4, 1);
+      ctx.fillStyle = vitre; ctx.fillRect(2, 9, 19, 2);                      // on devine l'interieur
+    }
+    ctx.fillStyle = toit; ctx.fillRect(0, 5, 24, 4);                         // le toit
+    ctx.fillStyle = arete; ctx.fillRect(0, 5, 24, 1);
+    poteauDArret(24, 0);
+    return;
+  }
+  // De profil : l'abri court du nord au sud, la vitre du fond du cote du mur.
+  const mur = sens === 'est' ? 1 : 10;
+  ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(4, 28, 10, 4);
+  ctx.fillStyle = cadre; ctx.fillRect(mur, 8, 4, 20);
+  ctx.fillStyle = vitre; ctx.fillRect(mur + 1, 9, 2, 18);                    // la vitre du fond, par la tranche
+  ctx.fillStyle = reflet; ctx.fillRect(mur + 1, 9, 1, 6);
+  ctx.fillStyle = bois; ctx.fillRect(sens === 'est' ? 6 : 6, 13, 3, 10);     // le banc
+  ctx.fillStyle = vitre; ctx.fillRect(2, 8, 12, 1); ctx.fillRect(2, 27, 12, 1);   // les vitres des bouts
+  ctx.fillStyle = reclame; ctx.fillRect(sens === 'est' ? 2 : 10, 20, 4, 7);
+  ctx.fillStyle = toit; ctx.fillRect(1, 5, 14, 22);                          // le toit, vu d'en haut
+  ctx.fillStyle = arete; ctx.fillRect(1, 5, 14, 1); ctx.fillRect(1, 5, 1, 22);
+  ctx.fillStyle = '#4a4d55'; ctx.fillRect(3, 8, 10, 16);
+  poteauDArret(sens === 'est' ? 13 : 2, 7);
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -4106,6 +4160,50 @@ const DECORS = {
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 3); ctx.fillRect(1, 0, 16, 3);
     ctx.fillStyle = '#523a22'; ctx.fillRect(2, 7, 2, 5); ctx.fillRect(14, 7, 2, 5);
     ctx.fillStyle = '#7d5a36'; ctx.fillRect(1, 4, 16, 1);
+  } },
+  // --- Le mobilier de rue : il REGARDE la rue ------------------------------------
+  // ⚠️ Demande de Martin : « des bancs sur le bord de la rue ». Un banc de parc
+  // se pose n'importe comment ; un banc de trottoir tourne le dos au mur et
+  // regarde passer les chars. Le `banc` d'origine est vu de FACE (il regarde le
+  // sud, vers nous) ; ses trois freres le montrent de DOS (`banc_nord`, le
+  // dossier devant l'assise) et de PROFIL (`banc_est`, `banc_ouest`, le dossier
+  // du cote du mur). C'est le cote du trottoir qui choisit (`mobilier.py`).
+  banc_nord: { casse: 0.8, pv: 40, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#7d5a36'; ctx.fillRect(1, 1, 16, 3);                 // l'assise, vue par-dessus le dossier
+    ctx.fillStyle = '#523a22'; ctx.fillRect(2, 8, 2, 4); ctx.fillRect(14, 8, 2, 4);   // les pieds
+    ctx.fillStyle = '#5a3f25'; ctx.fillRect(1, 4, 16, 4);                 // le dos du dossier, face a nous
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(1, 4, 16, 1);                 // son arete
+  } },
+  banc_est: { casse: 0.8, pv: 40, w: 10, h: 18, ancre: [5, 16], r: 5, sol: [3, 6], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#523a22'; ctx.fillRect(1, 1, 3, 13);                 // le dossier, a l'ouest, dans l'ombre
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(4, 3, 4, 12);                 // l'assise, vue du dessus
+    ctx.fillStyle = '#7d5a36'; ctx.fillRect(4, 3, 4, 1); ctx.fillRect(1, 1, 3, 1);
+    ctx.fillStyle = '#523a22'; ctx.fillRect(4, 15, 1, 3); ctx.fillRect(7, 15, 1, 3);   // les pieds du bout sud
+  } },
+  banc_ouest: { casse: 0.8, pv: 40, w: 10, h: 18, ancre: [5, 16], r: 5, sol: [3, 6], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = '#5a3f25'; ctx.fillRect(6, 1, 3, 13);                 // le dossier, a l'est
+    ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 3, 4, 12);                 // l'assise
+    ctx.fillStyle = '#7d5a36'; ctx.fillRect(2, 3, 4, 1); ctx.fillRect(2, 3, 1, 12); ctx.fillRect(6, 1, 3, 1);
+    ctx.fillStyle = '#523a22'; ctx.fillRect(2, 15, 1, 3); ctx.fillRect(5, 15, 1, 3);
+  } },
+  // ⚠️ L'ABRIBUS : un toit, trois vitres, une reclame et le POTEAU D'ARRET. A
+  // seize pixels, c'est le poteau qui le nomme — la plaque blanche et son
+  // pictogramme bleu se lisent d'un bout de rue a l'autre, l'abri ne fait que
+  // le confirmer. Il est vu de face (`abribus`, ouvert au sud), de dos
+  // (`abribus_nord` : la vitre du fond devant, le banc derriere) et de profil.
+  // ⚠️ `casse` : c'est du verre, un char lance le traverse — et c'est une
+  // cible de plus pour une ville qui se brise.
+  abribus: { casse: 0.6, pv: 70, w: 26, h: 28, ancre: [13, 23], r: 6, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
+    peindreAbribus(ctx, 'sud');
+  } },
+  abribus_nord: { casse: 0.6, pv: 70, w: 26, h: 28, ancre: [13, 23], r: 6, sol: [10, 3], solide: true, peindre: function (ctx, w, h) {
+    peindreAbribus(ctx, 'nord');
+  } },
+  abribus_est: { casse: 0.6, pv: 70, w: 16, h: 34, ancre: [8, 25], r: 6, sol: [4, 7], solide: true, peindre: function (ctx, w, h) {
+    peindreAbribus(ctx, 'est');
+  } },
+  abribus_ouest: { casse: 0.6, pv: 70, w: 16, h: 34, ancre: [8, 25], r: 6, sol: [4, 7], solide: true, peindre: function (ctx, w, h) {
+    peindreAbribus(ctx, 'ouest');
   } },
   caisse: { casse: 0.8, pv: 20, w: 16, h: 16, ancre: [8, 15], r: 6, sol: [7, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8a6a3f'; ctx.fillRect(1, 2, 14, 14);

@@ -699,7 +699,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Histoire: Histoire, Hud: Hud, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL,
