@@ -15,6 +15,7 @@ const Hud = (function () {
     d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
     d.getElementById('score-form').addEventListener('submit', envoyerScore);
     avisSon = d.getElementById('avis-son');
+    logoTitre = d.querySelector('#voile-titre .logo');
     majAvisSon();
   }
 
@@ -707,6 +708,19 @@ const Hud = (function () {
     B.stats.rects += 2;
   }
 
+  //: Le titre de l'ouverture. ⚠️ Le logo (71 x 15) a un multiple ENTIER : a x3,
+  //: chaque pixel du dessin couvre trois pixels du jeu et garde le meme grain
+  //: que la ville derriere ; a x2,5 il baverait une rangee sur deux.
+  const LOGO_ECHELLE = 3, LOGO_Y = 54;
+  //: La bande sombre sous le titre : le logo (54 a 99) et « BAIE-DES-BRUMES » (105).
+  const BANDE_TITRE = { y: 50, h: 68 };
+  let logoTitre = null;
+
+  /** Le logo du `<h1>` de l'accueil, s'il a fini de charger — sinon `null`. */
+  function logoCharge() {
+    return logoTitre && logoTitre.complete && logoTitre.naturalWidth > 0 ? logoTitre : null;
+  }
+
   /** L'ouverture : le noir d'ou l'on sort, et le titre qui s'inscrit.
 
       ⚠️ Son propre noir, et pas celui de `Jeu.transiter` : un fondu de porte
@@ -714,9 +728,15 @@ const Hud = (function () {
       pendant le noir que le car doit arriver. Deux compteurs qui ne veulent pas
       dire la meme chose ne partagent pas une variable.
 
-      ⚠️ Le titre s'ecrit en DEUX passes (l'ombre, puis les lettres), comme tout
-      texte pose sur le jeu : sans ombre, « BANDINI » disparait sur un mur
-      clair, et c'est le nom du jeu. */
+      ⚠️ LE TITRE EST LE LOGO DE L'ACCUEIL, la meme image : celle que le `<h1>`
+      a deja chargee (`static/img/logo.svg`, dessinee par `scripts/icones.py`).
+      Retour de Martin : le logo neuf etait sur l'accueil, et l'ouverture
+      ecrivait encore « BANDINI » en police du HUD. Une seconde copie du dessin
+      ici aurait diverge a la premiere retouche.
+
+      ⚠️ Tant que l'image n'est pas la (ou au banc, qui n'a pas de page), le
+      nom s'ecrit en lettres, en DEUX passes (l'ombre, puis les lettres) : sans
+      ombre, « BANDINI » disparait sur un mur clair, et c'est le nom du jeu. */
   function dessinerOuverture(ctx) {
     const o = B.ouverture;
     if (!o) return;
@@ -733,14 +753,25 @@ const Hud = (function () {
       // se lisait plus. Le nom du jeu ne peut pas dependre de ce qu'il y a
       // derriere — et la scene se joue devant un batiment, toujours le meme.
       ctx.fillStyle = 'rgba(11,10,18,' + (0.62 * a).toFixed(3) + ')';
-      ctx.fillRect(0, 56, VW, 56);
+      ctx.fillRect(0, BANDE_TITRE.y, VW, BANDE_TITRE.h);
       B.stats.rects++;
-      const xn = Math.round((VW - Atlas.largeurTexte(nom, 4)) / 2);
+      const logo = logoCharge();
+      if (logo) {
+        const w = logo.naturalWidth * LOGO_ECHELLE, h = logo.naturalHeight * LOGO_ECHELLE;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.imageSmoothingEnabled = false;
+        ctx.drawImage(logo, Math.round((VW - w) / 2), LOGO_Y, w, h);
+        ctx.restore();
+        B.stats.images++;
+      } else {
+        const xn = Math.round((VW - Atlas.largeurTexte(nom, 4)) / 2);
+        Atlas.texte(ctx, nom, xn + 2, 70, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 4);
+        Atlas.texte(ctx, nom, xn, 68, 'rgba(232,179,60,' + a.toFixed(3) + ')', 4);
+      }
       const xs = Math.round((VW - Atlas.largeurTexte(sous, 1)) / 2);
-      Atlas.texte(ctx, nom, xn + 2, 70, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 4);
-      Atlas.texte(ctx, nom, xn, 68, 'rgba(232,179,60,' + a.toFixed(3) + ')', 4);
-      Atlas.texte(ctx, sous, xs + 1, 103, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 1);
-      Atlas.texte(ctx, sous, xs, 102, 'rgba(239,230,208,' + a.toFixed(3) + ')', 1);
+      Atlas.texte(ctx, sous, xs + 1, 106, 'rgba(11,10,18,' + (0.8 * a).toFixed(3) + ')', 1);
+      Atlas.texte(ctx, sous, xs, 105, 'rgba(239,230,208,' + a.toFixed(3) + ')', 1);
     }
   }
 
@@ -1432,6 +1463,6 @@ const Hud = (function () {
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
-           dessiner, dessinerRoue, rayonDeLaRoue, posteDeLaRoue, miniCarte, MINI, montrerScores, demanderScore,
+           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI, montrerScores, demanderScore,
            afficherScores, ancres: function () { return ancres; } };
 })();

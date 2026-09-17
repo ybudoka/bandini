@@ -72,6 +72,38 @@ def test_la_page_charge_sans_erreur(page, serveur, erreurs, ecran):
     assert deborde <= 0, f"la page deborde de {deborde} px"
 
 
+def test_le_titre_de_l_ouverture_est_le_logo(page, serveur, erreurs):
+    """Quand le car repart, le titre qui monte est le logo de l'accueil, pas des lettres.
+
+    Retour de Martin : le logo neuf etait sur l'accueil, et l'ouverture ecrivait
+    encore « BANDINI » en police du HUD. On lit les PIXELS de l'ecran : l'eclat
+    blanc du dernier I et l'or du haut du B, ou le titre en lettres ne met rien.
+    """
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("document.querySelector('#voile-titre .logo').complete")
+    jouer(page)
+    couleurs = page.evaluate("""() => {
+        const L = window.BANDINI, H = L.Hud, S = L.Base.SCALE;
+        const img = document.querySelector('#voile-titre .logo');
+        const x0 = Math.round((L.VW - img.naturalWidth * H.LOGO_ECHELLE) / 2), y0 = H.LOGO_Y;
+        // ⚠️ Tout dans le meme tour de JS : une image de jeu entre la pose et la
+        // lecture ferait avancer cette fausse ouverture, qui n'a pas de car.
+        L.B.ouverture = { noir: 0, titre: 1 };
+        H.dessiner();
+        L.B.ouverture = null;
+        const ctx = document.getElementById('toile').getContext('2d');
+        function lire(gx, gy) {
+            const x = (x0 + gx * H.LOGO_ECHELLE + 1) * S + 1, y = (y0 + gy * H.LOGO_ECHELLE + 1) * S + 1;
+            return Array.from(ctx.getImageData(x, y, 1, 1).data.slice(0, 3));
+        }
+        return { eclat: lire(img.naturalWidth - 5, 1), or: lire(4, 1) };
+    }""")
+    assert couleurs["eclat"] == [255, 255, 255], couleurs
+    assert couleurs["or"] == [0xFF, 0xF3, 0xC8], couleurs
+    assert erreurs == []
+
+
 def test_jouer_puis_marcher_au_clavier(page, serveur, erreurs):
     page.goto(serveur)
     attendre_titre(page)
