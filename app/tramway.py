@@ -36,12 +36,28 @@ RAYON_BOUT = 12
 #: traverse la ville en escalier.
 COUT_VIRAGE = 6
 
+#: ⚠️ **ET LA VOIE DU MILIEU COÛTE AUSSI** (17 sept. 2026), comme pour l'autobus
+#: (`autobus.COUT_VOIE_DU_MILIEU`) — mais ici ce n'est pas une préférence, c'est
+#: la ligne entière qui en dépend. Une rame roule par PAIRES de voies opposées :
+#: sur un boulevard à quatre voies, la seule paire qui existe est celle du
+#: MILIEU, et aucune de ses deux voies ne longe un trottoir — donc pas un arrêt
+#: n'y tient. Mesuré le jour où la trame a bougé : la ligne s'est mise à
+#: descendre un boulevard, elle est passée de 12 arrêts à 4, et le quai du
+#: traversier n'avait plus le sien (`test_tramway`). Les rues à deux voies, elles,
+#: bordent leurs deux trottoirs : c'est là que le tramway doit passer.
+COUT_VOIE_DU_MILIEU = 8
+
 #: Les arrêts, en tuiles de tracé : au moins tant entre deux, et jamais à moins de
 #: tant d'une boîte (la rame fait trois tuiles, elle bloquerait le croisement).
 ECART_ARRETS = 45
 LOIN_DES_BOITES = 3
 #: Un arrêt à moins de tant de tuiles (à pied) du quai du traversier en porte le nom.
-PRES_DU_TRAVERSIER = 32
+#: ⚠️ 32 jusqu'au 17 sept. 2026, quand le chenal du pont s'est élargi : le quai du
+#: traversier est descendu de dix-sept tuiles avec toute la bande sud, et les rues
+#: qui l'entourent sont des boulevards — pas une place de rame n'y longe un
+#: trottoir, donc pas un arrêt. Le dernier arrêt de la ligne est à 36 tuiles du
+#: quai, et il est bien celui d'où l'on va prendre le bateau.
+PRES_DU_TRAVERSIER = 40
 #: Pas à moins de tant d'un arrêt d'autobus : deux abris côte à côte, c'est un terminus.
 LOIN_DES_ABRIBUS = 6
 
@@ -109,6 +125,8 @@ class _Rails:
                 if not self.paire(nx, ny, nd):
                     continue
                 nc = c + 1 + (COUT_VIRAGE if nd != d else 0)
+                if self.voie[ny][nx] in PAS and not self.reseau.longe_le_trottoir(nx, ny):
+                    nc += COUT_VOIE_DU_MILIEU
                 if nc < dist.get((nx, ny, nd), 1 << 60):
                     dist[(nx, ny, nd)] = nc
                     avant[(nx, ny, nd)] = (x, y, d)

@@ -144,7 +144,13 @@ def test_elles_partent_avant_qu_on_les_touche(banc, paquet):
           for (let i = 0; i < 400 && !betes(L, espece).length; i++) o.frame(1);
           const vues = betes(L, espece);
           if (!vues.length) { out[espece] = { n: 0 }; continue; }
-          const bete = vues[0];
+          // ⚠️ **LA PLUS PROCHE, pas la première de la liste.** Une bête restée
+          // d'un tour précédent, à deux mille pixels, est hors de la bulle : elle
+          // ne bouge plus, et le juge la voyait « ne pas fuir » (0 px en 240
+          // images, 17 sept. 2026). On approche celle qu'on approche.
+          const bete = vues.slice().sort(function (a, b) {
+            return Math.hypot(a.x - L.B.joueur.x, a.y - L.B.joueur.y)
+                 - Math.hypot(b.x - L.B.joueur.x, b.y - L.B.joueur.y); })[0];
           const fiche = L.B.defs.pietons.betes[espece];
           const d0 = Math.hypot(bete.x - L.B.joueur.x, bete.y - L.B.joueur.y);
           // On s'approche : à `fuite_px`, elle doit être déjà partie.

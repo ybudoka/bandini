@@ -68,26 +68,104 @@ def _chenal_du_pont() -> int:
     return droite - gauche
 
 
+def _nage_la_plus_courte_vers_la_pointe() -> int:
+    """Le plus court passage d'EAU entre La Pointe et le reste de la ville, le
+    pont defait — en tuiles, et par l'eau seulement.
+
+    ⚠️ **Ce n'est pas la largeur du chenal sous le tablier, et c'est tout
+    l'interet.** Mesure du 17 sept. 2026, le jour ou le chenal est passe a 24
+    tuiles (`carte.RANGEES`) : il en mesurait bien 24 sous le pont, et se
+    nageait en 11 a son coin nord-ouest, parce que le sable des deux rives s'y
+    etait avance — la regle du tiers (`carte.PLAGES`) le permettait enfin. Un
+    juge qui lit UNE colonne ne voit pas ca ; celui-ci fait le tour de l'eau.
+    """
+    sol = [list(ligne) for ligne in SOL]
+    pont = CARTE["ponts"][0]
+    for y in range(pont["y"], pont["y"] + pont["h"]):
+        for x in range(pont["x"], pont["x"] + pont["l"]):
+            sol[y][x] = "~"                  # on defait le pont : reste la nage
+    ile = CARTE["ile"]
+
+    def dans_l_ile(x: int, y: int) -> bool:
+        return (ile["x"] <= x < ile["x"] + ile["l"]
+                and ile["y"] <= y < ile["y"] + ile["h"])
+
+    foire = CARTE["foire"]
+    depart = (foire["x"] + foire["l"] // 2, foire["y"] + foire["h"] // 2)
+    assert sol[depart[1]][depart[0]] != "~", "la foire est a l'eau ?"
+    pointe = {depart}
+    file = deque([depart])
+    while file:                              # la terre de La Pointe, d'un tenant
+        x, y = file.popleft()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            voisin = (x + dx, y + dy)
+            if (voisin in pointe or not (0 <= voisin[0] < LARGEUR and 0 <= voisin[1] < HAUTEUR)
+                    or sol[voisin[1]][voisin[0]] == "~"):
+                continue
+            pointe.add(voisin)
+            file.append(voisin)
+    dist = {t: 0 for t in pointe}
+    file = deque(pointe)
+    while file:
+        x, y = file.popleft()
+        for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
+            nx, ny = x + dx, y + dy
+            if not (0 <= nx < LARGEUR and 0 <= ny < HAUTEUR) or (nx, ny) in dist:
+                continue
+            if sol[ny][nx] != "~":
+                if not dans_l_ile(nx, ny):
+                    return dist[(x, y)] + 1  # la premiere rive qui n'est pas elle
+                continue
+            dist[(nx, ny)] = dist[(x, y)] + 1
+            file.append((nx, ny))
+    raise AssertionError("La Pointe ne voit aucune rive : elle est seule au monde ?")
+
+
 def test_le_chenal_du_pont_est_un_pari_pas_une_promenade():
     """⚠️ Si l'on nage, La Pointe n'est plus une ile — sauf si la traversee se
     paie. Elle doit coûter assez pour qu'on hesite, et pas assez pour qu'elle
     soit impossible : sinon l'eau redevient un mur, avec une animation en plus.
 
+    ⚠️ **Depuis le 17 sept. 2026, le chenal fait 24 tuiles et le prix a monte
+    d'un cran** (demande de Martin : « allonge le pont et eloigne-la du reste de
+    la ville »). A jeun, c'est fini : 160 points de souffle sur 100. Avec un
+    cafe, ca passe — de justesse. La Pointe se range donc entre la ville, qu'on
+    traverse a pied, et l'Ile-aux-Corneilles, qui demande le cafe ET l'estomac
+    plein (`test_ile.test_a_la_nage_c_est_un_pari`). Trois crans, trois
+    endroits : c'est la geographie qui se lit dans le souffle.
+
     ⚠️ **Les deux berges sont gratuites depuis le 16 sept. 2026** : la tuile
     d'eau qui touche la terre est de l'eau BASSE, on y a pied (`Monde.eauBasse`).
-    Une traversee en paie donc deux de moins — 72 points au lieu de 88 — et ce
-    juge doit compter comme le jeu compte, sinon il garde une marge qui n'existe
-    plus et le jour ou le chenal s'elargit, il rougit trop tard.
+    Une traversee en paie donc deux de moins, et ce juge compte comme le jeu
+    compte — sinon il garde une marge qui n'existe plus.
     """
-    chenal = _chenal_du_pont()
-    prix = (chenal - 2) * cout_par_tuile()
-    assert prix <= SOUFFLE, (
-        f"le chenal fait {chenal} tuiles, soit {prix:.0f} points de souffle sur {SOUFFLE} : "
-        "on ne peut pas le traverser, l'eau est redevenue un mur"
+    nage = _nage_la_plus_courte_vers_la_pointe()
+    a_payer = nage - 2
+    assert a_payer * cout_par_tuile() > SOUFFLE, (
+        f"{nage} tuiles d'eau jusqu'a La Pointe, soit {a_payer * cout_par_tuile():.0f} points "
+        f"de souffle sur {SOUFFLE} : on y va a jeun, sur un coup de tete, et le pont ne sert "
+        "plus a rien"
     )
-    assert prix >= SOUFFLE * 0.6, (
-        f"le chenal ne coûte que {prix:.0f} points sur {SOUFFLE} : ce n'est plus un pari, "
-        "c'est une promenade, et le pont ne sert plus a rien"
+    assert a_payer * cout_par_tuile(cafe=True) <= SOUFFLE, (
+        f"{nage} tuiles d'eau jusqu'a La Pointe : meme avec un cafe il en coute "
+        f"{a_payer * cout_par_tuile(cafe=True):.0f} points sur {SOUFFLE} — l'eau est redevenue "
+        "un mur, avec une animation en plus"
+    )
+    assert a_payer * cout_par_tuile(cafe=True) >= SOUFFLE * 0.6, (
+        f"{nage} tuiles d'eau : le cafe en laisse trop — ce n'est plus un pari, c'est une "
+        "promenade"
+    )
+
+
+def test_le_tablier_va_d_une_rive_a_l_autre():
+    """⚠️ Le pont commence et finit sur la TERRE : un tablier qui s'arrete sur
+    l'eau se conduit droit dans la baie, et un tablier qui mord sur le quartier
+    est une rue, pas un pont. Le juge le dit en un chiffre — la largeur d'eau
+    sous le tablier est exactement sa longueur."""
+    pont = CARTE["ponts"][0]
+    assert _chenal_du_pont() == pont["h"], (
+        f"le tablier fait {pont['h']} tuiles et le chenal {_chenal_du_pont()} : "
+        "le pont ne va pas d'une rive a l'autre"
     )
 
 

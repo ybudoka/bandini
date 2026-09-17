@@ -79,6 +79,15 @@ def test_une_arme_de_fortune_casse_en_le_disant(banc):
         L.Jeu.commencer();
         """ + _espion(["cone", "casse", "erreur", "coup"]) + """
         const j = L.B.joueur;
+        // ⚠️ **LA RUE SE VIDE D'ABORD.** Un coup touche TOUT ce qui est à portée,
+        // et chaque corps touché use l'arme d'un cran : un passant de plus à côté
+        // du joueur, et le cône casse en deux coups au lieu de quatre. Le juge
+        // tenait à la trame — le 17 sept. 2026 la carte a grandi, quelqu'un s'est
+        // retrouvé au terminus, et il est tombé.
+        L.B.entites.filter(function (e) {
+            return e !== j && (e.type === 'pieton' || e.type === 'vehicule');
+        }).forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
         L.Combat.ramasserArme('cone', null); j.arme = 'cone';
         const def = L.Combat.armeDef('cone');
         for (let coup = 0; coup < def.usures; coup++) {

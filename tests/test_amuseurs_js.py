@@ -49,9 +49,21 @@ def test_les_quatre_amuseurs_naissent_au_centre_ville(banc, paquet):
         // On promène le joueur dans toute la ville : personne ne doit en
         // trouver ailleurs qu'au centre.
         const c = L.Monde.carte;
-        const coins = [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.85, 0.85]];
-        for (const [fx, fy] of coins) {
-            L.B.joueur.x = c.pxW * fx; L.B.joueur.y = c.pxH * fy;
+        // ⚠️ **LE CENTRE DU FAUBOURG EN PREMIER, et par sa ZONE, pas par une
+        // fraction de la carte.** Les cinq fractions promenaient le juge aux
+        // quatre coins ; qu'une d'elles tombe dans le centre-ville tenait à la
+        // trame, et le 17 sept. 2026 la carte a grandi vers le bas — plus
+        // aucune n'y tombait, et le juge a dit « aucun amuseur dans toute la
+        // ville » alors qu'ils étaient tous là où on les voulait. On va donc
+        // AU centre-ville, puis on fait le tour pour vérifier qu'il n'y en a
+        // nulle part ailleurs.
+        const zf = (c.zones || []).find(function (q) { return q.slug === 'faubourg'; });
+        const places = [[(zf.x + zf.l / 2) * L.TT, (zf.y + zf.h / 2) * L.TT]];
+        for (const [fx, fy] of [[0.2, 0.2], [0.8, 0.2], [0.5, 0.5], [0.2, 0.8], [0.85, 0.85]]) {
+            places.push([c.pxW * fx, c.pxH * fy]);
+        }
+        for (const [px, py] of places) {
+            L.B.joueur.x = px; L.B.joueur.y = py;
             L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
             o.frame(400);
             for (const a of L.B.entites) {
@@ -125,6 +137,15 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(77);
+        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
+        // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
+        // partie, les scènes du terminus sont toutes à l'écran — elles ne
+        // comptent pas — et les suivantes sont hors de la bulle. Ce juge tenait
+        // donc à la trame, et le 17 sept. 2026 elle a bougé : plus un seul
+        // amuseur en 2 000 images, alors que la règle n'avait pas changé.
+        const zf = (L.Monde.carte.zones || []).find(function (q) { return q.slug === 'faubourg'; });
+        L.B.joueur.x = (zf.x + zf.l / 2) * L.TT; L.B.joueur.y = (zf.y + zf.h / 2) * L.TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
         const j = L.B.joueur;
         const releves = [];
         let vues = 0, seuls = 0;
@@ -421,6 +442,15 @@ def test_un_amuseur_se_pose_sur_une_scene_de_la_carte(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(44);
+        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus.** Un amuseur naît sur une
+        // scène HORS CHAMP mais dans la bulle (`sceneLibre`) : au départ de la
+        // partie, les scènes du terminus sont toutes à l'écran — elles ne
+        // comptent pas — et les suivantes sont hors de la bulle. Ce juge tenait
+        // donc à la trame, et le 17 sept. 2026 elle a bougé : plus un seul
+        // amuseur en 2 000 images, alors que la règle n'avait pas changé.
+        const zf = (L.Monde.carte.zones || []).find(function (q) { return q.slug === 'faubourg'; });
+        L.B.joueur.x = (zf.x + zf.l / 2) * L.TT; L.B.joueur.y = (zf.y + zf.h / 2) * L.TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
         const sur = [], hors = [];
         for (let i = 0; i < 2000; i++) {
             o.frame(1);

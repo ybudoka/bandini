@@ -705,8 +705,8 @@ DISTRICTS: tuple[dict, ...] = (
                   "~~~~~~~",
                   "~~~~~~~",
                   "~~~~~~~")},
-    # La Pointe — le parc au bout de la ville. Un chenal la coupe du reste :
-    # UN pont, et rien d'autre. Des bois, des sentiers, un phare, quatre
+    # La Pointe — le parc au bout de la ville. Un chenal de 24 tuiles la coupe
+    # du reste : UN pont, et rien d'autre. Des bois, des sentiers, un phare, quatre
     # maisons au bout, et les Skateux qui tiennent le stationnement.
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
@@ -741,13 +741,30 @@ DISTRICTS: tuple[dict, ...] = (
 COLONNES = (18, 15, 20, 16, 19,              # Les Érables / Les Quais
             15, 11, 14, 18, 12, 16, 11, 14,  # Le Faubourg (v1, elargi de 2)
             19, 15, 21, 16, 14, 18, 15)      # La Shop / La Pointe
-#: ⚠️ SAUF LA RANGEE DU PONT (la premiere de la bande sud) : elle est restee a
-#: 11, et ses deux tuiles sont allees a la suivante. Le chenal que le pont
-#: enjambe est de l'eau, pas un terrain — a treize tuiles, il coutait 104
-#: points de souffle sur 100 et l'eau redevenait un mur (`test_eau`). Le pari
-#: de la traversee ne bouge donc pas, et la trame garde sa somme.
+#: ⚠️ **LA RANGÉE DU PONT (la première de la bande sud) EST LE CHENAL**, et
+#: c'est le seul endroit où la ville grandit. Demande de Martin (17 sept. 2026) :
+#: « agrandis la carte vers le bas et déplace l'île où est la foire vers le bas
+#: pour allonger le pont et l'éloigner du reste de la ville ». Elle passe donc de
+#: 11 à 24 : treize tuiles d'eau de plus, treize tuiles de pont, et tout ce qui
+#: est au sud descend d'autant — la carte fait 419 × 224 au lieu de 419 × 211.
+#:
+#: ⚠️ **Aucune AUTRE rangée ne bouge**, et c'est ce qui rend le déplacement
+#: propre : la foire (80 × 33), les bois, les maisons et le phare de La Pointe
+#: gardent leur taille à la tuile près, ils ne font que descendre. Ce qui change
+#: de forme, c'est ce que cette rangée-là porte ailleurs : la rangée nord des
+#: Quais (ses blocs de commerces deviennent profonds — deux rangées de bâtiments
+#: dos à dos au lieu d'une) et le haut de la baie.
+#:
+#: ⚠️ **Le prix de la traversée à la nage a changé avec elle**, et c'était la
+#: seule vraie question : onze tuiles se nageaient à jeun (72 points de souffle
+#: sur 100), vingt-quatre ne se nagent qu'avec un café (88 sur 100). La Pointe
+#: se range donc entre la ville et l'Île-aux-Corneilles, qui demande le café ET
+#: l'estomac plein. ⚠️ Et le chenal n'a plus droit à une plage
+#: (`_rives_d_un_pont`) : à 24 tuiles, la règle du tiers en donnait huit par
+#: rive et la traversée retombait à onze tuiles d'eau. `test_eau` refait les
+#: deux calculs sur la carte livrée.
 RANGEES = (11, 14, 10, 13, 11, 15,           # la bande nord
-           11, 16, 11, 13, 10, 12)           # la bande sud
+           24, 16, 11, 13, 10, 12)           # la bande sud
 
 #: La largeur de chaque rue, trottoirs compris. 6 = boulevard (4 voies),
 #: 4 = rue (2 voies). Il y a une rue de plus que de blocs dans chaque sens.
@@ -1127,6 +1144,13 @@ AMARRAGES: dict = {
 #: le seul chemin). La profondeur qu'un bassin peut donner est donc un tiers de
 #: sa largeur quand il y a une rive en face, la moitie quand il n'y en a pas — et
 #: sous `profondeur[0]`, ce cote n'a pas de plage du tout.
+#:
+#: ⚠️ **Et le chenal d'un pont n'en a JAMAIS, quelle que soit sa largeur**
+#: (`_rives_d_un_pont`). Le tiers a suffi tant que le chenal faisait onze
+#: tuiles ; le jour où il est passé à vingt-quatre (17 sept. 2026, `RANGEES`),
+#: il en donnait huit par rive — et la mesure est sans appel : la traversée à la
+#: nage retombait de 24 tuiles d'eau à 11, le chenal élargi ne coûtait plus
+#: rien. Ce qu'un pont enjambe reste de l'eau d'une rive à l'autre.
 #:
 #: ⚠️ **Et du RIVAGE derriere elle** : le plus long bout de cote d'un seul tenant,
 #: pas la somme des bouts. Ailleurs, la ville touche l'eau sans sable — un
@@ -5240,10 +5264,32 @@ class _Chantier:
         pas = max(1, hauteur // 8)
         ouest = self._terre_a_cote([(x - 1, y + j) for j in range(0, hauteur, pas)])
         est = self._terre_a_cote([(x + largeur, y + j) for j in range(0, hauteur, pas)])
+        # ⚠️ Les rives qu'un pont relie n'ont pas de plage (voir `PLAGES`). On
+        # saute l'appel en entier : `_plage` ne tire son premier de qu'APRES
+        # avoir mesure le large, donc un chenal qui n'en a jamais eu n'en tire
+        # pas plus qu'avant, et pas une plage de la ville ne se deplace.
+        enjambees = self._rives_d_un_pont(x, y, largeur, hauteur)
         for cote, rivage, en_face in (("nord", nord, sud), ("sud", sud, nord),
                                       ("ouest", ouest, est), ("est", est, ouest)):
-            if rivage:
+            if rivage and cote not in enjambees:
                 self._plage(x, y, largeur, hauteur, cote, en_face)
+
+    def _rives_d_un_pont(self, x: int, y: int, largeur: int, hauteur: int) -> frozenset[str]:
+        """Les cotes de ce bassin qu'un pont relie — ceux-la n'ont pas de plage.
+
+        Un pont vertical relie la rive NORD a la rive SUD du bassin qu'il
+        traverse ; un pont horizontal, l'OUEST a l'EST.
+        """
+        for sens, i, j in sorted(PONTS):
+            if sens == "v":
+                px, py = self.xr[i], self.yb[j]
+                pl, ph, cotes = RUES_V[i], RANGEES[j], frozenset(("nord", "sud"))
+            else:
+                px, py = self.xb[i], self.yr[j]
+                pl, ph, cotes = COLONNES[i], RUES_H[j], frozenset(("ouest", "est"))
+            if px < x + largeur and x < px + pl and py < y + hauteur and y < py + ph:
+                return cotes
+        return frozenset()
 
     def _plage(self, x: int, y: int, largeur: int, hauteur: int, cote: str,
                en_face: bool) -> None:
@@ -6026,7 +6072,14 @@ class _Chantier:
                 # ⚠️ Le tablier seulement : un quai sur l'eau porte la baie sous
                 # lui, et une chaine tendue dans la baie ne ferme rien.
                 tablier = QUAI_TABLIER if g == "j" else rh
-                profondeur = min(MOUILLAGE["profondeur"], tablier - QUAI_APRON - 1)
+                # ⚠️ **LA CHAINE ENTOURE LA CALE, elle ne la coupe pas.** La
+                # profondeur ordinaire suffisait tant que la cale se posait a
+                # quatre tuiles du bord ; le 17 sept. 2026 elle s'est posee a
+                # cinq, pile sur la derniere rangee de l'enceinte — la cale
+                # etait SUR la chaine, et `test_barrieres` l'a dit. L'enceinte
+                # descend donc avec elle, jusqu'a ce que le tablier permet.
+                fond = max(MOUILLAGE["profondeur"], a["y"] - ry + 2)
+                profondeur = min(fond, tablier - QUAI_APRON - 1)
                 x0 = max(rx, a["x"] - MOUILLAGE["demi_largeur"])
                 x1 = min(rx + rl, a["x"] + MOUILLAGE["demi_largeur"] + 1)
                 rect = (x0, ry, x1 - x0, profondeur)

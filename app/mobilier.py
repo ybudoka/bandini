@@ -102,12 +102,23 @@ def _bords(chantier, ville: dict) -> list[dict]:
             for x in range(inter["x"] - COIN - 1, inter["x"] + inter["l"] + COIN + 1):
                 coins.add((x, y))
     evites: set[tuple[int, int]] = set(coins) | autobus.parvis(ville)
-    rectangles = list(ville.get("chantiers") or []) + list(ville.get("plages") or [])
+    rectangles = list(ville.get("plages") or [])
     if ville.get("foire"):
         rectangles.append(ville["foire"])
     for r in rectangles:
         for y in range(r["y"] - 1, r["y"] + r["h"] + 1):
             for x in range(r["x"] - 1, r["x"] + r["l"] + 1):
+                evites.add((x, y))
+    # ⚠️ **L'ENCEINTE D'UN CHANTIER SE RETIRE SANS SA MARGE**, et c'est ce qui
+    # garde la promesse « la ville est la même avec ou sans chantiers ». Une
+    # enceinte est posée sur le LOT d'un bâtiment : ses tuiles ne sont jamais un
+    # bord de rue, donc l'écarter n'enlève aucun bord — mais la marge d'une
+    # tuile, elle, mordait sur le trottoir d'en face. Mesuré le 17 sept. 2026 :
+    # un chantier de La Shop mangeait un bord de sept tuiles, et les 1 900
+    # meubles qui le suivaient dans la liste se décalaient tous d'un cran.
+    for r in ville.get("chantiers") or []:
+        for y in range(r["y"], r["y"] + r["h"]):
+            for x in range(r["x"], r["x"] + r["l"]):
                 evites.add((x, y))
 
     def cote_du_trottoir(x: int, y: int) -> tuple[int, int] | None:

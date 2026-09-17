@@ -277,6 +277,12 @@ def test_on_achete_le_silence_d_un_temoin(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         L.B.partie.argent = 100;
+        // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** L'invite ACTION nomme le plus proche,
+        // et la ville pose ses ambulants où elle veut : le 17 sept. 2026, la trame
+        // a bougé, une roulotte à café s'est installée au terminus, et le juge
+        // lisait « ROULOTTE À CAFÉ — 4 $ » au lieu du silence du témoin.
+        L.B.defs.ambulants = [];
+        for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const t = o.poser('passant', 16, 0);
         t.probaTemoin = 1; t.etat = 'flane';
         L.Entites.regarder(t, -1, 0);
