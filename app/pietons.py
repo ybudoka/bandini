@@ -405,8 +405,18 @@ VOL_DE_CHAR: dict = {
 #: ⚠️ Le tirage se fait a l'EMPREINTE de la minute (`hash2`), jamais au de du
 #: jeu : la lecon du char en panne, qui avait fait tomber quatre juges d'un
 #: coup.
+#:
+#: ⚠️ **« PAR MINUTE DE JEU » TROMPE** — retour de Martin (16 sept. 2026) : « je
+#: veux moins de bagarre de gang ». Une journee dure huit minutes
+#: (`economie.JOUR_SECONDES`), donc une minute de jeu dure un TIERS DE SECONDE,
+#: et `majBagarre` tire a chacun de ses passages — toutes les 30 images, deux
+#: fois par seconde. A 0,12, il suffisait de rester QUATRE SECONDES en vue
+#: d'une frontiere pour qu'une rixe parte : on en croisait une a chaque
+#: frontiere. A 0,01, elle se fait attendre CINQUANTE secondes en moyenne — on
+#: la voit si on s'attarde, plus en passant. Un juge tient l'attente, calculee
+#: sur la vraie cadence du navigateur.
 BAGARRE: dict = {
-    "chance_par_minute": 0.12,   # qu'une rixe commence, par minute de jeu
+    "chance_par_minute": 0.01,   # a chaque tirage, deux fois par seconde (voir plus haut)
     "membres": 3,                # de chaque cote — six hommes, pas une emeute
     # ⚠️ LA FENETRE EST CALEE SUR CELLE DE LA VILLE, et les deux bornes sont
     # des mesures, pas des gouts. En dessous de `trop_pres_px` on serait a

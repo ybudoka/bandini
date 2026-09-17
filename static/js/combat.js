@@ -123,7 +123,9 @@ const Combat = (function () {
     if (e.phase === 'anticipation') {
       e.phase = 'actif';
       e.phaseT = arme.actif;
-      Son.SFX.arme(arme);            // la batte, le couteau... chacune son son
+      // La batte, le couteau... chacune son son — entendu de LA OU frappe
+      // celui qui frappe : une rixe hors champ ne s'entend pas.
+      Son.depuis(e, function () { Son.SFX.arme(arme); });
       if (arme.type === 'jet') return;
       arcDeMelee(e, arme);
     } else if (e.phase === 'actif') {

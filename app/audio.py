@@ -1020,6 +1020,27 @@ RUMEUR = {
     "retour_par_image": 0.004,
 }
 
+#: LES COUPS DES AUTRES S'ENTENDENT DE LA OU ILS SONT.
+#:
+#: ⚠️ Retour de Martin (16 sept. 2026) : « les cris doivent etre moins fort si on
+#: est loin et devenir plus fort quand on s'approche », puis « meme que je veux
+#: pas entendre quand on les voit pas ». Le grognement d'un coup encaisse
+#: (`touche`) et le coup lui-meme (`batte`, `coup`...) partaient au PLEIN
+#: volume, ou que ce soit — et la rixe de gangs nait expres hors de l'ecran :
+#: on entendait six hommes se battre sans en voir un seul.
+#:
+#: La regle, pour tout ce que frappe ou encaisse QUELQU'UN D'AUTRE que le
+#: joueur : hors de l'ecran, rien ; a l'ecran, le volume baisse en ligne droite
+#: avec la distance au joueur. Le joueur s'entend toujours plein volume.
+COUPS_DES_AUTRES = {
+    # ⚠️ Un peu plus que la demi-diagonale de l'ecran (480 x 270 : 275 px),
+    # pour qu'un coin de l'ecran s'entende encore un peu. Au bord gauche ou
+    # droit (240 px), il reste un cinquieme du volume ; a deux pas, presque tout.
+    "portee_px": 300,
+    # Un homme dont le milieu vient de passer le bord se voit encore a moitie.
+    "marge_px": 8,
+}
+
 
 def exporter() -> dict:
     """⚠️ Ne declare QUE les fichiers presents : le navigateur ne demande jamais
@@ -1028,6 +1049,7 @@ def exporter() -> dict:
         "dossier": DOSSIER,
         "parole": dict(PAROLE),
         "rumeur": dict(RUMEUR),
+        "coups_des_autres": dict(COUPS_DES_AUTRES),
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
         # le volume qui va AVEC ce fichier, qui n'est pas celui des notes.

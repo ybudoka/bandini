@@ -111,13 +111,24 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
     ne regarde ces secondes-là.
 
     ⚠️ Les deux bornes viennent de la FICHE (`pietons.SPECTACLE`), pas du juge :
-    le jour où Martin dit « plutôt 6 », rien ici ne ment."""
+    le jour où Martin dit « plutôt 6 », rien ici ne ment.
+
+    ⚠️ **Le contrat vaut pour une rue calme.** Quand la rue prend peur autour
+    du numéro — une auto du trafic renverse quelqu'un à côté, un pickpocket se
+    fait prendre —, le public se sauve (`reactions.fuite_secondes`) et personne
+    n'est recrutable tant qu'il court : c'est voulu. On cesse alors de juger ce
+    numéro-là. Mesuré le 16 sept. 2026 (les rixes) : ce juge ne tenait que par
+    l'ordre des dés. Sans aucune rixe, la graine 77 tombait déjà (une auto à
+    48 px, 591 images seul) ; les rixes tiraient des dés et déplaçaient
+    l'accident ailleurs. Resserré, il tient sur sept graines et trois chances
+    de rixe."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(77);
         const j = L.B.joueur;
         const releves = [];
         let vues = 0, seuls = 0;
+        const rayonPeur = L.B.defs.pietons.reactions.peur_rayon_tuiles * L.TT;
         for (let tour = 0; tour < 3; tour++) {
             let a = null;
             for (let i = 0; i < 600 && !a; i++) {
@@ -130,6 +141,9 @@ def test_quand_on_le_voit_il_a_entre_trois_et_cinq_personnes_autour(banc, specta
                 const dx = a.x - j.x, dy = a.y - j.y, n = Math.hypot(dx, dy) || 1;
                 if (n > 44) { j.x += dx / n * 0.9; j.y += dy / n * 0.9; L.Monde.centrerCamera(j.x, j.y); }
                 o.frame(1);
+                // ⚠️ LA RUE A EU PEUR : son public s'est sauvé, et c'est voulu.
+                if (L.Entites.pietonsAutour(a.x, a.y, rayonPeur).some(function (q) {
+                    return q.vivant && (q.etat === 'fuit' || q.etat === 'temoin'); })) break;
                 if (!L.Entites.visibleAEcran(a.x, a.y, 0)) continue;
                 vues++;
                 const cercle = L.Entites.badauds(a).length;

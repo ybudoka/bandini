@@ -2408,6 +2408,11 @@ const Entites = (function () {
 
   /** Une rixe par minute de jeu, au plus, et jamais deux a la fois.
 
+      ⚠️ Une minute de jeu dure un tiers de seconde : ce passage-ci, toutes
+      les 30 images, en voit une neuve a chaque fois. C'est donc DEUX TIRAGES
+      PAR SECONDE, et `chance_par_minute` se lit a cette cadence-la
+      (`pietons.BAGARRE`, et son juge).
+
       ⚠️ Le tirage se fait a l'EMPREINTE de la minute, jamais au de du jeu : un
       decor qui consomme `B.rng()` decale tous les des qui suivent, et cette
       lecon-la a fait tomber quatre juges sans rapport le jour du char en panne. */
@@ -3799,7 +3804,9 @@ const Entites = (function () {
     e.vy = Math.sin(angle) * poussee;
     if (opts.saigne) e.saigne = Math.min(B.defs.pietons.reactions.saignement_images, opts.saigne);
     if (e !== B.joueur) sang(e.x, e.y, opts.saigne ? 6 : 3);
-    Son.SFX.touche();
+    // Le grognement vient de celui qui encaisse : muet hors de l'ecran, plus
+    // fort a mesure qu'on s'approche (retour de Martin, 16 sept. 2026).
+    Son.depuis(e, Son.SFX.touche);
     if (e.vie <= 0 && e.type === 'joueur') {
       Missions.hopital(source);
     } else if (e.vie <= 0) {

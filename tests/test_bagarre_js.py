@@ -326,3 +326,57 @@ def test_le_brave_ne_se_jette_pas_sur_le_joueur_pour_le_geste_d_un_autre(banc):
     # L'autre moitié : quand c'est bien lui, rien n'a changé.
     assert r["joueur"]["gang"] == "attaque_joueur", "la gang ne répond plus au joueur"
     assert r["joueur"]["brave"] == "attaque_joueur", "le brave ne répond plus au joueur"
+
+
+def test_une_rixe_qu_on_ne_voit_pas_ne_s_entend_pas(banc):
+    """⚠️ Retour de Martin (16 sept. 2026) : « même que je veux pas entendre quand
+    on les voit pas ». La rixe naît EXPRÈS hors de l'écran (personne ne se
+    matérialise sous les yeux du joueur) — et chaque coup, chaque grognement
+    partait au plein volume : on entendait six hommes se battre sans en voir un.
+
+    On la laisse se battre hors champ, puis on va se planter à côté : les mêmes
+    hommes, les mêmes coups, et seul l'écran décide."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        L.graine(11);
+        %s
+        const trouve = allumer(L);
+        if (!trouve) return { trouve: false };
+        const vrai = L.Son.depuis, appels = [];
+        L.Son.depuis = function (qui, effet) {
+            const n = joues.length;
+            const v = vrai(qui, effet);
+            if (qui && qui.bagarre) {
+                appels.push({ v: v, sources: joues.length - n,
+                              vu: L.Entites.visibleAEcran(qui.x, qui.y, 8) });
+            }
+            return v;
+        };
+        o.frame(420);
+        const horsChamp = appels.splice(0);
+        // On va voir : au milieu de ceux qui sont encore debout.
+        const debout = rixeurs(L).filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
+        const j = L.B.joueur;
+        j.x = debout.reduce(function (s, e) { return s + e.x; }, 0) / debout.length;
+        j.y = debout.reduce(function (s, e) { return s + e.y; }, 0) / debout.length;
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Entites.indexer();
+        o.frame(300);
+        const enVue = appels.splice(0);
+        L.Son.depuis = vrai;
+        return { trouve: true, horsChamp: horsChamp, enVue: enVue, debout: debout.length };
+    }""" % ALLUMER)
+    assert r["trouve"], "aucune frontière de la ville n'a ses deux trottoirs"
+    hors = r["horsChamp"]
+    assert hors, "personne n'a frappé ni encaissé hors champ : le juge ne mesure rien"
+    assert not any(a["vu"] for a in hors), "la rixe est entrée dans l'écran : ce n'est plus hors champ"
+    assert all(a["v"] == 0 and a["sources"] == 0 for a in hors), (
+        "on entend une rixe qu'on ne voit pas : %s" % [a for a in hors if a["v"] or a["sources"]][:3])
+    assert r["debout"] >= 2, "la rixe s'est finie avant qu'on aille la voir"
+    vue = r["enVue"]
+    entendus = [a for a in vue if a["v"] > 0]
+    assert entendus and all(a["sources"] > 0 for a in entendus), (
+        "à côté de la rixe, on n'entend rien : %s" % vue[:3])
+    assert all(a["vu"] for a in entendus), "on a entendu quelqu'un qu'on ne voyait pas"

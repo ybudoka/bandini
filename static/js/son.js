@@ -110,10 +110,16 @@ const Son = (function () {
     try { parti.close(); } catch (e) { /* deja fermee */ }
   }
 
+  //: Le volume et le panoramique du son en cours, le temps d'un appel a
+  //: `depuis` — null le reste du temps. ⚠️ `joue`, `ton` et `bruit` le lisent :
+  //: c'est ce qui pose dans le monde TOUS les effets du combat (une douzaine
+  //: d'armes, chacune avec son filet) sans les reecrire un par un.
+  let ici = null;
+
   /** Une note : frequence en Hz, duree en s, forme, volume, glisse (facteur de frequence finale). */
   function ton(freq, duree, forme, volume, glisse, depart) {
     if (!pret()) return;
-    tonA(ctx.currentTime + (depart || 0), freq, duree, forme, volume, glisse);
+    tonA(ctx.currentTime + (depart || 0), freq, duree, forme, ici ? (volume || 0.4) * ici.volume : volume, glisse);
   }
 
   /** La meme note, mais POSEE a un instant de l'horloge audio. C'est ce qu'il
@@ -155,7 +161,7 @@ const Son = (function () {
     filtre.frequency.setValueAtTime(freqDebut || 1200, t0);
     filtre.frequency.exponentialRampToValueAtTime(freqFin || 200, t0 + duree);
     const gain = ctx.createGain();
-    gain.gain.setValueAtTime(volume || 0.5, t0);
+    gain.gain.setValueAtTime((volume || 0.5) * (ici ? ici.volume : 1), t0);
     src.connect(filtre).connect(gain).connect(maitre);
     src.start(t0);
   }
@@ -268,7 +274,40 @@ const Son = (function () {
     return volume;
   }
 
-  function joue(slug) { return echantillon(slug) !== null; }
+  function joue(slug) { return echantillon(slug, ici) !== null; }
+
+  /** Combien s'entend ce qui se passe en (x, y) : 0 hors de l'ecran, et de plus
+      en plus fort a mesure que le joueur s'approche (`audio.coups_des_autres`).
+
+      ⚠️ L'ECRAN, pas une distance : la vue est plus large que haute, et la rixe
+      de gangs nait juste au-dela de son bord. Un rayon qui s'entend a 300 px
+      entend aussi, en haut et en bas, ce que l'ecran ne montre pas. */
+  function presence(x, y) {
+    const j = B.joueur, cam = B.cam;
+    if (!j || !cam) return 0;
+    const r = (B.defs && B.defs.audio && B.defs.audio.coups_des_autres) || {};
+    const m = r.marge_px || 0;
+    if (x < cam.x - m || x > cam.x + VW + m || y < cam.y - m || y > cam.y + VH + m) return 0;
+    return Math.max(0, 1 - Math.hypot(x - j.x, y - j.y) / (r.portee_px || 300));
+  }
+
+  /** Joue `effet` (un `SFX`) comme s'il venait de `qui` : muet si on ne le voit
+      pas, plus fort de pres, a gauche s'il est a gauche. Le joueur s'entend
+      toujours plein volume. Rend le volume (0 = rien n'est parti).
+
+      ⚠️ Retour de Martin : « je veux pas entendre quand on les voit pas ». Le
+      coup et le grognement d'une rixe hors champ partaient au plein volume. */
+  function depuis(qui, effet) {
+    if (!qui || qui === B.joueur) { effet(); return 1; }
+    const v = presence(qui.x, qui.y);
+    if (v <= 0) return 0;
+    const r = (B.defs && B.defs.audio && B.defs.audio.coups_des_autres) || {};
+    ici = { volume: v, pan: (qui.x - B.joueur.x) / (r.portee_px || 300) };
+    // ⚠️ `finally` : un effet qui leve laisserait `ici` pose, et TOUS les sons
+    // suivants du jeu — le joueur compris — sortiraient a ce volume-la.
+    try { effet(); } finally { ici = null; }
+    return v;
+  }
 
   /** Ce son est-il pret a jouer ? ⚠️ Repondre en le JOUANT (comme le faisaient
       les tests) demarre une source a chaque appel : dans une boucle d'attente,
@@ -1360,7 +1399,7 @@ const Son = (function () {
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
-    chargerEchantillons, echantillon, joue, estCharge, jouerA, boucle, boucleActive, reglerBoucle, volumeBoucle,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs

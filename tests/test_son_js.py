@@ -999,3 +999,71 @@ def test_le_jet_d_une_borne_est_tenu_et_suit_la_distance(banc):
     assert 0 < max(r["loin"]) < min(r["pres"]), "le souffle ne baisse pas avec la distance : %s" % r["loin"][:4]
     assert max(r["tresLoin"]) == 0, "on entend la borne à neuf cents pixels : %s" % r["tresLoin"][:4]
     assert max(r["apres"]) == 0, "la gerbe est morte et le souffle continue : %s" % r["apres"]
+
+
+def test_le_coup_d_un_autre_s_entend_de_la_ou_il_est(banc):
+    """⚠️ Retour de Martin (16 sept. 2026) : « les cris doivent être moins fort
+    si on est loin et devenir plus fort quand on s'approche », puis « même que je
+    veux pas entendre quand on les voit pas ». Le grognement d'un coup encaissé
+    partait au plein volume, où que ce soit.
+
+    ⚠️ **L'écran, pas un rayon** : à 200 px au-dessus du joueur on est plus près
+    qu'à 200 px à sa droite — mais hors de la vue, qui est plus large que haute.
+    L'un s'entend, l'autre non. Et on juge les DEUX chemins : le filet
+    (oscillateurs, avant que les fichiers arrivent) et l'échantillon."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        const j = L.B.joueur, SFX = L.Son.SFX, c = L.Monde.carte;
+        // Au milieu de la ville : la caméra n'est bornée par aucun bord.
+        j.x = Math.floor(c.pxW / 2); j.y = Math.floor(c.pxH / 2);
+        L.Monde.centrerCamera(j.x, j.y);
+        function filet(dx, dy) {
+            const n = joues.length;
+            const v = L.Son.depuis({ x: j.x + dx, y: j.y + dy }, SFX.touche);
+            return { v: v, sources: joues.length - n };
+        }
+        const sansFichier = { charge: L.Son.estCharge('touche'),
+                              pres: filet(20, 0), dessus: filet(0, 200) };
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const ctx = L.Son.contexte;
+        // Le volume d'un echantillon est sur son gain, branche juste derriere la source.
+        function gains(qui) {
+            const n = ctx.sources.length;
+            const v = L.Son.depuis(qui, SFX.touche);
+            const g = ctx.sources.slice(n).filter(function (s) { return s.__demarree; })
+                .map(function (s) { return s.__vers[0].gain.value; });
+            return { v: v, gains: g };
+        }
+        const autour = function (dx, dy) { return gains({ x: j.x + dx, y: j.y + dy }); };
+        const r = {
+            sansFichier: sansFichier, charge: L.Son.estCharge('touche'),
+            base: L.B.defs.audio.echantillons.find(function (e) { return e.slug === 'touche'; }).volume,
+            joueur: gains(j), pres: autour(20, 0), milieu: autour(120, 0), bord: autour(220, 0),
+            dessus: autour(0, 200), dehors: autour(400, 0), muettes: ctx.sourcesMuettes(),
+        };
+        // ⚠️ Et apres, le son ordinaire est rendu a lui-meme : un volume reste
+        // pose ferait chuchoter tout le jeu.
+        const n = ctx.sources.length;
+        SFX.touche();
+        r.apres = ctx.sources.slice(n).map(function (s) { return s.__vers[0].gain.value; });
+        return r;
+    }""")
+    f = r["sansFichier"]
+    assert f["charge"] is False, "le fichier était déjà là : le filet n'est pas jugé"
+    assert f["pres"]["v"] > 0.9 and f["pres"]["sources"] > 0, "sans fichier, un coup à deux pas est muet"
+    assert f["dessus"]["v"] == 0 and f["dessus"]["sources"] == 0, (
+        "sans fichier, on entend un coup hors de l'écran")
+    assert r["charge"], "le grognement ne se charge pas : l'échantillon n'est pas jugé"
+    base = r["base"]
+    assert r["joueur"]["gains"] == [base], "le joueur ne s'entend plus plein volume : %s" % r["joueur"]
+    for cle in ("pres", "milieu", "bord"):
+        assert len(r[cle]["gains"]) == 1, "à l'écran (%s), rien n'est parti : %s" % (cle, r[cle])
+    pres, milieu, bord = (r[k]["gains"][0] for k in ("pres", "milieu", "bord"))
+    assert base > pres > milieu > bord > 0, (
+        "le coup ne baisse pas avec la distance : %s > %s > %s > %s" % (base, pres, milieu, bord))
+    assert r["dessus"] == {"v": 0, "gains": []}, "on entend un coup au-dessus de l'écran : %s" % r["dessus"]
+    assert r["dehors"] == {"v": 0, "gains": []}, "on entend un coup hors de l'écran : %s" % r["dehors"]
+    assert r["muettes"] == 0
+    assert r["apres"] == [base], "après un coup lointain, le son du joueur reste bas : %s" % r["apres"]

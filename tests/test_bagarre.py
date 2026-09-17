@@ -6,9 +6,13 @@ elle ne lui met pas d'étoile, elle ne compte pas dans ses morts, et personne ne
 se retourne contre lui parce qu'elle a lieu.
 """
 
+import math
+import re
+from pathlib import Path
+
 import pytest
 
-from app import carte, definitions, pietons
+from app import carte, definitions, economie, pietons
 
 
 @pytest.fixture(scope="module")
@@ -102,3 +106,24 @@ def test_les_frontieres_ne_dependent_pas_de_l_ordre_d_un_ensemble(ville):
     assert pietons.frontieres(ville) == pietons.frontieres(ville)
     # Et elle ne tient que des fiches : la même carte rend la même chose.
     assert pietons.frontieres(carte.exporter()) == pietons.frontieres(ville)
+
+
+def test_une_rixe_se_fait_attendre():
+    """⚠️ Retour de Martin (16 sept. 2026) : « je veux moins de bagarre de gang ».
+
+    **« Par minute de jeu » trompe** : une journée dure `JOUR_SECONDES`, donc
+    une minute de jeu dure un tiers de seconde, et `majBagarre` tire à chacun
+    de ses passages. À 0,12, quatre secondes en vue d'une frontière suffisaient
+    pour qu'une rixe parte. On calcule donc l'attente sur la VRAIE cadence —
+    celle qu'écrit le navigateur, pas un chiffre recopié ici."""
+    js = (Path(__file__).resolve().parent.parent / "static" / "js" / "entites.js").read_text(encoding="utf-8")
+    passage = re.findall(r"B\.t % (\d+) === 0\) majBagarre\(\)", js)
+    assert len(passage) == 1, "la cadence de `majBagarre` a changé de forme : le juge ne la lit plus"
+    images_par_passage = int(passage[0])
+    images_par_minute = economie.JOUR_SECONDES * 60 / (24 * 60)
+    # Un passage ne tire que si la minute a changé depuis le précédent.
+    images_par_tirage = images_par_passage * math.ceil(images_par_minute / images_par_passage)
+    attente_s = images_par_tirage / 60 / pietons.BAGARRE["chance_par_minute"]
+    assert attente_s >= 45, (
+        "une rixe part après %.0f s en vue d'une frontière, en moyenne : on en croise une à chaque coin"
+        % attente_s)
