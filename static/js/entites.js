@@ -4161,12 +4161,33 @@ const Entites = (function () {
     ctx.globalAlpha = 1;
   }
 
+  /** La pose d'un decor ANIME a l'image `t` (par defaut, celle qui va se peindre).
+
+      ⚠️ `travaille: 'jour'` : une machine de chantier s'arrete la nuit, a sa pose
+      de repos (0) — et c'est cette fonction que `chantiers.js` relit pour savoir
+      quand la boule frappe. Deux formules, et le coup partirait dans le vide. */
+  function poseDuDecor(d, t, nuit) {
+    if (!d.anime) return 0;
+    if (d.travaille === 'jour' && (nuit === undefined ? Monde.estNuit() : nuit)) return 0;
+    return Math.floor((t === undefined ? B.t : t) / d.anime) % d.variantes;
+  }
+
   function dessiner(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const visibles = [];
+    const nuit = Monde.estNuit();
     for (const e of B.entites) {
       if (!e.dessine) continue;
-      if (e.x < cx - 40 || e.x > cx + VW + 40 || e.y < cy - 48 || e.y > cy + VH + 48) continue;
+      // ⚠️ UN DECOR SORT DE LA LISTE PAR SON DESSIN, pas par son pied. La marge
+      // fixe (40 px, 48 au nord et au sud) coupait la grue a tour — 112 px de
+      // large, 90 au-dessus de sa tuile — alors que sa fleche etait encore a
+      // l'ecran : elle apparaissait d'un coup en montant la rue.
+      // (Les feux ont leur propre peintre, plus grand que leur fiche : marge fixe.)
+      const fiche = e.decor && e.type !== 'feu' && e.type !== 'feu_pieton' && DECORS[e.decor];
+      if (fiche) {
+        const x0 = e.x - fiche.ancre[0], y0 = e.y - fiche.ancre[1] - (e.altitude || 0);
+        if (x0 + fiche.w < cx - 4 || x0 > cx + VW + 4 || y0 + fiche.h < cy - 4 || y0 > cy + VH + 4) continue;
+      } else if (e.x < cx - 40 || e.x > cx + VW + 40 || e.y < cy - 48 || e.y > cy + VH + 48) continue;
       visibles.push(e);
     }
     // ⚠️ Les morts d'abord : un cadavre se fait marcher dessus, il ne cache
@@ -4200,7 +4221,7 @@ const Entites = (function () {
         // une articulation, pas dix — chaque pose est cuite UNE fois et reste
         // en cache, donc un manège qui tourne coute quatre canevas, pas un par
         // image.
-        const pose = d.anime ? Math.floor(B.t / d.anime) % d.variantes : e.v;
+        const pose = d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
         const c = d.variantes
           ? Atlas.cuirePeintre('decor|' + e.decor + '|' + pose, d.w, d.h,
                                function (g, w, h) { d.peindre(g, w, h, pose); })
@@ -4301,6 +4322,6 @@ const Entites = (function () {
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose,
+    dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose, poseDuDecor,
   };
 })();

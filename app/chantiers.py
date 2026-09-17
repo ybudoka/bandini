@@ -85,6 +85,16 @@ MACHINES: dict[int, tuple[str, ...]] = {
     3: ("grue",),
 }
 
+#: ⚠️ LA BOULE FRAPPE POUR VRAI : la grue à boule ne se pose qu'à DEUX tuiles de
+#: la moitié encore debout, sur une rangée où le mur l'attend — elle-même et la
+#: rangée au-dessus, puisque la boule pend en l'air, une tuile plus haut à
+#: l'écran. Plus près, sa voisine serait le mur et la règle des quatre voisines
+#: la refuse ; plus loin, la boule frapperait le vide. Mesuré sur sept graines :
+#: la place existe 364 fois sur 374 (bâtiment libre × côté qui tombe) — un bâtiment
+#: qui ne l'a pas ne se démolit pas, et la règle est donc TOUJOURS vraie.
+FRAPPE = "grue_a_boule"
+PORTEE_BOULE = 2
+
 #: Ce qui fait qu'un bâtiment SERT. Une seule de ces choses sur lui ou devant lui,
 #: et on ne le démolit pas.
 SERVENT = ("portes", "devantures", "points_interet", "paquets", "ambulants", "scenes",
@@ -210,13 +220,30 @@ def _touche_la_ville(sol: list[str], neuves: set[tuple[int, int]],
     return True
 
 
+def _frappe(x: int, y: int, debout: set[tuple[int, int]], sens: int) -> tuple[int, int] | None:
+    """La tuile du mur que frappe une boule posée en (x, y), ou None.
+
+    (Rien de debout ENTRE la boule et le mur : c'est la règle des quatre voisines
+    qui le garantit, la tuile d'à côté est du sol.)
+    """
+    mur = (x + PORTEE_BOULE * sens, y)
+    if mur in debout and (mur[0], y - 1) in debout:
+        return mur
+    return None
+
+
 def _poser_machines(sol: list[str], phase: int, neuves: set[tuple[int, int]],
-                    tuiles: set[tuple[int, int]], des: carte.Des) -> list[dict] | None:
+                    tuiles: set[tuple[int, int]], des: carte.Des,
+                    debout: set[tuple[int, int]] | None = None,
+                    sens: int = 1) -> list[dict] | None:
     """Une place par machine, ou None si la phase ne peut pas les porter.
 
     ⚠️ Une machine ne se pose que sur une tuile dont les quatre voisines sont du
     sol : une pelle dans l'embrasure d'un passage le bouche aussi sûrement
     qu'un mur. Et on rejoue `_touche_la_ville` avec elle.
+
+    `debout` et `sens` : la moitié qui tient encore et le côté où elle est (+1 à
+    l'est, -1 à l'ouest) — la grue à boule ne se pose que là d'où elle la frappe.
     """
     poses: list[dict] = []
     bloquees: set[tuple[int, int]] = set()
@@ -234,6 +261,7 @@ def _poser_machines(sol: list[str], phase: int, neuves: set[tuple[int, int]],
             (x, y) for x, y in sorted(neuves)
             if (x, y) not in bloquees
             and all(du_sol(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+            and (sorte != FRAPPE or _frappe(x, y, debout or set(), sens))
         ]
         # ⚠️ COTE RUE d'abord : une pelle qui travaille au fond du terrain, derriere
         # la moitie encore debout, personne ne la voit passer. On tire parmi les
@@ -248,7 +276,12 @@ def _poser_machines(sol: list[str], phase: int, neuves: set[tuple[int, int]],
         if place is None:
             return None
         bloquees.add(place)
-        poses.append({"type": sorte, "x": place[0], "y": place[1]})
+        pose = {"type": sorte, "x": place[0], "y": place[1]}
+        if sorte == FRAPPE:
+            mur = _frappe(place[0], place[1], debout or set(), sens)
+            pose["sens"] = sens
+            pose["frappe"] = [mur[0], mur[1]]
+        poses.append(pose)
     return poses
 
 
@@ -284,6 +317,9 @@ def _phases(sol: list[str], libre: dict, des: carte.Des) -> list[dict] | None:
     milieu = x0 + largeur // 2
     est = des.chance(0.5)
     tombees = {(x, y) for x, y in tuiles if (x >= milieu) == est}
+    debout = tuiles - tombees
+    # Le côté de la moitié debout, vu de celle qui tombe : c'est là que frappe la boule.
+    sens = -1 if est else 1
 
     toit = _toit_d_origine(sol, libre["tuiles"], facades)
     # ⚠️ Le neuf a le toit PLAT, de gravier : c'est ce qu'on coule aujourd'hui,
@@ -317,7 +353,7 @@ def _phases(sol: list[str], libre: dict, des: carte.Des) -> list[dict] | None:
         lignes = patche(remplace)
         if neuves and not _touche_la_ville(lignes, neuves, set(), tuiles):
             return None
-        machines = _poser_machines(lignes, numero, neuves, tuiles, des) if neuves else []
+        machines = _poser_machines(lignes, numero, neuves, tuiles, des, debout, sens) if neuves else []
         if machines is None:
             return None
         phases.append({

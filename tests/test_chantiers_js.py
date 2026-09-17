@@ -70,7 +70,7 @@ def test_le_premier_matin_porte_ses_chantiers(banc):
         assert ch["posee"] == ch["decalage"], ch
         assert ch["rangees"] == ch["attendues"], f"chantier {ch['id']} : le sol n'est pas celui du jour"
         assert ch["incoherent"] == 0, "la solidité ne suit pas le sol posé"
-        assert tuple(ch["machines"]) == chantiers.MACHINES.get(ch["posee"], ()), ch
+        assert tuple(m.removesuffix("_ouest") for m in ch["machines"]) == chantiers.MACHINES.get(ch["posee"], ()), ch
 
 
 def test_le_jeu_et_le_generateur_lisent_la_meme_horloge(banc, paquet):
@@ -185,7 +185,8 @@ def test_les_machines_travaillent_et_arretent_puis_s_en_vont(banc):
     }""")
     for phase, machines in r.items():
         attendues = chantiers.MACHINES.get(int(phase), ())
-        assert tuple(m["decor"] for m in machines) == attendues, (phase, machines)
+        # La grue à boule tournée vers l'ouest est la même machine, en miroir.
+        assert tuple(m["decor"].removesuffix("_ouest") for m in machines) == attendues, (phase, machines)
         for m in machines:
             assert m["solide"], f"{m['decor']} ne bloque personne"
             assert m["indexee"], f"{m['decor']} n'est pas dans l'index du décor : le char la traverse"
@@ -392,3 +393,251 @@ def test_la_boule_se_balance_et_la_grue_tourne(banc):
         assert f["anime"] and f["variantes"] >= 4, nom
         assert f["distinctes"] >= f["variantes"] // 2, f"{nom} ne bouge pas : {f}"
         assert f["solide"] and f["arrete"], f"{nom} : un char la traverse"
+
+
+# --- 2e vague : le chantier travaille ----------------------------------------------------
+
+
+def test_la_boule_touche_le_mur_au_pixel_pres(banc):
+    """⚠️ La boule frappe POUR VRAI : à la pose du coup, son dernier pixel touche le
+    premier pixel du mur — et à aucune autre pose elle n'y entre. Des deux côtés :
+    la grue tournée vers l'ouest est un miroir, ancre comprise."""
+    r = banc(_juge("""
+        L.Jeu.commencer();
+        const traces = [];
+        const faux = { fillRect: function (x, y, w, h) { traces.push([x, y, w, h]); } };
+        Object.defineProperty(faux, 'fillStyle', { set: function () {}, get: function () { return ''; } });
+        return L.Chantiers.liste.map(function (ch, i) {
+            L.Chantiers.appliquer(i, 1);
+            const e = ch.machines.find(function (m) { return m.frappe; });
+            const f = L.DECORS[e.decor];
+            const bords = [];
+            for (let p = 0; p < f.variantes; p++) {
+                traces.length = 0;
+                f.peindre(faux, f.w, f.h, p);
+                // Les deux rectangles de la boule : les derniers peints avant son reflet.
+                const boule = traces.slice(-3, -1);
+                const g = Math.min.apply(null, boule.map(function (q) { return q[0]; }));
+                const dr = Math.max.apply(null, boule.map(function (q) { return q[0] + q[2] - 1; }));
+                bords.push([e.x - f.ancre[0] + g, e.x - f.ancre[0] + dr]);
+            }
+            const mx = e.frappe[0], my = e.frappe[1];
+            return { id: ch.def.id, decor: e.decor, sens: e.sens, ex: e.x, frappe: f.frappe, bords: bords,
+                     mur: [mx * 16, (mx + 1) * 16 - 1],
+                     solide: [L.Monde.solidite(mx, my), L.Monde.solidite(mx, my - 1)],
+                     contact: L.Chantiers.CONTACT_X };
+        });
+    """))
+    assert {c["sens"] for c in r} == {1, -1}, "il faut juger les deux côtés : " + str(r)
+    for c in r:
+        assert c["solide"] == [1, 1], f"chantier {c['id']} : la boule frappe un mur qui n'est pas là"
+        gauche, droite = c["mur"]
+        for pose, (g, d) in enumerate(c["bords"]):
+            if c["sens"] > 0:
+                assert d < gauche, (c["id"], pose, "la boule entre dans le mur")
+                if pose == c["frappe"]:
+                    assert d == gauche - 1, (c["id"], "au coup, la boule ne touche pas le mur")
+                    assert c["ex"] + c["contact"] == gauche, "la poussière ne part pas du mur"
+            else:
+                assert g > droite, (c["id"], pose, "la boule entre dans le mur")
+                if pose == c["frappe"]:
+                    assert g == droite + 1, (c["id"], "au coup, la boule ne touche pas le mur")
+                    assert c["ex"] - c["contact"] == droite + 1, "la poussière ne part pas du mur"
+
+
+def test_le_coup_part_a_la_pose_qu_on_voit_et_le_chantier_se_tait_la_nuit(banc):
+    """Le son, la poussière et la secousse partent à la PREMIÈRE image de la pose
+    du coup. La nuit : plus un son, et les machines à leur pose de repos."""
+    r = banc(_juge("""
+        L.Jeu.commencer();
+        L.Chantiers.appliquer(0, 1);
+        const ch = L.Chantiers.liste[0];
+        const e = ch.machines.find(function (m) { return m.frappe; });
+        const f = L.DECORS[e.decor];
+        poserLeJoueur(L, { x: e.x, y: e.y + 48 });
+        const rumeurs = [];
+        L.Son.SFX.rumeur_chantier = function (v) { rumeurs.push(v); };
+        const tourne = function (n) {
+            let secousse = 0;
+            for (let k = 0; k < n; k++) {
+                L.B.cam.secousse = 0;
+                L.Chantiers.maj();
+                secousse = Math.max(secousse, L.B.cam.secousse);
+                L.B.t++;
+            }
+            return secousse;
+        };
+        L.B.partie.heure = 0.5;
+        const t0 = L.B.t, particules = L.B.particules.length;
+        const secousse = tourne(1300);
+        const jour = L.Chantiers.journal.filter(function (x) { return x.t >= t0; });
+        const coups = jour.filter(function (x) { return x.son === 'boule'; }).map(function (x) {
+            return [L.Entites.poseDuDecor(f, x.t, false), L.Entites.poseDuDecor(f, x.t + 1, false)];
+        });
+        const rumeurJour = rumeurs.slice();
+        L.B.partie.heure = 0.95;
+        rumeurs.length = 0;
+        const t1 = L.B.t;
+        tourne(1300);
+        const poses = new Set();
+        for (let t = 0; t < f.anime * f.variantes; t++) poses.add(L.Entites.poseDuDecor(f, t));
+        return { coups: coups, sons: jour.map(function (x) { return x.son; }), frappe: f.frappe,
+                 particules: L.B.particules.length - particules, secousse: secousse,
+                 rumeurJour: Math.min.apply(null, rumeurJour), nuit: L.Monde.estNuit(),
+                 sonsDeNuit: L.Chantiers.journal.filter(function (x) { return x.t >= t1; }).length,
+                 rumeurNuit: Math.max.apply(null, rumeurs), posesDeNuit: Array.from(poses) };
+    """))
+    assert len(r["coups"]) >= 7, r["sons"]
+    for avant, pendant in r["coups"]:
+        assert pendant == r["frappe"], "le coup part sur une autre pose que celle du coup"
+        assert avant == r["frappe"] - 1, "le coup part en retard sur la pose qu'on voit"
+    assert "marteau_piqueur" in r["sons"], "ce qu'on ne voit pas ne s'entend jamais"
+    assert r["particules"] > 0, "pas de poussière au coup"
+    assert r["secousse"] > 0, "à deux pas du coup, la rue ne tremble pas"
+    assert r["rumeurJour"] > 0.5, "à deux pas du chantier, pas de rumeur"
+    assert r["nuit"]
+    assert r["sonsDeNuit"] == 0, "le chantier travaille la nuit"
+    assert r["rumeurNuit"] == 0
+    assert r["posesDeNuit"] == [0], "la nuit, les machines bougent encore"
+
+
+def test_on_entend_le_chantier_avant_de_le_voir(banc):
+    """La rumeur suit la distance : forte devant, plus faible au bout de la rue,
+    rien au loin — et rien dans une pièce."""
+    r = banc(_juge("""
+        L.Jeu.commencer();
+        L.B.partie.heure = 0.5;
+        const ch = L.Chantiers.liste.find(function (c) { return c.posee >= 1 && c.posee <= 3; });
+        const d = ch.def;
+        const vus = [];
+        L.Son.SFX.rumeur_chantier = function (v) { vus.push(v); };
+        const mesure = function (p) { poserLeJoueur(L, p); vus.length = 0; L.Chantiers.travailler(); return vus[vus.length - 1]; };
+        const cx = (d.x + d.l / 2) * 16, bas = (d.y + d.h) * 16;
+        const pres = mesure({ x: cx, y: bas + 40 });
+        const moyen = mesure({ x: cx, y: bas + 250 });
+        const auLoin = mesure(loin(L));
+        poserLeJoueur(L, { x: cx, y: bas + 40 });
+        L.B.interieur = { banc: true };
+        vus.length = 0; L.Chantiers.travailler();
+        const piece = vus[vus.length - 1];
+        L.B.interieur = null;
+        return { pres: pres, moyen: moyen, loin: auLoin, piece: piece };
+    """))
+    assert r["pres"] > 0.8, r
+    assert 0 < r["moyen"] < r["pres"], r
+    assert r["loin"] == 0, r
+    assert r["piece"] == 0, "on entend le chantier depuis une pièce"
+
+
+def test_la_grue_se_dessine_tant_que_sa_fleche_est_a_l_ecran(banc):
+    """⚠️ Un décor sortait de la liste de dessin à 48 px de l'écran, mesurés à son
+    PIED : la grue — 112 px de large, 90 au-dessus de sa tuile — surgissait d'un
+    coup en montant la rue. Et la nuit, elle se peint à sa pose de repos."""
+    r = banc(_juge("""
+        L.Jeu.commencer();
+        L.B.partie.heure = 0.5;
+        const f = L.DECORS.grue, cam = L.B.cam;
+        const g = L.Entites.creer('decor', cam.x + 200, cam.y + 100, { decor: 'grue', r: 7, dessine: true, v: 0 });
+        const compte = function (x, y) {
+            g.x = x; g.y = y;
+            L.Entites.dessiner(o.ctx, cam);
+            return L.B.stats.entites;
+        };
+        const sousLEcran = compte(cam.x + 200, cam.y + L.VH + f.h + 20);
+        const flecheEnBas = compte(cam.x + 200, cam.y + L.VH + f.ancre[1] - 10);
+        const aGauche = compte(cam.x - f.w - 20, cam.y + 100);
+        const flecheAGauche = compte(cam.x - 50, cam.y + 100);
+        const cles = [];
+        const cuire = L.Atlas.cuirePeintre;
+        L.Atlas.cuirePeintre = function (cle) { if (cle.indexOf('decor|grue|') === 0) cles.push(cle); return cuire.apply(null, arguments); };
+        L.B.t = 7 * f.anime;
+        compte(cam.x + 200, cam.y + 100);
+        const jour = cles.slice();
+        cles.length = 0;
+        L.B.partie.heure = 0.95;
+        compte(cam.x + 200, cam.y + 100);
+        L.Atlas.cuirePeintre = cuire;
+        return { sousLEcran: sousLEcran, flecheEnBas: flecheEnBas, aGauche: aGauche,
+                 flecheAGauche: flecheAGauche, jour: jour, nuit: cles };
+    """))
+    assert r["flecheEnBas"] == r["sousLEcran"] + 1, "le pied sous l'écran, la flèche visible : la grue ne se peint pas"
+    assert r["flecheAGauche"] == r["aGauche"] + 1, "le pied à gauche de l'écran, la flèche visible : la grue ne se peint pas"
+    assert r["jour"] == ["decor|grue|7"], r
+    assert r["nuit"] == ["decor|grue|0"], "la nuit, la grue tourne encore"
+
+
+def test_une_fleche_qui_depasse_retient_la_phase(banc):
+    """⚠️ Le chantier hors de vue, mais la flèche de sa grue encore à l'écran :
+    la phase attend — une grue qui s'évapore se voit autant qu'un mur."""
+    r = banc(_juge("""
+        L.Jeu.commencer();
+        const ch = L.Chantiers.liste[0], d = ch.def;
+        const g = d.phases[3].machines[0];
+        g.x = d.x + d.l - 1;                     // au bord est : la flèche dépasse de l'empreinte
+        L.Chantiers.appliquer(0, 3);
+        poserLeJoueur(L, loin(L));
+        for (const e of L.B.entites.slice()) {
+            if (e === L.B.joueur || !(e.type === 'pieton' || e.type === 'agent' || e.type === 'vehicule')) continue;
+            if (e.x > (d.x - 2) * 16 && e.x < (d.x + d.l + 2) * 16 && e.y > (d.y - 2) * 16 && e.y < (d.y + d.h + 2) * 16) L.Entites.retirer(e);
+        }
+        const f = L.DECORS.grue;
+        L.B.cam.x = g.x * 16 + 8 - f.ancre[0] + f.w - 4;
+        L.B.cam.y = (d.y + d.h / 2) * 16 - L.VH / 2;
+        L.B.partie.jour += 60;
+        tourner(L, 3);
+        const retenue = ch.posee;
+        L.B.cam.x += 16;
+        tourner(L, 3);
+        return { retenue: retenue, apres: ch.posee, voulue: L.Chantiers.phaseVoulue(d),
+                 horsEmpreinte: L.B.cam.x - 16 > (d.x + d.l) * 16 + 40 };
+    """))
+    assert r["horsEmpreinte"], "le juge doit placer l'écran hors de la marge de l'empreinte"
+    assert r["voulue"] == 4
+    assert r["retenue"] == 3, "la phase s'est posée sous la flèche de la grue"
+    assert r["apres"] == 4
+
+
+def test_les_sons_du_chantier_sortent_avec_ou_sans_leur_fichier(banc):
+    """Le filet, comme partout : avant que les fichiers arrivent, chaque son de
+    chantier se synthétise — et tout ce qui démarre atteint la sortie. Trop loin,
+    rien ne part. Fichiers chargés, la boule joue son échantillon ; le bip de
+    recul, lui, reste synthétisé (trois bips à 1050 Hz) : il n'a pas de fichier."""
+    r = banc("""async function (L, o) {
+        const joues = o.brancherAudio(true);
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        const j = L.B.joueur, SFX = L.Son.SFX;
+        const sons = ['boule', 'marteau_piqueur', 'godet', 'bip_recul', 'marteau', 'scie'];
+        const filet = {};
+        for (const son of sons) {
+            const n = joues.length;
+            const v = SFX.chantier(son, j.x + 60, j.y, 340);
+            filet[son] = { volume: v, joues: joues.length - n };
+        }
+        const n = joues.length;
+        const loinV = SFX.chantier('boule', j.x + 500, j.y, 460);
+        const loin = joues.length - n;
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const ctx = L.Son.contexte;
+        const m = joues.length;
+        SFX.chantier('boule', j.x + 60, j.y, 460);
+        const bouleFichier = joues.slice(m).map(function (x) { return x.quoi; });
+        const k = joues.length;
+        SFX.chantier('bip_recul', j.x + 60, j.y, 340);
+        const bips = joues.slice(k).filter(function (x) { return x.quoi === 'ton' && x.hz === 1050; }).length;
+        SFX.rumeur_chantier(0.5);
+        const rumeur = L.Son.volumeBoucle('chantier');
+        SFX.rumeur_chantier(0);
+        return { filet: filet, loin: loin, loinV: loinV, bouleFichier: bouleFichier, bips: bips,
+                 charge: L.Son.estCharge('boule'), rumeur: rumeur, eteinte: L.Son.boucleActive('chantier'),
+                 muettes: ctx.sourcesMuettes() };
+    }""")
+    for son, f in r["filet"].items():
+        assert f["volume"] > 0 and f["joues"] > 0, f"{son} : sans fichier, le chantier est muet"
+    assert r["loin"] == 0 and r["loinV"] == 0, "un coup de boule s'entend à l'autre bout de la ville"
+    assert r["charge"], "le fichier de la boule ne se charge pas"
+    assert r["bouleFichier"] == ["echantillon"], "fichier chargé, la boule joue encore sa synthèse"
+    assert r["bips"] == 3
+    assert r["rumeur"] and r["rumeur"] > 0, "la rumeur du chantier ne tourne pas"
+    assert r["eteinte"] is False, "la rumeur ne s'éteint pas"
+    assert r["muettes"] == 0, "un son de chantier démarre sans atteindre la sortie"

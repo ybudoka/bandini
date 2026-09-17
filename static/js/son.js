@@ -310,6 +310,26 @@ const Son = (function () {
     return courante ? courante.gain.gain.value : null;
   }
 
+  // --- Ça travaille : le filet des sons de chantier ---------------------------------
+  //: Chaque son de chantier sans son fichier, a un volume `v` (0..1) qui dit deja
+  //: la distance. ⚠️ Le bip de recul N'EST QUE CA : ElevenLabs n'a rendu que des
+  //: sifflements continus en trois essais (voir `audio.py`), et un bip de recul
+  //: est un ton electronique — trois bips de 0,45 s, autant de silence entre eux.
+  const REPLI_CHANTIER = {
+    boule: function (v) { bruit(0.7, 0.5 * v, 900, 50); ton(46, 0.5, 'sine', 0.45 * v, 0.6); },
+    marteau_piqueur: function (v) {
+      const t0 = ctx.currentTime;
+      for (let k = 0; k < 30; k++) bruitA(t0 + k * 0.06, 0.04, 0.16 * v, 900);
+    },
+    godet: function (v) { bruit(0.9, 0.22 * v, 1600, 300); ton(110, 0.5, 'sawtooth', 0.05 * v, 1.3, 0.2); },
+    bip_recul: function (v) { for (let k = 0; k < 3; k++) ton(1050, 0.45, 'square', 0.06 * v, 1, k * 0.9); },
+    marteau: function (v) {
+      const t0 = ctx.currentTime;
+      for (let k = 0; k < 3; k++) { tonA(t0 + k * 0.22, 420, 0.06, 'triangle', 0.22 * v, 0.7); bruitA(t0 + k * 0.22, 0.05, 0.2 * v, 2500); }
+    },
+    scie: function (v) { ton(1800, 1.4, 'sawtooth', 0.04 * v, 1.15); bruit(1.2, 0.08 * v, 5000, 2500); },
+  };
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -371,6 +391,33 @@ const Son = (function () {
     borne_jet: function (force) {
       const f = Math.max(0, Math.min(1, force || 0));
       if (f > 0 && B.t % 6 === 0) bruit(0.2, 0.1 * f, 2000, 700);
+    },
+    /** Un son de CHANTIER pose en (x, y) : l'echantillon s'il est charge, son
+        filet sinon — au meme volume, qui dit la distance. Rend ce volume (0 =
+        trop loin, rien n'est parti). C'est `chantiers.js` qui decide QUAND :
+        au geste qu'on voit, sur son horloge, et jamais la nuit. */
+    chantier: function (slug, x, y, portee) {
+      const j = B.joueur;
+      if (!j || !pret()) return 0;
+      const p = portee || 320;
+      const v = 1 - Math.hypot(x - j.x, y - j.y) / p;
+      if (v <= 0) return 0;
+      if (estCharge(slug)) return jouerA(slug, x, y, p);
+      (REPLI_CHANTIER[slug] || REPLI_CHANTIER.marteau)(v);
+      return v;
+    },
+    /** La rumeur du chantier le plus proche, TENUE a chaque image comme le jet
+        d'une borne : `volume` 0 = on se tait. Faute de fichier, un grondement
+        sourd toutes les quinze images, qui se recouvre. */
+    rumeur_chantier: function (volume) {
+      const v = Math.max(0, Math.min(1, volume || 0));
+      if (!estCharge('chantier')) {
+        if (v > 0.02 && B.t % 15 === 0) bruit(0.35, 0.05 * v, 260, 90);
+        return;
+      }
+      if (v <= 0.02) { boucle('chantier', false); return; }
+      if (!boucleActive('chantier')) boucle('chantier', true, v);
+      reglerBoucle('chantier', v);
     },
     //: Le nid-de-poule : le COUP SEC de la suspension qui talonne, puis la
     //: tole qui resonne une demi-seconde. Synthetise, comme la borne : le seau

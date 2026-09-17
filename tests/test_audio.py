@@ -477,3 +477,25 @@ def test_la_fille_de_la_brume_a_plusieurs_repliques():
     assert all(v["voix"] == audio.VOIX_BRUME for v in brume)
     autres = {audio.VOIX_PAR_GENRE["homme"], audio.VOIX_PAR_GENRE["femme"], audio.VOIX_CRIEUR}
     assert audio.VOIX_BRUME not in autres, "sa voix doit se distinguer des passantes et du crieur"
+
+
+def test_chaque_son_de_chantier_a_son_fichier_ou_son_filet():
+    """Ça travaille (2e vague) : `chantiers.js` joue des sons par leur NOM
+    (`jouer('boule', …)`, et les horloges). Chacun doit avoir son repli
+    synthétisé dans `son.js` — le filet, comme partout — et tous sauf le bip de
+    recul leur fichier au catalogue : ElevenLabs n'a rendu que des sifflements
+    continus pour lui, en trois essais (voir `audio.py`)."""
+    chantiers = (RACINE_JS / "chantiers.js").read_text(encoding="utf-8")
+    joues = set(re.findall(r"jouer\('([a-z_]+)'", chantiers))
+    joues |= set(re.findall(r"\['([a-z_]+)', \d+, \d+\]", chantiers))
+    assert {"boule", "godet", "marteau_piqueur", "bip_recul", "marteau", "scie"} <= joues, joues
+    son = (RACINE_JS / "son.js").read_text(encoding="utf-8")
+    bloc = son[son.index("const REPLI_CHANTIER = {"):son.index("const SFX = {")]
+    filets = set(re.findall(r"^\s+([a-z_]+): function", bloc, re.M))
+    assert joues <= filets, f"sans filet : {joues - filets}"
+    assert joues - {"bip_recul"} <= set(audio.SLUGS), joues - set(audio.SLUGS)
+    assert "bip_recul" not in audio.SLUGS
+    # La rumeur est une boucle, tenue par `SFX.rumeur_chantier`.
+    rumeur = audio.par_slug("chantier")
+    assert rumeur and rumeur["boucle"]
+    assert "rumeur_chantier(" in chantiers

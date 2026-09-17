@@ -3239,6 +3239,60 @@ function peindreKiosque(ctx, v, auvent, auvent2, produit) {
   if (produit) produit(ctx);
 }
 
+/* ⚠️ Un peintre MIROIR : le même dessin, retourné gauche-droite. Pas de
+   `scale(-1, 1)` : on ne retourne que `fillRect`, et le banc — qui peint dans un
+   faux contexte — voit exactement ce que peint le navigateur. */
+function miroirX(ctx, w) {
+  return {
+    set fillStyle(c) { ctx.fillStyle = c; },
+    get fillStyle() { return ctx.fillStyle; },
+    fillRect: function (x, y, l, h) { ctx.fillRect(w - x - l, y, l, h); },
+  };
+}
+
+//: ⚠️ LA BOULE FRAPPE POUR VRAI (2e vague des chantiers). Elle RECULE lentement,
+//: part, cogne le mur et rebondit : seize poses, et la douzième (indice 11) est
+//: le coup — `chantiers.js` y joue le son, la poussière et les éclats. Python la
+//: pose à DEUX tuiles du mur (`chantiers.PORTEE_BOULE`) : au coup, le dernier
+//: pixel de la boule touche le premier pixel de la tuile du mur, à 24 px du
+//: centre de la machine. Un juge le mesure.
+const BOULE = {
+  angles: [0, -0.12, -0.26, -0.4, -0.52, -0.61, -0.66, -0.62, -0.5, -0.3, -0.06, 0.085, 0.02, -0.08, -0.04, 0.02],
+  frappe: 11,
+  pointe: [32, 6],     // le bout de la flèche, d'où pend le câble
+  cable: 24,
+};
+
+function peindreGrueABoule(ctx, w, h, v) {
+  const trait = function (x0, y0, x1, y1, e, c) {
+    ctx.fillStyle = c;
+    const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+    for (let k = 0; k <= n; k++) {
+      ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
+    }
+  };
+  ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(1, 49, 28, 5);
+  ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 42, 26, 9);
+  ctx.fillStyle = '#4a4d55'; for (let x = 2; x < 27; x += 3) ctx.fillRect(x, 43, 1, 7);
+  ctx.fillStyle = '#b8332a'; ctx.fillRect(3, 32, 20, 11);
+  ctx.fillStyle = '#d24a3a'; ctx.fillRect(3, 32, 20, 2);
+  ctx.fillStyle = '#243447'; ctx.fillRect(5, 34, 6, 5);
+  // La flèche en treillis : deux longerons et des diagonales, jusqu'au bout
+  // d'où pend le câble.
+  const piedX = 16, piedY = 34, boutX = BOULE.pointe[0], boutY = BOULE.pointe[1];
+  trait(piedX, piedY, boutX, boutY, 2, '#d2a126');
+  trait(piedX + 3, piedY + 1, boutX + 2, boutY + 1, 1, '#a87c16');
+  for (let k = 1; k < 6; k++) {
+    const x = piedX + (boutX - piedX) * k / 6, y = piedY + (boutY - piedY) * k / 6;
+    trait(Math.round(x), Math.round(y), Math.round(x + 3), Math.round(y + 1), 1, '#a87c16');
+  }
+  const angle = BOULE.angles[v % BOULE.angles.length];
+  const bx = Math.round(boutX + Math.sin(angle) * BOULE.cable), by = Math.round(boutY + Math.cos(angle) * BOULE.cable);
+  trait(boutX, boutY, bx, by, 1, '#3a3d44');
+  ctx.fillStyle = '#2c2c30'; ctx.fillRect(bx - 3, by - 2, 7, 6); ctx.fillRect(bx - 2, by - 3, 5, 8);
+  ctx.fillStyle = '#5f6267'; ctx.fillRect(bx - 1, by - 2, 2, 2);
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -4245,7 +4299,7 @@ const DECORS = {
   } },
   // La pelle : le bras monte, le godet racle, le bras redescend. Six poses
   // aller-retour, jamais un saut du haut au bas.
-  pelleteuse: { anime: 9, arrete: 6.0, w: 40, h: 30, ancre: [16, 26], r: 8, sol: [9, 6], solide: true, variantes: 6, peindre: function (ctx, w, h, v) {
+  pelleteuse: { anime: 9, arrete: 6.0, w: 40, h: 30, ancre: [16, 26], r: 8, sol: [9, 6], solide: true, variantes: 6, travaille: 'jour', racle: 0, peindre: function (ctx, w, h, v) {
     const trait = function (x0, y0, x1, y1, e, c) {
       ctx.fillStyle = c;
       const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
@@ -4274,41 +4328,19 @@ const DECORS = {
     ctx.fillStyle = '#5f6267'; ctx.fillRect(godetX - 3, godetY + 4, 1, 2); ctx.fillRect(godetX, godetY + 4, 1, 2); ctx.fillRect(godetX + 3, godetY + 4, 1, 2);
     if (leve === 0) { ctx.fillStyle = '#6e5330'; ctx.fillRect(godetX - 5, godetY + 5, 10, 2); }
   } },
-  // La boule : elle se balance au bout de son cable, et c'est le mouvement qui
-  // dit « demolition » avant meme qu'on voie le mur tombe.
-  grue_a_boule: { anime: 7, arrete: 8.0, w: 50, h: 54, ancre: [14, 50], r: 8, sol: [9, 6], solide: true, variantes: 8, peindre: function (ctx, w, h, v) {
-    const trait = function (x0, y0, x1, y1, e, c) {
-      ctx.fillStyle = c;
-      const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
-      for (let k = 0; k <= n; k++) {
-        ctx.fillRect(Math.round(x0 + (x1 - x0) * k / n), Math.round(y0 + (y1 - y0) * k / n), e, e);
-      }
-    };
-    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(1, 49, 28, 5);
-    ctx.fillStyle = '#2c2c30'; ctx.fillRect(1, 42, 26, 9);
-    ctx.fillStyle = '#4a4d55'; for (let x = 2; x < 27; x += 3) ctx.fillRect(x, 43, 1, 7);
-    ctx.fillStyle = '#b8332a'; ctx.fillRect(3, 32, 20, 11);
-    ctx.fillStyle = '#d24a3a'; ctx.fillRect(3, 32, 20, 2);
-    ctx.fillStyle = '#243447'; ctx.fillRect(5, 34, 6, 5);
-    // La fleche en treillis : deux longerons et des diagonales.
-    const piedX = 18, piedY = 34, boutX = 42, boutY = 4;
-    trait(piedX, piedY, boutX, boutY, 2, '#d2a126');
-    trait(piedX + 3, piedY + 1, boutX + 2, boutY + 1, 1, '#a87c16');
-    for (let k = 1; k < 6; k++) {
-      const x = piedX + (boutX - piedX) * k / 6, y = piedY + (boutY - piedY) * k / 6;
-      trait(Math.round(x), Math.round(y), Math.round(x + 3), Math.round(y + 1), 1, '#a87c16');
-    }
-    // Le cable et la boule : un pendule de huit poses (±0,55 rad).
-    const angle = Math.sin(v / 8 * Math.PI * 2) * 0.55;
-    const bx = Math.round(boutX + Math.sin(angle) * 30), by = Math.round(boutY + Math.cos(angle) * 30);
-    trait(boutX, boutY, bx, by, 1, '#3a3d44');
-    ctx.fillStyle = '#2c2c30'; ctx.fillRect(bx - 3, by - 2, 7, 6); ctx.fillRect(bx - 2, by - 3, 5, 8);
-    ctx.fillStyle = '#5f6267'; ctx.fillRect(bx - 1, by - 2, 2, 2);
+  // La boule : elle recule, part et FRAPPE le mur (voir `BOULE`). ⚠️ Deux
+  // fiches pour une machine : Python dit de quel côté est la moitié debout
+  // (`sens`), et la grue tournée vers l'ouest est le MIROIR exact de l'autre —
+  // l'ancre aussi, pour que la machine reste sur sa tuile.
+  // ⚠️ `travaille: 'jour'` : la nuit, elle s'arrête à sa pose de repos.
+  grue_a_boule: { anime: 10, arrete: 8.0, w: 50, h: 54, ancre: [14, 50], r: 8, sol: [9, 6], solide: true, variantes: 16, travaille: 'jour', frappe: BOULE.frappe, peindre: peindreGrueABoule },
+  grue_a_boule_ouest: { anime: 10, arrete: 8.0, w: 50, h: 54, ancre: [36, 50], r: 8, sol: [9, 6], solide: true, variantes: 16, travaille: 'jour', frappe: BOULE.frappe, peindre: function (ctx, w, h, v) {
+    peindreGrueABoule(miroirX(ctx, w), w, h, v);
   } },
   // La grue a tour : sa fleche TOURNE, lentement, seize poses pour un tour.
   // ⚠️ Vue de trois-quarts : un cercle couche se lit en ellipse, alors la
   // fleche fait quatre fois moins de chemin en hauteur qu'en largeur.
-  grue: { anime: 20, arrete: 9.0, w: 112, h: 94, ancre: [56, 90], r: 7, sol: [7, 6], solide: true, variantes: 16, peindre: function (ctx, w, h, v) {
+  grue: { anime: 20, arrete: 9.0, w: 112, h: 94, ancre: [56, 90], r: 7, sol: [7, 6], solide: true, variantes: 16, travaille: 'jour', peindre: function (ctx, w, h, v) {
     const trait = function (x0, y0, x1, y1, e, c) {
       ctx.fillStyle = c;
       const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);

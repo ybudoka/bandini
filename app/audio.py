@@ -306,6 +306,52 @@ CATALOGUE: list[Echantillon] = [
        prompt="a head going under water, one gulp as the surface closes over, "
               "muffled bubbles rising, the sound turning dull and distant, "
               "close-up, no voices, no music"),
+    # --- Ça travaille : les chantiers (2e vague, 16 sept. 2026) ---------------
+    # ⚠️ Des sons POSÉS dans le monde (`Son.SFX.chantier`) : ils partent de la
+    # machine, plus faibles de loin — et JAMAIS la nuit : un chantier se tait à
+    # la tombée du jour, et ses machines s'arrêtent avec lui. Chacun s'accroche
+    # à un geste qu'on VOIT quand il y en a un : la boule au coup de sa pose
+    # `frappe`, le godet quand la pelle racle. Le marteau-piqueur, le bip de
+    # recul, le marteau et la scie sont ce qu'on ne voit pas derrière la
+    # palissade — ils reviennent sur une horloge, jamais tous ensemble.
+    _e("boule", "Boule de démolition", variantes=2, duree_s=2.0, volume=0.6,
+       influence=0.5,
+       prompt="a heavy steel wrecking ball smashing into a brick wall, one deep "
+              "booming impact, then bricks and concrete chunks crumbling and "
+              "tumbling down, dust, outdoors, no voices, no music"),
+    _e("marteau_piqueur", "Marteau-piqueur", duree_s=2.5, volume=0.35,
+       influence=0.6,
+       prompt="a pneumatic jackhammer breaking a concrete slab, one rapid "
+              "rattling burst of about two seconds then it stops, outdoors "
+              "construction site, no voices, no music"),
+    _e("godet", "Godet de pelle mécanique", variantes=2, duree_s=2.0, volume=0.35,
+       influence=0.5,
+       prompt="an excavator bucket scraping into gravel and broken bricks, then "
+              "dumping the load with a rattling pour of stones, hydraulic hiss, "
+              "outdoors, no voices, no music"),
+    # ⚠️ PAS DE BIP DE RECUL ICI, et c'est mesuré : trois générations (« evenly
+    # spaced beeps », puis les durées en toutes lettres, puis « dry, no reverb,
+    # clean silence between each beep » à 1000 Hz) ont rendu trois SIFFLEMENTS
+    # CONTINUS — à l'enveloppe par tranches de 10 ms, pas un seul silence entre
+    # deux bips. Un bip de recul est de toute façon un ton électronique : il est
+    # synthétisé dans `son.js` (`REPLI_CHANTIER.bip_recul`), et ne coûte rien.
+    _e("marteau", "Coups de marteau", variantes=2, duree_s=1.2, volume=0.28,
+       influence=0.6,
+       prompt="a carpenter driving a nail into a wooden framing stud with a "
+              "steel hammer, three quick sharp blows, outdoors, no voices, "
+              "no music"),
+    _e("scie", "Scie circulaire", duree_s=2.0, volume=0.25, influence=0.6,
+       prompt="a circular saw spinning up and cutting through a wooden plank, "
+              "high whining buzz, then spinning down, outdoors, no voices, "
+              "no music"),
+    # La rumeur : une BOUCLE, dont le volume suit la distance au chantier le
+    # plus proche. C'est elle qui dit « il y a un chantier par là » avant qu'on
+    # le voie.
+    _e("chantier", "Rumeur de chantier", duree_s=6.0, volume=0.3, boucle=True,
+       influence=0.45,
+       prompt="distant construction site ambience, a diesel machine engine "
+              "rumbling steadily with faint metal clanks, seamless loop, "
+              "no beeps, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------

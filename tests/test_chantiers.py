@@ -360,3 +360,66 @@ def test_une_machine_qui_coupe_un_couloir_est_refusee():
     assert chantiers._touche_la_ville(ouvert, tuiles, set(), tuiles)
     # Une machine au bout du couloir, et le reste ne sort plus.
     assert not chantiers._touche_la_ville(ouvert, tuiles, {(4, 1)}, tuiles)
+
+
+# --- 2e vague : la boule frappe pour vrai ------------------------------------------------
+
+
+@pytest.mark.parametrize("graine", [None, 7, 99, 2026])
+def test_la_boule_se_pose_la_ou_elle_frappe_le_mur_debout(graine):
+    """⚠️ La boule frappe POUR VRAI : à deux tuiles de la moitié debout et tournée
+    vers elle, avec du mur sur sa rangée ET sur celle du dessus — la boule pend
+    en l'air, une tuile plus haut à l'écran. Sans ça, elle cogne le vide pendant
+    trois jours."""
+    ville = VILLE if graine is None else carte.generer(graine=graine)
+    # ⚠️ Sans chantier, le juge passerait à vide : c'est ce qui arrive quand la
+    # boule ne trouve JAMAIS sa place (le sens inversé, par exemple).
+    assert len(ville["chantiers"]) == chantiers.NOMBRE, graine
+    for ch in ville["chantiers"]:
+        (boule,) = ch["phases"][1]["machines"]
+        assert boule["type"] == chantiers.FRAPPE
+        sens, (mx, my) = boule["sens"], boule["frappe"]
+        assert sens in (1, -1)
+        assert (mx, my) == (boule["x"] + chantiers.PORTEE_BOULE * sens, boule["y"]), boule
+        siennes = set(chantiers.tuiles(ch))
+        base, demolie = ch["phases"][0]["sol"], ch["phases"][1]["sol"]
+        for y in (my, my - 1):
+            assert (mx, y) in siennes, (graine, ch["id"], "la boule frappe hors du bâtiment")
+            glyphe = demolie[y - ch["y"]][mx - ch["x"]]
+            assert glyphe == base[y - ch["y"]][mx - ch["x"]], (graine, ch["id"], "le mur frappé est tombé")
+            assert carte.LEGENDE[glyphe]["solide"] == 1, (graine, ch["id"], glyphe)
+        entre = chantiers.appliquer(ville["sol"], ch, 1)[my][boule["x"] + sens]
+        assert carte.marchable(entre), (graine, ch["id"], "entre la boule et le mur, il reste un mur")
+        # Tournée vers la moitié DEBOUT : de l'autre côté, tout est tombé.
+        derriere = boule["x"] - sens
+        if (derriere, my) in siennes:
+            assert demolie[my - ch["y"]][derriere - ch["x"]] == chantiers.GRAVATS, (graine, ch["id"])
+
+
+#: Une maison ÉCHANCRÉE : les colonnes 5 et 6 n'ont qu'une tuile, au
+#: rez-de-chaussée. La moitié ouest tombée, les deux seules places d'où la boule
+#: atteint la moitié est — (3, 3) et (4, 3) — frapperaient un mur d'une tuile de
+#: haut : à l'écran, la boule pend une tuile plus haut et cogne le vide.
+_MAISON_ECHANCREE = [
+    "BBBBBBBBBB",
+    "BPPPP..PPB",
+    "BPPPP..PPB",
+    "BFFFFFFFFB",
+    "..........",
+    "..........",
+]
+
+
+def test_la_boule_ne_frappe_pas_un_mur_sans_rien_au_dessus():
+    """⚠️ La garde de la rangée du dessus : aucune maison de la graine livrée ne
+    l'exerce, d'où la carte écrite à la main."""
+    tuiles = [(x, y) for y in (1, 2) for x in (1, 2, 3, 4, 7, 8)] + [(x, 3) for x in range(1, 9)]
+    ville = {"sol": _MAISON_ECHANCREE}
+    libres = chantiers.libres(ville, [{"tuiles": tuiles, "genre": "maisons"}])
+    assert len(libres) == 1, "la maison échancrée devrait être démolissable"
+    assert chantiers._phases(ville["sol"], libres[0], _DeFixe(est=False)) is None, \
+        "la boule frapperait un mur d'une tuile de haut"
+    phases = chantiers._phases(ville["sol"], libres[0], _DeFixe(est=True))
+    assert phases is not None, "l'autre moitié tombée, la boule a son mur entier"
+    (boule,) = phases[1]["machines"]
+    assert (boule["x"], boule["y"], boule["sens"], boule["frappe"]) == (6, 3, -1, [4, 3])
