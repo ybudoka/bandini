@@ -103,6 +103,12 @@ const Vehicules = (function () {
       vole: false, aToi: false, aQui: null, laisse: false, malGareT: 0, epaveT: 0, coule: 0, solide: false, vivant: true, sprite: def.sprite, sirene: false, remorque: null, remorqueePar: null, parcouru: 0,
     }, options || {}));
     v.sprite = silhouetteDe(def, x, y, options);
+    // ⚠️ UNE SILHOUETTE PEUT PORTER SA COULEUR : l'autobus scolaire est jaune,
+    // quelle que soit celle tiree pour l'autobus. Le de de la couleur est tire
+    // quand meme, avant — la naissance consomme le meme nombre de des pour
+    // toutes les silhouettes. Une couleur DONNEE (`options.couleur`) gagne.
+    const fiche = SPRITES[v.sprite];
+    if (fiche && fiche.couleur && !(options && options.couleur)) { v.couleur = fiche.couleur; v.swaps = nuances(fiche.couleur); }
     // ⚠️ UN DEUX-ROUES DU TRAFIC A UN PILOTE, et il a ses propres couleurs. Le
     // cycliste etait cuit dans le velo — la meme tete pour toute la ville. Un
     // sprite qui declare une `selle` prend un passant assis dessus, tire des

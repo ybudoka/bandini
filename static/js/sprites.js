@@ -1360,6 +1360,129 @@ SPRITES.camion = enVolume(MACHINE_CAMION, 40, 76, { k: '#101018', c: '#7f8c8d', 
 SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 80, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
 SPRITES.bateau = enVolume(MACHINE_BATEAU, 30, 48, { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
 
+/* --- Les variantes du parc : la meme empreinte, une autre silhouette ------------------
+
+   ⚠️ **Retour de Martin : « aussi des variantes ».** L'auto avait ses quatre
+   silhouettes ; le reste du parc etait une seule machine repeinte. Les types qui
+   ne sont pas des flottes en recoivent : le CAMION (une benne, une citerne),
+   l'AUTOBUS (le scolaire jaune, capot devant), la LUXE (un VUS) et la CHALOUPE
+   (un bateau a console). Le taxi, la police, l'ambulance et la remorqueuse sont
+   des flottes, et une flotte se reconnait d'un coup d'oeil parce qu'elle ne
+   varie pas.
+
+   ⚠️ Rien ne change a l'empreinte : c'est toujours le meme vehicule du
+   catalogue, il se conduit pareil et il bloque pareil. */
+
+// La cabine du camion, commune a ses trois silhouettes.
+const CABINE_CAMION = [].concat(
+  essieuDeChar(13.2, 3.4, 6.8), essieuDeChar(-12.2, 3.4, 6.8),
+  [caisseDeChar({ dessus: [[20, 5.6], [19.2, 8.4], [15.8, 8.8], [10.4, 8.8], [10.2, 5.6], [-20, 5.6]], bas: 1.8, essieux: [13.2, -12.2], r: 3.4,
+                  plan: planPince(40, 8.0, 6.8), aretes: 'cccDs' })],
+  habitacle({ avant: 15.8, toit: [13.4, 10.4], arriere: 10.4, montant: null, bas: 8.8, haut: 15.0, demi: 7.0 }),
+  parechocsDeChar(20, -20, 6.8), lampesDeChar(19.8, -19.8, 3.6, 8.3, 3.6, 5.2),
+);
+// Le camion-benne : des ridelles hautes, un pare-cabine, et le fond qu'on voit d'en haut.
+const MACHINE_CAMION_BENNE = Object.assign({}, MACHINE_CAMION, {
+  pieces: CABINE_CAMION.concat([
+    ['bloc', [-20.2, 8.4], [7.2, 8.0], [5.6, 12.6], 'C', 'c', 'D', 0.02],                   // les ridelles
+    ['bloc', [-20.2, 8.4], [-8.0, -7.2], [5.6, 12.6], 'C', 'c', 'D', 0.02],
+    ['bloc', [8.4, 9.8], [-8.0, 8.0], [5.6, 16.0], 'C', 'D', 'D', 0.02],                    // le pare-cabine
+    ['bloc', [-20.6, -19.6], [-7.2, 7.2], [5.6, 12.6], 'C', 'D', 'D', 0.02],                // le hayon
+    ['bloc', [-19.6, 8.4], [-7.2, 7.2], [5.7, 6.0], 's', 's', 's', 0],                      // le fond de la benne
+  ], [-15, -9, -3, 3].reduce(function (t, u) {
+    return t.concat([['tube', [u, 8.05, 6.0], [u, 8.05, 12.4], 'D', 1.0], ['tube', [u, -8.05, 6.0], [u, -8.05, 12.4], 'D', 1.0]]);
+  }, [])),
+});
+// Le camion-citerne : une citerne ronde en acier, ceinturee, et son trou d'homme.
+const MACHINE_CAMION_CITERNE = Object.assign({}, MACHINE_CAMION, {
+  pieces: CABINE_CAMION.concat([
+    ['bloc', [-19.8, 8.8], [-6.0, 6.0], [5.6, 7.0], 'M', 'M', 'M', 0.02],
+    ['bloc', [-19.8, 8.8], [-7.6, 7.6], [7.0, 14.6], 'B', 'M', 'M', 0.02],
+    ['bloc', [-19.8, 8.8], [-6.4, 6.4], [14.6, 16.2], 'B', 'M', 'M', 0.02],
+    ['bloc', [-19.8, 8.8], [-4.0, 4.0], [16.2, 17.0], 'B', 'B', 'M', 0.02],
+    ['bloc', [-7.0, -3.6], [-1.8, 1.8], [17.0, 17.8], 'M', 's', 's', 0.1],                  // le trou d'homme
+  ], [-14.6, -5.2, 4.2].reduce(function (t, u) {
+    return t.concat([['bloc', [u, u + 0.9], [-7.8, 7.8], [6.8, 14.8], 's', 's', 's', 0.3],
+                     ['bloc', [u, u + 0.9], [-6.6, 6.6], [14.8, 16.4], 's', 's', 's', 0.3],
+                     ['bloc', [u, u + 0.9], [-4.2, 4.2], [16.4, 17.2], 's', 's', 's', 0.3]]);
+  }, [])),
+});
+
+// L'autobus scolaire : un capot devant, une caisse jaune a deux bandes noires.
+const FENETRES_SCOLAIRE = [];
+[-20.5, -15, -9.5, -4, 1.5, 7].forEach(function (u) {
+  [-1, 1].forEach(function (s) {
+    const w = s * 8.02;
+    FENETRES_SCOLAIRE.push(['bloc', [u, u + 4.2], [w - 0.01, w + 0.01], [11.0, 15.4], 'v', 'v', 'v', 0.04]);
+    FENETRES_SCOLAIRE.push(['tube', [u - 0.4, s * 8.04, 10.7], [u + 4.6, s * 8.04, 10.7], 'D', 1.0],
+                           ['tube', [u - 0.4, s * 8.04, 15.7], [u + 4.6, s * 8.04, 15.7], 'D', 1.0],
+                           ['tube', [u + 4.8, s * 8.04, 10.7], [u + 4.8, s * 8.04, 15.7], 'D', 1.0]);
+  });
+});
+const MACHINE_AUTOBUS_SCOLAIRE = Object.assign({}, MACHINE_AUTOBUS, {
+  pieces: [].concat(
+    essieuDeChar(17.0, 3.4, 6.8), essieuDeChar(-14.0, 3.4, 6.8),
+    [caisseDeChar({ dessus: [[24, 5.6], [23.2, 8.8], [16.8, 9.6], [16.4, 16.8], [15.4, 17.8], [-23.0, 17.8], [-24, 16.8]], bas: 1.8,
+                    essieux: [17.0, -14.0], r: 3.4, plan: planPince(48, 8.0, 6.4), aretes: 'ccDCCc' })],
+    FENETRES_SCOLAIRE,
+    [
+      ['bloc', [16.2, 16.5], [-6.6, 6.6], [10.4, 16.0], 'v', 'v', 'v', 0.05],               // le pare-brise, au-dessus du capot
+      ['tube', [16.6, -6.8, 10.2], [16.6, 6.8, 10.2], 'D', 1.0], ['tube', [16.6, -6.8, 16.2], [16.6, 6.8, 16.2], 'D', 1.0],
+      ['tube', [16.62, -5.8, 12.4], [16.62, 5.8, 12.4], 'G', 0.3],
+      ['bloc', [23.8, 24.4], [-4.0, 4.0], [3.0, 7.6], 'B', 'M', 'B', 0.2],                  // la calandre
+      ['tube', [15.8, 8.06, 7.2], [-23.4, 8.06, 7.2], 'k', 1.0], ['tube', [15.8, -8.06, 7.2], [-23.4, -8.06, 7.2], 'k', 1.0],   // les bandes noires
+      ['tube', [15.8, 8.06, 9.6], [-23.4, 8.06, 9.6], 'k', 1.0], ['tube', [15.8, -8.06, 9.6], [-23.4, -8.06, 9.6], 'k', 1.0],
+      ['bloc', [-24.08, -24.0], [-4.0, 4.0], [10.8, 15.4], 'v', 'v', 'v', 0.05],            // la porte de secours
+      ['tube', [-24.1, -4.2, 10.6], [-24.1, 4.2, 10.6], 'D', 1.0], ['tube', [-24.1, -4.2, 15.6], [-24.1, 4.2, 15.6], 'D', 1.0],
+      ['bloc', [12.4, 15.6], [8.02, 8.06], [2.4, 15.8], 'E', 'E', 'E', 0.05],               // la porte
+      ['bloc', [15.4, 16.6], [-7.4, -4.4], [16.6, 17.6], 'l', 'l', 'l', 0.2],                // les feux d'arret, en haut
+      ['bloc', [15.4, 16.6], [4.4, 7.4], [16.6, 17.6], 'l', 'l', 'l', 0.2],
+    ],
+    parechocsDeChar(24, -24, 7.2), lampesDeChar(23.8, -23.8, 3.2, 7.2, 3.6, 5.2),
+  ),
+});
+
+// Le VUS de luxe : haut, long toit jusqu'au hayon, barres de toit, chrome.
+const MACHINE_LUXE_VUS = Object.assign({}, MACHINE_LUXE, {
+  pieces: [].concat(
+    essieuDeChar(10.4, 3.5, 6.6), essieuDeChar(-10.2, 3.5, 6.6),
+    [caisseDeChar({ dessus: [[16, 5.6], [15.2, 7.8], [-15.0, 8.0], [-16, 7.0]], bas: 2.2, essieux: [10.4, -10.2], r: 3.5,
+                    plan: planPince(32, 7.5, 6.2) })],
+    habitacle({ avant: 6.0, toit: [3.0, -13.0], arriere: -15.0, montant: -2.8, custode: -8.8, bas: 7.8, haut: 13.8, demi: 6.6 }),
+    [
+      ['tube', [14.6, 7.52, 7.6], [-14.2, 7.52, 7.8], 'B', 1.0], ['tube', [14.6, -7.52, 7.6], [-14.2, -7.52, 7.8], 'B', 1.0],   // le jonc
+      ['tube', [2.0, 5.2, 14.2], [-12.0, 5.2, 14.2], 'B', 0.2], ['tube', [2.0, -5.2, 14.2], [-12.0, -5.2, 14.2], 'B', 0.2],     // les barres de toit
+      ['bloc', [15.8, 16.4], [-4.4, 4.4], [3.4, 6.8], 'B', 'M', 'B', 0.2],                  // la calandre
+    ],
+    parechocsDeChar(16, -16, 6.2), lampesDeChar(15.8, -15.8, 3.4, 7.1, 4.2, 5.8),
+  ),
+});
+
+// Le bateau a console : la meme coque, une console et son pare-brise, un siege derriere.
+const MACHINE_BATEAU_CONSOLE = Object.assign({}, MACHINE_BATEAU, {
+  pieces: MACHINE_BATEAU.pieces.filter(function (p) { return !(p[0] === 'bloc' && p[5] === 'u'); }).concat([
+    ['bloc', [-3.4, 0.8], [-2.4, 2.4], [1.6, 5.6], 'D', 'c', 'D', 0.1],                      // la console, son tableau de bord sombre
+    ['profil', [[0.8, 5.6], [-0.6, 7.6], [-1.0, 7.6], [0.4, 5.6]], [-2.4, 2.4], 'D', 'v.v.', 0.2], // son pare-brise
+    ['tube', [0.6, -2.4, 5.8], [0.6, 2.4, 5.8], 'D', 1.0], ['tube', [-0.8, -2.4, 7.7], [-0.8, 2.4, 7.7], 'D', 1.0],
+    ['bloc', [-7.2, -5.0], [-2.6, 2.6], [1.6, 4.4], 'u', 'u', 'u', 0.1],                     // le siege
+    ['bloc', [-7.6, -7.0], [-2.6, 2.6], [4.4, 6.4], 'u', 'u', 'u', 0.1],
+  ]),
+});
+
+// Les fiches des variantes, et leur poids : la silhouette d'origine reste la plus courante.
+SPRITES.camion_benne = enVolume(MACHINE_CAMION_BENNE, 40, 76, SPRITES.camion.pal);
+SPRITES.camion_citerne = enVolume(MACHINE_CAMION_CITERNE, 40, 76, SPRITES.camion.pal);
+SPRITES.camion.variantes = { camion: 3, camion_benne: 2, camion_citerne: 1 };
+// ⚠️ L'autobus scolaire est JAUNE, quelle que soit la couleur tiree pour l'autobus :
+// une silhouette peut porter sa couleur (`Vehicules.creer` la lui rend).
+SPRITES.autobus_scolaire = enVolume(MACHINE_AUTOBUS_SCOLAIRE, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#f5b400' }));
+SPRITES.autobus_scolaire.couleur = '#f5b400';
+SPRITES.autobus.variantes = { autobus: 3, autobus_scolaire: 2 };
+SPRITES.luxe_vus = enVolume(MACHINE_LUXE_VUS, 32, 56, SPRITES.luxe.pal);
+SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
+SPRITES.bateau_console = enVolume(MACHINE_BATEAU_CONSOLE, 30, 48, SPRITES.bateau.pal);
+SPRITES.bateau.variantes = { bateau: 3, bateau_console: 2 };
+
 /* Peintres de tuiles 16x16 : (ctx, variante, T). Le bruit vient de la variante,
    un entier stable par position (hash2), pour que la ville ne scintille pas. */
 const TUILES = (function () {

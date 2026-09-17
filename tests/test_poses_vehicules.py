@@ -99,9 +99,17 @@ def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const n = L.Vehicules.ROTATIONS, out = {};
+        // ⚠️ Chaque sprite du catalogue ET ses variantes : une benne ou un VUS
+        // se rogne aussi bien que la silhouette d'origine.
+        const noms = [];
         L.B.defs.vehicules.forEach(function (v) {
             const def = L.SPRITES[v.sprite];
-            if (!def || out[v.sprite]) return;
+            if (!def) return;
+            [v.sprite].concat(Object.keys(def.variantes || {})).forEach(function (n) { if (noms.indexOf(n) < 0) noms.push(n); });
+        });
+        noms.forEach(function (nom) {
+            const def = L.SPRITES[nom];
+            if (!def || out[nom]) return;
             const m = { machine: !!def.machine, bords: [] };
             if (def.machine) {
                 const cote = def.w;
@@ -112,11 +120,11 @@ def test_tout_le_parc_est_en_volume_et_sa_toile_ne_rogne_rien(banc):
                 }
                 m.posesTirees = def.poses.cote[0].join('') === L.Atlas.projeter(def.machine, 0, cote).join('');
             }
-            out[v.sprite] = m;
+            out[nom] = m;
         });
         return out;
     }""")
-    assert len(r) >= 12, "le décor du juge est faux : %s" % list(r)
+    assert len(r) >= 20, "le décor du juge est faux : %s" % list(r)
     dessines = sorted(s for s, m in r.items() if not m["machine"])
     assert dessines == [], f"des véhicules roulent encore sur un dessin fait main : {dessines}"
     for sprite, m in r.items():
@@ -1268,3 +1276,39 @@ def test_de_dos_un_char_montre_sa_longueur(banc, paquet):
             assert m[vue] >= m["longueur"] - 1, (
                 f"{slug} vu de {vue} : {m[vue]} rangées pour {m['longueur']} px de long — il ne montre pas sa longueur"
             )
+
+
+def test_des_variantes_pour_tout_le_parc_mais_pas_pour_les_flottes(banc):
+    """Retour de Martin : « aussi des variantes ». ⚠️ **Mesuré avant** : seule
+    l'auto avait des silhouettes ; un camion, un autobus, une luxe ou une
+    chaloupe étaient une seule machine repeinte.
+
+    On fait naître 200 de chacun à 200 places : plusieurs silhouettes sortent,
+    celle d'origine reste la plus courante. Le taxi, la police, l'ambulance et
+    la remorqueuse, eux, ne varient jamais — une flotte se reconnaît parce
+    qu'elle ne varie pas. Et l'autobus scolaire est toujours JAUNE, quelle que
+    soit la couleur tirée pour l'autobus."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const out = {};
+        ['camion', 'autobus', 'luxe', 'bateau', 'taxi', 'police', 'ambulance', 'remorqueuse'].forEach(function (slug) {
+            const compte = {}, couleurs = {};
+            for (let i = 0; i < 200; i++) {
+                const v = L.Vehicules.creer(slug, 150 + (i % 20) * 41, 150 + Math.floor(i / 20) * 29, 0, { etat: 'stationne' });
+                compte[v.sprite] = (compte[v.sprite] || 0) + 1;
+                (couleurs[v.sprite] = couleurs[v.sprite] || {})[v.couleur] = true;
+                L.Entites.retirer(v);
+            }
+            out[slug] = { compte: compte, couleurs: couleurs, sprite: L.B.defs.vehicules.find(function (d) { return d.slug === slug; }).sprite };
+        });
+        return out;
+    }""")
+    for slug in ("camion", "autobus", "luxe", "bateau"):
+        m = r[slug]
+        assert len(m["compte"]) >= 2, f"{slug} ne varie pas : {m['compte']}"
+        assert max(m["compte"], key=m["compte"].get) == m["sprite"], f"{slug} : la silhouette d'origine n'est plus la plus courante ({m['compte']})"
+    for slug in ("taxi", "police", "ambulance", "remorqueuse"):
+        assert list(r[slug]["compte"]) == [r[slug]["sprite"]], f"la flotte {slug} varie : {r[slug]['compte']}"
+    assert list(r["autobus"]["couleurs"].get("autobus_scolaire", {})) == ["#f5b400"], (
+        "l'autobus scolaire n'est pas toujours jaune : %s" % r["autobus"]["couleurs"]
+    )
