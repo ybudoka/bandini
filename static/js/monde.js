@@ -187,6 +187,10 @@ const Monde = (function () {
       morceaux: new Map(), visibles: new Set(),
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
+      // Les rideaux de garage : meme regle, et ils se souviennent de leur hauteur.
+      portesGarage: (def.portes_garage || []).map(function (p) {
+        return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, ouverture: 0, tient: 0, servi: null };
+      }),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
       quartiers: def.grille && def.grille.standing ? {
@@ -816,6 +820,83 @@ const Monde = (function () {
         ctx.fillRect(x + 4, y + 3, reste, 13);
       }
       B.stats.rects += 2;
+    }
+  }
+
+  // --- Les portes de garage : un rideau qui se leve tout seul ---------------------------
+  //
+  // Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou on
+  // stationne pour vendre ou faire des missions. la porte ouvre seule des qu'on est
+  // devant en voiture ». La tuile `G` reste un MUR (le char se gare devant, il
+  // n'entre pas dans le toit) ; ce qui bouge, c'est le rideau, peint par-dessus le
+  // sol comme un battant. Qui le leve, c'est `Missions.majGarage`.
+
+  //: Combien d'images le rideau met a monter (ou a descendre), et combien il reste
+  //: leve une fois le char parti. ⚠️ Assez lent pour qu'on le VOIE monter — c'est
+  //: tout l'effet —, assez vif pour qu'un char qui arrive au pas ne s'arrete pas
+  //: devant un rideau encore baisse.
+  const RIDEAU_MONTE = 30, RIDEAU_TIENT = 45;
+
+  function portesDeGarage() { return (carte && carte.portesGarage) || []; }
+  function porteDeGarage(lieu) { return portesDeGarage().find(function (p) { return p.lieu === lieu; }) || null; }
+
+  /** Ce pixel est-il DEVANT le rideau : sur sa largeur (plus `marge` tuiles de
+      chaque cote), et a `profondeur` tuiles au plus de la facade ? */
+  function devantLaPorteDeGarage(pg, x, y, profondeur, marge) {
+    const m = marge || 0;
+    return x >= (pg.x - m) * TT && x < (pg.x + pg.l + m) * TT &&
+           y >= (pg.y + 1) * TT && y < (pg.y + 1 + profondeur) * TT;
+  }
+
+  /** Le milieu de la place devant le rideau : ou l'on gare, ou l'on livre. */
+  function baieDeLaPorteDeGarage(pg) { return { x: (pg.x + pg.l / 2) * TT, y: (pg.y + 2) * TT }; }
+
+  /** On est devant : le rideau monte (ou reste leve) pour `RIDEAU_TIENT` images. */
+  function leverLaPorteDeGarage(pg) { pg.tient = RIDEAU_TIENT; }
+
+  /** Rend vrai si un rideau vient de se mettre en marche — c'est la qu'il grince. */
+  function majPortesDeGarage() {
+    let part = false;
+    for (const pg of portesDeGarage()) {
+      const voulu = pg.tient > 0 ? 1 : 0;
+      if (pg.tient > 0) pg.tient--;
+      if (pg.ouverture === voulu) continue;
+      if (pg.ouverture === 1 - voulu) part = true;
+      pg.ouverture = voulu ? Math.min(1, pg.ouverture + 1 / RIDEAU_MONTE)
+                           : Math.max(0, pg.ouverture - 1 / RIDEAU_MONTE);
+    }
+    return part;
+  }
+
+  /** Le rideau et le garage derriere, par-dessus le sol. ⚠️ Il couvre TOUTE la
+      baie, ferme compris : le dessin cuit dessous est un rideau d'une tuile par
+      glyphe, et deux rideaux cote a cote ne font pas une porte de garage. */
+  function dessinerPortesDeGarage(ctx, cam) {
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const pg of portesDeGarage()) {
+      const x = pg.x * TT - cx + 1, y = pg.y * TT - cy + 2, l = pg.l * TT - 2, h = TT - 2;
+      if (x + l < 0 || x > VW || y + h < 0 || y > VH) continue;
+      ctx.fillStyle = '#3b3d42';                        // les montants et le linteau
+      ctx.fillRect(x, y, l, h);
+      ctx.fillStyle = '#141218';                        // le dedans, dans l'ombre
+      ctx.fillRect(x + 1, y + 1, l - 2, h - 1);
+      ctx.fillStyle = '#2c2a31';                        // le beton du plancher, qu'on devine
+      ctx.fillRect(x + 1, y + h - 3, l - 2, 3);
+      ctx.fillStyle = '#e0b43a';                        // la bande jaune du seuil
+      ctx.fillRect(x + 1, y + h - 1, l - 2, 1);
+      const rideau = Math.round((h - 2) * (1 - pg.ouverture));
+      let rects = 4;
+      if (rideau > 0) {
+        ctx.fillStyle = '#8a8d93';
+        ctx.fillRect(x + 1, y + 1, l - 2, rideau);
+        ctx.fillStyle = '#6a6d73';                      // les lames
+        for (let k = y + 2; k < y + 1 + rideau; k += 2) { ctx.fillRect(x + 1, k, l - 2, 1); rects++; }
+        ctx.fillStyle = '#4a4c52';                      // la barre du bas, et sa poignee
+        ctx.fillRect(x + 1, y + rideau, l - 2, 1);
+        ctx.fillRect(x + (l >> 1) - 2, y + rideau - 1, 4, 1);
+        rects += 3;
+      }
+      B.stats.rects += rects;
     }
   }
 
@@ -1612,7 +1693,9 @@ const Monde = (function () {
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
+    portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
+estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

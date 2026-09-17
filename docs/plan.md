@@ -209,7 +209,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
-| Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
+| Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
@@ -752,7 +752,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_accents.py
+        test_bd.py test_comptes.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -11147,6 +11147,48 @@ demande de Martin : « est-ce compliqué de faire du jeu une webapp installable 
   déjà leur banc : `test_navigateur.py` lance un vrai Chromium, donc le worker se juge en
   coupant le réseau après le premier chargement.
 
+**Livré** (17 sept. 2026) — les deux vagues d'un coup. Un **travailleur**
+(`static/js/travailleur.js`, servi à la racine par `/travailleur.js`, `no-cache` et ETag),
+inscrit après `load` par `hors-ligne.js`, garde **la coquille** — ce que la page d'accueil
+demande, **lu dans la page rendue** (`app/hors_ligne.py`), jamais tenu à la main — et les
+sons **à l'usage**. **LES SONS HORS LIGNE**, dans les OPTIONS, dit ce qu'il reste
+(« 13 MO »), les télécharge d'un coup sur ACTION (« 42 % », puis « OUI ») et demande au
+navigateur de ne pas les effacer. (Les scores, eux, disaient « Pas de réseau » au lieu de
+« Personne encore » — le tableau a été retiré du jeu le lendemain même de sa livraison, et
+ce juge-là avec.)
+
+- ⚠️ **Mesuré : le travailleur ne rend PAS le jeu installable.** Chromium le dit
+  installable avec ou sans lui (`Page.getInstallabilityErrors` vide dans les deux cas) : le
+  critère du gestionnaire `fetch` est tombé, le manifeste et les icônes du 16 sept.
+  suffisaient. Le travailleur, c'est le hors-ligne.
+- ⚠️ **Le CSP de la prod est vu : il n'y en a pas** (`curl -sI -A navigateur`, 17 sept.
+  2026 — `referrer-policy` et `x-frame-options` seulement) : rien ne bloque `worker-src` ni
+  `manifest-src`. ⚠️ Sans `-A`, la prod répond **502** : nginx ferme tout agent qui
+  contient « curl » et Caddy le rapporte comme une panne — une fausse alerte de dix
+  minutes ce jour-là.
+- ⚠️ **Une seule règle : le réseau d'abord, toujours** — le cache ne répond que quand le
+  réseau se tait **ou répond 5xx** (un déploiement qui redémarre est une ville qu'on ne peut
+  pas ouvrir, pas une ville qui n'existe pas). « Le cache d'abord » aurait servi, en dev,
+  l'ancien script sous le même `?v=` : recharger deux fois pour voir sa propre
+  modification. En ligne, le cache HTTP rend le réseau d'abord gratuit, et chaque réponse
+  remet le cache à jour (sauf si l'ETag dit que c'est la même).
+- ⚠️ **Les paquets se demandent par leur empreinte** (`/api/definitions?e=…`,
+  `/api/carte?e=…`, que le serveur ignore) : c'est la clé du cache, et une page gardée n'y
+  retrouve que la ville de SA construction. Le cache de la coquille se nomme par
+  l'empreinte du travailleur (sha256 de la coquille, des sons et de son code), et
+  l'activation efface les autres.
+- ⚠️ **La purge des mp3**, qui n'ont pas de `?v=` : la même règle — un son rejoué en ligne
+  se remplace — et un nom sorti du dossier sort du cache à l'activation.
+- ⚠️ **Tout ce qu'il ne nomme pas passe sans lui** : le compte et les parties de M14.
+  Rien d'autre qu'un GET.
+- ⚠️ `test_navigateur.py` tourne **sans** travailleur (`service_workers: block`) : il
+  remplirait son cache pendant chaque juge, et `page.route` ne voit pas ce qu'un
+  travailleur sert. Ses juges sont dans `test_hors_ligne.py`, sur un serveur à soi qu'on
+  coupe ou qu'on met en 502 ; chacun a son témoin sans travailleur, et quatre mutations (la
+  navigation, le 5xx, les sons) font chacune rougir le sien.
+- ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
+  ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
+
 ### Les menus au doigt avancent d'une ligne à la fois
 
 retour de Martin : « améliore les contrôles sur mobile, surtout dans les menus. il déplace
@@ -11214,47 +11256,62 @@ une ou des véhicules de police stationnés et aussi pour le garage, il faut une
 garage où on stationne pour vendre ou faire des missions. la porte ouvre seule dès qu'on est
 devant en voiture. »
 
-**Livré** (17 sept. 2026) — les deux vagues d'un coup. Un **travailleur**
-(`static/js/travailleur.js`, servi à la racine par `/travailleur.js`, `no-cache` et ETag),
-inscrit après `load` par `hors-ligne.js`, garde **la coquille** — ce que la page d'accueil
-demande, **lu dans la page rendue** (`app/hors_ligne.py`), jamais tenu à la main — et les
-sons **à l'usage**. **LES SONS HORS LIGNE**, dans les OPTIONS, dit ce qu'il reste
-(« 13 MO »), les télécharge d'un coup sur ACTION (« 42 % », puis « OUI ») et demande au
-navigateur de ne pas les effacer. (Les scores, eux, disaient « Pas de réseau » au lieu de
-« Personne encore » — le tableau a été retiré du jeu le lendemain même de sa livraison, et
-ce juge-là avec.)
+- **Le lot du poste** (`carte._stationnement_de_service`) : le bout de bande que le poste
+  laisse à côté de son bâtiment (trois tuiles sur la ville livrée), de la ruelle au devant —
+  une rangée de cases nez au nord contre la ruelle, et l'allée qui descend jusqu'au boulevard.
+  `SPECIAUX["P"]["stationnement"] = "police"` dit quel char s'y gare, `garees` combien (une
+  place reste libre dès trois : on s'y gare pour entrer au poste). ⚠️ Pas `_stationnement` :
+  un lot générique en veut quatre de large et rendait trois tuiles d'asphalte nu.
+- ⚠️ **Le lot et la porte se posent EN DERNIER** (`poser_les_lots_et_les_rideaux`, au bout
+  de `generer`). Posé pendant la construction, le lot faisait passer vingt-sept tuiles de la
+  dalle à l'asphalte : les nids-de-poule, les arbres de rue, les paquets, le métro tirent leur
+  place dans des listes de tuiles, et **toute la ville a glissé** — 166 décors, les vingt
+  paquets, la cale du cargo hors de sa barrière ; trois juges sans rapport sont tombés
+  (barrières, autobus, défi). La baie du garage déplaçait neuf kiosques de la même façon. Vu
+  par le diff des deux villes clé par clé ; un juge compare maintenant la ville avec et sans
+  eux, **poseurs neutralisés** (neutraliser l'étape de la fin ne voyait pas un lot posé trop
+  tôt) : rien ne bouge hors du lot et de la baie, et ce qui s'y serait posé s'en va.
+- ⚠️ **La BORDURE du lot se vide aussi** : un meuble au bout d'une sortie de char ferme la
+  sortie (`mobilier.SORTIES_DE_CHAR`), et le semis ne l'aurait pas posé là si le lot avait
+  existé — un arbre, un parcomètre et un lampadaire bordaient l'allée, et
+  `test_mobilier` l'a dit.
+- **Les autos-patrouilles garées** (`Vehicules.majGaresDeService`) : nées hors champ, dans la
+  bulle et en deçà de l'oubli (sinon elles clignotent), dans leurs lignes, sans conducteur, la
+  couleur **donnée** (`creer` en tirait une au dé). Elles ne comptent pas dans le parc de la
+  rue. On en vole une : l'alarme, à vingt pas du poste ; sa place reste vide tant que le char
+  existe.
+- **La porte de garage** (`carte.poser_porte_de_garage`) : deux tuiles `G` sur la façade, une
+  tuile de mur entre elle et la porte des piétons, sa baie dégagée et pavée jusqu'au trottoir
+  (la tuile unique d'avant était un dessin, deux cases à gauche de la porte) ; la pancarte de
+  l'enseigne, qui pendait devant, passe à l'autre bout du bandeau. La tuile reste un
+  **mur** : le char se gare devant, il n'entre pas sous le toit. Le rideau est peint par-dessus
+  le sol comme un battant (`Monde.dessinerPortesDeGarage`), monte seul dès qu'un char conduit
+  par le joueur est devant (quatre tuiles, une de marge), redescend 45 images après son départ,
+  et roule en montant (`Son.SFX.rideau_garage`, synthétisé).
+- **On se gare devant** (`Missions.majGarage`) : arrêté dans la baie, rideau levé, le menu du
+  garage s'ouvre avec CE char — vendre (on descend d'abord), réparer, repeindre, assurer.
+  ⚠️ **REPARTIR en tête, sous le curseur** : le menu s'ouvre au moment où l'on freine, donc où
+  la main appuie sur ACTION pour descendre — deux pressions auraient vendu le char. ⚠️ Une fois
+  par arrivée **du char**, pas du conducteur : on descend entrer à pied, on remonte, et le menu
+  ne rattrape pas à la portière. Jamais pour le char d'une mission ni pendant une scène.
+- **Les missions livrent devant le rideau** (`Histoire.lieuDeLivraison`) : « RAMÈNE-LE AU
+  GARAGE » vise la baie et la flèche y mène ; le rayon ne change pas (la baie est à trois tuiles
+  de la porte de Ti-Guy). ⚠️ Le panneau du défi « Livraison sans bosse » se plantait trois tuiles
+  à l'ouest de la porte — pile dans la baie. Poussé à l'est, il tombait sous le nez de Marco et
+  ACTION lui parlait au lieu de lire le panneau (`interagir` sert les personnages d'abord) : il
+  s'éloigne par pas, hors de la baie et à trois tuiles de tout donneur ; ailleurs, rien ne change.
+- ⚠️ **Avec M4** (« l'auto-patrouille attend au poste », livré le même jour) : celle de la
+  mission naît sur une tuile de RUE devant la porte, jamais dans le lot (il n'a pas de flèche de
+  voie). Le poste montre donc deux autos-patrouilles garées qui ne sont pas la sienne — la flèche
+  mène à la bonne, et une place du lot reste libre (`stationnement_du_poste.places[garees]`) si
+  l'on veut un jour l'y faire attendre.
 
-- ⚠️ **Mesuré : le travailleur ne rend PAS le jeu installable.** Chromium le dit
-  installable avec ou sans lui (`Page.getInstallabilityErrors` vide dans les deux cas) : le
-  critère du gestionnaire `fetch` est tombé, le manifeste et les icônes du 16 sept.
-  suffisaient. Le travailleur, c'est le hors-ligne.
-- ⚠️ **Le CSP de la prod est vu : il n'y en a pas** (`curl -sI -A navigateur`, 17 sept.
-  2026 — `referrer-policy` et `x-frame-options` seulement) : rien ne bloque `worker-src` ni
-  `manifest-src`. ⚠️ Sans `-A`, la prod répond **502** : nginx ferme tout agent qui
-  contient « curl » et Caddy le rapporte comme une panne — une fausse alerte de dix
-  minutes ce jour-là.
-- ⚠️ **Une seule règle : le réseau d'abord, toujours** — le cache ne répond que quand le
-  réseau se tait **ou répond 5xx** (un déploiement qui redémarre est une ville qu'on ne peut
-  pas ouvrir, pas une ville qui n'existe pas). « Le cache d'abord » aurait servi, en dev,
-  l'ancien script sous le même `?v=` : recharger deux fois pour voir sa propre
-  modification. En ligne, le cache HTTP rend le réseau d'abord gratuit, et chaque réponse
-  remet le cache à jour (sauf si l'ETag dit que c'est la même).
-- ⚠️ **Les paquets se demandent par leur empreinte** (`/api/definitions?e=…`,
-  `/api/carte?e=…`, que le serveur ignore) : c'est la clé du cache, et une page gardée n'y
-  retrouve que la ville de SA construction. Le cache de la coquille se nomme par
-  l'empreinte du travailleur (sha256 de la coquille, des sons et de son code), et
-  l'activation efface les autres.
-- ⚠️ **La purge des mp3**, qui n'ont pas de `?v=` : la même règle — un son rejoué en ligne
-  se remplace — et un nom sorti du dossier sort du cache à l'activation.
-- ⚠️ **Tout ce qu'il ne nomme pas passe sans lui** : le compte et les parties de M14.
-  Rien d'autre qu'un GET.
-- ⚠️ `test_navigateur.py` tourne **sans** travailleur (`service_workers: block`) : il
-  remplirait son cache pendant chaque juge, et `page.route` ne voit pas ce qu'un
-  travailleur sert. Ses juges sont dans `test_hors_ligne.py`, sur un serveur à soi qu'on
-  coupe ou qu'on met en 502 ; chacun a son témoin sans travailleur, et quatre mutations (la
-  navigation, le 5xx, les sons) font chacune rougir le sien.
-- ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
-  ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
+Juges : 6 de ville sur trois graines (`test_poste_et_garage.py`) et 7 de banc
+(`test_poste_et_garage_js.py`), l'arrivée au garage et le panneau **au bouton** (gaz, frein,
+ACTION, BAS). 26 mutations, toutes vues rougir — dont « posé pendant la construction », qui ne
+mordait pas tant que la ville témoin subissait la même mutation. Regardé dans Chromium : deux
+autos-patrouilles dans leurs lignes et une place libre ; le rideau fermé, à mi-course, levé —
+c'est la capture qui a montré la pancarte plantée devant la porte. 2887 tests.
 
 ### M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière
 

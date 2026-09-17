@@ -87,6 +87,17 @@ const Histoire = (function () {
     return null;
   }
 
+  /** Ou l'on LIVRE un char : devant la porte de garage du lieu s'il en a une —
+      c'est la qu'on stationne (demande de Martin, 17 sept. 2026) —, sinon a sa
+      porte. ⚠️ Le rayon de l'objectif ne change pas : la baie est a trois tuiles
+      de la porte des pietons, et un char livre « au garage » l'est toujours. */
+  function lieuDeLivraison(slug) {
+    const pg = Monde.porteDeGarage(slug);
+    if (!pg) return lieu(slug);
+    const baie = Monde.baieDeLaPorteDeGarage(pg), l = lieu(slug);
+    return { x: baie.x, y: baie.y, nom: l ? l.nom : slug };
+  }
+
   /** Une tuile marchable pres d'un pixel, hors chaussee, en spirale. */
   function tuileLibre(x, y, rayonMax) {
     const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
@@ -815,7 +826,7 @@ const Histoire = (function () {
       case 'livrer': {
         const v = B.mission.vehicule || j.dansVehicule;
         if (!v || v.etat === 'epave') { echouer('vehicule_detruit'); return; }
-        const l = lieu(o.lieu);
+        const l = lieuDeLivraison(o.lieu);
         if (j.dansVehicule === v && l && dist2(v.x, v.y, l.x, l.y) < (o.rayon * TT) * (o.rayon * TT) && Math.abs(v.vitesse) < 0.4) {
           B.mission.sansBosse = o.sans_degats && v.chocs === p.chocs && v.vie === v.vieMax;
           Vehicules.descendre(j, true);
@@ -988,6 +999,18 @@ const Histoire = (function () {
   function defis() { return B.defs.defis || []; }
 
   /** Un panneau par defi, pose a son point de depart. */
+  //: Un panneau se tient a cette distance au moins d'un donneur : au-dela de la
+  //: portee de parole (`RAYON_PARLER`) de celui qui le lit, planté devant.
+  const PANNEAU_LOIN_DU_DONNEUR = 3 * TT;
+
+  /** Ce pixel, s'il n'est ni devant un rideau de garage (sa baie, une tuile de
+      marge) ni a portee d'un donneur ; sinon null. */
+  function placeDePanneau(p) {
+    if (!p) return null;
+    if (Monde.portesDeGarage().some(function (pg) { return Monde.devantLaPorteDeGarage(pg, p.x, p.y, 2, 1); })) return null;
+    return Entites.pietonsAutour(p.x, p.y, PANNEAU_LOIN_DU_DONNEUR).some(function (e) { return e.personnage; }) ? null : p;
+  }
+
   function creerPanneaux() {
     for (const d of defis()) {
       let l = null;
@@ -1016,7 +1039,17 @@ const Histoire = (function () {
         }
       } else if (d.ou.indexOf('porte:') === 0) l = lieu(d.ou.slice(6));
       if (!l) continue;
-      const place = tuileLibre(l.x - TT * 3, l.y, 3) || tuileLibre(l.x + TT * 3, l.y, 3);
+      // ⚠️ JAMAIS DEVANT UN RIDEAU DE GARAGE : trois tuiles a l'ouest de la
+      // porte de Ti-Guy, c'est exactement la baie ou l'on gare pour vendre, et
+      // le panneau de la livraison s'y plantait devant la porte qui se leve.
+      // ⚠️ NI SOUS LE NEZ D'UN DONNEUR : a l'est, c'est Marco qui attend, et
+      // ACTION lui parlait au lieu de lire le panneau (`interagir` sert les
+      // personnages d'abord). On s'eloigne par pas ; ailleurs, rien ne change.
+      let place = null;
+      for (const loin of [3, 5, 7]) {
+        place = placeDePanneau(tuileLibre(l.x - TT * loin, l.y, 3)) || placeDePanneau(tuileLibre(l.x + TT * loin, l.y, 3));
+        if (place) break;
+      }
       if (!place) continue;
       Entites.creer('panneau', place.x, place.y, { decor: 'panneau', r: 3, solide: false, dessine: true, vivant: false, defi: d.slug });
     }
@@ -1127,7 +1160,8 @@ const Histoire = (function () {
       const o = m.objectifs[p.mission.etape];
       if (!o) return null;
       let l = null;
-      if (o.type === 'aller' || o.type === 'livrer') l = lieu(o.lieu);
+      if (o.type === 'aller') l = lieu(o.lieu);
+      else if (o.type === 'livrer') l = lieuDeLivraison(o.lieu);
       else if (o.type === 'monter') l = B.mission && B.mission.vehicule ? B.mission.vehicule : null;
       else if (o.type === 'retourner') l = ouTrouver(m.donneur);
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
@@ -1210,5 +1244,5 @@ const Histoire = (function () {
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, present, calme, jouerOuDire,
            noter, rencontrer, CARNET_MAX,
-           proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
+           proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
 })();

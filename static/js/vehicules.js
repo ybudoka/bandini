@@ -275,6 +275,10 @@ const Vehicules = (function () {
       // faisait naitre un char de moins — et chaque naissance evitee decale
       // tous les des qui suivent. Un juge d'amuseur est tombe pour ca.
       if (v.panneT > 0) continue;
+      // ⚠️ Ni une auto-patrouille garee au poste : c'est le LOT qui la fait
+      // naitre (`majGaresDeService`), pas le parc de la rue — la compter
+      // ferait naitre un char de moins, et les des de toute la ville glissent.
+      if (v.gareDeService && v.etat === 'stationne' && !v.laisse) continue;
       // ⚠️ Un autobus de ligne n'est ni du trafic ni un char gare : c'est l'horaire
       // qui le fait naitre (`Autobus.faireNaitre`), il ne prend la place de personne.
       if (v.conducteur === 'ligne') continue;
@@ -282,6 +286,7 @@ const Vehicules = (function () {
     }
     if (B.t % 20 !== 0) return;
     majAmarrages();
+    majGaresDeService();
     const zone = Monde.zoneA(j.x, j.y);
     const voulu = Math.min(t.vehicules_max, zone ? zone.vehicules : 6) * Monde.rythme(zone);
     if (roulent < voulu) {
@@ -353,6 +358,47 @@ const Vehicules = (function () {
       const couleur = def.couleurs[hash2(place.x * 7919 + place.y, 0xC0C0E) % def.couleurs.length];
       const v = creer('bateau', x, y, place.angle || 0, { etat: 'stationne', couleur: couleur });
       if (v) { v.amarrage = place; nees++; }
+    }
+    return nees;
+  }
+
+  //: La bulle des chars gares au poste. ⚠️ EN DECA de l'oubli (`oubli_px`) : au-dela,
+  //: `peupler` oublierait a l'image suivante celle qu'on vient de poser, et on la
+  //: reposerait — une auto-patrouille qui clignote hors champ, vingt fois par seconde.
+  const GAREES_MARGE = 60;
+  const NEZ_DU_SENS = { N: [0, -1], S: [0, 1], O: [-1, 0], E: [1, 0] };
+
+  /** LES AUTOS-PATROUILLES GAREES AU POSTE. Demande de Martin (17 sept. 2026) :
+      « ajoute toujours un stationnement au poste de police avec une ou des
+      vehicules de police stationnes ». Python dessine le lot et dit combien de
+      places sont prises (`stationnement_du_poste.garees`) ; ici on y pose le
+      char de la fiche, dans ses lignes, comme `placeStationnee`.
+
+      ⚠️ Rien n'est tire au de du jeu : la couleur est DONNEE (sinon `creer` en
+      tire une), et la place est ecrite. Ce qui nait pour le decor ne decale pas
+      le hasard — la lecon des chaloupes (`majAmarrages`).
+
+      ⚠️ Garee, elle n'a pas de conducteur : ce n'est pas la police qui patrouille
+      (`conducteur === 'police'`), c'est un char a voler — et l'alarme d'une
+      auto-patrouille, a vingt pas du poste, se paie. Prise et laissee ailleurs,
+      elle garde sa place tant qu'elle existe ; oubliee ou detruite, le lot en
+      refait une, hors champ. */
+  function majGaresDeService() {
+    const lot = Monde.carte && Monde.carte.def && Monde.carte.def.stationnement_du_poste;
+    const j = B.joueur;
+    if (!lot || !j || B.interieur) return 0;
+    const def = vehiculeDef(lot.vehicule);
+    if (!def) return 0;
+    const portee = trafic().oubli_px - GAREES_MARGE;
+    let nees = 0;
+    for (let i = 0; i < lot.garees && i < lot.places.length; i++) {
+      const place = lot.places[i], nez = NEZ_DU_SENS[place.sens] || NEZ_DU_SENS.N;
+      const x = (place.x + 0.5 - nez[0] / 2) * TT, y = (place.y + 0.5 - nez[1] / 2) * TT;
+      if (dist2(x, y, j.x, j.y) > portee * portee) continue;
+      if (B.entites.some(function (q) { return q.type === 'vehicule' && q.gareDeService === place; })) continue;
+      if (Entites.visibleAEcran(x, y, 24) || !libreAutour(x, y, 12)) continue;
+      const v = creer(lot.vehicule, x, y, Math.atan2(nez[1], nez[0]), { etat: 'stationne', couleur: def.couleurs[0] });
+      if (v) { v.gareDeService = place; nees++; }
     }
     return nees;
   }
@@ -2729,7 +2775,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,

@@ -1328,8 +1328,11 @@ const Missions = (function () {
     return v.mission ? 'QUELQU’UN D’AUTRE' : null;
   }
 
-  function menuGarage(items) {
-    const eco = B.defs.economie, p = B.partie, v = charDevant();
+  /** `v` : le char a traiter. Sans lui, celui qui est gare devant la porte des
+      pietons (le comptoir, dedans) ; avec lui, celui qui attend devant le rideau
+      (`majGarage`), conducteur a bord. */
+  function menuGarage(items, vDonne) {
+    const eco = B.defs.economie, p = B.partie, v = vDonne || charDevant();
     if (!v) {
       items.push({ libelle: 'GARE UN CHAR DEVANT LA PORTE', actif: false });
       return { titre: 'GARAGE ROCCO BANDINI', items: items };
@@ -1344,8 +1347,13 @@ const Missions = (function () {
       p.ventes = p.ventes || {};
       const jour = p.ventes[v.slug] && p.ventes[v.slug].jour === p.jour ? p.ventes[v.slug].n : 0;
       p.ventes[v.slug] = { jour: p.jour, n: jour + 1 };
-      const i = B.exterieur.entites.indexOf(v);
-      if (i >= 0) B.exterieur.entites.splice(i, 1);
+      // ⚠️ Vendu DEVANT LE RIDEAU, on est encore au volant : on descend avant
+      // que Ti-Guy le rentre, sinon on part avec le char dans la poche.
+      if (B.joueur && B.joueur.dansVehicule === v) Vehicules.descendre(B.joueur, true);
+      if (B.exterieur) {
+        const i = B.exterieur.entites.indexOf(v);
+        if (i >= 0) B.exterieur.entites.splice(i, 1);
+      } else Entites.retirer(v);
       return true;
     } });
     items.push({ libelle: 'RÉPARER', detail: reparation + ' $', actif: reparation > 0 && p.argent >= reparation, faire: function () {
@@ -1371,6 +1379,60 @@ const Missions = (function () {
                    faire: function () { encaisserAssurance(); return true; } });
     }
     return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
+  }
+
+  // --- La porte de garage : on se gare devant, le rideau monte, Ti-Guy sort ---------------
+
+  //: A combien de tuiles de la facade le rideau se leve pour un char qui arrive, et
+  //: combien de tuiles de cote on tolere : « des qu'on est devant en voiture ».
+  const RIDEAU_PORTEE = 4, RIDEAU_MARGE = 1;
+  //: La place devant le rideau, en tuiles de profondeur : un char nez au rideau.
+  const BAIE_PROFONDEUR = 2;
+  //: Sous cette vitesse, le char est GARE — le menu s'ouvre.
+  const BAIE_ARRET = 0.3;
+
+  /** Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou
+      on stationne pour vendre ou faire des missions. la porte ouvre seule des
+      qu'on est devant en voiture. »
+
+      Au volant, devant le rideau : il monte. Arrete dans la baie, rideau leve :
+      le menu du garage s'ouvre avec CE char — vendre, reparer, repeindre,
+      assurer —, sans descendre ni passer par le comptoir. Une fois par arrivee
+      (`servi` : le CHAR servi) : on le ferme, il ne revient pas tant que ce
+      char-la n'est pas ressorti de la baie. ⚠️ Le char, pas le conducteur : on
+      descend devant le rideau pour entrer au garage a pied, on remonte pour
+      repartir — et le menu ne doit pas nous rattraper a la portiere.
+
+      ⚠️ JAMAIS pour le char d'une mission en cours ni pendant une scene : la
+      livraison au garage est l'affaire de `Histoire` (elle se fait DEVANT CE
+      RIDEAU, `lieuDeLivraison`), et un menu ouvert par-dessus figerait
+      l'objectif qu'on vient d'atteindre. */
+  function majGarage() {
+    const portes = Monde.portesDeGarage();
+    if (!portes.length || B.interieur) return;
+    const j = B.joueur, v = j && j.dansVehicule;
+    for (const pg of portes) {
+      if (v && Monde.devantLaPorteDeGarage(pg, v.x, v.y, RIDEAU_PORTEE, RIDEAU_MARGE)) Monde.leverLaPorteDeGarage(pg);
+    }
+    if (Monde.majPortesDeGarage()) Son.SFX.rideau_garage();
+    for (const pg of portes) {
+      if (pg.servi && !Monde.devantLaPorteDeGarage(pg, pg.servi.x, pg.servi.y, BAIE_PROFONDEUR, 0)) pg.servi = null;
+      if (!v || !Monde.devantLaPorteDeGarage(pg, v.x, v.y, BAIE_PROFONDEUR, 0)) continue;
+      if (pg.servi === v || pg.ouverture < 1 || Math.abs(v.vitesse) >= BAIE_ARRET) continue;
+      if (B.cinema || B.menu || B.transition || v.mission || v.etat === 'epave') continue;
+      pg.servi = v;
+      v.vitesse = 0; v.vx = 0; v.vy = 0;
+      Hud.ouvrirMenu(menuDuRideau(v));
+    }
+  }
+
+  /** Le menu du garage, ouvert du volant. ⚠️ REPARTIR EN TETE, et c'est le
+      curseur : le menu s'ouvre tout seul au moment ou l'on freine, donc au
+      moment ou la main appuie sur ACTION pour descendre — deux pressions
+      auraient VENDU le char qu'on voulait seulement garer. */
+  function menuDuRideau(v) {
+    const items = [{ libelle: 'REPARTIR', faire: function () { return true; } }];
+    return menuGarage(items, v);
   }
 
   // --- Les magasins ------------------------------------------------------------------
@@ -2423,6 +2485,7 @@ const Missions = (function () {
     if (B.t % 30 === 0) majCollecteurs();
     majFourriere();
     majMalGares();
+    majGarage();
     majInvite(B.joueur);
     // Les paquets se ramassent en passant dessus.
     if (B.joueur && !B.interieur) {
@@ -2439,7 +2502,7 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
-           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,

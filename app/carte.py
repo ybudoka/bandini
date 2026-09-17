@@ -1411,8 +1411,13 @@ SPECIAUX: dict[str, dict] = {
           "porte_garage": True, "famille": "tes_places"},
     "K": {"slug": "planque", "nom": "La planque de Rocco", "interieur": "planque",
           "famille": "tes_places"},
+    # ⚠️ `stationnement` : demande de Martin (17 sept. 2026), « ajoute toujours
+    # un stationnement au poste de police avec une ou des vehicules de police
+    # stationnes ». Le lot prend le bout de bande que le batiment laisse a cote
+    # de lui (`_stationnement_de_service`) ; la valeur est le char qui s'y gare,
+    # et le navigateur l'y pose (`Vehicules.majGaresDeService`).
     "P": {"slug": "poste", "nom": "Poste de police", "interieur": "poste",
-          "famille": "service"},
+          "famille": "service", "stationnement": "police"},
     "H": {"slug": "hopital", "nom": "Hôpital de Baie-des-Brumes", "interieur": "hopital",
           "famille": "soins"},
     "B": {"slug": "bar", "nom": "Bar Le Brouillard", "interieur": "bar",
@@ -1765,6 +1770,15 @@ class _Chantier:
         self.lots: dict[str, tuple[int, int, int, int]] = {}
         self.decor: list[dict] = []
         self.fourriere: dict | None = None
+        #: Les VRAIES portes de garage — deux tuiles de rideau qu'un char vient
+        #: garer devant, et qui se levent toutes seules (`poser_porte_de_garage`).
+        self.portes_garage: list[dict] = []
+        #: Le lot des autos-patrouilles, a cote du poste (`_stationnement_de_service`).
+        self.stationnement_du_poste: dict | None = None
+        #: Ce qui se pose EN DERNIER (`poser_les_lots_et_les_rideaux`) : le bout de
+        #: bande du poste et la facade du garage, retenus pendant la construction.
+        self.lots_de_service: list[tuple[int, int, int, int, dict]] = []
+        self.rideaux_a_poser: list[tuple[list[tuple[int, int]], int, int, dict]] = []
         #: L'empreinte du dernier batiment pose (voir `_pose_batiment`).
         self.empreinte_du_batiment = 0
         #: Sa boite (x, y, largeur, hauteur) — voir `_terrain_de_banlieue`.
@@ -2245,12 +2259,20 @@ class _Chantier:
             else:
                 return None
         self.degager_le_devant(px, py)
-        # ⚠️ ET LA MARCHE PAVE L'ABORD JUSQU'A LA DALLE. Depuis le trottoir a une
-        # tuile, la couronne du bloc se glisse entre le devant du batiment et le
-        # trottoir : sans ca, on sortait d'un commerce sur deux dalles, puis une
-        # tuile de paves, puis le trottoir — et le juge des sentiers de banlieue
-        # s'arretait sur les paves. On pave jusqu'a la chaussee, et rien d'autre
-        # que l'abord : l'herbe d'une cour reste de l'herbe.
+        self.paver_l_abord(px, py)
+        if special and special.get("porte_garage"):
+            # ⚠️ Le rideau d'une tuile reste la pendant la construction ; la vraie
+            # porte se pose en dernier (`poser_les_lots_et_les_rideaux`).
+            self.rideaux_a_poser.append((list(facades), px, py, special))
+        return px, py
+
+    def paver_l_abord(self, px: int, py: int) -> None:
+        """⚠️ ET LA MARCHE PAVE L'ABORD JUSQU'A LA DALLE. Depuis le trottoir a une
+        tuile, la couronne du bloc se glisse entre le devant du batiment et le
+        trottoir : sans ca, on sortait d'un commerce sur deux dalles, puis une
+        tuile de paves, puis le trottoir — et le juge des sentiers de banlieue
+        s'arretait sur les paves. On pave jusqu'a la chaussee, et rien d'autre
+        que l'abord : l'herbe d'une cour reste de l'herbe."""
         for j in range(1, 12):
             if py + j >= self.hauteur:
                 break
@@ -2261,7 +2283,108 @@ class _Chantier:
                 self.sol[py + j][px] = "."
             elif glyphe not in (",", "."):
                 break
-        return px, py
+
+    def _repeindre_la_facade(self, x: int, y: int, glyphe: str) -> None:
+        """Change une tuile de facade ET le masque de la devanture qui la couvre :
+        le peintre lit `motifs`, pas le sol, et un rideau absent du masque serait
+        une vitrine peinte par-dessus la porte."""
+        self.sol[y][x] = glyphe
+        for d in self.devantures:
+            if d["y"] == y and d["x"] <= x < d["x"] + d["l"]:
+                i = x - d["x"]
+                d["motifs"] = d["motifs"][:i] + glyphe + d["motifs"][i + 1:]
+
+    def poser_les_lots_et_les_rideaux(self, ville: dict) -> None:
+        """Le lot du poste et la porte du garage, sur la ville FINIE.
+
+        ⚠️ EN DERNIER, et c'est tout le point. Posee pendant la construction, les
+        vingt-sept tuiles du lot passaient de la dalle a l'asphalte : les nids de
+        poule, les arbres de rue, les paquets, le metro tirent leur place dans des
+        listes de tuiles, et TOUTE la ville a glisse — 166 decors, les vingt
+        paquets, la cale du cargo hors de sa barriere (trois juges sans rapport
+        sont tombes). La baie du garage deplacait neuf kiosques de la meme facon.
+        Ici, plus rien ne tire au sort apres : ce qui change, c'est le lot et la
+        baie, et rien d'autre.
+
+        ⚠️ Et ce qui s'y etait pose s'en va (le decor, sa lampe s'il en porte une) :
+        un lot ou une baie ou l'on ne peut pas se garer ne sert a rien. Autour du lot
+        AUSSI, sur la bordure : un meuble au bout d'une sortie de char est interdit
+        (`mobilier.SORTIES_DE_CHAR`), et le semis ne l'aurait pas pose la si le lot
+        avait existe — un arbre, un parcometre et un lampadaire bordaient l'allee.
+        """
+        rangees: set[int] = set()
+        vides: set[tuple[int, int]] = set()
+        for x, y, largeur, hauteur, special in self.lots_de_service:
+            self._stationnement_de_service(x, y, largeur, hauteur, special)
+            vides |= {(x + i, y + j) for i in range(largeur) for j in range(hauteur + 1)}
+            vides |= {(x + i, y + j) for i in range(-1, largeur + 1) for j in range(-1, hauteur + 2)}
+            rangees.update(range(y, y + hauteur + 1))
+        for facades, px, py, special in self.rideaux_a_poser:
+            porte = self.poser_porte_de_garage(facades, px, py, special)
+            if porte:
+                vides |= {(porte["x"] + i, py + j) for i in range(porte["l"]) for j in (1, 2)}
+                rangees.update(range(py, min(self.hauteur, py + 12)))
+        partis = [d for d in ville["decor"] if (d["x"], d["y"]) in vides]
+        ville["decor"][:] = [d for d in ville["decor"] if (d["x"], d["y"]) not in vides]
+        eteintes = {(d["x"], d["y"]) for d in partis if d["type"] == "lampadaire"}
+        ville["lampes"][:] = [lampe for lampe in ville["lampes"] if (lampe["x"], lampe["y"]) not in eteintes]
+        for y in sorted(rangees):
+            ville["sol"][y] = "".join(self.sol[y])
+        ville["stationnement_du_poste"] = self.stationnement_du_poste
+        ville["portes_garage"] = self.portes_garage
+
+    #: La largeur d'une porte de garage, en tuiles : un char fait une tuile de
+    #: large (16 px), et il lui faut de quoi entrer sans racler les montants.
+    PORTE_DE_GARAGE_L = 2
+
+    def poser_porte_de_garage(self, facades: list[tuple[int, int]], px: int, py: int,
+                              special: dict) -> dict | None:
+        """UNE VRAIE PORTE DE GARAGE : deux tuiles de rideau sur la facade, a
+        cote de la porte des pietons, et devant elle de quoi garer un char.
+
+        Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage
+        ou on stationne pour vendre ou faire des missions. la porte ouvre seule
+        des qu'on est devant en voiture. » Le garage n'avait qu'une tuile de
+        rideau peinte, deux cases a gauche de la porte — un dessin, pas un
+        endroit ou aller. La porte se leve dans le navigateur
+        (`Monde.majPortesDeGarage`), et c'est garer DEVANT qui ouvre le menu du
+        garage (`Missions.majGarage`).
+
+        ⚠️ Une tuile de mur ENTRE les deux portes quand la facade le permet : un
+        rideau colle a la porte des pietons, et le char gare devant bouche
+        l'entree qu'on veut prendre a pied. ⚠️ Et elle ne consomme aucun de :
+        c'est une couche peinte sur un mur deja pose, comme la porte elle-meme.
+        """
+        rangee = {tx for tx, ty in facades if ty == py}
+        large = self.PORTE_DE_GARAGE_L
+        for gx in (px - 1 - large, px + 2, px - large, px + 1):
+            tuiles = [gx + i for i in range(large)]
+            if all(t in rangee and self.sol[py][t] in ("F", "W", "G") and self.marchable_en(t, py + 1)
+                   for t in tuiles):
+                break
+        else:
+            return None
+        # L'ancien rideau d'une tuile, s'il n'est pas dans la nouvelle porte, redevient du mur.
+        for t in sorted(rangee):
+            if self.sol[py][t] == "G" and t not in tuiles:
+                self._repeindre_la_facade(t, py, "F")
+        for t in tuiles:
+            self._repeindre_la_facade(t, py, "G")
+            self.degager_le_devant(t, py)
+            self.paver_l_abord(t, py)
+        # ⚠️ LA PANCARTE NE PEND PAS DEVANT LE RIDEAU : elle pend au bout du bandeau,
+        # et le bout gauche de GARAGE BANDINI tombait sur la porte — un chevalet
+        # plante dans la baie ou l'on gare. Elle passe a l'autre bout, ou s'en va.
+        for d in self.devantures:
+            if d["y"] != py or not d["pancarte"]:
+                continue
+            bouts = {-1: d["x"], 1: d["x"] + d["l"] - 1}
+            if bouts[d["pancarte"]] in tuiles:
+                autre = -d["pancarte"]
+                d["pancarte"] = autre if bouts[autre] not in tuiles and self.marchable_en(bouts[autre], py + 1) else 0
+        porte = {"x": gx, "y": py, "l": large, "lieu": special["slug"]}
+        self.portes_garage.append(porte)
+        return porte
 
     # --- Les devantures ------------------------------------------------------
 
@@ -3276,6 +3399,7 @@ class _Chantier:
         mini = {"maisons": 4, "banlieue": 7, "hangars": 9, "industriel": 10}.get(genre, 5)
         parcelles: list[tuple[tuple[int, int, int, int], bool]] = []
         vedette = -1
+        lot_de_service: tuple[int, int, int, int] | None = None
         # ⚠️ LA PARCELLE DU LIEU GARANTI SE TAILLE A LA MESURE DE SA PIECE, et
         # avant le decoupage — pas apres. Le decoupage tire ses coupes au sort :
         # lui demander ensuite la plus grosse parcelle, c'est esperer que le
@@ -3347,7 +3471,15 @@ class _Chantier:
                 # qui n'a plus de marge — refermait : quarante-six tuiles
                 # enclavees a murer sur une graine, quatre sur celle qu'on
                 # livre. Une parcelle, un voisin, pas de cour fermee.
-                if largeur - large >= mini:
+                # ⚠️ SAUF LE LOT D'UN LIEU DE SERVICE : le poste de police garde
+                # a cote de lui le bout de bande que son batiment laisse, de la
+                # ruelle jusqu'au devant, pour ses autos-patrouilles. Il ne tire
+                # aucun de et ne deplace aucun mur : le batiment garde sa
+                # parcelle, et ce bout-la etait deja un terrain nu.
+                if (special.get("stationnement") and largeur - large >= 1
+                        and bh - 2 >= CASE_CREUX + 2):
+                    lot_de_service = (x + large, zy, largeur - large, bh - 2)
+                elif largeur - large >= mini:
                     parcelles.append(((x + large, zy, largeur - large, zh), True))
                 continue
             if k == bande_skateux:
@@ -3464,6 +3596,9 @@ class _Chantier:
             porte = self.poser_porte(facades_vedette, special)
             if porte:
                 self.poser_devanture(facades_vedette, porte, genre, special)
+        if lot_de_service:
+            # ⚠️ RETENU, pas pose : voir `poser_les_lots_et_les_rideaux`.
+            self.lots_de_service.append((*lot_de_service, special))
         for facades, _, tuiles, parcelle, boite in batiments:
             self.tuiles_du_batiment = tuiles
             porte_du_batiment = None
@@ -3726,6 +3861,35 @@ class _Chantier:
             tuiles = {(bx + i, by + j) for j in range(bh) for i in range(bl)}
         self.tuiles_du_batiment = tuiles
         return self.batiment_forme(tuiles, vitrines, genre)
+
+    # --- Le lot d'un lieu de service (le poste) -----------------------------
+
+    def _stationnement_de_service(self, x: int, y: int, largeur: int, hauteur: int,
+                                  special: dict) -> None:
+        """Le lot des autos-patrouilles : une rangee de cases contre la ruelle,
+        et une allee qui descend jusqu'a la rue.
+
+        ⚠️ PAS `_stationnement` : le bout de bande qu'un poste laisse a cote de
+        son batiment fait trois tuiles de large, et un lot generique en veut
+        quatre (une rangee et son allee cote a cote) — il rendait un carre
+        d'asphalte nu. Ici les cases prennent le HAUT, nez contre la ruelle, et
+        tout le reste est l'allee : on recule, on descend, on sort.
+
+        ⚠️ Il se pose EN DERNIER (`poser_les_lots_et_les_rideaux`), qui vide le
+        lot et sa sortie de ce qui s'y etait pose.
+
+        ⚠️ `garees` : combien de places ont leur char, en partant du batiment.
+        Une place reste libre quand il y en a trois ou plus — un vrai lot a
+        toujours un trou, et c'est la qu'on se gare pour entrer au poste.
+        """
+        self.rect(x, y, largeur, hauteur, "p")
+        self.rect(x, y, largeur, CASE_CREUX, "^")
+        places = [{"x": x + i, "y": y, "sens": "N"} for i in range(largeur)]
+        self.stationnement_du_poste = {
+            "lieu": special["slug"], "vehicule": special["stationnement"],
+            "x": x, "y": y, "largeur": largeur, "hauteur": hauteur,
+            "places": places, "garees": len(places) - 1 if len(places) >= 3 else len(places),
+        }
 
     # --- La fourriere (M9) --------------------------------------------------
 
@@ -6395,6 +6559,9 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # charrue. Elle ne pose rien, ne tire aucun de, et ne tombe que si l'option le veut.
     from . import neige as neige_mod
     ville["neige"] = neige_mod.tracer(ville)
+    # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
+    # que toutes les etapes d'avant lisent pour tirer leurs places.
+    chantier.poser_les_lots_et_les_rideaux(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

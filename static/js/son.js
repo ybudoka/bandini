@@ -535,6 +535,13 @@ const Son = (function () {
     // ElevenLabs a part dans le plan, et un `joue` sans fichier au catalogue
     // reclamerait un mp3 qui n'existe pas.
     sifflet_train: function () { ton(1320, 0.12, 'triangle', 0.16); ton(1175, 0.32, 'triangle', 0.16, 1, 0.16); },
+    // Le rideau du garage qui monte ou descend : un roulement grave et les lames
+    // qui claquent une a une. ⚠️ Synthetise seulement, pour la meme raison que le
+    // sifflet : un `joue` sans fichier au catalogue reclamerait un mp3 absent.
+    rideau_garage: function () {
+      bruit(0.5, 0.12, 700, 180);
+      for (let i = 0; i < 6; i++) ton(150 + (i % 2) * 35, 0.04, 'square', 0.05, 0.8, i * 0.08);
+    },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
     // meme bouton que le klaxon d'une auto. Les velos du trafic la font deja
     // entendre en passant (`jouerA`) ; ici c'est la sienne.

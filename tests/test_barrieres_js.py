@@ -14,7 +14,19 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         const j = L.B.joueur, TT = L.TT, b = L.Monde.carte.def.barrieres.find(function (q) { return q.slug === 'pont'; });
         const x = (b.x + 1) * TT + 8;                      // la voie qui descend
         const out = { fermee: L.Monde.barriereFermee(b) };
-        function partir(y) { j.x = x; j.y = y; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer(); }
+        // ⚠️ LE TRAFIC DU HASARD N'EST PAS CE QU'ON JUGE. Un camion rentrait dans
+        // le char au depart et un velo au milieu du pont : vingt-quatre points de
+        // carrosserie, alors que le juge compte au point pres ce que la barriere
+        // coute. Il tenait par chance de graine — livrer le lot du poste a change
+        // trois meubles a l'autre bout de la ville, le trafic est tombe ailleurs,
+        // et ce juge est tombe avec. On coupe les naissances et on vide la rue.
+        L.B.defs.conduite.trafic.vehicules_max = 0;
+        function vider() {
+            L.B.entites.filter(function (e) {
+                return e !== j && e !== j.dansVehicule && (e.type === 'vehicule' || e.type === 'pieton');
+            }).forEach(function (e) { L.Entites.retirer(e); });
+        }
+        function partir(y) { vider(); j.x = x; j.y = y; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer(); }
         // 1. Au pas : le char se bute aux cones, et le HUD dit pourquoi.
         partir((b.y - 3) * TT);
         let v = L.Vehicules.creer('auto', x, j.y, Math.PI / 2, { etat: 'stationne' }); L.Entites.indexer();
@@ -37,6 +49,11 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         }
         traverser();
         out.lance = { y: v.y / TT, vie: v.vie, vieMax: v.vieMax };
+        // ⚠️ ET LE DERNIER ESSAI SE FAIT AU PAS, comme le premier. Plein gaz sur
+        // douze tuiles, le char derive d'une demi-tuile et racle le garde-fou du
+        // pont : des points de carrosserie qui n'ont rien a voir avec la
+        // barriere. Le juge tenait par chance de graine — retirer trois meubles
+        // a l'autre bout de la ville (le lot du poste) le faisait tomber.
         L.Vehicules.descendre(j, true); L.Entites.retirer(v);
         // 3. A pied : les jambes passent.
         partir((b.y - 2) * TT); j.x = b.x * TT + 8;       // le trottoir du pont
@@ -53,7 +70,11 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         partir((b.y - 3) * TT);
         v = L.Vehicules.creer('auto', x, j.y, Math.PI / 2, { etat: 'stationne' }); L.Entites.indexer();
         L.Vehicules.monter(j, v);
-        traverser();
+        v.vitesse = 1.0; v.vx = 0; v.vy = 1.0;
+        for (let i = 0; i < 300 && v.y < (b.y + b.h + 1) * TT; i++) {
+            v.vitesse = Math.max(v.vitesse, 0.9); v.vy = Math.max(v.vy, 0.9); v.vx = 0;
+            o.frame(1);
+        }
         out.apres = { y: v.y / TT, vie: v.vie };
         out.b = { y: b.y, h: b.h };
         return out;
