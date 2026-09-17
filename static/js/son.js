@@ -16,6 +16,18 @@ const Son = (function () {
 
   function init(w, urlStatique) { fenetre = w; base = urlStatique || '/static/'; }
 
+  /** Telecharge et decode un fichier : la promesse d'un tampon.
+
+      ⚠️ Le SEUL chemin des six chargements d'audio (echantillons, voix des
+      passants, voix de l'histoire, ambiance, radio, musique) : chacun se compte
+      (`Chargements`), et c'est ce que montre l'icone du coin. Six copies de la
+      meme chaine, c'etait six endroits ou oublier de compter. */
+  function decoder(url) {
+    return Chargements.suivre(fenetre.fetch(url)
+      .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
+      .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); }));
+  }
+
   /** Tirer des mp3 dans le CACHE DU NAVIGATEUR avant d'en avoir besoin.
 
       ⚠️ Ce n'est pas un chargement : rien n'est decode, rien n'est garde ici.
@@ -35,7 +47,11 @@ const Son = (function () {
       if (!f || prechauffes.has(f)) return;
       prechauffes.add(f);
       n++;
-      fenetre.fetch(base + B.defs.audio.dossier + '/' + f).catch(function () { /* on jouera sans */ });
+      // ⚠️ On LIT le corps : `fetch` se resout aux en-tetes, et l'icone du coin
+      // s'eteindrait avant que le fichier soit vraiment dans le cache.
+      Chargements.suivre(fenetre.fetch(base + B.defs.audio.dossier + '/' + f)
+        .then(function (r) { return r.arrayBuffer ? r.arrayBuffer() : r; }))
+        .catch(function () { /* on jouera sans */ });
     });
     return n;
   }
@@ -215,11 +231,7 @@ const Son = (function () {
     const dossier = base + audio.dossier + '/';
     audio.echantillons.forEach(function (e) {
       (e.fichiers || []).forEach(function (nom) {
-        fenetre.fetch(dossier + nom)
-          .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-          .then(function (octets) {
-            return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); });
-          })
+        decoder(dossier + nom)
           .then(function (tampon) {
             const liste = tampons.get(e.slug) || [];
             liste.push(tampon);
@@ -567,9 +579,7 @@ const Son = (function () {
       Voix.chargees = true;
       Voix.liste().forEach(function (v) {
         if (!v.fichier) return;
-        fenetre.fetch(base + B.defs.audio.dossier + '/' + v.fichier)
-          .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-          .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+        decoder(base + B.defs.audio.dossier + '/' + v.fichier)
           .then(function (tampon) { tampons.set('voix-' + v.slug, [tampon]); })
           .catch(function () { /* muet, tant pis */ });
       });
@@ -588,9 +598,7 @@ const Son = (function () {
       Voix.missionsChargees.add(mission);
       if (!ctx || !fenetre || !fenetre.fetch) return;
       Voix.histoire().filter(function (v) { return v.mission === mission && v.fichier; }).forEach(function (v) {
-        fenetre.fetch(base + B.defs.audio.dossier + '/' + v.fichier)
-          .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-          .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+        decoder(base + B.defs.audio.dossier + '/' + v.fichier)
           .then(function (tampon) {
             tampons.set('histoire-' + v.slug, [tampon]);
             // La replique qu'on affiche attendait justement cette voix : on la dit maintenant.
@@ -756,9 +764,7 @@ const Son = (function () {
       if (tampons.has('ambiance-' + a.slug)) { Ambiance._demarrer(a); return true; }
       if (Ambiance.chargee === 'en cours') return true;
       Ambiance.chargee = 'en cours';
-      fenetre.fetch(base + B.defs.audio.dossier + '/' + a.fichier)
-        .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-        .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+      decoder(base + B.defs.audio.dossier + '/' + a.fichier)
         .then(function (tampon) {
           tampons.set('ambiance-' + a.slug, [tampon]);
           Ambiance.chargee = 'prete';
@@ -991,9 +997,7 @@ const Son = (function () {
       if (tampons.has('radio-' + slug)) { Radio._demarrer(slug); return true; }
       if (Radio.chargees.get(slug) === 'en cours') return true;
       Radio.chargees.set(slug, 'en cours');
-      fenetre.fetch(base + B.defs.audio.dossier + '/' + station.fichier)
-        .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-        .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+      decoder(base + B.defs.audio.dossier + '/' + station.fichier)
         .then(function (tampon) {
           tampons.set('radio-' + slug, [tampon]);
           Radio.chargees.set(slug, 'prete');
@@ -1087,9 +1091,7 @@ const Son = (function () {
     // muet pour toujours.
     if (!ctx || !fenetre || !fenetre.fetch) return 'en cours';
     morceauxCharges.set(cle, 'en cours');
-    fenetre.fetch(base + B.defs.audio.dossier + '/' + fichier)
-      .then(function (r) { return r.ok ? r.arrayBuffer() : Promise.reject(r.status); })
-      .then(function (octets) { return new Promise(function (ok, ko) { ctx.decodeAudioData(octets, ok, ko); }); })
+    decoder(base + B.defs.audio.dossier + '/' + fichier)
       .then(function (tampon) {
         tampons.set(cle, [tampon]);
         morceauxCharges.set(cle, 'prete');

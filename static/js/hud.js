@@ -41,6 +41,66 @@ const Hud = (function () {
 
   function etat(nom) { if (racine) racine.dataset.etat = nom; }
 
+  /** La barre de chargement du lancement (`#chargement`), sur 100.
+
+      ⚠️ Elle n'avance jamais a reculons : `chargement.js` l'a deja poussee
+      pendant les scripts, et une barre qui recule ment. */
+  function progression(valeur) {
+    const barre = doc && doc.getElementById('chargement');
+    const plein = doc && doc.getElementById('chargement-plein');
+    if (!barre || !plein) return;
+    const avant = Number(barre.getAttribute('aria-valuenow')) || 0;
+    const v = Math.round(Math.max(avant, Math.min(100, valeur)));
+    if (v === avant) return;
+    barre.setAttribute('aria-valuenow', String(v));
+    plein.style.width = v + '%';
+  }
+
+  /** La part de la barre qui revient aux scripts (`data-part-scripts`) : celle
+      que `chargement.js` remplit, et au-dessus de laquelle le jeu continue. */
+  function partDesScripts() {
+    const barre = doc && doc.getElementById('chargement');
+    return Number(barre && barre.dataset && barre.dataset.partScripts) || 60;
+  }
+
+  function finirChargement() {
+    const barre = doc && doc.getElementById('chargement');
+    if (barre) barre.hidden = true;
+  }
+
+  /*: L'ICONE QUI TOURNE quand quelque chose se charge en jouant (`Chargements`).
+    ⚠️ Pas au premier fichier : un bruitage deja dans le cache se decode en
+    quelques images, et une icone qui clignote a chaque coup de poing se lit
+    comme un defaut. Elle attend `apres` images de chargement, puis s'attarde
+    `reste` images apres le dernier.
+    ⚠️ Au coin BAS-GAUCHE, a une colonne du bord : la boite de dialogue commence
+    a x = 12 et s'arrete huit pixels au-dessus du bas, l'icone ne la touche pas.
+    En tactile, la croix tient ce coin : l'icone se range contre la mini-carte,
+    la ou le pouce ne va jamais (comme l'arme courante). */
+  const ICONE = { apres: 12, reste: 20, cote: 10 };
+  let chargeDepuis = 0, chargeReste = 0;
+  function iconeDeChargement(ctx) {
+    const n = typeof Chargements !== 'undefined' ? Chargements.nombre() : 0;
+    chargeDepuis = n > 0 ? chargeDepuis + 1 : 0;
+    if (chargeDepuis >= ICONE.apres) chargeReste = ICONE.reste;
+    else if (n === 0 && chargeReste > 0) chargeReste--;
+    if (chargeReste <= 0) return;
+    const c = ICONE.cote;
+    const x = Entree.estTactile ? MINI.x + MINI.l + 4 : 1;
+    const y = Entree.estTactile ? MINI.y + MINI.h - c : VH - c - 1;
+    // Huit briques en rond : la plus claire tourne, les autres s'eteignent
+    // derriere elle — lisible a l'echelle 1, sans un seul arc a lisser.
+    const tete = (B.image >> 2) % 8;
+    for (let k = 0; k < 8; k++) {
+      const a = k / 8 * Math.PI * 2;
+      const age = (tete - k + 8) % 8;
+      ctx.fillStyle = age === 0 ? '#ffe39a' : age < 3 ? '#e8b33c' : 'rgba(232,179,60,0.35)';
+      ctx.fillRect(Math.round(x + c / 2 - 1 + Math.cos(a) * 3.5), Math.round(y + c / 2 - 1 + Math.sin(a) * 3.5), 2, 2);
+      B.stats.rects++;
+    }
+    noter('chargement', x, y, c, c);
+  }
+
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
   // --- Menus canvas ---------------------------------------------------------------
@@ -1609,6 +1669,7 @@ const Hud = (function () {
         Atlas.texte(ctx, B.msg, (VW - l) / 2, 43, '#efe6d0', 2);
         B.msgT--;
       }
+      if (B.etat === 'jeu') iconeDeChargement(ctx);
       if (B.etat === 'pause') {
         ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH);
         dessinerMenu(ctx);
@@ -1652,7 +1713,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
     marqueurs: function () { return marqueurs; },

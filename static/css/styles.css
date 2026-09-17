@@ -120,6 +120,25 @@ canvas#toile {
 
 .aide { margin: 0; font-size: clamp(11px, 1.5vw, 13px); opacity: .8; }
 .aide--petit { opacity: .6; }
+
+/* La barre de chargement du lancement : un cadre dore et des briques qui
+   avancent par pas (`steps`) — une barre lisse jurerait avec les pixels. */
+.chargement { margin: .9rem auto 0; width: min(260px, 72vw); }
+.chargement[hidden] { display: none; }
+/* ⚠️ PENDANT le chargement, l'aide des touches cede sa place a la barre : le
+   cadre du titre etait deja plein a ras bord, et la barre en plus coupait le
+   logo en haut et « Chargement… » en bas (vu en Fast 3G, 17 sept. 2026). On ne
+   peut pas encore jouer : l'aide revient avec l'ecran titre, a sa place. */
+#bandini[data-etat="chargement"] .aide:not(.aide--petit):not(.aide--son) { display: none; }
+.chargement-barre {
+  height: 12px; padding: 2px; border: 2px solid #e8b33c; background: #14111d;
+  box-sizing: border-box;
+}
+#chargement-plein {
+  display: block; height: 100%; width: 0;
+  background: repeating-linear-gradient(90deg, #e8b33c 0 6px, #b98a2a 6px 8px);
+  transition: width .25s steps(5, end);
+}
 /* Le son attend un geste : assez visible pour qu'on le fasse, assez discret
    pour ne pas voler la vedette au titre. */
 .aide--son {

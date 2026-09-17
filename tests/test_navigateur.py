@@ -108,6 +108,33 @@ def test_le_titre_de_l_ouverture_est_le_logo(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_la_barre_de_chargement_avance_puis_s_efface(page, serveur, erreurs):
+    """Demande de Martin (17 sept. 2026) : « une barre de chargement au lancement
+    du jeu ». Elle avance pendant les scripts (`chargement.js`), puis pendant les
+    definitions et la carte, jamais a reculons, finit a 100 — et s'efface quand
+    l'ecran titre est pret."""
+    page.add_init_script("""
+        window.__barre = [];
+        new MutationObserver(function (ms) {
+            ms.forEach(function (m) {
+                if (m.target.id === 'chargement') window.__barre.push(Number(m.target.getAttribute('aria-valuenow')));
+            });
+        }).observe(document, { attributes: true, subtree: true, attributeFilter: ['aria-valuenow'] });
+    """)
+    page.goto(serveur)
+    attendre_titre(page)
+    valeurs = page.evaluate("window.__barre")
+    part_scripts = int(page.get_attribute("#chargement", "data-part-scripts"))
+    assert valeurs == sorted(valeurs), f"la barre a recule : {valeurs}"
+    assert any(0 < v < part_scripts for v in valeurs), f"rien pendant les scripts : {valeurs}"
+    # ⚠️ Sous 95 : le 95 se pose avant de batir la ville, sans avoir lu un octet —
+    # c'est la lecture des deux reponses qui doit se voir entre les deux.
+    assert any(part_scripts < v < 95 for v in valeurs), f"rien pendant les donnees : {valeurs}"
+    assert valeurs[-1] == 100, valeurs
+    assert page.locator("#chargement").is_hidden(), "la barre reste affichee sur l'ecran titre"
+    assert erreurs == []
+
+
 def test_une_carte_d_une_autre_construction_est_refusee(page, serveur):
     """⚠️ La carte voyage a part depuis le 16 sept. 2026 (`/api/carte`), et les
     deux reponses doivent etre de la MEME construction : un deploiement tombe

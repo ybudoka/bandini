@@ -193,7 +193,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le poing américain au poing | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-poing-américain-au-poing) |
 | Le voleur de moto est dessus | ✅ **livré** | 17 sept. 2026 | **P1** | **correctif** | [notes](#le-voleur-de-moto-est-dessus) |
 | Les nids-de-poule survivent à une porte | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-nids-de-poule-survivent-à-une-porte) |
-| Une barre de chargement, et l'icône qui tourne | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#une-barre-de-chargement-et-licône-qui-tourne) |
+| Une barre de chargement, et l'icône qui tourne | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#une-barre-de-chargement-et-licône-qui-tourne) |
 | Le serveur ne redémarre plus pour un test | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#le-serveur-ne-redémarre-plus-pour-un-test) |
 | Le poing américain chez Gus | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#le-poing-américain-chez-gus) |
 | Les petits manèges à l'échelle de la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
@@ -622,7 +622,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx), `/api/scores` GET/POST, `/sante`, `/manifest.webmanifest`, `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/sante`, `/manifest.webmanifest`, `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` (M14) | SQLite sous `DONNEES_DIR` : ouverture, **WAL + `timeout`** (deux workers gunicorn), migrations numérotées, vidage quotidien | une migration s'applique une seule fois, deux workers écrivent sans se barrer, une base vide se crée toute seule |
 | `comptes.py` (M14) | inscription, connexion, mot de passe haché, session signée, la partie au serveur, l'effacement du compte | un mot de passe n'est jamais gardé en clair, un pseudo pris est refusé, effacer efface vraiment, le jeu marche **sans** compte |
 
@@ -642,7 +642,8 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 
 | # | Fichier | Rôle |
 |---|---|---|
-| 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1) |
+| 0 | `chargement.js` | **la barre de chargement, avant le jeu** : chargé en premier, il compte les scripts à mesure qu'ils arrivent (`data-scripts` de la page) et remplit leur part de `#chargement` (`data-part-scripts`) ; `jeu.js` reprend au-dessus |
+| 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -659,7 +660,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 13 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
 | 13b | `scenes.js` | **le metteur en scène** : joue une liste de plans (`missions.TYPES_PLANS`) sans connaître aucune scène par son nom — `jouer(scene, contexte)`, `maj()`, `passer()` ; aucun dé, la ville figée, une seule façon de finir (jouée ou passée), le joueur rendu où il était, trois secondes au plus après le dernier mot |
 | 14 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), posés **dehors** devant leur porte ou **dedans** à leur point en entrant chez eux, leur **bulle** quand ils ont une job pour toi, le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |
-| 15 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores |
+| 15 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores, la **barre de chargement** du titre (`progression`, `finirChargement`) et l'**icône qui tourne** quand `Chargements` compte quelque chose |
 | 15b | `casque.js` | **le casque Meta Quest** : un écran virtuel WebGL dans une session `immersive-vr` (la toile en texture, espace `local`), la session qui cadence (`Jeu.avancer`), et les manettes Touch rendues comme une manette Xbox (`VERS_XBOX` → `Entree.brancherCasque`) ; une voile DOM fait sortir du casque, sortir ramène au titre |
 | 16 | `jeu.js` | machine d'états (`chargement \| titre \| jeu \| prison \| hopital \| fin`), `maj()`, `rendre()`, `boucle()`, **les portes** (`transiter()` : noircir sur l'ancienne scène, changer au noir, éclaircir sur la nouvelle — le jeu figé pendant, comme sous un menu), amorçage (`fetch` du paquet), `window.BANDINI` (surface de test et débogage : `B`, espaces de noms, `graine(n)`, `entree(a)`, `debug.cones`, `maj`, `rendre`, `stats`) |
 
@@ -727,7 +728,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -10238,6 +10239,33 @@ et le préchauffage des mp3 de l'ouverture ; en jeu, l'audio se charge à l'usag
 
 - ⚠️ À mesurer avant de dessiner : ce qui se charge vraiment, et combien de temps, sur le
   téléphone de Martin
+
+**Livrée le 17 sept. 2026.**
+
+- ⚠️ **Mesuré d'abord** (Chromium, Fast 3G, processeur ×4) : l'écran titre arrive à **10,7
+  s** — les **20 scripts** jusqu'à 7,2 s, les définitions et la carte jusqu'à 10,3 s, la
+  ville qui se bâtit le reste ; puis la musique et les voix de l'ouverture se chargent
+  encore **quatre secondes** derrière le titre. **Livré** : la barre du titre
+  (`#chargement`, un cadre doré et des briques qui avancent par pas) — `chargement.js`,
+  chargé **en premier**, compte les scripts à mesure qu'ils arrivent (60 % de la barre ; un
+  fichier et pas un script en ligne, la sécurité du serveur peut refuser ces derniers) ;
+  `jeu.js` continue **à l'octet près** sur les deux requêtes, contre la taille décompressée
+  que le serveur annonce (`X-Octets` : derrière nginx, la longueur de la réponse est celle
+  du gzip) ; la ville bâtie, elle fait son dernier pas et s'efface. Jamais à reculons. **Et
+  l'icône** : `Chargements` compte ce qui se télécharge (les six chemins de l'audio passent
+  par un seul, `Son.decoder`, et le préchauffage lit le corps) ; le HUD montre huit briques
+  qui tournent au **coin bas-gauche** — au bord de la boîte de dialogue sans la toucher,
+  contre la mini-carte en tactile (la croix tient le coin) — **après 12 images** de
+  chargement (un bruitage en cache ne la fait pas clignoter) et **20 images de plus** après
+  le dernier.
+- ⚠️ Pas pendant une scène : le HUD s'y tait.
+- ⚠️ **Pendant le chargement, l'aide des touches cède sa place à la barre** : le cadre du
+  titre était plein à ras bord, et la barre en plus coupait le logo en haut et
+  « Chargement… » en bas (vu en Fast 3G) ; elle revient avec l'écran titre, identique à
+  avant. Juges : `test_chargement_js` (le compte, le son qui s'y inscrit, l'icône
+  brève/longue/qui s'attarde/par-dessus rien), `test_routes` (`X-Octets`, le nombre de
+  scripts annoncé), `test_navigateur` (la barre avance pendant les scripts ET pendant les
+  octets, finit à 100, s'efface) — chaque règle retirée fait rougir son juge.
 
 ### Le serveur ne redémarre plus pour un test
 

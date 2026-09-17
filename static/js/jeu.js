@@ -721,11 +721,41 @@ const Jeu = (function () {
     return c;
   }
 
-  function chargerJson(url, quoi) {
+  function chargerJson(url, quoi, suivi) {
     return fenetre.fetch(url).then(function (r) {
       if (!r.ok) throw new Error(quoi + ' ' + r.status);
-      return r.json();
+      return lireEnSuivant(r, suivi);
     });
+  }
+
+  /** Le corps d'une reponse JSON, en disant ou on en est : `suivi(0..1)`.
+
+      ⚠️ On compte les octets DECOMPRESSES que lit le navigateur contre ceux que
+      le serveur annonce (`X-Octets`, voir `routes._revalide`) : derriere nginx,
+      la longueur de la reponse est celle du gzip, et la barre avancerait au
+      juge. Sans l'en-tete ou sans flux lisible (un vieux navigateur, le banc
+      d'essai), on lit d'un coup : la barre saute, elle ne ment pas. */
+  function lireEnSuivant(r, suivi) {
+    const total = Number(r.headers && r.headers.get && r.headers.get('X-Octets')) || 0;
+    const Decodeur = fenetre.TextDecoder;
+    if (!suivi || !total || !r.body || !r.body.getReader || !Decodeur) return r.json();
+    const lecteur = r.body.getReader(), morceaux = [];
+    let recus = 0;
+    function lire() {
+      return lecteur.read().then(function (m) {
+        if (m.done) {
+          const tout = new Uint8Array(recus);
+          let k = 0;
+          morceaux.forEach(function (c) { tout.set(c, k); k += c.length; });
+          return JSON.parse(new Decodeur('utf-8').decode(tout));
+        }
+        morceaux.push(m.value);
+        recus += m.value.length;
+        suivi(Math.min(1, recus / total));
+        return lire();
+      });
+    }
+    return lire();
   }
 
   /** Les definitions et la carte : DEUX requetes, lancees ensemble, et la carte
@@ -740,9 +770,21 @@ const Jeu = (function () {
       des missions qui ne se parlent plus. On refuse, et la page dit de
       recharger. */
   function chargerDefinitions(racine) {
+    // ⚠️ La barre reprend ou `chargement.js` l'a laissee (les scripts), et garde
+    // ses cinq derniers pour la ville qui se batit. Entre les deux, les deux
+    // requetes a la mesure de leur poids sur le fil : la carte 42 Ko gzip, les
+    // definitions 33 (mesure du 17 sept. 2026).
+    const depart = Hud.partDesScripts(), arrivee = 95;
+    const parts = { definitions: 0, carte: 0 };
+    function suivre(quoi, poids) {
+      return function (f) {
+        parts[quoi] = f * poids;
+        Hud.progression(depart + (arrivee - depart) * (parts.definitions + parts.carte));
+      };
+    }
     return Promise.all([
-      chargerJson(racine.dataset.urlDefinitions, 'definitions'),
-      chargerJson(racine.dataset.urlCarte, 'carte'),
+      chargerJson(racine.dataset.urlDefinitions, 'definitions', suivre('definitions', 0.45)),
+      chargerJson(racine.dataset.urlCarte, 'carte', suivre('carte', 0.55)),
     ]).then(function (reponses) {
       const defs = reponses[0], carte = reponses[1];
       if (carte.empreinte !== defs.carte_empreinte) {
@@ -801,6 +843,7 @@ const Jeu = (function () {
 
     return chargerDefinitions(racine).then(function (defs) {
       B.defs = defs;
+      Hud.progression(95);
       Monde.charger(defs.carte);
       // La partie du dernier emplacement joue : celle que JOUER propose d'abord.
       B.partie = chargerPartie(Sauvegarde.emplacement());
@@ -826,6 +869,9 @@ const Jeu = (function () {
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
         + (parties > 1 ? ' · ' + parties + ' parties sauvegardées' : '');
       // On revient d'un changement de partie : le choix se rouvre sur elle.
+      // La ville est batie : la barre fait son dernier pas, et s'efface.
+      Hud.progression(100);
+      Hud.finirChargement();
       const rouvrir = Sauvegarde.rouverture();
       if (rouvrir) ouvrirParties(rouvrir);
       dernier = 0; accu = 0;
@@ -846,7 +892,7 @@ const Jeu = (function () {
 if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
-    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Monde: Monde, Entites: Entites, Combat: Combat,
+    Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
     Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,

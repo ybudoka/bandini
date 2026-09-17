@@ -9,6 +9,27 @@ def test_accueil(client):
     assert 'data-etat="chargement"' in html
 
 
+def test_la_page_dit_combien_de_scripts_elle_charge(client):
+    """La barre du lancement compte les scripts a mesure qu'ils arrivent
+    (`chargement.js`) : le total vient de la page, et il doit etre le vrai."""
+    import re
+
+    html = client.get("/").get_data(as_text=True)
+    annonces = int(re.search(r'data-scripts="(\d+)"', html).group(1))
+    charges = re.findall(r'<script src="[^"]*/static/js/[^"]+\.js', html)
+    assert annonces == len(charges) > 10, (annonces, len(charges))
+    assert charges[0].endswith("/chargement.js"), "le compteur doit arriver AVANT les scripts qu'il compte"
+
+
+def test_la_taille_decompressee_voyage_avec_les_paquets(client):
+    """⚠️ Derriere nginx, la longueur de la reponse est celle du gzip ; le
+    navigateur lit, lui, des octets decompresses. `X-Octets` est ce que la barre
+    de chargement compte — il doit valoir le corps, a l'octet pres."""
+    for url in ("/api/definitions", "/api/carte"):
+        reponse = client.get(url)
+        assert int(reponse.headers["X-Octets"]) == len(reponse.get_data()), url
+
+
 def test_sante(client):
     donnees = client.get("/sante").get_json()
     assert donnees["ok"] is True

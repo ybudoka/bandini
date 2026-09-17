@@ -329,6 +329,34 @@ const Base = (function () {
   };
 })();
 
+// --- Chargements ----------------------------------------------------------------------
+
+/** Ce qui se charge en ce moment : un son, une voix, une musique.
+
+    Demande de Martin (17 sept. 2026) : « s'il y a des chargements dans le jeu, un
+    petit icone s'animant dans un coin de l'ecran ». L'audio se charge A L'USAGE
+    (12 Mo en 166 fichiers) : c'est lui qu'on attend en jouant, et rien ne le
+    disait. Le HUD lit ce compte (`Hud.dessiner`).
+
+    ⚠️ Chaque debut rend SA fin, qui ne decompte qu'une fois : une fin appelee deux
+    fois ferait tomber le compte sous zero, et une fin jamais appelee laisserait
+    l'icone tourner pour toujours — d'ou `suivre`, qui la pose sur la reussite
+    comme sur l'echec. */
+const Chargements = (function () {
+  'use strict';
+  let enCours = 0;
+  function debut() {
+    enCours++;
+    let fini = false;
+    return function fin() { if (!fini) { fini = true; enCours--; } };
+  }
+  function suivre(promesse) {
+    const fin = debut();
+    return promesse.then(function (v) { fin(); return v; }, function (e) { fin(); throw e; });
+  }
+  return { debut: debut, suivre: suivre, nombre: function () { return enCours; } };
+})();
+
 // --- Sauvegarde ----------------------------------------------------------------------
 
 const Sauvegarde = (function () {

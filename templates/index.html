@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block corps %}
-<main id="bandini" class="jeu" data-etat="chargement"
+<main id="bandini" class="jeu" data-etat="chargement" data-scripts="{{ scripts_du_jeu }}"
       data-url-definitions="{{ url_for('jeu.api_definitions') }}"
       data-url-carte="{{ url_for('jeu.api_carte') }}"
       data-url-scores="{{ url_for('jeu.api_scores') }}"
@@ -26,6 +26,13 @@
         <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme d’avant, <em>tenu</em> la roue ·
         <kbd>Échap</kbd> pause · <kbd>M</kbd> son
       </p>
+      {# La barre de chargement (demande de Martin, 17 sept. 2026) : les scripts
+         (`chargement.js`), puis les definitions et la carte a l'octet pres, puis la
+         ville qui se batit (`Jeu.demarrer`). Elle se cache a l'ecran titre. #}
+      <div class="chargement" id="chargement" role="progressbar" aria-label="Chargement de la ville"
+           aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" data-part-scripts="60">
+        <div class="chargement-barre"><i id="chargement-plein"></i></div>
+      </div>
       <p class="aide aide--petit" id="etat-chargement">Chargement de Baie-des-Brumes…</p>
       {# Le navigateur n'accorde le son qu'apres un geste de la main, et la
          manette n'en est pas un : on le dit, au lieu de se taire. #}
@@ -69,6 +76,7 @@
 {% block scripts %}
 {# ⚠️ L'ORDRE EST LA DEPENDANCE, et cette liste est la source unique : le banc
    d'essai (tests/banc.js) la lit pour charger les memes fichiers. #}
+<script src="{{ url_for('static', filename='js/chargement.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>

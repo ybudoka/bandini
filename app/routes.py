@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import json
+import re
+from functools import lru_cache
+from pathlib import Path
 
 from flask import (
     Blueprint,
@@ -24,9 +27,19 @@ def tableau() -> Tableau:
     return current_app.extensions["tableau_scores"]
 
 
+@lru_cache(maxsize=1)
+def _scripts_du_jeu(gabarit: str) -> int:
+    """Combien de scripts la page charge : `chargement.js` compte leur arrivee.
+
+    ⚠️ Lu dans le gabarit lui-meme, pas ecrit a la main : un script de plus dans
+    la page et la barre s'arreterait avant la fin, ou deborderait."""
+    return len(re.findall(r"filename='js/[^']+'", Path(gabarit).read_text(encoding="utf-8")))
+
+
 @bp.route("/")
 def accueil():
-    return render_template("index.html")
+    gabarit = str(Path(current_app.root_path, current_app.template_folder, "index.html"))
+    return render_template("index.html", scripts_du_jeu=_scripts_du_jeu(gabarit))
 
 
 def _revalide(paquet) -> Response:
@@ -40,6 +53,11 @@ def _revalide(paquet) -> Response:
         reponse = Response(status=304)
     else:
         reponse = Response(paquet.corps, mimetype="application/json")
+        # ⚠️ LA TAILLE DECOMPRESSEE, pour la barre de chargement : nginx compresse
+        # la reponse, et `Content-Length` (s'il reste) compte des octets gzip —
+        # alors que le navigateur, lui, lit des octets decompresses. Sans ce
+        # nombre-la, la barre avancerait au jugé.
+        reponse.headers["X-Octets"] = str(paquet.taille)
     reponse.headers["ETag"] = etag
     reponse.headers["Cache-Control"] = "no-cache"
     return reponse
