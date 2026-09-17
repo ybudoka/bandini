@@ -138,7 +138,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (1re vague : le compte, la session longue et les parties sur le serveur) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; la 2e : le jeu se synchronise) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -222,7 +222,7 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
-| `SECRET_KEY` vaut `cle-de-developpement-a-changer` **par défaut** — ⚠️ mais `installer.sh` en génère déjà une vraie (`token_hex(32)`) dans le `.env` partagé, depuis M0 : ce qui reste, c'est que l'application **refuse de démarrer** avec la clé de développement quand `FLASK_DEBUG` est faux | Sans compte ni session, une clé faible ne protège rien | **M14** : le jour où une session vaut une partie |
+| **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo) |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
 exclu de la commande de tous les jours ci-dessous parce qu'il monte un Chromium et prend des
@@ -632,9 +632,9 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/sante`, `/manifest.webmanifest`, `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
-| `bd.py` (M14) | SQLite sous `DONNEES_DIR` : ouverture, **WAL + `timeout`** (deux workers gunicorn), migrations numérotées, vidage quotidien | une migration s'applique une seule fois, deux workers écrivent sans se barrer, une base vide se crée toute seule |
-| `comptes.py` (M14) | inscription, connexion, mot de passe haché, session signée, la partie au serveur, l'effacement du compte | un mot de passe n'est jamais gardé en clair, un pseudo pris est refusé, effacer efface vraiment, le jeu marche **sans** compte |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
+| `comptes.py` | les comptes (M14) : `inscrire` (pseudo des scores, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
 Réutiliser tels quels : `create_app` de `/Users/martingagne/dev/car-game/app/__init__.py`,
 `config.py`, `run.py`, `Tableau` de `app/scores.py`, `scripts/verifier_dependances.py`,
@@ -722,7 +722,7 @@ app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
       chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py
-      bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
+      bd.py comptes.py
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
 static/img/  favicon.svg favicon.ico icone-180.png icone-192.png icone-512.png logo.svg (dessinés par scripts/icones.py)
@@ -741,12 +741,14 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
+        test_bd.py test_comptes.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
           git-hooks/post-commit
-deploy/  README.md deploy.sh installer.sh gunicorn.conf.py
+deploy/  README.md deploy.sh installer.sh gunicorn.conf.py sauvegarder_bd.py
          systemd/bandini-gestiondojo.service.example nginx/bandini-gestiondojo.conf.example caddy/README.md
+         systemd/bandini-sauvegarde-bd.service.example systemd/bandini-sauvegarde-bd.timer.example
 .github/workflows/ci.yml
 ```
 
@@ -4910,7 +4912,9 @@ serveur reçoit des **instantanés**, jamais chaque image.
 - **Il tourne** : chaque usage en émet un nouveau et périme l'ancien. ⚠️ Et c'est ce qui donne
   la détection de vol gratuitement — si un jeton **déjà périmé** revient, c'est que deux
   appareils portent la même session : on coupe tous les appareils du compte et on redemande le
-  mot de passe. C'est la seule façon simple de réagir à un vol de cookie.
+  mot de passe. C'est la seule façon simple de réagir à un vol de cookie. ⚠️ **Livré
+  autrement** (17 sept. 2026) : il tourne à l'**ouverture** du jeu, pas à chaque requête — des
+  requêtes qui se croisent passeraient pour un vol (voir les notes de M14).
 - Le mot de passe ne sert donc qu'à **lier un appareil**, une fois. C'est tout ce qu'on tape.
 
 **Le NIP** — et ⚠️ **il faut dire tout de suite ce qu'il n'est pas** : le NIP **n'ouvre pas un
@@ -8664,6 +8668,52 @@ production avec la clé de développement ; **(2)** le jeu se synchronise — le
 instantané monte, `sendBeacon`, la question « garder celle-ci / prendre celle-là » ; **(3)**
 le NIP ; **(4)** les scores déménagent dans la base, et effacer son compte ; puis le défi du
 jour, le mode photo et la coop.
+
+**1re vague livrée** (17 sept. 2026) : le serveur sait tout faire, et **le jeu ne s'en sert
+pas encore** — aucun écran ne crée de compte, c'est la 2e vague. `app/bd.py` (SQLite sous
+`DONNEES_DIR`, WAL, `BEGIN IMMEDIATE`, migrations numérotées par `user_version`, ouverte à
+la première requête de compte et jamais au démarrage) ; `app/comptes.py` (inscription,
+connexion, jeton d'appareil, trois cases au compteur) ; six routes sous `/api/compte/`
+(`inscription`, `connexion`, `ouvrir`, `deconnexion`, `parties/<n>` en GET et en POST) ; le
+refus de démarrer avec la clé de développement ; le vidage quotidien
+(`deploy/sauvegarder_bd.py` et sa minuterie systemd, sept copies gardées). Juges :
+`tests/test_comptes.py` et `tests/test_bd.py`, chacun **vu rouge** en retirant sa règle (le
+compteur, la preuve de vol, `BEGIN IMMEDIATE`, le refus, l'empreinte du jeton, la grâce, la
+borne de la route, `foreign_keys`).
+
+- ⚠️ **Le jeton tourne à l'OUVERTURE du jeu, pas à chaque requête** — la fiche disait «
+  chaque usage ». Un jeu envoie des requêtes qui se croisent (une sauvegarde lente partie
+  avant la rotation, un `sendBeacon` dont personne ne lit la réponse) : avec une rotation
+  par requête, chaque retardataire arriverait avec un jeton déjà remplacé et passerait pour
+  un vol — tous les appareils coupés, pour rien. `POST /api/compte/ouvrir` tourne le jeton
+  une fois par chargement ; **la 2e vague doit attendre sa réponse avant tout autre appel de
+  compte**.
+
+- ⚠️ **Une réponse perdue ne coupe personne** (l'autobus) : tant que le nouveau jeton n'a
+  JAMAIS servi, l'ancien reste accepté — tel quel pendant `GRACE_S` (2 min : deux onglets
+  ouverts ensemble), puis l'ouverture en émet un autre. L'ancien ne devient une preuve de
+  vol qu'une fois son successeur vu (`appareils.precedente` et `vu`, puis `jetons_perimes`).
+
+- ⚠️ **Effacer une case garde son compteur** (`partie` NULL) : sans lui, la vieille copie
+  d'un autre appareil reviendrait remplir la case vidée. Et les écritures passent par
+  `POST`, pas `PUT` : `sendBeacon` ne sait faire que POST.
+
+- ⚠️ **La production se reconnaît à `APP_BASE_URL` en https**, pas à `FLASK_DEBUG` :
+  `.env.example` met `FLASK_DEBUG=false`, et le serveur du salon aurait refusé de démarrer
+  avec `change-cette-cle`. Le même signal rend le cookie `Secure` — en http sur le wifi, un
+  cookie `Secure` ne serait jamais gardé par le téléphone. **Mesuré sur le serveur** (en
+  lecture) : clé de 64 caractères, `https://bandini.gestiondojo.ca`, Python 3.12.3, SQLite
+  3.45.1 (l'`UPSERT` demande 3.24).
+
+- ⚠️ **La borne du site reste celle d'un score** (16 Ko, `test_corps_trop_gros`) : la route
+  d'une partie relève la sienne à 52 Ko (`REQUETE_PARTIE_MAX_OCTETS`, par
+  `request.max_content_length`), sous le `client_max_body_size 64k` de nginx — au-delà,
+  nginx répondrait en HTML.
+
+- ⚠️ **À faire sur le serveur, une fois** : relancer `installer.sh` (idempotent) pour poser
+  `bandini-sauvegarde-bd.timer` et `shared/copies/` — `deploy.sh` ne touche pas systemd.
+  Rien ne presse tant que personne ne peut créer de compte : la base n'existe qu'à la
+  première requête de compte.
 
 ### Les zones conditionnelles
 

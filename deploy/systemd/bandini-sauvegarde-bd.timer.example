@@ -1,0 +1,14 @@
+; Copier vers /etc/systemd/system/bandini-sauvegarde-bd.timer — deploy/installer.sh le
+; fait et l'active. Verifier : systemctl list-timers bandini-sauvegarde-bd
+
+[Unit]
+Description=Vidage quotidien de la base de Bandini (vers 4 h 15)
+
+[Timer]
+OnCalendar=*-*-* 04:15:00
+RandomizedDelaySec=10min
+; Serveur eteint a 4 h 15 : la copie se fait au redemarrage, pas le lendemain.
+Persistent=true
+
+[Install]
+WantedBy=timers.target

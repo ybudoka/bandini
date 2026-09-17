@@ -45,14 +45,25 @@ def _entier(donnees: dict, cle: str, minimum: int, maximum: int) -> int:
     return valeur
 
 
+def pseudo_propre(brut: object) -> str | None:
+    """Le pseudo nettoye (espaces reduits), ou None s'il n'est pas permis.
+
+    La meme regle pour le tableau des scores et pour les comptes (M14) : un pseudo
+    permis a un endroit et refuse a l'autre, c'est deux regles qui derivent.
+    """
+    if not isinstance(brut, str):
+        return None
+    pseudo = re.sub(r"\s+", " ", brut.strip())
+    return pseudo if _PSEUDO.match(pseudo) else None
+
+
 def valider(donnees: object) -> dict:
     """Rend un score propre, ou leve ScoreInvalide."""
     if not isinstance(donnees, dict):
         raise ScoreInvalide("corps attendu : un objet JSON")
 
-    pseudo = str(donnees.get("pseudo", "")).strip()
-    pseudo = re.sub(r"\s+", " ", pseudo)
-    if not _PSEUDO.match(pseudo):
+    pseudo = pseudo_propre(str(donnees.get("pseudo", "")))
+    if pseudo is None:
         raise ScoreInvalide(f"pseudo : 1 à {PSEUDO_MAX} lettres, chiffres, espaces ou tirets")
 
     fortune = _entier(donnees, "fortune", 0, economie.FORTUNE_MAX)

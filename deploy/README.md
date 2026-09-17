@@ -42,6 +42,27 @@ ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 \
   'bash /srv/bandini/repo/deploy/deploy.sh main'
 ```
 
+## La base des comptes (M14)
+
+Les comptes et leurs parties vivent dans `/srv/bandini/shared/donnees/bandini.sqlite3`
+(SQLite en WAL, a cote de `scores.json`). Elle se cree et se migre toute seule a la
+premiere requete de compte : rien a faire a la mise en ligne.
+
+- **Le vidage quotidien** : `bandini-sauvegarde-bd.timer` (vers 4 h 15) copie la base
+  dans `/srv/bandini/shared/copies/` et garde les sept dernieres
+  (`deploy/sauvegarder_bd.py`). ⚠️ Un serveur installe avant M14 n'a pas la minuterie :
+  relancer `installer.sh` une fois (il est idempotent), puis
+  `systemctl list-timers bandini-sauvegarde-bd`.
+- ⚠️ **Jamais un `cp` de la base** pour la sauvegarder ou la deplacer : ses dernieres
+  ecritures sont dans `bandini.sqlite3-wal`. Une copie a la main :
+  `sudo -u www-data python3 /srv/bandini/current/deploy/sauvegarder_bd.py --donnees
+  /srv/bandini/shared/donnees --copies /tmp/copie`.
+- **Reprendre une copie** : arreter le service, remplacer `bandini.sqlite3` et effacer
+  `bandini.sqlite3-wal` et `-shm` (ils appartiennent a l'ancienne base), redemarrer.
+- ⚠️ **Le service refuse de demarrer avec la cle de developpement** quand
+  `APP_BASE_URL` est en https : `SECRET_KEY` doit etre une vraie cle (l'installeur en
+  genere une).
+
 ## Verifications
 
 ```bash

@@ -25,11 +25,12 @@ if ss -ltnp 2>/dev/null | grep -q ":$PORT "; then
 fi
 
 echo "==> Arborescence"
-sudo -n mkdir -p "$BASE/releases" "$BASE/shared/donnees" "$BASE/shared/maison"
+sudo -n mkdir -p "$BASE/releases" "$BASE/shared/donnees" "$BASE/shared/maison" "$BASE/shared/copies"
 sudo -n chown -R dojoadmin:dojoadmin "$BASE"
 # ⚠️ `maison` est le HOME de gunicorn : sans lui, son serveur de controle
 # echoue a chaque demarrage sur /var/www/.gunicorn (voir le service).
-sudo -n chown www-data:www-data "$BASE/shared/donnees" "$BASE/shared/maison"
+# `copies` : le vidage quotidien de la base (M14), ecrit par www-data.
+sudo -n chown www-data:www-data "$BASE/shared/donnees" "$BASE/shared/maison" "$BASE/shared/copies"
 
 echo "==> Depot"
 if [ ! -d "$BASE/repo/.git" ]; then
@@ -58,6 +59,13 @@ echo "==> systemd"
 sudo -n install -m 644 "$BASE/repo/deploy/systemd/$SERVICE.service.example" "/etc/systemd/system/$SERVICE.service"
 sudo -n systemctl daemon-reload
 sudo -n systemctl enable -q "$SERVICE"
+# Le vidage quotidien de la base des comptes (M14) : une base sans copie de
+# surete est une perte de donnees qui attend sa date.
+for unite in bandini-sauvegarde-bd.service bandini-sauvegarde-bd.timer; do
+  sudo -n install -m 644 "$BASE/repo/deploy/systemd/$unite.example" "/etc/systemd/system/$unite"
+done
+sudo -n systemctl daemon-reload
+sudo -n systemctl enable -q --now bandini-sauvegarde-bd.timer
 
 echo "==> nginx"
 sudo -n install -m 644 "$BASE/repo/deploy/nginx/$SERVICE.conf.example" "/etc/nginx/sites-available/$SERVICE.conf"

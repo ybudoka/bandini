@@ -6,11 +6,31 @@ from datetime import date
 
 from flask import Flask
 
-from config import Config
+from config import CLES_DE_DEVELOPPEMENT, Config
 
+from . import bd
 from .definitions import construire
 from .scores import Tableau
 from .version import VERSION
+
+
+def refuser_la_cle_de_developpement(config) -> None:
+    """⚠️ En production, une cle que tout le monde connait ne se prend pas.
+
+    Rien ne signe encore avec elle — le jeton d'appareil de M14 vit en base, pas
+    dans un cookie signe —, mais le jour ou quelque chose le fera (un lien pour
+    reprendre un mot de passe perdu), cette cle-la n'existera deja plus en ligne.
+    L'installeur en genere une vraie depuis M0 ; ce refus garde qu'elle y reste.
+    """
+    if not config.get("PRODUCTION"):
+        return
+    cle = config.get("SECRET_KEY") or ""
+    if cle in CLES_DE_DEVELOPPEMENT or len(cle) < 32:
+        raise RuntimeError(
+            "SECRET_KEY : la cle de developpement (ou une cle de moins de 32 caracteres) "
+            "en production. Generer une vraie cle : "
+            "python3 -c 'import secrets; print(secrets.token_hex(32))'"
+        )
 
 
 def create_app(config_object: type[Config] = Config) -> Flask:
@@ -20,6 +40,7 @@ def create_app(config_object: type[Config] = Config) -> Flask:
         static_folder="../static",
     )
     app.config.from_object(config_object)
+    refuser_la_cle_de_developpement(app.config)
 
     app.extensions["tableau_scores"] = Tableau(app.config["DONNEES_DIR"])
     app.extensions["version"] = VERSION
@@ -32,6 +53,7 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     from .routes import bp
 
     app.register_blueprint(bp)
+    app.teardown_appcontext(bd.fermer)
 
     @app.context_processor
     def variables_globales() -> dict:

@@ -1,8 +1,9 @@
 """Configuration de Bandini.
 
-Le jeu n'a ni compte ni base de donnees : la partie (argent, casier, planque,
-missions faites) vit dans le `localStorage` du navigateur. Le serveur ne garde
-que le tableau des scores, dans un fichier JSON sous `DONNEES_DIR`.
+La partie (argent, casier, planque, missions faites) vit dans le `localStorage`
+du navigateur, et c'est lui qui joue. Le serveur garde le tableau des scores
+(un fichier JSON) et, depuis M14, les comptes et leurs parties dans une base
+SQLite — les deux sous `DONNEES_DIR`. Un compte n'est qu'une synchronisation.
 """
 
 from __future__ import annotations
@@ -112,6 +113,10 @@ def _flag(name: str, default: bool = False) -> bool:
     return valeur in {"1", "true", "yes", "on", "oui"}
 
 
+#: Ce qui n'est PAS un secret : le defaut ci-dessous, et celui de `.env.example`.
+CLES_DE_DEVELOPPEMENT = ("cle-de-developpement-a-changer", "change-cette-cle")
+
+
 class Config:
     SECRET_KEY = os.getenv("SECRET_KEY", "cle-de-developpement-a-changer")
 
@@ -121,12 +126,19 @@ class Config:
 
     APP_BASE_URL = os.getenv("APP_BASE_URL", "http://127.0.0.1:5400")
 
+    # Servi en https, c'est la production : le cookie d'appareil y est `Secure`, et
+    # la cle de developpement y est refusee au demarrage. ⚠️ Pas `FLASK_DEBUG` :
+    # `.env.example` le met a false, et le serveur du salon refuserait de partir.
+    PRODUCTION = APP_BASE_URL.startswith("https://")
+
     # Ou vit scores.json. Relatif a la racine du projet si ce n'est pas absolu.
     DONNEES_DIR = str((RACINE / os.getenv("DONNEES_DIR", "donnees")).resolve())
 
     SEND_FILE_MAX_AGE_DEFAULT = int(os.getenv("STATIC_MAX_AGE", "0"))
 
-    # Le seul POST du site est un score de quelques dizaines d'octets.
+    # Un score pese quelques dizaines d'octets, un appel de compte a peine plus. La
+    # seule exception, une partie qui monte, releve sa borne dans sa route
+    # (`comptes.PARTIE_MAX_OCTETS`).
     MAX_CONTENT_LENGTH = 16 * 1024
 
     DEBUG = _flag("FLASK_DEBUG", False)

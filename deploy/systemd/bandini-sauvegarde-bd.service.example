@@ -1,0 +1,18 @@
+; Copier vers /etc/systemd/system/bandini-sauvegarde-bd.service — deploy/installer.sh
+; le fait, avec sa minuterie (bandini-sauvegarde-bd.timer.example).
+;
+; Le vidage quotidien de la base des comptes (M14). A la main :
+;   sudo systemctl start bandini-sauvegarde-bd && journalctl -u bandini-sauvegarde-bd -n 5
+
+[Unit]
+Description=Vidage quotidien de la base de Bandini
+
+[Service]
+Type=oneshot
+; Le proprietaire de la base : il la lit sans droits de plus, et ses copies lui
+; appartiennent.
+User=www-data
+Group=www-data
+; ⚠️ Le python3 du SYSTEME : le script n'utilise que la bibliotheque standard, et
+; le venv d'une release disparait quand on nettoie les vieilles releases.
+ExecStart=/usr/bin/python3 /srv/bandini/current/deploy/sauvegarder_bd.py --donnees /srv/bandini/shared/donnees --copies /srv/bandini/shared/copies
