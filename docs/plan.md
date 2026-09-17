@@ -138,7 +138,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (1re vague : le compte, la session longue et les parties sur le serveur) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -8654,6 +8654,14 @@ session sur un appareil déjà lié, il n'ouvre **pas** un compte : il déchiffr
 localement, cinq essais et le jeton s'efface, le compte ne se bloque pas. Mesuré : une
 partie pèse 790 o à 4,5 Ko. Plus le défi du jour à graine serveur (reporté de M7), le mode
 photo, la coop locale
+
+**Le découpage** (17 sept. 2026) : **(1)** le compte, la session longue et les parties sur
+le serveur — `app/bd.py` (SQLite, WAL, migrations par `user_version`), l'inscription, le
+jeton d'appareil qui tourne, les instantanés au compteur, et le refus de démarrer en
+production avec la clé de développement ; **(2)** le jeu se synchronise — les moments où un
+instantané monte, `sendBeacon`, la question « garder celle-ci / prendre celle-là » ; **(3)**
+le NIP ; **(4)** les scores déménagent dans la base, et effacer son compte ; puis le défi du
+jour, le mode photo et la coop.
 
 ### Les zones conditionnelles
 
