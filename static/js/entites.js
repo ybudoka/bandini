@@ -2605,6 +2605,7 @@ const Entites = (function () {
     }
     // Les hommes-sandwichs ne comptent pas dans la foule : ils ont un poste.
     if (B.t % 30 === 0) naitreLesHommesSandwichs(false);
+    if (B.t % 30 === 0) majKiosques();
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
     if (B.t % 30 === 0) naitreLaFoire();
@@ -2699,22 +2700,72 @@ const Entites = (function () {
     });
   }
 
-  /** Les kiosques et les camions de la carte, avec quelqu'un derriere. */
+  //: Le marchand a les pieds 11 px au-dessus de l'ancre de son kiosque : le
+  //: comptoir couvre ses jambes, ses yeux passent sous le toit (voir
+  //: `cabane_fruits_de_mer`, sprites.js).
+  const VENDEUR_DERRIERE = 11;
+
+  /** Les kiosques et les camions de la carte, avec quelqu'un derriere — s'ils
+      sont ouverts. Personne ne regarde encore : le marchand d'un kiosque ouvert
+      est deja a son comptoir. */
   function creerAmbulants(def) {
     (def.ambulants || []).forEach(function (a) {
       const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === a.slug; });
       if (!commerce) return;
       const fiche = DECORS[commerce.sprite] || {};
-      creer('ambulant', a.x * TT + 8, a.y * TT + 15, {
+      const etal = creer('ambulant', a.x * TT + 8, a.y * TT + 15, {
         decor: commerce.sprite, slug: a.slug, r: fiche.r === undefined ? 10 : fiche.r,
-        solide: true, dessine: true,
+        solide: true, dessine: true, vendeur: null,
       });
-      ajouterA(grilleFixe, B.entites[B.entites.length - 1]);
-      const vendeur = creerPieton(a.x * TT + 8, a.y * TT + 4, archetype('vendeur'));
-      vendeur.etat = 'fige';
-      vendeur.face = 'bas';
-      vendeur.commerce = a.slug;
+      ajouterA(grilleFixe, etal);
+      if (enService(commerce.heures)) posterLeVendeur(etal);
     });
+  }
+
+  function posterLeVendeur(etal) {
+    const vendeur = creerPieton(etal.x, etal.y - VENDEUR_DERRIERE, archetype('vendeur'));
+    vendeur.etat = 'fige';
+    vendeur.face = 'bas';
+    vendeur.commerce = etal.slug;
+    etal.vendeur = vendeur;
+    return vendeur;
+  }
+
+  /** ⚠️ UN KIOSQUE FERME N'A PERSONNE DERRIERE. Retour de Martin, capture a
+      l'appui (17 sept. 2026) : la cabane a fruits de mer fermee, et son
+      marchand au comptoir. Il y etait pose au chargement et n'en partait
+      jamais ; ACTION repondait « FERME » a quelqu'un qui attendait de servir.
+
+      A la fermeture, il plie bagage. Hors champ, il s'efface ; sous nos yeux,
+      il s'en va a pied vers une porte, et la foule l'oublie ensuite comme un
+      passant. A l'ouverture, un marchand revient — HORS CHAMP seulement :
+      personne ne nait sous le regard, et un kiosque qu'on fixe a l'heure
+      d'ouvrir reste vide tant qu'on le fixe.
+
+      ⚠️ Le lien passe par le KIOSQUE (`etal.vendeur`), pas par le slug : trois
+      kiosques a hot-dogs portent le meme. Et un marchand couche ou en fuite se
+      detache aussi a la fermeture : sans ca, le kiosque dont on a assomme le
+      vendeur restait vide pour toute la partie. */
+  function majKiosques() {
+    for (let i = 0; i < B.entites.length; i++) {
+      const etal = B.entites[i];
+      if (etal.type !== 'ambulant') continue;
+      const commerce = (B.defs.ambulants || []).find(function (c) { return c.slug === etal.slug; });
+      const ouvert = enService(commerce && commerce.heures);
+      const v = etal.vendeur;
+      if (!ouvert && v) {
+        etal.vendeur = null;
+        v.commerce = null;
+        if (!v.vivant || v.etat !== 'fige') continue;
+        if (!visibleAEcran(v.x, v.y, 24)) { retirer(v); i = B.entites.indexOf(etal); continue; }
+        v.etat = 'flane';
+        v.plante = null;
+        v.allure = 1;
+        envoyerAUnePorte(v);
+      } else if (ouvert && !v && !visibleAEcran(etal.x, etal.y - VENDEUR_DERRIERE, 24)) {
+        posterLeVendeur(etal);
+      }
+    }
   }
 
   /** Des armes de fortune trainent partout : un cone de chantier, une
@@ -4413,7 +4464,7 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
-    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, creerPaquets, creerPieton, reindexerDecor,
+    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,

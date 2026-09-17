@@ -201,7 +201,7 @@ ne bougent pas quand l'ordre de travail change.
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Le client du taxi attend au bord de la route, et une flèche y mène | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
-| Un kiosque fermé n'a personne derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
+| Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
@@ -736,7 +736,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
         test_eau_son_js.py test_eau_basse_js.py test_amuseurs_js.py test_roue_js.py test_sieste_js.py
-        test_reclame.py test_reclame_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
+        test_reclame.py test_reclame_js.py test_kiosque_ferme_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
@@ -10843,6 +10843,22 @@ comptoir au chargement, et il ne s'en va jamais. Trois kiosques ont des heures
 hors de ces heures ACTION répond « FERME », mais l'invite annonce encore le prix et le
 marchand attend au comptoir. Les intérieurs, eux, n'ont pas d'heures : leur commis est là
 parce qu'ils sont ouverts.
+
+**Livré** : `Entites.majKiosques`, une ronde toutes les trente images dans `peupler`. À la
+fermeture, le marchand plie bagage : hors champ il s'efface, sous nos yeux il quitte le
+comptoir à pied vers une porte (`envoyerAUnePorte`) et la foule l'oublie comme un passant. À
+l'ouverture il revient, **hors champ seulement**. Une partie chargée la nuit pose les kiosques
+fermés vides. L'invite dit « CABANE À FRUITS DE MER — FERMÉ » au lieu d'un prix, et ACTION
+« FERMÉ ». Trois juges de banc (`test_kiosque_ferme_js.py`), chacun vu rougir sans sa règle
+(six mutations). Capture Chromium : la cabane à midi, son marchand ; à 21 h 39, vide.
+
+- ⚠️ **Le lien passe par le kiosque** (`etal.vendeur`), pas par le slug : trois kiosques à
+  hot-dogs portent le même.
+- ⚠️ **Le marchand a une allure de 0** (`pietons.py`, `vendeur`) : sans `allure = 1` au départ,
+  il « flâne » sur place derrière son comptoir fermé.
+- ⚠️ Un marchand assommé ou tué se détache aussi à la fermeture : avant, un kiosque dont on
+  avait couché le vendeur restait vide pour toute la partie ; il est maintenant regarni à
+  l'ouverture suivante.
 
 ### Le jeu écrit avec ses accents
 

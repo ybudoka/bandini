@@ -100,7 +100,7 @@ const Missions = (function () {
   function acheterAmbulant(j, etal) {
     const commerce = commerceDe(etal.slug);
     if (!commerce) return false;
-    if (!ouvert(commerce)) { Hud.message('FERME'); Son.SFX.erreur(); return true; }
+    if (!ouvert(commerce)) { Hud.message('FERMÉ'); Son.SFX.erreur(); return true; }
     // La cale n'est pas une bouchee : c'est un comptoir, et les caisses vont
     // dans le char d'a cote.
     if (commerce.service === 'contrebande') { Hud.ouvrirMenu(menuContrebande(j, etal)); return true; }
@@ -2340,6 +2340,8 @@ const Missions = (function () {
         B.invite = c.nom.toUpperCase() + (v ? ' — ' + caissesDe(v) + '/' + cf.caisses_max + ' CAISSES' : ' — VIENS EN CHAR');
         return;
       }
+      // ⚠️ Fermé, on ne promet pas de prix : ACTION ne vendra rien.
+      if (c && !ouvert(c)) { B.invite = c.nom.toUpperCase() + ' — FERMÉ'; return; }
       B.invite = c ? c.nom.toUpperCase() + ' — ' + prixAmbulant(j, c) + ' $' + (coupon(j, c.slug) < 1 ? ' (COUPON)' : '') : 'ACHETER';
       return;
     }
