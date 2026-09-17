@@ -68,6 +68,26 @@ HORAIRE: dict = {
     "rayon_monter_px": 34,       # à quelle distance de l'autobus on monte
 }
 
+#: ⚠️ ON ATTEND L'AUTOBUS (M12, 17 sept. 2026) : des passants qui attendent à
+#: l'abribus, montent quand il s'arrête et descendent quelques arrêts plus loin —
+#: de la vie qui a un BUT, et la façon la moins chère de faire entrer et sortir du
+#: monde sans qu'il naisse sous les yeux.
+#:
+#: ⚠️ Qui attend se tire à l'EMPREINTE de l'arrêt et du quart d'heure, jamais au dé
+#: du jeu ; on naît hors de l'écran (la vue fait 480 × 270 : au-delà de 276 px du
+#: joueur, on est forcément dehors) et dans la bulle des passants (520 px).
+ATTENTE: dict = {
+    "par_abri": 2,               # au plus tant de gens au même abribus
+    "part": 0.6,                 # la part des abribus où quelqu'un attend, de jour
+    "part_nuit": 0.2,            # et de nuit
+    "arrets_min": 2,             # on descend entre tant d'arrêts plus loin…
+    "arrets_max": 4,             # … et tant
+    "montee_images": 18,         # portes ouvertes depuis tant d'images, on s'avance
+    "pas_px": 0.8,               # le pas jusqu'à la porte, par image
+    "naissance_min_px": 300,     # la fenêtre où l'on naît à l'abribus
+    "naissance_max_px": 480,
+}
+
 #: Le coût d'un pas dans la recherche du tracé. ⚠️ Un VIRAGE coûte : sans lui,
 #: deux chemins de même longueur se valent, et le tracé traverse une boîte de
 #: croisement en escalier. Une voie qui ne longe PAS le trottoir coûte aussi :
@@ -511,6 +531,7 @@ def tracer(chantier, ville: dict) -> dict:
         "arrets": [{"nom": a["nom"], "x": a["x"], "y": a["y"]}
                    for _t, a in sorted(arrets.items(), key=lambda kv: kv[1]["id"])],
         "horaire": dict(HORAIRE),
+        "attente": dict(ATTENTE),
     }
 
 

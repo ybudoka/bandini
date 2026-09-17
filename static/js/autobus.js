@@ -78,7 +78,7 @@ const Autobus = (function () {
         arretA: arretA, ordre: l.arrets.map(function (c) { return { arret: c[0], i: c[1] }; }),
       };
     });
-    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire };
+    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null };
     return prepare;
   }
 
@@ -153,7 +153,7 @@ const Autobus = (function () {
         const v = Vehicules.creer('autobus', p.x, p.y, p.angle, {
           conducteur: 'ligne', etat: 'roule', couleur: L.couleur, sprite: 'autobus', sens: p.sens,
           ligne: L.numero, rang: rang, etape: (p.i + 1) % L.n, servi: -1, arretT: 0, arret: null,
-          passager: null, demande: false, bloqueT: 0,
+          passager: null, demande: false, bloqueT: 0, bord: [],
         });
         if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
       }
@@ -195,7 +195,11 @@ const Autobus = (function () {
       ne voit pas ne coute pas une seconde de retard. */
   function dureeDArret(v, id) {
     const h = donnees().horaire, j = B.joueur, a = arret(id);
-    if (v.passager) return v.demande ? h.arret_images : 0;
+    // ⚠️ Quelqu'un descend ICI : c'est une demande d'arret comme celle du joueur.
+    const descend = (v.bord || []).some(function (b) { return b.arret === id; });
+    if (v.passager) return (v.demande || descend) ? h.arret_images : 0;
+    // Quelqu'un attend a l'abribus : on s'arrete pour lui, qu'on le voie ou non.
+    if (descend || quiAttend(id).some(function (e) { return e.etat === 'fige'; })) return h.arret_images;
     if (j && a && !j.dansVehicule && Math.abs(Math.floor(j.x / TT) - a.quai[0]) + Math.abs(Math.floor(j.y / TT) - a.quai[1]) <= 3) return h.arret_images;
     return Entites.visibleAEcran(v.x, v.y, 40) ? Math.round(h.arret_images * 0.6) : 0;
   }
@@ -211,6 +215,7 @@ const Autobus = (function () {
       Vehicules.rouler(v, 0);
       const j = v.passager;
       if (j && v.demande && h.arret_images - v.arretT >= DESCENTE_IMAGES) descendre(j, false);
+      majLesVoyageurs(v, h.arret_images - v.arretT);
       if (v.arretT === 0) { v.attendFeu = false; v.demande = false; }
       return;
     }
@@ -444,8 +449,177 @@ const Autobus = (function () {
     return a.nom.toUpperCase() + (morceaux.length ? ' · ' + morceaux.join(' · ') : '');
   }
 
+  // --- On attend l'autobus (M12) ------------------------------------------------------
+  //
+  // ⚠️ Des passants qui attendent a l'abribus, montent quand il s'arrete, et
+  // descendent quelques arrets plus loin. PYTHON REGLE (`autobus.ATTENTE`), ICI ON
+  // JOUE — et sans un de du jeu : qui attend se tire a l'empreinte de l'arret et du
+  // quart d'heure, et `creerPieton`, qui en tire deux, joue avec un de prete.
+
+  //: Toutes les combien d'images on regarde les abribus, decale des autobus et de
+  //: `peupler` : trois naissances dans la meme image se disputeraient les places.
+  const ATTENTE_REGARD = 30, ATTENTE_DECALAGE = 11;
+
+  /** Le quart d'heure de la partie : l'empreinte de qui attend. */
+  function quartDHeure() {
+    const p = B.partie;
+    return p ? Math.floor(((p.jour - 1) + p.heure) * 96) : 0;
+  }
+
+  /** `fn` jouee avec un de PRETE : la file du jeu ne bouge pas d'un tirage. */
+  function sansLeDe(graine, fn) {
+    const de = B.rng;
+    let s = graine >>> 0;
+    B.rng = function () { s = hash2(s + 1, 0x5EED); return (s % 100000) / 100000; };
+    try { return fn(); } finally { B.rng = de; }
+  }
+
+  function quiAttend(id) {
+    const out = [];
+    for (const e of B.entites) if (e.attend === id && e.type === 'pieton' && e.vivant) out.push(e);
+    return out;
+  }
+
+  /** Combien de gens attendent a cet arret, a ce quart d'heure. ⚠️ Zero s'il vient
+      d'y passer un autobus qui les a pris : l'abribus ne se remplit pas derriere
+      lui dans le meme quart d'heure. */
+  function combienAttendent(a) {
+    const r = donnees() && donnees().attente;
+    if (!r || !B.partie) return 0;
+    const quart = quartDHeure();
+    if (B.abribusServis && B.abribusServis[a.id] === quart) return 0;
+    const h = hash2(a.id * 7919 + quart, 0xAB12);
+    const part = Monde.estNuit() ? r.part_nuit : r.part;
+    if ((h % 1000) / 1000 >= part) return 0;
+    return 1 + ((h >>> 10) % r.par_abri);
+  }
+
+  function faceVers(dx, dy) {
+    return Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
+  }
+
+  /** Un voyageur qui attend a l'abribus : un passant du quartier, pas une mere
+      avec son petit (le petit resterait sur le trottoir quand elle monte). */
+  function naitreUnVoyageur(a, k) {
+    const p = PAS[a.sens] || [1, 0], glisse = (k % 2 ? 1 : -1) * (6 + 6 * k);
+    const x = a.quai[0] * TT + 8 + p[0] * glisse, y = a.quai[1] * TT + 8 + p[1] * glisse;
+    if (!Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT))) return null;
+    // ⚠️ PERSONNE NE NAIT DANS QUELQU'UN : un passant qui longe le trottoir a ce
+    // moment-la se retrouvait enfonce de 7 px dans la dame qui attend — le juge de
+    // la foule l'a vu a l'image d'apres. Il attendra le regard suivant.
+    if (Entites.autour(x, y, 11, Entites.deboutDansLaFoule).length) return null;
+    const graine = hash2(a.id * 31 + k, quartDHeure());
+    const e = sansLeDe(graine, function () {
+      let arch = null;
+      for (let essai = 0; essai < 6 && (!arch || arch.accompagne); essai++) {
+        arch = Entites.archetypeDeRue(x, y, (hash2(graine, essai) % 997) / 997);
+      }
+      return arch && !arch.accompagne ? Entites.creerPieton(x, y, arch) : null;
+    });
+    if (!e) return null;
+    // ⚠️ IL N'EST PAS LA FOULE : il attend, comme l'ouvrier a son chantier. Sans
+    // cette marque, il passerait par-dessus le plafond de passants.
+    e.metier = 'autobus';
+    e.attend = a.id;
+    e.etat = 'fige';
+    e.plante = { x: e.x, y: e.y };
+    e.face = faceVers(a.x * TT + 8 - x, a.y * TT + 8 - y);        // il regarde la rue
+    return e;
+  }
+
+  /** Les abribus de la bulle, HORS DE L'ECRAN : qui doit attendre y attend. */
+  function naitreALAbribus() {
+    const d = donnees(), j = B.joueur, r = d && d.attente;
+    if (!r || !j || B.interieur || (B.t % ATTENTE_REGARD) !== ATTENTE_DECALAGE) return;
+    let nes = 0;
+    for (const a of d.arrets) {
+      const x = a.quai[0] * TT + 8, y = a.quai[1] * TT + 8, d2 = dist2(x, y, j.x, j.y);
+      if (d2 < r.naissance_min_px * r.naissance_min_px || d2 > r.naissance_max_px * r.naissance_max_px) continue;
+      if (Entites.visibleAEcran(x, y, 40)) continue;
+      const voulu = combienAttendent(a);
+      for (let k = quiAttend(a.id).length; k < voulu; k++) if (naitreUnVoyageur(a, k)) nes++;
+    }
+    if (nes) Entites.indexer();
+  }
+
+  //: Le pas de la porte, en pixels hors de la caisse. ⚠️ Plus qu'un rayon de passant
+  //: (5) : un voyageur qui chevauche la tole POUSSE l'autobus hors de sa voie — mesure,
+  //: 29 releves sur 1175 hors du trace avec un pas de 4 px.
+  const PAS_DE_PORTE = 9;
+
+  /** La porte de l'autobus, cote trottoir, au tiers avant de la caisse. */
+  function porteDe(v) {
+    const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
+    return { x: v.x + cx * v.def.longueur / 4 - cy * (v.def.largeur / 2 + PAS_DE_PORTE),
+             y: v.y + cy * v.def.longueur / 4 + cx * (v.def.largeur / 2 + PAS_DE_PORTE) };
+  }
+
+  /** Portes ouvertes depuis `ouvert` images : ceux qui descendent ici descendent,
+      puis ceux qui attendent s'avancent a la porte et montent. */
+  function majLesVoyageurs(v, ouvert) {
+    const d = donnees(), r = d && d.attente;
+    if (!r || v.arret === null || v.arret === undefined) return;
+    if (ouvert === DESCENTE_IMAGES) faireDescendre(v);
+    if (ouvert < r.montee_images) return;
+    const porte = porteDe(v);
+    for (const e of quiAttend(v.arret)) {
+      if (e.etat !== 'fige') continue;                       // bouscule, il a fui : il ne monte plus
+      const dx = porte.x - e.x, dy = porte.y - e.y, loin = Math.hypot(dx, dy);
+      if (loin < 5) { embarquer(v, e); continue; }
+      const pas = Math.min(loin, r.pas_px);
+      e.x += dx / loin * pas; e.y += dy / loin * pas;
+      e.plante = { x: e.x, y: e.y };
+      e.vx = dx / loin * pas; e.vy = dy / loin * pas;
+      if (e.anim) e.anim.dist += pas;
+      e.face = faceVers(dx, dy);
+    }
+  }
+
+  function embarquer(v, e) {
+    const d = donnees(), r = d.attente, L = ligne(v.ligne);
+    const rang = L ? L.ordre.findIndex(function (o) { return o.arret === v.arret; }) : -1;
+    if (!L || rang < 0) return;
+    const k = r.arrets_min + (hash2(e.id, v.arret) % (r.arrets_max - r.arrets_min + 1));
+    const sortie = L.ordre[(rang + k) % L.ordre.length].arret;
+    v.bord = v.bord || [];
+    v.bord.push({ arret: sortie, depuis: v.arret, arch: e.arch, swaps: e.swaps, graine: hash2(e.id, sortie) });
+    B.abribusServis = B.abribusServis || {};
+    B.abribusServis[v.arret] = quartDHeure();
+    Entites.retirer(e);
+  }
+
+  /** Ceux dont c'est l'arret descendent sur le trottoir, et redeviennent des
+      passants comme les autres : ils s'en vont a leurs affaires. */
+  function faireDescendre(v) {
+    const a = arret(v.arret);
+    if (!a || !v.bord || !v.bord.length) return;
+    const partent = v.bord.filter(function (b) { return b.arret === v.arret; });
+    const porte = porteDe(v);
+    partent.forEach(function (b, k) {
+      const x = porte.x - Math.cos(v.angle) * 12 * k, y = porte.y - Math.sin(v.angle) * 12 * k;
+      if (!Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT))) return;
+      // Quelqu'un sur le pas de la porte : on ne descend pas DANS lui, on descend
+      // a l'arret suivant.
+      if (Entites.autour(x, y, 11, Entites.deboutDansLaFoule).length) {
+        const L = ligne(v.ligne), rang = L ? L.ordre.findIndex(function (o) { return o.arret === v.arret; }) : -1;
+        if (rang >= 0) b.arret = L.ordre[(rang + 1) % L.ordre.length].arret;
+        return;
+      }
+      v.bord.splice(v.bord.indexOf(b), 1);
+      const e = sansLeDe(b.graine, function () {
+        const arch = Entites.archetype(b.arch);
+        return Entites.creerPieton(x, y, arch ? Object.assign({}, arch, { couleurs: b.swaps || arch.couleurs }) : null);
+      });
+      if (!e) return;
+      e.descenduDe = v.ligne;
+      e.face = faceVers(a.quai[0] * TT + 8 - v.x, a.quai[1] * TT + 8 - v.y);
+    });
+    Entites.indexer();
+  }
+
   function maj() {
     faireNaitre();
+    naitreALAbribus();
     majPassager();
   }
 
@@ -453,5 +627,6 @@ const Autobus = (function () {
     donnees, derouler, ligne, arret, tempsDeLaPartie, placeALHeure, enService, faireNaitre,
     conduire, peutEntrer, autobusSousLaMain, prochainArret, monter, descendre, majPassager,
     invite, inviteMonter, ligneDuHud, abribusIci, attenteDe, texteDAttente, maj,
+    quiAttend, combienAttendent, naitreALAbribus, porteDe, quartDHeure, dureeDArret, naitreUnVoyageur,
   };
 })();

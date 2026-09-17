@@ -48,6 +48,7 @@ const Jeu = (function () {
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
     B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
+    B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();

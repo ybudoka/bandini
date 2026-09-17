@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (neuf vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : on attend l'autobus, les éboueurs, le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (dix vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : les éboueurs, le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -728,7 +728,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8358,6 +8358,38 @@ précisément ce qui les rend vivants : ils ne sont là que pour être là. »
   vérifier à qui appartient le diff**. 4 juges neufs, rouge-avant prouvé trois fois ; 1716
   tests. Restent ensuite : le tramway, le traversier, la neige et la charrue, la nuit de
   déneigement, l'arrêt d'autobus, les éboueurs.
+
+✅ **10e vague livrée** (17 sept. 2026) — *on attend l'autobus*. Des passants attendent à
+l'abribus, montent quand l'autobus s'arrête et descendent deux à quatre arrêts plus loin :
+de la vie qui a un **but**, et la façon la moins chère de faire entrer et sortir du monde
+sans qu'il naisse sous les yeux. Python règle (`autobus.ATTENTE`), `autobus.js` joue.
+
+- ⚠️ **Qui attend se tire à l'empreinte de l'arrêt et du quart d'heure, jamais au dé du
+  jeu** — et `creerPieton`, qui en tire deux, joue avec un **dé prêté** (`sansLeDe`) : la
+  file du jeu ne bouge pas d'un tirage, et le juge des autobus, qui compte les dés par pile
+  d'appel, compte aussi ceux-là.
+- ⚠️ **Personne ne naît sous les yeux** : entre 300 et 480 px du joueur (la vue fait 480 ×
+  270, donc au-delà de 276 px on est dehors ; la bulle d'oubli est à 520) — **et pas à
+  l'écran quand la caméra a pris de l'avance** au volant, cas qu'un juge force en posant la
+  caméra sur l'abribus. Ils ne sont pas la foule (`metier: 'autobus'`), et un abribus que
+  l'autobus vient de servir ne se remplit pas derrière lui dans le même quart d'heure.
+- ⚠️ **L'autobus s'arrête pour qui attend, vu ou pas** ; avec le joueur à bord, seulement
+  pour qui descend (une demande d'arrêt comme la sienne) — qui attend prendra le suivant.
+  Ceux qui descendent redeviennent des passants, là où ils voulaient aller.
+- ⚠️ **Un défaut trouvé par un juge d'une autre vague** : un voyageur qui s'avançait à 4 px
+  de la caisse la chevauchait, et la résolution des collisions **poussait l'autobus hors de
+  sa voie** — 29 relevés sur 1 175 hors du tracé. Le pas de la porte est à 9 px (plus qu'un
+  rayon de passant), et c'est ce juge-là qui le garde.
+- ⚠️ **Et un défaut vu par le juge de la foule** : un voyageur **naissait dans le passant**
+  qui longeait le trottoir à ce moment-là (7,4 px d'enfoncement, l'image d'après sa
+  naissance). On ne naît plus dans quelqu'un, et on ne descend pas dans quelqu'un : un pas
+  de porte occupé fait descendre à l'arrêt suivant.
+- ⚠️ **Deux gardes qu'aucun juge n'exerçait** : la place d'attente sur un mur (les 106
+  places des 53 abribus sont bonnes sur cette ville — un juge pose un mur exprès) et
+  l'abribus qui se remplit derrière l'autobus (le premier juge passait **par chance** : le
+  quart d'heure avait changé pendant l'attente, et le nouveau ne voulait personne). 9 juges
+  neufs (`test_on_attend_l_autobus.py`, `test_on_attend_l_autobus_js.py`), **13 mutations
+  toutes rouges**.
 
 ### M14 Meta
 
