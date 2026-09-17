@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (huit vagues livrées) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (neuf vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : on attend l'autobus, les éboueurs, le traversier, le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
