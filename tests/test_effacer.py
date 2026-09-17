@@ -220,7 +220,7 @@ def test_l_avocat_ne_rend_jamais_un_casier_negatif(banc):
         return { actifAVide: vide.actif, detail: vide.detail, casier: p.casier, argent: p.argent };
     }""" % ALLER)
     assert r["actifAVide"] is False, "il efface une page d'un dossier blanc : %s" % r
-    assert r["detail"] == "RIEN A EFFACER"
+    assert r["detail"] == "RIEN À EFFACER"
     assert r["casier"] == 0, "casier negatif : %s" % r
 
 
@@ -266,7 +266,7 @@ def test_on_voit_l_avocat_assis_et_on_lui_parle_du_pas_d_a_cote(banc):
     assert r["bouge"] < 1, f"trois cents images plus tard, il s'est leve : {r}"
     assert len(r["pas"]) >= 3, f"on ne peut pas l'approcher : {r['pas']}"
     for tuile, vu in r["pas"].items():
-        assert vu["invite"] == "PARLER A L’AVOCAT", f"a {tuile}, le HUD promet {vu['invite']!r}"
+        assert vu["invite"] == "PARLER À L’AVOCAT", f"a {tuile}, le HUD promet {vu['invite']!r}"
         assert vu["titre"] == "ME DESJARDINS", f"a {tuile}, ACTION n'ouvre pas son menu : {vu}"
 
 

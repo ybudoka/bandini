@@ -805,7 +805,7 @@ def test_les_ambulances_et_les_polices_ont_chacune_leur_sirene(banc):
     assert 0 < r["pres"] <= 1, "le volume ne suit pas la distance : %s" % r["pres"]
     assert r["revenue"] is True, "la sirene ne revient pas quand elle se rapproche"
     assert r["eteinte"] is False, "la sirene continue apres avoir ete eteinte"
-    assert r["etiquette"] == "SIRENE", "le bouton dit encore KLAXON dans une ambulance"
+    assert r["etiquette"] == "SIRÈNE", "le bouton dit encore KLAXON dans une ambulance"
     assert r["allumee"] is True and r["entendue"] == 1, (
         "au volant, la sirene doit sonner a plein : %s" % r["entendue"]
     )
@@ -5164,7 +5164,7 @@ def test_la_fourriere_paie_les_epaves_qu_on_lui_amene_au_crochet(banc, paquet):
     assert r["saine"]["accrochee"] is True and r["saine"]["boulot"] is None, (
         "une berline saine ne doit PAS lancer de remorquage : %s" % r["saine"]
     )
-    assert "EPAVES" in (r["saine"]["msg"] or ""), "le refus doit se dire : %s" % r["saine"]["msg"]
+    assert "ÉPAVES" in (r["saine"]["msg"] or ""), "le refus doit se dire : %s" % r["saine"]["msg"]
     assert r["epave"]["etatEpave"] == "epave" and r["epave"]["accrochee"] is True
     assert r["epave"]["boulot"] == "remorquage" and r["epave"]["etape"] == "route", (
         "une epave au crochet doit prendre le contrat en une pression : %s" % r["epave"]
@@ -6458,7 +6458,7 @@ def test_l_hopital_et_la_prison_passent_par_la_machine_des_portes(banc):
                  : 1 - (tr.t - noir) / tr.ouvre;
         }
         L.Atlas.texte = function (ctx, s, x, y, c, e) {
-            if (String(s).indexOf('REVEIL') >= 0) ecrits.push(alpha());
+            if (String(s).indexOf('RÉVEIL') >= 0) ecrits.push(alpha());
             return vraiTexte.apply(null, arguments);
         };
         // Un passant et un char : rien de tout ca ne doit avancer dans le noir.
@@ -6746,7 +6746,7 @@ def test_le_garage_rachete_repare_et_repeint(banc, paquet):
         const libelles = menu.items.map(function (i) { return i.libelle; });
         const vente = L.Missions.prixDeVente(v);
         const item = function (debut) { return (L.B.menu.items.find(function (i) { return i.libelle.indexOf(debut) === 0; }) || { faire: function () { throw new Error(debut + ' absent de ' + L.B.menu.items.map(function (i) { return i.libelle; }).join('|')); } }); };
-        item('REPARER').faire();
+        item('RÉPARER').faire();
         const apresReparation = { vie: v.vie, argent: L.B.partie.argent };
         item('REPEINDRE').faire();
         const apresPeinture = { vole: v.vole, argent: L.B.partie.argent };
@@ -6755,7 +6755,7 @@ def test_le_garage_rachete_repare_et_repeint(banc, paquet):
         return { libelles: libelles, vente: vente, apresReparation: apresReparation, apresPeinture: apresPeinture,
                  argent: L.B.partie.argent, reste: L.B.exterieur.entites.indexOf(v) >= 0 };
     }""")
-    assert any(libelle.startswith("VENDRE") for libelle in r["libelles"]) and "REPARER" in r["libelles"]
+    assert any(libelle.startswith("VENDRE") for libelle in r["libelles"]) and "RÉPARER" in r["libelles"]
     assert r["vente"] == round(auto["prix"] * eco["vente_fraction"] * 0.5)
     assert r["apresReparation"]["vie"] == auto["vie"]
     assert r["apresReparation"]["argent"] == 1000 - 50 * eco["reparation_par_pv"]
@@ -6927,7 +6927,7 @@ def test_le_poing_americain_se_paie_au_comptoir_de_gus(banc, paquet):
     assert r["avant"] == "%d $" % americain["prix"] and r["actif"] is True
     assert r["argent"] == 100 - americain["prix"], "le poing americain ne s'est pas paye"
     assert r["sac"] is not None, "paye, mais pas dans le sac"
-    assert r["apres"] == "DEJA A TOI"
+    assert r["apres"] == "DÉJÀ À TOI"
 
 
 def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
@@ -6964,7 +6964,7 @@ def test_un_achat_unique_se_voit_tout_de_suite_au_comptoir(banc, paquet):
     }""")
     assert r["avant"] == "%d $" % pistolet["prix"]
     assert r["etat"]["ouvert"] is True, "le comptoir s'est ferme sous les doigts du joueur"
-    assert r["etat"]["detail"] == "DEJA A TOI", "le comptoir affiche encore le prix d'une arme payee"
+    assert r["etat"]["detail"] == "DÉJÀ À TOI", "le comptoir affiche encore le prix d'une arme payee"
     assert r["etat"]["actif"] is False
     assert r["etat"]["sur"] == "%d $" % (2000 - pistolet["prix"]), "le magot affiche n'a pas bouge"
     assert r["etat"]["munitions"] is True, "les munitions de l'arme achetee n'apparaissent pas"
@@ -7360,7 +7360,7 @@ def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
         d.audio.radios.forEach(function (r) { textes.push(r.nom); });
         d.economie.proprietes.forEach(function (p) { textes.push(p.nom); });
         d.pietons.catalogue.forEach(function (p) { textes.push(p.nom); });
-        ['DORMIR JUSQU’AU MATIN', 'REVEIL A L’HOPITAL — 30 $', 'Baie-des-Brumes… la brume'].forEach(function (t) { textes.push(t); });
+        ['DORMIR JUSQU’AU MATIN', 'RÉVEIL À L’HÔPITAL — 30 $', 'Baie-des-Brumes… la brume'].forEach(function (t) { textes.push(t); });
         // La fortune du HUD : toLocaleString colle une espace fine insecable entre les milliers.
         textes.push((1078).toLocaleString('fr-CA') + ' $', (1250000).toLocaleString('fr-CA') + ' $');
         const inconnus = {};

@@ -510,10 +510,10 @@ def test_la_carte_peint_le_zonage(banc, paquet, villes, chantier):
 
 #: Les enseignes du standing, en toutes lettres (pas relues dans `devantures`).
 COSSUES = {"BIJOUTERIE", "FLEURISTE", "BISTRO", "GALERIE D'ART", "TAILLEUR", "CHOCOLATIER",
-           "BOUTIQUE DE VIN", "PARFUMERIE", "ANTIQUAIRE", "FROMAGERIE", "SALON DE THE",
+           "BOUTIQUE DE VIN", "PARFUMERIE", "ANTIQUAIRE", "FROMAGERIE", "SALON DE THÉ",
            "HAUTE COUTURE", "MAROQUINERIE", "ENCADREUR", "TRAITEUR", "SPA"}
-PAUVRES = {"PRET SUR GAGES", "CHEQUES CASH", "BINGO", "DEPANNEUR 24 H", "A LOUER", "TOUT A 1 $",
-           "BRIC-A-BRAC", "PRETS RAPIDES", "VIDEO POKER", "LIQUIDATION", "TATOUAGE", "BIERE ET VIN"}
+PAUVRES = {"PRÊT SUR GAGES", "CHÈQUES CASH", "BINGO", "DÉPANNEUR 24 H", "À LOUER", "TOUT À 1 $",
+           "BRIC-À-BRAC", "PRÊTS RAPIDES", "VIDÉO POKER", "LIQUIDATION", "TATOUAGE", "BIÈRE ET VIN"}
 
 
 def _ordinaires(ville):
@@ -556,7 +556,7 @@ def test_la_facade_suit_le_standing(villes, chantier):
         assert d.get("standing") == lettre.get(s), (d["texte"], d.get("standing"), s)
         if s != "pauvre":
             assert "B" not in d["motifs"], f"{d['texte']} placardé en quartier {s}"
-        elif d["texte"] != "A LOUER":
+        elif d["texte"] != "À LOUER":
             vitrines += d["motifs"].count("W") + d["motifs"].count("B")
             placardees += d["motifs"].count("B")
     assert 0.2 <= placardees / vitrines <= 0.5, f"{placardees} vitrines placardées sur {vitrines}"
@@ -566,7 +566,7 @@ def test_la_facade_suit_le_standing(villes, chantier):
 
 def test_un_local_a_louer_ne_s_ouvre_pas_et_ne_s_allume_pas(villes):
     ville = villes[0]
-    locaux = [d for d in ville["devantures"] if d["texte"] == "A LOUER"]
+    locaux = [d for d in ville["devantures"] if d["texte"] == "À LOUER"]
     assert locaux, "pas un local à louer dans toute la ville"
     lampes = {(lampe["x"], lampe["y"]) for lampe in ville["lampes"] if lampe.get("c") == "vitrine"}
     machines = {(m["x"], m["y"] - 1) for m in ville["decor"]
@@ -603,7 +603,7 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
         == [{k: v for k, v in p.items() if k != "nom"} for p in sans["portes"]]
     manquantes = [lampe for lampe in sans["lampes"] if lampe not in ville["lampes"]]
     assert all(lampe.get("c") == "vitrine" for lampe in manquantes), manquantes
-    assert len(manquantes) == sum(1 for d in ville["devantures"] if d["texte"] == "A LOUER")
+    assert len(manquantes) == sum(1 for d in ville["devantures"] if d["texte"] == "À LOUER")
 
 
 @pytest.fixture(scope="module")

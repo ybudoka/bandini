@@ -84,7 +84,7 @@ const Combat = (function () {
   function perdreArme(e, slug) {
     delete B.partie.armes[slug];
     if (e.arme === slug) { e.arme = 'poings'; B.partie.arme = 'poings'; }
-    Hud.message('ARME CASSEE');
+    Hud.message('ARME CASSÉE');
     Son.SFX.casse();
   }
 

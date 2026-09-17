@@ -93,12 +93,12 @@ def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
 
 
 PROFILS: list[Profil] = [
-    _profil("standard", "XBOX, PLAYSTATION", "LE NAVIGATEUR LA RECONNAIT",
+    _profil("standard", "XBOX, PLAYSTATION", "LE NAVIGATEUR LA RECONNAÎT",
             faces=FACES_STANDARD),
-    _profil("bt_dinput", "8BITDO EN BLUETOOTH", "GACHETTES 8 ET 9, CROIX SUR UN AXE",
+    _profil("bt_dinput", "8BITDO EN BLUETOOTH", "GÂCHETTES 8 ET 9, CROIX SUR UN AXE",
             faces=FACES_DINPUT, croix_boutons=False,
             epaules=(6, 7), gachettes=(8, 9), meta=(10, 11)),
-    _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "NUMEROS STANDARDS, CROIX A PART",
+    _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "NUMÉROS STANDARDS, CROIX À PART",
             faces=FACES_STANDARD, croix_boutons=False),
 ]
 

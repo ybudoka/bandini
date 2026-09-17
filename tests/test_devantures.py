@@ -205,7 +205,7 @@ def test_chaque_devanture_eclaire_son_trottoir(ville):
 
     ⚠️ Sauf le local A LOUER : il est vide, et sa vitrine est noire (`test_quartiers`)."""
     vitrines = [lampe for lampe in ville["lampes"] if lampe.get("c") == "vitrine"]
-    assert len(vitrines) == len([d for d in ville["devantures"] if d["texte"] != "A LOUER"])
+    assert len(vitrines) == len([d for d in ville["devantures"] if d["texte"] != "À LOUER"])
     for lampe in vitrines:
         assert lampe["r"] > 0
 

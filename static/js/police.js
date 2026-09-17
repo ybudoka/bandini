@@ -712,7 +712,7 @@ const Police = (function () {
     if (r.etoiles <= 0) return;
     r.vu++;
     const p = defs().paliers[r.etoiles];
-    if (r.vu > p.decroissance_s * 60) { r.etoiles--; r.vu = 0; if (r.etoiles === 0) Hud.message('LA POLICE A LACHE'); }
+    if (r.vu > p.decroissance_s * 60) { r.etoiles--; r.vu = 0; if (r.etoiles === 0) Hud.message('LA POLICE A LÂCHÉ'); }
   }
 
   function maj() {

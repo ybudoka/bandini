@@ -198,7 +198,7 @@ def test_le_neuf_a_une_porte_peinte_qui_donne_sur_la_rue():
         assert ch["masque"][j][i] == "X"
         assert phase["sol"][j][i] == "F", "une porte peinte sur une vitrine"
         assert carte.marchable(VILLE["sol"][py + 1][px]), "la porte du neuf donne sur un mur"
-        assert phase["panneau"] == "A LOUER"
+        assert phase["panneau"] == "À LOUER"
     for ch in VILLE["chantiers"]:
         assert all(p["porte"] is None for p in ch["phases"][:chantiers.DERNIERE])
 

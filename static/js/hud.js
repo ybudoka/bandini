@@ -321,7 +321,7 @@ const Hud = (function () {
     // navigateur le retient tant qu'aucun geste n'a touche la page. Cette
     // ligne-la n'est pas un reglage, c'est un diagnostic — sans elle, un joueur
     // a la manette cherche la panne dans ses haut-parleurs.
-    const ETATS = { actif: 'ACTIF', attente: 'TOUCHE L\'ECRAN', coupe: 'COUPE', absent: 'INDISPONIBLE' };
+    const ETATS = { actif: 'ACTIF', attente: 'TOUCHE L\'ÉCRAN', coupe: 'COUPÉ', absent: 'INDISPONIBLE' };
     const etatSon = { libelle: 'SON', detail: ETATS[Son.etatSon()] || '?', actif: false };
     // Installable, et jouable hors ligne : la ville se garde toute seule, les
     // sons a l'usage — les 14 Mo d'un coup, seulement si on le demande.
@@ -337,11 +337,11 @@ const Hud = (function () {
       etatSon,
       bascule('sang', 'SANG'),
       bascule('vibration', 'VIBRATION'),
-      bascule('muet', 'SON COUPE'),
+      bascule('muet', 'SON COUPÉ'),
       bascule('daltonien', 'PALETTE DALTONIENNE'),
-      bascule('trace', 'TRACE DES VEHICULES'),
+      bascule('trace', 'TRACE DES VÉHICULES'),
       // ⚠️ M12 : derriere une option tant que la sonde de performance ne l'a pas jugee.
-      bascule('neige', 'TEMPETES DE NEIGE (ESSAI)'),
+      bascule('neige', 'TEMPÊTES DE NEIGE (ESSAI)'),
       // ⚠️ Retour de Martin : vue de dessus, on n'est pas assis dans l'auto. Le
       // volant d'une vraie auto (l'arriere part du cote ou l'on tourne) ne colle
       // a l'ecran que nez en haut ; COMME EN AVANT, droite tourne toujours dans
@@ -420,7 +420,7 @@ const Hud = (function () {
   const LIGNES_MANETTE = [
     ['action', 'ACTION / ENTRER'],
     ['attaque', 'FRAPPER / KLAXON'],
-    ['esquive', 'COURIR / FREIN A MAIN'],
+    ['esquive', 'COURIR / FREIN À MAIN'],
     ['arme', 'ARME / RADIO'],
     ['annuler', 'RETOUR'],
     ['pause', 'PAUSE'],
@@ -476,9 +476,9 @@ const Hud = (function () {
     const items = LIGNES_MANETTE.map(function (l) {
       return { libelle: l[1], quoi: l[0], faire: function () { apprendreUn(l[0]); return false; } };
     });
-    items.push({ libelle: 'TOUT REAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
+    items.push({ libelle: 'TOUT RÉAPPRENDRE', faire: function () { toutReapprendre(0); return false; } });
     items.push({ libelle: 'RETOUR', faire: function () { suite = null; ouvrirMenu(menuManette()); return false; } });
-    const menu = { titre: 'REAPPRENDRE', items: items, curseur: 0, manetteInerte: true };
+    const menu = { titre: 'RÉAPPRENDRE', items: items, curseur: 0, manetteInerte: true };
     let repos = null;                 // les axes au repos, pour voir lesquels bougent
     menu.maj = function (m) {
       const etat = Entree.manetteInfo(), profil = Entree.profilManette();
@@ -504,13 +504,13 @@ const Hud = (function () {
       // par le dongle 2,4 GHz ou le cable, elle se presente en Xbox — et la, le
       // navigateur la reconnait. Ca vaut la peine de le dire sur place.
       const indice = /8bitdo/i.test(etat.id || '') && etat.mapping !== 'standard'
-        ? '8BITDO : DONGLE 2,4 GHZ OU CABLE = MODE XBOX'
+        ? '8BITDO : DONGLE 2,4 GHZ OU CÂBLE = MODE XBOX'
         : (etat.id || '?').slice(0, 24).toUpperCase();
       m.aide = etat.apprend
-        ? (etat.attend ? 'RELACHE D’ABORD · ECHAP : ANNULER'
-                       : 'APPUIE SUR LE BOUTON (OU LA CROIX) VOULU · ECHAP : ANNULER')
+        ? (etat.attend ? 'RELÂCHE D’ABORD · ÉCHAP : ANNULER'
+                       : 'APPUIE SUR LE BOUTON (OU LA CROIX) VOULU · ÉCHAP : ANNULER')
         : (etat.branchee
-          ? 'ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—')
+          ? 'ENFONCÉS : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—')
             + ' · AXES : ' + (bougent.length ? bougent.join(' ') : '—')
             + ' · ' + indice
           : 'BRANCHE UNE MANETTE ET APPUIE SUR UN BOUTON');
@@ -542,7 +542,7 @@ const Hud = (function () {
     const items = bloc.profils.map(function (p) {
       return { libelle: p.nom, profil: p, faire: function () { return choisir(p); } };
     });
-    items.push({ libelle: 'REAPPRENDRE BOUTON PAR BOUTON',
+    items.push({ libelle: 'RÉAPPRENDRE BOUTON PAR BOUTON',
                  faire: function () { ouvrirMenu(menuManetteBoutons()); return false; } });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuOptions()); return false; } });
     // Le curseur commence sur la disposition en cours : appuyer sur ACTION pour
@@ -580,7 +580,7 @@ const Hud = (function () {
       for (const cle of ['gaz', 'frein']) if (profil[cle].type === 'bouton') connus[profil[cle].i] = true;
       const inconnus = etat.boutons.filter(function (i) { return !connus[i]; });
       const bit = /8bitdo/i.test(etat.id || '') && etat.mapping !== 'standard';
-      const lignes = ['ENFONCES : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—'),
+      const lignes = ['ENFONCÉS : ' + (etat.boutons.length ? etat.boutons.join(' ') : '—'),
                       inconnus.length ? 'BOUTON ' + inconnus.join(' ') + ' : PAS DANS CELLE-CI'
                         : (bit ? '8BITDO : DONGLE 2,4 GHZ = XBOX' : (etat.id || '').slice(0, 24).toUpperCase())];
       lignes.forEach(function (l, i) {
@@ -597,12 +597,12 @@ const Hud = (function () {
     const minutes = Math.floor((s.secondes || 0) / 60);
     const fortune = p.argent + (p.planque.coffre || 0);
     const lignes = [
-      ['JOUR ' + p.jour + ' · ' + minutes + ' MIN JOUEES', ''],
+      ['JOUR ' + p.jour + ' · ' + minutes + ' MIN JOUÉES', ''],
       ['FORTUNE', fortune + ' $'],
-      ['PROPRIETES', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
+      ['PROPRIÉTÉS', Object.keys(p.proprietes).length + ' / ' + B.defs.economie.proprietes.filter(function (q) { return q.phase === 1; }).length],
       ['PAQUETS', Object.keys(p.paquets).length + ' / ' + (Monde.carte.ville ? Monde.carte.ville : Monde.carte).def.paquets.length],
       ['CRIMES', String(s.crimes || 0)],
-      ['CHARS VOLES', String(s.volees || 0)],
+      ['CHARS VOLÉS', String(s.volees || 0)],
       ['COURSES DE TAXI', String(s.courses || 0)],
       ['MORTS', String(s.tues || 0)],
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
@@ -614,7 +614,7 @@ const Hud = (function () {
 
   // --- Les parties : trois emplacements, au titre ------------------------------------
 
-  const MOIS = ['JANV.', 'FEVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOUT', 'SEPT.', 'OCT.', 'NOV.', 'DEC.'];
+  const MOIS = ['JANV.', 'FÉVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOÛT', 'SEPT.', 'OCT.', 'NOV.', 'DÉC.'];
 
   /** « 3 H 20 », « 25 MIN » : le temps passe DANS la partie. */
   function tempsDeJeu(secondes) {
@@ -627,9 +627,9 @@ const Hud = (function () {
     const d = new Date(ms), m = new Date(maintenant);
     const heure = d.getHours() + ' H ' + String(d.getMinutes()).padStart(2, '0');
     const meme = function (a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); };
-    if (meme(d, m)) return 'AUJOURD\'HUI A ' + heure;
-    if (meme(d, new Date(m.getFullYear(), m.getMonth(), m.getDate() - 1))) return 'HIER A ' + heure;
-    return 'LE ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' A ' + heure;
+    if (meme(d, m)) return 'AUJOURD\'HUI À ' + heure;
+    if (meme(d, new Date(m.getFullYear(), m.getMonth(), m.getDate() - 1))) return 'HIER À ' + heure;
+    return 'LE ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' À ' + heure;
   }
 
   /** Une ligne d'emplacement : « 1  JOUR 12 · 4300 $ », ou `vide` s'il n'y a rien. */
@@ -676,7 +676,7 @@ const Hud = (function () {
         const a = item && item.emplacement ? liste[item.emplacement - 1] : null;
         m.aide = !item || !item.emplacement ? 'FRAPPE : RETOUR AU TITRE'
           : !a ? 'UNE PARTIE NEUVE COMMENCE ICI'
-          : (a.sauveeLe ? 'SAUVEE ' + quand(a.sauveeLe, Date.now()) + ' · ' : '')
+          : (a.sauveeLe ? 'SAUVÉE ' + quand(a.sauveeLe, Date.now()) + ' · ' : '')
             + a.missions + (a.missions > 1 ? ' MISSIONS' : ' MISSION');
       } };
     menu.maj(menu);
@@ -729,7 +729,7 @@ const Hud = (function () {
     liste.forEach(function (a, i) {
       const n = i + 1;
       if (n === de) return;
-      items.push({ libelle: ligneEmplacement(n, a, 'VIDE'), detail: a ? 'ECRASEE' : '',
+      items.push({ libelle: ligneEmplacement(n, a, 'VIDE'), detail: a ? 'ÉCRASÉE' : '',
                    faire: function () {
                      if (a) { ouvrirMenu(menuCopierConfirmer(de, n)); return false; }
                      Jeu.copierPartie(de, n);
@@ -744,7 +744,7 @@ const Hud = (function () {
   /** Copier PAR-DESSUS une partie, c'est l'effacer : meme question, meme NON d'abord. */
   function menuCopierConfirmer(de, vers) {
     const a = Sauvegarde.apercu(vers);
-    return { titre: 'ECRASER LA PARTIE ' + vers + '?', curseur: 0,
+    return { titre: 'ÉCRASER LA PARTIE ' + vers + '?', curseur: 0,
       sur: a ? 'JOUR ' + a.jour + ' · ' + tempsDeJeu(a.secondes) : '',
       aide: 'LA PARTIE ' + vers + ' NE REVIENDRA PAS',
       items: [
@@ -918,7 +918,7 @@ const Hud = (function () {
       { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
       { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
       { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
-      { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDEE'); return false; } },
+      { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDÉE'); return false; } },
       { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
     ] };
   }

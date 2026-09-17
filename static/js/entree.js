@@ -598,7 +598,7 @@ const Entree = (function () {
       // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
       // klaxon d'une auto-patrouille n'a jamais servi a rien.
       : nom === 'vehicule_sirene'
-      ? { attaque: 'SIRENE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
+      ? { attaque: 'SIRÈNE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
       : nom === 'vehicule_sonnette'                       // un velo : sa sonnette
       ? { attaque: 'SONNETTE', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
       : nom === 'menu'

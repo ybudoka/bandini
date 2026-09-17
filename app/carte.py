@@ -1371,7 +1371,7 @@ BARRIERES: tuple[dict, ...] = (
     {"slug": "foire", "nom": "L'arche de la foire", "ou": {"foire": "entree"},
      "arrete": ("pieton", "vehicule"), "condition": {"payer": "foire"},
      "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
-     "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTREE",
+     "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTRÉE",
      "decor": None, "prix": economie.FOIRE["entree"], "dedans": "N"},
 )
 

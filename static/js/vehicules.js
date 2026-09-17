@@ -964,7 +964,7 @@ const Vehicules = (function () {
       j.x = v.x; j.y = v.y;
       j.nage = true;
       Entites.remous(j.x, j.y, 16);
-      Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULE', 240);
+      Hud.message('LE ' + v.def.nom.toUpperCase() + ' A COULÉ', 240);
     }
     Entites.remous(v.x, v.y, 18);
     perdu(v);
@@ -1068,12 +1068,12 @@ const Vehicules = (function () {
   function basculerCrochet(v) {
     if (v.remorque) { decrocher(v); return false; }
     const cible = aCrocher(v);
-    if (!cible) { Hud.message('RIEN A ACCROCHER DERRIERE'); return false; }
+    if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); return false; }
     v.remorque = cible;
     cible.remorqueePar = v;
     cible.alarme = 0;
     Son.SFX.choc();
-    Hud.message(cible.def.nom.toUpperCase() + ' ACCROCHE');
+    Hud.message(cible.def.nom.toUpperCase() + ' ACCROCHÉ');
     return true;
   }
 
@@ -1362,7 +1362,7 @@ const Vehicules = (function () {
     // la prochaine image, avec la musique du district ou l'on descend.
     Son.Chef.maj();
     if (!force) bruitDeMontee(v);
-    if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.abandonner('BOULOT ABANDONNE');
+    if (typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.abandonner('BOULOT ABANDONNÉ');
     return true;
   }
 
@@ -1376,7 +1376,7 @@ const Vehicules = (function () {
     j.roule = 18; j.invincible = 0;
     Entites.dansLaCarte(j);
     Entites.blesser(j, Math.round(vitesse * ph.renverse_degats_par_px * 0.5), null, { renverse: true, angle: v.angle });
-    Hud.message('EJECTE !');
+    Hud.message('ÉJECTÉ !');
   }
 
   // --- Trafic : lire la carte, choisir, freiner ---------------------------------------
@@ -1915,7 +1915,7 @@ const Vehicules = (function () {
     if (Entree.neuf('arme')) {
       const station = Son.Radio.suivante();
       const def = station ? Son.Radio.station(station) : null;
-      Hud.message(def ? 'RADIO : ' + def.nom.toUpperCase() : 'RADIO ETEINTE');
+      Hud.message(def ? 'RADIO : ' + def.nom.toUpperCase() : 'RADIO ÉTEINTE');
     }
     // Le moteur monte dans les tours.
     if (v.def.classe !== 'velo') Son.reglerBoucle('moteur', 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);

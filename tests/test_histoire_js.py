@@ -375,7 +375,7 @@ def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paque
     pistolet = next(a for a in paquet["armes"] if a["slug"] == "pistolet")
     prix = round(pistolet["prix"] * mn["rabais"])
     assert r["titre"] == "UN MORT DANS LA RUE" and r["lue"] == "narrateur-journal-un_mort"
-    assert r["forcee"] == "LES CRAVATES CHASSEES DU FAUBOURG" and r["forceeLue"] == "narrateur-journal-cravates_chassees"
+    assert r["forcee"] == "LES CRAVATES CHASSÉES DU FAUBOURG" and r["forceeLue"] == "narrateur-journal-cravates_chassees"
     assert r["avant"] is True and r["menuAvant"] is None, "avant M5, Josee ne vend rien"
     assert r["menu"] == "MARCHÉ NOIR" and r["prix"] == f"{prix} $"
     assert r["argent"] == 1000 - prix and r["arme"] is True

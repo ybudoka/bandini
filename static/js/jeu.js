@@ -523,7 +523,7 @@ const Jeu = (function () {
     if (Entree.neuf('muet')) {
       B.options.muet = !B.options.muet;
       Son.majVolume();
-      Hud.message(B.options.muet ? 'SON COUPE' : 'SON');
+      Hud.message(B.options.muet ? 'SON COUPÉ' : 'SON');
     }
     // ⚠️ « Jouer » n'etait qu'un bouton de la page : a la manette (ou au
     // clavier), on ne pouvait pas commencer la partie sans toucher l'ecran.
@@ -536,7 +536,7 @@ const Jeu = (function () {
       // est efface par « BAIE-DES-BRUMES » et le silence reste muet.
       // Commencer a la manette ne donne AUCUN geste au navigateur : il refuse
       // alors le son sans rien dire. On le dit a sa place.
-      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ÉCRAN', 300);
       Entree.videPresse();
       return;
     }
@@ -547,7 +547,7 @@ const Jeu = (function () {
       const sansSon = choisit && Son.enAttente();
       Hud.majMenu();
       // ⚠️ Meme avis qu'au titre : c'est ICI qu'on commence, desormais.
-      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ÉCRAN', 300);
       Entree.videPresse();
       return;
     }

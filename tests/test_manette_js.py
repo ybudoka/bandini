@@ -207,7 +207,7 @@ def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
         function boutons(i) { const b = []; for (let k = 0; k <= 15; k++) b.push(k === i ? 1 : 0); return b; }
         o.pad([0, 0], boutons(-1)); o.frame(2);
         const m = L.Hud.menuManetteBoutons();
-        m.items.find(function (i) { return i.libelle === 'TOUT REAPPRENDRE'; }).faire();
+        m.items.find(function (i) { return i.libelle === 'TOUT RÉAPPRENDRE'; }).faire();
         const demandes = [];
         // On appuie sur 15, 14, 13... : chaque geste doit etre pris par l'action suivante.
         for (let n = 0; n < 14; n++) {
@@ -460,6 +460,6 @@ def test_un_bouton_hors_disposition_se_dit_au_lieu_de_ne_rien_faire(banc):
         o.pad(null); o.frame(2);
         return { connu: connu, inconnu: inconnu };
     }""")
-    assert any("ENFONCES : 0" in s for s in r["connu"])
+    assert any("ENFONCÉS : 0" in s for s in r["connu"])
     assert not any("PAS DANS CELLE-CI" in s for s in r["connu"]), "le bouton 0 est connu"
     assert any("BOUTON 11 : PAS DANS CELLE-CI" in s for s in r["inconnu"])

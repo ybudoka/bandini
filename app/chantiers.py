@@ -67,11 +67,11 @@ DALLE = "g"
 GENRES = ("maisons", "banlieue", "commerces", "industriel", "hangars")
 
 PHASES: tuple[dict, ...] = (
-    {"slug": "condamne", "nom": "Condamné", "panneau": "A DEMOLIR"},
+    {"slug": "condamne", "nom": "Condamné", "panneau": "À DÉMOLIR"},
     {"slug": "demolition", "nom": "Démolition", "panneau": None},
     {"slug": "rase", "nom": "Terrain rasé", "panneau": None},
     {"slug": "charpente", "nom": "Dalle et grue", "panneau": None},
-    {"slug": "neuf", "nom": "Bâtiment neuf", "panneau": "A LOUER"},
+    {"slug": "neuf", "nom": "Bâtiment neuf", "panneau": "À LOUER"},
 )
 DERNIERE = len(PHASES) - 1
 

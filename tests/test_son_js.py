@@ -80,7 +80,7 @@ def test_commencer_a_la_manette_previent_qu_il_manque_un_geste(banc):
     assert r["auTitre"] == "titre"
     assert r["etat"] == "jeu", "la manette doit quand meme pouvoir commencer la partie"
     assert r["son"] == "attente"
-    assert "TOUCHE L'ECRAN" in (r["msg"] or ""), "le silence doit se dire a l'ecran"
+    assert "TOUCHE L'ÉCRAN" in (r["msg"] or ""), "le silence doit se dire a l'ecran"
 
 
 def test_commencer_a_la_manette_ne_previent_pas_quand_le_son_marche(banc):
@@ -93,7 +93,7 @@ def test_commencer_a_la_manette_ne_previent_pas_quand_le_son_marche(banc):
     }""")
     assert r["etat"] == "jeu"
     assert r["son"] == "actif"
-    assert "TOUCHE L'ECRAN" not in r["msg"], "ne pas crier au loup quand le son sort"
+    assert "TOUCHE L'ÉCRAN" not in r["msg"], "ne pas crier au loup quand le son sort"
 
 
 def test_l_avis_de_l_ecran_titre_se_montre_et_s_efface(banc):
@@ -132,7 +132,7 @@ def test_les_options_montrent_l_etat_du_son(banc):
     }""")
     assert r["pause"] == "PAUSE"
     assert r["titre"] == "OPTIONS"
-    assert r["detail"] == "TOUCHE L'ECRAN", "les OPTIONS doivent nommer la panne"
+    assert r["detail"] == "TOUCHE L'ÉCRAN", "les OPTIONS doivent nommer la panne"
     assert r["actif"] is False, "cette ligne est un diagnostic, pas un reglage"
     assert r["curseur"] != 0, "le curseur ne doit pas s'ouvrir sur une ligne qu'on ne peut pas activer"
 

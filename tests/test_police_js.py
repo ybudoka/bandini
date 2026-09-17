@@ -135,7 +135,7 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
         // ⚠️ On attend LE MENU D'ARRESTATION, pas « un menu » : n'importe quel
         // autre menu (une reponse de l'histoire, un comptoir) arretait la
         // boucle et le juge lisait le mauvais titre.
-        const arrete = function () { return L.B.menu && L.B.menu.titre === 'ARRETE !'; };
+        const arrete = function () { return L.B.menu && L.B.menu.titre === 'ARRÊTÉ !'; };
         for (let i = 0; i < 300 && !arrete(); i++) { o.frame(1); if (arrete() && arrive < 0) arrive = i; }
         const menu = L.B.menu;
         const ferme = (function () { o.tape('Space'); return L.B.menu === menu; })();
@@ -150,7 +150,7 @@ def test_l_agent_poursuit_et_arrete_le_joueur_immobile(banc, paquet):
                  auPoste: Math.hypot(j.x - (poste.x * L.TT + 8), j.y - (poste.y * L.TT + 20)) < 24 };
     }""")
     assert r["arrive"] >= 0, "l'agent lance sur un recherche ne l'arrete jamais"
-    assert r["titre"] == "ARRETE !"
+    assert r["titre"] == "ARRÊTÉ !"
     assert r["resteOuvert"] is True, "on ne se sauve pas d'une arrestation en fermant le menu"
     assert r["etoiles"] == 0 and r["casier"] == 1 and r["arrestations"] == 1
     assert r["paye"] == paquet["economie"]["amendes"][0][0]

@@ -264,9 +264,9 @@ def test_copier_recopie_a_l_octet_et_demande_avant_d_ecraser(banc, partie):
     assert r["quelle"] == {"titre": "COPIER QUELLE PARTIE?", "ici": "1  JOUR 7 · 321 $"}
     assert r["vers"]["titre"] == "COPIER LA 1 VERS"
     assert r["vers"]["libelles"] == ["2  VIDE", "3  JOUR 3 · 90 $", "RETOUR"], "on ne se copie pas sur soi-meme"
-    assert r["vers"]["details"] == ["", "ECRASEE", ""]
+    assert r["vers"]["details"] == ["", "ÉCRASÉE", ""]
     assert r["copiee"] == {"titre": "PARTIES", "ici": "2  JOUR 7 · 321 $", "deux": un}, "copiee a l'octet"
-    assert r["question"] == {"titre": "ECRASER LA PARTIE 3?", "ici": "NON, LA GARDER"}
+    assert r["question"] == {"titre": "ÉCRASER LA PARTIE 3?", "ici": "NON, LA GARDER"}
     assert r["gardee"] == trois
     assert r["store"][TROIS] == un and r["store"][UN] == un and r["ici"] == "3  JOUR 7 · 321 $"
 
@@ -337,7 +337,7 @@ def test_choisir_sa_partie_a_la_manette_dit_que_le_son_attend(banc, partie):
         return { auTitre: auTitre, etat: L.B.etat, msg: L.B.msg };
     }""", stockage={UN: partie(7, 321)})
     assert r["auTitre"] is None, "le choix s'ouvre : on ne joue pas encore, rien a dire"
-    assert r["etat"] == "jeu" and r["msg"] == "SON EN ATTENTE — TOUCHE L'ECRAN"
+    assert r["etat"] == "jeu" and r["msg"] == "SON EN ATTENTE — TOUCHE L'ÉCRAN"
 
 
 def test_la_date_se_dit_comme_on_la_dit(banc):
@@ -347,4 +347,4 @@ def test_la_date_se_dit_comme_on_la_dit(banc):
                 new Date(2026, 7, 31, 21, 40).getTime()].map(function (t) { return L.Hud.quand(t, maintenant); })
           .concat([L.Hud.tempsDeJeu(25 * 60 + 59), L.Hud.tempsDeJeu(3 * 3600 + 5 * 60)]);
     }""")
-    assert r == ["AUJOURD'HUI A 9 H 07", "HIER A 23 H 59", "LE 31 AOUT A 21 H 40", "25 MIN", "3 H 05"]
+    assert r == ["AUJOURD'HUI À 9 H 07", "HIER À 23 H 59", "LE 31 AOÛT À 21 H 40", "25 MIN", "3 H 05"]

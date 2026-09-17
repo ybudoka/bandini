@@ -202,7 +202,7 @@ ne bougent pas quand l'ordre de travail change.
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (3 vagues : le standing et la saleté ; le zonage ; les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
-| Le jeu écrit avec ses accents | ⬜ **en cours** (1re vague livrée : la police) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
+| Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
@@ -750,7 +750,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py
+        test_bd.py test_comptes.py test_accents.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -11048,6 +11048,43 @@ LACHE »), côté JS comme côté Python.
   cédille dessous ; « E » + U+0301 = « É » ; « é » = « É » ; la largeur ne bouge pas) — rouge
   quand on retire la boucle des marques ; le juge « la police sait écrire tout ce que le jeu
   affiche » passe par `Atlas.connait` et attend « HÔPITAL ».
+
+**2e vague livrée le 17 sept. 2026 — les textes retrouvent leurs accents.**
+
+- **184 chaînes corrigées** dans 13 fichiers : les menus et messages du moteur (`hud.js`,
+  `missions.js`, `vehicules.js`, `police.js`, `jeu.js`, `combat.js`, `entree.js`), les
+  enseignes et les tags (`devantures.py`, 50 textes), le journal du matin, les paliers de boulot
+  (`economie.py`), les panneaux de chantier, les profils de manette. On n'a **ajouté que
+  des accents** : un script refusait toute correction qui changeait autre chose, posait mot à
+  mot DANS le littéral (« IL A FINI — RESTE À SAVOIR CE QU'IL A FAIT » : un « A » sur trois)
+  et relisait le fichier posé.
+- ⚠️ **Comment on les a trouvées** : le correcteur français de macOS (`NSSpellChecker`, par
+  un script Swift) sur chaque mot des chaînes affichables — un mot refusé dont une
+  suggestion a les mêmes lettres est une faute sûre (« hopital » → « hôpital ») ; un mot
+  juste qui a une variante accentuée juste aussi (« A » / « À », « PASSE » / « PASSÉ ») est
+  AMBIGU et s'est relu dans sa phrase, 704 chaînes en cinq lots. ⚠️ Le correcteur admet
+  les rectifications de 1990 (« aout », « croute ») : le dépôt garde l'orthographe
+  traditionnelle, partout.
+- ⚠️ **Laissés sans accent, exprès** : les noms de voix ElevenLabs (« Khaivan - Quebec
+  accent » — c'est leur nom sur le compte), le SQL de M14, `fr-CA`, les étiquettes du mode
+  TRACE (« BOITE », « DEPORT » : un outil de diagnostic que des juges comparent), « Me
+  Desjardins » (Maître), « COUTURE CHEZ EVA » (on n'invente pas un prénom), « PIZZERIA ».
+- ⚠️ **Les enseignes des quartiers pauvres et cossus** (3e vague, arrivée PENDANT cette livraison)
+  étaient neuves et sans accents : le juge les a vues au remontage. « À LOUER » y est aussi une
+  CONSTANTE comparée (`devantures.A_LOUER`, relue par `vitrines.py` et `test_quartiers`) : la
+  constante et ses juges ont changé ensemble. La ville générée a été comparée avant/après, clé par
+  clé, accents retirés : identique.
+- **23 comparaisons, dans 8 fichiers de juges, suivaient une chaîne mot pour mot** et la
+  suivent maintenant accentuée.
+  ⚠️ `test_son_js` vérifiait que « TOUCHE L'ECRAN » était **absent** : un `not in` sur
+  l'ancienne forme serait resté vert pour toujours.
+- **Juge** : `tests/test_accents.py` refuse 96 mots qui n'existent pas sans leur accent
+  (« HOPITAL », « DEJA », « FOURRIERE », « AOUT »…) dans les chaînes de `static/js`
+  (commentaires exclus : ils sont écrits sans accents, et c'est du code) et dans TOUT le
+  paquet servi au navigateur, carte comprise. Rouge sur « PARTIE SAUVEGARDEE » remis dans
+  `hud.js`, rouge sur l'enseigne « HOPITAL » remise dans `devantures.py` — et il a trouvé, à
+  sa première exécution, trois textes de `manettes.py` que l'inventaire avait écartés.
+  ⚠️ Il ne tranche pas « A » / « À » : ça se relit.
 
 ### Quatre activités que le jeu n'a pas
 
