@@ -205,6 +205,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
+| Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -10916,6 +10917,11 @@ demande de Martin : « est-ce compliqué de faire du jeu une webapp installable 
   l'usage, définitions par empreinte, scores qui disent la vérité — ~1 jour). Les juges ont
   déjà leur banc : `test_navigateur.py` lance un vrai Chromium, donc le worker se juge en
   coupant le réseau après le premier chargement.
+
+### Les menus au doigt avancent d'une ligne à la fois
+
+retour de Martin : « améliore les contrôles sur mobile, surtout dans les menus. il déplace
+souvent de 2 menus à la fois vers le haut et le bas. »
 
 ### M16 Cent missions
 
