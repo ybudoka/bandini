@@ -1,4 +1,4 @@
-"""Les routes : une page, un paquet de definitions et sa carte, les scores, les comptes, un healthcheck, les icones."""
+"""Les routes : une page, un paquet de definitions et sa carte, les comptes, un healthcheck, les icones."""
 
 from __future__ import annotations
 
@@ -21,13 +21,8 @@ from flask import (
 
 from . import bd, comptes
 from . import hors_ligne
-from .scores import ScoreInvalide, Tableau
 
 bp = Blueprint("jeu", __name__)
-
-
-def tableau() -> Tableau:
-    return current_app.extensions["tableau_scores"]
 
 
 @lru_cache(maxsize=1)
@@ -92,20 +87,6 @@ def api_carte():
     deux reponses sont de la meme construction.
     """
     return _revalide(current_app.extensions["carte"])
-
-
-@bp.route("/api/scores", methods=["GET"])
-def api_scores():
-    return jsonify({"scores": tableau().meilleurs()})
-
-
-@bp.route("/api/scores", methods=["POST"])
-def api_scores_ajouter():
-    try:
-        score, rang = tableau().ajouter(request.get_json(silent=True))
-    except ScoreInvalide as erreur:
-        return jsonify({"erreur": str(erreur)}), 400
-    return jsonify({"score": score, "rang": rang, "scores": tableau().meilleurs()}), 201
 
 
 # --- Les comptes (M14) : le local joue, le serveur se souvient ---------------------------
@@ -209,7 +190,7 @@ def api_compte_partie(n: int):
 def api_compte_partie_ecrire(n: int):
     """Un instantane monte. POST et pas PUT : `sendBeacon`, le seul appel qui survit a
     la fermeture d'un onglet sur telephone, ne sait faire que POST."""
-    # ⚠️ AVANT de lire le corps : la borne du site est celle d'un score.
+    # ⚠️ AVANT de lire le corps : la borne du site est celle d'un corps ordinaire.
     request.max_content_length = comptes.REQUETE_PARTIE_MAX_OCTETS
     session = comptes.authentifier(bd.connexion(), _jeton())
     ecrite, etat = comptes.ecrire_partie(

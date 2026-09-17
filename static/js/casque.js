@@ -172,8 +172,8 @@ const Casque = (function () {
     Base.imposerEchelle(null);
     Base.redimensionner(fenetre, Entree.estTactile);
     // ⚠️ Pas de partie hors du casque (voir l'en-tete) : retour au titre, qui
-    // sauvegarde. Sauf si c'est une VOILE qui nous a fait sortir — le nom pour le
-    // tableau des scores : c'est elle qu'on vient montrer, elle reste.
+    // sauvegarde. Sauf si c'est une VOILE qui nous a fait sortir : c'est elle
+    // qu'on vient montrer, elle reste.
     if (Hud.voileCourant) return;
     if (B.etat === 'jeu' || B.etat === 'pause' || B.etat === 'carte') Jeu.retourTitre();
     // Le choix des parties est un menu de la toile, sans voile : hors du casque

@@ -17,8 +17,9 @@ FORTUNE_MAX = 50_000_000
 JOUR_SECONDES = 480
 
 #: Un joueur qui ne fait que gagner de l'argent plafonne autour de 2 000 $/h
-#: (0,6 $/s). Cette borne de VRAISEMBLANCE sert au tableau des scores : un score
-#: qui l'explose n'est pas une performance, c'est un navigateur bidouille.
+#: (0,6 $/s). Cette borne de VRAISEMBLANCE gardait le tableau des scores, retire
+#: du jeu le 17 sept. 2026 ; elle reste la mesure de ce qu'un boulot peut donner
+#: — `test_economie` refuse un boulot qui l'explose, et c'est un garde d'equilibre.
 GAIN_MAX_PAR_SECONDE = 500
 
 # --- Prison et hopital ----------------------------------------------------

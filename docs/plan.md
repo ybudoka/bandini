@@ -204,7 +204,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
-| Le tableau des scores s'en va | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
+| Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
@@ -229,7 +229,6 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
-| Un **score ne s'envoie pas hors ligne** (aucune file d'attente) | La page le dit (« Pas de réseau — réessaie plus tard »), et M14 déménage les scores dans la base | Si Martin joue hors ligne et veut garder un score : une file dans le stockage, vidée au retour du réseau — avec la 4e vague de M14, pas avant |
 | **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo) |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
@@ -408,8 +407,9 @@ répliques sont dites à voix haute** (ElevenLabs, une voix par personnage) en p
 des scènes animées à l'intro et à la fin, et une réplique à chaque temps, pendant compris —
 voir « Les missions mises en scène ».
 
-**Meta et présentation** : tableau des scores en ligne (fortune, missions, propriétés,
-durée) · bilan de session, caméra qui respire, visée assistée, GPS pointillé, options
+**Meta et présentation** : ~~tableau des scores en ligne~~ (**retiré du jeu** le
+17 sept. 2026, à la demande de Martin — voir « Le tableau des scores s'en va ») · bilan de
+session, caméra qui respire, visée assistée, GPS pointillé, options
 (sang, palette daltonienne, vibration) **v1** · défi du jour à graine serveur, mode photo,
 coop locale **M14**.
 
@@ -640,14 +640,13 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
-| `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/scores` GET/POST, `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
-| `comptes.py` | les comptes (M14) : `inscrire` (pseudo des scores, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
+| `comptes.py` | les comptes (M14) : `inscrire` (pseudo — la règle vit ici depuis le retrait du tableau des scores —, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
 Réutiliser tels quels : `create_app` de `/Users/martingagne/dev/car-game/app/__init__.py`,
-`config.py`, `run.py`, `Tableau` de `app/scores.py`, `scripts/verifier_dependances.py`,
+`config.py`, `run.py`, `scripts/verifier_dependances.py`,
 `tests/harnais_js.py` et la fixture `serveur` (make_server port 0) de
 `/Users/martingagne/dev/online-4all-games/tests/`.
 
@@ -684,7 +683,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 13 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
 | 13b | `scenes.js` | **le metteur en scène** : joue une liste de plans (`missions.TYPES_PLANS`) sans connaître aucune scène par son nom — `jouer(scene, contexte)`, `maj()`, `passer()` ; aucun dé, la ville figée, une seule façon de finir (jouée ou passée), le joueur rendu où il était, trois secondes au plus après le dernier mot |
 | 14 | `histoire.js` | les donneurs et leurs dialogues **dits à voix haute** (une voix par personnage, ducking, combiné au téléphone), posés **dehors** devant leur porte ou **dedans** à leur point en entrant chez eux, leur **bulle** quand ils ont une job pour toi, le téléphone qui appelle, la machine à objectifs des missions, les figurants posés en ville, les défis à panneaux, le GPS |
-| 15 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, voiles DOM (titre, pseudo + tableau), `fetch` scores, la **barre de chargement** du titre (`progression`, `finirChargement`) et l'**icône qui tourne** quand `Chargements` compte quelque chose |
+| 15 | `hud.js` | vie + endurance, ★, argent, arme + munitions, mini-carte 64×48 avec blips, texte de mission, GPS pointillé, toasts, menus canvas (pause, magasin, téléphone, prison, planque, options), boîte de dialogue, fondus, la voile DOM du titre (la seule depuis le retrait du tableau des scores), la **barre de chargement** du titre (`progression`, `finirChargement`) et l'**icône qui tourne** quand `Chargements` compte quelque chose |
 | 15b | `casque.js` | **le casque Meta Quest** : un écran virtuel WebGL dans une session `immersive-vr` (la toile en texture, espace `local`), la session qui cadence (`Jeu.avancer`), et les manettes Touch rendues comme une manette Xbox (`VERS_XBOX` → `Entree.brancherCasque`) ; une voile DOM fait sortir du casque, sortir ramène au titre |
 | 16 | `jeu.js` | machine d'états (`chargement \| titre \| jeu \| prison \| hopital \| fin`), `maj()`, `rendre()`, `boucle()`, **les portes** (`transiter()` : noircir sur l'ancienne scène, changer au noir, éclaircir sur la nouvelle — le jeu figé pendant, comme sous un menu), amorçage (`fetch` du paquet), `window.BANDINI` (surface de test et débogage : `B`, espaces de noms, `graine(n)`, `entree(a)`, `debug.cones`, `maj`, `rendre`, `stats`) |
 
@@ -730,7 +729,7 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
 docs/plan.md (ce document : la vision, les jalons, et cette carte)
-app/  __init__.py routes.py version.py scores.py definitions.py hors_ligne.py
+app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
       chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py
@@ -740,7 +739,7 @@ static/css/styles.css  static/js/ (16 fichiers ci-dessus)
 static/img/  favicon.svg favicon.ico icone-180.png icone-192.png icone-512.png logo.svg (dessinés par scripts/icones.py)
 static/audio/  bruitages, radios, ambiances et voix (.mp3 ElevenLabs, recette dans app/audio.py)
 tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/fetch/manette/audio,
-        frame(n), touches, singe)  test_routes.py test_hors_ligne.py test_scores.py test_definitions.py
+        frame(n), touches, singe)  test_routes.py test_hors_ligne.py test_definitions.py
         test_vehicules.py test_armes.py test_armes_js.py test_brume_js.py test_economie.py test_recherche.py test_carte.py
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
@@ -817,7 +816,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py sauvegarder_bd.py
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, entraves du jour (liste validée par Python), nuit de déneigement, feux clignotants la nuit, pointe directionnelle, crimes d'autrui, arrêts d'autobus, éboueurs, bêtes | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; suivre un DÉTOUR qui mène de l'autre côté ; perdre son char une nuit de déneigement |
 | M14 | **P4** Meta | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
 | M16 | **P4** Cent missions | neuf types d'objectifs de plus, `exige` / `ferme` / `donne` étendu, lieux nommés, dialogues hors paquet, téléphone qui trie ; 109 missions en 9 arcs, 34 personnages, 3 piétons de mission, un chien, 5 défis | finir un arc par district au téléphone ; aucune mission morte au singe ; les deux fins atteignables par le catalogue |
-| — | **P2** Une ouverture et un générique | **l'ouverture : livrée** — jouée au premier JOUER (l'autobus arrive au terminus, le narrateur dit la prémisse, `ouverture` en mp3 **et** en notes), passable d'un bouton, rejouable du carnet, jamais rejouée sur une partie en cours ; le générique branché sur les deux fins de M13 (caméra sur la ville, chiffres de la partie, manchette du Clairon, `generique`, puis l'envoi du score) | commencer une partie et savoir qui on est sans avoir lu le plan ; passer l'ouverture d'un bouton, à la manette comme au doigt ; voir une fin, envoyer son score, et retrouver la ville après |
+| — | **P2** Une ouverture et un générique | **l'ouverture : livrée** — jouée au premier JOUER (l'autobus arrive au terminus, le narrateur dit la prémisse, `ouverture` en mp3 **et** en notes), passable d'un bouton, rejouable du carnet, jamais rejouée sur une partie en cours ; le générique branché sur les deux fins de M13 (caméra sur la ville, chiffres de la partie, manchette du Clairon, `generique`, puis le BILAN — l'envoi du score jusqu'au retrait du tableau, le 17 sept. 2026) | commencer une partie et savoir qui on est sans avoir lu le plan ; passer l'ouverture d'un bouton, à la manette comme au doigt ; voir une fin, envoyer son score, et retrouver la ville après |
 | M13 | **P4** Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ | atteindre les deux fins ; chaque réplique se dit à voix haute |
 
 Tailles relatives : M0 1, M1 3, M2 3, M3 4, M4 3, M5 2, M6 3, M7 2 (v1 = 21) ;
@@ -4896,10 +4895,10 @@ _Ce que ça donne :_ une ville qui bouge toute seule, avec ou sans toi.
     joue sans compte, comme avant, et le compte n'est qu'une **synchronisation**. Sinon une
     panne de serveur, une connexion coupée dans l'autobus ou un certificat expiré empêchent
     de jouer à un jeu qui tourne entièrement dans le navigateur.
-  - **Le tableau des scores déménage** dans la BD avec ses règles intactes (pseudo validé,
-    borne de vraisemblance de `economie.GAIN_MAX_PAR_SECONDE`, tri, plafond). Deux endroits
-    pour la même chose, c'est deux endroits qui dérivent. Un score sans compte s'y inscrit
-    toujours, sous un pseudo, comme aujourd'hui.
+  - ⚠️ **Le tableau des scores ne déménage nulle part : il n'existe plus** (17 sept. 2026,
+    demande de Martin — voir « Le tableau des scores s'en va »). Ce qu'il en reste, la règle
+    du pseudo, vit dans `comptes.py` ; `economie.GAIN_MAX_PAR_SECONDE` reste une borne
+    d'équilibre des boulots, jugée par `test_economie`.
   - ⚠️ **On ne peut pas empêcher la triche d'un jeu qui tourne dans le navigateur** — une
     partie qu'on peut poster est une partie qu'on peut fabriquer. Ce qu'on peut faire, c'est
     que ça ne rapporte rien : le classement garde sa borne, le serveur garde la durée et la
@@ -4954,10 +4953,9 @@ serveur reçoit des **instantanés**, jamais chaque image.
 
 | Table | Ce qu'elle garde |
 |---|---|
-| `comptes` | pseudo (unique, les mêmes règles que le pseudo des scores), empreinte du mot de passe (`generate_password_hash`, scrypt), courriel **facultatif**, date de création |
+| `comptes` | pseudo (unique ; la règle vit dans `comptes.py`), empreinte du mot de passe (`generate_password_hash`, scrypt), courriel **facultatif**, date de création |
 | `parties` | compte, emplacement (1–3), **compteur**, le JSON de la partie (4,5 Ko), version du schéma, empreinte des définitions, date |
 | `appareils` | compte, **empreinte** du jeton (jamais le jeton), nom donné par le joueur (« le téléphone »), dernière visite, date de péremption |
-| `scores` | le tableau des scores, déménagé du fichier JSON (M14 le dit déjà), avec un compte **facultatif** |
 
 **La session longue durée** — c'est un **jeton d'appareil**, pas un mot de passe qu'on retape :
 
@@ -5000,7 +4998,7 @@ possibilités : inacceptable comme secret de compte, parfait comme verrou d'écr
 - ⚠️ **Une partie plus vieille ne peut pas écraser une plus neuve** — c'est le compteur, et
   c'est le juge le plus important de la fiche.
 - ⚠️ **Effacer un compte efface pour vrai** : les parties disparaissent, les appareils sont
-  révoqués, et les scores restent sous un pseudo sans compte. Un bouton, une confirmation, et
+  révoqués. Un bouton, une confirmation, et
   une page qui dit ce qui est gardé.
 - ⚠️ **Le mot de passe perdu sans courriel est un compte perdu**, et c'est écrit à
   l'inscription, pas découvert après.
@@ -5997,8 +5995,8 @@ le garage dont on hérite, les 15 000 $ de Sal « Le Barbier » ; ce qui manque,
   entendre. Un joueur qui part à gauche ne saura jamais pourquoi il est là.
 - **Le jeu ne finit nulle part.** `B.etat` ne prend que `titre | jeu | pause | carte` :
   l'état `fin` qu'annonce la carte du dépôt (« Côté JS », ligne `jeu.js`) **n'a jamais été
-  écrit**, et le score ne part que d'un item du menu PAUSE (`BILAN DE LA SESSION` →
-  `ENVOYER MON SCORE`, `Hud.demanderScore`). Une partie se quitte ; elle ne se conclut pas.
+  écrit**, et une partie ne se conclut nulle part : elle se quitte. (Elle s'envoyait au
+  tableau des scores depuis le menu PAUSE ; ce tableau est parti le 17 sept. 2026.)
 - **Le mécanisme, lui, est entièrement là** — c'est pour ça que l'ouverture est une vague de
   taille 2 et pas un jalon : `B.cinema` fige la ville et enchaîne des répliques **dites à
   voix haute** (`Histoire.dire` : ACTION passe, la voix finie passe toute seule, la radio et
@@ -6074,11 +6072,12 @@ deux musiques d'ÉTAT (poursuite, bagarre), et l'ouverture est une pièce nommé
   une variante de l'ouverture, même tonalité, plus lente, pas un morceau étranger. Et la
   manchette **lue par le narrateur qui a ouvert le jeu** : c'est le même homme aux deux
   bouts, et c'est ça qui fait une ligne plutôt que deux animations.
-- **Elle mène au score** : `Hud.demanderScore()` existe déjà et n'est appelé de nulle part
-  ailleurs qu'un menu. Le générique est le seul endroit du jeu où l'envoi s'offre tout seul.
-- ⚠️ **La partie continue après le générique** (règle de M13, inchangée) : le score part, le
-  monde reste, la sauvegarde ne se referme pas. Un générique qui verrouille la ville
-  transforme une fin en écran de défaite.
+- **Elle mène au BILAN** (`Hud.menuBilan`) : jours joués, fortune, propriétés, paquets,
+  crimes. ⚠️ Elle menait au tableau des scores jusqu'au 17 sept. 2026 ; il a été retiré du
+  jeu, et le bilan est ce qui reste à montrer quand le générique se termine.
+- ⚠️ **La partie continue après le générique** (règle de M13, inchangée) : le monde reste,
+  la sauvegarde ne se referme pas. Un générique qui verrouille la ville transforme une fin
+  en écran de défaite.
 
 **Ce que ça coûte en crédits** : deux morceaux de 45 s à **30 crédits la seconde = 2 700**
 sur les 90 000 du mois, plus quelques centaines de caractères de narration (les voix se
@@ -6099,7 +6098,7 @@ paient au caractère). Même échelle que les dix-neuf morceaux déjà généré
 - _Navigateur_ : JOUER au clavier **et** à la manette lance l'ouverture, aucune erreur
   console, et le son n'est jamais demandé avant le geste.
 - _Générique_ : le test qui force chacune des deux fins (déjà prévu par M13) vérifie qu'on
-  retombe sur une ville jouable, score envoyé ou non.
+  retombe sur une ville jouable, bilan fermé ou non.
 
 ⚠️ **Ce que les juges de la 1re vague ont réellement attrapé** (13 dans `test_ouverture.py`, plus un
 dans `test_navigateur.py`) : deux pièges de mesure dans les juges eux-mêmes — le banc **écrit dans le
@@ -6127,7 +6126,7 @@ _Ce que ça donne :_ une histoire qui se termine, de deux façons.
 - **Le générique** — l'animation audio-visuelle de fin, le narrateur du Clairon,
   `generique` — est décrit juste au-dessus, dans « La ligne d'histoire » : M13
   fournit les deux fins, cette section-là fournit ce qu'on en voit et ce qu'on en entend.
-- La partie **continue après la fin** : le score part, le monde reste.
+- La partie **continue après la fin** : le bilan se montre, le monde reste.
 - **Juges** : un test force chacune des deux fins (elles sont atteignables) ; la dette reste
   remboursable jusqu'au bout (aucune fin ne se referme sur un bug) ; chaque réplique
   nouvelle a son personnage et sa voix.
@@ -6142,9 +6141,9 @@ _Ce que ça donne :_ une histoire qui se termine, de deux façons.
 
 ## Tests et CI
 
-- **pytest** : modules Python (invariants ci-dessus), routes, scores, version.
+- **pytest** : modules Python (invariants ci-dessus), routes, version.
 - **JS déterministe via pytest + Node** (`harnais_js.py` + `banc.js`, `ENTREE` = le paquet Python réel) : intégrité des sprites, cercle-vs-tuiles, cône de vision, décroissance des ★, amendes, monter/descendre, trafic, physique, missions, sauvegarde v0 → repli, budget de rendu, singe (3 000 pas par défaut, `BANDINI_SINGE_PAS=50000` pour une longue nuit).
-- **Playwright** (`test_navigateur.py`, fixture `serveur`) : 4 écrans (1280×720, 1024×768, 390×844, 844×390) ; aucune erreur console ; Jouer → état `jeu` ; clavier déplace ; tactile : commandes ≥ 64 px (pause 44), dans l'écran, sans chevauchement, glisser sur `#croix` déplace ; envoi de score.
+- **Playwright** (`test_navigateur.py`, fixture `serveur`) : 4 écrans (1280×720, 1024×768, 390×844, 844×390) ; aucune erreur console ; Jouer → état `jeu` ; clavier déplace ; tactile : commandes ≥ 64 px (pause 44), dans l'écran, sans chevauchement, glisser sur `#croix` déplace.
 - **Où ça tourne** (décision de Martin, 17 sept. 2026) : **en local seulement.** La CI (dépôt public) ne fait plus que `uv sync`, la synchronisation des dépendances et `ruff`, en une minute. ⚠️ Le verdict qui autorise une mise en ligne est `BANDINI_TESTS_OBLIGATOIRES=1 uv run pytest -q` — la suite complète, banc Node et Chromium compris, sans rien qui se saute faute d'outil — **verte sur le commit exact** qu'on pousse sur `main`. `deploy.sh` prend `origin/main` tel quel et ne lit rien : c'est à celui qui pousse d'avoir fait tourner la suite. Pourquoi : ~2 450 juges ne tenaient plus dans le délai d'un runner (le run de 0.115.0 coupé à 25 min, à 94 %, sans un juge tombé, et tous ceux de `dev` de la même heure) ; on attendait une vérification qui ne finissait plus.
 - **La carte du dépôt** (l'arborescence ci-dessus et les tableaux « Côté Python » / « Côté JS ») : `scripts/verifier_carte_du_depot.py` la compare aux fichiers que git suit, `tests/test_carte_du_depot.py` fait échouer la suite quand un fichier n'y est pas — et deux **gardes Claude Code** (`.claude/settings.json`) le rappellent plus tôt, là où corriger ne coûte rien : à l'écriture d'un fichier (PostToolUse `Write|Edit`) et avant `git commit` (PreToolUse `Bash`, qui lit le plan de l'**index**, pas celui de l'arbre — sinon la carte corrigée resterait sur le bureau). ⚠️ Pourquoi une garde et pas seulement un test : le 13 sept. 2026, trois tests, deux scripts et quatre modules existaient sans y être, et personne ne relit l'arborescence avant de committer. Un fichier **à venir** se note avec son jalon entre parenthèses sur sa ligne (`bd.py comptes.py (M14 — …)`) : c'est ce qui l'excuse d'être absent ; `static/audio/` se couvre d'un seul trait.
 - **La table des jalons** (« État des jalons », tout en haut) : `scripts/verifier_table_des_jalons.py` vérifie qu'elle garde ses **six colonnes** (`Jalon | État | Date | Prio | Genre | Notes`) et que chaque cellule dit ce qu'elle doit dire — un état connu, une date `14 sept. 2026` ou `—`, une prio `P1`–`P4` ou `—`, un genre `ajout` ou `correctif`. `tests/test_table_des_jalons.py` fait échouer la suite, et les deux mêmes **gardes Claude Code** que la carte du dépôt le rappellent à l'écriture et avant `git commit`. ⚠️ Pourquoi : la table a été divisée le 14 sept. 2026, et le jour même une session qui n'avait pas vu passer le changement a rajouté sa ligne dans l'**ancienne forme à trois colonnes** (`| Un poteau par coin | **P2** **correctif**, **en cours** (14 sept. 2026) | … |`). Markdown ne s'en plaint pas : il avale la ligne et la rend de travers, et la division se perd sans qu'un test rougisse. C'est le risque propre à un fichier que **plusieurs sessions écrivent en même temps** — la forme doit se défendre toute seule, parce que personne ne relit l'en-tête avant d'ajouter sa ligne. ⚠️ **Et la colonne Notes n'est qu'un lien** (17 sept. 2026) vers un titre de « Notes des jalons », en bas du plan : les cellules avaient grossi jusqu'à 22 000 caractères et la table pesait 320 Ko. `--ranger` y déplace une note écrite dans sa cellule, la met en forme et pose le lien ; le juge refuse une note restée dans la table ou un lien qui ne mène à aucune note.
@@ -6155,7 +6154,7 @@ _Ce que ça donne :_ une histoire qui se termine, de deux façons.
 
 1. `uv run ruff check . && uv run pytest -q` verts ; `uv run python run.py` → http://127.0.0.1:5400.
 2. Playwright local : captures aux 4 écrans (garage, rue de jour, nuit à 3★, prison).
-3. Après chaque déploiement : `/sante`, `/api/definitions` (gzip + ETag → 304), `/static/js/jeu.js` 200, POST puis GET `/api/scores`, `journalctl -u bandini-gestiondojo`.
+3. Après chaque déploiement : `/sante`, `/api/definitions` (gzip + ETag → 304), `/static/js/jeu.js` 200, `/travailleur.js` (`no-cache` + ETag), `journalctl -u bandini-gestiondojo`.
 4. Martin teste sur téléphone (tactile) et sur ordinateur (manette) à chaque jalon.
 
 ## Risques et parades
@@ -8720,7 +8719,8 @@ le serveur — `app/bd.py` (SQLite, WAL, migrations par `user_version`), l'inscr
 jeton d'appareil qui tourne, les instantanés au compteur, et le refus de démarrer en
 production avec la clé de développement ; **(2)** le jeu se synchronise — les moments où un
 instantané monte, `sendBeacon`, la question « garder celle-ci / prendre celle-là » ; **(3)**
-le NIP ; **(4)** les scores déménagent dans la base, et effacer son compte ; puis le défi du
+le NIP ; **(4)** effacer son compte (le tableau des scores devait déménager ici : il a été
+retiré du jeu le 17 sept. 2026) ; puis le défi du
 jour, le mode photo et la coop.
 
 **1re vague livrée** (17 sept. 2026) : le serveur sait tout faire, et **le jeu ne s'en sert
@@ -8759,7 +8759,8 @@ borne de la route, `foreign_keys`).
   lecture) : clé de 64 caractères, `https://bandini.gestiondojo.ca`, Python 3.12.3, SQLite
   3.45.1 (l'`UPSERT` demande 3.24).
 
-- ⚠️ **La borne du site reste celle d'un score** (16 Ko, `test_corps_trop_gros`) : la route
+- ⚠️ **La borne du site reste de 16 Ko** (`test_corps_trop_gros`, mesurée depuis le retrait
+  du tableau des scores sur l'inscription) : la route
   d'une partie relève la sienne à 52 Ko (`REQUETE_PARTIE_MAX_OCTETS`, par
   `request.max_content_length`), sous le `client_max_body_size 64k` de nginx — au-delà,
   nginx répondrait en HTML.
@@ -9242,8 +9243,8 @@ un juge navigateur qui prouve que la voix se décode.
   garage, les 15 000 $ de Sal : c'est écrit **dans ce plan**, dans `economie.DETTE` et dans
   une réplique de Ti-Guy qu'il faut aller chercher à la porte du terminus. À l'autre bout,
   `B.etat` ne prend que `titre`, `jeu`, `pause` et `carte` : l'état `fin` qu'annonce la
-  carte du dépôt (« Côté JS », `jeu.js`) **n'a jamais été écrit**, et le score ne part que
-  d'un item du menu PAUSE.
+  carte du dépôt (« Côté JS », `jeu.js`) **n'a jamais été écrit** : rien ne conclut une
+  partie.
 - ⚠️ **Deux vagues, deux échéances** : l'**ouverture** se livre tout de suite (rien de neuf
   à dessiner — l'autobus, le terminus, la caméra, le fondu `Jeu.transiter()` et le cinéma
   `B.cinema`, qui fige la ville et dit une réplique à voix haute, existent tous), le
@@ -10671,8 +10672,8 @@ demande de Martin : « ajoute le support des manettes sur casque vr meta quest �
   frapper), gâchettes = frein et gaz, **clic du stick gauche = PAUSE** (xr-standard ne
   promet pas le bouton ☰ ; le jeu le dit en entrant), clic du stick droit = CARTE, stick
   gauche = marcher, stick droit = la croix des menus ; les vibrations passent par les mains.
-  Le menu du Quest par-dessus la partie la met en pause ; toute **voile DOM** (le titre, le
-  nom pour les scores) **fait sortir du casque**, et sortir du casque ramène au titre,
+  Le menu du Quest par-dessus la partie la met en pause ; toute **voile DOM** (le titre —
+  la seule qui reste depuis le retrait du tableau des scores) **fait sortir du casque**, et sortir du casque ramène au titre,
   partie sauvegardée — hors du casque, un joueur de Quest n'a plus aucune manette (même
   règle quand on en sort pendant le choix des parties, et quand un changement de partie
   recharge la page : sur un navigateur qui ouvre un casque, le titre revient au lieu du
@@ -11219,8 +11220,9 @@ inscrit après `load` par `hors-ligne.js`, garde **la coquille** — ce que la p
 demande, **lu dans la page rendue** (`app/hors_ligne.py`), jamais tenu à la main — et les
 sons **à l'usage**. **LES SONS HORS LIGNE**, dans les OPTIONS, dit ce qu'il reste
 (« 13 MO »), les télécharge d'un coup sur ACTION (« 42 % », puis « OUI ») et demande au
-navigateur de ne pas les effacer. Les scores disent « Pas de réseau » au lieu de
-« Personne encore ».
+navigateur de ne pas les effacer. (Les scores, eux, disaient « Pas de réseau » au lieu de
+« Personne encore » — le tableau a été retiré du jeu le lendemain même de sa livraison, et
+ce juge-là avec.)
 
 - ⚠️ **Mesuré : le travailleur ne rend PAS le jeu installable.** Chromium le dit
   installable avec ou sans lui (`Page.getInstallabilityErrors` vide dans les deux cas) : le
@@ -11244,13 +11246,13 @@ navigateur de ne pas les effacer. Les scores disent « Pas de réseau » au lieu
   l'activation efface les autres.
 - ⚠️ **La purge des mp3**, qui n'ont pas de `?v=` : la même règle — un son rejoué en ligne
   se remplace — et un nom sorti du dossier sort du cache à l'activation.
-- ⚠️ **Tout ce qu'il ne nomme pas passe sans lui** : les scores, et ce que M14 ajoutera.
+- ⚠️ **Tout ce qu'il ne nomme pas passe sans lui** : le compte et les parties de M14.
   Rien d'autre qu'un GET.
 - ⚠️ `test_navigateur.py` tourne **sans** travailleur (`service_workers: block`) : il
   remplirait son cache pendant chaque juge, et `page.route` ne voit pas ce qu'un
   travailleur sert. Ses juges sont dans `test_hors_ligne.py`, sur un serveur à soi qu'on
   coupe ou qu'on met en 502 ; chacun a son témoin sans travailleur, et quatre mutations (la
-  navigation, le 5xx, les sons, le message des scores) font chacune rougir le sien.
+  navigation, le 5xx, les sons) font chacune rougir le sien.
 - ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
   ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
 
@@ -11307,8 +11309,21 @@ MEILLEURS SCORES du titre, la ligne ENVOYER MON SCORE du bilan, l'écran du pseu
 `/api/scores`, `app/scores.py` et son fichier JSON, le pseudo de la partie. La 4e vague de
 M14 (« les scores déménagent dans la base ») tombe avec, et la dette aussi.
 
+**Livré** (17 sept. 2026). Sont partis : `app/scores.py` et `tests/test_scores.py`, les deux
+routes `/api/scores`, le bouton MEILLEURS SCORES, les deux voiles (le tableau et le nom), leurs
+styles, la ligne ENVOYER MON SCORE du bilan, `Hud.montrerScores/envoyerScore/demanderScore/
+afficherScores`, le pseudo de la partie, et le `scores.json` du serveur. Un juge le tient :
+`/api/scores` rend 404, et le mot « score » n'est plus nulle part dans la page.
+
 - ⚠️ Les **règles du pseudo** (`pseudo_propre`, `PSEUDO_MAX`) vivaient dans `scores.py` et
-  servent aux **comptes de M14** : elles déménagent chez eux avant la suppression
+  servent aux **comptes de M14** : elles ont déménagé chez eux (`comptes.py`), avec leur juge
+- ⚠️ **`economie.GAIN_MAX_PAR_SECONDE` reste**, mais change de raison d'être : c'était la
+  borne de vraisemblance d'un score envoyé, c'est maintenant un garde d'équilibre — aucun
+  boulot ne doit la dépasser (`test_economie`)
+- ⚠️ **Deux choses qui menaient au score** se sont trouvé une autre fin : le **générique**
+  de M13 mène au BILAN, et la **4e vague de M14** perd son déménagement
+- ⚠️ Le `voile()` du HUD ne sert plus qu'au **titre** — c'est lui, et lui seul, qui fait
+  sortir du casque Quest (`casque.js`)
 
 ### M16 Cent missions
 

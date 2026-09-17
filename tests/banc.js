@@ -80,7 +80,7 @@ function banc(corps) {
   toile.id = 'toile';
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
-  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte', urlScores: '/api/scores' };
+  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
   const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
@@ -92,10 +92,9 @@ function banc(corps) {
   const pouce = faireElement('u');
   croix.querySelector = function () { return pouce; };
   elements.croix = croix;
-  ['voile-titre', 'voile-scores', 'voile-score-envoi', 'bouton-jouer', 'bouton-scores', 'bouton-fermer-scores',
-   'bouton-annuler-score', 'score-form', 'pseudo', 'score-etat', 'liste-scores', 'etat-chargement',
+  ['voile-titre', 'bouton-jouer', 'etat-chargement',
    'avis-son', 'bouton-casque'].forEach(function (id) {
-    elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : id === 'pseudo' ? 'input' : 'div', id);
+    elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : 'div', id);
   });
   const body = faireElement('body');
   const documentElement = faireElement('html');
@@ -156,7 +155,7 @@ function banc(corps) {
       if (/\.mp3($|\?)/.test(String(url))) {
         return Promise.resolve({ ok: true, arrayBuffer: function () { return Promise.resolve(new ArrayBuffer(64)); } });
       }
-      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ scores: [], rang: 1 }); } });
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
     },
     addEventListener: function (t, f) { (ecouteurs[t] = ecouteurs[t] || []).push(f); },
     removeEventListener: function () {}, dispatchEvent: function () {},
