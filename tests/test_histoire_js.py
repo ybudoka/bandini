@@ -176,6 +176,39 @@ def test_le_donneur_suivant_appelle_au_telephone(banc, paquet):
     assert m2["dialogue"]["appel"][0]["qui"] == "thibodeau"
 
 
+def test_le_dialogue_de_l_appel_attend_la_fin_de_la_sonnerie(banc):
+    """Demande de Martin (17 sept. 2026) : « quand on reçoit des appels, le
+    dialogue commence après la fin de la sonnerie ».
+
+    ⚠️ Au banc, aucun mp3 n'est decode : la sonnerie est celle de la SYNTHESE
+    (0,37 s, soit 22 images). C'est l'ecart qu'on mesure — pas les deux
+    secondes du fichier, qui ne sont pas la."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.partie.missionsFaites.m1 = 1;
+        let sonne = -1, parle = -1, ensemble = false;
+        for (let i = 0; i < 900 && parle < 0; i++) {
+          o.frame(1);
+          if (L.B.sonnerie && sonne < 0) sonne = i;
+          if (L.B.sonnerie && L.B.cinema) ensemble = true;   // on parle pendant que ca sonne
+          if (L.B.cinema) parle = i;
+        }
+        const c = L.B.cinema;
+        return { sonne: sonne, parle: parle, ensemble: ensemble,
+                 duree: L.Son.SFX.telephone(), sonnerie: L.B.sonnerie,
+                 partie: c && c.partie, qui: c && c.lignes[0].qui, appels: L.B.partie.appels };
+    }""")
+    duree = r.get("duree") or 0
+    assert duree > 0, "la sonnerie ne dit pas ce qu'elle dure : personne ne peut l'attendre"
+    assert 0 <= r["sonne"] < r["parle"], "le telephone sonne, PUIS le donneur parle"
+    images = round(duree * 60)                      # 60 images font une seconde
+    assert r["parle"] - r["sonne"] == images, "le dialogue part a la fin de la sonnerie, ni avant ni plus tard"
+    assert r["ensemble"] is False, "la voix du donneur passait par-dessus le combine"
+    assert r["sonnerie"] is None, "la sonnerie se raccroche quand le dialogue part"
+    assert r["partie"] == "appel" and r["qui"] == "thibodeau"
+    assert r["appels"] == {"m2": True}, "l'appel n'est marque qu'au decrochage"
+
+
 def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

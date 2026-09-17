@@ -515,16 +515,42 @@ const Histoire = (function () {
 
   // --- Le telephone ------------------------------------------------------------------------
 
+  /** Le combine sonne, puis on decroche. `B.sonnerie` tient qui appelle et a
+      quelle image la sonnerie se tait.
+
+      ⚠️ **LE DIALOGUE ATTEND LA FIN DE LA SONNERIE.** Demande de Martin
+      (17 sept. 2026) : « quand on reçoit des appels, le dialogue commence après
+      la fin de la sonnerie ». La premiere replique partait dans la MEME image
+      que `Son.SFX.telephone()` : le combine sonnait deux secondes par-dessus la
+      voix du donneur — on l'entendait parler avant d'avoir decroche.
+
+      ⚠️ La sonnerie n'est PAS dans la partie (`B`, pas `p`) : deux secondes de
+      telephone n'ont rien a faire dans une sauvegarde. Et `p.appels` ne se
+      marque qu'au DECROCHAGE — fermer l'onglet pendant que ca sonne refait
+      sonner l'appel plus tard au lieu de le perdre pour de bon. */
   function majTelephone() {
     const p = B.partie;
     if (B.cinema || p.mission || B.interieur || B.finEnAttente) return;
+    if (B.sonnerie) {
+      if (B.t < B.sonnerie.t) return;                     // ca sonne encore : on ne decroche pas
+      const m = mission(B.sonnerie.slug);
+      B.sonnerie = null;
+      // ⚠️ On a pu aller voir le donneur pendant que ca sonnait : un appel qui
+      // annonce une mission deja prise (ou deja annoncee) ne se dit pas.
+      if (!m || p.appels[m.slug] || !disponibles().some(function (x) { return x.slug === m.slug; })) return;
+      p.appels[m.slug] = true;
+      dire(m, 'appel', function () { Hud.message('VA VOIR ' + personnage(m.donneur).nom.toUpperCase(), 180); });
+      return;
+    }
     const prochaine = disponibles().find(function (m) { return m.prerequis.length && m.dialogue.appel.length && !p.appels[m.slug]; });
     if (!prochaine) return;
     if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
     if (B.t < p.appelT) return;
-    p.appels[prochaine.slug] = true; p.appelT = null;
-    Son.SFX.telephone();
-    dire(prochaine, 'appel', function () { Hud.message('VA VOIR ' + personnage(prochaine.donneur).nom.toUpperCase(), 180); });
+    p.appelT = null;
+    // `Son.SFX.telephone()` rend ce que dure la sonnerie, en secondes (le mp3,
+    // ou les trois bips de la synthese) ; 60 images font une seconde, et une
+    // image au moins : le dialogue ne part jamais dans celle ou ca sonne.
+    B.sonnerie = { slug: prochaine.slug, t: B.t + Math.max(1, Math.round((Son.SFX.telephone() || 0) * 60)) };
   }
 
   // --- Parler a quelqu'un -----------------------------------------------------------------

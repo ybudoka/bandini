@@ -383,6 +383,12 @@ const Son = (function () {
     benne: function (v) { ton(160, 1.1, 'sawtooth', 0.05 * v, 1.5); bruit(0.8, 0.25 * v, 1400, 200); },
   };
 
+  //: Ce que dure la sonnerie SYNTHETISEE, en secondes : son dernier coup part a
+  //: 0,29 s et dure 0,08. ⚠️ Elle sert de fin de sonnerie quand le mp3 n'est pas
+  //: (encore) la — le dialogue de l'appel l'attend, et attendre les deux secondes
+  //: du fichier pendant que trois bips ont deja fini serait un silence pour rien.
+  const SONNERIE_SYNTHESE = 0.37;
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -548,7 +554,19 @@ const Son = (function () {
     sonnette: function () { if (!joue('sonnette')) { ton(2600, 0.1, 'sine', 0.16); ton(2600, 0.14, 'sine', 0.12, 1, 0.13); } },
     // Un deux-roues s'enfourche : la bequille et le cadre, pas une portiere.
     enfourcher: function () { if (!joue('enfourcher')) { bruit(0.05, 0.15, 1800, 300); ton(700, 0.05, 'square', 0.08, 0.6, 0.03); } },
-    telephone: function () { if (!joue('telephone')) for (let i = 0; i < 3; i++) { ton(1200, 0.08, 'square', 0.15, 1, i * 0.12); ton(1600, 0.08, 'square', 0.15, 1, i * 0.12 + 0.05); } },
+    // ⚠️ **ELLE REND SA DUREE**, en secondes — le seul SFX qui rende quelque
+    // chose. Le dialogue de l'appel attend la fin de la sonnerie
+    // (`Histoire.majTelephone`) : sans ce nombre, il faudrait l'ecrire une
+    // deuxieme fois dans `histoire.js`, et les deux divergeraient le jour ou
+    // la sonnerie change. Le fichier dure ce que le catalogue declare
+    // (`audio.py`, `duree_s` : la finition le coupe la) ; sans fichier, la
+    // synthese fait ses trois coups en 0,37 s (le dernier part a 0,29 et dure
+    // 0,08).
+    telephone: function () {
+      if (!joue('telephone')) { for (let i = 0; i < 3; i++) { ton(1200, 0.08, 'square', 0.15, 1, i * 0.12); ton(1600, 0.08, 'square', 0.15, 1, i * 0.12 + 0.05); } return SONNERIE_SYNTHESE; }
+      const def = defEchantillon('telephone');
+      return (def && def.duree_s) || SONNERIE_SYNTHESE;
+    },
     helico: function () { if (!joue('helico')) bruit(0.3, 0.2, 200, 80); },
     // --- Les armes : un son par arme (`armes.py`, champ `son`) ----------------
     // ⚠️ `arme(def)` est le seul point d'entree du combat : il lit `def.son` et
