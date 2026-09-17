@@ -1067,3 +1067,66 @@ def test_le_coup_d_un_autre_s_entend_de_la_ou_il_est(banc):
     assert r["dehors"] == {"v": 0, "gains": []}, "on entend un coup hors de l'écran : %s" % r["dehors"]
     assert r["muettes"] == 0
     assert r["apres"] == [base], "après un coup lointain, le son du joueur reste bas : %s" % r["apres"]
+
+
+def test_le_klaxon_du_trafic_s_entend_de_la_ou_il_est(banc):
+    """⚠️ Retour de Martin (16 sept. 2026) : « réduit un peu les klaxon des
+    voiture qui passe ». Le char impatient klaxonnait au PLEIN volume, même hors
+    de l'écran — mesuré au bord d'une rue du centre, les deux tiers des klaxons
+    venaient d'un char qu'on ne voyait pas.
+
+    On passe par le VRAI chemin (`klaxonT`, comme le trafic bloqué et le char
+    heurté), et on ne compte que les sources qui jouent le fichier du klaxon :
+    une image pose d'autres sons, et les confondre ferait passer n'importe quoi."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        const j = L.B.joueur, c = L.Monde.carte, ctx = L.Son.contexte;
+        j.x = Math.floor(c.pxW / 2); j.y = Math.floor(c.pxH / 2);
+        L.Monde.centrerCamera(j.x, j.y);
+        // Les tampons du klaxon (deux variantes) : on les reconnait a l'objet.
+        const tampons = new Set();
+        for (let i = 0; i < 40; i++) tampons.add(L.Son.echantillon('klaxon').source.buffer);
+        function klaxons(n) {
+            return ctx.sources.slice(n).filter(function (s) { return s.__demarree && tampons.has(s.buffer); })
+                .map(function (s) { return s.__vers[0].gain.value; });
+        }
+        function impatient(dx, dy) {
+            const v = o.char('auto', dx, dy, 0);
+            v.conducteur = 'trafic'; v.klaxonT = 30;
+            const n = ctx.sources.length;
+            // ⚠️ Une image du banc n'est pas toujours UNE mise a jour : on avance
+            // jusqu'a ce que le klaxon soit parti, sinon il sonnerait pendant
+            // l'essai suivant et serait compte au mauvais char.
+            for (let k = 0; k < 6 && v.klaxonT === 30; k++) o.frame(1);
+            const g = klaxons(n);
+            L.Entites.retirer(v);
+            return g;
+        }
+        const r = {
+            base: L.B.defs.audio.echantillons.find(function (e) { return e.slug === 'klaxon'; }).volume,
+            pres: impatient(40, 0), bord: impatient(220, 0),
+            // ⚠️ Au-DESSUS : 200 px plus bas, le milieu de la carte est dans
+            // l'eau, et un char qui coule ne klaxonne pas — ce cas-la etait
+            // muet avec ou sans la regle.
+            dessus: impatient(0, -200), dehors: impatient(420, 0),
+        };
+        // Le sien, au volant : plein volume.
+        const v = o.char('auto', 40, 0, 0);
+        L.Vehicules.monter(j, v);
+        const n = ctx.sources.length;
+        o.tape('KeyJ', 2);
+        o.frame(3);
+        r.joueur = klaxons(n);
+        r.muettes = ctx.sourcesMuettes();
+        return r;
+    }""")
+    base = r["base"]
+    assert r["joueur"] == [base], "au volant, son propre klaxon n'est plus plein volume : %s" % r
+    assert len(r["pres"]) == 1 and len(r["bord"]) == 1, "un char à l'écran klaxonne en silence : %s" % r
+    assert base > r["pres"][0] > r["bord"][0] > 0, "le klaxon ne baisse pas avec la distance : %s" % r
+    assert r["dessus"] == [], "on entend klaxonner un char au-dessus de l'écran : %s" % r["dessus"]
+    assert r["dehors"] == [], "on entend klaxonner un char hors de l'écran : %s" % r["dehors"]
+    assert r["muettes"] == 0

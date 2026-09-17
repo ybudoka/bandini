@@ -1293,9 +1293,17 @@ const Vehicules = (function () {
 
   /** L'avertisseur du char, au bouton du klaxon : le klaxon, ou la sonnette
       d'un velo. ⚠️ C'est la fiche qui le nomme (`klaxon`, `vehicules.py`),
-      et c'est un effet de `Son.SFX` — le trafic impatient passe par ici aussi. */
+      et c'est un effet de `Son.SFX` — le trafic impatient passe par ici aussi.
+
+      ⚠️ Retour de Martin : « réduit un peu les klaxon des voiture qui passe ».
+      Celui du trafic partait au PLEIN volume, ou que soit le char : mesure au
+      bord d'une rue du centre, 1 a 6 klaxons par minute, les deux tiers d'un
+      char hors de l'ecran. Il suit donc la regle des coups des autres
+      (`Son.depuis`) : muet hors champ, plus doux de loin. Le sien, au volant,
+      reste plein volume. */
   function avertir(v) {
-    (Son.SFX[v.def.klaxon] || Son.SFX.klaxon)();
+    const effet = Son.SFX[v.def.klaxon] || Son.SFX.klaxon;
+    Son.depuis(v.conducteur === B.joueur ? B.joueur : v, effet);
   }
 
   /** Descendre : a gauche si c'est libre, sinon a droite, sinon derriere. */
