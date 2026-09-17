@@ -206,6 +206,7 @@ ne bougent pas quand l'ordre de travail change.
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
+| Le volant en marche arrière, au choix | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11013,6 +11014,21 @@ demande de Martin : « est-ce compliqué de faire du jeu une webapp installable 
 
 retour de Martin : « améliore les contrôles sur mobile, surtout dans les menus. il déplace
 souvent de 2 menus à la fois vers le haut et le bas. »
+
+### Le volant en marche arrière, au choix
+
+retour de Martin (17 sept. 2026) : « je pense que ce serait logique d'inverser les contrôles de
+virage gauche et droite quand on recule avec un véhicule », puis « mets-le dans une option de
+jeu ». Mesuré avant : depuis M3, `majPhysique` inverse **déjà** le volant en marche arrière,
+comme une vraie auto (droite : l'arrière part à droite du conducteur, le char tourne dans le
+sens inverse des aiguilles d'une montre). Vue de dessus, ça ne colle à l'écran que nez en
+haut. L'option garde le même sens de rotation qu'en marche avant (droite = horaire, toujours).
+
+- Une bascule dans OPTIONS, sauvegardée avec les autres ; par défaut, rien ne change.
+- Pour le joueur seulement : la police et le trafic gardent la physique d'auto.
+- ⚠️ Le signe de la **rotation**, pas la consigne du stick : le volant est lissé
+  (`volant_prise`), inverser la consigne le ferait traverser de butée à butée au passage à
+  vitesse nulle, et le char tournerait du mauvais côté au début de chaque recul.
 
 ### M16 Cent missions
 
