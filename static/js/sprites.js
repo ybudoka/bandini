@@ -4296,6 +4296,20 @@ const DECORS = {
     ctx.fillStyle = '#7d5a36'; ctx.fillRect(4, 3, 4, 1); ctx.fillRect(1, 1, 3, 1);
     ctx.fillStyle = '#523a22'; ctx.fillRect(4, 15, 1, 3); ctx.fillRect(7, 15, 1, 3);   // les pieds du bout sud
   } },
+  // LE BAC A FLEURS, en cossu seulement (`mobilier.PART_BAC_FLEURS`) : du beton,
+  // du feuillage, et trois couleurs de fleurs. ⚠️ Il ARRETE un pieton comme un
+  // banc, et cede sous un char comme lui.
+  bac_fleurs: { casse: 0.8, pv: 35, w: 16, h: 12, ancre: [8, 11], r: 5, sol: [7, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 10, 15, 2);        // son ombre
+    ctx.fillStyle = '#8b877b'; ctx.fillRect(1, 5, 14, 6);                     // le bac de beton
+    ctx.fillStyle = '#a5a194'; ctx.fillRect(1, 5, 14, 1);                     // son rebord
+    ctx.fillStyle = '#6f6b60'; ctx.fillRect(1, 10, 14, 1);
+    ctx.fillStyle = '#2f6b2a'; ctx.fillRect(2, 2, 12, 4); ctx.fillRect(4, 1, 8, 1);  // le feuillage
+    ctx.fillStyle = '#3f8d38'; ctx.fillRect(3, 3, 4, 2); ctx.fillRect(9, 2, 3, 2);
+    ctx.fillStyle = '#d9486a'; ctx.fillRect(3, 2, 2, 1); ctx.fillRect(10, 1, 1, 1); ctx.fillRect(7, 3, 1, 1);
+    ctx.fillStyle = '#f2c14e'; ctx.fillRect(5, 1, 1, 1); ctx.fillRect(12, 3, 1, 1);
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(8, 1, 1, 1);
+  } },
   banc_ouest: { casse: 0.8, pv: 40, w: 10, h: 18, ancre: [5, 16], r: 5, sol: [3, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3f25'; ctx.fillRect(6, 1, 3, 13);                 // le dossier, a l'est
     ctx.fillStyle = '#6b4b2c'; ctx.fillRect(2, 3, 4, 12);                 // l'assise
@@ -4425,6 +4439,55 @@ const DECORS = {
     ctx.fillStyle = '#9a7c48'; ctx.fillRect(3, 2, 5, 1);
     ctx.fillStyle = '#4e3620'; ctx.fillRect(1, 7, 10, 1); ctx.fillRect(1, 13, 10, 1);  // les deux cercles
     ctx.fillStyle = '#8f4a22'; ctx.fillRect(8, 5, 1, 7); ctx.fillRect(3, 9, 1, 5);     // la rouille qui coule
+  } },
+
+  /* --- CE QUI TRAINE AU PIED DES PLEX ------------------------------------
+
+     ⚠️ Des quartiers qu'on reconnait (demande de Martin : « des cartiers plus
+     pauvre et sale »). La saleté des quartiers cossus DESCEND chez les pauvres
+     (`salete.py`) — elle ne s'ajoute pas — et sur un trottoir, on ne jette ni
+     baril ni caisse : on sort ses sacs, et un matelas le jour du déménagement.
+     La poubelle, elle, reste la même : dans un quartier pauvre, elle déborde. */
+
+  // LE MATELAS, couche a plat, jauni, une tache. ⚠️ PAS solide : on marche
+  // dessus, comme sur le pneu. Ses boutons de capiton le nomment — sans eux,
+  // un rectangle beige est une dalle.
+  matelas: { casse: 0.95, pv: 10, w: 22, h: 14, ancre: [11, 13], r: 6, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.16)'; ctx.fillRect(1, 12, 21, 2);        // son ombre
+    ctx.fillStyle = '#b9ad93'; ctx.fillRect(1, 3, 20, 9);                     // la toile, jaunie
+    ctx.fillStyle = '#cfc4a8'; ctx.fillRect(2, 4, 18, 3);                     // le dessus qui prend le jour
+    ctx.fillStyle = '#9c9078'; ctx.fillRect(1, 3, 20, 1); ctx.fillRect(1, 11, 20, 1);  // les bords piques
+    ctx.fillStyle = '#a89c82';                                                // le capiton
+    for (let x = 5; x < 20; x += 5) { ctx.fillRect(x, 5, 1, 1); ctx.fillRect(x, 9, 1, 1); }
+    ctx.fillStyle = '#8a7652'; ctx.fillRect(12, 6, 5, 3); ctx.fillRect(13, 9, 3, 1);   // la tache
+  } },
+
+  // LE CADDIE RENVERSE, couche sur le flanc : les roues en l'air, la poignee
+  // rouge qui depasse. Du fil de fer, jamais un bloc plein — plein, c'est une
+  // caisse grise.
+  caddie: { casse: 0.9, pv: 20, w: 18, h: 12, ancre: [9, 11], r: 5, sol: [8, 3], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 10, 16, 2);        // son ombre
+    ctx.fillStyle = '#9aa0a6';                                                // le panier, en fil de fer
+    ctx.fillRect(2, 3, 12, 1); ctx.fillRect(2, 9, 12, 1); ctx.fillRect(2, 3, 1, 7); ctx.fillRect(13, 3, 1, 7);
+    ctx.fillRect(2, 6, 12, 1);
+    for (let x = 5; x < 13; x += 3) ctx.fillRect(x, 3, 1, 7);                 // le grillage
+    ctx.fillStyle = '#6f757c'; ctx.fillRect(14, 4, 1, 5);                     // le montant de la poignee
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(14, 2, 3, 2);                     // la poignee rouge
+    ctx.fillStyle = '#26262a'; ctx.fillRect(3, 1, 2, 2); ctx.fillRect(10, 1, 2, 2);   // les roues, vers le ciel
+  } },
+
+  // LA POUBELLE QUI DEBORDE : la cuve de `poubelle`, le couvercle de travers, un
+  // sac qui depasse et un autre au pied. ⚠️ Ce n'est pas un decor de plus : c'est
+  // la MEME poubelle, dans un quartier pauvre (`salete.deplacer` la change).
+  poubelle_pleine: { casse: 0.85, pv: 25, w: 14, h: 16, ancre: [6, 15], r: 4, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.20)'; ctx.fillRect(1, 14, 13, 2);        // son ombre
+    ctx.fillStyle = '#3f4a3c'; ctx.fillRect(2, 5, 8, 11);                     // la cuve
+    ctx.fillStyle = '#4c5a48'; ctx.fillRect(3, 6, 6, 9);
+    ctx.fillStyle = '#2b2b30'; ctx.fillRect(3, 1, 6, 5); ctx.fillRect(5, 0, 2, 1);   // le sac qui depasse
+    ctx.fillStyle = '#3b3b42'; ctx.fillRect(4, 2, 2, 2);
+    ctx.fillStyle = '#2b332a'; ctx.fillRect(0, 3, 5, 2); ctx.fillRect(5, 7, 1, 8);   // le couvercle de travers
+    ctx.fillStyle = '#35402f'; ctx.fillRect(9, 11, 5, 5); ctx.fillRect(10, 10, 3, 1); // le sac vert au pied
+    ctx.fillStyle = '#c9c3ae'; ctx.fillRect(8, 15, 2, 1); ctx.fillRect(11, 9, 1, 1);  // ce qui en sort
   } },
   fontaine: { arrete: 9, w: 34, h: 30, ancre: [17, 27], r: 13, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#8b877b'; ctx.fillRect(2, 10, 30, 17); ctx.fillRect(6, 7, 22, 21);

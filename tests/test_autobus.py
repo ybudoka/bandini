@@ -201,8 +201,12 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     """⚠️ Leur propre ordre, APRÈS la ville : une ligne de plus ne déplace ni un
     arbre, ni un paquet, ni une enseigne. Sans les lignes ni le mobilier, la ville
     est la même tuile pour tuile, et le décor d'avant est le même, dans le même
-    ordre — les nouveaux meubles ne font que s'ajouter au bout."""
-    from app import metro, mobilier
+    ordre — les nouveaux meubles ne font que s'ajouter au bout.
+
+    ⚠️ La saleté se déplace APRÈS les lignes (`salete.deplacer`) et contourne
+    leurs abribus, comme le mobilier : on la retire des deux villes."""
+    from app import metro, mobilier, salete
+    monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     avec = carte.generer()
     monkeypatch.setattr(autobus, "tracer", lambda chantier, ville: {"lignes": [], "arrets": [], "horaire": {}})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
@@ -216,4 +220,4 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]
     ajoutes = {d["type"] for d in avec["decor"][len(sans["decor"]):]}
-    assert ajoutes <= {"arbre", *autobus.ABRIS.values(), *autobus.BANCS.values(), *metro.EDICULES.values()}, ajoutes
+    assert ajoutes <= {"arbre", "bac_fleurs", *autobus.ABRIS.values(), *autobus.BANCS.values(), *metro.EDICULES.values()}, ajoutes

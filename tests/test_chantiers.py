@@ -256,11 +256,17 @@ def test_deux_chantiers_ne_se_voisinent_pas():
 
 def test_la_ville_avec_ou_sans_chantiers_est_la_meme(monkeypatch):
     """⚠️ Les chantiers tirent dans LEUR dé, après toute la ville : sans eux, pas
-    un arbre, pas un paquet, pas une enseigne n'a bougé."""
+    un arbre, pas un paquet, pas une enseigne n'a bougé.
+
+    ⚠️ La saleté se déplace APRÈS les chantiers (`salete.deplacer`) et ne jette
+    rien dans leur enceinte : on la retire des deux villes."""
+    from app import salete
+    monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
+    avec = carte.generer()
     monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
     sans = carte.generer()
     assert sans["chantiers"] == []
-    for cle, valeur in VILLE.items():
+    for cle, valeur in avec.items():
         if cle != "chantiers":
             assert sans[cle] == valeur, f"« {cle} » change quand on ajoute les chantiers"
 

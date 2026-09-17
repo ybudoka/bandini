@@ -104,7 +104,12 @@ def test_le_quai_a_son_tunnel_et_la_rame_sa_porte(ville):
 def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
     """⚠️ Son propre ordre : sans le métro (et sans le mobilier, qui vient après
     lui), la ville est la même tuile pour tuile, et les édicules ne font que
-    s'ajouter au bout du décor."""
+    s'ajouter au bout du décor.
+
+    ⚠️ La saleté se déplace APRÈS le métro (`salete.deplacer`) et contourne ses
+    édicules, comme le mobilier : on la retire des deux villes."""
+    from app import salete
+    monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
     avec = carte.generer()
     monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})

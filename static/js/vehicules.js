@@ -1724,6 +1724,12 @@ const Vehicules = (function () {
     // deux cibles). Il n'est jamais immobile, le compteur ci-dessus ne le
     // voit pas ; la capture de Martin, elle, le montrait bien. On compare a
     // l'endroit ou il etait il y a dix secondes. Seul un vrai feu rouge excuse.
+    // ⚠️ Et il excuse TOUTE la fenetre, pas seulement l'image ou l'on compare :
+    // un taxi reste 600 images au feu derriere une moto qui attend la boite, il
+    // repart, et la comparaison tombait juste apres — « dix secondes au meme
+    // endroit », et on le teleportait au milieu de la voie. Une attente legitime
+    // remet donc l'ancrage a zero (graine 5 de `test_trace_js`, 16 sept. 2026).
+    if (attenteLegitime(v)) v.ancrage = null;
     if (!v.ancrage || B.t - v.ancrage.t >= 600) {
       if (v.ancrage && !attenteLegitime(v) && dist2(v.x, v.y, v.ancrage.x, v.ancrage.y) < 24 * 24) v.surPlace = (v.surPlace || 0) + 1;
       else v.surPlace = 0;

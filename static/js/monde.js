@@ -60,6 +60,34 @@ const Monde = (function () {
   let nids = new Set();
   function nidDePoule(tx, ty) { return nids.has(tx + ',' + ty); }
 
+  //: Le STANDING d'une tuile (des quartiers qu'on reconnait) : 'cossu',
+  //: 'ordinaire', 'pauvre', ou null sur l'eau et dans une piece. ⚠️ Python l'a
+  //: DECIDE (`carte.STANDING`, une lettre par bloc) ; ici on le lit, avec la meme
+  //: coupe au milieu de chaque rue (`_Chantier.standing_en`), et un juge tient
+  //: que les deux disent la meme chose tuile pour tuile.
+  //: ⚠️ Il vit sur la CARTE, pas dans le module : une piece recharge le module
+  //: (`entrer` passe par `charger`) et `restaurer` ne rend que la carte.
+  const STANDINGS = { '+': 'cossu', '=': 'ordinaire', '-': 'pauvre' };
+  function coupes(blocs, rues) {
+    const sortie = [0];
+    let x = 0;
+    for (let i = 0; i < blocs.length; i++) {
+      if (i > 0) sortie.push(x + Math.floor(rues[i] / 2));
+      x += rues[i] + blocs[i];
+    }
+    return sortie;
+  }
+  function rang(bornes, v) {
+    let i = 0;
+    while (i + 1 < bornes.length && bornes[i + 1] <= v) i++;
+    return i;
+  }
+  function standingA(tx, ty) {
+    const s = carte && carte.standing;
+    if (!s || tx < 0 || ty < 0 || tx >= carte.w || ty >= carte.h) return null;
+    return STANDINGS[s.lettres[rang(s.y, ty)][rang(s.x, tx)]] || null;
+  }
+
   //: Le coeur de la ville — la zone vers laquelle le trafic du matin converge
   //: (`trafic.pointe.vers`). Cherche une fois : les zones ne bougent pas.
   let coeur = null;
@@ -133,6 +161,10 @@ const Monde = (function () {
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
+      standing: def.grille && def.grille.standing ? {
+        lettres: def.grille.standing,
+        x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),
+      } : null,
       intersections: def.intersections || [],
       // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
       // LAMPADAIRE (haut, large, blanc-jaune), la VITRINE (basse et chaude,
@@ -1501,7 +1533,7 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, standingA, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,

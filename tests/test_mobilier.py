@@ -46,7 +46,8 @@ def test_la_rue_se_plante_et_se_meuble(villes):
     _avec, _sans, ajoutes = villes
     arbres = [d for d in ajoutes if d["type"] == "arbre"]
     bancs = [d for d in ajoutes if d["type"] in mobilier.BANCS_PAR_COTE.values()]
-    assert {d["type"] for d in ajoutes} <= {"arbre", *mobilier.BANCS_PAR_COTE.values()}
+    # ⚠️ Le bac à fleurs est du mobilier de rue cossue (`test_quartiers`).
+    assert {d["type"] for d in ajoutes} <= {"arbre", "bac_fleurs", *mobilier.BANCS_PAR_COTE.values()}
     assert 120 <= len(arbres) <= 400, f"{len(arbres)} arbres de rue"
     assert 25 <= len(bancs) <= 200, f"{len(bancs)} bancs de rue"
 
@@ -58,7 +59,7 @@ def test_chaque_meuble_borde_un_trottoir_et_le_banc_regarde_la_rue(villes):
         assert avec["sol"][y][x] in ("_", ","), f"{d['type']} en {(x, y)} sur « {avec['sol'][y][x]} »"
         cote = cote_du_trottoir(avec, x, y)
         assert cote is not None, f"{d['type']} en {(x, y)} ne borde pas UN trottoir"
-        if d["type"] != "arbre":
+        if d["type"].startswith("banc"):
             assert d["type"] == REGARDE[cote], f"{d['type']} en {(x, y)} tourne le dos à la rue"
 
 

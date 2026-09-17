@@ -39,6 +39,24 @@ RYTHMES: dict[str, dict] = {
     "pointe": {"arbres": ((8, 10), 0.70), "bancs": ((20, 26), 0.35)},
 }
 
+#: ⚠️ **LE STANDING PASSE PAR-DESSUS LE QUARTIER** pour les arbres (demande de
+#: Martin : « des cartiers plus riche et propre [...], des cartiers plus pauvre et
+#: sale »). Une rue cossue est plantée serré et partout ; une rue pauvre ne l'est
+#: pas du tout — c'est ce qu'on voit d'abord en changeant de rue, avant la
+#: moindre enseigne. `None` : le rythme du district, tel quel.
+ARBRES_PAR_STANDING: dict[str, tuple | None] = {
+    "cossu": ((6, 8), 0.95),
+    "ordinaire": None,
+    "pauvre": ((14, 18), 0.0),
+}
+
+#: Les bacs à fleurs, en cossu seulement : la part des intervalles d'un bord
+#: (d'un bout à l'arbre, d'un arbre au suivant) qui en reçoivent un, au milieu.
+#: ⚠️ Pas seulement ENTRE deux arbres : un bord cossu fait huit tuiles en
+#: moyenne (813 tuiles sur 94 bords), il porte donc un arbre, et « entre deux
+#: arbres » n'a posé que trois bacs dans toute la ville.
+PART_BAC_FLEURS = 0.5
+
 #: Un bord plus court que ça ne se plante pas : deux tuiles entre deux coins de
 #: rue, ce n'est pas une rue, c'est un bout de trottoir.
 BORD_MIN = 5
@@ -124,7 +142,8 @@ def _bords(chantier, ville: dict) -> list[dict]:
             cx, cy = cx + pas[0], cy + pas[1]
         if len(file) >= BORD_MIN:
             bords.append({"tuiles": file, "cote": cote,
-                          "district": chantier.district_en(*file[len(file) // 2])})
+                          "district": chantier.district_en(*file[len(file) // 2]),
+                          "standing": chantier.standing_en(*file[len(file) // 2])})
     return bords
 
 
@@ -168,12 +187,17 @@ def _place_libre(chantier, x: int, y: int, solides: set[tuple[int, int]]) -> boo
 
 
 def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
-    """Plante les arbres et pose les bancs du bord des rues. Rend les comptes."""
+    """Plante les arbres, pose les bancs et les bacs à fleurs du bord des rues.
+    Rend les comptes."""
     from . import carte
 
     des = carte.Des(graine ^ 0xA4B4E5)
+    # ⚠️ Les bacs à fleurs tirent dans LEUR dé : tirés dans celui des arbres, ils
+    # décalaient chaque bord qui suit, et les arbres des rues ordinaires
+    # bougeaient d'un bout à l'autre de la ville sans que leur règle ait changé.
+    des_bacs = carte.Des(graine ^ 0xBAC5)
     solides = {(d["x"], d["y"]) for d in chantier.decor if d["type"] in carte.DECOR_SOLIDE}
-    poses = {"arbres": 0, "bancs": 0}
+    poses = {"arbres": 0, "bancs": 0, "bacs": 0}
     for bord in _bords(chantier, ville):
         rythme = RYTHMES.get(bord["district"])
         if rythme is None:
@@ -181,7 +205,7 @@ def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
         tuiles = bord["tuiles"]
         # Le tirage se fait pour CHAQUE bord, qu'on le plante ou non : un bord de
         # plus ou de moins ne décale pas le dé de tous ceux qui suivent.
-        (pas_min, pas_max), part = rythme["arbres"]
+        (pas_min, pas_max), part = ARBRES_PAR_STANDING.get(bord["standing"]) or rythme["arbres"]
         plante = des.chance(part)
         pas = des.entier(pas_min, pas_max)
         depart = des.entier(1, max(1, pas // 2))
@@ -200,24 +224,36 @@ def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
                         break
                 k += pas
         fiche_bancs = rythme["bancs"]
-        if fiche_bancs is None:
+        if fiche_bancs is not None:
+            (banc_min, banc_max), part_bancs = fiche_bancs
+            assis = des.chance(part_bancs)
+            pas_banc = des.entier(banc_min, banc_max)
+            # ⚠️ Entre deux arbres, jamais dessous : un banc se met à l'ombre, pas
+            # dans le tronc. On part du milieu du premier intervalle.
+            k = (arbres[0] + (arbres[1] if len(arbres) > 1 else arbres[0] + pas)) // 2 if arbres else pas_banc // 2
+            while assis and k < len(tuiles) - 1:
+                for essai in (k, k + 1, k - 1, k + 2, k - 2):
+                    if not (0 < essai < len(tuiles) - 1):
+                        continue
+                    x, y = tuiles[essai]
+                    if _place_libre(chantier, x, y, solides) and chantier.poser_decor(BANCS_PAR_COTE[bord["cote"]], x, y):
+                        solides.add((x, y))
+                        poses["bancs"] += 1
+                        break
+                k += pas_banc
+        if bord["standing"] != "cossu":
             continue
-        (banc_min, banc_max), part_bancs = fiche_bancs
-        assis = des.chance(part_bancs)
-        pas_banc = des.entier(banc_min, banc_max)
-        if not assis:
-            continue
-        # ⚠️ Entre deux arbres, jamais dessous : un banc se met à l'ombre, pas
-        # dans le tronc. On part du milieu du premier intervalle.
-        k = (arbres[0] + (arbres[1] if len(arbres) > 1 else arbres[0] + pas)) // 2 if arbres else pas_banc // 2
-        while k < len(tuiles) - 1:
-            for essai in (k, k + 1, k - 1, k + 2, k - 2):
-                if not (0 < essai < len(tuiles) - 1):
-                    continue
-                x, y = tuiles[essai]
-                if _place_libre(chantier, x, y, solides) and chantier.poser_decor(BANCS_PAR_COTE[bord["cote"]], x, y):
-                    solides.add((x, y))
-                    poses["bancs"] += 1
-                    break
-            k += pas_banc
+        # Les bacs à fleurs : au milieu d'un intervalle sur deux, entre les
+        # arbres et les bouts du bord. Là où un banc a déjà pris l'ombre,
+        # `_place_libre` refuse.
+        reperes = [0, *arbres, len(tuiles) - 1]
+        for a, b in zip(reperes, reperes[1:]):
+            if not des_bacs.chance(PART_BAC_FLEURS):
+                continue
+            if b - a < 4:
+                continue
+            x, y = tuiles[(a + b) // 2]
+            if _place_libre(chantier, x, y, solides) and chantier.poser_decor("bac_fleurs", x, y):
+                solides.add((x, y))
+                poses["bacs"] += 1
     return poses

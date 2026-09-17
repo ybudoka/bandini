@@ -51,6 +51,7 @@ Forme servie (`exporter()`) :
 
 from __future__ import annotations
 
+import bisect
 import math
 
 from . import devantures as devantures_mod
@@ -547,6 +548,11 @@ GENRES_COMMERCANTS = frozenset({"commerces", "hangars", "industriel"})
 #: un char rare qu'on croise partout n'est plus rare, et c'est tout ce qui
 #: fait qu'on le VEUT. La Shop n'en a aucun : on ne laisse pas une
 #: decapotable dans une cour a ferraille.
+#: ⚠️ `standing` : QUI A LES MOYENS, bloc par bloc, a cote du `plan` et de la
+#: meme forme (`STANDINGS`). Le plan dit ce qu'on fait la (l'usage), le standing
+#: dit qui en a les moyens — une rue commercante peut etre chic ou miteuse. Il
+#: est ECRIT, pas tire : c'est une decision de ville, elle ne consomme aucun de,
+#: et elle ne suit pas le district (le Faubourg a sa rue chic et son coin pauvre).
 DISTRICTS: tuple[dict, ...] = (
     # Le Faubourg — le quartier de la v1, intact. Trame serree, blocs courts,
     # la cour des Cravates au centre. C'est ici qu'on debarque de l'autobus.
@@ -576,7 +582,16 @@ DISTRICTS: tuple[dict, ...] = (
               "ccGKohhh",
               "PcBcg<hh",
               "cCcc^^hH",
-              "~~jjcccc")},
+              "~~jjcccc"),
+     # ⚠️ Sa rue chic va du Terminus a la place, par le parc ; son coin pauvre
+     # tient la cour des Cravates, le garage de l'oncle, la planque et le bar
+     # — c'est la que Rocco s'est endette, pas sur la rue des boutiques.
+     "standing": ("=+++====",
+                  "+=+++=+=",
+                  "==--+===",
+                  "==----==",
+                  "=-----==",
+                  "~~--====")},
     # Les Erables — la banlieue. Colonnes larges, maisons detachees sur grandes
     # parcelles, deux parcs, un depanneur, et les Chevreuils qui tournent en
     # char le soir faute de mieux.
@@ -589,7 +604,14 @@ DISTRICTS: tuple[dict, ...] = (
               "Dmmmm",
               "mm<mm",
               "ccgmm",
-              "mmm<m")},
+              "mmm<m"),
+     # Cossus, sauf la rangee commercante contre la cour des Chevreuils.
+     "standing": ("+++++",
+                  "+++++",
+                  "+++++",
+                  "+++++",
+                  "===++",
+                  "+++++")},
     # La Shop — l'industriel. Des blocs de 2 x 2 partout : presque pas de rues,
     # des entrepots gros comme un pate de maisons, des stationnements vides.
     # Deserte la nuit, et c'est exactement ce qui la rend inquietante.
@@ -602,7 +624,15 @@ DISTRICTS: tuple[dict, ...] = (
               "i<g<E<i",
               "^<^<^<^",
               "i<Y<i<c",
-              "^<^<^<^")},
+              "^<^<^<^"),
+     # Pauvre presque partout ; le parc, la fourriere municipale et le seul
+     # bloc de commerces tiennent l'ordinaire.
+     "standing": ("------=",
+                  "------=",
+                  "-------",
+                  "-------",
+                  "--==--=",
+                  "--==--=")},
     # Les Quais — le port. Blocs LONGS d'est en ouest (des hangars de trois
     # blocs de large), une rangee de quais, l'eau au sud. Ca grouille au matin,
     # ca se vide a la noirceur — sauf la Brume.
@@ -622,7 +652,14 @@ DISTRICTS: tuple[dict, ...] = (
               "L<g<w<c",
               "w<<N<<c",
               "j<<j<<j",
-              "^<<^<<^")},
+              "^<<^<<^"),
+     # Pauvres, sauf la rangee commercante du nord.
+     "standing": ("=======",
+                  "-------",
+                  "-------",
+                  "-------",
+                  "-------",
+                  "-------")},
     # La baie — pas un quartier : l'eau. Un seul bloc fusionne de 7 x 6, ce qui
     # efface toutes les rues qui la traverseraient. Le traversier y passera (v2,
     # M12) ; pour l'instant on la longe.
@@ -635,7 +672,13 @@ DISTRICTS: tuple[dict, ...] = (
               "^<<<<<<",
               "^<<<<<<",
               "^<<<<<<",
-              "^<<<<<<")},
+              "^<<<<<<"),
+     "standing": ("~~~~~~~",
+                  "~~~~~~~",
+                  "~~~~~~~",
+                  "~~~~~~~",
+                  "~~~~~~~",
+                  "~~~~~~~")},
     # La Pointe — le parc au bout de la ville. Un chenal la coupe du reste :
     # UN pont, et rien d'autre. Des bois, des sentiers, un phare, quatre
     # maisons au bout, et les Skateux qui tiennent le stationnement.
@@ -651,7 +694,13 @@ DISTRICTS: tuple[dict, ...] = (
               "^<<<^c",
               "n<<<^V",
               "^<<<^g",
-              "~<<~<<")},
+              "~<<~<<"),
+     "standing": ("~~~~~~",
+                  "======",
+                  "======",
+                  "======",
+                  "======",
+                  "~~~~~~")},
 )
 
 #: ⚠️ Aucune colonne n'a la largeur de sa voisine, aucune rangee la hauteur de
@@ -1169,6 +1218,10 @@ DECOR_SOLIDE = frozenset({
     "pop_corn", "poutine", "queues_de_castor",
     # Le pied d'acier de la montagne russe : la voie est en l'air, lui non.
     "pied_montagne_russe",
+    # Des quartiers qu'on reconnait : la poubelle qui deborde (pauvre), le bac a
+    # fleurs (cossu), le caddie renverse au pied des plex. Le matelas, couche a
+    # plat, ne l'est pas : on marche dessus, comme sur le pneu.
+    "bac_fleurs", "caddie", "poubelle_pleine",
 })
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
@@ -1509,11 +1562,55 @@ def regions_du_plan(plan: tuple[str, ...]) -> dict[tuple[int, int], tuple[int, i
     return maitre
 
 
+#: Les trois standings, par leur lettre dans `DISTRICTS[].standing`. ⚠️ Le `~`
+#: n'en est pas un : c'est la lettre OBLIGEE d'un bloc d'eau, ou personne
+#: n'habite. Tout autre bloc declare le sien — pas de defaut silencieux, sinon
+#: un quartier oublie serait ordinaire sans que personne l'ait decide.
+STANDINGS: dict[str, str] = {"+": "cossu", "=": "ordinaire", "-": "pauvre"}
+SANS_STANDING = "~"
+
+
+def _assembler_le_standing(districts: tuple[dict, ...], plan: tuple[str, ...]) -> tuple[str, ...]:
+    """La grille de standing de la ville, bloc par bloc, alignee sur `plan`.
+
+    Leve ValueError si une grille n'a pas la forme de son plan, si un bloc bati
+    ne declare rien (ou l'eau quelque chose), ou si un bloc avale ne dit pas la
+    meme chose que son maitre : un superbloc est UN lot, il n'a qu'un standing.
+    """
+    grille = [[""] * len(plan[0]) for _ in plan]
+    for district in districts:
+        standing = district.get("standing")
+        if standing is None or len(standing) != len(district["plan"]) \
+                or any(len(a) != len(b) for a, b in zip(standing, district["plan"])):
+            raise ValueError(f"{district['slug']} : le standing n'a pas la forme du plan")
+        for j, ligne in enumerate(standing):
+            for i, lettre in enumerate(ligne):
+                grille[district["by"] + j][district["bx"] + i] = lettre
+    maitre = regions_du_plan(plan)
+    for (bx, by), (mx, my) in maitre.items():
+        lettre, du_maitre = grille[by][bx], grille[my][mx]
+        if plan[my][mx] == "~":
+            if lettre != SANS_STANDING:
+                raise ValueError(f"le bloc d'eau {(bx, by)} declare un standing ({lettre!r})")
+        elif lettre not in STANDINGS:
+            raise ValueError(f"le bloc {(bx, by)} ne declare pas son standing ({lettre!r})")
+        if lettre != du_maitre:
+            raise ValueError(f"le bloc {(bx, by)} dit {lettre!r}, son maitre {(mx, my)} dit {du_maitre!r}")
+    return tuple("".join(ligne) for ligne in grille)
+
+
+STANDING: tuple[str, ...] = _assembler_le_standing(DISTRICTS, PLAN)
+
+
 class _Chantier:
     """L'echafaudage : la trame, puis les rues, puis les ilots, puis le decor."""
 
     def __init__(self, plan: tuple[str, ...], graine: int) -> None:
         self.plan = plan
+        # ⚠️ Un plan d'essai n'a pas de standing ecrit : il est ordinaire partout
+        # ou il y a du sol. La ville, elle, lit la grille de `DISTRICTS`.
+        self.standing = STANDING if plan == PLAN else tuple(
+            "".join(SANS_STANDING if g == "~" else "=" for g in ligne) for ligne in plan)
         self.nc = len(plan[0])
         self.nr = len(plan)
         if len(COLONNES) != self.nc or len(RANGEES) != self.nr:
@@ -1541,6 +1638,10 @@ class _Chantier:
             y += RANGEES[j]
         self.yr.append(y)
         self.hauteur = y + RUES_H[self.nr]
+        #: Ou commence chaque colonne (et chaque rangee) de blocs pour
+        #: `standing_en` : au MILIEU de la rue qui la precede.
+        self._coupes_x = [0] + [self.xr[i] + RUES_V[i] // 2 for i in range(1, self.nc)]
+        self._coupes_y = [0] + [self.yr[j] + RUES_H[j] // 2 for j in range(1, self.nr)]
 
         self.sol = [[","] * self.largeur for _ in range(self.hauteur)]
         self.voie = [["."] * self.largeur for _ in range(self.hauteur)]
@@ -1604,6 +1705,11 @@ class _Chantier:
         self.visites = 0
         self.graffitis: list[dict] = []
         self.murs_tagges: set[tuple[int, int]] = set()
+        #: Ou le terrain vague a JETE quelque chose (`DECHETS`). ⚠️ Le type ne
+        #: suffit pas a le dire : une caisse de quai est de la cargaison, un pneu
+        #: de greve une defense. C'est ce que `salete.deplacer` a le droit de
+        #: deplacer, et rien d'autre.
+        self.dechets_semes: set[tuple[int, int]] = set()
         #: ⚠️ Les devantures tirent dans LEUR PROPRE de. Avec le de commun, choisir
         #: un nom d'enseigne decalait toute la suite du hasard et deplacait des
         #: arbres a l'autre bout de la ville : une couche peinte ne doit pas
@@ -2055,6 +2161,16 @@ class _Chantier:
     ENSEIGNE_ETIREE = 5
     ENSEIGNE_MIN = 2
 
+    def standing_en(self, x: int, y: int) -> str | None:
+        """`cossu`, `ordinaire` ou `pauvre` ; `None` sur l'eau. ⚠️ Une rue se
+        coupe en deux, comme entre deux districts (`rect_district`) : chaque
+        trottoir est du standing du bloc qu'il borde."""
+        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+            return None
+        bx = bisect.bisect_right(self._coupes_x, x) - 1
+        by = bisect.bisect_right(self._coupes_y, y) - 1
+        return STANDINGS.get(self.standing[by][bx])
+
     def district_en(self, x: int, y: int) -> str:
         """Le quartier d'une tuile — il decide des noms sur les enseignes."""
         for district in DISTRICTS:
@@ -2320,29 +2436,41 @@ class _Chantier:
                     mots = devantures_mod.TAGS_GANG.get(gang, devantures_mod.TAGS_LIBRES)
                 else:
                     mots = devantures_mod.TAGS_LIBRES
-                # ⚠️ Un tag long deborde sur les murs voisins : on compte
-                # d'abord la place REELLE (jusqu'a trois tuiles de mur d'un
-                # seul tenant), puis on ne tire que parmi les mots qui y
-                # tiennent. Sans ca, « LA VILLE DORT » finissait ecrit en
-                # travers d'un trottoir ou d'une vitrine.
-                place = 1
-                while place < 3 and x + place < self.largeur \
-                        and self.sol[y][x + place] in ("F", "d") \
-                        and (x + place, y) not in self.murs_tagges:
-                    place += 1
-                possibles = [m for m in mots
-                             if devantures_mod.tient_en(m, place, TUILE_PX, marge=0)]
-                if not possibles:
-                    continue
-                texte = possibles[self.des_devanture.entier(0, len(possibles) - 1)]
-                self.graffitis.append({
-                    "x": x, "y": y,
-                    "motif": devantures_mod.MOTIFS[self.des_devanture.entier(0, len(devantures_mod.MOTIFS) - 1)],
-                    "couleur": self.des_devanture.entier(0, len(devantures_mod.COULEURS_TAG) - 1),
-                    "texte": texte,
-                    "penche": self.des_devanture.entier(0, 1),
-                })
-                self.murs_tagges.add((x, y))
+                self.taguer(x, y, mots, self.des_devanture)
+
+    def mur_taggable(self, x: int, y: int) -> bool:
+        """Un mur nu (`F`) ou condamne (`d`), pas encore tague, et qui se VOIT :
+        il faut pouvoir se planter devant."""
+        return (0 <= y < self.hauteur - 1 and 0 <= x < self.largeur
+                and self.sol[y][x] in ("F", "d") and (x, y) not in self.murs_tagges
+                and self.marchable_en(x, y + 1))
+
+    def taguer(self, x: int, y: int, mots: tuple[str, ...], des: Des) -> bool:
+        """Un tag sur ce mur, tire dans `mots` avec `des`. Faux s'il n'y tient pas."""
+        # ⚠️ Un tag long deborde sur les murs voisins : on compte
+        # d'abord la place REELLE (jusqu'a trois tuiles de mur d'un
+        # seul tenant), puis on ne tire que parmi les mots qui y
+        # tiennent. Sans ca, « LA VILLE DORT » finissait ecrit en
+        # travers d'un trottoir ou d'une vitrine.
+        place = 1
+        while place < 3 and x + place < self.largeur \
+                and self.sol[y][x + place] in ("F", "d") \
+                and (x + place, y) not in self.murs_tagges:
+            place += 1
+        possibles = [m for m in mots
+                     if devantures_mod.tient_en(m, place, TUILE_PX, marge=0)]
+        if not possibles:
+            return False
+        texte = possibles[des.entier(0, len(possibles) - 1)]
+        self.graffitis.append({
+            "x": x, "y": y,
+            "motif": devantures_mod.MOTIFS[des.entier(0, len(devantures_mod.MOTIFS) - 1)],
+            "couleur": des.entier(0, len(devantures_mod.COULEURS_TAG) - 1),
+            "texte": texte,
+            "penche": des.entier(0, 1),
+        })
+        self.murs_tagges.add((x, y))
+        return True
 
     #: La largeur d'une VITRINE, en tuiles. ⚠️ Une facade de soixante tuiles
     #: n'est pas un commerce, c'est une rangee de commerces — et une seule porte
@@ -3631,8 +3759,9 @@ class _Chantier:
         # plus le meme nombre de tirages, et le lot d'a cote changerait avec eux.
         for _ in range(max(2, largeur * hauteur // PART_DECHET)):
             quoi = self.des_dechet.choix(DECHETS)
-            self.poser_decor(quoi, x + self.des_dechet.entier(0, largeur - 1),
-                             y + self.des_dechet.entier(0, hauteur - 1))
+            dx, dy = x + self.des_dechet.entier(0, largeur - 1), y + self.des_dechet.entier(0, hauteur - 1)
+            if self.poser_decor(quoi, dx, dy):
+                self.dechets_semes.add((dx, dy))
         for _ in range(max(1, largeur * hauteur // PART_MAUVAISE_HERBE)):
             self.poser_decor("buisson", x + self.des_dechet.entier(0, largeur - 1),
                              y + self.des_dechet.entier(0, hauteur - 1))
@@ -5268,14 +5397,14 @@ class _Chantier:
             candidats.remove(c)
         return sorted(gardees, key=lambda c: (c["y"], c["x"]))
 
-    def nids_de_poule(self) -> list[dict]:
-        """Les tuiles defoncees : de la chaussee, hors croisement, espacees."""
-        fiche = NIDS_DE_POULE
+    def chaussee_a_nids(self) -> list[tuple[int, int]]:
+        """Ou un nid-de-poule peut se creuser : de la chaussee, hors croisement
+        et hors ligne d'arret."""
         boites = [(i["x"], i["y"], i["l"], i["h"]) for i in self.intersections]
         # ⚠️ `self.arrets` est indexe par "x,y" : le lire comme un ensemble de
         # couples ne trouvait jamais rien, et on creusait des nids sur les lignes d'arret.
         arrets = {tuple(int(n) for n in cle.split(",")) for cle in self.arrets}
-        candidats = [
+        return [
             (x, y)
             for y in range(1, self.hauteur - 1)
             for x in range(1, self.largeur - 1)
@@ -5283,6 +5412,11 @@ class _Chantier:
             and (x, y) not in arrets
             and not any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites)
         ]
+
+    def nids_de_poule(self) -> list[dict]:
+        """Les tuiles defoncees : de la chaussee, hors croisement, espacees."""
+        fiche = NIDS_DE_POULE
+        candidats = self.chaussee_a_nids()
         poses: list[tuple[int, int]] = []
         for _essai in range(4000):
             if not candidats or len(poses) >= fiche["par_ville"][1]:
@@ -5996,7 +6130,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "hauteur": chantier.hauteur,
         "tuile_px": TUILE_PX,
         "grille": {"colonnes": list(COLONNES), "rangees": list(RANGEES),
-                   "rues_v": list(RUES_V), "rues_h": list(RUES_H), "trottoir": TROTTOIR},
+                   "rues_v": list(RUES_V), "rues_h": list(RUES_H), "trottoir": TROTTOIR,
+                   # ⚠️ Douze lignes de glyphes, pas un rectangle par bloc : le
+                   # paquet voyage a mille octets de son plafond (`test_definitions`).
+                   "standing": list(chantier.standing)},
         "sol": ["".join(ligne) for ligne in chantier.sol],
         "voie": ["".join(ligne) for ligne in chantier.voie],
         "arrets": chantier.arrets,
@@ -6080,6 +6217,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # leur place sur l'abord, et les arbres de rue leur laissent de l'air.
     from . import metro as metro_mod
     ville["metro"] = metro_mod.creuser(chantier, ville)
+    # ⚠️ LA SALETE SE DEPLACE, APRES LES LIGNES ET LE METRO, AVANT LE MOBILIER :
+    # ce qu'elle enleve et ce qu'elle pose ne deplace ni un abribus, ni un edicule,
+    # ni un chantier, et les arbres de rue plantent autour de ce qu'elle a laisse.
+    from . import salete as salete_mod
+    salete_mod.deplacer(chantier, ville, graine)
     # ⚠️ LE MOBILIER DE RUE EN TOUT DERNIER, dans son propre de : un arbre de
     # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
     from . import mobilier as mobilier_mod

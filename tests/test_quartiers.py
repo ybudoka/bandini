@@ -1,0 +1,351 @@
+"""Des quartiers qu'on reconnaît — 1re vague : le standing se déclare, et la
+saleté se déplace.
+
+Demande de Martin (16 sept. 2026) : « je veux des cartiers plus reconnaissable,
+plus riche et propre avec des commerce plus riche, des cartiers plus pauvre et
+sale ».
+
+⚠️ **Mesuré d'abord** : le zonage existait (les lettres du `plan`), le standing
+n'existait nulle part, et la saleté ne suivait que le genre des îlots — 30 objets
+en cossu, 40 en ordinaire, 159 en pauvre une fois la grille écrite. Et Martin
+avait renvoyé « trop de saleté partout » le jour même : **le total ne monte pas**.
+
+Les juges comparent la ville à elle-même **sans** `salete.deplacer` : c'est la
+seule façon de dire « rien d'autre n'a bougé » sans recopier la ville d'hier.
+"""
+
+from __future__ import annotations
+
+import json
+
+import pytest
+
+from app import carte, mobilier, salete
+
+#: La saleté qu'on compte : ce qu'on jette par terre, sur la friche d'un terrain
+#: vague (`;`) ou au pied d'un mur (`_`). ⚠️ En toutes lettres, pas relu dans
+#: `carte.DECHETS` ni `salete.AU_PIED_DES_MURS` : un juge qui relit la table
+#: qu'il juge ne rougit pas.
+DECHETS = {"debris", "ordures", "pneu", "baril", "caisse", "matelas", "caddie"}
+SOLS_SALES = {";", "_"}
+
+#: Le rapport de densité exigé entre un quartier pauvre et un ordinaire.
+CINQ_FOIS = 5
+
+
+def _sans(*quoi):
+    """Génère la ville avec ces fonctions remplacées par rien."""
+    originaux = [(module, nom, getattr(module, nom)) for module, nom in quoi]
+    for module, nom, _ in originaux:
+        setattr(module, nom, lambda *a, **k: {})
+    try:
+        return carte.generer()
+    finally:
+        for module, nom, fonction in originaux:
+            setattr(module, nom, fonction)
+
+
+@pytest.fixture(scope="module")
+def villes():
+    """`ville` : la ville livrée. `avant` et `apres` : sans le mobilier de rue,
+    sans puis avec le déplacement de la saleté."""
+    ville = carte.generer()
+    avant = _sans((salete, "deplacer"), (mobilier, "semer"))
+    apres = _sans((mobilier, "semer"))
+    return ville, avant, apres
+
+
+@pytest.fixture(scope="module")
+def tout_part():
+    """⚠️ LA RÈGLE DE POSE SOUS CHARGE. Sur la ville livrée, huit déchets
+    seulement se reposent : aucun ne tombe à côté d'un autre décor, et un juge
+    qui ne lit qu'eux resterait vert sans `_place_libre` (mutation vue le
+    16 sept. 2026). Ici TOUTE la saleté part, pauvre comprise, et se repose :
+    une quarantaine de poses pour mettre la règle à l'épreuve. `(avant, apres)`."""
+    garde = dict(salete.GARDE)
+    salete.GARDE.update({k: 0.0 for k in salete.GARDE})
+    try:
+        apres = _sans((mobilier, "semer"))
+    finally:
+        salete.GARDE.update(garde)
+    return _sans((salete, "deplacer"), (mobilier, "semer")), apres
+
+
+@pytest.fixture(scope="module")
+def chantier():
+    return carte._Chantier(carte.PLAN, carte.GRAINE)
+
+
+def dechets(ville):
+    return [d for d in ville["decor"]
+            if d["type"] in DECHETS and ville["sol"][d["y"]][d["x"]] in SOLS_SALES]
+
+
+def saletes(ville):
+    """Chaque saleté de la ville : (sorte, x, y)."""
+    return ([("dechet", d["x"], d["y"]) for d in dechets(ville)]
+            + [("tag", g["x"], g["y"]) for g in ville["graffitis"]]
+            + [("nid", n["x"], n["y"]) for n in ville["nids_de_poule"]])
+
+
+# --- Le standing se déclare ---------------------------------------------------
+
+
+def test_chaque_bloc_declare_son_standing():
+    """Pas de défaut silencieux : un bloc bâtissable dit `+`, `=` ou `-`, un bloc
+    d'eau dit `~`, et un bloc avalé dit ce que dit son maître."""
+    maitre = carte.regions_du_plan(carte.PLAN)
+    assert len(carte.STANDING) == len(carte.PLAN)
+    for by, ligne in enumerate(carte.PLAN):
+        assert len(carte.STANDING[by]) == len(ligne)
+        for bx, _glyphe in enumerate(ligne):
+            mx, my = maitre[(bx, by)]
+            lettre = carte.STANDING[by][bx]
+            if carte.PLAN[my][mx] == "~":
+                assert lettre == "~", f"le bloc d'eau {(bx, by)} déclare {lettre!r}"
+            else:
+                assert lettre in "+=-", f"le bloc {(bx, by)} ({carte.PLAN[my][mx]}) déclare {lettre!r}"
+            assert lettre == carte.STANDING[my][mx], f"{(bx, by)} ne dit pas ce que dit son maître {(mx, my)}"
+
+
+@pytest.mark.parametrize("slug, rangee, colonne, lettre, message", [
+    ("erables", 0, 0, "?", "ne declare pas"),
+    ("baie", 2, 3, "=", "bloc d'eau"),
+    ("erables", 1, 1, "-", "son maitre"),         # un `<` qui ne dit pas ce que dit son maître
+])
+def test_une_grille_fautive_ne_se_charge_pas(slug, rangee, colonne, lettre, message):
+    districts = []
+    for d in carte.DISTRICTS:
+        if d["slug"] == slug:
+            lignes = list(d["standing"])
+            lignes[rangee] = lignes[rangee][:colonne] + lettre + lignes[rangee][colonne + 1:]
+            d = {**d, "standing": tuple(lignes)}
+        districts.append(d)
+    with pytest.raises(ValueError, match=message):
+        carte._assembler_le_standing(tuple(districts), carte.PLAN)
+
+
+def test_une_grille_sans_la_forme_du_plan_ne_se_charge_pas():
+    districts = tuple({**d, "standing": d["standing"][:-1]} if d["slug"] == "shop" else d
+                      for d in carte.DISTRICTS)
+    with pytest.raises(ValueError, match="forme du plan"):
+        carte._assembler_le_standing(districts, carte.PLAN)
+
+
+def test_le_standing_ne_suit_pas_le_district():
+    """Le Faubourg a sa rue chic et son coin pauvre ; les Quais et La Shop ne
+    sont pas pauvres d'un bout à l'autre."""
+    for district in carte.DISTRICTS:
+        if district["slug"] in ("faubourg", "quais", "shop"):
+            lettres = set("".join(district["standing"])) - {"~"}
+            assert len(lettres) >= 2, f"{district['nom']} n'a qu'un standing : {lettres}"
+
+
+def test_une_rue_se_coupe_en_deux(chantier):
+    """Chaque moitié de rue est du standing du bloc qu'elle borde — la coupe de
+    `rect_district`, écrite ici en toutes lettres."""
+    x = 0
+    for i, (rue, colonne) in enumerate(zip(carte.RUES_V, carte.COLONNES)):
+        if i > 0:
+            ouest, est = x + rue // 2 - 1, x + rue // 2
+            y = chantier.yb[1] + 2                    # au milieu de la 2e rangée de blocs
+            attendu_ouest = carte.STANDINGS.get(carte.STANDING[1][i - 1])
+            attendu_est = carte.STANDINGS.get(carte.STANDING[1][i])
+            assert chantier.standing_en(ouest, y) == attendu_ouest, (i, ouest)
+            assert chantier.standing_en(est, y) == attendu_est, (i, est)
+        x += rue + colonne
+
+
+# --- La saleté se déplace -----------------------------------------------------
+
+
+def test_zero_salete_en_cossu_et_cinq_fois_plus_en_pauvre(villes, chantier):
+    ville, _avant, _apres = villes
+    terre: dict[str | None, int] = {}
+    for y, ligne in enumerate(ville["sol"]):
+        for x, glyphe in enumerate(ligne):
+            if glyphe != "~":
+                s = chantier.standing_en(x, y)
+                terre[s] = terre.get(s, 0) + 1
+    compte: dict[str | None, int] = {}
+    en_cossu = []
+    for sorte, x, y in saletes(ville):
+        s = chantier.standing_en(x, y)
+        compte[s] = compte.get(s, 0) + 1
+        if s == "cossu":
+            en_cossu.append((sorte, x, y))
+    assert not en_cossu, f"{len(en_cossu)} saletés en quartier cossu, dont {en_cossu[:3]}"
+    pauvre = compte.get("pauvre", 0) / terre["pauvre"]
+    ordinaire = compte.get("ordinaire", 0) / terre["ordinaire"]
+    assert ordinaire > 0, "un quartier ordinaire sans une saleté n'est plus ordinaire"
+    assert pauvre >= CINQ_FOIS * ordinaire, (
+        f"pauvre {1000 * pauvre:.2f}, ordinaire {1000 * ordinaire:.2f} par mille tuiles")
+
+
+def test_la_salete_se_deplace_sans_s_ajouter(villes):
+    """⚠️ « trop de saleté partout » : aucune des trois sortes ne monte."""
+    _ville, avant, apres = villes
+    for sorte in ("dechet", "tag", "nid"):
+        n_avant = sum(1 for s in saletes(avant) if s[0] == sorte)
+        n_apres = sum(1 for s in saletes(apres) if s[0] == sorte)
+        assert n_apres <= n_avant, f"{sorte} : {n_avant} avant, {n_apres} après"
+        assert n_apres >= 0.9 * n_avant, f"{sorte} : {n_avant} avant, {n_apres} après — elle s'est perdue"
+
+
+def test_hors_de_la_salete_la_ville_ne_bouge_pas(villes):
+    """Le déplacement ne touche que la saleté : pas une tuile, pas un paquet,
+    pas un abribus, et pas un autre décor. La poubelle qui déborde est la même
+    poubelle."""
+    _ville, avant, apres = villes
+    touchees = {"decor", "graffitis", "nids_de_poule"}
+    for cle in avant:
+        if cle not in touchees:
+            assert json.dumps(avant[cle], sort_keys=True) == json.dumps(apres[cle], sort_keys=True), cle
+
+    def reste(ville):
+        sales = {(d["x"], d["y"]) for d in dechets(ville)}
+        return [{**d, "type": "poubelle" if d["type"] == "poubelle_pleine" else d["type"]}
+                for d in ville["decor"] if (d["x"], d["y"]) not in sales]
+
+    assert reste(avant) == reste(apres)
+
+
+@pytest.mark.parametrize("quelle", ["livree", "tout_part"])
+def test_ce_qui_se_pose_est_au_pied_d_un_mur_pauvre(villes, tout_part, chantier, quelle):
+    avant, apres = villes[1:] if quelle == "livree" else tout_part
+    deja = {(d["x"], d["y"]) for d in avant["decor"]}
+    poses = [d for d in dechets(apres) if (d["x"], d["y"]) not in deja]
+    assert len(poses) >= (5 if quelle == "livree" else 30), f"{len(poses)} déchets reposés"
+    devant = {(p["x"] + i, p["y"] + j) for p in apres["portes"] for j in (1, 2, 3) for i in (-1, 0, 1)}
+    for d in poses:
+        x, y = d["x"], d["y"]
+        assert chantier.standing_en(x, y) == "pauvre", f"{d['type']} en {(x, y)} hors d'un quartier pauvre"
+        assert apres["sol"][y][x] == "_", f"{d['type']} en {(x, y)} sur « {apres['sol'][y][x]} »"
+        murs = [apres["sol"][y + dy][x + dx] for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1))]
+        assert any(carte.LEGENDE[m].get("solide") == 1 for m in murs), f"{d['type']} en {(x, y)} loin d'un mur"
+        assert (x, y) not in devant, f"{d['type']} en {(x, y)} devant une porte"
+        voisins = [e for e in apres["decor"] if e is not d and abs(e["x"] - x) <= 1 and abs(e["y"] - y) <= 1]
+        assert not voisins, f"{d['type']} en {(x, y)} collé à {voisins[0]['type']}"
+
+
+@pytest.mark.parametrize("quelle", ["livree", "tout_part"])
+def test_rien_ne_se_ferme_a_pied(villes, tout_part, quelle):
+    """⚠️ Un sac d'ordures ARRÊTE un piéton. Tout ce qu'on atteignait à pied
+    avant s'atteint encore — moins les tuiles que la saleté occupe."""
+    avant, apres = villes[1:] if quelle == "livree" else tout_part
+
+    def atteignables(ville):
+        sol, largeur, hauteur = ville["sol"], ville["largeur"], ville["hauteur"]
+        bloque = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
+        depart = (ville["apparition"]["joueur"]["x"], ville["apparition"]["joueur"]["y"])
+        vus, pile = {depart}, [depart]
+        while pile:
+            x, y = pile.pop()
+            for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+                if (0 <= n[0] < largeur and 0 <= n[1] < hauteur and n not in vus
+                        and carte.franchissable(sol[n[1]][n[0]]) and n not in bloque):
+                    vus.add(n)
+                    pile.append(n)
+        return vus
+
+    pris = {(d["x"], d["y"]) for d in apres["decor"]} - {(d["x"], d["y"]) for d in avant["decor"]}
+    perdus = (atteignables(avant) - pris) - atteignables(apres)
+    assert not perdus, f"{len(perdus)} tuiles qu'on n'atteint plus à pied, dont {sorted(perdus)[:4]}"
+
+
+def test_la_poubelle_deborde_en_pauvre_et_seulement_la(villes, chantier):
+    ville, avant, _apres = villes
+    poubelles = [d for d in ville["decor"] if d["type"] in ("poubelle", "poubelle_pleine")]
+    assert len(poubelles) == sum(1 for d in avant["decor"] if d["type"] == "poubelle")
+    pleines = 0
+    for d in poubelles:
+        pauvre = chantier.standing_en(d["x"], d["y"]) == "pauvre"
+        assert (d["type"] == "poubelle_pleine") == pauvre, f"{d['type']} en {(d['x'], d['y'])}"
+        pleines += pauvre
+    assert pleines >= 20, f"{pleines} poubelles qui débordent dans toute la ville"
+
+
+def test_les_nids_deplaces_restent_des_nids(villes):
+    """Espacés, sur la chaussée, hors croisement — la règle de `NIDS_DE_POULE`,
+    écrite ici en chiffres."""
+    ville, _avant, _apres = villes
+    nids = [(n["x"], n["y"]) for n in ville["nids_de_poule"]]
+    for i, (x, y) in enumerate(nids):
+        assert carte.LEGENDE[ville["sol"][y][x]].get("route"), f"nid en {(x, y)} hors de la chaussée"
+        for inter in ville["intersections"]:
+            assert not (inter["x"] <= x < inter["x"] + inter["l"] and inter["y"] <= y < inter["y"] + inter["h"])
+        for px, py in nids[i + 1:]:
+            assert abs(px - x) + abs(py - y) >= 7, f"deux nids collés en {(x, y)} et {(px, py)}"
+
+
+# --- Le propre se voit aussi --------------------------------------------------
+
+
+def test_une_rue_cossue_est_plantee_une_rue_pauvre_ne_l_est_pas(villes, chantier):
+    """Les arbres et les bacs à fleurs du bord des rues (`mobilier.semer`)."""
+    ville, _avant, apres = villes
+    ajoutes = ville["decor"][len(apres["decor"]):]
+    abords: dict[str | None, int] = {}
+    for y, ligne in enumerate(ville["sol"]):
+        for x, glyphe in enumerate(ligne):
+            if glyphe == "_":
+                s = chantier.standing_en(x, y)
+                abords[s] = abords.get(s, 0) + 1
+    arbres: dict[str | None, int] = {}
+    for d in ajoutes:
+        s = chantier.standing_en(d["x"], d["y"])
+        if d["type"] == "arbre":
+            arbres[s] = arbres.get(s, 0) + 1
+        elif d["type"] == "bac_fleurs":
+            assert s == "cossu", f"un bac à fleurs en {(d['x'], d['y'])}, quartier {s}"
+    assert not arbres.get("pauvre"), f"{arbres.get('pauvre')} arbres de rue en quartier pauvre"
+    assert arbres["cossu"] / abords["cossu"] > arbres["ordinaire"] / abords["ordinaire"], (arbres, abords)
+    # ⚠️ ET DANS LE FAUBOURG. Les Érables sont plantés serré par leur district :
+    # sans le standing, « cossu plus planté qu'ordinaire » tenait tout seul. Au
+    # Faubourg, c'est le standing seul qui sépare la rue chic des autres.
+    au_faubourg: dict[str | None, list[int]] = {}
+    for y, ligne in enumerate(ville["sol"]):
+        for x, glyphe in enumerate(ligne):
+            if glyphe == "_" and chantier.district_en(x, y) == "faubourg":
+                au_faubourg.setdefault(chantier.standing_en(x, y), [0, 0])[0] += 1
+    for d in ajoutes:
+        if d["type"] == "arbre" and chantier.district_en(d["x"], d["y"]) == "faubourg":
+            au_faubourg[chantier.standing_en(d["x"], d["y"])][1] += 1
+    chic, ordinaire = (au_faubourg[s][1] / au_faubourg[s][0] for s in ("cossu", "ordinaire"))
+    assert chic >= 2 * ordinaire, f"la rue chic du Faubourg : {au_faubourg}"
+    bacs = sum(1 for d in ajoutes if d["type"] == "bac_fleurs")
+    assert bacs >= 10, f"{bacs} bacs à fleurs dans toute la ville"
+
+
+# --- Le moteur lit la même grille ---------------------------------------------
+
+
+def test_le_moteur_lit_le_meme_standing(banc, chantier):
+    """Python décide, JS calcule : `Monde.standingA` dit la même chose que
+    `standing_en`, tuile pour tuile — et ressorti d'une pièce, encore."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const lettre = { cossu: '+', ordinaire: '=', pauvre: '-' };
+        const carte = function () {
+            const lignes = [];
+            for (let y = 0; y < L.Monde.carte.h; y++) {
+                let l = '';
+                for (let x = 0; x < L.Monde.carte.w; x++) l += lettre[L.Monde.standingA(x, y)] || '~';
+                lignes.push(l);
+            }
+            return lignes;
+        };
+        const dehors = carte();
+        const ville = L.Monde.carte;
+        const porte = ville.def.portes.find(function (p) { return p.interieur; });
+        L.Monde.entrer(porte);
+        const dedans = L.Monde.standingA(1, 1);
+        L.Monde.restaurer(ville);
+        return { dehors: dehors, dedans: dedans, ressorti: L.Monde.standingA(10, 10) };
+    }""")
+    lettre = {"cossu": "+", "ordinaire": "=", "pauvre": "-", None: "~"}
+    for y, ligne in enumerate(r["dehors"]):
+        attendu = "".join(lettre[chantier.standing_en(x, y)] for x in range(len(ligne)))
+        assert ligne == attendu, f"rangée {y} : le moteur et le générateur ne s'entendent pas"
+    assert r["dedans"] is None
+    assert r["ressorti"] == chantier.standing_en(10, 10)
