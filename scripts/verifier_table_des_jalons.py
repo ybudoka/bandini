@@ -20,13 +20,23 @@ raison sur une priorite. Ce qu'il exige :
    ✅ pour ce qui est livre, ⬜ pour tout le reste ;
 3. une date `JJ mois AAAA` ou `—`, et jamais une date restee collee dans l'etat ;
 4. une prio `P1` a `P4` ou `—` ;
-5. un genre `ajout`, `correctif` ou `—`.
+5. un genre `ajout`, `correctif` ou `—` ;
+6. des notes qui ne sont qu'un lien, `[notes](#ancre)`, vers un titre de la
+   section « Notes des jalons » en bas du plan.
 
-Appele de trois facons, comme son voisin `verifier_carte_du_depot.py` :
+La 6e regle date du 17 sept. 2026 : les notes vivaient dans la cellule, et une
+ligne de table ne se replie pas — la plus longue faisait 22 000 caracteres, et la
+table entiere 320 Ko. `--ranger` fait le travail : il sort chaque note restee dans
+sa cellule, la met en forme (un paragraphe, une puce par ⚠️, une vague par
+paragraphe, replie a 92 colonnes) et pose le lien. On peut donc continuer
+d'ecrire la note dans la cellule, et ranger avant de committer.
+
+Appele de quatre facons, comme son voisin `verifier_carte_du_depot.py` :
 
     python scripts/verifier_table_des_jalons.py              # tout le plan
     python scripts/verifier_table_des_jalons.py --fichier F  # ne dit rien si F n'est pas le plan
     python scripts/verifier_table_des_jalons.py --commit     # ce qui part au commit
+    python scripts/verifier_table_des_jalons.py --ranger     # sort les notes de la table, puis juge
 """
 
 from __future__ import annotations
@@ -35,11 +45,19 @@ import argparse
 import re
 import subprocess
 import sys
+import textwrap
+import unicodedata
 from pathlib import Path
 
 PLAN = "docs/plan.md"
 TITRE = "## État des jalons"
 ENTETE = "| Jalon | État | Date | Prio | Genre | Notes |"
+TITRE_NOTES = "## Notes des jalons"
+INTRO_NOTES = (
+    "Le détail de chaque ligne de la table « État des jalons », dans le même ordre : ce qui a "
+    "été demandé, mesuré, livré, et pourquoi. La table n'y renvoie que par un lien ; une note "
+    "écrite dans sa cellule se range ici avec `--ranger` (voir la légende de la table)."
+)
 
 COLONNES = 6
 
@@ -68,6 +86,20 @@ GENRE = re.compile(r"^(?:ajout|\*\*correctif\*\*)$")
 # une date entre parentheses, la ou elle ne devrait plus etre depuis qu'il y a
 # une colonne Date : « **livré** (14 sept. 2026) »
 DATE_COLLEE = re.compile(r"\(\s*\d{1,2} (?:" + "|".join(map(re.escape, MOIS)) + r")")
+LIEN_NOTES = re.compile(r"\[notes\]\(#([^)\s]+)\)")
+
+# La mise en forme d'une note. Les lignes du plan sont repliees a cette largeur.
+LARGEUR = 92
+ALERTE = "⚠️"
+# « ✅ **2e vague livrée** (15 sept. 2026) — ... » : chaque vague ouvre un paragraphe
+VAGUE = re.compile(r"\s+(?=(?:✅|🔨|⬜|⚠️) \*\*(?:\d+(?:re|e) vague|Refaite)\b)")
+# des espaces ou l'on ne coupe pas la ligne : dans un bout de code, contre un
+# guillemet ou une ponctuation double, et au milieu d'un nombre (« 2 507 »)
+COLLE = re.compile(r"`[^`\n]*`|« | »| [:;!?%$](?=\s|$)|\d (?=\d{3}(?!\d))")
+# une ligne repliee qui commencerait ainsi deviendrait une liste, un titre ou une citation
+DANGER = re.compile(
+    r"[-+*](?:\s|$)|[-=]+\s*$|>|#{1,6}(?:\s|$)|\d{1,9}[.)](?:\s|$)|\||`{3}|~{3}|<[A-Za-z/!?]"
+)
 
 
 def _dedans(texte: str) -> str:
@@ -113,6 +145,73 @@ def cellules(ligne: str) -> list[str]:
     return [c.strip() for c in parts[1:-1]]
 
 
+# --- les ancres ------------------------------------------------------------
+
+
+def ancre(titre: str) -> str:
+    """L'ancre que GitHub donne a un titre (github-slugger), avant le suffixe des doublons.
+
+    Minuscules ; on garde les lettres (accents compris), les chiffres, `-` et `_` ;
+    chaque espace devient `-`. « La fourrière : remorquage » donne donc
+    `la-fourrière--remorquage` — l'espace de chaque cote du deux-points reste.
+    """
+    garde = []
+    for c in titre.strip().lower():
+        if c in " -_":
+            garde.append(c)
+        elif unicodedata.category(c)[0] in "LN":
+            garde.append(c)
+        elif unicodedata.category(c)[0] == "M" and not 0xFE00 <= ord(c) <= 0xFE0F:
+            garde.append(c)
+    return "".join(garde).replace(" ", "-")
+
+
+def titres(lignes: list[str]) -> list[tuple[int, int, str, str]]:
+    """Les titres du document : (index de ligne, niveau, texte, ancre), doublons suffixes."""
+    vues: dict[str, int] = {}
+    trouves = []
+    dans_code = False
+    for i, ligne in enumerate(lignes):
+        if ligne.lstrip().startswith(("```", "~~~")):
+            dans_code = not dans_code
+            continue
+        if dans_code:
+            continue
+        m = re.match(r"^(#{1,6})[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$", ligne)
+        if m is None:
+            continue
+        base = ancre(m.group(2))
+        nom = base
+        while nom in vues:
+            vues[base] += 1
+            nom = f"{base}-{vues[base]}"
+        vues[nom] = 0
+        trouves.append((i, len(m.group(1)), m.group(2), nom))
+    return trouves
+
+
+def _bornes_notes(lignes: list[str]) -> tuple[int, int] | None:
+    """La ligne `## Notes des jalons` et la premiere ligne apres sa section."""
+    debut = next((i for i, x in enumerate(lignes) if x.strip() == TITRE_NOTES), None)
+    if debut is None:
+        return None
+    fin = next((j for j in range(debut + 1, len(lignes)) if lignes[j].startswith("## ")), None)
+    return debut, len(lignes) if fin is None else fin
+
+
+def ancres_des_notes(corps: str) -> set[str]:
+    """Les ancres des notes : les titres `###` de la section « Notes des jalons »."""
+    lignes = corps.split("\n")
+    bornes = _bornes_notes(lignes)
+    if bornes is None:
+        return set()
+    debut, fin = bornes
+    return {nom for i, niveau, _, nom in titres(lignes) if debut < i < fin and niveau == 3}
+
+
+# --- le juge ---------------------------------------------------------------
+
+
 def juger(corps: str) -> list[str]:
     """Les reproches, un par ligne fautive. Vide = la table tient."""
     lignes = table(corps)
@@ -128,6 +227,7 @@ def juger(corps: str) -> list[str]:
             f"  trouvé  : {entete.strip()}"
         )
 
+    notes_connues = ancres_des_notes(corps)
     for numero, ligne in lignes[2:]:  # [0] l'en-tete, [1] le separateur
         cols = cellules(ligne)
         jalon = cols[0] if cols else "?"
@@ -141,7 +241,7 @@ def juger(corps: str) -> list[str]:
             )
             continue
 
-        _, etat, date, prio, genre, _ = cols
+        _, etat, date, prio, genre, notes = cols
 
         icone, sans_icone = _icone(etat)
         # le plus long d'abord : « livrée » commence aussi par « livré »
@@ -183,8 +283,212 @@ def juger(corps: str) -> list[str]:
                 f"{PLAN}:{numero} : « {jalon} » a le genre « {genre} ».\n"
                 "  Il faut « ajout » ou « **correctif** » (le préfixe du commit décide)."
             )
+        lien = LIEN_NOTES.fullmatch(notes)
+        if lien is None:
+            reproches.append(
+                f"{PLAN}:{numero} : « {jalon} » garde ses notes dans la table"
+                f" ({len(notes)} caractères).\n"
+                f"  La cellule Notes n'est qu'un lien, [notes](#ancre), vers « {TITRE_NOTES[3:]} »\n"
+                "  en bas du plan. Pour y déplacer la note et poser le lien :\n"
+                "  uv run python scripts/verifier_table_des_jalons.py --ranger"
+            )
+        elif lien.group(1) not in notes_connues:
+            reproches.append(
+                f"{PLAN}:{numero} : « {jalon} » renvoie à #{lien.group(1)}, qui n'est le titre"
+                " d'aucune note.\n"
+                f"  Les notes sont les titres ### de « {TITRE_NOTES[3:]} ». Si le titre porte le\n"
+                "  nom du jalon, --ranger recolle le lien."
+            )
 
     return reproches
+
+
+# --- ranger ----------------------------------------------------------------
+
+
+def _envelopper(texte: str, premier: str = "", suivants: str = "") -> list[str]:
+    """Replie un paragraphe a LARGEUR sans qu'une ligne devienne une liste ou un titre."""
+    colle = COLLE.sub(lambda m: m.group(0).replace(" ", "\0"), texte.strip())
+    if not premier and DANGER.match(colle):
+        colle = re.sub(r"^(\d+)([.)])", r"\1\\\2", colle) if colle[0].isdigit() else "\\" + colle
+    lignes = textwrap.wrap(
+        colle,
+        width=LARGEUR,
+        initial_indent=premier,
+        subsequent_indent=suivants,
+        break_long_words=False,
+        break_on_hyphens=False,
+    )
+    i = 1
+    while i < len(lignes):
+        reste = lignes[i][len(suivants) :]
+        if DANGER.match(reste):
+            # le premier mot remonte sur la ligne d'avant : elle deborde un peu, le sens tient
+            mot, _, suite = reste.partition(" ")
+            lignes[i - 1] += " " + mot
+            if suite:
+                lignes[i] = suivants + suite
+            else:
+                del lignes[i]
+            continue
+        i += 1
+    return [x.replace("\0", " ") for x in lignes]
+
+
+def _coupe_ici(avant: str, apres: str) -> bool:
+    """Un ⚠️ ouvre-t-il une nouvelle puce ? Seulement s'il commence une phrase."""
+    avant = avant.rstrip()
+    if not avant:
+        return False
+    if re.search(r"\*\*\d+\.\*\*$", avant):  # « **3.** ⚠️ » : une enumeration
+        return False
+    if avant.rstrip('*)»" ')[-1:] in (".", "!", "?", "…"):
+        return True
+    # « (`--refaire batte`) ⚠️ **Correctif, 15 sept. » : le point a ete oublie
+    return avant.endswith(")") and re.match(r"\*\*[A-ZÀ-Ý0-9]", apres) is not None
+
+
+def _segments(bloc: str) -> list[str]:
+    morceaux = []
+    depart = 0
+    for m in re.finditer(ALERTE, bloc):
+        if m.start() > depart and _coupe_ici(bloc[depart : m.start()], bloc[m.end() :].lstrip()):
+            morceaux.append(bloc[depart : m.start()].strip())
+            depart = m.start()
+    morceaux.append(bloc[depart:].strip())
+    return [x for x in morceaux if x]
+
+
+def mettre_en_forme(note: str) -> list[str]:
+    """Une note d'une seule ligne devient des paragraphes : une vague par paragraphe,
+    une puce par ⚠️ qui ouvre une phrase. Pas un mot ne change."""
+    lignes: list[str] = []
+    for bloc in VAGUE.split(note.strip()):
+        segments = _segments(bloc)
+        if not segments:
+            continue
+        if lignes:
+            lignes.append("")
+        lignes += _envelopper(segments[0])
+        if len(segments) > 1:
+            lignes.append("")
+            for segment in segments[1:]:
+                lignes += _envelopper(segment, "- ", "  ")
+    return lignes
+
+
+def _titre_de_note(jalon: str) -> str:
+    # « » n'ont pas la meme ancre chez GitHub et dans l'apercu de VS Code ; “ ” si
+    return re.sub(r"«\s*", "“", re.sub(r"\s*»", "”", jalon))
+
+
+def _sans_blancs_aux_bords(lignes: list[str]) -> list[str]:
+    debut = 0
+    while debut < len(lignes) and not lignes[debut].strip():
+        debut += 1
+    fin = len(lignes)
+    while fin > debut and not lignes[fin - 1].strip():
+        fin -= 1
+    return lignes[debut:fin]
+
+
+def ranger(corps: str) -> str:
+    """Sort les notes restees dans la table, et range la section dans l'ordre de la table.
+
+    Une note deja rangee ne bouge que de place ; un lien casse est recolle si une note
+    porte le nom du jalon ; une note que plus aucune ligne ne cite reste, a la fin.
+    Se rejoue sans rien changer.
+    """
+    lignes = corps.split("\n")
+    rangs = table(corps)
+    if len(rangs) < 3:
+        return corps
+
+    ancres_avant = {i: nom for i, _, _, nom in titres(lignes)}
+    bornes = _bornes_notes(lignes)
+    notes: list[dict] = []  # {"titre", "corps", "ancre"} dans l'ordre du fichier
+    if bornes is None:
+        intro = _envelopper(INTRO_NOTES)
+        avant, apres = lignes[:], []
+        while avant and not avant[-1].strip():
+            avant.pop()
+    else:
+        debut, fin = bornes
+        avant, apres = lignes[:debut], lignes[fin:]
+        while avant and not avant[-1].strip():
+            avant.pop()
+        courante = None
+        intro_brute: list[str] = []
+        for i in range(debut + 1, fin):
+            if lignes[i].startswith("### "):
+                courante = {
+                    "titre": lignes[i][4:].strip(),
+                    "corps": [],
+                    "ancre": ancres_avant.get(i),
+                }
+                notes.append(courante)
+            elif courante is None:
+                intro_brute.append(lignes[i])
+            else:
+                courante["corps"].append(lignes[i])
+        intro = _sans_blancs_aux_bords(intro_brute)
+        for note in notes:
+            note["corps"] = _sans_blancs_aux_bords(note["corps"])
+
+    if rangs[-1][0] > len(avant):
+        return corps  # la section des notes est au-dessus de la table : on ne touche a rien
+
+    par_ancre = {n["ancre"]: n for n in notes if n["ancre"]}
+    ordre: list[dict] = []
+    liens: list[tuple[int, dict]] = []  # (index de la ligne de table, note visee)
+    for numero, ligne in rangs[2:]:
+        cols = cellules(ligne)
+        if len(cols) != COLONNES:
+            continue
+        jalon, texte = cols[0], cols[5]
+        titre = _titre_de_note(jalon)
+        lien = LIEN_NOTES.fullmatch(texte)
+        if lien is not None:
+            note = par_ancre.get(lien.group(1)) or next(
+                (n for n in notes if n["titre"] == titre), None
+            )
+            if note is None:
+                continue  # un lien qui ne mene nulle part : le juge le dira
+        else:
+            note = next((n for n in notes if n["titre"] == titre), None)
+            if note is None:
+                note = {"titre": titre, "corps": [], "ancre": None}
+                notes.append(note)
+            if note["corps"]:
+                note["corps"].append("")
+            note["corps"] += mettre_en_forme(texte)
+        liens.append((numero - 1, note))
+        if all(note is not n for n in ordre):
+            ordre.append(note)
+    ordre += [n for n in notes if all(n is not m for m in ordre)]
+
+    section = [TITRE_NOTES, "", *intro]
+    positions = []
+    for note in ordre:
+        section.append("")
+        positions.append((len(avant) + 1 + len(section), note))
+        section += [f"### {note['titre']}", "", *note["corps"]]
+    if apres:
+        section.append("")
+    nouvelles = [*avant, "", *section, *apres]
+    if not apres:
+        nouvelles.append("")
+
+    ancres_apres = {i: nom for i, _, _, nom in titres(nouvelles)}
+    ancre_de = {id(note): ancres_apres[i] for i, note in positions}
+    for index, note in liens:
+        parts = nouvelles[index].split("|")
+        parts[-2] = f" [notes](#{ancre_de[id(note)]}) "
+        nouvelles[index] = "|".join(parts)
+    return "\n".join(nouvelles)
+
+
+# --- la ligne de commande --------------------------------------------------
 
 
 def _racine(depart: Path) -> Path:
@@ -212,6 +516,9 @@ def main() -> int:
     analyseur = argparse.ArgumentParser(description=__doc__)
     analyseur.add_argument("--fichier", help="ne juge que si ce fichier est le plan")
     analyseur.add_argument("--commit", action="store_true", help="juge l'index, pas le disque")
+    analyseur.add_argument(
+        "--ranger", action="store_true", help="sort les notes de la table, puis juge"
+    )
     analyseur.add_argument("--cwd", default=".", help="où chercher le dépôt")
     args = analyseur.parse_args()
 
@@ -231,6 +538,12 @@ def main() -> int:
         if not plan.exists():
             return 0
         corps = plan.read_text(encoding="utf-8")
+        if args.ranger:
+            range_ = ranger(corps)
+            if range_ != corps:
+                plan.write_text(range_, encoding="utf-8")
+                print(f"{PLAN} : notes rangées sous « {TITRE_NOTES[3:]} ».")
+            corps = range_
 
     reproches = juger(corps)
     if not reproches:

@@ -28,6 +28,15 @@ juges = _charger()
 
 
 def _plan_d_essai(*lignes: str) -> str:
+    """Un plan minimal. Une cellule Notes qui vaut « notes » devient le lien vers sa note."""
+    rangees, notes = [], []
+    for ligne in lignes:
+        cols = juges.cellules(ligne)
+        if cols and cols[-1] == "notes":
+            coupe = ligne.rstrip().rstrip("|").rstrip()
+            ligne = f"{coupe[: -len('notes')]}[notes](#{juges.ancre(cols[0])}) |"
+            notes += [f"### {cols[0]}", "", "ce qu'il y a dedans", ""]
+        rangees.append(ligne)
     return "\n".join(
         [
             "# Plan",
@@ -38,15 +47,18 @@ def _plan_d_essai(*lignes: str) -> str:
             "",
             juges.ENTETE,
             "|---|---|---|---|---|---|",
-            *lignes,
+            *rangees,
             "",
             "## Dettes",
             "",
+            juges.TITRE_NOTES,
+            "",
+            *notes,
         ]
     )
 
 
-BONNE = "| M9 Le parc | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | ce qu'il y a dedans |"
+BONNE = "| M9 Le parc | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | notes |"
 
 
 # --- le vrai plan ---------------------------------------------------------
@@ -194,3 +206,158 @@ def test_la_table_s_arrete_a_la_premiere_ligne_qui_n_est_pas_une_ligne():
     """Les autres tables du plan (les dettes, l'architecture) ne sont pas jugées."""
     corps = _plan_d_essai(BONNE) + "\n| Dette | Pourquoi | Déclencheur |\n|---|---|---|\n"
     assert juges.juger(corps) == []
+
+
+# --- les notes : un lien dans la table, le detail en bas du plan ------------
+
+NOTE_LONGUE = (
+    "demande de Martin (« des feux qu'on voit ») : il n'y en avait pas. Le poteau est posé. "
+    "⚠️ **Un poteau par coin** : quatre, c'était une forêt. "
+    "⚠️ Et le dessin suit le feu — (⚠️ jamais l'inverse) — **3.** ⚠️ **Le troisième point** tient. "
+    "✅ **2e vague livrée** (15 sept. 2026) — *le clignotant*. La nuit, ça clignote. "
+    "⚠️ **Mesuré** : 0,2 ms. 3 juges ; 1611 tests."
+)
+
+
+def _plan_a_ranger(*lignes: str) -> str:
+    return "\n".join(
+        [
+            "# Plan",
+            "",
+            "## État des jalons",
+            "",
+            juges.ENTETE,
+            "|---|---|---|---|---|---|",
+            *lignes,
+            "",
+            "## Dettes",
+            "",
+            "Rien.",
+            "",
+        ]
+    )
+
+
+def _normaliser(texte: str) -> str:
+    return " ".join(texte.split())
+
+
+def test_une_note_restee_dans_la_table_est_attrapee():
+    """Le cas qui a fait naitre la regle : 22 000 caracteres sur une ligne de table."""
+    longue = f"| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | {NOTE_LONGUE} |"
+    reproches = juges.juger(_plan_d_essai(longue))
+    assert len(reproches) == 1
+    assert "garde ses notes dans la table" in reproches[0]
+    assert "--ranger" in reproches[0]
+
+
+def test_un_lien_qui_ne_mene_nulle_part_est_attrape():
+    perdu = "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | [notes](#m-neuf) |"
+    reproches = juges.juger(_plan_d_essai(perdu))
+    assert len(reproches) == 1
+    assert "#m-neuf" in reproches[0]
+
+
+def test_un_lien_vers_un_titre_hors_des_notes_est_attrape():
+    """#dettes est un vrai titre du plan, mais pas une note."""
+    ailleurs = "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | [notes](#dettes) |"
+    reproches = juges.juger(_plan_d_essai(ailleurs))
+    assert len(reproches) == 1
+    assert "#dettes" in reproches[0]
+
+
+def test_l_ancre_est_celle_de_github():
+    assert juges.ancre("Le char abrite, l'appel fige") == "le-char-abrite-lappel-fige"
+    assert juges.ancre("La fourrière : remorquage") == "la-fourrière--remorquage"
+    assert (
+        juges.ancre("L'Île-aux-Corneilles — deuxième vague")
+        == "lîle-aux-corneilles--deuxième-vague"
+    )
+    assert juges.ancre("**v1 complète**") == "v1-complète"
+    assert juges.ancre("Se réveiller dans un lit d’hôpital") == "se-réveiller-dans-un-lit-dhôpital"
+
+
+def test_deux_titres_pareils_ont_deux_ancres():
+    lignes = ["# Plan", "## Le métro", "```", "## Le métro", "```", "### Le métro"]
+    assert [nom for *_, nom in juges.titres(lignes)] == ["plan", "le-métro", "le-métro-1"]
+
+
+def test_ranger_sort_la_note_et_pose_le_lien():
+    corps = _plan_a_ranger(
+        f"| M9 Le parc | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | {NOTE_LONGUE} |"
+    )
+    range_ = juges.ranger(corps)
+    assert juges.juger(range_) == []
+    assert "| [notes](#m9-le-parc) |" in range_
+    assert "\n## Notes des jalons\n" in range_
+    assert range_.index("## Dettes") < range_.index("## Notes des jalons")
+    assert "Rien." in range_
+
+
+def test_ranger_ne_perd_pas_un_mot():
+    corps = _plan_a_ranger(
+        f"| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | {NOTE_LONGUE} |"
+    )
+    lignes = juges.ranger(corps).split("\n")
+    depart = lignes.index("### M9") + 1
+    dedans = [x[2:] if x.startswith("- ") else x for x in lignes[depart:]]
+    assert _normaliser(" ".join(dedans)) == _normaliser(NOTE_LONGUE)
+
+
+def test_ranger_se_rejoue_sans_rien_changer():
+    corps = _plan_a_ranger(
+        f"| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | {NOTE_LONGUE} |",
+        "| M10 | ⬜ **à faire** | — | **P3** | ajout | une note courte |",
+    )
+    une_fois = juges.ranger(corps)
+    assert juges.ranger(une_fois) == une_fois
+
+
+def test_une_puce_par_alerte_qui_ouvre_une_phrase():
+    lignes = juges.mettre_en_forme(NOTE_LONGUE)
+    puces = [x for x in lignes if x.startswith("- ")]
+    assert puces[0].startswith("- ⚠️ **Un poteau par coin**")
+    assert puces[1].startswith("- ⚠️ Et le dessin suit le feu")
+    # au milieu d'une phrase (« — (⚠️ ») ou apres « **3.** », le ⚠️ ne coupe pas
+    assert len(puces) == 3
+    assert any("**3.** ⚠️ **Le troisième point**" in x for x in lignes)
+
+
+def test_une_vague_ouvre_un_paragraphe():
+    lignes = juges.mettre_en_forme(NOTE_LONGUE)
+    assert any(x.startswith("✅ **2e vague livrée** (15 sept. 2026)") for x in lignes)
+    vague = next(i for i, x in enumerate(lignes) if x.startswith("✅ **2e vague"))
+    assert lignes[vague - 1] == ""
+
+
+def test_une_ligne_repliee_ne_devient_jamais_une_liste_ni_un_titre():
+    """Replier au mauvais endroit ferait une puce d'un tiret, ou un titre d'un dièse."""
+    for piege in ("- suite", "1. suite", "# suite", "> suite"):
+        texte = "a" * (juges.LARGEUR - 1) + " " + piege + " " + "b " * 60
+        for premier, suivants in (("", ""), ("- ", "  ")):
+            lignes = juges._envelopper(texte, premier, suivants)
+            for ligne in lignes[1:]:
+                assert not juges.DANGER.match(ligne[len(suivants) :]), (piege, ligne)
+            assert _normaliser(
+                " ".join(x[len(premier) :] if i == 0 else x for i, x in enumerate(lignes))
+            ) == _normaliser(texte)
+
+
+def test_ranger_recolle_un_lien_casse_quand_la_note_porte_le_nom_du_jalon():
+    corps = _plan_a_ranger(
+        "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | [notes](#faute) |"
+    )
+    corps += "\n## Notes des jalons\n\n### M9\n\nle détail\n"
+    range_ = juges.ranger(corps)
+    assert "[notes](#m9)" in range_
+    assert juges.juger(range_) == []
+
+
+def test_ranger_remet_les_notes_dans_l_ordre_de_la_table():
+    corps = _plan_a_ranger(
+        "| M9 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | [notes](#m9) |",
+        "| M10 | ✅ **livré** | 13 sept. 2026 | **P1** | ajout | [notes](#m10) |",
+    )
+    corps += "\n## Notes des jalons\n\n### M10\n\ndix\n\n### M9\n\nneuf\n\n### Orpheline\n\nreste\n"
+    range_ = juges.ranger(corps)
+    assert range_.index("### M9") < range_.index("### M10") < range_.index("### Orpheline")
