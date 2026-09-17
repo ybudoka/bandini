@@ -9114,6 +9114,12 @@ chose d'entrer », « plus compacte ».
   à rougir) ; 1837 tests. **Restent les trois défis** (galerie de tir, marteau de force,
   pêche aux canards) et les quatre pistes audio.
 
+🔨 **5e vague en cours** (17 sept. 2026) — *les trois défis et l'audio*. Ce qui reste de la
+fiche : la galerie de tir, le marteau de force et la pêche aux canards sur les rails de
+`missions.DEFIS`, et les quatre pistes — l'orgue de manège (**une musique qui sort d'un
+ENDROIT** : le code du musicien de rue, une source fixe), les cris de la foire, les vagues
+de la baie et le moteur de la coque.
+
 ### Plus de champs : des terrains vagues et des parcs
 
 demande de Martin : « au lieu des champs, mets des terrains vague un peu salle et avec des
