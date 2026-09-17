@@ -41,6 +41,22 @@ EFFETS: dict = {
     "deneige_images": 3600,      # une tuile déneigée le reste tant d'images (trois heures de jeu)
 }
 
+#: ⚠️ LA NUIT DE DÉNEIGEMENT (M12) : « la veille d'une opération, un feu orange clignote
+#: sur le panneau de la rue : interdiction de stationner cette nuit-là, et ce qui reste
+#: dans la rue part au lot ». Le LENDEMAIN d'une tempête, les panneaux d'un secteur
+#: clignotent dès `annonce_h` ; l'opération va de `debut_h` à `fin_h` le matin d'après.
+#: Les secteurs se suivent, un par tempête. ⚠️ Elle s'annonce ou elle n'arrive pas :
+#: `annonce_h` est bien avant `debut_h`, le même jour (un juge le tient).
+DENEIGEMENT: dict = {
+    "apres_tempete_jours": 1,
+    "annonce_h": 12.0,
+    "debut_h": 23.0,
+    "fin_h": 7.0,
+    "secteurs": ("faubourg", "erables", "quais", "shop", "pointe"),
+    #: Ce qui reste de la neige au sol, entre la tempête et la fin de l'opération.
+    "reste": 0.6,
+}
+
 #: La charrue : sa tournée passe par ces lieux garantis, et elle sort avec la tempête.
 CHARRUE: dict = {
     "passe_par": ("terminus", "hopital", "usine", "garage"),
@@ -70,8 +86,32 @@ def tracer_charrue(ville: dict) -> dict | None:
     return {"trace": autobus.coins(construite[0])}
 
 
+def panneaux(ville: dict) -> dict[str, list[list[int]]]:
+    """Les panneaux d'un secteur : un au coin de chaque boîte de croisement du quartier,
+    sur le premier coin de trottoir libre (nord-ouest, nord-est, sud-est, sud-ouest)."""
+    occupe = {(d["x"], d["y"]) for d in ville["decor"]}
+    portes = {(p["x"], p["y"] + 1) for p in ville["portes"]}
+    out: dict[str, list[list[int]]] = {s: [] for s in DENEIGEMENT["secteurs"]}
+    zones = [z for z in ville["zones"] if z.get("district") in out]
+    for b in ville["intersections"]:
+        coins = [(b["x"] - 1, b["y"] - 1), (b["x"] + b["l"], b["y"] - 1),
+                 (b["x"] + b["l"], b["y"] + b["h"]), (b["x"] - 1, b["y"] + b["h"])]
+        for x, y in coins:
+            if not (0 <= y < len(ville["sol"]) and 0 <= x < len(ville["sol"][0])):
+                continue
+            if ville["sol"][y][x] != "." or (x, y) in occupe or (x, y) in portes:
+                continue
+            z = next((z for z in zones if z["x"] <= x < z["x"] + z["l"] and z["y"] <= y < z["y"] + z["h"]), None)
+            if z:
+                out[z["district"]].append([x, y])
+            break
+    return out
+
+
 def tracer(ville: dict) -> dict:
-    """Ce que le paquet transporte : l'horaire des tempêtes, leurs effets, la charrue."""
+    """Ce que le paquet transporte : l'horaire des tempêtes, leurs effets, la charrue et
+    les nuits de déneigement."""
     charrue = tracer_charrue(ville)
     return {"tempete": dict(TEMPETE), "effets": dict(EFFETS),
-            "charrue": ({**charrue, **{k: v for k, v in CHARRUE.items() if k != "passe_par"}} if charrue else None)}
+            "charrue": ({**charrue, **{k: v for k, v in CHARRUE.items() if k != "passe_par"}} if charrue else None),
+            "deneigement": {**DENEIGEMENT, "secteurs": list(DENEIGEMENT["secteurs"]), "panneaux": panneaux(ville)}}

@@ -678,7 +678,7 @@ const Jeu = (function () {
     if (B.interieur) Metro.dessiner(ctx, vue);
     // ⚠️ Les battants PAR-DESSUS le sol, jamais dedans : repeindre un
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
-    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
+    if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);

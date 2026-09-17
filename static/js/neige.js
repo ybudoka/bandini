@@ -46,6 +46,55 @@ const Neige = (function () {
     return intensiteA(B.partie.jour, B.partie.heure);
   }
 
+  /** Le jour d'une tempete ? Et laquelle (0, 1, 2...) : c'est elle qui choisit le secteur. */
+  function rangDeTempete(jour) {
+    const t = donnees().tempete;
+    if (jour < t.premier || (jour - t.premier) % t.tous_les !== 0) return -1;
+    return (jour - t.premier) / t.tous_les;
+  }
+
+  /** La nuit de deneigement a cette heure : { secteur, enCours } — ou null. Pure.
+      ⚠️ Le LENDEMAIN d'une tempete, des `annonce_h` : les panneaux du secteur clignotent.
+      De `debut_h` a `fin_h` le matin d'apres, ce qui reste dans ses rues part au lot. */
+  function operationA(jour, heure) {
+    const d = donnees();
+    if (!d || !d.deneigement) return null;
+    const o = d.deneigement, h = heure * 24;
+    const annonce = rangDeTempete(jour - o.apres_tempete_jours);
+    if (annonce >= 0 && h >= o.annonce_h) return { secteur: o.secteurs[annonce % o.secteurs.length], enCours: h >= o.debut_h };
+    const veille = rangDeTempete(jour - 1 - o.apres_tempete_jours);
+    if (veille >= 0 && h < o.fin_h) return { secteur: o.secteurs[veille % o.secteurs.length], enCours: true };
+    return null;
+  }
+
+  function operation() {
+    if (!B.options || !B.options.neige || !B.partie) return null;
+    return operationA(B.partie.jour, B.partie.heure);
+  }
+
+  /** La neige AU SOL : la tempete, puis ce qu'il en reste jusqu'a la fin de l'operation
+      qui la deblaie. Pure (avec l'intensite). */
+  function couvertureA(jour, heure) {
+    const i = intensiteA(jour, heure), d = donnees();
+    if (!d || !d.deneigement) return i;
+    const o = d.deneigement, t = d.tempete, h = heure * 24;
+    const reste = (rangDeTempete(jour) >= 0 && h >= t.fin_h)
+      || rangDeTempete(jour - o.apres_tempete_jours) >= 0
+      || (rangDeTempete(jour - 1 - o.apres_tempete_jours) >= 0 && h < o.fin_h);
+    return Math.max(i, reste ? o.reste : 0);
+  }
+
+  function couverture() {
+    if (!B.options || !B.options.neige || !B.partie || B.interieur) return 0;
+    return couvertureA(B.partie.jour, B.partie.heure);
+  }
+
+  /** La charrue sort avec la tempete, et la nuit de deneigement. */
+  function charrueDehors() {
+    const o = operation();
+    return intensite() > 0 || !!(o && o.enCours);
+  }
+
   function cle(tx, ty) { return tx + ',' + ty; }
 
   function deneigee(tx, ty) {
@@ -63,7 +112,7 @@ const Neige = (function () {
 
   /** Ce que la neige laisse de l'adherence d'un char, ici. */
   function adherence(v) {
-    const i = intensite();
+    const i = couverture();
     if (!i) return 1;
     const e = donnees().effets;
     return melange(deneigee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? e.adherence_deneigee : e.adherence, i);
@@ -71,7 +120,7 @@ const Neige = (function () {
 
   /** Et de son freinage. */
   function frein(v) {
-    const i = intensite();
+    const i = couverture();
     if (!i) return 1;
     const e = donnees().effets;
     return deneigee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? 1 : melange(e.frein, i);
@@ -85,7 +134,80 @@ const Neige = (function () {
 
   // --- A chaque image ------------------------------------------------------------------
 
+  // --- La nuit de deneigement ----------------------------------------------------------
+
+  //: Les cases de stationnement : un char DANS sa case ne part jamais au lot.
+  const CASES = { '^': 1, 'v': 1, '<': 1, '>': 1 };
+
+  function dansLeSecteur(secteur, tx, ty) {
+    return Monde.carte.def.zones.some(function (z) {
+      return z.district === secteur && tx >= z.x && tx < z.x + z.l && ty >= z.y && ty < z.y + z.h;
+    });
+  }
+
+  function dansUneCase(v) {
+    const demi = Math.max(v.def.longueur, v.def.largeur) / 2;
+    for (let ty = Math.floor((v.y - demi) / TT); ty <= Math.floor((v.y + demi) / TT); ty++) {
+      for (let tx = Math.floor((v.x - demi) / TT); tx <= Math.floor((v.x + demi) / TT); tx++) {
+        if (CASES[Monde.glyphe(tx, ty)]) return true;
+      }
+    }
+    return false;
+  }
+
+  /** Pendant l'operation, une fois par seconde : un char LAISSE dans les rues du secteur
+      (hors d'une case, hors de la planque) part au lot — quand on ne le regarde pas. On
+      ne voit pas la remorqueuse l'emmener : on le retrouve au lot le lendemain. */
+  function majDeneigement() {
+    const o = operation();
+    if (!o || !o.enCours || B.interieur || B.t % 60 !== 0) return;
+    for (const v of B.entites.slice()) {
+      if (v.type !== 'vehicule' || !v.laisse || v.conducteur || v.etat === 'epave') continue;
+      if (v.saisi !== null && v.saisi !== undefined) continue;
+      if (Missions.estDeLaPlanque(v) || dansUneCase(v)) continue;
+      if (!dansLeSecteur(o.secteur, Math.floor(v.x / TT), Math.floor(v.y / TT))) continue;
+      if (Entites.visibleAEcran(v.x, v.y, 60)) continue;
+      const nom = v.def.nom.toUpperCase();
+      Missions.saisir(v);
+      Hud.message('DÉNEIGEMENT — ' + nom + ' REMORQUÉ AU LOT', 300);
+    }
+  }
+
+  function panneauxDuSecteur(o) {
+    const d = donnees();
+    return (o && d.deneigement && d.deneigement.panneaux[o.secteur]) || [];
+  }
+
+  /** Les panneaux du secteur annonce, le feu orange qui clignote. */
+  function dessinerPanneaux(ctx, cam) {
+    const o = operation();
+    if (!o || B.interieur) return;
+    const allume = ((B.image || B.t) % 40) < 20;
+    let n = 0;
+    for (const p of panneauxDuSecteur(o)) {
+      const px = Math.round(p[0] * TT + 8 - cam.x), py = Math.round(p[1] * TT + 13 - cam.y);
+      if (px < -10 || px > VW + 10 || py < -4 || py > VH + 26) continue;
+      ctx.fillStyle = '#4a4d55'; ctx.fillRect(px, py - 15, 1, 15);
+      ctx.fillStyle = '#eeeae0'; ctx.fillRect(px - 4, py - 22, 9, 7);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(px - 3, py - 21, 7, 1); ctx.fillRect(px - 3, py - 17, 7, 1); ctx.fillRect(px, py - 20, 1, 3);
+      ctx.fillStyle = allume ? '#ff9f1c' : '#6a4812'; ctx.fillRect(px - 1, py - 26, 3, 3);
+      n += 6;
+    }
+    B.stats.rects += n;
+  }
+
+  /** Pres d'un panneau allume, la ligne du bas dit ce qu'il annonce. */
+  function texteDInfo(j) {
+    const o = operation();
+    if (!o || !j || B.interieur) return null;
+    const pres = panneauxDuSecteur(o).some(function (p) { return Math.abs(p[0] * TT + 8 - j.x) + Math.abs(p[1] * TT + 8 - j.y) <= 3 * TT; });
+    if (!pres) return null;
+    const debut = donnees().deneigement.debut_h;
+    return o.enCours ? 'DÉNEIGEMENT EN COURS · STATIONNEMENT INTERDIT' : 'DÉNEIGEMENT CETTE NUIT · STATIONNEMENT INTERDIT DÈS ' + debut + ':00';
+  }
+
   function maj() {
+    majDeneigement();
     const i = intensite();
     // Le vent : une boucle dont le volume suit la tempete.
     const voulu = i > 0.02 ? i * 0.5 : 0;
@@ -111,7 +233,7 @@ const Neige = (function () {
       deblaye. ⚠️ Par PLAGES de tuiles d'une rangee, pas tuile par tuile : cinq cents
       rectangles par image deviennent une cinquantaine. */
   function dessinerSol(ctx, cam) {
-    const i = intensite();
+    const i = couverture();
     if (!i) return;
     const c = Monde.carte, e = donnees().effets;
     const x0 = Math.max(0, Math.floor(cam.x / TT)), y0 = Math.max(0, Math.floor(cam.y / TT));
@@ -155,8 +277,9 @@ const Neige = (function () {
   }
 
   return {
-    donnees, intensiteA, intensite, deneigee, deneiger, adherence, frein, vitesseTrafic,
-    maj, oublier, dessinerSol, dessinerTempete,
+    donnees, intensiteA, intensite, couvertureA, couverture, operationA, operation, charrueDehors,
+    deneigee, deneiger, adherence, frein, vitesseTrafic, dansUneCase, majDeneigement, texteDInfo,
+    maj, oublier, dessinerSol, dessinerTempete, dessinerPanneaux,
     get deneigees() { return deneigees.size; },
   };
 })();

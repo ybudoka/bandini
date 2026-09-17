@@ -903,7 +903,7 @@ const Hud = (function () {
     if (!j || B.invite || B.menu || B.dialogue) return;
     // Sous terre, le metro dit ou l'on est et quand passe la rame.
     // Au quai du traversier (ou a bord), son horaire.
-    const t = B.interieur ? Metro.texteDInfo(j) : (Autobus.texteDAttente(j) || Traversier.texteDInfo(j));
+    const t = B.interieur ? Metro.texteDInfo(j) : (Autobus.texteDAttente(j) || Traversier.texteDInfo(j) || Neige.texteDInfo(j));
     if (!t) return;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);

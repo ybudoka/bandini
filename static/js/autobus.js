@@ -811,7 +811,7 @@ const Autobus = (function () {
     const d = donnees(), C = d && d.charrue, j = B.joueur;
     if (!C || !j || B.interieur || (B.t % REGARD_IMAGES) !== CHARRUE_DECALAGE) return;
     const v0 = enService('charrue', 0);
-    if (!(Neige.intensite() > 0)) {
+    if (!Neige.charrueDehors()) {
       if (v0 && !v0.passager && !Entites.visibleAEcran(v0.x, v0.y, 60)) Entites.retirer(v0);
       return;
     }

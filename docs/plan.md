@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (quatorze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (quinze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -619,7 +619,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
 | `traversier.py` | le **traversier** (M12) : les deux quais (une coque de 8 × 3 dans l'eau profonde, des tuiles de rive carrossables qui touchent le pont, une rue à côté) et le couloir d'eau libre qui les relie, hors de la ceinture de l'île et loin des amarrages ; l'**horaire** (départ à l'heure juste) ; ne pose rien, ne tire aucun dé | `test_traversier.py`, `test_traversier_js.py` |
 | `tramway.py` | le **tramway** (M12) : la voie double du Faubourg au quai du traversier (une recherche qui ne tourne que dans les boîtes et n'avance que si la voie d'en face existe ; le retour décalé d'une tuile), ses arrêts (les terminus d'abord, au bord du trottoir, loin des abribus) et son horaire ; ne pose rien, ne tire aucun dé | `test_tramway.py`, `test_tramway_js.py` |
-| `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, la sonde de `test_navigateur.py` |
+| `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; la **nuit de déneigement** (le lendemain d'une tempête, un secteur par tempête) et ses panneaux, un au coin de chaque boîte ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, `test_deneigement.py`, `test_deneigement_js.py`, la sonde de `test_navigateur.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
@@ -659,7 +659,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9b | `autobus.js` | les **lignes d'autobus** : l'horaire (la place de chaque autobus sur sa boucle ne dépend que de l'heure de la partie), la naissance **hors de l'écran** sans un dé du jeu, le conducteur `'ligne'` (le tracé tuile par tuile, le feu guetté une tuile avant la ligne d'arrêt, l'abribus servi si quelqu'un attend, si on l'a demandé ou si ça se voit) ; le **passager** (`j.passager` + `j.dansVehicule` sans le volant) : monter et payer à l'arrêt, demander l'arrêt, descendre sur le trottoir de l'abri ; l'attente affichée à l'abribus |
 | 9c | `metro.js` | le **métro** : l'horaire des rames (une boucle, la place de chaque rame ne dépend que de l'heure), la descente par l'édicule (3 $, refusée si recherché), la rame qui entre, s'arrête et repart au quai (peinte par-dessus les deux rangées de tunnel de `metro_quai`), le tunnel qui défile dans les fenêtres de la rame, les portes qui ne s'ouvrent qu'en station, et `B.exterieur` recalé sur l'édicule de la station où l'on est — on remonte ailleurs qu'on est descendu ; la ligne en pointillé sur la grande carte |
 | 9d | `traversier.js` | le **traversier** : sa place ne dépend que de l'heure (`placeA`, un trapèze de vitesse), le pont posé dans la carte à quai (`poser`/`lever`, chaque octet rendu), l'embarquement de ce qui est sur le pont au départ (`aBord` : les chars et le joueur suivent la coque au pixel, un passant égaré est remis sur le quai), Radio-Traversier à bord, la corne, la ligne du HUD, la coque et les panneaux triés avec les passants (comme la foire), le pointillé de la grande carte |
-| 9e | `neige.js` | la **tempête de neige** : l'intensité à l'heure (`intensiteA`), 0 sans l'option ; les coefficients qu'elle donne à la physique (`adherence`, `frein`, `vitesseTrafic`) ; les tuiles déblayées par la charrue (`deneiger`, la seule mémoire) ; la neige au sol par plages et le voile avec ses flocons ; le vent en boucle |
+| 9e | `neige.js` | la **tempête de neige** : l'intensité à l'heure (`intensiteA`), 0 sans l'option ; les coefficients qu'elle donne à la physique (`adherence`, `frein`, `vitesseTrafic`) ; les tuiles déblayées par la charrue (`deneiger`, la seule mémoire) ; la neige au sol par plages et le voile avec ses flocons ; le vent en boucle ; la **nuit de déneigement** (`operationA`, les panneaux qui clignotent, ce qui reste dans les rues du secteur part au lot par `Missions.saisir`) |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A\*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital, le **refuge** (`auRefuge` : sur l'île, aucun agent, l'hélico repart, rien ne fait monter les étoiles) |
 | 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce |
 | 12 | `foire.js` | la foire qui roule : **le petit train** (sa voie en pixels depuis les tuiles `T`, l'arrêt devant quelqu'un, `bloquer` — on ne traverse pas un wagon) et **la montagne russe** (la voie 3D tracée par Python, conduite par l'énergie, deux moitiés cuites) ; rien dans `B.entites`, trié au dessin par `ajouterVisibles` |
@@ -734,7 +734,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8587,6 +8587,32 @@ déblayer sa tournée en poussant les chars mal garés.
   ElevenLabs dont le volume suit l'intensité. **12 juges neufs** (`test_neige.py`,
   `test_neige_js.py`, la sonde), **15 mutations toutes rouges** — celle du premier soir
   restait verte tant que le juge ne posait pas un rythme où le jour 1 tombait pile.
+
+✅ **15e vague livrée** (17 sept. 2026) — *la nuit de déneigement*, avec la neige (même
+option). Le lendemain d'une tempête, dès midi, les panneaux d'un secteur clignotent orange —
+« DÉNEIGEMENT CETTE NUIT · STATIONNEMENT INTERDIT DÈS 23:00 » — et de 23 h à 7 h, un char
+laissé dans ses rues part au lot. Les secteurs se suivent, un par tempête, et la charrue
+sort cette nuit-là aussi.
+
+- ⚠️ **Elle s'annonce ou elle n'arrive pas** — le juge du plan : l'opération est une
+  fonction du jour et de l'heure (`Neige.operationA`) ; un juge la parcourt minute par
+  minute sur trois cycles de tempête et vérifie que chaque nuit est précédée, le même jour,
+  d'au moins six heures d'annonce (onze, avec les réglages livrés). Python garde les bornes
+  : l'annonce le jour même, bien avant la nuit, et jamais un soir de tempête.
+- ⚠️ **Ce qui part au lot, c'est ce qui était permis le reste du temps** : un char `laissé`
+  hors d'une case, dans le secteur — une ruelle, par exemple, où `Missions.malGare` ne le
+  remorque jamais. Il part par `Missions.saisir` (on le rachète au comptoir), jamais sous
+  les yeux, jamais celui de la planque, jamais dans sa case, jamais dans un autre secteur.
+  ⚠️ Et le juge lit le LOT, pas la disparition : au-delà d'`oubli_px`, un char garé s'oublie
+  de toute façon — le char de l'autre secteur « disparaissait » sans être remorqué, et la
+  règle du secteur passait pour tenue.
+- Les panneaux (`neige.panneaux`) : un au coin de chaque boîte du quartier, sur le trottoir
+  — de 14 (La Pointe) à 54 (Le Faubourg) ; blancs, un P barré, un feu orange qui clignote.
+  Entre la tempête et la fin de l'opération, la neige reste au sol à 60 % (`couverture`), et
+  la physique la sent : la ville ne redevient grise que derrière la charrue. **7 juges
+  neufs** (`test_deneigement.py`, `test_deneigement_js.py`), **14 mutations toutes rouges**
+  — celle du secteur restait verte tant que le juge regardait si le char avait disparu
+  plutôt que s'il était au lot.
 
 ### M14 Meta
 
