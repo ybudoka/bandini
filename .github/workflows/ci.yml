@@ -24,7 +24,13 @@ jobs:
     # developpement et un runner est environ deux fois plus lent : on passait
     # tout juste, un run sur deux. Elle grossit d'une dizaine de juges par
     # vague ; 25 minutes laissent de la marge pour un bon moment.
-    timeout-minutes: 25
+    # ⚠️ LE « BON MOMENT » A DURE UN JOUR. Le 17 sept. 2026, plusieurs sessions
+    # livrant en parallele, la suite est passee a ~2 450 juges : le run de `main`
+    # de 0.115.0 a ete coupe a 25 min 15 s, a 94 % et sans un juge tombe, et tous
+    # les runs de `dev` de la meme heure sont morts pareil. Releve a 45 minutes
+    # pour debloquer les livraisons ; paralleliser (`pytest-xdist`) ou decouper
+    # le job est une decision de Martin, toujours ouverte.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
