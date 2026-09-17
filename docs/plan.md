@@ -202,6 +202,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
+| Le jeu écrit avec ses accents | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10801,6 +10802,23 @@ comptoir au chargement, et il ne s'en va jamais. Trois kiosques ont des heures
 hors de ces heures ACTION répond « FERME », mais l'invite annonce encore le prix et le
 marchand attend au comptoir. Les intérieurs, eux, n'ont pas d'heures : leur commis est là
 parce qu'ils sont ouverts.
+
+### Le jeu écrit avec ses accents
+
+Demande de Martin (17 sept. 2026) : « le jeu doit supporter les accents ». Mesuré avant : la
+police pixel 3×5 (`POLICE_PIXEL`) n'a que des majuscules nues, et `Atlas.normaliser` **retire**
+chaque accent avant de dessiner (« HÔPITAL » s'écrit HOPITAL) — un choix du jalon « Gestes et
+lisibilité », quand un glyphe absent tombait sur « ? ». Deux conséquences : un texte accentué
+à la source perd ses accents à l'écran, et des centaines de textes du jeu ont été écrits sans
+accents dès le départ (« PARTIE SAUVEGARDEE », « HOPITAL A MOITIE PRIX », « LA POLICE A
+LACHE »), côté JS comme côté Python.
+
+- **1re vague — la police** : les accents se dessinent **au-dessus** de la capitale, dans
+  l'interligne (aigu, grave, circonflexe, tréma ; la cédille dessous), sans changer la largeur
+  d'une lettre ni la hauteur d'une ligne ; les lieux où le texte colle au bord du dessus
+  (panneau de chantier, bulle) se vérifient sur capture.
+- **2e vague — les textes** : remettre les accents dans tout ce qui s'affiche, fichier par
+  fichier, et un juge qui refuse un mot connu sans son accent.
 
 ### Quatre activités que le jeu n'a pas
 
