@@ -2180,6 +2180,56 @@ const TUILES = (function () {
       points(ctx, v + 1, T, '#d2c5a6', 8, 55);
       if (v === 14 || v === 15) points(ctx, v + 1, T, '#9c8e70', 6, 96);   // du gravier plus gros
     },
+    // ⚠️ LA VOIE DU PETIT TRAIN DE LA FOIRE. La variante vient de
+    // `Monde.varianteDeRail` : les bits 1/2/4/8 disent de quel cote la voie
+    // continue (nord/est/sud/ouest, la lecture de la cloture), le bit 16 que
+    // c'est un PASSAGE A NIVEAU (une allee la croise : des planches entre les
+    // rails), et les bits hauts le grain du gazon dessous.
+    // ⚠️ Une courbe est un QUART DE CERCLE de rayon 8 autour du coin de la
+    // tuile — exactement la courbe que suit le train (`Foire`). Une voie peinte
+    // en equerre sous un train qui tourne rond, c'est un train qui deraille.
+    'T': function (ctx, v, T) {
+      herbe(ctx, (v >> 5) & 15, T);
+      const m = v & 15, m2 = T / 2;
+      const droite = m === 10 || m === 5;
+      // Le ballast, puis les traverses, puis les rails : deux fils d'acier a
+      // trois pixels de l'axe (un ecartement de train de foire).
+      if (droite) {
+        const h = m === 10;
+        ctx.fillStyle = '#7d7466';
+        if (h) ctx.fillRect(0, m2 - 5, T, 10); else ctx.fillRect(m2 - 5, 0, 10, T);
+        ctx.fillStyle = '#6a6256';
+        for (let k = 1; k < T; k += 5) { if (h) ctx.fillRect(k, m2 - 5, 1, 10); else ctx.fillRect(m2 - 5, k, 10, 1); }
+        ctx.fillStyle = (v & 16) ? '#9a7b52' : '#5b3f28';
+        for (let k = 1; k < T; k += 3) { if (h) ctx.fillRect(k, m2 - 4, 2, 8); else ctx.fillRect(m2 - 4, k, 8, 2); }
+        if (v & 16) {                               // le passage a niveau : on marche sur du bois
+          ctx.fillStyle = '#b08d5f';
+          if (h) ctx.fillRect(0, m2 - 2, T, 4); else ctx.fillRect(m2 - 2, 0, 4, T);
+        }
+        for (const [d, c] of [[-3, '#c9ccd1'], [2, '#8b9097']]) {
+          ctx.fillStyle = c;
+          if (h) ctx.fillRect(0, m2 + d, T, 1); else ctx.fillRect(m2 + d, 0, 1, T);
+        }
+        return;
+      }
+      // Une courbe : le coin vers lequel elle tourne est celui des deux voisines.
+      const ox = (m & 2) ? T : 0, oy = (m & 4) ? T : 0;
+      const anneau = function (r0, r1, couleur, pas) {
+        ctx.fillStyle = couleur;
+        for (let y = 0; y < T; y++) {
+          for (let x = 0; x < T; x++) {
+            const d = Math.hypot(x + 0.5 - ox, y + 0.5 - oy);
+            if (d < r0 || d >= r1) continue;
+            if (pas && Math.floor(Math.atan2(Math.abs(y + 0.5 - oy), Math.abs(x + 0.5 - ox)) * 12) % pas !== 0) continue;
+            ctx.fillRect(x, y, 1, 1);
+          }
+        }
+      };
+      anneau(3, 13, '#7d7466', 0);
+      anneau(4, 12, '#5b3f28', 3);
+      anneau(4.5, 5.5, '#8b9097', 0);
+      anneau(10.5, 11.5, '#c9ccd1', 0);
+    },
     // ⚠️ QUATRE TUILES FONT UN ROND, pas quatre carres. Chaque tuile porte un
     // QUART du disque, et elle sait lequel en lisant ses voisines (`bloc` dans
     // LEGENDE, bits 1/2/4/8 = nord/est/sud/ouest) : le centre du cercle est du
@@ -3623,6 +3673,19 @@ const DECORS = {
       ctx.fillStyle = 'rgba(255,255,255,0.35)'; ctx.fillRect(nx - 3, ny + 3, 7, 1);
       ctx.fillStyle = '#1b1b1f'; ctx.fillRect(nx - 2, ny + 5, 5, 1);
     }
+  } },
+
+  // LE PIED DE LA MONTAGNE RUSSE. ⚠️ `invisible` : il est PEINT avec la
+  // structure (`Foire`, une image pour toute la montagne) — l'entite ne sert
+  // qu'a ARRETER, parce que la voie est en l'air et qu'on passe dessous, mais
+  // pas au travers d'un treteau d'acier. Vingt-quatre pieds peints un par un
+  // coutaient vingt-quatre images par image, pour rien.
+  // Sa boite se cale sur la semelle : `Foire` pose le treteau a quatre pixels
+  // au-dessus du bas de la tuile, la ou l'entite a son pied.
+  pied_montagne_russe: { invisible: true, arrete: 30, w: 12, h: 6, ancre: [6, 6], r: 4, sol: [4, 3], solide: true, peindre: function (ctx) {
+    ctx.fillStyle = '#6f737a'; ctx.fillRect(1, 2, 10, 3);
+    ctx.fillStyle = '#e4e2da'; ctx.fillRect(3, 0, 1, 3);
+    ctx.fillStyle = '#a3a6ac'; ctx.fillRect(8, 0, 1, 3);
   } },
 
   // LE CARROUSEL : un toit conique raye, et les chevaux dessous qui tournent.

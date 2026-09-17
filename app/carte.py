@@ -260,6 +260,14 @@ LEGENDE: dict[str, dict] = {
     # que `w` / `W` deux ecrans plus bas, et meme parade : les deux ne vivent
     # jamais dans le meme genre de plan (l'un est du SOL, l'autre du BATI).
     "g": {"nom": "allée de poussière de pierre", "terre": True},
+    # ⚠️ LA VOIE DU PETIT TRAIN DE LA FOIRE. On y marche (on la traverse pour
+    # entrer), mais c'est un GLYPHE et pas du decor : la voie se cuit avec le
+    # sol, une fois par morceau, au lieu de se repeindre a chaque image. Chaque
+    # tuile lit ses voisines pour savoir si elle est droite ou en courbe
+    # (`rail`, `Monde.varianteDeRail`) — la meme lecture que la cloture.
+    # ⚠️ `T` majuscule : `t` minuscule est un plancher. Les deux ne vivent
+    # jamais dans le meme genre de plan (l'un dehors, l'autre dedans).
+    "T": {"nom": "voie du petit train", "rail": True},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
     # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre
@@ -783,8 +791,15 @@ FOIRE: dict = {
     # ⚠️ Mesure a l'ecran, pas au gout : a 54 x 24 le fond nord restait un grand
     # gazon noir derriere les kiosques. A 50 x 21, les manèges sont JUSTE
     # derriere les comptoirs, et l'ecran (30 x 17 tuiles) montre la foire entiere.
-    "enceinte": (50, 21),
-    "marge_ouest": 5,         # l'enceinte se cale a l'ouest : l'est est l'elan du pont
+    # ⚠️ PUIS 52 x 31, et ce n'est pas la foire qui s'etale : Martin a demande
+    # « un petit train qui fait le tour de la foire et une enorme montagne
+    # russe ». Le train veut une rangee de voie de chaque cote (a trois tuiles
+    # du bord : la palissade rentre de deux) ; la montagne russe veut cinq rangs
+    # au nord, derriere les manèges. Rien d'autre ne s'ecarte : l'allee, les
+    # comptoirs et les manèges gardent leurs pas. Et on ne s'etend ni a l'est
+    # (l'elan du pont) ni au-dela du bloc (33 rangs, une tuile de marge).
+    "enceinte": (52, 31),
+    "marge_ouest": 3,         # l'enceinte se cale a l'ouest : l'est est l'elan du pont
     "pas_kiosque": 3,         # un kiosque tous les trois pas, des deux cotes
     # ⚠️ Neuf kiosques a manger ou a gagner, et les trois jeux d'adresse. La
     # POUTINE et les QUEUES DE CASTOR ne sont pas du decor exotique : c'est ce
@@ -804,7 +819,193 @@ FOIRE: dict = {
     "lampes": ("foire_jaune", "foire_rose", "foire_bleue"),
     "rayon_lampe": 56,
     "rayon_manege": 58,
+    # ⚠️ **LE PETIT TRAIN FAIT LE TOUR DE LA FOIRE** — Martin. Une voie fermee,
+    # une tuile d'epais, a `retrait` tuiles du bord de l'enceinte : la palissade
+    # rentre de 0 a 2, donc la voie ne la touche jamais, et elle COUPE l'allee
+    # d'entree — la premiere chose qu'on voit en passant l'arche, c'est le train.
+    # ⚠️ Il S'ARRETE devant quelqu'un et siffle : un train de foire ne renverse
+    # personne. Et on ne passe pas A TRAVERS un wagon (`Foire.bloquer`).
+    # ⚠️ On n'y monte pas, comme les manèges.
+    "train": {
+        "retrait": 3,
+        "wagons": 4,
+        "vitesse": 0.8,         # px par image : le pas d'un enfant qui court
+        "reprise": 0.02,        # ce qu'il reprend par image apres un arret
+        "ecart_px": 15,         # d'un wagon au suivant, attelage compris
+        "regard_px": 26,        # ce que la locomotive surveille devant elle
+        "sifflet_images": 150,  # pas deux coups de sifflet en deux secondes et demie
+    },
+    # ⚠️ **L'ENORME MONTAGNE RUSSE** — Martin. La plus haute chose de la ville :
+    # la grande roue fait 92 px de haut, le sommet de la chaine en fait 150, et
+    # elle est plus LARGE que l'ecran (30 tuiles). Un aller et un retour a
+    # quatre rangs l'un de l'autre, un looping, une bosse, et la gare a l'ouest.
+    # ⚠️ ELLE EST EN L'AIR : on passe dessous, et seuls ses PIEDS arretent
+    # (`pied_montagne_russe`, un par tuile). ⚠️ Python trace la voie entiere
+    # (x, y, z) et la juge — hauteur, looping, pieds sous chaque metre en l'air ;
+    # le navigateur ne fait que la peindre et y faire rouler les chariots.
+    "montagne_russe": {
+        "largeur": 38,          # tuiles, virages compris
+        "rangs": 5,             # de l'aller au retour, virages compris
+        "hauteur_px": 150,      # le sommet de la chaine
+        "boucle_px": 44,        # le rayon du looping
+        "pas_px": 4,            # la voie exportee, un point tous les 4 px (en 3D)
+        "pied_px": 32,          # un pied tous les deux metres de voie en l'air
+        "pied_des_px": 14,      # sous cette hauteur, la voie pose sur son lit
+        "chariots": 4,
+        "ecart_px": 13,
+        # ⚠️ Des px par image, et la gravite en px par image au carre :
+        # v²/2 + g·z se conserve. Du sommet (150) au creux (26), elle file a
+        # plus de quatre px et demi par image — huit fois la chaine.
+        # ⚠️ Le frottement est TOUT PETIT, et c'est mesure : a 0,0006 le chariot
+        # arrivait en haut du looping a la vitesse plancher — il ne l'aurait pas
+        # passe sans elle. A 0,0002, il y passe encore a 2,4.
+        # ⚠️ `vitesse_chaine` et pas `chaine` : `chaine` est la TRANCHE de voie
+        # (des indices) dans le paquet, et la fiche l'ecrasait en s'y fusionnant.
+        "vitesse_chaine": 0.55,
+        "depart": 1.0,
+        "gravite": 0.085,
+        "frottement": 0.0002,
+        "vitesse_min": 0.7,
+        "vitesse_max": 6.0,
+        "gare_images": 240,     # quatre secondes en gare
+    },
 }
+
+def voie_de_montagne_russe(tx0: int, ty0: int, fiche: dict | None = None) -> dict:
+    """La voie ENTIERE de la montagne russe dont le coin nord-ouest est la tuile
+    (tx0, ty0), dans le sens ou roulent les chariots.
+
+    Rend `voie` — des points [x, y, z] en pixels du monde, un tous les `pas_px`
+    MESURES EN 3D : une chaine qui grimpe a 45° n'est pas plus courte qu'une
+    allee, et le navigateur en tire la vitesse par l'energie —, les tranches
+    `gare`, `chaine` et `boucle` en indices, et `supports` : [indice, tx, ty],
+    le point de voie que porte chaque pied et la tuile ou il pose.
+
+    ⚠️ LE HAUT DERRIERE, LE BAS DEVANT — et c'est ce que le premier dessin
+    faisait a l'envers. En trois-quarts, ce qui monte monte VERS LE HAUT DE
+    L'ECRAN : la chaine posee sur la ligne de devant (au sud) traversait le
+    looping et la ligne du fond en diagonale, et on voyait un noeud au lieu
+    d'une montagne russe. La chaine est donc au NORD (le retour du dessin
+    d'avant), et le looping et la bosse au SUD, devant elle.
+
+    Dans le sens de la marche : la gare au bout ouest de la ligne sud ; le
+    virage de l'ouest au ras du sol ; la CHAINE au nord, vers l'est, jusqu'au
+    sommet ; la plongee dans le virage de l'est, qui remonte ; la ligne sud vers
+    l'ouest — une descente, le LOOPING, une bosse — et le frein de la gare.
+    ⚠️ Le looping est dans le plan x-z : vu en trois-quarts, c'est un cercle
+    debout — la meme lecture que la grande roue, et c'est ce qui dit « montagne
+    russe » a deux cents pixels. Il DERIVE de `derive` px en un tour : l'entree
+    et la sortie ne tombent pas au meme endroit, comme sur une vraie."""
+    f = fiche or FOIRE["montagne_russe"]
+    haut, rayon = f["hauteur_px"], f["boucle_px"]
+    y_nord = ty0 * TUILE_PX + 12
+    y_sud = (ty0 + f["rangs"] - 1) * TUILE_PX + 12
+    rv = (y_sud - y_nord) / 2                         # le rayon des virages
+    y_mil = (y_nord + y_sud) / 2
+    x_ouest = tx0 * TUILE_PX + 8 + rv
+    x_est = (tx0 + f["largeur"] - 1) * TUILE_PX + 8 - rv
+    long_ = x_est - x_ouest
+    derive = 24
+
+    def profil(points: tuple, u: float) -> float:
+        for (u0, z0), (u1, z1) in zip(points, points[1:]):
+            if u <= u1:
+                return z0 + (z1 - z0) * (u - u0) / (u1 - u0)
+        return points[-1][1]
+
+    # Les hauteurs le long de chaque ligne, de 0 (son debut) a 1 (sa fin).
+    devant = ((0.0, 64), (0.16, 12), (0.22, 8), (0.50, 8), (0.62, 42), (0.74, 8),
+              (0.80, 4), (1.0, 4))
+    fond = ((0.0, 6), (0.08, 8), (0.12, 12), (0.62, haut - 8), (0.66, haut), (0.72, haut),
+            (0.95, 20), (1.0, 26))
+    u_boucle = 0.34
+
+    bruts: list[tuple[float, float, float, str]] = []
+    x, x_boucle, bouclee = x_est, x_est - u_boucle * long_, False
+    while x > x_ouest:                                # 1. devant, vers l'ouest
+        u = (x_est - x) / long_
+        if not bouclee and x <= x_boucle:
+            k = int(2 * math.pi * rayon)
+            for i in range(k):
+                phi = 2 * math.pi * i / k
+                bruts.append((x_boucle - rayon * math.sin(phi) - derive * phi / (2 * math.pi),
+                               y_sud, 8 + rayon * (1 - math.cos(phi)), "boucle"))
+            x, bouclee = x_boucle - derive, True
+            continue
+        bruts.append((x, y_sud, profil(devant, u), "gare" if 0.82 <= u <= 0.97 else ""))
+        x -= 1
+    m = int(math.pi * rv)
+    for i in range(m):                                # 2. le virage de l'ouest, au ras du sol
+        a = math.pi / 2 + math.pi * i / m
+        bruts.append((x_ouest + rv * math.cos(a), y_mil + rv * math.sin(a), 4 + 2 * i / m, "virage"))
+    n = int(long_)
+    for i in range(n):                                # 3. le fond, vers l'est : la chaine
+        u = i / n
+        bruts.append((x_ouest + i * long_ / n, y_nord, profil(fond, u),
+                      "chaine" if 0.12 <= u <= 0.64 else ""))
+    for i in range(m):                                # 4. le virage de l'est, qui remonte
+        a = -math.pi / 2 + math.pi * i / m
+        bruts.append((x_est + rv * math.cos(a), y_mil + rv * math.sin(a),
+                      26 + (64 - 26) * i / m, "virage"))
+
+    # ⚠️ ON ARRONDIT LES CASSURES, pas le looping : les hauteurs sont posees par
+    # segments droits, et un segment droit qui rencontre un palier fait un
+    # angle — un chariot qui y passe decolle a l'oeil. Une moyenne glissante
+    # sur deux dizaines de pixels, en rond (la voie est fermee), et le looping
+    # (deja lisse) ne se melange pas a ses voisins.
+    nb = len(bruts)
+    lisses = []
+    for i, (bx, by, bz, quoi) in enumerate(bruts):
+        if quoi == "boucle":
+            lisses.append((bx, by, bz, quoi))
+            continue
+        voisins = [bruts[(i + d) % nb][2] for d in range(-12, 13) if bruts[(i + d) % nb][3] != "boucle"]
+        lisses.append((bx, by, sum(voisins) / len(voisins), quoi))
+
+    # Le reechantillonnage, tous les `pas_px` en 3D.
+    cumul = [0.0]
+    for i in range(nb):
+        a, b = lisses[i], lisses[(i + 1) % nb]
+        cumul.append(cumul[-1] + math.dist(a[:3], b[:3]))
+    total = cumul[-1]
+    voie: list[list[float]] = []
+    etiquettes: list[str] = []
+    j = 0
+    for k in range(int(total // f["pas_px"])):
+        cible = k * f["pas_px"]
+        while cumul[j + 1] < cible:
+            j += 1
+        a, b = lisses[j], lisses[(j + 1) % nb]
+        t = (cible - cumul[j]) / max(1e-9, cumul[j + 1] - cumul[j])
+        # ⚠️ En pixels ENTIERS : le dessin arrondit de toute facon, et une
+        # decimale coutait 700 octets gzip au paquet (sur un plafond de 70 Ko).
+        voie.append([round(a[i] + (b[i] - a[i]) * t) for i in range(3)])
+        etiquettes.append(a[3])
+
+    def tranche(quoi: str) -> list[int]:
+        indices = [i for i, e in enumerate(etiquettes) if e == quoi]
+        return [indices[0], indices[-1]]
+
+    # ⚠️ LES PIEDS : un tous les `pied_px` de voie en l'air, et seulement la ou
+    # la voie passe AU-DESSUS du centre d'une tuile (a trois px pres) — un pied
+    # d'acier est d'aplomb, pas en biais. Dans le looping, seuls les flancs du
+    # bas en ont : le haut du cercle ne repose sur rien.
+    supports: list[list[int]] = []
+    dernier = -10**9
+    for i, (px, py, pz) in enumerate(voie):
+        if pz <= f["pied_des_px"] or i * f["pas_px"] - dernier < f["pied_px"]:
+            continue
+        if etiquettes[i] == "boucle" and pz > 8 + rayon:
+            continue
+        tx, ty = int(px // TUILE_PX), int((py - 4) // TUILE_PX)
+        if math.hypot(px - (tx * TUILE_PX + 8), py - (ty * TUILE_PX + 12)) > 3:
+            continue
+        supports.append([i, tx, ty])
+        dernier = i * f["pas_px"]
+    return {"voie": voie, "gare": tranche("gare"), "chaine": tranche("chaine"),
+            "boucle": tranche("boucle"), "supports": supports,
+            "zone": {"x": tx0, "y": ty0, "l": f["largeur"], "h": f["rangs"]}}
+
 
 #: **LES AMARRAGES.** Ou une chaloupe attend. ⚠️ La coque est passee en phase 1
 #: le 16 sept. 2026 (la dette de M3) : il lui fallait un endroit ou la trouver,
@@ -960,6 +1161,8 @@ DECOR_SOLIDE = frozenset({
     # Les neuf kiosques de la foire : un comptoir, ca arrete un pieton.
     "ballons", "barbe_a_papa", "hot_dogs", "lance_anneaux", "limonade", "peluches",
     "pop_corn", "poutine", "queues_de_castor",
+    # Le pied d'acier de la montagne russe : la voie est en l'air, lui non.
+    "pied_montagne_russe",
 })
 
 #: **LE BRIS D'AQUEDUC.** Le troisieme visage de l'entrave, et le seul qui ne
@@ -1439,6 +1642,8 @@ class _Chantier:
         self.kiosques: list[dict] = []
         self.foire_entree: tuple[int, int, int, int] | None = None
         self.foire_enclos: list[list[int]] = []
+        self.train_de_foire: dict | None = None
+        self.montagne_russe: dict | None = None
         # ⚠️ SON PROPRE DE. Piger les scenes dans le de commun decalerait tout
         # ce qui vient apres — la ville livree changerait de gabarits, et le
         # depanneur perdrait son enseigne (la lecon est ecrite dans
@@ -4132,7 +4337,7 @@ class _Chantier:
 
         # --- 0. L'enceinte, au milieu du bloc, plus petite que lui.
         el = min(largeur - 12, fiche["enceinte"][0])
-        eh = min(hauteur - 5, fiche["enceinte"][1])
+        eh = min(hauteur - 2, fiche["enceinte"][1])
         # ⚠️ A L'OUEST DU BLOC, et pas au milieu. Le pont de La Pointe atterrit a
         # l'EST de ce bloc : centree, l'enceinte tombait pile dans l'axe de sa
         # sortie, et un char lance qui descendait du pont filait douze tuiles
@@ -4143,8 +4348,13 @@ class _Chantier:
         ey = y + (hauteur - eh) // 2
         self.foire = {"x": ex, "y": ey, "l": el, "h": eh}
         allee = fiche["allee"]
-        a0 = ey + eh // 2 - allee // 2                 # la premiere rangee de l'allee
-        a1 = a0 + allee - 1                            # la derniere
+        retrait = fiche["train"]["retrait"]
+        # ⚠️ L'ALLEE SE PLACE DEPUIS LE SUD, plus au milieu. Au sud, tout a son
+        # pas : les comptoirs (+2), la cour a manger (+4), les manèges (+6), la
+        # voie du train (+8), puis la palissade. Ce qui reste au NORD est pour
+        # les manèges du nord et la montagne russe derriere eux.
+        a1 = ey + eh - 1 - retrait - 8                 # la derniere rangee de l'allee
+        a0 = a1 - allee + 1                            # la premiere
         gx = ex + el // 3                              # l'arche, sur la palissade sud
 
         # ⚠️ LA PALISSADE EN ESCALIER : chaque cote rentre de 0 a 2 tuiles par
@@ -4249,25 +4459,68 @@ class _Chantier:
         for tx, ty in pourtour:
             self.reserver(tx, ty, 1, 1)
 
+        # ⚠️ LA VOIE DU PETIT TRAIN, reservee juste apres la palissade et pour
+        # la meme raison : rien ne doit s'y poser, ni kiosque ni table. Un
+        # rectangle a `retrait` tuiles du bord, dans le sens des aiguilles d'une
+        # montre (le train roule dans l'ordre de la liste). La palissade rentre
+        # de deux tuiles au plus : la voie est donc TOUJOURS dedans.
+        vx0, vy0 = ex + retrait, ey + retrait
+        vx1, vy1 = ex + el - 1 - retrait, ey + eh - 1 - retrait
+        voie = ([(tx, vy0) for tx in range(vx0, vx1)] + [(vx1, ty) for ty in range(vy0, vy1)]
+                + [(tx, vy1) for tx in range(vx1, vx0, -1)] + [(vx0, ty) for ty in range(vy1, vy0, -1)])
+        for tx, ty in voie:
+            if not dedans(tx, ty):
+                raise ValueError(f"la voie du train sort de l'enceinte en ({tx}, {ty})")
+            self.reserver(tx, ty, 1, 1)
+
         # Le sol de la foire : de la terre battue a l'interieur de l'enceinte.
         for ty in range(ey, ey + eh):
             for tx in range(ex, ex + el):
                 if dedans(tx, ty):
                     self.sol[ty][tx] = ","
-        self.rect(ex + 1, a0, el - 2, allee, "g")
+        # L'allee centrale, d'un bout de la voie a l'autre. ⚠️ Elle partait de
+        # `ex + 1` : la ou la palissade rentre, sa premiere tuile tombait DEHORS.
+        self.rect(vx0 + 1, a0, vx1 - vx0 - 1, allee, "g")
         # L'allee d'entree, de l'arche jusqu'a l'allee centrale.
         self.rect(gx - 1, a1 + 1, 3, bas_arche - a1, "g")
         # Une traverse au milieu : on passe entre les rangs pour aller aux manèges.
-        tv = ex + el // 2 + 3
-        self.rect(tv, ey + 2, 2, eh - 4, "g")
+        # ⚠️ Elle s'arrete a une tuile de la voie, des deux cotes : une allee qui
+        # finit SUR les rails invite a y attendre, et le train attendrait.
+        tv = ex + el // 2 + 2
+        self.rect(tv, vy0 + 2, 2, vy1 - vy0 - 3, "g")
         interdits = {tv - 1, tv, tv + 1, tv + 2}
+        # La voie, par-dessus les allees : elle COUPE l'allee d'entree, et c'est
+        # la premiere chose qu'on voit en passant l'arche.
+        for tx, ty in voie:
+            self.sol[ty][tx] = "T"
+        self.train_de_foire = {"voie": [[tx, ty] for tx, ty in voie]}
 
         # --- 1. La grande roue, au bout de l'allee, cote nord.
-        rx, ry = ex + el - 7, a0 - 1
+        rx, ry = vx1 - 4, a0 - 1
         self.roue = {"x": rx, "y": ry}
         self.poser_decor("grande_roue", rx, ry)
         self.lampes.append({"x": rx, "y": ry - 3, "r": fiche["rayon_manege"] + 20, "c": "foire_jaune"})
         self.reserver(rx - 3, ry - 5, 7, 6)
+
+        # --- 1 bis. LA MONTAGNE RUSSE, au nord, derriere les manèges : elle
+        # prend les rangs entre la voie du train (+2) et le haut des manèges du
+        # nord. Ses PIEDS se posent ici — un decor solide par tuile ; la voie
+        # elle-meme est en l'air, et le navigateur la peint.
+        # ⚠️ Pas de pied sur la traverse : on passe dessous, pas au travers.
+        mr = FOIRE["montagne_russe"]
+        mx0 = vx0 + 2
+        mx0 = min(mx0, vx1 - 1 - mr["largeur"])
+        self.montagne_russe = voie_de_montagne_russe(mx0, vy0 + 2, mr)
+        pieds: set[tuple[int, int]] = set()
+        gardes = []
+        for i, tx, ty in self.montagne_russe["supports"]:
+            if self.sol[ty][tx] != "," or not dedans(tx, ty):
+                continue
+            if (tx, ty) not in pieds and not self.poser_decor("pied_montagne_russe", tx, ty):
+                continue
+            pieds.add((tx, ty))
+            gardes.append([i, tx, ty])
+        self.montagne_russe["supports"] = gardes
 
         # --- 2. L'allee bordee des DEUX cotes, serree. Le de ne choisit que l'ordre.
         sortes = list(fiche["kiosques"]) + list(fiche["jeux"])
@@ -4277,7 +4530,7 @@ class _Chantier:
             melange.append(restant.pop(des.suivant() % len(restant)))
         n = 0
         jeux_poses: set[str] = set()
-        for kx in range(ex + 4, ex + el - 5, fiche["pas_kiosque"]):
+        for kx in range(vx0 + 2, vx1 - 3, fiche["pas_kiosque"]):
             if kx in interdits:
                 continue
             for ky in (a0 - 1, a1 + 2):
@@ -4313,8 +4566,8 @@ class _Chantier:
         # manèges sur six ne se posaient plus. Et on laisse la place de la cour a
         # manger de part et d'autre de l'allee d'entree (`abs(mx - gx) <= 10`).
         m = 0
-        for ligne, depart in ((a0 - 5, ex + 5), (a1 + 6, ex + 5)):
-            for mx in range(depart, ex + el - 9, fiche["pas_manege"]):
+        for ligne, depart in ((a0 - 5, vx0 + 2), (a1 + 6, vx0 + 2)):
+            for mx in range(depart, vx1 - 6, fiche["pas_manege"]):
                 if m >= len(fiche["manèges"]):
                     break
                 if any(abs(mx - t) <= 2 for t in interdits):
@@ -4335,7 +4588,7 @@ class _Chantier:
             cote = 1 if i % 2 == 0 else -1
             tx = gx + cote * (3 + (i // 2) * 3)
             ty = a1 + 4
-            if dedans(tx, ty):
+            if vx0 < tx < vx1 and dedans(tx, ty):
                 self.poser_decor("table_pique_nique", tx, ty)
 
         # --- 5. LA CLOTURE, sur l'anneau reserve au depart. ⚠️ Du GRILLAGE et
@@ -4352,6 +4605,14 @@ class _Chantier:
         # L'arche, a cheval sur l'ouverture ; elle ne bloque rien.
         self.poser_decor("portique_foire", gx, bas_arche)
         self.lampes.append({"x": gx, "y": bas_arche - 2, "r": fiche["rayon_lampe"] + 10, "c": "foire_rose"})
+        # La montagne russe, la nuit : la gare et le looping. ⚠️ EN DERNIER dans
+        # la liste : le rendu n'allume que les 25 premieres lampes a l'ecran, et
+        # ce sont les kiosques qu'il ne faut jamais eteindre.
+        mr_voie = self.montagne_russe["voie"]
+        for tranche, couleur, monte in (("gare", "foire_rose", 1), ("boucle", "foire_bleue", 3)):
+            i = sum(self.montagne_russe[tranche]) // 2
+            self.lampes.append({"x": int(mr_voie[i][0] // TUILE_PX), "y": int(mr_voie[i][1] // TUILE_PX) - monte,
+                                "r": fiche["rayon_manege"] + 14, "c": couleur})
         # L'interieur, en bandes par rangee, pour le navigateur.
         for ty in range(ey, ey + eh):
             debut = None
@@ -5768,6 +6029,14 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         # ⚠️ L'INTERIEUR de la palissade, en bandes par rangee [y, x0, x1] : la
         # foule y nait et y reste, et resquiller se juge a la retombee DEDANS.
         "foire_enclos": chantier.foire_enclos,
+        # Le petit train et la montagne russe : la GEOMETRIE vient du chantier,
+        # la CONDUITE de la fiche — le navigateur n'invente ni l'une ni l'autre.
+        "train_de_foire": chantier.train_de_foire and {**chantier.train_de_foire, **FOIRE["train"]},
+        "montagne_russe": chantier.montagne_russe and {
+            **chantier.montagne_russe,
+            **{k: v for k, v in FOIRE["montagne_russe"].items()
+               if k in ("pas_px", "chariots", "ecart_px", "vitesse_chaine", "depart", "gravite",
+                        "frottement", "vitesse_min", "vitesse_max", "gare_images", "hauteur_px")}},
         "aqueducs": chantier.aqueducs(),
         "aqueduc": {"raison": AQUEDUCS["raison"], "degats": AQUEDUCS["degats"],
                     "chance_par_heure": AQUEDUCS["chance_par_heure"],

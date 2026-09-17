@@ -1160,11 +1160,27 @@ const Monde = (function () {
     return (tx & 1) | ((ty & 1) << 1) | (usure << 2);
   }
 
+  /** La variante d'une tuile de VOIE (le petit train de la foire) : de quel
+      cote la voie continue (1 nord, 2 est, 4 sud, 8 ouest — la lecture de la
+      cloture), 16 si une allee la croise (un passage a niveau), et le grain du
+      gazon dessous. */
+  function varianteDeRail(tx, ty) {
+    const est = function (x, y) { return glyphe(x, y) === 'T'; };
+    const m = (est(tx, ty - 1) ? 1 : 0) | (est(tx + 1, ty) ? 2 : 0) | (est(tx, ty + 1) ? 4 : 0) | (est(tx - 1, ty) ? 8 : 0);
+    // ⚠️ Des DEUX cotes : l'allee centrale vient buter contre la voie sans la
+    // traverser (derriere, c'est la palissade), et des planches y inviteraient
+    // a passer.
+    const croise = m === 10 ? (glyphe(tx, ty - 1) === 'g' && glyphe(tx, ty + 1) === 'g')
+      : m === 5 ? (glyphe(tx - 1, ty) === 'g' && glyphe(tx + 1, ty) === 'g') : false;
+    return m | (croise ? 16 : 0) | ((hash2(tx, ty) % USURES_DE_SOL) << 5);
+  }
+
   /** La variante d'une tuile : ce que son peintre a besoin de savoir de ses
       voisines. Passage pieton, case de stationnement, rampe et cloture en ont
       une ; les autres se contentent d'un bruit stable. */
   function varianteDeTuile(g, tx, ty) {
     if (CASES[g]) return varianteDeCase(g, tx, ty);
+    if (g === 'T') return varianteDeRail(tx, ty);
     if (g === 'p') return hash2(tx, ty) % USURES;
     if (SOLS_D_ILOT[g]) return varianteDeSol(g, tx, ty);
     if (g === 'R' || g === 'J') return varianteDeRampe(g, tx, ty);
@@ -1486,7 +1502,7 @@ const Monde = (function () {
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
     feuxClignotent, arterePasse, nidDePoule, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
-    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
+    ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE, estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,

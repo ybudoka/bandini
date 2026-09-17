@@ -173,7 +173,9 @@ const Entites = (function () {
       const fiche = DECORS[d.type] || {};
       const e = creer('decor', d.x * TT + 8, d.y * TT + 15, {
         decor: d.type, r: fiche.r === undefined ? 3 : fiche.r, solide: !!fiche.solide,
-        dessine: true,
+        // ⚠️ `invisible` : un decor qui ARRETE sans se peindre lui-meme — le pied
+        // de la montagne russe, peint avec toute la structure (`Foire`).
+        dessine: !fiche.invisible,
         // ⚠️ UNE VARIANTE PAR TUILE, et tiree a l'EMPREINTE de la tuile — jamais
         // au de du jeu : un decor qui consomme `B.rng()` decale tout ce qui
         // suit, et cette lecon-la a deja fait tomber quatre juges sans rapport.
@@ -2716,6 +2718,9 @@ const Entites = (function () {
       e.x = d.x + dx / dist * min;
       e.y = d.y + dy / dist * min;
     }
+    // Le petit train de la foire : il roule, donc il n'est pas dans l'index du
+    // decor — mais on ne passe pas au travers d'un wagon non plus.
+    Foire.bloquer(e);
   }
 
   // --- La foule ne se traverse pas -------------------------------------------------
@@ -4197,6 +4202,11 @@ const Entites = (function () {
     // un demi-pixel decidait alors si on la voyait ou si elle disparaissait
     // dessous. On lui donne donc la profondeur de son porteur, plus un cheveu :
     // elle est toujours au-dessus, quel que soit le cap.
+    // ⚠️ LE TRAIN ET LA MONTAGNE RUSSE DE LA FOIRE se trient avec le reste — un
+    // wagon passe devant un passant ou derriere, selon sa rangee — mais ils ne
+    // sont PAS dans `B.entites` (la lecon des betes). `Foire` ajoute ce qui est
+    // a l'ecran, et chacun porte son peintre.
+    if (!B.interieur) Foire.ajouterVisibles(visibles, cx, cy);
     const profond = function (e) { return e.remorqueePar ? e.remorqueePar.y + 0.5 : e.y; };
     visibles.sort(function (a, b) {
       return (a.vivant ? 1 : 0) - (b.vivant ? 1 : 0) || profond(a) - profond(b) || a.id - b.id;
@@ -4210,6 +4220,7 @@ const Entites = (function () {
       // l'autre sens, un `decor` pose sur une entite qui a deja son peintre
       // l'EFFACE en silence : c'est ce qui est arrive aux feux, muets d'un
       // bout a l'autre de la ville parce qu'ils portaient `decor: 'feu'`.
+      if (e.peindreFoire) { e.peindreFoire(ctx); continue; }
       if (e.type === 'feu') { Vehicules.dessinerFeu(ctx, e, cx, cy); continue; }
       if (e.type === 'feu_pieton') { Vehicules.dessinerFeuPieton(ctx, e, cx, cy); continue; }
       if (e.decor) {                 // decor ET commerces ambulants

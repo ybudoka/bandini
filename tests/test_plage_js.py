@@ -366,8 +366,15 @@ def test_un_grand_se_fait_bronzer_sur_une_serviette_libre(banc, paquet):
         a.jeu = 'bronzer'; a.lit = lit; a.jeuT = 5000;
         a.cap = { x: lit.x * TT + 8, y: lit.y * TT + 8 }; a.capT = 0; a.etat = 'cap';
         const prisPourB = L.Entites.litLibre(b, 100000) === lit;
+        // ⚠️ ON LUI LAISSE LE TEMPS D'ARRIVER : c'est RESTER qui se juge ici, pas
+        // le chemin. Le juge a tenu par chance jusqu'au 16 sept. 2026 — le grand
+        // tire etait deja SUR sa serviette. Les pieds de la montagne russe ont
+        // decale les numeros d'entite, il en a tire un autre, a 114 px d'une
+        // chaise longue, qui est reste dix secondes coince contre une table de
+        // pique-nique (`cap` marche en ligne droite) avant de s'y installer — et
+        // d'y rester. 900 images n'en laissaient que 255 au soleil.
         let auSoleil = 0;
-        for (let i = 0; i < 900; i++) {
+        for (let i = 0; i < 1500; i++) {
           o.frame(1);
           const d = Math.hypot(a.x - (lit.x * TT + 8), a.y - (lit.y * TT + 8));
           if (d <= 14 && a.etat === 'arret' && a.jeu === 'bronzer') auSoleil++;

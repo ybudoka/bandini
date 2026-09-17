@@ -462,6 +462,12 @@ const Son = (function () {
     porte_commerce: function () { if (!joue('porte_commerce')) { bruit(0.03, 0.08, 3000, 2000); ton(2300, 0.18, 'sine', 0.12, 1, 0.03); ton(3100, 0.25, 'sine', 0.09, 1, 0.1); } },
     porte_vehicule: function () { if (!joue('porte_vehicule')) { bruit(0.05, 0.3, 1500, 200); ton(95, 0.09, 'square', 0.14, 0.5, 0.01); } },
     porte: function (genre) { (SFX['porte_' + genre] || SFX.porte_maison)(); },
+    // Le petit train de la foire, arrete devant quelqu'un : deux coups de
+    // sifflet aigus, un court et un long. ⚠️ Synthetise seulement, comme la
+    // distributrice : le son de la foire (orgue, cris, sifflet) est une piste
+    // ElevenLabs a part dans le plan, et un `joue` sans fichier au catalogue
+    // reclamerait un mp3 qui n'existe pas.
+    sifflet_train: function () { ton(1320, 0.12, 'triangle', 0.16); ton(1175, 0.32, 'triangle', 0.16, 1, 0.16); },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
     // meme bouton que le klaxon d'une auto. Les velos du trafic la font deja
     // entendre en passant (`jouerA`) ; ici c'est la sienne.
