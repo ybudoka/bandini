@@ -13,7 +13,7 @@ Josee, la Chef des Quais, veut le Faubourg vide de Cravates (M5).
 
 from __future__ import annotations
 
-from typing import TypedDict
+from typing import NotRequired, TypedDict
 
 TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
@@ -55,6 +55,10 @@ class Personnage(TypedDict):
     couleurs: dict     # les permutations du sprite `joueur` : c chandail, h cheveux, s peau, p pantalon
     ou: str            # ou il se tient : `porte:<lieu>` (dehors, a cote de la porte) ou `point:<type>` (dedans)
     heler: str         # le mot de sa BULLE quand il a une job pour toi (voir `Entites.bulle`)
+    # La mission apres laquelle il n'est plus a sa place (Ti-Guy quitte le terminus
+    # apres M1 : sa scene de fin le fait entrer au garage). ⚠️ Dans les donnees, pas
+    # dans `histoire.js` : un juge y interdit tout slug de mission.
+    parti_apres: NotRequired[str]
 
 
 #: ⚠️ La bulle est lue a l'ecran, en police 3x5 : plus long que ca et le mot
@@ -68,7 +72,7 @@ HELER_MAX = 16
 PERSONNAGES: list[Personnage] = [
     {"slug": "ti_guy", "nom": "Ti-Guy", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
      "couleurs": {"c": "#2e8b57", "h": "#3a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:terminus",
-     "heler": "Hé! Le cousin!"},
+     "heler": "Hé! Le cousin!", "parti_apres": "m1"},
     {"slug": "thibodeau", "nom": "Madame Thibodeau", "genre": "femme", "voix": "Julia",
      "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#4a3a5a"}, "ou": "porte:kiosque",
      "heler": "Psst! Toi!"},
@@ -101,11 +105,23 @@ class Mission(TypedDict):
     echec: list[str]
     dialogue: dict     # appel (au telephone), intro, fin, echec : listes de {qui, texte}
     donne: dict        # ce que la fin accorde, en plus de l'argent
+    scenes: dict       # `intro` et `fin` : des listes de plans (voir `TYPES_PLANS`)
     phase: int
 
 
 def _l(qui: str, texte: str) -> dict:
     return {"qui": qui, "texte": texte}
+
+
+def _p(qui: str, texte: str, objectif: int) -> dict:
+    """Une réplique PENDANT : dite quand l'objectif `objectif` (compté à partir de 0)
+    commence — au combiné si celui qui la dit n'est pas là."""
+    return {"qui": qui, "texte": texte, "objectif": objectif}
+
+
+#: Ce que dit un personnage qui n'a rien pour toi. ⚠️ Ici et pas dans
+#: `histoire.js` : « le Faubourg est tranquille » ne se dit qu'apres M5.
+REPOS = {"texte": "REVIENS ME VOIR PLUS TARD.", "apres": "m5", "texte_apres": "LE FAUBOURG EST TRANQUILLE. MERCI."}
 
 
 #: L'OUVERTURE — ce que le narrateur dit pendant que le car arrive au terminus.
@@ -159,7 +175,8 @@ TYPES_PLANS: dict[str, tuple[str, ...]] = {
     # `recul` : tant de pixels en amont de la rue du lieu (il faut qu'il en ait une).
     "camera": ("vers", "recul", "duree", "courbe", "lissage"),
     # Un acteur va à un lieu, à pied, les jambes animées, en `duree` images.
-    "marcher": ("acteur", "vers", "duree"),
+    # `pres` : s'arrêter à tant de pixels du lieu (on va VERS quelqu'un, pas sur lui).
+    "marcher": ("acteur", "vers", "duree", "pres"),
     # Un char de la scène : il ENTRE par la rue (`vehicule` le crée, `depuis` pixels
     # en amont de `vers`), ou il PART (`part` pixels en aval). `fumee` : les bouffées
     # du pot, `portiere` : le claquement à l'arrêt et au départ, `retirer` : il
@@ -234,7 +251,8 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
         inconnues = set(plan) - set(TYPES_PLANS[genre]) - set(CLES_DE_TOUS_LES_PLANS)
         if inconnues:
             erreurs.append(f"plan {i} ({genre}) : clés inconnues {sorted(inconnues)}")
-        for cle in ("duree", "ferme", "ouvre", "tient", "monte", "tenu", "descend", "depuis", "part", "recul", "fumee"):
+        for cle in ("duree", "ferme", "ouvre", "tient", "monte", "tenu", "descend", "depuis", "part", "recul", "fumee",
+                    "pres"):
             if cle in plan and (not isinstance(plan[cle], int) or plan[cle] < 0):
                 erreurs.append(f"plan {i} ({genre}) : {cle} doit être un entier positif")
         if "lissage" in plan and not (isinstance(plan["lissage"], float) and 0 < plan["lissage"] <= 1):
@@ -264,6 +282,29 @@ CATALOGUE: list[Mission] = [
             {"type": "monter", "vehicule": "auto", "ou": "ruelle:garage", "texte": "PRENDS LE CHAR DANS LA RUELLE"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "sans_degats": True, "texte": "RAMÈNE-LE AU GARAGE, SANS BOSSE"},
         ],
+        # Ti-Guy montre le garage, et la caméra va voir la ruelle où dort le char —
+        # un LIEU : le char appartient au deuxième objectif, qui ne se pose pas encore.
+        # À la fin, Ti-Guy sort du garage, tend la clé et y rentre : c'est ce qui le
+        # fait quitter le terminus (`parti_apres`), plus un `if` dans `reussir()`.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1, 2]},
+                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "porte:garage", "duree": 70,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [3, 4], "ensemble": True},
+                {"type": "attendre", "duree": 30},
+                {"type": "coupe", "vers": "ruelle:garage", "ferme": 20, "ouvre": 20, "tient": 150},
+            ],
+            "fin": [
+                {"type": "sortir", "acteur": "ti_guy", "de": "porte:garage", "vers": "joueur"},
+                {"type": "marcher", "acteur": "ti_guy", "vers": "joueur", "pres": 22, "duree": 50},
+                {"type": "dire", "repliques": [1]},
+                {"type": "geste", "acteur": "ti_guy", "geste": "donner", "vers": "joueur", "duree": 60,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+                {"type": "entrer", "acteur": "ti_guy", "dans": "porte:garage", "duree": 50},
+            ],
+        },
         "dialogue": {
             "appel": [],
             "intro": [
@@ -277,6 +318,8 @@ CATALOGUE: list[Mission] = [
                 _l("ti_guy", "Tiens, la clé de la planque. Dors là, pis fais-toi pas pogner."),
             ],
             "echec": [_l("ti_guy", "Ouain... On va dire que c'était un essai. Reviens me voir.")],
+            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
+            "pendant": [_p("ti_guy", "Beau char! Ramène-le au garage tranquillement, pis évite la police.", 2)],
         },
     },
     {
@@ -299,6 +342,27 @@ CATALOGUE: list[Mission] = [
             {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO"},
             {"type": "retourner", "texte": "RAPPORTE LA CAISSE À MADAME THIBODEAU"},
         ],
+        # Elle montre le coin, et la caméra va voir les deux Cravates — qui existent :
+        # la mission est posée avant son intro. À la fin, elle reprend sa caisse et
+        # tend le bâton de son défunt.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1]},
+                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "cible", "duree": 60,
+                 "ensemble": True},
+                {"type": "camera", "vers": "cible", "duree": 45, "courbe": "freine", "ensemble": True},
+                {"type": "dire", "repliques": [2, 3]},
+                {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
+            ],
+            "fin": [
+                {"type": "geste", "acteur": "donneur", "geste": "prendre", "vers": "joueur", "duree": 60,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [1]},
+                {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+            ],
+        },
         "dialogue": {
             "appel": [_l("thibodeau", "C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères. Viens me voir, veux-tu?")],
             "intro": [
@@ -311,6 +375,8 @@ CATALOGUE: list[Mission] = [
                 _l("thibodeau", "Tiens, le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi."),
             ],
             "echec": [_l("thibodeau", "Ils t'ont eu, hein? Repose-toi, pis reviens.")],
+            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
+            "pendant": [_p("thibodeau", "Il se sauve avec ma caisse! Lâche-le pas!", 1)],
         },
     },
     {
@@ -323,6 +389,27 @@ CATALOGUE: list[Mission] = [
             {"type": "courses", "n": 3, "texte": "FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "RAMÈNE LE TAXI AU GARAGE"},
         ],
+        # Marco tend les clés, et la caméra va voir le taxi. À la fin, il fait le
+        # tour du taxi, montre le casse-croûte, et la caméra y va : la fin passe la
+        # main au sergent Bouchard.
+        "scenes": {
+            "intro": [
+                {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [1]},
+                {"type": "camera", "vers": "vehicule", "duree": 45, "courbe": "freine", "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+                {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
+            ],
+            "fin": [
+                {"type": "marcher", "acteur": "donneur", "vers": "vehicule", "pres": 24, "duree": 50},
+                {"type": "dire", "repliques": [1], "ensemble": True},
+                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "chez:bouchard", "duree": 60},
+                {"type": "coupe", "vers": "chez:bouchard", "ferme": 20, "ouvre": 20, "tient": 130, "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+                {"type": "marcher", "acteur": "donneur", "vers": "place:donneur", "duree": 50},
+            ],
+        },
         "dialogue": {
             "appel": [_l("marco", "Marco, le cousin. J'ai un taxi qui dort au garage. Ça te tente de faire du cash?")],
             "intro": [
@@ -347,6 +434,21 @@ CATALOGUE: list[Mission] = [
             {"type": "semer", "etoiles": 2, "escorte": "ti_guy", "texte": "SÈME LA POLICE — TI-GUY TE SUIT"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "LARGUE L'AUTO AU GARAGE"},
         ],
+        # Bouchard parle dedans : la caméra sort voir le poste (un lieu —
+        # l'auto-patrouille est le deuxième objectif). À la fin, on est au garage et
+        # lui au casse-croûte : la caméra va chez lui, et il parle au combiné.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1], "ensemble": True},
+                {"type": "coupe", "vers": "porte:poste", "ferme": 20, "ouvre": 20, "tient": 150},
+                {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+                {"type": "dire", "repliques": [2, 3]},
+            ],
+            "fin": [
+                {"type": "coupe", "vers": "chez:bouchard", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
+                {"type": "dire"},
+            ],
+        },
         "dialogue": {
             "appel": [_l("bouchard", "Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte, j'ai une job.")],
             "intro": [
@@ -359,6 +461,8 @@ CATALOGUE: list[Mission] = [
                 _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention."),
             ],
             "echec": [_l("bouchard", "J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.")],
+            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
+            "pendant": [_p("ti_guy", "C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.", 2)],
         },
     },
     {
@@ -372,6 +476,21 @@ CATALOGUE: list[Mission] = [
             {"type": "semer", "etoiles": 3, "texte": "SÈME LA POLICE"},
             {"type": "aller", "lieu": "planque", "rayon": 4, "texte": "RENTRE À LA PLANQUE"},
         ],
+        # Josée parle au Brouillard : la caméra sort voir le coin des Cravates (un
+        # lieu — dedans, rien ne se pose avant la sortie). À la fin, on est à la
+        # planque : la caméra va voir le Brouillard, qui est à toi.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1], "ensemble": True},
+                {"type": "coupe", "vers": "zone:cravates", "ferme": 20, "ouvre": 20, "tient": 150},
+                {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+                {"type": "dire", "repliques": [2, 3]},
+            ],
+            "fin": [
+                {"type": "coupe", "vers": "chez:josee", "ferme": 20, "ouvre": 20, "tient": 180, "ensemble": True},
+                {"type": "dire"},
+            ],
+        },
         "dialogue": {
             "appel": [_l("josee", "Josée. On m'appelle la Chef. Viens au Brouillard, j'ai à te parler.")],
             "intro": [
@@ -384,6 +503,8 @@ CATALOGUE: list[Mission] = [
                 _l("josee", "On va se reparler. Y a plus grand que le Faubourg."),
             ],
             "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.")],
+            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
+            "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1)],
         },
     },
 ]
@@ -416,6 +537,10 @@ def personnage(slug: str) -> Personnage | None:
     return None
 
 
+#: L'ordre dans lequel se comptent les répliques d'une mission (le `n` du slug de voix).
+PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant")
+
+
 def repliques() -> list[dict]:
     """Toutes les repliques de l'histoire, dans l'ordre, avec leur slug de voix.
 
@@ -426,12 +551,15 @@ def repliques() -> list[dict]:
     sortie = []
     for mission in CATALOGUE:
         n = 0
-        for partie in ("appel", "intro", "client", "fin", "echec"):
+        # ⚠️ `pendant` se compte APRES `echec` : insérée avant `fin`, elle renommerait
+        # les voix de fin et d'échec déjà générées, et des mp3 payés deviendraient
+        # des 404.
+        for partie in PARTIES:
             for ligne in mission["dialogue"].get(partie, []):
                 n += 1
                 sortie.append({"slug": f"{ligne['qui']}-{mission['slug']}-{n}", "qui": ligne["qui"],
                                "texte": ligne["texte"], "mission": mission["slug"], "partie": partie,
-                               "telephone": partie == "appel"})
+                               "telephone": partie in ("appel", "echec")})
     return sortie
 
 
@@ -449,6 +577,77 @@ def repliques_ouverture() -> list[dict]:
     return [{"slug": f"{ligne['qui']}-ouverture-{i}", "qui": ligne["qui"], "texte": ligne["texte"],
              "mission": "ouverture", "partie": "ouverture", "telephone": False}
             for i, ligne in enumerate(OUVERTURE, start=1)]
+
+
+#: Les acteurs qu'une scène de mission peut nommer, en plus des personnages : ce que
+#: la mission pose (`vehicule`, la première `cible`, le `fuyard`) et le joueur.
+ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
+#: Les formes de lieu : un acteur, `place:<acteur>` (où il était au début de la
+#: scène), et ce que `Histoire.resoudre` connaît — plus `chez:<personnage>`, la
+#: porte de là où il se tient.
+FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez")
+
+
+def _lieux_du_plan(plan: dict) -> list[str]:
+    return [plan[cle] for cle in ("vers", "dans", "de") if isinstance(plan.get(cle), str)]
+
+
+def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
+    """Ce qui manque à une mission pour être FINIE : ses scènes, ses répliques à
+    chaque temps, et une fin qui ne parle pas par la bouche d'un absent."""
+    slug, erreurs = mission["slug"], []
+    scenes, dialogue = mission.get("scenes") or {}, mission["dialogue"]
+    personnages = {p["slug"] for p in PERSONNAGES}
+    for partie in ("intro", "fin", "echec"):
+        if not dialogue.get(partie):
+            erreurs.append(f"{slug} : pas de répliques {partie}")
+    pendant = dialogue.get("pendant", []) + dialogue.get("client", [])
+    if not pendant:
+        erreurs.append(f"{slug} : aucune réplique pendant la mission")
+    for ligne in dialogue.get("pendant", []):
+        if not 0 <= ligne.get("objectif", -1) < len(mission["objectifs"]):
+            erreurs.append(f"{slug} : une réplique pendant accrochée à un objectif qui n'existe pas")
+    for partie in ("intro", "fin"):
+        scene = scenes.get(partie)
+        if not scene:
+            erreurs.append(f"{slug} : pas de scène {partie}")
+            continue
+        erreurs += [f"{slug} {partie} : {e}" for e in erreurs_de_scene(scene)]
+        acteurs = set(ACTEURS_DE_MISSION) | personnages
+        for plan in scene:
+            if plan.get("acteur") and plan["acteur"] not in acteurs:
+                erreurs.append(f"{slug} {partie} : acteur inconnu {plan['acteur']!r}")
+            for nom in _lieux_du_plan(plan):
+                forme = nom.split(":", 1)[0] if ":" in nom else None
+                if forme is None and nom not in acteurs:
+                    erreurs.append(f"{slug} {partie} : lieu inconnu {nom!r}")
+                elif forme is not None and forme not in FORMES_DE_LIEU:
+                    erreurs.append(f"{slug} {partie} : forme de lieu inconnue {nom!r}")
+                elif forme in ("place",) and nom[6:] not in acteurs:
+                    erreurs.append(f"{slug} {partie} : {nom!r} n'est la place de personne")
+                elif forme == "chez" and nom[5:] not in personnages:
+                    erreurs.append(f"{slug} {partie} : {nom!r} n'est chez personne")
+        # Chaque réplique de la partie est dite, et une seule fois.
+        dites: list[int] = []
+        for plan in scene:
+            if plan["type"] == "dire":
+                dites += plan.get("repliques") or list(range(1, len(dialogue.get(partie, [])) + 1))
+        if sorted(dites) != list(range(1, len(dialogue.get(partie, [])) + 1)):
+            erreurs.append(f"{slug} {partie} : les répliques dites {sorted(dites)} ne sont pas toutes, une fois")
+    # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
+    # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
+    donneur = personnage(mission["donneur"])
+    dernier = mission["objectifs"][-1] if mission["objectifs"] else {}
+    chez_lui = donneur["ou"][6:] if donneur and donneur["ou"].startswith("porte:") else None
+    loin = dernier.get("type") != "retourner" and dernier.get("lieu") != chez_lui
+    if loin and scenes.get("fin"):
+        noms = {"donneur", mission["donneur"]}
+        vient = any(p["type"] in ("sortir", "marcher") and p.get("acteur") in noms for p in scenes["fin"])
+        va_chez_lui = any(p["type"] == "coupe" and p.get("vers") in {"chez:" + mission["donneur"], "donneur"}
+                          for p in scenes["fin"])
+        if not (vient or va_chez_lui):
+            erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
+    return erreurs
 
 
 def ordre_topologique() -> list[str]:

@@ -873,6 +873,7 @@ const Hud = (function () {
     // ⚠️ A bord d'un autobus, on est « dans un vehicule » et l'invite parle quand
     // meme : c'est elle qui dit ou l'on descend.
     if (!j || (j.dansVehicule && !j.passager) || !B.invite || B.menu) return;   // un menu ouvert : l'invite se tait
+    if (B.scene) return;                     // une scene joue : ACTION passe une replique, il n'ouvre pas de porte
     const t = 'ACTION : ' + B.invite;
     const l = Atlas.largeurTexte(t, 1);
     ctx.fillStyle = 'rgba(11,10,18,0.7)'; ctx.fillRect((VW - l) / 2 - 4, VH - 26, l + 8, 11);
@@ -944,7 +945,9 @@ const Hud = (function () {
     // qu'on lit — et « ACTION > » serait reste eteint (ou allume) tout l'appel,
     // c'est-a-dire au seul moment ou il a quelque chose a dire.
     if (B.cinema && (B.image >> 4) % 2 === 0) {
-      const suite = B.cinema.i < B.cinema.lignes.length - 1 ? 'ACTION >' : 'ACTION > FIN';
+      // ⚠️ Dans une scene, la derniere ligne d'un plan `dire` n'est pas la fin : d'autres
+      // repliques suivent sous d'autres plans. On ne promet pas « FIN » a tort.
+      const suite = (B.scene || B.cinema.i < B.cinema.lignes.length - 1) ? 'ACTION >' : 'ACTION > FIN';
       texte(ctx, suite, VW - 18 - Atlas.largeurTexte(suite, 1), VH - 16, '#8a8698', 1);
     }
     if (d.duree && d.t > d.duree) B.dialogue = null;

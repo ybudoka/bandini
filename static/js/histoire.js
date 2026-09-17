@@ -184,12 +184,14 @@ const Histoire = (function () {
     return B.entites.find(function (e) { return e.type === 'pieton' && e.personnage === slug && e.vivant; }) || null;
   }
 
-  /** Pose les personnages qui se tiennent DEHORS, a cote de leur porte. Ti-Guy
-      attend au terminus tant que M1 n'est pas faite ; les autres sont chez eux. */
+  /** Pose les personnages qui se tiennent DEHORS, a cote de leur porte — sauf
+      ceux qui sont partis apres leur mission (`parti_apres`). */
   function creerDonneurs() {
     for (const p of personnages()) {
       if (p.ou.indexOf('porte:') !== 0) continue;                 // les autres sont dedans
-      if (p.slug === 'ti_guy' && faite('m1')) continue;
+      // Parti apres sa mission (Ti-Guy entre au garage a la fin de M1) : dans les
+      // donnees, parce qu'ici aucun slug de mission ne s'ecrit.
+      if (p.parti_apres && faite(p.parti_apres)) continue;
       const l = lieu(p.ou.slice(6));
       if (!l) continue;
       // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
@@ -256,10 +258,34 @@ const Histoire = (function () {
 
   /** Une suite de repliques. Le joueur ecoute : ACTION passe a la suivante, et
       la voix finie (ou le texte lu) passe toute seule. `fin` s'appelle apres. */
-  function dire(m, partie, fin) {
-    const lignes = ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
-      return { qui: l.qui, texte: l.texte, telephone: partie === 'appel', slug: slugDeVoix(m, partie, i) };
-    });
+  //: A cette distance, celui qui parle est LA ; plus loin, on l'entend au combine.
+  const RAYON_PRESENT = 12 * TT;
+
+  /** Celui qui parle est-il la, a portee de voix ? */
+  function present(qui) {
+    const j = B.joueur, e = donneur(qui);
+    return !!(j && e && e.dessine !== false && dist2(e.x, e.y, j.x, j.y) < RAYON_PRESENT * RAYON_PRESENT);
+  }
+
+  /** Les repliques d'une partie, pretes a dire, avec leur slug de voix.
+
+      ⚠️ AU COMBINE : l'appel toujours, et l'echec toujours — on n'est jamais a
+      cote du donneur quand on rate. L'intro, la fin et les repliques `pendant`
+      le sont QUAND CELUI QUI PARLE N'EST PAS LA (`auto`, tranche a la ligne) :
+      une fin de M4 jouee au garage, Bouchard au casse-croute, se dit au
+      telephone ; la meme ligne dite a deux pas ne l'est pas. Le client du taxi,
+      lui, est assis dans le char. */
+  function lignesDe(m, partie, filtre) {
+    const toujours = partie === 'appel' || partie === 'echec';
+    const auto = partie === 'intro' || partie === 'fin' || partie === 'pendant';
+    return ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
+      return { qui: l.qui, texte: l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
+               slug: slugDeVoix(m, partie, i) };
+    }).filter(function (l) { return !filtre || filtre(l); });
+  }
+
+  function dire(m, partie, fin, filtre) {
+    const lignes = lignesDe(m, partie, filtre);
     if (!lignes.length) { if (fin) fin(); return false; }
     Son.Voix.chargerHistoire(m.slug);
     B.cinema = { lignes: lignes, i: -1, t: 0, duree: 0, fin: fin || null, mission: m.slug, partie: partie };
@@ -281,9 +307,11 @@ const Histoire = (function () {
   }
 
   /** Le slug de voix d'une replique : `<qui>-<mission>-<n>`, n compte a travers
-      appel, intro, client, fin, echec — exactement comme `missions.repliques()`. */
+      appel, intro, client, fin, echec, pendant — exactement comme `missions.repliques()`. */
   function slugDeVoix(m, partie, i) {
-    const ordre = ['appel', 'intro', 'client', 'fin', 'echec'];
+    // ⚠️ `pendant` APRES `echec`, comme `missions.PARTIES` : inseree plus tot,
+    // elle renommerait des voix deja generees.
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant'];
     let n = 0;
     for (const p of ordre) {
       const lignes = m.dialogue[p] || [];
@@ -300,6 +328,7 @@ const Histoire = (function () {
     if (c.i >= c.lignes.length) { finir(); return; }
     const l = c.lignes[c.i];
     const p = personnage(l.qui);
+    if (l.auto) l.telephone = !present(l.qui);        // la, ou au bout du fil : a la ligne
     c.t = 0;
     c.duree = 90 + l.texte.length * 3;                      // le temps de lire, si la voix manque
     // ⚠️ `anonyme` : l'ouverture n'a personne au-dessus de sa boite — c'est une
@@ -399,7 +428,6 @@ const Histoire = (function () {
     B.ouverture = etat;
     etat.arret = { x: arret.x, y: arret.y };
     etat.quai = quai;
-    etat.retour = chezLui;
     etat.rejoue = !!rejoue;
     if (B.scene !== etat) B.ouverture = null;              // tout a saute d'un coup
     return true;
@@ -440,7 +468,7 @@ const Histoire = (function () {
 
   function majTelephone() {
     const p = B.partie;
-    if (B.cinema || p.mission || B.interieur) return;
+    if (B.cinema || p.mission || B.interieur || B.finEnAttente) return;
     const prochaine = disponibles().find(function (m) { return m.prerequis.length && m.dialogue.appel.length && !p.appels[m.slug]; });
     if (!prochaine) return;
     if (p.appelT === undefined || p.appelT === null) { p.appelT = B.t + DELAI_APPEL; return; }
@@ -473,13 +501,59 @@ const Histoire = (function () {
       // les tirages de `poser()` tombent dans le meme ordre. Ce qui s'ANNONCE
       // (le titre, l'objectif, le coup de cuivre) attend, lui, la fin de l'intro.
       commencer(m.slug, true);
-      dire(m, 'intro', function () { annoncer(m); });
+      jouerOuDire(m, 'intro', function () { annoncer(m); });
       return true;
     }
     const mn = B.defs.marche_noir;
     if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
-    Hud.dialogue(p.nom, [faite('m5') ? 'LE FAUBOURG EST TRANQUILLE. MERCI.' : 'REVIENS ME VOIR PLUS TARD.'], 120);
+    const repos = B.defs.repos || {};
+    Hud.dialogue(p.nom, [repos.apres && faite(repos.apres) ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], 120);
     return true;
+  }
+
+  // --- Les scenes des missions ----------------------------------------------------------
+
+  /** Le moment se prete-t-il a une scene ? ⚠️ JAMAIS EN PLEINE ACTION : ni a 3★
+      et plus, ni au volant d'un char qui roule, ni pendant un fondu de porte. */
+  function calme() {
+    const j = B.joueur, v = j && j.dansVehicule;
+    return !!j && (B.recherche.etoiles || 0) < 3 && !(v && Math.abs(v.vitesse || 0) > 0.2) && !B.transition && !B.scene;
+  }
+
+  /** Une partie d'une mission : sa SCENE (`missions.py`, `scenes`) si elle en a
+      une et que le moment s'y prete, sinon ses repliques seules. `acteurs` : ce que
+      la scene peut nommer en plus de ce que la mission a pose. */
+  function jouerOuDire(m, partie, fin, acteurs) {
+    const scene = m.scenes && m.scenes[partie];
+    if (scene && calme()) {
+      const bm = B.mission || {};
+      const etat = Scenes.jouer(scene, {
+        mission: m, voix: m.slug, lignes: lignesDe(m, partie), fin: fin,
+        acteurs: Object.assign({
+          vehicule: bm.vehicule || null, fuyard: bm.fuyard || null,
+          cible: (bm.entites || []).find(function (e) { return e.cible && e.vivant; }) || null,
+        }, acteurs || {}),
+      });
+      if (etat) return true;
+    }
+    return dire(m, partie, fin);
+  }
+
+  /** La scene de fin, quand le moment s'y prete. ⚠️ Ce qu'on gagne est deja
+      accorde (`reussir`) : rien ne depend de l'avoir regardee. La scene attend
+      seulement qu'on soit a l'arret et hors poursuite. */
+  function jouerLaFin() {
+    const f = B.finEnAttente;
+    if (!f || B.cinema || B.scene) return;
+    const m = mission(f.slug);
+    if (!m) { B.finEnAttente = null; return; }
+    if (m.scenes && m.scenes.fin && !calme()) return;
+    B.finEnAttente = null;
+    const d = m.donne || {};
+    jouerOuDire(m, 'fin', function () {
+      if (d.message) Hud.message(d.message, 200);
+      Missions.sauvegarderPartie();
+    }, { vehicule: f.vehicule });
   }
 
   // --- Les missions ------------------------------------------------------------------------
@@ -519,11 +593,13 @@ const Histoire = (function () {
     if (!o) { reussir(); return; }
     // ⚠️ Tout le monde est deja tombe a un essai rate : l'objectif est FAIT.
     // On ne repose pas des morts pour les recoucher.
-    if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(); return; }
+    if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
     B.mission.aPoser = true;
     if (!B.interieur) poser();
     if (!enSilence) Hud.message(o.texte, 200);
+    // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
+    if (!enSilence && (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; })) B.mission.pendant = p.etape;
   }
 
   function poser() {
@@ -736,6 +812,7 @@ const Histoire = (function () {
     const m = courante();
     if (!m) return;
     const p = B.partie, d = m.donne || {};
+    const vehicule = B.mission ? B.mission.vehicule : null;
     nettoyer(false);
     if (p.tombes) delete p.tombes[m.slug];
     p.missionsFaites[m.slug] = p.jour;
@@ -754,11 +831,11 @@ const Histoire = (function () {
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
     Son.SFX.mission();
-    dire(m, 'fin', function () {
-      if (d.message) Hud.message(d.message, 200);
-      if (m.slug === 'm1') { const t = donneur('ti_guy'); if (t) { t.etat = 'entre'; t.minuterie = 60; } }
-      Missions.sauvegarderPartie();
-    });
+    Missions.sauvegarderPartie();
+    // ⚠️ LA FIN SE JOUE QUAND LE MOMENT S'Y PRETE (`jouerLaFin`) : tout de suite
+    // si l'on est a l'arret et hors poursuite, sinon des qu'on l'est.
+    B.finEnAttente = { slug: m.slug, vehicule: vehicule };
+    jouerLaFin();
   }
 
   function echouer(raison) {
@@ -1005,10 +1082,18 @@ const Histoire = (function () {
     if (!B.joueur || !B.partie) return;
     majCinema();
     if (B.cinema) return;
+    jouerLaFin();
+    if (B.cinema) return;
     majBulles();
     majTelephone();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+      if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
+        const etape = B.mission.pendant;
+        B.mission.pendant = null;
+        dire(courante(), 'pendant', null, function (l) { return l.objectif === etape; });
+        return;
+      }
       if (!B.interieur) {
         if (B.mission.aPoser) poser();
         majObjectif();
@@ -1021,6 +1106,7 @@ const Histoire = (function () {
            donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
+           lieuDuPersonnage, present, calme, jouerOuDire,
            noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
 })();

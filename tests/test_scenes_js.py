@@ -238,8 +238,13 @@ def test_la_mission_est_posee_avant_son_intro(banc):
                 L.Histoire.parler('marco');
                 vus.pendant = { mission: L.B.partie.mission && L.B.partie.mission.slug, cinema: !!L.B.cinema,
                                 taxi: !!(L.B.mission && L.B.mission.vehicule), msg: L.B.msg || '' };
+                // L'intro est une SCENE (2e vague) : elle continue apres ses mots.
                 let n = 0;
-                while (L.B.cinema && n < 20) { L.Histoire.suivante(); n++; }
+                while ((L.B.cinema || L.B.scene) && n < 5000) {
+                    if (L.B.cinema) L.Histoire.suivante();
+                    if (L.B.scene) L.Scenes.maj();
+                    n++;
+                }
                 vus.msg = L.B.msg || '';
             } else {
                 L.Histoire.commencer('m3');

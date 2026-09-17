@@ -19,7 +19,7 @@ def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
         const invite = L.B.invite;
         const parle = L.Missions.interagir(j);
         const cinema = L.B.cinema;
-        return { pres: pres, invite0: invite0, invite: invite, parle: parle,
+        return { pres: pres, invite0: invite0, invite: invite, parle: parle, scene: !!L.B.scene,
                  lignes: cinema ? cinema.lignes.length : 0, qui: cinema ? cinema.lignes[0].qui : null,
                  slug: cinema ? cinema.lignes[0].slug : null, dialogue: L.B.dialogue && L.B.dialogue.qui,
                  demandee: L.Son.Voix.demandees[0], fige: (function () { const x = j.x; o.tape('KeyD', 10); return j.x === x; })(),
@@ -28,7 +28,9 @@ def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
     assert 24 <= r["pres"] <= 80, "Ti-Guy attend a cote de la porte du terminus"
     assert r["invite0"] != "PARLER À TI-GUY", "au pas de la porte, ACTION ne saute pas sur Ti-Guy"
     assert r["invite"] == "PARLER À TI-GUY"
-    assert r["parle"] is True and r["lignes"] == len(paquet["missions"][0]["dialogue"]["intro"])
+    # ⚠️ Depuis la 2e vague des scènes, parler joue la SCENE d'intro : ses répliques
+    # se disent en deux temps, sous ses plans (`missions.py`, `scenes.intro`).
+    assert r["parle"] is True and r["scene"] is True and 1 <= r["lignes"] <= len(paquet["missions"][0]["dialogue"]["intro"])
     assert r["qui"] == "ti_guy" and r["slug"] == "ti_guy-m1-1" and r["dialogue"] == "Ti-Guy"
     assert r["demandee"] == "ti_guy-m1-1", "la replique demande sa voix"
     assert r["fige"] is True, "pendant qu'on lui parle, le joueur ecoute"
@@ -59,9 +61,13 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         const t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
         L.Missions.interagir(j);
-        // On passe les repliques a ACTION, une a une.
+        // On passe les repliques a ACTION, une a une — et la SCENE, qui continue
+        // apres ses mots, a PAUSE (2e vague des scenes).
         let passes = 0;
-        while (L.B.cinema && passes < 10) { o.tape('KeyE', 2); passes++; }
+        const ecouter = function (max) {
+            while ((L.B.cinema || L.B.scene) && passes < max) { o.tape(L.B.cinema ? 'KeyE' : 'Escape', 2); passes++; }
+        };
+        ecouter(10);
         const commencee = L.B.partie.mission && L.B.partie.mission.slug;
         const etape0 = L.B.partie.mission.etape;
         const objectif0 = L.Histoire.ligneObjectif();
@@ -79,17 +85,27 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         o.frame(2);
         const etape2 = L.B.partie.mission.etape;
         const objectif2 = L.Histoire.ligneObjectif();
+        // Au volant, Ti-Guy appelle : la replique PENDANT de l'objectif, au combine
+        // (il est au terminus). On l'ecoute.
+        const pendant = L.B.cinema ? { partie: L.B.cinema.partie, slug: L.B.cinema.lignes[0].slug,
+                                       telephone: L.B.cinema.lignes[0].telephone } : null;
+        ecouter(20);
         // 3. Au garage, sans bosse, a l'arret.
         v.x = garage.x; v.y = garage.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y;
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m1;
-        const finDite = L.B.cinema && L.B.cinema.partie === 'fin';
+        // La fin est une SCENE : Ti-Guy sort du garage et marche jusqu'a toi avant
+        // de parler. On la laisse jouer jusqu'a sa premiere replique.
+        const finJouee = !!L.B.scene;
+        let attente = 0;
+        while (L.B.scene && !L.B.cinema && attente < 300) { o.frame(1); attente++; }
+        const finDite = !!L.B.cinema;
         const voixFin = L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1];
-        while (L.B.cinema && passes < 30) { o.tape('KeyE', 2); passes++; }
+        ecouter(40);
         return { passes: passes, commencee: commencee, etape0: etape0, objectif0: objectif0, gps0: gps0 && gps0.nom,
                  etape1: etape1, ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
-                 voixFin: voixFin, mission: L.B.partie.mission,
-                 dansVehicule: !!j.dansVehicule, tiGuy: L.Histoire.donneur('ti_guy') && L.Histoire.donneur('ti_guy').etat,
+                 finJouee: finJouee, voixFin: voixFin, mission: L.B.partie.mission, pendant: pendant,
+                 tiGuy: !!L.Histoire.donneur('ti_guy'),
                  missions: L.B.partie.stats.missions, paiements: paiements };
     }""")
     assert r["commencee"] == "m1" and r["etape0"] == 0
@@ -97,7 +113,9 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
     assert r["etape1"] == 1, "arrive au garage, l'objectif suivant"
     assert r["ruelle"] == "x", "le char de Ti-Guy dort dans une ruelle"
     assert r["etape2"] == 2 and r["objectif2"] == m1["objectifs"][2]["texte"]
-    assert r["finie"] is True and r["finDite"] is True, "la mission finie, Ti-Guy conclut"
+    assert r["pendant"] == {"partie": "pendant", "slug": "ti_guy-m1-8", "telephone": True}, \
+        "au volant, Ti-Guy appelle : sa replique pendant, au combine"
+    assert r["finie"] is True and r["finJouee"] is True and r["finDite"] is True, "la mission finie, Ti-Guy conclut"
     assert r["voixFin"] == "ti_guy-m1-5", "la replique de fin demande sa voix (n continue apres l'intro)"
     # ⚠️ La prime de la MISSION, retrouvee par son libelle : c'est elle qu'on
     # juge, pas la somme de tout ce qui est entre dans les poches en chemin.
@@ -106,8 +124,10 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
     assert prime[0]["montant"] == m1["recompense"] + m1["recompense"] // 2, (
         "sans bosse : la prime et demie (%s)" % prime[0]
     )
-    assert r["mission"] is None and r["dansVehicule"] is False and r["missions"] == 1
-    assert r["tiGuy"] == "entre", "Ti-Guy s'en va une fois le cousin lance"
+    assert r["mission"] is None and r["missions"] == 1
+    # ⚠️ Plus un `if (m.slug === 'm1')` dans `reussir()` : c'est la scène de fin qui
+    # fait entrer Ti-Guy au garage, et il quitte la ville avec elle.
+    assert r["tiGuy"] is False, "Ti-Guy s'en va une fois le cousin lance"
 
 
 def test_une_arrestation_fait_rater_la_mission_et_on_peut_recommencer(banc):
@@ -171,6 +191,10 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         cibles.forEach(function (e) { L.Entites.assommer(e); });
         o.frame(2);
         const etape1 = L.B.partie.mission.etape;
+        // Le fuyard file : Mme Thibodeau crie (sa replique PENDANT), et a pied ca fige
+        // la rue le temps de l'entendre. Elle est a deux pas : pas au combine.
+        const pendant = L.B.cinema ? { partie: L.B.cinema.partie, telephone: L.B.cinema.lignes[0].telephone } : null;
+        while (L.B.cinema) L.Histoire.suivante();
         const moto = L.B.mission.fuyard;
         const fuit = moto && moto.fuite && moto.conducteur === 'trafic' && moto.slug === 'moto';
         let dMax = 0;
@@ -189,13 +213,14 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m2;
-        return { n: cibles.length, pres: pres, ligne0: ligne0, etape1: etape1, fuit: fuit, dMax: dMax, tombe: tombe,
+        return { n: cibles.length, pres: pres, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
                  porteur: !!porteur, caisse: !!caisse, etape2: etape2, finie: finie,
                  batte: !!L.B.partie.armes.batte, rabais: L.B.partie.rabais };
     }""")
     assert r["n"] == 2 and r["pres"], "deux Cravates rodent pres du kiosque"
     assert r["ligne0"].endswith(" 0/2")
     assert r["etape1"] == 1, "les deux K.-O., le fuyard file"
+    assert r["pendant"] == {"partie": "pendant", "telephone": False}, "elle crie apres le fuyard, a deux pas de toi"
     assert r["fuit"] is True and r["dMax"] > 60, "la moto s'eloigne sur les rails"
     assert r["tombe"] and r["porteur"] and r["caisse"], "la moto cassee, le Cravate tombe, la caisse aussi"
     assert r["etape2"] == 2 and r["finie"] is True
@@ -344,6 +369,7 @@ def test_le_sergent_et_josee_se_voient_dans_leur_piece(banc):
                 dit.invite = L.B.invite;
                 dit.parle = L.Missions.utiliserPoint(j);
                 dit.qui = L.B.cinema ? L.B.cinema.lignes[0].qui : (L.B.dialogue ? L.B.dialogue.qui : null);
+                L.Scenes.passer();                     // l'intro de Josee est une scene (2e vague)
                 L.B.cinema = null; L.B.dialogue = null;
             }
             o.sortir();
@@ -384,7 +410,7 @@ def test_le_donneur_qui_a_une_job_pour_toi_t_interpelle(banc, paquet):
         o.frame(2);
         const pendant = bulleDe('ti_guy');
         L.B.partie.mission.etape = 2; L.B.mission.vehicule = null;
-        L.Histoire.reussir(); L.Histoire.finir();
+        L.Histoire.reussir(); L.Scenes.passer(); L.Histoire.finir();
         o.frame(2);
         const apres = bulleDe('ti_guy');
         // M1 faite : c'est Mme Thibodeau (M2) qui attend, maintenant.
@@ -530,6 +556,9 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
         reprendre();
         const etapeReprise = L.B.partie.mission.etape;
         const deboutReprise = debout().map(function (e) { return !!e.chef; });
+        // ⚠️ Le chef debout, Josee appelle (sa replique PENDANT) : a pied, ca fige la
+        // rue comme tout dialogue. On raccroche.
+        L.B.cinema = null; L.B.dialogue = null;
         debout().forEach(function (e) { L.Entites.tuer(e); });
         o.frame(2);
         const etapeApres = L.B.partie.mission.etape;

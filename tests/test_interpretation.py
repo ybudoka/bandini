@@ -200,7 +200,10 @@ def test_une_ligne_attend_que_sa_voix_se_taise(banc):
         const j = L.B.joueur;
         const t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
-        L.Missions.interagir(j);
+        // ⚠️ Les QUATRE lignes de l'intro, dites d'un trait : parler a Ti-Guy joue
+        // maintenant sa SCENE (`Scenes`), qui les dit en deux temps sous ses plans.
+        // C'est l'attente de la voix qu'on juge ici, pas la scene.
+        L.Histoire.dire(L.Histoire.courante() || L.B.defs.missions[0], 'intro', null);
         const c = L.B.cinema;
         if (!c) return null;
         // La voix de la premiere ligne joue, et elle est plus longue que le temps de lire.

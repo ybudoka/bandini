@@ -179,7 +179,7 @@ ne bougent pas quand l'ordre de travail change.
 | L'avocat qu'on voit au Brouillard | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#lavocat-quon-voit-au-brouillard) |
 | Faire les poches, l'arme à la main | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#faire-les-poches-larme-à-la-main) |
 | Des klaxons qu'on entend de là où ils sont | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#des-klaxons-quon-entend-de-là-où-ils-sont) |
-| Les missions mises en scène | ⬜ **en cours** (1re vague livrée : le metteur en scène et l'ouverture réécrite dedans ; 2e vague en cours : les cinq missions de la v1) | 16 sept. 2026 | **P2** | ajout | [notes](#les-missions-mises-en-scène) |
+| Les missions mises en scène | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#les-missions-mises-en-scène) |
 | La carte sort du paquet | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#la-carte-sort-du-paquet) |
 | L'Île-aux-Corneilles | ✅ **livré** (1re vague : l'île existe, et la police n'y va pas) | 17 sept. 2026 | **P4** | ajout | [notes](#lîle-aux-corneilles) |
 | L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [notes](#lîle-aux-corneilles--deuxième-vague) |
@@ -726,7 +726,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_eau_son_js.py test_eau_basse_js.py test_amuseurs_js.py test_roue_js.py test_sieste_js.py
         test_reclame.py test_reclame_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
-        test_mise_en_scene.py test_scenes_js.py test_parties_js.py
+        test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
@@ -9914,6 +9914,33 @@ le car quitte la ville une image plus tôt.
   dessiner le titre : il fabrique maintenant la scène (`B.scene` et son carton) — la règle
   jugée n'a pas bougé, et il rougit toujours quand le HUD n'écrit plus le logo. Reste la 2e
   vague : les cinq missions de la v1 mises en scène.
+
+⚠️ **2e vague livrée le 17 sept. 2026 — les cinq missions de la v1, mises en scène.** Chaque
+mission porte ses `scenes` (`intro`, `fin`) et ses répliques `pendant` dans `missions.py`,
+et `erreurs_de_mise_en_scene` la refuse s'il en manque une : chaque réplique dite une fois,
+des acteurs et des lieux connus (`place:`, `chez:`, `porte:`, `ruelle:`, `zone:`), et **une
+fin qui se joue loin du donneur le fait venir ou va le voir chez lui**.
+
+- Ti-Guy sort du garage, tend la clé et y rentre : le `if (m.slug === 'm1')` de `reussir()`
+  est parti, et `parti_apres` le garde loin du terminus au rechargement. Madame Thibodeau
+  montre ses deux Cravates — qui existent, la mission est posée avant l'intro ; Marco fait
+  le tour du taxi et la caméra va voir le casse-croûte.
+- ⚠️ **Bouchard et Josée parlent DEDANS, et la coupe sort voir la ville** : la pièce est
+  mise de côté au noir (carte, gens et nom) puis rendue ; passée au milieu, elle revient
+  d'abord. Les fins de M4 et M5 vont chez eux.
+- ⚠️ **Au combiné quand celui qui parle n'est pas là**, tranché à la ligne : l'appel et
+  l'échec toujours ; l'intro, la fin et `pendant` selon qu'il se tient à douze tuiles.
+- ⚠️ **Jamais en pleine action** : l'argent et `donne` tout de suite, la scène de fin attend
+  l'arrêt et moins de 3★ ; une intro à 3★ se dit sans scène.
+- Quatre répliques `pendant` (M1, M2, M4, M5 ; le client de M3 l'était déjà) et leurs voix
+  ElevenLabs, comptées **après** `echec` : aucun mp3 payé ne change de nom. Aucun slug de
+  mission dans `histoire.js` (« Le Faubourg est tranquille » est passé dans `REPOS`).
+- Le moteur compte les plans sautés, et un juge exige zéro pour chaque scène du catalogue —
+  c'est lui qui a vu une mise en place qui oubliait le taxi. **6 juges Python de plus (13 en
+  tout), 19 de banc et 1 de navigateur (M1 de l'intro à la fin, aucune erreur console), 17
+  mutations toutes rouges.** Neuf juges existants suivent le nouveau comportement (parler
+  joue une scène ; les répliques `pendant` figent la rue à pied) sans perdre ce qu'ils
+  gardaient. À écouter par Martin : les quatre voix `pendant`.
 
 ### La carte sort du paquet
 

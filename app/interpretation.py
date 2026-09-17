@@ -241,6 +241,8 @@ JEU: dict[str, str] = {
     "ti_guy-m1-5": "[laughs] Pas une bosse! T'es ben le cousin de Rocco.",
     "ti_guy-m1-6": "[warmly] Tiens, la clé de la planque. Dors là… pis fais-toi pas pogner.",
     "ti_guy-m1-7": "[sighs] Ouain… On va dire que c'était un essai. Reviens me voir.",
+    # Pendant (2e vague des scènes) : au combiné, pendant qu'on roule.
+    "ti_guy-m1-8": "[amused] Beau char! Ramène-le au garage tranquillement, pis évite la police.",
     # --- M2, Madame Thibodeau : inquiete, puis en colere, puis tendre.
     "thibodeau-m2-1": "[worried] C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères… Viens me voir, veux-tu?",
     "thibodeau-m2-2": "[bitterly] Deux Cravates sont venus me « protéger ». [angry] Ils ont vidé ma caisse.",
@@ -249,6 +251,7 @@ JEU: dict[str, str] = {
     "thibodeau-m2-5": "[relieved] Mon argent! [warmly] T'es un bon garçon, toi.",
     "thibodeau-m2-6": "[tenderly] Tiens… le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi.",
     "thibodeau-m2-7": "[concerned] Ils t'ont eu, hein? Repose-toi… pis reviens.",
+    "thibodeau-m2-8": "[worried] Il se sauve avec ma caisse! Lâche-le pas!",
     # --- M3, Marco : l'affaire d'abord, et la mise en garde a voix basse.
     "marco-m3-1": "[casually] Marco, le cousin. J'ai un taxi qui dort au garage. [mischievously] Ça te tente de faire du cash?",
     "marco-m3-2": "[serious] Trois clients, pas plus. Pis tu me ramènes le taxi… entier.",
@@ -265,6 +268,7 @@ JEU: dict[str, str] = {
     "bouchard-m4-5": "[satisfied] Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom.",
     "bouchard-m4-6": "[gravely] Un mot d'avertissement… Josée, au bar, cherche du monde comme toi. Fais attention.",
     "bouchard-m4-7": "[nervously] J'ai rien vu, j'ai rien entendu. [sighs] Reviens quand ça sera calme.",
+    "ti_guy-m4-8": "[confident] C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.",
     # --- M5, Josee : froide, et elle pese chaque ordre.
     "josee-m5-1": "[coldly] Josée. On m'appelle la Chef. Viens au Brouillard… j'ai à te parler.",
     "josee-m5-2": "[coldly] Les Cravates tiennent trois coins de rue. Je les veux vides… avant la nuit.",
@@ -273,6 +277,7 @@ JEU: dict[str, str] = {
     "josee-m5-5": "[satisfied] Le Faubourg respire. Le bar est à toi… pis toute la ville va le lire demain matin.",
     "josee-m5-6": "[mysteriously] On va se reparler. Y a plus grand… que le Faubourg.",
     "josee-m5-7": "[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.",
+    "josee-m5-8": "[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.

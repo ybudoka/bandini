@@ -6651,6 +6651,8 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
         j.x = taxi.x; j.y = taxi.y;
         L.Vehicules.monter(j, taxi);
         o.frame(3);
+        // La fin de M3 est une SCENE (Marco fait le tour du taxi) : on la passe.
+        L.Scenes.passer();
         L.B.dialogue = null; L.B.cinema = null;
         const livre = { faite: !!L.B.partie.missionsFaites.m3, mission: taxi.mission, aQui: taxi.aQui };
 

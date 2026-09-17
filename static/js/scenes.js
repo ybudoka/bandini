@@ -56,13 +56,40 @@ const Scenes = (function () {
     return Histoire.donneur(nom);
   }
 
-  /** Un lieu : un nom que la scène a reçu, un acteur (sa position), ou tout ce
-      que `Histoire.resoudre` connaît. `null` si rien ne répond : le plan saute. */
+  /** `fn` jouée dans la VILLE quand on est dans une pièce : la carte de la rue le
+      temps d'un calcul, puis celle de la pièce. (`Monde.restaurer` ne fait que
+      remettre une carte : rien ne se recuit.) */
+  function dansLaVille(fn) {
+    const ext = B.exterieur, ici = Monde.carte;
+    if (!B.interieur || !ext) return null;
+    Monde.restaurer(ext.carte);
+    try { return fn(); } finally { Monde.restaurer(ici); }
+  }
+
+  /** Un lieu dans le monde qu'on regarde : un nom que la scène a reçu, un acteur
+      (sa position), `place:<acteur>` (où il était à la première image),
+      `chez:<personnage>` (la porte de là où il se tient), ou tout ce que
+      `Histoire.resoudre` connaît. */
+  function lieuIci(s, nom) {
+    if (s.lieux[nom]) return s.lieux[nom];
+    if (nom.indexOf('place:') === 0) return s.places[nom.slice(6)] || null;
+    const a = acteur(s, nom);
+    if (a) return { x: a.x, y: a.y };
+    if (nom.indexOf('chez:') === 0) return Histoire.lieuDuPersonnage(nom.slice(5));
+    if (nom === 'donneur' && !s.mission) return null;
+    return Histoire.resoudre(nom, s.mission);
+  }
+
+  /** Un lieu. ⚠️ Dans une pièce, un lieu de la ville se trouve quand même — marqué
+      `dehors` : seule une `coupe` peut aller le voir, au noir. `null` si rien ne
+      répond : le plan saute. */
   function lieu(s, nom, recul) {
     if (!nom) return null;
-    let l = s.lieux[nom] || null;
-    if (!l) { const a = acteur(s, nom); if (a) l = { x: a.x, y: a.y }; }
-    if (!l && (nom !== 'donneur' || s.mission)) l = Histoire.resoudre(nom, s.mission);
+    let l = lieuIci(s, nom);
+    if (!l && B.interieur) {
+      const vu = dansLaVille(function () { return lieuIci(s, nom); });
+      if (vu) l = Object.assign({}, vu, { dehors: true });
+    }
     if (!l) return null;
     if (recul && l.sens !== undefined && ANGLES[l.sens] !== undefined) {
       const a = ANGLES[l.sens];
@@ -87,13 +114,23 @@ const Scenes = (function () {
     if (!j || B.scene || !scene || !scene.length) return null;
     const s = {
       plans: scene, i: 0, t: 0, actifs: [], bloquant: null, cree: [], touches: [],
-      lieux: Object.assign({}, c.lieux || {}), acteurs: {}, mission: c.mission || null,
+      lieux: Object.assign({}, c.lieux || {}), acteurs: {}, places: {}, mission: c.mission || null,
       lignes: c.lignes || [], anonyme: !!c.anonyme,
-      retour: { x: j.x, y: j.y }, musique: null, boucles: [], moteur: false,
+      // ⚠️ `dessine` aussi : au volant, le bonhomme est caché dans son char, et la
+      // scène le rend comme elle l'a trouvé.
+      retour: { x: j.x, y: j.y, dessine: j.dessine !== false }, musique: null, boucles: [], moteur: false,
       noir: 0, titre: 0, carton: null, camera: null,
       vise: { x: B.cam.x + VW / 2, y: B.cam.y + VH / 2 },
-      silence: -1, fin: c.fin || null,
+      silence: -1, fin: c.fin || null, sautes: 0,
     };
+    for (const nom in (c.acteurs || {})) if (c.acteurs[nom]) s.acteurs[nom] = c.acteurs[nom];
+    // Où chacun se tenait à la première image : `place:<acteur>`, pour revenir.
+    for (const plan of scene) {
+      for (const nom of [plan.acteur, 'donneur']) {
+        const a = nom && !s.places[nom] ? acteur(s, nom) : null;
+        if (a) s.places[nom] = { x: a.x, y: a.y };
+      }
+    }
     B.scene = s;
     j.vx = 0; j.vy = 0;
     // ⚠️ Qui SORT n'était pas là avant : un acteur dont le premier plan est
@@ -113,6 +150,11 @@ const Scenes = (function () {
   }
 
   function toucher(s, e) { if (s.touches.indexOf(e) < 0) s.touches.push(e); }
+
+  /** Un plan qui ne trouve pas son lieu ou son acteur : SAUTÉ, jamais attendu — et
+      compté (`sautes`), pour qu'un juge voie une scène du catalogue qui s'écrit
+      avec des noms que la ville ne connaît pas. */
+  function introuvable(s) { s.sautes++; return false; }
 
   /** Les plans suivants partent : tant qu'ils sont instantanés ou `ensemble`,
       le suivant part avec eux ; le premier qui dure et retient s'arrête là. */
@@ -179,7 +221,7 @@ const Scenes = (function () {
       const a = s.actifs.find(function (x) { return x.plan === plan; });
       if (a && a.fini) continue;
       const genre = PLANS[plan.type];
-      if (genre && genre.achever) genre.achever(s, plan);
+      if (genre && genre.achever) genre.achever(s, plan, a || null);
     }
     B.scene = null;
     Son.Voix.couper();
@@ -194,7 +236,7 @@ const Scenes = (function () {
     const j = B.joueur;
     if (j) {
       j.geste = null;
-      j.dessine = true; j.x = s.retour.x; j.y = s.retour.y; j.vx = 0; j.vy = 0;
+      j.dessine = s.retour.dessine; j.x = s.retour.x; j.y = s.retour.y; j.vx = 0; j.vy = 0;
       Entites.dansLaCarte(j);
       Monde.centrerCamera(j.x, j.y);
     }
@@ -245,7 +287,7 @@ const Scenes = (function () {
     camera: {
       demarrer: function (s, a, p) {
         const l = lieu(s, p.vers, p.recul);
-        if (!l) return false;
+        if (!l || l.dehors) return introuvable(s);
         if (p.lissage) { s.camera = { vers: p.vers, recul: p.recul || 0, lissage: p.lissage }; return false; }
         s.camera = null;
         if (!p.duree) { viser(s, l.x, l.y); return false; }
@@ -261,9 +303,10 @@ const Scenes = (function () {
 
     marcher: {
       demarrer: function (s, a, p) {
-        const e = acteur(s, p.acteur), l = lieu(s, p.vers);
-        if (!e || !l) return false;
+        const e = acteur(s, p.acteur), l0 = lieu(s, p.vers);
+        if (!e || !l0 || l0.dehors) return introuvable(s);
         toucher(s, e);
+        const l = this.arret(e, l0, p.pres);
         a.e = e; a.de = { x: e.x, y: e.y }; a.a = l;
         if (!p.duree) { pas(e, l.x, l.y); e.vx = 0; e.vy = 0; return false; }
         return true;
@@ -274,10 +317,19 @@ const Scenes = (function () {
         if (u >= 1) { a.e.vx = 0; a.e.vy = 0; return false; }
         return true;
       },
+      /** Où s'arrêter : `pres` pixels avant le lieu, sur la ligne qui y mène. */
+      arret: function (e, l, pres) {
+        const d = Math.hypot(l.x - e.x, l.y - e.y);
+        if (!pres || d <= pres) return pres && d <= pres ? { x: e.x, y: e.y } : l;
+        const k = (d - pres) / d;
+        return { x: e.x + (l.x - e.x) * k, y: e.y + (l.y - e.y) * k };
+      },
       // Passé : il est arrivé. (Le joueur, lui, revient de toute façon chez lui.)
-      achever: function (s, p) {
-        const e = acteur(s, p.acteur), l = lieu(s, p.vers);
-        if (e && l && e !== B.joueur) { e.x = l.x; e.y = l.y; e.vx = 0; e.vy = 0; }
+      achever: function (s, p, a) {
+        const e = acteur(s, p.acteur), l = a && a.a ? a.a : lieu(s, p.vers);
+        if (!e || !l || l.dehors || e === B.joueur) return;
+        const fin = a && a.a ? l : this.arret(e, l, p.pres);
+        e.x = fin.x; e.y = fin.y; e.vx = 0; e.vy = 0;
       },
     },
 
@@ -286,24 +338,24 @@ const Scenes = (function () {
         let v = acteur(s, p.acteur);
         if (p.vers) {
           const l = lieu(s, p.vers);
-          if (!l) return false;
+          if (!l) return introuvable(s);
           const angle = ANGLES[l.sens] !== undefined ? ANGLES[l.sens] : (v ? v.angle : 0);
           const dx = Math.cos(angle), dy = Math.sin(angle), recul = p.depuis || 0;
           if (!v && p.vehicule) {
             const def = Vehicules.vehiculeDef(p.vehicule);
-            if (!def) return false;
+            if (!def) return introuvable(s);
             // ⚠️ La couleur EN CLAIR : `Vehicules.creer` en tire une du
             // catalogue sinon, et un dé tiré ici décale tous ceux qui suivent.
             v = Vehicules.creer(p.vehicule, l.x - dx * recul, l.y - dy * recul, angle,
                                 { couleur: p.couleur || def.couleurs[0], etat: 'stationne' });
-            if (!v) return false;
+            if (!v) return introuvable(s);
             s.acteurs[p.acteur] = v; s.cree.push(v);
             if (v.def.classe !== 'velo') { Son.boucle('moteur', true); s.moteur = true; }
           }
-          if (!v) return false;
+          if (!v) return introuvable(s);
           a.v = v; a.de = { x: v.x, y: v.y }; a.a = { x: l.x, y: l.y }; v.angle = angle;
         } else {
-          if (!v || B.entites.indexOf(v) < 0) return false;
+          if (!v || B.entites.indexOf(v) < 0) return introuvable(s);
           const dx = Math.cos(v.angle), dy = Math.sin(v.angle);
           a.v = v; a.de = { x: v.x, y: v.y }; a.a = { x: v.x + dx * (p.part || 0), y: v.y + dy * (p.part || 0) };
         }
@@ -338,7 +390,7 @@ const Scenes = (function () {
     geste: {
       demarrer: function (s, a, p) {
         const e = acteur(s, p.acteur);
-        if (!e) return false;
+        if (!e) return introuvable(s);
         toucher(s, e);
         const l = p.vers ? lieu(s, p.vers) : null;
         if (l) {
@@ -359,7 +411,7 @@ const Scenes = (function () {
     entrer: {
       demarrer: function (s, a, p) {
         const e = acteur(s, p.acteur), l = lieu(s, p.dans);
-        if (!e || !l) return false;
+        if (!e || !l || l.dehors) return introuvable(s);
         toucher(s, e);
         a.e = e; a.de = { x: e.x, y: e.y }; a.a = l;
         return true;
@@ -368,14 +420,14 @@ const Scenes = (function () {
         const duree = p.duree || ENTRER_IMAGES, u = Math.min(1, t / duree);
         pas(a.e, a.de.x + (a.a.x - a.de.x) * u, a.de.y + (a.a.y - a.de.y) * u);
         if (u < 1) return true;
-        this.achever(s, p, a.e);
+        this.achever(s, p, a);
         return false;
       },
       // ⚠️ Passé la porte, un personnage QUITTE la ville (Ti-Guy rentre au
       // terminus, il n'y attend plus personne) ; le joueur, lui, est seulement
       // caché — il revient de toute façon chez lui à la dernière image.
-      achever: function (s, p, deja) {
-        const e = deja || acteur(s, p.acteur);
+      achever: function (s, p, a) {
+        const e = (a && a.e) || acteur(s, p.acteur);
         if (!e) return;
         if (e === B.joueur) { e.dessine = false; return; }
         e.vx = 0; e.vy = 0;
@@ -386,7 +438,7 @@ const Scenes = (function () {
     sortir: {
       demarrer: function (s, a, p) {
         const e = acteur(s, p.acteur), de = acteur(s, p.de) || lieu(s, p.de);
-        if (!e || !de) return false;
+        if (!e || !de || de.dehors) return introuvable(s);
         toucher(s, e);
         if (de.type === 'vehicule') {
           // ⚠️ DU BON CÔTÉ DU CHAR, et ce n'est pas toujours le même : la rue peut
@@ -417,25 +469,51 @@ const Scenes = (function () {
 
     coupe: {
       demarrer: function (s, a, p) {
-        a.retourne = p.vers !== undefined && p.tient !== undefined;
         a.ailleurs = p.vers ? lieu(s, p.vers) : null;
-        if (p.vers && !a.ailleurs) return false;
+        if (p.vers && !a.ailleurs) return introuvable(s);
+        // ⚠️ Un lieu de la VILLE vu d'une pièce : on y va et on en REVIENT toujours,
+        // même sans `tient` — le joueur est resté dedans.
+        a.retourne = (p.vers !== undefined && p.tient !== undefined) || !!(a.ailleurs && a.ailleurs.dehors);
         // Sans `ferme`, on part DU noir : c'est l'ouverture, qui sort de l'écran titre.
         if (!p.ferme) { s.noir = 1; this.sauter(s, a); }
         return true;
       },
-      /** Le noir est plein : la caméra saute là-bas. */
+      /** Le noir est plein : la caméra saute là-bas — et sort dans la rue, s'il le faut. */
       sauter: function (s, a) {
         if (a.saute) return;
         a.saute = true;
-        if (a.ailleurs) { a.depuis = { x: s.vise.x, y: s.vise.y }; viser(s, a.ailleurs.x, a.ailleurs.y); }
+        if (!a.ailleurs) return;
+        a.depuis = { x: s.vise.x, y: s.vise.y };
+        if (a.ailleurs.dehors && B.interieur && B.exterieur) {
+          // ⚠️ LA PIÈCE EST MISE DE CÔTÉ, AU NOIR, telle qu'elle est : sa carte, ses
+          // gens (le joueur est parmi eux), son nom. La ville figée prend sa place le
+          // temps du plan, et rien d'elle ne bouge — personne n'y marche.
+          a.dedans = { carte: Monde.carte, entites: B.entites, interieur: B.interieur };
+          Monde.restaurer(B.exterieur.carte);
+          B.entites = B.exterieur.entites;
+          B.interieur = null;
+          Entites.reindexerDecor();
+        }
+        viser(s, a.ailleurs.x, a.ailleurs.y);
+      },
+      /** Le noir plein une seconde fois : la pièce revient, et la caméra avec. */
+      revenir: function (s, a) {
+        if (a.revenu) return;
+        a.revenu = true;
+        if (a.dedans) {
+          Monde.restaurer(a.dedans.carte);
+          B.entites = a.dedans.entites;
+          B.interieur = a.dedans.interieur;
+          a.dedans = null;
+          Entites.reindexerDecor();
+        }
+        if (a.depuis) viser(s, a.depuis.x, a.depuis.y);
       },
       maj: function (s, a, p, t) {
         const f = p.ferme || 0, o = p.ouvre || 0;
         const A = f, Bo = A + o, C = Bo + (p.tient || 0), D = C + f, E = D + o;
         if (t >= A) this.sauter(s, a);
-        // Et revient, le noir plein une seconde fois.
-        if (a.retourne && !a.revenu && t >= D && t > C) { a.revenu = true; viser(s, a.depuis.x, a.depuis.y); }
+        if (a.retourne && t >= D && t > C) this.revenir(s, a);
         s.noir = t < A ? t / A
                : t < Bo ? 1 - (t - A) / o
                : (!a.retourne || t <= C) ? 0
@@ -443,6 +521,11 @@ const Scenes = (function () {
                : t < E ? 1 - (t - D) / o
                : 0;
         return a.retourne ? t < E : t < Bo;
+      },
+      // Passée au milieu : la pièce revient avant tout le reste.
+      achever: function (s, p, a) {
+        if (a && a.dedans) this.revenir(s, a);
+        s.noir = 0;
       },
     },
 

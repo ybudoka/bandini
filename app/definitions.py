@@ -65,6 +65,7 @@ def assembler() -> dict:
         # Les scènes, en plans (voir `missions.TYPES_PLANS`) : `scenes.js` les joue
         # sans en connaître aucune par son nom.
         "scenes": {"ouverture": missions.SCENE_OUVERTURE},
+        "repos": missions.REPOS,
         "types_plans": {genre: list(cles) for genre, cles in missions.TYPES_PLANS.items()},
         "types_objectifs": list(missions.TYPES_OBJECTIFS),
         "journal": journal.REGLES,

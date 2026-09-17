@@ -260,6 +260,43 @@ def test_changer_de_partie_recharge_la_page_et_rouvre_le_choix(page, serveur, er
     assert erreurs == []
 
 
+def test_la_premiere_mission_se_joue_en_scenes_de_l_intro_a_la_fin(page, serveur, erreurs):
+    """Les missions mises en scène, dans un vrai navigateur : M1 de l'intro à la fin,
+    en temps réel, voix et musique comprises — et aucune erreur console.
+
+    On ne conduit pas pour de vrai : on POSE le cousin là où l'objectif s'accomplit
+    et on laisse le jeu le voir. Ce sont les scènes qu'on juge ici : qu'elles
+    partent, qu'elles jouent jusqu'au bout sans qu'on touche à rien, et que Ti-Guy,
+    sa clé tendue, rentre au garage."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_function("window.BANDINI.B.etat === 'jeu' && !window.BANDINI.B.scene")
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
+        j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
+        L.Histoire.parler('ti_guy');
+    }""")
+    assert page.evaluate("!!window.BANDINI.B.scene"), "parler a Ti-Guy ne joue pas sa scene d'intro"
+    page.wait_for_function("!window.BANDINI.B.scene && !window.BANDINI.B.cinema", timeout=90000)
+    assert page.evaluate("window.BANDINI.B.partie.mission.slug") == "m1"
+    # Au garage, puis dans le char de la ruelle, puis le char ramene au garage.
+    page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), j = L.B.joueur;
+                            j.x = g.x; j.y = g.y; L.Entites.indexer(); }""")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 1", timeout=20000)
+    page.evaluate("""() => { const L = window.BANDINI, v = L.B.mission.vehicule, j = L.B.joueur;
+                            j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); }""")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 2", timeout=20000)
+    page.wait_for_function("!window.BANDINI.B.cinema", timeout=60000)      # Ti-Guy au combine
+    page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), v = L.B.mission.vehicule, j = L.B.joueur;
+                            v.x = g.x; v.y = g.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y; }""")
+    page.wait_for_function("!!window.BANDINI.B.partie.missionsFaites.m1", timeout=20000)
+    page.wait_for_function("!!window.BANDINI.B.scene", timeout=20000)
+    page.wait_for_function("!window.BANDINI.B.scene && !window.BANDINI.B.cinema", timeout=90000)
+    assert page.evaluate("!window.BANDINI.Histoire.donneur('ti_guy')"), "Ti-Guy n'est pas rentre au garage"
+    assert erreurs == []
+
+
 def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     contexte = browser.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True,
                                    device_scale_factor=2)
