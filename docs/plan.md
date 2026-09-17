@@ -211,6 +211,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ⬜ **en cours** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
+| M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -11280,6 +11281,13 @@ pied ; en char arrêté devant la porte ; en char un peu en retrait) :
   (M4 et M3) et `test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit`. Trois mutations
   (sans `sansChar` ; l'escorte à la tuile la plus proche ; la voie à contresens préférée) font
   chacune rougir la sienne, M3 et M4 séparément.
+
+### M1 : le char dort dans la ruelle avant qu'on l'y montre
+
+demande de Martin (17 sept. 2026) : « pour la mission du véhicule à apporter au garage, il
+faut voir l'auto en place durant l'animation ».
+
+⬜ **En cours.**
 
 ### Le tableau des scores s'en va
 
