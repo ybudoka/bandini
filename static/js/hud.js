@@ -297,6 +297,8 @@ const Hud = (function () {
       bascule('muet', 'SON COUPE'),
       bascule('daltonien', 'PALETTE DALTONIENNE'),
       bascule('trace', 'TRACE DES VEHICULES'),
+      // ⚠️ M12 : derriere une option tant que la sonde de performance ne l'a pas jugee.
+      bascule('neige', 'TEMPETES DE NEIGE (ESSAI)'),
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };

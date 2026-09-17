@@ -1608,6 +1608,21 @@ const MACHINE_BATEAU_CONSOLE = Object.assign({}, MACHINE_BATEAU, {
 SPRITES.camion_benne = enVolume(MACHINE_CAMION_BENNE, 40, 76, SPRITES.camion.pal);
 SPRITES.camion_citerne = enVolume(MACHINE_CAMION_CITERNE, 40, 76, SPRITES.camion.pal);
 SPRITES.camion.variantes = { camion: 3, camion_benne: 2, camion_citerne: 1 };
+// ⚠️ LA CHARRUE (M12) n'est PAS tiree au sort : c'est la tempete qui la sort
+// (`Autobus.faireNaitreLaCharrue`). Le camion, une lame en biais devant et un
+// gyrophare ambre sur la cabine.
+const MACHINE_CAMION_CHARRUE = Object.assign({}, MACHINE_CAMION, {
+  pieces: MACHINE_CAMION.pieces.concat([
+    // ⚠️ Relevee de deux pixels, comme en transit : posee au sol, elle soudait la roue
+    // avant a la route et la machine ne montrait plus qu'une roue de profil.
+    ['profil', [[23.6, 3.6], [24.4, 5.0], [24.0, 8.4], [21.8, 8.4], [21.4, 3.6]], [-10.4, 10.4], 'y', 'kkkkk', 0.1],   // la lame
+    ['tube', [20.2, -4.0, 4.6], [22.0, -6.0, 4.6], 'k', 0.3], ['tube', [20.2, 4.0, 4.6], [22.0, 6.0, 4.6], 'k', 0.3],  // ses bras
+    ['bloc', [11.6, 13.2], [-1.2, 1.2], [15.0, 16.4], 'y', 'y', 'y', 0.2],                                          // le gyrophare
+  ]),
+});
+SPRITES.camion_charrue = enVolume(MACHINE_CAMION_CHARRUE, 40, 76, Object.assign({}, SPRITES.camion.pal, { y: '#f39c12' }));
+SPRITES.camion_charrue.couleur = '#e67e22';
+SPRITES.camion_charrue.de = 'camion';
 // ⚠️ L'autobus scolaire est JAUNE, quelle que soit la couleur tiree pour l'autobus :
 // une silhouette peut porter sa couleur (`Vehicules.creer` la lui rend).
 SPRITES.autobus_scolaire = enVolume(MACHINE_AUTOBUS_SCOLAIRE, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#f5b400' }));

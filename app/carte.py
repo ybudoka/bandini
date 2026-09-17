@@ -6338,6 +6338,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # correspondance du quai. Il trace sa voie double et ses arrets, et ne pose rien.
     from . import tramway as tramway_mod
     ville["tramway"] = tramway_mod.tracer(ville)
+    # ⚠️ LA NEIGE (M12) : l'horaire des tempetes, leurs effets et la tournee de la
+    # charrue. Elle ne pose rien, ne tire aucun de, et ne tombe que si l'option le veut.
+    from . import neige as neige_mod
+    ville["neige"] = neige_mod.tracer(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

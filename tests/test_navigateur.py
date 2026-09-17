@@ -501,6 +501,34 @@ def test_la_ville_tient_le_rythme_de_nuit_a_trois_etoiles(page, serveur, erreurs
     assert erreurs == []
 
 
+def test_la_tempete_de_neige_tient_le_rythme(page, serveur, erreurs):
+    """⚠️ La SONDE que le plan exigeait avant d'allumer la neige (M12) : le même pire
+    cas que la nuit à trois étoiles — au volant, recherché — un soir de pleine tempête,
+    l'option allumée, la charrue dehors. Le chiffre s'imprime à côté de celui de la nuit :
+    c'est la différence qu'on regarde avant de mettre l'option à OUI par défaut."""
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("""() => {
+        const L = window.BANDINI, j = L.B.joueur, t = L.Neige.donnees().tempete;
+        j.intouchable = true;
+        L.B.options.neige = true;
+        L.B.partie.jour = t.premier;
+        L.B.partie.heure = (t.debut_h + t.fin_h) / 2 / 24;
+        L.Police.ajouterChaleur(9);
+        const v = L.Vehicules.creer('auto', j.x + 24, j.y, 0, { etat: 'stationne' });
+        L.Entites.indexer();
+        L.Vehicules.monter(j, v);
+    }""")
+    page.wait_for_timeout(4000)
+    etat = page.evaluate("({ ms: window.BANDINI.B.stats.ms, i: window.BANDINI.Neige.intensite(), images: window.BANDINI.B.stats.images })")
+    print(f"\n[perf] {etat['ms']:.1f} ms par image, tempete {etat['i']:.2f}, {etat['images']} images, 3 etoiles")
+    assert etat["i"] > 0.9, "la sonde ne mesure pas une tempête"
+    assert etat["ms"] < 40, f"{etat['ms']:.1f} ms par image : la tempête ne tient pas le rythme"
+    assert erreurs == []
+
+
 def test_sans_geste_le_son_est_retenu_et_la_page_le_dit(page, serveur, erreurs):
     """La panne de Martin, dans un vrai navigateur.
 

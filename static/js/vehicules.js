@@ -667,7 +667,7 @@ const Vehicules = (function () {
     const d = v.def;
     if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
     if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein;
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
@@ -692,7 +692,8 @@ const Vehicules = (function () {
       pivoterSurLArriere(v, ancien);
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
-    const adh = cmd.freinMain ? d.adherence_frein : d.adherence;
+    // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v);
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     // En l'air (rampe) : on retombe.
@@ -1703,6 +1704,9 @@ const Vehicules = (function () {
     const toi = v.rails && B.joueur, tonChar = toi && B.joueur.dansVehicule;
     for (const e of Entites.autour(ax, ay, portee / 2 + 16, function (q) {
       if (toi && (q === toi || q === tonChar)) return false;
+      // ⚠️ LA CHARRUE POUSSE LES CHARS MAL GARES (M12) : un char sans conducteur n'est
+      // pas un obstacle pour elle, c'est de la neige de plus.
+      if (v.charrue && q.type === 'vehicule' && !q.conducteur) return false;
       return q !== v && ((q.type === 'vehicule') || ((q.type === 'pieton' || q.type === 'joueur') && q.vivant && !q.dansVehicule));
     })) {
       const dx = e.x - v.x, dy = e.y - v.y;
@@ -1813,7 +1817,7 @@ const Vehicules = (function () {
     }
     const voulu = angleVers(v.x, v.y, v.cible.x, v.cible.y);
     const ecart = ecartAngle(v.angle, voulu);
-    let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville);   // sirene : bien plus vite
+    let vitesseVoulue = v.def.vitesse_max * (v.poursuite ? 0.85 : t.vitesse_ville) * Neige.vitesseTrafic();   // sirene : bien plus vite
     // ⚠️ On ralentit AVANT le coin, pas dedans : a 2,2 px/image le rayon de
     // braquage fait 3,6 tuiles, et un coin de rue en demande 1,5 — le char
     // ratait son virage et finissait sur le trottoir d'en face.

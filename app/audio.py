@@ -370,6 +370,11 @@ CATALOGUE: list[Echantillon] = [
     # La rumeur : une BOUCLE, dont le volume suit la distance au chantier le
     # plus proche. C'est elle qui dit « il y a un chantier par là » avant qu'on
     # le voie.
+    # La tempete de neige (M12) : le vent, une BOUCLE dont le volume suit la tempete.
+    _e("tempete", "Vent de tempete", duree_s=8.0, volume=0.35, boucle=True, influence=0.45,
+       prompt="a winter blizzard wind howling and gusting through city streets at "
+              "night, snow hissing, steady intensity, seamless loop, no voices, "
+              "no music"),
     _e("chantier", "Rumeur de chantier", duree_s=6.0, volume=0.3, boucle=True,
        influence=0.45,
        prompt="distant construction site ambience, a diesel machine engine "

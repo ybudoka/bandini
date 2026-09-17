@@ -110,7 +110,16 @@ const Autobus = (function () {
                   arretA: arretA, ordre: [], autobus: 1, horaire: e.horaire,
                   points: e.points.map(function (pt, k) { return { k: k, i: pt[0], x: pt[1], y: pt[2] }; }) };
     }
-    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null, tournee: tournee };
+    // ⚠️ LA CHARRUE (M12) roule comme une ligne elle aussi, sans arret : elle sort avec
+    // la tempete (`Neige.intensite`) et deblaie ce qu'elle passe.
+    const nc = def.neige && def.neige.charrue;
+    let charrue = null;
+    if (nc) {
+      const tuiles = derouler(nc.trace);
+      charrue = { numero: 'charrue', nom: 'La charrue', tuiles: tuiles, n: tuiles.length, longueurPx: tuiles.length * TT,
+                  arretA: new Map(), ordre: [], autobus: 1, horaire: { vitesse_px: nc.vitesse_px }, largeur: nc.largeur_tuiles };
+    }
+    prepare = { lignes: lignes, arrets: arrets, horaire: brut.horaire, attente: brut.attente || null, tournee: tournee, charrue: charrue };
     return prepare;
   }
 
@@ -130,6 +139,7 @@ const Autobus = (function () {
     const d = donnees();
     if (!d) return null;
     if (numero === 'tournee') return d.tournee;
+    if (numero === 'charrue') return d.charrue;
     return d.lignes.find(function (l) { return l.numero === numero; }) || null;
   }
 
@@ -271,6 +281,7 @@ const Autobus = (function () {
       }
       return;
     }
+    if (v.charrue) Neige.deneiger(Math.floor(v.x / TT), Math.floor(v.y / TT), L.largeur);
     let cible = centre(L.tuiles[v.etape]);
     if (dist2(cible.x, cible.y, v.x, v.y) < 36) {
       const ici = v.etape;
@@ -309,7 +320,7 @@ const Autobus = (function () {
     v.cible = cible;
     v.sens = FLECHE_DE[Math.sign(cible.tx - Math.floor(v.x / TT)) + ',' + Math.sign(cible.ty - Math.floor(v.y / TT))] || v.sens;
     // La vitesse : celle du trafic, qui ralentit avant un coin, une boite ou un arret.
-    let voulue = v.def.vitesse_max * t.vitesse_ville;
+    let voulue = v.def.vitesse_max * t.vitesse_ville * Neige.vitesseTrafic();
     const devant1 = L.tuiles[(v.etape + 1) % L.n], devant2 = L.tuiles[(v.etape + 2) % L.n];
     const f0 = Monde.fleche(cible.tx, cible.ty), f1 = Monde.fleche(devant1[0], devant1[1]);
     if (f0 === '+' || f0 === 'S' || f1 === '+' || f1 === 'S') voulue = Math.min(voulue, 1.1);
@@ -363,7 +374,7 @@ const Autobus = (function () {
     const r = d.horaire.rayon_monter_px;
     let meilleur = null, dMin = Infinity;
     for (const v of Entites.autour(j.x, j.y, r + 30, function (q) { return q.type === 'vehicule'; })) {
-      if (v.conducteur !== 'ligne' || v.collecte || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
+      if (v.conducteur !== 'ligne' || v.collecte || v.charrue || !(v.arretT > 0) || v.etat === 'epave' || v.passager) continue;
       const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
       const long = borner((j.x - v.x) * cx + (j.y - v.y) * cy, -v.def.longueur / 2, v.def.longueur / 2);
       const px = v.x + cx * long, py = v.y + cy * long;
@@ -789,6 +800,35 @@ const Autobus = (function () {
     if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.4;
   }
 
+  // --- La charrue (M12) -----------------------------------------------------------------
+
+  const CHARRUE_DECALAGE = 7;
+
+  /** La charrue sort avec la tempete, hors de l'ecran et a sa place a l'heure ; la
+      tempete finie, elle rentre des qu'on ne la voit plus. ⚠️ Aucun de : sa silhouette
+      et sa couleur sont donnees. */
+  function faireNaitreLaCharrue() {
+    const d = donnees(), C = d && d.charrue, j = B.joueur;
+    if (!C || !j || B.interieur || (B.t % REGARD_IMAGES) !== CHARRUE_DECALAGE) return;
+    const v0 = enService('charrue', 0);
+    if (!(Neige.intensite() > 0)) {
+      if (v0 && !v0.passager && !Entites.visibleAEcran(v0.x, v0.y, 60)) Entites.retirer(v0);
+      return;
+    }
+    if (v0) return;
+    const t = B.defs.conduite.trafic, p = placeALHeure(C, 0, tempsDeLaPartie());
+    const d2 = dist2(p.x, p.y, j.x, j.y);
+    if (d2 < t.naissance_px * t.naissance_px || d2 > (t.oubli_px - 80) * (t.oubli_px - 80)) return;
+    if (Entites.visibleAEcran(p.x, p.y, 60)) return;
+    if (Entites.autour(p.x, p.y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) return;
+    const v = Vehicules.creer('camion', p.x, p.y, p.angle, {
+      conducteur: 'ligne', etat: 'roule', sprite: 'camion_charrue', couleur: '#e67e22', sens: p.sens,
+      ligne: 'charrue', charrue: true, rang: 0, etape: (p.i + 1) % C.n, servi: -1, arretT: 0, arret: null,
+      passager: null, demande: false, bloqueT: 0,
+    });
+    if (v) v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.4;
+  }
+
   /** Combien d'images le camion reste a ce point : le temps d'un bac, s'il y en a
       un plein ; sinon il passe. */
   function dureeDeCollecte(k) {
@@ -874,6 +914,7 @@ const Autobus = (function () {
   function maj() {
     faireNaitre();
     faireNaitreLaTournee();
+    faireNaitreLaCharrue();
     majLesBacs();
     naitreALAbribus();
     majPassager();
@@ -885,6 +926,6 @@ const Autobus = (function () {
     invite, inviteMonter, ligneDuHud, abribusIci, attenteDe, texteDAttente, maj,
     quiAttend, combienAttendent, naitreALAbribus, porteDe, quartDHeure, dureeDArret, naitreUnVoyageur,
     parcoursDuJour, dejaVide, bacDe, placeDuBac, majLesBacs, faireNaitreLaTournee, dureeDeCollecte,
-    railsParTuile, dessinerRails,
+    railsParTuile, dessinerRails, faireNaitreLaCharrue,
   };
 })();
