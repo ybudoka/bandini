@@ -20,7 +20,7 @@ import json
 
 import pytest
 
-from app import carte, devantures, mobilier, pietons, salete, vitrines
+from app import carte, devantures, mobilier, salete, vitrines
 
 #: La saleté qu'on compte : ce qu'on jette par terre, sur la friche d'un terrain
 #: vague (`;`) ou au pied d'un mur (`_`). ⚠️ En toutes lettres, pas relu dans
@@ -432,13 +432,12 @@ def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
     assert [d for d in ville["decor"] if d["type"] not in USAGE_DU_MEUBLE] == sans["decor"]
 
 
-def _tuile(ville, chantier, glyphe, usage, standing, district=None):
+def _tuile(ville, chantier, glyphe, usage, standing):
     for y, ligne in enumerate(ville["sol"]):
         for x, g in enumerate(ligne):
-            if g == glyphe and chantier.usage_en(x, y) == usage and chantier.standing_en(x, y) == standing \
-                    and (district is None or chantier.district_en(x, y) == district):
+            if g == glyphe and chantier.usage_en(x, y) == usage and chantier.standing_en(x, y) == standing:
                 return x, y
-    raise AssertionError(f"aucun « {glyphe} » {usage} {standing} {district or ''} dans la ville")
+    raise AssertionError(f"aucun « {glyphe} » {usage} {standing} dans la ville")
 
 
 def _luminance(couleur):
@@ -703,163 +702,3 @@ def test_un_lampadaire_en_panne_n_eclaire_pas(banc, villes):
     }""" % (panne["x"], panne["y"]))
     assert r["n"] > 0, "la nuit n'allume rien : le juge ne mesure rien"
     assert all(tx != panne["x"] or abs(py - (panne["y"] * 16 + 2)) > 1 for tx, py in r["vues"]), "le lampadaire en panne éclaire"
-
-
-# --- 4e vague : le standing se vit ----------------------------------------------
-
-
-#: Qui marche où, en toutes lettres (pas relu dans `pietons.CATALOGUE`).
-STANDINGS_DES_SORTES = {"touriste": ("cossu", "ordinaire"), "jogger": ("cossu", "ordinaire"),
-                        "ivrogne": ("pauvre",), "pickpocket": ("pauvre",)}
-
-
-def test_qui_marche_dit_le_standing(chantier, villes):
-    """Chaque sorte qui a un standing peut naître QUELQUE PART : son district et
-    son standing doivent se croiser dans la ville, sinon c'est une sorte morte."""
-    ville = villes[0]
-    fiches = {p["slug"]: p for p in pietons.exporter()["catalogue"]}
-    for slug, standings in STANDINGS_DES_SORTES.items():
-        assert tuple(fiches[slug]["standings"] or ()) == standings, fiches[slug]
-    for slug, fiche in fiches.items():
-        if not fiche.get("standings"):
-            continue
-        places = 0
-        for y in range(0, ville["hauteur"], 3):
-            for x in range(0, ville["largeur"], 3):
-                if not carte.marchable(ville["sol"][y][x]):
-                    continue
-                if fiche["districts"] and chantier.district_en(x, y) not in fiche["districts"]:
-                    continue
-                places += chantier.standing_en(x, y) in fiche["standings"]
-        assert places > 20, f"{slug} n'a presque nulle part où naître ({places} tuiles)"
-
-
-def test_l_ivrogne_ne_dort_pas_dans_la_rue_chic(banc, villes, chantier):
-    """⚠️ Le district se lit au joueur, le standing à la TUILE où la sorte se pose :
-    deux blocs voisins n'ont pas le même. On plante le joueur dans la rue chic du
-    Faubourg, puis dans les Quais pauvres, et on regarde qui naît."""
-    ville = villes[0]
-    chic = _tuile(ville, chantier, "_", "commercial", "cossu", "faubourg")
-    # ⚠️ Aux QUAIS : l'ivrogne a ses quartiers (`districts`), et La Shop n'en est
-    # pas — un juge planté là ne verrait jamais personne et passerait pour rien.
-    pauvre = _tuile(ville, chantier, "_", "industriel", "pauvre", "quais")
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const TT = L.TT, nes = [];
-        const voir = function (x, y) {
-            const j = L.B.joueur;
-            j.x = x * TT + 8; j.y = y * TT + 8; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
-            for (let i = 0; i < 120; i++) {
-                L.Entites.naitreLesSortes();
-                for (const e of L.B.entites) {
-                    if (e.type !== 'pieton' || !e.metier || e.vu) continue;
-                    e.vu = 1;
-                    nes.push({ arch: e.arch, tx: Math.floor(e.x / TT), ty: Math.floor(e.y / TT) });
-                }
-                o.frame(1);
-            }
-        };
-        voir(%d, %d);
-        voir(%d, %d);
-        return nes;
-    }""" % (*pauvre, *chic))
-    vus = set()
-    for ne in r:
-        standings = STANDINGS_DES_SORTES.get(ne["arch"])
-        if not standings:
-            continue
-        vus.add(ne["arch"])
-        rang = chantier.standing_en(ne["tx"], ne["ty"])
-        assert rang in standings, f"un {ne['arch']} en quartier {rang}, en {(ne['tx'], ne['ty'])}"
-    assert vus, "aucune sorte à standing n'est née : le juge ne mesure rien"
-
-
-def test_pas_de_char_rare_dans_une_rue_pauvre(banc, paquet):
-    """Une décapotable dans la rue chic du Faubourg, pas devant le prêteur sur
-    gages — et une minoune qui casse plus vite."""
-    fiche = paquet["conduite"]["standing"]
-    rares = [v["slug"] for v in paquet["vehicules"] if v.get("rare")]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const zone = L.Monde.carte.zones.find(function (z) { return z.slug === 'faubourg'; });
-        const tirer = function (standing) {
-            const vus = {};
-            for (let i = 0; i < 400; i++) {
-                const t = L.Vehicules.typeDeRue(zone, standing);
-                if (t) vus[t.slug] = (vus[t.slug] || 0) + 1;
-            }
-            return vus;
-        };
-        return { rares: zone.rares, cossu: tirer('cossu'), pauvre: tirer('pauvre'), ordinaire: tirer('ordinaire') };
-    }""")
-    assert r["rares"], "le Faubourg ne déclare aucun char rare : le juge ne mesure rien"
-    for slug in rares:
-        assert slug not in r["pauvre"], f"un {slug} dans une rue pauvre"
-    assert any(slug in r["cossu"] for slug in rares), f"aucun char rare dans la rue chic : {r['cossu']}"
-    assert fiche["pauvre"]["usure"] < 1 and fiche["cossu"]["usure"] == 1
-
-
-def test_une_minoune_a_moins_de_carrosserie(banc, villes, chantier):
-    """Un char qui naît dans une rue pauvre a la carrosserie qu'il lui reste
-    (`usure`) ; celui d'une rue cossue est entier. ⚠️ On suit les chars par leur
-    naissance, pas par l'endroit où on les trouve : un char roule, et la bulle en
-    garde d'autres, nés ailleurs."""
-    ville = villes[0]
-    pauvre = _tuile(ville, chantier, "_", "industriel", "pauvre", "quais")
-    cossu = _tuile(ville, chantier, "_", "residentiel", "cossu", "erables")
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        const TT = L.TT, j = L.B.joueur, vus = {};
-        const rouler = function (x, y, images) {
-            j.x = x * TT + 8; j.y = y * TT + 8; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
-            const nes = [];
-            for (let i = 0; i < images; i++) {
-                o.frame(1);
-                for (const v of L.B.entites) {
-                    if (v.type !== 'vehicule' || v.rails || vus[v.id]) continue;
-                    vus[v.id] = 1;
-                    nes.push({ usure: v.usure === undefined ? null : v.usure, part: v.vie / v.vieMax });
-                }
-            }
-            return nes;
-        };
-        return { pauvre: rouler(%d, %d, 1200), cossu: rouler(%d, %d, 1200) };
-    }""" % (*pauvre, *cossu))
-    minounes = [v for v in r["pauvre"] if v["usure"] is not None]
-    assert len(minounes) >= 3, f"presque aucune minoune dans le quartier pauvre : {r['pauvre'][:5]}"
-    for v in minounes:
-        assert abs(v["part"] - v["usure"]) < 0.02, v
-        assert 0.5 <= v["usure"] <= 0.7, v
-    entiers = [v for v in r["cossu"] if v["usure"] is None]
-    assert len(entiers) >= 3, f"aucun char entier dans le quartier cossu : {r['cossu'][:5]}"
-    for v in entiers:
-        assert v["part"] == 1, v
-
-
-def test_la_police_arrive_plus_vite_chez_les_riches(banc, paquet):
-    """⚠️ Voler chez les riches paie, et ça se paie : plus de patrouilles et un
-    témoin qui téléphone plus vite en cossu ; l'inverse en pauvre."""
-    table = paquet["recherche"]["standing"]
-    assert table["cossu"]["patrouille"] > table["ordinaire"]["patrouille"] > table["pauvre"]["patrouille"]
-    assert table["cossu"]["depeche"] < table["ordinaire"]["depeche"] < table["pauvre"]["depeche"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.B.partie.heure = 0.55;
-        const zone = L.Monde.carte.zones.find(function (z) { return z.slug === 'faubourg'; });
-        return { cossu: L.Police.agentsVoulus(zone, 'cossu'), ordinaire: L.Police.agentsVoulus(zone, 'ordinaire'),
-                 pauvre: L.Police.agentsVoulus(zone, 'pauvre') };
-    }""")
-    assert r["cossu"] > r["ordinaire"] > r["pauvre"], r
-
-
-def test_les_tiroirs_d_un_logement_disent_le_quartier(banc, paquet):
-    parts = paquet["economie"]["fouille_standing"]
-    assert parts["cossu"] > parts["ordinaire"] > parts["pauvre"]
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.B.rng = function () { return 0.5; };
-        return { cossu: L.Missions.gainDeFouille('cossu'), ordinaire: L.Missions.gainDeFouille('ordinaire'),
-                 pauvre: L.Missions.gainDeFouille('pauvre'), rien: L.Missions.gainDeFouille(null) };
-    }""")
-    assert r["cossu"] > r["ordinaire"] > r["pauvre"] >= 1, r
-    assert r["rien"] == r["ordinaire"], "sans standing, la fouille reste celle d'avant"

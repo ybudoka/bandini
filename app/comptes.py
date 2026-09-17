@@ -4,8 +4,7 @@
 verite pendant qu'on joue ; le serveur recoit des INSTANTANES, et un compte n'est
 qu'une synchronisation — jamais une condition pour jouer.
 
-Ce qu'on demande, et rien d'autre : un pseudo (ses regles vivent ici depuis que le
-tableau des scores est parti),
+Ce qu'on demande, et rien d'autre : un pseudo (les regles du tableau des scores),
 un mot de passe, et un courriel FACULTATIF qui ne servira qu'a reprendre un mot
 de passe perdu.
 
@@ -50,6 +49,7 @@ from functools import lru_cache
 from werkzeug.security import check_password_hash, generate_password_hash
 
 from . import bd
+from .scores import PSEUDO_MAX, pseudo_propre
 
 #: Les trois cases de `Sauvegarde` (base.js) : le serveur les reflete, il ne les invente pas.
 EMPLACEMENTS = 3
@@ -60,17 +60,9 @@ MOT_DE_PASSE_MAX = 128
 COURRIEL_MAX = 254
 NOM_APPAREIL_MAX = 32
 
-PSEUDO_MAX = 16
-#: Lettres (accents compris), chiffres, espace, tiret, souligne. Rien d'autre :
-#: le pseudo est reaffiche a tout le monde.
-#: ⚠️ Cette regle vivait dans `scores.py` jusqu'au 17 sept. 2026, ou le tableau
-#: des scores a ete retire du jeu (demande de Martin) ; elle n'avait plus qu'un
-#: lecteur, et elle a suivi.
-_PSEUDO = re.compile(r"^[\w \-]{1,16}$", re.UNICODE)
-
 COOKIE = "bandini-appareil"
-#: Le cookie ne part qu'avec les appels de compte : ni la page ni les definitions
-#: ne le portent.
+#: Le cookie ne part qu'avec les appels de compte : ni la page, ni les definitions,
+#: ni les scores ne le portent.
 CHEMIN_COOKIE = "/api/compte"
 JETON_OCTETS = 32
 DUREE_JETON_S = 365 * 24 * 3600
@@ -88,14 +80,6 @@ COMPTEUR_MAX = 2**53 - 1
 _EMPREINTE_DEFS = re.compile(r"^[0-9a-f]{0,64}$")
 _JETON = re.compile(r"^[A-Za-z0-9_\-]{16,64}$")
 _COURRIEL = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-
-def pseudo_propre(brut: object) -> str | None:
-    """Le pseudo nettoye (espaces reduits), ou None s'il n'est pas permis."""
-    if not isinstance(brut, str):
-        return None
-    pseudo = re.sub(r"\s+", " ", brut.strip())
-    return pseudo if _PSEUDO.match(pseudo) else None
-
 
 MAUVAIS_IDENTIFIANTS = "pseudo ou mot de passe incorrect"
 APPAREIL_INCONNU = "cet appareil n'est pas lié à un compte"

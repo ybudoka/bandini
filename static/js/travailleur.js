@@ -25,9 +25,9 @@
    en ligne — et un son qui n'est plus dans le dossier sort du cache a
    l'activation.
 
-   ⚠️ Tout ce qu'il ne nomme pas passe sans lui : le compte et les parties sur
-   le serveur (M14). Rien de ce qui ECRIT ne se garde, et rien d'autre qu'un
-   GET. */
+   ⚠️ Tout ce qu'il ne nomme pas passe sans lui : les scores, et ce que M14
+   ajoutera (le compte, les parties sur le serveur). Rien de ce qui ECRIT ne se
+   garde, et rien d'autre qu'un GET. */
 
 'use strict';
 

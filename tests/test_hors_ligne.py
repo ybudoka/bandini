@@ -263,3 +263,14 @@ def test_les_sons_se_gardent_d_un_coup_et_se_jouent_hors_ligne(browser, ville):
                            f"/static/audio/{nom.name}")
     assert octets == nom.stat().st_size
     contexte.close()
+
+
+def test_les_scores_disent_qu_ils_sont_en_ligne(browser, ville):
+    """⚠️ Le jeu se joue hors ligne, le tableau des scores non : « Personne encore »
+    serait un mensonge — un tableau vide qui ment est pire qu'un tableau qui le dit."""
+    contexte, page = ouvrir(browser, ville.url)
+    contexte.set_offline(True)
+    page.click("#bouton-scores")
+    page.wait_for_function("document.getElementById('liste-scores').textContent.length > 0")
+    assert "Pas de réseau" in page.text_content("#liste-scores")
+    contexte.close()

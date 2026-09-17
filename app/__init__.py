@@ -10,6 +10,7 @@ from config import CLES_DE_DEVELOPPEMENT, Config
 
 from . import bd
 from .definitions import construire
+from .scores import Tableau
 from .version import VERSION
 
 
@@ -41,6 +42,7 @@ def create_app(config_object: type[Config] = Config) -> Flask:
     app.config.from_object(config_object)
     refuser_la_cle_de_developpement(app.config)
 
+    app.extensions["tableau_scores"] = Tableau(app.config["DONNEES_DIR"])
     app.extensions["version"] = VERSION
     # Le paquet de definitions et la carte sont construits UNE fois : les
     # catalogues ne changent pas sous un processus lance.

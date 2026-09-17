@@ -45,9 +45,8 @@ ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 \
 ## La base des comptes (M14)
 
 Les comptes et leurs parties vivent dans `/srv/bandini/shared/donnees/bandini.sqlite3`
-(SQLite en WAL ; c'est tout ce que ce dossier contient depuis le retrait du tableau des
-scores, le 17 sept. 2026 — l'ancien `scores.json` ne sert plus a rien). Elle se cree
-et se migre toute seule a la premiere requete de compte : rien a faire a la mise en ligne.
+(SQLite en WAL, a cote de `scores.json`). Elle se cree et se migre toute seule a la
+premiere requete de compte : rien a faire a la mise en ligne.
 
 - **Le vidage quotidien** : `bandini-sauvegarde-bd.timer` (vers 4 h 15) copie la base
   dans `/srv/bandini/shared/copies/` et garde les sept dernieres

@@ -17,9 +17,8 @@ FORTUNE_MAX = 50_000_000
 JOUR_SECONDES = 480
 
 #: Un joueur qui ne fait que gagner de l'argent plafonne autour de 2 000 $/h
-#: (0,6 $/s). Cette borne de VRAISEMBLANCE gardait le tableau des scores, retire
-#: du jeu le 17 sept. 2026 ; elle reste la mesure de ce qu'un boulot peut donner
-#: — `test_economie` refuse un boulot qui l'explose, et c'est un garde d'equilibre.
+#: (0,6 $/s). Cette borne de VRAISEMBLANCE sert au tableau des scores : un score
+#: qui l'explose n'est pas une performance, c'est un navigateur bidouille.
 GAIN_MAX_PAR_SECONDE = 500
 
 # --- Prison et hopital ----------------------------------------------------
@@ -743,17 +742,9 @@ def _table_des_dettes() -> list[int]:
     return table
 
 
-#: ⚠️ **CE QU'IL Y A DANS LES TIROIRS** (4e vague des quartiers) : la part de
-#: `fouille_min`/`fouille_max` qu'on trouve, selon le standing du logement. Voler
-#: chez les riches paie ; dans un plex du port, il n'y a presque rien a prendre —
-#: et la police, elle, tarde (voir `recherche.STANDING`). C'est le meme echange.
-FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvre": 0.4}
-
-
 def exporter() -> dict:
     return {
         "argent_depart": ARGENT_DEPART,
-        "fouille_standing": dict(FOUILLE_PAR_STANDING),
         "fortune_max": FORTUNE_MAX,
         "jour_secondes": JOUR_SECONDES,
         "casier_max": CASIER_MAX,

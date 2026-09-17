@@ -152,11 +152,9 @@ def test_la_fourriere_ne_peut_pas_devenir_une_machine_a_argent():
     assert economie.FOURRIERE["etoiles_vol"] >= 1, "reprendre son char sans payer, c'est un vol"
 
 
-def test_aucun_boulot_ne_depasse_la_borne_de_vraisemblance():
-    """Le boulot le plus riche, fait a la chaine sans jamais rater, doit rester
-    sous la borne de vraisemblance (`GAIN_MAX_PAR_SECONDE`). Elle gardait le
-    tableau des scores ; depuis son retrait (17 sept. 2026) c'est un garde
-    d'equilibre : un boulot qui l'explose rend l'argent du jeu sans valeur."""
+def test_aucun_boulot_ne_depasse_la_borne_du_tableau_des_scores():
+    """Le boulot le plus riche, fait a la chaine sans jamais rater, doit
+    rester sous la borne de vraisemblance des scores."""
     for slug, boulot in economie.BOULOTS.items():
         # Un boulot ne se fait pas en moins de vingt secondes par etape.
         par_seconde = economie.gain_boulot(boulot) / (20 * boulot["etapes"])

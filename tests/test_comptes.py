@@ -7,6 +7,7 @@ import sys
 import pytest
 
 from app import bd, comptes, create_app
+from app.scores import ScoreInvalide, valider
 from conftest import RACINE, ConfigTest
 
 MDP = "la-brume-1987"
@@ -82,17 +83,14 @@ def test_une_inscription_invalide_est_refusee(conn, donnees):
         comptes.inscrire(conn, donnees)
 
 
-def test_la_regle_du_pseudo(conn):
-    """⚠️ La regle vivait dans `scores.py` jusqu'au retrait du tableau des scores
-    (17 sept. 2026) : elle a suivi son dernier lecteur. Un pseudo est reaffiche a
-    tout le monde, donc rien qui ressemble a du balisage ; et les espaces se
-    reduisent avant d'entrer en base."""
-    assert comptes.pseudo_propre("<b>") is None
-    assert comptes.pseudo_propre("") is None
-    assert comptes.pseudo_propre("x" * (comptes.PSEUDO_MAX + 1)) is None
+def test_le_pseudo_suit_la_regle_du_tableau_des_scores(conn):
+    """Un pseudo refuse au tableau l'est au compte, et le meme nettoyage s'applique."""
+    score = {"fortune": 500, "missions": 0, "proprietes": 0, "duree_s": 120}
+    with pytest.raises(ScoreInvalide):
+        valider({**score, "pseudo": "<b>"})
     with pytest.raises(comptes.CompteInvalide):
         comptes.inscrire(conn, {"pseudo": "<b>", "mot_de_passe": MDP})
-    assert comptes.pseudo_propre("  Léa   T ") == "Léa T"
+    assert valider({**score, "pseudo": "  Léa   T "})["pseudo"] == "Léa T"
     assert _inscrire(conn, "  Léa   T ").pseudo == "Léa T"
 
 
@@ -361,7 +359,7 @@ def test_par_http_le_cookie_est_secure_en_production(tmp_path):
 
 
 def test_par_http_une_partie_de_40_ko_monte_et_une_de_60_ko_non(client):
-    """La borne du site est de 16 Ko : la route d'une partie releve la sienne."""
+    """La borne du site est celle d'un score (16 Ko) : la route d'une partie releve la sienne."""
     client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
     lourde = {**_partie(), "journal": ["x" * 100] * 400}  # ~41 Ko
     assert client.post("/api/compte/parties/1", json={"compteur": 1, "partie": lourde}).status_code == 200
@@ -400,7 +398,7 @@ def test_le_jeu_demarre_et_se_joue_avec_la_base_eteinte(tmp_path):
 
 
 def test_la_page_et_les_definitions_n_ouvrent_jamais_la_base(app, client):
-    for chemin in ("/", "/api/definitions", "/api/carte", "/travailleur.js", "/sante"):
+    for chemin in ("/", "/api/definitions", "/api/carte", "/api/scores", "/sante"):
         client.get(chemin)
     assert not os.path.exists(os.path.join(app.config["DONNEES_DIR"], bd.FICHIER))
 

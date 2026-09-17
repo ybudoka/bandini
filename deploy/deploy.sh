@@ -15,9 +15,7 @@
 # Arborescence attendue (voir deploy/README.md pour l'installation initiale) :
 #   /srv/bandini/repo/            clone git (origine des releases)
 #   /srv/bandini/shared/.env      configuration du serveur (hors release)
-#   /srv/bandini/shared/donnees/  bandini.sqlite3, la base des comptes (hors release,
-#                                 appartient a www-data ; le tableau des scores et son
-#                                 scores.json ont ete retires du jeu le 17 sept. 2026)
+#   /srv/bandini/shared/donnees/  scores.json (hors release, appartient a www-data)
 #   /srv/bandini/releases/        versions horodatees
 #   /srv/bandini/current          lien symbolique vers la release active
 

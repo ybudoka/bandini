@@ -1,17 +1,22 @@
-/* Bandini — HUD (canvas, hors nuit) et la voile DOM du titre. */
+/* Bandini — HUD (canvas, hors nuit) et voiles DOM (titre, scores). */
 
 const Hud = (function () {
   'use strict';
 
-  let doc = null, racine = null, voiles = {};
+  let doc = null, racine = null, voiles = {}, urlScores = '';
 
   function init(d, r) {
     doc = d; racine = r;
-    ['titre'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
+    urlScores = r.dataset.urlScores;
+    ['titre', 'scores', 'score-envoi'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
     // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
     // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
     // l'image suivante, y choisirait aussitot la ligne sous le curseur.
     d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Entree.videPresse(); Jeu.ouvrirParties(); });
+    d.getElementById('bouton-scores').addEventListener('click', function () { Son.reveiller(); montrerScores(); });
+    d.getElementById('bouton-fermer-scores').addEventListener('click', function () { voile('titre'); });
+    d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
+    d.getElementById('score-form').addEventListener('submit', envoyerScore);
     avisSon = d.getElementById('avis-son');
     logoTitre = d.querySelector('#voile-titre .logo');
     majAvisSon();
@@ -30,7 +35,7 @@ const Hud = (function () {
     voileCourant = nom;
     for (const n in voiles) voiles[n].hidden = (n !== nom);
     // ⚠️ Une voile est du DOM, et le casque n'affiche que la toile : on en
-    // sort pour la montrer (depuis le 17 sept. 2026 il n'en reste qu'une, le titre).
+    // sort pour la montrer (le titre, le nom pour le tableau des scores).
     if (nom && typeof Casque !== 'undefined' && Casque.actif) Casque.sortir();
   }
 
@@ -603,7 +608,8 @@ const Hud = (function () {
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
     ];
     return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
-      .concat([{ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+      .concat([{ libelle: 'ENVOYER MON SCORE', faire: function () { fermerMenu(); demanderScore(); return true; } },
+               { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
   }
 
   // --- Les parties : trois emplacements, au titre ------------------------------------
@@ -1101,6 +1107,71 @@ const Hud = (function () {
     }
     if (tr.fait) tr.vu = true;
     B.stats.rects++;
+  }
+
+  // --- Scores ---------------------------------------------------------------------
+
+  function afficherScores(scores, vide) {
+    const liste = doc.getElementById('liste-scores');
+    liste.innerHTML = '';
+    if (!scores || !scores.length) {
+      const li = doc.createElement('li');
+      li.className = 'scores__vide';
+      li.textContent = vide || 'Personne encore. Baie-des-Brumes t’attend.';
+      liste.appendChild(li);
+      return;
+    }
+    scores.forEach(function (s) {
+      const li = doc.createElement('li');
+      const nom = doc.createElement('span'); nom.textContent = s.pseudo;
+      const detail = doc.createElement('span');
+      detail.textContent = s.fortune.toLocaleString('fr-CA') + ' $ · ' + s.missions + ' missions';
+      li.appendChild(nom); li.appendChild(detail);
+      liste.appendChild(li);
+    });
+  }
+
+  function montrerScores() {
+    voile('scores');
+    fetch(urlScores, { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('scores ' + r.status); return r.json(); })
+      .then(function (d) { afficherScores(d.scores); })
+      // ⚠️ Pas « Personne encore » : le jeu se joue hors ligne, le tableau non,
+      // et un tableau vide qui ment est pire qu'un tableau qui le dit.
+      .catch(function () { afficherScores([], 'Pas de réseau : le tableau des scores vit en ligne.'); });
+  }
+
+  function envoyerScore(ev) {
+    ev.preventDefault();
+    const champ = doc.getElementById('pseudo'), etatEl = doc.getElementById('score-etat');
+    const pseudo = champ.value.trim();
+    if (!pseudo) { etatEl.textContent = 'Écris un pseudo.'; return; }
+    etatEl.textContent = 'Envoi…';
+    const p = B.partie;
+    const fortune = p.argent + Object.keys(p.proprietes).reduce(function (s, slug) {
+      const prop = B.defs.economie.proprietes.find(function (q) { return q.slug === slug; });
+      return s + (prop ? prop.prix : 0);
+    }, 0);
+    fetch(urlScores, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pseudo: pseudo, fortune: fortune, missions: Object.keys(p.missionsFaites).length,
+                             proprietes: Object.keys(p.proprietes).length, duree_s: Math.max(1, p.stats.secondes) }),
+    })
+      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      .then(function (res) {
+        if (!res.ok) { etatEl.textContent = res.d.erreur || 'Refusé.'; return; }
+        p.pseudo = pseudo;
+        etatEl.textContent = res.d.rang && res.d.rang <= 10 ? 'Bravo, ' + res.d.rang + 'e au tableau!' : 'Score envoyé.';
+        afficherScores(res.d.scores);
+        setTimeout(function () { voile('scores'); }, 900);
+      })
+      .catch(function () { etatEl.textContent = 'Pas de réseau — réessaie plus tard.'; });
+  }
+
+  function demanderScore() {
+    voile('score-envoi');
+    doc.getElementById('pseudo').value = B.partie.pseudo || '';
+    doc.getElementById('score-etat').textContent = '';
   }
 
   // --- Dessin --------------------------------------------------------------------------
@@ -1822,5 +1893,6 @@ const Hud = (function () {
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
-           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI, ancres: function () { return ancres; } };
+           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI, montrerScores, demanderScore,
+           afficherScores, ancres: function () { return ancres; } };
 })();

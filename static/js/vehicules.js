@@ -135,38 +135,16 @@ const Vehicules = (function () {
       n'est plus un coupe sport, c'est une auto de plus. Et c'est PYTHON qui
       decide ou — le navigateur n'a pas a savoir qu'une decapotable n'a rien a
       faire a La Shop. */
-  function standingDuParc(standing) {
-    const table = (B.defs.conduite && B.defs.conduite.standing) || {};
-    return table[standing] || { rares: 1, usure: 1 };
-  }
-
-  function typeDeRue(zone, standing) {
+  function typeDeRue(zone) {
     const rares = (zone && zone.rares) || [];
-    // ⚠️ ET PAS DANS UNE RUE PAUVRE (4e vague des quartiers) : une decapotable
-    // devant un preteur sur gages n'est plus une decapotable.
-    const permis = standing === undefined ? 1 : standingDuParc(standing).rares;
     const types = B.defs.vehicules.filter(function (v) {
       if (v.phase !== 1 || v.frequence <= 0) return false;
-      return !v.rare || (permis && rares.indexOf(v.slug) >= 0);
+      return !v.rare || rares.indexOf(v.slug) >= 0;
     });
     if (!types.length) return null;
     let tirage = B.rng() * types.reduce(function (s, v) { return s + v.frequence; }, 0);
     for (const v of types) { tirage -= v.frequence; if (tirage <= 0) return v; }
     return types[0];
-  }
-
-  /** LA MINOUNE D'UNE RUE PAUVRE : la carrosserie qu'il lui reste (`usure`). Elle
-      ne se voit pas d'en haut — elle se SENT, au premier poteau : un char de la
-      rue chic encaisse, celui-la casse. */
-  function user(v, standing) {
-    if (!v) return v;
-    const usure = standingDuParc(standing).usure;
-    if (usure >= 1) return v;
-    // `usure` reste sur le char : c'est ce qui dit qu'il est NE minoune, et pas
-    // qu'il s'est fait defoncer depuis (un juge les distingue).
-    v.usure = usure;
-    v.vie = Math.max(1, Math.round(v.vieMax * usure));
-    return v;
   }
 
   function libreAutour(x, y, rayon) {
@@ -326,11 +304,9 @@ const Vehicules = (function () {
     if (roulent < voulu) {
       const place = placeDansLeTrafic();
       if (place) {
-        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
-        const type = typeDeRue(zone, rang);
+        const type = typeDeRue(zone);
         const v = type && creer(type.slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
         if (v) {
-          user(v, rang);
           v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
           // ⚠️ Une ambulance sur trois est EN COURSE, et on l'entend passer.
           // Les deux autres rentrent au garage : une ville ou toutes les
@@ -346,12 +322,9 @@ const Vehicules = (function () {
       // elle finissait A CHEVAL SUR SES LIGNES — a un centieme de pixel pres,
       // ce qui est exactement ce qu'un juge voit et qu'un oeil ne voit pas.
       if (place) {
-        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
-        let type = typeDeRue(zone, rang);
-        for (let essai = 0; essai < 6 && type && type.longueur > CASE_PX; essai++) type = typeDeRue(zone, rang);
-        if (type && type.longueur <= CASE_PX) {
-          user(creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' }), rang);
-        }
+        let type = typeDeRue(zone);
+        for (let essai = 0; essai < 6 && type && type.longueur > CASE_PX; essai++) type = typeDeRue(zone);
+        if (type && type.longueur <= CASE_PX) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
       }
     }
   }
@@ -2920,7 +2893,7 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
