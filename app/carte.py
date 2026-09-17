@@ -6334,6 +6334,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # le couloir d'eau libre entre eux, et ne pose rien. Aucun de.
     from . import traversier as traversier_mod
     ville["traversier"] = traversier_mod.tracer(ville)
+    # ⚠️ LE TRAMWAY, APRES LE TRAVERSIER (M12) : son terminus des Quais est la
+    # correspondance du quai. Il trace sa voie double et ses arrets, et ne pose rien.
+    from . import tramway as tramway_mod
+    ville["tramway"] = tramway_mod.tracer(ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

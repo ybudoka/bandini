@@ -76,7 +76,9 @@ const Vehicules = (function () {
     const base = SPRITES[def.sprite];
     const variantes = base && base.variantes;
     const donnee = options && options.sprite;
-    if (donnee && (donnee === def.sprite || (variantes && variantes[donnee]))) return donnee;
+    // ⚠️ Une silhouette DONNEE est celle de la fiche, une de ses variantes, ou une
+    // silhouette qui se declare d'elle sans jamais se tirer au sort (`de`, le tramway).
+    if (donnee && (donnee === def.sprite || (variantes && variantes[donnee]) || (SPRITES[donnee] && SPRITES[donnee].de === def.sprite))) return donnee;
     if (!variantes) return def.sprite;
     const noms = Object.keys(variantes);
     const total = noms.reduce(function (t, n) { return t + variantes[n]; }, 0);
@@ -1215,7 +1217,9 @@ const Vehicules = (function () {
   function vehiculeSousLaMain(j) {
     const portee = physique().portee_monter_px;
     let meilleur = null, dMin = Infinity;
-    for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave'; })) {
+    // ⚠️ Une rame de tramway ne se vole pas : sur ses rails, elle n'irait nulle part
+    // ailleurs, et hors de ses rails ce n'est plus un tramway. On y MONTE a l'arret.
+    for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.rails; })) {
       for (const c of cercles(v)) {
         const d = Math.hypot(c.x - j.x, c.y - j.y) - c.r;
         if (d < dMin && d <= portee) { dMin = d; meilleur = v; }
@@ -1601,14 +1605,25 @@ const Vehicules = (function () {
   function croisementLibre(inter, v) {
     const cx = (inter.x + inter.l / 2) * TT, cy = (inter.y + inter.h / 2) * TT;
     const rayon = Math.max(inter.l, inter.h) * TT / 2 + 2 * TT + 12;      // la boite ET ses passages
-    for (const e of Entites.autour(cx, cy, rayon + 40, function (q) { return q.type === 'vehicule' && q !== v && q.etat !== 'epave'; })) {
+    const approche = rayon + APPROCHE_TRAM_TUILES * TT;
+    for (const e of Entites.autour(cx, cy, approche, function (q) { return q.type === 'vehicule' && q !== v && q.etat !== 'epave'; })) {
       if (e.enBoite === inter) return false;
+      // ⚠️ LE TRAFIC CEDE AU TRAMWAY (M12) : on ne s'engage pas dans une boite vers
+      // laquelle roule une rame. Elle a ses rails, elle ne se range pas.
+      if (e.rails && !v.rails && !(e.arretT > 0)) {
+        const dx = cx - e.x, dy = cy - e.y;
+        if (dx * Math.cos(e.angle) + dy * Math.sin(e.angle) > -TT && dx * dx + dy * dy < approche * approche) return false;
+        continue;
+      }
       // ⚠️ Un autobus de ligne attend a la ligne d'arret comme le trafic : il n'est
       // pas « un char stationne dans la boite », sinon tout le carrefour l'attend.
       if (e.conducteur !== 'trafic' && e.conducteur !== 'ligne' && dist2(e.x, e.y, cx, cy) < rayon * rayon) return false;   // le joueur, un char stationne
     }
     return true;
   }
+
+  //: Jusqu'a combien de tuiles d'une boite une rame qui arrive la reserve.
+  const APPROCHE_TRAM_TUILES = 4;
 
   // --- Le deport : se tasser dans la voie d'a cote -----------------------------------
   //
@@ -1684,7 +1699,10 @@ const Vehicules = (function () {
     const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
     const ax = v.x + cx * (v.def.longueur / 2 + portee / 2), ay = v.y + cy * (v.def.longueur / 2 + portee / 2);
     let dMin = Infinity;
+    // ⚠️ UNE RAME NE S'ARRETE PAS POUR TOI (M12) : ni pour le joueur, ni pour son char.
+    const toi = v.rails && B.joueur, tonChar = toi && B.joueur.dansVehicule;
     for (const e of Entites.autour(ax, ay, portee / 2 + 16, function (q) {
+      if (toi && (q === toi || q === tonChar)) return false;
       return q !== v && ((q.type === 'vehicule') || ((q.type === 'pieton' || q.type === 'joueur') && q.vivant && !q.dansVehicule));
     })) {
       const dx = e.x - v.x, dy = e.y - v.y;

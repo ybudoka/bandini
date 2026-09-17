@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (douze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le tramway, la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ⬜ **en cours** (treize vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : la neige et la charrue, la nuit de déneigement, le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -618,6 +618,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
 | `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
 | `traversier.py` | le **traversier** (M12) : les deux quais (une coque de 8 × 3 dans l'eau profonde, des tuiles de rive carrossables qui touchent le pont, une rue à côté) et le couloir d'eau libre qui les relie, hors de la ceinture de l'île et loin des amarrages ; l'**horaire** (départ à l'heure juste) ; ne pose rien, ne tire aucun dé | `test_traversier.py`, `test_traversier_js.py` |
+| `tramway.py` | le **tramway** (M12) : la voie double du Faubourg au quai du traversier (une recherche qui ne tourne que dans les boîtes et n'avance que si la voie d'en face existe ; le retour décalé d'une tuile), ses arrêts (les terminus d'abord, au bord du trottoir, loin des abribus) et son horaire ; ne pose rien, ne tire aucun dé | `test_tramway.py`, `test_tramway_js.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
@@ -712,7 +713,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py
       bd.py comptes.py (M14 — jusque-la, le jeu n'a ni compte ni base de donnees)
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
@@ -731,7 +732,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8520,6 +8521,40 @@ qui n'y est pas reste à quai : il part sans toi.
   trafic ne prend le traversier. **15 juges neufs** (`test_traversier.py`,
   `test_traversier_js.py`), **22 mutations toutes rouges** — celle de la coque posée sur la
   terre ne l'est que par le juge de durée.
+
+✅ **13e vague livrée** (17 sept. 2026) — *le tramway*. La ligne **T**, du Casse-croûte du
+Faubourg au Quai du traversier : trois rames crème à bande rouge sur une voie double, douze
+arrêts marqués d'un poteau rouge. Elles n'attendent personne, ne s'arrêtent pas pour toi —
+elles sonnent —, et le trafic leur cède.
+
+- ⚠️ **Double voie, jamais à contresens** (`tramway.py`) : une recherche sur les voies, qui
+  ne tourne que dans les boîtes (de n'importe quelle voie : c'est ce qu'elle ignore du champ
+  de direction) et n'avance que si la voie d'EN FACE existe aussi ; le retour est l'aller
+  décalé d'une tuile à gauche (un coin se décale de ses deux gauches — intérieur à gauche,
+  extérieur à droite). Aux deux terminus, la rame passe d'une voie à l'autre là où elle est
+  : c'est une rame à deux cabines. Sur la graine livrée : **516 tuiles, 8 coins**,
+  contournement de la baie par l'ouest. Rien de fermable, aucun dé, la ville identique avec
+  ou sans (un juge compare).
+- ⚠️ **Le tramway est une LIGNE** (`autobus.js`) : ses rames sont des autobus marqués
+  `rails` sur la ligne `T`, avec l'horaire, l'invite, le passager, la ligne du HUD et le
+  tracé de la grande carte des autobus. Ce qui change : sa place vient de SON horaire (1,4
+  px/image) ; il s'arrête à chaque arrêt le temps des portes, ni plus ni moins
+  (`dureeDArret`) ; `obstacleDevant` ne voit ni le joueur ni son char — il sonne
+  (`cloche_tram`, ElevenLabs) ; un char ne s'engage pas dans une boîte vers laquelle roule
+  une rame à quatre tuiles (`croisementLibre`), mais deux rames qui s'y croisent ne se
+  cèdent pas le passage. On ne vole pas une rame ; on y monte à l'arrêt, 3 $.
+- ⚠️ **Une silhouette donnée se déclare** : `Vehicules.creer` refusait tout ce qui n'était
+  pas une variante tirée au sort, et la rame naissait… autobus scolaire. `SPRITES.tramway.de
+  = 'autobus'` : une silhouette de la fiche qui ne se tire jamais. La machine est celle de
+  l'autobus sans roues visibles, un pare-brise à chaque bout, deux portes, la livrée et le
+  pantographe ; les rails sont peints sous la ville (`dessinerRails`), deux filets d'acier
+  dans le sens de la voie.
+- ⚠️ **Le banc compte les jours** : `tempsDeLaPartie` ajoute les jours d'avant, et le juge
+  qui posait une rame « au deuxième jour » la faisait naître à 949 px de sa place — un tour
+  et demi de boucle. **15 juges neufs** (`test_tramway.py`, `test_tramway_js.py`), **19
+  mutations toutes rouges** — cinq restaient vertes avant qu'on croise deux rames, qu'on
+  regarde le sens des rails, qu'on mesure la place à l'heure, et qu'on salisse une copie de
+  la ville (un meuble, un abribus) là où la graine n'en mettait pas.
 
 ### M14 Meta
 

@@ -1613,6 +1613,35 @@ SPRITES.camion.variantes = { camion: 3, camion_benne: 2, camion_citerne: 1 };
 SPRITES.autobus_scolaire = enVolume(MACHINE_AUTOBUS_SCOLAIRE, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#f5b400' }));
 SPRITES.autobus_scolaire.couleur = '#f5b400';
 SPRITES.autobus.variantes = { autobus: 3, autobus_scolaire: 2 };
+// ⚠️ LE TRAMWAY (M12) n'est PAS une variante tiree au sort : c'est la silhouette que
+// sa ligne donne (`Autobus.faireNaitre`). La caisse de l'autobus, la jupe jusqu'aux
+// bogies (aucune roue ne se voit), un pare-brise A CHAQUE BOUT — il ne fait jamais
+// demi-tour —, la bande de livree, deux portes et le pantographe sur le toit.
+const MACHINE_TRAMWAY = Object.assign({}, MACHINE_AUTOBUS, {
+  pieces: [].concat(
+    [caisseDeChar({ dessus: [[24, 15.6], [23.2, 18.2], [-23.2, 18.2], [-24, 15.6]], bas: 0.9, essieux: [], r: 3.4,
+                    plan: planPince(48, 8.0, 7.4), aretes: 'cCc' })],
+    FENETRES_AUTOBUS,
+    [
+      ['bloc', [24.0, 24.08], [-6.6, 6.6], [8.6, 15.4], 'v', 'v', 'v', 0.05],                // le pare-brise, devant
+      ['tube', [24.1, -6.8, 8.4], [24.1, 6.8, 8.4], 'D', 0.5], ['tube', [24.1, -6.8, 15.6], [24.1, 6.8, 15.6], 'D', 0.5],
+      ['bloc', [-24.08, -24.0], [-6.6, 6.6], [8.6, 15.4], 'v', 'v', 'v', 0.05],              // et derriere
+      ['tube', [-24.1, -6.8, 8.4], [-24.1, 6.8, 8.4], 'D', 0.5], ['tube', [-24.1, -6.8, 15.6], [-24.1, 6.8, 15.6], 'D', 0.5],
+      ['tube', [23.6, 8.06, 5.2], [-23.6, 8.06, 5.2], 's', 1.0], ['tube', [23.6, -8.06, 5.2], [-23.6, -8.06, 5.2], 's', 1.0],   // la livree
+      ['tube', [23.6, 8.06, 6.4], [-23.6, 8.06, 6.4], 's', 1.0], ['tube', [23.6, -8.06, 6.4], [-23.6, -8.06, 6.4], 's', 1.0],
+      ['bloc', [16.4, 21.6], [8.02, 8.06], [1.4, 15.4], 'E', 'E', 'E', 0.05],               // les portes
+      ['bloc', [-2.6, 2.6], [8.02, 8.06], [1.4, 15.4], 'E', 'E', 'E', 0.05],
+      ['bloc', [-4.0, 4.0], [-4.4, 4.4], [18.2, 19.0], 'C', 'D', 'D', 0.1],                  // le socle du pantographe
+      ['tube', [-3.0, -3.0, 19.0], [1.0, 0, 23.0], 'k', 0.3], ['tube', [-3.0, 3.0, 19.0], [1.0, 0, 23.0], 'k', 0.3],
+      ['tube', [1.0, 0, 23.0], [-2.0, 0, 24.8], 'k', 0.3],
+      ['tube', [-2.0, -4.0, 24.8], [-2.0, 4.0, 24.8], 'k', 0.3],                             // l'archet, sous le fil
+    ],
+    lampesDeChar(23.8, -23.8, 4.2, 7.9, 3.0, 4.6),
+  ),
+});
+SPRITES.tramway = enVolume(MACHINE_TRAMWAY, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#e9e3d0', s: '#c0392b', e: '#3a3d44' }));
+SPRITES.tramway.couleur = '#e9e3d0';
+SPRITES.tramway.de = 'autobus';
 SPRITES.luxe_vus = enVolume(MACHINE_LUXE_VUS, 32, 56, SPRITES.luxe.pal);
 SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
 SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);

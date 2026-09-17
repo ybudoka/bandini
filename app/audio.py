@@ -286,6 +286,12 @@ CATALOGUE: list[Echantillon] = [
     _e("sonnette", "Sonnette de vélo", duree_s=1.0, volume=0.11, influence=0.75,
        prompt="a bicycle bell struck twice, bright ringing brass with a "
               "shimmering tail, close, no music"),
+    # Le tramway (M12) : sa cloche quand les portes se ferment, et quand quelqu'un est
+    # sur ses rails — il ne freine pas, il sonne.
+    _e("cloche_tram", "Cloche du tramway", duree_s=1.5, volume=0.3, influence=0.7,
+       prompt="a vintage streetcar foot bell rung twice, ding ding, bright brass "
+              "clang with a short ring, outdoors on a city street, no voices, "
+              "no music"),
     # --- L'eau ---------------------------------------------------------------
     # ⚠️ Depuis « L'eau n'est plus un mur », on entrait dans la baie sur
     # `choc` — la TOLE FROISSEE, le son d'un accident de char — et on nageait

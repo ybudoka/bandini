@@ -85,7 +85,9 @@ def test_la_ville_est_la_meme_avec_ou_sans_traversier(ville, monkeypatch):
     sans = carte.generer()
     assert set(sans) == set(ville)
     for cle in ville:
-        if cle == "traversier":
+        # ⚠️ Le tramway, lui, a son terminus au quai du traversier : sans traversier, il
+        # s'arrête à la cantine. Il en dépend — ce qui ne bouge pas, c'est le reste.
+        if cle in ("traversier", "tramway"):
             continue
         assert sans[cle] == ville[cle], f"« {cle} » a bougé"
 

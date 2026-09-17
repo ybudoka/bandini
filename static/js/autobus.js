@@ -78,6 +78,26 @@ const Autobus = (function () {
         arretA: arretA, ordre: l.arrets.map(function (c) { return { arret: c[0], i: c[1] }; }),
       };
     });
+    // ⚠️ LE TRAMWAY (M12) EST UNE LIGNE : meme horaire, memes arrets en file, memes
+    // passagers et meme invite. Ses voitures sont des autobus marques `rails`, sur la
+    // voie double que Python a tracee (`tramway.py`) : ils n'attendent personne, ne
+    // s'arretent pas pour le joueur, et le trafic leur cede (`Vehicules.croisementLibre`).
+    const tr = def.tramway;
+    if (tr) {
+      const tuiles = derouler(tr.trace);
+      const arretA = new Map(), ordre = [];
+      tr.arrets.forEach(function (a) {
+        const id = arrets.length, sens = def.voie[a[2]][a[1]], p = PAS[sens] || [1, 0];
+        const quai = [a[1] - p[1], a[2] + p[0]];
+        // Pas d'abri : un poteau et son panneau (`dessinerRails`). `abri` = le quai.
+        arrets.push({ id: id, nom: a[3], x: a[1], y: a[2], sens: sens, lignes: [tr.numero], tram: true, quai: quai, abri: quai });
+        arretA.set(a[0], id);
+        ordre.push({ arret: id, i: a[0] });
+      });
+      lignes.push({ numero: tr.numero, nom: tr.nom, couleur: tr.horaire.couleur, autobus: tr.horaire.rames,
+                    tuiles: tuiles, n: tuiles.length, longueurPx: tuiles.length * TT, arretA: arretA, ordre: ordre,
+                    horaire: tr.horaire, rails: true, sprite: 'tramway', aller: tr.aller });
+    }
     // ⚠️ LA TOURNEE DES EBOUEURS (M12) roule comme une ligne : meme boucle, memes
     // feux, memes arrets en file — ses « arrets » sont les bacs du bord du trottoir.
     const e = def.eboueurs;
@@ -131,7 +151,7 @@ const Autobus = (function () {
 
   /** Ou l'horaire met l'autobus `rang` de sa ligne a cet instant. */
   function placeALHeure(L, rang, temps) {
-    const h = donnees().horaire;
+    const h = L.horaire || donnees().horaire;
     const s = (((temps * h.vitesse_px + rang * L.longueurPx / L.autobus) % L.longueurPx) + L.longueurPx) % L.longueurPx;
     const k = s / TT, i = Math.floor(k) % L.n, f = k - Math.floor(k);
     const a = L.tuiles[i], b = L.tuiles[(i + 1) % L.n];
@@ -165,7 +185,10 @@ const Autobus = (function () {
         if (Entites.visibleAEcran(p.x, p.y, 60)) continue;
         if (Entites.autour(p.x, p.y, 48, function (q) { return q.type === 'vehicule' || q.type === 'joueur'; }).length) continue;
         const v = Vehicules.creer('autobus', p.x, p.y, p.angle, {
-          conducteur: 'ligne', etat: 'roule', couleur: L.couleur, sprite: 'autobus', sens: p.sens,
+          // ⚠️ La couleur est DONNEE (aucun de) : celle de la ligne, ou celle que la
+          // silhouette porte (la caisse creme du tramway, sa bande rouge).
+          conducteur: 'ligne', etat: 'roule', couleur: (L.sprite && SPRITES[L.sprite].couleur) || L.couleur,
+          sprite: L.sprite || 'autobus', sens: p.sens, rails: !!L.rails,
           ligne: L.numero, rang: rang, etape: (p.i + 1) % L.n, servi: -1, arretT: 0, arret: null,
           passager: null, demande: false, bloqueT: 0, bord: [],
         });
@@ -209,6 +232,9 @@ const Autobus = (function () {
       ne voit pas ne coute pas une seconde de retard. */
   function dureeDArret(v, id) {
     const h = donnees().horaire, j = B.joueur, a = arret(id);
+    // ⚠️ UNE RAME N'ATTEND PERSONNE ET NE SAUTE AUCUN ARRET : portes ouvertes le temps
+    // de l'horaire, que quelqu'un coure vers elle ou non — il ne s'arrete pas pour toi.
+    if (v.rails) { const L = ligne(v.ligne); return (L && L.horaire || h).arret_images; }
     // ⚠️ Quelqu'un descend ICI : c'est une demande d'arret comme celle du joueur.
     const descend = (v.bord || []).some(function (b) { return b.arret === id; });
     if (v.passager) return (v.demande || descend) ? h.arret_images : 0;
@@ -235,10 +261,14 @@ const Autobus = (function () {
       v.arretT--;
       v.attendFeu = true;
       Vehicules.rouler(v, 0);
-      const j = v.passager;
-      if (j && v.demande && h.arret_images - v.arretT >= DESCENTE_IMAGES) descendre(j, false);
-      majLesVoyageurs(v, h.arret_images - v.arretT);
-      if (v.arretT === 0) { v.attendFeu = false; v.demande = false; }
+      const j = v.passager, portes = (L.horaire || h).arret_images;
+      if (j && v.demande && portes - v.arretT >= DESCENTE_IMAGES) descendre(j, false);
+      majLesVoyageurs(v, portes - v.arretT);
+      if (v.arretT === 0) {
+        v.attendFeu = false; v.demande = false;
+        // La cloche du tramway : les portes se ferment, il repart.
+        if (v.rails) Son.depuis(v, Son.SFX.cloche_tram);
+      }
       return;
     }
     let cible = centre(L.tuiles[v.etape]);
@@ -288,6 +318,7 @@ const Autobus = (function () {
     if (L.arretA.has(v.etape) || L.arretA.has((v.etape + 1) % L.n)) voulue = Math.min(voulue, 0.9);
     if (Math.abs(ecartAngle(v.angle, angleVers(v.x, v.y, cible.x, cible.y))) > 0.5) voulue = Math.min(voulue, 0.8);
     const obstacle = Vehicules.obstacleDevant(v);
+    if (v.rails) sonnerDevant(v);
     if (obstacle < t.distance_securite_px) {
       voulue = 0;
       // ⚠️ Deux fois la patience du trafic : un autobus ne force pas le passage
@@ -304,6 +335,22 @@ const Autobus = (function () {
     v.bloqueT = Math.abs(v.vitesse) < 0.05 && !v.attendFeu ? (v.bloqueT || 0) + 1 : 0;
     if (v.bloqueT > OUBLI_BLOQUE_IMAGES && !v.passager && !Entites.visibleAEcran(v.x, v.y, 60)) Entites.retirer(v);
   }
+
+  /** Une rame qui voit le joueur sur ses rails SONNE — elle ne freine pas. */
+  function sonnerDevant(v) {
+    if (v.clocheT > 0) { v.clocheT--; return; }
+    const j = B.joueur;
+    if (!j || Math.abs(v.vitesse) < 0.3) return;
+    const cx = Math.cos(v.angle), cy = Math.sin(v.angle), dx = j.x - v.x, dy = j.y - v.y;
+    const devant = dx * cx + dy * cy, cote = Math.abs(-dx * cy + dy * cx);
+    if (devant > v.def.longueur / 2 && devant < v.def.longueur / 2 + CLOCHE_TUILES * TT && cote < 12) {
+      Son.depuis(v, Son.SFX.cloche_tram);
+      v.clocheT = CLOCHE_IMAGES;
+    }
+  }
+
+  //: Jusqu'ou devant elle une rame sonne pour le joueur, et pas plus d'une fois par tant d'images.
+  const CLOCHE_TUILES = 4, CLOCHE_IMAGES = 70;
 
   // --- Le passager --------------------------------------------------------------------
 
@@ -766,6 +813,64 @@ const Autobus = (function () {
     if (u > 0.45 && u < 0.55) bac.vide = true;
   }
 
+  // --- Les rails du tramway (M12) --------------------------------------------------------
+
+  //: Les rails par tuile : 1 = est-ouest, 2 = nord-sud (les deux dans un virage).
+  let rails = null, railsSource = null;
+  function railsParTuile() {
+    const d = donnees(), L = d && d.lignes.find(function (l) { return l.rails; });
+    if (!L) return null;
+    if (railsSource === L) return rails;
+    railsSource = L;
+    rails = new Map();
+    for (let i = 0; i < L.n; i++) {
+      const p = L.tuiles[(i + L.n - 1) % L.n], c = L.tuiles[i], s = L.tuiles[(i + 1) % L.n];
+      let bits = 0;
+      for (const o of [p, s]) bits |= o[1] === c[1] ? 1 : 2;
+      const cle = c[0] + ',' + c[1];
+      rails.set(cle, (rails.get(cle) || 0) | bits);
+    }
+    return rails;
+  }
+
+  /** Les rails, SOUS tout le reste : deux filets d'acier dans l'asphalte, et le poteau
+      de chaque arret de tramway. */
+  function dessinerRails(ctx, cam) {
+    const r = railsParTuile();
+    if (!r) return;
+    const x0 = Math.floor(cam.x / TT), y0 = Math.floor(cam.y / TT);
+    const x1 = Math.ceil((cam.x + VW) / TT), y1 = Math.ceil((cam.y + VH) / TT);
+    let n = 0;
+    for (let ty = y0; ty <= y1; ty++) {
+      for (let tx = x0; tx <= x1; tx++) {
+        const bits = r.get(tx + ',' + ty);
+        if (!bits) continue;
+        const px = Math.round(tx * TT - cam.x), py = Math.round(ty * TT - cam.y);
+        if (bits & 1) {
+          ctx.fillStyle = '#26282d'; ctx.fillRect(px, py + 4, TT, 1); ctx.fillRect(px, py + 11, TT, 1);
+          ctx.fillStyle = '#a4a9b0'; ctx.fillRect(px, py + 5, TT, 1); ctx.fillRect(px, py + 12, TT, 1);
+          n += 4;
+        }
+        if (bits & 2) {
+          ctx.fillStyle = '#26282d'; ctx.fillRect(px + 4, py, 1, TT); ctx.fillRect(px + 11, py, 1, TT);
+          ctx.fillStyle = '#a4a9b0'; ctx.fillRect(px + 5, py, 1, TT); ctx.fillRect(px + 12, py, 1, TT);
+          n += 4;
+        }
+      }
+    }
+    // Le poteau de l'arret : un panneau rouge marque d'un T blanc.
+    for (const a of donnees().arrets) {
+      if (!a.tram) continue;
+      const px = Math.round(a.quai[0] * TT + 8 - cam.x), py = Math.round(a.quai[1] * TT + 12 - cam.y);
+      if (px < -8 || px > VW + 8 || py < -8 || py > VH + 24) continue;
+      ctx.fillStyle = '#4a4d55'; ctx.fillRect(px, py - 14, 1, 14);
+      ctx.fillStyle = '#c0392b'; ctx.fillRect(px - 4, py - 21, 9, 8);
+      ctx.fillStyle = '#eeeae0'; ctx.fillRect(px - 2, py - 19, 5, 1); ctx.fillRect(px, py - 18, 1, 4);
+      n += 5;
+    }
+    B.stats.rects += n;
+  }
+
   function maj() {
     faireNaitre();
     faireNaitreLaTournee();
@@ -780,5 +885,6 @@ const Autobus = (function () {
     invite, inviteMonter, ligneDuHud, abribusIci, attenteDe, texteDAttente, maj,
     quiAttend, combienAttendent, naitreALAbribus, porteDe, quartDHeure, dureeDArret, naitreUnVoyageur,
     parcoursDuJour, dejaVide, bacDe, placeDuBac, majLesBacs, faireNaitreLaTournee, dureeDeCollecte,
+    railsParTuile, dessinerRails,
   };
 })();

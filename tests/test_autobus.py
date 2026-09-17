@@ -218,7 +218,8 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
         # ⚠️ La tournée des éboueurs se trace APRÈS tout le reste, sur les voies et
         # loin des abribus et du décor : sans eux, ses bacs tombent ailleurs. Elle ne
         # pose rien dans la ville (`test_eboueurs.py`), elle en dépend seulement.
-        if cle in ("decor", "autobus", "metro", "eboueurs"):
+        # Le tramway aussi : ses arrêts se tiennent loin des abribus.
+        if cle in ("decor", "autobus", "metro", "eboueurs", "tramway"):
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]

@@ -387,6 +387,8 @@ const Son = (function () {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
     touche: function () { if (!joue('touche')) ton(220, 0.12, 'sawtooth', 0.25, 0.4); },
+    // La cloche du tramway : deux coups clairs. Un DE SES effets (voir `Son.depuis`).
+    cloche_tram: function () { if (!joue('cloche_tram')) { ton(1320, 0.3, 'triangle', 0.16, 1); ton(1320, 0.3, 'triangle', 0.16, 1, 0.32); } },
     ramasse: function () { if (!joue('ramasse')) { ton(880, 0.08, 'sine', 0.25); ton(1320, 0.12, 'sine', 0.2, 1, 0.07); } },
     argent: function () { if (!joue('argent')) { ton(1500, 0.06, 'sine', 0.2); ton(2000, 0.1, 'sine', 0.18, 1, 0.06); } },
     menu: function () { if (!joue('menu')) ton(660, 0.05, 'square', 0.15); },
