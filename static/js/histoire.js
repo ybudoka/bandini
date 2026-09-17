@@ -663,6 +663,9 @@ const Histoire = (function () {
     p.etape++;
     const o = m.objectifs[p.etape];
     if (!o) { reussir(); return; }
+    // ⚠️ Tout le monde est deja tombe a un essai rate : l'objectif est FAIT.
+    // On ne repose pas des morts pour les recoucher.
+    if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(); return; }
     p.debutT = B.t;
     B.mission.aPoser = true;
     if (!B.interieur) poser();
@@ -705,15 +708,21 @@ const Histoire = (function () {
     const arch = Entites.archetype(gang.pieton);
     const centre = o.chef ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y };
     const coins = o.coins || 1;
-    B.mission.kos = 0;
+    const etape = B.partie.mission.etape, parCoin = tombesDe(m.slug, etape);
+    const reste = o.n - dejaTombes(m.slug, etape);
+    B.mission.kos = o.n - reste;
+    if (reste <= 0) return;
     for (let c = 0; c < coins; c++) {
       const a = c / coins * Math.PI * 2;
       const cx = coins > 1 ? centre.x + Math.cos(a) * 120 : centre.x, cy = coins > 1 ? centre.y + Math.sin(a) * 120 : centre.y;
-      for (let i = 0; i < Math.ceil(o.n / coins); i++) {
+      // ⚠️ Un coin qu'on a vide reste vide : on n'y repose que ce qui
+      // manquait encore a son compte.
+      for (let i = parCoin[c] || 0; i < Math.ceil(o.n / coins); i++) {
         const place = tuileLibre(cx + (i - 1) * 20 + 40, cy + 10, 6);
         if (!place) continue;
         const e = Entites.creerPieton(place.x, place.y, arch);
         e.cible = true; e.mission = m.slug; e.courage = 1; e.etat = 'flane';
+        e.etape = etape; e.coin = c;
         // ⚠️ CE QUE PORTE UN HOMME DE MISSION VIENT DE LA FICHE, pas de
         // l'archetype. `arme` et `vie` sont facultatives (`missions.py`) et ne
         // valent que pour CES hommes-la : la Cravate de rue reste ce qu'elle
@@ -725,7 +734,7 @@ const Histoire = (function () {
         if (o.vie) { e.vie = e.vieMax = o.vie; }
         if (o.chef) { e.chef = true; e.vie = e.vieMax = 160; e.arme = 'batte'; e.swaps = Object.assign({}, e.swaps, { c: '#101018' }); }
         B.mission.entites.push(e);
-        if (B.mission.entites.filter(function (q) { return q.cible && q.mission === m.slug && q.vivant && q.etat !== 'assomme'; }).length >= o.n) break;
+        if (B.mission.entites.filter(function (q) { return q.cible && q.etape === etape && q.vivant && q.etat !== 'assomme'; }).length >= reste) break;
       }
     }
     Entites.indexer();
@@ -810,10 +819,14 @@ const Histoire = (function () {
         return;
       }
       case 'tuer': {
-        const cibles = B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && !e.porteLaCaisse; });
+        // ⚠️ Les cibles de CET objectif, pas de toute la mission : les six du
+        // premier objectif de m5 sont encore au sol quand le chef sort, et
+        // comptees avec lui elles le couchaient avant qu'il ait fait un pas.
+        const cibles = B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && !e.porteLaCaisse && e.etape === p.etape; });
         const tombes = cibles.filter(function (e) { return !e.vivant || e.etat === 'assomme'; }).length;
-        B.mission.kos = tombes;
-        if (cibles.length && tombes >= Math.min(o.n, cibles.length)) {
+        const avant = dejaTombes(m.slug, p.etape);
+        B.mission.kos = Math.min(o.n, avant + tombes);
+        if (cibles.length && tombes >= Math.min(o.n - avant, cibles.length)) {
           if (o.chef && B.recherche.etoiles < 3 && m.objectifs[p.etape + 1] && m.objectifs[p.etape + 1].type === 'semer') Hud.message('UN TÉMOIN A APPELÉ LA POLICE !', 150);
           avancer();
         }
@@ -870,6 +883,7 @@ const Histoire = (function () {
     if (!m) return;
     const p = B.partie, d = m.donne || {};
     nettoyer(false);
+    if (p.tombes) delete p.tombes[m.slug];
     p.missionsFaites[m.slug] = p.jour;
     p.mission = null;
     p.appelT = null;
@@ -896,6 +910,7 @@ const Histoire = (function () {
   function echouer(raison) {
     const m = courante();
     if (!m) return;
+    retenirLesTombes(m);
     nettoyer(true);
     B.partie.mission = null;
     B.mission = null;
@@ -905,6 +920,30 @@ const Histoire = (function () {
     B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
     dire(m, 'echec', null);
     void raison;
+  }
+
+  /** Ceux qu'on a couches ne se relevent pas parce qu'on a rate : on les
+      compte par objectif et par coin, et la reprise ne repose que les autres.
+      ⚠️ K.-O. compte comme mort, comme au compteur de l'objectif : le « 4/6 »
+      qu'on a lu a l'ecran est celui qu'on retrouve en revenant. */
+  function retenirLesTombes(m) {
+    if (!B.mission) return;
+    const toutes = B.partie.tombes = B.partie.tombes || {};
+    const t = toutes[m.slug] = toutes[m.slug] || {};
+    for (const e of B.mission.entites) {
+      if (e.type !== 'pieton' || e.etape === undefined || (e.vivant && e.etat !== 'assomme')) continue;
+      const parCoin = t[e.etape] = t[e.etape] || [];
+      parCoin[e.coin] = (parCoin[e.coin] || 0) + 1;
+    }
+  }
+
+  function tombesDe(slug, etape) {
+    const t = B.partie.tombes && B.partie.tombes[slug];
+    return (t && t[etape]) || [];
+  }
+
+  function dejaTombes(slug, etape) {
+    return tombesDe(slug, etape).reduce(function (a, n) { return a + (n || 0); }, 0);
   }
 
   /** Ce que la mission avait pose : on l'enleve (ou on le laisse vivre sa vie). */

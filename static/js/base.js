@@ -131,6 +131,11 @@ function etatInitial(defs) {
     carnet: [],
     proprietes: {},
     missionsFaites: {},
+    //: Ceux qu'on a couches a un essai RATE, par mission, par objectif et
+    //: par coin (`tombes.m5[0]` vaut `[2, 2, 0]`). ⚠️ Mourir ou se faire
+    //: arreter fait rater la mission, pas ressusciter ses Cravates : la
+    //: reprise ne repose que ceux qui tiennent encore debout.
+    tombes: {},
     mission: null,        // { slug, etape } — la mission en cours
     appels: {},           // les appels recus, par mission
     appelT: null,

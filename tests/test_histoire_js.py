@@ -477,3 +477,78 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
     assert r["subit"]["mort"] is True, "mais deux hommes qu'on laisse cogner ont encore raison de toi"
     assert r["subit"]["s"] > 4, f"{r['subit']['s']:.1f} s a encaisser : moins, et on n'a pas le temps de reagir"
     assert r["arch"] == {"vie": 90, "arme": "batte"}, "la Cravate de rue, elle, garde son baton (M5, la dette)"
+
+
+def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
+    """Retour de Martin : « quand on meurt ou est arrete lors d'une mission, ceux
+    qu'on a tues sont resettes ». Ratee a l'hopital ou en prison, la mission se
+    retente — mais les Cravates deja couches ne se relevent pas pour autant, et
+    un coin qu'on a vide reste vide."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        ['m1', 'm2', 'm3', 'm4'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.B.partie.argent = 5000;
+        const dehors = { x: j.x, y: j.y };
+        function debout() {
+            return L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.vivant; });
+        }
+        function prendre() {
+            L.Histoire.commencer('m5');
+            L.B.cinema = null; L.B.dialogue = null;
+            j.invincible = 1e6;                        // on mesure la reprise, pas la bagarre
+            o.frame(2);
+        }
+        function reprendre() {
+            L.Histoire.finir();                        // la replique d'echec
+            o.frame(200);                              // le fondu : lit d'hopital ou poste
+            if (L.B.interieur) L.Jeu.quitterLaPiece();
+            j.x = dehors.x; j.y = dehors.y; L.Entites.dansLaCarte(j); L.Entites.indexer();
+            prendre();
+        }
+        prendre();
+        const six = debout();
+        const survivants = six.slice(4).map(function (e) { return { x: e.x, y: e.y }; });
+        six.slice(0, 4).forEach(function (e) { L.Entites.tuer(e); });
+        o.frame(2);
+        const lue = L.Histoire.ligneObjectif();
+        L.Missions.hopital();
+        const rateeMort = L.B.partie.mission === null;
+        reprendre();
+        const relue = L.Histoire.ligneObjectif();
+        const reposes = debout();
+        const dansLeurCoin = reposes.every(function (e) {
+            return survivants.some(function (s) { return Math.hypot(e.x - s.x, e.y - s.y) < 100; });
+        });
+        reposes.forEach(function (e) { L.Entites.tuer(e); });
+        o.frame(30);
+        const chef = L.B.mission.entites.find(function (e) { return e.chef; });
+        const etapeDuChef = L.B.partie.mission.etape;
+        const chefDebout = !!chef && chef.vivant;
+        L.Missions.prison(null);
+        const rateePrison = L.B.partie.mission === null;
+        reprendre();
+        const etapeReprise = L.B.partie.mission.etape;
+        const deboutReprise = debout().map(function (e) { return !!e.chef; });
+        debout().forEach(function (e) { L.Entites.tuer(e); });
+        o.frame(2);
+        const etapeApres = L.B.partie.mission.etape;
+        L.Histoire.reussir();
+        L.Histoire.finir();
+        return { n: six.length, lue: lue, rateeMort: rateeMort, relue: relue, reposes: reposes.length,
+                 dansLeurCoin: dansLeurCoin, etapeDuChef: etapeDuChef, chefDebout: chefDebout,
+                 rateePrison: rateePrison, etapeReprise: etapeReprise, deboutReprise: deboutReprise,
+                 etapeApres: etapeApres, oubliees: !(L.B.partie.tombes || {}).m5 };
+    }""")
+    assert r["n"] == 6 and r["lue"].endswith(" 4/6")
+    assert r["rateeMort"] is True, "a l'hopital, la mission rate"
+    assert r["relue"].endswith(" 4/6"), f"la reprise repart de {r['relue']!r} : les morts se sont releves"
+    assert r["reposes"] == 2, f"{r['reposes']} Cravates reposes : seuls les deux survivants reviennent"
+    assert r["dansLeurCoin"] is True, "un coin qu'on a vide reste vide"
+    assert r["etapeDuChef"] == 1 and r["chefDebout"] is True, (
+        "les six au sol, le chef sort — et les corps du premier objectif ne le couchent pas a sa place")
+    assert r["rateePrison"] is True, "en prison, la mission rate aussi"
+    assert r["etapeReprise"] == 1 and r["deboutReprise"] == [True], (
+        "les trois coins sont vides : la reprise va droit au chef, seul debout")
+    assert r["etapeApres"] == 2, "le chef couche, on seme la police"
+    assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
