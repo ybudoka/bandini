@@ -201,9 +201,11 @@ def test_le_plus_court_des_tags_tient_toujours_sur_un_mur():
 
 
 def test_chaque_devanture_eclaire_son_trottoir(ville):
-    """Sans lumiere, tout ce travail disparaît la moitie du temps de jeu."""
+    """Sans lumiere, tout ce travail disparaît la moitie du temps de jeu.
+
+    ⚠️ Sauf le local A LOUER : il est vide, et sa vitrine est noire (`test_quartiers`)."""
     vitrines = [lampe for lampe in ville["lampes"] if lampe.get("c") == "vitrine"]
-    assert len(vitrines) == len(ville["devantures"])
+    assert len(vitrines) == len([d for d in ville["devantures"] if d["texte"] != "A LOUER"])
     for lampe in vitrines:
         assert lampe["r"] > 0
 
@@ -243,7 +245,8 @@ def test_les_regles_tiennent_sur_d_autres_graines(graine):
 
 #: « W » vitrine · « D » porte qu'on ouvre · « d » condamnee · « G » garage
 #: · « P » porte PEINTE (le sol reste un mur : elle ne promet rien).
-MOTIFS_CONNUS = frozenset("WDdGP")
+#: `B` : une vitrine placardée, en quartier pauvre (`test_quartiers`).
+MOTIFS_CONNUS = frozenset("WDdGPB")
 PORTES_VISIBLES = frozenset("DdGP")
 
 
@@ -262,11 +265,13 @@ def test_on_voit_toujours_une_porte(ville):
 
 def test_le_masque_dit_la_verite_du_sol(ville, sol):
     """⚠️ Sauf « P » : celle-la est peinte sur un mur plein, et c'est justement
-    ce qui fait qu'elle ne s'ouvre pas."""
+    ce qui fait qu'elle ne s'ouvre pas. Et « B », la vitrine PLACARDEE d'une rue
+    pauvre (`test_quartiers`) : des planches peintes sur une vitrine qui reste
+    une vitrine."""
     for d in ville["devantures"]:
         for i, lettre in enumerate(d["motifs"]):
             glyphe = sol[d["y"]][d["x"] + i]
-            attendu = "W" if lettre == "P" else lettre
+            attendu = "W" if lettre in ("P", "B") else lettre
             assert glyphe == attendu, (
                 f"{d['texte']} tuile {i} : le masque dit « {lettre} », le sol « {glyphe} »")
 

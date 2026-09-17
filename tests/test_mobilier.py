@@ -50,7 +50,9 @@ def test_la_rue_se_plante_et_se_meuble(villes):
     # boîte aux lettres, bac de recyclage, palettes, benne — sont jugés dans
     # `test_quartiers`.
     usage = {"parcometre", "boite_aux_lettres", "bac_recyclage", "palettes", "benne"}
-    assert {d["type"] for d in ajoutes} <= {"arbre", "bac_fleurs", *usage, *mobilier.BANCS_PAR_COTE.values()}
+    # Et le lampadaire du milieu d'une rue cossue (3e vague).
+    assert {d["type"] for d in ajoutes} <= {"arbre", "bac_fleurs", "lampadaire", *usage,
+                                           *mobilier.BANCS_PAR_COTE.values()}
     assert 120 <= len(arbres) <= 400, f"{len(arbres)} arbres de rue"
     assert 25 <= len(bancs) <= 200, f"{len(bancs)} bancs de rue"
 

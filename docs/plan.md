@@ -197,12 +197,13 @@ ne bougent pas quand l'ordre de travail change.
 | Le poing américain chez Gus | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#le-poing-américain-chez-gus) |
 | Les petits manèges à l'échelle de la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#les-petits-manèges-à-léchelle-de-la-grande-roue) |
 | Quatre trous dans les missions | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#quatre-trous-dans-les-missions) |
-| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Le client du taxi attend au bord de la route, et une flèche y mène | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
 | La première réplique, et la ruelle de Ti-Guy | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Un kiosque fermé n'a personne derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#un-kiosque-fermé-na-personne-derrière) |
+| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** (3 vagues : le standing et la saleté ; le zonage ; les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | Le jeu écrit avec ses accents | ⬜ **en cours** (1re vague livrée : la police) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
+| Qui attend l'autobus monte dedans | ⬜ **à faire** | — | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Les menus au doigt avancent d'une ligne à la fois | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
@@ -619,7 +620,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `journal.py` | _Le Clairon de la Baie_ : la manchette du matin, une règle par gravité — la première qui passe gagne, la dernière est le repli ; lue par le narrateur (M7) | règles ordonnées et repli ; `test_audio.py`, `test_histoire_js.py` |
 | `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
 | `musique.py` | la musique **écrite en notes** (notes, tempo, formes d'onde) — le **filet** depuis que les quinze morceaux sont des mp3 générés (`audio.MUSIQUES` en porte la recette) ; `scripts/musique_apercu.py` rend les notes en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix, et la couverture : aucun morceau sans musique générée) |
-| `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
+| `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé ; les enseignes du standing (`COMMERCES_COSSUS`, `COMMERCES_PAUVRES`, `A_LOUER`, `PART_PLACARDEE`) | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
 | `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison) |
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
@@ -629,6 +630,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; la **nuit de déneigement** (le lendemain d'une tempête, un secteur par tempête) et ses panneaux, un au coin de chaque boîte ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, `test_deneigement.py`, `test_deneigement_js.py`, la sonde de `test_navigateur.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
+| `vitrines.py` | **les commerces montent et descendent**, sur la ville finie : renomme les enseignes des blocs cossus et pauvres (même famille, même bandeau, loin de son double), placarde une vitrine sur trois en pauvre (`B`, jamais sur une machine), vide un commerce fermé sur cinq (`A LOUER`), marque le `standing` des façades — sans tirer un dé ni toucher une tuile | `test_quartiers.py` (enseignes, façades, locaux vides, rien de déplacé) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `scores.py` | copie de `car-game`, `valider()` : pseudo, `fortune`, `missions`, `proprietes`, `duree_s` ; tri fortune puis missions puis durée ; borne `fortune / duree_s` | copie des tests |
@@ -722,7 +724,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)
 app/  __init__.py routes.py version.py scores.py definitions.py
       vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py
       bd.py comptes.py
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
@@ -4328,7 +4330,49 @@ Chaque usage a sa signature au sol et dans son mobilier, croisée avec le standi
   parc, eau), légende dérivée de la table des couleurs comme pour les lieux. C'est la seule
   façon de voir le zonage **avant** d'y marcher.
 
-#### 3e vague — les commerces montent et descendent (taille 1)
+#### 3e vague — les commerces montent et descendent (taille 1) — **livrée le 17 sept. 2026**
+
+✅ **Ce qui est livré, et où ça s'écarte de la proposition ci-dessous :**
+
+- **Tout se fait sur la ville FINIE** (`app/vitrines.py`, après le métro, avant la saleté). ⚠️ Le
+  premier essai tirait les enseignes dans des catalogues par standing pendant la construction :
+  un nom plus long élargit le bandeau (`poser_devanture` l'étire jusqu'à ce qu'il tienne), change
+  la tuile de la porte peinte, le nombre de tirages de la pancarte et la famille qui ouvre sa
+  porte la première — **dix juges tombés**, rampes et barrière du cargo comprises, sans qu'un seul
+  parle d'enseigne. La passe finale ne tire aucun dé et ne touche aucune tuile ; un juge le tient
+  (sans elle, la ville est la même hors des noms, des planches et des standings).
+- **Les enseignes** : `devantures.COMMERCES_COSSUS` (seize) et `COMMERCES_PAUVRES` (douze). Une
+  devanture d'un bloc cossu ou pauvre prend un nom de la **même famille** (la pièce derrière la porte
+  reste la bonne) qui **tient dans le même bandeau**, loin de son double ; la porte qui s'ouvre prend
+  le nouveau nom. Une famille sans nom de son standing garde le sien : le port garde sa poissonnerie,
+  La Shop ses ateliers. Mesuré : 19 renommées.
+- **À LOUER** : un commerce **fermé** sur cinq d'une rue pauvre (`vitrines.PART_A_LOUER`) — toutes
+  ses vitrines placardées, sa lampe de vitrine retirée. Offert à la seule famille « commerce », il
+  ne tombait jamais ; à toutes, il remplaçait chaque criée (huit locaux vides). Mesuré : 3.
+- **La façade** : chaque devanture et chaque logement d'un bloc cossu ou pauvre porte `standing`
+  (`+` ou `-`). En pauvre, une vitrine sur trois devient le motif `B`, tirée à la position
+  (`carte.empreinte_de_tuile`) et **jamais au-dessus d'un guichet ou d'une machine** (ils sont
+  encastrés dans la vitrine) ; le sol reste `W`. Le peintre : lettrage doré et auvent uni en cossu ;
+  néon à moitié éteint, auvent déchiré, planches en pauvre ; jardinières, ou fenêtres placardées,
+  drap et escalier rouillé pour les logements.
+- **La nuit** (`mobilier.eclairer`) : un lampadaire sur trois **en panne** en pauvre (29 sur 69),
+  et ceux des rues cossues **portent plus loin** (`PORTEE_COSSUE`, 60 px au lieu de 44).
+  ⚠️ **Pas de poteaux « plus rapprochés »** : vingt-neuf lampadaires neufs au milieu des bords
+  cossus changeaient le décor, donc les entités et les dés, et un juge d'autobus déjà fragile est
+  tombé (voir « Qui attend l'autobus monte dedans »).
+- **Les pièces** : `piece_de_commerce(standing=…)` — le comptoir d'un commerce pauvre barre les
+  trois quarts de la pièce ; un commerce cossu a une plante de chaque côté de la porte, un pauvre
+  aucune. Le contenu seul : ses mesures ne changent pas.
+- **Reportés** : la grille de fer baissée la nuit et la vitrine cossue allumée toute la nuit —
+  une devanture se peint UNE fois dans son morceau, et la faire changer avec l'heure demande de
+  repeindre les morceaux à la brune.
+- **Juges** (`test_quartiers.py`, 8 de plus, quatorze mutations toutes rouges) : aucune enseigne
+  cossue en pauvre ni l'inverse, la façade suit le standing (une vitrine sur trois, jamais sur une
+  machine), le local à louer ne s'ouvre ni ne s'allume, **les commerces montent sans rien déplacer**,
+  la nuit se redistribue sans un poteau de plus, la pièce suit le standing, la façade se peint selon
+  le standing, un lampadaire en panne n'éclaire pas. Et regardé dans Chromium.
+
+_La proposition d'origine :_
 
 - **Des enseignes par standing**, pas seulement par district (`devantures.COMMERCES`) : en
   cossu, BIJOUTERIE, FLEURISTE, BISTRO, GALERIE, TAILLEUR, CHOCOLATIER, BOUTIQUE DE VIN ; en
@@ -10503,6 +10547,37 @@ change ; **129 meubles d'usage** (40 parcomètres, 21 boîtes aux lettres, 12 ba
   hors du tracé), et la ville neuve l'a fait tomber sur la sienne. Ligne et trafic ne se
   poussent plus : 20 sur 20, à la base comme avec la vague.
 - Restent la 3e vague (les commerces montent et descendent) et la 4e (le standing se vit).
+
+✅ **3e vague livrée** (17 sept. 2026) : **sur la ville finie**, `app/vitrines.py` renomme
+les enseignes des blocs cossus et pauvres — seize noms cossus, douze pauvres, toujours de la même
+famille et dans le même bandeau —, placarde **43 vitrines** et vide **3 locaux À LOUER** ; les
+façades portent leur standing (lettrage doré et auvent uni ↔ néon à moitié éteint, auvent déchiré,
+planches ; jardinières ↔ fenêtres placardées, drap, escalier rouillé). **29 lampadaires en panne**
+en pauvre, et ceux des rues cossues **portent plus loin** (60 px au lieu de 44). Un commerce pauvre
+qui s'ouvre a un comptoir qui barre la pièce, un cossu deux plantes à l'entrée.
+
+- ⚠️ **Tirer les noms pendant la construction a fait tomber dix juges** : un nom plus long élargit
+  le bandeau, déplace la porte peinte et décale le dé des devantures — rampes perdues, barrière du
+  cargo déplacée. D'où la passe finale, qui ne touche ni une tuile ni un dé.
+- ⚠️ **Et pas un poteau de plus** : vingt-neuf lampadaires neufs en cossu décalaient les dés de la
+  ville, et le juge d'autobus « qui attend monte » est tombé — il ne tient que par sa graine
+  (voir « Qui attend l'autobus monte dedans »).
+- Reste la 4e vague : le standing se vit (qui marche, ce qui est garé, la police et l'argent).
+
+### Qui attend l'autobus monte dedans
+
+vu le 17 sept. 2026 en livrant la 3e vague des quartiers : le juge
+`test_l_autobus_s_arrete_pour_eux_ils_montent_et_descendent_plus_loin` (on attend l'autobus)
+**ne tient que par sa graine**. Rejoué sur la base avec `L.graine(1…12)` : **11 graines sur 12
+tombent** — « l'autobus est reparti et il reste du monde sur le trottoir », « 2 attendaient,
+4 sont montés » (des passants qui n'attendaient pas montent aussi), « l'autobus n'a pas marqué
+l'abribus servi », un descendu à 564 px de son arrêt. La 3e vague des quartiers l'a fait tomber
+sur sa propre graine en ajoutant vingt-neuf lampadaires (des entités de plus, donc d'autres
+dés) ; elle a renoncé aux poteaux, mais la règle reste fausse la plupart du temps.
+
+- ⚠️ À faire : lire chaque défaut sur une graine où il se produit (le chien de garde et le vélo
+  qui poussait l'autobus ont été trouvés comme ça), corriger la règle, puis tenir le juge sur
+  **plusieurs** graines.
 
 ### Trois sauvegardes, et on les gère
 

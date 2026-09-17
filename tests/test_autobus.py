@@ -207,6 +207,9 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
     leurs abribus, comme le mobilier : on la retire des deux villes."""
     from app import metro, mobilier, salete
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
+    # Et les lampadaires du mobilier (`eclairer`) : ils se plantent le long des
+    # rues, après les lignes.
+    monkeypatch.setattr(mobilier, "eclairer", lambda chantier, bords, solides: {})
     avec = carte.generer()
     monkeypatch.setattr(autobus, "tracer", lambda chantier, ville: {"lignes": [], "arrets": [], "horaire": {}})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})

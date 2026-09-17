@@ -159,6 +159,40 @@ COMMERCES: dict[str, tuple[tuple[str, str], ...]] = {
     ),
 }
 
+# --- Le standing -------------------------------------------------------------
+
+#: ⚠️ **LE STANDING CHANGE L'ENSEIGNE** (des quartiers qu'on reconnait, 3e vague) :
+#: la rue chic du Faubourg et le coin de la cour des Cravates sont du meme
+#: district, et ne vendent pas la meme chose. `vitrines.monter_et_descendre`
+#: RENOMME, sur la ville finie, les commerces d'un bloc cossu ou pauvre — un nom de
+#: la meme famille (la piece derriere ne change pas) et qui tient dans le meme
+#: bandeau (le mur ne change pas).
+#: ⚠️ Un juge interdit une enseigne cossue dans un bloc pauvre, et l'inverse : la
+#: BIJOUTERIE du catalogue du Faubourg se renomme si elle tombe en pauvre.
+COMMERCES_COSSUS: tuple[tuple[str, str], ...] = (
+    ("BIJOUTERIE", "commerce"), ("FLEURISTE", "commerce"), ("BISTRO", "bouffe"),
+    ("GALERIE D'ART", "savoir"), ("TAILLEUR", "mode"), ("CHOCOLATIER", "bouffe"),
+    ("BOUTIQUE DE VIN", "bouffe"), ("PARFUMERIE", "mode"), ("ANTIQUAIRE", "artisan"),
+    ("FROMAGERIE", "bouffe"), ("SALON DE THE", "bouffe"), ("HAUTE COUTURE", "mode"),
+    ("MAROQUINERIE", "mode"), ("ENCADREUR", "artisan"), ("TRAITEUR", "bouffe"),
+    ("SPA", "service"),
+)
+COMMERCES_PAUVRES: tuple[tuple[str, str], ...] = (
+    ("PRET SUR GAGES", "commerce"), ("CHEQUES CASH", "service"), ("BINGO", "nuit"),
+    ("DEPANNEUR 24 H", "bouffe"), ("A LOUER", "commerce"), ("TOUT A 1 $", "commerce"),
+    ("BRIC-A-BRAC", "commerce"), ("PRETS RAPIDES", "service"), ("VIDEO POKER", "nuit"),
+    ("LIQUIDATION", "commerce"), ("TATOUAGE", "mode"), ("BIERE ET VIN", "bouffe"),
+)
+
+#: Le local vide : ses vitrines sont TOUTES placardees, sa porte ne s'ouvre pas,
+#: et sa vitrine ne s'allume pas la nuit. Une enseigne « A LOUER » derriere
+#: laquelle on trouve un magasin meuble ment deux fois.
+A_LOUER = "A LOUER"
+
+#: La part des vitrines PLACARDEES d'une rue pauvre (le motif `B` des devantures).
+PART_PLACARDEE = 1 / 3
+
+
 # --- Les residences ---------------------------------------------------------
 
 #: ⚠️ Un logement n'a pas d'enseigne : ce qui le fait lire, c'est la BRIQUE, les

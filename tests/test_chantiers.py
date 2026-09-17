@@ -263,8 +263,10 @@ def test_la_ville_avec_ou_sans_chantiers_est_la_meme(monkeypatch):
 
     ⚠️ La saleté se déplace APRÈS les chantiers (`salete.deplacer`) et ne jette
     rien dans leur enceinte : on la retire des deux villes."""
-    from app import salete
+    from app import mobilier, salete
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
+    # Et les lampadaires du mobilier (`eclairer`), qui évitent les enceintes.
+    monkeypatch.setattr(mobilier, "eclairer", lambda chantier, bords, solides: {})
     avec = carte.generer()
     monkeypatch.setattr(chantiers, "tirer", lambda ville, batiments, graine: [])
     sans = carte.generer()

@@ -198,6 +198,41 @@ def _place_libre(chantier, x: int, y: int, solides: set[tuple[int, int]]) -> boo
     return _ne_coupe_rien(chantier, x, y, solides)
 
 
+#: ⚠️ **LA NUIT DIT LE STANDING** (3e vague) : dans une rue pauvre, un lampadaire
+#: sur trois est en panne ; dans une rue cossue, chaque lampadaire porte plus loin.
+#: ⚠️ **Pas un poteau de plus.** On en plantait au milieu des bords cossus, autant
+#: qu'on en éteignait : vingt-neuf décors de plus, et les dés de la ville se sont
+#: décalés — un juge d'autobus déjà fragile (onze graines sur douze à la base) est
+#: tombé sur la sienne. La lumière se déplace par sa PORTÉE, pas par des poteaux.
+PART_EN_PANNE = 1 / 3
+
+#: La portée d'un lampadaire de rue cossue, en pixels (celle des autres : 44,
+#: `SORTES_DE_LAMPE` dans monde.js).
+PORTEE_COSSUE = 60
+
+
+def eclairer(chantier, bords: list[dict], solides: set[tuple[int, int]]) -> dict[str, int]:
+    """Éteint un lampadaire sur trois en pauvre, et élargit ceux des rues cossues.
+    Rend les comptes. ⚠️ Ne pose rien : `bords` et `solides` restent là pour la
+    signature du semis."""
+    from . import carte
+
+    comptes = {"en_panne": 0, "elargis": 0}
+    for lampe in chantier.lampes:
+        # Un lampadaire est la lampe SANS sorte (`c`) : les vitrines et les
+        # fenêtres ont la leur, et elles ne sont pas sur la rue.
+        if lampe.get("c"):
+            continue
+        standing = chantier.standing_en(lampe["x"], lampe["y"])
+        if standing == "pauvre" and carte.empreinte_de_tuile(lampe["x"], lampe["y"]) < PART_EN_PANNE:
+            lampe["panne"] = 1
+            comptes["en_panne"] += 1
+        elif standing == "cossu":
+            lampe["r"] = PORTEE_COSSUE
+            comptes["elargis"] += 1
+    return comptes
+
+
 def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
     """Plante les arbres, pose les bancs et les bacs à fleurs du bord des rues.
     Rend les comptes."""
@@ -212,7 +247,9 @@ def semer(chantier, ville: dict, graine: int) -> dict[str, int]:
     des_usage = carte.Des(graine ^ 0x05A6E)
     solides = {(d["x"], d["y"]) for d in chantier.decor if d["type"] in carte.DECOR_SOLIDE}
     poses = {"arbres": 0, "bancs": 0, "bacs": 0, "usage": 0}
-    for bord in _bords(chantier, ville):
+    bords = _bords(chantier, ville)
+    poses.update(eclairer(chantier, bords, solides))
+    for bord in bords:
         rythme = RYTHMES.get(bord["district"])
         if rythme is None:
             continue

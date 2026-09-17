@@ -3058,6 +3058,12 @@ const FACADES = (function () {
 
   /** L'enseigne, le nom, l'auvent raye, la vitre et la pancarte.
       `d` = { x, y, l, genre, texte, pancarte, porte }, `g` = le genre. */
+  //: ⚠️ LE STANDING SE LIT A LA FACADE (des quartiers qu'on reconnait, 3e vague).
+  //: `d.standing` : '+' cossu (lettrage dore, auvent uni), '-' pauvre (neon a
+  //: moitie eteint, auvent dechire, vitrines placardees — le motif `B`, que
+  //: Python a tire a la position). Rien pour l'ordinaire.
+  const DORURE = '#f2d27a';
+
   function devanture(ctx, d, g, ox, oy) {
     const large = d.l * T;
 
@@ -3070,7 +3076,9 @@ const FACADES = (function () {
     for (let i = 0; i < d.l; i++) {
       const x = ox + i * T;
       const quoi = motifs[i] || 'W';
-      if (quoi === 'W') { auvent(ctx, g, x, oy); vitrine(ctx, g, x, oy, i, d.l, motifs); }
+      const dechire = d.standing === '-' && hash(d.x + i, d.y) % 2 === 0;
+      if (quoi === 'W') { auvent(ctx, g, x, oy, d.standing, dechire); vitrine(ctx, g, x, oy, i, d.l, motifs); }
+      else if (quoi === 'B') { auvent(ctx, g, x, oy, d.standing, dechire); placardee(ctx, x, oy); }
       else porte(ctx, g, x, oy, quoi);
     }
 
@@ -3099,8 +3107,17 @@ const FACADES = (function () {
 
     // Le nom, centre. ⚠️ Arrondi a l'entier : un texte pose sur un demi-pixel
     // est floute par le canvas, et a cinq pixels de haut il devient illisible.
-    const larg = Atlas.largeurTexte(d.texte, 1);
-    Atlas.texte(ctx, d.texte, Math.round(ox + (large - larg) / 2), y + 4, g.lettres, 1);
+    const larg = Atlas.largeurTexte(d.texte, 1), tx = Math.round(ox + (large - larg) / 2);
+    if (d.standing === '-') {
+      // Le neon a MOITIE eteint : les lettres d'un bout brillent, l'autre bout
+      // est mort, a peine plus clair que le panneau.
+      const coupe = Math.ceil(d.texte.length / 2), avant = d.texte.slice(0, coupe);
+      const eteint = eclaircir(g.bandeau, 28), vivant = hash(d.x, d.y) % 2 === 0;
+      Atlas.texte(ctx, avant, tx, y + 4, vivant ? g.lettres : eteint, 1);
+      Atlas.texte(ctx, d.texte.slice(coupe), tx + Atlas.largeurTexte(avant, 1) + 1, y + 4, vivant ? eteint : g.lettres, 1);
+    } else {
+      Atlas.texte(ctx, d.texte, tx, y + 4, d.standing === '+' ? DORURE : g.lettres, 1);
+    }
 
     // Le dessous du panneau, sur le mur : c'est ce qui dit qu'il est DEVANT.
     ctx.fillStyle = 'rgba(11,10,18,0.42)';
@@ -3109,13 +3126,39 @@ const FACADES = (function () {
     ctx.fillRect(ox, oy + 1, large, 1);
   }
 
-  function auvent(ctx, g, x, oy) {
+  function auvent(ctx, g, x, oy, standing, dechire) {
     ctx.fillStyle = g.auvent;
     ctx.fillRect(x, oy + AUVENT_Y, T, AUVENT_H);
-    ctx.fillStyle = eclaircir(g.auvent, 34);
-    for (let k = 0; k < T; k += 6) ctx.fillRect(x + k, oy + AUVENT_Y, 3, AUVENT_H);
+    // Cossu : une toile UNIE. Les rayures sont celles du quartier.
+    if (standing !== '+') {
+      ctx.fillStyle = eclaircir(g.auvent, 34);
+      for (let k = 0; k < T; k += 6) ctx.fillRect(x + k, oy + AUVENT_Y, 3, AUVENT_H);
+    }
     ctx.fillStyle = 'rgba(0,0,0,0.28)';
     ctx.fillRect(x, oy + AUVENT_Y + AUVENT_H - 1, T, 1);
+    if (dechire) {
+      // Une dechirure : la toile pend, et on voit le mur au travers.
+      ctx.fillStyle = 'rgba(11,10,18,0.55)';
+      ctx.fillRect(x + 6, oy + AUVENT_Y + 2, 4, AUVENT_H - 2);
+      ctx.fillRect(x + 7, oy + AUVENT_Y + 1, 2, 1);
+      ctx.fillStyle = g.auvent;
+      ctx.fillRect(x + 9, oy + AUVENT_Y + AUVENT_H, 2, 2);
+    }
+  }
+
+  /** Une vitrine PLACARDEE : trois planches de travers sur le verre. */
+  function placardee(ctx, x, oy) {
+    ctx.fillStyle = '#3a342c';
+    ctx.fillRect(x, oy + VITRE_Y, T, VITRE_H);
+    ctx.fillStyle = '#7a6448';
+    ctx.fillRect(x + 1, oy + VITRE_Y + 1, T - 2, 2);
+    ctx.fillRect(x + 1, oy + VITRE_Y + 4, T - 2, 2);
+    ctx.fillRect(x + 1, oy + VITRE_Y + 7, T - 2, 2);
+    ctx.fillStyle = '#5c4a34';
+    ctx.fillRect(x + 1, oy + VITRE_Y + 2, T - 2, 1);
+    ctx.fillRect(x + 1, oy + VITRE_Y + 5, T - 2, 1);
+    ctx.fillStyle = '#9aa0a6';                    // les clous
+    ctx.fillRect(x + 2, oy + VITRE_Y + 1, 1, 1); ctx.fillRect(x + T - 3, oy + VITRE_Y + 4, 1, 1);
   }
 
   /** La vitre au pied du mur : c'est elle qu'on voit briller de loin la nuit.
@@ -3219,11 +3262,11 @@ const FACADES = (function () {
   }
 
   /** La rangee de fenetres d'un etage, deux par tuile. */
-  function etage(ctx, r, m, ox, oy, y) {
+  function etage(ctx, r, m, ox, oy, y, e) {
     for (let i = 0; i < r.l; i++) {
       const x = ox + i * T;
-      fenetre(ctx, m, x + 2, y, 5, 3);
-      fenetre(ctx, m, x + 9, y, 5, 3);
+      fenetreDuStanding(ctx, r, m, x + 2, y, 5, 3, 2 * i, e || 0);
+      fenetreDuStanding(ctx, r, m, x + 9, y, 5, 3, 2 * i + 1, e || 0);
     }
   }
 
@@ -3290,23 +3333,50 @@ const FACADES = (function () {
     ctx.fillStyle = m.joint;
     ctx.fillRect(ox, oy, large, 1);
 
+    // ⚠️ Le fer d'un logement pauvre a rouille (3e vague).
+    const ferDuLogement = r.standing === '-' ? FER_ROUILLE : fer;
     const hauts = Math.max(0, r.etages - 1);
-    for (let e = 0; e < hauts; e++) etage(ctx, r, m, ox, oy, oy + 2 + e * 4);
-    if (r.balcon && hauts) balcon(ctx, fer, ox, oy, large, 2 + (hauts - 1) * 4 + 3);
+    for (let e = 0; e < hauts; e++) etage(ctx, r, m, ox, oy, oy + 2 + e * 4, e);
+    if (r.balcon && hauts) balcon(ctx, ferDuLogement, ox, oy, large, 2 + (hauts - 1) * 4 + 3);
 
     const motifs = r.motifs || '';
     for (let i = 0; i < r.l; i++) {
       const x = ox + i * T;
       const quoi = motifs[i] || 'F';
       if (quoi === 'D' || quoi === 'd' || quoi === 'P' || quoi === 'G') {
-        porteDeLogement(ctx, m, fer, x, oy + RDC_Y, RDC_H, quoi);
+        porteDeLogement(ctx, m, ferDuLogement, x, oy + RDC_Y, RDC_H, quoi);
       } else {
-        fenetre(ctx, m, x + 3, oy + RDC_Y + 1, 10, 4);
+        fenetreDuStanding(ctx, r, m, x + 3, oy + RDC_Y + 1, 10, 4, i, 9);
         ctx.fillStyle = 'rgba(0,0,0,0.18)';               // le soubassement
         ctx.fillRect(x, oy + T - 1, T, 1);
       }
     }
-    if (r.etages >= 2) escalier(ctx, fer, ox + r.porte * T, oy + T, r.escalier);
+    if (r.etages >= 2) escalier(ctx, ferDuLogement, ox + r.porte * T, oy + T, r.escalier);
+  }
+
+  //: Le fer rouille d'un escalier de rue pauvre : le meme dessin, d'autres couleurs.
+  const FER_ROUILLE = { barreau: '#4a3226', marche: '#7a5a44', arete: '#9a6a4a', ombre: 'rgba(0,0,0,0.35)' };
+
+  /** Une fenetre de logement, selon le standing. ⚠️ Tiree a la position (`hash`) :
+      en cossu, une jardiniere fleurie dessous ; en pauvre, une sur trois
+      placardee et une sur cinq tendue d'un drap. */
+  function fenetreDuStanding(ctx, r, m, x, y, l, h, i, rangee) {
+    fenetre(ctx, m, x, y, l, h);
+    const tirage = hash(r.x + i, r.y + rangee) % 15;
+    if (r.standing === '+') {
+      ctx.fillStyle = '#6b4b2c'; ctx.fillRect(x, y + h, l, 1);             // la jardiniere
+      ctx.fillStyle = '#3f8d38'; ctx.fillRect(x + 1, y + h - 1, l - 2, 1);
+      ctx.fillStyle = tirage % 2 ? '#d9486a' : '#f2c14e';
+      for (let k = 1; k < l - 1; k += 2) ctx.fillRect(x + k, y + h - 1, 1, 1);
+    } else if (r.standing === '-') {
+      if (tirage < 5) {                                                    // placardee
+        ctx.fillStyle = '#7a6448'; ctx.fillRect(x, y, l, h);
+        ctx.fillStyle = '#5c4a34'; ctx.fillRect(x, y + Math.floor(h / 2), l, 1);
+      } else if (tirage < 8) {                                             // un drap pour rideau
+        ctx.fillStyle = '#d9d2c2'; ctx.fillRect(x + 1, y + 1, l - 2, h - 2);
+        ctx.fillStyle = '#b8b09c'; ctx.fillRect(x + 2, y + 1, 1, h - 2);
+      }
+    }
   }
 
   //: Trois facons de salir un mur. 0 = le mot seul, 1 = le barbouillage seul,

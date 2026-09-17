@@ -201,7 +201,8 @@ const Monde = (function () {
       // le mur — on doit deviner qu'il y a quelqu'un, pas lire son journal).
       lampes: (def.lampes || []).map(function (l) {
         const sorte = SORTES_DE_LAMPE[l.c] || SORTES_DE_LAMPE.poteau;
-        return { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c };
+        // ⚠️ `panne` : un lampadaire de rue pauvre qui n'eclaire plus (3e vague).
+        return { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c, panne: !!l.panne };
       }),
       portes: def.portes || [],
       rampes: def.rampes || [],
@@ -1595,6 +1596,7 @@ const Monde = (function () {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const l of carte.lampes) {
       if (l.eteinte) continue;             // son poteau est a terre
+      if (l.panne) continue;               // une rue pauvre : personne ne change l'ampoule
       if (l.demolie) continue;             // sa fenetre est tombee avec le batiment (chantier)
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });

@@ -1613,6 +1613,8 @@ def regions_du_plan(plan: tuple[str, ...]) -> dict[tuple[int, int], tuple[int, i
 #: n'habite. Tout autre bloc declare le sien — pas de defaut silencieux, sinon
 #: un quartier oublie serait ordinaire sans que personne l'ait decide.
 STANDINGS: dict[str, str] = {"+": "cossu", "=": "ordinaire", "-": "pauvre"}
+#: Ce que portent une devanture et une residence qui ne sont pas ordinaires.
+STANDING_LETTRE: dict[str, str] = {"cossu": "+", "pauvre": "-"}
 SANS_STANDING = "~"
 
 
@@ -1678,6 +1680,17 @@ USAGE_DU_GENRE: dict[str, str] = {
     "commerces": "commercial", "maisons": "residentiel", "banlieue": "residentiel",
     "hangars": "industriel", "industriel": "industriel", "gang": "industriel",
 }
+
+
+def empreinte_de_tuile(x: int, y: int) -> float:
+    """Un tirage STABLE dans [0, 1) pour cette tuile, sans consommer un de : le
+    `hash2` de base.js, en 32 bits. ⚠️ Pour ce qui se decide a la position (une
+    vitrine placardee, un lampadaire en panne) : changer un bloc de standing ne
+    rebat pas le reste de la ville."""
+    h = (x * 374761393 + y * 668265263) & 0xFFFFFFFF
+    h = ((h ^ (h >> 13)) * 1274126177) & 0xFFFFFFFF
+    h ^= h >> 16
+    return h / 0x100000000
 
 
 def usage_du_glyphe(glyphe: str) -> str:
@@ -3471,7 +3484,10 @@ class _Chantier:
                     ouvre = self.des_devanture.chance(self.PART_COMMERCE_VISITABLE)
                     if mesures_de_la_part(part) and self.premiere_du_genre(famille):
                         ouvre = True
-                    dedans = self.poser_la_piece(famille, part, ancre) if ouvre else None
+                    # La piece suit le standing du bloc (3e vague) : son CONTENU,
+                    # pas ses mesures — rien d'autre dans la ville n'en depend.
+                    dedans = (self.poser_la_piece(famille, part, ancre, standing=self.standing_en(*ancre))
+                              if ouvre else None)
                     if dedans:
                         visite = {"slug": famille, "nom": enseigne[0], "interieur": dedans}
                 elif quoi == "logement":
@@ -3516,7 +3532,8 @@ class _Chantier:
                              y + self.des.entier(0, 1))
 
     def poser_la_piece(self, quoi: str, part: set[tuple[int, int]],
-                       ancre: tuple[int, int], *, etages: int = 1) -> str | None:
+                       ancre: tuple[int, int], *, etages: int = 1,
+                       standing: str | None = None) -> str | None:
         """Une piece aux mesures de cette part de batiment. `None` si trop petit.
 
         ⚠️ `None` est un RESULTAT, pas un echec : un bout de batiment de six
@@ -3555,7 +3572,7 @@ class _Chantier:
                                                   variante=self.posees)
         else:
             self.pieces[slug] = piece_de_commerce(
-                slug, quoi, largeur, hauteur, porte, variante=self.posees)
+                slug, quoi, largeur, hauteur, porte, variante=self.posees, standing=standing)
         return slug
 
     def premiere_du_genre(self, famille: str | None) -> bool:
@@ -6350,6 +6367,13 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ni un chantier, et les arbres de rue plantent autour de ce qu'elle a laisse.
     from . import salete as salete_mod
     salete_mod.deplacer(chantier, ville, graine)
+    # ⚠️ LES COMMERCES MONTENT ET DESCENDENT SUR LA VILLE FINIE (3e vague) : un nom
+    # d'enseigne, des planches sur une vitrine, le standing d'une facade — rien qui
+    # deplace une tuile. Tires pendant la construction, les noms changeaient la
+    # largeur des bandeaux et les portes peintes : dix juges sont tombes, rampes
+    # et barriere du cargo comprises.
+    from . import vitrines as vitrines_mod
+    vitrines_mod.monter_et_descendre(chantier, ville)
     # ⚠️ LE MOBILIER DE RUE EN TOUT DERNIER, dans son propre de : un arbre de
     # plus ne deplace ni un abribus, ni un paquet, ni une enseigne.
     from . import mobilier as mobilier_mod
@@ -7104,7 +7128,7 @@ def _quelqu_un(grille: list[list[str]], qui: str, autour: tuple[int, int],
 
 
 def piece_de_commerce(slug: str, famille: str, largeur: int, hauteur: int,
-                      porte: int, variante: int = 0) -> dict:
+                      porte: int, variante: int = 0, standing: str | None = None) -> dict:
     """Un commerce POSE : le fond, les allees, le comptoir, et du monde dedans.
 
     Trois rangees qui ne changent pas, quelle que soit la taille : le FOND
@@ -7124,15 +7148,22 @@ def piece_de_commerce(slug: str, famille: str, largeur: int, hauteur: int,
     # Le comptoir : la moitie de la largeur, du cote oppose a la porte.
     rangee = hauteur - 2
     long_ = max(2, min(largeur - 1, (largeur + 1) // 2))
+    # ⚠️ Le standing se voit en entrant (3e vague) : le comptoir d'un commerce
+    # pauvre barre presque toute la piece — on est servi de loin, comme chez un
+    # preteur sur gages ; un commerce cossu a une plante de chaque cote de la porte.
+    if standing == "pauvre":
+        long_ = max(2, min(largeur - 1, (3 * largeur + 3) // 4))
     debut = 0 if porte > largeur / 2 else largeur - long_
     comptoir = [(x, rangee) for x in range(debut, debut + long_)]
     for x, y in comptoir:
         grille[y][x] = "c"
-    # Une plante a l'entree, du cote ou il reste de la place.
+    # Une plante a l'entree, du cote ou il reste de la place — deux en cossu,
+    # aucune en pauvre.
+    plantes = {"cossu": 2, "pauvre": 0}.get(standing, 1)
     for x in (0, largeur - 1):
-        if abs(x + 1 - porte) >= 2 and _libre(grille, x, hauteur - 1):
+        if plantes and abs(x + 1 - porte) >= 2 and _libre(grille, x, hauteur - 1):
             grille[hauteur - 1][x] = "n"
-            break
+            plantes -= 1
     type_, genre = fiche["point"]
     points = [_poser_le_point(grille, type_, genre, porte, list(reversed(comptoir)))]
     _completer_les_meubles(grille, porte, "enk",
