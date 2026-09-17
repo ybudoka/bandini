@@ -81,9 +81,15 @@ def banc(paquet):
         pytest.fail("node est obligatoire (BANDINI_TESTS_OBLIGATOIRES=1) et il manque")
     prelude = (RACINE / "tests" / "banc.js").read_text(encoding="utf-8")
 
-    def executer(corps: str, graine: int = 0x1A2B3C4D):
+    def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None):
+        # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         script = prelude + "\nrapporter(banc(" + corps + "));\n"
-        sortie = lancer_node(script, entree={"racine": str(RACINE), "defs": paquet, "graine": graine})
+        entree = {"racine": str(RACINE), "defs": paquet, "graine": graine}
+        if stockage is not None:
+            entree["stockage"] = stockage
+        if session is not None:
+            entree["session"] = session
+        sortie = lancer_node(script, entree=entree)
         return json.loads(sortie.strip().splitlines()[-1]) if sortie.strip() else None
 
     return executer

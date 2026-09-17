@@ -115,7 +115,12 @@ function banc(corps) {
   // --- Fausse fenetre -----------------------------------------------------------------
   const ecouteurs = {};
   let rafCb = null, horloge = 0;
-  const store = {};
+  // ⚠️ `ENTREE.stockage` : ce que le navigateur avait DEJA avant que la page
+  // charge (une partie d'avant, trois emplacements). Le jeu lit sa partie au
+  // demarrage : l'ecrire apres coup, dans le corps d'un test, arrive trop tard.
+  const store = Object.assign({}, ENTREE.stockage || {});
+  const session = Object.assign({}, ENTREE.session || {});
+  let rechargements = 0;
   const fetchs = [];
   const pads = [];
   const FauxMath = Object.create(Math);
@@ -133,6 +138,11 @@ function banc(corps) {
     requestAnimationFrame: function (cb) { rafCb = cb; return 1; }, cancelAnimationFrame: function () {},
     localStorage: { getItem: function (k) { return k in store ? store[k] : null; }, setItem: function (k, v) { store[k] = String(v); },
                     removeItem: function (k) { delete store[k]; } },
+    sessionStorage: { getItem: function (k) { return k in session ? session[k] : null; }, setItem: function (k, v) { session[k] = String(v); },
+                      removeItem: function (k) { delete session[k]; } },
+    // Recharger la page ne recharge rien ici : on COMPTE. Le test rejoue la
+    // suite dans un second banc, avec le stockage que le premier a laisse.
+    location: { search: '', reload: function () { rechargements++; } },
     navigator: { getGamepads: function () { return pads; }, vibrate: function () {} },
     matchMedia: function () { return { matches: false }; },
     fetch: function (url, opts) {
@@ -361,7 +371,8 @@ function banc(corps) {
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
                    fondu: fondu, entrer: entrer, sortir: sortir,
-                   doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, ctx: toile.getContext('2d'),
+                   doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, session: session, ctx: toile.getContext('2d'),
+                   rechargements: function () { return rechargements; },
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).
                    attendre: function () { return new Promise(function (r) { setImmediate(r); }); } };

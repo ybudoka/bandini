@@ -186,6 +186,53 @@ def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
     assert erreurs == []
 
 
+def test_changer_de_partie_recharge_la_page_et_rouvre_le_choix(page, serveur, erreurs):
+    """Trois parties : prendre la 2 dans une ville posee pour la 1 RECHARGE la page.
+
+    ⚠️ Le banc ne fait que COMPTER les rechargements, et son `sessionStorage`
+    est un objet. Qu'une vraie page se recharge, que le drapeau survive a ce
+    rechargement-la et a lui seul, et que le choix se rouvre sur la 2 : ca ne se
+    voit qu'ici.
+    """
+    def appui(touche):
+        # Tenue un instant : deux appuis dans la meme image n'en font qu'un.
+        page.keyboard.down(touche)
+        page.wait_for_timeout(60)
+        page.keyboard.up(touche)
+        page.wait_for_timeout(60)
+
+    choix_ouvert = "window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'PARTIES'"
+    ici = "() => { const m = BANDINI.B.menu; return m.items[m.curseur].libelle; }"
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)                                   # aucune partie : JOUER joue, dans la 1
+    page.evaluate("() => BANDINI.Jeu.retourTitre()")
+    un = page.evaluate("() => localStorage.getItem('bandini-partie-v1')")
+    assert un, "revenir au titre sauvegarde la 1"
+    appui("KeyE")
+    page.wait_for_function(choix_ouvert)
+    appui("KeyS")
+    assert page.evaluate(ici) == "2  NOUVELLE PARTIE"
+    with page.expect_navigation():
+        appui("KeyE")
+    attendre_titre(page)
+    page.wait_for_function(choix_ouvert)
+    assert page.evaluate(ici) == "2  NOUVELLE PARTIE", "le choix se rouvre tout seul, sur la partie prise"
+    appui("KeyE")
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    assert page.evaluate("() => BANDINI.B.partie.jour") == 1
+    assert page.evaluate("() => !!(BANDINI.B.scene || BANDINI.B.ouverture)"), "une partie neuve s'ouvre sur sa scene"
+    assert page.evaluate("() => localStorage.getItem('bandini-emplacement-v1')") == "2"
+    assert page.evaluate("() => localStorage.getItem('bandini-partie-v1')") == un, "la 1 n'a pas bouge"
+    # Un rechargement ORDINAIRE ne rouvre rien : le drapeau n'a servi qu'une fois.
+    page.reload()
+    attendre_titre(page)
+    page.wait_for_timeout(300)
+    assert page.evaluate("() => BANDINI.B.menu") is None
+    assert page.is_visible("#voile-titre")
+    assert erreurs == []
+
+
 def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     contexte = browser.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True,
                                    device_scale_factor=2)

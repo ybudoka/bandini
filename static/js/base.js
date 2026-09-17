@@ -327,23 +327,94 @@ const Base = (function () {
 
 const Sauvegarde = (function () {
   'use strict';
+  /*: TROIS EMPLACEMENTS, et le premier porte la cle d'AVANT les emplacements.
+    ⚠️ Rien ne se deplace : la partie de Martin etait sous `bandini-partie-v1`,
+    elle y reste, et elle devient l'emplacement 1 sans qu'une seule ecriture ait
+    lieu. Une migration qui recopie puis efface est une migration qui peut
+    s'arreter au milieu — et un retour a une version d'avant retrouverait sa
+    partie la ou il l'a laissee. */
   const CLE = 'bandini-partie-v1';
-  let stockage = null;
+  const EMPLACEMENTS = 3;
+  //: Le dernier emplacement joue : c'est lui que le titre charge et propose.
+  const CLE_EMPLACEMENT = 'bandini-emplacement-v1';
+  //: ⚠️ Dans `sessionStorage`, pas dans `localStorage` : ce drapeau ne doit
+  //: survivre qu'au rechargement qu'on a demande, jamais a la visite suivante.
+  const CLE_ROUVRIR = 'bandini-rouvrir-parties';
+  let stockage = null, session = null, actif = 1;
 
-  function init(s) { stockage = s; }
+  function init(s, sess) {
+    stockage = s; session = sess || null;
+    let n = 1;
+    try { n = parseInt(stockage && stockage.getItem(CLE_EMPLACEMENT), 10); } catch (e) { n = 1; }
+    actif = n >= 1 && n <= EMPLACEMENTS ? n : 1;
+  }
 
-  function lire() {
+  function cle(n) { return n === 1 ? CLE : CLE + '-' + n; }
+  function emplacement() { return actif; }
+  function choisir(n) {
+    actif = n;
+    try { stockage && stockage.setItem(CLE_EMPLACEMENT, String(n)); } catch (e) { /* rien */ }
+  }
+
+  function brut(n) {
+    try { return (stockage && stockage.getItem(cle(n || actif))) || null; } catch (e) { return null; }
+  }
+
+  function lire(n) {
     try {
-      const brut = stockage && stockage.getItem(CLE);
-      return brut ? JSON.parse(brut) : null;
+      const b = brut(n);
+      return b ? JSON.parse(b) : null;
     } catch (e) { return null; }
   }
 
-  function ecrire(partie) {
-    try { stockage && stockage.setItem(CLE, JSON.stringify(partie)); return true; } catch (e) { return false; }
+  /** ⚠️ La date part avec la partie ECRITE, pas dans `B.partie` : une horloge
+      murale dans l'etat du jeu ferait differer deux parties jouees pareil. */
+  function ecrire(partie, n) {
+    try {
+      stockage && stockage.setItem(cle(n || actif), JSON.stringify(Object.assign({}, partie, { sauveeLe: Date.now() })));
+      return true;
+    } catch (e) { return false; }
   }
 
-  function effacer() { try { stockage && stockage.removeItem(CLE); } catch (e) { /* rien */ } }
+  function effacer(n) { try { stockage && stockage.removeItem(cle(n || actif)); } catch (e) { /* rien */ } }
+
+  /** Copie TELLE QUELLE, a l'octet : une copie qu'on relit et reecrit passerait
+      par `completer()` et ne serait plus la partie qu'on a voulu garder. */
+  function copier(de, vers) {
+    const b = brut(de);
+    if (!b || de === vers) return false;
+    try { stockage.setItem(cle(vers), b); return true; } catch (e) { return false; }
+  }
+
+  /** Ce que le choix des parties montre d'un emplacement, ou null s'il est vide
+      (ou illisible : il n'y a rien a en reprendre). */
+  function apercu(n) {
+    const p = lire(n);
+    if (!p || typeof p !== 'object') return null;
+    return { jour: p.jour || 1, argent: p.argent || 0,
+             secondes: (p.stats && p.stats.secondes) || 0,
+             missions: p.missionsFaites ? Object.keys(p.missionsFaites).length : 0,
+             sauveeLe: typeof p.sauveeLe === 'number' ? p.sauveeLe : null };
+  }
+
+  function occupes() {
+    const out = [];
+    for (let n = 1; n <= EMPLACEMENTS; n++) if (apercu(n)) out.push(n);
+    return out;
+  }
+
+  function marquerRouverture(n) { try { session && session.setItem(CLE_ROUVRIR, String(n)); } catch (e) { /* rien */ } }
+  /** L'emplacement a rouvrir, UNE fois apres `marquerRouverture(n)` — le
+      drapeau se lit et s'efface —, sinon 0. ⚠️ Le numero voyage avec le
+      drapeau : on a pu prendre une case VIDE, et le choix doit se rouvrir sur
+      elle, pas sur la premiere partie qui existe. */
+  function rouverture() {
+    try {
+      const n = session ? parseInt(session.getItem(CLE_ROUVRIR), 10) : 0;
+      if (session) session.removeItem(CLE_ROUVRIR);
+      return n >= 1 && n <= EMPLACEMENTS ? n : 0;
+    } catch (e) { return 0; }
+  }
 
   const CLE_OPTIONS = 'bandini-options-v1';
   function ecrireOptions(options) {
@@ -380,5 +451,6 @@ const Sauvegarde = (function () {
     return out;
   }
 
-  return { CLE, CLE_OPTIONS, init, lire, ecrire, effacer, completer, ecrireOptions, lireOptions };
+  return { CLE, CLE_OPTIONS, CLE_EMPLACEMENT, EMPLACEMENTS, init, cle, emplacement, choisir, lire, ecrire, effacer, copier,
+           apercu, occupes, marquerRouverture, rouverture, completer, ecrireOptions, lireOptions };
 })();

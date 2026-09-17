@@ -9,7 +9,10 @@ const Hud = (function () {
     doc = d; racine = r;
     urlScores = r.dataset.urlScores;
     ['titre', 'scores', 'score-envoi'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
-    d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Jeu.jouer(); });
+    // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
+    // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
+    // l'image suivante, y choisirait aussitot la ligne sous le curseur.
+    d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Entree.videPresse(); Jeu.ouvrirParties(); });
     d.getElementById('bouton-scores').addEventListener('click', function () { Son.reveiller(); montrerScores(); });
     d.getElementById('bouton-fermer-scores').addEventListener('click', function () { voile('titre'); });
     d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
@@ -488,6 +491,148 @@ const Hud = (function () {
     return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
       .concat([{ libelle: 'ENVOYER MON SCORE', faire: function () { fermerMenu(); demanderScore(); return true; } },
                { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+  }
+
+  // --- Les parties : trois emplacements, au titre ------------------------------------
+
+  const MOIS = ['JANV.', 'FEVR.', 'MARS', 'AVR.', 'MAI', 'JUIN', 'JUIL.', 'AOUT', 'SEPT.', 'OCT.', 'NOV.', 'DEC.'];
+
+  /** « 3 H 20 », « 25 MIN » : le temps passe DANS la partie. */
+  function tempsDeJeu(secondes) {
+    const min = Math.floor((secondes || 0) / 60);
+    return min >= 60 ? Math.floor(min / 60) + ' H ' + String(min % 60).padStart(2, '0') : min + ' MIN';
+  }
+
+  /** « AUJOURD'HUI A 21 H 40 », « HIER A 8 H 05 », « LE 14 SEPT. A 21 H 40 ». */
+  function quand(ms, maintenant) {
+    const d = new Date(ms), m = new Date(maintenant);
+    const heure = d.getHours() + ' H ' + String(d.getMinutes()).padStart(2, '0');
+    const meme = function (a, b) { return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate(); };
+    if (meme(d, m)) return 'AUJOURD\'HUI A ' + heure;
+    if (meme(d, new Date(m.getFullYear(), m.getMonth(), m.getDate() - 1))) return 'HIER A ' + heure;
+    return 'LE ' + d.getDate() + ' ' + MOIS[d.getMonth()] + ' A ' + heure;
+  }
+
+  /** Une ligne d'emplacement : « 1  JOUR 12 · 4300 $ », ou `vide` s'il n'y a rien. */
+  function ligneEmplacement(n, a, vide) {
+    return n + '  ' + (a ? 'JOUR ' + a.jour + ' · ' + a.argent + ' $' : vide);
+  }
+
+  function apercus() {
+    const out = [];
+    for (let n = 1; n <= Sauvegarde.EMPLACEMENTS; n++) out.push(Sauvegarde.apercu(n));
+    return out;
+  }
+
+  /** Revenir au titre depuis le choix des parties. */
+  function fermerParties() { fermerMenu(); voile('titre'); }
+
+  /** LE CHOIX DES PARTIES. ACTION sur un emplacement le JOUE — sa partie, ou une
+      neuve s'il est vide : continuer, c'est deux ACTION depuis le titre, le
+      curseur attend deja sur la derniere partie jouee.
+
+      ⚠️ Effacer et copier sont des LIGNES du menu, pas un bouton de plus sur
+      l'emplacement : un geste que l'ecran ne nomme pas n'existe pas pour celui
+      qui tient la manette. */
+  function menuParties(curseur) {
+    const liste = apercus();
+    const pleins = liste.filter(Boolean).length;
+    const actif = Sauvegarde.emplacement();
+    const items = liste.map(function (a, i) {
+      const n = i + 1;
+      return { libelle: ligneEmplacement(n, a, 'NOUVELLE PARTIE'), detail: a ? tempsDeJeu(a.secondes) : '', emplacement: n,
+               faire: function () { Jeu.jouerPartie(n); return false; } };
+    });
+    items.push({ libelle: 'COPIER UNE PARTIE', actif: pleins > 0, faire: function () { ouvrirMenu(menuCopier()); return false; } });
+    items.push({ libelle: 'EFFACER UNE PARTIE', actif: pleins > 0, faire: function () { ouvrirMenu(menuEffacer()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { fermerParties(); return false; } });
+    if (typeof curseur !== 'number') {
+      // La derniere partie jouee ; si elle n'est plus la, la premiere qui reste.
+      curseur = liste[actif - 1] ? actif - 1 : Math.max(0, liste.findIndex(Boolean));
+    }
+    const menu = { titre: 'PARTIES', items: items, curseur: curseur, retour: fermerParties,
+      // Ce que la ligne ne dit pas faute de place : quand, et ou l'on en est.
+      maj: function (m) {
+        const item = m.items[m.curseur];
+        const a = item && item.emplacement ? liste[item.emplacement - 1] : null;
+        m.aide = !item || !item.emplacement ? 'FRAPPE : RETOUR AU TITRE'
+          : !a ? 'UNE PARTIE NEUVE COMMENCE ICI'
+          : (a.sauveeLe ? 'SAUVEE ' + quand(a.sauveeLe, Date.now()) + ' · ' : '')
+            + a.missions + (a.missions > 1 ? ' MISSIONS' : ' MISSION');
+      } };
+    menu.maj(menu);
+    return menu;
+  }
+
+  function menuEffacer(curseur) {
+    const liste = apercus();
+    const items = liste.map(function (a, i) {
+      const n = i + 1;
+      return { libelle: ligneEmplacement(n, a, 'VIDE'), detail: a ? tempsDeJeu(a.secondes) : '', actif: !!a,
+               faire: function () { ouvrirMenu(menuEffacerConfirmer(n)); return false; } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuParties()); return false; } });
+    // ⚠️ Sur une partie qui EXISTE : une case vide est grisee, et un curseur
+    // pose dessus n'a l'air de rien choisir.
+    return { titre: 'EFFACER QUELLE PARTIE?', items: items, retour: function () { ouvrirMenu(menuParties()); },
+             curseur: typeof curseur === 'number' ? curseur : Math.max(0, liste.findIndex(Boolean)) };
+  }
+
+  /** ⚠️ Le curseur s'ouvre sur NON. Une partie effacee ne revient pas, et ACTION
+      est le bouton qu'on vient de presser deux fois de suite pour arriver ici. */
+  function menuEffacerConfirmer(n) {
+    const a = Sauvegarde.apercu(n);
+    return { titre: 'EFFACER LA PARTIE ' + n + '?', curseur: 0,
+      sur: a ? 'JOUR ' + a.jour + ' · ' + tempsDeJeu(a.secondes) : '',
+      aide: 'ELLE NE REVIENDRA PAS',
+      items: [
+        { libelle: 'NON, LA GARDER', faire: function () { ouvrirMenu(menuParties(n - 1)); return false; } },
+        { libelle: 'OUI, L\'EFFACER POUR DE BON', faire: function () { Jeu.effacerPartie(n); ouvrirMenu(menuParties(n - 1)); return false; } },
+      ],
+      retour: function () { ouvrirMenu(menuEffacer(n - 1)); } };
+  }
+
+  function menuCopier(curseur) {
+    const liste = apercus();
+    const items = liste.map(function (a, i) {
+      const n = i + 1;
+      return { libelle: ligneEmplacement(n, a, 'VIDE'), detail: a ? tempsDeJeu(a.secondes) : '', actif: !!a,
+               faire: function () { ouvrirMenu(menuCopierVers(n)); return false; } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuParties()); return false; } });
+    return { titre: 'COPIER QUELLE PARTIE?', items: items, retour: function () { ouvrirMenu(menuParties()); },
+             curseur: typeof curseur === 'number' ? curseur : Math.max(0, liste.findIndex(Boolean)) };
+  }
+
+  function menuCopierVers(de) {
+    const liste = apercus();
+    const items = [];
+    liste.forEach(function (a, i) {
+      const n = i + 1;
+      if (n === de) return;
+      items.push({ libelle: ligneEmplacement(n, a, 'VIDE'), detail: a ? 'ECRASEE' : '',
+                   faire: function () {
+                     if (a) { ouvrirMenu(menuCopierConfirmer(de, n)); return false; }
+                     Jeu.copierPartie(de, n);
+                     ouvrirMenu(menuParties(n - 1));
+                     return false;
+                   } });
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCopier(de - 1)); return false; } });
+    return { titre: 'COPIER LA ' + de + ' VERS', items: items, retour: function () { ouvrirMenu(menuCopier(de - 1)); } };
+  }
+
+  /** Copier PAR-DESSUS une partie, c'est l'effacer : meme question, meme NON d'abord. */
+  function menuCopierConfirmer(de, vers) {
+    const a = Sauvegarde.apercu(vers);
+    return { titre: 'ECRASER LA PARTIE ' + vers + '?', curseur: 0,
+      sur: a ? 'JOUR ' + a.jour + ' · ' + tempsDeJeu(a.secondes) : '',
+      aide: 'LA PARTIE ' + vers + ' NE REVIENDRA PAS',
+      items: [
+        { libelle: 'NON, LA GARDER', faire: function () { ouvrirMenu(menuParties(vers - 1)); return false; } },
+        { libelle: 'OUI, LA REMPLACER PAR LA ' + de, faire: function () { Jeu.copierPartie(de, vers); ouvrirMenu(menuParties(vers - 1)); return false; } },
+      ],
+      retour: function () { ouvrirMenu(menuCopierVers(de)); } };
   }
 
   // --- Le carnet : la mission, le journal, le repertoire ---------------------------
@@ -1486,6 +1631,11 @@ const Hud = (function () {
       if (B.menu) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
       dessinerMenu(ctx);
     }
+    // Le choix des parties : la ville vide du titre, assombrie, derriere.
+    if (B.etat === 'titre' && B.menu) {
+      ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++;
+      dessinerMenu(ctx);
+    }
     if (B.etat === 'carte') dessinerCarte(ctx);
     dessinerTransition(ctx);
     if (B.options.perf) {
@@ -1500,6 +1650,7 @@ const Hud = (function () {
   }
 
   return { init, voile, etat, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+    menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, couleurDeLieu, PULSE_JOUEUR, BATTEMENT_CIBLE,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },

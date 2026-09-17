@@ -7,11 +7,15 @@ const Jeu = (function () {
   const PAS = 1000 / 60;
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
+  //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
+  //: n'a pas joue depuis le chargement de la page (voir `jouerPartie`).
+  let monde = null;
 
   // --- Etats -------------------------------------------------------------------------
 
   function commencer() {
     const p = B.partie;
+    monde = p;
     Entites.vider();
     B.entites.length = 0;
     Entites.creerDecor(Monde.carte.def);
@@ -92,6 +96,85 @@ const Jeu = (function () {
     const neuve = (p.x === null || p.x === undefined) && !p.ouvertureVue;
     commencer();
     if (neuve) Histoire.ouverture(false);
+  }
+
+  // --- Les parties : trois emplacements -------------------------------------------------
+
+  /** La partie de l'emplacement `n`, completee — ou une partie neuve s'il est vide. */
+  function chargerPartie(n) {
+    const p = Sauvegarde.completer(Sauvegarde.lire(n), B.defs);
+    if (p.empreinte && p.empreinte !== B.defs.empreinte) {
+      // Le catalogue a change : on garde la partie, mais une position qui
+      // n'existe plus sur la nouvelle carte doit etre oubliee — la sienne, et
+      // celle du char gare devant la planque.
+      p.x = null; p.y = null;
+      if (p.planque && p.planque.vehicule) {
+        p.planque.vehicule.x = null; p.planque.vehicule.y = null;
+      }
+    }
+    return p;
+  }
+
+  /** JOUER, au titre : le choix des parties.
+
+      ⚠️ Sans aucune partie sauvegardee, JOUER JOUE. Trois fois « NOUVELLE
+      PARTIE » devant quelqu'un qui ouvre le jeu pour la premiere fois, c'est un
+      menu qui ne choisit rien — il commence dans l'emplacement 1, comme avant.
+      `sur` : au retour d'un rechargement, le choix se montre quand meme, le
+      curseur sur cet emplacement-la. */
+  function ouvrirParties(sur) {
+    if (!sur && !Sauvegarde.occupes().length) { jouerPartie(Sauvegarde.emplacement()); return; }
+    Hud.voile(null);
+    Hud.ouvrirMenu(Hud.menuParties(sur ? sur - 1 : undefined));
+  }
+
+  /** Jouer l'emplacement `n` : sa partie, ou une neuve s'il est vide.
+
+      ⚠️ UNE VILLE DEJA POSEE POUR UNE AUTRE PARTIE SE RECHARGE, elle ne se
+      recycle pas. `commencer()` sait reposer la MEME partie apres un retour au
+      titre ; il ne sait pas oublier tout ce qu'une autre a laisse : le sang sur
+      le trottoir, les lampadaires casses, la phase posee des chantiers, et les
+      compteurs que chaque systeme accroche a `B` en cours de route. Un seul
+      oubli, et la partie 2 porte les cicatrices de la 1. Recharger la page est
+      le seul oubli complet, et il ne coute qu'au geste rare — changer de partie
+      apres avoir joue. Le choix des parties se rouvre alors tout seul, le
+      curseur sur celle qu'on a prise : il reste un ACTION a faire, et c'est
+      tant mieux, parce que c'est ce geste-la qui rend le son.
+
+      « Une autre partie », c'est un autre emplacement, mais aussi le meme
+      emplacement efface ou ecrase par une copie depuis (`B.partie` n'est plus
+      l'objet pour lequel la ville a ete posee). */
+  function jouerPartie(n) {
+    if (monde && (n !== Sauvegarde.emplacement() || B.partie !== monde)) {
+      Sauvegarde.choisir(n);
+      Sauvegarde.marquerRouverture(n);
+      if (B.menu) Hud.fermerMenu();
+      const etat = doc && doc.getElementById('etat-chargement');
+      if (etat) etat.textContent = 'Changement de partie…';
+      if (fenetre && fenetre.location && fenetre.location.reload) fenetre.location.reload();
+      return;
+    }
+    if (n !== Sauvegarde.emplacement()) B.partie = chargerPartie(n);
+    Sauvegarde.choisir(n);
+    if (B.menu) Hud.fermerMenu();
+    jouer();
+  }
+
+  /** Effacer l'emplacement `n`. ⚠️ Si c'est celui qu'on a charge, `B.partie`
+      redevient une partie NEUVE tout de suite : l'ancienne, restee en memoire,
+      se reecrirait sinon a la premiere sauvegarde automatique — une partie
+      effacee qui revient toute seule dix secondes plus tard. */
+  function effacerPartie(n) {
+    Sauvegarde.effacer(n);
+    if (n === Sauvegarde.emplacement()) B.partie = chargerPartie(n);
+  }
+
+  /** Copier `de` sur `vers`. Meme garde qu'`effacerPartie` : ecraser la partie
+      chargee, c'est la remplacer en memoire aussi. */
+  function copierPartie(de, vers) {
+    const ok = Sauvegarde.copier(de, vers);
+    if (ok && vers === Sauvegarde.emplacement()) B.partie = chargerPartie(vers);
+    return ok;
   }
 
   // --- Les portes : noircir sur l'ancienne, changer au noir, eclaircir sur la nouvelle ---
@@ -445,12 +528,23 @@ const Jeu = (function () {
         && (Entree.neuf('action') || Entree.neuf('pause'))) {
       Son.reveiller();
       const sansSon = Son.enAttente();
-      jouer();
+      ouvrirParties();
       // ⚠️ Apres `commencer()`, qui pose son propre message : sinon le nôtre
       // est efface par « BAIE-DES-BRUMES » et le silence reste muet.
       // Commencer a la manette ne donne AUCUN geste au navigateur : il refuse
       // alors le son sans rien dire. On le dit a sa place.
-      if (sansSon) Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
+      Entree.videPresse();
+      return;
+    }
+    // Le choix des parties, au titre : un menu comme les autres.
+    if (B.etat === 'titre' && B.menu) {
+      const choisit = Entree.neuf('action');
+      if (choisit) Son.reveiller();
+      const sansSon = choisit && Son.enAttente();
+      Hud.majMenu();
+      // ⚠️ Meme avis qu'au titre : c'est ICI qu'on commence, desormais.
+      if (sansSon && B.etat === 'jeu') Hud.message('SON EN ATTENTE — TOUCHE L\'ECRAN', 300);
       Entree.videPresse();
       return;
     }
@@ -657,7 +751,11 @@ const Jeu = (function () {
     const toile = d.getElementById('toile');
     Base.initCanvas(toile, fabriqueCanvas);
     Son.init(w, racine.dataset.urlStatique);
-    Sauvegarde.init(w.localStorage);
+    // ⚠️ Lire `sessionStorage` peut LEVER (stockage bloque, navigation privee
+    // de certains navigateurs) : le choix des parties s'en passe tres bien.
+    let session = null;
+    try { session = w.sessionStorage || null; } catch (e) { session = null; }
+    Sauvegarde.init(w.localStorage, session);
     Object.assign(B.options, Sauvegarde.lireOptions() || {});
     // Les boutons de manette reappris par le joueur (ecran OPTIONS > MANETTE).
     Entree.reglerManette(B.options.manette);
@@ -692,16 +790,8 @@ const Jeu = (function () {
     return chargerDefinitions(racine).then(function (defs) {
       B.defs = defs;
       Monde.charger(defs.carte);
-      B.partie = Sauvegarde.completer(Sauvegarde.lire(), defs);
-      if (B.partie.empreinte && B.partie.empreinte !== defs.empreinte) {
-        // Le catalogue a change : on garde la partie, mais une position qui
-        // n'existe plus sur la nouvelle carte doit etre oubliee — la sienne, et
-        // celle du char gare devant la planque.
-        B.partie.x = null; B.partie.y = null;
-        if (B.partie.planque && B.partie.planque.vehicule) {
-          B.partie.planque.vehicule.x = null; B.partie.planque.vehicule.y = null;
-        }
-      }
+      // La partie du dernier emplacement joue : celle que JOUER propose d'abord.
+      B.partie = chargerPartie(Sauvegarde.emplacement());
       const app = defs.carte.apparition.joueur;
       Monde.centrerCamera(app.x * TT, app.y * TT);
       B.etat = 'titre';
@@ -717,7 +807,12 @@ const Jeu = (function () {
       // se charge a l'usage (12 Mo en 166 fichiers), et doit le rester.
       Son.prechauffer(Histoire.fichiersDeLOuverture());
       const etat = d.getElementById('etat-chargement');
-      if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie en cours, jour ' + B.partie.jour : 'nouvelle partie');
+      const parties = Sauvegarde.occupes().length;
+      if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
+        + (parties > 1 ? ' · ' + parties + ' parties sauvegardées' : '');
+      // On revient d'un changement de partie : le choix se rouvre sur elle.
+      const rouvrir = Sauvegarde.rouverture();
+      if (rouvrir) ouvrirParties(rouvrir);
       dernier = 0; accu = 0;
       fenetre.requestAnimationFrame(boucle);
       return defs;
@@ -729,7 +824,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */
