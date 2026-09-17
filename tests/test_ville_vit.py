@@ -817,6 +817,9 @@ def test_un_char_se_fait_voler_sous_tes_yeux(banc, paquet):
     qui ment."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ Ce juge mesure le crime d'autrui SANS méprise : la méprise (M12) a les siens
+        // (`test_crime_d_autrui_js.py`), et une empreinte qui tombe bien ne doit rien y changer.
+        L.B.defs.recherche.autrui.chance = 0;
         L.graine(19);
         const j = L.B.joueur, f = L.B.defs.pietons.vol_de_char;
         const d = o.ligneDroite();

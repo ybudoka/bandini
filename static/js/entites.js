@@ -1499,6 +1499,8 @@ const Entites = (function () {
     // au manteau, et c'est lui qui rend la police credible.
     const agent = pietonsAutour(e.x, e.y, 120).find(function (q) { return q.agent && q.vivant; });
     if (agent) { e.etat = 'fuit'; e.menace = agent; e.minuterie = 600; e.cri = 90; agent.but = { x: e.x, y: e.y }; }
+    // ⚠️ Et parfois, un passant qui a vu la scene de loin te confond (M12).
+    else Police.crimeDAutrui('pickpocket', cible.x, cible.y, e);
   }
 
   /** Il ouvre la portiere et il s'en va avec. ⚠️ Le voleur DISPARAIT dans le
@@ -1528,6 +1530,8 @@ const Entites = (function () {
     const vu = pietonsAutour(v.x, v.y, 120).filter(function (q) { return q !== e && q.vivant && !q.metier; });
     if (vu.length) bulle(vu[0], paroles('pickpocket').au_voleur, { duree: 120 });
     alerter(v.x, v.y, e, f.peur);
+    // ⚠️ Et parfois, c'est toi qu'on a vu partir avec (M12) : le crime d'autrui.
+    Police.crimeDAutrui('vol_vehicule', v.x, v.y, e);
     Son.SFX.porte('vehicule');
     retirer(e);
   }
@@ -3428,7 +3432,11 @@ const Entites = (function () {
       } else {
         e.vx = 0; e.vy = 0;
         regarder(e, dx, dy);
-        if (e.t % f.cadence_images === 0) Combat.frapper(e, false);
+        if (e.t % f.cadence_images === 0) {
+          Combat.frapper(e, false);
+          // ⚠️ Tu passais par la : un passant te prend pour un des leurs (M12).
+          Police.crimeDAutrui('coup_pieton', e.x, e.y, e);
+        }
       }
     } else if (e.etat === 'attaque') {
       // ⚠️ ON NE FLANE PAS PENDANT QU'ON FRAPPE — et c'est un vrai trou, pas un

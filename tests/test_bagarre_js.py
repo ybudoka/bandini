@@ -106,6 +106,9 @@ def test_le_joueur_ne_paie_pas_la_bagarre(banc):
     char du trafic."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
+        // ⚠️ Ce juge mesure le crime d'autrui SANS méprise : la méprise (M12) a les siens
+        // (`test_crime_d_autrui_js.py`), et une empreinte qui tombe bien ne doit rien y changer.
+        L.B.defs.recherche.autrui.chance = 0;
         L.graine(12);
         %s
         const trouve = allumer(L);

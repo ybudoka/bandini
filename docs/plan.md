@@ -137,7 +137,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
-| M12 La ville vit | ⬜ **en cours** (quinze vagues livrées ; reprise le 17 sept. 2026 jusqu'au bout : le crime d'autrui) | 15 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
+| M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **à faire** | — | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
@@ -734,7 +734,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
-        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py
+        test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -8613,6 +8613,31 @@ sort cette nuit-là aussi.
   neufs** (`test_deneigement.py`, `test_deneigement_js.py`), **14 mutations toutes rouges**
   — celle du secteur restait verte tant que le juge regardait si le char avait disparu
   plutôt que s'il était au lot.
+
+✅ **16e vague livrée** (17 sept. 2026) — *le crime d'autrui*, et M12 est livré. La ville
+volait, cognait et partait avec des chars toute seule (le pickpocket, la rixe, le voleur de
+char) sans jamais te regarder ; maintenant, **rarement**, un passant qui a vu la scène de
+loin te désigne — « C'EST LUI! » — si tu te tenais tout près. Il porte le crime, il court le
+dire à un agent ou il téléphone, et on peut lui acheter le silence.
+
+- ⚠️ **Le juge du plan : aucune étoile à un joueur qui n'y est pour rien.** Un VRAI vol à la
+  tire (la routine du pickpocket, pas un appel à la main), la méprise forcée à coup sûr, le
+  joueur immobile à 112 px de la victime : ni crime à son nom, ni chaleur, sur toute la
+  machine des témoins. À 24 px, le badaud le désigne et la chaleur monte. Le rayon
+  (`autrui.rayon_px`, 72) est la seule distance qui compte, et Python le borne à cinq
+  tuiles.
+- ⚠️ **Rare** : une chance sur trois (`autrui.chance`), tirée à l'EMPREINTE de l'image et du
+  coupable — aucun dé, mesurée entre 20 et 50 % sur 400 images —, et pas deux méprises en
+  une minute et demie. **Lisible** : la scène doit être à l'écran (le vrai coupable avec) ;
+  le témoin doit voir le JOUEUR ; au volant, on passe. Et chaque méprise ne vaut qu'un délit
+  à UNE étoile qui exige un témoin : on peut toujours lui acheter le silence.
+- ⚠️ **La victime ne se trompe pas de coupable** : la plus proche de la scène, c'était elle
+  — et elle te montrait du doigt au lieu de crier « AU VOLEUR! » après celui qui fuyait. Qui
+  fuit le vrai coupable est écarté. ⚠️ Et le premier juge lisait des étoiles : un vol à la
+  tire rapporté vaut le tiers d'une (35 de chaleur sur 100) — il lit la chaleur, comme le
+  juge des témoins. Les trois juges qui tenaient « le joueur ne paie jamais le crime d'un
+  autre » fixent la chance à 0 : ils mesurent le crime, pas la méprise. **6 juges neufs**
+  (`test_crime_d_autrui.py`, `test_crime_d_autrui_js.py`), **13 mutations toutes rouges**.
 
 ### M14 Meta
 

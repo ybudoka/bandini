@@ -148,6 +148,46 @@ const Police = (function () {
     return crime;
   }
 
+  /** LE CRIME D'AUTRUI (M12) : un passant confond le joueur avec le vrai coupable.
+
+      ⚠️ Rare (`autrui.chance`, tiree a l'EMPREINTE de l'image et du coupable : aucun
+      de), lisible (la scene est a l'ecran, et le vrai coupable avec — le pickpocket qui
+      file, la victime qui crie « au voleur »), et JAMAIS au-dela de `autrui.rayon_px` :
+      un joueur qui n'y est pour rien et qui se tient loin ne recoit rien. Le passant
+      qui te designe doit te VOIR, pas le coupable ; il crie, et la suite est la
+      machine des temoins — il court le dire a un agent, et on lui achete le silence.
+      Au volant, on passe : personne ne confond un char avec un voleur a pied. */
+  function crimeDAutrui(type, x, y, coupable) {
+    const r = defs().autrui, delit = defs().delits[type], j = B.joueur;
+    if (!r || !delit || !j || !j.vivant || B.interieur || j.dansVehicule) return null;
+    if (Math.hypot(j.x - x, j.y - y) > r.rayon_px) return null;
+    if (!Entites.visibleAEcran(x, y, 0)) return null;
+    if (B.recherche.autruiT !== undefined && B.t - B.recherche.autruiT < r.repos_s * 60) return null;
+    if (hash2(B.t, coupable && coupable.id || 0) % 1000 >= r.chance * 1000) return null;
+    let temoin = null, dMin = Infinity;
+    for (const e of Entites.pietonsAutour(x, y, r.temoin_px)) {
+      if (e === coupable || !e.vivant || e.agent || e.intouchable || e.metier || e.gang) continue;
+      if (e.etat === 'assomme' || e.etat === 'temoin' || e.bagarre) continue;
+      // ⚠️ La VICTIME ne se trompe pas de coupable : elle fuit celui qui l'a volee, et
+      // c'est lui qu'elle designe (« AU VOLEUR! »). Sans cette ligne, c'est elle — la plus
+      // proche de la scene — qui te montrait du doigt.
+      if (coupable && e.menace === coupable) continue;
+      if (!Monde.ligneLibre(e.x, e.y, j.x, j.y)) continue;
+      const d = Math.hypot(e.x - x, e.y - y);
+      if (d < dMin) { dMin = d; temoin = e; }
+    }
+    if (!temoin) return null;
+    const crime = { type: type, gravite: delit.etoiles, temoin: true, x: j.x, y: j.y, t: B.t, vu: true, rapporte: false, autrui: true };
+    B.crimes.push(crime);
+    if (B.crimes.length > 40) B.crimes.shift();
+    const t = defs().temoins;
+    temoin.etat = 'temoin'; temoin.crime = crime; temoin.menace = j; temoin.minuterie = t.oubli_s * 60; temoin.cri = 120;
+    Entites.regarder(temoin, j.x - temoin.x, j.y - temoin.y);
+    Entites.bulle(temoin, r.cri, { duree: 150 });
+    B.recherche.autruiT = B.t;
+    return crime;
+  }
+
   /** Un temoin arrive a un agent (ou telephone) : le crime est connu. */
   function rapporter(crime, agent) {
     if (!crime || crime.rapporte) return false;
@@ -720,7 +760,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, rapporter, acheterLeSilence, remiseAZero, entendre,
+  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };

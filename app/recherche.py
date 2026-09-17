@@ -120,6 +120,25 @@ TEMOINS = {
     "delai_depeche_s": 8,
 }
 
+#: ⚠️ LE CRIME D'AUTRUI (M12) : « un crime qu'on n'a pas commis peut te tomber dessus si
+#: tu es au mauvais endroit — un témoin qui te confond. C'est risqué, donc c'est RARE et
+#: LISIBLE (on voit le vrai coupable), et un juge vérifie qu'aucune étoile ne tombe sur
+#: un joueur immobile à plus de N tuiles. »
+#:
+#: La ville vole, cogne et part avec des chars toute seule (le pickpocket, la rixe, le
+#: voleur de char) ; parfois, un passant qui a vu la scène de loin désigne le joueur
+#: qui passait TOUT PRÈS. `chance` : la part des crimes vus d'assez près qui trouvent
+#: quelqu'un pour te confondre (tirée à l'empreinte, jamais au dé) ; `rayon_px` : jamais
+#: au-delà ; `repos_s` : pas deux méprises coup sur coup. La suite est la machine des
+#: témoins : il court le dire à un agent, et on peut lui acheter le silence.
+AUTRUI = {
+    "chance": 0.35,
+    "rayon_px": 72,
+    "temoin_px": 140,
+    "repos_s": 90,
+    "cri": "C'EST LUI!",
+}
+
 #: LE STOOL — celui qui n'a RIEN VU, et qui te reconnait quand meme.
 #:
 #: ⚠️ **Ce n'est pas un temoin, et la difference est tout le personnage.** Le
@@ -322,6 +341,7 @@ def exporter() -> dict:
         "delits": DELITS,
         "vision": VISION,
         "temoins": TEMOINS,
+        "autrui": dict(AUTRUI),
         "stool": dict(STOOL),
         "bouclier": dict(BOUCLIER),
         "deguisement": DEGUISEMENT,
