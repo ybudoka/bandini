@@ -163,10 +163,11 @@ ne bougent pas quand l'ordre de travail change.
 | Rien devant une porte | **livré** | 16 sept. 2026 | **P2** | **correctif** | retour de Martin, capture à l'appui (une machine distributrice plantée devant la porte de la PIZZERIA NAPOLI) : « jamais rien devant la porte d'une maison, d'un commerce ou autre ». ⚠️ **Mesuré** sur sept graines : les vraies portes (`D`, `d`, `G`) avaient toujours leurs deux tuiles de devant libres ; **tout** ce qui bouchait était devant une porte **peinte** (`P`, celle qu'une devanture ou un logement se dessine quand son bâtiment n'en a pas tiré) — 3 à 7 objets par ville : des distributrices surtout (`distributrices()` prenait le `P` pour une vitrine), un BBQ, un arbre, un paquet. **Livré** : la porte peinte est une porte — `degager_le_devant` (sorti de `poser_porte`) réserve et vide ses deux tuiles comme pour une vraie, `est_une_porte` la reconnaît, et la machine ne se pose plus ni sous elle ni à côté. Remesuré : **zéro** objet devant une porte sur les sept graines, et autant de machines qu'avant (30 à 32). Juge `test_rien_ne_se_tient_devant_une_porte_meme_peinte` (quatre graines, décor, kiosques, réclames, scènes et paquets) — vu **rouge** sans le dégagement (BBQ, arbre, paquet sur trois graines). ⚠️ **La piste d'une rampe passe quand même** devant une porte peinte (`devants_peints`, `_roulable(piste=True)`) : elle se garde vide, et sans ça la rampe du stationnement voisin de la NAPOLI tombait — cinq rampes, `test_il_y_a_des_rampes` rouge, le panneau du Grand Saut déplacé et un baigneur sans serviette : les kiosques, les réclames et la barrière du cargo suivaient la rampe. Le pied et la lèvre, eux, jamais (le juge les compte). Ce qui bouge dans la ville du jeu : le décor dégagé et **les 20 paquets** (leur liste de places a perdu des tuiles). ⚠️ Pas touché : **à côté** d'une vraie porte, neuf guichets restent encastrés sous la vitrine voisine — ils ne bouchent rien, mais c'est à Martin de dire si « devant » veut aussi dire « collé ». |
 | Une icône, un favicon et un logo | **en cours** | 16 sept. 2026 | **P3** | ajout | demande de Martin : « fait moi un favicon et icone pour webapp », puis « et un beau logo en pixel art pour l'accueil ». Le premier morceau de « Installable, et jouable hors ligne » (plus bas) : les icônes qu'iOS et Android attendent pour l'écran d'accueil, et le titre de l'accueil dessiné en pixels — sans le worker. |
 | Le petit train et la montagne russe de la foire | **en cours** | 16 sept. 2026 | **P4** | ajout | demande de Martin : « ajoute un petit train qui fait le tour de la foire et une énorme montagne russe ». Suite de la foire refaite (ligne « Le bord de l'eau et la foire »). ⚠️ **Deux choses qui bougent pour de vrai, pas deux manèges de plus** : le train suit une voie fermée le long de la clôture, par l'intérieur, et **s'arrête devant quelqu'un** (un train de foire ne renverse personne) ; la montagne russe est la plus grosse chose de la ville, en l'air — on passe dessous, seuls ses pieds arrêtent — et ses chars montent lentement la côte et plongent. Sans dé (l'empreinte, jamais `B.rng()`), et on n'y monte pas, comme les manèges. |
+| Les missions mises en scène | **à faire** | — | **P2** | ajout | demande de Martin : « je veux que chaque mission vienne avec des animations et des dialogues ». Devient une **décision** (« Contexte ») : une mission, c'est ses objectifs, ses répliques à chaque temps (appel, intro, **pendant**, fin, échec) et ses **scènes** d'intro et de fin — sinon elle n'est pas finie. ⚠️ **Mesuré le 16 sept. 2026** : les dialogues sont là sauf au milieu (le client de m3 est la seule réplique dite pendant une mission) ; les animations n'existent pas — `B.cinema` fige une boîte de texte, et la seule scène animée du jeu, l'ouverture, est écrite en dur (265 lignes pour une dizaine de secondes) ; **trois fins sur cinq sont dites par des absents** (m1, m4, m5) ; et la seule animation de fin est un `if (m.slug === 'm1')` dans `reussir()`. ⚠️ **Un vocabulaire, pas des scripts** : une scène est une liste de plans typés dans `missions.py` (`camera`, `marcher`, `conduire`, `geste`, `entrer`/`sortir`, `coupe`, `dire`, `titre`, `son`, `attendre`), six gestes dessinés une fois sur le sprite que partagent tous les personnages. Deux vagues : le metteur en scène **et l'ouverture réécrite dedans** (ses 13 juges sans retouche : la preuve que le vocabulaire suffit), puis les cinq missions de la v1. ⚠️ **Avant M16**, dont chaque mission l'écrira |
 | L'Île-aux-Corneilles | **à faire** | — | **P4** | ajout | demande de Martin : « tu peux extensionner la carte au besoin » — ⚠️ mesuré, le besoin est nul : **21 % de la carte est déjà de l'eau** (18 675 tuiles) et un rectangle de **40 × 24 tuiles d'eau pleine** attend au milieu de la baie. Une île, un quai, une chapelle, une usine à poisson fermée, **pas de police** (on y laisse refroidir un char et un casier), et une seule porte de sortie. Elle donne enfin une destination au traversier de M12 et à la fin _Le dernier traversier_ |
 | Quatre activités que le jeu n'a pas | **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | sorti de la tournée du net : des **paliers** de boulot avec récompense permanente (**livrés le 15 sept.**, `aee8543` : +25 % de vie à 25 ambulances, le char à la planque à 50), deux boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante_, mais avec un casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent intouchables |
 | Installable, et jouable hors ligne | **à faire** | — | **P4** | ajout | demande de Martin : « est-ce compliqué de faire du jeu une webapp installable ? », puis « jouable hors ligne ». ⚠️ **Mesuré : sur iPhone, la moitié est déjà faite, et personne ne l'a voulu** — `base.html` porte déjà `apple-mobile-web-app-capable`, `mobile-web-app-capable`, `theme-color` et `viewport-fit=cover` : « Ajouter à l'écran d'accueil » donne **aujourd'hui** une app plein écran sans barre Safari. Il n'y manque qu'une **icône** — iOS ne prend pas un `favicon.svg` et colle une capture d'écran floue à la place. Android et Chrome bureau, eux, exigent trois choses : un `manifest.webmanifest`, des icônes PNG (192, 512, une *maskable* — Chromium est **déjà là** pour Playwright, il rend le SVG sans rien ajouter au projet) et un service worker **qui a un gestionnaire `fetch`** : sans lui, Chrome ne propose pas l'installation du tout. ⚠️ **Le worker se sert à la RACINE, et c'est le seul vrai piège** : Flask sert tout sous `/static/`, or un worker ne contrôle que son dossier — `/static/js/sw.js` ne verrait jamais `/`. Il lui faut sa route à lui dans `routes.py`, en `no-cache` : nginx met `expires 7d` sur `/static/`, et un worker figé une semaine est un piège qui se referme sur la session suivante. ⚠️ **Le poids est mesuré, et c'est lui qui décide** : la coquille pèse **300 Ko** de JS gzippé et **65 Ko** de définitions (492 Ko brut) — précachée sans y penser ; l'audio pèse **12 Mo en 166 fichiers**, chargés à la demande (`son.js` : `fetch` puis `decodeAudioData`). Avaler 12 Mo en silence sur un forfait cellulaire n'est pas une fonctionnalité : l'audio se cache **à l'usage**, et « toute la ville hors ligne » est un **bouton** qu'on choisit. ⚠️ **Le cache se nomme par l'EMPREINTE, jamais par la version** — `definitions.py` calcule déjà un sha256 du paquet, et la sauvegarde s'en sert pour oublier une position qui n'existe plus (`jeu.js`). Un paquet caché qui ne correspond plus au JS servi ne ressemble pas à un bogue de cache : il ressemble à un bogue de jeu. C'est mot pour mot ce que `version.py` dit déjà dans sa propre docstring. ⚠️ Et **un worker naïf casserait la revalidation 304** montée dans `api_definitions` — celle qui accepte l'ETag **faible** de nginx. ⚠️ **Les mp3 ne portent pas `?v=`**, contrairement au JS : un bruitage regénéré garde son nom, donc un cache d'usage servirait l'ancien pour toujours. Il faut une règle de purge, et elle n'a pas de version à quoi se raccrocher. ⚠️ **Les scores restent en ligne** : `horsLigne` existe (`jeu.js`) mais ne couvre que l'échec de chargement des définitions — l'écran des scores n'a aucun chemin hors-ligne, et un tableau vide qui ment est pire qu'un tableau qui dit « pas de réseau ». ⚠️ À **vérifier sur le serveur** : le snippet de sécurité nginx (`gestion-dojo-security-server.conf`, hors dépôt) peut porter un CSP qui bloque `worker-src` ou `manifest-src` — et ça ne se verra qu'en prod. Deux vagues : **(1) l'installation** (manifeste, icônes, worker minimal — ~2 h), **(2) le hors-ligne pour vrai** (coquille précachée, audio à l'usage, définitions par empreinte, scores qui disent la vérité — ~1 jour). Les juges ont déjà leur banc : `test_navigateur.py` lance un vrai Chromium, donc le worker se juge en coupant le réseau après le premier chargement. |
-| M16 Cent missions | **à faire** (v2) | — | **P4** | ajout | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche |
+| M16 Cent missions | **à faire** (v2) | — | **P4** | ajout | demande de Martin : « plus de 100 missions avec les personnages existants et de nouveaux personnages, partout sur la carte ». **109 missions de plus** en 9 arcs, 34 personnages, 9 types d'objectifs de plus — et rien d'autre : le moteur apprend neuf verbes, le reste est du catalogue. ⚠️ Le carnet passe avant (cent missions sans carnet, c'est cent appels qu'on oublie) ; M13 en devient la dernière tranche. ⚠️ **Depuis le 16 sept. 2026, chaque mission vient avec ses scènes et ses dialogues** (« Les missions mises en scène », qui passe avant) : une tranche livre ses missions mises en scène, ou ne se livre pas |
 | M13 Les deux fins | **à faire** (v2) | — | **P4** | ajout | une mission par district, Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ |
 
 ## Dettes
@@ -266,6 +267,7 @@ Décisions prises avec Martin (12 sept. 2026) :
 | Idées | **toutes** les idées de la première liste + les 28 nouvelles ; prémisse, ville et personnages retenus |
 | Audio (12 sept. 2026) | les sons importants sont de **vrais échantillons ElevenLabs**, générés par le serveur MCP `elevenlabs` et versionnés dans `static/audio/` ; la synthèse de `son.js` reste le **filet** quand un fichier manque. Voix des personnages en M6, radios en M3. |
 | Voix de l'histoire (13 sept. 2026) | **chaque réplique de l'histoire est dite à voix haute, en plus d'être écrite.** Les dialogues des donneurs (Ti-Guy, Mme Thibodeau, Sgt Bouchard, Josée, Dr Lachance, Marco), le téléphone, les manchettes du journal : une voix ElevenLabs **par personnage**, générée une fois par TTS et versionnée comme le reste. Le texte reste affiché (lisibilité, muet, tactile) ; la voix s'ajoute, elle ne remplace pas. |
+| Missions mises en scène (16 sept. 2026) | **chaque mission vient avec ses animations et ses dialogues.** Une mission, c'est trois choses : ses objectifs, ses **répliques dites à voix haute** à chaque temps (appel, intro, pendant, fin, échec) et ses **scènes** (le donneur qui fait un geste, la caméra qui va voir où l'on s'en va, ce qu'on gagne qu'on voit arriver). Une mission à qui il en manque une **n'est pas finie**, et le juge du catalogue la refuse. Les scènes sont des **données** dans `missions.py`, écrites dans un vocabulaire de plans — jamais un script par mission. Voir « Les missions mises en scène ». |
 
 ## La vision (tout ce qui est retenu)
 
@@ -351,7 +353,9 @@ assurance et fraude, le shylock **v2**.
 **Missions et narratif** : histoire par téléphone et PNJ, 5 missions v1 (voir plus bas),
 3 défis · contacts du marché noir, la peur fait taire les témoins **v1** · **toutes les
 répliques sont dites à voix haute** (ElevenLabs, une voix par personnage) en plus du texte
-**v1** — voir « Les voix de l'histoire » ci-dessous.
+**v1** — voir « Les voix de l'histoire » ci-dessous · **chaque mission est mise en scène** :
+des scènes animées à l'intro et à la fin, et une réplique à chaque temps, pendant compris
+**v2** — voir « Les missions mises en scène ».
 
 **Meta et présentation** : tableau des scores en ligne (fortune, missions, propriétés,
 durée) · bilan de session, caméra qui respire, visée assistée, GPS pointillé, options
@@ -385,6 +389,162 @@ des passants. Ce que ça implique, jalon par jalon :
   le journal du matin est lu par le narrateur, en plus de la manchette.
 - **Un test navigateur** prouve que chaque voix se décode ; un test Python que chaque
   réplique a un personnage connu et tient en une phrase ou deux.
+
+## Les missions mises en scène (décision du 16 sept. 2026)
+
+_Demande de Martin (16 sept. 2026) :_ « je veux que chaque mission vienne avec des
+animations et des dialogues. »
+
+**La règle.** Une mission, c'est **trois choses** : ses objectifs, ses **dialogues** et ses
+**scènes**. Les trois vivent dans `missions.py`, les trois sont jugées, et une mission à qui
+il en manque une **n'est pas finie** — ni les cinq de la v1, ni les cent de M16, ni celle
+qu'on ajoutera dans un an. Le juge du catalogue la refuse, comme il refuse déjà un objectif
+sans type. La règle des voix (ci-dessus) tient sans changer : le texte est la source, une
+voix par personnage, une réplique sans mp3 s'affiche sans voix.
+
+⚠️ **Mesuré le 16 sept. 2026, et c'est ce qui dit ce qui manque.**
+
+- **Les dialogues sont là, sauf au milieu.** Les cinq missions ont six ou sept répliques,
+  toutes dites à voix haute : l'appel (sauf m1, où Ti-Guy t'attend au terminus), l'intro, la
+  fin, l'échec — et le client de m3, **la seule réplique du jeu dite pendant une mission**.
+  Entre l'intro et la fin, le donneur se tait : le fuyard part en moto, le chef des Cravates
+  sort, Ti-Guy démarre derrière l'auto-patrouille, et personne ne dit rien.
+- **Les animations, elles, n'existent pas.** Pendant un dialogue, `B.cinema` fige la ville
+  et pose une boîte de texte : le donneur reste planté, la caméra ne bouge pas. **La seule
+  scène animée du jeu est l'ouverture**, et elle est écrite **en dur** dans `histoire.js` —
+  ses temps en images (`OUV`), son autobus, son trajet : 265 lignes pour une scène d'une
+  dizaine de secondes. Cent trente-quatre scènes écrites comme ça, c'est un moteur que personne ne
+  relit plus.
+- **La fin est dite par des absents.** Trois fins sur cinq se déclenchent loin du donneur :
+  m1 finit au garage (Ti-Guy est au terminus), m4 au garage (Bouchard mange au
+  casse-croûte), m5 à la planque (Josée est au Brouillard). Leur voix sort de nulle part, et
+  sans le « (AU TÉLÉPHONE) » que porte l'appel.
+- **Et la seule animation de fin de mission est un `if (m.slug === 'm1')`** dans
+  `reussir()` : Ti-Guy rentre dans le terminus. C'est exactement ce que M16 interdit.
+
+**Ce que chaque mission porte, au minimum :**
+
+| Temps | Dialogue | Scène |
+|---|---|---|
+| **Appel** | une réplique, au combiné — sauf un donneur qu'on rencontre en personne | aucune : le téléphone fige déjà la ville (« Le char abrite, l'appel fige »), une scène de plus en ferait une pause |
+| **Intro** | deux à quatre répliques du donneur | **elle montre** : le donneur fait un geste, la caméra va voir où l'on s'en va — le char, le coin de rue, le poste — et revient |
+| **Pendant** | **au moins une**, accrochée à un objectif, dite quand il commence — au combiné si le donneur n'est pas là (la règle de `B.cinema` tient : elle fige à pied, jamais au volant) | facultative : un temps fort, si l'objectif en a un (le fuyard enfourche sa moto) |
+| **Fin** | une à trois répliques, **dites par quelqu'un qui est là** | **on voit ce qu'on gagne** — la clé tendue, l'enseigne, la poignée de main — et la fin **passe la main** : si elle nomme le prochain donneur, la caméra va le voir |
+| **Échec** | une réplique, **au combiné** : on n'est jamais à côté du donneur quand on rate | aucune de plus : le fondu de l'hôpital ou de la prison **est** la scène |
+
+⚠️ **Un vocabulaire, pas cent trente-quatre scripts.** La règle de M16 s'étend aux scènes :
+une scène est une **liste de plans** dans `missions.py`, typés comme les objectifs, et
+`histoire.js` ne connaît aucune scène par son nom. Une dizaine de types (`TYPES_PLANS`) — et
+si une scène ne s'écrit pas avec eux, on ajoute **un type**, jamais un
+`if (slug === 'q07')` :
+
+- `camera` — aller voir un lieu (tout ce que `resoudre()` connaît), le tenir, revenir ;
+- `marcher` — un acteur va à un lieu, à pied, les jambes animées (`marcherVersLeQuai`,
+  généralisé) ;
+- `conduire` — un char de la scène entre par la rue, s'arrête, repart hors champ (l'autobus
+  de l'ouverture, généralisé) ;
+- `geste` — un acteur fait un geste : `montrer`, `donner`, `prendre`, `bras_croises`,
+  `hausser`, `telephone` ;
+- `entrer` et `sortir` — un acteur passe une porte (le Ti-Guy de m1, sans son `if`) ;
+- `coupe` — un fondu vers un autre lieu, puis retour : c'est ce qui fait parler un donneur
+  **chez lui** quand la fin se joue ailleurs, et ce qui montre dehors une scène qui commence
+  dedans. ⚠️ Son propre noir, comme l'ouverture : `Jeu.transiter()` fige la boucle, et la
+  scène doit continuer pendant le fondu ;
+- `dire` — la réplique n de la partie : la scène se joue **sous** ses répliques ;
+- `titre` — le carton : le titre de la mission à l'intro, la prime à la fin ;
+- `son` — un bruitage du catalogue ;
+- `attendre` — n images.
+
+⚠️ **Les gestes se dessinent une fois pour tout le monde.** Les personnages sont tous le
+sprite `joueur` repeint (`couleurs` : chandail, cheveux, peau, pantalon) : six gestes dessinés
+sur lui, dans ses trois faces, servent à tous ceux qui le portent — ceux d'aujourd'hui
+et ceux de M16. **Aucun sprite par mission** — ce
+qu'une scène fait passer de main en main (la clé, la caisse) est un décor du catalogue.
+
+**Les règles du moteur** — celles que l'ouverture a déjà payées, et qui deviennent
+générales :
+
+- ⚠️ **Aucun dé tiré.** Une partie jouée en regardant les scènes est exactement celle qu'on
+  joue en les passant : même tuile, même monde, même prochain dé. C'est le juge central de
+  l'ouverture, étendu au catalogue.
+- ⚠️ **La mission se pose AVANT sa scène d'intro.** Aujourd'hui `commencer()` n'est appelé
+  qu'à la fin du dialogue : quand Madame Thibodeau parle de ses deux Cravates, ils n'existent
+  pas encore, et la caméra filmerait un coin vide. Ce n'est pas un dé de déplacé — la ville
+  est figée pendant la scène et la scène n'en tire aucun, donc les tirages de `poser()`
+  tombent dans le même ordre. ⚠️ Dedans (Josée au bar), rien ne se pose avant la sortie
+  (`aPoser`) : la scène montre alors un **lieu** par `coupe`, jamais un acteur qui n'existe
+  pas.
+- ⚠️ **On la passe** : ACTION saute une réplique, PAUSE saute la scène, et l'on tombe
+  exactement où elle nous aurait laissés. Une mission ratée se retente : une scène qu'on ne
+  peut pas passer devient une punition à la deuxième tentative.
+- ⚠️ **Elle se termine toujours.** Un plan dont le lieu ne se résout pas est **sauté**, jamais
+  attendu ; une voix qui ne dit jamais qu'elle s'est tue garde son plafond (`majCinema`).
+- ⚠️ **Elle ne déplace pas le joueur.** La caméra voyage, le bonhomme reste — ou revient à la
+  dernière image (`retour`, la règle de l'ouverture revue du carnet).
+- ⚠️ **Jamais en pleine action.** La scène de fin ne part ni à 3★ et plus, ni dans un char
+  qui roule. **L'argent et `donne` sont accordés tout de suite** ; la scène attend qu'on soit
+  à l'arrêt et hors poursuite. Rien de ce qu'on gagne ne dépend de l'avoir regardé.
+- ⚠️ **Courte.** Elle se termine quand ses plans **et** ses répliques sont finis, jamais au
+  premier des deux (la règle de l'ouverture) — et une scène ne tient pas plus de trois
+  secondes après son dernier mot.
+- ⚠️ **L'ordre des slugs de voix ne bouge pas.** `pendant` se compte **après** `echec` dans
+  `repliques()` et `slugDeVoix()` : insérée avant `fin`, elle renommerait les quinze voix de
+  fin et d'échec déjà générées, et quinze mp3 payés deviendraient des 404. Et une fin qui
+  passe au combiné ne se **régénère** pas : le combiné est un filtre joué, pas un fichier.
+
+**Les cinq missions de la v1, mises en scène** — le banc d'essai du vocabulaire :
+
+| # | Intro | Pendant | Fin |
+|---|---|---|---|
+| m1 | Ti-Guy `montrer` vers le garage ; `camera` sur le garage et sa ruelle — un lieu, pas le char : il appartient au deuxième objectif, qui ne se pose pas encore | quand on monte dans le char, au combiné | Ti-Guy `sortir` du garage, fait le tour du char, `donner` la clé ; il `entrer` au garage — et le `if` de `reussir()` disparaît |
+| m2 | Madame Thibodeau `montrer` le coin ; `camera` sur les deux Cravates | le fuyard enfourche sa moto (`conduire`) | elle `prendre` la caisse, `donner` le bâton de son défunt |
+| m3 | Marco `donner` les clés ; `camera` sur le taxi | le client (existe) | Marco fait le tour du taxi, `montrer` vers le casse-croûte ; `coupe` sur Bouchard à son dîner — la fin passe la main |
+| m4 | Bouchard, dedans : `coupe` sur le poste (un lieu : l'auto-patrouille est le deuxième objectif) | quand Ti-Guy démarre derrière toi, au combiné | `coupe` au casse-croûte : Bouchard au `telephone`, ses deux répliques au combiné |
+| m5 | Josée, dedans : `coupe` sur les trois coins des Cravates, un par un | quand le chef sort, au combiné | `coupe` au Brouillard : Josée devant sa porte, l'enseigne est à toi |
+
+**Ce que ça coûte :**
+
+- **Voix** : une réplique `pendant` par mission, ≈ 75 caractères — **400 pour la v1**, et
+  ≈ **10 000** sur les cent trente-quatre de M16.
+- **Musique** : **zéro**. Aucun morceau par mission : la scène baisse ce qui joue (le
+  _ducking_ des voix existe).
+- **Dessin** : six gestes, une fois.
+- **Paquet** : une dizaine de plans pèsent un demi-kilo-octet par scène. Pour cinq missions,
+  rien ; pour cent trente-quatre, ≈ 130 Ko bruts — les scènes **voyagent avec leurs
+  répliques**, par `/api/dialogue/<slug>` (M16).
+
+**Juges** — on juge le câblage, pas la fiche :
+
+- _Python_ (`test_mise_en_scene.py`) : chaque mission du catalogue a une scène `intro` et
+  une scène `fin` non vides, des répliques `intro`, `fin` et `echec`, et au moins une
+  réplique `pendant` accrochée à un objectif qui existe ; chaque plan est d'un type connu,
+  chaque lieu se résout, chaque acteur est le joueur, le donneur, un personnage connu ou un
+  homme que la mission pose ; **une fin qui se déclenche loin du donneur** commence par une
+  `coupe` chez lui ou le fait `marcher` jusqu'à toi — sinon ses répliques sont au combiné ;
+  l'échec est au combiné.
+- _Python_ : `histoire.js` ne contient **aucun slug de mission** — le juge qui aurait
+  attrapé le `if` de Ti-Guy. ⚠️ Le remettre pour le voir rougir avant de le croire.
+- _Banc_ : **chaque scène du catalogue** se termine, jouée sans jamais toucher ACTION et
+  avec toutes ses voix absentes ; PAUSE à n'importe quel plan tombe sur le même état que la
+  scène jouée jusqu'au bout ; le prochain dé (`B.rng()`) est le même avec et sans les
+  scènes ; aucune scène ne part à 3★ ou au volant d'un char qui roule.
+- _Banc_ : **l'ouverture, réécrite dans le vocabulaire, passe ses 13 juges sans qu'on en
+  touche un.** C'est la preuve que les plans suffisent : s'ils n'écrivent pas l'ouverture, ils
+  n'écriront pas cent trente-quatre missions. Le générique (2e vague de « La ligne
+  d'histoire ») s'écrit dans le même vocabulaire.
+- _Navigateur_ : m1 jouée de l'intro à la fin, aucune erreur console.
+- _Martin_ : jouer m1 à m5 sans jamais entendre quelqu'un qui n'est pas là, et savoir où
+  aller **avant** que l'objectif s'affiche, parce que la scène l'a montré.
+
+**Comment on le livre** (taille 3, deux vagues, chacune jouable et déployée) :
+
+1. **Le metteur en scène** (taille 2) : `TYPES_PLANS` et leur lecteur, les six gestes, la
+   mission posée avant son intro, et **l'ouverture réécrite dedans** — rien ne change à
+   l'écran, et c'est le but : ses 13 juges le prouvent.
+2. **La v1 mise en scène** (taille 1) : les cinq scènes d'intro, les cinq de fin, les cinq
+   répliques `pendant` et leurs voix, les fins d'absents au combiné ou en `coupe`, le `if` de
+   m1 retiré. ⚠️ **Avant la première tranche de M16** : c'est ce vocabulaire que ses cent
+   missions écriront.
 
 ## Architecture
 
@@ -483,6 +643,10 @@ refusé +1 · entrer armé en territoire de gang : 0 ★ mais la gang attaque.
 
 Défis : Le Grand Saut du viaduc (moto) · Tour du Faubourg (3 tours < 2:00) · Livraison sans
 bosse (90 s, 1★ au départ, zéro dégât).
+
+⚠️ **Depuis le 16 sept. 2026, chacune doit aussi être mise en scène** — une scène d'intro,
+une scène de fin, une réplique pendant ; ce qu'elles montrent est écrit dans « Les missions
+mises en scène ».
 
 La suite — 109 missions, 34 personnages, les cinq districts — est en **M16**.
 
@@ -629,6 +793,7 @@ ordre-là.
 | **P2** | ajout | Des sortes de gens — le réservoir | 3 | ⚠️ **deux vagues livrées** (les trois de Martin, puis cinq des sept « qui viennent avec »). Reste le réservoir, où l'on pige par vagues — plus la **personne âgée** (attend les feux pour piétons) et le **pickpocket** (M12) |
 | **P2** | **correctif** | Les véhicules vus **de profil**, comme les piétons | 5 | ⚠️ **avant tout véhicule de plus** — le tramway et le traversier de M12, le sprite du bateau en dette : chaque char dessiné avant la refonte se dessine deux fois. Ne touche **qu'au dessin** (la physique voit toujours un rectangle vu d'en haut), et jette les quatre toits de M9 |
 | **P2** | ajout | La ligne d'histoire : une ouverture et un générique | 3 | ⚠️ **l'ouverture est livrée** (16 sept. 2026) — elle ne dépendait de rien ; le **générique**, lui, attend **M13** : il n'y a pas de fin à filmer avant |
+| **P2** | ajout | Les missions mises en scène | 3 | ⚠️ **avant M16** : c'est le vocabulaire de plans que ses cent missions écriront, et chaque mission écrite avant lui s'écrirait deux fois. L'ouverture s'y réécrit en premier (ses 13 juges sont la preuve), puis les cinq missions de la v1 |
 | **P3** | **correctif** | Le trottoir **et les traverses** de deux tuiles | 2 | ⚠️ redessine la ville : tout ce qui touche à la géométrie passe après |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | M10 L'argent sale | 3 | **M9** : les guichets se défoncent au camion |
@@ -638,7 +803,7 @@ ordre-là.
 | **P4** | ajout | Les zones conditionnelles | 3 | avant l'île et avant les entraves de M12 : c'est le mécanisme qu'elles partagent toutes les deux |
 | **P4** | ajout | L'Île-aux-Corneilles | 3 | **les zones conditionnelles** d'abord ; l'eau est livrée, le traversier (M12) viendra après et l'île l'attend sans lui |
 | **P4** | ajout | Quatre activités que le jeu n'a pas | 2 | ⚠️ la **refonte des véhicules** d'abord (les deux boulots neufs ne demandent aucun char de plus, mais la liste du quai fait regarder le parc de près) |
-| **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) ; ⚠️ les dialogues sortent du paquet ; M13 en est la dernière tranche |
+| **P4** | ajout | M16 Cent missions | 8 (4 × 2) | le **carnet** d'abord (c'est lui qui rend cent missions lisibles) et **les missions mises en scène** (chaque mission porte ses scènes et ses dialogues) ; ⚠️ les dialogues et les scènes sortent du paquet ; M13 en est la dernière tranche |
 | **P4** | ajout | M13 Les deux fins | 4 | **M8** pour les districts, et ça gagne à suivre **M10** : la dette de Rocco est le fil des deux fins. C'est la fin — elle se pose en dernier |
 
 M8 porte tout le reste (les gangs, les fins, le traversier, la fourrière ont besoin de la
@@ -4828,9 +4993,22 @@ tiennent sur onze types d'objectifs et quatre causes d'échec, et `histoire.js` 
 aucune mission par son nom. La règle tient : **une mission est une liste d'objectifs dans
 `missions.py`**, et si une idée ne s'écrit pas avec les types existants, on ajoute **un
 type** — jamais un `if (slug === 'q07')`. Ce jalon en ajoute neuf, listés plus bas, et
-c'est tout ce que le moteur apprend. Les cent missions sont des **données**.
+c'est tout ce que le moteur apprend. Les cent missions sont des **données** — objectifs,
+répliques **et scènes**.
+
+⚠️ **Chaque mission vient avec ses animations et ses dialogues** (décision du 16 sept.
+2026, « Les missions mises en scène ») : une scène d'intro qui montre où l'on va, une scène
+de fin où l'on voit ce qu'on gagne, et une réplique à chaque temps — appel, intro, **pendant**,
+fin, échec. Les tables ci-dessous disent ce qu'on **fait** ; la scène et les répliques
+s'écrivent **ensemble**, dans la tranche qui livre la mission, avec le vocabulaire de plans
+déjà livré. Une mission qui n'a que ses objectifs n'est pas livrée.
 
 #### Ce que le moteur apprend (et rien d'autre)
+
+- **Rien pour la mise en scène.** Le vocabulaire de plans (`camera`, `marcher`, `conduire`,
+  `geste`, `coupe`…) et les six gestes sont livrés **avant** ce jalon. M16 n'y ajoute un type
+  que si une de ses scènes ne s'écrit pas avec les existants — sur la même règle que les
+  objectifs, et avec son juge de banc.
 
 - **Neuf types d'objectifs de plus** dans `TYPES_OBJECTIFS`, chacun avec son juge de banc :
   `suivre` (filer un piéton ou un char sans être vu : trop près ou trop loin, c'est raté),
@@ -4880,7 +5058,10 @@ c'est tout ce que le moteur apprend. Les cent missions sont des **données**.
   gzippé par-dessus les 43 d'aujourd'hui, et les 70 Ko sautent. Le catalogue (objectifs, prérequis, `donne`)
   reste dedans — c'est ce que le carnet et le GPS lisent — et les répliques viennent par
   `/api/dialogue/<slug>` **quand le téléphone sonne**, avec un ETag comme le reste. Une
-  requête par mission, avant que la première voix se charge de toute façon.
+  requête par mission, avant que la première voix se charge de toute façon. ⚠️ **Les scènes
+  voyagent avec les répliques** : une dizaine de plans par scène, deux scènes par mission,
+  ≈ 130 Ko bruts de plus sur le catalogue — la même route, la même requête, et le paquet ne
+  les voit jamais.
 - **Trois personnages qui ne sont pas des donneurs** dans `pietons.py`, fréquence 0, posés
   par les missions comme le fuyard de m2 : le **matelot** (les gars de Sven), le **ciseau**
   (les hommes de main de Sal), le **gardien** (les gardes de Prévost et du lot). Et
@@ -5230,14 +5411,29 @@ que Bandini n'utilisait pas encore :
   `test_missions.py` qui bornent le catalogue à 30–60 voix et 4 000 caractères deviennent
   des bornes **par arc** ; la borne globale monte à 70 000. Et la règle de M6 tient : une
   réplique dont le fichier manque s'affiche sans voix.
+  - ⚠️ **Recompté le 16 sept. 2026, et les 70 000 ne tiennent plus.** Le compte ci-dessus
+    date d'avant les vingt missions de l'île et du casse : 129 missions neuves × 7 × 75 font
+    déjà ≈ 68 000. Et la mise en scène ajoute **une réplique `pendant` par mission** :
+    129 × 8 × 75 ≈ **77 000**, plus les cinq de la v1 ≈ **80 000 caractères**. La borne
+    globale monte donc à **85 000** ; les bornes par arc gagnent une réplique par mission.
+    ⚠️ La mise en scène, elle, ne coûte **aucune voix de plus** hors de `pendant` : une fin
+    passée au combiné ne se régénère pas (le combiné est un filtre joué), et une `coupe` fait
+    parler le donneur chez lui avec les mots qu'il avait déjà.
 
 #### Comment on le livre — quatre tranches, chacune jouable et déployée
 
+⚠️ **Une tranche livre ses missions mises en scène, ou ne se livre pas.** Chaque mission
+d'une tranche arrive avec ses deux scènes, ses répliques à chaque temps et leurs voix ; le juge
+du catalogue (« Les missions mises en scène ») refuse la tranche sinon. C'est aussi ce qui
+fixe son coût : écrire une mission, c'est écrire sa scène **en même temps** que ses mots —
+jamais une passe « animations » à la fin, qui ne viendrait pas.
+
 1. **Le moteur, et le Faubourg** (taille 2) : les neuf types, `exige`, `ferme`, `donne`
-   étendu, les résolveurs de lieux, les dialogues hors paquet, le téléphone qui trie ;
-   m6 et l'arc F comme banc d'essai — douze missions qui utilisent tout. ⚠️ Le carnet
-   (P2) doit être livré avant : sans lui, treize missions disponibles sont treize appels
-   qu'on oublie.
+   étendu, les résolveurs de lieux, les dialogues **et les scènes** hors paquet, le
+   téléphone qui trie ; m6 et l'arc F comme banc d'essai — douze missions qui utilisent
+   tout. ⚠️ Le carnet (P2) doit être livré avant : sans lui, treize missions disponibles sont
+   treize appels qu'on oublie. ⚠️ **Et les missions mises en scène (P2) aussi** : douze
+   missions écrites sans le vocabulaire de plans s'écriraient deux fois.
 2. **Les trois districts** (taille 2) : arcs Q, E, S et leurs dix-neuf personnages, les
    quatre lieux spéciaux, les trois piétons de mission, `libere` et `calme`.
 3. **La Pointe, l'hôpital, la dette, le Clairon, la police** (taille 2) : arcs P, H, D, C,
@@ -5264,7 +5460,13 @@ que Bandini n'utilisait pas encore :
 - **Les voix** : un slug par réplique, ≤ 110 caractères, ≤ 2 phrases, un personnage connu
   avec une voix nommée ; jamais deux personnages de même voix dans un même dialogue ; le
   compte par arc et le total sous leurs bornes.
-- **Le paquet** : sans les dialogues, il reste sous 600 Ko bruts et 70 Ko gzip ;
+- **Les scènes** : les juges de « Les missions mises en scène » tournent sur tout le
+  catalogue — deux scènes et une réplique `pendant` par mission, des plans de types connus
+  et des lieux qui se résolvent, aucune fin dite par un absent, aucun slug de mission dans
+  `histoire.js` ; le singe **regarde** les scènes de ses vingt missions et n'en trouve
+  aucune qui ne se termine pas, qui tire un dé ou qui déplace le joueur ; chaque type de plan
+  sert au moins trois fois, sinon il ne valait pas un type.
+- **Le paquet** : sans les dialogues ni les scènes, il reste sous 600 Ko bruts et 70 Ko gzip ;
   `/api/dialogue/<slug>` répond 304 au deuxième passage et 404 pour un slug inconnu.
 - **Le banc** : m6 de bout en bout ; **une mission par nouveau type**, jouée jusqu'à la
   récompense ; le singe qui prend vingt missions au hasard et ne trouve **aucune mission
@@ -5275,7 +5477,8 @@ que Bandini n'utilisait pas encore :
   les deux survivent à une sauvegarde.
 - **Martin** : finir un arc par district au téléphone ; ne jamais se demander quoi faire
   (le carnet le dit) ; entendre trente-quatre personnes différentes sans qu'une seule
-  paraisse en avoir la voix d'une autre.
+  paraisse en avoir la voix d'une autre ; **voir** chaque mission commencer et finir — un
+  geste, un lieu montré, ce qu'on gagne — sans qu'aucune ressemble à la précédente.
 
 ### La ligne d'histoire : une ouverture et un générique (**ajout**, taille 3)
 
@@ -5369,6 +5572,10 @@ deux musiques d'ÉTAT (poursuite, bagarre), et l'ouverture est une pièce nommé
   sont la dernière tranche de **M16** ; cette vague est ce qui se **branche dessus**, pas ce
   qui les écrit. Ce qu'elle apporte au moteur : l'état `fin` qui manque à `B.etat`, et un
   enchaînement qui ne soit pas un item de menu.
+- ⚠️ **Il s'écrit dans le vocabulaire de plans** (« Les missions mises en scène »), pas en
+  dur comme l'ouverture l'a d'abord été : `camera` sur le district libéré, `conduire` pour le
+  traversier, `titre` pour les chiffres. Les deux génériques sont des données dans
+  `missions.py`, comme les scènes de mission.
 - **Ce qu'on voit** : la ville en plan large, la caméra qui traverse le district libéré — ou
   le traversier qui s'éloigne du quai, selon la fin — puis les chiffres de la partie qui
   montent un à un (fortune, missions, propriétés, jours, la dette de Rocco réglée ou non),
