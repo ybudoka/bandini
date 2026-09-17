@@ -211,7 +211,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
-| M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
+| M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ⬜ **en cours** (1re vague livrée : l'appel d'une mission ; la 2e : la sonnerie baisse, et le Clairon l'attend) | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -11441,7 +11441,31 @@ forte avant qu'il parle ». Deux choses, et les deux sont mesurées :
 demande de Martin (17 sept. 2026) : « pour la mission du véhicule à apporter au garage, il
 faut voir l'auto en place durant l'animation ».
 
-⬜ **En cours.**
+**Livré** (17 sept. 2026). Ti-Guy dit « y a un char qui traîne dans une ruelle, un peu plus
+loin », et la coupe de l'intro va voir cette ruelle-là (`RUELLE_DU_CHAR_DE_M1`) — elle la
+filmait **vide** : le char naissait au tour de SON objectif, le deuxième, et l'intro se joue
+au premier. Mesuré au banc : 158 images de ruelle à l'écran, aucun char à moins de 200 px du
+point visé. **Les chars des objectifs `monter` d'une mission se posent maintenant dès son
+début** (`Histoire.poser`, la boucle des objectifs qui suivent) ; venu leur tour, `poser()`
+retrouve celui-là — `B.mission.chars`, un char par étape — au lieu d'en créer un second.
+
+- ⚠️ **`B.mission.vehicule`, lui, attend son tour.** C'est lui que `majObjectif` surveille, et
+  un char de mission qui saute fait rater quel que soit l'objectif (« Quatre trous dans les
+  missions ») : un char qu'on n'a pas encore eu à aller chercher n'est pas encore le char de
+  la mission. Il le devient à l'objectif `monter`.
+- ⚠️ **Un char de mission ne s'oublie pas** (`Vehicules.peupler` épargne ce qui porte
+  `mission`) : à vingt-quatre tuiles du garage, il dort là sans que la bulle l'efface.
+- ⚠️ **M4 filme encore un poste sans auto-patrouille** : Bouchard parle DANS le casse-croûte,
+  et rien ne se pose tant qu'on est dedans (`B.mission.aPoser`, posé à la sortie). Poser dans
+  la ville depuis une pièce demande d'échanger la carte ET les entités — ce que seule la
+  `coupe` sait faire aujourd'hui (`scenes.js`). Le jour où on le veut, c'est là que ça se
+  décide.
+
+Juges (`tests/test_missions_en_scene_js.py`) :
+`test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide` — ce que la caméra voit,
+image par image, hors du noir, l'écran compris — et
+`test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois`. Deux mutations (la
+pose d'avance retirée ; la reprise du char posé d'avance retirée) font chacune rougir la sienne.
 
 ### Le tableau des scores s'en va
 

@@ -292,10 +292,12 @@ CATALOGUE: list[Mission] = [
             {"type": "monter", "vehicule": "auto", "ou": RUELLE_DU_CHAR_DE_M1, "texte": "PRENDS LE CHAR DANS LA RUELLE"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "sans_degats": True, "texte": "RAMÈNE-LE AU GARAGE, SANS BOSSE"},
         ],
-        # Ti-Guy montre le garage, et la caméra va voir la ruelle où dort le char —
-        # un LIEU : le char appartient au deuxième objectif, qui ne se pose pas encore.
-        # À la fin, Ti-Guy sort du garage, tend la clé et y rentre : c'est ce qui le
-        # fait quitter le terminus (`parti_apres`), plus un `if` dans `reussir()`.
+        # Ti-Guy montre le garage, et la caméra va voir la ruelle où dort le char.
+        # ⚠️ Il y DORT DÉJÀ : les chars des objectifs `monter` d'une mission se posent
+        # à son début (`Histoire.poser`), pas au tour de leur objectif — sinon la
+        # coupe filme une ruelle vide. À la fin, Ti-Guy sort du garage, tend la clé et
+        # y rentre : c'est ce qui le fait quitter le terminus (`parti_apres`), plus un
+        # `if` dans `reussir()`.
         "scenes": {
             "intro": [
                 {"type": "dire", "repliques": [1, 2]},
@@ -444,9 +446,11 @@ CATALOGUE: list[Mission] = [
             {"type": "semer", "etoiles": 2, "escorte": "ti_guy", "texte": "SÈME LA POLICE — TI-GUY TE SUIT"},
             {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "LARGUE L'AUTO AU GARAGE"},
         ],
-        # Bouchard parle dedans : la caméra sort voir le poste (un lieu —
-        # l'auto-patrouille est le deuxième objectif). À la fin, on est au garage et
-        # lui au casse-croûte : la caméra va chez lui, et il parle au combiné.
+        # Bouchard parle dedans : la caméra sort voir le poste. ⚠️ L'auto-patrouille
+        # est le deuxième objectif, mais elle y attend déjà (`Histoire.poser`) — sauf
+        # ici, où l'on parle DANS le casse-croûte : rien ne se pose avant la sortie, et
+        # la coupe montre le poste seul. À la fin, on est au garage et lui au
+        # casse-croûte : la caméra va chez lui, et il parle au combiné.
         "scenes": {
             "intro": [
                 {"type": "dire", "repliques": [1], "ensemble": True},

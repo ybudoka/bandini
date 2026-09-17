@@ -235,3 +235,58 @@ def test_ti_guy_n_attend_plus_au_terminus_une_fois_m1_faite(banc):
         return { avant: avant, apres: !!L.Histoire.donneur('ti_guy'), thibodeau: !!L.Histoire.donneur('thibodeau') };
     }""")
     assert r == {"avant": True, "apres": False, "thibodeau": True}, r
+
+
+def test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide(banc):
+    """⚠️ Rouge avant (17 sept. 2026), demande de Martin : « pour la mission du
+    véhicule à apporter au garage, il faut voir l'auto en place durant
+    l'animation ». Ti-Guy dit « y a un char qui traîne dans une ruelle », la
+    coupe va voir CETTE ruelle-là — et elle la filmait vide : le char naissait
+    au tour de son objectif, deux objectifs plus loin. Mesuré : 158 images à
+    l'écran, aucun char à 200 px. Les chars des objectifs `monter` se posent
+    maintenant dès le début de la mission (`Histoire.poser`)."""
+    r = banc("function (L, o) {" + OUTILS + """
+        const m = mission(L, 'm1');
+        partie(L, m.slug);
+        allerVoir(L, o, m);
+        L.Histoire.parler(m.donneur);
+        // La ruelle que la coupe va voir : le lieu de l'objectif `monter`.
+        const but = L.Histoire.resoudre(m.objectifs.find(function (q) { return q.type === 'monter'; }).ou, m);
+        let images = 0, vues = 0, chars = 0;
+        for (let n = 0; n < 6000 && (L.B.scene || L.B.cinema); n++) {
+          o.frame(1);
+          const s = L.B.scene;
+          // La caméra est LÀ-BAS, et l'écran n'est pas au noir : ce que Martin voit.
+          if (!s || (s.noir || 0) > 0.2 || !s.vise || Math.hypot(s.vise.x - but.x, s.vise.y - but.y) > 8) continue;
+          images++;
+          const v = L.B.entites.find(function (e) { return e.type === 'vehicule' && e.mission === 'm1'; });
+          if (v) { chars++; if (L.Entites.visibleAEcran(v.x, v.y, -20)) vues++; }
+        }
+        return { images: images, chars: chars, vues: vues, poses: Object.keys(L.B.mission.chars || {}).length };
+    }""")
+    assert r["images"] > 60, f"la coupe ne tient pas la ruelle à l'écran ({r})"
+    assert r["chars"] == r["images"], f"le char de M1 n'est pas dans la ruelle pendant la coupe ({r})"
+    assert r["vues"] == r["images"], f"le char de M1 est posé, mais hors de l'écran pendant la coupe ({r})"
+
+
+def test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois(banc):
+    """La règle, hors mise en scène : le char d'un objectif `monter` est là dès le
+    début de la mission, mais il ne devient `B.mission.vehicule` qu'à son tour — et
+    l'objectif venu ne pose pas un deuxième char."""
+    r = banc("function (L, o) {" + OUTILS + """
+        const m = mission(L, 'm1');
+        partie(L, m.slug);
+        L.Histoire.commencer('m1'); L.B.cinema = null;
+        const chars = function () { return L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.mission === 'm1'; }); };
+        const auDebut = chars(), premier = auDebut[0];
+        const avant = { n: auDebut.length, slug: premier ? premier.slug : null,
+                        etape: L.B.partie.mission.etape, vehicule: !!L.B.mission.vehicule };
+        // L'objectif du char, venu son tour : le même char, pas un deuxième.
+        L.Histoire.avancer();
+        const apres = chars();
+        return { avant: avant, n: apres.length, meme: apres[0] === premier,
+                 vehicule: L.B.mission.vehicule === premier, etape: L.B.partie.mission.etape };
+    }""")
+    assert r["avant"] == {"n": 1, "slug": "auto", "etape": 0, "vehicule": False}, r["avant"]
+    assert r["n"] == 1 and r["meme"], f"un deuxième char est né au tour de l'objectif ({r})"
+    assert r["vehicule"] and r["etape"] == 1, f"le char posé d'avance n'est pas devenu celui de la mission ({r})"

@@ -644,7 +644,7 @@ const Histoire = (function () {
     const m = mission(slug);
     if (!m || B.partie.mission) return false;
     B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
-    B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };
+    B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
     avancer(enSilence);
     return true;
@@ -683,17 +683,8 @@ const Histoire = (function () {
     B.mission.aPoser = false;
     if (!o) return;
     if (o.type === 'monter') {
-      const ou = resoudre(o.ou, m);
-      const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
-      const place = rue || ou;
-      if (place) {
-        // ⚠️ `aQui` vient de la fiche (`prete` dans `missions.py`), et il ne
-        // s'efface JAMAIS : le taxi de Marco est a Marco avant, pendant et
-        // apres — c'est lui qui l'empeche d'etre vendu au garage de Ti-Guy,
-        // qui est a deux pas de la ou il dort.
-        const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
-        if (v) { B.mission.vehicule = v; B.mission.entites.push(v); }
-      }
+      const v = poserLeChar(m, o, p.etape);
+      if (v) B.mission.vehicule = v;
     } else if (o.type === 'tuer') {
       poserLesCravates(m, o);
     } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
@@ -705,6 +696,40 @@ const Histoire = (function () {
     } else if (o.type === 'courses') {
       B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
     }
+    // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
+    // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
+    // une ruelle », la coupe de l'intro allait voir cette ruelle-la — et la
+    // filmait VIDE (mesure au banc : 155 images a l'ecran, aucun char a 200 px).
+    // Les chars des objectifs qui suivent se posent donc des le debut de la
+    // mission ; `poser()`, venu leur tour, retrouve ceux-la (`B.mission.chars`)
+    // au lieu d'en creer un second. ⚠️ `B.mission.vehicule`, lui, attend son
+    // tour : c'est LUI que `majObjectif` surveille (un char de mission qui
+    // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
+    // pas encore le char de la mission.
+    for (let i = p.etape + 1; i < m.objectifs.length; i++) {
+      if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
+    }
+  }
+
+  /** Le char d'un objectif `monter`, la ou il dort. Rend celui qui y est deja
+      — pose d'avance — sauf s'il a saute ou quitte la ville entre-temps. */
+  function poserLeChar(m, o, etape) {
+    const chars = B.mission.chars || (B.mission.chars = {});
+    const deja = chars[etape];
+    if (deja && deja.etat !== 'epave' && B.entites.indexOf(deja) >= 0) return deja;
+    const ou = resoudre(o.ou, m);
+    const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
+    const place = rue || ou;
+    if (!place) return null;
+    // ⚠️ `aQui` vient de la fiche (`prete` dans `missions.py`), et il ne
+    // s'efface JAMAIS : le taxi de Marco est a Marco avant, pendant et
+    // apres — c'est lui qui l'empeche d'etre vendu au garage de Ti-Guy,
+    // qui est a deux pas de la ou il dort.
+    const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
+    if (!v) return null;
+    chars[etape] = v;
+    B.mission.entites.push(v);
+    return v;
   }
 
   function poserLesCravates(m, o) {
@@ -1249,7 +1274,7 @@ const Histoire = (function () {
     majBulles();
     majTelephone();
     if (B.partie.mission) {
-      if (!B.mission) B.mission = { entites: [], vehicule: null, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+      if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
         const etape = B.mission.pendant;
         B.mission.pendant = null;
