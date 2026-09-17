@@ -200,6 +200,7 @@ ne bougent pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (2 vagues livrées ; la 3e : les commerces montent et descendent) | 17 sept. 2026 | **P3** | ajout | [notes](#des-quartiers-quon-reconnaît--riches-pauvres-et-zonés) |
 | On fait un tour dans le petit train, la montagne russe et la grande roue | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#on-fait-un-tour-dans-le-petit-train-la-montagne-russe-et-la-grande-roue) |
 | Le client du taxi attend au bord de la route, et une flèche y mène | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-client-du-taxi-attend-au-bord-de-la-route-et-une-flèche-y-mène) |
+| La première réplique, et la ruelle de Ti-Guy | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#la-première-réplique-et-la-ruelle-de-ti-guy) |
 | Quatre activités que le jeu n'a pas | ⬜ **à faire** — ⚠️ **une des quatre est déjà livrée** | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Installable, et jouable hors ligne | ⬜ **à faire** | — | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
@@ -10738,6 +10739,17 @@ pas de porte une fois sur trois, sinon n'importe quelle tuile marchable hors rou
 une arrière-cour), à 40 px près d'une chaussée ou à dix tuiles. Et la flèche au bord de
 l'écran comme celle de la mini-carte ne suivent que `Histoire.cible()` : le boulot n'a qu'un
 point qui clignote sur la mini-carte, et seulement s'il tombe dans son cadre.
+
+### La première réplique, et la ruelle de Ti-Guy
+
+demande de Martin (17 sept. 2026), « oui corrige tout », après « Quatre trous dans les
+missions » : les deux restes de la vérification au bouton. L'appui d'ACTION qui lance une
+conversation saute sa première réplique, chez les cinq donneurs, au clavier comme à la
+manette : `Combat.maj` ouvre le dialogue, puis `Histoire.maj` relit le même appui dans la
+même image et passe à la deuxième — on ne lit jamais « Heille! Le cousin de Rocco! », ni la
+phrase qui explique la mission. Et Ti-Guy dit encore « la ruelle derrière le garage » alors
+que le char dort à vingt-quatre tuiles : la réplique change, et sa voix (`ti_guy-m1-3`) se
+régénère.
 
 ### Quatre activités que le jeu n'a pas
 
