@@ -20,7 +20,8 @@
     },
     {
       // Le serveur seul, avec rechargement automatique : sauver un fichier
-      // Python redemarre Flask, et debugpy suit le processus fils.
+      // Python d'app/ (ou config.py, run.py) redemarre Flask, et debugpy suit
+      // le processus fils. tests/, scripts/ et le reste ne redemarrent rien.
       "name": "Serveur Flask (run.py, rechargement auto)",
       "type": "debugpy",
       "request": "launch",

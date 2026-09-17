@@ -7,12 +7,17 @@ que le tableau des scores, dans un fichier JSON sous `DONNEES_DIR`.
 
 from __future__ import annotations
 
+import glob
 import os
 import socket
 from pathlib import Path
 from urllib.parse import urlparse
 
 RACINE = Path(__file__).resolve().parent
+
+#: Ce qui, modifie, change le serveur qui tourne. Le reste de la racine ne le
+#: redemarre pas : voir `ce_que_le_rechargeur_ignore`.
+CE_QUI_REDEMARRE_LE_SERVEUR = ("app", "config.py", "run.py")
 
 
 def port_de_dev() -> int:
@@ -31,6 +36,28 @@ def port_de_dev() -> int:
             return port
 
     return 5400
+
+
+def ce_que_le_rechargeur_ignore(racine: Path = RACINE) -> set[str]:
+    """Les `exclude_patterns` du rechargeur de Werkzeug : tout sauf `app/`, `config.py`, `run.py`.
+
+    ⚠️ Sans `watchdog`, Werkzeug surveille chaque `.py` sous `sys.path` — et la
+    racine du depot y est, c'est le dossier de `run.py`. Un juge ecrit dans
+    `tests/` par une autre session redemarrait donc Flask, et le jeu ouvert
+    dans Chrome perdait son serveur. On liste ce qui compte plutot que ce qui
+    ne compte pas : un dossier ajoute a la racine est ignore des le demarrage
+    suivant. `templates/` et `static/` n'ont pas besoin de redemarrage (Jinja
+    relit ses gabarits en debug, et le statique est servi tel quel).
+    """
+    motifs: set[str] = set()
+    for entree in racine.iterdir():
+        if entree.name in CE_QUI_REDEMARRE_LE_SERVEUR:
+            continue
+        # Les motifs sont des fnmatch : un `[` dans le chemin serait une classe.
+        chemin = glob.escape(str(entree))
+        motifs.add(chemin)
+        motifs.add(chemin + os.sep + "*")
+    return motifs
 
 
 def hote_est_local(hote: str) -> bool:

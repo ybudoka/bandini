@@ -14,6 +14,7 @@ if dotenv_path.exists() and os.access(dotenv_path, os.R_OK):
 from app import create_app  # noqa: E402  (apres le chargement du .env)
 from config import (  # noqa: E402  (idem)
     adresses_du_reseau_local,
+    ce_que_le_rechargeur_ignore,
     hote_est_local,
     port_de_dev,
 )
@@ -49,4 +50,7 @@ if __name__ == "__main__":
         use_debugger=app.config.get("DEBUG", False) and local,
         port=port,
         use_reloader=True,
+        # Seuls app/, config.py et run.py redemarrent le serveur : un juge
+        # sauve dans tests/ ou un script de scripts/ ne coupe plus la partie.
+        exclude_patterns=ce_que_le_rechargeur_ignore(),
     )
