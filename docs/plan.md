@@ -182,7 +182,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les missions mises en scène | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#les-missions-mises-en-scène) |
 | La carte sort du paquet | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#la-carte-sort-du-paquet) |
 | L'Île-aux-Corneilles | ✅ **livré** (1re vague : l'île existe, et la police n'y va pas) | 17 sept. 2026 | **P4** | ajout | [notes](#lîle-aux-corneilles) |
-| L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [notes](#lîle-aux-corneilles--deuxième-vague) |
+| L'Île-aux-Corneilles — deuxième vague | ⬜ **en cours** | 17 sept. 2026 | **P4** | ajout | [notes](#lîle-aux-corneilles--deuxième-vague) |
 | Ceux qu'on a couchés restent couchés | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#ceux-quon-a-couchés-restent-couchés) |
 | Les hommes de Sal cognent à mains nues | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#les-hommes-de-sal-cognent-à-mains-nues) |
 | Un commerce s'achète au comptoir | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#un-commerce-sachète-au-comptoir) |
