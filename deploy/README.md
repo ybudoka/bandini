@@ -28,6 +28,15 @@ Internet :443 → Caddy (TLS) → nginx 127.0.0.1:8080 → gunicorn 127.0.0.1:80
 
 ## Chaque mise en ligne suivante
 
+⚠️ **D'abord la suite complète, en local, sur le commit qu'on livre** : les tests ne
+tournent plus en CI (decision du 17 sept. 2026), et `deploy.sh` prend `origin/main`
+tel quel sans rien verifier.
+
+```bash
+BANDINI_TESTS_OBLIGATOIRES=1 uv run pytest -q     # verte, navigateur compris
+git push origin <sha>:refs/heads/main
+```
+
 ```bash
 ssh -i ~/.ssh/dojo_deploy -o IdentitiesOnly=yes dojoadmin@103.98.215.181 \
   'bash /srv/bandini/repo/deploy/deploy.sh main'

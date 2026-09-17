@@ -1,7 +1,8 @@
 """Le jeu dans un vrai navigateur (Playwright) : chargement, clavier, tactile, cibles.
 
-Se saute sans Chromium en local ; en CI, BANDINI_TESTS_OBLIGATOIRES=1 en fait
-un echec — un garde-fou qui se desactive tout seul n'en est pas un.
+Se saute sans Chromium ; dans la suite de livraison (BANDINI_TESTS_OBLIGATOIRES=1,
+en local avant de pousser sur `main` — les tests ne tournent plus en CI depuis le
+17 sept. 2026), c'est un echec : un garde-fou qui se desactive tout seul n'en est pas un.
 """
 
 import os

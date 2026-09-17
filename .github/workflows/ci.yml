@@ -16,21 +16,19 @@ permissions:
   contents: read
 
 jobs:
-  rapide:
+  # ⚠️ LES TESTS TOURNENT EN LOCAL SEULEMENT (decision de Martin, 17 sept. 2026).
+  # La suite (~2 450 juges, banc Node et Chromium compris) ne tenait plus dans le
+  # delai d'un runner : le run de `main` de 0.115.0 est mort coupe a 25 min, a
+  # 94 % et sans un juge tombe, et tous les runs de `dev` de la meme heure avec
+  # lui. On livrait en attendant une verification qui ne finissait plus.
+  #
+  # Ici ne reste que ce qui prend quelques secondes et ne ment jamais : les
+  # dependances synchronisees et le lint. Le verdict qui autorise une mise en
+  # ligne est la suite COMPLETE, navigateur compris, verte EN LOCAL sur le commit
+  # exact qu'on pousse sur `main` (voir docs/plan.md, « Tests et CI »).
+  verifications:
     runs-on: ubuntu-latest
-    # ⚠️ 10 minutes ne suffisaient plus, et ca s'est vu de la pire facon : le run
-    # est mort ANNULE, ce qui se lit comme « un autre push l'a remplace » alors
-    # que c'etait le delai. La suite met 4 min 30 sur une machine de
-    # developpement et un runner est environ deux fois plus lent : on passait
-    # tout juste, un run sur deux. Elle grossit d'une dizaine de juges par
-    # vague ; 25 minutes laissent de la marge pour un bon moment.
-    # ⚠️ LE « BON MOMENT » A DURE UN JOUR. Le 17 sept. 2026, plusieurs sessions
-    # livrant en parallele, la suite est passee a ~2 450 juges : le run de `main`
-    # de 0.115.0 a ete coupe a 25 min 15 s, a 94 % et sans un juge tombe, et tous
-    # les runs de `dev` de la meme heure sont morts pareil. Releve a 45 minutes
-    # pour debloquer les livraisons ; paralleliser (`pytest-xdist`) ou decouper
-    # le job est une decision de Martin, toujours ouverte.
-    timeout-minutes: 45
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -42,37 +40,3 @@ jobs:
         run: uv run python scripts/verifier_dependances.py
       - name: Lint
         run: uv run ruff check .
-      # ⚠️ BANDINI_TESTS_OBLIGATOIRES=1 interdit aux tests Node de se sauter :
-      # sans Node, l'execution finirait verte sans avoir fait tourner le moteur.
-      - name: Tests (Python + moteur sous Node)
-        run: uv run pytest -q --ignore=tests/test_navigateur.py
-        env:
-          BANDINI_TESTS_OBLIGATOIRES: "1"
-
-  navigateur:
-    needs: rapide
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-        with:
-          enable-cache: true
-      - name: Installer les dependances
-        run: uv sync --all-groups
-      - name: Cache Chromium
-        id: chromium
-        uses: actions/cache@v4
-        with:
-          path: ~/.cache/ms-playwright
-          key: chromium-${{ runner.os }}-${{ hashFiles('uv.lock') }}
-      - name: Installer Chromium
-        if: steps.chromium.outputs.cache-hit != 'true'
-        run: uv run playwright install --with-deps chromium
-      - name: Dependances systeme de Chromium
-        if: steps.chromium.outputs.cache-hit == 'true'
-        run: uv run playwright install-deps chromium
-      - name: Tests de navigateur
-        run: uv run pytest -q tests/test_navigateur.py
-        env:
-          BANDINI_TESTS_OBLIGATOIRES: "1"
