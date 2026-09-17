@@ -53,7 +53,6 @@ const B = {
   scene: null,          // la scene qui joue, quelle qu'elle soit (voir Scenes)
   finEnAttente: null,   // la fin d'une mission reussie, qui attend qu'on soit a l'arret (Histoire.jouerLaFin)
   sonnerie: null,       // le combine sonne : { slug, t } — on decroche a l'image `t` (Histoire.majTelephone)
-  manchette: null,      // la manchette du matin qui attend la fin de la sonnerie de Sal (Missions.direLaManchette)
   mission: null,        // les figurants de la mission en cours (pas sauvegardes : voir Histoire)
   defi: null,           // le defi en cours
   stats: { images: 0, rects: 0, entites: 0, actifs: 0, morceaux: 0, ms: 0 },

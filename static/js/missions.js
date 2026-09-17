@@ -1534,17 +1534,9 @@ const Missions = (function () {
   }
 
   /** La manchette s'affiche ET se lit : le narrateur du Clairon la dit a voix
-      haute. `attente` : les images de sonnerie a laisser passer avant qu'il
-      ouvre la bouche — elle est posee dans `B.manchette`, et `maj()` la dit
-      quand le combine s'est tu.
-
-      ⚠️ **LE NARRATEUR ATTEND LA FIN DE LA SONNERIE.** Retour de Martin
-      (17 sept. 2026) : « il y a une sonnerie trop forte avant qu'il parle ».
-      Le rappel de Sal (`nuitDeLaDette`) et la manchette partaient dans la MEME
-      image : le combine sonnait par-dessus ses premiers mots. C'est la regle de
-      l'appel d'une mission (`Histoire.majTelephone`), au lever du jour. */
-  function direLaManchette(m, attente) {
-    if (attente > 0) { B.manchette = { m: m, t: B.t + attente }; return; }
+      haute. ⚠️ Et RIEN ne sonne par-dessus : le rappel de Sal, qui tombait dans
+      la meme image, ne fait plus sonner le telephone (`nuitDeLaDette`). */
+  function direLaManchette(m) {
     Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
     if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
   }
@@ -1556,7 +1548,7 @@ const Missions = (function () {
   }
 
   function nouveauJour() {
-    const sonnerie = nuitDeLaDette();        // le rappel de Sal, s'il sonne : le Clairon l'attend
+    nuitDeLaDette();
     nuitDesSkimmers();
     nuitDeLAssurance();
     // ⚠️ La ville se repare AU LEVER DU JOUR, pas dans la minute : ce qu'on a
@@ -1568,7 +1560,7 @@ const Missions = (function () {
     B.coincees = {};
     revenusDuJour();
     const m = manchetteDuJour();
-    if (m) { B.partie.derniereManchette = m; direLaManchette(m, sonnerie); }
+    if (m) { B.partie.derniereManchette = m; direLaManchette(m); }
     else Hud.message('JOUR ' + B.partie.jour);
   }
 
@@ -1791,25 +1783,33 @@ const Missions = (function () {
     return table[table.length - 1];
   }
 
-  /** Rend les IMAGES de sonnerie que le rappel de Sal vient de poser (0 : le
-      telephone n'a pas sonne). ⚠️ C'est ce qui fait attendre le narrateur du
-      Clairon : les deux tombaient dans la meme image (voir `nouveauJour`). */
+  /** La nuit de la dette : elle monte, et Sal fait son rappel.
+
+      ⚠️ **LE RAPPEL NE SONNE PLUS.** Martin (17 sept. 2026) : « enlève
+      complètement la sonnerie quand le narrateur parle ». Le rappel tombe au
+      LEVER DU JOUR, dans la meme image que la manchette du Clairon : le combine
+      sonnait sur les premiers mots du narrateur. L'attendre (2e vague) ne
+      suffisait pas — c'est le MESSAGE qui porte la pression du shylock, pas la
+      sonnerie, et le matin appartient a celui qui lit le journal.
+
+      ⚠️ L'appel d'une mission, lui, GARDE sa sonnerie (`Histoire.majTelephone`) :
+      elle annonce quelqu'un au bout du fil, et le donneur attend qu'elle se
+      taise avant de parler. Ici, personne ne decroche : Sal ne laisse qu'un
+      mot. */
   function nuitDeLaDette() {
     const p = B.partie, f = ficheDette();
-    if (!f || p.dette <= 0) return 0;
+    if (!f || p.dette <= 0) return;
     const avant = p.dette;
     p.dette = detteDuLendemain(p.dette);
-    // Le telephone commence a sonner avant que les hommes ne viennent : on a
-    // le temps de faire quelque chose, et c'est ce qui en fait une pression
-    // plutot qu'une embuscade.
+    // Le rappel arrive avant que les hommes ne viennent : on a le temps de
+    // faire quelque chose, et c'est ce qui en fait une pression plutot qu'une
+    // embuscade.
     if (p.jour >= f.rappel_jour && p.rappelJour !== p.jour && p.jour < f.collecte_jour) {
       p.rappelJour = p.jour;
-      const sonnerie = Son.SFX.telephone() || 0;
       Hud.message('SAL : « TU ME DOIS ' + p.dette + ' $ »', 240);
-      return Math.max(1, Math.round(sonnerie * 60));          // 60 images font une seconde
+    } else if (p.dette > avant) {
+      Hud.message('LA DETTE MONTE — ' + p.dette + ' $', 180);
     }
-    if (p.dette > avant) Hud.message('LA DETTE MONTE — ' + p.dette + ' $', 180);
-    return 0;
   }
 
   function collecteurs() {
@@ -2509,8 +2509,6 @@ const Missions = (function () {
       for (const slug in B.joueur.coupons) if (--B.joueur.coupons[slug] <= 0) delete B.joueur.coupons[slug];
     }
     boulot.maj();
-    // Le Clairon attendait que la sonnerie de Sal se taise : c'est fait.
-    if (B.manchette && B.t >= B.manchette.t) { const m = B.manchette.m; B.manchette = null; direLaManchette(m, 0); }
     if (B.t % 30 === 0) majCollecteurs();
     majFourriere();
     majMalGares();

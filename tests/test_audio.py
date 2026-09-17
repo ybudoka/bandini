@@ -455,27 +455,30 @@ def _melange(chemin, volume):
 @ffmpeg_present
 def test_la_sonnerie_du_telephone_ne_couvre_pas_la_voix_qui_la_suit():
     """Retour de Martin (17 sept. 2026), sur le narrateur du Clairon : « il y a
-    une sonnerie trop forte avant qu'il parle ».
+    une sonnerie trop forte avant qu'il parle ». La sonnerie du matin est partie
+    depuis (`nuitDeLaDette`), mais celle de l'APPEL reste : elle annonce le
+    donneur, et il parle juste apres.
 
     ⚠️ Le `volume` du catalogue ne se juge pas tout seul : la sonnerie est a
-    0,28 et la voix a 0,85, et c'est pourtant la sonnerie qui sortait 6,5 dB
-    au-dessus — son fichier est 9 dB plus haut. Le juge mesure donc le
+    0,28 et les voix a 0,85-0,92, et c'est pourtant la sonnerie qui sortait
+    6,5 dB au-dessus — son fichier est 9 dB plus haut. Le juge mesure donc le
     MELANGE (fichier x volume), le seul nombre qui dise lequel couvre l'autre.
     """
     sonnerie = next(e for e in audio.CATALOGUE if e["slug"] == "telephone")
     fichier = audio.chemin(sonnerie, 1)
     if not fichier.is_file():
         pytest.skip("la sonnerie n'est pas generee sur ce poste")
-    # ⚠️ Le narrateur vit dans `voix_journal` et `voix_ouverture`, pas dans
-    # `voix_histoire` : la manchette du matin et les quatre phrases du car.
-    voix = [v for v in audio.voix_journal() + audio.voix_ouverture() if audio.chemin_voix(v).is_file()]
+    # ⚠️ TOUTES les voix : les donneurs (`voix_histoire`), le narrateur du matin
+    # (`voix_journal`) et celui de l'ouverture (`voix_ouverture`) — la sonnerie
+    # ne doit en couvrir aucune, et c'est la plus BASSE qui decide.
+    voix = [v for v in audio.voix_histoire() + audio.voix_journal() + audio.voix_ouverture()
+            if audio.chemin_voix(v).is_file()]
     if not voix:
-        pytest.skip("les voix du narrateur ne sont pas generees sur ce poste")
+        pytest.skip("les voix ne sont pas generees sur ce poste")
     combine = _melange(fichier, sonnerie["volume"])
-    # La plus BASSE : la sonnerie ne doit en couvrir aucune.
-    narrateur = min(_melange(audio.chemin_voix(v), v["volume"]) for v in voix)
-    assert combine <= narrateur, (
-        f"la sonnerie sort a {combine:.1f} LUFS et la voix a {narrateur:.1f} : "
+    plus_basse = min(_melange(audio.chemin_voix(v), v["volume"]) for v in voix)
+    assert combine <= plus_basse, (
+        f"la sonnerie sort a {combine:.1f} LUFS et la voix la plus basse a {plus_basse:.1f} : "
         "le combine passe par-dessus celui qui parle")
 
 

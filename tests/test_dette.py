@@ -116,36 +116,36 @@ def test_la_nuit_fait_monter_la_dette_et_le_plafond_la_retient(banc):
     assert r["apresCent"] == r["plafond"], "le plafond ne retient rien : %s" % r
 
 
-def test_le_narrateur_du_matin_attend_la_fin_de_la_sonnerie(banc):
-    """Retour de Martin (17 sept. 2026) : « il y a une sonnerie trop forte avant
-    qu'il parle ». Le rappel de Sal et la manchette du Clairon partaient dans la
-    MEME image : le combiné sonnait par-dessus les premiers mots du narrateur.
+def test_le_rappel_de_sal_ne_sonne_pas_quand_le_narrateur_parle(banc):
+    """Martin (17 sept. 2026) : « enlève complètement la sonnerie quand le
+    narrateur parle ». Le rappel de Sal tombe au lever du jour, dans la même
+    image que la manchette du Clairon : le combiné sonnait sur les premiers mots
+    du narrateur. Le message de Sal reste — c'est lui qui porte la pression.
 
-    ⚠️ Au banc, aucun mp3 n'est décodé : la sonnerie est celle de la synthèse
-    (0,37 s, soit 22 images). C'est cet écart-là qu'on mesure."""
+    ⚠️ Le juge ESPIONNE `Son.SFX.telephone` : au banc il n'y a pas d'`AudioContext`,
+    donc compter les sources jouées ne dirait rien. Ce qu'on veut savoir, c'est
+    si le jeu a DEMANDÉ la sonnerie."""
     r = banc("""function (L, o) {
         %s
         p.jour = f.rappel_jour; p.rappelJour = -1; p.dette = 15000;
         L.B.dialogue = null;
+        let sonneries = 0;
+        const vraie = L.Son.SFX.telephone;
+        L.Son.SFX.telephone = function () { sonneries++; return vraie.apply(L.Son.SFX, arguments); };
         L.Missions.nouveauJour();
-        const sonne = { attend: !!L.B.manchette, images: L.B.manchette && L.B.manchette.t - L.B.t,
-                        dialogue: L.B.dialogue && L.B.dialogue.qui, voix: L.Son.Voix.demandees.length,
-                        msg: L.B.msg };
-        let dit = -1;
-        for (let i = 0; i < 120 && dit < 0; i++) { o.frame(1); if (!L.B.manchette) dit = i; }
-        return { sonne: sonne, dit: dit, dialogue: L.B.dialogue && L.B.dialogue.qui,
-                 voix: L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1],
-                 duree: L.Son.SFX.telephone() };
+        const matin = { sonneries: sonneries, dialogue: L.B.dialogue && L.B.dialogue.qui,
+                        voix: L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1], msg: L.B.msg };
+        for (let i = 0; i < 90; i++) o.frame(1);            // et rien ne sonne apres coup
+        L.Son.SFX.telephone = vraie;
+        return { matin: matin, sonneries: sonneries, attente: !!L.B.manchette };
     }""" % DECOR)
-    assert r["sonne"]["attend"] is True, "la manchette ne s'est pas mise en attente : %s" % r["sonne"]
-    assert r["sonne"]["dialogue"] is None, "le Clairon parle par-dessus la sonnerie : %s" % r["sonne"]
-    assert r["sonne"]["voix"] == 0, "la voix du narrateur est demandée pendant que ça sonne"
-    assert "SAL" in (r["sonne"]["msg"] or ""), "le rappel de Sal ne s'affiche plus : %s" % r["sonne"]
-    images = round(r["duree"] * 60)                      # 60 images font une seconde
-    assert images <= r["dit"] + 1 <= images + 2, (
-        "la manchette part %s images après la sonnerie, qui en dure %s" % (r["dit"] + 1, images))
-    assert r["dialogue"] == "LE CLAIRON DE LA BAIE", "la manchette ne se dit jamais : %s" % r
-    assert (r["voix"] or "").startswith("narrateur-journal-"), "le narrateur ne lit pas la manchette : %s" % r
+    assert r["matin"]["sonneries"] == 0, "le telephone sonne encore pendant que le narrateur lit"
+    assert r["sonneries"] == 0, "la sonnerie a seulement ete repoussee, pas enlevee"
+    assert r["attente"] is False, "il reste une manchette en attente : le matin ne se dit plus tout de suite"
+    assert r["matin"]["dialogue"] == "LE CLAIRON DE LA BAIE", "la manchette ne se dit pas : %s" % r["matin"]
+    assert (r["matin"]["voix"] or "").startswith("narrateur-journal-"), (
+        "le narrateur ne lit pas la manchette : %s" % r["matin"])
+    assert "SAL" in (r["matin"]["msg"] or ""), "le rappel de Sal a disparu avec sa sonnerie : %s" % r["matin"]
 
 
 def test_personne_ne_vient_avant_le_jour_dit_puis_ils_viennent(banc):

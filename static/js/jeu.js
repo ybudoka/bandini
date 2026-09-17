@@ -48,7 +48,7 @@ const Jeu = (function () {
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
     if (p.mission) p.mission = null;  // une mission ne survit pas au rechargement : ses figurants non plus
     B.mission = null; B.defi = null; B.cinema = null; B.ouverture = null; B.scene = null; B.finEnAttente = null;
-    B.sonnerie = null; B.manchette = null;    // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
+    B.sonnerie = null;                       // un telephone qui sonnait dans la partie d'avant ne sonne pas dans celle-ci
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
