@@ -993,11 +993,100 @@ const Hud = (function () {
     message('TÉLÉPORTÉ');
   }
 
+  /** Teleporte le joueur a un point (en ville, a pied). Meme refus que
+      `teleporterVersObjectif` : ni dans une piece, ni au volant. */
+  function sauterVers(x, y, nom) {
+    const j = B.joueur;
+    if (!j) return false;
+    if (B.interieur || j.dansVehicule) { message('SORS D\'ABORD'); return false; }
+    if (x === undefined || y === undefined) { message('INTROUVABLE'); return false; }
+    j.x = x; j.y = y; j.vx = 0; j.vy = 0;
+    Monde.centrerCamera(j.x, j.y);
+    message('TÉLÉPORTÉ — ' + (nom || '').toUpperCase());
+    return true;
+  }
+
+  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`, chacune
+      menant vers son donneur. C'est le CATALOGUE qui fait la liste — une
+      mission ajoutee au jeu tombe ici sans qu'on y touche. Le donneur porte un
+      intitule d'etat (à faire / en cours / faite) et, s'il a un lieu, un saut. */
+  function menuSautMissions() {
+    const p = B.partie;
+    const cours = p.mission ? p.mission.slug : null;
+    const items = (B.defs.missions || []).map(function (m) {
+      const ou = Histoire.ouTrouver(m.donneur);
+      const etat = p.missionsFaites[m.slug] ? 'FAITE' : (m.slug === cours ? 'EN COURS' : '→ DONNEUR');
+      return { libelle: m.titre.toUpperCase(), detail: etat,
+               actif: !!ou,
+               faire: function () { return !sauterVers(ou.x, ou.y, m.titre); } };
+    });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'SAUT VERS UNE MISSION', largeur: 340, hauteur: VH - 30,
+             items: items, retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** JUKEBOX : toutes les musiques de `B.defs.audio.musiques`, jouables a la
+      demande. Le morceau choisit joue TANT QU'ON n'arrete pas (`Son.Chef` le
+      respecte des qu'il lit `B.jukebox`) ; la note en bas le rappelle. */
+  function menuJukebox() {
+    const musiques = (B.defs.audio && B.defs.audio.musiques) || [];
+    const items = musiques.map(function (m) {
+      const joue = B.jukebox === m.slug;
+      return { libelle: (m.nom || m.slug).toUpperCase(), detail: joue ? '▶ JOUE' : '',
+               faire: function () {
+                 B.jukebox = (B.jukebox === m.slug) ? null : m.slug;
+                 if (B.jukebox) Son.Mus.jouer(B.jukebox);
+                 else Son.Chef.arreter();
+                 return false;                                        // on reste dans le jukebox
+               } };
+    });
+    items.push({ libelle: 'ARRÊTER LA MUSIQUE', detail: B.jukebox ? '▶ JOUE' : '',
+                 faire: function () { B.jukebox = null; Son.Chef.arreter(); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); return false; } });
+    return { titre: 'JUKEBOX', largeur: 340, hauteur: VH - 30, items: items,
+             retour: function () { B.jukebox = null; Son.Chef.arreter(); ouvrirMenu(menuDebug()); } };
+  }
+
+  /** PLUS : une page de triches de débug qui débordent du menu principal (le
+      saut de mission, le jukebox). Ouverte depuis la derniere ligne du menu
+      DEBUG, pour ne pas l'encombrer. */
+  function menuDebugPlus() {
+    return { titre: 'PLUS DE TRICHE', sur: 'DEBUG', items: [
+      { libelle: 'SAUT VERS UNE MISSION', faire: function () { ouvrirMenu(menuSautMissions()); return false; } },
+      { libelle: 'JUKEBOX', faire: function () { ouvrirMenu(menuJukebox()); return false; } },
+      { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } },
+    ], retour: function () { ouvrirMenu(menuDebug()); } };
+  }
+
+  /** Donne TOUTES les armes (chargees a fond) et TOUS les vetements, en lisant
+      la source de verite elle-meme (`B.defs`). C'est le CATALOGUE qui decide :
+      une arme ou une tenue ajoutee au jeu tombe dans cette triche sans qu'on y
+      touche — aucun slug ecrit ici, donc rien a oublier le jour ou s'ajoute le
+      suivant. Les poings et le chandail, deja a soi, sont ignores. */
+  function tousLesItems() {
+    const p = B.partie;
+    if (!p) { message('PAS DE PARTIE'); return false; }
+    let armes = 0, tenues = 0;
+    for (const a of (B.defs.armes || [])) {
+      if (a.slug === 'poings') continue;                 // deja au sac a la naissance
+      if (Combat.ramasserArme(a.slug, a.munitions_max || a.chargeur)) armes++;
+    }
+    for (const t of (B.defs.tenues || [])) {
+      if (t.slug === 'chandail' || p.tenues.indexOf(t.slug) >= 0) continue;
+      p.tenues.push(t.slug);
+      tenues++;
+    }
+    Son.SFX.argent();
+    message('TOUTES LES ARMES ET TENUES');
+    return false;
+  }
+
   function menuDebug() {
     const m = Histoire.courante();
     return { titre: 'DEBUG', sur: 'TRICHE', items: [
       { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
+      { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
       { libelle: 'INVINCIBLE', detail: B.debugInvincible ? 'OUI' : 'NON', faire: function (item) {
         B.debugInvincible = !B.debugInvincible;
@@ -1022,6 +1111,7 @@ const Hud = (function () {
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
+      { libelle: 'PLUS…', faire: function () { ouvrirMenu(menuDebugPlus()); return false; } },
       { libelle: 'RETOUR', faire: function () { fermerMenu(); return true; } },
     ] };
   }

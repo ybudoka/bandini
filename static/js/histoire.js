@@ -1511,7 +1511,7 @@ const Histoire = (function () {
            donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
-           lieuDuPersonnage, present, calme, jouerOuDire,
+           lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
            noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj };

@@ -971,6 +971,14 @@ const Son = (function () {
     },
 
     maj: function () {
+      // ⚠️ LE JUKEBOX (débug) TIENT LA MAIN. Tant qu'on a choisi un morceau
+      // dans le jukebox, le chef d'orchestre ne replace ni l'ambiance du
+      // district, ni la poursuite, ni la bagarre par-dessus : on écoute ce
+      // qu'on a demandé. L'arrêt remet `B.jukebox` à null et le chef reprend.
+      if (B.jukebox) {
+        if (Chef.piste !== B.jukebox) { Chef.piste = B.jukebox; Chef.rang = 99; Mus.jouer(B.jukebox); }
+        return;
+      }
       if (Chef.queue > 0) Chef.queue--;
       const v = Chef.voulu();
       if (!v) {
