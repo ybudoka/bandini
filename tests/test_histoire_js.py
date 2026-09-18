@@ -455,6 +455,25 @@ def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paque
     assert r["argent"] == 1000 - prix and r["arme"] is True
 
 
+def test_la_manchette_reste_assez_longtemps_pour_le_texte_lu(banc):
+    """⚠️ La boîte du Clairon s'éteignait à 420 images FIXES, alors que les
+    leçons du narrateur (régénérées le 18 sept., avec pauses) durent jusqu'à
+    9,6 s. Elle suit maintenant la longueur du texte LU, comme le cinéma
+    (90 + 3 par caractère) : la plus longue des voix ne doit pas déborder."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        // La leçon la plus longue du catalogue : on l'impose comme manchette.
+        L.B.partie.manchetteForcee = 'lecon_klaxon';
+        L.Missions.nouveauJour();
+        const d = L.B.dialogue;
+        return { duree: d && d.duree, lignes: d && d.lignes };
+    }""")
+    assert r["lignes"] and r["lignes"][0] == "LE SAVIEZ-VOUS?", "la leçon n'est pas la manchette"
+    # La voix de `lecon_klaxon` dure 9,61 s = 577 images ; la boîte doit tenir
+    # au moins le temps de LA LIRE (bien au-delà des 420 images d'avant).
+    assert r["duree"] >= 540, f"la boîte ne tient pas la leçon : {r['duree']} images"
+
+
 def test_la_carte_de_la_ville_s_ouvre_et_se_ferme(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

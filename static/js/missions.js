@@ -1557,7 +1557,15 @@ const Missions = (function () {
       haute. ⚠️ Et RIEN ne sonne par-dessus : le rappel de Sal, qui tombait dans
       la meme image, ne fait plus sonner le telephone (`nuitDeLaDette`). */
   function direLaManchette(m) {
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
+    // ⚠️ La duree suit CE QUE LE NARRATEUR DIT (`lu`), pas un nombre fixe : les
+    // lecons regenerees du 18 sept. (avec leurs pauses) durent jusqu'a 9,6 s,
+    // et une boite qui s'eteint a 420 images (7 s) disparaissait au milieu de
+    // la voix. On dimensionne sur le texte LU, le plus long des deux — et a
+    // 4 images par caractere (au lieu des 3 du cinema) : le narrateur est un
+    // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
+    // porte des « … » que `lu` ne montre pas.
+    const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree);
     if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
   }
 

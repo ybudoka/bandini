@@ -429,7 +429,17 @@ const Histoire = (function () {
     // figee si le navigateur ne dit jamais que la voix s'est tue (onglet
     // cache, contexte suspendu) ; ACTION passe toujours.
     const l = c.lignes[c.i];
-    const parle = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug) && c.t < c.duree + 900;
+    // ⚠️ UNE VOIX QUI PARLE, OU QUI SE CHARGE ENCORE, RETIENT LA LIGNE. `parle`
+    // regardait seulement `enCours` : la premiere replique d'une mission dont le
+    // mp3 n'etait pas encore cache passait au temps de LIRE (court), la voix
+    // chargee en differe arrivait sur la ligne suivante, et `parler` la coupait
+    // a l'instant meme de la poser. Les voix regenerees du 18 sept. (plus
+    // longues, avec leurs pauses) rendaient la coupure plus visible. Une voix
+    // EN ATTENTE (`Voix.attendue`) pour la ligne courante retient donc autant
+    // qu'une voix qui joue : son `fin` rabattra `duree` une fois dite.
+    const enCours = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug);
+    const enAttente = !!(l && Son.Voix.attendue && Son.Voix.attendue.slug === l.slug);
+    const parle = (enCours || enAttente) && c.t < c.duree + 900;
     // ⚠️ PAS DE BOUTON A LA PREMIERE IMAGE D'UNE LIGNE. L'appui d'ACTION qui
     // OUVRE la conversation (`Combat.maj` → `parler`) est encore « neuf » quand
     // `Histoire.maj` passe ici, dans la MEME image : il sautait la premiere
