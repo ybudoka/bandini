@@ -972,6 +972,45 @@ const Hud = (function () {
     ] };
   }
 
+  // --- Debug : la triche du developpeur, jamais un bouton visible -------------------
+  //: Ce menu ne s'ouvre QUE par la suite secrete de touches ecoutee dans
+  //: `Jeu.demarrer` (voir `Entree.surSecret`) — aucune ligne de menu n'y mene,
+  //: aucune sauvegarde ne s'en souvient.
+
+  /** Saute le joueur au point que le HUD pointe deja (la fleche/losange de
+      `Histoire.cible`) — rien de plus qu'un raccourci sur une position deja
+      calculee. Refuse dans une piece ou au volant : `Jeu.sortir` orchestre sa
+      propre transition et redonnerait au joueur la position de la porte un
+      instant plus tard, par-dessus le teleport. */
+  function teleporterVersObjectif() {
+    const j = B.joueur;
+    if (!j) return;
+    if (B.interieur || j.dansVehicule) { message('SORS D\'ABORD'); return; }
+    const c = Histoire.cible();
+    if (!c) { message('AUCUN OBJECTIF'); return; }
+    j.x = c.x; j.y = c.y; j.vx = 0; j.vy = 0;
+    Monde.centrerCamera(j.x, j.y);
+    message('TÉLÉPORTÉ');
+  }
+
+  function menuDebug() {
+    const m = Histoire.courante();
+    return { titre: 'DEBUG', sur: 'TRICHE', items: [
+      { libelle: 'ARGENT +1 000 $', faire: function () { Missions.encaisser(1000, 'DEBUG'); return false; } },
+      { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
+      { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
+      { libelle: 'INVINCIBLE', detail: B.debugInvincible ? 'OUI' : 'NON', faire: function (item) {
+        B.debugInvincible = !B.debugInvincible;
+        item.detail = B.debugInvincible ? 'OUI' : 'NON';
+        return false;
+      } },
+      { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
+      { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
+      { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
+      { libelle: 'RETOUR', faire: function () { fermerMenu(); return true; } },
+    ] };
+  }
+
   /** L'invite du bas : ce que fera ACTION ici. */
   function invite(ctx) {
     const j = B.joueur;
@@ -1958,7 +1997,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
     legendeDeLaCarte, legendeDuZonage, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
     marqueurs: function () { return marqueurs; },

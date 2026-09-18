@@ -5,6 +5,18 @@ const Jeu = (function () {
   'use strict';
 
   const PAS = 1000 / 60;
+  //: La suite de touches qui reveille le menu DEBUG (voir `Entree.surSecret`,
+  //: `ouvrirMenuDebug`) : « RIGOLO », en lettres qu'AUCUNE action
+  //: d'`Entree.MAP_TOUCHES` n'utilise (a verifier avant d'y toucher : une
+  //: lettre libre aujourd'hui peut se faire lier demain, comme KeyT l'a ete a
+  //: `verrouiller`). ⚠️ Pas les fleches ni B/A (le Konami classique) : KeyB est
+  //: ANNULER, et le taper pendant que PAUSE est ouvert fermait le menu pause
+  //: (`reprendre()` suit, `jeu.js:690`) juste avant que le dernier appui
+  //: n'ouvre DEBUG par-dessus — la suite paraissait ignorer le garde-fou de
+  //: `ouvrirMenuDebug` alors qu'elle avait change l'etat sous ses pieds. Une
+  //: suite hors de `MAP_TOUCHES` ne fait RIEN d'autre en la tapant, dans aucun
+  //: ecran — c'est le seul moyen de garder le garde-fou fiable.
+  const SEQUENCE_DEBUG = ['KeyR', 'KeyI', 'KeyG', 'KeyO', 'KeyL', 'KeyO'];
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
   //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
@@ -476,6 +488,14 @@ const Jeu = (function () {
 
   function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); }
 
+  /** Reveille par la suite secrete (`SEQUENCE_DEBUG`) — jamais par un bouton.
+      En partie seulement, et pas par-dessus un autre menu, une scene ou la
+      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu. */
+  function ouvrirMenuDebug() {
+    if (B.etat !== 'jeu' || B.menu || B.cinema || B.roue) return;
+    Hud.ouvrirMenu(Hud.menuDebug());
+  }
+
   /** La carte de la ville, plein ecran : la simulation attend. */
   function ouvrirCarte() {
     if (B.etat !== 'jeu' && B.etat !== 'pause') return;
@@ -527,6 +547,13 @@ const Jeu = (function () {
 
   function maj() {
     Entree.debutImage();
+    // ⚠️ Le debug INVINCIBLE (`Hud.menuDebug`) reutilise les images
+    // d'invincibilite ORDINAIRES (`Entites.blesser` refuse tout coup tant
+    // qu'elles durent) plutot qu'un second garde-fou : en la rechargeant
+    // CHAQUE image, tant que le flag tient, elle ne retombe jamais a zero — et
+    // combat, tirs, explosions, collisions restent le MEME chemin qu'en jeu
+    // normal, juste sans jamais s'epuiser.
+    if (B.debugInvincible && B.joueur) B.joueur.invincible = 30;
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();
@@ -840,6 +867,7 @@ const Jeu = (function () {
     if (/[?&]trace=1/.test(adresse)) B.options.trace = true;
     if (/[?&]perf=1/.test(adresse)) B.options.perf = true;
     Entree.init(d, w, w.navigator);
+    Entree.surSecret(SEQUENCE_DEBUG, ouvrirMenuDebug);
     Hud.init(d, racine);
     B.rng = mulberry(B.graine);
 
