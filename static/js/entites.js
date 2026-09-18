@@ -164,6 +164,7 @@ const Entites = (function () {
       vie: p.vie, vieMax: Math.round(100 * Missions.avantage('vie', 1)),
       endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
+      cible: null,
     });
     B.joueur = j;
     return j;
@@ -4347,6 +4348,23 @@ const Entites = (function () {
     return Math.floor((t === undefined ? B.t : t) / d.anime) % d.variantes;
   }
 
+  /** L'anneau de la cible verrouillee (`Combat.majCible`) : un repere carre qui
+      respire au-dessus de la tete, dans le monde — pour VOIR qui on vise,
+      pas seulement le sentir a la maniere dont on frappe. */
+  function dessinerCible(ctx, cam) {
+    const c = B.joueur && B.joueur.cible;
+    if (!c || !c.vivant) return;
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    const x = Math.round(c.x - cx), y = Math.round(c.y - 20 - cy);
+    const r = 5 + Math.round(Math.sin((B.image % 40) / 40 * Math.PI) * 2);
+    ctx.fillStyle = '#ff5a3c';
+    ctx.fillRect(x - r, y - r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y + r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y - r, 1, r * 2 + 1);
+    ctx.fillRect(x + r, y - r, 1, r * 2 + 1);
+    B.stats.rects += 4;
+  }
+
   function dessiner(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const visibles = [];
@@ -4503,6 +4521,6 @@ const Entites = (function () {
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose, poseDuDecor,
+    dessiner, dessinerDecals, dessinerParticules, dessinerCible, imageDe, nomDePose, pose, poseDuDecor,
   };
 })();

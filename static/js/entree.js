@@ -22,6 +22,11 @@ const Entree = (function () {
     annuler: ['Backspace', 'KeyB'],
     muet: ['KeyM'],
     carte: ['KeyN'],
+    // ⚠️ PAS KeyT NI AUCUNE LETTRE D'UNE SUITE SECRETE (`Jeu.SEQUENCE_DEBUG`,
+    // ecoutee par `surSecret`) : elles doivent rester hors de `MAP_TOUCHES`
+    // (voir le commentaire au-dessus de `secrets`, plus bas dans ce fichier),
+    // sans quoi les taper declenche AUSSI cette action-ci.
+    verrouiller: ['KeyH'],
   };
   //: La disposition d'une manette RECONNUE par le navigateur (`mapping:
   //: "standard"`, W3C) : 0 le bouton du bas, 1 celui de droite, 2 celui de
@@ -35,7 +40,7 @@ const Entree = (function () {
   //: l'appuyant, et garde le resultat dans les options (`options.manette`).
   const MANETTE_DEFAUT = {
     action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
-    carte: [8], pause: [9], muet: [],
+    carte: [8], pause: [9], muet: [], verrouiller: [10],
     haut: [12], bas: [13], gauche: [14], droite: [15],
   };
   //: Le stick de marche, puis le gaz et le frein. Sur une manette reconnue ce
@@ -125,6 +130,36 @@ const Entree = (function () {
     e.preventDefault();
     if (valeur && !enfonce[e.code] && !e.repeat) presse[e.code] = true;
     enfonce[e.code] = valeur;
+  }
+
+  // --- Secret -------------------------------------------------------------------------
+
+  //: Une SUITE de touches a taper dans l'ordre, pour reveiller quelque chose de
+  //: cache (le menu DEBUG) — jamais dans MAP_TOUCHES, qui associe une touche a
+  //: une ACTION, pas une suite ordonnee. Les fleches qu'elle utilise bougent le
+  //: joueur au passage : les deux sacs sont independants, ca ne genre rien.
+  const SECRET_DELAI = 1500;      // trop lent entre deux touches et on repart a zero
+  let secretTampon = [], secretDernier = 0;
+  const secrets = [];
+
+  /** Enregistre une suite (tableau de `e.code`) et la fonction appelee des
+      qu'elle est tapee au complet. */
+  function surSecret(suite, fait) { secrets.push({ suite: suite.slice(), fait: fait }); }
+
+  function surToucheSecrete(e) {
+    if (!secrets.length || e.repeat) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    const t = Date.now();
+    if (t - secretDernier > SECRET_DELAI) secretTampon.length = 0;
+    secretDernier = t;
+    secretTampon.push(e.code);
+    for (const s of secrets) {
+      const n = s.suite.length, q = secretTampon.length;
+      if (q < n) continue;
+      let pareil = true;
+      for (let i = 0; i < n; i++) if (secretTampon[q - n + i] !== s.suite[i]) { pareil = false; break; }
+      if (pareil) { secretTampon.length = 0; s.fait(); }
+    }
   }
 
   // --- Manette ----------------------------------------------------------------------
@@ -617,7 +652,7 @@ const Entree = (function () {
 
   function init(d, w, n) {
     doc = d; fenetre = w; nav = n;
-    w.addEventListener('keydown', function (e) { surTouche(e, true); });
+    w.addEventListener('keydown', function (e) { surToucheSecrete(e); surTouche(e, true); });
     w.addEventListener('keyup', function (e) { surTouche(e, false); });
     w.addEventListener('blur', toutRelacher);
     w.addEventListener('gamepadconnected', function () { manetteVue = true; Son.reveiller(); });
@@ -628,6 +663,7 @@ const Entree = (function () {
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
     init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    surSecret,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,

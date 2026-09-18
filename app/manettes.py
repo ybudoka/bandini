@@ -66,7 +66,7 @@ def _chapeau() -> dict:
 
 
 def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
-            gachettes=(6, 7), meta=(8, 9), axes=(0, 1)) -> Profil:
+            gachettes=(6, 7), meta=(8, 9), axes=(0, 1), verrouiller=10) -> Profil:
     """Une disposition. `faces` donne les quatre boutons de droite par position ;
     `croix_boutons` dit si la croix est quatre boutons ou un chapeau."""
     boutons: dict[str, list[int]] = {
@@ -80,6 +80,11 @@ def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
         "carte": [meta[0]],
         "pause": [meta[1]],
         "muet": [],
+        # ⚠️ 10 est libre sur une manette reconnue et sur bt_croix_axe (SELECT et
+        # START s'arretent a 8/9) — mais PAS sur bt_dinput, ou 10/11 sont deja
+        # CARTE et PAUSE (`meta`) : ce profil-la passe `verrouiller=2`, l'un des
+        # deux boutons de droite que la numerotation DirectInput saute.
+        "verrouiller": [verrouiller],
         "haut": [12] if croix_boutons else [],
         "bas": [13] if croix_boutons else [],
         "gauche": [14] if croix_boutons else [],
@@ -97,7 +102,7 @@ PROFILS: list[Profil] = [
             faces=FACES_STANDARD),
     _profil("bt_dinput", "8BITDO EN BLUETOOTH", "GÂCHETTES 8 ET 9, CROIX SUR UN AXE",
             faces=FACES_DINPUT, croix_boutons=False,
-            epaules=(6, 7), gachettes=(8, 9), meta=(10, 11)),
+            epaules=(6, 7), gachettes=(8, 9), meta=(10, 11), verrouiller=2),
     _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "NUMÉROS STANDARDS, CROIX À PART",
             faces=FACES_STANDARD, croix_boutons=False),
 ]

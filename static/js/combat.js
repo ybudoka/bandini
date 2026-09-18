@@ -22,6 +22,22 @@ const Combat = (function () {
   const COUP_FORT_DEGATS = 1.8;
   const ASSIST_DEGRES = 26, ASSIST_PORTEE = 220;
   const ROULADE_IMAGES = 16, ROULADE_COUT = 25, ROULADE_VITESSE = 3.4;
+  //: Le verrouillage de cible (17 sept. 2026, demande de Martin : « on rate
+  //: trop souvent un ennemi tout proche »). Un ennemi colle au joueur peut
+  //: quand meme tomber hors du cone d'attaque si `e.angle` n'a pas ete
+  //: rafraichi depuis le dernier pas (`regarder`, `entites.js`) — s'arreter
+  //: pour cogner suffit a le manquer. VERROUILLER force l'angle sur une cible
+  //: choisie, image apres image, qu'on bouge ou non.
+  //:
+  //: Un seul bouton, comme la roue d'armes (voir plus bas) :
+  //: - une TAPE verrouille l'ennemi le plus proche, ou — deja verrouille —
+  //:   passe au suivant (le plus proche APRES celui-la, dans l'ordre des
+  //:   distances, en boucle).
+  //: - TENIR au-dela de `TENIR_IMAGES` deverrouille.
+  //: - Le verrouillage se lache aussi tout seul : cible morte, hors de
+  //:   `VERROU_PORTEE`, ou plus de ligne de vue.
+  const VERROU_PORTEE = 260;
+  let verrouTenu = 0;
 
   //: Le selecteur d'arme. ⚠️ Le catalogue compte TREIZE armes, et jusqu'au
   //: 16 sept. 2026 un seul bouton les parcourait d'un cran, dans un seul
@@ -147,6 +163,14 @@ const Combat = (function () {
   function arcDeMelee(e, arme) {
     const portee = arme.portee + 6;
     const demi = arme.arc / 2 * (e.fort ? 1.25 : 1);
+    // ⚠️ A BOUT PORTANT, L'ANGLE VIENT DU DERNIER PAS, PAS DE LA CIBLE :
+    // `e.angle` n'est ecrit que quand on bouge (`regarder`, appele depuis
+    // `majJoueur`). S'arreter pour cogner un ennemi qui a devie de quelques
+    // pixels suffisait a le manquer, meme colle contre lui. Le meme
+    // rattrapage que `tirer` (`viseeAssistee`), mais borne a la portee de
+    // l'arme pour ne pas accrocher un passant plus loin, mieux aligne, que
+    // celui qu'on a sous le nez.
+    const angle = e === B.joueur ? viseeAssistee(e, e.angle, portee) : e.angle;
     const cibles = Entites.autour(e.x, e.y, portee + 8, function (c) {
       return c !== e && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
     });
@@ -159,7 +183,7 @@ const Combat = (function () {
       // qui regardait, et c'est le meme test qui l'en protege.
       if (e.type === 'pieton' && c.type === 'pieton'
           && !(e.gang && c.gang && e.gang !== c.gang)) continue;
-      const ecart = Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, c.x, c.y)));
+      const ecart = Math.abs(ecartAngle(angle, angleVers(e.x, e.y, c.x, c.y)));
       if (ecart > demi) continue;
       if (!Monde.ligneLibre(e.x, e.y, c.x, c.y)) continue;
       e.touches.push(c.id);
@@ -195,12 +219,57 @@ const Combat = (function () {
     if (sac.usure >= arme.usures) perdreArme(B.joueur, arme.slug);
   }
 
+  // --- Verrouillage -----------------------------------------------------------------
+
+  /** Les ennemis a portee de verrouillage, du plus proche au plus loin, avec
+      ligne de vue — le meme bassin que `viseeAssistee`, mais TOUS, pas
+      seulement celui le mieux aligne. */
+  function ciblesVerrouillables(e) {
+    return Entites.pietonsAutour(e.x, e.y, VERROU_PORTEE)
+      .filter(function (c) { return c !== e && Monde.ligneLibre(e.x, e.y, c.x, c.y); })
+      .sort(function (a, b) { return dist2(e.x, e.y, a.x, a.y) - dist2(e.x, e.y, b.x, b.y); });
+  }
+
+  //: `verrouDeclenche` : ce TENIR a deja fait son geste (deverrouille) —
+  //: sans lui, un bouton garde au-dela de `TENIR_IMAGES` reprenait a 0 et
+  //: remontait, et le RELACHEMENT tombait en pleine remontee : il se relisait
+  //: comme une TAPE et re-verrouillait aussitot ce qu'on venait de lacher.
+  let verrouDeclenche = false;
+
+  /** VERROUILLER : tape = verrouille/change de cible, tenir = deverrouille.
+      Tant qu'une cible tient, `e.angle` pointe dessus a chaque image — c'est
+      ce qui rend `arcDeMelee` et `viseeAssistee` fiables a bout portant, sans
+      qu'ils aient eux-memes rien a savoir du verrouillage. */
+  function majCible(e) {
+    if (e.cible && (!e.cible.vivant || dist2(e.x, e.y, e.cible.x, e.cible.y) > VERROU_PORTEE * VERROU_PORTEE
+        || !Monde.ligneLibre(e.x, e.y, e.cible.x, e.cible.y))) {
+      e.cible = null;
+    }
+    if (Entree.neuf('verrouiller')) { verrouTenu = 1; verrouDeclenche = false; }
+    else if (Entree.bas('verrouiller') && verrouTenu > 0) verrouTenu++;
+    if (Entree.bas('verrouiller')) {
+      if (!verrouDeclenche && verrouTenu > TENIR_IMAGES) { e.cible = null; verrouDeclenche = true; }
+    } else {
+      if (verrouTenu > 0 && !verrouDeclenche) {
+        // Relache avant TENIR_IMAGES, et pas deja deverrouille : une TAPE.
+        const cibles = ciblesVerrouillables(e);
+        if (cibles.length) e.cible = cibles[(cibles.indexOf(e.cible) + 1) % cibles.length];
+      }
+      verrouTenu = 0;
+      verrouDeclenche = false;
+    }
+    if (e.cible) Entites.regarder(e, e.cible.x - e.x, e.cible.y - e.y);
+  }
+
   // --- Tirer ----------------------------------------------------------------------
 
-  /** L'angle corrige vers l'ennemi le plus proche dans le cone de visee. */
-  function viseeAssistee(e, angle) {
+  /** L'angle corrige vers l'ennemi le plus proche dans le cone de visee.
+      `rayon` borne la recherche (la mêlée passe sa portée, courte : sans
+      ça un passant loin mais mieux aligné volerait l'assistance à celui
+      qu'on a sous le nez). */
+  function viseeAssistee(e, angle, rayon) {
     let meilleur = angle, ecartMin = ASSIST_DEGRES * Math.PI / 180;
-    for (const c of Entites.pietonsAutour(e.x, e.y, ASSIST_PORTEE)) {
+    for (const c of Entites.pietonsAutour(e.x, e.y, rayon || ASSIST_PORTEE)) {
       if (c === e) continue;
       const vers = angleVers(e.x, e.y, c.x, c.y);
       const ecart = Math.abs(ecartAngle(angle, vers));
@@ -802,6 +871,12 @@ const Combat = (function () {
 
   function maj() {
     const j = B.joueur;
+    // ⚠️ AVANT LA BOUCLE D'ATTAQUE, plus bas : `arcDeMelee` lit `e.angle`
+    // pendant la phase active, et c'est cette ligne qui le tient pointe sur
+    // la cible verrouillee, image apres image, meme si le joueur ne bouge
+    // pas. Un `j` qui n'existe pas encore (chargement) ne verrouille rien.
+    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !B.roue) majCible(j);
+    else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
     majOtage();
@@ -910,6 +985,7 @@ const Combat = (function () {
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
+    majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };
 })();

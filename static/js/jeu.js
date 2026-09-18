@@ -700,6 +700,7 @@ const Jeu = (function () {
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
+    Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
