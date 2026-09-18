@@ -37,6 +37,14 @@ const Jeu = (function () {
         v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
       }
     }
+    // Le char DONNE par une mission (`donne.vehicule`, le taxi de m97) gare
+    // devant la planque, a part de celui qu'on y laisse soi-meme.
+    const donne = p.vehiculePlanque;
+    if (donne && Vehicules.vehiculeDef(donne.slug)) {
+      const place = placeDevantLaPlanque();
+      const v = place && Vehicules.creer(donne.slug, place.x, place.y, donne.angle || 0, { etat: 'stationne' });
+      if (v && donne.couleur) { v.couleur = donne.couleur; v.swaps = nuances(donne.couleur); }
+    }
     // Les chars saisis attendent dans la cour du lot, comme celui de la
     // planque attend devant sa porte.
     Missions.garnirLaFourriere();
@@ -485,6 +493,13 @@ const Jeu = (function () {
 
   function retourTitre() {
     Missions.sauvegarderPartie();
+    // ⚠️ UN DES TROIS MOMENTS QUI COMPTENT (M14) : on vient de finir de jouer, et
+    // c'est la que la partie doit etre a jour sur le compte — pas dans une minute
+    // et demie. Les deux autres : l'onglet qui se ferme, et le repos de
+    // `Compte.apresEcriture` pendant qu'on joue. ⚠️ `ranger` et pas `monter` : le
+    // titre est aussi le moment ou une partie qui attendait en coulisse (elle ne
+    // pouvait pas se poser pendant qu'on jouait) peut enfin descendre.
+    Compte.ranger();
     B.etat = 'titre';
     Hud.etat('titre');
     Hud.voile('titre');
@@ -631,6 +646,8 @@ const Jeu = (function () {
         // La musique suit ce qui t'arrive : district, poursuite, bagarre.
         Son.Chef.maj();
         Monde.majChemins();
+        // Les vagues : leur volume est une question de carte, pas de son.
+        Monde.majSonDuBord();
         Entites.maj();
         Combat.maj();
         Vehicules.maj();
@@ -838,7 +855,14 @@ const Jeu = (function () {
     // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
     // le geste le plus banal sur telephone : changer d'application). Fermer
     // dans ce cas-la viderait les sons decodes et la page reviendrait muette.
-    w.addEventListener('pagehide', function (ev) { if (!ev || !ev.persisted) Son.fermer(); });
+    w.addEventListener('pagehide', function (ev) {
+      if (ev && ev.persisted) return;
+      Son.fermer();
+      // ⚠️ `sendBeacon`, pas `fetch` : une requete ordinaire lancee pendant que
+      // la page s'en va se fait couper — sur telephone, changer d'application
+      // EST la facon normale de quitter le jeu.
+      Compte.partir();
+    });
     d.addEventListener('pointerdown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     d.addEventListener('keydown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     // On sonde tout de suite : le contexte naît « suspended » si la page n'a
@@ -872,6 +896,18 @@ const Jeu = (function () {
       // Le bouton JOUER DANS LE CASQUE : seulement une fois la ville chargee, et
       // seulement si le navigateur ouvre une session immersive.
       Casque.init(d, w, w.navigator);
+      // LE COMPTE (M14) : l'ouverture part ICI, une fois la ville batie — elle ne
+      // retarde pas le chargement d'une milliseconde, et sa reponse arrive
+      // pendant qu'on lit l'ecran titre. ⚠️ Rien n'attend apres elle : serveur
+      // eteint, wifi coupe, base tombee, on joue pareil.
+      Compte.init(w, racine);
+      Compte.surChangement(function (vue, recue) {
+        // Une partie qui DESCEND du compte remplace celle qu'on a en memoire.
+        // ⚠️ C'est `Compte.poser` qui refuse d'ecrire quoi que ce soit sous les
+        // pieds de quelqu'un qui joue — une garde de plus ici ne serait jamais
+        // exercee, donc jamais jugee, et elle mentirait le jour ou l'autre tombe.
+        if (recue && recue === Sauvegarde.emplacement()) B.partie = chargerPartie(recue);
+      });
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -901,7 +937,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,

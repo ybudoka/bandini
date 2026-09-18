@@ -16,6 +16,7 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     r = banc("""function (L, o) {
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
                  carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length,
+                 compte: o.compte.appels.map(function (a) { return a.chemin; }),
                  ouverture: L.Histoire.fichiersDeLOuverture().length };
     }""")
     assert r["etat"] == "titre"
@@ -33,7 +34,13 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # chiffre ci-dessous est ce qui le garantit : il ne bouge que si quelqu'un
     # ajoute une phrase a l'ouverture, jamais parce qu'un son de plus s'est
     # invite au demarrage.
-    assert r["fetchs"] == 2 + r["ouverture"]
+    # ⚠️ Plus UNE requete de compte (M14, 2e vague) : `POST /api/compte/ouvrir`,
+    # qui tourne le jeton d'appareil une fois par chargement. Sans cookie, le
+    # serveur repond « pas de compte » et plus rien ne part — un jeu qui bavarde
+    # avec le serveur alors que personne n'a de compte serait un jeu qui a oublie
+    # qu'il se joue hors ligne.
+    assert r["compte"] == ["ouvrir"]
+    assert r["fetchs"] == 3 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 

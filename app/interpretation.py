@@ -278,6 +278,23 @@ JEU: dict[str, str] = {
     "josee-m5-6": "[mysteriously] On va se reparler. Y a plus grand… que le Faubourg.",
     "josee-m5-7": "[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.",
     "josee-m5-8": "[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.",
+    # --- M6, Josee presente la ville : plus chaude qu'a M5, elle donne des noms.
+    "josee-m6-1": "[confident] Josée. Le Faubourg est à nous. Viens au bar… je te présente la ville.",
+    "josee-m6-2": "[matter-of-fact] Quatre coins, quatre personnes. Ti-Paul au dépanneur… ma sœur Lulu à la cantine.",
+    "josee-m6-3": "[matter-of-fact] Raymonde tient le syndicat à l'usine… pis Ovila garde le phare.",
+    "josee-m6-4": "[warmly] Va leur serrer la main… Dans cette ville, tout commence par là.",
+    "josee-m6-5": "[satisfied] Quatre poignées de main. [warmly] Le monde va t'appeler par ton nom… astheure.",
+    "josee-m6-6": "[mysteriously] Garde l'œil ouvert… Il se passe plus de choses que t'en penses.",
+    "josee-m6-7": "[disappointed] Tu reviendras… quand tu auras le temps de faire le tour.",
+    "josee-m6-8": "[knowingly] Le dépanneur d'abord. Ti-Paul en sait plus… qu'il en a l'air.",
+    # --- M97, Marco trahit : froid, amer, puis qui se rend a l'evidence.
+    "marco-m97-1": "[coldly] Marco. Viens au garage, cousin. On a à se parler… toi pis moi.",
+    "marco-m97-2": "[bitterly] Bouchard m'a montré ton dossier. T'as bâti un nom… sur mon dos.",
+    "marco-m97-3": "[menacingly] Pis il paie pour te voir tomber… Tiens, les voilà.",
+    "marco-m97-4": "[impressed] T'es plus dur que les chiens qu'il a lâchés. Garde le taxi… il est à toi.",
+    "marco-m97-5": "[somber] Moi, je disparais… La ville est à toi, cousin.",
+    "marco-m97-6": "[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.",
+    "marco-m97-7": "[worried] Cours, cousin… Ceux-là ne font pas de quartier.",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.

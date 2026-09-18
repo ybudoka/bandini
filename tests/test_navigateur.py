@@ -790,3 +790,54 @@ def test_le_casque_montre_la_toile_dans_un_vrai_webgl(page, serveur, erreurs):
     assert r["coin"] == [11, 10, 18], f"autour de l'ecran, le fond doit etre le noir du jeu : {r['coin']}"
     assert page.evaluate("window.BANDINI.Base.SCALE") == 3
     assert erreurs == []
+
+
+# --- Le compte (M14, 2e vague) ---------------------------------------------------------
+
+
+def test_creer_un_compte_de_bout_en_bout(page, serveur, erreurs):
+    """Le vrai chemin : l'écran, le POST, SQLite, le cookie, l'écran qui suit.
+
+    ⚠️ Et une chose que le banc ne peut pas voir : le formulaire doit DISPARAÎTRE
+    une fois connecté. `hidden` ne suffit pas — `.compte-form` est en `display:
+    flex`, qui bat l'attribut, et le banc lisait pourtant `hidden === true`. Un
+    juge qui regarde la propriété plutôt que l'écran aurait laissé passer un
+    formulaire de connexion affiché sous le nom de celui qui est connecté."""
+    page.goto(serveur)
+    attendre_titre(page)
+    assert page.text_content("#bouton-compte") == "Compte"
+    page.click("#bouton-compte")
+    page.wait_for_selector("#voile-compte:not([hidden])")
+    assert page.is_visible("#compte-form")
+
+    page.fill("#compte-pseudo", "Martin")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.fill("#compte-courriel", "martin@exemple.ca")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    assert not page.is_visible("#compte-form"), "connecté, on ne redemande pas un mot de passe"
+    assert page.is_visible("#bouton-compte-deconnexion")
+    assert page.text_content("#bouton-compte") == "Compte : Martin"
+    assert page.input_value("#compte-passe") == "", "le mot de passe ne traîne pas dans un champ"
+    # ⚠️ Le seul mot qui dit que ça a marché : il vivait DANS le formulaire, donc
+    # il se cachait avec lui à la seconde où il servait.
+    assert page.is_visible("#compte-etat") and "Martin" in page.text_content("#compte-etat")
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "ouvert"
+    # ⚠️ Le jeton d'appareil est un cookie `HttpOnly` : le JS de la page ne doit
+    # pas pouvoir le lire, sinon une seule faille d'injection ouvrirait le compte.
+    assert "bandini-appareil" not in page.evaluate("document.cookie")
+    jeton = [c for c in page.context.cookies() if c["name"] == "bandini-appareil"]
+    assert jeton and jeton[0]["httpOnly"] and jeton[0]["path"] == "/api/compte"
+    assert erreurs == []
+
+
+def test_le_compte_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
+    """⚠️ Serveur de comptes en panne (500 sur toutes ses routes) : la ville
+    s'ouvre, JOUER joue, et l'écran du compte le dit sans drame."""
+    page.route("**/api/compte/**", lambda route: route.fulfill(status=500, body="{}",
+                                                              content_type="application/json"))
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"

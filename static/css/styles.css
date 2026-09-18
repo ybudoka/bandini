@@ -159,22 +159,9 @@ kbd {
   font-size: .95em;
 }
 
-.scores {
-  margin: 0;
-  padding: 0 0 0 1.6em;
-  width: min(100%, 360px);
-  text-align: left;
-  font-size: clamp(13px, 2vw, 16px);
-  max-height: 55%;
-  overflow: auto;
-}
-.scores li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
-.scores li span:last-child { color: var(--or); white-space: nowrap; }
-.scores__vide { list-style: none; opacity: .8; }
-
-.score-form { display: flex; flex-direction: column; gap: 6px; align-items: center; }
-.score-form__ligne { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
-.score-form input {
+.compte-form { display: flex; flex-direction: column; gap: 6px; align-items: center; }
+.compte-form__ligne { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+.compte-form input {
   width: 12em;
   min-height: 44px;
   padding: 8px 12px;
@@ -184,7 +171,27 @@ kbd {
   background: var(--parchemin);
   color: var(--nuit);
 }
-.score-form__etat { margin: 0; min-height: 1.2em; font-size: 14px; color: var(--or); }
+.compte-form__etat { margin: 0; min-height: 1.2em; font-size: 14px; color: var(--or); }
+
+/* Le compte (M14) : les trois cases telles que le serveur les connait. Deux
+   colonnes, la valeur en or a droite. */
+.compte-parties {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  width: min(30em, 100%);
+  font-size: 15px;
+}
+.compte-parties li { display: flex; justify-content: space-between; gap: 12px; padding: 2px 0; }
+.compte-parties li span:last-child { color: var(--or); white-space: nowrap; }
+.compte-parties:empty { display: none; }
+/* ⚠️ `display: flex` BAT l'attribut `hidden` : sans cette règle, le formulaire du
+   compte reste à l'écran une fois connecté — et rien ne le dit au banc, qui voit
+   bien `hidden = true`. Vu à la capture, le 17 sept. 2026 ; c'est la même raison
+   qui a fait écrire `.voile[hidden]` plus haut. */
+.compte-form[hidden] { display: none; }
+/* Trois champs nommés : « Courriel (facultatif) » ne tient pas dans 12em. */
+#voile-compte .compte-form input { width: 15em; }
 
 .pied {
   display: flex;

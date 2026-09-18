@@ -734,6 +734,57 @@ const Monde = (function () {
     }
     return false;
   }
+  // --- LE SON DU BORD DE L'EAU ---------------------------------------------------------
+  //
+  // ⚠️ **Une plage muette est un dessin de plage.** La grève est meublée depuis
+  // le 16 sept. (174 meubles), les enfants y jouent, une coque y est amarrée —
+  // et on pouvait s'asseoir sur le sable sans entendre une seule vague.
+  //
+  // ⚠️ Ça vit ICI et pas dans `son.js` : le volume des vagues est une question
+  // de CARTE (« où est l'eau ? »), et `son.js` ne connaît pas la ville.
+
+  //: Au-delà, on n'entend plus la baie (en tuiles) ; à une tuile, on a les
+  //: pieds dedans et ça joue plein.
+  const VAGUES_TUILES = 9;
+  const VAGUES_PLEIN = 1;
+  //: Ce que le volume rattrape par image. ⚠️ Le volume GLISSE : on ne cherche
+  //: l'eau qu'une image sur quinze (289 tuiles par recherche, ça ne se paie pas
+  //: soixante fois par seconde), et un volume qui saute d'un palier toutes les
+  //: quinze images s'entend comme un bouton qu'on tourne.
+  const VAGUES_PAS = 0.02;
+  let vaguesVolume = 0, vaguesVoulu = 0;
+
+  /** À combien de tuiles est l'eau la plus proche (distance de l'échiquier),
+      ou null au-delà de `rmax`. Anneau par anneau : on s'arrête au premier. */
+  function eauLaPlusProche(tx, ty, rmax) {
+    for (let r = 0; r <= rmax; r++) {
+      for (let dy = -r; dy <= r; dy++) {
+        for (let dx = -r; dx <= r; dx++) {
+          if (Math.abs(dx) !== r && Math.abs(dy) !== r) continue;
+          if (estEau(tx + dx, ty + dy)) return r;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Les vagues, à chaque image. ⚠️ Dedans, la baie se tait : une porte, c'est
+      une porte — et le volume repart de zéro, sinon il redescendrait en
+      glissant pendant qu'on est au comptoir. */
+  function majSonDuBord() {
+    if (typeof Son === 'undefined') return;
+    const j = B.joueur;
+    if (!j || B.interieur) { vaguesVoulu = 0; vaguesVolume = 0; Son.SFX.vagues(0); return; }
+    if (B.t % 15 === 0) {
+      const r = eauLaPlusProche(Math.floor(j.x / TT), Math.floor(j.y / TT), VAGUES_TUILES);
+      vaguesVoulu = r === null ? 0
+        : r <= VAGUES_PLEIN ? 1
+        : 1 - (r - VAGUES_PLEIN) / (VAGUES_TUILES - VAGUES_PLEIN);
+    }
+    vaguesVolume += Math.max(-VAGUES_PAS, Math.min(VAGUES_PAS, vaguesVoulu - vaguesVolume));
+    Son.SFX.vagues(vaguesVolume);
+  }
+
   /** Un meuble (table, comptoir, lit...) : un pieton PASSE dessus — la legende
       ne l'arrete pas — mais personne n'a a s'y tenir debout. */
   function estMeuble(tx, ty) { return !!((carte && carte.legende[glyphe(tx, ty)] || {}).meuble); }
@@ -1688,7 +1739,7 @@ const Monde = (function () {
 
   return {
     MUR, EAU, BASSE, GRILLAGE, BARBELE, MASQUE_PIETON, MASQUE_NAGEUR, MASQUE_VEHICULE,
-    MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse,
+    MASQUE_A_PIED, MORCEAUX_MAX, estEau, eauBasse, eauLaPlusProche, majSonDuBord,
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,

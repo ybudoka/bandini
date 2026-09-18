@@ -144,8 +144,18 @@ function etatInitial(defs) {
     appelT: null,
     defisFaits: {},
     rabais: {},
+    //: Les contacts du téléphone (`donne.contacts`, m6) : des personnages
+    //: dont on a le numéro. Un objet slug -> jour, comme le répertoire.
+    contacts: {},
     sergentAmi: false,
     faubourgLibere: false,
+    //: Les districts liberes (`libere` de M16, generalise `faubourg_libere`) :
+    //: un tableau de slugs — ordonne, comme tout ce qui voyage dans la partie.
+    libere: [],
+    //: Le char que DONNE une mission, gare devant la planque (`donne.vehicule`,
+    //: le taxi de m97). Il vit a part de `planque.vehicule` (celui qu'on y
+    //: laisse soi-meme) pour ne pas ecraser la sauvegarde.
+    vehiculePlanque: null,
     manchetteForcee: null,
     paquets: {},
     journal: null,
@@ -376,14 +386,61 @@ const Sauvegarde = (function () {
   //: ⚠️ Dans `sessionStorage`, pas dans `localStorage` : ce drapeau ne doit
   //: survivre qu'au rechargement qu'on a demande, jamais a la visite suivante.
   const CLE_ROUVRIR = 'bandini-rouvrir-parties';
-  let stockage = null, session = null, actif = 1;
+  /*: LE COMPTEUR DES SAUVEGARDES, par emplacement (M14) : il avance d'un cran a
+    chaque ecriture locale, et c'est le SEUL ordre que le serveur comprend — deux
+    appareils n'ont pas la meme heure, et une horloge qui recule ferait perdre une
+    partie. ⚠️ Il ne vit pas DANS la partie : une copie d'un emplacement vers un
+    autre emporterait son compteur, et la case copiee se croirait a jour. */
+  const CLE_COMPTEUR = 'bandini-compteur-v1';
+  let stockage = null, session = null, actif = 1, compteurs = {}, apresEcriture = null;
 
   function init(s, sess) {
     stockage = s; session = sess || null;
     let n = 1;
     try { n = parseInt(stockage && stockage.getItem(CLE_EMPLACEMENT), 10); } catch (e) { n = 1; }
     actif = n >= 1 && n <= EMPLACEMENTS ? n : 1;
+    compteurs = {};
+    try {
+      const gardes = stockage && stockage.getItem(CLE_COMPTEUR);
+      const lus = gardes ? JSON.parse(gardes) : null;
+      if (lus && typeof lus === 'object') compteurs = lus;
+    } catch (e) { compteurs = {}; }
+    // ⚠️ Une partie d'AVANT le compteur (celle de Martin) n'en a pas, et une case
+    // pleine a zero passerait pour une case vide au premier compte : elle demarre
+    // a 1. Ce qui est vide reste a zero — c'est ce qui dit « il n'y a rien ici ».
+    for (let i = 1; i <= EMPLACEMENTS; i++) {
+      if (!compteurs[i] && brut(i)) compteurs[i] = 1;
+    }
   }
+
+  function compteur(n) {
+    const v = compteurs[n || actif];
+    return typeof v === 'number' && v > 0 ? v : 0;
+  }
+
+  function ecrireCompteurs() {
+    try { stockage && stockage.setItem(CLE_COMPTEUR, JSON.stringify(compteurs)); } catch (e) { /* rien */ }
+  }
+
+  /** Le compteur de `n` prend la valeur `v` — celle du serveur, quand sa partie
+      descend : la prochaine sauvegarde repart de la, et rien ne se refuse. */
+  function poserCompteur(n, v) {
+    compteurs[n || actif] = typeof v === 'number' && v > 0 ? Math.floor(v) : 0;
+    ecrireCompteurs();
+  }
+
+  function avancer(n) {
+    compteurs[n] = compteur(n) + 1;
+    ecrireCompteurs();
+    return compteurs[n];
+  }
+
+  /** Le crochet du compte (M14) : appele apres CHAQUE ecriture locale, avec
+      l'emplacement ecrit. ⚠️ `Sauvegarde` ne sait rien du reseau et ne doit rien
+      en savoir : elle previent, c'est tout. */
+  function surEcriture(f) { apresEcriture = f; }
+
+  function prevenirEcriture(n) { if (apresEcriture) apresEcriture(n); }
 
   function cle(n) { return n === 1 ? CLE : CLE + '-' + n; }
   function emplacement() { return actif; }
@@ -406,20 +463,48 @@ const Sauvegarde = (function () {
   /** ⚠️ La date part avec la partie ECRITE, pas dans `B.partie` : une horloge
       murale dans l'etat du jeu ferait differer deux parties jouees pareil. */
   function ecrire(partie, n) {
+    const ou = n || actif;
     try {
-      stockage && stockage.setItem(cle(n || actif), JSON.stringify(Object.assign({}, partie, { sauveeLe: Date.now() })));
-      return true;
+      stockage && stockage.setItem(cle(ou), JSON.stringify(Object.assign({}, partie, { sauveeLe: Date.now() })));
     } catch (e) { return false; }
+    // ⚠️ Le compteur n'avance QUE si l'ecriture a tenu : un quota plein qui
+    // ferait avancer le compteur ferait monter au serveur une partie qui n'est
+    // pas celle d'ici.
+    avancer(ou);
+    prevenirEcriture(ou);
+    return true;
   }
 
-  function effacer(n) { try { stockage && stockage.removeItem(cle(n || actif)); } catch (e) { /* rien */ } }
+  /** La partie du serveur, posee TELLE QUELLE (M14) : elle garde sa date de
+      sauvegarde, et le compteur ne bouge pas — c'est `Compte` qui le pose sur
+      celui du serveur. ⚠️ Passer par `ecrire` la redaterait a maintenant et
+      avancerait le compteur : la case descendue se croirait plus neuve que la
+      version dont elle vient, et elle remonterait aussitot. */
+  function poser(n, partie) {
+    try { stockage && stockage.setItem(cle(n || actif), JSON.stringify(partie)); return true; } catch (e) { return false; }
+  }
+
+  /** ⚠️ Effacer AVANCE le compteur (M14) : une case videe ici doit se vider
+      la-bas aussi, et une case vide sans compteur neuf se ferait remplir par la
+      vieille copie que le serveur garde encore. */
+  function effacer(n) {
+    const ou = n || actif;
+    try { stockage && stockage.removeItem(cle(ou)); } catch (e) { /* rien */ }
+    avancer(ou);
+    prevenirEcriture(ou);
+  }
 
   /** Copie TELLE QUELLE, a l'octet : une copie qu'on relit et reecrit passerait
       par `completer()` et ne serait plus la partie qu'on a voulu garder. */
   function copier(de, vers) {
     const b = brut(de);
     if (!b || de === vers) return false;
-    try { stockage.setItem(cle(vers), b); return true; } catch (e) { return false; }
+    try { stockage.setItem(cle(vers), b); } catch (e) { return false; }
+    // La case d'arrivee vient de changer : c'est une version de plus, comme une
+    // sauvegarde. Celle de depart, elle, n'a pas bouge.
+    avancer(vers);
+    prevenirEcriture(vers);
+    return true;
   }
 
   /** Ce que le choix des parties montre d'un emplacement, ou null s'il est vide
@@ -465,7 +550,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);
@@ -487,6 +572,7 @@ const Sauvegarde = (function () {
     return out;
   }
 
-  return { CLE, CLE_OPTIONS, CLE_EMPLACEMENT, EMPLACEMENTS, init, cle, emplacement, choisir, lire, ecrire, effacer, copier,
+  return { CLE, CLE_OPTIONS, CLE_EMPLACEMENT, CLE_COMPTEUR, EMPLACEMENTS, init, cle, emplacement, choisir, lire, ecrire, effacer, copier,
+           poser, compteur, poserCompteur, surEcriture,
            apercu, occupes, marquerRouverture, rouverture, completer, ecrireOptions, lireOptions };
 })();

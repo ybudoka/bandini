@@ -143,7 +143,7 @@ ne bougent pas quand l'ordre de travail change.
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
 | L'eau basse : le premier pas ne noie pas | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#leau-basse--le-premier-pas-ne-noie-pas) |
-| Le bord de l'eau et la foire | ⬜ **en cours** (3 vagues livrées : la grève se meuble ; les enfants jouent ; l'eau porte quelque chose — la 4e, la foire de La Pointe, est refaite : restent les trois défis et l'audio) | 16 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
+| Le bord de l'eau et la foire | ✅ **livré** (cinq vagues : la grève se meuble ; les enfants jouent ; l'eau porte quelque chose ; la foire de La Pointe ; les trois jeux d'adresse et l'audio) | 17 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
 | Plus de champs : des terrains vagues et des parcs | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#plus-de-champs--des-terrains-vagues-et-des-parcs) |
 | La roue d'armes | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#la-roue-darmes) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [notes](#la-ligne-dhistoire--une-ouverture-et-un-générique) |
@@ -666,6 +666,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
+| 1b | `compte.js` | **le compte, côté jeu** (M14, 2e vague) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -753,7 +754,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py
+        test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -9111,14 +9112,53 @@ chose d'entrer », « plus compacte ».
   lampadaire planté ; une table de la cour à manger n'est pas du mobilier de plage. 15 juges
   (`test_foire.py`), dont un qui prouve que le détecteur de trou **voit** un trou (le trou
   d'origine a disparu avec le déplacement des tables : remettre le défaut ne suffisait plus
-  à rougir) ; 1837 tests. **Restent les trois défis** (galerie de tir, marteau de force,
-  pêche aux canards) et les quatre pistes audio.
+  à rougir) ; 1837 tests. **Restait les trois défis** (galerie de tir, marteau de force,
+  pêche aux canards) et les quatre pistes audio — livrés le 17 sept. par la 5e vague.
 
-🔨 **5e vague en cours** (17 sept. 2026) — *les trois défis et l'audio*. Ce qui reste de la
-fiche : la galerie de tir, le marteau de force et la pêche aux canards sur les rails de
-`missions.DEFIS`, et les quatre pistes — l'orgue de manège (**une musique qui sort d'un
-ENDROIT** : le code du musicien de rue, une source fixe), les cris de la foire, les vagues
-de la baie et le moteur de la coque.
+✅ **5e vague livrée** (17 sept. 2026) — *les trois défis et l'audio*.
+
+- ⚠️ **Un jeu d'adresse est un DÉFI, pas un moteur.** La galerie de tir, le marteau de force
+  et la pêche aux canards tiennent sur les rails de `missions.DEFIS` (un lieu, un compte, un
+  chrono, une prime, un texte en majuscules) : trois fiches de plus, `a_pied` — on les joue
+  DEBOUT devant un comptoir, pas au volant. `ou: foire:<jeu>`, et aucun panneau ne se plante
+  : c'est le comptoir qu'on lit. La prime est petite (règle des paliers de boulot), et les
+  trois ensemble rapportent dix fois le billet d'entrée — au troisième, la **casquette de la
+  foire** (`magasins.TENUES`), rien d'autre ne la donne.
+  - La **galerie de tir** : les cibles sont des décors `cible_foire` avec des `pv`, « ce
+    qu'on mesure, c'est ce qui est TOMBÉ » — une balle, une bille, n'importe quoi qui les
+    crève. On recule pour tirer (rayon large), et le forain relève ses cibles avant qu'on
+    tire — une galerie jouée deux fois dans la journée ne doit pas devenir un défi impossible.
+  - Le **marteau de force** : marteler ACTION contre un chrono, aucune statistique neuve —
+    le compte est en coups, pas en muscles. `Son.SFX.maillet` (un coup mat sur un plateau de
+    bois) et `cloche` (le seul son du jeu qui dise « tu as gagné » avant le HUD).
+  - La **pêche aux canards** : on la GAGNE, on ne la VOLE pas (`vole_pas`) — un comptoir
+    défoncé met fin au jeu. Le canard ne s'accroche que quand il passe sous le crochet, et
+    c'est le DESSIN qui le dit (`canardAuCrochet` lit `Entites.poseDuDecor`, la même pose
+    que celle qui se peint) — un chrono inventé et une animation qui tourne de son côté, ce
+    serait un jeu d'adresse où l'adresse ne sert à rien.
+  - ⚠️ **La chaîne d'action affame ce qui suit** : `actionDeDefi` passe AVANT le reste,
+    sinon marteler devant le comptoir ouvrirait le menu du comptoir à chaque coup.
+- ⚠️ **Les quatre pistes sont générées et posées** (`audio.py`, `musique.py` + une séance
+  ElevenLabs) : les **vagues** (boucle dont le volume suit la distance à l'eau), les **cris
+  de la foire** (ce qu'on entend avant de voir la palissade), le **moteur de la coque** (un
+  hors-bord cogne et crachote, il ne roule pas au ralenti d'une auto), et **l'orgue du
+  manège** — une MUSIQUE qui sort d'un ENDROIT, le code du musicien de rue avec une source
+  fixe au milieu de l'allée, pas une ambiance de district de plus. Chaque boucle a son repli
+  synthétisé, exactement ce que fait un vrai maître d'œuvre sourd.
+
+- ⚠️ **Le district se tait dans la foire.** Mesuré : l'ambiance de La Pointe jouait
+  **dessous** l'orgue — deux musiques à la fois, alors que la fiche de l'orgue dit noir sur
+  blanc qu'il est « une musique qui sort d'un ENDROIT », PAR-DESSUS l'ambiance. `Chef.voulu`
+  coupe l'ambiance du district dans l'enceinte (`Monde.dansLaFoire`), **mais APRÈS** la
+  poursuite et la bagarre : se cacher sous un comptoir ne rend pas la ville sourde à la
+  police. Un juge le tient (`test_son_js.py`), à pied, recherché et au bord de la
+  palissade.
+- ⚠️ **Reste ouvert, mesuré et nommé** : à la lisière de la palissade, l'ambiance de La
+  Pointe revient **d'un coup** alors que l'orgue (460 px de portée) s'entend encore. C'est
+  voulu — dehors, c'est La Pointe — mais la bascule est plus sèche qu'aux frontières de
+  district, qui ont leur hystérésis (`hysteresis_px`). **Idée à reprendre** si Martin trouve
+  la couture trop brusque en sortant de la foire : la même hystérésis qu'à une frontière de
+  district, appliquée au bord de l'enceinte.
 
 ### Plus de champs : des terrains vagues et des parcs
 

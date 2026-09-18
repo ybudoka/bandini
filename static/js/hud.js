@@ -1,22 +1,30 @@
-/* Bandini — HUD (canvas, hors nuit) et voiles DOM (titre, scores). */
+/* Bandini — HUD (canvas, hors nuit) et la voile DOM du titre. */
 
 const Hud = (function () {
   'use strict';
 
-  let doc = null, racine = null, voiles = {}, urlScores = '';
+  let doc = null, racine = null, voiles = {};
 
   function init(d, r) {
     doc = d; racine = r;
-    urlScores = r.dataset.urlScores;
-    ['titre', 'scores', 'score-envoi'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
+    ['titre', 'compte'].forEach(function (n) { voiles[n] = d.getElementById('voile-' + n); });
     // ⚠️ `videPresse` : ENTREE sur le bouton qui a le focus fait un clic ET un
     // appui d'ACTION. Le clic ouvre le choix des parties, et l'appui, lu a
     // l'image suivante, y choisirait aussitot la ligne sous le curseur.
     d.getElementById('bouton-jouer').addEventListener('click', function () { Son.reveiller(); Entree.videPresse(); Jeu.ouvrirParties(); });
-    d.getElementById('bouton-scores').addEventListener('click', function () { Son.reveiller(); montrerScores(); });
-    d.getElementById('bouton-fermer-scores').addEventListener('click', function () { voile('titre'); });
-    d.getElementById('bouton-annuler-score').addEventListener('click', function () { voile(null); Jeu.reprendre(); });
-    d.getElementById('score-form').addEventListener('submit', envoyerScore);
+    // LE COMPTE (M14) : l'ecran, et le seul endroit du HUD qui parle a `Compte`.
+    d.getElementById('bouton-compte').addEventListener('click', function () { Son.reveiller(); montrerCompte(); });
+    d.getElementById('bouton-fermer-compte').addEventListener('click', function () { voile('titre'); });
+    d.getElementById('compte-form').addEventListener('submit', function (ev) { ev.preventDefault(); envoyerCompte('connexion'); });
+    d.getElementById('bouton-compte-inscription').addEventListener('click', function () { envoyerCompte('inscription'); });
+    d.getElementById('bouton-compte-deconnexion').addEventListener('click', function () {
+      const etatEl = d.getElementById('compte-etat');
+      if (etatEl) etatEl.textContent = 'Déconnexion…';
+      Compte.deconnecter().then(function (v) { majCompte(v); if (etatEl) etatEl.textContent = 'Déconnecté de cet appareil.'; });
+    });
+    // ⚠️ L'ecran suit le compte, il ne l'interroge pas : l'ouverture, une partie
+    // qui descend ou une session coupee arrivent quand le reseau veut bien.
+    Compte.surChangement(function (vue) { majCompte(vue); });
     avisSon = d.getElementById('avis-son');
     logoTitre = d.querySelector('#voile-titre .logo');
     majAvisSon();
@@ -35,7 +43,7 @@ const Hud = (function () {
     voileCourant = nom;
     for (const n in voiles) voiles[n].hidden = (n !== nom);
     // ⚠️ Une voile est du DOM, et le casque n'affiche que la toile : on en
-    // sort pour la montrer (le titre, le nom pour le tableau des scores).
+    // sort pour la montrer (depuis le 17 sept. 2026 il n'en reste qu'une, le titre).
     if (nom && typeof Casque !== 'undefined' && Casque.actif) Casque.sortir();
   }
 
@@ -608,8 +616,7 @@ const Hud = (function () {
       ['HOSPITALISATIONS', String(s.hospitalisations || 0)],
     ];
     return { titre: 'BILAN', items: lignes.map(function (l) { return { libelle: l[0], detail: l[1], actif: false }; })
-      .concat([{ libelle: 'ENVOYER MON SCORE', faire: function () { fermerMenu(); demanderScore(); return true; } },
-               { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
+      .concat([{ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } }]) };
   }
 
   // --- Les parties : trois emplacements, au titre ------------------------------------
@@ -659,8 +666,17 @@ const Hud = (function () {
     const actif = Sauvegarde.emplacement();
     const items = liste.map(function (a, i) {
       const n = i + 1;
-      return { libelle: ligneEmplacement(n, a, 'NOUVELLE PARTIE'), detail: a ? tempsDeJeu(a.secondes) : '', emplacement: n,
-               faire: function () { Jeu.jouerPartie(n); return false; } };
+      // ⚠️ DEUX VERSIONS NE SE JOUENT PAS D'UN COUP (M14) : jouer celle d'ici
+      // ferait monter la sienne par-dessus celle de l'autre appareil dix
+      // secondes plus tard — la partie du telephone perdue sans un mot.
+      const deux = Compte.decision(n) === 'trancher';
+      return { libelle: ligneEmplacement(n, a, 'NOUVELLE PARTIE'),
+               detail: deux ? 'DEUX VERSIONS' : (a ? tempsDeJeu(a.secondes) : ''), emplacement: n,
+               faire: function () {
+                 if (deux) { ouvrirMenu(menuVersions(n)); return false; }
+                 Jeu.jouerPartie(n);
+                 return false;
+               } };
     });
     items.push({ libelle: 'COPIER UNE PARTIE', actif: pleins > 0, faire: function () { ouvrirMenu(menuCopier()); return false; } });
     items.push({ libelle: 'EFFACER UNE PARTIE', actif: pleins > 0, faire: function () { ouvrirMenu(menuEffacer()); return false; } });
@@ -675,12 +691,43 @@ const Hud = (function () {
         const item = m.items[m.curseur];
         const a = item && item.emplacement ? liste[item.emplacement - 1] : null;
         m.aide = !item || !item.emplacement ? 'FRAPPE : RETOUR AU TITRE'
+          : Compte.decision(item.emplacement) === 'trancher' ? 'UNE AUTRE VERSION DORT SUR TON COMPTE — ACTION POUR CHOISIR'
           : !a ? 'UNE PARTIE NEUVE COMMENCE ICI'
           : (a.sauveeLe ? 'SAUVÉE ' + quand(a.sauveeLe, Date.now()) + ' · ' : '')
             + a.missions + (a.missions > 1 ? ' MISSIONS' : ' MISSION');
       } };
     menu.maj(menu);
     return menu;
+  }
+
+  /** DEUX VERSIONS DE LA MEME CASE (M14). On a joue ici, et ailleurs, sans que
+      les deux se soient parle : le serveur ne fusionne rien et le jeu non plus —
+      c'est le joueur qui tranche, une fois, en voyant les deux.
+
+      ⚠️ Le curseur s'ouvre sur CELLE DU COMPTE quand elle est plus avancee : on
+      arrive ici surtout en s'asseyant a l'ordi apres avoir joue au telephone. */
+  function menuVersions(n) {
+    const c = Compte.conflit(n) || {};
+    const ici = Sauvegarde.apercu(n), la = c.serveur || null;
+    const dire = function (a) { return a ? 'JOUR ' + a.jour + ' · ' + a.argent + ' $ · ' + tempsDeJeu(a.secondes) : 'RIEN'; };
+    return { titre: 'PARTIE ' + n + ' : DEUX VERSIONS', largeur: 320,
+      sur: 'ELLES NE SE FUSIONNENT PAS',
+      aide: 'CELLE QU\'ON NE GARDE PAS NE REVIENDRA PAS',
+      curseur: la && ici && la.secondes > ici.secondes ? 1 : 0,
+      items: [
+        { libelle: 'GARDER CELLE D\'ICI', detail: dire(ici),
+          faire: function () { Compte.garder(n); ouvrirMenu(menuParties(n - 1)); return false; } },
+        { libelle: 'PRENDRE CELLE DU COMPTE', detail: dire(la),
+          faire: function () { ouvrirMenu(menuEchange(n)); Compte.prendre(n).then(function () { ouvrirMenu(menuParties(n - 1)); }); return false; } },
+        { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuParties(n - 1)); return false; } },
+      ],
+      retour: function () { ouvrirMenu(menuParties(n - 1)); } };
+  }
+
+  /** L'attente pendant que la partie descend : une ligne inerte, et aucun bouton
+      qui ferait deux fois le meme echange. */
+  function menuEchange(n) {
+    return { titre: 'PARTIE ' + n, sur: 'ON DESCEND CELLE DU COMPTE…', items: [{ libelle: 'UN INSTANT', actif: false }], curseur: 0 };
   }
 
   function menuEffacer(curseur) {
@@ -1109,69 +1156,91 @@ const Hud = (function () {
     B.stats.rects++;
   }
 
-  // --- Scores ---------------------------------------------------------------------
+  // --- LE COMPTE (M14, 2e vague) -------------------------------------------------------
 
-  function afficherScores(scores, vide) {
-    const liste = doc.getElementById('liste-scores');
-    liste.innerHTML = '';
-    if (!scores || !scores.length) {
-      const li = doc.createElement('li');
-      li.className = 'scores__vide';
-      li.textContent = vide || 'Personne encore. Baie-des-Brumes t’attend.';
-      liste.appendChild(li);
-      return;
+  const MOT_DU_COMPTE = 'Un compte garde tes parties sur le serveur : commence au téléphone, finis à l’ordi. Le jeu se joue très bien sans.';
+
+  function champ(id) {
+    const el = doc && doc.getElementById(id);
+    return el ? String(el.value || '').trim() : '';
+  }
+
+  /** « aujourd'hui à 21 h 40 » pour le DOM — le canvas, lui, a `quand()`. */
+  function dateCourte(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '';
+    return quand(d.getTime(), Date.now()).toLowerCase();
+  }
+
+  function montrerCompte() {
+    voile('compte');
+    majCompte();
+    const el = doc.getElementById('compte-pseudo');
+    if (el && el.focus) el.focus();
+  }
+
+  /** Ce que l'ecran du compte montre. Ferme, il demande un pseudo ; ouvert, il
+      montre les trois cases TELLES QUE LE SERVEUR LES CONNAIT — c'est la seule
+      fenetre sur ce qui est monte, et « ça a marché? » est la premiere question
+      qu'on se pose en changeant d'appareil. */
+  function majCompte(vue) {
+    if (!doc) return;
+    const v = vue || Compte.etat();
+    const ouvert = v.etat === 'ouvert';
+    const form = doc.getElementById('compte-form');
+    const liste = doc.getElementById('compte-parties');
+    const mot = doc.getElementById('compte-mot');
+    const partir = doc.getElementById('bouton-compte-deconnexion');
+    const bouton = doc.getElementById('bouton-compte');
+    const etatEl = doc.getElementById('compte-etat');
+    if (form) form.hidden = ouvert;
+    if (partir) partir.hidden = !ouvert;
+    if (bouton) bouton.textContent = ouvert ? 'Compte : ' + v.pseudo : 'Compte';
+    if (mot) {
+      mot.textContent = ouvert ? 'Connecté comme ' + v.pseudo + '. Tes parties montent toutes seules.'
+        : v.etat === 'hors-ligne' ? 'Pas de réseau : le compte attendra. Le jeu, lui, se joue hors ligne.'
+        : v.etat === 'indisponible' ? 'Les comptes sont indisponibles pour l’instant. Le jeu, lui, tourne.'
+        : MOT_DU_COMPTE;
     }
-    scores.forEach(function (s) {
+    // ⚠️ Un message de session coupee doit rester lisible : il n'est efface que
+    // par le geste suivant, jamais par une mise a jour qui passe.
+    if (etatEl && !ouvert && v.message) etatEl.textContent = v.message;
+    if (!liste) return;
+    liste.innerHTML = '';
+    if (!ouvert) return;
+    for (const c of v.cases) {
       const li = doc.createElement('li');
-      const nom = doc.createElement('span'); nom.textContent = s.pseudo;
+      const nom = doc.createElement('span');
+      const a = c.serveur && c.serveur.apercu;
+      nom.textContent = 'Partie ' + c.emplacement + (a ? ' · jour ' + a.jour + ' · ' + a.argent + ' $' : ' · vide');
       const detail = doc.createElement('span');
-      detail.textContent = s.fortune.toLocaleString('fr-CA') + ' $ · ' + s.missions + ' missions';
+      detail.textContent = c.decision === 'trancher' ? 'deux versions — choisis en jouant'
+        : c.serveur && c.serveur.sauvee_le ? dateCourte(c.serveur.sauvee_le) : '—';
       li.appendChild(nom); li.appendChild(detail);
       liste.appendChild(li);
+    }
+  }
+
+  /** ⚠️ Le mot de passe LIE L'APPAREIL, une fois : il ne reste pas dans le champ
+      apres coup, et rien ne le garde nulle part. */
+  function envoyerCompte(quoi) {
+    const etatEl = doc.getElementById('compte-etat');
+    const donnees = { pseudo: champ('compte-pseudo'), mot_de_passe: champ('compte-passe') };
+    if (quoi === 'inscription') donnees.courriel = champ('compte-courriel');
+    if (!donnees.pseudo || !donnees.mot_de_passe) {
+      if (etatEl) etatEl.textContent = 'Il faut un pseudo et un mot de passe.';
+      return null;
+    }
+    if (etatEl) etatEl.textContent = quoi === 'inscription' ? 'Création du compte…' : 'Connexion…';
+    const promesse = quoi === 'inscription' ? Compte.inscrire(donnees) : Compte.connecter(donnees);
+    return promesse.then(function (v) {
+      const passe = doc.getElementById('compte-passe');
+      if (passe) passe.value = '';
+      majCompte(v);
+      if (etatEl) etatEl.textContent = v.etat === 'ouvert' ? 'Bonjour, ' + v.pseudo + ' — tes parties sont là.' : (v.message || 'Refusé.');
+      return v;
     });
-  }
-
-  function montrerScores() {
-    voile('scores');
-    fetch(urlScores, { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('scores ' + r.status); return r.json(); })
-      .then(function (d) { afficherScores(d.scores); })
-      // ⚠️ Pas « Personne encore » : le jeu se joue hors ligne, le tableau non,
-      // et un tableau vide qui ment est pire qu'un tableau qui le dit.
-      .catch(function () { afficherScores([], 'Pas de réseau : le tableau des scores vit en ligne.'); });
-  }
-
-  function envoyerScore(ev) {
-    ev.preventDefault();
-    const champ = doc.getElementById('pseudo'), etatEl = doc.getElementById('score-etat');
-    const pseudo = champ.value.trim();
-    if (!pseudo) { etatEl.textContent = 'Écris un pseudo.'; return; }
-    etatEl.textContent = 'Envoi…';
-    const p = B.partie;
-    const fortune = p.argent + Object.keys(p.proprietes).reduce(function (s, slug) {
-      const prop = B.defs.economie.proprietes.find(function (q) { return q.slug === slug; });
-      return s + (prop ? prop.prix : 0);
-    }, 0);
-    fetch(urlScores, {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ pseudo: pseudo, fortune: fortune, missions: Object.keys(p.missionsFaites).length,
-                             proprietes: Object.keys(p.proprietes).length, duree_s: Math.max(1, p.stats.secondes) }),
-    })
-      .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
-      .then(function (res) {
-        if (!res.ok) { etatEl.textContent = res.d.erreur || 'Refusé.'; return; }
-        p.pseudo = pseudo;
-        etatEl.textContent = res.d.rang && res.d.rang <= 10 ? 'Bravo, ' + res.d.rang + 'e au tableau!' : 'Score envoyé.';
-        afficherScores(res.d.scores);
-        setTimeout(function () { voile('scores'); }, 900);
-      })
-      .catch(function () { etatEl.textContent = 'Pas de réseau — réessaie plus tard.'; });
-  }
-
-  function demanderScore() {
-    voile('score-envoi');
-    doc.getElementById('pseudo').value = B.partie.pseudo || '';
-    doc.getElementById('score-etat').textContent = '';
   }
 
   // --- Dessin --------------------------------------------------------------------------
@@ -1893,6 +1962,7 @@ const Hud = (function () {
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,
-           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI, montrerScores, demanderScore,
-           afficherScores, ancres: function () { return ancres; } };
+           dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
+           montrerCompte, majCompte, envoyerCompte, menuVersions,
+           ancres: function () { return ancres; } };
 })();

@@ -40,6 +40,7 @@ MEUBLES = frozenset(g for g, p in carte.LEGENDE.items() if p.get("meuble"))
 TYPES_SERVIS = frozenset({
     "lit", "coffre", "garde_robe", "vendre", "reparer", "repeindre", "acheter",
     "hotdog", "soigner", "caisse", "journal", "contact", "sergent", "casier",
+    "lulu", "ovila",
     "fourriere", "emplettes", "salon", "escalier", "fouiller",
     # M11, 2e vague — les deux moities du meme choix : effacer une page, sur,
     # cher, une fois par jour (l'avocat) ou payer d'avance et revenir demain

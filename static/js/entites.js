@@ -461,6 +461,25 @@ const Entites = (function () {
       ce qu'on a casse reste casse jusqu'a `nouveauJour()`, et le quartier
       porte ses blessures — c'est ce qui fait qu'une nuit de folie SE VOIT le
       matin. */
+  /** RELEVER un decor casse, tout de suite : ce que le forain fait de ses
+      cibles entre deux parties (`Histoire.commencerDefi`).
+
+      ⚠️ La meme remise a neuf que le matin (`reparerLeDecor`), pour UNE piece.
+      Sans elle, une galerie de tir jouee deux fois dans la journee serait un
+      defi qu'on ne peut plus gagner : ses cibles sont par terre, et le matin
+      est loin. */
+  function releverDecor(e) {
+    if (!e || e.type !== 'decor') return false;
+    e.pv = undefined;
+    if (!e.brise) return false;
+    const fiche = DECORS[e.decor] || {};
+    e.brise = false;
+    e.dessine = true;
+    e.solide = !!fiche.solide;
+    reindexerDecor();
+    return true;
+  }
+
   function reparerLeDecor() {
     let remis = 0;
     for (let i = B.entites.length - 1; i >= 0; i--) {
@@ -4467,7 +4486,7 @@ const Entites = (function () {
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
-    briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
+    briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, placeAuBordDeLaRoute, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,

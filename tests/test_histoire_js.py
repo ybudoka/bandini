@@ -396,7 +396,7 @@ def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paque
         const avant = L.Histoire.parler('josee');
         const menuAvant = L.B.menu && L.B.menu.titre;
         L.B.dialogue = null;
-        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
         L.B.partie.argent = 1000;
         L.Histoire.parler('josee');
         const menu = L.B.menu;
@@ -689,6 +689,11 @@ def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
     repliques affichees."""
     premieres = {}
     for m in paquet["missions"]:
+        # ⚠️ Marco donne M3 ET m97 : `disponibleDe` sert la PREMIERE dans l'ordre
+        # du catalogue dont les prérequis sont faits. On garde donc la première
+        # occurrence, pas la dernière.
+        if m["donneur"] in premieres:
+            continue
         n = len(m["dialogue"].get("appel", []))
         premieres[m["donneur"]] = f"{m['dialogue']['intro'][0]['qui']}-{m['slug']}-{n + 1}"
     r = banc("""function (L, o) {

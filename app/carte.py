@@ -899,6 +899,26 @@ FOIRE: dict = {
     "kiosques": ("barbe_a_papa", "hot_dogs", "pop_corn", "limonade", "poutine",
                  "queues_de_castor", "ballons", "peluches", "lance_anneaux"),
     "jeux": ("galerie_tir", "marteau_force", "peche_canards"),
+    # ⚠️ **UN JEU D'ADRESSE EST UN DEFI, PAS UN MOTEUR** (`missions.DEFIS`) : ce
+    # que la carte pose ici, ce sont trois COMPTOIRS et, pour la galerie, ses
+    # cibles — le reste est une regle de jeu, pas un batiment.
+    #
+    # ⚠️ **LA GALERIE DE TIR EST AU NORD DE L'ALLEE, TOUJOURS**, et ses trois
+    # cibles se posent DEVANT elle, sur la premiere rangee de l'allee. Deux
+    # raisons, et la premiere est mecanique :
+    #
+    #   - **une baraque ARRETE LA BALLE** (`solide`, comme tous les comptoirs de
+    #     la foire) : des cibles posees DERRIERE le comptoir ne se tirent pas
+    #     depuis l'allee — mesure au banc, trois chargeurs, pas une cible
+    #     crevee. Devant, la baraque devient ce qu'elle doit etre : le PARE-BALLE
+    #     du stand. On tire vers elle, jamais vers l'allee ;
+    #   - et le dessin trie par le sud : devant le comptoir, les cibles se
+    #     peignent PAR-DESSUS lui — une rangee de cibles et la baraque derriere,
+    #     exactement ce qu'on voit d'un stand de tir. Sur la rangee sud, l'ordre
+    #     s'inverserait et la baraque les mangerait ; tombee sur une case du sud,
+    #     la galerie laisse donc sa place a un comptoir et repasse a la suivante.
+    "cibles": 3,              # trois cibles, comme les trois peintes sur sa baraque
+
     # ⚠️ Du DECOR ANIME, et on n'y monte PAS : un manège ou l'on monte et qui ne
     # donne rien est un decor cher ; un manège qui tourne avec du monde dessus
     # est une ville qui vit. EN DOUBLE : l'exageration est le propos.
@@ -911,6 +931,31 @@ FOIRE: dict = {
     "lampes": ("foire_jaune", "foire_rose", "foire_bleue"),
     "rayon_lampe": 56,
     "rayon_manege": 58,
+    # ⚠️ **UNE FOIRE MUETTE EST UNE PEINTURE**, et la fiche du plan le dit en
+    # majuscules. Deux sons, et ils ne sont pas de la meme famille :
+    #
+    #   - **l'orgue de manège** est une MUSIQUE QUI SORT D'UN ENDROIT. Le
+    #     musicien de rue est « une musique qui sort de QUELQU'UN » — son gain a
+    #     lui, par-dessus l'ambiance du district, sans prendre le rang de
+    #     personne. L'orgue, c'est le MEME code (`Son.Rue`) avec une source
+    #     FIXE : le milieu de l'allee. ⚠️ Surtout pas une ambiance de district
+    #     de plus — une ambiance se joue PARTOUT dans son district, et la foire
+    #     tient dans 52 x 31 tuiles de La Pointe ;
+    #   - **les cris** sont un BRUITAGE en boucle, dose a la distance comme la
+    #     rumeur d'un chantier. Ce qui nomme une foire, ce sont les cris d'un
+    #     manège — pas le murmure d'une foule (`foule`, qui joue deja partout).
+    #
+    # ⚠️ Les portees se mesurent depuis le CENTRE de l'enceinte, et la moitie
+    # de sa diagonale en fait 242 px (52 x 31 tuiles) : sous 300, on entrerait
+    # dans la foire avant de l'entendre.
+    "son": {
+        "orgue": "foire_orgue",
+        "orgue_portee_px": 460,    # de la palissade, on l'entend deja
+        "orgue_plein_px": 150,     # dans l'allee, il joue plein
+        "orgue_volume": 0.7,
+        "cris_portee_px": 400,
+        "cris_volume": 0.9,
+    },
     # ⚠️ **LE PETIT TRAIN FAIT LE TOUR DE LA FOIRE** — Martin. Une voie fermee,
     # une tuile d'epais, a `retrait` tuiles du bord de l'enceinte : la palissade
     # rentre de 0 a 2, donc la voie ne la touche jamais, et elle COUPE l'allee
@@ -1278,6 +1323,11 @@ DECOR_SOLIDE = frozenset({
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
     "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
     "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
+    # ⚠️ La cible de la galerie ARRETE LA BALLE, et c'est toute la difference
+    # entre un defi et une formalite : sans solidite, une balle traverse les
+    # trois d'un coup (rien n'arrete ce qui n'est pas solide, `combat.js`) et la
+    # galerie de tir se gagne d'une seule cartouche, de biais.
+    "cible_foire",
     # Les neuf kiosques de la foire : un comptoir, ca arrete un pieton.
     "ballons", "barbe_a_papa", "hot_dogs", "lance_anneaux", "limonade", "peluches",
     "pop_corn", "poutine", "queues_de_castor",
@@ -5000,14 +5050,26 @@ class _Chantier:
                     continue                           # ni le pied de la roue
                 quoi = melange[n % len(melange)]
                 n += 1
-                if quoi in fiche["jeux"] and quoi in jeux_poses:
+                # ⚠️ La galerie de tir attend une case du NORD (voir `FOIRE`) :
+                # sur une case du sud elle ne se pose pas, elle REPASSE — `n`
+                # recule d'un cran, et c'est la prochaine case qui l'aura.
+                au_sud = quoi == "galerie_tir" and ky >= a0
+                if quoi in fiche["jeux"] and (quoi in jeux_poses or au_sud):
+                    if au_sud and quoi not in jeux_poses:
+                        n -= 1
                     quoi = fiche["kiosques"][n % len(fiche["kiosques"])]
                 if not self.poser_decor(quoi, kx, ky):
                     continue
                 self.kiosques.append({"slug": quoi, "x": kx, "y": ky, "nord": ky < a0})
                 if quoi in fiche["jeux"]:
                     jeux_poses.add(quoi)
-                    self.jeux.append({"slug": quoi, "x": kx, "y": ky})
+                    # ⚠️ Les CIBLES de la galerie ne se posent pas ici mais tout
+                    # a la fin (`cibles_de_la_galerie`) : trois tuiles de gazon
+                    # de moins dans la reserve ou les PAQUETS se cachent, et ce
+                    # sont les vingt paquets de la ville qui bougent — puis les
+                    # graffitis, les nids-de-poule et les chantiers avec eux. Ce
+                    # qu'on AJOUTE se pose en dernier.
+                    self.jeux.append({"slug": quoi, "x": kx, "y": ky, "nord": ky < a0})
                 # ⚠️ Une guirlande tous les DEUX kiosques, au halo plus large : le
                 # rendu tient un plafond de 50 lumieres (lampadaires + feux de
                 # circulation + projecteur), et une lampe par comptoir les
@@ -6210,6 +6272,33 @@ class _Chantier:
                     return False
         return True
 
+    def cibles_de_la_galerie(self) -> list[list[int]]:
+        """Les trois cibles de la galerie de tir, DERRIERE son comptoir.
+
+        ⚠️ **Le seul decor de la foire qui ait des PV** : une balle la creve, le
+        matin la releve (`reparerLeDecor`), exactement comme le chateau de sable
+        de la greve. C'est tout ce qu'un jeu d'adresse demande au moteur — le
+        reste est une regle de jeu (`missions.DEFIS`), pas un batiment.
+
+        ⚠️ **DEVANT le comptoir, pas derriere** : une baraque arrete la balle, et
+        des cibles posees derriere elle ne se tirent pas depuis l'allee (mesure
+        au banc). La baraque est le pare-balle du stand ; les cibles sont entre
+        elle et le tireur.
+
+        ⚠️ **Et ca se pose EN DERNIER**, avec les distributrices et la greve, pour
+        la raison que le plan ecrit en majuscules : trois tuiles de gazon de plus
+        dans `occupe`, ce sont trois recoins de moins ou `paquets()` tire ses
+        vingt cachettes — et toute la ville se rebat derriere. Ce qu'on AJOUTE se
+        pose apres ce qui CHOISIT.
+        """
+        galerie = next((j for j in self.jeux if j["slug"] == "galerie_tir"), None)
+        if not galerie:
+            return []
+        y = galerie["y"] + 1                            # la premiere rangee de l'allee
+        galerie["cibles"] = [[galerie["x"] + dx, y] for dx in (-1, 0, 1)
+                             if self.poser_decor("cible_foire", galerie["x"] + dx, y)]
+        return galerie["cibles"]
+
     def paquets(self, nombre: int = 20) -> list[dict]:
         """Vingt paquets caches dans les recoins : ruelles, terrains vagues,
         coins de parc, quais. Jamais sur une rue, jamais devant une porte,
@@ -6453,6 +6542,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ⚠️ Apres les paquets : les machines prennent ce qui reste, et une de plus
     # ne deplace ni un paquet, ni une scene, ni un kiosque.
     chantier.distributrices()
+    # ⚠️ Et les cibles de la galerie de tir avec elles, pour la meme raison :
+    # trois tuiles de plus dans `occupe` AVANT les paquets, et les vingt
+    # cachettes de la ville changent de place (mesure : 426 decors deplaces hors
+    # du bloc de la foire, plus les graffitis, les nids-de-poule et les
+    # chantiers). Ce qu'on AJOUTE se pose en dernier.
+    chantier.cibles_de_la_galerie()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
     # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
     chantier.graffitis_sur_les_murs()
@@ -6519,7 +6614,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "flottants": list(FLOTTANTS),
         "decor_solide": sorted(DECOR_SOLIDE),
         "amarrages": chantier.amarrages(),
-        "foire": chantier.foire,
+        # ⚠️ La fiche du SON voyage avec le rectangle : le navigateur dose
+        # l'orgue et les cris a la distance du CENTRE, et les chiffres viennent
+        # de Python comme le reste de l'echelle.
+        "foire": chantier.foire and {**chantier.foire, **FOIRE["son"]},
         "roue": chantier.roue,
         "jeux_de_foire": chantier.jeux,
         "kiosques_de_foire": chantier.kiosques,
@@ -6988,7 +7086,7 @@ B  ah  ah   nB
 B  ah  ah    B
 Bn           B
 BBBBWWDWWBBBBB
-""", points=(_pt("hotdog", 4, 4), _pt("emplettes", 9, 4, genre="marine")),
+""", points=(_pt("hotdog", 4, 4), _pt("emplettes", 9, 4, genre="marine"), _pt("lulu", 7, 4)),
      gens=_gens(("commis", 4, 2), ("client", 10, 5))),
 
     # L'usine Prevost : les grandes machines, l'etabli, le magasin d'outils.
@@ -7042,7 +7140,7 @@ B   a h   B
 B         B
 Bz j    e B
 BBBWWDWWBBB
-""", points=(_pt("lit", 2, 1), _pt("journal", 3, 4)),
+""", points=(_pt("lit", 2, 1), _pt("journal", 3, 4), _pt("ovila", 7, 2)),
      gens=_gens(("commis", 8, 4),)),
 
     # --- Le metro : un quai et une rame, pour toutes les stations -------------

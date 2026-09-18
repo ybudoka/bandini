@@ -226,6 +226,19 @@ const Histoire = (function () {
     return B.entites.find(function (e) { return e.type === 'pieton' && e.personnage === slug && e.vivant; }) || null;
   }
 
+  /** La cible d'un objectif `parler` : le slug du personnage a qui l'on doit
+      parler. `cible: "<perso>"` ou `cible: "personnages:<perso>"` nomment un
+      personnage de l'histoire ; `cible: "arch:<slug>"` vise le premier
+      figurant de cet archetype pose en ville (les cinq commis de f12). Les
+      quatre contacts de m6 sont des personnages. */
+  function cibleDuParler(o) {
+    const c = o && o.cible;
+    if (!c) return null;
+    if (c.indexOf('arch:') === 0) return 'arch:' + c.slice(5);
+    if (c.indexOf('personnages:') === 0) return c.slice(12);
+    return c;
+  }
+
   /** Pose les personnages qui se tiennent DEHORS, a cote de leur porte — sauf
       ceux qui sont partis apres leur mission (`parti_apres`). */
   function creerDonneurs() {
@@ -561,6 +574,13 @@ const Histoire = (function () {
     if (!p || B.cinema) return false;
     rencontrer(slug);
     const enCours = courante();
+    // ⚠️ L'objectif `parler` d'une mission : on l'accomplit en parlant a SA
+    // cible, pas au donneur. m6 t'envoie serrer la main de quatre personnes :
+    // c'est la poignee qui compte, et elle est ICI, dans le moteur.
+    if (enCours) {
+      const o = objectif();
+      if (o && o.type === 'parler' && cibleDuParler(o) === slug) { avancer(); return true; }
+    }
     if (enCours && enCours.donneur === slug) {
       const o = objectif();
       if (o && o.type === 'retourner') { reussir(); return true; }
@@ -965,6 +985,20 @@ const Histoire = (function () {
     if (d.sergent_ami) p.sergentAmi = true;
     if (d.propriete && !p.proprietes[d.propriete]) p.proprietes[d.propriete] = { jour: p.jour, caisse: 0 };
     if (d.faubourg_libere) p.faubourgLibere = true;
+    // ⚠️ `libere` : un district de plus (m98 comptera la liste). `faubourg_libere`
+    // alimente la MEME liste, pour qu'il n'y ait qu'une verite.
+    if (d.libere && p.libere.indexOf(d.libere) < 0) p.libere.push(d.libere);
+    if (d.faubourg_libere && p.libere.indexOf('faubourg') < 0) p.libere.push('faubourg');
+    // ⚠️ `contacts` : des numeros au telephone (m6, Josée qui présente la ville).
+    (d.contacts || []).forEach(function (slug) { p.contacts[slug] = true; });
+    // ⚠️ `vehicule` : un char garé devant la planque, posé au prochain chargement
+    // (m97, le taxi de Marco). Il vit à part de `planque.vehicule` pour ne pas
+    // écraser la sauvegarde de Martin.
+    if (d.vehicule && Vehicules.vehiculeDef(d.vehicule)) {
+      const def = Vehicules.vehiculeDef(d.vehicule);
+      p.vehiculePlanque = { slug: d.vehicule, couleur: def.couleurs && def.couleurs[0] ? def.couleurs[0] : null,
+                            vie: 100, angle: 0, vole: false };
+    }
     if (d.manchette) p.manchetteForcee = d.manchette;
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
@@ -1121,6 +1155,74 @@ const Histoire = (function () {
     return true;
   }
 
+  // --- Les trois jeux d'adresse de la foire -----------------------------------------------------
+  //
+  // ⚠️ **UN JEU D'ADRESSE EST UN DÉFI, PAS UN MOTEUR**, et c'est la fiche du
+  // plan qui l'écrit en majuscules : ce qui suit tient sur les rails des trois
+  // défis de char de la v1 — un lieu, un compte, un chrono, une prime, un texte
+  // en majuscules. La seule chose qu'ils ajoutent, c'est `a_pied` : on les joue
+  // DEBOUT devant un comptoir. Pas de statistique neuve, pas d'état de plus.
+
+  /** Les jeux de la foire, et ce qu'il en reste à gagner. */
+  function defisDeFoire() { return defis().filter(function (d) { return d.foire; }); }
+
+  /** Le comptoir d'un défi de foire, tel qu'il vit dans le monde. ⚠️ Peut être
+      CASSÉ : un comptoir défoncé ne sert plus de lot (voir `majDefi`). */
+  function comptoirDeDefi(d) {
+    if (!d || !d.ou || d.ou.indexOf('foire:') !== 0 || typeof Foire === 'undefined') return null;
+    return Foire.kiosqueDuJeu(d.ou.slice(6));
+  }
+
+  /** Le canard est-il sous le crochet, À CETTE IMAGE ?
+
+      ⚠️ **C'est le DESSIN qui le dit**, et c'est tout ce qui rend la pêche
+      jouable : la pose du bassin (`Entites.poseDuDecor`, la même que celle qui
+      se peint) vaut `d.pose` pendant `anime` images par tour, et c'est à ce
+      moment-là — et à ce moment-là seulement — qu'un canard passe sous la
+      canne. Un chrono inventé ici et une animation qui tourne de son côté, ce
+      serait un jeu d'adresse où l'adresse ne sert à rien. */
+  function canardAuCrochet() {
+    const f = typeof DECORS !== 'undefined' ? DECORS.peche_canards : null;
+    const d = defis().find(function (q) { return q.slug === 'canards'; });
+    if (!f || !d) return false;
+    // ⚠️ `B.t + 1` : `maj` tourne AVANT que l'image avance, et c'est l'image
+    // SUIVANTE qui se peint — la même correction que le marteau du chantier.
+    return Entites.poseDuDecor(f, B.t + 1, false) === d.pose;
+  }
+
+  /** ACTION pendant un défi de foire : le marteau et la canne. Rend vrai si le
+      bouton a servi — et alors il ne sert à rien d'autre.
+
+      ⚠️ **LA CHAÎNE D'ACTION AFFAME CE QUI SUIT** : ce test passe AVANT tout le
+      reste (`Missions.interagir`), sinon marteler devant le comptoir ouvrirait
+      le menu du comptoir à chaque coup. */
+  function actionDeDefi() {
+    const f = B.defi;
+    if (!f) return false;
+    const d = defis().find(function (q) { return q.slug === f.slug; });
+    if (!d || !d.a_pied) return false;
+    if (d.coups) {
+      f.coups++;
+      Son.SFX.maillet();
+      if (f.coups >= d.coups) { Son.SFX.cloche(); finirDefi(true); }
+      return true;
+    }
+    if (d.canards) {
+      if (!canardAuCrochet()) { Hud.message('RATÉ — IL EST REPARTI', 60); Son.SFX.erreur(); return true; }
+      // ⚠️ UN CANARD PAR PASSAGE : sans ça, trois appuis dans la même fenêtre
+      // pêchent trois fois le même canard, et le jeu se gagne en martelant.
+      const tour = Math.floor((B.t + 1) / (DECORS.peche_canards.anime * DECORS.peche_canards.variantes));
+      if (f.tour === tour) { Hud.message('CELUI-LÀ EST DÉJÀ DANS LE SEAU', 60); return true; }
+      f.tour = tour;
+      f.pris++;
+      Son.SFX.ramasse();
+      if (f.pris >= d.canards) finirDefi(true);
+      else Hud.message('UN CANARD ! ' + f.pris + ' / ' + d.canards, 60);
+      return true;
+    }
+    return false;
+  }
+
   //: Le temps qu'on a, le panneau lu, pour monter dans le char du defi.
   //: ⚠️ LE PANNEAU SE LIT A PIED (au volant, ACTION fait descendre) : le tour et
   //: la livraison, qui ratent sans char, ratent donc a l'image suivante — ni
@@ -1131,8 +1233,18 @@ const Histoire = (function () {
 
   function commencerDefi(d) {
     const j = B.joueur;
-    B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0 };
+    B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0,
+               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y };
     Son.SFX.mission();
+    // ⚠️ UN JEU DE FOIRE SE JOUE DEBOUT : pas de char a trouver, ca part tout de
+    // suite — et le forain RELEVE SES CIBLES avant de nous laisser tirer. Sans
+    // ca, une galerie jouee deux fois dans la journee serait un defi qu'on ne
+    // peut plus gagner : ses cibles sont par terre, et le matin est loin.
+    if (d.a_pied) {
+      if (d.cibles && typeof Foire !== 'undefined') Foire.cibles().forEach(Entites.releverDecor);
+      partir(d, null);
+      return;
+    }
     // Le Grand Saut compte ses dix secondes lui-meme (`majDefi`) : il part tout de suite.
     if (d.vehicule || j.dansVehicule) { partir(d, j.dansVehicule); return; }
     Hud.message(d.titre.toUpperCase() + ' — MONTE DANS UN CHAR', 150);
@@ -1153,6 +1265,7 @@ const Histoire = (function () {
     const f = B.defi, j = B.joueur;
     if (!f) return;
     const d = defis().find(function (q) { return q.slug === f.slug; });
+    if (d.a_pied) { majDefiDeFoire(d, f, j); return; }
     if (!f.parti) {
       if (!j.dansVehicule) { if (++f.attente > ATTENTE_CHAR) finirDefi(false, 'IL FAUT UN CHAR'); return; }
       partir(d, j.dansVehicule);
@@ -1184,6 +1297,36 @@ const Histoire = (function () {
     }
   }
 
+  /** Une image d'un jeu d'adresse. Trois règles pour les trois, et elles sont
+      les mêmes que pour les défis de char : un chrono, un lieu, un compte.
+
+      ⚠️ **ON RESTE DEVANT LE COMPTOIR.** C'est le « lieu » de la fiche : un
+      marteau de force qu'on martèle en marchant vers le pont ne serait plus un
+      jeu d'adresse, ce serait un bouton. Le rayon est large pour la galerie
+      (on recule pour tirer) et serré pour les deux autres (on y a les mains).
+
+      ⚠️ **ON LE GAGNE, ON NE LE VOLE PAS** : un comptoir défoncé ne rend pas de
+      lot. Ça vaut pour les trois — défoncer la baraque met fin à la partie —
+      et c'est `vole_pas` qui le DIT pour la pêche, là où la tentation est la
+      plus grande (un bassin plein de canards derrière une planche). */
+  function majDefiDeFoire(d, f, j) {
+    f.t++;
+    if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+    if (j.dansVehicule) { finirDefi(false, 'PAS AU VOLANT'); return; }
+    const comptoir = comptoirDeDefi(d);
+    if (!comptoir || comptoir.brise) { finirDefi(false, 'LE COMPTOIR EST EN MIETTES'); return; }
+    if (Math.hypot(j.x - comptoir.x, j.y - comptoir.y) > (d.rayon_px || 40)) {
+      finirDefi(false, 'TU T\'EN VAS'); return;
+    }
+    // LA GALERIE DE TIR : les cibles sont des décors avec des PV, et n'importe
+    // quoi qui les crève compte — une balle, une bille de fronde. ⚠️ Rien ne
+    // compte les tirs : ce qu'on mesure, c'est ce qui est TOMBÉ.
+    if (d.cibles) {
+      const crevees = Foire.cibles().filter(function (c) { return c.brise; }).length;
+      if (crevees >= d.cibles) finirDefi(true);
+    }
+  }
+
   function finirDefi(reussi, raison) {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
     B.defi = null;
@@ -1194,6 +1337,32 @@ const Histoire = (function () {
     else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
     noter('DÉFI RÉUSSI : ' + d.titre + (premiere ? ' — ' + d.prime + ' $' : ''), true);
     Son.SFX.mission();
+    if (d.foire) lotDeLaFoire();
+  }
+
+  /** LE LOT DU TROISIÈME PALIER : la casquette de la foire.
+
+      ⚠️ **La prime de ces trois-là est petite, et c'est la règle des paliers de
+      boulot** — un jeu d'adresse ne paie pas mieux à l'heure qu'une course. Ce
+      qu'on vient chercher au troisième, ce n'est pas l'argent : c'est la seule
+      tenue du jeu qui ne s'achète pas (`magasins.TENUES`, champ `prime`). Le
+      vestiaire existait déjà et n'apprend rien. */
+  function lotDeLaFoire() {
+    const p = B.partie;
+    // ⚠️ C'est le CATALOGUE qui dit quelle tenue est le lot (`prime: 'foire'`),
+    // pas un slug écrit ici : une deuxième vérité serait une tenue qu'on ne
+    // peut plus gagner le jour où quelqu'un la renomme.
+    const tenue = (B.defs.tenues || []).find(function (t) { return t.prime === 'foire'; });
+    if (!tenue || p.tenues.indexOf(tenue.slug) >= 0) return;
+    if (defisDeFoire().some(function (q) { return !p.defisFaits[q.slug]; })) return;
+    p.tenues.push(tenue.slug);
+    Hud.message('LES TROIS JEUX — ' + tenue.nom.toUpperCase(), 240);
+    noter('LA FOIRE : ' + tenue.nom, true);
+  }
+
+  /** Le défi que vend ce comptoir-là (`ou: 'foire:<kiosque>'`), ou null. */
+  function defiDuComptoir(slug) {
+    return defis().find(function (d) { return d.ou === 'foire:' + slug; }) || null;
   }
 
   // --- Le GPS : ou aller, pour le HUD ------------------------------------------------------------
@@ -1233,6 +1402,16 @@ const Histoire = (function () {
       const reste = d.chrono_s ? Math.max(0, d.chrono_s * 60 - B.defi.t) : null;
       const chrono = reste === null ? '' : ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
       if (!B.defi.parti) return d.titre.toUpperCase() + chrono + ' — MONTE DANS UN CHAR';
+      // ⚠️ Les jeux de foire comptent aussi, et le CANARD dit « MAINTENANT » :
+      // la fenêtre dure moins d'une demi-seconde, et un joueur qui ne voit pas
+      // le fil descendre sur le bassin n'a rien pour savoir quand appuyer.
+      if (d.cibles) {
+        const crevees = typeof Foire === 'undefined' ? 0 : Foire.cibles().filter(function (c) { return c.brise; }).length;
+        return d.titre.toUpperCase() + chrono + ' CIBLES ' + Math.min(crevees, d.cibles) + '/' + d.cibles;
+      }
+      if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
+      if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
+             + (canardAuCrochet() ? ' — MAINTENANT !' : '');
       const compte = d.points ? ' TOUR ' + (B.defi.tours + 1) + '/' + d.tours : d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
       return d.titre.toUpperCase() + chrono + compte;
     }
@@ -1295,5 +1474,6 @@ const Histoire = (function () {
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, present, calme, jouerOuDire,
            noter, rencontrer, CARNET_MAX,
-           proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
+           proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
+           cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj };
 })();

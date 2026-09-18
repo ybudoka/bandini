@@ -73,23 +73,19 @@ def test_carte_avec_etag(client):
     assert client.get("/api/carte", headers={"If-None-Match": '"autre"'}).status_code == 200
 
 
-def test_api_scores(client):
-    assert client.get("/api/scores").get_json() == {"scores": []}
-
-    refus = client.post("/api/scores", json={"pseudo": "", "fortune": 1, "missions": 0,
-                                             "proprietes": 0, "duree_s": 10})
-    assert refus.status_code == 400
-    assert "pseudo" in refus.get_json()["erreur"]
-
-    ok = client.post("/api/scores", json={"pseudo": "Léa", "fortune": 1230, "missions": 0,
-                                          "proprietes": 1, "duree_s": 600})
-    assert ok.status_code == 201
-    assert ok.get_json()["rang"] == 1
-    assert client.get("/api/scores").get_json()["scores"][0]["pseudo"] == "Léa"
+def test_le_tableau_des_scores_n_existe_plus(client):
+    """Retire le 17 sept. 2026 (demande de Martin) : plus de route, et plus un mot
+    dans la page — ni bouton, ni voile, ni adresse a appeler."""
+    assert client.get("/api/scores").status_code == 404
+    assert client.post("/api/scores", json={}).status_code == 404
+    html = client.get("/").get_data(as_text=True)
+    assert "score" not in html.lower()
 
 
 def test_corps_trop_gros(client):
-    gros = client.post("/api/scores", data="x" * 20_000, content_type="application/json")
+    """La borne du site (16 Ko), mesuree sur la seule route qui prend un corps."""
+    gros = client.post("/api/compte/inscription", data="x" * 20_000,
+                       content_type="application/json")
     assert gros.status_code == 413
 
 

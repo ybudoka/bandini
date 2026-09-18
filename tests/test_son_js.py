@@ -862,6 +862,49 @@ def test_le_musicien_et_le_district_jouent_en_meme_temps(banc):
     assert r["muettes"] == 0
 
 
+def test_la_musique_du_district_se_tait_dans_la_foire(banc):
+    """⚠️ Dans l'enceinte de la foire, l'ambiance du district — La Pointe — ne
+    doit plus jouer. L'orgue du manège est la musique du lieu : il sort par
+    `Son.Rue` PAR-DESSUS, et laisser l'ambiance dessous ferait deux musiques à
+    la fois. Dehors, elle revient.
+
+    ⚠️ Ce n'est PAS une règle d'état : la poursuite et la bagarre, qui se
+    décident plus haut dans `Chef.voulu`, continuent de couvrir dans la foire
+    — on se cache sous un comptoir, la ville ne devient pas sourde."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(107);
+        o.frame(2);
+        const j = L.B.joueur, C = L.Son.Chef, TT = L.TT;
+        const f = L.Monde.carte.def.foire;
+        // Le milieu de l'enceinte, la ou l'allée se trouve.
+        const dedans = { x: (f.x + f.l / 2) * TT, y: (f.y + f.h / 2) * TT };
+        const avant = L.Son.Mus.courante;
+        // Dehors, au sud de la palissade.
+        j.x = dedans.x; j.y = dedans.y;
+        o.frame(2);
+        const dans = L.Monde.dansLaFoire(Math.floor(j.x / TT), Math.floor(j.y / TT));
+        const enFoire = L.Son.Mus.courante;
+        // Et la poursuite garde son rang, meme a l'interieur.
+        L.B.recherche.etoiles = L.B.defs.audio.musique.poursuite_etoiles;
+        o.frame(2);
+        const poursuite = L.Son.Mus.courante;
+        L.B.recherche.etoiles = 0;
+        while (L.Son.Mus.courante === 'mus_poursuite' && L.B.t < 60 * 30) o.frame(1);
+        return { avant: avant, dans: dans, enFoire: enFoire, poursuite: poursuite };
+    }""")
+    assert r["avant"] and r["avant"].startswith("amb_"), (
+        "avant, c'est l'ambiance du district qui joue : %s" % r["avant"]
+    )
+    assert r["dans"], "le juge ne s'est pas place dans la foire"
+    assert r["enFoire"] is None, (
+        "la musique du district ne doit pas jouer dans la foire : %s" % r["enFoire"]
+    )
+    assert r["poursuite"] == "mus_poursuite", (
+        "la poursuite doit continuer de couvrir meme dans la foire : %s" % r["poursuite"]
+    )
+
+
 def test_le_musicien_de_rue_ne_se_coupe_pas_a_chaque_image(banc):
     """⚠️ Trouve en branchant le mp3 du musicien, et ca ne touchait PAS qu'au
     mp3 : `Son.Rue.tick()` passe en tete de `maj()` dans `jeu.js`, alors

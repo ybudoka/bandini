@@ -1351,11 +1351,18 @@ const Vehicules = (function () {
     // ⚠️ L'etiquette du bouton tactile suit l'avertisseur : SIRENE, SONNETTE, KLAXON.
     Entree.contexte(v.def.sirene ? 'vehicule_sirene' : v.def.klaxon === 'sonnette' ? 'vehicule_sonnette' : 'vehicule');
     bruitDeMontee(v);
-    if (v.def.classe !== 'velo') Son.boucle('moteur', true, 0.6);
+    if (v.def.classe !== 'velo') Son.boucle(boucleDeMoteur(v), true, 0.6);
     if (v.def.radio) { Son.Ambiance.arreter(); Son.Radio.jouer(v.def.radio); }
     Hud.message(v.def.nom.toUpperCase());
     return true;
   }
+
+  /** La boucle de moteur d'un char — ou d'une COQUE. ⚠️ La chaloupe de la
+      3e vague tournait au ralenti d'une AUTO : un hors-bord n'a ni boite ni
+      silencieux, il cogne et il crachote, et c'est le seul moteur du jeu qu'on
+      entende par-dessus de l'eau. Le reste ne change pas : meme montee dans les
+      tours, meme hauteur qui suit la vitesse. */
+  function boucleDeMoteur(v) { return v.def.classe === 'bateau' ? 'moteur_bateau' : 'moteur'; }
 
   /** Le bruit de la montee, et de la descente : la portiere d'un char — ou
       la bequille et le cadre d'une moto et d'un velo, qu'on enfourche.
@@ -1414,7 +1421,12 @@ const Vehicules = (function () {
     j.descenduT = B.t;
     Entites.dansLaCarte(j);
     Entree.contexte('pied');
+    // ⚠️ LES DEUX, et pas seulement celui du char qu'on quitte : si la fiche
+    // changeait de camp entre la montee et la descente (une coque remorquee,
+    // un char devenu epave), le moteur resterait allume pour toujours a
+    // l'autre bout de la ville. Eteindre ce qui ne joue pas ne coute rien.
     Son.boucle('moteur', false);
+    Son.boucle('moteur_bateau', false);
     Son.Radio.arreter();
     // ⚠️ On ne relance pas l'ambiance unique : `Son.Chef` reprend la main a
     // la prochaine image, avec la musique du district ou l'on descend.
@@ -2082,7 +2094,7 @@ const Vehicules = (function () {
       Hud.message(def ? 'RADIO : ' + def.nom.toUpperCase() : 'RADIO ÉTEINTE');
     }
     // Le moteur monte dans les tours.
-    if (v.def.classe !== 'velo') Son.reglerBoucle('moteur', 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);
+    if (v.def.classe !== 'velo') Son.reglerBoucle(boucleDeMoteur(v), 0.35 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.5, 0.7 + Math.abs(v.vitesse) / v.def.vitesse_max * 0.9);
   }
 
   // --- Boucle -------------------------------------------------------------------------

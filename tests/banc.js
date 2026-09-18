@@ -50,7 +50,7 @@ function faireCanvas(w, h) {
 function faireElement(tag, id) {
   const ecouteurs = {};
   const el = {
-    tagName: tag.toUpperCase(), id: id || '', hidden: false, textContent: '', innerHTML: '', value: '',
+    tagName: tag.toUpperCase(), id: id || '', hidden: false, textContent: '', value: '',
     dataset: {}, style: {}, enfants: [], classes: new Set(),
     classList: { add: function (c) { el.classes.add(c); }, remove: function (c) { el.classes.delete(c); },
                  contains: function (c) { return el.classes.has(c); } },
@@ -64,6 +64,13 @@ function faireElement(tag, id) {
     getBoundingClientRect: function () { return { left: 20, top: 500, width: 140, height: 140, right: 160, bottom: 640 }; },
     focus: function () {}, blur: function () {},
   };
+  // ⚠️ `innerHTML = ''` VIDE la liste des enfants : sans ca, l'ecran du compte
+  // empilerait ses trois cases a chaque mise a jour et le banc ne le verrait pas.
+  let html = '';
+  Object.defineProperty(el, 'innerHTML', {
+    get: function () { return html; },
+    set: function (v) { html = String(v); if (!html) el.enfants.length = 0; },
+  });
   return el;
 }
 
@@ -80,7 +87,8 @@ function banc(corps) {
   toile.id = 'toile';
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
-  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte', urlScores: '/api/scores' };
+  bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte',
+                      urlCompte: '/api/compte/' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
   const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
@@ -92,10 +100,14 @@ function banc(corps) {
   const pouce = faireElement('u');
   croix.querySelector = function () { return pouce; };
   elements.croix = croix;
-  ['voile-titre', 'voile-scores', 'voile-score-envoi', 'bouton-jouer', 'bouton-scores', 'bouton-fermer-scores',
-   'bouton-annuler-score', 'score-form', 'pseudo', 'score-etat', 'liste-scores', 'etat-chargement',
-   'avis-son', 'bouton-casque'].forEach(function (id) {
-    elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : id === 'pseudo' ? 'input' : 'div', id);
+  ['voile-titre', 'bouton-jouer', 'etat-chargement',
+   'avis-son', 'bouton-casque',
+   // L'ecran du compte (M14, 2e vague).
+   'voile-compte', 'bouton-compte', 'bouton-fermer-compte', 'compte-form', 'compte-pseudo', 'compte-passe',
+   'compte-courriel', 'compte-etat', 'compte-mot', 'compte-parties', 'bouton-compte-inscription',
+   'bouton-compte-connexion', 'bouton-compte-deconnexion'].forEach(function (id) {
+    const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel';
+    elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : entree ? 'input' : 'div', id);
   });
   const body = faireElement('body');
   const documentElement = faireElement('html');
@@ -123,6 +135,36 @@ function banc(corps) {
   let rechargements = 0;
   const fetchs = [];
   const pads = [];
+  /*: LE FAUX SERVEUR DE COMPTES (M14). `ENTREE.reseau` pose les reponses AVANT le
+    chargement — l'ouverture part des la ville batie, un test qui les poserait
+    apres arriverait trop tard. Une entree vaut { statut, corps } ou { panne: true }
+    (le serveur ne repond pas du tout), et la cle est le chemin sous /api/compte/
+    ('ouvrir', 'parties/1'...) ou '*' pour toutes. */
+  const reseau = Object.assign({}, ENTREE.reseau || {});
+  const appelsCompte = [];
+  const beacons = [];
+  //: `tenu: true` dans `ENTREE.reseau` : la reponse attend `o.compte.rendre(…)`.
+  //: ⚠️ Il faut l'armer AVANT le chargement — l'ouverture part des la ville batie,
+  //: et c'est justement ce qu'on veut voir attendre.
+  const tenues = {};
+  for (const chemin in reseau) if (reseau[chemin] && reseau[chemin].tenu) tenues[chemin] = [];
+  //: ⚠️ La cle peut porter sa methode (`'GET parties/1'`) : la meme adresse rend
+  //: la partie du serveur en GET et accepte ou refuse un instantane en POST, et
+  //: un test qui ne peut pas les distinguer ferait passer une montee pour une
+  //: descente reussie. A defaut, la cle nue sert les deux, puis '*'.
+  function reponseDe(chemin, methode) {
+    const cles = [methode + ' ' + chemin, chemin, '*'];
+    for (const c of cles) if (reseau[c] !== undefined) return reseau[c];
+    return { statut: 200, corps: chemin === 'ouvrir' ? { compte: null } : {} };
+  }
+  function servirCompte(chemin, methode) {
+    const r = reponseDe(chemin, methode);
+    if (r && r.panne) return Promise.reject(new Error('reseau coupe'));
+    const statut = r && typeof r.statut === 'number' ? r.statut : 200;
+    const corps = r && r.corps !== undefined ? r.corps : {};
+    return Promise.resolve({ ok: statut < 400, status: statut,
+                             json: function () { return Promise.resolve(corps); } });
+  }
   const FauxMath = Object.create(Math);
   (function () { let a = (ENTREE.graine || 0x1a2b3c4d) >>> 0; FauxMath.random = function () {
     a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -143,10 +185,38 @@ function banc(corps) {
     // Recharger la page ne recharge rien ici : on COMPTE. Le test rejoue la
     // suite dans un second banc, avec le stockage que le premier a laisse.
     location: { search: '', reload: function () { rechargements++; } },
-    navigator: { getGamepads: function () { return pads; }, vibrate: function () {} },
+    navigator: { getGamepads: function () { return pads; }, vibrate: function () {},
+                 userAgent: 'Banc/1.0',
+                 // ⚠️ Le seul appel qui survit a la fermeture d'un onglet : le banc
+                 // garde ce qui part, personne n'en lit la reponse.
+                 sendBeacon: function (url, paquet) {
+                   beacons.push({ url: String(url), type: (paquet && paquet.type) || '',
+                                  corps: paquet && paquet.texte !== undefined ? JSON.parse(paquet.texte) : paquet });
+                   return true;
+                 } },
+    // Un Blob juste assez vrai : `sendBeacon` a besoin de son type pour que Flask
+    // lise le corps en JSON.
+    Blob: function (parties, options) {
+      this.texte = (parties || []).join('');
+      this.type = (options && options.type) || '';
+    },
     matchMedia: function () { return { matches: false }; },
     fetch: function (url, opts) {
       fetchs.push({ url: url, opts: opts });
+      const adresse = String(url);
+      if (adresse.indexOf('/api/compte/') === 0) {
+        const chemin = adresse.slice('/api/compte/'.length);
+        let corps = null;
+        try { corps = opts && opts.body ? JSON.parse(opts.body) : null; } catch (e) { corps = String(opts.body); }
+        appelsCompte.push({ chemin: chemin, methode: (opts && opts.method) || 'GET', corps: corps,
+                            entete: (opts && opts.headers) || null });
+        // ⚠️ Une reponse TENUE ne se resout pas toute seule : c'est ce qui
+        // permet de juger que rien ne double l'ouverture pendant qu'elle vole.
+        const methode = (opts && opts.method) || 'GET';
+        const tenu = tenues[methode + ' ' + chemin] || tenues[chemin];
+        if (tenu) return new Promise(function (r) { tenu.push(r); }).then(function () { return servirCompte(chemin, methode); });
+        return servirCompte(chemin, methode);
+      }
       if (String(url).indexOf('definitions') >= 0) return Promise.resolve({ ok: true, json: function () { return Promise.resolve(defs); } });
       // ⚠️ La carte a sa requete depuis qu'elle est sortie du paquet : le banc
       // la sert comme le serveur, a part, et le jeu la remet dans `defs.carte`.
@@ -156,7 +226,7 @@ function banc(corps) {
       if (/\.mp3($|\?)/.test(String(url))) {
         return Promise.resolve({ ok: true, arrayBuffer: function () { return Promise.resolve(new ArrayBuffer(64)); } });
       }
-      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({ scores: [], rang: 1 }); } });
+      return Promise.resolve({ ok: true, json: function () { return Promise.resolve({}); } });
     },
     addEventListener: function (t, f) { (ecouteurs[t] = ecouteurs[t] || []).push(f); },
     removeEventListener: function () {}, dispatchEvent: function () {},
@@ -273,6 +343,10 @@ function banc(corps) {
       cb(horloge);
     }
   }
+  /** Un evenement de la FENETRE, joue comme le navigateur le joue (`pagehide`,
+      `resize`...). ⚠️ Juger `Compte.partir()` en l'appelant soi-meme ne dit rien
+      du jour ou plus personne ne l'appelle : c'est le geste qu'on veut voir. */
+  function fenetreEvenement(type, extra) { (ecouteurs[type] || []).forEach(function (f) { f(evenement(type, extra)); }); }
   function touche(code) { (ecouteurs.keydown || []).forEach(function (f) { f(evenement('keydown', { code: code })); }); }
   function relacher(code) { (ecouteurs.keyup || []).forEach(function (f) { f(evenement('keyup', { code: code })); }); }
   function tape(code, images) { touche(code); frame(1); relacher(code); frame(images || 1); }
@@ -369,9 +443,19 @@ function banc(corps) {
   }
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
+                   fenetreEvenement: fenetreEvenement,
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
                    fondu: fondu, entrer: entrer, sortir: sortir,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, session: session, ctx: toile.getContext('2d'),
+                   // Le compte (M14) : ce qui est parti, ce qui reste a rendre, et ce qu'on repond.
+                   compte: { appels: appelsCompte, beacons: beacons,
+                             repondre: function (chemin, valeur) { reseau[chemin] = valeur; },
+                             tenir: function (chemin) { tenues[chemin] = tenues[chemin] || []; },
+                             rendre: function (chemin) {
+                               const attente = tenues[chemin] || [];
+                               delete tenues[chemin];
+                               attente.forEach(function (r) { r(); });
+                             } },
                    rechargements: function () { return rechargements; },
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).

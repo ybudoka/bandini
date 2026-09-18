@@ -17,7 +17,8 @@ from typing import NotRequired, TypedDict
 
 TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
-    "parler",      # toucher un personnage
+    "parler",      # toucher un personnage — `cible` : de qui il s'agit (`personnages:`
+                   # ou `arch:`), l'objectif s'accomplit en lui parlant
     "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`) ;
                    # `prete` : a QUI il est — un char prete ne se vend pas ;
                    # `ou: ruelle:<lieu>:<n>` : la ruelle la plus proche a n tuiles au moins
@@ -93,6 +94,29 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "narrateur", "nom": "Le Clairon de la Baie", "genre": "homme", "voix": "annonceur centre d'achat 1",
      "couleurs": {"c": "#3a3a4a", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "",
      "heler": ""},
+
+    # --- M16 : les quatre contacts que Josée te présente (m6, « Le tour du
+    # propriétaire »). Un par district, un par monde : deux se tiennent DEHORS
+    # devant leur porte, deux DEDANS sur un point de piece pose exprès.
+    # ⚠️ Les trois voix quebecoises de femme (Jeanne Mance, Julia, Amélie) sont
+    # TOUTES prises. Décision de Martin le 17 sept. 2026 : pour Lulu et
+    # Raymonde, on sort du quebecois plutot que de les faire partager une voix.
+    # Lulu prend Clara Dupont (la seule autre voix de femme en francais du
+    # compte, `language: fr`) ; Raymonde prend Nadine, la voix rauque — ici
+    # l'accent FAIT le personnage, une presidente de syndicat qui a roule sa
+    # bosse. Martin les auditonna a la prochaine generation.
+    {"slug": "tipaul", "nom": "Ti-Paul Gagnon", "genre": "homme", "voix": "Québec Tremblay - Confident and Measured",
+     "couleurs": {"c": "#c0392b", "h": "#7a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:depanneur",
+     "heler": "Salut, l'ami!"},
+    {"slug": "lulu", "nom": "Lucienne « Lulu » Pelletier", "genre": "femme", "voix": "Clara Dupont - Professional and Urgent",
+     "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#f0c098", "p": "#4a3a5a"}, "ou": "point:lulu",
+     "heler": "Viens manger!"},
+    {"slug": "raymonde", "nom": "Raymonde Fortin", "genre": "femme", "voix": "Nadine",
+     "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "porte:usine",
+     "heler": "Le syndicat!"},
+    {"slug": "ovila", "nom": "Ovila Saint-Onge", "genre": "homme", "voix": "annonceur centre d'achat 1",
+     "couleurs": {"c": "#2e8b57", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:ovila",
+     "heler": "Les lumières..."},
 ]
 
 
@@ -521,6 +545,98 @@ CATALOGUE: list[Mission] = [
             "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1)],
         },
     },
+    {
+        "slug": "m6", "titre": "Le tour du propriétaire", "donneur": "josee", "prerequis": ["m5"],
+        "recompense": 300, "phase": 1, "echec": ["mort", "arrete"],
+        "donne": {"message": "QUATRE CONTACTS AU TÉLÉPHONE",
+                  "contacts": ["tipaul", "lulu", "raymonde", "ovila"]},
+        # Le tour de Josée : quatre districts, quatre portes, du dépanneur au
+        # phare. Chaque objectif `parler` nomme sa CIBLE — ce qu'on accomplit en
+        # lui parlant, jamais en s'approchant de sa tuile (`Histoire` lit la cible).
+        "objectifs": [
+            {"type": "parler", "cible": "tipaul", "texte": "PARLE À TI-PAUL, AU DÉPANNEUR"},
+            {"type": "parler", "cible": "lulu", "texte": "PARLE À LULU, À LA CANTINE"},
+            {"type": "parler", "cible": "raymonde", "texte": "PARLE À RAYMONDE, À L'USINE"},
+            {"type": "parler", "cible": "ovila", "texte": "PARLE À OVILA, AU PHARE"},
+        ],
+        # Josée parle dedans : la caméra sort voir le dépanneur, la première
+        # porte du tour. Il n'y a pas d'objectif `retourner` — la mission se
+        # clôt après le dernier contact, et Josée est loin : la fin se dit
+        # donc au combiné.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1], "ensemble": True},
+                {"type": "coupe", "vers": "porte:depanneur", "ferme": 20, "ouvre": 20, "tient": 150},
+                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "porte:depanneur", "duree": 70,
+                 "ensemble": True},
+                {"type": "dire", "repliques": [2, 3]},
+            ],
+            "fin": [
+                {"type": "coupe", "vers": "chez:josee", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
+                {"type": "dire"},
+            ],
+        },
+        "dialogue": {
+            "appel": [_l("josee", "Josée. Le Faubourg est à nous. Viens au bar, je te présente la ville.")],
+            "intro": [
+                _l("josee", "Quatre coins, quatre personnes. Ti-Paul au dépanneur, ma sœur Lulu à la cantine."),
+                _l("josee", "Raymonde tient le syndicat à l'usine, pis Ovila garde le phare."),
+                _l("josee", "Va leur serrer la main. Dans cette ville, tout commence par là."),
+            ],
+            "fin": [
+                _l("josee", "Quatre poignées de main. Le monde va t'appeler par ton nom, astheure."),
+                _l("josee", "Garde l'œil ouvert. Il se passe plus de choses que t'en penses."),
+            ],
+            "echec": [_l("josee", "Tu reviendras quand tu auras le temps de faire le tour.")],
+            "pendant": [_p("josee", "Le dépanneur d'abord. Ti-Paul en sait plus qu'il en a l'air.", 0)],
+        },
+    },
+    {
+        "slug": "m97", "titre": "Marco te vend", "donneur": "marco", "prerequis": ["m5"],
+        "recompense": 150, "phase": 1, "echec": ["mort", "arrete"],
+        # ⚠️ `exige` : la condition de « dans quel état », distincte du prérequis
+        # « après quoi ». Pas encore lue par le navigateur — elle vaut au juge
+        # dès aujourd'hui et au téléphone le jour où il triera.
+        "exige": {"liberes": 3},
+        "donne": {"message": "LE TAXI DE MARCO EST GARÉ À LA PLANQUE", "vehicule": "taxi"},
+        "objectifs": [
+            {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE — MARCO T'ATTEND"},
+            {"type": "semer", "etoiles": 5, "texte": "SÈME LA POLICE — 5 ÉTOILES"},
+            {"type": "ramasser", "cible": "fuyard", "vehicule": "taxi", "texte": "RATTRAPE LE TAXI DE MARCO"},
+        ],
+        # Marco t'attend sur le pas du garage, le téléphone sonne, et c'est un
+        # guet-apens : la coupe montre la rue du garage, la caméra revient sur
+        # toi. La fin laisse filer le taxi de Marco — le choix « le coucher ou
+        # le laisser filer » est dans les répliques, pas dans un bouton.
+        "scenes": {
+            "intro": [
+                {"type": "dire", "repliques": [1], "ensemble": True},
+                {"type": "coupe", "vers": "porte:garage", "ferme": 20, "ouvre": 20, "tient": 150},
+                {"type": "geste", "acteur": "donneur", "geste": "hausser", "duree": 70, "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+                {"type": "coupe", "vers": "joueur", "ferme": 20, "ouvre": 20, "tient": 60},
+            ],
+            "fin": [
+                {"type": "coupe", "vers": "chez:marco", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
+                {"type": "dire", "repliques": [1]},
+                {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+                {"type": "dire", "repliques": [2]},
+            ],
+        },
+        "dialogue": {
+            "appel": [_l("marco", "Marco. Viens au garage, cousin. On a à se parler, toi pis moi.")],
+            "intro": [
+                _l("marco", "Bouchard m'a montré ton dossier. T'as bâti un nom sur mon dos."),
+                _l("marco", "Pis il paie pour te voir tomber. Tiens, les voilà."),
+            ],
+            "fin": [
+                _l("marco", "T'es plus dur que les chiens qu'il a lâchés. Garde le taxi, il est à toi."),
+                _l("marco", "Moi, je disparais. La ville est à toi, cousin."),
+            ],
+            "echec": [_l("marco", "Tiens-toi prêt. On va régler ça bien comme il faut.")],
+            "pendant": [_p("marco", "Cours, cousin. Ceux-là ne font pas de quartier.", 1)],
+        },
+    },
 ]
 
 #: Les defis : un panneau en ville, un chrono, une prime — une seule fois.
@@ -532,7 +648,61 @@ DEFIS: list[dict] = [
      "texte": "TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 2:00"},
     {"slug": "livraison", "titre": "Livraison sans bosse", "ou": "porte:garage", "lieu": "bar", "chrono_s": 90,
      "etoiles": 1, "prime": 250, "texte": "LIVRE TON CHAR AU BAR EN 90 S, SANS UNE BOSSE, AVEC LA POLICE AUX FESSES"},
+
+    # --- LES TROIS JEUX D'ADRESSE DE LA FOIRE (bord de l'eau, 4e vague) -------
+    #
+    # ⚠️ **UN JEU D'ADRESSE EST UN DEFI, PAS UN MOTEUR**, et c'est la fiche du
+    # plan qui l'ecrit en majuscules. Ils tiennent donc sur les rails de la v1 —
+    # un lieu, un compte, un chrono, une prime, un texte en majuscules — et tout
+    # ce qu'ils ajoutent au moteur est `a_pied` : on les joue debout devant un
+    # comptoir, pas au volant.
+    #
+    # ⚠️ `ou` : `foire:<jeu>`, et AUCUN PANNEAU ne se plante (`creerPanneaux` ne
+    # connait que `rampe` et `porte:`). C'est le COMPTOIR qu'on lit : un panneau
+    # de defi au milieu d'une allee de foire, entre deux kiosques a trois tuiles
+    # l'un de l'autre, serait un poteau de plus dans le seul endroit dense du
+    # jeu — et la baraque dit deja ce qu'elle vend.
+    #
+    # ⚠️ **LA PRIME EST PETITE, ET C'EST LA REGLE DES PALIERS DE BOULOT** : un
+    # defi de foire ne paie pas mieux a l'heure qu'un boulot honnete (juge :
+    # `prime / chrono_s` sous le taux du taxi). Les trois ensemble rapportent
+    # dix fois le billet d'entree — de quoi jouer, pas de quoi vivre. Ce qu'on
+    # vient chercher au troisieme, c'est la CASQUETTE (`CASQUETTE_DE_LA_FOIRE`).
+    {"slug": "tir", "titre": "La galerie de tir", "ou": "foire:galerie_tir", "a_pied": True,
+     "foire": True, "cibles": 3, "chrono_s": 30, "rayon_px": 120, "prime": 60,
+     "texte": "CRÈVE LES TROIS CIBLES EN 30 S"},
+    # ⚠️ « Marteler ACTION contre un chrono : aucune statistique neuve, c'est le
+    # BOUTON qui fait la force. » Le compte est en coups, pas en muscles.
+    {"slug": "marteau", "titre": "Le marteau de force", "ou": "foire:marteau_force", "a_pied": True,
+     # ⚠️ `rayon_px` : on a les mains dessus, mais on se tient DANS L'ALLEE —
+     # deux tuiles et demie du comptoir, mesure au banc. A une tuile et demie,
+     # on ne pouvait pas jouer sans monter sur la baraque.
+     "foire": True, "coups": 25, "chrono_s": 10, "rayon_px": 44, "prime": 25,
+     "texte": "MARTÈLE ACTION : 25 COUPS EN 10 S, ET LA CLOCHE SONNE"},
+    # ⚠️ **ON LA GAGNE, ON NE LA VOLE PAS** : le canard ne s'accroche que quand
+    # il passe sous le crochet, et un comptoir defonce ne rend pas un lot — il
+    # met fin au jeu (`vole_pas`).
+    {"slug": "canards", "titre": "La pêche aux canards", "ou": "foire:peche_canards", "a_pied": True,
+     # ⚠️ `pose` : la FENETRE, c'est la pose du bassin ou le canard passe sous le
+     # crochet — pas un chrono invente. Le dessin du kiosque (`peche_canards`,
+     # `anime` + `variantes`) et la regle du jeu disent donc la MEME chose, et
+     # un juge de banc le prouve en regardant la couche peinte : a cette
+     # pose-la, un canard est sous la canne.
+     "foire": True, "canards": 5, "chrono_s": 40, "rayon_px": 44, "prime": 90,
+     "pose": 0, "vole_pas": True,
+     "texte": "PÊCHE CINQ CANARDS : ACTION QUAND IL PASSE SOUS LE CROCHET"},
 ]
+
+#: ⚠️ **LE LOT DU TROISIEME PALIER**, et rien d'autre ne la donne : la casquette
+#: de la foire (`magasins.TENUES`) tombe quand les TROIS jeux d'adresse sont
+#: gagnes. Le vestiaire existait deja et ne demande rien a personne — une tenue
+#: de plus, c'est une ligne de catalogue, pas un moteur.
+CASQUETTE_DE_LA_FOIRE = "casquette_foire"
+
+
+def defis_de_foire() -> list[dict]:
+    """Les jeux d'adresse de la foire, dans l'ordre du catalogue."""
+    return [d for d in DEFIS if d.get("foire")]
 
 NB_MISSIONS = len(CATALOGUE)
 

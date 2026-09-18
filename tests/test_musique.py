@@ -137,9 +137,16 @@ def test_la_musique_ne_reclame_aucun_fichier(theme):
 
 
 def test_le_theme_pese_moins_qu_une_seconde_de_mp3():
+    """⚠️ **Relevé de 48 à 52 Ko le 17 sept. 2026** — l'orgue de la foire, et
+    rien d'autre. Mesuré avant de toucher au chiffre : la valse pèse **2 318
+    octets** pour 28,8 s de notes, là où le mp3 qu'elle remplace en pèse 240 Ko.
+    Le budget dit « le filet reste plus léger qu'une seconde de mp3 » ; un
+    morceau de plus qui coûte deux Ko ne le dément pas. Ce qui le démentirait,
+    c'est de le relever de deux Ko à chaque ajout — il monte donc d'un cran
+    franc, une fois."""
     import json
     octets = len(json.dumps(audio.exporter()["musiques"]))
-    assert octets < 48000, f"{octets} octets : le catalogue enfle"
+    assert octets < 52000, f"{octets} octets : le catalogue enfle"
 
 
 # --- M9 : les stations procedurales -----------------------------------------

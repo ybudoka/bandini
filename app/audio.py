@@ -394,6 +394,39 @@ CATALOGUE: list[Echantillon] = [
        prompt="distant construction site ambience, a diesel machine engine "
               "rumbling steadily with faint metal clanks, seamless loop, "
               "no beeps, no voices, no music"),
+    # --- LE BORD DE L'EAU ET LA FOIRE (4e vague) ---------------------------
+    # ⚠️ Trois BOUCLES et rien d'autre : ce qui manquait a ces deux endroits,
+    # ce n'est pas un bruitage de plus, c'est une MATIERE qui tient sous les
+    # pas. Une plage muette est un dessin de plage ; une foire muette est une
+    # peinture. (La quatrieme piste de la fiche, l'orgue de manège, n'est pas
+    # ici : c'est une MUSIQUE, et elle sort d'un endroit — voir `MUSIQUES`.)
+    #
+    # LES VAGUES : le volume suit la distance a l'eau (`Monde.majSonDuBord`).
+    # ⚠️ Pas de mouettes dans le prompt : le goeland est une BETE du jeu, il a
+    # son cri a lui et il n'est pas toujours la. Une boucle qui crie toute
+    # seule, c'est un oiseau qu'on cherche des yeux sans jamais le trouver.
+    _e("vagues", "Vagues sur la grève", duree_s=8.0, volume=0.30, boucle=True,
+       influence=0.45,
+       prompt="small calm waves lapping on a sandy shore of a sheltered bay, "
+              "gentle water wash and retreat, close but soft, seamless loop, "
+              "no gulls, no wind, no voices, no music"),
+    # LES CRIS DE LA FOIRE : ce qu'on entend AVANT de voir la palissade. Ce
+    # n'est pas la rumeur de la rue (`foule`) : une foule qui murmure n'est pas
+    # une foire — ce qui nomme une foire, ce sont les CRIS d'un manège.
+    _e("foire_cris", "Les cris de la foire", duree_s=8.0, volume=0.34, boucle=True,
+       influence=0.4,
+       prompt="a busy outdoor funfair crowd heard from close by, children "
+              "shrieking and laughing on a spinning ride, excited chatter, "
+              "faint ride machinery clatter, seamless loop, no music, no announcer",
+       ),
+    # LE MOTEUR DE LA COQUE : la chaloupe de la 3e vague roulait au ralenti
+    # d'une AUTO (`moteur`). ⚠️ Un hors-bord n'a ni boite ni silencieux : il
+    # cogne, il crachote, et le son change avec le gaz comme celui d'un char.
+    _e("moteur_bateau", "Moteur de la chaloupe", duree_s=4.0, volume=0.30,
+       boucle=True, influence=0.55,
+       prompt="a small outboard boat motor idling and puttering on calm water, "
+              "two-stroke engine putter with water slap against the hull, "
+              "recorded from on board, seamless loop, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -711,6 +744,19 @@ MUSIQUES: list[Piece] = [
        "of a body shop, no vocals, seamless loop",
        duree_s=45, volume=0.31),
 
+    # --- L'ORGUE DE LA FOIRE (bord de l'eau, 4e vague) ----------------------
+    # ⚠️ **UNE MUSIQUE QUI SORT D'UN ENDROIT**, et c'est pour ca qu'elle est
+    # dans cette liste-ci et pas dans les bruitages : elle passe par le chemin
+    # du musicien de rue (`Son.Rue`), avec une source fixe au milieu de
+    # l'allee. Le prompt REPREND la fiche du morceau ecrit (`musique.ORGUE`) —
+    # meme tonalite, meme tempo, trois temps — sinon on ne remplace pas une
+    # musique, on en met une autre.
+    _m("foire_orgue",
+       "a mechanical fairground barrel organ playing a bright cheerful waltz in "
+       "three four time at 150 bpm in D major, oom-pah-pah bass and chords under "
+       "a simple pipe melody, bells and small percussion, old carousel limonaire, "
+       "slightly out of tune, no vocals, seamless loop",
+       duree_s=30, volume=0.42),
 ]
 
 
