@@ -177,10 +177,43 @@ const Entree = (function () {
       enchainer dans l'ordre pour reveiller quelque chose de cache. */
   function surSuiteActions(suite, fait) { suitesActions.push({ suite: suite.slice(), fait: fait }); }
 
+  //: Le STICK pour la suite d'actions. ⚠️ La suite se lisait sur `neuf`, qui ne
+  //: VIENT QUE DES BOUTONS (la croix, le clavier, le doigt) : un stick
+  //: analogique ne « presse » jamais haut/bas/gauche/droite, il ne fait que
+  //: pousser `axe`. On traduit donc le stick en direction cardinale, avec une
+  //: MORTE confortable (il faut pousser franchement) et une HYSTERESIS (une
+  //: direction ne compte qu'une fois par poussee, jusqu'au relachement). Le
+  //: cardinal dominant absorbe les diagonales : un Konami mal ajuste de
+  //: quelques degres reste lu « haut » ou « droite », jamais « diagonal ».
+  let directionStick = null, directionStickEmise = null;
+  const STICK_MORTE = 0.55;     // il faut vraiment pousser pour choisir
+  const STICK_RELACHE = 0.3;    // ... et vraiment lacher pour pouvoir recompter
+
+  function directionDuStick() {
+    const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    const m = Math.hypot(st.x, st.y);
+    // Zone morte : sous le relachement, on rend la main et on oublie.
+    if (m < STICK_RELACHE) { directionStick = null; return null; }
+    // Entre les deux : on GARDE la direction deja verrouillee (hysteresis).
+    if (m < STICK_MORTE) return directionStick;
+    let d;
+    if (Math.abs(st.x) > Math.abs(st.y)) d = st.x > 0 ? 'droite' : 'gauche';
+    else d = st.y > 0 ? 'bas' : 'haut';
+    directionStick = d;
+    return d;
+  }
+
   function lireSuitesActions() {
     if (!suitesActions.length) return;
     const fraiches = [];
     for (const a in MAP_TOUCHES) if (neuf(a)) fraiches.push(a);
+    // Le stick : sa direction ne va au tampon que quand elle VIENT de changer
+    // (une fois par poussee) — pas a chaque image.
+    const d = directionDuStick();
+    if (d !== directionStickEmise) {
+      directionStickEmise = d;
+      if (d) fraiches.push(d);
+    }
     if (!fraiches.length) return;
     const t = Date.now();
     if (t - dernierActions > SECRET_ACTIONS_DELAI) tamponActions.length = 0;

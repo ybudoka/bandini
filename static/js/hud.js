@@ -1009,16 +1009,23 @@ const Hud = (function () {
   /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`, chacune
       menant vers son donneur. C'est le CATALOGUE qui fait la liste — une
       mission ajoutee au jeu tombe ici sans qu'on y touche. Le donneur porte un
-      intitule d'etat (à faire / en cours / faite) et, s'il a un lieu, un saut. */
+      intitule d'etat (à faire / en cours / faite) et, s'il a un lieu, un saut.
+      ⚠️ Sauter vers une mission DEJA FAITE la reinitialise (`Histoire.
+      reinitialiser`) pour qu'on puisse la refaire : le drapeau FAIT, l'appel
+      et les tombes tombent, puis on se teleporte chez le donneur. */
   function menuSautMissions() {
     const p = B.partie;
     const cours = p.mission ? p.mission.slug : null;
     const items = (B.defs.missions || []).map(function (m) {
       const ou = Histoire.ouTrouver(m.donneur);
-      const etat = p.missionsFaites[m.slug] ? 'FAITE' : (m.slug === cours ? 'EN COURS' : '→ DONNEUR');
+      const faite = !!p.missionsFaites[m.slug];
+      const etat = faite ? 'FAITE · REFAIRE' : (m.slug === cours ? 'EN COURS' : '→ DONNEUR');
       return { libelle: m.titre.toUpperCase(), detail: etat,
                actif: !!ou,
-               faire: function () { return !sauterVers(ou.x, ou.y, m.titre); } };
+               faire: function () {
+                 if (faite) Histoire.reinitialiser(m.slug);
+                 return !sauterVers(ou.x, ou.y, m.titre);
+               } };
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'SAUT VERS UNE MISSION', largeur: 340, hauteur: VH - 30,

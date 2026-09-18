@@ -1054,6 +1054,27 @@ const Histoire = (function () {
     void raison;
   }
 
+  /** Reinitialise une mission pour pouvoir la refaire (triche de debug, appelee
+      par le saut de mission) : retire son drapeau FAIT, ses appels et ses
+      tombes. Si c'est la mission EN COURS, on l'abandonne proprement d'abord
+      (nettoyage des entites, sans compter d'echec). ⚠️ Les recompenses deja
+      recues ne sont pas reprises : rejouer la mission les redonnera. */
+  function reinitialiser(slug) {
+    const p = B.partie;
+    if (!p || !slug) return false;
+    if (p.mission && p.mission.slug === slug) {
+      nettoyer(true);
+      p.mission = null;
+      B.mission = null;
+      B.finEnAttente = null;
+    }
+    delete p.missionsFaites[slug];
+    delete p.appels[slug];
+    if (p.tombes) delete p.tombes[slug];
+    p.appelT = null;
+    return true;
+  }
+
   /** Ceux qu'on a couches ne se relevent pas parce qu'on a rate : on les
       compte par objectif et par coin, et la reprise ne repose que les autres.
       ⚠️ K.-O. compte comme mort, comme au compteur de l'objectif : le « 4/6 »
@@ -1512,7 +1533,7 @@ const Histoire = (function () {
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
-           noter, rencontrer, CARNET_MAX,
+           reinitialiser, noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj };
 })();

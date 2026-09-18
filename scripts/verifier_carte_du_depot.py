@@ -51,7 +51,7 @@ TITRE_PYTHON = "### Côté Python"
 TITRE_JS = "### Côté JS"
 
 #: Ces dossiers se couvrent d'un seul trait : leur nom dans l'arborescence suffit.
-COUVERTS_PAR_DOSSIER = ("static/audio/",)
+COUVERTS_PAR_DOSSIER = ("static/audio/", "app/missions/")
 
 #: Ce qui, dans l'arborescence, ressemble a un fichier (pour le sens inverse :
 #: « encore sur la carte, plus dans le depot »).
