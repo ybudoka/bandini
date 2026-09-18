@@ -296,7 +296,7 @@ const Combat = (function () {
       const reste = munitions(arme.slug);
       // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
       // que le bouton etait casse, pas le chargeur.
-      if (reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
+      if (!B.debugMunitions && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
     e.etat = 'attaque';
     e.arc = arme;
@@ -327,7 +327,7 @@ const Combat = (function () {
     }
     if (joueur) {
       const sac = B.partie.armes[arme.slug];
-      if (sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
+      if (!B.debugMunitions && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
       B.cam.secousse = 0.6;
       Entree.vibrer(25);
       Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
@@ -532,8 +532,8 @@ const Combat = (function () {
     if (!arme || arme.type !== 'jet' || e.phase !== 'actif') return;
     const sac = B.partie.armes[arme.slug];
     if (e === B.joueur) {
-      if (!sac || sac.mun <= 0) { e.etat = 'flane'; e.phase = null; return; }
-      sac.mun--;
+      if (!B.debugMunitions && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
+      if (!B.debugMunitions) sac.mun--;
     }
     for (let i = 0; i < 3; i++) {
       const a = e.angle + (B.rng() - 0.5) * 0.7;

@@ -1004,6 +1004,21 @@ const Hud = (function () {
         item.detail = B.debugInvincible ? 'OUI' : 'NON';
         return false;
       } },
+      { libelle: 'ÉNERGIE INFINIE', detail: B.debugEndurance ? 'OUI' : 'NON', faire: function (item) {
+        B.debugEndurance = !B.debugEndurance;
+        item.detail = B.debugEndurance ? 'OUI' : 'NON';
+        return false;
+      } },
+      { libelle: 'MUNITIONS INFINIES', detail: B.debugMunitions ? 'OUI' : 'NON', faire: function (item) {
+        B.debugMunitions = !B.debugMunitions;
+        item.detail = B.debugMunitions ? 'OUI' : 'NON';
+        return false;
+      } },
+      { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: B.debugPasArrete ? 'OUI' : 'NON', faire: function (item) {
+        B.debugPasArrete = !B.debugPasArrete;
+        item.detail = B.debugPasArrete ? 'OUI' : 'NON';
+        return false;
+      } },
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },

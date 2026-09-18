@@ -17,6 +17,12 @@ const Jeu = (function () {
   //: suite hors de `MAP_TOUCHES` ne fait RIEN d'autre en la tapant, dans aucun
   //: ecran — c'est le seul moyen de garder le garde-fou fiable.
   const SEQUENCE_DEBUG = ['KeyR', 'KeyI', 'KeyG', 'KeyO', 'KeyL', 'KeyO'];
+  //: La suite d'ACTIONS qui reveille AUSSI le menu DEBUG, la ou un clavier
+  //: n'existe pas — le Konami directionnel, accessible a la manette, au stick
+  //: du casque et au joystick tactile (`Entree.surSuiteActions`). Les fleches
+  //: bougent le joueur au passage, comme toute suite : c'est de la triche de
+  //: developpeur, jamais un geste qu'on fait par accident.
+  const SEQUENCE_DEBUG_ACTIONS = ['haut', 'haut', 'bas', 'bas', 'gauche', 'droite', 'gauche', 'droite'];
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
   //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
@@ -554,6 +560,11 @@ const Jeu = (function () {
     // combat, tirs, explosions, collisions restent le MEME chemin qu'en jeu
     // normal, juste sans jamais s'epuiser.
     if (B.debugInvincible && B.joueur) B.joueur.invincible = 30;
+    // ⚠️ MÊME PATRON que l'invincibilité : on recharge le souffle à fond à
+    // CHAQUE image tant que le flag tient, au lieu d'un second garde-fou dans
+    // la dépense. Le sprint et la nage restent le même chemin, juste sans
+    // jamais s'épuiser — et on ne coule jamais.
+    if (B.debugEndurance && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();
@@ -868,6 +879,7 @@ const Jeu = (function () {
     if (/[?&]perf=1/.test(adresse)) B.options.perf = true;
     Entree.init(d, w, w.navigator);
     Entree.surSecret(SEQUENCE_DEBUG, ouvrirMenuDebug);
+    Entree.surSuiteActions(SEQUENCE_DEBUG_ACTIONS, ouvrirMenuDebug);
     Hud.init(d, racine);
     B.rng = mulberry(B.graine);
 

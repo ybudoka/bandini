@@ -162,6 +162,41 @@ const Entree = (function () {
     }
   }
 
+  // --- Secret par ACTIONS (manette + tactile) -------------------------------------
+
+  //: La meme suite secrete, mais en ACTIONS plutot qu'en touches : ce que la
+  //: manette, le stick du casque ou le joystick tactile donnent. On la lit UNE
+  //: FOIS PAR IMAGE (`debutImage`), quand `neuf` est encore frais, sur les
+  //: actions qui viennent de s'enclencher — un Konami directionnel marche ainsi
+  //: au pouce comme au doigt, et au clavier aussi (les fleches sont des actions).
+  const SECRET_ACTIONS_DELAI = 1500;
+  let tamponActions = [], dernierActions = 0;
+  const suitesActions = [];
+
+  /** Enregistre une suite d'ACTIONS (`haut`, `bas`, `gauche`, `droite`…) a
+      enchainer dans l'ordre pour reveiller quelque chose de cache. */
+  function surSuiteActions(suite, fait) { suitesActions.push({ suite: suite.slice(), fait: fait }); }
+
+  function lireSuitesActions() {
+    if (!suitesActions.length) return;
+    const fraiches = [];
+    for (const a in MAP_TOUCHES) if (neuf(a)) fraiches.push(a);
+    if (!fraiches.length) return;
+    const t = Date.now();
+    if (t - dernierActions > SECRET_ACTIONS_DELAI) tamponActions.length = 0;
+    dernierActions = t;
+    for (const a of fraiches) {
+      tamponActions.push(a);
+      for (const s of suitesActions) {
+        const n = s.suite.length, q = tamponActions.length;
+        if (q < n) continue;
+        let pareil = true;
+        for (let i = 0; i < n; i++) if (tamponActions[q - n + i] !== s.suite[i]) { pareil = false; break; }
+        if (pareil) { tamponActions.length = 0; s.fait(); break; }
+      }
+    }
+  }
+
   // --- Manette ----------------------------------------------------------------------
 
   function profilParDefaut() {
@@ -622,6 +657,7 @@ const Entree = (function () {
       const h = Math.hypot(x, y);
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
+    lireSuitesActions();
   }
 
   function contexte(nom) {
@@ -663,7 +699,7 @@ const Entree = (function () {
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
     init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
-    surSecret,
+    surSecret, surSuiteActions,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,
