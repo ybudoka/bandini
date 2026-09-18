@@ -266,7 +266,12 @@ CATALOGUE: list[Echantillon] = [
     # (`civil-m3-4`) sort à −21,3, et 0,28 la dépassait de deux dixièmes de dB.
     # À 0,26 la sonnerie tombe à −21,8 — sous la PLUS BASSE, pas sous la
     # moyenne, avec une demi-marche d'air pour la prochaine voix générée.
-    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.26,
+    # ⚠️ **0,23 et pas 0,26** : la demi-marche d'air a été consommée le 18 sept.
+    # 2026, quand les 15 voix de m6/m97 sont nées. La plus basse des 73 est
+    # `bouchard-m4-2` (`[quietly]`, à −21,9 LUFS) : à 0,26 la sonnerie la
+    # couvrait de deux dixièmes. À 0,23 elle tombe à −22,9 — une marche entière
+    # sous la plus basse, pas une demi.
+    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.23,
        influence=0.75,
        prompt="an old flip phone ringing twice on a table, thin electronic "
               "ringtone with a faint buzz of vibration, close, no voices, "

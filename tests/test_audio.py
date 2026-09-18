@@ -92,7 +92,12 @@ def test_le_poids_audio_reste_raisonnable():
     # Les voix de l'histoire se chargent par mission : une replique reste legere.
     for fichier in histoire:
         assert fichier.stat().st_size < 150_000, fichier.name
-    assert sum(f.stat().st_size for f in histoire) < 3_000_000
+    # ⚠️ Relevé de 3 à 4 Mo le 18 sept. 2026 : m6 (8 répliques de Josée) et m97
+    # (7 de Marco) ont été ajoutées et générées — 15 voix de plus, 192 Ko, et le
+    # total passe à 3,19 Mo. Ce plafond ne protège pas le démarrage (ces voix se
+    # chargent par mission, une à la fois) : il borne le dépôt, et c'est un ajout
+    # de contenu, pas un dépassement qu'on laisse filer.
+    assert sum(f.stat().st_size for f in histoire) < 4_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on

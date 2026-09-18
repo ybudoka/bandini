@@ -271,6 +271,47 @@ def test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide(banc):
     assert r["vues"] == r["images"], f"le char de M1 est posé, mais hors de l'écran pendant la coupe ({r})"
 
 
+@pytest.mark.parametrize("slug,vers,cible", [
+    ("m4", "porte:poste", "police"),       # l'auto-patrouille attend devant le poste
+    ("m5", "zone:cravates", "cravates"),   # les Cravates tiennent leurs coins
+])
+def test_la_coupe_d_une_intro_qui_commence_dedans_filme_ce_qu_elle_pose(banc, slug, vers, cible):
+    """⚠️ La règle des scènes, généralisée : une coupe vers la rue doit y trouver
+    ce que la mission y pose, MÊME quand la mission commence DANS une pièce. m4
+    (Bouchard, au casse-croûte) et m5 (Josée, au bar) posaient leurs éléments
+    seulement à la SORTIE : leur intro coupait vers la rue et filmait le poste ou
+    le coin des Cravates vide."""
+    r = banc("function (L, o) {" + OUTILS + """
+        const m = mission(L, '%s');
+        partie(L, m.slug);
+        // La coupe de l'intro, et ce qu'elle doit montrer — résolu DANS LA VILLE,
+        // avant d'entrer : une fois dedans, `Monde.carte` est la pièce.
+        const coupe = m.scenes.intro.find(function (p) { return p.type === 'coupe'; });
+        const but = L.Histoire.resoudre(coupe.vers, m);
+        allerVoir(L, o, m);
+        L.Histoire.parler(m.donneur);
+        // Ce qu'on cherche : le char `monter`, sinon les Cravates `tuer`.
+        function montre(e) {
+          if (e.type === 'vehicule') return e.mission === '%s';
+          return e.cible && e.mission === '%s';
+        }
+        let images = 0, vues = 0, poses = 0;
+        for (let n = 0; n < 6000 && (L.B.scene || L.B.cinema); n++) {
+          o.frame(1);
+          const s = L.B.scene;
+          if (!s || (s.noir || 0) > 0.2 || !s.vise || Math.hypot(s.vise.x - but.x, s.vise.y - but.y) > 8) continue;
+          images++;
+          const e = L.B.entites.find(montre);
+          if (e) { poses++; if (L.Entites.visibleAEcran(e.x, e.y, -20)) vues++; }
+        }
+        return { images: images, poses: poses, vues: vues, dedans: L.B.interieur ? L.B.interieur.slug : null };
+    }""" % (slug, slug, slug))
+    assert r["images"] > 30, f"{slug} : la coupe ne tient pas son lieu à l'écran ({r})"
+    assert r["poses"] == r["images"], f"{slug} : {cible} absent pendant la coupe ({r})"
+    assert r["vues"] == r["images"], f"{slug} : {cible} posé mais hors de l'écran pendant la coupe ({r})"
+    assert r["dedans"], f"{slug} : la mission commence bien DANS une pièce (le juge ne filme pas la rue)"
+
+
 def test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois(banc):
     """La règle, hors mise en scène : le char d'un objectif `monter` est là dès le
     début de la mission, mais il ne devient `B.mission.vehicule` qu'à son tour — et

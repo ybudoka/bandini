@@ -43,6 +43,19 @@ def test_le_jeu_dit_exactement_les_mots_de_la_boite(voix):
         f"{voix['slug']} : la voix dirait « {dit} » sous « {voix['texte']} »")
 
 
+def test_chaque_jeu_porte_une_emotion_de_ton():
+    """⚠️ « Toujours de l'émotion ». Un soupir, un rire ou un cri (`CORPS`)
+    disent comment le corps parle, pas ce qu'on ressent ; une replique qui ne
+    porte qu'eux sort plate a cote des autres. Chaque jeu doit donc porter au
+    moins une balise de TON, en plus de ses balises de corps."""
+    sans_ton = []
+    for slug, dit in interpretation.JEU.items():
+        b = set(interpretation.balises(dit))
+        if not (b & interpretation.TONS):
+            sans_ton.append((slug, b))
+    assert not sans_ton, f"ces jeux n'expriment aucun ton ({sans_ton})"
+
+
 @pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
 def test_les_balises_sont_celles_que_v3_comprend(voix):
     """Une balise inconnue se LIT a voix haute. Et `<break time>` est du v2 :

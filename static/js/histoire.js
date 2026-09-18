@@ -679,8 +679,9 @@ const Histoire = (function () {
     if (o) Hud.message(o.texte, 200);
   }
 
-  /** L'objectif suivant. Ce qu'il faut poser en ville se pose DEHORS : si
-      l'objectif arrive pendant qu'on est dedans (Josee au bar), a la sortie. */
+  /** L'objectif suivant. Ce qui se pose en ville se pose TOUT DE SUITE — dans
+      la VILLE, même quand on est dans une pièce : la scène d'intro qui coupe
+      vers la rue doit y trouver le char ou les Cravates qu'elle montre. */
   function avancer(enSilence) {
     const m = courante(), p = B.partie.mission;
     p.etape++;
@@ -690,45 +691,62 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
-    B.mission.aPoser = true;
-    if (!B.interieur) poser();
+    poser();
     if (!enSilence) Hud.message(o.texte, 200);
     // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
     if (!enSilence && (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; })) B.mission.pendant = p.etape;
   }
 
+  /** Pose dans la VILLE, même quand on est dans une pièce. ⚠️ La règle des
+      scènes : une coupe vers la rue doit y trouver ce que la mission y pose —
+      le char d'un `monter`, les Cravates d'un `tuer` — pas une rue vide. Quand
+      on est dedans, `Monde.carte` est la pièce et `B.entites` ses gens : le
+      temps du placement, on remet la carte et la liste de la ville, on naît au
+      bon monde, puis on reprend les deux. */
+  function dansLaVille(fn) {
+    const ext = B.interieur ? B.exterieur : null;
+    if (!ext) { fn(); return; }
+    const carte = Monde.carte, entites = B.entites;
+    Monde.restaurer(ext.carte);
+    B.entites = ext.entites;
+    try { fn(); } finally { Monde.restaurer(carte); B.entites = entites; }
+  }
+
   function poser() {
     const m = courante(), p = B.partie.mission, j = B.joueur;
     const o = m.objectifs[p.etape];
-    B.mission.aPoser = false;
     if (!o) return;
-    if (o.type === 'monter') {
-      const v = poserLeChar(m, o, p.etape);
-      if (v) B.mission.vehicule = v;
-    } else if (o.type === 'tuer') {
-      poserLesCravates(m, o);
-    } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
-      poserLeFuyard(m, o);
-    } else if (o.type === 'semer') {
-      B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
-      B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
-      if (o.escorte) poserLEscorte(m, o);
-    } else if (o.type === 'courses') {
-      B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
-    }
-    // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
-    // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
-    // une ruelle », la coupe de l'intro allait voir cette ruelle-la — et la
-    // filmait VIDE (mesure au banc : 155 images a l'ecran, aucun char a 200 px).
-    // Les chars des objectifs qui suivent se posent donc des le debut de la
-    // mission ; `poser()`, venu leur tour, retrouve ceux-la (`B.mission.chars`)
-    // au lieu d'en creer un second. ⚠️ `B.mission.vehicule`, lui, attend son
-    // tour : c'est LUI que `majObjectif` surveille (un char de mission qui
-    // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
-    // pas encore le char de la mission.
-    for (let i = p.etape + 1; i < m.objectifs.length; i++) {
-      if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
-    }
+    // ⚠️ Toujours dans la VILLE, même quand on est dans une pièce : une scène
+    // qui coupe vers la rue doit y trouver ce qu'on pose (`dansLaVille`).
+    dansLaVille(function () {
+      if (o.type === 'monter') {
+        const v = poserLeChar(m, o, p.etape);
+        if (v) B.mission.vehicule = v;
+      } else if (o.type === 'tuer') {
+        poserLesCravates(m, o);
+      } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
+        poserLeFuyard(m, o);
+      } else if (o.type === 'semer') {
+        B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
+        B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
+        if (o.escorte) poserLEscorte(m, o);
+      } else if (o.type === 'courses') {
+        B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
+      }
+      // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
+      // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
+      // une ruelle », la coupe de l'intro allait voir cette ruelle-la — et la
+      // filmait VIDE (mesure au banc : 155 images a l'ecran, aucun char a 200 px).
+      // Les chars des objectifs qui suivent se posent donc des le debut de la
+      // mission ; `poser()`, venu leur tour, retrouve ceux-la (`B.mission.chars`)
+      // au lieu d'en creer un second. ⚠️ `B.mission.vehicule`, lui, attend son
+      // tour : c'est LUI que `majObjectif` surveille (un char de mission qui
+      // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
+      // pas encore le char de la mission.
+      for (let i = p.etape + 1; i < m.objectifs.length; i++) {
+        if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
+      }
+    });
   }
 
   /** Le char d'un objectif `monter`, la ou il dort. Rend celui qui y est deja
@@ -1386,6 +1404,18 @@ const Histoire = (function () {
       else if (o.type === 'retourner') l = ouTrouver(m.donneur);
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
+      // ⚠️ `parler` : la cible est un PERSONNAGE, pas un lieu. On pointe sa
+      // personne quand elle est dehors (Ti-Paul, Raymonde), sinon sa porte (Lulu
+      // à la cantine, Ovila au phare). Sans ce cas, m6 n'avait ni flèche ni
+      // repère — on cherchait quatre personnes à l'aveugle.
+      else if (o.type === 'parler') {
+        const slug = cibleDuParler(o);
+        if (slug) {
+          const ou = ouTrouver(slug);
+          const qui = personnage(slug);
+          if (ou && qui) l = { x: ou.x, y: ou.y, nom: qui.nom };
+        }
+      }
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
@@ -1461,7 +1491,6 @@ const Histoire = (function () {
         return;
       }
       if (!B.interieur) {
-        if (B.mission.aPoser) poser();
         majObjectif();
       }
     }
