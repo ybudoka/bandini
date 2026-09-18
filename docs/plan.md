@@ -138,7 +138,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; **la 2e — le jeu se synchronise — est en cours**) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (2 vagues livrées : le compte, la session longue et les parties sur le serveur ; le jeu se synchronise et se montre enfin — restent le NIP, effacer son compte, le défi du jour, le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -8771,6 +8771,79 @@ borne de la route, `foreign_keys`).
   `bandini-sauvegarde-bd.timer` et `shared/copies/` — `deploy.sh` ne touche pas systemd.
   Rien ne presse tant que personne ne peut créer de compte : la base n'existe qu'à la
   première requête de compte.
+
+**2e vague livrée** (17 sept. 2026) : **le jeu se synchronise**, et le compte se voit enfin.
+`static/js/compte.js` (le seul endroit du jeu qui parle à `/api/compte/`), l'**écran du
+compte** au titre (une voile DOM — un mot de passe se tape, et un menu de manette sait
+choisir, pas écrire ; le bouton porte le pseudo dès qu'un compte est ouvert), le **compteur
+des sauvegardes** dans `Sauvegarde` (`base.js`), et le **choix entre deux versions** dans le
+menu des PARTIES.
+
+- ⚠️ **L'ouverture passe en premier, et SEULE.** Le jeton tourne à
+  `POST /api/compte/ouvrir` : un appel de compte parti avant sa réponse arriverait avec un
+  jeton déjà remplacé et passerait pour un vol — tous les appareils coupés, pour rien. Tout
+  ce que le jeu demande attend derrière sa promesse, dans une file où deux appels ne se
+  croisent jamais. C'est une **connexion** qui le prouve au banc : elle, n'attend pas d'être
+  « ouvert » pour partir.
+
+- ⚠️ **Le compteur seul ne dit pas s'il y a conflit.** « Mon local est à 41, le serveur à
+  40 » ne dit pas si j'ai joué depuis SA version ou si nous avons joué chacun de notre côté.
+  La réponse est dans ce que cet appareil a vu du compte la dernière fois
+  (`bandini-compte-sync-v1`, rangé sous le pseudo : un autre compte repart à zéro). Sans ce
+  témoin, il n'y a que deux issues et les deux sont fausses — écraser en silence, ou poser
+  la question à chaque partie. `decision(n)` tranche seule les cas évidents (une case vide
+  d'un côté se remplit de l'autre) et ne dérange le joueur que quand les deux ont bougé.
+
+- ⚠️ **Une case vide qui reçoit, ce n'est pas la même chose qu'une case à zéro.** La partie
+  de Martin dort dans le navigateur depuis des semaines et n'a pas de compteur : à zéro, elle
+  passerait pour une case vide et la première connexion la remplacerait sans un mot. Elle
+  démarre donc à 1 ; ce qui est vide reste à zéro, et c'est ça qui dit « il n'y a rien ici ».
+
+- ⚠️ **Rien ne s'écrit sous les pieds de quelqu'un qui joue — et la garde est là où ça
+  écrit**, pas avant la requête : entre la demande et la réponse il se passe une seconde, et
+  une seconde suffit pour presser JOUER. La partie descendue serait alors écrasée dix
+  secondes plus tard par la sauvegarde automatique de celle qu'on joue, et l'autre appareil
+  aurait perdu sa soirée sans que personne ne comprenne. Elle devient une question, posée au
+  retour au titre.
+
+- **Trois moments où un instantané monte** : le repos de 90 s pendant qu'on joue (la partie
+  se sauve toutes les dix secondes en local, le serveur n'a pas besoin de les voir toutes),
+  le **retour au titre** (`Compte.ranger`), et le **départ de la page** — `sendBeacon`, le
+  seul appel qui survit à la fermeture d'un onglet sur téléphone, avec un Blob
+  `application/json` sinon Flask ne lit pas le corps. ⚠️ Le beacon ne part **jamais** sur une
+  case en désaccord : personne n'en lit la réponse, il écraserait celle de l'autre appareil,
+  et la question qu'on s'apprêtait à poser n'aurait plus d'objet.
+
+- ⚠️ **Une réponse 200 sans le champ `partie` n'efface rien** (un proxy, une page d'erreur en
+  JSON) : le vrai serveur en met toujours un, `null` compris. Vider une case sur une réponse
+  qu'on ne comprend pas, c'est perdre une partie pour de bon.
+
+- ⚠️ **Deux choses que le banc ne pouvait pas voir, et qu'une capture Chromium a montrées**
+  (17 sept. 2026) : le formulaire restait à l'écran une fois connecté — `.score-form` est en
+  `display: flex`, qui **bat l'attribut `hidden`** —, alors que le banc lisait bien
+  `hidden === true` ; et « Bonjour, Martin » vivait DANS ce formulaire, donc le seul mot qui
+  dit que ça a marché se cachait à la seconde où il servait. Deux juges de navigateur en
+  sortent (`test_navigateur.py`) : un compte créé **de bout en bout** (l'écran, le POST,
+  SQLite, le cookie `HttpOnly` que le JS de la page ne peut pas lire) et un serveur de
+  comptes **en panne** qui ne barre pas le chemin de JOUER.
+
+- **Juges** : `tests/test_comptes_js.py` (**30**) plus les deux du navigateur, et **17
+  mutations toutes rouges** — la file, le compteur, le témoin, la partie posée telle quelle,
+  le refus qui ne fusionne rien, la garde du joueur qui joue, le type du beacon, les deux
+  choix du menu. Le banc a appris trois choses pour ça : `ENTREE.reseau` (un faux
+  `/api/compte/` dont on peut **tenir** une réponse en vol, et qui distingue GET de POST sur
+  la même adresse), `fenetreEvenement` (le `pagehide` joué comme le navigateur le joue —
+  juger `Compte.partir()` en l'appelant soi-même ne dirait rien du jour où plus personne ne
+  l'appelle) et un `innerHTML` qui vide vraiment la liste des enfants.
+
+- ⚠️ **Deux gardes ont été retirées parce qu'aucune mutation ne les faisait rougir** : une
+  question déjà posée restait posée alors que les compteurs le disaient déjà, et `jeu.js`
+  revérifiait l'écran titre que `Compte` garde déjà. Une garde jamais exercée n'est pas une
+  ceinture de sécurité, c'est une promesse que personne ne vérifie — et elle mentira le jour
+  où l'autre tombe.
+
+- **Reste de M14** : le NIP (3e vague), effacer son compte (4e), puis le défi du jour à
+  graine serveur, le mode photo et la coop locale.
 
 ### Les zones conditionnelles
 
