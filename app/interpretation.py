@@ -322,7 +322,7 @@ JEU: dict[str, str] = {
     "narrateur-journal-un_mort": "[somber] Un mort dans la rue. Un passant retrouvé sans vie… témoins recherchés.",
     "narrateur-journal-un_blesse": "[serious] Un blessé à l'hôpital. Le docteur Lachance parle d'une nuit agitée… aux urgences.",
     "narrateur-journal-vague_de_vols": "[dramatic] Vague de vols d'autos. Trois véhicules disparus. [sarcastic] « On a nos soupçons », dit le sergent.",
-    "narrateur-journal-un_char_vole": "[serious] Un char volé au Faubourg. Le propriétaire l'avait laissé tourner. [deadpan] Il ne tourne plus.",
+    "narrateur-journal-un_char_vole": "[serious] Un char volé au Faubourg. On l'a vu disparaître en pleine rue. [wryly] Il est reparti en plein vol.",
     "narrateur-journal-taxi_qui_ne_dort_pas": "[curious] Le taxi qui ne dort pas. Un chauffeur enchaîne les courses… les clients parlent de brouillard.",
     "narrateur-journal-faubourg_inquiet": "[concerned] Le Faubourg s'inquiète. Les commerçants demandent plus de patrouilles.",
     "narrateur-journal-brume": "[somber] Brume sur le bassin. Le traversier a pris du retard… [sighs] rien à signaler.",
