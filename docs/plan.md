@@ -221,7 +221,7 @@ ne bougent pas quand l'ordre de travail change.
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 18 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
-| M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
+| M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » est entamée : les neuf types, `exige`/`ferme`/`donne` étendu, la sauvegarde et les lieux nommés sont commités — **sans juges de banc ni l'arc F** : un type n'est pas livré tant qu'il n'a pas son juge) | 18 sept. 2026 | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
 ## Dettes
@@ -738,7 +738,7 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
-docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)
+docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)  ecrire-drole.md (comment faire rire + l'inventaire des types de texte du jeu)
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
@@ -5477,6 +5477,30 @@ survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
 
 _Demande de Martin (13 sept. 2026) :_ « je veux plus de 100 missions avec les personnages
 existants et de nouveaux personnages, partout sur la carte, plein de nouvelles idées ! »
+
+⚠️ **Où l'on en est, le 18 sept. 2026.** La **tranche 1 (« le moteur, et le Faubourg »)** est
+entamée, pas finie. Sont **commités** (`14fd7ae` et `b23f2e4`) :
+
+- les **neuf types d'objectifs** déclarés (`TYPES_OBJECTIFS`) et **joués** dans
+  `histoire.js` — chacun réutilise un mécanisme existant : `sauter` = le vol du Grand Saut,
+  `boulots` = le compteur du klaxon, `payer`/`acheter` = l'économie, `eteindre` = `Incendies`,
+  `detruire` = un char de mission, `proteger` = `e.suit` (le petit qui colle à sa mère),
+  `suivre` = le fuyard, `pickpocket` = le jet des poches de m2 ;
+- les **deux échecs** (`etoile`, `protege_mort`) et les **quatre options transverses**
+  (`chrono_s`, `sans_etoile`, `sans_arme`, `contre`) ;
+- **`exige`/`ferme`** au modèle (`missions.py` `Mission`) et au filtre JS
+  (`Histoire.disponibles`, `exigeTenu`, `estFermee`) ;
+- **`donne` étendu** (`calme`, `dette: -n`, `casier: -n`, plus `libere`/`contacts`
+  généralisés) ;
+- la **sauvegarde** (`p.calmes`, `p.fermees`, `p.choix` et leur repli champ par champ) et
+- les **résolveurs de lieux** : `district:`, `boutique:`, `pont`, `quai`, `bois`,
+  `rampe:` (tous déterministes — aucun `B.rng()`).
+
+⚠️ **Ce qui manque encore, et c'est le plus dur** : les **juges de banc** d'un type par an
+(un type n'est pas « livré » tant que le singe ne l'a pas joué sans le trouver mort), le
+**téléphone qui trie** (un appel par demi-journée, non du `disponibles()` actuel qui appelle
+sans compter), et **l'arc F** (f01–f13) — ses treize missions, scènes et répliques compris.
+Jusque-là, le moteur est **prêt mais pas prouvé**.
 
 _Ce que ça donne :_ une ville où **chaque quartier a une histoire**, et où le téléphone
 sonne pour autre chose que les cinq missions du Faubourg. **109 missions de plus** (114 en
