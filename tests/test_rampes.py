@@ -212,7 +212,12 @@ def test_le_panneau_du_grand_saut_se_pose_sur_une_rampe(banc):
                  total: (c.rampes || []).length };
     }""")
     assert r["trouve"], "aucun panneau pour Le Grand Saut : le defi est injouable"
-    assert r["colle"] <= 5 * 16, f"le panneau est a {r['colle']} px de la rampe la plus proche"
+    # ⚠️ HUIT tuiles, parce que c'est ce que le code permet : le panneau
+    # s'écarte par pas (`for loin of [3, 5, 7]`) quand un donneur ou un rideau
+    # de garage occupe la place, et il se pose au PIED de la rampe, une tuile en
+    # amont — 7 + 1. Le juge disait 5 : il tenait tant qu'aucune rampe n'avait
+    # un personnage devant elle, et le 17 sept. 2026 la trame a bougé.
+    assert r["colle"] <= 8 * 16, f"le panneau est a {r['colle']} px de la rampe la plus proche"
     assert r["pourLeDefi"], "aucune rampe ne recoit une moto : le Grand Saut est injouable"
     # ⚠️ Ce juge-ci ne demande plus que toutes les rampes ne soient pas
     # marquees : c'est une propriete de la CARTE, pas du panneau, et elle se

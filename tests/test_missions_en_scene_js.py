@@ -36,7 +36,7 @@ OUTILS = """
     while (L.B.cinema) L.Histoire.suivante();
     L.B.partie.mission.etape = m.objectifs.length - 1;
     const o = m.objectifs[m.objectifs.length - 1], j = L.B.joueur;
-    const ou = o.lieu ? L.Histoire.lieu(o.lieu) : L.Histoire.donneur(m.donneur);
+    const ou = o.lieu ? L.Histoire.lieu(o.lieu) : L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
     j.x = ou.x - (o.lieu ? 0 : 14); j.y = ou.y;
     // Ce qu'on LIVRE est la, a l'arret, a cote de soi : comme dans une vraie partie.
     const monter = m.objectifs.slice().reverse().find(function (q) { return q.type === 'monter'; });
@@ -112,7 +112,9 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, slug):
     fin = missions.par_slug(slug)["dialogue"]["fin"]
     assert len(r["dites"]) == len(fin), (slug, r["dites"])
     au_combine = [("(AU TÉLÉPHONE)" in qui) for qui in r["dites"]]
-    loin = slug in ("m4", "m5")
+    # ⚠️ m6 se conclut après le dernier contact : Josée est dedans (au bar), le
+    # joueur dehors — sa fin se dit au combiné, comme M4 et M5.
+    loin = slug in ("m4", "m5", "m6")
     assert all(au_combine) if loin else not any(au_combine), \
         f"{slug} : {r['dites']} — la fin se dit au combiné quand, et seulement quand, celui qui parle n'est pas là"
     if slug == "m1":
@@ -267,6 +269,47 @@ def test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide(banc):
     assert r["images"] > 60, f"la coupe ne tient pas la ruelle à l'écran ({r})"
     assert r["chars"] == r["images"], f"le char de M1 n'est pas dans la ruelle pendant la coupe ({r})"
     assert r["vues"] == r["images"], f"le char de M1 est posé, mais hors de l'écran pendant la coupe ({r})"
+
+
+@pytest.mark.parametrize("slug,vers,cible", [
+    ("m4", "porte:poste", "police"),       # l'auto-patrouille attend devant le poste
+    ("m5", "zone:cravates", "cravates"),   # les Cravates tiennent leurs coins
+])
+def test_la_coupe_d_une_intro_qui_commence_dedans_filme_ce_qu_elle_pose(banc, slug, vers, cible):
+    """⚠️ La règle des scènes, généralisée : une coupe vers la rue doit y trouver
+    ce que la mission y pose, MÊME quand la mission commence DANS une pièce. m4
+    (Bouchard, au casse-croûte) et m5 (Josée, au bar) posaient leurs éléments
+    seulement à la SORTIE : leur intro coupait vers la rue et filmait le poste ou
+    le coin des Cravates vide."""
+    r = banc("function (L, o) {" + OUTILS + """
+        const m = mission(L, '%s');
+        partie(L, m.slug);
+        // La coupe de l'intro, et ce qu'elle doit montrer — résolu DANS LA VILLE,
+        // avant d'entrer : une fois dedans, `Monde.carte` est la pièce.
+        const coupe = m.scenes.intro.find(function (p) { return p.type === 'coupe'; });
+        const but = L.Histoire.resoudre(coupe.vers, m);
+        allerVoir(L, o, m);
+        L.Histoire.parler(m.donneur);
+        // Ce qu'on cherche : le char `monter`, sinon les Cravates `tuer`.
+        function montre(e) {
+          if (e.type === 'vehicule') return e.mission === '%s';
+          return e.cible && e.mission === '%s';
+        }
+        let images = 0, vues = 0, poses = 0;
+        for (let n = 0; n < 6000 && (L.B.scene || L.B.cinema); n++) {
+          o.frame(1);
+          const s = L.B.scene;
+          if (!s || (s.noir || 0) > 0.2 || !s.vise || Math.hypot(s.vise.x - but.x, s.vise.y - but.y) > 8) continue;
+          images++;
+          const e = L.B.entites.find(montre);
+          if (e) { poses++; if (L.Entites.visibleAEcran(e.x, e.y, -20)) vues++; }
+        }
+        return { images: images, poses: poses, vues: vues, dedans: L.B.interieur ? L.B.interieur.slug : null };
+    }""" % (slug, slug, slug))
+    assert r["images"] > 30, f"{slug} : la coupe ne tient pas son lieu à l'écran ({r})"
+    assert r["poses"] == r["images"], f"{slug} : {cible} absent pendant la coupe ({r})"
+    assert r["vues"] == r["images"], f"{slug} : {cible} posé mais hors de l'écran pendant la coupe ({r})"
+    assert r["dedans"], f"{slug} : la mission commence bien DANS une pièce (le juge ne filme pas la rue)"
 
 
 def test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois(banc):

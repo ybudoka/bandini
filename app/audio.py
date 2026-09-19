@@ -145,6 +145,14 @@ CATALOGUE: list[Echantillon] = [
        prompt="a single bolt-action rifle shot on a city street, a loud sharp "
               "crack with a rolling echo off the buildings, then the bolt "
               "worked with a metallic clack, no voices, no music"),
+    # ⚠️ LA CARABINE À BOUCHON de la galerie de tir : un petit « pop » mat de
+    # bouchon de liège, pas une détonation. Ce n'est pas une arme à feu — c'est
+    # le bruit d'un stand de foire, et c'est POUR CELA qu'il ne déclenche ni
+    # fuite ni police (`combat.js`, champ `foire`).
+    _e("carabine_foire", "Carabine à bouchon", duree_s=0.5, volume=0.4, influence=0.7,
+       prompt="a soft cork pop from a fairground shooting gallery air rifle, "
+              "one light hollow plop with a tiny puff of air, dry close-up, "
+              "no gunshot, no echo, no voices, no music"),
     _e("molotov", "Cocktail Molotov qui casse", duree_s=1.3, volume=0.7,
        prompt="a glass bottle shattering on asphalt then a sudden whoomp of "
               "gasoline igniting into a burst of flames with a short crackle, "
@@ -266,7 +274,12 @@ CATALOGUE: list[Echantillon] = [
     # (`civil-m3-4`) sort à −21,3, et 0,28 la dépassait de deux dixièmes de dB.
     # À 0,26 la sonnerie tombe à −21,8 — sous la PLUS BASSE, pas sous la
     # moyenne, avec une demi-marche d'air pour la prochaine voix générée.
-    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.26,
+    # ⚠️ **0,23 et pas 0,26** : la demi-marche d'air a été consommée le 18 sept.
+    # 2026, quand les 15 voix de m6/m97 sont nées. La plus basse des 73 est
+    # `bouchard-m4-2` (`[quietly]`, à −21,9 LUFS) : à 0,26 la sonnerie la
+    # couvrait de deux dixièmes. À 0,23 elle tombe à −22,9 — une marche entière
+    # sous la plus basse, pas une demi.
+    _e("telephone", "Sonnerie du téléphone", duree_s=2.0, volume=0.23,
        influence=0.75,
        prompt="an old flip phone ringing twice on a table, thin electronic "
               "ringtone with a faint buzz of vibration, close, no voices, "
@@ -394,6 +407,39 @@ CATALOGUE: list[Echantillon] = [
        prompt="distant construction site ambience, a diesel machine engine "
               "rumbling steadily with faint metal clanks, seamless loop, "
               "no beeps, no voices, no music"),
+    # --- LE BORD DE L'EAU ET LA FOIRE (4e vague) ---------------------------
+    # ⚠️ Trois BOUCLES et rien d'autre : ce qui manquait a ces deux endroits,
+    # ce n'est pas un bruitage de plus, c'est une MATIERE qui tient sous les
+    # pas. Une plage muette est un dessin de plage ; une foire muette est une
+    # peinture. (La quatrieme piste de la fiche, l'orgue de manège, n'est pas
+    # ici : c'est une MUSIQUE, et elle sort d'un endroit — voir `MUSIQUES`.)
+    #
+    # LES VAGUES : le volume suit la distance a l'eau (`Monde.majSonDuBord`).
+    # ⚠️ Pas de mouettes dans le prompt : le goeland est une BETE du jeu, il a
+    # son cri a lui et il n'est pas toujours la. Une boucle qui crie toute
+    # seule, c'est un oiseau qu'on cherche des yeux sans jamais le trouver.
+    _e("vagues", "Vagues sur la grève", duree_s=8.0, volume=0.30, boucle=True,
+       influence=0.45,
+       prompt="small calm waves lapping on a sandy shore of a sheltered bay, "
+              "gentle water wash and retreat, close but soft, seamless loop, "
+              "no gulls, no wind, no voices, no music"),
+    # LES CRIS DE LA FOIRE : ce qu'on entend AVANT de voir la palissade. Ce
+    # n'est pas la rumeur de la rue (`foule`) : une foule qui murmure n'est pas
+    # une foire — ce qui nomme une foire, ce sont les CRIS d'un manège.
+    _e("foire_cris", "Les cris de la foire", duree_s=8.0, volume=0.34, boucle=True,
+       influence=0.4,
+       prompt="a busy outdoor funfair crowd heard from close by, children "
+              "shrieking and laughing on a spinning ride, excited chatter, "
+              "faint ride machinery clatter, seamless loop, no music, no announcer",
+       ),
+    # LE MOTEUR DE LA COQUE : la chaloupe de la 3e vague roulait au ralenti
+    # d'une AUTO (`moteur`). ⚠️ Un hors-bord n'a ni boite ni silencieux : il
+    # cogne, il crachote, et le son change avec le gaz comme celui d'un char.
+    _e("moteur_bateau", "Moteur de la chaloupe", duree_s=4.0, volume=0.30,
+       boucle=True, influence=0.55,
+       prompt="a small outboard boat motor idling and puttering on calm water, "
+              "two-stroke engine putter with water slap against the hull, "
+              "recorded from on board, seamless loop, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -711,6 +757,19 @@ MUSIQUES: list[Piece] = [
        "of a body shop, no vocals, seamless loop",
        duree_s=45, volume=0.31),
 
+    # --- L'ORGUE DE LA FOIRE (bord de l'eau, 4e vague) ----------------------
+    # ⚠️ **UNE MUSIQUE QUI SORT D'UN ENDROIT**, et c'est pour ca qu'elle est
+    # dans cette liste-ci et pas dans les bruitages : elle passe par le chemin
+    # du musicien de rue (`Son.Rue`), avec une source fixe au milieu de
+    # l'allee. Le prompt REPREND la fiche du morceau ecrit (`musique.ORGUE`) —
+    # meme tonalite, meme tempo, trois temps — sinon on ne remplace pas une
+    # musique, on en met une autre.
+    _m("foire_orgue",
+       "a mechanical fairground barrel organ playing a bright cheerful waltz in "
+       "three four time at 150 bpm in D major, oom-pah-pah bass and chords under "
+       "a simple pipe melody, bells and small percussion, old carousel limonaire, "
+       "slightly out of tune, no vocals, seamless loop",
+       duree_s=30, volume=0.42),
 ]
 
 

@@ -276,6 +276,13 @@ TENUES = [
     {"slug": "veste_cuir", "nom": "Veste de cuir", "prix": 200, "couleur": "#2c2c2c"},
     {"slug": "complet", "nom": "Complet gris", "prix": 500, "couleur": "#7f8c8d"},
     {"slug": "chemise_hawai", "nom": "Chemise hawaïenne", "prix": 120, "couleur": "#f39c12"},
+    # ⚠️ **LA SEULE QUI NE SE VEND PAS** : le lot du troisieme jeu d'adresse de
+    # la foire (`missions.CASQUETTE_DE_LA_FOIRE`). `prime` dit d'ou elle vient,
+    # et c'est ce qui la tient hors de la boutique de Rosa tant qu'on ne l'a pas
+    # gagnee — un lot qu'on peut acheter n'est plus un lot. Une fois a soi, elle
+    # s'y range comme les autres : c'est la qu'on vient la remettre.
+    {"slug": "casquette_foire", "nom": "Casquette de la foire", "prix": None,
+     "couleur": "#e8a33a", "prime": "foire"},
 ]
 
 #: Chez le barbier (`boutique_service`) : la coupe change la COULEUR des cheveux

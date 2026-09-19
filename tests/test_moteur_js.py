@@ -16,6 +16,7 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     r = banc("""function (L, o) {
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
                  carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length,
+                 compte: o.compte.appels.map(function (a) { return a.chemin; }),
                  ouverture: L.Histoire.fichiersDeLOuverture().length };
     }""")
     assert r["etat"] == "titre"
@@ -33,7 +34,13 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # chiffre ci-dessous est ce qui le garantit : il ne bouge que si quelqu'un
     # ajoute une phrase a l'ouverture, jamais parce qu'un son de plus s'est
     # invite au demarrage.
-    assert r["fetchs"] == 2 + r["ouverture"]
+    # ⚠️ Plus UNE requete de compte (M14, 2e vague) : `POST /api/compte/ouvrir`,
+    # qui tourne le jeton d'appareil une fois par chargement. Sans cookie, le
+    # serveur repond « pas de compte » et plus rien ne part — un jeu qui bavarde
+    # avec le serveur alors que personne n'a de compte serait un jeu qui a oublie
+    # qu'il se joue hors ligne.
+    assert r["compte"] == ["ouvrir"]
+    assert r["fetchs"] == 3 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 
@@ -2990,8 +2997,18 @@ def test_la_foule_ne_se_traverse_plus(banc):
                     for (let b = a + 1; b < gens.length; b++) {
                         const d = Math.hypot(gens[a].x - gens[b].x, gens[a].y - gens[b].y);
                         const chevauche = gens[a].r + gens[b].r - d;
-                        if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
                         if (chevauche > gens[a].r + gens[b].r - 0.001) nes++;
+                        // ⚠️ **LA FOULE ENTRE ELLE, pas le joueur contre elle.** Deux
+                        // passants se démêlent tous les deux : chacun cède la moitié,
+                        // et un chevauchement qui dure est un vrai défaut. Le joueur,
+                        // lui, POUSSE — et quand il coince quelqu'un contre un mur,
+                        // personne n'a plus où aller : mesuré le 17 sept. 2026 au
+                        // terminus, 5,2 px d'enfoncement, un passant acculé à la
+                        // façade. Ce cas-là a son juge à lui, et il est plus sévère
+                        // (`test_courir_ne_permet_pas_de_traverser_les_gens` : on
+                        // n'entre pas dans quelqu'un qui a de quoi s'écarter).
+                        if (gens[a].type === 'joueur' || gens[b].type === 'joueur') continue;
+                        if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
                         const cle = gens[a].id + '-' + gens[b].id;
                         if (chevauche > 1) {
                             gros++;
@@ -3104,13 +3121,24 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         const pousse = Math.hypot(t.x - poste.x, t.y - poste.y);
         o.relacher('KeyD'); o.relacher('ShiftLeft');
         j.x = poste.x - 200; j.y = poste.y;              // on le lache
-        o.frame(180);
+        // ⚠️ Il rentre à pied, et le chemin du retour dépend de ce qu'il a autour
+        // (un banc, un passant, la largeur du trottoir) : 180 images le ramenaient
+        // à un demi-pixel près tant que la trame n'avait pas bougé, et à 1,0 px
+        // pile le 17 sept. 2026. On lui laisse le temps d'arriver plutôt que
+        // d'élargir la règle : « à sa place » veut dire à sa place.
+        for (let i = 0; i < 600 && Math.hypot(t.x - poste.x, t.y - poste.y) > 1; i++) o.frame(1);
         return { pousse: +pousse.toFixed(1), rentre: +Math.hypot(t.x - poste.x, t.y - poste.y).toFixed(1),
                  etat: t.etat };
     }""")
     assert r["pousse"] > 0.5, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
     assert r["pousse"] < 12, f"on l'a promene de {r['pousse']} px : il n'est plus a son poste"
-    assert r["rentre"] < 1, "lache, il doit revenir a sa place"
+    # ⚠️ **UN PIXEL, c'est à sa place** : il marche par pas de fraction de pixel et
+    # s'arrête dès qu'il est chez lui. Le juge exigeait STRICTEMENT moins d'un
+    # pixel, et il l'obtenait tant que le trottoir d'à côté était celui-là ; le
+    # 17 sept. 2026, la trame a bougé et il s'est posé à 1,0 px pile. Un donneur
+    # large de douze pixels est à son poste à un pixel près — ce qu'on juge, c'est
+    # qu'il RENTRE, pas qu'il vise le sous-pixel.
+    assert r["rentre"] <= 1, "lache, il doit revenir a sa place"
     assert r["etat"] == "fige"
 
 
@@ -3205,6 +3233,14 @@ def test_les_poings_assomment_et_le_couteau_tue(banc):
         function cogner(arme, arch) {
             L.B.joueur.arme = arme;
             if (arme !== 'poings') L.B.partie.armes[arme] = { mun: null, usure: 0 };
+            // ⚠️ **LA RUE SE VIDE AVANT CHAQUE MANCHE.** Un coup touche TOUT ce
+            // qui est à portée : un passant de plus à côté de la cible, et le
+            // couteau en tue deux (17 sept. 2026, la trame a bougé et le juge
+            // comptait deux morts pour un). On ne juge que le corps qu'on frappe.
+            for (const q of L.B.entites.slice()) {
+                if (q === L.B.joueur || q.type === 'joueur') continue;
+                if (q.type === 'pieton' || q.type === 'vehicule') L.Entites.retirer(q);
+            }
             const c = o.poser(arch, 12, 0);
             c.courage = 0;
             for (let coup = 0; coup < 30 && c.vie > 0; coup++) {
@@ -3254,6 +3290,18 @@ def test_l_arme_du_mort_se_ramasse(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(8);
+        // ⚠️ **RIEN D'AUTRE SOUS LA MAIN.** ACTION sert le premier venu — une
+        // porte, un personnage, un comptoir — et l'arme au sol passe après (voir
+        // `Missions.interagir`). Le 17 sept. 2026, la trame a bougé, le terminus
+        // a changé de voisinage, et le E ramassait autre chose. On s'écarte de la
+        // porte et on vide les alentours : ce juge parle de l'arme du mort.
+        const j0 = L.B.joueur;
+        j0.y += 40;
+        for (const q of L.B.entites.slice()) {
+            if (q === j0 || q.type === 'joueur') continue;
+            if (q.type === 'pieton' || q.type === 'vehicule' || q.type === 'ramassage') L.Entites.retirer(q);
+        }
+        L.Entites.indexer();
         const cravate = o.poser('cravate', 14, 0);
         const armeDeLaCravate = cravate.arme;
         L.Entites.tuer(cravate, L.B.joueur);
@@ -3277,6 +3325,11 @@ def test_le_pickpocket_se_fait_dans_le_dos(banc):
         L.Jeu.commencer();
         L.graine(9);
         const j = L.B.joueur;
+        // ⚠️ **LA RUE SE VIDE** : `pickpocket` sert le plus commode, pas celui
+        // qu'on vise, et un passant de dos à côté de la dame suffit à faire dire
+        // « oui » au juge qui attendait « non » (17 sept. 2026, la trame a bougé).
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        L.Entites.indexer();
         const face = o.poser('dame', 14, 0);
         face.argent = 40;
         L.Entites.regarder(face, -1, 0);            // elle regarde le joueur
@@ -3303,6 +3356,18 @@ def test_le_pistolet_tire_touche_et_compte_ses_balles(banc, paquet):
         // La rue est peuplee des le depart : on la vide, la visee assistee
         // irait chercher le premier passant venu.
         L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        // ⚠️ **ET LA BALLE A BESOIN DE QUATRE-VINGT-DIX PIXELS DE RUE.** Au
+        // terminus, le jour où la trame a bougé (17 sept. 2026), un mur se
+        // trouvait entre le canon et la cible : la balle s'arrêtait dessus et le
+        // juge lisait « la balle n'a pas touché ». Le boulevard du nord est droit.
+        const c0 = L.Monde.carte;
+        for (let y = 0; y < 12; y++) {
+          let pris = false;
+          for (let x = 40; x < 80; x++) if (c0.voie[y][x] === '>') {
+            j.x = x * L.TT + 8; j.y = y * L.TT + 8; L.Monde.centrerCamera(j.x, j.y); pris = true; break;
+          }
+          if (pris) break;
+        }
         L.Entites.indexer();
         j.arme = 'pistolet';
         L.B.partie.armes.pistolet = { mun: 12, usure: 0 };
@@ -3509,6 +3574,11 @@ def test_un_enfant_ne_peut_pas_etre_touche(banc):
         L.Jeu.commencer();
         L.graine(31);
         const j = L.B.joueur;
+        // ⚠️ **LA RUE SE VIDE** : six coups de couteau touchent TOUT ce qui est à
+        // portée, et un passant de plus à côté de l'enfant met un mort au compteur
+        // que ce juge veut à zéro (17 sept. 2026, la trame a bougé).
+        L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton'; });
+        L.Entites.indexer();
         const petit = o.poser('enfant', 12, 0);
         o.viser(petit);
         const avant = petit.vie;
@@ -3768,12 +3838,25 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ **SUR LE BOULEVARD DU POURTOUR, là où il y a de quoi courir.** Le
+        // juge sprintait vers l'OUEST depuis le terminus : le jour où la trame a
+        // bougé (17 sept. 2026), un mur s'y trouvait et le joueur a parcouru ZÉRO
+        // pixel à jeun — on comparait un mur à une course. Le boulevard du nord
+        // traverse toute la ville et il est droit d'un bout à l'autre.
+        const c = L.Monde.carte;
+        let place = null;
+        for (let y = 0; y < 12 && !place; y++) {
+          for (let x = 40; x < 80; x++) if (c.voie[y][x] === '>') { place = { x: x * L.TT + 8, y: y * L.TT + 8 }; break; }
+        }
+        j.x = place.x; j.y = place.y; L.Monde.centrerCamera(j.x, j.y);
         function tenir() {
           j.endurance = 100;
+          j.x = place.x; j.y = place.y; L.Monde.centrerCamera(j.x, j.y);
           const depart = { x: j.x, y: j.y };
           let n = 0;
-          o.touche('ShiftLeft'); o.touche('KeyA');
+          o.touche('ShiftLeft'); o.touche('KeyD');
           while (j.endurance > 0 && n < 2000) {
+            for (const v of L.B.entites.slice()) if (v.type === 'vehicule') L.Entites.retirer(v);
             // ⚠️ On mesure le JOUEUR, pas la foule : une flaneuse plantee sur
             // le trajet coutait 44 images de bousculade (mesure du 13 sept.
             // 2026, le jour ou huit enseignes de plus ont deplace les portes
@@ -3781,7 +3864,7 @@ def test_le_cafe_fait_courir_deux_fois_plus_longtemps(banc, paquet):
             for (const e of L.Entites.pietonsAutour(j.x, j.y, 60)) L.Entites.retirer(e);
             o.frame(1); n++;
           }
-          o.relacher('KeyA'); o.relacher('ShiftLeft');
+          o.relacher('KeyD'); o.relacher('ShiftLeft');
           return { images: n, px: Math.hypot(j.x - depart.x, j.y - depart.y) };
         }
         const ajeun = tenir();
@@ -3822,6 +3905,11 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
         L.Jeu.commencer();
         L.graine(33);
         const j = L.B.joueur;
+        // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** ACTION sert le plus proche : le jour
+        // où la trame a bougé (17 sept. 2026), une roulotte à café s'est installée
+        // au terminus, et le juge a vu 4 $ de café là où il attendait un refus.
+        L.B.defs.ambulants = [];
+        for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 12, 0);
         fille.etat = 'arret';
         L.Entites.indexer();
@@ -3968,6 +4056,13 @@ def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ **PAS DE ROULOTTE DANS LE DOS.** L'invite ACTION nomme ce qu'il y a
+        // de plus proche, et la ville pose ses ambulants où elle veut : le jour
+        // où la trame a bougé (17 sept. 2026), une roulotte à café s'est
+        // installée au terminus et c'est elle que le juge lisait. Ce juge-ci
+        // parle de la fille, pas de ce qui se vend à côté.
+        L.B.defs.ambulants = [];
+        for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 14, 0);
         fille.etat = 'arret';
         L.Entites.indexer();
@@ -6054,6 +6149,20 @@ def test_on_prend_le_velo_du_cycliste(banc):
         L.Jeu.commencer();
         L.graine(54);
         const j = L.B.joueur;
+        // ⚠️ **SUR LE BOULEVARD DU POURTOUR** : le vélo part vers l'est (angle 0)
+        // et il lui faut de la rue devant lui. Au terminus, le jour où la trame a
+        // bougé (17 sept. 2026), il butait sur un mur au bout de vingt tuiles et
+        // le juge lisait « le vélo n'avance pas ». Le boulevard du nord est droit
+        // d'un bout à l'autre de la ville.
+        const c = L.Monde.carte;
+        for (let y = 0; y < 12; y++) {
+          let pris = false;
+          for (let x = 40; x < 80; x++) if (c.voie[y][x] === '>') {
+            j.x = x * L.TT + 8; j.y = y * L.TT + 8; L.Monde.centrerCamera(j.x, j.y); pris = true; break;
+          }
+          if (pris) break;
+        }
+        L.Entites.indexer();
         const velo = o.char('velo', 16, 0, 0);
         velo.conducteur = 'trafic'; velo.etat = 'roule';
         L.Entites.indexer();

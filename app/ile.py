@@ -2,10 +2,12 @@
 
 Demande de Martin (15 sept. 2026) : « tu peux extensionner la carte au besoin ».
 
-⚠️ **Mesuré d'abord : on n'agrandit rien.** La carte fait 419 × 211 tuiles et
-23 % en sont de l'eau ; la baie seule est un rectangle d'eau pleine de 117 × 93
-qui ne sert qu'à se noyer. L'île se pose DEDANS : la carte garde sa taille, sa
-trame, ses rues et tous ses juges de géométrie.
+⚠️ **Mesuré d'abord : on n'agrandit rien.** La carte faisait 419 × 211 tuiles
+et 23 % en étaient de l'eau ; la baie seule est un rectangle d'eau pleine de
+117 × 93 qui ne sert qu'à se noyer. L'île se pose DEDANS : la carte garde sa
+taille, sa trame, ses rues et tous ses juges de géométrie. (Depuis le 17 sept.
+2026 la carte fait 419 × 224 : le chenal du pont a pris treize tuiles pour
+éloigner La Pointe, et la baie les a prises avec lui — voir `carte.RANGEES`.)
 
 ⚠️ **Une île se DESSINE, elle ne se génère pas** — comme une pièce
 (`carte._piece`) et pour la même raison : c'est un lieu, pas un quartier de
@@ -48,11 +50,19 @@ from . import carte
 #: l'île à trente tuiles d'eau de la rive la plus proche (le pari de la nage)
 #: tout en laissant le large à plus de soixante tuiles de toute terre
 #: (`test_eau.test_on_ne_va_meme_pas_au_milieu_de_la_baie`).
+#: ⚠️ **`y` est passé de 139 à 152 le 17 sept. 2026** : le chenal du pont a
+#: grandi de treize tuiles et toute la bande sud est descendue d'autant
+#: (`carte.RANGEES`). L'île descend avec elle — elle reste au milieu de la baie,
+#: et sa rive la plus proche fait toujours trente tuiles d'eau. La laisser en
+#: place l'aurait mise dans le couloir du traversier : celui-ci choisit la
+#: traversée la plus au nord-ouest, la nouvelle passait à une tuile de la
+#: ceinture de l'île, et la ville n'était plus la même avec et sans elle
+#: (`test_ile.test_l_ile_ne_deplace_rien_de_la_ville`).
 ILE: dict = {
     "slug": "ile",
     "nom": "L'Île-aux-Corneilles",
     "x": 203,
-    "y": 139,
+    "y": 152,
     # ⚠️ De l'eau tout autour, sur au moins tant de tuiles : sinon la levée de
     # sable d'une rive frôle celle de l'île, et « loin » redevient « à côté ».
     "ceinture": 4,

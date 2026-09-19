@@ -3907,6 +3907,12 @@ function ovaleDeManege(ctx, cx, cy, rx, ry) {
   }
 }
 
+//: La pose du bassin de la peche aux canards ou le canard passe sous le
+//: crochet — la MEME que `missions.DEFIS` (slug `canards`, champ `pose`), et un
+//: juge de banc exige qu'elles ne se separent jamais : le jour ou l'une bouge
+//: sans l'autre, le joueur appuie sur un canard qui n'est pas la.
+const PECHE_POSE = 2;
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -4463,20 +4469,60 @@ const DECORS = {
     ctx.fillStyle = '#3a3d44'; ctx.fillRect(17, 26, 3, 4);
   } },
 
-  peche_canards: { anime: 22, arrete: 8, w: 26, h: 22, ancre: [13, 19], r: 10, sol: [11, 8], solide: true, variantes: 3, peindre: function (ctx, w, h, v) {
+  // ⚠️ **LE DESSIN ET LA REGLE DU JEU DISENT LA MEME CHOSE**, et c'est tout ce
+  // qui rend la peche aux canards jouable : `missions.DEFIS` (slug `canards`)
+  // declare `pose: CANARD_AU_CROCHET`, et c'est a CETTE pose-la, et a elle
+  // seule, que le canard qui derive passe SOUS la canne. On ne pouvait pas le
+  // faire avec la premiere version — cinq canards regulierement espaces sur un
+  // bassin qui defile : des canards identiques et egalement espaces remettent
+  // toujours l'un des leurs sous le crochet, une pose sur deux. UN canard qui
+  // TRAVERSE, deux qui flottent plus bas (hors de portee du fil, pour que le
+  // bassin ne soit pas vide), et la fenetre devient un instant qu'on guette.
+  peche_canards: { anime: 20, arrete: 8, w: 26, h: 22, ancre: [13, 19], r: 10, sol: [11, 8], solide: true, variantes: 5, peindre: function (ctx, w, h, v) {
+    const pris = v === PECHE_POSE;                                           // le canard est sous le fil
     ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(3, 17, 20, 4);
     ctx.fillStyle = '#3f6f8a'; ctx.fillRect(2, 7, 22, 11);                   // le bassin
     ctx.fillStyle = '#5a93ad'; ctx.fillRect(3, 8, 20, 9);
-    ctx.fillStyle = '#7fb6d9'; ctx.fillRect(3, 8 + (v % 3), 20, 1);          // la ride qui tourne
-    for (let k = 0; k < 5; k++) {                                            // les canards
-      const dx = 4 + ((k * 4 + v) % 18);
-      ctx.fillStyle = '#efd06a'; ctx.fillRect(dx, 10 + (k % 2) * 3, 4, 3);
-      ctx.fillStyle = '#e8a33a'; ctx.fillRect(dx + 3, 10 + (k % 2) * 3, 2, 1);
+    ctx.fillStyle = '#7fb6d9'; ctx.fillRect(3, 9 + (v % 3), 20, 1);          // la ride qui tourne
+    for (const dx of [5, 16]) {                                              // les deux qui flottent au fond
+      ctx.fillStyle = '#efd06a'; ctx.fillRect(dx, 13, 4, 3);
+      ctx.fillStyle = '#e8a33a'; ctx.fillRect(dx + 3, 13, 2, 1);
     }
+    // LE CANARD QUI TRAVERSE, d'une pose a l'autre : 2, 7, 12, 17, 22.
+    const dx = 2 + v * 5;
+    ctx.fillStyle = pris ? '#fff3c4' : '#efd06a'; ctx.fillRect(dx, 9, 4, 3);
+    ctx.fillStyle = '#e8a33a'; ctx.fillRect(dx + 3, 9, 2, 1);                // le bec
     ctx.fillStyle = '#5a3f26'; ctx.fillRect(1, 4, 24, 3);                    // le rebord
     ctx.fillStyle = '#7a5836'; ctx.fillRect(1, 4, 24, 2);
-    ctx.fillStyle = '#c0392b'; ctx.fillRect(20, 1, 2, 6);                    // la canne
-    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(21, 6, 1, 4);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(12, 0, 2, 5);                    // la canne
+    // ⚠️ LE FIL DESCEND SUR LE CANARD a la bonne pose : c'est le seul signal
+    // qu'on a le temps de lire en jouant, et il doit etre dans le DESSIN — un
+    // joueur ne regarde pas la ligne du HUD pour appuyer a la demi-seconde.
+    ctx.fillStyle = '#9aa0a8'; ctx.fillRect(13, 5, 1, pris ? 5 : 3);
+    if (pris) { ctx.fillStyle = '#efe6d0'; ctx.fillRect(12, 8, 3, 1); }      // le crochet, sur l'eau
+  } },
+
+  // LA CIBLE DE LA GALERIE — ⚠️ **le seul décor de la foire qui ait des PV**, et
+  // c'est tout ce qu'un jeu d'adresse demande au moteur : une balle la crève, le
+  // matin la relève (`reparerLeDecor`), exactement comme le château de sable de
+  // la grève. Trois en rang derrière le comptoir (`carte.FOIRE.cibles`).
+  //
+  // ⚠️ Ce qui la nomme à douze pixels, c'est le DISQUE CERCLÉ posé haut sur un
+  // pied maigre : un carré rouge et blanc se lit comme une pancarte, et un
+  // disque posé au sol se lit comme une plaque d'égout. Le pied et son ombre
+  // disent qu'elle est DEBOUT.
+  // ⚠️ `solide` : elle arrête la balle. Sans ça, un tir de biais traverse les
+  // trois (rien n'arrête ce qui n'est pas solide) et la galerie se gagne d'une
+  // seule cartouche.
+  cible_foire: { casse: 0.8, pv: 10, w: 12, h: 20, ancre: [6, 17], r: 4, solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.22)'; ctx.fillRect(2, 16, 8, 3);         // son ombre au sol
+    ctx.fillStyle = '#4a4d55'; ctx.fillRect(5, 9, 2, 8);                      // le pied
+    ctx.fillStyle = '#5e626a'; ctx.fillRect(5, 9, 1, 8);
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(1, 1, 10, 10);                    // le disque, blanc cassé
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(2, 2, 8, 8);                      // l'anneau rouge
+    ctx.fillStyle = '#efe6d0'; ctx.fillRect(3, 3, 6, 6);
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(4, 4, 4, 4);                      // le mille
+    ctx.fillStyle = '#2a2a2e'; ctx.fillRect(5, 5, 2, 2);
   } },
 
   // --- LA VIE QUI N'EST PAS HUMAINE ----------------------------------------

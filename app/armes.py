@@ -70,13 +70,14 @@ class Arme(TypedDict):
     bruit: int
     feu_s: int
     assomme: bool
+    foire: bool
 
 
 def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation=5, actif=4,
        renverse=False, saigne=0, chargeur=None, munitions_max=None, vproj=0.0,
        dispersion=0.0, cloche=False, plombs=1, prix_munitions=None, etoiles=0, usures=0,
        sprite=None, phase=1, son=None, auto=False, dispersion_max=None, bruit=0,
-       feu_s=0, assomme=False) -> Arme:
+       feu_s=0, assomme=False, foire=False) -> Arme:
     return Arme(
         slug=slug, nom=nom, type=type_, degats=degats, portee=portee, arc=arc,
         cadence=cadence, anticipation=anticipation, actif=actif, renverse=renverse,
@@ -85,7 +86,7 @@ def _a(slug, nom, type_, degats, portee, cadence, prix, *, arc=0.9, anticipation
         prix_munitions=prix_munitions, etoiles_usage=etoiles, usures=usures,
         sprite=sprite or slug, phase=phase, son=son or slug, auto=auto,
         dispersion_max=dispersion if dispersion_max is None else dispersion_max,
-        bruit=bruit, feu_s=feu_s, assomme=assomme,
+        bruit=bruit, feu_s=feu_s, assomme=assomme, foire=foire,
     )
 
 
@@ -165,6 +166,17 @@ CATALOGUE: list[Arme] = [
     # demi-vue fait 240). C'est aussi celle qu'on entend de plus loin.
     _a("carabine", "Carabine", "tir", 60, 230, 55, 1200, chargeur=5, munitions_max=25,
        vproj=10.0, prix_munitions=50, etoiles=1, bruit=22),
+    # ⚠️ **LA CARABINE À BOUCHON de la galerie de tir** — jamais achetée, jamais
+    # dans le sac : le forain la PRÊTE le temps du défi (`Histoire.commencerDefi`),
+    # puis la reprend. `foire` est la défense qui la rend inoffensive dans
+    # `combat.js` : pas de crime signalé, personne ne fuit, aucun agent
+    # n'entend, et le bouchon ne blesse QUE les cibles — jamais un passant.
+    # C'est un jeu d'adresse, pas un stand de tir ; un joueur sans arme à feu
+    # pouvait jusque-là se baisser les bras devant la galerie (les poings
+    # n'atteignent pas les décors).
+    _a("carabine_foire", "Carabine à bouchon", "tir", 10, 160, 20, 0,
+       chargeur=999, munitions_max=999, vproj=6.0, sprite="carabine",
+       son="carabine_foire", foire=True),
 ]
 
 ORDRE_CYCLE = [a["slug"] for a in CATALOGUE]

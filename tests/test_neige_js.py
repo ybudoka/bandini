@@ -122,9 +122,19 @@ def test_la_charrue_sort_avec_la_tempete_deblaie_et_pousse_un_char_mal_gare(banc
         for (let k = 0; k < 200 && !v; k++) { o.frame(1); v = L.B.entites.find(function (q) { return q.charrue; }); }
         if (!v) return { nee: false };
         const out = { nee: true, sprite: v.sprite, visible: L.Entites.visibleAEcran(v.x, v.y, 0) };
+        // ⚠️ **ON ATTEND UN BOUT DROIT.** Le char se pose devant le capot : si la
+        // charrue tourne avant d'y arriver, elle ne le touche jamais et le juge
+        // conclut « il n'a pas bougé ». Son tracé a changé le 17 sept. 2026 (la
+        // trame a bougé, et les boucles avec elle), et c'est exactement ce qui est
+        // arrivé. On la suit jusqu'à ce qu'elle tienne son cap une seconde.
+        for (let essai = 0; essai < 20; essai++) {
+            const a0 = v.angle;
+            for (let k = 0; k < 60; k++) o.frame(1);
+            if (Math.abs(Math.cos(v.angle - a0) - 1) < 0.001) break;
+        }
         // Un char gare dans sa voie, devant elle.
         const cx = Math.cos(v.angle), cy = Math.sin(v.angle);
-        const gare = L.Vehicules.creer('auto', v.x + cx * 70, v.y + cy * 70, v.angle, { etat: 'stationne', couleur: '#3a6fb0' });
+        const gare = L.Vehicules.creer('auto', v.x + cx * 48, v.y + cy * 48, v.angle, { etat: 'stationne', couleur: '#3a6fb0' });
         gare.laisse = true;
         L.Entites.indexer();
         const g0 = { x: gare.x, y: gare.y };

@@ -247,7 +247,7 @@ def duree_s(morceau: Morceau) -> float:
 
 def exporter() -> list[Morceau]:
     return ([dict(m) for m in MORCEAUX] + stations() + ambiances()  # type: ignore[misc]
-            + rues() + commerces())
+            + rues() + commerces() + [orgue()])
 
 
 # --- Les stations procedurales (M9) ----------------------------------------
@@ -545,10 +545,40 @@ def rues() -> list[Morceau]:
 
 
 def rue_par_slug(slug: str) -> Morceau | None:
-    for style in RUE:
+    for style in RUE + [ORGUE]:
         if style["slug"] == slug:
             return generer_rue(style)
     return None
+
+
+# --- L'orgue de la foire ----------------------------------------------------
+
+#: ⚠️ **UNE MUSIQUE QUI SORT D'UN ENDROIT.** Le musicien de rue est « une
+#: musique qui sort de QUELQU'UN » — son gain a lui, par-dessus l'ambiance du
+#: district, sans prendre le rang de personne (`MUSIQUE.rue_sous_etat`). L'orgue
+#: de la foire est le MEME code avec une source FIXE : le milieu de l'allee. Et
+#: surtout pas une ambiance de district de plus — une ambiance se joue PARTOUT
+#: dans son district, et la foire tient dans 52 x 31 tuiles de La Pointe.
+#:
+#: ⚠️ Il passe donc par `generer_rue` et non par `generer_station` : ce qu'il
+#: faut ici, c'est une VALSE (`mesure: 6`, trois temps), et le generateur de
+#: stations ne sait compter qu'en quatre. Deux voix : la basse-accords de la
+#: main gauche (l'oum-pa-pa d'un limonaire) et la ritournelle par-dessus.
+#:
+#: ⚠️ MAJEURE, HAUTE ET VITE — le contraire des cinq pieces de rue, dont quatre
+#: sont mineures et lentes. Un orgue de manège qui sonne comme le gars a la
+#: guitare du Faubourg, c'est une foire qu'on n'entend pas arriver.
+ORGUE: StyleRue = {
+    "slug": "foire_orgue", "nom": "L'orgue de la foire", "graine": 19230601,
+    "bpm": 150, "tonique": 62, "gamme": MAJEURE, "grille": (0, 4, 0, 4, 3, 4, 0, 0),
+    "mesure": 6, "forme_chant": "square", "forme_gratte": "triangle", "volume": 0.55,
+}
+
+
+def orgue() -> Morceau:
+    """La ritournelle de la foire, en notes — le filet, comme partout : si le
+    mp3 n'est pas la, le sequenceur la joue telle qu'elle est ecrite ici."""
+    return generer_rue(ORGUE)
 
 
 #: --- La musique qui dit ou tu es et ce qui t'arrive -------------------------

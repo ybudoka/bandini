@@ -199,7 +199,7 @@ def test_la_disposition_a_croix_sur_un_axe_marche_sans_rien_apprendre(banc):
     assert r["lu"]["repos"] == []
 
 
-def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
+def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
     """⚠️ Le vrai geste quand rien ne repond : TOUT REAPPRENDRE, et le jeu
     demande un bouton apres l'autre. La croix compte pour quatre."""
     r = banc("""function (L, o) {
@@ -210,7 +210,7 @@ def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
         m.items.find(function (i) { return i.libelle === 'TOUT RÉAPPRENDRE'; }).faire();
         const demandes = [];
         // On appuie sur 15, 14, 13... : chaque geste doit etre pris par l'action suivante.
-        for (let n = 0; n < 14; n++) {
+        for (let n = 0; n < 15; n++) {
             demandes.push(L.Entree.apprendEnCours());
             if (!L.Entree.apprendEnCours()) break;
             o.pad([0, 0], boutons(-1)); o.frame(2);          // repos
@@ -223,6 +223,7 @@ def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
                  fini: L.Entree.apprendEnCours(), garde: !!L.B.options.manette };
     }""")
     assert r["demandes"][:5] == ["action", "attaque", "esquive", "arme", "annuler"]
+    assert "verrouiller" in r["demandes"]
     assert "haut" in r["demandes"] and "bas" in r["demandes"], "la croix s'apprend en quatre gestes"
     assert r["action"] == [15] and r["attaque"] == [14]
     assert r["fini"] is None, "la file doit finir"

@@ -226,6 +226,19 @@ const Histoire = (function () {
     return B.entites.find(function (e) { return e.type === 'pieton' && e.personnage === slug && e.vivant; }) || null;
   }
 
+  /** La cible d'un objectif `parler` : le slug du personnage a qui l'on doit
+      parler. `cible: "<perso>"` ou `cible: "personnages:<perso>"` nomment un
+      personnage de l'histoire ; `cible: "arch:<slug>"` vise le premier
+      figurant de cet archetype pose en ville (les cinq commis de f12). Les
+      quatre contacts de m6 sont des personnages. */
+  function cibleDuParler(o) {
+    const c = o && o.cible;
+    if (!c) return null;
+    if (c.indexOf('arch:') === 0) return 'arch:' + c.slice(5);
+    if (c.indexOf('personnages:') === 0) return c.slice(12);
+    return c;
+  }
+
   /** Pose les personnages qui se tiennent DEHORS, a cote de leur porte — sauf
       ceux qui sont partis apres leur mission (`parti_apres`). */
   function creerDonneurs() {
@@ -416,7 +429,17 @@ const Histoire = (function () {
     // figee si le navigateur ne dit jamais que la voix s'est tue (onglet
     // cache, contexte suspendu) ; ACTION passe toujours.
     const l = c.lignes[c.i];
-    const parle = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug) && c.t < c.duree + 900;
+    // ⚠️ UNE VOIX QUI PARLE, OU QUI SE CHARGE ENCORE, RETIENT LA LIGNE. `parle`
+    // regardait seulement `enCours` : la premiere replique d'une mission dont le
+    // mp3 n'etait pas encore cache passait au temps de LIRE (court), la voix
+    // chargee en differe arrivait sur la ligne suivante, et `parler` la coupait
+    // a l'instant meme de la poser. Les voix regenerees du 18 sept. (plus
+    // longues, avec leurs pauses) rendaient la coupure plus visible. Une voix
+    // EN ATTENTE (`Voix.attendue`) pour la ligne courante retient donc autant
+    // qu'une voix qui joue : son `fin` rabattra `duree` une fois dite.
+    const enCours = !!(l && Son.Voix.enCours && Son.Voix.enCours.slug === l.slug);
+    const enAttente = !!(l && Son.Voix.attendue && Son.Voix.attendue.slug === l.slug);
+    const parle = (enCours || enAttente) && c.t < c.duree + 900;
     // ⚠️ PAS DE BOUTON A LA PREMIERE IMAGE D'UNE LIGNE. L'appui d'ACTION qui
     // OUVRE la conversation (`Combat.maj` → `parler`) est encore « neuf » quand
     // `Histoire.maj` passe ici, dans la MEME image : il sautait la premiere
@@ -561,6 +584,13 @@ const Histoire = (function () {
     if (!p || B.cinema) return false;
     rencontrer(slug);
     const enCours = courante();
+    // ⚠️ L'objectif `parler` d'une mission : on l'accomplit en parlant a SA
+    // cible, pas au donneur. m6 t'envoie serrer la main de quatre personnes :
+    // c'est la poignee qui compte, et elle est ICI, dans le moteur.
+    if (enCours) {
+      const o = objectif();
+      if (o && o.type === 'parler' && cibleDuParler(o) === slug) { avancer(); return true; }
+    }
     if (enCours && enCours.donneur === slug) {
       const o = objectif();
       if (o && o.type === 'retourner') { reussir(); return true; }
@@ -659,8 +689,9 @@ const Histoire = (function () {
     if (o) Hud.message(o.texte, 200);
   }
 
-  /** L'objectif suivant. Ce qu'il faut poser en ville se pose DEHORS : si
-      l'objectif arrive pendant qu'on est dedans (Josee au bar), a la sortie. */
+  /** L'objectif suivant. Ce qui se pose en ville se pose TOUT DE SUITE — dans
+      la VILLE, même quand on est dans une pièce : la scène d'intro qui coupe
+      vers la rue doit y trouver le char ou les Cravates qu'elle montre. */
   function avancer(enSilence) {
     const m = courante(), p = B.partie.mission;
     p.etape++;
@@ -670,45 +701,62 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
-    B.mission.aPoser = true;
-    if (!B.interieur) poser();
+    poser();
     if (!enSilence) Hud.message(o.texte, 200);
     // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
     if (!enSilence && (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; })) B.mission.pendant = p.etape;
   }
 
+  /** Pose dans la VILLE, même quand on est dans une pièce. ⚠️ La règle des
+      scènes : une coupe vers la rue doit y trouver ce que la mission y pose —
+      le char d'un `monter`, les Cravates d'un `tuer` — pas une rue vide. Quand
+      on est dedans, `Monde.carte` est la pièce et `B.entites` ses gens : le
+      temps du placement, on remet la carte et la liste de la ville, on naît au
+      bon monde, puis on reprend les deux. */
+  function dansLaVille(fn) {
+    const ext = B.interieur ? B.exterieur : null;
+    if (!ext) { fn(); return; }
+    const carte = Monde.carte, entites = B.entites;
+    Monde.restaurer(ext.carte);
+    B.entites = ext.entites;
+    try { fn(); } finally { Monde.restaurer(carte); B.entites = entites; }
+  }
+
   function poser() {
     const m = courante(), p = B.partie.mission, j = B.joueur;
     const o = m.objectifs[p.etape];
-    B.mission.aPoser = false;
     if (!o) return;
-    if (o.type === 'monter') {
-      const v = poserLeChar(m, o, p.etape);
-      if (v) B.mission.vehicule = v;
-    } else if (o.type === 'tuer') {
-      poserLesCravates(m, o);
-    } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
-      poserLeFuyard(m, o);
-    } else if (o.type === 'semer') {
-      B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
-      B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
-      if (o.escorte) poserLEscorte(m, o);
-    } else if (o.type === 'courses') {
-      B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
-    }
-    // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
-    // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
-    // une ruelle », la coupe de l'intro allait voir cette ruelle-la — et la
-    // filmait VIDE (mesure au banc : 155 images a l'ecran, aucun char a 200 px).
-    // Les chars des objectifs qui suivent se posent donc des le debut de la
-    // mission ; `poser()`, venu leur tour, retrouve ceux-la (`B.mission.chars`)
-    // au lieu d'en creer un second. ⚠️ `B.mission.vehicule`, lui, attend son
-    // tour : c'est LUI que `majObjectif` surveille (un char de mission qui
-    // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
-    // pas encore le char de la mission.
-    for (let i = p.etape + 1; i < m.objectifs.length; i++) {
-      if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
-    }
+    // ⚠️ Toujours dans la VILLE, même quand on est dans une pièce : une scène
+    // qui coupe vers la rue doit y trouver ce qu'on pose (`dansLaVille`).
+    dansLaVille(function () {
+      if (o.type === 'monter') {
+        const v = poserLeChar(m, o, p.etape);
+        if (v) B.mission.vehicule = v;
+      } else if (o.type === 'tuer') {
+        poserLesCravates(m, o);
+      } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
+        poserLeFuyard(m, o);
+      } else if (o.type === 'semer') {
+        B.recherche.etoiles = Math.max(B.recherche.etoiles, o.etoiles || 1); B.recherche.vu = 0; B.recherche.flash = 60;
+        B.recherche.dernierVu = { x: j.x, y: j.y, t: B.t };
+        if (o.escorte) poserLEscorte(m, o);
+      } else if (o.type === 'courses') {
+        B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
+      }
+      // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
+      // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
+      // une ruelle », la coupe de l'intro allait voir cette ruelle-la — et la
+      // filmait VIDE (mesure au banc : 155 images a l'ecran, aucun char a 200 px).
+      // Les chars des objectifs qui suivent se posent donc des le debut de la
+      // mission ; `poser()`, venu leur tour, retrouve ceux-la (`B.mission.chars`)
+      // au lieu d'en creer un second. ⚠️ `B.mission.vehicule`, lui, attend son
+      // tour : c'est LUI que `majObjectif` surveille (un char de mission qui
+      // saute fait rater), et un char qu'on n'a pas encore eu a chercher n'est
+      // pas encore le char de la mission.
+      for (let i = p.etape + 1; i < m.objectifs.length; i++) {
+        if (m.objectifs[i].type === 'monter') poserLeChar(m, m.objectifs[i], i);
+      }
+    });
   }
 
   /** Le char d'un objectif `monter`, la ou il dort. Rend celui qui y est deja
@@ -965,6 +1013,20 @@ const Histoire = (function () {
     if (d.sergent_ami) p.sergentAmi = true;
     if (d.propriete && !p.proprietes[d.propriete]) p.proprietes[d.propriete] = { jour: p.jour, caisse: 0 };
     if (d.faubourg_libere) p.faubourgLibere = true;
+    // ⚠️ `libere` : un district de plus (m98 comptera la liste). `faubourg_libere`
+    // alimente la MEME liste, pour qu'il n'y ait qu'une verite.
+    if (d.libere && p.libere.indexOf(d.libere) < 0) p.libere.push(d.libere);
+    if (d.faubourg_libere && p.libere.indexOf('faubourg') < 0) p.libere.push('faubourg');
+    // ⚠️ `contacts` : des numeros au telephone (m6, Josée qui présente la ville).
+    (d.contacts || []).forEach(function (slug) { p.contacts[slug] = true; });
+    // ⚠️ `vehicule` : un char garé devant la planque, posé au prochain chargement
+    // (m97, le taxi de Marco). Il vit à part de `planque.vehicule` pour ne pas
+    // écraser la sauvegarde de Martin.
+    if (d.vehicule && Vehicules.vehiculeDef(d.vehicule)) {
+      const def = Vehicules.vehiculeDef(d.vehicule);
+      p.vehiculePlanque = { slug: d.vehicule, couleur: def.couleurs && def.couleurs[0] ? def.couleurs[0] : null,
+                            vie: 100, angle: 0, vole: false };
+    }
     if (d.manchette) p.manchetteForcee = d.manchette;
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
@@ -990,6 +1052,27 @@ const Histoire = (function () {
     B.partie.stats.echecs = (B.partie.stats.echecs || 0) + 1;
     dire(m, 'echec', null);
     void raison;
+  }
+
+  /** Reinitialise une mission pour pouvoir la refaire (triche de debug, appelee
+      par le saut de mission) : retire son drapeau FAIT, ses appels et ses
+      tombes. Si c'est la mission EN COURS, on l'abandonne proprement d'abord
+      (nettoyage des entites, sans compter d'echec). ⚠️ Les recompenses deja
+      recues ne sont pas reprises : rejouer la mission les redonnera. */
+  function reinitialiser(slug) {
+    const p = B.partie;
+    if (!p || !slug) return false;
+    if (p.mission && p.mission.slug === slug) {
+      nettoyer(true);
+      p.mission = null;
+      B.mission = null;
+      B.finEnAttente = null;
+    }
+    delete p.missionsFaites[slug];
+    delete p.appels[slug];
+    if (p.tombes) delete p.tombes[slug];
+    p.appelT = null;
+    return true;
   }
 
   /** Ceux qu'on a couches ne se relevent pas parce qu'on a rate : on les
@@ -1121,6 +1204,74 @@ const Histoire = (function () {
     return true;
   }
 
+  // --- Les trois jeux d'adresse de la foire -----------------------------------------------------
+  //
+  // ⚠️ **UN JEU D'ADRESSE EST UN DÉFI, PAS UN MOTEUR**, et c'est la fiche du
+  // plan qui l'écrit en majuscules : ce qui suit tient sur les rails des trois
+  // défis de char de la v1 — un lieu, un compte, un chrono, une prime, un texte
+  // en majuscules. La seule chose qu'ils ajoutent, c'est `a_pied` : on les joue
+  // DEBOUT devant un comptoir. Pas de statistique neuve, pas d'état de plus.
+
+  /** Les jeux de la foire, et ce qu'il en reste à gagner. */
+  function defisDeFoire() { return defis().filter(function (d) { return d.foire; }); }
+
+  /** Le comptoir d'un défi de foire, tel qu'il vit dans le monde. ⚠️ Peut être
+      CASSÉ : un comptoir défoncé ne sert plus de lot (voir `majDefi`). */
+  function comptoirDeDefi(d) {
+    if (!d || !d.ou || d.ou.indexOf('foire:') !== 0 || typeof Foire === 'undefined') return null;
+    return Foire.kiosqueDuJeu(d.ou.slice(6));
+  }
+
+  /** Le canard est-il sous le crochet, À CETTE IMAGE ?
+
+      ⚠️ **C'est le DESSIN qui le dit**, et c'est tout ce qui rend la pêche
+      jouable : la pose du bassin (`Entites.poseDuDecor`, la même que celle qui
+      se peint) vaut `d.pose` pendant `anime` images par tour, et c'est à ce
+      moment-là — et à ce moment-là seulement — qu'un canard passe sous la
+      canne. Un chrono inventé ici et une animation qui tourne de son côté, ce
+      serait un jeu d'adresse où l'adresse ne sert à rien. */
+  function canardAuCrochet() {
+    const f = typeof DECORS !== 'undefined' ? DECORS.peche_canards : null;
+    const d = defis().find(function (q) { return q.slug === 'canards'; });
+    if (!f || !d) return false;
+    // ⚠️ `B.t + 1` : `maj` tourne AVANT que l'image avance, et c'est l'image
+    // SUIVANTE qui se peint — la même correction que le marteau du chantier.
+    return Entites.poseDuDecor(f, B.t + 1, false) === d.pose;
+  }
+
+  /** ACTION pendant un défi de foire : le marteau et la canne. Rend vrai si le
+      bouton a servi — et alors il ne sert à rien d'autre.
+
+      ⚠️ **LA CHAÎNE D'ACTION AFFAME CE QUI SUIT** : ce test passe AVANT tout le
+      reste (`Missions.interagir`), sinon marteler devant le comptoir ouvrirait
+      le menu du comptoir à chaque coup. */
+  function actionDeDefi() {
+    const f = B.defi;
+    if (!f) return false;
+    const d = defis().find(function (q) { return q.slug === f.slug; });
+    if (!d || !d.a_pied) return false;
+    if (d.coups) {
+      f.coups++;
+      Son.SFX.maillet();
+      if (f.coups >= d.coups) { Son.SFX.cloche(); finirDefi(true); }
+      return true;
+    }
+    if (d.canards) {
+      if (!canardAuCrochet()) { Hud.message('RATÉ — IL EST REPARTI', 60); Son.SFX.erreur(); return true; }
+      // ⚠️ UN CANARD PAR PASSAGE : sans ça, trois appuis dans la même fenêtre
+      // pêchent trois fois le même canard, et le jeu se gagne en martelant.
+      const tour = Math.floor((B.t + 1) / (DECORS.peche_canards.anime * DECORS.peche_canards.variantes));
+      if (f.tour === tour) { Hud.message('CELUI-LÀ EST DÉJÀ DANS LE SEAU', 60); return true; }
+      f.tour = tour;
+      f.pris++;
+      Son.SFX.ramasse();
+      if (f.pris >= d.canards) finirDefi(true);
+      else Hud.message('UN CANARD ! ' + f.pris + ' / ' + d.canards, 60);
+      return true;
+    }
+    return false;
+  }
+
   //: Le temps qu'on a, le panneau lu, pour monter dans le char du defi.
   //: ⚠️ LE PANNEAU SE LIT A PIED (au volant, ACTION fait descendre) : le tour et
   //: la livraison, qui ratent sans char, ratent donc a l'image suivante — ni
@@ -1131,8 +1282,31 @@ const Histoire = (function () {
 
   function commencerDefi(d) {
     const j = B.joueur;
-    B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0 };
+    B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0,
+               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y, avantArme: null };
     Son.SFX.mission();
+    // ⚠️ UN JEU DE FOIRE SE JOUE DEBOUT : pas de char a trouver, ca part tout de
+    // suite — et le forain RELEVE SES CIBLES avant de nous laisser tirer. Sans
+    // ca, une galerie jouee deux fois dans la journee serait un defi qu'on ne
+    // peut plus gagner : ses cibles sont par terre, et le matin est loin.
+    if (d.a_pied) {
+      if (d.cibles && typeof Foire !== 'undefined') Foire.cibles().forEach(Entites.releverDecor);
+      // ⚠️ **LE FORAIN PRÊTE SA CARABINE À BOUCHON**, puis la reprend à la fin.
+      // Avant, on crevait les cibles avec sa PROPRE arme à feu : la foule
+      // fuyait, la police rappliquait, et sans arme à feu on ne pouvait pas
+      // jouer du tout (les poings n'atteignent pas les décors). La carabine de
+      // foire est inoffensive — `foire`, dans `combat.js` — et ne sort du sac
+      // que le temps de la partie.
+      if (d.cibles && typeof Combat !== 'undefined') {
+        B.defi.avantArme = j.arme;
+        B.partie.armes.carabine_foire = { mun: null, usure: 0 };
+        B.partie.arme = 'carabine_foire';
+        j.arme = 'carabine_foire';
+      }
+      if (d.consigne) Hud.message(d.consigne, 180);
+      partir(d, null);
+      return;
+    }
     // Le Grand Saut compte ses dix secondes lui-meme (`majDefi`) : il part tout de suite.
     if (d.vehicule || j.dansVehicule) { partir(d, j.dansVehicule); return; }
     Hud.message(d.titre.toUpperCase() + ' — MONTE DANS UN CHAR', 150);
@@ -1146,13 +1320,17 @@ const Histoire = (function () {
     f.parti = true; f.t = 0;
     f.chocs = v ? v.chocs : 0; f.vie = v ? v.vie : 0;
     if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
-    Hud.message(d.titre.toUpperCase() + ' — GO !', 120);
+    // ⚠️ **AU GO, ON RAPPELLE QUOI FAIRE** : le menu l'a dit en `aide`, mais on
+    // le relit à l'instant où la partie part — et la consigne d'un jeu de
+    // foire tient en une ligne (`FRAPPE POUR TIRER`, `MARTÈLE ACTION`…).
+    Hud.message(d.titre.toUpperCase() + ' — GO ! ' + (d.consigne || ''), 160);
   }
 
   function majDefi() {
     const f = B.defi, j = B.joueur;
     if (!f) return;
     const d = defis().find(function (q) { return q.slug === f.slug; });
+    if (d.a_pied) { majDefiDeFoire(d, f, j); return; }
     if (!f.parti) {
       if (!j.dansVehicule) { if (++f.attente > ATTENTE_CHAR) finirDefi(false, 'IL FAUT UN CHAR'); return; }
       partir(d, j.dansVehicule);
@@ -1184,8 +1362,48 @@ const Histoire = (function () {
     }
   }
 
+  /** Une image d'un jeu d'adresse. Trois règles pour les trois, et elles sont
+      les mêmes que pour les défis de char : un chrono, un lieu, un compte.
+
+      ⚠️ **ON RESTE DEVANT LE COMPTOIR.** C'est le « lieu » de la fiche : un
+      marteau de force qu'on martèle en marchant vers le pont ne serait plus un
+      jeu d'adresse, ce serait un bouton. Le rayon est large pour la galerie
+      (on recule pour tirer) et serré pour les deux autres (on y a les mains).
+
+      ⚠️ **ON LE GAGNE, ON NE LE VOLE PAS** : un comptoir défoncé ne rend pas de
+      lot. Ça vaut pour les trois — défoncer la baraque met fin à la partie —
+      et c'est `vole_pas` qui le DIT pour la pêche, là où la tentation est la
+      plus grande (un bassin plein de canards derrière une planche). */
+  function majDefiDeFoire(d, f, j) {
+    f.t++;
+    if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+    if (j.dansVehicule) { finirDefi(false, 'PAS AU VOLANT'); return; }
+    const comptoir = comptoirDeDefi(d);
+    if (!comptoir || comptoir.brise) { finirDefi(false, 'LE COMPTOIR EST EN MIETTES'); return; }
+    if (Math.hypot(j.x - comptoir.x, j.y - comptoir.y) > (d.rayon_px || 40)) {
+      finirDefi(false, 'TU T\'EN VAS'); return;
+    }
+    // LA GALERIE DE TIR : les cibles sont des décors avec des PV, et n'importe
+    // quoi qui les crève compte — une balle, une bille de fronde. ⚠️ Rien ne
+    // compte les tirs : ce qu'on mesure, c'est ce qui est TOMBÉ.
+    if (d.cibles) {
+      const crevees = Foire.cibles().filter(function (c) { return c.brise; }).length;
+      if (crevees >= d.cibles) finirDefi(true);
+    }
+  }
+
   function finirDefi(reussi, raison) {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
+    // ⚠️ **LE FORAIN REPREND SA CARABINE** — gagnée ou ratée, la partie est
+    // finie, et on reprend l'arme qu'on tenait avant de jouer. Sans ça, on
+    // garderait le bouchon pour la rue, et il ne blesse personne.
+    if (f && f.avantArme && B.joueur) {
+      delete B.partie.armes.carabine_foire;
+      if (B.joueur.arme === 'carabine_foire') {
+        B.joueur.arme = f.avantArme;
+        B.partie.arme = f.avantArme;
+      }
+    }
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
@@ -1194,6 +1412,32 @@ const Histoire = (function () {
     else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
     noter('DÉFI RÉUSSI : ' + d.titre + (premiere ? ' — ' + d.prime + ' $' : ''), true);
     Son.SFX.mission();
+    if (d.foire) lotDeLaFoire();
+  }
+
+  /** LE LOT DU TROISIÈME PALIER : la casquette de la foire.
+
+      ⚠️ **La prime de ces trois-là est petite, et c'est la règle des paliers de
+      boulot** — un jeu d'adresse ne paie pas mieux à l'heure qu'une course. Ce
+      qu'on vient chercher au troisième, ce n'est pas l'argent : c'est la seule
+      tenue du jeu qui ne s'achète pas (`magasins.TENUES`, champ `prime`). Le
+      vestiaire existait déjà et n'apprend rien. */
+  function lotDeLaFoire() {
+    const p = B.partie;
+    // ⚠️ C'est le CATALOGUE qui dit quelle tenue est le lot (`prime: 'foire'`),
+    // pas un slug écrit ici : une deuxième vérité serait une tenue qu'on ne
+    // peut plus gagner le jour où quelqu'un la renomme.
+    const tenue = (B.defs.tenues || []).find(function (t) { return t.prime === 'foire'; });
+    if (!tenue || p.tenues.indexOf(tenue.slug) >= 0) return;
+    if (defisDeFoire().some(function (q) { return !p.defisFaits[q.slug]; })) return;
+    p.tenues.push(tenue.slug);
+    Hud.message('LES TROIS JEUX — ' + tenue.nom.toUpperCase(), 240);
+    noter('LA FOIRE : ' + tenue.nom, true);
+  }
+
+  /** Le défi que vend ce comptoir-là (`ou: 'foire:<kiosque>'`), ou null. */
+  function defiDuComptoir(slug) {
+    return defis().find(function (d) { return d.ou === 'foire:' + slug; }) || null;
   }
 
   // --- Le GPS : ou aller, pour le HUD ------------------------------------------------------------
@@ -1217,11 +1461,26 @@ const Histoire = (function () {
       else if (o.type === 'retourner') l = ouTrouver(m.donneur);
       else if (o.type === 'ramasser') l = B.mission && (B.mission.entites.find(function (e) { return e.objet === 'caisse'; }) || B.mission.entites.find(function (e) { return e.porteLaCaisse && e.vivant && e.etat !== 'assomme'; }) || (!B.mission.fuyardTombe ? B.mission.fuyard : null));
       else if (o.type === 'tuer') { const restants = B.mission ? B.mission.entites.filter(function (e) { return e.cible && e.vivant && e.etat !== 'assomme'; }) : []; l = restants[0] || null; }
+      // ⚠️ `parler` : la cible est un PERSONNAGE, pas un lieu. On pointe sa
+      // personne quand elle est dehors (Ti-Paul, Raymonde), sinon sa porte (Lulu
+      // à la cantine, Ovila au phare). Sans ce cas, m6 n'avait ni flèche ni
+      // repère — on cherchait quatre personnes à l'aveugle.
+      else if (o.type === 'parler') {
+        const slug = cibleDuParler(o);
+        if (slug) {
+          const ou = ouTrouver(slug);
+          const qui = personnage(slug);
+          if (ou && qui) l = { x: ou.x, y: ou.y, nom: qui.nom };
+        }
+      }
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
     const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
     if (attendue) { const l = ouTrouver(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
+    // Un feu de bâtiment (P4) : pas de mission, pas d'appel — le feu est la
+    // seule chose à chercher, et il se pointe comme un objectif.
+    if (typeof Incendies !== 'undefined') { const fe = Incendies.cible(); if (fe) return fe; }
     return null;
   }
 
@@ -1233,6 +1492,16 @@ const Histoire = (function () {
       const reste = d.chrono_s ? Math.max(0, d.chrono_s * 60 - B.defi.t) : null;
       const chrono = reste === null ? '' : ' ' + Math.floor(reste / 3600) + ':' + ('0' + Math.floor(reste % 3600 / 60)).slice(-2);
       if (!B.defi.parti) return d.titre.toUpperCase() + chrono + ' — MONTE DANS UN CHAR';
+      // ⚠️ Les jeux de foire comptent aussi, et le CANARD dit « MAINTENANT » :
+      // la fenêtre dure moins d'une demi-seconde, et un joueur qui ne voit pas
+      // le fil descendre sur le bassin n'a rien pour savoir quand appuyer.
+      if (d.cibles) {
+        const crevees = typeof Foire === 'undefined' ? 0 : Foire.cibles().filter(function (c) { return c.brise; }).length;
+        return d.titre.toUpperCase() + chrono + ' CIBLES ' + Math.min(crevees, d.cibles) + '/' + d.cibles;
+      }
+      if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
+      if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
+             + (canardAuCrochet() ? ' — MAINTENANT !' : '');
       const compte = d.points ? ' TOUR ' + (B.defi.tours + 1) + '/' + d.tours : d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
       return d.titre.toUpperCase() + chrono + compte;
     }
@@ -1282,7 +1551,6 @@ const Histoire = (function () {
         return;
       }
       if (!B.interieur) {
-        if (B.mission.aPoser) poser();
         majObjectif();
       }
     }
@@ -1293,7 +1561,8 @@ const Histoire = (function () {
            donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
            parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
-           lieuDuPersonnage, present, calme, jouerOuDire,
-           noter, rencontrer, CARNET_MAX,
-           proposerDefi, commencerDefi, finirDefi, cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, maj };
+           lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
+           reinitialiser, noter, rencontrer, CARNET_MAX,
+           proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
+           cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj };
 })();

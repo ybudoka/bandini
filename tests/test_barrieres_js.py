@@ -44,7 +44,7 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         // aurait compte dans les degats des cones.
         function traverser() {
             o.touche('KeyW');
-            for (let i = 0; i < 400 && v.y < (b.y + b.h + 1) * TT; i++) o.frame(1);
+            for (let i = 0; i < 40 * (b.h + 12) && v.y < (b.y + b.h + 1) * TT; i++) o.frame(1);
             o.relacher('KeyW');
         }
         traverser();
@@ -71,7 +71,11 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         v = L.Vehicules.creer('auto', x, j.y, Math.PI / 2, { etat: 'stationne' }); L.Entites.indexer();
         L.Vehicules.monter(j, v);
         v.vitesse = 1.0; v.vx = 0; v.vy = 1.0;
-        for (let i = 0; i < 300 && v.y < (b.y + b.h + 1) * TT; i++) {
+            // ⚠️ Le budget d'images suit la LONGUEUR DU PONT : 300 images faisaient
+            // onze tuiles de tablier, pas vingt-quatre (17 sept. 2026, le chenal
+            // élargi). À 0,9 px par image, il faut une quarantaine d'images par
+            // tuile, et de quoi prendre son élan de chaque côté.
+        for (let i = 0; i < 40 * (b.h + 6) && v.y < (b.y + b.h + 1) * TT; i++) {
             v.vitesse = Math.max(v.vitesse, 0.9); v.vy = Math.max(v.vy, 0.9); v.vx = 0;
             o.frame(1);
         }

@@ -176,10 +176,21 @@ def test_la_cargaison_laisse_l_apron_libre(ville):
 
 def test_la_ville_est_moins_sale(ville):
     """303 objets de saleté, c'était « trop de saleté partout ». Le plafond est
-    celui que Martin a accepté à l'œil, pas un chiffre rond."""
+    celui que Martin a accepté à l'œil, pas un chiffre rond.
+
+    ⚠️ **Il se mesure par MILLE TUILES, pas en objets** (17 sept. 2026). « Trop
+    de saleté partout » parle de ce qu'on voit à l'écran, donc d'une densité :
+    un plafond en objets se fait rougir par une ville qui grandit, et il l'a été
+    le jour où le port a gagné une rangée de blocs profonds — 209 objets pour
+    200 permis, alors que la densité n'avait pas bougé (3,2 pour mille, puis
+    3,5). Les 303 du départ faisaient 5,1 pour mille ; les 192 acceptés à l'œil,
+    3,2."""
     sale = {"debris", "ordures", "pneu", "baril", "caisse"}
     n = sum(1 for d in ville["decor"] if d["type"] in sale)
-    assert 60 <= n <= 200, f"{n} objets de saleté dans la ville"
+    marchables = sum(1 for ligne in ville["sol"] for g in ligne if carte.marchable(g))
+    pour_mille = 1000 * n / marchables
+    assert 1.0 <= pour_mille <= 4.0, (
+        f"{n} objets de saleté sur {marchables} tuiles marchables — {pour_mille:.1f} pour mille")
     assert carte.PART_DECHET >= 10, "un terrain vague plus chargé qu'une sur dix"
 
 

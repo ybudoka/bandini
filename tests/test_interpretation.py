@@ -43,6 +43,19 @@ def test_le_jeu_dit_exactement_les_mots_de_la_boite(voix):
         f"{voix['slug']} : la voix dirait « {dit} » sous « {voix['texte']} »")
 
 
+def test_chaque_jeu_porte_une_emotion_de_ton():
+    """⚠️ « Toujours de l'émotion ». Un soupir, un rire ou un cri (`CORPS`)
+    disent comment le corps parle, pas ce qu'on ressent ; une replique qui ne
+    porte qu'eux sort plate a cote des autres. Chaque jeu doit donc porter au
+    moins une balise de TON, en plus de ses balises de corps."""
+    sans_ton = []
+    for slug, dit in interpretation.JEU.items():
+        b = set(interpretation.balises(dit))
+        if not (b & interpretation.TONS):
+            sans_ton.append((slug, b))
+    assert not sans_ton, f"ces jeux n'expriment aucun ton ({sans_ton})"
+
+
 @pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
 def test_les_balises_sont_celles_que_v3_comprend(voix):
     """Une balise inconnue se LIT a voix haute. Et `<break time>` est du v2 :
@@ -231,3 +244,35 @@ def test_une_ligne_attend_que_sa_voix_se_taise(banc):
     assert r["apres"] == 1, "la voix s'est tue et la ligne est restee"
     assert r["lue"] == 2, "sans voix, la ligne passe apres le temps de la lire"
     assert r["coincee"] == 3, "une voix muette pour le navigateur a fige la scene"
+
+
+def test_une_ligne_attend_une_voix_encore_en_chargement(banc):
+    """⚠️ Une voix qui n'est pas encore cachee (`Voix.attendue`) retenait la ligne
+    au temps de LIRE seulement : la voix chargee en differe arrivait sur la ligne
+    suivante et se faisait couper aussitot. Une voix EN ATTENTE doit donc retenir
+    autant qu'une voix qui joue — jusqu'a son `fin`, qui rabat `duree`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Histoire.dire(L.B.defs.missions[0], 'intro', null);
+        const c = L.B.cinema;
+        if (!c) return null;
+        const l = c.lignes[0];
+        // La voix de la premiere ligne n'est pas encore chargee : elle ATTEND.
+        L.Son.Voix.attendue = { slug: l.slug, options: {} };
+        o.frame(c.duree + 300);                     // bien au-dela du temps de lire
+        const pendant = c.i;
+        // Elle arrive enfin (comme `chargerHistoire` le fait) : elle joue, puis
+        // son `fin` rabat la duree, et la ligne passe.
+        L.Son.Voix.attendue = null;
+        L.Son.Voix.enCours = { slug: l.slug };
+        o.frame(2);
+        L.Son.Voix.enCours = null;
+        // On simule le `fin` du parler : la duree tombe a « maintenant + 20 ».
+        c.duree = Math.min(c.duree, c.t + 20);
+        o.frame(c.duree + 3);
+        const apres = c.i;
+        return { pendant: pendant, apres: apres };
+    }""")
+    assert r is not None, "Ti-Guy ne parle pas : le banc n'a rien a juger"
+    assert r["pendant"] == 0, "la ligne est passee pendant que sa voix se chargeait encore"
+    assert r["apres"] == 1, "la voix chargee puis dite, la ligne ne passe pas"

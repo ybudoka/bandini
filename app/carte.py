@@ -705,8 +705,8 @@ DISTRICTS: tuple[dict, ...] = (
                   "~~~~~~~",
                   "~~~~~~~",
                   "~~~~~~~")},
-    # La Pointe — le parc au bout de la ville. Un chenal la coupe du reste :
-    # UN pont, et rien d'autre. Des bois, des sentiers, un phare, quatre
+    # La Pointe — le parc au bout de la ville. Un chenal de 24 tuiles la coupe
+    # du reste : UN pont, et rien d'autre. Des bois, des sentiers, un phare, quatre
     # maisons au bout, et les Skateux qui tiennent le stationnement.
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
@@ -741,13 +741,30 @@ DISTRICTS: tuple[dict, ...] = (
 COLONNES = (18, 15, 20, 16, 19,              # Les Érables / Les Quais
             15, 11, 14, 18, 12, 16, 11, 14,  # Le Faubourg (v1, elargi de 2)
             19, 15, 21, 16, 14, 18, 15)      # La Shop / La Pointe
-#: ⚠️ SAUF LA RANGEE DU PONT (la premiere de la bande sud) : elle est restee a
-#: 11, et ses deux tuiles sont allees a la suivante. Le chenal que le pont
-#: enjambe est de l'eau, pas un terrain — a treize tuiles, il coutait 104
-#: points de souffle sur 100 et l'eau redevenait un mur (`test_eau`). Le pari
-#: de la traversee ne bouge donc pas, et la trame garde sa somme.
+#: ⚠️ **LA RANGÉE DU PONT (la première de la bande sud) EST LE CHENAL**, et
+#: c'est le seul endroit où la ville grandit. Demande de Martin (17 sept. 2026) :
+#: « agrandis la carte vers le bas et déplace l'île où est la foire vers le bas
+#: pour allonger le pont et l'éloigner du reste de la ville ». Elle passe donc de
+#: 11 à 24 : treize tuiles d'eau de plus, treize tuiles de pont, et tout ce qui
+#: est au sud descend d'autant — la carte fait 419 × 224 au lieu de 419 × 211.
+#:
+#: ⚠️ **Aucune AUTRE rangée ne bouge**, et c'est ce qui rend le déplacement
+#: propre : la foire (80 × 33), les bois, les maisons et le phare de La Pointe
+#: gardent leur taille à la tuile près, ils ne font que descendre. Ce qui change
+#: de forme, c'est ce que cette rangée-là porte ailleurs : la rangée nord des
+#: Quais (ses blocs de commerces deviennent profonds — deux rangées de bâtiments
+#: dos à dos au lieu d'une) et le haut de la baie.
+#:
+#: ⚠️ **Le prix de la traversée à la nage a changé avec elle**, et c'était la
+#: seule vraie question : onze tuiles se nageaient à jeun (72 points de souffle
+#: sur 100), vingt-quatre ne se nagent qu'avec un café (88 sur 100). La Pointe
+#: se range donc entre la ville et l'Île-aux-Corneilles, qui demande le café ET
+#: l'estomac plein. ⚠️ Et le chenal n'a plus droit à une plage
+#: (`_rives_d_un_pont`) : à 24 tuiles, la règle du tiers en donnait huit par
+#: rive et la traversée retombait à onze tuiles d'eau. `test_eau` refait les
+#: deux calculs sur la carte livrée.
 RANGEES = (11, 14, 10, 13, 11, 15,           # la bande nord
-           11, 16, 11, 13, 10, 12)           # la bande sud
+           24, 16, 11, 13, 10, 12)           # la bande sud
 
 #: La largeur de chaque rue, trottoirs compris. 6 = boulevard (4 voies),
 #: 4 = rue (2 voies). Il y a une rue de plus que de blocs dans chaque sens.
@@ -882,6 +899,26 @@ FOIRE: dict = {
     "kiosques": ("barbe_a_papa", "hot_dogs", "pop_corn", "limonade", "poutine",
                  "queues_de_castor", "ballons", "peluches", "lance_anneaux"),
     "jeux": ("galerie_tir", "marteau_force", "peche_canards"),
+    # ⚠️ **UN JEU D'ADRESSE EST UN DEFI, PAS UN MOTEUR** (`missions.DEFIS`) : ce
+    # que la carte pose ici, ce sont trois COMPTOIRS et, pour la galerie, ses
+    # cibles — le reste est une regle de jeu, pas un batiment.
+    #
+    # ⚠️ **LA GALERIE DE TIR EST AU NORD DE L'ALLEE, TOUJOURS**, et ses trois
+    # cibles se posent DEVANT elle, sur la premiere rangee de l'allee. Deux
+    # raisons, et la premiere est mecanique :
+    #
+    #   - **une baraque ARRETE LA BALLE** (`solide`, comme tous les comptoirs de
+    #     la foire) : des cibles posees DERRIERE le comptoir ne se tirent pas
+    #     depuis l'allee — mesure au banc, trois chargeurs, pas une cible
+    #     crevee. Devant, la baraque devient ce qu'elle doit etre : le PARE-BALLE
+    #     du stand. On tire vers elle, jamais vers l'allee ;
+    #   - et le dessin trie par le sud : devant le comptoir, les cibles se
+    #     peignent PAR-DESSUS lui — une rangee de cibles et la baraque derriere,
+    #     exactement ce qu'on voit d'un stand de tir. Sur la rangee sud, l'ordre
+    #     s'inverserait et la baraque les mangerait ; tombee sur une case du sud,
+    #     la galerie laisse donc sa place a un comptoir et repasse a la suivante.
+    "cibles": 3,              # trois cibles, comme les trois peintes sur sa baraque
+
     # ⚠️ Du DECOR ANIME, et on n'y monte PAS : un manège ou l'on monte et qui ne
     # donne rien est un decor cher ; un manège qui tourne avec du monde dessus
     # est une ville qui vit. EN DOUBLE : l'exageration est le propos.
@@ -894,6 +931,31 @@ FOIRE: dict = {
     "lampes": ("foire_jaune", "foire_rose", "foire_bleue"),
     "rayon_lampe": 56,
     "rayon_manege": 58,
+    # ⚠️ **UNE FOIRE MUETTE EST UNE PEINTURE**, et la fiche du plan le dit en
+    # majuscules. Deux sons, et ils ne sont pas de la meme famille :
+    #
+    #   - **l'orgue de manège** est une MUSIQUE QUI SORT D'UN ENDROIT. Le
+    #     musicien de rue est « une musique qui sort de QUELQU'UN » — son gain a
+    #     lui, par-dessus l'ambiance du district, sans prendre le rang de
+    #     personne. L'orgue, c'est le MEME code (`Son.Rue`) avec une source
+    #     FIXE : le milieu de l'allee. ⚠️ Surtout pas une ambiance de district
+    #     de plus — une ambiance se joue PARTOUT dans son district, et la foire
+    #     tient dans 52 x 31 tuiles de La Pointe ;
+    #   - **les cris** sont un BRUITAGE en boucle, dose a la distance comme la
+    #     rumeur d'un chantier. Ce qui nomme une foire, ce sont les cris d'un
+    #     manège — pas le murmure d'une foule (`foule`, qui joue deja partout).
+    #
+    # ⚠️ Les portees se mesurent depuis le CENTRE de l'enceinte, et la moitie
+    # de sa diagonale en fait 242 px (52 x 31 tuiles) : sous 300, on entrerait
+    # dans la foire avant de l'entendre.
+    "son": {
+        "orgue": "foire_orgue",
+        "orgue_portee_px": 460,    # de la palissade, on l'entend deja
+        "orgue_plein_px": 150,     # dans l'allee, il joue plein
+        "orgue_volume": 0.7,
+        "cris_portee_px": 400,
+        "cris_volume": 0.9,
+    },
     # ⚠️ **LE PETIT TRAIN FAIT LE TOUR DE LA FOIRE** — Martin. Une voie fermee,
     # une tuile d'epais, a `retrait` tuiles du bord de l'enceinte : la palissade
     # rentre de 0 a 2, donc la voie ne la touche jamais, et elle COUPE l'allee
@@ -1128,6 +1190,13 @@ AMARRAGES: dict = {
 #: sa largeur quand il y a une rive en face, la moitie quand il n'y en a pas — et
 #: sous `profondeur[0]`, ce cote n'a pas de plage du tout.
 #:
+#: ⚠️ **Et le chenal d'un pont n'en a JAMAIS, quelle que soit sa largeur**
+#: (`_rives_d_un_pont`). Le tiers a suffi tant que le chenal faisait onze
+#: tuiles ; le jour où il est passé à vingt-quatre (17 sept. 2026, `RANGEES`),
+#: il en donnait huit par rive — et la mesure est sans appel : la traversée à la
+#: nage retombait de 24 tuiles d'eau à 11, le chenal élargi ne coûtait plus
+#: rien. Ce qu'un pont enjambe reste de l'eau d'une rive à l'autre.
+#:
 #: ⚠️ **Et du RIVAGE derriere elle** : le plus long bout de cote d'un seul tenant,
 #: pas la somme des bouts. Ailleurs, la ville touche l'eau sans sable — un
 #: trottoir au bord de l'eau, comme au quai.
@@ -1254,6 +1323,11 @@ DECOR_SOLIDE = frozenset({
     "distributrice_grignotines", "distributrice_liqueur", "fontaine", "galerie_tir",
     "grande_roue", "guichet", "lampadaire", "marteau_force", "ordures",
     "peche_canards", "poteau_amarrage", "poubelle", "table_pique_nique", "tasses",
+    # ⚠️ La cible de la galerie ARRETE LA BALLE, et c'est toute la difference
+    # entre un defi et une formalite : sans solidite, une balle traverse les
+    # trois d'un coup (rien n'arrete ce qui n'est pas solide, `combat.js`) et la
+    # galerie de tir se gagne d'une seule cartouche, de biais.
+    "cible_foire",
     # Les neuf kiosques de la foire : un comptoir, ca arrete un pieton.
     "ballons", "barbe_a_papa", "hot_dogs", "lance_anneaux", "limonade", "peluches",
     "pop_corn", "poutine", "queues_de_castor",
@@ -4976,14 +5050,26 @@ class _Chantier:
                     continue                           # ni le pied de la roue
                 quoi = melange[n % len(melange)]
                 n += 1
-                if quoi in fiche["jeux"] and quoi in jeux_poses:
+                # ⚠️ La galerie de tir attend une case du NORD (voir `FOIRE`) :
+                # sur une case du sud elle ne se pose pas, elle REPASSE — `n`
+                # recule d'un cran, et c'est la prochaine case qui l'aura.
+                au_sud = quoi == "galerie_tir" and ky >= a0
+                if quoi in fiche["jeux"] and (quoi in jeux_poses or au_sud):
+                    if au_sud and quoi not in jeux_poses:
+                        n -= 1
                     quoi = fiche["kiosques"][n % len(fiche["kiosques"])]
                 if not self.poser_decor(quoi, kx, ky):
                     continue
                 self.kiosques.append({"slug": quoi, "x": kx, "y": ky, "nord": ky < a0})
                 if quoi in fiche["jeux"]:
                     jeux_poses.add(quoi)
-                    self.jeux.append({"slug": quoi, "x": kx, "y": ky})
+                    # ⚠️ Les CIBLES de la galerie ne se posent pas ici mais tout
+                    # a la fin (`cibles_de_la_galerie`) : trois tuiles de gazon
+                    # de moins dans la reserve ou les PAQUETS se cachent, et ce
+                    # sont les vingt paquets de la ville qui bougent — puis les
+                    # graffitis, les nids-de-poule et les chantiers avec eux. Ce
+                    # qu'on AJOUTE se pose en dernier.
+                    self.jeux.append({"slug": quoi, "x": kx, "y": ky, "nord": ky < a0})
                 # ⚠️ Une guirlande tous les DEUX kiosques, au halo plus large : le
                 # rendu tient un plafond de 50 lumieres (lampadaires + feux de
                 # circulation + projecteur), et une lampe par comptoir les
@@ -5240,10 +5326,32 @@ class _Chantier:
         pas = max(1, hauteur // 8)
         ouest = self._terre_a_cote([(x - 1, y + j) for j in range(0, hauteur, pas)])
         est = self._terre_a_cote([(x + largeur, y + j) for j in range(0, hauteur, pas)])
+        # ⚠️ Les rives qu'un pont relie n'ont pas de plage (voir `PLAGES`). On
+        # saute l'appel en entier : `_plage` ne tire son premier de qu'APRES
+        # avoir mesure le large, donc un chenal qui n'en a jamais eu n'en tire
+        # pas plus qu'avant, et pas une plage de la ville ne se deplace.
+        enjambees = self._rives_d_un_pont(x, y, largeur, hauteur)
         for cote, rivage, en_face in (("nord", nord, sud), ("sud", sud, nord),
                                       ("ouest", ouest, est), ("est", est, ouest)):
-            if rivage:
+            if rivage and cote not in enjambees:
                 self._plage(x, y, largeur, hauteur, cote, en_face)
+
+    def _rives_d_un_pont(self, x: int, y: int, largeur: int, hauteur: int) -> frozenset[str]:
+        """Les cotes de ce bassin qu'un pont relie — ceux-la n'ont pas de plage.
+
+        Un pont vertical relie la rive NORD a la rive SUD du bassin qu'il
+        traverse ; un pont horizontal, l'OUEST a l'EST.
+        """
+        for sens, i, j in sorted(PONTS):
+            if sens == "v":
+                px, py = self.xr[i], self.yb[j]
+                pl, ph, cotes = RUES_V[i], RANGEES[j], frozenset(("nord", "sud"))
+            else:
+                px, py = self.xb[i], self.yr[j]
+                pl, ph, cotes = COLONNES[i], RUES_H[j], frozenset(("ouest", "est"))
+            if px < x + largeur and x < px + pl and py < y + hauteur and y < py + ph:
+                return cotes
+        return frozenset()
 
     def _plage(self, x: int, y: int, largeur: int, hauteur: int, cote: str,
                en_face: bool) -> None:
@@ -6026,7 +6134,14 @@ class _Chantier:
                 # ⚠️ Le tablier seulement : un quai sur l'eau porte la baie sous
                 # lui, et une chaine tendue dans la baie ne ferme rien.
                 tablier = QUAI_TABLIER if g == "j" else rh
-                profondeur = min(MOUILLAGE["profondeur"], tablier - QUAI_APRON - 1)
+                # ⚠️ **LA CHAINE ENTOURE LA CALE, elle ne la coupe pas.** La
+                # profondeur ordinaire suffisait tant que la cale se posait a
+                # quatre tuiles du bord ; le 17 sept. 2026 elle s'est posee a
+                # cinq, pile sur la derniere rangee de l'enceinte — la cale
+                # etait SUR la chaine, et `test_barrieres` l'a dit. L'enceinte
+                # descend donc avec elle, jusqu'a ce que le tablier permet.
+                fond = max(MOUILLAGE["profondeur"], a["y"] - ry + 2)
+                profondeur = min(fond, tablier - QUAI_APRON - 1)
                 x0 = max(rx, a["x"] - MOUILLAGE["demi_largeur"])
                 x1 = min(rx + rl, a["x"] + MOUILLAGE["demi_largeur"] + 1)
                 rect = (x0, ry, x1 - x0, profondeur)
@@ -6156,6 +6271,33 @@ class _Chantier:
                 if routier(self.sol[j][i]):
                     return False
         return True
+
+    def cibles_de_la_galerie(self) -> list[list[int]]:
+        """Les trois cibles de la galerie de tir, DERRIERE son comptoir.
+
+        ⚠️ **Le seul decor de la foire qui ait des PV** : une balle la creve, le
+        matin la releve (`reparerLeDecor`), exactement comme le chateau de sable
+        de la greve. C'est tout ce qu'un jeu d'adresse demande au moteur — le
+        reste est une regle de jeu (`missions.DEFIS`), pas un batiment.
+
+        ⚠️ **DEVANT le comptoir, pas derriere** : une baraque arrete la balle, et
+        des cibles posees derriere elle ne se tirent pas depuis l'allee (mesure
+        au banc). La baraque est le pare-balle du stand ; les cibles sont entre
+        elle et le tireur.
+
+        ⚠️ **Et ca se pose EN DERNIER**, avec les distributrices et la greve, pour
+        la raison que le plan ecrit en majuscules : trois tuiles de gazon de plus
+        dans `occupe`, ce sont trois recoins de moins ou `paquets()` tire ses
+        vingt cachettes — et toute la ville se rebat derriere. Ce qu'on AJOUTE se
+        pose apres ce qui CHOISIT.
+        """
+        galerie = next((j for j in self.jeux if j["slug"] == "galerie_tir"), None)
+        if not galerie:
+            return []
+        y = galerie["y"] + 1                            # la premiere rangee de l'allee
+        galerie["cibles"] = [[galerie["x"] + dx, y] for dx in (-1, 0, 1)
+                             if self.poser_decor("cible_foire", galerie["x"] + dx, y)]
+        return galerie["cibles"]
 
     def paquets(self, nombre: int = 20) -> list[dict]:
         """Vingt paquets caches dans les recoins : ruelles, terrains vagues,
@@ -6400,6 +6542,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ⚠️ Apres les paquets : les machines prennent ce qui reste, et une de plus
     # ne deplace ni un paquet, ni une scene, ni un kiosque.
     chantier.distributrices()
+    # ⚠️ Et les cibles de la galerie de tir avec elles, pour la meme raison :
+    # trois tuiles de plus dans `occupe` AVANT les paquets, et les vingt
+    # cachettes de la ville changent de place (mesure : 426 decors deplaces hors
+    # du bloc de la foire, plus les graffitis, les nids-de-poule et les
+    # chantiers). Ce qu'on AJOUTE se pose en dernier.
+    chantier.cibles_de_la_galerie()
     # ⚠️ Apres les ilots ET les ponts : on tague des murs qui existent, et on
     # ne tague pas une vitrine (les devantures ont deja reserve les leurs).
     chantier.graffitis_sur_les_murs()
@@ -6466,7 +6614,10 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
         "flottants": list(FLOTTANTS),
         "decor_solide": sorted(DECOR_SOLIDE),
         "amarrages": chantier.amarrages(),
-        "foire": chantier.foire,
+        # ⚠️ La fiche du SON voyage avec le rectangle : le navigateur dose
+        # l'orgue et les cris a la distance du CENTRE, et les chiffres viennent
+        # de Python comme le reste de l'echelle.
+        "foire": chantier.foire and {**chantier.foire, **FOIRE["son"]},
         "roue": chantier.roue,
         "jeux_de_foire": chantier.jeux,
         "kiosques_de_foire": chantier.kiosques,
@@ -6559,6 +6710,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # charrue. Elle ne pose rien, ne tire aucun de, et ne tombe que si l'option le veut.
     from . import neige as neige_mod
     ville["neige"] = neige_mod.tracer(ville)
+    # ⚠️ LES INCENDIES (P4, « le pompier volontaire ») : la règle du feu et les
+    # façades où il peut se déclarer. Aucun dé, rien de posé — le navigateur décide
+    # QUI brûle à l'empreinte de l'heure, pendant que la ville reste la même.
+    from . import incendies as incendies_mod
+    ville["incendies"] = incendies_mod.tracer(ville)
     # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
     # que toutes les etapes d'avant lisent pour tirer leurs places.
     chantier.poser_les_lots_et_les_rideaux(ville)
@@ -6935,7 +7091,7 @@ B  ah  ah   nB
 B  ah  ah    B
 Bn           B
 BBBBWWDWWBBBBB
-""", points=(_pt("hotdog", 4, 4), _pt("emplettes", 9, 4, genre="marine")),
+""", points=(_pt("hotdog", 4, 4), _pt("emplettes", 9, 4, genre="marine"), _pt("lulu", 7, 4)),
      gens=_gens(("commis", 4, 2), ("client", 10, 5))),
 
     # L'usine Prevost : les grandes machines, l'etabli, le magasin d'outils.
@@ -6989,7 +7145,7 @@ B   a h   B
 B         B
 Bz j    e B
 BBBWWDWWBBB
-""", points=(_pt("lit", 2, 1), _pt("journal", 3, 4)),
+""", points=(_pt("lit", 2, 1), _pt("journal", 3, 4), _pt("ovila", 7, 2)),
      gens=_gens(("commis", 8, 4),)),
 
     # --- Le metro : un quai et une rame, pour toutes les stations -------------

@@ -22,6 +22,11 @@ const Entree = (function () {
     annuler: ['Backspace', 'KeyB'],
     muet: ['KeyM'],
     carte: ['KeyN'],
+    // ⚠️ PAS KeyT NI AUCUNE LETTRE D'UNE SUITE SECRETE (`Jeu.SEQUENCE_DEBUG`,
+    // ecoutee par `surSecret`) : elles doivent rester hors de `MAP_TOUCHES`
+    // (voir le commentaire au-dessus de `secrets`, plus bas dans ce fichier),
+    // sans quoi les taper declenche AUSSI cette action-ci.
+    verrouiller: ['KeyH'],
   };
   //: La disposition d'une manette RECONNUE par le navigateur (`mapping:
   //: "standard"`, W3C) : 0 le bouton du bas, 1 celui de droite, 2 celui de
@@ -35,7 +40,7 @@ const Entree = (function () {
   //: l'appuyant, et garde le resultat dans les options (`options.manette`).
   const MANETTE_DEFAUT = {
     action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
-    carte: [8], pause: [9], muet: [],
+    carte: [8], pause: [9], muet: [], verrouiller: [10],
     haut: [12], bas: [13], gauche: [14], droite: [15],
   };
   //: Le stick de marche, puis le gaz et le frein. Sur une manette reconnue ce
@@ -125,6 +130,104 @@ const Entree = (function () {
     e.preventDefault();
     if (valeur && !enfonce[e.code] && !e.repeat) presse[e.code] = true;
     enfonce[e.code] = valeur;
+  }
+
+  // --- Secret -------------------------------------------------------------------------
+
+  //: Une SUITE de touches a taper dans l'ordre, pour reveiller quelque chose de
+  //: cache (le menu DEBUG) — jamais dans MAP_TOUCHES, qui associe une touche a
+  //: une ACTION, pas une suite ordonnee. Les fleches qu'elle utilise bougent le
+  //: joueur au passage : les deux sacs sont independants, ca ne genre rien.
+  const SECRET_DELAI = 1500;      // trop lent entre deux touches et on repart a zero
+  let secretTampon = [], secretDernier = 0;
+  const secrets = [];
+
+  /** Enregistre une suite (tableau de `e.code`) et la fonction appelee des
+      qu'elle est tapee au complet. */
+  function surSecret(suite, fait) { secrets.push({ suite: suite.slice(), fait: fait }); }
+
+  function surToucheSecrete(e) {
+    if (!secrets.length || e.repeat) return;
+    if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
+    const t = Date.now();
+    if (t - secretDernier > SECRET_DELAI) secretTampon.length = 0;
+    secretDernier = t;
+    secretTampon.push(e.code);
+    for (const s of secrets) {
+      const n = s.suite.length, q = secretTampon.length;
+      if (q < n) continue;
+      let pareil = true;
+      for (let i = 0; i < n; i++) if (secretTampon[q - n + i] !== s.suite[i]) { pareil = false; break; }
+      if (pareil) { secretTampon.length = 0; s.fait(); }
+    }
+  }
+
+  // --- Secret par ACTIONS (manette + tactile) -------------------------------------
+
+  //: La meme suite secrete, mais en ACTIONS plutot qu'en touches : ce que la
+  //: manette, le stick du casque ou le joystick tactile donnent. On la lit UNE
+  //: FOIS PAR IMAGE (`debutImage`), quand `neuf` est encore frais, sur les
+  //: actions qui viennent de s'enclencher — un Konami directionnel marche ainsi
+  //: au pouce comme au doigt, et au clavier aussi (les fleches sont des actions).
+  const SECRET_ACTIONS_DELAI = 1500;
+  let tamponActions = [], dernierActions = 0;
+  const suitesActions = [];
+
+  /** Enregistre une suite d'ACTIONS (`haut`, `bas`, `gauche`, `droite`…) a
+      enchainer dans l'ordre pour reveiller quelque chose de cache. */
+  function surSuiteActions(suite, fait) { suitesActions.push({ suite: suite.slice(), fait: fait }); }
+
+  //: Le STICK pour la suite d'actions. ⚠️ La suite se lisait sur `neuf`, qui ne
+  //: VIENT QUE DES BOUTONS (la croix, le clavier, le doigt) : un stick
+  //: analogique ne « presse » jamais haut/bas/gauche/droite, il ne fait que
+  //: pousser `axe`. On traduit donc le stick en direction cardinale, avec une
+  //: MORTE confortable (il faut pousser franchement) et une HYSTERESIS (une
+  //: direction ne compte qu'une fois par poussee, jusqu'au relachement). Le
+  //: cardinal dominant absorbe les diagonales : un Konami mal ajuste de
+  //: quelques degres reste lu « haut » ou « droite », jamais « diagonal ».
+  let directionStick = null, directionStickEmise = null;
+  const STICK_MORTE = 0.55;     // il faut vraiment pousser pour choisir
+  const STICK_RELACHE = 0.3;    // ... et vraiment lacher pour pouvoir recompter
+
+  function directionDuStick() {
+    const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    const m = Math.hypot(st.x, st.y);
+    // Zone morte : sous le relachement, on rend la main et on oublie.
+    if (m < STICK_RELACHE) { directionStick = null; return null; }
+    // Entre les deux : on GARDE la direction deja verrouillee (hysteresis).
+    if (m < STICK_MORTE) return directionStick;
+    let d;
+    if (Math.abs(st.x) > Math.abs(st.y)) d = st.x > 0 ? 'droite' : 'gauche';
+    else d = st.y > 0 ? 'bas' : 'haut';
+    directionStick = d;
+    return d;
+  }
+
+  function lireSuitesActions() {
+    if (!suitesActions.length) return;
+    const fraiches = [];
+    for (const a in MAP_TOUCHES) if (neuf(a)) fraiches.push(a);
+    // Le stick : sa direction ne va au tampon que quand elle VIENT de changer
+    // (une fois par poussee) — pas a chaque image.
+    const d = directionDuStick();
+    if (d !== directionStickEmise) {
+      directionStickEmise = d;
+      if (d) fraiches.push(d);
+    }
+    if (!fraiches.length) return;
+    const t = Date.now();
+    if (t - dernierActions > SECRET_ACTIONS_DELAI) tamponActions.length = 0;
+    dernierActions = t;
+    for (const a of fraiches) {
+      tamponActions.push(a);
+      for (const s of suitesActions) {
+        const n = s.suite.length, q = tamponActions.length;
+        if (q < n) continue;
+        let pareil = true;
+        for (let i = 0; i < n; i++) if (tamponActions[q - n + i] !== s.suite[i]) { pareil = false; break; }
+        if (pareil) { tamponActions.length = 0; s.fait(); break; }
+      }
+    }
   }
 
   // --- Manette ----------------------------------------------------------------------
@@ -587,6 +690,7 @@ const Entree = (function () {
       const h = Math.hypot(x, y);
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
+    lireSuitesActions();
   }
 
   function contexte(nom) {
@@ -617,7 +721,7 @@ const Entree = (function () {
 
   function init(d, w, n) {
     doc = d; fenetre = w; nav = n;
-    w.addEventListener('keydown', function (e) { surTouche(e, true); });
+    w.addEventListener('keydown', function (e) { surToucheSecrete(e); surTouche(e, true); });
     w.addEventListener('keyup', function (e) { surTouche(e, false); });
     w.addEventListener('blur', toutRelacher);
     w.addEventListener('gamepadconnected', function () { manetteVue = true; Son.reveiller(); });
@@ -628,6 +732,7 @@ const Entree = (function () {
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
     init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    surSecret, surSuiteActions,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,

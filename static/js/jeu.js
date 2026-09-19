@@ -5,6 +5,24 @@ const Jeu = (function () {
   'use strict';
 
   const PAS = 1000 / 60;
+  //: La suite de touches qui reveille le menu DEBUG (voir `Entree.surSecret`,
+  //: `ouvrirMenuDebug`) : « RIGOLO », en lettres qu'AUCUNE action
+  //: d'`Entree.MAP_TOUCHES` n'utilise (a verifier avant d'y toucher : une
+  //: lettre libre aujourd'hui peut se faire lier demain, comme KeyT l'a ete a
+  //: `verrouiller`). ⚠️ Pas les fleches ni B/A (le Konami classique) : KeyB est
+  //: ANNULER, et le taper pendant que PAUSE est ouvert fermait le menu pause
+  //: (`reprendre()` suit, `jeu.js:690`) juste avant que le dernier appui
+  //: n'ouvre DEBUG par-dessus — la suite paraissait ignorer le garde-fou de
+  //: `ouvrirMenuDebug` alors qu'elle avait change l'etat sous ses pieds. Une
+  //: suite hors de `MAP_TOUCHES` ne fait RIEN d'autre en la tapant, dans aucun
+  //: ecran — c'est le seul moyen de garder le garde-fou fiable.
+  const SEQUENCE_DEBUG = ['KeyR', 'KeyI', 'KeyG', 'KeyO', 'KeyL', 'KeyO'];
+  //: La suite d'ACTIONS qui reveille AUSSI le menu DEBUG, la ou un clavier
+  //: n'existe pas — le Konami directionnel, accessible a la manette, au stick
+  //: du casque et au joystick tactile (`Entree.surSuiteActions`). Les fleches
+  //: bougent le joueur au passage, comme toute suite : c'est de la triche de
+  //: developpeur, jamais un geste qu'on fait par accident.
+  const SEQUENCE_DEBUG_ACTIONS = ['haut', 'haut', 'bas', 'bas', 'gauche', 'droite', 'gauche', 'droite'];
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
   //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
@@ -37,6 +55,14 @@ const Jeu = (function () {
         v.vie = Math.max(1, garde.vie); v.vole = !!garde.vole;
       }
     }
+    // Le char DONNE par une mission (`donne.vehicule`, le taxi de m97) gare
+    // devant la planque, a part de celui qu'on y laisse soi-meme.
+    const donne = p.vehiculePlanque;
+    if (donne && Vehicules.vehiculeDef(donne.slug)) {
+      const place = placeDevantLaPlanque();
+      const v = place && Vehicules.creer(donne.slug, place.x, place.y, donne.angle || 0, { etat: 'stationne' });
+      if (v && donne.couleur) { v.couleur = donne.couleur; v.swaps = nuances(donne.couleur); }
+    }
     // Les chars saisis attendent dans la cour du lot, comme celui de la
     // planque attend devant sa porte.
     Missions.garnirLaFourriere();
@@ -52,6 +78,7 @@ const Jeu = (function () {
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
+    Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -468,6 +495,14 @@ const Jeu = (function () {
 
   function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); }
 
+  /** Reveille par la suite secrete (`SEQUENCE_DEBUG`) — jamais par un bouton.
+      En partie seulement, et pas par-dessus un autre menu, une scene ou la
+      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu. */
+  function ouvrirMenuDebug() {
+    if (B.etat !== 'jeu' || B.menu || B.cinema || B.roue) return;
+    Hud.ouvrirMenu(Hud.menuDebug());
+  }
+
   /** La carte de la ville, plein ecran : la simulation attend. */
   function ouvrirCarte() {
     if (B.etat !== 'jeu' && B.etat !== 'pause') return;
@@ -485,6 +520,13 @@ const Jeu = (function () {
 
   function retourTitre() {
     Missions.sauvegarderPartie();
+    // ⚠️ UN DES TROIS MOMENTS QUI COMPTENT (M14) : on vient de finir de jouer, et
+    // c'est la que la partie doit etre a jour sur le compte — pas dans une minute
+    // et demie. Les deux autres : l'onglet qui se ferme, et le repos de
+    // `Compte.apresEcriture` pendant qu'on joue. ⚠️ `ranger` et pas `monter` : le
+    // titre est aussi le moment ou une partie qui attendait en coulisse (elle ne
+    // pouvait pas se poser pendant qu'on jouait) peut enfin descendre.
+    Compte.ranger();
     B.etat = 'titre';
     Hud.etat('titre');
     Hud.voile('titre');
@@ -512,6 +554,18 @@ const Jeu = (function () {
 
   function maj() {
     Entree.debutImage();
+    // ⚠️ Le debug INVINCIBLE (`Hud.menuDebug`) reutilise les images
+    // d'invincibilite ORDINAIRES (`Entites.blesser` refuse tout coup tant
+    // qu'elles durent) plutot qu'un second garde-fou : en la rechargeant
+    // CHAQUE image, tant que le flag tient, elle ne retombe jamais a zero — et
+    // combat, tirs, explosions, collisions restent le MEME chemin qu'en jeu
+    // normal, juste sans jamais s'epuiser.
+    if (B.debugInvincible && B.joueur) B.joueur.invincible = 30;
+    // ⚠️ MÊME PATRON que l'invincibilité : on recharge le souffle à fond à
+    // CHAQUE image tant que le flag tient, au lieu d'un second garde-fou dans
+    // la dépense. Le sprint et la nage restent le même chemin, juste sans
+    // jamais s'épuiser — et on ne coule jamais.
+    if (B.debugEndurance && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();
@@ -631,12 +685,15 @@ const Jeu = (function () {
         // La musique suit ce qui t'arrive : district, poursuite, bagarre.
         Son.Chef.maj();
         Monde.majChemins();
+        // Les vagues : leur volume est une question de carte, pas de son.
+        Monde.majSonDuBord();
         Entites.maj();
         Combat.maj();
         Vehicules.maj();
         Traversier.maj();                 // apres les chars : ce qui est a bord suit la coque
         Neige.maj();
         Police.maj();
+        Incendies.maj();
         Missions.maj();
         Chantiers.maj();
         Foire.maj();
@@ -683,6 +740,7 @@ const Jeu = (function () {
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
+    Entites.dessinerCible(ctx, vue);
     Entites.dessinerParticules(ctx, vue);
     if (B.options.trace && !B.interieur) Vehicules.dessinerTrace(ctx, vue);
     if (!B.interieur) Police.dessinerHelico(ctx, vue);
@@ -822,6 +880,8 @@ const Jeu = (function () {
     if (/[?&]trace=1/.test(adresse)) B.options.trace = true;
     if (/[?&]perf=1/.test(adresse)) B.options.perf = true;
     Entree.init(d, w, w.navigator);
+    Entree.surSecret(SEQUENCE_DEBUG, ouvrirMenuDebug);
+    Entree.surSuiteActions(SEQUENCE_DEBUG_ACTIONS, ouvrirMenuDebug);
     Hud.init(d, racine);
     B.rng = mulberry(B.graine);
 
@@ -838,7 +898,14 @@ const Jeu = (function () {
     // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
     // le geste le plus banal sur telephone : changer d'application). Fermer
     // dans ce cas-la viderait les sons decodes et la page reviendrait muette.
-    w.addEventListener('pagehide', function (ev) { if (!ev || !ev.persisted) Son.fermer(); });
+    w.addEventListener('pagehide', function (ev) {
+      if (ev && ev.persisted) return;
+      Son.fermer();
+      // ⚠️ `sendBeacon`, pas `fetch` : une requete ordinaire lancee pendant que
+      // la page s'en va se fait couper — sur telephone, changer d'application
+      // EST la facon normale de quitter le jeu.
+      Compte.partir();
+    });
     d.addEventListener('pointerdown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     d.addEventListener('keydown', function () { Son.reveiller(); Hud.majAvisSon(); }, { passive: true });
     // On sonde tout de suite : le contexte naît « suspended » si la page n'a
@@ -872,6 +939,18 @@ const Jeu = (function () {
       // Le bouton JOUER DANS LE CASQUE : seulement une fois la ville chargee, et
       // seulement si le navigateur ouvre une session immersive.
       Casque.init(d, w, w.navigator);
+      // LE COMPTE (M14) : l'ouverture part ICI, une fois la ville batie — elle ne
+      // retarde pas le chargement d'une milliseconde, et sa reponse arrive
+      // pendant qu'on lit l'ecran titre. ⚠️ Rien n'attend apres elle : serveur
+      // eteint, wifi coupe, base tombee, on joue pareil.
+      Compte.init(w, racine);
+      Compte.surChangement(function (vue, recue) {
+        // Une partie qui DESCEND du compte remplace celle qu'on a en memoire.
+        // ⚠️ C'est `Compte.poser` qui refuse d'ecrire quoi que ce soit sous les
+        // pieds de quelqu'un qui joue — une garde de plus ici ne serait jamais
+        // exercee, donc jamais jugee, et elle mentirait le jour ou l'autre tombe.
+        if (recue && recue === Sauvegarde.emplacement()) B.partie = chargerPartie(recue);
+      });
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -901,7 +980,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,

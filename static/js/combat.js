@@ -22,6 +22,22 @@ const Combat = (function () {
   const COUP_FORT_DEGATS = 1.8;
   const ASSIST_DEGRES = 26, ASSIST_PORTEE = 220;
   const ROULADE_IMAGES = 16, ROULADE_COUT = 25, ROULADE_VITESSE = 3.4;
+  //: Le verrouillage de cible (17 sept. 2026, demande de Martin : « on rate
+  //: trop souvent un ennemi tout proche »). Un ennemi colle au joueur peut
+  //: quand meme tomber hors du cone d'attaque si `e.angle` n'a pas ete
+  //: rafraichi depuis le dernier pas (`regarder`, `entites.js`) — s'arreter
+  //: pour cogner suffit a le manquer. VERROUILLER force l'angle sur une cible
+  //: choisie, image apres image, qu'on bouge ou non.
+  //:
+  //: Un seul bouton, comme la roue d'armes (voir plus bas) :
+  //: - une TAPE verrouille l'ennemi le plus proche, ou — deja verrouille —
+  //:   passe au suivant (le plus proche APRES celui-la, dans l'ordre des
+  //:   distances, en boucle).
+  //: - TENIR au-dela de `TENIR_IMAGES` deverrouille.
+  //: - Le verrouillage se lache aussi tout seul : cible morte, hors de
+  //:   `VERROU_PORTEE`, ou plus de ligne de vue.
+  const VERROU_PORTEE = 260;
+  let verrouTenu = 0;
 
   //: Le selecteur d'arme. ⚠️ Le catalogue compte TREIZE armes, et jusqu'au
   //: 16 sept. 2026 un seul bouton les parcourait d'un cran, dans un seul
@@ -147,6 +163,14 @@ const Combat = (function () {
   function arcDeMelee(e, arme) {
     const portee = arme.portee + 6;
     const demi = arme.arc / 2 * (e.fort ? 1.25 : 1);
+    // ⚠️ A BOUT PORTANT, L'ANGLE VIENT DU DERNIER PAS, PAS DE LA CIBLE :
+    // `e.angle` n'est ecrit que quand on bouge (`regarder`, appele depuis
+    // `majJoueur`). S'arreter pour cogner un ennemi qui a devie de quelques
+    // pixels suffisait a le manquer, meme colle contre lui. Le meme
+    // rattrapage que `tirer` (`viseeAssistee`), mais borne a la portee de
+    // l'arme pour ne pas accrocher un passant plus loin, mieux aligne, que
+    // celui qu'on a sous le nez.
+    const angle = e === B.joueur ? viseeAssistee(e, e.angle, portee) : e.angle;
     const cibles = Entites.autour(e.x, e.y, portee + 8, function (c) {
       return c !== e && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
     });
@@ -159,7 +183,7 @@ const Combat = (function () {
       // qui regardait, et c'est le meme test qui l'en protege.
       if (e.type === 'pieton' && c.type === 'pieton'
           && !(e.gang && c.gang && e.gang !== c.gang)) continue;
-      const ecart = Math.abs(ecartAngle(e.angle, angleVers(e.x, e.y, c.x, c.y)));
+      const ecart = Math.abs(ecartAngle(angle, angleVers(e.x, e.y, c.x, c.y)));
       if (ecart > demi) continue;
       if (!Monde.ligneLibre(e.x, e.y, c.x, c.y)) continue;
       e.touches.push(c.id);
@@ -195,12 +219,57 @@ const Combat = (function () {
     if (sac.usure >= arme.usures) perdreArme(B.joueur, arme.slug);
   }
 
+  // --- Verrouillage -----------------------------------------------------------------
+
+  /** Les ennemis a portee de verrouillage, du plus proche au plus loin, avec
+      ligne de vue — le meme bassin que `viseeAssistee`, mais TOUS, pas
+      seulement celui le mieux aligne. */
+  function ciblesVerrouillables(e) {
+    return Entites.pietonsAutour(e.x, e.y, VERROU_PORTEE)
+      .filter(function (c) { return c !== e && Monde.ligneLibre(e.x, e.y, c.x, c.y); })
+      .sort(function (a, b) { return dist2(e.x, e.y, a.x, a.y) - dist2(e.x, e.y, b.x, b.y); });
+  }
+
+  //: `verrouDeclenche` : ce TENIR a deja fait son geste (deverrouille) —
+  //: sans lui, un bouton garde au-dela de `TENIR_IMAGES` reprenait a 0 et
+  //: remontait, et le RELACHEMENT tombait en pleine remontee : il se relisait
+  //: comme une TAPE et re-verrouillait aussitot ce qu'on venait de lacher.
+  let verrouDeclenche = false;
+
+  /** VERROUILLER : tape = verrouille/change de cible, tenir = deverrouille.
+      Tant qu'une cible tient, `e.angle` pointe dessus a chaque image — c'est
+      ce qui rend `arcDeMelee` et `viseeAssistee` fiables a bout portant, sans
+      qu'ils aient eux-memes rien a savoir du verrouillage. */
+  function majCible(e) {
+    if (e.cible && (!e.cible.vivant || dist2(e.x, e.y, e.cible.x, e.cible.y) > VERROU_PORTEE * VERROU_PORTEE
+        || !Monde.ligneLibre(e.x, e.y, e.cible.x, e.cible.y))) {
+      e.cible = null;
+    }
+    if (Entree.neuf('verrouiller')) { verrouTenu = 1; verrouDeclenche = false; }
+    else if (Entree.bas('verrouiller') && verrouTenu > 0) verrouTenu++;
+    if (Entree.bas('verrouiller')) {
+      if (!verrouDeclenche && verrouTenu > TENIR_IMAGES) { e.cible = null; verrouDeclenche = true; }
+    } else {
+      if (verrouTenu > 0 && !verrouDeclenche) {
+        // Relache avant TENIR_IMAGES, et pas deja deverrouille : une TAPE.
+        const cibles = ciblesVerrouillables(e);
+        if (cibles.length) e.cible = cibles[(cibles.indexOf(e.cible) + 1) % cibles.length];
+      }
+      verrouTenu = 0;
+      verrouDeclenche = false;
+    }
+    if (e.cible) Entites.regarder(e, e.cible.x - e.x, e.cible.y - e.y);
+  }
+
   // --- Tirer ----------------------------------------------------------------------
 
-  /** L'angle corrige vers l'ennemi le plus proche dans le cone de visee. */
-  function viseeAssistee(e, angle) {
+  /** L'angle corrige vers l'ennemi le plus proche dans le cone de visee.
+      `rayon` borne la recherche (la mêlée passe sa portée, courte : sans
+      ça un passant loin mais mieux aligné volerait l'assistance à celui
+      qu'on a sous le nez). */
+  function viseeAssistee(e, angle, rayon) {
     let meilleur = angle, ecartMin = ASSIST_DEGRES * Math.PI / 180;
-    for (const c of Entites.pietonsAutour(e.x, e.y, ASSIST_PORTEE)) {
+    for (const c of Entites.pietonsAutour(e.x, e.y, rayon || ASSIST_PORTEE)) {
       if (c === e) continue;
       const vers = angleVers(e.x, e.y, c.x, c.y);
       const ecart = Math.abs(ecartAngle(angle, vers));
@@ -227,7 +296,7 @@ const Combat = (function () {
       const reste = munitions(arme.slug);
       // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
       // que le bouton etait casse, pas le chargeur.
-      if (reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
+      if (!B.debugMunitions && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
     e.etat = 'attaque';
     e.arc = arme;
@@ -236,15 +305,21 @@ const Combat = (function () {
     e.touches = [];
     // ⚠️ APRES UN COUP DE FEU, LA RUE NE REPREND PAS SON MURMURE : elle revient
     // en CRIS, puis se calme. Une foule qui murmure pareil avant et apres un
-    // coup de feu n'est pas une foule, c'est un bruit de fond.
-    Son.Rumeur.crier();
-    const angle = joueur ? viseeAssistee(e, e.angle) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
+    // coup de feu n'est pas une foule, c'est un bruit de fond. Le bouchon de
+    // foire, lui, ne fait pas lever la tete : la fetes reste une fete.
+    if (!arme.foire) Son.Rumeur.crier();
+    // ⚠️ **PAS DE VISÉE ASSISTÉE POUR LE BOUCHON DE FOIRE** : dans une allée
+    // pleine de monde, l'assistance détournerait chaque tir vers le passant le
+    // mieux aligné — des gens immunisés, des cibles qui restent debout, et une
+    // galerie injouable. On vise SA cible, là où on regarde.
+    const angle = joueur ? (arme.foire ? e.angle : viseeAssistee(e, e.angle)) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
     const dispersion = dispersionDe(e, arme);
     for (let i = 0; i < (arme.plombs || 1); i++) {
       const devie = angle + (B.rng() - 0.5) * dispersion * 2;
       Entites.creer('projectile', e.x + Math.cos(angle) * 8, e.y + Math.sin(angle) * 8 - 6, {
         r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
         saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
+        foire: !!arme.foire,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -258,14 +333,21 @@ const Combat = (function () {
     }
     if (joueur) {
       const sac = B.partie.armes[arme.slug];
-      if (sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
+      if (!B.debugMunitions && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
       B.cam.secousse = 0.6;
       Entree.vibrer(25);
-      Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
-      Entites.alerter(e.x, e.y, e, 3);
-      // ⚠️ Un coup de feu s'entend : hors du cone, sans ligne de vue. Tirer
-      // de loin t'evite d'etre vu, jamais d'etre cherche.
-      if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
+      // ⚠️ **LA CARABINE À BOUCHON DE LA FOIRE N'EST PAS UNE ARME** : pas de
+      // crime signalé, personne ne fuit, aucun agent n'entend le petit « pop ».
+      // C'est un jeu d'adresse devant un comptoir, pas un stand de tir en ville
+      // — et sans cette porte, jouer à la galerie vidait l'allée et nous
+      // mettait la police au cul pour une partie de foire.
+      if (!arme.foire) {
+        Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
+        Entites.alerter(e.x, e.y, e, 3);
+        // ⚠️ Un coup de feu s'entend : hors du cone, sans ligne de vue. Tirer
+        // de loin t'evite d'etre vu, jamais d'etre cherche.
+        if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
+      }
     }
     // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
     // quand elle CASSE (`allumer`), pas quand elle part.
@@ -386,6 +468,11 @@ const Combat = (function () {
     let arrete = false;
     for (const d of Entites.decorAutour(p.x, p.y, pas + 24)) {
       if (d.brise) continue;
+      // ⚠️ **LE BOUCHON DE FOIRE NE CASSE QUE LES CIBLES** de la galerie
+      // (`cible_foire`) : il traverse le reste de l'allée sans rien démonter.
+      // Crever un kiosque ou une table de pique-nique depuis le stand serait
+      // un sabotage, pas un jeu d'adresse.
+      if (p.foire && d.decor !== 'cible_foire') continue;
       const fiche = DECORS[d.decor] || {};
       if (!fiche.pv && !fiche.arrete) continue;
       if (distanceAuTrajet(p, d.x, d.y - HAUTEUR_CANON) > (d.r || 4) + MARGE_DECOR) continue;
@@ -420,6 +507,11 @@ const Combat = (function () {
         continue;
       }
       const touche = Entites.autour(p.x, p.y, 7, function (c) {
+        // ⚠️ **LE BOUCHON DE FOIRE NE BLESSE PERSONNE** : il ne vise que les
+        // cibles de la galerie, jamais un passant, un donneur, une mascotte. Un
+        // joueur qui arrose l'allée ne doit pas transformer la fête en
+        // carnage — il rate, c'est tout.
+        if (p.foire) return false;
         return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
       })[0];
       if (touche && (!p.cloche || p.z < 14)) {
@@ -463,8 +555,8 @@ const Combat = (function () {
     if (!arme || arme.type !== 'jet' || e.phase !== 'actif') return;
     const sac = B.partie.armes[arme.slug];
     if (e === B.joueur) {
-      if (!sac || sac.mun <= 0) { e.etat = 'flane'; e.phase = null; return; }
-      sac.mun--;
+      if (!B.debugMunitions && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
+      if (!B.debugMunitions) sac.mun--;
     }
     for (let i = 0; i < 3; i++) {
       const a = e.angle + (B.rng() - 0.5) * 0.7;
@@ -481,6 +573,10 @@ const Combat = (function () {
       c.minuterie = 180;
       if (e.t % 20 === 0) Entites.blesser(c, arme.degats, e, { assomme: true });
     }
+    // Le feu de bâtiment (P4) : le jet d'extincteur attire la flamme. ⚠️ C'est
+    // `Incendies` qui décide de la règle — ici, on ne lui donne que la main qui
+    // tient la gâchette.
+    if (typeof Incendies !== 'undefined') Incendies.majJet(e);
   }
 
   // --- Ramasser, faire les poches -------------------------------------------------
@@ -802,6 +898,12 @@ const Combat = (function () {
 
   function maj() {
     const j = B.joueur;
+    // ⚠️ AVANT LA BOUCLE D'ATTAQUE, plus bas : `arcDeMelee` lit `e.angle`
+    // pendant la phase active, et c'est cette ligne qui le tient pointe sur
+    // la cible verrouillee, image apres image, meme si le joueur ne bouge
+    // pas. Un `j` qui n'existe pas encore (chargement) ne verrouille rien.
+    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !B.roue) majCible(j);
+    else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
     majOtage();
@@ -910,6 +1012,7 @@ const Combat = (function () {
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
     frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
+    majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
   };
 })();

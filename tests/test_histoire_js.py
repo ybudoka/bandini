@@ -287,6 +287,47 @@ def test_le_sergent_ami_et_le_faubourg_libere(banc):
     assert r["faites"] == ["m1", "m2", "m3", "m4", "m5"]
 
 
+def test_le_tour_du_proprietaire_pointe_chaque_contact(banc, paquet):
+    """⚠️ m6, « Le tour du propriétaire » : quatre objectifs `parler` à quatre
+    personnes. `Histoire.cible()` n'avait AUCUN cas `parler` — ni flèche à
+    l'écran, ni losange sur la mini-carte, ni « OÙ » dans le carnet : on
+    cherchait Ti-Paul, Lulu, Raymonde et Ovila à l'aveugle. Le GPS doit pointer
+    la PERSONNE quand elle est dehors (Ti-Paul au dépanneur, Raymonde à
+    l'usine), et sa PORTE quand elle est dedans (Lulu à la cantine, Ovila au
+    phare)."""
+    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.Histoire.commencer('m6');
+        function vue(etape) {
+            L.B.partie.mission.etape = etape;
+            const g = L.Histoire.cible();
+            const perso = L.B.defs.personnages.find(function (q) { return q.slug === L.Histoire.cibleDuParler(L.Histoire.courante().objectifs[etape]); });
+            return { nom: g && g.nom, x: g && g.x, y: g && g.y,
+                     surLePersonnage: g && perso ? (function () {
+                        const e = L.Histoire.donneur(perso.slug);
+                        return e && Math.hypot(g.x - e.x, g.y - e.y) < 4;
+                     })() : null,
+                     surLaPorte: g && perso ? (function () {
+                        const l = L.Histoire.lieuDuPersonnage(perso.slug);
+                        return l && Math.hypot(g.x - l.x, g.y - l.y) < 4;
+                     })() : null };
+        }
+        return { tiPaul: vue(0), lulu: vue(1), raymonde: vue(2), ovila: vue(3) };
+    }""")
+    # Les quatre objectifs sont bien des `parler`, dans cet ordre.
+    assert [o["cible"] for o in m6["objectifs"]] == ["tipaul", "lulu", "raymonde", "ovila"]
+    assert r["tiPaul"]["nom"] == "Ti-Paul Gagnon", "le GPS nomme Ti-Paul, pas un lieu"
+    assert r["tiPaul"]["surLePersonnage"] is True, "Ti-Paul est dehors : on pointe SA personne"
+    assert r["lulu"]["nom"] == "Lucienne « Lulu » Pelletier", "le GPS nomme Lulu"
+    assert r["lulu"]["surLaPorte"] is True, "Lulu est dedans : on pointe sa porte (la cantine)"
+    assert r["raymonde"]["nom"] == "Raymonde Fortin", "le GPS nomme Raymonde"
+    assert r["raymonde"]["surLePersonnage"] is True, "Raymonde est dehors : on pointe SA personne"
+    assert r["ovila"]["nom"] == "Ovila Saint-Onge", "le GPS nomme Ovila"
+    assert r["ovila"]["surLaPorte"] is True, "Ovila est dedans : on pointe sa porte (le phare)"
+
+
 def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
@@ -396,7 +437,7 @@ def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paque
         const avant = L.Histoire.parler('josee');
         const menuAvant = L.B.menu && L.B.menu.titre;
         L.B.dialogue = null;
-        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        ['m1', 'm2', 'm3', 'm4', 'm5', 'm6'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
         L.B.partie.argent = 1000;
         L.Histoire.parler('josee');
         const menu = L.B.menu;
@@ -412,6 +453,25 @@ def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paque
     assert r["avant"] is True and r["menuAvant"] is None, "avant M5, Josee ne vend rien"
     assert r["menu"] == "MARCHÉ NOIR" and r["prix"] == f"{prix} $"
     assert r["argent"] == 1000 - prix and r["arme"] is True
+
+
+def test_la_manchette_reste_assez_longtemps_pour_le_texte_lu(banc):
+    """⚠️ La boîte du Clairon s'éteignait à 420 images FIXES, alors que les
+    leçons du narrateur (régénérées le 18 sept., avec pauses) durent jusqu'à
+    9,6 s. Elle suit maintenant la longueur du texte LU, comme le cinéma
+    (90 + 3 par caractère) : la plus longue des voix ne doit pas déborder."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        // La leçon la plus longue du catalogue : on l'impose comme manchette.
+        L.B.partie.manchetteForcee = 'lecon_klaxon';
+        L.Missions.nouveauJour();
+        const d = L.B.dialogue;
+        return { duree: d && d.duree, lignes: d && d.lignes };
+    }""")
+    assert r["lignes"] and r["lignes"][0] == "LE SAVIEZ-VOUS?", "la leçon n'est pas la manchette"
+    # La voix de `lecon_klaxon` dure 9,61 s = 577 images ; la boîte doit tenir
+    # au moins le temps de LA LIRE (bien au-delà des 420 images d'avant).
+    assert r["duree"] >= 540, f"la boîte ne tient pas la leçon : {r['duree']} images"
 
 
 def test_la_carte_de_la_ville_s_ouvre_et_se_ferme(banc):
@@ -689,6 +749,11 @@ def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
     repliques affichees."""
     premieres = {}
     for m in paquet["missions"]:
+        # ⚠️ Marco donne M3 ET m97 : `disponibleDe` sert la PREMIERE dans l'ordre
+        # du catalogue dont les prérequis sont faits. On garde donc la première
+        # occurrence, pas la dernière.
+        if m["donneur"] in premieres:
+            continue
         n = len(m["dialogue"].get("appel", []))
         premieres[m["donneur"]] = f"{m['dialogue']['intro'][0]['qui']}-{m['slug']}-{n + 1}"
     r = banc("""function (L, o) {

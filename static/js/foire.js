@@ -247,6 +247,46 @@ const Foire = (function () {
 
   function sousLaMain(j) { return trainSousLaMain(j) || montagneSousLaMain(j) || roueSousLaMain(j); }
 
+  // --- Les trois jeux d'adresse ---------------------------------------------------------
+  //
+  // ⚠️ **UN JEU D'ADRESSE EST UN DÉFI, PAS UN MOTEUR** (la fiche du plan l'écrit
+  // en majuscules) : ce qui suit ne sert qu'à répondre « quel comptoir est sous
+  // la main » et « où sont les cibles ». La règle du jeu, le compte, le chrono
+  // et la prime vivent dans `missions.DEFIS` et `Histoire`, avec les trois défis
+  // de char de la v1 — rien de neuf n'entre dans le moteur pour eux.
+
+  //: Un comptoir de jeu se lit d'aussi près qu'un étal d'ambulant : on est
+  //: DEVANT, et la baraque nous arrête déjà (`solide`).
+  const PORTEE_JEU = 30;
+
+  function jeux() { return (Monde.carte && Monde.carte.def && Monde.carte.def.jeux_de_foire) || []; }
+
+  /** Le décor d'un jeu, tel qu'il vit dans le monde (il peut être CASSÉ). */
+  function kiosqueDuJeu(slug) {
+    const j = jeux().find(function (q) { return q.slug === slug; });
+    if (!j) return null;
+    return Entites.decorAutour(j.x * TT + 8, j.y * TT + 15, 10).find(function (e) {
+      return e.decor === slug;
+    }) || null;
+  }
+
+  /** Les trois cibles de la galerie de tir, cassées ou debout. */
+  function cibles() {
+    return B.entites.filter(function (e) { return e.type === 'decor' && e.decor === 'cible_foire'; });
+  }
+
+  /** Le comptoir de jeu sous la main du joueur : son slug, ou null. ⚠️ Le plus
+      proche, et à pied seulement — au volant, ACTION fait descendre. */
+  function jeuSousLaMain(j) {
+    if (!j || j.dansVehicule || j.manege || B.interieur) return null;
+    let meilleur = null, dMin = PORTEE_JEU;
+    for (const q of jeux()) {
+      const d = Math.hypot(q.x * TT + 8 - j.x, q.y * TT + 15 - j.y);
+      if (d <= dMin) { dMin = d; meilleur = q; }
+    }
+    return meilleur ? meilleur.slug : null;
+  }
+
   function inviteMonter(j) {
     const m = sousLaMain(j);
     return m ? TOURS[m.quoi].invite : null;
@@ -468,6 +508,46 @@ const Foire = (function () {
     // ⚠️ APRÈS les machines : le joueur assis prend la place de son banc de CETTE
     // image, et la caméra (`Monde.majCamera`, plus loin dans la boucle) le suit.
     majPassager();
+    laFoireSEntend();
+  }
+
+  // --- Ce qu'on entend d'une foire ------------------------------------------------------
+  //
+  // ⚠️ **UNE FOIRE MUETTE EST UNE PEINTURE** — la fiche du plan l'écrit en
+  // majuscules, et c'est le seul morceau de cette vague qui s'entende de
+  // l'extérieur de la palissade.
+
+  /** Le milieu de l'enceinte : la source des deux sons. */
+  function centre() {
+    const f = Monde.carte && Monde.carte.def && Monde.carte.def.foire;
+    return f ? { x: (f.x + f.l / 2) * TT, y: (f.y + f.h / 2) * TT, f: f } : null;
+  }
+
+  /** L'orgue et les cris, DOSÉS À LA DISTANCE, une fois par image.
+
+      ⚠️ PAS une image sur quinze : le volume suit la distance, et un volume qui
+      ne se recalcule que quatre fois par seconde saute par marches quand on
+      marche vers la foire. C'est mot pour mot la raison qui sort la musique du
+      musicien de rue de `majSortes` (`entites.js`).
+
+      ⚠️ L'orgue passe par `Son.Rue` — « une musique qui sort de QUELQU'UN »,
+      avec ici une source FIXE. Il ne prend donc le rang de personne : il joue
+      par-dessus l'ambiance du district, et il se tasse tout seul sous une
+      poursuite. Les cris, eux, sont une boucle de bruitage, comme la rumeur
+      d'un chantier. */
+  function laFoireSEntend() {
+    const c = centre(), j = B.joueur;
+    if (!c || !j || typeof Son === 'undefined') return;
+    // ⚠️ Dedans, on n'entend pas la foire : une porte, c'est une porte.
+    if (B.interieur) { Son.SFX.rumeur_foire(0); return; }
+    const d = Math.hypot(j.x - c.x, j.y - c.y);
+    const plein = c.f.orgue_plein_px || 150, portee = c.f.orgue_portee_px || 460;
+    if (d < portee) {
+      const pres = d <= plein ? 1 : 1 - (d - plein) / (portee - plein);
+      Son.Rue.demander(c.f.orgue || 'foire_orgue', pres * (c.f.orgue_volume === undefined ? 0.7 : c.f.orgue_volume));
+    }
+    const pc = c.f.cris_portee_px || 400;
+    Son.SFX.rumeur_foire(d >= pc ? 0 : (1 - d / pc) * (c.f.cris_volume === undefined ? 0.9 : c.f.cris_volume));
   }
 
   // --- Le dessin ----------------------------------------------------------------------
@@ -718,6 +798,7 @@ const Foire = (function () {
   return {
     demarrer, maj, bloquer, ajouterVisibles, wagons, pointDuTrain, pointDeMontagne,
     sousLaMain, inviteMonter, monter, descendre,
+    jeux, jeuSousLaMain, kiosqueDuJeu, cibles, centre, PORTEE_JEU,
     MACHINES: FOIRE_EN_VOLUME,
     get train() { return train; }, get montagne() { return mr; }, get roue() { return roue; }, attache,
   };

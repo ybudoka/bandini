@@ -1,9 +1,9 @@
 """Configuration de Bandini.
 
 La partie (argent, casier, planque, missions faites) vit dans le `localStorage`
-du navigateur, et c'est lui qui joue. Le serveur garde le tableau des scores
-(un fichier JSON) et, depuis M14, les comptes et leurs parties dans une base
-SQLite — les deux sous `DONNEES_DIR`. Un compte n'est qu'une synchronisation.
+du navigateur, et c'est lui qui joue. Le serveur garde, depuis M14, les comptes
+et leurs parties dans une base SQLite sous `DONNEES_DIR` — rien d'autre. Un
+compte n'est qu'une synchronisation.
 """
 
 from __future__ import annotations
@@ -131,12 +131,12 @@ class Config:
     # `.env.example` le met a false, et le serveur du salon refuserait de partir.
     PRODUCTION = APP_BASE_URL.startswith("https://")
 
-    # Ou vit scores.json. Relatif a la racine du projet si ce n'est pas absolu.
+    # Ou vit la base SQLite des comptes. Relatif a la racine du projet si ce n'est pas absolu.
     DONNEES_DIR = str((RACINE / os.getenv("DONNEES_DIR", "donnees")).resolve())
 
     SEND_FILE_MAX_AGE_DEFAULT = int(os.getenv("STATIC_MAX_AGE", "0"))
 
-    # Un score pese quelques dizaines d'octets, un appel de compte a peine plus. La
+    # Un appel de compte pese a peine plus que quelques dizaines d'octets. La
     # seule exception, une partie qui monte, releve sa borne dans sa route
     # (`comptes.PARTIE_MAX_OCTETS`).
     MAX_CONTENT_LENGTH = 16 * 1024

@@ -14,8 +14,17 @@ VOL = """
         r.chance = 1; r.repos_s = 0;
         L.graine(88);
         const j = L.B.joueur, TT = L.TT, d = o.ligneDroite();
+        // ⚠️ **ET LA RUE SE VIDE DE SES CHARS.** Le badaud se tient au bord d'une
+        // voie ; un char du trafic le FAUCHE, et un badaud mort ne dénonce
+        // personne (mesuré le 17 sept. 2026 : mort vers l'image 800, aucune
+        // chaleur au bout de 1 500). C'est la même leçon que le juge du pont : le
+        // trafic du hasard n'est pas ce qu'on juge ici.
+        L.B.defs.conduite.trafic.vehicules_max = 0;
         j.x = d.x; j.y = d.y - 3 * TT; L.Monde.centrerCamera(j.x, j.y);
-        for (const q of L.B.entites.slice()) if (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 400) L.Entites.retirer(q);
+        for (const q of L.B.entites.slice()) {
+            if (q === j || q.type === 'joueur') continue;
+            if (q.type === 'vehicule' || (q.type === 'pieton' && Math.hypot(q.x - j.x, q.y - j.y) < 400)) L.Entites.retirer(q);
+        }
         const voleur = o.poser('pickpocket', 0, 0);
         voleur.etat = 'flane'; voleur.argent = 0;
         const victime = o.poser('passant', 40, 0);
@@ -31,19 +40,30 @@ VOL = """
         let vole = -1;
         for (let i = 0; i < 900 && vole < 0; i++) {
             o.frame(1);
-            for (const q of L.B.entites.slice()) if (q.type === 'pieton' && q !== voleur && q !== victime && q !== badaud) L.Entites.retirer(q);
+            for (const q of L.B.entites.slice()) {
+                if (q === j || q.type === 'joueur' || q === voleur || q === victime || q === badaud) continue;
+                if (q.type === 'pieton' || q.type === 'vehicule') L.Entites.retirer(q);
+            }
             victime.face = 'droite';
             j.x = victime.x - ecart; j.y = victime.y; j.vx = 0; j.vy = 0;
             L.Monde.centrerCamera(victime.x, victime.y);
             if (voleur.voleT > 0) vole = i;
         }
         const meprise = L.B.crimes.find(function (c) { return c.autrui; }) || null;
-        const temoin = { etat: badaud.etat, dit: badaud.bulle ? badaud.bulle.texte : null, menace: badaud.menace === j };
+        // ⚠️ **IL PORTE TON CRIME — c'est ça, te désigner.** Le juge lisait
+        // `menace === joueur`, et ça ne tient qu'une image : dès qu'un agent est
+        // à portée, le témoin lâche sa menace et COURT LE DÉNONCER
+        // (`Police.maj`, « e.menace = null; e.vers = proche »). Qu'aucun agent ne
+        // passe par là tenait à la trame, et le 17 sept. 2026 elle a bougé. Ce
+        // qui ne bouge pas, c'est le crime qu'il a dans les mains : le tien.
+        const temoin = { etat: badaud.etat, dit: badaud.bulle ? badaud.bulle.texte : null,
+                         porte: !!meprise && badaud.crime === meprise };
         // La suite : la machine des temoins (il court, ou il telephone). ⚠️ On lit la
         // CHALEUR, pas les etoiles : un vol a la tire rapporte en vaut le tiers d'une.
         let chaleur = 0;
         for (let i = 0; i < 1500; i++) {
             o.frame(1);
+            for (const q of L.B.entites.slice()) if (q.type === 'vehicule') L.Entites.retirer(q);
             j.vx = 0; j.vy = 0;
             chaleur = Math.max(chaleur, L.B.recherche.chaleur + L.B.recherche.etoiles * 100);
         }
@@ -72,7 +92,7 @@ def test_tout_pres_un_temoin_te_confond_et_ca_se_lit(banc):
     }""")
     assert r["vole"], "le juge ne met aucun vol en scène"
     assert r["meprise"] is True, "tout près, personne ne t'a confondu"
-    assert r["temoin"]["dit"] == r["cri"] and r["temoin"]["menace"], r["temoin"]
+    assert r["temoin"]["dit"] == r["cri"] and r["temoin"]["porte"], r["temoin"]
     assert r["rapporte"] and r["chaleur"] > 0, f"le témoin n'a rien fait de sa méprise : {r}"
 
 

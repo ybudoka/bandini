@@ -178,20 +178,31 @@ EGALISATION: dict[str, str] = {
     "Alexandre - Authentic French Canadian": PASSE_HAUT_HOMMES + ",equalizer=f=110:t=o:w=1:g=-6",
 }
 
-#: Les balises permises. ⚠️ Une liste FERMEE : une balise que v3 ne comprend pas,
-#: il la lit a voix haute (« crochet, tristement »). On l'allonge quand on en
-#: essaie une nouvelle, pas en passant.
-BALISES = frozenset({
-    # le ton
+#: Les balises de TON — l'emotion proprement dite. ⚠️ Elles sont separees des
+#: balises de CORPS pour une regle : CHAQUE replique en porte au moins une. Un
+#: simple soupir (`[sighs]`) ou un rire (`[laughs]`) dit comment le corps parle,
+#: pas ce qu'on ressent ; une voix qui ne dit que ca sort plate a cote des
+#: autres. `test_interpretation.py` exige qu'aucun jeu ne s'ecrive sans ton.
+TONS = frozenset({
     "amused", "annoyed", "angry", "bitterly", "calm", "casually", "cheerful", "coldly",
     "concerned", "confident", "curious", "deadpan", "disappointed", "dramatic", "enthusiastic",
     "excited", "firmly", "gravely", "gruffly", "happy", "impressed", "knowingly",
     "matter-of-fact", "menacingly", "mischievously", "mysteriously", "nervously", "playfully",
     "quietly", "relieved", "sarcastic", "satisfied", "serious", "smugly", "softly", "somber",
     "surprised", "teasing", "tenderly", "warmly", "worried", "wryly",
-    # le corps
+})
+
+#: Les balises de CORPS — ce que fait le corps, par-dessus le ton : un soupir,
+#: un rire, un cri, un murmure. Elles n'expriment pas un sentiment a elles
+#: seules, elles le colorent.
+CORPS = frozenset({
     "groans", "laughs", "shouting", "sighs", "whispers",
 })
+
+#: Les balises permises. ⚠️ Une liste FERMEE : une balise que v3 ne comprend pas,
+#: il la lit a voix haute (« crochet, tristement »). On l'allonge quand on en
+#: essaie une nouvelle, pas en passant.
+BALISES = TONS | CORPS
 
 #: slug -> texte joue. ⚠️ Toutes les voix y sont (`test_interpretation.py`) :
 #: une replique ajoutee sans son jeu sortirait plate a la prochaine generation.
@@ -208,7 +219,7 @@ JEU: dict[str, str] = {
     # --- Le crieur : il vend, il ne murmure jamais.
     "approchez_c": "[excited] Approchez, approchez… venez voir!",
     "special_c": "[enthusiastic] Le spécial du jour… c'est icitte!",
-    "moitie_prix_c": "[shouting] Moitié prix, moitié prix — aujourd'hui!",
+    "moitie_prix_c": "[excited] [shouting] Moitié prix, moitié prix — aujourd'hui!",
     # --- La fille de la Brume : elle n'annonce pas, elle accoste. La pause est
     # dans l'invitation, jamais dans le prix.
     "compagnie_b": "[softly] Tu cherches de la compagnie… mon beau?",
@@ -238,9 +249,9 @@ JEU: dict[str, str] = {
     "ti_guy-m1-2": "[quietly] Rocco est parti se faire oublier. Le garage… c'est toi qui le tiens, astheure.",
     "ti_guy-m1-3": "[mischievously] Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer.",
     "ti_guy-m1-4": "[serious] Ramène-le au garage sans le bosser… pis sans que personne te voie.",
-    "ti_guy-m1-5": "[laughs] Pas une bosse! T'es ben le cousin de Rocco.",
+    "ti_guy-m1-5": "[excited] Pas une bosse! [laughs] T'es ben le cousin de Rocco.",
     "ti_guy-m1-6": "[warmly] Tiens, la clé de la planque. Dors là… pis fais-toi pas pogner.",
-    "ti_guy-m1-7": "[sighs] Ouain… On va dire que c'était un essai. Reviens me voir.",
+    "ti_guy-m1-7": "[disappointed] Ouain… On va dire que c'était un essai. [sighs] Reviens me voir.",
     # Pendant (2e vague des scènes) : au combiné, pendant qu'on roule.
     "ti_guy-m1-8": "[amused] Beau char! Ramène-le au garage tranquillement, pis évite la police.",
     # --- M2, Madame Thibodeau : inquiete, puis en colere, puis tendre.
@@ -259,7 +270,7 @@ JEU: dict[str, str] = {
     "civil-m3-4": "[smugly] Roule, mon homme. Pis fais pas de folies… j'suis de la police.",
     "marco-m3-5": "[impressed] Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte.",
     "marco-m3-6": "[casually] Y mange là tous les midis. Sois poli… c'est un ami de la famille.",
-    "marco-m3-7": "[groans] Mon taxi… Bon. On efface, pis on recommence.",
+    "marco-m3-7": "[disappointed] Mon taxi… Bon. On efface… [groans] pis on recommence.",
     # --- M4, le sergent Bouchard : bourru, et il baisse la voix pour le sale.
     "bouchard-m4-1": "[gruffly] Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte… j'ai une job.",
     "bouchard-m4-2": "[quietly] Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers… pas propres.",
@@ -278,6 +289,23 @@ JEU: dict[str, str] = {
     "josee-m5-6": "[mysteriously] On va se reparler. Y a plus grand… que le Faubourg.",
     "josee-m5-7": "[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.",
     "josee-m5-8": "[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.",
+    # --- M6, Josee presente la ville : plus chaude qu'a M5, elle donne des noms.
+    "josee-m6-1": "[confident] Josée. Le Faubourg est à nous. Viens au bar… je te présente la ville.",
+    "josee-m6-2": "[matter-of-fact] Quatre coins, quatre personnes. Ti-Paul au dépanneur… ma sœur Lulu à la cantine.",
+    "josee-m6-3": "[matter-of-fact] Raymonde tient le syndicat à l'usine… pis Ovila garde le phare.",
+    "josee-m6-4": "[warmly] Va leur serrer la main… Dans cette ville, tout commence par là.",
+    "josee-m6-5": "[satisfied] Quatre poignées de main. [warmly] Le monde va t'appeler par ton nom… astheure.",
+    "josee-m6-6": "[mysteriously] Garde l'œil ouvert… Il se passe plus de choses que t'en penses.",
+    "josee-m6-7": "[disappointed] Tu reviendras… quand tu auras le temps de faire le tour.",
+    "josee-m6-8": "[knowingly] Le dépanneur d'abord. Ti-Paul en sait plus… qu'il en a l'air.",
+    # --- M97, Marco trahit : froid, amer, puis qui se rend a l'evidence.
+    "marco-m97-1": "[coldly] Marco. Viens au garage, cousin. On a à se parler… toi pis moi.",
+    "marco-m97-2": "[bitterly] Bouchard m'a montré ton dossier. T'as bâti un nom… sur mon dos.",
+    "marco-m97-3": "[menacingly] Pis il paie pour te voir tomber… Tiens, les voilà.",
+    "marco-m97-4": "[impressed] T'es plus dur que les chiens qu'il a lâchés. Garde le taxi… il est à toi.",
+    "marco-m97-5": "[somber] Moi, je disparais… La ville est à toi, cousin.",
+    "marco-m97-6": "[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.",
+    "marco-m97-7": "[worried] Cours, cousin… Ceux-là ne font pas de quartier.",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.
@@ -288,7 +316,7 @@ JEU: dict[str, str] = {
     "narrateur-journal-un_char_vole": "[serious] Un char volé au Faubourg. Le propriétaire l'avait laissé tourner. [deadpan] Il ne tourne plus.",
     "narrateur-journal-taxi_qui_ne_dort_pas": "[curious] Le taxi qui ne dort pas. Un chauffeur enchaîne les courses… les clients parlent de brouillard.",
     "narrateur-journal-faubourg_inquiet": "[concerned] Le Faubourg s'inquiète. Les commerçants demandent plus de patrouilles.",
-    "narrateur-journal-brume": "[sighs] Brume sur le bassin. Le traversier a pris du retard… rien à signaler.",
+    "narrateur-journal-brume": "[somber] Brume sur le bassin. Le traversier a pris du retard… [sighs] rien à signaler.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",
     "narrateur-journal-lecon_fourriere": "[matter-of-fact] Votre char a disparu? Mal garé, il est à la fourrière municipale. On peut l'y racheter… à un prix qui dépend de ce qu'il vaut.",

@@ -13,7 +13,7 @@ import json
 from app import carte
 
 #: Les points qui ne passent PAS par un menu : ils agissent tout de suite.
-SANS_MENU = ("sergent", "contact", "escalier", "fouiller", "rame")
+SANS_MENU = ("sergent", "contact", "escalier", "fouiller", "rame", "lulu", "ovila")
 
 #: ⚠️ Les comptoirs encore en chantier, et le jalon qui les doit. La liste est
 #: volontairement penible a garder : chaque entree doit encore exister dans une

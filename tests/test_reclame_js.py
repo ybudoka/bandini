@@ -115,6 +115,15 @@ def test_le_coupon_rabat_le_prix_du_kiosque_une_fois(banc, paquet):
     res = banc("""function (L, o) {
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ **UN SEUL ÉTAL SOUS LA MAIN.** L'invite ACTION nomme le plus proche,
+        // et la ville pose ses ambulants où elle veut : le 17 sept. 2026, la trame
+        // a bougé et une roulotte à café s'est installée au terminus PUIS à côté
+        // du kiosque à hot-dogs — c'est elle que le juge lisait, deux fois. On ne
+        // garde que le kiosque dont ce juge parle.
+        for (const q of L.B.entites.slice()) {
+            if (q.type === 'ambulant' && q.slug !== 'hotdog') L.Entites.retirer(q);
+        }
+        L.B.defs.ambulants = (L.B.defs.ambulants || []).filter(function (a) { return a.slug === 'hotdog'; });
         const c = o.poser('homme_sandwich', 14, 0);
         c.etat = 'boniment'; c.minuterie = 500; c.kiosque = 'hotdog'; c.boniment = 'HOT-DOG MOITIÉ PRIX';
         L.Entites.indexer();

@@ -4,6 +4,13 @@ Document de reprise : à lire en début de session. Le plan ci-dessous a été
 approuvé par Martin le 12 septembre 2026. Mettre à jour la section « État des
 jalons » à chaque jalon livré.
 
+⚠️ **`docs/carte.md` est l'inventaire de la carte** (districts, bâtiments,
+véhicules, personnages, gangs, piétons, barrières). Il reflète `app/carte.py`
+et doit être **mis à jour à chaque changement de la ville** — un nouveau
+bâtiment, un district, un gang, un véhicule ou une sorte de piéton. La carte
+se génère depuis le code : c'est le code qui fait foi, et ce document ne doit
+pas prendre de retard dessus.
+
 ## État des jalons
 
 Les lignes **livrées** sont dans l'ordre où elles l'ont été ; celles **à faire** sont dans
@@ -138,12 +145,12 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; la 2e : le jeu se synchronise) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; **la 2e — le jeu se synchronise — est en cours**) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
 | L'eau basse : le premier pas ne noie pas | ✅ **livré** | 16 sept. 2026 | **P2** | **correctif** | [notes](#leau-basse--le-premier-pas-ne-noie-pas) |
-| Le bord de l'eau et la foire | ⬜ **en cours** (3 vagues livrées : la grève se meuble ; les enfants jouent ; l'eau porte quelque chose — la 4e, la foire de La Pointe, est refaite : restent les trois défis et l'audio) | 16 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
+| Le bord de l'eau et la foire | ✅ **livré** (cinq vagues : la grève se meuble ; les enfants jouent ; l'eau porte quelque chose ; la foire de La Pointe ; les trois jeux d'adresse et l'audio) | 17 sept. 2026 | **P4** | ajout | [notes](#le-bord-de-leau-et-la-foire) |
 | Plus de champs : des terrains vagues et des parcs | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#plus-de-champs--des-terrains-vagues-et-des-parcs) |
 | La roue d'armes | ✅ **livré** | 16 sept. 2026 | **P2** | ajout | [notes](#la-roue-darmes) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [notes](#la-ligne-dhistoire--une-ouverture-et-un-générique) |
@@ -205,15 +212,15 @@ ne bougent pas quand l'ordre de travail change.
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
-| Quatre activités que le jeu n'a pas | ⬜ **en cours** (1 des 4 livrée : les paliers de boulot ; restent la patrouille, le pompier volontaire, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
+| Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
 | Le poste a son stationnement, le garage sa vraie porte | ✅ **livré** | 17 sept. 2026 | **P2** | ajout | [notes](#le-poste-a-son-stationnement-le-garage-sa-vraie-porte) |
 | M4 : l'auto-patrouille attend au poste, et Ti-Guy suit derrière | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m4--lauto-patrouille-attend-au-poste-et-ti-guy-suit-derrière) |
-| M1 : le char dort dans la ruelle avant qu'on l'y montre | ⬜ **en cours** | 17 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
+| M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 18 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
-| La Pointe s'éloigne : le pont s'allonge | ⬜ **en cours** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
+| La Pointe s'éloigne : le pont s'allonge | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
 | M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
@@ -553,6 +560,7 @@ générales :
 | m3 | Marco `donner` les clés ; `camera` sur le taxi | le client (existe) | Marco fait le tour du taxi, `montrer` vers le casse-croûte ; `coupe` sur Bouchard à son dîner — la fin passe la main |
 | m4 | Bouchard, dedans : `coupe` sur le poste (un lieu : l'auto-patrouille est le deuxième objectif) | quand Ti-Guy démarre derrière toi, au combiné | `coupe` au casse-croûte : Bouchard au `telephone`, ses deux répliques au combiné |
 | m5 | Josée, dedans : `coupe` sur les trois coins des Cravates, un par un | quand le chef sort, au combiné | `coupe` au Brouillard : Josée devant sa porte, l'enseigne est à toi |
+| m50 | Le Cargo de Minuit | Marco | Aller au cargo des quais, parler au garde, rattraper le docker, ramener le colis |
 
 **Ce que ça coûte :**
 
@@ -619,7 +627,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `economie.py` | `ARGENT_DEPART`, `amende(etoiles, casier)` = `min(argent, base[★] × (1 + 0,5 × casier))`, pots-de-vin `40 × ★ × (1 + 0,5 × casier)`, hôpital `clamp(10 %, 30, 500)`, propriétés, `FORTUNE_MAX`, ce que la bouffe rend (`*_pv` et `*_souffle`) et `CAFE` (durée + dépense du sprint) | jamais négatif, monotone, plafonné, retour sur investissement 10–60 min, coordonnées sur une porte, le café n'achète que de la **durée** et dure plus qu'un plein de souffle |
 | `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) | contigus, monotones, palier 0 sans réponse |
 | `carte.py` | **plan compact** du district (grille de blocs 8×6 : `h` habitations, `c` commerces, `g` gang, `p` parc, `o` place, `q` quai, `~` eau, majuscules = bâtiment spécial garanti, `<` et `^` = bloc **avalé** par son voisin) + `COLONNES`/`RANGEES`/`RUES_V`/`RUES_H` (aucune égale à sa voisine) ; `generer(plan, graine)` produit tuiles (`sol`, `voie` = champ de direction + lignes d'arrêt), intersections (avec leurs bras), portes, lampes, décor, zones, apparitions ; intérieurs en ASCII. **Trois sources d'irrégularité** : la trame, les superblocs (une rue qui n'existe pas → des T), et le découpage BSP en parcelles inégales (bâtiments en U ou en L, dents creuses, terrains vagues, stationnements). Un **stationnement est dessiné**, pas rayé au hasard : des rangées de cases de 1 × 2 tuiles (le gabarit exact de l'auto, glyphes `^ v < >` = où pointe le **nez**), des allées de manœuvre — toute rangée en touche une —, des rangées **dos à dos** dès qu'il y a douze tuiles de creux, des îlots de béton (`I`) et un lampadaire au bout des rangées. Un **filet** bouche les poches injoignables au lieu de livrer un îlot muré. Deux **couches peintes** par-dessus, qui ne touchent à aucune solidité : les **devantures** (bandeau, nom, vitrines, pancarte) et les **résidences** (étages de fenêtres, balcon, escalier de fer) — `_a_quoi_sert()` décide, par bâtiment, commerce ou logement. Les **intérieurs sont dessinés à la main** (`_piece`, un plan par pièce, l'espace = le plancher, meubles en glyphes) et **jugés à l'import** : une porte, un plancher d'un seul tenant, des points atteignables | rectangulaire, glyphes connus, **connexité forte des voies** (BFS), un seul îlot marchable **sur cinq graines**, portes ⇔ intérieurs, aucun gabarit sur une rue **qui existe**, un superbloc avale bien sa rue, **toute rangée de stationnement touche une allée** et toute case fait deux tuiles de creux, **juge d'asymétrie**, déterministe |
-| `missions.py` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues ; les **scènes**, en plans (`TYPES_PLANS`, `SCENE_OUVERTURE`, `erreurs_de_scene`, six `GESTES`) | prérequis sans cycle, cibles sur tuile marchable, références existantes |
+| `missions/` | 5 missions v1 + 3 défis : donneur, prérequis, objectifs typés (aller, monter, livrer, tuer, survivre, course, chrono, retourner), récompense, dialogues ; les **scènes**, en plans (`TYPES_PLANS`, `SCENE_OUVERTURE`, `erreurs_de_scene`, six `GESTES`) — **une mission par fichier** (`m1.py`…`m97.py`, chacun `MISSION = {…}`), le moteur, les personnages et les défis dans `__init__.py` | prérequis sans cycle, cibles sur tuile marchable, références existantes |
 | `pietons.py` | 8 archétypes (couleurs = échanges de palette, `courage`, `temoin`, bourse, arme), les gangs et leur territoire, `REACTIONS` (recul, KO, fuite, saignement, pickpocket) ; les **métiers** qui ne naissent pas au hasard (la Brume, le marchand, le commis, l'agent, l'**homme-sandwich** et ses heures) | couleurs valides, courage de 0 à 1, un gang a un territoire qui existe, aucun membre de gang au hasard dans la rue, un métier a ses heures |
 | `magasins.py` | inventaires armurerie / vêtements / garage ; les ambulants : ce qu'on y achète, les PV et le **souffle** rendus, l'`effet` qui dure (`EFFETS`), leurs `districts` (la cabane à fruits de mer ne quitte pas le port) et leur `reclame` ; `RECLAME` : l'homme-sandwich (portée, boniment, repos, coupon) ; `COMPTOIRS` : de quoi manger et boire par famille de commerce ; `DISTRIBUTRICES` : les trois sortes de machine, leurs articles au prix du comptoir et les familles de devanture devant lesquelles elles se posent (`sortes_devant`) | articles existants, tout ce qui se mange nourrit les jambes, un `effet` que le navigateur sait tenir, seul le café réveille, rien ne bat le hot-dog au dollar, un solliciteur n'est pas un mur |
 | `audio.py` | catalogue des sons : slug, **prompt ElevenLabs** (la recette reste à côté du son), durée, boucle, volume, variantes ; `exporter()` ne déclare que les fichiers **présents** | bornes ElevenLabs, aucun orphelin, poids < 600 Ko, chaque effet garde son repli synthétisé |
@@ -666,6 +674,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
+| 1b | `compte.js` | **le compte, côté jeu** (M14, 2e vague) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -729,12 +738,13 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
-docs/plan.md (ce document : la vision, les jalons, et cette carte)
+docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
-      vehicules.py armes.py economie.py recherche.py carte.py missions.py magasins.py
+      vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
       bd.py comptes.py
+app/missions/  __init__.py _commun.py et une mission par fichier (m1.py … m97.py) — le moteur, les personnages, les défis et les scènes vivent dans __init__.py, chaque mission dans son propre fichier
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
 static/img/  favicon.svg favicon.ico icone-180.png icone-192.png icone-512.png logo.svg (dessinés par scripts/icones.py)
@@ -751,11 +761,11 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_reclame.py test_reclame_js.py test_kiosque_ferme_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
-        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_reseau_local.py
+        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py
+        test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
-          verifier_ce_qui_casse.py
+          verifier_ce_qui_casse.py verifier_carte_du_plan.py
           audio_elevenlabs.py musique_apercu.py icones.py
           git-hooks/post-commit
 deploy/  README.md deploy.sh installer.sh gunicorn.conf.py sauvegarder_bd.py
@@ -9111,8 +9121,53 @@ chose d'entrer », « plus compacte ».
   lampadaire planté ; une table de la cour à manger n'est pas du mobilier de plage. 15 juges
   (`test_foire.py`), dont un qui prouve que le détecteur de trou **voit** un trou (le trou
   d'origine a disparu avec le déplacement des tables : remettre le défaut ne suffisait plus
-  à rougir) ; 1837 tests. **Restent les trois défis** (galerie de tir, marteau de force,
-  pêche aux canards) et les quatre pistes audio.
+  à rougir) ; 1837 tests. **Restait les trois défis** (galerie de tir, marteau de force,
+  pêche aux canards) et les quatre pistes audio — livrés le 17 sept. par la 5e vague.
+
+✅ **5e vague livrée** (17 sept. 2026) — *les trois défis et l'audio*.
+
+- ⚠️ **Un jeu d'adresse est un DÉFI, pas un moteur.** La galerie de tir, le marteau de force
+  et la pêche aux canards tiennent sur les rails de `missions.DEFIS` (un lieu, un compte, un
+  chrono, une prime, un texte en majuscules) : trois fiches de plus, `a_pied` — on les joue
+  DEBOUT devant un comptoir, pas au volant. `ou: foire:<jeu>`, et aucun panneau ne se plante
+  : c'est le comptoir qu'on lit. La prime est petite (règle des paliers de boulot), et les
+  trois ensemble rapportent dix fois le billet d'entrée — au troisième, la **casquette de la
+  foire** (`magasins.TENUES`), rien d'autre ne la donne.
+  - La **galerie de tir** : les cibles sont des décors `cible_foire` avec des `pv`, « ce
+    qu'on mesure, c'est ce qui est TOMBÉ » — une balle, une bille, n'importe quoi qui les
+    crève. On recule pour tirer (rayon large), et le forain relève ses cibles avant qu'on
+    tire — une galerie jouée deux fois dans la journée ne doit pas devenir un défi impossible.
+  - Le **marteau de force** : marteler ACTION contre un chrono, aucune statistique neuve —
+    le compte est en coups, pas en muscles. `Son.SFX.maillet` (un coup mat sur un plateau de
+    bois) et `cloche` (le seul son du jeu qui dise « tu as gagné » avant le HUD).
+  - La **pêche aux canards** : on la GAGNE, on ne la VOLE pas (`vole_pas`) — un comptoir
+    défoncé met fin au jeu. Le canard ne s'accroche que quand il passe sous le crochet, et
+    c'est le DESSIN qui le dit (`canardAuCrochet` lit `Entites.poseDuDecor`, la même pose
+    que celle qui se peint) — un chrono inventé et une animation qui tourne de son côté, ce
+    serait un jeu d'adresse où l'adresse ne sert à rien.
+  - ⚠️ **La chaîne d'action affame ce qui suit** : `actionDeDefi` passe AVANT le reste,
+    sinon marteler devant le comptoir ouvrirait le menu du comptoir à chaque coup.
+- ⚠️ **Les quatre pistes sont générées et posées** (`audio.py`, `musique.py` + une séance
+  ElevenLabs) : les **vagues** (boucle dont le volume suit la distance à l'eau), les **cris
+  de la foire** (ce qu'on entend avant de voir la palissade), le **moteur de la coque** (un
+  hors-bord cogne et crachote, il ne roule pas au ralenti d'une auto), et **l'orgue du
+  manège** — une MUSIQUE qui sort d'un ENDROIT, le code du musicien de rue avec une source
+  fixe au milieu de l'allée, pas une ambiance de district de plus. Chaque boucle a son repli
+  synthétisé, exactement ce que fait un vrai maître d'œuvre sourd.
+
+- ⚠️ **Le district se tait dans la foire.** Mesuré : l'ambiance de La Pointe jouait
+  **dessous** l'orgue — deux musiques à la fois, alors que la fiche de l'orgue dit noir sur
+  blanc qu'il est « une musique qui sort d'un ENDROIT », PAR-DESSUS l'ambiance. `Chef.voulu`
+  coupe l'ambiance du district dans l'enceinte (`Monde.dansLaFoire`), **mais APRÈS** la
+  poursuite et la bagarre : se cacher sous un comptoir ne rend pas la ville sourde à la
+  police. Un juge le tient (`test_son_js.py`), à pied, recherché et au bord de la
+  palissade.
+- ⚠️ **Reste ouvert, mesuré et nommé** : à la lisière de la palissade, l'ambiance de La
+  Pointe revient **d'un coup** alors que l'orgue (460 px de portée) s'entend encore. C'est
+  voulu — dehors, c'est La Pointe — mais la bascule est plus sèche qu'aux frontières de
+  district, qui ont leur hystérésis (`hysteresis_px`). **Idée à reprendre** si Martin trouve
+  la couture trop brusque en sortant de la foire : la même hystérésis qu'à une frontière de
+  district, appliquée au bord de l'enceinte.
 
 ### Plus de champs : des terrains vagues et des parcs
 
@@ -11168,6 +11223,18 @@ casier et un char volé — et **pompier volontaire**), **la liste du quai** (qu
 demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent
 intouchables
 
+**Pompier volontaire — livré le 18 sept. 2026** (2e des 4 activités) : pas de caserne ni de
+camion à dessiner — un feu se déclare sur une façade (`app/incendies.py`, la règle et les
+candidats ; `static/js/incendies.js`, qui brûle), à l'empreinte de l'heure comme le bris
+d'aqueduc (jamais au dé du jeu) ; on arrive à pied ou en char, on l'éteint à l'extincteur (le
+jet attire la flamme, `combat.js` → `Incendies.majJet`), et la prime tombe — une fois, bornée
+sous ce que rapporte le boulot le plus riche. ⚠️ Jamais une cour de gang ni un lieu garanti ;
+un feu est CONTINU, pas un changement discret — sa fumée se voit de loin, et c'est par elle
+qu'on le trouve. ⚠️ Rien ne se sauvegarde : un feu éteint se re-déclare au rechargement, le
+prix de garder la ville déterministe. Juges : `tests/test_incendies.py` (la règle, la borne
+d'équilibre, les candidats) et `tests/test_incendies_js.py` (il se déclare à l'heure, il
+s'éteint au jet, il ne se re-déclare pas).
+
 ### Installable, et jouable hors ligne
 
 demande de Martin : « est-ce compliqué de faire du jeu une webapp installable ? », puis
@@ -11469,7 +11536,15 @@ s'en vont avec.
 demande de Martin (17 sept. 2026) : « pour la mission du véhicule à apporter au garage, il
 faut voir l'auto en place durant l'animation ».
 
-⬜ **En cours.**
+**Livré, et généralisé (18 sept. 2026).** La règle vaut pour toutes les scènes : **une coupe
+montre ce qu'elle nomme.** Un plan qui fait VOIR un élément de la mission — le char d'un
+`monter`, les Cravates d'un `tuer` — doit le trouver posé à l'écran, même quand la mission
+commence DANS une pièce. C'est `Histoire.poser` qui pose dans la VILLE quoi qu'il arrive, via
+`dansLaVille` : quand on est dedans (`Monde.carte` = la pièce, `B.entites` = ses gens), on
+remet le temps du placement la carte et la liste de la ville, on naît au bon monde, puis on
+reprend les deux. m4 (Bouchard au casse-croûte) et m5 (Josée au bar) posaient leurs éléments
+seulement à la sortie : leur intro coupait vers la rue et filmait le poste ou le coin des
+Cravates vide.
 
 ### Le tableau des scores s'en va
 
@@ -11499,6 +11574,70 @@ afficherScores`, le pseudo de la partie, et le `scores.json` du serveur. Un juge
 
 demande de Martin (17 sept. 2026) : « aggrandit la carte vers le bas et déplace l'ile ou est la
 foire vers le bas pour allonger le pont et l'éloigner du reste de la ville ».
+
+- **Une seule rangée change, et c'est par elle que la carte grandit.** La ville est une grille de
+  20 colonnes × 12 rangées de blocs (`carte.COLONNES`, `carte.RANGEES`) ; la première rangée de la
+  bande sud **EST** le chenal que le pont enjambe. Elle passe de **11 à 24 tuiles** : le pont fait
+  24 tuiles au lieu de 11, La Pointe descend de 13, et la carte passe de **419 × 211 à 419 × 224**.
+  Aucune autre rangée ne bouge : la foire garde son enceinte de 52 × 31 à la tuile près (elle
+  descend de 13, rien d'autre), comme les bois, les maisons et le phare.
+- **Ce que cette rangée porte ailleurs.** Elle est aussi la rangée nord des Quais et le haut de la
+  baie. Les blocs de commerces du port deviennent donc profonds — deux rangées de bâtiments dos à
+  dos au lieu d'une — et la baie gagne treize tuiles. C'était le prix : une rangée traverse toute
+  la ville, on ne l'allonge pas pour un seul district. Les autres formes (insérer une rangée,
+  descendre le district) coûtent la même chose et abîment la foire en plus.
+- **Le chenal élargi se remplissait de sable.** Mesuré avant de livrer : à 24 tuiles, la règle des
+  plages (un tiers du bassin quand il y a une rive en face) en donnait **huit par rive**, et la
+  traversée à la nage retombait de 24 tuiles d'eau à **11** — le chenal plus large ne coûtait plus
+  rien, et la coque du traversier passait sur du sable. Règle ajoutée : **un bassin qu'un pont
+  enjambe n'a pas de plage sur les deux rives qu'il relie** (`_rives_d_un_pont`). L'appel est sauté
+  en entier, avant le premier dé de `_plage` : pas une plage de la ville ne se déplace.
+- **Le prix de la nage monte d'un cran, et c'est la vraie décision.** Onze tuiles se nageaient à
+  jeun (72 points de souffle sur 100). La traversée la plus courte fait maintenant **22 tuiles**
+  (au coin nord-ouest, pas sous le pont) : **160 points à jeun — impossible — et 80 avec un café**.
+  Trois crans, trois endroits : la ville à pied, La Pointe au café, l'Île-aux-Corneilles au café
+  **et** l'estomac plein.
+- **Le juge du chenal ne lit plus une colonne.** `test_le_chenal_du_pont_est_un_pari_pas_une_promenade`
+  mesurait la hauteur d'eau sous le tablier ; il fait maintenant le tour de l'eau (le pont défait)
+  et prend **la nage la plus courte de La Pointe à la ville**. C'est ce qui a montré le sable :
+  l'ancien juge voyait 24 et se taisait pendant qu'on traversait en 11. Un second juge dit que le
+  tablier va d'une rive à l'autre (le chenal sous lui vaut sa longueur, ni plus ni moins).
+- **L'île descend de treize tuiles avec la bande sud** (`ile.ILE["y"]` : 139 → 152). Sa rive la plus
+  proche fait toujours 30 tuiles d'eau. La laisser en place la mettait dans le couloir du
+  traversier : celui-ci prend la traversée la plus au nord-ouest, la nouvelle passait à une tuile de
+  sa ceinture, et la ville n'était plus la même avec et sans l'île.
+- **Toute la ville est re-tirée, et c'était inévitable.** Les îlots consomment le dé commun dans
+  l'ordre `(colonne, rangée)` : des blocs de port plus profonds, c'est plus de parcelles, donc tout
+  ce qui vient après change de place — 22 % des tuiles du nord, qui n'était pourtant pas touché.
+  **Douze juges sans rapport sont tombés**, tous verts sur la base ; aucun n'a été assoupli sans
+  raison écrite :
+  - **la ville s'est livrée sans camion à ordures** (`eboueurs.tracer` rendait `None`, sans un mot) :
+    la boucle n'essayait qu'**une seule** place pour sa première étape, et celle-là partait vers
+    l'ouest sur un boulevard qui ne mène nulle part. La première étape a maintenant ses candidates
+    comme les autres ; une boucle qui marchait du premier coup ne change pas d'une tuile ;
+  - **la ligne 2 laissait 148 tuiles sans un arrêt** (84 permis) : elle descendait le trottoir du
+    **bord de la carte**, où l'abribus tomberait hors de la ville — donc aucun arrêt, jamais. Cette
+    voie-là coûte maintenant comme une voie du milieu (`COUT_SANS_ABRI`), et la boucle est choisie
+    en mesurant d'avance son plus long désert ;
+  - **le tramway est passé de 12 arrêts à 4 et le quai du traversier n'avait plus le sien** : une
+    rame roule par **paires de voies opposées**, et sur un boulevard à quatre voies la seule paire
+    est celle du MILIEU — aucune ne longe un trottoir. La voie du milieu lui coûte donc elle aussi
+    (`tramway.COUT_VOIE_DU_MILIEU = 8`, plus cher qu'un virage), et il a repris les rues à deux
+    voies. Le quai ayant descendu de 17 tuiles, son arrêt est à 36 tuiles et non 29
+    (`PRES_DU_TRAVERSIER` : 32 → 40) ;
+  - **« la ville avec ou sans chantiers est la même » n'était vrai que par chance** : l'enceinte
+    d'un chantier s'écartait du mobilier avec **une marge d'une tuile**, et cette marge-là a mordu
+    un bord de rue de sept tuiles — les 1 900 meubles qui suivaient se décalaient tous. L'enceinte
+    s'écarte maintenant sans sa marge : ses tuiles sont un LOT de bâtiment, jamais un bord de rue ;
+  - **la cale du cargo était SUR sa chaîne** : l'enceinte du mouillage descend désormais avec la
+    cale au lieu de la couper ;
+  - **trois juges de goût, relus plutôt que remontés** : la saleté se mesure en objets **par mille
+    tuiles marchables** (3,5 pour mille, comme les 3,2 acceptés à l'œil ; le plafond en objets
+    rougissait parce que la ville a grandi) ; le panneau du Grand Saut a droit à ses 8 tuiles, qui
+    sont ce que son code permet depuis toujours (`[3, 5, 7]` + le pied) ; et le filet
+    (`boucher_les_poches`) a le droit de reboucher une encoignure de 2 × 2 entre deux entrepôts sur
+    la graine livrée — pas une cour (moins de dix tuiles).
+- **Suite complète verte** : 2 313 juges Python, la suite JS, `ruff`.
 
 ### M16 Cent missions
 

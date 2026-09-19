@@ -7,7 +7,7 @@
 # avec `ss -ltnp | grep 800` avant d'en choisir un nouveau.
 bind = "127.0.0.1:8006"
 
-# Une page, un paquet JSON, un fichier de scores : des workers synchrones
+# Une page, deux paquets JSON et une petite base SQLite : des workers synchrones
 # suffisent largement.
 workers = 2
 threads = 4

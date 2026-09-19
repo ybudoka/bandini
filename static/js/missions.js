@@ -198,11 +198,24 @@ const Missions = (function () {
     // ⚠️ On ne magasine pas avec quelqu'un dans les bras : tant qu'on tient un
     // otage, ACTION ne fait qu'une chose — le lacher.
     if (j.otage) return Combat.lacherOtage(false);
+    // ⚠️ UN JEU D'ADRESSE EN COURS PREND LE BOUTON, et il le prend AVANT tout le
+    // reste : le marteau de force se joue en martelant ACTION devant son
+    // comptoir, et sans cette ligne chaque coup ouvrirait le menu de la
+    // baraque d'a cote. La chaine d'ACTION affame ce qui suit — c'est vrai
+    // dans les deux sens, et c'est pour ca que ce test-ci est le premier.
+    if (B.defi && Histoire.actionDeDefi()) return true;
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) return Histoire.parler(perso.personnage);
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) return Histoire.proposerDefi(panneau.defi);
+    // Le comptoir d'un jeu d'adresse de la foire : c'est LUI le panneau. ⚠️ Un
+    // panneau de defi plante dans une allee ou les kiosques sont a trois tuiles
+    // l'un de l'autre serait un poteau de plus dans le seul endroit dense du
+    // jeu — et la baraque dit deja ce qu'elle vend.
+    const comptoir = typeof Foire !== 'undefined' ? Foire.jeuSousLaMain(j) : null;
+    const jeu = comptoir ? Histoire.defiDuComptoir(comptoir) : null;
+    if (jeu) return Histoire.proposerDefi(jeu.slug);
     const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
@@ -873,6 +886,7 @@ const Missions = (function () {
     lit: 'DORMIR', coffre: 'COFFRE', garde_robe: 'GARDE-ROBE', vendre: 'VENDRE LE CHAR', reparer: 'RÉPARER',
     repeindre: 'REPEINDRE', acheter: 'ACHETER', hotdog: 'MANGER', soigner: 'SE FAIRE SOIGNER', caisse: 'LA CAISSE',
     journal: 'LE CLAIRON', contact: 'PARLER', sergent: 'PARLER', casier: 'LE CARNET',
+    lulu: 'PARLER', ovila: 'PARLER',
     emplettes: 'ACHETER', salon: 'SE FAIRE COIFFER', escalier: 'MONTER', fouiller: 'FOUILLER',
     fourriere: 'LE LOT', avocat: 'PARLER À L’AVOCAT', hacker: 'LE COMPTOIR DU FOND',
     distributrice: 'LA MACHINE',
@@ -1475,7 +1489,13 @@ const Missions = (function () {
 
   function menuVetements() {
     const p = B.partie;
-    const items = (B.defs.tenues || []).map(function (t) {
+    // ⚠️ UN LOT NE SE VEND PAS. La casquette de la foire (`prime`) n'apparait
+    // chez Rosa qu'une fois GAGNEE — sinon le lot des trois jeux d'adresse
+    // s'achete au comptoir d'a cote, et il ne vaut plus rien. Une fois a soi,
+    // elle se range avec les autres : c'est la qu'on vient la remettre.
+    const items = (B.defs.tenues || []).filter(function (t) {
+      return !t.prime || p.tenues.indexOf(t.slug) >= 0;
+    }).map(function (t) {
       const deja = p.tenues.indexOf(t.slug) >= 0;
       return { libelle: t.nom.toUpperCase(), detail: deja ? (p.tenue === t.slug ? 'PORTÉE' : 'À TOI') : t.prix + ' $',
                actif: deja || p.argent >= t.prix, faire: function () {
@@ -1537,7 +1557,15 @@ const Missions = (function () {
       haute. ⚠️ Et RIEN ne sonne par-dessus : le rappel de Sal, qui tombait dans
       la meme image, ne fait plus sonner le telephone (`nuitDeLaDette`). */
   function direLaManchette(m) {
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], 420);
+    // ⚠️ La duree suit CE QUE LE NARRATEUR DIT (`lu`), pas un nombre fixe : les
+    // lecons regenerees du 18 sept. (avec leurs pauses) durent jusqu'a 9,6 s,
+    // et une boite qui s'eteint a 420 images (7 s) disparaissait au milieu de
+    // la voix. On dimensionne sur le texte LU, le plus long des deux — et a
+    // 4 images par caractere (au lieu des 3 du cinema) : le narrateur est un
+    // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
+    // porte des « … » que `lu` ne montre pas.
+    const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree);
     if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
   }
 

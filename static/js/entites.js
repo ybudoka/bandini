@@ -164,6 +164,7 @@ const Entites = (function () {
       vie: p.vie, vieMax: Math.round(100 * Missions.avantage('vie', 1)),
       endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
+      cible: null,
     });
     B.joueur = j;
     return j;
@@ -461,6 +462,25 @@ const Entites = (function () {
       ce qu'on a casse reste casse jusqu'a `nouveauJour()`, et le quartier
       porte ses blessures — c'est ce qui fait qu'une nuit de folie SE VOIT le
       matin. */
+  /** RELEVER un decor casse, tout de suite : ce que le forain fait de ses
+      cibles entre deux parties (`Histoire.commencerDefi`).
+
+      ⚠️ La meme remise a neuf que le matin (`reparerLeDecor`), pour UNE piece.
+      Sans elle, une galerie de tir jouee deux fois dans la journee serait un
+      defi qu'on ne peut plus gagner : ses cibles sont par terre, et le matin
+      est loin. */
+  function releverDecor(e) {
+    if (!e || e.type !== 'decor') return false;
+    e.pv = undefined;
+    if (!e.brise) return false;
+    const fiche = DECORS[e.decor] || {};
+    e.brise = false;
+    e.dessine = true;
+    e.solide = !!fiche.solide;
+    reindexerDecor();
+    return true;
+  }
+
   function reparerLeDecor() {
     let remis = 0;
     for (let i = B.entites.length - 1; i >= 0; i--) {
@@ -4328,6 +4348,23 @@ const Entites = (function () {
     return Math.floor((t === undefined ? B.t : t) / d.anime) % d.variantes;
   }
 
+  /** L'anneau de la cible verrouillee (`Combat.majCible`) : un repere carre qui
+      respire au-dessus de la tete, dans le monde — pour VOIR qui on vise,
+      pas seulement le sentir a la maniere dont on frappe. */
+  function dessinerCible(ctx, cam) {
+    const c = B.joueur && B.joueur.cible;
+    if (!c || !c.vivant) return;
+    const cx = Math.round(cam.x), cy = Math.round(cam.y);
+    const x = Math.round(c.x - cx), y = Math.round(c.y - 20 - cy);
+    const r = 5 + Math.round(Math.sin((B.image % 40) / 40 * Math.PI) * 2);
+    ctx.fillStyle = '#ff5a3c';
+    ctx.fillRect(x - r, y - r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y + r, r * 2 + 1, 1);
+    ctx.fillRect(x - r, y - r, 1, r * 2 + 1);
+    ctx.fillRect(x + r, y - r, 1, r * 2 + 1);
+    B.stats.rects += 4;
+  }
+
   function dessiner(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     const visibles = [];
@@ -4467,7 +4504,7 @@ const Entites = (function () {
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
     creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
-    briser, endommagerDecor, reparerLeDecor, DEBRIS_MAX,
+    briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,
     indexer, autour, decorAutour, pietonsAutour, placeDeNaissance, placeAuBordDeLaRoute, porteQuiSert, quelquUnRentre, envoyerAUnePorte, peupler, peuplerDabord,
@@ -4484,6 +4521,6 @@ const Entites = (function () {
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,
-    dessiner, dessinerDecals, dessinerParticules, imageDe, nomDePose, pose, poseDuDecor,
+    dessiner, dessinerDecals, dessinerParticules, dessinerCible, imageDe, nomDePose, pose, poseDuDecor,
   };
 })();

@@ -22,11 +22,16 @@ def test_pas_de_cycle(monkeypatch):
 
 
 def test_les_cinq_missions_se_suivent():
-    assert [m["slug"] for m in missions.CATALOGUE] == ["m1", "m2", "m3", "m4", "m5"]
-    assert missions.ordre_topologique() == ["m1", "m2", "m3", "m4", "m5"]
-    for precedente, mission in zip(missions.CATALOGUE, missions.CATALOGUE[1:]):
-        assert mission["prerequis"] == [precedente["slug"]], "chaque mission ouvre la suivante"
-    assert len(missions.DEFIS) == 3
+    # ⚠️ Les cinq missions de la v1 ouvrent la ville, dans cet ordre-là ; M16
+    # pose ensuite son tronc (`m6` et `m97`) sur `m5`, sans le casser.
+    assert [m["slug"] for m in missions.CATALOGUE][:5] == ["m1", "m2", "m3", "m4", "m5"]
+    assert missions.ordre_topologique()[:5] == ["m1", "m2", "m3", "m4", "m5"]
+    for precedente, mission in zip(missions.CATALOGUE[:5], missions.CATALOGUE[1:5]):
+        assert mission["prerequis"] == [precedente["slug"]], "chaque mission de la v1 ouvre la suivante"
+    # ⚠️ Trois défis de char depuis la v1, plus les trois jeux d'adresse de la
+    # foire : un jeu d'adresse est un DÉFI, pas un moteur.
+    assert len(missions.DEFIS) == 6
+    assert len(missions.defis_de_foire()) == 3
 
 
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
@@ -82,8 +87,27 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
         assert 8 <= len(r["texte"]) <= 110, r["slug"]
         assert r["texte"].count(". ") + r["texte"].count("! ") + r["texte"].count("? ") <= 2, \
             f"{r['slug']} : plus de deux phrases"
-    assert 30 <= len(vues) <= 60
-    assert sum(len(r["texte"]) for r in missions.repliques()) < 4000, "quelques milliers de caracteres, pas plus"
+    # ⚠️ Le budget se juge PAR MISSION, jamais par un total global : les voix se
+    # génèrent (et se paient) par tranche, et un nombre fixe obligerait à
+    # retoucher ce test à CHAQUE mission ajoutée — exactement ce qu'on veut
+    # arrêter. Ce qui reste borné ici, c'est qu'UNE mission ne déborde pas :
+    # `REPLIQUES_PAR_MISSION` répliques au plus (les cinq de la v1 font 7–8),
+    # et une réplique reste déjà bornée au-dessus (8–110 caractères, ≤ 2 phrases).
+    REPLIQUES_PAR_MISSION = 10
+    par_mission: dict[str, int] = {}
+    for r in missions.repliques():
+        par_mission[r["mission"]] = par_mission.get(r["mission"], 0) + 1
+    for slug, n in par_mission.items():
+        assert n <= REPLIQUES_PAR_MISSION, (
+            f"{slug} : {n} répliques pour un plafond de {REPLIQUES_PAR_MISSION} "
+            "— une mission bavarde, c'est une voix de plus à générer par ligne"
+        )
+    # Le filet global suit le catalogue : il se détend tout seul quand on ajoute
+    # une mission, et serre toujours la moyenne (~7 répliques/mission).
+    plafond = REPLIQUES_PAR_MISSION * len(missions.CATALOGUE)
+    assert 30 <= len(vues) <= plafond
+    assert sum(len(r["texte"]) for r in missions.repliques()) < 75 * plafond, \
+        "les répliques raccourcissent avec le nombre de missions, pas l'inverse"
     for m in missions.CATALOGUE:
         for partie in ("intro", "fin", "echec"):
             assert m["dialogue"][partie], f"{m['slug']} : pas de {partie}"

@@ -19,6 +19,11 @@
      plans pas encore joués auraient laissé derrière eux.
    - ELLE SE TERMINE TOUJOURS : un plan dont le lieu ou l'acteur ne se trouve pas
      est sauté, jamais attendu.
+   - UNE COUPE MONTRE CE QU'ELLE NOMME : un plan qui fait VOIR un élément de la
+     mission (le char d'un `monter`, les Cravates d'un `tuer`) doit le trouver
+     posé à l'écran, même quand la mission commence dans une pièce — c'est
+     `Histoire.poser`, via `dansLaVille`, qui pose dans la VILLE quoi qu'il
+     arrive.
    - ELLE NE DÉPLACE PAS LE JOUEUR : la caméra voyage, le bonhomme peut marcher,
      mais il revient à la dernière image là où il était à la première.
    - COURTE : elle finit quand ses plans ET ses répliques sont finis, et ne tient

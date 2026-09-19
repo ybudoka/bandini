@@ -396,6 +396,19 @@ const Son = (function () {
     // La cloche du tramway : deux coups clairs. Un DE SES effets (voir `Son.depuis`).
     cloche_tram: function () { if (!joue('cloche_tram')) { ton(1320, 0.3, 'triangle', 0.16, 1); ton(1320, 0.3, 'triangle', 0.16, 1, 0.32); } },
     ramasse: function () { if (!joue('ramasse')) { ton(880, 0.08, 'sine', 0.25); ton(1320, 0.12, 'sine', 0.2, 1, 0.07); } },
+    //: LE MAILLET du marteau de force : un coup MAT sur un plateau de bois, pas
+    //: un coup de poing. ⚠️ Synthetise, et ce n'est pas une economie de bouts de
+    //: chandelle : le seau des bruitages porte deja 190 fichiers, et un coup sec
+    //: est exactement ce qu'un oscillateur fait le mieux.
+    maillet: function () { ton(190, 0.07, 'square', 0.26, 0.4); bruit(0.07, 0.22, 700, 180); },
+    //: LA CLOCHE, en haut de la colonne : UN coup, clair et qui traine. C'est le
+    //: seul son du jeu qui dise « tu as gagne » avant que le HUD l'ecrive — deux
+    //: coups en feraient un tramway (`cloche_tram`), qui, lui, passe.
+    cloche: function () {
+      ton(1760, 0.9, 'sine', 0.22, 1.6);
+      ton(2640, 0.6, 'triangle', 0.09, 1.9, 0.01);
+      ton(880, 1.1, 'sine', 0.10, 1.3, 0.02);
+    },
     argent: function () { if (!joue('argent')) { ton(1500, 0.06, 'sine', 0.2); ton(2000, 0.1, 'sine', 0.18, 1, 0.06); } },
     menu: function () { if (!joue('menu')) ton(660, 0.05, 'square', 0.15); },
     // ⚠️ Le filet du refus suit la meme regle que l'echantillon (voir
@@ -491,6 +504,39 @@ const Son = (function () {
       if (v <= 0.02) { boucle('chantier', false); return; }
       if (!boucleActive('chantier')) boucle('chantier', true, v);
       reglerBoucle('chantier', v);
+    },
+    /** LES CRIS DE LA FOIRE, tenus comme la rumeur d'un chantier : `volume` 0
+        = on se tait. ⚠️ Faute de fichier, ce n'est PAS du bruit blanc — une
+        foire, ce sont des voix : deux cris courts et aigus de temps en temps,
+        a des hauteurs qui ne se repetent pas. Un souffle continu sonnerait
+        comme le vent, et la foire aurait l'air vide. */
+    rumeur_foire: function (volume) {
+      const v = Math.max(0, Math.min(1, volume || 0));
+      if (!estCharge('foire_cris')) {
+        if (v > 0.02 && B.t % 47 === 0) {
+          const h = 620 + (B.t % 7) * 90;
+          ton(h, 0.22, 'triangle', 0.035 * v, 1.25, 0);
+          ton(h * 1.5, 0.16, 'sine', 0.02 * v, 1.4, 0.12);
+        }
+        return;
+      }
+      if (v <= 0.02) { boucle('foire_cris', false); return; }
+      if (!boucleActive('foire_cris')) boucle('foire_cris', true, v);
+      reglerBoucle('foire_cris', v);
+    },
+    /** LES VAGUES, dosees a la distance de l'eau (`Monde.majSonDuBord`).
+        ⚠️ Le repli est un SOUFFLE QUI RESPIRE, pas un bruit plat : une vague
+        monte et redescend, et c'est ce va-et-vient qu'on reconnait les yeux
+        fermes. Un bruit blanc constant, c'est une radio mal accordee. */
+    vagues: function (volume) {
+      const v = Math.max(0, Math.min(1, volume || 0));
+      if (!estCharge('vagues')) {
+        if (v > 0.02 && B.t % 90 === 0) bruit(1.6, 0.05 * v, 700, 240);
+        return;
+      }
+      if (v <= 0.02) { boucle('vagues', false); return; }
+      if (!boucleActive('vagues')) boucle('vagues', true, v);
+      reglerBoucle('vagues', v);
     },
     //: Le nid-de-poule : le COUP SEC de la suspension qui talonne, puis la
     //: tole qui resonne une demi-seconde. Synthetise, comme la borne : le seau
@@ -588,9 +634,27 @@ const Son = (function () {
     // puis le « whoomp » — joue a l'ARRIVEE de la bouteille, par `Combat`.
     mitraillette: function () { if (!joue('mitraillette')) { bruit(0.06, 0.6, 3500, 300); ton(110, 0.05, 'square', 0.3, 0.5); } },
     carabine: function () { if (!joue('carabine')) { bruit(0.25, 0.9, 2500, 120); ton(70, 0.3, 'sine', 0.5, 0.4); ton(1200, 0.05, 'square', 0.1, 1, 0.5); } },
+    //: LA CARABINE À BOUCHON de la galerie de tir : un « pop » mat de liège.
+    //: Synthétisé, comme le sifflet du petit train : le son de la foire est une
+    //: piste à part, et un `joue` sans mp3 réclamerait un fichier absent.
+    carabine_foire: function () { if (!joue('carabine_foire')) { ton(240, 0.05, 'sine', 0.3, 2.2); bruit(0.06, 0.18, 1400, 500); } },
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },
     // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
     extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },
+    // L'eau sur la braise : un sifflement court, quand le feu s'éteint. ⚠️
+    // Synthétisé, comme la borne : le seau des bruitages est plein, et ce
+    // « tss » ne réclame pas un fichier.
+    eau: function () { bruit(0.4, 0.22, 3200, 900); },
+    // Le feu de bâtiment, tenu tant qu'on en est près : un crépitement sourd,
+    // dosé à la distance (`force`, 0 = on se tait). ⚠️ Sans fichier au
+    // catalogue — comme la rumeur d'un chantier quand son mp3 manque.
+    rumeur_incendie: function (force) {
+      const v = Math.max(0, Math.min(1, force || 0));
+      if (v > 0.02 && B.t % 13 === 0) {
+        bruit(0.16, 0.06 * v, 900, 220);
+        if (v > 0.4 && B.t % 37 === 0) ton(380, 0.05, 'square', 0.03 * v, 1.6);
+      }
+    },
     vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
     casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },
     degainer: function () { if (!joue('degainer')) { bruit(0.08, 0.1, 2500, 900); ton(520, 0.04, 'triangle', 0.1, 1, 0.05); } },
@@ -899,6 +963,15 @@ const Son = (function () {
       // pendant tout le chargement — deux musiques a la fois, ce que l'echelle
       // interdit.
       if (Radio.demandee || Radio.courante || Ambiance.demandee || Ambiance.courante) return null;
+      // ⚠️ DANS LA FOIRE, PAS DE MUSIQUE DE DISTRICT. L'orgue est la musique du
+      // lieu : elle sort de la même bouche que le musicien de rue (`Son.Rue`,
+      // une source fixe au milieu de l'allée), PAR-DESSUS l'ambiance. Laisser
+      // jouer l'ambiance de La Pointe dessous, ce serait deux musiques à la
+      // fois — le bois et la foire — alors que la foire a SON monde à elle.
+      // Comme c'est une décision de lieu, pas d'état, la poursuite et la
+      // bagarre (qui se décident plus haut) continuent de couvrir : se cacher
+      // sous un comptoir ne rend pas la ville muette à la police.
+      if (Monde.dansLaFoire(Math.floor(j.x / TT), Math.floor(j.y / TT))) return null;
       const amb = Chef.ambianceDuLieu();
       return amb ? { slug: amb, rang: e.ambiance || 4 } : null;
     },
@@ -916,6 +989,14 @@ const Son = (function () {
     },
 
     maj: function () {
+      // ⚠️ LE JUKEBOX (débug) TIENT LA MAIN. Tant qu'on a choisi un morceau
+      // dans le jukebox, le chef d'orchestre ne replace ni l'ambiance du
+      // district, ni la poursuite, ni la bagarre par-dessus : on écoute ce
+      // qu'on a demandé. L'arrêt remet `B.jukebox` à null et le chef reprend.
+      if (B.jukebox) {
+        if (Chef.piste !== B.jukebox) { Chef.piste = B.jukebox; Chef.rang = 99; Mus.jouer(B.jukebox); }
+        return;
+      }
       if (Chef.queue > 0) Chef.queue--;
       const v = Chef.voulu();
       if (!v) {
@@ -1328,11 +1409,21 @@ const Son = (function () {
     },
 
     /** Le musicien le plus proche reclame sa toune, a ce volume-la. A appeler
-        a chaque image tant qu'il joue ; des qu'on cesse, la musique s'arrete. */
+        a chaque image tant qu'il joue ; des qu'on cesse, la musique s'arrete.
+
+        ⚠️ **LE PLUS FORT GAGNE, PAS LE DERNIER ARRIVE.** Tant qu'il n'y avait
+        que des musiciens, `entites.js` choisissait LE PLUS PROCHE avant
+        d'appeler et l'ordre ne voulait rien dire. Depuis que l'orgue de la
+        foire demande lui aussi (`Foire.laFoireSEntend`, une source fixe), deux
+        sources reclament dans la meme image : sans cette ligne, celle qui joue
+        est celle dont la boucle du jeu tombe en dernier — donc un gars a la
+        guitare a l'entree de la foire couvrirait un limonaire de six metres. */
     demander: function (slug, volume) {
       if (!Rue.def(slug)) return false;
+      const v = Math.max(0, Math.min(1, volume));
+      if (Rue.demandeT === B.t && Rue.courante && v <= Rue.volume) return false;
       Rue.courante = slug;
-      Rue.volume = Math.max(0, Math.min(1, volume));
+      Rue.volume = v;
       Rue.demandeT = B.t;
       return true;
     },

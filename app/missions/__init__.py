@@ -17,7 +17,8 @@ from typing import NotRequired, TypedDict
 
 TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
-    "parler",      # toucher un personnage
+    "parler",      # toucher un personnage — `cible` : de qui il s'agit (`personnages:`
+                   # ou `arch:`), l'objectif s'accomplit en lui parlant
     "monter",      # monter dans le vehicule de la mission (`vehicule`, `ou`) ;
                    # `prete` : a QUI il est — un char prete ne se vend pas ;
                    # `ou: ruelle:<lieu>:<n>` : la ruelle la plus proche a n tuiles au moins
@@ -93,6 +94,29 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "narrateur", "nom": "Le Clairon de la Baie", "genre": "homme", "voix": "annonceur centre d'achat 1",
      "couleurs": {"c": "#3a3a4a", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "",
      "heler": ""},
+
+    # --- M16 : les quatre contacts que Josée te présente (m6, « Le tour du
+    # propriétaire »). Un par district, un par monde : deux se tiennent DEHORS
+    # devant leur porte, deux DEDANS sur un point de piece pose exprès.
+    # ⚠️ Les trois voix quebecoises de femme (Jeanne Mance, Julia, Amélie) sont
+    # TOUTES prises. Décision de Martin le 17 sept. 2026 : pour Lulu et
+    # Raymonde, on sort du quebecois plutot que de les faire partager une voix.
+    # Lulu prend Clara Dupont (la seule autre voix de femme en francais du
+    # compte, `language: fr`) ; Raymonde prend Nadine, la voix rauque — ici
+    # l'accent FAIT le personnage, une presidente de syndicat qui a roule sa
+    # bosse. Martin les auditonna a la prochaine generation.
+    {"slug": "tipaul", "nom": "Ti-Paul Gagnon", "genre": "homme", "voix": "Québec Tremblay - Confident and Measured",
+     "couleurs": {"c": "#c0392b", "h": "#7a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:depanneur",
+     "heler": "Salut, l'ami!"},
+    {"slug": "lulu", "nom": "Lucienne « Lulu » Pelletier", "genre": "femme", "voix": "Clara Dupont - Professional and Urgent",
+     "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#f0c098", "p": "#4a3a5a"}, "ou": "point:lulu",
+     "heler": "Viens manger!"},
+    {"slug": "raymonde", "nom": "Raymonde Fortin", "genre": "femme", "voix": "Nadine",
+     "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "porte:usine",
+     "heler": "Le syndicat!"},
+    {"slug": "ovila", "nom": "Ovila Saint-Onge", "genre": "homme", "voix": "annonceur centre d'achat 1",
+     "couleurs": {"c": "#2e8b57", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:ovila",
+     "heler": "Les lumières..."},
 ]
 
 
@@ -110,14 +134,7 @@ class Mission(TypedDict):
     phase: int
 
 
-def _l(qui: str, texte: str) -> dict:
-    return {"qui": qui, "texte": texte}
-
-
-def _p(qui: str, texte: str, objectif: int) -> dict:
-    """Une réplique PENDANT : dite quand l'objectif `objectif` (compté à partir de 0)
-    commence — au combiné si celui qui la dit n'est pas là."""
-    return {"qui": qui, "texte": texte, "objectif": objectif}
+from ._commun import _l, _p
 
 
 #: Ce que dit un personnage qui n'a rien pour toi. ⚠️ Ici et pas dans
@@ -272,256 +289,15 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
             erreurs.append(f"plan {i} : un titre sans texte ni logo")
     return erreurs
 
+# --- Les missions, une par fichier ----------------------------------------
+# ⚠️ Chaque mission vit dans `m1.py`, `m2.py`, … sous la forme `MISSION = {…}`
+# (répliques écrites avec `_l`/`_p` de `_commun.py`). Ce fichier les réunit
+# dans `CATALOGUE` : ajouter une mission = créer son fichier et l'ajouter
+# aux deux listes ci-dessous, rien d'autre.
+from . import m1, m2, m3, m4, m5, m6, m50, m97
 
-#: Ou dort le char de M1. ⚠️ Demande de Martin (17 sept. 2026) : la ruelle la
-#: plus proche du garage est a six tuiles — le char naissait DANS l'ecran, sous
-#: les yeux du joueur, et le ramener tenait en trois secondes. A vingt-quatre, il
-#: faut le chercher au GPS et rouler pour de vrai. ⚠️ UNE constante, parce que
-#: DEUX lecteurs : l'objectif qui y pose le char, et la coupe de l'intro qui va
-#: le montrer. Deux chaines, et la camera filmerait une ruelle vide.
-RUELLE_DU_CHAR_DE_M1 = "ruelle:garage:24"
+CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION, m97.MISSION]
 
-
-CATALOGUE: list[Mission] = [
-    {
-        "slug": "m1", "titre": "Bienvenue en ville", "donneur": "ti_guy", "prerequis": [],
-        "recompense": 100, "phase": 1, "echec": ["arrete", "vehicule_detruit"],
-        "donne": {"message": "LA CLÉ DE LA PLANQUE"},
-        "objectifs": [
-            {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"},
-            {"type": "monter", "vehicule": "auto", "ou": RUELLE_DU_CHAR_DE_M1, "texte": "PRENDS LE CHAR DANS LA RUELLE"},
-            {"type": "livrer", "lieu": "garage", "rayon": 4, "sans_degats": True, "texte": "RAMÈNE-LE AU GARAGE, SANS BOSSE"},
-        ],
-        # Ti-Guy montre le garage, et la caméra va voir la ruelle où dort le char.
-        # ⚠️ Il y DORT DÉJÀ : les chars des objectifs `monter` d'une mission se posent
-        # à son début (`Histoire.poser`), pas au tour de leur objectif — sinon la
-        # coupe filme une ruelle vide. À la fin, Ti-Guy sort du garage, tend la clé et
-        # y rentre : c'est ce qui le fait quitter le terminus (`parti_apres`), plus un
-        # `if` dans `reussir()`.
-        "scenes": {
-            "intro": [
-                {"type": "dire", "repliques": [1, 2]},
-                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "porte:garage", "duree": 70,
-                 "ensemble": True},
-                {"type": "dire", "repliques": [3, 4], "ensemble": True},
-                {"type": "attendre", "duree": 30},
-                {"type": "coupe", "vers": RUELLE_DU_CHAR_DE_M1, "ferme": 20, "ouvre": 20, "tient": 150},
-            ],
-            "fin": [
-                {"type": "sortir", "acteur": "ti_guy", "de": "porte:garage", "vers": "joueur"},
-                {"type": "marcher", "acteur": "ti_guy", "vers": "joueur", "pres": 22, "duree": 50},
-                {"type": "dire", "repliques": [1]},
-                {"type": "geste", "acteur": "ti_guy", "geste": "donner", "vers": "joueur", "duree": 60,
-                 "ensemble": True},
-                {"type": "dire", "repliques": [2]},
-                {"type": "entrer", "acteur": "ti_guy", "dans": "porte:garage", "duree": 50},
-            ],
-        },
-        "dialogue": {
-            "appel": [],
-            "intro": [
-                _l("ti_guy", "Heille! Le cousin de Rocco! T'as fait bon voyage?"),
-                _l("ti_guy", "Rocco est parti se faire oublier. Le garage, c'est toi qui le tiens, astheure."),
-                _l("ti_guy", "Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer."),
-                _l("ti_guy", "Ramène-le au garage sans le bosser, pis sans que personne te voie."),
-            ],
-            "fin": [
-                _l("ti_guy", "Pas une bosse! T'es ben le cousin de Rocco."),
-                _l("ti_guy", "Tiens, la clé de la planque. Dors là, pis fais-toi pas pogner."),
-            ],
-            "echec": [_l("ti_guy", "Ouain... On va dire que c'était un essai. Reviens me voir.")],
-            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-            "pendant": [_p("ti_guy", "Beau char! Ramène-le au garage tranquillement, pis évite la police.", 2)],
-        },
-    },
-    {
-        "slug": "m2", "titre": "Le kiosque de Madame Thibodeau", "donneur": "thibodeau", "prerequis": ["m1"],
-        "recompense": 150, "phase": 1, "echec": ["mort", "arrete"],
-        "donne": {"arme": "batte", "rabais": {"kiosque": 0.75}, "message": "LE BÂTON, ET −25 % AU KIOSQUE"},
-        "objectifs": [
-            # ⚠️ **LA PREMIERE BAGARRE DU JEU, ET ELLE SE GAGNE AUX POINGS.** Ces
-            # deux-la sont venus racketter une dame au kiosque, pas casser un
-            # homme : ils arrivent LES MAINS VIDES, comme Madame Thibodeau le
-            # promet deux lignes plus bas (« Avec tes poings, pas plus »).
-            # Mesure d'avant : ils portaient le baton de l'archetype — 18 de
-            # degats et `renverse`, contre 100 PV et des poings a 8. Un joueur
-            # passif tombait en 3 s, et les coucher demandait 4,3 s de coups
-            # sans une image perdue : la premiere bagarre exigeait un jeu
-            # parfait. ⚠️ Et le baton est la RECOMPENSE de cette mission-ci :
-            # on le rencontrait avant de l'avoir.
-            {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "arme": "", "vie": 55,
-             "texte": "METS LES DEUX CRAVATES K.-O."},
-            {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO"},
-            {"type": "retourner", "texte": "RAPPORTE LA CAISSE À MADAME THIBODEAU"},
-        ],
-        # Elle montre le coin, et la caméra va voir les deux Cravates — qui existent :
-        # la mission est posée avant son intro. À la fin, elle reprend sa caisse et
-        # tend le bâton de son défunt.
-        "scenes": {
-            "intro": [
-                {"type": "dire", "repliques": [1]},
-                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "cible", "duree": 60,
-                 "ensemble": True},
-                {"type": "camera", "vers": "cible", "duree": 45, "courbe": "freine", "ensemble": True},
-                {"type": "dire", "repliques": [2, 3]},
-                {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
-            ],
-            "fin": [
-                {"type": "geste", "acteur": "donneur", "geste": "prendre", "vers": "joueur", "duree": 60,
-                 "ensemble": True},
-                {"type": "dire", "repliques": [1]},
-                {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
-                 "ensemble": True},
-                {"type": "dire", "repliques": [2]},
-            ],
-        },
-        "dialogue": {
-            "appel": [_l("thibodeau", "C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères. Viens me voir, veux-tu?")],
-            "intro": [
-                _l("thibodeau", "Deux Cravates sont venus me « protéger ». Ils ont vidé ma caisse."),
-                _l("thibodeau", "Ils rôdent encore au coin. Fais-leur comprendre. Avec tes poings, pas plus."),
-                _l("thibodeau", "Le troisième s'est sauvé en moto avec mon argent. Rattrape-le."),
-            ],
-            "fin": [
-                _l("thibodeau", "Mon argent! T'es un bon garçon, toi."),
-                _l("thibodeau", "Tiens, le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi."),
-            ],
-            "echec": [_l("thibodeau", "Ils t'ont eu, hein? Repose-toi, pis reviens.")],
-            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-            "pendant": [_p("thibodeau", "Il se sauve avec ma caisse! Lâche-le pas!", 1)],
-        },
-    },
-    {
-        "slug": "m3", "titre": "Le taxi de Marco", "donneur": "marco", "prerequis": ["m2"],
-        "recompense": 200, "phase": 1, "echec": ["arrete", "vehicule_detruit"],
-        "donne": {"message": "LE SERGENT BOUCHARD VEUT TE VOIR"},
-        "objectifs": [
-            {"type": "monter", "vehicule": "taxi", "ou": "porte:garage", "prete": "marco",
-             "texte": "MONTE DANS LE TAXI DE MARCO"},
-            {"type": "courses", "n": 3, "texte": "FAIS TROIS COURSES — KLAXONNE POUR UN CLIENT"},
-            {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "RAMÈNE LE TAXI AU GARAGE"},
-        ],
-        # Marco tend les clés, et la caméra va voir le taxi. À la fin, il fait le
-        # tour du taxi, montre le casse-croûte, et la caméra y va : la fin passe la
-        # main au sergent Bouchard.
-        "scenes": {
-            "intro": [
-                {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
-                 "ensemble": True},
-                {"type": "dire", "repliques": [1]},
-                {"type": "camera", "vers": "vehicule", "duree": 45, "courbe": "freine", "ensemble": True},
-                {"type": "dire", "repliques": [2]},
-                {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
-            ],
-            "fin": [
-                {"type": "marcher", "acteur": "donneur", "vers": "vehicule", "pres": 24, "duree": 50},
-                {"type": "dire", "repliques": [1], "ensemble": True},
-                {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "chez:bouchard", "duree": 60},
-                {"type": "coupe", "vers": "chez:bouchard", "ferme": 20, "ouvre": 20, "tient": 130, "ensemble": True},
-                {"type": "dire", "repliques": [2]},
-                {"type": "marcher", "acteur": "donneur", "vers": "place:donneur", "duree": 50},
-            ],
-        },
-        "dialogue": {
-            "appel": [_l("marco", "Marco, le cousin. J'ai un taxi qui dort au garage. Ça te tente de faire du cash?")],
-            "intro": [
-                _l("marco", "Trois clients, pas plus. Pis tu me ramènes le taxi entier."),
-                _l("marco", "Ouvre l'œil. Y a du monde en ville qui pose des questions sur toi."),
-            ],
-            "client": [_l("civil", "Roule, mon homme. Pis fais pas de folies : j'suis de la police.")],
-            "fin": [
-                _l("marco", "Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte."),
-                _l("marco", "Y mange là tous les midis. Sois poli, c'est un ami de la famille."),
-            ],
-            "echec": [_l("marco", "Mon taxi... Bon. On efface, pis on recommence.")],
-        },
-    },
-    {
-        "slug": "m4", "titre": "Le lunch du sergent", "donneur": "bouchard", "prerequis": ["m3"],
-        "recompense": 400, "phase": 1, "echec": ["arrete", "vehicule_detruit"],
-        "donne": {"sergent_ami": True, "message": "LE SERGENT EST TON AMI"},
-        "objectifs": [
-            {"type": "aller", "lieu": "poste", "rayon": 5, "nuit": True, "texte": "VA AU POSTE, DE NUIT"},
-            {"type": "monter", "vehicule": "police", "ou": "porte:poste", "texte": "PRENDS L'AUTO-PATROUILLE"},
-            {"type": "semer", "etoiles": 2, "escorte": "ti_guy", "texte": "SÈME LA POLICE — TI-GUY TE SUIT"},
-            {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "LARGUE L'AUTO AU GARAGE"},
-        ],
-        # Bouchard parle dedans : la caméra sort voir le poste. ⚠️ L'auto-patrouille
-        # est le deuxième objectif, mais elle y attend déjà (`Histoire.poser`) — sauf
-        # ici, où l'on parle DANS le casse-croûte : rien ne se pose avant la sortie, et
-        # la coupe montre le poste seul. À la fin, on est au garage et lui au
-        # casse-croûte : la caméra va chez lui, et il parle au combiné.
-        "scenes": {
-            "intro": [
-                {"type": "dire", "repliques": [1], "ensemble": True},
-                {"type": "coupe", "vers": "porte:poste", "ferme": 20, "ouvre": 20, "tient": 150},
-                {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
-                {"type": "dire", "repliques": [2, 3]},
-            ],
-            "fin": [
-                {"type": "coupe", "vers": "chez:bouchard", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
-                {"type": "dire"},
-            ],
-        },
-        "dialogue": {
-            "appel": [_l("bouchard", "Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte, j'ai une job.")],
-            "intro": [
-                _l("bouchard", "Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers pas propres."),
-                _l("bouchard", "Prends-la de nuit, sans témoin. Ti-Guy va te suivre en char, pour faire diversion."),
-                _l("bouchard", "Largue-la au garage. Pis si mes gars te courent après, sème-les."),
-            ],
-            "fin": [
-                _l("bouchard", "Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom."),
-                _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention."),
-            ],
-            "echec": [_l("bouchard", "J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.")],
-            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-            "pendant": [_p("ti_guy", "C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.", 2)],
-        },
-    },
-    {
-        "slug": "m5", "titre": "La Chef des Quais", "donneur": "josee", "prerequis": ["m4"],
-        "recompense": 800, "phase": 1, "echec": ["mort", "arrete"],
-        "donne": {"propriete": "bar", "faubourg_libere": True, "manchette": "cravates_chassees",
-                  "message": "LE BAR EST À TOI"},
-        "objectifs": [
-            {"type": "tuer", "groupe": "cravates", "n": 6, "ou": "zone:cravates", "coins": 3, "texte": "VIDE LES TROIS COINS DES CRAVATES"},
-            {"type": "tuer", "groupe": "cravates", "n": 1, "chef": True, "texte": "COUCHE LE CHEF"},
-            {"type": "semer", "etoiles": 3, "texte": "SÈME LA POLICE"},
-            {"type": "aller", "lieu": "planque", "rayon": 4, "texte": "RENTRE À LA PLANQUE"},
-        ],
-        # Josée parle au Brouillard : la caméra sort voir le coin des Cravates (un
-        # lieu — dedans, rien ne se pose avant la sortie). À la fin, on est à la
-        # planque : la caméra va voir le Brouillard, qui est à toi.
-        "scenes": {
-            "intro": [
-                {"type": "dire", "repliques": [1], "ensemble": True},
-                {"type": "coupe", "vers": "zone:cravates", "ferme": 20, "ouvre": 20, "tient": 150},
-                {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
-                {"type": "dire", "repliques": [2, 3]},
-            ],
-            "fin": [
-                {"type": "coupe", "vers": "chez:josee", "ferme": 20, "ouvre": 20, "tient": 180, "ensemble": True},
-                {"type": "dire"},
-            ],
-        },
-        "dialogue": {
-            "appel": [_l("josee", "Josée. On m'appelle la Chef. Viens au Brouillard, j'ai à te parler.")],
-            "intro": [
-                _l("josee", "Les Cravates tiennent trois coins de rue. Je les veux vides avant la nuit."),
-                _l("josee", "Leur chef va sortir quand ses gars vont tomber. Lui, je le veux couché."),
-                _l("josee", "Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque."),
-            ],
-            "fin": [
-                _l("josee", "Le Faubourg respire. Le bar est à toi, pis toute la ville va le lire demain matin."),
-                _l("josee", "On va se reparler. Y a plus grand que le Faubourg."),
-            ],
-            "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.")],
-            # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-            "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1)],
-        },
-    },
-]
 
 #: Les defis : un panneau en ville, un chrono, une prime — une seule fois.
 DEFIS: list[dict] = [
@@ -532,7 +308,69 @@ DEFIS: list[dict] = [
      "texte": "TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 2:00"},
     {"slug": "livraison", "titre": "Livraison sans bosse", "ou": "porte:garage", "lieu": "bar", "chrono_s": 90,
      "etoiles": 1, "prime": 250, "texte": "LIVRE TON CHAR AU BAR EN 90 S, SANS UNE BOSSE, AVEC LA POLICE AUX FESSES"},
+
+    # --- LES TROIS JEUX D'ADRESSE DE LA FOIRE (bord de l'eau, 4e vague) -------
+    #
+    # ⚠️ **UN JEU D'ADRESSE EST UN DEFI, PAS UN MOTEUR**, et c'est la fiche du
+    # plan qui l'ecrit en majuscules. Ils tiennent donc sur les rails de la v1 —
+    # un lieu, un compte, un chrono, une prime, un texte en majuscules — et tout
+    # ce qu'ils ajoutent au moteur est `a_pied` : on les joue debout devant un
+    # comptoir, pas au volant.
+    #
+    # ⚠️ `ou` : `foire:<jeu>`, et AUCUN PANNEAU ne se plante (`creerPanneaux` ne
+    # connait que `rampe` et `porte:`). C'est le COMPTOIR qu'on lit : un panneau
+    # de defi au milieu d'une allee de foire, entre deux kiosques a trois tuiles
+    # l'un de l'autre, serait un poteau de plus dans le seul endroit dense du
+    # jeu — et la baraque dit deja ce qu'elle vend.
+    #
+    # ⚠️ **LA PRIME EST PETITE, ET C'EST LA REGLE DES PALIERS DE BOULOT** : un
+    # defi de foire ne paie pas mieux a l'heure qu'un boulot honnete (juge :
+    # `prime / chrono_s` sous le taux du taxi). Les trois ensemble rapportent
+    # dix fois le billet d'entree — de quoi jouer, pas de quoi vivre. Ce qu'on
+    # vient chercher au troisieme, c'est la CASQUETTE (`CASQUETTE_DE_LA_FOIRE`).
+    {"slug": "tir", "titre": "La galerie de tir", "ou": "foire:galerie_tir", "a_pied": True,
+     # ⚠️ **LE FORAIN PRÊTE SA CARABINE À BOUCHON** (`armes.carabine_foire`).
+     # Avant, on crevait les cibles avec sa PROPRE arme à feu : la foule fuyait,
+     # la police rappliquait, et un joueur sans arme à feu ne pouvait pas jouer
+     # du tout (les poings n'atteignent pas les décors). `Histoire.commencerDefi`
+     # prête la carabine — inoffensive, `foire` — et la reprend à la fin.
+     "foire": True, "cibles": 3, "chrono_s": 30, "rayon_px": 120, "prime": 60,
+     "consigne": "FRAPPE POUR TIRER",
+     "texte": "LE FORAIN TE PRÊTE SA CARABINE : TIRE LES TROIS CIBLES EN 30 S"},
+    # ⚠️ « Marteler ACTION contre un chrono : aucune statistique neuve, c'est le
+    # BOUTON qui fait la force. » Le compte est en coups, pas en muscles.
+    {"slug": "marteau", "titre": "Le marteau de force", "ou": "foire:marteau_force", "a_pied": True,
+     # ⚠️ `rayon_px` : on a les mains dessus, mais on se tient DANS L'ALLEE —
+     # deux tuiles et demie du comptoir, mesure au banc. A une tuile et demie,
+     # on ne pouvait pas jouer sans monter sur la baraque.
+     "foire": True, "coups": 25, "chrono_s": 10, "rayon_px": 44, "prime": 25,
+     "consigne": "MARTÈLE ACTION",
+     "texte": "MARTÈLE ACTION : 25 COUPS EN 10 S, ET LA CLOCHE SONNE"},
+    # ⚠️ **ON LA GAGNE, ON NE LA VOLE PAS** : le canard ne s'accroche que quand
+    # il passe sous le crochet, et un comptoir defonce ne rend pas un lot — il
+    # met fin au jeu (`vole_pas`).
+    {"slug": "canards", "titre": "La pêche aux canards", "ou": "foire:peche_canards", "a_pied": True,
+     # ⚠️ `pose` : la FENETRE, c'est la pose du bassin ou le canard passe sous le
+     # crochet — pas un chrono invente. Le dessin du kiosque (`peche_canards`,
+     # `anime` + `variantes`) et la regle du jeu disent donc la MEME chose, et
+     # un juge de banc le prouve en regardant la couche peinte : a cette
+     # pose-la, un canard est sous la canne.
+     "foire": True, "canards": 5, "chrono_s": 40, "rayon_px": 44, "prime": 90,
+     "pose": 0, "vole_pas": True,
+     "consigne": "ACTION QUAND IL PASSE SOUS LE CROCHET",
+     "texte": "PÊCHE CINQ CANARDS : ACTION QUAND IL PASSE SOUS LE CROCHET"},
 ]
+
+#: ⚠️ **LE LOT DU TROISIEME PALIER**, et rien d'autre ne la donne : la casquette
+#: de la foire (`magasins.TENUES`) tombe quand les TROIS jeux d'adresse sont
+#: gagnes. Le vestiaire existait deja et ne demande rien a personne — une tenue
+#: de plus, c'est une ligne de catalogue, pas un moteur.
+CASQUETTE_DE_LA_FOIRE = "casquette_foire"
+
+
+def defis_de_foire() -> list[dict]:
+    """Les jeux d'adresse de la foire, dans l'ordre du catalogue."""
+    return [d for d in DEFIS if d.get("foire")]
 
 NB_MISSIONS = len(CATALOGUE)
 

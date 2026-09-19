@@ -92,8 +92,17 @@ ATTENTE: dict = {
 #: deux chemins de même longueur se valent, et le tracé traverse une boîte de
 #: croisement en escalier. Une voie qui ne longe PAS le trottoir coûte aussi :
 #: sur un boulevard, l'autobus roule à droite, là où sont les arrêts.
+#:
+#: ⚠️ **ET LA VOIE QUI REGARDE DEHORS** (17 sept. 2026) : sur le boulevard du
+#: pourtour, la voie qui longe le trottoir du bord de la carte a bien son
+#: trottoir — mais l'abribus tomberait HORS de la ville, donc aucun arrêt ne s'y
+#: pose, jamais. Le jour où la trame a bougé, la ligne 2 a descendu ce
+#: trottoir-là sur 126 tuiles et laissé 148 tuiles sans un arrêt (le juge en
+#: tolère 84). Elle coûte donc comme une voie du milieu : ce n'est pas interdit,
+#: c'est moins bien — un demi-tour de plus vaut mieux qu'un quartier sans arrêt.
 COUT_VIRAGE = 4
 COUT_VOIE_DU_MILIEU = 2
+COUT_SANS_ABRI = 2
 COUT_DEPORT = 3
 
 #: Ce que vaut, en tuiles de marche, un arrêt tourné dans le sens du voyage.
@@ -174,6 +183,18 @@ class _Reseau:
             return False
         rx, ry = a_droite(*PAS[fleche])
         return self.dedans(x + rx, y + ry) and self.sol[y + ry][x + rx] == "."
+
+    def peut_porter_un_abri(self, x: int, y: int) -> bool:
+        """La voie a-t-elle de la place DERRIÈRE son trottoir pour un abribus ?
+
+        ⚠️ Seulement la géométrie — hors de la carte ou pas. Ce qui occupe la
+        tuile (une porte, un meuble) est l'affaire d'`arret_possible` : un tracé
+        ne se détourne pas pour un banc, il se détourne pour le vide."""
+        fleche = self.voie[y][x]
+        if fleche not in PAS:
+            return True
+        rx, ry = a_droite(*PAS[fleche])
+        return self.dedans(x + 2 * rx, y + 2 * ry)
 
     def peut_sortir(self, x: int, y: int, d: tuple[int, int]) -> bool:
         """`Vehicules.peutSortir` : depuis cette tuile de boîte, tout droit dans ce
@@ -258,6 +279,8 @@ class _Reseau:
                 pas = 1 + (COUT_VIRAGE if virage else 0) + (COUT_DEPORT if deport else 0)
                 if self.voie[cy][cx] in PAS and not self.longe_le_trottoir(cx, cy):
                     pas += COUT_VOIE_DU_MILIEU
+                elif not self.peut_porter_un_abri(cx, cy):
+                    pas += COUT_SANS_ABRI
                 apres = (tourne or virage or deport) if self.voie[cy][cx] == "+" else False
                 cle = ((cx, cy), cap, apres)
                 if cout + pas < dist.get(cle, 1 << 60):
@@ -325,14 +348,40 @@ def arret_possible(reseau: _Reseau, chantier, x: int, y: int) -> tuple[tuple[int
 ESSAIS_PAR_ETAPE = 4
 
 
-def _boucle(reseau: _Reseau, choix: list[list[tuple[int, int]]]):
+def _boucle(reseau: _Reseau, choix: list[list[tuple[int, int]]], acceptable=None):
     """La boucle qui passe par une place de chaque étape, dans l'ordre : (boucle,
     indice de chaque étape, places retenues) — ou None.
 
     Pour chaque étape on prend la première place candidate qu'on sait rejoindre ;
     si aucune ne se rejoint en ne tournant qu'une fois par boîte, on accepte le
-    double virage plutôt qu'une ligne qui ne dessert pas son lieu."""
-    etapes = [choix[0][0]]
+    double virage plutôt qu'une ligne qui ne dessert pas son lieu.
+
+    ⚠️ `acceptable` : ce qu'on demande à la boucle EN PLUS d'exister — pour une
+    ligne d'autobus, de pouvoir être desservie (`_plus_long_desert`). Une boucle
+    refusée n'est pas perdue : elle sert de repli si aucune candidate ne passe.
+
+    ⚠️ **La PREMIÈRE étape a droit à ses candidates elle aussi** (17 sept. 2026).
+    Elle n'en avait qu'une, et une ligne entière tombait quand cette place-là ne
+    menait nulle part : le jour où le chenal du pont s'est élargi, la tournée des
+    éboueurs a commencé sur une voie du boulevard du nord qui va vers l'ouest,
+    aucun trajet n'en partait vers l'est, et la ville s'est livrée SANS camion à
+    ordures (`tracer` rendait None, sans un mot). On recommence donc la boucle
+    sur la candidate suivante. Une boucle qui marchait du premier coup ne change
+    pas d'une tuile : on ne paie la recherche que sur un échec."""
+    faute_de_mieux = None
+    for premier in choix[0][:ESSAIS_PAR_ETAPE]:
+        faite = _une_boucle(reseau, choix, premier)
+        if faite is None:
+            continue
+        if acceptable is None or acceptable(faite[0]):
+            return faite
+        faute_de_mieux = faute_de_mieux or faite
+    return faute_de_mieux
+
+
+def _une_boucle(reseau: _Reseau, choix: list[list[tuple[int, int]]], premier: tuple[int, int]):
+    """La boucle qui part de `premier` — voir `_boucle`."""
+    etapes = [premier]
     boucle: list[tuple[int, int]] = []
     indices: list[int] = []
     for k in range(1, len(choix) + 1):
@@ -354,6 +403,24 @@ def _boucle(reseau: _Reseau, choix: list[list[tuple[int, int]]]):
         if k < len(choix):
             etapes.append(cible)
     return boucle, indices, etapes
+
+
+def _plus_long_desert(boucle: list[tuple[int, int]], possibles: dict) -> int:
+    """Le plus long bout de boucle où AUCUN arrêt ne peut se poser, en tuiles.
+
+    ⚠️ Une boucle est un trajet permis ; ce n'est pas encore une ligne. Le bord
+    de la carte le dit mieux que tout : sur le boulevard du pourtour, la voie qui
+    longe le trottoir du DEHORS ne peut porter aucun abribus (il tomberait hors
+    de la ville), donc un tour qui la descend sur cent cinquante tuiles ne
+    dessert personne. Mesure du 17 sept. 2026, quand la trame a bougé : la ligne
+    2 y a pris 148 tuiles d'affilée sans un arrêt (le juge en tolère 84). On
+    mesure donc le desert AVANT de choisir la boucle, et `_boucle` en essaie une
+    autre."""
+    n = len(boucle)
+    creux = [i for i, t in enumerate(boucle) if t in possibles]
+    if not creux:
+        return n
+    return max((creux[(k + 1) % len(creux)] - creux[k]) % n for k in range(len(creux)))
 
 
 def coins(boucle: list[tuple[int, int]]) -> list[list[int]]:
@@ -435,7 +502,8 @@ def tracer(chantier, ville: dict) -> dict:
             if not choix:
                 choix = sorted((abs(t[0] - lieu["x"]) + abs(t[1] - lieu["y"]), t) for t in possibles)
             etapes.append([t for _note, t in choix])
-        construite = _boucle(reseau, etapes)
+        construite = _boucle(reseau, etapes,
+                             lambda b: _plus_long_desert(b, possibles) <= 2 * ARRETS["ecart"][1])
         if construite is None:
             raise ValueError(f"ligne {fiche['numero']} : pas de tracé entre ses étapes")
         boucle, fixes, retenues = construite

@@ -92,7 +92,12 @@ def test_le_poids_audio_reste_raisonnable():
     # Les voix de l'histoire se chargent par mission : une replique reste legere.
     for fichier in histoire:
         assert fichier.stat().st_size < 150_000, fichier.name
-    assert sum(f.stat().st_size for f in histoire) < 3_000_000
+    # ⚠️ Relevé de 3 à 4 Mo le 18 sept. 2026 : m6 (8 répliques de Josée) et m97
+    # (7 de Marco) ont été ajoutées et générées — 15 voix de plus, 192 Ko, et le
+    # total passe à 3,19 Mo. Ce plafond ne protège pas le démarrage (ces voix se
+    # chargent par mission, une à la fois) : il borne le dépôt, et c'est un ajout
+    # de contenu, pas un dépassement qu'on laisse filer.
+    assert sum(f.stat().st_size for f in histoire) < 4_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on
@@ -257,8 +262,8 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
     cours — jamais au demarrage."""
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
-    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "journal", "ouverture"}, \
-        "les cinq missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
+    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "m6", "m97", "journal", "ouverture"}, \
+        "les missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
     assert all(v["qui"] and v["partie"] for v in histoire)
     assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
     assert all(v["fichier"] is None or v["fichier"].startswith("histoire-") for v in histoire)
