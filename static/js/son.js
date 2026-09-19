@@ -634,6 +634,10 @@ const Son = (function () {
     // puis le « whoomp » — joue a l'ARRIVEE de la bouteille, par `Combat`.
     mitraillette: function () { if (!joue('mitraillette')) { bruit(0.06, 0.6, 3500, 300); ton(110, 0.05, 'square', 0.3, 0.5); } },
     carabine: function () { if (!joue('carabine')) { bruit(0.25, 0.9, 2500, 120); ton(70, 0.3, 'sine', 0.5, 0.4); ton(1200, 0.05, 'square', 0.1, 1, 0.5); } },
+    //: LA CARABINE À BOUCHON de la galerie de tir : un « pop » mat de liège.
+    //: Synthétisé, comme le sifflet du petit train : le son de la foire est une
+    //: piste à part, et un `joue` sans mp3 réclamerait un fichier absent.
+    carabine_foire: function () { if (!joue('carabine_foire')) { ton(240, 0.05, 'sine', 0.3, 2.2); bruit(0.06, 0.18, 1400, 500); } },
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },
     // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
     extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },

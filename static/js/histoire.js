@@ -1283,7 +1283,7 @@ const Histoire = (function () {
   function commencerDefi(d) {
     const j = B.joueur;
     B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0,
-               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y };
+               coups: 0, pris: 0, tour: -1, x: j.x, y: j.y, avantArme: null };
     Son.SFX.mission();
     // ⚠️ UN JEU DE FOIRE SE JOUE DEBOUT : pas de char a trouver, ca part tout de
     // suite — et le forain RELEVE SES CIBLES avant de nous laisser tirer. Sans
@@ -1291,6 +1291,19 @@ const Histoire = (function () {
     // peut plus gagner : ses cibles sont par terre, et le matin est loin.
     if (d.a_pied) {
       if (d.cibles && typeof Foire !== 'undefined') Foire.cibles().forEach(Entites.releverDecor);
+      // ⚠️ **LE FORAIN PRÊTE SA CARABINE À BOUCHON**, puis la reprend à la fin.
+      // Avant, on crevait les cibles avec sa PROPRE arme à feu : la foule
+      // fuyait, la police rappliquait, et sans arme à feu on ne pouvait pas
+      // jouer du tout (les poings n'atteignent pas les décors). La carabine de
+      // foire est inoffensive — `foire`, dans `combat.js` — et ne sort du sac
+      // que le temps de la partie.
+      if (d.cibles && typeof Combat !== 'undefined') {
+        B.defi.avantArme = j.arme;
+        B.partie.armes.carabine_foire = { mun: null, usure: 0 };
+        B.partie.arme = 'carabine_foire';
+        j.arme = 'carabine_foire';
+      }
+      if (d.consigne) Hud.message(d.consigne, 180);
       partir(d, null);
       return;
     }
@@ -1307,7 +1320,10 @@ const Histoire = (function () {
     f.parti = true; f.t = 0;
     f.chocs = v ? v.chocs : 0; f.vie = v ? v.vie : 0;
     if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
-    Hud.message(d.titre.toUpperCase() + ' — GO !', 120);
+    // ⚠️ **AU GO, ON RAPPELLE QUOI FAIRE** : le menu l'a dit en `aide`, mais on
+    // le relit à l'instant où la partie part — et la consigne d'un jeu de
+    // foire tient en une ligne (`FRAPPE POUR TIRER`, `MARTÈLE ACTION`…).
+    Hud.message(d.titre.toUpperCase() + ' — GO ! ' + (d.consigne || ''), 160);
   }
 
   function majDefi() {
@@ -1378,6 +1394,16 @@ const Histoire = (function () {
 
   function finirDefi(reussi, raison) {
     const f = B.defi, d = defis().find(function (q) { return q.slug === f.slug; });
+    // ⚠️ **LE FORAIN REPREND SA CARABINE** — gagnée ou ratée, la partie est
+    // finie, et on reprend l'arme qu'on tenait avant de jouer. Sans ça, on
+    // garderait le bouchon pour la rue, et il ne blesse personne.
+    if (f && f.avantArme && B.joueur) {
+      delete B.partie.armes.carabine_foire;
+      if (B.joueur.arme === 'carabine_foire') {
+        B.joueur.arme = f.avantArme;
+        B.partie.arme = f.avantArme;
+      }
+    }
     B.defi = null;
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];

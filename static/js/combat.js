@@ -305,15 +305,21 @@ const Combat = (function () {
     e.touches = [];
     // ⚠️ APRES UN COUP DE FEU, LA RUE NE REPREND PAS SON MURMURE : elle revient
     // en CRIS, puis se calme. Une foule qui murmure pareil avant et apres un
-    // coup de feu n'est pas une foule, c'est un bruit de fond.
-    Son.Rumeur.crier();
-    const angle = joueur ? viseeAssistee(e, e.angle) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
+    // coup de feu n'est pas une foule, c'est un bruit de fond. Le bouchon de
+    // foire, lui, ne fait pas lever la tete : la fetes reste une fete.
+    if (!arme.foire) Son.Rumeur.crier();
+    // ⚠️ **PAS DE VISÉE ASSISTÉE POUR LE BOUCHON DE FOIRE** : dans une allée
+    // pleine de monde, l'assistance détournerait chaque tir vers le passant le
+    // mieux aligné — des gens immunisés, des cibles qui restent debout, et une
+    // galerie injouable. On vise SA cible, là où on regarde.
+    const angle = joueur ? (arme.foire ? e.angle : viseeAssistee(e, e.angle)) : angleVers(e.x, e.y, B.joueur.x, B.joueur.y);
     const dispersion = dispersionDe(e, arme);
     for (let i = 0; i < (arme.plombs || 1); i++) {
       const devie = angle + (B.rng() - 0.5) * dispersion * 2;
       Entites.creer('projectile', e.x + Math.cos(angle) * 8, e.y + Math.sin(angle) * 8 - 6, {
         r: 2, dessine: false, tireur: e, degats: arme.degats, arme: arme.slug,
         saigne: arme.saigne, cloche: !!arme.cloche, feu_s: arme.feu_s || 0,
+        foire: !!arme.foire,
         vx: Math.cos(devie) * arme.vitesse_projectile,
         vy: Math.sin(devie) * arme.vitesse_projectile,
         z: 6, vz: arme.cloche ? 1.6 : 0, portee: arme.portee, parcouru: 0,
@@ -330,11 +336,18 @@ const Combat = (function () {
       if (!B.debugMunitions && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
       B.cam.secousse = 0.6;
       Entree.vibrer(25);
-      Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
-      Entites.alerter(e.x, e.y, e, 3);
-      // ⚠️ Un coup de feu s'entend : hors du cone, sans ligne de vue. Tirer
-      // de loin t'evite d'etre vu, jamais d'etre cherche.
-      if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
+      // ⚠️ **LA CARABINE À BOUCHON DE LA FOIRE N'EST PAS UNE ARME** : pas de
+      // crime signalé, personne ne fuit, aucun agent n'entend le petit « pop ».
+      // C'est un jeu d'adresse devant un comptoir, pas un stand de tir en ville
+      // — et sans cette porte, jouer à la galerie vidait l'allée et nous
+      // mettait la police au cul pour une partie de foire.
+      if (!arme.foire) {
+        Police.signalerCrime('arme_sortie', e.x, e.y, Police.quelqu_un_voit(e.x, e.y, e));
+        Entites.alerter(e.x, e.y, e, 3);
+        // ⚠️ Un coup de feu s'entend : hors du cone, sans ligne de vue. Tirer
+        // de loin t'evite d'etre vu, jamais d'etre cherche.
+        if (arme.bruit > 0) Police.entendre(e.x, e.y, arme.bruit * TT);
+      }
     }
     // Le coup de feu, la fronde qui claque — sauf la bouteille, qu'on entend
     // quand elle CASSE (`allumer`), pas quand elle part.
@@ -455,6 +468,11 @@ const Combat = (function () {
     let arrete = false;
     for (const d of Entites.decorAutour(p.x, p.y, pas + 24)) {
       if (d.brise) continue;
+      // ⚠️ **LE BOUCHON DE FOIRE NE CASSE QUE LES CIBLES** de la galerie
+      // (`cible_foire`) : il traverse le reste de l'allée sans rien démonter.
+      // Crever un kiosque ou une table de pique-nique depuis le stand serait
+      // un sabotage, pas un jeu d'adresse.
+      if (p.foire && d.decor !== 'cible_foire') continue;
       const fiche = DECORS[d.decor] || {};
       if (!fiche.pv && !fiche.arrete) continue;
       if (distanceAuTrajet(p, d.x, d.y - HAUTEUR_CANON) > (d.r || 4) + MARGE_DECOR) continue;
@@ -489,6 +507,11 @@ const Combat = (function () {
         continue;
       }
       const touche = Entites.autour(p.x, p.y, 7, function (c) {
+        // ⚠️ **LE BOUCHON DE FOIRE NE BLESSE PERSONNE** : il ne vise que les
+        // cibles de la galerie, jamais un passant, un donneur, une mascotte. Un
+        // joueur qui arrose l'allée ne doit pas transformer la fête en
+        // carnage — il rate, c'est tout.
+        if (p.foire) return false;
         return c !== p.tireur && c.vivant && (c.type === 'pieton' || c.type === 'joueur');
       })[0];
       if (touche && (!p.cloche || p.z < 14)) {
@@ -549,12 +572,11 @@ const Combat = (function () {
       c.etat = 'fuit';
       c.minuterie = 180;
       if (e.t % 20 === 0) Entites.blesser(c, arme.degats, e, { assomme: true });
+    }
     // Le feu de bâtiment (P4) : le jet d'extincteur attire la flamme. ⚠️ C'est
-    // `Incendies` qui décide de la règle — ici, on ne lui donne que la main qu
-i
+    // `Incendies` qui décide de la règle — ici, on ne lui donne que la main qui
     // tient la gâchette.
     if (typeof Incendies !== 'undefined') Incendies.majJet(e);
-    }
   }
 
   // --- Ramasser, faire les poches -------------------------------------------------

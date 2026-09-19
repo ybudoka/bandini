@@ -296,6 +296,57 @@ def test_resquiller_par_la_cloture_coute_une_etoile(banc, paquet):
     assert r["avec"]["etoiles"] == 0, "on paie une étoile avec son billet en poche"
 
 
+def test_la_galerie_prete_sa_carabine_a_bouchon_et_la_reprend(banc):
+    """⚠️ **La galerie de tir est un jeu d'adresse, pas un stand de tir.** Avant,
+    on crevait les cibles avec sa PROPRE arme à feu : la foule fuyait, la police
+    rappliquait (`arme_sortie` + fuite), et un joueur sans arme à feu ne pouvait
+    pas jouer du tout — les poings n'atteignent pas les décors.
+
+    Le forain prête donc sa **carabine à bouchon** (`carabine_foire`) le temps du
+    défi : inoffensive (aucun crime, personne ne fuit, aucun blessé), elle ne casse
+    QUE les cibles, et il la reprend à la fin — on revient à son arme d'avant."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const g = L.Foire.jeux().find(function (q) { return q.slug === 'galerie_tir'; });
+        j.x = g.x * L.TT + 8; j.y = (g.y + 2) * L.TT + 8;
+        L.Entites.indexer();
+        o.tape('KeyE'); o.frame(1);      // le comptoir
+        o.tape('KeyE'); o.frame(1);      // COMMENCER
+        const pretee = j.arme;
+        const etoilesAvant = L.B.recherche.etoiles;
+        o.tape('Space'); o.frame(3);     // un coup vers l'allée
+        const armeApresCoup = j.arme;
+        const etoilesApres = L.B.recherche.etoiles;
+        const fuite = L.B.entites.filter(function (e) { return e.type === 'pieton'
+            && (e.etat === 'fuit' || e.etat === 'temoin'); }).length;
+        const tues = L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.vivant; }).length;
+        // On vise chaque cible de près, et on tire jusqu'à la victoire.
+        let essai = 0;
+        while (L.B.defi && essai++ < 30) {
+            const cible = L.Foire.cibles().find(function (q) { return !q.brise; });
+            if (!cible) break;
+            j.x = cible.x; j.y = cible.y + 30; L.Entites.indexer();
+            j.angle = Math.atan2(cible.y - j.y, cible.x - j.x);
+            let m = 0;
+            while (m++ < 10 && !(cible.brise)) { o.tape('Space'); o.frame(3); }
+            o.frame(2);
+        }
+        const reussi = !!L.B.partie.defisFaits.tir;
+        const armeEnfin = j.arme;
+        return { pretee: pretee, armeApresCoup: armeApresCoup,
+                 etoilesAvant: etoilesAvant, etoilesApres: etoilesApres,
+                 fuite: fuite, tues: tues, reussi: reussi, armeEnfin: armeEnfin,
+                 gardeBouchon: !!L.B.partie.armes.carabine_foire };
+    }""")
+    assert r["pretee"] == "carabine_foire", "le forain ne prête pas sa carabine"
+    assert r["armeApresCoup"] == "carabine_foire", "on garde le bouchon le temps du défi"
+    assert r["etoilesAvant"] == 0 and r["etoilesApres"] == 0, "le bouchon ne déclenche aucune étoile"
+    assert r["fuite"] == 0 and r["tues"] == 0, "la foire ne fuit pas et personne n'est blessé"
+    assert r["reussi"], "on ne gagne pas la galerie avec la carabine prêtée"
+    assert r["armeEnfin"] == "poings" and not r["gardeBouchon"], "le forain ne reprend pas sa carabine"
+
+
 def test_la_foire_se_remplit_de_monde_et_de_mascottes(banc, paquet):
     """« Beaucoup de monde », « des mascottes ». ⚠️ Ils naissent DANS l'enceinte,
     y restent, et personne n'apparaît sous les yeux du joueur. Au premier essai,

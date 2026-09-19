@@ -329,8 +329,14 @@ DEFIS: list[dict] = [
     # dix fois le billet d'entree — de quoi jouer, pas de quoi vivre. Ce qu'on
     # vient chercher au troisieme, c'est la CASQUETTE (`CASQUETTE_DE_LA_FOIRE`).
     {"slug": "tir", "titre": "La galerie de tir", "ou": "foire:galerie_tir", "a_pied": True,
+     # ⚠️ **LE FORAIN PRÊTE SA CARABINE À BOUCHON** (`armes.carabine_foire`).
+     # Avant, on crevait les cibles avec sa PROPRE arme à feu : la foule fuyait,
+     # la police rappliquait, et un joueur sans arme à feu ne pouvait pas jouer
+     # du tout (les poings n'atteignent pas les décors). `Histoire.commencerDefi`
+     # prête la carabine — inoffensive, `foire` — et la reprend à la fin.
      "foire": True, "cibles": 3, "chrono_s": 30, "rayon_px": 120, "prime": 60,
-     "texte": "CRÈVE LES TROIS CIBLES EN 30 S"},
+     "consigne": "FRAPPE POUR TIRER",
+     "texte": "LE FORAIN TE PRÊTE SA CARABINE : TIRE LES TROIS CIBLES EN 30 S"},
     # ⚠️ « Marteler ACTION contre un chrono : aucune statistique neuve, c'est le
     # BOUTON qui fait la force. » Le compte est en coups, pas en muscles.
     {"slug": "marteau", "titre": "Le marteau de force", "ou": "foire:marteau_force", "a_pied": True,
@@ -338,6 +344,7 @@ DEFIS: list[dict] = [
      # deux tuiles et demie du comptoir, mesure au banc. A une tuile et demie,
      # on ne pouvait pas jouer sans monter sur la baraque.
      "foire": True, "coups": 25, "chrono_s": 10, "rayon_px": 44, "prime": 25,
+     "consigne": "MARTÈLE ACTION",
      "texte": "MARTÈLE ACTION : 25 COUPS EN 10 S, ET LA CLOCHE SONNE"},
     # ⚠️ **ON LA GAGNE, ON NE LA VOLE PAS** : le canard ne s'accroche que quand
     # il passe sous le crochet, et un comptoir defonce ne rend pas un lot — il
@@ -350,6 +357,7 @@ DEFIS: list[dict] = [
      # pose-la, un canard est sous la canne.
      "foire": True, "canards": 5, "chrono_s": 40, "rayon_px": 44, "prime": 90,
      "pose": 0, "vole_pas": True,
+     "consigne": "ACTION QUAND IL PASSE SOUS LE CROCHET",
      "texte": "PÊCHE CINQ CANARDS : ACTION QUAND IL PASSE SOUS LE CROCHET"},
 ]
 

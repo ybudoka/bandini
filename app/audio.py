@@ -145,6 +145,14 @@ CATALOGUE: list[Echantillon] = [
        prompt="a single bolt-action rifle shot on a city street, a loud sharp "
               "crack with a rolling echo off the buildings, then the bolt "
               "worked with a metallic clack, no voices, no music"),
+    # ⚠️ LA CARABINE À BOUCHON de la galerie de tir : un petit « pop » mat de
+    # bouchon de liège, pas une détonation. Ce n'est pas une arme à feu — c'est
+    # le bruit d'un stand de foire, et c'est POUR CELA qu'il ne déclenche ni
+    # fuite ni police (`combat.js`, champ `foire`).
+    _e("carabine_foire", "Carabine à bouchon", duree_s=0.5, volume=0.4, influence=0.7,
+       prompt="a soft cork pop from a fairground shooting gallery air rifle, "
+              "one light hollow plop with a tiny puff of air, dry close-up, "
+              "no gunshot, no echo, no voices, no music"),
     _e("molotov", "Cocktail Molotov qui casse", duree_s=1.3, volume=0.7,
        prompt="a glass bottle shattering on asphalt then a sudden whoomp of "
               "gasoline igniting into a burst of flames with a short crackle, "
