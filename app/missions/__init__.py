@@ -294,9 +294,9 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # (répliques écrites avec `_l`/`_p` de `_commun.py`). Ce fichier les réunit
 # dans `CATALOGUE` : ajouter une mission = créer son fichier et l'ajouter
 # aux deux listes ci-dessous, rien d'autre.
-from . import m1, m2, m3, m4, m5, m6, m97
+from . import m1, m2, m3, m4, m5, m6, m50, m97
 
-CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m97.MISSION]
+CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION, m97.MISSION]
 
 
 #: Les defis : un panneau en ville, un chrono, une prime — une seule fois.
