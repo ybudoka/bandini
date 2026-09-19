@@ -8084,7 +8084,11 @@ soit qui l'ait ouvert, et il se répare au lever du jour comme le reste. **Le sk
 s'achète chez Josée (350 $ — pas une arme : `MARCHE_NOIR.objets`), se pose sur un guichet
 par ACTION, **lit pendant la nuit** (350–900 $) ou se fait trouver (trois fois sur dix), et
 se vide au même guichet le lendemain ; trois posés à la fois au plus, et l'invite du HUD dit
-exactement ce qu'ACTION va faire (poser, attendre, vider). **L'assurance** au garage :
+exactement ce qu'ACTION va faire (poser, attendre, vider). Il se pose aussi sur une machine
+distributrice de la rue — dans son menu, **en plus des articles** et jamais à leur place :
+on peut poser un skimmer et acheter une canette dans la même visite, l'un n'empêche pas
+l'autre ; la machine d'une salle d'attente, elle, ne se skime pas, et une machine défoncée
+emporte le skimmer avec sa caisse. **L'assurance** au garage :
 Ti-Guy couvre ce qui est garé devant, sans demander à qui c'est — la moitié du prix neuf,
 **jamais plus de 900 $**, prime de 30 % ; le char qui brûle, plie ou coule ouvre une
 réclamation qu'on **encaisse au garage** ; à la troisième, **l'assureur enquête** : quatre

@@ -1971,9 +1971,36 @@ const Missions = (function () {
 
   function tuileDe(e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); }
 
-  function skimmerA(g) {
-    const cle = tuileDe(g);
+  function skimmerSur(cle) {
     return B.partie.skimmers.find(function (s) { return s.cle === cle; }) || null;
+  }
+
+  function skimmerA(g) { return skimmerSur(tuileDe(g)); }
+
+  /** Poser un skimmer a cette cle (un guichet, ou une machine de la rue) : il
+      lit cette nuit. Rend vrai si un skimmer est parti de la poche. */
+  function poserSkimmer(cle, x, y) {
+    const p = B.partie;
+    if ((p.objets.skimmer || 0) <= 0 || p.skimmers.length >= B.defs.economie.guichet.skimmer.max_poses) return false;
+    p.objets.skimmer -= 1;
+    p.skimmers.push({ cle: cle, x: x, y: y, jour: p.jour, monte: 0, pret: false });
+    Hud.message('SKIMMER POSÉ — REVIENS DEMAIN', 180);
+    return true;
+  }
+
+  /** La caisse de ce skimmer est pleine : on l'encaisse et il repart. */
+  function viderSkimmer(s) { encaisser(s.monte, 'SKIMMER'); B.partie.skimmers.splice(B.partie.skimmers.indexOf(s), 1); }
+
+  /** Les lignes du menu d'une MACHINE qui concernent le skimmer (pose, attente
+      ou vide), ou rien. ⚠️ Dans le menu, jamais a la place d'acheter : on peut
+      poser un skimmer ET s'offrir une liqueur dans la meme visite. */
+  function itemsSkimmerMachine(m) {
+    const p = B.partie, fiche = B.defs.economie.guichet.skimmer, s = skimmerSur(m.cle);
+    if (s && s.pret) return [{ libelle: 'VIDER LE SKIMMER — ' + s.monte + ' $', faire: function () { viderSkimmer(s); return false; } }];
+    if (s) return [{ libelle: 'SKIMMER POSÉ — REVIENS DEMAIN', actif: false }];
+    if ((p.objets.skimmer || 0) > 0 && p.skimmers.length < fiche.max_poses)
+      return [{ libelle: 'POSER UN SKIMMER', faire: function () { poserSkimmer(m.cle, m.x, m.y); return false; } }];
+    return [];
   }
 
   /** Ce qu'ACTION ferait a ce guichet — le libelle de l'invite, ou null s'il
@@ -1995,17 +2022,9 @@ const Missions = (function () {
     if (!g) return false;
     const p = B.partie, fiche = B.defs.economie.guichet.skimmer, s = skimmerA(g);
     j.animT = 10; j.animType = 'ramasse';
-    if (s && s.pret) {
-      encaisser(s.monte, 'SKIMMER');
-      p.skimmers.splice(p.skimmers.indexOf(s), 1);
-      return true;
-    }
+    if (s && s.pret) { viderSkimmer(s); return true; }
     if (s) { Hud.message('REVIENS DEMAIN'); return true; }
-    if ((p.objets.skimmer || 0) <= 0 || p.skimmers.length >= fiche.max_poses) return false;
-    p.objets.skimmer -= 1;
-    p.skimmers.push({ cle: tuileDe(g), x: g.x, y: g.y, jour: p.jour, monte: 0, pret: false });
-    Hud.message('SKIMMER POSÉ — REVIENS DEMAIN', 180);
-    return true;
+    return poserSkimmer(tuileDe(g), g.x, g.y);
   }
 
   /** La nuit des skimmers : chacun lit, ou se fait trouver. Rend combien
@@ -2145,7 +2164,12 @@ const Missions = (function () {
         return true;
       });
     });
-    return { titre: m.fiche.nom.toUpperCase(), items: items, sur: B.partie.argent + ' $' };
+    // ⚠️ Le skimmer se pose aussi sur une machine DE LA RUE — mais EN PLUS des
+    // articles, jamais a leur place : on peut poser un skimmer et acheter une
+    // liqueur dans la meme visite, l'un n'empeche pas l'autre. La machine d'une
+    // salle d'attente, elle, ne se skime pas.
+    const skimmers = m.cle.indexOf('rue:') === 0 ? itemsSkimmerMachine(m) : [];
+    return { titre: m.fiche.nom.toUpperCase(), items: items.concat(skimmers), sur: B.partie.argent + ' $' };
   }
 
   /** Brasser la machine : une fois sur `brasser`, ce qui etait pris tombe. */
@@ -2187,6 +2211,8 @@ const Missions = (function () {
       }
     }
     if (m && B.coincees) delete B.coincees[m.cle];
+    // ⚠️ Le skimmer pose sur cette machine part avec la caisse, comme au guichet.
+    if (m) B.partie.skimmers = B.partie.skimmers.filter(function (s) { return s.cle !== m.cle; });
     Police.signalerCrime('distributrice', d.x, d.y, Police.quelqu_un_voit(d.x, d.y, null));
     Son.SFX.monnaie();
     return total;
@@ -2561,6 +2587,7 @@ const Missions = (function () {
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,
+           skimmerSur, poserSkimmer, viderSkimmer, itemsSkimmerMachine,
            itemBouchee, manger, distributriceSousLaMain, inviteDistributrice, utiliserDistributrice, menuDistributrice,
            brasser, distributriceCassee, machineDuPoint,
            valeurAssuree, primeAssurance, assurer, charPerdu, encaisserAssurance, nuitDeLAssurance,
