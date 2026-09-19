@@ -6,20 +6,20 @@ MISSION = {
     "slug": "m50",
     "titre": "Le Cargo de Minuit",
     "donneur": "marco",
-    "prerequis": ["m49"],
+    "prerequis": ["m5"],
     "recompense": 450,
     "phase": 1,
     "echec": ["mort", "arrete"],
     "donne": {"message": "LE PORT À MINUIT"},
 
     "objectifs": [
-        { "type": "aller", "texte": "ALLER AU CARGO DES QUAIS",
-          "lieu": "cargo", "rayon": 4, "nuit": True },
+        { "type": "aller", "texte": "ALLER À LA CANTINE DES QUAIS, DE NUIT",
+          "lieu": "cantine", "rayon": 4, "nuit": True },
 
-        { "type": "parler", "texte": "PARLER AU GARDE DU CARGO",
-          "cible": "gardien" },
+        { "type": "parler", "texte": "PARLER À LULU, À LA CANTINE",
+          "cible": "lulu" },
 
-        { "type": "ramasser", "texte": "RAMASSER LE COLIS SUR LE QUAI",
+        { "type": "ramasser", "texte": "RATTRAPER LE FUYARD ET SON COLIS",
           "vehicule": "auto", "cible": "fuyard" },
 
         { "type": "retourner", "texte": "RETOURNER AU GARAGE" }
@@ -34,10 +34,7 @@ MISSION = {
             _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.")
         ],
         "pendant": [
-            _p("marco", "Le cargo est là. Bouge pas trop les lumières.", 0),
-            _p("marco", "Parle au garde, il sait quoi faire.", 1),
-            _p("marco", "Le docker va essayer de filer. Rattrape-le!", 2),
-            _p("marco", "Ramène ça au garage, vite.", 3)
+            _p("marco", "Le docker va essayer de filer. Rattrape-le!", 2)
         ],
         "client": [],
         "fin": [
