@@ -31,6 +31,21 @@ TYPES_OBJECTIFS = (
     "courses",     # `n` courses de taxi (le klaxon prend un client)
     "semer",       # redescendre a 0 etoile (`etoiles` posees au depart)
     "retourner",   # revenir au donneur
+    # --- M16 : les neuf types de plus (docs/plan.md, « Ce que le moteur apprend »).
+    # ⚠️ Chacun porte un juge de banc avant de servir une mission, et chacun
+    # s'écrit en DONNÉES, jamais en `if (slug === '…')`. Les clés se déclarent
+    # ici pour rester lisibles au carnet et au GPS comme au navigateur.
+    "suivre",      # filer un piéton ou un char sans être vu : trop près ou trop
+                   # loin, c'est raté (`cible`)
+    "proteger",    # un personnage te suit à pied ou monte avec toi ; s'il meurt,
+                   # échec `protege_mort` (`cible`)
+    "pickpocket",  # les poches d'un piéton PRÉCIS, par-derrière (le jet de m2) `cible`
+    "payer",       # donner un montant (`montant`)
+    "acheter",     # un article à un comptoir (`article`, `ou`)
+    "detruire",    # un véhicule de la mission (`vehicule_val` : ce qu'on lui enveie)
+    "sauter",      # une rampe (`vol_px` : le juge du Grand Saut)
+    "eteindre",    # un feu à l'extincteur (le jet existe, le feu de char aussi)
+    "boulots",     # `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi)
 )
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
@@ -46,7 +61,16 @@ TYPES_OBJECTIFS = (
 #: rue doit rester ce qu'elle est : c'est elle qui tient le Faubourg (M5), c'est
 #: elle qui vient encaisser la dette de Rocco, et l'affaiblir pour arranger M2
 #: rendrait tout le reste du jeu mou. Ce qui change, c'est QUI on envoie.
-ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono")
+# ⚠️ `etoile` (les missions discrètes, `sans_etoile`) et `protege_mort`
+# (`proteger`, sa cible est tombée) sont les deux échecs que M16 ajoute aux
+# quatre de la v1. Ils vivent ICI, lus par `histoire.js` comme le reste.
+ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort")
+
+#: Les quatre options qui TRAVERSENT les types d'objectifs (M16). Une clé
+#: d'objectif, pas un type : `chrono_s` sur n'importe lequel (le défi l'avait),
+#: `sans_etoile` (échec `etoile` dès qu'on est vu), `sans_arme` (en territoire
+#: de gang les mains vides), `contre` (des adversaires sur une `course`).
+OPTIONS_OBJECTIFS = ("chrono_s", "sans_etoile", "sans_arme", "contre")
 
 
 class Personnage(TypedDict):
@@ -131,6 +155,11 @@ class Mission(TypedDict):
     donne: dict        # ce que la fin accorde, en plus de l'argent
     scenes: dict       # `intro` et `fin` : des listes de plans (voir `TYPES_PLANS`)
     phase: int
+    # --- M16 : les deux cles qui font les choix et les conditions d'etat.
+    # ⚠️ Facultatives, lues par le navigateur (voir `histoire.js` `exigeTenu`,
+    # `estFermee`) et par le carnet.
+    exige: NotRequired[dict]   # ce qu'il faut AVOIR en plus des prerequis
+    ferme: NotRequired[str]    # le slug de la mission que celle-ci ferme
 
 
 from ._commun import _l, _p

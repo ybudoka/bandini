@@ -143,6 +143,27 @@ clés :
 | `semer` | redescendre à 0 étoile | `etoiles` (posées au départ), `escorte` |
 | `retourner` | revenir au donneur | — |
 
+**Les neuf types de M16** (la « tranche 1 » : le moteur les déclare, chacun
+attend son **juge de banc** avant de porter une mission) :
+
+| Type | Ce qu'il demande | Clés notables |
+|---|---|---|
+| `suivre` | filer un piéton ou un char sans être vu — trop près ou trop loin, raté | `cible` |
+| `proteger` | un personnage te suit à pied ou monte avec toi ; s'il meurt, échec `protege_mort` | `cible` |
+| `pickpocket` | les poches d'un piéton **précis**, par-derrière (le jet de m2) | `cible` |
+| `payer` | donner un montant | `montant` |
+| `acheter` | un article à un comptoir | `article`, `ou` |
+| `detruire` | un véhicule de la mission | `vehicule_val` (ce qu'on lui envoie) |
+| `sauter` | une rampe | `vol_px` (le juge du Grand Saut) |
+| `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
+| `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
+
+**Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
+des types, mais des clés qui se posent sur **n'importe quel** objectif —
+`chrono_s` (le chrono, que le défi avait déjà), `sans_etoile` (échec `etoile`
+dès qu'on est vu), `sans_arme` (en territoire de gang les mains vides),
+`contre` (des adversaires sur une `course`).
+
 Contraintes **jugées** (voir `test_missions.py`) :
 
 - `texte` en **MAJUSCULES**, une ligne (≤ 60 caractères) : c'est ce qui
@@ -183,6 +204,13 @@ _p("marco", "Cours, cousin!", 1)                          # PENDANT : accrochée
 | `client` | le client de m3 (réplique dite pendant une mission) | compte comme du « pendant » |
 | `fin` | la récompense, dite par **quelqu'un qui est là** | 1 à 3 répliques |
 | `echec` | on a raté | une réplique **au combiné** |
+
+À partir de M16, **les dialogues sortent du paquet** : les répliques d'une
+mission viennent par `/api/dialogue/<slug>` **quand le téléphone sonne** (avec un
+ETag), et **les scènes voyagent avec elles**. Le catalogue (objectifs,
+prérequis, `donne`) reste dans le paquet — c'est ce que le carnet et le GPS
+lisent. Rien ne change pour **l'écriture** d'une mission : on écrit ici les
+répliques comme avant, le routeur s'occupe du reste.
 
 Règles jugées (`erreurs_de_mise_en_scene`) :
 
@@ -261,6 +289,24 @@ En plus de `recompense`, la mission peut donner :
 - d'autres clés spécifiques (rabais, `sergent_ami`, `faubourg_libere`,
   `manchette`, `contacts`…).
 
+À partir de M16, `donne` grossit. Chaque clé a **un** endroit qui la lit, dans
+`Histoire.recompenser()` :
+
+- `libere: "<district>"` — généralise `faubourg_libere` : le gang devient des
+  passants, la zone s'efface de `carte.zones()` ;
+- `calme: "<gang>"` — `hostile_toujours` et `hostile_si_arme` tombent ;
+- `contact` — un numéro de plus au téléphone ;
+- `vehicule`, `tenue`, `munitions`, `rabais` par comptoir ;
+- `dette: -n`, `casier: -n`, `ami`/`ennemi`, `boulot`, `manchette`.
+
+**`exige` et `ferme`** (M16) viennent compléter `prerequis` :
+
+- `exige` — ce qu'il faut avoir **en plus** des prérequis : `argent_min`,
+  `proprietes`, `liberes`, `dette`, `tenue`, `heure`. Un prérequis dit « après
+  quoi » ; `exige` dit « dans quel état ».
+- `ferme` — une mission qui en **ferme** une autre (un choix) : une mission
+  fermée n'apparaît plus jamais, ni au téléphone ni au carnet.
+
 Tout ça est jugé : `arme` doit exister, `propriete` doit exister.
 
 ---
@@ -284,7 +330,8 @@ ligne de jalon dans `docs/plan.md`).
 - un objectif sans type, ou un type inconnu ;
 - un `texte` d'objectif pas en MAJUSCULES ou trop long ;
 - un `lieu`/`groupe`/`vehicule`/`arme`/`propriete` inconnu ;
-- un `echec` hors de `ECHECS` (`mort`, `arrete`, `vehicule_detruit`, `chrono`) ;
+- un `echec` hors de `ECHECS` (`mort`, `arrete`, `vehicule_detruit`, `chrono`,
+  et depuis M16 `etoile`, `protege_mort`) ;
 - un donneur sans position (`perso["ou"]` vide) ;
 - `intro`/`fin`/`echec` sans répliques, ou pas de « pendant » ;
 - une scène `intro` ou `fin` manquante ou vide ;
@@ -312,3 +359,11 @@ Une mission est **trois choses** — ses objectifs, ses dialogues et ses scènes
 toutes trois jugées ; elle vit **dans son propre fichier** `app/missions/<slug>.py`
 (`MISSION = {…}`), le donneur dans `PERSONNAGES` (dans `__init__.py`), les scènes
 dans le vocabulaire de `TYPES_PLANS`, et le navigateur ne décide rien.
+
+⚠️ **Ce document suit le moteur, pas l'inverse.** Les neuf types d'objectifs de
+M16 (`suivre`, `proteger`, `pickpocket`, `payer`, `acheter`, `detruire`,
+`sauter`, `eteindre`, `boulots`), les deux échecs (`etoile`, `protege_mort`),
+les options transverses (`chrono_s`, `sans_etoile`, `sans_arme`, `contre`) et
+l'extension `exige`/`ferme`/`donne` y figurent à leur place : un type n'est
+**pas** livré tant qu'il n'a pas son juge de banc, et une mission qui s'en sert
+avant ce juge n'est pas finie.
