@@ -549,6 +549,11 @@ const Combat = (function () {
       c.etat = 'fuit';
       c.minuterie = 180;
       if (e.t % 20 === 0) Entites.blesser(c, arme.degats, e, { assomme: true });
+    // Le feu de bâtiment (P4) : le jet d'extincteur attire la flamme. ⚠️ C'est
+    // `Incendies` qui décide de la règle — ici, on ne lui donne que la main qu
+i
+    // tient la gâchette.
+    if (typeof Incendies !== 'undefined') Incendies.majJet(e);
     }
   }
 

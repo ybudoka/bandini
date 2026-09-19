@@ -1452,6 +1452,9 @@ const Histoire = (function () {
     // Un appel recu : le donneur a aller voir.
     const attendue = disponibles().find(function (q) { return p.appels[q.slug]; }) || disponibles().find(function (q) { return !q.prerequis.length; });
     if (attendue) { const l = ouTrouver(attendue.donneur); const perso = personnage(attendue.donneur); return l ? { x: l.x, y: l.y, nom: perso.nom, couleur: '#8ad26a' } : null; }
+    // Un feu de bâtiment (P4) : pas de mission, pas d'appel — le feu est la
+    // seule chose à chercher, et il se pointe comme un objectif.
+    if (typeof Incendies !== 'undefined') { const fe = Incendies.cible(); if (fe) return fe; }
     return null;
   }
 

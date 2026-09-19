@@ -637,6 +637,20 @@ const Son = (function () {
     molotov: function () { if (!joue('molotov')) { bruit(0.1, 0.4, 7000, 2500); bruit(0.5, 0.5, 900, 150); ton(55, 0.4, 'sine', 0.3, 0.6, 0.08); } },
     // Un souffle de poudre, seul ; le jet en continu, c'est `jet()` qui le tient.
     extincteur: function () { if (!joue('extincteur')) bruit(0.25, 0.18, 5000, 2500); },
+    // L'eau sur la braise : un sifflement court, quand le feu s'éteint. ⚠️
+    // Synthétisé, comme la borne : le seau des bruitages est plein, et ce
+    // « tss » ne réclame pas un fichier.
+    eau: function () { bruit(0.4, 0.22, 3200, 900); },
+    // Le feu de bâtiment, tenu tant qu'on en est près : un crépitement sourd,
+    // dosé à la distance (`force`, 0 = on se tait). ⚠️ Sans fichier au
+    // catalogue — comme la rumeur d'un chantier quand son mp3 manque.
+    rumeur_incendie: function (force) {
+      const v = Math.max(0, Math.min(1, force || 0));
+      if (v > 0.02 && B.t % 13 === 0) {
+        bruit(0.16, 0.06 * v, 900, 220);
+        if (v > 0.4 && B.t % 37 === 0) ton(380, 0.05, 'square', 0.03 * v, 1.6);
+      }
+    },
     vide: function () { if (!joue('vide')) { ton(1400, 0.03, 'square', 0.15); ton(900, 0.03, 'square', 0.1, 1, 0.04); } },
     casse: function () { if (!joue('casse')) { bruit(0.2, 0.4, 3000, 400); ton(220, 0.08, 'square', 0.2, 0.5); } },
     degainer: function () { if (!joue('degainer')) { bruit(0.08, 0.1, 2500, 900); ton(520, 0.04, 'triangle', 0.1, 1, 0.05); } },

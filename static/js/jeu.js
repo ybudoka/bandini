@@ -78,6 +78,7 @@ const Jeu = (function () {
     B.abribusServis = {};                    // les abribus qu'un autobus vient de servir (Autobus)
     Traversier.oublier();                    // rien a bord, la carte neuve n'a pas de pont pose
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
+    Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -692,6 +693,7 @@ const Jeu = (function () {
         Traversier.maj();                 // apres les chars : ce qui est a bord suit la coque
         Neige.maj();
         Police.maj();
+        Incendies.maj();
         Missions.maj();
         Chantiers.maj();
         Foire.maj();
@@ -978,7 +980,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,

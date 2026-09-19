@@ -6710,6 +6710,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # charrue. Elle ne pose rien, ne tire aucun de, et ne tombe que si l'option le veut.
     from . import neige as neige_mod
     ville["neige"] = neige_mod.tracer(ville)
+    # ⚠️ LES INCENDIES (P4, « le pompier volontaire ») : la règle du feu et les
+    # façades où il peut se déclarer. Aucun dé, rien de posé — le navigateur décide
+    # QUI brûle à l'empreinte de l'heure, pendant que la ville reste la même.
+    from . import incendies as incendies_mod
+    ville["incendies"] = incendies_mod.tracer(ville)
     # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
     # que toutes les etapes d'avant lisent pour tirer leurs places.
     chantier.poser_les_lots_et_les_rideaux(ville)

@@ -212,7 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
-| Quatre activités que le jeu n'a pas | ⬜ **en cours** (1 des 4 livrée : les paliers de boulot ; restent la patrouille, le pompier volontaire, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
+| Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -741,7 +741,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
       bd.py comptes.py
 app/missions/  __init__.py _commun.py et une mission par fichier (m1.py … m97.py) — le moteur, les personnages, les défis et les scènes vivent dans __init__.py, chaque mission dans son propre fichier
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
@@ -762,7 +762,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py
+        test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py verifier_carte_du_plan.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -11221,6 +11221,18 @@ boulots de plus sans un seul véhicule neuf (**la patrouille** — la _vigilante
 casier et un char volé — et **pompier volontaire**), **la liste du quai** (quatre modèles
 demandés, sans bosse) et **les frénésies**, à trancher par Martin ; ⚠️ les enfants restent
 intouchables
+
+**Pompier volontaire — livré le 18 sept. 2026** (2e des 4 activités) : pas de caserne ni de
+camion à dessiner — un feu se déclare sur une façade (`app/incendies.py`, la règle et les
+candidats ; `static/js/incendies.js`, qui brûle), à l'empreinte de l'heure comme le bris
+d'aqueduc (jamais au dé du jeu) ; on arrive à pied ou en char, on l'éteint à l'extincteur (le
+jet attire la flamme, `combat.js` → `Incendies.majJet`), et la prime tombe — une fois, bornée
+sous ce que rapporte le boulot le plus riche. ⚠️ Jamais une cour de gang ni un lieu garanti ;
+un feu est CONTINU, pas un changement discret — sa fumée se voit de loin, et c'est par elle
+qu'on le trouve. ⚠️ Rien ne se sauvegarde : un feu éteint se re-déclare au rechargement, le
+prix de garder la ville déterministe. Juges : `tests/test_incendies.py` (la règle, la borne
+d'équilibre, les candidats) et `tests/test_incendies_js.py` (il se déclare à l'heure, il
+s'éteint au jet, il ne se re-déclare pas).
 
 ### Installable, et jouable hors ligne
 
