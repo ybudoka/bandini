@@ -1,7 +1,7 @@
 # La carte de Baie-des-Brumes — inventaire
 
 > Source de vérité : `app/carte.py` (`DISTRICTS`, `SPECIAUX`, `INTERIEURS`,
-> `BARRIERES`), `app/pietons.py` (`CATALOGUE`, `GANGS`), `app/missions.py`
+> `BARRIERES`), `app/pietons.py` (`CATALOGUE`, `GANGS`), `app/missions/__init__.py`
 > (`PERSONNAGES`), `app/vehicules.py` (`CATALOGUE`).
 >
 > ⚠️ **Ce document est un instantané.** La carte est générée depuis le code —
@@ -227,4 +227,4 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   auto-patrouille garée.
 
 > Rappel : les missions (`m1`…`m97`) et les défis sont documentés dans
-> `app/missions.py` — voir la réponse « quelles missions existent ».
+> `app/missions/` (une mission par fichier) — voir `docs/comment-monter-les-missions.md`.

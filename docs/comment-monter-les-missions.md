@@ -5,12 +5,16 @@ Bandini, à l'intention d'une IA (ou d'un humain) qui découvre le projet. Il ne
 remplace ni `docs/plan.md` (la vision) ni `docs/carte.md` (l'inventaire de la
 ville) : il raconte la **recette**, pas le pourquoi.
 
-> ⚠️ **Source de vérité : `app/missions.py`, rien d'autre.** C'est là que vivent
-> les missions, leurs répliques, leurs scènes **et** leurs juges. Le navigateur
-> ne décide rien : il joue les objectifs dans l'ordre et parle avec les mots
-> d'ici. On ne touche jamais à `static/js/histoire.js` ou `scenes.js` pour
-> *ajouter* une mission — on ne les touche que pour ajouter un **type** de plan
-> (voir § 6), et alors on le fait pour tout le monde.
+> ⚠️ **Une mission = un fichier.** Les missions vivent dans `app/missions/`,
+> **une par fichier** (`m1.py`, `m2.py`, … `m97.py`) : chacun déclare `MISSION = {…}`
+> et n'a besoin que de `_l`/`_p` (importés de `_commun.py`). Le moteur — les
+> types d'objectifs, les personnages, les défis, les scènes d'ouverture, les
+> juges — vit dans `app/missions/__init__.py`. **Ajouter une mission = créer son
+> fichier et l'ajouter aux deux listes de `__init__.py`, rien d'autre.**
+>
+> On ne touche jamais à `static/js/histoire.js` ou `scenes.js` pour *ajouter*
+> une mission — on ne les touche que pour ajouter un **type** de plan (voir § 6),
+> et alors on le fait pour tout le monde.
 
 ---
 
@@ -56,9 +60,33 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
 }
 ```
 
-**Fichier cible** : `app/missions.py`, dans `CATALOGUE`, à la fin du bloc de
-mission (après `m97` aujourd'hui). Le slug est l'ordre de nommage **M16** :
-le tronc `m6` et `m97` se posent déjà sur `m5` ; les suivantes suivent.
+**Fichier cible** : un **nouveau fichier** `app/missions/m7.py`, qui déclare
+`MISSION = { … }` :
+
+```python
+"""La mission m7 — voir `app/missions/__init__.py` pour le moteur."""
+
+from ._commun import _l, _p   # les deux usines de répliques
+
+
+MISSION = {
+    "slug": "m7", "titre": "Un titre court", "donneur": "marco", "prerequis": ["m5"],
+    # … tout le dicton ci-dessus …
+}
+```
+
+Puis **enregistrer la mission** dans `app/missions/__init__.py`, aux deux
+endroits :
+
+```python
+from . import m1, m2, m3, m4, m5, m6, m97, m7      # 1. l'import
+
+CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, …, m97.MISSION, m7.MISSION]  # 2. la liste
+```
+
+Le slug est l'ordre de nommage **M16** : le tronc `m6` et `m97` se posent déjà
+sur `m5` ; les suivantes suivent. **Rien d'autre à toucher** : `definitions.py`
+sert le `CATALOGUE` tel quel, le navigateur lit `B.defs.missions`.
 
 ---
 
@@ -280,7 +308,7 @@ taux du taxi).
 
 ## 10. Résumé en une phrase
 
-Une mission est **trois choses** dans `app/missions.py` — ses objectifs, ses
-dialogues et ses scènes — toutes trois jugées ; le donneur vit dans
-`PERSONNAGES`, les scènes dans le vocabulaire de `TYPES_PLANS`, et le navigateur
-ne décide rien.
+Une mission est **trois choses** — ses objectifs, ses dialogues et ses scènes —
+toutes trois jugées ; elle vit **dans son propre fichier** `app/missions/<slug>.py`
+(`MISSION = {…}`), le donneur dans `PERSONNAGES` (dans `__init__.py`), les scènes
+dans le vocabulaire de `TYPES_PLANS`, et le navigateur ne décide rien.

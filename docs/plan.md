@@ -560,6 +560,7 @@ générales :
 | m3 | Marco `donner` les clés ; `camera` sur le taxi | le client (existe) | Marco fait le tour du taxi, `montrer` vers le casse-croûte ; `coupe` sur Bouchard à son dîner — la fin passe la main |
 | m4 | Bouchard, dedans : `coupe` sur le poste (un lieu : l'auto-patrouille est le deuxième objectif) | quand Ti-Guy démarre derrière toi, au combiné | `coupe` au casse-croûte : Bouchard au `telephone`, ses deux répliques au combiné |
 | m5 | Josée, dedans : `coupe` sur les trois coins des Cravates, un par un | quand le chef sort, au combiné | `coupe` au Brouillard : Josée devant sa porte, l'enseigne est à toi |
+| m50 | Le Cargo de Minuit | Marco | Aller au cargo des quais, parler au garde, rattraper le docker, ramener le colis |
 
 **Ce que ça coûte :**
 
