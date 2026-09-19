@@ -34,7 +34,8 @@ MISSION = {
             _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.")
         ],
         "pendant": [
-            _p("marco", "Le docker va essayer de filer. Rattrape-le!", 2)
+            # ⚠️ C'est Lulu qui le crie : elle est à la cantine quand le docker file.
+            _p("lulu", "Le docker va essayer de filer. Rattrape-le!", 2)
         ],
         "client": [],
         "fin": [

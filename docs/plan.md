@@ -560,7 +560,7 @@ générales :
 | m3 | Marco `donner` les clés ; `camera` sur le taxi | le client (existe) | Marco fait le tour du taxi, `montrer` vers le casse-croûte ; `coupe` sur Bouchard à son dîner — la fin passe la main |
 | m4 | Bouchard, dedans : `coupe` sur le poste (un lieu : l'auto-patrouille est le deuxième objectif) | quand Ti-Guy démarre derrière toi, au combiné | `coupe` au casse-croûte : Bouchard au `telephone`, ses deux répliques au combiné |
 | m5 | Josée, dedans : `coupe` sur les trois coins des Cravates, un par un | quand le chef sort, au combiné | `coupe` au Brouillard : Josée devant sa porte, l'enseigne est à toi |
-| m50 | Le Cargo de Minuit | Marco | Aller au cargo des quais, parler au garde, rattraper le docker, ramener le colis |
+| m50 | `camera` sur la porte du garage ; Marco marche vers toi et te `montrer` la direction | quand le fuyard file avec le colis, au combiné | Marco revient vers toi et `prendre` le colis |
 
 **Ce que ça coûte :**
 
@@ -5531,11 +5531,17 @@ personnage_ (la table a trente-cinq lignes : Lachance était déjà promis à _P
 ⚠️ **Recompté le 17 sept. 2026 : Martin a ajouté dix voix le 15, et plusieurs sont
 multilingues.** Le compte en a cinquante. Ce qui dit le français qu'on obtient, ce n'est pas
 l'étiquette `language` (la langue d'origine), c'est `verified_languages` dans
-`GET /v2/voices` — gratuit, et `elevenlabs_list_voices` ne le montre pas :
+`GET /v2/voices` — gratuit, et `elevenlabs_list_voices` ne le montre pas.
+⚠️ **Recompté le 18 sept. 2026 : cinq voix féminines de plus, le compte passe à
+cinquante-cinq.** Deux comptent pour le jeu — **Claudia** (jeune, confiante) et
+**Caroline - Soft Quebec accent** (douce, narration), toutes deux québécoises d'origine
+(fr-CA) — et trois non-francophones qu'on n'utilisera pas : Meera (tamoul), Riya Rao
+(hindi), Ana (britannique). Le manque de femmes québécoises (ci-dessous) se resserre donc
+de trois à cinq en une journée.
 
 | Origine | Hommes | Femmes |
 |---|---|---|
-| **québécoise** (enregistrée en fr-CA) | Felix, Khaivan, Québec Tremblay, Alexandre, Léo, Patrick — pris ou promis ; **Alexandre Boutin** et **Premium Male teacher** (Adam), libres ; les deux **annonceurs** générés (le 1 lit le Clairon) | Jeanne Mance, Julia, Amélie — **toutes prises** |
+| **québécoise** (enregistrée en fr-CA) | Felix, Khaivan, Québec Tremblay, Alexandre, Léo, Patrick — pris ou promis ; **Alexandre Boutin** et **Premium Male teacher** (Adam), libres ; les deux **annonceurs** générés (le 1 lit le Clairon) | Jeanne Mance, Julia, Amélie — prises ; **Claudia** (jeune) et **Caroline** (douce) — ajoutées le 18 sept. 2026, **libres** |
 | **France** | Luca, Nicolas Petit (parisien), Martin Dupont Intime, Roland Lescalde, Troy | Clara Dupont |
 | **multilingue** (née ailleurs) | Bubba Marshal (rocailleux, Sud des É.-U.), Omar J et Lutz (jeunes) | Ruby Roo (jeune, « fr-quebec »), Nadine (rauque, « fr-swiss »), Kriti, Arabella, Piku (une enfant) |
 
@@ -5551,7 +5557,9 @@ l'étiquette `language` (la langue d'origine), c'est `verified_languages` dans
   pas à supposer.
 - **Le manque, c'est les femmes.** Onze dans la table, plus Josée et Mme Thibodeau, pour
   trois voix québécoises qui parlent déjà toutes. Les hommes sont vingt-huit pour huit voix :
-  ça se partage.
+  ça se partage. ⚠️ Le 18 sept. 2026, Martin a ajouté **Claudia** et **Caroline**, deux
+  québécoises d'origine, au compte : le manque passe de trois à **cinq** voix de femmes —
+  elles couvriront deux des cinq rôles féminins encore sans voix (en attendant l'audition).
 
 Ce qu'on fait, dans cet ordre :
 

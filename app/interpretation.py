@@ -306,6 +306,15 @@ JEU: dict[str, str] = {
     "marco-m97-5": "[somber] Moi, je disparais… La ville est à toi, cousin.",
     "marco-m97-6": "[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.",
     "marco-m97-7": "[worried] Cours, cousin… Ceux-là ne font pas de quartier.",
+    # --- M50, Marco te confie un colis : la contrebande à voix basse, « discret ».
+    "marco-m50-1": "[casually] Cousin, j'ai une faveur. Passe au port… discret.",
+    "marco-m50-2": "[quietly] Un colis arrive ce soir… sur le cargo.",
+    "marco-m50-3": "[serious] Va le chercher. Personne doit savoir… que ça vient de moi.",
+    "marco-m50-4": "[satisfied] Parfait. Personne t'a vu… Bon.",
+    "marco-m50-5": "[casually] Tiens… pour le trouble.",
+    "marco-m50-6": "[disappointed] T'es censé être discret… pas mort.",
+    # Pendant, à la cantine : c'est Lulu qui voit le docker filer et qui prévient.
+    "lulu-m50-7": "[excited] Le docker va essayer de filer. Rattrape-le!",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.

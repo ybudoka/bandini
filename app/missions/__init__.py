@@ -99,16 +99,15 @@ PERSONNAGES: list[Personnage] = [
     # propriétaire »). Un par district, un par monde : deux se tiennent DEHORS
     # devant leur porte, deux DEDANS sur un point de piece pose exprès.
     # ⚠️ Les trois voix quebecoises de femme (Jeanne Mance, Julia, Amélie) sont
-    # TOUTES prises. Décision de Martin le 17 sept. 2026 : pour Lulu et
-    # Raymonde, on sort du quebecois plutot que de les faire partager une voix.
-    # Lulu prend Clara Dupont (la seule autre voix de femme en francais du
-    # compte, `language: fr`) ; Raymonde prend Nadine, la voix rauque — ici
-    # l'accent FAIT le personnage, une presidente de syndicat qui a roule sa
-    # bosse. Martin les auditonna a la prochaine generation.
+    # TOUTES prises. Le 18 sept. 2026, Martin a ajoute deux quebecoises
+    # d'origine au compte : Lulu prend donc Claudia (jeune, confiante), et
+    # Raymonde garde Nadine, la voix rauque — ici l'accent FAIT le personnage,
+    # une presidente de syndicat qui a roule sa bosse. Martin les auditonna a la
+    # prochaine generation.
     {"slug": "tipaul", "nom": "Ti-Paul Gagnon", "genre": "homme", "voix": "Québec Tremblay - Confident and Measured",
      "couleurs": {"c": "#c0392b", "h": "#7a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:depanneur",
      "heler": "Salut, l'ami!"},
-    {"slug": "lulu", "nom": "Lucienne « Lulu » Pelletier", "genre": "femme", "voix": "Clara Dupont - Professional and Urgent",
+    {"slug": "lulu", "nom": "Lucienne « Lulu » Pelletier", "genre": "femme", "voix": "Claudia - Warm, Energetic and Confident",
      "couleurs": {"c": "#f1c40f", "h": "#101018", "s": "#f0c098", "p": "#4a3a5a"}, "ou": "point:lulu",
      "heler": "Viens manger!"},
     {"slug": "raymonde", "nom": "Raymonde Fortin", "genre": "femme", "voix": "Nadine",
