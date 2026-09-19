@@ -7283,16 +7283,58 @@ def test_le_journal_du_matin_raconte_hier_et_enseigne_les_matins_calmes(banc, pa
     dites = [x for x in r["lues"] if x]
     assert len(dites) == len(set(dites)), "le journal enseigne deux fois la même chose : %s" % dites
     assert len(dites) >= 3, "le journal cesse d'enseigner après deux jours : %s" % dites
-    # ⚠️ Tout su : le repli redevient « rien à signaler », et c'est une bonne
-    # nouvelle.
-    assert r["toutSu"] == "BRUME SUR LE BASSIN", (
-        "il enseigne encore à quelqu'un qui sait déjà tout : %s" % r["toutSu"]
+    # ⚠️ Tout su : le repli ne reprend plus « Brume sur le bassin » a l'infini,
+    # il VARIE entre les matins calmes — la bonne nouvelle reste la meme, un
+    # matin ou rien n'arrive, mais il ne se lit plus mot pour mot pareil.
+    matins = {m["titre"] for m in paquet["journal_matins"]}
+    assert r["toutSu"] in matins, (
+        "il enseigne encore, ou le matin calme ne varie pas : %s" % r["toutSu"]
     )
     assert r["sang"] == "UN MORT DANS LA RUE", "une leçon passe avant un mort : %s" % r["sang"]
     # ⚠️ `retenues` est mesuré APRÈS qu'on l'a remis à zéro dans le banc : ce
     # qui compte ici, c'est qu'il ait grandi pendant les quatre premiers jours,
     # et les quatre leçons distinctes ci-dessus le prouvent déjà.
     assert len(lecons) >= 4, "moins de quatre leçons : le journal a vite fini d'enseigner"
+
+
+def test_les_matins_calmes_ne_se_redisent_pas_deux_fois_de_suite(banc, paquet):
+    """⚠️ « Brume sur le bassin » était le SEUL matin normal, et un joueur qui
+    avait tout appris le lisait mot pour mot chaque jour. Les matins calmes
+    (`journal_matins`) VARIENT, tirés dans le dé du jeu sans jamais redire le
+    précédent — la même règle que les répliques de la rue, et reproductible
+    parce que le tirage passe par `B.rng()`."""
+    matins = [m["slug"] for m in paquet["journal_matins"]]
+    assert len(matins) >= 2, "moins de deux matins calmes : rien à faire varier"
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const p = L.B.partie;
+        // Tout su : on enseigne a personne, il ne reste que les matins calmes.
+        for (const l of (L.B.defs.journal_lecons || [])) p.stats[l.cle] = 9;
+        // ⚠️ On rebase le journal d'hier sur les stats d'AUJOURD'HUI : sinon
+        // `courses = 9` ferait une manchette (le taxi qui ne dort pas, min 3),
+        // pas un matin calme. Le delta doit etre zero pour ne rien signaler.
+        p.journal = { crimes: p.stats.crimes || 0, tues: p.stats.tues || 0, volees: p.stats.volees || 0,
+                      courses: p.stats.courses || 0, hospitalisations: p.stats.hospitalisations || 0 };
+        const titres = [];
+        for (let jour = 0; jour < 8; jour++) {
+            L.Missions.nouveauJour();
+            const m = p.derniereManchette;
+            titres.push(m ? m.slug : null);
+            const s = p.stats;
+            p.journal = { crimes: s.crimes || 0, tues: s.tues || 0, volees: s.volees || 0,
+                          courses: s.courses || 0, hospitalisations: s.hospitalisations || 0,
+                          matin: m ? m.slug : null };
+        }
+        return { titres: titres, lues: L.B.dialogue ? L.B.dialogue.lignes[0] : null };
+    }""")
+    titres = r["titres"]
+    # Chaque matin tire est bien un matin calme, jamais une manchette ni lecon.
+    assert all(t in matins for t in titres), f"pas des matins calmes : {titres}"
+    # Jamais deux fois de suite le meme.
+    for a, b in zip(titres, titres[1:]):
+        assert a != b, f"deux matins calmes identiques de suite : {titres}"
+    # Et le bassin est assez large pour qu'on en voie plus d'un sur huit jours.
+    assert len(set(titres)) >= 2, f"les matins ne varient pas : {titres}"
 
 
 # --- Les gestes : le corps bouge quand on agit ----------------------------

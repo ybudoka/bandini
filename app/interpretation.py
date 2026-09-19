@@ -306,6 +306,15 @@ JEU: dict[str, str] = {
     "marco-m97-5": "[somber] Moi, je disparais… La ville est à toi, cousin.",
     "marco-m97-6": "[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.",
     "marco-m97-7": "[worried] Cours, cousin… Ceux-là ne font pas de quartier.",
+    # --- M50, Marco te confie un colis : la contrebande à voix basse, « discret ».
+    "marco-m50-1": "[casually] Cousin, j'ai une faveur. Passe au port… discret.",
+    "marco-m50-2": "[quietly] Un colis arrive ce soir… sur le cargo.",
+    "marco-m50-3": "[serious] Va le chercher. Personne doit savoir… que ça vient de moi.",
+    "marco-m50-4": "[satisfied] Parfait. Personne t'a vu… Bon.",
+    "marco-m50-5": "[casually] Tiens… pour le trouble.",
+    "marco-m50-6": "[disappointed] T'es censé être discret… pas mort.",
+    # Pendant, à la cantine : c'est Lulu qui voit le docker filer et qui prévient.
+    "lulu-m50-7": "[excited] Le docker va essayer de filer. Rattrape-le!",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.
@@ -313,10 +322,19 @@ JEU: dict[str, str] = {
     "narrateur-journal-un_mort": "[somber] Un mort dans la rue. Un passant retrouvé sans vie… témoins recherchés.",
     "narrateur-journal-un_blesse": "[serious] Un blessé à l'hôpital. Le docteur Lachance parle d'une nuit agitée… aux urgences.",
     "narrateur-journal-vague_de_vols": "[dramatic] Vague de vols d'autos. Trois véhicules disparus. [sarcastic] « On a nos soupçons », dit le sergent.",
-    "narrateur-journal-un_char_vole": "[serious] Un char volé au Faubourg. Le propriétaire l'avait laissé tourner. [deadpan] Il ne tourne plus.",
+    "narrateur-journal-un_char_vole": "[serious] Un char volé au Faubourg. On l'a vu disparaître en pleine rue. [wryly] Il est reparti en plein vol.",
     "narrateur-journal-taxi_qui_ne_dort_pas": "[curious] Le taxi qui ne dort pas. Un chauffeur enchaîne les courses… les clients parlent de brouillard.",
     "narrateur-journal-faubourg_inquiet": "[concerned] Le Faubourg s'inquiète. Les commerçants demandent plus de patrouilles.",
     "narrateur-journal-brume": "[somber] Brume sur le bassin. Le traversier a pris du retard… [sighs] rien à signaler.",
+    # --- Les matins calmes : le narrateur, en paix, lit la ville qui se reveille.
+    # Jamais de drame ici — c'est un homme qui aime les matins ou rien n'arrive.
+    "narrateur-journal-matin_maree": "[calm] La marée est haute… les quais s'éveillent, les cordages craquent dans la brise.",
+    "narrateur-journal-matin_mouettes": "[casually] Les mouettes crient tôt… elles tournent au-dessus du quai, puis elles se taisent.",
+    "narrateur-journal-matin_boulanger": "[warmly] Ça sent le pain chaud! Le boulanger du Faubourg sort ses fournées… la rue marche le nez en l'air.",
+    "narrateur-journal-matin_laitier": "[calm] Le laitier passe à l'aube. Les bouteilles s'alignent sur les perrons… [softly] le Faubourg dort encore, presque.",
+    "narrateur-journal-matin_peche": "[satisfied] La pêche a été bonne… les bateaux rentrent au quai, les coffres pleins.",
+    "narrateur-journal-matin_volets": "[cheerful] La ville ouvre les volets. Ils se lèvent un à un… Baie-des-Brumes s'étire au soleil.",
+    "narrateur-journal-matin_silence": "[warmly] Un matin tranquille. Rien à signaler à Baie-des-Brumes… le meilleur genre de matin.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",
     "narrateur-journal-lecon_fourriere": "[matter-of-fact] Votre char a disparu? Mal garé, il est à la fourrière municipale. On peut l'y racheter… à un prix qui dépend de ce qu'il vaut.",

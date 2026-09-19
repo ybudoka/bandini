@@ -544,8 +544,17 @@ def main() -> int:
     radios = [r for r in radios if options.radios or r["slug"] in options.refaire]
     musiques = musiques_a_faire(options.refaire) if (options.musiques or options.refaire) else []
     musiques = [m for m in musiques if options.musiques or m["slug"] in options.refaire]
-    voix = [v for v in (audio.toutes_les_voix() if options.refaire else audio.voix_manquantes())
-            if options.voix or v["slug"] in options.refaire]
+    # ⚠️ Trois cas SEPARES, jamais combinés. `--refaire <slug>` retire UNE voix
+    # (et `--voix --refaire <slug>` doit faire pareil : le slug filtre, pas
+    # `--voix`). L'ancien filtre court-circuitait sur `--voix` et gardait TOUTES
+    # les voix : « refaire une » régénérait les 80 d'un coup, à crédits perdus.
+    # Désormais le slug prime, et `--voix` ne sert qu'aux manquantes.
+    if options.refaire:
+        voix = [v for v in audio.toutes_les_voix() if v["slug"] in options.refaire]
+    elif options.voix:
+        voix = audio.voix_manquantes()
+    else:
+        voix = []
     if not travail and not radios and not musiques and not voix:
         print("Rien a generer : les", sum(e["variantes"] for e in audio.CATALOGUE),
               "fichiers sont la.")

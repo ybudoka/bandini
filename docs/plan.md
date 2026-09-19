@@ -221,7 +221,7 @@ ne bougent pas quand l'ordre de travail change.
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 18 sept. 2026 | **P2** | **correctif** | [notes](#m1--le-char-dort-dans-la-ruelle-avant-quon-ly-montre) |
 | Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-dialogue-attend-la-fin-de-la-sonnerie) |
 | La Pointe s'éloigne : le pont s'allonge | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#la-pointe-séloigne--le-pont-sallonge) |
-| M16 Cent missions | ⬜ **à faire** | — | **P4** | ajout | [notes](#m16-cent-missions) |
+| M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » est entamée : les neuf types, `exige`/`ferme`/`donne` étendu, la sauvegarde et les lieux nommés sont commités — **sans juges de banc ni l'arc F** : un type n'est pas livré tant qu'il n'a pas son juge) | 18 sept. 2026 | **P4** | ajout | [notes](#m16-cent-missions) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [notes](#m13-les-deux-fins) |
 
 ## Dettes
@@ -560,7 +560,7 @@ générales :
 | m3 | Marco `donner` les clés ; `camera` sur le taxi | le client (existe) | Marco fait le tour du taxi, `montrer` vers le casse-croûte ; `coupe` sur Bouchard à son dîner — la fin passe la main |
 | m4 | Bouchard, dedans : `coupe` sur le poste (un lieu : l'auto-patrouille est le deuxième objectif) | quand Ti-Guy démarre derrière toi, au combiné | `coupe` au casse-croûte : Bouchard au `telephone`, ses deux répliques au combiné |
 | m5 | Josée, dedans : `coupe` sur les trois coins des Cravates, un par un | quand le chef sort, au combiné | `coupe` au Brouillard : Josée devant sa porte, l'enseigne est à toi |
-| m50 | Le Cargo de Minuit | Marco | Aller au cargo des quais, parler au garde, rattraper le docker, ramener le colis |
+| m50 | `camera` sur la porte du garage ; Marco marche vers toi et te `montrer` la direction | quand le fuyard file avec le colis, au combiné | Marco revient vers toi et `prendre` le colis |
 
 **Ce que ça coûte :**
 
@@ -738,7 +738,7 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
-docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)
+docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)  ecrire-drole.md (comment faire rire + l'inventaire des types de texte du jeu)
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
@@ -5428,10 +5428,79 @@ patrouille ne compte que les vrais fuyards ; la liste du quai ne demande que des
 existent au catalogue et qu'on peut trouver dans la ville ; une frénésie ne touche jamais un
 intouchable.
 
+### La réputation et la lecture des passants (**ajout**, taille 2) — ⚠️ à trancher par Martin
+
+_Demande de Martin (18 sept. 2026) :_ « cherche aussi pour cyberpunk et watchdog ».
+
+La deuxième tournée du net (Watch Dogs, Cyberpunk 2077) n'ajoute **aucun type d'objectif** :
+les gigs des _fixers_ de Cyberpunk sont déjà le « donneur qui hèle », et le **choix** au
+dialogue (le centre de Cyberpunk) est déjà toute la colonne `ferme`/`donne` de M16. Un seul
+patron leur appartient encore, et il ne tient pas dans une mission : **lire un passant et
+choisir quoi en faire** — le profiling de Watch Dogs, où chaque piéton porte un état du monde
+(« ancien combattant », « revenu 8 000 $ », « harcèlement ») et où **agir** change ta
+réputation.
+
+Ce que ça donne, dans l'esprit de la ville : Bandini a déjà un levier de réputation en germe
+(`casier` de M11, `ami`/`ennemi` de M16, la rumeur qui se tait devant une arme de M15), mais
+il ne dit **jamais** ce qu'un passant pense de toi. La lecture comble ce trou. Elle n'est
+**pas** une activité de boulot, et surtout **pas un cent-et-unième type d'objectif** : un
+objectif `lire` pousserait à du `if (slug === '…')`, et la règle de M16 l'interdit. C'est un
+état continu de la ville, un module autonome comme les frénésies — **branché dans `jeu.js`
+`maj()`, jamais dans `BOULOTS`**.
+
+- **Lire** — au contact d'un passant (la bulle « Hé ! » de M6, ou un geste volontaire), on
+  voit **une** ligne sur lui : un mot-clé sans enjeu mécanique (« retourne chanter le
+  vendredi », « doit 200 $ à Sal », « a perdu Biscuit »). Une ligne = de la **couleur**, pas
+  un fil à tirer — aucune mission n'en dépend, et rien ne s'y enchaîne. C'est exactement la
+  promesse de M15 « la ville te parle », étendue des radios aux visages.
+- **La réputation** — les gestes existants y écrivent déjà (payer pour un débiteur en d04,
+  couvrir un témoin en f06, tuer un intouchable) : un compteur par district, invisible ou
+  lisible au carnet, qui change **une** chose concrète — un passant d'un district où tu es
+  bien vu ne te dénonce pas à la police (le vol de char de Watch Dogs) ; là où tu es mal vu,
+  il **appelle** même sans étoile. C'est le seul effet, borné et dur : pas de statistique de
+  peur générale (M15 en a déjà une), pas de prix à l'acte.
+- ⚠️ **Deux garde-fous non négociables**, calqués sur les frénésies : les enfants restent
+  **illisibles** (pas de profil sur un gosse), et **rien ne se tire au dé de la partie** — une
+  ligne de passant se lit à l'empreinte, comme le bris d'aqueduc, jamais au `B.rng()`. Et un
+  troisième, propre à la lecture : **une lecture ne coûte rien et ne rapporte rien** ; si
+  elle se met à donner, elle devient l'objectif qu'on a juré de ne pas écrire.
+
+⚠️ **Le vrai coût n'est pas le code, c'est l'écriture** : 50 à 100 lignes de passant, une par
+quartier, rédigées et auditées comme les répliques de M15 — sans elles, la lecture est un
+menu vide. C'est à Martin de dire si la ville en veut, et dans quelle vague.
+
+**Juges** : une ligne de passant ne pèse sur aucune mission (grep : aucun slug ne la lit) ;
+un enfant n'a jamais de profil ; la réputation ne change rien d'autre que la délation, et elle
+survit à une sauvegarde ; lire n'est jamais un objectif du catalogue.
+
 ### M16 — Cent missions (**ajout**, taille 8, en quatre tranches de 2)
 
 _Demande de Martin (13 sept. 2026) :_ « je veux plus de 100 missions avec les personnages
 existants et de nouveaux personnages, partout sur la carte, plein de nouvelles idées ! »
+
+⚠️ **Où l'on en est, le 18 sept. 2026.** La **tranche 1 (« le moteur, et le Faubourg »)** est
+entamée, pas finie. Sont **commités** (`14fd7ae` et `b23f2e4`) :
+
+- les **neuf types d'objectifs** déclarés (`TYPES_OBJECTIFS`) et **joués** dans
+  `histoire.js` — chacun réutilise un mécanisme existant : `sauter` = le vol du Grand Saut,
+  `boulots` = le compteur du klaxon, `payer`/`acheter` = l'économie, `eteindre` = `Incendies`,
+  `detruire` = un char de mission, `proteger` = `e.suit` (le petit qui colle à sa mère),
+  `suivre` = le fuyard, `pickpocket` = le jet des poches de m2 ;
+- les **deux échecs** (`etoile`, `protege_mort`) et les **quatre options transverses**
+  (`chrono_s`, `sans_etoile`, `sans_arme`, `contre`) ;
+- **`exige`/`ferme`** au modèle (`missions.py` `Mission`) et au filtre JS
+  (`Histoire.disponibles`, `exigeTenu`, `estFermee`) ;
+- **`donne` étendu** (`calme`, `dette: -n`, `casier: -n`, plus `libere`/`contacts`
+  généralisés) ;
+- la **sauvegarde** (`p.calmes`, `p.fermees`, `p.choix` et leur repli champ par champ) et
+- les **résolveurs de lieux** : `district:`, `boutique:`, `pont`, `quai`, `bois`,
+  `rampe:` (tous déterministes — aucun `B.rng()`).
+
+⚠️ **Ce qui manque encore, et c'est le plus dur** : les **juges de banc** d'un type par an
+(un type n'est pas « livré » tant que le singe ne l'a pas joué sans le trouver mort), le
+**téléphone qui trie** (un appel par demi-journée, non du `disponibles()` actuel qui appelle
+sans compter), et **l'arc F** (f01–f13) — ses treize missions, scènes et répliques compris.
+Jusque-là, le moteur est **prêt mais pas prouvé**.
 
 _Ce que ça donne :_ une ville où **chaque quartier a une histoire**, et où le téléphone
 sonne pour autre chose que les cinq missions du Faubourg. **109 missions de plus** (114 en
@@ -5531,11 +5600,17 @@ personnage_ (la table a trente-cinq lignes : Lachance était déjà promis à _P
 ⚠️ **Recompté le 17 sept. 2026 : Martin a ajouté dix voix le 15, et plusieurs sont
 multilingues.** Le compte en a cinquante. Ce qui dit le français qu'on obtient, ce n'est pas
 l'étiquette `language` (la langue d'origine), c'est `verified_languages` dans
-`GET /v2/voices` — gratuit, et `elevenlabs_list_voices` ne le montre pas :
+`GET /v2/voices` — gratuit, et `elevenlabs_list_voices` ne le montre pas.
+⚠️ **Recompté le 18 sept. 2026 : cinq voix féminines de plus, le compte passe à
+cinquante-cinq.** Deux comptent pour le jeu — **Claudia** (jeune, confiante) et
+**Caroline - Soft Quebec accent** (douce, narration), toutes deux québécoises d'origine
+(fr-CA) — et trois non-francophones qu'on n'utilisera pas : Meera (tamoul), Riya Rao
+(hindi), Ana (britannique). Le manque de femmes québécoises (ci-dessous) se resserre donc
+de trois à cinq en une journée.
 
 | Origine | Hommes | Femmes |
 |---|---|---|
-| **québécoise** (enregistrée en fr-CA) | Felix, Khaivan, Québec Tremblay, Alexandre, Léo, Patrick — pris ou promis ; **Alexandre Boutin** et **Premium Male teacher** (Adam), libres ; les deux **annonceurs** générés (le 1 lit le Clairon) | Jeanne Mance, Julia, Amélie — **toutes prises** |
+| **québécoise** (enregistrée en fr-CA) | Felix, Khaivan, Québec Tremblay, Alexandre, Léo, Patrick — pris ou promis ; **Alexandre Boutin** et **Premium Male teacher** (Adam), libres ; les deux **annonceurs** générés (le 1 lit le Clairon) | Jeanne Mance, Julia, Amélie — prises ; **Claudia** (jeune) et **Caroline** (douce) — ajoutées le 18 sept. 2026, **libres** |
 | **France** | Luca, Nicolas Petit (parisien), Martin Dupont Intime, Roland Lescalde, Troy | Clara Dupont |
 | **multilingue** (née ailleurs) | Bubba Marshal (rocailleux, Sud des É.-U.), Omar J et Lutz (jeunes) | Ruby Roo (jeune, « fr-quebec »), Nadine (rauque, « fr-swiss »), Kriti, Arabella, Piku (une enfant) |
 
@@ -5551,7 +5626,9 @@ l'étiquette `language` (la langue d'origine), c'est `verified_languages` dans
   pas à supposer.
 - **Le manque, c'est les femmes.** Onze dans la table, plus Josée et Mme Thibodeau, pour
   trois voix québécoises qui parlent déjà toutes. Les hommes sont vingt-huit pour huit voix :
-  ça se partage.
+  ça se partage. ⚠️ Le 18 sept. 2026, Martin a ajouté **Claudia** et **Caroline**, deux
+  québécoises d'origine, au compte : le manque passe de trois à **cinq** voix de femmes —
+  elles couvriront deux des cinq rôles féminins encore sans voix (en attendant l'audition).
 
 Ce qu'on fait, dans cet ordre :
 
@@ -8084,7 +8161,11 @@ soit qui l'ait ouvert, et il se répare au lever du jour comme le reste. **Le sk
 s'achète chez Josée (350 $ — pas une arme : `MARCHE_NOIR.objets`), se pose sur un guichet
 par ACTION, **lit pendant la nuit** (350–900 $) ou se fait trouver (trois fois sur dix), et
 se vide au même guichet le lendemain ; trois posés à la fois au plus, et l'invite du HUD dit
-exactement ce qu'ACTION va faire (poser, attendre, vider). **L'assurance** au garage :
+exactement ce qu'ACTION va faire (poser, attendre, vider). Il se pose aussi sur une machine
+distributrice de la rue — dans son menu, **en plus des articles** et jamais à leur place :
+on peut poser un skimmer et acheter une canette dans la même visite, l'un n'empêche pas
+l'autre ; la machine d'une salle d'attente, elle, ne se skime pas, et une machine défoncée
+emporte le skimmer avec sa caisse. **L'assurance** au garage :
 Ti-Guy couvre ce qui est garé devant, sans demander à qui c'est — la moitié du prix neuf,
 **jamais plus de 900 $**, prime de 30 % ; le char qui brûle, plie ou coule ouvre une
 réclamation qu'on **encaisse au garage** ; à la troisième, **l'assureur enquête** : quatre

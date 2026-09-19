@@ -60,10 +60,32 @@ const Histoire = (function () {
   function faite(slug) { return !!B.partie.missionsFaites[slug]; }
   function courante() { return B.partie.mission ? mission(B.partie.mission.slug) : null; }
 
-  /** Les missions qu'on peut commencer : prerequis faits, pas encore faites, aucune en cours. */
+  /** `exige` de M16 tenu ? — ce qu'il faut AVOIR en plus des pre-requis
+      (`argent_min`, `proprietes`, `liberes`, `dette`, `tenue`, `heure`).
+      Un pre-requis dit « apres quoi », `exige` dit « dans quel etat ». */
+  function exigeTenu(exige) {
+    if (!exige) return true;
+    const p = B.partie;
+    if (exige.argent_min !== undefined && p.argent < exige.argent_min) return false;
+    if (exige.liberes !== undefined && (p.libere || []).length < exige.liberes) return false;
+    if (exige.proprietes !== undefined && (p.proprietes && Object.keys(p.proprietes).length < exige.proprietes)) return false;
+    if (exige.dette !== undefined && (p.dette || 0) > exige.dette) return false;
+    if (exige.tenue && (p.tenues || []).indexOf(exige.tenue) < 0) return false;
+    // ⚠️ `exige.heure` ne se juge PAS ici : `disponibles()` est un filtre
+    // statique, sans le moment du jour. L'heure se vérifie au DECLENCHEMENT du
+    // téléphone (tranche 3, la police : être au casse-croûte à midi).
+    return true;
+  }
+
+  /** ⚠️ `ferme` de M16 : une mission FERMEE disparait du telephone ET du carnet.
+      C'est ce qui fait les choix (q10/q11, r03/r04, d07/d08, e11, x04). */
+  function estFermee(slug) { return (B.partie.fermees || []).indexOf(slug) >= 0; }
+
+  /** Les missions qu'on peut commencer : prerequis faits, pas encore faites,
+      aucune en cours, `exige` tenu, et pas fermees. */
   function disponibles() {
     if (B.partie.mission) return [];
-    return defs().filter(function (m) { return !faite(m.slug) && m.prerequis.every(faite); });
+    return defs().filter(function (m) { return !faite(m.slug) && !estFermee(m.slug) && m.prerequis.every(faite) && exigeTenu(m.exige); });
   }
 
   function disponibleDe(donneur) {
@@ -167,15 +189,103 @@ const Histoire = (function () {
     return meilleur;
   }
 
+  // --- Les lieux de M16 (docs/plan.md, « Des lieux qu'on peut nommer ») -----
+  //
+  // ⚠️ **JAMAIS DE DÉ** : un lieu se résout par itération déterministe (la
+  // spirale de `tuileLibre`, la plus proche du joueur), pas par `B.rng()`. La
+  // règle de la ville tient ici encore : un tirage au dé décalerait tout le
+  // hasard qui suit.
+
+  /** Sans accents, en majuscules — pour matcher une enseigne (`boutique:pharmacie`). */
+  function sansAccent(t) {
+    return (t || '').toUpperCase()
+      .replace(/[ÀÂÄ]/g, 'A').replace(/[ÉÈÊË]/g, 'E')
+      .replace(/[ÎÏ]/g, 'I').replace(/[ÔÖ]/g, 'O')
+      .replace(/[ÙÛÜ]/g, 'U').replace(/Ç/g, 'C');
+  }
+
+  /** La devanture la plus proche dont l'ENSEIGNE porte le mot (`boutique:<mot>`).
+      Le pixel rendu est devant la porte, sur le trottoir. La « plus proche du
+      joueur » est un choix délibéré : une mission dit « la pharmacie d'ici »,
+      pas « une pharmacie n'importe où ». */
+  function boutiquex(mot) {
+    const devs = (Monde.carte.def && Monde.carte.def.devantures) || [];
+    const n = sansAccent(mot), j = B.joueur;
+    let meilleure = null, meilleureD = Infinity;
+    for (const d of devs) {
+      if (!d.texte || sansAccent(d.texte).indexOf(n) < 0) continue;
+      const d2 = dist2(d.x * TT + 8, (d.y + 1) * TT + 8, j.x, j.y);
+      if (d2 < meilleureD) { meilleureD = d2; meilleure = d; }
+    }
+    return meilleure
+      ? { x: (meilleure.x + meilleure.l / 2) * TT + 8, y: (meilleure.y + 1) * TT + 8, nom: meilleure.texte }
+      : null;
+  }
+
+  /** Une tuile marchable dans un district, en spirale autour de son centre. */
+  function tuileDeDistrict(slug) {
+    const z = (Monde.carte.zones || []).find(function (q) { return q.slug === slug; });
+    if (!z) return null;
+    const cx = (z.x + z.l / 2) * TT + 8, cy = (z.y + z.h / 2) * TT + 8;
+    return tuileLibre(cx, cy, Math.max(z.l, z.h)) || { x: cx, y: cy };
+  }
+
+  /** Le pont de La Pointe : la barrière du paquet (elle porte le bon rectangle). */
+  function lieuPont() {
+    const b = ((Monde.carte.def && Monde.carte.def.barrieres) || []).find(function (q) { return q.slug === 'pont'; });
+    return b ? { x: (b.x + b.l / 2) * TT + 8, y: (b.y + b.h / 2) * TT + 8, nom: b.nom } : null;
+  }
+
+  /** Un quai marchable (glyphe `q` ou `j`), le premier rencontré — déterministe
+      par l'ordre de lecture (nord-ouest d'abord). */
+  function tuileDeQuai() {
+    const c = Monde.carte;
+    for (let ty = 0; ty < c.h; ty++) for (let tx = 0; tx < c.w; tx++) {
+      const g = Monde.glyphe(tx, ty);
+      if ((g === 'q' || g === 'j') && Monde.marchablePieton(tx, ty)) return { x: tx * TT + 8, y: ty * TT + 8 };
+    }
+    return null;
+  }
+
+  /** Les bois de La Pointe : un glyphe `n` marchable dans le district `pointe`. */
+  function tuileDeBois() {
+    const z = (Monde.carte.zones || []).find(function (q) { return q.slug === 'pointe'; });
+    if (!z) return null;
+    for (let ty = z.y; ty < z.y + z.h; ty++) for (let tx = z.x; tx < z.x + z.l; tx++) {
+      if (Monde.glyphe(tx, ty) === 'n' && Monde.marchablePieton(tx, ty)) return { x: tx * TT + 8, y: ty * TT + 8 };
+    }
+    return null;
+  }
+
+  /** Une rampe du district demandé (`rampe:<district>`), la plus proche du joueur. */
+  function tuileDeRampe(district) {
+    const rampes = Monde.carte.rampes || [];
+    const z = (Monde.carte.zones || []).find(function (q) { return q.slug === district; });
+    const j = B.joueur;
+    let meilleure = null, meilleureD = Infinity;
+    for (const r of rampes) {
+      if (z && (r.x < z.x || r.x >= z.x + z.l || r.y < z.y || r.y >= z.y + z.h)) continue;
+      const d2 = dist2(r.x * TT + 8, r.y * TT + 8, j.x, j.y);
+      if (d2 < meilleureD) { meilleureD = d2; meilleure = r; }
+    }
+    return meilleure ? { x: meilleure.x * TT + 8, y: meilleure.y * TT + 8 } : null;
+  }
+
   /** `ou` d'un objectif ou d'un personnage → un pixel. */
   function resoudre(ou, m) {
     if (!ou) return null;
     if (ou === 'donneur') return ouTrouver(m.donneur);
+    if (ou === 'pont') return lieuPont();
+    if (ou === 'quai') return tuileDeQuai();
+    if (ou === 'bois') return tuileDeBois();
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
     if (deux[0] === 'ruelle') return ruellePres(deux[1], Number(deux[2]) || 0);   // `ruelle:garage:24`
     if (deux[0] === 'zone') { const z = Monde.carte.zones.find(function (q) { return q.slug === deux[1]; }); return z ? { x: (z.x + z.l / 2) * TT, y: (z.y + z.h / 2) * TT, zone: z } : null; }
     if (deux[0] === 'point') return null;                 // dedans : pas de pixel en ville
+    if (deux[0] === 'district') return tuileDeDistrict(deux[1]);
+    if (deux[0] === 'boutique') return boutiquex(deux[1]);
+    if (deux[0] === 'rampe') return tuileDeRampe(deux[1]);
     return lieu(ou);
   }
 
@@ -674,7 +784,8 @@ const Histoire = (function () {
     const m = mission(slug);
     if (!m || B.partie.mission) return false;
     B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
-    B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };
+    B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
+                  vol: 0, boulotsDepart: 0, suit: null, protege: null };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
     avancer(enSilence);
     return true;
@@ -742,6 +853,44 @@ const Histoire = (function () {
         if (o.escorte) poserLEscorte(m, o);
       } else if (o.type === 'courses') {
         B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
+      } else if (o.type === 'boulots') {
+        // ⚠️ Le compte part d'ICI : on ne compte QUE les boulots faits pendant
+        // la mission, pas ceux d'avant. `sorte` nomme le compteur (`taxi`,
+        // `pizza`, `ambulance`, `remorquage`).
+        B.mission.boulotsDepart = Missions.boulot.faits[o.sorte] || 0;
+      } else if (o.type === 'detruire') {
+        // Un char posé exprès à détruire : réutilise `poserLeChar` (le même
+        // char, la même `ou`), mais c'est dans `chars` qu'`majObjectif` le
+        // surveille, pas `vehicule` (on ne roule pas dedans, on le casse).
+        poserLeChar(m, o, p.etape);
+      } else if (o.type === 'proteger') {
+        // Le personnage à protéger : posé comme un piéton de mission, il nous
+        // suit (`e.suit = B.joueur`, le mécanisme du petit qui colle à sa mère —
+        // il court à 1.6× son allure et ne s'éloigne jamais) et sa mort est
+        // l'échec `protege_mort`.
+        const p = personnage(o.cible);
+        const place = p ? (ouTrouver(p.slug) || tuileLibre(j.x + 40, j.y, 6)) : tuileLibre(j.x + 40, j.y, 6);
+        if (place) {
+          const e = creerPersonnage(p, place.x, place.y);
+          e.suit = B.joueur; e.courage = 0; e.intouchable = false; e.mission = m.slug;
+          B.mission.protege = e; B.mission.entites.push(e);
+        }
+        Entites.indexer();
+      } else if (o.type === 'suivre') {
+        poserLeFuyard(m, o);
+      } else if (o.type === 'pickpocket') {
+        // Un archétype précis, marqué pour le jet des poches : le joueur le
+        // vide par-derrière (`Combat.pickpocket`), et `majObjectif` valide
+        // quand SES poches sont à nous.
+        const arch = Entites.archetype(o.cible);
+        const place = tuileLibre(j.x + 60, j.y, 6);
+        if (place) {
+          const e = Entites.creerPieton(place.x, place.y, arch);
+          e.pickpocket = true; e.cible = true; e.mission = m.slug; e.etape = p.etape;
+          e.argent = (arch.argent || [10, 30]).reduce(function (a, b) { return a + b; }, 0);  // une bourse lisible
+          B.mission.entites.push(e);
+          Entites.indexer();
+        }
       }
       // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
       // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
@@ -907,6 +1056,12 @@ const Histoire = (function () {
       echouer('vehicule_detruit');
       return;
     }
+    // ⚠️ M16 — les options qui TRAVERSENT tout objectif (`OPTIONS_OBJECTIFS`).
+    // `chrono_s` : le chrono sur n'importe lequel (le défi l'avait, la mission
+    // non). `debutT` est posé dans `avancer()` ; `* 60` convertit en images.
+    if (o.chrono_s && B.t - p.debutT > o.chrono_s * 60) { echouer('chrono'); return; }
+    // `sans_etoile` : échec `etoile` dès qu'on est vu (les missions discrètes).
+    if (o.sans_etoile && B.recherche.etoiles > 0) { echouer('etoile'); return; }
     switch (o.type) {
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
@@ -990,6 +1145,72 @@ const Histoire = (function () {
         return;
       case 'parler':
         return;
+      // --- M16 : les neuf types de plus ------------------------------------
+      // ⚠️ Chacun réutilise un mécanisme qui existe déjà ailleurs : le vol du
+      // Grand Saut (`majDefi`), le compteur des boulots (`Missions.boulot`), le
+      // jet des poches (`Combat.pickpocket`), l'extincteur (`Incendies`). Un
+      // type ne s'invente ici un moteur que s'il n'existe nulle part.
+      case 'sauter': {
+        // Le vol compte en distance parcourue en l'air, comme le Grand Saut.
+        const v = j.dansVehicule;
+        if (v && v.z > 0) { B.mission.vol += Math.hypot(v.vx, v.vy); if (B.mission.vol >= o.vol_px) avancer(); }
+        return;
+      }
+      case 'boulots': {
+        const depart = B.mission.boulotsDepart, faits = Missions.boulot.faits[o.sorte] || 0;
+        if (faits - depart >= o.n) avancer();
+        return;
+      }
+      case 'detruire': {
+        const c = B.mission.chars && B.mission.chars[p.etape];
+        if (!c) { avancer(); return; }
+        if (c.etat === 'epave') avancer();
+        return;
+      }
+      case 'eteindre': {
+        // L'extincteur éteint déjà le feu de bâtiment (`Incendies`). Ce type
+        // attend qu'aucun feu ne brûle plus au lieu nommé — ou, faute de feu
+        // de mission, le feu actif du moment.
+        if (typeof Incendies !== 'undefined' && !Incendies.feuActif()) avancer();
+        return;
+      }
+      case 'payer': {
+        if (Missions.payer(o.montant, o.raison || '')) avancer();
+        return;
+      }
+      case 'acheter': {
+        // Un article a un comptoir : la mission avance quand on l'a en poche
+        // (`B.partie.objets` ou `armes`). Le menu du comptoir l'achète déjà.
+        const enPoche = B.partie.objets[o.article] || B.partie.armes[o.article];
+        if (enPoche) avancer();
+        return;
+      }
+      case 'suivre': {
+        // Filer une cible sans être vu : trop près (`proche`) ou trop loin
+        // (`loin`), c'est raté. La cible est le `fuyard` de la mission.
+        const c = B.mission.fuyard;
+        if (!c) { avancer(); return; }
+        const d = Math.hypot(c.x - j.x, c.y - j.y);
+        if (o.loin && d > o.loin * TT) { echouer('chrono'); return; }
+        if (d < (o.proche || 3) * TT) { echouer('etoile'); return; }
+        return;
+      }
+      case 'proteger': {
+        // Un personnage te suit ; s'il meurt, échec `protege_mort`. La cible
+        // est posée en `poser()` (`B.mission.protege`).
+        const c = B.mission.protege;
+        if (!c) { avancer(); return; }
+        if (!c.vivant || c.etat === 'assomme') { echouer('protege_mort'); return; }
+        return;
+      }
+      case 'pickpocket': {
+        // Les poches d'un piéton PRÉCIS, par-derrière (le jet de `Combat`).
+        // `cible` nomme l'archétype ; `Combat.pickpocket` vise le premier à
+        // portée — on ne le fait valider que quand la bonne poche est vide.
+        const victime = B.mission.entites.find(function (e) { return e.pickpocket === true && (!e.vivant || e.etat === 'assomme'); });
+        if (victime) avancer();
+        return;
+      }
       default:
         avancer();
     }
@@ -1017,6 +1238,19 @@ const Histoire = (function () {
     // alimente la MEME liste, pour qu'il n'y ait qu'une verite.
     if (d.libere && p.libere.indexOf(d.libere) < 0) p.libere.push(d.libere);
     if (d.faubourg_libere && p.libere.indexOf('faubourg') < 0) p.libere.push('faubourg');
+    // ⚠️ `calme` (M16) : un gang de plus qui oublie son hostilite (la seule
+    // facon de marcher dans La Shop, s05 — et Les Erables, e04). Comme `libere`,
+    // une liste ordonnee dans la partie.
+    if (d.calme && p.calmes.indexOf(d.calme) < 0) p.calmes.push(d.calme);
+    // ⚠️ `dette: -n` et `casier: -n` (M16) : des cles NEGATIVES, une facon de
+    // dire « la fin t'enleve ce poids ». Bornees a zero, jamais sous.
+    if (typeof d.dette === 'number') p.dette = Math.max(0, p.dette + d.dette);
+    if (typeof d.casier === 'number') p.casier = Math.max(0, p.casier + d.casier);
+    // ⚠️ `ferme` (M16) : une mission qui en FERME une autre. Un choix est un
+    // choix parce qu'il coute : on ecrit la fermeture ICI, au moment de la
+    // recompense, et la mission fermee disparait de partout des la prochaine
+    // fois qu'on regarde le telephone ou le carnet.
+    if (m.ferme && p.fermees.indexOf(m.ferme) < 0) p.fermees.push(m.ferme);
     // ⚠️ `contacts` : des numeros au telephone (m6, Josée qui présente la ville).
     (d.contacts || []).forEach(function (slug) { p.contacts[slug] = true; });
     // ⚠️ `vehicule` : un char garé devant la planque, posé au prochain chargement
@@ -1543,7 +1777,8 @@ const Histoire = (function () {
     majBulles();
     majTelephone();
     if (B.partie.mission) {
-      if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+      if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
+                                    vol: 0, boulotsDepart: 0, suit: null, protege: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
         const etape = B.mission.pendant;
         B.mission.pendant = null;

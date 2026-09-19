@@ -86,6 +86,26 @@ def test_les_voix_a_secher_sont_des_voix_du_jeu():
     assert not inconnues, f"ces voix a secher ne parlent nulle part : {inconnues}"
 
 
+def test_refaire_une_voix_ne_refait_pas_toutes_les_voix():
+    """⚠️ REGRESSION : `--voix --refaire <slug>` régénérait les 80 voix d'un coup.
+
+    L'ancien filtre `if options.voix or v["slug"] in options.refaire`
+    court-circuitait sur `--voix` : dès qu'on disait `--voix`, TOUTES les voix
+    passaient, et le slug demandé était ignoré. « Refaire une » coûtait la
+    génération complète. Le tri doit avoir trois branches SÉPARÉES : le slug
+    prime sur `--voix`, qui ne sert qu'à générer les manquantes."""
+    source = (RACINE / "scripts" / "audio_elevenlabs.py").read_text(encoding="utf-8")
+    # Le filtre fautif ne doit plus exister ; le tri est en trois branches.
+    assert "if options.voix or v[\"slug\"] in options.refaire" not in source, (
+        "le filtre court-circuitait sur --voix et refaisait tout"
+    )
+    assert source.count("if options.refaire:") >= 1, "--refaire doit avoir sa propre branche"
+    # Et le slug doit bien filtrer quand on demande un refaire.
+    assert 'v["slug"] in options.refaire' in source, (
+        "--refaire doit filtrer par slug, pas laisser --voix tout emporter"
+    )
+
+
 def test_chaque_egalisation_corrige_une_voix_du_jeu():
     """Une cle mal recopiee laisserait sa voix au passe-haut des hommes, sans un mot."""
     utilisees = {v["voix"] for v in VOIX}

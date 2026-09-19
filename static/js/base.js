@@ -152,6 +152,16 @@ function etatInitial(defs) {
     //: Les districts liberes (`libere` de M16, generalise `faubourg_libere`) :
     //: un tableau de slugs — ordonne, comme tout ce qui voyage dans la partie.
     libere: [],
+    //: Les gangs CALMES (`donne.calme` de M16) : un tableau de slugs. Une fois
+    //: calme, un gang oublie `hostile_toujours` et `hostile_si_arme` — la seule
+    //: facon de marcher dans La Shop (`s05`).
+    calmes: [],
+    //: Les missions FERMEES de M16 (`ferme`, les choix) : un tableau de slugs.
+    //: Une mission fermee n'apparait plus jamais, ni au telephone ni au carnet.
+    fermees: [],
+    //: Les choix de M16, par paire : `p.choix[q10]` vaut le slug pris
+    //: (`q10` ou `q11`). C'est ce qui retient la branche qu'on a suivie.
+    choix: {},
     //: Le char que DONNE une mission, gare devant la planque (`donne.vehicule`,
     //: le taxi de m97). Il vit a part de `planque.vehicule` (celui qu'on y
     //: laisse soi-meme) pour ne pas ecraser la sauvegarde.
@@ -560,6 +570,13 @@ const Sauvegarde = (function () {
     if (!Array.isArray(out.fourriere)) out.fourriere = [];
     if (!Array.isArray(out.carnet)) out.carnet = [];
     if (!Array.isArray(out.skimmers)) out.skimmers = [];
+    // ⚠️ M16 : les trois champs des choix et des gangs, en tableau ordonne (un
+    // tableau ne passe pas par la fusion d'objets ci-dessus). Une vieille
+    // partie repart avec tout a vide.
+    if (!Array.isArray(out.libere)) out.libere = [];
+    if (!Array.isArray(out.calmes)) out.calmes = [];
+    if (!Array.isArray(out.fermees)) out.fermees = [];
+    if (!out.choix || typeof out.choix !== 'object') out.choix = {};
     // ⚠️ Une partie d'avant les chantiers REPART de son jour : sinon elle
     // s'ouvrirait au trentieme jour sur trois batiments neufs qu'on n'a jamais
     // vus tomber.

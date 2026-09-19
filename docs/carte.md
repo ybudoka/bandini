@@ -129,7 +129,7 @@ voix.
 | `civil` | Le client | Alexandre | — (dans le taxi) | — |
 | `narrateur` | Le Clairon de la Baie | annonceur centre d'achat 1 | — | — |
 | `tipaul` | Ti-Paul Gagnon | Québec Tremblay | porte:depanneur | — |
-| `lulu` | Lucienne « Lulu » Pelletier | Clara Dupont | point:lulu | — |
+| `lulu` | Lucienne « Lulu » Pelletier | Claudia | point:lulu | — |
 | `raymonde` | Raymonde Fortin | Nadine | porte:usine | — |
 | `ovila` | Ovila Saint-Onge | annonceur centre d'achat 1 | point:ovila | — |
 

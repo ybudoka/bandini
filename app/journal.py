@@ -33,8 +33,8 @@ REGLES: list[Regle] = [
      "texte": "TROIS VÉHICULES DISPARUS. « ON A NOS SOUPÇONS », DIT LE SERGENT.",
      "lu": "Vague de vols d'autos. Trois véhicules disparus. « On a nos soupçons », dit le sergent."},
     {"slug": "un_char_vole", "cle": "volees", "min": 1, "titre": "UN CHAR VOLÉ AU FAUBOURG",
-     "texte": "LE PROPRIÉTAIRE L'AVAIT LAISSÉ TOURNER. IL NE TOURNE PLUS.",
-     "lu": "Un char volé au Faubourg. Le propriétaire l'avait laissé tourner. Il ne tourne plus."},
+     "texte": "ON L'A VU DISPARAÎTRE EN PLEINE RUE. IL EST REPARTI EN PLEIN VOL.",
+     "lu": "Un char volé au Faubourg. On l'a vu disparaître en pleine rue. Il est reparti en plein vol."},
     {"slug": "taxi_qui_ne_dort_pas", "cle": "courses", "min": 3, "titre": "LE TAXI QUI NE DORT PAS",
      "texte": "UN CHAUFFEUR ENCHAÎNE LES COURSES. LES CLIENTS PARLENT DE BROUILLARD.",
      "lu": "Le taxi qui ne dort pas. Un chauffeur enchaîne les courses ; les clients parlent de brouillard."},
@@ -44,6 +44,44 @@ REGLES: list[Regle] = [
     {"slug": "brume", "cle": "crimes", "min": 0, "titre": "BRUME SUR LE BASSIN",
      "texte": "LE TRAVERSIER A PRIS DU RETARD. RIEN À SIGNALER.",
      "lu": "Brume sur le bassin. Le traversier a pris du retard. Rien à signaler."},
+]
+
+#: LES MATINS CALMES — ce que le Clairon lit quand il ne s'est RIEN passé.
+#:
+#: ⚠️ « Brume sur le bassin » (le repli, ci-dessus) était le SEUL matin normal :
+#: chaque matin où la ville dormait se lisait mot pour mot pareil. Ces sept-là
+#: s'ajoutent au bassin : le narrateur en tire un, sans jamais redire le
+#: précédent (même règle que les répliques de la rue), et le repli reste le
+#: filet — il n'y a rien de plus grave à dire.
+#:
+#: ⚠️ Chacun porte la même forme que les manchettes (`slug`, `titre`, `texte`
+#: en casse de manchette, `lu` en casse naturelle) : c'est ce qui les fait lire
+#: par le narrateur (`audio.voix_journal`) sans une ligne de plus, et c'est ce
+#: qui les fait juger par les mêmes juges qu'elle. Ils ne sont PAS dans
+#: `REGLES` : ils ne portent aucune gravité, ce ne sont pas des règles qui
+#: passent, ce sont des replis qui VARIENT.
+MATINS: list[Regle] = [
+    {"slug": "matin_maree", "cle": "crimes", "min": 0, "titre": "LA MARÉE EST HAUTE",
+     "texte": "LES QUAIS S'ÉVEILLENT. LES CORDAGES CRAQUENT DANS LA BRISE.",
+     "lu": "La marée est haute. Les quais s'éveillent, les cordages craquent dans la brise."},
+    {"slug": "matin_mouettes", "cle": "crimes", "min": 0, "titre": "LES MOUETTES CRIENT TÔT",
+     "texte": "ELLES TOURNENT AU-DESSUS DU QUAI, PUIS ELLES SE TAISENT.",
+     "lu": "Les mouettes crient tôt. Elles tournent au-dessus du quai, puis elles se taisent."},
+    {"slug": "matin_boulanger", "cle": "crimes", "min": 0, "titre": "ÇA SENT LE PAIN CHAUD",
+     "texte": "LE BOULANGER DU FAUBOURG SORT SES FOURNÉES. LA RUE MARCHE LE NEZ EN L'AIR.",
+     "lu": "Ça sent le pain chaud. Le boulanger du Faubourg sort ses fournées, la rue marche le nez en l'air."},
+    {"slug": "matin_laitier", "cle": "crimes", "min": 0, "titre": "LE LAITIER PASSE À L'AUBE",
+     "texte": "LES BOUTEILLES S'ALIGNENT SUR LES PERRONS. LE FAUBOURG DORT ENCORE, PRESQUE.",
+     "lu": "Le laitier passe à l'aube. Les bouteilles s'alignent sur les perrons, le Faubourg dort encore, presque."},
+    {"slug": "matin_peche", "cle": "crimes", "min": 0, "titre": "LA PÊCHE A ÉTÉ BONNE",
+     "texte": "LES BATEAUX RENTRENT AU QUAI, LES COFFRES PLEINS.",
+     "lu": "La pêche a été bonne. Les bateaux rentrent au quai, les coffres pleins."},
+    {"slug": "matin_volets", "cle": "crimes", "min": 0, "titre": "LA VILLE OUVRE LES VOLETS",
+     "texte": "ILS SE LÈVENT UN À UN. BAIE-DES-BRUMES S'ÉTIRE AU SOLEIL.",
+     "lu": "La ville ouvre les volets. Ils se lèvent un à un, Baie-des-Brumes s'étire au soleil."},
+    {"slug": "matin_silence", "cle": "crimes", "min": 0, "titre": "UN MATIN TRANQUILLE",
+     "texte": "RIEN À SIGNALER À BAIE-DES-BRUMES. LE MEILLEUR GENRE DE MATIN.",
+     "lu": "Un matin tranquille. Rien à signaler à Baie-des-Brumes, le meilleur genre de matin."},
 ]
 
 #: CE QUE LE JEU T'APPREND, un matin a la fois.

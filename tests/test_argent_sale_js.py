@@ -3,7 +3,7 @@ s'y arrete ; la caisse tombe en liasses qu'on ramasse en passant ; le skimmer
 se pose, lit la nuit et se vide ; l'assurance paie le char disparu, et
 l'assureur enquete a la troisieme reclamation."""
 
-from app import economie, vehicules
+from app import economie, magasins, vehicules
 
 
 def test_le_camion_defonce_le_guichet_et_l_auto_s_y_arrete(banc, paquet):
@@ -192,3 +192,70 @@ def test_le_marche_noir_vend_le_skimmer_et_la_partie_le_garde(banc, paquet):
     assert r["prix"] == s["prix"] and r["enPoche"] == 1
     assert "(1 EN POCHE)" in r["detail"]
     assert r["vieille"] == {"objets": {}, "skimmers": [], "assurance": {"du": 0, "reclamations": 0, "enquete": 0}}
+
+
+def test_le_skimmer_se_pose_sur_une_machine_sans_empecher_d_acheter(banc, paquet):
+    """Le skimmer se pose aussi sur une machine distributrice DE LA RUE — mais
+    dans son menu, EN PLUS des articles : poser un skimmer n'empeche pas
+    d'acheter une canette dans la meme visite, et la machine d'une salle
+    d'attente refuse le skimmer."""
+    tarifs = paquet["economie"]["tarifs"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(5);
+        const j = L.B.joueur, p = L.B.partie;
+        const d = L.B.entites.find(function (e) {
+            return e.type === 'decor' && e.decor.indexOf('distributrice') === 0
+                && !L.Entites.autour(e.x, e.y, 60, function (q) { return q.type === 'ambulant' || q.metier; }).length;
+        });
+        if (!d) return { pasDeMachine: true };
+        j.x = d.x; j.y = d.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        const m = L.Missions.distributriceSousLaMain(j);
+        if (!m) return { pasDeMachine: true };
+        p.objets.skimmer = 2; p.argent = 100;
+        const menu = L.Missions.menuDistributrice(m);
+        const libelles = menu.items.map(function (i) { return i.libelle; });
+        // Les articles d'abord, le skimmer en SURPLUS : on peut encore acheter.
+        const pose = menu.items.find(function (i) { return i.libelle === 'POSER UN SKIMMER'; });
+        if (!pose) return { pasDePose: true, libelles: libelles };
+        const avant = p.argent;
+        // On pose le skimmer SANS fermer le menu, puis on achete une canette.
+        const poseFait = pose.faire();
+        const n1 = p.skimmers.length, reste = p.objets.skimmer;
+        const achats = L.Missions.menuDistributrice(m);
+        const achetable = achats.items[0].libelle;
+        L.B.rng = function () { return 0.99; };                   // la canette tombe
+        const servi = achats.items[0].faire();
+        const apres = p.argent, n2 = p.skimmers.length;
+        // Le menu redecore le skimmer deja pose : on attend, pas de deuxieme pose.
+        const revu = L.Missions.menuDistributrice(m).items.map(function (i) { return i.libelle; });
+        // La nuit le lit, puis on le vide au menu.
+        L.B.rng = function () { return 0.9; };
+        L.Missions.nuitDesSkimmers();
+        const vide = L.Missions.menuDistributrice(m).items.find(function (i) { return i.libelle.indexOf('VIDER LE SKIMMER') === 0; });
+        const avantVide = p.argent;
+        if (vide) vide.faire();
+        const n3 = p.skimmers.length, gagne = p.argent - avantVide;
+        // La machine d'une salle d'attente (pas `rue:`) ne propose pas de skimmer.
+        const interieur = { cle: 'piece:3,4', sorte: m.sorte, fiche: L.B.defs.distributrices[m.sorte], x: 0, y: 0 };
+        const sansSkimmer = L.Missions.menuDistributrice(interieur).items.map(function (i) { return i.libelle; });
+        return { libelles: libelles, poseFait: poseFait, n1: n1, reste: reste, achetable: achetable, servi: servi,
+                 apres: apres, n2: n2, revu: revu, vide: vide ? vide.libelle : null, n3: n3, gagne: gagne,
+                 sansSkimmer: sansSkimmer };
+    }""")
+    assert not r.get("pasDeMachine"), "la ville n'a pas de machine loin des kiosques"
+    assert not r.get("pasDePose"), r
+    s = economie.GUICHET["skimmer"]
+    # Les articles d'abord, puis le skimmer : l'ordre n'empeche pas d'acheter.
+    assert "POSER UN SKIMMER" in r["libelles"]
+    assert r["libelles"].index("POSER UN SKIMMER") > r["libelles"].index(r["achetable"]), r["libelles"]
+    assert r["poseFait"] is False and r["n1"] == 1 and r["reste"] == 1, "poser un skimmer ne ferme pas le menu"
+    assert r["servi"] is False and r["apres"] < 100 and r["n2"] == 1, "on achete apres avoir pose le skimmer"
+    assert "SKIMMER POSÉ — REVIENS DEMAIN" in r["revu"], r["revu"]
+    assert r["vide"] is not None, "le skimmer lu la nuit se vide au menu"
+    assert r["n3"] == 0, "vider le skimmer le retire"
+    monte = int(r["vide"].split("— ")[1].split(" $")[0])
+    assert s["rendement"][0] <= monte <= s["rendement"][1]
+    assert r["gagne"] == monte
+    assert "POSER UN SKIMMER" not in r["sansSkimmer"] and "SKIMMER POSÉ — REVIENS DEMAIN" not in r["sansSkimmer"], \
+           "la machine d'une salle d'attente ne se skime pas"

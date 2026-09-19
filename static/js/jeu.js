@@ -67,8 +67,18 @@ const Jeu = (function () {
     // planque attend devant sa porte.
     Missions.garnirLaFourriere();
     const app = Monde.carte.apparition.joueur;
-    const x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
-    const y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;
+    let x = p.x !== null && p.x !== undefined ? p.x : app.x * TT + 8;
+    let y = p.y !== null && p.y !== undefined ? p.y : app.y * TT + 8;
+    // ⚠️ Au tout premier matin, on debarque au terminus. Des qu'on a la cle de
+    // la planque en poche (m1 faite, `donne.message` = « LA CLE DE LA
+    // PLANQUE »), c'est DEVANT LA PLANQUE qu'on reapparait au lancement : une
+    // position perdue (la carte a change sous la partie) ne renvoie plus a la
+    // gare, elle nous remet chez nous. Une partie continue, elle, garde sa
+    // position sauvegardee (`p.x`), exactement comme avant.
+    if ((p.x === null || p.x === undefined) && p.missionsFaites && p.missionsFaites.m1) {
+      const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
+      if (porte) { x = porte.x * TT + 8; y = (porte.y + 1) * TT + 8; }
+    }
     const j = Entites.creerJoueur(x, y);
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
