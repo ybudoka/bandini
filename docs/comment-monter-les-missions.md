@@ -153,7 +153,7 @@ attend son **juge de banc** avant de porter une mission) :
 | `pickpocket` | les poches d'un piéton **précis**, par-derrière (le jet de m2) | `cible` |
 | `payer` | donner un montant | `montant` |
 | `acheter` | un article à un comptoir | `article`, `ou` |
-| `detruire` | un véhicule de la mission | `vehicule_val` (ce qu'on lui envoie) |
+| `detruire` | un véhicule de la mission | `vehicule` (le char posé), `ou` (où il naît) |
 | `sauter` | une rampe | `vol_px` (le juge du Grand Saut) |
 | `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |

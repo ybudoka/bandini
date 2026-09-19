@@ -784,7 +784,8 @@ const Histoire = (function () {
     const m = mission(slug);
     if (!m || B.partie.mission) return false;
     B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
-    B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };
+    B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
+                  vol: 0, boulotsDepart: 0, suit: null, protege: null };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
     avancer(enSilence);
     return true;
@@ -852,6 +853,44 @@ const Histoire = (function () {
         if (o.escorte) poserLEscorte(m, o);
       } else if (o.type === 'courses') {
         B.mission.courses = 0; B.mission.coursesDepart = Missions.boulot.faits.taxi;
+      } else if (o.type === 'boulots') {
+        // ⚠️ Le compte part d'ICI : on ne compte QUE les boulots faits pendant
+        // la mission, pas ceux d'avant. `sorte` nomme le compteur (`taxi`,
+        // `pizza`, `ambulance`, `remorquage`).
+        B.mission.boulotsDepart = Missions.boulot.faits[o.sorte] || 0;
+      } else if (o.type === 'detruire') {
+        // Un char posé exprès à détruire : réutilise `poserLeChar` (le même
+        // char, la même `ou`), mais c'est dans `chars` qu'`majObjectif` le
+        // surveille, pas `vehicule` (on ne roule pas dedans, on le casse).
+        poserLeChar(m, o, p.etape);
+      } else if (o.type === 'proteger') {
+        // Le personnage à protéger : posé comme un piéton de mission, il nous
+        // suit (`e.suit = B.joueur`, le mécanisme du petit qui colle à sa mère —
+        // il court à 1.6× son allure et ne s'éloigne jamais) et sa mort est
+        // l'échec `protege_mort`.
+        const p = personnage(o.cible);
+        const place = p ? (ouTrouver(p.slug) || tuileLibre(j.x + 40, j.y, 6)) : tuileLibre(j.x + 40, j.y, 6);
+        if (place) {
+          const e = creerPersonnage(p, place.x, place.y);
+          e.suit = B.joueur; e.courage = 0; e.intouchable = false; e.mission = m.slug;
+          B.mission.protege = e; B.mission.entites.push(e);
+        }
+        Entites.indexer();
+      } else if (o.type === 'suivre') {
+        poserLeFuyard(m, o);
+      } else if (o.type === 'pickpocket') {
+        // Un archétype précis, marqué pour le jet des poches : le joueur le
+        // vide par-derrière (`Combat.pickpocket`), et `majObjectif` valide
+        // quand SES poches sont à nous.
+        const arch = Entites.archetype(o.cible);
+        const place = tuileLibre(j.x + 60, j.y, 6);
+        if (place) {
+          const e = Entites.creerPieton(place.x, place.y, arch);
+          e.pickpocket = true; e.cible = true; e.mission = m.slug; e.etape = p.etape;
+          e.argent = (arch.argent || [10, 30]).reduce(function (a, b) { return a + b; }, 0);  // une bourse lisible
+          B.mission.entites.push(e);
+          Entites.indexer();
+        }
       }
       // ⚠️ **UN CHAR DE MISSION DORT LA AVANT QU'ON EN PARLE.** Il ne naissait
       // qu'au tour de SON objectif : Ti-Guy disait « y a un char qui traine dans
@@ -1017,6 +1056,12 @@ const Histoire = (function () {
       echouer('vehicule_detruit');
       return;
     }
+    // ⚠️ M16 — les options qui TRAVERSENT tout objectif (`OPTIONS_OBJECTIFS`).
+    // `chrono_s` : le chrono sur n'importe lequel (le défi l'avait, la mission
+    // non). `debutT` est posé dans `avancer()` ; `* 60` convertit en images.
+    if (o.chrono_s && B.t - p.debutT > o.chrono_s * 60) { echouer('chrono'); return; }
+    // `sans_etoile` : échec `etoile` dès qu'on est vu (les missions discrètes).
+    if (o.sans_etoile && B.recherche.etoiles > 0) { echouer('etoile'); return; }
     switch (o.type) {
       case 'aller': {
         if (o.nuit && !Monde.estNuit()) { B.mission.attend = 'ATTENDS LA NUIT'; return; }
@@ -1100,6 +1145,72 @@ const Histoire = (function () {
         return;
       case 'parler':
         return;
+      // --- M16 : les neuf types de plus ------------------------------------
+      // ⚠️ Chacun réutilise un mécanisme qui existe déjà ailleurs : le vol du
+      // Grand Saut (`majDefi`), le compteur des boulots (`Missions.boulot`), le
+      // jet des poches (`Combat.pickpocket`), l'extincteur (`Incendies`). Un
+      // type ne s'invente ici un moteur que s'il n'existe nulle part.
+      case 'sauter': {
+        // Le vol compte en distance parcourue en l'air, comme le Grand Saut.
+        const v = j.dansVehicule;
+        if (v && v.z > 0) { B.mission.vol += Math.hypot(v.vx, v.vy); if (B.mission.vol >= o.vol_px) avancer(); }
+        return;
+      }
+      case 'boulots': {
+        const depart = B.mission.boulotsDepart, faits = Missions.boulot.faits[o.sorte] || 0;
+        if (faits - depart >= o.n) avancer();
+        return;
+      }
+      case 'detruire': {
+        const c = B.mission.chars && B.mission.chars[p.etape];
+        if (!c) { avancer(); return; }
+        if (c.etat === 'epave') avancer();
+        return;
+      }
+      case 'eteindre': {
+        // L'extincteur éteint déjà le feu de bâtiment (`Incendies`). Ce type
+        // attend qu'aucun feu ne brûle plus au lieu nommé — ou, faute de feu
+        // de mission, le feu actif du moment.
+        if (typeof Incendies !== 'undefined' && !Incendies.feuActif()) avancer();
+        return;
+      }
+      case 'payer': {
+        if (Missions.payer(o.montant, o.raison || '')) avancer();
+        return;
+      }
+      case 'acheter': {
+        // Un article a un comptoir : la mission avance quand on l'a en poche
+        // (`B.partie.objets` ou `armes`). Le menu du comptoir l'achète déjà.
+        const enPoche = B.partie.objets[o.article] || B.partie.armes[o.article];
+        if (enPoche) avancer();
+        return;
+      }
+      case 'suivre': {
+        // Filer une cible sans être vu : trop près (`proche`) ou trop loin
+        // (`loin`), c'est raté. La cible est le `fuyard` de la mission.
+        const c = B.mission.fuyard;
+        if (!c) { avancer(); return; }
+        const d = Math.hypot(c.x - j.x, c.y - j.y);
+        if (o.loin && d > o.loin * TT) { echouer('chrono'); return; }
+        if (d < (o.proche || 3) * TT) { echouer('etoile'); return; }
+        return;
+      }
+      case 'proteger': {
+        // Un personnage te suit ; s'il meurt, échec `protege_mort`. La cible
+        // est posée en `poser()` (`B.mission.protege`).
+        const c = B.mission.protege;
+        if (!c) { avancer(); return; }
+        if (!c.vivant || c.etat === 'assomme') { echouer('protege_mort'); return; }
+        return;
+      }
+      case 'pickpocket': {
+        // Les poches d'un piéton PRÉCIS, par-derrière (le jet de `Combat`).
+        // `cible` nomme l'archétype ; `Combat.pickpocket` vise le premier à
+        // portée — on ne le fait valider que quand la bonne poche est vide.
+        const victime = B.mission.entites.find(function (e) { return e.pickpocket === true && (!e.vivant || e.etat === 'assomme'); });
+        if (victime) avancer();
+        return;
+      }
       default:
         avancer();
     }
@@ -1666,7 +1777,8 @@ const Histoire = (function () {
     majBulles();
     majTelephone();
     if (B.partie.mission) {
-      if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0 };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+      if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
+                                    vol: 0, boulotsDepart: 0, suit: null, protege: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
         const etape = B.mission.pendant;
         B.mission.pendant = null;
