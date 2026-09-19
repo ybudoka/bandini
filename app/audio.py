@@ -971,7 +971,9 @@ def voix_journal() -> list[dict]:
             # declare pas et l'encadre s'affiche sans voix — c'est la regle de
             # ce fichier, et c'est elle qui permet d'ecrire le texte avant de
             # depenser un credit.
-            for r in journal.REGLES + journal.SPECIALES + journal.LECONS]
+            # Les MATINS calmes aussi : ce ne sont pas des regles qui passent,
+            # mais des replis qui VARIENT, lus de la meme voix.
+            for r in journal.REGLES + journal.SPECIALES + journal.LECONS + journal.MATINS]
 
 
 def voix_ouverture() -> list[dict]:

@@ -71,6 +71,9 @@ def assembler() -> dict:
         "journal": journal.REGLES,
         "journal_speciales": journal.SPECIALES,
         "journal_lecons": journal.LECONS,
+        # Les matins calmes : les replis qui VARIENT quand rien n'est passe. Le
+        # narrateur les lit comme une manchette, tires sans redire le precedent.
+        "journal_matins": journal.MATINS,
         "marche_noir": magasins.MARCHE_NOIR,
         "magasins": magasins.CATALOGUE,
         "ambulants": magasins.AMBULANTS,

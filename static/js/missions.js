@@ -1548,8 +1548,26 @@ const Missions = (function () {
         return p.leconsLues.indexOf(l.slug) < 0 && !(s[l.cle] > 0);
       });
       if (lecon) { p.leconsLues.push(lecon.slug); choisie = lecon; }
+      else {
+        // ⚠️ RIEN A ENSEIGNER : le repli VARIENT. « Brume sur le bassin » etait
+        // le seul matin normal, et un joueur qui a tout appris le lisait mot pour
+        // mot chaque jour. On tire dans les matins calmes (`journal_matins`) sans
+        // jamais redire celui d'hier (`hier.matin`), comme les repliques de la
+        // rue — et on retombe sur tout le bassin s'il n'en reste qu'un. Le
+        // hasard passe par `B.rng()`, jamais `Math.random()` : c'est ce qui rend
+        // le tirage reproductible, donc juge.
+        const matins = B.defs.journal_matins || [];
+        const frais = matins.filter(function (m) { return m.slug !== hier.matin; });
+        const bassin = frais.length ? frais : matins;
+        if (bassin.length) choisie = bassin[Math.floor(B.rng() * bassin.length)];
+      }
     }
-    p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0 };
+    // ⚠️ `matin` retient le slug du dernier matin calme tire, pour ne pas le
+    // redire le lendemain. Une manchette ou une lecon ne laisse rien : le filet
+    // « brume » reste la quand rien d'autre ne passe.
+    const estUnMatinCalme = choisie && (B.defs.journal_matins || []).some(function (m) { return m.slug === choisie.slug; });
+    p.journal = { crimes: s.crimes, tues: s.tues, volees: s.volees, courses: s.courses || 0, hospitalisations: s.hospitalisations || 0,
+                  matin: estUnMatinCalme ? choisie.slug : null };
     return choisie || regles[regles.length - 1] || null;
   }
 

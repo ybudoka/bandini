@@ -326,6 +326,15 @@ JEU: dict[str, str] = {
     "narrateur-journal-taxi_qui_ne_dort_pas": "[curious] Le taxi qui ne dort pas. Un chauffeur enchaîne les courses… les clients parlent de brouillard.",
     "narrateur-journal-faubourg_inquiet": "[concerned] Le Faubourg s'inquiète. Les commerçants demandent plus de patrouilles.",
     "narrateur-journal-brume": "[somber] Brume sur le bassin. Le traversier a pris du retard… [sighs] rien à signaler.",
+    # --- Les matins calmes : le narrateur, en paix, lit la ville qui se reveille.
+    # Jamais de drame ici — c'est un homme qui aime les matins ou rien n'arrive.
+    "narrateur-journal-matin_maree": "[calm] La marée est haute… les quais s'éveillent, les cordages craquent dans la brise.",
+    "narrateur-journal-matin_mouettes": "[casually] Les mouettes crient tôt… elles tournent au-dessus du quai, puis elles se taisent.",
+    "narrateur-journal-matin_boulanger": "[warmly] Ça sent le pain chaud! Le boulanger du Faubourg sort ses fournées… la rue marche le nez en l'air.",
+    "narrateur-journal-matin_laitier": "[calm] Le laitier passe à l'aube. Les bouteilles s'alignent sur les perrons… [softly] le Faubourg dort encore, presque.",
+    "narrateur-journal-matin_peche": "[satisfied] La pêche a été bonne… les bateaux rentrent au quai, les coffres pleins.",
+    "narrateur-journal-matin_volets": "[cheerful] La ville ouvre les volets. Ils se lèvent un à un… Baie-des-Brumes s'étire au soleil.",
+    "narrateur-journal-matin_silence": "[warmly] Un matin tranquille. Rien à signaler à Baie-des-Brumes… le meilleur genre de matin.",
     "narrateur-journal-cravates_chassees": "[excited] Les Cravates chassées du Faubourg! Trois coins de rue libérés en une nuit… toute la ville en parle.",
     "narrateur-journal-lecon_klaxon": "[amused] Le saviez-vous? Un coup de klaxon dans un taxi vous trouve un client. Ça marche aussi avec la pizza… l'ambulance et la remorqueuse.",
     "narrateur-journal-lecon_fourriere": "[matter-of-fact] Votre char a disparu? Mal garé, il est à la fourrière municipale. On peut l'y racheter… à un prix qui dépend de ce qu'il vaut.",
