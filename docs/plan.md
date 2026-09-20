@@ -213,6 +213,7 @@ ne bougent pas quand l'ordre de travail change.
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
+| On agit sur ce qu'on regarde | ⬜ **en cours** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -11405,6 +11406,17 @@ ce juge-là avec.)
   navigation, le 5xx, les sons) font chacune rougir le sien.
 - ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
   ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
+
+### On agit sur ce qu'on regarde
+
+demande de Martin (20 sept. 2026) : « pour activer une interaction avec la plupart des choses,
+à moins d'exception, que le personnage doive faire face à ce qu'il veut activer ».
+
+- ⚠️ **En cours.** Aujourd'hui ACTION sert tout ce qui est dans un rayon autour du joueur, quel
+  que soit son regard : on entre dans un commerce le dos tourné, on monte dans un char qu'on
+  ne voit pas. Objectif : une seule règle de « faire face » (un cône devant le regard, dans le
+  paquet), lue par les mêmes fonctions « sous la main » que l'invite du HUD — pour que le HUD
+  ne promette jamais un geste qu'ACTION refuserait — et une courte liste d'exceptions dites.
 
 ### Les menus au doigt avancent d'une ligne à la fois
 
