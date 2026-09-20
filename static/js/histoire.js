@@ -744,6 +744,9 @@ const Histoire = (function () {
       const bm = B.mission || {};
       const etat = Scenes.jouer(scene, {
         mission: m, voix: m.slug, lignes: lignesDe(m, partie), fin: fin,
+        // ⚠️ Ceux qui ARRIVENT (`loin`) n'existent pas encore : `cible` nomme alors le
+        // point d'où ils viendront, et la caméra peut aller le voir.
+        lieux: bm.arrivee ? { cible: bm.arrivee } : {},
         acteurs: Object.assign({
           vehicule: bm.vehicule || null, fuyard: bm.fuyard || null,
           cible: (bm.entites || []).find(function (e) { return e.cible && e.vivant; }) || null,
@@ -809,6 +812,15 @@ const Histoire = (function () {
     Hud.message(m.titre.toUpperCase(), 180);
     Son.SFX.mission();
     if (o) Hud.message(o.texte, 200);
+    faireArriver(m, o);
+  }
+
+  /** Ce que l'intro a fait attendre : les hommes d'un `tuer` qui `arrivent`
+      naissent MAINTENANT, quand le donneur a fini de parler — pas pendant qu'il
+      parle, collés à lui. */
+  function faireArriver(m, o) {
+    if (!B.mission || !B.mission.arrivee || !o || o.type !== 'tuer') return;
+    dansLaVille(function () { poserLesCravates(m, o, false); });
   }
 
   /** L'objectif suivant. Ce qui se pose en ville se pose TOUT DE SUITE — dans
@@ -823,7 +835,7 @@ const Histoire = (function () {
     // On ne repose pas des morts pour les recoucher.
     if (o.type === 'tuer' && dejaTombes(m.slug, p.etape) >= o.n) { avancer(enSilence); return; }
     p.debutT = B.t;
-    poser();
+    poser(enSilence);
     if (!enSilence) Hud.message(o.texte, 200);
     // La replique PENDANT de cet objectif, des qu'aucune autre ne parle (`maj`).
     if (!enSilence && (m.dialogue.pendant || []).some(function (l) { return l.objectif === p.etape; })) B.mission.pendant = p.etape;
@@ -844,7 +856,7 @@ const Histoire = (function () {
     try { fn(); } finally { Monde.restaurer(carte); B.entites = entites; }
   }
 
-  function poser() {
+  function poser(enSilence) {
     const m = courante(), p = B.partie.mission, j = B.joueur;
     const o = m.objectifs[p.etape];
     if (!o) return;
@@ -855,7 +867,7 @@ const Histoire = (function () {
         const v = poserLeChar(m, o, p.etape);
         if (v) B.mission.vehicule = v;
       } else if (o.type === 'tuer') {
-        poserLesCravates(m, o);
+        poserLesCravates(m, o, enSilence);
       } else if (o.type === 'ramasser' && o.cible === 'fuyard') {
         poserLeFuyard(m, o);
       } else if (o.type === 'semer') {
@@ -940,27 +952,68 @@ const Histoire = (function () {
     return v;
   }
 
-  function poserLesCravates(m, o) {
+  /** Où naissent des hommes qui ARRIVENT (`loin`, en tuiles) : à cette distance
+      du joueur, sur un sol où l'on marche, et avec une ligne droite libre
+      jusqu'à lui — `attaque_joueur` marche droit et ne contourne aucun mur.
+
+      ⚠️ AUCUN DÉ : les seize directions se prennent dans un ordre fixe, de la
+      plus lointaine à la plus proche, pour que jouer la scène ou la passer donne
+      la même ville. Hors de l'écran d'abord ; à l'écran seulement s'il n'y a
+      que ça. ⚠️ Pas plus loin que 16 tuiles : au-delà de 260 px, `attaque_joueur`
+      renonce à la première image.
+
+      `null` : dedans (le joueur n'a pas de coordonnées de ville) ou nulle part. */
+  function placeDArrivee(loin) {
+    const j = B.joueur;
+    if (B.interieur) return null;
+    for (const horsChamp of [true, false]) {
+      for (let r = loin; r >= loin - 3; r--) {
+        for (let k = 0; k < 16; k++) {
+          const a = k * Math.PI / 8;
+          const tx = Math.floor((j.x + Math.cos(a) * r * TT) / TT), ty = Math.floor((j.y + Math.sin(a) * r * TT) / TT);
+          if (!Monde.marchablePieton(tx, ty)) continue;
+          const place = { x: tx * TT + 8, y: ty * TT + 8 };
+          if (horsChamp && Entites.visibleAEcran(place.x, place.y, 8)) continue;
+          if (Monde.ligneLibre(place.x, place.y, j.x, j.y)) return place;
+        }
+      }
+    }
+    return null;
+  }
+
+  /** `enSilence` : l'intro va se dire. Ceux qui `arrivent` (`loin`) attendent la fin
+      de la scène (`faireArriver`) : leur point de naissance est choisi tout de suite —
+      la caméra de l'intro peut aller le voir (`cible`) —, eux naissent plus tard. */
+  function poserLesCravates(m, o, enSilence) {
     const gang = B.defs.pietons.gangs.find(function (g) { return g.slug === o.groupe; });
     if (!gang) return;
     const arch = Entites.archetype(gang.pieton);
-    const centre = o.chef ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y };
     const coins = o.coins || 1;
     const etape = B.partie.mission.etape, parCoin = tombesDe(m.slug, etape);
     const reste = o.n - dejaTombes(m.slug, etape);
     B.mission.kos = o.n - reste;
     if (reste <= 0) return;
+    const arrivee = o.loin ? B.mission.arrivee || placeDArrivee(o.loin) : null;
+    if (arrivee && enSilence) { B.mission.arrivee = arrivee; return; }
+    const centre = arrivee || (o.chef ? { x: B.joueur.x, y: B.joueur.y } : resoudre(o.ou, m) || { x: B.joueur.x, y: B.joueur.y });
+    // Côte à côte, en travers de leur route : le second n'est pas derrière le premier.
+    const dx = B.joueur.x - centre.x, dy = B.joueur.y - centre.y, norme = Math.hypot(dx, dy) || 1;
     for (let c = 0; c < coins; c++) {
       const a = c / coins * Math.PI * 2;
       const cx = coins > 1 ? centre.x + Math.cos(a) * 120 : centre.x, cy = coins > 1 ? centre.y + Math.sin(a) * 120 : centre.y;
       // ⚠️ Un coin qu'on a vide reste vide : on n'y repose que ce qui
       // manquait encore a son compte.
       for (let i = parCoin[c] || 0; i < Math.ceil(o.n / coins); i++) {
-        const place = tuileLibre(cx + (i - 1) * 20 + 40, cy + 10, 6);
+        const place = arrivee ? tuileLibre(cx - dy / norme * i * 18, cy + dx / norme * i * 18, 2)
+                              : tuileLibre(cx + (i - 1) * 20 + 40, cy + 10, 6);
         if (!place) continue;
         const e = Entites.creerPieton(place.x, place.y, arch);
         e.cible = true; e.mission = m.slug; e.courage = 1; e.etat = 'flane';
         e.etape = etape; e.coin = c;
+        // ⚠️ Ils ARRIVENT sur le joueur : à la course, tout de suite, un cri au-dessus de
+        // la tête. `alerter` ne le ferait qu'autour de `centre`, et ne réveille que ceux
+        // qui ont une ligne libre jusqu'à lui — ici, on le sait déjà.
+        if (arrivee) { e.etat = 'attaque_joueur'; e.cri = 90; }
         // ⚠️ CE QUE PORTE UN HOMME DE MISSION VIENT DE LA FICHE, pas de
         // l'archetype. `arme` et `vie` sont facultatives (`missions.py`) et ne
         // valent que pour CES hommes-la : la Cravate de rue reste ce qu'elle
@@ -976,7 +1029,8 @@ const Histoire = (function () {
       }
     }
     Entites.indexer();
-    Entites.alerter(centre.x, centre.y, B.joueur, 1);     // ils t'ont vu venir
+    if (arrivee) B.mission.arrivee = null;
+    else Entites.alerter(centre.x, centre.y, B.joueur, 1);     // ils t'ont vu venir
   }
 
   function poserLeFuyard(m, o) {

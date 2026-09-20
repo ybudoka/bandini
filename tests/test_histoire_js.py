@@ -219,7 +219,11 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
         L.Histoire.commencer('m2');
         const cibles = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
-        const pres = cibles.every(function (e) { return Math.hypot(e.x - t.x, e.y - t.y) < 160; });
+        // ⚠️ Ils ARRIVENT (`loin`) : à la lisière de l'écran, sur le joueur, pas collés au kiosque.
+        const arrivent = cibles.every(function (e) {
+          const d = Math.hypot(e.x - j.x, e.y - j.y);
+          return d > 180 && d <= 260 && e.etat === 'attaque_joueur';
+        });
         const ligne0 = L.Histoire.ligneObjectif();
         cibles.forEach(function (e) { L.Entites.assommer(e); });
         o.frame(2);
@@ -246,11 +250,11 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m2;
-        return { n: cibles.length, pres: pres, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
+        return { n: cibles.length, arrivent: arrivent, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
                  porteur: !!porteur, caisse: !!caisse, etape2: etape2, finie: finie,
                  batte: !!L.B.partie.armes.batte, rabais: L.B.partie.rabais };
     }""")
-    assert r["n"] == 2 and r["pres"], "deux Cravates rodent pres du kiosque"
+    assert r["n"] == 2 and r["arrivent"], "deux Cravates arrivent de loin, sur le joueur"
     assert r["ligne0"].endswith(" 0/2")
     assert r["etape1"] == 1, "les deux K.-O., le fuyard file"
     assert r["pendant"] == {"partie": "pendant", "telephone": False}, "elle crie apres le fuyard, a deux pas de toi"
@@ -258,6 +262,61 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
     assert r["tombe"] and r["porteur"] and r["caisse"], "la moto cassee, le Cravate tombe, la caisse aussi"
     assert r["etape2"] == 2 and r["finie"] is True
     assert r["batte"] is True and r["rabais"] == {"kiosque": 0.75}, "le baton, et le kiosque moins cher"
+
+
+def test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler(banc):
+    """⚠️ Martin, 20 sept. 2026, devant l'intro : « il faudrait que les méchants apparaissent
+    plus loin et m'attaquent, mais aussi après que la dame ait fini de parler ». Ils naissaient
+    à 40 px du kiosque, donc du joueur, dès la pose de la mission : collés à elle pendant
+    qu'elle parlait. Maintenant : personne pendant l'intro (la caméra va voir le COIN d'où
+    ils viendront, vide), puis deux hommes hors de l'écran qui courent sur le joueur."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const j = L.B.joueur;
+        L.B.partie.missionsFaites.m1 = 1;
+        const t = L.Histoire.donneur('thibodeau');
+        j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        const hommes = function () { return L.B.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.mission === 'm2'; }); };
+        L.Histoire.parler('thibodeau');
+        const arrivee = L.B.mission.arrivee ? { x: L.B.mission.arrivee.x, y: L.B.mission.arrivee.y } : null;
+        const scene = L.B.scene;
+        // Pendant qu'elle parle : personne, et la caméra va voir le coin.
+        let images = 0, avant = 0, coin = 0;
+        while ((L.B.scene || L.B.cinema) && images < 6000) {
+          o.frame(1); images++;
+          if (L.B.scene || L.B.cinema) avant += hommes().length;    // l'image où elle finit est celle où ils naissent
+          const s = L.B.scene;
+          if (arrivee && s && s.vise && Math.hypot(s.vise.x - arrivee.x, s.vise.y - arrivee.y) < 8) coin++;
+        }
+        const nes = hommes();
+        // Juste apres : deux hommes, au coin, hors de l'ecran, a la course.
+        const aLaNaissance = nes.map(function (e) {
+          return { d: Math.hypot(e.x - j.x, e.y - j.y), coin: arrivee ? Math.hypot(e.x - arrivee.x, e.y - arrivee.y) : null,
+                   visible: L.Entites.visibleAEcran(e.x, e.y, 0), etat: e.etat };
+        });
+        // Puis ils arrivent : le premier au contact.
+        let contact = -1, dMin = 1e9;
+        for (let i = 0; i < 400 && contact < 0; i++) {
+          o.frame(1);
+          for (const e of hommes()) dMin = Math.min(dMin, Math.hypot(e.x - j.x, e.y - j.y));
+          if (dMin < 22) contact = i;
+        }
+        return { scene: !!scene, sautes: scene ? scene.sautes : null, images: images, avant: avant, coin: coin, arrivee: !!arrivee,
+                 n: nes.length, aLaNaissance: aLaNaissance, contact: contact, dMin: dMin, objectif: L.Histoire.ligneObjectif() };
+    }""")
+    assert r["scene"] and r["arrivee"], "l'intro se joue, et le point d'arrivée est choisi avant"
+    assert r["sautes"] == 0, "aucun plan de l'intro ne s'est perdu : `cible` nomme le coin d'où ils viendront"
+    assert r["avant"] == 0, "personne ne naît pendant qu'elle parle"
+    assert r["coin"] > 20, f"la caméra va voir le coin (vue {r['coin']} images)"
+    assert r["n"] == 2, "les deux Cravates naissent quand elle a fini"
+    for h in r["aLaNaissance"]:
+        assert h["etat"] == "attaque_joueur", "ils courent sur le joueur dès la première image"
+        assert 180 < h["d"] <= 260, f"loin, mais pas au-delà de ce que `attaque_joueur` poursuit ({h['d']:.0f} px)"
+        assert h["coin"] < 40, "ils naissent au coin que la caméra a montré"
+        assert not h["visible"], "ils arrivent de hors de l'écran, pas de nulle part sous les yeux"
+    assert 0 <= r["contact"] < 400 and r["dMin"] < 22, "ils arrivent jusqu'au joueur"
+    assert r["objectif"].endswith(" 0/2")
 
 
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
@@ -610,6 +669,10 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
     joueur qui se deplace, qui en a un dans le dos, qui rate — celui-la
     encaissait 18 par coup. Cette moitie tient l'autre bord : deux hommes
     qu'on peut ignorer ne seraient plus une bagarre.
+
+    ⚠️ **Les secondes se comptent depuis le premier contact** (20 sept. 2026) : les deux
+    hommes naissent hors de l'écran, après l'intro, et courent sur le joueur. Leur course
+    n'est pas de la bagarre — la mesurer rendait le juge rouge à 7,1 s pour 4,6 de coups.
     """
     r = banc("""function (L, o) {
         function bagarre(riposte) {
@@ -623,10 +686,13 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
             L.B.cinema = null; L.B.dialogue = null;      // on a raccroche : la bagarre commence
             const cibles = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
             const fiches = cibles.map(function (e) { return { vie: e.vie, arme: e.arme }; });
-            let i = 0, mort = false, creux = j.vie;
+            let i = 0, mort = false, creux = j.vie, contact = -1;
             for (; i < 1800; i++) {
                 const debout = cibles.filter(function (e) { return e.vivant && e.etat !== 'assomme'; });
                 if (!debout.length) break;
+                // ⚠️ La bagarre COMMENCE AU PREMIER CONTACT : ils arrivent de quinze tuiles
+                // (`loin`), et deux secondes et demie de course ne sont pas de la bagarre.
+                if (contact < 0 && debout.some(function (e) { return Math.hypot(e.x - j.x, e.y - j.y) < 26; })) contact = i;
                 if (j.vie <= 0 || L.B.transition) { mort = true; break; }   // l'hopital l'a repris
                 creux = Math.min(creux, j.vie);
                 // ⚠️ UN COUP SUR DIX IMAGES, pas un par image : le juge doit
@@ -640,7 +706,7 @@ def test_la_premiere_bagarre_se_gagne_aux_poings(banc, paquet):
                 }
                 o.frame(1);
             }
-            return { fiches: fiches, s: i / 60, mort: mort, restant: mort ? 0 : creux };
+            return { fiches: fiches, s: (i - Math.max(contact, 0)) / 60, mort: mort, restant: mort ? 0 : creux };
         }
         const bat = bagarre(true), subit = bagarre(false);
         // L'archetype, lui, n'a pas bouge : une Cravate de rue garde son baton.

@@ -143,7 +143,7 @@ clés :
 | `monter` | monter dans le véhicule de la mission | `vehicule`, `ou` (dont `ruelle:<lieu>:<n>`), `prete` |
 | `livrer` | amener le véhicule à un lieu | `lieu`, `rayon`, `sans_degats` (prime) |
 | `ramasser` | ramasser un objet | `cible: fuyard` (le rattraper d'abord), `vehicule` |
-| `tuer` | mettre KO `n` membres d'un `groupe` | `groupe`, `n`, `chef`, `arme`, `vie` |
+| `tuer` | mettre KO `n` membres d'un `groupe` | `groupe`, `n`, `chef`, `arme`, `vie`, `loin` |
 | `survivre` | tenir | `secondes` |
 | `course` | passer des points de passage, chrono | `points` |
 | `courses` | `n` courses de taxi (klaxon = client) | `n` |
@@ -186,7 +186,11 @@ son arme. Deux clés passent par-dessus, **seulement pour CES hommes-là** :
 
 - `arme` — ce qu'ils tiennent ; `""` = les poings (un homme sans arme ne peut
   pas non plus en **lâcher** une en tombant) ;
-- `vie` — leurs points de vie.
+- `vie` — leurs points de vie ;
+- `loin` — **ils arrivent** : au lieu d'attendre là où `ou` les pose, ils naissent à `loin`
+  tuiles du joueur (16 au plus : au-delà de 260 px ils renoncent), juste hors de l'écran,
+  **une fois l'intro finie**, et courent sur lui. Pendant l'intro, `cible` nomme le point d'où
+  ils viendront : la caméra peut aller le voir, vide.
 
 ⚠️ **On ne touche jamais à l'archétype pour régler une bagarre.** Une Cravate
 de rue doit rester ce qu'elle est : c'est elle qui tient le Faubourg (m5).

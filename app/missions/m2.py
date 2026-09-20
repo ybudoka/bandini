@@ -17,19 +17,24 @@ MISSION = {
         # sans une image perdue : la premiere bagarre exigeait un jeu
         # parfait. ⚠️ Et le baton est la RECOMPENSE de cette mission-ci :
         # on le rencontrait avant de l'avoir.
-        {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "arme": "", "vie": 55,
+        # ⚠️ **ILS ARRIVENT, ET APRES SON INTRO.** Ils naissaient a 40 px du kiosque —
+        # donc du joueur — des la pose de la mission : collés a elle pendant qu'elle
+        # parlait (Martin, 20 sept. 2026). `loin` : ils naissent quand elle a fini,
+        # a 15 tuiles (juste hors de l'ecran), et courent sur le joueur.
+        {"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "arme": "", "vie": 55, "loin": 15,
          "texte": "METS LES DEUX CRAVATES K.-O."},
         {"type": "ramasser", "cible": "fuyard", "vehicule": "moto", "texte": "RATTRAPE LE FUYARD EN MOTO"},
         {"type": "retourner", "texte": "RAPPORTE LA CAISSE À MADAME THIBODEAU"},
     ],
-    # Elle montre le coin, et la caméra va voir les deux Cravates — qui existent :
-    # la mission est posée avant son intro. À la fin, elle reprend sa caisse et
-    # tend le bâton de son défunt.
-    # ⚠️ Elle n'écrit QUE son intro : la caméra va voir les deux Cravates —
-    # `cible`, qui existe parce que la mission est posée avant son intro, et que
-    # le défaut, lui, ne vise jamais un acteur qu'une partie en cours pose. Sa fin
-    # (elle reprend sa caisse, elle tend le bâton de son défunt) est **mot pour
-    # mot** celle que `scene_par_defaut` bâtit : on l'a donc effacée.
+    # Elle montre le coin, et la caméra va le voir — VIDE : les deux Cravates n'y
+    # naissent qu'une fois qu'elle a fini de parler (`loin`). À la fin, elle reprend
+    # sa caisse et tend le bâton de son défunt.
+    # ⚠️ Elle n'écrit QUE son intro : la caméra va voir la `cible` — le point d'où
+    # les Cravates vont arriver (`Histoire.jouerOuDire` le nomme tant qu'ils
+    # n'existent pas, puis l'homme lui-même), que le défaut ne vise jamais : c'est
+    # un acteur que seule une partie en cours pose. Sa fin (elle reprend sa caisse,
+    # elle tend le bâton de son défunt) est **mot pour mot** celle que
+    # `scene_par_defaut` bâtit : on l'a donc effacée.
     "scenes": {
         "intro": [
             {"type": "dire", "repliques": [1]},
