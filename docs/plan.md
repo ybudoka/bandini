@@ -214,6 +214,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ⬜ **en cours** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
+| Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -11417,6 +11418,20 @@ demande de Martin (20 sept. 2026) : « pour activer une interaction avec la plup
   ne voit pas. Objectif : une seule règle de « faire face » (un cône devant le regard, dans le
   paquet), lue par les mêmes fonctions « sous la main » que l'invite du HUD — pour que le HUD
   ne promette jamais un geste qu'ACTION refuserait — et une courte liste d'exceptions dites.
+
+### Rien devant une porte, plus large
+
+retour de Martin (20 sept. 2026) : « déplace les obstacles pour éviter que ça soit devant les
+portes des commerces et dans les missions ».
+
+- ⚠️ **En cours.** Mesuré avant : le devant réservé (deux tuiles) est propre sur toutes les
+  couches, mais un obstacle se lit « devant » dès qu'il est dans l'axe à trois tuiles, ou collé
+  de côté — 15 à 40 par ville : la scène d'un amuseur (sa foule tombe sur le pas de porte), un
+  kiosque à côté du terminus, un BBQ, une caisse, un arbre. Et ce qui apparaît en jeu : la voie
+  fermée du jour, le bris d'aqueduc, un nid-de-poule, à trois tuiles de la porte du bar.
+  Objectif : **déplacer** ces obstacles-là (jamais re-tirer la ville), tenir le devant des lieux
+  de mission plus large encore, et que les personnages que les missions posent ne se plantent
+  pas sur un pas de porte.
 
 ### Les menus au doigt avancent d'une ligne à la fois
 
