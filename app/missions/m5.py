@@ -16,13 +16,12 @@ MISSION = {
     # Josée parle au Brouillard : la caméra sort voir le coin des Cravates (un
     # lieu — dedans, rien ne se pose avant la sortie). À la fin, on est à la
     # planque : la caméra va voir le Brouillard, qui est à toi.
+    # ⚠️ Son intro est celle du défaut (Josée parle au Brouillard, la caméra sort
+    # voir le coin des Cravates par une coupe : dedans, rien ne se pose avant la
+    # sortie) — effacée. Sa fin, elle, tient VINGT IMAGES DE PLUS que le défaut :
+    # on reste sur le Brouillard, qui est à toi. Une scène écrite gagne toujours
+    # sur celle qu'on lui bâtirait, et c'est à ça qu'elle sert.
     "scenes": {
-        "intro": [
-            {"type": "dire", "repliques": [1], "ensemble": True},
-            {"type": "coupe", "vers": "zone:cravates", "ferme": 20, "ouvre": 20, "tient": 150},
-            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
-            {"type": "dire", "repliques": [2, 3]},
-        ],
         "fin": [
             {"type": "coupe", "vers": "chez:josee", "ferme": 20, "ouvre": 20, "tient": 180, "ensemble": True},
             {"type": "dire"},

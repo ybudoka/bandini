@@ -7,21 +7,100 @@ part à 3★ ou au volant d'un char qui roule ; et une fin dite loin de celui qu
 parle se dit au combiné.
 """
 
+import json
+
 import pytest
 
 from app import missions
+# Les deux usines de répliques, là où les fichiers de mission les prennent.
+from app.missions._commun import _l, _p
 
 MISSIONS = [m["slug"] for m in missions.CATALOGUE]
 
+#: ⚠️ **CHAQUE MISSION EST JUGÉE DEUX FOIS : avec la scène qu'elle écrit, et avec
+#: celle que `missions.py` lui bâtirait si elle n'en écrivait pas.** C'est la
+#: preuve du bloc Lego (demande de Martin, 20 sept. 2026) : une mission qui
+#: n'apporte que ses objectifs et ses répliques reçoit des animations qui JOUENT
+#: — pas seulement qui passent le juge de forme. Les huit du catalogue couvrent
+#: les quatre formes du défaut : un donneur dehors, un donneur dedans, une fin
+#: devant lui, une fin ailleurs.
+MODES = ("écrite", "défaut")
+CAS = [f"{slug}-{mode}" for slug in MISSIONS for mode in MODES]
+
+
+def scene_jugee(cas: str, partie: str) -> list[dict]:
+    """La scène que le banc va vraiment jouer : celle qu'écrit la mission, ou
+    celle que `missions.scene_par_defaut` lui bâtirait."""
+    slug, mode = cas.split("-")
+    m = missions.par_slug(slug)
+    return m["scenes"][partie] if mode == "écrite" else missions.scene_par_defaut(m, partie)
+
+
+def poser(cas: str, partie: str) -> tuple[str, str]:
+    """Le slug, et le JS qui pose la scène à juger (rien, si elle est déjà là)."""
+    slug, mode = cas.split("-")
+    if mode == "écrite":
+        return slug, ""
+    return slug, f"mission(L, '{slug}').scenes['{partie}'] = {json.dumps(scene_jugee(cas, partie), ensure_ascii=False)};"
+
+
+#: ⚠️ **UNE FICHE RÉDUITE À L'OS**, pour le juge du bloc Lego : ce qui distingue
+#: une mission, et rien d'autre — pas de `prerequis` au-delà du fil, pas de
+#: `phase`, pas d'`echec`, pas de `donne`, **pas de `scenes`**. Elle finit chez
+#: Josée, qui se tient DEDANS.
+NEUVE: dict = {
+    "slug": "zz", "titre": "Un essai", "donneur": "josee",
+    "prerequis": [missions.ordre_topologique()[-1]], "recompense": 300,
+    "objectifs": [
+        {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"},
+        {"type": "retourner", "texte": "REVIENS ME VOIR"},
+    ],
+    "dialogue": {
+        "appel": [_l("josee", "C'est moi. Viens me voir, j'ai une job.")],
+        "intro": [_l("josee", "Va au garage."), _l("josee", "Pis reviens me voir.")],
+        "pendant": [_p("josee", "Ça avance, ton affaire?", 1)],
+        "fin": [_l("josee", "C'est fait. Merci."), _l("josee", "On se reparle.")],
+        "echec": [_l("josee", "Une autre fois. Repose-toi.")],
+    },
+}
+
 #: Mettre en place une intro (aller voir le donneur, chez lui s'il le faut) ou une
 #: fin (la mission à son dernier objectif, le joueur là où il s'accomplit).
-OUTILS = """
-  const ORDRE = ['m1', 'm2', 'm3', 'm4', 'm5'];
+#: ⚠️ L'ordre vient de `ordre_topologique()`, jamais d'une liste recopiée : elle
+#: s'était déjà arrêtée à m5 pendant que le catalogue en comptait huit.
+OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + """
   function mission(L, slug) { return L.B.defs.missions.find(function (m) { return m.slug === slug; }); }
   function faites(L, slug) { for (const s of ORDRE) { if (s === slug) break; L.B.partie.missionsFaites[s] = 1; } }
+  // ⚠️ **CE QU'UNE MISSION EXIGE EN PLUS DE SES PREREQUIS** (`exige`, M16) : le
+  // juge le TIENT, au lieu de faire comme s'il n'existait pas. Sans ca, une
+  // mission conditionnelle n'est jamais offerte au banc et sa scene d'intro
+  // n'est jugee par personne — c'est ce qui arrivait a m97 (`liberes: 3`), rouge
+  // sur `dev` sans que rien ne le dise. Les cles sont celles d'`exigeTenu`.
+  function tenirExige(L, m) {
+    const e = m && m.exige, p = L.B.partie;
+    if (!e) return;
+    if (e.argent_min !== undefined) p.argent = Math.max(p.argent || 0, e.argent_min);
+    if (e.dette !== undefined) p.dette = Math.min(p.dette || 0, e.dette);
+    if (e.tenue) { p.tenues = p.tenues || []; if (p.tenues.indexOf(e.tenue) < 0) p.tenues.push(e.tenue); }
+    // ⚠️ `exigeTenu` ne fait que COMPTER ces deux-la ; on prend quand meme les
+    // vrais slugs de la ville et du catalogue, pour que le carnet et le HUD
+    // lisent quelque chose qui existe.
+    if (e.liberes !== undefined) {
+      const d = (L.Monde.carte && L.Monde.carte.def && L.Monde.carte.def.districts) || [];
+      p.libere = d.map(function (q) { return q.slug; }).slice(0, e.liberes);
+      while (p.libere.length < e.liberes) p.libere.push('district' + p.libere.length);
+    }
+    if (e.proprietes !== undefined) {
+      p.proprietes = p.proprietes || {};
+      const noms = (L.B.defs.economie.proprietes || []).map(function (q) { return q.slug; });
+      for (let i = 0; Object.keys(p.proprietes).length < e.proprietes; i++) {
+        p.proprietes[noms[i] || ('propriete' + i)] = { jour: 1, caisse: 0 };
+      }
+    }
+  }
   // ⚠️ Les missions faites AVANT `commencer` : c'est lui qui pose les donneurs, et
   // Ti-Guy n'attend plus au terminus une fois M1 faite (`parti_apres`).
-  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); }
+  function partie(L, slug) { if (L.B.interieur) L.Jeu.quitterLaPiece(); L.Jeu.retourTitre(); L.B.partie.missionsFaites = {}; L.B.partie.mission = null; faites(L, slug); L.Jeu.commencer(); tenirExige(L, mission(L, slug)); }
   function allerVoir(L, o, m) {
     const perso = L.B.defs.personnages.find(function (p) { return p.slug === m.donneur; });
     if (perso.ou.indexOf('point:') === 0) {
@@ -36,8 +115,18 @@ OUTILS = """
     while (L.B.cinema) L.Histoire.suivante();
     L.B.partie.mission.etape = m.objectifs.length - 1;
     const o = m.objectifs[m.objectifs.length - 1], j = L.B.joueur;
-    const ou = o.lieu ? L.Histoire.lieu(o.lieu) : L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
-    j.x = ou.x - (o.lieu ? 0 : 14); j.y = ou.y;
+    // ⚠️ **OU L'ON EST QUAND LA FIN PART**, et c'est le dernier objectif qui le
+    // dit — c'est lui, ensuite, qui decide si le donneur est a portee de voix.
+    // Un LIEU nous y emmene ; `retourner` nous ramene devant lui ; tout le reste
+    // (rattraper un fuyard, semer la police) se finit LA OU L'ON EST, et le
+    // donneur, lui, est reste chez lui. Poser le joueur sur le donneur dans ce
+    // dernier cas faisait parler en personne quelqu'un que la vraie partie
+    // aurait mis au combine.
+    if (o.lieu) { const l = L.Histoire.lieu(o.lieu); j.x = l.x; j.y = l.y; }
+    else if (o.type === 'retourner') {
+      const e = L.Histoire.donneur(m.donneur) || L.Histoire.lieuDuPersonnage(m.donneur);
+      j.x = e.x - 14; j.y = e.y;
+    }
     // Ce qu'on LIVRE est la, a l'arret, a cote de soi : comme dans une vraie partie.
     const monter = m.objectifs.slice().reverse().find(function (q) { return q.type === 'monter'; });
     L.B.mission.vehicule = (o.type === 'livrer' && monter)
@@ -59,7 +148,16 @@ OUTILS = """
   function etat(L) {
     const j = L.B.joueur;
     return { x: Math.round(j.x * 100), y: Math.round(j.y * 100), dessine: j.dessine, piece: L.B.interieur ? L.B.interieur.slug : null,
-             carte: L.Monde.carte.interieur ? L.Monde.carte.interieur.slug : null, entites: L.B.entites.length,
+             carte: L.Monde.carte.interieur ? L.Monde.carte.interieur.slug : null,
+             // ⚠️ **CE QU'UNE SCENE PEUT EMPORTER, PAS LE COMPTE BRUT DE LA VILLE.**
+             // La foule se repeuple autour du joueur au fil des images VIVANTES, et
+             // une scene passee n'en consomme pas le meme nombre qu'une scene
+             // regardee : `B.entites.length` mesurait donc le va-et-vient des
+             // passants — 2 488 contre 2 489 sur m2, sans qu'aucune des deux scenes
+             // ait laisse ni emporte quoi que ce soit. On compte ce qu'une scene
+             // TOUCHE : les hommes que la mission a poses, les personnages de
+             // l'histoire.
+             restes: L.B.entites.filter(function (e) { return e.mission || e.personnage; }).length,
              moi: L.B.entites.indexOf(j) >= 0, tiGuy: !!L.Histoire.donneur('ti_guy'), scene: !!L.B.scene,
              cinema: !!L.B.cinema, mission: L.B.partie.mission ? L.B.partie.mission.slug : null, fin: !!L.B.finEnAttente,
              // Où se tiennent les donneurs : une scène qui en fait marcher un le laisse
@@ -68,13 +166,15 @@ OUTILS = """
                const e = L.Histoire.donneur(p.slug); return e ? [p.slug, Math.round(e.x), Math.round(e.y)] : null;
              }).filter(Boolean) };
   }
-"""
+""")
 
 
-@pytest.mark.parametrize("slug", MISSIONS)
-def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, slug):
+@pytest.mark.parametrize("cas", CAS)
+def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, cas):
+    slug, pose = poser(cas, "intro")
     r = banc("function (L, o) {" + OUTILS + """
         const m = mission(L, '%s');
+        %s
         partie(L, m.slug);
         allerVoir(L, o, m);
         const avant = etat(L);
@@ -82,7 +182,7 @@ def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, slug):
         const s = L.B.scene, scene = !!s, posee = L.B.partie.mission && L.B.partie.mission.slug;
         const joue = jouerJusquauBout(L, o, 6000);
         return { scene: scene, sautes: s ? s.sautes : null, posee: posee, joue: joue, avant: avant, apres: etat(L) };
-    }""" % slug)
+    }""" % (slug, pose))
     assert r["scene"], f"{slug} : parler au donneur ne joue pas sa scène d'intro"
     assert r["sautes"] == 0, f"{slug} : {r['sautes']} plan(s) de l'intro n'ont trouvé ni leur lieu ni leur acteur"
     assert r["posee"] == slug, "la mission se pose avant son intro"
@@ -94,10 +194,12 @@ def test_chaque_intro_se_joue_seule_et_rend_la_ville(banc, slug):
         assert r["joue"]["dehors"], f"{slug} : dedans, la scène n'est jamais allée voir la ville"
 
 
-@pytest.mark.parametrize("slug", MISSIONS)
-def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, slug):
+@pytest.mark.parametrize("cas", CAS)
+def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, cas):
+    slug, pose = poser(cas, "fin")
     r = banc("function (L, o) {" + OUTILS + """
         const m = mission(L, '%s');
+        %s
         partie(L, m.slug);
         versLaFin(L, m);
         const dites = ecouter(L);
@@ -105,7 +207,7 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, slug):
         const s = L.B.scene, scene = !!s, faite = !!L.B.partie.missionsFaites[m.slug];
         const joue = jouerJusquauBout(L, o, 6000);
         return { scene: scene, sautes: s ? s.sautes : null, faite: faite, joue: joue, dites: dites, apres: etat(L) };
-    }""" % slug)
+    }""" % (slug, pose))
     assert r["faite"] and r["scene"], f"{slug} : la fin ne joue pas sa scène"
     assert r["sautes"] == 0, f"{slug} : {r['sautes']} plan(s) de la fin n'ont trouvé ni leur lieu ni leur acteur"
     assert r["joue"]["n"] < 6000, f"{slug} : la scène de fin ne se termine pas"
@@ -114,17 +216,22 @@ def test_chaque_fin_se_joue_seule_et_se_dit_la_ou_il_faut(banc, slug):
     au_combine = [("(AU TÉLÉPHONE)" in qui) for qui in r["dites"]]
     # ⚠️ m6 se conclut après le dernier contact : Josée est dedans (au bar), le
     # joueur dehors — sa fin se dit au combiné, comme M4 et M5.
-    loin = slug in ("m4", "m5", "m6")
+    # ⚠️ **LA RÈGLE SE LIT DANS LES DONNÉES**, pas dans une liste de slugs : une
+    # mission de plus doit être jugée sans qu'on vienne l'inscrire ici.
+    loin = not missions.fin_dite_en_personne(missions.par_slug(slug), scene_jugee(cas, "fin"))
     assert all(au_combine) if loin else not any(au_combine), \
         f"{slug} : {r['dites']} — la fin se dit au combiné quand, et seulement quand, celui qui parle n'est pas là"
-    if slug == "m1":
+    if missions.personnage(missions.par_slug(slug)["donneur"]).get("parti_apres") == slug:
         assert r["apres"]["tiGuy"] is False, "Ti-Guy rentre au garage et quitte la ville avec la scène"
 
 
-@pytest.mark.parametrize("cas", ["m1-fin", "m3-fin", "m4-intro", "m5-fin"])
+@pytest.mark.parametrize("cas", [f"{slug}-{partie}" for slug in MISSIONS for partie in ("intro", "fin")])
 def test_passer_une_scene_de_mission_a_n_importe_quel_moment(banc, cas):
     """PAUSE à n'importe quel plan tombe au même état que la scène vue jusqu'au bout
-    — Ti-Guy rentré, la pièce rendue après une coupe dehors — et le même dé."""
+    — Ti-Guy rentré, la pièce rendue après une coupe dehors — et le même dé.
+
+    ⚠️ **TOUTES les scènes du catalogue**, et plus quatre cas choisis à la main :
+    une mission de plus doit hériter de cette garantie sans qu'on l'inscrive ici."""
     slug, partie = cas.split("-")
     r = banc("function (L, o) {" + OUTILS + """
         const sorties = [];
@@ -152,21 +259,23 @@ def test_passer_une_scene_de_mission_a_n_importe_quel_moment(banc, cas):
         assert s["e"] == reference, f"{cas} passée à l'image {s['k']} : {s['e']} au lieu de {reference}"
 
 
-def test_une_scene_de_mission_ne_tire_aucun_de(banc):
-    """Le prochain dé est le même avec les scènes et sans elles (répliques seules)."""
+@pytest.mark.parametrize("slug", MISSIONS)
+def test_une_scene_de_mission_ne_tire_aucun_de(banc, slug):
+    """Le prochain dé est le même avec les scènes et sans elles (répliques seules).
+    ⚠️ Chaque mission du catalogue, et plus la seule m3."""
     def partie(avec):
         return banc("function (L, o) {" + OUTILS + """
             if (!%s) L.B.defs.missions.forEach(function (m) { m.scenes = null; });
-            const m = mission(L, 'm3');
-            partie(L, 'm3'); L.graine(1357);
+            const m = mission(L, '%s');
+            partie(L, m.slug); L.graine(1357);
             allerVoir(L, o, m);
             L.Histoire.parler(m.donneur);
             jouerJusquauBout(L, o, 6000);
             const e = etat(L);
             L.Histoire.reussir();
             jouerJusquauBout(L, o, 6000);
-            return { x: e.x, y: e.y, entites: e.entites, de: L.B.rng() };
-        }""" % ("true" if avec else "false"))
+            return { x: e.x, y: e.y, restes: e.restes, de: L.B.rng() };
+        }""" % ("true" if avec else "false", slug))
     assert partie(True) == partie(False)
 
 
@@ -333,3 +442,42 @@ def test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois(ba
     assert r["avant"] == {"n": 1, "slug": "auto", "etape": 0, "vehicule": False}, r["avant"]
     assert r["n"] == 1 and r["meme"], f"un deuxième char est né au tour de l'objectif ({r})"
     assert r["vehicule"] and r["etape"] == 1, f"le char posé d'avance n'est pas devenu celui de la mission ({r})"
+
+
+def test_une_mission_neuve_qui_n_apporte_que_ses_donnees_se_joue(banc):
+    """⚠️ **LA PREUVE DU BLOC LEGO, AU BANC** (demande de Martin, 20 sept. 2026).
+    Une fiche qui n'écrit QUE ce qui la distingue — son donneur, ses objectifs,
+    ses répliques — est posée dans le catalogue du navigateur, et l'on joue son
+    intro et sa fin comme celles des autres : elles partent, elles ne sautent
+    aucun plan, elles se terminent sans ACTION et sans voix.
+
+    ⚠️ Une promesse qu'on n'essaie pas est une promesse : c'est le seul juge qui
+    monte une mission que personne n'a écrite à la main."""
+    fiche = dict(NEUVE)
+    missions._completer(fiche)
+    r = banc("function (L, o) {" + OUTILS + """
+        L.B.defs.missions.push(NEUVE);
+        const m = mission(L, 'zz');
+        partie(L, m.slug);
+        allerVoir(L, o, m);
+        const offerte = L.Histoire.parler(m.donneur) !== false;
+        const intro = L.B.scene, plansIntro = intro ? intro.plans.length : 0;
+        const sautesIntro = intro ? (jouerJusquauBout(L, o, 6000), intro.sautes) : null;
+        versLaFin(L, m);
+        const dites = ecouter(L);
+        L.Histoire.reussir();
+        const fin = L.B.scene;
+        const joue = jouerJusquauBout(L, o, 6000);
+        return { offerte: offerte, intro: !!intro, plansIntro: plansIntro, sautesIntro: sautesIntro,
+                 fin: !!fin, sautesFin: fin ? fin.sautes : null, n: joue.n, dites: dites,
+                 faite: !!L.B.partie.missionsFaites.zz };
+    }""".replace("NEUVE", json.dumps(fiche, ensure_ascii=False)))
+    assert r["offerte"] and r["intro"], "parler au donneur ne joue pas l'intro de la mission neuve"
+    assert r["plansIntro"] >= 3, f"son intro n'a que {r['plansIntro']} plans : ce n'est pas une scène"
+    assert r["sautesIntro"] == 0, f"{r['sautesIntro']} plan(s) de son intro n'ont rien trouvé"
+    assert r["faite"] and r["fin"], "sa fin ne joue pas sa scène"
+    assert r["sautesFin"] == 0, f"{r['sautesFin']} plan(s) de sa fin n'ont rien trouvé"
+    assert r["n"] < 6000, "sa fin ne se termine pas sans ACTION ni voix"
+    assert len(r["dites"]) == len(fiche["dialogue"]["fin"]), r["dites"]
+    assert not any("(AU TÉLÉPHONE)" in qui for qui in r["dites"]), \
+        "elle finit chez son donneur : il parle en personne, pas au combiné"

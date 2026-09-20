@@ -9,7 +9,10 @@ en reconnaissant une scène.
 import re
 from pathlib import Path
 
+import pytest
+
 from app import missions
+from app.missions._commun import _l, _p
 
 RACINE = Path(__file__).resolve().parent.parent
 SCENES_JS = (RACINE / "static" / "js" / "scenes.js").read_text(encoding="utf-8")
@@ -103,7 +106,11 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
     lieux = {p["slug"] for p in ville["points_interet"]} | {p["lieu"] for p in ville["portes"] if p.get("lieu")}
     zones = {z["slug"] for z in ville["zones"]}
     for m in missions.CATALOGUE:
-        for partie, scene in m["scenes"].items():
+        # ⚠️ Celles qu'elle écrit ET celles que le défaut lui bâtirait : c'est le
+        # défaut qui portera la prochaine mission, et les cent de M16.
+        ecrites = list(m["scenes"].items())
+        defauts = [(partie, missions.scene_par_defaut(m, partie)) for partie in ("intro", "fin")]
+        for partie, scene in ecrites + defauts:
             for plan in scene:
                 for nom in (plan.get(cle) for cle in ("vers", "dans", "de")):
                     if not isinstance(nom, str) or ":" not in nom:
@@ -165,3 +172,86 @@ def test_l_echec_se_dit_au_combine():
     """On n'est jamais à côté du donneur quand on rate."""
     echecs = [r for r in missions.repliques() if r["partie"] == "echec"]
     assert echecs and all(r["telephone"] for r in echecs)
+
+
+# --- Le bloc Lego : une mission qui n'apporte que ses données ---------------------------
+
+
+def _fiche(donneur, objectifs, intro=2, fin=2):
+    """Une fiche réduite à l'os : ce qui distingue une mission, et rien d'autre.
+    Pas de `prerequis`, pas de `phase`, pas d'`echec`, pas de `donne`, pas de
+    `scenes`."""
+    return {
+        "slug": "zz", "titre": "Un essai", "donneur": donneur, "recompense": 100,
+        "objectifs": objectifs,
+        "dialogue": {
+            "appel": [_l(donneur, "Viens me voir.")],
+            "intro": [_l(donneur, f"Intro {i}.") for i in range(1, intro + 1)],
+            "pendant": [_p(donneur, "Ça avance?", 0)],
+            "fin": [_l(donneur, f"Fin {i}.") for i in range(1, fin + 1)],
+            "echec": [_l(donneur, "Une autre fois.")],
+        },
+    }
+
+
+#: Les formes que le défaut doit couvrir — ce sont celles que les missions écrites
+#: à la main ont fini par prendre. ⚠️ `marco` et `thibodeau` se tiennent dehors
+#: (`porte:`), `bouchard` et `josee` dedans (`point:`).
+FORMES = {
+    "dehors, fin ailleurs": ("marco", [{"type": "aller", "lieu": "poste", "rayon": 4, "texte": "VA AU POSTE"}]),
+    "dehors, fin chez lui": ("thibodeau", [{"type": "tuer", "groupe": "cravates", "n": 2, "ou": "donneur", "texte": "COGNE"},
+                                           {"type": "retourner", "texte": "REVIENS"}]),
+    "dedans, un lieu à montrer": ("bouchard", [{"type": "aller", "lieu": "poste", "rayon": 4, "texte": "VA AU POSTE"}]),
+    "dedans, rien à montrer": ("josee", [{"type": "survivre", "secondes": 30, "texte": "TIENS LE COUP"}]),
+    "une zone": ("josee", [{"type": "tuer", "groupe": "cravates", "n": 2, "ou": "zone:cravates", "texte": "VIDE LE COIN"}]),
+    "une seule réplique": ("marco", [{"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}], 1, 1),
+}
+
+
+@pytest.mark.parametrize("forme", sorted(FORMES))
+def test_une_mission_qui_n_apporte_que_ses_donnees_est_finie(forme):
+    """⚠️ **LE BLOC LEGO** (demande de Martin, 20 sept. 2026). Un fichier de
+    mission qui n'écrit que ce qui la distingue — son donneur, ses objectifs, ses
+    répliques — reçoit tout le reste : ses clés par défaut ET ses deux scènes. Il
+    doit passer le juge du catalogue sans qu'on lui ajoute une ligne."""
+    fiche = _fiche(*FORMES[forme])
+    manque = set(missions.DEFAUTS_DE_MISSION) - set(fiche)
+    assert manque, "la fiche d'essai doit vraiment omettre les clés par défaut"
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == [], forme
+    for cle, valeur in missions.DEFAUTS_DE_MISSION.items():
+        if cle != "scenes":
+            assert fiche[cle] == valeur, (forme, cle)
+    for partie in ("intro", "fin"):
+        assert fiche["scenes"][partie], (forme, partie)
+
+
+@pytest.mark.parametrize("forme", sorted(FORMES))
+def test_une_scene_par_defaut_montre_quelque_chose(forme):
+    """Une scène par défaut n'est jamais une boîte de dialogue déguisée : il s'y
+    passe toujours un geste, une caméra ou une coupe. Et **dedans, elle sort** —
+    sinon on parlerait d'un lieu qu'on ne montre pas."""
+    fiche = _fiche(*FORMES[forme])
+    missions._completer(fiche)
+    for partie in ("intro", "fin"):
+        assert {p["type"] for p in fiche["scenes"][partie]} - {"dire"}, (forme, partie)
+    if missions.dedans(FORMES[forme][0]):
+        assert "coupe" in {p["type"] for p in fiche["scenes"]["intro"]}, forme
+
+
+def test_le_catalogue_est_complete_a_l_import():
+    """Personne, en aval — le paquet, le navigateur, les juges — n'a à savoir
+    qu'une clé pouvait manquer."""
+    for m in missions.CATALOGUE:
+        for cle in ("prerequis", "phase", "echec", "donne", "scenes"):
+            assert cle in m, (m["slug"], cle)
+        assert set(m["scenes"]) == {"intro", "fin"}, m["slug"]
+
+
+def test_chaque_mission_du_catalogue_a_aussi_des_scenes_par_defaut_jouables():
+    """⚠️ Les missions écrivent les leurs ; le défaut doit quand même savoir les
+    mettre en scène — c'est lui qui portera les cent de M16. Le banc les joue
+    toutes les deux (`test_missions_en_scene_js`)."""
+    for m in missions.CATALOGUE:
+        for partie in ("intro", "fin"):
+            assert missions.erreurs_de_scene(missions.scene_par_defaut(m, partie)) == [], (m["slug"], partie)

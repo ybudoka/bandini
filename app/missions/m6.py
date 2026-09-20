@@ -20,6 +20,10 @@ MISSION = {
     # porte du tour. Il n'y a pas d'objectif `retourner` — la mission se
     # clôt après le dernier contact, et Josée est loin : la fin se dit
     # donc au combiné.
+    # ⚠️ Elle n'écrit QUE son intro, qui montre la PREMIÈRE PORTE du tour alors
+    # que le tour en compte quatre. Sa fin — une coupe chez Josée, qui est loin :
+    # elle parle au combiné — est celle que `scene_par_defaut` bâtit, mot pour
+    # mot, et elle est effacée.
     "scenes": {
         "intro": [
             {"type": "dire", "repliques": [1], "ensemble": True},
@@ -27,10 +31,6 @@ MISSION = {
             {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "porte:depanneur", "duree": 70,
              "ensemble": True},
             {"type": "dire", "repliques": [2, 3]},
-        ],
-        "fin": [
-            {"type": "coupe", "vers": "chez:josee", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
-            {"type": "dire"},
         ],
     },
     "dialogue": {

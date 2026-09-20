@@ -254,6 +254,7 @@ cd ~/dev/bandini
 uv sync --all-groups && cp -n .env.example .env
 git config core.hooksPath scripts/git-hooks
 uv run ruff check . && uv run pytest -q --ignore=tests/test_navigateur.py
+uv run python scripts/verifier_missions.py --detail   # les missions sont-elles finies ?
 # ⚠️ AVANT DE POUSSER SUR `main` : la suite COMPLETE, navigateur compris, sur le commit
 # exact qu'on livre. Les tests ne tournent plus en CI (decision du 17 sept. 2026).
 BANDINI_TESTS_OBLIGATOIRES=1 uv run pytest -q
@@ -768,7 +769,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
         test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
-          verifier_ce_qui_casse.py verifier_carte_du_plan.py
+          verifier_ce_qui_casse.py verifier_carte_du_plan.py verifier_missions.py
           audio_elevenlabs.py musique_apercu.py icones.py
           git-hooks/post-commit
 deploy/  README.md deploy.sh installer.sh gunicorn.conf.py sauvegarder_bd.py

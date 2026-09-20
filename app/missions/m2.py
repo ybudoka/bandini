@@ -25,6 +25,11 @@ MISSION = {
     # Elle montre le coin, et la caméra va voir les deux Cravates — qui existent :
     # la mission est posée avant son intro. À la fin, elle reprend sa caisse et
     # tend le bâton de son défunt.
+    # ⚠️ Elle n'écrit QUE son intro : la caméra va voir les deux Cravates —
+    # `cible`, qui existe parce que la mission est posée avant son intro, et que
+    # le défaut, lui, ne vise jamais un acteur qu'une partie en cours pose. Sa fin
+    # (elle reprend sa caisse, elle tend le bâton de son défunt) est **mot pour
+    # mot** celle que `scene_par_defaut` bâtit : on l'a donc effacée.
     "scenes": {
         "intro": [
             {"type": "dire", "repliques": [1]},
@@ -33,14 +38,6 @@ MISSION = {
             {"type": "camera", "vers": "cible", "duree": 45, "courbe": "freine", "ensemble": True},
             {"type": "dire", "repliques": [2, 3]},
             {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
-        ],
-        "fin": [
-            {"type": "geste", "acteur": "donneur", "geste": "prendre", "vers": "joueur", "duree": 60,
-             "ensemble": True},
-            {"type": "dire", "repliques": [1]},
-            {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
-             "ensemble": True},
-            {"type": "dire", "repliques": [2]},
         ],
     },
     "dialogue": {

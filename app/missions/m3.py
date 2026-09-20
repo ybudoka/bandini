@@ -1,6 +1,6 @@
 """La mission m3 — voir `app/missions/__init__.py` pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _l
 
 MISSION = {
     "slug": "m3", "titre": "Le taxi de Marco", "donneur": "marco", "prerequis": ["m2"],
