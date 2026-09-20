@@ -63,6 +63,11 @@ const Monde = (function () {
   //: batiment effacait tous les nids de la ville jusqu'au rechargement.
   function nidDePoule(tx, ty) { return !!(carte && carte.nids && carte.nids.has(tx + ',' + ty)); }
 
+  //: Les PLAQUES D'ACIER des tranchées de chantier (`chantiers.js` les pose et les
+  //: retire avec la phase du jour) : même règle que les nids, l'index vit SUR LA
+  //: CARTE, et « x,y » -> vrai.
+  function plaqueDAcier(tx, ty) { return !!(carte && carte.plaques && carte.plaques.has(tx + ',' + ty)); }
+
   //: Le STANDING d'une tuile (des quartiers qu'on reconnait) : 'cossu',
   //: 'ordinaire', 'pauvre', ou null sur l'eau et dans une piece. ⚠️ Python l'a
   //: DECIDE (`carte.STANDING`, une lettre par bloc) ; ici on le lit, avec la meme
@@ -193,6 +198,7 @@ const Monde = (function () {
       }),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
+      plaques: new Set(),
       quartiers: def.grille && def.grille.standing ? {
         standing: def.grille.standing, usage: def.grille.usage || null,
         usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
@@ -1754,7 +1760,7 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,

@@ -2582,6 +2582,40 @@ const Entites = (function () {
     return nes;
   }
 
+  /** L'ÉQUIPE d'un chantier (3e vague de « Ça travaille ») : un ouvrier planté sur
+      chacun des postes que Python a choisis (`chantiers._postes`), tant que le
+      joueur est dans la bulle et que le poste est hors de l'écran.
+
+      ⚠️ **INTOUCHABLES, comme les ouvriers de la voie fermée** — et pour la même
+      raison : une équipe qu'on fauche au premier passage est une cible. Et ils ne
+      comptent pas dans la foule (`metier`) : ils ont un poste. Mais ⚠️ ils ne se
+      marquent PAS `chantier` : `naitreLesOuvriers` compte « qui travaille » avec
+      `q.chantier && q.vivant`, et l'équipe d'une voie fermée ne naîtrait plus.
+      `equipeDe` porte l'id du chantier, `posteDe` le numéro du poste : c'est ce
+      qui dit qu'un poste est pris. */
+  function naitreLEquipe(id, postes) {
+    const arch = archetype('ouvrier');
+    if (!arch || !B.joueur || B.interieur) return 0;
+    let nes = 0;
+    postes.forEach(function (p, k) {
+      const x = p[0] * TT + 8, y = p[1] * TT + 8;
+      if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) return;
+      if (visibleAEcran(x, y, 24)) return;
+      if (B.entites.some(function (q) { return q.equipeDe === id && q.posteDe === k && q.vivant; })) return;
+      const e = creerPieton(x, y, arch);
+      e.metier = 'chantier';
+      e.intouchable = true;
+      e.etat = 'fige';
+      e.face = 'bas';
+      e.plante = { x: e.x, y: e.y };
+      e.equipeDe = id;
+      e.posteDe = k;
+      nes++;
+    });
+    if (nes) indexer();
+    return nes;
+  }
+
   /** Combien de flaneurs la rue veut, ici et maintenant.
 
       ⚠️ ECRIT UNE FOIS. `peupler` avait son calcul ; l'attroupement, qui fait
@@ -4514,7 +4548,7 @@ const Entites = (function () {
     plageEn, litLibre, coinDePlage,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, majVolDeChar, emporterLeChar,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
