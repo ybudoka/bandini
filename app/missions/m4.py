@@ -12,23 +12,13 @@ MISSION = {
         {"type": "semer", "etoiles": 2, "escorte": "ti_guy", "texte": "SÈME LA POLICE — TI-GUY TE SUIT"},
         {"type": "livrer", "lieu": "garage", "rayon": 4, "texte": "LARGUE L'AUTO AU GARAGE"},
     ],
-    # Bouchard parle dedans : la caméra sort voir le poste. ⚠️ L'auto-patrouille
-    # est le deuxième objectif, mais elle y attend déjà (`Histoire.poser`) — sauf
-    # ici, où l'on parle DANS le casse-croûte : rien ne se pose avant la sortie, et
-    # la coupe montre le poste seul. À la fin, on est au garage et lui au
-    # casse-croûte : la caméra va chez lui, et il parle au combiné.
-    "scenes": {
-        "intro": [
-            {"type": "dire", "repliques": [1], "ensemble": True},
-            {"type": "coupe", "vers": "porte:poste", "ferme": 20, "ouvre": 20, "tient": 150},
-            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
-            {"type": "dire", "repliques": [2, 3]},
-        ],
-        "fin": [
-            {"type": "coupe", "vers": "chez:bouchard", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True},
-            {"type": "dire"},
-        ],
-    },
+    # ⚠️ **ELLE N'ÉCRIT AUCUNE SCÈNE, et elle en a deux** — le bloc Lego
+    # (`scene_par_defaut`, dans `__init__.py`). Bouchard parle dedans : le défaut
+    # sort voir le poste par une coupe (le lieu que nomme son premier objectif —
+    # l'auto-patrouille, elle, est le deuxième), il croise les bras, il finit sa
+    # phrase. À la fin on est au garage et lui au casse-croûte : le défaut va chez
+    # lui, et il parle au combiné. C'est exactement ce qui était écrit ici, plan
+    # pour plan.
     "dialogue": {
         "appel": [_l("bouchard", "Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte, j'ai une job.")],
         "intro": [

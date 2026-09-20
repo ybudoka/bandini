@@ -13,7 +13,10 @@ Josee, la Chef des Quais, veut le Faubourg vide de Cravates (M5).
 
 from __future__ import annotations
 
+import copy
 from typing import NotRequired, TypedDict
+
+from ._commun import _l
 
 TYPES_OBJECTIFS = (
     "aller",       # atteindre un lieu (rayon en tuiles) ; `nuit` : attendre la nuit
@@ -144,17 +147,23 @@ PERSONNAGES: list[Personnage] = [
 
 
 class Mission(TypedDict):
+    """Une mission FINIE. ⚠️ Les cles `NotRequired` sont celles qu'un fichier de
+    mission peut OMETTRE : `_completer()` les remplit au chargement du module, et
+    tout ce qui lit `CATALOGUE` — le paquet, les juges, le navigateur — voit une
+    mission complete. Ecrire une mission, c'est donc n'ecrire que ce qui lui est
+    PROPRE (voir `docs/comment-monter-les-missions.md`)."""
+
     slug: str
     titre: str
     donneur: str
-    prerequis: list[str]
     recompense: int
     objectifs: list[dict]
-    echec: list[str]
-    dialogue: dict     # appel (au telephone), intro, fin, echec : listes de {qui, texte}
-    donne: dict        # ce que la fin accorde, en plus de l'argent
-    scenes: dict       # `intro` et `fin` : des listes de plans (voir `TYPES_PLANS`)
-    phase: int
+    dialogue: dict     # appel (au telephone), intro, pendant, fin, echec : listes de {qui, texte}
+    prerequis: NotRequired[list[str]]
+    echec: NotRequired[list[str]]
+    donne: NotRequired[dict]   # ce que la fin accorde, en plus de l'argent
+    scenes: NotRequired[dict]  # `intro` et `fin` : des listes de plans (voir `TYPES_PLANS`)
+    phase: NotRequired[int]
     # --- M16 : les deux cles qui font les choix et les conditions d'etat.
     # ⚠️ Facultatives, lues par le navigateur (voir `histoire.js` `exigeTenu`,
     # `estFermee`) et par le carnet.
@@ -162,7 +171,19 @@ class Mission(TypedDict):
     ferme: NotRequired[str]    # le slug de la mission que celle-ci ferme
 
 
-from ._commun import _l, _p
+#: ⚠️ **CE QU'UNE MISSION RECOIT QUAND SON FICHIER NE LE DIT PAS.** Demande de
+#: Martin (20 sept. 2026) : « je veux que ca soit facile d'ajouter des missions,
+#: comme des blocs Lego ». Un fichier de mission n'ecrit que ce qui la distingue ;
+#: le reste tombe ici, une fois, et se lit au meme endroit pour les cent missions
+#: de M16.
+DEFAUTS_DE_MISSION: dict = {
+    "prerequis": [],
+    "phase": 1,
+    "echec": ["mort", "arrete"],
+    "donne": {},
+    "scenes": {},
+}
+
 
 
 #: Ce que dit un personnage qui n'a rien pour toi. ⚠️ Ici et pas dans
@@ -322,7 +343,10 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # (répliques écrites avec `_l`/`_p` de `_commun.py`). Ce fichier les réunit
 # dans `CATALOGUE` : ajouter une mission = créer son fichier et l'ajouter
 # aux deux listes ci-dessous, rien d'autre.
-from . import m1, m2, m3, m4, m5, m6, m50, m97
+# ⚠️ `noqa: E402` : cet import est EN BAS a dessein — chaque fichier de mission
+# n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
+# cles par defaut et les scenes), et il faut donc que le moteur soit defini.
+from . import m1, m2, m3, m4, m5, m6, m50, m97  # noqa: E402
 
 CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION, m97.MISSION]
 
@@ -516,18 +540,183 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
             erreurs.append(f"{slug} {partie} : les répliques dites {sorted(dites)} ne sont pas toutes, une fois")
     # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
     # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
-    donneur = personnage(mission["donneur"])
-    dernier = mission["objectifs"][-1] if mission["objectifs"] else {}
-    chez_lui = donneur["ou"][6:] if donneur and donneur["ou"].startswith("porte:") else None
-    loin = dernier.get("type") != "retourner" and dernier.get("lieu") != chez_lui
-    if loin and scenes.get("fin"):
-        noms = {"donneur", mission["donneur"]}
-        vient = any(p["type"] in ("sortir", "marcher") and p.get("acteur") in noms for p in scenes["fin"])
+    if scenes.get("fin") and not fin_dite_en_personne(mission, scenes["fin"]):
         va_chez_lui = any(p["type"] == "coupe" and p.get("vers") in {"chez:" + mission["donneur"], "donneur"}
                           for p in scenes["fin"])
-        if not (vient or va_chez_lui):
+        if not va_chez_lui:
             erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
     return erreurs
+
+
+# --- Les scènes par défaut : le bloc Lego -----------------------------------------------------
+#
+# Demande de Martin (20 sept. 2026) : « valide toutes les missions pour que les
+# animations fonctionnent. Je veux que ça soit facile d'ajouter des missions,
+# comme des blocs Lego ».
+#
+# ⚠️ **UNE MISSION QUI N'ÉCRIT PAS SES SCÈNES EN REÇOIT QUAND MÊME.** Elles sont
+# bâties de ce que son fichier dit déjà : qui la donne, où il se tient, ce qu'elle
+# demande d'abord, et où elle se termine. Ce sont exactement les formes que les
+# missions écrites à la main ont fini par prendre — on ne les a pas inventées, on
+# les a relevées — et chacune reste libre d'écrire la sienne.
+#
+# ⚠️ **Et elles doivent JOUER, pas seulement passer le juge de forme.** Un plan
+# dont le lieu ne se résout pas est sauté en silence (`Scenes.introuvable`) : le
+# défaut ne vise donc que ce que Python peut garantir — un lieu nommé par un
+# objectif, la porte du donneur (`chez:`), le joueur, le donneur lui-même. Jamais
+# un acteur que seule une partie en cours poserait (`cible`, `fuyard`).
+
+#: Les durées des scènes par défaut, en images (60 = une seconde). Celles des
+#: scènes écrites à la main : elles ont été jouées, elles se lisent.
+TEMPS_PAR_DEFAUT = {"geste": 60, "bras_croises": 90, "camera": 45, "retour": 40,
+                    "ferme": 20, "ouvre": 20, "tient": 150}
+
+
+def _dire(repliques: list[int] | None = None, ensemble: bool = False) -> dict:
+    plan: dict = {"type": "dire"}
+    if repliques is not None:
+        plan["repliques"] = repliques
+    if ensemble:
+        plan["ensemble"] = True
+    return plan
+
+
+def _en_deux(combien: int) -> tuple[list[int], list[int]]:
+    """La première réplique, puis les autres : une scène dit un mot, montre, puis
+    finit de parler. Une seule réplique et il n'y a rien après."""
+    return [1], list(range(2, combien + 1))
+
+
+def dedans(slug_donneur: str) -> bool:
+    """Ce donneur-là parle-t-il DEDANS ? (`point:sergent` : le casse-croûte.)"""
+    p = personnage(slug_donneur)
+    return bool(p and p["ou"].startswith("point:"))
+
+
+def lieu_a_montrer(mission: dict) -> str | None:
+    """Le lieu que l'intro va voir : le premier objectif qui en nomme un.
+
+    ⚠️ `ou: "donneur"` ne compte pas — aller voir celui qui parle n'est pas un
+    plan, c'est un sur-place. Rien à montrer, et la scène se joue chez le
+    donneur : la caméra ne bouge pas, le geste, lui, joue toujours.
+    """
+    for objectif in mission["objectifs"]:
+        ou = objectif.get("ou")
+        if ou and ou != "donneur" and not ou.startswith("point:"):
+            return ou
+        if objectif.get("lieu"):
+            # ⚠️ `porte:<lieu>`, pas le nom nu : `Histoire.resoudre` rend le même
+            # pixel des deux façons, mais c'est la forme préfixée que le juge des
+            # lieux sait confronter à la ville bâtie.
+            return "porte:" + objectif["lieu"]
+    return None
+
+
+def fin_chez_le_donneur(mission: dict) -> bool:
+    """La mission se termine-t-elle là où se tient son donneur ? C'est ce qui
+    décide si sa fin se joue devant lui ou par une coupe chez lui — la règle
+    « on n'entend jamais quelqu'un qui n'est pas là »."""
+    donneur = personnage(mission["donneur"])
+    dernier = mission["objectifs"][-1] if mission["objectifs"] else {}
+    if dernier.get("type") == "retourner":
+        return True
+    chez_lui = donneur["ou"][6:] if donneur and donneur["ou"].startswith("porte:") else None
+    return bool(chez_lui) and dernier.get("lieu") == chez_lui
+
+
+def fin_dite_en_personne(mission: dict, scene: list[dict] | None = None) -> bool:
+    """La fin se dit-elle DEVANT le donneur, ou au combiné ?
+
+    Devant lui si la mission se termine chez lui, ou si sa scène l'amène
+    (`sortir` du garage, `marcher` jusqu'à toi). Sinon il n'est pas là, et ses
+    répliques passent au téléphone. ⚠️ `scene` : celle qu'on va vraiment jouer,
+    qui n'est pas forcément celle qu'écrit le fichier (une mission peut jouer sa
+    scène par défaut).
+    """
+    if fin_chez_le_donneur(mission):
+        return True
+    if scene is None:
+        scene = (mission.get("scenes") or {}).get("fin") or []
+    noms = {"donneur", mission["donneur"]}
+    return any(p["type"] in ("sortir", "marcher") and p.get("acteur") in noms for p in scene)
+
+
+def scene_par_defaut(mission: dict, partie: str) -> list[dict]:
+    """La scène `intro` ou `fin` d'une mission qui n'en écrit pas.
+
+    **Intro, dehors** : il dit un mot, montre où l'on s'en va, la caméra y va, il
+    finit sa phrase, la caméra revient. **Intro, dedans** : il dit un mot, la
+    caméra sort voir le lieu par une coupe, il croise les bras, il finit.
+    **Fin, chez lui** : il reprend ce qu'on rapporte, il donne ce qu'on gagne.
+    **Fin, ailleurs** : une coupe chez lui — sans elle, on l'entendrait de nulle
+    part.
+    """
+    t, vers = TEMPS_PAR_DEFAUT, lieu_a_montrer(mission)
+    premiere, reste = _en_deux(len(mission["dialogue"].get(partie) or []))
+    if partie == "intro":
+        if dedans(mission["donneur"]):
+            # Dedans, rien de la ville ne se pose avant la sortie : on montre un
+            # LIEU par une coupe, jamais un acteur qui n'existe pas encore.
+            return [
+                _dire(premiere, ensemble=True),
+                {"type": "coupe", "vers": vers or "chez:" + mission["donneur"],
+                 "ferme": t["ferme"], "ouvre": t["ouvre"], "tient": t["tient"]},
+                {"type": "geste", "acteur": "donneur", "geste": "bras_croises",
+                 "duree": t["bras_croises"], "ensemble": True},
+                *([_dire(reste)] if reste else []),
+            ]
+        if not vers:
+            # Rien à montrer : il parle, les bras croisés. Une scène sans plan de
+            # geste serait une boîte de dialogue, pas une scène.
+            return [
+                {"type": "geste", "acteur": "donneur", "geste": "bras_croises",
+                 "duree": t["bras_croises"], "ensemble": True},
+                _dire(),
+            ]
+        return [
+            _dire(premiere),
+            {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": vers,
+             "duree": t["geste"], "ensemble": True},
+            {"type": "camera", "vers": vers, "duree": t["camera"], "courbe": "freine", "ensemble": True},
+            *([_dire(reste)] if reste else []),
+            {"type": "camera", "vers": "joueur", "duree": t["retour"], "courbe": "freine"},
+        ]
+    if not fin_chez_le_donneur(mission):
+        return [
+            {"type": "coupe", "vers": "chez:" + mission["donneur"],
+             "ferme": t["ferme"], "ouvre": t["ouvre"], "tient": t["tient"] + 10, "ensemble": True},
+            _dire(),
+        ]
+    return [
+        {"type": "geste", "acteur": "donneur", "geste": "prendre", "vers": "joueur",
+         "duree": t["geste"], "ensemble": True},
+        _dire(premiere),
+        {"type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur",
+         "duree": t["geste"], "ensemble": True},
+        *([_dire(reste)] if reste else []),
+    ]
+
+
+def scenes_de(mission: dict) -> dict:
+    """Les scènes d'une mission : celles que son fichier écrit, et le défaut pour
+    les autres. ⚠️ Une mission peut n'en écrire qu'une — l'autre lui est bâtie."""
+    ecrites = mission.get("scenes") or {}
+    return {partie: ecrites.get(partie) or scene_par_defaut(mission, partie)
+            for partie in ("intro", "fin")}
+
+
+def _completer(mission: dict) -> dict:
+    """Un fichier de mission devient une mission FINIE : ses clés facultatives,
+    puis ses scènes. ⚠️ Appelée une fois, au chargement — personne, en aval, n'a à
+    savoir qu'une clé pouvait manquer."""
+    for cle, valeur in DEFAUTS_DE_MISSION.items():
+        mission.setdefault(cle, copy.deepcopy(valeur))
+    mission["scenes"] = scenes_de(mission)
+    return mission
+
+
+for _fiche in CATALOGUE:
+    _completer(_fiche)
 
 
 def ordre_topologique() -> list[str]:

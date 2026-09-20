@@ -32,6 +32,13 @@ qu'elle ne porte pas **les trois** :
 Les trois sont **jugées**. Une mission à qui il en manque une fait rougir un
 test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
 
+> ⚠️ **Mais tu n'as à écrire que les deux premières** (20 sept. 2026, demande de
+> Martin : « je veux que ça soit facile d'ajouter des missions, comme des blocs
+> Lego »). Les **scènes ont un défaut** : `missions.scene_par_defaut` les bâtit de
+> ce que ton fichier dit déjà — qui la donne, où il se tient, ce qu'elle demande
+> d'abord, où elle se termine. Tu en écris une ? La tienne gagne. Aucune ? Les
+> animations jouent quand même, et le juge est content. Voir § 6.
+
 ---
 
 ## 2. La structure d'une mission
@@ -41,14 +48,14 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
     "slug": "m7",                       # nom stable, cité partout ; m1…m97 existent déjà
     "titre": "Un titre court",          # ce qui s'affiche
     "donneur": "marco",                 # un slug de PERSONNAGES (§ 3)
-    "prerequis": ["m5"],                # les missions DÉJÀ terminées ; [] pour la première
+    "prerequis": ["m5"],                # FACULTATIF (défaut []) : les missions DÉJÀ terminées
     "recompense": 400,                  # en dollars, > 0 (jugé)
-    "phase": 1,                         # le palier de contenu (voir ci-dessous)
-    "echec": ["mort", "arrete"],        # un sous-ensemble de ECHECS
+    "phase": 1,                         # FACULTATIF (défaut 1) : le palier de contenu
+    "echec": ["mort", "arrete"],        # FACULTATIF (défaut ["mort", "arrete"])
     "exige": {"liberes": 3},            # FACULTATIF : condition d'« état » (pas encore lue au nav.)
-    "donne": {"arme": "batte", "message": "LE BÂTON"},
+    "donne": {"arme": "batte", "message": "LE BÂTON"},   # FACULTATIF (défaut {})
     "objectifs": [ … ],                 # § 4
-    "scenes": {"intro": [ … ], "fin": [ … ]},   # § 6
+    "scenes": {"intro": [ … ], "fin": [ … ]},   # FACULTATIF : § 6, le défaut les bâtit
     "dialogue": {                       # § 5
         "appel":      [ … ],
         "intro":      [ … ],
@@ -230,6 +237,26 @@ régénère (`scripts/audio_elevenlabs.py --refaire`).
 
 ## 6. Les scènes (`scenes`, le vocabulaire de plans)
 
+> ⚠️ **Commence par ne pas en écrire.** `missions.scene_par_defaut` bâtit l'intro
+> et la fin de ce que ta fiche dit déjà. Quatre formes, et on ne les a pas
+> inventées — ce sont celles que les missions écrites à la main ont fini par
+> prendre (mesuré le 20 sept. 2026 : **cinq des seize scènes du catalogue étaient
+> mot pour mot celles du défaut**, elles sont effacées, et le paquet exporté n'a
+> pas bougé d'un octet) :
+>
+> | Le donneur | L'intro par défaut | La fin par défaut |
+> |---|---|---|
+> | **dehors** (`porte:`) | il dit un mot, `montrer` vers le premier lieu que la mission nomme, la caméra y va, il finit, la caméra revient | **chez lui** : il `prendre` ce qu'on rapporte, il `donner` ce qu'on gagne |
+> | **dedans** (`point:`) | il dit un mot, une `coupe` sort voir ce lieu, il `bras_croises`, il finit | **ailleurs** : une `coupe` chez lui — sans elle, on l'entendrait de nulle part |
+>
+> **Écris la tienne quand tu veux mieux**, et seulement alors : m2 vise la `cible`
+> (les deux Cravates posées), m5 tient son dernier plan vingt images de plus, m1
+> fait sortir Ti-Guy du garage. ⚠️ Le défaut, lui, ne vise **que ce que Python peut
+> garantir** — un lieu nommé par un objectif, la porte du donneur (`chez:`), le
+> joueur, le donneur. Jamais `cible` ni `fuyard` : un plan dont le lieu ne se
+> résout pas est **sauté en silence**, et une animation qui ne joue pas est pire
+> qu'une animation absente.
+
 Une scène est une **liste de plans**, typés dans `TYPES_PLANS`. `scenes.js` les
 joue **sans connaître aucune scène par son nom**. Si une scène ne s'écrit pas
 avec les types existants, on ajoute **un type** — jamais un
@@ -316,9 +343,23 @@ Tout ça est jugé : `arme` doit exister, `propriete` doit exister.
 Avant de dire « c'est fini », lancer :
 
 ```bash
+uv run python scripts/verifier_missions.py --detail         # ce qui manque, en clair
 uv run python scripts/verifier_table_des_jalons.py          # si une ligne de jalon a été ajoutée
-uv run python -m pytest tests/test_missions.py tests/test_mise_en_scene.py tests/test_scenes_js.py -q
+uv run python -m pytest tests/test_missions.py tests/test_mise_en_scene.py tests/test_missions_en_scene_js.py -q
 uv run python scripts/verifier_carte_du_plan.py             # SI un personnage a été ajouté (docs/carte.md !)
+```
+
+⚠️ **Et il n'y a rien à inscrire dans les juges.** Ils lisent le catalogue —
+`ordre_topologique()`, `fin_dite_en_personne()` — au lieu de nommer les missions
+en dur, et chaque mission est jugée **deux fois** : avec la scène qu'elle écrit,
+et avec celle que le défaut lui bâtirait. Le 20 sept. 2026, quatre d'entre eux
+nommaient encore des slugs, et l'un d'eux s'était arrêté à m5 pendant que le
+catalogue en comptait huit.
+
+Le squelette d'un fichier neuf s'imprime :
+
+```bash
+uv run python scripts/verifier_missions.py --squelette m7 --donneur josee
 ```
 
 Et vérifier que `docs/carte.md` et `docs/plan.md` sont **mis à jour** (un
@@ -358,7 +399,9 @@ taux du taxi).
 Une mission est **trois choses** — ses objectifs, ses dialogues et ses scènes —
 toutes trois jugées ; elle vit **dans son propre fichier** `app/missions/<slug>.py`
 (`MISSION = {…}`), le donneur dans `PERSONNAGES` (dans `__init__.py`), les scènes
-dans le vocabulaire de `TYPES_PLANS`, et le navigateur ne décide rien.
+dans le vocabulaire de `TYPES_PLANS`, et le navigateur ne décide rien. **Mais tu
+n'écris que ce qui la distingue** : les clés par défaut et les deux scènes lui
+sont données — c'est le bloc Lego.
 
 ⚠️ **Ce document suit le moteur, pas l'inverse.** Les neuf types d'objectifs de
 M16 (`suivre`, `proteger`, `pickpocket`, `payer`, `acheter`, `detruire`,

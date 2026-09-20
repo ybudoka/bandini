@@ -767,6 +767,17 @@ const Histoire = (function () {
     const d = m.donne || {};
     jouerOuDire(m, 'fin', function () {
       if (d.message) Hud.message(d.message, 200);
+      // ⚠️ **QUI S'EN VA EST DANS LES DONNEES** (`parti_apres`), pas dans la
+      // scene. `creerDonneurs` ne le repose deja plus a la partie suivante, mais
+      // rien ne le retirait de CELLE-CI : c'est la scene ecrite de M1 qui le
+      // faisait entrer au garage, et une mission qui n'ecrit pas la sienne
+      // laissait son donneur plante devant sa porte jusqu'au rechargement.
+      // Ici, aucun slug ne s'ecrit : la fiche dit apres quelle mission il part.
+      for (const p of personnages()) {
+        if (p.parti_apres !== m.slug) continue;
+        const e = donneur(p.slug);
+        if (e) Entites.retirer(e);
+      }
       Missions.sauvegarderPartie();
     }, { vehicule: f.vehicule });
   }
