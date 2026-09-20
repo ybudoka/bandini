@@ -212,6 +212,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le jeu écrit avec ses accents | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#le-jeu-écrit-avec-ses-accents) |
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
+| Une mission s'ajoute comme un bloc Lego | ⬜ **en cours** | 20 sept. 2026 | **P3** | ajout | [notes](#une-mission-sajoute-comme-un-bloc-lego) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ⬜ **en cours** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
 | Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
@@ -11296,6 +11297,18 @@ LACHE »), côté JS comme côté Python.
   `hud.js`, rouge sur l'enseigne « HOPITAL » remise dans `devantures.py` — et il a trouvé, à
   sa première exécution, trois textes de `manettes.py` que l'inventaire avait écartés.
   ⚠️ Il ne tranche pas « A » / « À » : ça se relit.
+
+### Une mission s'ajoute comme un bloc Lego
+
+demande de Martin (20 sept. 2026) : « valide toutes les missions pour que les animations
+fonctionnent. Je veux que ça soit facile d'ajouter des missions, comme des blocs Lego ».
+
+- ⚠️ **En cours.** « Une mission = un fichier » a déjà réglé la moitié du problème : reste
+  qu'un fichier de mission doit **écrire ses deux scènes à la main**, plan par plan, et que
+  plusieurs juges du banc nomment les missions en dur (l'ordre des prérequis, les cas de
+  « passer », le dé, les fins au combiné). Objectif : une mission qui n'apporte que ses
+  objectifs et ses répliques reçoit **des animations qui marchent**, et tous les juges la
+  prennent au passage.
 
 ### Quatre activités que le jeu n'a pas
 
