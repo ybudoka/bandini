@@ -52,12 +52,16 @@ def erreurs(page):
     return liste
 
 
+COMMANDES_OUVERTES = "window.BANDINI.B.menu && window.BANDINI.B.menu.titre === 'COMMANDES'"
+
+
 def attendre_titre(page):
     page.wait_for_selector('#bandini[data-etat="titre"]', timeout=15000)
 
 
 def jouer(page):
-    """JOUER, puis PASSER l'ouverture : les juges d'ici veulent la ville, pas la scene.
+    """JOUER, PASSER l'ouverture, puis fermer les COMMANDES : les juges d'ici
+    veulent la ville, pas la scene ni l'aide.
 
     ⚠️ Depuis que le jeu s'ouvre sur une scene (le car de six heures, le
     narrateur), cliquer JOUER ne rend plus les commandes tout de suite : elle
@@ -65,11 +69,18 @@ def jouer(page):
     juste apres ne bouge pas d'un pixel. Tout ce qui veut jouer DANS la ville
     passe donc par ici — un seul endroit a changer le jour ou l'ouverture change.
     L'ouverture elle-meme a ses juges, plus bas et au banc.
+
+    ⚠️ Et depuis le 21 sept. 2026, la fin de l'ouverture ouvre l'ecran
+    COMMANDES, qui fige la ville tant qu'on ne l'a pas ferme (ses juges : plus
+    bas, et `test_commandes_js.py`). On le ferme comme un joueur : ECHAP.
     """
     page.click("#bouton-jouer")
     page.wait_for_selector('#bandini[data-etat="jeu"]')
     page.evaluate("window.BANDINI.Histoire.passerOuverture()")
     page.wait_for_function("!window.BANDINI.B.ouverture")
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.keyboard.press("Escape")
+    page.wait_for_function("!window.BANDINI.B.menu")
 
 
 @pytest.mark.parametrize("ecran", list(ECRANS))
@@ -214,6 +225,10 @@ def test_l_ouverture_joue_au_premier_jouer_et_se_passe(page, serveur, erreurs):
     page.wait_for_function("!window.BANDINI.B.ouverture")
     assert page.evaluate("window.BANDINI.B.joueur.dessine") is True
     assert page.evaluate("window.BANDINI.B.entites.filter(e => e.slug === 'autobus' && e.conducteur !== 'ligne').length") == 0
+    # Les COMMANDES s'ouvrent quand on rend le bonhomme, et E (« C'EST PARTI ») les ferme.
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.keyboard.press("KeyE")
+    page.wait_for_function("!window.BANDINI.B.menu")
     page.keyboard.down("KeyW")
     page.wait_for_timeout(400)
     page.keyboard.up("KeyW")
@@ -306,6 +321,59 @@ def test_la_premiere_mission_se_joue_en_scenes_de_l_intro_a_la_fin(page, serveur
     assert erreurs == []
 
 
+#: Une manette que le navigateur croit branchee : `window.__manette(boutons)` la
+#: tient, `navigator.getGamepads` la rend. Assez pour l'API Manette de Chromium,
+#: que Playwright ne sait pas imiter.
+FAUSSE_MANETTE = """
+window.__pad = null;
+navigator.getGamepads = function () { return window.__pad ? [window.__pad] : []; };
+window.__manette = function (id, boutons) {
+  const b = []; for (let i = 0; i < 17; i++) b.push({ pressed: boutons.indexOf(i) >= 0, value: boutons.indexOf(i) >= 0 ? 1 : 0 });
+  window.__pad = { id: id, mapping: 'standard', connected: true, axes: [0, 0, 0, 0], buttons: b, index: 0 };
+};
+"""
+
+
+def test_les_commandes_parlent_la_manette_du_titre_a_la_ville(page, serveur, erreurs):
+    """Demande de Martin (21 sept. 2026) : une manette branchee, l'aide dit SUR
+    QUEL BOUTON peser. Tout a la manette, comme il joue : le titre lit ses
+    lettres, A commence, et l'ecran COMMANDES du bout de l'ouverture allume ce
+    qu'on touche sans se fermer — seul A le ferme. ⚠️ Visibilite a l'ECRAN
+    (`is_visible`), jamais l'attribut `hidden` (voir `.boutons`)."""
+    page.add_init_script(FAUSSE_MANETTE)
+    page.goto(serveur)
+    attendre_titre(page)
+    x = "Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)"
+
+    def appui(*boutons):
+        page.evaluate("([i, b]) => window.__manette(i, b)", [x, list(boutons)])
+        page.wait_for_timeout(120)
+        page.evaluate("([i]) => window.__manette(i, [])", [x])
+        page.wait_for_timeout(120)
+
+    assert page.is_visible("#aide-clavier") and not page.is_visible("#aide-manette")
+    appui(1)                                          # B : rien au titre, mais on tient la manette
+    page.wait_for_function("!document.getElementById('aide-manette').hidden")
+    assert page.is_visible("#aide-manette") and not page.is_visible("#aide-clavier")
+    assert page.inner_text("#aide-manette-jouer") == "A"
+    appui(0)                                          # A : JOUER
+    page.wait_for_selector('#bandini[data-etat="jeu"]')
+    page.evaluate("window.BANDINI.Histoire.passerOuverture()")
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.evaluate("([i]) => window.__manette(i, [1])", [x])            # B tenu
+    page.wait_for_timeout(150)
+    allumees = page.evaluate("""() => { const L = window.BANDINI;
+        return L.Hud.lignesDAide(L.B.defs.manettes.pages[L.B.menu.page], L.Entree.appareil)
+            .filter(li => li.allume).map(li => li.c); }""")
+    assert allumees == ["esquive"], allumees
+    page.evaluate("([i]) => window.__manette(i, [])", [x])
+    page.wait_for_timeout(120)
+    assert page.evaluate(COMMANDES_OUVERTES), "B ne ferme pas l'aide : on y essaie ses boutons"
+    appui(0)
+    page.wait_for_function("!window.BANDINI.B.menu")
+    assert erreurs == []
+
+
 def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     contexte = browser.new_context(viewport={"width": 844, "height": 390}, has_touch=True, is_mobile=True,
                                    device_scale_factor=2)
@@ -320,6 +388,13 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
     # pastilles et un joystick, pas une scene. Elle a les siens.
     page.evaluate("window.BANDINI.Histoire.passerOuverture()")
     page.wait_for_function("!window.BANDINI.B.ouverture")
+    # ⚠️ L'ecran COMMANDES est ouvert ici, et c'est voulu : ses lignes sont des
+    # ancres du HUD, et la mesure plus bas verifie qu'aucune ne finit sous un
+    # pouce — au telephone en paysage, les boutons couvrent le coin en bas a
+    # droite, et le plan centre y poussait FRAPPE et SPRINT (vu a la capture).
+    page.wait_for_function(COMMANDES_OUVERTES)
+    page.wait_for_timeout(100)
+    assert page.evaluate("window.BANDINI.Hud.ancres().filter(a => a.nom === 'commandes').length") >= 6
     assert page.evaluate("document.body.classList.contains('tactile')")
     for action, minimum in (("attaque", 64), ("action", 64), ("esquive", 64), ("arme", 64), ("pause", 44)):
         boite = page.locator(f'#tactile b[data-a="{action}"]').bounding_box()
@@ -360,6 +435,10 @@ def test_les_commandes_tactiles_sont_grandes_et_visibles(browser, serveur):
                          and boite["y"] < bouton["y"] + bouton["height"]
                          and bouton["y"] < boite["y"] + boite["height"])
             assert not chevauche, f"le HUD « {ancre['nom']} » passe sous le bouton {nom}"
+    # L'aide se ferme au DOIGT : son pied dit « CHOISIR », le nom du bouton ACTION dans un menu.
+    assert page.inner_text('#tactile b[data-a="action"]') == "CHOISIR"
+    page.tap('#tactile b[data-a="action"]')
+    page.wait_for_function("!window.BANDINI.B.menu")
     # Glisser sur le joystick deplace le joueur.
     x0 = page.evaluate("window.BANDINI.B.joueur.x")
     cx, cy = croix["x"] + croix["width"] / 2, croix["y"] + croix["height"] / 2

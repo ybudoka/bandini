@@ -81,6 +81,15 @@ const Entree = (function () {
   const REPOS_IMAGES = 30;
   const ignores = {};                // le bouton qu'on vient d'apprendre, jusqu'au relachement
   const info = { branchee: false, id: '', mapping: '', boutons: [], axes: [] };
+  //: L'APPAREIL QU'ON TIENT : le dernier qui a servi — 'clavier', 'manette' ou
+  //: 'tactile'. L'ecran COMMANDES et l'invite du HUD montrent SES boutons, et
+  //: changent sous les yeux quand on pose le clavier pour prendre la manette.
+  //: ⚠️ Pas « une manette est branchee » : celui qui joue au clavier avec une
+  //: manette qui dort sur le bureau ne veut pas lire des A et des B.
+  let appareil = null;
+  //: Ce que la manette tenait a l'image d'avant (boutons, croix, stick pousse,
+  //: gachettes) : elle ne reprend l'appareil que sur un geste NEUF.
+  let actifAvant = [];
 
   function poser(sac, a, v) {
     v = !!v;
@@ -128,6 +137,7 @@ const Entree = (function () {
     if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA')) return;
     if (!TOUCHES_JEU.has(e.code)) return;
     e.preventDefault();
+    if (valeur) appareil = 'clavier';
     if (valeur && !enfonce[e.code] && !e.repeat) presse[e.code] = true;
     enfonce[e.code] = valeur;
   }
@@ -489,6 +499,17 @@ const Entree = (function () {
     }
     if (!branchee && !manetteVue) return;
     manetteVue = branchee;
+    // ⚠️ SUR UN GESTE NEUF, pas sur un etat : un stick qui derive au repos, ou
+    // un bouton que la manette rend enfonce en permanence, reprenaient
+    // l'appareil a CHAQUE image — et l'aide montrait des A et des B a qui tape
+    // au clavier (vu dans Chromium, une vraie manette branchee au Mac).
+    const actif = info.boutons.slice();
+    for (const a of CROIX_ACTIONS) if (etat[a]) actif.push(a);
+    if (Math.hypot(sx, sy) > 0.5) actif.push('stick');
+    if (g > 0.5) actif.push('gaz');
+    if (f > 0.5) actif.push('frein');
+    if (branchee && actif.some(function (a) { return actifAvant.indexOf(a) < 0; })) appareil = 'manette';
+    actifAvant = actif;
     // Pendant un apprentissage la manette ne commande rien (voir `apprendre`).
     for (const a in MAP_TOUCHES) poser(vPad, a, apprentissage ? false : etat[a]);
     if (apprentissage) { stick.x = 0; stick.y = 0; stick.mag = 0; gaz = 0; frein = 0; return; }
@@ -536,6 +557,7 @@ const Entree = (function () {
       s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
     }
     for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
+    if (s.mag > 0 || Object.keys(etat).length) appareil = 'manette';
     stickCasque.x = s.x; stickCasque.y = s.y; stickCasque.mag = s.mag;
     gazCasque = p ? lirePedale(p, PEDALES_DEFAUT.gaz) : 0;
     freinCasque = p ? lirePedale(p, PEDALES_DEFAUT.frein) : 0;
@@ -562,9 +584,37 @@ const Entree = (function () {
              attend: !!(apprentissage && apprentissage.attend) };
   }
 
+  /** L'appareil qu'on tient (voir `appareil`). Avant le premier geste : la
+      manette si le navigateur en voit une, le doigt sur un ecran tactile,
+      sinon le clavier. */
+  function appareilCourant() {
+    if (appareil) return appareil;
+    if (manetteVue || padCasque) return 'manette';
+    return tactile ? 'tactile' : 'clavier';
+  }
+
+  /** Les lettres de la manette : 'xbox', 'playstation' ou 'nintendo'
+      (`manettes.FAMILLES`). Celle qu'on a choisie dans OPTIONS > MANETTE, sinon
+      celle que son nom trahit (`manettes.DETECTION`), sinon Xbox.
+
+      ⚠️ Rien ne devine une Nintendo : la 8BitDo de Martin se presente parfois
+      en « Pro Controller » et porte pourtant les lettres Xbox. */
+  function familleManette() {
+    const bloc = (B.defs && B.defs.manettes) || {};
+    const familles = bloc.familles || {};
+    const choisie = B.options && B.options.lettresManette;
+    if (choisie && familles[choisie]) return choisie;
+    const id = info.id || (padCasque && padCasque.id) || '';
+    for (const d of bloc.detection || []) {
+      if (new RegExp(d.motif, 'i').test(id)) return d.famille;
+    }
+    return bloc.famille_defaut || 'xbox';
+  }
+
   // --- Tactile ----------------------------------------------------------------------
 
   function passerEnTactile() {
+    appareil = 'tactile';
     if (tactile) return;
     tactile = true;
     if (doc && doc.body) doc.body.classList.add('tactile');
@@ -578,6 +628,9 @@ const Entree = (function () {
     if (!zone) return;
     if (fenetre && fenetre.matchMedia && fenetre.matchMedia('(pointer: coarse)').matches) passerEnTactile();
     fenetre.addEventListener('touchstart', passerEnTactile, { once: true, passive: true });
+    // ⚠️ Une fois, c'est pour la classe `tactile` ; le doigt qui REVIENT apres
+    // le clavier ou la manette, lui, doit se lire a chaque fois.
+    fenetre.addEventListener('touchstart', function () { appareil = 'tactile'; }, { passive: true });
 
     const croix = d.getElementById('croix');
     const bouton = croix.querySelector('u');
@@ -693,10 +746,10 @@ const Entree = (function () {
     lireSuitesActions();
   }
 
-  function contexte(nom) {
-    if (nom === contexteCourant || !doc) { contexteCourant = nom; return; }
-    contexteCourant = nom;
-    const etiquettes = nom === 'vehicule'
+  /** Ce qu'on lit sur les quatre boutons tactiles dans ce contexte-la. L'ecran
+      COMMANDES les montre tels quels : au doigt, le nom du bouton EST son geste. */
+  function etiquettes(nom) {
+    return nom === 'vehicule'
       ? { attaque: 'KLAXON', action: 'SORTIR', esquive: 'FREIN', arme: 'RADIO' }
       // ⚠️ Sur un char a sirene, le bouton du klaxon EST celui de la sirene :
       // c'est ce qu'on cherche en premier au volant d'une ambulance, et le
@@ -713,9 +766,15 @@ const Entree = (function () {
           // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
           // la bouffee qui coute du souffle.
           : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
-    Object.keys(etiquettes).forEach(function (a) {
+  }
+
+  function contexte(nom) {
+    if (nom === contexteCourant || !doc) { contexteCourant = nom; return; }
+    contexteCourant = nom;
+    const e = etiquettes(nom);
+    Object.keys(e).forEach(function (a) {
       const b = doc.querySelector('#boutons b[data-a="' + a + '"]');
-      if (b) b.textContent = etiquettes[a];
+      if (b) b.textContent = e[a];
     });
   }
 
@@ -724,7 +783,7 @@ const Entree = (function () {
     w.addEventListener('keydown', function (e) { surToucheSecrete(e); surTouche(e, true); });
     w.addEventListener('keyup', function (e) { surTouche(e, false); });
     w.addEventListener('blur', toutRelacher);
-    w.addEventListener('gamepadconnected', function () { manetteVue = true; Son.reveiller(); });
+    w.addEventListener('gamepadconnected', function () { manetteVue = true; appareil = 'manette'; Son.reveiller(); });
     initTactile(d);
     empecherZoom(d, w);
   }
@@ -732,10 +791,13 @@ const Entree = (function () {
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
     init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    etiquettesTactiles: etiquettes,
+    toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
     lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
-    annulerApprentissage, oublierRepos, manetteInfo, brancherCasque,
+    annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
+    get appareil() { return appareilCourant(); },
     get axe() { return axe; },
     get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },

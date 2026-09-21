@@ -139,7 +139,9 @@ const Jeu = (function () {
     const p = B.partie;
     const neuve = (p.x === null || p.x === undefined) && !p.ouvertureVue;
     commencer();
-    if (neuve) Histoire.ouverture(false);
+    // Sans ouverture possible (pas de rue devant le terminus), les commandes
+    // s'ouvrent tout de suite : c'est la fin de l'ouverture qui les montre.
+    if (neuve && !Histoire.ouverture(false)) Hud.ouvrirCommandes();
   }
 
   // --- Les parties : trois emplacements -------------------------------------------------
@@ -602,6 +604,8 @@ const Jeu = (function () {
     }
     // ⚠️ « Jouer » n'etait qu'un bouton de la page : a la manette (ou au
     // clavier), on ne pouvait pas commencer la partie sans toucher l'ecran.
+    // La ligne d'aide du titre suit l'appareil qu'on tient.
+    if (B.etat === 'titre') Hud.majAideDuTitre();
     if (B.etat === 'titre' && Hud.voileCourant === 'titre'
         && (Entree.neuf('action') || Entree.neuf('pause'))) {
       Son.reveiller();

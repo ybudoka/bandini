@@ -727,6 +727,11 @@ const Histoire = (function () {
       B.partie.ouvertureVue = true;
       if (typeof Missions !== 'undefined' && Missions.sauvegarderPartie) Missions.sauvegarderPartie();
       Hud.message('BAIE-DES-BRUMES', 150);
+      // ⚠️ LES COMMANDES, AU MOMENT OU ON LES REND : la scene finie, on tient
+      // enfin le bonhomme — c'est la qu'on a besoin de savoir sur quoi peser.
+      // Pas avant (la scene dit elle-meme ACTION et FRAPPE), pas a la revue du
+      // carnet (on sait deja jouer).
+      Hud.ouvrirCommandes();
     }
   }
 

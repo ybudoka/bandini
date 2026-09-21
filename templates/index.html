@@ -35,7 +35,13 @@
          ⚠️ PAS `.aide` : `body.tactile .aide { display: none }` — la ligne disparaitrait
          sur telephone, qui est la plateforme du jeu. #}
       <p class="defi-du-jour" id="defi-du-jour" hidden></p>
-      <p class="aide">
+      {# La ligne d'aide suit l'appareil qu'on tient (`Hud.majAideDuTitre`) : une
+         manette lit SES boutons — les lettres de sa famille, `manettes.FAMILLES`. #}
+      <p class="aide" id="aide-manette" hidden>
+        <kbd id="aide-manette-jouer">A</kbd> jouer · <kbd id="aide-manette-pause">START</kbd> pause ·
+        les commandes s’affichent au début de la partie
+      </p>
+      <p class="aide" id="aide-clavier">
         <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action <em>(face à la chose)</em> ·
         <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme d’avant, <em>tenu</em> la roue ·
         <kbd>Échap</kbd> pause · <kbd>M</kbd> son

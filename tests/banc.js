@@ -111,7 +111,9 @@ function banc(corps) {
    'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer',
    // Effacer son compte (M14, 4e vague).
    'defi-du-jour', 'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
-   'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde']
+   'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde',
+   // La ligne d'aide du titre, qui suit l'appareil (l'ecran COMMANDES).
+   'aide-clavier', 'aide-manette', 'aide-manette-jouer', 'aide-manette-pause']
     .forEach(function (id) {
     const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel'
       || id === 'nip-code' || id === 'nip-nouveau' || id === 'compte-effacer-passe';

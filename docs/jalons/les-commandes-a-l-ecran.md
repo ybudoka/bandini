@@ -37,3 +37,36 @@ chose pour le « ACTION > » des dialogues.
 - ⚠️ Pendant l'aide la ville est figée (c'est un menu) ; la manette y **allume**, elle ne ferme
   pas — seul ACTION ferme, sinon on la ferme en essayant un bouton.
 - ⚠️ Un écran se juge à l'écran : une capture Chromium par appareil avant de livrer.
+
+## Notes
+
+**Livré le 21 sept. 2026 (vague 1 entière).** `manettes.py` porte les tables : la pièce du dessin
+de chaque bouton (`pieces`), les lettres de trois familles (`FAMILLES`), la détection
+(`DETECTION`) et les deux pages (`PAGES_COMMANDES`). `entree.js` sait quel appareil on tient
+(`appareil`) et quelle famille est la manette (`familleManette`) ; `hud.js` dessine l'écran
+(`menuCommandes`), le vrai bouton dans l'invite et les répliques (`glypheDAction`), et la ligne
+du titre (`majAideDuTitre`). OPTIONS > MANETTE a une ligne LETTRES DES BOUTONS (auto, Xbox,
+PlayStation, Nintendo). Juges : `test_commandes_js.py` (9), `test_manettes.py` (+14), et trois
+juges du navigateur (le neuf joue tout à la manette, du titre à la ville).
+
+- ⚠️ **Ce que les captures ont trouvé et qu'aucun juge ne voyait** : « Xbox Wireless
+  Controller » contient le nom d'une DualShock 4 (une croix bleue sous le A — le motif est
+  maintenant ancré, `^wireless controller`) ; les traits s'arrêtaient au bord de la manette
+  (ils se tracent par-dessus) ; au téléphone en paysage, le plan tactile centré poussait FRAPPE
+  et SPRINT sous les vrais boutons (décalé à gauche, et chaque ligne est une ancre du HUD que
+  le juge tactile mesure — la mutation « recentrer » le fait rougir) ; au volant, les trois
+  lignes du pouce tombaient dans le cercle du joystick (elles s'empilent vers le haut).
+- ⚠️ **La manette ne reprend l'appareil que sur un geste NEUF** (un bouton qui s'enfonce, le
+  stick poussé au-delà de 0,5) : une vraie manette branchée au Mac, au repos, gardait
+  l'appareil contre le clavier dans Chromium. Un stick qui dérive ou un bouton rendu enfoncé en
+  permanence l'auraient repris à chaque image.
+- ⚠️ **Le stick ne tourne pas la page** : on le pousse pour voir MARCHER s'allumer, et la page
+  tournait sous le pouce (vu au banc). La croix, les flèches et le pouce la tournent.
+- ⚠️ **La pause garde sa règle** : RETOUR (Effacer, B) revient à la PAUSE, PAUSE reprend le jeu.
+- ⚠️ **VISER sur la 8BitDo en DirectInput** : son bouton 2 n'est nulle part sur la manette ;
+  l'aide le dit « BOUTON 2 », sans trait. Une disposition réapprise garde les pièces de la
+  disposition par défaut (comme le dessin de l'écran MANETTE), sauf VISER.
+- ⚠️ `test_ouverture.py` et `jouer(page)` de `test_navigateur.py` ferment maintenant l'aide avant
+  de marcher : c'est la promesse nouvelle, pas un contournement.
+- Sept mutations, sept juges rouges : `manetteInerte`, l'ouverture qui ouvre l'aide, l'ancre de
+  la détection (banc et Python), l'appareil clavier, le geste neuf, le plan tactile recentré.

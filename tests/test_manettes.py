@@ -7,6 +7,7 @@ pas d'action orpheline, pas un bouton pour deux choses, pas un chapeau tordu.
 """
 
 import re
+import unicodedata
 from pathlib import Path
 
 import pytest
@@ -113,3 +114,113 @@ def test_le_paquet_sert_les_dispositions(paquet):
     bloc = paquet["manettes"]
     assert [p["slug"] for p in bloc["profils"]] == [p["slug"] for p in manettes.PROFILS]
     assert bloc["defaut"] in {p["slug"] for p in bloc["profils"]}
+
+
+# --- L'ecran COMMANDES : les lettres des boutons et les deux pages -------------------
+
+#: Toutes les pieces du dessin qu'une ligne de l'aide peut viser (`hud.js`).
+PIECES = {"bas", "droite", "gauche", "haut", "epaule_g", "epaule_d", "gachette_g", "gachette_d",
+          "select", "start", "croix", "stick", "clic"}
+
+
+@pytest.mark.parametrize("profil", manettes.PROFILS, ids=lambda p: p["slug"])
+def test_chaque_bouton_dit_sur_quelle_piece_il_est(profil):
+    """`pieces` court le long de `boutons` : le k-ieme numero d'une action est
+    sur la k-ieme piece. Sinon l'aide imprimerait le A de l'un sur l'autre."""
+    assert set(profil["pieces"]) == set(profil["boutons"])
+    for action, indices in profil["boutons"].items():
+        pieces = profil["pieces"][action]
+        assert len(pieces) == len(indices), action
+        assert all(p is None or p in PIECES for p in pieces), (action, pieces)
+    # Les quatre boutons de droite par POSITION, quelle que soit la numerotation.
+    assert [profil["pieces"][a][0] for a in ("action", "esquive", "attaque", "arme")] == \
+        ["bas", "droite", "gauche", "haut"]
+
+
+def test_viser_n_est_le_clic_du_stick_que_sur_une_numerotation_standard():
+    """⚠️ Le 10 d'une manette reconnue est le clic du stick gauche ; le 2 de la
+    disposition DirectInput est un numero que rien ne situe — l'aide doit le
+    dire par son numero, pas l'imprimer sur le stick."""
+    assert manettes.par_slug("standard")["pieces"]["verrouiller"] == ["clic"]
+    assert manettes.par_slug("bt_dinput")["pieces"]["verrouiller"] == [None]
+
+
+@pytest.mark.parametrize("slug", sorted(manettes.FAMILLES))
+def test_chaque_famille_nomme_chaque_piece(slug):
+    famille = manettes.FAMILLES[slug]
+    assert famille["nom"] == famille["nom"].upper()
+    vues = {p for profil in manettes.PROFILS for pieces in profil["pieces"].values() for p in pieces if p}
+    vues |= {"gachette_g", "gachette_d", "stick"}
+    for piece in vues - {"croix"}:
+        assert piece in famille["boutons"], f"{slug} : rien d'imprime sur {piece}"
+    for piece, bouton in famille["boutons"].items():
+        assert piece in PIECES
+        assert ("texte" in bouton) != ("forme" in bouton), (slug, piece)
+        assert re.fullmatch(r"#[0-9a-f]{6}", bouton["couleur"]), (slug, piece)
+        if "forme" in bouton:
+            assert bouton["forme"] in manettes.FORMES
+        else:
+            assert bouton["texte"] == bouton["texte"].upper() and len(bouton["texte"]) <= 7
+
+
+def test_les_familles_ont_chacune_leurs_lettres_ou_il_faut():
+    """Le A d'une Xbox et le B d'une Nintendo sont au MEME endroit (en bas)."""
+    f = manettes.FAMILLES
+    assert f["xbox"]["boutons"]["bas"]["texte"] == "A"
+    assert f["nintendo"]["boutons"]["bas"]["texte"] == "B"
+    assert f["playstation"]["boutons"]["bas"]["forme"] == "croix"
+    assert manettes.FAMILLE_DEFAUT == "xbox"
+
+
+@pytest.mark.parametrize("nom,famille", [
+    ("Xbox Wireless Controller (STANDARD GAMEPAD Vendor: 045e Product: 0b13)", None),
+    ("Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 09cc)", "playstation"),
+    ("DualSense Wireless Controller (STANDARD GAMEPAD Vendor: 054c Product: 0ce6)", "playstation"),
+    ("Pro Controller (Vendor: 057e Product: 2009)", None),
+    ("8BitDo Ultimate 2.4G (Vendor: 2dc8 Product: 3106)", None),
+])
+def test_la_detection_ne_prend_pas_une_xbox_pour_une_playstation(nom, famille):
+    """⚠️ « Xbox Wireless Controller » contient « Wireless Controller », le nom
+    d'une DualShock 4 : vu a la capture, une croix bleue sous le A. Et rien ne
+    devine une Nintendo (la 8BitDo de Martin se dit « Pro Controller »)."""
+    trouvee = next((d["famille"] for d in manettes.DETECTION
+                    if re.search(d["motif"], nom, re.IGNORECASE)), None)
+    assert trouvee == famille
+
+
+def _police_pixel() -> set[str]:
+    source = (RACINE / "static" / "js" / "sprites.js").read_text(encoding="utf-8")
+    bloc = re.search(r"const POLICE_PIXEL = \{(.*?)\n\};", source, re.S).group(1)
+    return set(re.findall(r"'(.)': '[01]{15}'", bloc)) | {'"'}
+
+
+def test_les_pages_de_l_aide_tiennent_debout():
+    source = (RACINE / "static" / "js" / "entree.js").read_text(encoding="utf-8")
+    bloc = re.search(r"const MAP_TOUCHES = \{(.*?)\n  \};", source, re.S).group(1)
+    actions = set(re.findall(r"^\s+(\w+): \[", bloc, re.M))
+    police = _police_pixel()
+    assert [p["slug"] for p in manettes.PAGES_COMMANDES] == ["pied", "volant"]
+    for page in manettes.PAGES_COMMANDES:
+        vus = [ligne["c"] for ligne in page["lignes"]]
+        assert len(vus) == len(set(vus)), page["slug"]
+        for ligne in page["lignes"]:
+            assert ligne["c"] in actions or ligne["c"] in manettes.GESTES, ligne
+            texte = ligne["texte"]
+            assert texte == texte.upper() and len(texte) <= manettes.LIBELLE_MAX, texte
+            for ch in texte:
+                base = unicodedata.normalize("NFD", ch)[0]
+                assert base in police, f"« {ch} » de {texte!r} : la police pixel ne l'a pas"
+
+
+def test_le_javascript_dessine_chaque_forme():
+    source = (RACINE / "static" / "js" / "hud.js").read_text(encoding="utf-8")
+    bloc = re.search(r"const FORMES_DE_BOUTON = \{(.*?)\n  \};", source, re.S).group(1)
+    assert set(re.findall(r"^\s+(\w+): \[", bloc, re.M)) == set(manettes.FORMES)
+
+
+def test_le_paquet_sert_l_aide(paquet):
+    bloc = paquet["manettes"]
+    assert set(bloc["familles"]) == set(manettes.FAMILLES)
+    assert bloc["famille_defaut"] in bloc["familles"]
+    assert [p["slug"] for p in bloc["pages"]] == ["pied", "volant"]
+    assert all("pieces" in p for p in bloc["profils"])
