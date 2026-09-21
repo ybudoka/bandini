@@ -56,12 +56,12 @@ MISSION = {
     "scenes": {
         "intro": [
             { "type": "camera", "vers": "porte:garage", "duree": 90 },
-            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 60 },
+            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "pres": 22, "duree": 60 },
             { "type": "geste", "acteur": "donneur", "geste": "montrer", "duree": 40 },
             { "type": "dire", "repliques": [1, 2] }
         ],
         "fin": [
-            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 50 },
+            { "type": "marcher", "acteur": "donneur", "vers": "joueur", "pres": 22, "duree": 50 },
             { "type": "geste", "acteur": "donneur", "geste": "prendre", "duree": 40 },
             { "type": "dire", "repliques": [1, 2] }
         ]

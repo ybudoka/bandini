@@ -274,7 +274,7 @@ avec les types existants, on ajoute **un type** — jamais un
 | Type | Rôle | Clés |
 |---|---|---|
 | `camera` | aller voir un lieu, le tenir, revenir | `vers`, `recul`, `duree`, `courbe`, `lissage` |
-| `marcher` | un acteur va à un lieu à pied | `acteur`, `vers`, `duree`, `pres` |
+| `marcher` | un acteur va à un lieu à pied ; **`pres` est obligatoire quand `vers` est `joueur`** (22 px, la distance de parole) — sans lui il finit sur le joueur | `acteur`, `vers`, `duree`, `pres` |
 | `conduire` | un char entre / part | `acteur`, `vehicule`, `couleur`, `vers`/`part`, `depuis`, `duree`, `courbe`, `fumee`, `portiere`, `retirer` |
 | `geste` | un geste du sprite (montrer, donner, prendre, bras_croises, hausser, telephone) | `acteur`, `geste`, `duree`, `vers` |
 | `entrer` / `sortir` | un acteur passe une porte | `acteur`, `dans`/`de`, `vers` |

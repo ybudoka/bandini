@@ -330,6 +330,10 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
             erreurs.append(f"plan {i} : geste inconnu {plan.get('geste')!r}")
         if genre in ("marcher", "geste", "entrer", "sortir", "conduire") and not plan.get("acteur"):
             erreurs.append(f"plan {i} ({genre}) : sans acteur")
+        # ⚠️ Sans `pres`, il marche jusqu'AU PIXEL du joueur et finit dessus (m50 : Marco se
+        # superposait au personnage). 22 px, c'est la distance de parole (`RAYON_PARLER`).
+        if genre == "marcher" and plan.get("vers") == "joueur" and not plan.get("pres"):
+            erreurs.append(f"plan {i} : marcher vers le joueur sans `pres` — l'acteur finirait sur lui")
         if genre == "conduire" and ("vers" in plan) == ("part" in plan):
             erreurs.append(f"plan {i} : un char ENTRE (`vers`) ou PART (`part`), pas les deux")
         if genre == "son" and sum(k in plan for k in ("sfx", "musique", "boucle")) != 1:

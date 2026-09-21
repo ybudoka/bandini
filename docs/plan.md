@@ -504,7 +504,8 @@ si une scène ne s'écrit pas avec eux, on ajoute **un type**, jamais un
 
 - `camera` — aller voir un lieu (tout ce que `resoudre()` connaît), le tenir, revenir ;
 - `marcher` — un acteur va à un lieu, à pied, les jambes animées (`marcherVersLeQuai`,
-  généralisé) ;
+  généralisé) ; ⚠️ vers le joueur, `pres` est obligatoire (22 px, la distance de parole) : sans
+  lui l'acteur finit au pixel du joueur, dessus (Marco, m50) — le validateur le refuse ;
 - `conduire` — un char de la scène entre par la rue, s'arrête, repart hors champ (l'autobus
   de l'ouverture, généralisé) ;
 - `geste` — un acteur fait un geste : `montrer`, `donner`, `prendre`, `bras_croises`,

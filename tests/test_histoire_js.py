@@ -544,6 +544,49 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
         "la réplique de mission garde sa place"
 
 
+def test_m50_marco_ne_marche_pas_sur_le_joueur_a_l_intro_ni_a_la_fin(banc):
+    """⚠️ Martin, 20 sept. 2026 : « Marco se déplace par-dessus le personnage principal dans
+    l'animation du début ». `marcher vers joueur` sans `pres` allait au pixel du joueur : 0 px
+    dans les quatre cas mesurés (16 à 60 px au départ), et il y restait toute la scène. Il
+    s'arrête maintenant à la distance de parole — ou ne bouge pas s'il y est déjà."""
+    r = banc("""function (L, o) {
+        const scene = function (depart) {
+            L.Jeu.commencer();
+            L.graine(6);
+            const B = L.B, j = B.joueur;
+            j.invincible = 1e6;
+            B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+            const marco = L.Histoire.donneur('marco');
+            j.x = marco.x - depart.ecart; j.y = marco.y; L.Entites.indexer();
+            if (depart.fin) {
+                L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+                B.partie.mission.etape = 3; L.Entites.indexer();
+                L.Histoire.reussir();
+            } else {
+                L.Histoire.parler('marco');
+            }
+            let dMin = 1e9, dMax = 0, n = 0;
+            while ((B.scene || B.cinema) && n < 6000) {
+                o.frame(1); n++;
+                const d = Math.hypot(marco.x - j.x, marco.y - j.y);
+                dMin = Math.min(dMin, d); dMax = Math.max(dMax, d);
+            }
+            return { ecart: depart.ecart, fin: !!depart.fin, images: n, dMin: Math.round(dMin * 10) / 10,
+                     dFin: Math.round(Math.hypot(marco.x - j.x, marco.y - j.y) * 10) / 10 };
+        };
+        const sortie = [];
+        for (const ecart of [16, 22, 44]) sortie.push(scene({ ecart: ecart, fin: false }));
+        for (const ecart of [16, 22]) sortie.push(scene({ ecart: ecart, fin: true }));
+        return sortie;
+    }""")
+    for s in r:
+        quand = "fin" if s["fin"] else "intro"
+        assert s["images"] > 30, f"{quand} : la scène ne s'est pas jouée ({s})"
+        # ⚠️ Rouge avant : 0 px.
+        assert s["dMin"] >= 14, f"{quand} : Marco marche sur le joueur ({s['dMin']} px, départ à {s['ecart']} px)"
+        assert s["dFin"] >= 14, f"{quand} : Marco reste sur le joueur ({s['dFin']} px)"
+
+
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

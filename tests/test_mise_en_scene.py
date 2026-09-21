@@ -184,6 +184,20 @@ def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_pe
     assert not any(r["telephone"] for r in renvois)
 
 
+def test_un_acteur_qui_marche_vers_le_joueur_s_arrete_a_distance_de_parole():
+    """⚠️ Martin, 20 sept. 2026 : « Marco se déplace par-dessus le personnage principal dans
+    l'animation du début ». Sans `pres`, `marcher vers joueur` va au pixel du joueur : l'acteur
+    finit dessus. Rouge avant : m50 n'en passait pas, ni à l'intro ni à la fin."""
+    for m in missions.CATALOGUE:
+        for partie, scene in m["scenes"].items():
+            for plan in scene:
+                if plan["type"] == "marcher" and plan.get("vers") == "joueur":
+                    assert plan.get("pres", 0) >= 14, (m["slug"], partie, "marche sur le joueur")
+    nu = [{"type": "marcher", "acteur": "donneur", "vers": "joueur", "duree": 50}]
+    assert any("sans `pres`" in e for e in missions.erreurs_de_scene(nu))
+    assert missions.erreurs_de_scene([dict(nu[0], pres=22)]) == []
+
+
 def test_l_echec_se_dit_au_combine():
     """On n'est jamais à côté du donneur quand on rate."""
     echecs = [r for r in missions.repliques() if r["partie"] == "echec"]
