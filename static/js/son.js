@@ -373,9 +373,12 @@ const Son = (function () {
       arrive et du musicien de rue. ⚠️ Les chiffres viennent de Python
       (`musique.MUSIQUE`), comme l'echelle : le navigateur les LIT. */
   function dureeFondu(vif) {
-    const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
+    const r = reglagesMusique();
     return vif ? (r.fondu_vif_s || 0.7) : (r.fondu_s || 2);
   }
+
+  /** Les chiffres de la musique, tels que Python les ecrit (`musique.MUSIQUE`). */
+  function reglagesMusique() { return (B.defs && B.defs.audio && B.defs.audio.musique) || {}; }
 
   /** La poursuite et la bagarre : les deux pistes qui prennent toute la place. */
   function pisteDEtat(slug) { return slug === 'mus_poursuite' || slug === 'mus_bagarre'; }
@@ -427,6 +430,77 @@ const Son = (function () {
       eteindre(courante, fondu);
     }
   }
+
+  // --- Le ducking : la musique se retire quand quelqu'un parle, GRADUELLEMENT ---------
+  /*: ⚠️ Demande de Martin (20 sept. 2026), dans le prolongement du fondu enchaine :
+    « il faut aussi baisser les volumes et les monter graduellement ». Avant, la
+    musique tombait au quart D'UN COUP a la premiere syllabe d'une replique et
+    revenait d'un coup a la derniere : deux repliques qui s'enchainaient la
+    faisaient sauter deux fois.
+
+    ⚠️ Le niveau GLISSE vers sa cible a chaque image de `maj()`, qui tourne a pas
+    fixe (60 par seconde, `jeu.js`) : `baisse_s` et `remonte_s` sont de vraies
+    secondes, quelle que soit la frequence de l'ecran — et le banc, qui rejoue les
+    memes pas, voit la meme courbe.
+
+    ⚠️ Elle REMONTE PLUS LENTEMENT qu'elle ne baisse, et c'est voulu : entre deux
+    repliques d'une meme conversation, la musique n'a pas le temps de revenir.
+
+    ⚠️ Ce qui glisse, c'est le NIVEAU ; qui l'applique reste a chacun : les boucles
+    (`musique-`, `radio-`, `ambiance-`), les notes du sequenceur (`Mus.attenuation`,
+    lue a la pose : jusqu'a HORIZON_S de retard, ce qui est deja programme garde son
+    volume) et le musicien de rue (`Rue.attenuation`). */
+  const IMAGE_S = 1 / 60;
+
+  /** Un niveau qui rejoint sa `cible` GRADUELLEMENT, un pas de `maj()` a la fois :
+      exponentiel, donc sans a-coup au depart, et arrete net quand il y est. */
+  function glisser(niveau, cible) {
+    if (niveau === cible) return niveau;
+    const r = reglagesMusique();
+    const duree = cible < niveau ? (r.baisse_s || 0.3) : (r.remonte_s || 1.2);
+    const suivant = niveau + (cible - niveau) * (1 - Math.exp(-IMAGE_S / (duree / 3)));
+    return Math.abs(cible - suivant) < 0.005 ? cible : suivant;
+  }
+
+  /** Une boucle qui est de la MUSIQUE (celle qui baisse pendant une replique). ⚠️
+      `rue-` est absent expres : le musicien de rue repose son gain a chaque image,
+      attenuation comprise (`Rue.tick`). */
+  function boucleDeMusique(slug) {
+    return slug.indexOf('radio-') === 0 || slug.indexOf('ambiance-') === 0 || slug.indexOf('musique-') === 0;
+  }
+
+  const Duck = {
+    niveau: 1,          // 1 = plein ; `ducking` = tout en bas
+    cible: 1,
+
+    /** Ou l'on veut aller : `actif` = quelqu'un parle. */
+    viser: function (actif) {
+      Duck.cible = actif ? (reglagesMusique().ducking || 0.25) : 1;
+    },
+
+    /** Une image (`Mus.tick`). Ne fait rien quand tout est au plein volume.
+        ⚠️ Elle tourne AUSSI quand le niveau est installe en bas : une boucle
+        demarree pendant une replique n'a pas encore son `avant`. */
+    maj: function () {
+      if (Duck.niveau === 1 && Duck.cible === 1) return;
+      Duck.niveau = glisser(Duck.niveau, Duck.cible);
+      Mus.attenuation = Duck.niveau;
+      Rue.attenuation = Duck.niveau;
+      boucles.forEach(function (courante, slug) {
+        if (!boucleDeMusique(slug)) return;
+        // ⚠️ `avant` = le volume SANS ducking, pris la premiere fois qu'on baisse ce
+        // qui joue : une boucle demarree PENDANT une replique le prend a son tour, et
+        // baisse elle aussi au lieu de couvrir la voix.
+        if (Duck.niveau < 1) {
+          if (courante.avant === undefined) courante.avant = courante.gain.gain.value;
+          courante.gain.gain.value = courante.avant * Duck.niveau;
+        } else if (courante.avant !== undefined) {
+          courante.gain.gain.value = courante.avant;
+          delete courante.avant;
+        }
+      });
+    },
+  };
 
   /** Regle une boucle en marche : volume (0..1) et hauteur (1 = normale).
       C'est ce qui fait monter le moteur dans les tours. */
@@ -870,24 +944,14 @@ const Son = (function () {
       Voix.baisserLeReste(false);
     },
 
-    /** Le ducking : les boucles de musique (radio, ambiance) au quart pendant qu'on parle. */
+    /** Le ducking : la musique se retire pendant qu'on parle — GRADUELLEMENT, voir
+        « Le ducking ». ⚠️ Cet appel ne baisse rien : il donne la CIBLE, et `Duck`
+        glisse. Tout ce qui joue est concerne — les boucles (radio, ambiance,
+        `musique-`), le sequenceur (`Mus.attenuation`) et le musicien de rue, qui a
+        sa propre sortie : sans lui, sa guitare couvrait la voix au telephone,
+        exactement comme la radio du camion le faisait avant elle. */
     baisserLeReste: function (actif) {
-      Mus.attenuation = actif ? 0.25 : 1;
-      // ⚠️ Le musicien de rue AUSSI : il ne traverse ni `boucles` ni `Mus`, il
-      // a sa propre sortie — sans cette ligne, sa guitare couvrait la voix au
-      // telephone, exactement comme la radio du camion le faisait avant elle.
-      Rue.attenuation = actif ? 0.25 : 1;
-      boucles.forEach(function (courante, slug) {
-        // ⚠️ `musique-` aussi, depuis que les quinze morceaux sont des mp3 :
-        // sans lui, l'ambiance du district et la musique de poursuite
-        // couvraient la replique, exactement comme la radio du camion le
-        // faisait avant elles. (`rue-` est absent expres : le musicien de rue
-        // repose son gain a chaque image, attenuation comprise.)
-        if (slug.indexOf('radio-') !== 0 && slug.indexOf('ambiance-') !== 0
-            && slug.indexOf('musique-') !== 0) return;
-        if (actif && courante.avant === undefined) { courante.avant = courante.gain.gain.value; courante.gain.gain.value = courante.avant * 0.25; }
-        else if (!actif && courante.avant !== undefined) { courante.gain.gain.value = courante.avant; delete courante.avant; }
-      });
+      Duck.viser(actif);
       Voix.ducking = !!actif;
     },
 
@@ -1463,6 +1527,8 @@ const Son = (function () {
 
     /** Une image de musique. A appeler a CHAQUE image, y compris au menu. */
     tick: function () {
+      // Le ducking glisse d'abord : la duree d'un pas ne depend pas de ce qui joue.
+      Duck.maj();
       // Les pistes en notes qui finissent leur fondu de sortie — avant tout le
       // reste : quand plus rien ne joue, elles sont justement les seules.
       if (Mus.sortantes.length) {
@@ -1523,7 +1589,8 @@ const Son = (function () {
     courante: null,     // le slug du morceau demande cette image
     jouee: null,        // celui qui tourne pour de vrai
     volume: 0,          // 0..1, la distance
-    attenuation: 1,     // le ducking (une voix, une poursuite)
+    attenuation: 1,     // le ducking (une voix) : `Duck` le fait glisser
+    sousEtat: 1,        // le retrait sous la musique d'ETAT : il glisse aussi
     demandeT: -1,       // la derniere image ou quelqu'un a demande a jouer
     pas: 0, debutT: 0, prochain: 0,
     sortie: null,       // le gain qui porte la distance
@@ -1587,6 +1654,13 @@ const Son = (function () {
 
     /** Une image de musique de rue. Appelee a chaque image, comme `Mus.tick`. */
     tick: function () {
+      // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
+      // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
+      // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
+      // ⚠️ Il GLISSE, et il glisse TOUJOURS — meme sans musicien en vue : un gars
+      // qui apparait en pleine poursuite doit entrer deja tasse, pas plein puis
+      // redescendre.
+      Rue.sousEtat = glisser(Rue.sousEtat, pisteDEtat(Chef.piste) ? (reglagesMusique().rue_sous_etat || 0.25) : 1);
       // ⚠️ Plus personne ne demande : le musicien est mort, assomme, hors de
       // portee ou hors de la bulle. On se tait — et c'est ce qui evite qu'une
       // toune continue toute seule a l'autre bout de la ville.
@@ -1609,12 +1683,7 @@ const Son = (function () {
         Rue.jouee = Rue.courante; Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
       }
       if (etatSon() !== 'actif') { Rue.pas++; Rue.debutT = 0; Rue.prochain = 0; return; }
-      // ⚠️ La musique d'ETAT prend toute la place : quand la police te court
-      // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
-      // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
-      const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
-      const etat = pisteDEtat(Chef.piste);
-      Rue.g = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
+      Rue.g = Rue.volume * Rue.attenuation * Rue.sousEtat;
       // LE FICHIER, quand il y en a un. ⚠️ Le volume se REPOSE a chaque image :
       // c'est la distance, et elle change a chaque pas du joueur. Une boucle
       // reglee une fois au depart resterait forte a l'autre bout de la rue.

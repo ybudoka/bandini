@@ -740,6 +740,16 @@ MUSIQUE = {
     # se demande a l'appel (`Mus.jouer(slug, 0)`) et se justifie a cet endroit.
     "fondu_s": 2,
     "fondu_vif_s": 0.7,
+    # ⚠️ LE VOLUME BAISSE ET REMONTE GRADUELLEMENT (Martin, 20 sept. 2026) : « il
+    # faut aussi baisser les volumes et les monter graduellement ». Quand quelqu'un
+    # parle, la musique se retire au `ducking` (le quart) en `baisse_s`, et revient
+    # en `remonte_s`. ⚠️ Elle remonte PLUS LENTEMENT qu'elle ne baisse : deux
+    # repliques qui s'enchainent ne la laissent pas revenir entre les deux (elle
+    # sautait, avant, a chaque phrase) ; et le musicien de rue glisse de la meme
+    # facon quand la poursuite ou la bagarre demarre, ou finit.
+    "ducking": 0.25,
+    "baisse_s": 0.3,
+    "remonte_s": 1.2,
     "hysteresis_px": 96,        # six tuiles a franchir avant de changer de piste
     # ⚠️ LE MUSICIEN DE RUE N'EST PAS DANS L'ECHELLE, et c'est voulu : ce n'est
     # pas une piste, c'est un SON DU MONDE — il sort d'un gars qu'on voit, comme
