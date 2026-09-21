@@ -393,6 +393,7 @@ def test_la_coupe_de_l_intro_de_m1_filme_le_char_pas_une_ruelle_vide(banc):
 @pytest.mark.parametrize("slug,vers,cible", [
     ("m4", "porte:poste", "police"),       # l'auto-patrouille attend devant le poste
     ("m5", "zone:cravates", "cravates"),   # les Cravates tiennent leurs coins
+    ("q02", "ruelle:cantine:10", "camion"),  # le camion de poisson dort dans sa ruelle
 ])
 def test_la_coupe_d_une_intro_qui_commence_dedans_filme_ce_qu_elle_pose(banc, slug, vers, cible):
     """⚠️ La règle des scènes, généralisée : une coupe vers la rue doit y trouver
@@ -578,3 +579,65 @@ def test_le_tour_du_proprietaire_laisse_finir_ses_repliques(banc, racine):
         place = r["debuts"][i + 1] - r["debuts"][i]
         assert place >= math.ceil(voix) + CHARGEMENT, (
             f"{r['voix'][i]} : {voix:.0f} images de voix, mais la réplique suivante part {place} images après la sienne")
+
+
+#: Le banc n'a pas de son : ici, chaque voix « joue » le temps de son mp3, plus ce qu'il met à
+#: arriver (`CHARGEMENT`, comme au tour de m6). Une voix remplacée ou coupée avant sa fin est notée.
+VOIX_DU_FICHIER = """
+  function voixDuFichier(L, durees) {
+    const V = L.Son.Voix, coupees = [];
+    function couper(par) { const e = V.enCours; if (e && e.reste > 0) coupees.push({ slug: e.slug, reste: e.reste, par: par }); V.enCours = null; }
+    V.parler = function (slug, options) {
+      if (!(slug in durees)) return null;
+      couper(slug);
+      V.enCours = { slug: slug, reste: durees[slug] + 30, fin: options && options.fin };
+      return V.enCours;
+    };
+    V.couper = function () { couper(null); };
+    return { coupees: coupees, image: function () { const e = V.enCours; if (e && --e.reste <= 0) { V.enCours = null; if (e.fin) e.fin(); } } };
+  }
+  function ecouterJusquauBout(L, o, v) {
+    let n = 0;
+    while ((L.B.scene || L.B.cinema) && n < 6000) { o.frame(1); v.image(); n++; }
+    return n;
+  }
+"""
+
+#: ⚠️ Rouges AVANT la règle (mesurés le 21 sept. 2026, pas de ce passage) : l'intro « dedans » du défaut
+#: (`dire` `ensemble` sous une coupe de 230 images) coupe Bouchard (m4) et Josée (m5) ; m97 a la même forme
+#: écrite ; la fin de m3 met son premier `dire` en `ensemble` devant un geste d'une seconde. `strict` : le
+#: jour où on les recale, le juge le dit.
+DEJA_COUPEES = {"m3-fin", "m4-intro", "m5-intro", "m97-intro"}
+
+
+@ffprobe_present
+@pytest.mark.parametrize("cas", [
+    pytest.param(c, marks=pytest.mark.xfail(strict=True, reason="coupée avant ce juge (voir DEJA_COUPEES)"))
+    if c in DEJA_COUPEES else c
+    for c in [f"{slug}-{partie}" for slug in MISSIONS for partie in ("intro", "fin")]])
+def test_aucune_voix_de_scene_n_est_coupee_par_la_suivante(banc, racine, cas):
+    """⚠️ Rouge avant (21 sept. 2026, les voix des cinq missions) : l'intro de q02 prenait la scène par
+    défaut — Lulu dit sa première réplique en `ensemble` sous une coupe de 230 images, la voix en dure 559,
+    et la réplique suivante la coupait à trois secondes, en plein « le chauffeur s'est pogné la main ».
+    Un `dire` qui n'est pas `ensemble` attend sa voix ; celui qui l'est laisse aux plans suivants le soin
+    de la couvrir. Ici, la scène se joue avec la durée de chaque mp3, et aucune voix ne se fait couper.
+
+    ⚠️ La durée est celle du FICHIER : une voix régénérée plus longue peut faire rougir ce juge — recaler
+    la scène (ou ne plus mettre ce `dire` en `ensemble`)."""
+    slug, partie = cas.split("-")
+    durees = {r["slug"]: math.ceil(_duree_s(racine / "static" / "audio" / f"histoire-{r['slug']}.mp3") * 60)
+              for r in missions.repliques()
+              if r["mission"] == slug and (racine / "static" / "audio" / f"histoire-{r['slug']}.mp3").exists()}
+    r = banc("function (L, o) {" + OUTILS + VOIX_DU_FICHIER + """
+        const m = mission(L, '%s');
+        partie(L, m.slug);
+        if ('%s' === 'intro') allerVoir(L, o, m); else versLaFin(L, m);
+        const v = voixDuFichier(L, %s);
+        if ('%s' === 'intro') L.Histoire.parler(m.donneur); else L.Histoire.reussir();
+        const n = ecouterJusquauBout(L, o, v);
+        return { n: n, coupees: v.coupees };
+    }""" % (slug, partie, json.dumps(durees), partie))
+    assert r["n"] < 6000, f"{cas} : la scène ne se termine pas"
+    assert r["coupees"] == [], "; ".join(
+        f"{c['slug']} coupée {c['reste']} images avant sa fin (chargement compris) par {c['par'] or 'la fin de la scène'}"
+        for c in r["coupees"])

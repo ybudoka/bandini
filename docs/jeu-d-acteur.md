@@ -87,7 +87,12 @@ l'un après l'autre :
 
 C'est le m1 de Ti-Guy : le geste tombe **sur** la réplique qui nomme la ruelle, et
 la coupe arrive **pendant** qu'il parle encore — la voix passe par-dessus le
-changement d'image. Même logique pour la caméra (`ensemble` + `courbe: "freine"`) :
+changement d'image. ⚠️ Une `dire` en `ensemble` ne retient rien : si les plans
+qui suivent finissent avant sa voix, la `dire` suivante la **coupe** (q02 l'a fait :
+Lulu perdait 5 s de sa réplique). Pour une coupe SOUS la réplique, l'ordre sûr est
+l'inverse — la coupe en `ensemble`, puis la `dire` sans `ensemble` : c'est la voix
+qui retient la scène (`q02`, `m51`, et le juge
+`test_aucune_voix_de_scene_n_est_coupee_par_la_suivante`). Même logique pour la caméra (`ensemble` + `courbe: "freine"`) :
 elle arrive au moment où le mot **atterrit**, pas dix images après.
 
 **Un geste qui précède la parole** (l'anticipation d'un comédien : le corps décide

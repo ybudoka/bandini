@@ -47,8 +47,9 @@ juge l'exige) ; une réplique dont le fichier manque s'affiche sans voix. La com
 
 ## Notes
 
-⚠️ **Livré le 21 sept. 2026, sauf les voix** — les cinq missions se jouent de l'appel à la prime
-(`tests/test_cinq_missions_js.py`, au bouton, sous Node) ; leurs **38 voix** ne sont pas générées.
+⚠️ **Livré le 21 sept. 2026** — les cinq missions se jouent de l'appel à la prime
+(`tests/test_cinq_missions_js.py`, au bouton, sous Node) ; leurs **38 voix** sont venues le même jour
+(voir « Les 38 voix », plus bas).
 
 **Ce qui est livré**
 
@@ -113,3 +114,36 @@ de la place pour quatre missions de plus. Le vrai remède reste `/api/dialogue/<
 de Prévost au profit du syndicat de Raymonde, gardée au bar de Josée (le plan la voulait après q03, qui
 n'existe pas). Aucune n'a
 de nouveau personnage : `docs/carte.md` ne bouge pas.
+
+### Les 38 voix (21 sept. 2026, livrées)
+
+Martin : « il manque des voix pour les dernières missions créées ». Générées d'un coup, sans l'essai
+d'une ligne clé que la note ci-dessus prévoyait : c'est lui qui les a demandées, et ça coûte peu
+(≈ 3 800 crédits, 31 795 restants avant ; une ligne à refaire, ≈ 100). Masters gardés dans
+`~/elevenlabs-audio/bandini-voix-v3-masters-2026-09-16/` : toute retouche de finition est gratuite
+(`--refinir --masters`). `thibodeau-m51-8` (Julia) est passée par l'isolateur (`comment=voix isolee`).
+
+- **Mesurées, pas écoutées** : −19,3 à −20,1 LUFS, pics ≤ −1,6 dBFS, 2,7 à 9,3 s. Trois fins muettes
+  d'environ 1 s au lieu de 0,35 s (`marco-f01-3`, `marco-f01-4`, `raymonde-s03-7`), comme `marco-m3-2`,
+  `bouchard-m4-4` ou `marco-m97-1` avant elles : la finition, pas la génération.
+- **À écouter d'abord**, comme prévu : `bouchard-m51-3` et `bouchard-m51-5` (`[deadpan]`, jamais joué
+  avant), `raymonde-s03-3` (Nadine), `tipaul-e01-1` (Ti-Paul sur la voix de Marco).
+- ⚠️ **La voix de Lulu se faisait couper dans l'intro de q02.** q02 prenait l'intro « dedans » du
+  défaut : sa première réplique (`lulu-q02-2`, 9,3 s = 559 images) jouait en `ensemble` sous une coupe de
+  230 images, et la seconde la coupait en plein « le chauffeur s'est pogné la main ». q02 écrit
+  maintenant son intro dans la forme de m51 : la coupe part `ensemble` AVEC la réplique, et c'est le
+  `dire` (pas `ensemble`) qui retient la scène jusqu'au bout de la voix. La coupe tient 240 images :
+  elle montre le camion pendant « dans une ruelle, plein de morue » et revient à la cantine juste avant
+  la blague (4,1 s).
+- **Un juge pour toutes les scènes** : `test_aucune_voix_de_scene_n_est_coupee_par_la_suivante`
+  (`test_missions_en_scene_js.py`) joue chaque intro et chaque fin au banc, chaque voix « jouant » le
+  temps de son mp3 plus 30 images de chargement, et refuse toute voix interrompue avant sa fin. Rouge
+  sur q02 avant la correction (360 images). Et q02 rejoint le juge « la coupe filme ce qu'elle pose »
+  (le camion est à l'écran pendant toute la coupe).
+- ⚠️ **Quatre scènes coupaient déjà leurs voix** (pas de ce passage, marquées `xfail` strict dans
+  `DEJA_COUPEES`) : l'intro de **m4** (Bouchard) et de **m5** (Josée), qui prennent l'intro « dedans » du
+  défaut, celle de **m97** (même forme, écrite), et la fin de **m3** (Marco perd presque toute sa
+  première réplique : `dire` `ensemble` devant un geste d'une seconde). Le jour où on les recale, le juge
+  passe au vert et `strict` demande de les retirer de la liste. Le remède du défaut n'est pas trivial :
+  retenir par la voix plutôt que par la coupe ferait parler la seconde réplique hors champ quand la
+  première est courte.

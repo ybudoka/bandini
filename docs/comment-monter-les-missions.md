@@ -353,7 +353,10 @@ attendre le précédent), `fond` (le plan ne retient pas la scène).
 - **Une réplique ne se cale pas toute seule.** Une `dire` en `ensemble` joue sous le plan qui
   retient la scène ; si ce plan finit avant la voix, la réplique suivante la COUPE. Mesurer la
   voix (`ffprobe`), laisser de la marge (un `attendre`) : `m6` est l'exemple, et
-  `test_le_tour_du_proprietaire_laisse_finir_ses_repliques` en est le juge.
+  `test_le_tour_du_proprietaire_laisse_finir_ses_repliques` en est le juge. Plus simple quand on ne
+  veut qu'une coupe sous la réplique : la coupe en `ensemble`, PUIS la `dire` sans `ensemble` — c'est la
+  voix qui retient la scène (`q02`, `m51`). `test_aucune_voix_de_scene_n_est_coupee_par_la_suivante`
+  joue toutes les scènes avec la durée de leurs mp3 : il refuse une voix coupée, une fois générée.
 
 **Les acteurs nommables** : `joueur`, `donneur`, `vehicule`, `cible`, `fuyard`,
 plus tout `slug` de `PERSONNAGES`. **Les formes de lieu** : un acteur,

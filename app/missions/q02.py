@@ -53,10 +53,21 @@ MISSION = {
             _l("lulu", "Mon poisson… Ben tant pis, on va le faire en soupe. Reviens quand tu conduis mieux.",
                jeu="[disappointed] Mon poisson… Ben tant pis, on va le faire en soupe. [teasing] Reviens quand tu conduis mieux.")
         ]
-    }
+    },
 
-    # ⚠️ ELLE N'ÉCRIT AUCUNE SCÈNE, et elle en a deux (`scene_par_defaut`) : Lulu parle dedans, la
-    # coupe sort voir le camion dans sa ruelle, elle croise les bras, elle finit sa phrase. À la
-    # fin on est au casse-croûte et elle à sa cantine : une coupe chez elle, sans quoi on l'entendrait
-    # de nulle part.
+    # Intention (intro) : le joueur voit le camion pendant que Lulu le nomme (« dans une ruelle, plein
+    # de morue »), et la caméra revient à la cantine pour la blague du chauffeur ; elle croise les bras,
+    # elle donne l'ordre. ⚠️ Elle parle DEDANS : c'est la forme du défaut, SAUF que la coupe part
+    # `ensemble` avec la première réplique au lieu de la retenir — la voix dure 9,3 s, la coupe 4 s, et
+    # la seconde réplique la coupait en plein « pogné la main ». Le `dire` retient la scène jusqu'au bout
+    # de sa voix. La coupe (240 images) revient juste avant « Le chauffeur » (4,1 s).
+    # La fin reste celle du défaut : on est au casse-croûte et elle à sa cantine, une coupe chez elle.
+    "scenes": {
+        "intro": [
+            { "type": "coupe", "vers": "ruelle:cantine:10", "ferme": 20, "ouvre": 20, "tient": 160, "ensemble": True },
+            { "type": "dire", "repliques": [1] },
+            { "type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True },
+            { "type": "dire", "repliques": [2] }
+        ]
+    }
 }
