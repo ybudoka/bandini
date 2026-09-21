@@ -537,6 +537,8 @@ const Jeu = (function () {
     // titre est aussi le moment ou une partie qui attendait en coulisse (elle ne
     // pouvait pas se poser pendant qu'on jouait) peut enfin descendre.
     Compte.ranger();
+    // Le titre revient : le defi du jour a peut-etre change depuis (au plus une demande / 10 min).
+    Defi.rafraichir();
     B.etat = 'titre';
     Hud.etat('titre');
     Hud.voile('titre');
@@ -903,6 +905,8 @@ const Jeu = (function () {
     // dedans. C'est alors la session qui dit si on la regarde (`Casque`).
     d.addEventListener('visibilitychange', function () {
       if (d.hidden && !(typeof Casque !== 'undefined' && Casque.actif)) { pause(); Son.suspendre(); }
+      // Une page rouverte le lendemain matin ne doit pas annoncer le defi d'hier.
+      else if (!d.hidden) Defi.rafraichir();
     });
     // ⚠️ La page s'en va : on rend la carte son — mais SEULEMENT si elle ne peut
     // pas revenir. `persisted` dit que le navigateur la met de cote (bfcache,
@@ -961,6 +965,9 @@ const Jeu = (function () {
         // exercee, donc jamais jugee, et elle mentirait le jour ou l'autre tombe.
         if (recue && recue === Sauvegarde.emplacement()) B.partie = chargerPartie(recue);
       });
+      // LE DEFI DU JOUR (M14, 5e vague) : une demande, et rien n'attend sa reponse. ⚠️ Sans
+      // reseau, pas de defi du jour — et le jeu ne s'en apercoit pas.
+      Defi.init(w, racine);
       const etat = d.getElementById('etat-chargement');
       const parties = Sauvegarde.occupes().length;
       if (etat) etat.textContent = 'v' + defs.version + ' · ' + (B.partie.x !== null ? 'partie ' + Sauvegarde.emplacement() + ', jour ' + B.partie.jour : 'nouvelle partie')
@@ -990,7 +997,7 @@ if (typeof window !== 'undefined') {
   window.BANDINI = {
     B: B, VW: VW, VH: VH, TT: TT,
     Base: Base, Atlas: Atlas, Entree: Entree, Son: Son, Chargements: Chargements, Monde: Monde, Entites: Entites, Combat: Combat,
-    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte,
+    Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Police: Police, Chantiers: Chantiers, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,

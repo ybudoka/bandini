@@ -17,6 +17,7 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
         return { etat: L.B.etat, cles: Object.keys(L).sort(), version: L.B.defs.version,
                  carte: [L.Monde.carte.w, L.Monde.carte.h], fetchs: o.fetchs.length,
                  compte: o.compte.appels.map(function (a) { return a.chemin; }),
+                 defi: o.defi.appels.length,
                  ouverture: L.Histoire.fichiersDeLOuverture().length };
     }""")
     assert r["etat"] == "titre"
@@ -40,7 +41,10 @@ def test_le_moteur_charge_et_expose_son_api(banc, paquet):
     # avec le serveur alors que personne n'a de compte serait un jeu qui a oublie
     # qu'il se joue hors ligne.
     assert r["compte"] == ["ouvrir"]
-    assert r["fetchs"] == 3 + r["ouverture"]
+    # ⚠️ Plus UNE requete pour le defi du jour (M14, 5e vague) : `GET /api/defi`, sans
+    # cookie et sans que rien n'attende sa reponse.
+    assert r["defi"] == 1
+    assert r["fetchs"] == 4 + r["ouverture"]
     assert r["ouverture"] <= 6, "l'ouverture se prechauffe ; la ville, non"
 
 

@@ -82,7 +82,7 @@ def banc(paquet):
     prelude = (RACINE / "tests" / "banc.js").read_text(encoding="utf-8")
 
     def executer(corps: str, graine: int = 0x1A2B3C4D, stockage: dict | None = None, session: dict | None = None,
-                 reseau: dict | None = None):
+                 reseau: dict | None = None, defi: dict | None = None):
         # `stockage` / `session` : ce que le navigateur gardait AVANT le chargement.
         # `reseau` : ce que /api/compte/ repond (M14) — l'ouverture part des que la
         # ville est batie, donc ses reponses se posent avant, jamais pendant.
@@ -94,6 +94,8 @@ def banc(paquet):
             entree["session"] = session
         if reseau is not None:
             entree["reseau"] = reseau
+        if defi is not None:
+            entree["defi"] = defi
         sortie = lancer_node(script, entree=entree)
         return json.loads(sortie.strip().splitlines()[-1]) if sortie.strip() else None
 

@@ -145,7 +145,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (3 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe — restent le signaleur, le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (4 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, et effacer son compte ; **la 5e — le défi du jour — est en cours** ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (5 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, et le défi du jour ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -659,9 +659,10 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement, `effacer` — le compte pour vrai, mot de passe redemandé, 403 et jamais 401 ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement, `effacer` — le compte pour vrai, mot de passe redemandé, 403 et jamais 401 ; erreurs de compte en JSON, 503 quand la base tombe), `/api/defi` (M14 : le défi du jour — la date de Québec et le slug, publique, jamais en cache), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
 | `comptes.py` | les comptes (M14) : `inscrire` (pseudo — la règle vit ici depuis le retrait du tableau des scores —, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
+| `defi.py` | le **défi du jour** (M14) : le serveur dit lequel des six défis (`missions.DEFIS`) est celui d'aujourd'hui — une **rotation** sur la date de **Québec** (jamais un tirage : ni `hash()` salé ni hasard, deux workers répondent la même chose), qui bascule à minuit **heure de Québec** (pas UTC, qui tombe à 20 h en été), avec un repli sur UTC-5 si le système n'a pas la base des fuseaux (`tzdata` n'est pas une dépendance) ; **ni compte ni base**, et **pas de graine** dans la réponse : les six défis sont déterministes, personne ne la lirait | `test_defi.py` : chaque défi revient une fois par tour et jamais deux jours de suite, la bascule à minuit de Québec **été comme hiver** (et pas à minuit UTC), un instant sans fuseau refusé, le repli sans base de fuseaux, la route publique et `no-store`, et qu'elle ne porte **aucun champ de plus** |
 
 Réutiliser tels quels : `create_app` de `/Users/martingagne/dev/car-game/app/__init__.py`,
 `config.py`, `run.py`, `scripts/verifier_dependances.py`,
@@ -684,6 +685,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
 | 1b | `compte.js` | **le compte, côté jeu** (M14) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer ; le **NIP** (3e vague) — un verrou d'écran sur un appareil déjà lié, jamais un second mot de passe : PBKDF2 → AES-GCM (WebCrypto) chiffre le jeton d'appareil localement, cinq essais ratés l'effacent sans jamais toucher au compte ; **effacer son compte** (4e vague) — le serveur efface pour vrai, cet appareil oublie son NIP et son témoin, et **ses parties locales ne bougent pas** |
+| 1c | `defi.js` | **le défi du jour, côté jeu** (M14) : la demande à `/api/defi` (sans cookie, personne n'attend sa réponse), le défi d'aujourd'hui cherché **une fois** dans le catalogue à la porte, `aPayer(slug)` — la prime du jour se touche **une fois par date du serveur**, jamais par slug ni à l'horloge du téléphone —, et au plus une demande par dix minutes (le titre, la page rouverte le lendemain). **Sans réseau, pas de défi du jour** : rien ne l'exige |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -752,7 +754,7 @@ app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
       chantiers.py autobus.py mobilier.py metro.py salete.py devants.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
-      bd.py comptes.py
+      bd.py comptes.py defi.py
 app/missions/  __init__.py _commun.py et une mission par fichier (m1.py … m97.py) — le moteur, les personnages, les défis et les scènes vivent dans __init__.py, chaque mission dans son propre fichier
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
 static/css/styles.css  static/js/ (16 fichiers ci-dessus)
@@ -772,7 +774,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py test_regard_js.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
+        test_bd.py test_comptes.py test_comptes_js.py test_defi.py test_defi_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py verifier_carte_du_plan.py verifier_missions.py
           audio_elevenlabs.py musique_apercu.py icones.py
@@ -834,7 +836,7 @@ deploy/  README.md deploy.sh installer.sh gunicorn.conf.py sauvegarder_bd.py
 | M15 | **P4** La ville te parle | le repli du journal enseigne une chose par jour, animateur + pubs + bulletin sur les radios, banques de répliques par contexte, tirage sans les quatre dernières, la rumeur qui se tait devant une arme, la police à la radio, bruits de quartier, souffle du joueur | apprendre le klaxon sans l'avoir lu nulle part ; entendre sa propre nuit au bulletin ; sentir la rue se taire avant de voir l'étoile |
 | M10 | **P4** L'argent sale | le shylock (dette, intérêts, hommes de main), guichets au camion, skimmers, assurance et fraude | rembourser 15 000 $ sans se faire tuer ; la fraude rapporte moins que le travail à l'heure |
 | M12 | **P4** La ville vit | tramway sur rails, traversier à l'heure, tempête de neige avec charrue, entraves du jour (liste validée par Python), nuit de déneigement, feux clignotants la nuit, pointe directionnelle, crimes d'autrui, arrêts d'autobus, éboueurs, bêtes | traverser à La Pointe en traversier ; conduire dans la neige sans que le rythme tombe ; suivre un DÉTOUR qui mène de l'autre côté ; perdre son char une nuit de déneigement |
-| M14 | **P4** Meta | compte + SQLite (partie et classement au serveur, `localStorage` toujours le défaut), défi du jour à graine serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le classement du jour tourne ; deux manettes sur un écran |
+| M14 | **P4** Meta | compte + SQLite (partie au serveur, `localStorage` toujours le défaut — le classement est tombé avec les scores), défi du jour désigné par le serveur, mode photo, coop locale | commencer au téléphone et finir à l'ordi ; le défi du jour s'annonce au titre et paie sa prime une fois par jour ; deux manettes sur un écran |
 | M16 | **P4** Cent missions | neuf types d'objectifs de plus, `exige` / `ferme` / `donne` étendu, lieux nommés, dialogues hors paquet, téléphone qui trie ; 109 missions en 9 arcs, 34 personnages, 3 piétons de mission, un chien, 5 défis | finir un arc par district au téléphone ; aucune mission morte au singe ; les deux fins atteignables par le catalogue |
 | — | **P2** Une ouverture et un générique | **l'ouverture : livrée** — jouée au premier JOUER (l'autobus arrive au terminus, le narrateur dit la prémisse, `ouverture` en mp3 **et** en notes), passable d'un bouton, rejouable du carnet, jamais rejouée sur une partie en cours ; le générique branché sur les deux fins de M13 (caméra sur la ville, chiffres de la partie, manchette du Clairon, `generique`, puis le BILAN — l'envoi du score jusqu'au retrait du tableau, le 17 sept. 2026) | commencer une partie et savoir qui on est sans avoir lu le plan ; passer l'ouverture d'un bouton, à la manette comme au doigt ; voir une fin, envoyer son score, et retrouver la ville après |
 | M13 | **P4** Les deux fins | une mission par district (4 donneurs, 4 voix), Marco qui te vend, Dr Lachance donneur, _Le Boss_ et _Sacrer son camp_ | atteindre les deux fins ; chaque réplique se dit à voix haute |
@@ -9043,7 +9045,69 @@ lié — et il faut redire tout de suite ce qu'il n'est pas : il **n'ouvre pas u
   (`node:crypto`'s `webcrypto`, aussi vraie que celle d'un navigateur), `btoa`/`atob` et
   `TextEncoder`/`TextDecoder`.
 
-- **Reste de M14** : le défi du jour à graine serveur, le mode photo et la coop locale.
+- **Reste de M14** : le mode photo et la coop locale.
+
+**5e vague livrée** (20 sept. 2026) : **le défi du jour** — et il faut dire d'abord ce qu'on a
+**tranché sans pouvoir demander**, parce que la fiche tenait en deux lignes (« `/api/defi`
+donne la graine du jour, le classement est celui du jour, tout le monde joue la même ville »)
+et se heurtait à un choix de Martin.
+
+- ⚠️ **Il n'y a pas de classement.** Le tableau des scores est parti le 17 sept. 2026 à sa
+  demande (« le score pourrait être complètement enlevé » — **tout** s'en va, et un juge tient
+  que le mot n'est plus dans la page) : le « classement du jour » partait avec lui, et le
+  rebâtir aurait défait ce choix. Ce qui reste du défi du jour est ce que personne n'a retiré :
+  une date, un défi, une prime. **Si Martin veut un classement**, c'est un ajout — une table
+  (compte, date, temps), une route qui reçoit un résultat, et la question de la triche que la
+  fiche de M14 a déjà tranchée (« on ne peut pas l'empêcher : que ça ne rapporte rien ») — pas
+  une correction de ce qui est livré.
+- **Le défi du jour est l'un des six défis qui existent déjà** (le Grand Saut, le Tour du
+  Faubourg, la Livraison sans bosse, et les trois jeux d'adresse de la foire), **désigné par la
+  date** ; le serveur en est l'horloge, parce qu'un jeu qui tourne dans le navigateur ne décide
+  pas seul du jour qu'on est. Le réussir paie **sa prime une fois par jour**, même s'il a déjà
+  été fait (les six ne paient sinon qu'une fois), **en plus** de celle de la première fois — un
+  seul versement, un seul message. Le titre l'annonce, et le menu du panneau dit ce qu'on va
+  toucher (`DÉFI DU JOUR · 500 $`, puis `RÉUSSI AUJOURD'HUI`).
+- ⚠️ **Sans réseau, il n'y a pas de défi du jour** — et le jeu ne s'en aperçoit pas : un
+  bonus, jamais une condition. Pas de repli sur l'horloge du téléphone, qui est justement ce
+  qu'on évite en demandant la date au serveur. Ce que le serveur dit se vérifie : une date qui
+  n'en est pas une, ou un défi que **ce** catalogue ne connaît pas (version d'avant, d'après),
+  est ignoré comme s'il n'y en avait pas.
+- ⚠️ **La graine ne sert qu'à choisir, et la réponse n'en porte pas.** Les six défis sont
+  déterministes (ni `B.rng` ni `hash2` : une rampe, un circuit, une livraison, trois jeux à
+  cibles fixes) : un nombre de plus dans `/api/defi` n'aurait eu aucun lecteur. Ce que la fiche
+  appelait « la graine du jour » **désigne** un défi, rien de plus — et un juge tient que la
+  réponse n'a que `date` et `defi`. (Ce que la « graine du jour » du jeu pilote déjà — météo,
+  entraves, prix — dépend du **jour de la partie**, pas de la date réelle ; les rendre communs à
+  tous demanderait de forcer le jour de chaque partie, et n'est pas fait.)
+- ⚠️ **Une rotation, pas un tirage** : `(jour − EPOQUE) % n`. Chaque défi revient tous les `n`
+  jours, jamais deux fois de suite, et rien n'y dépend du processus — pas de `hash()` (salé, le
+  piège de `ci-pile-ou-face`). Ajouter un défi au catalogue le fait entrer dans la rotation et
+  peut **changer le défi du jour en pleine journée** au déploiement ; c'est pourquoi la prime se
+  paie **par date du serveur** (`defiDuJour.date`) et jamais par slug : deux défis du jour le
+  même jour ne paient pas deux fois.
+- ⚠️ **Le jour bascule à minuit heure de Québec**, pas à minuit UTC (20 h en été : un joueur du
+  soir verrait « demain » avant la fin de sa soirée). **À vérifier sur le serveur, une fois** :
+  `python3 -c "import zoneinfo; zoneinfo.ZoneInfo('America/Toronto')"` — `tzdata` n'est pas une
+  dépendance du projet et le code compte sur celui du système. S'il manque, la route ne plante
+  pas : elle retombe sur UTC-5 avec un avertissement dans le journal, et le jour ne bascule
+  qu'à 1 h en été.
+- ⚠️ **`/api/defi` est un préfixe de `/api/definitions`** — et ça m'a coûté 102 juges rouges d'un
+  coup : le faux `fetch` du banc comparait par `indexOf(…) === 0`, captait le paquet du jeu et
+  répondait « réseau coupé » à tout le chargement. Le vrai code n'a pas ce défaut, mais la
+  frontière se juge : l'adresse est un `data-url-defi` que la **coquille hors ligne** ne lit pas
+  (un défi gardé par le travailleur passerait minuit sans le savoir), et un juge vérifie que
+  `/api/definitions` y est et pas `/api/defi`.
+- ⚠️ **La ligne du titre n'est pas une `.aide`** : `body.tactile .aide { display: none }` la ferait
+  disparaître sur téléphone, qui est la plateforme du jeu. Et l'écran titre est un `.voile` en
+  `overflow: hidden` comme l'était celui du compte : les juges vérifient en portrait
+  (390×219 pour l'écran de jeu) et en paysage que ni JOUER ni COMPTE ne sortent de l'écran.
+- **Une garde retirée parce qu'aucune mutation ne la faisait rougir** (encore) : le défi était
+  cherché dans le catalogue à la porte **et** à chaque lecture ; c'est maintenant une seule
+  fois, à la porte.
+- **Juges** : `test_defi.py` (**10**), `test_defi_js.py` (**22**) et `test_navigateur.py`
+  (**+5** : le vrai serveur, la route qui tombe, la page rouverte le lendemain, la place sur
+  téléphone en portrait et en paysage), et **27 mutations toutes rouges** (8 serveur, 16 jeu,
+  3 Chromium).
 
 **4e vague livrée** (20 sept. 2026) : **effacer son compte**, et la page qui dit ce qui est
 gardé. Le serveur efface pour vrai ; l'écran ne fait que le proposer.

@@ -9,6 +9,10 @@
          jeton d'appareil ne part qu'avec ces appels-la, ni avec la page, ni avec
          les definitions. Une adresse ecrite ailleurs les ferait diverger. #}
       data-url-compte="{{ url_compte }}"
+      {# Le defi du jour (M14, 5e vague) : jamais dans la coquille hors ligne — l'adresse est
+         un `data-url-defi`, que `hors_ligne._ADRESSES` ne lit pas. Un defi garde par le
+         travailleur passerait minuit sans le savoir. #}
+      data-url-defi="{{ url_for('jeu.api_defi') }}"
       data-url-statique="{{ url_for('static', filename='') }}">
 
   <div class="ecran">
@@ -27,6 +31,10 @@
            ses manettes Touch ne se lisent que la-dedans. Voir static/js/casque.js. #}
         <button class="bouton" id="bouton-casque" type="button" hidden>Jouer dans le casque</button>
       </div>
+      {# LE DEFI DU JOUR (M14, 5e vague) : le serveur dit lequel ; sans reseau, rien du tout.
+         ⚠️ PAS `.aide` : `body.tactile .aide { display: none }` — la ligne disparaitrait
+         sur telephone, qui est la plateforme du jeu. #}
+      <p class="defi-du-jour" id="defi-du-jour" hidden></p>
       <p class="aide">
         <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action <em>(face à la chose)</em> ·
         <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme d’avant, <em>tenu</em> la roue ·
@@ -157,6 +165,7 @@
 <script src="{{ url_for('static', filename='js/hors-ligne.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/base.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/compte.js') }}?v={{ version }}"></script>
+<script src="{{ url_for('static', filename='js/defi.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/atlas.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/sprites.js') }}?v={{ version }}"></script>
 <script src="{{ url_for('static', filename='js/entree.js') }}?v={{ version }}"></script>

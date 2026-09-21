@@ -88,7 +88,7 @@ function banc(corps) {
   elements.toile = toile;
   const bandini = faireElement('main', 'bandini');
   bandini.dataset = { etat: 'chargement', urlDefinitions: '/api/definitions', urlCarte: '/api/carte',
-                      urlCompte: '/api/compte/' };
+                      urlCompte: '/api/compte/', urlDefi: '/api/defi' };
   elements.bandini = bandini;
   const tactile = faireElement('div', 'tactile');
   const boutonsTactiles = ['attaque', 'action', 'esquive', 'arme', 'pause', 'plein'].map(function (a) {
@@ -110,7 +110,7 @@ function banc(corps) {
    'nip-form', 'nip-code', 'nip-etat', 'bouton-nip-mot-de-passe',
    'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer',
    // Effacer son compte (M14, 4e vague).
-   'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
+   'defi-du-jour', 'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
    'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde']
     .forEach(function (id) {
     const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel'
@@ -151,6 +151,11 @@ function banc(corps) {
   const reseau = Object.assign({}, ENTREE.reseau || {});
   const appelsCompte = [];
   const beacons = [];
+  /*: LE FAUX /api/defi (M14, 5e vague). `ENTREE.defi` : { statut, corps } ou { panne: true }.
+    ⚠️ Par DEFAUT le reseau est coupe : sans defi du jour, tout ce qui existait joue comme
+    avant — un test qui veut le defi du jour le demande (`defi=` de la fixture `banc`). */
+  let defiEntree = ENTREE.defi !== undefined ? ENTREE.defi : { panne: true };
+  const appelsDefi = [];
   //: `tenu: true` dans `ENTREE.reseau` : la reponse attend `o.compte.rendre(…)`.
   //: ⚠️ Il faut l'armer AVANT le chargement — l'ouverture part des la ville batie,
   //: et c'est justement ce qu'on veut voir attendre.
@@ -218,6 +223,15 @@ function banc(corps) {
     fetch: function (url, opts) {
       fetchs.push({ url: url, opts: opts });
       const adresse = String(url);
+      // ⚠️ L'adresse EXACTE : `/api/defi` est un PREFIXE de `/api/definitions`, et un `indexOf(…) === 0`
+      // captait le paquet du jeu — le chargement entier tombait en « reseau coupe ».
+      if (adresse === '/api/defi' || adresse.indexOf('/api/defi?') === 0) {
+        appelsDefi.push({ url: adresse, opts: opts });
+        if (defiEntree && defiEntree.panne) return Promise.reject(new Error('reseau coupe'));
+        const statut = defiEntree && typeof defiEntree.statut === 'number' ? defiEntree.statut : 200;
+        return Promise.resolve({ ok: statut < 400, status: statut,
+                                 json: function () { return Promise.resolve(defiEntree.corps); } });
+      }
       if (adresse.indexOf('/api/compte/') === 0) {
         const chemin = adresse.slice('/api/compte/'.length);
         let corps = null;
@@ -474,6 +488,7 @@ function banc(corps) {
 
   const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
                    fenetreEvenement: fenetreEvenement,
+                   defi: { appels: appelsDefi, repondre: function (v) { defiEntree = v; } },
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,
                    fondu: fondu, entrer: entrer, sortir: sortir,
                    doc: doc, fenetre: fenetre, fetchs: fetchs, elements: elements, store: store, session: session, ctx: toile.getContext('2d'),

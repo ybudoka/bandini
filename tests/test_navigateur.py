@@ -5,6 +5,7 @@ en local avant de pousser sur `main` — les tests ne tournent plus en CI depuis
 17 sept. 2026), c'est un echec : un garde-fou qui se desactive tout seul n'en est pas un.
 """
 
+import json
 import os
 import re
 
@@ -1142,4 +1143,70 @@ def test_tout_l_ecran_du_compte_s_atteint_en_le_faisant_defiler_sur_un_telephone
     for ident in ("compte-mot", "compte-effacer-passe", "bouton-compte-effacer-annuler",
                   "bouton-compte-effacer-confirmer", "bouton-compte-deconnexion", "bouton-fermer-compte"):
         assert atteignable_au_doigt(page, ident), f"{ident} est inatteignable en {nom} ({taille[0]}×{taille[1]})"
+    assert erreurs == []
+
+
+# --- Le defi du jour (M14, 5e vague) -------------------------------------------------------
+
+
+def test_le_titre_annonce_le_defi_que_le_vrai_serveur_designe(page, serveur, erreurs):
+    """Le vrai serveur, la vraie route : la ligne du titre nomme le defi que `/api/defi` a rendu,
+    avec la prime du catalogue — et aucun cookie ne part (route publique)."""
+    demandes = []
+    page.on("request", lambda r: demandes.append(r) if r.url.endswith("/api/defi") else None)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    reponse = page.evaluate("fetch('/api/defi').then(r => r.json())")
+    fiche = page.evaluate("window.BANDINI.B.defs.defis.find(d => d.slug === '%s')" % reponse["defi"])
+    assert page.is_visible("#defi-du-jour")
+    assert page.text_content("#defi-du-jour") == f"Défi du jour : {fiche['titre']} — {fiche['prime']} $"
+    assert len(demandes) >= 1 and all("cookie" not in r.headers for r in demandes)
+    assert erreurs == []
+
+
+def test_le_defi_du_jour_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
+    """⚠️ Un bonus, jamais une condition : la route tombe (500), le titre ne dit rien, JOUER joue."""
+    page.route("**/api/defi", lambda route: route.fulfill(status=500, body="{}", content_type="application/json"))
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_timeout(300)
+    assert not page.is_visible("#defi-du-jour")
+    assert page.evaluate("window.BANDINI.Defi.duJour()") is None
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+def test_une_page_rouverte_le_lendemain_annonce_le_defi_du_nouveau_jour(page, serveur, erreurs):
+    """Un telephone qui a dormi sur la table : la page revient (`visibilitychange`), dix minutes
+    ont passe, et le titre ne doit pas annoncer le defi d'hier."""
+    reponses = iter([{"date": "2026-09-20", "defi": "saut"}, {"date": "2026-09-21", "defi": "tour"}])
+
+    def repondre(route):
+        route.fulfill(status=200, body=json.dumps(next(reponses)), content_type="application/json")
+
+    page.add_init_script("""(() => { const reel = Date.now.bind(Date); window.__decalage = 0;
+        Date.now = () => reel() + window.__decalage; })()""")
+    page.route("**/api/defi", repondre)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    assert "Grand Saut" in page.text_content("#defi-du-jour")
+    page.evaluate("window.__decalage = window.BANDINI.Defi.REPOS_MS + 1000")
+    page.evaluate("document.dispatchEvent(new Event('visibilitychange'))")
+    page.wait_for_function("window.BANDINI.Defi.duJour() && window.BANDINI.Defi.duJour().slug === 'tour'", timeout=8000)
+    assert "Tour du Faubourg" in page.text_content("#defi-du-jour")
+    assert erreurs == []
+
+
+@pytest.mark.parametrize("nom,taille", [("portrait", (390, 844)), ("paysage", (844, 390))])
+def test_la_ligne_du_defi_ne_pousse_ni_jouer_ni_compte_hors_de_l_ecran(page, serveur, erreurs, nom, taille):
+    """⚠️ L'écran titre est aussi un `.voile` en `overflow: hidden` (le piège de l'écran du compte) :
+    une ligne de plus ne doit pas rogner JOUER — mesuré en portrait, où l'écran de jeu fait 390×219."""
+    page.set_viewport_size({"width": taille[0], "height": taille[1]})
+    page.goto(serveur)
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Defi.duJour() !== null", timeout=8000)
+    for ident in ("bouton-jouer", "bouton-compte", "defi-du-jour"):
+        assert page.evaluate(DANS_L_ECRAN, ident), f"{ident} sort de l'écran titre en {nom}"
     assert erreurs == []

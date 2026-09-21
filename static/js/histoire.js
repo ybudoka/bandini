@@ -1453,7 +1453,13 @@ const Histoire = (function () {
     const d = defis().find(function (q) { return q.slug === slug; });
     if (!d || B.defi) return false;
     const fait = !!B.partie.defisFaits[slug];
-    Hud.ouvrirMenu({ titre: d.titre.toUpperCase(), sur: fait ? 'DÉJÀ RÉUSSI' : d.prime + ' $', aide: d.texte, items: [
+    // LE DEFI DU JOUR (M14, 5e vague) : sa prime se gagne chaque jour, en plus de celle de la
+    // premiere fois — et on dit ce qu'on va toucher, pas seulement « une prime ».
+    const duJour = Defi.estDuJour(slug), aPayer = Defi.aPayer(slug);
+    const gain = (fait ? 0 : d.prime) + (aPayer ? d.prime : 0);
+    const sur = duJour ? (aPayer ? 'DÉFI DU JOUR · ' + gain + ' $' : 'DÉFI DU JOUR — RÉUSSI AUJOURD\'HUI')
+      : (fait ? 'DÉJÀ RÉUSSI' : d.prime + ' $');
+    Hud.ouvrirMenu({ titre: d.titre.toUpperCase(), sur: sur, aide: d.texte, items: [
       { libelle: 'COMMENCER', faire: function () { commencerDefi(d); return true; } },
       { libelle: 'PAS MAINTENANT', faire: function () { return true; } },
     ] });
@@ -1664,9 +1670,14 @@ const Histoire = (function () {
     if (!reussi) { Hud.message('DÉFI RATÉ — ' + (raison || ''), 180); Son.SFX.erreur(); noter('DÉFI RATÉ : ' + d.titre, false); return; }
     const premiere = !B.partie.defisFaits[d.slug];
     B.partie.defisFaits[d.slug] = { jour: B.partie.jour, temps: f.t };
-    if (premiere) Missions.encaisser(d.prime, d.titre.toUpperCase());
+    // ⚠️ LE DEFI DU JOUR PAIE SA PRIME UNE FOIS PAR JOUR (date du serveur), en plus de celle de
+    // la premiere fois : UN seul `encaisser`, donc un seul message — deux se recouvriraient.
+    const duJour = Defi.aPayer(d.slug);
+    if (duJour) Defi.noterFait(d.slug, f.t);
+    const gain = (premiere ? d.prime : 0) + (duJour ? d.prime : 0);
+    if (gain) Missions.encaisser(gain, (duJour ? 'DÉFI DU JOUR — ' : '') + d.titre.toUpperCase());
     else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
-    noter('DÉFI RÉUSSI : ' + d.titre + (premiere ? ' — ' + d.prime + ' $' : ''), true);
+    noter('DÉFI RÉUSSI : ' + d.titre + (gain ? ' — ' + gain + ' $' : ''), true);
     Son.SFX.mission();
     if (d.foire) lotDeLaFoire();
   }

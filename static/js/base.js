@@ -143,6 +143,10 @@ function etatInitial(defs) {
     appels: {},           // les appels recus, par mission
     appelT: null,
     defisFaits: {},
+    //: LE DEFI DU JOUR (M14, 5e vague) : `{ date, slug, temps }` de la derniere prime du jour
+    //: encaissee par CETTE partie. ⚠️ La date est celle du SERVEUR, jamais l'horloge locale.
+    //: Null tant qu'on n'en a pas touche ; une vieille partie le recoit par `completer`.
+    defiDuJour: null,
     rabais: {},
     //: Les contacts du téléphone (`donne.contacts`, m6) : des personnages
     //: dont on a le numéro. Un objet slug -> jour, comme le répertoire.

@@ -65,6 +65,8 @@ const Hud = (function () {
     // ⚠️ L'ecran suit le compte, il ne l'interroge pas : l'ouverture, une partie
     // qui descend ou une session coupee arrivent quand le reseau veut bien.
     Compte.surChangement(function (vue) { majCompte(vue); });
+    // LE DEFI DU JOUR (M14, 5e vague) : la ligne du titre suit ce que le serveur a dit.
+    Defi.surChangement(majDefiDuJour);
     avisSon = d.getElementById('avis-son');
     logoTitre = d.querySelector('#voile-titre .logo');
     majAvisSon();
@@ -1384,6 +1386,17 @@ const Hud = (function () {
     if (el && el.focus) el.focus();
   }
 
+  /** LE DEFI DU JOUR au titre : « Defi du jour : Tour du Faubourg — 250 $ », ou rien du tout
+      (pas de reseau, defi inconnu de ce catalogue). ⚠️ `textContent`, jamais `innerHTML` : le
+      titre vient d'un catalogue, mais le slug vient du reseau. */
+  function majDefiDuJour() {
+    const el = doc && doc.getElementById('defi-du-jour');
+    if (!el) return;
+    const j = Defi.duJour();
+    el.hidden = !j;
+    el.textContent = j ? 'Défi du jour : ' + j.def.titre + ' — ' + j.def.prime + ' $' : '';
+  }
+
   /** Le message de l'effacement : dans le formulaire ET dans `compte-etat`, qui est
       DEHORS — un effacement reussi (ou une session coupee) referme le formulaire, et le
       seul mot qui dit ce qui s'est passe se cacherait avec lui (le piege de « Bonjour »). */
@@ -2237,6 +2250,6 @@ const Hud = (function () {
     get voileCourant() { return voileCourant; },
            majAvisSon,
            dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
-           montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip, envoyerEffacer,
+           montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip, envoyerEffacer, majDefiDuJour,
            ancres: function () { return ancres; } };
 })();
