@@ -16,21 +16,40 @@ MISSION = {
         {"type": "parler", "cible": "raymonde", "texte": "PARLE À RAYMONDE, À L'USINE"},
         {"type": "parler", "cible": "ovila", "texte": "PARLE À OVILA, AU PHARE"},
     ],
-    # Josée parle dedans : la caméra sort voir le dépanneur, la première
-    # porte du tour. Il n'y a pas d'objectif `retourner` — la mission se
-    # clôt après le dernier contact, et Josée est loin : la fin se dit
-    # donc au combiné.
-    # ⚠️ Elle n'écrit QUE son intro, qui montre la PREMIÈRE PORTE du tour alors
-    # que le tour en compte quatre. Sa fin — une coupe chez Josée, qui est loin :
-    # elle parle au combiné — est celle que `scene_par_defaut` bâtit, mot pour
-    # mot, et elle est effacée.
+    # Josée parle dedans, et la caméra sort voir LES QUATRE PORTES du tour, chacune
+    # quand elle la nomme. Il n'y a pas d'objectif `retourner` — la mission se clôt
+    # après le dernier contact, et Josée est loin : la fin se dit donc au combiné.
+    # ⚠️ Elle n'écrit QUE son intro. Sa fin — une coupe chez Josée, qui est loin : elle
+    # parle au combiné — est celle que `scene_par_defaut` bâtit, mot pour mot, et elle
+    # est effacée.
+    #
+    # ⚠️ **LES TEMPS SONT CEUX DES VOIX** (mesurés le 20 sept. 2026 sur `josee-m6-2` et
+    # `-3`, 60 images = 1 s) : la réplique 1 dure 362 images, Ti-Paul y est nommé à
+    # l'image 141 et Lulu à la 242 ; la 2 dure 282, Raymonde y est nommé d'entrée et Ovila
+    # à la 164. Chaque coupe vit donc SOUS sa réplique — et lui survit de quelques images :
+    # c'est la coupe qui retient la scène, et une réplique qui a besoin de plus de temps
+    # que la coupe est COUPÉE par la suivante (elle l'était : l'ancienne coupe, 230 images
+    # pour une réplique de 362). D'où les deux `attendre` : ils laissent finir la phrase, avec
+    # de quoi absorber une voix qui met du temps à arriver.
+    # Un tronçon d'une coupe = `ferme` + `ouvre` + `tient` ; deux lieux + le retour = 2 × le
+    # tronçon + `ferme` + `ouvre`, soit 258 images pour la première coupe, 304 pour la seconde.
+    # ⚠️ Si une voix change de durée, c'est ici qu'on recale — et `test_le_tour_du_proprietaire_
+    # montre_ses_quatre_contacts` dit quand la caméra n'est plus sur la bonne porte.
     "scenes": {
         "intro": [
+            # « Quatre coins, quatre personnes » : Josée parle dans le bar, on la voit.
             {"type": "dire", "repliques": [1], "ensemble": True},
-            {"type": "coupe", "vers": "porte:depanneur", "ferme": 20, "ouvre": 20, "tient": 150},
-            {"type": "geste", "acteur": "donneur", "geste": "montrer", "vers": "porte:depanneur", "duree": 70,
-             "ensemble": True},
-            {"type": "dire", "repliques": [2, 3]},
+            {"type": "attendre", "duree": 100},
+            # « Ti-Paul au dépanneur » (image 141), puis « ma sœur Lulu à la cantine » (242).
+            {"type": "coupe", "vers": ["chez:tipaul", "chez:lulu"], "ferme": 14, "ouvre": 14, "tient": 87},
+            {"type": "attendre", "duree": 70},
+            # « Raymonde à l'usine » (0), puis « Ovila garde le phare » (164).
+            {"type": "dire", "repliques": [2], "ensemble": True},
+            {"type": "coupe", "vers": ["chez:raymonde", "chez:ovila"], "ferme": 14, "ouvre": 14, "tient": 110},
+            {"type": "attendre", "duree": 60},
+            # « Va leur serrer la main » : Josée, de retour dans le bar, montre la sortie.
+            {"type": "geste", "acteur": "donneur", "geste": "montrer", "duree": 70, "ensemble": True},
+            {"type": "dire", "repliques": [3]},
         ],
     },
     "dialogue": {

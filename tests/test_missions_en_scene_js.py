@@ -8,6 +8,9 @@ parle se dit au combiné.
 """
 
 import json
+import math
+import shutil
+import subprocess
 
 import pytest
 
@@ -481,3 +484,90 @@ def test_une_mission_neuve_qui_n_apporte_que_ses_donnees_se_joue(banc):
     assert len(r["dites"]) == len(fiche["dialogue"]["fin"]), r["dites"]
     assert not any("(AU TÉLÉPHONE)" in qui for qui in r["dites"]), \
         "elle finit chez son donneur : il parle en personne, pas au combiné"
+
+
+# --- Le tour du propriétaire : ses quatre portes, chacune quand Josée la nomme ---------------
+
+#: Jouer l'intro de m6 dans le bar, image par image, et rendre ce que la caméra a montré.
+#: ⚠️ Les portes se résolvent DANS LA VILLE, avant d'entrer : une fois dedans,
+#: `Monde.carte` est la pièce.
+TOUR_DE_M6 = """function (L, o) {""" + OUTILS + """
+        const m = mission(L, 'm6');
+        partie(L, m.slug);
+        const portes = m.objectifs.map(function (q) {
+          const l = L.Histoire.lieuDuPersonnage(q.cible);
+          return { slug: q.cible, x: l.x, y: l.y };
+        });
+        allerVoir(L, o, m);
+        const avant = etat(L);
+        const debuts = [], vues = portes.map(function () { return { n: 0, premiere: null }; });
+        const vrai = L.Hud.dialogue;
+        let n = 0;
+        L.Hud.dialogue = function () { debuts.push(n); return vrai.apply(null, arguments); };
+        const d0 = L.Son.Voix.demandees.length;
+        L.Histoire.parler(m.donneur);
+        const s = L.B.scene;
+        while ((L.B.scene || L.B.cinema) && n < 6000) {
+          o.frame(1); n++;
+          const sc = L.B.scene;
+          // La caméra est LÀ-BAS, et l'écran n'est pas au noir : ce que Martin voit.
+          if (!sc || (sc.noir || 0) > 0.2 || !sc.vise) continue;
+          portes.forEach(function (p, i) {
+            if (Math.hypot(sc.vise.x - p.x, sc.vise.y - p.y) < 8) { vues[i].n++; if (vues[i].premiere === null) vues[i].premiere = n; }
+          });
+        }
+        return { portes: portes.map(function (p) { return p.slug; }), vues: vues, debuts: debuts, sautes: s ? s.sautes : null,
+                 images: n, voix: L.Son.Voix.demandees.slice(d0), avant: avant, apres: etat(L) };
+    }"""
+
+
+def test_le_tour_du_proprietaire_montre_ses_quatre_contacts(banc):
+    """⚠️ Rouge avant (20 sept. 2026), demande de Martin : « améliore l'animation de la
+    mission tour du propriétaire pour voir toutes les cibles, pas juste la première ».
+    L'intro de m6 ne filmait que le dépanneur (159 images) alors que Josée nomme quatre
+    portes : la cantine, l'usine et le phare ne se voyaient jamais. Chaque contact doit
+    être à l'écran (hors du noir) au moins une seconde, dans l'ordre du tour, et pendant la
+    réplique qui le nomme — Ti-Paul et Lulu sous la première, Raymonde et Ovila sous la
+    seconde."""
+    r = banc(TOUR_DE_M6)
+    assert r["portes"] == ["tipaul", "lulu", "raymonde", "ovila"]
+    assert r["sautes"] == 0, f"{r['sautes']} plan(s) de l'intro n'ont trouvé ni leur lieu ni leur acteur"
+    for slug, vue in zip(r["portes"], r["vues"]):
+        assert vue["n"] >= 60, f"{slug} : la caméra ne le montre que {vue['n']} images (il en faut 60, une seconde)"
+    premieres = [v["premiere"] for v in r["vues"]]
+    assert premieres == sorted(premieres), f"le tour n'est pas dans l'ordre : {dict(zip(r['portes'], premieres))}"
+    un, deux, trois = r["debuts"]
+    for i in (0, 1):
+        assert un <= premieres[i] < deux, f"{r['portes'][i]} paraît à l'image {premieres[i]}, hors de la réplique 1 ({un}-{deux})"
+    for i in (2, 3):
+        assert deux <= premieres[i] < trois, f"{r['portes'][i]} paraît à l'image {premieres[i]}, hors de la réplique 2 ({deux}-{trois})"
+    # Et le bar est rendu tel qu'on l'a laissé.
+    for cle in ("x", "y", "piece", "carte", "moi"):
+        assert r["apres"][cle] == r["avant"][cle], f"{cle} : {r['avant'][cle]} -> {r['apres'][cle]}"
+
+
+ffprobe_present = pytest.mark.skipif(shutil.which("ffprobe") is None, reason="ffprobe n'est pas installé : ce juge mesure des mp3")
+
+
+def _duree_s(chemin) -> float:
+    return float(subprocess.run(["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "csv=p=0",
+                                 str(chemin)], capture_output=True, text=True).stdout)
+
+
+@ffprobe_present
+def test_le_tour_du_proprietaire_laisse_finir_ses_repliques(banc, racine):
+    """⚠️ Rouge avant (20 sept. 2026) : la coupe qui portait la réplique 1 ne tenait que 230
+    images, la voix en dure 360 — la réplique 2 la coupait à l'image 229, en plein « ma sœur
+    Lulu à la cantine ». Une réplique suivante ne part qu'une fois la voix précédente finie,
+    avec de quoi absorber un mp3 qui met du temps à arriver (`CHARGEMENT`).
+
+    ⚠️ La durée est celle du FICHIER : si une voix est régénérée plus longue, ce juge dit de
+    recaler `scenes.intro` de `m6.py` — c'est ce qu'il garde."""
+    CHARGEMENT = 30        # images : une demi-seconde
+    r = banc(TOUR_DE_M6)
+    assert len(r["debuts"]) == len(r["voix"]) == 3, (r["debuts"], r["voix"])
+    for i in (0, 1):
+        voix = _duree_s(racine / "static" / "audio" / f"histoire-{r['voix'][i]}.mp3") * 60
+        place = r["debuts"][i + 1] - r["debuts"][i]
+        assert place >= math.ceil(voix) + CHARGEMENT, (
+            f"{r['voix'][i]} : {voix:.0f} images de voix, mais la réplique suivante part {place} images après la sienne")

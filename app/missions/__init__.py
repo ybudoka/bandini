@@ -260,6 +260,10 @@ TYPES_PLANS: dict[str, tuple[str, ...]] = {
     # Le noir : `ferme` images pour y tomber, la caméra saute à `vers`, `ouvre`
     # images pour en sortir, `tient` images là-bas. ⚠️ Son PROPRE noir : un fondu de
     # porte fige la boucle, et la scène doit continuer pendant.
+    # ⚠️ `vers` peut être UNE LISTE de lieux, visités dans l'ordre d'un seul aller-retour :
+    # chacun a son noir (`ferme`, `ouvre`) et tient `tient` images, et la pièce ne revient
+    # qu'à la fin — le tour de m6 montre ses quatre portes sans repasser par le bar.
+    # Tous dehors, ou tous ici : jamais un mélange.
     "coupe": ("vers", "ferme", "ouvre", "tient"),
     # Des répliques de la scène (`repliques`, comptées à partir de 1 ; toutes par
     # défaut). La scène se joue SOUS elles.
@@ -322,6 +326,11 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
                     "pres"):
             if cle in plan and (not isinstance(plan[cle], int) or plan[cle] < 0):
                 erreurs.append(f"plan {i} ({genre}) : {cle} doit être un entier positif")
+        if isinstance(plan.get("vers"), list):
+            if genre != "coupe":
+                erreurs.append(f"plan {i} ({genre}) : `vers` en liste, c'est pour la coupe seule")
+            elif not plan["vers"] or not all(isinstance(v, str) and v for v in plan["vers"]):
+                erreurs.append(f"plan {i} (coupe) : `vers` en liste doit nommer au moins un lieu, chacun en texte")
         if "lissage" in plan and not (isinstance(plan["lissage"], float) and 0 < plan["lissage"] <= 1):
             erreurs.append(f"plan {i} ({genre}) : lissage entre 0 et 1")
         if "courbe" in plan and plan["courbe"] not in COURBES:
@@ -499,7 +508,11 @@ FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez")
 
 
 def _lieux_du_plan(plan: dict) -> list[str]:
-    return [plan[cle] for cle in ("vers", "dans", "de") if isinstance(plan.get(cle), str)]
+    lieux: list[str] = []
+    for cle in ("vers", "dans", "de"):
+        valeur = plan.get(cle)
+        lieux += [v for v in (valeur if isinstance(valeur, list) else [valeur]) if isinstance(v, str)]
+    return lieux
 
 
 def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
@@ -548,8 +561,8 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
     # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
     # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
     if scenes.get("fin") and not fin_dite_en_personne(mission, scenes["fin"]):
-        va_chez_lui = any(p["type"] == "coupe" and p.get("vers") in {"chez:" + mission["donneur"], "donneur"}
-                          for p in scenes["fin"])
+        chez_lui = {"chez:" + mission["donneur"], "donneur"}
+        va_chez_lui = any(p["type"] == "coupe" and chez_lui & set(_lieux_du_plan(p)) for p in scenes["fin"])
         if not va_chez_lui:
             erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
     return erreurs

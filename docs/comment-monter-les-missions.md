@@ -278,7 +278,7 @@ avec les types existants, on ajoute **un type** — jamais un
 | `conduire` | un char entre / part | `acteur`, `vehicule`, `couleur`, `vers`/`part`, `depuis`, `duree`, `courbe`, `fumee`, `portiere`, `retirer` |
 | `geste` | un geste du sprite (montrer, donner, prendre, bras_croises, hausser, telephone) | `acteur`, `geste`, `duree`, `vers` |
 | `entrer` / `sortir` | un acteur passe une porte | `acteur`, `dans`/`de`, `vers` |
-| `coupe` | fondu vers un autre lieu puis retour | `vers`, `ferme`, `ouvre`, `tient` |
+| `coupe` | fondu vers un autre lieu — ou une **liste** de lieux, visités d'un seul aller-retour — puis retour | `vers` (un lieu ou une liste), `ferme`, `ouvre`, `tient` (par lieu) |
 | `dire` | réplique(s) de la partie, la scène se joue **sous** elles | `repliques` (comptées à partir de 1) |
 | `titre` | le carton (logo ou texte) | `texte`, `sous`, `logo`, `monte`, `tenu`, `descend` |
 | `son` | un bruitage, un morceau, une boucle | `sfx` / `musique` / `boucle` (un seul) |
@@ -299,6 +299,10 @@ attendre le précédent), `fond` (le plan ne retient pas la scène).
 - **Jamais en pleine action** : la scène de fin ne part ni à 3★ ni dans un char
   en marche ; l'argent et `donne` sont accordés tout de suite.
 - **Courte** : ≤ 3 secondes après le dernier mot.
+- **Une réplique ne se cale pas toute seule.** Une `dire` en `ensemble` joue sous le plan qui
+  retient la scène ; si ce plan finit avant la voix, la réplique suivante la COUPE. Mesurer la
+  voix (`ffprobe`), laisser de la marge (un `attendre`) : `m6` est l'exemple, et
+  `test_le_tour_du_proprietaire_laisse_finir_ses_repliques` en est le juge.
 
 **Les acteurs nommables** : `joueur`, `donneur`, `vehicule`, `cible`, `fuyard`,
 plus tout `slug` de `PERSONNAGES`. **Les formes de lieu** : un acteur,

@@ -260,3 +260,40 @@ def test_la_mission_est_posee_avant_son_intro(banc):
     assert avec["vus"]["pendant"]["msg"] not in (avec["texte"], avec["titre"]), "l'objectif s'affiche sous l'intro"
     assert avec["vus"]["msg"] == avec["texte"], "à la fin de l'intro, l'objectif s'annonce"
     assert avec["de"] == sans["de"] and avec["entites"] == sans["entites"], "poser avant l'intro a déplacé un dé"
+
+
+def test_une_coupe_visite_plusieurs_lieux_d_un_seul_aller_retour(banc):
+    """⚠️ `vers` en liste (le tour de m6 : quatre portes) : chaque lieu a son noir et tient
+    `tient` images, dans l'ordre, et le retour ne vient qu'à la fin. Trois lieux, `ferme` 6,
+    `ouvre` 6, `tient` 10 : trois tronçons de 22 images et le retour de 12, soit 78 — un lieu
+    seul, lui, fait toujours 2 × 12 + `tient`."""
+    r = banc("function (L, o) {" + ESSAI + """
+        const lieux = { un: { x: 300, y: 300 }, deux: { x: 900, y: 500 }, trois: { x: 1500, y: 700 } };
+        function jouer(vers) {
+          L.Jeu.retourTitre(); preparer(L);
+          const s = L.Scenes.jouer([{ type: 'coupe', vers: vers, ferme: 6, ouvre: 6, tient: 10 }], { lieux: lieux });
+          const vus = {}, noirs = [];
+          let n = 0;
+          while (L.B.scene && n < 500) {
+            L.Scenes.maj(); n++;
+            noirs.push(s.noir);
+            for (const k in lieux) {
+              if (s.noir < 0.05 && Math.hypot(s.vise.x - lieux[k].x, s.vise.y - lieux[k].y) < 1) {
+                vus[k] = vus[k] || { n: 0, premiere: n }; vus[k].n++;
+              }
+            }
+          }
+          const pleins = noirs.filter(function (q, i) { return q >= 0.99 && (i === 0 || noirs[i - 1] < 0.99); }).length;
+          return { n: n, vus: vus, pleins: pleins, sautes: s.sautes };
+        }
+        return { trois: jouer(['un', 'deux', 'trois']), seul: jouer('un'), perdu: jouer(['un', 'nulle-part']) };
+    }""")
+    trois = r["trois"]
+    assert trois["n"] == 78, f"trois lieux : {trois['n']} images au lieu de 78"
+    assert list(trois["vus"]) == ["un", "deux", "trois"], f"l'ordre des lieux : {list(trois['vus'])}"
+    assert all(v["n"] >= 10 for v in trois["vus"].values()), f"chaque lieu tient 10 images : {trois['vus']}"
+    assert trois["pleins"] == 4, f"un noir plein par lieu, et un pour le retour : {trois['pleins']}"
+    assert trois["sautes"] == 0
+    assert r["seul"]["n"] == 34, f"un lieu seul : {r['seul']['n']} images au lieu de 34, comme avant"
+    # Un lieu qui ne se trouve pas est sauté et COMPTÉ ; les autres se jouent.
+    assert r["perdu"]["sautes"] == 1 and list(r["perdu"]["vus"]) == ["un"], r["perdu"]

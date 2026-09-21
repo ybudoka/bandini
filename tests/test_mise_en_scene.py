@@ -112,8 +112,10 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
         defauts = [(partie, missions.scene_par_defaut(m, partie)) for partie in ("intro", "fin")]
         for partie, scene in ecrites + defauts:
             for plan in scene:
-                for nom in (plan.get(cle) for cle in ("vers", "dans", "de")):
-                    if not isinstance(nom, str) or ":" not in nom:
+                # ⚠️ `_lieux_du_plan` : une coupe en liste (`vers: [...]`, le tour de m6) nomme
+                # plusieurs lieux, et chacun est confronté à la ville.
+                for nom in missions._lieux_du_plan(plan):
+                    if ":" not in nom:
                         continue
                     forme, suite = nom.split(":", 1)
                     # `ruelle:garage:24` : la ruelle a vingt-quatre tuiles au moins.
@@ -126,6 +128,22 @@ def test_les_lieux_des_scenes_existent_dans_la_ville():
                         assert suite in zones, (m["slug"], partie, nom)
                     elif forme == "chez":
                         assert missions.personnage(suite)["ou"], (m["slug"], partie, nom)
+
+
+def test_une_coupe_en_liste_se_valide_lieu_par_lieu():
+    """`vers` en liste : réservé à la coupe, non vide, et chaque lieu est jugé comme s'il
+    était seul — `chez:` d'un personnage qui n'existe pas se voit."""
+    import copy
+    coupe = {"type": "coupe", "vers": ["chez:tipaul", "chez:lulu"], "ferme": 14, "ouvre": 14, "tient": 87}
+    assert missions.erreurs_de_scene([coupe]) == []
+    assert missions._lieux_du_plan(coupe) == ["chez:tipaul", "chez:lulu"]
+    assert any("pour la coupe seule" in e for e in missions.erreurs_de_scene([{"type": "camera", "vers": ["a", "b"]}]))
+    assert any("au moins un lieu" in e for e in missions.erreurs_de_scene([dict(coupe, vers=[])]))
+    assert any("au moins un lieu" in e for e in missions.erreurs_de_scene([dict(coupe, vers=["chez:tipaul", 7])]))
+    m6 = copy.deepcopy(missions.par_slug("m6"))
+    m6["scenes"]["intro"][2]["vers"] = ["chez:tipaul", "chez:personne"]
+    assert any("n'est chez personne" in e for e in missions.erreurs_de_mise_en_scene(m6)), \
+        "le second lieu d'une coupe en liste n'est pas jugé"
 
 
 def test_le_juge_refuse_une_mission_pas_finie():

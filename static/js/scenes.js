@@ -474,32 +474,46 @@ const Scenes = (function () {
 
     coupe: {
       demarrer: function (s, a, p) {
-        a.ailleurs = p.vers ? lieu(s, p.vers) : null;
-        if (p.vers && !a.ailleurs) return introuvable(s);
+        // ⚠️ `vers` : UN lieu, ou une LISTE qu'on visite d'un seul aller-retour (le tour
+        // de m6 : quatre portes, un seul retour dans la pièce). Un lieu qui ne se trouve
+        // pas est sauté — et compté, pour que le juge le voie.
+        const noms = p.vers ? [].concat(p.vers) : [];
+        a.etapes = noms.map(function (nom) { return lieu(s, nom); }).filter(Boolean);
+        // ⚠️ Tous dehors, ou tous ici : la ville figée prend la place de la pièce le temps
+        // de la coupe, et un lieu de la pièce y serait lu avec des coordonnées de ville.
+        const dehors = a.etapes.length > 0 && a.etapes[0].dehors;
+        a.etapes = a.etapes.filter(function (l) { return !!l.dehors === !!dehors; });
+        s.sautes += noms.length - a.etapes.length;
+        if (noms.length && !a.etapes.length) return false;
+        a.ailleurs = a.etapes[0] || null;
         // ⚠️ Un lieu de la VILLE vu d'une pièce : on y va et on en REVIENT toujours,
         // même sans `tient` — le joueur est resté dedans.
         a.retourne = (p.vers !== undefined && p.tient !== undefined) || !!(a.ailleurs && a.ailleurs.dehors);
         // Sans `ferme`, on part DU noir : c'est l'ouverture, qui sort de l'écran titre.
-        if (!p.ferme) { s.noir = 1; this.sauter(s, a); }
+        if (!p.ferme) { s.noir = 1; this.sauter(s, a, 0); }
         return true;
       },
-      /** Le noir est plein : la caméra saute là-bas — et sort dans la rue, s'il le faut. */
-      sauter: function (s, a) {
-        if (a.saute) return;
-        a.saute = true;
-        if (!a.ailleurs) return;
-        a.depuis = { x: s.vise.x, y: s.vise.y };
-        if (a.ailleurs.dehors && B.interieur && B.exterieur) {
-          // ⚠️ LA PIÈCE EST MISE DE CÔTÉ, AU NOIR, telle qu'elle est : sa carte, ses
-          // gens (le joueur est parmi eux), son nom. La ville figée prend sa place le
-          // temps du plan, et rien d'elle ne bouge — personne n'y marche.
-          a.dedans = { carte: Monde.carte, entites: B.entites, interieur: B.interieur };
-          Monde.restaurer(B.exterieur.carte);
-          B.entites = B.exterieur.entites;
-          B.interieur = null;
-          Entites.reindexerDecor();
+      /** Le noir est plein : la caméra saute au lieu `k` — et sort dans la rue, s'il le faut. */
+      sauter: function (s, a, k) {
+        if (a.saute !== undefined && a.saute >= k) return;
+        a.saute = k;
+        const l = a.etapes[k];
+        if (!l) return;
+        if (k === 0) {
+          a.depuis = { x: s.vise.x, y: s.vise.y };
+          if (l.dehors && B.interieur && B.exterieur) {
+            // ⚠️ LA PIÈCE EST MISE DE CÔTÉ, AU NOIR, telle qu'elle est : sa carte, ses
+            // gens (le joueur est parmi eux), son nom. La ville figée prend sa place le
+            // temps du plan, et rien d'elle ne bouge — personne n'y marche. Une seule fois,
+            // au premier lieu : les suivants sont déjà dans la ville.
+            a.dedans = { carte: Monde.carte, entites: B.entites, interieur: B.interieur };
+            Monde.restaurer(B.exterieur.carte);
+            B.entites = B.exterieur.entites;
+            B.interieur = null;
+            Entites.reindexerDecor();
+          }
         }
-        viser(s, a.ailleurs.x, a.ailleurs.y);
+        viser(s, l.x, l.y);
       },
       /** Le noir plein une seconde fois : la pièce revient, et la caméra avec. */
       revenir: function (s, a) {
@@ -514,18 +528,19 @@ const Scenes = (function () {
         }
         if (a.depuis) viser(s, a.depuis.x, a.depuis.y);
       },
+      /** La ligne du temps : un tronçon par lieu (`ferme` pour tomber au noir, `ouvre` pour
+          en sortir, `tient` là-bas), puis, si l'on revient, un dernier tronçon sans `tient`
+          — la pièce revient au noir plein. Un seul lieu : exactement l'aller-retour d'avant. */
       maj: function (s, a, p, t) {
-        const f = p.ferme || 0, o = p.ouvre || 0;
-        const A = f, Bo = A + o, C = Bo + (p.tient || 0), D = C + f, E = D + o;
-        if (t >= A) this.sauter(s, a);
-        if (a.retourne && t >= D && t > C) this.revenir(s, a);
-        s.noir = t < A ? t / A
-               : t < Bo ? 1 - (t - A) / o
-               : (!a.retourne || t <= C) ? 0
-               : t < D ? (t - C) / f
-               : t < E ? 1 - (t - D) / o
-               : 0;
-        return a.retourne ? t < E : t < Bo;
+        const f = p.ferme || 0, o = p.ouvre || 0, tronc = f + o + (p.tient || 0);
+        const n = Math.max(1, a.etapes.length), dernier = a.retourne ? n : n - 1;
+        const k = tronc > 0 ? Math.min(dernier, Math.floor(t / tronc)) : dernier;
+        const u = t - k * tronc, retour = a.retourne && k === n;
+        if (retour) { if (u >= f && u > 0) this.revenir(s, a); }
+        else if (u >= f) this.sauter(s, a, k);
+        // ⚠️ Au premier instant du retour, la pièce est encore là : le noir ne tombe qu'ensuite.
+        s.noir = u < f ? u / f : retour && u === 0 ? 0 : u < f + o ? 1 - (u - f) / o : 0;
+        return t < dernier * tronc + f + o;
       },
       // Passée au milieu : la pièce revient avant tout le reste.
       achever: function (s, p, a) {
