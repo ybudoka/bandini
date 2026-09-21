@@ -656,10 +656,14 @@ const Son = (function () {
         d'une borne : `volume` 0 = on se tait. Faute de fichier, un grondement
         sourd toutes les quinze images, qui se recouvre. */
     /** La corne du traversier, posee en (x, y) : l'echantillon s'il est charge, sinon
-        deux longs coups graves. Rend le volume (0 = trop loin). */
+        deux longs coups graves. Rend le volume (0 = trop loin).
+        ⚠️ SANS position, elle sonne ou l'on est : c'est l'avertisseur des grands
+        bateaux (`klaxon: 'corne'` de leur fiche), et `Vehicules.avertir` appelle
+        un avertisseur sans rien lui donner, comme le klaxon et la sonnette. */
     corne: function (x, y, portee) {
       const j = B.joueur;
       if (!j || !pret()) return 0;
+      if (x === undefined || y === undefined) { x = j.x; y = j.y; }
       const p = portee || 900;
       const v = 1 - Math.hypot(x - j.x, y - j.y) / p;
       if (v <= 0) return 0;

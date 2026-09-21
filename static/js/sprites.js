@@ -1782,6 +1782,137 @@ SPRITES.luxe.variantes = { luxe: 3, luxe_vus: 2 };
 SPRITES.bateau_console = assisDedans(MACHINE_BATEAU_CONSOLE, 30, 48, 'volant', SPRITES.bateau.pal);
 SPRITES.bateau.variantes = { bateau: 3, bateau_console: 2 };
 
+/* --- DEUX BATEAUX DE PLUS : le chalutier et le porte-conteneurs ------------------
+
+   ⚠️ **Demande de Martin (21 sept. 2026) : « nouveau bateau : chalutier +
+   porte-conteneurs ».** Des machines comme la chaloupe — le meme biais du sol, le
+   meme contour, les 32 caps —, mais pontees : on ne voit personne a la barre, on
+   est dans la timonerie.
+
+   ⚠️ **« De dos, un char montre sa longueur »** (le juge du 16 sept.) : au biais de
+   0,75, une coque basse de 160 px vue de dos n'occupe que 120 rangees de sol, et
+   ce qui la bloque en fait 160. Ce qui paie la difference, c'est la HAUTEUR aux
+   deux bouts : le mat avant a la proue, le chateau et sa cheminee a la poupe —
+   ce qu'un porte-conteneurs a, justement. Sans eux, il se dessinait plus court que
+   sa coque, et on touchait le quai avec de l'eau qu'on ne voyait pas.
+
+   ⚠️ Les feux : `l` en tete de mat, `t` a la poupe, tous deux en haut — c'est ce
+   qui les laisse voir ensemble a presque tous les caps (le juge en veut 24 sur 32),
+   et le blanc devant le rouge dit ou va le nez. */
+
+// Le chalutier : une coque haute a l'etrave relevee, la timonerie blanche, le mat,
+// le tambour du filet et le portique de poupe.
+const PLAN_CHALUTIER = [[-28, 7.4], [-18, 8.6], [4, 9.0], [14, 8.2], [21, 6.0], [26, 3.0], [28.6, 0.6]];
+const MACHINE_CHALUTIER = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [
+    // La coque : l'etrave, le fond, le tableau, et la tonture qui descend vers la poupe (le pont).
+    ['profil', [[28.4, 11.0], [27.0, 7.0], [24.0, 3.0], [19.0, 0.6], [-23.0, 0.6], [-26.6, 2.0], [-28.0, 4.5], [-28.0, 8.6]],
+     PLAN_CHALUTIER, 'c', 'DDDrDDDu', 0],
+    ['profil', [[24.0, 3.0], [19.0, 0.6], [-23.0, 0.6], [-26.6, 2.0], [-27.3, 3.0]], PLAN_CHALUTIER, 'r', 'rrrr.', 0.05],   // la flottaison
+    ['tube', [27.6, 0, 11.2], [21.0, 0, 10.8], 'M', 0.1],                                     // l'etai d'etrave, sur le pont
+    ['bloc', [21.6, 22.8], [-3.6, -2.4], [10.6, 11.8], 'M', 'M', 'M', 0.1],                  // les bittes
+    ['bloc', [21.6, 22.8], [2.4, 3.6], [10.6, 11.8], 'M', 'M', 'M', 0.1],
+    // La timonerie, blanche, en avant du milieu ; son toit deborde un peu.
+    ['bloc', [2.0, 13.0], [-5.6, 5.6], [9.8, 18.2], 'B', 'w', 'W', 0.1],
+    ['bloc', [1.4, 13.8], [-6.0, 6.0], [18.2, 18.9], 'B', 'M', 'M', 0.1],
+    ['bloc', [13.0, 13.08], [-4.6, 4.6], [14.0, 16.6], 'v', 'v', 'v', 0.12],                  // ses vitres devant
+    ['tube', [13.12, -4.8, 13.6], [13.12, 4.8, 13.6], 'D', 0.2], ['tube', [13.12, -4.8, 17.0], [13.12, 4.8, 17.0], 'D', 0.2],
+    ['bloc', [5.0, 11.4], [5.62, 5.7], [14.0, 16.6], 'v', 'v', 'v', 0.12],                    // et sur les flancs
+    ['bloc', [5.0, 11.4], [-5.7, -5.62], [14.0, 16.6], 'v', 'v', 'v', 0.12],
+    ['tube', [4.8, 5.74, 13.6], [11.6, 5.74, 13.6], 'D', 0.2], ['tube', [4.8, 5.74, 17.0], [11.6, 5.74, 17.0], 'D', 0.2],
+    ['tube', [4.8, -5.74, 13.6], [11.6, -5.74, 13.6], 'D', 0.2], ['tube', [4.8, -5.74, 17.0], [11.6, -5.74, 17.0], 'D', 0.2],
+    ['bloc', [1.92, 2.0], [-1.4, 1.4], [10.2, 16.0], 'E', 'E', 'E', 0.12],                    // la porte, derriere
+    // Le mat, sa vergue, le radar et le feu de tete de mat.
+    ['tube', [7.0, 0, 18.9], [7.0, 0, 33.5], 'M', 0.2],
+    ['tube', [7.0, -5.0, 30.0], [7.0, 5.0, 30.0], 'M', 0.2],
+    ['bloc', [4.6, 9.4], [-0.5, 0.5], [22.0, 22.8], 'k', 'k', 'k', 0.3],
+    ['bloc', [6.4, 7.6], [-0.6, 0.6], [33.5, 35.0], 'l', 'l', 'l', 0.3],
+    // Le tambour, son filet vert et ses flotteurs.
+    ['bloc', [-19.5, -14.5], [-5.0, 5.0], [8.6, 12.8], 'n', 'n', 'M', 0.1],
+    ['bloc', [-18.4, -17.2], [-3.4, -2.2], [12.8, 13.8], 'o', 'o', 'o', 0.12],
+    ['bloc', [-16.8, -15.6], [1.6, 2.8], [12.8, 13.8], 'o', 'o', 'o', 0.12],
+    // Le portique de poupe, orange, ses cables vers le tambour, et le feu de poupe.
+    ['bloc', [-26.6, -25.4], [-7.0, -5.8], [8.6, 25.0], 'o', 'o', 'o', 0.1],
+    ['bloc', [-26.6, -25.4], [5.8, 7.0], [8.6, 25.0], 'o', 'o', 'o', 0.1],
+    ['bloc', [-26.6, -25.4], [-7.0, 7.0], [24.0, 25.4], 'o', 'o', 'o', 0.1],
+    ['tube', [-26.0, -2.0, 24.0], [-18.0, -2.0, 12.8], 'k', 0.05], ['tube', [-26.0, 2.0, 24.0], [-18.0, 2.0, 12.8], 'k', 0.05],
+    ['bloc', [-26.6, -25.4], [-0.8, 0.8], [25.4, 26.8], 't', 't', 't', 0.3],
+  ],
+};
+
+// Le porte-conteneurs : la coque sombre, la flottaison rouge, huit travees de
+// conteneurs empiles, le chateau blanc et sa cheminee a la poupe, le mat avant.
+const PLAN_CARGO = [[-80, 16.5], [-70, 18.8], [40, 19.4], [56, 17.8], [68, 13.0], [76, 6.0], [80.8, 0.8]];
+// ⚠️ Les couleurs et les hauteurs des piles sont ECRITES, pas tirees : deux
+// porte-conteneurs du meme jour ont la meme cargaison, et aucun de ne part au jeu.
+const PILES_CARGO = [
+  ['abeg', 3, 4, 3, 2], ['fgab', 4, 4, 3, 3], ['ehfa', 2, 3, 4, 4], ['bage', 4, 3, 3, 2],
+  ['gfbh', 3, 4, 4, 3], ['aefb', 2, 2, 3, 3], ['hbag', 3, 3, 2, 2], ['efab', 2, 2, 2, 1],
+];
+const CONTENEURS = (function () {
+  const out = [], tier = 4.8, cotes = [[-17, -8.7], [-8.4, -0.15], [0.15, 8.4], [8.7, 17]];
+  const pont = function (u) { return 12.6 + (u + 80) * 2 / 160.8; };
+  PILES_CARGO.forEach(function (travee, i) {
+    const u0 = -52 + i * 13.75, u1 = u0 + 12.6, z0 = pont(u0) - 0.2;
+    // La derniere travee, sous l'epaule de la proue, est plus etroite.
+    const serre = i === PILES_CARGO.length - 1 ? 0.88 : 1;
+    cotes.forEach(function (c, k) {
+      const w0 = c[0] * serre, w1 = c[1] * serre, z1 = z0 + travee[k + 1] * tier, ch = travee[0][k];
+      out.push(['bloc', [u0, u1], [w0, w1], [z0, z1], ch, ch, ch, 0.02]);
+      // Les joints entre deux etages, sur les faces qui se voient.
+      for (let t = 1; t < travee[k + 1]; t++) {
+        const z = z0 + t * tier;
+        out.push(['tube', [u0 - 0.05, w0, z], [u0 - 0.05, w1, z], 'q', 0.04], ['tube', [u1 + 0.05, w0, z], [u1 + 0.05, w1, z], 'q', 0.04]);
+        if (k === 0) out.push(['tube', [u0, w0 - 0.05, z], [u1, w0 - 0.05, z], 'q', 0.04]);
+        if (k === 3) out.push(['tube', [u0, w1 + 0.05, z], [u1, w1 + 0.05, z], 'q', 0.04]);
+      }
+    });
+  });
+  return out;
+})();
+const MACHINE_PORTE_CONTENEURS = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    [
+      ['profil', [[80.8, 14.6], [79.6, 9.0], [77.0, 3.4], [72.0, 0.6], [-74.0, 0.6], [-78.2, 2.4], [-80.0, 6.0], [-80.0, 12.6]],
+       PLAN_CARGO, 'c', 'DDDrDDDu', 0],
+      ['profil', [[77.0, 3.4], [72.0, 0.6], [-74.0, 0.6], [-78.2, 2.4], [-78.8, 3.4]], PLAN_CARGO, 'r', 'rrrr.', 0.05],   // la flottaison
+      ['bloc', [58.0, 70.0], [-10.0, 10.0], [13.8, 16.4], 'u', 'c', 'D', 0.05],                 // le gaillard d'avant
+      ['bloc', [72.0, 74.0], [-4.0, -2.4], [14.2, 15.6], 'M', 'M', 'M', 0.1],                   // les guindeaux
+      ['bloc', [72.0, 74.0], [2.4, 4.0], [14.2, 15.6], 'M', 'M', 'M', 0.1],
+      // Le mat avant, sa vergue et son feu : c'est lui qui donne sa longueur de dos.
+      ['tube', [66.0, 0, 16.4], [66.0, 0, 50.6], 'M', 0.2],
+      ['tube', [66.0, -4.0, 45.0], [66.0, 4.0, 45.0], 'M', 0.2],
+      ['bloc', [65.4, 66.6], [-0.6, 0.6], [50.6, 52.2], 'l', 'l', 'l', 0.3],
+    ],
+    CONTENEURS,
+    [
+      // Le chateau, sa passerelle aux ailes pleine largeur, ses vitres et ses hublots.
+      ['bloc', [-74.0, -56.0], [-15.0, 15.0], [12.4, 38.0], 'B', 'w', 'W', 0.05],
+      ['bloc', [-62.0, -55.0], [-19.0, 19.0], [38.0, 42.0], 'B', 'w', 'W', 0.05],
+      ['bloc', [-55.0, -54.92], [-17.5, 17.5], [39.0, 41.0], 'v', 'v', 'v', 0.12],
+      ['tube', [-54.88, -17.8, 38.6], [-54.88, 17.8, 38.6], 'D', 0.2], ['tube', [-54.88, -17.8, 41.4], [-54.88, 17.8, 41.4], 'D', 0.2],
+      ['tube', [-55.94, -13.0, 18.0], [-55.94, 13.0, 18.0], 'E', 0.12], ['tube', [-55.94, -13.0, 23.0], [-55.94, 13.0, 23.0], 'E', 0.12],
+      ['tube', [-55.94, -13.0, 28.0], [-55.94, 13.0, 28.0], 'E', 0.12], ['tube', [-55.94, -13.0, 33.0], [-55.94, 13.0, 33.0], 'E', 0.12],
+      // Les canots de sauvetage, orange, de chaque bord.
+      ['bloc', [-72.0, -63.0], [15.2, 18.2], [26.0, 29.4], 'y', 'y', 'y', 0.1],
+      ['bloc', [-72.0, -63.0], [-18.2, -15.2], [26.0, 29.4], 'y', 'y', 'y', 0.1],
+      // La cheminee, sa bande rouge, et le feu de poupe sur son bord arriere.
+      ['bloc', [-73.0, -65.0], [-5.0, 5.0], [38.0, 54.0], 'n', 'n', 'n', 0.05],
+      ['bloc', [-73.1, -64.9], [-5.1, 5.1], [49.0, 51.5], 's', 's', 's', 0.06],
+      ['bloc', [-73.8, -72.6], [-0.8, 0.8], [53.0, 55.0], 't', 't', 't', 0.3],
+    ],
+  ),
+};
+
+SPRITES.chalutier = enVolume(MACHINE_CHALUTIER, 56, 104, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#5a2a22', l: '#fff3b0', t: '#ff4b3e', u: '#8a6a44', w: '#ecf0f1', W: '#b9c0c7', n: '#3f6b4a', o: '#e67e22' });
+SPRITES.porte_conteneurs = enVolume(MACHINE_PORTE_CONTENEURS, 160, 232, {
+  k: '#101018', c: '#1f3a5f', v: '#7fb3d8', r: '#8e2b20', l: '#fff3b0', t: '#ff4b3e', u: '#6b7078', w: '#ecf0f1', W: '#b9c0c7',
+  n: '#26262e', s: '#c0392b', y: '#f39c12', q: '#2b2b30',
+  a: '#b03a2e', b: '#2e6da4', e: '#d68910', f: '#1e8449', g: '#95a5a6', h: '#d5d8dc',
+});
+
 /* --- LA FOIRE QUI ROULE, EN VOLUME ------------------------------------------------
 
    ⚠️ **Demande de Martin : « je veux aussi que le petit train soit dans le même

@@ -224,7 +224,11 @@ def test_le_bateau_est_le_seul_a_flotter():
     """⚠️ Un char dans l'eau coule, et le bateau non — et c'est sa FICHE qui le
     dit (`eau`, deja la pour sa friction et son adherence), pas une classe
     ecrite dans le JavaScript. Une deuxieme verite a tenir a jour, c'est une
-    deuxieme verite qui finit par mentir."""
+    deuxieme verite qui finit par mentir.
+
+    ⚠️ LES bateaux depuis le 21 sept. 2026 : la chaloupe, le chalutier et le
+    porte-conteneurs — et ce sont les seuls de leur classe."""
     from app import vehicules
     flottent = [v["slug"] for v in vehicules.CATALOGUE if v["eau"]]
-    assert flottent == ["bateau"], flottent
+    assert flottent == ["bateau", "chalutier", "porte_conteneurs"], flottent
+    assert flottent == [v["slug"] for v in vehicules.CATALOGUE if v["classe"] == "bateau"]

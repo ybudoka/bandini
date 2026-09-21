@@ -26,7 +26,7 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
         "camion", "autobus", "ambulance", "remorqueuse",
-        "sport", "luxe", "cabriolet", "bateau"}
+        "sport", "luxe", "cabriolet", "bateau", "chalutier", "porte_conteneurs"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
@@ -362,12 +362,18 @@ def test_une_moto_et_un_velo_n_ont_pas_de_portiere():
 
 def test_le_velo_a_une_sonnette_et_les_autres_un_klaxon():
     """L'avertisseur vient de la fiche : la sonnette du velo, le klaxon de tous
-    les autres — et c'est toujours un effet que `son.js` sait jouer."""
+    les autres — et c'est toujours un effet que `son.js` sait jouer.
+
+    ⚠️ Sauf les grands bateaux (21 sept. 2026) : le chalutier et le
+    porte-conteneurs ont la CORNE du traversier. La chaloupe, elle, garde son
+    klaxon — un hors-bord n'a pas de corne de brume."""
     for v in vehicules.CATALOGUE:
         assert v["klaxon"] in vehicules.AVERTISSEURS, v["slug"]
     par_slug = {v["slug"]: v for v in vehicules.CATALOGUE}
     assert par_slug["velo"]["klaxon"] == "sonnette"
-    assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] != "velo")
+    cornes = {"chalutier", "porte_conteneurs"}
+    assert {v["slug"] for v in vehicules.CATALOGUE if v["klaxon"] == "corne"} == cornes
+    assert all(v["klaxon"] == "klaxon" for v in vehicules.CATALOGUE if v["slug"] not in cornes | {"velo"})
 
 
 def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
@@ -376,8 +382,13 @@ def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
     saute par-dessus la seule bande libre d'une ruelle ; et la portee doit
     couvrir au moins le char le plus long, sinon un autobus retombe d'un saut
     au milieu d'un toit y reste. Mais pas plus de huit tuiles : au-dela, ce
-    n'est plus un degagement, c'est une teleportation."""
+    n'est plus un degagement, c'est une teleportation.
+
+    ⚠️ **Ce qui roule en ville** (21 sept. 2026) : le porte-conteneurs fait dix
+    tuiles, et `Vehicules.degager` cherche au moins a la longueur du char — une
+    coque se degage a sa propre echelle. Les huit tuiles restent le plafond de
+    tout ce qui saute sur un toit."""
     ph = vehicules.PHYSIQUE
-    plus_long = max(v["longueur"] for v in vehicules.de_phase(1))
+    plus_long = max(v["longueur"] for v in vehicules.de_phase(1) if not v["eau"])
     assert 0 < ph["degagement_pas_px"] <= ph["sous_pas_px"]
     assert plus_long <= ph["degagement_px"] <= 8 * 16

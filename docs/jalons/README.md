@@ -200,3 +200,4 @@ Deux documents d'avant la table :
 | Les commandes à l'écran : l'aide du début, et le vrai bouton sous le pouce | ✅ **livré** | 21 sept. 2026 | **P2** | ajout | [notes](les-commandes-a-l-ecran.md#notes) |
 | Le trafic ne rate plus ses virages dans les coins en L | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [fiche](le-trafic-ne-rate-plus-ses-virages-dans-les-coins-en-l.md#fiche) · [notes](le-trafic-ne-rate-plus-ses-virages-dans-les-coins-en-l.md#notes) |
 | Des garages où l'on entre — deuxième vague : les bungalows des Érables | ✅ **livré** | 21 sept. 2026 | **P2** | ajout | [fiche](des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche-de-la-deuxième-vague) · [notes](des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#notes) |
+| Deux bateaux de plus : le chalutier et le porte-conteneurs | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](deux-bateaux-de-plus-le-chalutier-et-le-porte-conteneurs.md#notes) |

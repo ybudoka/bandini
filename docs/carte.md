@@ -126,7 +126,9 @@ un paiement.
 | `sport` | Coupé sport | auto | 2 | Rare. |
 | `luxe` | Berline de luxe | auto | 4 | Rare. |
 | `cabriolet` | Cabriolet rose | auto | 2 | Rare (Faubourg, La Pointe). Le plus rapide des chars à quatre roues, sous la moto ; menée à la vue de tous par la conductrice (`au_volant`), qui descend si on la vole. Ne se gare jamais. |
-| `bateau` | Chaloupe | bateau | 4 | Phase 2 (hors trafic). |
+| `bateau` | Chaloupe | bateau | 4 | Hors trafic : amarrée contre une rive bâtie (`carte.amarrages`). Deux silhouettes, la barre et la console. |
+| `chalutier` | Chalutier | bateau | 3 | Hors trafic : deux à quai autour du cargo (`navires.py`). Plus lent et plus lourd que la chaloupe ; la corne. |
+| `porte_conteneurs` | Porte-conteneurs | bateau | 2 | Hors trafic : un seul, au quai du cargo (`navires.py`). Dix tuiles, le plus lent et le plus lourd du parc ; la corne. |
 
 ---
 

@@ -352,7 +352,7 @@ const Vehicules = (function () {
       const v = B.entites[i];
       if (v.type !== 'vehicule') continue;
       const loin = dist2(v.x, v.y, j.x, j.y) > t.oubli_px * t.oubli_px;
-      if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, 60)) { Entites.retirer(v); continue; }
+      if (loin && v.conducteur !== j && !v.mission && !v.remorqueePar && !v.remorque && !Entites.visibleAEcran(v.x, v.y, margeDOubli(v))) { Entites.retirer(v); continue; }
       if (v.etat === 'epave') continue;
       // ⚠️ **UNE PANNE N'EST PAS UN CHAR GARE** : la compter dans les places
       // de stationnement prenait une place au parc normal, donc la ville
@@ -421,7 +421,9 @@ const Vehicules = (function () {
     const def = Monde.carte && Monde.carte.def;
     const places = (def && def.amarrages) || [];
     const j = B.joueur;
-    if (!places.length || !j || B.interieur) return 0;
+    // ⚠️ Les grands bateaux ne dependent pas des chaloupes : une ville sans
+    // amarrage aurait quand meme son cargo.
+    if (!places.length || !j || B.interieur) return majMouillages();
     let nees = 0;
     for (const place of places) {
       const x = place.x * TT + 8, y = place.y * TT + 8;
@@ -447,8 +449,47 @@ const Vehicules = (function () {
       const v = creer('bateau', x, y, place.angle || 0, { etat: 'stationne', couleur: couleur });
       if (v) { v.amarrage = place; nees++; }
     }
+    return nees + majMouillages();
+  }
+
+  /** LES GRANDS BATEAUX A QUAI : le chalutier et le porte-conteneurs (demande de
+      Martin, 21 sept. 2026). La meme regle que les chaloupes — hors champ, dans la
+      bulle, une seule a la fois, la couleur a l'empreinte du mouillage —, mais la
+      place est un CENTRE en pixels et un cap (`carte.mouillages`, `navires.py`) :
+      une coque de dix tuiles ne se centre pas sur une tuile, et elle mouille le
+      long du quai, le nez vers le chenal.
+
+      ⚠️ **Hors champ par son BOUT, pas par son centre** : a 160 px, un centre
+      juste hors de l'ecran laisse la proue dedans. La marge est la demi-longueur.
+      ⚠️ Et EN DECA de l'oubli (`oubli_px`) : au-dela, `peupler` l'oublierait a
+      l'image suivante et on la referait — un porte-conteneurs qui nait et meurt
+      soixante fois par seconde, hors champ. */
+  function majMouillages() {
+    const def = Monde.carte && Monde.carte.def;
+    const places = (def && def.mouillages) || [];
+    const j = B.joueur;
+    if (!places.length || !j || B.interieur) return 0;
+    const portee = trafic().oubli_px - GAREES_MARGE;
+    let nees = 0;
+    for (const place of places) {
+      const fiche = vehiculeDef(place.slug);
+      if (!fiche) continue;
+      const d2 = (place.x - j.x) * (place.x - j.x) + (place.y - j.y) * (place.y - j.y);
+      if (d2 > portee * portee) continue;
+      if (B.entites.some(function (q) { return q.type === 'vehicule' && q.amarrage === place; })) continue;
+      if (Entites.visibleAEcran(place.x, place.y, fiche.longueur / 2 + 24)) continue;
+      const couleur = fiche.couleurs[hash2(place.x * 7919 + place.y, 0xC0C0E) % fiche.couleurs.length];
+      const v = creer(place.slug, place.x, place.y, place.angle || 0, { etat: 'stationne', couleur: couleur });
+      if (v) { v.amarrage = place; nees++; }
+    }
     return nees;
   }
+
+  /** La marge d'oubli d'un char : ⚠️ par son BOUT. Un char de moins de 72 px garde
+      les 60 px de tout le monde (les des du trafic ne bougent pas d'un cran) ; un
+      porte-conteneurs, sa demi-longueur et de l'air — sinon il disparaissait la
+      proue encore a l'ecran. */
+  function margeDOubli(v) { return Math.max(60, v.def.longueur / 2 + 24); }
 
   //: La bulle des chars gares au poste. ⚠️ EN DECA de l'oubli (`oubli_px`) : au-dela,
   //: `peupler` oublierait a l'image suivante celle qu'on vient de poser, et on la
@@ -745,6 +786,11 @@ const Vehicules = (function () {
       trouve rien, on n'y revient pas avant une demi-seconde : la recherche
       est chere, et le mur ne bougera pas d'ici la.
 
+      ⚠️ **La portee est au moins la longueur du char** : un porte-conteneurs de
+      dix tuiles, le nez dans une jetee, ne se degage pas a six tuiles. Pour tout ce
+      qui roule en ville, `degagement_px` couvre deja le plus long (le juge) et rien
+      ne change.
+
       ⚠️ Pas pour le trafic sur ses rails : il ne lit pas les tuiles, il suit
       sa voie, et il a son propre chien de garde (`debloquer`). Rend vrai si
       le char a bouge. */
@@ -767,8 +813,8 @@ const Vehicules = (function () {
     if (v.angleLibre !== undefined && Math.abs(ecartAngle(v.angle, v.angleLibre)) > 0.01) caps.push(v.angleLibre);
     const droit = Math.round(v.angle / (Math.PI / 2)) * (Math.PI / 2);
     if (caps.every(function (a) { return Math.abs(ecartAngle(a, droit)) > 0.01; })) caps.push(droit);
-    const pas = ph.degagement_pas_px;
-    for (let r = 0; r <= ph.degagement_px; r += pas) {
+    const pas = ph.degagement_pas_px, portee = Math.max(ph.degagement_px, v.def.longueur);
+    for (let r = 0; r <= portee; r += pas) {
       const n = r === 0 ? 1 : Math.min(32, Math.max(8, Math.round(2 * Math.PI * r / pas)));
       for (const a of caps) {
         for (let i = 0; i < n; i++) {
@@ -3102,7 +3148,7 @@ const Vehicules = (function () {
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

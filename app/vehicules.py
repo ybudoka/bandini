@@ -96,7 +96,9 @@ CLASSES_A_PORTIERES = ("auto", "camion")
 #: dit, pas un `slug === 'velo'` dans `vehicules.js`. Les velos du trafic
 #: sonnaient deja en passant ; c'est le meme son, desormais aussi sous le
 #: pouce.
-AVERTISSEURS = ("klaxon", "sonnette")
+#: ⚠️ Et la CORNE des grands bateaux (le chalutier, le porte-conteneurs) : la
+#: meme que celle du traversier, jouee la ou l'on est quand on la tient.
+AVERTISSEURS = ("klaxon", "sonnette", "corne")
 
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq, couleurs,
@@ -220,6 +222,33 @@ CATALOGUE: list[Vehicule] = [
     # trouve amarree au quai (`carte.amarrages`), et nulle part ailleurs.
     _v("bateau", "Chaloupe", "bateau", 30, 12, 3.2, 0.02, 40, 120, 4, 2000, 0.0,
        ["#ecf0f1", "#2c3e50"], "bateau", eau=True, cercles=3, phase=1),
+    # --- Deux bateaux de plus (demande de Martin, 21 sept. 2026) -----------
+    # ⚠️ « nouveau bateau : chalutier + porte-conteneurs ». La meme regle que la
+    # chaloupe, et rien d'autre : `eau`, hors du trafic, et la coque arretee par
+    # tout ce qui n'est pas de l'eau. Ils mouillent a quai (`navires.py`), pas aux
+    # amarrages : une chaloupe se glisse contre n'importe quelle rive batie, un
+    # chalutier demande trois tuiles de quai, un porte-conteneurs dix.
+    #
+    # ⚠️ **LA CORNE, PAS LE KLAXON** : c'est la fiche qui le dit (`klaxon`), et
+    # c'est l'echantillon du traversier. Une chaloupe hors-bord garde son klaxon
+    # — personne ne met une corne de brume sur un 9,9 forces.
+    #
+    # ⚠️ **Le prix reste sous celui du luxe** (le juge : « la meilleure revente du
+    # jeu »). Ce n'est pas ce que vaut un navire : c'est ce que Ti-Guy en donnerait,
+    # et un porte-conteneurs ne passe pas la porte de son garage.
+    #
+    # Le chalutier : trois tuiles et demie, plus lent et plus lourd que la
+    # chaloupe, et il encaisse — c'est un outil de travail.
+    _v("chalutier", "Chalutier", "bateau", 56, 18, 2.6, 0.012, 56, 300, 3, 3000, 0.0,
+       ["#c0392b", "#1f4e79", "#2e7d4f", "#e8e2d0"], "chalutier", eau=True, masse=3.0,
+       cercles=4, klaxon="corne"),
+    # Le porte-conteneurs : dix tuiles, deux de plus que le traversier. Il met cinq
+    # secondes a prendre son erre, il vire le plus large que le juge permette (six
+    # tuiles), il glisse (`adherence` de l'eau) et il pousse tout ce qui flotte
+    # (`masse`). Cinq cercles : il en faut `longueur / largeur`, soit quatre.
+    _v("porte_conteneurs", "Porte-conteneurs", "bateau", 160, 40, 1.9, 0.005, 96, 1500, 2, 5000, 0.0,
+       ["#1f3a5f", "#7a1f1f", "#2b2b30", "#1d5c4a"], "porte_conteneurs", eau=True, masse=12.0,
+       cercles=5, klaxon="corne"),
 ]
 
 CLASSES = ("auto", "moto", "velo", "camion", "bateau")

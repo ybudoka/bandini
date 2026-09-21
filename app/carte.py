@@ -7004,6 +7004,12 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.
     from . import devants as devants_mod
     devants_mod.deplacer(chantier, ville)
+    # ⚠️ LES GRANDS BATEAUX, APRES TOUT (demande de Martin, 21 sept. 2026) : le
+    # chalutier et le porte-conteneurs mouillent a quai, loin des chaloupes, des
+    # ponts et de la route du traversier — qu'ils lisent, donc qu'ils suivent. Ils
+    # ne posent rien et ne tirent aucun de : la ville est la meme sans eux.
+    from . import navires as navires_mod
+    ville["mouillages"] = navires_mod.amarrer(chantier, ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------
