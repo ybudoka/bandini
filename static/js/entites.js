@@ -4506,7 +4506,23 @@ const Entites = (function () {
         B.stats.images++;
         continue;
       }
-      if (e.type === 'vehicule') { Vehicules.dessinerUn(ctx, e, cx, cy); continue; }
+      if (e.type === 'vehicule') {
+        // ⚠️ UN CHAR QUI PASSE LE SEUIL D'UN GARAGE disparait sous le linteau, puis
+        // derriere les lames qui descendent : on le peint, moins ce qui est au-dessus
+        // du bas du rideau dans le passage (le reste de l'ecran, tout entier).
+        const rideau = Monde.rideauPres(e);
+        if (rideau) {
+          const haut = (rideau.y - rideau.baie) * TT - cy, bas = Monde.basDuRideau(rideau) - cy;
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(0, 0, VW, VH);
+          ctx.rect(rideau.x * TT - cx, haut, rideau.l * TT, Math.max(0, bas - haut));
+          ctx.clip('evenodd');
+          Vehicules.dessinerUn(ctx, e, cx, cy);
+          ctx.restore();
+        } else Vehicules.dessinerUn(ctx, e, cx, cy);
+        continue;
+      }
       if (e.type === 'ramassage' && e.objet === 'caisse') {
         const d = DECORS.caisse;
         const c = Atlas.cuirePeintre('decor|caisse', d.w, d.h, d.peindre);

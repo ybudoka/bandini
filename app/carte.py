@@ -2398,6 +2398,12 @@ class _Chantier:
             if porte:
                 vides |= {(porte["x"] + i, py + j) for i in range(porte["l"]) for j in (1, 2)}
                 rangees.update(range(py, min(self.hauteur, py + 12)))
+        # ⚠️ LES CARROSSERIES APRES LE RIDEAU DE TI-GUY : `portes_garage[0]` reste le sien
+        # (des juges le lisent la), et elles evitent sa facade.
+        for porte in self.poser_les_carrosseries(ville):
+            py = porte["y"]
+            vides |= {(porte["x"] + i, y) for i in range(porte["l"]) for y in porte["abord"]}
+            rangees.update(range(py, min(self.hauteur, py + 12)))
         partis = [d for d in ville["decor"] if (d["x"], d["y"]) in vides]
         ville["decor"][:] = [d for d in ville["decor"] if (d["x"], d["y"]) not in vides]
         eteintes = {(d["x"], d["y"]) for d in partis if d["type"] == "lampadaire"}
@@ -2405,11 +2411,20 @@ class _Chantier:
         for y in sorted(rangees):
             ville["sol"][y] = "".join(self.sol[y])
         ville["stationnement_du_poste"] = self.stationnement_du_poste
+        for porte in self.portes_garage:
+            porte.pop("abord", None)
         ville["portes_garage"] = self.portes_garage
 
     #: La largeur d'une porte de garage, en tuiles : un char fait une tuile de
     #: large (16 px), et il lui faut de quoi entrer sans racler les montants.
     PORTE_DE_GARAGE_L = 2
+
+    #: Combien de rangees de TOIT la baie prend derriere le rideau (des garages ou
+    #: l'on entre, 21 sept. 2026) : le char passe sous le linteau, nez au mur du fond,
+    #: et le rideau retombe derriere son pare-chocs. ⚠️ Deux, et c'est une mesure :
+    #: l'autobus, le plus long du parc, fait 48 px — la rangee du rideau et deux de
+    #: toit. Elle voyage avec chaque porte (`baie`) : le navigateur ne la devine pas.
+    BAIE_SOUS_LE_TOIT = 2
 
     def poser_porte_de_garage(self, facades: list[tuple[int, int]], px: int, py: int,
                               special: dict) -> dict | None:
@@ -2421,8 +2436,9 @@ class _Chantier:
         des qu'on est devant en voiture. » Le garage n'avait qu'une tuile de
         rideau peinte, deux cases a gauche de la porte — un dessin, pas un
         endroit ou aller. La porte se leve dans le navigateur
-        (`Monde.majPortesDeGarage`), et c'est garer DEVANT qui ouvre le menu du
-        garage (`Missions.majGarage`).
+        (`Monde.majPortesDeGarage`), et c'est garer DEVANT — ou entrer dessous, depuis
+        les garages ou l'on entre (21 sept. 2026) — qui ouvre le menu du garage
+        (`Missions.majGarage`).
 
         ⚠️ Une tuile de mur ENTRE les deux portes quand la facade le permet : un
         rideau colle a la porte des pietons, et le char gare devant bouche
@@ -2442,6 +2458,11 @@ class _Chantier:
         for t in sorted(rangee):
             if self.sol[py][t] == "G" and t not in tuiles:
                 self._repeindre_la_facade(t, py, "F")
+        return self._poser_le_rideau(tuiles, py, special["slug"])
+
+    def _poser_le_rideau(self, tuiles: list[int], py: int, lieu: str) -> dict:
+        """Le rideau sur ces tuiles de facade : le mur devient `G`, son devant se degage
+        et se pave jusqu'a la rue, et la pancarte qui pendait devant s'en va au bout."""
         for t in tuiles:
             self._repeindre_la_facade(t, py, "G")
             self.degager_le_devant(t, py)
@@ -2456,9 +2477,150 @@ class _Chantier:
             if bouts[d["pancarte"]] in tuiles:
                 autre = -d["pancarte"]
                 d["pancarte"] = autre if bouts[autre] not in tuiles and self.marchable_en(bouts[autre], py + 1) else 0
-        porte = {"x": gx, "y": py, "l": large, "lieu": special["slug"]}
+        porte = {"x": tuiles[0], "y": py, "l": len(tuiles), "lieu": lieu, "baie": self.BAIE_SOUS_LE_TOIT}
         self.portes_garage.append(porte)
         return porte
+
+    def poser_les_carrosseries(self, ville: dict) -> list[dict]:
+        """UNE CARROSSERIE PAR DISTRICT : un commerce sans porte devient un atelier ou
+        l'on RENTRE son char (des garages ou l'on entre, 21 sept. 2026).
+
+        Demande de Martin : « il faut des portes de garage qu'on peut vraiment entrer.
+        pour permettre de semer la police en voiture », puis « repeindre des voitures ».
+        Le rideau se pose sur deux tuiles de la vitrine, l'enseigne change de nom
+        (`devantures.CARROSSERIES`), et un point de la famille des services dit ou elle
+        est. Le reste — le rideau qui monte, le char qui passe sous le toit, le pistolet —
+        se joue dans le navigateur (`Missions.majGarage`).
+
+        ⚠️ SUR LA VILLE FINIE ET SANS UN DE, comme le rideau de Ti-Guy : rien ne tire sa
+        place apres, et aucun batiment ne bouge. Le choix est une mesure — la facade qui
+        convient la plus proche du coeur du district —, jamais un tirage.
+
+        ⚠️ Ce qu'une facade doit offrir, et chaque ligne a sa raison :
+        - deux tuiles de vitrine ou de mur (jamais la porte peinte, jamais des planches) ;
+        - DERRIERE, `BAIE_SOUS_LE_TOIT` rangees de toit du MEME batiment : c'est la ou le
+          char se cache, et une cour ou le toit du voisin n'en est pas une ;
+        - DEVANT, du roulable jusqu'a la rue, sans meuble qu'on ne deplace pas (un
+          abribus, un edicule, un lampadaire) — le mobile, lui, s'en va comme devant le
+          rideau de Ti-Guy ;
+        - ni sur un chantier (on demolit ce batiment-la un jour), ni a deux pas d'une facade
+          qui peut bruler (les incendies ne touchent pas un lieu garanti), ni a moins de
+          `CARROSSERIE_ECART` tuiles de la porte d'un lieu garanti ;
+        - pas dans un bloc cossu : une carrosserie entre la galerie d'art et le salon de
+          the, ce n'est pas une rue qu'on reconnait.
+        """
+        from . import chantiers as chantiers_mod
+        from . import devants as devants_mod
+
+        index: dict[tuple[int, int], int] = {}
+        for i, batiment in enumerate(self.batiments):
+            for tx, ty in batiment["tuiles"]:
+                index[(tx, ty)] = i
+        interdites: set[tuple[int, int]] = set()
+        for ch in ville.get("chantiers") or []:
+            siennes = set(chantiers_mod.tuiles(ch))
+            interdites |= siennes | {(x, y + j) for x, y in siennes for j in (1, 2)}
+        feux = {(f["x"], f["y"]) for f in (ville.get("incendies") or {}).get("facades") or []}
+        garantis = {s["slug"] for s in SPECIAUX.values()}
+        portes_gardees = [(p["x"], p["y"]) for p in ville["portes"] if p.get("lieu") in garantis]
+        portes_gardees += [(p["x"], p["y"]) for p in self.portes_garage]
+        poses_mobiles = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in devants_mod.DECOR_MOBILE}
+        occupees = {(d["x"], d["y"]) for d in ville["decor"]} - poses_mobiles
+        for cle in ("paquets", "ambulants", "scenes", "reclames"):
+            occupees |= {(q["x"], q["y"]) for q in ville.get(cle) or []}
+
+        def abord(t: int, py: int) -> list[int] | None:
+            """Les rangees roulables entre le rideau et la rue, ou None."""
+            rangees = []
+            for j in range(1, self.CARROSSERIE_ABORD + 1):
+                y = py + j
+                if y >= self.hauteur or (t, y) in interdites:
+                    return None
+                fiche = LEGENDE[self.sol[y][t]]
+                if fiche.get("route") and not fiche.get("stationnement") and j > 1:
+                    return rangees
+                if fiche.get("solide", 0) != 0 or (t, y) in occupees:
+                    return None
+                rangees.append(y)
+            return None
+
+        def place(d: dict) -> tuple[int, list[int]] | None:
+            py = d["y"]
+            for i in range(d["l"] - 1):
+                tuiles = [d["x"] + i, d["x"] + i + 1]
+                if any(d["motifs"][k] not in "WF" for k in (i, i + 1)):
+                    continue
+                if any(self.sol[py][t] not in "WF" for t in tuiles):
+                    continue
+                qui = index.get((tuiles[0], py))
+                if qui is None or any(index.get((t, py - k)) != qui or not LEGENDE[self.sol[py - k][t]].get("toit")
+                                      for t in tuiles for k in range(1, self.BAIE_SOUS_LE_TOIT + 1)):
+                    continue
+                if index.get((tuiles[1], py)) != qui:
+                    continue
+                if any(max(abs(fx - t), abs(fy - py)) <= 2 for fx, fy in feux for t in tuiles):
+                    continue
+                if any(max(abs(gx - t), abs(gy - py)) < self.CARROSSERIE_ECART for gx, gy in portes_gardees
+                       for t in tuiles):
+                    continue
+                bords = [abord(t, py) for t in tuiles]
+                if any(b is None for b in bords):
+                    continue
+                return tuiles, sorted(set(bords[0]) | set(bords[1]))
+            return None
+
+        posees: list[dict] = []
+        for district in DISTRICTS:
+            fiche = devantures_mod.CARROSSERIES.get(district["slug"])
+            if district.get("eau") or not fiche:
+                continue
+            enseigne, nom = fiche
+            x0, y0, dl, dh = self.rect_district(district)
+            cx, cy = x0 + dl / 2, y0 + dh / 2
+            meilleure = None
+            for d in self.devantures:
+                if d["porte"] or d["texte"] == devantures_mod.A_LOUER:
+                    continue
+                if self.district_en(d["x"], d["y"]) != district["slug"] or self.standing_en(d["x"], d["y"]) == "cossu":
+                    continue
+                if not devantures_mod.tient_en(enseigne, d["l"], TUILE_PX):
+                    continue
+                trouvee = place(d)
+                if not trouvee:
+                    continue
+                tuiles, _ = trouvee
+                cle = (d["texte"] != enseigne, abs(tuiles[0] + 1 - cx) + abs(d["y"] - cy), d["y"], d["x"])
+                if meilleure is None or cle < meilleure[0]:
+                    meilleure = (cle, d, trouvee)
+            if not meilleure:
+                continue
+            _, d, (tuiles, rangees) = meilleure
+            d["texte"] = enseigne
+            d["genre"] = devantures_mod.genre_index("industrie")
+            lieu = f"carrosserie_{district['slug']}"
+            porte = self._poser_le_rideau(tuiles, d["y"], lieu)
+            porte["genre"] = "carrosserie"
+            # ⚠️ LE RIDEAU EST LA PORTE : la porte PEINTE du bandeau redevient le mur qu'elle
+            # couvrait. Une porte peinte ne double jamais une vraie (`test_devantures`) —
+            # elle n'etait la que parce que le commerce n'en avait aucune.
+            for i, motif in enumerate(d["motifs"]):
+                if motif == "P":
+                    x = d["x"] + i
+                    d["motifs"] = d["motifs"][:i] + self.sol[d["y"]][x] + d["motifs"][i + 1:]
+                    self.portes_peintes.discard((x, d["y"]))
+            porte["abord"] = rangees
+            portes_gardees.append((porte["x"], porte["y"]))
+            self.points.append({"type": "carrosserie", "slug": lieu, "nom": nom,
+                                "x": tuiles[0], "y": d["y"] + 1, "famille": "service"})
+            posees.append(porte)
+        return posees
+
+    #: Jusqu'ou l'abord d'une carrosserie peut descendre avant la rue, en tuiles : le
+    #: pas de porte, la couronne du bloc, le trottoir — la rue tombe a la cinquieme.
+    CARROSSERIE_ABORD = 5
+    #: A combien de tuiles de la porte d'un lieu garanti (et d'un autre rideau) une
+    #: carrosserie ne s'ouvre pas : Ti-Guy n'a pas de concurrent sur son trottoir.
+    CARROSSERIE_ECART = 8
 
     # --- Les devantures ------------------------------------------------------
 

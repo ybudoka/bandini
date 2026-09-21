@@ -604,6 +604,8 @@ const Vehicules = (function () {
       demande un bit « terre » sur chaque tuile du jeu pour un seul vehicule. */
   function tuileInterdite(v, tx, ty) {
     if (v.def && v.def.eau) return !Monde.estEau(tx, ty);
+    // ⚠️ Le passage d'un rideau leve, pour le seul char qu'il attend (`Monde.seuilOuvert`).
+    if (Monde.seuilOuvert(v, tx, ty)) return false;
     return Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE);
   }
 
@@ -1450,9 +1452,15 @@ const Vehicules = (function () {
     const v = j.dansVehicule;
     if (!v) return false;
     if (!force && Math.abs(v.vitesse) > 1.2) { v.vitesse *= 0.8; return false; }
+    // ⚠️ SOUS LE TOIT D'UN GARAGE, les portieres donnent sur des murs : on ne descend
+    // pas (on recule d'abord), et si on y est force — vendu chez Ti-Guy, une epave —
+    // on ressort a pied par-dessous le rideau, dans la baie.
+    const rideau = Monde.rideauDe(v);
+    if (rideau && !force) { Hud.message('RECULE D’ABORD — T’ES SOUS LE TOIT'); return false; }
     const cotes = [v.angle + Math.PI / 2, v.angle - Math.PI / 2, v.angle + Math.PI];
     let pose = false;
-    for (const a of cotes) {
+    if (rideau) { const baie = Monde.baieDeLaPorteDeGarage(rideau); j.x = baie.x; j.y = baie.y; pose = true; }
+    for (const a of (pose ? [] : cotes)) {
       const x = v.x + Math.cos(a) * (v.def.largeur / 2 + 8), y = v.y + Math.sin(a) * (v.def.largeur / 2 + 8);
       if (!Monde.bloque(Math.floor(x / TT), Math.floor(y / TT), Monde.MASQUE_PIETON)) { j.x = x; j.y = y; pose = true; break; }
     }
@@ -2125,10 +2133,16 @@ const Vehicules = (function () {
              reculCommeEnAvant: !!B.options.reculCommeEnAvant };
   }
 
+  //: Les mains hors du volant : le char de l'atelier ne bouge pas (`Missions.majGarage`).
+  const POINT_MORT = { gaz: 0, frein: 0, direction: 0, freinMain: false };
+
   function majJoueur(j) {
     const v = j.dansVehicule;
     if (v.etat === 'epave') { descendre(j, true); return; }
-    majPhysique(v, commandesJoueur(v));
+    // ⚠️ SOUS LE RIDEAU, ON NE CONDUIT PAS : il descend, le pistolet siffle, il remonte.
+    // Tant que dure l'atelier, le char est a l'arret et le volant ne repond pas.
+    if (v.atelier) { v.vitesse = 0; v.vx = 0; v.vy = 0; }
+    majPhysique(v, v.atelier ? POINT_MORT : commandesJoueur(v));
     if (Entree.neuf('attaque')) {
       // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on
@@ -2145,7 +2159,7 @@ const Vehicules = (function () {
       if (v.def.crochet) basculerCrochet(v);
       if ((!v.def.sirene || allume) && typeof Missions !== 'undefined' && Missions.boulot) Missions.boulot.klaxon(v);
     }
-    if (Entree.neuf('action') && !B.cinema) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
+    if (Entree.neuf('action') && !B.cinema && !v.atelier) descendre(j, false);   // (pendant un dialogue, ACTION passe la replique)
     if (Entree.neuf('arme')) {
       const station = Son.Radio.suivante();
       const def = station ? Son.Radio.station(station) : null;

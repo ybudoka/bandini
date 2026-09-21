@@ -195,3 +195,4 @@ Deux documents d'avant la table :
 | Le décor, les bêtes et les gens répondent | ✅ **livré** (1re vague : six gestes — s'asseoir, fouiller, boire, la borne, le pourboire, la photo) | 21 sept. 2026 | **P4** | ajout | [notes](le-decor-les-betes-et-les-gens-repondent.md#notes) |
 | Une décapotable rose et sa conductrice | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](une-decapotable-rose-et-sa-conductrice.md) |
 | La Brume : chacune son coin (pas d'attroupement de filles la nuit) | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](la-brume-chacune-son-coin.md#notes) |
+| Des garages où l'on entre : semer la police et repeindre | ✅ **livré** (1re vague : les carrosseries, et on entre chez Ti-Guy) | 21 sept. 2026 | **P2** | ajout | [fiche](des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche) · [notes](des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#notes) |

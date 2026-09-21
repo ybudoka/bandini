@@ -766,6 +766,14 @@ const Son = (function () {
       bruit(0.5, 0.12, 700, 180);
       for (let i = 0; i < 6; i++) ton(150 + (i % 2) * 35, 0.04, 'square', 0.05, 0.8, i * 0.08);
     },
+    // Le pistolet de la carrosserie, derriere le rideau baisse : UNE passe, un souffle
+    // aigu qui siffle et le compresseur qui cogne dessous — l'atelier en fait trois
+    // (`Missions.majGarage`). ⚠️ Synthetise seulement, comme le rideau : pas de
+    // fichier au catalogue.
+    pistolet_peinture: function () {
+      bruit(0.4, 0.09, 5200, 3400);
+      ton(62, 0.12, 'square', 0.04, 0.6);
+    },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
     // meme bouton que le klaxon d'une auto. Les velos du trafic la font deja
     // entendre en passant (`jouerA`) ; ici c'est la sienne.

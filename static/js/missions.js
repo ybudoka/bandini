@@ -1409,10 +1409,7 @@ const Missions = (function () {
     } });
     items.push({ libelle: 'REPEINDRE (EFFACE LE VOL)', detail: eco.repeinte + ' $', actif: p.argent >= eco.repeinte, faire: function () {
       payer(eco.repeinte, 'PEINTURE');
-      const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
-      v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
-      v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
-      Police.remiseAZero();
+      repeindre(v);
       return true;
     } });
     // L'assurance : Ti-Guy couvre ce qui est gare devant, sans demander a qui
@@ -1429,6 +1426,16 @@ const Missions = (function () {
     return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
   }
 
+  /** Une couche neuve : une autre couleur de sa fiche (s'il en a une autre), le vol
+      efface, l'alarme coupee, et la police remise a zero — elle cherchait CE char-la.
+      Le menu de Ti-Guy et la carrosserie passent par la meme main. */
+  function repeindre(v) {
+    const autres = v.def.couleurs.filter(function (c) { return c !== v.couleur; });
+    v.couleur = autres.length ? autres[Math.floor(B.rng() * autres.length)] : v.couleur;
+    v.swaps = nuances(v.couleur); v.vole = false; v.alarme = 0;
+    Police.remiseAZero();
+  }
+
   // --- La porte de garage : on se gare devant, le rideau monte, Ti-Guy sort ---------------
 
   //: A combien de tuiles de la facade le rideau se leve pour un char qui arrive, et
@@ -1438,10 +1445,109 @@ const Missions = (function () {
   const BAIE_PROFONDEUR = 2;
   //: Sous cette vitesse, le char est GARE — le menu s'ouvre.
   const BAIE_ARRET = 0.3;
+  //: Combien de passes de pistolet on entend, rideau baisse, a la carrosserie.
+  const PASSES_DE_PISTOLET = 3;
+
+  /** Ce que coute la peinture a la carrosserie, a la chaleur d'en ce moment. */
+  function prixCarrosserie() {
+    const c = B.defs.economie.carrosserie;
+    return c.prix + c.par_etoile * Math.max(0, B.recherche.etoiles || 0);
+  }
+
+  /** Pourquoi ce char ne passe pas le seuil de ce rideau — `null` s'il passe, `''`
+      pour un refus qui se tait.
+
+      ⚠️ Chez Ti-Guy, le char d'une mission ne passe pas (il se LIVRE devant le rideau,
+      `Histoire.lieuDeLivraison`) mais le rideau se leve quand meme pour lui. A la
+      carrosserie, il passe : semer la police en pleine mission, c'est tout l'interet.
+      ⚠️ Une auto-patrouille ne se repeint pas, et une remorque ne rentre pas sous le toit. */
+  function refusDuSeuil(pg, v) {
+    if (B.cinema || B.menu || B.transition || v.etat === 'epave') return '';
+    if (v.remorque) return 'DÉCROCHE CE QUE TU TIRES D’ABORD';
+    if (pg.genre !== 'carrosserie') return v.mission ? '' : null;
+    if (v.def.police) return 'UN CHAR DE POLICE ? ON TOUCHE PAS À ÇA';
+    const prix = prixCarrosserie();
+    if (B.partie.argent < prix) return 'PEINTURE : ' + prix + ' $ — T’AS PAS ÇA';
+    return null;
+  }
+
+  /** Le char est-il TOUT ENTIER passe sous le linteau ? Son pare-chocs arriere au-dessus
+      du bas de la rangee du rideau — c'est la que le rideau retombe. La boite du char
+      tourne avec lui ; les montants tiennent deja ses flancs. */
+  function toutDedans(pg, v) {
+    const c = Math.abs(Math.cos(v.angle)), s = Math.abs(Math.sin(v.angle));
+    const demi = s * v.def.longueur / 2 + c * v.def.largeur / 2;
+    return Monde.dansLePassage(pg, v.x, v.y) && v.y + demi <= (pg.y + 1) * TT;
+  }
+
+  /** On a passe le seuil : le volant se fige, le rideau retombe derriere le pare-chocs. */
+  function entrer(pg, v) {
+    pg.dedans = v; pg.phase = 'baisse'; pg.t = 0; pg.tient = 0;
+    pg.prix = pg.genre === 'carrosserie' ? prixCarrosserie() : 0;
+    v.atelier = pg; v.vitesse = 0; v.vx = 0; v.vy = 0;
+  }
+
+  /** L'ATELIER, rideau baisse : `baisse` → `peint` (la carrosserie) ou `menu` (Ti-Guy)
+      → `leve` → `sortie`. On en sort en reculant ; le rideau tient tant que le char est
+      dessous ou devant, et l'atelier se referme quand il a quitte la baie. */
+  function majAtelier(pg) {
+    const v = pg.dedans, j = B.joueur;
+    // Le char n'est plus au joueur (vendu chez Ti-Guy, une epave) : l'atelier se referme.
+    if (!j || j.dansVehicule !== v || v.etat === 'epave' || B.entites.indexOf(v) < 0) {
+      v.atelier = null;
+      pg.dedans = null; pg.admis = null; pg.phase = null;
+      return;
+    }
+    if (pg.phase === 'sortie') {
+      if (Monde.dansLePassage(pg, v.x, v.y) || Monde.devantLaPorteDeGarage(pg, v.x, v.y, BAIE_PROFONDEUR, RIDEAU_MARGE)) {
+        Monde.leverLaPorteDeGarage(pg);
+        return;
+      }
+      pg.dedans = null; pg.phase = null;
+      return;
+    }
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    if (pg.phase === 'baisse') {
+      if (pg.ouverture > 0) return;
+      pg.t = 0;
+      if (pg.genre !== 'carrosserie') { pg.phase = 'menu'; Hud.ouvrirMenu(menuDuRideau(v)); return; }
+      // ⚠️ Le prix est celui de l'ENTREE : une etoile gagnee en route ne se paie
+      // pas deux fois, et l'argent se recompte ici — on a pu en depenser depuis.
+      if (B.partie.argent < pg.prix) { Hud.message('PEINTURE : ' + pg.prix + ' $ — T’AS PAS ÇA', 150); Son.SFX.erreur(); pg.phase = 'leve'; }
+      else pg.phase = 'peint';
+    }
+    if (pg.phase === 'peint') {
+      const duree = Math.max(1, Math.round(B.defs.economie.carrosserie.atelier_s * 60));
+      if (pg.t % Math.ceil(duree / PASSES_DE_PISTOLET) === 0) Son.SFX.pistolet_peinture();
+      if (++pg.t < duree) return;
+      const cherchaient = B.recherche.etoiles > 0;
+      payer(pg.prix, 'PEINTURE — ' + (cherchaient ? 'ILS CHERCHENT UN AUTRE CHAR' : 'COMME NEUF'));
+      repeindre(v);
+      pg.phase = 'leve';
+    }
+    if (pg.phase === 'menu') {
+      if (B.menu) return;
+      pg.phase = 'leve';
+    }
+    if (pg.phase === 'leve') {
+      Monde.leverLaPorteDeGarage(pg);
+      if (pg.ouverture < 1) return;
+      pg.phase = 'sortie'; v.atelier = null;
+    }
+  }
 
   /** Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou
       on stationne pour vendre ou faire des missions. la porte ouvre seule des
-      qu'on est devant en voiture. »
+      qu'on est devant en voiture. » Puis (21 sept. 2026) : « des portes de garage
+      qu'on peut vraiment entrer. pour permettre de semer la police en voiture »,
+      et « repeindre des voitures ».
+
+      ⚠️ ON ENTRE. Rideau leve, le char admis (`refusDuSeuil`) passe le seuil
+      (`Monde.seuilOuvert`) ; tout entier sous le toit, le volant se fige et le
+      rideau retombe (`majAtelier`). A la CARROSSERIE (`genre`), le pistolet siffle
+      et le char ressort d'une autre couleur, la police a zero, pour le prix de la
+      peinture et d'un supplement par etoile ; sans l'argent, le rideau ne monte
+      pas. Chez Ti-Guy, son menu s'ouvre a l'abri.
 
       Au volant, devant le rideau : il monte. Arrete dans la baie, rideau leve :
       le menu du garage s'ouvre avec CE char — vendre, reparer, repeindre,
@@ -1460,11 +1566,26 @@ const Missions = (function () {
     if (!portes.length || B.interieur) return;
     const j = B.joueur, v = j && j.dansVehicule;
     for (const pg of portes) {
-      if (v && Monde.devantLaPorteDeGarage(pg, v.x, v.y, RIDEAU_PORTEE, RIDEAU_MARGE)) Monde.leverLaPorteDeGarage(pg);
+      if (pg.dedans) { majAtelier(pg); continue; }
+      const devant = v && Monde.devantLaPorteDeGarage(pg, v.x, v.y, RIDEAU_PORTEE, RIDEAU_MARGE);
+      const dessous = v && pg.baie > 0 && Monde.dansLePassage(pg, v.x, v.y);
+      if (!devant && !dessous) { pg.admis = null; pg.refuse = null; continue; }
+      const refus = pg.admis === v ? null : refusDuSeuil(pg, v);
+      if (pg.genre === 'carrosserie' && refus !== null) {
+        // Refuse une fois par arrivee : on le dit, et le rideau reste baisse.
+        if (refus && pg.refuse !== v) { pg.refuse = v; Hud.message(refus, 150); Son.SFX.erreur(); }
+        continue;
+      }
+      Monde.leverLaPorteDeGarage(pg);
+      if (refus === null && pg.baie) pg.admis = v;
+      if (pg.admis === v && toutDedans(pg, v)) entrer(pg, v);
     }
     if (Monde.majPortesDeGarage()) Son.SFX.rideau_garage();
     for (const pg of portes) {
-      if (pg.servi && !Monde.devantLaPorteDeGarage(pg, pg.servi.x, pg.servi.y, BAIE_PROFONDEUR, 0)) pg.servi = null;
+      // ⚠️ Le menu DEVANT le rideau est celui de Ti-Guy : une carrosserie n'a pas de comptoir.
+      if (pg.genre !== 'garage' || pg.dedans) continue;
+      if (pg.servi && !Monde.devantLaPorteDeGarage(pg, pg.servi.x, pg.servi.y, BAIE_PROFONDEUR, 0)
+          && !Monde.dansLePassage(pg, pg.servi.x, pg.servi.y)) pg.servi = null;
       if (!v || !Monde.devantLaPorteDeGarage(pg, v.x, v.y, BAIE_PROFONDEUR, 0)) continue;
       if (pg.servi === v || pg.ouverture < 1 || Math.abs(v.vitesse) >= BAIE_ARRET) continue;
       if (B.cinema || B.menu || B.transition || v.mission || v.etat === 'epave') continue;
@@ -2633,6 +2754,7 @@ const Missions = (function () {
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
            dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,
            guichetSousLaMain, inviteGuichet, utiliserGuichet, nuitDesSkimmers, guichetCasse, ramasserLesBillets,

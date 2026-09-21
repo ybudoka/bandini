@@ -254,6 +254,19 @@ ENSEIGNES: dict[str, tuple[str, str]] = {
     "kiosque": ("KIOSQUE", "commerce"),
 }
 
+#: ⚠️ **LES CARROSSERIES** (des garages où l'on entre, 21 sept. 2026) : un atelier par
+#: district, pose sur la ville FINIE (`carte._Chantier.poser_les_carrosseries`). On y rentre
+#: le char et il ressort d'une autre couleur. L'enseigne, puis le nom du point sur la carte.
+#: ⚠️ La Shop en avait DEJA une (« PEINTURE AUTO », au catalogue) qui ne menait nulle part :
+#: c'est elle qu'on ouvre d'abord, si sa facade le permet.
+CARROSSERIES: dict[str, tuple[str, str]] = {
+    "faubourg": ("CARROSSERIE", "Carrosserie du Faubourg"),
+    "erables": ("PEINTURE MINUTE", "Peinture Minute"),
+    "shop": ("PEINTURE AUTO", "Peinture Auto"),
+    "quais": ("CARROSSERIE", "Carrosserie du port"),
+    "pointe": ("PEINTURE MINUTE", "Peinture Minute de La Pointe"),
+}
+
 #: ⚠️ La planque n'a PAS d'enseigne : une planque avec son nom sur le mur n'est
 #: plus une planque. Meme chose pour les portes condamnees.
 SANS_ENSEIGNE = frozenset({"planque"})

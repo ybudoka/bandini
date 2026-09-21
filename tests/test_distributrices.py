@@ -164,14 +164,21 @@ def test_une_machine_de_plus_ne_deplace_rien_d_autre():
     est exactement la meme — les paquets, les kiosques et le reste du decor au
     meme endroit. C'est ce qui permet d'en regler le nombre sans toucher aux
     missions ni aux juges des autres."""
-    avec = carte.generer()
-    decors = {fiche["decor"] for fiche in magasins.DISTRIBUTRICES.values()}
-    sauve = carte._Chantier.distributrices
+    # ⚠️ LES CARROSSERIES DES DEUX COTES : posees sur la ville finie, elles ecartent une
+    # facade qui a une machine devant — une machine de plus les ferait changer de rue.
+    carrosseries = carte._Chantier.poser_les_carrosseries
+    carte._Chantier.poser_les_carrosseries = lambda self, ville_: []
     try:
-        carte._Chantier.distributrices = lambda self: 0
-        sans = carte.generer()
+        avec = carte.generer()
+        decors = {fiche["decor"] for fiche in magasins.DISTRIBUTRICES.values()}
+        sauve = carte._Chantier.distributrices
+        try:
+            carte._Chantier.distributrices = lambda self: 0
+            sans = carte.generer()
+        finally:
+            carte._Chantier.distributrices = sauve
     finally:
-        carte._Chantier.distributrices = sauve
+        carte._Chantier.poser_les_carrosseries = carrosseries
     assert [d for d in avec["decor"] if d["type"] not in decors] == sans["decor"]
     assert avec["paquets"] == sans["paquets"]
     assert avec["ambulants"] == sans["ambulants"]

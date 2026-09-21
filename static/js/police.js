@@ -455,8 +455,10 @@ const Police = (function () {
       }
       if (j.dansVehicule && d < 40) {
         a.vx = 0; a.vy = 0; Entites.regarder(a, j.x - a.x, j.y - a.y);
-        // Un char arrete ne protege de rien : il t'en sort.
-        if (!triche('pasArrete') && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
+        // Un char arrete ne protege de rien : il t'en sort. ⚠️ Sauf SOUS LE TOIT d'un
+        // garage : le rideau est entre vous deux, et il ne passe pas la main au travers.
+        if (!triche('pasArrete') && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu
+            && !Monde.rideauDe(j.dansVehicule)) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
         return true;
       }
       suivre(a, but, v.policier);

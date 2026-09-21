@@ -61,6 +61,15 @@ dessiné à la main (sauf exceptions), et appartient à une **famille de lieu**
 `kiosque` (Mme Thibodeau), `hopital_soins`, `hotel_chambre`, `metro_quai`,
 `metro_rame`.
 
+**Les carrosseries** (des garages où l'on entre, 21 sept. 2026) : une par district, posées
+sur la ville finie par `_Chantier.poser_les_carrosseries` — un commerce sans porte dont
+l'enseigne devient CARROSSERIE, PEINTURE AUTO ou PEINTURE MINUTE (`devantures.CARROSSERIES`),
+un rideau de deux tuiles et une baie de deux rangées sous le toit. Point `carrosserie_<district>`,
+famille `service`, sans intérieur : on y entre en char, on en ressort repeint et la police à
+zéro (100 $ + 50 $ par étoile, `economie.CARROSSERIE`). Ville livrée : Faubourg, La Shop, Les
+Quais — pas Les Érables (leurs commerces se visitent tous). Le rideau de Ti-Guy s'entre aussi :
+son menu s'ouvre à l'abri.
+
 **Lieux sans intérieur propre** (points de commerce générés sur les parcelles) :
 `logement` (logements procéduraux, un par habitation), et les devantures de
 quartier (commerces tirés par famille).

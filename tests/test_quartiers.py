@@ -585,7 +585,11 @@ def test_les_commerces_montent_sans_rien_deplacer(villes, monkeypatch):
     ville est la même tuile pour tuile ; les devantures ne diffèrent que par leur
     nom, leurs planches et leur standing ; les portes par leur nom ; les lampes par
     la vitrine éteinte d'un local vide."""
-    ville = villes[0]
+    # ⚠️ LES CARROSSERIES DES DEUX COTES, comme `devants.deplacer` ailleurs : posees sur
+    # la ville FINIE, elles choisissent leur facade d'apres les noms et les planches (un
+    # local A LOUER n'en devient pas une). La comparaison reste celle des commerces.
+    monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
+    ville = carte.generer()
     monkeypatch.setattr(vitrines, "monter_et_descendre", lambda chantier, ville: {})
     sans = carte.generer()
     changent = {"devantures", "residences", "portes", "lampes"}

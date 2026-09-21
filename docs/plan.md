@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (178 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (179 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -78,7 +78,6 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
-| Des garages où l'on entre : semer la police et repeindre | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche) |
 | La nuit a ses habitudes | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/la-nuit-a-ses-habitudes.md#fiche) |
 | Les commandes à l'écran : l'aide du début, et le vrai bouton sous le pouce | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/les-commandes-a-l-ecran.md#fiche) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |

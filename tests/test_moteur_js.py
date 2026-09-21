@@ -1344,7 +1344,11 @@ def test_le_joueur_et_les_lieux_sont_sur_des_tuiles_marchables(banc):
         const j = L.B.joueur;
         const dur = L.Monde.solidite(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT));
         const lieux = L.Monde.carte.points.map(function (p) {
-            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1)];
+            // ⚠️ Une carrosserie n'a pas de porte des pietons : sa porte est le rideau.
+            const rideau = L.Monde.portesDeGarage().some(function (pg) {
+                return pg.lieu === p.slug && pg.y === p.y - 1 && p.x >= pg.x && p.x < pg.x + pg.l;
+            });
+            return [p.slug, L.Monde.solidite(p.x, p.y), !!L.Monde.porteA(p.x, p.y - 1) || rideau];
         });
         return { dur: dur, lieux: lieux, zone: L.Monde.zoneA(j.x, j.y).slug,
                  horsCarte: L.Monde.porteA(-1, -1) };

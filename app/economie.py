@@ -692,6 +692,20 @@ VENTE_MALUS_DOUBLON = 0.20
 REPARATION_PAR_PV = 2
 REPEINTE = 100
 
+#: ⚠️ **LA CARROSSERIE** (demande de Martin, 21 sept. 2026 : « des portes de garage qu'on
+#: peut vraiment entrer. pour permettre de semer la police en voiture », puis « repeindre
+#: des voitures »). On rentre le char, le rideau retombe, et il ressort d'une autre couleur :
+#: le vol effacé, la police à zéro. La peinture de Ti-Guy (`REPEINTE`) plus un supplément
+#: PAR ÉTOILE — le silence coûte ce que vaut la chasse, et cinq étoiles effacées pour cent
+#: piastres rendraient la police décorative. ⚠️ Chez Ti-Guy, c'est prix de famille : son
+#: menu garde `REPEINTE` tout court.
+#: `atelier_s` : le temps que le rideau reste baissé, pistolet en marche.
+CARROSSERIE = {"prix": REPEINTE, "par_etoile": 50, "atelier_s": 1.5}
+
+
+def prix_carrosserie(etoiles: int) -> int:
+    return CARROSSERIE["prix"] + CARROSSERIE["par_etoile"] * max(0, etoiles)
+
 
 def prix_vente(prix_neuf: int, vie: int, vie_max: int, doublons: int) -> int:
     if vie_max <= 0:
@@ -771,6 +785,7 @@ def exporter() -> dict:
         "vente_malus_doublon": VENTE_MALUS_DOUBLON,
         "reparation_par_pv": REPARATION_PAR_PV,
         "repeinte": REPEINTE,
+        "carrosserie": dict(CARROSSERIE),
         "proprietes": PROPRIETES,
         "caisse_jours_max": CAISSE_JOURS_MAX,
         "dette": dict(DETTE),

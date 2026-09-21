@@ -217,8 +217,12 @@ const Monde = (function () {
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
       // Les rideaux de garage : meme regle, et ils se souviennent de leur hauteur.
+      // ⚠️ `baie` : les rangees de toit derriere le rideau, ou le char se cache
+      // (Python la garantit, le navigateur ne la devine pas). `admis`, `dedans`,
+      // `phase` : l'atelier (`Missions.majGarage`).
       portesGarage: (def.portes_garage || []).map(function (p) {
-        return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, ouverture: 0, tient: 0, servi: null };
+        return { x: p.x, y: p.y, l: p.l, lieu: p.lieu, baie: p.baie || 0, genre: p.genre || 'garage',
+                 ouverture: 0, tient: 0, servi: null, admis: null, dedans: null, phase: null, t: 0, refuse: null };
       }),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
@@ -919,9 +923,17 @@ const Monde = (function () {
   //
   // Demande de Martin (17 sept. 2026) : « il faut une vraie porte de garage ou on
   // stationne pour vendre ou faire des missions. la porte ouvre seule des qu'on est
-  // devant en voiture ». La tuile `G` reste un MUR (le char se gare devant, il
-  // n'entre pas dans le toit) ; ce qui bouge, c'est le rideau, peint par-dessus le
-  // sol comme un battant. Qui le leve, c'est `Missions.majGarage`.
+  // devant en voiture ». La tuile `G` reste un MUR pour tout le monde ; ce qui bouge,
+  // c'est le rideau, peint par-dessus le sol comme un battant. Qui le leve, c'est
+  // `Missions.majGarage`.
+  //
+  // ⚠️ ET ON ENTRE (21 sept. 2026 : « des portes de garage qu'on peut vraiment
+  // entrer. pour permettre de semer la police en voiture »). Rideau leve, le char
+  // ADMIS — celui du joueur, et lui seul — passe le seuil : la rangee du rideau et
+  // les `baie` rangees de toit derriere cessent d'etre un mur POUR LUI
+  // (`seuilOuvert`, lu par `Vehicules.tuileInterdite`). Pour les autres, le toit
+  // reste un toit : l'auto-patrouille qui suit s'arrete devant, et la ligne de vue
+  // (`ligneLibre`) ne traverse pas plus un rideau qu'un mur.
 
   //: Combien d'images le rideau met a monter (ou a descendre), et combien il reste
   //: leve une fois le char parti. ⚠️ Assez lent pour qu'on le VOIE monter — c'est
@@ -942,6 +954,51 @@ const Monde = (function () {
 
   /** Le milieu de la place devant le rideau : ou l'on gare, ou l'on livre. */
   function baieDeLaPorteDeGarage(pg) { return { x: (pg.x + pg.l / 2) * TT, y: (pg.y + 2) * TT }; }
+
+  /** Ce pixel est-il SOUS LE LINTEAU : dans la rangee du rideau, ou dans les rangees
+      de toit derriere lui ? */
+  function dansLePassage(pg, x, y) {
+    return x >= pg.x * TT && x < (pg.x + pg.l) * TT && y >= (pg.y - pg.baie) * TT && y < (pg.y + 1) * TT;
+  }
+
+  /** Le rideau sous lequel ce char a le nez — ou le centre —, ou null. */
+  function rideauDe(v) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) if (portes[i].baie && dansLePassage(portes[i], v.x, v.y)) return portes[i];
+    return null;
+  }
+
+  /** Le rideau dont ce char est ASSEZ PRES pour y avoir le nez : dans ses colonnes,
+      du fond de la baie a deux tuiles devant. C'est ce que le dessin decoupe. */
+  function rideauPres(v) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) {
+      const pg = portes[i];
+      if (!pg.baie || v.x < pg.x * TT || v.x >= (pg.x + pg.l) * TT) continue;
+      if (v.y >= (pg.y - pg.baie) * TT && v.y < (pg.y + 3) * TT) return pg;
+    }
+    return null;
+  }
+
+  /** ⚠️ **LA TUILE QUI S'OUVRE POUR UN SEUL CHAR.** Le passage d'un rideau n'est pas
+      un mur pour le char qu'il a ADMIS, tant que le rideau est leve — ou tant que ce
+      char est l'atelier en cours (`dedans`), sinon le rideau qui retombe le
+      pousserait dehors (`Vehicules.degager` lit la meme regle). Pour tout autre char,
+      et pour ce char-la une fois reparti, c'est un toit. */
+  function seuilOuvert(v, tx, ty) {
+    const portes = portesDeGarage();
+    for (let i = 0; i < portes.length; i++) {
+      const pg = portes[i];
+      if (pg.admis !== v || !pg.baie) continue;
+      if (tx >= pg.x && tx < pg.x + pg.l && ty <= pg.y && ty >= pg.y - pg.baie) return pg.ouverture >= 1 || pg.dedans === v;
+    }
+    return false;
+  }
+
+  /** La ligne, en pixels du monde, SOUS laquelle on voit ce qui passe le seuil : le
+      bas du rideau (le linteau, rideau leve). Au-dessus, le char est sous le toit —
+      ou derriere les lames. ⚠️ Le meme calcul que `dessinerPortesDeGarage`. */
+  function basDuRideau(pg) { return pg.y * TT + 3 + Math.round((TT - 4) * (1 - pg.ouverture)); }
 
   /** On est devant : le rideau monte (ou reste leve) pour `RIDEAU_TIENT` images. */
   function leverLaPorteDeGarage(pg) { pg.tient = RIDEAU_TIENT; }
@@ -1801,6 +1858,7 @@ const Monde = (function () {
     feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
+    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
