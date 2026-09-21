@@ -1111,6 +1111,93 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
     assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
 
 
+def _m5_posee():
+    """Le début commun des juges de la dernière Cravate : M5 posée, ses six Cravates dans leurs
+    coins, le joueur resté chez Josée (loin d'eux)."""
+    return """
+        L.Jeu.commencer();
+        ['m1', 'm2', 'm3', 'm4'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
+        L.Histoire.commencer('m5');
+        L.B.cinema = null; L.B.dialogue = null; L.B.scene = null;
+        L.B.joueur.invincible = 1e6;
+        o.frame(2);
+        const six = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible; });
+    """
+
+
+def test_une_cravate_de_m5_n_entre_par_aucune_porte(banc):
+    """⚠️ Retour de Martin, 21 sept. 2026 : « la mission de libérer les trois coins des Cravates,
+    la dernière cravate à trouver n'apparaît pas ». Un flâneur qui passe sous une porte y entre
+    une fois sur douze, et une Cravate de M5 aussi : sortie de la ville, elle restait comptée
+    debout, la mission bloquait à 5/6 et la flèche montrait la porte, où il n'y avait personne.
+    Au banc, celle du coin 2 rentrait en une minute, sur 2 graines sur 8. Ici on la plante sous
+    une porte, et le dé dit « rentre » une fois sur deux ; un TÉMOIN (la même Cravate, sans
+    mission) y entre, lui : c'est ce qui dit que le juge mord encore."""
+    r = banc("""function (L, o) {""" + _m5_posee() + """
+        const M = L.Monde, TT = 16;
+        // La porte la plus proche du premier, avec un trottoir dessous.
+        const tx0 = Math.floor(six[0].x / TT), ty0 = Math.floor(six[0].y / TT);
+        let seuil = null;
+        for (let r = 0; r < 40 && !seuil; r++) {
+          for (let dy = -r; dy <= r && !seuil; dy++) for (let dx = -r; dx <= r && !seuil; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+            const g = M.glyphe(tx0 + dx, ty0 + dy);
+            if ((g === 'd' || g === 'D') && M.marchablePieton(tx0 + dx, ty0 + dy + 1)) {
+              seuil = { x: (tx0 + dx) * TT + 8, y: (ty0 + dy + 1) * TT + 8 };
+            }
+          }
+        }
+        // Il flane sur le seuil, et decide a chaque image ; le de alterne « on ne
+        // s'arrete pas » et « on rentre ». Rend l'image ou il a quitte la ville.
+        function planter(e) {
+          const rng = L.B.rng;
+          let k = 0, sortie = -1;
+          L.B.rng = function () { return (k++ % 2) ? 0.01 : 0.5; };
+          for (let i = 0; i < 300 && sortie < 0; i++) {
+            if (e.etat !== 'entre') { e.x = seuil.x; e.y = seuil.y; e.vx = 0; e.vy = 0; e.etat = 'flane'; e.butT = 0; }
+            L.Entites.indexer();
+            o.frame(1);
+            if (L.B.entites.indexOf(e) < 0) sortie = i;
+          }
+          L.B.rng = rng;
+          return sortie;
+        }
+        const temoin = six[1];
+        temoin.mission = null; temoin.cible = false;
+        const temoinSorti = planter(temoin);
+        const sortie = planter(six[0]);
+        o.frame(2);
+        const g = L.Histoire.cible();
+        return { seuil: !!seuil, temoinSorti: temoinSorti, sortie: sortie, dansLaVille: L.B.entites.indexOf(six[0]) >= 0,
+                 gpsSurLui: !!g && Math.hypot(g.x - six[0].x, g.y - six[0].y) < 1 };
+    }""")
+    assert r["seuil"], "une porte avec un trottoir dessous, près du Faubourg"
+    assert r["temoinSorti"] >= 0, "le témoin sans mission rentre : le juge mord encore"
+    assert r["sortie"] < 0 and r["dansLaVille"], "une Cravate de M5 n'entre par aucune porte"
+    assert r["gpsSurLui"], "la flèche montre une Cravate qu'on peut trouver"
+
+
+def test_une_cravate_de_m5_couchee_reste_couchee_tant_que_la_mission_dure(banc):
+    """⚠️ Même retour de Martin. Un K.-O. (poings, poing américain) se relevait au bout de 5 s
+    et s'enfuyait : le « 1/6 » redevenait « 0/6 », et pour finir M5 il fallait coucher les six
+    Cravates, réparties sur trois coins, en 5 s. Le K.-O. compte comme un mort au compteur : il
+    reste au sol tant que la mission dure, et se relève quand elle s'arrête."""
+    r = banc("""function (L, o) {""" + _m5_posee() + """
+        L.Entites.assommer(six[0]);
+        o.frame(2);
+        const lue = L.Histoire.ligneObjectif();
+        o.frame(600);                                   // deux fois le temps d'un K.-O.
+        const relue = L.Histoire.ligneObjectif(), auSol = six[0].etat;
+        L.Histoire.reinitialiser('m5');                 // la mission s'arrete : on nettoie
+        o.frame(400);
+        return { lue: lue, relue: relue, auSol: auSol, apres: six[0].etat };
+    }""")
+    assert r["lue"].endswith(" 1/6")
+    assert r["auSol"] == "assomme" and r["relue"].endswith(" 1/6"), (
+        f"le compteur est revenu à {r['relue']!r} : la Cravate couchée s'est relevée ({r['auSol']})")
+    assert r["apres"] != "assomme", "la mission arrêtée, elle se relève comme tout le monde"
+
+
 def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
     """⚠️ Rouge avant (17 sept. 2026), chez les cinq donneurs : l'appui d'ACTION
     qui ouvre la conversation etait relu par `Histoire.majCinema` dans la MEME

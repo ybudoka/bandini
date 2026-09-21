@@ -3878,7 +3878,12 @@ const Entites = (function () {
       return;
     }
     if (e.etat === 'assomme') {
-      if (--e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
+      // ⚠️ UNE CIBLE DE MISSION COUCHEE RESTE COUCHEE tant que la mission dure :
+      // le K.-O. compte comme un mort au compteur de l'objectif. Elle se relevait
+      // au bout de 5 s et s'enfuyait — le « 1/6 » redevenait « 0/6 », et il
+      // fallait coucher les six Cravates de M5, sur trois coins, en 5 s.
+      // `nettoyer` lui retire `cible` a la fin : elle se releve alors.
+      if (!e.cible && --e.minuterie <= 0) { e.etat = 'fuit'; e.minuterie = reactions.fuite_secondes * 60; e.face = 'bas'; }
       return;
     }
     if (e.metier === 'reclame' && (e.etat === 'flane' || e.etat === 'arret')) solliciter(e);
@@ -4093,8 +4098,14 @@ const Entites = (function () {
             return;
           }
           // Une porte juste au nord ? Une fois sur douze, on rentre.
+          // ⚠️ SAUF UN HOMME DE MISSION (retour de Martin, 21 sept. 2026 : « la
+          // derniere cravate a trouver n'apparait pas »). Une Cravate de M5 qui
+          // flanait sous une porte y entrait : sortie de la ville, elle restait
+          // comptee debout, la mission bloquait a 5/6 et la fleche montrait la
+          // porte. ⚠️ Teste APRES le de : il se tire comme avant, et la ville
+          // d'une mission reste celle d'hier.
           const g = Monde.glyphe(tx, ty - 1);
-          if ((g === 'd' || g === 'D') && !e.metier && !e.suit && !e.petit && B.rng() < 0.08) {
+          if ((g === 'd' || g === 'D') && !e.metier && !e.suit && !e.petit && B.rng() < 0.08 && !e.mission) {
             e.etat = 'entre'; e.minuterie = 40; e.face = 'haut';
             return;
           }

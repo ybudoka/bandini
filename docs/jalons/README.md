@@ -203,3 +203,4 @@ Deux documents d'avant la table :
 | Deux bateaux de plus : le chalutier et le porte-conteneurs | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](deux-bateaux-de-plus-le-chalutier-et-le-porte-conteneurs.md#notes) |
 | Les vélos : la bordure, les trottoirs, les parcs — et des enfants à vélo | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](les-velos-la-bordure-les-trottoirs-les-parcs-et-des-enfants-a-velo.md#notes) |
 | Une partie rechargée ne réapparaît plus dans un bâtiment | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [fiche](une-partie-rechargee-ne-reapparait-plus-dans-un-batiment.md#fiche) · [notes](une-partie-rechargee-ne-reapparait-plus-dans-un-batiment.md#notes) |
+| La dernière Cravate de M5 ne disparaît plus | ✅ **livré** | 21 sept. 2026 | **P1** | **correctif** | [fiche](la-derniere-cravate-de-m5-ne-disparait-plus.md#fiche) · [notes](la-derniere-cravate-de-m5-ne-disparait-plus.md#notes) |
