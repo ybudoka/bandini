@@ -145,7 +145,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (3 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe — restent le signaleur, le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (3 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, et le NIP ; **la 4e — effacer son compte — est en cours** ; restent le défi du jour, le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (4 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, et effacer son compte ; restent le défi du jour, le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -241,7 +241,7 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
-| **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo) |
+| **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo). ⚠️ **Échue** : l'écran est en ligne depuis le 17 sept. 2026, et la confirmation d'effacement (4e vague) est un second endroit où l'on devine un mot de passe |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
 exclu de la commande de tous les jours ci-dessous parce qu'il monte un Chromium et prend des
@@ -654,7 +654,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement, `effacer` — le compte pour vrai, mot de passe redemandé, 403 et jamais 401 ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
 | `comptes.py` | les comptes (M14) : `inscrire` (pseudo — la règle vit ici depuis le retrait du tableau des scores —, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
@@ -678,7 +678,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
-| 1b | `compte.js` | **le compte, côté jeu** (M14) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer ; le **NIP** (3e vague) — un verrou d'écran sur un appareil déjà lié, jamais un second mot de passe : PBKDF2 → AES-GCM (WebCrypto) chiffre le jeton d'appareil localement, cinq essais ratés l'effacent sans jamais toucher au compte |
+| 1b | `compte.js` | **le compte, côté jeu** (M14) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer ; le **NIP** (3e vague) — un verrou d'écran sur un appareil déjà lié, jamais un second mot de passe : PBKDF2 → AES-GCM (WebCrypto) chiffre le jeton d'appareil localement, cinq essais ratés l'effacent sans jamais toucher au compte ; **effacer son compte** (4e vague) — le serveur efface pour vrai, cet appareil oublie son NIP et son témoin, et **ses parties locales ne bougent pas** |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -9038,8 +9038,66 @@ lié — et il faut redire tout de suite ce qu'il n'est pas : il **n'ouvre pas u
   (`node:crypto`'s `webcrypto`, aussi vraie que celle d'un navigateur), `btoa`/`atob` et
   `TextEncoder`/`TextDecoder`.
 
-- **Reste de M14** : effacer son compte (4e vague), puis le défi du jour à graine
-  serveur, le mode photo et la coop locale.
+- **Reste de M14** : le défi du jour à graine serveur, le mode photo et la coop locale.
+
+**4e vague livrée** (20 sept. 2026) : **effacer son compte**, et la page qui dit ce qui est
+gardé. Le serveur efface pour vrai ; l'écran ne fait que le proposer.
+
+- **Un seul `DELETE FROM comptes`.** Les trois autres tables descendent de lui en
+  `ON DELETE CASCADE` (et `bd.ouvrir` allume `foreign_keys` par connexion — sans quoi rien ne
+  partirait avec lui). Ce que ça n'efface pas : les copies de sûreté quotidiennes de la base,
+  qui s'effacent d'elles-mêmes au bout de sept jours — **et la page le dit**.
+- ⚠️ **Le mot de passe est redemandé**, même sur un appareil déjà lié : « un bouton, une
+  confirmation », et un cookie d'appareil emprunté ou volé ne doit pas suffire à détruire un
+  compte. **Un mot de passe faux rend 403, jamais 401** : un 401 efface le cookie, et une faute
+  de frappe à l'effacement aurait délié l'appareil qui vient de la faire (un juge tient
+  `MotDePasseIncorrect` hors de `NonAutorise`).
+- ⚠️ **SQLite réutilise l'`id` d'un compte effacé** (`INTEGER PRIMARY KEY`, pas
+  d'`AUTOINCREMENT`) : si le `CASCADE` lâchait, les parties et appareils orphelins
+  s'accrocheraient au **nouveau** compte de même pseudo. La garde qui compte est donc « le
+  nouveau compte repart à vide », pas « l'id change » — et le juge de bout en bout ajoute la
+  seule preuve qu'un banc ne peut pas donner : **reprendre le même pseudo** dans Chromium.
+- ⚠️ **Effacer le compte n'efface pas les parties de ce navigateur** : le `localStorage` reste
+  la vérité, le compte n'est qu'une synchronisation. Ce que **cet appareil** oublie : le NIP
+  et **le témoin de synchronisation** — qui doit partir avec le compte, pas seulement se ranger
+  sous le pseudo : le pseudo se reprend aussitôt, et un témoin resté sur un compte neuf
+  parlerait de parties qui n'ont jamais existé là-bas.
+- ⚠️ **Rien ne part tant que le serveur n'a pas dit oui**, et une réponse perdue ne se
+  présume pas : « rien n'a été effacé » serait un mensonge si le serveur a eu le temps d'agir,
+  alors l'écran dit qu'il n'a pas pu **confirmer** (le prochain `ouvrir()` le montrera).
+- **La page « Ce qu'on garde »** (un `<details>`, fermé par défaut, sauf sous le verrou du NIP
+  qui montre le NIP seul) ne dit que ce qui est **vrai aujourd'hui** — la base et ses copies —
+  et ne promet rien qu'aucun code ne tienne : *mot de passe perdu, compte perdu*, courriel ou
+  pas, parce que rien ne permet encore de le retrouver (la fiche promettait de l'écrire « à
+  l'inscription » : c'est dit ici, pas encore à l'inscription elle-même).
+- ⚠️ **Deux défauts de mes vagues précédentes, trouvés en REGARDANT l'écran** (le banc et les
+  juges verts les avaient laissés passer) :
+  1. **Une faille du NIP (3e vague).** `.boutons` est en `display: flex`, qui bat l'attribut
+     `hidden` — le piège de la 2e vague, revenu : « Retirer le NIP de cet appareil » s'affichait
+     dans **les quatre états**, dont l'écran **verrouillé**, où il retirait le verrou sans le
+     NIP (un emprunteur le presse, recharge, et `init()` — sans NIP — rouvre le compte avec le
+     cookie encore valide). Corrigé à deux étages (commit `490c097`) : `.boutons[hidden]` et
+     `desactiverNip()` qui refuse tant que `etat !== 'ouvert'`, **quoi que l'écran montre**.
+     Le juge est devenu une **matrice de visibilité réelle** (`is_visible`, jamais l'attribut)
+     sur les quatre états.
+  2. **L'écran du compte était rogné sur téléphone (2e vague).** `.voile` centre son contenu
+     dans un `.ecran` en `overflow: hidden` : ce qui déborde était coupé des deux côtés, sans
+     défilement. Mesuré : en portrait (écran de jeu de 390×219), « Retour » hors écran et le
+     champ du pseudo coupé en haut ; en paysage tout tenait **au pixel près** et la
+     confirmation d'effacement (+130 px) l'aurait rognée. `#voile-compte` défile maintenant
+     (marges `auto` : le centrage reste quand ça tient — un simple `justify-content: center`
+     rend le haut inatteignable dès que ça déborde). Le juge fait défiler **à la molette**, pas
+     par `scrollIntoView` ni par le `click` de Playwright, qui défilent même un conteneur
+     `overflow: hidden` et laisseraient passer un bouton qu'un doigt n'atteint pas.
+- **Juges** : `test_comptes.py` (**+14** : tout ce qui appartient au compte disparaît et
+  rien d'un autre compte, les jetons ne valent plus rien, le pseudo repris repart à vide, le
+  mot de passe faux ou absent ne touche à rien, 403 et pas 401, deux appareils qui effacent
+  ensemble, dont trois par HTTP), `test_comptes_js.py` (**+10**) et `test_navigateur.py`
+  (**+4** : le bout en bout avec le pseudo repris, la page, et le défilement en portrait et en
+  paysage), **19 mutations toutes rouges** (6 serveur, 13 client et écran).
+- ⚠️ **À faire encore, et ce n'est plus optionnel** : la dette « aucune limite d'essais » est
+  **échue** (voir la table des dettes) — le formulaire de connexion est public depuis la 2e
+  vague, et la confirmation d'effacement est un second endroit où l'on devine un mot de passe.
 
 ### Les zones conditionnelles
 

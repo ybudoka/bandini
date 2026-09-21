@@ -99,6 +99,7 @@ def pseudo_propre(brut: object) -> str | None:
 
 MAUVAIS_IDENTIFIANTS = "pseudo ou mot de passe incorrect"
 APPAREIL_INCONNU = "cet appareil n'est pas lié à un compte"
+MOT_DE_PASSE_FAUX = "mot de passe incorrect : rien n'a été effacé"
 SESSION_EXPIREE = "session expirée : reconnecte-toi"
 SESSION_COUPEE = ("ce compte a été ouvert ailleurs avec une vieille session : "
                   "tous les appareils sont déconnectés, reconnecte-toi")
@@ -120,6 +121,13 @@ class EmplacementInconnu(CompteInvalide):
 
 class PartieTropGrosse(CompteInvalide):
     statut = 413
+
+
+class MotDePasseIncorrect(CompteInvalide):
+    """403 — et PAS `NonAutorise` (401) : un 401 efface le cookie, et une faute de frappe a
+    l'effacement du compte ne doit surtout pas delier l'appareil qui vient de la faire."""
+
+    statut = 403
 
 
 class NonAutorise(Exception):
@@ -357,6 +365,36 @@ def authentifier(
 def deconnecter(conn: sqlite3.Connection, session: Session) -> None:
     with bd.transaction(conn):
         conn.execute("DELETE FROM appareils WHERE id = ?", (session.appareil_id,))
+
+
+def effacer(conn: sqlite3.Connection, session: Session, donnees: object) -> None:
+    """Efface le compte POUR VRAI (M14, 4e vague) : ses parties, ses appareils, ses jetons
+    perimes, son courriel, son pseudo — le pseudo est libre aussitot.
+
+    ⚠️ Le mot de passe est redemande, meme sur un appareil deja lie : « un bouton, une
+    confirmation », et un cookie d'appareil emprunte ou vole ne doit pas suffire a detruire
+    un compte. Un mot de passe faux rend `MotDePasseIncorrect` (403), jamais 401.
+
+    ⚠️ UN SEUL `DELETE FROM comptes` : les trois autres tables descendent de lui en
+    `ON DELETE CASCADE` (et `bd.ouvrir` allume `foreign_keys` par connexion — sans quoi rien
+    ne partirait avec lui). Ce que ca n'efface PAS : les copies de sûreté quotidiennes de la
+    base (`deploy/sauvegarder_bd.py`, les sept dernieres), qui s'effacent d'elles-memes.
+    """
+    donnees = _objet(donnees)
+    mot_de_passe = donnees.get("mot_de_passe")
+    if not isinstance(mot_de_passe, str) or len(mot_de_passe) > MOT_DE_PASSE_MAX:
+        raise MotDePasseIncorrect(MOT_DE_PASSE_FAUX)
+    rang = conn.execute(
+        "SELECT mot_de_passe FROM comptes WHERE id = ?", (session.compte_id,)
+    ).fetchone()
+    if rang is None:
+        # Le compte est deja parti (deux appareils qui l'effacent ensemble) : la session ne vaut plus rien.
+        raise NonAutorise(APPAREIL_INCONNU)
+    # Hors transaction : scrypt prend un moment, et le verrou d'ecriture est a tout le monde.
+    if not check_password_hash(rang["mot_de_passe"], mot_de_passe):
+        raise MotDePasseIncorrect(MOT_DE_PASSE_FAUX)
+    with bd.transaction(conn):
+        conn.execute("DELETE FROM comptes WHERE id = ?", (session.compte_id,))
 
 
 # --- Les parties -----------------------------------------------------------------------

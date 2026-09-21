@@ -216,6 +216,17 @@ def api_compte_nip():
     return jsonify({"jeton": _jeton()})
 
 
+@bp.route("/api/compte/effacer", methods=["POST"])
+def api_compte_effacer():
+    """Efface le compte pour vrai (M14, 4e vague). Le mot de passe est redemande : voir
+    `comptes.effacer`. Un mot de passe faux rend 403 et LAISSE LE COOKIE — l'appareil reste lie."""
+    session = comptes.authentifier(bd.connexion(), _jeton())
+    comptes.effacer(bd.connexion(), session, request.get_json(silent=True))
+    reponse = jsonify({"compte": None})
+    _cookie(reponse, None)
+    return reponse
+
+
 #: (fichier de static/img/, cote, usage). La 512 sert deux fois : Bandini tient
 #: dans le cercle du masque d'Android (tests/test_icones.py le verifie), une
 #: seconde image « maskable » serait la meme.
