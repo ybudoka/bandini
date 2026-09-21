@@ -26,7 +26,7 @@ import hashlib
 import json
 from dataclasses import dataclass
 
-from . import (armes, audio, carte, devantures, economie, journal, magasins, manettes,
+from . import (armes, audio, carte, devantures, economie, interactions, journal, magasins, manettes,
                missions, pietons, recherche, vehicules)
 from .version import VERSION
 
@@ -55,6 +55,8 @@ def assembler() -> dict:
         "pietons": gens,
         "manettes": manettes.exporter(),
         "devantures": devantures.exporter(),
+        # Les gestes du décor et de la rue : ACTION devant un banc, une poubelle, un artiste.
+        "interactions": interactions.exporter(),
         "carte": ville,
         "missions": missions.CATALOGUE,
         "defis": missions.DEFIS,

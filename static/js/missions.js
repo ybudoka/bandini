@@ -283,8 +283,18 @@ const Missions = (function () {
     // l'heure, c'etait une tape, et elle fait les poches. ⚠️ Rendre `true` sans
     // ce relais, c'etait le bug « je n'arrive plus a voler les gens » : l'arme a
     // la main, toute victime des poches est aussi a portee de bouclier.
+    //
+    // ⚠️ LES GENS QUI TRAVAILLENT DANS LA RUE AVANT LUI (le pourboire à l'artiste, la
+    // photo du touriste) : le bouclier prend n'importe quel passant, et il aurait pris
+    // le musicien. Sauf DERRIERE l'artiste quand ses poches se prennent — c'est le
+    // pickpocket (`Combat.pochesAPrendre`).
+    if (typeof Interactions !== 'undefined' && Interactions.utiliserSurLesGens(j)) return true;
     const otage = Combat.otageSousLaMain(j);
     if (otage) return Combat.viserOtage(j);
+    // ⚠️ LE DECOR EN TOUT DERNIER : un banc, un bac, une fontaine ne volent ACTION ni a
+    // une personne, ni a la porte, l'arme par terre ou le char d'a cote (`Interactions`
+    // les ecarte lui-meme : ils sont servis par l'appelant, APRES nous).
+    if (typeof Interactions !== 'undefined') return Interactions.utiliserSurLeDecor(j);
     return false;
   }
 
@@ -2479,6 +2489,8 @@ const Missions = (function () {
     // promet un geste qui n'aura pas lieu se lit comme un bogue.
     if (j && j.manege) return;
     if (!j || j.dansVehicule || B.menu || B.cinema) return;
+    // ⚠️ Assis sur un banc, ACTION ne fait qu'une chose : se lever (`Interactions.majAssis`).
+    if (j.assis) { B.invite = 'SE LEVER'; return; }
     if (B.interieur) {
       // Le metro dit ce qu'ACTION fait sous terre (monter, descendre, remonter) —
       // et se tait quand la rame n'est pas la : une invite qui promet un geste
@@ -2536,6 +2548,9 @@ const Missions = (function () {
     // Brume et pas une passante — le HUD la nomme.
     const fille = filleSousLaMain(j);
     if (fille) { B.invite = 'LA BRUME — ' + B.defs.economie.tarifs.compagnie + ' $'; return; }
+    // ⚠️ Meme place que dans `interagir` : avant le bouclier, apres la fille.
+    const gens = typeof Interactions !== 'undefined' ? Interactions.inviteGens(j) : null;
+    if (gens) { B.invite = gens; return; }
     const guichet = inviteGuichet(j);
     if (guichet) { B.invite = guichet; return; }
     const machine = distributriceSousLaMain(j);
@@ -2557,13 +2572,18 @@ const Missions = (function () {
     // ⚠️ « TENIR » est dans l'invite parce que la prise se tient : un bouton
     // qui demande qu'on insiste sans le dire n'est pas un bouton qui resiste,
     // c'est un bouton brise. Le HUD la remplit pendant qu'on insiste.
-    if (Combat.otageSousLaMain(j)) B.invite = 'BOUCLIER HUMAIN — TENIR';
+    if (Combat.otageSousLaMain(j)) { B.invite = 'BOUCLIER HUMAIN — TENIR'; return; }
+    // Le decor, en dernier — comme dans `interagir` (la porte, l'arme et le char ont deja repondu).
+    const decor = typeof Interactions !== 'undefined' ? Interactions.inviteDecor(j) : null;
+    if (decor) B.invite = decor;
   }
 
   function sauvegarderPartie() {
     const p = B.partie, j = B.joueur;
     if (j) {
-      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : { x: j.x, y: j.y };
+      // ⚠️ Assis, on se sauvegarde la ou l'on se tenait : le banc est solide, et un joueur
+      // recharge DEDANS ne saurait pas en sortir.
+      const dehors = B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : (j.assis ? { x: j.assis.avant.x, y: j.assis.avant.y } : { x: j.x, y: j.y });
       p.x = Math.round(dehors.x); p.y = Math.round(dehors.y); p.vie = Math.max(1, j.vie); p.arme = j.arme;
       // Le char gare devant la planque revient avec la partie.
       const planque = Monde.carte.ville ? Monde.carte.ville : Monde.carte;

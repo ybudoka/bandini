@@ -2970,7 +2970,7 @@ const Entites = (function () {
   function cede(e) {
     // ⚠️ Couche dans son lit, le joueur ne se fait pas sortir du lit a coups
     // d'epaule : c'est lui qui se leve, et seulement quand il pousse le stick.
-    if (e.alite && e.type === 'joueur') return false;
+    if ((e.alite || e.assis) && e.type === 'joueur') return false;
     if (e.etat !== 'fige') return true;
     if (!e.plante) return true;
     return dist2(e.x, e.y, e.plante.x, e.plante.y) < ECART_PLANTE * ECART_PLANTE;
@@ -3208,6 +3208,9 @@ const Entites = (function () {
     // MARCHER le personnage vers son choix, au ralenti et sans le vouloir.
     // C'est aussi ce qui fait le prix de la roue : on est debout, immobile.
     if (B.cinema || B.roue) { j.vx = 0; j.vy = 0; return; }   // on ecoute, ou on choisit
+    // ⚠️ ASSIS SUR UN BANC — comme le lit, c'est le stick qui leve (`Interactions.majAssis`) ;
+    // tant qu'on est assis rien ne bouge, et le pas qui suit un lever est le notre, dans la meme image.
+    if (j.assis && typeof Interactions !== 'undefined' && Interactions.majAssis(j)) return;
     // ⚠️ COUCHE DANS UN LIT — le reveil a l'hopital : rien ne bouge tant qu'on
     // ne pousse pas, et la PREMIERE poussee leve. On marche dans la meme image,
     // depuis le pas de cote que `seLever` vient de poser.

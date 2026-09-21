@@ -587,16 +587,24 @@ const Combat = (function () {
     })[0] || null;
   }
 
+  /** Ses poches sont-elles a prendre, d'ici ? ⚠️ LA regle du pickpocket, dite une
+      fois : `interactions.js` la lit aussi (un pourboire, une photo, un banc ne
+      volent pas le geste de qui a quelqu'un dans le dos). */
+  function pochesAPrendre(j, c) {
+    const dos = B.defs.pietons.reactions.pickpocket_dos_degres * Math.PI / 180 / 2;
+    if (c.gang || !c.vivant || c.argent <= 0 || !faceA(j, c.x, c.y)) return false;
+    if (c.etat === 'assomme') return true;                 // assomme : les poches sont a nous
+    // ⚠️ DERRIERE lui : on compare son regard a la direction d'ou l'on vient.
+    return Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > Math.PI - dos;
+  }
+
+  function victimeDesPoches(j) {
+    return Entites.pietonsAutour(j.x, j.y, 20).find(function (c) { return pochesAPrendre(j, c); }) || null;
+  }
+
   function pickpocket(j) {
     const reactions = B.defs.pietons.reactions;
-    const dos = reactions.pickpocket_dos_degres * Math.PI / 180 / 2;
-    const victimes = Entites.pietonsAutour(j.x, j.y, 20).filter(function (c) {
-      if (c.gang || !c.vivant || c.argent <= 0 || !faceA(j, c.x, c.y)) return false;
-      if (c.etat === 'assomme') return true;                 // assomme : les poches sont a nous
-      // ⚠️ DERRIERE lui : on compare son regard a la direction d'ou l'on vient.
-      return Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > Math.PI - dos;
-    });
-    const victime = victimes[0];
+    const victime = victimeDesPoches(j);
     if (!victime) return false;
     Missions.encaisser(victime.argent, 'POCHES');
     victime.argent = 0;
@@ -698,7 +706,7 @@ const Combat = (function () {
     const j = B.joueur;
     // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
     // d'une cloture on ne fait rien du tout.
-    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || B.cinema) {
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || B.cinema) {
       fermerRoue(false);
       tenu = 0;
       return;
@@ -839,7 +847,7 @@ const Combat = (function () {
     // ⚠️ `dansVehicule` et `interieur` aussi, pour la tape : `otageSousLaMain`
     // les ecartait deja pour la prise, mais on ne fait pas les poches d'un
     // passant depuis un char ni a travers le mur d'une piece.
-    const debout = j.vivant && !j.enjambe && !j.alite && !j.dansVehicule && !B.interieur
+    const debout = j.vivant && !j.enjambe && !j.alite && !j.assis && !j.dansVehicule && !B.interieur
       && !B.cinema && !B.roue;
     // Relachee avant d'avoir muri : c'etait une tape (voir `viserOtage`).
     if (debout && !Entree.bas('action')) { j.saisie = 0; pickpocket(j); return; }
@@ -904,7 +912,7 @@ const Combat = (function () {
     // pendant la phase active, et c'est cette ligne qui le tient pointe sur
     // la cible verrouillee, image apres image, meme si le joueur ne bouge
     // pas. Un `j` qui n'existe pas encore (chargement) ne verrouille rien.
-    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !B.roue) majCible(j);
+    if (j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !j.assis && !B.roue) majCible(j);
     else if (j) { j.cible = null; verrouTenu = 0; }
     majProjectiles();
     majBrasiers();
@@ -929,7 +937,7 @@ const Combat = (function () {
     // (`Entites.majJoueur`), et un coup de poing donne depuis l'oreiller
     // partirait d'un corps qui n'est pas debout.
     // ⚠️ Assis dans un manège (`j.manege`), on ne frappe pas et on ne ramasse rien.
-    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite) return;
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis) return;
     // ⚠️ ROUE OUVERTE, ON NE SE BAT PAS. Le monde rampe tant qu'elle est la :
     // pouvoir tirer dedans, ce serait un ralenti a la demande — tenir ARME,
     // viser tranquillement, tirer. On choisit son arme OU on se bat.
@@ -1012,7 +1020,7 @@ const Combat = (function () {
   return {
     CHARGE_MIN, ROULADE_IMAGES, TENIR_IMAGES, RALENTI, armeDef, armeCourante, munitions, possede, regles,
     armesDuSac, aSec, degainer, retourRapide, ouvrirRoue, fermerRoue, creneauVise, majRoue, tempsQuiPasse,
-    frapper, tirer, cycler, roulade, pickpocket, ramasserArme, objetSousLaMain,
+    frapper, tirer, cycler, roulade, pickpocket, pochesAPrendre, victimeDesPoches, ramasserArme, objetSousLaMain,
     viseeAssistee, dispersionDe, allumer, majBrasiers, majAttaque, majProjectiles, maj,
     majCible, ciblesVerrouillables, VERROU_PORTEE,
     otageSousLaMain, viserOtage, prendreEnOtage, lacherOtage, majOtage, majSaisie,
