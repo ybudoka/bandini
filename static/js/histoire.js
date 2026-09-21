@@ -148,6 +148,15 @@ const Histoire = (function () {
     return null;
   }
 
+  /** Où le joueur se tient DANS LA VILLE. ⚠️ Dedans, ses x et y sont ceux de la PIÈCE
+      (la cantine : 104, 120) : une rue cherchée à ces coordonnées-là est celle du coin
+      haut-gauche de la carte, à 3 000 px de la porte. La rue qu'il verra en sortant est
+      celle de sa porte (`B.exterieur`). */
+  function ouEstLeJoueurEnVille() {
+    const ext = B.interieur ? B.exterieur : null;
+    return ext ? { x: ext.x, y: ext.y } : { x: B.joueur.x, y: B.joueur.y };
+  }
+
   const CAP_DE_FLECHE = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
 
   /** Une place ou poser un char SANS le poser dans un autre.
@@ -1034,8 +1043,10 @@ const Histoire = (function () {
   }
 
   function poserLeFuyard(m, o) {
-    const j = B.joueur;
-    const rue = tuileDeRue(j.x, j.y, 10);
+    // ⚠️ Le fuyard naît dans la ville, près de la porte quand on est dedans (m50 : Lulu le
+    // voit filer depuis la cantine), et pas dans le char qu'on a garé devant elle.
+    const ici = ouEstLeJoueurEnVille();
+    const rue = tuileDeRue(ici.x, ici.y, 10, sansChar) || tuileDeRue(ici.x, ici.y, 10);
     if (!rue) return;
     const angle = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 }[rue.sens];
     const v = Vehicules.creer(o.vehicule || 'moto', rue.x, rue.y, angle, { conducteur: 'trafic', etat: 'roule', poursuite: true, fuite: true, sens: rue.sens, mission: m.slug, fuyard: true });

@@ -319,6 +319,163 @@ def test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler(ban
     assert r["objectif"].endswith(" 0/2")
 
 
+def _jouer_m50_jusqu_a_lulu(garee):
+    """Le début de m50, joué au bouton : la nuit, la cantine, Lulu. Rend le JS qui le fait et
+    ce qu'il mesure — `garee` : on est venu EN CHAR, garé sur la tuile de rue devant la porte."""
+    return """function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+        const cantine = L.Histoire.lieu('cantine');
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        // Venu EN CHAR : on se gare sur la tuile de rue la plus proche de la porte, celle-là même
+        // où naît ce que la mission pose près de nous.
+        let mien = null;
+        if (GAREE) {
+            const arret = L.Histoire.tuileDeRue(porte.x * 16 + 8, (porte.y + 1) * 16 + 10, 10);
+            mien = L.Vehicules.creer('auto', arret.x, arret.y, CAP[arret.sens], { etat: 'stationne' });
+        }
+        j.x = cantine.x; j.y = cantine.y + 20; L.Entites.indexer();
+        o.frame(3);
+        const etapeAller = B.partie.mission.etape;
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        const dedans = B.interieur && B.interieur.slug;
+        const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+        j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+        o.frame(2);
+        const invite = (L.Missions.majInvite(j), B.invite);
+        o.tape('KeyE', 2);
+        o.frame(2);
+        const etapeLulu = B.partie.mission.etape;
+        const pendant = B.cinema ? B.cinema.partie : null;
+        const f = B.mission.fuyard;
+        const ext = B.exterieur;
+        const mesure = { etapeAller: etapeAller, dedans: dedans, invite: invite, etapeLulu: etapeLulu, pendant: pendant,
+            fuyard: !!f, dansLaVille: !!f && ext.entites.indexOf(f) >= 0,
+            dPorte: f ? Math.round(Math.hypot(f.x - ext.x, f.y - ext.y)) : null,
+            dChar: f && mien ? Math.round(Math.hypot(f.x - mien.x, f.y - mien.y)) : null };
+        return { mesure: mesure };
+    }""".replace("GAREE", "true" if garee else "false")
+
+
+def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
+    """⚠️ Martin, 20 sept. 2026 : « la mission 50 ne fonctionne pas bien ». Rouge avant : parler à
+    Lulu, c'est le faire DEDANS, et le fuyard naissait sur la rue la plus proche des x et y du
+    joueur — ceux de la PIÈCE (104, 120), donc le coin haut-gauche de la carte, à 2 900 px de la
+    cantine. La flèche du GPS y menait, la ville était vide, la mission ne se finissait pas.
+
+    Ici on la joue au bouton, de l'appel de Marco à la prime : la nuit, la cantine, Lulu qui crie
+    (« pendant » : il faut la passer avant que l'objectif suivant compte), le fuyard qui file
+    devant la porte, la caisse, le garage."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        const marco = L.Histoire.donneur('marco');
+        j.x = marco.x - 16; j.y = marco.y; L.Entites.indexer();
+        const parle = L.Histoire.parler('marco');
+        let n = 0;
+        while ((B.scene || B.cinema) && n < 6000) { o.frame(1); if (B.cinema && n % 30 === 0) L.Histoire.suivante(); n++; }
+        const debut = { parle: parle, etape: B.partie.mission.etape, objectif: L.Histoire.ligneObjectif() };
+        // Le jour : on attend la nuit.
+        o.frame(3);
+        const attend = B.mission.attend;
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        const cantine = L.Histoire.lieu('cantine');
+        j.x = cantine.x; j.y = cantine.y + 20; L.Entites.indexer();
+        o.frame(3);
+        const etapeAller = B.partie.mission.etape;
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        const dedans = B.interieur && B.interieur.slug;
+        const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+        j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+        o.frame(2);
+        const invite = (L.Missions.majInvite(j), B.invite);
+        o.tape('KeyE', 2);
+        o.frame(2);
+        const etapeLulu = B.partie.mission.etape;
+        const pendant = B.cinema ? { partie: B.cinema.partie, qui: B.cinema.lignes[0].qui, telephone: B.cinema.lignes[0].telephone } : null;
+        const f = B.mission.fuyard, ext = B.exterieur;
+        const naissance = f ? { dansLaVille: ext.entites.indexOf(f) >= 0, dPorte: Math.round(Math.hypot(f.x - ext.x, f.y - ext.y)), slug: f.slug } : null;
+        // Elle crie, on sort.
+        let g = 0; while (B.cinema && g < 100) { L.Histoire.suivante(); g++; }
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        const dehors = !B.interieur;
+        const cible = L.Histoire.cible();
+        const dSortie = Math.round(Math.hypot(f.x - j.x, f.y - j.y));
+        const dFleche = cible ? Math.round(Math.hypot(cible.x - j.x, cible.y - j.y)) : null;
+        let dMax = 0;
+        for (let i = 0; i < 150; i++) { o.frame(1); dMax = Math.max(dMax, Math.hypot(f.x - j.x, f.y - j.y)); }
+        // Rattrapé : le char casse, le porteur tombe, la caisse aussi.
+        L.Vehicules.endommager(f, 999, j);
+        o.frame(2);
+        const tombe = B.mission.fuyardTombe;
+        const porteur = B.mission.entites.find(function (e) { return e.porteLaCaisse; });
+        L.Entites.assommer(porteur);
+        o.frame(2);
+        const caisse = B.mission.entites.find(function (e) { return e.objet === 'caisse'; });
+        j.x = caisse.x; j.y = caisse.y; L.Entites.indexer();
+        o.frame(2);
+        const etapeCaisse = B.partie.mission.etape, ligneCaisse = L.Histoire.ligneObjectif();
+        // Au garage : la prime.
+        const argent0 = B.partie.argent;
+        const m2 = L.Histoire.donneur('marco');
+        j.x = m2.x - 16; j.y = m2.y; L.Entites.indexer();
+        for (let k = 0; k < 400 && B.partie.mission; k++) o.frame(1);
+        const fait = !!B.partie.missionsFaites.m50;
+        let s = 0; while ((B.scene || B.cinema) && s < 6000) { o.frame(1); if (B.cinema && s % 30 === 0) L.Histoire.suivante(); s++; }
+        return { debut: debut, attend: attend, etapeAller: etapeAller, dedans: dedans, invite: invite, etapeLulu: etapeLulu,
+                 pendant: pendant, naissance: naissance, dehors: dehors, dSortie: dSortie, dFleche: dFleche, dMax: Math.round(dMax),
+                 tombe: tombe, etapeCaisse: etapeCaisse, ligneCaisse: ligneCaisse, fait: fait, prime: B.partie.argent - argent0 };
+    }""")
+    assert r["debut"]["parle"] is True and r["debut"]["etape"] == 0, "Marco donne la mission"
+    assert r["debut"]["objectif"].startswith("ALLER À LA CANTINE"), r["debut"]
+    assert r["attend"] == "ATTENDS LA NUIT", "de jour, on attend la nuit"
+    assert r["etapeAller"] == 1, "arrivé à la cantine de nuit, on passe à Lulu"
+    assert r["dedans"] == "cantine" and r["invite"] == "PARLER À LUCIENNE « LULU » PELLETIER"
+    assert r["etapeLulu"] == 2, "ACTION devant Lulu accomplit l'objectif"
+    assert r["pendant"] == {"partie": "pendant", "qui": "lulu", "telephone": False}, "c'est Lulu qui le crie, elle est là"
+    nait = r["naissance"]
+    assert nait and nait["dansLaVille"], "le fuyard nait dans la VILLE, pas dans la piece"
+    assert nait["slug"] == "auto"
+    # ⚠️ Rouge avant : 2 900 px, au coin de la carte.
+    assert nait["dPorte"] <= 200, f"le fuyard naît devant la cantine, pas au bout de la carte ({nait['dPorte']} px de la porte)"
+    assert r["dehors"] is True
+    assert r["dSortie"] <= 200, f"en sortant, on le voit filer ({r['dSortie']} px)"
+    assert r["dFleche"] <= 200, "la flèche du GPS mène à lui, et il est là"
+    assert r["dMax"] > 150, "il file : la rue s'allonge entre lui et nous"
+    assert r["tombe"] is True and r["etapeCaisse"] == 3 and r["ligneCaisse"].startswith("RETOURNER AU GARAGE")
+    assert r["fait"] is True and r["prime"] == 450, "au garage, Marco paie la mission"
+
+
+def test_m50_le_fuyard_ne_nait_pas_dans_le_char_gare_devant_la_cantine(banc):
+    """On vient à la cantine EN CHAR (c'est la nuit, la mission est au port) et on se gare sur la
+    tuile de rue la plus proche de la porte — celle-là même où le fuyard naît. Il naissait aux
+    mêmes x et y que notre char, dessous (voir `test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur`).
+    Un char fait 28 px de long : rien à moins de 32 px."""
+    r = banc(_jouer_m50_jusqu_a_lulu(True))["mesure"]
+    assert r["etapeLulu"] == 2 and r["fuyard"] and r["dansLaVille"]
+    assert r["dChar"] >= 28, f"le fuyard naît dans le char garé ({r['dChar']} px, un char en fait 28)"
+    assert r["dPorte"] <= 200, "et il reste devant la porte"
+
+
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
