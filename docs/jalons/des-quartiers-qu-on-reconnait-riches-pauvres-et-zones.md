@@ -247,7 +247,70 @@ _La proposition d'origine :_
 - **Les commerces qui s'ouvrent** (un sur cinq) prennent une pièce selon le standing : un bistro
   n'a pas le comptoir d'un prêteur sur gages.
 
-### 4e vague — le standing se vit (taille 1) — **en cours (21 sept. 2026)**
+### 4e vague — le standing se vit (taille 1) — **livrée le 17 sept. 2026, reposée le 21 sept. 2026**
+
+✅ **Ce qui est livré, et où ça s'écarte de la proposition ci-dessous :**
+
+- ⚠️ **LIVRÉE, PUIS EFFACÉE, PUIS REPOSÉE.** Livrée le 17 sept. 2026 à 15 h 47 (`cde28f9`) ; 53
+  minutes plus tard, un commit fait depuis l'éditeur, au message générique (`a5027b9`, « feat:
+  Implement score tracking feature… »), a été fait depuis un arbre **plus vieux** : il a ramené le
+  tableau des scores que Martin venait de retirer, et **effacé toute la vague** — le code, les
+  juges et sa note du plan. Le tableau des scores est reparti le soir même (`d54c809`) ; la vague,
+  personne ne l'a vue partir, et la table du plan disait « 3 vagues livrées » pendant quatre jours.
+  Seule `Missions.gainDeFouille` avait survécu, qui lisait une table que le paquet ne portait plus
+  (donc des tiroirs pareils partout). Reposée le 21 sept. 2026 sur le `dev` du jour, **le même
+  code** : deux conflits seulement, résolus en gardant les deux côtés (le `au_volant` du cabriolet
+  rose, né entre-temps, ne se gare toujours pas, et ce qui se gare lit le standing).
+- **Qui marche** : `pietons.Pieton.standings` (une sorte sans standing va partout) se croise avec
+  `districts` — touriste et joggeuse en cossu et ordinaire, ivrogne et pickpocket en pauvre.
+  ⚠️ Le district se lit au JOUEUR (c'est sa bulle), le standing à la TUILE où la sorte se pose :
+  deux blocs voisins n'ont pas le même. Et un juge exige que le croisement des deux existe
+  quelque part — une sorte qui ne peut naître nulle part est une sorte morte (le premier essai
+  mettait le touriste en cossu seul : ses quartiers sont les Quais et La Pointe, il n'y serait
+  jamais né).
+- **Ce qui est garé** : `vehicules.STANDING_DU_PARC` — `rares` (le haut de gamme peut-il naître
+  ici ?) et `usure` (la carrosserie qu'il lui reste). Pas un char rare dans une rue pauvre ; les
+  chars qui y naissent gardent 60 % de leur tôle, et le char porte sa marque (`usure`), ce qui
+  distingue un char né minoune d'un char défoncé depuis. La fumée commence sous 50 % : une
+  minoune ne fume pas en naissant, elle casse plus vite.
+- **La police** : `recherche.STANDING` — `patrouille` multiplie ce que la zone veut d'agents
+  (1,5 en cossu, 0,6 en pauvre), `depeche` le délai au bout duquel un témoin qui ne trouve pas
+  d'agent téléphone (0,6 en cossu, 1,7 en pauvre).
+- **L'argent** : `economie.FOUILLE_PAR_STANDING` — les tiroirs d'un logement rapportent 2,2 fois
+  plus en cossu, 0,4 fois en pauvre. Le standing se lit DEHORS (`B.exterieur`) : dedans, on est
+  dans une pièce, et une pièce n'a pas de quartier.
+- ⚠️ **Pas d'épave sur des blocs** : une épave s'efface au bout de quarante secondes
+  (`PHYSIQUE["epave_secondes"]`), elle ne peut pas décorer une rue. La minoune dit la même chose.
+- **Reporté** : « la gang tient la rue ». Le territoire des gangs est une carte à part
+  (`pietons.frontieres`) ; décider qui gagne entre elle et le standing vaut sa propre ligne.
+- ⚠️ **QUATRE JUGES VOISINS NE TENAIENT QUE PAR LES DÉS**, et changer qui marche dans la rue les a
+  fait tomber. Aucun ne parlait de standing, et chacun avait un vrai défaut :
+  - « les cinq qui viennent avec » posait le témoin **par rapport au joueur** alors que son propre
+    commentaire dit « à côté de l'ivrogne » — l'ivrogne venait de marcher cent soixante pas, il
+    était à 191 px, hors du rayon de peur (sept tuiles). Il le pose maintenant à côté de l'ivrogne.
+  - « une rixe qu'on ne voit pas ne s'entend pas » laissait la bagarre sept secondes hors champ :
+    **un camp entier y passait**, et le juge mesurait le silence d'une bagarre finie. Cent
+    cinquante images, et il écoute jusqu'à entendre.
+  - « les cinq qui viennent avec » encore : il donnait 180 images à l'ivrogne pour tomber — mais un
+    flâneur s'arrête tout seul une fois sur trois, pour 50 à 209 images, et `majIvrogne` ne regarde
+    qu'un ivrogne **qui flâne**. Le juge le remet debout quand il s'arrête.
+  - « le pont arrête les chars » conduisait à fond dans une ville vivante : **une seule caisse
+    lointaine** le faisait rougir à la base. Il dégage son corridor, et il exige que la fiche de
+    dégâts coûte quelque chose.
+- ⚠️ **Et un cinquième, à la reprise** : « les tiroirs d'un logement ne se fouillent qu'une fois »
+  (`test_interieurs_js`, refait le 20 sept. pour « on agit sur ce qu'on regarde ») bornait le gain
+  à la fourchette d'avant la vague. Son premier logement est cossu : 120 $ pour un plafond de 60. Il
+  lit maintenant le standing de l'adresse, dehors, et borne par la part du quartier.
+- **Juges** (`test_quartiers.py`, 7 de plus) : qui marche dit le standing (et peut naître quelque
+  part), l'ivrogne ne dort pas dans la rue chic, pas un char rare dans une rue pauvre, une minoune a
+  moins de carrosserie (et le char cossu toute la sienne), la police arrive plus vite chez les riches,
+  **le témoin téléphone plus vite chez les riches**, les tiroirs disent le quartier. ⚠️ Le septième
+  est né de la reprise : sur dix mutations rejouées le 21 sept., neuf rougissaient, et **la dixième
+  restait verte** — `police.js` pouvait oublier le `depeche` du témoin, le juge de la police ne
+  lisait que la table Python et la patrouille. Il fait maintenant téléphoner un témoin par
+  `Police.maj` sur une tuile cossue, une ordinaire et une pauvre, au même âge du crime.
+
+_La proposition d'origine :_
 
 Celle qui peut attendre : les trois premières font déjà ce que Martin a demandé. Celle-ci donne
 au standing une **conséquence de jeu**.
@@ -361,3 +424,21 @@ qui s'ouvre a un comptoir qui barre la pièce, un cossu deux plantes à l'entré
   ville, et le juge d'autobus « qui attend monte » est tombé — il ne tient que par sa graine
   (voir « Qui attend l'autobus monte dedans »).
 - Reste la 4e vague : le standing se vit (qui marche, ce qui est garé, la police et l'argent).
+
+✅ **4e vague livrée — le jalon est complet** (livrée le 17 sept. 2026, effacée le jour même par un
+commit d'éditeur, reposée le 21 sept. 2026) : le standing a des conséquences de jeu. **Qui marche** :
+touristes et joggeuses en cossu et ordinaire, ivrognes et pickpockets en pauvre
+(`pietons.Pieton.standings`, croisé avec `districts`, lu à la TUILE où la sorte se pose). **Ce qui
+est garé** : pas un char rare dans une rue pauvre, et les chars qui y naissent sont des minounes
+(60 % de carrosserie — ça se sent au premier poteau). **La police et l'argent** : une patrouille et
+demie en cossu contre six dixièmes en pauvre, un témoin qui téléphone presque deux fois plus tard
+en pauvre, et les tiroirs d'un logement qui rapportent 2,2 fois plus en cossu, 0,4 fois en pauvre.
+Voler chez les riches paie, et ça se paie.
+
+- ⚠️ **Un commit d'éditeur fait depuis un arbre périmé efface sans bruit** : `a5027b9` (17 sept.,
+  16 h 40) a emporté la vague 53 minutes après sa livraison, et rien n'a rougi — ses juges
+  partaient avec elle. Le témoin qui l'a dit, quatre jours plus tard : `git log -S` sur un nom de
+  la vague (`STANDING_DU_PARC`) rendait deux commits, l'ajout et la suppression. Avant de refaire
+  une vague « à faire », chercher si elle n'a pas déjà existé.
+- **Pas d'épave sur des blocs** (une épave s'efface en quarante secondes) ; **reporté** : « la
+  gang tient la rue » en pauvre, qui vaut sa propre ligne.

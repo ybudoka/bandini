@@ -84,6 +84,10 @@ def test_le_pont_arrete_les_chars_et_pas_les_jambes_avant_m2(banc, paquet):
         return out;
     }""")
     b = r["b"]
+    # ⚠️ La fiche doit COUTER quelque chose, sinon le juge compare zero a zero :
+    # il relit `forcer.degats` pour son attendu, et une fiche a zero le rendait
+    # vert (mutation du 17 sept. 2026).
+    assert pont["forcer"]["degats"] > 0, pont
     assert r["fermee"] is True
     assert r["lent"]["y"] < b["y"] + 0.5, f"au pas, le char est entre sur le pont : {r['lent']}"
     assert r["lent"]["msg"] == pont["raison"], r["lent"]

@@ -757,9 +757,17 @@ def _table_des_dettes() -> list[int]:
     return table
 
 
+#: ⚠️ **CE QU'IL Y A DANS LES TIROIRS** (4e vague des quartiers) : la part de
+#: `fouille_min`/`fouille_max` qu'on trouve, selon le standing du logement. Voler
+#: chez les riches paie ; dans un plex du port, il n'y a presque rien a prendre —
+#: et la police, elle, tarde (voir `recherche.STANDING`). C'est le meme echange.
+FOUILLE_PAR_STANDING: dict[str, float] = {"cossu": 2.2, "ordinaire": 1.0, "pauvre": 0.4}
+
+
 def exporter() -> dict:
     return {
         "argent_depart": ARGENT_DEPART,
+        "fouille_standing": dict(FOUILLE_PAR_STANDING),
         "fortune_max": FORTUNE_MAX,
         "jour_secondes": JOUR_SECONDES,
         "casier_max": CASIER_MAX,

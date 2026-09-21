@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (191 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (193 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -80,7 +80,6 @@ pas quand l'ordre de travail change.
 |---|---|---|---|---|---|
 | Des phares à la mesure de chaque char | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-phares-a-la-mesure-de-chaque-char.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
-| Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e, le standing se vit, commencée) | 21 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
 | L'aéroport de Baie-des-Brumes | ⬜ **en cours** | 21 sept. 2026 | **P3** | ajout | [fiche](jalons/l-aeroport.md#fiche) |
 | M15 La ville te parle — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [fiche](jalons/ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](jalons/ca-travaille-chantiers-et-demolitions.md#notes) |
@@ -117,7 +116,6 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 |---|---|---|---|---|
 | **P2** | correctif | Des phares à la mesure de chaque char | 1 | ne dépend de rien : `Vehicules.allumerLesPhares` et `Base.fin`, les machines déclarent déjà leurs lampes |
 | **P2** | ajout | La ligne d'histoire : une ouverture et un générique | 3 | ⚠️ **l'ouverture est livrée** (16 sept. 2026) — elle ne dépendait de rien ; le **générique**, lui, attend **M13** : il n'y a pas de fin à filmer avant |
-| **P3** | ajout | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | 4 | ⚠️ redessine ce qu'il y a sur chaque bloc, et **M16** (des lieux nommés dans chaque quartier), les éboueurs et les crimes d'autrui de **M12**, les lignes d'autobus et les chantiers s'y posent : faits avant, ils s'ajustent deux fois. Attend **les bancs et les arbres de rue** (en cours) — c'est le même semis, on le règle par standing au lieu de le refaire |
 | **P4** | ajout | M15 La ville te parle | 4 | le narrateur, le journal et les voix existent ; ⚠️ contient un correctif (les passants se répètent) |
 | **P4** | ajout | Ça travaille : chantiers et démolitions | 3 | ⚠️ **la refonte des véhicules d'abord** (la pelle et la grue sont du décor animé tant qu'elle n'est pas faite) ; partage son mécanisme avec les **entraves de M12**, qui s'y branchent au lieu de vivre à part |
 | **P4** | ajout | M14 Meta | 4 | de l'**infrastructure** (serveur, BD, comptes, sessions, NIP) : un autre métier que le reste. ⚠️ Rien n'en dépend, et rien n'en doit dépendre : un compte est un **confort**, le jeu se joue serveur éteint |

@@ -2041,6 +2041,13 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         // place et sous la meme arme, reagit la ou l'ivrogne repond.
         sobre.etat = 'flane'; soul.etat = 'flane'; soul.bulle = null;
         const temoin = o.poser('passant', 16, 0); temoin.etat = 'flane';
+        // ⚠️ A COTE DE L'IVROGNE, pas du joueur. `poser` place par rapport au
+        // JOUEUR, et l'ivrogne vient de marcher cent soixante pas : mesure du
+        // 17 sept. 2026, il etait a 191 px — hors du rayon de peur (sept
+        // tuiles). Le juge notait « le passant ne reagit pas » alors que le
+        // passant n'etait pas la, et il ne tenait que par la promenade de
+        // l'ivrogne (la 4e vague des quartiers l'a defaite).
+        temoin.x = soul.x + 16; temoin.y = soul.y; temoin.plante = null;
         L.Entites.indexer();
         L.Entites.alerter(soul.x, soul.y, j, 2);
         out.ivrogne = { zigzag: vireSoul.pct, droit: vireSobre.pct,
@@ -2056,7 +2063,17 @@ def test_les_cinq_qui_viennent_avec_font_chacune_son_metier(banc, paquet):
         const vraiTaux = L.B.defs.pietons.reactions.ivrogne_chute;
         L.B.defs.pietons.reactions.ivrogne_chute = 1;
         let tombe = false;
-        for (let i = 0; i < 180 && !tombe; i++) { o.frame(1); if (soul.etat === 'assomme') tombe = true; }
+        // ⚠️ ET ON LE REMET DEBOUT S'IL S'ARRETE. Un flaneur s'arrete tout seul
+        // une fois sur trois, pour 50 a 209 images, et `majIvrogne` ne regarde
+        // qu'un ivrogne qui FLANE : mesure du 17 sept. 2026, sa halte a dure
+        // 195 images, son compte a gele a 45 — UNE COCHE avant la chute — et le
+        // juge a note « il ne tombe jamais tout seul ». Ce qu'on prouve, c'est
+        // qu'il tombe en marchant ; la duree de ses haltes est une autre regle.
+        for (let i = 0; i < 400 && !tombe; i++) {
+            o.frame(1);
+            if (soul.etat === 'arret') { soul.etat = 'flane'; soul.minuterie = 0; }
+            if (soul.etat === 'assomme') tombe = true;
+        }
         L.B.defs.pietons.reactions.ivrogne_chute = vraiTaux;
         out.ivrogne.tombe = tombe;
         out.ivrogne.taux = vraiTaux;

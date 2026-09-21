@@ -770,6 +770,14 @@ const Entites = (function () {
       // trottoir devant les commerces.
       const place = spectacle ? sceneLibre(zone) : placeDeNaissance();
       if (!place || visibleAEcran(place.x, place.y, 24)) continue;
+      // ⚠️ ET SON STANDING, a l'endroit ou elle se pose (4e vague des quartiers) :
+      // un touriste ne flane pas au pied des plex du port, un ivrogne ne dort pas
+      // dans la rue chic. Le district se lit au joueur (c'est sa bulle), le
+      // standing a la TUILE : deux blocs voisins n'ont pas le meme.
+      if (arch.standings) {
+        const rang = Monde.standingA(Math.floor(place.x / TT), Math.floor(place.y / TT));
+        if (arch.standings.indexOf(rang) < 0) continue;
+      }
       const e = creerPieton(place.x, place.y, arch);
       if (!e) continue;
       // ⚠️ Qui tient un poste se lit dans la FICHE (`vitesse: 0`), pas dans

@@ -658,9 +658,24 @@ OMBRE = {
 }
 
 
+#: ⚠️ **CE QUI EST GARE DIT LE STANDING** (4e vague des quartiers). `rares` : le
+#: haut de gamme peut-il naitre ici ? Une decapotable devant un preteur sur gages
+#: n'est plus une decapotable, c'est une auto de plus — et c'est la rue chic du
+#: Faubourg qui la rend desirable. `usure` : la part de carrosserie qu'un char de
+#: la rue a encore — en pauvre, on roule une minoune, et elle casse plus vite.
+#: ⚠️ Pas d'epave sur des blocs (le plan la proposait) : une epave s'efface au bout
+#: de `PHYSIQUE["epave_secondes"]`, elle ne peut pas decorer une rue.
+STANDING_DU_PARC: dict[str, dict] = {
+    "cossu": {"rares": 1, "usure": 1.0},
+    "ordinaire": {"rares": 1, "usure": 1.0},
+    "pauvre": {"rares": 0, "usure": 0.6},
+}
+
+
 def exporter_conduite() -> dict:
     return {"trafic": dict(TRAFIC), "physique": dict(PHYSIQUE),
             "ombre": dict(OMBRE),
+            "standing": {nom: dict(fiche) for nom, fiche in STANDING_DU_PARC.items()},
             "saut_vitesse_min": saut_vitesse_min()}
 
 
