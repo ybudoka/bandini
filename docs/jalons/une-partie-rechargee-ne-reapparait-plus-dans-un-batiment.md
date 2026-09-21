@@ -40,11 +40,24 @@ partie se rouvre dedans.
   revient au pixel. Mutations : sans le correctif, la partie se rouvre sur le toit (2549, 763) et
   dans la baie ; avec « la première tuile trouvée » au lieu de la plus proche, on se rouvre dix
   tuiles au nord-ouest, derrière le garage. Rouge les deux fois.
-- ⚠️ **Ce qui n'est pas trouvé : comment la partie s'est écrite là.** La sauvegarde écrit où l'on
-  est (au volant : le centre du char), et 159, 47 n'est ni la baie du rideau (colonnes 156-157) ni
-  un pas de porte. Le correctif rend la partie jouable quoi qu'il soit arrivé ; si le cousin se
-  retrouve encore dans un toit EN JOUANT, c'est un autre bogue, et il faudra ce qui s'est passé
-  juste avant.
+- ⚠️ **Ce qui n'est pas trouvé : comment la partie s'est écrite là.** Martin : « directement en
+  chargeant la partie… peut-être le garage, je suis pas certain ». Ce que le banc montre :
+  - **Un chemin sûr vers un mur** : au volant sous le toit de Ti-Guy (auto ou autobus), la
+    sauvegarde écrit le centre du char, 2512, 776 — un toit. Et l'autobus peut y rester : il passe
+    le seuil sans que l'atelier le prenne tout de suite (pas de menu, rideau levé), et ACTION n'y
+    fait pas descendre (« RECULE D'ABORD »). La sauvegarde automatique écrit ce mur toutes les dix
+    secondes, et la partie se rouvrait dedans.
+  - **2549, 763 n'est pas ce chemin-là** : sous le rideau, le bus ne dépasse pas x = 2516. Ce sont
+    les coordonnées où `deplacerCercle` colle un corps de rayon 5 qui pousse à GAUCHE contre la
+    colonne 158 et en BAS contre la rangée 48 (159 × 16 + 5, 48 × 16 − 5) : le cousin était déjà
+    dans le toit, et il poussait vers le trottoir. La sauvegarde du 21 sept., 16 h 20, est celle
+    d'après le chargement.
+  - Piste non vérifiée : le serveur de dev sert le JS tel qu'il est sur le disque, et d'autres
+    sessions y écrivaient le garage toute la journée — un état entre deux commits a pu laisser
+    passer ce que le code livré ne laisse pas passer.
+
+  Le correctif rend la partie jouable quoi qu'il soit arrivé ; si le cousin se retrouve encore
+  dans un toit EN JOUANT, sans recharger, c'est un autre bogue.
 - La suite complète : 3 720 verts, 9 rouges. Les deux rouges d'avant (les cravates de M2, la
   foule) rougissent aussi sans ce correctif ; les trois de `test_version` : la version est passée
   de 0.177 à 0.179 pendant les 30 minutes de la suite ; les quatre du navigateur, rejoués seuls,
