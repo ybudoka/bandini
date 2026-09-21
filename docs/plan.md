@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| L'hélico : sourd dedans, et muet quand il est parti | ⬜ **en cours** | 21 sept. 2026 | **P1** | **correctif** | [fiche](jalons/l-helico-sourd-dedans-et-muet-quand-il-part.md#fiche) |
 | Des phares à la mesure de chaque char | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-phares-a-la-mesure-de-chaque-char.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
