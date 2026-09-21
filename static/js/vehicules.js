@@ -192,7 +192,10 @@ const Vehicules = (function () {
   //: qui la depasse ne se gare pas dedans.
   const CASE_PX = 2 * TT;
 
-  function placeStationnee() {
+  /** `prefere` (facultatif, `garesVoulus()`) : la nuit, on rentre chez soi
+      (`placeDeNuit`). Sans preference — le jour —, le tirage d'avant, au de pres. */
+  function placeStationnee(prefere) {
+    if (prefere && prefere.usage) return placeDeNuit(prefere);
     const t = trafic(), c = Monde.carte, j = B.joueur;
     for (let essai = 0; essai < 20; essai++) {
       const a = B.rng() * Math.PI * 2;
@@ -208,6 +211,64 @@ const Vehicules = (function () {
       return { x: x, y: y, angle: Math.atan2(nez[1], nez[0]) };
     }
     return null;
+  }
+
+  //: Les cases de la carte, par leur tuile du FOND (celle contre la ligne de
+  //: nez, avec le reste de la case derriere elle) : lues une fois par carte.
+  let fondsDe = null, fonds = [];
+  function fondsDesCases() {
+    const c = Monde.carte;
+    if (fondsDe === c) return fonds;
+    fondsDe = c; fonds = [];
+    for (let ty = 2; ty < c.h - 1; ty++) {
+      for (let tx = 1; tx < c.w - 1; tx++) {
+        const g = Monde.glyphe(tx, ty), nez = NEZ[g];
+        if (!nez || Monde.glyphe(tx + nez[0], ty + nez[1]) === g || Monde.glyphe(tx - nez[0], ty - nez[1]) !== g) continue;
+        fonds.push({ tx: tx, ty: ty, x: (tx + 0.5 - nez[0] / 2) * TT, y: (ty + 0.5 - nez[1] / 2) * TT,
+                     angle: Math.atan2(nez[1], nez[0]) });
+      }
+    }
+    return fonds;
+  }
+
+  /** La nuit, une case libre dans l'anneau de naissance — d'abord dans une rue
+      ou l'on habite, et une fois sur quelques-unes (`ailleurs`) devant un
+      commerce : le bar et le depanneur ont leurs clients de nuit.
+
+      ⚠️ **ON CHOISIT PARMI LES CASES, on ne tire pas au hasard dans l'anneau.**
+      Premiere version : le tirage du jour, qui refusait les cases d'ailleurs
+      pendant ses premiers essais. Or une tuile tiree au hasard n'est une case
+      qu'une fois sur dix — refuser en plus faisait MOINS de chars la nuit que
+      le jour (0 contre 1 en 4 000 images, le juge l'a vu). Le jour garde son
+      tirage : c'est lui qui garde les des de la suite a leur place. */
+  function placeDeNuit(prefere) {
+    const t = trafic(), j = B.joueur;
+    const min = t.naissance_px * 0.6, max = t.naissance_px * 0.6 + (t.oubli_px - t.naissance_px);
+    const chez = [], ailleurs = [];
+    for (const f of fondsDesCases()) {
+      const d2 = dist2(f.x, f.y, j.x, j.y);
+      if (d2 < min * min || d2 > max * max) continue;
+      if (Entites.visibleAEcran(f.x, f.y, 40) || !libreAutour(f.x, f.y, 40)) continue;
+      (Monde.usageA(f.tx, f.ty) === prefere.usage ? chez : ailleurs).push(f);
+    }
+    const versAilleurs = B.rng() < (prefere.ailleurs || 0);
+    const liste = chez.length && !(versAilleurs && ailleurs.length) ? chez : ailleurs;
+    if (!liste.length) return null;
+    const f = liste[Math.floor(B.rng() * liste.length)];
+    return { x: f.x, y: f.y, angle: f.angle };
+  }
+
+  /** Combien de chars garés la bulle veut à cette heure, et où d'abord.
+
+      ⚠️ **LA NUIT, LES CHARS RENTRENT À LA MAISON** (`TRAFIC.garer_la_nuit`) :
+      deux fois plus, et d'abord dans les rues où l'on habite. Le jour rend
+      exactement ce qu'il rendait avant (six, n'importe où) — c'est ce qui garde
+      les des de toute la suite a leur place. `estNuit(heure)` AVEC l'heure :
+      c'est la nuit DEHORS, qu'on la voie ou non. */
+  function garesVoulus() {
+    const t = trafic(), n = t.garer_la_nuit;
+    if (n && B.partie && Monde.estNuit(B.partie.heure)) return { max: n.max, usage: n.usage, ailleurs: n.ailleurs };
+    return { max: t.stationnes_max, usage: null, ailleurs: 0 };
   }
 
   /** Comme les pietons : naitre hors champ, s'oublier hors de la bulle. */
@@ -325,8 +386,8 @@ const Vehicules = (function () {
           if (v.def.sirene) v.sirene = B.rng() < AMBULANCE_EN_COURSE;
         }
       }
-    } else if (stationnes < t.stationnes_max && B.t % 40 === 0) {
-      const place = placeStationnee();
+    } else if (stationnes < garesVoulus().max && B.t % 40 === 0) {
+      const place = placeStationnee(garesVoulus());
       // ⚠️ IL FAUT QUE LE CHAR RENTRE DANS LA CASE. Une case fait deux tuiles,
       // soit 32 px ; la remorqueuse en fait 36. Garee la, elle depassait, le
       // garde-fou (`degager`) la poussait hors des tuiles qu'elle chevauche, et
@@ -2609,6 +2670,38 @@ const Vehicules = (function () {
   /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
   function lampesDesFeux() { return lampesFeux.image === B.image ? lampesFeux.liste : []; }
 
+  //: **LES PHARES** (la nuit a ses habitudes). Un char qu'on MENE eclaire la rue
+  //: devant lui — un faisceau allonge dans son axe (`a`, `e` : `Base.fin` l'etire)
+  //: — et ses feux arriere rougeoient. Un char gare est eteint : c'est ce qui dit,
+  //: de loin, lequel va bouger. Ramasses EN DESSINANT, comme les feux de
+  //: circulation, et pour la meme raison : `dessinerUn` ne passe que sur les chars
+  //: de l'ecran.
+  const LAMPES_PHARES_MAX = 12;
+  const PHARE = { devant: 16, rayon: 30, allonge: 1.7, c: 'rgba(255,236,190,0.42)' };
+  const FEU_ARRIERE = { rayon: 7, c: 'rgba(255,55,45,0.50)' };
+  const lampesPhares = { image: -1, liste: [], allume: false };
+
+  function allumerLesPhares(v, cx, cy) {
+    if (lampesPhares.image !== B.image) {
+      lampesPhares.image = B.image;
+      lampesPhares.liste.length = 0;
+      lampesPhares.allume = Monde.ambiance().alpha >= BRUNE;
+    }
+    if (!lampesPhares.allume || !v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
+    // ⚠️ Deux places gardees pour le char du joueur : c'est lui qu'on regarde.
+    const plafond = v.conducteur === B.joueur ? LAMPES_PHARES_MAX : LAMPES_PHARES_MAX - 2;
+    if (lampesPhares.liste.length + 2 > plafond) return;
+    const demi = v.def.longueur / 2, ca = Math.cos(v.angle), sa = Math.sin(v.angle);
+    const d = demi + PHARE.devant;
+    lampesPhares.liste.push({ x: v.x + ca * d - cx, y: v.y + sa * d - v.z - cy, r: PHARE.rayon, c: PHARE.c,
+                              a: v.angle, e: PHARE.allonge, phare: v });
+    lampesPhares.liste.push({ x: v.x - ca * (demi + 1) - cx, y: v.y - sa * (demi + 1) - v.z - cy,
+                              r: FEU_ARRIERE.rayon, c: FEU_ARRIERE.c, arriere: v });
+  }
+
+  /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
+  function lampesDesPhares() { return lampesPhares.image === B.image ? lampesPhares.liste : []; }
+
   /** Une ampoule allumee : le pourtour de la phase, un COEUR plus pale, et la
       lampe qu'elle jette a la brune.
 
@@ -2962,6 +3055,7 @@ const Vehicules = (function () {
     // et centre sur son empreinte — donc sur `v.x`, `v.y`, la ou l'ombre est
     // posee et la ou les cercles de collision sont. Ce qu'on voit tourner est
     // ce qui bloque.
+    allumerLesPhares(v, cx, cy);
     const toit = Atlas.cuireCap(v.sprite, def, swapsDuMoment(v, def), ROTATIONS, capDe(v.angle), centreDuToit(v));
     const demi = toit.width / 2;
     ctx.drawImage(toit, Math.round(v.x - demi - cx), Math.round(v.y - v.z - demi - cy));
@@ -2981,9 +3075,9 @@ const Vehicules = (function () {
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
-    pointDArret, approcheDeLaLigne, placeDeLaPanne,
+    pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

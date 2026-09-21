@@ -27,7 +27,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, carte, devantures, economie, interactions, journal, magasins, manettes,
-               missions, pietons, recherche, vehicules)
+               missions, nuit, pietons, recherche, vehicules)
 from .version import VERSION
 
 
@@ -57,6 +57,9 @@ def assembler() -> dict:
         "devantures": devantures.exporter(),
         # Les gestes du décor et de la rue : ACTION devant un banc, une poubelle, un artiste.
         "interactions": interactions.exporter(),
+        # Ce que la nuit change (« la nuit a ses habitudes ») : les fenêtres qui
+        # s'éteignent, les lampadaires qui grésillent, le last call, le camelot…
+        "nuit": nuit.exporter(ville),
         "carte": ville,
         "missions": missions.pour_le_navigateur(),
         "defis": missions.DEFIS,

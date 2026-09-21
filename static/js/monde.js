@@ -240,7 +240,11 @@ const Monde = (function () {
       lampes: (def.lampes || []).map(function (l) {
         const sorte = SORTES_DE_LAMPE[l.c] || SORTES_DE_LAMPE.poteau;
         // ⚠️ `panne` : un lampadaire de rue pauvre qui n'eclaire plus (3e vague).
-        return { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c, panne: !!l.panne };
+        // `gresille` : un autre qui hoquette (la nuit a ses habitudes).
+        const lampe = { x: l.x * TT + 8, y: l.y * TT + sorte.dy, r: l.r || 44, c: sorte.c, panne: !!l.panne,
+                        gresille: !!l.gresille, tx: l.x, ty: l.y };
+        if (l.c === 'fenetre') heuresDeLaFenetre(lampe);
+        return lampe;
       }),
       portes: def.portes || [],
       rampes: def.rampes || [],
@@ -1833,6 +1837,37 @@ const Monde = (function () {
     return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
   }
 
+  //: **LA NUIT A SES HABITUDES : LES FENETRES S'ETEIGNENT UNE A UNE.** Chacune a
+  //: son coucher et son lever (`nuit.FENETRES`), lus a l'empreinte de sa tuile —
+  //: jamais au de du jeu. Poses une fois, au chargement de la carte.
+  function heuresDeLaFenetre(l) {
+    const f = B.defs && B.defs.nuit && B.defs.nuit.fenetres;
+    if (!f) return;
+    const h = hash2(l.tx, l.ty);
+    l.coucher = (f.coucher[0] + (h % 1000) / 1000 * (f.coucher[1] - f.coucher[0])) % 1;
+    l.lever = f.lever[0] + ((h >>> 10) % 1000) / 1000 * (f.lever[1] - f.lever[0]);
+  }
+
+  /** La fenetre dort-elle a cette heure ? Entre son coucher et son lever — qui
+      peut passer minuit. Une fenetre sans heures (pas de fiche) ne dort jamais. */
+  function fenetreEteinte(l, heure) {
+    if (l.coucher === undefined) return false;
+    const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
+    return l.coucher < l.lever ? (h >= l.coucher && h < l.lever) : (h >= l.coucher || h < l.lever);
+  }
+
+  /** Le lampadaire qui grésille est-il noir a cette image ? Par SALVES
+      (`nuit.LAMPADAIRES`) : la plupart du temps il tient, puis il hoquette. A
+      l'empreinte de la lampe et de `B.t` — un decor ne tire pas de de. */
+  function gresilleEteint(l, t) {
+    const g = B.defs && B.defs.nuit && B.defs.nuit.lampadaires;
+    if (!g || !l.gresille) return false;
+    const temps = t === undefined ? B.t : t;
+    const salve = hash2(Math.floor(temps / g.salve_images), l.tx * 31 + l.ty) % 1000 < g.part_des_salves * 1000;
+    if (!salve) return false;
+    return hash2(Math.floor(temps / g.clignote_images), l.tx + l.ty * 17) % 1000 < g.part_eteinte * 1000;
+  }
+
   function lampesVisibles(cam) {
     // Les lampadaires n'eclairent qu'a la brune : en plein jour, rien.
     if (!carte || ambiance().alpha < 0.2) return [];
@@ -1842,6 +1877,8 @@ const Monde = (function () {
       if (l.eteinte) continue;             // son poteau est a terre
       if (l.panne) continue;               // une rue pauvre : personne ne change l'ampoule
       if (l.demolie) continue;             // sa fenetre est tombee avec le batiment (chantier)
+      if (fenetreEteinte(l)) continue;     // on est couche, chez nous (la nuit a ses habitudes)
+      if (gresilleEteint(l)) continue;     // l'ampoule hoquette
       if (l.x < cx - l.r || l.x > cx + VW + l.r || l.y < cy - l.r || l.y > cy + VH + l.r) continue;
       out.push({ x: l.x - cx, y: l.y - cy, r: l.r, c: l.c });
       if (out.length >= 25) break;
@@ -1861,7 +1898,7 @@ const Monde = (function () {
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
+    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };

@@ -345,8 +345,9 @@ const Base = (function () {
   //: un croisement, c'est 2 poteaux de chars a 2 ampoules et jusqu'a 4
   //: poteaux de pietons — 8 lampes, et l'ecran en tient plusieurs. Au plafond
   //: d'avant, les feux AURAIENT ETEINT les lampadaires au lieu de s'ajouter a
-  //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico.
-  const LAMPES_MAX = 50;
+  //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico. Et depuis la
+  //: nuit a ses habitudes, les PHARES : douze lampes de plus (six chars menes).
+  const LAMPES_MAX = 62;
 
   /** Compose la nuit et les lampes, puis envoie a l'ecran. */
   function fin(ambiance, lampes) {
@@ -363,6 +364,20 @@ const Base = (function () {
         c.globalCompositeOperation = 'lighter';
         for (let i = 0; i < lampes.length && i < LAMPES_MAX; i++) {
           const l = lampes[i];
+          // Un faisceau (un phare) : le meme halo, ETIRE dans son axe (`e`, `a`).
+          if (l.e) {
+            c.save();
+            c.translate(l.x, l.y);
+            c.rotate(l.a || 0);
+            c.scale(l.e, 1);
+            const f = c.createRadialGradient(0, 0, 2, 0, 0, l.r);
+            f.addColorStop(0, l.c);
+            f.addColorStop(1, 'rgba(0,0,0,0)');
+            c.fillStyle = f;
+            c.fillRect(-l.r, -l.r, l.r * 2, l.r * 2);
+            c.restore();
+            continue;
+          }
           const g = c.createRadialGradient(l.x, l.y, 2, l.x, l.y, l.r);
           g.addColorStop(0, l.c || 'rgba(255,220,140,0.55)');
           g.addColorStop(1, 'rgba(0,0,0,0)');

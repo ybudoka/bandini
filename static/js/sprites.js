@@ -4700,6 +4700,33 @@ const DECORS = {
     ctx.fillStyle = '#e0b7a8'; ctx.fillRect(7, y0 + 2, 2, 1);                // le museau
   } },
 
+  // LE RATON LAVEUR (la nuit a ses habitudes), vu d'en haut. ⚠️ Ce qui le nomme,
+  // c'est le MASQUE (une bande noire sur les yeux, du blanc autour) et la QUEUE
+  // ANNELEE : sans eux, c'est un chat gris. Plus trapu que le chat, plus bas.
+  // Poses : 0 il fouille (ramasse sur lui-meme), 1 en marche, 2 il se sauve.
+  raton: { solide: false, r: 0, variantes: 3, w: 16, h: 16, ancre: [8, 12], peindre: function (ctx, w, h, v) {
+    const file = v === 2, marche = v === 1;
+    ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(4, 12, 8, 2);        // son ombre
+    const long = file ? 8 : marche ? 7 : 5;
+    const y0 = 12 - long;
+    ctx.fillStyle = '#4c4845'; ctx.fillRect(4, y0, 8, long);                 // le corps, trapu
+    ctx.fillStyle = '#77716c'; ctx.fillRect(4, y0, 7, long - 1);             // le dos eclaire du nord-ouest
+    // La queue annelee, en anneaux de deux sur deux : tendue derriere lui quand il
+    // file, en crosse sinon. ⚠️ A un pixel d'epaisseur, on ne lisait pas les anneaux.
+    const anneaux = file ? [[7, 12], [7, 14]] : marche
+      ? [[12, 9], [13, 7], [14, 5]] : [[12, 10], [13, 8], [14, 6], [14, 4]];
+    anneaux.forEach(function (a, i) {
+      ctx.fillStyle = i % 2 ? '#a19a93' : '#26232a';
+      ctx.fillRect(a[0], a[1], 2, 2);
+    });
+    ctx.fillStyle = '#d8d4ce'; ctx.fillRect(4, y0, 8, 3);                    // la face claire
+    ctx.fillStyle = '#1c1a1f'; ctx.fillRect(4, y0 + 1, 8, 1);                // LE MASQUE
+    ctx.fillStyle = '#f2e27a'; ctx.fillRect(5, y0 + 1, 1, 1); ctx.fillRect(10, y0 + 1, 1, 1);   // les yeux, dans le noir
+    ctx.fillStyle = '#26232a'; ctx.fillRect(7, y0 + 2, 2, 1);                // le museau
+    ctx.fillStyle = '#4c4845';                                               // les oreilles, rondes
+    ctx.fillRect(4, y0 - 1, 2, 1); ctx.fillRect(10, y0 - 1, 2, 1);
+  } },
+
   // LE BALLON DE PLAGE. ⚠️ Il ne bloque rien et n'entre dans aucun index : il
   // VOLE. Un decor qui bouge se voit de trois ecrans — c'est tout ce qu'on
   // demande a deux enfants qui se le lancent.
@@ -5484,6 +5511,16 @@ const DECALS = {
   impact: function (ctx, v, w, h) {
     ctx.fillStyle = 'rgba(20,18,26,0.5)';
     ctx.fillRect(7, 5, 2, 2); ctx.fillRect(6 + (v % 3), 4, 1, 1);
+  },
+  // LE CLAIRON SUR LE PERRON (la nuit a ses habitudes) : un journal roule, son
+  // elastique rouge, couche un peu de biais selon `v`. Pose par le camelot.
+  journal: function (ctx, v, w, h) {
+    const dy = v % 2, dx = (v >> 1) % 2;
+    ctx.fillStyle = 'rgba(20,18,26,0.25)'; ctx.fillRect(4 + dx, 7 + dy, 9, 2);   // son ombre
+    ctx.fillStyle = '#b9b2a2'; ctx.fillRect(3 + dx, 5 + dy, 9, 3);               // le rouleau
+    ctx.fillStyle = '#ece6d6'; ctx.fillRect(3 + dx, 5 + dy, 9, 2);               // le papier, eclaire
+    ctx.fillStyle = '#7a7466'; ctx.fillRect(4 + dx, 6 + dy, 3, 1); ctx.fillRect(8 + dx, 6 + dy, 3, 1);   // les lignes
+    ctx.fillStyle = '#c0392b'; ctx.fillRect(7 + dx, 5 + dy, 1, 3);               // l'elastique
   },
 };
 

@@ -238,15 +238,24 @@ const Interactions = (function () {
     return true;
   }
 
-  function choisirLaTrouvaille(table, facteurRien) {
+  function choisirLaTrouvaille(table, facteurRien, nuit) {
+    // ⚠️ LA NUIT A SES HABITUDES (`fouiller.la_nuit`) : la nuit, le rat de la table
+    // est un raton, et il pese plus lourd. Toujours UN `B.rng()` : la nuit change ce
+    // que le de rend, pas combien on en tire.
+    const poids = function (e) {
+      if (e[1] === 'rien') return e[0] * facteurRien;
+      if (nuit && e[1] === nuit.remplace) return e[0] * nuit.poids;
+      return e[0];
+    };
+    const rend = function (slug) { return nuit && slug === nuit.remplace ? nuit.par : slug; };
     let total = 0;
-    table.forEach(function (e) { total += e[0] * (e[1] === 'rien' ? facteurRien : 1); });
+    table.forEach(function (e) { total += poids(e); });
     let tirage = B.rng() * total;
     for (const e of table) {
-      tirage -= e[0] * (e[1] === 'rien' ? facteurRien : 1);
-      if (tirage < 0) return e[1];
+      tirage -= poids(e);
+      if (tirage < 0) return rend(e[1]);
     }
-    return table[table.length - 1][1];
+    return rend(table[table.length - 1][1]);
   }
 
   function fouiller(j, bac) {
@@ -258,8 +267,11 @@ const Interactions = (function () {
     // ⚠️ Le quartier dit la poubelle : `Monde.standingA` lit le bloc sous le bac.
     const standing = Monde.standingA(Math.floor(bac.x / TT), Math.floor(bac.y / TT));
     const facteur = c.standing[standing] === undefined ? 1 : c.standing[standing];
-    const slug = choisirLaTrouvaille(c.tables[c.decors[bac.decor]], facteur);
+    const nuit = c.la_nuit && Monde.estNuit(p.heure) ? c.la_nuit : null;
+    const slug = choisirLaTrouvaille(c.tables[c.decors[bac.decor]], facteur, nuit);
     const t = c.trouvailles[slug];
+    // Le raton ne reste pas dans la poubelle : on le voit filer.
+    if (nuit && slug === nuit.par) Entites.fairePartirUnRaton(bac.x, bac.y + 4);
     if (t.argent) {
       const gain = t.argent[0] + Math.floor(B.rng() * (t.argent[1] - t.argent[0] + 1));
       Missions.encaisser(gain, t.texte);

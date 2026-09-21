@@ -198,10 +198,11 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `exhibitionniste` | L'homme au manteau | — (la police l'arrête) |
 | `contractuelle` | Contractuelle | faubourg, shop |
 | `touriste` | Touriste | quais, pointe |
-| `ivrogne` | Ivrogne | quais, faubourg |
+| `ivrogne` | Ivrogne | quais, faubourg — et à 3 h, en grappe devant chaque bar (le last call) |
 | `jogger` | Joggeuse | erables, pointe |
 | `facteur` | Facteur | erables, faubourg |
 | `crieur` | Crieur de journaux | faubourg, shop (le jour) |
+| `camelot` | Camelot du _Clairon_ (lance le journal sur les perrons) | erables, faubourg (à l'aube) |
 | `laveur` | Laveur de vitres | shop, faubourg |
 | `pickpocket` | Pickpocket | faubourg, quais |
 

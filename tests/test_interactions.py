@@ -77,9 +77,14 @@ def test_les_tables_de_fouille_se_tiennent():
         assert all(isinstance(p, int) and p > 0 for p, _ in table), "%s : des poids entiers et positifs" % nom
         assert {s for _, s in table} <= set(f["trouvailles"]), "%s : une trouvaille inconnue" % nom
         assert len({s for _, s in table}) == len(table), "%s : une trouvaille deux fois" % nom
-    assert set(f["trouvailles"]) == {s for table in f["tables"].values() for _, s in table}, "une trouvaille que rien ne tire"
+    tirees = {s for table in f["tables"].values() for _, s in table}
+    # La nuit, le rat de la table est un raton (`la_nuit`) : c'est elle qui le tire.
+    tirees.add(f["la_nuit"]["par"])
+    assert f["la_nuit"]["remplace"] in {s for table in f["tables"].values() for _, s in table}
+    assert set(f["trouvailles"]) == tirees, "une trouvaille que rien ne tire"
     # La morsure ne tue jamais (le navigateur garde toujours un point) et reste petite.
     assert -5 <= f["trouvailles"]["rat"]["pv"] < 0
+    assert -5 <= f["trouvailles"]["raton"]["pv"] < 0
     for slug, t in f["trouvailles"].items():
         if "argent" in t:
             assert 1 <= t["argent"][0] <= t["argent"][1], slug

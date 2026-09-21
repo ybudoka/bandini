@@ -229,6 +229,16 @@ CLASSES = ("auto", "moto", "velo", "camion", "bateau")
 TRAFIC = {
     "vehicules_max": 9,           # en circulation, dans la bulle
     "stationnes_max": 6,          # a l'arret sur les stationnements
+    # ⚠️ **LA NUIT, LES CHARS RENTRENT A LA MAISON** (Martin, 21 sept. 2026 : « la
+    # nuit, plus de vehicules stationnes »). Le jour, six chars gares ou que ce
+    # soit ; la nuit, le monde est rentre : DEUX FOIS plus, et d'abord dans les
+    # rues ou l'on habite (`Monde.usageA` = `usage`). Une fois sur quelques-unes
+    # (`ailleurs`), devant un commerce quand meme : le bar et le depanneur ont
+    # leurs clients de nuit — et un quartier sans une seule rue a logements (La
+    # Shop) garde ses chars de nuit dans ses cours. ⚠️ Le JOUR ne change pas
+    # d'un de : le banc joue a 8 h 24, et chaque naissance deplacee decale tous
+    # les des qui suivent (`Vehicules.peupler`).
+    "garer_la_nuit": {"max": 12, "usage": "residentiel", "ailleurs": 0.15},
     "regard_tuiles": 4,           # a quelle distance un conducteur regarde devant
     "distance_securite_px": 34,   # plus pres que ca, il freine
     "vitesse_ville": 0.55,        # fraction de la vitesse max en circulation

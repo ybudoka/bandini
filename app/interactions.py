@@ -69,6 +69,8 @@ TROUVAILLES: dict[str, dict] = {
     "canettes": {"texte": "DES CANETTES CONSIGNÉES", "argent": (2, 4)},
     "reste": {"texte": "UN RESTE DE POUTINE", "pv": 4, "souffle": 6},
     "rat": {"texte": "UN RAT !", "pv": -3},
+    # La nuit, c'est lui qui est dans la poubelle (voir `FOUILLER["la_nuit"]`).
+    "raton": {"texte": "UN RATON LAVEUR !", "pv": -4},
 }
 
 FOUILLER: dict = {
@@ -96,6 +98,11 @@ FOUILLER: dict = {
     # bac de quartier cossu est presque toujours vide, celui d'un quartier pauvre
     # déborde (`Monde.standingA`). Sans standing (une ruelle hors quartier) : 1.
     "standing": {"cossu": 3.0, "ordinaire": 1.0, "pauvre": 0.6},
+    # ⚠️ LA NUIT A SES HABITUDES : la nuit, le rat de la table est un RATON LAVEUR,
+    # et il y en a plus (son poids fois `poids`). Le tirage reste UN `B.rng()` : la
+    # nuit ne tire pas un de de plus, elle change ce qu'il rend. Et le raton se
+    # sauve de la poubelle — on le voit filer (`Entites.fairePartirUnRaton`).
+    "la_nuit": {"remplace": "rat", "par": "raton", "poids": 2.0},
     "trouvailles": {slug: dict(t) for slug, t in TROUVAILLES.items()},
 }
 

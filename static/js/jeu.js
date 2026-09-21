@@ -770,6 +770,8 @@ const Jeu = (function () {
     // chacune porte la couleur de sa phase a CETTE image-ci. Les chercher
     // autrement voudrait dire balayer 482 poteaux par image.
     if (!B.interieur) for (const l of Vehicules.lampesDesFeux()) lampes.push(l);
+    // Les phares (la nuit a ses habitudes) : ramasses en dessinant, comme les feux.
+    if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
     Base.fin(Monde.ambiance(), lampes);

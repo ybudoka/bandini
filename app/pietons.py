@@ -349,6 +349,15 @@ CATALOGUE: list[Pieton] = [
        sprite="crieur", vitesse=0.0, courage=0.2, temoin=0.7, vie=65,
        argent=(8, 35), metier="crieur", frequence=0.0,
        heures=(0.25, 0.55), districts=("faubourg", "shop")),
+    # ⚠️ LA NUIT A SES HABITUDES : LE CAMELOT DU CLAIRON. Il passe a l'AUBE, avant
+    # le crieur, et il lance le journal sur les perrons, porte apres porte — sans
+    # jamais entrer, comme le facteur. Le corps est celui du crieur (le sac de
+    # journaux en bandouliere), repeint ; la routine est la sienne. Ses heures
+    # tombent dans la nuit qu'on voit : on le croise a la lueur des lampadaires.
+    _p("camelot", "Camelot", "#2f5f8a", "#3a2a1a", "#e8b088", "#2a2a3a",
+       sprite="crieur", vitesse=1.15, courage=0.2, temoin=0.4, vie=60,
+       argent=(2, 12), metier="camelot", frequence=0.0,
+       heures=(0.19, 0.265), districts=("erables", "faubourg")),
     # ⚠️ IL TRAVAILLE AU FEU ROUGE : il ne s'approche que des chars ARRETES.
     # Les feux pour pietons viennent d'etre livres — c'est la meme horloge, et
     # c'est elle qui lui donne ses quinze secondes de travail.
@@ -517,6 +526,15 @@ PLAGE: dict = {
     "ballon_vitesse": 2.4,
     "ballon_pause": 26,          # le temps de le ramasser avant de le relancer
     "jeu_images": (300, 720),    # puis on change de jeu
+    # ⚠️ **LA NUIT, PERSONNE NE SE BAIGNE** (Martin, 21 sept. 2026). La plage
+    # ouvre a 7 h 12 et ferme a 19 h 12, sur 24 h ramenees a 0..1 comme les
+    # `heures` d'un metier : hors de la, personne n'y nait, et qui y est encore
+    # sort de l'eau, range ses affaires et s'en va — hors de l'ecran, jamais
+    # sous nos yeux. ⚠️ Ici et PAS sur l'archetype `enfant` : toute la ville
+    # s'en sert, et les enfants disparaitraient de partout a la brunante. Les
+    # deux heures tombent DANS le jour (`Monde.estNuit` : 6 h 24 → 19 h 53) :
+    # on ferme au coucher du soleil, pas une fois la nuit tombee.
+    "heures": (0.30, 0.80),
 }
 
 #: **LES GOELANDS ET LES CHATS.** La vie qui n'est pas humaine.
@@ -557,6 +575,22 @@ BETES: dict = {
         "assis_images": (120, 420),
         "marche_images": (60, 200),
     },
+    # ⚠️ LA NUIT A SES HABITUDES : LE RATON LAVEUR. Il ne sort que la nuit
+    # (`heures`), dans les ruelles comme le chat, et c'est lui qui sort de la
+    # poubelle qu'on fouille a trois heures du matin (`interactions.FOUILLER`).
+    # Plus lent que le chat, et il se laisse approcher de plus pres : il a
+    # l'habitude des poubelles, pas des gens. Et la nuit, les goelands dorment.
+    "raton": {
+        "combien": 2,
+        "fuite_px": 52,
+        "detale_images": 150,
+        "detale_vitesse": 2.1,
+        "pas": 0.35,
+        "assis_images": (100, 320),
+        "marche_images": (60, 180),
+        "heures": (0.83, 0.26),
+    },
+    "goeland_dort": True,
     # ⚠️ La bulle des betes est plus PETITE que celle des gens (520) : une bete
     # ne sert a rien qu'on ne la voie pas, et elle ne doit surtout pas peser sur
     # le budget d'images de la rue.
@@ -719,6 +753,8 @@ PAROLES: dict[str, dict] = {
     # ⚠️ Ce qu'il crie VRAIMENT, c'est la manchette du Clairon ; celle-ci n'est
     # que son appel, pour les matins où il n'y a rien à signaler.
     "crieur": {"appel": "LE CLAIRON DE LA BAIE!"},
+    # Il ne crie pas la manchette : il la LANCE. Un mot, de temps en temps.
+    "camelot": {"lance": "LE CLAIRON!"},
     "laveur": {"propose": "UN COUP DE CHIFFON?", "merci": "MERCI M'SIEUR"},
     # Le voleur ne dit rien. C'est la VICTIME qui parle — et c'est elle qu'on
     # doit entendre, sinon le vol n'est qu'une animation.
@@ -843,13 +879,19 @@ def exporter() -> dict:
                               "marche_images": list(BETES["goeland"]["marche_images"])},
                   "chat": {**BETES["chat"],
                            "assis_images": list(BETES["chat"]["assis_images"]),
-                           "marche_images": list(BETES["chat"]["marche_images"])}},
+                           "marche_images": list(BETES["chat"]["marche_images"])},
+                  "raton": {**BETES["raton"],
+                            "assis_images": list(BETES["raton"]["assis_images"]),
+                            "marche_images": list(BETES["raton"]["marche_images"]),
+                            "heures": list(BETES["raton"]["heures"])},
+                  "goeland_dort": BETES["goeland_dort"]},
         "plage": {**PLAGE,
                   "adultes_archetypes": list(PLAGE["adultes_archetypes"]),
                   "bronzer_images": list(PLAGE["bronzer_images"]),
                   "accroupi_images": list(PLAGE["accroupi_images"]),
                   "barbote_images": list(PLAGE["barbote_images"]),
-                  "jeu_images": list(PLAGE["jeu_images"])},
+                  "jeu_images": list(PLAGE["jeu_images"]),
+                  "heures": list(PLAGE["heures"])},
         # ⚠️ Le spectacle de rue passe par le paquet, comme tout le reste : un
         # minimum de 3 ecrit dans `entites.js` serait un nombre que personne ne
         # peut relire ni juger depuis la source de verite.

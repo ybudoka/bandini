@@ -696,7 +696,7 @@ const Entites = (function () {
     fait rien est un costume, et le depot a deja paye ce defaut une fois. */
   const SORTES = ['musicien', 'amuseur', 'jongleur', 'echassier', 'exhibitionniste',
                   'contractuelle', 'touriste', 'ivrogne', 'jogger', 'facteur',
-                  'crieur', 'laveur', 'pickpocket'];
+                  'crieur', 'laveur', 'pickpocket', 'camelot'];
 
   //: LES AMUSEURS DE RUE — les quatre qui font un NUMERO et qu'on regarde.
   //: ⚠️ Ils partagent un plafond au lieu d'en avoir un chacun, et c'est la
@@ -743,6 +743,10 @@ const Entites = (function () {
       // pareilles — de la figuration, donc. Un quartier se reconnait aussi a
       // qui y marche.
       if (arch.districts && (!zone || arch.districts.indexOf(zone.district) < 0)) continue;
+      // ⚠️ ET SES HEURES (la nuit a ses habitudes). Le crieur ne travaille que le
+      // matin (`heures`) — et il naissait quand meme a deux heures du matin, pour
+      // hurler la manchette a une rue vide. `enService` est celui de l'homme-sandwich.
+      if (!enService(arch.heures)) continue;
       // ⚠️ DEUX pour celles qui tiennent un poste, UNE pour celles qui
       // marchent. Un spectacle est plante quelque part : il en faut deux pour
       // avoir une chance d'en croiser un. Une sorte qui marche, elle, traverse
@@ -1219,6 +1223,10 @@ const Entites = (function () {
     if (B.interieur || B.t % 15 !== 0) return;
     for (const e of B.entites) {
       if (e.type !== 'pieton' || !e.vivant || e.etat === 'assomme') continue;
+      // Passe ses heures, une sorte rentre — hors de l'ecran (le crieur, le camelot).
+      // ⚠️ Les heures se lisent sur l'ARCHETYPE : une sorte ne les porte pas sur elle.
+      const sorte = SORTES.indexOf(e.arch) >= 0 ? archetype(e.arch) : null;
+      if (sorte && sorte.heures && !enService(sorte.heures)) { rentrerHorsChamp(e); continue; }
       // ⚠️ On aiguille sur le METIER, pas sur le slug : c'est le metier qui
       // est le crochet declare dans `pietons.py`, et c'est lui qui dit ce que
       // la sorte FAIT. Un slug ne dit que comment on l'appelle.
@@ -1232,6 +1240,7 @@ const Entites = (function () {
       else if (e.metier === 'laveur') majLaveur(e);
       else if (e.metier === 'pickpocket') majPickpocket(e);
       else if (e.metier === 'baigneur') majPlage(e);
+      else if (e.metier === 'camelot') majCamelot(e);
       else if (e.metier === 'forain') majForain(e);
       else if (e.metier === 'mascotte') majMascotte(e);
     }
@@ -1369,6 +1378,8 @@ const Entites = (function () {
       facon n'a qu'une reaction. */
   function majIvrogne(e) {
     if (e.etat !== 'flane') return;
+    if (e.fetard) chicaner(e);
+    if (e.etat !== 'flane') return;
     // ⚠️ UN COMPTE A SOI, jamais `e.t % 60`. `majSortes` ne tourne qu'une image
     // sur quinze et `e.t` compte depuis la NAISSANCE : les deux ne tombent
     // ensemble que si l'on est ne sur un multiple de quinze. Un ivrogne ne du
@@ -1386,10 +1397,69 @@ const Entites = (function () {
       poussiere(e.x, e.y, 4);
       return;
     }
+    // Le fetard du last call CHANTE au lieu d'insulter : a l'empreinte du fetard
+    // et de l'instant, pas au de — ce qu'il chante ne change rien au jeu.
+    const lc = e.fetard && B.defs.nuit && B.defs.nuit.last_call;
+    if (lc) {
+      const h = hash2(e.id * 7919 + B.t, 0x1A57C);
+      if (h % 1000 < lc.chante * 1000) bulle(e, lc.chansons[(h >>> 10) % lc.chansons.length], { duree: 120 });
+      return;
+    }
     const mots = paroles('ivrogne').insultes;
     if (mots && mots.length && B.rng() < 0.14) {
       bulle(e, mots[Math.floor(B.rng() * mots.length)], { duree: 90 });
     }
+  }
+
+  /** **LA CHICANE** : on frôle un fetard du last call, il se retourne. Une fois
+      par fetard ; une part d'entre eux passe aux poings (`attaque_joueur`, comme
+      une Cravate sur son territoire). A l'empreinte du fetard, jamais au de. */
+  function chicaner(e) {
+    const c = B.defs.nuit && B.defs.nuit.last_call && B.defs.nuit.last_call.chicane, j = B.joueur;
+    if (!c || e.chicane || !j || !j.vivant || j.dansVehicule || B.cinema) return;
+    if (dist2(e.x, e.y, j.x, j.y) > c.portee_px * c.portee_px) return;
+    e.chicane = true;
+    const h = hash2(e.id, 0xC41CA);
+    regarder(e, j.x - e.x, j.y - e.y);
+    bulle(e, c.mots[h % c.mots.length], { duree: 100 });
+    if ((h >>> 10) % 1000 < c.part * 1000) { e.etat = 'attaque_joueur'; e.cri = 90; }
+  }
+
+  /** **LE LAST CALL** (la nuit a ses habitudes) : a 3 h, chaque bar de la bulle
+      (`nuit.last_call.bars`) laisse sortir sa grappe de fetards — une fois par bar
+      et par nuit. Nes DANS LA PORTE, qui s'ouvre : comme le flaneur qui sort de
+      chez lui, on les voit sortir, on ne les voit pas apparaitre. ⚠️ Combien, a
+      l'empreinte du jour et du bar : aucun de du jeu ne sert a les compter. */
+  function naitreLeLastCall() {
+    const lc = B.defs.nuit && B.defs.nuit.last_call, p = B.partie, j = B.joueur;
+    if (!lc || !p || !j || B.interieur) return 0;
+    if (p.heure < lc.heure || p.heure >= lc.jusqu_a) return 0;
+    const arch = archetype('ivrogne');
+    if (!arch) return 0;
+    const faits = B.lastCall || (B.lastCall = {});
+    let nes = 0;
+    lc.bars.forEach(function (bar, k) {
+      const cle = p.jour + ':' + k;
+      if (faits[cle]) return;
+      const x = bar.x * TT + 8, y = bar.y * TT + 8;
+      if (dist2(x, y, j.x, j.y) > lc.portee_px * lc.portee_px) return;
+      if (!Monde.marchablePieton(bar.x, bar.y)) return;
+      faits[cle] = true;
+      const n = lc.fetards[0] + hash2(p.jour, k * 131 + 7) % (lc.fetards[1] - lc.fetards[0] + 1);
+      Monde.ouvrirPorte(bar.porte[0], bar.porte[1]);
+      for (let i = 0; i < n; i++) {
+        // En grappe devant la porte : un pas de cote chacun, pas tous sur la meme tuile.
+        const dx = ((i % 3) - 1) * 10, dy = Math.floor(i / 3) * 8;
+        const e = creerPieton(x + dx, y + dy, arch);
+        if (!e) continue;
+        e.fetard = true;
+        e.etat = 'flane';
+        e.sortie = { x: bar.porte[0], y: bar.porte[1], t: 0 };
+        nes++;
+      }
+    });
+    if (nes) indexer();
+    return nes;
   }
 
   /** La porte la plus proche qu'il n'a pas encore desservie. */
@@ -1438,6 +1508,93 @@ const Entites = (function () {
     e.porteTournee = porte;
     e.cap = { x: porte.x * TT + 8, y: (porte.y + 1) * TT + 8 };
     e.capT = 0; e.etat = 'cap';
+  }
+
+  /** Qui a fini sa journee s'en va — HORS DE L'ECRAN, jamais sous nos yeux. Par
+      `entre` (retire a l'image suivante) : on est dans la boucle de `majSortes`. */
+  function rentrerHorsChamp(e) {
+    if (visibleAEcran(e.x, e.y, 40)) return;
+    e.etat = 'entre'; e.minuterie = 1; e.vx = 0; e.vy = 0;
+  }
+
+  /** Le perron le plus proche qu'il n'a pas encore servi — d'abord dans une rue ou
+      l'on habite : le Clairon se lit au dejeuner, pas au comptoir. */
+  function prochainPerron(e) {
+    const carte = Monde.carte;
+    if (!carte || !carte.portesFermees.length) return null;
+    const faites = e.tournee || (e.tournee = []);
+    const portee = PORTEE_SORTE * PORTEE_SORTE;
+    let chez = null, dChez = portee, autre = null, dAutre = portee;
+    for (const porte of carte.portesFermees) {
+      const px = porte.x * TT + 8, py = (porte.y + 1) * TT + 8;
+      const d = dist2(px, py, e.x, e.y);
+      if (d >= portee || faites.indexOf(porte) >= 0) continue;
+      if (Monde.glyphe(porte.x, porte.y) !== porte.glyphe) continue;   // rasee (chantier)
+      if (!Monde.marchablePieton(porte.x, porte.y + 1)) continue;
+      // ⚠️ Un perron qu'il VOIT : `cap` marche en ligne droite, et le premier camelot
+      // restait dix secondes le nez contre le mur d'une cour, a viser la porte d'en face.
+      if (!Monde.ligneLibre(e.x, e.y, px, py)) continue;
+      if (Monde.usageA(porte.x, porte.y) === 'residentiel') { if (d < dChez) { dChez = d; chez = porte; } }
+      else if (d < dAutre) { dAutre = d; autre = porte; }
+    }
+    return chez || autre;
+  }
+
+  /** **LE CAMELOT DU CLAIRON** (la nuit a ses habitudes). Il va de perron en perron
+      et y LANCE le journal — un rouleau qui reste sur le seuil jusqu'a ce qu'on le
+      rentre (`nuit.CAMELOT.rentre_a`). ⚠️ Il n'ouvre aucune porte : c'est toute la
+      difference avec le facteur, qui fait battre les portes une a une. */
+  function majCamelot(e) {
+    // ⚠️ Un perron qu'il n'atteint pas (`cap` renonce au bout de dix secondes) se
+    // RAYE de la tournee : sinon il le rechoisissait, le plus proche, sans fin.
+    if (e.perron && (e.etat !== 'cap' || !e.cap)) { e.tournee.push(e.perron); e.perron = null; }
+    if (e.lanceT > 0) {
+      e.lanceT -= 15;
+      if (e.lanceT <= 0) { e.lanceT = 0; e.etat = 'flane'; }
+      return;
+    }
+    if (e.etat === 'cap' && e.cap && e.perron) {
+      if (Math.hypot(e.cap.x - e.x, e.cap.y - e.y) > 18) return;
+      const p = e.perron;
+      poserLeJournal(p.x * TT + 8, (p.y + 1) * TT + 3);
+      e.tournee.push(p);
+      e.perron = null; e.cap = null;
+      e.etat = 'arret'; e.minuterie = 20; e.vx = 0; e.vy = 0;
+      e.face = 'haut';
+      e.lanceT = 20;
+      const c = B.defs.nuit && B.defs.nuit.camelot;
+      if (c && hash2(e.id, e.tournee.length) % 1000 < c.parle * 1000) bulle(e, paroles('camelot').lance, { duree: 70 });
+      return;
+    }
+    if (e.etat !== 'flane') return;
+    const p = prochainPerron(e);
+    if (!p) { if (e.tournee && e.tournee.length > 12) e.tournee.length = 0; return; }
+    e.perron = p;
+    e.cap = { x: p.x * TT + 8, y: (p.y + 1) * TT + 8 };
+    e.capT = 0; e.etat = 'cap';
+  }
+
+  /** Le journal sur le perron : un decalque, qui porte son JOUR — rentre a l'heure
+      dite (`rentrerLesJournaux`). Aucun de : sa pose se lit a sa place. */
+  function poserLeJournal(x, y) {
+    if (B.decals.length >= MAX_DECALS) B.decals.shift();
+    B.decals.push({ x: x, y: y, type: 'journal', v: hash2(Math.floor(x), Math.floor(y)) % 4,
+                    jour: B.partie ? B.partie.jour : 0 });
+  }
+
+  /** On a rentre le journal : passe l'heure (`rentre_a`), ou le lendemain, ceux
+      qu'on ne voit pas s'en vont. Sous nos yeux, il attend qu'on regarde ailleurs. */
+  function rentrerLesJournaux() {
+    const c = B.defs.nuit && B.defs.nuit.camelot, p = B.partie;
+    if (!c || !p || !B.decals.length) return;
+    // Il passe avant 6 h 30 : a partir de `rentre_a`, tout journal du jour est rentre.
+    const tard = p.heure >= c.rentre_a;
+    for (let i = B.decals.length - 1; i >= 0; i--) {
+      const d = B.decals[i];
+      if (d.type !== 'journal') continue;
+      if (!(tard || d.jour !== p.jour) || visibleAEcran(d.x, d.y, 16)) continue;
+      B.decals.splice(i, 1);
+    }
   }
 
   /** IL HURLE CE QUE TU AS FAIT HIER.
@@ -1685,7 +1842,7 @@ const Entites = (function () {
       Sans ca ce ne sont pas deux betes, c'est deux dessins du meme animal. */
   function chezElle(espece, tx, ty) {
     if (!Monde.marchablePieton(tx, ty)) return false;
-    if (espece === 'chat') return Monde.glyphe(tx, ty) === 'x';          // la ruelle
+    if (espece === 'chat' || espece === 'raton') return Monde.glyphe(tx, ty) === 'x';   // la ruelle
     const g = Monde.glyphe(tx, ty);
     if (g !== 's' && g !== 'Q') return false;                            // le sable, le quai
     for (let d = 1; d <= 3; d++) {
@@ -1703,8 +1860,14 @@ const Entites = (function () {
     const f = B.defs.pietons && B.defs.pietons.betes;
     if (!f || !B.joueur || B.interieur) return 0;
     let nes = 0;
-    for (const espece of ['goeland', 'chat']) {
+    // ⚠️ LA NUIT A SES HABITUDES : le raton ne sort que la nuit (`heures`), et la
+    // nuit le goeland dort — il n'en nait plus (`goeland_dort`).
+    const nuit = B.partie && Monde.estNuit(B.partie.heure);
+    for (const espece of ['goeland', 'chat', 'raton']) {
       const fiche = f[espece];
+      if (!fiche) continue;
+      if (fiche.heures && !enService(fiche.heures)) continue;
+      if (espece === 'goeland' && nuit && f.goeland_dort) continue;
       const deja = betes().filter(function (q) { return q.espece === espece; }).length;
       if (deja >= fiche.combien) continue;
       const place = placeDeBete(espece, f.rayon_px);
@@ -1734,6 +1897,20 @@ const Entites = (function () {
       }
     }
     return null;
+  }
+
+  /** Le raton qui sort de la poubelle qu'on fouille, et qui file a l'oppose du
+      joueur (`interactions.js`). ⚠️ Il ne se pose pas : il PART. */
+  function fairePartirUnRaton(x, y) {
+    const f = B.defs.pietons && B.defs.pietons.betes, fiche = f && f.raton;
+    if (!fiche || !B.joueur) return null;
+    const e = {
+      type: 'bete', espece: 'raton', decor: 'raton', x: x, y: y, r: 0, solide: false,
+      id: ++idDeBete, t: 0, v: 0, humeur: 'pose', minuterie: 1, vx: 0, vy: 0, altitude: 0, fuite: 0, libre: true,
+    };
+    betes().push(e);
+    sEnvoler(e, fiche, B.joueur);
+    return e;
   }
 
   function oublier(e) {
@@ -1774,7 +1951,7 @@ const Entites = (function () {
       e.v = 1;
     } else {
       e.humeur = 'pose';
-      const dur = e.espece === 'chat' ? fiche.assis_images : fiche.picore_images;
+      const dur = e.espece === 'goeland' ? fiche.picore_images : fiche.assis_images;
       e.minuterie = dur[0] + (tirage >>> 8) % (dur[1] - dur[0]);
       e.vx = 0; e.vy = 0;
       // Le goeland picore une image sur deux ; le chat, assis, ne bouge pas.
@@ -1820,7 +1997,14 @@ const Entites = (function () {
       e.v = 2;
     } else {
       // Le chat file au sol, et il s'arrete s'il se bute a autre chose que sa ruelle.
-      if (!chezElle('chat', Math.floor(e.x / TT), Math.floor(e.y / TT))) { oublier(e); return; }
+      // ⚠️ Le raton sorti d'une poubelle (`libre`) file sur le trottoir : il n'a pas
+      // de ruelle a lui, il a la rue — il s'en va au bout de sa fuite.
+      if (!e.libre && !chezElle(e.espece, Math.floor(e.x / TT), Math.floor(e.y / TT))) { oublier(e); return; }
+      if (e.libre && !Monde.marchablePieton(Math.floor(e.x / TT), Math.floor(e.y / TT))) {
+        // Un mur : il recule d'un pas et tourne d'un quart — il longe, il ne traverse pas.
+        e.x -= e.vx; e.y -= e.vy;
+        const vx = e.vx; e.vx = -e.vy; e.vy = vx;
+      }
       e.v = 2;
     }
     if (e.fuite <= 0) oublier(e);
@@ -1997,7 +2181,8 @@ const Entites = (function () {
       des deux groupes qui est le plus loin de son compte. */
   function naitreLesEnfantsDeLaPlage() {
     const f = B.defs.pietons && B.defs.pietons.plage;
-    if (!f || !B.joueur || B.interieur) return 0;
+    // La nuit, personne ne se baigne : la plage a ses heures (`PLAGE.heures`).
+    if (!f || !B.joueur || B.interieur || !enService(f.heures)) return 0;
     const baigneurs = B.entites.filter(function (q) { return q.metier === 'baigneur' && q.vivant; });
     const petits = baigneurs.filter(function (q) { return q.sprite === 'enfant'; }).length;
     const grands = baigneurs.length - petits;
@@ -2120,9 +2305,35 @@ const Entites = (function () {
     return null;
   }
 
+  /** La plage ferme (`PLAGE.heures`) : on sort de l'eau, on range ses affaires,
+      et on s'en va.
+
+      ⚠️ **HORS DE L'ECRAN, JAMAIS SOUS NOS YEUX** — comme le marchand d'un
+      kiosque qui ferme. Un baigneur qu'on regarde marche (il sort de l'eau s'il
+      y est, puis il flane et quitte le sable) ; celui qu'on ne voit pas est deja
+      rentre. Aucun de. ⚠️ Par `entre` (retire a l'image suivante, comme qui
+      passe une porte), pas par `retirer` : on est ici DANS la boucle de
+      `majSortes`, et un `splice` en plein parcours sauterait le suivant. */
+  function plierBagage(e) {
+    quitterLeJeu(e);
+    if (!visibleAEcran(e.x, e.y, 40)) { e.etat = 'entre'; e.minuterie = 1; e.vx = 0; e.vy = 0; return; }
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    if (!Monde.estEau(tx, ty)) return;
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const cx = tx + dx, cy = ty + dy;
+      if (Monde.estEau(cx, cy) || !Monde.marchablePieton(cx, cy)) continue;
+      // ⚠️ Six pixels AU-DELA du centre, comme `bordDeLEau` dans l'autre sens :
+      // `cap` s'arrete a 12 px de son but, et vise au centre, il restait les
+      // pieds dans l'eau (le juge l'a vu).
+      e.cap = { x: cx * TT + 8 + dx * 6, y: cy * TT + 8 + dy * 6 }; e.capT = 0; e.etat = 'cap';
+      return;
+    }
+  }
+
   /** La routine : trois jeux, et on en change. */
   function majPlage(e) {
     const f = B.defs.pietons.plage;
+    if (!enService(f.heures)) { plierBagage(e); return; }
     if (e.etat !== 'flane' && e.etat !== 'arret' && e.etat !== 'cap' && e.etat !== 'fige') {
       // Il a peur, il temoigne, il fuit : le jeu s'arrete, il reste un enfant.
       quitterLeJeu(e);
@@ -2692,6 +2903,8 @@ const Entites = (function () {
     if (B.t % 30 === 0) majBagarre();
     if (B.t % 30 === 0) majAqueduc();
     if (B.t % 90 === 0) naitreLesSortes();
+    if (B.t % 30 === 0) naitreLeLastCall();
+    if (B.t % 120 === 0) rentrerLesJournaux();
     majSortes();
     // ⚠️ Une part de l'oubli passe par les PORTES : sinon la ville se vide
     // toujours de la meme facon (par distance) et on n'aurait ajoute qu'une
@@ -4599,7 +4812,8 @@ const Entites = (function () {
     enjamber, majEnjambe, clotureDevant, reglesCloture,
     blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
-    naitreLesEnfantsDeLaPlage, majPlage, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
+    naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
+    poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
