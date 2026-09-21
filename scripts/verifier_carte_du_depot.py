@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""La carte du depot — `docs/plan.md` la porte, ce script verifie qu'elle est a jour.
+"""La carte du depot — `docs/architecture.md` la porte, ce script verifie qu'elle est a jour.
 
-La carte, c'est trois choses dans le plan : l'**arborescence** (section
+La carte, c'est trois choses dans `docs/architecture.md` (le plan, lui, ne garde plus que
+ce qui reste a faire — fragmente le 20 sept. 2026) : l'**arborescence** (section
 « Arborescence du depot », le bloc ``` ), le tableau « Cote Python » (une ligne
 par module d'`app/`) et le tableau « Cote JS » (une ligne par script de
 `static/js/`). C'est par la qu'une session reprend le travail — et c'est ce
@@ -44,14 +45,15 @@ import sys
 from pathlib import Path
 
 RACINE = Path(__file__).resolve().parent.parent
-PLAN = "docs/plan.md"
+#: Le document qui porte la carte : « Architecture » (les deux tableaux) et « Arborescence du dépôt ».
+PLAN = "docs/architecture.md"
 
 TITRE_ARBORESCENCE = "## Arborescence du dépôt"
 TITRE_PYTHON = "### Côté Python"
 TITRE_JS = "### Côté JS"
 
 #: Ces dossiers se couvrent d'un seul trait : leur nom dans l'arborescence suffit.
-COUVERTS_PAR_DOSSIER = ("static/audio/", "app/missions/")
+COUVERTS_PAR_DOSSIER = ("static/audio/", "app/missions/", "docs/jalons/")
 
 #: Ce qui, dans l'arborescence, ressemble a un fichier (pour le sens inverse :
 #: « encore sur la carte, plus dans le depot »).
@@ -107,7 +109,7 @@ def jetons_de_fichiers(bloc: str) -> set:
 
 
 class Carte:
-    """La carte telle qu'un texte de plan la porte."""
+    """La carte telle que le texte de `docs/architecture.md` la porte."""
 
     def __init__(self, texte: str) -> None:
         self.bloc = bloc_arborescence(texte)
@@ -130,7 +132,7 @@ def _dossier_couvrant(chemin: str) -> str | None:
 def problemes_du_fichier(chemin: str, carte: Carte) -> list:
     """Ce qui manque a la carte pour ce fichier — vide s'il y est."""
     if not carte.bloc:
-        return [f"{chemin} : la section « {TITRE_ARBORESCENCE[3:]} » du plan est introuvable"]
+        return [f"{chemin} : la section « {TITRE_ARBORESCENCE[3:]} » de {PLAN} est introuvable"]
     base = chemin.rsplit("/", 1)[-1]
     dossier = _dossier_couvrant(chemin)
     if dossier:
@@ -265,7 +267,7 @@ def verifier_commit() -> list:
 
     ⚠️ C'est la version INDEXEE du plan qui compte : celle de l'arbre de travail
     peut nommer le fichier sans partir dans le commit. Quand c'est le cas, on le
-    dit, et le remede tient en un `git add docs/plan.md`.
+    dit, et le remede tient en un `git add docs/architecture.md`.
     """
     index = index_du_commit()
     if not index:
@@ -318,7 +320,7 @@ def main(argv: list | None = None) -> int:
         for probleme in problemes:
             print(f"  - {probleme}", file=sys.stderr)
         print(
-            "Mets-la à jour dans docs/plan.md — « Arborescence du dépôt » pour un fichier, "
+            f"Mets-la à jour dans {PLAN} — « Arborescence du dépôt » pour un fichier, "
             "le tableau « Côté Python » ou « Côté JS » pour un module ; un fichier à venir "
             "se note avec son jalon entre parenthèses sur la même ligne.",
             file=sys.stderr,

@@ -13,7 +13,7 @@ moitiés, dans cet ordre :
 > Ce document ne remplace ni `docs/comment-monter-les-missions.md` (la
 > *recette*, le « comment » technique) ni `docs/ecrire-drole.md` (le texte, et ce
 > qui le rend drôle) : il dit **comment bien jouer** ce que ces deux-là font
-> écrire. Le plan (`docs/plan.md`, « Le jeu d'acteur ») en tient la décision.
+> écrire. La décision est dans `docs/missions-en-scene.md`, « Le jeu d'acteur ».
 
 ⚠️ **Ce que les juges vérifient, et ce qu'ils ne vérifient pas.** Ils jugent le
 **câblage** : la scène se termine, les répliques sont dites une fois, la voix dit
@@ -481,7 +481,7 @@ Les tests disent que **c'est câblé**. Seule l'écoute dit que **c'est juste**.
 - **Ce dépôt** — `app/interpretation.py` (les balises, les mesures du 16 sept. 2026, la
   finition), `app/missions/__init__.py` (`TYPES_PLANS`, `TEMPS_PAR_DEFAUT`,
   `scene_par_defaut`), les missions écrites à la main (`m1.py`, `m2.py`, `m3.py`,
-  `m97.py`), et `docs/plan.md` (« Les voix de l'histoire », « Les missions mises en scène »).
+  `m97.py`), et `docs/voix-de-l-histoire.md`, `docs/missions-en-scene.md`.
 - **ElevenLabs, guide de prompt d'Eleven v3** — les balises (`[whispers]`, `[sighs]`,
   `[excited]`, `[sarcastic]`, `[curious]`, `[laughs]`…), la ponctuation et les
   majuscules pour le rythme et l'emphase, les trois stabilités (Créatif, Naturel,

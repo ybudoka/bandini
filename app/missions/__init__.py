@@ -96,7 +96,7 @@ HELER_MAX = 16
 
 
 #: ⚠️ Les voix sont celles que Martin a ajoutees a son compte le 13 sept. 2026
-#: (voir docs/plan.md, « Les voix de l'histoire »). Si un nom change,
+#: (voir docs/voix-de-l-histoire.md). Si un nom change,
 #: `scripts/audio_elevenlabs.py --voix` le dit : il ne devine jamais.
 PERSONNAGES: list[Personnage] = [
     {"slug": "ti_guy", "nom": "Ti-Guy", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
@@ -219,7 +219,7 @@ OUVERTURE: list[dict] = [
 
 # --- Les scènes : un vocabulaire de plans ----------------------------------------------------
 #
-# Décision du 16 sept. 2026 (« Les missions mises en scène », docs/plan.md) : une
+# Décision du 16 sept. 2026 (docs/missions-en-scene.md) : une
 # scène est une LISTE DE PLANS, typés comme les objectifs, et `static/js/scenes.js`
 # les joue sans connaître aucune scène par son nom. Si une scène ne s'écrit pas
 # avec ces types, on ajoute UN TYPE — jamais un `if (slug === 'q07')`.

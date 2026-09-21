@@ -25,7 +25,7 @@ jobs:
   # Ici ne reste que ce qui prend quelques secondes et ne ment jamais : les
   # dependances synchronisees et le lint. Le verdict qui autorise une mise en
   # ligne est la suite COMPLETE, navigateur compris, verte EN LOCAL sur le commit
-  # exact qu'on pousse sur `main` (voir docs/plan.md, « Tests et CI »).
+  # exact qu'on pousse sur `main` (voir docs/exploitation.md, « Tests et CI »).
   verifications:
     runs-on: ubuntu-latest
     timeout-minutes: 10

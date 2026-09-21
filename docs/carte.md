@@ -7,7 +7,7 @@
 > ⚠️ **Ce document est un instantané.** La carte est générée depuis le code —
 > c'est `app/carte.py` qui fait foi. **Toute modification de la carte, des
 > districts, des bâtiments, des personnages, des véhicules ou des gangs DOIT
-> être répercutée ici.** Voir la consigne correspondante dans `docs/plan.md`.
+> être répercutée ici.** Voir la consigne correspondante dans `docs/reprendre-le-travail.md`.
 
 La ville tient sur **une seule grille de blocs** (20 colonnes × 12 rangées),
 rebâtie à l'ouverture par `generer(plan, graine)`. Rien n'est régulier : chaque

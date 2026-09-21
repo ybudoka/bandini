@@ -1,6 +1,6 @@
 /* Bandini — le metteur en scène.
 
-   Décision du 16 sept. 2026 (« Les missions mises en scène », docs/plan.md) : une
+   Décision du 16 sept. 2026 (docs/missions-en-scene.md) : une
    scène est une LISTE DE PLANS écrite dans `missions.py` (`TYPES_PLANS`), et ce
    script les joue sans connaître aucune scène par son nom. Si une scène ne
    s'écrit pas avec les types d'ici, on ajoute UN TYPE — jamais un

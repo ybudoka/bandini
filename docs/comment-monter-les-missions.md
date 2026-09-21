@@ -2,7 +2,7 @@
 
 Ce document explique **comment ajouter une mission de bout en bout** dans
 Bandini, à l'intention d'une IA (ou d'un humain) qui découvre le projet. Il ne
-remplace ni `docs/plan.md` (la vision) ni `docs/carte.md` (l'inventaire de la
+remplace ni `docs/vision.md` (la vision) ni `docs/carte.md` (l'inventaire de la
 ville) : il raconte la **recette**, pas le pourquoi. Pour que la mission soit
 **bien jouée** — scènes qui racontent, voix qui ont de l'émotion — lis aussi
 `docs/jeu-d-acteur.md` : les juges vérifient que c'est câblé, pas que c'est juste.
@@ -123,7 +123,7 @@ Règles à respecter :
   cheveux, s peau, p pantalon). Tous les personnages sont ce sprite repeint —
   **aucun sprite par personnage**.
 - **`voix`** : ne pas inventer. Les voix disponibles sont celles du compte
-  ElevenLabs de Martin (`docs/plan.md`, « Les voix de l'histoire ») ; le serveur
+  ElevenLabs de Martin (`docs/voix-de-l-histoire.md`) ; le serveur
   MCP `elevenlabs` les liste (`scripts/audio_elevenlabs.py --voix` ne fait que
   **générer** les répliques), et on ne devine jamais un nom.
 - **`heler` ≤ 16** caractères (jugé `HELER_MAX`) : la bulle se lit en police
@@ -397,9 +397,10 @@ Le squelette d'un fichier neuf s'imprime :
 uv run python scripts/verifier_missions.py --squelette m7 --donneur josee
 ```
 
-Et vérifier que `docs/carte.md` et `docs/plan.md` sont **mis à jour** (un
+Et vérifier que `docs/carte.md` et le plan sont **mis à jour** (un
 nouveau personnage → `docs/carte.md` § personnages ; une nouvelle mission →
-ligne de jalon dans `docs/plan.md`).
+ligne de jalon : ⬜ dans `docs/plan.md` tant qu'elle est en cours, puis ✅ dans
+`docs/jalons/README.md`).
 
 ### Ce que les juges refusent (récapitulatif)
 
