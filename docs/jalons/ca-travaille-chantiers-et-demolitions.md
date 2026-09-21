@@ -258,9 +258,57 @@ sans un homme dessus est un décor, et il s'arrête net à sa palissade : la vag
 - ⚠️ **Regardé dans Chromium avant de livrer** (les juges verts ont déjà laissé passer un
   damier) : la plaque se lit, le ruban aussi, les hommes en gilet orange entourent la pelle ; la
   rue rapiécée était trop noire — on aurait dit un trou — et a été éclaircie d'un cran.
-- **16 juges Python + 8 de banc, 28 mutations, chaque règle vue rouge sans elle.** Reste : le
-  signaleur (LENTEMENT d'un côté, ARRÊT de l'autre — une sorte de gens qui **arrête le trafic**,
-  toi aussi), le conteneur qu'on pousse, le tas de terre qui fait rampe, de nouveaux chantiers
-  quand les premiers sont finis ; et l'étage 2 — la pelle conduisible, après la refonte des
-  véhicules. À écouter par Martin : le claquement de la plaque n'a pas de fichier ElevenLabs,
-  et le filet synthétisé est ce qu'on entend.
+- **16 juges Python + 8 de banc, 28 mutations, chaque règle vue rouge sans elle.** Restait : le
+  signaleur (livré à la 4e vague), le conteneur qu'on pousse, le tas de terre qui fait rampe,
+  de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 — la pelle conduisible,
+  après la refonte des véhicules. À écouter par Martin : le claquement de la plaque n'a pas de
+  fichier ElevenLabs, et le filet synthétisé est ce qu'on entend.
+
+⚠️ **4e vague livrée le 20 sept. 2026 — le signaleur qui arrête le trafic.** Sur le trottoir, au
+bout amont de la tranchée, un homme tient une palette : ARRÊT (l'octogone rouge) trois
+secondes, puis LENTEMENT (le losange orange) trois secondes. Le trafic de sa voie obéit — et la
+file qui s'arrête devant lui est ce qui te bloque, toi aussi : le joueur, lui, peut passer, comme
+devant un feu.
+
+- ⚠️ **Il se tient sur le TROTTOIR, jamais dans la chaussée** : un homme planté dans la voie, le
+  trafic le contourne (`changerDeVoie`), il ne l'écoute pas. Python le pose (`chantiers._signaleur`)
+  sur la tuile au nord de la tranchée, **du bout d'où l'on vient** (à l'est d'une voie qui va vers
+  l'ouest). Refusé — et le chantier n'en est pas refusé — sur une voie nord-sud, sur deux tuiles
+  qui ne vont pas dans le même sens, sur un trottoir qui est une chaussée ou déjà pris par un
+  meuble ; chaque refus a sa carte. **Il ne sert que pendant les plaques** (phases 2 et 3).
+  Mesuré : les trois tranchées de la graine livrée en ont un, et tous sont à l'est d'une voie
+  « < » — l'autre bout (voie « > ») n'est jugé que sur une carte écrite à la main.
+- ⚠️ **Branché dans `obstacleDevant`, pas dans les feux** : la ligne d'arrêt du trafic est liée
+  aux croisements (`attendFeu`, `prochaineCible`) et l'y greffer aurait touché la partie la plus
+  jugée de la conduite. `Chantiers.signalDevant` rend la distance de son nez à l'homme quand la
+  palette dit ARRÊT, sinon l'infini ; la conduite ordinaire fait le reste, **au même freinage que
+  pour un piéton planté sur la voie**. Il ne parle qu'à SA voie (la rangée de la tranchée, dans son
+  sens), à six tuiles au plus, pas à qui l'a déjà dépassé, **jamais à une poursuite ni à une
+  rame**. Un vrai char de trafic est posé cinq tuiles derrière lui : il s'arrête sans jamais passer
+  l'homme, sans forcer le passage, et repart au LENTEMENT.
+- ⚠️ **Trois secondes d'ARRÊT, pas plus** : la patience du trafic est de 200 images (3,3 s), au-delà
+  il force le passage. Un ARRÊT plus long ne serait pas obéi ; un juge compare les deux constantes
+  (`anime` de la palette, `patience_images` de la fiche).
+- ⚠️ **Une seule source : la POSE de la palette** (`Entites.poseDuDecor(f, t, false)`, comme
+  `feuDeCirculation` pour un feu) décide à la fois du dessin et de l'obéissance. Sans `travaille`,
+  donc **jamais de pose de repos la nuit** : le premier essai en avait une, et un homme resté à
+  l'écran à la tombée du jour aurait montré ARRÊT pendant que le trafic passait. (Aucun juge ne le
+  voyait : la mutation, oui.) Un juge lit les deux poses la nuit.
+- ⚠️ **La palette naît et rentre avec son homme**, jamais seule sur le trottoir : posée dans sa
+  main à sa naissance, retirée quand il rentre la nuit, quand la phase change, ou quand la
+  distance l'oublie. Son poste s'appelle `'signal'` (`posteDe`), pas un numéro : sinon il se
+  confondait avec le poste 0 de l'équipe du terrain et ne naissait pas. Il naît hors de l'écran,
+  intouchable, hors de la foule, tourné vers la route — les mêmes règles que l'équipe.
+- ⚠️ **Le paquet de la carte est à SEC** : `test_le_paquet_reste_leger` a rougi (48 045 octets
+  gzip pour un plafond de 48 000 ; la base en pesait 47 976). Le signaleur voyageait avec un
+  drapeau par phase et une clé par champ ; il ne voyage plus que sa tuile `[x, y]` — la voie est
+  la rangée dessous, son sens se lit sur le calque `voie`, et « sert pendant les plaques » se lit
+  dans `tranchee` de la phase, qui y est déjà. Résultat : **47 999 octets, un de marge**. Le
+  prochain ajout à la carte, de n'importe quelle session, doit se serrer de même ou relever le
+  plafond (`test_definitions`) en le disant — c'est le budget de Martin, je n'y ai pas touché.
+- ⚠️ **Regardé dans Chromium** : l'octogone se lit dans sa main, deux chars s'arrêtent en file
+  avant la plaque ; au LENTEMENT le losange orange et la file repart.
+- **9 juges Python + 3 de banc (dont un char de trafic qui s'arrête et repart), 21 mutations, chaque
+  règle vue rouge sans elle.** Reste : le conteneur qu'on pousse, le tas de terre qui fait
+  rampe, de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 — la pelle
+  conduisible, après la refonte des véhicules.
