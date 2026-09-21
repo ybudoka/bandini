@@ -77,6 +77,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| La Brume : chacune son coin (pas d'attroupement de filles la nuit) | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-brume-chacune-son-coin.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Des garages où l'on entre : semer la police et repeindre | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche) |
 | La nuit a ses habitudes | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/la-nuit-a-ses-habitudes.md#fiche) |
