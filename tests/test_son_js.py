@@ -687,8 +687,11 @@ def test_une_station_procedurale_baisse_quand_quelqu_un_parle(banc):
         L.Jeu.commencer();
         const avant = L.Son.Mus.attenuation;
         L.Son.Voix.baisserLeReste(true);
+        // ⚠️ Le ducking GLISSE (voir « Le ducking ») : une seconde de pas fixes.
+        for (let k = 0; k < 60; k++) L.Son.Mus.tick();
         const pendant = L.Son.Mus.attenuation;
         L.Son.Voix.baisserLeReste(false);
+        for (let k = 0; k < 240; k++) L.Son.Mus.tick();
         return { avant: avant, pendant: pendant, apres: L.Son.Mus.attenuation };
     }""")
     assert r["avant"] == 1 and r["apres"] == 1
@@ -773,8 +776,11 @@ def test_la_musique_en_mp3_baisse_quand_quelqu_un_parle(banc):
         }
         const avant = volume();
         L.Son.Voix.baisserLeReste(true);
+        // ⚠️ Le ducking GLISSE : on laisse passer une seconde de pas fixes.
+        for (let k = 0; k < 60; k++) L.Son.Mus.tick();
         const pendant = volume();
         L.Son.Voix.baisserLeReste(false);
+        for (let k = 0; k < 240; k++) L.Son.Mus.tick();
         return { avant: avant, pendant: pendant, apres: volume() };
     }""")
     assert r["avant"] and r["avant"] > 0, "le mp3 ne joue pas : %s" % r
@@ -1479,3 +1485,154 @@ def test_changer_de_piste_pendant_un_fondu_ne_fait_pas_planter_la_musique(banc):
     assert r["arrets"][0] is not None and r["arrets"][1] is not None and r["arrets"][2] is None, \
         "les deux premieres doivent baisser, la derniere jouer : %s" % r
     assert r["muettes"] == 0
+
+
+# --- Le volume baisse et remonte graduellement (20 sept. 2026) --------------
+#
+# ⚠️ Demande de Martin, dans le prolongement du fondu enchaine : « il faut aussi
+# baisser les volumes et les monter graduellement ». Le ducking mettait la musique
+# au quart D'UN COUP a la premiere syllabe et la remettait d'un coup a la derniere.
+#
+# ⚠️ Ces juges avancent `Mus.tick()` pas a pas — c'est `maj()`, a 60 par seconde —
+# et lisent le volume a CHAQUE pas : « ca finit au quart » ne dit rien d'une
+# courbe, il faut voir qu'aucun pas ne saute.
+
+
+def _est_graduelle(serie, depart, arrivee, ce_qu_on_juge):
+    """Monotone, sans saut, et arrivee EXACTE : rend le nombre de pas du trajet."""
+    sens = 1 if arrivee > depart else -1
+    course = abs(arrivee - depart)
+    pas = [(b - a) * sens for a, b in zip([depart] + serie, serie)]
+    assert all(p >= -1e-9 for p in pas), "%s : le volume repart en arriere : %s" % (ce_qu_on_juge, serie[:40])
+    assert max(pas) < 0.25 * course, \
+        "%s : un pas saute de %.0f%% du chemin (c'est un coup sec) : %s" % (ce_qu_on_juge, 100 * max(pas) / course, serie[:6])
+    assert abs(serie[-1] - arrivee) < 1e-9, "%s : n'arrive pas (%s au lieu de %s)" % (ce_qu_on_juge, serie[-1], arrivee)
+    return next(i for i, v in enumerate(serie) if abs(v - arrivee) < 1e-9) + 1
+
+
+def test_la_musique_baisse_puis_remonte_graduellement_et_remonte_plus_lentement(banc):
+    """Deux moities, et une troisieme : elle baisse sans saut, elle remonte sans
+    saut ET ELLE REMONTE PLUS LENTEMENT — c'est ce qui laisse deux repliques
+    d'une meme conversation sans faire sauter la musique entre les deux."""
+    r = banc("""async function (L, o) {""" + _OUTILS_FONDU + """
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        // ⚠️ LES CHIFFRES SONT CEUX DU JUGE, pas ceux de Python : un `0.25`, un `0.3` ou
+        // un `1.2` ecrits en dur dans le JS donneraient la meme courbe que le paquet
+        // et ne rougiraient jamais. Ici, tout est double : la courbe doit suivre.
+        Object.assign(L.B.defs.audio.musique, { ducking: 0.4, baisse_s: 0.6, remonte_s: 2.4 });
+        poser('titre');
+        L.Son.Mus.jouer('titre');
+        image(); await o.attendre(); await o.attendre(); image();
+        function volume() { const g = sources(); return g[g.length - 1].__vers[0].gain.value; }
+        const plein = volume();
+        L.Son.Voix.baisserLeReste(true);
+        const descente = [];
+        for (let k = 0; k < 150; k++) { image(); descente.push(volume()); }
+        L.Son.Voix.baisserLeReste(false);
+        const montee = [];
+        for (let k = 0; k < 420; k++) { image(); montee.push(volume()); }
+        const m = L.B.defs.audio.musique;
+        return { plein: plein, descente: descente, montee: montee, ducking: m.ducking, baisse: m.baisse_s, remonte: m.remonte_s };
+    }""")
+    assert r["plein"] > 0
+    bas = r["plein"] * r["ducking"]
+    n_baisse = _est_graduelle(r["descente"], r["plein"], bas, "la descente")
+    n_remonte = _est_graduelle(r["montee"], bas, r["plein"], "la remontee")
+    assert n_baisse >= 0.15 * 60, "la musique tombe en %d pas : c'est un saut, pas une descente" % n_baisse
+    assert n_remonte > 2 * n_baisse, \
+        "elle remonte en %d pas et baisse en %d : elle doit revenir bien plus lentement" % (n_remonte, n_baisse)
+    # Les durees viennent de Python : le niveau se rapproche de sa cible comme
+    # exp(-t / (duree / 3)) et s'arrete a 0,005 pres. Deux fois les chiffres, deux fois le trajet.
+    import math
+    for n, duree, ce in ((n_baisse, r["baisse"], "la descente"), (n_remonte, r["remonte"], "la remontee")):
+        attendu = math.log((1 - r["ducking"]) / 0.005) * (duree / 3) * 60
+        assert 0.75 * attendu < n < 1.25 * attendu, \
+            "%s prend %d pas, il en faut ~%d pour %s s : la duree ne vient pas de Python" % (ce, n, attendu, duree)
+
+
+def test_deux_repliques_qui_s_enchainent_ne_font_pas_sauter_la_musique(banc):
+    """⚠️ Le vrai defaut : une conversation, c'est des repliques a une seconde
+    l'une de l'autre. Avant, la musique remontait a fond entre chacune ; elle n'en
+    a maintenant pas le temps, elle reste sous la voix d'un bout a l'autre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const S = L.Son;
+        S.Voix.baisserLeReste(true);
+        for (let k = 0; k < 90; k++) S.Mus.tick();       // la premiere replique, bien installee
+        S.Voix.baisserLeReste(false);
+        let entre = 0;
+        for (let k = 0; k < 10; k++) { S.Mus.tick(); entre = Math.max(entre, S.Mus.attenuation); }
+        S.Voix.baisserLeReste(true);                       // la suivante, un sixieme de seconde apres
+        let pire = 0;
+        for (let k = 0; k < 60; k++) { S.Mus.tick(); pire = Math.max(pire, S.Mus.attenuation); }
+        return { entre: entre, pire: pire, plancher: L.B.defs.audio.musique.ducking };
+    }""")
+    assert r["entre"] < 0.6, "entre deux repliques la musique remonte a %.2f : elle saute" % r["entre"]
+    assert r["pire"] < 0.6 and r["pire"] > r["plancher"], r
+
+
+def test_une_musique_qui_demarre_pendant_une_replique_baisse_elle_aussi(banc):
+    """⚠️ Avant, seules les boucles DEJA en marche baissaient : une piste lancee
+    pendant un dialogue (on entre dans un commerce en plein appel) entrait au plein
+    volume et couvrait la voix jusqu'a la fin de la replique."""
+    r = banc("""async function (L, o) {""" + _OUTILS_FONDU + """
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        poser('titre'); poser('amb_quais');
+        L.Son.Mus.jouer('titre');
+        image(); await o.attendre(); await o.attendre(); image();
+        L.Son.Voix.baisserLeReste(true);
+        for (let k = 0; k < 90; k++) image();
+        L.Son.Mus.jouer('amb_quais');
+        image(); await o.attendre(); await o.attendre();
+        for (let k = 0; k < 10; k++) image();
+        const g = sources();
+        return { volume: g[g.length - 1].__vers[0].gain.value, n: g.length, ducking: L.B.defs.audio.musique.ducking };
+    }""")
+    assert r["n"] == 2, r
+    assert abs(r["volume"] - 0.5 * r["ducking"]) < 1e-9, \
+        "la nouvelle piste joue a %s au lieu de %s : elle couvre la replique" % (r["volume"], 0.5 * r["ducking"])
+
+
+def test_le_musicien_de_rue_glisse_sous_la_musique_d_etat_et_sous_une_voix(banc):
+    """⚠️ Le musicien de rue a sa propre sortie, et deux raisons de baisser : une voix
+    (`Rue.attenuation`) et la musique d'ETAT (`rue_sous_etat`, quand la police te court
+    apres). Les deux etaient des sauts."""
+    r = banc("""async function (L, o) {
+        o.brancherAudio(true);
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre();
+        L.Jeu.commencer();
+        const piece = JSON.parse(JSON.stringify(L.Son.Mus.def('titre')));
+        piece.slug = 'essai_rue'; piece.fichier = 'musique-essai_rue.mp3'; piece.volume_fichier = 0.5;
+        L.B.defs.audio.musiques.push(piece);
+        function image() {
+            L.Son.Mus.tick(); L.Son.Rue.tick(); L.Son.Rue.demander('essai_rue', 1); L.B.t++;
+            return L.Son.volumeBoucle('rue-essai_rue');
+        }
+        image(); image();
+        await o.attendre(); await o.attendre();
+        image(); image();
+        const plein = image();
+        function serie(n) { const v = []; for (let k = 0; k < n; k++) v.push(image()); return v; }
+        L.Son.Chef.piste = 'mus_poursuite';
+        const etatBas = serie(120);
+        L.Son.Chef.piste = null;
+        const etatHaut = serie(300);
+        L.Son.Voix.baisserLeReste(true);
+        const voixBas = serie(120);
+        L.Son.Voix.baisserLeReste(false);
+        const voixHaut = serie(300);
+        const m = L.B.defs.audio.musique;
+        return { plein: plein, etatBas: etatBas, etatHaut: etatHaut, voixBas: voixBas, voixHaut: voixHaut,
+                 sousEtat: m.rue_sous_etat, ducking: m.ducking };
+    }""")
+    p = r["plein"]
+    assert p > 0
+    _est_graduelle(r["etatBas"], p, p * r["sousEtat"], "la guitare sous la poursuite")
+    _est_graduelle(r["etatHaut"], p * r["sousEtat"], p, "la guitare qui revient apres la poursuite")
+    _est_graduelle(r["voixBas"], p, p * r["ducking"], "la guitare sous une voix")
+    _est_graduelle(r["voixHaut"], p * r["ducking"], p, "la guitare qui revient apres une voix")
