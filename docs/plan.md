@@ -214,6 +214,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
+| Les donneurs ne se cachent plus derrière le décor | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-donneurs-ne-se-cachent-plus-derrière-le-décor) |
 | Rien devant une porte, plus large | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
 | Le tour du propriétaire montre ses quatre contacts | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-tour-du-propriétaire-montre-ses-quatre-contacts) |
@@ -11681,6 +11682,19 @@ un char qu'on ne voyait pas.
   et geste), l'exception de la sortie, la portière, les gens, le comptoir, l'arme sous les
   pieds, l'édicule, les manèges, l'étal/la machine/le guichet/le panneau, le bouclier et les
   poches. ⚠️ Vingt-cinq mutations (retirer chaque `faceA`) le font rougir, chacune.
+
+### Les donneurs ne se cachent plus derrière le décor
+
+retour de Martin (20 sept. 2026), avec une capture de Ti-Paul devant son dépanneur : « ici Ti-Paul est
+caché par l'arrêt, mets un garde pour éviter ça ».
+
+- ⚠️ **En cours.** Mesuré avant, au banc : `Histoire.poserDonneur` met le personnage à deux tuiles de sa
+  porte sans regarder ce qui se peint devant lui. La ville se peint du nord au sud (`Entites.dessiner`
+  trie par `y`) : l'abribus (26 × 28 px) une tuile plus bas passe DEVANT Ti-Paul, à 216, 808, et il ne
+  reste que sa tête. Des cinq donneurs du dehors, Ti-Paul est le seul dont le sprite est entièrement
+  sous du décor (100 % de son rectangle) ; Ti-Guy en a un tiers sous une roulotte à café. Objectif : un
+  garde à la pose — le donneur se tient là où on le voit, sans changer la ville ni tirer un dé — et un
+  juge qui refuse tout donneur, dedans ou dehors, caché plus qu'à moitié.
 
 ### Rien devant une porte, plus large
 
