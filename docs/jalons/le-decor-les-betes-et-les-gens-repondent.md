@@ -93,10 +93,20 @@ au barbecue** d'un parc (12 dans la ville), **lire** un panneau.
   le dixième de la plus petite prime (100 $), l'espérance d'une fouille sous 2 $, et un banc ne soigne
   ni plus d'une PV toutes les deux secondes ni au-delà de 60 % de la barre.
 - **Deux fichiers de tests** : `test_interactions.py` (12 juges : le catalogue et ses bornes) et
-  `test_interactions_js.py` (16 juges **par le bouton** : chaque geste, l'invite qui dit ce que ACTION
-  fait, le dos tourné qui ne fait rien, la porte qui passe avant le banc, le pickpocket qui garde ses
-  poches, le char sous la main qui ne double pas le pourboire, le coup donné qui nous lève).
-  ⚠️ Quinze mutations (retirer chaque règle) les font rougir — voir la liste dans la note du commit.
+  `test_interactions_js.py` (20 juges **par le bouton** : chaque geste, l'invite qui dit ce que ACTION
+  fait, le dos tourné qui ne fait rien, la porte / l'arme par terre / le char qui passent avant le banc,
+  le pickpocket qui garde ses poches, le char sous la main qui ne double pas le pourboire, le coup
+  donné, le sprint ou l'arme qui nous lèvent, la pression du lever qui n'ouvre pas la machine d'à côté).
+- ⚠️ **Vingt mutations** (retirer chaque règle, une par une : le regard, les poches, « une pression, un
+  geste », la pression du lever, la porte, l'arme et le char séparément, le refus de la police, une
+  fois par jour, la morsure qui ne tue pas, la sauvegarde assise, la gerbe, le quartier, le coup reçu, la
+  photo une fois, le touriste qui paie de sa poche) **font rougir un juge chacune**. ⚠️ **Deux mutants
+  ont d'abord survécu** — la porte/l'arme/le char (le juge de la porte posait le joueur devant une
+  porte où AUCUN banc n'était : il jugeait le vide) et la pression du lever : quatre juges de plus.
+- ⚠️ **Deux juges étaient déjà rouges avant ce jalon** et le restent, à l'identique sur la base sans lui
+  (`test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler`, « ils arrivent de hors de
+  l'écran » ; `test_la_foule_ne_se_traverse_plus`, 333 chevauchements creusés) : pas de ce jalon, à
+  reprendre à part. Le reste — 132 fichiers de la suite et les 38 juges Chromium — est vert.
 - ⚠️ **Deux pièges de banc** à savoir avant de reprendre : `o.frame(1)` **ne fait pas toujours avancer
   la simulation d'un pas** (l'accumulateur d'images), donc deux gestes « à une image d'écart » tombent
   parfois dans la même image de jeu et le garde « une pression, un geste » en avale un — le juge attend
