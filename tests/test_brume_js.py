@@ -47,6 +47,13 @@ def test_plusieurs_dialogues_et_jamais_deux_fois_de_suite_le_meme(banc, paquet):
         L.graine(9);
         """ + ESPION + """
         const fille = o.poser('racoleuse', 40, 0);
+        // ⚠️ La rue autour d'elle est VIDE : au terminus, une roulotte a cafe et son vendeur, Ti-Guy
+        // et le figurant qui passe la poussent (la « separation »), et a plus de 48 px elle n'accoste
+        // plus. Le juge tenait a l'endroit exact de la roulotte — deplacee de deux tuiles pour ne
+        // plus boucher la porte du terminus (`app/devants.py`), la fille dérivait de 43 a 50 px.
+        L.B.entites.filter(function (e) { return e !== fille && e.type === 'pieton' && Math.hypot(e.x - fille.x, e.y - fille.y) < 120; })
+            .forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
         const suite = [];
         for (let i = 0; i < 24; i++) {
             fille.accosteT = -99999; fille.bulle = null;

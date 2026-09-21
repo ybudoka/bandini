@@ -999,3 +999,184 @@ def test_mot_de_passe_plutot_montre_le_formulaire_sans_toucher_au_nip(banc):
         });
     }""", stockage=premier)
     assert r == {"nip": False, "form": True, "configure": True}
+
+
+# =========================================================================================
+# EFFACER SON COMPTE (M14, 4e vague) : le serveur efface pour vrai (`test_comptes.py`) ;
+# ici, ce que CET appareil en fait — et surtout ce qu'il ne fait PAS tant que le serveur
+# n'a pas dit oui.
+# =========================================================================================
+
+#: Un appareil qui porte un compte ouvert : ses parties locales, son compteur, son temoin
+#: de synchronisation et un NIP — de quoi voir ce qui part et ce qui reste.
+def _appareil_avec_compte():
+    return stockage(cases={1: partie(jour=7)}, compteurs={1: 4},
+                    sync={"compte": "martin", "cases": {"1": {"envoye": 4, "serveur": 4}}})
+
+
+EFFACER_OK = {"statut": 200, "corps": {"compte": None}}
+
+
+def _ouvert_avec_un_nip(banc, suite, **reseau):
+    """Joue `suite` (un corps JS qui recoit L, o) sur un appareil ouvert ET verrouille par un NIP."""
+    return banc("""function (L, o) {""" + CALME + """
+        return calme(o).then(function () { return L.Compte.activerNip('4821'); })
+          .then(function () { return (""" + suite + """)(L, o); });
+    }""", stockage=_appareil_avec_compte(),
+             reseau={"ouvrir": ouvert([case(1, 4, apercu(jour=7)), case(2), case(3)]),
+                     "nip": {"statut": 200, "corps": {"jeton": "un-jeton-de-test"}}, **reseau})
+
+
+def test_effacer_le_compte_vide_ce_que_l_appareil_savait_du_compte_et_garde_les_parties(banc):
+    r = _ouvert_avec_un_nip(banc, """function (L, o) {
+        const avant = { nip: !!o.store['bandini-nip-v1'], sync: !!o.store['bandini-compte-sync-v1'] };
+        return L.Compte.effacer('un-mot-de-passe').then(function (res) {
+          return { avant: avant, res: res, etat: L.Compte.etat().etat, pseudo: L.Compte.etat().pseudo,
+                   nip: !!o.store['bandini-nip-v1'], sync: !!o.store['bandini-compte-sync-v1'],
+                   local: JSON.parse(o.store['bandini-partie-v1']), compteur: JSON.parse(o.store['bandini-compteur-v1']),
+                   appel: o.compte.appels.filter(function (a) { return a.chemin === 'effacer'; }) };
+        });
+    }""", effacer=EFFACER_OK)
+    assert r["avant"] == {"nip": True, "sync": True}
+    assert r["res"] == {"ok": True}
+    assert (r["etat"], r["pseudo"]) == ("ferme", None)
+    assert r["nip"] is False, "le NIP n'a plus de compte a verrouiller"
+    # ⚠️ Le temoin PART avec le compte : le pseudo se reprend aussitot, et un temoin reste sur un
+    # compte neuf parlerait de parties qui n'ont jamais existe la-bas.
+    assert r["sync"] is False
+    assert r["local"]["jour"] == 7 and r["compteur"]["1"] == 4, "les parties de CE navigateur ne bougent pas"
+    assert len(r["appel"]) == 1
+    assert r["appel"][0]["methode"] == "POST"
+    assert r["appel"][0]["corps"] == {"mot_de_passe": "un-mot-de-passe"}
+
+
+def test_un_mot_de_passe_faux_ne_fait_rien_partir(banc):
+    """⚠️ Le serveur dit 403 : la session, le NIP, le temoin et l'etat restent EXACTEMENT ou ils sont."""
+    r = _ouvert_avec_un_nip(banc, """function (L, o) {
+        return L.Compte.effacer('un-mauvais-mot-de-passe').then(function (res) {
+          return { res: res, etat: L.Compte.etat().etat, pseudo: L.Compte.etat().pseudo,
+                   nip: !!o.store['bandini-nip-v1'], sync: !!o.store['bandini-compte-sync-v1'],
+                   configure: L.Compte.etat().nipConfigure };
+        });
+    }""", effacer={"statut": 403, "corps": {"erreur": "mot de passe incorrect : rien n'a été effacé"}})
+    assert r["res"]["ok"] is False and "rien n'a été effacé" in r["res"]["motif"]
+    assert (r["etat"], r["pseudo"]) == ("ouvert", "martin")
+    assert r["nip"] is True and r["sync"] is True and r["configure"] is True
+
+
+def test_sans_compte_ouvert_effacer_ne_parle_pas_au_serveur(banc):
+    r = banc("""function (L, o) {""" + CALME + """
+        return calme(o).then(function () { return L.Compte.effacer('un-mot-de-passe'); }).then(function (res) {
+          return { res: res, appels: o.compte.appels.map(function (a) { return a.chemin; }) };
+        });
+    }""")
+    assert r["res"]["ok"] is False
+    assert r["appels"] == ["ouvrir"]
+
+
+def test_un_reseau_coupe_a_l_effacement_ne_pretend_pas_que_rien_n_a_ete_efface(banc):
+    """⚠️ Une reponse perdue ne se presume pas : le serveur a peut-etre eu le temps d'agir.
+    On dit qu'on n'a pas pu CONFIRMER, et rien de local ne part (le prochain `ouvrir()` dira)."""
+    r = _ouvert_avec_un_nip(banc, """function (L, o) {
+        return L.Compte.effacer('un-mot-de-passe').then(function (res) {
+          return { res: res, nip: !!o.store['bandini-nip-v1'], sync: !!o.store['bandini-compte-sync-v1'],
+                   local: !!o.store['bandini-partie-v1'] };
+        });
+    }""", effacer={"panne": True})
+    assert r["res"]["ok"] is False
+    assert "confirmé" in r["res"]["motif"] and "rien n'a été effacé" not in r["res"]["motif"]
+    assert r["nip"] is True and r["sync"] is True and r["local"] is True
+
+
+def test_une_session_coupee_pendant_l_effacement_referme_le_compte_sans_rien_effacer_de_local(banc):
+    r = _ouvert_avec_un_nip(banc, """function (L, o) {
+        return L.Compte.effacer('un-mot-de-passe').then(function (res) {
+          return { res: res, etat: L.Compte.etat().etat, local: !!o.store['bandini-partie-v1'] };
+        });
+    }""", effacer={"statut": 401, "corps": {"erreur": "session expirée : reconnecte-toi", "coupe": False}})
+    assert r["res"]["ok"] is False and "expirée" in r["res"]["motif"]
+    assert r["etat"] == "ferme"
+    assert r["local"] is True
+
+
+# --- L'ecran ---------------------------------------------------------------------------
+
+
+def _ecran_ouvert(banc, suite, **reseau):
+    return banc("""function (L, o) {""" + CALME + """
+        function vu(id) { return !o.elements[id].hidden; }
+        return calme(o).then(function () { L.Hud.montrerCompte(); return (""" + suite + """)(L, o, vu); });
+    }""", stockage=_appareil_avec_compte(),
+             reseau={"ouvrir": ouvert([case(1, 4, apercu(jour=7)), case(2), case(3)]), **reseau})
+
+
+def test_l_ecran_propose_effacer_puis_demande_le_mot_de_passe(banc):
+    r = _ecran_ouvert(banc, """function (L, o, vu) {
+        const a = { ligne: vu('compte-effacer-ligne'), form: vu('compte-effacer-form') };
+        o.elements['bouton-compte-effacer'].dispatch('click', {});
+        const b = { ligne: vu('compte-effacer-ligne'), form: vu('compte-effacer-form') };
+        o.elements['bouton-compte-effacer-annuler'].dispatch('click', {});
+        const c = { ligne: vu('compte-effacer-ligne'), form: vu('compte-effacer-form') };
+        return { a: a, b: b, c: c, appels: o.compte.appels.length };
+    }""")
+    assert r["a"] == {"ligne": True, "form": False}, "d'abord un bouton, pas la confirmation"
+    assert r["b"] == {"ligne": False, "form": True}, "la confirmation prend la place du bouton"
+    assert r["c"] == {"ligne": True, "form": False}, "« Non, le garder » revient au bouton"
+    assert r["appels"] == 1, "rien n'est parti (l'ouverture seule)"
+
+
+def test_effacer_n_existe_pas_sur_un_compte_ferme_ni_verrouille(banc):
+    ferme = banc("""function (L, o) {""" + CALME + """
+        return calme(o).then(function () { L.Hud.montrerCompte();
+          return { ligne: !o.elements['compte-effacer-ligne'].hidden, form: !o.elements['compte-effacer-form'].hidden }; });
+    }""")
+    verrouille = banc("""function (L, o) {""" + CALME + """
+        return calme(o).then(function () { L.Hud.montrerCompte();
+          return { ligne: !o.elements['compte-effacer-ligne'].hidden, garde: !o.elements['compte-garde'].hidden }; });
+    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
+    assert ferme == {"ligne": False, "form": False}
+    assert verrouille == {"ligne": False, "garde": False}, "le verrou montre le NIP seul"
+
+
+def test_confirmer_sans_mot_de_passe_ne_parle_pas_au_serveur(banc):
+    r = _ecran_ouvert(banc, """function (L, o, vu) {
+        o.elements['bouton-compte-effacer'].dispatch('click', {});
+        o.elements['compte-effacer-passe'].value = '   ';
+        const rendu = L.Hud.envoyerEffacer();
+        return { rendu: rendu, message: o.elements['compte-etat'].textContent, appels: o.compte.appels.length };
+    }""")
+    assert r["rendu"] is None and "mot de passe" in r["message"]
+    assert r["appels"] == 1
+
+
+def test_effacer_depuis_l_ecran_dit_ce_qui_s_est_passe_dehors_du_formulaire(banc):
+    """⚠️ Le message vit DANS `compte-etat`, dehors du formulaire : un effacement reussi
+    referme la confirmation, et le seul mot qui dit que ca a marche se cacherait avec elle."""
+    r = _ecran_ouvert(banc, """function (L, o, vu) {
+        o.elements['bouton-compte-effacer'].dispatch('click', {});
+        o.elements['compte-effacer-passe'].value = 'un-mot-de-passe';
+        return L.Hud.envoyerEffacer().then(function () {
+          return { form: vu('compte-effacer-form'), connexion: vu('compte-form'), champ: o.elements['compte-effacer-passe'].value,
+                   message: o.elements['compte-etat'].textContent, bouton: o.elements['bouton-compte'].textContent };
+        });
+    }""", effacer=EFFACER_OK)
+    assert r["form"] is False and r["connexion"] is True, "on retombe sur le formulaire de connexion"
+    assert "effacé" in r["message"] and "ce navigateur" in r["message"]
+    assert r["champ"] == "", "le mot de passe ne traine pas dans le champ"
+    assert r["bouton"] == "Compte"
+
+
+def test_un_mot_de_passe_faux_a_l_ecran_garde_la_confirmation_et_vide_le_champ(banc):
+    r = _ecran_ouvert(banc, """function (L, o, vu) {
+        o.elements['bouton-compte-effacer'].dispatch('click', {});
+        o.elements['compte-effacer-passe'].value = 'un-mauvais-mot-de-passe';
+        return L.Hud.envoyerEffacer().then(function () {
+          return { form: vu('compte-effacer-form'), champ: o.elements['compte-effacer-passe'].value,
+                   dedans: o.elements['compte-effacer-etat'].textContent,
+                   bouton: o.elements['bouton-compte'].textContent };
+        });
+    }""", effacer={"statut": 403, "corps": {"erreur": "mot de passe incorrect : rien n'a été effacé"}})
+    assert r["form"] is True, "la confirmation reste ouverte : on peut retaper"
+    assert r["champ"] == "", "meme apres un echec, le mot de passe ne reste pas dans le champ"
+    assert "incorrect" in r["dedans"]
+    assert r["bouton"] == "Compte : martin", "toujours connecte"

@@ -108,9 +108,12 @@ def test_le_metro_ne_deplace_rien_de_la_ville(monkeypatch):
 
     ⚠️ La saleté se déplace APRÈS le métro (`salete.deplacer`) et contourne ses
     édicules, comme le mobilier : on la retire des deux villes."""
-    from app import salete
+    from app import devants, salete
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
     monkeypatch.setattr(mobilier, "semer", lambda chantier, ville, graine: {})
+    # ⚠️ Le devant des portes vient APRES tout et lit les edicules pour n'y rien poser : il part
+    # des deux villes, comme la saleté.
+    monkeypatch.setattr(devants, "deplacer", lambda chantier, ville: {})
     avec = carte.generer()
     monkeypatch.setattr(metro, "creuser", lambda chantier, ville: {})
     sans = carte.generer()

@@ -120,16 +120,26 @@ const Histoire = (function () {
     return { x: baie.x, y: baie.y, nom: l ? l.nom : slug };
   }
 
-  /** Une tuile marchable pres d'un pixel, hors chaussee, en spirale. */
+  /** Une tuile marchable pres d'un pixel, hors chaussee, en spirale.
+
+      ⚠️ **Jamais devant une porte** : c'est ici que les missions posent leur monde (le
+      donneur, les hommes de main, le fuyard, l'escorte), et un personnage plante sur le
+      pas d'un commerce est un obstacle qu'on contourne pour entrer. On prend la premiere
+      tuile qui n'y est pas, dans le rayon ; a defaut, la premiere venue — mieux vaut un
+      donneur devant une porte que pas de donneur. */
   function tuileLibre(x, y, rayonMax) {
     const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    let repli = null;
     for (let r = 0; r <= (rayonMax || 4); r++) {
       for (let dy = -r; dy <= r; dy++) for (let dx = -r; dx <= r; dx++) {
         if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
-        if (Monde.marchablePieton(tx + dx, ty + dy) && !Monde.estChaussee(tx + dx, ty + dy)) return { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+        if (!Monde.marchablePieton(tx + dx, ty + dy) || Monde.estChaussee(tx + dx, ty + dy)) continue;
+        const place = { x: (tx + dx) * TT + 8, y: (ty + dy) * TT + 8 };
+        if (!Monde.devantDUnePorte(tx + dx, ty + dy)) return place;
+        if (!repli) repli = place;
       }
     }
-    return null;
+    return repli;
   }
 
   /** Une tuile de rue (avec une fleche) pres d'un pixel : la ou un char peut naitre.
@@ -1489,9 +1499,10 @@ const Histoire = (function () {
   const PANNEAU_LOIN_DU_DONNEUR = 3 * TT;
 
   /** Ce pixel, s'il n'est ni devant un rideau de garage (sa baie, une tuile de
-      marge) ni a portee d'un donneur ; sinon null. */
+      marge), ni devant une porte, ni a portee d'un donneur ; sinon null. */
   function placeDePanneau(p) {
     if (!p) return null;
+    if (Monde.devantDUnePorte(Math.floor(p.x / TT), Math.floor(p.y / TT))) return null;
     if (Monde.portesDeGarage().some(function (pg) { return Monde.devantLaPorteDeGarage(pg, p.x, p.y, 2, 1); })) return null;
     return Entites.pietonsAutour(p.x, p.y, PANNEAU_LOIN_DU_DONNEUR).some(function (e) { return e.personnage; }) ? null : p;
   }

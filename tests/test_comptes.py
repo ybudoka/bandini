@@ -288,6 +288,99 @@ def test_les_parties_d_un_compte_ne_se_lisent_pas_d_un_autre(conn):
     assert comptes.lire_partie(conn, rocco, 1)["compteur"] == 3
 
 
+# --- Effacer son compte (M14, 4e vague) ---------------------------------------------------
+
+TABLES_DU_COMPTE = ("appareils", "parties", "jetons_perimes")
+
+
+def _tout_ce_qui_appartient_a(conn, compte_id):
+    """Les lignes du compte dans CHAQUE table : `comptes` (id) et les trois qui en descendent."""
+    n = conn.execute("SELECT COUNT(*) FROM comptes WHERE id = ?", (compte_id,)).fetchone()[0]
+    return {"comptes": n, **{t: conn.execute(f"SELECT COUNT(*) FROM {t} WHERE compte_id = ?",
+                                              (compte_id,)).fetchone()[0] for t in TABLES_DU_COMPTE}}
+
+
+def _un_compte_bien_rempli(conn, pseudo="Rocco"):
+    """Deux appareils, deux parties, et un jeton perime (la trace d'un vol detecte)."""
+    telephone = _inscrire(conn, pseudo)
+    comptes.connecter(conn, {"pseudo": pseudo, "mot_de_passe": MDP}, quand=T0 + 1)
+    comptes.ecrire_partie(conn, telephone.compte_id, 1, {"compteur": 3, "partie": _partie(5)}, quand=T0)
+    comptes.ecrire_partie(conn, telephone.compte_id, 2, {"compteur": 1, "partie": _partie(9)}, quand=T0)
+    conn.execute("INSERT INTO jetons_perimes (empreinte, compte_id, perime_le) VALUES (?, ?, ?)",
+                 (comptes.empreinte(f"perime-de-{pseudo}"), telephone.compte_id, T0))
+    conn.commit()
+    return telephone
+
+
+def test_effacer_un_compte_efface_tout_ce_qui_lui_appartient_et_rien_d_autre(conn):
+    """⚠️ Le contrat de la fiche : « les parties disparaissent, les appareils sont
+    revoques ». Un seul `DELETE FROM comptes` — les trois autres tables descendent de lui en
+    `ON DELETE CASCADE`, et `foreign_keys` est allume par connexion : c'est ce juge qui
+    rougirait si l'un des deux lachait, avec un compte a moitie efface."""
+    rocco = _un_compte_bien_rempli(conn)
+    sal = _un_compte_bien_rempli(conn, "Sal")
+    avant_sal = _tout_ce_qui_appartient_a(conn, sal.compte_id)
+    assert avant_sal == {"comptes": 1, "appareils": 2, "parties": 2, "jetons_perimes": 1}
+    assert _tout_ce_qui_appartient_a(conn, rocco.compte_id) == avant_sal
+
+    comptes.effacer(conn, comptes.authentifier(conn, rocco.jeton), {"mot_de_passe": MDP})
+
+    assert _tout_ce_qui_appartient_a(conn, rocco.compte_id) == {t: 0 for t in ("comptes", *TABLES_DU_COMPTE)}
+    assert _tout_ce_qui_appartient_a(conn, sal.compte_id) == avant_sal, "un autre compte n'a pas bouge"
+
+
+def test_apres_l_effacement_les_jetons_du_compte_ne_valent_plus_rien(conn):
+    rocco = _inscrire(conn)
+    ordi = comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP}, quand=T0 + 1)
+    comptes.effacer(conn, comptes.authentifier(conn, rocco.jeton), {"mot_de_passe": MDP})
+    for jeton in (rocco.jeton, ordi.jeton):
+        with pytest.raises(comptes.NonAutorise):
+            comptes.authentifier(conn, jeton)
+    with pytest.raises(comptes.NonAutorise):
+        comptes.connecter(conn, {"pseudo": "Rocco", "mot_de_passe": MDP})
+
+
+def test_le_pseudo_efface_est_libre_et_le_nouveau_compte_repart_a_vide(conn):
+    """Le pseudo se reprend aussitot — et rien de l'ancien compte ne revient avec lui."""
+    ancien = _un_compte_bien_rempli(conn)
+    comptes.effacer(conn, comptes.authentifier(conn, ancien.jeton), {"mot_de_passe": MDP})
+    neuf = _inscrire(conn, "ROCCO", quand=T0 + 100)
+    # ⚠️ SQLite REUTILISE l'id d'un compte efface (`INTEGER PRIMARY KEY`, pas d'AUTOINCREMENT) :
+    # si le CASCADE lachait, les parties et appareils orphelins s'accrocheraient au NOUVEAU
+    # compte. « Il repart a vide » est donc exactement la garde qui compte, et pas « l'id change ».
+    assert all(p["compteur"] == 0 for p in comptes.etat_des_parties(conn, neuf.compte_id))
+    assert _tout_ce_qui_appartient_a(conn, neuf.compte_id) == {"comptes": 1, "appareils": 1,
+                                                                "parties": 0, "jetons_perimes": 0}
+
+
+@pytest.mark.parametrize("donnees", [{}, {"mot_de_passe": None}, {"mot_de_passe": 12345678},
+                                     {"mot_de_passe": "x" * (comptes.MOT_DE_PASSE_MAX + 1)},
+                                     {"mot_de_passe": "un-mauvais-mot-de-passe"}, {"mot_de_passe": ""}])
+def test_effacer_refuse_un_mot_de_passe_faux_ou_absent_et_ne_touche_a_rien(conn, donnees):
+    """⚠️ Le mot de passe est REDEMANDE, meme sur un appareil deja lie : un cookie
+    d'appareil emprunte ou vole ne doit pas suffire a detruire un compte."""
+    rocco = _un_compte_bien_rempli(conn)
+    avant = _tout_ce_qui_appartient_a(conn, rocco.compte_id)
+    with pytest.raises(comptes.MotDePasseIncorrect):
+        comptes.effacer(conn, comptes.authentifier(conn, rocco.jeton), donnees)
+    assert _tout_ce_qui_appartient_a(conn, rocco.compte_id) == avant
+
+
+def test_un_mot_de_passe_faux_a_l_effacement_est_un_403_et_pas_un_401():
+    """⚠️ Un 401 efface le cookie (`_non_autorise`) : une faute de frappe delierait l'appareil."""
+    assert comptes.MotDePasseIncorrect.statut == 403
+    assert not issubclass(comptes.MotDePasseIncorrect, comptes.NonAutorise)
+
+
+def test_effacer_un_compte_deja_parti_n_est_plus_une_session(conn):
+    """Deux appareils l'effacent ensemble : le second arrive apres, sur un compte qui n'existe plus."""
+    rocco = _inscrire(conn)
+    session = comptes.authentifier(conn, rocco.jeton)
+    comptes.effacer(conn, session, {"mot_de_passe": MDP})
+    with pytest.raises(comptes.NonAutorise):
+        comptes.effacer(conn, session, {"mot_de_passe": MDP})
+
+
 # --- Par HTTP --------------------------------------------------------------------------
 
 
@@ -331,6 +424,41 @@ def test_par_http_le_nip_rend_le_jeton_que_le_cookie_porte_deja(client):
 
 def test_par_http_le_nip_refuse_sans_session(client):
     assert client.post("/api/compte/nip").status_code == 401
+
+
+def test_par_http_effacer_son_compte_delie_l_appareil_et_libere_le_pseudo(client):
+    client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    client.post("/api/compte/parties/1", json={"compteur": 4, "partie": _partie(9)})
+
+    fait = client.post("/api/compte/effacer", json={"mot_de_passe": MDP})
+    assert fait.status_code == 200 and fait.get_json() == {"compte": None}
+    assert _cookie(client) is None, "le cookie s'efface avec le compte"
+    assert client.get("/api/compte/parties/1").status_code == 401
+    assert client.post("/api/compte/ouvrir").get_json() == {"compte": None}
+
+    # Le pseudo est libre — et la partie de l'ancien compte n'est pas revenue avec lui.
+    neuf = client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    assert neuf.status_code == 201
+    assert client.get("/api/compte/parties/1").get_json()["partie"] is None
+
+
+def test_par_http_un_mot_de_passe_faux_a_l_effacement_laisse_l_appareil_lie(client):
+    """⚠️ 403, jamais 401 : la session survit a une faute de frappe, et rien n'est efface."""
+    client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    client.post("/api/compte/parties/1", json={"compteur": 4, "partie": _partie(9)})
+    jeton = _cookie(client).value
+
+    refus = client.post("/api/compte/effacer", json={"mot_de_passe": "un-mauvais-mot-de-passe"})
+    assert refus.status_code == 403 and "rien n'a été effacé" in refus.get_json()["erreur"]
+    assert _cookie(client).value == jeton, "l'appareil reste lie"
+    assert client.get("/api/compte/parties/1").get_json()["partie"]["jour"] == 9
+
+
+def test_par_http_effacer_sans_session_rend_401_et_sans_corps_rend_400(client):
+    assert client.post("/api/compte/effacer", json={"mot_de_passe": MDP}).status_code == 401
+    client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    assert client.post("/api/compte/effacer", data="pas du json",
+                       content_type="text/plain").status_code == 400
 
 
 def test_par_http_un_pseudo_pris_rend_409(client):

@@ -47,6 +47,21 @@ const Hud = (function () {
       if (etatEl) etatEl.textContent = fait ? 'NIP retiré de cet appareil.' : 'Déverrouille le compte d’abord.';
       majCompte();
     });
+    // EFFACER SON COMPTE (M14, 4e vague) : un bouton, puis une confirmation par mot de passe.
+    d.getElementById('bouton-compte-effacer').addEventListener('click', function () {
+      effacerDemande = true;
+      majCompte();
+      const el = d.getElementById('compte-effacer-passe');
+      if (el && el.focus) el.focus();
+    });
+    d.getElementById('bouton-compte-effacer-annuler').addEventListener('click', function () {
+      effacerDemande = false;
+      const el = d.getElementById('compte-effacer-passe');
+      if (el) el.value = '';
+      direEffacer('');
+      majCompte();
+    });
+    d.getElementById('compte-effacer-form').addEventListener('submit', envoyerEffacer);
     // ⚠️ L'ecran suit le compte, il ne l'interroge pas : l'ouverture, une partie
     // qui descend ou une session coupee arrivent quand le reseau veut bien.
     Compte.surChangement(function (vue) { majCompte(vue); });
@@ -1418,14 +1433,47 @@ const Hud = (function () {
   //: SANS toucher au NIP local — un contournement d'un chargement, pas un « oublie
   //: mon NIP ». Remis a zero a chaque ouverture de l'ecran.
   let nipBypasse = false;
+  //: EFFACER SON COMPTE (M14, 4e vague) : la confirmation est-elle ouverte ? Purement
+  //: d'affichage, et remise a zero a chaque ouverture de l'ecran, comme `nipBypasse`.
+  let effacerDemande = false;
 
   function montrerCompte() {
     nipBypasse = false;
+    effacerDemande = false;
     voile('compte');
     majCompte();
     const v = Compte.etat();
     const el = doc.getElementById(v.etat === 'verrouille' ? 'nip-code' : 'compte-pseudo');
     if (el && el.focus) el.focus();
+  }
+
+  /** Le message de l'effacement : dans le formulaire ET dans `compte-etat`, qui est
+      DEHORS — un effacement reussi (ou une session coupee) referme le formulaire, et le
+      seul mot qui dit ce qui s'est passe se cacherait avec lui (le piege de « Bonjour »). */
+  function direEffacer(texte) {
+    const dedans = doc.getElementById('compte-effacer-etat'), dehors = doc.getElementById('compte-etat');
+    if (dedans) dedans.textContent = texte;
+    if (dehors) dehors.textContent = texte;
+  }
+
+  /** ⚠️ Le mot de passe ne reste dans le champ NI apres un succes NI apres un echec. */
+  function envoyerEffacer(ev) {
+    if (ev) ev.preventDefault();
+    const champEl = doc.getElementById('compte-effacer-passe');
+    const motDePasse = champEl ? String(champEl.value || '').trim() : '';
+    if (!motDePasse) { direEffacer('Il faut ton mot de passe pour confirmer.'); return null; }
+    direEffacer('Effacement…');
+    return Compte.effacer(motDePasse).then(function (r) {
+      if (champEl) champEl.value = '';
+      if (r.ok) {
+        effacerDemande = false;
+        direEffacer('Compte effacé. Les parties de ce navigateur sont toujours là.');
+      } else {
+        direEffacer(r.motif || 'Refusé.');
+      }
+      majCompte();
+      return r;
+    });
   }
 
   /** Le NIP tape au verrou. ⚠️ `Compte.deverrouiller` rend `{ok:false, motif, essaisRestants}`
@@ -1469,6 +1517,15 @@ const Hud = (function () {
     const etatEl = doc.getElementById('compte-etat');
     const activerForm = doc.getElementById('nip-activer-form');
     const retrait = doc.getElementById('nip-retrait');
+    const effacerLigne = doc.getElementById('compte-effacer-ligne');
+    const effacerForm = doc.getElementById('compte-effacer-form');
+    const garde = doc.getElementById('compte-garde');
+    // ⚠️ Effacer n'existe QUE sur un compte ouvert (le serveur le refuserait de toute facon),
+    // et la confirmation prend la place du bouton — jamais les deux a l'ecran.
+    if (effacerLigne) effacerLigne.hidden = !ouvert || effacerDemande;
+    if (effacerForm) effacerForm.hidden = !ouvert || !effacerDemande;
+    // « Ce qu'on garde » se lit partout SAUF sous le verrou, qui montre le NIP seul.
+    if (garde) garde.hidden = verrouille;
     if (nipForm) nipForm.hidden = !verrouille;
     if (form) form.hidden = verrouille || ouvert;
     if (mot) mot.hidden = verrouille;
@@ -2243,6 +2300,6 @@ const Hud = (function () {
     get voileCourant() { return voileCourant; },
            majAvisSon,
            dessiner, dessinerRoue, rayonDeLaRoue, LOGO_ECHELLE, LOGO_Y, posteDeLaRoue, miniCarte, MINI,
-           montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip,
+           montrerCompte, majCompte, envoyerCompte, menuVersions, deverrouillerNip, envoyerEffacer,
            ancres: function () { return ancres; } };
 })();

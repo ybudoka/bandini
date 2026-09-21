@@ -400,6 +400,46 @@ const Compte = (function () {
     });
   }
 
+  // --- EFFACER SON COMPTE (M14, 4e vague) --------------------------------------------------
+
+  /*: ⚠️ EFFACER LE COMPTE N'EFFACE PAS LES PARTIES DE CE NAVIGATEUR : le `localStorage` reste
+    la verite, le compte n'est qu'une synchronisation — sans compte on joue comme avant, avec
+    les memes parties. Ce qui s'en va, c'est ce que le SERVEUR gardait (pseudo, mot de passe
+    hache, courriel, parties, appareils) et ce que CET appareil savait de ce compte : le NIP
+    et le temoin de synchronisation.
+
+    ⚠️ LE TEMOIN DOIT PARTIR AVEC LE COMPTE, pas seulement se ranger sous le pseudo : le
+    pseudo se reprend aussitot, et un temoin reste sur un compte NEUF dirait « j'ai deja vu
+    cette case du serveur » de parties qui n'ont jamais existe la-bas.
+
+    ⚠️ RIEN NE PART TANT QUE LE SERVEUR N'A PAS DIT OUI. Un mot de passe faux (403) laisse
+    tout en place — session, NIP, temoin, cookie. Et une reponse perdue en route ne se
+    presume pas : « rien n'a ete efface » serait un mensonge si le serveur a eu le temps
+    d'agir, alors on dit qu'on n'a pas pu confirmer (le prochain `ouvrir()` le montrera). */
+
+  function effacer(motDePasse) {
+    return file(function () {
+      if (etat !== 'ouvert') return { ok: false, motif: 'aucun compte ouvert' };
+      return appel('effacer', { mot_de_passe: motDePasse }).then(function (res) {
+        // ⚠️ Un mot de passe faux (403) passe par ICI sans rien changer : `recevoirCompte` ne
+        // touche a l'etat que sur 401 (session coupee) et 503 (base tombee). Une branche
+        // « 403 » a part ferait la meme chose — et aucune mutation ne la ferait rougir.
+        if (!res.ok) {
+          recevoirCompte(res);
+          return { ok: false, motif: (res.corps && res.corps.erreur) || 'refusé' };
+        }
+        effacerBlobNip();
+        sync = { compte: null, cases: {} };
+        try { stockage && stockage.removeItem(CLE_SYNC); } catch (e) { /* rien */ }
+        recevoirCompte(res);
+        return { ok: true };
+      }, function () {
+        panne();
+        return { ok: false, motif: 'Pas de réseau : l’effacement n’a pas pu être confirmé. Réessaie.' };
+      });
+    });
+  }
+
   // --- LE NIP (M14, 3e vague) : un verrou d'ECRAN, jamais un second mot de passe ------
 
   /*: ⚠️ IL FAUT DIRE TOUT DE SUITE CE QU'IL N'EST PAS : le NIP N'OUVRE PAS UN COMPTE, il
@@ -591,6 +631,6 @@ const Compte = (function () {
 
   return { init, ouvrir, etat: etatPublic, surChangement, decision, conflit: function (n) { return conflits[n] || null; },
            inscrire, connecter, deconnecter, monter, prendre, garder, partir, apresEcriture, ranger,
-           nipConfigure, nipEssaisRestants, nipRefus, activerNip, desactiverNip, deverrouiller,
+           nipConfigure, nipEssaisRestants, nipRefus, activerNip, desactiverNip, deverrouiller, effacer,
            REPOS_MS };
 })();

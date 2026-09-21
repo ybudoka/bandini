@@ -195,6 +195,24 @@ kbd {
    retirait le verrou sans le NIP. Vu à la capture le 20 sept. 2026 ; les juges du NIP ne
    regardaient pas ce bloc-là. */
 .boutons[hidden] { display: none; }
+
+/* ⚠️ L'ECRAN DU COMPTE DEFILE (M14) : il est bien plus haut que le titre, et `.voile` centre
+   son contenu dans un `.ecran` en `overflow: hidden` — ce qui deborde etait ROGNE des deux
+   cotes, sans defilement. Mesure du 20 sept. 2026 : en portrait (ecran de jeu de 390x219),
+   « Retour » etait hors ecran, meme le champ du pseudo etait coupe en haut ; en paysage tout
+   tenait AU PIXEL PRES, et la confirmation d'effacement (+130 px) l'aurait rogne. Les marges
+   `auto` gardent le centrage quand ca tient (un simple `justify-content: center` rendrait le
+   haut inatteignable des que ca deborde). */
+#voile-compte { justify-content: flex-start; overflow-y: auto; overscroll-behavior: contain; }
+#voile-compte > :first-child { margin-top: auto; }
+#voile-compte > :last-child { margin-bottom: auto; }
+
+/* « Ce qu'on garde » (M14, 4e vague) : un <details>, ferme par defaut — ce n'est pas ce
+   qu'on est venu chercher, mais ca doit se trouver sans chercher. */
+.compte-garde { width: min(30em, 100%); margin-top: 10px; font-size: 13px; text-align: left; }
+.compte-garde summary { cursor: pointer; text-align: center; opacity: .85; }
+.compte-garde ul { margin: 6px 0 0; padding-left: 1.2em; }
+.compte-garde li { margin: 3px 0; }
 /* Trois champs nommés : « Courriel (facultatif) » ne tient pas dans 12em. */
 #voile-compte .compte-form input { width: 15em; }
 

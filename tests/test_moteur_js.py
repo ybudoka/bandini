@@ -3104,6 +3104,14 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         L.Jeu.commencer();
         const j = L.B.joueur;
         const t = L.B.entites.find(function (e) { return e.personnage === 'ti_guy'; });
+        // ⚠️ **LA RUE AUTOUR DE LUI EST VIDE** : une roulotte a cafe a 1 tuile de Ti-Guy fait ce juge.
+        // A l'ouest, elle se tenait sur la piste du coureur — il mesurait 1 px, la roulotte, pas la
+        // laisse ; deplacee a l'est (`app/devants.py` : elle bouchait la porte du terminus), Ti-Guy
+        // se retrouvait coince contre elle, a 12,1 px et incapable de revenir. Le juge parle d'un
+        // donneur, pas d'une roulotte : on l'ote, et ce qu'on mesure est la laisse toute seule.
+        L.B.entites.filter(function (e) { return e.type === 'ambulant' && Math.hypot(e.x - t.x, e.y - t.y) < 200; })
+            .forEach(function (e) { L.Entites.retirer(e); });
+        L.Entites.indexer();
         o.frame(2);
         const poste = { x: t.plante ? t.plante.x : t.x, y: t.plante ? t.plante.y : t.y };
         j.x = poste.x - 40; j.y = poste.y; j.vx = 0; j.vy = 0;
@@ -3120,6 +3128,9 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         for (let i = 0; i < 240; i++) { j.y = poste.y; o.frame(1); }
         const pousse = Math.hypot(t.x - poste.x, t.y - poste.y);
         o.relacher('KeyD'); o.relacher('ShiftLeft');
+        // ⚠️ Et on le DEPLACE pour de bon, de huit pixels (sous la laisse) : en rue libre la poussee
+        // ne l'ecarte que d'un dixieme de pixel, et « il rentre » serait vrai sans qu'il ait a rentrer.
+        t.x = poste.x + 8; t.y = poste.y;
         j.x = poste.x - 200; j.y = poste.y;              // on le lache
         // ⚠️ Il rentre à pied, et le chemin du retour dépend de ce qu'il a autour
         // (un banc, un passant, la largeur du trottoir) : 180 images le ramenaient
@@ -3130,7 +3141,9 @@ def test_celui_qui_tient_son_poste_cede_puis_revient(banc):
         return { pousse: +pousse.toFixed(1), rentre: +Math.hypot(t.x - poste.x, t.y - poste.y).toFixed(1),
                  etat: t.etat };
     }""")
-    assert r["pousse"] > 0.5, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
+    # ⚠️ Le plancher est « un peu », pas un demi-pixel : en rue libre la laisse le ramene a chaque
+    # image et l'equilibre est a 0,1-0,3 px (le demi-pixel d'avant n'etait tenu que par la roulotte).
+    assert r["pousse"] > 0.05, "on doit pouvoir le tasser un peu, sinon il bouche la rue"
     assert r["pousse"] < 12, f"on l'a promene de {r['pousse']} px : il n'est plus a son poste"
     # ⚠️ **UN PIXEL, c'est à sa place** : il marche par pas de fraction de pixel et
     # s'arrête dès qu'il est chez lui. Le juge exigeait STRICTEMENT moins d'un

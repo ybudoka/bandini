@@ -108,10 +108,13 @@ function banc(corps) {
    'bouton-compte-connexion', 'bouton-compte-deconnexion',
    // Le NIP (M14, 3e vague).
    'nip-form', 'nip-code', 'nip-etat', 'bouton-nip-mot-de-passe',
-   'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer']
+   'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer',
+   // Effacer son compte (M14, 4e vague).
+   'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
+   'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde']
     .forEach(function (id) {
     const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel'
-      || id === 'nip-code' || id === 'nip-nouveau';
+      || id === 'nip-code' || id === 'nip-nouveau' || id === 'compte-effacer-passe';
     elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : entree ? 'input' : 'div', id);
   });
   const body = faireElement('body');
