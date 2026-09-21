@@ -82,6 +82,40 @@ def test_le_trafic_et_la_physique_sont_bornes():
     assert 0 <= ph["pivot_arriere"] < 0.5, "le pivot est DERRIERE le centre, pas derriere le char"
 
 
+def test_aucune_fiche_ne_promet_une_pointe_que_la_physique_refuse():
+    """⚠️ La paie de la Prevost (21 sept. 2026) : le camion plafonnait a 1,97 px/image au lieu des 2,8 de sa
+    fiche, et un agent a pied (2,0) le suivait jusqu'au bar. La friction mangeait tout ce que le moteur
+    ajoutait bien avant la `vitesse_max` — et la berline de luxe, l'autobus, le porte-conteneurs avec lui.
+
+    On INTEGRE image par image, comme `majPhysique` : gaz a fond, `(vitesse + acceleration) x friction`,
+    bornee par la fiche. Une formule fermee dirait ce qu'on croit, pas ce que le moteur fait."""
+    for v in vehicules.CATALOGUE:
+        vitesse, secondes = 0.0, None
+        for image in range(60 * 30):
+            vitesse = min(v["vitesse_max"], (vitesse + v["acceleration"]) * v["friction"])
+            if secondes is None and vitesse >= 0.95 * v["vitesse_max"]:
+                secondes = image / 60
+        assert secondes is not None, f"{v['slug']} plafonne a {vitesse:.2f} pour une fiche a {v['vitesse_max']}"
+        # ⚠️ La pointe elle-meme, pas seulement 95 % : un moteur qui s'epuise a 2,79 laisse le compteur a 119.
+        pointe = v["acceleration"] * v["friction"] / (1 - v["friction"])
+        assert pointe >= v["vitesse_max"], f"{v['slug']} : pointe {pointe:.4f} sous sa fiche"
+        # Et un char qui atteignait deja sa vitesse garde la friction de sa surface : on ne l'a pas touche.
+        base = vehicules.FRICTION_EAU if v["eau"] else vehicules.FRICTION_RUE
+        if v["acceleration"] * base / (1 - base) >= v["vitesse_max"]:
+            assert v["friction"] == base, v["slug"]
+
+
+def test_un_char_a_moteur_distance_un_agent_a_pied():
+    """Semer la police, c'est d'abord la distancer. Un agent court a `VITESSES["policier"]` ; tout ce qui a un
+    moteur et roule en ville va plus vite a fond — le camion et l'autobus compris, les plus lents. Le velo,
+    lui, ne distance personne : on le pedale."""
+    from app.recherche import VITESSES
+    for v in vehicules.CATALOGUE:
+        if v["reservoir"] and not v["eau"]:
+            assert v["vitesse_max"] >= 1.25 * VITESSES["policier"], \
+                f"{v['slug']} ({v['vitesse_max']}) ne distance pas un agent a pied ({VITESSES['policier']})"
+
+
 def test_le_sous_pas_ne_traverse_jamais_un_char():
     """⚠️ Le sous-pas doit rester plus petit que le demi-largeur du char le
     plus etroit : sinon, a pleine vitesse, deux cercles se croisent sans se

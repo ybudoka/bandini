@@ -4212,7 +4212,7 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
         j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         function ecart(a, b) { let e = b - a; while (e > Math.PI) e -= 2 * Math.PI; while (e < -Math.PI) e += 2 * Math.PI; return e; }
         const out = {};
-        ['auto', 'moto', 'autobus'].forEach(function (slug) {
+        ['auto', 'moto', 'camion', 'autobus'].forEach(function (slug) {
             const v = o.char(slug, 0, 0, 0);
             const cercles = [], glisses = [];
             [0.25, 1.0].forEach(function (part) {
@@ -4233,7 +4233,7 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
                 glisses.push(+(Math.abs(ecart(v.angle, Math.atan2(v.vy, v.vx))) * 180 / Math.PI).toFixed(1));
                 if (tourne < Math.PI * 2) cercles.push('jamais bouclé');
             });
-            out[slug] = { rayon: v.def.rayon_braquage, cercles: cercles, glisses: glisses };
+            out[slug] = { rayon: v.def.rayon_braquage, classe: v.def.classe, cercles: cercles, glisses: glisses };
             L.Entites.retirer(v);
         });
         return out;
@@ -4250,7 +4250,17 @@ def test_le_cercle_d_un_char_ne_grandit_pas_avec_sa_vitesse(banc, paquet):
         assert vite <= lent * 2.6, f"{slug} : le cercle passe de {lent} à {vite} px avec la vitesse"
         # Et il reste franchissable : un coin de rue fait une tuile et demie,
         # une intersection quatre.
-        assert vite <= 16 * 4.5, f"{slug} : {vite / 16:.1f} tuiles de rayon à fond, aucun coin ne passe"
+        # ⚠️ SAUF UN POIDS LOURD LANCÉ (21 sept. 2026, la paie de la Prévost).
+        # Jusque-là l'autobus ne passait jamais 1,84 px/image — la friction lui
+        # volait sa `vitesse_max` —, et ce juge le mesurait « à fond » sans le
+        # savoir : il était vert à vide. Il roule enfin à 2,6, et à 2,6 un
+        # autobus ne prend pas une intersection : il freine avant, comme un vrai.
+        # Rien n'a reculé : la courbe lit `vitesse / vitesse_max`, qui n'a pas
+        # bougé, donc à chaque vitesse qu'il atteignait avant il tourne comme
+        # avant. La borne ne garde que l'ordre de grandeur — qu'on ne l'alourdisse
+        # pas sans le voir.
+        tuiles = 6.5 if m["classe"] == "camion" else 4.5
+        assert vite <= 16 * tuiles, f"{slug} : {vite / 16:.1f} tuiles de rayon à fond, aucun coin ne passe"
     # La berline glisse un peu, jamais en travers : c'est le caractère de la
     # sport, pas celui d'une auto de tous les jours.
     assert max(r["auto"]["glisses"]) < 20, r["auto"]

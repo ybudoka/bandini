@@ -212,6 +212,77 @@ def test_s03_le_camion_de_paie_deux_etoiles_puis_le_syndicat(banc):
     assert r["fait"] is True and r["argent"] == [450]
 
 
+def test_s03_le_camion_de_paie_a_fond_seme_l_agent_a_pied_et_les_etoiles_tombent(banc):
+    """⚠️ Le juge d'au-dessus SAUTE l'étape « sème la police » (`etoiles = 0`) — et c'est elle que Martin n'a
+    jamais passée (21 sept. 2026 : « presque impossible, le camion va trop lentement pour les policiers »). Le
+    camion plafonnait à 1,97 px/image au lieu des 2,8 de sa fiche, un agent à pied court à 2,0 : il le suivait
+    à 40 px, le voyait à chaque image, et les deux étoiles ne tombaient jamais.
+
+    Ici on la joue : le camion de paie, gaz tenu au bouton, sur la plus longue ligne droite de la ville, un
+    agent en chasse à 40 px derrière. Le camion prend sa vitesse, l'agent le perd de vue, et la première
+    étoile tombe. Le reste de la ville est coupé — les passants qu'on renverserait feraient monter la chaleur,
+    les autres agents naissent au hasard (`peuplerAgents`) : ce n'est pas ce qu'on juge. L'agent regarde à
+    chaque image, pas une sur trois : c'est l'`id` de l'agent qui choisissait lesquelles."""
+    r = banc("function (L, o) {" + OUTILS + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, j = B.joueur, TT = L.TT, c = L.Monde.carte; j.invincible = 1e6;
+        B.defs.conduite.trafic.vehicules_max = 0; B.defs.conduite.trafic.stationnes_max = 0;
+        B.defs.recherche.police.regarde_toutes_les_images = 1;
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'e01', 'q02']);
+        L.Histoire.commencer('s03'); B.cinema = null; B.scene = null;
+        const v = B.mission.vehicule;
+        j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
+        L.Vehicules.monter(j, v); L.Entites.indexer();
+        o.frame(2); fermer(L);
+        const debut = { etape: etape(L), etoiles: B.recherche.etoiles };
+        // La plus longue ligne droite vers l'est où passe un camion (trois rangées libres).
+        let route = null;
+        for (let ty = 2; ty < c.h - 2; ty++) {
+            let x0 = null;
+            for (let tx = 1; tx < c.w - 1; tx++) {
+                const libre = L.Monde.estRoute(tx, ty) && [-1, 0, 1].every(function (d) {
+                    return !L.Monde.bloque(tx, ty + d, L.Monde.MASQUE_VEHICULE) && !L.Monde.estEau(tx, ty + d);
+                });
+                if (!libre) { x0 = null; continue; }
+                if (x0 === null) x0 = tx;
+                if (!route || tx - x0 > route.l) route = { x: x0, y: ty, l: tx - x0 };
+            }
+        }
+        const xa = (route.x + 2) * TT + 8, ya = route.y * TT + 8, fin = (route.x + route.l - 4) * TT;
+        v.x = xa; v.y = ya; v.angle = 0; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y;
+        L.Monde.centrerCamera(v.x, v.y);
+        const agent = L.Police.creerAgent(xa - 40, ya, 'poursuit'); agent.angle = 0; agent.vuT = 0;
+        B.recherche.vu = 0; B.recherche.dernierVu = { x: xa, y: ya, t: B.t };
+        function vider() {
+            B.entites.filter(function (e) {
+                return e !== j && e !== v && e !== agent && (e.type === 'vehicule' || e.type === 'pieton');
+            }).forEach(function (e) { L.Entites.retirer(e); });
+            L.Entites.indexer();
+        }
+        vider();
+        let pointe = 0, perdu = null, tombe = null, i = 0;
+        o.touche('KeyW');
+        for (; i < 60 * 45 && v.x < fin && tombe === null; i++) {
+            o.frame(1);
+            if (i % 10 === 0) vider();
+            pointe = Math.max(pointe, Math.abs(v.vitesse));
+            if (perdu === null && B.recherche.vu > 60) perdu = { s: +(i / 60).toFixed(1), d: Math.round(Math.hypot(agent.x - v.x, agent.y - v.y)) };
+            if (B.recherche.etoiles < 2) tombe = +(i / 60).toFixed(1);
+        }
+        o.relacher('KeyW');
+        return { debut: debut, route: route, pointe: +pointe.toFixed(2), fiche: v.def.vitesse_max, perdu: perdu, tombe: tombe,
+                 s: +(i / 60).toFixed(1), d: Math.round(Math.hypot(agent.x - v.x, agent.y - v.y)),
+                 etoiles: B.recherche.etoiles, etape: etape(L), dans: j.dansVehicule === v };
+    }""")
+    assert r["debut"] == {"etape": 1, "etoiles": 2}, r["debut"]
+    assert r["route"]["l"] >= 200, f"pas de ligne droite assez longue pour juger : {r['route']}"
+    assert r["dans"], "on est sorti du camion en route"
+    assert r["pointe"] >= 0.95 * r["fiche"], f"le camion plafonne sous sa fiche : {r}"
+    assert r["perdu"] is not None, f"l'agent à pied ne lâche pas le camion : {r}"
+    assert r["tombe"] is not None, f"les deux étoiles ne tombent jamais : {r}"
+    assert r["etape"] == 1 and r["etoiles"] == 1, r
+
+
 def test_m51_la_tournee_du_sergent_trois_poignees_de_main_dites_puis_le_casse_croute(banc):
     """Bouchard : Thibodeau, Lulu et Ti-Paul disent chacun leur mot en personne (leur voix demandée), et
     l'objectif n'avance qu'une fois la boîte fermée ; puis on rapporte les enveloppes au casse-croûte."""

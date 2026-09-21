@@ -100,6 +100,40 @@ CLASSES_A_PORTIERES = ("auto", "camion")
 #: meme que celle du traversier, jouee la ou l'on est quand on la tient.
 AVERTISSEURS = ("klaxon", "sonnette", "corne")
 
+#: La friction de la rue et celle de l'eau : ce que perd, a chaque image, un
+#: char qu'on ne pousse plus.
+FRICTION_RUE = 0.985
+FRICTION_EAU = 0.995
+
+
+def friction_pour(vitesse_max: float, acceleration: float, base: float) -> float:
+    """La friction d'un char : celle de la rue (ou de l'eau), sauf si elle lui
+    vole la `vitesse_max` que sa fiche promet.
+
+    ⚠️ **LA FICHE NE MENT PAS SUR LA VITESSE** (21 sept. 2026, retour de Martin :
+    « la paie de la Prevost est presque impossible, le camion va trop lentement
+    pour les policiers »). A fond, le moteur fait `vitesse = (vitesse +
+    acceleration) x friction` a chaque image : la vitesse plafonne la ou la
+    friction mange tout ce que le moteur ajoute, a `acceleration x friction /
+    (1 - friction)`. A 0,985, un moteur faible n'atteignait JAMAIS sa
+    `vitesse_max` : le camion plafonnait a 1,97 px/image au lieu de 2,8 — moins
+    qu'un agent a pied (2,0), qui le suivait a 40 px jusqu'au bar, et les deux
+    etoiles de s03 ne tombaient jamais. La berline de luxe roulait a 2,76 au
+    lieu de 3,6, le porte-conteneurs a la moitie de sa fiche, et le compteur du
+    HUD n'affichait jamais 120.
+
+    ⚠️ C'est donc la FRICTION qui se deduit, juste assez faible pour que la
+    pointe soit la `vitesse_max` — pas l'acceleration, qui dit comment le char
+    DEMARRE : le camion part toujours en camion. Et le trafic ne voit rien : il
+    roule sur ses rails (`rouler`), sans friction, et son acceleration n'a pas
+    bouge d'un cheveu. Un char qui atteint deja sa vitesse garde la friction de
+    la rue : la moto, la police, le taxi ne changent pas.
+    """
+    juste = vitesse_max / (vitesse_max + acceleration)
+    # Arrondie VERS LE HAUT : arrondie au plus pres, la pointe retombait d'un
+    # cheveu sous la fiche.
+    return max(base, math.ceil(juste * 100_000) / 100_000)
+
 
 def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq, couleurs,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
@@ -110,7 +144,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
-        frein=round(accel * 2, 3), friction=0.995 if eau else 0.985,
+        frein=round(accel * 2, 3),
+        friction=friction_pour(vmax, accel, FRICTION_EAU if eau else FRICTION_RUE),
         rayon_braquage=rayon,
         adherence=adherence if adherence is not None else (0.30 if not eau else 0.05),
         adherence_frein=0.035,
