@@ -40,15 +40,15 @@ MISSION = {
                jeu="[matter-of-fact] Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque."),
         ],
         "fin": [
-            _l("josee", "Josée. Le Faubourg respire. Le bar est à toi, pis toute la ville va le lire demain matin.",
-               jeu="[satisfied] Josée. Le Faubourg respire. Le bar est à toi… pis toute la ville va le lire demain matin."),
+            _l("josee", "Le Faubourg respire. Le bar est à toi, pis toute la ville va le lire demain matin.",
+               jeu="[satisfied] Le Faubourg respire. Le bar est à toi… pis toute la ville va le lire demain matin."),
             _l("josee", "On va se reparler. Y a plus grand que le Faubourg.",
                jeu="[mysteriously] On va se reparler. Y a plus grand… que le Faubourg."),
         ],
-        "echec": [_l("josee", "Josée. Les Cravates sont encore là. Reviens quand tu seras prêt.",
-                     jeu="[disappointed] Josée. Les Cravates sont encore là. Reviens quand tu seras prêt.")],
+        "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.",
+                     jeu="[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("josee", "C'est Josée. Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1,
-                       jeu="[menacingly] C'est Josée. Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.")],
+        "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1,
+                       jeu="[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.")],
     },
 }

@@ -55,8 +55,8 @@ aller le prendre.
 | Situation | Ce qu'elle dit | Pourquoi |
 |---|---|---|
 | Au premier appel | « Tu me connais pas encore. Josée, on m'appelle la Chef. » (m5) | pas une question : un constat — et une promesse |
-| Au téléphone, ensuite | « Josée. » (m6), « C'est Josée. » (m5, m6) | ⚠️ **un nom, un point, l'affaire** : pas de bonjour, c'est sa signature |
-| Quand ça a mal tourné | « Josée. Les Cravates sont encore là. » (m5) | pas de consolation : le constat, puis la porte ouverte |
+| Au téléphone, ensuite | « Josée. » (m6) | ⚠️ **un nom, un point, l'affaire** : pas de bonjour, c'est sa signature |
+| Plus tard dans la mission (fin au combiné, échec) | « Le Faubourg respire. » (m5), « Les Cravates sont encore là. » (m5) | pas de nom (on l'a entendue à l'appel), pas de consolation : le constat |
 | Déjà connue, en personne | rien — elle commence par ce qu'elle veut (« Quatre coins, quatre personnes. », m6) | on vient chez elle : saluer, c'est à toi |
 
 ## Son corps

@@ -54,8 +54,8 @@ MISSION = {
                jeu="[warmly] Tiens, pour la peine… Je t'en dois une, cousin.")
         ],
         "echec": [
-            _l("marco", "Marco. Ils t'ont eu… Repose-toi, cousin. Le garage tient encore debout.",
-               jeu="[concerned] Marco. Ils t'ont eu… Repose-toi, cousin. [wryly] Le garage tient encore debout.")
+            _l("marco", "Ils t'ont eu… Repose-toi, cousin. Le garage tient encore debout.",
+               jeu="[concerned] Ils t'ont eu… Repose-toi, cousin. [wryly] Le garage tient encore debout.")
         ]
     },
 

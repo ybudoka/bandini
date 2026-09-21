@@ -30,6 +30,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import tempfile
 import threading
 from pathlib import Path
@@ -311,6 +312,24 @@ def secher(client: ClientMCP, master: Path, dossier: Path) -> Path:
         _sortie_ffmpeg(["-i", reponse["fichier"], "-af", f"atrim=end={duree:.3f}",
                         "-ac", "1", "-ar", "44100", str(cible)])
     return cible
+
+
+def ranger_master(paye: Path, attendu: Path, seche: bool) -> None:
+    """⚠️ Le master payé prend le nom que `--refinir` relit. Le serveur n'écrase jamais : un
+    `--refaire` avec `--masters` écrivait `<slug>-2.mp3` (et `<slug>-2-sec.wav`) à côté de
+    `<slug>.mp3`, et `--refinir` relisait celui-ci — l'ANCIENNE phrase, finie comme si c'était la
+    nouvelle, sans que rien ne le dise (21 sept. 2026, les gens se présentent : 38 voix refaites).
+    L'ancien reste à côté, daté : un master payé ne se jette pas."""
+    paires = [(paye, attendu)]
+    if seche:
+        paires.append((paye.with_name(f"{paye.stem}-sec.wav"), attendu.with_name(f"{attendu.stem}-sec.wav")))
+    date = time.strftime("%Y-%m-%d-%H%M%S")
+    for neuf, cible in paires:
+        if neuf == cible or not neuf.exists():
+            continue
+        if cible.exists():
+            cible.rename(cible.with_name(f"{attendu.stem}-avant-{date}{cible.name[len(attendu.stem):]}"))
+        neuf.rename(cible)
 
 
 def finir_voix(master: Path, cible: Path, histoire: bool, marque: str | None = None,
@@ -669,6 +688,8 @@ def main() -> int:
                     print(f"  ✗ {nom:>40}  finition : {souci}")
                     continue
                 faits += 1
+                if options.masters:
+                    ranger_master(Path(reponse["fichier"]), Path(masters) / nom, interpretation.a_secher(ligne))
                 duree = "" if avant is None else f"{avant:5.2f} s -> "
                 trous = f"  ⚠ trou de {max(bilan['trous']):.1f} s" if bilan["trous"] else ""
                 print(f"  ✓ {nom:>40}  {duree}{bilan['duree']:5.2f} s  gain {bilan['gain']:+5.1f} dB{trous}")

@@ -53,7 +53,7 @@ travail, et il trouve ça drôle.
 |---|---|---|
 | À la première rencontre | « Salut, l'ami! Moi, c'est Ti-Paul, pis toi, t'es le nouveau de Josée? » (m6) | il se présente **et** te demande qui tu es — alors qu'il le sait déjà |
 | Au téléphone | « C'est Ti-Paul, du dépanneur! » (e01) | le nom et l'adresse : c'est tout ce qu'il est |
-| Quand ça a mal tourné | « C'est Ti-Paul, l'ami. Ils t'ont eu? » (e01) | l'« ami » reste, même pour consoler |
+| Quand ça a mal tourné (même mission) | « Ils t'ont eu? Bon… le parking est à eux ce soir. » (e01) | pas de nom : il s'est présenté à l'appel ; il console en parlant de son parking |
 | Déjà connu, en personne | « Salut, l'ami! » (sa bulle) | il ne se nomme plus — tout le monde le connaît, et tu es un habitué |
 
 ⚠️ **Il partage sa voix avec Marco.** Ce qui les distingue, c'est l'écriture : Marco ouvre par « cousin »

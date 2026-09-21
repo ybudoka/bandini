@@ -179,12 +179,12 @@ texte que le juge refuse ou que la voix massacre.
    corrompue, des négligents — pas des pauvres ni de la misère. Une blague qui
    fait mal est une blague qui sort (cf. § 1.2 et § 1.4).
 
-7. **Qui parle au téléphone se nomme — et la salutation peut être la blague.** Au combiné et à la
-   première rencontre, la première réplique dit qui parle (jugé ; `jeu-d-acteur.md` § 3.11). C'est une
-   contrainte, et c'est un ressort : « C'est pas Bouchard qui t'appelle, OK? » (l'échec de m4) fait rire
-   d'un flic qui se nomme pour nier qu'il appelle ; « C'est moi, Ti-Guy, tu me replaces pas? » (m1), d'un
-   homme qui croit que toute la ville le connaît. La salutation de chacun est dans sa fiche
-   (`docs/personnages/`) : on joue avec, on ne l'invente pas à chaque fois.
+7. **On se présente une fois par mission — et la présentation peut être la blague.** La première fois
+   qu'on entend quelqu'un dans la mission, il dit qui il est (jugé ; `jeu-d-acteur.md` § 3.11), et plus
+   jamais ensuite : une blague de présentation ne se répète pas. C'est une contrainte, et c'est un ressort :
+   « C'est moi, Ti-Guy, tu me replaces pas? » (m1) fait rire d'un homme qui croit que toute la ville le
+   connaît ; « Tu me connais pas encore. » (Josée, m5) inquiète en quatre mots. La salutation de chacun est
+   dans sa fiche (`docs/personnages/`) : on joue avec, on ne l'invente pas à chaque fois.
 
 8. **Chaque « bruit de fond » tire un dé qui décale tout le hasard.** Quand on
    ajoute une réplique de rue ou un matin calme, on ne tire **jamais** `B.rng()`

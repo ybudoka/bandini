@@ -5,7 +5,7 @@ de la boite de dialogue ET de la voix generee (voir `audio.voix_histoire`).
 Le navigateur ne decide rien : il joue les objectifs dans l'ordre, selon leur
 type, et parle avec les mots d'ici.
 
-Le fil : Ti-Guy accueille le cousin de Rocco au terminus (M1), Madame
+Le fil : Ti-Guy accueille le neveu de Rocco au terminus (M1), Madame
 Thibodeau a un compte a regler avec les Cravates (M2), Marco prete son taxi
 (M3), le sergent Bouchard a une auto-patrouille a faire disparaitre (M4) et
 Josee, la Chef des Quais, veut le Faubourg vide de Cravates (M5).
@@ -102,7 +102,7 @@ HELER_MAX = 16
 PERSONNAGES: list[Personnage] = [
     {"slug": "ti_guy", "nom": "Ti-Guy", "genre": "homme", "voix": "Felix Tabarnak - Confident and Witty",
      "couleurs": {"c": "#2e8b57", "h": "#3a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:terminus",
-     "heler": "Hé! Le cousin!", "parti_apres": "m1"},
+     "heler": "Hé! Le neveu!", "parti_apres": "m1"},
     {"slug": "thibodeau", "nom": "Madame Thibodeau", "genre": "femme", "voix": "Julia",
      "couleurs": {"c": "#8e44ad", "h": "#d0d0d0", "s": "#e8b088", "p": "#4a3a5a"}, "ou": "porte:kiosque",
      "heler": "Psst! Toi!"},
@@ -465,10 +465,12 @@ def personnage(slug: str) -> Personnage | None:
 #
 # ⚠️ Demande de Martin (21 sept. 2026) : « normalement les gens se présentent avant de parler,
 # comme "C'est XXX" ou "Salut, c'est XXX" ou "Salut XXX, tu sais je suis qui ? Je suis XXX" »,
-# puis « sois varié et contextuel selon la personnalité des personnages ». Au téléphone on
-# n'a qu'une voix, et à la première rencontre qu'un bonhomme de seize pixels sans visage : le
-# nom se DIT, une fois par conversation, dans la salutation de CE personnage. La règle et ses
-# formes : `docs/jeu-d-acteur.md` § 3.11 ; la salutation de chacun : sa fiche, `docs/personnages/`.
+# puis « sois varié et contextuel selon la personnalité des personnages », puis — le même soir —
+# « finalement les personnes doivent se présenter seulement UNE FOIS PAR MISSION ». Au téléphone
+# on n'a qu'une voix, et à la première rencontre qu'un bonhomme de seize pixels sans visage : le
+# nom se DIT, la première fois qu'on entend quelqu'un dans la mission, dans la salutation de CE
+# personnage — et plus jamais dans la même mission. La règle et ses formes :
+# `docs/jeu-d-acteur.md` § 3.11 ; la salutation de chacun : sa fiche, `docs/personnages/`.
 
 #: Les mots d'un `nom` qui ne nomment personne à eux seuls : « le sergent » n'est pas Bouchard
 #: (Lulu dit « le sergent va être content »), « Madame » n'est pas Thibodeau.
@@ -682,22 +684,28 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
             erreurs.append(f"{slug} {partie} : les répliques dites {sorted(dites)} ne sont pas toutes, une fois")
     # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
     # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
-    fin_au_combine = bool(scenes.get("fin")) and not fin_dite_en_personne(mission, scenes["fin"])
-    if fin_au_combine:
+    if scenes.get("fin") and not fin_dite_en_personne(mission, scenes["fin"]):
         chez_lui = {"chez:" + mission["donneur"], "donneur"}
         va_chez_lui = any(p["type"] == "coupe" and chez_lui & set(_lieux_du_plan(p)) for p in scenes["fin"])
         if not va_chez_lui:
             erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
-    # ⚠️ QUI PARLE AU COMBINÉ SE NOMME, dès sa première réplique : l'appel et l'échec se disent
-    # TOUJOURS au téléphone (`histoire.js`, `lignesDe`), la fin quand le donneur n'est pas là. Le
-    # téléphone n'a pas de visage — « Cousin, j'ai une faveur » ne dit pas qui appelle.
-    for partie, quoi in (("appel", "l'appel"), ("echec", "l'échec"), ("fin", "la fin, dite au combiné,")):
-        lignes = dialogue.get(partie) or []
-        if partie == "fin" and not fin_au_combine or not lignes or not on_le_rencontre(lignes[0]["qui"]):
-            continue
-        if not se_nomme(lignes[0]["qui"], lignes[0]["texte"]):
-            erreurs.append(f"{slug} : {quoi} ne dit pas qui parle — « {lignes[0]['texte']} » "
-                           f"(docs/jeu-d-acteur.md § 3.11)")
+    # ⚠️ ON SE PRÉSENTE UNE FOIS PAR MISSION (Martin, 21 sept. 2026). L'appel est la première chose
+    # qu'on entend d'une mission, et il se dit TOUJOURS au téléphone (`histoire.js`, `lignesDe`) : sa
+    # première réplique dit qui appelle — « Cousin, j'ai une faveur » ne le disait pas. Ensuite, plus
+    # personne ne redit son nom dans la même mission : Josée le disait à l'appel, au `pendant`, à la
+    # fin et à l'échec de m5 — la voix est connue depuis l'appel.
+    appel = dialogue.get("appel") or []
+    if appel and on_le_rencontre(appel[0]["qui"]) and not se_nomme(appel[0]["qui"], appel[0]["texte"]):
+        erreurs.append(f"{slug} : l'appel ne dit pas qui appelle — « {appel[0]['texte']} » "
+                       f"(docs/jeu-d-acteur.md § 3.11)")
+    fois: dict[str, list[str]] = {}
+    for ligne in dans_l_ordre_ou_on_les_entend(mission):
+        if on_le_rencontre(ligne["qui"]) and se_nomme(ligne["qui"], ligne["texte"]):
+            fois.setdefault(ligne["qui"], []).append(ligne["texte"])
+    for qui, textes in fois.items():
+        if len(textes) > 1:
+            erreurs.append(f"{slug} : {qui} se présente {len(textes)} fois — une fois par mission : "
+                           + " / ".join(f"« {t} »" for t in textes))
     return erreurs
 
 

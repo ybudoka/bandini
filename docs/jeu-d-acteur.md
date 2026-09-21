@@ -316,8 +316,8 @@ volume bas pour se faire sentir sonnera comme les autres — et un limiteur
 La voix « au combiné » est un **filtre joué**, pas un fichier différent : les
 mêmes mots, le même mp3. Écris donc l'appel **pour la situation** : plus court,
 plus pressé, sans cérémonie (« Il se sauve avec ma caisse! Lâche-le pas! »), et
-n'y mets pas un geste ni un plan — le téléphone fige déjà la ville. ⚠️ Mais **on s'y
-nomme**, dès la première réplique, dans la salutation du personnage (§ 3.11).
+n'y mets pas un geste ni un plan — le téléphone fige déjà la ville. ⚠️ Mais **à l'appel,
+on se nomme**, dans la salutation du personnage — une fois pour toute la mission (§ 3.11).
 
 ### 3.7 bis Lire la fiche avant d'écrire
 
@@ -403,7 +403,9 @@ qui sonne bien mais dont la **finition** cloche (niveau, temps mort, égalisatio
 
 ⚠️ **Demande de Martin (21 sept. 2026)** : « normalement les gens se présentent avant de parler, comme
 "C'est XXX" ou "Salut, c'est XXX" ou "Salut XXX, tu sais je suis qui ? Je suis XXX" », puis « sois varié et
-contextuel selon la personnalité des personnages avec les salutations ».
+contextuel selon la personnalité des personnages avec les salutations », puis, le même soir, après une
+première version qui les nommait à chaque coup de fil : « finalement les personnes doivent se présenter
+**seulement une fois par mission** ».
 
 **Pourquoi.** Au téléphone, on n'a qu'une voix : la boîte affiche bien « MARCO (AU TÉLÉPHONE) », mais celui
 qui écoute ne lit pas, et « Cousin, j'ai une faveur » (l'ancien appel de m50) ne disait pas qui appelait. À
@@ -412,32 +414,34 @@ dans le jeu aussi.
 
 **La règle, en quatre temps**
 
-1. **Au téléphone, on se nomme dès la première réplique** : l'**appel**, l'**échec** (toujours au combiné,
-   `histoire.js` `lignesDe`), la **fin** quand le donneur n'est pas là (`missions.fin_dite_en_personne` :
-   sept fins sur treize) — et une réplique **`pendant` dite de loin** (m1, m5, q02, s03, m51 : le joueur est
-   à l'autre bout de la ville quand l'objectif commence).
-2. **À la première rencontre, on se présente** : le nom, et ce qu'on est. « Raymonde Fortin, présidente du
-   syndicat. » (m6)
-3. **Une fois par conversation.** La première réplique porte le nom ; les suivantes, non. Un nom répété à
-   chaque ligne sonne comme un répondeur.
+1. **Une fois par mission.** La première fois qu'on entend quelqu'un dans une mission, il dit son nom, dans
+   sa salutation : pour le donneur, c'est l'**appel** (toujours au combiné, `histoire.js` `lignesDe`) ;
+   sans appel, sa première réplique (Ti-Guy au terminus, m1) ; pour un autre, sa première réplique à lui —
+   la poignée de main (Lulu à m50), ou un `pendant` dit de loin (« C'est Ti-Guy, j'suis juste derrière
+   toi », m4).
+2. **Jamais deux.** Ensuite, dans la même mission, **personne ne redit son nom** — ni au `pendant`, ni à la
+   fin, ni à l'échec, même au combiné : la voix est connue depuis l'appel. La première version de la règle
+   (« une fois par conversation ») faisait dire « Josée » quatre fois dans m5 ; ça sonnait comme un
+   répondeur.
+3. **À la première rencontre, on se présente vraiment** : le nom, et ce qu'on est. « Raymonde Fortin,
+   présidente du syndicat. » (m6)
 4. **Déjà connu, en personne : pas de nom** — une salutation suffit, et c'est **la sienne** (« Te v'là,
-   toi! » pour Lulu, « Le jeune. » pour Bouchard). On est devant lui : le sprite et la boîte disent qui c'est.
+   toi! » pour Lulu, « Le jeune. » pour Bouchard). On est devant lui : le sprite et la boîte disent qui c'est
+   (les poignées de main de m51).
 
 **Les formes — une par situation, jamais la même pour deux personnages dans une mission**
 
 | Forme | Ce qu'elle dit du personnage | Dans le jeu |
 |---|---|---|
-| « C'est X. » | le neutre, le proche | « C'est Josée. » (m6), « C'est Lulu. » (q02) |
+| « C'est X. » | le neutre, le proche | « C'est Ti-Paul, du dépanneur! » (e01), « C'est Ti-Guy, j'suis juste derrière toi. » (m4) |
 | « Salut, c'est X. » | le familier | « Salut, c'est Marco, le Cousin. » (m3), « Salut, le jeune, c'est Bouchard. » (m51) |
-| « X. » | le sec : un chef, un flic pressé, quelqu'un de fâché | « Josée. » (m5), « Raymonde. » (s03), « Marco. » (m97) |
+| « X. » | le sec : un chef, quelqu'un de fâché | « Josée. » (m6), « Marco. » (m97) |
+| « X, du lieu. » | celui qu'on connaît par où il se tient | « Raymonde, du syndicat. » (s03) |
 | « Ici le sergent X. » | le grade, l'officiel | Bouchard, au premier appel (m4) |
-| « X au bout du fil! » | celui qui est content d'appeler | Ti-Guy (m1) |
 | « Moi, c'est X. » | la première rencontre, en personne | Ti-Paul, Lulu (m6) |
 | « Tu me replaces pas? C'est moi, X! » | celui qui croit que tout le monde le connaît | Ti-Guy au terminus (m1) — la forme de Martin |
 | « Tu me connais pas encore. X. » | la menace polie | Josée, au premier appel (m5) |
 | « Prénom Nom, titre. » | le formel, l'ancien temps | « Ovila Saint-Onge, pour vous servir. », « Madame Thibodeau, du kiosque. » |
-| « C'est encore X! » | quand on rappelle | Lulu, pendant la livraison (q02) |
-| « C'est pas X qui t'appelle, OK? » | le contre-emploi : il se nomme pour nier qu'il appelle | Bouchard, à l'échec de m4 |
 
 **Varier sans perdre le personnage.** Chacun a **sa** salutation — elle est dans sa fiche,
 [`docs/personnages/`](personnages/README.md), avec ce qu'il ne dit jamais. La variété vient du **contexte**,
@@ -445,23 +449,27 @@ pas du hasard :
 
 - **la situation** — une contrebande se dit bas, même au combiné (« C'est Marco. Parle pas trop fort,
   cousin… », m50) ;
-- **l'émotion** — l'échec rend le nom sec (« Josée. Les Cravates sont encore là. ») ;
-- **la relation** — ⚠️ quand elle change, la salutation change : Marco dit « Cousin, c'est Marco » à chaque
-  appel, sauf à m97 où il ne dit plus que « Marco. ». La trahison s'entend avant d'être dite.
+- **la place dans la mission** — l'appel se nomme ; l'échec, lui, ne se nomme plus et commence par
+  l'émotion (« Ouain… », « Mon poisson… », « Ils t'ont eu, hein? ») : on sait déjà qui appelle ;
+- **la relation** — ⚠️ quand elle change, la salutation change : Marco se présente toujours avec un
+  « salut » ou un « c'est » (« Cousin, c'est Marco. »), sauf à m97 où il ne dit plus que « Marco. ». La
+  trahison s'entend avant d'être dite.
 
 **Le prix en caractères.** Une réplique garde ses deux phrases au plus (jugé) : le nom se glisse souvent par
 une virgule plutôt que par une phrase de plus (« Salut, le jeune, c'est Bouchard. »). Et une réplique dont
 le texte change **se régénère** (`--refaire <slug>`, payant) — son slug, lui, ne bouge pas.
 
 **Ce que le juge vérifie** (`erreurs_de_mise_en_scene`, `erreurs_de_presentation`, et
-`scripts/verifier_missions.py`) : la première réplique de l'appel, de l'échec et de la fin au combiné dit le
-nom de celui qui parle ; et, dans l'ordre du catalogue, la première réplique qu'on entend de chacun aussi. Le
+`scripts/verifier_missions.py`) : la première réplique de l'appel dit le nom de celui qui appelle ; **personne
+ne se nomme deux fois dans une mission** ; et, dans l'ordre du catalogue, la première réplique qu'on entend
+de chacun le nomme. Le
 nom, c'est un mot de son `nom` (`missions.noms_dits` : « Lucienne « Lulu » Pelletier » → Lucienne, Lulu,
 Pelletier), mot entier, sans les titres — « le sergent » ne nomme pas Bouchard. Le client du taxi et le
 narrateur n'y sont pas soumis : on ne les rencontre pas (`missions.on_le_rencontre`).
 
-⚠️ **Ce qu'il ne vérifie pas** : une réplique `pendant` dite de loin (la distance se décide en jeu, par
-`present()`) — relis celles de ta mission en te demandant où est le joueur quand l'objectif commence ; un
+⚠️ **Ce qu'il ne vérifie pas** : la première réplique d'un personnage qui n'a pas appelé et qui parle
+**de loin** (un `pendant` au combiné — la distance se décide en jeu, par `present()`) : relis-la en te
+demandant où est le joueur quand l'objectif commence, et s'il a déjà entendu cette voix dans la mission ; un
 chemin qui n'est pas celui du catalogue (m50 peut se jouer avant m6 : l'accueil de Lulu à m50 se présente
 donc aussi, en des mots qui marchent dans les deux cas) ; et la **justesse** d'une salutation — ça, c'est la
 fiche et l'oreille.
@@ -559,8 +567,8 @@ Avant de dire « c'est fini », **joue la mission de l'intro à la fin** et vér
 - [ ] **Un ton** au moins par réplique, **une balise en tête**, jamais `…` après un mot seul (§ 3.5).
 - [ ] Le **jeu** de chaque réplique est son `jeu=`, dans le fichier de la mission, et dit **les mêmes mots** (§ 3.9).
 - [ ] Le rôle est **dans l'étendue de la voix** choisie (§ 3.8) ; le volume ne porte pas l'émotion (§ 3.6).
-- [ ] Au téléphone et à la première rencontre, **chacun se nomme**, une fois, dans **sa** salutation (§ 3.11 et
-      sa fiche) — les `pendant` dits de loin compris, que le juge ne voit pas.
+- [ ] Chacun se présente **une fois par mission** — à l'appel, ou à sa première réplique s'il n'a pas appelé —
+      dans **sa** salutation, et **plus jamais ensuite** dans la mission (§ 3.11 et sa fiche).
 - [ ] J'ai fait **écouter** au moins la réplique la plus difficile avant de tout générer (§ 3.10).
 
 ```bash

@@ -53,7 +53,7 @@ petits-enfants qui mangent chez elle le midi.
 | Situation | Ce qu'elle dit | Pourquoi |
 |---|---|---|
 | Au téléphone | « C'est Madame Thibodeau, du kiosque. » (m2) | nom complet, titre, adresse : comme on appelait dans le temps |
-| Quand ça a mal tourné | « C'est Madame Thibodeau, mon p'tit. Ils t'ont eu, hein? » (m2) | le « Madame » ne tombe jamais ; le « mon p'tit » console |
+| Quand ça a mal tourné (même mission) | « Ils t'ont eu, hein? Repose-toi… pis reviens. » (m2) | pas de nom : elle s'est présentée à l'appel ; le « hein? » de celle qui s'inquiète |
 | Déjà connue, en personne | « Tiens, mon p'tit… » (m51) | pas de nom : elle est **chez elle**, derrière son comptoir |
 | Quand elle a un secret | « Psst! Toi! » (sa bulle) | elle ne crie pas ton nom, elle t'attire |
 

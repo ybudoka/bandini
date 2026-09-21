@@ -227,27 +227,24 @@ def test_un_accueil_s_accroche_a_la_poignee_de_main_de_celui_qui_parle():
     assert not any(r["telephone"] for r in accueils), "on leur serre la main : ils parlent en personne"
 
 
-def test_qui_parle_au_combine_se_nomme():
-    """⚠️ Martin, 21 sept. 2026 : « normalement les gens se présentent avant de parler ». L'appel et
-    l'échec se disent TOUJOURS au téléphone, la fin quand le donneur n'est pas là : la première
-    réplique dit qui parle. m50 appelait d'un « Cousin, j'ai une faveur » — qui, au juste?"""
+def test_on_se_presente_une_fois_par_mission():
+    """⚠️ Martin, 21 sept. 2026 : « normalement les gens se présentent avant de parler », puis « finalement
+    les personnes doivent se présenter seulement une fois par mission ». L'appel (toujours au téléphone)
+    dit qui appelle — m50 appelait d'un « Cousin, j'ai une faveur » ; ensuite, plus personne ne redit son
+    nom dans la mission — Josée le disait à l'appel, au pendant, à la fin et à l'échec de m5."""
     import copy
     m50 = copy.deepcopy(missions.par_slug("m50"))
     m50["dialogue"]["appel"][0]["texte"] = "Cousin, j'ai une faveur. Passe au port, discret."
-    assert any("l'appel ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m50))
-    m50["dialogue"]["appel"][0]["texte"] = "Cousin, c'est Marco. J'ai une faveur."
-    m50["dialogue"]["echec"][0]["texte"] = "T'es censé être discret, pas mort."
-    assert any("l'échec ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m50))
-    # m4 finit au garage, Bouchard au casse-croûte : sa fin passe au combiné, et il s'y nomme.
-    m4 = copy.deepcopy(missions.par_slug("m4"))
-    assert not missions.fin_dite_en_personne(m4, m4["scenes"]["fin"])
-    m4["dialogue"]["fin"][0]["texte"] = "Propre. Si un de mes gars te pogne, tu dis mon nom."
-    assert any("la fin, dite au combiné, ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m4))
-    # m2 finit chez Madame Thibodeau : devant elle, pas besoin de se nommer.
-    m2 = copy.deepcopy(missions.par_slug("m2"))
-    assert missions.fin_dite_en_personne(m2, m2["scenes"]["fin"])
-    m2["dialogue"]["fin"][0]["texte"] = "Mon argent! T'es un bon garçon, toi."
-    assert missions.erreurs_de_mise_en_scene(m2) == []
+    assert any("l'appel ne dit pas qui appelle" in e for e in missions.erreurs_de_mise_en_scene(m50))
+    m5 = copy.deepcopy(missions.par_slug("m5"))
+    assert missions.erreurs_de_mise_en_scene(m5) == []
+    m5["dialogue"]["echec"][0]["texte"] = "Josée. Les Cravates sont encore là. Reviens quand tu seras prêt."
+    assert any("josee se présente 2 fois" in e for e in missions.erreurs_de_mise_en_scene(m5)), "l'échec redit son nom"
+    # Un AUTRE personnage de la même mission a droit à sa présentation : Lulu à m50, après l'appel de Marco.
+    assert missions.se_nomme("lulu", missions.par_slug("m50")["dialogue"]["accueil"][0]["texte"])
+    assert missions.erreurs_de_mise_en_scene(missions.par_slug("m50")) == []
+    # Nommer quelqu'un d'autre n'est pas se présenter : Ti-Paul parle de Bouchard à m51.
+    assert missions.erreurs_de_mise_en_scene(missions.par_slug("m51")) == []
 
 
 def test_la_premiere_fois_qu_on_entend_quelqu_un_il_dit_son_nom():
@@ -304,9 +301,8 @@ def test_l_echec_se_dit_au_combine():
 def _fiche(donneur, objectifs, intro=2, fin=2):
     """Une fiche réduite à l'os : ce qui distingue une mission, et rien d'autre.
     Pas de `prerequis`, pas de `phase`, pas d'`echec`, pas de `donne`, pas de
-    `scenes`. ⚠️ Au combiné, on se nomme (l'appel, l'échec, une fin loin du donneur) : la fiche
-    le fait aussi, sinon le juge « qui parle se nomme » la refuserait pour autre chose que ce
-    qu'on juge."""
+    `scenes`. ⚠️ On se présente une fois par mission, à l'appel : la fiche le fait aussi, sinon le
+    juge « qui parle se nomme » la refuserait pour autre chose que ce qu'on juge."""
     nom = " ".join(missions.noms_dits(donneur))
     return {
         "slug": "zz", "titre": "Un essai", "donneur": donneur, "recompense": 100,
@@ -315,8 +311,8 @@ def _fiche(donneur, objectifs, intro=2, fin=2):
             "appel": [_l(donneur, f"C'est {nom}. Viens me voir.")],
             "intro": [_l(donneur, f"Intro {i}.") for i in range(1, intro + 1)],
             "pendant": [_p(donneur, "Ça avance?", 0)],
-            "fin": [_l(donneur, f"C'est {nom}. Fin {i}." if i == 1 else f"Fin {i}.") for i in range(1, fin + 1)],
-            "echec": [_l(donneur, f"C'est {nom}. Une autre fois.")],
+            "fin": [_l(donneur, f"Fin {i}.") for i in range(1, fin + 1)],
+            "echec": [_l(donneur, "Une autre fois.")],
         },
     }
 

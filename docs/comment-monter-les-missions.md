@@ -221,7 +221,7 @@ un `jeu=` en dernier** : la même phrase, jouée (§ « Chaque réplique veut au
 
 ```python
 _l("marco", "Cousin, c'est Marco. Viens au garage.",
-   jeu="[casually] Cousin, c'est Marco… Viens au garage.")          # une réplique normale (au combiné : il se nomme)
+   jeu="[casually] Cousin, c'est Marco… Viens au garage.")          # l'appel : il se nomme, une fois pour la mission
 _p("marco", "Cours, cousin!", 1, jeu="[firmly] Cours, cousin!")      # PENDANT : accrochée à l'objectif n (0-based)
 _r("lulu", "Reviens ce soir.", 0, jeu="[warmly] Reviens ce soir.")   # RENVOI : quand on lui parle trop tôt, à l'objectif n
 ```
@@ -251,12 +251,14 @@ Règles jugées (`erreurs_de_mise_en_scene`) :
 - l'`objectif` d'une réplique `_p` ou `_r` doit pointer un objectif réel ;
 - les répliques de chaque partie sont **toutes dites, et une seule fois**, par
   les plans `dire` de la scène correspondante (§ 6) ;
-- ⚠️ **qui parle au combiné se nomme** (21 sept. 2026, demande de Martin) : la première réplique de
-  l'`appel`, de l'`echec` et de la `fin` quand elle se dit loin du donneur porte le nom de celui qui parle
-  — « Cousin, c'est Marco. », « Ici le sergent Bouchard. » ; et, dans l'ordre du catalogue, la première
-  réplique qu'on entend d'un personnage aussi (`erreurs_de_presentation`). Chacun le fait **à sa façon** :
-  la salutation est dans sa fiche, [`docs/personnages/`](personnages/README.md), et les formes dans
-  `docs/jeu-d-acteur.md` § 3.11. Le juge ne voit pas un `pendant` dit de loin : nomme-le à la main.
+- ⚠️ **on se présente une fois par mission** (21 sept. 2026, demande de Martin) : la première réplique de
+  l'`appel` porte le nom de celui qui appelle — « Cousin, c'est Marco. », « Ici le sergent Bouchard. » —
+  et **personne ne redit son nom** ensuite dans la mission (ni au `pendant`, ni à la `fin`, ni à
+  l'`echec`, même au combiné) ; et, dans l'ordre du catalogue, la première réplique qu'on entend d'un
+  personnage le nomme (`erreurs_de_presentation`). Chacun le fait **à sa façon** : la salutation est dans
+  sa fiche, [`docs/personnages/`](personnages/README.md), et les formes dans `docs/jeu-d-acteur.md` § 3.11.
+  Le juge ne voit pas la première réplique d'un autre personnage dite de loin (un `pendant`) : nomme-la à
+  la main.
 
 ⚠️ **L'ordre des slugs de voix ne bouge jamais.** Le slug d'une réplique est
 `<qui>-<mission>-<n>`, avec `n` compté dans l'ordre `appel, intro, client, fin,

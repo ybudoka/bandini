@@ -63,8 +63,8 @@ MISSION = {
                jeu="[casually] Tiens… pour le trouble.")
         ],
         "echec": [
-            _l("marco", "Cousin, c'est Marco. T'es censé être discret, pas mort.",
-               jeu="[disappointed] Cousin, c'est Marco. T'es censé être discret… pas mort.")
+            _l("marco", "T’es censé être discret, pas mort.",
+               jeu="[disappointed] T'es censé être discret… pas mort.")
         ]
     },
 

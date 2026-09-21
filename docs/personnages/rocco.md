@@ -21,7 +21,8 @@ devait à chacun. Il a ouvert le garage où l'on repeint les chars qu'il ne faut
 ennemis chez les Cravates, qui disent qu'il leur devait de l'argent (f01). Il a emprunté à Sal le Barbier
 plus qu'il ne pouvait rendre (l'ouverture).
 
-Puis il a disparu, et c'est toi qu'on a fait venir, en autobus, avec cinquante piastres (l'ouverture). Tout
+Puis il est mort, le mois passé (l'ouverture) — « parti se faire oublier », dit Ti-Guy, qui n'arrive pas à le
+dire (m1) — et c'est toi, son neveu, qu'on a fait venir en autobus, avec cinquante piastres. Tout
 le monde dans la ville a une version de Rocco : Ti-Guy parle de lui au présent, Marco en parle le moins
 possible, Sal compte les jours.
 
@@ -30,8 +31,8 @@ possible, Sal compte les jours.
 | Qui | Ce qu'il dit | Où |
 |---|---|---|
 | le narrateur | « Ton oncle Rocco est mort le mois passé. » | l'ouverture |
-| Ti-Guy | « Le cousin de Rocco! » ; « Rocco est parti se faire oublier. » | m1 |
-| Ti-Guy | « T'es ben le cousin de Rocco. » | m1 |
+| Ti-Guy | « Le neveu de Rocco! » ; « Rocco est parti se faire oublier. » | m1 |
+| Ti-Guy | « T'es ben le neveu de Rocco. » | m1 |
 | Marco | « Ils disent que Rocco leur devait de l'argent. » | f01 |
 | le journal | « Le garage de Rocco. On y répare, on y repeint… » | `journal.py` |
 
@@ -49,9 +50,17 @@ devait 15 000 »), `d05` (ses papiers dans le coffre de la planque), `d08` (sa b
 Rocco » (une île), `f04` (ses paquets cachés, selon le Grand Mo). Et **Rosa Di Meo**, la couturière, son
 ancienne blonde (M16).
 
-## À trancher
+## Tranché : l'oncle Rocco
 
-⚠️ **Le jeu se contredit sur Rocco, et c'est la première chose qu'on entend.**
+✅ **Martin, 21 sept. 2026 : « l'oncle Rocco ».** L'ouverture a raison — Rocco était ton oncle, il est mort
+le mois passé. Ti-Guy dit maintenant « le **neveu** de Rocco » (m1, deux répliques et sa bulle). Son
+« Rocco est **parti se faire oublier** » reste : c'est la première lecture ci-dessous, celle qui ne change
+pas l'ouverture — Ti-Guy n'arrive pas à dire « mort ». Une mission qui le lui fait remarquer serait la
+bienvenue.
+
+Ce qui avait été relevé :
+
+⚠️ **Le jeu se contredisait sur Rocco, et c'était la première chose qu'on entend.**
 
 - **Mort ou en fuite ?** L'ouverture : « ton oncle Rocco est **mort** le mois passé ». Ti-Guy, trois minutes
   plus tard (m1) : « Rocco est **parti se faire oublier** ».
@@ -67,4 +76,4 @@ Deux lectures tiennent, et il faut en garder une :
    les deux fins (M13) gagnent un retour possible de Rocco.
 
 La première ne demande de changer aucun mot ; la seconde, l'ouverture (deux voix du narrateur à régénérer).
-C'est à Martin de choisir : c'est son histoire.
+Martin a choisi la première : « l'oncle Rocco ».

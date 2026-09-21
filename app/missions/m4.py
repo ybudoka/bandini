@@ -32,13 +32,13 @@ MISSION = {
                jeu="[firmly] Largue-la au garage. Pis si mes gars te courent après… sème-les."),
         ],
         "fin": [
-            _l("bouchard", "Bouchard. Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom.",
-               jeu="[satisfied] Bouchard. Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom."),
+            _l("bouchard", "Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom.",
+               jeu="[satisfied] Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom."),
             _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention.",
                jeu="[gravely] Un mot d'avertissement… Josée, au bar, cherche du monde comme toi. Fais attention."),
         ],
-        "echec": [_l("bouchard", "C'est pas Bouchard qui t'appelle, OK? J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.",
-                     jeu="[nervously] C'est pas Bouchard qui t'appelle, OK? J'ai rien vu, j'ai rien entendu. [sighs] Reviens quand ça sera calme.")],
+        "echec": [_l("bouchard", "J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.",
+                     jeu="[nervously] J'ai rien vu, j'ai rien entendu. [sighs] Reviens quand ça sera calme.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
         "pendant": [_p("ti_guy", "C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.", 2,
                        jeu="[confident] C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.")],

@@ -49,8 +49,8 @@ MISSION = {
     "dialogue": {
         "appel": [],
         "intro": [
-            _l("ti_guy", "Heille, le cousin de Rocco! C'est moi, Ti-Guy, tu me replaces pas? T'as fait bon voyage?",
-               jeu="[excited] Heille, le cousin de Rocco! C'est moi, Ti-Guy, tu me replaces pas? [warmly] T'as fait bon voyage?"),
+            _l("ti_guy", "Heille, le neveu de Rocco! C'est moi, Ti-Guy, tu me replaces pas? T'as fait bon voyage?",
+               jeu="[excited] Heille, le neveu de Rocco! C'est moi, Ti-Guy, tu me replaces pas? [warmly] T'as fait bon voyage?"),
             _l("ti_guy", "Rocco est parti se faire oublier. Le garage, c'est toi qui le tiens, astheure.",
                jeu="[quietly] Rocco est parti se faire oublier. Le garage… c'est toi qui le tiens, astheure."),
             _l("ti_guy", "Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer.",
@@ -59,15 +59,15 @@ MISSION = {
                jeu="[serious] Ramène-le au garage sans le bosser… pis sans que personne te voie."),
         ],
         "fin": [
-            _l("ti_guy", "Pas une bosse! T'es ben le cousin de Rocco.",
-               jeu="[excited] Pas une bosse! [laughs] T'es ben le cousin de Rocco."),
+            _l("ti_guy", "Pas une bosse! T'es ben le neveu de Rocco.",
+               jeu="[excited] Pas une bosse! [laughs] T'es ben le neveu de Rocco."),
             _l("ti_guy", "Tiens, la clé de la planque. Dors là, pis fais-toi pas pogner.",
                jeu="[warmly] Tiens, la clé de la planque. Dors là… pis fais-toi pas pogner."),
         ],
-        "echec": [_l("ti_guy", "C'est Ti-Guy. Ouain, on va dire que c'était un essai. Reviens me voir.",
-                     jeu="[disappointed] C'est Ti-Guy. Ouain, on va dire que c'était un essai. [sighs] Reviens me voir.")],
+        "echec": [_l("ti_guy", "Ouain... On va dire que c'était un essai. Reviens me voir.",
+                     jeu="[disappointed] Ouain… On va dire que c'était un essai. [sighs] Reviens me voir.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("ti_guy", "Ti-Guy au bout du fil! Beau char, ramène-le au garage tranquillement, pis évite la police.", 2,
-                       jeu="[amused] Ti-Guy au bout du fil! Beau char, ramène-le au garage tranquillement, pis évite la police.")],
+        "pendant": [_p("ti_guy", "Beau char! Ramène-le au garage tranquillement, pis évite la police.", 2,
+                       jeu="[amused] Beau char! Ramène-le au garage tranquillement, pis évite la police.")],
     },
 }

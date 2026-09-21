@@ -52,8 +52,7 @@ si elle a peur de toi : « Josée se porte garante de toi… ça reste à voir �
 |---|---|---|
 | À la première rencontre | « Raymonde Fortin, présidente du syndicat. » (m6) | ⚠️ nom complet et titre, **pas de bonjour** : elle se présente comme à une table de négociation |
 | Au téléphone | « Raymonde, du syndicat. » (s03) | le prénom, mais le syndicat toujours avec |
-| Quand elle rappelle, ou que c'est fini | « Raymonde. » (s03), « C'est Raymonde. » (s03) | on se connaît : le nom sec suffit |
-| Quand ça a mal tourné | « Raymonde. Prévost garde sa paie… » (s03) | pas de consolation : le compte de ce que ça coûte |
+| Plus tard dans la mission (au combiné, à l'échec) | « Perds-les avant le bar! » (s03), « Prévost garde sa paie… » (s03) | pas de nom : on l'a entendue à l'appel ; pas de consolation, le compte de ce que ça coûte |
 | Déjà connue, en personne | « Le syndicat. » (sa bulle : « Le syndicat! ») | c'est ce qu'elle est avant d'être quelqu'un |
 
 ## Son corps

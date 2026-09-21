@@ -54,8 +54,7 @@ et elle compte.
 | À la première rencontre | « Allô, mon grand! Moi, c'est Lulu, la sœur de Josée. » (m6) | elle se présente par sa sœur : c'est ce qui compte aux Quais |
 | Si on la rencontre par Marco | « Te v'là, toi! Lulu, la sœur de Josée. C'est Marco qui t'envoie pour le cargo? » (m50) | écrite pour marcher qu'on l'ait déjà vue ou non (m50 se joue avant ou après m6) |
 | Au téléphone | « Allô, mon grand, c'est Lulu! » (q02) | chaleureuse d'abord, le nom ensuite |
-| Quand elle rappelle | « C'est encore Lulu! » (q02) | elle sait qu'elle dérange — et elle rappelle quand même |
-| Quand ça a mal tourné | « C'est Lulu. Mon poisson… » (q02) | un nom tout court : sa déception, c'est la gaieté qui manque |
+| Plus tard dans la mission (au combiné, à l'échec) | « Doucement dans les tournants! » (q02), « Mon poisson… » (q02) | pas de nom : on l'a entendue à l'appel ; sa déception, c'est la gaieté qui manque |
 | Déjà connue, en personne | « Te v'là, toi! » | elle ne se nomme plus : elle te sert |
 
 ## Son corps

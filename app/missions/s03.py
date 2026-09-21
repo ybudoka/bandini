@@ -46,18 +46,18 @@ MISSION = {
         ],
         "pendant": [
             # Au combiné : elle est à l'usine, on est au volant, la police au cul.
-            _p("raymonde", "C'est Raymonde. Perds-les avant le bar! Josée aime pas les visiteurs en uniforme.", 1,
-               jeu="[firmly] C'est Raymonde. Perds-les avant le bar! [sarcastic] Josée aime pas les visiteurs… en uniforme.")
+            _p("raymonde", "Perds-les avant le bar! Josée aime pas les visiteurs en uniforme.", 1,
+               jeu="[firmly] Perds-les avant le bar! [sarcastic] Josée aime pas les visiteurs… en uniforme.")
         ],
         "fin": [
-            _l("raymonde", "Raymonde. Josée a compté : toutes les enveloppes y sont. Mes gars vont manger cette semaine.",
-               jeu="[relieved] Raymonde. Josée a compté… toutes les enveloppes y sont. [warmly] Mes gars vont manger cette semaine."),
+            _l("raymonde", "Toutes les enveloppes y sont. Mes gars vont manger cette semaine.",
+               jeu="[relieved] Toutes les enveloppes y sont… [warmly] Mes gars vont manger cette semaine."),
             _l("raymonde", "Prévost va hurler. Laisse-le hurler, moi j'ai jamais eu peur d'un patron.",
                jeu="[firmly] Prévost va hurler. Laisse-le hurler… [wryly] moi j'ai jamais eu peur d'un patron.")
         ],
         "echec": [
-            _l("raymonde", "Raymonde. Prévost garde sa paie, pis mes gars gardent leur faim. Reviens quand t'auras réfléchi.",
-               jeu="[coldly] Raymonde. Prévost garde sa paie… pis mes gars gardent leur faim. [firmly] Reviens quand t'auras réfléchi.")
+            _l("raymonde", "Prévost garde sa paie, pis mes gars gardent leur faim. Reviens quand t'auras réfléchi.",
+               jeu="[coldly] Prévost garde sa paie… pis mes gars gardent leur faim. [firmly] Reviens quand t'auras réfléchi.")
         ]
     }
 

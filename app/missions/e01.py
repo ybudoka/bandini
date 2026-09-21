@@ -50,8 +50,8 @@ MISSION = {
                jeu="[knowingly] Lulu, à la cantine, a un camion de poisson qui poireaute. Va la voir… de ma part.")
         ],
         "echec": [
-            _l("tipaul", "C'est Ti-Paul, l'ami. Ils t'ont eu? Bon… le parking est à eux ce soir, reviens quand t'auras dormi.",
-               jeu="[disappointed] C'est Ti-Paul, l'ami. Ils t'ont eu? Bon… le parking est à eux ce soir. [wryly] Reviens quand t'auras dormi.")
+            _l("tipaul", "Ils t'ont eu? Bon… le parking est à eux ce soir. Reviens quand t'auras dormi.",
+               jeu="[disappointed] Ils t'ont eu? Bon… le parking est à eux ce soir. [wryly] Reviens quand t'auras dormi.")
         ]
     },
 

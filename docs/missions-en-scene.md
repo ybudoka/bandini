@@ -224,12 +224,13 @@ d'écrire une scène ou un jeu de voix) ; ce qui suit en est l'essentiel.
   régénère.
 - **On essaie une réplique avant de tout générer** (`--refaire <slug>`, payant), Martin écoute, puis
   `--voix` fait le reste ; une finition qui cloche se retouche gratuitement (`--refinir --masters`).
-- ⚠️ **Qui parle se nomme** (21 sept. 2026, demande de Martin : « normalement les gens se présentent avant de
-  parler ») : au téléphone (l'appel, l'échec, une fin ou un `pendant` dits de loin) et à la première
-  rencontre, la première réplique dit le nom, une fois, dans **la salutation du personnage** — Josée ne dit
-  jamais bonjour, Lulu dit « mon grand », Bouchard sort son grade au premier appel. Jugé
-  (`erreurs_de_mise_en_scene`, `erreurs_de_presentation`) ; les formes sont au § 3.11 du guide, et la
-  salutation de chacun dans sa fiche, [`docs/personnages/`](personnages/README.md).
+- ⚠️ **On se présente une fois par mission** (21 sept. 2026, demande de Martin : « normalement les gens se
+  présentent avant de parler », puis « seulement une fois par mission ») : la première fois qu'on entend
+  quelqu'un dans la mission — l'appel, le plus souvent — il dit son nom, dans **sa salutation** : Josée ne
+  dit jamais bonjour, Lulu dit « mon grand », Bouchard sort son grade au premier appel. Ensuite, personne ne
+  redit son nom dans la mission. Jugé (`erreurs_de_mise_en_scene`, `erreurs_de_presentation`) ; les formes
+  sont au § 3.11 du guide, et la salutation de chacun dans sa fiche,
+  [`docs/personnages/`](personnages/README.md).
 
 **Ce qui est jugé, et ce qui ne l'est pas.** Les juges existants tiennent le câblage (la scène se
 termine, les mêmes mots, les balises connues, un ton par réplique, la ligne qui attend sa voix). **Rien

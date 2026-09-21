@@ -53,13 +53,14 @@ laissant le taxi (m97). Le Cousin n'a jamais eu sa part ; il part avant de la r�
 | Situation | Ce qu'il dit | Pourquoi |
 |---|---|---|
 | Au premier appel | « Salut, c'est Marco, le Cousin. » (m3) | il donne son surnom : il veut qu'on sache qu'il est de la famille |
-| Au téléphone, d'habitude | « Cousin, c'est Marco. » (f01, m50) | « cousin » **d'abord**, puis le nom : la complicité avant l'affaire |
+| Au téléphone, d'habitude | « Cousin, c'est Marco. » (f01) | « cousin » **d'abord**, puis le nom : la complicité avant l'affaire |
 | Pour une affaire louche | « C'est Marco. Parle pas trop fort, cousin… » (m50) | la contrebande se dit à voix basse, même au combiné |
-| Quand il a trahi | « Marco. » (m97) — et l'échec : « Encore en vie? Marco. » | ⚠️ **plus de « cousin » devant** : le mot recule dans la phrase, puis sert de coup |
+| Quand il a trahi | « Marco. Viens au garage, cousin. » (m97) | ⚠️ **plus de « salut » ni de « c'est »** : un nom sec, et « cousin » recule au bout de la phrase |
+| Plus tard dans la mission (fin au combiné, échec) | « T'es censé être discret, pas mort. » (m50) | pas de nom : on l'a entendu à l'appel (une fois par mission) |
 | Déjà connu, en personne | « Cousin. » | un mot, un signe de tête |
 
-⚠️ **La rupture de m97 se lit dans la salutation** : c'est le seul appel où il ne commence pas par
-« cousin ». Une mission qui ramènerait Marco après m97 doit choisir : il reprend l'habitude (le pardon), ou
+⚠️ **La rupture de m97 se lit dans la salutation** : c'est le seul appel où il se nomme d'un mot sec,
+sans « salut » ni « c'est ». Une mission qui ramènerait Marco après m97 doit choisir : il reprend l'habitude (le pardon), ou
 jamais (la rancune).
 
 ## Son corps
@@ -95,5 +96,5 @@ la dernière fois qu'on l'entend dire « cousin » en premier.
 
 - **Est-il le vrai cousin de Rocco ?** C'est la proposition de cette fiche (elle donne à m97 sa raison). Le
   jeu ne dit que « Marco, le Cousin » et « un ami de la famille ».
-- Si Rocco est ton **oncle** (l'ouverture), Marco est le cousin de ton père ou de ta mère ; son « cousin » au
-  joueur est alors un mot d'affection, pas un lien exact — ce qui lui va bien.
+- ✅ Rocco est ton **oncle** (Martin, 21 sept. 2026) : Marco est donc le cousin de ton père ou de ta mère, et
+  son « cousin » au joueur est un mot d'affection, pas un lien exact — ce qui lui va bien.

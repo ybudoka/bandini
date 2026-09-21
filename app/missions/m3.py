@@ -51,7 +51,7 @@ MISSION = {
             _l("marco", "Y mange là tous les midis. Sois poli, c'est un ami de la famille.",
                jeu="[casually] Y mange là tous les midis. Sois poli… c'est un ami de la famille."),
         ],
-        "echec": [_l("marco", "C'est Marco. Mon taxi... Bon, on efface, pis on recommence.",
-                     jeu="[disappointed] C'est Marco. Mon taxi… Bon, on efface… [groans] pis on recommence.")],
+        "echec": [_l("marco", "Mon taxi... Bon. On efface, pis on recommence.",
+                     jeu="[disappointed] Mon taxi… Bon. On efface… [groans] pis on recommence.")],
     },
 }

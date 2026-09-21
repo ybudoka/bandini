@@ -53,8 +53,8 @@ sien, et il montre ton dossier à Marco (m97). Bouchard n'aime personne plus hau
 | Situation | Ce qu'il dit | Pourquoi |
 |---|---|---|
 | Au premier appel | « Ici le sergent Bouchard. » (m4) | le grade : il se présente comme on présente un badge |
-| Au téléphone, ensuite | « Salut, le jeune, c'est Bouchard. » (m51), « Bouchard. » (m4, m51) | le « le jeune » est sa chaleur, le nom seul sa hâte |
-| Quand ça a mal tourné | « C'est pas Bouchard qui t'appelle, OK? » (m4) | ⚠️ un flic qui se nomme pour nier qu'il appelle : la peur, drôle |
+| Au premier appel d'une mission, ensuite | « Salut, le jeune, c'est Bouchard. » (m51) | le « le jeune » est sa chaleur |
+| Plus tard dans la mission (fin au combiné, échec) | « Propre. » (m4), « J'ai rien vu, j'ai rien entendu. » (m4) | pas de nom : il s'est nommé à l'appel — et à l'échec, il aimerait mieux ne pas l'avoir fait |
 | Déjà connu, en personne | « Le jeune. » (sa bulle : « Ici, le jeune! ») | il ne se nomme pas chez lui : tout le casse-croûte sait qui il est |
 
 ## Son corps

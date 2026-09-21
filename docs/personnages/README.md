@@ -45,30 +45,33 @@ dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fai
 Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas et
 court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie.
 
-## Qui parle se nomme — la salutation de chacun, d'un coup d'œil
+## On se présente une fois par mission — la salutation de chacun, d'un coup d'œil
 
-La règle (`docs/jeu-d-acteur.md` § 3.11, jugée) : **au téléphone et à la première rencontre, on se nomme,
-une fois par conversation** — et chacun le fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche
-dit pourquoi.
+La règle (`docs/jeu-d-acteur.md` § 3.11, jugée) : **la première fois qu'on entend quelqu'un dans une
+mission — l'appel, le plus souvent — il dit son nom, et plus jamais ensuite dans la mission** ; chacun le
+fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 
 | Qui | Au téléphone | À la première rencontre | Déjà connu, en personne | Ce qu'il ne dit jamais |
 |---|---|---|---|---|
-| Ti-Guy | « Ti-Guy au bout du fil! », « C'est Ti-Guy. » | « C'est moi, Ti-Guy, tu me replaces pas? » — il croit qu'on le connaît | « Heille, le cousin! » | « bonjour », « monsieur » |
+| Ti-Guy | « C'est Ti-Guy, j'suis juste derrière toi. » | « C'est moi, Ti-Guy, tu me replaces pas? » — il croit qu'on le connaît | « Heille, le neveu! » | « bonjour », « monsieur » |
 | Mme Thibodeau | « C'est Madame Thibodeau, du kiosque. » — le « Madame » toujours | la même, en personne | « Mon p'tit! » | son prénom ; un sacre |
 | Marco | « Cousin, c'est Marco. » ; bas : « C'est Marco. Parle pas trop fort, cousin » | « Salut, c'est Marco, le Cousin. » | « Cousin. » | « monsieur » ; un mot de trop |
-| Bouchard | « Ici le sergent Bouchard. » (la 1re fois), puis « Salut, le jeune, c'est Bouchard. », « Bouchard. » | le grade d'abord | « Le jeune. » | « merci », « s'il vous plaît » |
+| Bouchard | « Ici le sergent Bouchard. » (la 1re fois), puis « Salut, le jeune, c'est Bouchard. » | le grade d'abord | « Le jeune. » | « merci », « s'il vous plaît » |
 | Josée | « Josée. » — un nom, un point, l'affaire | « Tu me connais pas encore. Josée, on m'appelle la Chef. » | rien : elle commence par ce qu'elle veut | « allô », « salut », un cri |
-| Ti-Paul | « C'est Ti-Paul, du dépanneur! », « C'est Ti-Paul, l'ami. » | « Salut, l'ami! Moi, c'est Ti-Paul » | « Salut, l'ami! » | une phrase courte |
-| Lulu | « Allô, mon grand, c'est Lulu! », « C'est encore Lulu! » | « Allô, mon grand! Moi, c'est Lulu, la sœur de Josée. » | « Te v'là, toi! » | une menace ; « au revoir » sans « mange » |
-| Raymonde | « Raymonde, du syndicat. », « Raymonde. » | « Raymonde Fortin, présidente du syndicat. » — nom complet, titre, pas de sourire | « Le syndicat. » | « allô mon chou » ; « madame » |
+| Ti-Paul | « C'est Ti-Paul, du dépanneur! » | « Salut, l'ami! Moi, c'est Ti-Paul » | « Salut, l'ami! » | une phrase courte |
+| Lulu | « Allô, mon grand, c'est Lulu! » | « Allô, mon grand! Moi, c'est Lulu, la sœur de Josée. » | « Te v'là, toi! » | une menace ; « au revoir » sans « mange » |
+| Raymonde | « Raymonde, du syndicat. » | « Raymonde Fortin, présidente du syndicat. » — nom complet, titre, pas de sourire | « Le syndicat. » | « allô mon chou » ; « madame » |
 | Ovila | (il n'appelle pas encore) | « Ovila Saint-Onge, pour vous servir. » — il vouvoie | « Bonsoir. » | le tutoiement ; une hâte |
 | le narrateur | — | ne se présente pas : c'est le journal qui parle | — | « je » |
 | le client | — | ne se présente pas ; il se trahit (« j'suis de la police ») | — | son nom |
 
-⚠️ **Une salutation qui change dit quelque chose.** Marco qui appelle d'un « Marco. » sec, sans
-« cousin » devant (m97), c'est la trahison avant la trahison. Bouchard qui dit « C'est pas Bouchard qui
-t'appelle, OK? » (l'échec de m4), c'est un flic qui a peur. Rompre l'habitude d'un personnage est un outil —
-à condition qu'elle existe, et donc qu'elle soit écrite ici.
+⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
+ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de
+l'appel.
+
+⚠️ **Une salutation qui change dit quelque chose.** Marco qui appelle d'un « Marco. » sec, sans « salut »
+ni « c'est » (m97), c'est la trahison avant la trahison. Rompre l'habitude d'un personnage est un outil — à
+condition qu'elle existe, et donc qu'elle soit écrite ici.
 
 ## Ceux dont on parle, sans fiche encore
 
@@ -103,9 +106,9 @@ tableaux ci-dessus. Les sections, dans cet ordre (copier une fiche existante) :
 
 Relevé le 21 sept. 2026 en écrivant les fiches ; aucune n'a été corrigée d'autorité.
 
-1. **Rocco : mort ou en fuite ? Oncle ou cousin ?** L'ouverture dit « ton **oncle** Rocco est **mort** le
-   mois passé » ; à m1, Ti-Guy t'accueille comme « le **cousin** de Rocco » et dit que « Rocco est **parti se
-   faire oublier** ». Voir [rocco.md](rocco.md) — deux lectures possibles, une seule à garder.
+1. ✅ **Tranché par Martin (21 sept. 2026) : « l'oncle Rocco ».** L'ouverture a raison : le joueur est son
+   **neveu**, et Ti-Guy le dit maintenant (« Heille, le neveu de Rocco! », m1). Son « Rocco est parti se
+   faire oublier » reste : c'est sa façon de ne pas dire « mort ». Voir [rocco.md](rocco.md).
 2. **Marco est-il un vrai cousin ?** Il se dit « le Cousin » et appelle le joueur « cousin » ; Bouchard est
    « un ami de la famille » (m3). La fiche propose qu'il soit le vrai cousin de Rocco — ce qui donne à m97
    (« t'as bâti un nom sur mon dos ») sa raison. Voir [marco.md](marco.md).

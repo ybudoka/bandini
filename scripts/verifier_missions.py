@@ -56,8 +56,8 @@ MISSION = {{
     # balises d'émotion en anglais, des « … » et de la ponctuation) : l'arc du personnage, en une phrase.
     # Voir docs/jeu-d-acteur.md § 3.
     "dialogue": {{
-        # ⚠️ Au combiné (l'appel, l'échec, une fin loin du donneur), on SE NOMME dès la première
-        # réplique, dans SA salutation (docs/personnages/<lui>.md) — le juge le refuse sinon.
+        # ⚠️ On se présente UNE FOIS PAR MISSION : à l'appel (au combiné), dans SA salutation
+        # (docs/personnages/<lui>.md) — et plus jamais ensuite dans la mission. Le juge refuse les deux.
         "appel": [_l("{donneur}", "Salut, c'est {nom}. Viens me voir, j'ai une job.",
                      jeu="[casually] Salut, c'est {nom}. Viens me voir… j'ai une job.")],
         "intro": [
@@ -69,8 +69,7 @@ MISSION = {{
             _l("{donneur}", "C'est fait. Merci.", jeu="[relieved] C'est fait. Merci."),
             _l("{donneur}", "On se reparle.", jeu="[warmly] On se reparle."),
         ],
-        "echec": [_l("{donneur}", "C'est {nom}. Une autre fois. Repose-toi.",
-                     jeu="[disappointed] C'est {nom}. Une autre fois… Repose-toi.")],
+        "echec": [_l("{donneur}", "Une autre fois. Repose-toi.", jeu="[disappointed] Une autre fois… Repose-toi.")],
     }},
 }}'''
 

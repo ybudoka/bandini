@@ -2,7 +2,7 @@
 
 ← [les personnages](README.md) · [le jeu d'acteur](../jeu-d-acteur.md)
 
-> « Heille, le cousin de Rocco! C'est moi, Ti-Guy, tu me replaces pas? T'as fait bon voyage? » — m1
+> « Heille, le neveu de Rocco! C'est moi, Ti-Guy, tu me replaces pas? T'as fait bon voyage? » — m1
 
 ## En bref
 
@@ -12,7 +12,7 @@
 | Rôle | le receleur du garage (la vision), le chum de Rocco ; le premier visage de la ville |
 | Où | devant le terminus d'autobus (`porte:terminus`) ; après m1, il entre au garage et n'en ressort plus (`parti_apres: "m1"`) |
 | Voix | **Felix Tabarnak — Confident and Witty**, québécoise d'origine |
-| Bulle | « Hé! Le cousin! » |
+| Bulle | « Hé! Le neveu! » |
 | Couleurs | chandail vert forêt, cheveux bruns foncés, pantalon ardoise |
 | Missions | donne **m1** ; parle au combiné dans **m4** (il te suit en char pour faire diversion) |
 
@@ -56,9 +56,9 @@ dans la rue.
 | Situation | Ce qu'il dit | Pourquoi |
 |---|---|---|
 | À la première rencontre | « C'est moi, Ti-Guy, tu me replaces pas? » (m1) | il **croit qu'on le connaît** : c'est drôle, et c'est tout lui |
-| Au téléphone | « Ti-Guy au bout du fil! » (m1), « C'est Ti-Guy, j'suis juste derrière toi. » (m4) | fier d'appeler, comme s'il faisait une surprise |
-| Quand ça a mal tourné | « C'est Ti-Guy. Ouain, on va dire que c'était un essai. » (m1) | le nom d'abord, sec — puis il essaie de sauver l'ambiance |
-| Déjà connu, en personne | « Heille, le cousin! » (sa bulle : « Hé! Le cousin! ») | il ne se nomme plus : pour lui, on est de la famille |
+| Au téléphone, sa première réplique de la mission | « C'est Ti-Guy, j'suis juste derrière toi. » (m4) | fier d'appeler, comme s'il faisait une surprise |
+| Plus tard dans la mission (au combiné, à l'échec) | « Beau char! » (m1), « Ouain… On va dire que c'était un essai. » (m1) | ⚠️ pas de nom : il s'est présenté au terminus (une fois par mission) — sa gaieté, ou sa gaieté qui retombe, suffit |
+| Déjà connu, en personne | « Heille, le neveu! » (sa bulle : « Hé! Le neveu! ») | il ne se nomme plus : pour lui, on est de la famille |
 
 ## Son corps
 
@@ -69,13 +69,13 @@ garage et **marche** jusqu'à toi avant de parler — l'effort de venir, c'est s
 ## Ses liens
 
 - **Rocco** — son chum d'enfance, son patron, son grand frère d'adoption. Il en parle au présent.
-- **Le joueur** — « le cousin de Rocco » : il le couve, et il compte sur lui.
+- **Le joueur** — « le neveu de Rocco » : il le couve, et il compte sur lui.
 - **Bouchard** — il le connaît assez pour le suivre dans un coup (m4), pas assez pour lui faire confiance.
 - **Marco** — deux hommes de Rocco qui se disputent en silence qui était le plus proche de lui.
 
 ## Ce qu'il a dit (le canon)
 
-- m1 : le joueur est « le cousin de Rocco » ; « Rocco est parti se faire oublier » ; le garage est à toi ;
+- m1 : le joueur est « le neveu de Rocco » ; « Rocco est parti se faire oublier » ; le garage est à toi ;
   un char dort dans une ruelle ; la clé de la planque.
 - m4 : « C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs. »
 
@@ -85,7 +85,9 @@ garage et **marche** jusqu'à toi avant de parler — l'effort de venir, c'est s
 les papiers du coffre parlent d'une île. Trois missions qui le ramènent au garage, là où il se tient
 maintenant : il faudra lui donner un `ou` au garage et lever son `parti_apres`, ou le faire parler au combiné.
 
-## À trancher
+## Tranché
 
-- **« Le cousin de Rocco » et « parti se faire oublier »** contredisent l'ouverture (« ton oncle Rocco est
-  mort le mois passé »). Voir [rocco.md](rocco.md).
+- ✅ **« Le neveu de Rocco »** (Martin, 21 sept. 2026 : « l'oncle Rocco ») : Ti-Guy disait « le cousin »,
+  l'ouverture « ton oncle » — c'est l'ouverture qui a raison. Deux répliques de m1 et sa bulle corrigées.
+  « Rocco est parti se faire oublier » reste : c'est sa façon de ne pas dire « mort » (voir
+  [rocco.md](rocco.md)).
