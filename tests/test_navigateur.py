@@ -472,6 +472,8 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On le regarde : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, t.x - j.x, t.y - j.y);
         L.Missions.interagir(j);
     }""")
     assert page.evaluate("!!window.BANDINI.B.cinema"), "Ti-Guy ne parle pas"
@@ -841,3 +843,94 @@ def test_le_compte_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
     attendre_titre(page)
     jouer(page)
     assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+# --- Le NIP (M14, 3e vague) --------------------------------------------------------------
+
+
+def visibles(page, *ids):
+    """Ce que le joueur VOIT : `is_visible`, jamais l'attribut `hidden` — le banc lisait
+    `hidden === true` sur un formulaire encore affiche (2e vague), et sur `nip-retrait`
+    encore affiche dans les quatre etats (3e vague)."""
+    return {i: page.is_visible("#" + i) for i in ids}
+
+
+NIP_ELEMENTS = ("nip-form", "compte-form", "nip-activer-form", "nip-retrait", "bouton-nip-retirer",
+                "bouton-compte-deconnexion")
+
+
+def test_activer_un_nip_puis_le_retrouver_au_rechargement(page, serveur, erreurs):
+    """De bout en bout, avec un VRAI rechargement de page (localStorage survit, le
+    cookie httpOnly aussi — c'est justement lui que le NIP protège) : créer un
+    compte, activer un NIP, recharger, se faire demander le NIP, et déverrouiller.
+
+    ⚠️ Son PROPRE pseudo : le fixture `serveur` est celui de toute la session, donc une
+    seule base — « Martin » est déjà pris par le juge du compte, et le second
+    `inscription` rendait 409 dans la suite complète alors que ce juge passait seul."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    # ⚠️ FERME : ni reglage du NIP, ni bouton pour le retirer, ni deconnexion.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": True, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+    page.fill("#compte-pseudo", "Nadia")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    # OUVERT SANS NIP : on peut en ajouter un, pas en retirer un qui n'existe pas.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": True,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": True}
+    page.fill("#nip-nouveau", "4821")
+    page.click("#bouton-nip-activer")
+    page.wait_for_function("window.BANDINI.Compte.etat().nipConfigure === true", timeout=5000)
+    # OUVERT AVEC NIP : on peut le retirer, plus en ajouter.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": True, "bouton-nip-retirer": True,
+                                             "bouton-compte-deconnexion": True}
+
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    # ⚠️ Verrouille ou pas, JOUER doit rester JOUER : un compte est un confort.
+    assert page.is_visible("#bouton-jouer")
+
+    page.click("#bouton-compte")
+    # ⚠️ VERROUILLE : le NIP SEUL. « Retirer le NIP » s'affichait ici, et retirait le
+    # verrou sans le NIP — le bouton ne doit pas etre a l'ecran, ni cliquable.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": True, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+
+    page.fill("#nip-code", "4821")
+    page.click("#nip-form button[type=submit]")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=5000)
+    assert page.text_content("#bouton-compte") == "Compte : Nadia"
+    assert erreurs == []
+
+
+def test_le_nip_ne_bloque_jamais_jouer(page, serveur, erreurs):
+    """Un appareil verrouillé (NIP configuré, pas encore tapé) : JOUER joue quand
+    même, sans un seul appel au serveur des comptes."""
+    appels = []
+
+    def noter(route):
+        appels.append(route.request.url)
+        route.continue_()
+
+    page.route("**/api/compte/**", noter)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""() => {
+        localStorage.setItem('bandini-nip-v1', JSON.stringify({ sel: 'AA==', iv: 'AA==', corps: 'AA==', essais: 0 }));
+    }""")
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    appels_avant_jeu = list(appels)
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+    assert appels == appels_avant_jeu, "verrouille ne doit jamais parler au serveur des comptes"
+    assert erreurs == []

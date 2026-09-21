@@ -379,6 +379,17 @@ const Son = (function () {
       for (let k = 0; k < 3; k++) { tonA(t0 + k * 0.22, 420, 0.06, 'triangle', 0.22 * v, 0.7); bruitA(t0 + k * 0.22, 0.05, 0.2 * v, 2500); }
     },
     scie: function (v) { ton(1800, 1.4, 'sawtooth', 0.04 * v, 1.15); bruit(1.2, 0.08 * v, 5000, 2500); },
+    // La plaque d'acier de la tranchée : la roue avant claque, la plaque résonne, et
+    // la roue arrière claque à son tour. Synthétisée, comme le nid-de-poule : un
+    // cahot n'a pas besoin d'un fichier.
+    plaque: function (v) {
+      const t0 = ctx.currentTime;
+      for (const [dt, force] of [[0, 1], [0.13, 0.7]]) {
+        tonA(t0 + dt, 210, 0.09, 'square', 0.2 * v * force, 0.55);
+        bruitA(t0 + dt, 0.1, 0.18 * v * force, 3200);
+        tonA(t0 + dt + 0.02, 560, 0.3, 'triangle', 0.08 * v * force, 0.96);
+      }
+    },
     // Le bras du camion a ordures : le moteur hydraulique, puis ce qui degringole.
     benne: function (v) { ton(160, 1.1, 'sawtooth', 0.05 * v, 1.5); bruit(0.8, 0.25 * v, 1400, 200); },
   };

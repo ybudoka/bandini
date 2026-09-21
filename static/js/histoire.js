@@ -425,7 +425,7 @@ const Histoire = (function () {
 
   /** Le personnage a portee d'ACTION, s'il y en a un. */
   function personnageSousLaMain(j) {
-    return Entites.pietonsAutour(j.x, j.y, RAYON_PARLER).find(function (e) { return e.personnage; }) || null;
+    return Entites.pietonsAutour(j.x, j.y, RAYON_PARLER).find(function (e) { return e.personnage && faceA(j, e.x, e.y); }) || null;
   }
 
   // --- Les dialogues, dits a voix haute ----------------------------------------------------
@@ -1500,7 +1500,7 @@ const Histoire = (function () {
   }
 
   function panneauSousLaMain(j) {
-    return Entites.autour(j.x, j.y, 24, function (e) { return e.type === 'panneau'; })[0] || null;
+    return Entites.autour(j.x, j.y, 24, function (e) { return e.type === 'panneau' && faceA(j, e.x, e.y); })[0] || null;
   }
 
   function proposerDefi(slug) {

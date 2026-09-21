@@ -202,6 +202,20 @@ def api_compte_partie_ecrire(n: int):
     return jsonify({"erreur": "la partie du serveur est plus avancée", "serveur": etat}), 409
 
 
+@bp.route("/api/compte/nip", methods=["POST"])
+def api_compte_nip():
+    """Le jeton en clair, UNE fois : de quoi le chiffrer localement pour le NIP (M14, 3e vague).
+
+    ⚠️ Le serveur ne connaît jamais le NIP et ne le verra jamais : le chiffrement et le
+    déchiffrement sont entièrement locaux (WebCrypto, PBKDF2 + AES-GCM). Cette route
+    expose, à la demande explicite du joueur, le jeton que le cookie `httpOnly` porte
+    déjà — `httpOnly` bloque le JS de la page, pas le serveur, qui le lit à chaque
+    requête comme n'importe quel autre cookie.
+    """
+    comptes.authentifier(bd.connexion(), _jeton())
+    return jsonify({"jeton": _jeton()})
+
+
 #: (fichier de static/img/, cote, usage). La 512 sert deux fois : Bandini tient
 #: dans le cercle du masque d'Android (tests/test_icones.py le verifie), une
 #: seconde image « maskable » serait la meme.

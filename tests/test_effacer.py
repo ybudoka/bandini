@@ -247,6 +247,8 @@ def test_on_voit_l_avocat_assis_et_on_lui_parle_du_pas_d_a_cote(banc):
             const tx = ex + d[0], ty = ey + d[1];
             if (!L.Monde.marchablePieton(tx, ty) || L.Monde.estMeuble(tx, ty)) return;
             j.x = tx * L.TT + 8; j.y = ty * L.TT + 8;
+            // ⚠️ On le regarde : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+            L.Entites.regarder(j, e.x - j.x, e.y - j.y);
             L.B.menu = null;
             L.Missions.majInvite(j);
             const invite = L.B.invite;

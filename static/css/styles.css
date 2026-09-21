@@ -190,6 +190,11 @@ kbd {
    bien `hidden = true`. Vu à la capture, le 17 sept. 2026 ; c'est la même raison
    qui a fait écrire `.voile[hidden]` plus haut. */
 .compte-form[hidden] { display: none; }
+/* ⚠️ Idem pour `.boutons` (M14, 3e vague) : `<div class="boutons" id="nip-retrait" hidden>`
+   restait affiché dans TOUS les états — « Retirer le NIP » sous l'écran VERROUILLÉ, où il
+   retirait le verrou sans le NIP. Vu à la capture le 20 sept. 2026 ; les juges du NIP ne
+   regardaient pas ce bloc-là. */
+.boutons[hidden] { display: none; }
 /* Trois champs nommés : « Courriel (facultatif) » ne tient pas dans 12em. */
 #voile-compte .compte-form input { width: 15em; }
 

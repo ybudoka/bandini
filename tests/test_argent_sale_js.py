@@ -70,6 +70,8 @@ def test_le_skimmer_se_pose_lit_la_nuit_et_se_vide(banc, paquet):
         });
         if (!g) return { pasDeGuichet: true };
         j.x = g.x; j.y = g.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde le guichet : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(g);
         L.Missions.majInvite(j);
         const sansSkimmer = L.B.invite;
         p.objets.skimmer = 2;
@@ -209,6 +211,8 @@ def test_le_skimmer_se_pose_sur_une_machine_sans_empecher_d_acheter(banc, paquet
         });
         if (!d) return { pasDeMachine: true };
         j.x = d.x; j.y = d.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde la machine : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(d);
         const m = L.Missions.distributriceSousLaMain(j);
         if (!m) return { pasDeMachine: true };
         p.objets.skimmer = 2; p.argent = 100;

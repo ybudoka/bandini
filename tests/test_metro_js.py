@@ -35,6 +35,8 @@ def test_on_descend_au_metro_par_l_edicule(banc):
         L.Jeu.commencer();
         %s
         const s = surLeTrottoir(L, 1);
+        // ⚠️ On regarde l'édicule : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser({ x: (s.x + 0.5) * L.TT, y: (s.y + 0.5) * L.TT });
         o.frame(2);
         const invite = L.B.invite, argent = L.B.partie.argent;
         o.tape('KeyE', 1); o.fondu(); o.frame(2);
@@ -51,7 +53,9 @@ def test_recherche_ou_fauche_on_ne_passe_pas_le_tourniquet(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         %s
-        surLeTrottoir(L, 2);
+        const s = surLeTrottoir(L, 2);
+        // On regarde l'édicule : sans regard, ACTION ne dit rien (test_regard_js.py).
+        o.viser({ x: (s.x + 0.5) * L.TT, y: (s.y + 0.5) * L.TT });
         o.frame(2);
         L.B.recherche.etoiles = 1;
         o.tape('KeyE', 1); o.frame(40);
@@ -107,7 +111,9 @@ def test_les_portes_ne_s_ouvrent_qu_en_station_et_on_remonte_ailleurs(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         %s
-        surLeTrottoir(L, 3);
+        const edicule = surLeTrottoir(L, 3);
+        // On regarde l'édicule pour descendre (test_regard_js.py).
+        o.viser({ x: (edicule.x + 0.5) * L.TT, y: (edicule.y + 0.5) * L.TT });
         o.frame(2);
         o.tape('KeyE', 1); o.fondu(); o.frame(2);
         const argent = L.B.partie.argent;

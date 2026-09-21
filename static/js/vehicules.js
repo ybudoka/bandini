@@ -1048,6 +1048,25 @@ const Vehicules = (function () {
     }
   }
 
+  /** Une PLAQUE D'ACIER sous les roues (la tranchée d'un chantier) : ça claque et
+      ça secoue, et ça ne coûte RIEN — un nid-de-poule est un accident, une plaque
+      est un décor qu'on sent. ⚠️ Même règle de répit que les nids (sans lui un char
+      lent la claquerait à chaque image de la tuile), et le claquement part POSÉ
+      là où roule le char : le trafic aussi claque, et s'entend à la distance. Ce
+      qui secoue la caméra, lui, est le char du joueur. */
+  function majPlaque(v) {
+    const ph = physique();
+    if (v.plaqueT > 0) { v.plaqueT--; return; }
+    if (v.z > 2 || Math.hypot(v.vx, v.vy) < 0.8 || B.interieur) return;
+    if (!Monde.plaqueDAcier(Math.floor(v.x / TT), Math.floor(v.y / TT))) return;
+    v.plaqueT = ph.plaque_repit_images;
+    Son.SFX.chantier('plaque', v.x, v.y, 300);
+    if (v.conducteur === B.joueur) {
+      B.cam.secousse = Math.max(B.cam.secousse, ph.plaque_secousse);
+      Entree.vibrer(40);
+    }
+  }
+
   /** L'heure de la panne finie, le char s'en va — il s'efface, faute de savoir
       rentrer au garage tout seul.
 
@@ -1073,6 +1092,7 @@ const Vehicules = (function () {
     const ph = physique();
     bruitDePassage(v);
     majNidDePoule(v);
+    majPlaque(v);
     if (v.forceT > 0) v.forceT--;
     if (v.panneT > 0) majFinDePanne(v);
     if (majNoyade(v)) return;
@@ -1287,7 +1307,7 @@ const Vehicules = (function () {
     for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.rails; })) {
       for (const c of cercles(v)) {
         const d = Math.hypot(c.x - j.x, c.y - j.y) - c.r;
-        if (d < dMin && d <= portee) { dMin = d; meilleur = v; }
+        if (d < dMin && d <= portee && faceA(j, c.x, c.y)) { dMin = d; meilleur = v; }
       }
     }
     return meilleur;
@@ -2911,7 +2931,7 @@ const Vehicules = (function () {
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne,
     voieDeDepassement, voieLibre, changerDeVoie,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

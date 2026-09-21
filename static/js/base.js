@@ -212,6 +212,27 @@ function ecartAngle(a, b) {
   if (d <= -Math.PI) d += Math.PI * 2;
   return d;
 }
+
+//: Les quatre regards que le sprite MONTRE, en radians (`e.face`).
+const REGARDS = { droite: 0, bas: Math.PI / 2, gauche: Math.PI, haut: -Math.PI / 2 };
+
+/** `e` FAIT-IL FACE au point (x, y) ? La regle de toute interaction : pour agir sur
+    une porte, un char, un comptoir ou quelqu'un, on le regarde.
+
+    ⚠️ Le regard est ce que le sprite MONTRE (`face`), pas l'angle fin du stick :
+    ce que le joueur voit est ce que le jeu juge. `angle` ne sert que quand la pose
+    n'est pas un regard (couche, assis). ⚠️ Et on n'a pas a regarder ce qu'on a sous
+    les pieds (`regard.dessus_px`) : la, la direction n'est plus definie.
+
+    Toutes les fonctions « sous la main » passent par ici, et l'invite du HUD lit
+    les memes : le bouton ne promet jamais ce qu'il refuserait (`recherche.regard`). */
+function faceA(e, x, y) {
+  const r = B.defs.recherche.regard;
+  if (dist2(e.x, e.y, x, y) <= r.dessus_px * r.dessus_px) return true;
+  const regard = REGARDS[e.face];
+  return Math.abs(ecartAngle(regard === undefined ? e.angle : regard, angleVers(e.x, e.y, x, y)))
+    <= r.demi_cone_degres * Math.PI / 180;
+}
 /** Un entier stable pour une paire (x, y) — variantes de tuiles. */
 function hash2(x, y) {
   let h = (x * 374761393 + y * 668265263) | 0;

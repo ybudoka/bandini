@@ -28,7 +28,7 @@
         <button class="bouton" id="bouton-casque" type="button" hidden>Jouer dans le casque</button>
       </div>
       <p class="aide">
-        <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action ·
+        <kbd>WASD</kbd>/<kbd>←↑↓→</kbd> marcher · <kbd>Maj</kbd> courir · <kbd>E</kbd> action <em>(face à la chose)</em> ·
         <kbd>Espace</kbd> frapper · <kbd>Tab</kbd> arme d’avant, <em>tenu</em> la roue ·
         <kbd>Échap</kbd> pause · <kbd>M</kbd> son
       </p>
@@ -50,6 +50,21 @@
        jamais le chemin de JOUER : un compte est un confort. #}
     <section class="voile" id="voile-compte" hidden>
       <h2 class="titre titre--petit">Ton compte</h2>
+
+      {# LE NIP (M14, 3e vague) : un verrou d'ECRAN sur un appareil DEJA lie, jamais
+         un second mot de passe. ⚠️ SEUL a l'ecran tant qu'on n'a pas tape les quatre
+         chiffres — jamais en meme temps que le formulaire de mot de passe : deux
+         portes ouvertes a la fois n'en protegent aucune. #}
+      <form class="compte-form" id="nip-form" hidden>
+        <p class="aide aide--petit">Cet appareil a un NIP.</p>
+        <div class="compte-form__ligne">
+          <input id="nip-code" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••">
+          <button class="bouton bouton--principal" type="submit">Déverrouiller</button>
+        </div>
+        <p class="compte-form__etat" id="nip-etat"></p>
+        <button class="bouton" id="bouton-nip-mot-de-passe" type="button">Mot de passe plutôt</button>
+      </form>
+
       <p class="aide aide--petit" id="compte-mot">Un compte garde tes parties sur le serveur : commence au téléphone, finis à l’ordi. Le jeu se joue très bien sans.</p>
       <form class="compte-form" id="compte-form">
         <div class="compte-form__ligne">
@@ -72,6 +87,19 @@
          marché. Vu à la capture, le 17 sept. 2026. #}
       <p class="compte-form__etat" id="compte-etat"></p>
       <ul class="compte-parties" id="compte-parties"></ul>
+
+      {# Le reglage du NIP : seulement une fois le compte OUVERT (`Hud.majCompte`
+         montre l'une ou l'autre, jamais les deux). #}
+      <form class="compte-form" id="nip-activer-form" hidden>
+        <div class="compte-form__ligne">
+          <input id="nip-nouveau" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Quatre chiffres">
+          <button class="bouton" id="bouton-nip-activer" type="submit">Ajouter un NIP à cet appareil</button>
+        </div>
+      </form>
+      <div class="boutons" id="nip-retrait" hidden>
+        <button class="bouton" id="bouton-nip-retirer" type="button">Retirer le NIP de cet appareil</button>
+      </div>
+
       <div class="boutons">
         <button class="bouton" id="bouton-compte-deconnexion" type="button" hidden>Se déconnecter</button>
         <button class="bouton" id="bouton-fermer-compte" type="button">Retour</button>
