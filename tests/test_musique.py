@@ -478,3 +478,14 @@ def test_la_musique_generee_tient_dans_le_budget():
     # démarrage. Il ne servait qu'à nous faire écrire des boucles courtes
     # qu'on entend reboucler.
     assert ko < 12000, f"{secondes} s de musique, soit {ko} Ko : le depot enfle"
+
+
+def test_le_fondu_enchaine_est_ecrit_une_fois_et_le_navigateur_le_lit():
+    """⚠️ Demande de Martin (20 sept. 2026) : « les transitions de musique doivent
+    toujours se faire en crossover, a moins que ce soit necessaire pour l'effet et
+    l'ambiance ». `fondu_s` etait declare depuis le premier jour et le JS ne le
+    lisait jamais — d'ou des pistes coupees net. Il y a maintenant DEUX durees, et
+    la vive est plus courte que la lente : c'est l'exception qui garde la regle."""
+    r = audio.exporter()["musique"]
+    assert r["fondu_s"] > 0, "sans fondu, chaque changement de piste est une coupure"
+    assert 0 < r["fondu_vif_s"] < r["fondu_s"], (r["fondu_vif_s"], r["fondu_s"])

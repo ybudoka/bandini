@@ -196,6 +196,9 @@ kbd {
    regardaient pas ce bloc-là. */
 .boutons[hidden] { display: none; }
 
+/* Le defi du jour au titre (M14, 5e vague) : une ligne, en or comme l'argent. */
+.defi-du-jour { margin: 0; font-size: 14px; color: var(--or); }
+
 /* ⚠️ L'ECRAN DU COMPTE DEFILE (M14) : il est bien plus haut que le titre, et `.voile` centre
    son contenu dans un `.ecran` en `overflow: hidden` — ce qui deborde etait ROGNE des deux
    cotes, sans defilement. Mesure du 20 sept. 2026 : en portrait (ecran de jeu de 390x219),

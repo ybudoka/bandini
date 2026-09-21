@@ -19,7 +19,7 @@ from flask import (
     url_for,
 )
 
-from . import bd, comptes
+from . import bd, comptes, defi
 from . import hors_ligne
 
 bp = Blueprint("jeu", __name__)
@@ -200,6 +200,18 @@ def api_compte_partie_ecrire(n: int):
     if ecrite:
         return jsonify(etat)
     return jsonify({"erreur": "la partie du serveur est plus avancée", "serveur": etat}), 409
+
+
+@bp.route("/api/defi")
+def api_defi():
+    """Le defi du jour (M14, 5e vague) : la date du serveur et le slug du defi d'aujourd'hui.
+
+    Publique — ni compte ni base : c'est une fonction de la date. ⚠️ `no-store` : un defi garde
+    par le navigateur passerait minuit sans le savoir (nginx ne met en cache que `/static/`).
+    """
+    reponse = jsonify(defi.aujourdhui())
+    reponse.headers["Cache-Control"] = "no-store"
+    return reponse
 
 
 @bp.route("/api/compte/nip", methods=["POST"])

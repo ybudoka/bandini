@@ -122,7 +122,8 @@ const Son = (function () {
     Voix.chargees = false; Voix.enCours = null; Voix.missionsChargees.clear();
     Ambiance.courante = null; Ambiance.chargee = null;
     Radio.courante = null; Radio.chargees.clear();
-    Mus.arreter();
+    // ⚠️ Net : la page s'en va, le contexte se ferme juste apres — un fondu n'aurait personne a qui parler.
+    Mus.arreter(0); Mus.sortantes.length = 0;
     try { parti.close(); } catch (e) { /* deja fermee */ }
   }
 
@@ -268,9 +269,13 @@ const Son = (function () {
     // et il ne sort RIEN. C'est ainsi qu'aucun des 79 fichiers n'a jamais ete
     // entendu jusqu'au 13 sept. 2026, sans qu'une seule erreur soit levee.
     source.connect(gain);
-    sortie.connect(maitre);
+    // ⚠️ `fondu` (en secondes) : la musique entre PAR la chaine de fondu, pas
+    // directement sur le maitre — voir « Le fondu enchaine ». Le volume, lui,
+    // reste sur `gain` : la distance et le ducking le reposent sans toucher au fondu.
+    const chaine = options && options.fondu !== undefined ? chaineDeFondu(options.fondu) : null;
+    sortie.connect(chaine ? chaine.entree : maitre);
     source.start(ctx.currentTime);
-    return { source: source, gain: gain, base: def ? def.volume : 1 };
+    return { source: source, gain: gain, base: def ? def.volume : 1, fondu: chaine };
   }
 
   /** Un son POSE dans le monde : plus loin, plus faible ; a droite, a droite.
@@ -329,15 +334,97 @@ const Son = (function () {
     return !!liste && liste.length > 0;
   }
 
-  /** Une boucle qu'on allume et qu'on eteint (sirene, moteur). */
-  function boucle(slug, actif, volume) {
+  // --- Le fondu enchaine : la regle de TOUTE la musique ---------------------------------
+  /*: ⚠️ Demande de Martin (20 sept. 2026) : « les transitions de musique doivent
+    toujours se faire en crossover, a moins que ce soit necessaire pour l'effet
+    et l'ambiance ». Avant, `boucle(..., false)` faisait `source.stop()` : la
+    piste s'arretait NET et la suivante partait apres — un blanc, ou un coup sec.
+    Maintenant celle qui s'en va BAISSE pendant que celle qui arrive MONTE.
+
+    ⚠️ Trois choses a ne pas defaire :
+    - **Deux gains, pas un** (`entree`, puis `sortie`). Poser une courbe sur un
+      parametre qui en suit deja une leve `NotSupportedError` : quelqu'un qui
+      change encore de piste pendant le fondu d'entree aurait fait taire toute la
+      musique. Chaque gain ne recoit qu'UNE courbe.
+    - **Puissance constante** (sinus, cosinus), pas une rampe lineaire : deux
+      morceaux qui n'ont rien en commun sonnent deux fois moins fort au milieu
+      d'une rampe lineaire, et on entend le creux.
+    - **La piste qui sort quitte `boucles` TOUT DE SUITE** : sa cle est libre pour
+      la suivante (redemander la meme toune ne tombe pas sur elle), et
+      `boucleActive` ne dit « vrai » que de ce qu'on est cense entendre.
+
+    ⚠️ **UNE COUPURE FRANCHE SE DEMANDE.** Le fondu est ce qui arrive par defaut
+    a toute la musique ; couper net, c'est passer `0` a l'appel
+    (`Mus.jouer(slug, 0)`, `Mus.arreter(0)`) — et ecrire la raison a cet endroit,
+    parce que ce n'est jamais un oubli qu'on veut y trouver. */
+  const POINTS_DE_COURBE = 64;
+
+  /** La courbe d'un fondu, de 0 a 1 (`entrant`) ou de 1 a 0, a PUISSANCE CONSTANTE. */
+  function courbeDeFondu(entrant) {
+    const c = new Float32Array(POINTS_DE_COURBE);
+    for (let i = 0; i < POINTS_DE_COURBE; i++) {
+      const x = i / (POINTS_DE_COURBE - 1) * Math.PI / 2;
+      c[i] = entrant ? Math.sin(x) : Math.cos(x);
+    }
+    return c;
+  }
+
+  /** Combien de secondes dure un fondu. `vif` : celui de la musique d'ETAT qui
+      arrive et du musicien de rue. ⚠️ Les chiffres viennent de Python
+      (`musique.MUSIQUE`), comme l'echelle : le navigateur les LIT. */
+  function dureeFondu(vif) {
+    const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
+    return vif ? (r.fondu_vif_s || 0.7) : (r.fondu_s || 2);
+  }
+
+  /** La poursuite et la bagarre : les deux pistes qui prennent toute la place. */
+  function pisteDEtat(slug) { return slug === 'mus_poursuite' || slug === 'mus_bagarre'; }
+
+  /** Les deux gains d'un fondu, branches sur le maitre. Tout ce qu'on branche
+      sur `entree` monte pendant `duree` secondes (0 : plein tout de suite), et
+      `sortir(d)` le fait redescendre jusqu'au silence en `d` secondes. */
+  function chaineDeFondu(duree) {
+    const entree = ctx.createGain(), sortie = ctx.createGain();
+    entree.connect(sortie);
+    sortie.connect(maitre);
+    if (duree > 0) {
+      entree.gain.value = 0;
+      entree.gain.setValueCurveAtTime(courbeDeFondu(true), ctx.currentTime, duree);
+    }
+    let sortant = false;
+    return {
+      entree: entree,
+      sortir: function (d) {
+        if (sortant) return;
+        sortant = true;
+        sortie.gain.setValueCurveAtTime(courbeDeFondu(false), ctx.currentTime, d);
+      },
+    };
+  }
+
+  /** Eteint une boucle : en fondu si elle en a un et qu'on en demande un, net sinon. */
+  function eteindre(courante, fondu) {
+    if (fondu > 0 && courante.fondu && ctx) {
+      courante.fondu.sortir(fondu);
+      // ⚠️ Un peu APRES la fin de la courbe, jamais avant : arreter la source a
+      // l'instant ou le gain touche zero laisserait un claquement.
+      try { courante.source.stop(ctx.currentTime + fondu + 0.05); } catch (e) { /* deja finie */ }
+      return;
+    }
+    try { courante.source.stop(); } catch (e) { /* deja finie */ }
+  }
+
+  /** Une boucle qu'on allume et qu'on eteint (sirene, moteur — et la musique, qui
+      passe `fondu`, en secondes : voir plus haut). Sans `fondu`, elle part et
+      s'arrete net, comme un moteur. */
+  function boucle(slug, actif, volume, fondu) {
     const courante = boucles.get(slug);
     if (actif && !courante) {
-      const jouee = echantillon(slug, { boucle: true, volume: volume });
+      const jouee = echantillon(slug, { boucle: true, volume: volume, fondu: fondu });
       if (jouee) boucles.set(slug, jouee);
     } else if (!actif && courante) {
-      try { courante.source.stop(); } catch (e) { /* deja finie */ }
       boucles.delete(slug);
+      eteindre(courante, fondu);
     }
   }
 
@@ -889,9 +976,9 @@ const Son = (function () {
         .catch(function () { Ambiance.chargee = null; });
       return true;
     },
-    _demarrer: function (a) { boucle('ambiance-' + a.slug, true, a.volume); Ambiance.courante = a.slug; },
+    _demarrer: function (a) { boucle('ambiance-' + a.slug, true, a.volume, dureeFondu()); Ambiance.courante = a.slug; },
     arreter: function () {
-      if (Ambiance.courante) boucle('ambiance-' + Ambiance.courante, false);
+      if (Ambiance.courante) boucle('ambiance-' + Ambiance.courante, false, undefined, dureeFondu());
       Ambiance.courante = null; Ambiance.demandee = null;
     },
   };
@@ -1017,7 +1104,10 @@ const Son = (function () {
       if (v.slug === Chef.piste) return;
       Chef.piste = v.slug; Chef.rang = v.rang;
       Chef.queue = Chef.queue || 0;
-      Mus.jouer(v.slug);
+      // ⚠️ La musique d'ETAT entre VITE (`fondu_vif_s`) : deux secondes de montee
+      // feraient entendre que ca tourne mal apres l'avoir vu. Elle entre quand
+      // meme en fondu — c'est la duree qui change, pas la regle.
+      Mus.jouer(v.slug, pisteDEtat(v.slug) ? dureeFondu(true) : undefined);
     },
 
     arreter: function () { Mus.arreter(); Chef.piste = null; Chef.rang = 99; Chef.queue = 0; Chef.district = null; Chef.frontiere = null; },
@@ -1142,7 +1232,7 @@ const Son = (function () {
 
     _demarrer: function (slug) {
       const station = Radio.station(slug);
-      boucle('radio-' + slug, true, station ? station.volume : 0.4);
+      boucle('radio-' + slug, true, station ? station.volume : 0.4, dureeFondu());
       Radio.courante = slug;
     },
 
@@ -1150,7 +1240,7 @@ const Son = (function () {
       // ⚠️ On n'arrete le sequenceur QUE s'il jouait une station : au titre il
       // joue le theme du menu, et descendre d'un char ne doit pas l'eteindre.
       if (Radio.courante && Radio.estProcedurale(Radio.courante)) Mus.arreter();
-      else if (Radio.courante) boucle('radio-' + Radio.courante, false);
+      else if (Radio.courante) boucle('radio-' + Radio.courante, false, undefined, dureeFondu());
       Radio.courante = null;
       Radio.demandee = null;
     },
@@ -1274,6 +1364,15 @@ const Son = (function () {
     pas: 0,             // ou l'on en est, en pas (avance meme sans audio)
     debutT: 0,          // l'instant audio du pas 0 ; 0 = pas encore demarre
     prochain: 0,        // le prochain pas a programmer
+    // Le fondu (voir « Le fondu enchaine »). Le mp3 a le sien dans `boucles` ; le
+    // SEQUENCEUR, dont les notes ne traversent aucune boucle, a `chaine`.
+    entreeS: 0,         // la duree du fondu d'entree de la piste courante
+    chaine: null,       // ou aboutissent les notes de la piste courante
+    // ⚠️ Une piste en notes qui s'en va ne se tait pas : elle continue de poser ses
+    // notes, dans sa chaine qui baisse, jusqu'a la fin de la courbe. Le sequenceur
+    // ne programme qu'un quart de seconde d'avance : sans elle, l'ancienne se
+    // tairait en un quart de seconde et le « fondu » n'aurait rien a baisser.
+    sortantes: [],      // { def, debutT, prochain, chaine, finT }
 
     morceaux: function () { return (B.defs && B.defs.audio && B.defs.audio.musiques) || []; },
     def: function (slug) {
@@ -1284,12 +1383,17 @@ const Son = (function () {
     },
 
     /** Demande un morceau. Le redemander pendant qu'il joue ne le fait PAS
-        repartir du debut : le menu le reclame a chaque image. */
-    jouer: function (slug) {
+        repartir du debut : le menu le reclame a chaque image.
+
+        ⚠️ Le morceau qui jouait ne s'arrete pas, il BAISSE pendant que celui-ci
+        monte, `fondu` secondes (`fondu_s` par defaut). `0` coupe net — se justifie
+        a l'appel. */
+    jouer: function (slug, fondu) {
       if (Mus.courante === slug) return true;
       if (!Mus.def(slug)) { Mus.arreter(); return false; }
-      Mus.arreter();
-      Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+      const d = fondu === undefined ? dureeFondu() : fondu;
+      Mus.arreter(d);
+      Mus.courante = slug; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; Mus.entreeS = d;
       return true;
     },
 
@@ -1302,17 +1406,26 @@ const Son = (function () {
     _demarrer: function () {
       const def = Mus.def(Mus.courante);
       if (!def || !def.fichier) return;
-      boucle(Mus.cle(Mus.courante), true, volumeFichier(def));
+      boucle(Mus.cle(Mus.courante), true, volumeFichier(def), Mus.entreeS);
     },
 
-    arreter: function () {
-      if (Mus.courante) boucle(Mus.cle(Mus.courante), false);
-      Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0;
+    /** Eteint la musique — en fondu (`fondu_s`), sauf si on passe `0`. */
+    arreter: function (fondu) {
+      const d = fondu === undefined ? dureeFondu() : fondu;
+      if (Mus.courante) boucle(Mus.cle(Mus.courante), false, undefined, d);
+      // Le sequenceur : la piste passe en `sortantes` et finit sa courbe. A `0`, les
+      // notes deja posees s'eteignent seules — un quart de seconde au plus.
+      if (Mus.chaine && ctx && d > 0 && Mus.debutT) {
+        Mus.chaine.sortir(d);
+        Mus.sortantes.push({ def: Mus.def(Mus.courante), debutT: Mus.debutT, prochain: Mus.prochain,
+                             chaine: Mus.chaine, finT: ctx.currentTime + d });
+      }
+      Mus.courante = null; Mus.pas = 0; Mus.debutT = 0; Mus.prochain = 0; Mus.chaine = null;
     },
     stop: function () { Mus.arreter(); },       // l'ancien nom, garde par prudence
 
-    /** Pose toutes les notes d'un pas, a l'instant `t`. */
-    poser: function (def, p, t, pasS) {
+    /** Pose toutes les notes d'un pas, a l'instant `t`, dans `sortie`. */
+    poser: function (def, p, t, pasS, sortie) {
       for (let v = 0; v < def.voix.length; v++) {
         const voix = def.voix[v];
         const motif = voix.motif || def.pas;
@@ -1322,16 +1435,43 @@ const Son = (function () {
           if (note[0] !== dans) continue;
           const volume = (voix.volume || 0.2) * (note[3] === undefined ? 1 : note[3])
                        * (def.volume || 1) * Mus.attenuation;
-          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1]);
+          if (voix.forme === 'bruit') bruitA(t, Math.min(0.12, note[2] * pasS), volume, note[1], sortie);
           // ⚠️ 0.92 : la note s'arrete juste avant la suivante. Sans ce blanc,
           // deux notes voisines de meme hauteur n'en font plus qu'une longue.
-          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume);
+          else tonA(t, frequence(note[1]), note[2] * pasS * 0.92, voix.forme, volume, 0, sortie);
         }
       }
     },
 
+    /** Programme les pas d'une piste jusqu'a l'horizon. `piste` porte `debutT` et
+        `prochain` : c'est `Mus` lui-meme pour la piste courante, un objet de
+        `sortantes` pour une qui s'en va. Rend la duree d'un pas, en secondes. */
+    programmer: function (piste, def, sortie) {
+      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
+      if (!piste.debutT) { piste.debutT = ctx.currentTime + 0.08; piste.prochain = 0; }
+      const limite = ctx.currentTime + HORIZON_S;
+      // Un garde-fou : si l'onglet dort une minute, on ne rattrape pas mille
+      // pas d'un coup — on se recale sur l'horloge.
+      const retard = (ctx.currentTime - piste.debutT) / pasS - piste.prochain;
+      if (retard > 32) { piste.prochain = Math.floor((ctx.currentTime - piste.debutT) / pasS); }
+      while (piste.debutT + piste.prochain * pasS < limite) {
+        Mus.poser(def, piste.prochain, piste.debutT + piste.prochain * pasS, pasS, sortie);
+        piste.prochain++;
+      }
+      return pasS;
+    },
+
     /** Une image de musique. A appeler a CHAQUE image, y compris au menu. */
     tick: function () {
+      // Les pistes en notes qui finissent leur fondu de sortie — avant tout le
+      // reste : quand plus rien ne joue, elles sont justement les seules.
+      if (Mus.sortantes.length) {
+        if (etatSon() !== 'actif') Mus.sortantes.length = 0;
+        else {
+          Mus.sortantes = Mus.sortantes.filter(function (q) { return ctx.currentTime < q.finT; });
+          Mus.sortantes.forEach(function (q) { Mus.programmer(q, q.def, q.chaine.entree); });
+        }
+      }
       const def = Mus.def(Mus.courante);
       if (!def) return;
       // ⚠️ Un morceau qui sort d'un mp3 n'a RIEN a programmer : la boucle tourne
@@ -1352,17 +1492,10 @@ const Son = (function () {
       // figee, et programmer dedans ferait sortir toute la boucle d'un coup au
       // reveil. Le morceau demarrera pour de bon a la premiere image sonore.
       if (etatSon() !== 'actif') { Mus.pas++; Mus.debutT = 0; Mus.prochain = 0; return; }
-      const pasS = 60 / def.bpm / (def.pas_par_temps || 1);
-      if (!Mus.debutT) { Mus.debutT = ctx.currentTime + 0.08; Mus.prochain = 0; }
-      const limite = ctx.currentTime + HORIZON_S;
-      // Un garde-fou : si l'onglet dort une minute, on ne rattrape pas mille
-      // pas d'un coup — on se recale sur l'horloge.
-      const retard = (ctx.currentTime - Mus.debutT) / pasS - Mus.prochain;
-      if (retard > 32) { Mus.prochain = Math.floor((ctx.currentTime - Mus.debutT) / pasS); }
-      while (Mus.debutT + Mus.prochain * pasS < limite) {
-        Mus.poser(def, Mus.prochain, Mus.debutT + Mus.prochain * pasS, pasS);
-        Mus.prochain++;
-      }
+      // ⚠️ La chaine naît ICI, au vrai depart des notes : son fondu d'entree part
+      // de cet instant, pas de celui ou le morceau a ete demande.
+      if (!Mus.chaine) Mus.chaine = chaineDeFondu(Mus.entreeS);
+      const pasS = Mus.programmer(Mus, def, Mus.chaine.entree);
       Mus.pas = Math.max(0, Math.floor((ctx.currentTime - Mus.debutT) / pasS));
     },
   };
@@ -1413,7 +1546,7 @@ const Son = (function () {
     _demarrer: function () {
       const def = Rue.def(Rue.jouee);
       if (!def || !def.fichier) return;
-      boucle(Rue.cle(Rue.jouee), true, volumeFichier(def) * Rue.g);
+      boucle(Rue.cle(Rue.jouee), true, volumeFichier(def) * Rue.g, dureeFondu(true));
       // ⚠️ L'instant ou la boucle part : c'est LUI qui fait gratter la main en
       // mesure quand c'est un fichier qui joue (voir `surLeTemps`).
       Rue.debutT = ctx ? ctx.currentTime : 0;
@@ -1440,7 +1573,8 @@ const Son = (function () {
     },
 
     arreter: function () {
-      if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
+      // ⚠️ En fondu, vif : un musicien qu'on perd de vue s'eclipse, il ne claque pas.
+      if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false, undefined, dureeFondu(true));
       Rue.courante = null; Rue.jouee = null; Rue.volume = 0; Rue.g = 0;
       Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
     },
@@ -1470,7 +1604,8 @@ const Son = (function () {
       if (Rue.jouee !== Rue.courante) {
         // ⚠️ On eteint l'ancienne AVANT de changer de toune : `Rue.cle` suit
         // `Rue.jouee`, et une boucle qu'on oublie de nommer joue pour toujours.
-        if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false);
+        // Sa toune s'efface pendant que l'autre monte — meme regle que la piste de la ville.
+        if (Rue.jouee) boucle(Rue.cle(Rue.jouee), false, undefined, dureeFondu(true));
         Rue.jouee = Rue.courante; Rue.pas = 0; Rue.debutT = 0; Rue.prochain = 0;
       }
       if (etatSon() !== 'actif') { Rue.pas++; Rue.debutT = 0; Rue.prochain = 0; return; }
@@ -1478,7 +1613,7 @@ const Son = (function () {
       // apres, la toune du guitariste n'a plus d'importance. Le chiffre vient de
       // Python (`musique.MUSIQUE.rue_sous_etat`), comme le reste de l'echelle.
       const r = (B.defs && B.defs.audio && B.defs.audio.musique) || {};
-      const etat = Chef.piste === 'mus_poursuite' || Chef.piste === 'mus_bagarre';
+      const etat = pisteDEtat(Chef.piste);
       Rue.g = Rue.volume * Rue.attenuation * (etat ? (r.rue_sous_etat || 0.25) : 1);
       // LE FICHIER, quand il y en a un. ⚠️ Le volume se REPOSE a chaque image :
       // c'est la distance, et elle change a chaque pas du joueur. Une boucle
