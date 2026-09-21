@@ -219,6 +219,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les donneurs ne se cachent plus derrière le décor | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-donneurs-ne-se-cachent-plus-derrière-le-décor) |
 | Rien devant une porte, plus large | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les musiques s'enchaînent en fondu | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
+| Le volume de la musique baisse et remonte graduellement | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-volume-de-la-musique-baisse-et-remonte-graduellement) |
 | Le tour du propriétaire montre ses quatre contacts | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-tour-du-propriétaire-montre-ses-quatre-contacts) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
@@ -11961,6 +11962,17 @@ franche est l'exception qu'on justifie.
   que le navigateur si deux courbes se chevauchent. Vus **rouges** : 15 mutations au banc (chaque
   porte, la courbe linéaire, la durée en dur, le gain unique, l'arrêt avant la fin de la courbe…) —
   et chacune ne fait tomber que la porte visée — puis 3 dans le navigateur.
+
+### Le volume de la musique baisse et remonte graduellement
+
+retour de Martin (20 sept. 2026), dans le prolongement du fondu enchaîné : « il faut aussi baisser
+les volumes et les monter graduellement ».
+
+- ⚠️ **En cours.** Mesuré avant : le ducking (`Voix.baisserLeReste`) met la musique au quart **d'un
+  coup** à la première syllabe d'une réplique ou d'un appel, et la **remet d'un coup** à la dernière ;
+  deux répliques qui s'enchaînent font donc sauter la musique deux fois. Même saut pour le musicien de
+  rue (`rue_sous_etat`, ×0,25 quand la poursuite ou la bagarre démarre, ×1 quand elle s'arrête).
+  Le quart (0,25) est écrit en dur dans le JS, à deux endroits.
 
 ### Le tour du propriétaire montre ses quatre contacts
 
