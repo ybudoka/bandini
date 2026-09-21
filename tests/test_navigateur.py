@@ -472,6 +472,8 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On le regarde : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, t.x - j.x, t.y - j.y);
         L.Missions.interagir(j);
     }""")
     assert page.evaluate("!!window.BANDINI.B.cinema"), "Ti-Guy ne parle pas"
@@ -841,3 +843,223 @@ def test_le_compte_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
     attendre_titre(page)
     jouer(page)
     assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+# --- Le NIP (M14, 3e vague) --------------------------------------------------------------
+
+
+def visibles(page, *ids):
+    """Ce que le joueur VOIT : `is_visible`, jamais l'attribut `hidden` — le banc lisait
+    `hidden === true` sur un formulaire encore affiche (2e vague), et sur `nip-retrait`
+    encore affiche dans les quatre etats (3e vague)."""
+    return {i: page.is_visible("#" + i) for i in ids}
+
+
+NIP_ELEMENTS = ("nip-form", "compte-form", "nip-activer-form", "nip-retrait", "bouton-nip-retirer",
+                "bouton-compte-deconnexion")
+
+
+def test_activer_un_nip_puis_le_retrouver_au_rechargement(page, serveur, erreurs):
+    """De bout en bout, avec un VRAI rechargement de page (localStorage survit, le
+    cookie httpOnly aussi — c'est justement lui que le NIP protège) : créer un
+    compte, activer un NIP, recharger, se faire demander le NIP, et déverrouiller.
+
+    ⚠️ Son PROPRE pseudo : le fixture `serveur` est celui de toute la session, donc une
+    seule base — « Martin » est déjà pris par le juge du compte, et le second
+    `inscription` rendait 409 dans la suite complète alors que ce juge passait seul."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    # ⚠️ FERME : ni reglage du NIP, ni bouton pour le retirer, ni deconnexion.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": True, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+    page.fill("#compte-pseudo", "Nadia")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    # OUVERT SANS NIP : on peut en ajouter un, pas en retirer un qui n'existe pas.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": True,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": True}
+    page.fill("#nip-nouveau", "4821")
+    page.click("#bouton-nip-activer")
+    page.wait_for_function("window.BANDINI.Compte.etat().nipConfigure === true", timeout=5000)
+    # OUVERT AVEC NIP : on peut le retirer, plus en ajouter.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": False, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": True, "bouton-nip-retirer": True,
+                                             "bouton-compte-deconnexion": True}
+
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    # ⚠️ Verrouille ou pas, JOUER doit rester JOUER : un compte est un confort.
+    assert page.is_visible("#bouton-jouer")
+
+    page.click("#bouton-compte")
+    # ⚠️ VERROUILLE : le NIP SEUL. « Retirer le NIP » s'affichait ici, et retirait le
+    # verrou sans le NIP — le bouton ne doit pas etre a l'ecran, ni cliquable.
+    assert visibles(page, *NIP_ELEMENTS) == {"nip-form": True, "compte-form": False, "nip-activer-form": False,
+                                             "nip-retrait": False, "bouton-nip-retirer": False,
+                                             "bouton-compte-deconnexion": False}
+
+    page.fill("#nip-code", "4821")
+    page.click("#nip-form button[type=submit]")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=5000)
+    assert page.text_content("#bouton-compte") == "Compte : Nadia"
+    assert erreurs == []
+
+
+def test_le_nip_ne_bloque_jamais_jouer(page, serveur, erreurs):
+    """Un appareil verrouillé (NIP configuré, pas encore tapé) : JOUER joue quand
+    même, sans un seul appel au serveur des comptes."""
+    appels = []
+
+    def noter(route):
+        appels.append(route.request.url)
+        route.continue_()
+
+    page.route("**/api/compte/**", noter)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""() => {
+        localStorage.setItem('bandini-nip-v1', JSON.stringify({ sel: 'AA==', iv: 'AA==', corps: 'AA==', essais: 0 }));
+    }""")
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    appels_avant_jeu = list(appels)
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+    assert appels == appels_avant_jeu, "verrouille ne doit jamais parler au serveur des comptes"
+    assert erreurs == []
+
+
+# --- Effacer son compte (M14, 4e vague) --------------------------------------------------
+
+EFFACER_ELEMENTS = ("compte-effacer-ligne", "compte-effacer-form", "compte-garde")
+
+
+def test_effacer_son_compte_de_bout_en_bout(page, serveur, erreurs):
+    """Le vrai chemin, sur le vrai serveur : s'inscrire, refuser un mauvais mot de passe,
+    effacer, puis — la seule preuve qu'un banc ne peut pas donner — **reprendre le même
+    pseudo**, ce qui n'est possible que si le compte a vraiment disparu.
+
+    ⚠️ Son PROPRE pseudo (le fixture `serveur` est partagé par toute la session)."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    # FERME : la page « ce qu'on garde » se lit, mais rien à effacer.
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    page.fill("#compte-pseudo", "Leila")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    # OUVERT : le bouton, pas encore la confirmation.
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": True, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    page.click("#bouton-compte-effacer")
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": True,
+                                                 "compte-garde": True}
+
+    # Un mauvais mot de passe : rien n'est effacé, on reste connecté (403, pas 401).
+    page.fill("#compte-effacer-passe", "un-mauvais-mot-de-passe")
+    page.click("#bouton-compte-effacer-confirmer")
+    page.wait_for_function("document.getElementById('compte-effacer-etat').textContent.includes('incorrect')")
+    assert page.text_content("#bouton-compte") == "Compte : Leila"
+    assert page.input_value("#compte-effacer-passe") == "", "le mot de passe ne reste pas dans le champ"
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "ouvert"
+    assert page.is_visible("#compte-effacer-form"), "la confirmation reste ouverte : on peut retaper"
+
+    # Le bon : le compte disparaît, l'appareil est délié, le message se lit encore.
+    page.fill("#compte-effacer-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-effacer-confirmer")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ferme'", timeout=10000)
+    assert page.text_content("#bouton-compte") == "Compte"
+    assert page.is_visible("#compte-form"), "retour au formulaire de connexion"
+    assert visibles(page, *EFFACER_ELEMENTS) == {"compte-effacer-ligne": False, "compte-effacer-form": False,
+                                                 "compte-garde": True}
+    # ⚠️ Le seul mot qui dit ce qui s'est passé vit dehors du formulaire qui vient de se refermer.
+    assert page.is_visible("#compte-etat") and "effacé" in page.text_content("#compte-etat")
+    assert not [c for c in page.context.cookies() if c["name"] == "bandini-appareil"], "le cookie s'efface"
+
+    # LA PREUVE : le pseudo est libre. Un compte encore là aurait rendu 409 « déjà pris ».
+    page.fill("#compte-pseudo", "Leila")
+    page.fill("#compte-passe", "un-autre-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=10000)
+    assert page.text_content("#bouton-compte") == "Compte : Leila"
+    assert erreurs == ["Failed to load resource: the server responded with a status of 403 (FORBIDDEN)"], \
+        "seul le 403 attendu du mauvais mot de passe s'est produit"
+
+
+def test_la_page_ce_qu_on_garde_dit_la_verite_et_ne_promet_rien_qu_on_ne_tienne_pas(page, serveur, erreurs):
+    """« Une page dit ce qui est gardé et comment tout effacer » : elle se déplie, et elle
+    ne promet pas ce qu'aucun code ne tient — un mot de passe perdu ne se retrouve pas."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    assert not page.is_visible("#compte-garde li"), "fermée par défaut : ce n'est pas ce qu'on est venu chercher"
+    page.click("#compte-garde summary")
+    assert page.is_visible("#compte-garde li")
+    texte = page.text_content("#compte-garde")
+    for verite in ("empreinte", "jamais le mot de passe", "sept jours", "Mot de passe perdu, compte perdu"):
+        assert verite in texte, verite
+    assert erreurs == []
+
+
+# --- L'ecran du compte sur un petit ecran (M14) --------------------------------------------
+
+DANS_L_ECRAN = """(id) => {
+    const e = document.querySelector('.ecran').getBoundingClientRect(), b = document.getElementById(id);
+    if (!b || b.offsetParent === null) return false;
+    const r = b.getBoundingClientRect();
+    return r.top >= e.top - 1 && r.bottom <= e.bottom + 1;
+}"""
+
+
+def atteignable_au_doigt(page, ident, pas=60, maxi=60):
+    """Vrai si `ident` finit DANS l'écran en faisant défiler le voile comme un doigt le fait.
+
+    ⚠️ La MOLETTE, jamais `scrollIntoView` ni le `click` de Playwright (qui défilent
+    programmatiquement, même un conteneur `overflow: hidden`) : un joueur ne peut pas
+    faire ça, et un juge qui le fait laisserait passer un bouton inatteignable."""
+    page.evaluate("document.getElementById('voile-compte').scrollTop = 0")
+    boite = page.evaluate("""() => { const r = document.getElementById('voile-compte').getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
+    page.mouse.move(boite["x"], boite["y"])
+    for _ in range(maxi):
+        if page.evaluate(DANS_L_ECRAN, ident):
+            return True
+        page.mouse.wheel(0, pas)
+        page.wait_for_timeout(20)
+    return page.evaluate(DANS_L_ECRAN, ident)
+
+
+@pytest.mark.parametrize("nom,taille", [("portrait", (390, 844)), ("paysage", (844, 390))])
+def test_tout_l_ecran_du_compte_s_atteint_en_le_faisant_defiler_sur_un_telephone(page, serveur, erreurs, nom, taille):
+    """⚠️ Mesuré le 20 sept. 2026 : `.voile` centre son contenu dans un `.ecran` en
+    `overflow: hidden`, donc le compte était ROGNÉ — en portrait (écran de jeu de 390×219)
+    « Retour » était hors écran et le pseudo coupé en haut ; en paysage, la confirmation
+    d'effacement aurait débordé. Le pire état : compte ouvert, confirmation d'effacement ouverte."""
+    page.set_viewport_size({"width": taille[0], "height": taille[1]})
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""async (pseudo) => { await fetch('/api/compte/inscription', { method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pseudo: pseudo, mot_de_passe: 'un-mot-de-passe' }) }); }""", "Ecran-" + nom)
+    page.reload()
+    attendre_titre(page)
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=15000)
+    page.click("#bouton-compte")
+    page.evaluate("document.getElementById('bouton-compte-effacer').click()")
+    haut = page.evaluate("(() => { const v = document.getElementById('voile-compte'); return [v.scrollHeight, v.clientHeight]; })()")
+    if nom == "portrait":
+        assert haut[0] > haut[1], "précondition : sur ce petit écran, le contenu déborde"
+    for ident in ("compte-mot", "compte-effacer-passe", "bouton-compte-effacer-annuler",
+                  "bouton-compte-effacer-confirmer", "bouton-compte-deconnexion", "bouton-fermer-compte"):
+        assert atteignable_au_doigt(page, ident), f"{ident} est inatteignable en {nom} ({taille[0]}×{taille[1]})"
+    assert erreurs == []

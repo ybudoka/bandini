@@ -83,6 +83,8 @@ def test_on_entre_chez_un_commerce_ordinaire_et_il_porte_son_enseigne(banc):
             return p.nom && piece.porte === 'commerce';
         });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         o.entrer(porte);

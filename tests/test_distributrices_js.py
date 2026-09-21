@@ -21,6 +21,8 @@ def test_on_achete_a_la_machine_la_canette_reste_prise_et_on_brasse(banc, paquet
         });
         if (!d) return { pasDeMachine: true };
         j.x = d.x; j.y = d.y + 14; L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+        // ⚠️ On regarde la machine : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(d);
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         p.argent = 100; j.vie = 50; j.endurance = 10; j.surplus = 0;
@@ -119,6 +121,7 @@ def test_une_machine_defoncee_crache_sa_monnaie_et_ses_canettes(banc, paquet):
         const bues = canettes.filter(function (e) { return restent.indexOf(e) < 0; }).map(function (e) { return e.article; });
         // Defoncee, elle ne vend plus rien ; au matin, elle est debout.
         j.x = d.x; j.y = d.y + 14; L.Entites.indexer();
+        o.viser(d);                                            // on la regarde (test_regard_js.py)
         const brisee = !!d.brise, machine = L.Missions.distributriceSousLaMain(j);
         L.Missions.nouveauJour();
         L.Entites.indexer();
@@ -172,6 +175,8 @@ def test_a_l_hopital_les_malades_restent_couches_et_les_patients_assis(banc):
         // La machine a cafe de la salle d'attente, de la tuile d'a cote.
         const point = L.B.interieur.points.find(function (p) { return p.type === 'distributrice' && p.sorte === 'cafe'; });
         j.x = (point.x - 1) * L.TT + 8; j.y = point.y * L.TT + 8;
+        // ⚠️ On regarde la machine : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser({ x: (point.x + 0.5) * L.TT, y: (point.y + 0.5) * L.TT });
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         L.Missions.utiliserPoint(j);

@@ -91,6 +91,14 @@ def test_ils_partagent_un_plafond_et_ne_sont_jamais_tous_les_quatre(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(12);
+        // ⚠️ **AU CENTRE DU FAUBOURG, pas au terminus** (voir `test_quand_on_le_voit_...`) : un
+        // amuseur naît sur une scène HORS CHAMP mais dans la bulle, et au départ de la partie les
+        // scènes du terminus sont à l'écran. Ce juge tenait donc à la trame — sur vingt graines de
+        // jeu, une seule voyait naître un amuseur, dans la ville d'avant comme dans la nouvelle —
+        // et « aucun amuseur n'est jamais né » disait la chance, pas la règle du plafond.
+        const zf = (L.Monde.carte.zones || []).find(function (q) { return q.slug === 'faubourg'; });
+        L.B.joueur.x = (zf.x + zf.l / 2) * L.TT; L.B.joueur.y = (zf.y + zf.h / 2) * L.TT;
+        L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
         let pire = 0;
         const sortes = {};
         for (let i = 0; i < 2400; i++) {

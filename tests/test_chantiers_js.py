@@ -8,7 +8,7 @@ jamais sur quelqu'un, et défaire proprement ce qui appartenait à la maison.
 voir une phase se poser laisse tourner au moins deux cadences.
 """
 
-from app import chantiers
+from app import chantiers, vehicules
 
 #: Loin de tout chantier : le joueur y est posé quand on veut qu'une phase ait le
 #: droit de se poser. Choisi à l'exécution (voir `LOIN`).
@@ -607,7 +607,7 @@ def test_les_sons_du_chantier_sortent_avec_ou_sans_leur_fichier(banc):
         L.Jeu.commencer();
         L.Son.reveiller();
         const j = L.B.joueur, SFX = L.Son.SFX;
-        const sons = ['boule', 'marteau_piqueur', 'godet', 'bip_recul', 'marteau', 'scie'];
+        const sons = ['boule', 'marteau_piqueur', 'godet', 'bip_recul', 'marteau', 'scie', 'plaque'];
         const filet = {};
         for (const son of sons) {
             const n = joues.length;
@@ -641,3 +641,334 @@ def test_les_sons_du_chantier_sortent_avec_ou_sans_leur_fichier(banc):
     assert r["rumeur"] and r["rumeur"] > 0, "la rumeur du chantier ne tourne pas"
     assert r["eteinte"] is False, "la rumeur ne s'éteint pas"
     assert r["muettes"] == 0, "un son de chantier démarre sans atteindre la sortie"
+
+
+# --- 3e vague : la tranchée et l'équipe -------------------------------------------------
+
+#: Une toile qui note ce qu'on y peint : chaque `fillRect` avec sa couleur du moment.
+ENREGISTREUR = """
+  function enregistreur() {
+    const log = []; let style = '';
+    return new Proxy({}, {
+      get: function (t, k) {
+        if (k === 'log') return log;
+        if (k === 'fillStyle') return style;
+        return function () { if (k === 'fillRect') log.push([style].concat(Array.from(arguments))); };
+      },
+      set: function (t, k, v) { if (k === 'fillStyle') style = v; return true; },
+    });
+  }
+  // Le chantier dont la phase est `phase`, ou celui qui a une tranchée à cette phase.
+  function avecTranchee(L) {
+    const i = L.Chantiers.liste.findIndex(function (c) { return c.def.tranchee && c.def.tranchee.length; });
+    if (i < 0) throw new Error('aucun chantier n\\'a de tranchée');
+    return i;
+  }
+"""
+
+
+def test_une_plaque_claque_sous_les_roues_et_ne_coute_rien(banc):
+    """⚠️ Un nid-de-poule est un accident, une plaque d'acier est un décor qu'on
+    sent : elle claque et elle secoue, elle ne coûte rien. Même répit que les
+    nids (sans lui, un char lent la claque à chaque image), et rien à l'arrêt."""
+    r = banc(_juge(ENREGISTREUR + """
+        L.Jeu.commencer();
+        const i = avecTranchee(L), ch = L.Chantiers.liste[i], t = ch.def.tranchee, TT = L.TT;
+        const claque = [];
+        const vrai = L.Son.SFX.chantier;
+        L.Son.SFX.chantier = function (son, x, y, portee) { claque.push([son, Math.round(x), Math.round(y), portee]); return 1; };
+        const j = L.B.joueur;
+        j.x = t[0][0] * TT + 8; j.y = t[0][1] * TT + 8; L.Monde.centrerCamera(j.x, j.y);
+        const v = o.char('auto', 0, 0, 0);
+        L.Vehicules.monter(j, v);
+        v.x = t[0][0] * TT + 8; v.y = t[0][1] * TT + 8; L.Entites.indexer();
+        const out = {};
+        for (const phase of [0, 1, 2, 3, 4]) {
+            L.Chantiers.appliquer(i, phase);
+            out['phase' + phase] = t.map(function (c) { return L.Monde.plaqueDAcier(c[0], c[1]); });
+        }
+        out.ailleurs = L.Monde.plaqueDAcier(t[0][0] + 5, t[0][1] + 5);
+        L.Chantiers.appliquer(i, 2);
+        // 1. A L'ARRET
+        v.vitesse = 0; v.vx = 0; v.vy = 0; v.plaqueT = 0;
+        const vie0 = v.vie;
+        L.B.cam.secousse = 0; claque.length = 0;
+        for (let k = 0; k < 10; k++) L.Vehicules.majPlaque(v);
+        out.arret = { claque: claque.length, secousse: L.B.cam.secousse };
+        // 2. EN ROULANT : une fois, le temps du répit
+        v.vitesse = 2; v.vx = 2; v.vy = 0; v.plaqueT = 0;
+        for (let k = 0; k < 10; k++) L.Vehicules.majPlaque(v);
+        out.roule = { claque: claque.slice(), perdu: vie0 - v.vie, secousse: L.B.cam.secousse, repit: v.plaqueT };
+        // 3. Le répit passé, elle claque de nouveau.
+        v.plaqueT = 0; claque.length = 0;
+        L.Vehicules.majPlaque(v);
+        out.encore = claque.length;
+        // 4. En l'air, rien.
+        v.plaqueT = 0; v.z = 12; claque.length = 0;
+        L.Vehicules.majPlaque(v);
+        out.enLAir = claque.length;
+        v.z = 0;
+        // 5. Le trafic claque aussi, mais la caméra ne tremble que pour le joueur.
+        const autre = o.char('auto', 0, 0, 0);
+        autre.x = t[1][0] * TT + 8; autre.y = t[1][1] * TT + 8; autre.vitesse = 2; autre.vx = 2; autre.vy = 0; autre.plaqueT = 0;
+        L.B.cam.secousse = 0; claque.length = 0;
+        L.Vehicules.majPlaque(autre);
+        out.trafic = { claque: claque.length, secousse: L.B.cam.secousse };
+        L.Son.SFX.chantier = vrai;
+        return out;
+    """))
+    ph = vehicules.PHYSIQUE
+    assert r["phase0"] == [False, False] and r["phase1"] == [False, False], "des plaques avant que le terrain soit rasé"
+    assert r["phase2"] == [True, True] and r["phase3"] == [True, True], "la tranchée n'a pas ses plaques"
+    assert r["phase4"] == [False, False], "le neuf debout, les plaques claquent encore"
+    assert r["ailleurs"] is False
+    assert r["arret"] == {"claque": 0, "secousse": 0}, f"un char à l'arrêt claque : {r['arret']}"
+    assert [c[0] for c in r["roule"]["claque"]] == ["plaque"], f"une plaque, un claquement, puis le répit : {r['roule']}"
+    assert r["roule"]["perdu"] == 0, "une plaque d'acier ne coûte rien"
+    assert abs(r["roule"]["secousse"] - ph["plaque_secousse"]) < 1e-9, r["roule"]
+    assert r["roule"]["repit"] > 0, "aucun répit : la plaque claque à chaque image"
+    assert r["encore"] == 1, "le répit passé, elle ne claque plus"
+    assert r["enLAir"] == 0, "un char qui saute claque sur la plaque"
+    assert r["trafic"]["claque"] == 1 and r["trafic"]["secousse"] == 0, f"le trafic, lui : {r['trafic']}"
+
+
+def test_les_plaques_survivent_a_une_porte(banc):
+    """⚠️ Comme les nids : l'index vit SUR LA CARTE. Une pièce passe par `charger` ;
+    ressorti, la tranchée doit encore claquer."""
+    r = banc(_juge(ENREGISTREUR + """
+        L.Jeu.commencer();
+        const i = avecTranchee(L), t = L.Chantiers.liste[i].def.tranchee, c = L.Monde.carte;
+        L.Chantiers.appliquer(i, 2);
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        const j = L.B.joueur;
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Jeu.entrer(porte);
+        o.fondu();
+        const dedans = !!L.B.interieur;
+        L.Jeu.sortir();
+        o.fondu();
+        return { dedans: dedans, dehors: L.B.interieur === null,
+                 plaques: t.map(function (x) { return L.Monde.plaqueDAcier(x[0], x[1]); }) };
+    """))
+    assert r["dedans"] and r["dehors"], r
+    assert r["plaques"] == [True, True], "ressorti d'une pièce, la tranchée ne claque plus"
+
+
+def test_la_tranchee_se_peint_selon_la_phase_et_recuit_son_morceau(banc):
+    """Des plaques d'acier jusqu'au neuf, l'asphalte refait ensuite, rien avant.
+    Et le morceau de rue se recuit à chaque changement : sans cela, la couche
+    peinte du cache garde l'ancienne rue."""
+    r = banc(_juge(ENREGISTREUR + """
+        L.Jeu.commencer();
+        const i = avecTranchee(L), ch = L.Chantiers.liste[i], t = ch.def.tranchee, c = L.Monde.carte;
+        const mx = Math.floor(t[0][0] / 16), my = Math.floor(t[0][1] / 16);
+        const cle = mx + ',' + my;
+        const px = (t[0][0] - mx * 16) * 16, py = (t[0][1] - my * 16) * 16;
+        const dedans = function (r) { return r[1] >= px && r[1] < px + 32 && r[2] >= py && r[2] < py + 16; };
+        const sortie = {};
+        for (const phase of [0, 1, 2, 3, 4]) {
+            // ⚠️ Le cache doit être REMPLI avant : un juge qui regarde un cache
+            // vide ne verrait pas qu'on ne le vide plus.
+            c.morceaux.set(cle, { cuit: true });
+            L.Chantiers.appliquer(i, phase);
+            const encore = c.morceaux.has(cle);
+            const ctx = enregistreur();
+            L.Chantiers.peindre(ctx, mx, my);
+            const sur = ctx.log.filter(dedans).map(function (r) { return r[0]; });
+            sortie[phase] = { acier: sur.indexOf('#7e858d') >= 0, refait: sur.indexOf('#25262c') >= 0,
+                              ruban: sur.indexOf('#e8b33c') >= 0, encore: encore };
+        }
+        // ⚠️ Et une tranchée qui tombe dans un AUTRE morceau que la marge du bâtiment
+        // (sur la graine livrée, elle est toujours dans le même) : la tranchée
+        // recuit le sien, elle ne compte pas sur celui de la façade.
+        const loinTuile = [t[0][0], t[0][1] + 32];
+        ch.def.tranchee = [loinTuile, [loinTuile[0] + 1, loinTuile[1]]];
+        const autre = Math.floor(loinTuile[0] / 16) + ',' + Math.floor(loinTuile[1] / 16);
+        c.morceaux.set(autre, { cuit: true });
+        L.Chantiers.appliquer(i, 2);
+        sortie.autreMorceau = c.morceaux.has(autre);
+        return sortie;
+    """))
+    for phase in "01":
+        assert not r[phase]["acier"] and not r[phase]["refait"], f"la rue est peinte avant la tranchée : {r[phase]}"
+    for phase in "23":
+        assert r[phase]["acier"] and r[phase]["ruban"], f"phase {phase} : pas de plaques : {r[phase]}"
+        assert not r[phase]["refait"]
+    assert r["4"]["refait"] and not r["4"]["acier"], f"le neuf debout, la rue n'est pas refaite : {r['4']}"
+    for phase in "01234":
+        assert not r[phase]["encore"], "le morceau de la tranchée n'est pas recuit au changement de phase"
+    assert r["autreMorceau"] is False, "la tranchée ne recuit pas son propre morceau"
+
+
+def test_la_tranchee_ne_change_pas_sous_les_yeux(banc):
+    """⚠️ Des plaques qui surgissent au milieu de la rue se voient autant qu'un mur :
+    la caméra sur la TRANCHÉE (le bâtiment, lui, est plus haut que l'écran), la phase
+    qui la change attend — et se pose dès qu'on a tourné le coin."""
+    r = banc(_juge(ENREGISTREUR + """
+        L.Jeu.commencer();
+        const i = L.Chantiers.liste.findIndex(function (c) {
+            return c.posee === 1 && c.def.tranchee.length && c.def.phases[2].tranchee !== c.def.phases[1].tranchee;
+        });
+        if (i < 0) throw new Error('aucun chantier qui gagne sa tranchée à la prochaine phase');
+        const ch = L.Chantiers.liste[i], d = ch.def, t = d.tranchee;
+        // La tranchée tout en haut de l'écran : l'immeuble est au-dessus, hors de vue.
+        poserLeJoueur(L, { x: t[0][0] * 16 + 8, y: t[0][1] * 16 + L.VH / 2 - 4 });
+        const cam = L.B.cam;
+        const immeubleVu = (d.y + d.h) * 16 + 40 > cam.y;
+        const tranchee = t[0][1] * 16 + 16 > cam.y && t[0][1] * 16 < cam.y + L.VH;
+        L.B.partie.jour += d.pas;
+        o.frame(100);
+        const devant = ch.posee;
+        poserLeJoueur(L, loin(L));
+        o.frame(100);
+        return { immeubleVu: immeubleVu, tranchee: tranchee, devant: devant, apres: ch.posee, voulue: L.Chantiers.phaseVoulue(d) };
+    """))
+    assert not r["immeubleVu"] and r["tranchee"], f"le montage ne tient pas : {r}"
+    assert r["devant"] == 1, "les plaques sont apparues sous les yeux du joueur"
+    assert r["apres"] == r["voulue"] == 2, "hors de vue, la phase du jour doit se poser"
+
+
+def _equipe(o_corps: str) -> str:
+    return _juge(ENREGISTREUR + """
+        function equipe(L, id) {
+            return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant; });
+        }
+        // Le joueur au sud des postes, à portée de la bulle mais hors de l'écran.
+        function auSud(L, ch, tuile) {
+            poserLeJoueur(L, { x: tuile[0] * 16 + 8, y: tuile[1] * 16 + 8 + 300 });
+        }
+        L.Jeu.commencer();
+        const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[2].equipe.length === 2; });
+        const ch = L.Chantiers.liste[i], d = ch.def, postes = d.phases[2].equipe, id = d.id;
+        L.Chantiers.appliquer(i, 2);
+    """ + o_corps)
+
+
+def test_l_equipe_prend_son_poste_hors_de_l_ecran(banc):
+    """Un ouvrier par poste, planté, intouchable, hors de la foule — et jamais sous
+    les yeux du joueur, ni trop loin pour qu'on l'oublie aussitôt."""
+    r = banc(_equipe("""
+        // Loin : personne.
+        poserLeJoueur(L, loin(L));
+        L.Chantiers.equiper();
+        const loinN = equipe(L, id).length;
+        // Sur les postes : ils seraient vus naître.
+        poserLeJoueur(L, { x: postes[0][0] * 16 + 8, y: postes[0][1] * 16 + 8 });
+        L.Chantiers.equiper();
+        const surPlaceN = equipe(L, id).length;
+        // Au sud, à portée de la bulle, hors de l'écran.
+        auSud(L, ch, postes[0]);
+        L.Chantiers.equiper();
+        const gens = equipe(L, id);
+        const premiere = gens.length;
+        L.Chantiers.equiper(); L.Chantiers.equiper();
+        return { loinN: loinN, surPlaceN: surPlaceN, premiere: premiere, apres: equipe(L, id).length,
+                 postes: postes, gens: gens.map(function (e) {
+                     return { tx: Math.floor(e.x / 16), ty: Math.floor(e.y / 16), poste: e.posteDe, metier: e.metier,
+                              intouchable: e.intouchable, etat: e.etat, chantier: !!e.chantier, arch: e.arch,
+                              plante: !!e.plante, dansLaListe: L.B.entites.indexOf(e) >= 0 };
+                 }),
+                 voie: L.B.entites.filter(function (e) { return e.chantier; }).length };
+    """))
+    assert r["loinN"] == 0, "l'équipe naît à l'autre bout de la ville"
+    assert r["surPlaceN"] == 0, "l'équipe naît sous les yeux du joueur"
+    assert r["premiere"] == 2 and r["apres"] == 2, f"un poste, un homme — jamais deux : {r}"
+    assert sorted((g["tx"], g["ty"]) for g in r["gens"]) == sorted(tuple(p) for p in r["postes"]), r["gens"]
+    for g in r["gens"]:
+        assert g["arch"] == "ouvrier" and g["metier"] == "chantier", g
+        assert g["intouchable"] and g["etat"] == "fige" and g["plante"], g
+        assert not g["chantier"], "marqué `chantier` : il passerait pour un ouvrier de la voie fermée"
+    assert r["voie"] == 0
+
+
+def test_l_equipe_rentre_la_nuit_et_avec_la_phase(banc):
+    """Le jour elle travaille ; la nuit elle rentre — hors de l'écran seulement ;
+    et une phase sans équipe (le neuf) la renvoie chez elle."""
+    r = banc(_equipe("""
+        auSud(L, ch, postes[0]);
+        L.B.partie.heure = 0.5;
+        L.Chantiers.equiper();
+        const jour = equipe(L, id).length;
+        // La nuit, hors de l'écran : ils rentrent.
+        L.B.partie.heure = 0.95;
+        L.Chantiers.equiper();
+        const nuit = equipe(L, id).length;
+        // Et ils ne naissent pas la nuit.
+        L.Chantiers.equiper();
+        const nuitBis = equipe(L, id).length;
+        // Le matin, ils reviennent ; le neuf, ils repartent.
+        L.B.partie.heure = 0.5;
+        L.Chantiers.equiper();
+        const matin = equipe(L, id).length;
+        L.Chantiers.appliquer(i, 4);
+        auSud(L, ch, postes[0]);
+        L.Chantiers.equiper();
+        const neuf = equipe(L, id).length;
+        // La nuit, mais sous les yeux : personne ne les voit disparaître.
+        L.Chantiers.appliquer(i, 2);
+        auSud(L, ch, postes[0]);
+        L.Chantiers.equiper();
+        const avant = equipe(L, id);
+        const e = avant[0];
+        poserLeJoueur(L, { x: e.x, y: e.y + 30 });
+        L.B.partie.heure = 0.95;
+        L.Chantiers.equiper();
+        return { jour: jour, nuit: nuit, nuitBis: nuitBis, matin: matin, neuf: neuf, sousLesYeux: equipe(L, id).length,
+                 avant: avant.length };
+    """))
+    assert r["jour"] == 2, r
+    assert r["nuit"] == 0 and r["nuitBis"] == 0, f"la nuit, l'équipe est encore au travail : {r}"
+    assert r["matin"] == 2, f"au matin, l'équipe ne revient pas : {r}"
+    assert r["neuf"] == 0, f"personne ne travaille sur un bâtiment neuf : {r}"
+    assert r["sousLesYeux"] == r["avant"], f"l'équipe disparaît sous les yeux du joueur : {r}"
+
+
+def test_l_equipe_regarde_passer(banc):
+    """À moins de `REGARD` pixels, le visage tourné vers le joueur ; sinon vers la
+    machine du jour."""
+    r = banc(_equipe("""
+        auSud(L, ch, postes[0]);
+        L.B.partie.heure = 0.5;
+        L.Chantiers.equiper();
+        const e = equipe(L, id)[0];
+        const face = function (x, y) {
+            poserLeJoueur(L, { x: x, y: y });
+            e.face = 'bas';
+            L.Chantiers.maj();
+            return e.face;
+        };
+        const proche = { est: face(e.x + 40, e.y), ouest: face(e.x - 40, e.y), nord: face(e.x, e.y - 40), sud: face(e.x, e.y + 40) };
+        const m = ch.machines[0];
+        const eloigne = face(e.x + 60, e.y + L.Chantiers.REGARD + 200);
+        const dx = m.x - e.x, dy = m.y - e.y;
+        const versLaMachine = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
+        return { proche: proche, eloigne: eloigne, versLaMachine: versLaMachine };
+    """))
+    assert r["proche"] == {"est": "droite", "ouest": "gauche", "nord": "haut", "sud": "bas"}, r["proche"]
+    assert r["eloigne"] == r["versLaMachine"], f"loin du joueur, il ne regarde pas sa machine : {r}"
+
+
+def test_l_equipe_suit_la_phase(banc):
+    """⚠️ Un poste pris par l'homme d'hier reste « pris » : sans le renvoi de
+    l'équipe au changement de phase, il resterait planté là où la grue se pose."""
+    r = banc(_juge(ENREGISTREUR + """
+        L.Jeu.commencer();
+        const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[3].equipe.length === 2; });
+        const ch = L.Chantiers.liste[i], d = ch.def, id = d.id;
+        const equipe = function () { return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant; }); };
+        L.B.partie.heure = 0.5;
+        L.Chantiers.appliquer(i, 2);
+        poserLeJoueur(L, { x: d.phases[2].equipe[0][0] * 16 + 8, y: d.phases[2].equipe[0][1] * 16 + 8 + 300 });
+        L.Chantiers.equiper();
+        const hier = equipe();
+        L.Chantiers.appliquer(i, 3);
+        const apresChangement = equipe().length, hierEncore = hier.filter(function (e) { return L.B.entites.indexOf(e) >= 0; }).length;
+        L.Chantiers.equiper();
+        return { hier: hier.length, apresChangement: apresChangement, hierEncore: hierEncore,
+                 aujourdhui: equipe().map(function (e) { return [Math.floor(e.x / 16), Math.floor(e.y / 16)]; }),
+                 postes: d.phases[3].equipe };
+    """))
+    assert r["hier"] == 2
+    assert r["apresChangement"] == 0 and r["hierEncore"] == 0, f"l'équipe d'hier est restée : {r}"
+    assert sorted(r["aujourdhui"]) == sorted(r["postes"]), f"l'équipe du jour n'est pas aux postes de la phase : {r}"

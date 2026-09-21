@@ -55,7 +55,10 @@ def test_hors_champ_il_s_efface_a_la_fermeture_et_revient_a_l_ouverture(banc, pa
         L.B.partie.heure = %(ferme)s;
         o.frame(61);
         const ferme = { lien: !!etal.vendeur, dansLaVille: L.B.entites.indexOf(avant) >= 0 };
-        j.x = etal.x; j.y = etal.y + 22; L.Entites.indexer(); L.Missions.majInvite(j);
+        j.x = etal.x; j.y = etal.y + 22;
+        // ⚠️ On regarde la cabane : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(etal);
+        L.Entites.indexer(); L.Missions.majInvite(j);
         const invite = L.B.invite;
         L.B.partie.argent = 100;
         const achat = L.Missions.interagir(j);

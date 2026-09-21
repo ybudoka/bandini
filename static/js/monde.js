@@ -63,6 +63,11 @@ const Monde = (function () {
   //: batiment effacait tous les nids de la ville jusqu'au rechargement.
   function nidDePoule(tx, ty) { return !!(carte && carte.nids && carte.nids.has(tx + ',' + ty)); }
 
+  //: Les PLAQUES D'ACIER des tranchées de chantier (`chantiers.js` les pose et les
+  //: retire avec la phase du jour) : même règle que les nids, l'index vit SUR LA
+  //: CARTE, et « x,y » -> vrai.
+  function plaqueDAcier(tx, ty) { return !!(carte && carte.plaques && carte.plaques.has(tx + ',' + ty)); }
+
   //: Le STANDING d'une tuile (des quartiers qu'on reconnait) : 'cossu',
   //: 'ordinaire', 'pauvre', ou null sur l'eau et dans une piece. ⚠️ Python l'a
   //: DECIDE (`carte.STANDING`, une lettre par bloc) ; ici on le lit, avec la meme
@@ -128,12 +133,34 @@ const Monde = (function () {
     return ville.coeur;
   }
 
+  //: **LE DEVANT D'UNE PORTE** : trois tuiles dans l'axe, une de chaque cote — la
+  //: fenetre que la ville tient libre (`app/devants.py`) et que ce qu'une mission
+  //: pose (un donneur, des hommes de main, un panneau) ne prend pas non plus.
+  //: ⚠️ La fenetre vient du PAQUET (`def.devant`), elle ne s'ecrit pas ici : deux
+  //: chiffres qui divergent, et la ville degage une zone que le jeu remplit.
+  //: Une piece n'en a pas (`def.devant` absent) : un ensemble vide.
+  function devantsDePortes(def, portesVues) {
+    const devants = new Set();
+    const fen = def.devant;
+    if (!fen) return devants;
+    (def.devantures || []).concat(def.residences || []).forEach(function (f) {
+      for (let i = 0; i < f.motifs.length; i++) if (f.motifs[i] === 'P') portesVues.push({ x: f.x + i, y: f.y });
+    });
+    for (const p of portesVues) {
+      for (let dy = 1; dy <= fen.profondeur; dy++) {
+        for (let dx = -fen.cote; dx <= fen.cote; dx++) devants.add((p.x + dx) + ',' + (p.y + dy));
+      }
+    }
+    return devants;
+  }
+
   function charger(def) {
     const w = def.largeur, h = def.hauteur;
     const solide = new Uint8Array(w * h);
     const route = new Uint8Array(w * h);
     const passage = new Uint8Array(w * h);     // passage pieton : route ET trottoir
     const portesFermees = [];                   // les « d » : par ou les gens rentrent chez eux
+    const portesVues = [];                      // toutes celles qu'on VOIT : D, d, G (et les peintes, plus bas)
     for (let y = 0; y < h; y++) {
       const ligne = def.sol[y];
       for (let x = 0; x < w; x++) {
@@ -146,6 +173,7 @@ const Monde = (function () {
         // un interieur. Les gens passent les deux ; le joueur, seulement les
         // `D` — et le dessin le dit deja, c'est ce qui rend la regle lisible.
         if (ligne[x] === 'd' || ligne[x] === 'D') portesFermees.push({ x: x, y: y, glyphe: ligne[x] });
+        if (ligne[x] === 'd' || ligne[x] === 'D' || ligne[x] === 'G') portesVues.push({ x: x, y: y });
       }
     }
     const portes = new Map();
@@ -184,6 +212,7 @@ const Monde = (function () {
       // Le plancher d'une piece : ce qu'on peint SOUS les meubles (null dehors).
       plancher: def.plancher || null,
       solide: solide, route: route, passage: passage, portesFermees: portesFermees,
+      devants: devantsDePortes(def, portesVues),
       morceaux: new Map(), visibles: new Set(),
       // Les battants qui s'ouvrent : hors du cache de morceaux (voir `ouvrirPorte`).
       battants: new Map(),
@@ -193,6 +222,7 @@ const Monde = (function () {
       }),
       portesParTuile: portes, mini: null, croisements: croisements, arrets: def.arrets || {},
       nids: new Set((def.nids_de_poule || []).map(function (n) { return n.x + ',' + n.y; })), coeur: null,
+      plaques: new Set(),
       quartiers: def.grille && def.grille.standing ? {
         standing: def.grille.standing, usage: def.grille.usage || null,
         usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
@@ -394,13 +424,20 @@ const Monde = (function () {
     if (!total) return null;
     const jour = B.partie ? B.partie.jour : 0;
     if (entraveJour.jour !== jour) {
+      // ⚠️ `ecartee` : Python a marque celles qui tombent devant une porte
+      // (`app/devants.py`). On tire dans la liste ENTIERE — une entree de moins
+      // rebattrait tous les jours —, puis on passe a la suivante tant que celle-ci
+      // est ecartee. Le jour dont le tirage ne tombait pas sur elles ne change pas.
+      const tous = voies.concat(rues);
       // ⚠️ UNE SEULE PAR JOUR, et c'est ce qui evite d'avoir a juger les
       // COMBINAISONS : deux fermetures prises separement dans une liste valide
       // peuvent, ensemble, isoler un bloc. Une seule, et la question ne se pose
       // pas.
-      const i = hash2(jour, 9173) % total;
+      let i = hash2(jour, 9173) % total;
+      for (let k = 0; k < total && tous[i].ecartee; k++) i = (i + 1) % total;
+      if (tous[i].ecartee) { entraveJour = { jour: jour, b: null }; return null; }   // toutes ecartees
       const rue = i >= voies.length;
-      const c = rue ? rues[i - voies.length] : voies[i];
+      const c = tous[i];
       const f = (rue ? def.fermeture : def.entrave) || {};
       entraveJour = { jour: jour, b: {
         slug: rue ? 'rue_barree' : 'entrave',
@@ -493,7 +530,11 @@ const Monde = (function () {
     if (ecoule >= f.minutes) return null;
     const graine = jour * 1607 + heure;
     if (hash2(graine, 0xA9DE) / 4294967296 >= f.chance_par_heure) return null;
-    const c = liste[hash2(graine, 0x5EA0) % liste.length];
+    // ⚠️ `ecartee` : le bris qui tombe devant une porte (`app/devants.py`) passe au suivant.
+    let i = hash2(graine, 0x5EA0) % liste.length;
+    for (let k = 0; k < liste.length && liste[i].ecartee; k++) i = (i + 1) % liste.length;
+    if (liste[i].ecartee) return null;
+    const c = liste[i];
     brisEnCours.b = {
       slug: 'aqueduc', nom: "Un bris d'aqueduc",
       x: c.x, y: c.y, l: 1, h: 1,
@@ -951,6 +992,9 @@ const Monde = (function () {
     }
   }
 
+  /** Cette tuile est-elle DEVANT une porte (le pas, l'axe a trois tuiles, ses flancs) ? */
+  function devantDUnePorte(tx, ty) { return !!carte && carte.devants.has(tx + ',' + ty); }
+
   /** Une porte a cette tuile ? (index : on interroge a chaque image) */
   function porteA(tx, ty) {
     return carte.portesParTuile.get(tx + ',' + ty) || null;
@@ -1063,11 +1107,22 @@ const Monde = (function () {
     return !!(p && p.rampe);
   }
 
-  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade),
-      au sud dedans (la sortie est sur le mur du bas). Jamais les deux. */
+  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade), au
+      sud dedans (la sortie est sur le mur du bas). Jamais les deux.
+
+      ⚠️ DEHORS, IL FAUT LA REGARDER : le dos tourne a la porte, il n'y en a pas, et
+      l'invite « ENTRER » comme ACTION passent par ici. ⚠️ DEDANS, NON — c'est
+      l'exception de la sortie : en entrant on regarde vers le fond de la piece, la
+      porte est dans le dos, et c'est le jeu qui nous y a mis. Sortir reste le
+      geste vif du bloquant du 13 sept. 2026 (« chez Ti-Paul, il est impossible de
+      sortir »), pas un demi-tour a deviner. */
   function porteDevant(e) {
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
-    return porteA(tx, ty - 1) || porteA(tx, ty + 1);
+    for (const dy of [-1, 1]) {
+      const porte = porteA(tx, ty + dy);
+      if (porte && (B.interieur || faceA(e, (tx + 0.5) * TT, (ty + dy + 0.5) * TT))) return porte;
+    }
+    return null;
   }
 
   /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */
@@ -1743,11 +1798,11 @@ const Monde = (function () {
     charger, entrer, changerPiece, restaurer, glyphe, solidite, bloque, defoncer, estEnjambable,
     barrieres, barriereFermee, barriereA, barriereBloque, barriereEnjambable, barrieresFermees, dessinerBarrieres,
     brisDAqueduc, dansLaFoire, resquille,
-    feuxClignotent, arterePasse, nidDePoule, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
+    feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
-    ligneLibre, porteA, porteDevant, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
+    ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },

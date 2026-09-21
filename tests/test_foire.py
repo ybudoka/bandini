@@ -310,6 +310,8 @@ def test_la_galerie_prete_sa_carabine_a_bouchon_et_la_reprend(banc):
         const j = L.B.joueur;
         const g = L.Foire.jeux().find(function (q) { return q.slug === 'galerie_tir'; });
         j.x = g.x * L.TT + 8; j.y = (g.y + 2) * L.TT + 8;
+        // ⚠️ On regarde le comptoir : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser({ x: g.x * L.TT + 8, y: g.y * L.TT + 15 });
         L.Entites.indexer();
         o.tape('KeyE'); o.frame(1);      // le comptoir
         o.tape('KeyE'); o.frame(1);      // COMMENCER
@@ -994,6 +996,8 @@ def test_on_fait_un_tour_de_montagne_russe(banc, paquet):
         m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
         const p = F.pointDeMontagne(m.s - d.ecart_px);
         j.x = p.x + 1; j.y = p.y + 12; j.invincible = 999999;
+        // ⚠️ On regarde le chariot : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(p);
         L.Monde.centrerCamera(j.x, j.y);
         o.frame(1);
         const invite = B.invite;
@@ -1038,6 +1042,8 @@ def test_le_chariot_penche_et_passe_le_looping_la_tete_en_bas(banc, paquet):
         m.s = m.sGare; m.v = 0; m.attente = d.gare_images;
         const p = F.pointDeMontagne(m.s - 2 * d.ecart_px);
         j.x = p.x; j.y = p.y + 12;
+        // ⚠️ On regarde le chariot : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(p);
         o.tape('KeyE', 1);
         const crans = {}, couleurs = [];
         const vrai = A.cuireCap;

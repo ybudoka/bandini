@@ -105,8 +105,16 @@ function banc(corps) {
    // L'ecran du compte (M14, 2e vague).
    'voile-compte', 'bouton-compte', 'bouton-fermer-compte', 'compte-form', 'compte-pseudo', 'compte-passe',
    'compte-courriel', 'compte-etat', 'compte-mot', 'compte-parties', 'bouton-compte-inscription',
-   'bouton-compte-connexion', 'bouton-compte-deconnexion'].forEach(function (id) {
-    const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel';
+   'bouton-compte-connexion', 'bouton-compte-deconnexion',
+   // Le NIP (M14, 3e vague).
+   'nip-form', 'nip-code', 'nip-etat', 'bouton-nip-mot-de-passe',
+   'nip-activer-form', 'nip-nouveau', 'bouton-nip-activer', 'nip-retrait', 'bouton-nip-retirer',
+   // Effacer son compte (M14, 4e vague).
+   'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
+   'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde']
+    .forEach(function (id) {
+    const entree = id.indexOf('compte-pseudo') === 0 || id === 'compte-passe' || id === 'compte-courriel'
+      || id === 'nip-code' || id === 'nip-nouveau' || id === 'compte-effacer-passe';
     elements[id] = faireElement(id.indexOf('bouton') === 0 ? 'button' : entree ? 'input' : 'div', id);
   });
   const body = faireElement('body');
@@ -175,6 +183,12 @@ function banc(corps) {
     document: doc, console: console, Math: FauxMath, Date: Date, JSON: JSON, Object: Object, Array: Array,
     Uint8Array: Uint8Array, Uint8ClampedArray: Uint8ClampedArray, Int32Array: Int32Array, Float32Array: Float32Array,
     Map: Map, Set: Set, Promise: Promise, Error: Error, String: String, Number: Number, Boolean: Boolean,
+    // Le NIP (M14, 3e vague) : la meme WebCrypto que le navigateur — Node l'expose
+    // depuis `node:crypto`, aussi vraie que celle d'un vrai navigateur (PBKDF2, AES-GCM).
+    crypto: require('node:crypto').webcrypto,
+    TextEncoder: TextEncoder, TextDecoder: TextDecoder,
+    btoa: function (s) { return Buffer.from(s, 'binary').toString('base64'); },
+    atob: function (s) { return Buffer.from(s, 'base64').toString('binary'); },
     Event: function (t) { this.type = t; }, performance: { now: function () { return horloge; } },
     setTimeout: function () { return 0; }, clearTimeout: function () {}, setInterval: function () { return 0; }, clearInterval: function () {},
     requestAnimationFrame: function (cb) { rafCb = cb; return 1; }, cancelAnimationFrame: function () {},

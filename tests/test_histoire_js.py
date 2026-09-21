@@ -15,6 +15,8 @@ def test_les_donneurs_attendent_devant_leur_porte_et_ti_guy_parle(banc, paquet):
         const pres = Math.hypot(t.x - terminus.x, t.y - terminus.y);
         const invite0 = (L.Missions.majInvite(j), L.B.invite);
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On regarde Ti-Guy : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(t);
         L.Missions.majInvite(j);
         const invite = L.B.invite;
         const parle = L.Missions.interagir(j);
@@ -60,6 +62,8 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         };
         const t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On regarde Ti-Guy : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(t);
         L.Missions.interagir(j);
         // On passe les repliques a ACTION, une a une — et la SCENE, qui continue
         // apres ses mots, a PAUSE (2e vague des scenes).
@@ -397,7 +401,7 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
         const unPeuPlusTard = { t: B.defi && B.defi.t, etoiles: B.recherche.etoiles };
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
         for (const c of cotes) {
-            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
             if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
         }
         o.tape('KeyE', 2);                                // on monte
@@ -519,6 +523,8 @@ def test_le_sergent_et_josee_se_voient_dans_leur_piece(banc):
                           gens: L.B.entites.filter(function (q) { return q.type === 'pieton'; }).length };
             if (e) {
                 j.x = e.x - 14; j.y = e.y; L.Entites.indexer();
+                // ⚠️ On regarde le donneur : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+                o.viser(e);
                 L.Missions.majInvite(j);
                 dit.invite = L.B.invite;
                 dit.parle = L.Missions.utiliserPoint(j);
@@ -769,6 +775,8 @@ def test_la_premiere_replique_se_dit_quand_on_parle_au_bouton(banc, paquet):
             const d = L.Histoire.donneur(slug);
             if (!d) return { absent: true };
             j.x = d.x - 14; j.y = d.y; L.Entites.indexer();
+            // ⚠️ On regarde le donneur : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+            o.viser(d);
             L.Son.Voix.demandees.length = 0;
             if (manette) { o.pad([0, 0, 0, 0], [1]); o.frame(1); o.pad([0, 0, 0, 0], [0]); o.frame(1); }
             else { o.touche('KeyE'); o.frame(1); o.relacher('KeyE'); o.frame(1); }
@@ -843,7 +851,7 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         }
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
         for (const c of cotes) {
-            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
             if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
         }
         o.tape('KeyE', 2);
@@ -876,7 +884,7 @@ def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
         function monter(v) {
             const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
             for (const c of cotes) {
-                j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer();
+                j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
                 if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
             }
             o.tape('KeyE', 2);
@@ -960,7 +968,7 @@ def test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur(banc):
             const ecart = Math.hypot(v.x - mien.x, v.y - mien.y);
             L.Vehicules.descendre(j, true); o.frame(2);
             const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
-            for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+            for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
             o.tape('KeyE', 2);
             const rec = { slug: v.slug, ecart: Math.round(ecart), monte: j.dansVehicule === v, etape: B.partie.mission.etape };
             L.Histoire.echouer('arrete'); B.cinema = null; B.dialogue = null; B.recherche.etoiles = 0;
@@ -999,7 +1007,7 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
         for (let n = 0; n < 30 && B.partie.mission.etape < 1; n++) o.frame(1);
         const v = B.mission.vehicule;
         const cotes = [[0, 16], [0, -16], [16, 0], [-16, 0], [0, 22], [0, -22]];
-        for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
+        for (const c of cotes) { j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v); if (L.Vehicules.vehiculeSousLaMain(j) === v) break; }
         o.tape('KeyE', 2);
         o.frame(2);
         const e = B.mission.escorte;

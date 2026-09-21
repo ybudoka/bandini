@@ -143,9 +143,9 @@ ne bougent pas quand l'ordre de travail change.
 | Une passe visuelle sur les pâtés de maison | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-passe-visuelle-sur-les-pâtés-de-maison) |
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
-| Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille) | 16 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
+| Ça travaille : chantiers et démolitions | ⬜ **en cours** (3 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe — restent le signaleur, le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; **la 2e — le jeu se synchronise — est en cours**) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (4 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, et effacer son compte ; **la 5e — le défi du jour — est en cours** ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -214,6 +214,10 @@ ne bougent pas quand l'ordre de travail change.
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Une mission s'ajoute comme un bloc Lego | ✅ **livré** | 20 sept. 2026 | **P3** | ajout | [notes](#une-mission-sajoute-comme-un-bloc-lego) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
+| On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
+| Rien devant une porte, plus large | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
+| Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
+| Le tour du propriétaire montre ses quatre contacts | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-tour-du-propriétaire-montre-ses-quatre-contacts) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -238,7 +242,7 @@ est un oubli avec du style.
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | Le **bateau** reste en phase 2 (sans sprite, hors trafic) | Physique à part, tuiles d'eau carrossables, un quai où embarquer — il coûte plus qu'il ne donne aujourd'hui | Si le **traversier de M12** ne suffit pas à donner envie de l'eau. Sinon il tombe en v3, et la fiche le dit |
-| **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo) |
+| **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo). ⚠️ **Échue** : l'écran est en ligne depuis le 17 sept. 2026, et la confirmation d'effacement (4e vague) est un second endroit où l'on devine un mot de passe |
 
 ⚠️ Et une **fausse** dette, pour qu'on arrête de la reprendre : `tests/test_navigateur.py` est
 exclu de la commande de tous les jours ci-dessous parce qu'il monte un Chromium et prend des
@@ -638,7 +642,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
 | `musique.py` | la musique **écrite en notes** (notes, tempo, formes d'onde) — le **filet** depuis que les quinze morceaux sont des mp3 générés (`audio.MUSIQUES` en porte la recette) ; `scripts/musique_apercu.py` rend les notes en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix, et la couverture : aucun morceau sans musique générée) |
 | `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé ; les enseignes du standing (`COMMERCES_COSSUS`, `COMMERCES_PAUVRES`, `A_LOUER`, `PART_PLACARDEE`) | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
-| `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison) |
+| `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit ; **la tranchée** (deux tuiles d'asphalte sous la façade, plaques d'acier puis rue rapiécée, sans changer une tuile) et **l'équipe** (les postes des ouvriers, dans leur propre dé) | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`, la tranchée qui évite tout ce qui parle déjà, les postes hors des couloirs), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison, la plaque qui claque sans rien coûter, l'équipe qui naît hors de l'écran et rentre la nuit) |
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
 | `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
@@ -647,12 +651,13 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; la **nuit de déneigement** (le lendemain d'une tempête, un secteur par tempête) et ses panneaux, un au coin de chaque boîte ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, `test_deneigement.py`, `test_deneigement_js.py`, la sonde de `test_navigateur.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
+| `devants.py` | **rien devant une porte, plus large** : à la toute fin de `generer`, sans un dé, DÉPLACE ce qui bouche le devant d'une porte (trois tuiles dans l'axe, une de chaque côté ; deux de plus et une de plus devant un lieu de mission, lu dans `missions`) — les scènes, les kiosques et leur réclame, le décor mobile — sur la tuile voisine la plus proche, et MARQUE `ecartee` la voie fermée, la rue barrée et le bris d'aqueduc qui y tombent (le jeu passe à la suivante) ; la fenêtre voyage dans `ville["devant"]` | `test_devants.py` (rien ne reste devant une porte, la ville ne bouge que ce qui bouchait, aucun dé, les lieux de mission), `test_devants_js.py` (`Monde.devantDUnePorte`, `Histoire.tuileLibre`, la voie et le bris écartés) |
 | `vitrines.py` | **les commerces montent et descendent**, sur la ville finie : renomme les enseignes des blocs cossus et pauvres (même famille, même bandeau, loin de son double), placarde une vitrine sur trois en pauvre (`B`, jamais sur une machine), vide un commerce fermé sur cinq (`A LOUER`), marque le `standing` des façades — sans tirer un dé ni toucher une tuile | `test_quartiers.py` (enseignes, façades, locaux vides, rien de déplacé) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement, `effacer` — le compte pour vrai, mot de passe redemandé, 403 et jamais 401 ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
 | `comptes.py` | les comptes (M14) : `inscrire` (pseudo — la règle vit ici depuis le retrait du tableau des scores —, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
@@ -676,7 +681,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
-| 1b | `compte.js` | **le compte, côté jeu** (M14, 2e vague) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer |
+| 1b | `compte.js` | **le compte, côté jeu** (M14) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer ; le **NIP** (3e vague) — un verrou d'écran sur un appareil déjà lié, jamais un second mot de passe : PBKDF2 → AES-GCM (WebCrypto) chiffre le jeton d'appareil localement, cinq essais ratés l'effacent sans jamais toucher au compte ; **effacer son compte** (4e vague) — le serveur efface pour vrai, cet appareil oublie son NIP et son témoin, et **ses parties locales ne bougent pas** |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -690,7 +695,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9d | `traversier.js` | le **traversier** : sa place ne dépend que de l'heure (`placeA`, un trapèze de vitesse), le pont posé dans la carte à quai (`poser`/`lever`, chaque octet rendu), l'embarquement de ce qui est sur le pont au départ (`aBord` : les chars et le joueur suivent la coque au pixel, un passant égaré est remis sur le quai), Radio-Traversier à bord, la corne, la ligne du HUD, la coque et les panneaux triés avec les passants (comme la foire), le pointillé de la grande carte |
 | 9e | `neige.js` | la **tempête de neige** : l'intensité à l'heure (`intensiteA`), 0 sans l'option ; les coefficients qu'elle donne à la physique (`adherence`, `frein`, `vitesseTrafic`) ; les tuiles déblayées par la charrue (`deneiger`, la seule mémoire) ; la neige au sol par plages et le voile avec ses flocons ; le vent en boucle ; la **nuit de déneigement** (`operationA`, les panneaux qui clignotent, ce qui reste dans les rues du secteur part au lot par `Missions.saisir`) |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A\*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital, le **refuge** (`auRefuge` : sur l'île, aucun agent, l'hélico repart, rien ne fait monter les étoiles) |
-| 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce |
+| 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce ; **la tranchée** (les plaques d'acier dans `carte.plaques`, la couche peinte des plaques et de la rue rapiécée, le morceau recuit) et **l'équipe** (`equiper`, `regarder` : qui tient son poste le jour, rentre la nuit et regarde passer) |
 | 12 | `foire.js` | la foire qui roule : **le petit train** (sa voie en pixels depuis les tuiles `T`, l'arrêt devant quelqu'un, `bloquer` — on ne traverse pas un wagon) et **la montagne russe** (la voie 3D tracée par Python, conduite par l'énergie, deux moitiés cuites) ; rien dans `B.entites`, trié au dessin par `ajouterVisibles` |
 | 13 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
 | 13b | `scenes.js` | **le metteur en scène** : joue une liste de plans (`missions.TYPES_PLANS`) sans connaître aucune scène par son nom — `jouer(scene, contexte)`, `maj()`, `passer()` ; aucun dé, la ville figée, une seule façon de finir (jouée ou passée), le joueur rendu où il était, trois secondes au plus après le dernier mot |
@@ -744,7 +749,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py devants.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
       bd.py comptes.py
 app/missions/  __init__.py _commun.py et une mission par fichier (m1.py … m97.py) — le moteur, les personnages, les défis et les scènes vivent dans __init__.py, chaque mission dans son propre fichier
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
@@ -757,13 +762,13 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_menus_au_doigt_js.py test_son_js.py
-        test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
+        test_musique.py test_devantures.py test_devantures_js.py test_devants.py test_devants_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
         test_eau_son_js.py test_eau_basse_js.py test_amuseurs_js.py test_roue_js.py test_sieste_js.py test_debug_js.py
         test_reclame.py test_reclame_js.py test_kiosque_ferme_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
-        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py
+        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py test_regard_js.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
         test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
@@ -8280,10 +8285,62 @@ tremble à deux pas, et le mur frappé porte un trou et ses fissures.
   marge fixe la faisait surgir en montant la rue), et une phase attend aussi que la flèche
   d'une machine soit hors de l'écran. **6 juges de banc, 2 Python (5 cas) et 1 d'audio,
   chaque règle vue rouge sans elle (21 mutations).**
-- ⚠️ À écouter par Martin : aucun juge ne dit qu'un son est le bon. Reste : le réservoir
-  (tas de terre qui fait rampe, conteneur qu'on pousse, plaques qui claquent, signaleur qui
-  arrête le trafic) ; de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 —
-  la pelle conduisible, après la refonte des véhicules.
+- ⚠️ À écouter par Martin : aucun juge ne dit qu'un son est le bon.
+
+⚠️ **3e vague livrée le 20 sept. 2026 — la tranchée et l'équipe.** Un chantier qui travaille
+sans un homme dessus est un décor, et il s'arrête net à sa palissade : la vague lui donne
+**du monde** et **la rue d'en face**.
+
+- ⚠️ **La tranchée** (`chantiers._tranchee`) : deux tuiles d'**asphalte nu** sous la façade, sur
+  la première chaussée qui les offre (5 à 8 rangées plus bas sur la graine livrée), couvertes de
+  **plaques d'acier** boulonnées au ruban jaune et noir tant qu'on travaille (phases 2 et 3),
+  puis **rapiécées** — un carré plus sombre, joints scellés — quand le neuf est debout. Elle ne
+  change **aucune tuile** : elle se peint et se sent, donc les juges de géométrie de chaque phase
+  n'ont pas bougé d'une ligne. Jamais dans un croisement, sur une ligne d'arrêt, un nid, une
+  entrave, une fermeture, un pont, une barrière, ni à trois tuiles d'un bris d'aqueduc — chaque
+  exclusion a sa carte écrite à la main. **Facultative** : quand une fermeture couvre la rue
+  d'en face (graines 7 et 2026, un chantier sur trois), le chantier n'en a pas et n'en est pas
+  refusé ; le juge exige les trois de la graine livrée et deux sur trois ailleurs, pour qu'une
+  règle qui ne trouve jamais rien ne passe pas inaperçue.
+- ⚠️ **Elle claque** (`Vehicules.majPlaque`) : la roue avant, la plaque qui résonne, la roue
+  arrière — un son **synthétisé** (`REPLI_CHANTIER.plaque`, pas de fichier : un cahot n'en a pas
+  besoin), une secousse plus douce que le nid-de-poule (`plaque_secousse` 0,28 contre 0,35) et
+  **aucun point de carrosserie** : un nid est un accident, une plaque est un décor qu'on sent.
+  Même répit que les nids, rien à l'arrêt ni en l'air. **Le trafic claque aussi**, posé là où il
+  roule et entendu à la distance — mais la caméra ne tremble que pour le char du joueur. L'index
+  (`carte.plaques`) vit **sur la carte**, comme celui des nids : une porte franchie ne l'efface pas.
+- ⚠️ **L'équipe** (`chantiers._postes`, `Entites.naitreLEquipe`) : personne sur la maison
+  condamnée ni sur le neuf, **un homme** à la démolition, **deux** quand la pelle puis la grue
+  travaillent. Python choisit les **postes** : une tuile du terrain libéré aux quatre voisines
+  libres (jamais dans un couloir — un homme planté y ferait bouchon), à deux ou quatre tuiles de
+  la machine, à deux tuiles l'un de l'autre. Ils naissent **hors de l'écran et dans la bulle**,
+  intouchables comme les ouvriers de la voie fermée, **hors de la foule** (`metier`), plantés,
+  et **regardent passer** : à moins de 90 px le visage vers le joueur, sinon vers leur machine. La
+  nuit ils rentrent — hors de l'écran seulement. ⚠️ Ils portent `equipeDe` et `posteDe`, **pas**
+  `chantier` : `naitreLesOuvriers` compte « qui travaille » avec `q.chantier`, et une équipe de
+  chantier marquée pareil faisait ne plus naître celle de la voie fermée (le piège de la grue,
+  déjà payé une fois). Et au changement de phase l'équipe d'hier **s'en va** : un poste pris par
+  son homme reste « pris », il serait resté planté là où la grue se pose.
+- ⚠️ **Leur propre dé, un par chantier** : les trois chantiers de la graine livrée sont restés
+  où ils étaient, avec les mêmes machines et les mêmes tuiles — un juge rejoue `tirer` avec les
+  annexes retirées et compare.
+- ⚠️ **Deux juges verts qui ne mordaient pas**, trouvés à la mutation : le recuit du morceau de la
+  tranchée (sur la graine livrée, elle tombe **toujours** dans le même morceau que la marge du
+  bâtiment — le cache vidé par la marge cachait celui qu'on avait retiré : un cas synthétique, à
+  32 tuiles de là, et un cache **rempli** avant de le vider) et « personne sur une maison
+  condamnée » (le juge relisait la constante qu'on mutait). Et la tranchée, à cinq ou huit
+  tuiles de la façade, n'est pas dans le rectangle que la phase attend hors de l'écran : elle a
+  **son propre test** (`enVue`), et le juge met la caméra sur elle, l'immeuble au-dessus de
+  l'écran.
+- ⚠️ **Regardé dans Chromium avant de livrer** (les juges verts ont déjà laissé passer un
+  damier) : la plaque se lit, le ruban aussi, les hommes en gilet orange entourent la pelle ; la
+  rue rapiécée était trop noire — on aurait dit un trou — et a été éclaircie d'un cran.
+- **16 juges Python + 8 de banc, 28 mutations, chaque règle vue rouge sans elle.** Reste : le
+  signaleur (LENTEMENT d'un côté, ARRÊT de l'autre — une sorte de gens qui **arrête le trafic**,
+  toi aussi), le conteneur qu'on pousse, le tas de terre qui fait rampe, de nouveaux chantiers
+  quand les premiers sont finis ; et l'étage 2 — la pelle conduisible, après la refonte des
+  véhicules. À écouter par Martin : le claquement de la plaque n'a pas de fichier ElevenLabs,
+  et le filet synthétisé est ce qu'on entend.
 
 ### M12 La ville vit
 
@@ -8863,6 +8920,187 @@ borne de la route, `foreign_keys`).
   `bandini-sauvegarde-bd.timer` et `shared/copies/` — `deploy.sh` ne touche pas systemd.
   Rien ne presse tant que personne ne peut créer de compte : la base n'existe qu'à la
   première requête de compte.
+
+**2e vague livrée** (17 sept. 2026) : **le jeu se synchronise**, et le compte se voit enfin.
+`static/js/compte.js` (le seul endroit du jeu qui parle à `/api/compte/`), l'**écran du
+compte** au titre (une voile DOM — un mot de passe se tape, et un menu de manette sait
+choisir, pas écrire ; le bouton porte le pseudo dès qu'un compte est ouvert), le **compteur
+des sauvegardes** dans `Sauvegarde` (`base.js`), et le **choix entre deux versions** dans le
+menu des PARTIES.
+
+- ⚠️ **L'ouverture passe en premier, et SEULE.** Le jeton tourne à
+  `POST /api/compte/ouvrir` : un appel de compte parti avant sa réponse arriverait avec un
+  jeton déjà remplacé et passerait pour un vol — tous les appareils coupés, pour rien. Tout
+  ce que le jeu demande attend derrière sa promesse, dans une file où deux appels ne se
+  croisent jamais. C'est une **connexion** qui le prouve au banc : elle, n'attend pas d'être
+  « ouvert » pour partir.
+
+- ⚠️ **Le compteur seul ne dit pas s'il y a conflit.** « Mon local est à 41, le serveur à
+  40 » ne dit pas si j'ai joué depuis SA version ou si nous avons joué chacun de notre côté.
+  La réponse est dans ce que cet appareil a vu du compte la dernière fois
+  (`bandini-compte-sync-v1`, rangé sous le pseudo : un autre compte repart à zéro). Sans ce
+  témoin, il n'y a que deux issues et les deux sont fausses — écraser en silence, ou poser
+  la question à chaque partie. `decision(n)` tranche seule les cas évidents (une case vide
+  d'un côté se remplit de l'autre) et ne dérange le joueur que quand les deux ont bougé.
+
+- ⚠️ **Une case vide qui reçoit, ce n'est pas la même chose qu'une case à zéro.** La partie
+  de Martin dort dans le navigateur depuis des semaines et n'a pas de compteur : à zéro, elle
+  passerait pour une case vide et la première connexion la remplacerait sans un mot. Elle
+  démarre donc à 1 ; ce qui est vide reste à zéro, et c'est ça qui dit « il n'y a rien ici ».
+
+- ⚠️ **Rien ne s'écrit sous les pieds de quelqu'un qui joue — et la garde est là où ça
+  écrit**, pas avant la requête : entre la demande et la réponse il se passe une seconde, et
+  une seconde suffit pour presser JOUER. La partie descendue serait alors écrasée dix
+  secondes plus tard par la sauvegarde automatique de celle qu'on joue, et l'autre appareil
+  aurait perdu sa soirée sans que personne ne comprenne. Elle devient une question, posée au
+  retour au titre.
+
+- **Trois moments où un instantané monte** : le repos de 90 s pendant qu'on joue (la partie
+  se sauve toutes les dix secondes en local, le serveur n'a pas besoin de les voir toutes),
+  le **retour au titre** (`Compte.ranger`), et le **départ de la page** — `sendBeacon`, le
+  seul appel qui survit à la fermeture d'un onglet sur téléphone, avec un Blob
+  `application/json` sinon Flask ne lit pas le corps. ⚠️ Le beacon ne part **jamais** sur une
+  case en désaccord : personne n'en lit la réponse, il écraserait celle de l'autre appareil,
+  et la question qu'on s'apprêtait à poser n'aurait plus d'objet.
+
+- ⚠️ **Une réponse 200 sans le champ `partie` n'efface rien** (un proxy, une page d'erreur en
+  JSON) : le vrai serveur en met toujours un, `null` compris. Vider une case sur une réponse
+  qu'on ne comprend pas, c'est perdre une partie pour de bon.
+
+- ⚠️ **Deux choses que le banc ne pouvait pas voir, et qu'une capture Chromium a montrées**
+  (17 sept. 2026) : le formulaire restait à l'écran une fois connecté — `.score-form` est en
+  `display: flex`, qui **bat l'attribut `hidden`** —, alors que le banc lisait bien
+  `hidden === true` ; et « Bonjour, Martin » vivait DANS ce formulaire, donc le seul mot qui
+  dit que ça a marché se cachait à la seconde où il servait. Deux juges de navigateur en
+  sortent (`test_navigateur.py`) : un compte créé **de bout en bout** (l'écran, le POST,
+  SQLite, le cookie `HttpOnly` que le JS de la page ne peut pas lire) et un serveur de
+  comptes **en panne** qui ne barre pas le chemin de JOUER.
+
+- **Juges** : `tests/test_comptes_js.py` (**30**) plus les deux du navigateur, et **17
+  mutations toutes rouges** — la file, le compteur, le témoin, la partie posée telle quelle,
+  le refus qui ne fusionne rien, la garde du joueur qui joue, le type du beacon, les deux
+  choix du menu. Le banc a appris trois choses pour ça : `ENTREE.reseau` (un faux
+  `/api/compte/` dont on peut **tenir** une réponse en vol, et qui distingue GET de POST sur
+  la même adresse), `fenetreEvenement` (le `pagehide` joué comme le navigateur le joue —
+  juger `Compte.partir()` en l'appelant soi-même ne dirait rien du jour où plus personne ne
+  l'appelle) et un `innerHTML` qui vide vraiment la liste des enfants.
+
+- ⚠️ **Deux gardes ont été retirées parce qu'aucune mutation ne les faisait rougir** : une
+  question déjà posée restait posée alors que les compteurs le disaient déjà, et `jeu.js`
+  revérifiait l'écran titre que `Compte` garde déjà. Une garde jamais exercée n'est pas une
+  ceinture de sécurité, c'est une promesse que personne ne vérifie — et elle mentira le jour
+  où l'autre tombe.
+
+**3e vague livrée** (17 sept. 2026) : **le NIP**, un verrou d'écran sur un appareil déjà
+lié — et il faut redire tout de suite ce qu'il n'est pas : il **n'ouvre pas un compte**.
+
+- **Tout se passe en local, et le serveur ne connaît ni ne voit jamais le NIP.** Ce qui
+  dort dans le navigateur est le jeton d'appareil — le MÊME que celui du cookie `httpOnly`,
+  jamais un second secret —, chiffré par une clé dérivée du NIP (PBKDF2 → AES-GCM,
+  WebCrypto). La seule nouveauté côté serveur est une route qui **révèle ce jeton en clair,
+  une fois** : `POST /api/compte/nip` lit le cookie `httpOnly` (`httpOnly` bloque le JS de
+  la page, pas le serveur) et le rend tel quel — de quoi le chiffrer localement.
+- ⚠️ **Le contenu déchiffré ne sert jamais à rien d'autre qu'à prouver qu'on connaît le
+  NIP.** La vraie réouverture repasse par le cookie `httpOnly`, exactement comme sans NIP —
+  c'est pour ça qu'un jeton qui a tourné depuis (donc périmé côté serveur) reste un secret
+  local parfaitement vérifiable : seule l'étiquette d'authentification d'AES-GCM compte,
+  jamais ce qu'elle protège.
+- ⚠️ **Facultatif, il ne remplace jamais le mot de passe** : sans NIP configuré sur cet
+  appareil, `Compte.init()` appelle `ouvrir()` sans rien demander, exactement comme les 1re
+  et 2e vagues. Avec un NIP, `init()` s'arrête à `etat = 'verrouille'` et **aucune requête
+  ne part** avant `deverrouiller(nip)` — un jeu qui bavarde avec le serveur avant d'avoir vu
+  le NIP ne serait pas un verrou, ce serait une case à cocher.
+- ⚠️ **Rien d'autre n'en souffre** : `decision()`, `apresEcriture()`, `ranger()` et
+  `partir()` se taisent déjà tous si `etat !== 'ouvert'` — verrouillé se comporte comme
+  n'importe quel autre état non ouvert. JOUER reste JOUER, verrouillé ou pas : un compte est
+  un confort, jamais une condition, ici comme partout ailleurs dans M14.
+- ⚠️ **Le compte ne se bloque jamais, même après cinq essais ratés** — la même raison qui
+  fait qu'un mot de passe n'a pas de limite d'essais côté serveur : bloquer le COMPTE parce
+  qu'un inconnu a tapé cinq fois sur un téléphone perdu punirait exactement la mauvaise
+  personne. Cinq échecs **effacent le jeton chiffré de cet appareil**, rien de plus, et il
+  faut retaper le mot de passe pour le relier. Le compteur d'essais **vit dans le blob
+  chiffré** (jamais en mémoire), donc il survit à un rechargement — sinon la limite se
+  contournerait en rafraîchissant la page avant chaque essai.
+- ⚠️ **La liste noire et le format se vérifient avant tout appel réseau** : les vingt NIP
+  les plus tapés de la Terre (0000, 1234, 1111… et l'année en cours, calculée) sont refusés
+  sans jamais exposer le jeton pour rien.
+- **Se déconnecter efface aussi le NIP local** : oublier un appareil, c'est l'oublier pour
+  de bon — un NIP qui survivrait rouvrirait un verrou sur un compte qui n'est plus lié à
+  rien.
+- **L'écran** : le formulaire du NIP est **seul** à l'écran tant qu'on n'a pas tapé les
+  quatre chiffres, jamais en même temps que le mot de passe — deux portes ouvertes à la fois
+  n'en protègent aucune. « Mot de passe plutôt » montre le formulaire habituel **sans**
+  toucher au NIP local (un contournement d'un chargement, pas un « oublie mon NIP »). Une
+  fois le compte ouvert, un formulaire propose d'ajouter un NIP à cet appareil, ou de le
+  retirer s'il y en a déjà un.
+- **Juges** : `tests/test_comptes_js.py` (**+13**), deux dans `test_comptes.py` (la route
+  serveur), deux de bout en bout dans `test_navigateur.py` (activer un NIP puis **recharger
+  la page pour de vrai** — localStorage et le cookie `httpOnly` survivent tous les deux,
+  c'est justement ce que le NIP protège —, et un appareil verrouillé qui ne parle jamais au
+  serveur même en jouant), et **11 mutations toutes rouges**. Le banc a appris WebCrypto
+  (`node:crypto`'s `webcrypto`, aussi vraie que celle d'un navigateur), `btoa`/`atob` et
+  `TextEncoder`/`TextDecoder`.
+
+- **Reste de M14** : le défi du jour à graine serveur, le mode photo et la coop locale.
+
+**4e vague livrée** (20 sept. 2026) : **effacer son compte**, et la page qui dit ce qui est
+gardé. Le serveur efface pour vrai ; l'écran ne fait que le proposer.
+
+- **Un seul `DELETE FROM comptes`.** Les trois autres tables descendent de lui en
+  `ON DELETE CASCADE` (et `bd.ouvrir` allume `foreign_keys` par connexion — sans quoi rien ne
+  partirait avec lui). Ce que ça n'efface pas : les copies de sûreté quotidiennes de la base,
+  qui s'effacent d'elles-mêmes au bout de sept jours — **et la page le dit**.
+- ⚠️ **Le mot de passe est redemandé**, même sur un appareil déjà lié : « un bouton, une
+  confirmation », et un cookie d'appareil emprunté ou volé ne doit pas suffire à détruire un
+  compte. **Un mot de passe faux rend 403, jamais 401** : un 401 efface le cookie, et une faute
+  de frappe à l'effacement aurait délié l'appareil qui vient de la faire (un juge tient
+  `MotDePasseIncorrect` hors de `NonAutorise`).
+- ⚠️ **SQLite réutilise l'`id` d'un compte effacé** (`INTEGER PRIMARY KEY`, pas
+  d'`AUTOINCREMENT`) : si le `CASCADE` lâchait, les parties et appareils orphelins
+  s'accrocheraient au **nouveau** compte de même pseudo. La garde qui compte est donc « le
+  nouveau compte repart à vide », pas « l'id change » — et le juge de bout en bout ajoute la
+  seule preuve qu'un banc ne peut pas donner : **reprendre le même pseudo** dans Chromium.
+- ⚠️ **Effacer le compte n'efface pas les parties de ce navigateur** : le `localStorage` reste
+  la vérité, le compte n'est qu'une synchronisation. Ce que **cet appareil** oublie : le NIP
+  et **le témoin de synchronisation** — qui doit partir avec le compte, pas seulement se ranger
+  sous le pseudo : le pseudo se reprend aussitôt, et un témoin resté sur un compte neuf
+  parlerait de parties qui n'ont jamais existé là-bas.
+- ⚠️ **Rien ne part tant que le serveur n'a pas dit oui**, et une réponse perdue ne se
+  présume pas : « rien n'a été effacé » serait un mensonge si le serveur a eu le temps d'agir,
+  alors l'écran dit qu'il n'a pas pu **confirmer** (le prochain `ouvrir()` le montrera).
+- **La page « Ce qu'on garde »** (un `<details>`, fermé par défaut, sauf sous le verrou du NIP
+  qui montre le NIP seul) ne dit que ce qui est **vrai aujourd'hui** — la base et ses copies —
+  et ne promet rien qu'aucun code ne tienne : *mot de passe perdu, compte perdu*, courriel ou
+  pas, parce que rien ne permet encore de le retrouver (la fiche promettait de l'écrire « à
+  l'inscription » : c'est dit ici, pas encore à l'inscription elle-même).
+- ⚠️ **Deux défauts de mes vagues précédentes, trouvés en REGARDANT l'écran** (le banc et les
+  juges verts les avaient laissés passer) :
+  1. **Une faille du NIP (3e vague).** `.boutons` est en `display: flex`, qui bat l'attribut
+     `hidden` — le piège de la 2e vague, revenu : « Retirer le NIP de cet appareil » s'affichait
+     dans **les quatre états**, dont l'écran **verrouillé**, où il retirait le verrou sans le
+     NIP (un emprunteur le presse, recharge, et `init()` — sans NIP — rouvre le compte avec le
+     cookie encore valide). Corrigé à deux étages (commit `490c097`) : `.boutons[hidden]` et
+     `desactiverNip()` qui refuse tant que `etat !== 'ouvert'`, **quoi que l'écran montre**.
+     Le juge est devenu une **matrice de visibilité réelle** (`is_visible`, jamais l'attribut)
+     sur les quatre états.
+  2. **L'écran du compte était rogné sur téléphone (2e vague).** `.voile` centre son contenu
+     dans un `.ecran` en `overflow: hidden` : ce qui déborde était coupé des deux côtés, sans
+     défilement. Mesuré : en portrait (écran de jeu de 390×219), « Retour » hors écran et le
+     champ du pseudo coupé en haut ; en paysage tout tenait **au pixel près** et la
+     confirmation d'effacement (+130 px) l'aurait rognée. `#voile-compte` défile maintenant
+     (marges `auto` : le centrage reste quand ça tient — un simple `justify-content: center`
+     rend le haut inatteignable dès que ça déborde). Le juge fait défiler **à la molette**, pas
+     par `scrollIntoView` ni par le `click` de Playwright, qui défilent même un conteneur
+     `overflow: hidden` et laisseraient passer un bouton qu'un doigt n'atteint pas.
+- **Juges** : `test_comptes.py` (**+14** : tout ce qui appartient au compte disparaît et
+  rien d'un autre compte, les jetons ne valent plus rien, le pseudo repris repart à vide, le
+  mot de passe faux ou absent ne touche à rien, 403 et pas 401, deux appareils qui effacent
+  ensemble, dont trois par HTTP), `test_comptes_js.py` (**+10**) et `test_navigateur.py`
+  (**+4** : le bout en bout avec le pseudo repris, la page, et le défilement en portrait et en
+  paysage), **19 mutations toutes rouges** (6 serveur, 13 client et écran).
+- ⚠️ **À faire encore, et ce n'est plus optionnel** : la dette « aucune limite d'essais » est
+  **échue** (voir la table des dettes) — le formulaire de connexion est public depuis la 2e
+  vague, et la confirmation d'effacement est un second endroit où l'on devine un mot de passe.
 
 ### Les zones conditionnelles
 
@@ -11477,6 +11715,133 @@ ce juge-là avec.)
   navigation, le 5xx, les sons) font chacune rougir le sien.
 - ⚠️ Rien en http sur le réseau local (`192.168.x.x:5400`, pas de contexte sécurisé) : la
   ligne des OPTIONS dit INDISPONIBLE et le jeu se joue comme avant.
+
+### On agit sur ce qu'on regarde
+
+demande de Martin (20 sept. 2026) : « pour activer une interaction avec la plupart des choses,
+à moins d'exception, que le personnage doive faire face à ce qu'il veut activer ».
+
+✅ **Livré** (20 sept. 2026). Avant, ACTION servait tout ce qui était dans un rayon autour du
+joueur, quel que soit son regard : on entrait dans un commerce le dos tourné, on montait dans
+un char qu'on ne voyait pas.
+
+- ⚠️ **Une règle, un seul calcul.** `faceA(e, x, y)` (`base.js`) : le regard est ce que le
+  sprite MONTRE (`face`, l'un des quatre dessinés), pas l'angle fin du stick — ce que le joueur
+  voit est ce que le jeu juge. Cône de ±50° (`recherche.regard`), donc les diagonales se
+  recouvrent et aucune direction n'est hors de portée. Toutes les fonctions « sous la main »
+  la lisent : porte, portière, autobus, manège et comptoir de jeu de la foire, édicule du métro,
+  point d'un intérieur, personnage de l'histoire, homme de Sal, homme-sandwich, fille de la
+  Brume, témoin, stool, étal, machine, guichet, panneau, arme par terre, bouclier, poches. Et
+  l'invite du HUD lit les mêmes : le bouton ne promet jamais un geste qu'ACTION refuserait.
+- ⚠️ **Deux exceptions, dites.** (1) Ce qu'on a **sous les pieds** (8 px, `dessus_px`) : la
+  direction n'y est plus définie. (2) La **porte de sortie, dedans** : en entrant on regarde
+  le fond de la pièce, la porte est dans le dos, et c'est le jeu qui nous y a mis — sortir reste
+  le geste vif du bloquant du 13 sept. (« chez Ti-Paul, il est impossible de sortir »). Ce qui
+  se ramasse en passant dessus (billets, canettes) n'a jamais passé par ACTION.
+- ⚠️ **40 juges posaient le joueur « à côté » sans jamais le tourner** — moteur, histoire,
+  métro, autobus, foire, distributrices, réclame, dette… : ils regardent maintenant la chose
+  (`o.viser`). Celui du garage a dû déplacer son char : posé à l'est de quelqu'un qui regarde la
+  porte au nord, il n'était plus à portée de rien, et la course entre la porte et la portière
+  (le bug de Martin) ne se jouait plus.
+- ⚠️ **Deux juges passaient à vide** : `test_forcer_la_descente_ne_casse_pas_la_ligne` (sans
+  regard le joueur ne montait plus dans l'autobus, et ses non-événements restaient vrais) et le
+  test de fumée des canards, qui n'a **aucune assertion** et n'appuyait plus sur rien. Repérés
+  en consignant, dans une copie instrumentée, chaque refus de regard survenu pendant un ACTION
+  (touche ou appel direct) sur toute la suite. Cinq boucles « cherche une portière » de
+  `test_histoire_js.py` ne tenaient que par le regard par défaut (`bas`) : elles se tournent.
+- `test_regard_js.py` (12 juges) : la règle et ses bords, la porte de face et dos tourné (invite
+  et geste), l'exception de la sortie, la portière, les gens, le comptoir, l'arme sous les
+  pieds, l'édicule, les manèges, l'étal/la machine/le guichet/le panneau, le bouclier et les
+  poches. ⚠️ Vingt-cinq mutations (retirer chaque `faceA`) le font rougir, chacune.
+
+### Rien devant une porte, plus large
+
+retour de Martin (20 sept. 2026) : « déplace les obstacles pour éviter que ça soit devant les
+portes des commerces et dans les missions ».
+
+- ⚠️ **Mesuré avant** (quatre graines) : le pas de porte (deux tuiles) était propre sur toutes les
+  couches — mais un obstacle se lit « devant » dès qu'il est dans l'axe à trois tuiles, ou collé de
+  côté. **16 à 40 objets par ville** : six à douze scènes d'amuseurs (leur foule tombe sur le
+  seuil), deux à quatre kiosques (une roulotte à café contre la porte du terminus, où M1 commence),
+  des réclames, jusqu'à huit BBQ, des caisses, des arbres — et, en jeu, la voie fermée du jour et le
+  bris d'aqueduc à trois tuiles de la porte du bar. Martin a dit oui aux trois : le décor de la
+  rue, plus large ; ce qui apparaît en jeu ; ce que les missions posent.
+- ⚠️ **Livré : `app/devants.py`, à la toute fin de `generer`, sans un dé.** Réserver plus large
+  pendant la construction re-tire la ville (deux tuiles ont fait tomber trois juges sans
+  rapport, une rangée de la trame vingt-six) : on **déplace** donc après coup, sur la ville
+  finie. Le devant d'une porte, c'est trois tuiles dans l'axe et une de chaque côté
+  (`DEVANT`) ; devant un **lieu de mission** — les onze que lisent les objectifs, les scènes
+  et les personnages de `missions`, jamais une liste écrite ici —, deux tuiles de plus de chaque
+  côté et une de plus devant (`DEVANT_DE_MISSION`) : c'est là que le donneur attend et que le char
+  se livre. Ce qui bouche part sur la tuile voisine la plus proche, dans l'ordre de lecture :
+  les **scènes** (dans leur îlot ; leur foule ne tombe plus sur un seuil), les **kiosques** (même
+  sorte de sol, même quartier, leur réclame suit et se déplace si elle n'est plus à portée de
+  marche) et le **décor** mobile (`DECOR_MOBILE` : BBQ, caisses, arbres, poubelles…, sur le même
+  sol, sans couper de passage), en évitant tout ce qui a déjà choisi sa place (quais d'autobus,
+  stations, bacs des éboueurs, pistes de rampe). Rien ne s'y perd — ni kiosque, ni décor — sauf,
+  au pire, deux scènes sur une cinquantaine, faute de place dans leur îlot.
+- ⚠️ **Ce qui apparaît en jeu est MARQUÉ, pas retiré** : la voie fermée du jour, la rue barrée et
+  le bris d'aqueduc se tirent dans leur liste par `hash % longueur`, et une entrée de moins
+  rebat tous les jours — un juge de trafic qui prend « le premier chantier » en a trouvé un autre,
+  planté avant un croisement, et a rougi. Python pose `ecartee: 1` sur ceux qui tombent devant une
+  porte ; `Monde.entraveDuJour` et `Monde.brisDAqueduc` passent à la suivante. Les nids-de-poule,
+  tous actifs à la fois, sortent de leur liste.
+- ⚠️ **Côté jeu** : `ville["devant"]` porte la fenêtre (`cote`, `profondeur`), `Monde.devantDUnePorte`
+  la lit (portes du sol et portes peintes), et `Histoire.tuileLibre` — où les missions posent leur
+  monde : le donneur, les hommes de main, le fuyard, l'escorte — prend la première tuile qui n'est
+  pas devant une porte (à défaut, la première venue : mieux vaut un donneur devant une porte que
+  pas de donneur). Les panneaux de défi aussi.
+- ⚠️ **Trois juges ne tenaient qu'à la place exacte de la roulotte du terminus**, et le déplacer les
+  a dits : `test_ils_partagent_un_plafond…` (un amuseur naît dans la bulle, hors champ — le juge
+  partait du terminus, où toutes les scènes sont à l'écran : **une graine de jeu sur vingt** le
+  voyait naître, avant comme après ; il part maintenant du centre du Faubourg, comme son voisin),
+  `test_plusieurs_dialogues…` (la roulotte et son vendeur poussaient la fille de la Brume à 50 px,
+  hors de portée d'accoster) et `test_celui_qui_tient_son_poste_…` (à l'ouest de Ti-Guy, la roulotte
+  arrêtait le coureur : il mesurait 1 px, la roulotte, pas la laisse). Les trois se jugent
+  maintenant sans elle, sur leur règle ; celui du poste déplace Ti-Guy de huit pixels avant de le
+  lâcher, et rougit si la laisse cesse de le ramener (mutation vue). Trois autres juges qui
+  comparent la ville avec et sans une étape (`test_autobus`, `test_metro`,
+  `test_poste_et_garage`) neutralisent celle-ci des deux côtés, comme la saleté.
+- ⚠️ **Pas touché** : les guichets et les machines encastrées sous une vitrine (elles ne bouchent
+  rien), les lampadaires, les bancs et les abribus (une lampe, un sens, un tracé les suivent), les
+  meubles **dans** les pièces (la porte de sortie de 51 pièces sur 67 a un meuble à trois tuiles :
+  des comptoirs, tous atteignables — non demandé), l'équipe des chantiers (un ouvrier posté à trois
+  tuiles d'une porte sur une graine de six ; le juge veut son compte exact par phase) et la
+  tranchée (aucune devant une porte sur six graines).
+- 31 juges neufs (`test_devants.py`, `test_devants_js.py`), **rouge avant** : sans le
+  déplacement (13 des 23 juges Python), avec l'ancienne `tuileLibre` (le juge des tuiles libres), sans le saut
+  de la voie et du bris écartés (un juge chacun).
+- ⚠️ **Rouge sur `dev` avant moi, pas de moi** : `test_les_voix_de_l_histoire_sont_declarees_par_mission`
+  (m50 pas déclarée), `test_la_carte_du_depot_est_a_jour` (incendies, `test_debug_js`),
+  `test_la_foule_ne_se_traverse_plus` (deux façons de tomber) et l'intro de m97
+  (`test_chaque_intro_se_joue_seule…`, m50 se pose avant). Et `ruff` y trouve six erreurs dans
+  `app/missions/` et `test_argent_sale_js.py`.
+
+### Les musiques s'enchaînent en fondu
+
+retour de Martin (20 sept. 2026) : « les transitions de musique doivent toujours se faire en
+crossover, à moins que ce soit nécessaire pour l'effet et l'ambiance ». C'est une **règle
+permanente** : toute musique qui en remplace une autre le fait en fondu enchaîné, et la coupure
+franche est l'exception qu'on justifie.
+
+- ⚠️ **En cours.** Mesuré avant : rien ne s'enchaîne. `Mus.jouer` appelle `Mus.arreter`, qui
+  coupe la boucle (`source.stop()`) avant que la suivante démarre ; `Radio.arreter` et
+  `Ambiance.arreter` font pareil ; `musique.MUSIQUE.fondu_s` (2 s) est déclaré côté Python et
+  **le JS ne le lit jamais**. Ce qui s'entend : changer de district, monter dans un char à
+  radio, entrer dans un commerce, passer à la poursuite ou en revenir — chaque fois un blanc
+  ou un coup sec.
+
+### Le tour du propriétaire montre ses quatre contacts
+
+retour de Martin (20 sept. 2026) : « améliore l'animation de la mission tour du propriétaire
+pour voir toutes les cibles, pas juste la première ».
+
+- ⚠️ **En cours.** Mesuré avant, au banc : l'intro de m6 (Josée, dedans) ne filme que le
+  dépanneur — une seule `coupe`, 159 images à l'écran — alors que Josée nomme quatre portes
+  (dépanneur, cantine, usine, phare) : les trois autres ne se voient jamais. Et sa première
+  réplique (6,03 s de voix, 362 images) est coupée à l'image 229 par la deuxième, parce que la
+  coupe qui la porte ne tient que 230. Objectif : une coupe qui visite les quatre contacts d'un
+  seul aller-retour, calée sur les répliques qui les nomment, sans en couper une.
 
 ### Les menus au doigt avancent d'une ligne à la fois
 

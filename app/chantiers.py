@@ -32,6 +32,12 @@ ce qui comptait sur elle.** Ce module en tient trois par construction :
 
 Les deux autres vivent côté jeu : le cache de morceaux ne se recuit que hors de
 l'écran, et le jour de départ voyage dans la sauvegarde.
+
+3e vague : le chantier déborde de sa palissade et prend du monde. **La tranchée**
+(deux tuiles d'asphalte devant la façade, couvertes de plaques d'acier qui claquent
+sous les roues, puis refaites quand le neuf est debout) et **l'équipe** (des
+ouvriers plantés sur le terrain, autour de la machine du jour). Les deux vivent
+dans LEUR PROPRE dé : tirer une tranchée ne déplace ni un chantier, ni une machine.
 """
 
 from __future__ import annotations
@@ -65,6 +71,38 @@ DALLE = "g"
 #: ⚠️ Pas les cours de gang : on ne démolit pas le quartier général des Cravates
 #: parce que la graine l'a voulu.
 GENRES = ("maisons", "banlieue", "commerces", "industriel", "hangars")
+
+#: ⚠️ LA TRANCHÉE. Un chantier ne s'arrête pas à sa palissade : pour brancher le
+#: neuf, on ouvre la RUE d'en face, et pour que la ville roule quand même on jette
+#: dessus des plaques d'acier — deux tuiles d'asphalte, jamais plus, sur la
+#: première chaussée qu'on trouve sous la façade. Rouler dessus CLAQUE (un son, une
+#: secousse : du décor qu'on sent, comme un nid-de-poule, sans les points de
+#: carrosserie) ; quand le neuf est debout l'asphalte est refait, un carré plus
+#: noir que le reste. Ça ne sert à rien, et c'est ce qui rend le reste crédible.
+#:
+#: ⚠️ La tranchée ne coupe rien et ne déplace rien : elle se PEINT et se SENT, elle
+#: ne change aucune tuile. Deux tuiles d'asphalte nu (`#`), jamais là où quelque
+#: chose d'autre parle déjà — croisement, ligne d'arrêt, nid-de-poule, entrave,
+#: pont, barrière, bris d'aqueduc.
+TRANCHEE_TUILES = 2
+TRANCHEE_PORTEE = 11
+ASPHALTE = "#"
+#: Ce que la tranchée montre à chaque phase : rien avant que le terrain soit rasé,
+#: des plaques tant qu'on y travaille, une rue rapiécée quand le neuf est debout.
+TRANCHEE: dict[int, str] = {2: "plaques", 3: "plaques", 4: "rapiece"}
+#: Un bris d'aqueduc a sa flaque : on ne creuse pas dans son rayon.
+RAYON_AQUEDUC = 3
+
+#: ⚠️ L'ÉQUIPE : combien d'hommes tiennent leur poste sur le terrain, phase par
+#: phase. Personne sur une maison condamnée ni sur le neuf ; un seul à la
+#: démolition (il regarde la boule de loin) ; deux quand la pelle, puis la grue,
+#: travaillent. Python dit OÙ (des tuiles), le jeu les fait naître.
+EQUIPE: dict[int, int] = {1: 1, 2: 2, 3: 2}
+#: Un poste se prend à deux tuiles de la machine au moins (la boule pend à un
+#: pas d'elle, la pelle balaie son bras) et à quatre au plus (sinon on ne dirait
+#: pas qu'il travaille avec elle).
+POSTE_MIN = 2
+POSTE_MAX = 4
 
 PHASES: tuple[dict, ...] = (
     {"slug": "condamne", "nom": "Condamné", "panneau": "À DÉMOLIR"},
@@ -365,6 +403,101 @@ def _phases(sol: list[str], libre: dict, des: carte.Des) -> list[dict] | None:
     return phases
 
 
+def _tranchee(ville: dict, libre: dict, des: carte.Des) -> list[list[int]]:
+    """Les deux tuiles de chaussée que la tranchée ouvre sous la façade, ou [].
+
+    On descend rangée par rangée depuis la façade qui donne sur la rue : la
+    PREMIÈRE chaussée d'asphalte nu où deux tuiles de suite sont libres, à moins
+    de deux tuiles de côté du bâtiment. Aucune n'est un refus du chantier : il
+    n'a simplement pas de tranchée.
+    """
+    sol = ville["sol"]
+    x0, _, largeur, _ = _boite(libre["tuiles"])
+    bas = max(y for _, y in libre["sur_rue"])
+    boites = [(r["x"], r["y"], r["l"], r["h"])
+              for cle in ("intersections", "entraves", "fermetures", "ponts", "barrieres")
+              for r in ville.get(cle) or []]
+    # ⚠️ `arrets` est indexé par « x,y » (voir `Chantier.chaussee_a_nids`).
+    arrets = {tuple(int(n) for n in cle.split(",")) for cle in ville.get("arrets") or {}}
+    nids = {(n["x"], n["y"]) for n in ville.get("nids_de_poule") or []}
+    aqueducs = [(a["x"], a["y"]) for a in ville.get("aqueducs") or []]
+
+    def creusable(x: int, y: int) -> bool:
+        if not (0 < y < len(sol) - 1 and 0 < x < len(sol[y]) - 1) or sol[y][x] != ASPHALTE:
+            return False
+        if (x, y) in arrets or (x, y) in nids:
+            return False
+        if any(bx <= x < bx + bl and by <= y < by + bh for bx, by, bl, bh in boites):
+            return False
+        return not any(abs(x - ax) <= RAYON_AQUEDUC and abs(y - ay) <= RAYON_AQUEDUC
+                       for ax, ay in aqueducs)
+
+    for y in range(bas + 1, bas + 1 + TRANCHEE_PORTEE):
+        places = [x for x in range(x0 - 2, x0 + largeur + 1)
+                  if all(creusable(x + i, y) for i in range(TRANCHEE_TUILES))]
+        if places:
+            x = places[des.entier(0, len(places) - 1)]
+            return [[x + i, y] for i in range(TRANCHEE_TUILES)]
+    return []
+
+
+def _postes(sol: list[str], x0: int, y0: int, phase: dict, tuiles: set[tuple[int, int]],
+            combien: int, des: carte.Des) -> list[list[int]]:
+    """Où les ouvriers de cette phase tiennent leur poste.
+
+    Une tuile du terrain libéré dont les quatre voisines sont du sol (jamais dans
+    un couloir : un homme planté y ferait bouchon), les machines comptant comme
+    des murs, à `POSTE_MIN`..`POSTE_MAX` tuiles de la machine du jour. On tire
+    parmi les trois plus proches, comme `_poser_machines`.
+    """
+    if not combien:
+        return []
+    rangees = phase["sol"]
+    machines = [(m["x"], m["y"]) for m in phase["machines"]]
+
+    def du_sol(x: int, y: int) -> bool:
+        if (x, y) in machines:
+            return False
+        if (x, y) in tuiles:
+            return carte.marchable(rangees[y - y0][x - x0])
+        return 0 <= y < len(sol) and 0 <= x < len(sol[y]) and carte.marchable(sol[y][x])
+
+    def ecart(t: tuple[int, int]) -> int:
+        return min((max(abs(t[0] - mx), abs(t[1] - my)) for mx, my in machines), default=POSTE_MIN)
+
+    candidates = [
+        t for t in sorted(tuiles)
+        if du_sol(*t) and all(du_sol(t[0] + dx, t[1] + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        and POSTE_MIN <= ecart(t) <= POSTE_MAX
+    ]
+    candidates.sort(key=lambda t: (ecart(t), -t[1], t[0]))
+    postes: list[list[int]] = []
+    while candidates and len(postes) < combien:
+        x, y = candidates.pop(des.entier(0, min(2, len(candidates) - 1)))
+        # Deux hommes ne se marchent pas dessus : au moins deux tuiles entre eux.
+        if all(max(abs(x - px), abs(y - py)) >= 2 for px, py in postes):
+            postes.append([x, y])
+    return postes
+
+
+def _annexes(ville: dict, libre: dict, phases: list[dict], graine: int, numero: int) -> list[list[int]]:
+    """Pose sur chaque phase ce que la 3e vague y ajoute (`tranchee`, `equipe`) et
+    rend les tuiles de la tranchée.
+
+    ⚠️ Son PROPRE dé, un par chantier : le tirage des chantiers et des machines
+    (`tirer`, `_phases`) ne bouge pas d'un cheveu — les trois chantiers de la
+    graine livrée sont restés où ils étaient.
+    """
+    des = carte.Des(graine ^ 0x7A4C5EE ^ (numero * 0x9E3779B1))
+    rue = _tranchee(ville, libre, des)
+    tuiles = set(libre["tuiles"])
+    x0, y0, _, _ = _boite(libre["tuiles"])
+    for n, phase in enumerate(phases):
+        phase["tranchee"] = TRANCHEE.get(n) if rue else None
+        phase["equipe"] = _postes(ville["sol"], x0, y0, phase, tuiles, EQUIPE.get(n, 0), des)
+    return rue
+
+
 def tirer(ville: dict, batiments: list[dict], graine: int) -> list[dict]:
     """Les chantiers de la ville, prêts pour le paquet.
 
@@ -387,6 +520,7 @@ def tirer(ville: dict, batiments: list[dict], graine: int) -> list[dict]:
         if phases is None:
             continue
         numero = len(choisis)
+        rue = _annexes(ville, libre, phases, graine, numero)
         siennes = set(libre["tuiles"])
         masque = ["".join("X" if (x0 + i, y0 + j) in siennes else "."
                           for i in range(largeur)) for j in range(hauteur)]
@@ -395,6 +529,7 @@ def tirer(ville: dict, batiments: list[dict], graine: int) -> list[dict]:
             "x": x0, "y": y0, "l": largeur, "h": hauteur,
             "genre": libre["genre"],
             "masque": masque,
+            "tranchee": rue,
             # ⚠️ Chacun commence à une phase différente : au premier matin, la
             # ville montre déjà une maison condamnée, une démolition et un
             # terrain rasé. Sans ce décalage, il faudrait trois jours de jeu

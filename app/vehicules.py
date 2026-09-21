@@ -342,6 +342,11 @@ PHYSIQUE = {
     "nid_degats": 2,
     "nid_secousse": 0.35,
     "nid_repit_images": 30,       # on ne le paie pas deux fois en le traversant
+    # ⚠️ **UNE PLAQUE D'ACIER** (la tranchée d'un chantier, `chantiers.py`) : elle
+    # claque et elle secoue, elle ne coûte RIEN — un nid-de-poule est un accident,
+    # une plaque est un décor qu'on sent. Plus doux : ce n'est pas un trou.
+    "plaque_secousse": 0.28,
+    "plaque_repit_images": 30,
     # ⚠️ **LE BRAQUAGE EST UN RAYON, PAS UNE VITESSE DE ROTATION** (15 sept.
     # 2026, demande de Martin : « ameliore les virages »). Le char tournait de
     # `braquage` RADIANS PAR IMAGE, quelle que soit sa vitesse : le rayon du

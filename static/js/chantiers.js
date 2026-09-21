@@ -11,7 +11,12 @@
    que le neuf remonte des murs exactement là où l'on marchait la veille.
 
    2e vague : le chantier TRAVAILLE — la boule frappe le mur, la pelle racle, on
-   l'entend avant de le voir, et il se tait la nuit (`travailler`). */
+   l'entend avant de le voir, et il se tait la nuit (`travailler`).
+
+   3e vague : il DÉBORDE de sa palissade et il prend du monde. La tranchée ouverte
+   dans la rue d'en face (des plaques d'acier qui claquent sous les roues, puis
+   l'asphalte refait) et l'équipe : des ouvriers plantés au poste que Python leur
+   a choisi, qui regardent passer. */
 
 const Chantiers = (function () {
   'use strict';
@@ -49,6 +54,9 @@ const Chantiers = (function () {
   //: la machine (deux tuiles moins une demi — voir `BOULE` dans `sprites.js`), et
   //: 20 px au-dessus de son pied, là où pend la boule.
   const CONTACT_X = 24, CONTACT_Y = 20;
+  //: L'équipe regarde le joueur passer, de plus près que ça ; sinon elle regarde sa
+  //: machine.
+  const REGARD = 90;
 
   let liste = [];                  // { def, posee, machines, tuiles:Set }
   let effacees = new Set();        // « x,y » des tuiles dont le bâtiment est tombé
@@ -113,8 +121,31 @@ const Chantiers = (function () {
       for (let mx = m0x; mx <= m1x; mx++) carte.morceaux.delete(mx + ',' + my);
     }
     carte.mini = null;
+    poserLaTranchee(ch, phase);
     poserLesMachines(ch, phase);
+    retirerLEquipe(ch);
     degager(ch);
+  }
+
+  /** La tranchée du jour : les plaques d'acier claquent tant qu'elles sont posées,
+      et le morceau de rue se recuit pour que la couche peinte suive. ⚠️ Elle ne
+      change AUCUNE tuile : ce qu'un char sent vient de `carte.plaques`, ce qu'on
+      voit de `peindre`. */
+  function poserLaTranchee(ch, phase) {
+    const carte = Monde.carte, d = ch.def;
+    if (!carte.plaques) carte.plaques = new Set();
+    const plaquee = d.phases[phase].tranchee === 'plaques';
+    for (const t of d.tranchee || []) {
+      if (plaquee) carte.plaques.add(cle(t[0], t[1])); else carte.plaques.delete(cle(t[0], t[1]));
+      carte.morceaux.delete(Math.floor(t[0] / 16) + ',' + Math.floor(t[1] / 16));
+    }
+  }
+
+  /** La phase change, l'équipe aussi : celle d'hier s'en va (le chantier est hors
+      de vue, personne ne la voit partir) et `equiper` fait naître celle du jour. */
+  function retirerLEquipe(ch) {
+    for (const e of B.entites.slice()) if (e.equipeDe === ch.def.id) Entites.retirer(e);
+    ch.equipe = [];
   }
 
   /** Les tuiles dont le bâtiment est tombé : ce qu'on y peignait (façade de
@@ -183,6 +214,15 @@ const Chantiers = (function () {
         if (dedans(x0 - 8, y0 - 8, x0 + f.w + 8, y0 + f.h + 8)) return true;
       }
     }
+    // ⚠️ La tranchée est dans la rue, à cinq ou huit tuiles de la façade : des
+    // plaques qui surgissent ou une rue refaite d'un coup se voient tout autant.
+    // (Elle ne change qu'entre certaines phases : ailleurs, elle n'attend pas.)
+    const change = (ch.posee < 0 ? null : d.phases[ch.posee].tranchee) !== d.phases[voulue].tranchee;
+    if (change) {
+      for (const t of d.tranchee || []) {
+        if (dedans(t[0] * TT - 8, t[1] * TT - 8, (t[0] + 1) * TT + 8, (t[1] + 1) * TT + 8)) return true;
+      }
+    }
     return false;
   }
 
@@ -206,7 +246,7 @@ const Chantiers = (function () {
   function demarrer() {
     const def = Monde.carte && Monde.carte.def;
     liste = ((def && def.chantiers) || []).map(function (d) {
-      return { def: d, posee: -1, machines: [], tuiles: tuilesDe(d) };
+      return { def: d, posee: -1, machines: [], equipe: [], tuiles: tuilesDe(d) };
     });
     attente = 0;
     for (const ch of liste) appliquer(ch, phaseVoulue(ch.def));
@@ -228,6 +268,7 @@ const Chantiers = (function () {
   function maj() {
     if (!liste.length) return;
     travailler();
+    regarder();
     if (B.interieur) return;
     if (--attente > 0) return;
     attente = CADENCE;
@@ -236,6 +277,55 @@ const Chantiers = (function () {
       if (voulue === ch.posee) continue;
       if (enVue(ch, voulue) || quelquUnDedans(ch)) continue;
       appliquer(ch, voulue);
+    }
+    equiper();
+  }
+
+  // --- L'équipe -----------------------------------------------------------------------
+
+  /** Qui de l'équipe est encore là : une passe sur les entités, une fois par
+      cadence. (La distance les oublie, un coup de feu les fait détaler.) */
+  function reperer() {
+    const parId = {};
+    for (const ch of liste) { ch.equipe = []; parId[ch.def.id] = ch; }
+    for (const e of B.entites) {
+      if (e.equipeDe === undefined || !e.vivant) continue;
+      if (parId[e.equipeDe]) parId[e.equipeDe].equipe.push(e);
+    }
+  }
+
+  /** Le jour, chaque poste de la phase a son homme ; la nuit, ou sur un chantier
+      sans équipe, ils rentrent — hors de l'écran seulement, personne ne les voit
+      disparaître. */
+  function equiper() {
+    const jour = !Monde.estNuit();
+    reperer();
+    for (const ch of liste) {
+      const postes = ch.posee < 0 ? [] : (ch.def.phases[ch.posee].equipe || []);
+      if (jour && postes.length) {
+        // Les nouveaux venus se comptent tout de suite : `regarder` les orienterait
+        // sinon une cadence trop tard.
+        if (Entites.naitreLEquipe(ch.def.id, postes)) reperer();
+        continue;
+      }
+      for (const e of ch.equipe) if (!Entites.visibleAEcran(e.x, e.y, 24)) Entites.retirer(e);
+    }
+  }
+
+  /** Il regarde passer : à moins de `REGARD` px, le visage tourné vers le joueur,
+      sinon vers sa machine. ⚠️ Chaque image, et sur les seuls hommes de la dernière
+      passe (`reperer`) : deux ou trois entités par chantier, pas toute la ville. */
+  function regarder() {
+    const j = B.joueur;
+    if (!j) return;
+    for (const ch of liste) {
+      const m = ch.machines[0];
+      for (const e of ch.equipe) {
+        if (!e.vivant || e.etat !== 'fige') continue;
+        const versLui = Math.hypot(j.x - e.x, j.y - e.y) < REGARD || !m;
+        const dx = (versLui ? j.x : m.x) - e.x, dy = (versLui ? j.y : m.y) - e.y;
+        e.face = Math.abs(dx) >= Math.abs(dy) ? (dx > 0 ? 'droite' : 'gauche') : (dy > 0 ? 'bas' : 'haut');
+      }
     }
   }
 
@@ -365,11 +455,65 @@ const Chantiers = (function () {
     Atlas.texte(ctx, texte, x + 3, y + 2, '#1a1712', 1);
   }
 
+  /** Deux plaques d'acier boulonnées sur la coupe : l'asphalte ouvert autour, la
+      couture entre les plaques, l'éclat du haut, l'ombre du bas, les rivets. `n`
+      tuiles de large, en (x, y) du morceau. */
+  function plaques(ctx, x, y, n) {
+    const w = n * TT;
+    ctx.fillStyle = '#17181c'; ctx.fillRect(x, y + 1, w, 14);
+    ctx.fillStyle = '#7e858d'; ctx.fillRect(x + 1, y + 2, w - 2, 12);
+    ctx.fillStyle = '#a3abb3'; ctx.fillRect(x + 1, y + 2, w - 2, 1);
+    ctx.fillStyle = '#4b5158'; ctx.fillRect(x + 1, y + 13, w - 2, 1);
+    for (let i = 0; i < n; i++) {
+      const px = x + i * TT;
+      if (i) { ctx.fillStyle = '#5b626a'; ctx.fillRect(px - 1, y + 2, 2, 12); }
+      ctx.fillStyle = '#c3c9cf';
+      for (const [rx, ry] of [[3, 4], [12, 4], [3, 11], [12, 11]]) ctx.fillRect(px + rx, y + ry, 1, 1);
+    }
+    // Le ruban de danger, aux deux bouts de la coupe : jaune et noir.
+    for (const bout of [x, x + w - 2]) {
+      for (let k = 0; k < 6; k++) {
+        ctx.fillStyle = k % 2 ? '#1a1712' : '#e8b33c';
+        ctx.fillRect(bout, y + 2 + k * 2, 2, 2);
+      }
+    }
+  }
+
+  /** L'asphalte refait : un carré plus noir que la rue autour, ses joints scellés
+      et deux ou trois cailloux. Ça ne sert à rien du tout, et c'est ce qui rend
+      le reste crédible. */
+  function rapiece(ctx, x, y, n) {
+    const w = n * TT;
+    ctx.fillStyle = '#25262c'; ctx.fillRect(x, y + 1, w, 14);
+    ctx.fillStyle = '#191a1f';
+    ctx.fillRect(x, y + 1, w, 1); ctx.fillRect(x, y + 14, w, 1);
+    ctx.fillRect(x, y + 1, 1, 14); ctx.fillRect(x + w - 1, y + 1, 1, 14);
+    ctx.fillStyle = '#31333a';
+    for (let k = 0; k < n * 5; k++) {
+      const h = hash2(x + k * 13, y + k * 7);
+      ctx.fillRect(x + 2 + h % (w - 4), y + 3 + (h >>> 8) % 10, 1, 1);
+    }
+  }
+
+  /** La tranchée du chantier, sur CHAQUE morceau qu'elle touche : la toile coupe
+      ce qui dépasse. Elle est dans la rue, loin de l'empreinte du bâtiment — d'où
+      son propre test, avant celui de la façade. */
+  function tranchee(ctx, ch, ox, oy) {
+    const d = ch.def, t = d.tranchee;
+    if (!t || !t.length || ch.posee < 0) return;
+    const sorte = d.phases[ch.posee].tranchee;
+    if (!sorte) return;
+    const x = t[0][0] - ox, y = t[0][1] - oy;
+    if (x + t.length < 0 || x > 16 || y < 0 || y >= 16) return;
+    (sorte === 'plaques' ? plaques : rapiece)(ctx, x * TT, y * TT, t.length);
+  }
+
   /** Ce que le chantier ajoute au morceau, selon sa phase posée. */
   function peindre(ctx, mx, my) {
     const ox = mx * 16, oy = my * 16;
     for (const ch of liste) {
       const d = ch.def;
+      tranchee(ctx, ch, ox, oy);
       if (d.x + d.l < ox - 1 || d.x > ox + 16 || d.y + d.h + 2 < oy - 1 || d.y - 1 > oy + 16) continue;
       const px = (d.x - ox) * TT, py = (d.y - oy) * TT;
       const phase = ch.posee, sol = d.phases[phase].sol;
@@ -444,7 +588,7 @@ const Chantiers = (function () {
   }
 
   return {
-    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, demarrer, maj, efface, peindre, phaseVoulue, travailler,
+    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, REGARD, demarrer, maj, efface, peindre, phaseVoulue, travailler, equiper,
     get liste() { return liste; },
     get journal() { return journal; },
     // Pour les juges : poser une phase comme le ferait la journée.
