@@ -215,6 +215,7 @@ ne bougent pas quand l'ordre de travail change.
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
 | Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
+| Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -11634,6 +11635,20 @@ portes des commerces et dans les missions ».
   Objectif : **déplacer** ces obstacles-là (jamais re-tirer la ville), tenir le devant des lieux
   de mission plus large encore, et que les personnages que les missions posent ne se plantent
   pas sur un pas de porte.
+
+### Les musiques s'enchaînent en fondu
+
+retour de Martin (20 sept. 2026) : « les transitions de musique doivent toujours se faire en
+crossover, à moins que ce soit nécessaire pour l'effet et l'ambiance ». C'est une **règle
+permanente** : toute musique qui en remplace une autre le fait en fondu enchaîné, et la coupure
+franche est l'exception qu'on justifie.
+
+- ⚠️ **En cours.** Mesuré avant : rien ne s'enchaîne. `Mus.jouer` appelle `Mus.arreter`, qui
+  coupe la boucle (`source.stop()`) avant que la suivante démarre ; `Radio.arreter` et
+  `Ambiance.arreter` font pareil ; `musique.MUSIQUE.fondu_s` (2 s) est déclaré côté Python et
+  **le JS ne le lit jamais**. Ce qui s'entend : changer de district, monter dans un char à
+  radio, entrer dans un commerce, passer à la poursuite ou en revenir — chaque fois un blanc
+  ou un coup sec.
 
 ### Les menus au doigt avancent d'une ligne à la fois
 
