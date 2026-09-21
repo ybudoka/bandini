@@ -681,7 +681,9 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
             "s => window.BANDINI.Son.estCharge('histoire-' + s)", arg=premiere["slug"], timeout=45000)
         niveaux["une replique"] = page.evaluate("""(s) => {
             const S = window.BANDINI.Son;
-            S.Voix.couper(); S.Ambiance.arreter(); S.boucle('ambiance-ville', false);
+            // ⚠️ NET, et dans cet ordre : `Ambiance.arreter()` fond maintenant sur deux
+            // secondes, et la replique serait mesuree par-dessus l'ambiance qui s'eteint.
+            S.Voix.couper(); S.boucle('ambiance-ville', false); S.Ambiance.arreter();
             const p = window.__mesure(1500);
             S.Voix.parler(s, {});
             return p;
@@ -696,6 +698,84 @@ def test_tout_ce_qui_doit_s_entendre_s_entend(page, serveur, erreurs):
     muets = [nom for nom, v in niveaux.items() if v <= PLANCHER]
     print("\n[audio] " + " · ".join(f"{nom} {v:.4f}" for nom, v in niveaux.items()))
     assert not muets, f"ca « joue » mais on n'entend rien : {muets} (niveaux {niveaux})"
+    assert erreurs == []
+
+
+#: Une sonde sur les fondus : elle garde chaque courbe posee et chaque arret de
+#: source, avec le PARAMETRE lui-meme — c'est ce qui permet d'en lire la valeur
+#: pendant qu'il descend, sans deviner quel noeud est lequel.
+SONDE_FONDU = """
+window.__courbes = []; window.__arrets = [];
+(function () {
+  const C = AudioParam.prototype.setValueCurveAtTime;
+  AudioParam.prototype.setValueCurveAtTime = function (v, t, d) {
+    window.__courbes.push({ param: this, sens: v[v.length - 1] > v[0] ? 'entree' : 'sortie', t: t, duree: d });
+    return C.apply(this, arguments);
+  };
+  const S = AudioScheduledSourceNode.prototype.stop;
+  AudioBufferSourceNode.prototype.stop = function (t) {
+    window.__arrets.push({ apres: t === undefined ? 0 : t - this.context.currentTime });
+    return S.apply(this, arguments);
+  };
+})();
+"""
+
+
+def test_le_fondu_enchaine_marche_pour_de_vrai_dans_le_navigateur(page, serveur, erreurs):
+    """⚠️ Le faux contexte du banc dit ce que le jeu DEMANDE, pas ce que le
+    navigateur en fait. Ici, un vrai `AudioContext` : les deux courbes sont
+    acceptees (pas de `NotSupportedError`), l'ancienne piste descend pendant que
+    la nouvelle monte — a puissance constante —, et la source de l'ancienne ne
+    s'arrete qu'apres la fin de sa courbe. Demande de Martin (20 sept. 2026) :
+    « les transitions de musique doivent toujours se faire en crossover »."""
+    page.add_init_script(SONDE_FONDU)
+    page.goto(serveur)
+    attendre_titre(page)
+    jouer(page)
+    page.wait_for_function("window.BANDINI.Son.charges > 0", timeout=45000)
+    # ⚠️ Le jukebox TIENT LA MAIN du chef d'orchestre : la ville ne remet pas son
+    # ambiance pendant qu'on mesure. Deux morceaux dans le cache d'abord (le
+    # premier telechargement, lui, n'est pas un fondu qu'on puisse dater).
+    for slug in ("amb_quais", "amb_pointe"):
+        page.evaluate("(s) => { BANDINI.B.jukebox = s; }", slug)
+        page.wait_for_function("(s) => BANDINI.Son.boucleActive('musique-' + s)", arg=slug, timeout=45000)
+    avant = page.evaluate("() => window.__courbes.length")
+    fondu = page.evaluate("() => BANDINI.B.defs.audio.musique.fondu_s")
+    page.evaluate("() => { window.__arrets.length = 0; BANDINI.B.jukebox = 'amb_quais'; }")
+    page.wait_for_function("(n) => window.__courbes.length >= n + 2", arg=avant, timeout=15000)
+    mesures = page.evaluate("""() => new Promise(function (ok) {
+        const neuves = window.__courbes.slice(%d);
+        const entree = neuves.find(function (c) { return c.sens === 'entree'; });
+        const sortie = neuves.find(function (c) { return c.sens === 'sortie'; });
+        const ctx = BANDINI.Son.contexte;
+        const lu = [];
+        const t = setInterval(function () {
+          lu.push({ e: entree.param.value, s: sortie.param.value });
+        }, 250);
+        setTimeout(function () {
+          clearInterval(t);
+          ok({ lu: lu, neuves: neuves.map(function (c) { return { sens: c.sens, t: c.t, duree: c.duree }; }),
+               arrets: window.__arrets, actives: [BANDINI.Son.boucleActive('musique-amb_quais'), BANDINI.Son.boucleActive('musique-amb_pointe')] });
+        }, %d);
+    })""" % (avant, int((fondu + 0.6) * 1000)))
+    sens = sorted(c["sens"] for c in mesures["neuves"])
+    assert sens == ["entree", "sortie"], f"un fondu, c'est une courbe qui monte et une qui descend : {mesures['neuves']}"
+    for c in mesures["neuves"]:
+        assert c["duree"] == fondu, f"la courbe ne suit pas fondu_s ({fondu}) : {c}"
+    e, s = [next(c for c in mesures["neuves"] if c["sens"] == k) for k in ("entree", "sortie")]
+    assert abs(e["t"] - s["t"]) < 0.5, f"les deux courbes ne partent pas ensemble : {e} {s}"
+    lu = mesures["lu"]
+    assert lu[-1]["e"] > 0.95 and lu[-1]["s"] < 0.05, f"le fondu n'arrive pas au bout : {lu[-1]}"
+    assert all(b["e"] >= a["e"] - 1e-6 for a, b in zip(lu, lu[1:])), f"la nouvelle ne fait pas que monter : {lu}"
+    assert all(b["s"] <= a["s"] + 1e-6 for a, b in zip(lu, lu[1:])), f"l'ancienne ne fait pas que baisser : {lu}"
+    # Puissance constante : au milieu, ni creux ni bosse (deux fois 0,707 valent 1).
+    puissances = [m["e"] ** 2 + m["s"] ** 2 for m in lu]
+    assert all(0.8 < p < 1.2 for p in puissances), f"le fondu creuse ou gonfle le volume : {puissances}"
+    assert mesures["actives"] == [True, False], f"seule la nouvelle doit etre une boucle active : {mesures['actives']}"
+    # L'ancienne source ne s'arrete qu'APRES sa courbe.
+    assert mesures["arrets"], "l'ancienne piste n'a jamais ete arretee : elle jouerait pour toujours"
+    assert max(a["apres"] for a in mesures["arrets"]) >= fondu - 0.2, \
+        f"l'ancienne piste est coupee net : {mesures['arrets']}"
     assert erreurs == []
 
 
