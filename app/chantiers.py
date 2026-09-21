@@ -38,6 +38,9 @@ l'écran, et le jour de départ voyage dans la sauvegarde.
 sous les roues, puis refaites quand le neuf est debout) et **l'équipe** (des
 ouvriers plantés sur le terrain, autour de la machine du jour). Les deux vivent
 dans LEUR PROPRE dé : tirer une tranchée ne déplace ni un chantier, ni une machine.
+
+4e vague : **le signaleur** — un homme sur le trottoir, au bout amont de la tranchée,
+dont la palette dit ARRÊT puis LENTEMENT, et que le trafic de la voie obéit.
 """
 
 from __future__ import annotations
@@ -90,6 +93,19 @@ ASPHALTE = "#"
 #: Ce que la tranchée montre à chaque phase : rien avant que le terrain soit rasé,
 #: des plaques tant qu'on y travaille, une rue rapiécée quand le neuf est debout.
 TRANCHEE: dict[int, str] = {2: "plaques", 3: "plaques", 4: "rapiece"}
+#: ⚠️ LE SIGNALEUR. Il tient la voie où la tranchée est ouverte, tant que les plaques
+#: y sont (`TRANCHEE`), et il se tient sur le TROTTOIR d'à côté — jamais dans la
+#: chaussée : un homme planté dans la voie, le trafic le contourne, il ne
+#: l'écoute pas. Au bout d'où l'on vient : à l'est d'une voie qui va vers l'ouest,
+#: à l'ouest d'une voie qui va vers l'est, pour que le trafic le voie avant la
+#: tranchée. Il ne sert que sur une voie horizontale (`<` ou `>`) dont les deux
+#: tuiles vont dans le même sens : une tranchée sur une rue nord-sud, ou sur une
+#: tuile de croisement, n'a pas de signaleur (et n'en est pas refusée).
+SIGNAUX = ("<", ">")
+#: Ce qui occupe une tuile de trottoir et la rend impropre à un homme planté.
+OCCUPENT = ("decor", "lampes", "portes", "devantures", "residences", "points_interet",
+            "paquets", "ambulants", "reclames", "feux_pietons")
+
 #: Un bris d'aqueduc a sa flaque : on ne creuse pas dans son rayon.
 RAYON_AQUEDUC = 3
 
@@ -441,6 +457,34 @@ def _tranchee(ville: dict, libre: dict, des: carte.Des) -> list[list[int]]:
     return []
 
 
+def _signaleur(ville: dict, rue: list[list[int]]) -> dict | None:
+    """Où se tient le signaleur de cette tranchée, ou None.
+
+    `[x, y]` : sa tuile, le trottoir au nord de la tranchée. La voie qu'il tient est la
+    rangée `y + 1`, et son sens se lit dans le calque `voie` — le jeu le relit, il ne le
+    reçoit pas. ⚠️ Rien de plus dans le paquet : celui de la carte est à quelques octets de
+    son plafond gzip, et une clé de plus par chantier ou un drapeau par phase (« sert pendant
+    les plaques » se lit déjà dans `tranchee`) se paient.
+    """
+    if not rue:
+        return None
+    (x0, y), (x1, _) = rue[0], rue[-1]
+    sens = ville["voie"][y][x0]
+    if sens not in SIGNAUX or any(ville["voie"][y][x] != sens for x in range(x0, x1 + 1)):
+        return None
+    # Là d'où l'on vient : une voie qui va vers l'ouest arrive de l'est.
+    x = x1 if sens == "<" else x0
+    sol = ville["sol"]
+    glyphe = sol[y - 1][x]
+    if not carte.marchable(glyphe) or carte.LEGENDE[glyphe].get("route"):
+        return None
+    for cle in OCCUPENT:
+        for objet in ville.get(cle) or []:
+            if isinstance(objet.get("x"), int) and (x, y - 1) in _cases(objet):
+                return None
+    return [x, y - 1]
+
+
 def _postes(sol: list[str], x0: int, y0: int, phase: dict, tuiles: set[tuple[int, int]],
             combien: int, des: carte.Des) -> list[list[int]]:
     """Où les ouvriers de cette phase tiennent leur poste.
@@ -530,6 +574,7 @@ def tirer(ville: dict, batiments: list[dict], graine: int) -> list[dict]:
             "genre": libre["genre"],
             "masque": masque,
             "tranchee": rue,
+            "signaleur": _signaleur(ville, rue),
             # ⚠️ Chacun commence à une phase différente : au premier matin, la
             # ville montre déjà une maison condamnée, une démolition et un
             # terrain rasé. Sans ce décalage, il faudrait trois jours de jeu

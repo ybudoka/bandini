@@ -5256,6 +5256,32 @@ const DECORS = {
     ctx.fillStyle = '#8f6c44'; ctx.fillRect(9, 2, 5, 2); ctx.fillRect(6, 5, 5, 1);
     ctx.fillStyle = '#9a9689'; ctx.fillRect(4, 9, 2, 1); ctx.fillRect(15, 8, 2, 2); ctx.fillRect(18, 10, 1, 1);
   } },
+  // ⚠️ LA PALETTE DU SIGNALEUR : deux poses, ARRÊT (l'octogone rouge) puis LENTEMENT
+  // (le losange orange), une toutes les trois secondes. C'est LA pose qu'on lit
+  // pour savoir si le trafic s'arrête (`Chantiers.signalDevant` relit
+  // `Entites.poseDuDecor`, la même fonction que le dessin) : la palette ne peut
+  // donc pas dire ARRÊT pendant que les chars passent. Elle n'a pas de `travaille`,
+  // donc pas de pose de repos la nuit : elle vit avec l'homme qui la tient.
+  panneau_signaleur: { anime: 180, w: 14, h: 26, ancre: [7, 25], r: 0, solide: false, variantes: 2, peindre: function (ctx, w, h, v) {
+    ctx.fillStyle = '#3c4148'; ctx.fillRect(6, 12, 2, 13);
+    ctx.fillStyle = '#6b727b'; ctx.fillRect(6, 12, 1, 13);
+    if (v === 0) {
+      // ARRÊT : un octogone rouge bordé de blanc, la barre blanche au milieu.
+      ctx.fillStyle = '#f4f1e6';
+      ctx.fillRect(4, 0, 6, 1); ctx.fillRect(2, 1, 10, 1); ctx.fillRect(1, 2, 12, 8); ctx.fillRect(2, 10, 10, 1); ctx.fillRect(4, 11, 6, 1);
+      ctx.fillStyle = '#c0392b';
+      ctx.fillRect(4, 1, 6, 1); ctx.fillRect(2, 2, 10, 8); ctx.fillRect(4, 10, 6, 1);
+      ctx.fillStyle = '#f4f1e6'; ctx.fillRect(3, 5, 8, 2);
+    } else {
+      // LENTEMENT : un losange orange bordé de noir, un trait noir au milieu.
+      const rangs = [2, 4, 6, 8, 10, 12, 12, 10, 8, 6, 4, 2];
+      ctx.fillStyle = '#1a1712';
+      rangs.forEach(function (n, j) { ctx.fillRect(7 - n / 2, j, n, 1); });
+      ctx.fillStyle = '#f0a51a';
+      rangs.forEach(function (n, j) { if (n > 2 && j > 0 && j < 11) ctx.fillRect(7 - n / 2 + 1, j, n - 2, 1); });
+      ctx.fillStyle = '#1a1712'; ctx.fillRect(4, 5, 6, 2);
+    }
+  } },
   // La pelle : le bras monte, le godet racle, le bras redescend. Six poses
   // aller-retour, jamais un saut du haut au bas.
   pelleteuse: { anime: 9, arrete: 6.0, w: 40, h: 30, ancre: [16, 26], r: 8, sol: [9, 6], solide: true, variantes: 6, travaille: 'jour', racle: 0, peindre: function (ctx, w, h, v) {

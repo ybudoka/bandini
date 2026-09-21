@@ -1917,7 +1917,10 @@ const Vehicules = (function () {
       }
       if (devant < dMin) dMin = devant - v.def.longueur / 2;
     }
-    return dMin;
+    // ⚠️ Et le SIGNALEUR d'un chantier, quand sa palette dit ARRÊT : le même
+    // freinage que pour un piéton planté sur la voie, à la distance où il est.
+    // (Infinity la plupart du temps : aucun chantier ne le fait parler.)
+    return Math.min(dMin, Chantiers.signalDevant(v));
   }
 
   /** Le chien de garde du trafic : dix secondes sans bouger, sans feu rouge

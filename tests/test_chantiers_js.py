@@ -831,8 +831,9 @@ def test_la_tranchee_ne_change_pas_sous_les_yeux(banc):
 
 def _equipe(o_corps: str) -> str:
     return _juge(ENREGISTREUR + """
+        // L'équipe du TERRAIN : le signaleur, lui, a ses propres juges.
         function equipe(L, id) {
-            return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant; });
+            return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant && e.posteDe !== 'signal'; });
         }
         // Le joueur au sud des postes, à portée de la bulle mais hors de l'écran.
         function auSud(L, ch, tuile) {
@@ -956,7 +957,7 @@ def test_l_equipe_suit_la_phase(banc):
         L.Jeu.commencer();
         const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[3].equipe.length === 2; });
         const ch = L.Chantiers.liste[i], d = ch.def, id = d.id;
-        const equipe = function () { return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant; }); };
+        const equipe = function () { return L.B.entites.filter(function (e) { return e.equipeDe === id && e.vivant && e.posteDe !== 'signal'; }); };
         L.B.partie.heure = 0.5;
         L.Chantiers.appliquer(i, 2);
         poserLeJoueur(L, { x: d.phases[2].equipe[0][0] * 16 + 8, y: d.phases[2].equipe[0][1] * 16 + 8 + 300 });
@@ -972,3 +973,205 @@ def test_l_equipe_suit_la_phase(banc):
     assert r["hier"] == 2
     assert r["apresChangement"] == 0 and r["hierEncore"] == 0, f"l'équipe d'hier est restée : {r}"
     assert sorted(r["aujourdhui"]) == sorted(r["postes"]), f"l'équipe du jour n'est pas aux postes de la phase : {r}"
+
+
+# --- 4e vague : le signaleur --------------------------------------------------------------
+
+#: Un chantier dont le signaleur a huit tuiles de voie droite derrière lui (côté d'où vient
+#: le trafic) : ni croisement ni ligne d'arrêt, pour qu'aucun feu ne brouille la mesure.
+SIGNALEUR = """
+  // Le signaleur tel que le jeu le lit : Python n'envoie que sa tuile [x, y] ; la voie est
+  // la rangée dessous, et son sens se lit sur la carte.
+  function sig(L, ch) {
+    const s = ch.def.signaleur;
+    return { x: s[0], y: s[1], voie: s[1] + 1, sens: L.Monde.fleche(s[0], s[1] + 1) };
+  }
+  function droit(L, ch) {
+    const s = sig(L, ch), c = L.Monde.carte, p = { '<': 1, '>': -1 }[s.sens], voie = s.y + 1;
+    for (let k = 0; k <= 8; k++) {
+      const x = s.x + p * k;
+      if (c.voie[voie][x] !== s.sens || L.Monde.intersectionA(x, voie) || c.arrets[x + ',' + voie]) return false;
+    }
+    return true;
+  }
+  function chantierDuSignaleur(L) {
+    const i = L.Chantiers.liste.findIndex(function (c) { return c.def.signaleur && c.def.phases[2].tranchee === 'plaques' && droit(L, c); });
+    if (i < 0) throw new Error('aucun chantier dont le signaleur ait une voie droite derrière lui');
+    return i;
+  }
+  // Le joueur au sud du poste du signaleur, à portée de la bulle mais hors de l'écran.
+  function auSudDuSignaleur(L, s) { poserLeJoueur(L, { x: s.x * 16 + 8, y: s.y * 16 + 8 + 300 }); }
+  function homme(L, id) {
+    return L.B.entites.find(function (e) { return e.equipeDe === id && e.posteDe === 'signal' && e.vivant; });
+  }
+  function palette(L, id) {
+    return L.B.entites.find(function (e) { return e.type === 'decor' && e.palette === id; });
+  }
+  function char(L, ch, tuiles, extra) {
+    const s = sig(L, ch), p = { '<': 1, '>': -1 }[s.sens];
+    const v = L.Vehicules.creer('auto', (s.x + p * tuiles) * 16 + 8, (s.y + 1) * 16 + 8, s.sens === '<' ? Math.PI : 0,
+                                Object.assign({ conducteur: 'trafic', etat: 'roule', sens: s.sens }, extra || {}));
+    return v;
+  }
+"""
+
+
+def _signal(corps: str) -> str:
+    return _juge(SIGNALEUR + """
+        L.Jeu.commencer();
+        const i = chantierDuSignaleur(L), ch = L.Chantiers.liste[i], d = ch.def, s = sig(L, ch), id = d.id;
+        L.B.partie.heure = 0.5;
+        L.Chantiers.appliquer(i, 2);
+    """ + corps)
+
+
+def test_le_signaleur_nait_avec_sa_palette_et_s_en_va_avec_elle(banc):
+    """Un homme sur son trottoir, intouchable, tourné vers la route, avec une palette
+    dans la main — et jamais une palette qui dit ARRÊT toute seule."""
+    r = banc(_signal("""
+        const avant = { homme: !!homme(L, id), palette: !!palette(L, id) };
+        // Sous les yeux : il ne naît pas.
+        poserLeJoueur(L, { x: s.x * 16 + 8, y: s.y * 16 + 8 });
+        L.Chantiers.equiper();
+        const surPlace = !!homme(L, id);
+        auSudDuSignaleur(L, s);
+        L.Chantiers.equiper();
+        const e = homme(L, id), p = palette(L, id);
+        e.face = 'haut';
+        L.Chantiers.maj();
+        const jour = { tx: Math.floor(e.x / 16), ty: Math.floor(e.y / 16), intouchable: e.intouchable, etat: e.etat,
+                       metier: e.metier, chantier: !!e.chantier, face: e.face, arch: e.arch,
+                       palette: !!p, decor: p && p.decor, solide: p && p.solide, aCote: p && Math.abs(p.x - e.x) < 12 && p.y >= e.y,
+                       pose0: L.Entites.poseDuDecor(L.DECORS.panneau_signaleur, 0, false),
+                       pose1: L.Entites.poseDuDecor(L.DECORS.panneau_signaleur, 180, false) };
+        // Une seule palette, un seul homme, même après plusieurs passes.
+        L.Chantiers.equiper(); L.Chantiers.equiper();
+        const combien = { hommes: L.B.entites.filter(function (q) { return q.equipeDe === id && q.posteDe === 'signal'; }).length,
+                          palettes: L.B.entites.filter(function (q) { return q.palette === id; }).length };
+        // La phase 3 le garde ; le neuf et la démolition non.
+        const parPhase = {};
+        for (const phase of [0, 1, 3, 4]) {
+            L.Chantiers.appliquer(i, phase);
+            auSudDuSignaleur(L, s);
+            L.Chantiers.equiper();
+            parPhase[phase] = { homme: !!homme(L, id), palette: !!palette(L, id) };
+        }
+        // La nuit, hors de l'écran : il rentre, et la palette avec lui.
+        L.Chantiers.appliquer(i, 2);
+        auSudDuSignaleur(L, s);
+        L.Chantiers.equiper();
+        const jourBis = { homme: !!homme(L, id), palette: !!palette(L, id) };
+        L.B.partie.heure = 0.95;
+        // ⚠️ Un homme resté sous les yeux la nuit : le DESSIN (la pose par défaut) et la
+        // LOGIQUE (`false`, jamais de repos) disent la même chose — sinon la palette
+        // montre ARRÊT pendant que le trafic passe.
+        const f = L.DECORS.panneau_signaleur;
+        const poseDeNuit = [L.Entites.poseDuDecor(f, 200), L.Entites.poseDuDecor(f, 200, false), L.Monde.estNuit()];
+        L.Chantiers.equiper();
+        const nuit = { homme: !!homme(L, id), palette: !!palette(L, id) };
+        // L'homme parti (oublié loin du joueur) : la palette ne reste pas seule.
+        L.B.partie.heure = 0.5;
+        L.Chantiers.equiper();
+        L.Entites.retirer(homme(L, id));
+        poserLeJoueur(L, loin(L));
+        L.Chantiers.equiper();
+        const orpheline = { homme: !!homme(L, id), palette: !!palette(L, id) };
+        return { avant: avant, surPlace: surPlace, jour: jour, combien: combien, parPhase: parPhase, jourBis: jourBis,
+                 nuit: nuit, orpheline: orpheline, poste: [s.x, s.y], poseDeNuit: poseDeNuit };
+    """))
+    assert r["avant"] == {"homme": False, "palette": False}
+    assert r["surPlace"] is False, "le signaleur naît sous les yeux du joueur"
+    j = r["jour"]
+    assert (j["tx"], j["ty"]) == tuple(r["poste"]), j
+    assert j["arch"] == "ouvrier" and j["intouchable"] and j["etat"] == "fige" and j["metier"] == "chantier", j
+    assert not j["chantier"], "marqué `chantier`, il passerait pour un ouvrier de la voie fermée"
+    assert j["face"] == "bas", "le signaleur ne regarde pas la route"
+    assert j["palette"] and j["decor"] == "panneau_signaleur" and not j["solide"] and j["aCote"], j
+    assert (j["pose0"], j["pose1"]) == (0, 1), "la palette ne dit pas ARRÊT puis LENTEMENT"
+    assert r["combien"] == {"hommes": 1, "palettes": 1}, r["combien"]
+    assert r["parPhase"]["0"] == r["parPhase"]["1"] == r["parPhase"]["4"] == {"homme": False, "palette": False}, r["parPhase"]
+    assert r["parPhase"]["3"] == {"homme": True, "palette": True}, r["parPhase"]
+    assert r["jourBis"] == {"homme": True, "palette": True}
+    assert r["nuit"] == {"homme": False, "palette": False}, "la nuit, le signaleur est encore là"
+    assert r["poseDeNuit"] == [1, 1, True], f"le dessin et la logique de la palette divergent la nuit : {r['poseDeNuit']}"
+    assert r["orpheline"] == {"homme": False, "palette": False}, "la palette reste seule sur le trottoir"
+
+
+def test_le_trafic_lit_la_palette(banc):
+    """`signalDevant` : ARRÊT seulement, sur sa voie, dans son sens, avant lui, à moins
+    de six tuiles, et jamais pour une poursuite ni une rame. Et `obstacleDevant` le
+    lit — la conduite ordinaire du trafic n'a rien d'autre à savoir."""
+    r = banc(_signal("""
+        auSudDuSignaleur(L, s);
+        L.Chantiers.equiper();
+        const dist = function (v) { return L.Chantiers.signalDevant(v); };
+        const v = char(L, ch, 4);
+        const out = { longueur: v.def.longueur, anime: L.DECORS.panneau_signaleur.anime,
+                      patience: L.B.defs.conduite.trafic.patience_images };
+        L.B.t = 0;                                           // la palette dit ARRÊT
+        out.arret = dist(v);
+        out.obstacle = L.Vehicules.obstacleDevant(v);
+        L.B.t = 180;                                         // ... puis LENTEMENT
+        out.lentement = dist(v);
+        out.obstacleLent = L.Vehicules.obstacleDevant(v);
+        L.B.t = 0;
+        // Le même char, ailleurs : ce que le signaleur ne dit pas à tout le monde.
+        const ailleurs = function (retouche) {
+            const w = char(L, ch, 4); retouche(w); const r = dist(w); L.Entites.retirer(w); return r;
+        };
+        out.autreRangee = ailleurs(function (w) { w.y += 16; });
+        out.autreSens = ailleurs(function (w) { w.sens = s.sens === '<' ? '>' : '<'; });
+        out.dejaPasse = char(L, ch, -3) && (function () { const w = char(L, ch, -3); const r = dist(w); L.Entites.retirer(w); return r; })();
+        out.trop_loin = (function () { const w = char(L, ch, L.Chantiers.PORTEE_SIGNAL_TUILES + 3); const r = dist(w); L.Entites.retirer(w); return r; })();
+        out.poursuite = ailleurs(function (w) { w.poursuite = true; });
+        out.rame = ailleurs(function (w) { w.rails = true; });
+        // Sans son homme (oublié loin du joueur, la palette avec lui), personne ne dit rien.
+        L.Entites.retirer(homme(L, id));
+        poserLeJoueur(L, loin(L));
+        L.Chantiers.equiper();
+        out.sansHomme = dist(v);
+        return out;
+    """))
+    marge = r["longueur"] / 2
+    assert r["anime"] < r["patience"], \
+        "l'ARRÊT dure plus que la patience du trafic : il forcerait le passage au lieu de l'obéir"
+    assert abs(r["arret"] - (4 * 16 - marge)) < 1e-6, f"la distance de l'ARRÊT n'est pas celle du nez : {r}"
+    assert r["obstacle"] <= r["arret"], "la conduite ordinaire ne lit pas le signaleur"
+    assert r["lentement"] == float("inf") or r["lentement"] is None, f"LENTEMENT arrête le trafic : {r}"
+    # (JSON rend l'infini par `null`.)
+    assert r["obstacleLent"] is None or r["obstacleLent"] > r["arret"], "LENTEMENT arrête encore le trafic"
+    for cas in ("autreRangee", "autreSens", "dejaPasse", "trop_loin", "poursuite", "rame", "sansHomme"):
+        assert r[cas] is None or r[cas] == float("inf"), f"le signaleur arrête aussi ce cas-là : {cas} = {r[cas]}"
+
+
+def test_un_char_du_trafic_s_arrete_a_l_arret_et_repart_a_lentement(banc):
+    """⚠️ Le geste, pas la fonction : un vrai char de trafic sur la voie du signaleur
+    s'arrête avant la tranchée tant que la palette dit ARRÊT, sans jamais la passer, et
+    repart quand elle dit LENTEMENT — en moins de trois secondes d'attente, sous la
+    patience du trafic (il ne force pas le passage)."""
+    r = banc(_signal("""
+        auSudDuSignaleur(L, s);
+        L.Chantiers.equiper();
+        const v = char(L, ch, 5);
+        L.B.t = 0;
+        const sens = { '<': 1, '>': -1 }[s.sens], mx = homme(L, id).x;
+        const avance = function () { return (v.x - mx) * sens; };      // > 0 : il n'a pas passé le signaleur
+        const trace = [];
+        let force = 0;
+        for (let k = 0; k < 175; k++) {
+            L.Chantiers.maj();
+            o.frame(1);
+            if (v.force > 0) force++;
+            if (k % 25 === 0) trace.push([Math.round(avance()), +v.vitesse.toFixed(2)]);
+        }
+        const arrete = { avance: avance(), vitesse: v.vitesse, force: force, patience: v.patience, t: L.B.t };
+        L.B.t = 180;
+        for (let k = 0; k < 200; k++) o.frame(1);
+        return { arrete: arrete, trace: trace, apres: avance(), vitesseApres: v.vitesse, present: L.B.entites.indexOf(v) >= 0 };
+    """))
+    a = r["arrete"]
+    assert a["vitesse"] < 0.1, f"le char roule encore sous ARRÊT : {r['trace']}"
+    assert a["avance"] > 16, f"le char a passé le signaleur sous ARRÊT : {r['trace']}"
+    assert a["force"] == 0, f"le char force le passage pendant ARRÊT (patience {a['patience']}) : {r['trace']}"
+    assert r["present"], "le char a disparu"
+    assert r["apres"] < 0, f"à LENTEMENT, le char n'a pas repris sa route : {r}"

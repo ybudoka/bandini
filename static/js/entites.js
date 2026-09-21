@@ -2593,15 +2593,18 @@ const Entites = (function () {
       `q.chantier && q.vivant`, et l'équipe d'une voie fermée ne naîtrait plus.
       `equipeDe` porte l'id du chantier, `posteDe` le numéro du poste : c'est ce
       qui dit qu'un poste est pris. */
-  function naitreLEquipe(id, postes) {
+  function naitreLEquipe(id, postes, nom) {
     const arch = archetype('ouvrier');
     if (!arch || !B.joueur || B.interieur) return 0;
     let nes = 0;
     postes.forEach(function (p, k) {
+      // Le poste de la palette s'appelle `'signal'` (4e vague) : il ne se confond
+      // pas avec les postes numérotés de l'équipe du terrain.
+      const poste = nom === undefined ? k : nom;
       const x = p[0] * TT + 8, y = p[1] * TT + 8;
       if (dist2(x, y, B.joueur.x, B.joueur.y) > BULLE_OUBLI * BULLE_OUBLI) return;
       if (visibleAEcran(x, y, 24)) return;
-      if (B.entites.some(function (q) { return q.equipeDe === id && q.posteDe === k && q.vivant; })) return;
+      if (B.entites.some(function (q) { return q.equipeDe === id && q.posteDe === poste && q.vivant; })) return;
       const e = creerPieton(x, y, arch);
       e.metier = 'chantier';
       e.intouchable = true;
@@ -2609,7 +2612,7 @@ const Entites = (function () {
       e.face = 'bas';
       e.plante = { x: e.x, y: e.y };
       e.equipeDe = id;
-      e.posteDe = k;
+      e.posteDe = poste;
       nes++;
     });
     if (nes) indexer();

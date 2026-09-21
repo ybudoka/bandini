@@ -143,7 +143,7 @@ ne bougent pas quand l'ordre de travail change.
 | Une passe visuelle sur les pâtés de maison | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-passe-visuelle-sur-les-pâtés-de-maison) |
 | Une clôture, pas deux | ✅ **livré** | 15 sept. 2026 | **P2** | **correctif** | [notes](#une-clôture-pas-deux) |
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
-| Ça travaille : chantiers et démolitions | ⬜ **en cours** (3 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe — **la 4e, le signaleur qui arrête le trafic, est en cours** ; restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
+| Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
 | M14 Meta | ⬜ **en cours** (5 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, et le défi du jour ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
@@ -724,7 +724,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `manettes.py` | les **dispositions de manette** (Xbox/PlayStation, 8BitDo en Bluetooth, croix-sur-un-axe) et la numérotation DirectInput **mesurée** chez Martin ; le dessin de manette qui sert de preuve s'allume par numéro de bouton | `test_manettes.py` (un juge garde la mesure : la « corriger » effacerait le retour), `test_manette_js.py` |
 | `musique.py` | la musique **écrite en notes** (notes, tempo, formes d'onde) — le **filet** depuis que les quinze morceaux sont des mp3 générés (`audio.MUSIQUES` en porte la recette) ; `scripts/musique_apercu.py` rend les notes en WAV pour l'oreille, gratuitement et hors ligne | `test_musique.py` (tonalité, longueur de boucle, collisions entre voix, et la couverture : aucun morceau sans musique générée) |
 | `devantures.py` | 118 devantures et 142 noms d'enseigne **par district**, dix familles de couleurs, 54 graffitis signés chez leur gang, 74 immeubles à logements — une **couche peinte** (zéro solidité touchée) qui tire dans son propre dé ; les enseignes du standing (`COMMERCES_COSSUS`, `COMMERCES_PAUVRES`, `A_LOUER`, `PART_PLACARDEE`) | `test_devantures.py`, `test_devantures_js.py` (aucune enseigne hors de son district, aucun gang hors de chez lui, une porte visible partout) |
-| `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit ; **la tranchée** (deux tuiles d'asphalte sous la façade, plaques d'acier puis rue rapiécée, sans changer une tuile) et **l'équipe** (les postes des ouvriers, dans leur propre dé) | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`, la tranchée qui évite tout ce qui parle déjà, les postes hors des couloirs), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison, la plaque qui claque sans rien coûter, l'équipe qui naît hors de l'écran et rentre la nuit) |
+| `chantiers.py` | les **chantiers** : trois bâtiments qui ne servent à rien, tirés dans leur propre dé après toute la ville ; les tuiles de leurs **cinq phases** (condamné, démolition, rasé, charpente, neuf) et la place des machines — la grue à boule à deux tuiles du mur qu'elle frappe ; `phase_du_jour`, l'horloge que `chantiers.js` relit ; **la tranchée** (deux tuiles d'asphalte sous la façade, plaques d'acier puis rue rapiécée, sans changer une tuile) et **l'équipe** (les postes des ouvriers, dans leur propre dé) et **le signaleur** (le trottoir au bout amont de la tranchée, sa voie) | `test_chantiers.py` (ce qui sert n'est jamais touché, la ville d'un seul tenant à chaque phase, la ville identique avec et sans chantiers, l'horloge, `PYTHONHASHSEED`, la tranchée qui évite tout ce qui parle déjà, les postes hors des couloirs), `test_chantiers_js.py` (jamais sous les yeux ni sur quelqu'un, la sauvegarde, ce qui tombe avec la maison, la plaque qui claque sans rien coûter, l'équipe qui naît hors de l'écran et rentre la nuit, le signaleur et sa palette, un char de trafic qui s'arrête à ARRÊT et repart à LENTEMENT) |
 | `autobus.py` | les **lignes d'autobus** : la boucle de chaque ligne (une recherche qui obéit au champ de direction, **un seul virage par boîte** et là où il mène à une voie, jamais sur une tuile que la ville peut fermer — entraves, rues barrées, bris d'aqueduc, barrières, pont), ses **arrêts** (une voie droite qui longe le trottoir, l'abribus derrière, du bon côté de la rue pour le sens du voyage), leurs **noms** (le lieu servi, sinon « 3e Rue / 5e Avenue »), et l'**horaire** que `autobus.js` suit ; pose les abribus et leur banc | `test_autobus.py` (chaque pas permis, rien de fermable, un virage par boîte, l'arrêt le long du trottoir et son abri qui regarde la rue, jamais devant une porte, chaque lieu servi, les noms, la ville identique sans les lignes), `test_autobus_js.py` |
 | `mobilier.py` | le **mobilier de rue** : des arbres en RANGÉE le long de chaque bord de rue, au pas de son quartier, et des bancs qui regardent la rue (`banc`, `banc_nord`, `banc_est`, `banc_ouest`) ; jamais au coin d'un croisement, devant une porte, au bout d'une sortie de char, collé à un autre meuble, ni là où il fermerait un passage ; en cossu des **bacs à fleurs**, et partout le **mobilier de l'usage** (`MEUBLES_PAR_USAGE` : parcomètres, boîtes aux lettres, bacs de recyclage, palettes, bennes), chacun dans son dé ; son propre dé, en tout dernier | `test_mobilier.py` (le bord de rue et le banc tourné, les coins, les portes, les sorties, rien de fermé à pied, le pas et le quartier) |
 | `eboueurs.py` | la **tournée des éboueurs** (M12) : une boucle dans Les Érables tracée avec la machinerie des autobus, ses **bacs** au bord du trottoir (un tous les cinq pas, loin des boîtes, ni sur un meuble ni devant une porte) et son **horaire** ; ne pose rien, ne tire aucun dé | `test_eboueurs.py` (les flèches, rien de fermable, les bacs au bord du trottoir, la ville identique sans la tournée, l'horaire), `test_eboueurs_js.py` |
@@ -781,7 +781,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9e | `neige.js` | la **tempête de neige** : l'intensité à l'heure (`intensiteA`), 0 sans l'option ; les coefficients qu'elle donne à la physique (`adherence`, `frein`, `vitesseTrafic`) ; les tuiles déblayées par la charrue (`deneiger`, la seule mémoire) ; la neige au sol par plages et le voile avec ses flocons ; le vent en boucle ; la **nuit de déneigement** (`operationA`, les panneaux qui clignotent, ce qui reste dans les rues du secteur part au lot par `Missions.saisir`) |
 | 9f | `incendies.js` | le **feu de bâtiment** : QUAND il se déclare est une empreinte de l'heure (`feuActifA`, jamais un dé du jeu — deux joueurs voient le même feu), sa façade et son message « INCENDIE », la fumée et les flammes **allumées seulement hors de l'écran** ; l'**extincteur** l'éteint de loin (`majJet`, appelé par `Combat`) et la prime tombe une fois par feu ; `cible` le donne au GPS et aux missions (`histoire.js` attend qu'il soit éteint) ; rien ne se sauvegarde (`oublier` à chaque nouvelle partie) |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A\*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital, le **refuge** (`auRefuge` : sur l'île, aucun agent, l'hélico repart, rien ne fait monter les étoiles) |
-| 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce ; **la tranchée** (les plaques d'acier dans `carte.plaques`, la couche peinte des plaques et de la rue rapiécée, le morceau recuit) et **l'équipe** (`equiper`, `regarder` : qui tient son poste le jour, rentre la nuit et regarde passer) |
+| 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce ; **la tranchée** (les plaques d'acier dans `carte.plaques`, la couche peinte des plaques et de la rue rapiécée, le morceau recuit) et **l'équipe** (`equiper`, `regarder` : qui tient son poste le jour, rentre la nuit et regarde passer) et **le signaleur** (`signalDevant`, lu par `Vehicules.obstacleDevant` ; sa palette, un décor à deux poses qui suit son homme) |
 | 12 | `foire.js` | la foire qui roule : **le petit train** (sa voie en pixels depuis les tuiles `T`, l'arrêt devant quelqu'un, `bloquer` — on ne traverse pas un wagon) et **la montagne russe** (la voie 3D tracée par Python, conduite par l'énergie, deux moitiés cuites) ; rien dans `B.entites`, trié au dessin par `ajouterVisibles` |
 | 13 | `missions.js` | cadre `TYPES_ETAPE`, téléphone, boulots (taxi avec pouce lisse, pizza, ambulance, courses, cascades, paquets), magasins, planque, propriétés (caisse par jour, plafond 3 jours), économie (`encaisser`, `payer`), pickpocket, journal du matin, bilan de session |
 | 13b | `scenes.js` | **le metteur en scène** : joue une liste de plans (`missions.TYPES_PLANS`) sans connaître aucune scène par son nom — `jouer(scene, contexte)`, `maj()`, `passer()` ; aucun dé, la ville figée, une seule façon de finir (jouée ou passée), le joueur rendu où il était, trois secondes au plus après le dernier mot |
@@ -8421,12 +8421,60 @@ sans un homme dessus est un décor, et il s'arrête net à sa palissade : la vag
 - ⚠️ **Regardé dans Chromium avant de livrer** (les juges verts ont déjà laissé passer un
   damier) : la plaque se lit, le ruban aussi, les hommes en gilet orange entourent la pelle ; la
   rue rapiécée était trop noire — on aurait dit un trou — et a été éclaircie d'un cran.
-- **16 juges Python + 8 de banc, 28 mutations, chaque règle vue rouge sans elle.** Reste : le
-  signaleur (LENTEMENT d'un côté, ARRÊT de l'autre — une sorte de gens qui **arrête le trafic**,
-  toi aussi), le conteneur qu'on pousse, le tas de terre qui fait rampe, de nouveaux chantiers
-  quand les premiers sont finis ; et l'étage 2 — la pelle conduisible, après la refonte des
-  véhicules. À écouter par Martin : le claquement de la plaque n'a pas de fichier ElevenLabs,
-  et le filet synthétisé est ce qu'on entend.
+- **16 juges Python + 8 de banc, 28 mutations, chaque règle vue rouge sans elle.** Restait : le
+  signaleur (livré à la 4e vague), le conteneur qu'on pousse, le tas de terre qui fait rampe,
+  de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 — la pelle conduisible,
+  après la refonte des véhicules. À écouter par Martin : le claquement de la plaque n'a pas de
+  fichier ElevenLabs, et le filet synthétisé est ce qu'on entend.
+
+⚠️ **4e vague livrée le 20 sept. 2026 — le signaleur qui arrête le trafic.** Sur le trottoir, au
+bout amont de la tranchée, un homme tient une palette : ARRÊT (l'octogone rouge) trois
+secondes, puis LENTEMENT (le losange orange) trois secondes. Le trafic de sa voie obéit — et la
+file qui s'arrête devant lui est ce qui te bloque, toi aussi : le joueur, lui, peut passer, comme
+devant un feu.
+
+- ⚠️ **Il se tient sur le TROTTOIR, jamais dans la chaussée** : un homme planté dans la voie, le
+  trafic le contourne (`changerDeVoie`), il ne l'écoute pas. Python le pose (`chantiers._signaleur`)
+  sur la tuile au nord de la tranchée, **du bout d'où l'on vient** (à l'est d'une voie qui va vers
+  l'ouest). Refusé — et le chantier n'en est pas refusé — sur une voie nord-sud, sur deux tuiles
+  qui ne vont pas dans le même sens, sur un trottoir qui est une chaussée ou déjà pris par un
+  meuble ; chaque refus a sa carte. **Il ne sert que pendant les plaques** (phases 2 et 3).
+  Mesuré : les trois tranchées de la graine livrée en ont un, et tous sont à l'est d'une voie
+  « < » — l'autre bout (voie « > ») n'est jugé que sur une carte écrite à la main.
+- ⚠️ **Branché dans `obstacleDevant`, pas dans les feux** : la ligne d'arrêt du trafic est liée
+  aux croisements (`attendFeu`, `prochaineCible`) et l'y greffer aurait touché la partie la plus
+  jugée de la conduite. `Chantiers.signalDevant` rend la distance de son nez à l'homme quand la
+  palette dit ARRÊT, sinon l'infini ; la conduite ordinaire fait le reste, **au même freinage que
+  pour un piéton planté sur la voie**. Il ne parle qu'à SA voie (la rangée de la tranchée, dans son
+  sens), à six tuiles au plus, pas à qui l'a déjà dépassé, **jamais à une poursuite ni à une
+  rame**. Un vrai char de trafic est posé cinq tuiles derrière lui : il s'arrête sans jamais passer
+  l'homme, sans forcer le passage, et repart au LENTEMENT.
+- ⚠️ **Trois secondes d'ARRÊT, pas plus** : la patience du trafic est de 200 images (3,3 s), au-delà
+  il force le passage. Un ARRÊT plus long ne serait pas obéi ; un juge compare les deux constantes
+  (`anime` de la palette, `patience_images` de la fiche).
+- ⚠️ **Une seule source : la POSE de la palette** (`Entites.poseDuDecor(f, t, false)`, comme
+  `feuDeCirculation` pour un feu) décide à la fois du dessin et de l'obéissance. Sans `travaille`,
+  donc **jamais de pose de repos la nuit** : le premier essai en avait une, et un homme resté à
+  l'écran à la tombée du jour aurait montré ARRÊT pendant que le trafic passait. (Aucun juge ne le
+  voyait : la mutation, oui.) Un juge lit les deux poses la nuit.
+- ⚠️ **La palette naît et rentre avec son homme**, jamais seule sur le trottoir : posée dans sa
+  main à sa naissance, retirée quand il rentre la nuit, quand la phase change, ou quand la
+  distance l'oublie. Son poste s'appelle `'signal'` (`posteDe`), pas un numéro : sinon il se
+  confondait avec le poste 0 de l'équipe du terrain et ne naissait pas. Il naît hors de l'écran,
+  intouchable, hors de la foule, tourné vers la route — les mêmes règles que l'équipe.
+- ⚠️ **Le paquet de la carte est à SEC** : `test_le_paquet_reste_leger` a rougi (48 045 octets
+  gzip pour un plafond de 48 000 ; la base en pesait 47 976). Le signaleur voyageait avec un
+  drapeau par phase et une clé par champ ; il ne voyage plus que sa tuile `[x, y]` — la voie est
+  la rangée dessous, son sens se lit sur le calque `voie`, et « sert pendant les plaques » se lit
+  dans `tranchee` de la phase, qui y est déjà. Résultat : **47 999 octets, un de marge**. Le
+  prochain ajout à la carte, de n'importe quelle session, doit se serrer de même ou relever le
+  plafond (`test_definitions`) en le disant — c'est le budget de Martin, je n'y ai pas touché.
+- ⚠️ **Regardé dans Chromium** : l'octogone se lit dans sa main, deux chars s'arrêtent en file
+  avant la plaque ; au LENTEMENT le losange orange et la file repart.
+- **9 juges Python + 3 de banc (dont un char de trafic qui s'arrête et repart), 21 mutations, chaque
+  règle vue rouge sans elle.** Reste : le conteneur qu'on pousse, le tas de terre qui fait
+  rampe, de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 — la pelle
+  conduisible, après la refonte des véhicules.
 
 ### M12 La ville vit
 

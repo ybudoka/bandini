@@ -632,3 +632,89 @@ def test_tirer_tranchee_et_equipe_ne_deplace_pas_les_chantiers(monkeypatch):
     sans_eux = [(c["x"], c["y"], c["decalage"], c["pas"], [p["machines"] for p in c["phases"]],
                  [p["sol"] for p in c["phases"]]) for c in carte.generer()["chantiers"]]
     assert avec == sans_eux
+
+
+# --- 4e vague : le signaleur ------------------------------------------------------------
+
+
+def _rue_mini(sens: str = "<", trottoir: str = "."):
+    """Une chaussée d'une voie sous un trottoir : la tranchée est en (3..4, 2)."""
+    ville = {"sol": ["BBBBBBBB", trottoir * 8, "########"],
+             "voie": ["........", "........", sens * 8]}
+    return ville, [[3, 2], [4, 2]]
+
+
+def test_chaque_tranchee_de_la_graine_livree_a_son_signaleur():
+    """⚠️ Sans cette mesure, un signaleur qui ne se pose jamais passerait tous les
+    juges : la graine livrée les a tous, et la tranchée est toujours sur une voie
+    horizontale."""
+    for ch in VILLE["chantiers"]:
+        assert ch["signaleur"], f"le chantier {ch['id']} n'a pas de signaleur"
+
+
+def test_le_signaleur_tient_la_voie_de_la_tranchee_depuis_le_trottoir():
+    for graine, ville in _villes_de_la_rue():
+        sol = ville["sol"]
+        for ch in ville["chantiers"]:
+            s = ch["signaleur"]
+            if not ch["tranchee"]:
+                assert s is None, (graine, ch["id"])
+                continue
+            if s is None:
+                continue
+            clef = (graine, ch["id"])
+            (x0, y), (x1, _) = ch["tranchee"][0], ch["tranchee"][-1]
+            sx, sy = s
+            sens = ville["voie"][y][x0]
+            assert sens in chantiers.SIGNAUX, clef
+            assert sy == y - 1, clef
+            assert all(ville["voie"][y][x] == sens for x in range(x0, x1 + 1)), ("pas sa voie", clef)
+            # Là d'où l'on vient, sur le trottoir : jamais dans la chaussée.
+            assert sx == (x1 if sens == "<" else x0), ("pas au bout amont", clef)
+            glyphe = sol[sy][sx]
+            assert carte.marchable(glyphe) and not carte.LEGENDE[glyphe].get("route"), ("dans la chaussée", clef)
+            tuile = (sx, sy)
+            for cle in chantiers.OCCUPENT:
+                for objet in ville.get(cle) or []:
+                    assert tuile not in chantiers._cases(objet), (cle, objet, clef)
+
+
+def test_le_signaleur_n_existe_que_sur_une_tranchee():
+    """⚠️ Il ne sert que pendant les plaques — et cela se lit dans `tranchee` de chaque phase,
+    pas dans un drapeau de plus : le paquet de la carte est à quelques octets de son plafond."""
+    for _graine, ville in _villes_de_la_rue():
+        for ch in ville["chantiers"]:
+            if ch["signaleur"]:
+                assert ch["tranchee"], ch["id"]
+                assert [p["tranchee"] for p in ch["phases"]] == [None, None, "plaques", "plaques", "rapiece"]
+            assert all("signaleur" not in p for p in ch["phases"]), "un drapeau par phase : le paquet enfle"
+            assert ch["signaleur"] is None or len(ch["signaleur"]) == 2, ch["signaleur"]
+
+
+def test_le_signaleur_se_met_a_l_amont_de_chaque_sens():
+    """Les graines livrées n'ont que des voies « < » : la carte écrite à la main
+    juge l'autre bout."""
+    ville, rue = _rue_mini("<")
+    assert chantiers._signaleur(ville, rue) == [4, 1]
+    ville, rue = _rue_mini(">")
+    assert chantiers._signaleur(ville, rue) == [3, 1]
+
+
+@pytest.mark.parametrize("cas", ["nord_sud", "voies_mixtes", "chaussee", "meuble", "sans_tranchee"])
+def test_le_signaleur_a_ses_refus(cas):
+    """Chaque refus a sa carte : une voie qui ne va pas de l'est à l'ouest, une voie
+    à deux sens sous la tranchée, un trottoir qui est une chaussée, une tuile déjà
+    prise par un meuble — et le chantier n'en est pas refusé pour autant."""
+    ville, rue = _rue_mini("<")
+    assert chantiers._signaleur(ville, rue), "sans refus, il se pose"
+    if cas == "nord_sud":
+        ville["voie"][2] = "v" * 8
+    elif cas == "voies_mixtes":
+        ville["voie"][2] = "<<<<>>>>"   # la tranchée est sur les colonnes 3 et 4
+    elif cas == "chaussee":
+        ville["sol"][1] = "#" * 8
+    elif cas == "meuble":
+        ville["decor"] = [{"type": "banc", "x": 4, "y": 1}]
+    elif cas == "sans_tranchee":
+        rue = []
+    assert chantiers._signaleur(ville, rue) is None

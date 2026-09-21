@@ -16,7 +16,11 @@
    3e vague : il DÉBORDE de sa palissade et il prend du monde. La tranchée ouverte
    dans la rue d'en face (des plaques d'acier qui claquent sous les roues, puis
    l'asphalte refait) et l'équipe : des ouvriers plantés au poste que Python leur
-   a choisi, qui regardent passer. */
+   a choisi, qui regardent passer.
+
+   4e vague : le SIGNALEUR — un homme sur le trottoir, au bout amont de la tranchée,
+   dont la palette alterne ARRÊT et LENTEMENT. Le trafic de sa voie obéit à ARRÊT
+   (`signalDevant`, lu par `Vehicules.obstacleDevant`). */
 
 const Chantiers = (function () {
   'use strict';
@@ -57,6 +61,15 @@ const Chantiers = (function () {
   //: L'équipe regarde le joueur passer, de plus près que ça ; sinon elle regarde sa
   //: machine.
   const REGARD = 90;
+  //: ⚠️ LE SIGNALEUR. Sa palette est un décor à deux poses (`panneau_signaleur`) et
+  //: c'est la POSE qui décide : 0 = ARRÊT, 1 = LENTEMENT. Il voit venir le trafic de
+  //: plus loin qu'un piéton : six tuiles. ⚠️ Et l'ARRÊT dure trois secondes, pas plus
+  //: (`anime` 180 images) : la patience du trafic est de 200 images, au-delà il
+  //: force le passage — un arrêt plus long qu'elle ne serait pas obéi.
+  const PALETTE = 'panneau_signaleur';
+  const POSE_ARRET = 0;
+  const PORTEE_SIGNAL_TUILES = 6;
+  const PAS_SIGNAL = { '<': -1, '>': 1 };
 
   let liste = [];                  // { def, posee, machines, tuiles:Set }
   let effacees = new Set();        // « x,y » des tuiles dont le bâtiment est tombé
@@ -146,6 +159,8 @@ const Chantiers = (function () {
   function retirerLEquipe(ch) {
     for (const e of B.entites.slice()) if (e.equipeDe === ch.def.id) Entites.retirer(e);
     ch.equipe = [];
+    ch.signaleur = null;
+    lacherLaPalette(ch);
   }
 
   /** Les tuiles dont le bâtiment est tombé : ce qu'on y peignait (façade de
@@ -246,7 +261,7 @@ const Chantiers = (function () {
   function demarrer() {
     const def = Monde.carte && Monde.carte.def;
     liste = ((def && def.chantiers) || []).map(function (d) {
-      return { def: d, posee: -1, machines: [], equipe: [], tuiles: tuilesDe(d) };
+      return { def: d, posee: -1, machines: [], equipe: [], signaleur: null, panneau: null, tuiles: tuilesDe(d) };
     });
     attente = 0;
     for (const ch of liste) appliquer(ch, phaseVoulue(ch.def));
@@ -287,11 +302,33 @@ const Chantiers = (function () {
       cadence. (La distance les oublie, un coup de feu les fait détaler.) */
   function reperer() {
     const parId = {};
-    for (const ch of liste) { ch.equipe = []; parId[ch.def.id] = ch; }
+    for (const ch of liste) { ch.equipe = []; ch.signaleur = null; parId[ch.def.id] = ch; }
     for (const e of B.entites) {
       if (e.equipeDe === undefined || !e.vivant) continue;
-      if (parId[e.equipeDe]) parId[e.equipeDe].equipe.push(e);
+      const ch = parId[e.equipeDe];
+      if (!ch) continue;
+      // L'homme de la palette est de l'équipe (il naît et rentre avec elle), mais il
+      // n'est pas au terrain : `regarder` ne le tourne pas vers le joueur.
+      if (e.posteDe === 'signal') ch.signaleur = e; else ch.equipe.push(e);
     }
+  }
+
+  /** La palette suit son homme : posée dans sa main quand il naît, retirée quand
+      il rentre — jamais une palette qui dit ARRÊT toute seule sur un trottoir. */
+  function tenirLaPalette(ch) {
+    const e = ch.signaleur;
+    if (!e || !e.vivant || B.entites.indexOf(e) < 0) { lacherLaPalette(ch); return; }
+    if (ch.panneau && B.entites.indexOf(ch.panneau) >= 0) return;
+    // Dans sa main droite, un pixel plus bas que lui : elle se dessine DEVANT lui.
+    ch.panneau = Entites.creer('decor', e.x + 6, e.y + 1, {
+      decor: PALETTE, r: 0, solide: false, dessine: true, v: 0, palette: ch.def.id,
+    });
+    Entites.reindexerDecor();
+  }
+
+  function lacherLaPalette(ch) {
+    if (ch.panneau) Entites.retirer(ch.panneau);
+    ch.panneau = null;
   }
 
   /** Le jour, chaque poste de la phase a son homme ; la nuit, ou sur un chantier
@@ -301,15 +338,52 @@ const Chantiers = (function () {
     const jour = !Monde.estNuit();
     reperer();
     for (const ch of liste) {
-      const postes = ch.posee < 0 ? [] : (ch.def.phases[ch.posee].equipe || []);
+      const phase = ch.posee < 0 ? null : ch.def.phases[ch.posee];
+      const postes = phase ? (phase.equipe || []) : [];
+      const s = ch.def.signaleur;
+      // Il sert tant que les plaques sont posées : cela se lit dans la phase (`tranchee`).
+      const signale = !!(jour && s && phase && phase.tranchee === 'plaques');
       if (jour && postes.length) {
         // Les nouveaux venus se comptent tout de suite : `regarder` les orienterait
         // sinon une cadence trop tard.
         if (Entites.naitreLEquipe(ch.def.id, postes)) reperer();
-        continue;
+      } else {
+        for (const e of ch.equipe) if (!Entites.visibleAEcran(e.x, e.y, 24)) Entites.retirer(e);
       }
-      for (const e of ch.equipe) if (!Entites.visibleAEcran(e.x, e.y, 24)) Entites.retirer(e);
+      if (signale) {
+        if (Entites.naitreLEquipe(ch.def.id, [s], 'signal')) reperer();
+      } else if (ch.signaleur && !Entites.visibleAEcran(ch.signaleur.x, ch.signaleur.y, 24)) {
+        Entites.retirer(ch.signaleur);
+        ch.signaleur = null;
+      }
+      tenirLaPalette(ch);
     }
+  }
+
+  /** ⚠️ CE QUE LE TRAFIC LIT : à quelle distance de son nez le signaleur dit-il
+      ARRÊT ? Infinity si rien ne l'arrête. Lu par `Vehicules.obstacleDevant`, donc
+      par la même conduite que pour un piéton planté sur la voie — et le même
+      freinage.
+
+      Il ne parle qu'à SA voie (la rangée de la tranchée, dans son sens), pas à ce
+      qui est passé devant lui, pas au-delà de six tuiles, jamais à une rame ni à
+      une poursuite (la police ne s'arrête pas pour un signaleur), et seulement quand
+      sa palette dit ARRÊT — la même pose que celle qu'on voit. */
+  function signalDevant(v) {
+    if (v.rails || v.poursuite) return Infinity;
+    for (const ch of liste) {
+      const e = ch.signaleur, s = ch.def.signaleur;
+      if (!e || !ch.panneau || !s) continue;
+      if (Entites.poseDuDecor(DECORS[PALETTE], B.t, false) !== POSE_ARRET) continue;
+      // Sa voie : la rangée de la tranchée, juste sous lui — et son sens se lit sur la
+      // carte (`voie`), Python ne l'envoie pas.
+      const sens = Monde.fleche(s[0], s[1] + 1);
+      if (v.sens !== sens || Math.floor(v.y / TT) !== s[1] + 1 || !PAS_SIGNAL[sens]) continue;
+      const devant = (e.x - v.x) * PAS_SIGNAL[sens];
+      if (devant <= 0 || devant > PORTEE_SIGNAL_TUILES * TT + v.def.longueur / 2) continue;
+      return devant - v.def.longueur / 2;
+    }
+    return Infinity;
   }
 
   /** Il regarde passer : à moins de `REGARD` px, le visage tourné vers le joueur,
@@ -319,6 +393,8 @@ const Chantiers = (function () {
     const j = B.joueur;
     if (!j) return;
     for (const ch of liste) {
+      // Le signaleur regarde la ROUTE : il est au nord de la voie, le trafic vient d'en bas.
+      if (ch.signaleur && ch.signaleur.vivant && ch.signaleur.etat === 'fige') ch.signaleur.face = 'bas';
       const m = ch.machines[0];
       for (const e of ch.equipe) {
         if (!e.vivant || e.etat !== 'fige') continue;
@@ -588,7 +664,7 @@ const Chantiers = (function () {
   }
 
   return {
-    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, REGARD, demarrer, maj, efface, peindre, phaseVoulue, travailler, equiper,
+    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, REGARD, demarrer, maj, efface, peindre, phaseVoulue, travailler, equiper, signalDevant, PORTEE_SIGNAL_TUILES,
     get liste() { return liste; },
     get journal() { return journal; },
     // Pour les juges : poser une phase comme le ferait la journée.
