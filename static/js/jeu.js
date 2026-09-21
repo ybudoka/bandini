@@ -376,6 +376,10 @@ const Jeu = (function () {
     // la rue se tait, et ce qu'on entend en ouvrant les yeux est deja celle
     // d'ici. Une piece qui n'est pas un commerce reste silencieuse.
     Son.Radio.dedans(piece.interieur.slug);
+    // ⚠️ L'helico devient sourd AU NOIR aussi, avec la porte qui se ferme : le
+    // monde est fige pendant le fondu, et sans cet appel on l'entendrait en plein
+    // air dans la piece deja eclairee.
+    Police.majBruitHelico();
     return piece;
   }
 
@@ -467,6 +471,7 @@ const Jeu = (function () {
       // exactement la ou l'on etait, meme en sortant pendant le fondu d'entree.
       j.x = ext.x; j.y = ext.y;
       poserDansLaPorte(j, 'bas');
+      Police.majBruitHelico();              // la porte s'ouvre : l'helico se reentend en plein air
       // ⚠️ La porte de la RUE s'ouvre ici, une fois `Monde.restaurer` fait :
       // avant, `Monde.carte` est encore la piece, et ses battants ne sont pas
       // ceux de la ville. On la trouve juste au-dessus du pas de porte.
@@ -562,6 +567,9 @@ const Jeu = (function () {
     Hud.voile('titre');
     Son.Ambiance.arreter();
     Son.Chef.arreter();
+    // ⚠️ La ville reste derriere le titre, figee, l'helico avec : plus rien ne
+    // reglerait son bruit, qui tournerait sous la musique du titre.
+    Police.taireHelico();
     Son.Mus.jouer('titre');
   }
 

@@ -522,6 +522,38 @@ const Son = (function () {
     return courante ? courante.gain.gain.value : null;
   }
 
+  //: Le passe-bas d'une boucle entendue a travers un mur : ouvert, il laisse
+  //: tout passer ; ferme, il ne garde que le grave — le rotor sans son sifflement.
+  const COUPURE_CLAIRE = 20000, COUPURE_SOURDE = 250;
+
+  /** Etouffe une boucle en marche : `part` 0 = en plein air, 1 = a travers un
+      toit. Le passe-bas se glisse entre la source et le gain a la premiere
+      demande : les boucles qu'on n'etouffe jamais n'en portent pas. */
+  function etouffer(slug, part) {
+    const courante = boucles.get(slug);
+    if (!courante || !ctx || !ctx.createBiquadFilter) return;
+    if (!courante.sourdine) {
+      const filtre = ctx.createBiquadFilter();
+      filtre.type = 'lowpass';
+      filtre.Q.value = 0.7;
+      // ⚠️ La source ne va QUE dans son gain (`echantillon`) : la debrancher puis
+      // la rebrancher par le filtre ne perd rien d'autre en chemin.
+      courante.source.disconnect();
+      courante.source.connect(filtre).connect(courante.gain);
+      courante.sourdine = filtre;
+    }
+    // Exponentielle : l'oreille entend des octaves, pas des hertz.
+    const p = Math.max(0, Math.min(1, part));
+    courante.sourdine.frequency.value = COUPURE_CLAIRE * Math.pow(COUPURE_SOURDE / COUPURE_CLAIRE, p);
+  }
+
+  /** La coupure du passe-bas d'une boucle (en Hz), ou null : jamais etouffee, ou
+      eteinte. Le pendant en LECTURE d'`etouffer`, comme `volumeBoucle`. */
+  function coupureBoucle(slug) {
+    const courante = boucles.get(slug);
+    return courante && courante.sourdine ? courante.sourdine.frequency.value : null;
+  }
+
   // --- Ça travaille : le filet des sons de chantier ---------------------------------
   //: Chaque son de chantier sans son fichier, a un volume `v` (0..1) qui dit deja
   //: la distance. ⚠️ Le bip de recul N'EST QUE CA : ElevenLabs n'a rendu que des
@@ -1762,7 +1794,7 @@ const Son = (function () {
 
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
-    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle,
+    chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
     Radio, Ambiance, Rumeur, Voix,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs

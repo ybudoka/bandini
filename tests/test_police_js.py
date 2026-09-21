@@ -436,6 +436,113 @@ def test_a_cinq_etoiles_l_helico_te_survole_et_rien_ne_retombe(banc, paquet):
     assert 0 <= r["parti"] < 900, "la chasse finie, il s'en va"
 
 
+# Cinq etoiles, le son branche et ses fichiers charges, et 400 images : l'helico
+# est arrive et te survole. (Meme regle que `AGENT` : l'aide vit dans la fonction.)
+# `poser(j)`, s'il est donne, place le joueur avant que la chasse commence.
+SOUS_L_HELICO = """async function (L, o) {
+    async function sousLHelico(L, o, poser) {
+        L.Jeu.commencer();
+        L.Son.reveiller();
+        await o.attendre(); await o.attendre(); await o.attendre();
+        L.B.joueur.intouchable = true;
+        if (poser) { poser(L.B.joueur); L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y); L.Entites.indexer(); }
+        L.Police.ajouterChaleur(15);
+        for (let i = 0; i < 400; i++) o.frame(1);
+    }
+"""
+
+
+def test_dans_une_piece_l_helico_s_entend_sourd_et_se_tait_quand_il_repart(banc):
+    """⚠️ Bug de Martin (21 sept. 2026) : « je suis resté avec un son
+    d'hélicoptère de police ». La boucle `helico` ne se réglait que DEHORS, dans
+    `majHelico` : on entrait dans une pièce sous l'hélico, et son bruit restait
+    figé à son dernier volume, en plein air, pour toujours. Les étoiles
+    tombaient, mais l'hélico ne repartait pas — il reste dans la ville mise de
+    côté, où la police ne le cherchait plus — et rien n'éteignait la boucle.
+
+    Dedans, on l'entend encore : plus bas, et SOURD (un passe-bas — le rotor à
+    travers le toit). La chasse finie, il repart, et le bruit s'éteint avec
+    lui, sans qu'on ait à ressortir."""
+    r = banc(SOUS_L_HELICO + """
+        o.brancherAudio(true);
+        // ⚠️ Devant LA porte, pendant toute la chasse : dedans, l'helico tourne
+        // au-dessus d'elle. Une porte a l'autre bout de la ville ferait baisser le
+        // bruit par la DISTANCE, et le juge ne verrait plus le mur.
+        const def = L.Monde.carte.def;
+        let porte = null;
+        await sousLHelico(L, o, function (j) {
+            porte = def.portes.filter(function (q) { return q.interieur && def.interieurs[q.interieur]; })
+                .sort(function (a, b) { return Math.hypot(a.x * L.TT - j.x, a.y * L.TT - j.y) - Math.hypot(b.x * L.TT - j.x, b.y * L.TT - j.y); })[0];
+            j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        });
+        const out = { charge: L.Son.estCharge('helico'), dehors: L.Son.volumeBoucle('helico'),
+                      coupureDehors: L.Son.coupureBoucle('helico') };
+        o.entrer(porte);
+        out.piece = !!L.B.interieur;
+        out.auNoir = L.Son.coupureBoucle('helico');   // la porte se ferme : c'est la qu'il devient sourd
+        o.frame(60);
+        out.dedans = L.Son.volumeBoucle('helico');
+        out.coupureDedans = L.Son.coupureBoucle('helico');
+        out.muettes = L.Son.contexte.sourcesMuettes();
+        L.Police.remiseAZero();
+        const la = function () { return L.B.exterieur.entites.some(function (e) { return e.type === 'helico'; }); };
+        let tu = -1, parti = -1;
+        for (let i = 0; i < 900 && (tu < 0 || parti < 0); i++) {
+            o.frame(1);
+            if (tu < 0 && !L.Son.boucleActive('helico')) tu = i;
+            if (parti < 0 && !la()) parti = i;
+        }
+        out.tu = tu;
+        out.encoreLa = parti < 0;
+        out.entenduApres = L.Son.boucleActive('helico');
+        out.toujoursDedans = !!L.B.interieur;
+        return out;
+    }""")
+    assert r["charge"] and r["dehors"], f"l'helico ne s'entend pas dehors : le juge ne mesure rien ({r})"
+    assert r["coupureDehors"] is None or r["coupureDehors"] >= 10000, "dehors, l'helico est deja sourd"
+    assert r["piece"], "le joueur n'est pas entre"
+    assert r["auNoir"] is not None and r["auNoir"] <= 400, (
+        "l'helico ne devient sourd qu'apres le fondu, pas quand la porte se ferme : %s" % r["auNoir"]
+    )
+    assert 0 < r["dedans"] < r["dehors"] * 0.6, (
+        "dedans, l'helico doit s'entendre encore, mais plus bas : %s dehors, %s dedans" % (r["dehors"], r["dedans"])
+    )
+    assert r["coupureDedans"] is not None and r["coupureDedans"] <= 400, (
+        "dedans, l'helico doit s'entendre SOURD (passe-bas) : %s" % r["coupureDedans"]
+    )
+    assert r["muettes"] == 0, "le passe-bas a debranche la boucle de la sortie"
+    assert 0 <= r["tu"] < 900, "la chasse finie, le bruit de l'helico tourne encore dans la piece"
+    assert not r["encoreLa"], "la chasse finie, l'helico tourne encore au-dessus du toit"
+    assert not r["entenduApres"], "l'helico reparti, son bruit est revenu"
+    assert r["toujoursDedans"], "le juge devait rester dedans"
+
+
+def test_le_bruit_de_l_helico_ne_survit_ni_a_une_partie_reprise_ni_au_titre(banc):
+    """L'autre moitié de « être certain qu'il arrête » : l'hélico peut
+    disparaître sans repartir. Une partie reprise (`commencer()` vide la ville)
+    l'efface d'un coup, et le titre fige le monde où il tourne encore. Dans les
+    deux cas, sa boucle n'avait plus personne pour l'éteindre."""
+    r = banc(SOUS_L_HELICO + """
+        o.brancherAudio(true);
+        await sousLHelico(L, o);
+        const out = { avant: L.Son.boucleActive('helico') };
+        L.Jeu.commencer();
+        o.frame(2);
+        out.reprise = L.Son.boucleActive('helico');
+        L.B.joueur.intouchable = true;
+        L.Police.ajouterChaleur(15);
+        for (let i = 0; i < 400; i++) o.frame(1);
+        out.revenu = L.Son.boucleActive('helico');
+        L.Jeu.retourTitre();
+        o.frame(2);
+        out.titre = L.Son.boucleActive('helico');
+        return out;
+    }""")
+    assert r["avant"] and r["revenu"], f"l'helico ne s'entend pas : le juge ne mesure rien ({r})"
+    assert r["reprise"] is False, "une partie reprise garde le bruit d'un helico qui n'existe plus"
+    assert r["titre"] is False, "l'helico tourne encore sur l'ecran titre"
+
+
 def test_a_cinq_etoiles_un_barrage_se_dresse_devant_le_char(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

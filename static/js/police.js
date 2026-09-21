@@ -716,8 +716,27 @@ const Police = (function () {
   // rien. Son ombre court au sol, son projecteur te suit la nuit.
 
   const HELICO_VITESSE = 3.4, HELICO_ALTITUDE = 40, HELICO_RAYON_VOL = 56;
+  //: On l'entend jusqu'a 700 px ; reparti, il disparait la. Dedans, il s'entend
+  //: moins fort ET sourd (`Son.etouffer`) ; il entre et sort de l'oreille en fondu.
+  const HELICO_PORTEE_SON = 700, HELICO_VOLUME_DEDANS = 0.45, HELICO_FONDU_S = 0.6;
 
   function helico() { return B.entites.find(function (e) { return e.type === 'helico'; }) || null; }
+
+  /** L'helico, meme quand on est dedans : il est alors resté dans la ville mise
+      de côté (`B.exterieur.entites`), où `helico()` ne regarde pas. */
+  function helicoDuCiel() {
+    if (!B.interieur) return helico();
+    const dehors = B.exterieur && B.exterieur.entites;
+    return (dehors && dehors.find(function (e) { return e.type === 'helico'; })) || null;
+  }
+
+  /** Ce que l'helico survole : ton char, ou toi ; DEDANS, la porte par où tu es
+      entré — il tourne au-dessus du toit, pour rien. */
+  function ceQuIlSurvole() {
+    const j = B.joueur;
+    if (B.interieur) return B.exterieur ? { x: B.exterieur.x, y: B.exterieur.y } : null;
+    return j ? (j.dansVehicule || j) : null;
+  }
 
   function peuplerHelico() {
     const j = B.joueur;
@@ -730,7 +749,8 @@ const Police = (function () {
   }
 
   function majHelico(h) {
-    const j = B.joueur, r = B.recherche, cible = j.dansVehicule ? j.dansVehicule : j;
+    const j = B.joueur, r = B.recherche, cible = ceQuIlSurvole();
+    if (!cible) return;
     h.rotor += 0.9;
     if (r.etoiles <= 0 || !palier().helico) h.part = true;
     let bx, by;
@@ -741,14 +761,63 @@ const Police = (function () {
     h.vx = h.vx * 0.9 + dx / d * pas * 0.1; h.vy = h.vy * 0.9 + dy / d * pas * 0.1;
     h.x += h.vx; h.y += h.vy;
     if (Math.hypot(h.vx, h.vy) > 0.3) h.angle = Math.atan2(h.vy, h.vx);
-    if (h.part && dist2(h.x, h.y, j.x, j.y) > 700 * 700) { Entites.retirer(h); Son.boucle('helico', false); return; }
+    if (h.part && dist2(h.x, h.y, cible.x, cible.y) > HELICO_PORTEE_SON * HELICO_PORTEE_SON) { oublierHelico(h); return; }
     // Il voit tout ce qui est sous lui, sauf a travers un toit.
     const vision = defs().vision.helico, portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
     // ⚠️ Il voit a travers tout, sauf un toit : dans un garage, rideau baisse, il tourne pour rien.
     if (!h.part && !B.interieur && !Monde.abrite(j.dansVehicule) && dist2(h.x, h.y, cible.x, cible.y) < portee * portee) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
-    const dist = Math.hypot(h.x - j.x, h.y - j.y);
-    if (!Son.boucleActive('helico')) Son.boucle('helico', true, 0.6);
-    Son.reglerBoucle('helico', Math.max(0.05, 1 - dist / 700));
+  }
+
+  /** Il est reparti assez loin : on le retire de la ville ou il vole — celle
+      mise de cote quand on est dedans, ou `Entites.retirer` ne le trouverait pas. */
+  function oublierHelico(h) {
+    if (!B.interieur) { Entites.retirer(h); return; }
+    const dehors = B.exterieur ? B.exterieur.entites : [];
+    const i = dehors.indexOf(h);
+    if (i >= 0) dehors.splice(i, 1);
+  }
+
+  //: Ce que le melangeur a demande a `Son` pour l'helico : `volume` 0 = eteint,
+  //: `sourd` 1 = entendu a travers un toit. Les juges le lisent (voir `sirenes`).
+  const bruitHelico = { volume: 0, sourd: 0 };
+
+  /** Le bruit de l'helico : a CHAQUE image, dedans comme dehors, d'apres l'helico
+      qui existe vraiment.
+
+      ⚠️ Bug de Martin (21 sept. 2026) : « je suis resté avec un son
+      d'hélicoptère ». Le bruit ne se reglait que dans `majHelico`, qui ne
+      tournait que dehors, et ne s'eteignait qu'au depart de l'helico : entrer
+      dans une piece le figeait a son dernier volume, et une partie reprise
+      (`commencer()` vide la ville) effacait l'helico sans eteindre son bruit.
+      Pas d'helico, pas de bruit — quelle que soit la facon dont il a disparu.
+
+      ⚠️ Contrairement aux sirenes, il LIT `Son.boucleActive` : c'est la seule
+      facon d'etre certain que la boucle s'eteint, et une boucle que `Son` ne
+      peut pas jouer (pas de fichier, pas de geste) se redemande a chaque image
+      pour presque rien — `echantillon` rend null avant de fabriquer quoi que ce soit. */
+  function majBruitHelico() {
+    const h = helicoDuCiel(), ou = h && ceQuIlSurvole();
+    let voulu = 0;
+    if (h && ou) {
+      const loin = Math.hypot(h.x - ou.x, h.y - ou.y) / HELICO_PORTEE_SON;
+      // En chasse, on l'entend toujours un peu ; reparti, il s'eteint en
+      // s'eloignant, et se tait a la distance ou il disparait.
+      voulu = h.part ? Math.max(0, 1 - loin) : Math.max(0.05, 1 - loin);
+      if (B.interieur) voulu *= HELICO_VOLUME_DEDANS;
+      if (voulu < 0.01) voulu = 0;
+    }
+    bruitHelico.volume = voulu;
+    bruitHelico.sourd = B.interieur ? 1 : 0;
+    if (!voulu) { taireHelico(); return; }
+    if (!Son.boucleActive('helico')) Son.boucle('helico', true, voulu, HELICO_FONDU_S);
+    Son.reglerBoucle('helico', voulu);
+    Son.etouffer('helico', bruitHelico.sourd);
+  }
+
+  /** Eteint le bruit de l'helico, en fondu : l'ecran titre, ou plus d'helico. */
+  function taireHelico() {
+    bruitHelico.volume = 0;
+    if (Son.boucleActive('helico')) Son.boucle('helico', false, undefined, HELICO_FONDU_S);
   }
 
   /** L'helico se dessine par-dessus tout, avec son ombre au sol et son rotor qui tourne. */
@@ -868,7 +937,15 @@ const Police = (function () {
     const r = B.recherche, j = B.joueur;
     if (!j) return;
     if (r.flash > 0) r.flash--;
-    if (B.interieur) { decroitre(); return; }     // dedans, on se fait oublier ; personne ne patrouille les salons
+    if (B.interieur) {
+      // Dedans, on se fait oublier ; personne ne patrouille les salons. Mais
+      // l'helico tourne au-dessus du toit, et repart quand les etoiles tombent.
+      decroitre();
+      const h = helicoDuCiel();
+      if (h) majHelico(h);
+      majBruitHelico();
+      return;
+    }
     // ⚠️ L'ILE : on s'y fait oublier comme dans une piece, et la police s'en
     // va — aucun agent n'y nait, l'helico repart, et ce qui patrouillait hors
     // de l'ecran ne revient pas. Les temoins attendront qu'on rentre en ville.
@@ -876,6 +953,7 @@ const Police = (function () {
       decroitre();
       const h = helico();
       if (h) { h.part = true; majHelico(h); }
+      majBruitHelico();
       agents().concat(autos()).forEach(function (e) { if (!Entites.visibleAEcran(e.x, e.y, 60)) Entites.retirer(e); });
       return;
     }
@@ -890,6 +968,7 @@ const Police = (function () {
     majAffiches();
     const h = helico();
     if (h) majHelico(h);
+    majBruitHelico();
     majBarrages();
     majStools();
     // Les temoins qui courent vers un agent : arrives, ils racontent. Loin de
@@ -912,5 +991,5 @@ const Police = (function () {
   return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
-           helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
+           helico, majHelico, majBruitHelico, taireHelico, bruitHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();
