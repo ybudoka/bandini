@@ -77,6 +77,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Le trafic ne rate plus ses virages dans les coins en L | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/le-trafic-ne-rate-plus-ses-virages-dans-les-coins-en-l.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Des garages où l'on entre — deuxième vague : les bungalows des Érables | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche-de-la-deuxième-vague) · [notes](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#notes) |
 | Les commandes à l'écran : l'aide du début, et le vrai bouton sous le pouce | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/les-commandes-a-l-ecran.md#fiche) |
