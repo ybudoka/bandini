@@ -7,7 +7,7 @@ ville) : il raconte la **recette**, pas le pourquoi.
 
 > ⚠️ **Une mission = un fichier.** Les missions vivent dans `app/missions/`,
 > **une par fichier** (`m1.py`, `m2.py`, … `m97.py`) : chacun déclare `MISSION = {…}`
-> et n'a besoin que de `_l`/`_p` (importés de `_commun.py`). Le moteur — les
+> et n'a besoin que de `_l`/`_p`/`_r` (importés de `_commun.py`). Le moteur — les
 > types d'objectifs, les personnages, les défis, les scènes d'ouverture, les
 > juges — vit dans `app/missions/__init__.py`. **Ajouter une mission = créer son
 > fichier et l'ajouter aux deux listes de `__init__.py`, rien d'autre.**
@@ -60,6 +60,7 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
         "appel":      [ … ],
         "intro":      [ … ],
         "pendant":    [ … ],
+        "renvoi":     [ … ],           # FACULTATIF : § 5
         "client":     [ … ],
         "fin":        [ … ],
         "echec":      [ … ],
@@ -73,7 +74,7 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
 ```python
 """La mission m7 — voir `app/missions/__init__.py` pour le moteur."""
 
-from ._commun import _l, _p   # les deux usines de répliques
+from ._commun import _l, _p, _r   # les trois usines de répliques
 
 
 MISSION = {
@@ -200,11 +201,12 @@ Ce qui change, c'est **qui on envoie**.
 
 ## 5. Les dialogues (`dialogue`)
 
-Cinq temps, écrits avec les petites usines `_l` et `_p` :
+Les temps de dialogue, écrits avec les petites usines `_l`, `_p` et `_r` :
 
 ```python
 _l("marco", "Marco, le cousin. Viens au garage.")        # une réplique normale
 _p("marco", "Cours, cousin!", 1)                          # PENDANT : accrochée à l'objectif n (0-based)
+_r("lulu", "Reviens ce soir.", 0)                         # RENVOI : quand on lui parle trop tôt, à l'objectif n
 ```
 
 | Partie | Rôle | Règle |
@@ -212,6 +214,7 @@ _p("marco", "Cours, cousin!", 1)                          # PENDANT : accrochée
 | `appel` | le donneur t'appelle au combiné | une réplique, sauf un donneur rencontré en personne (m1) |
 | `intro` | le donneur pose le contexte | 2 à 4 répliques |
 | `pendant` | dite **quand un objectif commence** | **au moins une** (jugé) ; `_p(qui, texte, objectif)` |
+| `renvoi` | ce que dit `qui` quand on **lui** parle alors que ce n'est pas encore son tour (m50 : Lulu, de jour, dit d'attendre la nuit) | facultatif ; `_r(qui, texte, objectif)` ; dit **en personne**, jamais au combiné |
 | `client` | le client de m3 (réplique dite pendant une mission) | compte comme du « pendant » |
 | `fin` | la récompense, dite par **quelqu'un qui est là** | 1 à 3 répliques |
 | `echec` | on a raté | une réplique **au combiné** |
@@ -227,13 +230,13 @@ Règles jugées (`erreurs_de_mise_en_scene`) :
 
 - `intro`, `fin`, `echec` **non vides** ;
 - une réplique « pendant » (dont `client`) doit exister ;
-- l'`objectif` d'une réplique `_p` doit pointer un objectif réel ;
+- l'`objectif` d'une réplique `_p` ou `_r` doit pointer un objectif réel ;
 - les répliques de chaque partie sont **toutes dites, et une seule fois**, par
   les plans `dire` de la scène correspondante (§ 6).
 
 ⚠️ **L'ordre des slugs de voix ne bouge jamais.** Le slug d'une réplique est
 `<qui>-<mission>-<n>`, avec `n` compté dans l'ordre `appel, intro, client, fin,
-echec, pendant`. Insérer une réplique au milieu renomme tout ce qui suit, et
+echec, pendant, renvoi`. Insérer une réplique au milieu renomme tout ce qui suit, et
 des mp3 déjà générés deviendraient des 404. On **ajoute** à la fin, ou on
 régénère (`scripts/audio_elevenlabs.py --refaire`).
 

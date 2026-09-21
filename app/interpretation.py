@@ -315,6 +315,8 @@ JEU: dict[str, str] = {
     "marco-m50-6": "[disappointed] T'es censé être discret… pas mort.",
     # Pendant, à la cantine : c'est Lulu qui voit le docker filer et qui prévient.
     "lulu-m50-7": "[excited] Le docker va essayer de filer. Rattrape-le!",
+    # Renvoi, à la cantine, de jour : on lui parle trop tôt, elle dit d'attendre la noirceur.
+    "lulu-m50-8": "[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.

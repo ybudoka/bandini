@@ -480,6 +480,70 @@ def test_m50_le_fuyard_ne_nait_pas_dans_le_char_gare_devant_la_cantine(banc):
     assert r["dPorte"] <= 200, "et il reste devant la porte"
 
 
+def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : à la cantine, Lulu disait « le Faubourg est tranquille » — le
+    texte de repos de tout le monde, sans voix — parce que l'objectif 0 de m50 attend la nuit et
+    que « parler à Lulu » ne compte qu'au suivant. « Il fallait que j'attende la nuit : peux-tu
+    faire dire ça à Lulu ? » Rouge avant : pas de cinéma du tout, un texte muet.
+
+    Et la réplique de mission garde sa place : la nuit venue, parler à Lulu joue son `pendant`,
+    pas le renvoi."""
+    m50 = next(m for m in paquet["missions"] if m["slug"] == "m50")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B, j = B.joueur, M = L.Monde;
+        j.invincible = 1e6;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        const jour = !M.estNuit();
+        L.Histoire.commencer('m50'); B.cinema = null; B.scene = null;
+        const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'cantine' && q.interieur; });
+        const entrer = function () {
+            j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+            L.Jeu.entrer(porte); o.fondu();
+            for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        };
+        const parlerALulu = function () {
+            const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
+            j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
+            o.frame(2);
+            o.tape('KeyE', 2);
+            o.frame(2);
+        };
+        // De jour, dedans : Lulu renvoie.
+        entrer();
+        parlerALulu();
+        const c = B.cinema;
+        const renvoi = c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug, texte: c.lignes[0].texte,
+                             telephone: c.lignes[0].telephone } : null;
+        const voix = L.Son.Voix.demandees.slice();
+        const etapeRenvoi = B.partie.mission.etape;
+        while (B.cinema) L.Histoire.suivante();
+        // La nuit venue, dehors : l'objectif compte, et Lulu joue sa réplique de mission.
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        let h = B.partie.heure;
+        for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
+        B.partie.heure = h;
+        o.frame(3);
+        const etapeNuit = B.partie.mission.etape;
+        entrer();
+        parlerALulu();
+        const suite = B.cinema ? { partie: B.cinema.partie, slug: B.cinema.lignes[0].slug } : null;
+        return { jour: jour, renvoi: renvoi, voix: voix, etapeRenvoi: etapeRenvoi, etapeNuit: etapeNuit,
+                 etapeLulu: B.partie.mission.etape, suite: suite };
+    }""")
+    assert r["jour"] is True
+    assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-8", "telephone": False,
+                           "texte": m50["dialogue"]["renvoi"][0]["texte"]}, "de jour, Lulu dit d'attendre la nuit"
+    assert "noirceur" in r["renvoi"]["texte"]
+    assert "lulu-m50-8" in r["voix"], "et sa voix est demandée"
+    assert r["etapeRenvoi"] == 0, "on ne fait pas avancer la mission en se faisant renvoyer"
+    assert r["etapeNuit"] == 1, "la nuit venue, l'objectif compte"
+    assert r["etapeLulu"] == 2 and r["suite"] == {"partie": "pendant", "slug": "lulu-m50-7"}, \
+        "la réplique de mission garde sa place"
+
+
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();

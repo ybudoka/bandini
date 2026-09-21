@@ -158,7 +158,7 @@ class Mission(TypedDict):
     donneur: str
     recompense: int
     objectifs: list[dict]
-    dialogue: dict     # appel (au telephone), intro, pendant, fin, echec : listes de {qui, texte}
+    dialogue: dict     # appel (au telephone), intro, pendant, renvoi, fin, echec : listes de {qui, texte}
     prerequis: NotRequired[list[str]]
     echec: NotRequired[list[str]]
     donne: NotRequired[dict]   # ce que la fin accorde, en plus de l'argent
@@ -442,7 +442,9 @@ def personnage(slug: str) -> Personnage | None:
 
 
 #: L'ordre dans lequel se comptent les répliques d'une mission (le `n` du slug de voix).
-PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant")
+#: ⚠️ `renvoi` vient APRÈS `pendant` : un slug de voix se compte à sa place, et les mp3 déjà
+#: payés ne changent pas de nom.
+PARTIES = ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi")
 
 
 def repliques() -> list[dict]:
@@ -508,9 +510,10 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
     pendant = dialogue.get("pendant", []) + dialogue.get("client", [])
     if not pendant:
         erreurs.append(f"{slug} : aucune réplique pendant la mission")
-    for ligne in dialogue.get("pendant", []):
-        if not 0 <= ligne.get("objectif", -1) < len(mission["objectifs"]):
-            erreurs.append(f"{slug} : une réplique pendant accrochée à un objectif qui n'existe pas")
+    for partie in ("pendant", "renvoi"):
+        for ligne in dialogue.get(partie, []):
+            if not 0 <= ligne.get("objectif", -1) < len(mission["objectifs"]):
+                erreurs.append(f"{slug} : une réplique {partie} accrochée à un objectif qui n'existe pas")
     for partie in ("intro", "fin"):
         scene = scenes.get(partie)
         if not scene:

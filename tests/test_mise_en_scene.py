@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 from app import missions
-from app.missions._commun import _l, _p
+from app.missions._commun import _l, _p, _r
 
 RACINE = Path(__file__).resolve().parent.parent
 SCENES_JS = (RACINE / "static" / "js" / "scenes.js").read_text(encoding="utf-8")
@@ -155,8 +155,9 @@ def test_histoire_ne_nomme_aucune_mission():
 
 
 def test_les_voix_deja_payees_gardent_leur_slug():
-    """⚠️ `pendant` se compte APRÈS `echec` : insérée avant `fin`, elle renommait les
-    voix de fin et d'échec déjà générées — des mp3 payés devenus des 404."""
+    """⚠️ `pendant` se compte APRÈS `echec`, et `renvoi` après `pendant` : insérées avant
+    `fin`, elles renommaient les voix de fin et d'échec déjà générées — des mp3 payés
+    devenus des 404."""
     for m in missions.CATALOGUE:
         n, attendus = 0, {}
         for partie in ("appel", "intro", "client", "fin", "echec"):
@@ -164,8 +165,23 @@ def test_les_voix_deja_payees_gardent_leur_slug():
                 n += 1
                 attendus[(partie, ligne["texte"])] = f"{ligne['qui']}-{m['slug']}-{n}"
         for r in missions.repliques():
-            if r["mission"] == m["slug"] and r["partie"] != "pendant":
+            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi"):
                 assert r["slug"] == attendus[(r["partie"], r["texte"])], r
+
+
+def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_personne():
+    """⚠️ Lulu, de jour, renvoie qui lui parle trop tôt (m50). Une réplique `renvoi` dont
+    l'objectif n'existe pas ne se dirait jamais ; et on lui PARLE, donc elle ne passe pas au
+    combiné."""
+    fiche = _fiche("marco", [{"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}])
+    fiche["dialogue"]["renvoi"] = [_r("marco", "Reviens ce soir.", 0)]
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == []
+    fiche["dialogue"]["renvoi"] = [_r("marco", "Reviens ce soir.", 7)]
+    assert any("renvoi accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
+    renvois = [r for r in missions.repliques() if r["partie"] == "renvoi"]
+    assert [r["slug"] for r in renvois] == ["lulu-m50-8"], "m50 : Lulu dit d'attendre la nuit"
+    assert not any(r["telephone"] for r in renvois)
 
 
 def test_l_echec_se_dit_au_combine():

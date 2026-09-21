@@ -555,6 +555,14 @@ générales :
   `repliques()` et `slugDeVoix()` : insérée avant `fin`, elle renommerait les quinze voix de
   fin et d'échec déjà générées, et quinze mp3 payés deviendraient des 404. Et une fin qui
   passe au combiné ne se **régénère** pas : le combiné est un filtre joué, pas un fichier.
+  `renvoi` se compte **après** `pendant`, pour la même raison.
+- **Le renvoi** (20 sept. 2026, m50) : ce que dit `qui` quand on **lui** parle alors que ce
+  n'est pas encore son tour — `_r("lulu", "…", 0)`, accroché à l'objectif en cours. À la
+  cantine, de jour, l'objectif 0 de m50 attend la noirceur et « parler à Lulu » ne compte
+  qu'au suivant : elle disait le texte de repos de tout le monde (« le Faubourg est
+  tranquille »), sans voix. Elle dit maintenant d'attendre la nuit. Il se dit **en
+  personne** (jamais au combiné : on est devant lui), par `parler()`, avant le message du
+  donneur ; une mission qui n'en écrit pas garde le comportement d'avant.
 
 **Les cinq missions de la v1, mises en scène** — le banc d'essai du vocabulaire :
 
@@ -582,7 +590,7 @@ générales :
 
 - _Python_ (`test_mise_en_scene.py`) : chaque mission du catalogue a une scène `intro` et
   une scène `fin` non vides, des répliques `intro`, `fin` et `echec`, et au moins une
-  réplique `pendant` accrochée à un objectif qui existe ; chaque plan est d'un type connu,
+  réplique `pendant` accrochée à un objectif qui existe (comme chaque `renvoi`) ; chaque plan est d'un type connu,
   chaque lieu se résout, chaque acteur est le joueur, le donneur, un personnage connu ou un
   homme que la mission pose ; **une fin qui se déclenche loin du donneur** commence par une
   `coupe` chez lui ou le fait `marcher` jusqu'à toi — sinon ses répliques sont au combiné ;

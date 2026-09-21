@@ -488,11 +488,11 @@ const Histoire = (function () {
   }
 
   /** Le slug de voix d'une replique : `<qui>-<mission>-<n>`, n compte a travers
-      appel, intro, client, fin, echec, pendant — exactement comme `missions.repliques()`. */
+      appel, intro, client, fin, echec, pendant, renvoi — exactement comme `missions.repliques()`. */
   function slugDeVoix(m, partie, i) {
-    // ⚠️ `pendant` APRES `echec`, comme `missions.PARTIES` : inseree plus tot,
+    // ⚠️ `pendant` APRES `echec`, puis `renvoi`, comme `missions.PARTIES` : inseree plus tot,
     // elle renommerait des voix deja generees.
-    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant'];
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi'];
     let n = 0;
     for (const p of ordre) {
       const lignes = m.dialogue[p] || [];
@@ -716,6 +716,12 @@ const Histoire = (function () {
     if (enCours) {
       const o = objectif();
       if (o && o.type === 'parler' && cibleDuParler(o) === slug) { avancer(); return true; }
+      // ⚠️ RENVOYE : on parle a quelqu'un dont ce n'est pas encore le tour. Sa replique `renvoi`
+      // (`missions.py`) est accrochee a l'objectif en cours — Lulu, de jour, dit d'attendre la
+      // noirceur — au lieu du texte de repos que tout le monde dit sans voix. Une mission qui n'en
+      // ecrit pas garde le comportement d'avant.
+      const etape = B.partie.mission.etape;
+      if (dire(enCours, 'renvoi', null, function (l) { return l.qui === slug && l.objectif === etape; })) return true;
     }
     if (enCours && enCours.donneur === slug) {
       const o = objectif();
