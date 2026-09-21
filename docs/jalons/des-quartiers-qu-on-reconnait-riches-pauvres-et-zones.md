@@ -247,7 +247,7 @@ _La proposition d'origine :_
 - **Les commerces qui s'ouvrent** (un sur cinq) prennent une pièce selon le standing : un bistro
   n'a pas le comptoir d'un prêteur sur gages.
 
-### 4e vague — le standing se vit (taille 1)
+### 4e vague — le standing se vit (taille 1) — **en cours (21 sept. 2026)**
 
 Celle qui peut attendre : les trois premières font déjà ce que Martin a demandé. Celle-ci donne
 au standing une **conséquence de jeu**.
