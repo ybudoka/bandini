@@ -744,7 +744,13 @@ const Histoire = (function () {
     const mn = B.defs.marche_noir;
     if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
     const repos = B.defs.repos || {};
-    Hud.dialogue(p.nom, [repos.apres && faite(repos.apres) ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], 120);
+    const apres = !!(repos.apres && faite(repos.apres));
+    // ⚠️ Le repos se DIT aussi : `<qui>-repos-1` avant `repos.apres`, `-2` ensuite (`missions.
+    // repliques_de_repos`). Sans le mp3 (pas encore genere), la boite reste muette — le filet.
+    const voix = slug + '-repos-' + (apres ? 2 : 1);
+    const dite = Son.Voix.histoire().some(function (v) { return v.slug === voix && v.fichier; });
+    if (dite) { Son.Voix.chargerHistoire('repos'); Son.Voix.parler(voix, {}); }
+    Hud.dialogue(p.nom, [apres ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], dite ? 220 : 120);
     return true;
   }
 

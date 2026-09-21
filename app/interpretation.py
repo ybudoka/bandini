@@ -318,6 +318,24 @@ JEU: dict[str, str] = {
     # Renvoi, à la cantine, de jour : on lui parle trop tôt, elle dit d'attendre la noirceur.
     "lulu-m50-8": "[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.",
 
+    # --- Le repos : ce que chacun dit quand aucune mission ne l'attend. Le même texte pour tous
+    # (`missions.REPOS`), lu à sa façon — une balise de ton, en tête, avant M5 (`-1`) puis après (`-2`).
+    "thibodeau-repos-1": "[warmly] Reviens me voir… plus tard.",
+    "thibodeau-repos-2": "[softly] Le Faubourg est tranquille… Merci.",
+    "marco-repos-1": "[quietly] Reviens me voir… plus tard.",
+    "marco-repos-2": "[satisfied] Le Faubourg est tranquille… Merci.",
+    "bouchard-repos-1": "[gruffly] Reviens me voir… plus tard.",
+    "bouchard-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "josee-repos-1": "[knowingly] Reviens me voir… plus tard.",
+    "tipaul-repos-1": "[casually] Reviens me voir… plus tard.",
+    "tipaul-repos-2": "[cheerful] Le Faubourg est tranquille… Merci.",
+    "lulu-repos-1": "[warmly] Reviens me voir… plus tard.",
+    "lulu-repos-2": "[cheerful] Le Faubourg est tranquille… Merci.",
+    "raymonde-repos-1": "[firmly] Reviens me voir… plus tard.",
+    "raymonde-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "ovila-repos-1": "[calm] Reviens me voir… plus tard.",
+    "ovila-repos-2": "[softly] Le Faubourg est tranquille… Merci.",
+
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.
     "narrateur-journal-nuit_rouge": "[dramatic] Nuit rouge au Faubourg. Trois corps en une nuit… la police promet des renforts.",

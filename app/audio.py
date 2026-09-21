@@ -996,8 +996,27 @@ def voix_ouverture() -> list[dict]:
             for ligne in missions.repliques_ouverture()]
 
 
+def voix_repos() -> list[dict]:
+    """Ce que chaque personnage dit quand on lui parle et qu'aucune mission ne l'attend.
+
+    Même mécanique que `voix_ouverture()` : le texte vit dans `missions.REPOS`, le slug
+    (`lulu-repos-2`) suit la place du texte, et un mp3 qui manque laisse la boîte s'afficher
+    sans voix — le filet.
+    """
+    from . import missions
+    sortie = []
+    for r in missions.repliques_de_repos():
+        perso = missions.personnage(r["qui"])
+        if perso is None:
+            raise ValueError(f"repos {r['slug']} : personnage inconnu {r['qui']!r}")
+        sortie.append({"slug": r["slug"], "texte": r["texte"], "genre": perso["genre"], "voix": perso["voix"],
+                       "volume": 0.9, "histoire": True, "qui": r["qui"], "mission": r["mission"],
+                       "partie": r["partie"], "telephone": False})
+    return sortie
+
+
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + voix_histoire() + voix_journal() + voix_ouverture()
+    return list(VOIX) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
 
 
 def voix_par_slug(slug: str) -> Voix | None:
@@ -1201,6 +1220,6 @@ def exporter() -> dict:
             {"slug": v["slug"], "qui": v["qui"], "mission": v["mission"], "partie": v["partie"],
              "telephone": v["telephone"], "volume": v["volume"],
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in voix_histoire() + voix_journal() + voix_ouverture()
+            for v in voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
         ],
     }

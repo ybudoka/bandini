@@ -455,6 +455,15 @@ des passants. Ce que ça implique, jalon par jalon :
   le journal du matin est lu par le narrateur, en plus de la manchette.
 - **Un test navigateur** prouve que chaque voix se décode ; un test Python que chaque
   réplique a un personnage connu et tient en une phrase ou deux.
+- **Le repos parle aussi** (20 sept. 2026, demande de Martin : « fais parler les personnages ») :
+  quand aucune mission n'attend quelqu'un, chacun des **huit** personnages qu'on peut alors
+  aborder dit `REPOS` — « reviens me voir plus tard » avant M5, « le Faubourg est tranquille »
+  après — de sa voix et dans son ton : `<qui>-repos-1` et `-2`, chargées d'un coup par
+  `Son.Voix.chargerHistoire('repos')`, jeu dans `interpretation.py`. **15 fichiers** (≈ 650
+  caractères) : Ti-Guy s'en va après m1 (tant qu'il est là, il a m1 à donner) et Josée ouvre le
+  marché noir après M5 au lieu de dire son repos — on ne paie pas ce qui ne s'entend pas. Le
+  texte reste dans la boîte (`missions.REPOS`, source unique), et une boîte dont le mp3 manque
+  s'affiche sans voix.
 
 ## Les missions mises en scène (décision du 16 sept. 2026)
 

@@ -498,6 +498,25 @@ def repliques_ouverture() -> list[dict]:
             for i, ligne in enumerate(OUVERTURE, start=1)]
 
 
+def repliques_de_repos() -> list[dict]:
+    """Ce que chacun dit quand on lui parle et qu'aucune mission ne l'attend : `REPOS`, dit
+    de SA voix — le texte avant `REPOS["apres"]` (`-1`), l'autre ensuite (`-2`).
+
+    ⚠️ On ne paie que ce qui s'entend. `civil` et `narrateur` n'ont pas de `ou` : on ne leur
+    parle jamais. Ceux qui s'en vont après leur mission (`parti_apres`, Ti-Guy) ont toujours
+    leur mission à donner tant qu'ils sont là. Et Josée ouvre le marché noir après
+    `REPOS["apres"]` (`histoire.js`) au lieu de dire son repos : pas de `-2` pour elle.
+    `mission` vaut `"repos"` : c'est ce qui range ces voix ensemble et permet au navigateur de
+    les charger d'un coup (`Son.Voix.chargerHistoire('repos')`). Le slug suit la PLACE du texte,
+    comme partout : changer un mot se régénère à la ligne près.
+    """
+    return [{"slug": f"{p['slug']}-repos-{n}", "qui": p["slug"], "texte": texte, "mission": "repos",
+             "partie": "repos", "telephone": False}
+            for p in PERSONNAGES if p.get("ou") and not p.get("parti_apres")
+            for n, texte in enumerate((REPOS["texte"], REPOS["texte_apres"]), start=1)
+            if not (p["slug"] == "josee" and n == 2)]
+
+
 #: Les acteurs qu'une scène de mission peut nommer, en plus des personnages : ce que
 #: la mission pose (`vehicule`, la première `cible`, le `fuyard`) et le joueur.
 ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")

@@ -97,7 +97,11 @@ def test_le_poids_audio_reste_raisonnable():
     # total passe à 3,19 Mo. Ce plafond ne protège pas le démarrage (ces voix se
     # chargent par mission, une à la fois) : il borne le dépôt, et c'est un ajout
     # de contenu, pas un dépassement qu'on laisse filer.
-    assert sum(f.stat().st_size for f in histoire) < 4_000_000
+    # ⚠️ Relevé de 4 à 5 Mo le 20 sept. 2026 : les voix de repos (15 fichiers, 350 Ko — demande
+    # de Martin, « fais parler les personnages »), Lulu de m50 et ses sœurs ont fait passer le
+    # total à 4,10 Mo. Même raison : elles se chargent d'un coup par « repos » ou par mission,
+    # jamais au démarrage ; le plafond borne le dépôt. 5 et pas 4,2 : un chiffre qui tient.
+    assert sum(f.stat().st_size for f in histoire) < 5_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on
@@ -262,7 +266,7 @@ def test_les_voix_de_l_histoire_sont_declarees_par_mission(paquet):
     cours — jamais au demarrage."""
     histoire = paquet["audio"]["histoire"]
     assert len(histoire) >= 30
-    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "m6", "m50", "m97", "journal", "ouverture"}, \
+    assert {v["mission"] for v in histoire} == {"m1", "m2", "m3", "m4", "m5", "m6", "m50", "m97", "journal", "ouverture", "repos"}, \
         "les missions, le journal lu par le narrateur, et l'ouverture qu'il lit aussi"
     assert all(v["qui"] and v["partie"] for v in histoire)
     assert any(v["telephone"] for v in histoire), "les appels sont marques : la voix vient du combine"
@@ -476,7 +480,7 @@ def test_la_sonnerie_du_telephone_ne_couvre_pas_la_voix_qui_la_suit():
     # ⚠️ TOUTES les voix : les donneurs (`voix_histoire`), le narrateur du matin
     # (`voix_journal`) et celui de l'ouverture (`voix_ouverture`) — la sonnerie
     # ne doit en couvrir aucune, et c'est la plus BASSE qui decide.
-    voix = [v for v in audio.voix_histoire() + audio.voix_journal() + audio.voix_ouverture()
+    voix = [v for v in audio.voix_histoire() + audio.voix_journal() + audio.voix_ouverture() + audio.voix_repos()
             if audio.chemin_voix(v).is_file()]
     if not voix:
         pytest.skip("les voix ne sont pas generees sur ce poste")

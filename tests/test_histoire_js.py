@@ -587,6 +587,44 @@ def test_m50_marco_ne_marche_pas_sur_le_joueur_a_l_intro_ni_a_la_fin(banc):
         assert s["dFin"] >= 14, f"{quand} : Marco reste sur le joueur ({s['dFin']} px)"
 
 
+def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : « fais parler les personnages ». Sans mission pour toi, chacun
+    disait « reviens me voir plus tard » (avant M5) ou « le Faubourg est tranquille » (après) en
+    silence. Rouge avant : aucune voix demandée."""
+    import json
+    abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou") and not p.get("parti_apres")]
+    tous = [m["slug"] for m in paquet["missions"]]
+    assert abordables == ["thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila"]
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B;
+        const dit = function (qui) {
+            L.Son.Voix.demandees.length = 0;
+            const ok = L.Histoire.parler(qui);
+            const cinema = !!B.cinema;
+            const voix = L.Son.Voix.demandees.slice();
+            if (B.cinema) { while (B.cinema) L.Histoire.suivante(); }
+            return { ok: ok, cinema: cinema, voix: voix };
+        };
+        // Avant M5, partie neuve : personne (sauf Ti-Guy, qui a m1) n'a rien a donner.
+        const avant = {};
+        for (const qui of ENTREE_ABORDABLES) avant[qui] = dit(qui);
+        // Apres M5, toutes les missions faites : personne n'a plus rien a donner.
+        B.partie.missionsFaites = {};
+        for (const m of ENTREE_TOUS) B.partie.missionsFaites[m] = 1;
+        const apres = {};
+        for (const qui of ENTREE_ABORDABLES) apres[qui] = dit(qui);
+        return { avant: avant, apres: apres, menu: !!B.menu };
+    }""".replace("ENTREE_TOUS", json.dumps(tous)).replace("ENTREE_ABORDABLES", json.dumps(abordables)))
+    for qui, d in r["avant"].items():
+        assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-1"], (qui, d)
+    for qui, d in r["apres"].items():
+        if qui == "josee":       # apres M5 elle ouvre le marche noir : pas de repos, donc pas de voix
+            assert d["ok"] and d["voix"] == [], (qui, d)
+        else:
+            assert d["ok"] and not d["cinema"] and d["voix"] == [f"{qui}-repos-2"], (qui, d)
+
+
 def test_le_sergent_ami_et_le_faubourg_libere(banc):
     r = banc("""function (L, o) {
         L.Jeu.commencer();
