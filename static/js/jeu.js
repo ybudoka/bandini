@@ -79,6 +79,14 @@ const Jeu = (function () {
       const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === 'planque'; });
       if (porte) { x = porte.x * TT + 8; y = (porte.y + 1) * TT + 8; }
     }
+    // ⚠️ UNE POSITION SAUVEGARDEE N'EST PAS UNE PLACE OU L'ON TIENT. La sauvegarde
+    // ecrit ou l'on est, et au volant c'est le centre du char : sous le toit d'un
+    // garage, sur l'eau, dans une facade. Rouverte telle quelle, la partie nous
+    // posait sur le toit du garage Bandini (Martin, 21 sept. 2026), et rien ne
+    // sort un pieton d'un mur. C'est ICI qu'on corrige, pas a la sauvegarde : les
+    // parties deja ecrites se rouvrent aussi.
+    const debout = ouTenirDebout(x, y);
+    if (debout) { x = debout.x; y = debout.y; }
     const j = Entites.creerJoueur(x, y);
     Monde.centrerCamera(j.x, j.y);
     Entites.peuplerDabord();          // ⚠️ apres le joueur : la bulle est autour de lui
@@ -572,6 +580,28 @@ const Jeu = (function () {
       }
     }
     return null;
+  }
+
+  /** Ou un pieton tient debout, au plus pres du pixel (x, y) : ce pixel-la s'il y
+      tient (ni mur, ni eau, ni grillage), sinon le centre de la tuile a pied la
+      plus proche — hors chaussee, hors meuble —, ou null a plus de 12 tuiles.
+
+      ⚠️ La plus proche AU PIXEL, pas la premiere d'une spirale : sorti du toit du
+      garage, on retombe devant sa porte, pas dans la ruelle derriere parce que la
+      spirale commence par le nord. */
+  function ouTenirDebout(x, y) {
+    const tx = Math.floor(x / TT), ty = Math.floor(y / TT);
+    if (!Monde.bloque(tx, ty, Monde.MASQUE_PIETON)) return { x: x, y: y };
+    let mieux = null, loin = Infinity;
+    for (let dy = -12; dy <= 12; dy++) {
+      for (let dx = -12; dx <= 12; dx++) {
+        if (!Monde.marchablePieton(tx + dx, ty + dy) || Monde.estMeuble(tx + dx, ty + dy)) continue;
+        const px = (tx + dx) * TT + 8, py = (ty + dy) * TT + 8;
+        const d = (px - x) * (px - x) + (py - y) * (py - y);
+        if (d < loin) { loin = d; mieux = { x: px, y: py }; }
+      }
+    }
+    return mieux;
   }
 
   function maj() {

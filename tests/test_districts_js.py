@@ -4,6 +4,8 @@ Les juges de `test_districts.py` regardent la carte ; ceux-ci regardent le JEU �
 qui naît dans la rue, combien, et si le pont se traverse vraiment en char.
 """
 
+import pytest
+
 # Se transporter au centre d'une zone, camera et index remis a jour.
 ALLER = """function (L, o) {
     function aller(L, slug) {
@@ -141,6 +143,52 @@ def test_une_vieille_partie_ne_ramene_pas_son_char_dans_un_mur(banc):
     assert r["joueurLibre"], "le joueur repart dans un mur"
     assert r["char"] and r["surRue"], "le char de la planque n'est pas sur la rue"
     assert r["pres"] <= 10, f"le char revient a {r['pres']} tuiles de la planque"
+
+
+# Une partie de la BONNE carte, sauvegardee a (x, y), puis rouverte.
+ROUVRIR = """function (L, o) {
+    function rouvrir(x, y) {
+        L.B.partie = L.Sauvegarde.completer({}, L.B.defs);
+        L.B.partie.empreinte = L.B.defs.empreinte;
+        L.B.partie.x = x; L.B.partie.y = y;
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        return { x: j.x, y: j.y, tx: Math.floor(j.x / L.TT), ty: Math.floor(j.y / L.TT),
+                 mur: L.Monde.bloque(Math.floor(j.x / L.TT), Math.floor(j.y / L.TT), L.Monde.MASQUE_PIETON) };
+    }
+    const porte = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'garage'; });
+    const pg = L.Monde.porteDeGarage('garage');
+"""
+
+
+@pytest.mark.parametrize("ou", ["toit", "baie"])
+def test_une_partie_sauvee_dans_le_garage_se_rouvre_devant(banc, ou):
+    """⚠️ Martin, 21 sept. 2026 : sa partie sauvee a 2549, 763 — deux rangees de
+    toit au-dessus de la porte du garage Bandini — se rouvrait SUR le toit, et
+    rien ne sort un pieton d'un mur. La sauvegarde ecrit ou l'on est, et au
+    volant c'est le centre du char : la baie sous le rideau en est un autre cas.
+    On se rouvre sur le trottoir devant, pas dans la ruelle derriere."""
+    r = banc(ROUVRIR + """
+        const x = %s, y = %s;
+        const dessous = L.Monde.bloque(Math.floor(x / L.TT), Math.floor(y / L.TT), L.Monde.MASQUE_PIETON);
+        return Object.assign(rouvrir(x, y), { dessous: dessous, porteY: porte.y, porteX: porte.x });
+    }""" % (("porte.x * L.TT + 5", "(porte.y - 2) * L.TT + 11") if ou == "toit"
+            else ("(pg.x + pg.l / 2) * L.TT", "(pg.y - 1) * L.TT + 8")))
+    assert r["dessous"], f"le décor du juge est faux : la position n'est pas dans un mur ({r})"
+    assert not r["mur"], f"la partie se rouvre dans le garage : {r}"
+    assert r["ty"] > r["porteY"], f"on se rouvre derrière le garage, pas devant : {r}"
+    assert abs(r["tx"] - r["porteX"]) <= 3 and r["ty"] - r["porteY"] <= 2, f"on se rouvre loin du garage : {r}"
+
+
+def test_une_partie_sauvee_sur_le_trottoir_se_rouvre_au_pixel(banc):
+    """Ce qu'on corrige ne touche que les places ou l'on ne tient pas : sur le
+    trottoir devant le garage, on revient exactement ou l'on etait."""
+    r = banc(ROUVRIR + """
+        const x = porte.x * L.TT + 3, y = (porte.y + 1) * L.TT + 13;
+        return Object.assign(rouvrir(x, y), { x0: x, y0: y });
+    }""")
+    assert not r["mur"]
+    assert (r["x"], r["y"]) == (r["x0"], r["y0"]), f"une place libre a bougé : {r}"
 
 
 def test_la_nuit_le_trafic_et_la_foule_tombent(banc):
