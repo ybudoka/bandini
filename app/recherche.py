@@ -309,6 +309,22 @@ CLOTURES = {
 }
 
 
+#: FAIRE FACE : pour agir sur quelque chose (une porte, un char, un comptoir,
+#: quelqu'un), le joueur doit le REGARDER. ⚠️ « Regarder » veut dire ce que le
+#: sprite MONTRE — l'un des quatre regards dessines (`face`) — et pas l'angle
+#: fin du stick : ce que le joueur voit est ce que le jeu juge. Quatre regards
+#: a +/-50 degres se recouvrent de 10 degres a chaque diagonale : aucune
+#: direction n'est hors de portee, et sur une diagonale on peut viser des deux.
+#: ⚠️ Et ON N'A PAS A REGARDER CE QU'ON A SOUS LES PIEDS : a `dessus_px` d'un
+#: point, la direction n'est plus definie (une arme tombee la ou l'on se tient).
+#: Le meme calcul pour l'invite du HUD et pour ACTION — `faceA`, dans base.js —
+#: pour que le bouton ne promette jamais ce qu'il refuserait.
+REGARD = {
+    "demi_cone_degres": 50,   # de part et d'autre du regard dessine
+    "dessus_px": 8,           # sous les pieds : pas de regard a exiger
+}
+
+
 #: La police sur le terrain : patrouille, poursuite, arrestation, prison.
 POLICE = {
     "patrouille_par_zone_max": 3,   # agents a pied dans la bulle, plafond (la zone dit combien)
@@ -348,4 +364,5 @@ def exporter() -> dict:
         "vitesses": VITESSES,
         "clotures": CLOTURES,
         "nage": NAGE,
+        "regard": dict(REGARD),
     }

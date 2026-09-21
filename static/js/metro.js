@@ -130,7 +130,9 @@ const Metro = (function () {
     const d = donnees();
     if (!d || !j || j.dansVehicule || B.interieur) return null;
     const tx = Math.floor(j.x / TT), ty = Math.floor(j.y / TT);
-    return d.stations.find(function (s) { return s.sortie.y === ty && Math.abs(s.sortie.x - tx) <= 1; }) || null;
+    return d.stations.find(function (s) {
+      return s.sortie.y === ty && Math.abs(s.sortie.x - tx) <= 1 && faceA(j, (s.x + 0.5) * TT, (s.y + 0.5) * TT);
+    }) || null;
   }
 
   function inviteDescendre(j) {

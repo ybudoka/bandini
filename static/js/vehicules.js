@@ -1287,7 +1287,7 @@ const Vehicules = (function () {
     for (const v of Entites.autour(j.x, j.y, portee + 20, function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.rails; })) {
       for (const c of cercles(v)) {
         const d = Math.hypot(c.x - j.x, c.y - j.y) - c.r;
-        if (d < dMin && d <= portee) { dMin = d; meilleur = v; }
+        if (d < dMin && d <= portee && faceA(j, c.x, c.y)) { dMin = d; meilleur = v; }
       }
     }
     return meilleur;

@@ -144,7 +144,8 @@ const Missions = (function () {
   /** L'homme-sandwich a portee de main : celui qui te parle, ou qui passe. */
   function crieurSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.metier === 'reclame' && e.vivant && e.etat !== 'fuit' && e.etat !== 'assomme' && e.etat !== 'temoin';
+      return e.metier === 'reclame' && e.vivant && e.etat !== 'fuit' && e.etat !== 'assomme' && e.etat !== 'temoin'
+        && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -182,7 +183,7 @@ const Missions = (function () {
       se passer. */
   function filleSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit';
+      return e.metier === 'compagnie' && e.vivant && e.etat !== 'fuit' && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -191,7 +192,19 @@ const Missions = (function () {
       silence a travers la rue. */
   function stoolSousLaMain(j) {
     return Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px)
-      .find(Police.estStool) || null;
+      .find(function (e) { return Police.estStool(e) && faceA(j, e.x, e.y); }) || null;
+  }
+
+  /** L'etal d'un ambulant a portee de main — le meme pour l'invite et pour ACTION. */
+  function etalSousLaMain(j) {
+    return Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant' && faceA(j, e.x, e.y); })[0] || null;
+  }
+
+  /** Le temoin qui court raconter, a portee de main : on lui achete son silence. */
+  function temoinSousLaMain(j) {
+    return Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
+      return e.etat === 'temoin' && e.crime && !e.crime.rapporte && faceA(j, e.x, e.y);
+    }) || null;
   }
 
   function interagir(j) {
@@ -216,7 +229,7 @@ const Missions = (function () {
     const comptoir = typeof Foire !== 'undefined' ? Foire.jeuSousLaMain(j) : null;
     const jeu = comptoir ? Histoire.defiDuComptoir(comptoir) : null;
     if (jeu) return Histoire.proposerDefi(jeu.slug);
-    const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
+    const etal = etalSousLaMain(j);
     if (etal) return acheterAmbulant(j, etal);
     // ⚠️ LES HOMMES DE SAL AVANT TOUT LE MONDE : quand ils sont sur toi, il
     // n'y a rien d'autre a faire de ce bouton-la.
@@ -232,9 +245,7 @@ const Missions = (function () {
     const stool = stoolSousLaMain(j);
     if (stool) return Police.acheterLeStool(j, stool);
     // Un temoin qui court raconter : on lui achete le silence.
-    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
-      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
-    });
+    const temoin = temoinSousLaMain(j);
     if (temoin) return Police.acheterLeSilence(j, temoin);
     const crieur = crieurSousLaMain(j);
     if (crieur) return prendreCoupon(j, crieur);
@@ -904,7 +915,7 @@ const Missions = (function () {
     let meilleur = null, dMin = 1.6;
     for (const p of piece.points) {
       const d = Math.hypot(p.x - tx, p.y - ty);
-      if (d < dMin) { dMin = d; meilleur = p; }
+      if (d < dMin && faceA(j, (p.x + 0.5) * TT, (p.y + 0.5) * TT)) { dMin = d; meilleur = p; }
     }
     return meilleur;
   }
@@ -1951,7 +1962,7 @@ const Missions = (function () {
   function collecteurSousLaMain(j) {
     if (!j || B.interieur) return null;
     return Entites.pietonsAutour(j.x, j.y, 26).find(function (e) {
-      return e.collecteur && e.vivant;
+      return e.collecteur && e.vivant && faceA(j, e.x, e.y);
     }) || null;
   }
 
@@ -1984,7 +1995,9 @@ const Missions = (function () {
   /** Le guichet a portee de main — debout, dehors, et pas deja defonce. */
   function guichetSousLaMain(j) {
     if (B.interieur || j.dansVehicule) return null;
-    return Entites.decorAutour(j.x, j.y, 22).find(function (d) { return d.decor === 'guichet' && !d.brise; }) || null;
+    return Entites.decorAutour(j.x, j.y, 22).find(function (d) {
+      return d.decor === 'guichet' && !d.brise && faceA(j, d.x, d.y);
+    }) || null;
   }
 
   function tuileDe(e) { return Math.floor(e.x / TT) + ',' + Math.floor(e.y / TT); }
@@ -2140,7 +2153,7 @@ const Missions = (function () {
     // et ceci est le filet pour tout ce qu'on posera demain a cote d'une porte.
     if (Monde.porteDevant(j)) return null;
     const d = Entites.decorAutour(j.x, j.y, 22).find(function (q) {
-      return !q.brise && (DECORS[q.decor] || {}).distributrice;
+      return !q.brise && (DECORS[q.decor] || {}).distributrice && faceA(j, q.x, q.y);
     });
     return d ? machine(DECORS[d.decor].distributrice, 'rue:' + tuileDe(d), d.x, d.y) : null;
   }
@@ -2493,7 +2506,7 @@ const Missions = (function () {
     if (perso) { const d = Histoire.personnage(perso.personnage); B.invite = 'PARLER À ' + (d ? d.nom.toUpperCase() : '?'); return; }
     const panneau = Histoire.panneauSousLaMain(j);
     if (panneau) { B.invite = 'DÉFI'; return; }
-    const etal = Entites.autour(j.x, j.y, 30, function (e) { return e.type === 'ambulant'; })[0];
+    const etal = etalSousLaMain(j);
     if (etal) {
       const c = commerceDe(etal.slug);
       if (c && c.service === 'contrebande') {
@@ -2512,9 +2525,7 @@ const Missions = (function () {
     if (collecteurSousLaMain(j)) { B.invite = 'PAYER SAL — ' + B.partie.dette + ' $'; return; }
     const stool = stoolSousLaMain(j);
     if (stool) { B.invite = 'ACHETER SON SILENCE — ' + Police.prixDuStool() + ' $'; return; }
-    const temoin = Entites.pietonsAutour(j.x, j.y, B.defs.recherche.police.silence_rayon_px).find(function (e) {
-      return e.etat === 'temoin' && e.crime && !e.crime.rapporte;
-    });
+    const temoin = temoinSousLaMain(j);
     if (temoin) { B.invite = 'ACHETER SON SILENCE — ' + B.defs.economie.tarifs.silence_temoin + ' $'; return; }
     // L'homme-sandwich : l'invite nomme le kiosque pour lequel il crie.
     const crieur = crieurSousLaMain(j);
@@ -2598,7 +2609,7 @@ const Missions = (function () {
 
   return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
-           coupon, prixAmbulant, crieurSousLaMain, stoolSousLaMain, prendreCoupon,
+           coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
            dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,

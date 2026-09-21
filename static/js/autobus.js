@@ -389,7 +389,7 @@ const Autobus = (function () {
       const long = borner((j.x - v.x) * cx + (j.y - v.y) * cy, -v.def.longueur / 2, v.def.longueur / 2);
       const px = v.x + cx * long, py = v.y + cy * long;
       const d2 = dist2(px, py, j.x, j.y);
-      if (d2 < r * r && d2 < dMin) { dMin = d2; meilleur = v; }
+      if (d2 < r * r && d2 < dMin && faceA(j, px, py)) { dMin = d2; meilleur = v; }
     }
     return meilleur;
   }

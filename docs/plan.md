@@ -213,7 +213,7 @@ ne bougent pas quand l'ordre de travail change.
 | Installable, et jouable hors ligne | ✅ **livré** | 17 sept. 2026 | **P4** | ajout | [notes](#installable-et-jouable-hors-ligne) |
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
-| On agit sur ce qu'on regarde | ⬜ **en cours** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
+| On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
 | Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
@@ -763,7 +763,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_reclame.py test_reclame_js.py test_kiosque_ferme_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
         test_ouverture.py test_interpretation.py test_chantiers.py test_chantiers_js.py
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
-        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py
+        test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py test_regard_js.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
         test_bd.py test_comptes.py test_comptes_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
@@ -11536,11 +11536,38 @@ ce juge-là avec.)
 demande de Martin (20 sept. 2026) : « pour activer une interaction avec la plupart des choses,
 à moins d'exception, que le personnage doive faire face à ce qu'il veut activer ».
 
-- ⚠️ **En cours.** Aujourd'hui ACTION sert tout ce qui est dans un rayon autour du joueur, quel
-  que soit son regard : on entre dans un commerce le dos tourné, on monte dans un char qu'on
-  ne voit pas. Objectif : une seule règle de « faire face » (un cône devant le regard, dans le
-  paquet), lue par les mêmes fonctions « sous la main » que l'invite du HUD — pour que le HUD
-  ne promette jamais un geste qu'ACTION refuserait — et une courte liste d'exceptions dites.
+✅ **Livré** (20 sept. 2026). Avant, ACTION servait tout ce qui était dans un rayon autour du
+joueur, quel que soit son regard : on entrait dans un commerce le dos tourné, on montait dans
+un char qu'on ne voyait pas.
+
+- ⚠️ **Une règle, un seul calcul.** `faceA(e, x, y)` (`base.js`) : le regard est ce que le
+  sprite MONTRE (`face`, l'un des quatre dessinés), pas l'angle fin du stick — ce que le joueur
+  voit est ce que le jeu juge. Cône de ±50° (`recherche.regard`), donc les diagonales se
+  recouvrent et aucune direction n'est hors de portée. Toutes les fonctions « sous la main »
+  la lisent : porte, portière, autobus, manège et comptoir de jeu de la foire, édicule du métro,
+  point d'un intérieur, personnage de l'histoire, homme de Sal, homme-sandwich, fille de la
+  Brume, témoin, stool, étal, machine, guichet, panneau, arme par terre, bouclier, poches. Et
+  l'invite du HUD lit les mêmes : le bouton ne promet jamais un geste qu'ACTION refuserait.
+- ⚠️ **Deux exceptions, dites.** (1) Ce qu'on a **sous les pieds** (8 px, `dessus_px`) : la
+  direction n'y est plus définie. (2) La **porte de sortie, dedans** : en entrant on regarde
+  le fond de la pièce, la porte est dans le dos, et c'est le jeu qui nous y a mis — sortir reste
+  le geste vif du bloquant du 13 sept. (« chez Ti-Paul, il est impossible de sortir »). Ce qui
+  se ramasse en passant dessus (billets, canettes) n'a jamais passé par ACTION.
+- ⚠️ **40 juges posaient le joueur « à côté » sans jamais le tourner** — moteur, histoire,
+  métro, autobus, foire, distributrices, réclame, dette… : ils regardent maintenant la chose
+  (`o.viser`). Celui du garage a dû déplacer son char : posé à l'est de quelqu'un qui regarde la
+  porte au nord, il n'était plus à portée de rien, et la course entre la porte et la portière
+  (le bug de Martin) ne se jouait plus.
+- ⚠️ **Deux juges passaient à vide** : `test_forcer_la_descente_ne_casse_pas_la_ligne` (sans
+  regard le joueur ne montait plus dans l'autobus, et ses non-événements restaient vrais) et le
+  test de fumée des canards, qui n'a **aucune assertion** et n'appuyait plus sur rien. Repérés
+  en consignant, dans une copie instrumentée, chaque refus de regard survenu pendant un ACTION
+  (touche ou appel direct) sur toute la suite. Cinq boucles « cherche une portière » de
+  `test_histoire_js.py` ne tenaient que par le regard par défaut (`bas`) : elles se tournent.
+- `test_regard_js.py` (12 juges) : la règle et ses bords, la porte de face et dos tourné (invite
+  et geste), l'exception de la sortie, la portière, les gens, le comptoir, l'arme sous les
+  pieds, l'édicule, les manèges, l'étal/la machine/le guichet/le panneau, le bouclier et les
+  poches. ⚠️ Vingt-cinq mutations (retirer chaque `faceA`) le font rougir, chacune.
 
 ### Rien devant une porte, plus large
 

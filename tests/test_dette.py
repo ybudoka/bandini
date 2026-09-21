@@ -186,6 +186,8 @@ def test_on_les_paie_en_main_propre_et_la_dette_ne_passe_jamais_sous_zero(banc):
         for (let i = 0; i < 60; i++) { L.B.t += 30; L.Missions.majCollecteurs(); }
         const homme = L.Missions.collecteurs()[0];
         homme.x = j.x + 12; homme.y = j.y;
+        // ⚠️ On regarde l'homme de Sal : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(homme);
         L.Entites.indexer();
         L.Missions.majInvite(j);
         const invite = L.B.invite;
@@ -236,6 +238,7 @@ def test_le_menu_des_hommes_se_joue_vraiment(banc):
         for (let i = 0; i < 60; i++) { L.B.t += 30; L.Missions.majCollecteurs(); }
         const homme = L.Missions.collecteurs()[0];
         homme.x = j.x + 12; homme.y = j.y;
+        o.viser(homme);                         // on regarde l'homme : ACTION n'agit que sur ce qu'on regarde
         L.Entites.indexer();
         L.Missions.interagir(j);
         const m = L.B.menu;

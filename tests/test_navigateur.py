@@ -472,6 +472,8 @@ def test_une_voix_de_l_histoire_se_decode_et_baisse_la_radio(page, serveur, erre
     page.evaluate("""() => {
         const L = window.BANDINI, j = L.B.joueur, t = L.Histoire.donneur('ti_guy');
         j.x = t.x - 16; j.y = t.y; L.Entites.indexer();
+        // ⚠️ On le regarde : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, t.x - j.x, t.y - j.y);
         L.Missions.interagir(j);
     }""")
     assert page.evaluate("!!window.BANDINI.B.cinema"), "Ti-Guy ne parle pas"

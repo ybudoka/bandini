@@ -3306,6 +3306,8 @@ def test_l_arme_du_mort_se_ramasse(banc):
         const armeDeLaCravate = cravate.arme;
         L.Entites.tuer(cravate, L.B.joueur);
         L.Entites.indexer();
+        // ⚠️ On regarde l'arme : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(L.B.joueur, 1, 0);
         const objet = L.Combat.objetSousLaMain(L.B.joueur);
         o.tape('KeyE', 2);
         return { arme: armeDeLaCravate, objet: objet ? objet.arme : null,
@@ -3332,6 +3334,8 @@ def test_le_pickpocket_se_fait_dans_le_dos(banc):
         L.Entites.indexer();
         const face = o.poser('dame', 14, 0);
         face.argent = 40;
+        // ⚠️ Le joueur, lui, regarde la dame : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.regarder(face, -1, 0);            // elle regarde le joueur
         const deFace = L.Combat.pickpocket(j);
         L.Entites.regarder(face, 1, 0);             // elle lui tourne le dos
@@ -3628,6 +3632,8 @@ def test_le_kiosque_vend_de_la_vie_contre_de_l_argent(banc, paquet):
         const j = L.B.joueur;
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
         j.x = etal.x; j.y = etal.y + 22; j.vie = 40; L.B.partie.argent = 100;
+        // ⚠️ On regarde le kiosque : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Entites.indexer();
         const achat = L.Missions.interagir(j);
         const apres = { vie: j.vie, argent: L.B.partie.argent };
@@ -3657,6 +3663,8 @@ def test_manger_redonne_du_souffle_et_le_cafe_reveille(banc, paquet):
         function acheter(slug) {
           const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === slug; })[0];
           j.x = etal.x; j.y = etal.y + 22;
+          // ⚠️ On regarde l'étal : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+          L.Entites.regarder(j, 0, -1);
           L.Entites.indexer();
           return L.Missions.interagir(j);
         }
@@ -3912,6 +3920,8 @@ def test_la_compagnie_se_paie_et_refuse_quand_la_police_cherche(banc, paquet):
         for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 12, 0);
         fille.etat = 'arret';
+        // ⚠️ On regarde la fille : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.indexer();
         j.vie = 50; L.B.partie.argent = 200;
         L.B.recherche.etoiles = 2;
@@ -4065,6 +4075,8 @@ def test_le_hud_nomme_la_fille_de_la_brume(banc, paquet):
         for (const q of L.B.entites.slice()) if (q !== j && q.type !== 'joueur') L.Entites.retirer(q);
         const fille = o.poser('racoleuse', 14, 0);
         fille.etat = 'arret';
+        // ⚠️ On regarde la fille : l'invite n'apparaît que pour ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         L.Entites.indexer();
         L.Missions.majInvite(j);
         const pres = L.B.invite;
@@ -4088,6 +4100,8 @@ def test_on_vole_un_char_et_on_en_descend(banc):
         j.y += 40;                                  // loin de la porte du terminus : E y entrerait
         const v = o.char('auto', 24, 0, 0);
         const avantVol = L.B.partie.stats.volees;
+        // ⚠️ On regarde le char : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 1, 0);
         o.tape('KeyE', 2);
         const dedans = { conducteur: v.conducteur === j, dansVehicule: j.dansVehicule === v,
                          dessine: j.dessine, contexte: o.elements.tactile.querySelectorAll('[data-a]')[0].textContent };
@@ -6672,6 +6686,8 @@ def test_on_entre_dans_la_planque_et_on_en_ressort(banc):
         const j = L.B.joueur, c = L.Monde.carte;
         const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         // Ce qui ne bouge pas : ni les pietons (oublies quand on s'eloigne), ni les
         // chars, ni les armes de fortune (semees au fil des images).
         // ⚠️ `bete` et `ballon` sont de la VIE DE RUE, pas du mobilier : un goéland
@@ -7097,6 +7113,8 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
         L.B.partie.argent = 2000;
         const porte = c.portes.find(function (p) { return p.lieu === 'kiosque'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const dehors = L.B.invite;
         o.tape('KeyE', 1);
@@ -7105,6 +7123,8 @@ def test_un_commerce_s_achete_au_comptoir_et_rapporte(banc, paquet):
         const dedans = L.B.interieur && L.B.interieur.slug;
         const point = L.B.interieur.points.find(function (p) { return p.type === 'caisse'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        // Et la caisse aussi : on la regarde (elle est au-dessus du joueur).
+        L.Entites.regarder(j, 0, -1);
         L.Missions.majInvite(j);
         const inviteCaisse = L.B.invite;
         o.tape('KeyE', 2);
@@ -7149,11 +7169,15 @@ def test_au_garage_deux_pressions_vendent_le_char_et_n_achetent_pas_le_garage(ba
         L.B.partie.argent = 2 * %d;
         const porte = c.portes.find(function (p) { return p.lieu === 'garage'; });
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
         o.char('auto', 20, 0, 0);
         o.tape('KeyE', 1);
         o.fondu();
         const point = L.B.interieur.points.find(function (p) { return p.type === 'vendre'; });
         j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8 + 12;
+        // Et le comptoir aussi : on le regarde (il est au-dessus du joueur).
+        L.Entites.regarder(j, 0, -1);
         o.tape('KeyE', 2);
         const menu = L.B.menu ? L.B.menu.items.map(function (i) { return i.libelle; }) : null;
         const choisi = L.B.menu ? L.B.menu.items[L.B.menu.curseur].libelle : null;
@@ -7185,7 +7209,12 @@ def test_devant_le_garage_la_porte_gagne_sur_le_char_gare_devant(banc, a_soi):
         if (%s) L.B.partie.proprietes.garage = { jour: L.B.partie.jour, caisse: 0 };
         L.B.partie.argent = 99999;             // de quoi acheter : la porte ne doit pas le proposer
         j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
-        const v = o.char('auto', 20, 0, 0);    // gare devant, a portee de portiere
+        // ⚠️ On regarde la porte : dehors, ENTRER n'agit que sur ce qu'on regarde (test_regard_js.py).
+        L.Entites.regarder(j, 0, -1);
+        // ⚠️ Le char est DANS LE REGARD, a cote de la porte : depuis que ACTION n'agit que
+        // sur ce qu'on regarde, un char a l'est de quelqu'un qui regarde la porte au nord
+        // n'etait plus a portee de rien — et la course entre les deux lecteurs ne se jouait plus.
+        const v = o.char('auto', 12, -12, 0);  // gare devant, a portee de portiere
         const pres = L.Vehicules.vehiculeSousLaMain(j) === v, devant = L.Monde.porteDevant(j) === porte;
         o.tape('KeyE', 1);                     // UNE pression
         const fondu = !!L.B.transition, menu = !!L.B.menu, auVolant = !!j.dansVehicule;

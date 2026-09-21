@@ -1063,11 +1063,22 @@ const Monde = (function () {
     return !!(p && p.rampe);
   }
 
-  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade),
-      au sud dedans (la sortie est sur le mur du bas). Jamais les deux. */
+  /** La porte collee a la tuile ou se tient `e` : au nord dehors (une facade), au
+      sud dedans (la sortie est sur le mur du bas). Jamais les deux.
+
+      ⚠️ DEHORS, IL FAUT LA REGARDER : le dos tourne a la porte, il n'y en a pas, et
+      l'invite « ENTRER » comme ACTION passent par ici. ⚠️ DEDANS, NON — c'est
+      l'exception de la sortie : en entrant on regarde vers le fond de la piece, la
+      porte est dans le dos, et c'est le jeu qui nous y a mis. Sortir reste le
+      geste vif du bloquant du 13 sept. 2026 (« chez Ti-Paul, il est impossible de
+      sortir »), pas un demi-tour a deviner. */
   function porteDevant(e) {
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
-    return porteA(tx, ty - 1) || porteA(tx, ty + 1);
+    for (const dy of [-1, 1]) {
+      const porte = porteA(tx, ty + dy);
+      if (porte && (B.interieur || faceA(e, (tx + 0.5) * TT, (ty + dy + 0.5) * TT))) return porte;
+    }
+    return null;
   }
 
   /** La zone nommee qui contient ce point (la derniere gagne : la plus precise). */

@@ -286,6 +286,8 @@ def test_on_achete_le_silence_d_un_temoin(banc, paquet):
         const t = o.poser('passant', 16, 0);
         t.probaTemoin = 1; t.etat = 'flane';
         L.Entites.regarder(t, -1, 0);
+        // ⚠️ On regarde le témoin : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(t);
         const crime = L.Police.signalerCrime('coup_pieton', j.x, j.y, false);
         L.Missions.majInvite(j);
         const invite = L.B.invite;

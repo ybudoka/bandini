@@ -51,6 +51,9 @@ def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
         %s
         const m = amener(L, 2, 45);
         const j = L.B.joueur;
+        // ⚠️ On regarde la chaussée de l'arrêt, là où l'autobus s'arrêtera : ACTION
+        // n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         const attente = L.Autobus.texteDAttente(j);
         const arrive = attendreLAutobus(L, o, m.arret, 4000);
         if (!arrive) return { arrive: false, attente: attente };
@@ -58,6 +61,10 @@ def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
         const out = { arrive: true, images: arrive.images, attente: attente,
                       ecart_px: Math.hypot(v.x - (m.arret.x * L.TT + 8), v.y - (m.arret.y * L.TT + 8)),
                       invite: L.B.invite, argent: L.B.partie.argent };
+        // Le dos tourne a l'autobus, il n'y a plus de portiere ; on se retourne, et on monte.
+        L.Entites.regarder(j, j.x - v.x, j.y - v.y);
+        out.dos = !!L.Autobus.autobusSousLaMain(j);
+        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         o.tape('KeyE', 1);
         out.passager = j.passager === v;
         out.dansVehicule = j.dansVehicule === v;
@@ -71,6 +78,7 @@ def test_l_autobus_passe_a_l_abribus_ou_l_on_attend_et_on_monte(banc):
     assert r["attente"] and "DANS" in r["attente"], r["attente"]
     assert r["ecart_px"] < 8, f"arrêté à {r['ecart_px']:.0f} px de son arrêt"
     assert r["invite"].startswith("MONTER — LIGNE 2"), r["invite"]
+    assert r["dos"] is False, "on voit la portiere de l'autobus dos tourne"
     assert r["passager"] and r["dansVehicule"] and not r["dessine"]
     assert r["paye"] == 3
     # ⚠️ La pression qui fait monter ne fait pas redescendre dans la même image.
@@ -86,6 +94,8 @@ def test_a_bord_on_demande_l_arret_et_on_descend_au_suivant(banc):
         %s
         const m = amener(L, 2, 45);
         const j = L.B.joueur;
+        // On regarde la chaussée de l'arrêt (test_regard_js.py).
+        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         const arrive = attendreLAutobus(L, o, m.arret, 4000);
         if (!arrive) return { arrive: false };
         const v = arrive.v;
@@ -134,6 +144,8 @@ def test_recherche_ou_fauche_le_chauffeur_n_ouvre_pas(banc):
         %s
         const m = amener(L, 2, 45);
         const j = L.B.joueur;
+        // On regarde la chaussée de l'arrêt (test_regard_js.py).
+        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         const arrive = attendreLAutobus(L, o, m.arret, 4000);
         if (!arrive) return { arrive: false };
         L.B.recherche.etoiles = 1;
@@ -158,6 +170,9 @@ def test_forcer_la_descente_ne_casse_pas_la_ligne(banc):
         %s
         const m = amener(L, 2, 45);
         const j = L.B.joueur;
+        // ⚠️ On regarde la chaussée de l'arrêt : sans regard, ACTION ne fait pas monter
+        // et le juge passerait à vide (test_regard_js.py).
+        o.viser({ x: m.arret.x * L.TT + 8, y: m.arret.y * L.TT + 8 });
         const arrive = attendreLAutobus(L, o, m.arret, 4000);
         if (!arrive) return { arrive: false };
         const v = arrive.v;

@@ -214,7 +214,7 @@ const Foire = (function () {
     let meilleur = null, dMin = r;
     for (let k = 1; k < liste.length; k++) {
       const e = Math.hypot(liste[k].x - j.x, liste[k].y - j.y);
-      if (e <= dMin) { dMin = e; meilleur = k; }
+      if (e <= dMin && faceA(j, liste[k].x, liste[k].y)) { dMin = e; meilleur = k; }
     }
     return meilleur === null ? null : { quoi: 'train', k: meilleur };
   }
@@ -227,7 +227,7 @@ const Foire = (function () {
     for (let k = 0; k < d.chariots; k++) {
       const p = pointDeMontagne(mr.s - k * d.ecart_px);
       const e = Math.hypot(p.x - j.x, p.y - j.y);
-      if (e <= dMin) { dMin = e; meilleur = k; }
+      if (e <= dMin && faceA(j, p.x, p.y)) { dMin = e; meilleur = k; }
     }
     return meilleur === null ? null : { quoi: 'montagne', k: meilleur };
   }
@@ -237,6 +237,7 @@ const Foire = (function () {
   function roueSousLaMain(j) {
     if (!roue || roue.passager !== null || !libre(j)) return null;
     if (Math.hypot(j.x - roue.x, j.y - (roue.y + roue.devant)) > roue.rayonMonter) return null;
+    if (!faceA(j, roue.x, roue.y + roue.devant)) return null;
     let meilleur = 0, dMin = Infinity;
     for (let k = 0; k < roue.n; k++) {
       const e = Math.abs(ecartAngle(angleDeNacelle(k), Math.PI / 2));
@@ -282,7 +283,7 @@ const Foire = (function () {
     let meilleur = null, dMin = PORTEE_JEU;
     for (const q of jeux()) {
       const d = Math.hypot(q.x * TT + 8 - j.x, q.y * TT + 15 - j.y);
-      if (d <= dMin) { dMin = d; meilleur = q; }
+      if (d <= dMin && faceA(j, q.x * TT + 8, q.y * TT + 15)) { dMin = d; meilleur = q; }
     }
     return meilleur ? meilleur.slug : null;
   }

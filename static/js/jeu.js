@@ -994,7 +994,7 @@ if (typeof window !== 'undefined') {
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
     ETOILE: ETOILE,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,
-    etatInitial: etatInitial, mulberry: mulberry, hash2: hash2, nuances: nuances,
+    etatInitial: etatInitial, mulberry: mulberry, hash2: hash2, nuances: nuances, faceA: faceA,
     graine: function (n) { B.graine = n; B.rng = mulberry(n); },
     entree: function (a) { const s = Entree._sacs(); return { bas: Entree.bas(a), pad: !!s.vPad[a], tactile: !!s.vTact[a], axe: Entree.axe }; },
   };

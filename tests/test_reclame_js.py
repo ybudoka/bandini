@@ -126,6 +126,8 @@ def test_le_coupon_rabat_le_prix_du_kiosque_une_fois(banc, paquet):
         L.B.defs.ambulants = (L.B.defs.ambulants || []).filter(function (a) { return a.slug === 'hotdog'; });
         const c = o.poser('homme_sandwich', 14, 0);
         c.etat = 'boniment'; c.minuterie = 500; c.kiosque = 'hotdog'; c.boniment = 'HOT-DOG MOITIÉ PRIX';
+        // ⚠️ On regarde l'homme-sandwich : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(c);
         L.Entites.indexer();
         L.Missions.majInvite(j);
         const invite = L.B.invite;
@@ -137,6 +139,7 @@ def test_le_coupon_rabat_le_prix_du_kiosque_une_fois(banc, paquet):
         const etal = L.B.entites.filter(function (e) { return e.type === 'ambulant' && e.slug === 'hotdog'; })[0];
         c.x = j.x + 400; c.y = j.y + 400;
         j.x = etal.x; j.y = etal.y + 22; j.vie = 10; L.B.partie.argent = 100;
+        o.viser(etal);                                     // au kiosque : on le regarde, lui
         L.Entites.indexer();
         L.Missions.majInvite(j);
         const inviteKiosque = L.B.invite;
@@ -176,6 +179,8 @@ def test_la_cabane_sert_une_guedille(banc, paquet):
         if (!etal) return { etal: false };
         const vendeur = L.B.entites.find(function (e) { return e.metier === 'ambulant' && e.commerce === 'fruits_de_mer'; });
         j.x = etal.x; j.y = etal.y + 22; j.vie = 40; j.endurance = 20; L.B.partie.argent = 100; L.B.partie.heure = 0.5;
+        // ⚠️ On regarde la cabane : ACTION n'agit que sur ce qu'on regarde (test_regard_js.py).
+        o.viser(etal);
         L.Entites.indexer();
         const achat = L.Missions.interagir(j);
         const d = L.DECORS.cabane_fruits_de_mer;

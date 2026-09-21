@@ -582,14 +582,16 @@ const Combat = (function () {
   // --- Ramasser, faire les poches -------------------------------------------------
 
   function objetSousLaMain(j) {
-    return Entites.autour(j.x, j.y, 18, function (e) { return e.type === 'ramassage' && e.objet === 'arme'; })[0] || null;
+    return Entites.autour(j.x, j.y, 18, function (e) {
+      return e.type === 'ramassage' && e.objet === 'arme' && faceA(j, e.x, e.y);
+    })[0] || null;
   }
 
   function pickpocket(j) {
     const reactions = B.defs.pietons.reactions;
     const dos = reactions.pickpocket_dos_degres * Math.PI / 180 / 2;
     const victimes = Entites.pietonsAutour(j.x, j.y, 20).filter(function (c) {
-      if (c.gang || !c.vivant || c.argent <= 0) return false;
+      if (c.gang || !c.vivant || c.argent <= 0 || !faceA(j, c.x, c.y)) return false;
       if (c.etat === 'assomme') return true;                 // assomme : les poches sont a nous
       // ⚠️ DERRIERE lui : on compare son regard a la direction d'ou l'on vient.
       return Math.abs(ecartAngle(c.angle, angleVers(c.x, c.y, j.x, j.y))) > Math.PI - dos;
@@ -778,7 +780,7 @@ const Combat = (function () {
     if (objetSousLaMain(j) || Monde.porteDevant(j) || Vehicules.vehiculeSousLaMain(j)) return null;
     return Entites.pietonsAutour(j.x, j.y, ficheBouclier().portee_px).find(function (e) {
       return e.vivant && !e.agent && !e.intouchable && !e.petit && !e.commerce
-        && !e.personnage && !e.mission && e.etat !== 'assomme';
+        && !e.personnage && !e.mission && e.etat !== 'assomme' && faceA(j, e.x, e.y);
     }) || null;
   }
 

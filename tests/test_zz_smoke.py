@@ -4,6 +4,9 @@ def test_canards(banc):
         const g = L.Foire.jeux().find(function (q) { return q.slug === 'peche_canards'; });
         const j = L.B.joueur;
         j.x = g.x * L.TT + 8; j.y = (g.y + 2) * L.TT + 8;
+        // ⚠️ On regarde le comptoir : ACTION n'agit que sur ce qu'on regarde. Sans ca ce
+        // test de fumee n'appuyait sur rien et ne fumait plus (il n'a aucune assertion).
+        o.viser({ x: g.x * L.TT + 8, y: g.y * L.TT + 15 });
         L.Entites.indexer();
         o.frame(1);
         const sous = L.Foire.jeuSousLaMain(j);
