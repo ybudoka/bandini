@@ -277,11 +277,12 @@ def test_sous_le_toit_on_ne_descend_pas_et_vendu_on_ressort_dans_la_baie(banc):
     assert r["atelier"] is False, "l'atelier attend un char vendu"
 
 
-@pytest.mark.parametrize("lieu, passe", [("garage", False), ("carrosserie_faubourg", True)])
+@pytest.mark.parametrize("lieu, passe", [("garage", False), ("carrosserie_faubourg", True), ("bungalow_1", True)])
 def test_le_char_d_une_mission(banc, lieu, passe):
     """Chez Ti-Guy, le char d'une mission se LIVRE devant le rideau : le rideau se leve
     pour lui, mais il ne passe pas. A la carrosserie, il passe — semer la police en
-    pleine mission, c'est tout l'interet."""
+    pleine mission, c'est tout l'interet. Au bungalow aussi : on s'y cache comme on s'y
+    repeindrait."""
     r = _jouer(banc, """
         const a = preparer(L, '%s', 'auto', { mission: 'm1' });
         a.v.mission = 'm1';
@@ -332,3 +333,82 @@ def test_sous_le_linteau_le_char_se_peint_coupe_au_bas_du_rideau(banc):
     rects = [e[1:] for e in lui[:i] if e[0] == "rect"][-2:]
     assert rects[-1] == [round(n) for n in r["attendu"]], (rects, r["attendu"])
     assert ["clip", "evenodd"] not in r["pourLoin"], "un char loin des rideaux se peint sous un masque"
+
+
+# --- 2e vague : les bungalows, on s'y cache -------------------------------------------
+
+
+def test_au_bungalow_on_se_cache_sans_payer_ni_repeindre_et_on_ressort_en_reculant(banc):
+    """On entre, le rideau tombe : CACHE. Rien ne se paie, rien ne se repeint, les
+    etoiles restent — elles tombent comme hors de vue. Le gaz tenu ne rouvre pas (on est
+    entre en le tenant) ; le frein tenu depuis l'arret non plus (la main qui freinait) ;
+    le RELACHER puis reculer releve le rideau, et on ressort."""
+    r = _jouer(banc, """
+        const a = preparer(L, 'bungalow_1');
+        const TT = L.TT, v = a.v, pg = a.pg;
+        L.B.partie.argent = 1000;
+        L.B.recherche.etoiles = 2;
+        entrer(L, o, a);
+        const pris = !!v.atelier;
+        // On freine pour s'arreter sous le toit, et on tient le frein.
+        o.touche('KeyS');
+        for (let k = 0; k < 150 && pg.phase !== 'cache'; k++) o.frame(1);
+        const cache = { phase: pg.phase, ouverture: pg.ouverture, msg: L.B.msg, argent: L.B.partie.argent,
+                        couleur: v.couleur, vole: v.vole, etoiles: L.B.recherche.etoiles };
+        o.frame(60);
+        const tropTot = pg.phase;
+        o.relacher('KeyS');
+        o.touche('KeyW');
+        o.frame(60);
+        const gaz = { phase: pg.phase, ouverture: pg.ouverture };
+        o.relacher('KeyW');
+        o.touche('KeyS');
+        for (let k = 0; k < 120 && pg.phase !== 'sortie'; k++) o.frame(1);
+        const sort = { phase: pg.phase, ouverture: pg.ouverture };
+        for (let k = 0; k < 200 && v.y < a.baie.y + 2 * TT; k++) o.frame(1);
+        o.relacher('KeyS');
+        return { pris: pris, cache: cache, gaz: gaz, tropTot: tropTot, sort: sort, dehors: v.y > (pg.y + 1) * TT };
+    """)
+    assert r["pris"], "le char n'est jamais passe sous le toit du bungalow"
+    c = r["cache"]
+    assert c["phase"] == "cache" and c["ouverture"] == 0, c
+    assert "CACH" in c["msg"] and "RECULE" in c["msg"], c["msg"]
+    assert c["argent"] == 1000 and c["couleur"] == "#c0392b" and c["vole"] is True, "le bungalow n'est pas une carrosserie"
+    assert c["etoiles"] == 2, "se cacher n'efface pas : les etoiles tombent avec le temps"
+    assert r["gaz"] == {"phase": "cache", "ouverture": 0}, "le gaz tenu a rouvert la cachette"
+    assert r["tropTot"] == "cache", "le frein tenu depuis l'arret a ressorti le char aussitot"
+    assert r["sort"] == {"phase": "sortie", "ouverture": 1}, r["sort"]
+    assert r["dehors"], "reculer n'a pas fait ressortir le char"
+
+
+def test_cache_sous_le_toit_ni_l_helico_ni_la_patrouille_garee_devant_ne_te_voient(banc):
+    """Cinq etoiles : une auto-patrouille garee contre le rideau, equipage a bord, et
+    l'helico au-dessus du toit. Dans la rue, l'une et l'autre remettent a zero, a chaque
+    image, le temps passe hors de vue ; a l'abri, ce temps court, et une etoile tombe."""
+    r = _jouer(banc, """
+        const a = preparer(L, 'bungalow_1');
+        const TT = L.TT, v = a.v, pg = a.pg;
+        L.B.recherche.etoiles = 5;
+        entrer(L, o, a);
+        for (let k = 0; k < 150 && pg.phase !== 'cache'; k++) o.frame(1);
+        const flic = L.Vehicules.creer('police', a.baie.x, (pg.y + 2) * TT, -Math.PI / 2, { conducteur: 'police', etat: 'roule' });
+        L.Entites.creer('helico', v.x, v.y, { r: 0, z: 40, solide: false, vivant: true, dessine: false, orbite: 0, rotor: 0, part: false });
+        L.Entites.indexer();
+        const palier = L.B.defs.recherche.paliers[5];
+        L.B.recherche.vu = palier.decroissance_s * 60 - 90;
+        let remis = 0, pres = 0, dessus = 0, dernier = L.B.recherche.vu;
+        for (let k = 0; k < 120; k++) {
+            o.frame(1);
+            const r = L.B.recherche;
+            if (r.etoiles === 5 && r.vu < dernier) remis++;
+            dernier = r.vu;
+            if (Math.hypot(flic.x - v.x, flic.y - v.y) < 60 && flic.conducteur === 'police') pres++;
+            const h = L.Police.helico();
+            if (h && Math.hypot(h.x - v.x, h.y - v.y) < 120) dessus++;
+        }
+        return { remis: remis, pres: pres, dessus: dessus, etoiles: L.B.recherche.etoiles, phase: pg.phase };
+    """)
+    assert r["pres"] > 60, f"la patrouille n'est restee pres que {r['pres']} images : le juge ne mesure rien"
+    assert r["dessus"] > 60, f"l'helico n'a survole que {r['dessus']} images : le juge ne mesure rien"
+    assert r["remis"] == 0, "a l'abri, la police a quand meme remis le compteur a zero"
+    assert r["etoiles"] == 4 and r["phase"] == "cache", r

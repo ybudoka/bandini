@@ -308,6 +308,12 @@ def test_les_etoiles_ne_tombent_que_hors_de_vue(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         L.Police.ajouterChaleur(3);
+        // ⚠️ L'AGENT REGARDE A CHAQUE IMAGE. Au budget d'une sur trois, il ne regarde qu'aux
+        // images ou `(B.t + a.id) %% 3 === 0` : une entite de plus creee avant lui (21 sept.
+        // 2026, les entrees de garage des bungalows retiraient du decor) le faisait regarder
+        // une ou deux images trop tard — il s'etait deja detourne pour flaner et ne voyait
+        // plus rien. Le juge passait pour un numero sur trois ; le budget n'est pas sa regle.
+        L.B.defs.recherche.police.regarde_toutes_les_images = 1;
         // ⚠️ L'agent reste a 'flane', que la police dirige (`gere`) : il te voit, remet
         // `vu` a zero, et se met en poursuite — sans t'arreter, tu es intouchable.
         // Il etait pose 'fige' (« il te regarde sans bouger ») : un agent fige n'est

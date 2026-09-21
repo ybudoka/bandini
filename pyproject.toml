@@ -3,7 +3,7 @@ name = "bandini"
 # ⚠️ Ne se tape pas a la main : le crochet scripts/git-hooks/post-commit le pose
 # dans le commit selon le message (feat: mineur, fix: correctif, feat!: rupture).
 # Installer une fois par clone : git config core.hooksPath scripts/git-hooks
-version = "0.176.1"
+version = "0.177.0"
 description = "Bandini — ville ouverte en pixel art, dans le navigateur"
 readme = "README.md"
 requires-python = ">=3.11"

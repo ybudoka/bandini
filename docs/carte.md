@@ -70,6 +70,12 @@ zéro (100 $ + 50 $ par étoile, `economie.CARROSSERIE`). Ville livrée : Faubou
 Quais — pas Les Érables (leurs commerces se visitent tous). Le rideau de Ti-Guy s'entre aussi :
 son menu s'ouvre à l'abri.
 
+**Les bungalows avec garage** (2e vague, 21 sept. 2026) : cinq logements de banlieue
+(`bungalow_1`…), posés sur la ville finie par `_Chantier.poser_les_garages_de_bungalows` — un
+rideau, une baie sous le toit, une entrée asphaltée jusqu'au trottoir. Pas sur la carte. On y
+entre en char et on s'y cache : rien ne se paie ni ne se repeint, la police ne voit pas sous le
+toit, les étoiles tombent comme hors de vue. Ville livrée : les cinq aux Érables.
+
 **Lieux sans intérieur propre** (points de commerce générés sur les parcelles) :
 `logement` (logements procéduraux, un par habitation), et les devantures de
 quartier (commerces tirés par famille).

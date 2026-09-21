@@ -972,6 +972,16 @@ const Monde = (function () {
     return null;
   }
 
+  /** Ce char est-il A L'ABRI : sous le toit d'un garage, rideau pas encore leve ?
+      ⚠️ Personne ne le voit alors — ni l'helico, qui voit d'en haut a travers tout
+      sauf un toit, ni l'auto-patrouille garee devant le rideau, qui « sent » le
+      joueur a 60 px (`Police.commandes`). Sans ca, cinq etoiles ne tomberaient
+      jamais dans la cachette d'un bungalow. */
+  function abrite(v) {
+    const pg = v ? rideauDe(v) : null;
+    return !!pg && pg.dedans === v && pg.ouverture < 1;
+  }
+
   /** Le rideau dont ce char est ASSEZ PRES pour y avoir le nez : dans ses colonnes,
       du fond de la baie a deux tuiles devant. C'est ce que le dessin decoupe. */
   function rideauPres(v) {
@@ -1959,7 +1969,7 @@ const Monde = (function () {
     feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
-    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau,
+    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, abrite,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,

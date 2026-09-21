@@ -2400,7 +2400,7 @@ class _Chantier:
                 rangees.update(range(py, min(self.hauteur, py + 12)))
         # ⚠️ LES CARROSSERIES APRES LE RIDEAU DE TI-GUY : `portes_garage[0]` reste le sien
         # (des juges le lisent la), et elles evitent sa facade.
-        for porte in self.poser_les_carrosseries(ville):
+        for porte in self.poser_les_carrosseries(ville) + self.poser_les_garages_de_bungalows(ville):
             py = porte["y"]
             vides |= {(porte["x"] + i, y) for i in range(porte["l"]) for y in porte["abord"]}
             rangees.update(range(py, min(self.hauteur, py + 12)))
@@ -2614,6 +2614,125 @@ class _Chantier:
                                 "x": tuiles[0], "y": d["y"] + 1, "famille": "service"})
             posees.append(porte)
         return posees
+
+    def poser_les_garages_de_bungalows(self, ville: dict) -> list[dict]:
+        """DES BUNGALOWS AVEC GARAGE (des garages ou l'on entre, 2e vague, 21 sept. 2026) :
+        on y rentre le char et on s'y CACHE, sans peinture et sans payer — la police ne
+        voit pas sous un toit, et les etoiles tombent comme hors de vue.
+
+        Le rideau se pose sur deux tuiles d'un logement de banlieue, et une entree
+        ASPHALTEE descend du rideau a la rue : le gazon d'un bungalow n'est pas une
+        entree de garage, et c'est a elle qu'on reconnait la cachette — elle n'est pas
+        sur la carte.
+
+        ⚠️ SUR LA VILLE FINIE ET SANS UN DE, comme les carrosseries, et SANS ELLES : le
+        choix ne lit ni les noms, ni les planches, ni les carrosseries — un juge
+        « avec et sans » d'une autre etape ne doit pas voir un garage changer de rue.
+        La mesure : la plus proche du coeur de son district d'abord, puis les autres a
+        `BUNGALOW_ECART` tuiles au moins, jusqu'a `BUNGALOWS_MAX`.
+
+        ⚠️ Ce qu'une facade doit offrir : deux tuiles de mur ou de fenetre (jamais la
+        porte de la maison), deux rangees de toit du MEME bungalow derriere, du roulable
+        jusqu'a la rue sans meuble fixe, ni chantier, ni facade qui peut bruler a deux
+        pas, ni lieu garanti a moins de `CARROSSERIE_ECART` tuiles — et, pour une maison
+        a etage, pas du cote ou le palier de son escalier deborde.
+        """
+        from . import chantiers as chantiers_mod
+        from . import devants as devants_mod
+
+        index: dict[tuple[int, int], int] = {}
+        for i, batiment in enumerate(self.batiments):
+            for tx, ty in batiment["tuiles"]:
+                index[(tx, ty)] = i
+        interdites: set[tuple[int, int]] = set()
+        for ch in ville.get("chantiers") or []:
+            siennes = set(chantiers_mod.tuiles(ch))
+            interdites |= siennes | {(x, y + j) for x, y in siennes for j in (1, 2)}
+        feux = {(f["x"], f["y"]) for f in (ville.get("incendies") or {}).get("facades") or []}
+        garantis = {s["slug"] for s in SPECIAUX.values()}
+        gardees = [(p["x"], p["y"]) for p in ville["portes"] if p.get("lieu") in garantis]
+        gardees += [(p["x"], p["y"]) for p in self.portes_garage if p.get("genre") is None]
+        mobiles = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in devants_mod.DECOR_MOBILE}
+        occupees = {(d["x"], d["y"]) for d in ville["decor"]} - mobiles
+        for cle in ("paquets", "ambulants", "scenes", "reclames"):
+            occupees |= {(q["x"], q["y"]) for q in ville.get(cle) or []}
+
+        def allee(t: int, py: int) -> list[int] | None:
+            rangees = []
+            for j in range(1, self.BUNGALOW_ALLEE + 1):
+                y = py + j
+                if y >= self.hauteur or (t, y) in interdites:
+                    return None
+                fiche = LEGENDE[self.sol[y][t]]
+                if fiche.get("route") and not fiche.get("stationnement") and j > 1:
+                    return rangees
+                if fiche.get("solide", 0) != 0 or fiche.get("eau") or (t, y) in occupees:
+                    return None
+                rangees.append(y)
+            return None
+
+        def place(r: dict) -> tuple[list[int], list[int]] | None:
+            py, porte = r["y"], r["x"] + r["porte"]
+            palier = porte + r["escalier"] if r["etages"] >= 2 and r["escalier"] else None
+            for i in range(r["l"] - 1):
+                tuiles = [r["x"] + i, r["x"] + i + 1]
+                # Les planches d'un logement pauvre couvrent une FENETRE : la meme tuile.
+                if any(r["motifs"][k].replace("B", "W") not in "WF" for k in (i, i + 1)):
+                    continue
+                if palier in tuiles or any(self.sol[py][t] not in "WF" for t in tuiles):
+                    continue
+                qui = index.get((tuiles[0], py))
+                if qui is None or self.batiments[qui]["genre"] != "banlieue" or index.get((tuiles[1], py)) != qui:
+                    continue
+                if any(index.get((t, py - k)) != qui or not LEGENDE[self.sol[py - k][t]].get("toit")
+                       for t in tuiles for k in range(1, self.BAIE_SOUS_LE_TOIT + 1)):
+                    continue
+                if any(max(abs(fx - t), abs(fy - py)) <= 2 for fx, fy in feux for t in tuiles):
+                    continue
+                if any(max(abs(gx - t), abs(gy - py)) < self.CARROSSERIE_ECART for gx, gy in gardees
+                       for t in tuiles):
+                    continue
+                bords = [allee(t, py) for t in tuiles]
+                if any(b is None for b in bords):
+                    continue
+                return tuiles, sorted(set(bords[0]) | set(bords[1]))
+            return None
+
+        centres = {d["slug"]: self.rect_district(d) for d in DISTRICTS}
+        candidats = []
+        for r in self.residences:
+            trouvee = place(r)
+            if not trouvee:
+                continue
+            x0, y0, dl, dh = centres[self.district_en(r["x"], r["y"])]
+            loin = abs(trouvee[0][0] + 1 - (x0 + dl / 2)) + abs(r["y"] - (y0 + dh / 2))
+            candidats.append((loin, r["y"], r["x"], r, trouvee))
+        posees: list[dict] = []
+        for _, _, _, r, (tuiles, rangees) in sorted(candidats, key=lambda c: c[:3]):
+            if len(posees) >= self.BUNGALOWS_MAX:
+                break
+            if any(max(abs(p["x"] - tuiles[0]), abs(p["y"] - r["y"])) < self.BUNGALOW_ECART for p in posees):
+                continue
+            porte = self._poser_le_rideau(tuiles, r["y"], f"bungalow_{len(posees) + 1}")
+            porte["genre"] = "cachette"
+            porte["abord"] = rangees
+            i = tuiles[0] - r["x"]
+            r["motifs"] = r["motifs"][:i] + "GG" + r["motifs"][i + 2:]
+            # L'entree asphaltee : le gazon et l'abord du rideau a la rue. Le trottoir
+            # reste un trottoir — on le traverse, comme a la sortie d'un stationnement.
+            for t in tuiles:
+                for y in rangees:
+                    if self.sol[y][t] in ",_":
+                        self.sol[y][t] = "p"
+            posees.append(porte)
+        return posees
+
+    #: Les bungalows avec garage : combien, a quelle distance les uns des autres, et
+    #: jusqu'ou l'entree peut descendre avant la rue (la pelouse d'un bungalow est plus
+    #: profonde que le trottoir d'un commerce).
+    BUNGALOWS_MAX = 5
+    BUNGALOW_ECART = 20
+    BUNGALOW_ALLEE = 7
 
     #: Jusqu'ou l'abord d'une carrosserie peut descendre avant la rue, en tuiles : le
     #: pas de porte, la couronne du bloc, le trottoir — la rue tombe a la cinquieme.

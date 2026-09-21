@@ -681,7 +681,8 @@ const Police = (function () {
     const cible = j.dansVehicule ? j.dansVehicule : j;
     const d = Math.hypot(cible.x - v.x, cible.y - v.y);
     // Une auto sans conducteur ne voit rien : ses agents, dehors, voient pour eux.
-    if (eq.abord > 0 && (voit(v, cible.x, cible.y, 'auto_police', true) || d < 60)) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
+    // ⚠️ Garee devant le rideau baisse, elle ne « sent » plus rien : le joueur est a l'abri.
+    if (eq.abord > 0 && !Monde.abrite(j.dansVehicule) && (voit(v, cible.x, cible.y, 'auto_police', true) || d < 60)) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
     if (!j.dansVehicule && (d < p.auto_sortent_px || (eq.dehors && d < p.auto_sortent_px * 2.5))) {
       // Tu es a pied : elle s'arrete, l'equipage descend, et elle reste la (pas de va-et-vient).
       v.surRails = false;
@@ -743,7 +744,8 @@ const Police = (function () {
     if (h.part && dist2(h.x, h.y, j.x, j.y) > 700 * 700) { Entites.retirer(h); Son.boucle('helico', false); return; }
     // Il voit tout ce qui est sous lui, sauf a travers un toit.
     const vision = defs().vision.helico, portee = (Monde.estNuit() ? vision.nuit : vision.jour) * TT;
-    if (!h.part && !B.interieur && dist2(h.x, h.y, cible.x, cible.y) < portee * portee) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
+    // ⚠️ Il voit a travers tout, sauf un toit : dans un garage, rideau baisse, il tourne pour rien.
+    if (!h.part && !B.interieur && !Monde.abrite(j.dansVehicule) && dist2(h.x, h.y, cible.x, cible.y) < portee * portee) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
     const dist = Math.hypot(h.x - j.x, h.y - j.y);
     if (!Son.boucleActive('helico')) Son.boucle('helico', true, 0.6);
     Son.reglerBoucle('helico', Math.max(0.05, 1 - dist / 700));

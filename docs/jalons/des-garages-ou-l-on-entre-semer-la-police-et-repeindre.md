@@ -116,3 +116,42 @@ piéton, et rien ne regardait une porte peinte couverte par le rideau. Une autre
 ligne inutile (`servi` à l'entrée), retirée. Regardé dans Chromium : le char rouge s'engouffre,
 le rideau tombe, il ressort orange. 3 549 tests ; deux rouges déjà sur la base (la foule, les
 Cravates de M2).
+
+**2e vague, livrée le 21 sept. 2026** — les bungalows : on s'y cache, sans peinture et sans payer.
+
+- **Cinq bungalows avec garage** (`carte._Chantier.poser_les_garages_de_bungalows`), posés EN
+  DERNIER et sans dé sur un logement de banlieue qui a deux rangées de toit derrière sa façade —
+  presque tous : un bungalow des Érables est un 4 × 3. Le plus proche du cœur de son district
+  d'abord, les autres à `BUNGALOW_ECART` (20) tuiles au moins. Sur la ville livrée, les cinq
+  sont aux Érables (`bungalow_1`…).
+- **Une entrée asphaltée** du rideau au trottoir : le gazon et la couronne du bloc passent en `p`,
+  l'asphalte du lot du poste. C'est elle qui dit qu'il y a un garage — ⚠️ la cachette n'est PAS sur
+  la carte. La maison garde sa porte ; le rideau ne se pose jamais du côté où déborde le palier
+  de l'escalier d'une maison à étage.
+- ⚠️ **Sans lire les carrosseries** — ni les noms, ni les planches : un juge vérifie que la ville
+  sans carrosseries a exactement les mêmes bungalows. Un juge « avec et sans » d'une autre étape
+  n'a donc à neutraliser que ce qu'il compare.
+- **La cachette** (genre `cachette`, `Missions.majAtelier`) : le rideau tombe et rien ne se
+  passe — c'est tout le service (« CACHÉ — RECULE POUR SORTIR »). Rien ne se paie, rien ne se
+  repeint, les étoiles tombent comme hors de vue. Tout le monde passe, le char d'une mission
+  compris.
+- ⚠️ **Reculer DE NOUVEAU pour sortir** : un délai de 20 images laissait ressortir celui qui tient
+  encore le frein depuis l'arrêt — le juge l'a dit. Il faut relâcher la marche arrière, puis la
+  réappuyer ; le gaz ne rouvre jamais (on est entré en le tenant).
+- ⚠️ **À l'abri, personne ne te voit** (`Monde.abrite`) : l'hélico voyait à travers tout, et
+  l'auto-patrouille « sentait » le joueur à 60 px — garée contre le rideau, elle remettait à zéro,
+  à chaque image, le temps passé hors de vue, et cinq étoiles ne seraient jamais tombées. La
+  règle vaut aussi sous le rideau de la carrosserie et chez Ti-Guy.
+
+- ⚠️ **Un juge de la police tenait par la chance du numéro d'entité**
+  (`test_les_etoiles_ne_tombent_que_hors_de_vue`) : un agent ne regarde qu'une image sur trois,
+  quand `(B.t + a.id) % 3 === 0`. En retirant du décor, les entrées asphaltées lui ont fait tirer
+  un autre numéro : il regardait une image trop tard, déjà détourné pour flâner. Prouvé sur la
+  base — une entité de plus avant lui, et deux numéros sur trois le font tomber. Le juge fait
+  maintenant regarder son agent à chaque image, et il rougit toujours sans la règle.
+
+Juges : 3 de ville de plus sur quatre graines, 2 de banc au bouton, et le char d'une mission au
+bungalow en troisième cas. 14 mutations : 12 rougissent ; les deux autres (le palier d'un
+escalier, lire les carrosseries) n'ont rien à mordre dans les quatre villes jugées. Regardé dans
+Chromium : l'entrée asphaltée, le rideau baissé sur trois étoiles, le char qui ressort rouge.
+3 684 tests ; deux rouges déjà sur la base (la foule, les Cravates de M2).

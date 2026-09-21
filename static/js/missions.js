@@ -1483,6 +1483,9 @@ const Missions = (function () {
   function refusDuSeuil(pg, v) {
     if (B.cinema || B.menu || B.transition || v.etat === 'epave') return '';
     if (v.remorque) return 'DÉCROCHE CE QUE TU TIRES D’ABORD';
+    // La cachette d'un bungalow prend tout le monde, gratuitement — le char d'une
+    // mission compris : se cacher en pleine mission, c'est la meme idee que la peinture.
+    if (pg.genre === 'cachette') return null;
     if (pg.genre !== 'carrosserie') return v.mission ? '' : null;
     if (v.def.police) return 'UN CHAR DE POLICE ? ON TOUCHE PAS À ÇA';
     const prix = prixCarrosserie();
@@ -1506,9 +1509,10 @@ const Missions = (function () {
     v.atelier = pg; v.vitesse = 0; v.vx = 0; v.vy = 0;
   }
 
-  /** L'ATELIER, rideau baisse : `baisse` → `peint` (la carrosserie) ou `menu` (Ti-Guy)
-      → `leve` → `sortie`. On en sort en reculant ; le rideau tient tant que le char est
-      dessous ou devant, et l'atelier se referme quand il a quitte la baie. */
+  /** L'ATELIER, rideau baisse : `baisse` → `peint` (la carrosserie), `menu` (Ti-Guy) ou
+      `cache` (un bungalow, jusqu'a ce qu'on recule) → `leve` → `sortie`. On en sort en
+      reculant ; le rideau tient tant que le char est dessous ou devant, et l'atelier se
+      referme quand il a quitte la baie. */
   function majAtelier(pg) {
     const v = pg.dedans, j = B.joueur;
     // Le char n'est plus au joueur (vendu chez Ti-Guy, une epave) : l'atelier se referme.
@@ -1529,6 +1533,7 @@ const Missions = (function () {
     if (pg.phase === 'baisse') {
       if (pg.ouverture > 0) return;
       pg.t = 0;
+      if (pg.genre === 'cachette') { pg.phase = 'cache'; pg.relache = false; Hud.message('CACHÉ — RECULE POUR SORTIR', 180); return; }
       if (pg.genre !== 'carrosserie') { pg.phase = 'menu'; Hud.ouvrirMenu(menuDuRideau(v)); return; }
       // ⚠️ Le prix est celui de l'ENTREE : une etoile gagnee en route ne se paie
       // pas deux fois, et l'argent se recompte ici — on a pu en depenser depuis.
@@ -1546,6 +1551,16 @@ const Missions = (function () {
     }
     if (pg.phase === 'menu') {
       if (B.menu) return;
+      pg.phase = 'leve';
+    }
+    // ⚠️ CACHE : rien ne se passe, et c'est tout le service. La police ne voit pas sous
+    // un toit (`Monde.abrite`), les etoiles tombent comme hors de vue. RECULER releve le
+    // rideau — pas le gaz : on est entre en le tenant, et le nez est deja au mur. Et
+    // RECULER DE NOUVEAU : la main qui freinait pour s'arreter sous le toit, et qui tient
+    // encore le frein quand le rideau touche le sol, ne ressort pas aussitot.
+    if (pg.phase === 'cache') {
+      if (Vehicules.commandesJoueur(v).frein < 0.2) { pg.relache = true; return; }
+      if (!pg.relache) return;
       pg.phase = 'leve';
     }
     if (pg.phase === 'leve') {
@@ -1590,8 +1605,9 @@ const Missions = (function () {
       const dessous = v && pg.baie > 0 && Monde.dansLePassage(pg, v.x, v.y);
       if (!devant && !dessous) { pg.admis = null; pg.refuse = null; continue; }
       const refus = pg.admis === v ? null : refusDuSeuil(pg, v);
-      if (pg.genre === 'carrosserie' && refus !== null) {
-        // Refuse une fois par arrivee : on le dit, et le rideau reste baisse.
+      if (pg.genre !== 'garage' && refus !== null) {
+        // Refuse une fois par arrivee : on le dit, et le rideau reste baisse. (Chez Ti-Guy,
+      // il se leve quand meme : le char d'une mission s'y livre DEVANT.)
         if (refus && pg.refuse !== v) { pg.refuse = v; Hud.message(refus, 150); Son.SFX.erreur(); }
         continue;
       }

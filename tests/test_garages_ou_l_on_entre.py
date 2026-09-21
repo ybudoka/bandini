@@ -171,3 +171,76 @@ def test_la_peinture_coute_plus_cher_a_chaque_etoile_sauf_chez_ti_guy():
     assert all(b > a for a, b in zip(prix, prix[1:])), prix
     assert economie.exporter()["carrosserie"] == economie.CARROSSERIE
     assert economie.exporter()["repeinte"] == economie.REPEINTE
+
+
+# --- 2e vague : les bungalows, on s'y cache -------------------------------------------
+
+
+def _bungalows(ville):
+    return [p for p in ville["portes_garage"] if p.get("genre") == "cachette"]
+
+
+def test_des_bungalows_ont_leur_garage_ecartes_les_uns_des_autres(ville):
+    """Quelques bungalows, pas un par rue : une cachette qu'on trouve a chaque coin n'en
+    est plus une. Un toit de bungalow au-dessus de la baie, la maison qui garde sa porte,
+    et rien sur la carte — c'est au rideau et a l'entree qu'on la reconnait."""
+    portes = _bungalows(ville)
+    assert 2 <= len(portes) <= carte._Chantier.BUNGALOWS_MAX, portes
+    assert [p["lieu"] for p in portes] == [f"bungalow_{i + 1}" for i in range(len(portes))]
+    ecart = carte._Chantier.BUNGALOW_ECART
+    for i, p in enumerate(portes):
+        for q in portes[:i]:
+            assert max(abs(p["x"] - q["x"]), abs(p["y"] - q["y"])) >= ecart, (p, q)
+    toits = set(carte.COUVERTURES["banlieue"])
+    points = {q["slug"] for q in ville["points_interet"]}
+    for p in portes:
+        assert p["lieu"] not in points, f"{p['lieu']} est sur la carte : une cachette ne s'affiche pas"
+        assert ville["sol"][p["y"] - 1][p["x"]] in toits, f"{p['lieu']} n'est pas sous un toit de bungalow"
+        maison = next(r for r in ville["residences"] if r["y"] == p["y"] and r["x"] <= p["x"] and p["x"] + 1 < r["x"] + r["l"])
+        i = p["x"] - maison["x"]
+        assert maison["motifs"][i:i + 2] == "GG", maison
+        assert set(maison["motifs"]) & set("DdP"), f"la maison {maison} a perdu sa porte"
+
+
+def test_une_entree_asphaltee_du_rideau_a_la_rue(ville):
+    """Le gazon d'un bungalow n'est pas une entree de garage : de l'asphalte du rideau
+    jusqu'au trottoir, roulable jusqu'a la rue, et rien de pose dessus."""
+    sol = ville["sol"]
+    for p in _bungalows(ville):
+        allee = set()
+        for i in range(p["l"]):
+            tuiles = _abord(sol, p["x"] + i, p["y"])
+            assert tuiles is not None and len(tuiles) <= carte._Chantier.BUNGALOW_ALLEE, \
+                f"{p['lieu']} : pas de rue devant la colonne {p['x'] + i}"
+            allee |= set(tuiles)
+        assert sol[p["y"] + 1][p["x"]] == "p", f"{p['lieu']} : pas d'asphalte devant le rideau"
+        for x, y in sorted(allee):
+            assert _roulable(sol, x, y), f"{p['lieu']} : l'entree est bouchee en {x, y}"
+            assert sol[y][x] not in ",_", f"{p['lieu']} : du gazon dans l'entree en {x, y}"
+        poses = [(cle, q) for cle in ("decor", "paquets", "ambulants", "scenes", "reclames")
+                 for q in ville[cle] if (q["x"], q["y"]) in allee]
+        assert not poses, f"{p['lieu']} : pose dans l'entree : {poses}"
+
+
+def test_les_bungalows_ne_deplacent_rien_d_autre_et_ne_lisent_pas_les_carrosseries(ville, monkeypatch):
+    monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
+    avec = carte.generer(graine=ville["graine"])
+    monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
+    sans_carrosseries = carte.generer(graine=ville["graine"])
+    assert _bungalows(sans_carrosseries) == _bungalows(avec), "les bungalows changent de rue sans les carrosseries"
+    monkeypatch.setattr(carte._Chantier, "poser_les_garages_de_bungalows", lambda self, ville_: [])
+    sans = carte.generer(graine=ville["graine"])
+    for cle in ("paquets", "ambulants", "reclames", "scenes", "nids_de_poule", "barrieres", "metro",
+                "autobus", "chantiers", "portes", "devantures", "graffitis", "lampes", "points_interet"):
+        assert sans_carrosseries[cle] == sans[cle], f"les bungalows deplacent « {cle} »"
+    portes = _bungalows(sans_carrosseries)
+    touchees = {(p["x"] + i, p["y"] + j) for p in portes for i in range(p["l"]) for j in range(0, 12)}
+    for y, (a, b) in enumerate(zip(sans_carrosseries["sol"], sans["sol"])):
+        for x, (ga, gb) in enumerate(zip(a, b)):
+            assert ga == gb or (x, y) in touchees, f"la tuile {x, y} a change : {gb} -> {ga}"
+    assert [d for d in sans_carrosseries["decor"] if (d["x"], d["y"]) not in touchees] == \
+           [d for d in sans["decor"] if (d["x"], d["y"]) not in touchees], "le decor a bouge hors des entrees"
+    for ra, rs in zip(sans_carrosseries["residences"], sans["residences"]):
+        diff = [(i, ma, ms) for i, (ma, ms) in enumerate(zip(ra["motifs"], rs["motifs"])) if ma != ms]
+        assert all(ma == "G" and ms in "WFB" for _, ma, ms in diff), (rs, ra)
+        assert {k: v for k, v in ra.items() if k != "motifs"} == {k: v for k, v in rs.items() if k != "motifs"}
