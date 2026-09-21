@@ -1600,6 +1600,19 @@ const Vehicules = (function () {
     return false;
   }
 
+  /** Cette sortie part-elle d'ici, ou d'une tuile plus loin TOUT DROIT dans la
+      boite (`cap`) ? C'est la question que le tirage ne pose pas : une sortie
+      que la boite n'a pas se decouvre au fond, et on y arrive trop tard. */
+  function sortieDevant(tx, ty, cap, sens, v) {
+    const p = PAS_FLECHE[cap];
+    let x = tx, y = ty;
+    for (let i = 0; i < 9 && Monde.fleche(x, y) === '+'; i++) {
+      if (peutSortir(x, y, sens, v)) return true;
+      x += p[0]; y += p[1];
+    }
+    return false;
+  }
+
   /** Le trafic devant une barriere fermee fait DEMI-TOUR : la voie d'en face
       la plus proche, ou l'arret sur place s'il n'y en a pas. ⚠️ Sans ca, les
       chars s'empilaient devant les cones du pont jusqu'a la fin des temps. */
@@ -1819,8 +1832,13 @@ const Vehicules = (function () {
                             - dist2((tx + qb[0] * 6) * TT, (ty + qb[1] * 6) * TT, c.x, c.y));
             });
           } else {
+            // ⚠️ « Tout droit, SINON A GAUCHE » : au pied d'un T, ou tout droit
+            // n'existe pas, c'est le repli qui decide. Il a toujours ete la
+            // gauche (le char traversait la boite et prenait ce qu'il trouvait
+            // au fond) ; `sortieDevant` le rend explicite sans rien changer au
+            // partage des T.
             const tirage = B.rng();
-            ordre = tirage < 0.55 ? ['droit', 'droite', 'gauche'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+            ordre = tirage < 0.55 ? ['droit', 'gauche', 'droite'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
           }
         }
         v.sortie = ordre.map(function (choix) { return vers[choix]; });
@@ -1828,7 +1846,14 @@ const Vehicules = (function () {
       // 1. La sortie voulue, si elle part d'ici. Sinon on traverse la boite
       //    tout droit jusqu'a la voie d'ou elle part : un virage a droite se
       //    prend a l'entree de la boite, un virage a gauche au fond.
-      const voulu = v.sortie[0];
+      // ⚠️ **LA SORTIE VOULUE EST CELLE QUE LA BOITE A** (21 sept. 2026, retour
+      // de Martin au coin en L des Quais). Le tirage ne sait rien de la boite :
+      // dans un coin en L, un char qui descendait du nord en voulant « tout
+      // droit » traversait jusqu'a la rangee du bord de l'eau, n'y trouvait pas
+      // de sortie, et zigzaguait — ouest, nord, ouest. 24 entrees de boite sur
+      // 2 238, toutes dans les onze coins en L. On prend donc la premiere de la
+      // liste qui part d'ici ou de plus loin tout droit.
+      const voulu = v.sortie.find(function (sens) { return sortieDevant(tx, ty, droit, sens, v); }) || v.sortie[0];
       if (peutSortir(tx, ty, voulu, v)) {
         const q = PAS_FLECHE[voulu];
         v.sens = voulu;
