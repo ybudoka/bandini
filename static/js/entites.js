@@ -4161,7 +4161,7 @@ const Entites = (function () {
       if (e.metier || e.intouchable || e.etat === 'assomme' || e.etat === 'fuit' || e.etat === 'temoin' || e.aParle) continue;
       e.aParle = true;
       if (B.rng() > (chance === undefined ? 0.35 : chance)) break;
-      const femme = /passante|dame|mere|racoleuse/.test(e.arch);
+      const femme = /passante|dame|mere|racoleuse|conductrice/.test(e.arch);
       Son.Voix.dire(femme ? 'femme' : 'homme', e.x, e.y);
       break;
     }

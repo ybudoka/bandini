@@ -26,7 +26,7 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
         "camion", "autobus", "ambulance", "remorqueuse",
-        "sport", "luxe", "bateau"}
+        "sport", "luxe", "cabriolet", "bateau"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
     assert vehicules.par_slug("velo")["ejecte"] is True, "on tombe d'un velo au premier choc"
@@ -121,8 +121,11 @@ def test_le_haut_de_gamme_s_oppose_et_reste_rare():
     autos = [v for v in vehicules.de_phase(1) if v["classe"] == "auto"]
     moto = vehicules.par_slug("moto")
 
-    # Le sport : le plus rapide sur QUATRE roues, la moto restant devant.
+    # Le sport : le plus rapide des autos de tous les jours — le cabriolet rose,
+    # plus rapide encore, a son propre juge plus bas —, la moto restant devant.
     for v in autos:
+        if v["slug"] == "cabriolet":
+            continue
         assert sport["vitesse_max"] >= v["vitesse_max"], v["slug"]
     assert sport["vitesse_max"] < moto["vitesse_max"], "un coupe ne rattrape pas une moto"
     assert sport["acceleration"] > vehicules.par_slug("auto")["acceleration"], "reprise molle"
@@ -146,13 +149,56 @@ def test_le_haut_de_gamme_s_oppose_et_reste_rare():
 
     # ⚠️ Rares, et c'est la carte qui decide ou — pas leur frequence.
     rares = {v["slug"] for v in vehicules.CATALOGUE if v["rare"]}
-    assert rares == {"sport", "luxe"}
+    assert rares == {"sport", "luxe", "cabriolet"}
     for v in vehicules.de_phase(1):
         if v["rare"]:
             continue
         if v["frequence"] > 0:
             assert v["frequence"] > sport["frequence"], \
                 f"{v['slug']} est aussi rare qu'un coupe sport"
+
+
+def test_le_cabriolet_rose_va_plus_vite_et_a_sa_conductrice():
+    """⚠️ Demande de Martin (21 sept. 2026) : « une voiture type corvette, rose,
+    avec une femme en robe rose qui la pilote et en descend si volee. Elle va
+    plus vite. »
+
+    Le plus rapide des chars a QUATRE roues — le sport est devance —, mais la
+    parade de `exploitation.md` tient : un char qui roule bien au-dela de
+    l'auto-patrouille rend la police decorative. La moto reste devant, la
+    carrosserie reste mince (un barrage l'arrete pour de bon) et la vitesse
+    n'achete pas plus qu'un cheveu de distance sur la patrouille."""
+    cab, sport, moto = (vehicules.par_slug(s) for s in ("cabriolet", "sport", "moto"))
+    police = vehicules.par_slug("police")
+    for v in vehicules.de_phase(1):
+        if v["classe"] == "auto" and v["slug"] != "cabriolet":
+            assert cab["vitesse_max"] > v["vitesse_max"], f"le cabriolet ne devance pas {v['slug']}"
+    assert cab["vitesse_max"] < moto["vitesse_max"], "un cabriolet ne rattrape pas une moto"
+    assert cab["acceleration"] > vehicules.par_slug("auto")["acceleration"], "reprise molle"
+    assert cab["vitesse_max"] <= police["vitesse_max"] * 1.2, "elle sème toute la police du jeu"
+    # La carrosserie mince : le sport reste la plus fragile des autos, le cabriolet
+    # n'est pas un char qui encaisse.
+    assert cab["vie"] >= sport["vie"] and cab["vie"] <= vehicules.par_slug("auto")["vie"]
+    assert cab["alarme"], "un cabriolet rose sans alarme se vole trop facilement"
+    assert cab["places"] == 2 and cab["classe"] == "auto" and cab["portieres"]
+    # Rose, et rien d'autre : le catalogue ne la repeint pas en rouge a la naissance.
+    assert cab["couleurs"]
+    for c in cab["couleurs"]:
+        r, g, b = (int(c[i:i + 2], 16) for i in (1, 3, 5))
+        assert r >= 200 and b > g and r > g + 60, f"{c} n'est pas un rose"
+
+    # ⚠️ Elle est TOUJOURS menee, et c'est la fiche qui dit par qui — jamais un
+    # `slug === 'cabriolet'` dans le navigateur. Elle est la seule.
+    from app import pietons
+
+    assert cab["au_volant"] == "conductrice"
+    assert {v["slug"] for v in vehicules.CATALOGUE if v["au_volant"]} == {"cabriolet"}
+    conductrice = pietons.par_slug(cab["au_volant"])
+    assert conductrice is not None, "la fiche nomme un passant qui n'existe pas"
+    assert conductrice["sprite"] == "conductrice", "elle a repris le corps de tout le monde : plus de robe"
+    assert conductrice["frequence"] == 0.0 and conductrice["gang"] is None, "elle nait au hasard dans la rue"
+    assert conductrice["courage"] == 0.0, "elle ne riposte pas : elle descend et elle se sauve"
+    assert conductrice["temoin"] >= 0.5, "elle a tout vu, elle le dit"
 
 
 def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
@@ -175,7 +221,7 @@ def test_un_char_rare_ne_nait_que_la_ou_son_district_le_veut():
     # Et le paquet les sort, y compris pour les sous-zones : `Monde.zoneA` rend
     # la zone la PLUS PRECISE, donc une cour de gang doit heriter des siens.
     zones = {z["slug"]: z for z in carte.generer()["zones"]}
-    assert set(zones["faubourg"]["rares"]) == {"sport", "luxe"}
+    assert set(zones["faubourg"]["rares"]) == {"sport", "luxe", "cabriolet"}
     assert zones["cravates"]["rares"] == zones["faubourg"]["rares"], \
         "la cour des Cravates ne connait pas les chars de son district"
     assert zones["shop"]["rares"] == [] and zones["boulonneux"]["rares"] == []

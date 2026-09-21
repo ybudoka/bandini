@@ -88,6 +88,26 @@ def test_la_fille_de_la_brume_ne_porte_les_couleurs_de_personne():
                 f"{autre['slug']} porte la meme couleur « {cle} » que la fille de la Brume"
 
 
+def test_la_conductrice_ne_porte_les_couleurs_de_personne():
+    """⚠️ Meme regle que la fille de la Brume : a douze pixels de large, ce qui
+    la nomme est la COUPE (`conductrice` dans sprites.js, une robe), mais ses
+    couleurs ne doivent se recroiser nulle part — une robe rose de plus dans la
+    foule, et on ne sait plus laquelle sortait du cabriolet. Sa robe est d'une
+    seule piece : le meme rose en `c` et en `p`. La peau se partage."""
+    elle = pietons.par_slug("conductrice")
+    assert elle is not None and elle["sprite"] == "conductrice"
+    assert elle["couleurs"]["c"] == elle["couleurs"]["p"], "une robe n'a pas de haut et de bas"
+    for autre in pietons.CATALOGUE:
+        if autre["slug"] == "conductrice":
+            continue
+        for cle in ("c", "h", "p"):
+            assert autre["couleurs"][cle].lower() != elle["couleurs"][cle].lower(), \
+                f"{autre['slug']} porte la meme couleur « {cle} » que la conductrice"
+    # Et elle ne marche pas sans sa voiture : ni au hasard, ni de metier.
+    assert elle["frequence"] == 0.0 and elle["metier"] is None
+    assert elle not in pietons.ordinaires()
+
+
 def test_les_slugs_sont_uniques():
     assert len(pietons.SLUGS) == len(set(pietons.SLUGS))
 

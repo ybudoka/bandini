@@ -110,6 +110,7 @@ un paiement.
 | `remorqueuse` | Remorqueuse | camion | 2 | |
 | `sport` | Coupé sport | auto | 2 | Rare. |
 | `luxe` | Berline de luxe | auto | 4 | Rare. |
+| `cabriolet` | Cabriolet rose | auto | 2 | Rare (Faubourg, La Pointe). Le plus rapide des chars à quatre roues, sous la moto ; menée à la vue de tous par la conductrice (`au_volant`), qui descend si on la vole. Ne se gare jamais. |
 | `bateau` | Chaloupe | bateau | 4 | Phase 2 (hors trafic). |
 
 ---
@@ -178,6 +179,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 |---|---|---|
 | `baigneur` / `baigneuse` | Baigneur·se | plages |
 | `racoleuse` | Fille de la Brume | bar/port, la nuit |
+| `conductrice` | Dame au cabriolet | au volant du cabriolet rose — jamais à pied avant qu'on la vole |
 | `vendeur` | Marchand ambulant | comptoirs |
 | `mascotte` | Mascotte (ours) | foire (La Pointe) |
 | `mascotte_bleue` | Mascotte (bleue) | foire (La Pointe) |

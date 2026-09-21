@@ -139,6 +139,19 @@ CATALOGUE: list[Pieton] = [
     _p("racoleuse", "Fille de la Brume", "#ff3d8e", "#f2d27a", "#f0c098", "#c2185b",
        sprite="racoleuse", vitesse=0.9, vie=60, argent=(20, 90), temoin=0.2,
        metier="compagnie", heures=(0.78, 0.28), frequence=0.0),
+    # ⚠️ LA CONDUCTRICE DU CABRIOLET ROSE : elle ne marche jamais sans sa
+    # voiture (`frequence=0`, et pas de `metier` — descendue, c'est une passante
+    # comme une autre : elle fuit, elle temoigne). C'est la fiche du char qui la
+    # nomme (`vehicules.au_volant`), et le carjacking qui la fait naitre : elle
+    # sort de SA voiture, en robe. Troisieme archetype a avoir son propre corps
+    # (`conductrice` dans sprites.js) : une robe d'une seule piece, et une couleur
+    # ne la distingue pas d'un chandail a douze pixels — la coupe, oui. La robe
+    # est du meme rose en `c` et en `p` (une robe n'a pas de haut et de bas), et
+    # ses couleurs ne se croisent nulle part ailleurs dans le catalogue.
+    # Elle a de quoi payer sa voiture : la bourse est la plus lourde de la rue.
+    _p("conductrice", "Dame au cabriolet", "#f7a1c4", "#d9a441", "#f0c098", "#f7a1c4",
+       sprite="conductrice", vitesse=0.9, courage=0.0, vie=55, argent=(60, 180),
+       temoin=0.75, frequence=0.0),
     _p("vendeur", "Marchand ambulant", "#ecf0f1", "#3a2a1a", "#c98d66", "#2a3a4a",
        vitesse=0.0, vie=70, argent=(20, 70), temoin=0.5, metier="ambulant",
        frequence=0.0),

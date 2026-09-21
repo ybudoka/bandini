@@ -308,8 +308,14 @@ def test_les_etoiles_ne_tombent_que_hors_de_vue(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         L.Police.ajouterChaleur(3);
+        // ⚠️ L'agent reste a 'flane', que la police dirige (`gere`) : il te voit, remet
+        // `vu` a zero, et se met en poursuite — sans t'arreter, tu es intouchable.
+        // Il etait pose 'fige' (« il te regarde sans bouger ») : un agent fige n'est
+        // JAMAIS consulte par `gere` (son `vuT` restait a 9999), donc il ne voyait
+        // rien, et le juge ne passait que si un AUTRE agent, ne au hasard, arrivait
+        // a temps — 3 graines sur 60 le faisaient tomber, sur la base comme apres
+        // n'importe quel changement qui deplace un de (21 sept. 2026).
         const a = poserAgent(L, 'flane', 40);
-        a.etat = 'fige';                              // il te regarde sans bouger
         j.intouchable = true;                         // on observe : personne ne t'arrete
         o.frame(%d * 60 + 30);
         const vuParLAgent = L.B.recherche.etoiles;

@@ -591,7 +591,7 @@ DISTRICTS: tuple[dict, ...] = (
      # du jour. Les quatre autres ont baisse pour le payer — le budget d'image
      # n'a pas bouge, c'est la REPARTITION qui change.
      "pietons": 34, "vehicules": 12, "police": 2, "rythme": (0.35, 1.0, 1.0),
-     "rares": ("sport", "luxe"),
+     "rares": ("sport", "luxe", "cabriolet"),
      # ⚠️ **`jj`, PAS `qq`** — retour de Martin, capture a l'appui : « il y a
      # encore des quais entre deux routes ». Les deux quais du Faubourg etaient
      # du plancher plein ENTOURE DE RUES : une rue de chaque cote, et en
@@ -711,7 +711,7 @@ DISTRICTS: tuple[dict, ...] = (
     {"slug": "pointe", "nom": "La Pointe", "bx": 14, "by": 6,
      "gang": "skateux", "gang_nom": "Les Skateux", "brume": False,
      "pietons": 9, "vehicules": 4, "police": 1, "rythme": (0.2, 0.9, 1.2),
-     "rares": ("sport",),
+     "rares": ("sport", "cabriolet"),
      # ⚠️ Une des trois taches de bois devient la FOIRE (`f`) : on n'agrandit pas
      # la grille, on la DEPENSE — la lecon de l'ile. Celle-ci borde le chenal ;
      # les plages sont a l'ouest et au sud, face au large (`PLAGES`).

@@ -193,3 +193,4 @@ Deux documents d'avant la table :
 | La Pointe s'éloigne : le pont s'allonge | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](la-pointe-s-eloigne-le-pont-s-allonge.md) |
 | Les policiers descendent d'une auto arrêtée | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](les-policiers-descendent-d-une-auto-arretee.md) |
 | Le décor, les bêtes et les gens répondent | ✅ **livré** (1re vague : six gestes — s'asseoir, fouiller, boire, la borne, le pourboire, la photo) | 21 sept. 2026 | **P4** | ajout | [notes](le-decor-les-betes-et-les-gens-repondent.md#notes) |
+| Une décapotable rose et sa conductrice | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](une-decapotable-rose-et-sa-conductrice.md) |

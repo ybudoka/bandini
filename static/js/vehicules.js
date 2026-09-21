@@ -118,11 +118,22 @@ const Vehicules = (function () {
     // n'a personne dessus : c'est ce qui le distingue d'un char qui roule.
     const sprite = SPRITES[v.sprite];
     if (sprite && sprite.selle && v.conducteur === 'trafic') {
-      // ⚠️ SANS TOUCHER AUX DES DU JEU : la tete du pilote se tire de sa
-      // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
-      // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
-      const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
-      v.pilote = arch ? { swaps: arch.couleurs } : null;
+      // ⚠️ **QUELQU'UN DE PRECIS AU VOLANT** : la fiche peut dire QUI mene le char
+      // (`au_volant`, le cabriolet rose et sa conductrice) — et c'est elle, pas
+      // un passant tire de la rue. Son identite voyage avec elle (`arch`) : c'est
+      // ELLE que le carjacking sort de la voiture (`monter`), et pas celle qu'on
+      // croit reconnaitre au slug du char — un voleur qui l'aurait prise reste un
+      // voleur. Aucun de : le catalogue la nomme.
+      const nommee = def.au_volant ? Entites.archetype(def.au_volant) : null;
+      if (nommee && nommee.slug === def.au_volant) {
+        v.pilote = { swaps: nommee.couleurs, arch: nommee.slug };
+      } else {
+        // ⚠️ SANS TOUCHER AUX DES DU JEU : la tete du pilote se tire de sa
+        // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
+        // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
+        const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
+        v.pilote = arch ? { swaps: arch.couleurs } : null;
+      }
     }
     return v;
   }
@@ -322,9 +333,13 @@ const Vehicules = (function () {
       // elle finissait A CHEVAL SUR SES LIGNES — a un centieme de pixel pres,
       // ce qui est exactement ce qu'un juge voit et qu'un oeil ne voit pas.
       if (place) {
+        // ⚠️ Et ce qui est TOUJOURS MENE (`au_volant`) ne se gare jamais : un
+        // cabriolet rose vide, sans personne a en faire descendre, ne serait plus
+        // le sien — il ne se croise qu'en circulation, avec sa conductrice.
+        const rentre = function (t) { return t.longueur <= CASE_PX && !t.au_volant; };
         let type = typeDeRue(zone);
-        for (let essai = 0; essai < 6 && type && type.longueur > CASE_PX; essai++) type = typeDeRue(zone);
-        if (type && type.longueur <= CASE_PX) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
+        for (let essai = 0; essai < 6 && type && !rentre(type); essai++) type = typeDeRue(zone);
+        if (type && rentre(type)) creer(type.slug, place.x, place.y, place.angle, { etat: 'stationne' });
       }
     }
   }
@@ -1358,7 +1373,11 @@ const Vehicules = (function () {
       // avec ses couleurs, et il quitte la selle. Sans `v.pilote = null`, le
       // joueur le cachait tant qu'il roulait et il reapparaissait assis sur la
       // moto des qu'on en descendait.
-      const arch = Entites.archetypeDeRue();
+      // ⚠️ **C'EST CELUI QUI CONDUIT QUI DESCEND** : la conductrice du cabriolet, en
+      // robe rose, et pas un passant tire au hasard qui aurait ses couleurs. Elle
+      // dit son identite (`pilote.arch`) ; un pilote sans nom — le trafic ordinaire,
+      // le voleur d'une moto — reste un passant de la rue.
+      const arch = v.pilote && v.pilote.arch ? Entites.archetype(v.pilote.arch) : Entites.archetypeDeRue();
       const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
         v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
       v.pilote = null;

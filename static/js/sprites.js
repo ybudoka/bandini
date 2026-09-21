@@ -158,6 +158,52 @@ SPRITES.racoleuse = {
   },
 };
 
+/* La conductrice du cabriolet rose : 12 x 16, et c'est la COUPE qui la nomme, pas
+   une couleur — une robe d'une seule piece, de l'epaule au genou, qui s'evase
+   (la fille de la Brume a le bustier et la jupe courte, le passant a un pantalon).
+   Les cheveux longs tombent sur les epaules, les jambes sont nues et les
+   souliers clairs. ⚠️ Meme alphabet que `joueur` : `c` le haut de la robe et `p`
+   le bas — le catalogue leur donne le MEME rose, une robe n'a pas de haut et de
+   bas —, `h` les cheveux, `s` la peau. `d` (la ceinture et les plis) et `b` (les
+   souliers) sont a elle et ne se troquent pas. Pas de pose de coup : elle ne
+   frappe personne ; `couche` est la sienne, la robe etalee. Assise au volant,
+   c'est le corps du joueur qui la peint (`volant_*`) avec ses couleurs. */
+SPRITES.conductrice = {
+  w: 12, h: 16, ancre: [6, 15],
+  pal: { k: '#101018', s: '#f0c098', h: '#d9a441', c: '#f7a1c4', p: '#f7a1c4', d: '#e07aa5', o: '#ffffff', b: '#f4f0f2' },
+  swaps: ['c', 'h', 's', 'p'],
+  poses: {
+    bas: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '.khhksskhhk.', '.khhcccchhk.',
+       '.kskccccksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..kssk.kssk.', '..kbbk.kbbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '.khhksskhhk.', '.khhcccchhk.',
+       '.kskccccksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..kssk..ksk.', '..kbbk..kbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khsssshk..', '..ksossosk..', '..khsssshk..', '.khhksskhhk.', '.khhcccchhk.',
+       '.kskccccksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..ksk..kssk.', '..kbk..kbbk.'],
+    ],
+    haut: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '.khhhhhhhhk.', '.khhhhhhhhk.',
+       '.kskchhcksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..kssk.kssk.', '..kbbk.kbbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '.khhhhhhhhk.', '.khhhhhhhhk.',
+       '.kskchhcksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..kssk..ksk.', '..kbbk..kbk.'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '..khhhhhhk..', '.khhhhhhhhk.', '.khhhhhhhhk.',
+       '.kskchhcksk.', '.kskddddksk.', '..kppppppk..', '.kppppppppk.', 'kppdppppdppk', '..kssk.kssk.', '..ksk..kssk.', '..kbk..kbbk.'],
+    ],
+    cote: [
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khhkcck...',
+       '..khhcccsk..', '...kcdddk...', '...kppppk...', '..kppppppk..', '.kppdppdppk.', '...ksksk....', '...kbk.kbk..', '...kkk.kkk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khhkcck...',
+       '..khhcccsk..', '...kcdddk...', '...kppppk...', '..kppppppk..', '.kppdppdppk.', '..ksk..ksk..', '..kbk..kbk..', '..kkk..kkk..'],
+      ['....kkkk....', '...khhhhk...', '..khhhhhhk..', '..khhssosk..', '..khhssssk..', '..khhsssk...', '..khhkssk...', '..khhkcck...',
+       '..khhcccsk..', '...kcdddk...', '...kppppk...', '..kppppppk..', '.kppdppdppk.', '....kssk....', '....kbbk....', '....kkkk....'],
+    ],
+    couche: [
+      ['............', '............', '............', '............', '............', '............', '............',
+       '..kkkkkk....', '.kpppppkkkk.', 'kpppdppccchk', 'kppppppcccsh', '.kppdppkccsk', '..kbbkk.kkk.', '..kkk.......', '............', '............'],
+    ],
+  },
+};
+
 /* L'homme-sandwich : 14 x 16, deux pixels plus large que tout le monde, et
    c'est la pancarte qui les prend. Meme lecon que la fille de la Brume : a
    douze pixels de large, une couleur ne distingue personne — un CONTOUR, oui.
@@ -1191,7 +1237,12 @@ function deuxRoues(machine, longueur, cote, pal) {
     // la machine — deux nombres pour un meme siege finissent par diverger — et
     // c'est un point DE LA MACHINE : elle tourne avec elle
     // (`Vehicules.imageDuCavalier`).
-    selle: [0, -machine.assise[0] - longueur / 2],
+    //
+    // ⚠️ Et `assise[1]` — le DECALAGE LATERAL, 0 pour tout ce qui se chevauche —
+    // en est le premier nombre : au volant d'un char, on n'est pas sur l'axe.
+    // Meme projection que celle de la machine : `Vehicules.imageDuCavalier`
+    // fait tourner `selle[0]` avec elle.
+    selle: [machine.assise[1] || 0, -machine.assise[0] - longueur / 2],
   });
 }
 /** Une coque : une fiche en volume, le siege de celui qui la mene, et la POSTURE
@@ -1324,6 +1375,62 @@ const MACHINE_SPORT = {
       ['tube', [-12.2, 4.2, 5.1], [-12.2, 4.2, 5.9], 'D', 0.1], ['tube', [-12.2, -4.2, 5.1], [-12.2, -4.2, 5.9], 'D', 0.1],
     ],
     parechocsDeChar(13, -13, 4.6), lampesDeChar(12.8, -12.8, 2.4, 6.0, 2.7, 4.1),
+  ),
+};
+// --- Le cabriolet rose : une Corvette — long capot, cockpit recule, queue courte ---
+// ⚠️ Ce n'est PAS la sport repeinte : les proportions sont ce qui la nomme. Le
+// capot fait deux fois le coffre (le pare-brise est un pas derriere l'essieu
+// avant), le cockpit est ouvert et REPOUSSE vers l'arriere, les ailes arriere
+// gonflent au-dessus des roues et la taille se pince entre les deux, et le
+// derriere porte les quatre feux ronds. Basse — 5 px de caisse, sous la sport —,
+// une bosse au milieu du capot, deux ouies derriere les roues avant.
+// ⚠️ **On voit celle qui la mene** : `assise` est le siege du CONDUCTEUR, cote
+// gauche (`w` < 0 : a droite du char, c'est le sud quand il roule vers l'est), et
+// c'est la que la conductrice se peint (`assisDedans`, posture `volant`) — comme
+// le barreur de la chaloupe. Les fesses sur le coussin (3,9), les mains au volant.
+const MACHINE_CABRIOLET = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  assise: [-3.8, -3.0, 3.9],
+  pieces: [].concat(
+    essieuDeChar(8.8, 3.0, 5.6), essieuDeChar(-8.4, 3.0, 5.7, 3),
+    // Le dessus de la caisse, du nez a la queue. ⚠️ L'arete du milieu est '.' : le
+    // cockpit est OUVERT, ses flancs font les portieres et on voit dedans.
+    [caisseDeChar({ dessus: [[13.5, 3.0], [12.0, 3.9], [7.0, 4.5], [2.4, 4.9], [-7.2, 5.0], [-10.0, 5.3], [-12.6, 4.9], [-13.5, 4.0]],
+                    bas: 1.4, essieux: [8.8, -8.4], r: 3.0,
+                    // Le PLAN : le nez fin, l'aile avant, la taille, l'aile arriere qui gonfle.
+                    plan: [[-14, 4.6], [-12.4, 6.2], [-9.2, 6.6], [-4.5, 6.0], [0.5, 5.8], [5.0, 6.1], [8.8, 6.5], [11.6, 6.0], [14, 4.7]],
+                    aretes: 'ccc.ccc' })],
+    [
+      ['bloc', [-7.0, 2.0], [-5.8, 5.8], [3.0, 3.2], 'i', 'i', 'i', 0],                       // le plancher
+      ['bloc', [-5.0, -2.6], [-5.2, -0.8], [3.2, 3.9], 'u', 'u', 'u', 0.05],                   // les deux sieges
+      ['bloc', [-5.0, -2.6], [0.8, 5.2], [3.2, 3.9], 'u', 'u', 'u', 0.05],
+      ['bloc', [-6.2, -5.0], [-5.2, -0.8], [3.2, 6.8], 'u', 'u', 'u', 0.05],                   // et leurs dossiers
+      ['bloc', [-6.2, -5.0], [0.8, 5.2], [3.2, 6.8], 'u', 'u', 'u', 0.05],
+      ['bloc', [0.4, 2.2], [-5.6, 5.6], [3.2, 5.2], 'D', 'D', 'D', 0.1],                       // le tableau de bord
+      ['bloc', [-0.4, 0.2], [-4.0, -2.0], [5.0, 5.8], 'k', 'k', 'k', 0.2],                     // le volant, a gauche
+      ['profil', [[2.4, 4.9], [0.6, 7.6], [0.0, 7.6], [1.8, 4.9]], [-5.6, 5.6], 'D', 'v.v.', 0.1],  // le pare-brise, tres incline
+      ['tube', [0.2, -5.6, 8.2], [0.2, 5.6, 8.2], 'D', 0.8], ['tube', [0.4, -5.6, 7.7], [0.4, 5.6, 7.7], 'D', 0.6],   // son cadre
+      ['tube', [2.2, -5.6, 5.0], [2.2, 5.6, 5.0], 'D', 1.0],
+      ['tube', [1.6, -4.6, 6.6], [1.6, 4.6, 6.6], 'G', 0.3],                                  // son reflet
+      ['tube', [10.6, 6.55, 4.5], [-10.6, 6.62, 5.0], 'C', 0.05], ['tube', [10.6, -6.55, 4.5], [-10.6, -6.62, 5.0], 'C', 0.05],   // la ceinture
+      ['bloc', [3.6, 10.6], [-2.0, 2.0], [4.5, 5.0], 'C', 'C', 'C', 0.15],                     // la bosse du capot
+      // ⚠️ LES AILES : deux bosses devant, deux hanches derriere. C'est ce qui fait une
+      // Corvette de profil ET de dos — et ce qui couvre les roues, dont le haut
+      // depassait du capot comme des oreilles. Plus hautes que la ceinture (6,2 contre
+      // 5), elles laissent le capot et le pont arriere plus bas entre elles.
+      ['bloc', [6.8, 11.0], [4.2, 6.5], [5.0, 6.2], 'C', 'c', 'c', 0.1], ['bloc', [6.8, 11.0], [-6.5, -4.2], [5.0, 6.2], 'C', 'c', 'c', 0.1],
+      ['bloc', [-11.6, -5.8], [3.8, 6.6], [5.0, 6.2], 'C', 'c', 'c', 0.1], ['bloc', [-11.6, -5.8], [-6.6, -3.8], [5.0, 6.2], 'C', 'c', 'c', 0.1],
+      ['bloc', [2.4, 5.2], [6.0, 6.25], [2.8, 4.3], 'D', 'D', 'D', 0.2],                       // les ouies, derriere la roue avant
+      ['bloc', [2.4, 5.2], [-6.25, -6.0], [2.8, 4.3], 'D', 'D', 'D', 0.2],
+      ['tube', [-5.4, 6.2, 2.1], [1.4, 6.2, 2.1], 'B', 0.2], ['tube', [-5.4, -6.2, 2.1], [1.4, -6.2, 2.1], 'B', 0.2],   // les pots lateraux
+      ['bloc', [-14.0, -13.4], [-4.6, 4.6], [2.6, 3.2], 'k', 'k', 'k', 0.15],                  // le bas du derriere
+    ],
+    // Le nez : une gueule sombre sous le capot et deux phares fins aux ailes.
+    // Le derriere : QUATRE FEUX RONDS, deux par cote, comme la sienne.
+    [['bloc', [13.2, 13.9], [-4.2, 4.2], [1.9, 2.8], 'D', 'D', 'D', 0.15],
+     ['bloc', [11.8, 13.9], [3.8, 5.8], [3.1, 4.2], 'l', 'l', 'l', 0.25], ['bloc', [11.8, 13.9], [-5.8, -3.8], [3.1, 4.2], 'l', 'l', 'l', 0.25],
+     ['bloc', [-14.3, -13.3], [1.2, 2.7], [3.2, 4.5], 't', 't', 't', 0.3], ['bloc', [-14.3, -13.3], [-2.7, -1.2], [3.2, 4.5], 't', 't', 't', 0.3],
+     ['bloc', [-14.3, -13.3], [3.5, 5.0], [3.2, 4.5], 't', 't', 't', 0.3], ['bloc', [-14.3, -13.3], [-5.0, -3.5], [3.2, 4.5], 't', 't', 't', 0.3]],
   ),
 };
 // --- La luxe : longue, un long capot, du chrome ---------------------------------
@@ -1478,6 +1585,8 @@ const MACHINE_BATEAU = {
 // Les fiches. La toile de chacun couvre sa diagonale ET ce qui monte (juge : aucun
 // pixel sur le bord de la toile, a aucun cap).
 SPRITES.sport = enVolume(MACHINE_SPORT, 26, 44, { k: '#101018', c: '#c0392b', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#2a2028', u: '#6b4b2c', s: '#8e2b20' });
+// Le rose, les sieges creme : la conductrice y est peinte par-dessus (`assisDedans`), en robe.
+SPRITES.cabriolet = assisDedans(MACHINE_CABRIOLET, 27, 44, 'volant', { k: '#101018', c: '#ff77b7', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', i: '#3a2a3a', u: '#f2ece4', s: '#b04a7a' });
 SPRITES.luxe = enVolume(MACHINE_LUXE, 32, 52, { k: '#101018', c: '#101014', v: '#5f7f99', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', m: '#b9bcc4', s: '#26262e' });
 SPRITES.ambulance = enVolume(MACHINE_AMBULANCE, 32, 64, { k: '#101018', c: '#ffffff', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', x: '#e0312a', y: '#2f6fd8', s: '#f39c12', a: '#7a2320', b: '#8e9299' });
 // Rouge et blanc, devant sur la cabine et derriere sur la caisse : ils tournent avec sa sirene.

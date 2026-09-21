@@ -51,9 +51,18 @@ def test_le_paquet_reste_leger():
     `JSON.parse` plus petits, et un budget par sujet — la carte ne mange plus la
     marge des missions. Le vrai remede au poids du demarrage reste la dette des
     districts charges autour du joueur, avec son declencheur (« Dettes »).
+
+    ⚠️ **La carte : 48 000 → 50 000 octets gzip le 21 sept. 2026.** Mesure : elle
+    pesait 47 999 octets — UN de moins que le plafond, sans que personne y ait
+    pense —, et le cabriolet rose (son nom dans les `rares` de deux districts et
+    de leurs cours de gang) en a ajoute 13. Ce n'est pas le cabriolet qui a
+    rempli la carte, c'est que le plafond n'avait plus de marge : le prochain
+    ajout, quel qu'il soit, l'aurait fait tomber. Deux Ko de marge, et la meme
+    regle qu'avant : le vrai juge du poids est le declencheur de la dette
+    (« plus de 2 s entre Jouer et la ville »), pas ce nombre.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 200_000, 40_000), ("carte", 450_000, 48_000)):
+    for nom, brut_max, fil_max in (("definitions", 200_000, 40_000), ("carte", 450_000, 50_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

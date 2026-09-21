@@ -19,7 +19,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 
 | Module | Contenu | Tests pytest |
 |---|---|---|
-| `vehicules.py` | 8 types : vitesse, accélération, virage, PV, places, prix, fréquence, couleurs, `sprite` | slugs uniques, bornes, une auto `police`, sprite existe (harnais Node) |
+| `vehicules.py` | 8 types : vitesse, accélération, virage, PV, places, prix, fréquence, couleurs, `sprite`, et pour un char toujours mené (le cabriolet rose) `au_volant` — le passant que la fiche met au volant | slugs uniques, bornes, une auto `police`, sprite existe (harnais Node) |
 | `armes.py` | poings + 9 armes : dégâts, portée, cadence, chargeur, prix, `etoiles_usage`, `son` (le bruitage de l'arme, un slug de `audio.CATALOGUE`) | première = poings à 0 $, prix croissants, chaque `son` existe au catalogue audio |
 | `economie.py` | `ARGENT_DEPART`, `amende(etoiles, casier)` = `min(argent, base[★] × (1 + 0,5 × casier))`, pots-de-vin `40 × ★ × (1 + 0,5 × casier)`, hôpital `clamp(10 %, 30, 500)`, propriétés, `FORTUNE_MAX`, ce que la bouffe rend (`*_pv` et `*_souffle`) et `CAFE` (durée + dépense du sprint) | jamais négatif, monotone, plafonné, retour sur investissement 10–60 min, coordonnées sur une porte, le café n'achète que de la **durée** et dure plus qu'un plein de souffle |
 | `recherche.py` | paliers 0–5 (agents, autos, barrages, tirent, décroissance 15/25/40/60/90 s), délits → ★ (taxonomie ci-dessous), cônes (à pied 90° 9 tuiles jour / 6 nuit ; auto 60° 14/12 ; témoin 120° 6/4 ; alarme rayon 12) | contigus, monotones, palier 0 sans réponse |
@@ -167,7 +167,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_mise_en_scene.py test_scenes_js.py test_parties_js.py test_missions_en_scene_js.py
         test_table_des_jalons.py test_navigateur.py test_ce_qui_casse.py test_carte_du_plan.py test_reseau_local.py test_regard_js.py
         test_rechargement.py test_icones.py test_autobus.py test_autobus_js.py test_mobilier.py test_metro.py test_metro_js.py test_casque_js.py test_quartiers.py test_ile.py test_ile_js.py test_chargement_js.py test_on_attend_l_autobus.py test_on_attend_l_autobus_js.py test_client_au_bord_de_la_route_js.py test_eboueurs.py test_eboueurs_js.py test_traversier.py test_traversier_js.py test_tramway.py test_tramway_js.py test_neige.py test_neige_js.py test_deneigement.py test_deneigement_js.py test_crime_d_autrui.py test_crime_d_autrui_js.py
-        test_bd.py test_comptes.py test_comptes_js.py test_defi.py test_defi_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py test_donneurs_visibles_js.py test_interactions.py test_interactions_js.py
+        test_bd.py test_comptes.py test_comptes_js.py test_defi.py test_defi_js.py test_cabriolet_js.py test_poste_et_garage.py test_poste_et_garage_js.py test_accents.py test_passage_pietons.py test_zz_smoke.py test_incendies.py test_incendies_js.py test_donneurs_visibles_js.py test_interactions.py test_interactions_js.py
 scripts/  verifier_dependances.py verifier_carte_du_depot.py verifier_table_des_jalons.py
           verifier_ce_qui_casse.py verifier_carte_du_plan.py verifier_missions.py
           audio_elevenlabs.py musique_apercu.py icones.py

@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (176 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (177 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -81,7 +81,6 @@ pas quand l'ordre de travail change.
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
 | M15 La ville te parle — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [fiche](jalons/ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](jalons/ca-travaille-chantiers-et-demolitions.md#notes) |
-| Une décapotable rose et sa conductrice | ⬜ **en cours** | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/une-decapotable-rose-et-sa-conductrice.md#fiche) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
 | M14 Meta | ⬜ **en cours** (5 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, et le défi du jour ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [fiche](jalons/m14-meta.md#fiche) · [notes](jalons/m14-meta.md#notes) |
 | L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |

@@ -30,6 +30,12 @@ n'a pas a le deviner de son slug :
               rare — et c'est tout ce qui fait qu'on le VEUT
     alarme_s  la duree de son alarme, en secondes ; 0 = celle de tout le monde
               (`PHYSIQUE.alarme_secondes`)
+    au_volant le slug du passant (`pietons.CATALOGUE`) qui la mene TOUJOURS : le
+              trafic la fait naitre avec lui, elle ne se gare jamais (une
+              voiture qu'on lui a laissee n'aurait plus personne a faire
+              descendre), et le carjacking sort CELUI-LA de la voiture, pas
+              un passant tire au hasard. ⚠️ C'est la fiche qui le dit — le
+              navigateur n'a pas a reconnaitre un cabriolet a son slug
 """
 
 from __future__ import annotations
@@ -68,6 +74,7 @@ class Vehicule(TypedDict):
     reservoir: bool
     rare: bool
     alarme_s: float
+    au_volant: str | None
     defonce: float
     soigne: float
     crochet: bool
@@ -96,7 +103,8 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
        sprite, *, police=False, sirene=False, alarme=False, ejecte=False, eau=False,
        masse=1.0, cercles=3, reservoir=True, defonce=0.0, soigne=0.0, crochet=False,
        plateau=False, boulot=None,
-       radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0) -> Vehicule:
+       radio=None, phase=1, klaxon="klaxon", rare=False, adherence=None, alarme_s=0.0,
+       au_volant=None) -> Vehicule:
     return Vehicule(
         slug=slug, nom=nom, classe=classe, longueur=lon, largeur=lat,
         vitesse_max=vmax, vitesse_recul=round(vmax * 0.33, 2), acceleration=accel,
@@ -107,6 +115,7 @@ def _v(slug, nom, classe, lon, lat, vmax, accel, rayon, vie, places, prix, freq,
         masse=masse, vie=vie, places=places, prix=prix, frequence=freq,
         couleurs=couleurs, sprite=sprite, police=police, sirene=sirene, alarme=alarme,
         ejecte=ejecte, eau=eau, cercles=cercles, reservoir=reservoir, rare=rare, alarme_s=alarme_s,
+        au_volant=au_volant,
         defonce=defonce, soigne=soigne,
         crochet=crochet, plateau=plateau, boulot=boulot, radio=radio, phase=phase,
         portieres=classe in CLASSES_A_PORTIERES, klaxon=klaxon,
@@ -177,6 +186,22 @@ CATALOGUE: list[Vehicule] = [
        # conduite, elle recompense le vol. C'est la meilleure revente du jeu,
        # et `economie.prix_vente` le fait toute seule — le prix neuf suffit.
        adherence=0.40, alarme_s=30.0),
+    # ⚠️ **LE CABRIOLET ROSE** (demande de Martin, 21 sept. 2026 : « une voiture
+    # type corvette, rose, avec une femme en robe rose qui la pilote et en descend
+    # si volee. Elle va plus vite »). Le troisieme char qu'on vole EXPRES, et le
+    # seul du parc qui a SA conductrice (`au_volant`).
+    #
+    # ⚠️ **Elle va plus vite que le sport — pas plus vite que la moto.** Le
+    # garde-fou d'`exploitation.md` tient toujours : un char qui roule bien au-dela
+    # de l'auto-patrouille (4,4) rend la police decorative. Elle depasse le sport
+    # (4,8) d'un cran et la patrouille de 14 %, jamais la moto (5,2) ; la parade
+    # est la meme que la sienne — la carrosserie mince (80 PV : un barrage l'arrete
+    # pour de bon), l'alarme, et une adherence qui la fait partir en travers.
+    # `frequence` est plus haute que celle du sport : on la VEUT, mais on veut
+    # d'abord la VOIR — et c'est la carte qui decide ou (`rares` de `carte.py`).
+    _v("cabriolet", "Cabriolet rose", "auto", 27, 13, 5.0, 0.09, 18, 80, 2, 3800, 0.04,
+       ["#ff77b7"], "cabriolet", alarme=True, rare=True, masse=0.9,
+       adherence=0.20, au_volant="conductrice"),
     # ⚠️ **LA DETTE DE M3, PAYEE LE 16 SEPT. 2026.** « Phase 2 » voulait dire
     # « sans sprite et sans trafic » : la fiche existait depuis M3 — eau,
     # friction 0,995, adherence 0,05, trois cercles — et rien ne l'avait jamais
