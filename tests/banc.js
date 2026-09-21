@@ -255,8 +255,21 @@ function banc(corps) {
     function param(v) {
       // ⚠️ `setValueAtTime` pose vraiment la valeur : sinon le banc lit 440 Hz
       // pour toutes les notes et un sequenceur faux passerait les tests.
+      // ⚠️ `setValueCurveAtTime` GARDE ses courbes : c'est elle qui fait le fondu
+      // enchaine, et un juge doit pouvoir lire de quand a quand et dans quel sens.
       return { value: v, setValueAtTime: function (x) { this.value = x; return this; },
-               exponentialRampToValueAtTime: function () { return this; } };
+               exponentialRampToValueAtTime: function () { return this; },
+               setValueCurveAtTime: function (courbe, t, duree) {
+                 // ⚠️ Comme le navigateur : une courbe qui en chevauche une autre SUR LE
+                 // MEME PARAMETRE leve `NotSupportedError`. C'est ce qui oblige le fondu
+                 // a avoir deux gains — un seul ferait planter la musique a la premiere
+                 // piste changee pendant sa montee.
+                 (this.__courbes = this.__courbes || []).forEach(function (c) {
+                   if (t < c.t + c.duree && c.t < t + duree) throw new Error('NotSupportedError : courbes qui se chevauchent');
+                 });
+                 this.__courbes.push({ courbe: Array.from(courbe), t: t, duree: duree });
+                 return this;
+               } };
     }
     // ⚠️ Chaque noeud garde la liste de ce sur quoi il est branche. C'est ce qui
     // permet de juger qu'un son ATTEINT vraiment la sortie : une source que
@@ -317,7 +330,10 @@ function banc(corps) {
         return n;
       };
       this.createBufferSource = function () {
-        const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null, stop: function () {} });
+        // ⚠️ `stop(t)` note l'instant : une piste qui s'en va en fondu s'arrete
+        // APRES la fin de sa courbe, et un `stop()` sans argument est une coupure nette.
+        const n = noeud({ buffer: null, loop: false, playbackRate: param(1), onended: null,
+                          stop: function (t) { this.__arretT = t === undefined ? ctx.currentTime : t; } });
         sources.push(n);
         n.start = function (t) { n.__demarree = true; joues.push({ quoi: 'echantillon', t: t }); };
         return n;
