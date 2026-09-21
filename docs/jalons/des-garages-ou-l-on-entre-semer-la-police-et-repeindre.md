@@ -24,6 +24,26 @@ menu du garage à l'abri (réparer, repeindre, vendre) au lieu de l'ouvrir devan
 - ⚠️ La baie et les carrosseries se posent à la fin de `generer` (voir le lot du poste) : un
   juge compare la ville avec et sans elles.
 
+## Fiche de la deuxième vague
+
+Martin (21 sept. 2026), à la suite de la première : « oui vas-y pour la suite » — les garages des
+bungalows, pour se cacher **sans** passer par la peinture.
+
+Aux Érables, quelques bungalows ont un garage qu'on entre au volant, comme la carrosserie : le
+rideau monte, le char passe sous le toit, le rideau retombe. Rien ne se repeint et rien ne se paie :
+on est **caché**. La police ne voit pas sous un toit, les étoiles tombent comme hors de vue, et on
+ressort en reculant quand on veut (« CACHÉ — RECULE POUR SORTIR »). C'est la cachette gratuite et
+lente ; la carrosserie reste l'instantanée qui coûte.
+
+- ⚠️ Caché, c'est caché pour TOUT le monde : l'hélico ne voit pas à travers un toit, et une
+  auto-patrouille garée devant le rideau ne « sent » plus le joueur à 60 px (`Police.commandes`).
+  Sans ça, cinq étoiles ne tomberaient jamais dans un garage.
+- ⚠️ Une entrée asphaltée du rideau jusqu'à la rue (le gazon d'un bungalow n'est pas une
+  entrée de garage), et rien de fixe dessus.
+- ⚠️ Posés EN DERNIER et sans dé, comme les carrosseries : quelques bungalows, écartés les uns
+  des autres, choisis par une mesure. Pas sur la carte : une cachette ne s'affiche pas — on la
+  voit au rideau et à l'entrée asphaltée.
+
 ## Notes
 
 **1re vague, livrée le 21 sept. 2026** — on entre, le rideau tombe, on ressort d'une autre

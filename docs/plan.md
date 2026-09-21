@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
+| Des garages où l'on entre — deuxième vague : les bungalows des Érables | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche-de-la-deuxième-vague) · [notes](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#notes) |
 | La nuit a ses habitudes | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/la-nuit-a-ses-habitudes.md#fiche) |
 | Les commandes à l'écran : l'aide du début, et le vrai bouton sous le pouce | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/les-commandes-a-l-ecran.md#fiche) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e : le standing se vit) | 17 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
