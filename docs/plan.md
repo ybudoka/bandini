@@ -79,6 +79,7 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | L'hélico : sourd dedans, et muet quand il est parti | ⬜ **en cours** | 21 sept. 2026 | **P1** | **correctif** | [fiche](jalons/l-helico-sourd-dedans-et-muet-quand-il-part.md#fiche) |
+| Les chars lourds atteignent leur vitesse — la paie de la Prévost se sème | ⬜ **en cours** | 21 sept. 2026 | **P1** | **correctif** | [fiche](jalons/les-chars-lourds-atteignent-leur-vitesse-la-paie-de-la-prevost-se-seme.md#fiche) |
 | Des phares à la mesure de chaque char | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-phares-a-la-mesure-de-chaque-char.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ⬜ **en cours** (3 vagues livrées ; la 4e, le standing se vit, commencée) | 21 sept. 2026 | **P3** | ajout | [fiche](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](jalons/des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
@@ -116,6 +117,7 @@ Ce que chaque ligne à faire attend (la table de tri du 13 sept. 2026, réduite 
 
 | P | Genre | Ce qu'il y a à faire | Taille | Pourquoi là, et ce qu'il attend |
 |---|---|---|---|---|
+| **P1** | correctif | Les chars lourds atteignent leur vitesse — la paie de la Prévost se sème | 1 | ne dépend de rien : la friction de `_v` dans `app/vehicules.py` ; s03 était injouable |
 | **P2** | correctif | Des phares à la mesure de chaque char | 1 | ne dépend de rien : `Vehicules.allumerLesPhares` et `Base.fin`, les machines déclarent déjà leurs lampes |
 | **P2** | ajout | La ligne d'histoire : une ouverture et un générique | 3 | ⚠️ **l'ouverture est livrée** (16 sept. 2026) — elle ne dépendait de rien ; le **générique**, lui, attend **M13** : il n'y a pas de fin à filmer avant |
 | **P3** | ajout | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | 4 | ⚠️ redessine ce qu'il y a sur chaque bloc, et **M16** (des lieux nommés dans chaque quartier), les éboueurs et les crimes d'autrui de **M12**, les lignes d'autobus et les chantiers s'y posent : faits avant, ils s'ajustent deux fois. Attend **les bancs et les arbres de rue** (en cours) — c'est le même semis, on le règle par standing au lieu de le refaire |
