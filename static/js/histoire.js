@@ -380,6 +380,63 @@ const Histoire = (function () {
     }
   }
 
+  //: Au-dela de cette part de son sprite sous du decor peint apres lui, un personnage est CACHE.
+  const CACHE_MAX = 0.5;
+
+  /** La part (0 a 1) du sprite d'un personnage pose en (x, y) que du decor PEINT APRES
+      LUI recouvre.
+
+      ⚠️ La ville se peint du nord au sud (`Entites.dessiner` trie par `y`) : un abribus
+      une tuile plus bas passe DEVANT quelqu'un qui se tient derriere lui, et il n'en reste
+      que la tete — c'etait Ti-Paul, devant son depanneur (20 sept. 2026). Un decor a la
+      meme hauteur est peint AVANT lui (son numero est plus petit), donc ne le cache pas.
+      On compte les RECTANGLES des fiches, pixels transparents compris : c'est prudent, et
+      juste pour les decors pleins qui posent probleme (abribus, roulotte, kiosque). Tous
+      les personnages de l'histoire portent le corps du joueur (`creerPersonnage`). */
+  function partCachee(x, y) {
+    if (typeof DECORS === 'undefined' || typeof SPRITES === 'undefined') return 0;
+    const corps = SPRITES.joueur, x0 = x - corps.ancre[0], y0 = y - corps.ancre[1];
+    let cache = 0;
+    for (const d of B.entites) {
+      const f = d.decor && d.dessine !== false ? DECORS[d.decor] : null;
+      if (!f || d.y <= y) continue;
+      const dx0 = d.x - f.ancre[0], dy0 = d.y - f.ancre[1] - (d.altitude || 0);
+      const ox = Math.min(x0 + corps.w, dx0 + f.w) - Math.max(x0, dx0);
+      const oy = Math.min(y0 + corps.h, dy0 + f.h) - Math.max(y0, dy0);
+      if (ox > 0 && oy > 0) cache += ox * oy;
+    }
+    return Math.min(1, cache / (corps.w * corps.h));
+  }
+
+  /** Une tuile ou l'on peut se tenir : du trottoir, hors du pas d'une porte, et sans decor
+      solide dessus (`tuileLibre` ne regarde que la carte, pas les abribus ni les bancs). */
+  function tuileDeTrottoir(tx, ty) {
+    if (!Monde.marchablePieton(tx, ty) || Monde.estChaussee(tx, ty) || Monde.devantDUnePorte(tx, ty)) return null;
+    const x = tx * TT + 8, y = ty * TT + 8;
+    const pris = Entites.decorAutour(x, y, 24).some(function (d) { return d.solide && Math.hypot(d.x - x, d.y - y) < d.r + 7; });
+    return pris ? null : { x: x, y: y };
+  }
+
+  /** Ou un personnage se tient devant sa porte : a deux tuiles d'un cote, sinon de l'autre —
+      et, si du decor le cache (`partCachee`), la tuile voisine la plus proche ou on le voit.
+      ⚠️ SANS DE : les essais vont dans un ordre fixe, du plus pres au plus loin de la porte.
+      Quand rien n'est mieux, la tuile la moins cachee. */
+  function placeVisible(l) {
+    const premiere = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
+    if (!premiere) return null;
+    let part = partCachee(premiere.x, premiere.y), meilleure = premiere;
+    if (part < CACHE_MAX) return premiere;
+    const tx0 = Math.floor(l.x / TT), ty0 = Math.floor(l.y / TT);
+    for (const [dx, dy] of [[-2, 0], [3, 0], [-3, 0], [2, 1], [-2, 1], [4, 0], [-4, 0], [3, 1], [-3, 1]]) {
+      const place = tuileDeTrottoir(tx0 + dx, ty0 + dy);
+      if (!place) continue;
+      const c = partCachee(place.x, place.y);
+      if (c < CACHE_MAX) return place;
+      if (c < part) { part = c; meilleure = place; }
+    }
+    return meilleure;
+  }
+
   /** UN personnage du dehors, pose devant sa porte — ou null quand la porte ou la
       place manque. ⚠️ Il ne regarde ni `parti_apres` ni s'il est deja la : c'est
       `creerDonneurs` qui juge s'il doit exister, et le debug (`Hud.menuSautMissions`)
@@ -388,8 +445,9 @@ const Histoire = (function () {
     const l = lieu(p.ou.slice(6));
     if (!l) return null;
     // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
-    // qu'ACTION au pas de la porte serve encore a autre chose.
-    const place = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
+    // qu'ACTION au pas de la porte serve encore a autre chose — et JAMAIS derriere
+    // un abribus : `placeVisible` ecarte la tuile ou du decor le cache.
+    const place = placeVisible(l);
     return place ? creerPersonnage(p, place.x, place.y) : null;
   }
 
