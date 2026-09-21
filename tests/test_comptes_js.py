@@ -885,6 +885,29 @@ def test_retirer_le_nip_est_purement_local(banc):
     assert r["appels"] == ["ouvrir", "nip"]
 
 
+def test_un_nip_ne_se_retire_pas_tant_que_l_appareil_est_verrouille(banc):
+    """⚠️ Un verrou qu'on enleve sans le NIP n'est pas un verrou. Le bouton « Retirer le
+    NIP » s'affichait sous l'ecran VERROUILLE (`.boutons` en `display: flex` battait
+    `hidden`) : c'est le MODELE qui tient la regle, quoi que l'ecran montre — meme
+    en pressant le bouton a la main."""
+    r = banc("""function (L, o) {""" + CALME + """
+        return calme(o).then(function () {
+          const avant = L.Compte.etat().nipConfigure;
+          const rendu = L.Compte.desactiverNip();
+          o.elements['bouton-nip-retirer'].dispatch('click', {});
+          return { avant: avant, rendu: rendu, apres: L.Compte.etat().nipConfigure,
+                   etat: L.Compte.etat().etat, message: o.elements['compte-etat'].textContent,
+                   appels: o.compte.appels.length };
+        });
+    }""", stockage={"bandini-nip-v1": json.dumps({"sel": "AA==", "iv": "AA==", "corps": "AA==", "essais": 0})})
+    assert r["avant"] is True
+    assert r["rendu"] is False
+    assert r["apres"] is True, "le NIP est toujours la : le verrou tient"
+    assert r["etat"] == "verrouille"
+    assert "Déverrouille" in r["message"]
+    assert r["appels"] == 0
+
+
 def test_se_deconnecter_efface_aussi_le_nip_local(banc):
     """⚠️ Se deconnecter, c'est oublier CET appareil : un NIP qui survivrait
     rouvrirait un verrou sur un compte qui n'est plus lie a rien."""

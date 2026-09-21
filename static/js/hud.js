@@ -42,9 +42,9 @@ const Hud = (function () {
       });
     });
     d.getElementById('bouton-nip-retirer').addEventListener('click', function () {
-      Compte.desactiverNip();
+      const fait = Compte.desactiverNip();
       const etatEl = d.getElementById('compte-etat');
-      if (etatEl) etatEl.textContent = 'NIP retiré de cet appareil.';
+      if (etatEl) etatEl.textContent = fait ? 'NIP retiré de cet appareil.' : 'Déverrouille le compte d’abord.';
       majCompte();
     });
     // ⚠️ L'ecran suit le compte, il ne l'interroge pas : l'ouverture, une partie

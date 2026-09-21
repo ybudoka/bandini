@@ -533,8 +533,18 @@ const Compte = (function () {
     });
   }
 
-  /** Retire le NIP de cet appareil : purement local, le serveur n'en a jamais rien su. */
-  function desactiverNip() { effacerBlobNip(); prevenir(); }
+  /** Retire le NIP de cet appareil : purement local, le serveur n'en a jamais rien su.
+
+      ⚠️ UN NIP NE SE RETIRE QU'UNE FOIS DEVERROUILLE. Un verrou qu'on enleve sans le
+      NIP n'est pas un verrou : `etat !== 'ouvert'` refuse, QUOI QUE L'ECRAN MONTRE — le
+      bouton etait affiche sous l'ecran verrouille (CSS), et c'est le modele, pas
+      l'habillage, qui doit tenir la regle. Rend vrai si le NIP est parti. */
+  function desactiverNip() {
+    if (etat !== 'ouvert') return false;
+    effacerBlobNip();
+    prevenir();
+    return true;
+  }
 
   /** Tente d'ouvrir avec ce NIP. Un succes repart `ouvrir()` normalement — le MEME
       chemin qu'un appareil sans NIP, une fois le verrou leve : la vraie authentification
