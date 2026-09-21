@@ -841,3 +841,68 @@ def test_le_compte_ne_barre_jamais_le_chemin_de_jouer(page, serveur, erreurs):
     attendre_titre(page)
     jouer(page)
     assert page.get_attribute("#bandini", "data-etat") == "jeu"
+
+
+# --- Le NIP (M14, 3e vague) --------------------------------------------------------------
+
+
+def test_activer_un_nip_puis_le_retrouver_au_rechargement(page, serveur, erreurs):
+    """De bout en bout, avec un VRAI rechargement de page (localStorage survit, le
+    cookie httpOnly aussi — c'est justement lui que le NIP protège) : créer un
+    compte, activer un NIP, recharger, se faire demander le NIP, et déverrouiller.
+
+    ⚠️ Son PROPRE pseudo : le fixture `serveur` est celui de toute la session, donc une
+    seule base — « Martin » est déjà pris par le juge du compte, et le second
+    `inscription` rendait 409 dans la suite complète alors que ce juge passait seul."""
+    page.goto(serveur)
+    attendre_titre(page)
+    page.click("#bouton-compte")
+    page.fill("#compte-pseudo", "Nadia")
+    page.fill("#compte-passe", "un-mot-de-passe")
+    page.click("#bouton-compte-inscription")
+    page.wait_for_function("document.getElementById('compte-parties').children.length === 3", timeout=10000)
+
+    page.fill("#nip-nouveau", "4821")
+    page.click("#bouton-nip-activer")
+    page.wait_for_function("window.BANDINI.Compte.etat().nipConfigure === true", timeout=5000)
+
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    # ⚠️ Verrouille ou pas, JOUER doit rester JOUER : un compte est un confort.
+    assert page.is_visible("#bouton-jouer")
+
+    page.click("#bouton-compte")
+    assert page.is_visible("#nip-form")
+    assert not page.is_visible("#compte-form")
+
+    page.fill("#nip-code", "4821")
+    page.click("#nip-form button[type=submit]")
+    page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=5000)
+    assert page.text_content("#bouton-compte") == "Compte : Nadia"
+    assert erreurs == []
+
+
+def test_le_nip_ne_bloque_jamais_jouer(page, serveur, erreurs):
+    """Un appareil verrouillé (NIP configuré, pas encore tapé) : JOUER joue quand
+    même, sans un seul appel au serveur des comptes."""
+    appels = []
+
+    def noter(route):
+        appels.append(route.request.url)
+        route.continue_()
+
+    page.route("**/api/compte/**", noter)
+    page.goto(serveur)
+    attendre_titre(page)
+    page.evaluate("""() => {
+        localStorage.setItem('bandini-nip-v1', JSON.stringify({ sel: 'AA==', iv: 'AA==', corps: 'AA==', essais: 0 }));
+    }""")
+    page.reload()
+    attendre_titre(page)
+    assert page.evaluate("window.BANDINI.Compte.etat().etat") == "verrouille"
+    appels_avant_jeu = list(appels)
+    jouer(page)
+    assert page.get_attribute("#bandini", "data-etat") == "jeu"
+    assert appels == appels_avant_jeu, "verrouille ne doit jamais parler au serveur des comptes"
+    assert erreurs == []

@@ -320,6 +320,19 @@ def test_par_http_s_inscrire_ouvrir_sauver_et_retrouver(client):
     assert client.get("/api/compte/parties/2").status_code == 401
 
 
+def test_par_http_le_nip_rend_le_jeton_que_le_cookie_porte_deja(client):
+    """M14, 3e vague : `/api/compte/nip` expose le jeton EN CLAIR, une fois — de quoi le
+    chiffrer localement. ⚠️ `httpOnly` bloque le JS de la page, pas le serveur : c'est le
+    MEME jeton que celui du cookie, jamais un secret different."""
+    client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
+    revele = client.post("/api/compte/nip").get_json()["jeton"]
+    assert revele == _cookie(client).value
+
+
+def test_par_http_le_nip_refuse_sans_session(client):
+    assert client.post("/api/compte/nip").status_code == 401
+
+
 def test_par_http_un_pseudo_pris_rend_409(client):
     client.post("/api/compte/inscription", json={"pseudo": "Rocco", "mot_de_passe": MDP})
     client.delete_cookie(comptes.COOKIE, path=comptes.CHEMIN_COOKIE)

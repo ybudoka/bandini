@@ -145,7 +145,7 @@ ne bougent pas quand l'ordre de travail change.
 | M10 L'argent sale | ✅ **livré** (trois vagues) | 15 sept. 2026 | **P4** | ajout | [notes](#m10-largent-sale) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (2 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; **la 3e — la tranchée et l'équipe — est en cours**) | 20 sept. 2026 | **P4** | ajout | [notes](#ça-travaille--chantiers-et-démolitions) |
 | M12 La ville vit | ✅ **livré** (seize vagues ; les sept dernières le 17 sept. 2026 : éboueurs, traversier, tramway, neige et charrue, nuit de déneigement, crime d'autrui) | 17 sept. 2026 | **P4** | ajout | [notes](#m12-la-ville-vit) |
-| M14 Meta | ⬜ **en cours** (1re vague livrée : le compte, la session longue et les parties sur le serveur ; **la 2e — le jeu se synchronise — est en cours**) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
+| M14 Meta | ⬜ **en cours** (3 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, et le NIP ; restent effacer son compte, le défi du jour, le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [notes](#m14-meta) |
 | Les zones conditionnelles | ✅ **livré** (le mécanisme et quatre barrières) | 15 sept. 2026 | **P4** | ajout | [notes](#les-zones-conditionnelles) |
 | Toutes les façons de lancer ouvrent le réseau local | ✅ **livré** | 15 sept. 2026 | **P3** | **correctif** | [notes](#toutes-les-façons-de-lancer-ouvrent-le-réseau-local) |
 | La première bagarre ne se gagne pas | ✅ **livré** | 16 sept. 2026 | **P1** | **correctif** | [notes](#la-première-bagarre-ne-se-gagne-pas) |
@@ -652,7 +652,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
 | `hors_ligne.py` | le **travailleur hors ligne** : sa coquille **lue dans la page d'accueil rendue** (scripts, feuille, images, manifeste, et les deux paquets par leur empreinte `?e=`), les mp3 du dossier avec leur poids, et l'empreinte qui nomme son cache ; `routes.travailleur` le sert à la racine | `test_hors_ligne.py` (Flask, banc, et Chromium : réseau coupé, serveur en 502, les sons d'un coup, les scores) |
 | `version.py` + `scripts/git-hooks/post-commit` | copie intégrale d'`online-4all-games` (numéro déduit du message de commit, garde `BANDINI_VERSION`) ; `version = "0.0.0"` au départ | `test_version.py` copié |
-| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
+| `routes.py` | `/`, `/api/definitions` et `/api/carte` (ETag, 304, ETag faible de nginx, `X-Octets` : la taille décompressée pour la barre), `/api/compte/…` (M14 : inscription, connexion, ouvrir, déconnexion, parties, `nip` — le jeton en clair une fois, pour le chiffrer localement ; erreurs de compte en JSON, 503 quand la base tombe), `/sante`, `/manifest.webmanifest`, `/travailleur.js` (le hors-ligne, à la racine), `/favicon.ico`, 404 « Cul-de-sac » | page, ETag/304, scores, 413 |
 | `bd.py` | SQLite sous `DONNEES_DIR` (M14) : ouverture en **WAL** avec un délai d'attente (deux workers gunicorn), `transaction()` en `BEGIN IMMEDIATE` (le verrou d'écriture AVANT la lecture), `MIGRATIONS` numérotées par `user_version` — on en ajoute, on n'en modifie jamais une livrée ; la connexion de la requête s'ouvre à la première demande, jamais au démarrage, et `Indisponible` coupe les comptes sans couper le jeu | `test_bd.py` : une base vide se crée en WAL, une migration ne s'applique qu'une fois, **deux processus** écrivent la même case sans `database is locked`, la copie quotidienne emporte ce qui dort dans le `-wal` et garde sept jours |
 | `comptes.py` | les comptes (M14) : `inscrire` (pseudo — la règle vit ici depuis le retrait du tableau des scores —, mot de passe scrypt, courriel facultatif), `connecter` (le même refus pour un pseudo inconnu et un mot de passe faux), `authentifier` (le **jeton d'appareil** : empreinte sha256 en base, rotation à l'ouverture, grâce d'une réponse perdue, un jeton périmé qui revient coupe tous les appareils), `ecrire_partie` (trois cases, **un compteur, jamais une horloge**, un effacement garde son compteur) | `test_comptes.py` : ni mot de passe ni jeton en clair dans la base (vidage SQL et octets du WAL), le compteur refuse et rend la partie du serveur, la coupe, la réponse perdue, un an de session, le cookie `HttpOnly; SameSite=Lax; Path=/api/compte` (`Secure` en production), le jeu démarre base éteinte, le refus de la clé de développement |
 
@@ -676,7 +676,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 0b | `hors-ligne.js` | **installable, et jouable hors ligne**, côté page : inscrit le travailleur après `load` (rien sans contexte sécurisé), garde son dernier état pour la ligne LES SONS HORS LIGNE des OPTIONS (`detail()`, `toutTelecharger()`) |
 | — | `travailleur.js` | **le travailleur hors ligne** (service worker), **pas dans la page** : servi à la racine par `routes.travailleur`, qui pose `HORS_LIGNE` devant ; le réseau d'abord, le cache quand il se tait ou répond 5xx ; la coquille à l'installation, les sons à l'usage ou tous d'un coup |
 | 1 | `base.js` | constantes, `B` (sac d'état), maths, RNG, `Rendu` (cible hors écran + tampon lumière demi-résolution + `lampe()`), sauvegarde versionnée avec repli des champs, en **trois emplacements** (la clé d'avant est l'emplacement 1), `Chargements` (ce qui se télécharge, compté une fois et décompté une fois) |
-| 1b | `compte.js` | **le compte, côté jeu** (M14, 2e vague) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer |
+| 1b | `compte.js` | **le compte, côté jeu** (M14) : le seul endroit du jeu qui parle à `/api/compte/` ; l'ouverture passe en premier et seule (la file derrière sa promesse), le conflit de parties se tranche au compteur **et** au témoin `bandini-compte-sync-v1`, un compte est un confort — jamais une condition pour jouer ; le **NIP** (3e vague) — un verrou d'écran sur un appareil déjà lié, jamais un second mot de passe : PBKDF2 → AES-GCM (WebCrypto) chiffre le jeton d'appareil localement, cinq essais ratés l'effacent sans jamais toucher au compte |
 | 2 | `atlas.js` | cuisson des sprites/tuiles/police 5×7 depuis les grilles, validateur, miroirs, rotations, swaps de palette |
 | 3 | `sprites.js` | `SPRITES`, `TUILES`, `POLICE_PIXEL`, gabarits de particules et décalques (données seulement) |
 | 4 | `entree.js` | trois sacs d'entrées fusionnés par action (clavier `MAP_TOUCHES` AZERTY+QWERTY, manette `MAP_MANETTE` avec zone morte radiale et gâchettes analogiques, tactile `#croix` joystick suivi du pouce + boutons DOM 74/66/54/44 px), `contexte('pied'\|'vehicule'\|'menu')`, `empecherZoom()`, vibration |
@@ -8863,6 +8863,129 @@ borne de la route, `foreign_keys`).
   `bandini-sauvegarde-bd.timer` et `shared/copies/` — `deploy.sh` ne touche pas systemd.
   Rien ne presse tant que personne ne peut créer de compte : la base n'existe qu'à la
   première requête de compte.
+
+**2e vague livrée** (17 sept. 2026) : **le jeu se synchronise**, et le compte se voit enfin.
+`static/js/compte.js` (le seul endroit du jeu qui parle à `/api/compte/`), l'**écran du
+compte** au titre (une voile DOM — un mot de passe se tape, et un menu de manette sait
+choisir, pas écrire ; le bouton porte le pseudo dès qu'un compte est ouvert), le **compteur
+des sauvegardes** dans `Sauvegarde` (`base.js`), et le **choix entre deux versions** dans le
+menu des PARTIES.
+
+- ⚠️ **L'ouverture passe en premier, et SEULE.** Le jeton tourne à
+  `POST /api/compte/ouvrir` : un appel de compte parti avant sa réponse arriverait avec un
+  jeton déjà remplacé et passerait pour un vol — tous les appareils coupés, pour rien. Tout
+  ce que le jeu demande attend derrière sa promesse, dans une file où deux appels ne se
+  croisent jamais. C'est une **connexion** qui le prouve au banc : elle, n'attend pas d'être
+  « ouvert » pour partir.
+
+- ⚠️ **Le compteur seul ne dit pas s'il y a conflit.** « Mon local est à 41, le serveur à
+  40 » ne dit pas si j'ai joué depuis SA version ou si nous avons joué chacun de notre côté.
+  La réponse est dans ce que cet appareil a vu du compte la dernière fois
+  (`bandini-compte-sync-v1`, rangé sous le pseudo : un autre compte repart à zéro). Sans ce
+  témoin, il n'y a que deux issues et les deux sont fausses — écraser en silence, ou poser
+  la question à chaque partie. `decision(n)` tranche seule les cas évidents (une case vide
+  d'un côté se remplit de l'autre) et ne dérange le joueur que quand les deux ont bougé.
+
+- ⚠️ **Une case vide qui reçoit, ce n'est pas la même chose qu'une case à zéro.** La partie
+  de Martin dort dans le navigateur depuis des semaines et n'a pas de compteur : à zéro, elle
+  passerait pour une case vide et la première connexion la remplacerait sans un mot. Elle
+  démarre donc à 1 ; ce qui est vide reste à zéro, et c'est ça qui dit « il n'y a rien ici ».
+
+- ⚠️ **Rien ne s'écrit sous les pieds de quelqu'un qui joue — et la garde est là où ça
+  écrit**, pas avant la requête : entre la demande et la réponse il se passe une seconde, et
+  une seconde suffit pour presser JOUER. La partie descendue serait alors écrasée dix
+  secondes plus tard par la sauvegarde automatique de celle qu'on joue, et l'autre appareil
+  aurait perdu sa soirée sans que personne ne comprenne. Elle devient une question, posée au
+  retour au titre.
+
+- **Trois moments où un instantané monte** : le repos de 90 s pendant qu'on joue (la partie
+  se sauve toutes les dix secondes en local, le serveur n'a pas besoin de les voir toutes),
+  le **retour au titre** (`Compte.ranger`), et le **départ de la page** — `sendBeacon`, le
+  seul appel qui survit à la fermeture d'un onglet sur téléphone, avec un Blob
+  `application/json` sinon Flask ne lit pas le corps. ⚠️ Le beacon ne part **jamais** sur une
+  case en désaccord : personne n'en lit la réponse, il écraserait celle de l'autre appareil,
+  et la question qu'on s'apprêtait à poser n'aurait plus d'objet.
+
+- ⚠️ **Une réponse 200 sans le champ `partie` n'efface rien** (un proxy, une page d'erreur en
+  JSON) : le vrai serveur en met toujours un, `null` compris. Vider une case sur une réponse
+  qu'on ne comprend pas, c'est perdre une partie pour de bon.
+
+- ⚠️ **Deux choses que le banc ne pouvait pas voir, et qu'une capture Chromium a montrées**
+  (17 sept. 2026) : le formulaire restait à l'écran une fois connecté — `.score-form` est en
+  `display: flex`, qui **bat l'attribut `hidden`** —, alors que le banc lisait bien
+  `hidden === true` ; et « Bonjour, Martin » vivait DANS ce formulaire, donc le seul mot qui
+  dit que ça a marché se cachait à la seconde où il servait. Deux juges de navigateur en
+  sortent (`test_navigateur.py`) : un compte créé **de bout en bout** (l'écran, le POST,
+  SQLite, le cookie `HttpOnly` que le JS de la page ne peut pas lire) et un serveur de
+  comptes **en panne** qui ne barre pas le chemin de JOUER.
+
+- **Juges** : `tests/test_comptes_js.py` (**30**) plus les deux du navigateur, et **17
+  mutations toutes rouges** — la file, le compteur, le témoin, la partie posée telle quelle,
+  le refus qui ne fusionne rien, la garde du joueur qui joue, le type du beacon, les deux
+  choix du menu. Le banc a appris trois choses pour ça : `ENTREE.reseau` (un faux
+  `/api/compte/` dont on peut **tenir** une réponse en vol, et qui distingue GET de POST sur
+  la même adresse), `fenetreEvenement` (le `pagehide` joué comme le navigateur le joue —
+  juger `Compte.partir()` en l'appelant soi-même ne dirait rien du jour où plus personne ne
+  l'appelle) et un `innerHTML` qui vide vraiment la liste des enfants.
+
+- ⚠️ **Deux gardes ont été retirées parce qu'aucune mutation ne les faisait rougir** : une
+  question déjà posée restait posée alors que les compteurs le disaient déjà, et `jeu.js`
+  revérifiait l'écran titre que `Compte` garde déjà. Une garde jamais exercée n'est pas une
+  ceinture de sécurité, c'est une promesse que personne ne vérifie — et elle mentira le jour
+  où l'autre tombe.
+
+**3e vague livrée** (17 sept. 2026) : **le NIP**, un verrou d'écran sur un appareil déjà
+lié — et il faut redire tout de suite ce qu'il n'est pas : il **n'ouvre pas un compte**.
+
+- **Tout se passe en local, et le serveur ne connaît ni ne voit jamais le NIP.** Ce qui
+  dort dans le navigateur est le jeton d'appareil — le MÊME que celui du cookie `httpOnly`,
+  jamais un second secret —, chiffré par une clé dérivée du NIP (PBKDF2 → AES-GCM,
+  WebCrypto). La seule nouveauté côté serveur est une route qui **révèle ce jeton en clair,
+  une fois** : `POST /api/compte/nip` lit le cookie `httpOnly` (`httpOnly` bloque le JS de
+  la page, pas le serveur) et le rend tel quel — de quoi le chiffrer localement.
+- ⚠️ **Le contenu déchiffré ne sert jamais à rien d'autre qu'à prouver qu'on connaît le
+  NIP.** La vraie réouverture repasse par le cookie `httpOnly`, exactement comme sans NIP —
+  c'est pour ça qu'un jeton qui a tourné depuis (donc périmé côté serveur) reste un secret
+  local parfaitement vérifiable : seule l'étiquette d'authentification d'AES-GCM compte,
+  jamais ce qu'elle protège.
+- ⚠️ **Facultatif, il ne remplace jamais le mot de passe** : sans NIP configuré sur cet
+  appareil, `Compte.init()` appelle `ouvrir()` sans rien demander, exactement comme les 1re
+  et 2e vagues. Avec un NIP, `init()` s'arrête à `etat = 'verrouille'` et **aucune requête
+  ne part** avant `deverrouiller(nip)` — un jeu qui bavarde avec le serveur avant d'avoir vu
+  le NIP ne serait pas un verrou, ce serait une case à cocher.
+- ⚠️ **Rien d'autre n'en souffre** : `decision()`, `apresEcriture()`, `ranger()` et
+  `partir()` se taisent déjà tous si `etat !== 'ouvert'` — verrouillé se comporte comme
+  n'importe quel autre état non ouvert. JOUER reste JOUER, verrouillé ou pas : un compte est
+  un confort, jamais une condition, ici comme partout ailleurs dans M14.
+- ⚠️ **Le compte ne se bloque jamais, même après cinq essais ratés** — la même raison qui
+  fait qu'un mot de passe n'a pas de limite d'essais côté serveur : bloquer le COMPTE parce
+  qu'un inconnu a tapé cinq fois sur un téléphone perdu punirait exactement la mauvaise
+  personne. Cinq échecs **effacent le jeton chiffré de cet appareil**, rien de plus, et il
+  faut retaper le mot de passe pour le relier. Le compteur d'essais **vit dans le blob
+  chiffré** (jamais en mémoire), donc il survit à un rechargement — sinon la limite se
+  contournerait en rafraîchissant la page avant chaque essai.
+- ⚠️ **La liste noire et le format se vérifient avant tout appel réseau** : les vingt NIP
+  les plus tapés de la Terre (0000, 1234, 1111… et l'année en cours, calculée) sont refusés
+  sans jamais exposer le jeton pour rien.
+- **Se déconnecter efface aussi le NIP local** : oublier un appareil, c'est l'oublier pour
+  de bon — un NIP qui survivrait rouvrirait un verrou sur un compte qui n'est plus lié à
+  rien.
+- **L'écran** : le formulaire du NIP est **seul** à l'écran tant qu'on n'a pas tapé les
+  quatre chiffres, jamais en même temps que le mot de passe — deux portes ouvertes à la fois
+  n'en protègent aucune. « Mot de passe plutôt » montre le formulaire habituel **sans**
+  toucher au NIP local (un contournement d'un chargement, pas un « oublie mon NIP »). Une
+  fois le compte ouvert, un formulaire propose d'ajouter un NIP à cet appareil, ou de le
+  retirer s'il y en a déjà un.
+- **Juges** : `tests/test_comptes_js.py` (**+13**), deux dans `test_comptes.py` (la route
+  serveur), deux de bout en bout dans `test_navigateur.py` (activer un NIP puis **recharger
+  la page pour de vrai** — localStorage et le cookie `httpOnly` survivent tous les deux,
+  c'est justement ce que le NIP protège —, et un appareil verrouillé qui ne parle jamais au
+  serveur même en jouant), et **11 mutations toutes rouges**. Le banc a appris WebCrypto
+  (`node:crypto`'s `webcrypto`, aussi vraie que celle d'un navigateur), `btoa`/`atob` et
+  `TextEncoder`/`TextDecoder`.
+
+- **Reste de M14** : effacer son compte (4e vague), puis le défi du jour à graine
+  serveur, le mode photo et la coop locale.
 
 ### Les zones conditionnelles
 

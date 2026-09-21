@@ -96,7 +96,8 @@ const Compte = (function () {
       cases.push({ emplacement: n, serveur: parties[n] || null, conflit: conflits[n] || null,
                    decision: etat === 'ouvert' ? decision(n) : 'rien' });
     }
-    return { etat: etat, pseudo: pseudo, message: message, cases: cases };
+    return { etat: etat, pseudo: pseudo, message: message, cases: cases,
+             nipConfigure: nipConfigure(), nipEssaisRestants: nipEssaisRestants() };
   }
 
   /** ⚠️ Sans try/catch : un abonne qui leve est un bogue a nous, et un bogue
@@ -391,8 +392,180 @@ const Compte = (function () {
     return file(function () {
       return appel('deconnexion').then(function (res) {
         recevoirCompte(res);
+        // ⚠️ Se deconnecter, c'est oublier CET APPAREIL : un NIP qui survivrait
+        // rouvrirait le verrou sur un compte qui n'est plus lie a rien.
+        effacerBlobNip();
         return etatPublic();
       }, function () { panne(); return etatPublic(); });
+    });
+  }
+
+  // --- LE NIP (M14, 3e vague) : un verrou d'ECRAN, jamais un second mot de passe ------
+
+  /*: ⚠️ IL FAUT DIRE TOUT DE SUITE CE QU'IL N'EST PAS : le NIP N'OUVRE PAS UN COMPTE, il
+    ROUVRE une session sur un appareil DEJA LIE. Quatre chiffres, dix mille possibilites :
+    inacceptable comme secret de compte, parfait comme verrou d'ecran — il arrete
+    quelqu'un qui emprunte le telephone deux minutes, pas quelqu'un qui l'emporte chez lui
+    et prend son temps (10 000 candidats, ca s'essaie hors ligne).
+
+    ⚠️ TOUT SE PASSE EN LOCAL, ET LE SERVEUR NE VOIT NI NE CONNAIT JAMAIS LE NIP. Ce qui
+    dort dans le navigateur est le jeton d'appareil — le MEME que celui du cookie
+    httpOnly, jamais un second secret —, CHIFFRE par une cle derivee du NIP (PBKDF2 puis
+    AES-GCM, WebCrypto). Sans le NIP, ce qui est ecrit ne vaut rien a lui seul : dechiffrer
+    avec la mauvaise cle ne rend pas un jeton faux, ca LEVE — c'est l'etiquette
+    d'authentification d'AES-GCM qui refuse, pas une comparaison qu'on pourrait tromper.
+
+    ⚠️ LE DECHIFFRE NE SERT JAMAIS A RIEN D'AUTRE QU'A PROUVER QU'ON CONNAIT LE NIP. La
+    vraie reouverture passe par le cookie httpOnly, exactement comme sans NIP — c'est pour
+    ca qu'un jeton tourne (donc perime) depuis la derniere ouverture reste un secret
+    parfaitement verifiable : peu importe qu'il ne vaille plus rien cote serveur, seule
+    l'etiquette d'authentification compte ici.
+
+    ⚠️ FACULTATIF, ET IL NE REMPLACE JAMAIS LE MOT DE PASSE : sans NIP configure sur cet
+    appareil, la session longue s'ouvre TOUTE SEULE au chargement, exactement comme les
+    1re et 2e vagues l'ont livre — `init()` appelle `ouvrir()` sans rien demander. Avec un
+    NIP, `init()` s'arrete a `etat = 'verrouille'` et attend `deverrouiller(nip)` — et
+    RIEN d'autre n'en souffre : `decision()`, `apresEcriture()`, `ranger()` et `partir()`
+    se taisent tous tant que `etat !== 'ouvert'`, donc JOUER reste JOUER, verrouille ou
+    pas — un compte est un confort, jamais une condition, ici comme partout ailleurs.
+
+    ⚠️ LE COMPTE NE SE BLOQUE JAMAIS, MEME APRES CINQ ESSAIS RATES — la meme raison qui
+    fait qu'un mot de passe n'a pas de limite d'essais cote serveur : bloquer le COMPTE
+    parce qu'un inconnu a tape cinq fois sur un telephone perdu punirait exactement la
+    mauvaise personne. Cinq echecs EFFACENT LE JETON CHIFFRE DE CET APPAREIL, rien de
+    plus, et il faut retaper le mot de passe pour le relier. Le compteur d'essais VIT
+    DANS LE BLOB chiffre, donc il survit a un rechargement — sinon la limite se
+    contournerait en rafraichissant la page avant chaque essai. */
+
+  const CLE_NIP = 'bandini-nip-v1';
+  const NIP_ITERATIONS = 100000;
+  const NIP_ESSAIS_MAX = 5;
+
+  //: Les vingt NIP les plus tapes de la Terre : une LISTE, pas un algorithme — l'annee
+  //: en cours en fait partie (calculee, jamais a changer a la main l'an prochain).
+  function nipInterdits() {
+    return ['0000', '1111', '2222', '3333', '4444', '5555', '6666', '7777', '8888', '9999',
+            '1234', '4321', '1212', '2001', '1004', '6969', '1122', '1313', '0101',
+            String(new Date().getFullYear())];
+  }
+
+  function nipValide(nip) { return typeof nip === 'string' && /^\d{4}$/.test(nip); }
+
+  function nipRefus(nip) {
+    if (!nipValide(nip)) return 'quatre chiffres, ni plus ni moins';
+    if (nipInterdits().indexOf(nip) >= 0) return 'trop facile à deviner — un autre ?';
+    return null;
+  }
+
+  // --- Le chiffrement : PBKDF2 -> AES-GCM, tout WebCrypto, rien d'autre ----------------
+
+  function b64(tampon) {
+    const o = new Uint8Array(tampon);
+    let s = '';
+    for (let i = 0; i < o.length; i++) s += String.fromCharCode(o[i]);
+    return btoa(s);
+  }
+  function deb64(s) {
+    const brut = atob(s);
+    const o = new Uint8Array(brut.length);
+    for (let i = 0; i < brut.length; i++) o[i] = brut.charCodeAt(i);
+    return o;
+  }
+  function sousClef() { return fenetre && fenetre.crypto && fenetre.crypto.subtle; }
+
+  /** La cle AES-GCM derivee du NIP et d'un sel — jamais gardee, jamais renvoyee : elle
+      sert une fois et s'oublie avec la pile d'appel. */
+  function clefDe(nip, sel) {
+    const subtle = sousClef();
+    const encodeur = new TextEncoder();
+    return subtle.importKey('raw', encodeur.encode(nip), 'PBKDF2', false, ['deriveKey'])
+      .then(function (materiau) {
+        return subtle.deriveKey(
+          { name: 'PBKDF2', salt: sel, iterations: NIP_ITERATIONS, hash: 'SHA-256' },
+          materiau, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+      });
+  }
+
+  function lireBlobNip() {
+    try {
+      const brut = stockage && stockage.getItem(CLE_NIP);
+      const b = brut ? JSON.parse(brut) : null;
+      if (b && typeof b === 'object' && b.sel && b.iv && b.corps) return b;
+    } catch (e) { /* un blob illisible n'est pas un blob */ }
+    return null;
+  }
+  function ecrireBlobNip(b) {
+    try { stockage && stockage.setItem(CLE_NIP, JSON.stringify(b)); } catch (e) { /* rien */ }
+  }
+  function effacerBlobNip() {
+    try { stockage && stockage.removeItem(CLE_NIP); } catch (e) { /* rien */ }
+  }
+
+  function nipConfigure() { return !!lireBlobNip(); }
+  function nipEssaisRestants() {
+    const b = lireBlobNip();
+    return b ? Math.max(0, NIP_ESSAIS_MAX - (b.essais || 0)) : NIP_ESSAIS_MAX;
+  }
+
+  /** Active un NIP sur CET appareil : verifie le format et la liste noire, va chercher
+      le jeton en clair (la SEULE fois qu'il transite par le reseau depuis la 1re vague),
+      le chiffre, et l'oublie aussitot. ⚠️ Passe par `file()` : il faut une session
+      OUVERTE pour demander le jeton, et `file()` le garantit deja pour tout le reste. */
+  function activerNip(nip) {
+    const refus = nipRefus(nip);
+    if (refus) return Promise.resolve({ ok: false, motif: refus });
+    if (!sousClef()) return Promise.resolve({ ok: false, motif: 'ce navigateur ne sait pas chiffrer localement' });
+    return file(function () {
+      if (etat !== 'ouvert') return { ok: false, motif: 'aucun compte ouvert' };
+      return appel('nip').then(function (res) {
+        if (!res.ok) { recevoirCompte(res); return { ok: false, motif: (res.corps && res.corps.erreur) || 'refusé' }; }
+        const sel = fenetre.crypto.getRandomValues(new Uint8Array(16));
+        const iv = fenetre.crypto.getRandomValues(new Uint8Array(12));
+        return clefDe(nip, sel).then(function (clef) {
+          const encodeur = new TextEncoder();
+          return sousClef().encrypt({ name: 'AES-GCM', iv: iv }, clef, encodeur.encode(res.corps.jeton));
+        }).then(function (corps) {
+          ecrireBlobNip({ sel: b64(sel), iv: b64(iv), corps: b64(corps), essais: 0 });
+          prevenir();
+          return { ok: true };
+        });
+      }, panne);
+    });
+  }
+
+  /** Retire le NIP de cet appareil : purement local, le serveur n'en a jamais rien su. */
+  function desactiverNip() { effacerBlobNip(); prevenir(); }
+
+  /** Tente d'ouvrir avec ce NIP. Un succes repart `ouvrir()` normalement — le MEME
+      chemin qu'un appareil sans NIP, une fois le verrou leve : la vraie authentification
+      reste le cookie httpOnly, jamais le contenu dechiffre. */
+  function deverrouiller(nip) {
+    const b = lireBlobNip();
+    if (!b) return Promise.resolve({ ok: false, motif: 'aucun NIP sur cet appareil' });
+    if (!nipValide(nip)) return Promise.resolve({ ok: false, motif: 'quatre chiffres' });
+    if (!sousClef()) return Promise.resolve({ ok: false, motif: 'ce navigateur ne sait pas dechiffrer localement' });
+    return clefDe(nip, deb64(b.sel)).then(function (clef) {
+      return sousClef().decrypt({ name: 'AES-GCM', iv: deb64(b.iv) }, clef, deb64(b.corps));
+    }).then(function () {
+      // ⚠️ Le contenu dechiffre ne sert a rien de plus : voir le prologue de cette
+      // section. Seul le fait que le dechiffrement ait REUSSI compte ici.
+      b.essais = 0; ecrireBlobNip(b);
+      etat = 'inconnu'; message = '';
+      prevenir();
+      return ouvrir().then(function (v) { return Object.assign({ ok: true }, v); });
+    }, function () {
+      // ⚠️ AES-GCM ne dit jamais « mauvaise cle » autrement qu'en LEVANT : un NIP faux
+      // est donc indistinguable ici d'un blob corrompu — tant mieux, il n'y a rien de
+      // plus a en tirer, et rien de plus a proteger.
+      b.essais = (b.essais || 0) + 1;
+      if (b.essais >= NIP_ESSAIS_MAX) {
+        effacerBlobNip();
+        prevenir();
+        return { ok: false, motif: 'efface', essaisRestants: 0 };
+      }
+      ecrireBlobNip(b);
+      prevenir();
+      return { ok: false, motif: 'faux', essaisRestants: NIP_ESSAIS_MAX - b.essais };
     });
   }
 
@@ -402,10 +575,12 @@ const Compte = (function () {
     base = (racine && racine.dataset && racine.dataset.urlCompte) || '/api/compte/';
     sync = lireSync();
     Sauvegarde.surEcriture(apresEcriture);
+    if (nipConfigure()) { etat = 'verrouille'; prevenir(); return Promise.resolve(etatPublic()); }
     return ouvrir();
   }
 
   return { init, ouvrir, etat: etatPublic, surChangement, decision, conflit: function (n) { return conflits[n] || null; },
            inscrire, connecter, deconnecter, monter, prendre, garder, partir, apresEcriture, ranger,
+           nipConfigure, nipEssaisRestants, nipRefus, activerNip, desactiverNip, deverrouiller,
            REPOS_MS };
 })();
