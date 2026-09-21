@@ -205,8 +205,11 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
 
     ⚠️ La saleté se déplace APRÈS les lignes (`salete.deplacer`) et contourne
     leurs abribus, comme le mobilier : on la retire des deux villes."""
-    from app import metro, mobilier, salete
+    from app import devants, metro, mobilier, salete
     monkeypatch.setattr(salete, "deplacer", lambda chantier, ville, graine: {})
+    # ⚠️ Et le devant des portes (`devants.deplacer`) : il vient APRES tout, et lit les abribus
+    # pour ne rien leur poser dessus — sans eux, il deplace autre chose. Il part des deux villes.
+    monkeypatch.setattr(devants, "deplacer", lambda chantier, ville: {})
     # Et les lampadaires du mobilier (`eclairer`) : ils se plantent le long des
     # rues, après les lignes.
     monkeypatch.setattr(mobilier, "eclairer", lambda chantier, bords, solides: {})

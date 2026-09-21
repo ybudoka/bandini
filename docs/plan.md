@@ -214,7 +214,7 @@ ne bougent pas quand l'ordre de travail change.
 | Le tableau des scores s'en va | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-tableau-des-scores-sen-va) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
-| Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
+| Rien devant une porte, plus large | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
 | Le tour du propriétaire montre ses quatre contacts | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-tour-du-propriétaire-montre-ses-quatre-contacts) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
@@ -649,6 +649,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; la **nuit de déneigement** (le lendemain d'une tempête, un secteur par tempête) et ses panneaux, un au coin de chaque boîte ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, `test_deneigement.py`, `test_deneigement_js.py`, la sonde de `test_navigateur.py` |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
+| `devants.py` | **rien devant une porte, plus large** : à la toute fin de `generer`, sans un dé, DÉPLACE ce qui bouche le devant d'une porte (trois tuiles dans l'axe, une de chaque côté ; deux de plus et une de plus devant un lieu de mission, lu dans `missions`) — les scènes, les kiosques et leur réclame, le décor mobile — sur la tuile voisine la plus proche, et MARQUE `ecartee` la voie fermée, la rue barrée et le bris d'aqueduc qui y tombent (le jeu passe à la suivante) ; la fenêtre voyage dans `ville["devant"]` | `test_devants.py` (rien ne reste devant une porte, la ville ne bouge que ce qui bouchait, aucun dé, les lieux de mission), `test_devants_js.py` (`Monde.devantDUnePorte`, `Histoire.tuileLibre`, la voie et le bris écartés) |
 | `vitrines.py` | **les commerces montent et descendent**, sur la ville finie : renomme les enseignes des blocs cossus et pauvres (même famille, même bandeau, loin de son double), placarde une vitrine sur trois en pauvre (`B`, jamais sur une machine), vide un commerce fermé sur cinq (`A LOUER`), marque le `standing` des façades — sans tirer un dé ni toucher une tuile | `test_quartiers.py` (enseignes, façades, locaux vides, rien de déplacé) |
 | `metro.py` | le **métro** : la ligne jaune en boucle (six stations près de lieux garantis, sous la baie entre La Pointe et Les Quais), la place de chaque **édicule** sur l'abord d'une rue (ni devant une porte, ni sur le parvis du terminus, ni là où il fermerait un passage), la durée de chaque trajet et l'horaire que `metro.js` suit ; le quai et la rame sont deux pièces de `carte.INTERIEURS` (`metro_quai`, `metro_rame`) | `test_metro.py` (l'édicule qui regarde la rue et qu'on atteint à pied, près de son lieu, jamais devant une porte, la rame qui passe souvent, le tunnel sous la baie, le quai et la rame, la ville identique sans métro), `test_metro_js.py` |
 | `definitions.py` | `assembler()` (tout, carte comprise, tel que le navigateur le tient) → `construire()` → `Paquets(definitions, carte)`, chacun `Paquet(corps, etag, taille)`, construits une fois au démarrage sur UNE ville ; les définitions portent `carte_empreinte` | déterministe, un plafond par paquet (40 et 48 Ko gzip), l'empreinte des définitions suit la carte |
@@ -746,7 +747,7 @@ docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py
-      chantiers.py autobus.py mobilier.py metro.py salete.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
+      chantiers.py autobus.py mobilier.py metro.py salete.py devants.py ile.py eboueurs.py traversier.py tramway.py neige.py vitrines.py incendies.py
       bd.py comptes.py
 app/missions/  __init__.py _commun.py et une mission par fichier (m1.py … m97.py) — le moteur, les personnages, les défis et les scènes vivent dans __init__.py, chaque mission dans son propre fichier
 templates/  base.html index.html (canvas + #tactile + voiles + data-url-*) 404.html
@@ -759,7 +760,7 @@ tests/  conftest.py harnais_js.py banc.js (bac à sable Node : faux canvas/DOM/f
         test_districts.py test_missions.py test_magasins.py test_pietons.py test_audio.py
         test_version.py test_moteur_js.py test_police_js.py test_histoire_js.py
         test_trace_js.py test_districts_js.py test_manettes.py test_manette_js.py test_menus_au_doigt_js.py test_son_js.py
-        test_musique.py test_devantures.py test_devantures_js.py test_interieurs.py
+        test_musique.py test_devantures.py test_devantures_js.py test_devants.py test_devants_js.py test_interieurs.py
         test_interieurs_js.py test_rampes.py test_carte_du_depot.py test_eau.py test_banlieue.py test_parole.py test_effacer.py test_stool.py test_bouclier.py test_trottoir.py test_dette.py test_paliers.py test_ombre.py test_reproductible.py test_poses_vehicules.py
         test_eau_son_js.py test_eau_basse_js.py test_amuseurs_js.py test_roue_js.py test_sieste_js.py
         test_reclame.py test_reclame_js.py test_kiosque_ferme_js.py test_argent_sale.py test_argent_sale_js.py test_distributrices.py test_distributrices_js.py test_contrebande.py test_contrebande_js.py test_barrieres.py test_barrieres_js.py test_ville_vit.py test_bagarre.py test_bagarre_js.py test_aqueduc.py test_aqueduc_js.py test_greve.py test_greve_js.py test_plage_js.py test_musique_commerce.py test_bateau.py test_betes_js.py test_foire.py test_abri_js.py test_terrains_vagues.py test_port.py test_quai_se_marche.py
@@ -11686,14 +11687,63 @@ un char qu'on ne voyait pas.
 retour de Martin (20 sept. 2026) : « déplace les obstacles pour éviter que ça soit devant les
 portes des commerces et dans les missions ».
 
-- ⚠️ **En cours.** Mesuré avant : le devant réservé (deux tuiles) est propre sur toutes les
-  couches, mais un obstacle se lit « devant » dès qu'il est dans l'axe à trois tuiles, ou collé
-  de côté — 15 à 40 par ville : la scène d'un amuseur (sa foule tombe sur le pas de porte), un
-  kiosque à côté du terminus, un BBQ, une caisse, un arbre. Et ce qui apparaît en jeu : la voie
-  fermée du jour, le bris d'aqueduc, un nid-de-poule, à trois tuiles de la porte du bar.
-  Objectif : **déplacer** ces obstacles-là (jamais re-tirer la ville), tenir le devant des lieux
-  de mission plus large encore, et que les personnages que les missions posent ne se plantent
-  pas sur un pas de porte.
+- ⚠️ **Mesuré avant** (quatre graines) : le pas de porte (deux tuiles) était propre sur toutes les
+  couches — mais un obstacle se lit « devant » dès qu'il est dans l'axe à trois tuiles, ou collé de
+  côté. **16 à 40 objets par ville** : six à douze scènes d'amuseurs (leur foule tombe sur le
+  seuil), deux à quatre kiosques (une roulotte à café contre la porte du terminus, où M1 commence),
+  des réclames, jusqu'à huit BBQ, des caisses, des arbres — et, en jeu, la voie fermée du jour et le
+  bris d'aqueduc à trois tuiles de la porte du bar. Martin a dit oui aux trois : le décor de la
+  rue, plus large ; ce qui apparaît en jeu ; ce que les missions posent.
+- ⚠️ **Livré : `app/devants.py`, à la toute fin de `generer`, sans un dé.** Réserver plus large
+  pendant la construction re-tire la ville (deux tuiles ont fait tomber trois juges sans
+  rapport, une rangée de la trame vingt-six) : on **déplace** donc après coup, sur la ville
+  finie. Le devant d'une porte, c'est trois tuiles dans l'axe et une de chaque côté
+  (`DEVANT`) ; devant un **lieu de mission** — les onze que lisent les objectifs, les scènes
+  et les personnages de `missions`, jamais une liste écrite ici —, deux tuiles de plus de chaque
+  côté et une de plus devant (`DEVANT_DE_MISSION`) : c'est là que le donneur attend et que le char
+  se livre. Ce qui bouche part sur la tuile voisine la plus proche, dans l'ordre de lecture :
+  les **scènes** (dans leur îlot ; leur foule ne tombe plus sur un seuil), les **kiosques** (même
+  sorte de sol, même quartier, leur réclame suit et se déplace si elle n'est plus à portée de
+  marche) et le **décor** mobile (`DECOR_MOBILE` : BBQ, caisses, arbres, poubelles…, sur le même
+  sol, sans couper de passage), en évitant tout ce qui a déjà choisi sa place (quais d'autobus,
+  stations, bacs des éboueurs, pistes de rampe). Rien ne s'y perd — ni kiosque, ni décor — sauf,
+  au pire, deux scènes sur une cinquantaine, faute de place dans leur îlot.
+- ⚠️ **Ce qui apparaît en jeu est MARQUÉ, pas retiré** : la voie fermée du jour, la rue barrée et
+  le bris d'aqueduc se tirent dans leur liste par `hash % longueur`, et une entrée de moins
+  rebat tous les jours — un juge de trafic qui prend « le premier chantier » en a trouvé un autre,
+  planté avant un croisement, et a rougi. Python pose `ecartee: 1` sur ceux qui tombent devant une
+  porte ; `Monde.entraveDuJour` et `Monde.brisDAqueduc` passent à la suivante. Les nids-de-poule,
+  tous actifs à la fois, sortent de leur liste.
+- ⚠️ **Côté jeu** : `ville["devant"]` porte la fenêtre (`cote`, `profondeur`), `Monde.devantDUnePorte`
+  la lit (portes du sol et portes peintes), et `Histoire.tuileLibre` — où les missions posent leur
+  monde : le donneur, les hommes de main, le fuyard, l'escorte — prend la première tuile qui n'est
+  pas devant une porte (à défaut, la première venue : mieux vaut un donneur devant une porte que
+  pas de donneur). Les panneaux de défi aussi.
+- ⚠️ **Trois juges ne tenaient qu'à la place exacte de la roulotte du terminus**, et le déplacer les
+  a dits : `test_ils_partagent_un_plafond…` (un amuseur naît dans la bulle, hors champ — le juge
+  partait du terminus, où toutes les scènes sont à l'écran : **une graine de jeu sur vingt** le
+  voyait naître, avant comme après ; il part maintenant du centre du Faubourg, comme son voisin),
+  `test_plusieurs_dialogues…` (la roulotte et son vendeur poussaient la fille de la Brume à 50 px,
+  hors de portée d'accoster) et `test_celui_qui_tient_son_poste_…` (à l'ouest de Ti-Guy, la roulotte
+  arrêtait le coureur : il mesurait 1 px, la roulotte, pas la laisse). Les trois se jugent
+  maintenant sans elle, sur leur règle ; celui du poste déplace Ti-Guy de huit pixels avant de le
+  lâcher, et rougit si la laisse cesse de le ramener (mutation vue). Trois autres juges qui
+  comparent la ville avec et sans une étape (`test_autobus`, `test_metro`,
+  `test_poste_et_garage`) neutralisent celle-ci des deux côtés, comme la saleté.
+- ⚠️ **Pas touché** : les guichets et les machines encastrées sous une vitrine (elles ne bouchent
+  rien), les lampadaires, les bancs et les abribus (une lampe, un sens, un tracé les suivent), les
+  meubles **dans** les pièces (la porte de sortie de 51 pièces sur 67 a un meuble à trois tuiles :
+  des comptoirs, tous atteignables — non demandé), l'équipe des chantiers (un ouvrier posté à trois
+  tuiles d'une porte sur une graine de six ; le juge veut son compte exact par phase) et la
+  tranchée (aucune devant une porte sur six graines).
+- 31 juges neufs (`test_devants.py`, `test_devants_js.py`), **rouge avant** : sans le
+  déplacement (13 des 23 juges Python), avec l'ancienne `tuileLibre` (le juge des tuiles libres), sans le saut
+  de la voie et du bris écartés (un juge chacun).
+- ⚠️ **Rouge sur `dev` avant moi, pas de moi** : `test_les_voix_de_l_histoire_sont_declarees_par_mission`
+  (m50 pas déclarée), `test_la_carte_du_depot_est_a_jour` (incendies, `test_debug_js`),
+  `test_la_foule_ne_se_traverse_plus` (deux façons de tomber) et l'intro de m97
+  (`test_chaque_intro_se_joue_seule…`, m50 se pose avant). Et `ruff` y trouve six erreurs dans
+  `app/missions/` et `test_argent_sale_js.py`.
 
 ### Les musiques s'enchaînent en fondu
 

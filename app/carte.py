@@ -6718,6 +6718,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ⚠️ LE LOT DU POSTE ET LA PORTE DU GARAGE, APRES TOUT : ils changent des tuiles
     # que toutes les etapes d'avant lisent pour tirer leurs places.
     chantier.poser_les_lots_et_les_rideaux(ville)
+    # ⚠️ RIEN DEVANT UNE PORTE, PLUS LARGE : tout A LA FIN, sur la ville finie, et sans un
+    # de. Reserver plus de tuiles pendant la construction re-tire la ville entiere ; ici on
+    # DEPLACE ce qui bouche (une scene, un kiosque, un BBQ) sur la tuile voisine qui convient.
+    from . import devants as devants_mod
+    devants_mod.deplacer(chantier, ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

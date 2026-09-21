@@ -134,12 +134,19 @@ def test_le_lot_et_la_porte_ne_deplacent_rien_d_autre_dans_la_ville(ville, monke
     lot et de la baie."""
     # ⚠️ Les deux POSEURS neutralises, pas l'etape de la fin : un lot pose trop tot
     # serait aussi dans la ville temoin, et le juge comparerait deux villes glissees.
+    # ⚠️ Et le devant des portes (`devants.deplacer`) des DEUX villes : il vient apres le lot, et
+    # la porte du garage est une porte comme une autre — il ecarte ce qui tombe devant elle
+    # (un nid-de-poule a quatre tuiles de son rideau). C'est son travail, pas un glissement.
+    from app import devants
+    monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
+    avec = carte.generer(graine=ville["graine"])
     monkeypatch.setattr(carte._Chantier, "_stationnement_de_service", lambda self, *a: None)
     monkeypatch.setattr(carte._Chantier, "poser_porte_de_garage", lambda self, *a: None)
     sans = carte.generer(graine=ville["graine"])
     for cle in ("paquets", "ambulants", "reclames", "scenes", "nids_de_poule",
                 "barrieres", "metro", "autobus", "chantiers"):
-        assert ville[cle] == sans[cle], f"le lot du poste ou la porte du garage deplace « {cle} »"
+        assert avec[cle] == sans[cle], f"le lot du poste ou la porte du garage deplace « {cle} »"
+    ville = avec
     lot, pg = ville["stationnement_du_poste"], ville["portes_garage"][0]
     # Les devantures : identiques, sauf l'enseigne au-dessus du rideau (son masque
     # et sa pancarte suivent la porte).
