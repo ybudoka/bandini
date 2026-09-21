@@ -216,6 +216,7 @@ ne bougent pas quand l'ordre de travail change.
 | On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
 | Rien devant une porte, plus large | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
+| Le tour du propriétaire montre ses quatre contacts | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#le-tour-du-propriétaire-montre-ses-quatre-contacts) |
 | Les menus au doigt avancent d'une ligne à la fois | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](#les-menus-au-doigt-avancent-dune-ligne-à-la-fois) |
 | Qui attend l'autobus monte dedans | ✅ **livré** | 17 sept. 2026 | **P3** | **correctif** | [notes](#qui-attend-lautobus-monte-dedans) |
 | Le volant en marche arrière, au choix | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](#le-volant-en-marche-arrière-au-choix) |
@@ -11649,6 +11650,18 @@ franche est l'exception qu'on justifie.
   **le JS ne le lit jamais**. Ce qui s'entend : changer de district, monter dans un char à
   radio, entrer dans un commerce, passer à la poursuite ou en revenir — chaque fois un blanc
   ou un coup sec.
+
+### Le tour du propriétaire montre ses quatre contacts
+
+retour de Martin (20 sept. 2026) : « améliore l'animation de la mission tour du propriétaire
+pour voir toutes les cibles, pas juste la première ».
+
+- ⚠️ **En cours.** Mesuré avant, au banc : l'intro de m6 (Josée, dedans) ne filme que le
+  dépanneur — une seule `coupe`, 159 images à l'écran — alors que Josée nomme quatre portes
+  (dépanneur, cantine, usine, phare) : les trois autres ne se voient jamais. Et sa première
+  réplique (6,03 s de voix, 362 images) est coupée à l'image 229 par la deuxième, parce que la
+  coupe qui la porte ne tient que 230. Objectif : une coupe qui visite les quatre contacts d'un
+  seul aller-retour, calée sur les répliques qui les nomment, sans en couper une.
 
 ### Les menus au doigt avancent d'une ligne à la fois
 
