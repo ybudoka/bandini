@@ -129,3 +129,76 @@ def test_une_passante_parle_toujours_comme_avant(banc):
     }""")
     assert [d["genre"] for d in r["dits"]] == ["femme"], r["dits"]
     assert r["dits"][0]["slug"] is None, "un passant tire sa replique au hasard, comme avant"
+
+
+# ⚠️ LA NUIT QUI DURE (Martin, 21 sept. 2026, devant treize filles en grappe sur le
+# quai : « il faudrait eviter qu'il y ait des attroupements comme ca »). La fille a
+# un `metier`, donc `peupler` ne la compte pas dans la foule, et elle ne rentre
+# jamais par une porte : chaque passant qui rentrait chez lui la nuit laissait sa
+# place, et une chance sur cinq d'une fille de plus. Le banc rejoue cinq cents de
+# ces places au meme endroit — la rue videe de ses flaneurs, puis `peupler`.
+NUIT_QUI_DURE = """
+        L.Jeu.commencer();
+        L.graine(GRAINE);
+        L.B.partie.heure = 0.05;
+        const j = L.B.joueur;
+        const zone = L.Monde.zoneA(j.x, j.y);
+        function filles() {
+            return L.B.entites.filter(function (e) { return e.type === 'pieton' && e.metier === 'compagnie' && e.vivant; });
+        }
+        function laRueSeVide() {
+            for (let k = L.B.entites.length - 1; k >= 0; k--) {
+                const e = L.B.entites[k];
+                if (e.type === 'pieton' && !e.metier && !e.personnage && !e.mission) L.B.entites.splice(k, 1);
+            }
+            L.Entites.indexer();
+        }
+        function ecart(a, b) { return Math.hypot(a.poste.x - b.poste.x, a.poste.y - b.poste.y); }
+"""
+
+
+def test_la_nuit_la_brume_ne_fait_pas_d_attroupement(banc):
+    """Toutes les filles restent : c'est le PLAFOND qu'on regarde. Quelques-unes
+    dans la bulle — la Brume garde ses habituees — pas une grappe."""
+    r = banc("""function (L, o) {""" + NUIT_QUI_DURE.replace("GRAINE", "7") + """
+        for (let i = 1; i <= 500; i++) {
+            laRueSeVide();
+            L.B.t = i * 12;                    // `peupler` ne fait naitre qu'une image sur douze
+            L.Entites.peupler();
+        }
+        const f = filles();
+        let serre = null;
+        f.forEach(function (a, i) { f.slice(i + 1).forEach(function (b) {
+            const d = ecart(a, b); if (serre === null || d < serre) serre = d; }); });
+        return { brume: !!(zone && zone.brume), nuit: L.Monde.estNuit(), filles: f.length, serre: serre };
+    }""")
+    assert r["brume"] and r["nuit"], f"le juge ne rejoue pas une nuit de Brume : {r}"
+    assert r["filles"] >= 1, "la Brume n'a plus d'habituees"
+    assert r["filles"] <= 3, f"{r['filles']} filles dans la bulle : un attroupement"
+    assert r["serre"] is None or r["serre"] >= 160, f"deux coins a {r['serre']:.0f} px"
+
+
+def test_chacune_son_coin(banc):
+    """Une seule fille reste a la fois (la plus jeune) : le plafond ne mord
+    jamais, et c'est l'ECART qu'on regarde. Aucune fille neuve ne prend son coin
+    a moins de dix tuiles de celle qui est deja la."""
+    r = banc("""function (L, o) {""" + NUIT_QUI_DURE.replace("GRAINE", "11") + """
+        const serres = [];
+        let naissances = 0;
+        for (let i = 1; i <= 500; i++) {
+            laRueSeVide();
+            const avant = filles();
+            L.B.t = i * 12;
+            L.Entites.peupler();
+            const neuves = filles().filter(function (e) { return avant.indexOf(e) < 0; });
+            neuves.forEach(function (n) {
+                naissances++;
+                avant.forEach(function (a) { const d = ecart(n, a); if (d < 160) serres.push(Math.round(d)); });
+            });
+            if (neuves.length) avant.forEach(function (a) { L.B.entites.splice(L.B.entites.indexOf(a), 1); });
+        }
+        return { brume: !!(zone && zone.brume), nuit: L.Monde.estNuit(), naissances: naissances, serres: serres };
+    }""")
+    assert r["brume"] and r["nuit"], f"le juge ne rejoue pas une nuit de Brume : {r}"
+    assert r["naissances"] >= 20, f"trop peu de filles pour juger l'ecart : {r['naissances']}"
+    assert r["serres"] == [], f"des coins a moins de dix tuiles d'une autre : {r['serres']}"

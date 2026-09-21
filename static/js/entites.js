@@ -2639,6 +2639,27 @@ const Entites = (function () {
     return n;
   }
 
+  // ⚠️ LA BRUME N'EST PAS UNE FOULE (Martin, 21 sept. 2026 : treize filles en
+  // grappe sur le quai). Elle a un `metier`, donc `foule` ne la compte pas, et
+  // elle ne rentre jamais par une porte : sans plafond a elle, chaque passant
+  // qui rentrait chez lui la nuit laissait une chance sur cinq d'une fille de
+  // plus, et aucune ne repartait. Quelques-unes dans la bulle, chacune son coin
+  // (dix tuiles, un tiers d'ecran).
+  const BRUME_MAX = 3, BRUME_ECART = 160;
+
+  /** Une fille neuve peut-elle prendre un coin ici ? Pas si la bulle en a deja
+      assez, ni si une autre tient le coin d'a cote. Ne tire aucun de. */
+  function coinDeBrumeLibre(x, y) {
+    let n = 0;
+    for (const e of B.entites) {
+      if (e.type !== 'pieton' || e.metier !== 'compagnie' || !e.vivant) continue;
+      if (++n >= BRUME_MAX) return false;
+      const coin = e.poste || e;
+      if (dist2(coin.x, coin.y, x, y) < BRUME_ECART * BRUME_ECART) return false;
+    }
+    return true;
+  }
+
   /** Garde la rue peuplee : on nait hors champ, on s'oublie hors de la bulle. */
   function peupler() {
     let vivants = 0;
@@ -2684,9 +2705,11 @@ const Entites = (function () {
     const sortie = place.porte
       ? { x: place.porte.x, y: place.porte.y, t: 0 } : null;
     if (sortie) Monde.ouvrirPorte(sortie.x, sortie.y);
-    // La nuit, pres du bar et du port, la Brume a ses habituees.
+    // La nuit, pres du bar et du port, la Brume a ses habituees. ⚠️ Le coin se
+    // lit APRES le de : un refus retombe sur la naissance ordinaire, qui tire
+    // ce qu'elle tirait deja.
     const nuit = Monde.estNuit();
-    if (nuit && zone && zone.brume && B.rng() < 0.18) {
+    if (nuit && zone && zone.brume && B.rng() < 0.18 && coinDeBrumeLibre(place.x, place.y)) {
       const fille = archetype('racoleuse');
       if (fille) {
         const e = creerPieton(place.x, place.y, fille);

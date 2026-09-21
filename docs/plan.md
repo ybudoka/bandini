@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (177 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (178 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -77,7 +77,6 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
-| La Brume : chacune son coin (pas d'attroupement de filles la nuit) | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-brume-chacune-son-coin.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | Des garages où l'on entre : semer la police et repeindre | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/des-garages-ou-l-on-entre-semer-la-police-et-repeindre.md#fiche) |
 | La nuit a ses habitudes | ⬜ **en cours** | 21 sept. 2026 | **P2** | ajout | [fiche](jalons/la-nuit-a-ses-habitudes.md#fiche) |

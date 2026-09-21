@@ -194,3 +194,4 @@ Deux documents d'avant la table :
 | Les policiers descendent d'une auto arrêtée | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](les-policiers-descendent-d-une-auto-arretee.md) |
 | Le décor, les bêtes et les gens répondent | ✅ **livré** (1re vague : six gestes — s'asseoir, fouiller, boire, la borne, le pourboire, la photo) | 21 sept. 2026 | **P4** | ajout | [notes](le-decor-les-betes-et-les-gens-repondent.md#notes) |
 | Une décapotable rose et sa conductrice | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [notes](une-decapotable-rose-et-sa-conductrice.md) |
+| La Brume : chacune son coin (pas d'attroupement de filles la nuit) | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](la-brume-chacune-son-coin.md#notes) |
