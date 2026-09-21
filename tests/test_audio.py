@@ -101,7 +101,11 @@ def test_le_poids_audio_reste_raisonnable():
     # de Martin, « fais parler les personnages »), Lulu de m50 et ses sœurs ont fait passer le
     # total à 4,10 Mo. Même raison : elles se chargent d'un coup par « repos » ou par mission,
     # jamais au démarrage ; le plafond borne le dépôt. 5 et pas 4,2 : un chiffre qui tient.
-    assert sum(f.stat().st_size for f in histoire) < 5_000_000
+    # ⚠️ Relevé de 5 à 20 Mo le 20 sept. 2026, sur demande de Martin (« mets un plafond de 20 mo ») :
+    # M16 apporte cent trente-quatre missions, à quelques dizaines de Ko de voix chacune. Ce
+    # plafond ne protège rien de ce que le joueur télécharge (une mission à la fois, jamais au
+    # démarrage) : il borne le dépôt, et 20 Mo dit « on est loin de l'avoir atteint ».
+    assert sum(f.stat().st_size for f in histoire) < 20_000_000
     # LA MUSIQUE (14 sept. 2026). ⚠️ Elle sort du budget des bruitages, et pas
     # pour lui faire de la place : elle ne se telecharge JAMAIS au demarrage,
     # exactement comme les radios. Une ambiance de district arrive quand on

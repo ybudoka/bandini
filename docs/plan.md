@@ -336,6 +336,7 @@ Décisions prises avec Martin (12 sept. 2026) :
 | Voix de l'histoire (13 sept. 2026) | **chaque réplique de l'histoire est dite à voix haute, en plus d'être écrite.** Les dialogues des donneurs (Ti-Guy, Mme Thibodeau, Sgt Bouchard, Josée, Dr Lachance, Marco), le téléphone, les manchettes du journal : une voix ElevenLabs **par personnage**, générée une fois par TTS et versionnée comme le reste. Le texte reste affiché (lisibilité, muet, tactile) ; la voix s'ajoute, elle ne remplace pas. |
 | Tests (17 sept. 2026) | **les tests tournent en local seulement.** La suite ne tenait plus dans le délai d'un runner GitHub (coupée à 25 min, à 94 %, sans un juge tombé) et bloquait toutes les mises en ligne. La CI ne garde que les dépendances et le lint ; le verdict d'une livraison est la suite **complète**, navigateur compris, verte **en local** sur le commit exact poussé sur `main`. Voir « Tests et CI ». |
 | Missions mises en scène (16 sept. 2026) | **chaque mission vient avec ses animations et ses dialogues.** Une mission, c'est trois choses : ses objectifs, ses **répliques dites à voix haute** à chaque temps (appel, intro, pendant, fin, échec) et ses **scènes** (le donneur qui fait un geste, la caméra qui va voir où l'on s'en va, ce qu'on gagne qu'on voit arriver). Une mission à qui il en manque une **n'est pas finie**, et le juge du catalogue la refuse. Les scènes sont des **données** dans `missions.py`, écrites dans un vocabulaire de plans — jamais un script par mission. Voir « Les missions mises en scène ». |
+| Le jeu d'acteur (20 sept. 2026) | **les futures missions se jouent, elles ne se récitent pas.** Demande de Martin : de bonnes animations cinématiques, intéressantes, et de bonnes voix avec de l'émotion — « un bon jeu d'acteur ». Le savoir-faire est écrit dans `docs/jeu-d-acteur.md` : mettre une scène en images (l'image dit le *où*, la voix dit le *pourquoi* ; le geste tombe sur le mot ; le silence se joue dans la scène) et dire une réplique avec une intention, un arc et des balises v3. **Les juges vérifient le câblage, jamais le jeu : c'est Martin qui écoute.** Voir « Le jeu d'acteur ». |
 
 ## La vision (tout ce qui est retenu)
 
@@ -635,6 +636,64 @@ générales :
    m1 retiré. ⚠️ **Avant la première tranche de M16** : c'est ce vocabulaire que ses cent
    missions écriront.
 
+## Le jeu d'acteur (décision du 20 sept. 2026)
+
+_Demande de Martin (20 sept. 2026) :_ « pour les futures missions, je veux que tu documentes dans
+les plans les bonnes pratiques pour faire de bonnes animations cinématiques et intéressantes, et de
+bonnes voix avec de l'émotion — je veux un bon jeu d'acteur. »
+
+**Le constat.** « Les missions mises en scène » a fait qu'une mission **a** des scènes et des voix, et
+les juges le vérifient. Il n'a jamais dit qu'elles soient **bonnes** : une mission peut passer chaque
+test et jouer comme une boîte de dialogue. Le sprite n'a pas de visage — c'est **la voix, la caméra,
+le geste et le temps** qui jouent. Le guide complet est **`docs/jeu-d-acteur.md`** (à lire avant
+d'écrire une scène ou un jeu de voix) ; ce qui suit en est l'essentiel.
+
+**La scène.**
+
+- **Une phrase d'intention** avant le premier plan : « après cette scène, le joueur sait / ressent… ».
+  Sans elle, la scène est une pause.
+- **L'image dit le _où_, la voix dit le _pourquoi_.** On ne décrit pas ce que la caméra montre, et on
+  ne montre pas un lieu que la réplique n'a pas nommé.
+- **Le geste tombe sur le mot qui le porte.** ⚠️ `ensemble` lance le plan suivant **sur la même
+  image** (`demarrerLesSuivants`) : pour qu'un geste **précède** la parole, il faut un `attendre` entre
+  les deux — le lecteur le permet, aucune mission ne le fait encore.
+- **Le silence joue, et il vit dans la scène.** ⚠️ La finition des voix rogne tout silence de plus de
+  0,7 s : un grand silence se joue par un `attendre` (≈ 30–55 images) **après** le `dire`, jamais dans
+  le mp3.
+- **Choisir le geste pour ce qu'il dit** (`montrer` enjeu, `donner` confiance, `prendre` demande,
+  `bras_croises` méfiance, `hausser` désinvolture), et garder la gestuelle d'un personnage d'une
+  mission à l'autre.
+- **Ce que le moteur ne sait pas** — gros plan, zoom, tremblement, regard qui se tourne — s'ajoute en
+  **type de plan** avec son juge de banc, jamais en `if (slug === …)`.
+- **Le défaut est un minimum** : une mission qui a _un moment_ (un revirement, un lien, un passage de
+  témoin) écrit sa scène.
+
+**La voix.**
+
+- **Écrire pour la bouche** (8–110 caractères, une ou deux phrases, québécois parlé) puis **jouer une
+  intention** : un verbe d'action par réplique (convaincre, prévenir, cacher, tester…), et le
+  sous-texte là où le jeu devient intéressant.
+- **Un arc, pas un ton** : la fin sonne autrement que l'intro, l'échec autrement que la fin ; le
+  personnage garde un registre de base et varie autour.
+- **Les balises v3** : liste fermée (`interpretation.BALISES`), en anglais, **un ton au moins par
+  réplique** (jugé), une balise en tête, `…` à **un seul endroit** par phrase et jamais après un mot
+  seul (les trous de 1,2–2 s mesurés le 16 sept.).
+- ⚠️ **Le volume ne joue pas** : tout est normalisé à −19 LUFS, un murmure n'est pas plus faible
+  qu'un cri — le contraste doit venir de la livraison.
+- **La voix se choisit avant le jeu**, pour son grain et son étendue : les balises ne transforment pas
+  une voix (guide ElevenLabs), et Julia reste rauque quoi qu'on régénère.
+- ⚠️ **Chaque réplique de mission veut son entrée dans `interpretation.JEU`, dans le même commit** —
+  sinon `test_chaque_voix_a_son_jeu…` rougit. Le slug suit la **place** de la réplique : on ajoute à la
+  fin, on n'insère pas.
+- **On essaie une réplique avant de tout générer** (`--refaire <slug>`, payant), Martin écoute, puis
+  `--voix` fait le reste ; une finition qui cloche se retouche gratuitement (`--refinir --masters`).
+
+**Ce qui est jugé, et ce qui ne l'est pas.** Les juges existants tiennent le câblage (la scène se
+termine, les mêmes mots, les balises connues, un ton par réplique, la ligne qui attend sa voix). **Rien
+ne juge qu'une scène est belle ni qu'une voix est juste** — et on n'en écrit pas : un juge de « bon jeu »
+serait un juge à vide. La liste de contrôle du § 6 du guide se joue **à l'œil et à l'oreille**, mission
+jouée de l'intro à la fin.
+
 ## Architecture
 
 ### Principe
@@ -672,6 +731,7 @@ et la synthèse de `son.js` comme filet quand un fichier manque.
 | `traversier.py` | le **traversier** (M12) : les deux quais (une coque de 8 × 3 dans l'eau profonde, des tuiles de rive carrossables qui touchent le pont, une rue à côté) et le couloir d'eau libre qui les relie, hors de la ceinture de l'île et loin des amarrages ; l'**horaire** (départ à l'heure juste) ; ne pose rien, ne tire aucun dé | `test_traversier.py`, `test_traversier_js.py` |
 | `tramway.py` | le **tramway** (M12) : la voie double du Faubourg au quai du traversier (une recherche qui ne tourne que dans les boîtes et n'avance que si la voie d'en face existe ; le retour décalé d'une tuile), ses arrêts (les terminus d'abord, au bord du trottoir, loin des abribus) et son horaire ; ne pose rien, ne tire aucun dé | `test_tramway.py`, `test_tramway_js.py` |
 | `neige.py` | la **tempête de neige** (M12, derrière une option) : quand elle tombe (une fonction du jour et de l'heure), ce qu'elle fait (adhérence, freinage, trafic, voile, sol, durée d'une rue déblayée) et la tournée de la **charrue** (une boucle d'autobus) ; la **nuit de déneigement** (le lendemain d'une tempête, un secteur par tempête) et ses panneaux, un au coin de chaque boîte ; ne pose rien, ne tire aucun dé | `test_neige.py`, `test_neige_js.py`, `test_deneigement.py`, `test_deneigement_js.py`, la sonde de `test_navigateur.py` |
+| `incendies.py` | les **incendies** (P4, « le pompier volontaire ») : la règle du feu (`REGLE` : 6 % des heures en ont un, 40 minutes avant qu'il s'éteigne seul, le jet attrape la flamme à 44 px du mur, prime de 80 $) et les **façades** où un feu PEUT se déclarer, tirées de la ville finie — jamais une cour de gang ni un lieu garanti (`_interdites`), 14 au plus, à douze tuiles d'écart ; ne tire aucun dé : QUAND il brûle est une fonction de l'heure, lue par `incendies.js` | la règle tient ses bornes, la prime reste sous ce que rapporte une mission, des candidats sur du marchable et jamais un lieu intouchable, l'incendie voyage dans le paquet |
 | `ile.py` | **L'Île-aux-Corneilles** : le PLAN dessiné de l'île (48 × 30, jugé au chargement), ce que chaque glyphe pose (sol, décor, chaloupe), ses bâtiments (la chapelle et son clocher, le couvent, six maisons, l'usine condamnée, le hangar sans nom) et leurs deux pièces ; `poser` la pose APRÈS la ville et sans dé, ajoute ses chaloupes et sa zone `refuge` en dernier ; `zone()` | `test_ile.py` (la ceinture, ni route ni pont, un îlot par terre ferme, le pari de la nage, la ville qui ne bouge pas), `test_ile_js.py` (la police n'y va pas) |
 | `salete.py` | **la saleté se déplace, elle ne s'ajoute pas** : après les lignes d'autobus, enlève les déchets semés, les tags et les nids-de-poule des quartiers cossus (tous) et ordinaires (un sur deux, `GARDE`, lu à la position) et les repose en quartier pauvre — au plus autant — au pied des murs (`AU_PIED_DES_MURS`, la règle de `mobilier._place_libre`) ; la poubelle d'un quartier pauvre déborde (`poubelle_pleine`) ; le standing vient de `carte.STANDING` (`DISTRICTS[].standing`) | `test_quartiers.py` (la grille et ses refus, zéro en cossu et cinq fois l'ordinaire en pauvre, le total ne monte pas, rien d'autre ne bouge, pied de mur et passages même quand tout part, la rue plantée par standing, `Monde.standingA`) |
 | `devants.py` | **rien devant une porte, plus large** : à la toute fin de `generer`, sans un dé, DÉPLACE ce qui bouche le devant d'une porte (trois tuiles dans l'axe, une de chaque côté ; deux de plus et une de plus devant un lieu de mission, lu dans `missions`) — les scènes, les kiosques et leur réclame, le décor mobile — sur la tuile voisine la plus proche, et MARQUE `ecartee` la voie fermée, la rue barrée et le bris d'aqueduc qui y tombent (le jeu passe à la suivante) ; la fenêtre voyage dans `ville["devant"]` | `test_devants.py` (rien ne reste devant une porte, la ville ne bouge que ce qui bouchait, aucun dé, les lieux de mission), `test_devants_js.py` (`Monde.devantDUnePorte`, `Histoire.tuileLibre`, la voie et le bris écartés) |
@@ -719,6 +779,7 @@ fois en canevas hors écran (personnages 12×16, 4 directions × 3 poses ; véhi
 | 9c | `metro.js` | le **métro** : l'horaire des rames (une boucle, la place de chaque rame ne dépend que de l'heure), la descente par l'édicule (3 $, refusée si recherché), la rame qui entre, s'arrête et repart au quai (peinte par-dessus les deux rangées de tunnel de `metro_quai`), le tunnel qui défile dans les fenêtres de la rame, les portes qui ne s'ouvrent qu'en station, et `B.exterieur` recalé sur l'édicule de la station où l'on est — on remonte ailleurs qu'on est descendu ; la ligne en pointillé sur la grande carte |
 | 9d | `traversier.js` | le **traversier** : sa place ne dépend que de l'heure (`placeA`, un trapèze de vitesse), le pont posé dans la carte à quai (`poser`/`lever`, chaque octet rendu), l'embarquement de ce qui est sur le pont au départ (`aBord` : les chars et le joueur suivent la coque au pixel, un passant égaré est remis sur le quai), Radio-Traversier à bord, la corne, la ligne du HUD, la coque et les panneaux triés avec les passants (comme la foire), le pointillé de la grande carte |
 | 9e | `neige.js` | la **tempête de neige** : l'intensité à l'heure (`intensiteA`), 0 sans l'option ; les coefficients qu'elle donne à la physique (`adherence`, `frein`, `vitesseTrafic`) ; les tuiles déblayées par la charrue (`deneiger`, la seule mémoire) ; la neige au sol par plages et le voile avec ses flocons ; le vent en boucle ; la **nuit de déneigement** (`operationA`, les panneaux qui clignotent, ce qui reste dans les rues du secteur part au lot par `Missions.saisir`) |
+| 9f | `incendies.js` | le **feu de bâtiment** : QUAND il se déclare est une empreinte de l'heure (`feuActifA`, jamais un dé du jeu — deux joueurs voient le même feu), sa façade et son message « INCENDIE », la fumée et les flammes **allumées seulement hors de l'écran** ; l'**extincteur** l'éteint de loin (`majJet`, appelé par `Combat`) et la prime tombe une fois par feu ; `cible` le donne au GPS et aux missions (`histoire.js` attend qu'il soit éteint) ; rien ne se sauvegarde (`oublier` à chaque nouvelle partie) |
 | 10 | `police.js` | `signalerCrime()`, `voit()` (distance, cône, ligne de vue, budget 20 rayons/image), rapports de témoins, machine de recherche (`chaleur`, ★, `vu`, décroissance), apparition par palier, patrouille/poursuite (A\*)/arrestation, autos de poursuite, barrages, hélico, sergent ami, affiches, prison et hôpital, le **refuge** (`auRefuge` : sur l'île, aucun agent, l'hélico repart, rien ne fait monter les étoiles) |
 | 11 | `chantiers.js` | la **phase du jour** de chaque chantier (`phaseVoulue`, la même formule que `chantiers.phase_du_jour`), posée au démarrage puis **hors de vue et hors de toute présence** : tuiles et tableaux dérivés, portes des gens, machines, fenêtres éteintes, cache recuit autour ; `efface(x, y)` pour ce qui tombe avec la maison ; la couche peinte (planches, panneaux, gravats, échafaudage, le mur frappé) ; `travailler()` : le chantier qui **travaille** — la boule au coup de sa pose, la pelle qui racle, les horloges des sons qu'on ne voit pas, la rumeur du plus proche, et le silence la nuit ou dans une pièce ; **la tranchée** (les plaques d'acier dans `carte.plaques`, la couche peinte des plaques et de la rue rapiécée, le morceau recuit) et **l'équipe** (`equiper`, `regarder` : qui tient son poste le jour, rentre la nuit et regarde passer) |
 | 12 | `foire.js` | la foire qui roule : **le petit train** (sa voie en pixels depuis les tuiles `T`, l'arrêt devant quelqu'un, `bloquer` — on ne traverse pas un wagon) et **la montagne russe** (la voie 3D tracée par Python, conduite par l'énergie, deux moitiés cuites) ; rien dans `B.entites`, trié au dessin par `ajouterVisibles` |
@@ -770,7 +831,7 @@ run.py  config.py  pyproject.toml (name bandini, version posée par le crochet p
 .env.example  .gitignore  LICENSE (GPL-3)  README.md
 .claude/settings.json (gardes Claude Code : la carte du dépôt, voir « Tests et CI »)
 .vscode/  launch.json settings.json tasks.json
-docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)  ecrire-drole.md (comment faire rire + l'inventaire des types de texte du jeu)
+docs/plan.md (ce document : la vision, les jalons, et cette carte)  carte.md (l'inventaire de la ville : districts, bâtiments, véhicules, personnages, gangs, piétons, barrières)  comment-monter-les-missions.md (la recette pour une IA : objectifs, dialogues, scènes)  ecrire-drole.md (comment faire rire + l'inventaire des types de texte du jeu)  jeu-d-acteur.md (comment jouer juste : mettre une scène en images, et dire une réplique avec de l'émotion)
 app/  __init__.py routes.py version.py definitions.py hors_ligne.py
       vehicules.py armes.py economie.py recherche.py carte.py magasins.py
       audio.py journal.py pietons.py manettes.py musique.py devantures.py interpretation.py

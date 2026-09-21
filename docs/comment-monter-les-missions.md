@@ -3,7 +3,9 @@
 Ce document explique **comment ajouter une mission de bout en bout** dans
 Bandini, à l'intention d'une IA (ou d'un humain) qui découvre le projet. Il ne
 remplace ni `docs/plan.md` (la vision) ni `docs/carte.md` (l'inventaire de la
-ville) : il raconte la **recette**, pas le pourquoi.
+ville) : il raconte la **recette**, pas le pourquoi. Pour que la mission soit
+**bien jouée** — scènes qui racontent, voix qui ont de l'émotion — lis aussi
+`docs/jeu-d-acteur.md` : les juges vérifient que c'est câblé, pas que c'est juste.
 
 > ⚠️ **Une mission = un fichier.** Les missions vivent dans `app/missions/`,
 > **une par fichier** (`m1.py`, `m2.py`, … `m97.py`) : chacun déclare `MISSION = {…}`
@@ -121,8 +123,9 @@ Règles à respecter :
   cheveux, s peau, p pantalon). Tous les personnages sont ce sprite repeint —
   **aucun sprite par personnage**.
 - **`voix`** : ne pas inventer. Les voix disponibles sont celles du compte
-  ElevenLabs de Martin (`docs/plan.md`, « Les voix de l'histoire ») ;
-  `scripts/audio_elevenlabs.py --voix` les liste, il ne devine jamais.
+  ElevenLabs de Martin (`docs/plan.md`, « Les voix de l'histoire ») ; le serveur
+  MCP `elevenlabs` les liste (`scripts/audio_elevenlabs.py --voix` ne fait que
+  **générer** les répliques), et on ne devine jamais un nom.
 - **`heler` ≤ 16** caractères (jugé `HELER_MAX`) : la bulle se lit en police
   3×5, plus long ça déborde de la tête.
 - **`ou` vide** est réservé aux personnages qui ne se tiennent nulle part (le
@@ -242,6 +245,19 @@ echec, pendant, renvoi, accueil`. Insérer une réplique au milieu renomme tout 
 des mp3 déjà générés deviendraient des 404. On **ajoute** à la fin, ou on
 régénère (`scripts/audio_elevenlabs.py --refaire`).
 
+⚠️ **Chaque réplique veut aussi son jeu.** Le texte que tu écris ici est ce qu'on
+*lit* ; ce qu'ElevenLabs *dit* vit dans `app/interpretation.py` (`JEU`, clé = le
+slug ci-dessus) : les mêmes mots, plus des balises d'émotion en anglais
+(`[worried]`, `[sighs]`), des « … » et de la ponctuation. **Une réplique sans son
+jeu fait rougir `test_interpretation.py`** — à écrire dans le même commit. Un
+verbe d'action par réplique, un ton au moins, un arc du début à la fin de la
+mission : tout est dans `docs/jeu-d-acteur.md` § 3.
+
+```python
+# app/interpretation.py — JEU
+"thibodeau-m2-5": "[relieved] Mon argent! [warmly] T'es un bon garçon, toi.",
+```
+
 ---
 
 ## 6. Les scènes (`scenes`, le vocabulaire de plans)
@@ -265,6 +281,11 @@ régénère (`scripts/audio_elevenlabs.py --refaire`).
 > joueur, le donneur. Jamais `cible` ni `fuyard` : un plan dont le lieu ne se
 > résout pas est **sauté en silence**, et une animation qui ne joue pas est pire
 > qu'une animation absente.
+
+> **Écrire la tienne, oui — mais pour dire quelque chose.** Une phrase d'intention
+> d'abord (« après cette scène, le joueur sait / ressent… »), l'image pour le *où*
+> et la voix pour le *pourquoi*, le geste sur le mot qui le porte, un silence
+> après la réplique qui compte : `docs/jeu-d-acteur.md` § 2.
 
 Une scène est une **liste de plans**, typés dans `TYPES_PLANS`. `scenes.js` les
 joue **sans connaître aucune scène par son nom**. Si une scène ne s'écrit pas
@@ -359,6 +380,7 @@ Avant de dire « c'est fini », lancer :
 uv run python scripts/verifier_missions.py --detail         # ce qui manque, en clair
 uv run python scripts/verifier_table_des_jalons.py          # si une ligne de jalon a été ajoutée
 uv run python -m pytest tests/test_missions.py tests/test_mise_en_scene.py tests/test_missions_en_scene_js.py -q
+uv run python -m pytest tests/test_interpretation.py -q -k "jeu or balises"   # chaque réplique a son jeu
 uv run python scripts/verifier_carte_du_plan.py             # SI un personnage a été ajouté (docs/carte.md !)
 ```
 
@@ -392,7 +414,12 @@ ligne de jalon dans `docs/plan.md`).
 - un plan au type inconnu, aux clés inconnues, aux valeurs invalides ;
 - un acteur ou un lieu inconnu dans un plan ;
 - des répliques manquantes ou en double dans les plans `dire` ;
-- une fin dite par un donneur absent, sans que personne n'aille le voir.
+- une fin dite par un donneur absent, sans que personne n'aille le voir ;
+- une réplique **sans son jeu** dans `interpretation.JEU`, un jeu qui ne dit pas
+  **les mêmes mots** que la boîte, une balise que v3 ne connaît pas, un jeu sans
+  aucune balise de **ton**.
+
+Et ce qu'**aucun** juge ne refuse : une scène plate, une voix fausse. Ça s'écoute.
 
 ---
 
@@ -415,6 +442,10 @@ toutes trois jugées ; elle vit **dans son propre fichier** `app/missions/<slug>
 dans le vocabulaire de `TYPES_PLANS`, et le navigateur ne décide rien. **Mais tu
 n'écris que ce qui la distingue** : les clés par défaut et les deux scènes lui
 sont données — c'est le bloc Lego.
+
+⚠️ **Et elle se joue.** Câblée, elle passe les juges ; bien jouée, elle se souvient.
+`docs/jeu-d-acteur.md` dit comment : une intention par scène, une émotion par
+réplique, un silence là où ça compte.
 
 ⚠️ **Ce document suit le moteur, pas l'inverse.** Les neuf types d'objectifs de
 M16 (`suivre`, `proteger`, `pickpocket`, `payer`, `acheter`, `detruire`,
