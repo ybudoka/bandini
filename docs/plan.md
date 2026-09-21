@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (174 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (175 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |

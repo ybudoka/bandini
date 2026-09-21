@@ -191,3 +191,4 @@ Deux documents d'avant la table :
 | M1 : le char dort dans la ruelle avant qu'on l'y montre | ✅ **livré** | 18 sept. 2026 | **P2** | **correctif** | [notes](m1-le-char-dort-dans-la-ruelle-avant-qu-on-l-y-montre.md) |
 | Le dialogue attend la fin de la sonnerie | ✅ **livré** | 17 sept. 2026 | **P2** | **correctif** | [notes](le-dialogue-attend-la-fin-de-la-sonnerie.md) |
 | La Pointe s'éloigne : le pont s'allonge | ✅ **livré** | 17 sept. 2026 | **P3** | ajout | [notes](la-pointe-s-eloigne-le-pont-s-allonge.md) |
+| Les policiers descendent d'une auto arrêtée | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](les-policiers-descendent-d-une-auto-arretee.md) |

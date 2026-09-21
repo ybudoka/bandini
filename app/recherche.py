@@ -333,7 +333,27 @@ POLICE = {
     "poursuite_abandon_s": 12,      # sans te voir pendant ce temps, l'agent retourne patrouiller
     "chemin_toutes_les_images": 30, # l'agent redemande son chemin (A*) a ce rythme
     "auto_vitesse": 0.85,           # fraction de la vitesse max de l'auto-patrouille en poursuite
-    "auto_sortent_px": 60,          # si tu es a pied, les agents descendent a cette distance
+    "auto_sortent_px": 60,          # si tu es a pied, l'auto s'arrete a cette distance et l'equipage descend
+    # ⚠️ L'EQUIPAGE NE DESCEND PAS D'UNE AUTO QUI ROULE (retour de Martin : « les
+    # policiers en sortent trop vite et se font ecraser par leur propre voiture »).
+    # Deux vitesses REELLES (px/image, celle qui ecrase : `Math.hypot(vx, vy)`) :
+    # le PASSAGER saute sous la premiere — seul, le conducteur tient le volant —,
+    # et le CONDUCTEUR descend sous la seconde, auto arretee ; une auto a
+    # laquelle l'equipage tourne le dos ne roule plus. La premiere reste sous le
+    # seuil qui renverse un pieton (`vehicules.PHYSIQUE.renverse_vitesse_min`).
+    "auto_passager_saute_sous": 0.8,
+    "auto_arret_sous": 0.15,
+    # Le coup de frein d'une auto qui s'arrete sur toi (multiplie le frein de la
+    # fiche). Au frein normal elle mettait 47 px a s'arreter depuis les 60 px
+    # de `auto_sortent_px` : elle finissait contre toi. Ceci la garde a un char.
+    "auto_frein": 2.0,
+    # ⚠️ DEUX AGENTS PAR AUTO, UN AU VOLANT (retour de Martin). Les deux dehors,
+    # l'auto reste GAREE jusqu'a ce que l'un d'eux reprenne le volant ; au volant,
+    # un seul peut etre dehors. Personne n'est fabrique : on descend, on remonte.
+    "auto_equipage": 2,
+    "auto_rappel_px": 480,          # un agent plus loin que ca de son auto n'est plus de son equipage
+    "auto_regagne_s": 15,           # ... ni celui qui n'a pas regagne l'auto en ce temps
+    "auto_attend_px": 40,           # l'auto attend l'equipier qui arrive en courant, a cette distance
     "tir_cadence_s": 1.2,           # a 3 etoiles et plus, un agent tire a ce rythme
     "tir_portee_tuiles": 9,
     "affiches_max": 6,              # affiches « Recherche » dans la bulle a partir de 2 etoiles

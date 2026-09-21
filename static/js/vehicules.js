@@ -891,6 +891,11 @@ const Vehicules = (function () {
         if (d >= min) continue;
         const nx = dx / d, ny = dy / d;
         p.x = c.x + nx * min; p.y = c.y + ny * min;
+        // ⚠️ UNE AUTO DE PATROUILLE NE RENVERSE PAS SES AGENTS : elle les pousse
+        // hors de sa carrosserie, c'est tout. L'equipage descend d'une auto
+        // arretee (`Police.commandes`) ; ceci n'est que le filet — un agent reste
+        // au flanc d'une auto qui repart, une autre patrouille le frole.
+        if (v.conducteur === 'police' && p.agent) continue;
         if (vitesse >= ph.renverse_vitesse_min && !p.intouchable && p.etat !== 'assomme') {
           const degats = Math.round(vitesse * ph.renverse_degats_par_px);
           const avant = p.vivant;

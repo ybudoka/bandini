@@ -414,6 +414,8 @@ const Police = (function () {
       if (a.etat !== 'flane') { a.etat = 'flane'; a.but = null; a.chemin = null; }
       return false;
     }
+    // Il rentre a son auto : rien d'autre ne le regarde tant qu'il n'y est pas (`regagner`).
+    if (a.etat === 'regagne' && regagner(a)) return true;
     // Regarder : une image sur trois, c'est le budget.
     if ((B.t + a.id) % p.regarde_toutes_les_images === 0) {
       const cible = j.dansVehicule ? j.dansVehicule : j;
@@ -507,7 +509,9 @@ const Police = (function () {
     const j = B.joueur, r = B.recherche;
     if (B.t % 45 !== 0) return;
     const voulu = palier().autos;
-    const presentes = autos();
+    // ⚠️ Une auto dont l'equipage est mort reste garee, mais ne compte plus : sans ca, deux agents tues
+    // et la police n'enverrait plus jamais de renfort.
+    const presentes = autos().filter(function (a) { return !abandonnee(a); });
     if (presentes.length >= voulu) return;
     // Naissance sur une voie, hors ecran, dans le sens de la voie.
     const c = Monde.carte;
@@ -525,25 +529,166 @@ const Police = (function () {
     }
   }
 
+  /** Freiner SANS reculer. ⚠️ `frein` a l'arret, c'est la MARCHE ARRIERE
+      (`majPhysique` : sous 0,15 px/image, le frein pousse a reculer) : une auto
+      de patrouille a qui on disait « freine » s'arretait, puis reculait a
+      1,45 px/image — le seuil qui renverse un pieton est a 1,2 — et repartait.
+      On ne freine donc que tant qu'elle avance ; sous ce seuil, plus de frein,
+      et la friction finit le travail. */
+  function freiner(v, force) {
+    return { gaz: 0, frein: v.vitesse > 0.15 ? (force || 1) : 0, direction: 0, freinMain: false };
+  }
+
+  /** La portiere d'une auto arretee : `cote` = +1 le passager, -1 le conducteur.
+      Comme `Vehicules.descendre` : de son cote si c'est libre, sinon de l'autre,
+      sinon derriere, sinon dans l'auto (la collision le pousse dehors). Toujours
+      a cote de la carrosserie, jamais dans l'axe : c'est la que l'auto roule. */
+  function portiere(v, cote) {
+    const cotes = [v.angle + cote * Math.PI / 2, v.angle - cote * Math.PI / 2, v.angle + Math.PI];
+    for (const a of cotes) {
+      const ecart = a === cotes[2] ? v.def.longueur / 2 + 8 : v.def.largeur / 2 + 8;
+      const x = v.x + Math.cos(a) * ecart, y = v.y + Math.sin(a) * ecart;
+      if (!Monde.bloque(Math.floor(x / TT), Math.floor(y / TT), Monde.MASQUE_PIETON)) return { x: x, y: y };
+    }
+    return { x: v.x, y: v.y };
+  }
+
+  // --- L'equipage : deux agents par auto, un au volant, jamais un de plus ----------------------
+  //
+  // ⚠️ (retour de Martin) UNE AUTO A DEUX AGENTS, ET UN SEUL CONDUIT. `v.equipage` = combien
+  // en restent en vie (deux a la naissance) ; `v.equipe` = ceux qui sont DEHORS, des agents de
+  // la ville ; ce qui n'est pas dehors est a bord. Deux regles en decoulent :
+  // - l'auto ne roule que si quelqu'un est au volant : les deux dehors, elle reste GAREE
+  //   (vitesse tenue a zero) jusqu'a ce que l'un d'eux REPRENNE LE VOLANT — ils reviennent a
+  //   pied (`regagner`) des que tu n'es plus sur eux ;
+  // - au volant, un seul peut etre dehors : le passager.
+  // Personne n'est FABRIQUE : on descend de l'auto, on y remonte, et le compte ne change pas.
+  // Il ne baisse que quand un agent meurt, ou s'est perdu trop loin de son auto.
+
+  /** Met le compte a jour et le rend : { dehors, abord }. Un agent mort ne remonte pas (l'equipage
+      perd un homme) ; un agent que la ville a retire est considere remonte. */
+  function equipage(v) {
+    if (v.equipage === undefined) { v.equipage = reglages().auto_equipage; v.equipe = []; }
+    v.equipe = v.equipe.filter(function (a) {
+      if (!a.vivant) { v.equipage--; return false; }
+      return B.entites.indexOf(a) >= 0;
+    });
+    return { dehors: v.equipe.length, abord: v.equipage - v.equipe.length };
+  }
+
+  /** Une auto dont l'equipage est mort : personne ne la reprendra, elle ne compte plus. */
+  function abandonnee(v) { return v.equipage !== undefined && v.equipage <= 0; }
+
+  /** Un agent quitte l'equipage : mort, ou perdu trop loin. L'auto ne le compte plus. */
+  function perdreUnEquipier(v, a) {
+    v.equipe = v.equipe.filter(function (x) { return x !== a; });
+    v.equipage--;
+    a.auto = null;
+    if (a.etat === 'regagne') { a.etat = 'flane'; a.but = null; a.chemin = null; }
+  }
+
+  /** Garee : personne au volant. Ni vitesse, ni marche arriere, ni glissade. */
+  function garee(v) {
+    v.vitesse = 0; v.vx = 0; v.vy = 0;
+    return { gaz: 0, frein: 0, direction: 0, freinMain: false };
+  }
+
+  /** Un agent descend de l'auto, par sa portiere, et se tourne vers toi. */
+  function faireDescendre(v, cote) {
+    const j = B.joueur, porte = portiere(v, cote);
+    const a = creerAgent(porte.x, porte.y, 'poursuit');
+    Entites.regarder(a, j.x - porte.x, j.y - porte.y);
+    a.auto = v;
+    v.equipe.push(a);
+    Son.depuis(v, function () { Son.SFX.porte('vehicule'); });
+  }
+
+  /** Tu es a pied et l'auto est sur toi : elle S'ARRETE, puis l'equipage descend.
+
+      ⚠️ PAS AVANT (retour de Martin). Les deux agents naissaient a ±14 px de
+      l'auto, dans l'axe du monde et non de sa carrosserie, pendant qu'elle roulait
+      encore a 2,5–3,7 px/image : ecrases en une image, par leur propre voiture.
+      Maintenant :
+      - le PASSAGER saute seul quand l'auto est descendue au pas
+        (`auto_passager_saute_sous`, sous le seuil qui renverse) — le conducteur
+        tient le volant et continue de freiner ;
+      - le CONDUCTEUR descend quand elle est arretee (`auto_arret_sous`) ;
+      - equipage dehors, l'auto est GAREE : aucune marche arriere, immobile, jusqu'a ce
+        qu'un agent ait repris le volant (`commandes`). */
+  function stationner(v, p) {
+    const roule = Math.hypot(v.vx, v.vy);
+    if (equipage(v).abord >= 2 && roule < p.auto_passager_saute_sous) faireDescendre(v, 1);
+    if (equipage(v).abord === 1 && roule < p.auto_arret_sous) faireDescendre(v, -1);
+    return equipage(v).abord <= 0 ? garee(v) : freiner(v, p.auto_frein);
+  }
+
+  /** Personne au volant, et tu n'es plus sur eux : les agents dehors REGAGNENT l'auto. */
+  function rappeler(v, p) {
+    for (const a of v.equipe.slice()) {
+      if (Math.hypot(a.x - v.x, a.y - v.y) > p.auto_rappel_px) { perdreUnEquipier(v, a); continue; }
+      if (a.etat === 'regagne' || a.etat === 'assomme' || a.etat === 'attaque' || a.recul > 0) continue;
+      a.etat = 'regagne'; a.regagneDepuis = B.t; a.chemin = null; a.cheminT = 0;
+    }
+  }
+
+  /** Tu es de nouveau sur eux : ceux qui rentraient a l'auto reprennent la chasse. */
+  function lacher(v) {
+    for (const a of v.equipe) if (a.etat === 'regagne') { a.etat = 'poursuit'; a.chemin = null; a.vuT = 0; }
+  }
+
+  /** Un equipier arrive en courant : l'auto l'attend, une seconde, pas plus. */
+  function attendUnEquipier(v, p) {
+    return v.equipe.some(function (a) { return a.etat === 'regagne' && Math.hypot(a.x - v.x, a.y - v.y) < p.auto_attend_px; });
+  }
+
+  /** L'agent monte : il quitte la ville et l'auto le compte a bord. */
+  function remonter(a, v) {
+    v.equipe = v.equipe.filter(function (x) { return x !== a; });
+    a.auto = null;
+    Son.depuis(v, function () { Son.SFX.porte('vehicule'); });
+    Entites.retirer(a);
+  }
+
+  /** L'agent retourne a son auto pour reprendre le volant (ou la place du passager). Rend true
+      tant que la police le dirige ; sinon il a change d'etat, et la suite de `gere` le traite. */
+  function regagner(a) {
+    const v = a.auto, p = reglages();
+    if (!v || v.etat === 'epave' || B.entites.indexOf(v) < 0) { a.auto = null; a.etat = 'flane'; a.chemin = null; return false; }
+    if (B.recherche.etoiles <= 0) { a.etat = 'flane'; a.but = null; a.chemin = null; return false; }
+    if (B.t - a.regagneDepuis > p.auto_regagne_s * 60) { perdreUnEquipier(v, a); return false; }
+    // L'auto est deja repartie sans lui (l'autre a repris le volant) : il reprend la chasse a pied.
+    if (Math.hypot(v.vx, v.vy) > p.auto_arret_sous) { a.etat = 'poursuit'; a.chemin = null; a.vuT = 0; return false; }
+    if (Math.hypot(v.x - a.x, v.y - a.y) < v.def.largeur / 2 + 12) { remonter(a, v); return true; }
+    suivre(a, { x: v.x, y: v.y }, defs().vitesses.policier * 1.25);
+    return true;
+  }
+
   /** Les commandes d'une auto de patrouille. Elle suit les RAILS de la ville
       vers toi (feux et stops brules, sortie choisie vers toi a chaque
       croisement) et ne quitte les rails pour te FONCER dessus que quand elle
       te voit de pres. Rend 'rails' (le trafic la conduit) ou des commandes
-      (la physique la conduit). Foncer tout droit de loin finissait dans un mur. */
+      (la physique la conduit). Foncer tout droit de loin finissait dans un mur.
+
+      ⚠️ SANS PERSONNE AU VOLANT, ELLE NE ROULE PAS : les deux agents dehors, elle reste garee
+      — immobile — jusqu'a ce que l'un d'eux la reprenne (`regagner`). */
   function commandes(v) {
     const j = B.joueur, r = B.recherche, p = reglages();
+    const eq = equipage(v);
     v.poursuite = r.etoiles > 0;
-    if (r.etoiles <= 0) { v.surRails = false; return { gaz: 0, frein: 1, direction: 0, freinMain: false }; }
+    if (r.etoiles <= 0) { v.surRails = false; return eq.abord > 0 ? freiner(v) : garee(v); }
     const cible = j.dansVehicule ? j.dansVehicule : j;
     const d = Math.hypot(cible.x - v.x, cible.y - v.y);
-    if (voit(v, cible.x, cible.y, 'auto_police', true) || d < 60) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
-    if (!j.dansVehicule && (d < p.auto_sortent_px || (v.descendus && d < p.auto_sortent_px * 2.5))) {
-      // Tu es a pied : les agents descendent, et l'auto reste la (pas de va-et-vient).
-      if (!v.descendus) { v.descendus = true; creerAgent(v.x + 14, v.y, 'poursuit'); creerAgent(v.x - 14, v.y, 'poursuit'); }
+    // Une auto sans conducteur ne voit rien : ses agents, dehors, voient pour eux.
+    if (eq.abord > 0 && (voit(v, cible.x, cible.y, 'auto_police', true) || d < 60)) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; }
+    if (!j.dansVehicule && (d < p.auto_sortent_px || (eq.dehors && d < p.auto_sortent_px * 2.5))) {
+      // Tu es a pied : elle s'arrete, l'equipage descend, et elle reste la (pas de va-et-vient).
       v.surRails = false;
-      return { gaz: 0, frein: 1, direction: 0, freinMain: false };
+      lacher(v);
+      return stationner(v, p);
     }
-    if (v.descendus && d > p.auto_sortent_px * 2.5) v.descendus = false;   // tu t'es sauve loin : elle repart, pleine
+    // Tu t'es sauve loin (ou tu roules) : personne au volant, elle reste garee, et les agents rentrent.
+    if (eq.abord <= 0) { v.surRails = false; rappeler(v, p); return garee(v); }
+    if (eq.dehors && attendUnEquipier(v, p)) { v.surRails = false; return garee(v); }
     // De pres et a vue : on quitte les rails et on fonce. Coince (un mur) : on y retourne.
     const direct = d < 140 && Monde.ligneLibre(v.x, v.y, cible.x, cible.y);
     const coince = !v.surRails && (v.immobileT || 0) > 45;
@@ -762,6 +907,6 @@ const Police = (function () {
 
   return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
-           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos,
+           creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            helico, majHelico, dessinerHelico, lampeHelico, barrages, poserBarrage, maj };
 })();

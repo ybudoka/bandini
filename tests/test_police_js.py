@@ -509,3 +509,246 @@ def test_un_casier_epais_te_fait_reconnaitre_de_plus_loin(banc, paquet):
         "jumelles, pas un signalement (%s)" % r
     )
     assert r["anonymeVierge"] == r["vierge"], "le juge mesure deux choses différentes : %s" % r
+
+
+# --- L'equipage d'une auto de patrouille --------------------------------------------------
+
+# Une auto de patrouille lancee sur toi, a pied, sur une ligne droite de chaussee
+# qu'on trouve dans la ville (seize tuiles, deux de large, sans mur entre les deux).
+# Rien d'autre ne roule ni ne marche : on juge l'equipage, pas la circulation.
+# (L'aide vit DANS la fonction du banc : le banc ne prend qu'une expression.)
+PATROUILLE = """function (L, o) {
+    function lancer(L, vitesse) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, TT = L.TT, c = L.Monde.carte;
+        let site = null;
+        chercher: for (let ty = 3; ty < c.h - 3; ty++) for (let tx = 3; tx < c.w - 18; tx++) {
+            let ok = true;
+            for (let k = 0; k < 16 && ok; k++) if (!L.Monde.estChaussee(tx + k, ty) || !L.Monde.estChaussee(tx + k, ty + 1)) ok = false;
+            if (ok && L.Monde.ligneLibre(tx * TT, ty * TT + 8, (tx + 15) * TT, ty * TT + 8)) { site = { tx: tx, ty: ty }; break chercher; }
+        }
+        if (!site) throw new Error('aucune ligne droite de seize tuiles de chaussee dans la ville');
+        for (const e of L.B.entites.slice()) if (e !== j && (e.type === 'vehicule' || e.type === 'pieton')) L.Entites.retirer(e);
+        j.x = (site.tx + 15) * TT + 8; j.y = site.ty * TT + 8; j.dansVehicule = null;
+        j.intouchable = true;                       // on observe : personne ne t'arrete
+        L.Police.ajouterChaleur(9);                 // trois etoiles : l'auto vient
+        const v = L.Vehicules.creer('police', (site.tx + 2) * TT + 8, site.ty * TT + 8, 0,
+                                    { conducteur: 'police', etat: 'roule', sirene: true, poursuite: true });
+        v.vitesse = vitesse; v.vx = vitesse; v.vy = 0;
+        L.Entites.indexer();
+        return { j: j, v: v, site: site, avant: new Set(L.Police.agents().map(function (a) { return a.id; })) };
+    }
+"""
+
+
+def test_l_equipage_ne_descend_que_d_une_auto_arretee(banc, paquet):
+    """⚠️ Retour de Martin : « à plusieurs étoiles, la police arrive en voiture
+    rapidement, les policiers en sortent trop vite et se font écraser par leur
+    propre voiture. Quand les policiers en sortent, le véhicule ne devrait plus
+    rouler, à moins qu'un seul policier en sorte. »
+
+    Ils naissaient à ±14 px de l'auto pendant qu'elle roulait encore à 2,5–3,7
+    px/image, et mouraient en une image. Puis elle reculait sur leurs corps (le
+    frein, à l'arrêt, c'est la marche arrière : −1,45 px/image, au-dessus du
+    seuil qui renverse). Le juge tient les quatre choses ensemble : jamais deux
+    dehors tant qu'elle roule, l'auto GARÉE une fois l'équipage dehors, aucune
+    marche arrière, et personne d'écrasé."""
+    p = paquet["recherche"]["police"]
+    r = banc(PATROUILLE + """
+        const { j, v, avant } = lancer(L, 3.5);
+        const equipage = new Set();
+        const sorties = [];
+        let dehorsEnRoulant = 0, vitesseMin = 0, ecart = 0, garee = null, blesses = 0, images = 0;
+        for (let i = 0; i < 260; i++) {
+            o.frame(1);
+            const roule = Math.hypot(v.vx, v.vy);
+            vitesseMin = Math.min(vitesseMin, v.vitesse);
+            const dehors = L.Police.equipageDe(v).dehors;
+            if (dehors > equipage.size) {
+                const neufs = L.B.entites.filter(function (a) { return a.agent && !avant.has(a.id) && !equipage.has(a); })
+                    .sort(function (a, b) { return Math.hypot(a.x - v.x, a.y - v.y) - Math.hypot(b.x - v.x, b.y - v.y); });
+                for (const a of neufs.slice(0, dehors - equipage.size)) {
+                    equipage.add(a);
+                    const dx = a.x - v.x, dy = a.y - v.y, c = Math.cos(v.angle), s = Math.sin(v.angle);
+                    sorties.push({ i: i, roule: roule, axial: dx * c + dy * s, lateral: -dx * s + dy * c });
+                }
+            }
+            if (roule > L.B.defs.recherche.police.auto_arret_sous) dehorsEnRoulant = Math.max(dehorsEnRoulant, dehors);
+            if (dehors >= 2) {
+                garee = garee || { x: v.x, y: v.y };
+                ecart = Math.max(ecart, Math.hypot(v.x - garee.x, v.y - garee.y));
+                images++;
+            }
+            for (const a of equipage) if (!a.vivant || a.vie < a.vieMax || a.etat === 'assomme') blesses++;
+        }
+        return { dehors: L.Police.equipageDe(v).dehors, equipage: equipage.size, sorties: sorties, dehorsEnRoulant: dehorsEnRoulant,
+                 vitesseMin: vitesseMin, ecart: ecart, blesses: blesses, images: images, demi: v.def.largeur / 2, longueur: v.def.longueur };
+    }""")
+    assert r["dehors"] == 2 and r["equipage"] == 2, "l'auto s'est arrêtée sur le joueur et personne n'en est sorti : %s" % r
+    premier, second = r["sorties"]
+    # ⚠️ « A moins qu'un seul policier en sorte » : le passager saute seul, au pas,
+    # et le conducteur reste au volant. Deux dehors, elle ne roule plus.
+    assert premier["roule"] < p["auto_passager_saute_sous"], "le passager saute d'une auto lancée : %s" % r
+    assert second["roule"] < p["auto_arret_sous"], "le conducteur descend d'une auto qui roule encore : %s" % r
+    assert second["i"] > premier["i"], "les deux sortent dans la même image : c'est l'ancien « tous d'un coup » : %s" % r
+    assert r["dehorsEnRoulant"] <= 1, "deux agents dehors alors que l'auto roule : %s" % r
+    # ⚠️ Par la portière, pas dans l'axe : c'est la que l'auto roule.
+    for s in r["sorties"]:
+        assert abs(s["lateral"]) >= r["demi"] + 4, "un agent descend contre la carrosserie, dans l'axe de l'auto : %s" % r
+        assert abs(s["axial"]) < r["longueur"] / 2, "un agent descend loin devant ou derrière l'auto : %s" % r
+    assert premier["lateral"] * second["lateral"] < 0, "les deux descendent du même côté : %s" % r
+    assert r["images"] > 100, "le juge n'a pas regardé l'auto garée assez longtemps : %s" % r
+    assert r["ecart"] < 0.5, "l'auto roule encore, équipage dehors : %s" % r
+    assert r["vitesseMin"] > -0.05, "l'auto recule (le frein à l'arrêt, c'est la marche arrière) : %s" % r
+    assert r["blesses"] == 0, "un agent a été blessé ou écrasé par son auto : %s" % r
+
+
+def test_une_auto_de_patrouille_ne_renverse_pas_ses_agents(banc, paquet):
+    """Le filet, sous la règle : même si un agent se trouve devant une auto de
+    patrouille qui roule (elle repart avec l'équipage au flanc, une autre
+    patrouille la frôle), elle le **pousse** hors de sa carrosserie — elle ne le
+    renverse pas. Sans le filet, le même agent est mort en quelques images."""
+    r = banc(PATROUILLE + """
+        const { v } = lancer(L, 3.5);
+        // L'agent se tient dans l'axe, entre l'auto et toi, a la portee d'un pas.
+        const a = L.Police.creerAgent(v.x + 40, v.y, 'flane');
+        L.Entites.indexer();
+        let vitesseAuChoc = 0, touche = false;
+        for (let i = 0; i < 20; i++) {
+            a.vx = 0; a.vy = 0; a.etat = 'flane';                // il ne bouge pas : on le retient dans l'axe
+            o.frame(1);
+            if (Math.hypot(a.x - v.x, a.y - v.y) < v.def.longueur / 2 + a.r + 2) { touche = true; vitesseAuChoc = Math.max(vitesseAuChoc, Math.hypot(v.vx, v.vy)); }
+        }
+        return { touche: touche, vitesseAuChoc: vitesseAuChoc, vivant: a.vivant, vie: a.vie, vieMax: a.vieMax, etat: a.etat };
+    }""")
+    assert r["touche"], "le juge n'a jamais mis l'agent sous l'auto : %s" % r
+    assert r["vitesseAuChoc"] >= paquet["conduite"]["physique"]["renverse_vitesse_min"], (
+        "l'auto n'allait pas assez vite pour renverser : %s" % r)
+    assert r["vivant"] and r["vie"] == r["vieMax"] and r["etat"] != "assomme", "l'auto de patrouille a renversé son propre agent : %s" % r
+
+
+def test_la_chasse_finie_l_auto_freine_et_ne_recule_pas(banc):
+    """Le même défaut, sans équipage : `frein` à l'arrêt, c'est la marche
+    arrière. Quand la recherche tombe à zéro, l'auto de patrouille freinait —
+    puis reculait à 1,45 px/image tant qu'on la voyait."""
+    r = banc(PATROUILLE + """
+        const { v } = lancer(L, 3.5);
+        o.frame(20);
+        L.Police.remiseAZero();
+        let vitesseMin = 0;
+        for (let i = 0; i < 200; i++) { o.frame(1); vitesseMin = Math.min(vitesseMin, v.vitesse); }
+        return { vitesseMin: vitesseMin, vitesse: v.vitesse, x: v.x };
+    }""")
+    assert r["vitesseMin"] > -0.05, "la chasse finie, l'auto de patrouille recule : %s" % r
+    assert abs(r["vitesse"]) < 0.05, "la chasse finie, l'auto ne s'est pas arrêtée : %s" % r
+
+
+# Les deux agents sont descendus, l'auto est garee : le point de depart des juges qui suivent.
+DEUX_DEHORS = PATROUILLE + """
+    function descendreLesDeux(L, o, v) {
+        for (let i = 0; i < 300 && L.Police.equipageDe(v).dehors < 2; i++) o.frame(1);
+        return L.Police.equipageDe(v).dehors === 2;
+    }
+"""
+
+
+def test_deux_dehors_l_auto_reste_immobile_jusqu_a_ce_qu_un_agent_reprenne_le_volant(banc):
+    """⚠️ Retour de Martin : « si deux policiers sortent du véhicule, le véhicule
+    reste immobile, à moins qu'un policier reprenne le volant — mais toujours
+    logique : deux policiers par véhicule, un prend le volant, un seul peut en
+    ressortir. »
+
+    Avant, l'auto « repartait pleine » dès que tu étais à 150 px, ses deux
+    agents restant à pied : une auto sans conducteur qui roule, et, la fois
+    d'après, deux agents de plus. Maintenant : personne au volant, elle est
+    garée ; les agents rentrent à pied ; le premier monté la reprend. Le juge
+    tient l'arithmétique à chaque image — dehors + à bord = deux —, l'immobilité
+    IMAGE PAR IMAGE tant que personne n'est à bord, et qu'elle repart ensuite.
+    Le joueur s'éloigne à pied : les agents le suivent un moment, puis rentrent."""
+    r = banc(DEUX_DEHORS + """
+        const { j, v, site } = lancer(L, 3.5);
+        if (!descendreLesDeux(L, o, v)) return { erreur: 'l equipage n est pas descendu' };
+        const TT = L.TT, bout = site.tx * TT + 24;
+        let sansVolant = 0, pas = 0, faux = 0, reprise = null, plusLoin = 0, maxAutour = 0, loinDeLAuto = 0, plusLoinApres = 0;
+        let avant = { x: v.x, y: v.y, abord: 0 }, depart = null;
+        for (let i = 0; i < 800; i++) {
+            j.x = Math.max(bout, j.x - 2);                          // tu files vers l'autre bout de la ligne
+            o.frame(1);
+            const eq = L.Police.equipageDe(v);
+            if (eq.dehors + eq.abord !== 2 || eq.abord < 0 || eq.dehors < 0) faux++;
+            maxAutour = Math.max(maxAutour, L.B.entites.filter(function (a) { return a.auto === v; }).length);
+            plusLoin = Math.max(plusLoin, Math.hypot(j.x - v.x, j.y - v.y));
+            for (const a of v.equipe) loinDeLAuto = Math.max(loinDeLAuto, Math.hypot(a.x - v.x, a.y - v.y));
+            // Personne a bord, ni a l'image d'avant : elle n'a pas bouge d'un pixel.
+            if (eq.abord === 0 && avant.abord === 0) {
+                sansVolant++;
+                pas = Math.max(pas, Math.hypot(v.x - avant.x, v.y - avant.y), Math.hypot(v.vx, v.vy));
+            }
+            if (eq.abord >= 1 && reprise === null) { reprise = i; depart = { x: v.x, y: v.y }; }
+            if (depart) plusLoinApres = Math.max(plusLoinApres, Math.hypot(v.x - depart.x, v.y - depart.y));
+            avant = { x: v.x, y: v.y, abord: eq.abord };
+        }
+        return { plusLoin: plusLoin, sansVolant: sansVolant, pas: pas, faux: faux, reprise: reprise, loinDeLAuto: loinDeLAuto,
+                 apres: plusLoinApres, maxAutour: maxAutour, final: L.Police.equipageDe(v) };
+    }""")
+    assert "erreur" not in r, r
+    assert r["plusLoin"] > 160, "le juge est faux : le joueur est resté sur l'auto : %s" % r
+    assert r["faux"] == 0, "le compte de l'équipage est faux (dehors + à bord != 2) : %s" % r
+    assert r["maxAutour"] <= 2, "plus de deux agents pour une auto : %s" % r
+    assert r["loinDeLAuto"] > 30, "le juge est faux : les agents n'ont jamais quitté l'auto : %s" % r
+    assert r["sansVolant"] > 30, "le juge n'a pas vu l'auto sans conducteur assez longtemps : %s" % r
+    # ⚠️ LE COEUR : personne à bord, elle ne bouge pas — ni position, ni vitesse, image par image.
+    assert r["pas"] < 0.05, "l'auto roule sans personne au volant : %s" % r
+    assert r["reprise"] is not None, "personne n'a repris le volant : l'auto est garée pour toujours : %s" % r
+    assert r["apres"] > 30, "un agent a repris le volant et l'auto ne repart pas : %s" % r
+
+
+def test_un_seul_dehors_l_auto_peut_rouler_mais_pas_les_deux(banc):
+    """« Un policier prend le volant, un seul policier peut en ressortir. » Le
+    passager seul, dehors, ne retient pas l'auto (il saute pendant qu'elle finit
+    de freiner) ; le conducteur qui descend à son tour, si. Et quand elle roule,
+    jamais deux dehors — sur tout le trajet : l'arrivée, le départ, le retour."""
+    r = banc(PATROUILLE + """
+        const { j, v, site } = lancer(L, 3.5);
+        let deuxDehorsEnRoulant = 0, unSeulEnRoulant = 0, deuxDehors = 0, plusDeDeux = 0;
+        // Elle arrive, le passager saute, le conducteur descend ; tu files ; l'un remonte ; elle repart.
+        for (let i = 0; i < 1000; i++) {
+            if (i === 260) { j.x = site.tx * L.TT + 16; j.y = site.ty * L.TT + 8; }
+            o.frame(1);
+            const eq = L.Police.equipageDe(v), roule = Math.hypot(v.vx, v.vy);
+            if (eq.dehors > 2) plusDeDeux++;
+            if (eq.dehors === 2) deuxDehors++;
+            if (roule > 0.15 && eq.dehors === 2) deuxDehorsEnRoulant++;
+            if (roule > 0.15 && eq.dehors === 1) unSeulEnRoulant++;
+        }
+        return { deuxDehorsEnRoulant: deuxDehorsEnRoulant, unSeulEnRoulant: unSeulEnRoulant, deuxDehors: deuxDehors, plusDeDeux: plusDeDeux };
+    }""")
+    assert r["deuxDehors"] > 30, "le juge n'a jamais vu l'auto garée, équipage dehors : %s" % r
+    assert r["plusDeDeux"] == 0, "plus de deux agents dehors pour une auto : %s" % r
+    assert r["deuxDehorsEnRoulant"] == 0, "l'auto roule avec ses deux agents dehors : %s" % r
+    # L'exception de Martin, vue : un agent dehors, l'auto roule encore (l'autre est au volant).
+    assert r["unSeulEnRoulant"] > 0, "le passager ne saute jamais d'une auto qui finit de freiner : %s" % r
+
+
+def test_une_auto_dont_l_equipage_est_mort_reste_garee_et_ne_retient_plus_les_renforts(banc):
+    """Deux agents tués : personne ne reprendra le volant. L'auto reste garée —
+    immobile —, mais elle ne compte plus dans les autos du palier : sans ça, la
+    police n'enverrait plus jamais de renfort."""
+    r = banc(DEUX_DEHORS + """
+        const { j, v, site } = lancer(L, 3.5);
+        if (!descendreLesDeux(L, o, v)) return { erreur: 'l equipage n est pas descendu' };
+        const garee = { x: v.x, y: v.y };
+        for (const a of v.equipe.slice()) { a.vivant = false; a.vie = 0; a.etat = 'mort'; }
+        j.x = site.tx * L.TT + 16; j.y = site.ty * L.TT + 8;
+        let ecart = 0, autos = 0;
+        for (let i = 0; i < 500; i++) {
+            o.frame(1);
+            ecart = Math.max(ecart, Math.hypot(v.x - garee.x, v.y - garee.y));
+            autos = Math.max(autos, L.Police.autos().length);
+        }
+        return { eq: L.Police.equipageDe(v), abandonnee: L.Police.abandonnee(v), ecart: ecart, autos: autos, equipage: v.equipage };
+    }""")
+    assert "erreur" not in r, r
+    assert r["equipage"] == 0 and r["abandonnee"] is True, "l'équipage mort compte encore : %s" % r
+    assert r["ecart"] < 0.5, "une auto sans équipage roule : %s" % r
+    assert r["autos"] >= 2, "la police n'a pas envoyé de renfort : l'auto abandonnée retient la place d'une vivante : %s" % r
