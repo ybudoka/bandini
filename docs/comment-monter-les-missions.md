@@ -61,6 +61,7 @@ test (`erreurs_de_mise_en_scene`), pas seulement un œil humain.
         "intro":      [ … ],
         "pendant":    [ … ],
         "renvoi":     [ … ],           # FACULTATIF : § 5
+        "accueil":    [ … ],           # FACULTATIF : § 5
         "client":     [ … ],
         "fin":        [ … ],
         "echec":      [ … ],
@@ -215,6 +216,7 @@ _r("lulu", "Reviens ce soir.", 0)                         # RENVOI : quand on lu
 | `intro` | le donneur pose le contexte | 2 à 4 répliques |
 | `pendant` | dite **quand un objectif commence** | **au moins une** (jugé) ; `_p(qui, texte, objectif)` |
 | `renvoi` | ce que dit `qui` quand on **lui** parle alors que ce n'est pas encore son tour (m50 : Lulu, de jour, dit d'attendre la nuit) | facultatif ; `_r(qui, texte, objectif)` ; dit **en personne**, jamais au combiné |
+| `accueil` | ce que dit la cible d'un objectif `parler` quand on lui **serre la main** (m6 : Ti-Paul, Lulu, Raymonde, Ovila), avant que l'objectif avance | facultatif ; `_a(qui, texte, objectif)` ; l'objectif est un `parler` dont `qui` est la cible (jugé) ; dit **en personne** ; sans elle, la poignée de main est muette |
 | `client` | le client de m3 (réplique dite pendant une mission) | compte comme du « pendant » |
 | `fin` | la récompense, dite par **quelqu'un qui est là** | 1 à 3 répliques |
 | `echec` | on a raté | une réplique **au combiné** |
@@ -236,7 +238,7 @@ Règles jugées (`erreurs_de_mise_en_scene`) :
 
 ⚠️ **L'ordre des slugs de voix ne bouge jamais.** Le slug d'une réplique est
 `<qui>-<mission>-<n>`, avec `n` compté dans l'ordre `appel, intro, client, fin,
-echec, pendant, renvoi`. Insérer une réplique au milieu renomme tout ce qui suit, et
+echec, pendant, renvoi, accueil`. Insérer une réplique au milieu renomme tout ce qui suit, et
 des mp3 déjà générés deviendraient des 404. On **ajoute** à la fin, ou on
 régénère (`scripts/audio_elevenlabs.py --refaire`).
 

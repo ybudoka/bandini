@@ -298,6 +298,12 @@ JEU: dict[str, str] = {
     "josee-m6-6": "[mysteriously] Garde l'œil ouvert… Il se passe plus de choses que t'en penses.",
     "josee-m6-7": "[disappointed] Tu reviendras… quand tu auras le temps de faire le tour.",
     "josee-m6-8": "[knowingly] Le dépanneur d'abord. Ti-Paul en sait plus… qu'il en a l'air.",
+    # La poignée de main, dite en personne : chacun garde le registre de son repos (Ti-Paul badin, Lulu chaleureuse,
+    # Raymonde ferme, Ovila calme) — le contraste est dans la livraison, pas dans le volume.
+    "tipaul-m6-9": "[cheerful] Ah, c'est toi, le nouveau de Josée! [knowingly] Ici, rien passe… sans que je le sache.",
+    "lulu-m6-10": "[warmly] Josée m'a parlé de toi. [teasing] Assis-toi, mange un peu… t'as l'air d'un fantôme.",
+    "raymonde-m6-11": "[firmly] Le syndicat, c'est moi. Josée se porte garante de toi… ça reste à voir.",
+    "ovila-m6-12": "[calm] Les lumières du port, c'est moi… Depuis ici, je vois tout ce qui entre.",
     # --- M97, Marco trahit : froid, amer, puis qui se rend a l'evidence.
     "marco-m97-1": "[coldly] Marco. Viens au garage, cousin. On a à se parler… toi pis moi.",
     "marco-m97-2": "[bitterly] Bouchard m'a montré ton dossier. T'as bâti un nom… sur mon dos.",

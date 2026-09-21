@@ -114,12 +114,16 @@ def test_chaque_replique_a_une_voix_et_tient_en_deux_phrases():
     # `REPLIQUES_PAR_MISSION` répliques au plus (les cinq de la v1 font 7–8),
     # et une réplique reste déjà bornée au-dessus (8–110 caractères, ≤ 2 phrases).
     REPLIQUES_PAR_MISSION = 10
+    # ⚠️ m6 : quatre répliques de plus (la poignée de main de ses quatre contacts, `accueil`) — Martin,
+    # 20 sept. 2026, « enrichir leur dialogue » : une chacune, donc 12. Un plafond par mission qui le
+    # demande, jamais un plafond global relevé : les autres restent à 10.
+    PLAFONDS = {"m6": 12}
     par_mission: dict[str, int] = {}
     for r in missions.repliques():
         par_mission[r["mission"]] = par_mission.get(r["mission"], 0) + 1
     for slug, n in par_mission.items():
-        assert n <= REPLIQUES_PAR_MISSION, (
-            f"{slug} : {n} répliques pour un plafond de {REPLIQUES_PAR_MISSION} "
+        assert n <= PLAFONDS.get(slug, REPLIQUES_PAR_MISSION), (
+            f"{slug} : {n} répliques pour un plafond de {PLAFONDS.get(slug, REPLIQUES_PAR_MISSION)} "
             "— une mission bavarde, c'est une voix de plus à générer par ligne"
         )
     # Le filet global suit le catalogue : il se détend tout seul quand on ajoute

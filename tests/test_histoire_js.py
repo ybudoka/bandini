@@ -1399,3 +1399,54 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
     assert r["cote"] <= 24 and r["memeSens"] is True, f"Ti-Guy n'est pas dans une voie qui va où l'on va ({r})"
     assert r["joueur"] > 150, f"l'auto-patrouille n'avance que de {r['joueur']} px : quelqu'un lui bouche la rue"
     assert r["suit"] > 60, f"Ti-Guy ne suit pas ({r['suit']} px pendant qu'on en roule {r['joueur']})"
+
+
+def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avancer(banc, paquet):
+    """⚠️ Martin, 20 sept. 2026 : « il manque aussi des voix pour cette animation… enrichir leur
+    dialogue ». La poignée de main de m6 était MUETTE : `parler()` faisait `avancer()` tout de suite,
+    et Ti-Paul, Lulu, Raymonde et Ovila n'avaient pas une réplique. Chacun dit maintenant son
+    `accueil` — en personne, sa voix demandée — et l'objectif n'avance qu'une fois la boîte fermée.
+
+    Et sans `accueil`, la poignée de main reste ce qu'elle était : elle avance à l'instant."""
+    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(6);
+        const B = L.B;
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        L.Histoire.commencer('m6'); B.cinema = null; B.scene = null;
+        const d0 = L.Son.Voix.demandees.length;
+        const vus = [];
+        for (const slug of ['tipaul', 'lulu', 'raymonde', 'ovila']) {
+            const avant = B.partie.mission ? B.partie.mission.etape : null;
+            const rendu = L.Histoire.parler(slug);
+            const c = B.cinema;
+            const pendant = { rendu: rendu, avant: avant, etape: B.partie.mission ? B.partie.mission.etape : null,
+                              boite: c ? { partie: c.partie, qui: c.lignes[0].qui, slug: c.lignes[0].slug,
+                                           texte: c.lignes[0].texte, telephone: c.lignes[0].telephone, n: c.lignes.length } : null };
+            while (B.cinema) L.Histoire.suivante();
+            pendant.apres = B.partie.mission ? B.partie.mission.etape : 'finie';
+            vus.push(pendant);
+        }
+        const voix = L.Son.Voix.demandees.slice(d0);
+        // Sans `accueil` : la poignée de main muette d'avant.
+        L.Jeu.retourTitre(); L.Jeu.commencer(); L.graine(6);
+        B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1, m4: 1, m5: 1 };
+        L.B.defs.missions.find(function (m) { return m.slug === 'm6'; }).dialogue.accueil = [];
+        L.Histoire.commencer('m6'); B.cinema = null; B.scene = null;
+        L.Histoire.parler('tipaul');
+        const muet = { cinema: !!B.cinema, etape: B.partie.mission.etape };
+        return { vus: vus, voix: voix, muet: muet };
+    }""")
+    accueils = m6["dialogue"]["accueil"]
+    assert len(r["vus"]) == 4 and len(accueils) == 4
+    for i, (v, dit) in enumerate(zip(r["vus"], accueils)):
+        assert v["rendu"] is True, f"contact {i} : parler() ne rend pas true"
+        assert v["boite"] == {"partie": "accueil", "qui": dit["qui"], "slug": v["boite"]["slug"], "texte": dit["texte"],
+                              "telephone": False, "n": 1}, f"contact {i} : {v['boite']}"
+        assert v["etape"] == i, f"contact {i} : l'objectif avance PENDANT sa réplique ({v['etape']})"
+        assert v["apres"] == i + 1 or (i == 3 and v["apres"] != 3), f"contact {i} : l'objectif n'avance pas après ({v['apres']})"
+    assert [v["boite"]["slug"] for v in r["vus"]] == ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"]
+    assert [s for s in r["voix"] if s.endswith(("-9", "-10", "-11", "-12"))] == \
+        ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"], f"leurs voix ne sont pas demandées : {r['voix']}"
+    assert r["muet"] == {"cinema": False, "etape": 1}, f"sans réplique : la poignée de main avance à l'instant ({r['muet']})"

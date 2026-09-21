@@ -183,7 +183,7 @@ def test_les_voix_deja_payees_gardent_leur_slug():
                 n += 1
                 attendus[(partie, ligne["texte"])] = f"{ligne['qui']}-{m['slug']}-{n}"
         for r in missions.repliques():
-            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi"):
+            if r["mission"] == m["slug"] and r["partie"] not in ("pendant", "renvoi", "accueil"):
                 assert r["slug"] == attendus[(r["partie"], r["texte"])], r
 
 
@@ -200,6 +200,28 @@ def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_pe
     renvois = [r for r in missions.repliques() if r["partie"] == "renvoi"]
     assert [r["slug"] for r in renvois] == ["lulu-m50-8"], "m50 : Lulu dit d'attendre la nuit"
     assert not any(r["telephone"] for r in renvois)
+
+
+def test_un_accueil_s_accroche_a_la_poignee_de_main_de_celui_qui_parle():
+    """⚠️ Martin, 20 sept. 2026 : « enrichir leur dialogue ». Un `accueil` se dit quand on serre la
+    main de sa cible (objectif `parler`) : accroché à un autre objectif, ou dit par quelqu'un d'autre
+    que la cible, il ne se dirait jamais. Les quatre de m6 se comptent APRÈS `pendant` et `renvoi`,
+    pour qu'aucun mp3 déjà payé ne change de nom."""
+    from app.missions._commun import _a
+    fiche = _fiche("marco", [{"type": "parler", "cible": "tipaul", "texte": "PARLE À TI-PAUL"},
+                             {"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}])
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 0)]
+    missions._completer(fiche)
+    assert missions.erreurs_de_mise_en_scene(fiche) == []
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 1)]
+    assert any("SON objectif `parler`" in e for e in missions.erreurs_de_mise_en_scene(fiche)), "un objectif `aller`"
+    fiche["dialogue"]["accueil"] = [_a("lulu", "Viens manger!", 0)]
+    assert any("SON objectif `parler`" in e for e in missions.erreurs_de_mise_en_scene(fiche)), "la mauvaise voix"
+    fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 5)]
+    assert any("accueil accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
+    accueils = [r for r in missions.repliques() if r["partie"] == "accueil"]
+    assert [r["slug"] for r in accueils] == ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"]
+    assert not any(r["telephone"] for r in accueils), "on leur serre la main : ils parlent en personne"
 
 
 def test_un_acteur_qui_marche_vers_le_joueur_s_arrete_a_distance_de_parole():

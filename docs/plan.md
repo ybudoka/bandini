@@ -216,6 +216,7 @@ ne bougent pas quand l'ordre de travail change.
 | Les Cravates de M2 arrivent de loin, après l'intro | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-cravates-de-m2-arrivent-de-loin-après-lintro) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [notes](#quatre-activités-que-le-jeu-na-pas) |
 | On agit sur ce qu'on regarde | ✅ **livré** | 20 sept. 2026 | **P2** | ajout | [notes](#on-agit-sur-ce-quon-regarde) |
+| Les contacts du tour parlent à la poignée de main | ⬜ **en cours** | 20 sept. 2026 | **P2** | ajout | [notes](#les-contacts-du-tour-parlent-à-la-poignée-de-main) |
 | Les donneurs ne se cachent plus derrière le décor | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-donneurs-ne-se-cachent-plus-derrière-le-décor) |
 | Rien devant une porte, plus large | ✅ **livré** | 20 sept. 2026 | **P2** | **correctif** | [notes](#rien-devant-une-porte-plus-large) |
 | Les musiques s'enchaînent en fondu | ⬜ **en cours** | 20 sept. 2026 | **P2** | **correctif** | [notes](#les-musiques-senchaînent-en-fondu) |
@@ -569,7 +570,7 @@ générales :
   `repliques()` et `slugDeVoix()` : insérée avant `fin`, elle renommerait les quinze voix de
   fin et d'échec déjà générées, et quinze mp3 payés deviendraient des 404. Et une fin qui
   passe au combiné ne se **régénère** pas : le combiné est un filtre joué, pas un fichier.
-  `renvoi` se compte **après** `pendant`, pour la même raison.
+  `renvoi` se compte **après** `pendant`, pour la même raison, et `accueil` après `renvoi`.
 - **Le renvoi** (20 sept. 2026, m50) : ce que dit `qui` quand on **lui** parle alors que ce
   n'est pas encore son tour — `_r("lulu", "…", 0)`, accroché à l'objectif en cours. À la
   cantine, de jour, l'objectif 0 de m50 attend la noirceur et « parler à Lulu » ne compte
@@ -11800,6 +11801,21 @@ un char qu'on ne voyait pas.
   et geste), l'exception de la sortie, la portière, les gens, le comptoir, l'arme sous les
   pieds, l'édicule, les manèges, l'étal/la machine/le guichet/le panneau, le bouclier et les
   poches. ⚠️ Vingt-cinq mutations (retirer chaque `faceA`) le font rougir, chacune.
+
+### Les contacts du tour parlent à la poignée de main
+
+retour de Martin (20 sept. 2026), sur l'intro du tour du propriétaire : « il manque aussi des voix pour
+cette animation » et « il faudrait aussi enrichir leur dialogue en même temps ». Réponses de Martin :
+**à la poignée de main** (pas dans le montage), **une réplique chacun**.
+
+- ⚠️ **En cours.** Mesuré avant : les quatre contacts de m6 (Ti-Paul, Lulu, Raymonde, Ovila) n'ont AUCUNE
+  réplique. Un objectif `parler` s'accomplit en parlant à sa cible, et `Histoire.parler` fait alors
+  `avancer()` tout de suite : la poignée de main est muette. Seules Josée (huit répliques) et leur bulle
+  de hèlement (« Salut, l'ami! ») parlent. Objectif : une partie `accueil` du dialogue (après `renvoi`,
+  pour ne renommer aucun mp3), dite en personne à la poignée de main avant que l'objectif avance ; quatre
+  répliques, quatre voix, leur jeu dans `interpretation.JEU`, et le plafond de répliques par mission
+  relevé à 12 pour m6. ⚠️ Règle du guide du jeu d'acteur : UNE réplique clé générée d'abord, que Martin
+  écoute, puis le reste.
 
 ### Les donneurs ne se cachent plus derrière le décor
 

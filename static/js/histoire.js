@@ -556,11 +556,11 @@ const Histoire = (function () {
   }
 
   /** Le slug de voix d'une replique : `<qui>-<mission>-<n>`, n compte a travers
-      appel, intro, client, fin, echec, pendant, renvoi — exactement comme `missions.repliques()`. */
+      appel, intro, client, fin, echec, pendant, renvoi, accueil — exactement comme `missions.repliques()`. */
   function slugDeVoix(m, partie, i) {
     // ⚠️ `pendant` APRES `echec`, puis `renvoi`, comme `missions.PARTIES` : inseree plus tot,
     // elle renommerait des voix deja generees.
-    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi'];
+    const ordre = ['appel', 'intro', 'client', 'fin', 'echec', 'pendant', 'renvoi', 'accueil'];
     let n = 0;
     for (const p of ordre) {
       const lignes = m.dialogue[p] || [];
@@ -783,7 +783,14 @@ const Histoire = (function () {
     // c'est la poignee qui compte, et elle est ICI, dans le moteur.
     if (enCours) {
       const o = objectif();
-      if (o && o.type === 'parler' && cibleDuParler(o) === slug) { avancer(); return true; }
+      if (o && o.type === 'parler' && cibleDuParler(o) === slug) {
+        // ⚠️ LA POIGNEE DE MAIN SE DIT quand la fiche ecrit une replique `accueil` pour cette cible :
+        // elle parle, puis l'objectif avance (`dire` appelle `fin` une fois la boite fermee, et tout
+        // de suite quand il n'y a rien a dire — la poignee muette d'avant).
+        const etape = B.partie.mission.etape;
+        dire(enCours, 'accueil', function () { avancer(); }, function (l) { return l.qui === slug && l.objectif === etape; });
+        return true;
+      }
       // ⚠️ RENVOYE : on parle a quelqu'un dont ce n'est pas encore le tour. Sa replique `renvoi`
       // (`missions.py`) est accrochee a l'objectif en cours — Lulu, de jour, dit d'attendre la
       // noirceur — au lieu du texte de repos que tout le monde dit sans voix. Une mission qui n'en

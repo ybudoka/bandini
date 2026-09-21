@@ -1,6 +1,6 @@
 """La mission m6 — voir `app/missions/__init__.py` pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p
 
 MISSION = {
     "slug": "m6", "titre": "Le tour du propriétaire", "donneur": "josee", "prerequis": ["m5"],
@@ -65,5 +65,14 @@ MISSION = {
         ],
         "echec": [_l("josee", "Tu reviendras quand tu auras le temps de faire le tour.")],
         "pendant": [_p("josee", "Le dépanneur d'abord. Ti-Paul en sait plus qu'il en a l'air.", 0)],
+        # La poignée de main, dite : un mot de chacun, dans son registre — le bavard (il « en sait plus »),
+        # la sœur qui materne, la syndicaliste qui jauge, le gardien qui guette. Elles se comptent APRÈS
+        # `pendant` (`PARTIES`) : `tipaul-m6-9`, `lulu-m6-10`, `raymonde-m6-11`, `ovila-m6-12`.
+        "accueil": [
+            _a("tipaul", "Ah, c'est toi, le nouveau de Josée! Ici, rien passe sans que je le sache.", 0),
+            _a("lulu", "Josée m'a parlé de toi. Assis-toi, mange un peu, t'as l'air d'un fantôme.", 1),
+            _a("raymonde", "Le syndicat, c'est moi. Josée se porte garante de toi, ça reste à voir.", 2),
+            _a("ovila", "Les lumières du port, c'est moi. Depuis ici, je vois tout ce qui entre.", 3),
+        ],
     },
 }
