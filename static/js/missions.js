@@ -1093,6 +1093,19 @@ const Missions = (function () {
 
   // --- Les comptoirs des commerces ordinaires ------------------------------------------
 
+  /** **LA NUIT A SES HABITUDES** : un comptoir a ses heures (`magasins.HEURES_DES_COMPTOIRS`),
+      sauf dans les pieces qui ne ferment jamais (`nuit.comptoirs.toujours_ouverts` : le
+      depanneur). Rend le mot du comptoir ferme — « FERMÉ — OUVRE À 7 H » —, ou null s'il
+      sert. ⚠️ L'invite et le menu le lisent tous deux ICI : une invite qui promet
+      « ACHETER » devant un comptoir ferme se lit comme un bogue. */
+  function comptoirFerme(point) {
+    const comptoir = (B.defs.comptoirs || {})[point.genre], cn = B.defs.nuit && B.defs.nuit.comptoirs;
+    if (!comptoir || !comptoir.heures || !cn) return null;
+    if (B.interieur && cn.toujours_ouverts.indexOf(B.interieur.slug) >= 0) return null;
+    if (ouvert(comptoir)) return null;
+    return cn.ferme + ' ' + Math.round(comptoir.heures[0] * 24) + ' H';
+  }
+
   /** Ce qu'on achete au comptoir d'un commerce ordinaire.
 
       ⚠️ Rien n'est ecrit ici : le comptoir vient du serveur
@@ -1105,6 +1118,12 @@ const Missions = (function () {
     const p = B.partie, tarifs = B.defs.economie.tarifs, piece = B.interieur;
     const comptoir = (B.defs.comptoirs || {})[point.genre];
     if (!comptoir) return null;
+    // Ferme, on ne promet pas de prix : le menu le dit, et ACTION ne vendra rien.
+    const ferme = comptoirFerme(point);
+    if (ferme) {
+      items.push({ libelle: ferme, actif: false });
+      return { titre: piece ? piece.nom.toUpperCase() : comptoir.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
+    }
     comptoir.articles.forEach(function (a) {
       if (a.arme) return items.push(itemArme(a, comptoir.marge));
       if (a.tenue) return items.push(itemTenue(a, comptoir.rabais));
@@ -2629,7 +2648,7 @@ const Missions = (function () {
         B.invite = assis ? 'PARLER À ' + assis.nom.toUpperCase()
           : vente ? 'ACHETER ' + vente.nom.toUpperCase()
           : (point.type === 'distributrice' ? inviteDistributrice(machineDuPoint(point))
-            : (LIBELLES[point.type] || point.type.toUpperCase()));
+            : (point.type === 'emplettes' && comptoirFerme(point)) || (LIBELLES[point.type] || point.type.toUpperCase()));
         return;
       }
       if (Monde.porteDevant(j)) B.invite = 'SORTIR';
@@ -2753,7 +2772,7 @@ const Missions = (function () {
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,
            boulot, arrestation, saisir, charSaisissable, prixRachat, garnirLaFourriere, menuFourriere, dansLaCour, majFourriere, malGare, majMalGares, estDeLaPlanque, prison, utiliserPoint, pointSousLaMain, libelleDuPoint, menuDuPoint, proprieteDe, possede,
-           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
+           dormir, dormirJusquAuSoir, porterTenue, fouiller, menuComptoir, comptoirFerme, menuSalon, menuCasier, charDevant, prixDeVente, menuGarage, majGarage, menuDuRideau, menuArmurerie, menuVetements,
            repeindre, prixCarrosserie, refusDuSeuil,
            revenusDuJour, manchetteDuJour, lireLeJournal, menuMarcheNoir, ramasserPaquet, majInvite, rabais,
            nuitDeLaDette, detteDuLendemain, collecteurs, envoyerLesCollecteurs, majCollecteurs, rembourser, collecteurSousLaMain, menuDette,

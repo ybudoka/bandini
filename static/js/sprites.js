@@ -1732,6 +1732,17 @@ const MACHINE_CAMION_CHARRUE = Object.assign({}, MACHINE_CAMION, {
 SPRITES.camion_charrue = enVolume(MACHINE_CAMION_CHARRUE, 40, 76, Object.assign({}, SPRITES.camion.pal, { y: '#f39c12' }));
 SPRITES.camion_charrue.couleur = '#e67e22';
 SPRITES.camion_charrue.de = 'camion';
+// ⚠️ L'ARROSEUSE DE NUIT (la nuit a ses habitudes) n'est pas tiree au sort non plus :
+// c'est l'heure qui la sort (`Autobus.faireNaitreLArroseuse`). La citerne, et le
+// gyrophare ambre de la voirie sur la cabine — celui de la charrue.
+const MACHINE_CAMION_ARROSEUSE = Object.assign({}, MACHINE_CAMION_CITERNE, {
+  pieces: MACHINE_CAMION_CITERNE.pieces.concat([
+    ['bloc', [11.6, 13.2], [-1.2, 1.2], [15.0, 16.4], 'y', 'y', 'y', 0.2],                                          // le gyrophare
+  ]),
+});
+SPRITES.camion_arroseuse = enVolume(MACHINE_CAMION_ARROSEUSE, 40, 76, Object.assign({}, SPRITES.camion.pal, { y: '#f39c12' }));
+SPRITES.camion_arroseuse.couleur = '#dfe6ea';
+SPRITES.camion_arroseuse.de = 'camion';
 // ⚠️ L'autobus scolaire est JAUNE, quelle que soit la couleur tiree pour l'autobus :
 // une silhouette peut porter sa couleur (`Vehicules.creer` la lui rend).
 SPRITES.autobus_scolaire = enVolume(MACHINE_AUTOBUS_SCOLAIRE, 48, 80, Object.assign({}, SPRITES.autobus.pal, { c: '#f5b400' }));

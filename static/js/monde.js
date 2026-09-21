@@ -1868,6 +1868,70 @@ const Monde = (function () {
     return hash2(Math.floor(temps / g.clignote_images), l.tx + l.ty * 17) % 1000 < g.part_eteinte * 1000;
   }
 
+  // --- Les rues mouillees (la nuit a ses habitudes : l'arroseuse) ----------------------
+
+  //: « tx,ty » -> l'instant (`B.t`) ou l'arroseuse y est passee.
+  const mouillees = new Map();
+
+  function dureeMouillee() {
+    const a = B.defs && B.defs.nuit && B.defs.nuit.arroseuse;
+    return a ? Math.round(a.mouille_minutes / (24 * 60) * B.defs.economie.jour_secondes * 60) : 0;
+  }
+
+  /** L'arroseuse passe : sa tuile et ses voisines sont mouillees — la chaussee
+      seulement, le trottoir ne compte pas pour un char. */
+  function mouiller(tx, ty, largeur) {
+    const l = largeur || 0;
+    for (let dy = -l; dy <= l; dy++) for (let dx = -l; dx <= l; dx++) {
+      if (estRoute(tx + dx, ty + dy)) mouillees.set((tx + dx) + ',' + (ty + dy), B.t);
+    }
+  }
+
+  /** ⚠️ Un instant « dans le futur » (une partie recommencee remet `B.t` a zero)
+      ne mouille rien : la rue d'une autre partie est seche. */
+  function mouillee(tx, ty) {
+    const t = mouillees.get(tx + ',' + ty);
+    return t !== undefined && B.t >= t && B.t - t < dureeMouillee();
+  }
+
+  /** Ce que la rue mouillee laisse de l'adherence d'un char, et de son freinage. */
+  function adherenceMouillee(v) {
+    const a = B.defs.nuit && B.defs.nuit.arroseuse;
+    return a && mouillee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? a.adherence : 1;
+  }
+  function freinMouille(v) {
+    const a = B.defs.nuit && B.defs.nuit.arroseuse;
+    return a && mouillee(Math.floor(v.x / TT), Math.floor(v.y / TT)) ? a.frein : 1;
+  }
+
+  function oublierLesRuesMouillees() { mouillees.clear(); }
+
+  /** L'asphalte mouille : plus sombre, et un reflet. Une couche PEINTE par-dessus le
+      sol, qui ne touche a rien. Ce qui a seche s'oublie en passant. */
+  function dessinerMouille(ctx, cam) {
+    if (!mouillees.size) return;
+    const duree = dureeMouillee(), cx = Math.round(cam.x), cy = Math.round(cam.y);
+    for (const [cle, t] of mouillees) {
+      if (B.t < t || B.t - t >= duree) { mouillees.delete(cle); continue; }
+      const i = cle.indexOf(','), tx = +cle.slice(0, i), ty = +cle.slice(i + 1);
+      const x = tx * TT - cx, y = ty * TT - cy;
+      if (x < -TT || y < -TT || x > VW || y > VH) continue;
+      // Elle seche : le dernier quart de sa duree, la tache pâlit.
+      const reste = Math.min(1, (duree - (B.t - t)) / (duree * 0.25));
+      // ⚠️ Ce qui dit « mouille », c'est le REFLET, pas le sombre : assombrir un
+      // asphalte deja noir ne se voyait pas (capture). Un voile bleute, et des
+      // miroitements en tirets, a l'empreinte de la tuile.
+      ctx.fillStyle = 'rgba(30,52,86,' + (0.26 * reste).toFixed(3) + ')';
+      ctx.fillRect(x, y, TT, TT);
+      const h = hash2(tx, ty);
+      ctx.fillStyle = 'rgba(205,225,255,' + (0.38 * reste).toFixed(3) + ')';
+      ctx.fillRect(x + (h % 9), y + ((h >>> 4) % 13), 6, 1);
+      ctx.fillRect(x + ((h >>> 8) % 11), y + ((h >>> 12) % 13) + 1, 4, 1);
+      ctx.fillRect(x + ((h >>> 16) % 13), y + ((h >>> 20) % 14), 2, 1);
+      B.stats.rects += 4;
+    }
+  }
+
   function lampesVisibles(cam) {
     // Les lampadaires n'eclairent qu'a la brune : en plein jour, rien.
     if (!carte || ambiance().alpha < 0.2) return [];
@@ -1898,7 +1962,7 @@ const Monde = (function () {
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint,
+    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };

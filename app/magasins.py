@@ -253,6 +253,26 @@ COMPTOIRS: dict[str, dict] = {
     ]},
 }
 
+#: ⚠️ **LA NUIT A SES HABITUDES : LES COMPTOIRS ONT LEURS HEURES.** Jusqu'ici, on
+#: achetait une pointe de tarte à 4 h du matin partout en ville. Chaque famille ouvre
+#: au plus tard à 7 h (le jeu commence à 8 h 24 : le jour ne change pas) et ferme
+#: entre 20 h et 23 h selon son métier. La TAVERNE ouvre à 8 h et ferme à 3 h — l'heure
+#: du last call (`nuit.LAST_CALL`). Le DÉPANNEUR ne ferme jamais, lui : il vend sous
+#: la famille « bouffe », alors c'est la PIÈCE qui le dit (`nuit.COMPTOIRS`).
+HEURES_DES_COMPTOIRS: dict[str, tuple[float, float]] = {
+    "bouffe": (6 / 24, 23 / 24),
+    "service": (7 / 24, 21 / 24),
+    "artisan": (7 / 24, 21 / 24),
+    "nuit": (8 / 24, 3 / 24),
+    "commerce": (7 / 24, 22 / 24),
+    "marine": (5 / 24, 20 / 24),       # la poissonnerie : les bateaux rentrent tôt
+    "industrie": (6 / 24, 20 / 24),
+    "sante": (7 / 24, 22 / 24),
+    "mode": (7 / 24, 21 / 24),
+}
+for _famille, _heures in HEURES_DES_COMPTOIRS.items():
+    COMPTOIRS[_famille]["heures"] = _heures
+
 
 def comptoir(genre: str) -> dict | None:
     return COMPTOIRS.get(genre)

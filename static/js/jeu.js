@@ -90,6 +90,8 @@ const Jeu = (function () {
     Neige.oublier();                         // la rue d'une partie rechargee est blanche
     Incendies.oublier();                     // une nouvelle partie n'hérite pas des feux éteints
     Interactions.oublier();                  // ni de la soif des fontaines
+    Monde.oublierLesRuesMouillees();         // ni de l'arroseuse d'une autre nuit
+    B.lastCall = null;                       // ni des bars qu'elle a vus se vider
     B.transition = null;        // une partie ne commence jamais dans le noir d'une porte
     Histoire.creerDonneurs();
     Histoire.creerPanneaux();
@@ -750,6 +752,7 @@ const Jeu = (function () {
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
     Monde.dessinerSol(ctx, vue);
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
+    if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
     // Le tunnel, la rame et ses fenetres : peints par-dessus le sol de la piece,
     // sous les gens du quai.
     if (B.interieur) Metro.dessiner(ctx, vue);

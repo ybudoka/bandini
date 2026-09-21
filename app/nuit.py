@@ -82,6 +82,32 @@ CAMELOT: dict = {
 }
 
 
+#: **LES COMPTOIRS FERMENT LA NUIT** (`magasins.HEURES_DES_COMPTOIRS`) — sauf ces
+#: pièces-là, qui ne ferment jamais : le dépanneur vend sous la famille « bouffe »,
+#: mais un dépanneur, ça reste ouvert. Le mot du comptoir fermé, et l'heure où il rouvre.
+COMPTOIRS: dict = {
+    "toujours_ouverts": ["depanneur"],
+    "ferme": "FERMÉ — OUVRE À",
+}
+
+
+#: **L'ARROSEUSE DE NUIT.** Un camion-citerne de la Ville fait la tournée de la
+#: charrue (`neige.CHARRUE` : la même voirie déneige l'hiver et arrose l'été) entre
+#: 1 h et 5 h — sauf quand la charrue est dehors, elle. Derrière elle, l'asphalte
+#: reste MOUILLÉ un moment (`mouille_minutes`, en minutes de jeu) : les chars y
+#: tiennent moins la route (`adherence`, `frein` — comme la neige, en plus doux). Et
+#: aucun dé : sa place ne dépend que de l'heure (`Autobus.placeALHeure`).
+ARROSEUSE: dict = {
+    "heures": (1 / 24, 5 / 24),
+    "mouille_minutes": 45,
+    "adherence": 0.8,
+    "frein": 0.85,
+    "largeur_tuiles": 1,         # de chaque côté de sa voie, ce qu'elle mouille
+    "vitesse_px": 0.7,           # elle roule au pas : elle travaille
+    "couleur": "#dfe6ea",
+}
+
+
 def bars(ville: dict) -> list[dict]:
     """Où sort le last call : la porte de chaque devanture de la famille « nuit »,
     et la tuile de trottoir juste devant. Sans un dé, dans l'ordre de la ville."""
@@ -107,4 +133,6 @@ def exporter(ville: dict | None = None) -> dict:
         "last_call": {**LAST_CALL, "fetards": list(LAST_CALL["fetards"]),
                       "bars": bars(ville) if ville else []},
         "camelot": dict(CAMELOT),
+        "comptoirs": {**COMPTOIRS, "toujours_ouverts": list(COMPTOIRS["toujours_ouverts"])},
+        "arroseuse": {**ARROSEUSE, "heures": list(ARROSEUSE["heures"])},
     }

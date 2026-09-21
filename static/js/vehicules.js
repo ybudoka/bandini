@@ -804,7 +804,7 @@ const Vehicules = (function () {
     const d = v.def;
     if (cmd.gaz > 0) v.vitesse += d.acceleration * cmd.gaz;
     if (cmd.frein > 0) {
-      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v);
+      if (v.vitesse > 0.15) v.vitesse -= d.frein * cmd.frein * Neige.frein(v) * Monde.freinMouille(v);
       else v.vitesse -= d.acceleration * 0.7 * cmd.frein;      // marche arriere
     }
     if (cmd.freinMain) v.vitesse *= 0.965;
@@ -835,7 +835,7 @@ const Vehicules = (function () {
     }
     // Adherence : la vitesse reelle glisse vers le cap. Frein a main : elle traine.
     // ⚠️ LA NEIGE DIVISE L'ADHERENCE (M12) — la police glisse comme tout le monde.
-    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v);
+    const adh = (cmd.freinMain ? d.adherence_frein : d.adherence) * Neige.adherence(v) * Monde.adherenceMouillee(v);
     v.vx += (Math.cos(v.angle) * v.vitesse - v.vx) * adh;
     v.vy += (Math.sin(v.angle) * v.vitesse - v.vy) * adh;
     // En l'air (rampe) : on retombe.

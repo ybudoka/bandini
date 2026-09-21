@@ -703,3 +703,165 @@ def test_le_camelot_ne_vise_que_le_perron_qu_il_voit_et_raye_celui_qu_il_rate(ba
     assert not r["cacheVise"] and r["voit"], "le camelot vise un perron derrière un mur"
     assert r["raye"], "un perron raté ne se raye pas de la tournée"
     assert not r["reVise"], "le camelot revise le perron qu'il vient de rater"
+
+
+# --- Vague 4 : ce que ça change au jeu ----------------------------------------------------
+
+def test_la_nuit_le_comptoir_ferme_mais_pas_le_depanneur_ni_le_bar_avant_trois_heures(banc, paquet):
+    """À 3 h 30, le comptoir d'un casse-croûte ordinaire est fermé — l'invite le dit, le
+    menu ne vend rien ; le dépanneur sert encore. Le bar sert à 1 h et plus à 3 h 30.
+    ⚠️ Par le BOUTON (`utiliserPoint`) : un menu fermé qui s'ouvrirait quand même se voit là."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, c = L.Monde.carte;
+        // Un comptoir « bouffe » qui n'est PAS le depanneur.
+        const porte = c.portes.find(function (p) {
+          return p.interieur !== 'depanneur' && (c.def.interieurs[p.interieur].points || []).some(function (q) {
+            return q.type === 'emplettes' && q.genre === 'bouffe';
+          });
+        });
+        if (!porte) return { porte: false };
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        o.entrer(porte);
+        const point = L.B.interieur.points.find(function (p) { return p.type === 'emplettes'; });
+        j.x = point.x * L.TT + 8; j.y = point.y * L.TT + 8;
+        L.B.partie.argent = 200;
+        function essai(heure) {
+          L.B.partie.heure = heure; L.B.menu = null;
+          L.Missions.majInvite(j);
+          const invite = L.B.invite;
+          L.Missions.utiliserPoint(j);
+          const m = L.B.menu;
+          const actifs = m ? m.items.filter(function (i) { return i.actif; }).length : -1;
+          L.B.menu = null;
+          return { invite: invite, actifs: actifs, premier: m && m.items[0] ? m.items[0].libelle : null };
+        }
+        const nuit = essai(3.5 / 24), jour = essai(0.35);
+        const piece = L.B.interieur;
+        L.B.partie.heure = 3.5 / 24;
+        L.B.interieur = { slug: 'depanneur', nom: 'Dépanneur' };
+        const dep = L.Missions.menuComptoir({ type: 'emplettes', genre: 'bouffe' }, []);
+        L.B.interieur = piece;
+        const bar = function (h) {
+          L.B.partie.heure = h;
+          return L.Missions.comptoirFerme({ type: 'emplettes', genre: 'nuit' });
+        };
+        return { porte: true, nuit: nuit, jour: jour,
+                 depanneur: dep.items.filter(function (i) { return i.actif; }).length,
+                 barUneHeure: bar(1 / 24), barTroisHeures: bar(3.5 / 24) };
+    }""")
+    assert r["porte"], "pas de casse-croûte ordinaire dans la ville"
+    assert r["nuit"]["invite"].startswith("FERMÉ — OUVRE À"), r["nuit"]
+    assert r["nuit"]["actifs"] == 0, "à 3 h 30, le comptoir vend encore : %s" % r["nuit"]
+    assert r["nuit"]["premier"] == r["nuit"]["invite"], "l'invite et le menu ne disent pas la même chose"
+    assert r["jour"]["invite"] == "ACHETER" and r["jour"]["actifs"] > 0, "le matin, le comptoir est fermé"
+    assert r["depanneur"] > 0, "à 3 h 30, le dépanneur est fermé"
+    assert r["barUneHeure"] is None, "à 1 h, le bar est fermé"
+    assert r["barTroisHeures"], "à 3 h 30, le bar sert encore : le last call est passé"
+
+
+#: Le joueur au bord de la tournée de la charrue, qu'elle soit à l'heure dite.
+TOURNEE = """
+    function surLaTournee(L, heure, cameraSurElle) {
+      L.Jeu.commencer();
+      L.graine(2);
+      L.B.partie.jour = 1;
+      L.B.partie.heure = heure;
+      const A = L.Autobus.donnees().arroseuse;
+      if (!A) return null;
+      // A trois cent cinquante pixels de l'endroit ou l'horaire la met : dans la bulle, hors champ.
+      const p = L.Autobus.placeALHeure(A, 0, L.Autobus.tempsDeLaPartie());
+      L.B.joueur.x = p.x + 350; L.B.joueur.y = p.y;
+      if (!L.Monde.marchablePieton(Math.floor(L.B.joueur.x / L.TT), Math.floor(L.B.joueur.y / L.TT))) {
+        L.B.joueur.x = p.x; L.B.joueur.y = p.y + 350;
+      }
+      // ⚠️ La camera peut etre EN AVANCE sur le joueur : posee sur la place de
+      // l'arroseuse, elle glisse vers lui — et l'arroseuse attend d'etre hors du cadre.
+      // La camera rejoint le joueur en quelques images : on cale l'horloge pour que la
+      // PREMIERE image jouee soit un regard de l'arroseuse (`B.t % 20 === 13`).
+      if (cameraSurElle) { L.Monde.centrerCamera(p.x, p.y); L.B.t = 12; }
+      else L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y);
+      return A;
+    }
+    function arroseuse(L) {
+      return L.B.entites.find(function (v) { return v.type === 'vehicule' && v.ligne === 'arroseuse'; }) || null;
+    }
+"""
+
+
+def test_l_arroseuse_sort_la_nuit_hors_champ_et_rentre_le_jour(banc, paquet):
+    """À 2 h, l'arroseuse naît hors de l'écran, sur la tournée ; à 14 h, pas
+    d'arroseuse — et quand la charrue est dehors, l'arroseuse reste au garage."""
+    r = banc("""function (L, o) {
+        %s
+        const out = {};
+        for (const [nom, h] of [['nuit', 2 / 24], ['jour', 14 / 24]]) {
+          if (!surLaTournee(L, h, true)) return { tournee: false };
+          let vue = false;
+          for (let i = 0; i < 400 && !arroseuse(L); i++) {
+            L.B.partie.heure = h; o.frame(1);
+            const v = arroseuse(L);
+            if (v && L.Entites.visibleAEcran(v.x, v.y, 0)) vue = true;
+          }
+          const v = arroseuse(L);
+          out[nom] = v ? { sprite: v.sprite, vue: vue } : null;
+        }
+        // La charrue dehors : pas d'arroseuse.
+        surLaTournee(L, 2 / 24);
+        const dehors = L.Neige.charrueDehors;
+        L.Neige.charrueDehors = function () { return true; };
+        for (let i = 0; i < 400; i++) { L.B.partie.heure = 2 / 24; o.frame(1); }
+        out.avecLaCharrue = !!arroseuse(L);
+        L.Neige.charrueDehors = dehors;
+        out.tournee = true;
+        return out;
+    }""" % TOURNEE)
+    assert r["tournee"], "pas de tournée de charrue dans la ville"
+    assert r["nuit"], "à 2 h, pas d'arroseuse"
+    assert r["nuit"]["sprite"] == "camion_arroseuse"
+    assert not r["nuit"]["vue"], "l'arroseuse est apparue sous nos yeux"
+    assert r["jour"] is None, "une arroseuse à 14 h"
+    assert not r["avecLaCharrue"], "l'arroseuse est sortie pendant la tempête"
+
+
+def test_derriere_l_arroseuse_la_rue_est_mouillee_et_un_char_y_glisse_puis_elle_seche(banc, paquet):
+    """Elle mouille ce qu'elle passe (la chaussée, pas le trottoir) ; un char sur une
+    tuile mouillée tient moins la route et freine moins ; une heure plus tard, c'est sec."""
+    r = banc("""function (L, o) {
+        %s
+        if (!surLaTournee(L, 2 / 24)) return { tournee: false };
+        for (let i = 0; i < 400 && !arroseuse(L); i++) { L.B.partie.heure = 2 / 24; o.frame(1); }
+        const v = arroseuse(L);
+        if (!v) return { arroseuse: false };
+        const traces = [];
+        for (let i = 0; i < 600; i++) {
+          L.B.partie.heure = 2 / 24;
+          L.B.joueur.x = v.x + 200; L.B.joueur.y = v.y;   // qu'elle reste dans la bulle
+          o.frame(1);
+          if (i %% 60 === 0) traces.push([Math.floor(v.x / L.TT), Math.floor(v.y / L.TT)]);
+        }
+        const TT = L.TT;
+        const mouilles = traces.filter(function (t) { return L.Monde.mouillee(t[0], t[1]); }).length;
+        // Pas un trottoir mouille : on balaie autour de la derniere trace.
+        let trottoirs = 0;
+        const [lx, ly] = traces[traces.length - 1];
+        for (let dy = -4; dy <= 4; dy++) for (let dx = -4; dx <= 4; dx++) {
+          if (L.Monde.mouillee(lx + dx, ly + dy) && !L.Monde.estRoute(lx + dx, ly + dy)) trottoirs++;
+        }
+        // Un char sur la tuile mouillee, et le meme sur une tuile seche.
+        const ici = { x: traces[traces.length - 1][0] * TT + 8, y: traces[traces.length - 1][1] * TT + 8 };
+        const sec = { x: ici.x + 40 * TT, y: ici.y };
+        const adh = [L.Monde.adherenceMouillee(ici), L.Monde.adherenceMouillee(sec)];
+        const frein = [L.Monde.freinMouille(ici), L.Monde.freinMouille(sec)];
+        // Une heure de jeu plus tard, c'est sec.
+        L.B.t += Math.round(60 / 1440 * L.B.defs.economie.jour_secondes * 60);
+        const seche = !L.Monde.mouillee(lx, ly);
+        return { tournee: true, arroseuse: true, traces: traces.length, mouilles: mouilles, trottoirs: trottoirs,
+                 adh: adh, frein: frein, seche: seche };
+    }""" % TOURNEE)
+    assert r["tournee"] and r["arroseuse"], r
+    assert r["mouilles"] >= r["traces"] - 1, "%s de ses %s passages ne sont pas mouillés" % (r["mouilles"], r["traces"])
+    assert r["trottoirs"] == 0, "l'arroseuse a mouillé %s tuiles de trottoir" % r["trottoirs"]
+    assert r["adh"][0] < 1 and r["adh"][1] == 1, "sur l'asphalte mouillé, un char tient la route pareil : %s" % r["adh"]
+    assert r["frein"][0] < 1 and r["frein"][1] == 1, r["frein"]
+    assert r["seche"], "une heure plus tard, la rue est encore mouillée"

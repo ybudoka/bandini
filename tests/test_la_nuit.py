@@ -124,3 +124,34 @@ def test_la_nuit_le_rat_de_la_poubelle_est_un_raton_et_le_raton_ne_sort_que_la_n
     debut, fin = raton["heures"]
     assert debut >= NUIT_DEBUT - 0.01 and fin <= NUIT_FIN + 0.01, "le raton sort la nuit, pas à la brunante"
     assert raton["fuite_px"] < pietons.BETES["chat"]["fuite_px"], "le raton se laisse approcher plus que le chat"
+
+
+# --- Vague 4 : ce que ça change au jeu ----------------------------------------------------
+
+def test_les_comptoirs_ferment_la_nuit_ouvrent_avant_le_jeu_et_le_bar_ferme_au_last_call():
+    from app import carte, magasins, nuit
+    for famille, comptoir in magasins.COMPTOIRS.items():
+        ouvre, ferme = comptoir["heures"]
+        # Le jeu commence à 8 h 24 : tout est déjà ouvert — le jour ne change pas.
+        assert ouvre <= 8 / 24, f"{famille} ouvre après 8 h"
+        if famille == "nuit":
+            assert ferme == nuit.LAST_CALL["heure"], "le bar ferme à l'heure du last call"
+        else:
+            assert 20 / 24 <= ferme <= 23 / 24, f"{famille} ferme à {ferme * 24:.1f} h"
+    c = nuit.COMPTOIRS
+    assert "depanneur" in c["toujours_ouverts"], "un dépanneur, ça reste ouvert"
+    assert all(slug in carte.INTERIEURS for slug in c["toujours_ouverts"])
+    assert c["ferme"] == c["ferme"].upper()
+
+
+def test_l_arroseuse_sort_au_creux_de_la_nuit_et_mouille_sans_noyer():
+    from app import carte, neige, nuit
+    a = nuit.ARROSEUSE
+    debut, fin = a["heures"]
+    # En pleine nuit : après minuit, et rentrée avant le jour.
+    assert 0 < debut < fin <= NUIT_FIN, "l'arroseuse travaille au creux de la nuit"
+    # Moins glissant que la neige : une rue arrosée n'est pas une patinoire.
+    assert neige.EFFETS["adherence"] < a["adherence"] < 1
+    assert 0.6 <= a["frein"] < 1
+    assert 10 <= a["mouille_minutes"] <= 120
+    assert neige.tracer_charrue(carte.generer()) is not None, "l'arroseuse fait la tournée de la charrue : il en faut une"
