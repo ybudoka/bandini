@@ -181,9 +181,24 @@ function etatInitial(defs) {
     //: jamais — celui qui joue depuis trois jours n'a pas besoin qu'on lui
     //: presente son oncle.
     ouvertureVue: false,
+    //: Les triches du menu DEBUG qui se BASCULENT (`Hud.menuDebug`) — invincible,
+    //: vehicules invincibles, energie infinie, munitions infinies, police qui
+    //: n'arrete pas — et `menu`, qui n'est pas une triche mais la CLE : la suite
+    //: secrete l'a tapee dans cette partie, donc la PAUSE montre la ligne
+    //: TRICHES. ⚠️ Tout vit DANS LA PARTIE, pas sur `B` : ca suit son emplacement
+    //: (et le compte, qui monte la partie entiere), et une nouvelle partie
+    //: repart sans rien. On lit par `triche(nom)`, jamais a la main.
+    triches: { menu: false, invincible: false, vehicules: false, endurance: false, munitions: false, pasArrete: false },
     stats: { crimes: 0, arrestations: 0, volees: 0, tues: 0, secondes: 0 },
     x: null, y: null,
   };
+}
+
+/** Une triche du menu DEBUG est-elle allumee dans la partie en cours ? Faux sans
+    partie (le titre) et pour un nom inconnu. */
+function triche(nom) {
+  const p = B.partie;
+  return !!(p && p.triches && p.triches[nom]);
 }
 
 /** Les couleurs du joueur : son linge, et sa coupe s'il est passe chez le barbier.
@@ -581,7 +596,7 @@ const Sauvegarde = (function () {
     const base = etatInitial(defs);
     if (!partie || typeof partie !== 'object') return base;
     const out = Object.assign({}, base, partie);
-    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts']) {
+    for (const k of ['armes', 'planque', 'proprietes', 'missionsFaites', 'paquets', 'stats', 'connus', 'nettoyage', 'boulots', 'paliers', 'objets', 'assurance', 'contrebande', 'contacts', 'triches']) {
       out[k] = Object.assign({}, base[k], (partie[k] && typeof partie[k] === 'object') ? partie[k] : {});
     }
     if (!Array.isArray(out.tenues) || out.tenues.indexOf('chandail') < 0) out.tenues = ['chandail'].concat(Array.isArray(out.tenues) ? out.tenues : []);

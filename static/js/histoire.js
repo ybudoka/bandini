@@ -366,14 +366,21 @@ const Histoire = (function () {
       // Parti apres sa mission (Ti-Guy entre au garage a la fin de M1) : dans les
       // donnees, parce qu'ici aucun slug de mission ne s'ecrit.
       if (p.parti_apres && faite(p.parti_apres)) continue;
-      const l = lieu(p.ou.slice(6));
-      if (!l) continue;
-      // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
-      // qu'ACTION au pas de la porte serve encore a autre chose.
-      const place = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
-      if (!place) continue;
-      creerPersonnage(p, place.x, place.y);
+      poserDonneur(p);
     }
+  }
+
+  /** UN personnage du dehors, pose devant sa porte — ou null quand la porte ou la
+      place manque. ⚠️ Il ne regarde ni `parti_apres` ni s'il est deja la : c'est
+      `creerDonneurs` qui juge s'il doit exister, et le debug (`Hud.menuSautMissions`)
+      qui le REPOSE pour refaire la mission d'un donneur parti. */
+  function poserDonneur(p) {
+    const l = lieu(p.ou.slice(6));
+    if (!l) return null;
+    // A deux tuiles de la porte : assez pres pour le voir, assez loin pour
+    // qu'ACTION au pas de la porte serve encore a autre chose.
+    const place = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
+    return place ? creerPersonnage(p, place.x, place.y) : null;
   }
 
   /** Pose les personnages qui se tiennent DEDANS, quand on entre chez eux.
@@ -717,21 +724,42 @@ const Histoire = (function () {
       return true;
     }
     const m = disponibleDe(slug);
-    if (m) {
-      // ⚠️ LA MISSION SE POSE AVANT SA SCENE D'INTRO. Quand Madame Thibodeau
-      // parle de ses deux Cravates, ils doivent exister : une scene qui va les
-      // voir filmerait sinon un coin vide. Ce n'est pas un de de deplace — la
-      // ville est figee pendant qu'on parle et le dialogue n'en tire aucun, donc
-      // les tirages de `poser()` tombent dans le meme ordre. Ce qui s'ANNONCE
-      // (le titre, l'objectif, le coup de cuivre) attend, lui, la fin de l'intro.
-      commencer(m.slug, true);
-      jouerOuDire(m, 'intro', function () { annoncer(m); });
-      return true;
-    }
+    if (m) { poserPuisDireLIntro(m); return true; }
     const mn = B.defs.marche_noir;
     if (mn && slug === 'josee' && faite(mn.apres)) { Hud.ouvrirMenu(Missions.menuMarcheNoir()); return true; }
     const repos = B.defs.repos || {};
     Hud.dialogue(p.nom, [repos.apres && faite(repos.apres) ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], 120);
+    return true;
+  }
+
+  /** Ce que fait un donneur qui nous confie sa mission : elle se pose, puis son
+      intro se dit, puis elle s'annonce.
+
+      ⚠️ LA MISSION SE POSE AVANT SA SCENE D'INTRO. Quand Madame Thibodeau
+      parle de ses deux Cravates, ils doivent exister : une scene qui va les
+      voir filmerait sinon un coin vide. Ce n'est pas un de de deplace — la
+      ville est figee pendant qu'on parle et le dialogue n'en tire aucun, donc
+      les tirages de `poser()` tombent dans le meme ordre. Ce qui s'ANNONCE
+      (le titre, l'objectif, le coup de cuivre) attend, lui, la fin de l'intro. */
+  function poserPuisDireLIntro(m) {
+    commencer(m.slug, true);
+    jouerOuDire(m, 'intro', function () { annoncer(m); });
+  }
+
+  /** LANCE une mission comme si son donneur venait de nous parler, sans regarder
+      ce qu'il faut avoir fait avant (triche de debug : `Hud.menuSautMissions`).
+
+      Celle qui est en cours, quelle qu'elle soit, est abandonnee proprement —
+      sans compter d'echec ; celle qu'on lance, deja faite, redevient a faire.
+      ⚠️ Rien n'est pris pour un pre-requis : lancer M6 sans M5 donne la mission
+      dans l'etat ou la partie est, pas dans celui ou elle aurait du etre. */
+  function demarrer(slug) {
+    const m = mission(slug);
+    if (!m || !B.partie) return false;
+    abandonner();
+    reinitialiser(slug);
+    rencontrer(m.donneur);
+    poserPuisDireLIntro(m);
     return true;
   }
 
@@ -1364,6 +1392,18 @@ const Histoire = (function () {
     void raison;
   }
 
+  /** Abandonne la mission EN COURS, sans compter d'echec ni redire la moindre
+      replique : ses figurants s'en vont, la partie n'a plus de mission. Rien
+      n'est rendu de ce qu'elle avait pris. */
+  function abandonner() {
+    const p = B.partie;
+    if (!p || !p.mission) return;
+    nettoyer(true);
+    p.mission = null;
+    B.mission = null;
+    B.finEnAttente = null;
+  }
+
   /** Reinitialise une mission pour pouvoir la refaire (triche de debug, appelee
       par le saut de mission) : retire son drapeau FAIT, ses appels et ses
       tombes. Si c'est la mission EN COURS, on l'abandonne proprement d'abord
@@ -1372,12 +1412,7 @@ const Histoire = (function () {
   function reinitialiser(slug) {
     const p = B.partie;
     if (!p || !slug) return false;
-    if (p.mission && p.mission.slug === slug) {
-      nettoyer(true);
-      p.mission = null;
-      B.mission = null;
-      B.finEnAttente = null;
-    }
+    if (p.mission && p.mission.slug === slug) abandonner();
     delete p.missionsFaites[slug];
     delete p.appels[slug];
     if (p.tombes) delete p.tombes[slug];
@@ -1869,8 +1904,8 @@ const Histoire = (function () {
   }
 
   return { disponibles, disponibleDe, personnage, personnageSousLaMain, personnageDuPoint, pieceDuPoint,
-           donneur, creerDonneurs, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
-           parler, dire, suivante, finir, commencer, avancer, objectif, courante, reussir, echouer, evenement,
+           donneur, creerDonneurs, poserDonneur, creerDonneursDedans, creerPanneaux, panneauSousLaMain,
+           parler, dire, suivante, finir, commencer, demarrer, avancer, objectif, courante, reussir, echouer, evenement,
            ouverture, passerOuverture, fichiersDeLOuverture, direLignes, majCinema, resoudre,
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX,

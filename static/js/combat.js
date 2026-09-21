@@ -296,7 +296,7 @@ const Combat = (function () {
       const reste = munitions(arme.slug);
       // ⚠️ La gachette a vide CLIQUE : le buzzer des menus faisait croire
       // que le bouton etait casse, pas le chargeur.
-      if (!B.debugMunitions && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
+      if (!triche('munitions') && reste !== null && reste <= 0) { Son.SFX.vide(); return false; }
     }
     e.etat = 'attaque';
     e.arc = arme;
@@ -333,7 +333,7 @@ const Combat = (function () {
     }
     if (joueur) {
       const sac = B.partie.armes[arme.slug];
-      if (!B.debugMunitions && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
+      if (!triche('munitions') && sac && sac.mun !== null) sac.mun = Math.max(0, sac.mun - 1);
       B.cam.secousse = 0.6;
       Entree.vibrer(25);
       // ⚠️ **LA CARABINE À BOUCHON DE LA FOIRE N'EST PAS UNE ARME** : pas de
@@ -555,8 +555,8 @@ const Combat = (function () {
     if (!arme || arme.type !== 'jet' || e.phase !== 'actif') return;
     const sac = B.partie.armes[arme.slug];
     if (e === B.joueur) {
-      if (!B.debugMunitions && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
-      if (!B.debugMunitions) sac.mun--;
+      if (!triche('munitions') && (!sac || sac.mun <= 0)) { e.etat = 'flane'; e.phase = null; return; }
+      if (!triche('munitions')) sac.mun--;
     }
     for (let i = 0; i < 3; i++) {
       const a = e.angle + (B.rng() - 0.5) * 0.7;

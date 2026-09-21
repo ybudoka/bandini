@@ -507,9 +507,14 @@ const Jeu = (function () {
 
   /** Reveille par la suite secrete (`SEQUENCE_DEBUG`) — jamais par un bouton.
       En partie seulement, et pas par-dessus un autre menu, une scene ou la
-      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu. */
+      roue d'armes : ce sont eux qui gelent deja la simulation, pas ce menu.
+
+      ⚠️ La taper ACTIVE les triches de cette partie : la ligne TRICHES apparait
+      dans la PAUSE (`Hud.menuPause`), et se sauve avec la partie — on n'a plus
+      a retaper la suite, mais une partie qui ne l'a jamais tapee n'en montre rien. */
   function ouvrirMenuDebug() {
     if (B.etat !== 'jeu' || B.menu || B.cinema || B.roue) return;
+    if (!triche('menu')) { B.partie.triches.menu = true; Missions.sauvegarderPartie(); }
     Hud.ouvrirMenu(Hud.menuDebug());
   }
 
@@ -570,12 +575,12 @@ const Jeu = (function () {
     // CHAQUE image, tant que le flag tient, elle ne retombe jamais a zero — et
     // combat, tirs, explosions, collisions restent le MEME chemin qu'en jeu
     // normal, juste sans jamais s'epuiser.
-    if (B.debugInvincible && B.joueur) B.joueur.invincible = 30;
+    if (triche('invincible') && B.joueur) B.joueur.invincible = 30;
     // ⚠️ MÊME PATRON que l'invincibilité : on recharge le souffle à fond à
     // CHAQUE image tant que le flag tient, au lieu d'un second garde-fou dans
     // la dépense. Le sprint et la nage restent le même chemin, juste sans
     // jamais s'épuiser — et on ne coule jamais.
-    if (B.debugEndurance && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
+    if (triche('endurance') && B.joueur) B.joueur.endurance = B.defs.recherche.vitesses.endurance;
     // ⚠️ A chaque image, quel que soit l'ecran : la musique du menu doit
     // tourner au titre, la ou la simulation, elle, ne tourne pas.
     Son.Mus.tick();

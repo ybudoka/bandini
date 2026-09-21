@@ -448,13 +448,13 @@ const Police = (function () {
       }
       if (!j.dansVehicule && d < p.arrestation_px + 4) {
         a.vx = 0; a.vy = 0;
-        if (!B.debugPasArrete && !j.hospitalise && !j.intouchable && !B.menu) Missions.arrestation(a);
+        if (!triche('pasArrete') && !j.hospitalise && !j.intouchable && !B.menu) Missions.arrestation(a);
         return true;
       }
       if (j.dansVehicule && d < 40) {
         a.vx = 0; a.vy = 0; Entites.regarder(a, j.x - a.x, j.y - a.y);
         // Un char arrete ne protege de rien : il t'en sort.
-        if (!B.debugPasArrete && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
+        if (!triche('pasArrete') && d < 30 && Math.abs(j.dansVehicule.vitesse) < 0.5 && !j.intouchable && !B.menu) { Vehicules.descendre(j, true); Hud.message('SORS DU CHAR !'); }
         return true;
       }
       suivre(a, but, v.policier);

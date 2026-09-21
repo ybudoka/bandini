@@ -920,8 +920,16 @@ const Vehicules = (function () {
     if (v.assure && typeof Missions !== 'undefined' && Missions.charPerdu) Missions.charPerdu(v);
   }
 
+  /** La triche VEHICULES INVINCIBLES (`Hud.menuDebug`) : le char que le JOUEUR
+      CONDUIT — pas le trafic, pas la police, pas le fuyard d'une mission qu'il
+      faut justement abimer. ⚠️ `B.joueur &&` : un char gare a `conducteur ===
+      null` serait sinon « conduit » par un joueur qui n'existe pas encore. */
+  function blinde(v) {
+    return triche('vehicules') && !!B.joueur && v.conducteur === B.joueur;
+  }
+
   function endommager(v, degats, source) {
-    if (v.etat === 'epave' || degats <= 0) return;
+    if (v.etat === 'epave' || degats <= 0 || blinde(v)) return;
     v.vie -= degats;
     if (source) v.agresseur = source;
     if (v.vie > 0) return;
@@ -984,6 +992,9 @@ const Vehicules = (function () {
       v.coule = 0;
       return false;
     }
+    // ⚠️ Couler, c'est DISPARAITRE : une triche qui laisse la baie manger le char
+    // n'est pas invincible. Il roule sur l'eau, sans un remous.
+    if (blinde(v)) { v.coule = 0; return false; }
     if (!v.coule) {
       Entites.remous(v.x, v.y, 14);
       // ⚠️ Il entrait dans l'eau SANS UN BRUIT : le HUD ecrivait « IL COULE —

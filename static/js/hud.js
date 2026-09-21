@@ -986,21 +986,43 @@ const Hud = (function () {
   }
 
   function menuPause() {
-    return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: [
+    const items = [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
       { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
       { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
       { libelle: 'OPTIONS', faire: function () { ouvrirMenu(menuOptions()); return false; } },
+    ];
+    // ⚠️ La suite secrete (`Jeu.ouvrirMenuDebug`) a active les triches de cette
+    // partie : la ligne existe, et le menu DEBUG s'ouvre d'ici sans la retaper.
+    // Une partie qui ne l'a jamais tapee ne montre rien.
+    if (triche('menu')) items.push({ libelle: 'TRICHES', faire: function () { ouvrirMenu(menuDebug()); return false; } });
+    items.push(
       { libelle: 'SAUVEGARDER', faire: function () { Missions.sauvegarderPartie(); message('PARTIE SAUVEGARDÉE'); return false; } },
-      { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } },
-    ] };
+      { libelle: 'QUITTER VERS LE TITRE', faire: function () { Jeu.retourTitre(); return true; } });
+    return { titre: 'PAUSE', sur: 'JOUR ' + B.partie.jour + ' ' + Monde.heureTexte(), items: items };
   }
 
   // --- Debug : la triche du developpeur, jamais un bouton visible -------------------
-  //: Ce menu ne s'ouvre QUE par la suite secrete de touches ecoutee dans
-  //: `Jeu.demarrer` (voir `Entree.surSecret`) — aucune ligne de menu n'y mene,
-  //: aucune sauvegarde ne s'en souvient.
+  //: Ce menu s'ouvre par la suite secrete de touches ecoutee dans `Jeu.demarrer`
+  //: (voir `Entree.surSecret`) — et, une fois la suite tapee dans une partie, par
+  //: la ligne TRICHES de sa PAUSE (`menuPause`). Aucun autre bouton n'y mene.
+  //: ⚠️ Ses BASCULES (invincible, vehicules, energie, munitions, police) se sauvent
+  //: avec la partie (`B.partie.triches`) : on rouvre son emplacement, elles y sont
+  //: encore. C'est la ligne OUI/NON qui dit ce qui est allume.
+  //: ⚠️ Ouvert depuis la PAUSE (`B.etat === 'pause'`), RETOUR revient a la pause,
+  //: comme les OPTIONS ; une ligne qui rend `true` ferme le menu et la pause
+  //: reprend toute seule (`Jeu.maj` : « fermer le dernier menu, c'est reprendre »).
+
+  /** Bascule une triche de `B.partie.triches`, la dit dans son item et SE SAUVE
+      tout de suite : un rechargement avant la sauvegarde auto (dix secondes) ne
+      la perdrait pas. */
+  function basculerTriche(nom, item) {
+    const t = B.partie.triches;
+    t[nom] = !t[nom];
+    item.detail = t[nom] ? 'OUI' : 'NON';
+    Missions.sauvegarderPartie();
+  }
 
   /** Saute le joueur au point que le HUD pointe deja (la fleche/losange de
       `Histoire.cible`) — rien de plus qu'un raccourci sur une position deja
@@ -1018,39 +1040,91 @@ const Hud = (function () {
     message('TÉLÉPORTÉ');
   }
 
-  /** Teleporte le joueur a un point (en ville, a pied). Meme refus que
-      `teleporterVersObjectif` : ni dans une piece, ni au volant. */
-  function sauterVers(x, y, nom) {
-    const j = B.joueur;
-    if (!j) return false;
-    if (B.interieur || j.dansVehicule) { message('SORS D\'ABORD'); return false; }
-    if (x === undefined || y === undefined) { message('INTROUVABLE'); return false; }
-    j.x = x; j.y = y; j.vx = 0; j.vy = 0;
+  /** Une tuile a pied a un pas de `e` — hors chaussee, hors meuble, sans
+      personne dessus —, ou null. */
+  function placeAupres(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    const pas = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0], [0, 2], [0, -2]];
+    for (const p of pas) {
+      const x = tx + p[0], y = ty + p[1];
+      if (!Monde.marchablePieton(x, y) || Monde.estMeuble(x, y)) continue;
+      if (Entites.pietonsAutour(x * TT + 8, y * TT + 8, 10).length) continue;
+      return { x: x * TT + 8, y: y * TT + 8 };
+    }
+    return null;
+  }
+
+  /** Se poser DEVANT le donneur d'une mission, la ou l'on lui parle : a cote de
+      lui dehors, DANS sa piece quand il se tient dedans (M4, M5, M6).
+
+      ⚠️ Le bon endroit decide de la facon dont l'intro se joue : a moins de
+      douze tuiles de lui (`Histoire.present`) elle se joue EN PERSONNE, plus
+      loin elle se dit au combine. Et dehors, un donneur dedans n'existe pas.
+      ⚠️ On sort de la piece ou l'on est et du char SANS fondu (`Jeu.entrer` puis
+      `Jeu.finirTransition`, comme le reveil a l'hopital) : l'ancien saut refusait
+      « SORS D'ABORD » et ne posait le joueur que sur le pixel du donneur. Un
+      donneur qui n'est plus la — Ti-Guy entre au garage a la fin de M1 — est
+      REPOSE devant sa porte : sa mission se refait quand meme.
+      Rend faux quand il n'y a nulle part ou se poser. */
+  function allerChezLeDonneur(slug) {
+    const j = B.joueur, perso = Histoire.personnage(slug);
+    if (!j || !perso) return false;
+    Jeu.finirTransition();
+    if (j.dansVehicule) Vehicules.descendre(j, true);
+    // ⚠️ Dehors D'ABORD, toujours : `quitterLaPiece` ne pose pas le joueur, et un
+    // joueur qui garderait ses coordonnees de piece se retrouverait au milieu de
+    // la ville. Il retombe la ou il etait entre ; s'il ne trouve rien mieux, il y reste.
+    const ext = Jeu.quitterLaPiece();
+    if (ext) { j.x = ext.x; j.y = ext.y; }
+    let e = null;
+    if (perso.ou.indexOf('point:') === 0) {
+      const piece = Histoire.pieceDuPoint(perso.ou.slice(6));
+      const porte = piece && (Monde.carte.def.portes || []).find(function (q) { return q.lieu === piece.slug && q.interieur; });
+      if (porte && Jeu.entrer(porte)) { Jeu.finirTransition(); e = Histoire.donneur(slug); }
+    } else {
+      e = Histoire.donneur(slug) || Histoire.poserDonneur(perso);
+    }
+    if (!e) return false;
+    Entites.indexer();
+    const place = placeAupres(e);
+    if (!place) return false;
+    j.x = place.x; j.y = place.y; j.vx = 0; j.vy = 0;
+    Entites.regarder(j, e.x - j.x, e.y - j.y);
+    Entites.regarder(e, j.x - e.x, j.y - e.y);
+    Entites.indexer();
     Monde.centrerCamera(j.x, j.y);
-    message('TÉLÉPORTÉ — ' + (nom || '').toUpperCase());
     return true;
   }
 
-  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`, chacune
-      menant vers son donneur. C'est le CATALOGUE qui fait la liste — une
-      mission ajoutee au jeu tombe ici sans qu'on y touche. Le donneur porte un
-      intitule d'etat (à faire / en cours / faite) et, s'il a un lieu, un saut.
-      ⚠️ Sauter vers une mission DEJA FAITE la reinitialise (`Histoire.
-      reinitialiser`) pour qu'on puisse la refaire : le drapeau FAIT, l'appel
-      et les tombes tombent, puis on se teleporte chez le donneur. */
+  /** Va chez le donneur de `m` et LANCE la mission, comme s'il venait de nous
+      parler (`Histoire.demarrer`). Ferme le menu — et la pause : la partie
+      reprend AVANT que l'intro ne se joue. Rend `false` (le menu reste ouvert)
+      quand on ne peut pas : une scene joue, ou il n'y a nulle part ou se poser. */
+  function lancerLaMission(m) {
+    if (!B.joueur || B.cinema || B.scene) { message('UNE SCÈNE JOUE'); return false; }
+    if (!allerChezLeDonneur(m.donneur)) { message('INTROUVABLE'); return false; }
+    if (B.etat === 'pause') Jeu.reprendre();
+    fermerMenu();
+    Histoire.demarrer(m.slug);
+    return true;
+  }
+
+  /** SAUT VERS UNE MISSION : la liste complete de `B.defs.missions`. C'est le
+      CATALOGUE qui fait la liste — une mission ajoutee au jeu tombe ici sans
+      qu'on y touche. Choisir une ligne TELEPORTE devant le donneur (dans sa piece
+      s'il est dedans) et LANCE la mission tout de suite, intro comprise
+      (`lancerLaMission`) — deja faite, elle est d'abord reinitialisee ; en cours,
+      celle-ci ou une autre, elle est abandonnee sans compter d'echec.
+      ⚠️ Aucun pre-requis n'est regarde : la mission part dans l'etat ou est la partie. */
   function menuSautMissions() {
     const p = B.partie;
     const cours = p.mission ? p.mission.slug : null;
     const items = (B.defs.missions || []).map(function (m) {
-      const ou = Histoire.ouTrouver(m.donneur);
       const faite = !!p.missionsFaites[m.slug];
-      const etat = faite ? 'FAITE · REFAIRE' : (m.slug === cours ? 'EN COURS' : '→ DONNEUR');
+      const etat = faite ? 'FAITE · REFAIRE' : (m.slug === cours ? 'EN COURS · RELANCER' : 'LANCER');
       return { libelle: m.titre.toUpperCase(), detail: etat,
-               actif: !!ou,
-               faire: function () {
-                 if (faite) Histoire.reinitialiser(m.slug);
-                 return !sauterVers(ou.x, ou.y, m.titre);
-               } };
+               actif: !!Histoire.personnage(m.donneur),
+               faire: function () { return lancerLaMission(m); } };
     });
     items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuDebug()); return false; } });
     return { titre: 'SAUT VERS UNE MISSION', largeur: 340, hauteur: VH - 30,
@@ -1120,31 +1194,20 @@ const Hud = (function () {
       { libelle: 'ARGENT +50 000 $', faire: function () { Missions.encaisser(50000, 'DEBUG'); return false; } },
       { libelle: 'TOUS LES ITEMS', faire: function () { tousLesItems(); return false; } },
       { libelle: 'SANTÉ COMPLÈTE', faire: function () { Missions.soigner(B.joueur, B.joueur.vieMax); return false; } },
-      { libelle: 'INVINCIBLE', detail: B.debugInvincible ? 'OUI' : 'NON', faire: function (item) {
-        B.debugInvincible = !B.debugInvincible;
-        item.detail = B.debugInvincible ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'ÉNERGIE INFINIE', detail: B.debugEndurance ? 'OUI' : 'NON', faire: function (item) {
-        B.debugEndurance = !B.debugEndurance;
-        item.detail = B.debugEndurance ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'MUNITIONS INFINIES', detail: B.debugMunitions ? 'OUI' : 'NON', faire: function (item) {
-        B.debugMunitions = !B.debugMunitions;
-        item.detail = B.debugMunitions ? 'OUI' : 'NON';
-        return false;
-      } },
-      { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: B.debugPasArrete ? 'OUI' : 'NON', faire: function (item) {
-        B.debugPasArrete = !B.debugPasArrete;
-        item.detail = B.debugPasArrete ? 'OUI' : 'NON';
-        return false;
-      } },
+      { libelle: 'INVINCIBLE', detail: triche('invincible') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('invincible', item); return false; } },
+      { libelle: 'VÉHICULES INVINCIBLES', detail: triche('vehicules') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('vehicules', item); return false; } },
+      { libelle: 'ÉNERGIE INFINIE', detail: triche('endurance') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('endurance', item); return false; } },
+      { libelle: 'MUNITIONS INFINIES', detail: triche('munitions') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('munitions', item); return false; } },
+      { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: triche('pasArrete') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('pasArrete', item); return false; } },
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
       { libelle: 'PLUS…', faire: function () { ouvrirMenu(menuDebugPlus()); return false; } },
-      { libelle: 'RETOUR', faire: function () { fermerMenu(); return true; } },
+      { libelle: 'RETOUR', faire: function () {
+        if (B.etat === 'pause') { ouvrirMenu(menuPause()); return false; }
+        fermerMenu();
+        return true;
+      } },
     ] };
   }
 
