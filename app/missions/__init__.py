@@ -14,6 +14,7 @@ Josee, la Chef des Quais, veut le Faubourg vide de Cravates (M5).
 from __future__ import annotations
 
 import copy
+import re
 from typing import NotRequired, TypedDict
 
 from ._commun import _l
@@ -460,6 +461,77 @@ def personnage(slug: str) -> Personnage | None:
     return None
 
 
+# --- Qui parle se nomme ----------------------------------------------------------------------
+#
+# ⚠️ Demande de Martin (21 sept. 2026) : « normalement les gens se présentent avant de parler,
+# comme "C'est XXX" ou "Salut, c'est XXX" ou "Salut XXX, tu sais je suis qui ? Je suis XXX" »,
+# puis « sois varié et contextuel selon la personnalité des personnages ». Au téléphone on
+# n'a qu'une voix, et à la première rencontre qu'un bonhomme de seize pixels sans visage : le
+# nom se DIT, une fois par conversation, dans la salutation de CE personnage. La règle et ses
+# formes : `docs/jeu-d-acteur.md` § 3.11 ; la salutation de chacun : sa fiche, `docs/personnages/`.
+
+#: Les mots d'un `nom` qui ne nomment personne à eux seuls : « le sergent » n'est pas Bouchard
+#: (Lulu dit « le sergent va être content »), « Madame » n'est pas Thibodeau.
+TITRES = frozenset({"madame", "monsieur", "sergent", "docteur", "dr", "me", "le", "la", "les",
+                    "de", "du", "des"})
+
+
+def on_le_rencontre(qui: str) -> bool:
+    """Un personnage qu'on rencontre (il se tient quelque part, `ou`). Le client du taxi et le
+    narrateur du Clairon n'en sont pas : l'un est un rôle, l'autre une voix — ils ne se présentent pas."""
+    p = personnage(qui)
+    return bool(p and p.get("ou"))
+
+
+def noms_dits(qui: str) -> tuple[str, ...]:
+    """Les mots qui nomment `qui` quand il se présente : ceux de son `nom`, moins les titres.
+    « Lucienne « Lulu » Pelletier » → Lucienne, Lulu, Pelletier ; « Sergent Bouchard » → Bouchard."""
+    p = personnage(qui)
+    return tuple(mot for mot in re.findall(r"\w[\w-]*", p["nom"]) if mot.lower() not in TITRES) if p else ()
+
+
+def se_nomme(qui: str, texte: str) -> bool:
+    """La réplique dit-elle le nom de celui qui la dit ? Un mot entier, sans égard à la casse :
+    « Ti-Paul » ne se trouve pas dans « Ti-Paulette », ni « Marco » dans « Marcotte »."""
+    return any(re.search(rf"(?<![\w-]){re.escape(nom)}(?![\w-])", texte, re.IGNORECASE)
+               for nom in noms_dits(qui))
+
+
+def dans_l_ordre_ou_on_les_entend(mission: dict) -> list[dict]:
+    """Les répliques d'une mission dans l'ordre où le joueur les ENTEND (pas celui des slugs) :
+    l'appel, l'intro, puis objectif par objectif ce qui se dit quand il commence (`pendant`), si
+    on parle trop tôt (`renvoi`) et à la poignée de main qui l'accomplit (`accueil`) ; le client
+    du taxi, la fin, l'échec."""
+    dialogue = mission["dialogue"]
+    sortie = list(dialogue.get("appel") or []) + list(dialogue.get("intro") or [])
+    for i in range(len(mission["objectifs"])):
+        for partie in ("pendant", "renvoi", "accueil"):
+            sortie += [ligne for ligne in dialogue.get(partie) or [] if ligne.get("objectif") == i]
+    for partie in ("client", "fin", "echec"):
+        sortie += list(dialogue.get(partie) or [])
+    return sortie
+
+
+def erreurs_de_presentation(catalogue: list[dict] | None = None) -> list[str]:
+    """⚠️ LA PREMIÈRE FOIS QU'ON ENTEND QUELQU'UN, IL DIT SON NOM — dans l'ordre du catalogue,
+    qui est celui du téléphone. Les quatre contacts de m6 serraient la main sans dire le leur, et
+    Ti-Guy accueillait le joueur au terminus sans se nommer. ⚠️ Le juge suit UN chemin, celui du
+    catalogue : une mission jouable avant celle qui présente quelqu'un (m50 avant m6, pour Lulu) se
+    règle à la main, par une réplique qui marche dans les deux cas (« Lulu, si tu t'en rappelles »)."""
+    vus: set[str] = set()
+    erreurs: list[str] = []
+    for mission in CATALOGUE if catalogue is None else catalogue:
+        for ligne in dans_l_ordre_ou_on_les_entend(mission):
+            qui = ligne["qui"]
+            if qui in vus or not on_le_rencontre(qui):
+                continue
+            vus.add(qui)
+            if not se_nomme(qui, ligne["texte"]):
+                erreurs.append(f"{mission['slug']} : première fois qu'on entend {qui}, et son nom n'y est pas "
+                               f"— « {ligne['texte']} »")
+    return erreurs
+
+
 #: L'ordre dans lequel se comptent les répliques d'une mission (le `n` du slug de voix).
 #: ⚠️ `renvoi` vient APRÈS `pendant` : un slug de voix se compte à sa place, et les mp3 déjà
 #: payés ne changent pas de nom. Et `accueil` vient APRÈS `renvoi`, pour la même raison.
@@ -610,11 +682,22 @@ def erreurs_de_mise_en_scene(mission: dict) -> list[str]:
             erreurs.append(f"{slug} {partie} : les répliques dites {sorted(dites)} ne sont pas toutes, une fois")
     # ⚠️ UNE FIN QUI SE JOUE LOIN DU DONNEUR le fait venir (`sortir`, `marcher`) ou
     # va le voir chez lui (`coupe`) — sinon on entend quelqu'un qui n'est pas là.
-    if scenes.get("fin") and not fin_dite_en_personne(mission, scenes["fin"]):
+    fin_au_combine = bool(scenes.get("fin")) and not fin_dite_en_personne(mission, scenes["fin"])
+    if fin_au_combine:
         chez_lui = {"chez:" + mission["donneur"], "donneur"}
         va_chez_lui = any(p["type"] == "coupe" and chez_lui & set(_lieux_du_plan(p)) for p in scenes["fin"])
         if not va_chez_lui:
             erreurs.append(f"{slug} : la fin se joue loin de {mission['donneur']} et personne ne va le voir")
+    # ⚠️ QUI PARLE AU COMBINÉ SE NOMME, dès sa première réplique : l'appel et l'échec se disent
+    # TOUJOURS au téléphone (`histoire.js`, `lignesDe`), la fin quand le donneur n'est pas là. Le
+    # téléphone n'a pas de visage — « Cousin, j'ai une faveur » ne dit pas qui appelle.
+    for partie, quoi in (("appel", "l'appel"), ("echec", "l'échec"), ("fin", "la fin, dite au combiné,")):
+        lignes = dialogue.get(partie) or []
+        if partie == "fin" and not fin_au_combine or not lignes or not on_le_rencontre(lignes[0]["qui"]):
+            continue
+        if not se_nomme(lignes[0]["qui"], lignes[0]["texte"]):
+            erreurs.append(f"{slug} : {quoi} ne dit pas qui parle — « {lignes[0]['texte']} » "
+                           f"(docs/jeu-d-acteur.md § 3.11)")
     return erreurs
 
 

@@ -1,6 +1,6 @@
 """La mission m50 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p, _r
+from ._commun import _a, _l, _p, _r
 
 MISSION = {
     "slug": "m50",
@@ -28,8 +28,8 @@ MISSION = {
     # Le jeu de chaque réplique (`jeu=`) — Marco te confie un colis : la contrebande à voix basse, « discret ».
     "dialogue": {
         "appel": [
-            _l("marco", "Cousin, j’ai une faveur. Passe au port, discret.",
-               jeu="[casually] Cousin, j'ai une faveur. Passe au port… discret.")
+            _l("marco", "C'est Marco. Parle pas trop fort, cousin, j'ai une faveur. Passe au port, discret.",
+               jeu="[quietly] C'est Marco. Parle pas trop fort, cousin… j'ai une faveur. [casually] Passe au port, discret.")
         ],
         "intro": [
             _l("marco", "Un colis arrive ce soir, sur le cargo.",
@@ -50,6 +50,12 @@ MISSION = {
             _r("lulu", "Le cargo arrive à la noirceur, pas avant. Reviens me voir ce soir.", 0,
                jeu="[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.")
         ],
+        # La poignée de main de l'objectif 1 : elle était muette. Lulu se nomme — on peut jouer m50
+        # avant m6, et c'est alors ici qu'on la rencontre (docs/jeu-d-acteur.md § 3.11).
+        "accueil": [
+            _a("lulu", "Te v'là, toi! Lulu, la sœur de Josée. C'est Marco qui t'envoie pour le cargo?", 1,
+               jeu="[warmly] Te v'là, toi! Lulu, la sœur de Josée. [knowingly] C'est Marco qui t'envoie pour le cargo?")
+        ],
         "fin": [
             _l("marco", "Parfait. Personne t’a vu? Bon.",
                jeu="[satisfied] Parfait. Personne t'a vu… Bon."),
@@ -57,8 +63,8 @@ MISSION = {
                jeu="[casually] Tiens… pour le trouble.")
         ],
         "echec": [
-            _l("marco", "T’es censé être discret, pas mort.",
-               jeu="[disappointed] T'es censé être discret… pas mort.")
+            _l("marco", "Cousin, c'est Marco. T'es censé être discret, pas mort.",
+               jeu="[disappointed] Cousin, c'est Marco. T'es censé être discret… pas mort.")
         ]
     },
 

@@ -34,8 +34,8 @@ MISSION = {
     # grogne, le bavard en profite.
     "dialogue": {
         "appel": [
-            _l("bouchard", "Bouchard. J'ai une petite tournée à te confier. Passe au casse-croûte.",
-               jeu="[gruffly] Bouchard. J'ai une petite tournée à te confier. Passe au casse-croûte.")
+            _l("bouchard", "Salut, le jeune, c'est Bouchard. J'ai une petite tournée à te confier. Passe au casse-croûte.",
+               jeu="[gruffly] Salut, le jeune, c'est Bouchard. J'ai une petite tournée à te confier. Passe au casse-croûte.")
         ],
         "intro": [
             _l("bouchard", "C'est bientôt la cotisation de la Fraternité des policiers. Les commerçants donnent volontiers.",
@@ -45,18 +45,18 @@ MISSION = {
         ],
         "pendant": [
             # Au combiné : il est dans son casse-croûte, on a les poches pleines.
-            _p("bouchard", "Trois enveloppes? Rapporte-les-moi. Pis touche à rien, je sais combien y en a.", 3,
-               jeu="[gruffly] Trois enveloppes? Rapporte-les-moi. [menacingly] Pis touche à rien… je sais combien y en a.")
+            _p("bouchard", "C'est Bouchard. Trois enveloppes? Rapporte-les-moi, pis touche à rien : je sais combien y en a.", 3,
+               jeu="[gruffly] C'est Bouchard. Trois enveloppes? Rapporte-les-moi. [menacingly] Pis touche à rien… je sais combien y en a.")
         ],
         "fin": [
-            _l("bouchard", "Trois enveloppes, pas une plainte. Tu commences à comprendre comment ça marche, ici.",
-               jeu="[satisfied] Trois enveloppes, pas une plainte. [knowingly] Tu commences à comprendre comment ça marche… ici."),
+            _l("bouchard", "Bouchard. Trois enveloppes, pas une plainte. Tu commences à comprendre comment ça marche, ici.",
+               jeu="[satisfied] Bouchard. Trois enveloppes, pas une plainte. [knowingly] Tu commences à comprendre comment ça marche… ici."),
             _l("bouchard", "Ta part est dans ta poche. Pis si on te demande, c'était pour les orphelins.",
                jeu="[matter-of-fact] Ta part est dans ta poche. [deadpan] Pis si on te demande… c'était pour les orphelins.")
         ],
         "echec": [
-            _l("bouchard", "Ça, c'est de la tournée ratée. Reviens quand tu sauras marcher droit.",
-               jeu="[annoyed] Ça, c'est de la tournée ratée. [gruffly] Reviens quand tu sauras marcher droit.")
+            _l("bouchard", "Bouchard. Ça, c'est de la tournée ratée. Reviens quand tu sauras marcher droit.",
+               jeu="[annoyed] Bouchard. Ça, c'est de la tournée ratée. [gruffly] Reviens quand tu sauras marcher droit.")
         ],
         # La poignée de main, dite : chacun paie à sa façon — la vieille qui râle mais donne, la
         # cantinière qui grogne, le bavard qui en profite pour se plaindre. Comptées APRÈS `pendant`

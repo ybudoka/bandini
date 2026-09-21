@@ -227,6 +227,57 @@ def test_un_accueil_s_accroche_a_la_poignee_de_main_de_celui_qui_parle():
     assert not any(r["telephone"] for r in accueils), "on leur serre la main : ils parlent en personne"
 
 
+def test_qui_parle_au_combine_se_nomme():
+    """⚠️ Martin, 21 sept. 2026 : « normalement les gens se présentent avant de parler ». L'appel et
+    l'échec se disent TOUJOURS au téléphone, la fin quand le donneur n'est pas là : la première
+    réplique dit qui parle. m50 appelait d'un « Cousin, j'ai une faveur » — qui, au juste?"""
+    import copy
+    m50 = copy.deepcopy(missions.par_slug("m50"))
+    m50["dialogue"]["appel"][0]["texte"] = "Cousin, j'ai une faveur. Passe au port, discret."
+    assert any("l'appel ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m50))
+    m50["dialogue"]["appel"][0]["texte"] = "Cousin, c'est Marco. J'ai une faveur."
+    m50["dialogue"]["echec"][0]["texte"] = "T'es censé être discret, pas mort."
+    assert any("l'échec ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m50))
+    # m4 finit au garage, Bouchard au casse-croûte : sa fin passe au combiné, et il s'y nomme.
+    m4 = copy.deepcopy(missions.par_slug("m4"))
+    assert not missions.fin_dite_en_personne(m4, m4["scenes"]["fin"])
+    m4["dialogue"]["fin"][0]["texte"] = "Propre. Si un de mes gars te pogne, tu dis mon nom."
+    assert any("la fin, dite au combiné, ne dit pas qui parle" in e for e in missions.erreurs_de_mise_en_scene(m4))
+    # m2 finit chez Madame Thibodeau : devant elle, pas besoin de se nommer.
+    m2 = copy.deepcopy(missions.par_slug("m2"))
+    assert missions.fin_dite_en_personne(m2, m2["scenes"]["fin"])
+    m2["dialogue"]["fin"][0]["texte"] = "Mon argent! T'es un bon garçon, toi."
+    assert missions.erreurs_de_mise_en_scene(m2) == []
+
+
+def test_la_premiere_fois_qu_on_entend_quelqu_un_il_dit_son_nom():
+    """Dans l'ordre du catalogue (celui du téléphone), la première réplique de chacun le nomme :
+    Ti-Guy au terminus, les quatre contacts de m6 à la poignée de main. Le client du taxi et le
+    narrateur n'en sont pas — un rôle et une voix, on ne les rencontre pas."""
+    import copy
+    assert missions.erreurs_de_presentation() == []
+    catalogue = copy.deepcopy(missions.CATALOGUE)
+    m6 = next(m for m in catalogue if m["slug"] == "m6")
+    m6["dialogue"]["accueil"][0]["texte"] = "Ah, c'est toi, le nouveau de Josée! Ici, rien passe sans que je le sache."
+    assert [e for e in missions.erreurs_de_presentation(catalogue) if "tipaul" in e], "Ti-Paul serre la main sans se nommer"
+    # La deuxième fois, on le connaît : l'accueil de m51 ne dit pas « Ti-Paul », et c'est bien.
+    assert not missions.se_nomme("tipaul", missions.par_slug("m51")["dialogue"]["accueil"][2]["texte"])
+    assert not [e for e in missions.erreurs_de_presentation(catalogue) if "m51" in e]
+    assert not missions.on_le_rencontre("civil") and not missions.on_le_rencontre("narrateur")
+
+
+def test_se_nommer_c_est_dire_son_nom_en_entier():
+    """Un mot entier, sans égard à la casse — et un titre seul ne nomme personne."""
+    assert missions.noms_dits("lulu") == ("Lucienne", "Lulu", "Pelletier")
+    assert missions.noms_dits("bouchard") == ("Bouchard",)
+    assert missions.se_nomme("tipaul", "Moi, c'est Ti-Paul!")
+    assert not missions.se_nomme("tipaul", "C'est Ti-Paulette, du dépanneur.")
+    assert not missions.se_nomme("marco", "Les Marcotte sont en ville.")
+    assert not missions.se_nomme("bouchard", "Le sergent veut son poisson frais.")
+    assert not missions.se_nomme("thibodeau", "Madame est servie.")
+    assert missions.se_nomme("thibodeau", "C'est Madame THIBODEAU, du kiosque.")
+
+
 def test_un_acteur_qui_marche_vers_le_joueur_s_arrete_a_distance_de_parole():
     """⚠️ Martin, 20 sept. 2026 : « Marco se déplace par-dessus le personnage principal dans
     l'animation du début ». Sans `pres`, `marcher vers joueur` va au pixel du joueur : l'acteur
@@ -253,16 +304,19 @@ def test_l_echec_se_dit_au_combine():
 def _fiche(donneur, objectifs, intro=2, fin=2):
     """Une fiche réduite à l'os : ce qui distingue une mission, et rien d'autre.
     Pas de `prerequis`, pas de `phase`, pas d'`echec`, pas de `donne`, pas de
-    `scenes`."""
+    `scenes`. ⚠️ Au combiné, on se nomme (l'appel, l'échec, une fin loin du donneur) : la fiche
+    le fait aussi, sinon le juge « qui parle se nomme » la refuserait pour autre chose que ce
+    qu'on juge."""
+    nom = " ".join(missions.noms_dits(donneur))
     return {
         "slug": "zz", "titre": "Un essai", "donneur": donneur, "recompense": 100,
         "objectifs": objectifs,
         "dialogue": {
-            "appel": [_l(donneur, "Viens me voir.")],
+            "appel": [_l(donneur, f"C'est {nom}. Viens me voir.")],
             "intro": [_l(donneur, f"Intro {i}.") for i in range(1, intro + 1)],
             "pendant": [_p(donneur, "Ça avance?", 0)],
-            "fin": [_l(donneur, f"Fin {i}.") for i in range(1, fin + 1)],
-            "echec": [_l(donneur, "Une autre fois.")],
+            "fin": [_l(donneur, f"C'est {nom}. Fin {i}." if i == 1 else f"Fin {i}.") for i in range(1, fin + 1)],
+            "echec": [_l(donneur, f"C'est {nom}. Une autre fois.")],
         },
     }
 

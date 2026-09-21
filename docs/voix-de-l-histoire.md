@@ -8,6 +8,9 @@ Le jeu **parle**. Chaque réplique de l'histoire est écrite dans `missions.py` 
 source unique) et **dite** par une voix ElevenLabs générée une fois, comme les répliques
 des passants. Ce que ça implique, jalon par jalon :
 
+- **Qui parle se nomme** (21 sept. 2026, demande de Martin) : au téléphone et à la première rencontre,
+  la première réplique dit le nom de celui qui parle, dans **sa** salutation — voir `docs/jeu-d-acteur.md`
+  § 3.11 et les fiches des personnages, [docs/personnages/](personnages/README.md).
 - **Une voix par personnage**, nommée dans `audio.VOIX_PERSONNAGES`. Martin a ajouté des
   voix québécoises à son compte le 13 sept. ; distribution proposée : Ti-Guy = _Felix
   Tabarnak_ (l'homme de tous les jours), Sgt Bouchard = _Khaivan_ (accent bien dialectal),

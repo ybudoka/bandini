@@ -29,8 +29,8 @@ MISSION = {
     # passe la main à Raymonde, avec un clin d'œil.
     "dialogue": {
         "appel": [
-            _l("lulu", "Lulu, à la cantine! J'ai un camion de poisson sans chauffeur, pis c'est vendredi. Viens vite!",
-               jeu="[excited] Lulu, à la cantine! J'ai un camion de poisson sans chauffeur… pis c'est vendredi. Viens vite!")
+            _l("lulu", "Allô, mon grand, c'est Lulu! J'ai un camion de poisson sans chauffeur, pis c'est vendredi. Viens vite!",
+               jeu="[excited] Allô, mon grand, c'est Lulu! J'ai un camion de poisson sans chauffeur… pis c'est vendredi. Viens vite!")
         ],
         "intro": [
             _l("lulu", "Le camion est dans une ruelle, plein de morue. Le chauffeur s'est pogné la main dans sa glacière.",
@@ -40,18 +40,18 @@ MISSION = {
         ],
         "pendant": [
             # Au combiné : elle est à la cantine, on est au volant.
-            _p("lulu", "Doucement dans les tournants! Le sergent veut son poisson frais, pas en purée.", 1,
-               jeu="[worried] Doucement dans les tournants! [playfully] Le sergent veut son poisson frais… pas en purée.")
+            _p("lulu", "C'est encore Lulu! Doucement dans les tournants! Le sergent veut son poisson frais, pas en purée.", 1,
+               jeu="[worried] C'est encore Lulu! Doucement dans les tournants! [playfully] Le sergent veut son poisson frais… pas en purée.")
         ],
         "fin": [
-            _l("lulu", "Pas une écaille de perdue! Le sergent va être content, pis moi, j'suis payée.",
-               jeu="[relieved] Pas une écaille de perdue! [cheerful] Le sergent va être content, pis moi, j'suis payée."),
+            _l("lulu", "C'est Lulu! Pas une écaille de perdue! Le sergent va être content, pis moi, j'suis payée.",
+               jeu="[relieved] C'est Lulu! Pas une écaille de perdue! [cheerful] Le sergent va être content, pis moi, j'suis payée."),
             _l("lulu", "Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien, pis qui pose pas de questions.",
                jeu="[knowingly] Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien… pis qui pose pas de questions.")
         ],
         "echec": [
-            _l("lulu", "Mon poisson… Ben tant pis, on va le faire en soupe. Reviens quand tu conduis mieux.",
-               jeu="[disappointed] Mon poisson… Ben tant pis, on va le faire en soupe. [teasing] Reviens quand tu conduis mieux.")
+            _l("lulu", "C'est Lulu. Mon poisson… Ben tant pis, on va le faire en soupe. Reviens quand tu conduis mieux.",
+               jeu="[disappointed] C'est Lulu. Mon poisson… Ben tant pis, on va le faire en soupe. [teasing] Reviens quand tu conduis mieux.")
         ]
     },
 

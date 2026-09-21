@@ -27,6 +27,7 @@ Trois façons de l'appeler, comme ses voisins `verifier_carte_du_depot.py` et
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -55,8 +56,10 @@ MISSION = {{
     # balises d'émotion en anglais, des « … » et de la ponctuation) : l'arc du personnage, en une phrase.
     # Voir docs/jeu-d-acteur.md § 3.
     "dialogue": {{
-        "appel": [_l("{donneur}", "C'est moi. Viens me voir, j'ai une job.",
-                     jeu="[casually] C'est moi. Viens me voir… j'ai une job.")],
+        # ⚠️ Au combiné (l'appel, l'échec, une fin loin du donneur), on SE NOMME dès la première
+        # réplique, dans SA salutation (docs/personnages/<lui>.md) — le juge le refuse sinon.
+        "appel": [_l("{donneur}", "Salut, c'est {nom}. Viens me voir, j'ai une job.",
+                     jeu="[casually] Salut, c'est {nom}. Viens me voir… j'ai une job.")],
         "intro": [
             _l("{donneur}", "Première chose à dire.", jeu="[quietly] Première chose à dire."),
             _l("{donneur}", "Deuxième chose à dire.", jeu="[serious] Deuxième chose à dire."),
@@ -66,7 +69,8 @@ MISSION = {{
             _l("{donneur}", "C'est fait. Merci.", jeu="[relieved] C'est fait. Merci."),
             _l("{donneur}", "On se reparle.", jeu="[warmly] On se reparle."),
         ],
-        "echec": [_l("{donneur}", "Une autre fois. Repose-toi.", jeu="[disappointed] Une autre fois. Repose-toi.")],
+        "echec": [_l("{donneur}", "C'est {nom}. Une autre fois. Repose-toi.",
+                     jeu="[disappointed] C'est {nom}. Une autre fois… Repose-toi.")],
     }},
 }}'''
 
@@ -76,6 +80,7 @@ def reproches() -> list[str]:
     sortie: list[str] = []
     for mission in missions.CATALOGUE:
         sortie += missions.erreurs_de_mise_en_scene(mission)
+    sortie += missions.erreurs_de_presentation()
     try:
         missions.ordre_topologique()
     except ValueError as erreur:
@@ -121,8 +126,12 @@ def main() -> int:
                   file=sys.stderr)
             return 1
         ordre = missions.ordre_topologique()
+        # Le nom qu'il se donne au téléphone : son surnom s'il en a un (« Lulu »), sinon son nom
+        # sans les titres (« Bouchard ») — le squelette doit passer le juge « qui parle se nomme ».
+        surnom = re.search(r"«\s*([^»]+?)\s*»", missions.personnage(args.donneur)["nom"])
+        nom = surnom.group(1) if surnom else " ".join(missions.noms_dits(args.donneur))
         print(f"# À écrire dans app/missions/{args.squelette}.py :\n")
-        print(SQUELETTE.format(slug=args.squelette, donneur=args.donneur,
+        print(SQUELETTE.format(slug=args.squelette, donneur=args.donneur, nom=nom,
                                precedente=ordre[-1] if ordre else ""))
         print(f"\n# Puis, dans app/missions/__init__.py, ajouter `{args.squelette}` aux DEUX listes")
         print("# (l'import, et CATALOGUE). Puis :")

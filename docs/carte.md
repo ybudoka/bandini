@@ -135,7 +135,8 @@ un paiement.
 ## 5. Les personnages de l'histoire (`missions.PERSONNAGES`)
 
 Ceux qui donnent les missions et font vivre le fil, avec leur position et leur
-voix.
+voix. Leur histoire, leur personnalité et leur façon de parler et de se présenter : une fiche
+chacun dans [docs/personnages/](personnages/README.md).
 
 | Slug | Nom | Voix | Où | S'en va |
 |---|---|---|---|---|

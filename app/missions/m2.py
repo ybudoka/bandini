@@ -63,8 +63,8 @@ MISSION = {
             _l("thibodeau", "Tiens, le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi.",
                jeu="[tenderly] Tiens… le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi."),
         ],
-        "echec": [_l("thibodeau", "Ils t'ont eu, hein? Repose-toi, pis reviens.",
-                     jeu="[concerned] Ils t'ont eu, hein? Repose-toi… pis reviens.")],
+        "echec": [_l("thibodeau", "C'est Madame Thibodeau, mon p'tit. Ils t'ont eu, hein? Repose-toi, pis reviens.",
+                     jeu="[concerned] C'est Madame Thibodeau, mon p'tit. Ils t'ont eu, hein? Repose-toi… pis reviens.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
         "pendant": [_p("thibodeau", "Il se sauve avec ma caisse! Lâche-le pas!", 1,
                        jeu="[worried] Il se sauve avec ma caisse! Lâche-le pas!")],

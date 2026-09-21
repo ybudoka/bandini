@@ -105,8 +105,10 @@ sert le `CATALOGUE` tel quel, le navigateur lit `B.defs.missions`.
 
 ## 3. Les personnages (`PERSONNAGES`)
 
-Un **donneur** de mission doit exister dans `PERSONNAGES` avant la mission.
-Chaque personnage :
+Un **donneur** de mission doit exister dans `PERSONNAGES` avant la mission — **et sa fiche** dans
+[`docs/personnages/`](personnages/README.md) : son histoire, sa personnalité, sa façon de parler et de se
+présenter. On la lit avant d'écrire sa première réplique ; un personnage neuf a la sienne dans le même
+passage. Chaque personnage :
 
 ```python
 {
@@ -218,8 +220,8 @@ Les temps de dialogue, écrits avec les petites usines `_l`, `_p`, `_r` et `_a`.
 un `jeu=` en dernier** : la même phrase, jouée (§ « Chaque réplique veut aussi son jeu », plus bas).
 
 ```python
-_l("marco", "Marco, le cousin. Viens au garage.",
-   jeu="[casually] Marco, le cousin… Viens au garage.")             # une réplique normale
+_l("marco", "Cousin, c'est Marco. Viens au garage.",
+   jeu="[casually] Cousin, c'est Marco… Viens au garage.")          # une réplique normale (au combiné : il se nomme)
 _p("marco", "Cours, cousin!", 1, jeu="[firmly] Cours, cousin!")      # PENDANT : accrochée à l'objectif n (0-based)
 _r("lulu", "Reviens ce soir.", 0, jeu="[warmly] Reviens ce soir.")   # RENVOI : quand on lui parle trop tôt, à l'objectif n
 ```
@@ -248,7 +250,13 @@ Règles jugées (`erreurs_de_mise_en_scene`) :
 - une réplique « pendant » (dont `client`) doit exister ;
 - l'`objectif` d'une réplique `_p` ou `_r` doit pointer un objectif réel ;
 - les répliques de chaque partie sont **toutes dites, et une seule fois**, par
-  les plans `dire` de la scène correspondante (§ 6).
+  les plans `dire` de la scène correspondante (§ 6) ;
+- ⚠️ **qui parle au combiné se nomme** (21 sept. 2026, demande de Martin) : la première réplique de
+  l'`appel`, de l'`echec` et de la `fin` quand elle se dit loin du donneur porte le nom de celui qui parle
+  — « Cousin, c'est Marco. », « Ici le sergent Bouchard. » ; et, dans l'ordre du catalogue, la première
+  réplique qu'on entend d'un personnage aussi (`erreurs_de_presentation`). Chacun le fait **à sa façon** :
+  la salutation est dans sa fiche, [`docs/personnages/`](personnages/README.md), et les formes dans
+  `docs/jeu-d-acteur.md` § 3.11. Le juge ne voit pas un `pendant` dit de loin : nomme-le à la main.
 
 ⚠️ **L'ordre des slugs de voix ne bouge jamais.** Le slug d'une réplique est
 `<qui>-<mission>-<n>`, avec `n` compté dans l'ordre `appel, intro, client, fin,

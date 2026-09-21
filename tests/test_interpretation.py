@@ -291,7 +291,10 @@ def test_une_ligne_attend_une_voix_encore_en_chargement(banc):
         L.Son.Voix.enCours = null;
         // On simule le `fin` du parler : la duree tombe a « maintenant + 20 ».
         c.duree = Math.min(c.duree, c.t + 20);
-        o.frame(c.duree + 3);
+        // ⚠️ 23 images, pas `c.duree + 3` : la duree de la ligne 1 suit sa LONGUEUR, et la ligne 2
+        // passait avec elle des que la 1 etait plus longue que la 2 (Ti-Guy qui se nomme, 21 sept.
+        // 2026). « Maintenant + 20 » est franchi en 21 images ; la ligne la plus courte en dure 114.
+        o.frame(23);
         const apres = c.i;
         return { pendant: pendant, apres: apres };
     }""")

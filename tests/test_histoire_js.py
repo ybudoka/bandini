@@ -359,11 +359,16 @@ def _jouer_m50_jusqu_a_lulu(garee):
         const invite = (L.Missions.majInvite(j), B.invite);
         o.tape('KeyE', 2);
         o.frame(2);
+        // ⚠️ La poignée de main se DIT (21 sept. 2026, « qui parle se nomme ») : Lulu se présente,
+        // puis l'objectif avance et son `pendant` commence. On passe l'accueil, comme ACTION.
+        const accueil = B.cinema && B.cinema.partie === 'accueil' ? B.cinema.lignes[0].slug : null;
+        while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+        o.frame(2);
         const etapeLulu = B.partie.mission.etape;
         const pendant = B.cinema ? B.cinema.partie : null;
         const f = B.mission.fuyard;
         const ext = B.exterieur;
-        const mesure = { etapeAller: etapeAller, dedans: dedans, invite: invite, etapeLulu: etapeLulu, pendant: pendant,
+        const mesure = { etapeAller: etapeAller, dedans: dedans, invite: invite, accueil: accueil, etapeLulu: etapeLulu, pendant: pendant,
             fuyard: !!f, dansLaVille: !!f && ext.entites.indexOf(f) >= 0,
             dPorte: f ? Math.round(Math.hypot(f.x - ext.x, f.y - ext.y)) : null,
             dChar: f && mien ? Math.round(Math.hypot(f.x - mien.x, f.y - mien.y)) : null };
@@ -413,6 +418,11 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
         const invite = (L.Missions.majInvite(j), B.invite);
         o.tape('KeyE', 2);
         o.frame(2);
+        // ⚠️ La poignée de main se DIT (21 sept. 2026, « qui parle se nomme ») : Lulu se présente,
+        // puis l'objectif avance et son `pendant` commence. On passe l'accueil, comme ACTION.
+        const accueil = B.cinema && B.cinema.partie === 'accueil' ? B.cinema.lignes[0].slug : null;
+        while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+        o.frame(2);
         const etapeLulu = B.partie.mission.etape;
         const pendant = B.cinema ? { partie: B.cinema.partie, qui: B.cinema.lignes[0].qui, telephone: B.cinema.lignes[0].telephone } : null;
         const f = B.mission.fuyard, ext = B.exterieur;
@@ -445,7 +455,7 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
         for (let k = 0; k < 400 && B.partie.mission; k++) o.frame(1);
         const fait = !!B.partie.missionsFaites.m50;
         let s = 0; while ((B.scene || B.cinema) && s < 6000) { o.frame(1); if (B.cinema && s % 30 === 0) L.Histoire.suivante(); s++; }
-        return { debut: debut, attend: attend, etapeAller: etapeAller, dedans: dedans, invite: invite, etapeLulu: etapeLulu,
+        return { debut: debut, attend: attend, etapeAller: etapeAller, dedans: dedans, invite: invite, accueil: accueil, etapeLulu: etapeLulu,
                  pendant: pendant, naissance: naissance, dehors: dehors, dSortie: dSortie, dFleche: dFleche, dMax: Math.round(dMax),
                  tombe: tombe, etapeCaisse: etapeCaisse, ligneCaisse: ligneCaisse, fait: fait, prime: B.partie.argent - argent0 };
     }""")
@@ -454,6 +464,7 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
     assert r["attend"] == "ATTENDS LA NUIT", "de jour, on attend la nuit"
     assert r["etapeAller"] == 1, "arrivé à la cantine de nuit, on passe à Lulu"
     assert r["dedans"] == "cantine" and r["invite"] == "PARLER À LUCIENNE « LULU » PELLETIER"
+    assert r["accueil"] == "lulu-m50-9", "à la poignée de main, Lulu se présente (m50 peut se jouer avant m6)"
     assert r["etapeLulu"] == 2, "ACTION devant Lulu accomplit l'objectif"
     assert r["pendant"] == {"partie": "pendant", "qui": "lulu", "telephone": False}, "c'est Lulu qui le crie, elle est là"
     nait = r["naissance"]
@@ -503,12 +514,19 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
             L.Jeu.entrer(porte); o.fondu();
             for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
         };
+        let accueil = null;
         const parlerALulu = function () {
             const pt = B.interieur.points.find(function (q) { return q.type === 'lulu'; });
             j.x = pt.x * 16 + 8; j.y = (pt.y + 1) * 16 + 8; L.Entites.indexer();
             o.frame(2);
             o.tape('KeyE', 2);
             o.frame(2);
+            // ⚠️ La nuit, la poignée de main se DIT (« qui parle se nomme ») avant que l'objectif avance.
+            if (B.cinema && B.cinema.partie === 'accueil') {
+                accueil = B.cinema.lignes[0].slug;
+                while (B.cinema && B.cinema.partie === 'accueil') L.Histoire.suivante();
+                o.frame(2);
+            }
         };
         // De jour, dedans : Lulu renvoie.
         entrer();
@@ -531,7 +549,7 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
         parlerALulu();
         const suite = B.cinema ? { partie: B.cinema.partie, slug: B.cinema.lignes[0].slug } : null;
         return { jour: jour, renvoi: renvoi, voix: voix, etapeRenvoi: etapeRenvoi, etapeNuit: etapeNuit,
-                 etapeLulu: B.partie.mission.etape, suite: suite };
+                 accueil: accueil, etapeLulu: B.partie.mission.etape, suite: suite };
     }""")
     assert r["jour"] is True
     assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-8", "telephone": False,
@@ -540,6 +558,7 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
     assert "lulu-m50-8" in r["voix"], "et sa voix est demandée"
     assert r["etapeRenvoi"] == 0, "on ne fait pas avancer la mission en se faisant renvoyer"
     assert r["etapeNuit"] == 1, "la nuit venue, l'objectif compte"
+    assert r["accueil"] == "lulu-m50-9", "la nuit, la poignée de main se dit — le jour, c'est le renvoi, pas l'accueil"
     assert r["etapeLulu"] == 2 and r["suite"] == {"partie": "pendant", "slug": "lulu-m50-7"}, \
         "la réplique de mission garde sa place"
 
