@@ -19,19 +19,28 @@ MISSION = {
     # phrase. À la fin on est au garage et lui au casse-croûte : le défaut va chez
     # lui, et il parle au combiné. C'est exactement ce qui était écrit ici, plan
     # pour plan.
+    # Le jeu de chaque réplique (`jeu=`) — le sergent Bouchard : bourru, et il baisse la voix pour le sale.
     "dialogue": {
-        "appel": [_l("bouchard", "Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte, j'ai une job.")],
+        "appel": [_l("bouchard", "Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte, j'ai une job.",
+                     jeu="[gruffly] Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte… j'ai une job.")],
         "intro": [
-            _l("bouchard", "Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers pas propres."),
-            _l("bouchard", "Prends-la de nuit, sans témoin. Ti-Guy va te suivre en char, pour faire diversion."),
-            _l("bouchard", "Largue-la au garage. Pis si mes gars te courent après, sème-les."),
+            _l("bouchard", "Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers pas propres.",
+               jeu="[quietly] Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers… pas propres."),
+            _l("bouchard", "Prends-la de nuit, sans témoin. Ti-Guy va te suivre en char, pour faire diversion.",
+               jeu="[serious] Prends-la de nuit, sans témoin. Ti-Guy va te suivre en char, pour faire diversion."),
+            _l("bouchard", "Largue-la au garage. Pis si mes gars te courent après, sème-les.",
+               jeu="[firmly] Largue-la au garage. Pis si mes gars te courent après… sème-les."),
         ],
         "fin": [
-            _l("bouchard", "Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom."),
-            _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention."),
+            _l("bouchard", "Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom.",
+               jeu="[satisfied] Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom."),
+            _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention.",
+               jeu="[gravely] Un mot d'avertissement… Josée, au bar, cherche du monde comme toi. Fais attention."),
         ],
-        "echec": [_l("bouchard", "J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.")],
+        "echec": [_l("bouchard", "J'ai rien vu, j'ai rien entendu. Reviens quand ça sera calme.",
+                     jeu="[nervously] J'ai rien vu, j'ai rien entendu. [sighs] Reviens quand ça sera calme.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("ti_guy", "C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.", 2)],
+        "pendant": [_p("ti_guy", "C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.", 2,
+                       jeu="[confident] C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.")],
     },
 }

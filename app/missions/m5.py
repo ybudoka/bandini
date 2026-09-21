@@ -27,19 +27,28 @@ MISSION = {
             {"type": "dire"},
         ],
     },
+    # Le jeu de chaque réplique (`jeu=`) — Josee : froide, et elle pese chaque ordre.
     "dialogue": {
-        "appel": [_l("josee", "Josée. On m'appelle la Chef. Viens au Brouillard, j'ai à te parler.")],
+        "appel": [_l("josee", "Josée. On m'appelle la Chef. Viens au Brouillard, j'ai à te parler.",
+                     jeu="[coldly] Josée. On m'appelle la Chef. Viens au Brouillard… j'ai à te parler.")],
         "intro": [
-            _l("josee", "Les Cravates tiennent trois coins de rue. Je les veux vides avant la nuit."),
-            _l("josee", "Leur chef va sortir quand ses gars vont tomber. Lui, je le veux couché."),
-            _l("josee", "Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque."),
+            _l("josee", "Les Cravates tiennent trois coins de rue. Je les veux vides avant la nuit.",
+               jeu="[coldly] Les Cravates tiennent trois coins de rue. Je les veux vides… avant la nuit."),
+            _l("josee", "Leur chef va sortir quand ses gars vont tomber. Lui, je le veux couché.",
+               jeu="[menacingly] Leur chef va sortir quand ses gars vont tomber. Lui, je le veux couché."),
+            _l("josee", "Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque.",
+               jeu="[matter-of-fact] Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque."),
         ],
         "fin": [
-            _l("josee", "Le Faubourg respire. Le bar est à toi, pis toute la ville va le lire demain matin."),
-            _l("josee", "On va se reparler. Y a plus grand que le Faubourg."),
+            _l("josee", "Le Faubourg respire. Le bar est à toi, pis toute la ville va le lire demain matin.",
+               jeu="[satisfied] Le Faubourg respire. Le bar est à toi… pis toute la ville va le lire demain matin."),
+            _l("josee", "On va se reparler. Y a plus grand que le Faubourg.",
+               jeu="[mysteriously] On va se reparler. Y a plus grand… que le Faubourg."),
         ],
-        "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.")],
+        "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.",
+                     jeu="[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1)],
+        "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1,
+                       jeu="[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.")],
     },
 }

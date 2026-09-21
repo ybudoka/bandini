@@ -73,7 +73,14 @@ NEUVE: dict = {
 #: s'était déjà arrêtée à m5 pendant que le catalogue en comptait huit.
 OUTILS = ('  const ORDRE = ' + json.dumps(missions.ordre_topologique()) + ';' + """
   function mission(L, slug) { return L.B.defs.missions.find(function (m) { return m.slug === slug; }); }
-  function faites(L, slug) { for (const s of ORDRE) { if (s === slug) break; L.B.partie.missionsFaites[s] = 1; } }
+  function faites(L, slug) {
+    for (const s of ORDRE) { if (s === slug) break; L.B.partie.missionsFaites[s] = 1; }
+    // ⚠️ Un donneur donne la PREMIERE mission disponible de sa liste (`disponibleDe`, l'ordre du catalogue) :
+    // chez Marco, f01 se donne avant m97, et parler a Marco posait f01 quand le juge attendait m97. Celles du
+    // meme donneur qui viennent AVANT la mission jugee sont donc faites aussi — sans les nommer.
+    const cible = mission(L, slug);
+    for (const m of L.B.defs.missions) { if (m.slug === slug) break; if (cible && m.donneur === cible.donneur) L.B.partie.missionsFaites[m.slug] = 1; }
+  }
   // ⚠️ **CE QU'UNE MISSION EXIGE EN PLUS DE SES PREREQUIS** (`exige`, M16) : le
   // juge le TIENT, au lieu de faire comme s'il n'existait pas. Sans ca, une
   // mission conditionnelle n'est jamais offerte au banc et sa scene d'intro

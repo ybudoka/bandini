@@ -25,31 +25,40 @@ MISSION = {
         { "type": "retourner", "texte": "RETOURNER AU GARAGE" }
     ],
 
+    # Le jeu de chaque réplique (`jeu=`) — Marco te confie un colis : la contrebande à voix basse, « discret ».
     "dialogue": {
         "appel": [
-            _l("marco", "Cousin, j’ai une faveur. Passe au port, discret.")
+            _l("marco", "Cousin, j’ai une faveur. Passe au port, discret.",
+               jeu="[casually] Cousin, j'ai une faveur. Passe au port… discret.")
         ],
         "intro": [
-            _l("marco", "Un colis arrive ce soir, sur le cargo."),
-            _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.")
+            _l("marco", "Un colis arrive ce soir, sur le cargo.",
+               jeu="[quietly] Un colis arrive ce soir… sur le cargo."),
+            _l("marco", "Va le chercher. Personne doit savoir que ça vient de moi.",
+               jeu="[serious] Va le chercher. Personne doit savoir… que ça vient de moi.")
         ],
         "pendant": [
             # ⚠️ C'est Lulu qui le crie : elle est à la cantine quand le docker file.
-            _p("lulu", "Le docker va essayer de filer. Rattrape-le!", 2)
+            _p("lulu", "Le docker va essayer de filer. Rattrape-le!", 2,
+               jeu="[excited] Le docker va essayer de filer. Rattrape-le!")
         ],
         "client": [],
         # ⚠️ Lulu renvoie qui vient trop tôt : de jour, l'objectif 0 attend la noirceur et « parler à
         # Lulu » ne compte pas encore. Sans cette réplique elle disait le texte de repos de tout le
         # monde (« le Faubourg est tranquille »), sans voix, et le joueur ne savait pas quoi attendre.
         "renvoi": [
-            _r("lulu", "Le cargo arrive à la noirceur, pas avant. Reviens me voir ce soir.", 0)
+            _r("lulu", "Le cargo arrive à la noirceur, pas avant. Reviens me voir ce soir.", 0,
+               jeu="[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.")
         ],
         "fin": [
-            _l("marco", "Parfait. Personne t’a vu? Bon."),
-            _l("marco", "Tiens, pour le trouble.")
+            _l("marco", "Parfait. Personne t’a vu? Bon.",
+               jeu="[satisfied] Parfait. Personne t'a vu… Bon."),
+            _l("marco", "Tiens, pour le trouble.",
+               jeu="[casually] Tiens… pour le trouble.")
         ],
         "echec": [
-            _l("marco", "T’es censé être discret, pas mort.")
+            _l("marco", "T’es censé être discret, pas mort.",
+               jeu="[disappointed] T'es censé être discret… pas mort.")
         ]
     },
 

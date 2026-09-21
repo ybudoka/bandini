@@ -34,17 +34,25 @@ MISSION = {
             {"type": "dire", "repliques": [2]},
         ],
     },
+    # Le jeu de chaque réplique (`jeu=`) — Marco trahit : froid, amer, puis qui se rend a l'evidence.
     "dialogue": {
-        "appel": [_l("marco", "Marco. Viens au garage, cousin. On a à se parler, toi pis moi.")],
+        "appel": [_l("marco", "Marco. Viens au garage, cousin. On a à se parler, toi pis moi.",
+                     jeu="[coldly] Marco. Viens au garage, cousin. On a à se parler… toi pis moi.")],
         "intro": [
-            _l("marco", "Bouchard m'a montré ton dossier. T'as bâti un nom sur mon dos."),
-            _l("marco", "Pis il paie pour te voir tomber. Tiens, les voilà."),
+            _l("marco", "Bouchard m'a montré ton dossier. T'as bâti un nom sur mon dos.",
+               jeu="[bitterly] Bouchard m'a montré ton dossier. T'as bâti un nom… sur mon dos."),
+            _l("marco", "Pis il paie pour te voir tomber. Tiens, les voilà.",
+               jeu="[menacingly] Pis il paie pour te voir tomber… Tiens, les voilà."),
         ],
         "fin": [
-            _l("marco", "T'es plus dur que les chiens qu'il a lâchés. Garde le taxi, il est à toi."),
-            _l("marco", "Moi, je disparais. La ville est à toi, cousin."),
+            _l("marco", "T'es plus dur que les chiens qu'il a lâchés. Garde le taxi, il est à toi.",
+               jeu="[impressed] T'es plus dur que les chiens qu'il a lâchés. Garde le taxi… il est à toi."),
+            _l("marco", "Moi, je disparais. La ville est à toi, cousin.",
+               jeu="[somber] Moi, je disparais… La ville est à toi, cousin."),
         ],
-        "echec": [_l("marco", "Tiens-toi prêt. On va régler ça bien comme il faut.")],
-        "pendant": [_p("marco", "Cours, cousin. Ceux-là ne font pas de quartier.", 1)],
+        "echec": [_l("marco", "Tiens-toi prêt. On va régler ça bien comme il faut.",
+                     jeu="[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.")],
+        "pendant": [_p("marco", "Cours, cousin. Ceux-là ne font pas de quartier.", 1,
+                       jeu="[worried] Cours, cousin… Ceux-là ne font pas de quartier.")],
     },
 }

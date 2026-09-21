@@ -217,9 +217,11 @@ d'écrire une scène ou un jeu de voix) ; ce qui suit en est l'essentiel.
   qu'un cri — le contraste doit venir de la livraison.
 - **La voix se choisit avant le jeu**, pour son grain et son étendue : les balises ne transforment pas
   une voix (guide ElevenLabs), et Julia reste rauque quoi qu'on régénère.
-- ⚠️ **Chaque réplique de mission veut son entrée dans `interpretation.JEU`, dans le même commit** —
-  sinon `test_chaque_voix_a_son_jeu…` rougit. Le slug suit la **place** de la réplique : on ajoute à la
-  fin, on n'insère pas.
+- ⚠️ **Chaque réplique de mission porte son `jeu=`, dans le fichier de la mission** (depuis le
+  21 sept. 2026 ; avant, il vivait dans `interpretation.JEU`) — sinon `test_chaque_voix_a_son_jeu…`
+  rougit. Il est collé à la réplique : en insérer une n'emporte plus le jeu de sa voisine. Le slug du
+  **mp3**, lui, suit toujours la place de la réplique : on ajoute à la fin, on n'insère que si on
+  régénère.
 - **On essaie une réplique avant de tout générer** (`--refaire <slug>`, payant), Martin écoute, puis
   `--voix` fait le reste ; une finition qui cloche se retouche gratuitement (`--refinir --masters`).
 

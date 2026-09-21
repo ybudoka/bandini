@@ -38,7 +38,8 @@ from app import missions  # noqa: E402
 
 #: Le squelette d'un fichier de mission : ce qu'il FAUT écrire, et pas une clé de
 #: plus. Les quatre temps du dialogue sont là parce que le juge les exige tous les
-#: quatre — une mission qui se tait à l'échec n'est pas finie.
+#: quatre — une mission qui se tait à l'échec n'est pas finie. Et chaque réplique porte son
+#: `jeu=` : le juge l'exige aussi (`test_interpretation.py`), et il vit dans ce fichier-ci.
 SQUELETTE = '''"""La mission {slug} — voir `app/missions/__init__.py` pour le moteur."""
 
 from ._commun import _l, _p
@@ -50,18 +51,22 @@ MISSION = {{
         {{"type": "aller", "lieu": "garage", "rayon": 4, "texte": "VA AU GARAGE"}},
         {{"type": "retourner", "texte": "REVIENS ME VOIR"}},
     ],
+    # Le jeu de chaque réplique (`jeu=`, ce qu'ElevenLabs DIT : les mêmes mots que le texte, plus des
+    # balises d'émotion en anglais, des « … » et de la ponctuation) : l'arc du personnage, en une phrase.
+    # Voir docs/jeu-d-acteur.md § 3.
     "dialogue": {{
-        "appel": [_l("{donneur}", "C'est moi. Viens me voir, j'ai une job.")],
+        "appel": [_l("{donneur}", "C'est moi. Viens me voir, j'ai une job.",
+                     jeu="[casually] C'est moi. Viens me voir… j'ai une job.")],
         "intro": [
-            _l("{donneur}", "Première chose à dire."),
-            _l("{donneur}", "Deuxième chose à dire."),
+            _l("{donneur}", "Première chose à dire.", jeu="[quietly] Première chose à dire."),
+            _l("{donneur}", "Deuxième chose à dire.", jeu="[serious] Deuxième chose à dire."),
         ],
-        "pendant": [_p("{donneur}", "Ça avance, ton affaire?", 1)],
+        "pendant": [_p("{donneur}", "Ça avance, ton affaire?", 1, jeu="[curious] Ça avance, ton affaire?")],
         "fin": [
-            _l("{donneur}", "C'est fait. Merci."),
-            _l("{donneur}", "On se reparle."),
+            _l("{donneur}", "C'est fait. Merci.", jeu="[relieved] C'est fait. Merci."),
+            _l("{donneur}", "On se reparle.", jeu="[warmly] On se reparle."),
         ],
-        "echec": [_l("{donneur}", "Une autre fois. Repose-toi.")],
+        "echec": [_l("{donneur}", "Une autre fois. Repose-toi.", jeu="[disappointed] Une autre fois. Repose-toi.")],
     }},
 }}'''
 

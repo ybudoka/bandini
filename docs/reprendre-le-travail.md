@@ -33,7 +33,7 @@ Les sons manquants se regénèrent par le serveur MCP `elevenlabs` (clé dans
 uv run python scripts/audio_elevenlabs.py --essai       # ce qui serait généré
 uv run python scripts/audio_elevenlabs.py               # génère les bruitages qui manquent
 uv run python scripts/audio_elevenlabs.py --radios      # … et les stations de radio (musique : cher)
-uv run python scripts/audio_elevenlabs.py --voix        # … et les voix (passants + histoire, au caractère ; eleven_v3, leur jeu dans app/interpretation.py)
+uv run python scripts/audio_elevenlabs.py --voix        # … et les voix (passants + histoire, au caractère ; eleven_v3 ; leur jeu : `jeu=` dans chaque fichier de mission, et app/interpretation.py pour le reste)
 uv run python scripts/audio_elevenlabs.py --musiques    # … et les 15 musiques du jeu (30 crédits/seconde)
 uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume titre amb_quais ti_guy-m1-1
 ```

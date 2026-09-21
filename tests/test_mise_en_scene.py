@@ -220,7 +220,10 @@ def test_un_accueil_s_accroche_a_la_poignee_de_main_de_celui_qui_parle():
     fiche["dialogue"]["accueil"] = [_a("tipaul", "Salut, l'ami!", 5)]
     assert any("accueil accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
     accueils = [r for r in missions.repliques() if r["partie"] == "accueil"]
-    assert [r["slug"] for r in accueils] == ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"]
+    # Ceux de m6 : la mission qui a inventé la poignée de main dite. Les autres missions (m51) ont les
+    # leurs, et ce juge n'a pas à les nommer — il nomme ce qui est déjà payé.
+    assert [r["slug"] for r in accueils if r["mission"] == "m6"] == [
+        "tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"]
     assert not any(r["telephone"] for r in accueils), "on leur serre la main : ils parlent en personne"
 
 

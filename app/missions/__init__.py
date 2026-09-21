@@ -359,9 +359,15 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # ⚠️ `noqa: E402` : cet import est EN BAS a dessein — chaque fichier de mission
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
-from . import m1, m2, m3, m4, m5, m6, m50, m97  # noqa: E402
+from . import e01, f01, m1, m2, m3, m4, m5, m6, m50, m51, m97, q02, s03  # noqa: E402
 
-CATALOGUE: list[Mission] = [m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION, m97.MISSION]
+# ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
+# été dit. Après m6, les contacts appellent dans l'ordre où le tour les a présentés (Ti-Paul, Lulu,
+# Raymonde), le sergent après eux, et m97 — la fin de Marco — reste la dernière du tronc.
+CATALOGUE: list[Mission] = [
+    m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
+    f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION, m97.MISSION,
+]
 
 
 #: Les defis : un panneau en ville, un chrono, une prime — une seule fois.
@@ -478,8 +484,26 @@ def repliques() -> list[dict]:
                 n += 1
                 sortie.append({"slug": f"{ligne['qui']}-{mission['slug']}-{n}", "qui": ligne["qui"],
                                "texte": ligne["texte"], "mission": mission["slug"], "partie": partie,
-                               "telephone": partie in ("appel", "echec")})
+                               "telephone": partie in ("appel", "echec"),
+                               # Ce qu'ElevenLabs DIT (`interpretation.JEU` le rassemble) : None si la
+                               # réplique n'a pas encore son jeu, et un juge le refuse.
+                               "jeu": ligne.get("jeu")})
     return sortie
+
+
+def pour_le_navigateur() -> list[dict]:
+    """Le catalogue tel que le téléphone le reçoit : les missions SANS le jeu de leurs répliques.
+
+    ⚠️ `jeu` est ce qu'ElevenLabs dit (`_l(..., jeu=...)`) : il sert à générer les voix, jamais à jouer.
+    L'envoyer au navigateur, c'est des balises entre crochets dans le paquet — environ le tiers de
+    plus de texte par mission pour rien — et un écran qui pourrait un jour les afficher.
+    """
+    catalogue = copy.deepcopy(CATALOGUE)
+    for mission in catalogue:
+        for lignes in mission["dialogue"].values():
+            for ligne in lignes:
+                ligne.pop("jeu", None)
+    return catalogue
 
 
 def repliques_ouverture() -> list[dict]:

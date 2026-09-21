@@ -27,7 +27,7 @@ lieu qu'on connaît, et rien qui demande un moteur neuf.
 | `f01` | Les Cravates reviennent | Marco | m50 | de nuit au garage : repousser trois Cravates qui arrivent de loin, coucher leur chef, revenir |
 | `e01` | Les drifts de Ti-Paul | Ti-Paul | m6 | de nuit au dépanneur : trois Chevreuils, les poings nus, qui viennent se servir en bière |
 | `q02` | Le poisson du vendredi | Lulu | e01 | le camion de poisson dort dans une ruelle des Quais : le livrer au casse-croûte, sans bosse |
-| `s03` | La paie de la Prévost | Raymonde | q02 | voler le camion de paie derrière l'hôtel, semer 2★, le livrer au syndicat |
+| `s03` | La paie de la Prévost | Raymonde | q02 | voler le camion de paie près de l'hôtel, semer 2★, le livrer au bar de Josée (qui garde la caisse) |
 | `m51` | La tournée du sergent | Bouchard | e01, q02 | serrer la main de trois commerçants (Thibodeau, Lulu, Ti-Paul) pour « la cotisation », rapporter les enveloppes |
 
 ⚠️ **Les prérequis font une chaîne exprès.** Le téléphone sonne pour la première mission
@@ -39,10 +39,77 @@ demi-journée » de M16 les trierait mieux ; il n'est pas livré.
 ⚠️ **Les slugs suivent le plan de M16** quand la mission y est (`e01`, `q02`, `s03`, `f01`), avec
 ce qui change : `f01` est donnée par Marco au garage (Ti-Guy n'a plus de place après m1) et n'a pas
 d'extincteur (`eteindre` attend son juge) ; `q02` livre un camion, pas trois ; `s03` n'a pas de
-gardiens. `m51` n'est pas au plan : c'est un nom hors catalogue, comme m50.
+gardiens, et elle finit au **bar de Josée**, pas à l'usine (voir les Notes : la cour ferme la nuit). `m51` n'est pas au plan : c'est un nom hors catalogue, comme m50.
 
 ⚠️ **Les voix ne sont pas générées** : ElevenLabs se paie au caractère, et Martin n'a pas encore
-écouté un ton neuf. Chaque réplique a son jeu dans `app/interpretation.py` (un juge l'exige) ; une
-réplique dont le fichier manque s'affiche sans voix. La commande est dans les Notes.
+écouté un ton neuf. Chaque réplique a son jeu, collé à elle dans le fichier de la mission (`jeu=` ; un
+juge l'exige) ; une réplique dont le fichier manque s'affiche sans voix. La commande est dans les Notes.
 
 ## Notes
+
+⚠️ **Livré le 21 sept. 2026, sauf les voix** — les cinq missions se jouent de l'appel à la prime
+(`tests/test_cinq_missions_js.py`, au bouton, sous Node) ; leurs **38 voix** ne sont pas générées.
+
+**Ce qui est livré**
+
+- Les cinq fichiers `app/missions/{f01,e01,q02,s03,m51}.py`, inscrits dans `CATALOGUE` **dans l'ordre du
+  téléphone** (e01, q02, s03, m51, et f01 après m50). Le catalogue passe de 8 à 13 missions.
+- **Le jeu des voix vit dans le fichier de la mission** (demande de Martin, même jour : « si on veut que
+  les missions soient lues indépendantes, les interprétations devraient aussi être dans le fichier de
+  mission »). `_l`, `_p`, `_r`, `_a` prennent un `jeu=`, collé à la réplique ; les **104 jeux** des huit
+  missions d'avant ont déménagé de `interpretation.py` (aucun mot changé : les 136 entrées d'avant sont
+  identiques une à une), et les 38 des cinq nouvelles y sont nées. `interpretation.JEU` **rassemble** le
+  tout (`missions.repliques()` porte le `jeu`), et `missions.pour_le_navigateur()` le retire du paquet.
+  Un effet de bord heureux : une réplique insérée n'emporte plus le jeu de sa voisine — seul le nom du
+  mp3 suit encore la place. Docs ajustées : `comment-monter-les-missions.md` § 5, `jeu-d-acteur.md`
+  § 3.9, `missions-en-scene.md`, `ecrire-drole.md`, `reprendre-le-travail.md`, `architecture.md`, et le
+  squelette de `verifier_missions.py --squelette`.
+- **Trois juges qui nommaient des missions en dur** ont été rendus génériques (le catalogue en fournit la
+  liste) : les voix par mission (`test_audio.py`), les accueils de m6 (`test_mise_en_scene.py`), et
+  l'aide `faites()` du banc de scènes — un donneur donne la **première** mission disponible de sa liste
+  (`disponibleDe`), et f01 passait devant m97 chez Marco.
+- **Deux juges neufs** : le jeu suit sa réplique quand on en insère une, et le jeu ne part pas au navigateur.
+
+**Ce que le banc a montré** (et que le papier n'aurait pas dit)
+
+- ⚠️ Le `aller` du dépanneur (rayon 4) **ne s'accomplissait pas** pour qui vient de parler à Ti-Paul :
+  il se tient à 48 px du point, le joueur à 16 px de lui — 64,03 px pour un rayon de 64. On était AU
+  dépanneur et il fallait un pas de plus. Rayon 6 pour e01 et f01.
+- Les hommes de f01 et e01 naissent à 100–260 px, courent sur le joueur, et le chef de f01 sort quand les
+  trois sont tombés (bâton, 160 PV). Si l'on se bat **à la porte** du donneur, `retourner` s'accomplit dans
+  la même image que le dernier K.-O. : c'est voulu, on n'a pas à marcher pour rien.
+- ⚠️ **`s03` ne finit pas à l'usine — un juge de la ville l'a refusé** (`test_barrieres.py`, rouge à la
+  suite complète, pas au banc de la mission : celui-là téléportait le camion). La cour de l'usine est
+  fermée la nuit par une chaîne (`carte.BARRIERES`, `condition: heure jour`, on la défonce à 1★), et la
+  règle est écrite : « un lieu enfermé par une barrière d'heure, on le tolère, **sauf pour un lieu de
+  mission** ». La paie va donc au **bar de Josée**, et Raymonde le dit (« mon usine, elle, est surveillée »).
+  `usine` est aujourd'hui le seul lieu enfermé : aucun objectif `aller`/`livrer` ne peut le nommer.
+- q02 paie 375 $ sans bosse (250 + la moitié), 250 avec ; s03 paie 450 $ et pose 2★ dès qu'on monte dans le
+  camion ; m51 fait dire leur mot à Thibodeau, Lulu et Ti-Paul, chacun avec sa voix demandée.
+
+**Ce qui reste — les voix** : 38 répliques, **≈ 3 750 caractères** facturés (le texte joué, balises
+comprises). Rien n'est généré : une réplique dont le fichier manque s'affiche sans voix. Dans l'ordre du
+guide (`docs/jeu-d-acteur.md` § 3.10) :
+
+```bash
+uv run python scripts/audio_elevenlabs.py --essai                      # ce qui serait généré, sans rien dépenser
+uv run python scripts/audio_elevenlabs.py --refaire bouchard-m51-5     # une ligne clé — Martin écoute
+uv run python scripts/audio_elevenlabs.py --voix                       # puis le reste
+```
+
+⚠️ **À écouter d'abord : `bouchard-m51-5` et `bouchard-m51-3`** — c'est la seule balise que le jeu n'a
+**jamais** jouée (`[deadpan]`, dans la liste des tons depuis le début). Ensuite `raymonde-s03-3` (Nadine,
+rauque : elle ne crie jamais, elle est plus dure posée) et `tipaul-e01-1` (Ti-Paul a la voix de Marco, plus
+vif : ils ne sont jamais dans le même dialogue). Les scènes de m51 (et la fin de e01, qui nomme Lulu) sont
+**à recaler sur les voix une fois entendues** (`ffprobe` + `silencedetect`, `docs/jeu-d-acteur.md`) : elles
+n'utilisent que des `dire` qui se retiennent, mais aucun juge n'écoute.
+
+**Le paquet** : les définitions passent de 39 526 à 41 886 octets gzip — **470 octets par mission**, tout
+le catalogue voyageant dans le paquet. Plafond 40 000 → 44 000 (`test_definitions.py`, avec sa mesure) :
+de la place pour quatre missions de plus. Le vrai remède reste `/api/dialogue/<slug>` (M16, tranche 1).
+
+**Décisions de scénario à valider par Martin** : m51 est un sergent corrompu qui envoie le joueur ramasser
+« la cotisation de la Fraternité » chez trois commerçants (dans la veine de m4) ; s03 est un vol de la paie
+de Prévost au profit du syndicat de Raymonde, gardée au bar de Josée (le plan la voulait après q03, qui
+n'existe pas). Aucune n'a
+de nouveau personnage : `docs/carte.md` ne bouge pas.

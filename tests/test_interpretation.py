@@ -28,16 +28,18 @@ def test_chaque_voix_a_son_jeu_et_chaque_jeu_sa_voix():
     l'entendre. Et un jeu dont le slug a disparu ne sert plus personne."""
     slugs = {v["slug"] for v in VOIX}
     sans_jeu = sorted(slugs - set(interpretation.JEU))
-    assert not sans_jeu, f"ecris leur interpretation dans app/interpretation.py : {sans_jeu}"
+    assert not sans_jeu, (f"ajoute `jeu=` a ces repliques, dans le fichier de leur mission "
+                          f"(`app/missions/<slug>.py`) : {sans_jeu}")
     orphelins = sorted(set(interpretation.JEU) - slugs)
     assert not orphelins, f"ces jeux ne sont plus la voix de personne : {orphelins}"
 
 
 @pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
 def test_le_jeu_dit_exactement_les_mots_de_la_boite(voix):
-    """⚠️ Le slug d'une replique d'histoire suit sa PLACE (`ti_guy-m1-3`) : une
-    ligne inseree dans une mission decale toutes celles d'en dessous, et leur jeu
-    se met a dire la phrase de la voisine. C'est ce juge-ci qui rougit."""
+    """⚠️ Le jeu d'une replique de mission est colle a elle (`jeu=`, dans son fichier), donc une
+    ligne inseree ne decale plus celui de sa voisine. Ce juge reste le filet des textes qui ne
+    sont PAS des missions (passants, repos, journal, ouverture — leur slug suit une table) et de
+    celui qui retouche un mot d'un cote sans l'autre : la voix dirait autre chose que la boite."""
     dit = interpretation.dit(voix)
     assert interpretation.mots(dit) == interpretation.mots(voix["texte"]), (
         f"{voix['slug']} : la voix dirait « {dit} » sous « {voix['texte']} »")
@@ -112,7 +114,7 @@ def test_chaque_egalisation_corrige_une_voix_du_jeu():
     inconnues = sorted(set(interpretation.EGALISATION) - utilisees)
     assert not inconnues, f"ces egalisations ne corrigent personne : {inconnues}"
     for filtre in interpretation.EGALISATION.values():
-        assert filtre.startswith("highpass="), "le passe-haut d'abord : c'est la que « caverneux » vit"
+        assert filtre.startswith("highpass="), "le passe-haut au_debut : c'est la que « caverneux » vit"
 
 
 def test_toutes_les_finitions_egalisent():
@@ -296,3 +298,44 @@ def test_une_ligne_attend_une_voix_encore_en_chargement(banc):
     assert r is not None, "Ti-Guy ne parle pas : le banc n'a rien a juger"
     assert r["pendant"] == 0, "la ligne est passee pendant que sa voix se chargeait encore"
     assert r["apres"] == 1, "la voix chargee puis dite, la ligne ne passe pas"
+
+
+def test_le_jeu_d_une_replique_de_mission_la_suit_quand_on_en_insere_une_avant():
+    """⚠️ Martin, 21 sept. 2026 : « si on veut que les missions soient lues indépendantes, les
+    interprétations devraient aussi être dans le fichier de mission ». Avant, le jeu se rangeait par
+    slug (`marco-m50-3`) dans `interpretation.py` — et le slug suit la PLACE de la réplique :
+    en insérer une au milieu faisait dire à chaque voix d'en dessous la phrase de sa voisine.
+    Collé à la réplique (`jeu=`), il la suit. Rouge avant : `_l` n'acceptait pas `jeu`."""
+    from app import missions
+    from app.missions._commun import _a, _l, _p, _r
+
+    assert _l("marco", "Salut.") == {"qui": "marco", "texte": "Salut."}, "sans jeu, la ligne ne change pas"
+    for ligne in (_l("marco", "Salut.", jeu="[warmly] Salut."), _p("marco", "Salut.", 1, jeu="[warmly] Salut."),
+                  _r("marco", "Salut.", 1, jeu="[warmly] Salut."), _a("marco", "Salut.", 1, jeu="[warmly] Salut.")):
+        assert ligne["jeu"] == "[warmly] Salut."
+    fiche = {"slug": "zz", "dialogue": {"intro": [_l("marco", "Un.", jeu="[casually] Un."),
+                                                  _l("marco", "Deux.", jeu="[quietly] Deux.")]}}
+    avant = missions.CATALOGUE[:]
+    missions.CATALOGUE[:] = [fiche]
+    try:
+        au_debut = {r["texte"]: (r["slug"], r["jeu"]) for r in missions.repliques()}
+        fiche["dialogue"]["intro"].insert(0, _l("marco", "Zéro.", jeu="[firmly] Zéro."))
+        apres_ajout = {r["texte"]: (r["slug"], r["jeu"]) for r in missions.repliques()}
+    finally:
+        missions.CATALOGUE[:] = avant
+    assert apres_ajout["Un."][0] != au_debut["Un."][0], "le slug a bien glissé"
+    assert apres_ajout["Un."][1] == au_debut["Un."][1] == "[casually] Un.", "mais son jeu est resté avec elle"
+    assert apres_ajout["Deux."][1] == "[quietly] Deux."
+
+
+def test_le_jeu_des_repliques_ne_part_pas_au_navigateur():
+    """Le jeu sert à générer les voix, jamais à jouer : dans le paquet, ce ne serait que des balises
+    entre crochets — de quoi alourdir chaque mission — et un texte que le jeu pourrait afficher."""
+    from app import definitions, missions
+
+    corps = definitions.construire().definitions.corps.decode()
+    assert '"jeu"' not in corps and "[casually]" not in corps and "[worried]" not in corps
+    assert all("jeu" not in ligne for m in missions.pour_le_navigateur()
+               for lignes in m["dialogue"].values() for ligne in lignes)
+    assert any("jeu" in ligne for m in missions.CATALOGUE for lignes in m["dialogue"].values()
+               for ligne in lignes), "pour_le_navigateur retire le jeu d'une COPIE, pas du catalogue"

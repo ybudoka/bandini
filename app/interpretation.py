@@ -15,9 +15,11 @@ des pauses dans le texte et de l'émotion, et un léger temps mort à la fin pou
 des balises d'emotion entre crochets (`[sighs]`), des silences (« … », « — ») et
 de la ponctuation. Un juge (`test_interpretation.py`) retire tout ca et exige
 les memes mots que la boite — une voix qui dit autre chose que ce qu'on lit est
-pire qu'une voix plate. Et comme le slug suit la PLACE de la replique, ce meme
-juge attrape une replique inseree dans une mission : les interpretations d'en
-dessous ne collent plus a leur texte, et il le dit.
+pire qu'une voix plate. ⚠️ Le jeu d'une replique de MISSION vit dans le fichier de
+la mission, colle a la replique (`jeu=`) : une replique inseree au milieu n'emporte
+plus le jeu de sa voisine (le slug suit la PLACE, et le jeu d'avant se rangeait par
+slug). Ce module n'a gardé que ce qui n'est pas une mission — passants, repos,
+journal, ouverture — et rassemble le reste (`JEU`, tout en bas de sa table).
 
 ⚠️ **Pourquoi eleven_v3 et plus eleven_multilingual_v2.** v2 ne connait que ses
 curseurs (`style`, `stabilite`) : ils poussent TOUTE la replique dans un sens,
@@ -206,6 +208,7 @@ BALISES = TONS | CORPS
 
 #: slug -> texte joue. ⚠️ Toutes les voix y sont (`test_interpretation.py`) :
 #: une replique ajoutee sans son jeu sortirait plate a la prochaine generation.
+#: Ceux des missions viennent de leur fichier (voir la fin de la table).
 JEU: dict[str, str] = {
     # --- Les passants qu'on frole. Deux mots : une emotion, rarement une pause.
     "salut_h": "[cheerful] Salut!",
@@ -244,85 +247,8 @@ JEU: dict[str, str] = {
     "pub_tipaul_r": "[cheerful] Dépanneur Ti-Paul, ouvert tard. Bière frette, loterie… pis du bon café.",
     "pub_tipaul_a_toi_r": "[excited] Le Dépanneur Ti-Paul est vendu! [cheerful] Le nouveau proprio vous attend.",
 
-    # --- M1, Ti-Guy : content de te voir, puis complice.
-    "ti_guy-m1-1": "[excited] Heille! Le cousin de Rocco! [warmly] T'as fait bon voyage?",
-    "ti_guy-m1-2": "[quietly] Rocco est parti se faire oublier. Le garage… c'est toi qui le tiens, astheure.",
-    "ti_guy-m1-3": "[mischievously] Y a un char qui traîne dans une ruelle, un peu plus loin. Personne va s'en ennuyer.",
-    "ti_guy-m1-4": "[serious] Ramène-le au garage sans le bosser… pis sans que personne te voie.",
-    "ti_guy-m1-5": "[excited] Pas une bosse! [laughs] T'es ben le cousin de Rocco.",
-    "ti_guy-m1-6": "[warmly] Tiens, la clé de la planque. Dors là… pis fais-toi pas pogner.",
-    "ti_guy-m1-7": "[disappointed] Ouain… On va dire que c'était un essai. [sighs] Reviens me voir.",
-    # Pendant (2e vague des scènes) : au combiné, pendant qu'on roule.
-    "ti_guy-m1-8": "[amused] Beau char! Ramène-le au garage tranquillement, pis évite la police.",
-    # --- M2, Madame Thibodeau : inquiete, puis en colere, puis tendre.
-    "thibodeau-m2-1": "[worried] C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères… Viens me voir, veux-tu?",
-    "thibodeau-m2-2": "[bitterly] Deux Cravates sont venus me « protéger ». [angry] Ils ont vidé ma caisse.",
-    "thibodeau-m2-3": "[quietly] Ils rôdent encore au coin. Fais-leur comprendre… avec tes poings, pas plus.",
-    "thibodeau-m2-4": "[angry] Le troisième s'est sauvé en moto avec mon argent. Rattrape-le.",
-    "thibodeau-m2-5": "[relieved] Mon argent! [warmly] T'es un bon garçon, toi.",
-    "thibodeau-m2-6": "[tenderly] Tiens… le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi.",
-    "thibodeau-m2-7": "[concerned] Ils t'ont eu, hein? Repose-toi… pis reviens.",
-    "thibodeau-m2-8": "[worried] Il se sauve avec ma caisse! Lâche-le pas!",
-    # --- M3, Marco : l'affaire d'abord, et la mise en garde a voix basse.
-    "marco-m3-1": "[casually] Marco, le cousin. J'ai un taxi qui dort au garage. [mischievously] Ça te tente de faire du cash?",
-    "marco-m3-2": "[serious] Trois clients, pas plus. Pis tu me ramènes le taxi… entier.",
-    "marco-m3-3": "[quietly] Ouvre l'œil. Y a du monde en ville… qui pose des questions sur toi.",
-    "civil-m3-4": "[smugly] Roule, mon homme. Pis fais pas de folies… j'suis de la police.",
-    "marco-m3-5": "[impressed] Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte.",
-    "marco-m3-6": "[casually] Y mange là tous les midis. Sois poli… c'est un ami de la famille.",
-    "marco-m3-7": "[disappointed] Mon taxi… Bon. On efface… [groans] pis on recommence.",
-    # --- M4, le sergent Bouchard : bourru, et il baisse la voix pour le sale.
-    "bouchard-m4-1": "[gruffly] Bouchard. Marco m'a parlé de toi. Viens dîner au casse-croûte… j'ai une job.",
-    "bouchard-m4-2": "[quietly] Y a une auto-patrouille au poste que j'aimerais voir disparaître. Papiers… pas propres.",
-    "bouchard-m4-3": "[serious] Prends-la de nuit, sans témoin. Ti-Guy va te suivre en char, pour faire diversion.",
-    "bouchard-m4-4": "[firmly] Largue-la au garage. Pis si mes gars te courent après… sème-les.",
-    "bouchard-m4-5": "[satisfied] Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom.",
-    "bouchard-m4-6": "[gravely] Un mot d'avertissement… Josée, au bar, cherche du monde comme toi. Fais attention.",
-    "bouchard-m4-7": "[nervously] J'ai rien vu, j'ai rien entendu. [sighs] Reviens quand ça sera calme.",
-    "ti_guy-m4-8": "[confident] C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs.",
-    # --- M5, Josee : froide, et elle pese chaque ordre.
-    "josee-m5-1": "[coldly] Josée. On m'appelle la Chef. Viens au Brouillard… j'ai à te parler.",
-    "josee-m5-2": "[coldly] Les Cravates tiennent trois coins de rue. Je les veux vides… avant la nuit.",
-    "josee-m5-3": "[menacingly] Leur chef va sortir quand ses gars vont tomber. Lui, je le veux couché.",
-    "josee-m5-4": "[matter-of-fact] Un témoin va appeler la police, c'est sûr. Sème-les, pis rentre à ta planque.",
-    "josee-m5-5": "[satisfied] Le Faubourg respire. Le bar est à toi… pis toute la ville va le lire demain matin.",
-    "josee-m5-6": "[mysteriously] On va se reparler. Y a plus grand… que le Faubourg.",
-    "josee-m5-7": "[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.",
-    "josee-m5-8": "[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.",
-    # --- M6, Josee presente la ville : plus chaude qu'a M5, elle donne des noms.
-    "josee-m6-1": "[confident] Josée. Le Faubourg est à nous. Viens au bar… je te présente la ville.",
-    "josee-m6-2": "[matter-of-fact] Quatre coins, quatre personnes. Ti-Paul au dépanneur… ma sœur Lulu à la cantine.",
-    "josee-m6-3": "[matter-of-fact] Raymonde tient le syndicat à l'usine… pis Ovila garde le phare.",
-    "josee-m6-4": "[warmly] Va leur serrer la main… Dans cette ville, tout commence par là.",
-    "josee-m6-5": "[satisfied] Quatre poignées de main. [warmly] Le monde va t'appeler par ton nom… astheure.",
-    "josee-m6-6": "[mysteriously] Garde l'œil ouvert… Il se passe plus de choses que t'en penses.",
-    "josee-m6-7": "[disappointed] Tu reviendras… quand tu auras le temps de faire le tour.",
-    "josee-m6-8": "[knowingly] Le dépanneur d'abord. Ti-Paul en sait plus… qu'il en a l'air.",
-    # La poignée de main, dite en personne : chacun garde le registre de son repos (Ti-Paul badin, Lulu chaleureuse,
-    # Raymonde ferme, Ovila calme) — le contraste est dans la livraison, pas dans le volume.
-    "tipaul-m6-9": "[cheerful] Ah, c'est toi, le nouveau de Josée! [knowingly] Ici, rien passe… sans que je le sache.",
-    "lulu-m6-10": "[warmly] Josée m'a parlé de toi. [teasing] Assis-toi, mange un peu… t'as l'air d'un fantôme.",
-    "raymonde-m6-11": "[firmly] Le syndicat, c'est moi. Josée se porte garante de toi… ça reste à voir.",
-    "ovila-m6-12": "[calm] Les lumières du port, c'est moi… Depuis ici, je vois tout ce qui entre.",
-    # --- M97, Marco trahit : froid, amer, puis qui se rend a l'evidence.
-    "marco-m97-1": "[coldly] Marco. Viens au garage, cousin. On a à se parler… toi pis moi.",
-    "marco-m97-2": "[bitterly] Bouchard m'a montré ton dossier. T'as bâti un nom… sur mon dos.",
-    "marco-m97-3": "[menacingly] Pis il paie pour te voir tomber… Tiens, les voilà.",
-    "marco-m97-4": "[impressed] T'es plus dur que les chiens qu'il a lâchés. Garde le taxi… il est à toi.",
-    "marco-m97-5": "[somber] Moi, je disparais… La ville est à toi, cousin.",
-    "marco-m97-6": "[coldly] Tiens-toi prêt… On va régler ça bien comme il faut.",
-    "marco-m97-7": "[worried] Cours, cousin… Ceux-là ne font pas de quartier.",
-    # --- M50, Marco te confie un colis : la contrebande à voix basse, « discret ».
-    "marco-m50-1": "[casually] Cousin, j'ai une faveur. Passe au port… discret.",
-    "marco-m50-2": "[quietly] Un colis arrive ce soir… sur le cargo.",
-    "marco-m50-3": "[serious] Va le chercher. Personne doit savoir… que ça vient de moi.",
-    "marco-m50-4": "[satisfied] Parfait. Personne t'a vu… Bon.",
-    "marco-m50-5": "[casually] Tiens… pour le trouble.",
-    "marco-m50-6": "[disappointed] T'es censé être discret… pas mort.",
-    # Pendant, à la cantine : c'est Lulu qui voit le docker filer et qui prévient.
-    "lulu-m50-7": "[excited] Le docker va essayer de filer. Rattrape-le!",
-    # Renvoi, à la cantine, de jour : on lui parle trop tôt, elle dit d'attendre la noirceur.
-    "lulu-m50-8": "[warmly] Le cargo arrive à la noirceur… pas avant. Reviens me voir ce soir.",
+    # Le jeu des répliques de MISSION n'est pas ici : il est collé à chaque réplique, dans le fichier
+    # de la mission (`jeu=` sur `_l`/`_p`/`_r`/`_a`) — voir plus bas.
 
     # --- Le repos : ce que chacun dit quand aucune mission ne l'attend. Le même texte pour tous
     # (`missions.REPOS`), lu à sa façon — une balise de ton, en tête, avant M5 (`-1`) puis après (`-2`).
@@ -376,6 +302,15 @@ JEU: dict[str, str] = {
     "narrateur-ouverture-3": "[gravely] Il te laisse sa dette avec. Quinze mille piastres… à Sal le Barbier, qui compte les jours.",
     "narrateur-ouverture-4": "[wryly] T'arrives avec cinquante piastres pis un billet aller simple. Bonne chance… le jeune.",
 }
+
+# ⚠️ LE JEU D'UNE REPLIQUE DE MISSION VIT DANS LE FICHIER DE LA MISSION (`app/missions/<slug>.py`,
+# `jeu=` sur `_l`/`_p`/`_r`/`_a`), colle a la replique qu'il joue : une mission se lit d'un bloc, et
+# on n'a plus a tenir deux fichiers de front (Martin, 21 sept. 2026). On le rassemble ICI pour que
+# tout le monde lise une seule table — `dit()`, les juges, `scripts/audio_elevenlabs.py`.
+# ⚠️ L'import est en bas a dessein : `missions` n'a pas besoin de ce module.
+from app import missions  # noqa: E402
+
+JEU.update({r["slug"]: r["jeu"] for r in missions.repliques() if r.get("jeu")})
 
 _BALISE = re.compile(r"\[([^\[\]]*)\]")
 

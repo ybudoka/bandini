@@ -7,7 +7,8 @@ moitiés, dans cet ordre :
 1. **la scène** — ce que la caméra, les gestes et le temps peuvent faire, avec
    les plans qui existent vraiment (`TYPES_PLANS`) ;
 2. **la voix** — écrire pour la bouche, jouer une intention, poser les balises
-   d'émotion d'ElevenLabs v3 (`app/interpretation.py`) ;
+   d'émotion d'ElevenLabs v3 (le `jeu=` de chaque réplique, dans le fichier de la mission ;
+   `app/interpretation.py` garde la liste des balises et la finition) ;
 3. **les deux ensemble** — quand la parole et l'image se répondent.
 
 > Ce document ne remplace ni `docs/comment-monter-les-missions.md` (la
@@ -193,8 +194,9 @@ minimum honnête, pas un plafond. **Écris la tienne quand tu veux mieux.**
 ## 3. La voix — écrire pour la bouche, puis jouer une intention
 
 Toutes les répliques sont dites par ElevenLabs **eleven_v3**, une voix par
-personnage. Le texte affiché (`missions/*.py`) et le **jeu** (`interpretation.JEU`)
-sont **deux textes de la même phrase** : le premier se lit, le second se joue.
+personnage. Le texte affiché et le **jeu** (`jeu=`) sont **deux textes de la même phrase**,
+écrits ensemble dans le fichier de la mission (`_l(qui, texte, jeu=…)`) : le premier se lit,
+le second se joue.
 
 ### 3.1 Écrire pour la bouche
 
@@ -335,21 +337,34 @@ nom). Ce qu'il faut savoir :
 - **La stabilité reste à 0,5** (`interpretation.STABILITE`) : « Créatif » joue plus
   fort mais **invente** (des mots, des rires) ; « Robuste » ignore les balises.
 
-### 3.9 Le jeu s'écrit avec la réplique, dans le même commit
+### 3.9 Le jeu est collé à la réplique, dans le fichier de la mission
 
-⚠️ **Piège que le guide de la recette ne disait pas.** Le slug d'une réplique de
-mission est `<qui>-<mission>-<n>` (`ti_guy-m1-3`), compté dans l'ordre
-`appel, intro, client, fin, echec, pendant`. **Chaque réplique ajoutée doit avoir
-son entrée dans `interpretation.JEU`** — sinon `test_chaque_voix_a_son_jeu…` rougit,
-et la voix sortirait plate à la prochaine génération. Et comme le slug suit la
-**place** de la réplique, une réplique insérée au milieu décale toutes celles
-d'en dessous : leur jeu se met à dire la phrase de la voisine. Le juge « les mêmes
-mots » le rattrape ; on **ajoute à la fin**, on n'insère pas.
+⚠️ **Depuis le 21 sept. 2026, le jeu vit dans la mission** (demande de Martin : « si on veut
+que les missions soient lues indépendantes, les interprétations devraient aussi être dans le
+fichier de mission »). Chaque usine de réplique (`_l`, `_p`, `_r`, `_a`) prend un `jeu=` :
 
 ```python
-# app/interpretation.py — JEU : slug -> texte joué
-"thibodeau-m2-5": "[relieved] Mon argent! [warmly] T'es un bon garçon, toi.",
+# app/missions/m2.py
+_a("thibodeau", "Mon argent! T'es un bon garçon, toi.", 1,
+   jeu="[relieved] Mon argent! [warmly] T'es un bon garçon, toi.")
 ```
+
+**Chaque réplique doit avoir son `jeu=`** — sinon `test_chaque_voix_a_son_jeu…` rougit, et la voix
+sortirait plate à la prochaine génération. Le slug de la voix, lui, reste `<qui>-<mission>-<n>`
+(`ti_guy-m1-3`), compté dans l'ordre `appel, intro, client, fin, echec, pendant, renvoi, accueil` :
+c'est le **nom du mp3**, et il suit la place de la réplique. L'ancien piège — une réplique insérée
+au milieu décalait tous les slugs, et chaque jeu se mettait à dire la phrase de sa voisine — n'existe
+plus, puisque le jeu voyage avec sa réplique ; mais un mp3 déjà payé garde son nom, alors on **ajoute
+à la fin** (`docs/comment-monter-les-missions.md` § 5) et on n'insère que si on régénère.
+
+**Écris l'intention une fois, en commentaire, au-dessus de `"dialogue"`** : l'arc du personnage
+(« Thibodeau : inquiète, puis en colère, puis tendre »). Les balises la notent réplique par
+réplique ; le commentaire dit pourquoi, et il se lit avec le reste de la mission.
+
+`app/interpretation.py` garde le jeu de ce qui n'est **pas** une mission — les passants, les
+repos, le journal, l'ouverture — et **rassemble** celui des missions dans `JEU` : les juges et
+`scripts/audio_elevenlabs.py` lisent une seule table. Le navigateur, lui, ne reçoit jamais le jeu
+(`missions.pour_le_navigateur()`).
 
 **Le texte joué dit les mêmes mots** que la boîte (jugé) : tu ajoutes des balises,
 des `…` et de la ponctuation, **jamais un mot**. Une voix qui dit autre chose que
@@ -462,7 +477,7 @@ Avant de dire « c'est fini », **joue la mission de l'intro à la fin** et vér
 - [ ] Chaque réplique a un **verbe d'action** (§ 3.2) ; le ton n'est pas celui de la réplique d'à côté.
 - [ ] La fin **sonne autrement** que l'intro (§ 3.3) — le personnage a un trajet.
 - [ ] **Un ton** au moins par réplique, **une balise en tête**, jamais `…` après un mot seul (§ 3.5).
-- [ ] Le **jeu** de chaque réplique est écrit dans `interpretation.JEU`, et dit **les mêmes mots** (§ 3.9).
+- [ ] Le **jeu** de chaque réplique est son `jeu=`, dans le fichier de la mission, et dit **les mêmes mots** (§ 3.9).
 - [ ] Le rôle est **dans l'étendue de la voix** choisie (§ 3.8) ; le volume ne porte pas l'émotion (§ 3.6).
 - [ ] J'ai fait **écouter** au moins la réplique la plus difficile avant de tout générer (§ 3.10).
 

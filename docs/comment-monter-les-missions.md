@@ -7,9 +7,11 @@ ville) : il raconte la **recette**, pas le pourquoi. Pour que la mission soit
 **bien jouée** — scènes qui racontent, voix qui ont de l'émotion — lis aussi
 `docs/jeu-d-acteur.md` : les juges vérifient que c'est câblé, pas que c'est juste.
 
-> ⚠️ **Une mission = un fichier.** Les missions vivent dans `app/missions/`,
-> **une par fichier** (`m1.py`, `m2.py`, … `m97.py`) : chacun déclare `MISSION = {…}`
-> et n'a besoin que de `_l`/`_p`/`_r` (importés de `_commun.py`). Le moteur — les
+> ⚠️ **Une mission = un fichier, et il dit tout.** Les missions vivent dans `app/missions/`,
+> **une par fichier** (`m1.py`, `m2.py`, … `m97.py`, `e01.py`, `f01.py`…) : chacun déclare
+> `MISSION = {…}` et n'a besoin que de `_l`/`_p`/`_r`/`_a` (importés de `_commun.py`).
+> **Le jeu des voix y est aussi** : chaque réplique porte son `jeu=` (ce qu'ElevenLabs
+> *dit*, § 5) — on n'ouvre plus `app/interpretation.py` pour écrire une mission. Le moteur — les
 > types d'objectifs, les personnages, les défis, les scènes d'ouverture, les
 > juges — vit dans `app/missions/__init__.py`. **Ajouter une mission = créer son
 > fichier et l'ajouter aux deux listes de `__init__.py`, rien d'autre.**
@@ -181,6 +183,13 @@ Contraintes **jugées** (voir `test_missions.py`) :
 - `texte` en **MAJUSCULES**, une ligne (≤ 60 caractères) : c'est ce qui
   s'affiche en objectif.
 - `lieu` doit exister dans `carte.SPECIAUX` (ou `kiosque`/`planque`).
+- ⚠️ **`lieu` ne peut pas être enfermé par une barrière d'heure** (`test_barrieres.py`) : une mission qui s'y
+  termine ne se finirait pas de nuit sans défoncer la chaîne. Aujourd'hui, **`usine`** (la cour ferme la
+  nuit) ne peut être le `lieu` d'aucun objectif — `parler` à quelqu'un qui s'y tient reste permis, mais
+  on n'y `aller`/`livrer` pas. Le juge ne tourne pas au banc de la mission : il rougit à la suite complète.
+- ⚠️ **Un `aller` sur le lieu du donneur veut un rayon de 6 tuiles, pas 4** : il se tient à ~48 px du
+  point, et le joueur qui lui parle à 16 px de plus (Ti-Paul : 64,03 px contre 64) — on serait AU lieu et
+  la mission demanderait un pas de plus.
 - `groupe` doit exister dans `pietons.GANGS`.
 - `vehicule` doit exister dans `vehicules.CATALOGUE`.
 - `ou` de la forme `zone:<x>` → `x` dans `{cravates, port, faubourg}`.
@@ -205,12 +214,14 @@ Ce qui change, c'est **qui on envoie**.
 
 ## 5. Les dialogues (`dialogue`)
 
-Les temps de dialogue, écrits avec les petites usines `_l`, `_p` et `_r` :
+Les temps de dialogue, écrits avec les petites usines `_l`, `_p`, `_r` et `_a`. **Chacune prend
+un `jeu=` en dernier** : la même phrase, jouée (§ « Chaque réplique veut aussi son jeu », plus bas).
 
 ```python
-_l("marco", "Marco, le cousin. Viens au garage.")        # une réplique normale
-_p("marco", "Cours, cousin!", 1)                          # PENDANT : accrochée à l'objectif n (0-based)
-_r("lulu", "Reviens ce soir.", 0)                         # RENVOI : quand on lui parle trop tôt, à l'objectif n
+_l("marco", "Marco, le cousin. Viens au garage.",
+   jeu="[casually] Marco, le cousin… Viens au garage.")             # une réplique normale
+_p("marco", "Cours, cousin!", 1, jeu="[firmly] Cours, cousin!")      # PENDANT : accrochée à l'objectif n (0-based)
+_r("lulu", "Reviens ce soir.", 0, jeu="[warmly] Reviens ce soir.")   # RENVOI : quand on lui parle trop tôt, à l'objectif n
 ```
 
 | Partie | Rôle | Règle |
@@ -245,18 +256,35 @@ echec, pendant, renvoi, accueil`. Insérer une réplique au milieu renomme tout 
 des mp3 déjà générés deviendraient des 404. On **ajoute** à la fin, ou on
 régénère (`scripts/audio_elevenlabs.py --refaire`).
 
-⚠️ **Chaque réplique veut aussi son jeu.** Le texte que tu écris ici est ce qu'on
-*lit* ; ce qu'ElevenLabs *dit* vit dans `app/interpretation.py` (`JEU`, clé = le
-slug ci-dessus) : les mêmes mots, plus des balises d'émotion en anglais
-(`[worried]`, `[sighs]`), des « … » et de la ponctuation. **Une réplique sans son
-jeu fait rougir `test_interpretation.py`** — à écrire dans le même commit. Un
-verbe d'action par réplique, un ton au moins, un arc du début à la fin de la
-mission : tout est dans `docs/jeu-d-acteur.md` § 3.
+⚠️ **Chaque réplique veut aussi son jeu, et il est collé à elle** (21 sept. 2026, demande de
+Martin : « si on veut que les missions soient lues indépendantes, les interprétations devraient
+aussi être dans le fichier de mission »). Le texte est ce qu'on *lit* ; le `jeu=` est ce
+qu'ElevenLabs *dit* : les mêmes mots, plus des balises d'émotion en anglais (`[worried]`,
+`[sighs]`), des « … » et de la ponctuation. **Une réplique sans son `jeu=` fait rougir
+`test_interpretation.py`.** Un verbe d'action par réplique, un ton au moins, un arc du début à
+la fin de la mission : tout est dans `docs/jeu-d-acteur.md` § 3.
 
 ```python
-# app/interpretation.py — JEU
-"thibodeau-m2-5": "[relieved] Mon argent! [warmly] T'es un bon garçon, toi.",
+_a("thibodeau", "Mon argent! T'es un bon garçon, toi.", 1,
+   jeu="[relieved] Mon argent! [warmly] T'es un bon garçon, toi.")
 ```
+
+Ce que ça change, et ce que ça ne change pas :
+
+- **Le jeu suit sa réplique.** Avant, il se rangeait par slug dans `interpretation.py` : insérer
+  une réplique au milieu décalait tous les slugs d'en dessous, et chaque voix se mettait à jouer la
+  phrase de sa voisine. Collé à la réplique, il n'y a plus de décalage possible — le piège de
+  l'ordre reste seulement pour les **mp3** (ci-dessus).
+- **Un commentaire d'intention, une fois, au-dessus de `"dialogue"`** : « Marco : la
+  désinvolture de qui a peur et le cache… ». C'est l'arc que les balises notent (`docs/jeu-d-acteur.md`
+  § 3.3), et il se lit avec le reste de la mission.
+- **`app/interpretation.py` garde ce qui n'est pas une mission** : les passants, les repos, le
+  journal, l'ouverture, la liste des balises, la finition des voix. Il **rassemble** le jeu des
+  missions dans `JEU` (les juges et `scripts/audio_elevenlabs.py` lisent une seule table).
+- **Le navigateur ne reçoit jamais le jeu** (`missions.pour_le_navigateur()`) : ce ne serait
+  que des balises entre crochets dans le paquet.
+- **`jeu=` est facultatif pour l'usine, pas pour le juge** : `_l("marco", "…")` s'écrit sans, mais
+  `test_interpretation.py` refuse la réplique — une mission n'est pas finie avant.
 
 ---
 
@@ -416,7 +444,7 @@ ligne de jalon : ⬜ dans `docs/plan.md` tant qu'elle est en cours, puis ✅ dan
 - un acteur ou un lieu inconnu dans un plan ;
 - des répliques manquantes ou en double dans les plans `dire` ;
 - une fin dite par un donneur absent, sans que personne n'aille le voir ;
-- une réplique **sans son jeu** dans `interpretation.JEU`, un jeu qui ne dit pas
+- une réplique **sans son `jeu=`** (dans le fichier de la mission), un jeu qui ne dit pas
   **les mêmes mots** que la boîte, une balise que v3 ne connaît pas, un jeu sans
   aucune balise de **ton**.
 

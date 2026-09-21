@@ -109,8 +109,9 @@ pause ne se pose **jamais** après le dernier mot utile.
 
 En jeu, la moitié du rire vient de la **voix** : un « … » bien placé, un soupir
 (`[sighs]`), un rire (`[laughs]`) au bon endroit. Voir `docs/` + le module
-`app/interpretation.py` : c'est lui qui porte les pauses et les émotions, pas
-les balises à l'écran.
+le `jeu=` de chaque réplique (dans le fichier de la mission ; `app/interpretation.py`
+pour les passants, le journal et l'ouverture) : c'est lui qui porte les pauses et les émotions,
+pas les balises à l'écran.
 
 ### 2.5 L'anti-blague, avec parcimonie
 
@@ -138,7 +139,7 @@ le suivre, pas le précéder.
 | **Matins calmes** | `journal.py` (`MATINS`) | mêmes 4 clés que les manchettes | Le repli qui **varie** : jamais le même deux matins de suite. |
 | **Leçons du journal** | `journal.py` (`lecon_*` → `narrateur-journal-lecon_*` dans JEU) | micro-tutoriel drôle | Enseigne une mécanique *avec* une blague (klaxon, fourrière, café…). |
 | **Ouverture** | `audio.py` `voix_ouverture()` + JEU (`narrateur-ouverture-*`) | 4-5 phrases, une pause par phrase | La minute d'un nouveau joueur ; ne pas la gâcher. |
-| **Dialogues de mission** | `app/missions/m*.py` (`dialogue`) | listes `appel`/`intro`/`pendant`/`client`/`fin`/`echec` | Chaque temps a sa voix ; voir `comment-monter-les-missions.md`. |
+| **Dialogues de mission** | `app/missions/<slug>.py` (`dialogue`, chaque réplique avec son `jeu=`) | listes `appel`/`intro`/`pendant`/`client`/`fin`/`echec` (+ `renvoi`, `accueil`) | Chaque temps a sa voix ; voir `comment-monter-les-missions.md`. |
 | **Enseignes / devantures** | `app/devantures.py` (`COMMERCES_COSSUS`, `COMMERCES_PAUVRES`, `A_LOUER`) | un nom de commerce, court, évocateur | Renommées et **placardées** par `app/vitrines.py` ; les cossus vs pauvres. |
 | **Graffitis / placardage** | `app/vitrines.py` (motifs de placardage) | motif visuel + texte court | Une vitrine sur trois en pauvre ; jamais au-dessus d'une enseigne visitable. |
 
@@ -152,12 +153,13 @@ texte que le juge refuse ou que la voix massacre.
 1. **Le texte affiché = le texte dit.** Un juge (dans `test_inter​pretation.py`)
    retire les balises et les silences et exige **exactement les mêmes mots** que
    la boîte de dialogue. On n'écrit jamais une chose pour l'œil et une autre
-   pour l'oreille. Le jeu d'émotion se met **dans** `interpretation.py` (JEU),
-   pas en réinventant le texte.
+   pour l'oreille. Le jeu d'émotion se met **dans** le `jeu=` de la réplique (missions) ou
+   dans `interpretation.py` (JEU : passants, repos, journal, ouverture), pas en réinventant le texte.
 
-2. **Le slug suit la place, pas le contenu.** Une réplique insérée dans une
-   mission décale les slugs d'en dessous ; le même juge l'attrape. La blague
-   d'une réplique se corrige *sur place*, on ne ré-ordonne pas.
+2. **Le slug suit la place, pas le contenu.** Le nom du mp3 d'une réplique de
+   mission dépend de sa place : en insérer une décale les slugs d'en dessous
+   (le jeu, lui, est collé à sa réplique et la suit). La blague d'une réplique
+   se corrige *sur place*, on ne ré-ordonne pas.
 
 3. **Une pause par réplique, en tête de respiration.** v3 (ElevenLabs) pèse
    une pause très lourd : « … » + balise au milieu d'une phrase peut doubler la

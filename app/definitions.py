@@ -58,7 +58,7 @@ def assembler() -> dict:
         # Les gestes du décor et de la rue : ACTION devant un banc, une poubelle, un artiste.
         "interactions": interactions.exporter(),
         "carte": ville,
-        "missions": missions.CATALOGUE,
+        "missions": missions.pour_le_navigateur(),
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
         # Les quatre phrases de l'ouverture, avec leur slug de voix : le

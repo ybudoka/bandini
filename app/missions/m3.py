@@ -33,17 +33,25 @@ MISSION = {
             {"type": "marcher", "acteur": "donneur", "vers": "place:donneur", "duree": 50},
         ],
     },
+    # Le jeu de chaque réplique (`jeu=`) — Marco : l'affaire d'abord, et la mise en garde a voix basse.
     "dialogue": {
-        "appel": [_l("marco", "Marco, le cousin. J'ai un taxi qui dort au garage. Ça te tente de faire du cash?")],
+        "appel": [_l("marco", "Marco, le cousin. J'ai un taxi qui dort au garage. Ça te tente de faire du cash?",
+                     jeu="[casually] Marco, le cousin. J'ai un taxi qui dort au garage. [mischievously] Ça te tente de faire du cash?")],
         "intro": [
-            _l("marco", "Trois clients, pas plus. Pis tu me ramènes le taxi entier."),
-            _l("marco", "Ouvre l'œil. Y a du monde en ville qui pose des questions sur toi."),
+            _l("marco", "Trois clients, pas plus. Pis tu me ramènes le taxi entier.",
+               jeu="[serious] Trois clients, pas plus. Pis tu me ramènes le taxi… entier."),
+            _l("marco", "Ouvre l'œil. Y a du monde en ville qui pose des questions sur toi.",
+               jeu="[quietly] Ouvre l'œil. Y a du monde en ville… qui pose des questions sur toi."),
         ],
-        "client": [_l("civil", "Roule, mon homme. Pis fais pas de folies : j'suis de la police.")],
+        "client": [_l("civil", "Roule, mon homme. Pis fais pas de folies : j'suis de la police.",
+                      jeu="[smugly] Roule, mon homme. Pis fais pas de folies… j'suis de la police.")],
         "fin": [
-            _l("marco", "Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte."),
-            _l("marco", "Y mange là tous les midis. Sois poli, c'est un ami de la famille."),
+            _l("marco", "Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte.",
+               jeu="[impressed] Trois courses, un taxi entier. Le sergent Bouchard veut te voir au casse-croûte."),
+            _l("marco", "Y mange là tous les midis. Sois poli, c'est un ami de la famille.",
+               jeu="[casually] Y mange là tous les midis. Sois poli… c'est un ami de la famille."),
         ],
-        "echec": [_l("marco", "Mon taxi... Bon. On efface, pis on recommence.")],
+        "echec": [_l("marco", "Mon taxi... Bon. On efface, pis on recommence.",
+                     jeu="[disappointed] Mon taxi… Bon. On efface… [groans] pis on recommence.")],
     },
 }

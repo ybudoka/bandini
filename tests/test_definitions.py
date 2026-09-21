@@ -60,9 +60,18 @@ def test_le_paquet_reste_leger():
     ajout, quel qu'il soit, l'aurait fait tomber. Deux Ko de marge, et la meme
     regle qu'avant : le vrai juge du poids est le declencheur de la dette
     (« plus de 2 s entre Jouer et la ville »), pas ce nombre.
+
+    ⚠️ **Les définitions : 40 000 → 44 000 octets gzip le 21 sept. 2026.** Mesure : huit missions
+    pesaient 39 526 octets (474 sous le plafond), treize en pèsent 41 886 — **470 octets par mission**
+    (objectifs, répliques, scènes : tout le catalogue voyage dans le paquet). Quatre mille de marge
+    font place à quatre missions de plus ; ce n'est pas un droit d'en écrire cent. Le remède est
+    écrit depuis le 16 sept. dans la fiche de M16 : les dialogues et les scènes sortent du paquet
+    (`/api/dialogue/<slug>`, ETag), et le catalogue seul y reste. Il n'est pas livré ; ce plafond-ci
+    est ce qui le rendra urgent. ⚠️ Le JEU des répliques (`jeu=`) n'y voyage PAS
+    (`missions.pour_le_navigateur`) : il ne sert qu'à générer les voix.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 200_000, 40_000), ("carte", 450_000, 50_000)):
+    for nom, brut_max, fil_max in (("definitions", 200_000, 44_000), ("carte", 450_000, 50_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

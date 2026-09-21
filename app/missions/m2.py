@@ -45,19 +45,28 @@ MISSION = {
             {"type": "camera", "vers": "joueur", "duree": 40, "courbe": "freine"},
         ],
     },
+    # Le jeu de chaque réplique (`jeu=`) — Madame Thibodeau : inquiete, puis en colere, puis tendre.
     "dialogue": {
-        "appel": [_l("thibodeau", "C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères. Viens me voir, veux-tu?")],
+        "appel": [_l("thibodeau", "C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères. Viens me voir, veux-tu?",
+                     jeu="[worried] C'est Madame Thibodeau, du kiosque. Les Cravates me font des misères… Viens me voir, veux-tu?")],
         "intro": [
-            _l("thibodeau", "Deux Cravates sont venus me « protéger ». Ils ont vidé ma caisse."),
-            _l("thibodeau", "Ils rôdent encore au coin. Fais-leur comprendre. Avec tes poings, pas plus."),
-            _l("thibodeau", "Le troisième s'est sauvé en moto avec mon argent. Rattrape-le."),
+            _l("thibodeau", "Deux Cravates sont venus me « protéger ». Ils ont vidé ma caisse.",
+               jeu="[bitterly] Deux Cravates sont venus me « protéger ». [angry] Ils ont vidé ma caisse."),
+            _l("thibodeau", "Ils rôdent encore au coin. Fais-leur comprendre. Avec tes poings, pas plus.",
+               jeu="[quietly] Ils rôdent encore au coin. Fais-leur comprendre… avec tes poings, pas plus."),
+            _l("thibodeau", "Le troisième s'est sauvé en moto avec mon argent. Rattrape-le.",
+               jeu="[angry] Le troisième s'est sauvé en moto avec mon argent. Rattrape-le."),
         ],
         "fin": [
-            _l("thibodeau", "Mon argent! T'es un bon garçon, toi."),
-            _l("thibodeau", "Tiens, le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi."),
+            _l("thibodeau", "Mon argent! T'es un bon garçon, toi.",
+               jeu="[relieved] Mon argent! [warmly] T'es un bon garçon, toi."),
+            _l("thibodeau", "Tiens, le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi.",
+               jeu="[tenderly] Tiens… le bâton de mon défunt. Pis au kiosque, c'est moins cher pour toi."),
         ],
-        "echec": [_l("thibodeau", "Ils t'ont eu, hein? Repose-toi, pis reviens.")],
+        "echec": [_l("thibodeau", "Ils t'ont eu, hein? Repose-toi, pis reviens.",
+                     jeu="[concerned] Ils t'ont eu, hein? Repose-toi… pis reviens.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("thibodeau", "Il se sauve avec ma caisse! Lâche-le pas!", 1)],
+        "pendant": [_p("thibodeau", "Il se sauve avec ma caisse! Lâche-le pas!", 1,
+                       jeu="[worried] Il se sauve avec ma caisse! Lâche-le pas!")],
     },
 }
