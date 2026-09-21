@@ -3155,6 +3155,10 @@ const Entites = (function () {
   }
 
   function majJoueur(j) {
+    // ⚠️ Le `recul` d'un coup recu se decompte ICI, avant tout retour : seuls
+    // les pietons le faisaient, et le joueur restait penche de 0,22 rad a vie
+    // (retour de Martin : « mon personnage est croche »).
+    if (j.recul > 0) j.recul--;
     if (j.dansVehicule) return;
     // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
     // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).

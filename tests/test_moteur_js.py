@@ -7491,6 +7491,33 @@ def test_la_roulade_tourne_et_le_recul_chancelle(banc):
     assert r["penche"] < 1 and r["dy"] > 0, "ramasser courbe le dos"
 
 
+def test_le_joueur_touche_chancelle_puis_se_redresse(banc):
+    """Martin : « regarde pourquoi mon personnage est croche. » `blesser` pose un
+    `recul` (8 images, 22 si on est renverse) et seule la mise a jour des
+    PIETONS le decomptait : le joueur restait penche de 0,22 rad, du cote de sa
+    marche, jusqu'a la fin de la partie — au premier coup recu."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.graine(81);
+        const j = L.B.joueur;
+        const lu = function () { return { recul: j.recul, rot: L.Entites.pose(j).rot }; };
+        const avant = lu();
+        L.Entites.blesser(j, 1, null, {});
+        const petit = lu();
+        o.frame(12);
+        const petitApres = lu();
+        L.Entites.blesser(j, 1, null, { renverse: true });
+        const gros = lu();
+        o.frame(30);
+        const grosApres = lu();
+        return { avant: avant, petit: petit, petitApres: petitApres, gros: gros, grosApres: grosApres };
+    }""")
+    assert r["avant"]["rot"] == 0, r
+    assert r["petit"]["rot"] != 0 and r["gros"]["rot"] != 0, "le coup fait chanceler : %s" % r
+    assert r["petitApres"] == {"recul": 0, "rot": 0}, "le petit coup est oublie en 12 images : %s" % r
+    assert r["grosApres"] == {"recul": 0, "rot": 0}, "le corps renverse se redresse en 30 images : %s" % r
+
+
 def test_la_police_pixel_sait_ecrire_tout_ce_que_le_jeu_affiche(banc):
     """Un glyphe absent tombe sur « ? » : HÔPITAL, CASSE-CROÛTE, BÂTON… Martin
     l'a vu a l'ecran. Chaque nom du jeu doit se normaliser en glyphes connus —
