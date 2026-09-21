@@ -8,9 +8,8 @@
 
 ### Principe
 
-Comme dans `car-game` : **Python décide, JS calcule.** Tout ce qui tient dans une table
-(catalogues, économie, paliers de recherche, carte, missions, magasins) vit en Python, est
-testé par pytest et servi en **deux requêtes** revalidées par ETag : `/api/definitions` (les catalogues) et `/api/carte` (la ville, à part depuis le 16 sept. 2026 — elle faisait plus de la moitié du poids). Le
+**Python décide, JS calcule.** Tout ce qui tient dans une table
+(catalogues, économie, paliers de recherche, carte, missions, magasins) vit en Python, est testé par pytest et servi en **deux requêtes** revalidées par ETag : `/api/definitions` (les catalogues) et `/api/carte` (la ville, à part depuis le 16 sept. 2026 — elle faisait plus de la moitié du poids). Le
 JS joue ce qu'il reçoit : physique, rendu, IA locale, entrées. Les sprites restent
 dessinés en code ; l'audio est **mixte depuis le 12 sept. 2026** : de vrais échantillons
 ElevenLabs versionnés dans `static/audio/` (catalogue et recettes dans `app/audio.py`),
