@@ -30,6 +30,10 @@ def test_un_pieton_est_jouable(pieton):
     # qui les range la, pas leur slug.
     if pieton["metier"] in POSTES:
         assert pieton["vitesse"] == 0.0, pieton["slug"]
+    elif pieton["metier"] == "cycliste":
+        # L'enfant a velo ROULE : plus vite qu'un passant, moins qu'une course a
+        # pied qui detale (`pieton_course`) — c'est toujours un enfant.
+        assert 1.5 < pieton["vitesse"] <= 2.5, pieton["slug"]
     else:
         assert 0.5 <= pieton["vitesse"] <= 1.5, pieton["slug"]
     assert 0.0 <= pieton["courage"] <= 1.0

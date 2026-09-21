@@ -117,7 +117,7 @@ un paiement.
 | `auto` | Berline | auto | 4 | La référence (vitesse 100 %). |
 | `taxi` | Taxi | auto | 4 | Boulot taxi, radio. |
 | `moto` | Moto | moto | 2 | Éjecte, boulot pizza. |
-| `velo` | Vélo | velo | 1 | |
+| `velo` | Vélo | velo | 1 | Roule à la bordure (tassé vers le trottoir) et se range à gauche pour tourner à gauche ; de temps en temps un bout de trottoir, ou la traversée d'un parc par ses allées, au pas et en sonnant (`TRAFIC["velo"]`). |
 | `police` | Auto-patrouille | auto | 4 | Sirène, alarme, radio 10-4. |
 | `camion` | Camion | camion | 2 | |
 | `autobus` | Autobus | camion | 12 | |
@@ -213,6 +213,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `camelot` | Camelot du _Clairon_ (lance le journal sur les perrons) | erables, faubourg (à l'aube) |
 | `laveur` | Laveur de vitres | shop, faubourg |
 | `pickpocket` | Pickpocket | faubourg, quais |
+| `enfant_velo` | Enfant à vélo (casqué, intouchable) | erables, pointe, faubourg — le jour, sur le trottoir et dans les parcs seulement (`ENFANTS_A_VELO`) |
 
 ### Les gens d'intérieur (fréquence 0 — posés derrière une porte)
 

@@ -180,7 +180,11 @@ def test_en_courant_on_ne_seme_pas_un_agent_mais_en_sprintant_on_gagne_du_terrai
             j.x = d.x; j.y = d.y;
             j.endurance = 100; j.surplus = 0; j.cafeine = 0;
             L.B.recherche.etoiles = 0; L.B.recherche.chaleur = 0;
-            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'pieton' || !e.agent; });
+            // ⚠️ Et la rue VIDE DE SES CHARS : la ligne droite est une voie, et ce juge
+            // mesure la course a pied, pas le trafic. Un char passe entre le joueur et
+            // l'agent — ou un velo tasse a la bordure — et l'ecart ne disait plus rien de
+            // l'endurance : sur la base, quatre graines sur douze tombaient deja.
+            L.B.entites = L.B.entites.filter(function (e) { return (e.type !== 'pieton' || !e.agent) && e.type !== 'vehicule'; });
             L.Entites.indexer();
             L.Police.ajouterChaleur(3);
             const a = poserAgent(L, 'poursuit', 40);

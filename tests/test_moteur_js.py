@@ -1293,6 +1293,28 @@ def test_la_sauvegarde_fait_l_aller_retour_et_complete_un_vieux_blob(banc):
     assert r["vieux"]["armes"]["poings"] == {"mun": None}
 
 
+def test_un_char_ne_pousse_personne_hors_de_la_carte(banc):
+    """Un char gare qui chevauche le joueur au ras du bord nord le repousse — vers
+    le dedans de la carte, jamais au-dela. Le singe l'a trouve (graine 1) : le
+    joueur finissait a y = -3,5, dans le « mur » du dehors."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, T = L.TT, c = L.Monde.carte;
+        const out = [];
+        for (const dy of [4, 6, 8, 10]) {
+            j.x = 1782.8; j.y = 5.0; j.vx = 0; j.vy = 0;
+            L.B.entites = L.B.entites.filter(function (e) { return e.type !== 'vehicule'; });
+            const v = L.Vehicules.creer('remorqueuse', j.x + 2, j.y + dy, 0, { etat: 'stationne' });
+            L.Entites.indexer();
+            o.frame(1);
+            out.push({ dy: dy, y: j.y, dedans: j.y >= j.r && j.y <= c.pxH - j.r });
+            L.Entites.retirer(v);
+        }
+        return out;
+    }""")
+    assert all(q["dedans"] for q in r), f"pousse hors de la carte : {r}"
+
+
 @pytest.mark.parametrize("graine", [1, 2])
 def test_le_singe_ne_casse_rien(banc, graine):
     r = banc("""function (L, o) {
@@ -3460,6 +3482,11 @@ def test_la_bagarre_tient_le_budget(banc):
         for (const e of L.B.entites) {
             if (e.type !== 'pieton' || !e.actif) continue;
             if (!e.vivant) { morts++; continue; }
+            // ⚠️ Le PETIT QUI SUIT SA MERE nait avec elle : le budget se decide a la
+            // naissance (`peupler`), et une mere nee a vingt-sept flaneurs en fait
+            // vingt-neuf. Le juge tenait tant que la graine ne faisait pas naitre de
+            // paire au bord du budget (21 sept. 2026, graine 13).
+            if (e.suit) continue;
             if (e.metier || e.personnage) metiers++; else flaneurs++;
         }
         return { etat: L.B.etat, entites: L.B.entites.length, actifs: s.actifs,
@@ -5567,6 +5594,9 @@ def test_le_trafic_reste_dans_sa_voie(banc):
             if (i < 200 || i % 20) continue;
             L.B.entites.forEach(function (v) {
                 if (v.type !== 'vehicule' || v.conducteur !== 'trafic' || v.def.classe === 'velo' && false) return;
+                // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son
+                // plein gre : ce n'est pas un char qui coupe un coin (`test_velos_js`).
+                if (v.horsRue) return;
                 releves++;
                 const tx = Math.floor(v.x / L.TT), ty = Math.floor(v.y / L.TT);
                 if (!L.Monde.estRoute(tx, ty)) horsRoute++;

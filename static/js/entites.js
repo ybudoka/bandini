@@ -2206,6 +2206,127 @@ const Entites = (function () {
     return 1;
   }
 
+  // --- Les enfants a velo ------------------------------------------------------------
+
+  //: ⚠️ Martin (21 sept. 2026) : « je veux aussi des enfants a velo, seulement sur
+  //: trottoir, casque, parc ». Ce ne sont pas des chars : ce sont des passants
+  //: (`metier: 'cycliste'`) qui flanent plus vite, sur un corps a eux
+  //: (`SPRITES.enfant_velo`), et a qui la rue est INTERDITE — pas seulement la
+  //: chaussee, comme a tout le monde : la traverse aussi. Un enfant a velo reste
+  //: sur son ilot, le trottoir, l'abord et le parc.
+
+  /** Une tuile ou un enfant a velo peut rouler : le trottoir, l'abord, la
+      pelouse et l'allee d'un parc. ⚠️ Ni la chaussee ni le passage pieton
+      (`estRoute` les prend tous les deux), ni la ruelle, ni le sable. */
+  function roulableEnfant(tx, ty) {
+    if (Monde.estRoute(tx, ty) || Monde.bloque(tx, ty, Monde.MASQUE_PIETON)) return false;
+    const g = Monde.glyphe(tx, ty);
+    return Monde.estTrottoir(tx, ty) || Monde.estAbord(tx, ty) || g === ',' || g === 'g';
+  }
+
+  /** Il ne descend pas sur la rue, meme en detalant : on coupe le pas qui l'y
+      menerait, axe par axe — il longe la bordure au lieu de la franchir.
+
+      ⚠️ **ET LE COIN EN DIAGONALE.** Les deux axes, pris chacun seul, tombaient
+      sur du trottoir ; le pas entier, lui, tombait sur la traverse d'en biais —
+      au coin d'un ilot, en detalant. Le juge l'a vu deux fois en 800 releves.
+
+      ⚠️ Et s'il y est quand meme (un char l'a pousse, la foule l'a demele), il
+      en SORT : vers la tuile roulable la plus proche, a son allure. Sans ca, la
+      regle qui le garde sur le trottoir le gardait sur la traverse. */
+  function resterSurLeTrottoir(e) {
+    const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
+    if (!roulableEnfant(tx, ty)) {
+      // Le bord le plus PROCHE d'une tuile roulable, pas son centre : pousse d'un
+      // pixel sur la traverse, il remonte d'un pixel — viser le centre de la
+      // tuile du coin l'envoyait contre le poteau du feu, qui le renvoyait.
+      let meilleur = null;
+      for (let r = 1; r <= 3 && !meilleur; r++) {
+        for (let dy = -r; dy <= r; dy++) {
+          for (let dx = -r; dx <= r; dx++) {
+            if (Math.max(Math.abs(dx), Math.abs(dy)) !== r || !roulableEnfant(tx + dx, ty + dy)) continue;
+            const x0 = (tx + dx) * TT, y0 = (ty + dy) * TT;
+            const gx = Math.min(Math.max(e.x, x0 + e.r + 1), x0 + TT - e.r - 1) - e.x;
+            const gy = Math.min(Math.max(e.y, y0 + e.r + 1), y0 + TT - e.r - 1) - e.y;
+            const d = Math.hypot(gx, gy);
+            if (!meilleur || d < meilleur.d) meilleur = { gx: gx, gy: gy, d: d };
+          }
+        }
+      }
+      if (meilleur) {
+        const n = meilleur.d || 1, allure = Math.min(meilleur.d, Math.max(Math.hypot(e.vx, e.vy), B.defs.recherche.vitesses.pieton));
+        e.vx = meilleur.gx / n * allure; e.vy = meilleur.gy / n * allure;
+      }
+      return;
+    }
+    const bord = e.r + 2;
+    const x1 = Math.floor((e.x + e.vx + Math.sign(e.vx) * bord) / TT), y1 = Math.floor((e.y + e.vy + Math.sign(e.vy) * bord) / TT);
+    if (e.vx && !roulableEnfant(x1, ty)) e.vx = 0;
+    if (e.vy && !roulableEnfant(tx, y1)) e.vy = 0;
+    if (e.vx && e.vy && !roulableEnfant(x1, y1)) e.vy = 0;
+  }
+
+  /** `fn` jouee avec un de PRETE : la file du jeu ne bouge pas d'un tirage.
+      ⚠️ La meme que celle des gens qui attendent l'autobus (`Autobus`) :
+      `creerPieton` tire deux des, et une naissance de decor ne doit pas
+      deplacer tout ce qui nait apres elle. */
+  function sansLeDe(graine, fn) {
+    const de = B.rng;
+    let s = graine >>> 0;
+    B.rng = function () { s = hash2(s + 1, 0x5EED); return (s % 100000) / 100000; };
+    try { return fn(); } finally { B.rng = de; }
+  }
+
+  /** Une tuile de trottoir ou de parc, dans la bulle et hors champ, dans un
+      quartier qui en veut. ⚠️ Aucun de : on balaie en spirale, comme pour la
+      greve, en commencant par un cote qui tourne avec l'heure. */
+  function placeDEnfantAVelo(rayon, arch) {
+    const c = Monde.carte, j = B.joueur;
+    if (!c) return null;
+    const t = Math.floor(rayon / TT);
+    const jx = Math.floor(j.x / TT), jy = Math.floor(j.y / TT);
+    const tour = Math.floor(B.t / 60) % 4;
+    for (let d = 4; d <= t; d++) {
+      for (let k = -d; k <= d; k++) {
+        const cotes = [[jx + k, jy - d], [jx + d, jy + k], [jx - k, jy + d], [jx - d, jy - k]];
+        for (let n = 0; n < 4; n++) {
+          const tx = cotes[(n + tour) % 4][0], ty = cotes[(n + tour) % 4][1];
+          if (!roulableEnfant(tx, ty)) continue;
+          const x = tx * TT + 8, y = ty * TT + 8;
+          if (dist2(x, y, j.x, j.y) > rayon * rayon) continue;
+          const zone = Monde.zoneA(x, y);
+          if (arch.districts && (!zone || arch.districts.indexOf(zone.district) < 0)) continue;
+          if (visibleAEcran(x, y, 24) || !placeLibre(x, y)) continue;
+          return { x: x, y: y, tx: tx, ty: ty };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Les enfants a velo de la bulle : le jour (`heures`), dans leurs quartiers
+      (`districts`), `combien` au plus. Le casque, le cadre et le chandail se
+      lisent a l'empreinte de la tuile ou il nait. */
+  function naitreLesEnfantsAVelo() {
+    const f = B.defs.pietons && B.defs.pietons.enfants_a_velo;
+    const arch = archetype('enfant_velo');
+    if (!f || !arch || arch.slug !== 'enfant_velo' || !B.joueur || B.interieur) return 0;
+    if (!enService(arch.heures)) return 0;
+    const n = B.entites.filter(function (q) { return q.type === 'pieton' && q.arch === 'enfant_velo' && q.vivant; }).length;
+    if (n >= f.combien) return 0;
+    const place = placeDEnfantAVelo(f.rayon_px, arch);
+    if (!place) return 0;
+    const h = hash2(place.tx, place.ty);
+    const e = sansLeDe(h, function () { return creerPieton(place.x, place.y, arch); });
+    if (!e) return 0;
+    e.swaps = Object.assign({}, arch.couleurs, {
+      e: f.casques[h % f.casques.length],
+      v: f.cadres[(h >>> 8) % f.cadres.length],
+      c: f.chandails[(h >>> 16) % f.chandails.length],
+    });
+    return 1;
+  }
+
   /** Une tuile d'une plage declaree, dans la bulle et hors champ.
 
       ⚠️ **ELLE NE TIRE PAS UN SEUL DE.** Premiere version jetee : elle tirait
@@ -2897,6 +3018,7 @@ const Entites = (function () {
     if (B.t % 30 === 0) majKiosques();
     if (B.t % 45 === 0) naitreLesOuvriers();
     if (B.t % 60 === 0) naitreLesEnfantsDeLaPlage();
+    if (B.t % 60 === 30) naitreLesEnfantsAVelo();
     if (B.t % 30 === 0) naitreLaFoire();
     if (B.t % 40 === 0) naitreLesBetes();
     if (B.t % 30 === 0) majVolDeChar();
@@ -3259,8 +3381,14 @@ const Entites = (function () {
       if (!cede(e) || (e.pousseX === 0 && e.pousseY === 0)) continue;
       const n = Math.hypot(e.pousseX, e.pousseY);
       const k = n > pas ? pas / n : 1;
+      const x0 = e.x, y0 = e.y;
       deplacerCercle(e, e.pousseX * k, e.pousseY * k, Monde.MASQUE_PIETON);
       dansLaCarte(e);
+      // ⚠️ La foule ne pousse pas l'enfant a velo sur la rue. Au coin, ceux qui
+      // attendent la traverse le serraient contre le poteau du feu, et il finissait
+      // un pixel sur les bandes, coince la : il garde sa place, l'autre cede.
+      if (e.metier === 'cycliste' && roulableEnfant(Math.floor(x0 / TT), Math.floor(y0 / TT))
+          && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) { e.x = x0; e.y = y0; }
     }
   }
 
@@ -3762,6 +3890,10 @@ const Entites = (function () {
       return;
     }
 
+    // Pousse sur la rue, l'enfant a velo n'y souffle pas : il en sort d'abord.
+    if (e.etat === 'arret' && e.metier === 'cycliste' && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) {
+      e.etat = 'flane'; e.butT = 0;
+    }
     let vitesse = v.pieton * e.allure;
     // ⚠️ On nage a la vitesse de la nage, agent compris : un policier qui
     // traverserait le chenal aussi vite qu'il court sur le quai ferait de l'eau
@@ -3976,7 +4108,10 @@ const Entites = (function () {
         // ⚠️ La regle de la ville : on ne pose pas le pied sur la chaussee.
         // On traverse au passage, et seulement quand c'est sur.
         const ax = Math.floor((e.x + dir[0] * (e.r + 4)) / TT), ay = Math.floor((e.y + dir[1] * (e.r + 4)) / TT);
-        if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)) {
+        // ⚠️ L'enfant a velo ne descend meme pas sur la traverse : pour lui, toute
+        // la rue est un mur (`roulableEnfant`).
+        if (Monde.estChaussee(ax, ay) || Monde.bloque(ax, ay, Monde.MASQUE_PIETON)
+            || (e.metier === 'cycliste' && !roulableEnfant(ax, ay))) {
           e.dir = (e.dir + (B.rng() < 0.5 ? 1 : 3)) % 4;      // on tourne, on ne fonce pas
           e.butT = e.poste ? 30 : 60 + Math.floor(B.rng() * 120);
           e.vx = 0; e.vy = 0;
@@ -4013,8 +4148,15 @@ const Entites = (function () {
       }
     }
     const avant = { x: e.x, y: e.y };
+    const cycliste = e.metier === 'cycliste';
+    const surLeTrottoir = cycliste && roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT));
+    if (cycliste) resterSurLeTrottoir(e);
     deplacerCercle(e, e.vx, e.vy, masqueDe(e));
     dansLaCarte(e);
+    // ⚠️ La regle dure de l'enfant a velo : un pas qui le mettrait sur la rue ne
+    // se fait pas. `resterSurLeTrottoir` le prevoit ; ceci le garantit, quoi qu'ait
+    // fait la glissade le long d'un mur ou d'un banc.
+    if (surLeTrottoir && !roulableEnfant(Math.floor(e.x / TT), Math.floor(e.y / TT))) { e.x = avant.x; e.y = avant.y; }
     const bouge = Math.hypot(e.x - avant.x, e.y - avant.y);
     e.anim.dist += bouge;
     if (bouge < 0.2 && e.etat === 'flane') e.butT = 0;      // bloque : on change d'idee
@@ -4814,6 +4956,7 @@ const Entites = (function () {
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
+    naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
     naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,

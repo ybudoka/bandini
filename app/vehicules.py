@@ -358,6 +358,40 @@ TRAFIC = {
     },
     "naissance_px": 300,          # comme les pietons : hors ecran, dans la bulle
     "oubli_px": 560,
+    # ⚠️ **LE VELO ROULE A LA BORDURE** — Martin (21 sept. 2026) : « les velos
+    # peuvent passer dans les parcs, les trottoirs, et restent souvent sur la
+    # bordure de la route, sauf pour virage a gauche ». Il roulait au MILIEU de
+    # sa voie, comme une auto de huit pixels de large.
+    #
+    # ⚠️ Rien ici ne se tire au de du jeu : l'intention de tourner, le trottoir
+    # et le parc se lisent a l'EMPREINTE du cycliste et de l'endroit (`hash2`).
+    # C'est la lecon du pilote des deux-roues — un de de plus decale tout ce
+    # qui nait apres, et un juge de police voit son auto-patrouille ailleurs.
+    "velo": {
+        "bord_px": 4,             # il se tasse de ca vers le trottoir, depuis le centre de sa voie
+        # A cette distance de la ligne d'arret, il SAIT ou il va : s'il tourne a
+        # gauche, il se range a gauche (la voie du milieu, s'il y en a une), et
+        # tourne de la. Cinq tuiles : assez pour se tasser en diagonale.
+        "virage_tuiles": 5,
+        # --- Hors de la rue : le trottoir et le parc ------------------------
+        # ⚠️ **AU PAS, ET EN CEDANT.** Un velo qui fauche les pietons du trottoir
+        # n'est plus un cycliste, c'est une arme : il roule sous la vitesse qui
+        # renverse (`PHYSIQUE.renverse_vitesse_min`), s'arrete derriere un
+        # passant et sonne.
+        "trottoir_vitesse": 0.8,  # en px/image (une auto de ville : 2,2 ; un passant : 0,45)
+        "parc_chance": 0.05,      # par tuile longee au bord d'un parc : il entre le traverser
+        "trottoir_chance": 0.01,  # par tuile de voie : il monte faire un bout de trottoir
+        "trottoir_tuiles": [4, 10],  # la longueur d'un bout de trottoir, au plus ce qu'il y a
+        # Coince derriere un char arrete ce temps-la, un cycliste sur deux monte
+        # sur le trottoir et le longe — l'autre attend comme une auto.
+        "coince_images": 45,
+        "coince_part": 0.5,
+        "parc_allees_min": 6,     # une traversee de parc passe par au moins autant d'allee
+        "noeuds_max": 2500,       # le budget de la recherche d'une traversee
+        "attente_images": 240,    # au bout du trottoir, il attend un trou dans la voie, pas plus
+        "sonnette_images": 150,   # entre deux coups de sonnette a un passant
+        "repos_images": 900,      # redescendu, il ne remonte pas avant ce temps
+    },
 }
 
 #: Ce qui arrive quand un char touche quelque chose. ⚠️ Les degats se

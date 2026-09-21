@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (184 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (185 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -84,7 +84,6 @@ pas quand l'ordre de travail change.
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [fiche](jalons/ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](jalons/ca-travaille-chantiers-et-demolitions.md#notes) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
 | Cinq missions de plus, dans la lignée de m50 | ⬜ **en cours** (les cinq missions se jouent ; restent leurs 38 voix — ≈ 3 750 caractères d'ElevenLabs, à écouter avant de tout générer) | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/cinq-missions-de-plus-dans-la-lignee-de-m50.md#fiche) · [notes](jalons/cinq-missions-de-plus-dans-la-lignee-de-m50.md#notes) |
-| Les vélos : la bordure, les trottoirs, les parcs — et des enfants à vélo | ⬜ **en cours** | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/les-velos-la-bordure-les-trottoirs-les-parcs-et-des-enfants-a-velo.md#fiche) |
 | M14 Meta | ⬜ **en cours** (5 vagues livrées : le compte, la session longue, les parties sur le serveur, le jeu qui se synchronise, le NIP, effacer son compte, et le défi du jour ; restent le mode photo, la coop) | 17 sept. 2026 | **P4** | ajout | [fiche](jalons/m14-meta.md#fiche) · [notes](jalons/m14-meta.md#notes) |
 | L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [fiche](jalons/quatre-activites-que-le-jeu-n-a-pas.md#fiche) · [notes](jalons/quatre-activites-que-le-jeu-n-a-pas.md#notes) |

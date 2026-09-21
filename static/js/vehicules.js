@@ -380,6 +380,12 @@ const Vehicules = (function () {
         const v = type && creer(type.slug, place.x, place.y, place.angle, { conducteur: 'trafic', etat: 'roule', sens: place.sens });
         if (v) {
           v.vitesse = v.def.vitesse_max * t.vitesse_ville * 0.5;
+          // ⚠️ Le cycliste nait DEJA a la bordure : ne au milieu de sa voie, on le
+          // voyait glisser vers le trottoir a chaque apparition.
+          if (estVeloDuTrafic(v)) {
+            const q = droiteDe(PAS_FLECHE[place.sens]);
+            v.x += q[0] * t.velo.bord_px; v.y += q[1] * t.velo.bord_px;
+          }
           // ⚠️ Une ambulance sur trois est EN COURSE, et on l'entend passer.
           // Les deux autres rentrent au garage : une ville ou toutes les
           // ambulances hurlent n'est pas une ville, c'est une alarme.
@@ -1015,6 +1021,10 @@ const Vehicules = (function () {
         if (d >= min) continue;
         const nx = dx / d, ny = dy / d;
         p.x = c.x + nx * min; p.y = c.y + ny * min;
+        // ⚠️ PAS HORS DE LA CARTE : un char gare qui chevauche le joueur au ras du
+        // bord nord le poussait a y = -3,5, dans le « mur » du dehors (le singe l'a
+        // trouve, graine 1, le 21 sept. 2026). La meme borne que pour tout ce qui marche.
+        Entites.dansLaCarte(p);
         // ⚠️ UNE AUTO DE PATROUILLE NE RENVERSE PAS SES AGENTS : elle les pousse
         // hors de sa carrosserie, c'est tout. L'equipage descend d'une auto
         // arretee (`Police.commandes`) ; ceci n'est que le filet — un agent reste
@@ -1781,7 +1791,292 @@ const Vehicules = (function () {
     return { tx: sx, ty: sy, inter: Monde.intersectionA(sx + p[0], sy + p[1]) };
   }
 
+  // --- Le velo : a la bordure, a gauche pour tourner a gauche, et hors de la rue -------
+  //
+  // ⚠️ Martin (21 sept. 2026) : « les velos peuvent passer dans les parcs, les
+  // trottoirs, et restent souvent sur la bordure de la route, sauf pour virage a
+  // gauche ». Le velo du trafic roulait au MILIEU de sa voie, comme une auto de
+  // huit pixels de large, et ne quittait jamais les fleches. C'est toujours un
+  // char sur des rails : on ne touche qu'aux CIBLES qu'on lui donne.
+  //
+  // ⚠️ **AUCUN DE.** Ou il tourne, s'il monte sur le trottoir, quel parc il
+  // traverse : tout se lit a l'empreinte du cycliste et de l'endroit (`hash2`).
+
+  /** Un velo que le TRAFIC mene. ⚠️ La classe, pas le slug — et pas celui du
+      joueur, ni un fuyard de mission (`poursuite`), qui brule tout. */
+  function estVeloDuTrafic(v) {
+    return !!v.def && v.def.classe === 'velo' && v.conducteur === 'trafic' && !v.poursuite && !!trafic().velo;
+  }
+
+  /** Le hasard d'UN cycliste a UN endroit : stable, et gratuit pour les des du jeu. */
+  function empreinteVelo(v, a, b) { return hash2((v.id * 7919 + a) | 0, b | 0) / 4294967296; }
+
+  /** A droite de ce sens (on roule a droite) : le pas vers le trottoir. */
+  function droiteDe(p) { return [-p[1], p[0]]; }
+
+  //: Le bras d'un croisement par ou l'on SORT dans ce sens.
+  const BRAS_DU_SENS = { '^': 'N', 'v': 'S', '<': 'O', '>': 'E' };
+
+  /** Ou ce cycliste ira au croisement qu'il a devant : tout droit, a droite, a
+      gauche — dans l'ordre ou il les essaiera. Les memes parts ET le meme repli
+      que le reste du trafic (`prochaineCible`, la boite : « tout droit, sinon a
+      gauche »), mais tirees a l'empreinte, et d'abord parmi les bras qui
+      EXISTENT : se ranger a gauche devant un T sans gauche, c'est se ranger pour
+      rien. La boite, elle, prend ensuite la premiere de la liste qui en part
+      (`sortieDevant`). */
+  function ordreDuVelo(v, inter, sens) {
+    const p = PAS_FLECHE[sens];
+    const vers = { droit: sens, droite: FLECHE_DE[(-p[1]) + ',' + p[0]], gauche: FLECHE_DE[p[1] + ',' + (-p[0])] };
+    const tirage = empreinteVelo(v, inter.x * 4099 + inter.y, 17);
+    const ordre = tirage < 0.55 ? ['droit', 'gauche', 'droite'] : tirage < 0.78 ? ['droite', 'droit', 'gauche'] : ['gauche', 'droit', 'droite'];
+    const bras = inter.bras || 'NSOE';
+    return ordre.filter(function (c) { return bras.indexOf(BRAS_DU_SENS[vers[c]]) >= 0; }).concat(
+      ordre.filter(function (c) { return bras.indexOf(BRAS_DU_SENS[vers[c]]) < 0; }));
+  }
+
+  /** L'intention du cycliste au prochain croisement — lue AVANT la ligne
+      d'arret, a `virage_tuiles` : c'est ce qui lui laisse le temps de se ranger
+      a gauche. On l'oublie des qu'on a traverse la boite. */
+  function intentionDuVelo(v, tx, ty, p) {
+    if (v.intention && v.intention.dedans) v.intention = null;
+    if (v.intention) return v.intention;
+    const n = trafic().velo.virage_tuiles;
+    for (let k = 1; k <= n; k++) {
+      const sx = tx + p[0] * k, sy = ty + p[1] * k, f = Monde.fleche(sx, sy);
+      if (f === 'S') {
+        if (Monde.sensArret(sx, sy) !== v.sens) return null;
+        const inter = Monde.intersectionA(sx + p[0], sy + p[1]);
+        if (!inter) return null;
+        v.intention = { inter: inter, sens: v.sens, ordre: ordreDuVelo(v, inter, v.sens), dedans: false };
+        return v.intention;
+      }
+      if (f !== v.sens) return null;        // la voie finit ou tourne : rien de droit devant
+    }
+    return null;
+  }
+
+  /** +1 : a la bordure (a droite). -1 : a gauche — il va tourner a gauche, et
+      il roule encore dans le sens d'ou il arrive (la boite comprise, jusqu'au
+      virage). */
+  function coteDuVelo(v) {
+    const i = v.intention;
+    return i && i.ordre[0] === 'gauche' && v.sens === i.sens ? -1 : 1;
+  }
+
+  /** La cible, tassee vers la bordure (ou vers la ligne du milieu).
+
+      ⚠️ **SUR PLACE, IL GARDE SON COTE.** Une cible a moins d'un pixel devant
+      — ou derriere — est le point d'arret d'un velo arrive a la ligne : la
+      tasser le ferait glisser de travers au feu, et la laisser au milieu de la
+      voie le ramenait au milieu, trois pixels en crabe, le temps du rouge. On
+      la pose sur SA ligne a lui. */
+  function aLaBordure(v, c) {
+    if (!c || v.horsRue) return c;
+    const p = PAS_FLECHE[v.sens];
+    if (!p) return c;
+    const q = droiteDe(p);
+    if ((c.x - v.x) * p[0] + (c.y - v.y) * p[1] <= 1) {
+      const lat = (v.x - c.x) * q[0] + (v.y - c.y) * q[1];
+      return { x: c.x + q[0] * lat, y: c.y + q[1] * lat, tx: c.tx, ty: c.ty };
+    }
+    const d = trafic().velo.bord_px * coteDuVelo(v);
+    return { x: c.x + q[0] * d, y: c.y + q[1] * d, tx: c.tx, ty: c.ty };
+  }
+
+  /** Le pas lateral vers la voie qu'il VEUT : celle du trottoir d'ordinaire,
+      celle du milieu s'il va tourner a gauche. null s'il y est deja, ou si la
+      voisine n'est pas libre. Les memes gardes que le deport (`voieDeDepassement`) :
+      la voisine et la tuile d'apres dans notre sens, pas de barriere. */
+  function voieDuVelo(v, tx, ty, p) {
+    if (v.deportFroid > 0 || v.deportT > 0) return null;       // il vient de contourner quelque chose
+    const d = droiteDe(p), c = coteDuVelo(v), q = [d[0] * c, d[1] * c];
+    if (Monde.fleche(tx + q[0], ty + q[1]) !== v.sens) return null;
+    if (Monde.fleche(tx + q[0] + p[0], ty + q[1] + p[1]) !== v.sens) return null;
+    if (Monde.barriereBloque(v, tx + q[0], ty + q[1]) || Monde.barriereBloque(v, tx + q[0] + p[0], ty + q[1] + p[1])) return null;
+    return voieLibre(v, tx + q[0], ty + q[1], p) ? q : null;
+  }
+
+  /** Une tuile ou un velo roule hors de la chaussee : le trottoir (pas la
+      traverse, qui est de la route) et l'allee de parc — ni l'herbe, ou l'on
+      seme les arbres, les bancs et les buissons, ni l'abord, ou se range le
+      mobilier. Jamais le coin d'un croisement (ses poteaux, ses traverses), et
+      rien de pose dessus : sur des rails, il passerait au travers. */
+  function roulableHorsRue(tx, ty) {
+    const c = Monde.carte;
+    if (!c || tx < 1 || ty < 1 || tx >= c.w - 1 || ty >= c.h - 1) return false;
+    if (Monde.bloque(tx, ty, Monde.MASQUE_VEHICULE) || Monde.intersectionA(tx, ty)) return false;
+    if (Monde.glyphe(tx, ty) !== 'g' && !Monde.estTrottoir(tx, ty)) return false;
+    const x = tx * TT + 8, y = ty * TT + 8;
+    for (const d of Entites.decorAutour(x, y, 20)) {
+      if (!d.brise && Math.hypot(d.x - x, d.y - y) < 8 + (d.r || 4)) return false;
+    }
+    return true;
+  }
+
+  /** Un parc de l'autre cote du trottoir : la pelouse ou l'allee, une ou deux tuiles derriere. */
+  function parcDerriere(rx, ry, d) {
+    for (let k = 1; k <= 2; k++) {
+      const g = Monde.glyphe(rx + d[0] * k, ry + d[1] * k);
+      if (g === ',' || g === 'g') return true;
+    }
+    return false;
+  }
+
+  /** Un bout de trottoir : tout droit le long de la voie, de `trottoir_tuiles[0]`
+      a ce qu'il y a (au plus `trottoir_tuiles[1]`), et on redescend UNE tuile plus
+      loin, dans la meme voie. ⚠️ On s'arrete avant le coin : la traverse est de
+      la route, et un velo qui descend sur un passage pieton descend dans les
+      jambes de ceux qui traversent. */
+  function boutDeTrottoir(v, tx, ty, p) {
+    const f = trafic().velo, d = droiteDe(p);
+    const chemin = [];
+    for (let k = 1; k <= f.trottoir_tuiles[1]; k++) {
+      const sx = tx + d[0] + p[0] * k, sy = ty + d[1] + p[1] * k;
+      if (!roulableHorsRue(sx, sy) || !Monde.estTrottoir(sx, sy)) break;
+      if (Monde.fleche(tx + p[0] * k, ty + p[1] * k) !== v.sens) break;
+      if (Monde.fleche(tx + p[0] * (k + 1), ty + p[1] * (k + 1)) !== v.sens) break;
+      chemin.push(centre(sx, sy));
+    }
+    const min = f.trottoir_tuiles[0];
+    if (chemin.length < min) return null;
+    const n = min + Math.floor(empreinteVelo(v, tx * 3 + 1, ty * 5 + 2) * (chemin.length - min + 1));
+    const bout = chemin.slice(0, n), dernier = bout[bout.length - 1];
+    return { chemin: bout, retour: { tx: dernier.tx - d[0], ty: dernier.ty - d[1], sens: v.sens } };
+  }
+
+  /** Un segment roule-t-il tout du long sur des tuiles hors rue ? On echantillonne
+      l'axe et ses deux bords (un velo fait huit pixels de large). */
+  function segmentRoulable(a, b) {
+    const n = Math.ceil(Math.hypot(b.x - a.x, b.y - a.y) / 4);
+    const l = Math.hypot(b.x - a.x, b.y - a.y) || 1, nx = -(b.y - a.y) / l * 3, ny = (b.x - a.x) / l * 3;
+    for (let i = 0; i <= n; i++) {
+      const x = a.x + (b.x - a.x) * i / n, y = a.y + (b.y - a.y) * i / n;
+      for (const s of [0, 1, -1]) {
+        if (!roulableHorsRue(Math.floor((x + nx * s) / TT), Math.floor((y + ny * s) / TT))) return false;
+      }
+    }
+    return true;
+  }
+
+  /** Le chemin, sans ses marches d'escalier : d'un point, on vise le plus loin
+      qu'on voit en ligne droite. Sur des rails, un chemin de tuile en tuile fait
+      zigzaguer le velo en travers de la place du parc. */
+  function lisser(chemin) {
+    const out = [];
+    let i = 0;
+    while (i < chemin.length - 1) {
+      let j = chemin.length - 1;
+      while (j > i + 1 && !segmentRoulable(chemin[i], chemin[j])) j--;
+      out.push(chemin[j]);
+      i = j;
+    }
+    return out;
+  }
+
+  /** La traversee d'un parc, depuis la tuile de trottoir `(rx, ry)` : par ses
+      allees, jusqu'a un trottoir d'une AUTRE rue, et la voie ou redescendre.
+
+      ⚠️ Un Dijkstra a seaux (les couts sont 2 et 3 : l'allee coute moins que le
+      trottoir, donc on passe PAR le parc plutot qu'autour), plafonne. On garde
+      les bouts qui ont vu au moins `parc_allees_min` tuiles d'allee, et parmi
+      les plus longs dans le parc, on en prend un a l'empreinte.
+
+      ⚠️ **ON REDESCEND A LA SORTIE DE L'ALLEE**, sur la premiere tuile de
+      trottoir (`trottoir === 1`). La premiere version choisissait n'importe quel
+      bout de trottoir apres le parc : le velo sortait, longeait le trottoir cinq
+      tuiles a rebours, et repartait sur la chaussee dans l'autre sens. */
+  function traverseeDuParc(v, rx, ry) {
+    const f = trafic().velo, w = Monde.carte.w;
+    const depart = ry * w + rx;
+    const vu = new Map([[depart, { cout: 0, parent: -1, allees: 0, trottoir: 1 }]]);
+    const seaux = [[depart]];
+    let noeuds = 0;
+    const bouts = [];
+    for (let cout = 0; cout < seaux.length && noeuds < f.noeuds_max; cout++) {
+      for (const cle of seaux[cout] || []) {
+        const n = vu.get(cle);
+        if (n.cout !== cout) continue;
+        noeuds++;
+        const tx = cle % w, ty = Math.floor(cle / w);
+        // Un bout : du trottoir qui borde une voie dont c'est la DROITE, avec de quoi redescendre.
+        if (n.allees >= f.parc_allees_min && n.trottoir === 1 && Monde.estTrottoir(tx, ty)) {
+          for (const sens of ['>', '<', '^', 'v']) {
+            const q = PAS_FLECHE[sens], d = droiteDe(q), lx = tx - d[0], ly = ty - d[1];
+            if (Monde.fleche(lx, ly) === sens && Monde.fleche(lx + q[0], ly + q[1]) === sens) {
+              bouts.push({ cle: cle, allees: n.allees, retour: { tx: lx, ty: ly, sens: sens } });
+            }
+          }
+        }
+        for (const q of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+          const nx = tx + q[0], ny = ty + q[1];
+          if (!roulableHorsRue(nx, ny)) continue;
+          const allee = Monde.glyphe(nx, ny) === 'g';
+          const c2 = cout + (allee ? 2 : 3), k = ny * w + nx;
+          const deja = vu.get(k);
+          if (deja && deja.cout <= c2) continue;
+          vu.set(k, { cout: c2, parent: cle, allees: n.allees + (allee ? 1 : 0), trottoir: allee ? 0 : n.trottoir + 1 });
+          (seaux[c2] = seaux[c2] || []).push(k);
+        }
+      }
+    }
+    if (!bouts.length) return null;
+    const mieux = bouts.reduce(function (m, b) { return Math.max(m, b.allees); }, 0);
+    const retenus = bouts.filter(function (b) { return b.allees * 5 >= mieux * 4; });
+    const b = retenus[Math.floor(empreinteVelo(v, rx, ry) * retenus.length)];
+    const tuiles = [];
+    for (let cle = b.cle; cle !== -1; cle = vu.get(cle).parent) tuiles.push(centre(cle % w, Math.floor(cle / w)));
+    tuiles.reverse();
+    return { chemin: lisser(tuiles), retour: b.retour };
+  }
+
+  /** Il quitte la chaussee : un chemin de points, et ou redescendre au bout. */
+  function partirHorsRue(v, chemin, retour) {
+    if (!chemin || !chemin.length) return null;
+    v.horsRue = { chemin: chemin, i: 0, retour: retour, attente: 0 };
+    v.deportT = 0; v.sortie = null; v.enBoite = null; v.intention = null;
+    v.horsRues = (v.horsRues || 0) + 1;
+    return cibleHorsRue(v);
+  }
+
+  /** Le point suivant du chemin, puis la descente dans la voie — quand elle est
+      libre, ou quand il a assez attendu (sur des rails, le trafic ne se pousse
+      pas : au pire il se frole). */
+  function cibleHorsRue(v) {
+    const h = v.horsRue, f = trafic().velo;
+    if (h.i < h.chemin.length) return h.chemin[h.i++];
+    const r = h.retour, p = PAS_FLECHE[r.sens];
+    if (!voieLibre(v, r.tx, r.ty, p) && ++h.attente < f.attente_images) return { x: v.x, y: v.y };
+    v.horsRue = null;
+    v.horsRueFroid = B.t + f.repos_images;
+    v.sens = r.sens;
+    return aLaBordure(v, centre(r.tx + p[0], r.ty + p[1]));
+  }
+
+  /** Monter sur le trottoir, depuis la voie du bord : pour traverser le parc
+      qu'on longe, pour un bout de trottoir, ou parce qu'un char arrete bouche la
+      voie (`coince`). null s'il reste sur la chaussee. ⚠️ Jamais s'il va
+      tourner a gauche : il est range de l'autre cote. */
+  function monterSurLeTrottoir(v, tx, ty, p, coince) {
+    const f = trafic().velo;
+    if (v.mission || (v.horsRueFroid || 0) > B.t || coteDuVelo(v) < 0) return null;
+    const d = droiteDe(p), rx = tx + d[0], ry = ty + d[1];
+    if (!Monde.estTrottoir(rx, ry) || !roulableHorsRue(rx, ry)) return null;
+    if (!coince && parcDerriere(rx, ry, d) && empreinteVelo(v, tx, ty) < f.parc_chance) {
+      const t = traverseeDuParc(v, rx, ry);
+      if (t) return partirHorsRue(v, t.chemin, t.retour);
+    }
+    if (coince ? empreinteVelo(v, 3, 7) >= f.coince_part : empreinteVelo(v, ty, tx) >= f.trottoir_chance) return null;
+    const t = boutDeTrottoir(v, tx, ty, p);
+    return t ? partirHorsRue(v, t.chemin, t.retour) : null;
+  }
+
   function prochaineCible(v) {
+    if (v.horsRue && estVeloDuTrafic(v)) { v.attendFeu = false; v.guetteLigne = false; return cibleHorsRue(v); }
+    const c = cibleDeLaVoie(v);
+    return estVeloDuTrafic(v) ? aLaBordure(v, c) : c;
+  }
+
+  function cibleDeLaVoie(v) {
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     const f = Monde.fleche(tx, ty);
     v.attendFeu = false;
@@ -1790,6 +2085,7 @@ const Vehicules = (function () {
       v.sens = f; v.sortie = null;
       v.enBoite = null;                              // on rend le croisement
       const p = PAS_FLECHE[f];
+      if (estVeloDuTrafic(v)) intentionDuVelo(v, tx, ty, p);
       if (v.conducteur === 'trafic' && Monde.barriereBloque(v, tx + p[0], ty + p[1])) {
         // ⚠️ **On SE DEPORTE avant de faire demi-tour.** Une voie fermee laisse
         // sa voisine ouverte : y faire demi-tour serait absurde, et toute la
@@ -1810,6 +2106,14 @@ const Vehicules = (function () {
           v.attendFeu = true;
           return pointDArret(v, ligne.tx, ligne.ty, p);
         }
+      }
+      if (estVeloDuTrafic(v)) {
+        // ⚠️ Le trottoir d'abord : il ne se tasse pas dans la voie du milieu
+        // pour remonter sur le trottoir a la tuile d'apres.
+        const hors = !ligne && monterSurLeTrottoir(v, tx, ty, p, false);
+        if (hors) return hors;
+        const q = voieDuVelo(v, tx, ty, p);
+        if (q) return centre(tx + q[0] + p[0], ty + q[1] + p[1]);
       }
       return centre(tx + p[0], ty + p[1]);
     }
@@ -1849,9 +2153,15 @@ const Vehicules = (function () {
       // rapport au cap du moment fait tourner a gauche, puis a gauche du
       // nouveau cap, puis encore : le char faisait le tour de la boite sans
       // fin. Martin l'a vu, et le juge des boites en trouvait 1858 cas.
+      // ⚠️ Le cycliste sait deja ou il va : il l'a lu avant la ligne, et c'est
+      // pour ca qu'il s'est range a gauche (`intentionDuVelo`).
+      const intention = estVeloDuTrafic(v) && v.intention && v.intention.inter === Monde.intersectionA(tx, ty) ? v.intention : null;
+      if (intention) intention.dedans = true;
       if (!v.sortie) {
         let ordre;
-        if (v.poursuite && B.joueur) {
+        if (intention) {
+          ordre = intention.ordre.slice();
+        } else if (v.poursuite && B.joueur) {
           // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
           // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
           const j = B.joueur, signe = v.fuite ? -1 : 1;
@@ -2145,6 +2455,9 @@ const Vehicules = (function () {
     v.cible = null; v.sortie = null; v.enBoite = null; v.stopT = undefined; v.attenteBoite = 0; v.attendFeu = false;
     v.patience = 0; v.force = 90; v.immobileT = 0; v.surPlace = 0; v.ancrage = null; v.debloques = (v.debloques || 0) + 1;
     if (voie) {
+      // ⚠️ Recale sur la chaussee, le velo a fini son tour de trottoir. Sans voie
+      // a portee (au milieu du parc), il le garde : son chemin l'y ramene.
+      v.horsRue = null; v.intention = null;
       v.x = voie.x; v.y = voie.y;
       const q = PAS_FLECHE[v.sens] || [1, 0];
       v.angle = Math.atan2(q[1], q[0]);
@@ -2207,8 +2520,16 @@ const Vehicules = (function () {
     const devant = Monde.fleche(tx + p[0] * 2, ty + p[1] * 2);
     if (ici === '+' || ici === 'S' || devant === '+' || devant === 'S') vitesseVoulue = Math.min(vitesseVoulue, v.poursuite ? 1.5 : 1.1);
     if (Math.abs(ecart) > 0.5) vitesseVoulue = Math.min(vitesseVoulue, 0.8);
+    // ⚠️ Hors de la rue, un velo va AU PAS : sous la vitesse qui renverse, et
+    // assez lent pour s'arreter derriere un passant (`trottoir_vitesse`).
+    const velo = estVeloDuTrafic(v) ? t.velo : null;
+    if (velo && v.horsRue) vitesseVoulue = Math.min(vitesseVoulue, velo.trottoir_vitesse);
     const obstacle = obstacleDevant(v);
     const proche = obstacle < t.distance_securite_px;
+    // Et il SONNE a celui qu'il a devant — un coup, pas une rafale.
+    if (velo && v.horsRue && obstacle < t.distance_securite_px * 2 && (v.sonnetteT || 0) <= B.t) {
+      v.klaxonT = 30; v.sonnetteT = B.t + velo.sonnette_images;
+    }
     // ⚠️ On decide de se tasser DE LOIN (deux fois la distance de securite),
     // pas au dernier moment : a une tuile du pieton, le deport serait un coup
     // de volant a 45 degres. De loin, la diagonale se voit venir.
@@ -2216,6 +2537,13 @@ const Vehicules = (function () {
     if (proche && !deport) {
       vitesseVoulue = 0;
       v.patience++;
+      // ⚠️ COINCE DERRIERE UN CHAR ARRETE, un cycliste sur deux monte sur le
+      // trottoir et le longe (`coince_part`, a l'empreinte) ; l'autre attend.
+      if (velo && !v.horsRue && v.patience === velo.coince_images) {
+        const p = PAS_FLECHE[v.sens];
+        const hors = p && Monde.fleche(tx, ty) === v.sens && monterSurLeTrottoir(v, tx, ty, p, true);
+        if (hors) { v.cible = hors; v.patience = 0; }
+      }
       if (v.patience > t.patience_images) { v.force = 90; v.patience = 0; v.klaxonT = 30; }
     } else {
       if (obstacle < t.distance_securite_px * 2) vitesseVoulue *= 0.5;
@@ -2471,7 +2799,8 @@ const Vehicules = (function () {
     }
     // 3. Il roule hors de la chaussee.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
-    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty);
+    // ⚠️ Un velo parti sur le trottoir ou au parc (`horsRue`) y est de son plein gre.
+    const surRoute = Monde.estChaussee(tx, ty) || Monde.estRampe(tx, ty) || Monde.estPassage(tx, ty) || !!v.horsRue;
     v.horsVoieT = surRoute ? 0 : (v.horsVoieT || 0) + 1;
     if (v.horsVoieT === 90) anomalie(v, 'HORS VOIE');
   }
@@ -3148,6 +3477,7 @@ const Vehicules = (function () {
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
+    estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
     croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };

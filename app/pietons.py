@@ -114,6 +114,20 @@ CATALOGUE: list[Pieton] = [
     _p("mere", "Mère avec son petit", "#16a085", "#4a3320", "#f0c098", "#3a3a4a",
        vitesse=0.85, vie=65, argent=(10, 45), temoin=0.7, accompagne="enfant",
        frequence=1.4),
+    # ⚠️ L'ENFANT A VELO — Martin (21 sept. 2026) : « je veux aussi des enfants
+    # a velo, seulement sur trottoir, casque, parc ». Un CORPS a lui (le casque
+    # se voit de loin, `SPRITES.enfant_velo`), pas l'enfant repeint : a seize
+    # pixels, c'est la silhouette qui nomme, pas la couleur.
+    # ⚠️ Il ne descend JAMAIS sur la chaussee — pas meme sur un passage pieton :
+    # le trottoir, l'abord et le parc, rien d'autre (`Entites.roulableEnfant`).
+    # Intouchable comme l'enfant a pied, et il ne va rien raconter a la police
+    # (`temoin=0`) : un temoin court vers l'agent, et le chemin passe par la rue.
+    # ⚠️ Frequence 0 : il ne se tire pas dans la foule, il nait par son propre
+    # systeme (`ENFANTS_A_VELO`) — le jour, dans les quartiers qui ont des parcs.
+    _p("enfant_velo", "Enfant à vélo", "#f1c40f", "#6b4b2c", "#f0c098", "#2f6b8a",
+       sprite="enfant_velo", vitesse=2.0, vie=40, argent=(0, 2), temoin=0.0,
+       intouchable=True, metier="cycliste", frequence=0.0, heures=(0.33, 0.8),
+       districts=("erables", "pointe", "faubourg")),
     # ⚠️ LES BAIGNEURS — Martin : « des gens s'il y a beaucoup de place ». Des
     # enfants seuls sur une plage, c'est une cour d'ecole. Le corps commun, et
     # c'est la PALETTE qui les met en maillot : lui torse nu (le chandail a la
@@ -537,6 +551,19 @@ PLAGE: dict = {
     "heures": (0.30, 0.80),
 }
 
+#: **LES ENFANTS A VELO** — combien, et de quelles couleurs.
+#:
+#: ⚠️ Les couleurs se lisent A L'EMPREINTE de la tuile ou il nait, pas au de :
+#: un casque tire au sort decalerait tout ce qui nait apres lui. Et c'est le
+#: CASQUE qui change le plus d'un enfant a l'autre — c'est lui qu'on voit.
+ENFANTS_A_VELO: dict = {
+    "combien": 2,                # dans la bulle du joueur, au plus
+    "rayon_px": 480,             # ils naissent hors champ, dans cette bulle
+    "casques": ("#e03a2e", "#2f7fd8", "#f1c40f", "#27ae60", "#ff77b7", "#f39c12"),
+    "cadres": ("#27ae60", "#c0392b", "#2980b9", "#8e44ad", "#e8e8e8", "#16a085"),
+    "chandails": ("#f1c40f", "#e74c3c", "#3a6ea5", "#9b59b6", "#1abc9c", "#ecf0f1"),
+}
+
 #: **LES GOELANDS ET LES CHATS.** La vie qui n'est pas humaine.
 #:
 #: ⚠️ **ILS NE COMPTENT POUR RIEN, et c'est precisement ce qui les rend
@@ -885,6 +912,10 @@ def exporter() -> dict:
                             "marche_images": list(BETES["raton"]["marche_images"]),
                             "heures": list(BETES["raton"]["heures"])},
                   "goeland_dort": BETES["goeland_dort"]},
+        "enfants_a_velo": {**ENFANTS_A_VELO,
+                           "casques": list(ENFANTS_A_VELO["casques"]),
+                           "cadres": list(ENFANTS_A_VELO["cadres"]),
+                           "chandails": list(ENFANTS_A_VELO["chandails"])},
         "plage": {**PLAGE,
                   "adultes_archetypes": list(PLAGE["adultes_archetypes"]),
                   "bronzer_images": list(PLAGE["bronzer_images"]),

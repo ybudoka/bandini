@@ -108,6 +108,46 @@ SPRITES.enfant = {
   },
 };
 
+/* L'ENFANT A VELO : 16x15, un corps a lui — Martin (21 sept. 2026) : « des
+   enfants a velo, seulement sur trottoir, casque, parc ».
+
+   ⚠️ Le CASQUE est ce qui le nomme : un dome de couleur vive sur une tete
+   d'enfant, avec sa visiere de profil. A seize pixels, c'est la silhouette qui
+   dit « un enfant a velo », pas la couleur du chandail — l'enfant a pied
+   repeint n'aurait ete qu'un enfant de plus qui glisse.
+
+   Ce n'est PAS le velo du trafic (une machine projetee a 32 caps, `deuxRoues`) :
+   c'est un passant, qui flane en quatre directions sur le trottoir et dans le
+   parc, et qui garde les quatre faces de tout le monde. De face et de dos, on
+   voit la roue par la tranche, la fourche a la couleur du cadre, et le
+   catadioptre rouge dans le dos ; de profil, le velo entier, les pieds aux
+   pedales. Deux images par face : les pedales font un demi-tour de l'une a
+   l'autre (la foulee de `imageDe`).
+
+   Lettres : l'alphabet de l'enfant (`c` `h` `s` `p`, echanges par le
+   catalogue), plus `e` le casque et `v` le cadre, que `ENFANTS_A_VELO` varie
+   d'un enfant a l'autre ; `r` le pneu, `m` le moyeu, `t` le catadioptre. */
+SPRITES.enfant_velo = {
+  w: 16, h: 15, ancre: [8, 14],
+  pal: { k: '#101018', s: '#f0c098', h: '#6b4b2c', c: '#f1c40f', p: '#2f6b8a', o: '#ffffff', b: '#5a3a1a',
+         e: '#e03a2e', v: '#27ae60', r: '#2a2a2e', m: '#9aa0a8', t: '#e0312a' },
+  swaps: ['c', 'h', 's', 'p', 'e', 'v'],
+  poses: {
+    bas: [
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kpkvrrvkbk...', '...kbk.rr.......', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kbkvrrvkpk...', '.......rr.kbk...', '.......rr.......'],
+    ],
+    haut: [
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kpkvttvkbk...', '...kbk.rr.......', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kbkvttvkpk...', '.......rr.kbk...', '.......rr.......'],
+    ],
+    cote: [
+      ['.....kkkk.......', '....keeeekk.....', '...keeeeeeek....', '...kkhsssok.....', '....khssssk.....', '....kccck.......', '...kccccckk.....', '...kccccssskk...', '....kpppk..k....', '.....vkppkvv....', '.rrrv.vkpkv.vrr.', 'r..vrkbkpk.rv..r', 'r.mvvvvkbbkr.m.r', 'r...r......r...r', '.rrr........rrr.'],
+      ['.....kkkk.......', '....keeeekk.....', '...keeeeeeek....', '...kkhsssok.....', '....khssssk.....', '....kccck.......', '...kccccckk.....', '...kccccssskk...', '....kpppk..k....', '.....vkpppkv....', '.rrrv.kpkvv.vrr.', 'r..vrkbbk..rv..r', 'r.mvvvvm...r.m.r', 'r...r...bk.r...r', '.rrr........rrr.'],
+    ],
+  },
+};
+
 /* La fille de la Brume : 12x16 comme tout le monde, mais une SILHOUETTE a
    elle. Un echange de palette ne suffisait pas — de loin, sous la teinte de
    nuit, elle etait un passant rose de plus (retour de Martin : « on ne les
