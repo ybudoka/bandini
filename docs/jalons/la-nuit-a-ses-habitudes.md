@@ -108,3 +108,9 @@ elle qui glisse un moment.
 - **Regardé dans Chromium** : les phares, les fenêtres à 21 h et à 3 h 30, le lampadaire allumé puis
   noir, la grappe devant Le Brouillard qui chante, le raton et le journal (aperçu ×10), l'arroseuse et
   sa rue qui miroite.
+- ⚠️ **Deux juges étaient déjà rouges avant ce jalon** et le restent, à l'identique sur la base
+  sans lui (`b6ffdc5`) : `test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler` et
+  `test_la_foule_ne_se_traverse_plus` (les mêmes 333 chevauchements creusés). Pas de ce jalon. Le
+  reste est vert : la suite complète sur `b6ffdc5` + le jalon (3 609 juges), puis, remontée sur les
+  garages (`40c2fbb`), le rejugement des fichiers touchés des deux côtés (503) et les 38 juges
+  Chromium.
