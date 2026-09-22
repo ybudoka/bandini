@@ -55,7 +55,7 @@ def test_le_catalogue_ne_promet_rien_qui_n_existe_pas(banc, racine):
     noms = set()
     for gabarit in (interactions.ASSEOIR["sieges"], interactions.FOUILLER["decors"]):
         noms |= set(gabarit)
-    noms |= set(interactions.BOIRE["decors"]) | set(interactions.BORNE["decors"])
+    noms |= set(interactions.BOIRE["decors"]) | set(interactions.BARBECUE["decors"]) | set(interactions.BORNE["decors"])
     r = banc("""function (L, o) {
         const decors = %s, poses = %s;
         return { manquants: decors.filter(function (d) { return !L.DECORS[d]; }),
@@ -265,6 +265,54 @@ def test_on_boit_a_la_fontaine_puis_on_n_a_plus_soif(banc):
     assert r["inviteApres"] == c["encore"], "on n'a plus soif, et l'invite le dit"
     assert r["deuxieme"]["msg"] == c["encore"]
     assert r["inviteSoif"] == c["invite"], "dix secondes plus tard, on a de nouveau soif"
+
+
+def test_on_mange_au_barbecue_une_fois_par_jour_et_ca_reste_sous_le_hot_dog(banc):
+    c = interactions.BARBECUE
+    r = jouer(banc, """
+        const d = devant('bbq');
+        if (!d) return { pasDeBbq: true };
+        p.jour = 4; p.fouilles = {};
+        j.vie = 10; j.endurance = 5;
+        const inviteAvant = invite();
+        o.tape('KeyE');
+        const mange = { vie: j.vie, endurance: j.endurance, msg: L.B.msg };
+        const inviteApres = invite();
+        // Une autre pression, le meme jour : deja mange, et on le dit.
+        suivant();
+        o.tape('KeyE');
+        const deuxieme = { vie: j.vie, msg: L.B.msg };
+        // Le lendemain, le barbecue est de nouveau bon.
+        p.jour = 5; const inviteLendemain = invite();
+        return { inviteAvant: inviteAvant, mange: mange, inviteApres: inviteApres, deuxieme: deuxieme,
+                 inviteLendemain: inviteLendemain };
+    """)
+    assert not r.get("pasDeBbq"), "la ville n'a pas de barbecue devant lequel se planter"
+    assert r["inviteAvant"] == c["invite"]
+    assert r["mange"]["vie"] == 10 + c["pv"], "manger rend des PV"
+    # ⚠️ >= et pas == : `o.tape` avance au moins une image, et la reprise passive du
+    # souffle (`Entites.majJoueur`) en ajoute un peu par-dessus, comme pour `boire`.
+    assert r["mange"]["endurance"] >= 5 + c["souffle"] - 1, "manger rend aussi du souffle"
+    assert r["mange"]["msg"] == c["message"]
+    assert r["inviteApres"] == c["deja"], "un barbecue vide le dit — l'invite ne promet pas un second repas"
+    assert r["deuxieme"]["vie"] == r["mange"]["vie"] and r["deuxieme"]["msg"] == c["deja"], \
+        "une fois par jour et par barbecue"
+    assert r["inviteLendemain"] == c["invite"], "le lendemain, on peut remanger"
+
+
+def test_un_barbecue_ne_soigne_pas_au_dela_de_la_barre(banc):
+    """`Missions.soigner` plafonne déjà à `vieMax` : le barbecue n'a pas sa propre borne,
+    et c'est exactement pour ça qu'il ne doit jamais en avoir besoin."""
+    r = jouer(banc, """
+        const d = devant('bbq');
+        if (!d) return { pasDeBbq: true };
+        p.jour = 4; p.fouilles = {};
+        j.vie = j.vieMax;
+        o.tape('KeyE');
+        return { vie: j.vie, vieMax: j.vieMax };
+    """)
+    assert not r.get("pasDeBbq"), "la ville n'a pas de barbecue devant lequel se planter"
+    assert r["vie"] == r["vieMax"], "manger a pleine vie ne fait pas déborder la barre"
 
 
 def test_la_borne_s_ouvre_a_la_main_on_s_y_rafraichit_et_on_la_ferme(banc):

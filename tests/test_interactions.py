@@ -15,10 +15,11 @@ from app import carte, definitions, interactions, missions
 
 def _mots_affiches():
     """Tous les mots que la ville écrit ou dit : invites, refus, messages, répliques."""
-    a, f, b, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
-                          interactions.BORNE, interactions.POURBOIRE, interactions.PHOTO)
+    a, f, b, bb, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
+                              interactions.BARBECUE, interactions.BORNE, interactions.POURBOIRE, interactions.PHOTO)
     mots = [a["invite"], *a["refus"].values(), f["invite"], f["deja"], *(t["texte"] for t in f["trouvailles"].values()),
-            b["invite"], b["encore"], b["message"], bo["invite_ouvrir"], bo["invite_fermer"], p["invite"], ph["invite"], *ph["merci"]]
+            b["invite"], b["encore"], b["message"], bb["invite"], bb["deja"], bb["message"],
+            bo["invite_ouvrir"], bo["invite_fermer"], p["invite"], ph["invite"], *ph["merci"]]
     for liste in p["merci"].values():
         mots.extend(liste)
     return mots
@@ -26,7 +27,7 @@ def _mots_affiches():
 
 def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     exporte = interactions.exporter()
-    assert set(exporte) == {"asseoir", "fouiller", "boire", "borne", "pourboire", "photo"}
+    assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "borne", "pourboire", "photo"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
     assert definitions.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 
@@ -38,6 +39,7 @@ def test_un_decor_ne_donne_qu_un_seul_geste():
         "asseoir": set(interactions.ASSEOIR["sieges"]),
         "fouiller": set(interactions.FOUILLER["decors"]),
         "boire": set(interactions.BOIRE["decors"]),
+        "barbecue": set(interactions.BARBECUE["decors"]),
         "borne": set(interactions.BORNE["decors"]),
     }
     noms = [nom for decors in par_geste.values() for nom in decors]
@@ -68,6 +70,12 @@ def test_rien_ici_ne_remplace_une_mission_un_repas_ou_l_hopital():
     assert 60 / a["pv_images"] <= 0.5 and a["pv_plafond"] <= 0.6
     # Un reste de poutine ne vaut pas un hot-dog achete (`economie`) : quelques PV, pas dix.
     assert f["trouvailles"]["reste"]["pv"] <= 5
+    # Un repas au barbecue non plus : gratuit, donc sous le hot-dog achete (`economie.TARIFS`),
+    # en vie comme en souffle.
+    from app import economie
+    bb = interactions.BARBECUE
+    assert bb["pv"] < economie.TARIFS["hotdog_pv"] and bb["souffle"] < economie.TARIFS["hotdog_souffle"], \
+        "le barbecue rapporte autant ou plus qu'un hot-dog achete"
 
 
 def test_les_tables_de_fouille_se_tiennent():
@@ -115,7 +123,7 @@ def test_les_mots_de_la_ville_sont_ecrits_pour_la_police_pixel():
         assert texte == texte.upper() and texte.strip() == texte and texte, "un mot mal ecrit : %r" % texte
 
 
-@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "borne"])
+@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "barbecue", "borne"])
 def test_une_portee_de_geste_est_celle_d_une_main(nom):
     portee = interactions.exporter()[nom]["portee_px"]
     assert 16 <= portee <= 32, "%s : %s px ne se prend pas d'une main" % (nom, portee)

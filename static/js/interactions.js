@@ -4,7 +4,7 @@
    et les mots que la rue répond viennent du paquet (`B.defs.interactions`, écrit
    dans `app/interactions.py`) : ce fichier ne garde aucun nombre.
 
-   Six gestes, et pas un menu : on REGARDE la chose (`faceA`, comme tout le reste
+   Sept gestes, et pas un menu : on REGARDE la chose (`faceA`, comme tout le reste
    depuis « on agit sur ce qu'on regarde ») et on appuie sur ACTION.
 
    ⚠️ ACTION GARDE SON ORDRE (`Missions.interagir`), et c'est le point délicat :
@@ -135,7 +135,15 @@ const Interactions = (function () {
 
   function fontaineSeche(f) { return (fontaines[tuile(f)] || 0) > B.t; }
 
-  /** Les quatre gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
+  /** Un barbecue déjà vidé aujourd'hui : la MÊME case que les bacs fouillés
+      (`partie.fouilles`), préfixée `bbq:` pour ne jamais collider avec la
+      tuile d'une poubelle voisine. */
+  function mangeDuJour(bbq) {
+    const p = B.partie;
+    return !!p.fouilles && p.fouilles['bbq:' + tuile(bbq)] === p.jour;
+  }
+
+  /** Les cinq gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
       dit pourquoi ce n'est pas possible MAINTENANT (le HUD l'écrit, ACTION le dit) —
       un refus se montre, comme « FERMÉ » devant un kiosque. */
   const SUR_LE_DECOR = [
@@ -148,6 +156,9 @@ const Interactions = (function () {
     { geste: 'boire', table: function (c) { return c.boire.decors; }, portee: function (c) { return c.boire.portee_px; },
       refus: function (j, d) { return fontaineSeche(d) ? cfg().boire.encore : null; },
       invite: function (c) { return c.boire.invite; }, faire: boire },
+    { geste: 'barbecue', table: function (c) { return c.barbecue.decors; }, portee: function (c) { return c.barbecue.portee_px; },
+      refus: function (j, d) { return mangeDuJour(d) ? cfg().barbecue.deja : null; },
+      invite: function (c) { return c.barbecue.invite; }, faire: manger },
     { geste: 'borne', table: function (c) { return c.borne.decors; }, portee: function (c) { return c.borne.portee_px; },
       refus: function () { return null; },
       invite: function (c, j, d) { return jetDe(d) ? c.borne.invite_fermer : c.borne.invite_ouvrir; }, faire: ouvrirLaBorne },
@@ -301,6 +312,19 @@ const Interactions = (function () {
     j.endurance = Math.min(B.defs.recherche.vitesses.endurance, j.endurance + c.souffle);
     Hud.message(c.message);
     Son.SFX.nage();
+    return true;
+  }
+
+  function manger(j, bbq) {
+    const c = cfg().barbecue, p = B.partie;
+    j.animT = 24; j.animType = 'ramasse';
+    if (mangeDuJour(bbq)) { Hud.message(c.deja); Son.SFX.erreur(); return true; }
+    p.fouilles = p.fouilles || {};
+    p.fouilles['bbq:' + tuile(bbq)] = p.jour;
+    Missions.soigner(j, c.pv);
+    Missions.nourrir(j, c.souffle);
+    Hud.message(c.message);
+    Son.SFX.ramasse();
     return true;
   }
 

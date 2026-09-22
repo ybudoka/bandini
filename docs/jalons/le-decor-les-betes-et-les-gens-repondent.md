@@ -53,10 +53,32 @@ joue et ne garde aucun nombre.
 
 Et ce qui n'a pas été essayé : **arracher une affiche** « Recherché » (`police.majAffiches` les repose
 sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche arrachée),
-**vider un parcomètre** (un délit de plus dans `recherche.DELITS`), **pousser un caddie**, **manger
-au barbecue** d'un parc (12 dans la ville), **lire** un panneau.
+**vider un parcomètre** (un délit de plus dans `recherche.DELITS`), **pousser un caddie**, **lire** un
+panneau.
 
 ## Notes
+
+✅ **2e vague, premier geste : manger au barbecue** (22 sept. 2026).
+
+- **Pourquoi celui-là en premier** : le seul des six restants qui n'a besoin d'aucune place
+  neuve en ville — `bbq` existe déjà (`carte.DECOR_SOLIDE`, posé devant les maisons de
+  banlieue, `poser_decor("bbq", x, y)`), juste jamais servi. Le chat (une confiance à
+  écrire, `pietons.BETES.chat.fuite_px`) et le buisson (`Police.voit` à équilibrer,
+  M11) demandent tous deux de toucher un mécanisme qui n'est pas le sien ; l'affiche
+  arrachée attend d'abord un plafond. Ceux-là restent.
+- **Le geste** (`interactions.BARBECUE`, `Interactions.manger`) : la même route que `boire` —
+  8 PV, 15 de souffle (`Missions.soigner`/`nourrir`), une fois par jour et par barbecue
+  (la même case `partie.fouilles`, préfixée `bbq:` pour ne jamais collider avec une poubelle
+  voisine). ⚠️ **Toujours sous le hot-dog acheté** (25 PV/40 de souffle, `economie.TARIFS`) :
+  un juge le vérifie — on grignote, on n'achète rien.
+- **Aucun son neuf** : `Son.SFX.ramasse()` (déjà celui d'un reste de poutine trouvé) et
+  `Son.SFX.erreur()` pour le refus, comme les six premiers gestes.
+- **Juges** (`test_interactions.py`, `test_interactions_js.py`) : le catalogue voyage dans le
+  paquet, un décor ne donne qu'un seul geste, le barbecue reste sous le hot-dog, une portée
+  d'une main ; au banc : on mange, une fois par jour (mutation vérifiée rouge sur le vrai
+  garde — `refus`, pas la porte de secours redondante dans `manger()`, la même que
+  `fouiller`/`boire` portent déjà), et manger à pleine vie ne fait pas déborder la barre.
+- **Restent** : le chat, le buisson, l'affiche arrachée, le parcomètre, le caddie, le panneau.
 
 ✅ **Livré** (21 sept. 2026), première vague : les six gestes, sans un son neuf.
 

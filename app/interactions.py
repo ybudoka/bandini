@@ -1,6 +1,6 @@
 """Ce que ACTION fait devant le décor et devant ceux qui travaillent dans la rue (P4).
 
-Six gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
+Sept gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
 tout le reste) et on appuie.
 
 - **s'asseoir** sur un banc : le souffle revient, les forces un peu, la première
@@ -8,6 +8,9 @@ tout le reste) et on appuie.
 - **fouiller** une poubelle, une benne, un bac : quelques sous, une canette, un
   reste — ou un rat. Une fois par jour et par bac, et le quartier compte ;
 - **boire** à la fontaine de la place ;
+- **manger au barbecue** (deuxième vague, 22 sept. 2026) — un décor déjà posé
+  devant les maisons de banlieue, jamais encore servi : quelques PV et un peu
+  de souffle, une fois par jour et par barbecue, toujours sous le hot-dog acheté ;
 - **ouvrir la borne-fontaine** : la gerbe que la ville connaît déjà quand un char
   défonce une borne, mais à la main — on s'y rafraîchit ;
 - **un pourboire** à l'artiste de rue : la pièce change vraiment de poche ;
@@ -120,6 +123,25 @@ BOIRE: dict = {
     "repit_images": 600,
 }
 
+# --- Manger au barbecue -----------------------------------------------------------
+
+#: ⚠️ **AUCUNE PLACE NEUVE À TROUVER** (deuxième vague, 22 sept. 2026) : `bbq` est déjà
+#: posé par `carte.py` (devant les maisons de banlieue, `DECOR_SOLIDE`) — c'est pour ça
+#: qu'il ouvre la vague, avant le chat (une confiance à écrire) et le buisson (la police
+#: à équilibrer). Un reste de poutine ramassé dans une poubelle vaut 4 PV/6 de souffle
+#: (`FOUILLER`) ; un repas assis au barbecue en vaut un peu plus — jamais dix, jamais le
+#: hot-dog du kiosque (25 PV/40 de souffle, `economie.TARIFS`) : on grignote, on n'achète
+#: rien.
+BARBECUE: dict = {
+    "invite": "MANGER",
+    "deja": "DÉJÀ MANGÉ",
+    "message": "ÇA SENT BON",
+    "decors": ("bbq",),
+    "portee_px": PORTEE_PX,
+    "pv": 8,
+    "souffle": 15,
+}
+
 # --- La borne-fontaine -----------------------------------------------------------
 
 BORNE: dict = {
@@ -177,6 +199,7 @@ def exporter() -> dict:
                      "trouvailles": {s: {k: (list(v) if isinstance(v, tuple) else v) for k, v in t.items()}
                                      for s, t in FOUILLER["trouvailles"].items()}},
         "boire": {**BOIRE, "decors": list(BOIRE["decors"])},
+        "barbecue": {**BARBECUE, "decors": list(BARBECUE["decors"])},
         "borne": {**BORNE, "decors": list(BORNE["decors"])},
         "pourboire": {**POURBOIRE, "metiers": list(POURBOIRE["metiers"]),
                       "merci": {m: list(mots) for m, mots in POURBOIRE["merci"].items()}},
