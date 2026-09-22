@@ -78,6 +78,7 @@ pas quand l'ordre de travail change.
 
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
+| Viser une cible à la gâchette de droite | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/viser-une-cible-a-la-gachette-de-droite.md#fiche) |
 | La prime d'une mission se voit et s'entend | ⬜ **en cours** | 22 sept. 2026 | **P2** | ajout | [fiche](jalons/la-prime-d-une-mission-se-voit-et-s-entend.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
 | M15 La ville te parle — deuxième vague | ⬜ **en cours** (déjà livrés : la rue qui se tait, les leçons du Clairon, la radio qui parle vraiment, la police à la radio, le souffle du joueur, les bruits de quartier ; restent le bulletin de nouvelles et les répliques par contexte) | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
