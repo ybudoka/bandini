@@ -67,6 +67,9 @@ COULEURS = {
     "souliers": ("#1a1a1a", "#3a2a1a", "#5a3a1a", "#6a6a6a", "#e8e8e8", "#8a4a2a"),
     "chapeaux": ("#1a1a22", "#3a2a1a", "#c0392b", "#2980b9", "#2e8b57", "#f1c40f", "#e8e8e8",
                  "#7a5a2a", "#8e44ad", "#e67e22"),
+    # Les uniformes : UNE couleur chacun, celle que la rue reconnaît.
+    "police": ("#16264a",),
+    "garde": ("#3a3d33",),
 }
 
 
@@ -85,8 +88,8 @@ def _g(squelettes, coiffures, hauts, bas, *, chapeaux=(), chapeau_chance=0.0, mo
 
 #: Qui pioche dans quoi — par archétype de `pietons.CATALOGUE`. ⚠️ Seuls les archétypes au
 #: corps commun (`sprite: "joueur"`) s'habillent : les corps dessinés à la main (la mascotte,
-#: l'avocat, le jongleur…) gardent le leur. Un gang garde SA couleur (`couleurs_haut` fixe) :
-#: c'est à elle qu'on le reconnaît dans la rue.
+#: l'avocat, le jongleur…) gardent le leur. Un gang ou un uniforme garde SA couleur
+#: (`couleurs_haut: ("gang",)` → `haut_fixe`) : c'est à elle qu'on le reconnaît dans la rue.
 GARDE_ROBES: dict[str, dict] = {
     "passant": _g(("homme", "homme", "costaud", "grand", "vieux"),
                   ("courte", "courte", "rase", "degarnie", "chauve", "bouclee", "meche"),
@@ -187,6 +190,16 @@ GARDE_ROBES: dict[str, dict] = {
     "soignante": _g(("femme", "homme"), ("chignon", "queue", "courte"), ("sarrau",), ("pantalon",),
                     couleurs_haut=("pastel",), couleurs_bas=("pastel",),
                     accessoires={"lunettes": 0.2}),
+    # L'agent et le garde de sécurité : l'uniforme est fixe (`police.js` le reconnaît à sa
+    # couleur), la tête et le corps varient.
+    "policier": _g(("homme", "costaud", "grand"), ("courte", "rase", "degarnie"), ("chemise",),
+                   ("pantalon",), chapeaux=("kepi",), chapeau_chance=1.0,
+                   couleurs_haut=("gang",), couleurs_bas=("police",), couleurs_chapeau=("police",),
+                   accessoires={"moustache": 0.3, "lunettes_soleil": 0.2}),
+    "garde": _g(("costaud", "costaud", "homme"), ("rase", "courte", "chauve"), ("veste_travail",),
+                ("pantalon",), chapeaux=("casquette",), chapeau_chance=0.8,
+                couleurs_haut=("gang",), couleurs_bas=("garde",), couleurs_chapeau=("garde",),
+                souliers=("bottes",), accessoires={"lunettes_soleil": 0.3, "barbe": 0.15}),
     "gardien": _g(("vieux", "costaud"), ("degarnie", "courte"), ("veste_travail",), ("pantalon",),
                   chapeaux=("casquette",), chapeau_chance=1.0, couleurs_haut=("travail",),
                   couleurs_bas=("travail",), souliers=("bottes",), cheveux=GRIS,
@@ -261,7 +274,7 @@ def exporter() -> dict:
         if not g:
             continue
         g = dict(g)
-        # Le gang garde SA couleur : celle que l'archétype porte déjà (`couleurs.c`).
+        # Le gang — ou l'uniforme — garde SA couleur : celle que l'archétype porte déjà (`couleurs.c`).
         if "gang" in g["couleurs_haut"]:
             g["couleurs_haut"] = []
             g["haut_fixe"] = arch["couleurs"]["c"]

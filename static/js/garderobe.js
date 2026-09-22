@@ -610,6 +610,28 @@ const Garderobe = (function () {
     return (d && d.personnages && d.personnages[slug]) || null;
   }
 
+  /** La tenue du JOUEUR : le squelette d'homme, ses couleurs de toujours (`SPRITES.joueur`),
+      la coupe du barbier (`partie.cheveux`), le linge porte (`partie.tenue`, une piece `corps`
+      de `magasins.TENUES`) et le chapeau (`partie.chapeau`, une piece `tete`).
+      ⚠️ Une vieille sauvegarde peut PORTER la casquette de la foire comme linge (elle etait une
+      couleur de chandail avant la garde-robe) : elle passe sur la tete, et le chandail revient. */
+  function duJoueur(partie, defsJeu) {
+    const tenues = (defsJeu && defsJeu.tenues) || [];
+    const trouve = function (s) { return s ? tenues.find(function (t) { return t.slug === s; }) || null : null; };
+    const pal = SPRITES.joueur.pal;
+    let corps = trouve(partie.tenue), tete = trouve(partie.chapeau);
+    if (corps && corps.emplacement === 'tete') { if (!tete) tete = corps; corps = trouve('chandail'); }
+    if (tete && tete.emplacement !== 'tete') tete = null;
+    const piece = (corps && corps.piece) || {};
+    return {
+      squelette: 'homme', peau: pal.s, cheveux: partie.cheveux || pal.h, coiffure: 'courte',
+      haut: piece.haut || 'chandail', couleur_haut: corps ? corps.couleur : pal.c, motif: piece.motif || 'uni',
+      bas: 'pantalon', couleur_bas: pal.p, souliers: 'souliers', couleur_souliers: pal.b,
+      chapeau: tete && tete.piece ? tete.piece.chapeau : 'aucun', couleur_chapeau: tete ? tete.couleur : '#1a1a22',
+      accessoires: (piece.accessoires || []).slice(), accent: '#c0392b',
+    };
+  }
+
   /** Les couleurs de rue d'une tenue, au format des echanges de palette (`e.swaps`) : ce que
       le reste du jeu lit encore (le cavalier d'une moto, l'autobus qui recree un passant). */
   function couleurs(tn) {
@@ -619,5 +641,5 @@ const Garderobe = (function () {
   function vider() { cache.clear(); }
 
   return { MARGE_HAUT, MARGE_COTE, CACHE_MAX, CHAPEAUX, squelette, tete, vueDe, grille, palette,
-           cuire, tirer, duPersonnage, couleurs, vider, get taille() { return cache.size; } };
+           cuire, tirer, duPersonnage, duJoueur, couleurs, vider, get taille() { return cache.size; } };
 })();

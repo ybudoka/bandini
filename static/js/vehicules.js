@@ -3838,8 +3838,17 @@ const Vehicules = (function () {
       il avait les fesses a la hauteur des moyeux, les mains sur les genoux et
       les pieds dans le vide. Les pedales tournent avec la distance roulee
       (`pedale` du sprite) ; sans pedales — la moto —, la premiere image. */
-  function imageDuCavalier(def, v, swaps) {
-    const cuit = Atlas.cuire('joueur', SPRITES.joueur, swaps);
+  /** La TENUE de celui qui est sur le deux-roues (`Garderobe`), ou null : le joueur habille,
+      le pilote du trafic habille des sa naissance sur la selle (`v.pilote.tenue`). */
+  function tenueDuCavalier(v) {
+    if (!cavalierDe(v)) return null;
+    if (v.conducteur === B.joueur) return B.joueur.tenue || null;
+    return (v.pilote && v.pilote.tenue) || null;
+  }
+
+  function imageDuCavalier(def, v, swaps, tenue) {
+    // Habille : son squelette et ses pieces, chapeau compris ; sinon le corps commun teint.
+    const cuit = (tenue && typeof Garderobe !== 'undefined' && Garderobe.cuire(tenue)) || Atlas.cuire('joueur', SPRITES.joueur, swaps);
     const face = faceDe(v);
     // ⚠️ La POSTURE est celle de la fiche : on ne mene pas une chaloupe comme on
     // enfourche une moto — assis au fond, la main a la barre (`posture`).
@@ -3937,7 +3946,7 @@ const Vehicules = (function () {
     // ⚠️ Et le cavalier PAR-DESSUS, toujours : vu d'en haut, celui qui est
     // assis sur la machine est au-dessus d'elle, quel que soit son cap.
     const swaps = cavalierDe(v);
-    const cavalier = swaps ? imageDuCavalier(def, v, swaps) : null;
+    const cavalier = swaps ? imageDuCavalier(def, v, swaps, tenueDuCavalier(v)) : null;
     if (cavalier) {
       ctx.drawImage(cavalier.canvas, Math.round(cavalier.x - cx), Math.round(cavalier.y - v.z - cy));
       B.stats.images++;
@@ -3952,7 +3961,7 @@ const Vehicules = (function () {
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, tenueDuCavalier, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

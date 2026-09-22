@@ -1217,7 +1217,7 @@ const Missions = (function () {
     const prix = Math.round(tenue.prix * (rabaisTenue || 1));
     const deja = p.tenues.indexOf(article.tenue) >= 0;
     return { libelle: tenue.nom.toUpperCase(),
-             detail: deja ? (p.tenue === article.tenue ? 'PORTÉE' : 'À TOI') : prix + ' $',
+             detail: deja ? (portee(tenue) ? 'PORTÉE' : 'À TOI') : prix + ' $',
              actif: deja || p.argent >= prix,
              faire: function () {
                if (!deja) { payer(prix, tenue.nom.toUpperCase()); p.tenues.push(article.tenue); }
@@ -1238,6 +1238,7 @@ const Missions = (function () {
                      payer(prix, 'COUPE DE CHEVEUX');
                      p.cheveux = c.couleur;
                      B.joueur.swaps = apparenceDuJoueur(p, B.defs);
+                     B.joueur.tenue = Garderobe.duJoueur(p, B.defs);
                      Police.remiseAZero();
                      // ⚠️ Le stool reconnait une FACE : une coupe neuve la defait.
                      Police.onNeTeReconnaitPlus();
@@ -1321,10 +1322,13 @@ const Missions = (function () {
   function porterTenue(slug) {
     const tenue = (B.defs.tenues || []).find(function (t) { return t.slug === slug; });
     if (!tenue) return false;
-    B.partie.tenue = slug;
+    // Un CHAPEAU se met par-dessus le linge — et celui qu'on porte deja s'enleve.
+    if (tenue.emplacement === 'tete') B.partie.chapeau = B.partie.chapeau === slug ? null : slug;
+    else B.partie.tenue = slug;
     // ⚠️ `apparenceDuJoueur` et pas `{ c: ... }` : ecraser les swaps effacait la
     // teinture du barbier des qu'on changeait de linge.
     B.joueur.swaps = apparenceDuJoueur(B.partie, B.defs);
+    B.joueur.tenue = Garderobe.duJoueur(B.partie, B.defs);
     // Changer de linge, c'est devenir quelqu'un d'autre pour la police (M4 affinera).
     Police.remiseAZero();
     Police.onNeTeReconnaitPlus();
@@ -1333,8 +1337,8 @@ const Missions = (function () {
 
   function menuGardeRobe() {
     const p = B.partie;
-    const items = (B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }).map(function (t) {
-      return { libelle: t.nom.toUpperCase(), detail: p.tenue === t.slug ? 'PORTÉE' : '', faire: function () { porterTenue(t.slug); return true; } };
+    const items = parEmplacement((B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }), function (t) {
+      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : '', faire: function () { porterTenue(t.slug); return true; } };
     });
     return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TÊTE' };
   }
@@ -1688,17 +1692,35 @@ const Missions = (function () {
     return { titre: 'CHEZ GUS', items: items, sur: p.argent + ' $' };
   }
 
+  /** Porte-t-on cette piece ? Le linge (`partie.tenue`) ou le chapeau (`partie.chapeau`). */
+  function portee(t) {
+    const p = B.partie;
+    return t.emplacement === 'tete' ? p.chapeau === t.slug : p.tenue === t.slug;
+  }
+
+  /** Le linge, puis les chapeaux, chacun sous son titre de section (`entete`). */
+  function parEmplacement(tenues, item) {
+    const out = [];
+    [['corps', 'LE LINGE'], ['tete', 'LES CHAPEAUX']].forEach(function (e) {
+      const siennes = tenues.filter(function (t) { return (t.emplacement || 'corps') === e[0]; });
+      if (!siennes.length) return;
+      out.push({ entete: e[1], libelle: '', actif: false });
+      siennes.forEach(function (t) { out.push(item(t)); });
+    });
+    return out;
+  }
+
   function menuVetements() {
     const p = B.partie;
     // ⚠️ UN LOT NE SE VEND PAS. La casquette de la foire (`prime`) n'apparait
     // chez Rosa qu'une fois GAGNEE — sinon le lot des trois jeux d'adresse
     // s'achete au comptoir d'a cote, et il ne vaut plus rien. Une fois a soi,
     // elle se range avec les autres : c'est la qu'on vient la remettre.
-    const items = (B.defs.tenues || []).filter(function (t) {
+    const items = parEmplacement((B.defs.tenues || []).filter(function (t) {
       return !t.prime || p.tenues.indexOf(t.slug) >= 0;
-    }).map(function (t) {
+    }), function (t) {
       const deja = p.tenues.indexOf(t.slug) >= 0;
-      return { libelle: t.nom.toUpperCase(), detail: deja ? (p.tenue === t.slug ? 'PORTÉE' : 'À TOI') : t.prix + ' $',
+      return { libelle: t.nom.toUpperCase(), detail: deja ? (portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : 'À TOI') : t.prix + ' $',
                actif: deja || p.argent >= t.prix, faire: function () {
                  if (!deja) { payer(t.prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
                  porterTenue(t.slug);

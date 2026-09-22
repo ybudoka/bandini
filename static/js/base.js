@@ -100,6 +100,7 @@ function etatInitial(defs) {
     vie: 100,
     tenue: 'chandail',
     tenues: ['chandail'],
+    chapeau: null,        // le chapeau porte (`magasins.TENUES`, `emplacement: 'tete'`), ou rien
     cheveux: null,        // la couleur donnee par le barbier (`magasins.COIFFURES`)
     fouilles: {},         // les logements deja fouilles, par porte et par etage
     armes: { poings: { mun: null } },
@@ -238,7 +239,9 @@ function triche(nom) {
 function apparenceDuJoueur(partie, defs) {
   const tenue = ((defs && defs.tenues) || []).find(function (t) { return t.slug === partie.tenue; });
   const swaps = {};
-  if (tenue) swaps.c = tenue.couleur;
+  // ⚠️ Un CHAPEAU n'est pas un chandail (`emplacement: 'tete'`, la garde-robe) : la casquette de la
+  // foire, portee comme linge dans une vieille sauvegarde, ne teint plus le torse en orange.
+  if (tenue && tenue.emplacement !== 'tete') swaps.c = tenue.couleur;
   if (partie.cheveux) swaps.h = partie.cheveux;
   return Object.keys(swaps).length ? swaps : null;
 }

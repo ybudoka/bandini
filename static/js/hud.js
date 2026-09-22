@@ -1859,12 +1859,14 @@ const Hud = (function () {
              // de neuf a dessiner : on agrandit le meme sprite de 10 x 13.
              dessiner: function (ctx, x, y, l) {
                if (!q || !q.couleurs || typeof SPRITES === 'undefined' || !SPRITES.joueur) return;
-               const cuit = Atlas.cuire('joueur', SPRITES.joueur, q.couleurs);
+               // Habille (`Garderobe`) : sa tenue de rue, chapeau compris — celle de son portrait.
+               const tenue = typeof Garderobe !== 'undefined' ? Garderobe.duPersonnage(slug) : null;
+               const cuit = (tenue && Garderobe.cuire(tenue)) || Atlas.cuire('joueur', SPRITES.joueur, q.couleurs);
                const img = cuit.poses.bas && cuit.poses.bas[0];
                if (!img) return;
                ctx.imageSmoothingEnabled = false;
                ctx.drawImage(img, 0, 0, img.width, img.height,
-                             x + l - 46, y + 26, img.width * 3, img.height * 3);
+                             x + l - 10 - img.width * 3, y + 26 - (img.height - 16) * 3, img.width * 3, img.height * 3);
                B.stats.images++;
              } };
   }

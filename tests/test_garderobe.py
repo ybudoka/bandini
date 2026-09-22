@@ -75,3 +75,27 @@ def test_le_dessin_connait_chaque_piece():
 
 def test_le_paquet_porte_la_garde_robe(paquet):
     assert set(paquet["garderobe"]["garde_robes"]) == set(garderobe.GARDE_ROBES)
+
+
+def test_chaque_tenue_de_rosa_est_une_piece_qu_on_enfile():
+    from app import magasins
+    for t in magasins.TENUES:
+        assert t["emplacement"] in ("corps", "tete"), t["slug"]
+        piece = t["piece"]
+        if t["emplacement"] == "tete":
+            assert set(piece) == {"chapeau"} and piece["chapeau"] in garderobe.CHAPEAUX[1:], t["slug"]
+        else:
+            assert piece["haut"] in garderobe.HAUTS, t["slug"]
+            assert piece.get("motif", "uni") in garderobe.MOTIFS
+            assert set(piece.get("accessoires", [])) <= set(garderobe.ACCESSOIRES)
+    foire = next(t for t in magasins.TENUES if t.get("prime") == "foire")
+    assert foire["emplacement"] == "tete", "la casquette de la foire se porte sur la tête"
+    assert sum(1 for t in magasins.TENUES if t["emplacement"] == "tete" and t["prix"]) >= 5, "Rosa vend des chapeaux"
+
+
+def test_l_agent_et_le_garde_gardent_leur_uniforme():
+    robes = garderobe.exporter()["garde_robes"]
+    archs = {a["slug"]: a for a in pietons.CATALOGUE}
+    assert robes["policier"]["haut_fixe"] == archs["policier"]["couleurs"]["c"]
+    assert robes["garde"]["haut_fixe"] == archs["garde"]["couleurs"]["c"]
+    assert robes["policier"]["chapeaux"] == ["kepi"] and robes["policier"]["chapeau_chance"] == 1.0

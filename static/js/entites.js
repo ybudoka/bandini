@@ -169,6 +169,8 @@ const Entites = (function () {
     const p = B.partie;
     const j = creer('joueur', x, y, {
       r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
+      // Habille (`Garderobe`) : son linge, sa coupe ET son chapeau.
+      tenue: typeof Garderobe !== 'undefined' ? Garderobe.duJoueur(p, B.defs) : null,
       // ⚠️ `vieMax` N'EST PLUS UN LITTERAL : les paliers d'ambulance le font
       // monter (+10 % a dix transports, +25 % a vingt-cinq). C'est le seul
       // avantage de palier qui ne se lise pas au moment de s'en servir — une

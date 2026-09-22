@@ -144,3 +144,77 @@ def test_les_donneurs_portent_leur_tenue_et_le_cache_reste_borne(banc):
     }""")
     assert r["tiGuy"] == "costaud"
     assert r["taille"] <= r["max"], "le cache des tenues grossit sans borne"
+
+
+def test_le_joueur_achete_un_chapeau_le_porte_par_dessus_son_linge_et_l_enleve(banc):
+    """Chez Rosa, un chapeau se met SUR la tête sans changer le linge ; le reporter l'enlève ;
+    et en changer fait oublier ta tête à la police, comme le linge."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, p = B.partie, j = B.joueur, M = L.Missions;
+        p.argent = 1000;
+        let oublis = 0; const vrai = L.Police.onNeTeReconnaitPlus;
+        L.Police.onNeTeReconnaitPlus = function () { oublis++; return vrai.apply(null, arguments); };
+        const menu = M.menuVetements();
+        const titres = menu.items.filter(function (i) { return i.entete; }).map(function (i) { return i.entete; });
+        const achat = function (slug) {
+            const t = B.defs.tenues.find(function (x) { return x.slug === slug; });
+            const it = M.menuVetements().items.find(function (i) { return i.libelle === t.nom.toUpperCase(); });
+            it.faire();
+        };
+        const avant = j.tenue ? j.tenue.chapeau : null;
+        achat('complet');
+        achat('feutre');
+        const coiffe = { chapeau: j.tenue.chapeau, haut: j.tenue.haut, cravate: j.tenue.accessoires.indexOf('cravate') >= 0,
+                         linge: p.tenue, sur: p.chapeau, argent: p.argent,
+                         dessine: L.Garderobe.grille(j.tenue, 'bas', 0).join('').indexOf('t') >= 0,
+                         image: L.Entites.imageDe(j).canvas.width };
+        achat('feutre');
+        const retire = { chapeau: j.tenue.chapeau, sur: p.chapeau, linge: p.tenue };
+        L.Police.onNeTeReconnaitPlus = vrai;
+        return { titres: titres, avant: avant, coiffe: coiffe, retire: retire, oublis: oublis };
+    }""")
+    assert r["titres"] == ["LE LINGE", "LES CHAPEAUX"]
+    assert r["avant"] == "aucun"
+    c = r["coiffe"]
+    assert c["chapeau"] == "feutre" and c["sur"] == "feutre" and c["linge"] == "complet"
+    assert c["haut"] == "veston" and c["cravate"], "le complet est un veston et une cravate"
+    assert c["dessine"] and c["image"] == 16, "le joueur se dessine habillé"
+    assert c["argent"] == 1000 - 500 - 150
+    assert r["retire"] == {"chapeau": "aucun", "sur": None, "linge": "complet"}, "le reporter l'enlève"
+    assert r["oublis"] == 3, "chaque changement (linge, chapeau, chapeau enlevé) fait oublier ta tête"
+
+
+def test_une_vieille_sauvegarde_qui_portait_la_casquette_comme_linge(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const t = L.Garderobe.duJoueur({ tenue: 'casquette_foire', chapeau: null, cheveux: null }, L.B.defs);
+        const s = L.apparenceDuJoueur ? null : null;
+        return { chapeau: t.chapeau, couleur: t.couleur_chapeau, haut: t.haut, torse: t.couleur_haut };
+    }""")
+    assert r == {"chapeau": "casquette", "couleur": "#e8a33a", "haut": "chandail", "torse": "#c0392b"}
+
+
+def test_le_cavalier_se_dessine_habille_et_les_agents_portent_le_kepi(banc):
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, V = L.Vehicules;
+        const d = o.ligneDroite();
+        j.x = d.x; j.y = d.y;
+        B.partie.tenues.push('tuque'); L.Missions.porterTenue('tuque');
+        const v = V.creer('moto', j.x + 10, j.y, 0, {});
+        V.monter(j, v);
+        const tn = V.tenueDuCavalier(v);
+        const img = V.imageDuCavalier(L.SPRITES[v.sprite], v, V.cavalierDe(v), tn);
+        const agents = [];
+        for (let i = 0; i < 12; i++) {
+            const a = L.Police.creerAgent(j.x + 300, j.y + 300 + i, 'flane', i % 3 === 0 ? 'garde' : null);
+            agents.push({ garde: a.metier === 'garde', chapeau: a.tenue && a.tenue.chapeau, haut: a.tenue && a.tenue.couleur_haut });
+        }
+        return { chapeau: tn && tn.chapeau, largeur: img && img.canvas.width, agents: agents };
+    }""")
+    assert r["chapeau"] == "tuque" and r["largeur"] == 16, "sur la moto, le joueur garde sa tuque"
+    flics = [a for a in r["agents"] if not a["garde"]]
+    gardes = [a for a in r["agents"] if a["garde"]]
+    assert flics and all(a["chapeau"] == "kepi" and a["haut"] == "#1f3a6e" for a in flics), flics
+    assert gardes and all(a["haut"] == "#5a5f47" for a in gardes), gardes
