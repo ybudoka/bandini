@@ -215,3 +215,4 @@ Deux documents d'avant la table :
 | L'aéroport — le chantier du pont s'allonge, et l'île se cache sur la carte | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [fiche](l-aeroport-le-chantier-s-allonge-l-ile-se-cache.md#fiche) · [notes](l-aeroport-le-chantier-s-allonge-l-ile-se-cache.md#notes) |
 | Ça travaille : chantiers et démolitions | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [fiche](ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](ca-travaille-chantiers-et-demolitions.md#notes) |
 | Des phares à la mesure de chaque char — les murs et les toits | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [notes](des-phares-a-la-mesure-de-chaque-char.md#notes) |
+| Les montagnes et les falaises infranchissables | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [fiche](les-montagnes-et-les-falaises-infranchissables.md#fiche) · [notes](les-montagnes-et-les-falaises-infranchissables.md#notes) |

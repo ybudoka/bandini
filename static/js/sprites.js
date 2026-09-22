@@ -2989,6 +2989,34 @@ const TUILES = (function () {
       }
     },
     '~': function (ctx, v, T) { plein(ctx, '#2c5f8a', T); ctx.fillStyle = '#3b73a3'; ctx.fillRect(2 + (v % 5), 4, 6, 1); ctx.fillRect(7 - (v % 4), 11, 5, 1); },
+    /* --- Le relief : infranchissable, et ca se voit -----------------------
+
+       ⚠️ Pas de variante par voisine (une paroi qui lit ses quatre voisines,
+       comme une cloture ou un toit en pente) : le relief n'a qu'une face, et
+       elle donne sur la ville OU sur le large des deux cotes a la fois (la
+       chaine de l'est, la ligne de falaises du sud). `varianteDePassage` ne
+       rend que quatre valeurs (`hash2(tx, ty) % 4`) : une forme qui se REPETE
+       (un rocher au meme endroit, une ligne au meme cran) fait un papier peint
+       a l'echelle d'une chaine de montagnes — la lecon du trottoir et de
+       l'herbe (`sprites.js`, plus haut). Le bruit du sol, lui, varie tuile par
+       tuile par la POSITION (`points`, qui boucle sur `i`, pas sur `v`) : c'est
+       lui qui porte toute la variete ici, jamais une forme geometrique fixe. */
+    'M': function (ctx, v, T) {
+      plein(ctx, '#4a433c', T);
+      points(ctx, v, T, '#5c5349', 16, 0);
+      points(ctx, v, T, '#6b6153', 8, 40);
+      points(ctx, v, T, '#332e29', 14, 70);
+      points(ctx, v, T, '#231f1a', 6, 120);
+    },
+    'C': function (ctx, v, T) {
+      plein(ctx, '#5c5349', T);
+      ctx.fillStyle = '#6f6457';                       // les strates, une roche sedimentaire
+      for (let y = 1 + (v % 2); y < T; y += 4) ctx.fillRect(0, y, T, 1);
+      ctx.fillStyle = '#443d35';
+      for (let y = 3 - (v % 2); y < T; y += 4) ctx.fillRect(0, y, T, 1);
+      points(ctx, v, T, '#332e29', 10, 20);
+      points(ctx, v, T, '#7d7266', 5, 90);
+    },
     'B': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_TOLE); },
     'E': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_ARDOISE); },
     'O': function (ctx, v, T) { toitPlat(ctx, v, T, TOIT_GRAVIER); },

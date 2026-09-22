@@ -57,7 +57,7 @@ def test_la_ville_d_avant_ne_bouge_pas(ville, sans):
     for cle in ajouts:
         assert ville[cle][:len(sans[cle])] == sans[cle], f"« {cle} » a bougé avant l'aéroport"
     for cle in sans:
-        if cle in ("sol", "voie", "hauteur", "interieurs", "aeroport") + ajouts:
+        if cle in ("sol", "voie", "hauteur", "interieurs", "aeroport", "relief") + ajouts:
             continue
         assert ville[cle] == sans[cle], f"« {cle} » a bougé"
     assert {k: v for k, v in ville["interieurs"].items() if k not in aeroport.PIECES} == sans["interieurs"]
@@ -65,7 +65,8 @@ def test_la_ville_d_avant_ne_bouge_pas(ville, sans):
 
 def test_la_carte_grandit_au_sud_et_ce_qu_elle_gagne_est_de_l_eau(ville, sans):
     """La carte s'allonge jusqu'au bas du plan ; hors du plan, ce qu'elle gagne est
-    de l'eau, sans une flèche."""
+    de l'eau, sans une flèche — sauf le relief (`relief.py`, posé après nous), qui
+    referme le large d'une ligne de falaises et la ville d'une chaîne de montagnes."""
     x0, y0, largeur, hauteur = a_plan = ville["aeroport"]["plan"]
     assert ville["hauteur"] == y0 + hauteur > sans["hauteur"], a_plan
     assert len(ville["sol"]) == len(ville["voie"]) == ville["hauteur"]
@@ -77,7 +78,7 @@ def test_la_carte_grandit_au_sud_et_ce_qu_elle_gagne_est_de_l_eau(ville, sans):
                 continue
             if pont["x"] <= x < pont["x"] + pont["l"]:
                 continue
-            assert ville["sol"][y][x] == "~", (x, y)
+            assert ville["sol"][y][x] in ("~", "M", "C"), (x, y)
 
 
 def test_le_pont_prolonge_une_rue_de_la_pointe_et_le_trafic_ne_le_connait_pas(ville):
@@ -321,8 +322,8 @@ def test_la_carte_cache_l_ile_jusqu_au_pont_fini(ville, sans):
     """« La carte de l'aéroport peut-elle être masquée » (Martin) : l'île ENTIÈRE, bout
     du pont compris, jusqu'au pont fini. Python dit quoi cacher et jusqu'à quand : le
     rectangle de la terre de l'aéroport, la mission `a01`, et la hauteur de la carte
-    connue — sous elle, hors de l'île, il n'y a QUE de l'eau (la grande carte s'y arrête
-    sans rien cacher d'autre)."""
+    connue — sous elle, hors de l'île, il n'y a QUE de l'eau et le relief (`relief.py`,
+    posé après nous : la grande carte n'a rien à en cacher, lui)."""
     a = ville["aeroport"]
     m = a["masque"]
     assert (m["x"], m["y"], m["l"], m["h"]) == (a["x"], a["y"], a["l"], a["h"])
@@ -337,7 +338,8 @@ def test_la_carte_cache_l_ile_jusqu_au_pont_fini(ville, sans):
     for y in range(m["carte_h"], ville["hauteur"]):
         for x in range(ville["largeur"]):
             if not dedans(m, x, y):
-                assert ville["sol"][y][x] == "~", f"la grande carte coupe autre chose que de l'eau en {(x, y)}"
+                assert ville["sol"][y][x] in ("~", "M", "C"), \
+                    f"la grande carte coupe autre chose que de l'eau ou du relief en {(x, y)}"
 
 
 def test_les_missions_a_venir_sont_celles_de_l_arc_a():

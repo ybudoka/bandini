@@ -420,6 +420,26 @@ malgré des centaines de lignes ajoutées de chaque bord ; trois petits (une lis
 - Les annexes des chantiers (tranchée, équipe, signaleur, benne) se calculent maintenant tout à la
   toute fin de `carte.generer`, après l'aéroport et les grands bateaux — pas seulement après le
   mobilier de rue : rien de plus récent ne doit leur retirer une tuile.
+- ⚠️ **La benne posée au démarrage décalait des identifiants d'entités, et ça a fait rougir un juge
+  de policiers.** `poserLaBenne` naissait dans `poserLesMachines` (donc dès `appliquer`, au tout
+  premier chargement pour chaque chantier « ouvert » — visité ou non). Or `police.js` étale ses
+  vérifications de vue sur `(B.t + a.id) % N` (le budget d'un agent, pas du hasard) : les quelques
+  identifiants de plus décalaient le cran auquel un agent perd de vue le fuyard, retardant son
+  abandon de poursuite (image ~400, puis 1419 avec les bennes en plus) — assez pour qu'un juge à
+  cadence fixe (`test_deux_dehors_l_auto_reste_immobile_jusqu_a_ce_qu_un_agent_reprenne_le_volant`,
+  800 images) le rate. Élargir la cadence du juge a masqué le symptôme et en a montré un pire
+  (l'agent, parti bien plus loin, se perdait en revenant) — pas la bonne piste. La benne est passée
+  en pose PARESSEUSE, exactement comme l'équipe et le signaleur : `poserLaBenneSiBesoin`, appelée
+  par `equiper()`, gardée par la même bulle (`Entites.BULLE_OUBLI`) et `visibleAEcran`. Cohérent
+  avec « jamais sous les yeux », et corrige la cause plutôt que la tolérance du juge — celui-ci
+  repasse tel quel, inchangé, à sa cadence d'origine. Les cinq juges de banc qui posaient la benne
+  directement (`appliquerSeule` et un test à sa propre boucle) ont dû apprendre à poser le joueur
+  dans la bulle et appeler `equiper()`, comme tout juge d'équipe le fait déjà.
+- ⚠️ **La pelleteuse allumait 9 lampes pour une place gardée de 7** (`LAMPES_PAR_CHAR_MAX`,
+  `vehicules.js`) : quatre feux arrière sur le contrepoids (deux hauteurs empilées de chaque côté),
+  en plus des quatre phares et du faisceau du camion. Les deux paires empilées fusionnées en un
+  seul bloc par côté (même portée verticale, une seule lueur) : six lampes + le faisceau = sept,
+  pile la place gardée — `test_chaque_char_du_parc_allume_les_lampes_que_sa_machine_peint` le dit.
 
 **Le jalon est livré au complet.** Les deux étages du plan sont faits (le décor animé, puis les
 chars qu'on conduit) ; ce qui reste du réservoir d'origine — le rouleau compresseur, la bétonnière,

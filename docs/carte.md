@@ -19,6 +19,13 @@ carte fait 419 × 304 tuiles au lieu de 419 × 224 : quatre-vingts rangées d'ea
 large) et une île **dessinée** sous La Pointe, posée en dernier et sans un dé — la
 ville d'au-dessus n'a pas bougé d'une tuile.
 
+**Autour de la grille, depuis le 21 sept. 2026 : le relief**
+(`app/relief.py`). La carte fait 459 × 304 tuiles au lieu de 419 × 304 : quarante
+colonnes de montagnes à l'est (posées après la dernière rue, sans toucher la
+trame — le même principe que l'aéroport au sud), et une ligne de falaises qui
+referme le large au sud de l'aéroport. Infranchissable partout (`solide 1`) :
+ni à pied, ni en char, ni à la nage.
+
 ---
 
 ## 1. Les districts

@@ -93,6 +93,14 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
         return any(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
                    for ile in iles)
 
+    # ⚠️ Le relief (`relief.py`, 21 sept. 2026) n'est ni de l'eau ni de la ville : un
+    # « pas d'eau » qui vaut land pour ce juge ferait de la montagne un pont — elle
+    # touche le bord EST d'origine (celui de La Pointe compris) sur toute sa hauteur.
+    # Elle compte donc comme un obstacle des deux côtés : on ne s'y accroche pas
+    # (phase 1) et on n'y arrive pas (phase 2, comme une île).
+    def est_relief(x: int, y: int) -> bool:
+        return sol[y][x] in ("M", "C")
+
     foire = CARTE["foire"]
     depart = (foire["x"] + foire["l"] // 2, foire["y"] + foire["h"] // 2)
     assert sol[depart[1]][depart[0]] != "~", "la foire est a l'eau ?"
@@ -103,7 +111,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
         for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)):
             voisin = (x + dx, y + dy)
             if (voisin in pointe or not (0 <= voisin[0] < LARGEUR and 0 <= voisin[1] < HAUTEUR)
-                    or sol[voisin[1]][voisin[0]] == "~"):
+                    or sol[voisin[1]][voisin[0]] == "~" or est_relief(*voisin)):
                 continue
             pointe.add(voisin)
             file.append(voisin)
@@ -116,7 +124,7 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
             if not (0 <= nx < LARGEUR and 0 <= ny < HAUTEUR) or (nx, ny) in dist:
                 continue
             if sol[ny][nx] != "~":
-                if not dans_l_ile(nx, ny):
+                if not dans_l_ile(nx, ny) and not est_relief(nx, ny):
                     return dist[(x, y)] + 1  # la premiere rive qui n'est pas elle
                 continue
             dist[(nx, ny)] = dist[(x, y)] + 1

@@ -191,11 +191,15 @@ def test_les_zones_de_district_ne_se_chevauchent_pas():
     # ⚠️ Depuis l'aéroport (21 sept. 2026), la carte a grandi SOUS la trame : les
     # districts couvrent la ville d'avant, et le large couvre ce qu'elle a gagné au
     # sud — l'aéroport est posé par-dessus le large, comme une cour de gang l'est
-    # sur son district.
+    # sur son district. Depuis le relief (21 sept. 2026), la carte a aussi grandi À
+    # L'EST, d'une chaîne de montagnes : le large s'arrête où elle commence.
     large = ZONES["large"]
-    assert (large["x"], large["y"], large["l"]) == (0, CARTE["hauteur"] - large["h"], CARTE["largeur"])
-    aire = sum(z["l"] * z["h"] for z in quartiers) + large["l"] * large["h"]
-    assert aire == CARTE["largeur"] * CARTE["hauteur"], "les districts et le large ne couvrent pas toute la ville"
+    montagnes = CARTE["relief"]["montagnes"]
+    largeur_avant_relief = CARTE["largeur"] - montagnes["l"]
+    assert (large["x"], large["y"], large["l"]) == (0, CARTE["hauteur"] - large["h"], largeur_avant_relief)
+    aire = sum(z["l"] * z["h"] for z in quartiers) + large["l"] * large["h"] + montagnes["l"] * montagnes["h"]
+    assert aire == CARTE["largeur"] * CARTE["hauteur"], \
+        "les districts, le large et le relief ne couvrent pas toute la ville"
 
 
 @pytest.mark.parametrize("graine", [3, 777, 20260913])
