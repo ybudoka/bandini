@@ -7,14 +7,16 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     n'ont pas de `ou` : on ne leur parle jamais, ils n'ont pas de repos."""
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
-        "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"]
+        "mo", "fern", "mado", "gege", "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
+        "bonimenteur", "sven"]
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
     attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
-                                              "xavier", "lachance", "sven") for n in (1, 2) if (qui, n) != ("josee", 2)]
+                                              "xavier", "lachance", "gus", "rosa", "ginette", "gilles",
+                                              "bonimenteur", "sven") for n in (1, 2) if (qui, n) != ("josee", 2)]
     repos = missions.repliques_de_repos()
-    assert [r["slug"] for r in repos] == attendus, "vingt-neuf voix, pas trente"
+    assert [r["slug"] for r in repos] == attendus, "trente-neuf voix, pas quarante"
     assert {r["texte"] for r in repos} == {missions.REPOS["texte"], missions.REPOS["texte_apres"]}
     assert all(r["mission"] == "repos" and not r["telephone"] for r in repos)
     voix = {v["slug"]: v for v in audio.voix_repos()}
@@ -58,7 +60,7 @@ def test_les_cinq_missions_se_suivent():
 
 def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
     lieux = {p["slug"] for p in carte.SPECIAUX.values()} | {"kiosque", "planque"}
-    zones = {"cravates", "port", "faubourg"}
+    zones = {"cravates", "port", "faubourg", "boulonneux"}
     for m in missions.CATALOGUE:
         perso = missions.personnage(m["donneur"])
         assert perso and perso["ou"], f"{m['slug']} : le donneur doit se tenir quelque part"

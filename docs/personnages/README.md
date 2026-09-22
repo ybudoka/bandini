@@ -46,13 +46,20 @@ Chaque fiche mêle deux sortes de faits.
 | [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 |
 | [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
 | [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 |
+| [Gus Lévesque](gus.md) | `gus` | à l'armurerie | Khaivan | f02 |
+| [Rosa Di Meo](rosa.md) | `rosa` | à la Boutique Rosa | Amélie | f03 |
+| [Ginette](ginette.md) | `ginette` | à l'hôpital | Jeanne Mance | h02 |
+| [Gilles Thériault](gilles.md) | `gilles` | à la guérite de la fourrière | Patrick | s01 |
+| [Le Bonimenteur](le-bonimenteur.md) | `bonimenteur` | à l'arche de la foire | Léo | p13 · p14 |
 
-⚠️ **Quatre voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
+⚠️ **Sept voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
 dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fait le narrateur **et** Ovila,
-Alexandre Boutin fait Le Grand Mo **et** Gégé, Premium Male teacher (Adam) fait Fern **et** Xavier.
-Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas et
-court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie ; Mo étire ses phrases, Gégé les
-coupe court ; Fern est bref et pressé, Xavier s'emballe et n'arrête plus.
+Alexandre Boutin fait Le Grand Mo **et** Gégé, Premium Male teacher (Adam) fait Fern **et** Xavier, Khaivan
+fait le sergent Bouchard **et** Gus, Jeanne Mance fait Josée **et** Ginette, Patrick fait Dr Lachance **et**
+Gilles. Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas
+et court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie ; Mo étire ses phrases, Gégé les
+coupe court ; Fern est bref et pressé, Xavier s'emballe et n'arrête plus ; Bouchard commande, Gus négocie ;
+Josée dirige la rue, Ginette dirige l'hôpital ; Lachance est clinique, Gilles est nostalgique.
 
 ## On se présente une fois par mission — la salutation de chacun, d'un coup d'œil
 
@@ -80,6 +87,11 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Xavier | « Xavier! Tu me replaces pas? » | la même, au téléphone | « As-tu un char? » | un mot d'adulte |
 | Dr Lachance | « Ici le docteur Lachance, de l'hôpital. » | la même, au téléphone | « Viens, vite! » | une plainte sur sa fatigue |
 | Sven | « Sven. » — un nom, un point (m52) ; « C'est encore Sven. » / « Sven, une dernière fois. » (m53, m54) | la même, au téléphone : il ne rencontre pas, il appelle | « Viens, discret. » (sa bulle) | un sacre ; un diminutif ; « mon grand » ; une familiarité |
+| Gus | « Gus, de l'armurerie. » | la même, au téléphone | « Quoi, jeune? » | merci deux fois ; une excuse |
+| Rosa | « Rosa, de la boutique. » | la même, au téléphone | « Une minute! » | le nom complet de Rocco sans ironie |
+| Ginette | « C'est Ginette, de l'hôpital. » | la même, au téléphone | « Toi, viens voir. » | un mot sur un patient |
+| Gilles | « C'est Gilles, de la fourrière. » | la même, au téléphone | « Hé, le jeune! » | le mot « retraite » sans mélancolie |
+| Le Bonimenteur | « C'est le Bonimenteur, à l'arche de la foire. » | la même, au téléphone | « Approche, jeune! » | qu'il a peur, tout net |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de

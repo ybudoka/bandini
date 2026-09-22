@@ -312,6 +312,16 @@ JEU: dict[str, str] = {
     "xavier-repos-2": "[happy] Le Faubourg est tranquille… Merci.",
     "lachance-repos-1": "[calm] Reviens me voir… plus tard.",
     "lachance-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "gus-repos-1": "[gruffly] Reviens me voir… plus tard.",
+    "gus-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "rosa-repos-1": "[wryly] Reviens me voir… plus tard.",
+    "rosa-repos-2": "[amused] Le Faubourg est tranquille… Merci.",
+    "ginette-repos-1": "[matter-of-fact] Reviens me voir… plus tard.",
+    "ginette-repos-2": "[firmly] Le Faubourg est tranquille… Merci.",
+    "gilles-repos-1": "[somber] Reviens me voir… plus tard.",
+    "gilles-repos-2": "[warmly] Le Faubourg est tranquille… Merci.",
+    "bonimenteur-repos-1": "[cheerful] Reviens me voir… plus tard.",
+    "bonimenteur-repos-2": "[playfully] Le Faubourg est tranquille… Merci.",
 
     # --- Le Clairon : un vieil homme qui lit la manchette du matin. La pause
     # tombe entre le titre et ce qu'il en pense.

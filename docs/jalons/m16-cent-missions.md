@@ -625,3 +625,36 @@ catalogue.
     de lieux de cette tranche existaient déjà côté JS (`Histoire.resoudre`) mais la scène par
     défaut, qui les cite, n'était pas jugée pour eux — deux scènes par défaut (`f04`, `p01`)
     sautaient sans lieu à montrer avant ce correctif.
+- **22 sept. 2026 : dix missions de plus, et la foire devient un vrai lieu de mission.**
+  `f02` (Gus, armurier neuf), `f03` (Rosa, couturière neuve), `f08` (Marco, la berline de
+  Rocco), `q04` (Josée, `sans_etoile` — première mission à l'exercer vraiment), `e02`
+  (Ti-Paul), `h02` (Ginette, infirmière-chef neuve, `suivre`+`pickpocket`+`retourner`), `r01`
+  (Bouchard, `sans_etoile` une deuxième fois — et un fuyard à pattes plutôt qu'un objet posé
+  dedans : `ramasser` ne connaît QUE le patron du fuyard, jamais un objet statique), `s01`
+  (Gilles, gardien de fourrière neuf, `zone:boulonneux`), `p13`/`p14` (le Bonimenteur,
+  personnage neuf — comme Mo/Fern/Mado/Gégé/Xavier avant lui — posé DANS l'enceinte de la
+  foire). Cinq personnages de plus, tous à un lieu déjà dessiné (`carte.SPECIAUX`), sauf le
+  Bonimenteur.
+  - ⚠️ **La foire prend vie, à la demande de Martin (« profite-en pour améliorer la foire »)** :
+    un nouveau résolveur de lieu, `ou: "foire"` (`histoire.js::lieuFoire`/`poserDonneurFoire`,
+    même patron que `lieuPont` pour la barrière du pont — aucun changement à `app/carte.py`,
+    les coordonnées voyagent déjà dans l'export JSON). C'est le premier personnage de mission
+    posé DANS l'enceinte, hélable et vivant en ville — contrairement à un donneur `point:`, un
+    `retourner` le retrouve, prouvé par `p13`. Les kiosques de nourriture restent du décor, les
+    trois manèges décoratifs (carrousel, tasses, chaises volantes) restent non montables : la
+    règle du jalon de la foire (« aucun manège n'est montable ») tient telle quelle.
+  - ⚠️ **`s02` (Ti-Loup, la cour à ferraille) reste écartée** : son lieu fait partie des quatre
+    lieux spéciaux encore pas dessinés — aucune pièce neuve cette tranche-ci non plus. `s01`
+    (Gilles) le remplace dans l'arc S.
+  - ⚠️ **`ramasser` ne pose JAMAIS d'objet statique.** Découvert en concevant `q04`/`r01` :
+    `Histoire.poser()` ne fait naître une `caisse` que par le mécanisme du fuyard qui tombe
+    (m2/m50/m97/f03) — un `ramasser` sans `cible: "fuyard"` ne trouve jamais rien à ramasser.
+    `q04` et `r01` sont donc devenues un vol de camion (`monter`+`livrer`) et un fuyard à
+    pattes, plutôt que la fouille statique prévue au plan d'origine.
+  - ⚠️ **Ti-Guy ne peut plus être donneur après m1** (`parti_apres`) : `Histoire.creerDonneurs`
+    le retire de la ville pour de bon une fois m1 faite — `f08` (prévue pour lui dans le plan
+    d'origine) donne plutôt à Marco, toujours vivant `porte:garage`.
+  - Trois juges de banc de plus (`tests/test_dix_missions_deux_js.py`) : les deux missions de
+    la foire (`p13` prouve le donneur `foire` vivant + `retourner` ; `p14` reprend `proteger`)
+    et `sans_etoile` (`q04`, jamais jouée avant cette tranche). Les sept autres missions ne
+    réutilisent que des types déjà prouvés — couvertes par `scripts/verifier_missions.py`.

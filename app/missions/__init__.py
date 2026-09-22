@@ -178,6 +178,29 @@ PERSONNAGES: list[Personnage] = [
      "couleurs": {"c": "#ecf0f1", "h": "#8a8a8a", "s": "#e8b088", "p": "#2c3e50"}, "ou": "point:lachance",
      "heler": "Viens, vite!"},
 
+    # --- M16, dix missions de plus encore (22 sept. 2026) : quatre personnages posés à
+    # un lieu DÉJÀ dessiné, et un cinquième posé à l'arche de la foire (`ou: "foire"`,
+    # nouveau — voir `histoire.js::lieuFoire`/`poserDonneurFoire`) : la foire devient un
+    # vrai lieu de mission. Voix partagées (jamais dans la même mission) : Khaivan
+    # (Bouchard/Gus), Jeanne Mance (Josée/Ginette), Patrick (Lachance/Gilles) ; Amélie et
+    # Léo, libres jusqu'ici, prennent Rosa et le Bonimenteur.
+    {"slug": "gus", "nom": "Gus Lévesque", "genre": "homme", "voix": "Khaivan - Quebec accent",
+     "couleurs": {"c": "#4a4a3a", "h": "#5a5a5a", "s": "#c98d66", "p": "#2a2a2a"}, "ou": "porte:armurerie",
+     "heler": "Quoi, jeune?"},
+    {"slug": "rosa", "nom": "Rosa Di Meo", "genre": "femme", "voix": "Amélie - Young, Confident and Friendly",
+     "couleurs": {"c": "#a83279", "h": "#3a1a1a", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "porte:vetements",
+     "heler": "Une minute!"},
+    {"slug": "ginette", "nom": "Ginette", "genre": "femme", "voix": "Jeanne Mance - Charming, Clear and Young",
+     "couleurs": {"c": "#e8e8f0", "h": "#6a4a2a", "s": "#e8b088", "p": "#4a6a8a"}, "ou": "porte:hopital",
+     "heler": "Toi, viens voir."},
+    {"slug": "gilles", "nom": "Gilles Thériault", "genre": "homme", "voix": "Patrick - Clear, Natural and Polished",
+     "couleurs": {"c": "#5a6a4a", "h": "#c8c8c8", "s": "#c98d66", "p": "#2a2a2a"}, "ou": "porte:fourriere",
+     "heler": "Hé, le jeune!"},
+    {"slug": "bonimenteur", "nom": "Marcel « Le Bonimenteur » Dumouchel", "genre": "homme",
+     "voix": "Léo - Français québécois ",
+     "couleurs": {"c": "#d4a017", "h": "#1a1a1a", "s": "#e8b088", "p": "#1a1a3a"}, "ou": "foire",
+     "heler": "Approche, jeune!"},
+
     # --- Sven « le Norvégien » (21 sept. 2026, « Sven et le piratage ») : deja
     # prevu dans le plan M16 (« le contrebandier qui veut Les Quais »), jamais
     # encore pose. Il se tient sur SA jetee, a cote de SON porte-conteneurs —
@@ -405,8 +428,8 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
-    e01, e12, f01, f04, f05, f06, f07, f09, f11, h01, m1, m2, m3, m4, m5, m6, m50, m51,
-    m52, m53, m54, m97, p01, q02, q03, s03,
+    e01, e02, e12, f01, f02, f03, f04, f05, f06, f07, f08, f09, f11, h01, h02, m1, m2, m3,
+    m4, m5, m6, m50, m51, m52, m53, m54, m97, p01, p13, p14, q02, q03, q04, r01, s01, s03,
 )
 
 # ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
@@ -415,11 +438,17 @@ from . import (  # noqa: E402
 # ⚠️ Dix missions de plus (21 sept. 2026) : f04, f05, f06, f07, f09, f11 (Faubourg), h01 (l'hôpital),
 # p01 (La Pointe), q03 (Les Quais), e12 (Les Érables) — chacune après m6 (ou après une des dix,
 # f06/f07/f09), avant m97.
+# ⚠️ Dix missions de plus encore (22 sept. 2026) : f02, f03, f08 (Faubourg — Gus, Rosa, Ti-Guy),
+# q04 (les Quais — Josée), e02 (les Érables — Ti-Paul), h02 (l'hôpital — Ginette), r01 (la police —
+# Bouchard), s01 (la Shop — Gilles), p13/p14 (La Pointe — la foire prend vie, le Bonimenteur).
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
     f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
     h01.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
+    f02.MISSION, f03.MISSION, f08.MISSION,
+    q04.MISSION, e02.MISSION, h02.MISSION, r01.MISSION, s01.MISSION,
+    p13.MISSION, p14.MISSION,
     m52.MISSION, m53.MISSION, m54.MISSION,
     m97.MISSION,
 ]

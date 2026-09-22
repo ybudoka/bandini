@@ -262,6 +262,13 @@ const Histoire = (function () {
     return b ? { x: (b.x + b.l / 2) * TT + 8, y: (b.y + b.h / 2) * TT + 8, nom: b.nom } : null;
   }
 
+  /** L'arche de la foire : même patron que `lieuPont` — la barrière du paquet
+      porte déjà le bon rectangle (`carte.py::foire_entree`), rien à recalculer. */
+  function lieuFoire() {
+    const b = ((Monde.carte.def && Monde.carte.def.barrieres) || []).find(function (q) { return q.slug === 'foire'; });
+    return b ? { x: (b.x + b.l / 2) * TT + 8, y: (b.y + b.h / 2) * TT + 8, nom: b.nom } : null;
+  }
+
   /** Un quai marchable (glyphe `q` ou `j`), le premier rencontré — déterministe
       par l'ordre de lecture (nord-ouest d'abord). */
   function tuileDeQuai() {
@@ -329,6 +336,7 @@ const Histoire = (function () {
     if (ou === 'pont') return lieuPont();
     if (ou === 'quai') return tuileDeQuai();
     if (ou === 'bois') return tuileDeBois();
+    if (ou === 'foire') return lieuFoire();
     if (ou === 'amarrage:sven') return amarrageDeSven();
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
@@ -356,6 +364,9 @@ const Histoire = (function () {
     // ⚠️ Le POSTE, pas le centre de la coque : Sven se tient sur la jetée, pas
     // dans l'eau (`navires.py` l'exporte pour chaque mouillage).
     if (ou[0] === 'mouillage') { const mo = trouverMouillage(ou.slice(1).join(':')); return mo && mo.poste ? mo.poste : null; }
+    // ⚠️ Posé DEHORS, à l'arche — contrairement à un donneur `point:`, il existe
+    // vraiment en ville : hélable, GPS, et un `retourner` le trouve.
+    if (ou[0] === 'foire') return lieuFoire();
     return null;
   }
 
@@ -418,7 +429,19 @@ const Histoire = (function () {
       // ⚠️ Sven se tient sur SON poste a quai (`mouillage:`), pas a une porte :
       // les autres formes (`point:`) restent dedans, posees a l'entree de leur piece.
       else if (p.ou.indexOf('mouillage:') === 0) poserDonneurMouillage(p);
+      // Le Bonimenteur, a l'arche de la foire — dehors, comme une porte, mais sans batiment.
+      else if (p.ou === 'foire') poserDonneurFoire(p);
     }
+  }
+
+  /** UN personnage posé à l'arche de la foire (`ou: "foire"`) — même idée que
+      `poserDonneur`, mais la position vient de `lieuFoire()` (une barrière), pas
+      d'un bâtiment `SPECIAUX`. */
+  function poserDonneurFoire(p) {
+    const l = lieuFoire();
+    if (!l) return null;
+    const place = placeVisible(l);
+    return place ? creerPersonnage(p, place.x, place.y) : null;
   }
 
   /** UN personnage posé à quai, à côté du grand bateau que `navires.py` lui

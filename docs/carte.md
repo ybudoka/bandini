@@ -174,6 +174,16 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `gege` | Gérard « Gégé » Morin | Alexandre Boutin | porte:cantine | — |
 | `xavier` | Xavier | Premium Male teacher (Adam) | porte:depanneur | — |
 | `lachance` | Dr Lachance | Patrick | point:lachance | — |
+| `gus` | Gus Lévesque | Khaivan | porte:armurerie | — |
+| `rosa` | Rosa Di Meo | Amélie | porte:vetements | — |
+| `ginette` | Ginette | Jeanne Mance | porte:hopital | — |
+| `gilles` | Gilles Thériault | Patrick | porte:fourriere | — |
+| `bonimenteur` | Le Bonimenteur | Léo | foire (l'arche) | — |
+
+⚠️ **`ou: "foire"` est un lieu neuf** (22 sept. 2026) : le seul personnage posé DANS l'enceinte de la
+foire, vivant à l'arche — `histoire.js::lieuFoire`/`poserDonneurFoire` trouvent sa position dans la
+barrière `"foire"` déjà exportée (même patron que `lieuPont` pour le pont de La Pointe), sans toucher
+`app/carte.py`. Contrairement à un donneur `point:`, il hèle et se retrouve par `retourner`.
 
 ---
 

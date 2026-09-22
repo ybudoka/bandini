@@ -1,0 +1,57 @@
+"""La mission r01 — voir app/missions/__init__.py pour le moteur."""
+
+from ._commun import _l, _p
+
+MISSION = {
+    "slug": "r01",
+    "titre": "La nouvelle inspectrice",
+    "donneur": "bouchard",
+    "prerequis": ["m6"],
+    "recompense": 300,
+    "echec": ["mort", "arrete", "etoile"],
+    "donne": {"message": "LE CARNET, EN LIEU SÛR"},
+
+    # ⚠️ Un fuyard à pattes plutôt qu'un objet posé dedans — `ramasser`/`cible:
+    # "fuyard"` (m2/m50/m97, jamais un objet statique : `majObjectif` ne connaît
+    # que le fuyard qui tombe, ou une `caisse` posée par un fuyard tombé). `sans_etoile`
+    # (M16, 2e preuve) sur le rattrapage : une étoile là, et c'est un autre flic qui te
+    # voit fouiller le poste. Bouchard est DEDANS (`point:sergent`) : pas de
+    # `retourner`, sa fin se dit au casse-croûte comme f06.
+    "objectifs": [
+        {"type": "aller", "texte": "VA AU POSTE, DE NUIT",
+         "lieu": "poste", "rayon": 6, "nuit": True},
+
+        {"type": "ramasser", "texte": "RATTRAPE-LE AVANT QU'IL DISPARAISSE",
+         "cible": "fuyard", "vehicule": "auto", "sans_etoile": True},
+    ],
+
+    # Le jeu de chaque réplique (`jeu=`) — Bouchard : bourru, jamais un mot de trop,
+    # une satisfaction sèche — comme f06, il n'a pas besoin de sourire pour qu'on
+    # sache que l'affaire est réglée.
+    "dialogue": {
+        "appel": [
+            _l("bouchard", "Bouchard. Une nouvelle inspectrice, Roy, fouille dans mes affaires. Un jeune agent véreux lui vend mon carnet.",
+               jeu="[gruffly] Bouchard. Une nouvelle inspectrice, Roy, fouille dans mes affaires. [gravely] Un jeune agent véreux lui vend mon carnet.")
+        ],
+        "intro": [
+            _l("bouchard", "Il sort du poste à la noirceur, mon carnet dans sa mallette. Rattrape-le, discret.",
+               jeu="[firmly] Il sort du poste à la noirceur, mon carnet dans sa mallette. [gravely] Rattrape-le, discret."),
+            _l("bouchard", "Pas d'étoile là-dedans. Un gars qui court après un char au poste, ça pose des questions.",
+               jeu="[serious] Pas d'étoile là-dedans. [matter-of-fact] Un gars qui court après un char au poste… ça pose des questions.")
+        ],
+        "pendant": [
+            _p("bouchard", "Il roule vers le pont. Reste collé, mais reste invisible.", 1,
+               jeu="[gravely] Il roule vers le pont. [firmly] Reste collé, mais reste invisible.")
+        ],
+        "fin": [
+            _l("bouchard", "Mon carnet. Vingt ans de petites affaires, dedans. Ça reste entre nous deux.",
+               jeu="[relieved] Mon carnet. [gravely] Vingt ans de petites affaires, dedans. Ça reste entre nous deux."),
+            _l("bouchard", "Roy va devoir fouiller ailleurs. T'as fait ça proprement.",
+               jeu="[satisfied] Roy va devoir fouiller ailleurs. [gruffly] T'as fait ça proprement.")
+        ],
+        "echec": [
+            _l("bouchard", "Vu, hein? Astheure Roy va savoir que je fais nettoyer mes traces. Sacrament.",
+               jeu="[annoyed] Vu, hein? [gravely] Astheure Roy va savoir que je fais nettoyer mes traces. Sacrament.")
+        ]
+    }
+}
