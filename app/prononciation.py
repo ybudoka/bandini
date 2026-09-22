@@ -1,10 +1,17 @@
 """LE DICTIONNAIRE DE PRONONCIATION — comment une voix dit un mot, sans changer le mot.
 
 Les règles vivent dans `prononciation.pls` (le format W3C qu'ElevenLabs lit) :
-un mot tel qu'on l'écrit, et l'orthographe qu'on veut ENTENDRE.
+un mot tel qu'on l'écrit, le PHONÈME IPA qu'on veut entendre, et sa lecture en
+clair (un commentaire « dit : … » juste après la règle — personne ne relit l'IPA).
 
     affiché : « Prenez donc la rue des Érables. »
+    phonème : donc → dɔ̃
     entendu : « Prenez don la rue des Érables. »
+
+⚠️ **Des phonèmes, plus des alias** (Martin, 22 sept. 2026, après un essai en v3 :
+« ça marche bien, je préfère que tu y ailles avec ça »). Le phonème ne vaut que
+pour eleven_v3 (multilingual_v2 l'ignore) : c'est le modèle de toutes les voix
+qui prennent ce dictionnaire (`interpretation.MODELE`).
 
 ⚠️ **Martin, 22 sept. 2026** : « crée moi un dictionnaire pour mon jeu » (les
 *pronunciation dictionaries* d'ElevenLabs). C'est la troisième voie que
@@ -47,29 +54,43 @@ _NS = {"pls": ESPACE}
 #: dans un mot ne passe pas en silence.
 MARQUE_RESERVE = "EN RÉSERVE"
 
+#: Le commentaire qui suit une règle et la dit en clair : `<!-- dit : piasses -->`.
+MARQUE_LECTURE = "dit :"
 
-def _lexemes() -> list[tuple[str, str, bool]]:
-    """(mot écrit, mot entendu, en réserve), dans l'ordre du fichier."""
+
+def _lexemes() -> list[tuple[str, str, str | None, bool]]:
+    """(mot écrit, phonème, lecture en clair, en réserve), dans l'ordre du fichier.
+    ⚠️ La lecture est le commentaire « dit : » qui SUIT le lexème ; un autre commentaire
+    (une explication, un titre de section) ne s'y rattache pas."""
     parseur = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
     racine = ET.parse(FICHIER, parseur).getroot()
     resultat, reserve = [], False
     for noeud in racine:
         if noeud.tag is ET.Comment:
-            reserve = reserve or MARQUE_RESERVE in (noeud.text or "")
+            texte = (noeud.text or "").strip()
+            reserve = reserve or MARQUE_RESERVE in texte
+            if texte.startswith(MARQUE_LECTURE) and resultat and resultat[-1][2] is None:
+                mot, phoneme, _, dans_reserve = resultat[-1]
+                resultat[-1] = (mot, phoneme, texte[len(MARQUE_LECTURE):].strip(), dans_reserve)
         elif noeud.tag == f"{{{ESPACE}}}lexeme":
             resultat.append((noeud.findtext("pls:grapheme", namespaces=_NS),
-                             noeud.findtext("pls:alias", namespaces=_NS), reserve))
+                             noeud.findtext("pls:phoneme", namespaces=_NS), None, reserve))
     return resultat
 
 
 def regles() -> list[tuple[str, str]]:
-    """(mot écrit, mot entendu), dans l'ordre du fichier — l'ordre compte : la première qui colle gagne."""
-    return [(mot, alias) for mot, alias, _ in _lexemes()]
+    """(mot écrit, phonème), dans l'ordre du fichier — l'ordre compte : la première qui colle gagne."""
+    return [(mot, phoneme) for mot, phoneme, _, _ in _lexemes()]
+
+
+def lectures() -> dict[str, str | None]:
+    """Chaque mot et sa lecture en clair (`None` si le commentaire « dit : » manque)."""
+    return {mot: lecture for mot, _, lecture, _ in _lexemes()}
 
 
 def en_reserve() -> set[str]:
     """Les mots des règles qui attendent leur réplique."""
-    return {mot for mot, _, reserve in _lexemes() if reserve}
+    return {mot for mot, _, _, reserve in _lexemes() if reserve}
 
 
 def empreinte() -> str:
@@ -111,10 +132,11 @@ def touches(texte: str) -> list[str]:
 
 
 def entendu(texte: str) -> str:
-    """Ce que la voix dira — le texte après les règles. ⚠️ Une seule passe, la
-    première règle qui colle gagne : un alias ne se fait pas réécrire à son tour."""
+    """Ce que la voix dira, en clair — le texte après les règles, chaque mot remplacé par
+    sa lecture « dit : ». ⚠️ Une seule passe, la première règle qui colle gagne : une
+    lecture ne se fait pas réécrire à son tour. (ElevenLabs, lui, reçoit le phonème.)"""
     motif = _tout()
     if motif is None:
         return texte
-    alias = dict(regles())
-    return motif.sub(lambda m: alias[m.group(0)], texte)
+    lecture = lectures()
+    return motif.sub(lambda m: lecture[m.group(0)] or m.group(0), texte)

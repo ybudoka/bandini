@@ -7,7 +7,9 @@ toucher au texte qu'on lit. Ce qui peut s'y perdre sans que personne l'entende :
 - un lexique qu'ElevenLabs refuse (XML cassé, mauvais espace de noms) ;
 - une règle morte (le mot a quitté toutes les répliques) ou en double (seule
   la première compte : la seconde ment en silence) ;
-- une règle qui mord dans une balise de jeu (`[running]`) : v3 la lirait à voix haute.
+- une règle qui mord dans une balise de jeu (`[running]`) : v3 la lirait à voix haute ;
+- un phonème qui n'est pas de l'IPA (un `g` ou un `r` tapé au clavier) ou qui a perdu sa
+  lecture en clair (22 sept. 2026 : les règles passent de l'alias au phonème).
 """
 
 import json
@@ -31,17 +33,39 @@ def test_le_lexique_est_un_pls_qu_elevenlabs_lit():
     assert REGLES, "un dictionnaire sans règle"
 
 
-def test_chaque_regle_est_un_alias_complet():
-    """⚠️ Des alias, pas des phonèmes : l'alias marche avec tous les modèles (le
-    phonème IPA dépend du modèle), et il se relit sans connaître l'IPA."""
+#: L'IPA du français d'ici et de l'anglais qu'on y parle. ⚠️ Ni `g` ni `r` : le G de
+#: l'IPA est `ɡ` (U+0261), et le R d'ici est `ʁ` — une touche du clavier glissée dans un
+#: phonème est une faute de frappe, pas un son.
+IPA = set("abdefhijklmnopstuvwyzøŋœɑɔəɛɡɪʁʃʊʒɲɥʏ") | {"\u0303", "ː", "ˈ", "ˌ", ".", " "}
+
+
+def test_chaque_regle_est_un_phoneme_complet():
+    """⚠️ Des phonèmes IPA, plus des alias (Martin, 22 sept. 2026 : « ça marche bien »,
+    après « Deux piastres. » → pjɑs en v3). Un lexème = un grapheme puis un phonème, et
+    rien d'autre : un alias à côté laisserait ElevenLabs choisir."""
     racine = ET.parse(prononciation.FICHIER).getroot()
     for lexeme in racine.findall(f"{{{prononciation.ESPACE}}}lexeme"):
         enfants = [e.tag.split("}")[1] for e in lexeme]
-        assert enfants == ["grapheme", "alias"], f"un lexème = un grapheme puis un alias : {enfants}"
-    for mot, alias in REGLES:
+        assert enfants == ["grapheme", "phoneme"], f"un lexème = un grapheme puis un phonème : {enfants}"
+    for mot, phoneme in REGLES:
         assert mot and mot.strip() == mot, f"grapheme vide ou avec des blancs : {mot!r}"
-        assert alias and alias.strip() == alias, f"alias vide ou avec des blancs pour « {mot} »"
-        assert alias != mot, f"« {mot} » se remplace par lui-même"
+        assert phoneme and phoneme.strip() == phoneme, f"phonème vide ou avec des blancs pour « {mot} »"
+        etrangers = sorted(set(phoneme) - IPA)
+        assert not etrangers, f"« {mot} » → /{phoneme}/ : {etrangers} n'est pas de l'IPA d'ici"
+
+
+def test_chaque_phoneme_se_lit_en_clair():
+    """Personne ici ne relit l'IPA d'un coup d'œil : chaque règle garde, juste après elle,
+    le commentaire `<!-- dit : piasses -->`. Sans lui, une règle qui sonne mal ne se
+    retrouve plus dans le fichier."""
+    sans = [mot for mot, lecture in prononciation.lectures().items() if not lecture]
+    assert not sans, f"règles sans « {prononciation.MARQUE_LECTURE} » : {sans}"
+
+
+def test_les_phonemes_vont_a_un_modele_qui_les_lit():
+    """Le phonème dépend du modèle : eleven_v3 le lit, multilingual_v2 l'IGNORE (en
+    silence — la voix dirait « piastres »). Changer de modèle, c'est revenir aux alias."""
+    assert interpretation.MODELE == "eleven_v3"
 
 
 def test_aucune_regle_en_double():
@@ -68,7 +92,7 @@ def test_la_reserve_existe_et_ne_passe_pas_devant():
     """La réserve est la FIN du fichier : une règle dite qui la suivrait échapperait au
     juge ci-dessus. Et elle n'est pas vide — c'est elle qui sert les missions à venir."""
     lexemes = prononciation._lexemes()
-    drapeaux = [reserve for _, _, reserve in lexemes]
+    drapeaux = [reserve for _, _, _, reserve in lexemes]
     assert any(drapeaux), f"la marque « {prononciation.MARQUE_RESERVE} » manque"
     assert drapeaux == sorted(drapeaux), "une règle hors réserve après la marque"
 
@@ -94,7 +118,7 @@ def test_les_regles_prennent_des_mots_entiers():
     assert prononciation.entendu("Prenez donc la rue.") == "Prenez don la rue."
     assert prononciation.entendu("[running] Royal") == "[running] Royal"
     assert prononciation.entendu("l'inspectrice Roy.") == "l'inspectrice Roi."
-    # une seule passe : un alias n'est pas réécrit par une règle suivante
+    # une seule passe : une lecture n'est pas réécrite par une règle suivante
     assert prononciation.entendu("Astheure") == "Asteure"
 
 

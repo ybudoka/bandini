@@ -51,9 +51,9 @@ d'ElevenLabs. Un mot que la voix dit mal se corrige **sans toucher au texte** : 
 affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
 
 - **Les règles** vivent dans [`app/prononciation.pls`](../app/prononciation.pls) (format W3C
-  PLS, celui qu'ElevenLabs lit) : un `<grapheme>` (le mot tel qu'on l'écrit) et un `<alias>`
-  (l'orthographe qu'on veut entendre, en français). Un commentaire au-dessus de chaque règle
-  dit pourquoi elle est là.
+  PLS, celui qu'ElevenLabs lit) : un `<grapheme>` (le mot tel qu'on l'écrit), un `<phoneme>`
+  (le son qu'on veut entendre, en IPA : `pjɑs`) et, juste après, sa **lecture en clair**
+  (`<!-- dit : piasses -->`). Un commentaire au-dessus de chaque règle dit pourquoi elle est là.
 - **Ajouter une règle** : un `<lexeme>` de plus dans le `.pls`. ⚠️ Sensible à la **casse**
   (« Astheure » en tête de phrase est une deuxième règle), un mot **entier** seulement, et
   seule la **première** règle qui colle s'applique. Pas de `--` dans un commentaire XML (le
@@ -64,12 +64,18 @@ affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
   entend déjà (le juge l'exige : une faute de frappe dans le mot ne corrigerait rien, en silence) ;
   en dessous, **la réserve** — les mots que les prochaines missions diront sans doute (l'anglais du
   garage et de la rue, les contractions, les noms pas encore dits, `OK`, `Mme`, `10-4`). Une
-  réplique neuve qui dit « brakes » est donc déjà prononcée « brèques ». Un mot neuf qui sonne mal :
+  réplique neuve qui dit « brakes » est donc déjà prononcée « brèques » (`bʁek`). Un mot neuf qui sonne mal :
   sa règle va dans la réserve, ou au-dessus si une réplique le dit déjà.
 - **L'ordre compte** : une règle longue passe avant la courte qu'elle contient (« Ti-Guy » avant
   « Guy »), le juge y veille.
-- **Des alias, pas des phonèmes** : l'alias marche avec tous les modèles et se relit sans
-  connaître l'IPA ; le phonème dépend du modèle.
+- **Des phonèmes, plus des alias** (Martin, 22 sept. 2026, après un essai « Deux piastres. » →
+  `pjɑs` en v3 : « ça marche bien, je préfère que tu y ailles avec ça ») : le phonème dit le son
+  exact — l'affrication de « p'tit » (`ptsɪ`), le « gang » d'ici (`ɡɛŋ`) — là où l'alias passait
+  par une orthographe que le modèle relisait à sa façon. ⚠️ Il **dépend du modèle** : eleven_v3 le
+  lit, multilingual_v2 l'ignore en silence (un juge tient `interpretation.MODELE` à v3). Écrire
+  l'IPA d'ici : `ʁ` (jamais `r`), `ɡ` (U+0261, jamais le `g` du clavier), les voyelles relâchées
+  des syllabes fermées (`fʊl`, `ʃɪft`), `ts`/`dz` devant `i` et `y` ; le juge refuse un caractère
+  hors de l'IPA qu'on emploie, et une règle sans sa lecture « dit : ».
 - **Le téléversement** est automatique et gratuit : `scripts/audio_elevenlabs.py` compare
   l'empreinte du `.pls` à `app/prononciation.json` et en téléverse un neuf s'il a changé
   (chaque téléversement crée un nouveau dictionnaire chez ElevenLabs — committer le `.json`
