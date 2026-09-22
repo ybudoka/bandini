@@ -304,9 +304,19 @@ const Entites = (function () {
     // ⚠️ A L'EMPREINTE de son identifiant, JAMAIS `B.rng()` : un de de plus par naissance
     // decalerait tout ce que la ville tire ensuite. `swaps` suit la tenue : ce qui lit encore
     // ses couleurs (le cavalier d'une moto) le voit habille pareil.
-    const tenue = arch && arch.tenue ? arch.tenue
+    let tenue = arch && arch.tenue ? arch.tenue
       : (typeof Garderobe !== 'undefined' ? Garderobe.tirer(p.slug, hash2(e.id, 0x7e4e)) : null);
-    if (tenue) { e.tenue = tenue; e.swaps = Garderobe.couleurs(tenue); }
+    // ⚠️ Des COULEURS IMPOSEES sans tenue (un pilote d'avant la garde-robe, une robe que la
+    // mission choisit) : la tenue tiree les prend. Sans ca, celui qu'on jette de sa moto se
+    // relevait en quelqu'un d'autre.
+    const imposees = !!(tenue && !(arch && arch.tenue) && arch && arch.couleurs && archetype(p.slug) &&
+                        arch.couleurs !== archetype(p.slug).couleurs);
+    if (imposees) {
+      const c = arch.couleurs;
+      tenue = Object.assign({}, tenue, { couleur_haut: c.c || tenue.couleur_haut, cheveux: c.h || tenue.cheveux,
+                                         peau: c.s || tenue.peau, couleur_bas: c.p || tenue.couleur_bas });
+    }
+    if (tenue) { e.tenue = tenue; e.swaps = imposees ? arch.couleurs : Garderobe.couleurs(tenue); }
     // ⚠️ Une fille de la Brume TIENT SON COIN : sans poste, elle se remettait
     // a flaner comme n'importe qui au bout de dix secondes, et le seul indice
     // qui restait etait sa robe. On reconnait d'abord celle qui ATTEND.
@@ -1879,7 +1889,7 @@ const Entites = (function () {
     v.etat = 'roule';
     v.vole = true;
     const selle = SPRITES[v.sprite] && SPRITES[v.sprite].selle;
-    if (selle) v.pilote = { swaps: e.swaps };
+    if (selle) v.pilote = { swaps: e.swaps, tenue: e.tenue || null };
     v.sens = Monde.fleche(Math.floor(v.x / TT), Math.floor(v.y / TT)) || v.sens;
     v.alarme = 0;
     // ⚠️ La rue le voit partir — et c'est LUI la menace, pas le joueur. On

@@ -132,7 +132,10 @@ const Vehicules = (function () {
         // position par `hash2`. Un `B.rng()` ici decalait tout ce qui naissait
         // apres, et un juge de police voyait son auto-patrouille naitre ailleurs.
         const arch = Entites.archetypeDeRue(x, y, hash2(Math.round(x), Math.round(y)) / 4294967296);
-        v.pilote = arch ? { swaps: arch.couleurs } : null;
+        // Habille (`Garderobe`) des sa naissance sur la selle, a la meme empreinte : celui
+        // qu'on jette a terre se releve avec SA tenue (`Entites.creerPieton`, `arch.tenue`).
+        const tenue = arch && typeof Garderobe !== 'undefined' ? Garderobe.tirer(arch.slug, hash2(Math.round(y), Math.round(x))) : null;
+        v.pilote = arch ? { swaps: tenue ? Garderobe.couleurs(tenue) : arch.couleurs, tenue: tenue } : null;
       }
     }
     return v;
@@ -1601,7 +1604,7 @@ const Vehicules = (function () {
       // le sol.
       const arch = Entites.archetypeDeRue(v.x, v.y, hash2(Math.round(v.x), Math.round(v.y)) / 4294967296);
       const cycliste = Entites.creerPieton(v.x, v.y + 10,
-        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
       v.pilote = null;
       cycliste.etat = 'temoin'; cycliste.menace = j; cycliste.minuterie = 600; cycliste.cri = 120;
       cycliste.recul = 14; cycliste.vx = 0; cycliste.vy = 1.5;
@@ -1619,7 +1622,7 @@ const Vehicules = (function () {
       // le voleur d'une moto — reste un passant de la rue.
       const arch = v.pilote && v.pilote.arch ? Entites.archetype(v.pilote.arch) : Entites.archetypeDeRue();
       const victime = Entites.creerPieton(v.x + Math.cos(v.angle + Math.PI / 2) * 14, v.y + Math.sin(v.angle + Math.PI / 2) * 14,
-        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps }) : arch);
+        v.pilote && v.pilote.swaps ? Object.assign({}, arch, { couleurs: v.pilote.swaps, tenue: v.pilote.tenue || null }) : arch);
       v.pilote = null;
       victime.etat = 'temoin'; victime.menace = j; victime.minuterie = 600; victime.cri = 120;
       crime = 'carjacking'; vu = true;
