@@ -50,6 +50,27 @@ def jouer(banc, corps):
 # --- Le catalogue ---------------------------------------------------------------
 
 
+#: Un chat, posé et laissé confiant — pour les scénarios qui n'ont besoin que de LUI,
+#: pas de tout l'appareil de `test_betes_js.py`. ⚠️ Elle cherche son coin comme
+#: `Entites.chezElle` le veut (le chat vit dans les ruelles) : un `devant('chat')`
+#: sur `L.B.entites` ne trouverait jamais rien, les bêtes vivent dans `L.B.betes`.
+CHAT = """
+    function unChat() {
+        for (const e of L.Entites.betes()) L.Entites.retirer(e);
+        const c = L.Monde.carte, TT = L.TT;
+        for (let ty = 4; ty < c.h - 4; ty++) for (let tx = 4; tx < c.w - 4; tx++) {
+            if (!L.Entites.chezElle('chat', tx, ty)) continue;
+            j.x = tx * TT + 8 + 300; j.y = ty * TT + 8;
+            L.Monde.centrerCamera(j.x, j.y); L.Entites.indexer();
+            for (let i = 0; i < 400 && !L.Entites.betes().filter(function (e) { return e.espece === 'chat'; }).length; i++) o.frame(1);
+            const vus = L.Entites.betes().filter(function (e) { return e.espece === 'chat'; });
+            if (vus.length) return vus[0];
+        }
+        return null;
+    }
+"""
+
+
 def test_le_catalogue_ne_promet_rien_qui_n_existe_pas(banc, racine):
     """Chaque décor nommé existe dans `DECORS`, chaque pose de siège est dessinée."""
     noms = set()
@@ -338,6 +359,49 @@ def test_la_borne_s_ouvre_a_la_main_on_s_y_rafraichit_et_on_la_ferme(banc):
     assert r["inviteOuverte"] == c["invite_fermer"]
     assert r["dedans"] > r["dehors"], "on se rafraichit dans la gerbe"
     assert r["fermee"], "ACTION referme la borne"
+
+
+# --- Le chat -------------------------------------------------------------------------
+
+
+def test_on_caresse_le_chat_confiant_et_ca_ne_rapporte_rien(banc):
+    """⚠️ La confiance (`Entites.majBete`, `pietons.BETES["chat"]["confiance_px"]`) est
+    jugée à part, au banc des bêtes (`test_betes_js.py`) — ici, seulement le bouton :
+    ACTION près d'un chat confiant caresse, ne fait rien perdre ni gagner, et le chat
+    ne fuit pas pour autant (`utiliserSurLesBetes`, avant le décor, après le bouclier)."""
+    r = jouer(banc, CHAT + """
+        const chat = unChat();
+        if (!chat) return { pasDeChat: true };
+        // Dans la fenêtre jouable : au-delà de `confiance_px` (il ne fuit pas), en
+        // deçà de `portee_px` du geste (assez près pour la main).
+        const c = L.B.defs.pietons.betes.chat, ca = L.B.defs.interactions.caresser;
+        j.x = chat.x + (c.confiance_px + ca.portee_px) / 2; j.y = chat.y;
+        j.arme = 'poings'; L.Monde.centrerCamera(j.x, j.y); nettoyer(); o.frame(2);
+        const inviteAvant = invite();
+        const avant = { vie: j.vie, argent: p.argent, endurance: j.endurance };
+        o.tape('KeyE');
+        const apres = { vie: j.vie, argent: p.argent, endurance: j.endurance, msg: L.B.msg, fuite: chat.fuite > 0 };
+        return { pasDeChat: false, inviteAvant: inviteAvant, avant: avant, apres: apres };
+    """)
+    assert not r["pasDeChat"], "la ville n'a pas de chat auquel s'approcher"
+    assert r["inviteAvant"] == interactions.CARESSER["invite"]
+    assert r["apres"]["msg"] in interactions.CARESSER["mots"], "caresser dit un des mots du catalogue"
+    assert r["apres"]["vie"] == r["avant"]["vie"], "caresser ne rend ni ne coûte de PV"
+    assert r["apres"]["argent"] == r["avant"]["argent"], "caresser ne rapporte pas un sou"
+    assert r["apres"]["endurance"] == r["avant"]["endurance"], "caresser ne rend pas de souffle"
+    assert not r["apres"]["fuite"], "le chat qu'on vient de caresser ne détale pas"
+
+
+def test_loin_du_chat_ACTION_ne_caresse_rien(banc):
+    r = jouer(banc, CHAT + """
+        const chat = unChat();
+        if (!chat) return { pasDeChat: true };
+        j.x = chat.x + 200; j.y = chat.y; j.arme = 'poings';
+        L.Monde.centrerCamera(j.x, j.y); nettoyer(); o.frame(2);
+        return { pasDeChat: false, invite: invite() };
+    """)
+    assert not r["pasDeChat"], "la ville n'a pas de chat auquel s'approcher"
+    assert r["invite"] != interactions.CARESSER["invite"], "un chat à 200 px n'est pas sous la main"
 
 
 # --- Les gens ------------------------------------------------------------------------

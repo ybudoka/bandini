@@ -72,6 +72,17 @@ const Interactions = (function () {
     }) || null;
   }
 
+  /** Le chat CONFIANT à portée de main : `Entites.majBete` pose `e.confiance`
+      (au pas, sans arme, sans char) — ici, on ne fait que le lire et mesurer
+      la distance de la main, pas celle de la fuite. `!e.fuite` : un chat qui
+      détale encore n'est pas un chat qu'on caresse. */
+  function chatSousLaMain(j) {
+    const c = cfg().caresser;
+    return Entites.betes().find(function (e) {
+      return e.espece === c.espece && e.confiance && !e.fuite && dist2(j.x, j.y, e.x, e.y) < c.portee_px * c.portee_px;
+    }) || null;
+  }
+
   function mot(liste) { return liste[Math.floor(B.rng() * liste.length)]; }
 
   function donnerUnPourboire(j, artiste) {
@@ -110,6 +121,20 @@ const Interactions = (function () {
     j.animT = 12; j.animType = 'ramasse';
     if (sou > 0) { t.argent -= sou; Missions.encaisser(sou, 'PHOTO'); }
     else Son.SFX.ramasse();
+    return true;
+  }
+
+  /** Caresser le chat : rien à gagner, juste un mot au HUD et une pause — le seul
+      des huit gestes qui ne rapporte rien. ⚠️ Un `Hud.message`, pas une bulle : les
+      bêtes vivent dans `B.betes` (pas `B.entites`), et `dessinerBetes` ne dessine
+      aucune bulle — en poser une ne se serait jamais vue. Il s'assoit comme il le
+      fait déjà entre deux pas (`e.humeur = 'pose'`), le temps qu'on le flatte. */
+  function caresserLeChat(j, chat) {
+    const c = cfg().caresser;
+    chat.humeur = 'pose'; chat.vx = 0; chat.vy = 0; chat.minuterie = 90;
+    Hud.message(mot(c.mots));
+    j.animT = 20; j.animType = 'ramasse';
+    Son.SFX.ramasse();
     return true;
   }
 
@@ -354,6 +379,20 @@ const Interactions = (function () {
     return false;
   }
 
+  /** Une bête confiante — le chat qui se laisse approcher. Ni un décor (elle bouge,
+      elle vit dans `B.betes`), ni des gens (`Combat.otageSousLaMain` ne la voit
+      jamais) : sa propre place dans la chaîne, entre les deux — après le bouclier
+      humain (ce n'est jamais une prise d'otage), avant le décor (elle ne lui vole
+      rien, il n'y a rien d'autre à caresser sous la main en même temps). */
+  function utiliserSurLesBetes(j) {
+    if (j && j.gesteT === B.t) return true;
+    if (!peutAgir(j)) return false;
+    const chat = chatSousLaMain(j);
+    if (!chat) return false;
+    j.gesteT = B.t;
+    return caresserLeChat(j, chat);
+  }
+
   /** Après tout le reste : le décor. */
   function utiliserSurLeDecor(j) {
     if (j && j.gesteT === B.t) return true;
@@ -374,6 +413,11 @@ const Interactions = (function () {
     if (artisteSousLaMain(j)) return c.pourboire.invite + ' — ' + c.pourboire.montant + ' $';
     if (touristeSousLaMain(j)) return c.photo.invite;
     return null;
+  }
+
+  function inviteBetes(j) {
+    if (!peutAgir(j)) return null;
+    return chatSousLaMain(j) ? cfg().caresser.invite : null;
   }
 
   function inviteDecor(j) {
@@ -408,6 +452,7 @@ const Interactions = (function () {
     for (const k in fontaines) delete fontaines[k];
   }
 
-  return { peutAgir, artisteSousLaMain, touristeSousLaMain, decorSousLaMain, utiliserSurLesGens, utiliserSurLeDecor,
-           inviteGens, inviteDecor, majAssis, seLever, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
+  return { peutAgir, artisteSousLaMain, touristeSousLaMain, chatSousLaMain, decorSousLaMain,
+           utiliserSurLesGens, utiliserSurLesBetes, utiliserSurLeDecor,
+           inviteGens, inviteBetes, inviteDecor, majAssis, seLever, maj, oublier, fouilleDuJour, fontaineSeche, jetDe };
 })();

@@ -1801,6 +1801,12 @@ const Entites = (function () {
   function emporterLeChar(e, v) {
     const f = B.defs.pietons.vol_de_char;
     v.conducteur = 'trafic';
+    // ⚠️ IL PART D'UN STATIONNEMENT, PAS D'UN RAIL : tant qu'il n'a pas
+    // rejoint une tuile de la voirie, `avancer` (collision aux tuiles) le
+    // conduit au lieu du saut en ligne droite du trafic sur rails — sinon
+    // il traverse tout ce qui se trouve entre sa place et la rue (`maj`,
+    // Vehicules).
+    v.horsReseau = true;
     v.etat = 'roule';
     v.vole = true;
     const selle = SPRITES[v.sprite] && SPRITES[v.sprite].selle;
@@ -1990,7 +1996,15 @@ const Entites = (function () {
     // ⚠️ ELLE PART AVANT QU'ON LA TOUCHE. Un char qui fonce compte double : ce
     // qui arrive vite se voit venir de plus loin.
     const menace = j.dansVehicule ? j.dansVehicule : j;
-    const portee = fiche.fuite_px * (j.dansVehicule ? 1.6 : 1);
+    // ⚠️ LA CONFIANCE DU CHAT (`confiance_px`, 2e vague, 22 sept. 2026) : au pas, sans
+    // arme, sans char — un chat laisse approcher bien plus près, assez pour le caresser
+    // (`Interactions.caresserSousLaMain`). Courir (`Entree.bas('esquive')`), sortir une
+    // arme ou monter en char, et il redevient aussi farouche qu'avant. `e.confiance` est
+    // lu par `Interactions` : ce n'est confiant que si la bête ET la portée le disent —
+    // s'approcher DOUCEMENT d'un goéland ne le rend pas plus caressable, il n'a pas la clé.
+    e.confiance = fiche.confiance_px !== undefined && menace === j
+      && (!j.arme || j.arme === 'poings') && !Entree.bas('esquive');
+    const portee = (e.confiance ? fiche.confiance_px : fiche.fuite_px) * (j.dansVehicule ? 1.6 : 1);
     if (dist2(e.x, e.y, menace.x, menace.y) < portee * portee) { sEnvoler(e, fiche, menace); return; }
     if (--e.minuterie > 0) { avancerLaBete(e, fiche); return; }
     // Elle change d'idee : elle se pose, ou elle fait quelques pas.

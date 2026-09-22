@@ -302,6 +302,9 @@ const Missions = (function () {
     if (typeof Interactions !== 'undefined' && Interactions.utiliserSurLesGens(j)) return true;
     const otage = Combat.otageSousLaMain(j);
     if (otage) return Combat.viserOtage(j);
+    // Une bete confiante (le chat) : jamais une prise d'otage, jamais un decor — sa
+    // propre place, entre le bouclier et le decor (`Interactions.utiliserSurLesBetes`).
+    if (typeof Interactions !== 'undefined' && Interactions.utiliserSurLesBetes(j)) return true;
     // ⚠️ LE DECOR EN TOUT DERNIER : un banc, un bac, une fontaine ne volent ACTION ni a
     // une personne, ni a la porte, l'arme par terre ou le char d'a cote (`Interactions`
     // les ecarte lui-meme : ils sont servis par l'appelant, APRES nous).
@@ -2753,6 +2756,9 @@ const Missions = (function () {
     // qui demande qu'on insiste sans le dire n'est pas un bouton qui resiste,
     // c'est un bouton brise. Le HUD la remplit pendant qu'on insiste.
     if (Combat.otageSousLaMain(j)) { B.invite = 'BOUCLIER HUMAIN — TENIR'; return; }
+    // Une bete confiante, avant le decor — meme ordre que dans `interagir`.
+    const betes = typeof Interactions !== 'undefined' ? Interactions.inviteBetes(j) : null;
+    if (betes) { B.invite = betes; return; }
     // Le decor, en dernier — comme dans `interagir` (la porte, l'arme et le char ont deja repondu).
     const decor = typeof Interactions !== 'undefined' ? Interactions.inviteDecor(j) : null;
     if (decor) B.invite = decor;

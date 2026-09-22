@@ -587,6 +587,13 @@ ENFANTS_A_VELO: dict = {
 #: plus grande que tout ce qui pourrait les atteindre. C'est ce qui evite
 #: d'avoir a repondre a la question « que se passe-t-il si je lui roule
 #: dessus » — on n'y arrive pas.
+#:
+#: ⚠️ **LE CHAT SEUL A UNE CONFIANCE** (`confiance_px`, deuxieme vague, 22 sept.
+#: 2026, § « caresser le chat ») : marcher doucement (pas de sprint) et sans
+#: arme fait tomber sa distance de fuite a celle-la, assez pres pour le
+#: caresser (`interactions.CARESSER`). Courir ou sortir une arme, et il
+#: redevient farouche — `fuite_px`, comme avant. Le goeland n'a pas cette cle :
+#: il reste farouche, et c'est voulu (fiche de la 2e vague).
 BETES: dict = {
     "goeland": {
         "combien": 6,            # au plus, dans la bulle du joueur
@@ -601,6 +608,12 @@ BETES: dict = {
     "chat": {
         "combien": 3,
         "fuite_px": 74,
+        # ⚠️ Approché doucement, sans arme : il ne fuit plus qu'à CETTE distance —
+        # et il faut donc qu'elle reste NETTEMENT sous la portée d'ACTION
+        # (`interactions.CARESSER["portee_px"]`, 22 px), sinon la fenêtre où l'on
+        # est assez près pour caresser SANS avoir déjà fait fuir est trop
+        # étroite pour un joueur (mesuré : 20 laissait 2 px, injouable).
+        "confiance_px": 16,
         "detale_images": 120,
         "detale_vitesse": 2.6,
         "pas": 0.5,

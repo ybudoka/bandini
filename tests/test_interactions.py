@@ -15,10 +15,11 @@ from app import carte, definitions, interactions, missions
 
 def _mots_affiches():
     """Tous les mots que la ville écrit ou dit : invites, refus, messages, répliques."""
-    a, f, b, bb, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
-                              interactions.BARBECUE, interactions.BORNE, interactions.POURBOIRE, interactions.PHOTO)
+    a, f, b, bb, ca, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
+                                  interactions.BARBECUE, interactions.CARESSER, interactions.BORNE,
+                                  interactions.POURBOIRE, interactions.PHOTO)
     mots = [a["invite"], *a["refus"].values(), f["invite"], f["deja"], *(t["texte"] for t in f["trouvailles"].values()),
-            b["invite"], b["encore"], b["message"], bb["invite"], bb["deja"], bb["message"],
+            b["invite"], b["encore"], b["message"], bb["invite"], bb["deja"], bb["message"], ca["invite"], *ca["mots"],
             bo["invite_ouvrir"], bo["invite_fermer"], p["invite"], ph["invite"], *ph["merci"]]
     for liste in p["merci"].values():
         mots.extend(liste)
@@ -27,7 +28,7 @@ def _mots_affiches():
 
 def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     exporte = interactions.exporter()
-    assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "borne", "pourboire", "photo"}
+    assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "caresser", "borne", "pourboire", "photo"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
     assert definitions.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 
@@ -114,6 +115,35 @@ def test_le_pourboire_et_la_photo_restent_des_gestes_de_rue():
     assert ph["pose_images"] >= 30, "le temps d'un flash"
 
 
+def test_caresser_le_chat_ne_rapporte_rien():
+    """⚠️ Le seul des huit gestes sans PV, sans souffle, sans argent : `pietons.BETES` et
+    `Entites.majBete` décident déjà qui laisse approcher (le chat, pas le goéland) — ici,
+    seulement l'invite et ce qu'on dit."""
+    from app import pietons
+
+    c = interactions.CARESSER
+    assert c["espece"] == "chat"
+    assert not (set(c) & {"pv", "souffle", "argent", "montant"}), "caresser ne devrait rien rapporter"
+    assert len(c["mots"]) >= 2, "toujours le même mot serait une bête muette"
+    assert "confiance_px" in pietons.BETES["chat"], "rien ne laisse approcher le chat sans cette clé"
+    assert "confiance_px" not in pietons.BETES["goeland"], "le goéland doit rester farouche (fiche de la 2e vague)"
+    assert pietons.BETES["chat"]["confiance_px"] < pietons.BETES["chat"]["fuite_px"], \
+        "la confiance doit laisser approcher PLUS PRÈS que la fuite normale"
+    # ⚠️ La fenêtre où l'on est confiant assez pour ne pas fuir ET assez près pour
+    # `Interactions.caresserSousLaMain` (`c["portee_px"]`) doit être JOUABLE — quelques
+    # pixels de marge, pas deux : un chat qui fuit pile à la portée du bouton ne se
+    # caresse jamais (mesuré : `confiance_px` à 20 px pour un `portee_px` de 22 ne
+    # laissait que 2 px).
+    from app import armes
+
+    marge = c["portee_px"] - pietons.BETES["chat"]["confiance_px"]
+    assert marge >= 5, f"seulement {marge} px entre la fuite et la portée d'ACTION : injouable"
+    # Et l'inverse tient toujours : même confiant, un poing ne l'atteint pas.
+    poings = armes.par_slug("poings")
+    assert pietons.BETES["chat"]["confiance_px"] > poings["portee"], \
+        "confiant, le chat resterait quand même à portée d'un poing"
+
+
 def test_les_mots_de_la_ville_sont_ecrits_pour_la_police_pixel():
     """La police du jeu ne sait que les majuscules : une invite en minuscules se dessinerait en
     majuscules quand même, mais un mot à peine écrit trahit un texte oublié."""
@@ -123,7 +153,7 @@ def test_les_mots_de_la_ville_sont_ecrits_pour_la_police_pixel():
         assert texte == texte.upper() and texte.strip() == texte and texte, "un mot mal ecrit : %r" % texte
 
 
-@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "barbecue", "borne"])
+@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "barbecue", "caresser", "borne"])
 def test_une_portee_de_geste_est_celle_d_une_main(nom):
     portee = interactions.exporter()[nom]["portee_px"]
     assert 16 <= portee <= 32, "%s : %s px ne se prend pas d'une main" % (nom, portee)

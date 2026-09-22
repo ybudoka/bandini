@@ -37,14 +37,9 @@ joue et ne garde aucun nombre.
 
 ## Fiche de la deuxième vague
 
-**Ce qui reste, et pourquoi la première vague ne l'a pas pris** — deux gestes ont été écartés
-**exprès**, parce que chacun demande de toucher à un mécanisme qui n'est pas le sien :
+**Ce qui reste, et pourquoi la première vague ne l'a pas pris** — un geste a été écarté
+**exprès**, parce qu'il demande de toucher à un mécanisme qui n'est pas le sien :
 
-- **Caresser le chat des ruelles** — le chat **fuit à 74 px** (`pietons.BETES.chat.fuite_px`) et le
-  bras d'ACTION porte à 22 : on n'atteint jamais un chat. Il faut une **confiance** (un chat qui
-  laisse approcher qui marche doucement et sans arme) dans `Entites.majBete`, ce qui change le
-  juge des bêtes (`test_betes_js.py` : « elle part avant qu'on la touche »). Le goéland,
-  lui, doit rester farouche.
 - **Se cacher dans un buisson** (186 dans la ville, `casse: 0.9`, non solides) — le geste est
   facile ; l'**effet** ne l'est pas : `Police.voit(agent, x, y)` ne sait pas qui il regarde, il
   faudrait qu'il reconnaisse le joueur caché et réduise sa portée. C'est de l'équilibrage de la
@@ -58,14 +53,42 @@ panneau.
 
 ## Notes
 
+✅ **2e vague, deuxième geste : caresser le chat** (22 sept. 2026).
+
+- **Le chat SEUL a une confiance** (`pietons.BETES["chat"]["confiance_px"]`, 16 px) : au pas
+  (pas d'`esquive` tenue), sans arme (`j.arme` à `'poings'` ou vide — ⚠️ `'poings'` est la
+  valeur du joueur au repos, pas une chaîne vide : un premier `!j.arme` seul aurait laissé la
+  confiance ne jamais s'activer), `Entites.majBete` réduit son `fuite_px` (74) à cette
+  distance-là. Sprinter, sortir une arme ou monter en char, et il redevient aussi farouche que
+  le goéland — qui n'a jamais cette clé (`test_interactions.py`).
+- ⚠️ **LA FENÊTRE ÉTAIT TROP ÉTROITE POUR ÊTRE JOUABLE, ET LE PREMIER CHIFFRE LE PROUVAIT** :
+  `confiance_px` à 20 px pour une portée d'ACTION (`interactions.CARESSER["portee_px"]`) de
+  22 px ne laissait que 2 px entre « il fuit encore » et « trop loin pour caresser ». Ramené à
+  16 px (6 px de marge), avec un juge qui verrouille la marge (≥ 5 px) pour que ça ne se reproduise
+  pas — et l'inverse tient toujours : même confiant, 16 px reste au-dessus des 12 px d'un poing
+  (`armes.par_slug("poings")`), l'invariant « on ne touche jamais une bête » ne bouge pas.
+- **Le geste** (`interactions.CARESSER`, `Interactions.caresserLeChat`) : sa propre place dans la
+  chaîne d'ACTION — ni les gens (`Combat.otageSousLaMain` ne voit jamais une bête), ni le décor
+  (elle bouge, elle vit dans `B.betes` pas `B.entites`) — entre le bouclier humain et le décor.
+  ⚠️ **Le seul des huit gestes qui ne rapporte rien** : pas de PV, pas de souffle, pas d'argent,
+  juste un mot au HUD (`Hud.message`, pas une bulle — `dessinerBetes` n'en dessine aucune, en
+  poser une par `Entites.bulle` ne se serait jamais vue).
+- **Juges** (`test_interactions.py`, `test_interactions_js.py`, `test_betes_js.py`) : le chat ne
+  rapporte rien, la marge jouable et l'invariant du poing sont verrouillés ; au banc : au pas et
+  sans arme il laisse approcher (mutation vérifiée rouge — confiance forcée à faux), au sprint ou
+  armé il fuit comme avant, ACTION près d'un chat confiant caresse sans rien gagner ni perdre et
+  sans le faire fuir (mutation vérifiée rouge sur `utiliserSurLesBetes`), et loin d'un chat ACTION
+  ne caresse rien.
+- **Restent** : le buisson, l'affiche arrachée, le parcomètre, le caddie, le panneau.
+
 ✅ **2e vague, premier geste : manger au barbecue** (22 sept. 2026).
 
 - **Pourquoi celui-là en premier** : le seul des six restants qui n'a besoin d'aucune place
   neuve en ville — `bbq` existe déjà (`carte.DECOR_SOLIDE`, posé devant les maisons de
-  banlieue, `poser_decor("bbq", x, y)`), juste jamais servi. Le chat (une confiance à
-  écrire, `pietons.BETES.chat.fuite_px`) et le buisson (`Police.voit` à équilibrer,
-  M11) demandent tous deux de toucher un mécanisme qui n'est pas le sien ; l'affiche
-  arrachée attend d'abord un plafond. Ceux-là restent.
+  banlieue, `poser_decor("bbq", x, y)`), juste jamais servi. Le chat suit juste après (une
+  confiance à écrire, voir plus haut) ; le buisson (`Police.voit` à équilibrer, M11) demande
+  de toucher un mécanisme qui n'est pas le sien, et l'affiche arrachée attend d'abord un
+  plafond — ceux-là restent.
 - **Le geste** (`interactions.BARBECUE`, `Interactions.manger`) : la même route que `boire` —
   8 PV, 15 de souffle (`Missions.soigner`/`nourrir`), une fois par jour et par barbecue
   (la même case `partie.fouilles`, préfixée `bbq:` pour ne jamais collider avec une poubelle
@@ -78,7 +101,8 @@ panneau.
   d'une main ; au banc : on mange, une fois par jour (mutation vérifiée rouge sur le vrai
   garde — `refus`, pas la porte de secours redondante dans `manger()`, la même que
   `fouiller`/`boire` portent déjà), et manger à pleine vie ne fait pas déborder la barre.
-- **Restent** : le chat, le buisson, l'affiche arrachée, le parcomètre, le caddie, le panneau.
+- **Restent** (au moment de cette livraison) : le chat, le buisson, l'affiche arrachée, le
+  parcomètre, le caddie, le panneau — le chat est livré juste au-dessus, à sa suite.
 
 ✅ **Livré** (21 sept. 2026), première vague : les six gestes, sans un son neuf.
 

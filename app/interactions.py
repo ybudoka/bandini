@@ -1,6 +1,6 @@
-"""Ce que ACTION fait devant le décor et devant ceux qui travaillent dans la rue (P4).
+"""Ce que ACTION fait devant le décor, les bêtes et ceux qui travaillent dans la rue (P4).
 
-Sept gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
+Huit gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
 tout le reste) et on appuie.
 
 - **s'asseoir** sur un banc : le souffle revient, les forces un peu, la première
@@ -11,6 +11,10 @@ tout le reste) et on appuie.
 - **manger au barbecue** (deuxième vague, 22 sept. 2026) — un décor déjà posé
   devant les maisons de banlieue, jamais encore servi : quelques PV et un peu
   de souffle, une fois par jour et par barbecue, toujours sous le hot-dog acheté ;
+- **caresser le chat** (deuxième vague, 22 sept. 2026) — une BÊTE, pas un décor
+  ni un passant : il laisse approcher qui marche doucement et sans arme
+  (`pietons.BETES["chat"]["confiance_px"]`), au lieu de s'envoler à 74 px. Ne
+  rapporte rien — c'est le seul geste qui ne rapporte rien ;
 - **ouvrir la borne-fontaine** : la gerbe que la ville connaît déjà quand un char
   défonce une borne, mais à la main — on s'y rafraîchit ;
 - **un pourboire** à l'artiste de rue : la pièce change vraiment de poche ;
@@ -142,6 +146,21 @@ BARBECUE: dict = {
     "souffle": 15,
 }
 
+# --- Caresser le chat -------------------------------------------------------------
+
+#: ⚠️ **AUCUN NOMBRE, ET C'EST VOULU** (deuxième vague, 22 sept. 2026) : pas de PV,
+#: pas de souffle, pas d'argent — on ne caresse pas un chat pour en tirer quelque
+#: chose, c'est le seul des sept gestes qui ne rapporte RIEN. Ce qui le rend
+#: possible vit dans `pietons.BETES["chat"]["confiance_px"]` (marcher doucement,
+#: sans arme, laisse approcher) et `Entites.majBete` (JS) : ici, seulement
+#: l'invite et le mot dit.
+CARESSER: dict = {
+    "invite": "CARESSER",
+    "espece": "chat",
+    "portee_px": PORTEE_PX,
+    "mots": ("RONRON", "MIAOU", "IL SE FROTTE CONTRE TOI"),
+}
+
 # --- La borne-fontaine -----------------------------------------------------------
 
 BORNE: dict = {
@@ -200,6 +219,7 @@ def exporter() -> dict:
                                      for s, t in FOUILLER["trouvailles"].items()}},
         "boire": {**BOIRE, "decors": list(BOIRE["decors"])},
         "barbecue": {**BARBECUE, "decors": list(BARBECUE["decors"])},
+        "caresser": {**CARESSER, "mots": list(CARESSER["mots"])},
         "borne": {**BORNE, "decors": list(BORNE["decors"])},
         "pourboire": {**POURBOIRE, "metiers": list(POURBOIRE["metiers"]),
                       "merci": {m: list(mots) for m, mots in POURBOIRE["merci"].items()}},
