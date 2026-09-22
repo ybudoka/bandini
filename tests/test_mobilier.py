@@ -132,6 +132,13 @@ def test_le_mobilier_ne_ferme_aucun_passage(villes):
         return vus
 
     pris = {(d["x"], d["y"]) for d in ajoutes}
+    # ⚠️ Et les abribus qui ont GLISSÉ (`devants._deplacer_les_arrets`, 22 sept. 2026) : l'arrêt qui
+    # collait un lieu de mission cherche une place où il ne touche aucun meuble — sans les arbres de
+    # rue, il la trouve plus tôt sur sa voie. Sa tuile et celle de son banc sont OCCUPÉES, pas un
+    # passage fermé ; le juge de ce qu'un arrêt a le droit de couper est `mobilier._ne_coupe_rien`.
+    abris = {*autobus.ABRIS.values(), *autobus.BANCS.values()}
+    pris |= ({(d["x"], d["y"]) for d in avec["decor"] if d["type"] in abris}
+             - {(d["x"], d["y"]) for d in sans["decor"] if d["type"] in abris})
     perdus = (atteignables(sans) - pris) - atteignables(avec)
     assert not perdus, f"{len(perdus)} tuiles qu'on n'atteint plus à pied, dont {sorted(perdus)[:4]}"
 

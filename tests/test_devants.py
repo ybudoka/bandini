@@ -9,18 +9,19 @@ tuiles dans l'axe, une de chaque cote, et plus large encore devant un lieu de mi
 tient l'autre moitie de la promesse : on DEPLACE, on ne re-tire pas la ville.
 """
 
+from collections import Counter
 from functools import lru_cache
 from unittest import mock
 
 import pytest
 
-from app import carte, chantiers, devants
+from app import autobus, carte, chantiers, devants, missions
 
 GRAINES = [carte.GRAINE, 1, 2, 7]
 
 #: Ce que le deplacement ne doit JAMAIS toucher : le sol, les rues, les portes, et tout ce
 #: qui s'est pose apres le decor.
-INTACT = ("sol", "voie", "portes", "devantures", "residences", "lampes", "rampes", "autobus",
+INTACT = ("sol", "voie", "portes", "devantures", "residences", "lampes", "rampes",
           "metro", "eboueurs", "paquets", "graffitis", "barrieres", "zones",
           "points_interet", "interieurs", "arrets", "intersections", "portes_garage")
 
@@ -94,10 +95,17 @@ def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
         assert [{k: v for k, v in o.items() if k != "ecartee"} for o in avec[cle]] == sans[cle], \
             f"« {cle} » n'a plus la meme longueur ou le meme ordre"
 
+    # ⚠️ Les autobus : un arrêt qui collait la porte d'un lieu de mission GLISSE le long de sa voie,
+    # son abri et son banc avec lui (`_deplacer_les_arrets`) — rien d'autre des lignes ne bouge.
+    glisses = _glissements(sans, avec)
+    abris_et_bancs = {(t, x, y) for g in glisses for t, x, y in g["partis"] | g["arrives"]}
+
     larges, _ = devants.devants(avec)
     avant = {(d["type"], d["x"], d["y"]) for d in sans["decor"]}
     apres = {(d["type"], d["x"], d["y"]) for d in avec["decor"]}
-    partis, arrives = avant - apres, apres - avant
+    partis, arrives = avant - apres - abris_et_bancs, apres - avant - abris_et_bancs
+    assert {t for g in glisses for t in g["partis"]} <= avant - apres, "un abribus a glissé sans partir"
+    assert {t for g in glisses for t in g["arrives"]} <= apres - avant, "un abribus a glissé sans arriver"
     for type_, x, y in partis:
         assert type_ in devants.DECOR_MOBILE and (x, y) in larges, f"{type_} {x},{y} n'avait pas a partir"
     for type_, x, y in arrives:
@@ -124,6 +132,121 @@ def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
         for o in avec[cle]:
             touche = any((o["x"] + i, o["y"] + j) in larges for i in range(o["l"]) for j in range(o["h"]))
             assert bool(o.get("ecartee")) == touche, f"{cle} {o['x']},{o['y']} : ecartee = {o.get('ecartee')}, touche = {touche}"
+
+
+def _banc(ville: dict, rang: int) -> tuple[int, int] | None:
+    """Le banc d'un arrêt : à côté de son abri, le long de la voie, et tourné comme lui."""
+    a = autobus.detail(ville, rang)
+    dx, dy = autobus.PAS[a["sens"]]
+    ax, ay = a["abri"]
+    bancs = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] == autobus.BANCS[a["sens"]]}
+    return next((b for b in ((ax - dx, ay - dy), (ax + dx, ay + dy)) if b in bancs), None)
+
+
+def _glissements(sans: dict, avec: dict) -> list[dict]:
+    """Les arrêts qui ont glissé d'une ville à l'autre — et le juge de ce qu'un glissement a le droit
+    de changer : rien des lignes que l'indice de CET arrêt, décalé d'autant de tuiles qu'il a glissé
+    sur sa voie ; son nom ne change pas, ni sa flèche."""
+    assert len(sans["autobus"]["arrets"]) == len(avec["autobus"]["arrets"])
+    for cle in sans["autobus"]:
+        if cle not in ("arrets", "lignes"):
+            assert sans["autobus"][cle] == avec["autobus"][cle], f"« autobus.{cle} » a changé"
+    glisses, decalages = [], {}
+    for rang, (a, b) in enumerate(zip(sans["autobus"]["arrets"], avec["autobus"]["arrets"])):
+        assert a["nom"] == b["nom"], f"l'arrêt {rang} a changé de nom : {a['nom']} -> {b['nom']}"
+        if (a["x"], a["y"]) == (b["x"], b["y"]):
+            continue
+        da, db = autobus.detail(sans, rang), autobus.detail(avec, rang)
+        assert da["sens"] == db["sens"], f"{a['nom']} a changé de voie"
+        dx, dy = autobus.PAS[da["sens"]]
+        k = (b["x"] - a["x"]) * dx + (b["y"] - a["y"]) * dy
+        assert (b["x"], b["y"]) == (a["x"] + dx * k, a["y"] + dy * k), f"{a['nom']} a quitté sa voie"
+        assert 1 <= abs(k) <= devants.PORTEE_D_UN_ARRET, f"{a['nom']} a glissé de {k} tuiles"
+        ancien_banc, nouveau_banc = _banc(sans, rang), _banc(avec, rang)
+        assert (ancien_banc is None) == (nouveau_banc is None), f"{a['nom']} a perdu ou gagné son banc"
+        decalages[rang] = k
+        glisses.append({
+            "nom": a["nom"], "k": k, "avant": da, "apres": db,
+            "partis": {(autobus.ABRIS[da["sens"]], *da["abri"])}
+            | ({(autobus.BANCS[da["sens"]], *ancien_banc)} if ancien_banc else set()),
+            "arrives": {(autobus.ABRIS[db["sens"]], *db["abri"])}
+            | ({(autobus.BANCS[db["sens"]], *nouveau_banc)} if nouveau_banc else set()),
+        })
+    for ls, la in zip(sans["autobus"]["lignes"], avec["autobus"]["lignes"]):
+        assert {k: v for k, v in ls.items() if k != "arrets"} == {k: v for k, v in la.items() if k != "arrets"}, \
+            f"la ligne {ls['numero']} a changé de tracé"
+        assert la["arrets"] == [[id_, i + decalages.get(id_, 0)] for id_, i in ls["arrets"]], \
+            f"la ligne {ls['numero']} : un arrêt n'est plus à sa place dans la boucle"
+    return glisses
+
+
+#: L'air d'un lieu de mission pour un abribus, écrit ici en toutes lettres : deux tuiles de côté
+#: sans donneur (le devant de mission), trois pour un donneur, cinq pour deux, sept pour trois.
+#: ⚠️ Pas relu dans `devants` : un juge qui relit la table qu'il juge ne rougit jamais.
+AIR = {0: 2, 1: 3, 2: 5, 3: 7}
+
+
+def _abribus_colles(ville: dict) -> list[str]:
+    """Les arrêts dont l'abri ou le banc est dans l'air d'une porte de lieu de mission."""
+    donneurs = Counter(p["ou"][6:] for p in missions.PERSONNAGES if p["ou"].startswith("porte:"))
+    lieux = devants.lieux_de_mission(ville)
+    portes = [p for p in ville["portes"] if p["lieu"] in lieux]
+    colles = []
+    for rang, arret in enumerate(ville["autobus"]["arrets"]):
+        a = autobus.detail(ville, rang)
+        for t in [tuple(a["abri"]), _banc(ville, rang)]:
+            if t and any(1 <= t[1] - p["y"] <= 4 and abs(t[0] - p["x"]) <= AIR[donneurs[p["lieu"]]]
+                         for p in portes):
+                colles.append(arret["nom"])
+                break
+    return colles
+
+
+@pytest.mark.parametrize("graine", GRAINES)
+def test_aucun_abribus_ne_colle_la_porte_d_un_lieu_de_mission(graine):
+    """Retour de Martin (22 sept. 2026, capture) : « trop de choses collé devant chez Ti-Paul,
+    étale-les plus sur le pâté de maison ». La ligne 2 s'arrête devant le dépanneur, et son abribus
+    prenait la place la plus proche de la porte : deux tuiles de côté, celle du donneur. Ti-Paul se
+    rabattait entre l'édicule du métro et le guichet. Cinq arrêts étaient ainsi collés à un lieu de
+    mission ; ils glissent le long de leur voie.
+
+    ⚠️ Le terminus reste : son parvis (`autobus.PARVIS`) tient déjà son arrêt à distance du car de
+    l'ouverture, et il n'a nulle part où glisser plus loin. Il est hors du devant de mission."""
+    ville, temoin = _ville(graine), _ville(graine, deplace=False)
+    restent = _abribus_colles(ville)
+    assert all(nom.startswith("Terminus") for nom in restent), f"collés à un lieu de mission : {restent}"
+    for nom in restent:
+        rang = next(r for r, a in enumerate(ville["autobus"]["arrets"]) if a["nom"] == nom)
+        assert ville["autobus"]["arrets"][rang] == temoin["autobus"]["arrets"][rang], f"{nom} a glissé à moitié"
+        a = autobus.detail(ville, rang)
+        assert not any(1 <= a["abri"][1] - p["y"] <= 4 and abs(a["abri"][0] - p["x"]) <= 2
+                       for p in ville["portes"] if p["lieu"] == "terminus"), f"{nom} est devant le terminus"
+
+
+@pytest.mark.parametrize("graine", GRAINES)
+def test_le_temoin_a_bien_des_abribus_colles(graine):
+    """Le juge du dessus ne vaut que si la ville SANS le glissement en avait : quatre au moins, sur
+    chacune de ces graines (le dépanneur, le poste, le casse-croûte, l'hôpital)."""
+    assert len([n for n in _abribus_colles(_ville(graine, deplace=False)) if not n.startswith("Terminus")]) >= 4
+
+
+def test_devant_chez_ti_paul_l_arret_laisse_la_facade_aux_donneurs():
+    """Le cas de la capture, sur la ville livrée : Ti-Paul et Xavier attendent au dépanneur, à deux
+    et à quatre tuiles de la porte. L'abri et son banc se tiennent plus loin que six tuiles de côté —
+    une tuile d'air après le second donneur —, sur le même trottoir, et l'arrêt porte encore le nom
+    du dépanneur. Et ils ne se collent pas à un autre meuble : le premier glissement posait le banc
+    contre un arbre du parc, et refaisait un peu plus loin le paquet qu'on défaisait."""
+    ville = _ville(carte.GRAINE)
+    porte = next(p for p in ville["portes"] if p["lieu"] == "depanneur")
+    rang = next(r for r, a in enumerate(ville["autobus"]["arrets"]) if a["nom"] == "Dépanneur Chez Ti-Paul")
+    a = autobus.detail(ville, rang)
+    for t in (tuple(a["abri"]), _banc(ville, rang)):
+        assert t[1] == porte["y"] + 1, f"{t} n'est plus sur la façade du dépanneur"
+        assert abs(t[0] - porte["x"]) >= 6, f"{t} colle encore la porte du dépanneur ({porte['x']}, {porte['y']})"
+    siens = {tuple(a["abri"]), _banc(ville, rang)}
+    voisins = [d["type"] for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE and (d["x"], d["y"]) not in siens
+               and any(max(abs(d["x"] - x), abs(d["y"] - y)) <= 1 for x, y in siens)]
+    assert not voisins, f"l'arrêt du dépanneur se colle à {voisins}"
 
 
 @pytest.mark.parametrize("graine", GRAINES)

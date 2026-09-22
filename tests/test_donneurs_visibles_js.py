@@ -80,3 +80,63 @@ def test_un_donneur_repose_se_tient_au_meme_endroit_et_ne_tire_aucun_de(banc):
     assert r["apres"] == r["avant"], f"reposé ailleurs : {r['avant']} -> {r['apres']}"
     assert r["de"] == r["attendu"], "la pose ne consomme pas les deux dés de `creerPieton`, ni plus ni moins"
     assert r["cache"] < CACHE_MAX
+
+
+#: Deux personnages de l'histoire se tiennent au moins à tant de tuiles l'un de l'autre (en carré).
+#: ⚠️ Écrit ici, pas relu dans `histoire.js` : un juge qui relit la règle qu'il juge ne rougit jamais.
+ECART_TUILES = 2
+
+
+def test_deux_donneurs_ne_se_tiennent_jamais_sur_la_meme_tuile(banc):
+    """Retour de Martin (22 sept. 2026, capture du dépanneur) : « trop de choses collé devant chez
+    Ti-Paul ». Ti-Paul et Xavier attendent à la même porte, et `placeVisible` les posait sur le MÊME
+    pixel : deux bulles l'une sur l'autre, un seul bonhomme. Ti-Guy, Mo et Fern étaient trois sur la
+    même tuile du terminus. Ici, à la naissance de la partie, et encore après le départ de Ti-Guy
+    (m1 faite : Mo et Fern se partagent le terminus sans lui)."""
+    r = banc("""function (L, o) {
+        function places() {
+          return L.B.defs.personnages.filter(function (q) { return q.ou.indexOf('porte:') === 0; })
+            .map(function (p) { const e = L.Histoire.donneur(p.slug); return e ? [p.slug, p.ou, e.x, e.y] : null; })
+            .filter(Boolean);
+        }
+        L.Jeu.commencer();
+        const depart = places();
+        L.B.entites.filter(function (e) { return e.type === 'pieton' && e.personnage; }).forEach(L.Entites.retirer);
+        L.B.partie.missionsFaites.m1 = true;
+        L.Histoire.creerDonneurs();
+        return { depart: depart, apres_m1: places() };
+    }""")
+    for moment, places in r.items():
+        assert len(places) >= 10, f"{moment} : le juge ne voit que {len(places)} donneurs"
+        colles = [(a[0], b[0], (a[2] // 16, a[3] // 16), (b[2] // 16, b[3] // 16))
+                  for i, a in enumerate(places) for b in places[i + 1:]
+                  if max(abs(a[2] - b[2]), abs(a[3] - b[3])) < ECART_TUILES * 16]
+        assert not colles, f"{moment} : donneurs collés {colles}"
+    assert "ti_guy" not in {p[0] for p in r["apres_m1"]}, "Ti-Guy n'est pas parti après m1"
+    partages = [p for p in r["depart"] if p[1] in ("porte:depanneur", "porte:terminus")]
+    assert len(partages) >= 5, partages
+
+
+def test_le_second_donneur_d_une_porte_ne_se_glisse_pas_entre_deux_meubles(banc):
+    """Le second donneur d'une porte prend une place ou il ne touche aucun meuble solide : c'est
+    entre l'edicule du metro et le guichet que Ti-Paul se rabattait, colle aux deux. Au depanneur :
+    Ti-Paul a deux tuiles de la porte, Xavier plus loin sur la meme facade, a l'air libre."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const porte = L.Monde.carte.def.portes.find(function (q) { return q.lieu === 'depanneur'; });
+        const donne = {};
+        ['tipaul', 'xavier'].forEach(function (slug) {
+          const e = L.Histoire.donneur(slug);
+          const tx = Math.floor(e.x / 16), ty = Math.floor(e.y / 16);
+          const meubles = L.B.entites.filter(function (d) {
+            return d.decor && d.solide && Math.max(Math.abs(Math.floor(d.x / 16) - tx), Math.abs(Math.floor(d.y / 16) - ty)) <= 1;
+          }).map(function (d) { return d.decor; });
+          donne[slug] = { tx: tx, ty: ty, meubles: meubles };
+        });
+        return { porte: [porte.x, porte.y], donne: donne };
+    }""")
+    px, py = r["porte"]
+    tipaul, xavier = r["donne"]["tipaul"], r["donne"]["xavier"]
+    assert (tipaul["tx"], tipaul["ty"]) == (px + 2, py + 1), f"Ti-Paul n'est plus à deux tuiles de sa porte : {tipaul}"
+    assert xavier["ty"] == py + 1 and abs(xavier["tx"] - px) >= 3, f"Xavier : {xavier}"
+    assert not xavier["meubles"], f"Xavier se glisse contre {xavier['meubles']}"

@@ -503,24 +503,61 @@ const Histoire = (function () {
     return pris ? null : { x: x, y: y };
   }
 
+  //: Deux personnages de l'histoire ne se tiennent pas a moins de tant de tuiles l'un de l'autre
+  //: (en carre). ⚠️ Retour de Martin (22 sept. 2026, capture du depanneur) : Ti-Paul et Xavier
+  //: attendent a la meme porte, et `placeVisible` les posait sur le MEME pixel — deux bulles l'une
+  //: sur l'autre, un seul bonhomme. Ti-Guy, Mo et Fern etaient trois sur la meme tuile du terminus.
+  const ECART_DONNEURS = 2;
+
+  /** Un autre personnage de l'histoire se tient-il deja sur cette place, ou colle a elle ? */
+  function placeTenue(place) {
+    return B.entites.some(function (e) {
+      return e.type === 'pieton' && e.personnage && e.vivant
+        && Math.max(Math.abs(e.x - place.x), Math.abs(e.y - place.y)) < ECART_DONNEURS * TT;
+    });
+  }
+
+  /** La place touche-t-elle un meuble solide (une des huit tuiles autour) ? ⚠️ En TUILES : le
+      decor est ancre au pied de la sienne (`creerDecor`), pas en son centre. */
+  function colleeAUnMeuble(place) {
+    const tx = Math.floor(place.x / TT), ty = Math.floor(place.y / TT);
+    return Entites.decorAutour(place.x, place.y, 2 * TT).some(function (d) {
+      return d.solide && Math.max(Math.abs(Math.floor(d.x / TT) - tx), Math.abs(Math.floor(d.y / TT) - ty)) <= 1;
+    });
+  }
+
   /** Ou un personnage se tient devant sa porte : a deux tuiles d'un cote, sinon de l'autre —
       et, si du decor le cache (`partCachee`), la tuile voisine la plus proche ou on le voit.
       ⚠️ SANS DE : les essais vont dans un ordre fixe, du plus pres au plus loin de la porte.
-      Quand rien n'est mieux, la tuile la moins cachee. */
+      Quand rien n'est mieux, la tuile la moins cachee.
+
+      ⚠️ Une place qu'un autre personnage tient (`placeTenue`) ne se prend pas : le second donneur
+      d'une porte passe aux essais suivants. Et parmi ceux-la, pas une tuile collee a un meuble
+      (`colleeAUnMeuble`) : c'est entre l'edicule du metro et le guichet que Ti-Paul se rabattait.
+      Le premier donneur, lui, se tient ou il s'est toujours tenu. */
   function placeVisible(l) {
     const premiere = tuileLibre(l.x + 2 * TT, l.y, 3) || tuileLibre(l.x - 2 * TT, l.y, 3);
     if (!premiere) return null;
-    let part = partCachee(premiere.x, premiere.y), meilleure = premiere;
-    if (part < CACHE_MAX) return premiere;
+    const libre = !placeTenue(premiere);
+    let part = libre ? partCachee(premiere.x, premiere.y) : 1, meilleure = libre ? premiere : null;
+    if (libre && part < CACHE_MAX) return premiere;
     const tx0 = Math.floor(l.x / TT), ty0 = Math.floor(l.y / TT);
-    for (const [dx, dy] of [[-2, 0], [3, 0], [-3, 0], [2, 1], [-2, 1], [4, 0], [-4, 0], [3, 1], [-3, 1]]) {
+    const essais = [[-2, 0], [3, 0], [-3, 0], [2, 1], [-2, 1], [4, 0], [-4, 0], [3, 1], [-3, 1]];
+    // Un second donneur cherche un peu plus loin : a deux tuiles de l'autre, il lui faut la place.
+    if (!libre) essais.push([5, 0], [-5, 0], [4, 1], [-4, 1], [6, 0], [-6, 0]);
+    let collee = null;
+    for (const [dx, dy] of essais) {
       const place = tuileDeTrottoir(tx0 + dx, ty0 + dy);
-      if (!place) continue;
+      if (!place || placeTenue(place)) continue;
       const c = partCachee(place.x, place.y);
+      if (!libre && colleeAUnMeuble(place)) {
+        if (c < CACHE_MAX && !collee) collee = place;
+        continue;
+      }
       if (c < CACHE_MAX) return place;
       if (c < part) { part = c; meilleure = place; }
     }
-    return meilleure;
+    return collee || meilleure || premiere;
   }
 
   /** UN personnage du dehors, pose devant sa porte — ou null quand la porte ou la

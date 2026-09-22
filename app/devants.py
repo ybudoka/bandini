@@ -43,6 +43,29 @@ DEVANT = tuple((dx, dy) for dy in range(1, DEVANT_PROFONDEUR + 1)
 #: livre plus loin devant.
 DEVANT_DE_MISSION = tuple((dx, dy) for dy in (1, 2, 3, 4) for dx in (-2, -1, 0, 1, 2))
 
+#: L'air d'un lieu de mission, pour un ARRÊT D'AUTOBUS : son abri et son banc se tiennent plus loin
+#: que ça de côté de la porte. ⚠️ Retour de Martin (22 sept. 2026, capture) : « trop de choses collé
+#: devant chez Ti-Paul, étale-les plus sur le pâté de maison ». La ligne 2 s'arrête devant le
+#: dépanneur, et l'arrêt prenait la place la plus proche de la porte : deux tuiles de côté, celle
+#: même où le donneur se tient (`Histoire.placeVisible`). Ti-Paul se rabattait entre l'édicule du
+#: métro et le guichet, Xavier sur le même pixel que lui. Cinq arrêts de la ville étaient dans le
+#: devant d'un lieu de mission, tous des lieux que sert une ligne.
+#: Sans donneur à la porte, c'est le devant de mission (deux tuiles de côté). Avec, chacun prend deux
+#: tuiles — ils se tiennent à deux tuiles de la porte, et à deux tuiles l'un de l'autre — plus une
+#: d'air avant l'abri : trois pour Mado au casse-croûte, cinq pour Ti-Paul et Xavier.
+AIR_SANS_DONNEUR = 2
+AIR_PAR_DONNEUR = 2
+
+
+def air_d_un_arret(donneurs: int) -> int:
+    """De combien de tuiles de côté un abribus s'écarte d'une porte où attendent tant de donneurs."""
+    return max(AIR_SANS_DONNEUR, AIR_PAR_DONNEUR * donneurs + 1)
+
+
+#: Jusqu'où un arrêt glisse le long de sa voie, en tuiles. Au-delà il ne sert plus le même lieu :
+#: il reste où il est plutôt que d'abandonner sa porte.
+PORTEE_D_UN_ARRET = 8
+
 #: Jusqu'où on cherche une tuile voisine, en tuiles. Plus loin, l'objet n'est plus « à côté
 #: de là où il était » : on le retire plutôt que de l'envoyer dans un autre quartier. Un
 #: kiosque cherche plus loin qu'un baril : il y en a peu, et chacun a une raison d'être là.
@@ -54,8 +77,9 @@ PORTEE_D_UNE_SCENE = 16
 
 #: Le décor qu'on peut prendre et poser ailleurs : du mobilier de ville sans sens ni attache.
 #: ⚠️ Pas les machines encastrées dans une vitrine (`guichet`, `distributrice_*`), pas les
-#: lampadaires (une lampe les suit), pas les abribus (le tracé des lignes), les édicules (le
-#: métro), les bancs (ils regardent la rue) ni ce qui vit au bord de l'eau ou à la foire.
+#: lampadaires (une lampe les suit), pas les abribus (le tracé des lignes : ils ne glissent que le
+#: long de leur voie, avec leur arrêt, `_deplacer_les_arrets`), les édicules (le métro), les bancs
+#: (ils regardent la rue) ni ce qui vit au bord de l'eau ou à la foire.
 DECOR_MOBILE = frozenset({
     "arbre", "buisson", "caisse", "baril", "bbq", "debris", "ordures", "pneu", "palettes",
     "poubelle", "poubelle_pleine", "boite_aux_lettres", "bac_recyclage", "benne", "cabanon",
@@ -173,6 +197,19 @@ def _evitees(chantier, ville: dict) -> set[tuple[int, int]]:
     from . import salete
 
     return salete._evitees(chantier, ville)
+
+
+def _evitees_d_un_arret(chantier, ville: dict) -> set[tuple[int, int]]:
+    """Ce qui reste nu pour un abribus : la même liste, SAUF les coins de croisement. Le traceur y
+    pose déjà les siens (`autobus.arret_possible` ne tient que deux tuiles de voie droite hors de la
+    boîte) : un arrêt au coin de la rue est un arrêt ordinaire, et c'est souvent la seule place qui
+    reste entre la porte d'un lieu de mission et le carrefour."""
+    from . import mobilier
+
+    coins = {(x, y) for inter in chantier.intersections
+             for y in range(inter["y"] - mobilier.COIN - 1, inter["y"] + inter["h"] + mobilier.COIN + 1)
+             for x in range(inter["x"] - mobilier.COIN - 1, inter["x"] + inter["l"] + mobilier.COIN + 1)}
+    return _evitees(chantier, ville) - coins
 
 
 def _deplacer_le_decor(chantier, ville: dict, larges: set, pris: set,
@@ -317,6 +354,156 @@ def _deplacer_les_reclames(chantier, ville: dict, larges: set, pris: set) -> tup
     return deplaces, retires
 
 
+def donneurs_dehors(lieu: str) -> int:
+    """Combien de personnages de l'histoire attendent DEHORS, à la porte de ce lieu (`porte:<lieu>`)."""
+    from . import missions
+
+    return sum(1 for p in missions.PERSONNAGES if p["ou"] == f"porte:{lieu}")
+
+
+def devant_des_arrets(ville: dict) -> set[tuple[int, int]]:
+    """L'air des lieux de mission, pour un abribus et son banc (`air_d_un_arret`) : aussi profond
+    que le devant de mission, et d'autant plus large que la porte a de donneurs."""
+    missions_ = lieux_de_mission(ville)
+    air: set[tuple[int, int]] = set()
+    for (x, y), lieu in portes(ville).items():
+        if lieu in missions_:
+            cote = air_d_un_arret(donneurs_dehors(lieu))
+            air |= {(x + dx, y + dy) for dy in (1, 2, 3, 4) for dx in range(-cote, cote + 1)}
+    return air
+
+
+def _deplacer_les_arrets(chantier, ville: dict, larges: set, pris: set, evitees: set) -> tuple[int, int]:
+    """Un arrêt d'autobus dont l'abri ou le banc tombe dans l'air d'un lieu de mission : il glisse
+    le long de SA voie, sur le même tronçon, jusqu'à la place la plus proche où l'abri et le banc
+    laissent la façade au donneur. Rend (déplacés, restés).
+
+    ⚠️ **Le tracé ne bouge pas.** Un tronçon de voie se prend d'un bout à l'autre (on ne change de
+    voie que dans une boîte) : la boucle qui passait par l'arrêt passe aussi par sa nouvelle place,
+    `k` tuiles plus loin. Seul l'indice de l'arrêt dans chaque boucle change, et on vérifie qu'il
+    tombe sur la tuile. La place nouvelle obéit à tout ce que le traceur exige
+    (`autobus.arret_possible` : voie droite, trottoir à droite, abri libre, pas devant une porte),
+    à l'écart des lignes (`test_les_arrets_sont_a_leur_place_dans_la_boucle`) et loin des quais du
+    tramway, qui se sont posés loin des abribus (`tramway.LOIN_DES_ABRIBUS`).
+
+    ⚠️ **Faute de place, l'arrêt RESTE** : une ligne qui ne dessert plus son lieu est pire qu'un
+    abribus collé. Et le banc suit, ou l'arrêt ne bouge pas : un décor de moins décalerait les
+    numéros de tout le décor d'après (`police.js` étale ses rondes sur `id`)."""
+    from . import autobus, carte, mobilier, tramway
+
+    reseau_bus = ville.get("autobus") or {}
+    if not reseau_bus.get("arrets"):
+        return 0, 0
+    air = devant_des_arrets(ville)
+    reseau = autobus._Reseau(ville)
+    boucles = {ligne["numero"]: autobus.derouler(ligne["trace"]) for ligne in reseau_bus["lignes"]}
+    quais_du_tram = []
+    tram = ville.get("tramway")
+    if tram:
+        for _i, tx, ty, *_nom in tram["arrets"]:
+            rx, ry = autobus.a_droite(*autobus.PAS[ville["voie"][ty][tx]])
+            quais_du_tram.append((tx + rx, ty + ry))
+    deplaces = restes = 0
+    for rang, arret in enumerate(reseau_bus["arrets"]):
+        detail = autobus.detail(ville, rang)
+        sens, abri, quai = detail["sens"], tuple(detail["abri"]), tuple(detail["quai"])
+        dx, dy = autobus.PAS[sens]
+        decor_abri = next((d for d in ville["decor"]
+                           if (d["x"], d["y"]) == abri and d["type"] == autobus.ABRIS[sens]), None)
+        decor_banc = next((d for d in ville["decor"] if d["type"] == autobus.BANCS[sens]
+                           and (d["x"], d["y"]) in ((abri[0] - dx, abri[1] - dy), (abri[0] + dx, abri[1] + dy))),
+                          None)
+        banc = (decor_banc["x"], decor_banc["y"]) if decor_banc else None
+        if decor_abri is None or (abri not in air and banc not in air):
+            continue
+        solides = {(d["x"], d["y"]) for d in ville["decor"] if d["type"] in carte.DECOR_SOLIDE}
+        siens = {abri, quai} | ({banc} if banc else set())
+        for t in siens:
+            chantier.occupe.discard(t)
+        autres_pris = pris - siens
+        autres_solides = solides - siens
+        indices = {ligne["numero"]: next(i for id_, i in ligne["arrets"] if id_ == rang)
+                   for ligne in reseau_bus["lignes"] if any(id_ == rang for id_, _i in ligne["arrets"])}
+        autres_arrets = [(a["x"], a["y"]) for k, a in enumerate(reseau_bus["arrets"]) if k != rang]
+
+        def convient(k: int, aere: bool):
+            x, y = arret["x"] + dx * k, arret["y"] + dy * k
+            # Le même tronçon : rien que la même flèche, aucune boîte entre les deux places.
+            for j in range(1, abs(k) + 1):
+                tx, ty = arret["x"] + dx * j * (1 if k > 0 else -1), arret["y"] + dy * j * (1 if k > 0 else -1)
+                if not reseau.dedans(tx, ty) or reseau.voie[ty][tx] != sens or (tx, ty) in reseau.boites:
+                    return None
+            place = autobus.arret_possible(reseau, chantier, x, y)
+            if place is None:
+                return None
+            nouveau_quai, nouvel_abri = place
+            nouveau_banc = None
+            if banc is not None:
+                # Comme le traceur : EN AMONT de l'abri (on regarde venir l'autobus), sinon en aval.
+                nouveau_banc = next(((nouvel_abri[0] + dx * c, nouvel_abri[1] + dy * c) for c in (-1, 1)
+                                     if autobus._libre_pour_l_abri(chantier, nouvel_abri[0] + dx * c,
+                                                                   nouvel_abri[1] + dy * c, reseau.parvis)
+                                     and (nouvel_abri[0] + dx * c, nouvel_abri[1] + dy * c) not in air
+                                     and (nouvel_abri[0] + dx * c, nouvel_abri[1] + dy * c) not in autres_pris),
+                                    None)
+                if nouveau_banc is None:
+                    return None
+            poses = [nouvel_abri] + ([nouveau_banc] if nouveau_banc else [])
+            for p in poses:
+                if p in air or p in larges or p in autres_pris or p in evitees:
+                    return None
+                if not mobilier._ne_coupe_rien(chantier, *p, autres_solides | set(poses) - {p}):
+                    return None
+                # Aéré : ni l'abri ni le banc ne touchent un autre meuble — sinon on a refait, un peu
+                # plus loin, le paquet qu'on défaisait (le banc du dépanneur contre un arbre du parc).
+                if aere and any((p[0] + i, p[1] + j) in autres_solides and (p[0] + i, p[1] + j) not in poses
+                                for i in (-1, 0, 1) for j in (-1, 0, 1)):
+                    return None
+            if nouveau_quai in autres_pris:
+                return None
+            if any(abs(nouveau_quai[0] - qx) + abs(nouveau_quai[1] - qy) < tramway.LOIN_DES_ABRIBUS
+                   for qx, qy in quais_du_tram):
+                return None
+            if any(reseau.voie[ay][ax] == sens and abs(ax - x) + abs(ay - y) <= autobus.ARRETS["voisin"]
+                   for ax, ay in autres_arrets):
+                return None
+            for numero, i in indices.items():
+                boucle = boucles[numero]
+                n = len(boucle)
+                if not 0 <= i + k < n or boucle[i + k] != (x, y):
+                    return None
+                ligne = next(li for li in reseau_bus["lignes"] if li["numero"] == numero)
+                apres = sorted(i + k if id_ == rang else j for id_, j in ligne["arrets"])
+                ecarts = [(apres[(m + 1) % len(apres)] - apres[m]) % n for m in range(len(apres))]
+                if min(ecarts) < 8 or max(ecarts) > 2 * autobus.ARRETS["ecart"][1]:
+                    return None
+            return (x, y), nouveau_quai, nouvel_abri, nouveau_banc
+
+        # La place la plus proche où l'arrêt est AÉRÉ ; faute de mieux, la plus proche qui convient.
+        ordre = sorted((k for k in range(-PORTEE_D_UN_ARRET, PORTEE_D_UN_ARRET + 1) if k),
+                       key=lambda k: (abs(k), k))
+        trouve = next((c for aere in (True, False) for k in ordre
+                       if (c := convient(k, aere)) is not None), None)
+        if trouve is None:
+            chantier.occupe |= {abri} | ({banc} if banc else set())
+            restes += 1
+            continue
+        (x, y), nouveau_quai, nouvel_abri, nouveau_banc = trouve
+        k = (x - arret["x"]) * dx + (y - arret["y"]) * dy
+        arret["x"], arret["y"] = x, y
+        for ligne in reseau_bus["lignes"]:
+            ligne["arrets"] = [[id_, i + k if id_ == rang else i] for id_, i in ligne["arrets"]]
+        decor_abri["x"], decor_abri["y"] = nouvel_abri
+        if decor_banc is not None:
+            decor_banc["x"], decor_banc["y"] = nouveau_banc
+        nouveaux = {nouvel_abri} | ({nouveau_banc} if nouveau_banc else set())
+        chantier.occupe |= nouveaux
+        pris.difference_update(siens)
+        pris |= nouveaux | {nouveau_quai}
+        deplaces += 1
+    return deplaces, restes
+
+
 def _ecarter_les_evenements(ville: dict, larges: set) -> dict[str, int]:
     """Ce qui apparaît en jeu et tombe devant une porte : la voie fermée du jour, la rue barrée,
     le bris d'aqueduc — écartés, `ecartee: 1` — et les nids-de-poule, qui sortent de leur liste.
@@ -354,11 +541,14 @@ def deplacer(chantier, ville: dict) -> dict[str, tuple[int, int] | int]:
     `(déplacés, retirés)` pour les objets posés, un nombre pour ce qu'on retire des listes.
 
     ⚠️ Dans cet ordre : les scènes d'abord (leur foule prend la place autour d'elles, que le
-    décor doit ensuite leur laisser), puis les kiosques et leurs réclames, puis le décor."""
+    décor doit ensuite leur laisser), puis les arrêts d'autobus (ils n'ont que leur voie où
+    glisser : ils choisissent avant ce qui a toute la rue), puis les kiosques et leurs réclames,
+    puis le décor."""
     larges, pas = devants(ville)
     comptes: dict[str, tuple[int, int] | int] = {}
     comptes["scenes"] = _deplacer_les_scenes(chantier, ville, larges, pas)
     pris = _pris(chantier, ville)
+    comptes["arrets"] = _deplacer_les_arrets(chantier, ville, larges, pris, _evitees_d_un_arret(chantier, ville))
     comptes["kiosques"] = _deplacer_les_kiosques(chantier, ville, larges, pris)
     comptes["reclames"] = _deplacer_les_reclames(chantier, ville, larges, pris)
     pris = _pris(chantier, ville)
