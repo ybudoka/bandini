@@ -204,10 +204,19 @@ CORPS = frozenset({
     "groans", "laughs", "shouting", "sighs", "whispers",
 })
 
+#: Les balises d'ACCENT — un francais « pas d'ici », par la voix plutot que par
+#: le vocabulaire (docs/ecrire-un-accent.md). Au plus UNE par replique, EN TETE :
+#: elle prendrait la place du ton si elle trainait au milieu (docs/jeu-d-acteur.md
+#: § 3.8). Validee a l'oreille avant d'entrer ici, jamais en passant — Sven, le
+#: 22 sept. 2026 (Martin, apres l'avoir ecoutee : « c'est mieux »).
+ACCENTS = frozenset({
+    "Norwegian accent",
+})
+
 #: Les balises permises. ⚠️ Une liste FERMEE : une balise que v3 ne comprend pas,
 #: il la lit a voix haute (« crochet, tristement »). On l'allonge quand on en
 #: essaie une nouvelle, pas en passant.
-BALISES = TONS | CORPS
+BALISES = TONS | CORPS | ACCENTS
 
 #: slug -> texte joue. ⚠️ Toutes les voix y sont (`test_interpretation.py`) :
 #: une replique ajoutee sans son jeu sortirait plate a la prochaine generation.
@@ -289,8 +298,8 @@ JEU: dict[str, str] = {
     "raymonde-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
     "ovila-repos-1": "[calm] Reviens me voir… plus tard.",
     "ovila-repos-2": "[softly] Le Faubourg est tranquille… Merci.",
-    "sven-repos-1": "[coldly] Reviens me voir… plus tard.",
-    "sven-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
+    "sven-repos-1": "[Norwegian accent][coldly] Reviens me voir… plus tard.",
+    "sven-repos-2": "[Norwegian accent][matter-of-fact] Le Faubourg est tranquille… Merci.",
     "mo-repos-1": "[knowingly] Reviens me voir… plus tard.",
     "mo-repos-2": "[amused] Le Faubourg est tranquille… Merci.",
     "fern-repos-1": "[matter-of-fact] Reviens me voir… plus tard.",

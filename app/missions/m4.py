@@ -32,8 +32,8 @@ MISSION = {
                jeu="[firmly] Largue-la au garage. Pis si mes gars te courent après… sème-les."),
         ],
         "fin": [
-            _l("bouchard", "Propre. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom.",
-               jeu="[satisfied] Propre. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom."),
+            _l("bouchard", "Parfait. À partir d'aujourd'hui, si un de mes gars te pogne, tu dis mon nom.",
+               jeu="[satisfied] Parfait. À partir d'aujourd'hui, si un de mes gars te pogne… tu dis mon nom."),
             _l("bouchard", "Un mot d'avertissement : Josée, au bar, cherche du monde comme toi. Fais attention.",
                jeu="[gravely] Un mot d'avertissement… Josée, au bar, cherche du monde comme toi. Fais attention."),
         ],

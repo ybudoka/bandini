@@ -70,8 +70,13 @@ rien n'a changé en cours de route sur les trois décisions prises avec Martin.
   Comforting` (norvégien, accent d'Oslo) au compte. Les 26 répliques (m52-m54, huit
   chacune, plus les deux repos) générées avec elle par `scripts/audio_elevenlabs.py
   --refaire sven-…` — ciblé par slug, pas `--voix`, pour ne pas payer les personnages d'une
-  autre session au passage. Voir [sa fiche](sven.md#notes). Pas encore écoutées par Martin :
-  c'est toujours lui qui juge un son, jamais un juge automatique.
+  autre session au passage. Voir [sa fiche](sven.md#notes).
+- **La voix seule ne portait pas assez d'accent** (Martin, à l'oreille) : `[Norwegian
+  accent]` ajouté en tête des 26 `jeu=`, nouvelle catégorie `ACCENTS` dans
+  `app/interpretation.py`, testé d'abord sur les deux répliques de repos (moins chères)
+  avant de regénérer les 24 autres — voir `docs/ecrire-un-accent.md` § 3, écrit le même
+  jour. « Propre. » devenu « Parfait. » (m52, et la même réplique de Bouchard, m4, sans
+  rapport avec l'accent) sur demande de Martin.
 - **Deux sessions concurrentes ont atterri en même temps** : dix missions de plus (six
   personnages, `f04`-`e12`) et le correctif des phares sont arrivés sur `dev` pendant
   l'écriture de celle-ci. Les fichiers partagés (`missions/__init__.py`, `interpretation.py`,

@@ -70,6 +70,19 @@ def test_les_balises_sont_celles_que_v3_comprend(voix):
     assert "<" not in dit, f"{voix['slug']} : pas de SSML, v3 ne le lit pas"
 
 
+@pytest.mark.parametrize("voix", VOIX, ids=lambda v: v["slug"])
+def test_une_balise_d_accent_est_seule_et_en_tete(voix):
+    """docs/ecrire-un-accent.md, docs/jeu-d-acteur.md § 3.8 : v3 ne tolere qu'UNE
+    balise d'accent par replique, EN TETE — elle prendrait la place du ton si elle
+    trainait au milieu."""
+    dit = interpretation.dit(voix)
+    b = interpretation.balises(dit)
+    accents = [x for x in b if x in interpretation.ACCENTS]
+    assert len(accents) <= 1, f"{voix['slug']} : plus d'une balise d'accent {accents}"
+    if accents:
+        assert b[0] == accents[0], f"{voix['slug']} : l'accent doit ouvrir la replique"
+
+
 def test_le_script_envoie_le_jeu_avec_le_modele_qui_le_lit():
     """Le cablage : un jeu ecrit que le script n'envoie pas, ou envoie a v2 (qui
     lit les crochets a voix haute), ne vaut rien."""

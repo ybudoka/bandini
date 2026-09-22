@@ -82,5 +82,13 @@ antagoniste des Quais ; m52-m54 en sont le premier acte, écrit avant le reste d
 
 **Voix tranchée le 22 sept. 2026.** `Martin - Clear and Comforting` (norvégien, accent d'Oslo) a rejoint
 le compte ElevenLabs — la première voix du répertoire qui dise vraiment « pas d'ici », plutôt que le repli
-parisien (`Nicolas Petit`) qui tenait la place depuis la livraison de m52-m54. Rien d'autre ne change :
-mêmes répliques, même `jeu=`.
+parisien (`Nicolas Petit`) qui tenait la place depuis la livraison de m52-m54.
+
+**L'accent lui-même s'est renforcé le 22 sept. 2026.** La voix seule ne portait « pas trop d'accent »
+(Martin, à l'oreille) : les 26 répliques portent maintenant `[Norwegian accent]` en tête de leur `jeu=`
+(voir `docs/ecrire-un-accent.md` § 3) — confirmé meilleur après une première écoute sur les deux répliques
+de repos, avant de regénérer les 24 autres. `ACCENTS` (`app/interpretation.py`) en garde la liste, gardée
+par un juge (une seule balise d'accent, en tête).
+
+**Un mot changé au passage** : « Propre. » (m52, la fin de la mission) devenait « Parfait. » sur demande de
+Martin — et la même réplique de Bouchard (`m4`, sans rapport avec Sven ni l'accent) au passage.
