@@ -68,7 +68,10 @@ const B = {
   options: { muet: false, sang: true, vibration: true, daltonien: false, trace: false, neige: false,
              reculCommeEnAvant: false, manette: null, manetteProfil: null,
              // Les lettres des boutons de l'ecran COMMANDES : null = devinees.
-             lettresManette: null },
+             lettresManette: null,
+             // La coop locale (essai) : qui a la manette, entre les deux
+             // joueurs — faux (par defaut) = le deuxieme (`Entree.debutImage`).
+             coopP1Manette: false },
   trace: { anomalies: [], total: 0 },     // ce que le mode TRACE a releve (voir Vehicules.majTrace)
   cinema: null,         // un dialogue en cours : le joueur ecoute (voir Histoire.dire)
   ouverture: null,      // la scene d'ouverture en cours (voir Histoire.ouverture)

@@ -101,18 +101,27 @@ const Entree = (function () {
     sac[a] = v;
   }
 
+  /** La coop locale (essai) : qui tient la manette ? Par defaut le deuxieme
+      joueur — mais Martin veut choisir (options > COOP > JOUEUR 1 A LA
+      MANETTE), pour jouer le personnage principal au stick plutot qu'au
+      clavier. Hors coop, la question ne se pose pas : la manette est a tout
+      le monde, comme avant. */
+  function joueur1PrendLaManette() { return !!(B.coop && B.options.coopP1Manette); }
+
   function bas(a) {
-    // ⚠️ La coop locale (essai, un clavier + une manette) : la manette est
-    // celle du deuxieme joueur — un bouton pese dessus (ATTAQUE, ACTION,
-    // ESQUIVE…) ne doit JAMAIS faire agir le premier. Retour de Martin, 22
-    // sept. : « les frappes ne sont pas bien assignees » — c'etait ca, pas
-    // seulement le stick (deja ferme dans `debutImage`).
-    if (B.coop) return !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
-    return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    // ⚠️ La coop locale (essai, un clavier + une manette) : celui qui n'a
+    // PAS la manette ne doit jamais agir par ses boutons (ATTAQUE, ACTION,
+    // ESQUIVE…) — sans ca, une seule manette mene les deux personnages a la
+    // fois. Retour de Martin, 22 sept. : « les frappes ne sont pas bien
+    // assignees » — c'etait ca, pas seulement le stick (`debutImage`).
+    if (!B.coop) return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    if (joueur1PrendLaManette()) return !!vPad[a] || !!vTact[a] || !!vCasque[a];
+    return !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
   }
   function neuf(a) {
-    if (B.coop) return neufSansManette(a);
-    return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    if (!B.coop) return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    if (joueur1PrendLaManette()) return !!vNeuf[a];   // vNeuf ne vient jamais du clavier (voir `presse`, a part)
+    return neufSansManette(a);
   }
   /** Comme `neuf`, mais la manette ne compte pas — le clavier, le doigt et les
       mains du casque, oui : l'ecran MANETTE montre la manette Bluetooth, pas elles. */
@@ -124,12 +133,35 @@ const Entree = (function () {
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
-  /** La coop locale (essai, un clavier + une manette) : SEULEMENT la manette
-      — celle du deuxieme joueur (`Entites.majJoueur2`, son bouton ACTION).
-      Jamais le clavier, jamais le tactile : le symetrique de
-      `neufSansManette`, qui exclut la manette pour le premier joueur. */
-  function basManette(a) { return !!vPad[a]; }
-  function neufManette(a) { return !!vNeuf[a] && !vNeufTact[a] && !vNeufCasque[a]; }
+  //: Le clavier SEUL, sans la manette ni le tactile — la branche `axe` de
+  //: `debutImage` en a besoin deux fois (le joueur 1 SANS manette, le
+  //: joueur 2 quand la manette est passee au premier).
+  function axeClavierSeul() {
+    let x = 0, y = 0;
+    if (MAP_TOUCHES.gauche.some(function (k) { return enfonce[k]; })) x -= 1;
+    if (MAP_TOUCHES.droite.some(function (k) { return enfonce[k]; })) x += 1;
+    if (MAP_TOUCHES.haut.some(function (k) { return enfonce[k]; })) y -= 1;
+    if (MAP_TOUCHES.bas.some(function (k) { return enfonce[k]; })) y += 1;
+    const h = Math.hypot(x, y);
+    return { x: h ? x / h : 0, y: h ? y / h : 0, mag: h ? 1 : 0 };
+  }
+  /** La coop locale (essai, un clavier + une manette) : les entrees du
+      DEUXIEME joueur (`Entites.majJoueur2`) — la manette par defaut, le
+      clavier si l'option lui donne celle-ci a la place (`joueur1PrendLaManette`).
+      Jamais celles du premier joueur, quel que soit l'appareil de chacun. */
+  function basJoueur2(a) {
+    if (joueur1PrendLaManette()) return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
+    return !!vPad[a];
+  }
+  function neufJoueur2(a) {
+    if (joueur1PrendLaManette()) return MAP_TOUCHES[a].some(function (k) { return presse[k]; });
+    return !!vNeuf[a] && !vNeufTact[a] && !vNeufCasque[a];
+  }
+  function axeJoueur2() {
+    if (joueur1PrendLaManette()) return axeClavierSeul();
+    const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    return { x: st.x, y: st.y, mag: st.mag };
+  }
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
@@ -745,17 +777,21 @@ const Entree = (function () {
     // gagne, et c'est un stick de MANETTE dans les deux cas (marcher a mi-course,
     // promener un menu).
     const st = stickCasque.mag > stick.mag ? stickCasque : stick;
+    // ⚠️ La coop locale (essai, un clavier + une manette) : le joueur 1 n'a
+    // la manette QUE si l'option la lui donne (`joueur1PrendLaManette`) —
+    // sinon elle est au deuxieme joueur (`Entites.majJoueur2`, qui lit
+    // `Entree.axeJoueur2` directement), et le premier n'y repond plus.
+    const manettePourJoueur1 = !B.coop || joueur1PrendLaManette();
     if (pouce.actif && pouce.mag > 0) {
       axe.x = pouce.x; axe.y = pouce.y; axe.mag = pouce.mag; axe.source = 'tactile';
-    } else if (st.mag > 0 && !B.coop) {
+    } else if (st.mag > 0 && manettePourJoueur1) {
       axe.x = st.x; axe.y = st.y; axe.mag = st.mag; axe.source = 'manette';
     } else {
-      // ⚠️ La coop locale (essai, un clavier + une manette) : le joueur 1 ne
-      // repond QU'AU CLAVIER — la manette est celle du deuxieme joueur
-      // (`Entites.majJoueur2`, qui lit `Entree.stick` directement). `bas()`
-      // compte aussi la manette (son stick ET sa croix) : en coop on lit
-      // `enfonce` tout cru pour ne rien lui laisser passer.
-      const touche = B.coop
+      // ⚠️ `bas()` compte aussi la manette (son stick ET sa croix) : sans la
+      // manette (coop, pas l'option), on lit `enfonce` tout cru pour ne rien
+      // lui laisser passer — mais AVEC elle (hors coop, ou l'option), `bas()`
+      // se sert comme avant.
+      const touche = (B.coop && !manettePourJoueur1)
         ? function (a) { return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; }); }
         : bas;
       let x = 0, y = 0;
@@ -820,7 +856,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, basManette, neufManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
@@ -829,10 +865,10 @@ const Entree = (function () {
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
     get appareil() { return appareilCourant(); },
     get axe() { return axe; },
-    //: La coop locale (essai, un clavier + une manette) : le stick de LA
-    //: manette, brut — celui que `axe` (au-dessus) fusionne aussi au clavier
-    //: pour le joueur 1, hors coop. `Entites.majJoueur2` le lit directement.
-    get stick() { return stick; },
+    // La coop locale (essai, un clavier + une manette) : les entrees du
+    // DEUXIEME joueur (`Entites.majJoueur2`), et l'option qui decide qui a
+    // la manette (`Hud.menuOptions`, `options.coopP1Manette`).
+    basJoueur2, neufJoueur2, axeJoueur2, joueur1PrendLaManette,
     get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },
     _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, vCasque: vCasque, pouce: pouce, stick: stick, stickCasque: stickCasque }; },

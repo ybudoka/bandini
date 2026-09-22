@@ -7985,6 +7985,108 @@ def test_la_coop_locale_ignore_les_boutons_de_la_manette_pour_le_joueur_1(banc):
     )
 
 
+def test_la_coop_locale_le_deuxieme_joueur_interagit_au_bouton_action(banc):
+    """Demande de Martin (22 sept.) : « ajouter ACTION (interagir) » pour le
+    deuxième joueur — les mêmes gestes de décor que le premier
+    (`Interactions.utiliserSurLesGens`/`Betes`/`LeDecor`), au bouton ACTION de
+    LA MANETTE (`Entree.neufManette`), jamais celui du clavier. ⚠️ Jugé PAR LE
+    BOUTON (comme `test_interactions_js.py` : « la chaîne d'ACTION affame ce
+    qui suit, un juge qui appelle la fonction ne voit pas le bouton cassé »),
+    pas en appelant `Interactions.utiliserSurLeDecor` a la main."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // Vide les passants autour : quelqu'un devant la poubelle fausserait le juge.
+        for (const q of L.Entites.autour(e2.x, e2.y, 60, function (v) { return v.type === 'pieton' && v !== e2; })) L.Entites.retirer(q);
+        L.Entites.creer('decor', e2.x, e2.y - 12, { decor: 'poubelle', r: 5, solide: true, dessine: true });
+        L.Entites.reindexerDecor(); L.Entites.indexer();
+        L.Entites.regarder(e2, 0, -1);   // face au bac
+        const avant = Object.keys(L.B.partie.fouilles).length;
+        // Le bouton ACTION (0) de LA MANETTE — ni le stick, ni le clavier.
+        o.pad([0, 0], [1]);
+        o.frame(1);
+        o.pad(null);
+        const apres = Object.keys(L.B.partie.fouilles).length;
+        L.Jeu.basculerCoop();
+        return { avant: avant, apres: apres };
+    }""")
+    assert r["apres"] == r["avant"] + 1, "le bouton ACTION de la manette doit fouiller le bac pour le deuxieme joueur"
+
+
+def test_la_coop_locale_les_deux_joueurs_ne_peuvent_pas_se_frapper(banc):
+    """« Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin, 22
+    sept.) : `majJoueur2` recharge `e.invincible` chaque image, comme la
+    triche INVINCIBLE du joueur 1 — `Entites.blesser` refuse tout coup tant
+    qu'elle tient."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite, vieAvant = e2.vie;
+        const touche = L.Entites.blesser(e2, 20, 'poings', {});
+        o.frame(1);   // un pas de plus, l'invincibilite tient toujours
+        const toucheEncore = L.Entites.blesser(e2, 20, 'poings', {});
+        L.Jeu.basculerCoop();
+        return { touche: touche, toucheEncore: toucheEncore, vieAvant: vieAvant, vieApres: e2.vie };
+    }""")
+    assert r["touche"] is False and r["toucheEncore"] is False, "le deuxieme joueur peut encore etre blesse"
+    assert r["vieApres"] == r["vieAvant"], "le deuxieme joueur a perdu de la vie malgre l'invincibilite"
+
+
+def test_la_coop_locale_le_deuxieme_joueur_frappe_a_poings_nus(banc):
+    """Demande de Martin (22 sept.) : « toutes les mêmes actions » — ATTAQUE
+    fait frapper le deuxième joueur (`Combat.frapper`, generique sur
+    n'importe quelle entite — deja utilise pour les passants qui se battent).
+    Toujours a poings nus : il n'a pas d'arme a lui (`e.arme` reste vide,
+    `armeCourante()` ne lit que celle du premier)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // ATTAQUE : bouton 2 (MANETTE_DEFAUT.attaque = [2, 5]).
+        o.pad([0, 0], [0, 0, 1]);
+        o.frame(1);
+        const apres = { etat: e2.etat, arme: e2.arme };
+        o.pad(null);
+        L.Jeu.basculerCoop();
+        return { apres: apres };
+    }""")
+    assert r["apres"]["etat"] == "attaque", "ATTAQUE doit faire frapper le deuxieme joueur"
+    # ⚠️ `e.arme` vaut `undefined` : JSON (le banc rend le resultat en JSON)
+    # ne porte pas les clefs `undefined`, `r["apres"]` n'a alors pas de clef
+    # "arme" du tout — `.get(...)` plutot qu'un `[...]` qui leverait.
+    assert not r["apres"].get("arme"), "le deuxieme joueur frappe a poings nus, il n'a pas d'arme a lui"
+
+
+def test_la_coop_locale_l_option_donne_la_manette_au_joueur_1(banc):
+    """Demande de Martin (22 sept.) : « le joueur 1 doit pouvoir etre soit la
+    manette ou soit le clavier dans les options » — `options.coopP1Manette`
+    inverse qui a quoi : le premier a la manette, le deuxieme au clavier."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.B.options.coopP1Manette = true;
+        L.Jeu.basculerCoop();
+        // La manette pousse : le PREMIER doit marcher, le second rester immobile.
+        o.pad([1, 0]); o.frame(3);
+        const joueurVitesseManette = { vx: L.B.joueur.vx };
+        const e2VitesseManette = { vx: L.B.coop.entite.vx };
+        o.pad(null); o.frame(2);
+        // Le clavier pousse : le DEUXIEME doit marcher, le premier rester immobile.
+        o.touche('KeyD'); o.frame(3);
+        const joueurVitesseClavier = { vx: L.B.joueur.vx };
+        const e2VitesseClavier = { vx: L.B.coop.entite.vx };
+        o.relacher('KeyD');
+        L.Jeu.basculerCoop();
+        L.B.options.coopP1Manette = false;
+        return { joueurVitesseManette: joueurVitesseManette, e2VitesseManette: e2VitesseManette,
+                 joueurVitesseClavier: joueurVitesseClavier, e2VitesseClavier: e2VitesseClavier };
+    }""")
+    assert r["joueurVitesseManette"]["vx"] > 0.5, "l'option doit donner la manette au joueur 1"
+    assert r["e2VitesseManette"] == {"vx": 0}, "le deuxieme joueur ne doit pas repondre a la manette quand elle est au premier"
+    assert r["e2VitesseClavier"]["vx"] > 0.2, "le clavier doit faire marcher le deuxieme joueur, manette au premier"
+    assert r["joueurVitesseClavier"]["vx"] == 0, "le joueur 1 ne doit pas repondre au clavier quand il a la manette"
+
+
 def test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse(banc):
     """Le milieu des deux joueurs, et une LAISSE (`LAISSE_COOP`) qui l'empeche
     de trop s'eloigner — sans elle, l'un des deux sortirait de l'ecran.

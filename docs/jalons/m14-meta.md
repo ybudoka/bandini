@@ -592,9 +592,63 @@ deuxième joueur.
   tenue en vente ne porte (rouge, bleu, noir, gris, orange — voir `TENUES` dans
   `app/magasins.py`) : quelle que soit la tenue du joueur 1, « l'autre toi » reste visuellement
   l'autre. Vérifié à l'œil (Playwright, les deux joueurs posés côte à côte hors de la foule).
+- **L'ombre aussi** (Martin, 22 sept., dans la même respiration : « vu qu'on peut s'habiller en
+  boutique ») — le linge se change au comptoir, l'ombre jamais : un second repère qui tient quoi
+  qu'on porte. `ombre_coop`, un deuxième bitmap mis en cache par `Atlas.cuirePeintre` (même
+  teal que `COULEUR_COOP_JOUEUR2`, un peu plus opaque — 0,55 contre 0,30 — pour rester lisible à
+  12×6 px), choisi par `e.coopJoueur2` au même endroit que l'ombre ordinaire.
+- **Ils ne peuvent pas se frapper mutuellement** (Martin, 22 sept.) : sans ça, le deuxième
+  joueur est un piéton `vivant` comme un autre, et le premier — toujours armé, toujours en
+  combat — peut le cogner dans une bagarre ou une balle perdue. `e.invincible` posé à 30 DÈS LA
+  NAISSANCE (`creerCoopJoueur2`) et rechargé chaque image par `majJoueur2` (même mécanisme que
+  la triche INVINCIBLE du joueur 1, `Jeu.maj`) : `Entites.blesser` refuse tout coup tant qu'elle
+  tient. ⚠️ Sans le poser dès la création, une image sépare la naissance du premier rechargement
+  — juge mutation-vérifié sur les DEUX (l'oubli du rechargement, l'oubli de la valeur initiale).
+- **ACTION interagit avec le décor, les bêtes et les gens** (demande de Martin, 22 sept., après
+  avoir remarqué qu'aucun bouton de la manette ne faisait rien) : `majJoueur2` appelle
+  `Interactions.utiliserSurLesGens`/`utiliserSurLesBetes`/`utiliserSurLeDecor` — le même ordre
+  que `Missions.interagir` pour le joueur 1, MOINS le bouclier humain (une mécanique de combat,
+  hors de la portée de l'essai). Le bouton ACTION lu par `Entree.neufManette` — SEULEMENT la
+  manette (le symétrique de `neufSansManette`, qui exclut la manette pour le joueur 1). ⚠️ Un
+  banc l'assoit (même table de décor que le joueur 1) mais SANS `Interactions.majAssis` au
+  complet : cette fonction-là lit `Entree.axe`/`bas`/`neuf` du joueur 1 en dur, pas paramétrée
+  sur qui s'assoit — un parallèle minimal (le stick de la manette lève, un point c'est tout)
+  évite de la dupliquer en entier pour un essai. Pas de souffle qui revient ni de soin assis
+  pour le deuxième joueur pendant ce passage-ci. ⚠️ Jugé PAR LE BOUTON (`o.pad(...)`), pas en
+  appelant `Interactions.utiliserSurLeDecor` à la main — la même règle que
+  `test_interactions_js.py` : la chaîne d'ACTION affame ce qui suit, un juge qui appelle la
+  fonction ne voit pas le bouton cassé.
+- **« Toutes les mêmes actions, sauf ce qui change de scène, lance une mission ou conduit »**
+  (Martin, 22 sept., après le geste de décor) : ATTAQUE fait maintenant frapper le deuxième
+  joueur (`Combat.frapper(e, false)`) — TOUJOURS à poings nus, il n'a pas d'arme à lui
+  (`armeCourante()` ne lit QUE `B.joueur.arme` ; `frapper`, lui, lit `e.arme || 'poings'` sur
+  l'entité qu'on lui donne, et le deuxième joueur n'en a jamais). ⚠️ **`Combat.frapper` et
+  `majAttaque` étaient DÉJÀ génériques sur une entité** — les passants qui se battent entre eux
+  passent par le même mécanisme, `Combat.maj()` fait tourner `majAttaque` sur TOUT `B.entites`
+  en `etat === 'attaque'` — donner un coup au deuxième joueur n'a rien demandé de plus que
+  l'appeler avec `e` au lieu de `B.joueur`. Ce qui reste HORS de portée : la chaîne de
+  `Missions.interagir` au grand complet (portes, donneurs de mission, comptoirs, autobus,
+  guichets…) — elle change de scène et lance des missions, exactement ce que Martin a exclu —,
+  la roulade (`Combat.roulade` lit `Entree.axe`/`j.endurance` du joueur 1 en dur, et le deuxième
+  joueur n'a pas d'endurance du tout), le bouclier humain et toute arme propre au deuxième
+  joueur (son inventaire reste celui du premier, partagé).
+- **L'option qui échange qui a quoi** (demande de Martin, 22 sept., dans la foulée) : OPTIONS >
+  « JOUEUR 1 À LA MANETTE (COOP) » (`options.coopP1Manette`, un simple `bascule(...)` comme les
+  autres réglages, sauvegardé pareil). Par défaut, faux : le premier reste au clavier, le
+  deuxième à la manette (comme livré plus haut). Vrai : ça s'inverse — le premier joue au stick,
+  le deuxième au clavier. Recentré dans `Entree` : `joueur1PrendLaManette()` (une seule question
+  posée partout), `bas()`/`neuf()` (celles du joueur 1) ET les deux nouvelles `basJoueur2`/
+  `neufJoueur2`/`axeJoueur2` (celles du deuxième) la consultent toutes — `axeClavierSeul()`, la
+  lecture du clavier tout cru déjà écrite pour « le joueur 1 sans manette », sert maintenant
+  deux fois : pour lui SANS l'option, pour le deuxième AVEC. `Entites.majJoueur2` ne lit plus
+  jamais `Entree.stick` directement : `Entree.axeJoueur2()` déjà.
+- **Juges** ajoutés : `test_la_coop_locale_le_deuxieme_joueur_frappe_a_poings_nus` (ATTAQUE →
+  `etat === 'attaque'`, jamais d'arme) et `test_la_coop_locale_l_option_donne_la_manette_au_joueur_1`
+  (la manette bouge le premier et pas le second quand l'option est vraie, et l'inverse pour le
+  clavier), tous deux mutation-vérifiés.
 - **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux, un clavier sous une
   main et une manette dans l'autre, devant le même écran de 480×270 — la laisse retient plutôt
   qu'elle ne montre plus, et ça peut se sentir serré. Ni si 130 px est le bon chiffre
-  (`LAISSE_COOP`, dans `monde.js`) — posé à vue, à ajuster au prochain essai. Ni si « marcher
-  seulement » suffit ou si ça donne surtout envie de se battre à deux. **Prochain pas : Martin,
-  clavier et manette en main, encore.**
+  (`LAISSE_COOP`, dans `monde.js`) — posé à vue, à ajuster au prochain essai. Ni si le deuxième
+  joueur à poings nus, sans arme et sans roulade, tient sa place dans une vraie bagarre à deux
+  contre une bande. **Prochain pas : Martin, clavier et manette en main, encore.**

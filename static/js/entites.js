@@ -186,6 +186,10 @@ const Entites = (function () {
     return creer('pieton', x, y, {
       r: 5, sprite: 'joueur', swaps: swaps,
       etat: 'flane', dir: 0, butT: 0, cri: 0, coopJoueur2: true,
+      // ⚠️ Deja invincible A LA NAISSANCE, pas seulement a la premiere image
+      // de `majJoueur2` — sans ca, une image separe la creation du premier
+      // rechargement, et un coup porte pile a ce moment-la passerait.
+      invincible: 30,
     });
   }
 
@@ -4014,26 +4018,31 @@ const Entites = (function () {
   }
 
   /** La coop locale (M14, essai — un clavier + une manette) : un pieton
-      marque `coopJoueur2`, mene par le STICK DE LA MANETTE (`Entree.stick`)
-      plutot que par l'IA — le joueur 1, lui, reste au clavier pendant ce
-      temps (`Entree.debutImage`, garde `!B.coop` sur la branche manette), a
-      la MEME vitesse que lui (`v.joueur_marche`/`v.joueur_course`, pas
+      marque `coopJoueur2`, mene par LE DEUXIEME APPAREIL (`Entree.axeJoueur2`
+      — la manette par defaut, ou le clavier si l'option donne la manette au
+      joueur 1, `Entree.joueur1PrendLaManette`) plutot que par l'IA, a la
+      MEME vitesse que le premier (`v.joueur_marche`/`v.joueur_course`, pas
       `v.pieton` — un passant de la foule est plus lent qu'un joueur, et les
       deux couraient a des rythmes differents. Retour de Martin, 22 sept.
       2026, en testant). `Monde.majCameraCoop` les retient a portee l'un de
       l'autre (une laisse, pas un zoom — voir sa note).
 
-      ACTION (bouton de la manette, `Entree.neufManette`) interagit avec le
-      decor, les betes et les gens — les memes gestes que le joueur 1
-      (`Interactions.utiliserSurLesGens/Betes/LeDecor`), demandes par Martin
-      le meme jour. ⚠️ AUCUN COMBAT : ni le bouclier humain
-      (`Combat.otageSousLaMain`), ni rien d'arme — ce sont des mecaniques de
-      combat, hors de la portee « essai ». ⚠️ Un banc L'ASSOIT (comme le
-      joueur 1, meme table de decor) mais SANS `Interactions.majAssis`
-      complet — cette fonction-la lit `Entree.axe`/`bas`/`neuf` du JOUEUR 1
-      en dur, pas parametree sur qui s'assoit. Un parallele minimal : le
-      stick de la manette leve, un point c'est tout — pas de souffle qui
-      revient ni de soin assis pour le deuxieme joueur pendant l'essai. */
+      ⚠️ « Toutes les memes actions, sauf ce qui change de scene, lance une
+      mission ou conduit — ca reste toujours le joueur 1 » (Martin, 22 sept.).
+      ATTAQUE frappe (`Combat.frapper`, toujours a poings nus — le deuxieme
+      joueur n'a pas d'arme a lui, `armeCourante()` ne lit que celle du
+      premier) et ACTION interagit avec le decor, les betes et les gens
+      (`Interactions.utiliserSurLesGens/Betes/LeDecor`) — les memes gestes
+      que le joueur 1, en dehors de la chaine de `Missions.interagir` (portes,
+      donneurs de mission, comptoirs, autobus...), qui reste HORS DE PORTEE :
+      c'est elle qui change de scene et lance des missions. ⚠️ Ni roulade
+      (`Combat.roulade` lit `Entree.axe`/`j.endurance` du joueur 1 en dur), ni
+      bouclier humain, ni arme a soi — hors de la portee « essai ». ⚠️ Un banc
+      L'ASSOIT (meme table de decor que le joueur 1) mais SANS
+      `Interactions.majAssis` complet — cette fonction-la lit aussi
+      `Entree.axe`/`bas`/`neuf` du premier en dur. Un parallele minimal :
+      SEUL le mouvement leve, pas de souffle qui revient ni de soin assis
+      pour le deuxieme joueur pendant l'essai. */
   function majJoueur2(e) {
     // ⚠️ « Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin,
     // 22 sept.) : sans ca, le deuxieme joueur est un pieton `vivant` comme un
@@ -4041,14 +4050,20 @@ const Entites = (function () {
     // passant — un coup de trop dans une bagarre, une balle perdue. Rechargee
     // CHAQUE image, comme la triche INVINCIBLE du joueur 1 (`Jeu.maj`) :
     // `blesser()` refuse tout coup tant qu'elle tient (`e.invincible > 0`).
+    // ⚠️ Ca protege aussi le PREMIER : le deuxieme joueur ne frappe qu'a
+    // poings nus (plus bas), jamais assez fort pour justifier une riposte —
+    // mais `B.joueur`, lui, reste vulnerable a tout le reste (foule, police).
     e.invincible = 30;
-    const axe = Entree.stick;
+    const axe = Entree.axeJoueur2();
     if (e.assis) {
       if (axe.mag > 0) Interactions.seLever(e, axe.x, axe.y);
       else { e.vx = 0; e.vy = 0; return; }
-    } else if (Entree.neufManette('action') && typeof Interactions !== 'undefined'
-               && (Interactions.utiliserSurLesGens(e) || Interactions.utiliserSurLesBetes(e) || Interactions.utiliserSurLeDecor(e))) {
-      return;   // le geste a pris la pression : pas de mouvement cette image-ci
+    } else {
+      if (Entree.neufJoueur2('attaque') && typeof Combat !== 'undefined') Combat.frapper(e, false);
+      if (Entree.neufJoueur2('action') && typeof Interactions !== 'undefined'
+          && (Interactions.utiliserSurLesGens(e) || Interactions.utiliserSurLesBetes(e) || Interactions.utiliserSurLeDecor(e))) {
+        return;   // le geste a pris la pression : pas de mouvement cette image-ci
+      }
     }
     const v = B.defs.recherche.vitesses;
     if (axe.mag > 0) {

@@ -406,6 +406,11 @@ const Hud = (function () {
         return false;
       } },
       sonsHorsLigne,
+      // ⚠️ La coop locale (essai, un clavier + une manette) : par defaut la
+      // manette va au deuxieme joueur — Martin veut pouvoir se la garder
+      // (jouer le personnage principal au stick) et laisser le clavier au
+      // deuxieme. `Entree.debutImage`/`axeJoueur2` lisent cette meme case.
+      bascule('coopP1Manette', 'JOUEUR 1 À LA MANETTE (COOP)'),
       { libelle: 'MANETTE', faire: function () { ouvrirMenu(menuManette()); return false; } },
       { libelle: 'RETOUR', faire: function () { ouvrirMenu(menuPause()); return false; } },
     ], aide: 'ACTION : CHANGER · FRAPPE : FERMER' };
