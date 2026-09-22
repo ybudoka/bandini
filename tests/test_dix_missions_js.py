@@ -156,6 +156,7 @@ F06 = "function (L, o) {" + OUTILS + """
 #: Suivre à `ECART` pixels derrière lui, au pixel (le char collé à son pare-choc
 #: arrière, chaque image), jusqu'à ce que l'objectif avance ou que ça rate.
 DERRIERE = """
+    const vus = {};
     let i = 0;
     for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 0; i++) {
       if (!c.attendLeJoueur) {
@@ -164,9 +165,13 @@ DERRIERE = """
       }
       o.frame(1); fermerTout();
       if (i % 20 === 0) lignes.push(L.Histoire.ligneObjectif());
+      ['garage', 'terminus'].forEach(function (n) {
+        const l = L.Histoire.lieu(n);
+        vus[n] = Math.min(vus[n] || 1e9, Math.round(Math.hypot(l.x - c.x, l.y - c.y)));
+      });
     }
     const poste = L.Histoire.lieu('poste');
-    const fin = { images: i, etapeFilee: etape(L), dPoste: Math.round(Math.hypot(poste.x - c.x, poste.y - c.y)) };
+    const fin = { images: i, vus: vus, etapeFilee: etape(L), dPoste: Math.round(Math.hypot(poste.x - c.x, poste.y - c.y)) };
     finir(L, o);
     fin.libre = c.mission === null && B.entites.indexOf(c) >= 0;
 """
@@ -195,12 +200,18 @@ def test_f06_on_sort_du_casse_croute_et_on_le_file_jusqu_au_poste(banc):
 
     Ici on la joue comme lui : garé devant, Bouchard dedans, la porte, son char. Le stool attend
     qu'on soit au volant, roule au poste ; à six tuiles derrière lui, il y arrive, on paie, la
-    mission est faite — et son char repart dans le trafic, pas escamoté sous nos yeux."""
+    mission est faite — et son char repart dans le trafic, pas escamoté sous nos yeux.
+
+    ⚠️ Martin, ensuite : « je veux que ce soit plus long ». Le poste est à deux coins de rue
+    (15 à 20 s) : le stool fait un détour (`par`) — le garage, puis le terminus. Mesuré sur
+    six graines : 57 à 74 s de filature."""
     r = banc(F06.replace("SUITE", DERRIERE.replace("ECART", "96")))
     assert r["dSortie"] >= 5 * 16, "il naît à cinq tuiles au moins de la porte : %s" % r["dSortie"]
     assert r["aPied"]["etape"] == 0 and r["aPied"]["attend"] is True, "à pied, il attend : %s" % r["aPied"]
     assert r["aPied"]["ligne"].endswith("PRENDS UN CHAR"), r["aPied"]
     assert r["etapeFilee"] == 1 and r["dPoste"] < 8 * 16, "filé jusqu'au poste, l'objectif avance : %s" % r
+    assert r["vus"]["garage"] < 5 * 16 and r["vus"]["terminus"] < 5 * 16, "le détour, étape par étape : %s" % r["vus"]
+    assert r["images"] > 40 * 60, "une vraie filature, plus deux coins de rue : %s images" % r["images"]
     assert r["fait"] is True and 300 in r["argent"], "200 $ payés, 300 $ de prime : %s" % r
     assert r["libre"], "son char repart dans le trafic"
 

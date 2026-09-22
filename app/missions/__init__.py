@@ -40,7 +40,8 @@ TYPES_OBJECTIFS = (
     # s'écrit en DONNÉES, jamais en `if (slug === '…')`. Les clés se déclarent
     # ici pour rester lisibles au carnet et au GPS comme au navigateur.
     "suivre",      # filer un char sans être vu jusqu'à son `lieu` : trop près
-                   # (`proche`) ou trop loin (`loin`) trop longtemps, c'est raté
+                   # (`proche`) ou trop loin (`loin`) trop longtemps, c'est raté ;
+                   # `par` : les lieux de son détour, traversés dans l'ordre avant
     "proteger",    # un personnage te suit à pied ou monte avec toi ; s'il meurt,
                    # échec `protege_mort` (`cible`)
     "pickpocket",  # les poches d'un piéton PRÉCIS, par-derrière (le jet de m2) `cible`

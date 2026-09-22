@@ -17,6 +17,10 @@ MISSION = {
     # repère) et `loin` (trop loin, on le perd) se tolèrent un moment. ⚠️ Plus le fuyard
     # de m50 : il naissait devant la porte, sous `proche`, et l'échec tombait à la sortie
     # (Martin, 22 sept. 2026).
+    # ⚠️ `par` : le détour d'un stool nerveux, avant le poste — le garage, puis le
+    # terminus. Sans lui, le poste est à deux coins de rue et la filature durait 15 s ;
+    # Martin : « je veux que ce soit plus long ». Des lieux déjà de mission : la ville
+    # ne bouge pas.
     # `payer` (M16) : `Missions.payer` déduit l'argent, sans UI de plus.
     # ⚠️ Pas de `retourner` après : Bouchard se tient DEDANS (`point:sergent`) — un
     # `retourner` ne se règle qu'avec un donneur en chair et en os dans la ville
@@ -24,7 +28,7 @@ MISSION = {
     # ferme la mission tout seul (comme m51 : Bouchard se dit au combiné).
     "objectifs": [
         {"type": "suivre", "texte": "SUIS-LE SANS TE FAIRE REPÉRER",
-         "vehicule": "auto", "loin": 10, "proche": 3, "lieu": "poste"},
+         "vehicule": "auto", "loin": 10, "proche": 3, "par": ["garage", "terminus"], "lieu": "poste"},
 
         {"type": "payer", "texte": "PAIE-LUI 200 $ POUR SON SILENCE", "montant": 200},
     ],

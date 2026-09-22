@@ -1479,8 +1479,15 @@ const Histoire = (function () {
     const v = Vehicules.creer(o.vehicule || 'auto', rue.x, rue.y, CAP_DE_FLECHE[rue.sens], { conducteur: 'trafic', etat: 'roule', sens: rue.sens, mission: m.slug, suivi: true });
     if (!v) return;
     v.vitesse = 0; v.attendLeJoueur = true;
-    const l = o.lieu ? lieu(o.lieu) : null;
-    v.destination = l ? Monde.routeLaPlusProche(l.x, l.y, 10) : null;
+    // Ses étapes : le détour (`par`, Martin : « je veux que ce soit plus long »), puis
+    // le `lieu`. Chacune est la voie la plus proche de sa porte ; `destination` est la
+    // prochaine, et passe à la suivante quand il y arrive.
+    const etapes = (o.par || []).concat(o.lieu ? [o.lieu] : []).map(function (slug) {
+      const l = lieu(slug);
+      return l ? Monde.routeLaPlusProche(l.x, l.y, 10) : null;
+    }).filter(Boolean);
+    v.destination = etapes.shift() || null;
+    B.mission.etapesDuSuivi = etapes;
     B.mission.suivi = v; B.mission.entites.push(v);
     B.mission.suiviAttente = 0; B.mission.mefiance = 0; B.mission.perdu = 0;
   }
@@ -1704,9 +1711,13 @@ const Histoire = (function () {
           return;
         }
         if (c.destination && dist2(c.x, c.y, c.destination.x, c.destination.y) < (4 * TT) * (4 * TT)) {
-          c.attendLeJoueur = true; c.destination = null;   // rendu : il se range
-          avancer();
-          return;
+          // Une étape du détour : il repart vers la suivante, et on le file toujours.
+          if (bm.etapesDuSuivi && bm.etapesDuSuivi.length) c.destination = bm.etapesDuSuivi.shift();
+          else {
+            c.attendLeJoueur = true; c.destination = null;   // rendu : il se range
+            avancer();
+            return;
+          }
         }
         // ⚠️ Trop près, c'est DANS SON RÉTROVISEUR : derrière lui ou à côté. Il
         // démarrait devant ton char garé et te frôlait en passant — la méfiance

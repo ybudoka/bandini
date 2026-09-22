@@ -76,6 +76,8 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
                 # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
                 # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
                 assert o["lieu"] in lieux or o["lieu"].startswith("mouillage:"), f"{m['slug']} : lieu inconnu {o['lieu']}"
+            for etape in o.get("par", []):
+                assert etape in lieux, f"{m['slug']} : lieu du détour inconnu {etape}"
             if o.get("ou", "").startswith("zone:"):
                 assert o["ou"][5:] in zones
             if o.get("groupe"):
