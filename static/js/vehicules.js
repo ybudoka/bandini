@@ -3097,33 +3097,142 @@ const Vehicules = (function () {
   /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
   function lampesDesFeux() { return lampesFeux.image === B.image ? lampesFeux.liste : []; }
 
-  //: **LES PHARES** (la nuit a ses habitudes). Un char qu'on MENE eclaire la rue
-  //: devant lui — un faisceau allonge dans son axe (`a`, `e` : `Base.fin` l'etire)
-  //: — et ses feux arriere rougeoient. Un char gare est eteint : c'est ce qui dit,
-  //: de loin, lequel va bouger. Ramasses EN DESSINANT, comme les feux de
-  //: circulation, et pour la meme raison : `dessinerUn` ne passe que sur les chars
-  //: de l'ecran.
-  const LAMPES_PHARES_MAX = 12;
-  const PHARE = { devant: 16, rayon: 30, allonge: 1.7, c: 'rgba(255,236,190,0.42)' };
-  const FEU_ARRIERE = { rayon: 7, c: 'rgba(255,55,45,0.50)' };
-  const lampesPhares = { image: -1, liste: [], allume: false };
+  //: **LES PHARES** (la nuit a ses habitudes). Un char qu'on MENE allume ses
+  //: lampes — ses phares luisent, ses feux arriere rougeoient — et ses phares BAS
+  //: jettent un faisceau sur la chaussee devant lui. Un char gare est eteint :
+  //: c'est ce qui dit, de loin, lequel va bouger. Ramasses EN DESSINANT, comme
+  //: les feux de circulation, et pour la meme raison : `dessinerUn` ne passe que
+  //: sur les chars de l'ecran.
+  //:
+  //: ⚠️ **LES LAMPES VIENNENT DE LA MACHINE** (retour de Martin : « ajuste
+  //: correctement les phares pour tous les types de véhicules le soir »). Il n'y
+  //: avait qu'un halo rond, 16 px devant le nez, le meme pour le velo et pour
+  //: l'autobus : il debordait sur la caisse et derriere elle, un camion n'avait
+  //: qu'un feu arriere au milieu, et le chalutier roulait avec des phares d'auto.
+  //: Chaque machine declare deja ou sont ses lampes — ses pieces `l` et `t`, ce
+  //: qu'elle peint — : les lire, c'est les poser au pixel pres pour toutes les
+  //: silhouettes, et pour celles qui viendront.
+  //:
+  //: Le FAISCEAU de chaque classe : `portee` (px devant les phares), `ouverture`
+  //: (ce qu'il gagne de chaque cote au bout de sa portee) et `force`. ⚠️ `null`,
+  //: aucun : un bateau n'eclaire pas l'eau devant lui, il montre ses feux de
+  //: navigation. Une classe ABSENTE n'en a pas non plus — et un juge exige que
+  //: chaque classe du catalogue y soit, pour que ce soit une decision.
+  const FAISCEAUX = {
+    auto:   { portee: 56, ouverture: 13, force: 0.36 },
+    camion: { portee: 68, ouverture: 16, force: 0.38 },
+    moto:   { portee: 54, ouverture: 10, force: 0.34 },
+    velo:   { portee: 26, ouverture: 5, force: 0.20 },
+    bateau: null,
+  };
+  //: Un phare BAS eclaire la chaussee ; un phare HAUT — le feu de mat d'un
+  //: bateau, les feux d'arret de l'autobus scolaire — ne fait que luire.
+  const PHARE_BAS_Z = 10;
+  //: La lueur sur chaque lampe peinte : petite, comme celle d'un feu de
+  //: circulation (`RAYON_LAMPE`) — une lampe ne s'eclaire qu'elle-meme.
+  const LUEURS = { l: { rayon: 5, alpha: 0.55, defaut: '#fff3b0' }, t: { rayon: 5, alpha: 0.5, defaut: '#ff4b3e' } };
+  //: ⚠️ LE PLAFOND COMPTE DES CHARS. Il comptait des lampes — douze, deux par
+  //: char : passe six chars a l'ecran, les suivants roulaient eteints. Un char de
+  //: ville en allume cinq (un faisceau, deux phares, deux feux) ; l'autobus
+  //: scolaire et le cabriolet sept. Des places gardees pour le char du joueur :
+  //: c'est lui qu'on regarde.
+  const CHARS_ECLAIRES_MAX = 14;
+  const LAMPES_PAR_CHAR_MAX = 7;
+  const LAMPES_PHARES_MAX = CHARS_ECLAIRES_MAX * LAMPES_PAR_CHAR_MAX;
+  //: ⚠️ LE SOIR, LE FAISCEAU MONTE AVEC LA NUIT. Allume a la brune (18 h 40), il
+  //: jetait deja toute sa force sur une chaussee a peine assombrie : des cones
+  //: blancs sur une rue encore orangee. Il part du tiers (`FAISCEAU_A_LA_BRUNE`)
+  //: et n'a toute sa force qu'a la nuit faite (`NUIT_FAITE`, l'ambiance de 21 h).
+  //: Les LUEURS, elles, sont pleines des qu'on allume : une lampe allumee se
+  //: voit, soir ou pas.
+  const FAISCEAU_A_LA_BRUNE = 0.35;
+  const NUIT_FAITE = 0.62;
+  const lampesPhares = { image: -1, liste: [], allume: false, fondu: 1 };
+
+  /** Les lampes d'une silhouette, lues UNE FOIS dans sa machine : ou elles sont
+      (`u` vers l'avant, `w` vers la droite, `z` en hauteur, en px), et la
+      couleur de leur lueur, tiree de la palette — le phare jaunatre d'une
+      vieille auto, le feu rouge qu'elle peint. `bas` : le milieu et la
+      demi-largeur des phares BAS, d'ou part le faisceau (null s'il n'y en a pas).
+
+      ⚠️ Une piece de lampe a trois formes : `bloc` (ses trois faces, dont une
+      au moins est `l` ou `t` — le phare de la moto a le dessus noir), `point`
+      (le feu du velo, au bout du porte-bagages) et `tube`. */
+  const lampesDesMachines = new Map();
+  function lampesDeLaMachine(nom) {
+    if (lampesDesMachines.has(nom)) return lampesDesMachines.get(nom);
+    const def = SPRITES[nom];
+    const liste = [];
+    for (const p of (def && def.machine ? def.machine.pieces : [])) {
+      let lettre = null, u = 0, w = 0, z = 0;
+      if (p[0] === 'bloc') {
+        lettre = [p[4], p[5], p[6]].find(function (ch) { return ch === 'l' || ch === 't'; }) || null;
+        u = (p[1][0] + p[1][1]) / 2; w = (p[2][0] + p[2][1]) / 2; z = (p[3][0] + p[3][1]) / 2;
+      } else if (p[0] === 'point') {
+        lettre = p[2]; u = p[1][0]; w = p[1][1]; z = p[1][2];
+      } else if (p[0] === 'tube') {
+        lettre = p[3]; u = (p[1][0] + p[2][0]) / 2; w = (p[1][1] + p[2][1]) / 2; z = (p[1][2] + p[2][2]) / 2;
+      }
+      if (lettre !== 'l' && lettre !== 't') continue;
+      const lueur = LUEURS[lettre];
+      liste.push({ u: u, w: w, z: z, lettre: lettre, r: lueur.rayon,
+                   c: rgba((def.pal && def.pal[lettre]) || lueur.defaut, lueur.alpha) });
+    }
+    const bas = liste.filter(function (l) { return l.lettre === 'l' && l.z < PHARE_BAS_Z; });
+    if (bas.length) {
+      const ws = bas.map(function (l) { return l.w; });
+      const w0 = Math.min.apply(null, ws), w1 = Math.max.apply(null, ws);
+      liste.bas = { u: Math.max.apply(null, bas.map(function (l) { return l.u; })),
+                    w: (w0 + w1) / 2, demi: (w1 - w0) / 2 };
+    } else liste.bas = null;
+    liste.profondeur = (def && def.machine && def.machine.profondeur) || 1;
+    lampesDesMachines.set(nom, liste);
+    return liste;
+  }
+
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
+  }
 
   function allumerLesPhares(v, cx, cy) {
     if (lampesPhares.image !== B.image) {
       lampesPhares.image = B.image;
       lampesPhares.liste.length = 0;
-      lampesPhares.allume = Monde.ambiance().alpha >= BRUNE;
+      const noir = Monde.ambiance().alpha;
+      lampesPhares.allume = noir >= BRUNE;
+      lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
+        * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));
     }
     if (!lampesPhares.allume || !v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
-    // ⚠️ Deux places gardees pour le char du joueur : c'est lui qu'on regarde.
-    const plafond = v.conducteur === B.joueur ? LAMPES_PHARES_MAX : LAMPES_PHARES_MAX - 2;
-    if (lampesPhares.liste.length + 2 > plafond) return;
-    const demi = v.def.longueur / 2, ca = Math.cos(v.angle), sa = Math.sin(v.angle);
-    const d = demi + PHARE.devant;
-    lampesPhares.liste.push({ x: v.x + ca * d - cx, y: v.y + sa * d - v.z - cy, r: PHARE.rayon, c: PHARE.c,
-                              a: v.angle, e: PHARE.allonge, phare: v });
-    lampesPhares.liste.push({ x: v.x - ca * (demi + 1) - cx, y: v.y - sa * (demi + 1) - v.z - cy,
-                              r: FEU_ARRIERE.rayon, c: FEU_ARRIERE.c, arriere: v });
+    const lampes = lampesDeLaMachine(v.sprite);
+    const faisceau = lampes.bas ? FAISCEAUX[v.def.classe] || null : null;
+    const n = lampes.length + (faisceau ? 1 : 0);
+    const plafond = v.conducteur === B.joueur ? LAMPES_PHARES_MAX : LAMPES_PHARES_MAX - LAMPES_PAR_CHAR_MAX;
+    if (!n || lampesPhares.liste.length + n > plafond) return;
+    // ⚠️ Le cap DESSINE, pas `v.angle` : le toit est cuit au cran le plus
+    // proche, et une lueur posee au cap exact glisserait a cote de sa lampe.
+    const cap = capDe(v.angle) * Math.PI * 2 / ROTATIONS - Math.PI / 2;
+    const ca = Math.cos(cap), sa = Math.sin(cap), k = lampes.profondeur;
+    if (faisceau) {
+      // ⚠️ AU SOL (`v.y`, pas `v.y - v.z`) : la flaque de lumiere est sur la
+      // chaussee, comme l'ombre, meme quand le char saute. Et ECRASEE comme
+      // elle (`p`) : le sol se voit de biais. Il part des phares, pas de
+      // devant le nez — ce qui s'allume derriere les phares, c'est la caisse.
+      const b = lampes.bas, sol = ombreDe(v);
+      lampesPhares.liste.push({
+        x: v.x + b.u * ca - b.w * sa - cx, y: v.y + (b.u * sa + b.w * ca) * k - cy,
+        a: v.angle, p: sol ? sol.profondeur : k, r: faisceau.portee,
+        cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture],
+        c: 'rgba(255,236,190,' + (faisceau.force * lampesPhares.fondu).toFixed(3) + ')', faisceau: v,
+      });
+    }
+    const x0 = v.x - cx, y0 = v.y - v.z - cy;
+    for (const l of lampes) {
+      const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r, c: l.c };
+      if (l.lettre === 't') lampe.arriere = v; else lampe.phare = v;
+      lampesPhares.liste.push(lampe);
+    }
   }
 
   /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */

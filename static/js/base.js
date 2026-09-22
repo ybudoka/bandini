@@ -349,7 +349,13 @@ const Base = (function () {
   //: d'avant, les feux AURAIENT ETEINT les lampadaires au lieu de s'ajouter a
   //: eux : 25 lampadaires + 24 feux + le projecteur de l'helico. Et depuis la
   //: nuit a ses habitudes, les PHARES : douze lampes de plus (six chars menes).
-  const LAMPES_MAX = 62;
+  //: ⚠️ Et depuis « des phares a la mesure de chaque char », quatorze chars
+  //: menes a sept lampes au plus (`Vehicules`, `LAMPES_PHARES_MAX`) : a six,
+  //: le septieme char de l'ecran roulait eteint.
+  const LAMPES_MAX = 148;
+  //: Le bord d'un faisceau : [de combien la passe s'elargit au bout, sa part].
+  //: Les parts font 1 au milieu du cone.
+  const CONE_FLOU = [[8, 0.45], [0, 0.55]];
 
   /** Compose la nuit et les lampes, puis envoie a l'ecran. */
   function fin(ambiance, lampes) {
@@ -366,17 +372,31 @@ const Base = (function () {
         c.globalCompositeOperation = 'lighter';
         for (let i = 0; i < lampes.length && i < LAMPES_MAX; i++) {
           const l = lampes[i];
-          // Un faisceau (un phare) : le meme halo, ETIRE dans son axe (`e`, `a`).
-          if (l.e) {
+          // Un faisceau (des phares) : un CONE pose au sol, qui part des phares
+          // (`x`, `y`) dans l'axe `a` et s'eteint a sa portee `r` — `cone`, sa
+          // demi-largeur au depart et au bout. ⚠️ Ecrase comme le sol (`p`)
+          // APRES avoir tourne : le meme ordre que l'ombre des chars, sinon un
+          // faisceau en diagonale serait cisaille au lieu d'etre pose a plat.
+          if (l.cone) {
             c.save();
             c.translate(l.x, l.y);
+            c.scale(1, l.p || 1);
             c.rotate(l.a || 0);
-            c.scale(l.e, 1);
-            const f = c.createRadialGradient(0, 0, 2, 0, 0, l.r);
+            const f = c.createRadialGradient(0, 0, 0, 0, 0, l.r);
             f.addColorStop(0, l.c);
             f.addColorStop(1, 'rgba(0,0,0,0)');
             c.fillStyle = f;
-            c.fillRect(-l.r, -l.r, l.r * 2, l.r * 2);
+            // ⚠️ DEUX PASSES : le cone, et un cone plus large a moitie moins
+            // fort. D'une seule, le bord etait une arete franche — un triangle
+            // de lumiere pose sur la rue, pas un faisceau.
+            for (const [elargi, part] of CONE_FLOU) {
+              c.globalAlpha = part;
+              c.beginPath();
+              c.moveTo(0, -l.cone[0] - elargi / 2); c.lineTo(l.r, -l.cone[1] - elargi);
+              c.lineTo(l.r, l.cone[1] + elargi); c.lineTo(0, l.cone[0] + elargi / 2);
+              c.closePath();
+              c.fill();
+            }
             c.restore();
             continue;
           }

@@ -4,7 +4,18 @@
 la brunante (19 h 41, la plage vient de fermer, il ne fait pas encore nuit).
 """
 
+import re
+from pathlib import Path
+
+from app.vehicules import CATALOGUE
+
 JOUR, BRUNANTE, NUIT = 0.55, 0.82, 0.9
+
+RACINE = Path(__file__).resolve().parent.parent
+
+
+def js(nom: str) -> str:
+    return (RACINE / "static" / "js" / nom).read_text(encoding="utf-8")
 
 #: Pose le joueur au-dessus de la plus grosse grève de la carte (comme
 #: `test_plage_js.py`), cinq tuiles au nord : la grève est dans la bulle, une
@@ -350,38 +361,289 @@ DEUX_CHARS = """
       const gare = L.Vehicules.creer('auto', j.x - 70, j.y, Math.PI, { etat: 'stationne' });
       mene.vitesse = 0; gare.vitesse = 0;
       L.Monde.centrerCamera(j.x, j.y);
-      o.frame(2);
+      // ⚠️ Rendu SANS avancer le monde : deux images de simulation, et le char
+      // mené braquait de 0,9 rad pour suivre sa rue — « devant » n'était plus l'est.
+      L.Jeu.rendre();
       return { mene: mene, gare: gare };
     }
 """
 
 
 def test_la_nuit_un_char_mene_allume_ses_phares_et_un_char_gare_non(banc, paquet):
-    """La nuit, le char qu'on mène jette un faisceau DEVANT lui et deux feux rouges
-    derrière ; le char garé est éteint. Le jour, personne n'allume."""
+    """La nuit, le char qu'on mène jette un faisceau DEVANT lui, ses deux phares
+    luisent à l'avant et ses deux feux rouges à l'arrière ; le char garé est
+    éteint. Le jour, personne n'allume. (Vers l'est : l'axe du char est `x`.)"""
     r = banc("""function (L, o) {
         %s
         function releve(heure) {
           const c = deuxChars(L, heure);
           const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
           const lampes = L.Vehicules.lampesDesPhares();
-          const v = c.mene;
-          const ca = Math.cos(v.angle), sa = Math.sin(v.angle);
-          const devant = lampes.filter(function (l) {
-            return l.phare === v && ((l.x + cx - v.x) * ca + (l.y + cy - v.y) * sa) > v.def.longueur / 2;
+          const v = c.mene, demi = v.def.longueur / 2;
+          const le = function (cle) { return lampes.filter(function (l) { return l[cle] === v; }); };
+          const devant = le('faisceau').filter(function (l) { return l.x + cx - v.x + l.r > demi + 20; }).length;
+          const phares = le('phare').filter(function (l) { return l.x + cx - v.x > demi / 2; }).length;
+          const feux = le('arriere').filter(function (l) { return l.x + cx - v.x < -demi / 2; }).length;
+          const duGare = lampes.filter(function (l) {
+            return l.faisceau === c.gare || l.phare === c.gare || l.arriere === c.gare;
           }).length;
-          const derriere = lampes.filter(function (l) {
-            return l.arriere === v && ((l.x + cx - v.x) * ca + (l.y + cy - v.y) * sa) < 0;
-          }).length;
-          const duGare = lampes.filter(function (l) { return l.phare === c.gare || l.arriere === c.gare; }).length;
-          return { total: lampes.length, devant: devant, derriere: derriere, duGare: duGare };
+          return { total: lampes.length, devant: devant, phares: phares, feux: feux, duGare: duGare };
         }
         return { nuit: releve(%s), jour: releve(%s) };
     }""" % (DEUX_CHARS, NUIT, JOUR))
     assert r["nuit"]["devant"] == 1, "la nuit, le char mené n'éclaire pas devant lui : %s" % r["nuit"]
-    assert r["nuit"]["derriere"] == 1, "la nuit, pas de feu arrière : %s" % r["nuit"]
+    assert r["nuit"]["phares"] == 2, "la nuit, les deux phares ne luisent pas à l'avant : %s" % r["nuit"]
+    assert r["nuit"]["feux"] == 2, "la nuit, pas deux feux arrière : %s" % r["nuit"]
     assert r["nuit"]["duGare"] == 0, "un char garé a ses phares allumés"
     assert r["jour"]["total"] == 0, "en plein jour, des phares allumés"
+
+
+#: Tout le parc : la silhouette de chaque fiche du catalogue, ses variantes et
+#: celles qui se déclarent d'elle (le tramway), avec sa classe. Et un char mené,
+#: SEUL sous nos yeux, rendu sans avancer le monde (`Jeu.rendre`) : une image
+#: de simulation le ferait tourner d'un cran.
+PARC = """
+    function parc(L) {
+      const out = [];
+      for (const d of L.B.defs.vehicules) {
+        const s = L.SPRITES[d.sprite];
+        const noms = [d.sprite].concat(Object.keys(s.variantes || {}),
+          Object.keys(L.SPRITES).filter(function (n) { return L.SPRITES[n].de === d.sprite; }));
+        for (const n of noms) {
+          if (!out.some(function (p) { return p.sprite === n; })) out.push({ slug: d.slug, sprite: n, classe: d.classe });
+        }
+      }
+      return out;
+    }
+    function preparer(L) {
+      L.Jeu.commencer();
+      L.graine(3);
+      L.B.defs.conduite.trafic.vehicules_max = 0;
+      L.B.defs.conduite.trafic.stationnes_max = 0;
+      L.B.defs.conduite.trafic.garer_la_nuit.max = 0;
+    }
+    function seul(L, p, heure, angle, z) {
+      L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+      L.B.partie.heure = heure;
+      const j = L.B.joueur;
+      const v = L.Vehicules.creer(p.slug, j.x + 40, j.y + 20, angle,
+                                  { conducteur: 'trafic', etat: 'roule', sprite: p.sprite, couleur: '#c0392b' });
+      v.vitesse = 0; v.z = z || 0;
+      L.Monde.centrerCamera(j.x, j.y);
+      L.Jeu.rendre();
+      const cx = Math.round(L.B.cam.x), cy = Math.round(L.B.cam.y);
+      const lampes = L.Vehicules.lampesDesPhares().filter(function (l) {
+        return l.faisceau === v || l.phare === v || l.arriere === v;
+      });
+      // Chaque lampe relevée depuis le char : `dx`, `dy` depuis son centre DESSINÉ.
+      return { v: v, lampes: lampes.map(function (l) {
+        return Object.assign({}, l, { dx: l.x + cx - v.x, dy: l.y + cy - (v.y - v.z), sol: l.y + cy - v.y });
+      }) };
+    }
+"""
+
+
+def test_chaque_char_du_parc_allume_les_lampes_que_sa_machine_peint(banc, paquet):
+    """⚠️ **« Ajuste correctement les phares pour tous les types de véhicules le
+    soir »** (Martin, 21 sept. 2026). Un seul halo se posait 16 px devant le nez
+    de tous les chars ; un camion n'avait qu'un feu arrière, au milieu. Chaque
+    silhouette du parc déclare ses lampes dans sa machine (les pièces `l` et
+    `t`) : chacune a sa lueur, POSÉE SUR ELLE, et aucune lampe peinte n'est
+    oubliée.
+
+    Juge sur la grille projetée (`Atlas.projeter`, celle que le jeu peint), à
+    huit caps : chaque pixel de lampe peint est sous une lueur de sa sorte (son
+    rayon), et chaque lueur tombe, à un cap au moins, à un pixel au plus d'une
+    lettre de sa sorte. ⚠️ « À un cap au moins » : de face, les phares de la
+    charrue sont cachés par sa lame, et une lampe d'auto l'est par la caisse
+    quand elle s'éloigne — sa lueur est alors la lumière qui déborde."""
+    r = banc("""function (L, o) {
+        %s
+        preparer(L);
+        const out = {};
+        const SORTES = [['l', 'phare'], ['t', 'arriere']];
+        for (const p of parc(L)) {
+          const fiche = L.SPRITES[p.sprite], cote = fiche.w;
+          const res = { lettres: {}, loin: [], oubli: [], lampes: 0 };
+          const vues = { l: [], t: [] };
+          for (let k = 0; k < 8; k++) {
+            const angle = k * Math.PI / 4 - Math.PI / 2;
+            const s = seul(L, p, %s, angle);
+            const grille = L.Atlas.projeter(fiche.machine, angle, cote);
+            const a = function (x, y) { return y >= 0 && y < cote && x >= 0 && x < cote ? grille[y][x] : '.'; };
+            res.lampes = Math.max(res.lampes, s.lampes.length);
+            for (const [lettre, cle] of SORTES) {
+              const lueurs = s.lampes.filter(function (l) { return l[cle] === s.v; });
+              res.lettres[lettre] = lueurs.length;
+              lueurs.forEach(function (l, i) {
+                const gx = Math.floor(cote / 2 + l.dx), gy = Math.floor(cote / 2 + l.dy);
+                for (let y = gy - 1; y <= gy + 1; y++) for (let x = gx - 1; x <= gx + 1; x++) if (a(x, y) === lettre) vues[lettre][i] = true;
+              });
+              for (let y = 0; y < cote; y++) for (let x = 0; x < cote; x++) {
+                if (grille[y][x] !== lettre) continue;
+                const px = x + 0.5 - cote / 2, py = y + 0.5 - cote / 2;
+                if (!lueurs.some(function (l) { return Math.hypot(px - l.dx, py - l.dy) <= l.r; })) res.oubli.push([lettre, k, x, y]);
+              }
+            }
+          }
+          for (const [lettre] of SORTES) {
+            for (let i = 0; i < res.lettres[lettre]; i++) if (!vues[lettre][i]) res.loin.push([lettre, i]);
+          }
+          out[p.sprite] = res;
+        }
+        return out;
+    }""" % (PARC, NUIT))
+    assert len(r) >= 20, f"le parc n'a que {len(r)} silhouettes : {sorted(r)}"
+    for nom, res in r.items():
+        assert res["lettres"]["l"] >= 1, f"{nom} : aucun phare ne luit la nuit"
+        assert res["lettres"]["t"] >= 1, f"{nom} : aucun feu arrière ne luit la nuit"
+        assert not res["loin"], f"{nom} : des lueurs sur aucune lampe, à aucun cap (lettre, rang) {res['loin'][:4]}"
+        assert not res["oubli"], f"{nom} : des lampes peintes sans lueur (lettre, cap, x, y) {res['oubli'][:4]}"
+    assert r["auto"]["lettres"] == {"l": 2, "t": 2}, r["auto"]
+    assert r["camion"]["lettres"] == {"l": 2, "t": 2}, "un camion a DEUX feux arrière, pas un au milieu"
+    assert r["moto"]["lettres"] == {"l": 1, "t": 1}, r["moto"]
+    # Le plafond garde une place au char du joueur : sa place doit tenir le plus
+    # éclairé du parc, sinon ce char-là roulerait éteint une fois l'écran plein.
+    par_char = int(re.search(r"^  const LAMPES_PAR_CHAR_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    le_plus = max(r.items(), key=lambda kv: kv[1]["lampes"])
+    assert le_plus[1]["lampes"] <= par_char, (
+        f"{le_plus[0]} allume {le_plus[1]['lampes']} lampes, la place gardée n'en tient que {par_char}")
+
+
+def test_le_faisceau_est_a_la_mesure_de_chaque_classe(banc, paquet):
+    """Le faisceau part DES PHARES — pas de devant le nez : ce qui s'allumait
+    derrière, c'était la caisse — et porte au-delà du nez. Il est à la mesure de
+    son char : la lampe du vélo porte moins loin et moins fort que les phares
+    d'une auto, ceux d'un camion ou d'un autobus plus loin, et plus large au
+    départ (ses phares sont plus écartés). Un bateau n'en a pas : ses feux de
+    navigation seulement. Et il est POSÉ AU SOL : écrasé comme l'ombre, et il
+    reste sur la chaussée quand le char saute, pendant que ses phares montent."""
+    r = banc("""function (L, o) {
+        %s
+        preparer(L);
+        const out = {};
+        for (const p of parc(L)) {
+          const s = seul(L, p, %s, 0);
+          const f = s.lampes.filter(function (l) { return l.faisceau === s.v; });
+          const phares = s.lampes.filter(function (l) { return l.phare === s.v; });
+          out[p.sprite] = { classe: p.classe, n: f.length, demi: s.v.def.longueur / 2,
+            depart: f.length ? f[0].dx : null, portee: f.length ? f[0].r : null,
+            cone: f.length ? f[0].cone : null, force: f.length ? +/,([0-9.]+)\\)$/.exec(f[0].c)[1] : null,
+            avantMax: Math.max.apply(null, phares.map(function (l) { return l.dx; })) };
+        }
+        // Au sol : vers le nord, puis en l'air.
+        const auto = parc(L).find(function (p) { return p.sprite === 'auto'; });
+        const nord = seul(L, auto, %s, -Math.PI / 2);
+        const saut = seul(L, auto, %s, -Math.PI / 2, 24);
+        const f = function (s) { return s.lampes.find(function (l) { return l.faisceau === s.v; }); };
+        const ph = function (s) { return s.lampes.find(function (l) { return l.phare === s.v; }); };
+        out.sol = { p: f(nord).p, ombre: L.B.defs.conduite.ombre.profondeur,
+                    solNord: f(nord).sol, solSaut: f(saut).sol, pharesNord: ph(nord).sol, pharesSaut: ph(saut).sol,
+                    departNord: f(nord).sol, attendu: -(nord.v.def.longueur / 2) * L.SPRITES.auto.machine.profondeur };
+        return out;
+    }""" % (PARC, NUIT, NUIT, NUIT))
+    sol = r.pop("sol")
+    for nom, c in r.items():
+        if c["classe"] == "bateau":
+            assert c["n"] == 0, f"{nom} : un bateau éclaire l'eau devant lui comme une auto"
+            continue
+        assert c["n"] == 1, f"{nom} ({c['classe']}) roule sans faisceau"
+        assert 0 < c["depart"] <= c["demi"] + 1, (
+            f"{nom} : le faisceau part à {c['depart']} px du centre, le nez est à {c['demi']}")
+        assert c["depart"] >= c["avantMax"] - 0.5, f"{nom} : le faisceau part derrière ses phares"
+        assert c["depart"] + c["portee"] > c["demi"] + 20, f"{nom} : le faisceau ne dépasse pas le nez"
+    velo, moto, auto, camion, autobus = r["velo"], r["moto"], r["auto"], r["camion"], r["autobus"]
+    assert velo["portee"] < auto["portee"] and velo["force"] < auto["force"], (
+        f"la lampe du vélo éclaire comme des phares d'auto : {velo} / {auto}")
+    assert moto["cone"][0] < auto["cone"][0], f"une seule lampe, un faisceau aussi large que deux : {moto} / {auto}"
+    for gros in (camion, autobus):
+        assert gros["portee"] > auto["portee"], f"les phares d'un camion portent comme ceux d'une auto : {gros}"
+        assert gros["cone"][0] > auto["cone"][0], f"des phares plus écartés, un départ aussi étroit : {gros}"
+    assert sol["p"] == sol["ombre"], f"le faisceau n'est pas écrasé comme l'ombre : {sol}"
+    assert abs(sol["departNord"] - sol["attendu"]) < 1.5, f"vers le nord, le faisceau ne part pas du nez écrasé : {sol}"
+    assert sol["solSaut"] == sol["solNord"], f"le char saute et son faisceau quitte la chaussée : {sol}"
+    assert sol["pharesSaut"] < sol["pharesNord"] - 20, f"le char saute et ses phares restent au sol : {sol}"
+
+
+def test_chaque_classe_du_catalogue_a_decide_de_son_faisceau():
+    """Une classe absente de `FAISCEAUX` roule sans faisceau : c'est une
+    décision (un bateau), pas un oubli. La prochaine classe du catalogue — un
+    avion au sol, un tracteur — fait rougir ce juge jusqu'à ce qu'on écrive la
+    sienne, fût-ce `null`."""
+    bloc = re.search(r"^  const FAISCEAUX = \{\n(.*?)^  \};", js("vehicules.js"), re.M | re.S).group(1)
+    ecrites = set(re.findall(r"^    (\w+):", bloc, re.M))
+    classes = {v["classe"] for v in CATALOGUE}
+    assert classes <= ecrites, f"des classes sans décision de faisceau : {sorted(classes - ecrites)}"
+
+
+def test_quatorze_chars_menes_s_allument_tous_et_le_joueur_toujours(banc, paquet):
+    """⚠️ Le plafond comptait des LAMPES (douze, deux par char) : passé six chars à
+    l'écran, les suivants roulaient éteints. Il compte des chars. Quatorze chars
+    menés s'allument tous — autobus scolaire et cabriolet compris, les plus
+    éclairés — et quand l'écran en est plein, celui du joueur, dessiné le
+    dernier, s'allume quand même."""
+    r = banc("""function (L, o) {
+        %s
+        preparer(L);
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        const j = L.B.joueur;
+        const sortes = [['autobus', 'autobus_scolaire'], ['cabriolet', 'cabriolet'], ['auto', 'auto'], ['camion', 'camion'],
+                        ['moto', 'moto'], ['velo', 'velo'], ['taxi', 'taxi']];
+        function poser(n, y0) {
+          const out = [];
+          for (let i = 0; i < n; i++) {
+            const s = sortes[i %% sortes.length];
+            const v = L.Vehicules.creer(s[0], j.x - 180 + (i %% 5) * 80, j.y - 100 + y0 + Math.floor(i / 5) * 40, 0,
+                                        { conducteur: 'trafic', etat: 'roule', sprite: s[1], couleur: '#c0392b' });
+            v.vitesse = 0;
+            out.push(v);
+          }
+          return out;
+        }
+        const allume = function (v) {
+          return L.Vehicules.lampesDesPhares().some(function (l) { return l.phare === v || l.faisceau === v; });
+        };
+        const quatorze = poser(14, 0);
+        L.Monde.centrerCamera(j.x, j.y);
+        L.Jeu.rendre();
+        const eteints = quatorze.filter(function (v) { return !allume(v); }).map(function (v) { return v.sprite; });
+        // L'écran plein : vingt de plus, et le char du joueur tout en bas.
+        poser(20, 0);
+        const sien = L.Vehicules.creer('auto', j.x, j.y + 110, 0, { conducteur: j, etat: 'roule', couleur: '#c0392b' });
+        sien.vitesse = 0;
+        L.Jeu.rendre();
+        const derniers = L.Vehicules.lampesDesPhares();
+        return { eteints: eteints, sien: allume(sien), dernier: derniers[derniers.length - 1].phare === sien
+                 || derniers[derniers.length - 1].arriere === sien, total: derniers.length };
+    }""" % (PARC, NUIT))
+    assert not r["eteints"], f"des chars menés roulent éteints, l'écran n'en a que quatorze : {r['eteints']}"
+    assert r["sien"], f"l'écran plein, le char du joueur roule éteint ({r['total']} lampes)"
+    assert r["dernier"], "le char du joueur n'est pas le dernier dessiné : le juge ne dit pas ce qu'il croit"
+
+
+def test_le_soir_le_faisceau_monte_avec_la_nuit(banc, paquet):
+    """À la brune (19 h), le faisceau jetait déjà toute sa force sur une chaussée
+    à peine assombrie. Il monte avec la nuit : plus faible à 19 h qu'à 21 h 36,
+    et les LUEURS, elles, pleines dès qu'on allume — une lampe allumée se voit."""
+    r = banc("""function (L, o) {
+        %s
+        preparer(L);
+        const auto = parc(L).find(function (p) { return p.sprite === 'auto'; });
+        const alpha = function (c) { return +/,([0-9.]+)\\)$/.exec(c)[1]; };
+        const out = {};
+        for (const [nom, h] of [['brune', 0.79], ['nuit', %s]]) {
+          const s = seul(L, auto, h, 0);
+          out[nom] = { faisceau: alpha(s.lampes.find(function (l) { return l.faisceau === s.v; }).c),
+                       lueur: s.lampes.find(function (l) { return l.phare === s.v; }).c,
+                       noir: L.Monde.ambiance().alpha };
+        }
+        return out;
+    }""" % (PARC, NUIT))
+    brune, nuit = r["brune"], r["nuit"]
+    assert brune["noir"] >= 0.2, f"à 19 h il ne fait pas encore assez noir pour allumer : le juge ne dit rien ({brune})"
+    assert brune["faisceau"] < nuit["faisceau"] * 0.6, f"le soir, le faisceau a déjà sa force de nuit : {r}"
+    assert brune["lueur"] == nuit["lueur"], f"le soir, les phares luisent moins que la nuit : {r}"
 
 
 # --- Vague 3 : qui est dehors ------------------------------------------------------------

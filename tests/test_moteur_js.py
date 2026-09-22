@@ -6189,8 +6189,13 @@ def test_le_plafond_de_lampes_tient_les_lampadaires_ET_les_feux(racine):
     plafond = int(re.search(r"^  const LAMPES_MAX = (\d+);", js("base.js"), re.M).group(1))
     lampadaires = int(re.search(r"out\.length >= (\d+)\) break;", js("monde.js")).group(1))
     feux = int(re.search(r"^  const LAMPES_FEUX_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
-    # Et depuis « la nuit a ses habitudes », les phares des chars menés.
-    phares = int(re.search(r"^  const LAMPES_PHARES_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    # Et depuis « la nuit a ses habitudes », les phares des chars menés — comptés
+    # en CHARS depuis « des phares à la mesure de chaque char » : tant de chars, à
+    # tant de lampes au plus.
+    chars = int(re.search(r"^  const CHARS_ECLAIRES_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    par_char = int(re.search(r"^  const LAMPES_PAR_CHAR_MAX = (\d+);", js("vehicules.js"), re.M).group(1))
+    assert re.search(r"^  const LAMPES_PHARES_MAX = CHARS_ECLAIRES_MAX \* LAMPES_PAR_CHAR_MAX;", js("vehicules.js"), re.M)
+    phares = chars * par_char
     assert plafond >= lampadaires + feux + phares + 1, (
         f"{lampadaires} lampadaires + {feux} feux + {phares} phares + le projecteur de l'helico ne "
         f"tiennent pas sous un plafond de {plafond} : les feux en eteindraient"

@@ -211,3 +211,4 @@ Deux documents d'avant la table :
 | L'hélico : sourd dedans, et muet quand il est parti | ✅ **livré** | 21 sept. 2026 | **P1** | **correctif** | [fiche](l-helico-sourd-dedans-et-muet-quand-il-part.md#fiche) · [notes](l-helico-sourd-dedans-et-muet-quand-il-part.md#notes) |
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** | 21 sept. 2026 | **P3** | ajout | [fiche](des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
 | L'aéroport de Baie-des-Brumes | ✅ **livré** | 21 sept. 2026 | **P3** | ajout | [fiche](l-aeroport.md#fiche) · [notes](l-aeroport.md#notes) |
+| Des phares à la mesure de chaque char | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [fiche](des-phares-a-la-mesure-de-chaque-char.md#fiche) · [notes](des-phares-a-la-mesure-de-chaque-char.md#notes) |
