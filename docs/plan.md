@@ -79,6 +79,7 @@ pas quand l'ordre de travail change.
 | Jalon | État | Date | Prio | Genre | Notes |
 |---|---|---|---|---|---|
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
+| L'aéroport — le chantier du pont s'allonge, et l'île se cache sur la carte | ⬜ **en cours** | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/l-aeroport-le-chantier-s-allonge-l-ile-se-cache.md#fiche) |
 | M15 La ville te parle — deuxième vague | ⬜ **en cours** (déjà livrés : la rue qui se tait, les leçons du Clairon, la radio qui parle ; en cours : la police à la radio, le souffle, les bruits de quartier) | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [fiche](jalons/ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](jalons/ca-travaille-chantiers-et-demolitions.md#notes) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |
