@@ -143,11 +143,13 @@ def test_le_bouton_change_d_etiquette_et_revient(banc):
 
 
 def test_le_hud_dessine_la_sequence_sans_lever_d_erreur(banc):
-    """Un dessin de plus par image (`Hud.dessiner`) : le piratage ouvert ne doit pas
-    faire planter le rendu, ni disparaître dès la première image."""
+    """Un dessin de plus par image (`Hud.dessinerPiratage`) : le piratage ouvert ne doit pas
+    faire planter le rendu, ni disparaître dès la première image — et c'est bien LUI qui a
+    dessiné, pas seulement le reste du HUD (`noter('piratage', …)` pose son ancre)."""
     r = banc("""function (L, o) {""" + PRELUDE + """
         o.tape('KeyE', 2);
         o.frame(5);
-        return { ouvert: !!L.B.piratage, rects: L.B.stats.rects > 0 };
+        return { ouvert: !!L.B.piratage, rects: L.B.stats.rects > 0,
+                 ancre: L.Hud.ancres().some(function (a) { return a.nom === 'piratage'; }) };
     }""")
-    assert r["ouvert"] and r["rects"]
+    assert r["ouvert"] and r["rects"] and r["ancre"], "le HUD n'a pas dessiné la séquence du piratage"

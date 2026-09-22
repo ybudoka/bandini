@@ -2251,6 +2251,35 @@ const Hud = (function () {
     B.stats.rects += 3;
   }
 
+  //: L'initiale de chaque direction du piratage (`Histoire.DIRS_PIRATAGE`) —
+  //: le meme H/B/G/D que le clavier (`MAP_TOUCHES.haut` commence par une
+  //: fleche, mais la police du HUD n'en dessine pas).
+  const LETTRE_PIRATAGE = { haut: 'H', bas: 'B', gauche: 'G', droite: 'D' };
+
+  /** La sequence du piratage en cours (`B.piratage`), et sa progression : un
+      cran par direction, faite (vert), en cours (or, celle qu'on vise), a
+      venir (gris). Le meme geste que la barre de charge du coup fort — on lit
+      la couleur, pas les lettres, une fois qu'on a appris le motif. */
+  function dessinerPiratage(ctx) {
+    const r = B.piratage;
+    if (!r) return;
+    const n = r.sequence.length, pas = 14, largeur = n * pas + 6;
+    const x0 = Math.round((VW - largeur) / 2), y0 = 90;
+    ctx.fillStyle = 'rgba(11,10,18,0.82)'; ctx.fillRect(x0 - 5, y0 - 11, largeur + 10, 25);
+    B.stats.rects++;
+    for (let i = 0; i < n; i++) {
+      const fait = i < r.pos, enCours = i === r.pos;
+      ctx.fillStyle = fait ? '#1e3a1e' : (enCours ? '#4a3a10' : '#26262e');
+      ctx.fillRect(x0 + i * pas, y0, pas - 3, 11);
+      B.stats.rects++;
+      texte(ctx, LETTRE_PIRATAGE[r.sequence[i]], x0 + i * pas + 3, y0 + 2,
+            fait ? '#8fd46a' : (enCours ? '#e8b33c' : '#5a5a6a'), 1);
+    }
+    const consigne = 'FRAPPE POUR ABANDONNER';
+    texte(ctx, consigne, Math.round((VW - Atlas.largeurTexte(consigne, 1)) / 2), y0 + 15, '#8a8698', 1);
+    noter('piratage', x0 - 5, y0 - 11, largeur + 10, 25);
+  }
+
   // --- Mini-carte ---------------------------------------------------------------------
 
   const MINI = { x: 6, y: 22, l: 64, h: 48 };
@@ -2858,6 +2887,7 @@ const Hud = (function () {
                               couleur: gps.couleur || '#e8b33c', quoi: boulotEcran ? 'boulot' : 'histoire' };
         }
       }
+      dessinerPiratage(ctx);
       // Message.
       if (B.msg && B.msgT > 0) {
         const l = Atlas.largeurTexte(B.msg, 2);
