@@ -1805,9 +1805,9 @@ const Histoire = (function () {
     p.missionsFaites[m.slug] = p.jour;
     p.mission = null;
     p.appelT = null;
-    let prime = m.recompense;
-    if (B.mission && B.mission.sansBosse) prime += Math.round(m.recompense * 0.5);
-    Missions.encaisser(prime, m.titre.toUpperCase());
+    const bonus = B.mission && B.mission.sansBosse ? Math.round(m.recompense * 0.5) : 0;
+    const prime = m.recompense + bonus;
+    Missions.encaisser(prime, m.titre.toUpperCase(), true);
     if (d.arme && !p.armes[d.arme]) { const a = Combat.armeDef(d.arme); p.armes[d.arme] = { mun: a && a.chargeur ? a.chargeur : null }; }
     if (d.rabais) Object.keys(d.rabais).forEach(function (k) { p.rabais[k] = d.rabais[k]; });
     if (d.sergent_ami) p.sergentAmi = true;
@@ -1844,7 +1844,9 @@ const Histoire = (function () {
     p.stats.missions = (p.stats.missions || 0) + 1;
     noter('MISSION : ' + m.titre + ' — ' + prime + ' $', true);
     B.mission = null;
-    Son.SFX.mission();
+    // ⚠️ Le son de la prime REMPLACE le jingle de mission (et le ding de
+    // l'argent) : trois sons l'un sur l'autre ne disaient plus la taille.
+    Missions.annoncerPrime(prime, m.titre, 'MISSION RÉUSSIE', bonus);
     Missions.sauvegarderPartie();
     // ⚠️ LA FIN SE JOUE QUAND LE MOMENT S'Y PRETE (`jouerLaFin`) : tout de suite
     // si l'on est a l'arret et hors poursuite, sinon des qu'on l'est.
@@ -2372,10 +2374,14 @@ const Histoire = (function () {
     const duJour = Defi.aPayer(d.slug);
     if (duJour) Defi.noterFait(d.slug, f.t);
     const gain = (premiere ? d.prime : 0) + (duJour ? d.prime : 0);
-    if (gain) Missions.encaisser(gain, (duJour ? 'DÉFI DU JOUR — ' : '') + d.titre.toUpperCase());
-    else Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
+    if (gain) {
+      Missions.encaisser(gain, (duJour ? 'DÉFI DU JOUR — ' : '') + d.titre.toUpperCase(), true);
+      Missions.annoncerPrime(gain, d.titre, duJour ? 'DÉFI DU JOUR' : 'DÉFI RÉUSSI', 0);
+    } else {
+      Hud.message(d.titre.toUpperCase() + ' — RÉUSSI', 180);
+      Son.SFX.mission();
+    }
     noter('DÉFI RÉUSSI : ' + d.titre + (gain ? ' — ' + gain + ' $' : ''), true);
-    Son.SFX.mission();
     if (d.foire) lotDeLaFoire();
   }
 

@@ -165,6 +165,80 @@ const Hud = (function () {
 
   function message(texte, duree) { B.msg = texte; B.msgT = duree || 120; }
 
+  // --- Le bandeau de la prime ---------------------------------------------------------
+  //: La prime d'une mission ou d'un defi (`Missions.annoncerPrime`) : un bandeau au
+  //: centre, le montant en gros qui MONTE jusqu'a sa valeur. ⚠️ Il passe PAR-DESSUS
+  //: une scene et son fondu (`dessiner`, apres `dessinerTransition`) : la fin d'une
+  //: mission part tout de suite, et la bande des messages, elle, se tait pendant
+  //: une scene — le « +350 $ » d'avant ne s'affichait jamais.
+  //: `compte` (en images) suit la pluie de pieces du son du meme palier
+  //: (`son.js`, `prime_<palier>`) : on voit l'argent monter pendant qu'on
+  //: l'entend tomber. Plus la prime est grosse, plus il prend son temps.
+  const PRIME = {
+    compte: { petite: 24, moyenne: 42, grosse: 90, gros_lot: 156 },
+    couleur: { petite: '#efe6d0', moyenne: '#8fd46a', grosse: '#e8b33c', gros_lot: '#ffd84a' },
+    //: Les pieces qui tombent a l'ecran, par palier : aucune pour une petite prime.
+    pieces: { petite: 0, moyenne: 0, grosse: 8, gros_lot: 18 },
+    entree: 8, tenue: 150, sortie: 20, pop: 6,
+  };
+
+  function prime(p) {
+    B.prime = { montant: p.montant, titre: p.titre || '', quoi: p.quoi || 'PRIME', bonus: p.bonus || 0,
+                palier: PRIME.compte[p.palier] ? p.palier : 'petite', t: 0 };
+  }
+
+  /** Le bandeau avance d'un PAS DE SIMULATION (60 par seconde, `Jeu.maj`), pas
+      d'une image peinte : un ecran a 120 Hz le ferait durer moitie moins, et le
+      compteur ne suivrait plus la pluie de pieces du son. ⚠️ Pas non plus sur
+      `B.t` : la ville se fige pendant un dialogue — la scene de fin, justement
+      — et le bandeau resterait colle a l'ecran toute la conversation. */
+  function majPrime() {
+    const p = B.prime;
+    if (p && ++p.t >= PRIME.compte[p.palier] + PRIME.tenue + PRIME.sortie) B.prime = null;
+  }
+
+  /** Ce que le bandeau affiche a l'image `t` : le montant qui monte (vite au
+      debut, qui ralentit en arrivant), puis tient. Rendu a part pour le juge. */
+  function montantDeLaPrime(p) {
+    const k = Math.min(1, p.t / PRIME.compte[p.palier]);
+    return Math.round(p.montant * (1 - Math.pow(1 - k, 3)));
+  }
+
+  function dessinerPrime(ctx) {
+    const p = B.prime;
+    if (!p) return;
+    const compte = PRIME.compte[p.palier];
+    const t = p.t, coul = PRIME.couleur[p.palier];
+    const centre = function (s, y, c, e) { Atlas.texte(ctx, s, Math.round((VW - Atlas.largeurTexte(s, e)) / 2), y, c, e); };
+    ctx.save();
+    if (t > compte + PRIME.tenue) ctx.globalAlpha = 1 - (t - compte - PRIME.tenue) / PRIME.sortie;
+    // Les pieces tombent derriere le bandeau, le temps du compte et un peu plus.
+    const n = PRIME.pieces[p.palier];
+    for (let i = 0; i < n && t < compte + 60; i++) {
+      const x = (i * 53 + 17) % VW, y = ((t * (2 + i % 3) + i * 29) % (VH + 20)) - 10;
+      ctx.fillStyle = '#b8862a'; ctx.fillRect(x, y, 5, 5);
+      ctx.fillStyle = '#ffd84a'; ctx.fillRect(x, y, 4, 4);
+      B.stats.rects += 2;
+    }
+    // Le bandeau s'ouvre du centre vers les bords, filete de la couleur du palier.
+    // ⚠️ `haut` SOUS la bande des messages (40 a 56) : le `message` d'une fin
+    // de mission (« LA CLÉ DE LA PLANQUE ») s'y ecrit pendant que le bandeau tient.
+    const h = p.bonus ? 64 : 54, haut = 60, l = Math.round(VW * Math.min(1, (t + 1) / PRIME.entree));
+    ctx.fillStyle = 'rgba(11,10,18,0.85)'; ctx.fillRect((VW - l) / 2, haut, l, h);
+    ctx.fillStyle = coul; ctx.fillRect((VW - l) / 2, haut, l, 1); ctx.fillRect((VW - l) / 2, haut + h - 1, l, 1);
+    B.stats.rects += 3;
+    if (t >= PRIME.entree) {
+      centre(p.quoi, haut + 8, coul, 2);
+      // Le montant « saute » d'un cran quand le compte arrive ; le gros lot clignote.
+      const e = t >= compte && t < compte + PRIME.pop ? 5 : 4;
+      const clin = p.palier === 'gros_lot' && t >= compte && (t >> 3) % 2 === 0;
+      centre('+' + montantDeLaPrime(p).toLocaleString('fr-CA') + ' $', haut + 22 - (e - 4) * 2, clin ? '#ffffff' : coul, e);
+      centre(p.titre, haut + 47, '#efe6d0', 1);
+      if (p.bonus) centre('SANS UNE BOSSE : +' + p.bonus.toLocaleString('fr-CA') + ' $', haut + 57, '#8fd46a', 1);
+    }
+    ctx.restore();
+  }
+
   // --- Menus canvas ---------------------------------------------------------------
   //: Un menu = { titre, items: [{ libelle, detail, actif, faire }], curseur, aide, sur, obligatoire }.
   //: `faire()` rend true pour fermer le menu, false pour le laisser ouvert
@@ -3438,6 +3512,9 @@ const Hud = (function () {
     if (B.etat === 'carte') dessinerCarte(ctx);
     if (B.etat === 'photo') dessinerPhoto(ctx);
     dessinerTransition(ctx);
+    // ⚠️ APRES le fondu : la prime se lit meme quand la fin de mission noircit l'ecran.
+    // Pas sous un menu (il fige tout, le bandeau attend qu'on le ferme).
+    if (B.etat === 'jeu' && !B.menu) dessinerPrime(ctx);
     if (B.options.perf) {
       const s = B.stats;
       Atlas.texte(ctx, Math.round(s.ms * 10) / 10 + 'MS ' + s.images + 'I ' + s.entites + 'E', 6, VH - 8, '#8f8', 1);
@@ -3449,7 +3526,7 @@ const Hud = (function () {
     }
   }
 
-  return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
+  return { init, voile, etat, progression, partDesScripts, finirChargement, message, prime, majPrime, montantDeLaPrime, PRIME, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuSautMissions, menuSautDefis, menuJukebox, pointDuDefi, menuCarnet,
     ouvrirOnglet, toucherMenu, onglets: function () { return ongletsVisibles().map(function (o) { return o.slug; }); },
     ciblesDuMenu: function () { return cibles.slice(); }, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,

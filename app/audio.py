@@ -578,6 +578,32 @@ DEBIT_BOUCLE = "64k"
 
 SLUGS = tuple(e["slug"] for e in CATALOGUE)
 
+#: LA PRIME D'UNE MISSION, quatre paliers (`economie.PRIME_PALIERS`) : le son dit
+#: la taille de la prime avant qu'on lise le chiffre. ⚠️ EN ATTENTE, HORS DU
+#: CATALOGUE : le quota ElevenLabs etait a sec le 22 sept. 2026 (remise le 17 oct.),
+#: et le catalogue ne declare jamais un son sans son fichier
+#: (`test_le_son_survit_a_l_absence_d_audio`). D'ici la, `son.js` les synthetise
+#: (meme gradation : caisse, pieces, fanfare). Pour les generer : deplacer ces
+#: quatre lignes dans `CATALOGUE`, lancer `scripts/audio_elevenlabs.py`, puis
+#: remettre `if (!joue('prime_…'))` devant chaque synthese de `SFX.prime_*`.
+EN_ATTENTE: list[Echantillon] = [
+    _e("prime_petite", "Prime : petite", duree_s=0.8, volume=0.5,
+       prompt="a small cash register ding, a single bell ping and two or three "
+              "coins dropping into a tray, short, bright, close, no music"),
+    _e("prime_moyenne", "Prime : moyenne", duree_s=1.2, volume=0.52,
+       prompt="a cash register drawer springing open with a bright bell, then a "
+              "handful of coins spilling into a metal tray, satisfying, close, "
+              "no music"),
+    _e("prime_grosse", "Prime : grosse", duree_s=1.8, volume=0.55,
+       prompt="a big payout: cash register bell, a thick wad of banknotes "
+              "slapped on a counter, then a generous cascade of coins pouring "
+              "into a metal tray, rich and satisfying, close, no music"),
+    _e("prime_gros_lot", "Prime : gros lot", duree_s=3.0, volume=0.58,
+       prompt="a slot machine jackpot payout: a winning bell ringing, then a "
+              "long heavy shower of coins pouring and piling up in a metal tray, "
+              "triumphant, close, no voices, no music"),
+]
+
 
 class Radio(TypedDict):
     slug: str

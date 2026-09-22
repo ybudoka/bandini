@@ -871,7 +871,7 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
         let n = 0;
         while (B.defi && n < 30) { o.frame(1); n++; }
         return { commence: commence, aPied: aPied, unPeuPlusTard: unPeuPlusTard, auVolant: auVolant,
-                 reussi: !!B.partie.defisFaits.livraison, msg: B.msg, encore: B.defi && B.defi.slug };
+                 reussi: !!B.partie.defisFaits.livraison, msg: B.msg, prime: B.prime, encore: B.defi && B.defi.slug };
     }""")
     assert r["commence"] == "livraison"
     assert r["aPied"] == {"t": 0, "etoiles": 0} and r["unPeuPlusTard"] == {"t": 0, "etoiles": 0}, (
@@ -880,7 +880,8 @@ def test_la_livraison_se_commence_a_pied_et_part_au_volant(banc, paquet):
     assert r["auVolant"]["etoiles"] >= liv["etoiles"], "au volant, la police aux fesses"
     assert r["auVolant"]["ligne"].startswith("LIVRAISON SANS BOSSE 1:"), r["auVolant"]
     assert r["reussi"] is True, f"la livraison ne se gagne pas : {r['msg']} (encore : {r['encore']})"
-    assert str(liv["prime"]) in r["msg"]
+    # La prime se lit dans son bandeau (`Hud.prime`, test_prime_js.py), plus dans la bande des messages.
+    assert r["prime"]["montant"] == liv["prime"]
 
 
 def test_le_narrateur_lit_la_manchette_et_josee_ouvre_le_marche_noir(banc, paquet):

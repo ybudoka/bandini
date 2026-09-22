@@ -13,11 +13,39 @@ const Missions = (function () {
   const FONDU_NUIT = [32, 56, 32];      // une nuit de sommeil
   const FONDU_SOUFFLE = [24, 42, 24];   // la compagnie d'une fille de la Brume
 
-  function encaisser(montant, raison) {
+  /** `enSilence` : ni le ding ni la ligne de message — c'est `annoncerPrime`
+      qui dira cette somme-la, plus fort. */
+  function encaisser(montant, raison, enSilence) {
     montant = Math.max(0, Math.round(montant));
     B.partie.argent = Math.min(B.defs.economie.fortune_max, B.partie.argent + montant);
-    if (montant > 0) { Son.SFX.argent(); if (typeof Hud !== 'undefined') Hud.message('+' + montant + ' $' + (raison ? ' ' + raison : '')); }
+    if (montant > 0 && !enSilence) { Son.SFX.argent(); if (typeof Hud !== 'undefined') Hud.message('+' + montant + ' $' + (raison ? ' ' + raison : '')); }
     return montant;
+  }
+
+  /** Le palier d'une prime (`economie.PRIME_PALIERS`) : le dernier dont on atteint le seuil. */
+  function palierDePrime(montant) {
+    let palier = 'petite';
+    (B.defs.economie.prime_paliers || []).forEach(function (p) { if (montant >= p.des) palier = p.slug; });
+    return palier;
+  }
+
+  /** LA PRIME D'UNE MISSION (ou d'un defi) SE VOIT ET S'ENTEND. Martin, 22 sept.
+      2026 : « quand je reçois une prime pour une mission, je veux le voir
+      clairement et avec un son qui correspond à la prime ». Elle n'etait qu'un
+      « +350 $ » dans la bande des messages, avec le ding d'une liasse ramassee —
+      et la bande se tait pendant une scene : la fin d'une mission partait
+      aussitot, le chiffre ne s'affichait jamais. Le bandeau (`Hud.prime`) passe
+      PAR-DESSUS la scene, et le son est celui du palier.
+      ⚠️ L'argent, lui, s'encaisse a part (`encaisser(..., true)`) : c'est la
+      qu'on le compte, et les juges l'y guettent. `bonus` : la part ajoutee
+      (sans une bosse), dite sur sa ligne. */
+  function annoncerPrime(montant, titre, quoi, bonus) {
+    montant = Math.max(0, Math.round(montant));
+    if (!montant) return null;
+    const palier = palierDePrime(montant);
+    Son.SFX.prime(palier);
+    if (typeof Hud !== 'undefined') Hud.prime({ montant: montant, titre: titre, quoi: quoi, bonus: bonus || 0, palier: palier });
+    return palier;
   }
 
   function payer(montant, raison) {
@@ -2836,7 +2864,7 @@ const Missions = (function () {
     if (B.t % 60 === 0) B.partie.stats.secondes++;
   }
 
-  return { encaisser, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
+  return { encaisser, palierDePrime, annoncerPrime, payer, amende, potDeVin, factureHopital, nouveauJour, sauvegarderPartie,
            commerceDe, ouvert, acheterAmbulant, compagnie, interagir, soigner, nourrir, cafeine, hopital,
            coupon, prixAmbulant, crieurSousLaMain, filleSousLaMain, stoolSousLaMain, etalSousLaMain, temoinSousLaMain, prendreCoupon,
            paliersDe, palierDebloque, avantage, compterLeBoulot,

@@ -626,6 +626,28 @@ const Son = (function () {
   //: du fichier pendant que trois bips ont deja fini serait un silence pour rien.
   const SONNERIE_SYNTHESE = 0.37;
 
+  // --- Les briques des sons de prime (le filet synthetise) ---------------------------
+  /** La caisse enregistreuse : le tiroir qui claque, puis la clochette. */
+  function caisse(depart) {
+    ton(180, 0.06, 'square', 0.12, 0.6, depart);
+    ton(2093, 0.35, 'sine', 0.22, 1, depart + 0.05);
+    ton(2637, 0.5, 'sine', 0.18, 1, depart + 0.1);
+  }
+  /** `n` pieces qui tombent pendant `duree` secondes, a partir de `depart`.
+      ⚠️ Sans `Math.random` : la hauteur et l'ecart se tirent de l'indice, pour
+      que le son ne puise pas dans le hasard du jeu, et qu'il soit le meme
+      d'une fois sur l'autre. */
+  function pieces(n, duree, depart) {
+    for (let i = 0; i < n; i++) {
+      const f = 2900 + ((i * 7919) % 11) * 240, dt = ((i * 37) % 5) * 0.012;
+      ton(f, 0.07, 'sine', 0.1, 0.97, depart + (i * duree) / n + dt);
+    }
+  }
+  /** Do-mi-sol-do, vif : la fanfare des grosses primes. */
+  function arpege(depart, pas, volume) {
+    [523, 659, 784, 1047].forEach(function (f, i) { ton(f, i === 3 ? pas * 2.5 : pas, 'square', volume, 1, depart + i * pas); });
+  }
+
   const SFX = {
     pas: function () { if (!joue('pas')) bruit(0.05, 0.12, 900, 300); },
     coup: function () { if (!joue('coup')) { ton(140, 0.08, 'square', 0.3, 0.5); bruit(0.08, 0.3, 800, 200); } },
@@ -918,6 +940,20 @@ const Son = (function () {
       if (actif && B.t % 8 === 0) SFX.extincteur();
     },
     mission: function () { ton(523, 0.1, 'square', 0.2); ton(659, 0.1, 'square', 0.2, 1, 0.1); ton(784, 0.25, 'square', 0.22, 1, 0.2); },
+    // --- La prime d'une mission : le son dit sa taille (`economie.PRIME_PALIERS`) ---
+    // ⚠️ `prime(palier)` est le seul point d'entree : `Missions.annoncerPrime`
+    // l'appelle avec le palier deja tranche. SYNTHESE SEULE pour l'instant :
+    // les mp3 attendent le quota (`audio.EN_ATTENTE`, qui dit comment les
+    // brancher — un `joue` devant chaque ligne, comme les autres). La gradation
+    // est la meme des deux cotes : la caisse, puis des pieces de plus en plus
+    // nombreuses, puis la fanfare. La pluie de pieces dure ce que dure le
+    // compteur du bandeau (`Hud.prime`) : on entend l'argent tomber pendant
+    // qu'on le voit monter.
+    prime_petite: function () { caisse(0); pieces(3, 0.25, 0.12); },
+    prime_moyenne: function () { caisse(0); pieces(8, 0.6, 0.1); ton(784, 0.1, 'square', 0.12, 1, 0.5); ton(1047, 0.22, 'square', 0.14, 1, 0.6); },
+    prime_grosse: function () { arpege(0, 0.09, 0.16); caisse(0.36); pieces(14, 1.1, 0.4); ton(1047, 0.45, 'triangle', 0.18, 1, 1.2); ton(1319, 0.45, 'triangle', 0.14, 1, 1.2); },
+    prime_gros_lot: function () { arpege(0, 0.1, 0.2); arpege(0.4, 0.1, 0.2); caisse(0.8); caisse(1.3); pieces(28, 1.8, 0.8); [1047, 1319, 1568, 2093].forEach(function (f) { ton(f, 0.9, 'triangle', 0.14, 1, 2.2); }); },
+    prime: function (palier) { (SFX['prime_' + palier] || SFX.prime_petite)(); },
   };
 
   // --- Les voix des passants : un mot quand on se frole ------------------------------

@@ -786,6 +786,10 @@ const Jeu = (function () {
     // qu'on a laisse sur le trottoir. Une musique qu'on n'arrete que la ou on
     // la demarre est une musique qui reste allumee.
     Son.Rue.tick();
+    // Le bandeau de la prime compte ses pas ICI, avant tout ce qui fige la ville
+    // (un fondu, un dialogue) : il doit se derouler PENDANT la scene de fin. Un
+    // menu, lui, fige tout — le bandeau attend qu'on le ferme.
+    if (B.etat === 'jeu' && !B.menu) Hud.majPrime();
     if (Entree.neuf('muet')) {
       B.options.muet = !B.options.muet;
       Son.majVolume();

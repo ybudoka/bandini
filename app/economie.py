@@ -37,6 +37,32 @@ POT_DE_VIN_AMI_MAX = 2
 
 HOPITAL = {"fraction": 0.10, "minimum": 30, "maximum": 500}
 
+# --- La prime d'une mission : se voir et s'entendre ------------------------
+
+#: Martin, 22 sept. 2026 : « quand je reçois une prime pour une mission, je veux
+#: le voir clairement et avec un son qui correspond à la prime ». Quatre paliers,
+#: du plus petit au plus gros : `des` est le montant à partir duquel on y entre.
+#: Chacun a son son (`prime_<slug>` dans `audio.CATALOGUE`, synthétisé dans
+#: `son.js` tant que le mp3 manque) et son bandeau (`Hud.prime`) — plus la prime
+#: est grosse, plus le compteur prend son temps et plus la pluie de pièces dure.
+#: Les bornes suivent les missions de l'histoire (100 à 900 $, la moitié entre
+#: 200 et 350) : le gros lot est rare, c'est ce qui le fait sonner.
+PRIME_PALIERS = (
+    {"slug": "petite", "des": 0},
+    {"slug": "moyenne", "des": 250},
+    {"slug": "grosse", "des": 450},
+    {"slug": "gros_lot", "des": 800},
+)
+
+
+def palier_de_prime(montant: int) -> str:
+    """Le palier d'une prime : le dernier dont on atteint le seuil."""
+    palier = PRIME_PALIERS[0]["slug"]
+    for p in PRIME_PALIERS:
+        if montant >= p["des"]:
+            palier = p["slug"]
+    return palier
+
 # --- Les boulots montent en grade -----------------------------------------
 
 #: ⚠️ **Un boulot qui paie et rien d'autre n'est pas une activite, c'est un
@@ -797,6 +823,7 @@ def exporter() -> dict:
         "pot_de_vin_accepte": list(POT_DE_VIN_ACCEPTE),
         "pot_de_vin_ami_max": POT_DE_VIN_AMI_MAX,
         "hopital": dict(HOPITAL),
+        "prime_paliers": [dict(p) for p in PRIME_PALIERS],
         "tarifs": dict(TARIFS),
         "cafe": dict(CAFE),
         "souffle": dict(SOUFFLE),

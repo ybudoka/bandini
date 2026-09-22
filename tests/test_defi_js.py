@@ -119,12 +119,13 @@ def test_premiere_fois_et_defi_du_jour_paient_la_somme_en_un_seul_versement(banc
     r = banc(_demarre("""
         return o.attendre().then(function () { return o.attendre(); }).then(function () {
           const paye = gagner(L, o, 'tour');
-          return { paye: paye, msg: L.B.msg };
+          return { paye: paye, prime: L.B.prime };
         });
     """), defi=du_jour("tour"))
     assert r["paye"] == 2 * prime, "la prime de la premiere fois ET celle du jour"
-    # ⚠️ UN seul `encaisser` : deux messages « +250 $ » se recouvriraient a l'ecran.
-    assert f"+{2 * prime} $" in r["msg"] and "DÉFI DU JOUR" in r["msg"]
+    # ⚠️ UN seul `encaisser` : deux annonces « +250 $ » se recouvriraient a l'ecran.
+    # La somme se lit dans le bandeau de la prime (`Hud.prime`, test_prime_js.py).
+    assert r["prime"]["montant"] == 2 * prime and r["prime"]["quoi"] == "DÉFI DU JOUR"
 
 
 def test_un_autre_defi_ne_paie_pas_la_prime_du_jour(banc, defis):
