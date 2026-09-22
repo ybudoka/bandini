@@ -160,6 +160,18 @@ def test_l_agent_de_police_est_un_pieton_arme_qui_ne_nait_pas_au_hasard():
     assert agent not in pietons.ordinaires()
 
 
+def test_le_vigile_prive_ne_nait_jamais_au_hasard():
+    """⚠️ Infiltration : meme moule que l'agent (`police.js` le dirige
+    pareillement), un uniforme et une matraque a lui — il TIENT un batiment,
+    il n'a pas de pistolet et il ne temoigne pas : il agit, comme l'agent."""
+    garde = pietons.par_slug("garde")
+    assert garde and garde["metier"] == "garde" and garde["frequence"] == 0.0
+    assert garde["arme"] == "batte" and garde["courage"] == 1.0
+    assert garde["temoin"] == 0.0
+    assert garde not in pietons.ordinaires()
+    assert garde["couleurs"] != pietons.par_slug("policier")["couleurs"], "on doit le reconnaitre avant qu'il se retourne"
+
+
 def test_les_trois_sortes_ont_un_corps_a_elles():
     """⚠️ Demande de Martin : « des amuseurs publics, des musiciens de rue, des
     exhibitionnistes. »

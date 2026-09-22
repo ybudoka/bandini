@@ -15,6 +15,9 @@ const Police = (function () {
   'use strict';
 
   const PALETTE_AGENT = { c: '#1f3a6e', p: '#16264a', h: '#101018', s: '#e8b088' };
+  //: Le vigile prive (infiltration) : un uniforme d'entreprise, pas le bleu marine
+  //: de la police — pour qu'on le reconnaisse avant meme qu'il se retourne.
+  const PALETTE_GARDE = { c: '#5a5f47', p: '#3a3d33', h: '#2a2a2a', s: '#c98d66' };
 
   function defs() { return B.defs.recherche; }
   function reglages() { return B.defs.recherche.police; }
@@ -142,7 +145,10 @@ const Police = (function () {
   function signalerCrime(type, x, y, vu) {
     const delit = defs().delits[type];
     if (!delit) return null;
-    const parAgent = agents().some(function (a) { return voit(a, x, y, 'policier'); });
+    // ⚠️ `a.genreVision` : un vigile prive (infiltration) n'a pas le cone d'un
+    // policier — voir `VISION.garde`. Sans defaut, tout agent qui n'est pas
+    // un vrai policier deviendrait aveugle.
+    const parAgent = agents().some(function (a) { return voit(a, x, y, a.genreVision || 'policier'); });
     const compte = parAgent || (!!vu && !delit.temoin);
     const crime = { type: type, gravite: delit.etoiles, temoin: delit.temoin, x: x, y: y, t: B.t, vu: !!vu, rapporte: false };
     B.crimes.push(crime);
@@ -345,14 +351,24 @@ const Police = (function () {
 
   // --- Les agents ------------------------------------------------------------------
 
-  function creerAgent(x, y, etat) {
-    const arch = Entites.archetype('policier');
+  /** Un agent que `gere()` dirige : un vrai policier par defaut, ou — `genre:
+      'garde'` — un vigile prive (infiltration). ⚠️ Meme moteur, un cone et une
+      palette differents : `a.genreVision` est ce que `voit()`/`signalerCrime`
+      lisent pour savoir a quelle fiche de `VISION` se fier ; sans lui, un
+      garde verrait comme un policier (le defaut de `voit`), pas comme un
+      vigile. Un garde ne nait jamais du budget de patrouille de la ville
+      (`peuplerAgents`) : c'est une mission qui le pose, a la main. */
+  function creerAgent(x, y, etat, genre) {
+    const estGarde = genre === 'garde';
+    const arch = Entites.archetype(estGarde ? 'garde' : 'policier');
     const a = Entites.creerPieton(x, y, arch);
-    a.agent = true; a.metier = 'police'; a.swaps = Object.assign({}, PALETTE_AGENT);
+    a.agent = true; a.metier = estGarde ? 'garde' : 'police';
+    a.genreVision = estGarde ? 'garde' : 'policier';
+    a.swaps = Object.assign({}, estGarde ? PALETTE_GARDE : PALETTE_AGENT);
     // ⚠️ `vuT` = depuis combien de temps il ne te voit plus. Un agent qui nait
     // EN POURSUITE te voit, par definition : a 9999 il abandonnait des la
     // premiere image, avant meme d'avoir regarde.
-    a.arme = 'pistolet'; a.etat = etat || 'flane'; a.chemin = null; a.cheminT = 0; a.tirT = 0;
+    a.arme = estGarde ? 'batte' : 'pistolet'; a.etat = etat || 'flane'; a.chemin = null; a.cheminT = 0; a.tirT = 0;
     a.vuT = a.etat === 'poursuit' ? 0 : 9999;
     return a;
   }
@@ -434,7 +450,7 @@ const Police = (function () {
     // Regarder : une image sur trois, c'est le budget.
     if ((B.t + a.id) % p.regarde_toutes_les_images === 0) {
       const cible = j.dansVehicule ? j.dansVehicule : j;
-      if (voit(a, cible.x, cible.y, 'policier', true)) {
+      if (voit(a, cible.x, cible.y, a.genreVision || 'policier', true)) {
         a.vuT = 0;
         if (r.etoiles > 0) { r.vu = 0; r.dernierVu = { x: j.x, y: j.y, t: B.t }; if (a.etat !== 'poursuit') { a.etat = 'poursuit'; a.chemin = null; a.cheminT = 0; } }
         else if (j.flagrant > 0 && a.etat !== 'poursuit') { ajouterChaleur(1); a.etat = 'poursuit'; a.chemin = null; a.cheminT = 0; }

@@ -29,11 +29,19 @@ def test_delits():
 
 
 def test_vision():
-    for genre in ("policier", "auto_police", "pieton", "helico"):
+    for genre in ("policier", "auto_police", "pieton", "helico", "garde"):
         v = recherche.VISION[genre]
         assert 0 < v["angle"] <= 180
         assert v["nuit"] <= v["jour"]
     assert recherche.VISION["alarme_rayon"] > 0
+
+
+def test_le_vigile_a_un_cone_plus_court_qu_un_policier():
+    """⚠️ Infiltration : un garde tient un couloir, il ne patrouille pas un
+    pate de maisons — sinon `police.js` n'aurait rien eu besoin de generaliser
+    `voit()` a un genre par agent."""
+    garde, policier = recherche.VISION["garde"], recherche.VISION["policier"]
+    assert garde["jour"] <= policier["jour"] and garde["nuit"] <= policier["nuit"]
 
 
 def test_export_complet():

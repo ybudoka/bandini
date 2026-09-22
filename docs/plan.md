@@ -89,6 +89,7 @@ pas quand l'ordre de travail change.
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
 | M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » avance : dix missions de plus livrées — `f04`, `f05`, `f06`, `f07`, `f09`, `f11`, `h01`, `p01`, `q03`, `e12` — avec le premier juge de banc joué pour huit des neuf types neufs ; restent `eteindre` (pas de feu qu'une mission puisse allumer elle-même), le téléphone qui trie, et le reste de l'arc F) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
+| Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 
 ## L'ordre
 

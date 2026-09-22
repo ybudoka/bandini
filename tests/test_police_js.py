@@ -875,3 +875,67 @@ def test_une_auto_dont_l_equipage_est_mort_reste_garee_et_ne_retient_plus_les_re
     assert r["equipage"] == 0 and r["abandonnee"] is True, "l'équipage mort compte encore : %s" % r
     assert r["ecart"] < 0.5, "une auto sans équipage roule : %s" % r
     assert r["autos"] >= 2, "la police n'a pas envoyé de renfort : l'auto abandonnée retient la place d'une vivante : %s" % r
+
+
+def test_le_vigile_prive_a_son_propre_cone_et_sa_propre_allure(banc):
+    """⚠️ Infiltration : `Police.creerAgent(x, y, etat, 'garde')` fabrique un
+    vigile prive, pas un policier — un cone a lui (`VISION.garde`, plus court),
+    une palette a lui (on doit le reconnaitre avant qu'il se retourne), une
+    matraque et pas un pistolet. `genreVision` est ce que `voit()` lit."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, TT = L.TT;
+        const v = L.B.defs.recherche.vision;
+        // A mi-chemin entre la portee d'un garde et celle d'un policier : hors
+        // de porte du premier, dans celle du second.
+        const d = (v.garde.jour + v.policier.jour) / 2 * TT;
+        const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+        let place = null;
+        for (const e of dirs) {
+            const x = j.x + e[0] * d, y = j.y + e[1] * d;
+            if (L.Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)) && L.Monde.ligneLibre(j.x, j.y, x, y)) { place = { x: x, y: y }; break; }
+        }
+        if (!place) return { erreur: 'aucune direction degagee autour du joueur' };
+        // La MEME tuile pour les deux, l'un apres l'autre : la ligne de vue ne
+        // depend alors que du cone de chacun, jamais d'un obstacle different.
+        const garde = L.Police.creerAgent(place.x, place.y, 'flane', 'garde');
+        L.Entites.regarder(garde, j.x - place.x, j.y - place.y);
+        L.Entites.indexer();
+        const out = {
+            genreVision: garde.genreVision, metier: garde.metier, arme: garde.arme,
+            swapsGarde: JSON.stringify(garde.swaps),
+            gardeVoitLoin: L.Police.voit(garde, j.x, j.y, garde.genreVision),
+        };
+        L.Entites.retirer(garde);
+        const policier = L.Police.creerAgent(place.x, place.y, 'flane');
+        L.Entites.regarder(policier, j.x - place.x, j.y - place.y);
+        L.Entites.indexer();
+        out.memePalette = out.swapsGarde === JSON.stringify(policier.swaps);
+        out.policierVoitLoin = L.Police.voit(policier, j.x, j.y, policier.genreVision);
+        return out;
+    }""")
+    assert "erreur" not in r, r
+    assert r["genreVision"] == "garde" and r["metier"] == "garde" and r["arme"] == "batte"
+    assert r["memePalette"] is False, "un vigile ne porte pas le bleu de la police"
+    assert r["gardeVoitLoin"] is False, "hors de sa portee, un garde ne voit pas comme un policier : %s" % r
+    assert r["policierVoitLoin"] is True, "a la meme distance, un policier voit : %s" % r
+
+
+def test_signalerCrime_compte_le_guet_d_un_garde_comme_celui_d_un_policier(banc):
+    """⚠️ `signalerCrime` generalise aussi son `parAgent` : un garde qui a
+    l'effraction dans son cone la compte tout de suite (`temoin: True`
+    n'attend pas qu'un passant coure le raconter — le garde EST le temoin,
+    exactement comme le policier qu'il remplace pour cette porte)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur;
+        const garde = L.Police.creerAgent(j.x + 24, j.y, 'flane', 'garde');
+        L.Entites.regarder(garde, j.x - garde.x, j.y - garde.y);
+        L.Entites.indexer();
+        L.B.recherche.chaleur = 0; L.B.recherche.etoiles = 0;
+        // vu=false : sans le garde dans le cone, un delit a temoin ne compte pas tout de suite.
+        const crime = L.Police.signalerCrime('effraction', j.x, j.y, false);
+        return { rapporte: crime.rapporte, chaleur: L.B.recherche.chaleur };
+    }""")
+    assert r["rapporte"] is True, "un garde en cone doit compter comme un agent : %s" % r
+    assert r["chaleur"] > 0

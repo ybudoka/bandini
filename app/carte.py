@@ -1412,7 +1412,10 @@ NIDS_DE_POULE: dict = {
 #:               n'est pas faite), `heure` (« jour » = ouverte le jour, fermee
 #:               la nuit ; « nuit » l'inverse), `jour_tire` (la graine du jour,
 #:               par ou les entraves de M12 entreront), `payer` (le comptoir
-#:               d'un lieu — la guerite, deja ecrite) ;
+#:               d'un lieu — la guerite, deja ecrite), `objet` (une VRAIE
+#:               serrure : fermee tant que `partie.objets[slug]` n'est pas
+#:               possede — la cle d'une mission d'infiltration, trouvee ou
+#:               volee, jamais consommee) ;
 #:   `forcer`    ce que ca coute de passer quand meme : `etoiles`, `degats` ;
 #:               `None` pour ce qui ne se force pas ;
 #:   `raison`    la ligne, en majuscules, qui s'affiche quand on s'y bute — et

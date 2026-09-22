@@ -12,7 +12,7 @@ import pytest
 from app import aeroport, carte, economie, missions
 
 SORTES = {"pieton", "vehicule"}
-CONDITIONS = {"apres", "heure", "jour_tire", "payer"}
+CONDITIONS = {"apres", "heure", "jour_tire", "payer", "objet"}
 
 
 def test_la_fiche_se_tient():

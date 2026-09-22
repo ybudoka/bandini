@@ -613,6 +613,11 @@ const Monde = (function () {
     // pas son billet DU JOUR. Un billet par journee, pas par passage — une foire
     // qui refacture chaque aller-retour au hot-dog d'en face est un peage.
     if (c.payer) return !(p && p.billets && p.billets[c.payer] === p.jour);
+    // ⚠️ UNE VRAIE SERRURE (infiltration) : fermee tant qu'on n'a pas l'objet —
+    // une cle trouvee ou volee, dans `partie.objets` comme n'importe quel item
+    // (le skimmer). ⚠️ Elle ne se CONSOMME pas : une cle de mission ouvre sa
+    // porte tant qu'on la garde, elle ne se depense pas comme un billet.
+    if (c.objet) return !(p && p.objets && p.objets[c.objet] > 0);
     return false;
   }
 

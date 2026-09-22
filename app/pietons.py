@@ -239,6 +239,15 @@ CATALOGUE: list[Pieton] = [
     _p("policier", "Agent", "#1f3a6e", "#101018", "#e8b088", "#16264a",
        vitesse=1.0, courage=1.0, temoin=0.0, vie=100, argent=(0, 0), arme="pistolet",
        metier="police", frequence=0.0),
+    # Le vigile prive (infiltration) : le meme moule que l'agent — un pieton
+    # que `police.js` dirige quand il poursuit, et qui ne nait jamais au
+    # hasard dans la rue — mais un uniforme d'entreprise, une matraque et pas
+    # de pistolet : il TIENT un batiment, il ne patrouille pas la ville. Se
+    # faire voir par lui compte comme se faire voir par un agent (`genreVision`,
+    # cote navigateur) : c'est lui qui appelle les vrais policiers.
+    _p("garde", "Garde de sécurité", "#5a5f47", "#2a2a2a", "#c98d66", "#3a3d33",
+       vitesse=1.0, courage=1.0, temoin=0.0, vie=90, argent=(0, 0), arme="batte",
+       metier="garde", frequence=0.0),
     # Les gars du lot : ils tiennent la grille de la fourriere et ne naissent
     # jamais ailleurs. ⚠️ Courage 1 et une batte, pas un pistolet : ils
     # RIPOSTENT quand on sort un char sans payer, ils n'abattent personne —

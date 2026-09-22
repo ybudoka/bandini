@@ -258,6 +258,7 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
 | `malade` | Malade | lits de l'hôpital |
 | `avocat` | Me Desjardins | table du fond, Le Brouillard |
 | `policier` | Agent | patrouille (posé par `police.js`) |
+| `garde` | Garde de sécurité | vigile privé de l'infiltration, posé à la main par une mission (`Police.creerAgent(x, y, etat, 'garde')`) |
 | `gardien` | Gardien du lot | grille de la fourrière |
 
 ---

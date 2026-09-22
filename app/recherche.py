@@ -93,6 +93,12 @@ VISION = {
     "auto_police": {"angle": 30, "jour": 14, "nuit": 12},
     "pieton": {"angle": 60, "jour": 6, "nuit": 4},
     "helico": {"angle": 180, "jour": 25, "nuit": 20},
+    # ⚠️ LE VIGILE PRIVE (infiltration) : le meme cone qu'un policier, en plus
+    # court et en plus large — un garde tient un couloir, il ne patrouille pas
+    # un pate de maisons. Pas d'auto, pas d'helico : ses renforts, ce sont les
+    # VRAIS policiers, une fois qu'il a signale (`police.js` generalise `voit`
+    # a n'importe quel genre declare ici).
+    "garde": {"angle": 50, "jour": 6, "nuit": 5},
     "alarme_rayon": 12,
     "explosion_rayon": 15,
     "delai_reperage_s": 0.6,
