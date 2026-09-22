@@ -706,7 +706,7 @@ const Combat = (function () {
     const j = B.joueur;
     // Les memes gardes que le combat : au volant ARME est la RADIO, et en haut
     // d'une cloture on ne fait rien du tout.
-    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || B.cinema) {
+    if (!j || j.dansVehicule || j.manege || !j.vivant || j.enjambe || j.alite || j.assis || B.cinema || B.piratage) {
       fermerRoue(false);
       tenu = 0;
       return;
@@ -943,7 +943,9 @@ const Combat = (function () {
     // viser tranquillement, tirer. On choisit son arme OU on se bat.
     // ⚠️ Et ACTION passe par ici : sans cette porte, relacher la roue devant
     // une porte ouvrirait la porte, et devant un passant lui ferait les poches.
-    if (B.roue) return;
+    // ⚠️ Le piratage repurpose FRAPPE en ABANDONNER (`Histoire.majPiratage`) :
+    // sans cette porte, la meme pression donnerait AUSSI un coup de poing.
+    if (B.roue || B.piratage) return;
 
     if (Entree.neuf('esquive')) roulade(j);
 

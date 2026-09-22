@@ -289,6 +289,8 @@ JEU: dict[str, str] = {
     "raymonde-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
     "ovila-repos-1": "[calm] Reviens me voir… plus tard.",
     "ovila-repos-2": "[softly] Le Faubourg est tranquille… Merci.",
+    "sven-repos-1": "[coldly] Reviens me voir… plus tard.",
+    "sven-repos-2": "[matter-of-fact] Le Faubourg est tranquille… Merci.",
     "mo-repos-1": "[knowingly] Reviens me voir… plus tard.",
     "mo-repos-2": "[amused] Le Faubourg est tranquille… Merci.",
     "fern-repos-1": "[matter-of-fact] Reviens me voir… plus tard.",

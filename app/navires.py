@@ -181,7 +181,12 @@ class _Port:
                             large = (xa, y0, xa + LARGE, y0 + ly)
                         if not (self.quai(*flanc) and self.eau(*large)):
                             continue
-                        p = {"x0": x0, "y0": y0, "l": lx, "h": ly, "couche": couche}
+                        # ⚠️ LE POSTE : la tuile du QUAI au milieu du flanc, celle d'où l'on
+                        # monte à bord — pas le centre de la coque, qui est dans l'eau. C'est
+                        # là que Sven se tient (§ « Sven et le piratage »), et là que
+                        # `Histoire.poserLeChar` pose le joueur avant de faire naître le char.
+                        poste = (x0 + lx // 2, bord) if couche else (bord, y0 + ly // 2)
+                        p = {"x0": x0, "y0": y0, "l": lx, "h": ly, "couche": couche, "poste": poste}
                         for sens in ((1, 0), (-1, 0)) if couche else ((0, 1), (0, -1)):
                             c = chenal(p, sens, longueur)
                             if self.eau(*c):
@@ -225,8 +230,9 @@ def _libre_des_autres(p: dict, pris: list[dict]) -> bool:
 
 def amarrer(chantier, ville: dict) -> list[dict]:
     """Les mouillages de la ville : `slug`, le centre de la coque en PIXELS (`x`,
-    `y`) et son cap (`angle`, en radians, 0 à l'est). Vide s'il n'y a pas de quai du
-    cargo — un porte-conteneurs n'a rien à faire ailleurs."""
+    `y`) et son cap (`angle`, en radians, 0 à l'est), plus le `poste` — la tuile de
+    quai d'où l'on monte à bord, en pixels elle aussi. Vide s'il n'y a pas de quai
+    du cargo — un porte-conteneurs n'a rien à faire ailleurs."""
     cargo = next((b for b in ville.get("barrieres", []) if b["slug"] == "cargo"), None)
     if not cargo:
         return []
@@ -250,7 +256,9 @@ def amarrer(chantier, ville: dict) -> list[dict]:
                 pris.append(p)
                 combien -= 1
                 px, py = _centre(p)
-                sortie.append({"slug": slug, "x": round(px * tuile), "y": round(py * tuile), "angle": p["angle"]})
+                gx, gy = p["poste"]
+                sortie.append({"slug": slug, "x": round(px * tuile), "y": round(py * tuile), "angle": p["angle"],
+                               "poste": {"x": gx * tuile + tuile // 2, "y": gy * tuile + tuile // 2}})
                 # ⚠️ Les chalutiers se rangent autour du CARGO, pas de la chaîne : le
                 # port, c'est là où est le grand bateau.
                 if slug == "porte_conteneurs":

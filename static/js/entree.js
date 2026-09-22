@@ -762,6 +762,11 @@ const Entree = (function () {
         ? { attaque: 'RETOUR', action: 'CHOISIR', esquive: 'BAS', arme: 'HAUT' }
         : nom === 'dialogue'
           ? { attaque: 'PASSER', action: 'SUIVANT', esquive: '·', arme: '·' }
+          // ⚠️ Le piratage se joue au STICK (une direction a la fois, comme la
+          // roue d'armes) : FRAPPE est le seul bouton qui compte encore, et il
+          // change de sens — abandonner, pas frapper.
+          : nom === 'piratage'
+            ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·' }
           // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
           // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
           // la bouffee qui coute du souffle.

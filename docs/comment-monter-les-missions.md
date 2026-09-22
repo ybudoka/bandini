@@ -173,6 +173,7 @@ attend son **juge de banc** avant de porter une mission) :
 | `sauter` | une rampe | `vol_px` (le juge du Grand Saut) |
 | `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
+| `pirater` | s'approcher de `ou`, ACTION l'ouvre, reproduire une séquence de 4 directions avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; une mauvaise direction recommence, `essais` ratés déclenchent l'échec `alarme` | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
 
 **Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
@@ -195,6 +196,11 @@ Contraintes **jugées** (voir `test_missions.py`) :
 - `groupe` doit exister dans `pietons.GANGS`.
 - `vehicule` doit exister dans `vehicules.CATALOGUE`.
 - `ou` de la forme `zone:<x>` → `x` dans `{cravates, port, faubourg}`.
+- ⚠️ **Un `monter`/`livrer`/`pirater` sur l'eau** : `ou`/`lieu` en `mouillage:<slug>[:n]` (un grand
+  bateau — `carte.mouillages`, `navires.py` ; le centre de la coque, à son cap, hors de `tuileDeRue`) ou
+  `amarrage:sven` (la chaloupe amarrée le plus près de son mouillage). Le personnage qui se tient sur un
+  mouillage (`ou: "mouillage:<slug>[:n]"` dans `PERSONNAGES`) se pose sur son **poste** — la tuile de quai
+  d'à côté, jamais le centre de la coque — pour ne pas boucher l'accès au bateau (m52-m54, Sven).
 
 ⚠️ **Règle des hommes de mission (`tuer`)** : un objectif `tuer` pose des
 membres d'un `groupe`, qui sortent de l'archétype (`pietons.py`) avec sa vie et

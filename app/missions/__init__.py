@@ -50,6 +50,14 @@ TYPES_OBJECTIFS = (
     "sauter",      # une rampe (`vol_px` : le juge du Grand Saut)
     "eteindre",    # un feu à l'extincteur (le jet existe, le feu de char aussi)
     "boulots",     # `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi)
+    # --- Le piratage (Martin, 21 sept. 2026 : « je veux … de l'infiltration et du
+    # hacking ») : s'approcher de `ou` (résolu comme `monter`), tenir ACTION dedans
+    # `rayon` tuiles pour l'ouvrir, puis reproduire une séquence de `longueur`
+    # directions — le MÊME axe unifié que la marche (`Entree.axe` : clavier, manette,
+    # joystick tactile), donc rien de neuf à apprendre au doigt. Une mauvaise
+    # direction recommence la séquence ; après `essais` ratés, l'alarme sonne (échec
+    # `alarme`). Voir `Histoire.majPiratage`.
+    "pirater",     # `ou`, `rayon` (def. 3), `longueur` (def. 4), `essais` (def. 3)
 )
 
 #: ⚠️ **CE QUE PORTE UN HOMME DE MISSION SE DECLARE ICI.** Un objectif `tuer`
@@ -67,8 +75,9 @@ TYPES_OBJECTIFS = (
 #: rendrait tout le reste du jeu mou. Ce qui change, c'est QUI on envoie.
 # ⚠️ `etoile` (les missions discrètes, `sans_etoile`) et `protege_mort`
 # (`proteger`, sa cible est tombée) sont les deux échecs que M16 ajoute aux
-# quatre de la v1. Ils vivent ICI, lus par `histoire.js` comme le reste.
-ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort")
+# quatre de la v1. `alarme` (21 sept. 2026) est celui du piratage raté : trop
+# d'erreurs sur la séquence. Ils vivent ICI, lus par `histoire.js` comme le reste.
+ECHECS = ("mort", "arrete", "vehicule_detruit", "chrono", "etoile", "protege_mort", "alarme")
 
 #: Les quatre options qui TRAVERSENT les types d'objectifs (M16). Une clé
 #: d'objectif, pas un type : `chrono_s` sur n'importe lequel (le défi l'avait),
@@ -83,7 +92,8 @@ class Personnage(TypedDict):
     genre: str
     voix: str          # le nom exact de la voix dans le compte ElevenLabs
     couleurs: dict     # les permutations du sprite `joueur` : c chandail, h cheveux, s peau, p pantalon
-    ou: str            # ou il se tient : `porte:<lieu>` (dehors, a cote de la porte) ou `point:<type>` (dedans)
+    ou: str            # ou il se tient : `porte:<lieu>` (dehors, a cote de la porte), `point:<type>`
+                       # (dedans) ou `mouillage:<slug>[:n]` (le poste a quai d'un grand bateau)
     heler: str         # le mot de sa BULLE quand il a une job pour toi (voir `Entites.bulle`)
     # La mission apres laquelle il n'est plus a sa place (Ti-Guy quitte le terminus
     # apres M1 : sa scene de fin le fait entrer au garage). ⚠️ Dans les donnees, pas
@@ -167,6 +177,19 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "lachance", "nom": "Dr Lachance", "genre": "homme", "voix": "Patrick - Clear, Natural and Polished",
      "couleurs": {"c": "#ecf0f1", "h": "#8a8a8a", "s": "#e8b088", "p": "#2c3e50"}, "ou": "point:lachance",
      "heler": "Viens, vite!"},
+
+    # --- Sven « le Norvégien » (21 sept. 2026, « Sven et le piratage ») : deja
+    # prevu dans le plan M16 (« le contrebandier qui veut Les Quais »), jamais
+    # encore pose. Il se tient sur SA jetee, a cote de SON porte-conteneurs —
+    # `mouillage:porte_conteneurs` (le poste a quai que `navires.py` exporte).
+    # ⚠️ **Sa voix est provisoire.** Aucune voix « norvegienne » au compte
+    # ElevenLabs ; `Nicolas Petit` (accent parisien) est la seule qui lit
+    # nettement « pas d'ici » — a trancher par Martin, a l'oreille, comme le
+    # plan M16 le demande pour lui precisement. Les textes et leur `jeu=` sont
+    # ecrits ; aucune voix n'est generee tant qu'il n'a pas ecoute.
+    {"slug": "sven", "nom": "Sven Haugen", "genre": "homme", "voix": "Voix Nicolas Petit IA AUDIO Narration",
+     "couleurs": {"c": "#34495e", "h": "#c8c8c8", "s": "#e8b088", "p": "#1a1a1a"}, "ou": "mouillage:porte_conteneurs",
+     "heler": "Viens, discret."},
 ]
 
 
@@ -385,7 +408,7 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
 from . import (  # noqa: E402
     e01, e12, f01, f04, f05, f06, f07, f09, f11, h01, m1, m2, m3, m4, m5, m6, m50, m51,
-    m97, p01, q02, q03, s03,
+    m52, m53, m54, m97, p01, q02, q03, s03,
 )
 
 # ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
@@ -399,6 +422,7 @@ CATALOGUE: list[Mission] = [
     f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
     f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
     h01.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
+    m52.MISSION, m53.MISSION, m54.MISSION,
     m97.MISSION,
 ]
 
@@ -656,8 +680,14 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: `boutique:<genre>`, `district:<slug>` et `rampe:<district>` (M16) : les
 #: résolveurs déterministes de `Histoire.resoudre` — une scène par défaut peut
 #: montrer où l'on achète (`acheter`) ou saute (`sauter`) sans qu'une mission
-#: ait à nommer un lieu de `carte.SPECIAUX`.
-FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe")
+#: ait à nommer un lieu de `carte.SPECIAUX`. `mouillage:<slug>[:n]` : le grand
+#: bateau lui-même (`navires.py`), pas son poste — une caméra peut le regarder,
+#: un personnage y entre par l'eau, pas par une porte. `amarrage:sven` : la
+#: chaloupe amarrée le plus près du mouillage de Sven (`Histoire.amarrageDeSven`)
+#: — les amarrages ordinaires (`carte.amarrages`) n'appartiennent à personne
+#: d'autre.
+FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe",
+                   "mouillage", "amarrage")
 
 
 def _lieux_du_plan(plan: dict) -> list[str]:

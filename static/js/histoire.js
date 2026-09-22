@@ -99,6 +99,10 @@ const Histoire = (function () {
   /** Le pixel d'un lieu nomme : la tuile devant sa porte. Les lieux speciaux
       sont des points d'interet ; le kiosque, lui, n'est qu'une porte. */
   function lieu(slug) {
+    // ⚠️ Une `aller` vers un mouillage vise le POSTE (le quai, marchable) — pas
+    // le centre de la coque, qui est dans l'eau (`lieuDeLivraison` fait déjà
+    // cette différence pour un `livrer`).
+    if (slug.indexOf('mouillage:') === 0) { const mo = trouverMouillage(slug.slice(10)); return mo && mo.poste ? { x: mo.poste.x, y: mo.poste.y, nom: 'le quai' } : null; }
     const p = point(slug);
     if (p) return { x: p.x * TT + 8, y: p.y * TT + 8, nom: p.nom };
     const porte = (Monde.carte.def.portes || []).find(function (q) { return q.lieu === slug; });
@@ -114,6 +118,9 @@ const Histoire = (function () {
       porte. ⚠️ Le rayon de l'objectif ne change pas : la baie est a trois tuiles
       de la porte des pietons, et un char livre « au garage » l'est toujours. */
   function lieuDeLivraison(slug) {
+    // ⚠️ Livrer UNE COQUE, c'est la ramener à son mouillage — il n'y a pas de
+    // baie de garage sur l'eau. Le centre du mouillage, comme `poserLeChar`.
+    if (slug.indexOf('mouillage:') === 0) { const mo = trouverMouillage(slug.slice(10)); return mo ? { x: mo.x, y: mo.y, nom: 'son mouillage' } : null; }
     const pg = Monde.porteDeGarage(slug);
     if (!pg) return lieu(slug);
     const baie = Monde.baieDeLaPorteDeGarage(pg), l = lieu(slug);
@@ -290,6 +297,31 @@ const Histoire = (function () {
     return meilleure ? { x: meilleure.x * TT + 8, y: meilleure.y * TT + 8 } : null;
   }
 
+  /** Le mouillage `slug` (le n-ième, 0 par défaut — deux chalutiers partagent le
+      slug) : `carte.mouillages` (`navires.py`). `null` si la ville n'en a pas. */
+  function trouverMouillage(spec) {
+    const deux = spec.split(':'), slug = deux[0], n = Number(deux[1]) || 0;
+    const tous = ((Monde.carte && Monde.carte.def && Monde.carte.def.mouillages) || []).filter(function (q) { return q.slug === slug; });
+    return tous[n] || null;
+  }
+
+  /** LA CHALOUPE DE SVEN : pas la sienne en propre (les amarrages, `carte.amarrages`,
+      n'appartiennent à personne — seuls les grands bateaux ont un mouillage nommé),
+      mais celle amarrée le plus près de SON porte-conteneurs. ⚠️ `{ x, y, amarrage }`
+      comme `resoudre('mouillage:…')` rend `{ x, y, mouillage }` : `poserLeChar` s'en
+      sert pour ne pas router par `tuileDeRue` et pour réserver la place
+      (`Vehicules.majAmarrages` ne la refait pas naître par-dessus). */
+  function amarrageDeSven() {
+    const places = (Monde.carte.def.amarrages || []), cargo = trouverMouillage('porte_conteneurs');
+    if (!places.length || !cargo) return null;
+    let meilleure = null, dMin = Infinity;
+    for (const a of places) {
+      const x = a.x * TT + 8, y = a.y * TT + 8, d2 = (x - cargo.x) * (x - cargo.x) + (y - cargo.y) * (y - cargo.y);
+      if (d2 < dMin) { dMin = d2; meilleure = { x: x, y: y, amarrage: a }; }
+    }
+    return meilleure;
+  }
+
   /** `ou` d'un objectif ou d'un personnage → un pixel. */
   function resoudre(ou, m) {
     if (!ou) return null;
@@ -297,6 +329,7 @@ const Histoire = (function () {
     if (ou === 'pont') return lieuPont();
     if (ou === 'quai') return tuileDeQuai();
     if (ou === 'bois') return tuileDeBois();
+    if (ou === 'amarrage:sven') return amarrageDeSven();
     const deux = ou.split(':');
     if (deux[0] === 'porte') return lieu(deux[1]);
     if (deux[0] === 'ruelle') return ruellePres(deux[1], Number(deux[2]) || 0);   // `ruelle:garage:24`
@@ -305,6 +338,9 @@ const Histoire = (function () {
     if (deux[0] === 'district') return tuileDeDistrict(deux[1]);
     if (deux[0] === 'boutique') return boutiquex(deux[1]);
     if (deux[0] === 'rampe') return tuileDeRampe(deux[1]);
+    // ⚠️ Le CENTRE de la coque, pas son poste : une caméra le regarde, et
+    // `poserLeChar` y fait naître le véhicule, à son cap (`m.angle`).
+    if (deux[0] === 'mouillage') { const mo = trouverMouillage(deux.slice(1).join(':')); return mo ? { x: mo.x, y: mo.y, mouillage: mo } : null; }
     return lieu(ou);
   }
 
@@ -317,6 +353,9 @@ const Histoire = (function () {
       const piece = pieceDuPoint(ou[1]);
       return piece ? lieu(piece.slug) : null;
     }
+    // ⚠️ Le POSTE, pas le centre de la coque : Sven se tient sur la jetée, pas
+    // dans l'eau (`navires.py` l'exporte pour chaque mouillage).
+    if (ou[0] === 'mouillage') { const mo = trouverMouillage(ou.slice(1).join(':')); return mo && mo.poste ? mo.poste : null; }
     return null;
   }
 
@@ -372,12 +411,36 @@ const Histoire = (function () {
       ceux qui sont partis apres leur mission (`parti_apres`). */
   function creerDonneurs() {
     for (const p of personnages()) {
-      if (p.ou.indexOf('porte:') !== 0) continue;                 // les autres sont dedans
       // Parti apres sa mission (Ti-Guy entre au garage a la fin de M1) : dans les
       // donnees, parce qu'ici aucun slug de mission ne s'ecrit.
       if (p.parti_apres && faite(p.parti_apres)) continue;
-      poserDonneur(p);
+      if (p.ou.indexOf('porte:') === 0) poserDonneur(p);
+      // ⚠️ Sven se tient sur SON poste a quai (`mouillage:`), pas a une porte :
+      // les autres formes (`point:`) restent dedans, posees a l'entree de leur piece.
+      else if (p.ou.indexOf('mouillage:') === 0) poserDonneurMouillage(p);
     }
+  }
+
+  /** UN personnage posé à quai, à côté du grand bateau que `navires.py` lui
+      donne (`mouillage:<slug>[:n]`) — la même idée que `poserDonneur`, mais sur
+      le POSTE, pas devant une porte. `null` si la ville n'a pas ce mouillage.
+
+      ⚠️ **PAS PILE SUR LE POSTE.** C'est là que la coque s'aborde
+      (`Vehicules.vehiculeSousLaMain`) : un personnage planté dessus vole le
+      bouton ACTION au bateau, comme un donneur planté sur le pas d'une porte —
+      la même raison qui écarte celui-là de 2 tuiles (`placeVisible`). Deux
+      tuiles plus loin, le long du MÊME quai (l'axe où le poste ne bouge pas
+      d'avec le centre de la coque est celui qui longe le flanc). */
+  function poserDonneurMouillage(p) {
+    const mo = trouverMouillage(p.ou.slice(10));
+    if (!mo || !mo.poste) return null;
+    const long_x = mo.poste.y === mo.y;
+    const pas = { x: long_x ? 2 * TT : 0, y: long_x ? 0 : 2 * TT };
+    for (const signe of [1, -1, 0]) {
+      const x = mo.poste.x + pas.x * signe, y = mo.poste.y + pas.y * signe;
+      if (Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT))) return creerPersonnage(p, x, y);
+    }
+    return null;
   }
 
   //: Au-dela de cette part de son sprite sous du decor peint apres lui, un personnage est CACHE.
@@ -1067,18 +1130,136 @@ const Histoire = (function () {
     const deja = chars[etape];
     if (deja && deja.etat !== 'epave' && B.entites.indexOf(deja) >= 0) return deja;
     const ou = resoudre(o.ou, m);
-    const rue = ou ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
+    // ⚠️ SUR L'EAU, RIEN NE PASSE PAR `tuileDeRue` : c'est la route qui trouve la
+    // rue la plus proche d'un pixel, et la rue la plus proche d'une coque est
+    // toujours de l'eau. Le point ET LE CAP viennent tels quels du mouillage
+    // (`navires.py`, angle donné) ou de l'amarrage de Sven (`amarrageDeSven`,
+    // angle 0 — comme `Vehicules.majAmarrages`, une chaloupe n'en garde pas).
+    const surEau = o.ou.indexOf('mouillage:') === 0 || o.ou === 'amarrage:sven';
+    const cleAmarrage = ou && (ou.mouillage || ou.amarrage);
+    // ⚠️ « PRENDRE LA COQUE », PAS LA DÉDOUBLER (m52-m54, Sven) : le grand bateau
+    // ou la chaloupe mouillés là sont du DÉCOR permanent (`Vehicules.majMouillages`,
+    // `majAmarrages`), présents avant même que la mission commence. Sans ce test,
+    // `Vehicules.creer` en ferait naître un second par-dessus.
+    const dejaAmarre = surEau && cleAmarrage && B.entites.find(function (e) { return e.type === 'vehicule' && e.amarrage === cleAmarrage; });
+    const rue = ou && !surEau ? (o.ou.indexOf('ruelle:') === 0 ? ou : (tuileDeRue(ou.x, ou.y, 8, sansChar) || tuileDeRue(ou.x, ou.y, 8))) : null;
     const place = rue || ou;
     if (!place) return null;
+    const angle = surEau ? (ou.mouillage ? ou.mouillage.angle : 0) : (rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0);
     // ⚠️ `aQui` vient de la fiche (`prete` dans `missions.py`), et il ne
     // s'efface JAMAIS : le taxi de Marco est a Marco avant, pendant et
     // apres — c'est lui qui l'empeche d'etre vendu au garage de Ti-Guy,
     // qui est a deux pas de la ou il dort.
-    const v = Vehicules.creer(o.vehicule, place.x, place.y, rue && rue.sens ? CAP_DE_FLECHE[rue.sens] : 0, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
-    if (!v) return null;
+    let v;
+    if (dejaAmarre) {
+      v = dejaAmarre;
+      v.mission = m.slug; v.aQui = o.prete || null;
+    } else {
+      v = Vehicules.creer(o.vehicule, place.x, place.y, angle, { etat: 'stationne', mission: m.slug, aQui: o.prete || null });
+      if (!v) return null;
+      // ⚠️ LE MOUILLAGE OU L'AMARRAGE EST PRIS : sans `amarrage`, le decor
+      // (`Vehicules.majMouillages`/`majAmarrages`) ferait naitre un second
+      // bateau par-dessus des qu'on s'eloigne.
+      if (surEau) v.amarrage = cleAmarrage;
+    }
     chars[etape] = v;
     B.mission.entites.push(v);
     return v;
+  }
+
+  // --- Le piratage (M16, demande de Martin, 21 sept. 2026 : « de l'infiltration
+  // et du hacking ») -----------------------------------------------------------
+  //
+  // Une sequence de 4 directions a reproduire, avec le MEME axe unifie que la
+  // marche (`Entree.axe` : clavier, manette, joystick tactile) — rien de neuf a
+  // apprendre au pouce, et `Combat.creneauVise` (la roue d'armes) sait deja lire
+  // un flick de stick comme un cran parmi n. `B.piratage` cloue le joueur
+  // (`Entites.majJoueur`) et affame la roue, le combat, l'entree en char et les
+  // interactions (memes portes que `B.roue`) : un seul bouton a la fois.
+
+  //: Cran 0 EN HAUT, puis dans le sens des aiguilles — la lecture de `Combat.creneauVise`.
+  const DIRS_PIRATAGE = ['haut', 'droite', 'bas', 'gauche'];
+  //: Au-dela, un flick COMPTE ; en deca, on est revenu au neutre et le prochain
+  //: comptera. Le seuil haut est celui de la roue d'armes (`Combat.ROUE_ZONE_MORTE`,
+  //: non exportee — le meme chiffre, 0.45, c'est le meme geste au pouce). Le bas est
+  //: plus permissif : sans hysteresis, un stick qui tremble pile sur 0.45 compterait
+  //: deux fois le meme flick.
+  const PIRATAGE_SEUIL_HAUT = 0.45, PIRATAGE_SEUIL_BAS = 0.22;
+
+  /** L'objectif `pirater` EN COURS, ou null. Un seul a la fois : `p.etape` le dit. */
+  function objectifDePiratage() {
+    const m = courante(), p = B.partie.mission;
+    if (!m || !p) return null;
+    const o = m.objectifs[p.etape];
+    return o && o.type === 'pirater' ? o : null;
+  }
+
+  /** Le terminal d'un piratage en cours, a portee de main — pour le bouton ACTION,
+      comme `personnageSousLaMain` et `vehiculeSousLaMain`. `null` si un piratage est
+      deja ouvert (rien de neuf a demarrer) ou si on n'est pas assez pres. */
+  function piratageSousLaMain(j) {
+    if (B.piratage || !j || j.dansVehicule) return null;
+    const o = objectifDePiratage();
+    if (!o) return null;
+    const brut = resoudre(o.ou, courante());
+    // ⚠️ Un terminal sur un mouillage se pirate depuis le POSTE (le quai) : le
+    // centre que `resoudre` rend pour `mouillage:` est celui de la coque, dans
+    // l'eau, où l'on ne marche jamais.
+    const l = brut && brut.mouillage ? brut.mouillage.poste : brut;
+    if (!l) return null;
+    const r = (o.rayon || 3) * TT;
+    return dist2(j.x, j.y, l.x, l.y) < r * r ? o : null;
+  }
+
+  /** Ouvre le piratage de l'objectif en cours (bouton ACTION, via `Missions.interagir`).
+      Rend faux si rien n'est a pirater — `Missions.interagir` passe alors au suivant
+      de la chaine, comme pour un personnage ou un vehicule absents. */
+  function commencerPiratage() {
+    const p = B.partie.mission, o = objectifDePiratage();
+    if (!o) return false;
+    const longueur = o.longueur || 4, sequence = [];
+    for (let i = 0; i < longueur; i++) sequence.push(DIRS_PIRATAGE[Math.floor(B.rng() * DIRS_PIRATAGE.length)]);
+    B.piratage = { etape: p.etape, sequence: sequence, pos: 0, ratees: 0, relache: true,
+                   essais: o.essais != null ? o.essais : 3 };
+    Entree.contexte('piratage');
+    Son.SFX.menu();
+    return true;
+  }
+
+  /** Referme le piratage et REND LE BOUTON A CE QU'IL FAISAIT AVANT — comme
+      `Hud.fermerMenu` (`vehicule` au volant, `pied` sinon). Un seul endroit,
+      pour ne pas oublier l'etiquette dans un des trois chemins de sortie
+      (abandon, reussite, alarme) — ou dans la mission qui se termine ailleurs
+      (`nettoyer`). */
+  function fermerPiratage() {
+    if (!B.piratage) return;
+    B.piratage = null;
+    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+  }
+
+  /** Lue a chaque image tant que `B.piratage` est ouvert (depuis `majObjectif`,
+      cas `pirater`). ⚠️ FRAPPE ABANDONNE (comme `Combat.majRoue` referme la roue
+      au relachement d'ARME) : on garde ce qu'on a fait, on peut revenir. */
+  function majPiratage() {
+    const r = B.piratage;
+    if (Entree.neuf('attaque')) { fermerPiratage(); return; }
+    const mag = Entree.axe.mag;
+    if (r.relache && mag > PIRATAGE_SEUIL_HAUT) {
+      r.relache = false;
+      const cran = Combat.creneauVise(Entree.axe, DIRS_PIRATAGE.length);
+      const dir = cran >= 0 ? DIRS_PIRATAGE[cran] : null;
+      if (dir === r.sequence[r.pos]) {
+        r.pos++;
+        Son.SFX.menu();
+        if (r.pos >= r.sequence.length) { fermerPiratage(); avancer(); }
+      } else if (dir) {
+        r.pos = 0; r.ratees++;
+        Son.SFX.erreur();
+        if (r.ratees > r.essais) { fermerPiratage(); echouer('alarme'); }
+      }
+    } else if (mag < PIRATAGE_SEUIL_BAS) {
+      r.relache = true;
+    }
   }
 
   /** Où naissent des hommes qui ARRIVENT (`loin`, en tuiles) : à cette distance
@@ -1418,6 +1599,13 @@ const Histoire = (function () {
         if (victime) avancer();
         return;
       }
+      case 'pirater': {
+        // ⚠️ DEMARRER passe par `Missions.interagir` (le bouton ACTION, la meme
+        // chaine que parler/monter) : ici on ne fait QUE lire la sequence en
+        // cours, image par image, tant qu'elle est ouverte.
+        if (B.piratage && B.piratage.etape === p.etape) majPiratage();
+        return;
+      }
       default:
         avancer();
     }
@@ -1549,6 +1737,9 @@ const Histoire = (function () {
 
   /** Ce que la mission avait pose : on l'enleve (ou on le laisse vivre sa vie). */
   function nettoyer(tout) {
+    // ⚠️ TOUJOURS, meme mission deja nulle : un piratage ouvert ne doit pas
+    // survivre a la mission qui l'a pose (`reussir`, `echouer`, `abandonner`).
+    fermerPiratage();
     if (!B.mission) return;
     for (const e of B.mission.entites) {
       if (e.type === 'vehicule') {
@@ -2041,5 +2232,6 @@ const Histoire = (function () {
            lieuDuPersonnage, ouTrouver, present, calme, jouerOuDire,
            reinitialiser, noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
-           cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj };
+           cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
+           piratageSousLaMain, commencerPiratage };
 })();

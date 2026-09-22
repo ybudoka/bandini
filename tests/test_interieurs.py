@@ -273,13 +273,23 @@ def test_chaque_donneur_de_mission_a_sa_place():
 
 
 def test_les_lieux_des_missions_existent():
-    """Chaque `lieu` d'objectif est une porte ou un point de la ville."""
+    """Chaque `lieu` d'objectif est une porte, un point de la ville, ou un mouillage
+    (`mouillage:<slug>[:n]`, m52-m54) — de l'eau, sans porte ni point d'intérêt."""
     lieux = {p["slug"] for p in VILLE["points_interet"]}
     lieux |= {p["lieu"] for p in VILLE["portes"]}
+    mouillages = VILLE["mouillages"]
     for mission in missions.CATALOGUE:
         for objectif in mission["objectifs"]:
-            if objectif.get("lieu"):
-                assert objectif["lieu"] in lieux, f"{mission['slug']} : « {objectif['lieu']} » introuvable"
+            slug = objectif.get("lieu")
+            if not slug:
+                continue
+            if slug.startswith("mouillage:"):
+                deux = slug[len("mouillage:"):].split(":")
+                n = int(deux[1]) if len(deux) > 1 else 0
+                pareils = [m for m in mouillages if m["slug"] == deux[0]]
+                assert n < len(pareils), f"{mission['slug']} : « {slug} » introuvable"
+                continue
+            assert slug in lieux, f"{mission['slug']} : « {slug} » introuvable"
     for defi in missions.DEFIS:
         for lieu in defi.get("points", []) + ([defi["lieu"]] if defi.get("lieu") else []):
             assert lieu in lieux, f"{defi['slug']} : « {lieu} » introuvable"

@@ -217,6 +217,10 @@ const Missions = (function () {
     // baraque d'a cote. La chaine d'ACTION affame ce qui suit — c'est vrai
     // dans les deux sens, et c'est pour ca que ce test-ci est le premier.
     if (B.defi && Histoire.actionDeDefi()) return true;
+    // ⚠️ Le piratage EN COURS prend aussi le bouton avant tout : ouvrir un menu
+    // par-dessus une sequence a moitie tapee la perdrait pour rien.
+    const terminal = Histoire.piratageSousLaMain(j);
+    if (terminal) return Histoire.commencerPiratage();
     // Un personnage de l'histoire, un panneau de defi : avant tout le reste.
     const perso = Histoire.personnageSousLaMain(j);
     if (perso) return Histoire.parler(perso.personnage);

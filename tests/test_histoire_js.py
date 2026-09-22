@@ -613,7 +613,8 @@ def test_les_personnages_disent_leur_repos_a_voix_haute(banc, paquet):
     import json
     abordables = [p["slug"] for p in paquet["personnages"] if p.get("ou") and not p.get("parti_apres")]
     tous = [m["slug"] for m in paquet["missions"]]
-    assert abordables == ["thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila"]
+    assert abordables == ["thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
+                           "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         const B = L.B;

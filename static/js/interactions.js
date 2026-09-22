@@ -41,10 +41,11 @@ const Interactions = (function () {
 
   /** Le joueur est debout, dehors, et libre de ses mains. ⚠️ Les mêmes gardes que
       le combat : au volant, dans un manège, en haut d'une clôture, la roue d'armes
-      ouverte ou quelqu'un dans les bras, ACTION a déjà un sens ailleurs. */
+      ouverte, un piratage en cours, ou quelqu'un dans les bras, ACTION a déjà un
+      sens ailleurs. */
   function peutAgir(j) {
     return !!(j && j.vivant && !j.dansVehicule && !j.manege && !j.enjambe && !j.alite && !j.assis
-      && !j.otage && !j.roule && !B.interieur && !B.cinema && !B.menu && !B.roue && !B.transition && cfg());
+      && !j.otage && !j.roule && !B.interieur && !B.cinema && !B.menu && !B.roue && !B.piratage && !B.transition && cfg());
   }
 
   // --- Ce qui est sous la main : les gens ----------------------------------------

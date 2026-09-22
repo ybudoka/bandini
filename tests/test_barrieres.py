@@ -91,7 +91,10 @@ def lieux_de_mission():
     lieux = set()
     for m in missions.CATALOGUE:
         for o in m["objectifs"]:
-            if o.get("lieu"):
+            # ⚠️ Un mouillage (mouillage:<slug>[:n], m52-m54) n'est pas un
+            # point_interet : c'est de l'eau, sans porte ni barrière piétonne à
+            # franchir — cette règle-ci ne le concerne pas.
+            if o.get("lieu") and not o["lieu"].startswith("mouillage:"):
                 lieux.add(o["lieu"])
     for d in missions.DEFIS:
         if d.get("lieu"):

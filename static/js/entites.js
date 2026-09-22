@@ -3625,7 +3625,10 @@ const Entites = (function () {
     // un seul role a la fois — sans ca, choisir son arme au stick ferait
     // MARCHER le personnage vers son choix, au ralenti et sans le vouloir.
     // C'est aussi ce qui fait le prix de la roue : on est debout, immobile.
-    if (B.cinema || B.roue) { j.vx = 0; j.vy = 0; return; }   // on ecoute, ou on choisit
+    // ⚠️ LE PIRATAGE CLOUE COMME LA ROUE D'ARMES : le stick choisit une
+    // direction de sequence, pas un pas — s'il faisait aussi marcher le
+    // personnage, on sortirait du terminal des le premier essai.
+    if (B.cinema || B.roue || B.piratage) { j.vx = 0; j.vy = 0; return; }   // on ecoute, on choisit, ou on pirate
     // ⚠️ ASSIS SUR UN BANC — comme le lit, c'est le stick qui leve (`Interactions.majAssis`) ;
     // tant qu'on est assis rien ne bouge, et le pas qui suit un lever est le notre, dans la meme image.
     if (j.assis && typeof Interactions !== 'undefined' && Interactions.majAssis(j)) return;

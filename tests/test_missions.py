@@ -7,12 +7,12 @@ def test_chaque_personnage_qu_on_aborde_dit_son_repos_de_sa_voix():
     n'ont pas de `ou` : on ne leur parle jamais, ils n'ont pas de repos."""
     assert [p["slug"] for p in missions.PERSONNAGES if p.get("ou")] == [
         "ti_guy", "thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu", "raymonde", "ovila",
-        "mo", "fern", "mado", "gege", "xavier", "lachance"]
+        "mo", "fern", "mado", "gege", "xavier", "lachance", "sven"]
     # Ti-Guy s'en va apres m1 (il a m1 a donner tant qu'il est la) ; Josee ouvre le marche noir
     # apres M5 (`marche_noir.apres`) au lieu de dire son repos : pas de voix pour ce qui ne s'entend pas.
     attendus = [f"{qui}-repos-{n}" for qui in ("thibodeau", "marco", "bouchard", "josee", "tipaul", "lulu",
                                               "raymonde", "ovila", "mo", "fern", "mado", "gege",
-                                              "xavier", "lachance") for n in (1, 2) if (qui, n) != ("josee", 2)]
+                                              "xavier", "lachance", "sven") for n in (1, 2) if (qui, n) != ("josee", 2)]
     repos = missions.repliques_de_repos()
     assert [r["slug"] for r in repos] == attendus, "vingt-neuf voix, pas trente"
     assert {r["texte"] for r in repos} == {missions.REPOS["texte"], missions.REPOS["texte_apres"]}
@@ -67,7 +67,9 @@ def test_chaque_mission_a_un_donneur_place_et_des_objectifs_lisibles():
             assert o["type"] in missions.TYPES_OBJECTIFS
             assert o["texte"] == o["texte"].upper() and len(o["texte"]) <= 60, "l'objectif s'affiche en une ligne"
             if "lieu" in o:
-                assert o["lieu"] in lieux, f"{m['slug']} : lieu inconnu {o['lieu']}"
+                # ⚠️ Livrer une COQUE, c'est la ramener à son mouillage (`navires.py`) :
+                # il n'y a pas de baie de garage sur l'eau, `carte.SPECIAUX` n'en sait rien.
+                assert o["lieu"] in lieux or o["lieu"].startswith("mouillage:"), f"{m['slug']} : lieu inconnu {o['lieu']}"
             if o.get("ou", "").startswith("zone:"):
                 assert o["ou"][5:] in zones
             if o.get("groupe"):

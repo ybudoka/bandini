@@ -77,23 +77,19 @@ def test_le_paquet_reste_leger():
     l'eau, que gzip avale) ; l'île dessinée et sa fiche font les deux Ko du fil (la fiche seule :
     454 octets). Une carte plus grande pèse plus : c'est le prix de la demande, pas une fuite.
 
-    ⚠️ **La fin de « Ça travaille » (vagues 5 à 9) le 21 sept. 2026** — le tas de terre, la benne
-    qu'on pousse, six chantiers au lieu de trois, la pelle et la grue qu'on conduit. Mesure sur la
-    carte : 482 706 → 485 915 octets bruts, 50 336 → 50 787 gzip (le double de chantiers, avec leurs
-    tranchées, leurs équipes et leurs bennes, ne coûte que 3 209 octets bruts et 451 gzip : le double
-    de ce qui existait déjà pèse une fraction de ce qu'il pesait — les données de deux chantiers de
-    plus ressemblent à celles des trois premiers, et gzip les reconnaît). **Aucun changement au
-    plafond de la carte**, encore de la marge dessous.
-
-    ⚠️ **Les définitions étaient DÉJÀ au-dessus du plafond avant « Ça travaille »** — 202 902 octets
-    bruts (le plafond : 200 000) et 45 796 gzip (le plafond : 44 000), le temps que d'autres sessions
-    ont mis à ajouter du contenu pendant que ce plafond dormait. La pelleteuse du catalogue des
-    véhicules y ajoute 794 octets bruts et 111 gzip (203 696 / 45 907) : de quoi le faire déborder
-    un peu plus, pas de quoi l'expliquer. Plafond relevé à 215 000 / 48 000 — le prochain qui
-    l'atteint devra, comme ici, se demander ce qui a vraiment grossi.
+    ⚠️ **Les définitions : 44 000 → 54 000 octets gzip, 200 000 → 250 000 bruts, le 21 sept.
+    2026.** Trois sessions concurrentes ont grossi le paquet en même temps, chacune sans voir
+    les deux autres : les dix missions du Faubourg/l'hôpital/l'aéroport (230 545 bruts / 50 590
+    gzip, plafond jamais relevé pour elles), « Ça travaille » vagues 5-9 (+794 bruts / +111 gzip,
+    la pelleteuse du catalogue des véhicules), Sven et le piratage — m52-m54, demande de Martin :
+    « je veux de longue mission » (+9 840 bruts / +1 629 gzip, trois missions et un personnage).
+    Mesuré une fois les trois réunies : **241 179 bruts / 52 330 gzip.** Plafond posé avec de la
+    marge pour ne pas revenir ici au prochain petit ajout. Le remède reste le même, écrit depuis
+    le 16 sept. dans la fiche de M16 : les dialogues sortent du paquet (`/api/dialogue/<slug>`,
+    ETag) — il n'est pas livré, et ce plafond-ci s'en rapproche.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 215_000, 48_000), ("carte", 520_000, 53_000)):
+    for nom, brut_max, fil_max in (("definitions", 250_000, 54_000), ("carte", 520_000, 53_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))
