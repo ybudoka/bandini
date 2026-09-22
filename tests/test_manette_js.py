@@ -199,7 +199,7 @@ def test_la_disposition_a_croix_sur_un_axe_marche_sans_rien_apprendre(banc):
     assert r["lu"]["repos"] == []
 
 
-def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
+def test_tout_reapprendre_enchaine_les_onze_gestes(banc):
     """⚠️ Le vrai geste quand rien ne repond : TOUT REAPPRENDRE, et le jeu
     demande un bouton apres l'autre. La croix compte pour quatre."""
     r = banc("""function (L, o) {
@@ -223,7 +223,7 @@ def test_tout_reapprendre_enchaine_les_douze_gestes(banc):
                  fini: L.Entree.apprendEnCours(), garde: !!L.B.options.manette };
     }""")
     assert r["demandes"][:5] == ["action", "attaque", "esquive", "arme", "annuler"]
-    assert "verrouiller" in r["demandes"]
+    assert "verrouiller" not in r["demandes"], "VISER est la gachette du gaz : rien a reapprendre"
     assert "haut" in r["demandes"] and "bas" in r["demandes"], "la croix s'apprend en quatre gestes"
     assert r["action"] == [15] and r["attaque"] == [14]
     assert r["fini"] is None, "la file doit finir"

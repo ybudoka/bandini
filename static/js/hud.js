@@ -682,7 +682,6 @@ const Hud = (function () {
     { a: 'bas', nom: 'croix', x: 15, y: 22, l: 4, h: 4 },
     { a: 'carte', nom: 'select', x: 33, y: 18, l: 5, h: 3 },
     { a: 'pause', nom: 'start', x: 41, y: 18, l: 5, h: 3 },
-    { a: 'verrouiller', nom: 'centre', x: 36, y: 22, l: 6, h: 3 },
     { a: 'arme', rang: 0, nom: 'haut', x: 59, y: 14, l: 5, h: 5 },
     { a: 'attaque', rang: 0, nom: 'gauche', x: 54, y: 19, l: 5, h: 5 },
     { a: 'esquive', rang: 0, nom: 'droite', x: 64, y: 19, l: 5, h: 5 },
@@ -731,7 +730,6 @@ const Hud = (function () {
     ['annuler', 'RETOUR'],
     ['pause', 'PAUSE'],
     ['carte', 'CARTE'],
-    ['verrouiller', 'VERROUILLER / CHANGER DE CIBLE'],
     ['croix', 'CROIX DIRECTIONNELLE'],
     ['gaz', 'GAZ'],
     ['frein', 'FREIN'],
@@ -945,7 +943,7 @@ const Hud = (function () {
   //: La main qui tient chaque piece : la ligne de l'aide se range de son cote,
   //: ou dessous (`m`) pour les petits boutons du milieu.
   const COTE_DES_PIECES = { gachette_g: 'g', epaule_g: 'g', croix: 'g', stick: 'g', clic: 'g',
-                            select: 'm', start: 'm', centre: 'm',
+                            select: 'm', start: 'm',
                             gachette_d: 'd', epaule_d: 'd', haut: 'd', gauche: 'd', droite: 'd', bas: 'd' };
   //: Les boutons de droite portent leur lettre SUR le dessin : pas de trait.
   const FACES = { haut: true, gauche: true, droite: true, bas: true };
@@ -962,14 +960,14 @@ const Hud = (function () {
   /** La disposition choisie telle que le paquet la decrit. Une disposition
       REAPPRISE bouton par bouton n'a plus de description : on garde les pieces
       de la disposition par defaut — celles du dessin de l'ecran MANETTE, qui
-      fait deja cette hypothese — sauf VISER, que rien ne situe. */
+      fait deja cette hypothese. */
   function dispositionDecrite() {
     const bloc = B.defs.manettes || { profils: [] };
     const slug = B.options.manetteProfil || bloc.defaut;
     const p = bloc.profils.find(function (q) { return q.slug === slug; });
     if (p) return p;
     const defaut = bloc.profils.find(function (q) { return q.slug === bloc.defaut; });
-    return defaut ? { slug: 'apprise', pieces: Object.assign({}, defaut.pieces, { verrouiller: [null] }) } : null;
+    return defaut ? { slug: 'apprise', pieces: defaut.pieces } : null;
   }
 
   function familleCourante() {
@@ -1011,8 +1009,10 @@ const Hud = (function () {
     if (appareil === 'manette') {
       if (c === 'marcher') return { glyphes: [icone('stick', stickPousse), icone('croix', croixTenue)], pieces: ['stick', 'croix'] };
       if (c === 'tourner') return { glyphes: [icone('stick', stickPousse)], pieces: ['stick'] };
-      if (c === 'gaz' || c === 'frein') {
-        const nom = c === 'gaz' ? 'gachette_d' : 'gachette_g';
+      // ⚠️ VISER est la gachette du gaz, a pied (`Entree`, `gachetteVise`) : pas
+      // un bouton du profil, la meme piece que GAZ sur la page du volant.
+      if (c === 'gaz' || c === 'frein' || c === 'verrouiller') {
+        const nom = c === 'frein' ? 'gachette_g' : 'gachette_d';
         return { glyphes: [glypheDePiece(nom, fam, undefined, etat)], pieces: [nom] };
       }
       const indices = Entree.profilManette().boutons[c] || [];

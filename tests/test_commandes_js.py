@@ -132,7 +132,7 @@ def test_la_manette_de_martin_allume_ce_qu_on_touche_et_seul_action_ferme(banc):
     assert (r["page0"], r["page1"]) == (0, 1), "la croix-chapeau tourne la page"
     assert r["gaz"] == ["gaz"], "au volant, sa gachette 9 est le gaz"
     assert r["ferme"] is True
-    assert r["viser"] == "BOUTON 2", "un numero que rien ne situe se dit par son numero"
+    assert r["viser"] == "RT", "VISER est la gachette de droite (22 sept. 2026), plus le bouton 2"
     assert r["lettre"] == "A", "« Pro Controller » ne fait pas une Nintendo : ses lettres sont Xbox"
     assert r["appareil"] == "manette"
 

@@ -53,8 +53,6 @@ FACES_DINPUT = {"action": 0, "esquive": 1, "attaque": 3, "arme": 4}
 #: `MANETTE_PIECES`) : c'est elle qui porte la lettre imprimee. Le A d'une
 #: manette Xbox est EN BAS, quel que soit le numero que le navigateur lui donne.
 POSITIONS_DES_FACES = {"action": "bas", "esquive": "droite", "attaque": "gauche", "arme": "haut"}
-#: ⚠️ Le numero 10 d'une manette reconnue (W3C) est le CLIC DU STICK gauche.
-CLIC_DU_STICK = 10
 
 
 class Profil(TypedDict):
@@ -77,9 +75,14 @@ def _chapeau() -> dict:
 
 
 def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
-            gachettes=(6, 7), meta=(8, 9), axes=(0, 1), verrouiller=10) -> Profil:
+            gachettes=(6, 7), meta=(8, 9), axes=(0, 1)) -> Profil:
     """Une disposition. `faces` donne les quatre boutons de droite par position ;
-    `croix_boutons` dit si la croix est quatre boutons ou un chapeau."""
+    `croix_boutons` dit si la croix est quatre boutons ou un chapeau.
+
+    ⚠️ VISER UNE CIBLE (`verrouiller`) n'est dans aucune disposition : c'est la
+    gachette de droite, celle du GAZ, a pied (`entree.js`, `gachetteVise`). Demande
+    de Martin, 22 sept. 2026 — sur `bt_dinput` c'etait le bouton 2, un numero que
+    DirectInput saute et que rien sur la manette ne porte."""
     boutons: dict[str, list[int]] = {
         "action": [faces["action"]],
         "esquive": [faces["esquive"]],
@@ -91,11 +94,6 @@ def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
         "carte": [meta[0]],
         "pause": [meta[1]],
         "muet": [],
-        # ⚠️ 10 est libre sur une manette reconnue et sur bt_croix_axe (SELECT et
-        # START s'arretent a 8/9) — mais PAS sur bt_dinput, ou 10/11 sont deja
-        # CARTE et PAUSE (`meta`) : ce profil-la passe `verrouiller=2`, l'un des
-        # deux boutons de droite que la numerotation DirectInput saute.
-        "verrouiller": [verrouiller],
         "haut": [12] if croix_boutons else [],
         "bas": [13] if croix_boutons else [],
         "gauche": [14] if croix_boutons else [],
@@ -111,9 +109,6 @@ def _profil(slug, nom, detail, *, faces, croix_boutons=True, epaules=(4, 5),
         "carte": ["select"],
         "pause": ["start"],
         "muet": [],
-        # ⚠️ Le 2 de `bt_dinput` est un numero que la numerotation DirectInput
-        # saute : il n'est nulle part sur la manette, l'aide le dit par son numero.
-        "verrouiller": ["clic" if verrouiller == CLIC_DU_STICK else None],
         "haut": ["croix"] if croix_boutons else [],
         "bas": ["croix"] if croix_boutons else [],
         "gauche": ["croix"] if croix_boutons else [],
@@ -131,7 +126,7 @@ PROFILS: list[Profil] = [
             faces=FACES_STANDARD),
     _profil("bt_dinput", "8BITDO EN BLUETOOTH", "GÂCHETTES 8 ET 9, CROIX SUR UN AXE",
             faces=FACES_DINPUT, croix_boutons=False,
-            epaules=(6, 7), gachettes=(8, 9), meta=(10, 11), verrouiller=2),
+            epaules=(6, 7), gachettes=(8, 9), meta=(10, 11)),
     _profil("bt_croix_axe", "BLUETOOTH — CROIX SUR UN AXE", "NUMÉROS STANDARDS, CROIX À PART",
             faces=FACES_STANDARD, croix_boutons=False),
 ]

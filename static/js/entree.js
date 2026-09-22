@@ -38,9 +38,14 @@ const Entree = (function () {
   //: n'a pas les memes numeros sur le telephone et sur le Mac. Ca ne se devine
   //: pas : l'ecran MANETTE des options fait REAPPRENDRE chaque bouton en
   //: l'appuyant, et garde le resultat dans les options (`options.manette`).
+  //:
+  //: ⚠️ VERROUILLER (viser une cible) n'a PAS de bouton : c'est la GACHETTE DE
+  //: DROITE, celle du gaz, quand on est a pied (`gachetteVise`). Demande de
+  //: Martin, 22 sept. 2026 : sur sa 8BitDo en Bluetooth, VISER etait le bouton
+  //: 2 — un numero que DirectInput saute, que rien sur la manette ne porte.
   const MANETTE_DEFAUT = {
     action: [0], esquive: [1], annuler: [1], attaque: [2, 5], arme: [3, 4],
-    carte: [8], pause: [9], muet: [], verrouiller: [10],
+    carte: [8], pause: [9], muet: [],
     haut: [12], bas: [13], gauche: [14], droite: [15],
   };
   //: Le stick de marche, puis le gaz et le frein. Sur une manette reconnue ce
@@ -49,6 +54,11 @@ const Entree = (function () {
   //: repose a -1 sur une manette et a 0 sur la suivante).
   const AXES_DEFAUT = [0, 1];
   const PEDALES_DEFAUT = { gaz: { type: 'bouton', i: 7 }, frein: { type: 'bouton', i: 6 } };
+  /** La gachette de droite vise (VERROUILLER) : la pedale de GAZ, telle que le
+      profil la connait — un bouton ou un axe, dispositions sauvees et
+      reapprises comprises. Au volant, `Combat` ne lit pas le verrou : elle
+      reste le gaz, et rien d'autre. */
+  function gachetteVise(etat, g) { if (g > GESTE) etat.verrouiller = true; }
   const ZONE_MORTE = 0.2, ZONE_PLEINE = 0.95;
   //: De combien un bouton ou un axe doit bouger pour qu'on dise « c'est
   //: celui-la » pendant un apprentissage.
@@ -605,6 +615,7 @@ const Entree = (function () {
       f = Math.max(f, lirePedale(p, profil.frein));
       if (apprentissage) ecouterApprentissage(p);
     }
+    gachetteVise(etat, g);
     if (!branchee && !manetteVue) return;
     manetteVue = branchee;
     // ⚠️ SUR UN GESTE NEUF, pas sur un etat : un stick qui derive au repos, ou
@@ -667,6 +678,7 @@ const Entree = (function () {
         if (MANETTE_DEFAUT[a].some(function (i) { return valeurBouton(p, i) > GESTE; })) etat[a] = true;
       }
       s = zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
+      gachetteVise(etat, lirePedale(p, PEDALES_DEFAUT.gaz));
     }
     for (const a in MAP_TOUCHES) poser(vCasque, a, etat[a]);
     // Les Touch se lisent toujours a la disposition par defaut (voir plus haut).

@@ -137,12 +137,13 @@ def test_chaque_bouton_dit_sur_quelle_piece_il_est(profil):
         ["bas", "droite", "gauche", "haut"]
 
 
-def test_viser_n_est_le_clic_du_stick_que_sur_une_numerotation_standard():
-    """⚠️ Le 10 d'une manette reconnue est le clic du stick gauche ; le 2 de la
-    disposition DirectInput est un numero que rien ne situe — l'aide doit le
-    dire par son numero, pas l'imprimer sur le stick."""
-    assert manettes.par_slug("standard")["pieces"]["verrouiller"] == ["clic"]
-    assert manettes.par_slug("bt_dinput")["pieces"]["verrouiller"] == [None]
+@pytest.mark.parametrize("profil", manettes.PROFILS, ids=lambda p: p["slug"])
+def test_viser_n_a_pas_de_bouton_c_est_la_gachette_de_droite(profil):
+    """⚠️ VISER est la gachette du GAZ, a pied (`entree.js`, `gachetteVise`) —
+    demande de Martin, 22 sept. 2026. Un bouton VISER dans une disposition, et
+    le 2 de `bt_dinput` (un numero que DirectInput saute) reviendrait."""
+    assert "verrouiller" not in profil["boutons"]
+    assert "verrouiller" not in profil["pieces"]
 
 
 @pytest.mark.parametrize("slug", sorted(manettes.FAMILLES))

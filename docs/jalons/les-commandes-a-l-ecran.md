@@ -66,6 +66,8 @@ juges du navigateur (le neuf joue tout à la manette, du titre à la ville).
 - ⚠️ **VISER sur la 8BitDo en DirectInput** : son bouton 2 n'est nulle part sur la manette ;
   l'aide le dit « BOUTON 2 », sans trait. Une disposition réapprise garde les pièces de la
   disposition par défaut (comme le dessin de l'écran MANETTE), sauf VISER.
+  _Remplacé le 22 sept. 2026 : VISER est la gâchette de droite, sur toutes les manettes —
+  voir [viser une cible à la gâchette de droite](viser-une-cible-a-la-gachette-de-droite.md)._
 - ⚠️ `test_ouverture.py` et `jouer(page)` de `test_navigateur.py` ferment maintenant l'aide avant
   de marcher : c'est la promesse nouvelle, pas un contournement.
 - Sept mutations, sept juges rouges : `manetteInerte`, l'ouverture qui ouvre l'aide, l'ancre de
