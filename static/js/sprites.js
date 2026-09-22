@@ -1539,6 +1539,64 @@ const MACHINE_REMORQUEUSE = {
     parechocsDeChar(18, -18, 6.2), lampesDeChar(17.8, -17.8, 3.2, 7.6, 3.4, 5.4),
   ),
 };
+// --- La pelleteuse : deux chenilles, une tourelle jaune, une fleche articulee -----
+// ⚠️ **La pelle qu'on conduit** (« Ça travaille », 8e vague). Pas de roues : deux chenilles
+// (`profil` bordé de `k`) et leurs galets, un chassis, la tourelle et son contrepoids, la cabine
+// vitrée du côté VU (+w : c'est la face qu'on regarde de profil), et LE BRAS — la flèche qui monte,
+// le balancier qui redescend, le godet — en `profil` extrudés, seule façon de faire une diagonale
+// épaisse. Elle a la longueur du catalogue (38) : le bras est REPLIÉ, godet sous le nez, pour ne pas
+// dépasser la chaîne de cercles qui la représente.
+const CHENILLE = [[-16, 1.4], [-14.6, 0], [14.6, 0], [16, 1.4], [16, 3.4], [14.6, 4.8], [-14.6, 4.8], [-16, 3.4]];
+const MACHINE_PELLETEUSE = {
+  profondeur: BIAIS_DU_SOL, contour: true, arrondi: true,
+  pieces: [].concat(
+    // Les chenilles, et leurs galets sur le flanc qu'on voit : des petits blocs, PAS des `roue` — une
+    // machine qui a des roues doit en montrer deux au sol (`test_de_profil_une_machine_montre_ses_roues`),
+    // et une chenille touche le sol d'un seul tenant.
+    [['profil', CHENILLE, [5.0, 8.4], 'r', 'kkkkkkkk'], ['profil', CHENILLE, [-8.4, -5.0], 'r', 'kkkkkkkk']],
+    [-11.5, -6, 0, 6, 11.5].map(function (u) { return ['bloc', [u - 0.8, u + 0.8], [8.4, 8.55], [1.0, 2.6], 'M', 'M', 'M', 0.2]; }),
+    [
+      ['bloc', [-13.5, 13.5], [-5.4, 5.4], [3.6, 6.4], 's', 's', 's', 0.05],                   // le châssis
+      // La tourelle : le capot en pente vers l'arrière, jaune, rehaussé.
+      ['profil', [[-17, 6.4], [-17, 12.6], [-10, 13.8], [3.4, 12.8], [5.2, 11.2], [5.2, 6.4]], [-6.6, 6.6], 'c', 'DCCC.D', 0.1],
+      ['bloc', [-18.6, -16.6], [-6.0, 6.0], [7.0, 12.4], 's', 's', 's', 0.1],                  // le contrepoids
+      // Les ouïes du capot : trois fentes sombres sur le jaune, pas un carré.
+      ['tube', [-13, 3.0, 13.9], [-6, 3.0, 13.9], 's', 0.3], ['tube', [-13, 0.4, 14.0], [-6, 0.4, 14.0], 's', 0.3], ['tube', [-13, -2.2, 14.0], [-6, -2.2, 14.0], 's', 0.3],
+      // La cabine, côté visible : un volume jaune, un grand pare-brise et sa vitre latérale.
+      ['profil', [[-1.6, 12.8], [-1.6, 21.6], [5.4, 21.6], [7.0, 18.0], [7.0, 12.8]], [1.0, 6.8], 'c', 'DDDD.', 0.2],
+      ['bloc', [7.02, 7.12], [1.6, 6.4], [13.4, 20.2], 'v', 'v', 'v', 0.25],                   // le pare-brise
+      ['bloc', [-1.0, 5.8], [6.82, 6.9], [13.6, 20.8], 'v', 'v', 'v', 0.3],                    // la vitre du flanc
+      ['tube', [2.4, 6.86, 13.6], [2.4, 6.86, 20.8], 'D', 0.4],                                // le montant de la vitre
+      ['tube', [-1.6, 6.85, 21.6], [5.4, 6.85, 21.6], 'D', 0.3],                               // l'arête du toit (le cadre de la vitre)
+      // Le BRAS : à peu près tout ce qui dit « pelle ». Trois `profil` extrudés sur l'axe, jetés en
+      // AVANT dans l'ordre de profondeur (`avance` 9) : la flèche est montée sur la tourelle, et elle
+      // se voit devant son flanc — sans cela, le flanc jaune de la tourelle la cachait.
+      ['profil', [[3.4, 7.4], [11.6, 20.4], [15.0, 18.6], [6.8, 6.0]], [-1.7, 1.7], 'c', 'DDDD', 9],                     // la flèche
+      ['profil', [[13.2, 20.6], [14.6, 17.6], [24.2, 9.4], [21.8, 10.0]], [-1.4, 1.4], 'c', 'DDDD', 9.2],                // le balancier
+      ['profil', [[21.2, 10.6], [25.6, 9.4], [27.4, 3.0], [22.6, 1.4], [20.6, 5.8]], [-3.8, 3.8], 'm', 'BBDDD', 9.4],    // le godet
+      ['tube', [7.6, 1.0, 6.2], [13.0, 1.0, 16.0], 'h', 9.6], ['tube', [7.6, -1.0, 6.2], [13.0, -1.0, 16.0], 'h', 9.6],   // le vérin de la flèche
+      ['tube', [15.2, 1.0, 19.6], [19.6, 1.0, 11.4], 'h', 9.6],                                   // le vérin du balancier
+      ['tube', [22.2, 3.6, 8.8], [26.0, 3.6, 3.6], 'k', 9.8], ['tube', [22.2, -3.6, 8.8], [26.0, -3.6, 3.6], 'k', 9.8],   // les dents du godet
+      ['bloc', [4.5, 6.3], [-2.4, 2.4], [6.4, 8.2], 's', 's', 's', 9.1],                         // le pied de la flèche
+      // Un gyrophare orange sur le toit de la cabine, comme tout engin de chantier.
+      ['bloc', [1.0, 2.8], [3.6, 5.4], [21.6, 22.9], 'a', 'a', 'a', 0.4],
+    ],
+    // Les phares de travail au coin avant du toit de la cabine (côté vu), les feux au cul du contrepoids.
+    [
+      // Hauts sur le toit de la cabine et sur le contrepoids : on les voit de presque partout.
+      ['bloc', [4.6, 6.6], [1.2, 2.8], [21.6, 22.8], 'l', 'l', 'l', 0.4],
+      ['bloc', [4.6, 6.6], [5.4, 6.6], [21.6, 22.8], 'l', 'l', 'l', 0.4],
+      ['bloc', [-19.4, -17.6], [3.2, 5.6], [8.6, 10.4], 't', 't', 't', 0.3],
+      ['bloc', [-19.4, -17.6], [-5.6, -3.2], [8.6, 10.4], 't', 't', 't', 0.3],
+      ['bloc', [-19.0, -17.2], [3.2, 5.6], [12.4, 13.6], 't', 't', 't', 0.3],
+      ['bloc', [-19.0, -17.2], [-5.6, -3.2], [12.4, 13.6], 't', 't', 't', 0.3],
+      // Et deux phares bas, aux coins de la tourelle : vus de l'avant en biais, ils ne se cachent pas
+      // derrière la cabine.
+      ['bloc', [4.6, 6.0], [4.0, 5.8], [8.2, 9.6], 'l', 'l', 'l', 0.3],
+      ['bloc', [4.6, 6.0], [-5.8, -4.0], [8.2, 9.6], 'l', 'l', 'l', 0.3],
+    ],
+  ),
+};
 // --- Le camion : une cabine avancee, une caisse haute a nervures -----------------
 const NERVURES_CAMION = [];
 [-18, -13.5, -9, -4.5, 0, 4.5].forEach(function (u) {
@@ -1635,6 +1693,7 @@ SPRITES.remorqueuse = enVolume(MACHINE_REMORQUEUSE, 36, 60, { k: '#101018', c: '
 // Ambre, sur la cabine : ils tournent quand elle remorque. ⚠️ Sur une BASE SOMBRE,
 // et d'un ambre plus jaune que la caisse : ambre sur orange, la rampe disparaissait.
 SPRITES.remorqueuse.gyrophares = { quand: 'remorque', a: ['#ffd84a', '#6a4812'], b: ['#ffd84a', '#6a4812'] };
+SPRITES.pelleteuse = enVolume(MACHINE_PELLETEUSE, 38, 68, { k: '#101018', c: '#e8b33c', v: '#7fb3d8', r: '#26262b', s: '#4b4f56', h: '#7c828a', m: '#8d949c', a: '#ff9a1f', l: '#fff3b0', t: '#ff4b3e' });
 SPRITES.camion = enVolume(MACHINE_CAMION, 40, 76, { k: '#101018', c: '#7f8c8d', b: '#8d99a6', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#565c63', n: '#aab4be' });
 SPRITES.autobus = enVolume(MACHINE_AUTOBUS, 48, 80, { k: '#101018', c: '#2980b9', v: '#7fb3d8', r: '#1a1a1e', l: '#fff3b0', t: '#ff4b3e', s: '#1f5f8b', e: '#ffd84a' });
 SPRITES.bateau = assisDedans(MACHINE_BATEAU, 30, 48, 'barre', { k: '#101018', c: '#ecf0f1', v: '#7fb3d8', r: '#3a2f26', l: '#fff3b0', t: '#ff4b3e', x: '#ecf0f1', y: '#ecf0f1', s: '#00000030', u: '#8a6a44' });
@@ -5596,7 +5655,11 @@ const DECORS = {
   // articulation chacune, cuite une fois par pose (`anime`), exactement comme
   // les manèges. Et elles ARRETENT un char sans jamais tomber (`arrete`) : une
   // pelle mecanique qu'on renverse au pistolet, ce serait une farce.
-  tas_de_terre: { arrete: 3.0, w: 24, h: 14, ancre: [12, 12], r: 6, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
+  // ⚠️ `rampe: 12` : une rampe NATURELLE. Un char qui roule dessus ne s'y arrête pas et ne
+  // le casse pas (`Vehicules.decorDevant` l'ignore, quelle que soit sa masse) : il DÉCOLLE,
+  // doucement (`Vehicules.majTas`). `arrete` ne sert plus qu'aux balles. Le nombre est le
+  // rayon, en px, autour du centre du tas où les roues le sentent.
+  tas_de_terre: { arrete: 3.0, rampe: 12, w: 24, h: 14, ancre: [12, 12], r: 6, sol: [9, 4], solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(20,18,26,0.26)'; ctx.fillRect(1, 10, 22, 4);
     ctx.fillStyle = '#5e4128'; ctx.fillRect(1, 7, 22, 5); ctx.fillRect(3, 5, 18, 3);
     ctx.fillStyle = '#7a5a36'; ctx.fillRect(5, 3, 14, 4); ctx.fillRect(8, 1, 8, 3);
@@ -5628,6 +5691,26 @@ const DECORS = {
       rangs.forEach(function (n, j) { if (n > 2 && j > 0 && j < 11) ctx.fillRect(7 - n / 2 + 1, j, n - 2, 1); });
       ctx.fillStyle = '#1a1712'; ctx.fillRect(4, 5, 6, 2);
     }
+  } },
+  // ⚠️ LA BENNE À GRAVATS, qu'on POUSSE. `poussable` est sa masse (celle d'un char : la berline
+  // fait 1,0) et `portee` ce qu'elle peut s'éloigner de chez elle, en px — moins que la marge de
+  // sol libre que Python lui garantit autour (`chantiers.CONTENEUR_LARGEUR`), donc jamais dans un
+  // mur ni dans un couloir. `arrete` ne sert qu'aux balles : une benne est un abri. `sol` est sa
+  // boîte, en demi-côtés : c'est elle que les piétons et les chars sentent.
+  conteneur: { arrete: 4.0, poussable: 1.8, portee: 24, w: 34, h: 20, ancre: [17, 18], r: 10, sol: [15, 6], solide: true, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.28)'; ctx.fillRect(2, 15, 30, 4);
+    ctx.fillStyle = '#1a1712'; ctx.fillRect(5, 17, 4, 2); ctx.fillRect(25, 17, 4, 2);       // les roulettes
+    ctx.fillStyle = '#2f7a4d'; ctx.fillRect(2, 8, 30, 9);                                     // la caisse
+    ctx.fillStyle = '#1f5236'; ctx.fillRect(2, 15, 30, 2);
+    ctx.fillStyle = '#3b8f5d';
+    for (let x = 5; x < 31; x += 4) ctx.fillRect(x, 9, 1, 6);                                 // les nervures
+    ctx.fillStyle = '#22593a'; ctx.fillRect(2, 8, 30, 1);
+    ctx.fillStyle = '#3a8f5c'; ctx.fillRect(1, 5, 32, 3);                                     // le couvercle
+    ctx.fillStyle = '#44a06b'; ctx.fillRect(3, 3, 28, 2);
+    ctx.fillStyle = '#5cb885'; ctx.fillRect(5, 3, 24, 1);
+    ctx.fillStyle = '#1a1712'; ctx.fillRect(14, 6, 6, 1);                                     // la poignée
+    for (let k = 0; k < 6; k++) { ctx.fillStyle = k % 2 ? '#1a1712' : '#e8b33c'; ctx.fillRect(3 + k * 3, 13, 3, 2); }   // le ruban de danger
+    ctx.fillStyle = '#7a7d82'; ctx.fillRect(9, 10, 2, 1); ctx.fillRect(22, 11, 3, 1);         // les éraflures
   } },
   // La pelle : le bras monte, le godet racle, le bras redescend. Six poses
   // aller-retour, jamais un saut du haut au bas.

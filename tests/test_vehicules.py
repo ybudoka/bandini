@@ -25,7 +25,7 @@ def test_une_auto_de_police_le_parc_complet_et_le_velo():
     # ce qui n'est pas de l'eau »). Plus un seul vehicule en phase 2.
     assert {v["slug"] for v in vehicules.de_phase(1)} == {
         "auto", "taxi", "moto", "velo", "police",
-        "camion", "autobus", "ambulance", "remorqueuse",
+        "camion", "autobus", "ambulance", "remorqueuse", "pelleteuse",
         "sport", "luxe", "cabriolet", "bateau", "chalutier", "porte_conteneurs"}
     assert {v["slug"] for v in vehicules.CATALOGUE} - {v["slug"] for v in vehicules.de_phase(1)} == set()
     assert vehicules.par_slug("moto")["ejecte"] is True
@@ -108,10 +108,14 @@ def test_aucune_fiche_ne_promet_une_pointe_que_la_physique_refuse():
 def test_un_char_a_moteur_distance_un_agent_a_pied():
     """Semer la police, c'est d'abord la distancer. Un agent court a `VITESSES["policier"]` ; tout ce qui a un
     moteur et roule en ville va plus vite a fond — le camion et l'autobus compris, les plus lents. Le velo,
-    lui, ne distance personne : on le pedale."""
+    lui, ne distance personne : on le pedale.
+
+    ⚠️ **La pelleteuse non plus** (« Ça travaille » : l'etage 2, 12 km/h) : elle n'est pas la pour fuir, elle
+    est la pour la farce — un agent a pied la rattrape, et c'est voulu. `frequence == 0` : elle ne nait
+    jamais dans le trafic, ce n'est pas un char qu'on choisit pour semer qui que ce soit."""
     from app.recherche import VITESSES
     for v in vehicules.CATALOGUE:
-        if v["reservoir"] and not v["eau"]:
+        if v["reservoir"] and not v["eau"] and v["frequence"] > 0:
             assert v["vitesse_max"] >= 1.25 * VITESSES["policier"], \
                 f"{v['slug']} ({v['vitesse_max']}) ne distance pas un agent a pied ({VITESSES['policier']})"
 
@@ -291,9 +295,11 @@ def test_seuls_les_lourds_defoncent():
         if v["defonce"]:
             assert v["masse"] >= 2.0, f"{v['slug']} defonce sans etre lourd"
     lourds = {v["slug"] for v in vehicules.CATALOGUE if v["defonce"]}
-    assert lourds == {"camion", "autobus", "remorqueuse"}
+    assert lourds == {"camion", "autobus", "remorqueuse", "pelleteuse"}
     assert vehicules.par_slug("camion")["defonce"] > vehicules.par_slug("remorqueuse")["defonce"], \
-        "le camion est celui qui passe le mieux au travers"
+        "le camion est celui qui passe le mieux au travers des chars de la rue"
+    assert vehicules.par_slug("pelleteuse")["defonce"] > vehicules.par_slug("camion")["defonce"], \
+        "la pelle est celle qui passe le mieux au travers de tout"
     assert vehicules.PHYSIQUE["defonce_vitesse_min"] > 0
 
 
@@ -426,3 +432,27 @@ def test_le_garde_fou_cherche_assez_fin_et_assez_loin():
     plus_long = max(v["longueur"] for v in vehicules.de_phase(1) if not v["eau"])
     assert 0 < ph["degagement_pas_px"] <= ph["sous_pas_px"]
     assert plus_long <= ph["degagement_px"] <= 8 * 16
+
+
+def test_la_pelleteuse_ne_nait_pas_dans_la_rue_et_c_est_le_char_le_plus_lourd_et_le_plus_lent():
+    """⚠️ La pelle du chantier (8e vague de « Ça travaille ») : `frequence` 0 — c'est `chantiers.js` qui
+    la sort de son décor. La plus lourde et la plus lente DU PARC DE LA RUE (12 km/h, moins que le vélo),
+    et elle traverse tout : `defonce` le plus haut du parc — même en comptant les bateaux, qui ne roulent
+    jamais dans une rue.
+
+    ⚠️ **Hors trafic, pas hors catégorie** : le porte-conteneurs (masse 12, hors trafic — `eau`) est plus
+    lourd qu'elle, et LUI est plus rapide (1,9 contre 1,3) : la pelle reste la plus LENTE du catalogue au
+    grand complet, mais pas la plus lourde une fois les bateaux comptés."""
+    p = vehicules.par_slug("pelleteuse")
+    assert p["frequence"] == 0 and not p["rare"], "la pelle naîtrait dans le trafic"
+    de_la_rue = [v for v in vehicules.CATALOGUE if v["slug"] != "pelleteuse" and not v["eau"]]
+    autres = [v for v in vehicules.CATALOGUE if v["slug"] != "pelleteuse"]
+    assert p["masse"] > max(v["masse"] for v in de_la_rue), "la pelle n'est pas le char le plus lourd de la rue"
+    assert p["vitesse_max"] < min(v["vitesse_max"] for v in autres), "la pelle n'est pas le char le plus lent, bateaux compris"
+    assert p["defonce"] > max(v["defonce"] for v in autres), "un autre char passe mieux au travers"
+    assert p["classe"] == "camion" and p["portieres"], "on monte dans sa cabine par une portière"
+    # ⚠️ Pas plus large que le plus large du parc de la rue : les bacs des éboueurs se tiennent à 14 px
+    # du centre de la voie (`test_eboueurs_js`), une marge calculée sur ce char-là. Vu à 20 de large,
+    # la pelle frôlait un bac que le camion ne touche pas.
+    assert p["largeur"] <= max(v["largeur"] for v in de_la_rue), "la pelle est le char le plus large de la rue"
+    assert p["boulot"] is None and p["radio"] is None and not p["police"]

@@ -590,6 +590,21 @@ const Son = (function () {
       for (let k = 0; k < 3; k++) { tonA(t0 + k * 0.22, 420, 0.06, 'triangle', 0.22 * v, 0.7); bruitA(t0 + k * 0.22, 0.05, 0.2 * v, 2500); }
     },
     scie: function (v) { ton(1800, 1.4, 'sawtooth', 0.04 * v, 1.15); bruit(1.2, 0.08 * v, 5000, 2500); },
+    // La benne qu'on pousse : la tôle qui racle le trottoir, et un coup sourd de caisse vide.
+    conteneur: function (v) {
+      const t0 = ctx.currentTime;
+      bruitA(t0, 0.35, 0.2 * v, 1400);
+      tonA(t0 + 0.05, 95, 0.18, 'square', 0.12 * v, 0.7);
+      tonA(t0 + 0.05, 240, 0.25, 'triangle', 0.05 * v, 0.9);
+    },
+    // Le tas de terre : la roue attaque la pente (un coup sourd), la terre roule sous
+    // la caisse (du gravier), et on retombe mollement. Synthétisé : du sable, pas du fer.
+    tas: function (v) {
+      const t0 = ctx.currentTime;
+      tonA(t0, 62, 0.16, 'sine', 0.3 * v, 0.6);
+      bruitA(t0, 0.28, 0.16 * v, 900);
+      bruitA(t0 + 0.22, 0.14, 0.1 * v, 500);
+    },
     // La plaque d'acier de la tranchée : la roue avant claque, la plaque résonne, et
     // la roue arrière claque à son tour. Synthétisée, comme le nid-de-poule : un
     // cahot n'a pas besoin d'un fichier.

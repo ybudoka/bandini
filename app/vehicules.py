@@ -202,6 +202,22 @@ CATALOGUE: list[Vehicule] = [
     _v("remorqueuse", "Remorqueuse", "camion", 36, 15, 3.0, 0.04, 29, 220, 2, 1300, 0.05,
        ["#d98324", "#2c3e50", "#7f8c8d"], "remorqueuse", masse=2.2, cercles=4, adherence=0.24,
        defonce=0.6, crochet=True, boulot="remorquage", radio="station_remorqueuse"),
+    # ⚠️ **LA PELLE QU'ON CONDUIT** (« Ça travaille », 8e vague : l'étage 2 du plan, que la refonte
+    # des véhicules avait retardé). Elle ne naît JAMAIS dans la rue (`frequence` 0) : c'est celle du
+    # chantier, `chantiers.js` la sort de son décor quand on monte dedans. Elle roule à 12 km/h
+    # (1,3 — l'auto de référence fait 4,0), tourne court, et ne s'arrête devant rien : `defonce`
+    # 0,95, elle garde presque toute sa vitesse en traversant ce qu'un autre char casse en
+    # ralentissant — et le seuil de vitesse pour défoncer une clôture se règle sur SA vitesse
+    # (`vehicules.js`), pas sur celle d'un camion.
+    # ⚠️ **Masse 3,3, et pas plus** : plus lourde que l'autobus (3,2), sous le camion-cuisine (3,4) —
+    # une pelle qui déracinerait un commerce en roulant à 12 km/h n'est plus une farce — et très
+    # loin sous les machines du chantier (6, 8, 9) : elle ne détruit pas les siennes.
+    # ⚠️ **16 de large, comme le camion** : les bacs des éboueurs se tiennent à 14 px du centre de la
+    # voie, et `test_eboueurs_js` calcule cette marge sur le char le plus LARGE du parc — à 20 (rayon
+    # 10), la pelle frôlait un bac que le camion ne touche pas. On ne déplace pas les bacs de la ville
+    # pour un char qui n'est jamais dans le trafic.
+    _v("pelleteuse", "Pelleteuse", "camion", 38, 16, 1.3, 0.022, 30, 320, 1, 1500, 0.0,
+       ["#e8b33c"], "pelleteuse", masse=3.3, cercles=4, defonce=0.95, adherence=0.22),
     # --- Le haut de gamme : deux chars qu'on vole EXPRES ------------------
     # ⚠️ Tout le reste du parc est utilitaire — on le prend parce qu'il sert.
     # Ces deux-la, on les prend parce qu'on les VEUT, et ils s'opposent en
@@ -480,6 +496,25 @@ PHYSIQUE = {
     # une plaque est un décor qu'on sent. Plus doux : ce n'est pas un trou.
     "plaque_secousse": 0.28,
     "plaque_repit_images": 30,
+    # ⚠️ **UN TAS DE TERRE** (le chantier, `chantiers.py`) est une rampe NATURELLE : plus
+    # douce que celle des défis, et elle ne se mesure pas — elle se PLAFONNE. La vitesse
+    # qui compte est bornée (`tas_vitesse_max`) et le saut ne monte jamais au-dessus de
+    # `tas_hauteur_max` px : c'est sous le seuil (6 px) où un char passe AU-DESSUS des
+    # tuiles, donc un mur retient toujours ce qui retombe. Un juge REJOUE le saut d'ici, image
+    # par image (l'intégration est discrète : `z += vz; vz -= gravité` monte de `vz / 2` de
+    # plus que la formule continue — 6,3 px mesurés à 0,42, la moto).
+    "tas_impulsion": 0.38,        # vz = vitesse * ca, en sortant sur le tas
+    "tas_vitesse_min": 1.2,       # plus lent, on monte dessus sans décoller
+    "tas_vitesse_max": 4.0,       # la moto (5,2) ne vole pas plus haut que la berline
+    "tas_hauteur_max": 6,         # px : jamais plus haut qu'un char qui passe au-dessus d'un mur
+    "tas_repit_images": 30,       # on ne rebondit pas dix fois en roulant sur le même tas
+    "tas_secousse": 0.18,
+    # ⚠️ **UNE BENNE QU'ON POUSSE** (`chantiers.py`) : elle ralentit le char qui la pousse, d'autant
+    # plus qu'il est léger — `poussee_frein` x la masse de la benne / celle du char, par image de
+    # contact, au plus `poussee_frein_max`. Une berline (1,0) pousse une benne (1,8) à petite
+    # vitesse ; l'autobus (3,2) la sent à peine ; un char plus léger que le vélo serait borné.
+    "poussee_frein": 0.04,
+    "poussee_frein_max": 0.4,
     # ⚠️ **LE BRAQUAGE EST UN RAYON, PAS UNE VITESSE DE ROTATION** (15 sept.
     # 2026, demande de Martin : « ameliore les virages »). Le char tournait de
     # `braquage` RADIANS PAR IMAGE, quelle que soit sa vitesse : le rayon du

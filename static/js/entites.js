@@ -524,6 +524,52 @@ const Entites = (function () {
     for (const e of B.entites) if (estIndexable(e)) ajouterA(grilleFixe, e);
   }
 
+  /** La boîte d'un décor (`sol`, en demi-côtés) touche-t-elle le cercle (x, y, r) ?
+      La même arithmétique que `bloquerParDecor` : on ressort par le côté le moins enfoncé. */
+  function boiteTouche(d, x, y, r) {
+    const sol = (DECORS[d.decor] || {}).sol || [d.r || 4, d.r || 4];
+    return sol[0] + r - Math.abs(x - d.x) > 0 && sol[1] + r - Math.abs(y - d.y) > 0;
+  }
+
+  /** ⚠️ POUSSER UN DÉCOR (la benne d'un chantier) : le déplacer de (mx, my), s'il le peut.
+      Le décor ne bougeait JAMAIS (voir l'index fixe) : celui-ci est le seul qui bouge, et il
+      tient l'index à jour LUI-MÊME — sans quoi les piétons continueraient de buter sur
+      l'endroit qu'il a quitté et de traverser celui où il est.
+
+      Il refuse — et le char qui pousse est alors arrêté comme devant un mur — dès que le
+      décor : s'éloigne de plus de `portee` px de chez lui (`d.chez`), entre dans une tuile
+      solide (les quatre coins de sa boîte), ou en chevauche un autre décor solide. Rend vrai
+      s'il a bougé. */
+  function pousserDecor(d, mx, my) {
+    const fiche = DECORS[d.decor] || {};
+    if (!fiche.poussable || d.brise) return false;
+    if (!d.chez) d.chez = { x: d.x, y: d.y };
+    const nx = d.x + mx, ny = d.y + my, sol = fiche.sol || [d.r, d.r];
+    if (Math.max(Math.abs(nx - d.chez.x), Math.abs(ny - d.chez.y)) > (fiche.portee || 0)) return false;
+    for (const sx of [-1, 1]) {
+      for (const sy of [-1, 1]) {
+        if (Monde.solidite(Math.floor((nx + sx * sol[0]) / TT), Math.floor((ny + sy * sol[1]) / TT)) !== 0) return false;
+      }
+    }
+    for (const o of decorAutour(nx, ny, sol[0] + 24)) {
+      if (o === d || !o.solide || o.brise) continue;
+      const so = (DECORS[o.decor] || {}).sol || [o.r || 4, o.r || 4];
+      if (Math.abs(nx - o.x) < sol[0] + so[0] && Math.abs(ny - o.y) < sol[1] + so[1]) return false;
+    }
+    const ancienne = cle(d.x, d.y);
+    d.x = nx; d.y = ny;
+    if (cle(nx, ny) !== ancienne) {
+      const liste = grilleFixe.get(ancienne);
+      if (liste) {
+        const i = liste.indexOf(d);
+        if (i >= 0) liste.splice(i, 1);
+        if (!liste.length) grilleFixe.delete(ancienne);
+      }
+      ajouterA(grilleFixe, d);
+    }
+    return true;
+  }
+
   /** Y a-t-il deja quelqu'un debout ici ? ⚠️ Les deux branches de
       `placeDeNaissance` rendent un CENTRE DE TUILE : deux naissances sur la
       meme tuile, c'est le meme pixel — deux corps parfaitement confondus
@@ -4861,7 +4907,9 @@ const Entites = (function () {
         // une articulation, pas dix — chaque pose est cuite UNE fois et reste
         // en cache, donc un manège qui tourne coute quatre canevas, pas un par
         // image.
-        const pose = d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
+        // ⚠️ `poseManuelle` : la grue qu'un joueur pilote (`Chantiers.piloter`) ne tourne plus toute
+        // seule, elle prend la pose qu'on lui donne — jour ou nuit.
+        const pose = e.poseManuelle !== undefined ? e.poseManuelle : d.anime ? poseDuDecor(d, B.t, nuit) : e.v;
         const c = d.variantes
           ? Atlas.cuirePeintre('decor|' + e.decor + '|' + pose, d.w, d.h,
                                function (g, w, h) { d.peindre(g, w, h, pose); })
@@ -4971,7 +5019,7 @@ const Entites = (function () {
     plageEn, litLibre, coinDePlage,
     deplacerCercle, dansLaCarte, regarder, majJoueur, majPieton, maj, demeler, deboutDansLaFoule, pasDeDemele, mouiller,
     enjamber, majEnjambe, clotureDevant, reglesCloture,
-    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, majVolDeChar, emporterLeChar,
+    blesser, assommer, tuer, alerter, lacherArme, traverseeSure, trottoirLePlusProche, naitreLesOuvriers, naitreLEquipe, pousserDecor, boiteTouche, majVolDeChar, emporterLeChar,
     majBagarre, allumerLaBagarre, frontiereProche, rivalDe, enPleineRixe, majAqueduc, JET_EAU_IMAGES,
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,

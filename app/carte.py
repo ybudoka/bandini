@@ -7043,6 +7043,11 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # listes de tuiles) ; ici, la ville d'avant est la meme a la tuile pres. Aucun de.
     from . import aeroport as aeroport_mod
     ville["aeroport"] = aeroport_mod.poser(chantier, ville)
+    # ⚠️ LES ANNEXES DES CHANTIERS (la tranchée, l'équipe, le signaleur, la benne), TOUT A LA
+    # FIN, après absolument tout : elles lisent la ville FINIE — le mobilier, les abribus, la
+    # saleté, les grands bateaux et l'aéroport ne leur retirent rien, et une benne posée plus
+    # tôt tombait sur un parcmètre. Chaque chantier garde son dé : rien de la ville ne bouge.
+    chantiers_mod.completer(ville, graine)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

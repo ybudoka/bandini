@@ -607,7 +607,7 @@ def test_les_sons_du_chantier_sortent_avec_ou_sans_leur_fichier(banc):
         L.Jeu.commencer();
         L.Son.reveiller();
         const j = L.B.joueur, SFX = L.Son.SFX;
-        const sons = ['boule', 'marteau_piqueur', 'godet', 'bip_recul', 'marteau', 'scie', 'plaque'];
+        const sons = ['boule', 'marteau_piqueur', 'godet', 'bip_recul', 'marteau', 'scie', 'plaque', 'tas', 'conteneur'];
         const filet = {};
         for (const son of sons) {
             const n = joues.length;
@@ -1175,3 +1175,748 @@ def test_un_char_du_trafic_s_arrete_a_l_arret_et_repart_a_lentement(banc):
     assert a["force"] == 0, f"le char force le passage pendant ARRÊT (patience {a['patience']}) : {r['trace']}"
     assert r["present"], "le char a disparu"
     assert r["apres"] < 0, f"à LENTEMENT, le char n'a pas repris sa route : {r}"
+
+
+# --- 5e vague : le tas de terre fait rampe ---------------------------------------------------
+
+#: Un char lancé sur le tas de terre de la phase « rasé », mesuré image par image.
+TAS = """
+  // ⚠️ `o.char` pose RELATIVEMENT au joueur : ici, des coordonnées absolues.
+  function poserUnChar(L, slug, x, y) {
+    const v = L.Vehicules.creer(slug, x, y, 0, { etat: 'stationne' });
+    L.Entites.indexer();
+    return v;
+  }
+  // Le tas SEUL : la pelle voisine (à deux tuiles, arrête six) barrerait la route au banc.
+  function appliquerSansLaPelle(L, i, phase) {
+    const id = L.Chantiers.liste[i].def.id;
+    L.Chantiers.appliquer(i, phase);
+    for (const e of L.B.entites.slice()) if (e.machineDe === id && e.decor !== 'tas_de_terre') L.Entites.retirer(e);
+    L.Entites.reindexerDecor();
+  }
+  // `gaz` 0 : le char roule sur son erre — un char qui rampe ne doit pas ré-accélérer en route.
+  function surLeTas(L, o, slug, vitesse, phase, gaz, depart) {
+    const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[2].machines.some(function (m) { return m.type === 'tas_de_terre'; }); });
+    const ch = L.Chantiers.liste[i], id = ch.def.id;
+    appliquerSansLaPelle(L, i, phase === undefined ? 2 : phase);
+    const tas = L.B.entites.find(function (e) { return e.decor === 'tas_de_terre' && e.machineDe === id; });
+    if (phase !== undefined && !tas) return { tas: false };
+    poserLeJoueur(L, { x: tas.x, y: tas.y + 300 });
+    const v = poserUnChar(L, slug, tas.x - (depart || 60), tas.y - 1);
+    v.etat = 'roule';
+    v.vitesse = vitesse; v.vx = vitesse; v.vy = 0; v.angle = 0;
+    const vie0 = v.vie;
+    let zMax = 0, vitesseMin = vitesse, decolle = -1;
+    // Au plus 70 images, et on s'arrête dès qu'on a retombé passé le tas (voir plus bas) : ni jusqu'au mur d'en face.
+    for (let k = 0; k < 70; k++) {
+      L.Vehicules.majTas(v);
+      L.Vehicules.majPhysique(v, { gaz: gaz === undefined ? 1 : gaz, frein: 0, direction: 0 });
+      L.Vehicules.avancer(v);
+      if (v.z > 0 && decolle < 0) decolle = k;
+      zMax = Math.max(zMax, v.z);
+      vitesseMin = Math.min(vitesseMin, Math.hypot(v.vx, v.vy));
+      // Retombé ET passé le tas : on s'arrête là. Plus loin, c'est le mur du lot d'en face, pas le tas.
+      if (decolle >= 0 && v.z === 0 && (v.x - tas.x) > 25) break;
+    }
+    return { tas: true, zMax: zMax, decolle: decolle, apres: (v.x - tas.x), vitesseMin: vitesseMin,
+             perdu: vie0 - v.vie, brise: !!tas.brise, z: v.z, repit: v.tasT };
+  }
+"""
+
+
+def test_le_tas_de_terre_est_une_rampe_douce(banc):
+    """Un char lancé sur le tas décolle DOUCEMENT, sans perdre ni vitesse ni carrosserie,
+    et retombe passé le tas. Plus doux qu'une rampe : moins que les 6 px au-delà desquels un
+    char passe au-dessus des tuiles — même la moto, le char le plus rapide."""
+    r = banc(_juge(TAS + """
+        L.Jeu.commencer();
+        const out = {};
+        out.auto = surLeTas(L, o, 'auto', 3.4);
+        out.moto = surLeTas(L, o, 'moto', 5.2);
+        out.lent = surLeTas(L, o, 'auto', 1.1, undefined, 0, 36);
+        out.autobus = surLeTas(L, o, 'autobus', 2.6);
+        out.absent = surLeTas(L, o, 'auto', 3.4, 3);
+        out.ph = L.B.defs.conduite.physique;
+        return out;
+    """))
+    ph = r["ph"]
+    for slug in ("auto", "moto", "autobus"):
+        c = r[slug]
+        assert c["decolle"] >= 0 and c["zMax"] > 0, f"{slug} : le tas ne fait pas décoller : {c}"
+        assert c["zMax"] <= ph["tas_hauteur_max"], f"{slug} vole plus haut qu'un char qui passe un mur : {c}"
+        assert c["perdu"] == 0, f"{slug} : une rampe ne coûte rien : {c}"
+        assert not c["brise"], f"{slug} a déraciné le tas de terre : {c}"
+        assert c["apres"] > 20, f"{slug} s'est arrêté sur le tas : {c}"
+        assert c["vitesseMin"] > 0.5, f"{slug} : le tas l'a ralenti : {c}"
+        assert c["z"] == 0, f"{slug} n'est pas retombé : {c}"
+    assert r["lent"]["zMax"] == 0, f"un char qui rampe décolle : {r['lent']}"
+    assert r["lent"]["apres"] > 5, f"un char lent bute sur le tas : {r['lent']}"
+    assert r["absent"]["tas"] is False or r["absent"]["zMax"] == 0, "le tas n'existe plus en phase 3 : rien ne fait décoller"
+
+
+def test_le_tas_de_terre_n_est_pas_un_mur_meme_pour_un_char_lourd(banc):
+    """`decorDevant` l'ignore : la berline n'y bute pas, l'autobus (masse 3,2, au-delà du
+    `arrete` de 3,0) ne le déracine pas. `arrete` ne sert plus qu'aux balles."""
+    r = banc(_juge(TAS + """
+        L.Jeu.commencer();
+        const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[2].machines.some(function (m) { return m.type === 'tas_de_terre'; }); });
+        const ch = L.Chantiers.liste[i];
+        appliquerSansLaPelle(L, i, 2);
+        const tas = L.B.entites.find(function (e) { return e.decor === 'tas_de_terre' && e.machineDe === ch.def.id; });
+        const out = { arrete: L.DECORS.tas_de_terre.arrete, rampe: L.DECORS.tas_de_terre.rampe };
+        for (const slug of ['auto', 'autobus', 'camion']) {
+            const v = poserUnChar(L, slug, tas.x, tas.y);
+            v.vitesse = 3; v.vx = 3; v.vy = 0;
+            out[slug] = { rencontre: L.Vehicules.decorDevant(v, tas.x, tas.y), traverse: L.Vehicules.heurterDecor(v, tas.x, tas.y), brise: !!tas.brise };
+        }
+        return out;
+    """))
+    assert r["rampe"] and r["arrete"], "le tas garde `arrete` pour les balles et déclare sa rampe"
+    for slug in ("auto", "autobus", "camion"):
+        assert r[slug]["rencontre"] is None, f"{slug} rencontre le tas comme un obstacle : {r[slug]}"
+        assert r[slug]["traverse"] is True and not r[slug]["brise"], f"{slug} : {r[slug]}"
+
+
+def test_le_tas_de_terre_ne_rebondit_pas_dix_fois(banc):
+    """Le répit : rouler lentement sur le tas ne le fait pas rebondir à chaque image."""
+    r = banc(_juge(TAS + """
+        L.Jeu.commencer();
+        const i = L.Chantiers.liste.findIndex(function (c) { return c.def.phases[2].machines.some(function (m) { return m.type === 'tas_de_terre'; }); });
+        const ch = L.Chantiers.liste[i];
+        appliquerSansLaPelle(L, i, 2);
+        const tas = L.B.entites.find(function (e) { return e.decor === 'tas_de_terre' && e.machineDe === ch.def.id; });
+        const v = poserUnChar(L, 'auto', tas.x, tas.y - 1);
+        v.vitesse = 3; v.vx = 3; v.vy = 0;
+        let decollages = 0, avant = 0;
+        for (let k = 0; k < 20; k++) {
+            L.Vehicules.majTas(v);
+            if (v.vz > avant) decollages++;
+            avant = v.vz;
+            v.z = 0; v.vz = 0; avant = 0;          // on le repose : seul le répit peut l'empêcher de re-décoller
+        }
+        return { decollages: decollages, repit: v.tasT, ph: L.B.defs.conduite.physique };
+    """))
+    assert r["decollages"] == 1, f"le tas fait rebondir à chaque image : {r}"
+    assert r["repit"] > 0
+
+
+# --- 6e vague : la benne qu'on pousse ------------------------------------------------------
+
+BENNE = TAS + """
+  function benneDe(L, id) { return L.B.entites.filter(function (e) { return e.conteneurDe === id; }); }
+  function chantierAvecBenne(L) {
+    return L.Chantiers.liste.findIndex(function (c) { return c.def.conteneur; });
+  }
+  // La benne SEULE dans son coin : les machines voisines et l'équipe ne se mettent pas en travers.
+  function appliquerSeule(L, i, phase) {
+    const id = L.Chantiers.liste[i].def.id;
+    L.Chantiers.appliquer(i, phase);
+    for (const e of L.B.entites.slice()) if (e.machineDe === id) L.Entites.retirer(e);
+    L.Entites.reindexerDecor();
+    return benneDe(L, id)[0];
+  }
+"""
+
+
+def test_la_benne_est_la_pendant_les_travaux(banc):
+    """Une seule, chez elle, solide, dans l'index du décor : des phases 1 à 3, jamais sur la maison
+    condamnée ni sur le neuf — et jamais en double quand on repose la même phase."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const i = chantierAvecBenne(L), ch = L.Chantiers.liste[i], id = ch.def.id, maison = ch.def.conteneur;
+        const parPhase = {};
+        for (const phase of [0, 1, 2, 3, 4, 2, 2]) {
+            L.Chantiers.appliquer(i, phase);
+            const b = benneDe(L, id);
+            parPhase[phase] = { n: b.length };
+            if (b.length) {
+                const e = b[0];
+                parPhase[phase].chez = [Math.floor(e.x / 16), Math.floor((e.y - 15) / 16)];
+                parPhase[phase].solide = e.solide;
+                parPhase[phase].indexee = L.Entites.decorAutour(e.x, e.y, 2).indexOf(e) >= 0;
+                parPhase[phase].machine = e.machineDe !== undefined;
+            }
+        }
+        return { parPhase: parPhase, maison: maison, fiche: L.DECORS.conteneur };
+    """))
+    p = r["parPhase"]
+    assert p["0"]["n"] == 0 and p["4"]["n"] == 0, "une benne sur la maison condamnée ou sur le neuf"
+    for phase in "123":
+        assert p[phase]["n"] == 1, f"phase {phase} : {p[phase]}"
+        assert p[phase]["chez"] == r["maison"] and p[phase]["solide"] and p[phase]["indexee"], p[phase]
+        assert not p[phase]["machine"], "la benne est une machine : le chantier la ferait travailler"
+
+
+def test_un_char_pousse_la_benne_et_la_paie(banc):
+    """⚠️ Le geste : une berline lancée sur la benne la POUSSE — elle avance de sa portée, pas plus,
+    et le char perd de sa vitesse en route ; au bout, c'est un mur."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const i = chantierAvecBenne(L), fiche = L.DECORS.conteneur;
+        const b = appliquerSeule(L, i, 2);
+        poserLeJoueur(L, { x: b.x, y: b.y + 300 });
+        const dep = { x: b.x, y: b.y };
+        const v = poserUnChar(L, 'auto', b.x - 60, b.y - 3);
+        v.etat = 'roule'; v.vitesse = 2.6; v.vx = 2.6; v.vy = 0; v.angle = 0;
+        const vie0 = v.vie, vitesses = [];
+        let pousse = 0, bute = false;
+        for (let k = 0; k < 120; k++) {
+            const avant = b.x;
+            L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 0 });
+            L.Vehicules.avancer(v);
+            if (b.x > avant) pousse++;
+            if (k > 20 && k % 10 === 0) vitesses.push(+Math.hypot(v.vx, v.vy).toFixed(2));
+        }
+        const fin = { x: b.x, y: b.y };
+        return { dep: dep, fin: fin, pousse: pousse, vitesses: vitesses, portee: fiche.portee,
+                 dansLIndex: L.Entites.decorAutour(b.x, b.y, 2).indexOf(b) >= 0,
+                 ancienneVide: L.Entites.decorAutour(dep.x, dep.y, 2).indexOf(b) >= 0 && Math.abs(b.x - dep.x) > 8,
+                 vx: v.x - b.x, chocs: v.chocs, perdu: vie0 - v.vie };
+    """))
+    dx = r["fin"]["x"] - r["dep"]["x"]
+    assert dx > 8, f"la benne n'a pas bougé sous un char lancé dessus : {r}"
+    assert dx <= r["portee"] + 0.6, f"la benne est allée plus loin que sa portée : {dx} > {r['portee']}"
+    assert abs(r["fin"]["y"] - r["dep"]["y"]) < 0.5, "la benne a dérivé de côté"
+    assert r["pousse"] > 3
+    assert r["dansLIndex"] and not r["ancienneVide"], "l'index du décor ne suit pas la benne"
+    assert r["vx"] < 0, f"le char a traversé la benne : {r['vx']}"
+    assert min(r["vitesses"]) < 2.0, f"pousser la benne ne coûte aucune vitesse : {r['vitesses']}"
+
+
+def test_la_benne_ne_traverse_pas_un_mur(banc):
+    """⚠️ Contre une VRAIE façade (le lot d'un chantier rasé n'en a plus) : la benne s'arrête à son
+    pied, aucun coin de sa boîte n'entre dans une tuile solide — poussée par un char, ou d'un coup."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const f = L.DECORS.conteneur, sol = f.sol, c = L.Monde.carte;
+        // Une façade quelconque de la ville, avec trois tuiles libres dessous.
+        let mur = null;
+        for (let ty = 3; ty < c.h - 6 && !mur; ty++) {
+            for (let tx = 3; tx < c.w - 3 && !mur; tx++) {
+                const s = L.Monde.solidite;
+                if (s(tx, ty) === 1 && [-2, -1, 0, 1, 2].every(function (d) { return s(tx + d, ty + 1) === 0 && s(tx + d, ty + 2) === 0 && s(tx + d, ty + 3) === 0; })
+                    && [-1, 0, 1].every(function (d) { return s(tx + d, ty) === 1; })) mur = { tx: tx, ty: ty };
+            }
+        }
+        const x = mur.tx * 16 + 8, yMur = (mur.ty + 1) * 16;            // le pied du mur
+        // Une benne à 9 px du mur (comme à l'ouverture du chantier).
+        const b = L.Entites.creer('decor', x, yMur + 9 + sol[1], { decor: 'conteneur', r: f.r, solide: true, dessine: true });
+        b.chez = { x: b.x, y: b.y };
+        L.Entites.reindexerDecor();
+        poserLeJoueur(L, { x: x, y: yMur + 300 });
+        const direct = L.Entites.pousserDecor(b, 0, -12);           // 12 px > les 9 qui la séparent du mur
+        const intacte = b.y === yMur + 9 + sol[1];
+        // Puis un char, de face : elle monte jusqu'au mur, pas plus loin.
+        const v = poserUnChar(L, 'auto', x - 2, b.y + 40);
+        v.etat = 'roule'; v.angle = -Math.PI / 2; v.vitesse = 2.6; v.vx = 0; v.vy = -2.6;
+        for (let k = 0; k < 120; k++) {
+            L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 0 });
+            L.Vehicules.avancer(v);
+        }
+        let coinsSolides = 0;
+        for (const sx of [-1, 1]) for (const sy of [-1, 1]) {
+            if (L.Monde.solidite(Math.floor((b.x + sx * sol[0]) / 16), Math.floor((b.y + sy * sol[1]) / 16)) !== 0) coinsSolides++;
+        }
+        return { direct: direct, intacte: intacte, monte: b.y < yMur + 9 + sol[1] - 0.5, coinsSolides: coinsSolides,
+                 hautDeLaBoite: b.y - sol[1], yMur: yMur };
+    """))
+    assert r["direct"] is False and r["intacte"], f"la benne est entrée dans la façade d'un coup : {r}"
+    assert r["monte"], f"le char n'a pas poussé la benne vers le mur : {r}"
+    assert r["coinsSolides"] == 0, f"un coin de la benne est dans un mur : {r}"
+    assert r["hautDeLaBoite"] >= r["yMur"] - 0.01, f"la benne dépasse le pied du mur : {r}"
+
+
+def test_l_index_du_decor_suit_la_benne_d_une_cellule_a_l_autre(banc):
+    """⚠️ L'index fixe se range par cellules de 64 px : une benne qui en franchit une doit quitter
+    la liste de l'ancienne et entrer dans celle de la nouvelle — sinon les piétons buteraient sur
+    l'endroit qu'elle a quitté et traverseraient celui où elle est."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const f = L.DECORS.conteneur, c = L.Monde.carte;
+        // Un coin de ville tout dégagé, à cheval sur une frontière de cellule verticale (x = 64 k).
+        let lieu = null;
+        for (let k = 2; k < 60 && !lieu; k++) {
+            for (let ty = 4; ty < c.h - 4 && !lieu; ty++) {
+                let libre = true;
+                for (let tx = Math.floor((64 * k - 30) / 16); tx <= Math.floor((64 * k + 30) / 16) && libre; tx++) {
+                    if (L.Monde.solidite(tx, ty) !== 0 || L.Monde.solidite(tx, ty - 1) !== 0) libre = false;
+                }
+                if (libre) lieu = { x: 64 * k - 3, y: ty * 16 + 12, k: k };
+            }
+        }
+        const d = L.Entites.creer('decor', lieu.x, lieu.y, { decor: 'conteneur', r: f.r, solide: true, dessine: true, chez: { x: lieu.x, y: lieu.y } });
+        L.Entites.reindexerDecor();
+        const avant = L.Entites.decorAutour(lieu.x, lieu.y, 1).indexOf(d) >= 0;
+        const ok = L.Entites.pousserDecor(d, 6, 0);
+        return { lieu: lieu, avant: avant, ok: ok,
+                 ici: L.Entites.decorAutour(d.x, d.y, 1).indexOf(d) >= 0,
+                 celluleApres: Math.floor(d.x / 64), celluleAvant: Math.floor(lieu.x / 64) };
+    """))
+    assert r["avant"] and r["ok"], r
+    assert r["celluleApres"] == r["celluleAvant"] + 1, f"le montage ne franchit pas de cellule : {r}"
+    assert r["ici"], f"la benne n'est plus dans l'index de sa nouvelle cellule : {r}"
+
+
+def test_la_benne_rentre_chez_elle_avec_la_phase(banc):
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const i = chantierAvecBenne(L), ch = L.Chantiers.liste[i], id = ch.def.id;
+        const b = appliquerSeule(L, i, 2);
+        const chez = { x: b.chez.x, y: b.chez.y };
+        L.Entites.pousserDecor(b, 10, 0);
+        const poussee = { x: b.x, y: b.y };
+        L.Chantiers.appliquer(i, 3);
+        const apres = benneDe(L, id);
+        return { chez: chez, poussee: poussee, n: apres.length, apres: apres[0] && { x: apres[0].x, y: apres[0].y },
+                 ancienne: L.B.entites.indexOf(b) >= 0 };
+    """))
+    assert r["poussee"]["x"] == r["chez"]["x"] + 10
+    assert r["n"] == 1 and r["apres"] == r["chez"], f"la benne n'est pas rentrée : {r}"
+    assert not r["ancienne"], "l'ancienne benne est restée dans la ville"
+
+
+def test_le_poids_de_la_benne_se_paie_selon_la_masse_du_char(banc):
+    """La berline la pousse à petite vitesse, l'autobus la sent à peine : le frein dépend de la
+    masse du char, et il est borné."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const i = chantierAvecBenne(L), ph = L.B.defs.conduite.physique, fiche = L.DECORS.conteneur;
+        const out = { ph: { f: ph.poussee_frein, max: ph.poussee_frein_max }, poussable: fiche.poussable };
+        for (const slug of ['auto', 'autobus', 'moto', 'camion']) {
+            const b = appliquerSeule(L, i, 2);
+            poserLeJoueur(L, { x: b.x, y: b.y + 300 });
+            const v = poserUnChar(L, slug, b.x - 8, b.y - 3);
+            v.vitesse = 3; v.vx = 3; v.vy = 0;
+            const c = { x: v.x, y: v.y, r: 7 };
+            const ok = L.Vehicules.pousserLeDecor(v, b, c);
+            out[slug] = { ok: ok, reste: +(Math.hypot(v.vx, v.vy) / 3).toFixed(4), masse: v.def.masse };
+        }
+        // ⚠️ Aucun char du parc n'atteint la borne du frein : un char imaginaire, dix fois plus léger.
+        const b = appliquerSeule(L, i, 2);
+        poserLeJoueur(L, { x: b.x, y: b.y + 300 });
+        const leger = poserUnChar(L, 'moto', b.x - 8, b.y - 3);
+        leger.def = Object.assign({}, leger.def, { masse: 0.05 });
+        leger.vitesse = 3; leger.vx = 3; leger.vy = 0;
+        L.Vehicules.pousserLeDecor(leger, b, { x: leger.x, y: leger.y, r: 7 });
+        out.leger = { reste: +(Math.hypot(leger.vx, leger.vy) / 3).toFixed(4) };
+        return out;
+    """))
+    for slug in ("auto", "autobus", "moto", "camion"):
+        assert r[slug]["ok"], (slug, r[slug])
+        attendu = 1 - min(r["ph"]["max"], r["poussable"] * r["ph"]["f"] / r[slug]["masse"])
+        assert abs(r[slug]["reste"] - attendu) < 1e-3, (slug, r[slug], attendu)
+    assert r["auto"]["reste"] < r["autobus"]["reste"] <= 1, "l'autobus sent la benne autant que la berline"
+    assert abs(r["leger"]["reste"] - (1 - r["ph"]["max"])) < 1e-3, f"le frein n'est pas borné : {r['leger']}"
+
+
+def test_la_portee_de_la_benne_tient_dans_son_bloc_libre(banc):
+    """La garantie de Python (un bloc de sol libre de cinq tuiles de large) et la portée du jeu
+    parlent de la même chose : la benne, poussée au bout, reste dans le bloc."""
+    r = banc(_juge("""
+        const f = L.DECORS.conteneur;
+        return { portee: f.portee, sol: f.sol, poussable: f.poussable, arrete: f.arrete };
+    """))
+    demi_bloc = (chantiers.CONTENEUR_LARGEUR // 2) * 16 + 8
+    assert r["portee"] + r["sol"][0] <= demi_bloc, "poussée au bout, la benne sortirait de son bloc libre"
+    assert r["poussable"] > 0 and r["arrete"], "une benne poussable garde `arrete` (elle arrête les balles)"
+
+
+def test_la_benne_bute_sur_un_autre_decor_solide(banc):
+    """Poussée contre un banc ou une machine, elle ne le traverse pas : `pousserDecor` refuse."""
+    r = banc(_juge(BENNE + """
+        L.Jeu.commencer();
+        const i = chantierAvecBenne(L), f = L.DECORS.conteneur;
+        const b = appliquerSeule(L, i, 2);
+        // Un décor solide juste à côté, à l'est, dans la direction de la poussée.
+        const banc = L.Entites.creer('decor', b.x + f.sol[0] + 6, b.y, { decor: 'banc', r: 6, solide: true, dessine: true });
+        L.Entites.reindexerDecor();
+        const contre = L.Entites.pousserDecor(b, 8, 0);
+        const x1 = b.x;
+        const libre = L.Entites.pousserDecor(b, -8, 0);
+        return { contre: contre, x1: x1, chez: b.chez.x, libre: libre, apres: b.x, solide: !!L.DECORS.banc };
+    """))
+    assert r["solide"]
+    assert r["contre"] is False and r["x1"] == r["chez"], f"la benne a traversé le banc : {r}"
+    assert r["libre"] is True and r["apres"] == r["chez"] - 8, f"la benne ne recule pas quand la voie est libre : {r}"
+
+
+# --- 7e vague : de nouveaux chantiers quand les premiers sont finis -----------------------------
+
+DORMANT = """
+  function dormant(L) {
+    const i = L.Chantiers.liste.findIndex(function (c) { return c.def.ouvre; });
+    if (i < 0) throw new Error('aucun chantier dormant');
+    return i;
+  }
+  // Ce que la couche peinte du chantier ajoute : les couleurs des planches et du panneau.
+  function peintDeChantier(L, ch) {
+    const d = ch.def, log = [];
+    let style = '';
+    const ctx = new Proxy({}, {
+      get: function (t, k) {
+        if (k === 'fillStyle') return style;
+        return function () { if (k === 'fillRect') log.push([style].concat(Array.from(arguments))); };
+      },
+      set: function (t, k, v) { if (k === 'fillStyle') style = v; return true; },
+    });
+    // Tous les morceaux que touche le chantier.
+    for (let my = Math.floor((d.y - 1) / 16); my <= Math.floor((d.y + d.h + 1) / 16); my++) {
+      for (let mx = Math.floor((d.x - 1) / 16); mx <= Math.floor((d.x + d.l) / 16); mx++) L.Chantiers.peindre(ctx, mx, my);
+    }
+    return log.map(function (r) { return r[0]; });
+  }
+"""
+
+
+def test_un_chantier_dort_jusqu_a_son_jour_puis_s_eveille_hors_de_vue(banc):
+    """Le jour de l'ouverture, la maison passe de « telle quelle » à « condamnée » — et jamais sous les
+    yeux du joueur : le dormant attend, comme toute autre phase, que le coin soit tourné."""
+    r = banc(_juge(DORMANT + """
+        L.Jeu.commencer();
+        const i = dormant(L), ch = L.Chantiers.liste[i], d = ch.def, id = d.id, carte = L.Monde.carte;
+        const rangees = function () {
+            const out = [];
+            for (let j = 0; j < d.h; j++) out.push(carte.sol[d.y + j].slice(d.x, d.x + d.l));
+            return out;
+        };
+        L.B.partie.heure = 0.5;
+        const dort = { dort: ch.dort, posee: ch.posee, etat: L.Chantiers.etat(ch), voulue: L.Chantiers.phaseVoulue(d),
+                       sol: rangees(), base: d.phases[0].sol,
+                       peint: peintDeChantier(L, ch).filter(function (c) { return c === '#e8b33c' || c === '#2b2734'; }).length,
+                       entites: L.B.entites.filter(function (e) { return e.machineDe === id || e.equipeDe === id || e.conteneurDe === id || e.palette === id; }).length };
+        // Le jour venu, mais le joueur devant : il attend.
+        const debut = (L.B.partie.chantiers && L.B.partie.chantiers.debut) || 1;
+        L.B.partie.jour = debut + d.ouvre;
+        poserLeJoueur(L, { x: (d.x + d.l / 2) * 16, y: (d.y + d.h + 2) * 16 });
+        o.frame(100);
+        const devant = { dort: ch.dort, etat: L.Chantiers.etat(ch), voulue: L.Chantiers.phaseVoulue(d) };
+        // Il tourne le coin : le chantier s'éveille.
+        poserLeJoueur(L, loin(L));
+        o.frame(100);
+        const eveille = { dort: ch.dort, posee: ch.posee, etat: L.Chantiers.etat(ch), voulue: L.Chantiers.phaseVoulue(d),
+                          peint: peintDeChantier(L, ch).filter(function (c) { return c === '#e8b33c' || c === '#2b2734'; }).length };
+        return { dort: dort, devant: devant, eveille: eveille, ouvre: d.ouvre };
+    """))
+    dort = r["dort"]
+    assert dort["dort"] and dort["posee"] == 0 and dort["etat"] == -1 and dort["voulue"] == -1, dort
+    assert dort["sol"] == dort["base"], "un chantier dormant a changé la ville"
+    assert dort["peint"] == 0, "un chantier dormant peint déjà des planches ou un panneau"
+    assert dort["entites"] == 0, "un chantier dormant a déjà des machines, du monde ou une benne"
+    assert r["devant"] == {"dort": True, "etat": -1, "voulue": 0}, f"le chantier s'est éveillé sous les yeux du joueur : {r['devant']}"
+    assert r["eveille"]["dort"] is False and r["eveille"]["etat"] == 0 == r["eveille"]["voulue"], r["eveille"]
+    assert r["eveille"]["peint"] > 0, "éveillé, le chantier n'a ni planches ni panneau"
+
+
+def test_un_dormant_ne_fait_rien_travailler(banc):
+    """Ni homme, ni signaleur, ni benne, ni son : un chantier qui n'a pas ouvert est une maison."""
+    r = banc(_juge(DORMANT + """
+        L.Jeu.commencer();
+        const i = dormant(L), ch = L.Chantiers.liste[i], d = ch.def, id = d.id;
+        L.B.partie.heure = 0.5;
+        poserLeJoueur(L, { x: (d.x + d.l / 2) * 16 + 8, y: (d.y + d.h + 8) * 16 + 300 });
+        L.Chantiers.equiper();
+        for (let k = 0; k < 400; k++) { L.Chantiers.travailler(); L.B.t++; }
+        return { entites: L.B.entites.filter(function (e) { return e.equipeDe === id || e.palette === id || e.conteneurDe === id; }).length,
+                 journal: L.Chantiers.journal.filter(function (x) { return Math.abs(x.x - (d.x + d.l / 2) * 16) < 200 && Math.abs(x.y - (d.y + d.h / 2) * 16) < 200; }).length };
+    """))
+    assert r["entites"] == 0 and r["journal"] == 0, r
+
+
+# --- 8e vague : la pelle du chantier se conduit -----------------------------------------------
+
+PELLE = """
+  function chantierDeLaPelle(L) {
+    return L.Chantiers.liste.findIndex(function (c) { return c.def.phases[2].machines.some(function (m) { return m.type === 'pelleteuse'; }); });
+  }
+  function pelleDecor(L, ch) { return ch.machines.find(function (m) { return m.decor === 'pelleteuse'; }); }
+  // Le joueur planté à côté du décor, tourné vers lui.
+  function auPiedDeLaPelle(L, d) {
+    const j = L.B.joueur;
+    j.x = d.x - 22; j.y = d.y - 4; j.face = 'droite'; j.angle = 0; j.vx = 0; j.vy = 0; j.dansVehicule = null; j.dessine = true;
+    L.Entites.indexer();
+    return j;
+  }
+"""
+
+
+def test_on_monte_dans_la_pelle_du_chantier(banc):
+    """⚠️ L'étage 2 : le décor animé de la phase « rasé » est une pelle qu'on prend. Il faut être
+    à portée ET lui faire face ; ACTION passe par `Missions.interagir` ; le décor cède sa place à un
+    vrai char (plus de godet qui racle) ; et le crochet du chantier ne la reprend pas."""
+    r = banc(_juge(PELLE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaPelle(L), ch = L.Chantiers.liste[i], id = ch.def.id;
+        L.Chantiers.appliquer(i, 2);
+        L.B.partie.heure = 0.5;
+        const d = pelleDecor(L, ch);
+        const j = auPiedDeLaPelle(L, d);
+        const out = { pres: !!L.Chantiers.pelleSousLaMain(j), invite: L.Chantiers.inviteMonter(j) };
+        // Loin : rien.
+        j.x = d.x - 200; out.loin = L.Chantiers.pelleSousLaMain(j); j.x = d.x - 22;
+        // Dos tourné : rien (le bouton ne promet que ce qu'il fera).
+        j.face = 'gauche'; j.angle = Math.PI; out.dos = L.Chantiers.pelleSousLaMain(j); j.face = 'droite'; j.angle = 0;
+        // Une pelle brisée n'est plus une pelle.
+        d.brise = true; out.brisee = L.Chantiers.pelleSousLaMain(j); d.brise = false;
+        // La phase 3 n'a plus de pelle.
+        const avant = L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).length;
+        // ACTION.
+        L.Missions.majInvite(j);
+        out.inviteHud = L.B.invite;
+        out.action = L.Missions.interagir(j);
+        const v = L.B.entites.find(function (e) { return e.type === 'vehicule' && e.slug === 'pelleteuse'; });
+        out.vehicule = v && { conducteur: v.conducteur === j, pelleDe: v.pelleDe, couleur: v.couleur, dedans: j.dansVehicule === v, nom: v.def.nom };
+        out.decorRestant = L.B.entites.filter(function (e) { return e.decor === 'pelleteuse' && e.machineDe === id; }).length;
+        out.machines = ch.machines.filter(function (m) { return m.decor === 'pelleteuse'; }).length;
+        out.vehicules = L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).length - avant;
+        // Le godet ne racle plus : aucune image de travail ne le joue.
+        L.Son.SFX.chantier = function () {};
+        const t0 = L.B.t, journalAvant = L.Chantiers.journal.length;
+        for (let k = 0; k < 400; k++) { L.Chantiers.travailler(); L.B.t++; }
+        out.godets = L.Chantiers.journal.slice(journalAvant).filter(function (x) { return x.son === 'godet'; }).length;
+        return out;
+    """))
+    assert r["pres"] and r["invite"] == "MONTER : PELLETEUSE", r
+    assert r["loin"] is None, "la pelle se prend de loin"
+    assert r["dos"] is None, "la pelle se prend dos tourné"
+    assert r["brisee"] is None, "on monte dans une pelle brisée"
+    assert r["inviteHud"] == "MONTER : PELLETEUSE", f"le HUD ne promet pas ce qu'ACTION fait : {r['inviteHud']}"
+    assert r["action"] is True
+    assert r["vehicule"] == {"conducteur": True, "pelleDe": r["vehicule"]["pelleDe"], "couleur": "#e8b33c", "dedans": True, "nom": "Pelleteuse"}, r["vehicule"]
+    assert r["decorRestant"] == 0 and r["machines"] == 0, "le décor est resté dans le chantier"
+    assert r["vehicules"] == 1, "un seul char de plus"
+    assert r["godets"] == 0, "le godet racle encore une pelle qui n'est plus là"
+
+
+def test_la_pelle_roule_a_douze_kilometres_heure_et_ne_nait_pas_dans_la_rue(banc):
+    r = banc(_juge(PELLE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaPelle(L), ch = L.Chantiers.liste[i];
+        L.Chantiers.appliquer(i, 2);
+        const d = pelleDecor(L, ch), j = auPiedDeLaPelle(L, d);
+        L.Missions.interagir(j);
+        const v = j.dansVehicule;
+        // Elle roule : plein gaz sur une centaine d'images, jusqu'à sa vitesse max.
+        v.x = d.x + 60; v.y = d.y + 40; v.angle = 0; v.vx = 0; v.vy = 0; v.vitesse = 0;
+        let vmax = 0;
+        for (let k = 0; k < 90; k++) {
+            L.Vehicules.majPhysique(v, { gaz: 1, frein: 0, direction: 0 });
+            v.x += v.vx; v.y += v.vy;
+            vmax = Math.max(vmax, Math.hypot(v.vx, v.vy));
+        }
+        return { vmax: vmax, def: v.def.vitesse_max, etat: v.etat, pelleDe: v.pelleDe,
+                 // `typeDeRue` (le trafic) écarte toute fiche de fréquence nulle : la pelle n'y naît pas.
+                 dansLeTrafic: L.B.defs.vehicules.some(function (t) { return t.slug === 'pelleteuse' && t.phase === 1 && t.frequence > 0; }) };
+    """))
+    assert 1.0 < r["vmax"] <= r["def"] + 1e-6, f"elle ne roule pas à sa vitesse de fiche : {r}"
+    assert r["dansLeTrafic"] is False, "la pelle naît dans la rue"
+
+
+def test_la_pelle_defonce_a_douze_kilometres_heure_et_ne_casse_ni_les_machines_ni_les_commerces(banc):
+    """⚠️ Le seuil de vitesse pour défoncer une clôture se règle sur SA vitesse (trois quarts de la
+    vitesse max, jamais plus que le seuil de la fiche) : la pelle, à 1,1 px/image, traverse ce que le
+    camion — au même pas — ne fait que heurter. Et sa masse (3,3) reste sous tout ce qui ne doit
+    jamais céder : les machines du chantier, les commerces ambulants.
+
+    ⚠️ **UNE CLÔTURE NEUVE PAR ESSAI** : une clôture défoncée l'est pour de bon. Le premier montage
+    essayait la pelle, puis le camion sur la même tuile — brisée, elle ne retenait plus personne, et le
+    juge « le camion ne la défonce pas au pas » passait pour de mauvaises raisons."""
+    r = banc(_juge(PELLE + """
+        L.Jeu.commencer();
+        const c = L.Monde.carte, ph = L.B.defs.conduite.physique, out = { seuil: ph.defonce_vitesse_min };
+        // Des clôtures (solidité 3 ou 4), pas des meubles, dont tout le voisinage — de quoi loger un
+        // camion — est du sol ou d'autres clôtures : « tout ou rien », une façade touchée l'arrêterait.
+        const cibles = [];
+        for (let ty = 3; ty < c.h - 3 && cibles.length < 6; ty++) {
+            for (let tx = 4; tx < c.w - 4 && cibles.length < 6; tx++) {
+                const s = L.Monde.solidite(tx, ty);
+                let net = (s === 3 || s === 4) && !L.Monde.estMeuble(tx, ty) && L.Monde.solidite(tx - 1, ty) === 0 && L.Monde.solidite(tx - 2, ty) === 0;
+                for (let dx = -3; dx <= 1 && net; dx++) for (let dy = -1; dy <= 1 && net; dy++) {
+                    const v = L.Monde.solidite(tx + dx, ty + dy);
+                    if (v === 1 || v === 2 || (v !== 0 && v !== 3 && v !== 4)) net = false;
+                }
+                // À l'écart des précédentes : on ne défonce pas la voisine d'une clôture déjà brisée.
+                if (net && cibles.every(function (q) { return Math.abs(q.tx - tx) > 6 || Math.abs(q.ty - ty) > 6; })) cibles.push({ tx: tx, ty: ty });
+            }
+        }
+        out.nombre = cibles.length;
+        poserLeJoueur(L, { x: (cibles[0].tx - 6) * 16, y: cibles[0].ty * 16 + 300 });
+        let k = 0;
+        const essai = function (slug, vitesse) {
+            const cible = cibles[k++];
+            const v = L.Vehicules.creer(slug, cible.tx * 16 - 4, cible.ty * 16 + 8, 0, { etat: 'roule', couleur: '#e8b33c' });
+            L.Entites.indexer();
+            v.vitesse = vitesse; v.vx = vitesse; v.vy = 0;
+            const casse = L.Vehicules.defoncerDevant(v, cible.tx * 16 + 2, cible.ty * 16 + 8);
+            return { casse: casse, garde: casse ? Math.hypot(v.vx, v.vy) / vitesse : null };
+        };
+        out.pelle = essai('pelleteuse', 1.1);
+        out.pelleLente = essai('pelleteuse', 0.6);
+        out.camion = essai('camion', 1.1);
+        out.camionRapide = essai('camion', 1.8);
+        // Ce qu'elle ne doit jamais casser : tout décor qui `arrete` au-delà de la masse de l'autobus.
+        const masse = L.Vehicules.vehiculeDef('pelleteuse').masse, autobus = L.Vehicules.vehiculeDef('autobus').masse;
+        out.masse = masse; out.masseAutobus = autobus;
+        out.trop_legere = Object.keys(L.DECORS).filter(function (k) {
+            const f = L.DECORS[k];
+            return f.arrete && !f.poussable && !f.rampe && f.arrete > autobus && f.arrete <= masse;
+        });
+        return out;
+    """))
+    assert r["nombre"] >= 4, f"trop peu de clôtures isolées pour juger : {r['nombre']}"
+    assert r["pelle"]["casse"] is True, f"la pelle à 1,1 px/image ne traverse pas la clôture : {r['pelle']}"
+    assert r["pelle"]["garde"] > 0.9, f"elle perd de la vitesse en passant : {r['pelle']}"
+    assert r["pelleLente"]["casse"] is False, f"à 0,6 px/image, la pelle défonce encore : le seuil n'existe pas : {r['pelleLente']}"
+    assert r["camionRapide"]["casse"] is True, f"le montage ne prouve rien : le camion lancé ne la défonce pas : {r['camionRapide']}"
+    assert r["camion"]["casse"] is False, f"le camion, au même pas que la pelle, la défonce aussi : {r['camion']}"
+    assert r["masse"] > r["masseAutobus"]
+    assert r["trop_legere"] == [], f"la pelle déracinerait ce que l'autobus ne peut pas : {r['trop_legere']}"
+
+
+# --- 9e vague : la cabine de la grue ------------------------------------------------------------
+
+GRUE = """
+  function chantierDeLaGrue(L) {
+    return L.Chantiers.liste.findIndex(function (c) { return c.def.phases[3].machines.some(function (m) { return m.type === 'grue'; }); });
+  }
+  function grueDecor(L, ch) { return ch.machines.find(function (m) { return m.decor === 'grue'; }); }
+  function auPiedDeLaGrue(L, d) {
+    const j = L.B.joueur;
+    j.x = d.x - 20; j.y = d.y + 2; j.face = 'droite'; j.angle = 0; j.vx = 0; j.vy = 0; j.dansVehicule = null; j.dessine = true; j.manege = null;
+    L.Entites.indexer();
+    return j;
+  }
+  // La cabine : monter, avec ACTION et le stick simulés (le banc n'appelle pas `Entree.debutImage`).
+  function monterEnCabine(L, i) {
+    L.Chantiers.appliquer(i, 3);
+    const ch = L.Chantiers.liste[i], d = grueDecor(L, ch), j = auPiedDeLaGrue(L, d);
+    L.Missions.interagir(j);
+    return { ch: ch, d: d, j: j };
+  }
+"""
+
+
+def test_on_monte_dans_la_cabine_de_la_grue(banc):
+    r = banc(_juge(GRUE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaGrue(L), ch = L.Chantiers.liste[i];
+        L.Chantiers.appliquer(i, 3);
+        L.B.partie.heure = 0.5;
+        const d = grueDecor(L, ch), j = auPiedDeLaGrue(L, d), out = {};
+        out.pres = !!L.Chantiers.grueSousLaMain(j); out.invite = L.Chantiers.inviteGrue(j);
+        j.x = d.x - 200; out.loin = L.Chantiers.grueSousLaMain(j); j.x = d.x - 20;
+        j.face = 'gauche'; j.angle = Math.PI; out.dos = L.Chantiers.grueSousLaMain(j); j.face = 'droite'; j.angle = 0;
+        d.brise = true; out.brisee = L.Chantiers.grueSousLaMain(j); d.brise = false;
+        L.Missions.majInvite(j); out.inviteHud = L.B.invite;
+        out.action = L.Missions.interagir(j);
+        out.manege = j.manege && j.manege.quoi; out.dessine = j.dessine; out.auMat = Math.hypot(j.x - d.x, j.y - d.y) < 8;
+        out.pose = d.poseManuelle;
+        // La foire ne l'éjecte pas : ce n'est pas un manège, elle ne le connaît pas.
+        for (let k = 0; k < 5; k++) L.Foire.maj();
+        out.toujoursDedans = !!(j.manege && j.manege.quoi === 'grue');
+        // Dedans, on ne monte pas dans autre chose ni ne rentre par une deuxième pression.
+        out.doubleMonte = L.Chantiers.grueSousLaMain(j);
+        return out;
+    """))
+    assert r["pres"] and r["invite"] == "MONTER : GRUE", r
+    assert r["loin"] is None and r["dos"] is None and r["brisee"] is None, r
+    assert r["inviteHud"] == "MONTER : GRUE", f"le HUD ne promet pas ce qu'ACTION fait : {r['inviteHud']}"
+    assert r["action"] is True and r["manege"] == "grue" and r["dessine"] is False and r["auMat"], r
+    assert isinstance(r["pose"], (int, float)), "la grue ne garde pas sa pose"
+    assert r["toujoursDedans"], "la foire a éjecté le joueur de la cabine"
+    assert r["doubleMonte"] is None
+
+
+def test_la_fleche_suit_le_stick_et_action_redescend(banc):
+    """Le stick dose la vitesse et donne le sens ; à zéro, la flèche ne bouge pas ; ACTION redescend et la
+    grue reprend SON travail (elle ne garde pas la pose du pilote)."""
+    r = banc(_juge(GRUE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaGrue(L);
+        L.B.partie.heure = 0.5;
+        const c = monterEnCabine(L, i), d = c.d, j = c.j, f = L.DECORS.grue, out = { variantes: f.variantes };
+        const pivoter = function (x, images) {
+            L.Entree.axe.x = x;
+            const p0 = d.poseManuelle;
+            for (let k = 0; k < images; k++) { L.B.t++; L.Chantiers.maj(); }
+            return d.poseManuelle;
+        };
+        const depart = d.poseManuelle;
+        out.droite = pivoter(1, 30);
+        const apresDroite = d.poseManuelle;
+        out.gauche = pivoter(-1, 30);
+        out.retour = d.poseManuelle;
+        out.moitie = (function () { const a = d.poseManuelle; pivoter(0.5, 30); return (d.poseManuelle - a + f.variantes) % f.variantes; })();
+        out.immobile = (function () { const a = d.poseManuelle; pivoter(0, 60); return d.poseManuelle - a; })();
+        out.depart = depart; out.apresDroite = apresDroite;
+        out.entier = Number.isInteger(d.poseManuelle) && d.poseManuelle >= 0 && d.poseManuelle < f.variantes;
+        // ⚠️ La pression qui a fait monter ne fait pas descendre : à l'image même de la montée, ACTION
+        // (encore « neuve ») est dépensée.
+        const neuf = L.Entree.neuf;
+        L.B.t = c.j.manege.monteT;
+        L.Entree.neuf = function (a) { return a === 'action'; };
+        L.Chantiers.maj();
+        out.memeImage = !!(j.manege && j.manege.quoi === 'grue');
+        // ACTION, l'image d'après : on redescend — et la grue reprend son travail TOUT DE SUITE.
+        L.B.t++; L.Chantiers.maj();
+        L.Entree.neuf = neuf;
+        out.descendu = { manege: j.manege, dessine: j.dessine, poseLibre: d.poseManuelle === undefined, auPied: Math.hypot(j.x - d.x, j.y - d.y) < 30 };
+        L.Entree.axe.x = 0;
+        return out;
+    """))
+    v = r["variantes"]
+    # 30 images à 0,18 pose : 5,4 poses, lues 5 (la pose est un entier).
+    assert (r["apresDroite"] - r["depart"]) % v == 5, f"pleine vitesse à droite : {r}"
+    assert (r["retour"] - r["depart"]) % v in (0, v - 1, 1), f"à gauche, la flèche ne revient pas : {r}"
+    assert r["moitie"] in (2, 3), f"le stick à mi-course ne donne pas la moitié de la vitesse : {r}"
+    assert r["immobile"] == 0, f"le stick à zéro tourne encore la flèche : {r}"
+    assert r["entier"], "la pose n'est pas un entier de 0 à 15"
+    assert r["memeImage"], "la pression qui a fait monter a aussi fait descendre"
+    assert r["descendu"]["manege"] is None and r["descendu"]["dessine"] is True, r["descendu"]
+    assert r["descendu"]["poseLibre"], "la grue garde la pose de son pilote : elle ne reprend pas son travail"
+    assert r["descendu"]["auPied"]
+
+
+def test_la_cabine_lache_quand_le_pilote_meurt_ou_sort(banc):
+    r = banc(_juge(GRUE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaGrue(L);
+        L.B.partie.heure = 0.5;
+        const c = monterEnCabine(L, i), d = c.d, j = c.j, out = {};
+        j.vivant = false;
+        L.Chantiers.maj();
+        out.mort = { manege: j.manege, dessine: j.dessine, poseLibre: d.poseManuelle === undefined };
+        j.vivant = true;
+        // `Foire.descendre` lâche `j.manege` sans un mot : la grue reprend quand même son travail.
+        const c2 = monterEnCabine(L, i);
+        L.Foire.descendre(j, true);
+        L.Chantiers.maj();
+        out.foire = { manege: j.manege, poseLibre: c2.d.poseManuelle === undefined };
+        return out;
+    """))
+    assert r["mort"] == {"manege": None, "dessine": True, "poseLibre": True}, r["mort"]
+    assert r["foire"] == {"manege": None, "poseLibre": True}, r["foire"]
+
+
+def test_la_grue_pilotee_se_dessine_a_la_pose_qu_on_lui_donne(banc):
+    """`Entites.dessiner` lit `poseManuelle` avant l'horloge du décor — de jour comme de nuit."""
+    r = banc(_juge(GRUE + """
+        L.Jeu.commencer();
+        const i = chantierDeLaGrue(L);
+        const c = monterEnCabine(L, i), d = c.d;
+        const cles = [];
+        const cuire = L.Atlas.cuirePeintre;
+        L.Atlas.cuirePeintre = function (cle) { cles.push(cle); return cuire.apply(L.Atlas, arguments); };
+        const ctx = new Proxy({}, { get: function (t, k) { return function () {}; }, set: function () { return true; } });
+        L.Monde.centrerCamera(d.x, d.y - 30);
+        const dessin = function (heure, pose) {
+            L.B.partie.heure = heure;
+            d.poseManuelle = pose; cles.length = 0;
+            L.Entites.dessiner(ctx, L.B.cam);
+            return cles.filter(function (k) { return k.indexOf('decor|grue|') === 0; });
+        };
+        const out = { jour: dessin(0.5, 7), nuit: dessin(0.95, 11) };
+        L.Atlas.cuirePeintre = cuire;
+        return out;
+    """))
+    assert r["jour"] and set(r["jour"]) == {"decor|grue|7"}, r
+    assert r["nuit"] and set(r["nuit"]) == {"decor|grue|11"}, f"la nuit, la grue pilotée retombe à sa pose de repos : {r}"

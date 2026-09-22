@@ -615,11 +615,25 @@ const Vehicules = (function () {
       fraction de vitesse qu'on garde en passant au travers. */
   function decorDevant(v, x, y) {
     const ph = physique();
-    if (Math.hypot(v.vx, v.vy) < ph.choc_vitesse_min) return null;
+    // ⚠️ Un char LENT ne casse rien et ne bute sur rien — mais il POUSSE encore une benne : la
+    // poussée le ralentit sous ce seuil, et sans elle il la traverserait comme un fantôme.
+    const lent = Math.hypot(v.vx, v.vy) < ph.choc_vitesse_min;
     for (const c of cercles(v, x, y)) {
-      for (const d of Entites.decorAutour(c.x, c.y, c.r + 14)) {
+      // ⚠️ 26 et pas 14 : une benne fait 30 px de large, son CENTRE est à 15 px de son bout.
+      // (Le test précis, lui, est plus bas : ceci ne fait que choisir qui regarder.)
+      for (const d of Entites.decorAutour(c.x, c.y, c.r + 26)) {
         if (d.brise) continue;
         const fiche = DECORS[d.decor] || {};
+        // ⚠️ Une RAMPE (le tas de terre) n'est ni un mur ni un obstacle qui cède :
+        // le char passe dessus, et `majTas` le fait décoller. Sans cette ligne, la
+        // berline butait sur le tas et l'autobus le déracinait.
+        if (fiche.rampe) continue;
+        // ⚠️ Une BENNE se POUSSE : c'est sa boîte, pas un cercle, qu'on touche.
+        if (fiche.poussable) {
+          if (Entites.boiteTouche(d, c.x, c.y, c.r)) return { quoi: 'pousse', d: d, c: c };
+          continue;
+        }
+        if (lent) continue;
         if (!fiche.arrete && !fiche.casse) continue;
         if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + (d.r || 4)) continue;
         // ⚠️ `lourd` : il ne cede qu'a un char d'AU MOINS cette masse — le
@@ -636,11 +650,37 @@ const Vehicules = (function () {
     return null;
   }
 
+  /** POUSSER UNE BENNE : la boîte est écartée du cercle qui la touche par le côté le moins
+      enfoncé (comme un piéton contre un décor), et le char paie sa masse — la berline la
+      pousse à petite vitesse, l'autobus la sent à peine. Rend faux si elle ne bouge pas. */
+  function pousserLeDecor(v, d, c) {
+    const ph = physique(), fiche = DECORS[d.decor] || {}, sol = fiche.sol;
+    const dx = d.x - c.x, dy = d.y - c.y;
+    const px = sol[0] + c.r - Math.abs(dx), py = sol[1] + c.r - Math.abs(dy);
+    let mx = 0, my = 0;
+    if (px < py) mx = (dx < 0 ? -1 : 1) * (px + 0.5); else my = (dy < 0 ? -1 : 1) * (py + 0.5);
+    if (!Entites.pousserDecor(d, mx, my)) return false;
+    const frein = 1 - Math.min(ph.poussee_frein_max, fiche.poussable * ph.poussee_frein / v.def.masse);
+    v.vitesse *= frein; v.vx *= frein; v.vy *= frein;
+    if (!d.sonT || B.t - d.sonT > 25) {
+      d.sonT = B.t;
+      Son.SFX.chantier('conteneur', d.x, d.y, 260);
+      Entites.poussiere(d.x, d.y + 4, 2);
+    }
+    return true;
+  }
+
   /** Ce qui arrive quand un char rencontre du decor. Rend vrai si la voie
       s'ouvre (le decor a cede), faux s'il faut s'arreter dessus. */
   function heurterDecor(v, x, y) {
     const rencontre = decorDevant(v, x, y);
     if (!rencontre) return true;
+    // Une benne : on la pousse. Si elle ne peut pas bouger (un mur derrière, la limite de sa
+    // portée), c'est un mur comme un autre.
+    if (rencontre.quoi === 'pousse') {
+      if (pousserLeDecor(v, rencontre.d, rencontre.c)) return true;
+      rencontre.quoi = 'arrete';
+    }
     if (rencontre.quoi === 'arrete') {
       // ⚠️ Le REBOND se pose ici, pas dans `heurterMur` : celui-ci ne touche
       // qu'a `v.vitesse`, et c'est l'appelant qui renverse `vx`/`vy` — pour
@@ -707,7 +747,11 @@ const Vehicules = (function () {
   function defoncerDevant(v, x, y) {
     const ph = physique();
     if (!v.def.defonce || B.interieur) return false;
-    if (Math.hypot(v.vx, v.vy) < ph.defonce_vitesse_min) return false;
+    // ⚠️ Le seuil se règle sur la vitesse du char : la pelle (1,3 px/image, 12 km/h) ne serait jamais
+    // assez vite pour le 1,4 d'un camion — et c'est justement celle qui traverse une clôture au pas.
+    // Trois quarts de sa vitesse max, sans jamais dépasser le seuil de la fiche : rien ne change pour
+    // les chars plus rapides que 1,9.
+    if (Math.hypot(v.vx, v.vy) < Math.min(ph.defonce_vitesse_min, v.def.vitesse_max * 0.75)) return false;
     const tuiles = tuilesQuiBloquent(v, x, y);
     if (!tuiles.length) return false;
     for (const t of tuiles) {
@@ -1244,6 +1288,37 @@ const Vehicules = (function () {
     }
   }
 
+  /** Un TAS DE TERRE sous les roues (le chantier) : une rampe naturelle. Le char
+      décolle doucement, ne perd ni vitesse ni carrosserie, et retombe plus loin.
+
+      ⚠️ Le saut est PLAFONNÉ, il ne se mesure pas (`tas_hauteur_max` : moins que les
+      6 px au-delà desquels un char passe AU-DESSUS des tuiles) : un mur retient
+      toujours ce qui retombe, et un tas au bord d'un lot ne lance personne dans une
+      façade. Même répit que les nids, et seulement au sol : en l'air, rien. */
+  function majTas(v) {
+    const ph = physique();
+    if (v.tasT > 0) { v.tasT--; return; }
+    if (v.z > 0 || v.vz !== 0 || v.rails || B.interieur) return;
+    const vit = Math.hypot(v.vx, v.vy);
+    if (vit < ph.tas_vitesse_min) return;
+    for (const c of cercles(v, v.x, v.y)) {
+      for (const d of Entites.decorAutour(c.x, c.y, c.r + 26)) {
+        const fiche = DECORS[d.decor] || {};
+        if (!fiche.rampe || d.brise) continue;
+        if (Math.hypot(d.x - c.x, d.y - c.y) > c.r + fiche.rampe) continue;
+        v.vz = Math.min(vit, ph.tas_vitesse_max) * ph.tas_impulsion;
+        v.tasT = ph.tas_repit_images;
+        Entites.poussiere(v.x, v.y, 5);
+        Son.SFX.chantier('tas', v.x, v.y, 300);
+        if (v.conducteur === B.joueur) {
+          B.cam.secousse = Math.max(B.cam.secousse, ph.tas_secousse);
+          Entree.vibrer(30);
+        }
+        return;
+      }
+    }
+  }
+
   /** L'heure de la panne finie, le char s'en va — il s'efface, faute de savoir
       rentrer au garage tout seul.
 
@@ -1270,6 +1345,7 @@ const Vehicules = (function () {
     bruitDePassage(v);
     majNidDePoule(v);
     majPlaque(v);
+    majTas(v);
     if (v.forceT > 0) v.forceT--;
     if (v.panneT > 0) majFinDePanne(v);
     if (majNoyade(v)) return;
@@ -3607,14 +3683,14 @@ const Vehicules = (function () {
   }
 
   return {
-    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
+    ROTATIONS, courbeBraquage, vehiculeDef, creer, peupler, majGaresDeService, typeDeRue, cercles, bloqueParLesTuiles, chargeBloquee, decorDevant, heurterDecor, pousserLeDecor, degager, defoncerDevant, sirenes, aCrocher, basculerCrochet, decrocher,
     majPhysique, avancer, endommager, exploser, declencherAlarme,
     vehiculeSousLaMain, monter, descendre, ejecter,
     prochaineCible, peutSortir, obstacleDevant, majConducteur, commandesJoueur, rouler,
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

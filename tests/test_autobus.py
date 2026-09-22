@@ -12,7 +12,7 @@ juge ici, sur la ville que le navigateur reçoit.
 
 import pytest
 
-from app import autobus, carte
+from app import autobus, carte, chantiers
 
 
 @pytest.fixture(scope="module")
@@ -226,6 +226,11 @@ def test_les_lignes_ne_deplacent_rien_de_la_ville(monkeypatch):
         # pose rien dans la ville (`test_eboueurs.py`), elle en dépend seulement.
         # Le tramway aussi : ses arrêts se tiennent loin des abribus.
         if cle in ("decor", "autobus", "metro", "eboueurs", "tramway"):
+            continue
+        # ⚠️ Les annexes d'un chantier LISENT la ville finie (`chantiers.completer`) : elles ne
+        # sont pas de la ville du générateur, et suivent le décor d'une ville à l'autre.
+        if cle == "chantiers":
+            assert chantiers.sans_annexes(avec[cle]) == chantiers.sans_annexes(sans[cle]), "« chantiers » a bougé"
             continue
         assert avec[cle] == sans[cle], f"« {cle} » a bougé"
     assert avec["decor"][:len(sans["decor"])] == sans["decor"]

@@ -18,6 +18,18 @@
    l'asphalte refait) et l'équipe : des ouvriers plantés au poste que Python leur
    a choisi, qui regardent passer.
 
+   7e vague : de nouveaux chantiers QUAND LES PREMIERS SONT FINIS. Un chantier DORMANT
+   (`d.ouvre` : le jour où il ouvre) laisse sa maison telle quelle — pas une planche, pas
+   un panneau, pas un homme — et s'éveille à la maison condamnée, hors de vue, comme
+   toute autre phase.
+
+   8e vague : la PELLE se conduit (l'étage 2 du plan). Le décor animé de la phase « rasé » cède sa
+   place à un vrai char, `pelleteuse`, quand on monte dedans — plus de godet qui racle, plus de son.
+
+   9e vague : la CABINE DE LA GRUE. Elle ne roulera jamais : on monte dedans, on tourne la flèche
+   (gauche, droite), et ACTION redescend. Ce n'est pas un char, c'est un MODE : `j.manege`, le nom
+   que toutes les gardes du jeu connaissent déjà (plus de combat, plus de marche, plus d'invite).
+
    4e vague : le SIGNALEUR — un homme sur le trottoir, au bout amont de la tranchée,
    dont la palette alterne ARRÊT et LENTEMENT. Le trafic de sa voie obéit à ARRÊT
    (`signalDevant`, lu par `Vehicules.obstacleDevant`). */
@@ -69,6 +81,7 @@ const Chantiers = (function () {
   const PALETTE = 'panneau_signaleur';
   const POSE_ARRET = 0;
   const PORTEE_SIGNAL_TUILES = 6;
+
   const PAS_SIGNAL = { '<': -1, '>': 1 };
 
   let liste = [];                  // { def, posee, machines, tuiles:Set }
@@ -93,18 +106,28 @@ const Chantiers = (function () {
   }
 
   /** La phase qu'un chantier doit montrer aujourd'hui — la même formule que
-      `chantiers.phase_du_jour` en Python : un juge les compare. */
+      `chantiers.phase_du_jour` en Python : un juge les compare. ⚠️ -1 : il n'a pas ouvert. */
   function phaseVoulue(d) {
     const jour = (B.partie && B.partie.jour) || 1;
     const ecoules = Math.max(0, jour - debut());
-    return Math.min(d.phases.length - 1, d.decalage + Math.floor(ecoules / d.pas));
+    const ouvre = d.ouvre || 0;
+    if (ecoules < ouvre) return -1;
+    return Math.min(d.phases.length - 1, d.decalage + Math.floor((ecoules - ouvre) / d.pas));
   }
+
+  /** Ce que montre un chantier posé : sa phase, ou -1 s'il dort. (`posee` d'un dormant est 0 :
+      la ville du générateur — c'est le sol de la phase 0 — mais sans rien peindre dessus.) */
+  function etat(ch) { return ch.dort ? -1 : ch.posee; }
 
   // --- Poser une phase ---------------------------------------------------------------
 
   /** Écrit la phase dans la ville : tuiles, tableaux dérivés, portes des gens,
       lumières, machines, et le cache de morceaux autour. */
   function appliquer(ch, phase) {
+    // ⚠️ -1 : le chantier dort. Le sol est celui de la phase 0 (celui du générateur), et plus
+    // rien ne se pose — `peindre` saute un dormant, `equiper` ne trouve ni homme ni poste.
+    ch.dort = phase < 0;
+    phase = Math.max(0, phase);
     const carte = Monde.carte, d = ch.def, rangees = d.phases[phase].sol;
     for (let j = 0; j < d.h; j++) {
       const y = d.y + j, ligne = carte.sol[y];
@@ -193,7 +216,24 @@ const Chantiers = (function () {
         dessine: true, v: 0, machineDe: ch.def.id, frappe: m.frappe || null, sens: m.sens || 1,
       });
     });
+    poserLaBenne(ch, phase);
     Entites.reindexerDecor();
+  }
+
+  /** La BENNE, tant qu'il y a des machines (phases 1 à 3) : posée chez elle, à la tuile que
+      Python a choisie. ⚠️ À chaque phase elle est retirée et REPOSÉE — c'est ce qui la remet
+      chez elle quand on l'a poussée, et ce qui l'ôte du chemin du neuf. Elle se pousse
+      (`Entites.pousserDecor`) mais ne se tient pas dans `machines` : la pelle ne travaille pas
+      avec elle, et la boucle du chantier n'a rien à lui demander. */
+  function poserLaBenne(ch, phase) {
+    if (ch.conteneur) Entites.retirer(ch.conteneur);
+    ch.conteneur = null;
+    const maison = ch.def.conteneur;
+    if (!maison || !ch.def.phases[phase].machines.length) return;
+    const fiche = DECORS.conteneur, x = maison[0] * TT + 8, y = maison[1] * TT + 15;
+    ch.conteneur = Entites.creer('decor', x, y, {
+      decor: 'conteneur', r: fiche.r, solide: true, dessine: true, v: 0, conteneurDe: ch.def.id, chez: { x: x, y: y },
+    });
   }
 
   /** Ce qui traîne par terre dans l'empreinte (une arme lâchée, un paquet)
@@ -232,7 +272,7 @@ const Chantiers = (function () {
     // ⚠️ La tranchée est dans la rue, à cinq ou huit tuiles de la façade : des
     // plaques qui surgissent ou une rue refaite d'un coup se voient tout autant.
     // (Elle ne change qu'entre certaines phases : ailleurs, elle n'attend pas.)
-    const change = (ch.posee < 0 ? null : d.phases[ch.posee].tranchee) !== d.phases[voulue].tranchee;
+    const change = (ch.posee < 0 ? null : d.phases[ch.posee].tranchee) !== d.phases[Math.max(0, voulue)].tranchee;
     if (change) {
       for (const t of d.tranchee || []) {
         if (dedans(t[0] * TT - 8, t[1] * TT - 8, (t[0] + 1) * TT + 8, (t[1] + 1) * TT + 8)) return true;
@@ -261,7 +301,7 @@ const Chantiers = (function () {
   function demarrer() {
     const def = Monde.carte && Monde.carte.def;
     liste = ((def && def.chantiers) || []).map(function (d) {
-      return { def: d, posee: -1, machines: [], equipe: [], signaleur: null, panneau: null, tuiles: tuilesDe(d) };
+      return { def: d, posee: -1, dort: false, machines: [], equipe: [], signaleur: null, panneau: null, conteneur: null, tuiles: tuilesDe(d) };
     });
     attente = 0;
     for (const ch of liste) appliquer(ch, phaseVoulue(ch.def));
@@ -282,6 +322,7 @@ const Chantiers = (function () {
 
   function maj() {
     if (!liste.length) return;
+    piloter();
     travailler();
     regarder();
     if (B.interieur) return;
@@ -289,7 +330,7 @@ const Chantiers = (function () {
     attente = CADENCE;
     for (const ch of liste) {
       const voulue = phaseVoulue(ch.def);
-      if (voulue === ch.posee) continue;
+      if (voulue === etat(ch)) continue;
       if (enVue(ch, voulue) || quelquUnDedans(ch)) continue;
       appliquer(ch, voulue);
     }
@@ -358,6 +399,111 @@ const Chantiers = (function () {
       }
       tenirLaPalette(ch);
     }
+  }
+
+  // --- La pelle qu'on conduit --------------------------------------------------------------------
+
+  /** La pelle du chantier — le décor animé qui travaille — à portée de main, ou null. ⚠️ Comme toutes
+      les fonctions « sous la main » : on la mesure au bord de sa boîte (`sol`), et il faut lui faire
+      face (`faceA`) — le bouton ne promet que ce qu'il fera. Le décor brisé n'est plus une pelle. */
+  function pelleSousLaMain(j) {
+    if (!j || j.dansVehicule || B.interieur) return null;
+    for (const ch of liste) {
+      for (const m of ch.machines) {
+        if (m.decor !== 'pelleteuse' || m.brise) continue;
+        const sol = DECORS.pelleteuse.sol;
+        const dx = Math.max(Math.abs(j.x - m.x) - sol[0], 0), dy = Math.max(Math.abs(j.y - m.y) - sol[1], 0);
+        if (Math.hypot(dx, dy) <= 24 && faceA(j, m.x, m.y)) return { ch: ch, d: m };
+      }
+    }
+    return null;
+  }
+
+  function inviteMonter(j) { return pelleSousLaMain(j) ? 'MONTER : PELLETEUSE' : null; }
+
+  /** On monte : le décor est retiré du chantier (`machines`, pour que `travailler` ne fasse plus
+      racler un godet qui n'est plus là) et un vrai char naît à sa place, que `Vehicules.monter` prend
+      comme n'importe quel char garé — y compris le délit : les hommes du chantier regardent.
+      ⚠️ Une couleur DONNÉE (`couleur`) : le tirage d'une couleur consommerait un dé du jeu. */
+  function monterDansLaPelle(j, cible) {
+    const d = cible.d;
+    cible.ch.machines = cible.ch.machines.filter(function (m) { return m !== d; });
+    Entites.retirer(d);
+    Entites.reindexerDecor();
+    const v = Vehicules.creer('pelleteuse', d.x + 4, d.y - 8, 0, {
+      etat: 'stationne', couleur: Vehicules.vehiculeDef('pelleteuse').couleurs[0], pelleDe: cible.ch.def.id,
+    });
+    Entites.indexer();
+    Vehicules.degager(v);
+    Vehicules.monter(j, v);
+    return true;
+  }
+
+  // --- La cabine de la grue ------------------------------------------------------------------
+
+  //: Un tour complet en une seconde et demie : 16 poses (`DECORS.grue.variantes`), une tous les 5,6
+  //: images à pleine vitesse. Le stick dose : à mi-course, la moitié.
+  const GRUE_POSES_PAR_IMAGE = 0.18;
+
+  /** La grue du chantier à portée de main, ou null : mêmes règles que la pelle. */
+  function grueSousLaMain(j) {
+    if (!j || j.dansVehicule || j.manege || B.interieur) return null;
+    for (const ch of liste) {
+      for (const m of ch.machines) {
+        if (m.decor !== 'grue' || m.brise) continue;
+        const sol = DECORS.grue.sol;
+        const dx = Math.max(Math.abs(j.x - m.x) - sol[0], 0), dy = Math.max(Math.abs(j.y - m.y) - sol[1], 0);
+        if (Math.hypot(dx, dy) <= 24 && faceA(j, m.x, m.y)) return { ch: ch, d: m };
+      }
+    }
+    return null;
+  }
+
+  function inviteGrue(j) { return grueSousLaMain(j) ? 'MONTER : GRUE' : null; }
+
+  /** On monte : `j.manege` (quoi: 'grue') — le joueur disparaît dans la cabine, immobile au pied du
+      mât. La grue, elle, garde sa pose du moment (`poseManuelle`) au lieu de tourner toute seule. */
+  function monterDansLaGrue(j, cible) {
+    const d = cible.d, f = DECORS.grue;
+    j.manege = { quoi: 'grue', d: d, monteT: B.t, z: 0 };
+    j.dessine = false; j.vx = 0; j.vy = 0;
+    j.x = d.x; j.y = d.y + 4;
+    d.poseManuelle = Entites.poseDuDecor(f, B.t, false);
+    Hud.message('LA FLÈCHE : GAUCHE, DROITE — ACTION POUR DESCENDRE', 240);
+    return true;
+  }
+
+  /** On redescend, au pied du mât. `force` : ailleurs qu'à l'arrêt (mort, pièce, grue tombée). */
+  function descendreDeLaGrue(j, force) {
+    const m = j.manege;
+    if (!m || m.quoi !== 'grue') return false;
+    delete m.d.poseManuelle;                      // elle reprend SON travail, tout de suite
+    j.manege = null;
+    j.dessine = true; j.vx = 0; j.vy = 0;
+    j.descenduT = B.t;
+    if (!force) j.y += 14;
+    Entites.dansLaCarte(j);
+    return true;
+  }
+
+  /** À chaque image : la flèche suit le stick, ACTION descend. ⚠️ Et une grue dont plus personne ne tient
+      les commandes (le joueur est mort, sorti, ou descendu par un autre chemin — `Foire.descendre` lâche
+      `j.manege` sans nous le dire) reprend SON travail : `poseManuelle` ne survit pas à son pilote. */
+  function piloter() {
+    const j = B.joueur;
+    const m = j && j.manege && j.manege.quoi === 'grue' ? j.manege : null;
+    for (const ch of liste) {
+      for (const e of ch.machines) if (e.poseManuelle !== undefined && (!m || m.d !== e)) delete e.poseManuelle;
+    }
+    if (!m) return;
+    const d = m.d;
+    if (!j.vivant || B.interieur || B.entites.indexOf(d) < 0 || d.brise) { descendreDeLaGrue(j, true); return; }
+    j.x = d.x; j.y = d.y + 4; j.vx = 0; j.vy = 0;
+    if (B.t !== m.monteT && Entree.neuf('action')) { descendreDeLaGrue(j, false); return; }
+    const f = DECORS.grue;
+    // La pose est un nombre à virgule tant qu'on tourne, et `poseDuDecor` en lit l'entier.
+    m.cap = ((m.cap === undefined ? d.poseManuelle : m.cap) + Entree.axe.x * GRUE_POSES_PAR_IMAGE + f.variantes) % f.variantes;
+    d.poseManuelle = Math.floor(m.cap);
   }
 
   /** ⚠️ CE QUE LE TRAFIC LIT : à quelle distance de son nez le signaleur dit-il
@@ -589,6 +735,7 @@ const Chantiers = (function () {
     const ox = mx * 16, oy = my * 16;
     for (const ch of liste) {
       const d = ch.def;
+      if (ch.dort) continue;                      // rien n'a commencé : la maison est celle de tous les jours
       tranchee(ctx, ch, ox, oy);
       if (d.x + d.l < ox - 1 || d.x > ox + 16 || d.y + d.h + 2 < oy - 1 || d.y - 1 > oy + 16) continue;
       const px = (d.x - ox) * TT, py = (d.y - oy) * TT;
@@ -664,7 +811,7 @@ const Chantiers = (function () {
   }
 
   return {
-    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, REGARD, demarrer, maj, efface, peindre, phaseVoulue, travailler, equiper, signalDevant, PORTEE_SIGNAL_TUILES,
+    CADENCE, PORTEE_SON, PORTEE_BOULE, CONTACT_X, CONTACT_Y, REGARD, demarrer, maj, efface, peindre, phaseVoulue, etat, travailler, equiper, signalDevant, pelleSousLaMain, inviteMonter, monterDansLaPelle, grueSousLaMain, inviteGrue, monterDansLaGrue, descendreDeLaGrue, PORTEE_SIGNAL_TUILES,
     get liste() { return liste; },
     get journal() { return journal; },
     // Pour les juges : poser une phase comme le ferait la journée.

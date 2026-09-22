@@ -268,6 +268,13 @@ const Missions = (function () {
     if (manege) return Foire.monter(j, manege);
     const autobus = Autobus.autobusSousLaMain(j);
     if (autobus) return Autobus.monter(j, autobus);
+    // La pelle d'un chantier : on monte dans la cabine (8e vague de « Ça travaille »). Avant la
+    // portière (`Vehicules.maj`) : ce n'est un char qu'à l'instant où on le prend.
+    const pelle = Chantiers.pelleSousLaMain(j);
+    if (pelle) return Chantiers.monterDansLaPelle(j, pelle);
+    // La grue : la cabine, et la flèche qu'on tourne (9e vague).
+    const grue = Chantiers.grueSousLaMain(j);
+    if (grue) return Chantiers.monterDansLaGrue(j, grue);
     // ⚠️ LE BOUCLIER HUMAIN EN DERNIER, et c'est voulu : on attrape quelqu'un
     // quand ACTION n'avait rien d'autre a faire. Sinon le geste aurait pris
     // Josee en otage au lieu de lui parler. `otageSousLaMain` ecarte aussi la
@@ -2717,6 +2724,10 @@ const Missions = (function () {
     if (manege) { B.invite = manege; return; }
     const autobus = Autobus.inviteMonter(j);
     if (autobus) { B.invite = autobus; return; }
+    const pelle = Chantiers.inviteMonter(j);
+    if (pelle) { B.invite = pelle; return; }
+    const grue = Chantiers.inviteGrue(j);
+    if (grue) { B.invite = grue; return; }
     const objet = Combat.objetSousLaMain(j);
     if (objet) { const a = Combat.armeDef(objet.arme); B.invite = 'RAMASSER ' + (a ? a.nom.toUpperCase() : ''); return; }
     const porte = Monde.porteDevant(j);

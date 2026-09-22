@@ -14,14 +14,14 @@ from unittest import mock
 
 import pytest
 
-from app import carte, devants
+from app import carte, chantiers, devants
 
 GRAINES = [carte.GRAINE, 1, 2, 7]
 
 #: Ce que le deplacement ne doit JAMAIS toucher : le sol, les rues, les portes, et tout ce
 #: qui s'est pose apres le decor.
 INTACT = ("sol", "voie", "portes", "devantures", "residences", "lampes", "rampes", "autobus",
-          "metro", "eboueurs", "chantiers", "paquets", "graffitis", "barrieres", "zones",
+          "metro", "eboueurs", "paquets", "graffitis", "barrieres", "zones",
           "points_interet", "interieurs", "arrets", "intersections", "portes_garage")
 
 
@@ -85,6 +85,9 @@ def test_la_ville_ne_bouge_que_ce_qui_bouchait(graine):
     sans, avec = _ville(graine, deplace=False), _ville(graine)
     for cle in INTACT:
         assert sans[cle] == avec[cle], f"« {cle} » a change : le deplacement touche a la ville"
+    # ⚠️ Les chantiers, sans leurs annexes : elles LISENT la ville finie (`chantiers.completer`).
+    assert chantiers.sans_annexes(sans["chantiers"]) == chantiers.sans_annexes(avec["chantiers"]), \
+        "les chantiers ont change : le deplacement touche a la ville"
     # ⚠️ Les listes dans lesquelles le jeu TIRE (`hash % longueur`) gardent leur longueur et leur
     # ordre : une entree de moins rebattrait tous les jours. Elles portent seulement un drapeau.
     for cle in ("entraves", "fermetures", "aqueducs"):

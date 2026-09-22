@@ -338,6 +338,10 @@ const Foire = (function () {
   function majPassager() {
     const j = B.joueur, m = j && j.manege;
     if (!m) return;
+    // ⚠️ `j.manege` est le nom que TOUTES les gardes du jeu connaissent (combat, marche, invites) :
+    // la cabine d'une grue de chantier s'en sert (`Chantiers.monterDansLaGrue`), et ce n'est pas un
+    // manège — sans cette ligne, la foire éjecterait aussitôt quelqu'un qu'elle ne connaît pas.
+    if (m.quoi === 'grue') return;
     const machine = machineDe(m.quoi);
     if (!j.vivant || B.interieur || !machine) { descendre(j, true); return; }
     const s = siege(m);

@@ -132,12 +132,13 @@ un paiement.
 | `autobus` | Autobus | camion | 12 | |
 | `ambulance` | Ambulance | auto | 3 | Sirène, soigne, boulot ambulance. |
 | `remorqueuse` | Remorqueuse | camion | 2 | |
+| `pelleteuse` | Pelleteuse | camion | 1 | « Ça travaille » : ne naît jamais dans la rue (`frequence` 0), sort du décor du chantier quand on monte dedans. Le char le plus lent du catalogue (12 km/h, y compris les bateaux) et le plus lourd de la rue ; défonce au pas (le seuil se règle sur sa vitesse) ; un agent à pied la rattrape, et c'est voulu. |
 | `sport` | Coupé sport | auto | 2 | Rare. |
 | `luxe` | Berline de luxe | auto | 4 | Rare. |
 | `cabriolet` | Cabriolet rose | auto | 2 | Rare (Faubourg, La Pointe). Le plus rapide des chars à quatre roues, sous la moto ; menée à la vue de tous par la conductrice (`au_volant`), qui descend si on la vole. Ne se gare jamais. |
 | `bateau` | Chaloupe | bateau | 4 | Hors trafic : amarrée contre une rive bâtie (`carte.amarrages`). Deux silhouettes, la barre et la console. |
 | `chalutier` | Chalutier | bateau | 3 | Hors trafic : deux à quai autour du cargo (`navires.py`). Plus lent et plus lourd que la chaloupe ; la corne. |
-| `porte_conteneurs` | Porte-conteneurs | bateau | 2 | Hors trafic : un seul, au quai du cargo (`navires.py`). Dix tuiles, le plus lent et le plus lourd du parc ; la corne. |
+| `porte_conteneurs` | Porte-conteneurs | bateau | 2 | Hors trafic : un seul, au quai du cargo (`navires.py`). Dix tuiles, le plus lourd du parc (la pelleteuse du chantier, hors trafic elle aussi, la bat en lenteur) ; la corne. |
 
 ---
 

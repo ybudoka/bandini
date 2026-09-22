@@ -312,3 +312,116 @@ devant un feu.
   règle vue rouge sans elle.** Reste : le conteneur qu'on pousse, le tas de terre qui fait
   rampe, de nouveaux chantiers quand les premiers sont finis ; et l'étage 2 — la pelle
   conduisible, après la refonte des véhicules.
+
+⚠️ **5e vague livrée le 21 sept. 2026 — le tas de terre fait rampe.** Le tas de la phase « rasé »,
+à côté de la pelle, n'arrête plus personne : un char qui roule dessus **décolle**, doucement,
+et retombe plus loin sans avoir rien perdu.
+
+- ⚠️ **Ni un mur ni un obstacle qui cède** : `Vehicules.decorDevant` ignore toute fiche qui déclare
+  `rampe` (le rayon, en px, où les roues sentent le tas). Avant, la berline butait sur le tas
+  (masse 1,0 < `arrete` 3,0) et l'autobus le **déracinait** (3,2 ≥ 3,0). `arrete` ne sert plus qu'aux
+  balles — la fiche le garde pour ça.
+- ⚠️ **Plafonné, pas mesuré** : contrairement aux rampes des défis (élan, portée et freinage calculés
+  pour chaque char), le saut du tas est borné d'avance — `tas_impulsion` 0,38, vitesse comptée
+  jusqu'à 4, jamais plus haut que `tas_hauteur_max` = **6 px**, le seuil au-delà duquel un char passe
+  AU-DESSUS des tuiles (`v.z > 6`). Un mur retient donc toujours ce qui retombe, et un tas au bord
+  d'un lot ne lance personne dans une façade. **Le juge de banc a attrapé ma première valeur** : à
+  0,42 la moto montait à 6,3 px, parce que l'intégration est discrète (`z += vz ; vz -= g` monte de
+  `vz / 2` de plus que la formule continue) et que mon juge Python l'avait calculée en continu. Il
+  **rejoue maintenant le saut** image par image, comme `majPhysique`.
+- Même répit que les nids (30 images) ; sous 1,2 px/image on monte dessus sans décoller ; ni vitesse
+  ni carrosserie perdues ; de la poussière au départ, une secousse plus douce que celle d'une plaque
+  (0,18), un son synthétisé — un coup sourd, du gravier, un atterrissage mou.
+- **1 juge Python + 3 de banc, 7 mutations, chaque règle vue rouge sans elle.**
+
+⚠️ **6e vague livrée le 21 sept. 2026 — la benne qu'on pousse.** Devant chaque chantier, du début de
+la démolition à la dalle, une **benne à gravats** verte au ruban jaune et noir que les chars
+**poussent** : elle avance sous une berline lancée dessus, la ralentit, et s'arrête à sa portée ou
+au premier mur.
+
+- ⚠️ **Elle ne bouge que d'une fraction de tuile** : `portee` 24 px de chez elle (`d.chez`), moins
+  que le bloc de sol libre que Python lui garantit — cinq tuiles de large, trois de profondeur, tout
+  de l'espace piéton, milieu compris. Poussée au bout, sa boîte reste dans le bloc. À chaque phase
+  elle est retirée et **reposée chez elle** (elle ne se tient pas dans `machines`, la pelle ne
+  travaille pas avec elle) ; ni sur la maison condamnée ni sur le neuf.
+- ⚠️ **Le décor ne bougeait JAMAIS** : l'index fixe était bâti une fois. `Entites.pousserDecor` est
+  le seul à le faire bouger, et il tient l'index à jour LUI-MÊME — sans quoi les piétons buteraient
+  sur l'endroit qu'elle a quitté. Les chars la sentent par sa **boîte** (`sol`), pas par un cercle.
+- ⚠️ **Elle se paie à la masse** : `poussee_frein` x la masse de la benne / celle du char, borné par
+  `poussee_frein_max`. `decorDevant` sortait tout de suite pour un char lent (< 1 px/image), or la
+  poussée ralentit sous ce seuil : la poussée passe avant ce raccourci.
+- ⚠️ **Le parcmètre dans le bloc, et ce qu'il disait des vagues d'avant.** Le mobilier de rue, les
+  abribus et la saleté sont posés APRÈS `tirer` et ne retirent rien aux chantiers : un parcmètre est
+  tombé dans le bloc d'une benne, et la tranchée du premier chantier de la graine livrée **était
+  déjà sur quelque chose** — les juges des 3e et 4e vagues passaient sur leurs quatre graines par
+  chance. Les annexes (tranchée, équipe, signaleur, benne) se calculent maintenant dans
+  `chantiers.completer`, appelée **tout à la fin de `carte.generer`**, sur la ville finie.
+- **11 juges Python + 8 de banc, 22 mutations, chaque règle vue rouge sans elle.**
+
+⚠️ **7e vague livrée le 21 sept. 2026 — de nouveaux chantiers quand les premiers sont finis.** Au
+vingtième jour, la ville ne s'arrête plus de changer : trois chantiers **dorment** au premier matin
+(la maison reste telle quelle) et ouvrent à mesure que les premiers finissent — aux jours 8, 13 et 18
+— pour finir au plus tard au trente-quatrième.
+
+- ⚠️ **Six chantiers par ville, jamais plus de trois qui travaillent à la fois** : `OUVERTS` = 3 (ceux
+  d'avant, inchangés), `NOMBRE` = 6. Un chantier **DORMANT** est une maison : `phase_du_jour` rend
+  `DORMANT` (-1) avant son jour, la ville est celle du générateur, et le jeu ne pose rien. Il s'éveille
+  hors de vue, comme toute autre phase.
+- ⚠️ **Le piège du -1** : `phases[-1]` est le **NEUF**. `appliquer` (Python) lisait un dormant comme
+  le dernier indice de la liste — la mutation « appliquer(-1) lit le neuf » le montre.
+- ⚠️ **Un couplage vieux de la 3e vague, vu à l'atterrissage** : les postes de l'équipe partageaient
+  le dé de la tranchée, qui tire UNE fois quand elle trouve une place et PAS DU TOUT sinon — un
+  meuble sur la rue d'en face changeait donc les ouvriers du TERRAIN. Ils ont leur dé.
+- **9 juges Python + 2 de banc, 14 mutations, chaque règle vue rouge sans elle.**
+
+⚠️ **8e et 9e vagues livrées le 21 sept. 2026 — la pelle et la grue qu'on conduit (l'étage 2).** La
+refonte des véhicules était livrée entre-temps par une autre session : rien n'interdisait plus
+d'ajouter un char. Devant la pelle qui travaille, l'invite dit **MONTER : PELLETEUSE** ; devant la
+grue, **MONTER : GRUE**.
+
+- ⚠️ **La pelle sort de son décor, elle ne naît pas dans la rue** (`frequence` 0). Monter la retire du
+  chantier (le godet ne racle plus) et un vrai char naît à sa place — voler la pelle est un délit,
+  l'équipe plantée autour est témoin. Le seuil de vitesse pour défoncer une clôture se règle sur SA
+  vitesse (trois quarts de la vitesse max) : à 1,4 fixe, jamais assez vite pour ses 12 km/h.
+- ⚠️ **La grue ne roule pas : c'est un MODE**, pas un char. `j.manege` (le nom que la foire utilise
+  déjà) porte la cabine ; gauche et droite tournent la flèche (le stick dose la vitesse), ACTION
+  redescend. `Foire.majPassager` éjectait aussitôt quiconque n'était pas dans un de SES manèges —
+  une garde la laisse tranquille. La grue prend la pose qu'on lui donne tant qu'on la pilote, et
+  **reprend son travail** dès qu'on redescend, y compris si le pilote disparaît par un autre chemin
+  (la mort, une pièce).
+- **12 juges de banc, 28 mutations, chaque règle vue rouge sans elle.**
+
+⚠️ **L'atterrissage sur `dev`, après un redémarrage** (21 sept. 2026 au soir) — les cinq derniers
+commits de cette fiche n'existaient que sur `origin/dev`, qui porte l'ancien plan monolithique ; le
+`dev` local, fragmenté depuis, avait continué sans eux (véhicules lourds qui atteignent leur vitesse,
+phares par classe, virages en L, cabriolet, chalutier, porte-conteneurs, aéroport, M15…). Réconcilié
+à trois voies (base commune, mes 5 commits, `dev` courant) sur chaque fichier touché des deux côtés :
+zéro conflit textuel sur `entites.js`, `sprites.js`, `missions.js`, `son.js` et `app/vehicules.py`
+malgré des centaines de lignes ajoutées de chaque bord ; trois petits (une liste d'export dans
+`vehicules.js`, un import, un ensemble de slugs) résolus à la main.
+
+- ⚠️ **Deux prétentions à des records, fausses une fois le parc au complet** : « la pelle est le char
+  le plus lourd » ne tenait plus devant le porte-conteneurs (masse 12, mais hors trafic — `eau`) ; « la
+  pelle est le char le plus large » pareil (elle a été resserrée à 16 px, comme le camion, plus tôt
+  dans la même journée, pour ne pas frôler un bac d'éboueur). Les deux juges se limitent maintenant
+  À LA RUE. Le porte-conteneurs, lui, se disait « le plus lent » dans l'inventaire — plus vrai depuis
+  que la pelle existe (1,3 contre 1,9) : corrigé.
+- ⚠️ **Une pelle à 12 km/h « distance un agent à pied » selon un juge écrit avant elle.** Elle roule
+  sous la vitesse minimale que ce juge exige de tout ce qui a un moteur — et c'est voulu, pas un bug :
+  on ne vole pas une pelleteuse pour fuir la police, on la vole pour la farce, et un agent qui la
+  rattrape à la course est le gag. Exemptée avec sa raison écrite dans le juge, pas désarmée en
+  silence.
+- ⚠️ **Le budget des définitions était déjà rouge avant que j'y touche** — 202 902 octets bruts pour
+  un plafond de 200 000 (45 796 gzip pour 44 000), le temps que d'autres sessions ajoutent du contenu
+  pendant que ce plafond dormait. La pelleteuse du catalogue y ajoute 794 octets bruts et 111 gzip.
+  Plafond relevé à 215 000 / 48 000. Le budget de la carte, lui, avait encore de la marge : les six
+  chantiers (contre trois) et leurs annexes ajoutent 3 209 octets bruts et 451 gzip, sans toucher au
+  plafond fixé par l'aéroport la même journée.
+- Les annexes des chantiers (tranchée, équipe, signaleur, benne) se calculent maintenant tout à la
+  toute fin de `carte.generer`, après l'aéroport et les grands bateaux — pas seulement après le
+  mobilier de rue : rien de plus récent ne doit leur retirer une tuile.
+
+**Le jalon est livré au complet.** Les deux étages du plan sont faits (le décor animé, puis les
+chars qu'on conduit) ; ce qui reste du réservoir d'origine — le rouleau compresseur, la bétonnière,
+la roulotte de chantier, les toilettes portatives, le camion à benne — est resté au stade de
+brainstorm dans la Fiche : jamais promis comme livrable, à reprendre si Martin en veut un jour.

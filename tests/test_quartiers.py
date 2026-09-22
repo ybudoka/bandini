@@ -20,7 +20,7 @@ import json
 
 import pytest
 
-from app import carte, devantures, mobilier, pietons, salete, vitrines
+from app import carte, chantiers, devantures, mobilier, pietons, salete, vitrines
 
 #: La saleté qu'on compte : ce qu'on jette par terre, sur la friche d'un terrain
 #: vague (`;`) ou au pied d'un mur (`_`). ⚠️ En toutes lettres, pas relu dans
@@ -199,7 +199,10 @@ def test_hors_de_la_salete_la_ville_ne_bouge_pas(villes):
     _ville, avant, apres = villes
     touchees = {"decor", "graffitis", "nids_de_poule"}
     for cle in avant:
-        if cle not in touchees:
+        if cle == "chantiers":
+            # ⚠️ Sans leurs annexes : elles LISENT la ville finie (`chantiers.completer`).
+            assert chantiers.sans_annexes(avant[cle]) == chantiers.sans_annexes(apres[cle]), cle
+        elif cle not in touchees:
             assert json.dumps(avant[cle], sort_keys=True) == json.dumps(apres[cle], sort_keys=True), cle
 
     def reste(ville):
@@ -427,7 +430,9 @@ def test_le_zonage_ne_touche_ni_une_tuile_ni_un_arbre(villes, monkeypatch):
     monkeypatch.setattr(mobilier, "MEUBLES_PAR_USAGE", {})
     sans = carte.generer()
     for cle in ville:
-        if cle != "decor":
+        if cle == "chantiers":
+            assert chantiers.sans_annexes(ville[cle]) == chantiers.sans_annexes(sans[cle]), cle
+        elif cle != "decor":
             assert json.dumps(ville[cle], sort_keys=True) == json.dumps(sans[cle], sort_keys=True), cle
     assert [d for d in ville["decor"] if d["type"] not in USAGE_DU_MEUBLE] == sans["decor"]
 
