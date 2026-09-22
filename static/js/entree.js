@@ -517,20 +517,6 @@ const Entree = (function () {
     gaz = g; frein = f;
   }
 
-  /** Le stick de la DEUXIEME manette (`getGamepads()[1]`) — la coop locale
-      (M14, essai). `lireManette`, au-dessus, FUSIONNE toutes les manettes
-      branchees dans un seul stick : parfait a un joueur, ca ferait marcher le
-      deuxieme avec les doigts du premier. Un lecteur a part, qui ne touche a
-      rien de la manette du joueur 1. Axes 0/1 (la convention W3C du stick de
-      gauche) : pas le profil REAPPRIS du joueur 1, une deuxieme manette n'a
-      aucune raison d'avoir la meme disposition. */
-  function axeManette2() {
-    if (!nav || !nav.getGamepads) return { x: 0, y: 0, mag: 0 };
-    const p = nav.getGamepads()[1];
-    if (!p || p.connected === false) return { x: 0, y: 0, mag: 0 };
-    return zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
-  }
-
   /** Zone morte RADIALE : sous `ZONE_MORTE` rien, au-dela le module repart de
       zero jusqu'a `ZONE_PLEINE` — la direction, elle, est gardee telle quelle. */
   function zoneMorte(ax, ay) {
@@ -748,12 +734,20 @@ const Entree = (function () {
     const st = stickCasque.mag > stick.mag ? stickCasque : stick;
     if (pouce.actif && pouce.mag > 0) {
       axe.x = pouce.x; axe.y = pouce.y; axe.mag = pouce.mag; axe.source = 'tactile';
-    } else if (st.mag > 0) {
+    } else if (st.mag > 0 && !B.coop) {
       axe.x = st.x; axe.y = st.y; axe.mag = st.mag; axe.source = 'manette';
     } else {
+      // ⚠️ La coop locale (essai, un clavier + une manette) : le joueur 1 ne
+      // repond QU'AU CLAVIER — la manette est celle du deuxieme joueur
+      // (`Entites.majJoueur2`, qui lit `Entree.stick` directement). `bas()`
+      // compte aussi la manette (son stick ET sa croix) : en coop on lit
+      // `enfonce` tout cru pour ne rien lui laisser passer.
+      const touche = B.coop
+        ? function (a) { return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; }); }
+        : bas;
       let x = 0, y = 0;
-      if (bas('gauche')) x -= 1; if (bas('droite')) x += 1;
-      if (bas('haut')) y -= 1; if (bas('bas')) y += 1;
+      if (touche('gauche')) x -= 1; if (touche('droite')) x += 1;
+      if (touche('haut')) y -= 1; if (touche('bas')) y += 1;
       const h = Math.hypot(x, y);
       axe.x = h ? x / h : 0; axe.y = h ? y / h : 0; axe.mag = h ? 1 : 0; axe.source = 'clavier';
     }
@@ -817,11 +811,15 @@ const Entree = (function () {
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
-    lireManette, vibrer, pleinEcran, axeManette2,
+    lireManette, vibrer, pleinEcran,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
     get appareil() { return appareilCourant(); },
     get axe() { return axe; },
+    //: La coop locale (essai, un clavier + une manette) : le stick de LA
+    //: manette, brut — celui que `axe` (au-dessus) fusionne aussi au clavier
+    //: pour le joueur 1, hors coop. `Entites.majJoueur2` le lit directement.
+    get stick() { return stick; },
     get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },
     _sacs: function () { return { enfonce: enfonce, presse: presse, vPad: vPad, vTact: vTact, vNeuf: vNeuf, vCasque: vCasque, pouce: pouce, stick: stick, stickCasque: stickCasque }; },

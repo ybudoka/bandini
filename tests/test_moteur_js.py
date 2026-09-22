@@ -7821,26 +7821,34 @@ def test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville(banc):
     assert r["premiere"]["y"] == pytest.approx(r["lim"]["yMax"], abs=0.01)
 
 
-def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_deuxieme_manette(banc):
+def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
     """M14, essai — RISQUÉ, pas promis (voir la fiche du jalon) : `Jeu.basculerCoop`
-    fait naitre un pieton `coopJoueur2`, mene par `getGamepads()[1]` (jamais celle
-    du joueur 1 : `Entree.axeManette2` lit un index a part). Rebasculer l'efface."""
+    fait naitre un pieton `coopJoueur2`, mene par LA manette (`Entree.stick`) — le
+    joueur 1, lui, ne repond plus qu'au clavier pendant ce temps
+    (`Entree.debutImage`, `!B.coop` sur la branche manette). Un clavier, une
+    manette : la manette ne bouge jamais le joueur 1, le clavier ne bouge jamais
+    le deuxieme. Rebasculer efface le deuxieme joueur."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
-        const avant = L.B.entites.length, joueurAvant = { x: L.B.joueur.x, y: L.B.joueur.y };
+        const avant = L.B.entites.length;
         L.Jeu.basculerCoop();
         const ouvert = { coop: !!L.B.coop, entites: L.B.entites.length,
                           type: L.B.coop.entite.type, coopFlag: L.B.coop.entite.coopJoueur2,
                           vivant: L.B.coop.entite.vivant };
-        const e2Avant = { x: L.B.coop.entite.x, y: L.B.coop.entite.y };
-        // Seule la DEUXIEME manette pousse : la premiere ne bouge pas.
-        // ⚠️ 200 images, pas 20 : trop pres du spawn, le passage d'un passant
-        // (ou le premier joueur, juste a cote) aurait pu a lui seul bouger le
-        // deuxieme joueur de quelques pixels et rendre ce juge vert sans que
-        // la manette 2 y soit pour rien.
-        o.pad2([1, 0]); o.frame(200); o.pad2(null);
-        const e2Apres = { x: L.B.coop.entite.x, y: L.B.coop.entite.y };
-        const joueurApres = { x: L.B.joueur.x, y: L.B.joueur.y };
+        // ⚠️ La VITESSE, pas la position accumulee : pousser longtemps dans une
+        // direction fixe peut buter sur un mur pres du spawn (essaye, et vu :
+        // un juge qui pousse "vers l'est" pendant 200 images peut avancer de
+        // 5 px a peine, coince, sans que la coop y soit pour rien). La
+        // reponse immediate au stick/au clavier, elle, ne depend pas du decor.
+        o.pad([1, 0]); o.frame(3);
+        const e2VitesseManette = { vx: L.B.coop.entite.vx, vy: L.B.coop.entite.vy };
+        const joueurVitesseManette = { vx: L.B.joueur.vx, vy: L.B.joueur.vy };
+        o.pad(null); o.frame(2);
+        // Le CLAVIER pousse, SEUL : aucune manette branchee.
+        o.touche('KeyD'); o.frame(3);
+        const joueurVitesseClavier = { vx: L.B.joueur.vx, vy: L.B.joueur.vy };
+        const e2VitesseClavier = { vx: L.B.coop.entite.vx, vy: L.B.coop.entite.vy };
+        o.relacher('KeyD');
         const e2 = L.B.coop.entite;
         L.Jeu.basculerCoop();
         // ⚠️ PAS une comparaison de COMPTE : la foule nait et meurt toute
@@ -7848,19 +7856,17 @@ def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_deuxieme_manette(banc):
         // d'autres raisons. La seule preuve qui compte, c'est que CETTE
         // entite-la (`e2`, la reference gardee plus haut) a quitte le tableau.
         const ferme = { coop: L.B.coop, encore: L.B.entites.indexOf(e2) >= 0 };
-        return { avant: avant, ouvert: ouvert, e2Avant: e2Avant, e2Apres: e2Apres,
-                 joueurAvant: joueurAvant, joueurApres: joueurApres, ferme: ferme };
+        return { avant: avant, ouvert: ouvert, e2VitesseManette: e2VitesseManette,
+                 joueurVitesseManette: joueurVitesseManette,
+                 joueurVitesseClavier: joueurVitesseClavier, e2VitesseClavier: e2VitesseClavier,
+                 ferme: ferme };
     }""")
     assert r["ouvert"] == {"coop": True, "entites": r["avant"] + 1, "type": "pieton",
                             "coopFlag": True, "vivant": True}
-    assert r["e2Apres"]["x"] > r["e2Avant"]["x"] + 40, "le deuxieme joueur doit marcher"
-    # ⚠️ PAS un == strict : ne du meme cote que le premier (`placePresDe`, une
-    # tuile marchable A COTE), il peut le frOler en s'ebranlant — c'est la
-    # SEPARATION des cercles (comme deux passants), jamais une entree au
-    # clavier ou a la manette 1 qui aurait fuite vers `B.joueur`.
-    derive = ((r["joueurApres"]["x"] - r["joueurAvant"]["x"]) ** 2
-              + (r["joueurApres"]["y"] - r["joueurAvant"]["y"]) ** 2) ** 0.5
-    assert derive < 45, f"le joueur 1 a derive de {derive:.1f}px : la manette 2 le bouge"
+    assert r["e2VitesseManette"]["vx"] > 0.2, "la manette doit faire marcher le deuxieme joueur"
+    assert r["joueurVitesseManette"] == {"vx": 0, "vy": 0}, "la manette a bouge le joueur 1"
+    assert r["joueurVitesseClavier"]["vx"] > 0.5, "le clavier doit faire marcher le joueur 1"
+    assert r["e2VitesseClavier"] == {"vx": 0, "vy": 0}, "le clavier a bouge le deuxieme joueur"
     assert r["ferme"] == {"coop": None, "encore": False}, "rebasculer efface le deuxieme joueur"
 
 
@@ -7872,10 +7878,14 @@ def test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent(banc):
         L.Jeu.commencer();
         L.Jeu.basculerCoop();
         const zoomProche = L.B.cam.zoom;
-        // Le stick pousse le deuxieme joueur loin du premier (immobile) — a
-        // 0,45 px/image (`vitesses.pieton`), 700 images passent large au-dela
-        // du plein zoom (`ZOOM_DIST_PLEIN`, 80 px).
-        o.pad2([1, 0]); o.frame(700); o.pad2(null);
+        // ⚠️ On DEPLACE le deuxieme joueur, on ne le fait pas MARCHER : ce
+        // juge teste la formule de la camera (`Monde.majCameraCoop`), pas le
+        // chemin dans la ville — pousser la manette pendant des centaines
+        // d'images peut buter sur un mur pres du spawn selon l'endroit
+        // (mesure : 22 px apres 900 images, plein est). La marche elle-meme
+        // est le sujet de l'autre juge, avec la meme manette.
+        L.B.coop.entite.x += 300;
+        o.frame(120);
         const zoomLoin = L.B.cam.zoom;
         const dist = Math.hypot(L.B.joueur.x - L.B.coop.entite.x, L.B.joueur.y - L.B.coop.entite.y);
         L.Jeu.basculerCoop();

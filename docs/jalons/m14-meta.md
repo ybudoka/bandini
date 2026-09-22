@@ -510,20 +510,28 @@ PAUSE ou CARTE) referme et rend la main au jeu.
 
 **Essai livré** (22 sept. 2026) : **la coop locale** — RISQUÉ, marqué ainsi sur la fiche, et
 ça reste vrai après cet essai : ce qui suit est un premier passage jouable, pas une promesse
-tenue. Le verdict (« ça tient à 480×270 » ou « le mode photo suffit ») revient à Martin, à
-deux manettes en main — rien ici ne le remplace.
+tenue. Le verdict (« ça tient à 480×270 » ou « le mode photo suffit ») revient à Martin, clavier
+sous une main et manette dans l'autre — rien ici ne le remplace.
 
 Depuis le menu DEBUG (« COOP LOCALE (ESSAI) ») : un deuxième joueur naît à côté du premier
-(un piéton `coopJoueur2`, même sprite, même linge — « l'autre toi », pas un passant de plus),
-mené par la **deuxième manette seule** (`Entree.axeManette2`, un lecteur à part sur
-`getGamepads()[1]` — `lireManette` fusionne toutes les manettes branchées dans un seul stick,
-parfait à un joueur, ça aurait fait marcher le deuxième avec les doigts du premier). Marcher
-seulement : aucun combat, aucune interaction, aucune mission, aucune arme — le strict
-nécessaire pour juger si la caméra à deux tient. La caméra (`Monde.majCameraCoop`) vise le
-milieu des deux joueurs et zoome arrière à mesure qu'ils s'éloignent (1 en dessous de 80 px
-d'écart, 0,55 au-delà de 260 px, un fondu entre les deux) ; rebasculer efface le deuxième
-joueur et ramène le zoom à 1 sans à-coup.
+(un piéton `coopJoueur2`, même sprite, même linge — « l'autre toi », pas un passant de plus).
+**Un clavier, une manette** (demande de Martin, 22 sept.) : le joueur 1 ne répond plus QU'AU
+CLAVIER tant que la coop tient (`Entree.debutImage`, la branche manette se ferme sur `!B.coop`),
+le deuxième joueur ne répond QU'À LA MANETTE (`Entities.majJoueur2` lit `Entree.stick`
+directement, jamais le clavier). Marcher seulement : aucun combat, aucune interaction, aucune
+mission, aucune arme — le strict nécessaire pour juger si la caméra à deux tient. La caméra
+(`Monde.majCameraCoop`) vise le milieu des deux joueurs et zoome arrière à mesure qu'ils
+s'éloignent (1 en dessous de 80 px d'écart, 0,55 au-delà de 260 px, un fondu entre les deux) ;
+rebasculer efface le deuxième joueur et ramène le zoom à 1 sans à-coup.
 
+- ⚠️ **Deux manettes, ça ne marchait pas avec UNE manette en main** (retour de Martin juste
+  après le premier essai) : la version d'origine lisait `getGamepads()[1]` pour le deuxième
+  joueur — un vrai deuxième contrôleur. Personne n'en a deux qui traînent : Martin voulait
+  jouer clavier + l'unique manette. Refait pour ça : le joueur 1 se **prive** de la manette
+  (branche `manette` de `debutImage` fermée par `!B.coop`, et le repli clavier lit `enfonce`
+  tout cru — jamais `bas()`, qui compte AUSSI la croix d'une manette), le deuxième joueur lit
+  `Entree.stick` (le stick déjà fusionné et nettoyé de sa zone morte, celui que `lireManette`
+  calcule pour N'IMPORTE QUELLE manette branchée — une seule suffit).
 - ⚠️ **Le zoom se pose AVANT `Base.fin`, jamais après.** Première idée : appliquer le zoom
   puis le retirer avant d'appeler `Base.fin` (qui compose aussi les lampes de nuit et les
   phares des chars). Revenu en arrière en y regardant : `Base.fin` dessine sur le MÊME
@@ -538,25 +546,28 @@ joueur et ramène le zoom à 1 sans à-coup.
   mouvement voulu illisible dans les juges (un poussé en +x qui dérivait en -x). Corrigé
   (`Jeu.placePresDe`) : la même idée que `Hud.placeAupres` (l'objectif téléporté) — une tuile
   marchable à côté, jamais la tuile du premier joueur lui-même.
-- ⚠️ **`vitesses.pieton` est lent (0,45 px/image)** — le juge de mouvement pousse pendant 200
-  images (jusqu'à 90 px en théorie) et un juge de zoom pendant 700 (jusqu'à 315 px), sans quoi
-  la marge au-dessus du bruit ambiant (la foule qui frôle en passant) ne tient pas. **La
-  coop essai ne connaît que la marche : pas de sprint, pas de bouffée de souffle.**
+- ⚠️ **Un juge qui POUSSE longtemps dans une direction fixe peut buter sur un mur pres du
+  spawn** — mesuré : plein est pendant 900 images, 22 px parcourus (sur 405 en théorie à 0,45
+  px/image). Le quartier de départ est dense (le terminus, ses bancs, la cabine téléphonique).
+  Le juge de MOUVEMENT s'en tire en lisant la VITESSE juste après avoir poussé (2-3 images,
+  jamais coincé) plutôt que la distance parcourue sur des centaines d'images ; le juge de
+  ZOOM déplace le deuxième joueur directement (`entite.x += 300`) — il teste la formule de la
+  caméra, pas un chemin dans la ville.
 - **Juges** : deux tests dans `test_moteur_js.py` —
-  `test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_deuxieme_manette` (naissance à côté du
-  premier, seule la manette 2 le fait marcher — la 1 ne dérive pas au-delà de la séparation
-  ordinaire des cercles —, et `Entites.retirer` à la fermeture) et
-  `test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent` (zoom à 1 côte à côte,
-  zoom arrière après une vraie séparation, retour à 1 une fois la coop refermée), toutes deux
-  mutées à la main pour confirmer qu'elles mordent. Le banc (`tests/banc.js`) a appris
-  `o.pad2(...)`, une DEUXIÈME manette dans `getGamepads()`, sans toucher à `o.pad(...)`.
-- Vérifié à l'œil (Playwright, une fausse deuxième manette posée par
-  `Object.defineProperty(navigator, 'getGamepads', …)` avant le chargement de la page — le
-  vrai Gamepad API ne se simule pas autrement) : les deux personnages naissent côte à côte, la
-  caméra zoome bien arrière quand on éloigne le deuxième à la manette, et referme proprement
-  (zoom et deuxième joueur disparaissent ensemble).
-- **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux vraies manettes,
-  assis côte à côte devant le même écran de 480×270. Ni les trois chiffres du zoom
-  (`ZOOM_MIN`, `ZOOM_DIST_PLEIN`, `ZOOM_DIST_MAX`, dans `monde.js`) — posés à vue, à ajuster
-  une fois essayés pour de vrai. Ni si « marcher seulement » suffit ou si ça donne surtout
-  envie de se battre à deux. **Prochain pas : Martin, une deuxième manette en main.**
+  `test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette` (naissance à côté du premier,
+  la manette SEULE fait marcher le deuxième — vitesse du joueur 1 à zéro pendant ce temps —,
+  le clavier SEUL fait marcher le joueur 1 — vitesse du deuxième à zéro pendant ce temps —, et
+  `Entites.retirer` à la fermeture) et `test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent`
+  (zoom à 1 côte à côte, zoom arrière après une vraie séparation, retour à 1 une fois la coop
+  refermée), toutes deux mutées à la main pour confirmer qu'elles mordent.
+- Vérifié à l'œil (Playwright, une fausse manette posée par `Object.defineProperty(navigator,
+  'getGamepads', …)` avant le chargement de la page — le vrai Gamepad API ne se simule pas
+  autrement) : les deux personnages naissent côte à côte, la caméra zoome bien arrière quand on
+  éloigne le deuxième à la manette, et referme proprement (zoom et deuxième joueur disparaissent
+  ensemble). ⚠️ Cette capture-là datait de la version « deux manettes » — à refaire clavier +
+  manette si le prochain passage y touche encore.
+- **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux, un clavier sous une
+  main et une manette dans l'autre, devant le même écran de 480×270. Ni les trois chiffres du
+  zoom (`ZOOM_MIN`, `ZOOM_DIST_PLEIN`, `ZOOM_DIST_MAX`, dans `monde.js`) — posés à vue, à
+  ajuster une fois essayés pour de vrai. Ni si « marcher seulement » suffit ou si ça donne
+  surtout envie de se battre à deux. **Prochain pas : Martin, clavier et manette en main.**

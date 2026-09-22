@@ -3915,13 +3915,15 @@ const Entites = (function () {
     return (e.nage || e.agent || e.barbote || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
   }
 
-  /** La coop locale (M14, essai) : un pieton marque `coopJoueur2`, mene par le
-      stick de la DEUXIEME manette (`Entree.axeManette2`) plutot que par l'IA —
-      aucun combat, aucune interaction, aucune mission : juste marcher, pour
+  /** La coop locale (M14, essai — un clavier + une manette) : un pieton
+      marque `coopJoueur2`, mene par le STICK DE LA MANETTE (`Entree.stick`)
+      plutot que par l'IA — le joueur 1, lui, reste au clavier pendant ce
+      temps (`Entree.debutImage`, garde `!B.coop` sur la branche manette).
+      Aucun combat, aucune interaction, aucune mission : juste marcher, pour
       juger si la camera a deux (`Monde.majCameraCoop`) tient a 480x270. */
   function majJoueur2(e) {
     const v = B.defs.recherche.vitesses;
-    const axe = Entree.axeManette2();
+    const axe = Entree.stick;
     if (axe.mag > 0) {
       const vitesse = v.pieton * axe.mag;
       e.vx = axe.x * vitesse; e.vy = axe.y * vitesse;
