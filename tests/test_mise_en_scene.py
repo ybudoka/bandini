@@ -198,7 +198,7 @@ def test_une_replique_renvoi_s_accroche_a_un_objectif_qui_existe_et_se_dit_en_pe
     fiche["dialogue"]["renvoi"] = [_r("marco", "Reviens ce soir.", 7)]
     assert any("renvoi accrochée à un objectif qui n'existe pas" in e for e in missions.erreurs_de_mise_en_scene(fiche))
     renvois = [r for r in missions.repliques() if r["partie"] == "renvoi"]
-    assert [r["slug"] for r in renvois] == ["lulu-m50-8"], "m50 : Lulu dit d'attendre la nuit"
+    assert [r["slug"] for r in renvois] == ["lulu-m50-12"], "m50 : Lulu dit d'attendre la nuit"
     assert not any(r["telephone"] for r in renvois)
 
 

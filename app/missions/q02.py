@@ -1,6 +1,6 @@
 """La mission q02 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p
 
 MISSION = {
     "slug": "q02",
@@ -20,8 +20,21 @@ MISSION = {
         {"type": "monter", "texte": "PRENDS LE CAMION DE POISSON DANS LA RUELLE",
          "vehicule": "camion", "ou": "ruelle:cantine:10"},
 
+        # « Des missions plus longues » (22 sept. 2026) : la morue voyage sur de la glace — un détour aux
+        # Érables, chez Ti-Paul, à l'autre bout de la ville (on descend du camion, on lui parle, on
+        # remonte : `livrer` attend le même camion). Puis le sergent paie (pour une fois), et on rapporte
+        # l'argent à Lulu. La prime sans bosse se décide à la livraison, et tient jusqu'à la fin.
+        {"type": "parler", "texte": "ARRÊTE CHERCHER DE LA GLACE CHEZ TI-PAUL",
+         "cible": "tipaul"},
+
         {"type": "livrer", "texte": "LIVRE LE POISSON AU CASSE-CROÛTE, SANS BOSSE",
-         "lieu": "casse_croute", "rayon": 4, "sans_degats": True}
+         "lieu": "casse_croute", "rayon": 4, "sans_degats": True},
+
+        {"type": "parler", "texte": "FAIS PAYER LE SERGENT, AU CASSE-CROÛTE",
+         "cible": "bouchard"},
+
+        {"type": "aller", "texte": "RAPPORTE L'ARGENT À LULU, À LA CANTINE",
+         "lieu": "cantine", "rayon": 4}
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Lulu, le poisson du vendredi : la cantinière qui
@@ -40,18 +53,34 @@ MISSION = {
         ],
         "pendant": [
             # Au combiné : elle est à la cantine, on est au volant.
-            _p("lulu", "Doucement dans les tournants! Le sergent veut son poisson frais, pas en purée.", 1,
-               jeu="[worried] Doucement dans les tournants! [playfully] Le sergent veut son poisson frais… pas en purée.")
+            _p("lulu", "Oublie pas la glace chez Ti-Paul! Sans glace, ma morue va se sauver toute seule.", 1,
+               jeu="[worried] Oublie pas la glace chez Ti-Paul! [teasing] Sans glace, ma morue va se sauver… toute seule."),
+            _p("lulu", "Doucement dans les tournants! Le sergent veut son poisson frais, pas en purée.", 2,
+               jeu="[worried] Doucement dans les tournants! [playfully] Le sergent veut son poisson frais… pas en purée."),
+            _p("lulu", "Fais-le payer, le sergent! Pis compte les billets devant lui, hein.", 3,
+               jeu="[firmly] Fais-le payer, le sergent! [teasing] Pis compte les billets devant lui, hein."),
+            _p("lulu", "Rapporte-moi ça vite, mon grand. Pis mange en chemin, t'as l'air d'un fantôme.", 4,
+               jeu="[warmly] Rapporte-moi ça vite, mon grand. [teasing] Pis mange en chemin… t'as l'air d'un fantôme.")
         ],
         "fin": [
             _l("lulu", "Pas une écaille de perdue! Le sergent va être content, pis moi, j'suis payée.",
                jeu="[relieved] Pas une écaille de perdue! [cheerful] Le sergent va être content, pis moi, j'suis payée."),
+            _l("lulu", "Pis le sergent a payé? Ben coudonc. Y va pleuvoir des poissons.",
+               jeu="[surprised] Pis le sergent a payé? [amused] Ben coudonc… Y va pleuvoir des poissons."),
             _l("lulu", "Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien, pis qui pose pas de questions.",
                jeu="[knowingly] Passe voir Raymonde, à l'usine. Elle cherche quelqu'un qui conduit bien… pis qui pose pas de questions.")
         ],
         "echec": [
             _l("lulu", "Mon poisson… Ben tant pis, on va le faire en soupe. Reviens quand tu conduis mieux.",
                jeu="[disappointed] Mon poisson… Ben tant pis, on va le faire en soupe. [teasing] Reviens quand tu conduis mieux.")
+        ],
+        # Les poignées de main du détour : Ti-Paul (dehors, au dépanneur) et le sergent (dedans, au
+        # casse-croûte) sont connus depuis m6 et m4 — ils ne se nomment pas.
+        "accueil": [
+            _a("tipaul", "Ta glace, l'ami! Dis à Lulu qu'a me doit deux sacs, pis un café.", 1,
+               jeu="[cheerful] Ta glace, l'ami! [mischievously] Dis à Lulu qu'a me doit deux sacs… pis un café."),
+            _a("bouchard", "Le jeune. Tiens, pour Lulu. Pis dis-lui que le pourboire, c'est ma protection.", 3,
+               jeu="[gruffly] Le jeune. Tiens, pour Lulu. [deadpan] Pis dis-lui que le pourboire… c'est ma protection.")
         ]
     },
 

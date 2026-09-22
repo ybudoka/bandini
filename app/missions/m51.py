@@ -24,6 +24,16 @@ MISSION = {
         {"type": "parler", "texte": "PARLE À TI-PAUL, AU DÉPANNEUR",
          "cible": "tipaul"},
 
+        # « Des missions plus longues » (22 sept. 2026) : un jeune agent qui croit encore au règlement a
+        # vu passer l'enveloppe de Ti-Paul — on le sème (DEHORS, aux Érables : jamais une étoile posée
+        # dedans, `dernierVu` serait en coordonnées de pièce). Puis Bouchard tente sa chance au
+        # Brouillard : Josée ne donne pas — le seul « non » de la tournée, et il le sait.
+        {"type": "semer", "texte": "UN AGENT HONNÊTE TE SUIT — SÈME-LE",
+         "etoiles": 1},
+
+        {"type": "parler", "texte": "PASSE SALUER JOSÉE, AU BAR",
+         "cible": "josee"},
+
         {"type": "aller", "texte": "RAPPORTE LES ENVELOPPES AU CASSE-CROÛTE",
          "lieu": "casse_croute", "rayon": 3}
     ],
@@ -45,12 +55,19 @@ MISSION = {
         ],
         "pendant": [
             # Au combiné : il est dans son casse-croûte, on a les poches pleines.
-            _p("bouchard", "Trois enveloppes? Rapporte-les-moi. Pis touche à rien, je sais combien y en a.", 3,
-               jeu="[gruffly] Trois enveloppes? Rapporte-les-moi. [menacingly] Pis touche à rien… je sais combien y en a.")
+            _p("bouchard", "Trois enveloppes? Rapporte-les-moi. Pis touche à rien, je sais combien y en a.", 5,
+               jeu="[gruffly] Trois enveloppes? Rapporte-les-moi. [menacingly] Pis touche à rien… je sais combien y en a."),
+            # Au combiné, eux aussi : il est dans son casse-croûte, et il a peur d'un seul agent.
+            _p("bouchard", "Y a un jeune agent qui croit encore au règlement. Perds-le, pis vite.", 3,
+               jeu="[nervously] Y a un jeune agent qui croit encore au règlement. [gruffly] Perds-le, pis vite."),
+            _p("bouchard", "Arrête au Brouillard. Josée donne jamais, mais je lui demande pareil.", 4,
+               jeu="[matter-of-fact] Arrête au Brouillard. [deadpan] Josée donne jamais… mais je lui demande pareil.")
         ],
         "fin": [
             _l("bouchard", "Trois enveloppes, pas une plainte. Tu commences à comprendre comment ça marche, ici.",
                jeu="[satisfied] Trois enveloppes, pas une plainte. [knowingly] Tu commences à comprendre comment ça marche… ici."),
+            _l("bouchard", "Josée a rien donné? Ben, on va dire qu'elle a donné.",
+               jeu="[nervously] Josée a rien donné? [deadpan] Ben… on va dire qu'elle a donné."),
             _l("bouchard", "Ta part est dans ta poche. Pis si on te demande, c'était pour les orphelins.",
                jeu="[matter-of-fact] Ta part est dans ta poche. [deadpan] Pis si on te demande… c'était pour les orphelins.")
         ],
@@ -60,14 +77,18 @@ MISSION = {
         ],
         # La poignée de main, dite : chacun paie à sa façon — la vieille qui râle mais donne, la
         # cantinière qui grogne, le bavard qui en profite pour se plaindre. Comptées APRÈS `pendant`
-        # (`PARTIES`) : `thibodeau-m51-8`, `lulu-m51-9`, `tipaul-m51-10`.
+        # (`PARTIES`) : `thibodeau-m51-11`, `lulu-m51-12`, `tipaul-m51-13`, `josee-m51-14` (22 sept. 2026 :
+        # une fin et deux `pendant` de plus les ont décalées ; les mp3 se renomment par leur texte).
         "accueil": [
             _a("thibodeau", "Le sergent, encore? Tiens, mon p'tit. Dis-lui que j'ai une famille à nourrir, moi aussi.", 0,
                jeu="[annoyed] Le sergent, encore? [softly] Tiens, mon p'tit… Dis-lui que j'ai une famille à nourrir, moi aussi."),
             _a("lulu", "Il mange chez moi depuis dix ans sans payer! Bon, tiens, pour la police.", 1,
                jeu="[annoyed] Il mange chez moi depuis dix ans sans payer! [warmly] Bon… tiens, pour la police."),
             _a("tipaul", "Une enveloppe pour Bouchard? Tiens! Pis dis-lui que mon parking a besoin d'une patrouille.", 2,
-               jeu="[cheerful] Une enveloppe pour Bouchard? Tiens! [mischievously] Pis dis-lui que mon parking a besoin d'une patrouille.")
+               jeu="[cheerful] Une enveloppe pour Bouchard? Tiens! [mischievously] Pis dis-lui que mon parking a besoin d'une patrouille."),
+            # Le seul « non » : Josée ne hausse pas le ton, elle le connaît.
+            _a("josee", "Bouchard t'envoie quêter chez moi. Dis-lui que je connais son prix.", 4,
+               jeu="[coldly] Bouchard t'envoie quêter chez moi. [menacingly] Dis-lui que je connais son prix.")
         ]
     },
 

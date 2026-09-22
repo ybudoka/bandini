@@ -1,6 +1,6 @@
 """La mission s03 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p
 
 MISSION = {
     "slug": "s03",
@@ -19,15 +19,30 @@ MISSION = {
     # soit enfermé par une barrière d'heure — on ne finirait pas la mission de nuit sans défoncer la
     # chaîne. La paie va donc au bar de Josée (qui garde la caisse), et le mot de Raymonde le dit :
     # « mon usine est surveillée ». Raymonde, elle, dit sa fin de chez elle (la coupe du défaut).
+    # « Des missions plus longues » (22 sept. 2026) : Prévost fait garder son camion par deux
+    # Boulonneux — ils sortent de l'hôtel quand on monte (`loin` : ils arrivent sur nous) ; la paie
+    # livrée, il en envoie trois autres au bar — on tient la porte ; et c'est Josée, en personne, qui
+    # reçoit la paie.
+    # ⚠️ Pas posés d'avance dans la ruelle (`ou` sans `loin`) : hors de La Shop, un Boulonneux n'attaque
+    # pas, et au banc les deux « gardiens » flânaient à 30 tuiles du camion avant qu'on arrive.
     "objectifs": [
         {"type": "monter", "texte": "PRENDS LE CAMION DE PAIE PRÈS DE L'HÔTEL",
          "vehicule": "camion", "ou": "ruelle:hotel:12"},
+
+        {"type": "tuer", "texte": "LES GARDIENS DE PRÉVOST T'ONT VU — COUCHE-LES",
+         "groupe": "boulonneux", "n": 2, "ou": "ruelle:hotel:12", "loin": 12},
 
         {"type": "semer", "texte": "SÈME LA POLICE, LA PAIE À BORD",
          "etoiles": 2},
 
         {"type": "livrer", "texte": "LIVRE LA PAIE AU BAR DE JOSÉE",
-         "lieu": "bar", "rayon": 4}
+         "lieu": "bar", "rayon": 4},
+
+        {"type": "tuer", "texte": "PRÉVOST ENVOIE SES BOULONNEUX — TIENS LE BAR",
+         "groupe": "boulonneux", "n": 3, "ou": "donneur", "loin": 14},
+
+        {"type": "parler", "texte": "REMETS LA PAIE À JOSÉE, AU BAR",
+         "cible": "josee"}
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Raymonde, la paie de la Prévost : Nadine est rauque,
@@ -42,22 +57,35 @@ MISSION = {
             _l("raymonde", "Le camion de paie de Prévost dort près de l'Hôtel Bandini. Il le garde pour nous faire plier.",
                jeu="[bitterly] Le camion de paie de Prévost dort près de l'Hôtel Bandini. Il le garde… pour nous faire plier."),
             _l("raymonde", "Prends-le, sème la police, pis amène ça au bar de Josée. Mon usine, elle, est surveillée.",
-               jeu="[firmly] Prends-le, sème la police… pis amène ça au bar de Josée. [matter-of-fact] Mon usine, elle, est surveillée.")
+               jeu="[firmly] Prends-le, sème la police… pis amène ça au bar de Josée. [matter-of-fact] Mon usine, elle, est surveillée."),
+            _l("raymonde", "Prévost a mis deux Boulonneux dessus. Des gars de La Shop qui ont oublié d'où ils viennent.",
+               jeu="[bitterly] Prévost a mis deux Boulonneux dessus. [wryly] Des gars de La Shop… qui ont oublié d'où ils viennent.")
         ],
         "pendant": [
             # Au combiné : elle est à l'usine, on est au volant, la police au cul.
-            _p("raymonde", "Perds-les avant le bar! Josée aime pas les visiteurs en uniforme.", 1,
-               jeu="[firmly] Perds-les avant le bar! [sarcastic] Josée aime pas les visiteurs… en uniforme.")
+            _p("raymonde", "Les chiens de garde de Prévost! Couche-les avant qu'ils lisent ta plaque.", 1,
+               jeu="[firmly] Les chiens de garde de Prévost! [bitterly] Couche-les avant qu'ils lisent ta plaque."),
+            _p("raymonde", "Perds-les avant le bar! Josée aime pas les visiteurs en uniforme.", 2,
+               jeu="[firmly] Perds-les avant le bar! [sarcastic] Josée aime pas les visiteurs… en uniforme."),
+            _p("raymonde", "Prévost a su! Il envoie ses Boulonneux au bar. Tiens la porte, Josée te regarde.", 4,
+               jeu="[firmly] Prévost a su! Il envoie ses Boulonneux au bar. [matter-of-fact] Tiens la porte… Josée te regarde.")
         ],
         "fin": [
             _l("raymonde", "Toutes les enveloppes y sont. Mes gars vont manger cette semaine.",
                jeu="[relieved] Toutes les enveloppes y sont… [warmly] Mes gars vont manger cette semaine."),
+            _l("raymonde", "Dix pour cent pour Josée? Josée pis Prévost, c'est la même école.",
+               jeu="[bitterly] Dix pour cent pour Josée? [wryly] Josée pis Prévost… c'est la même école."),
             _l("raymonde", "Prévost va hurler. Laisse-le hurler, moi j'ai jamais eu peur d'un patron.",
                jeu="[firmly] Prévost va hurler. Laisse-le hurler… [wryly] moi j'ai jamais eu peur d'un patron.")
         ],
         "echec": [
             _l("raymonde", "Prévost garde sa paie, pis mes gars gardent leur faim. Reviens quand t'auras réfléchi.",
                jeu="[coldly] Prévost garde sa paie… pis mes gars gardent leur faim. [firmly] Reviens quand t'auras réfléchi.")
+        ],
+        # La poignée de main du bar : Josée est connue depuis m5 — elle ne salue pas, elle compte.
+        "accueil": [
+            _a("josee", "Toute la paie. Le Brouillard garde dix pour cent, pour le dérangement.", 5,
+               jeu="[coldly] Toute la paie. [matter-of-fact] Le Brouillard garde dix pour cent… pour le dérangement.")
         ]
     }
 

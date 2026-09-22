@@ -448,6 +448,27 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
         j.x = caisse.x; j.y = caisse.y; L.Entites.indexer();
         o.frame(2);
         const etapeCaisse = B.partie.mission.etape, ligneCaisse = L.Histoire.ligneObjectif();
+        const etoilesCaisse = B.recherche.etoiles;
+        // « Des missions plus longues » (22 sept. 2026) : la police du port a vu la bagarre. On se cache
+        // dans la cantine le temps que l'étoile tombe (la police ne voit pas dedans) ; l'objectif avance
+        // à la sortie.
+        let g2 = 0; while (B.cinema && g2 < 100) { L.Histoire.suivante(); g2++; }
+        j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+        L.Jeu.entrer(porte); o.fondu();
+        for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+        let cache = 0;
+        for (; cache < 9000 && B.recherche.etoiles > 0; cache++) o.frame(1);
+        L.Jeu.sortir(); o.fondu();
+        for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+        o.frame(3);
+        const etapePlanque = B.partie.mission.etape, lignePlanque = L.Histoire.ligneObjectif();
+        const pendantPlanque = B.cinema ? { qui: B.cinema.lignes[0].qui, slug: B.cinema.lignes[0].slug } : null;
+        let g3 = 0; while (B.cinema && g3 < 100) { L.Histoire.suivante(); g3++; }
+        // Pas au garage : à la planque de Rocco.
+        const planque = L.Histoire.lieu('planque');
+        j.x = planque.x; j.y = planque.y; L.Entites.indexer();
+        o.frame(3);
+        const etapeRetour = B.partie.mission.etape, ligneRetour = L.Histoire.ligneObjectif();
         // Au garage : la prime.
         const argent0 = B.partie.argent;
         const m2 = L.Histoire.donneur('marco');
@@ -457,14 +478,17 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
         let s = 0; while ((B.scene || B.cinema) && s < 6000) { o.frame(1); if (B.cinema && s % 30 === 0) L.Histoire.suivante(); s++; }
         return { debut: debut, attend: attend, etapeAller: etapeAller, dedans: dedans, invite: invite, accueil: accueil, etapeLulu: etapeLulu,
                  pendant: pendant, naissance: naissance, dehors: dehors, dSortie: dSortie, dFleche: dFleche, dMax: Math.round(dMax),
-                 tombe: tombe, etapeCaisse: etapeCaisse, ligneCaisse: ligneCaisse, fait: fait, prime: B.partie.argent - argent0 };
+                 tombe: tombe, etapeCaisse: etapeCaisse, ligneCaisse: ligneCaisse, etoilesCaisse: etoilesCaisse,
+                 secondesCache: Math.round(cache / 60), etapePlanque: etapePlanque, lignePlanque: lignePlanque,
+                 pendantPlanque: pendantPlanque, etapeRetour: etapeRetour, ligneRetour: ligneRetour,
+                 fait: fait, prime: B.partie.argent - argent0 };
     }""")
     assert r["debut"]["parle"] is True and r["debut"]["etape"] == 0, "Marco donne la mission"
     assert r["debut"]["objectif"].startswith("ALLER À LA CANTINE"), r["debut"]
     assert r["attend"] == "ATTENDS LA NUIT", "de jour, on attend la nuit"
     assert r["etapeAller"] == 1, "arrivé à la cantine de nuit, on passe à Lulu"
     assert r["dedans"] == "cantine" and r["invite"] == "PARLER À LUCIENNE « LULU » PELLETIER"
-    assert r["accueil"] == "lulu-m50-9", "à la poignée de main, Lulu se présente (m50 peut se jouer avant m6)"
+    assert r["accueil"] == "lulu-m50-13", "à la poignée de main, Lulu se présente (m50 peut se jouer avant m6)"
     assert r["etapeLulu"] == 2, "ACTION devant Lulu accomplit l'objectif"
     assert r["pendant"] == {"partie": "pendant", "qui": "lulu", "telephone": False}, "c'est Lulu qui le crie, elle est là"
     nait = r["naissance"]
@@ -476,7 +500,12 @@ def test_m50_le_fuyard_file_devant_la_cantine_quand_lulu_le_voit(banc):
     assert r["dSortie"] <= 200, f"en sortant, on le voit filer ({r['dSortie']} px)"
     assert r["dFleche"] <= 200, "la flèche du GPS mène à lui, et il est là"
     assert r["dMax"] > 150, "il file : la rue s'allonge entre lui et nous"
-    assert r["tombe"] is True and r["etapeCaisse"] == 3 and r["ligneCaisse"].startswith("RETOURNER AU GARAGE")
+    assert r["tombe"] is True and r["etapeCaisse"] == 3 and r["ligneCaisse"].startswith("SÈME LA POLICE DU PORT")
+    assert r["etoilesCaisse"] >= 1, "la bagarre sur le quai fait venir la police"
+    assert 0 < r["secondesCache"] < 120, f"cachés dans la cantine, l'étoile tombe ({r['secondesCache']} s)"
+    assert r["etapePlanque"] == 4 and r["lignePlanque"].startswith("CACHE LE COLIS À LA PLANQUE")
+    assert r["pendantPlanque"] == {"qui": "marco", "slug": "marco-m50-11"}, "Marco : pas au garage!"
+    assert r["etapeRetour"] == 5 and r["ligneRetour"].startswith("RETOURNER AU GARAGE")
     assert r["fait"] is True and r["prime"] == 450, "au garage, Marco paie la mission"
 
 
@@ -552,14 +581,14 @@ def test_m50_lulu_dit_d_attendre_la_noirceur_quand_on_lui_parle_de_jour(banc, pa
                  accueil: accueil, etapeLulu: B.partie.mission.etape, suite: suite };
     }""")
     assert r["jour"] is True
-    assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-8", "telephone": False,
+    assert r["renvoi"] == {"partie": "renvoi", "qui": "lulu", "slug": "lulu-m50-12", "telephone": False,
                            "texte": m50["dialogue"]["renvoi"][0]["texte"]}, "de jour, Lulu dit d'attendre la nuit"
     assert "noirceur" in r["renvoi"]["texte"]
-    assert "lulu-m50-8" in r["voix"], "et sa voix est demandée"
+    assert "lulu-m50-12" in r["voix"], "et sa voix est demandée"
     assert r["etapeRenvoi"] == 0, "on ne fait pas avancer la mission en se faisant renvoyer"
     assert r["etapeNuit"] == 1, "la nuit venue, l'objectif compte"
-    assert r["accueil"] == "lulu-m50-9", "la nuit, la poignée de main se dit — le jour, c'est le renvoi, pas l'accueil"
-    assert r["etapeLulu"] == 2 and r["suite"] == {"partie": "pendant", "slug": "lulu-m50-7"}, \
+    assert r["accueil"] == "lulu-m50-13", "la nuit, la poignée de main se dit — le jour, c'est le renvoi, pas l'accueil"
+    assert r["etapeLulu"] == 2 and r["suite"] == {"partie": "pendant", "slug": "lulu-m50-9"}, \
         "la réplique de mission garde sa place"
 
 

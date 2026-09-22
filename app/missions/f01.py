@@ -1,6 +1,6 @@
 """La mission f01 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p
 
 MISSION = {
     "slug": "f01",
@@ -25,6 +25,19 @@ MISSION = {
         {"type": "tuer", "texte": "COUCHE LEUR CHEF",
          "groupe": "cravates", "n": 1, "chef": True},
 
+        # « Des missions plus longues » (22 sept. 2026) : leur chef couché, leur comptable file avec le
+        # livre où la dette de Rocco est écrite. On le rattrape, la bagarre a fait venir la police, et
+        # Marco ne veut plus jamais voir ce livre : il finit à la mer, chez Ovila, au bout de La Pointe
+        # — l'autre bout de la ville.
+        {"type": "ramasser", "texte": "RATTRAPE LE COMPTABLE ET SON LIVRE DE DETTES",
+         "vehicule": "auto", "cible": "fuyard"},
+
+        {"type": "semer", "texte": "SÈME LA POLICE, LE LIVRE DANS TES POCHES",
+         "etoiles": 2},
+
+        {"type": "parler", "texte": "DONNE LE LIVRE À OVILA, AU PHARE",
+         "cible": "ovila"},
+
         {"type": "retourner", "texte": "RETOURNE VOIR MARCO"}
     ],
 
@@ -41,21 +54,38 @@ MISSION = {
             _l("marco", "Ils disent que Rocco leur devait de l'argent.",
                jeu="[casually] Ils disent que Rocco leur devait de l'argent."),
             _l("marco", "Ils veulent le collecter sur toi, à la noirceur. Moi, je surveille la porte.",
-               jeu="[wryly] Ils veulent le collecter sur toi… à la noirceur. Moi, je surveille la porte.")
+               jeu="[wryly] Ils veulent le collecter sur toi… à la noirceur. Moi, je surveille la porte."),
+            _l("marco", "Pis si ça tourne mal, je dirai que t'étais pas de la famille.",
+               jeu="[casually] Pis si ça tourne mal… [wryly] je dirai que t'étais pas de la famille.")
         ],
         "pendant": [
             _p("marco", "Leur chef est là! Couche-le, pis ils oublieront le chemin du garage.", 2,
-               jeu="[firmly] Leur chef est là! Couche-le… pis ils oublieront le chemin du garage.")
+               jeu="[firmly] Leur chef est là! Couche-le… pis ils oublieront le chemin du garage."),
+            _p("marco", "Leur comptable se sauve avec le livre de dettes! Rocco est écrit dedans.", 3,
+               jeu="[worried] Leur comptable se sauve avec le livre de dettes! [firmly] Rocco est écrit dedans."),
+            # Là ou au combiné (`present`) : Marco est resté à sa porte, on a le livre et deux autos-patrouilles.
+            _p("marco", "Deux autos-patrouilles, cousin. Perds-les, pis garde le livre au chaud.", 4,
+               jeu="[quietly] Deux autos-patrouilles, cousin. [firmly] Perds-les, pis garde le livre au chaud."),
+            _p("marco", "Va porter ça au vieux Ovila, au phare. La mer garde mieux les secrets que moi.", 5,
+               jeu="[wryly] Va porter ça au vieux Ovila, au phare. La mer garde mieux les secrets… que moi.")
         ],
         "fin": [
             _l("marco", "Le garage respire. Personne va venir nous parler de dette avant longtemps.",
                jeu="[relieved] Le garage respire. [warmly] Personne va venir nous parler de dette… avant longtemps."),
+            _l("marco", "Plus de livre, plus de dette. C'est comme ça que je fais mes comptes, moi.",
+               jeu="[satisfied] Plus de livre, plus de dette. [wryly] C'est comme ça que je fais mes comptes, moi."),
             _l("marco", "Tiens, pour la peine. Je t'en dois une, cousin.",
                jeu="[warmly] Tiens, pour la peine… Je t'en dois une, cousin.")
         ],
         "echec": [
             _l("marco", "Ils t'ont eu… Repose-toi, cousin. Le garage tient encore debout.",
                jeu="[concerned] Ils t'ont eu… Repose-toi, cousin. [wryly] Le garage tient encore debout.")
+        ],
+        # La poignée de main du phare. Ovila vouvoie (le seul du jeu) et se nomme : f01 se joue après
+        # m50, pas forcément après m6 — on peut le rencontrer ici.
+        "accueil": [
+            _a("ovila", "Ovila, au phare, bonsoir. Un livre de dettes? La mer en a avalé des pires que vous.", 5,
+               jeu="[calm] Ovila, au phare, bonsoir. Un livre de dettes? [mysteriously] La mer en a avalé des pires… que vous.")
         ]
     },
 
@@ -69,15 +99,21 @@ MISSION = {
             { "type": "geste", "acteur": "donneur", "geste": "hausser", "duree": 70, "ensemble": True },
             { "type": "dire", "repliques": [1] },
             { "type": "attendre", "duree": 30 },
-            { "type": "dire", "repliques": [2] }
+            { "type": "dire", "repliques": [2] },
+            # Sa lâcheté drôle, dite en haussant les épaules — la même que sur Rocco.
+            { "type": "geste", "acteur": "donneur", "geste": "hausser", "duree": 60, "ensemble": True },
+            { "type": "dire", "repliques": [3] }
         ],
         "fin": [
             { "type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 70, "ensemble": True },
             { "type": "dire", "repliques": [1] },
+            { "type": "attendre", "duree": 20 },
+            { "type": "geste", "acteur": "donneur", "geste": "hausser", "duree": 50, "ensemble": True },
+            { "type": "dire", "repliques": [2] },
             { "type": "attendre", "duree": 30 },
             { "type": "geste", "acteur": "donneur", "geste": "donner", "vers": "joueur", "duree": 60,
               "ensemble": True },
-            { "type": "dire", "repliques": [2] }
+            { "type": "dire", "repliques": [3] }
         ]
     }
 }
