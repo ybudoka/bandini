@@ -467,3 +467,43 @@ gardé. Le serveur efface pour vrai ; l'écran ne fait que le proposer.
 - ⚠️ **À faire encore, et ce n'est plus optionnel** : la dette « aucune limite d'essais » est
   **échue** (voir la table des dettes) — le formulaire de connexion est public depuis la 2e
   vague, et la confirmation d'effacement est un second endroit où l'on devine un mot de passe.
+
+**6e vague livrée** (22 sept. 2026) : **le mode photo**. Ouvert depuis PAUSE > MODE PHOTO
+(comme la carte, mais l'écran reste celui du jeu plutôt qu'un fond noir) : le monde attend
+(`B.t` ne bouge plus), la caméra se **détache** du joueur et répond au stick ou aux flèches
+(`B.photo.{dx,dy}`, bornée à la ville par `Monde.limitesCamera` — le même calcul que
+`cibleCamera`, exposé), ARME cycle cinq filtres (aucun, noir et blanc, sépia, contraste,
+froid), ACTION capture et télécharge un PNG (`Base.telecharger`, `cv.toDataURL`), ANNULER (ou
+PAUSE ou CARTE) referme et rend la main au jeu.
+
+- ⚠️ **Le filtre se pose sur l'écran, pas dans `Base.fin`.** Première version : un 4e
+  paramètre `filtre` sur `Base.fin(ambiance, lampes, corps, filtre)`, appliqué au
+  `ctx.filter` juste avant le dernier `drawImage`. Revenu en arrière : `Base.fin` compose
+  aussi les phares des chars (`corpsPhares`, un chantier en cours dans le même fichier au
+  moment d'écrire ceci) et les deux changements auraient dû se démêler ligne à ligne pour
+  livrer sans emporter le travail de l'autre. La bonne coupe existait déjà : `Base.ecran()`
+  rend le contexte ÉCRAN, le même que celui où `Base.fin` dessine son dernier `drawImage` —
+  poser le filtre dessus AVANT d'appeler `Base.fin`, et le remettre à `'none'` juste après,
+  obtient exactement le même effet sans toucher à la signature de `Base.fin` ni à un seul
+  caractère de son corps. `Hud.dessiner()`, appelé juste après, n'hérite jamais du filtre.
+- ⚠️ **La caméra détachée reste dans la ville.** Sans borne, le stick pousserait la vue sur
+  l'eau et le vide sous la mer, jamais peints. `Monde.limitesCamera()` reprend le calcul de
+  `cibleCamera` (une carte plus petite que l'écran se centre, sinon `[0, pxW-VW]`) et
+  `majPhoto` clampe `B.cam.x + dx` dedans à chaque image. Vérifié en poussant dans un seul
+  sens bien plus longtemps qu'il n'en faut pour traverser toute la ville, deux fois de suite :
+  si la vue colle vraiment au bord, la deuxième poussée ne déplace plus rien — une mutation
+  qui retire le clamp fait dériver la vue bien au-delà de `limitesCamera().xMax`, et le juge
+  rougit.
+- **Juges** : deux tests dans `test_moteur_js.py` —
+  `test_le_mode_photo_fige_le_monde_promene_la_camera_et_capture` (l'ouverture depuis PAUSE,
+  `B.t` gelé pendant que `B.image` continue d'avancer, le panoramique, les cinq filtres qui
+  cyclent, la capture qui télécharge vraiment un PNG, la fermeture) et
+  `test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville` (la butée, mutée pour confirmer
+  qu'elle mord). Le banc (`tests/banc.js`) a appris `canvas.toDataURL` (un faux, `'data:…'`)
+  et un `<a>` dont le `click()` s'enregistre dans `o.photo.telechargements` — sans ça, aucun
+  juge ne peut dire si l'image est vraiment partie.
+- Vérifié à l'œil (Playwright, `run.py` + Chromium headless) : le HUD de jeu disparaît, le
+  bandeau du bas affiche le nom du filtre et les trois touches, les trois filtres se
+  distinguent clairement les uns des autres, et le panoramique révèle bien de la ville qui
+  n'était pas à l'écran avant.
+- **Reste de M14** : la coop locale.
