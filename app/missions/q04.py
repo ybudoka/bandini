@@ -89,6 +89,8 @@ MISSION = {
             {"type": "dire", "repliques": [1]},
             {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
             {"type": "dire", "repliques": [2]},
+            # La troisième réplique (des missions plus longues, 22 sept. 2026) : l'étape de plus qu'elle annonce.
+            {"type": "dire", "repliques": [3]},
         ],
     },
 }

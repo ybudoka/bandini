@@ -32,9 +32,11 @@ aucun lieu neuf, la ville ne bouge pas (`test_devants.py`).
   `annoncer` ne l'armait pas) : « Le dépanneur d'abord » de m6 et le boîtier de m54 étaient payés et muets.
   Corrigé dans `annoncer` ; juge `test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro`
   (rouge sans le correctif). Elle se dit maintenant dans m6, m4, f03, f06, f07, e02, h02, s01, p13, q03, m54.
-- ⚠️ **69 mp3 payés ont changé de nom** (le slug suit la place) : renommés par (qui, mission, texte).
-  **291 répliques n'ont pas de voix** (≈ 28 000 caractères, le quota du mois n'en avait plus que
-  14 618) : Martin a choisi le texte seul pour l'instant.
+- ⚠️ **126 mp3 payés ont changé de nom** (le slug suit la place) : renommés par (qui, mission, texte),
+  aucun perdu — dont ceux des dix-neuf missions muettes, générés pendant ce passage par une autre session
+  (`f0049b0`). **Les 152 répliques neuves n'ont pas de voix** (≈ 15 000 caractères ; le quota du mois
+  n'en a plus, remise à zéro le 17 oct.) : Martin a choisi le texte seul pour l'instant.
+- Les scènes d'intro de q04 et r01 nommaient leurs répliques [1] et [2] : la troisième, neuve, y est ajoutée.
 - La flèche d'un `pirater` mène au terminal (au poste, quand c'est un mouillage) ; e12 visait
   `rampe:erables`, qui n'existe pas — la rampe du phare.
 - Plafond de répliques de `test_missions.py` : 10 → 18 par mission (m6 : 20).
