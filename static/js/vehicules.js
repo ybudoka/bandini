@@ -3250,9 +3250,9 @@ const Vehicules = (function () {
         lettre = p[3]; u = (p[1][0] + p[2][0]) / 2; w = (p[1][1] + p[2][1]) / 2; z = (p[1][2] + p[2][2]) / 2;
       }
       if (lettre !== 'l' && lettre !== 't') continue;
-      const lueur = LUEURS[lettre];
-      liste.push({ u: u, w: w, z: z, lettre: lettre, r: lueur.rayon,
-                   c: rgba((def.pal && def.pal[lettre]) || lueur.defaut, lueur.alpha) });
+      const lueur = LUEURS[lettre], teinte = (def.pal && def.pal[lettre]) || lueur.defaut;
+      liste.push({ u: u, w: w, z: z, lettre: lettre, r: lueur.rayon, teinte: teinte, alpha: lueur.alpha,
+                   c: rgba(teinte, lueur.alpha) });
     }
     const bas = liste.filter(function (l) { return l.lettre === 'l' && l.z < PHARE_BAS_Z; });
     if (bas.length) {
@@ -3264,6 +3264,52 @@ const Vehicules = (function () {
     liste.profondeur = (def && def.machine && def.machine.profondeur) || 1;
     lampesDesMachines.set(nom, liste);
     return liste;
+  }
+
+  /** ⚠️ **ON NE VOIT UNE LAMPE QUE SI ELLE REGARDE L'OEIL** (retour de Martin, 22 sept.
+      2026 : « les phares devraient logiquement etre visibles ou non selon la direction »).
+      La ville se voit de trois quarts : un char qui monte montre ses feux arriere, ses
+      phares sont caches par la caisse ; un char qui descend, l'inverse. Ce que la lueur
+      vaut, c'est ce qu'on VOIT de la lampe a ce cap : les pixels de sa lettre que la
+      projection a gardes (`Atlas.grilleDuCap`) autour de son centre — deux, et elle luit
+      a plein ; un, a moitie (on en devine le coin) ; aucun, elle est eteinte a l'ecran.
+      Lu une fois par silhouette, par cap et par lampe. */
+  const vuesDesLampes = new Map();
+  //: Ce que luit une lampe vue de profil (sa face de cote a l'oeil), en part de sa lueur.
+  const LUEUR_DE_PROFIL = 0.4;
+  //: Combien de pixels de sa lettre il faut voir pour qu'une lampe luise a plein.
+  const PIXELS_PLEINE_LUEUR = 2;
+
+  /** Ce qu'on voit de CHAQUE lampe de la silhouette a ce cap, de 0 a 1. ⚠️ Chaque pixel de
+      lampe que la projection a garde revient a la lampe de sa sorte la PLUS PROCHE, dans le
+      rayon de sa lueur : ainsi tout pixel peint est sous une lueur (un bout de lampe depasse
+      parfois de son centre), et une lampe cachee ne vole pas les pixels de sa jumelle. */
+  function partsVisibles(nom, i, lampes) {
+    const cle = nom + '|' + i;
+    if (vuesDesLampes.has(cle)) return vuesDesLampes.get(cle);
+    const def = SPRITES[nom], grille = Atlas.grilleDuCap(nom, def, ROTATIONS, i);
+    let parts = lampes.map(function () { return 1; });
+    if (grille) {
+      const centres = lampes.map(function (l) { return Atlas.ouTombe(def, ROTATIONS, i, l.u, l.w, l.z); });
+      const vus = lampes.map(function () { return 0; });
+      for (let y = 0; y < grille.length; y++) {
+        const ligne = grille[y];
+        for (let x = 0; x < ligne.length; x++) {
+          const ch = ligne[x];
+          if (ch !== 'l' && ch !== 't') continue;
+          let meilleure = -1, dMin = Infinity;
+          lampes.forEach(function (l, n) {
+            if (l.lettre !== ch) return;
+            const d = Math.hypot(x + 0.5 - (centres[n].x + 0.5), y + 0.5 - (centres[n].y + 0.5));
+            if (d <= l.r && d < dMin) { dMin = d; meilleure = n; }
+          });
+          if (meilleure >= 0) vus[meilleure]++;
+        }
+      }
+      parts = vus.map(function (n) { return Math.min(1, n / PIXELS_PLEINE_LUEUR); });
+    }
+    vuesDesLampes.set(cle, parts);
+    return parts;
   }
 
   function rgba(hex, a) {
@@ -3370,9 +3416,18 @@ const Vehicules = (function () {
         ox: ox, oy: oy, ca: ca, sa: sa, demi: b.demi, ouverture: faisceau.ouverture, porteeMax: faisceau.portee,
       });
     }
-    const x0 = v.x - cx, y0 = v.y - v.z - cy;
-    for (const l of lampes) {
-      const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r, c: l.c };
+    const x0 = v.x - cx, y0 = v.y - v.z - cy, i = capDe(v.angle), parts = partsVisibles(v.sprite, i, lampes);
+    for (let n = 0; n < lampes.length; n++) {
+      const l = lampes[n];
+      // Cachee par la caisse a ce cap : pas de lueur (le faisceau au sol, lui, reste).
+      // Et une lampe eclaire vers ou elle POINTE : pleine quand elle nous regarde (le
+      // phare d'un char qui descend, le feu arriere d'un char qui monte), a 40 % de
+      // profil, ou l'on n'en devine que le coin. `sa` est la part du cap vers le bas.
+      const face = l.lettre === 't' ? -sa : sa;
+      const part = parts[n] * (LUEUR_DE_PROFIL + (1 - LUEUR_DE_PROFIL) * Math.max(0, face));
+      if (part <= 0) continue;
+      const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r,
+                      c: part < 1 ? rgba(l.teinte, l.alpha * part) : l.c };
       if (Monde.cacheSousLeToit(rideau, lampe.x + cx, lampe.y + cy)) continue;
       if (l.lettre === 't') lampe.arriere = v; else lampe.phare = v;
       lampesPhares.liste.push(lampe);

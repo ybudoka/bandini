@@ -474,7 +474,10 @@ def test_chaque_char_du_parc_allume_les_lampes_que_sa_machine_peint(banc, paquet
             res.lampes = Math.max(res.lampes, s.lampes.length);
             for (const [lettre, cle] of SORTES) {
               const lueurs = s.lampes.filter(function (l) { return l[cle] === s.v; });
-              res.lettres[lettre] = lueurs.length;
+              // ⚠️ Le plus grand nombre sur les huit caps : une lampe tournee vers le haut de
+              // l'ecran est cachee par la caisse (« on ne voit une lampe que si elle regarde
+              // l'oeil »), et le dernier cap vu n'est pas toujours un cap ou elle luit.
+              res.lettres[lettre] = Math.max(res.lettres[lettre] || 0, lueurs.length);
               lueurs.forEach(function (l, i) {
                 const gx = Math.floor(cote / 2 + l.dx), gy = Math.floor(cote / 2 + l.dy);
                 for (let y = gy - 1; y <= gy + 1; y++) for (let x = gx - 1; x <= gx + 1; x++) if (a(x, y) === lettre) vues[lettre][i] = true;
@@ -537,11 +540,16 @@ def test_le_faisceau_est_a_la_mesure_de_chaque_classe(banc, paquet):
         const saut = seul(L, auto, %s, -Math.PI / 2, 24);
         const f = function (s) { return s.lampes.find(function (l) { return l.faisceau === s.v; }); };
         const ph = function (s) { return s.lampes.find(function (l) { return l.phare === s.v; }); };
+        // ⚠️ Les PHARES se mesurent sur un char qui DESCEND l'ecran : un char qui monte
+        // cache ses phares derriere sa caisse (« on ne voit une lampe que si elle
+        // regarde l'oeil ») — il n'en a pas de lueur a mesurer.
+        const sud = seul(L, auto, %s, Math.PI / 2);
+        const sudSaut = seul(L, auto, %s, Math.PI / 2, 24);
         out.sol = { p: f(nord).p, ombre: L.B.defs.conduite.ombre.profondeur,
-                    solNord: f(nord).sol, solSaut: f(saut).sol, pharesNord: ph(nord).sol, pharesSaut: ph(saut).sol,
+                    solNord: f(nord).sol, solSaut: f(saut).sol, pharesSol: ph(sud).sol, pharesSaut: ph(sudSaut).sol,
                     departNord: f(nord).sol, attendu: -(nord.v.def.longueur / 2) * L.SPRITES.auto.machine.profondeur };
         return out;
-    }""" % (PARC, NUIT, NUIT, NUIT))
+    }""" % (PARC, NUIT, NUIT, NUIT, NUIT, NUIT))
     sol = r.pop("sol")
     for nom, c in r.items():
         if c["classe"] == "bateau":
@@ -562,7 +570,7 @@ def test_le_faisceau_est_a_la_mesure_de_chaque_classe(banc, paquet):
     assert sol["p"] == sol["ombre"], f"le faisceau n'est pas écrasé comme l'ombre : {sol}"
     assert abs(sol["departNord"] - sol["attendu"]) < 1.5, f"vers le nord, le faisceau ne part pas du nez écrasé : {sol}"
     assert sol["solSaut"] == sol["solNord"], f"le char saute et son faisceau quitte la chaussée : {sol}"
-    assert sol["pharesSaut"] < sol["pharesNord"] - 20, f"le char saute et ses phares restent au sol : {sol}"
+    assert sol["pharesSaut"] < sol["pharesSol"] - 20, f"le char saute et ses phares restent au sol : {sol}"
 
 
 def test_chaque_classe_du_catalogue_a_decide_de_son_faisceau():

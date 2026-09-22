@@ -72,7 +72,10 @@ def test_sous_le_toit_de_chaque_garage_un_char_n_allume_rien(banc, paquet):
         for k, d in enumerate(g["dedans"]):
             assert d == {"phare": 0, "arriere": 0, "faisceau": 0}, \
                 "garage (%s, %s), char n° %s sous le toit : %s" % (g["x"], g["y"], k, d)
-        assert g["dehors"]["phare"] > 0 and g["dehors"]["arriere"] > 0, \
+        # Le témoin descend l'écran : ce sont ses phares qu'on voit (ses feux arrière, sur la
+        # face d'en haut, sont cachés par sa caisse — « on ne voit une lampe que si elle
+        # regarde l'œil »).
+        assert g["dehors"]["phare"] > 0, \
             "garage (%s, %s) : dans la rue, le même char n'éclaire pas — le juge ne mesure rien" % (g["x"], g["y"])
 
 
