@@ -684,6 +684,7 @@ const Monde = (function () {
     if ((e === B.joueur || e.conducteur === B.joueur) && typeof Hud !== 'undefined' && B.t - (B.buteMsgT || -999) >= 90) {
       B.buteMsgT = B.t;
       Hud.message(b.raison, 90);
+      if (typeof Son !== 'undefined') Son.SFX.erreur();
     }
     return true;
   }

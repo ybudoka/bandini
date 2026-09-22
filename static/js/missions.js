@@ -52,6 +52,12 @@ const Missions = (function () {
     montant = Math.max(0, Math.round(montant));
     if (B.partie.argent < montant) return false;
     B.partie.argent -= montant;
+    // ⚠️ LE TIROIR-CAISSE A CHAQUE ACHAT, comme `encaisser` : le meme
+    // echantillon (`argent`), deja paye. Jusqu'au 22 sept. 2026 chaque appelant
+    // le jouait lui-meme — et une quinzaine l'oubliaient (le billet de foire,
+    // le ticket de metro, la coupe de cheveux, l'amende, l'hopital…). Un
+    // appelant ne le rejoue donc plus apres `payer`.
+    if (montant > 0 && typeof Son !== 'undefined') Son.SFX.argent();
     if (typeof Hud !== 'undefined') Hud.message('-' + montant + ' $' + (raison ? ' ' + raison : ''));
     return true;
   }
@@ -139,7 +145,6 @@ const Missions = (function () {
     soigner(j, commerce.gain_pv ? B.defs.economie.tarifs[commerce.gain_pv] : 0);
     nourrir(j, commerce.gain_souffle ? B.defs.economie.tarifs[commerce.gain_souffle] : 0);
     if (commerce.effet === 'cafe') cafeine(j);
-    Son.SFX.argent();
     if (commerce.service === 'journal') Hud.message('LE CLAIRON DE LA BAIE');
     return true;
   }
@@ -946,7 +951,6 @@ const Missions = (function () {
       if (e.type === 'vehicule' && e.saisi === i) { e.saisi = null; e.vole = false; e.aToi = true; }
     });
     Hud.message('CHAR RACHETÉ — IL EST DANS LA COUR');
-    Son.SFX.argent();
     return true;
   }
 
@@ -1004,7 +1008,7 @@ const Missions = (function () {
     // brasse — l'invite l'a promis.
     if (point.type === 'distributrice') return utiliserDistributrice(j, machineDuPoint(point));
     const menu = menuDuPoint(point);
-    if (!menu) { Hud.message('PLUS TARD'); return true; }
+    if (!menu) { Hud.message('PLUS TARD'); Son.SFX.erreur(); return true; }
     // Un comptoir qui reste ouvert se refait apres chaque achat : l'arme passe
     // a « DEJA A TOI », le magot en haut a droite fond, les munitions de ce
     // qu'on vient d'acheter apparaissent. Sans ca, on paie deux fois.
@@ -1105,11 +1109,11 @@ const Missions = (function () {
         [['HOT-DOG', 'hotdog'], ['POUTINE', 'poutine'], ['SOUPE AUX POIS', 'soupe'], ['LIQUEUR', 'liqueur']].forEach(function (d) {
           items.push({ libelle: d[0], detail: tarifs[d[1]] + ' $ / +' + tarifs[d[1] + '_pv'] + ' PV +' + tarifs[d[1] + '_souffle'] + ' SOUFFLE',
                        actif: p.argent >= tarifs[d[1]],
-                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); Son.SFX.argent(); return false; } });
+                       faire: function () { payer(tarifs[d[1]], d[0]); soigner(B.joueur, tarifs[d[1] + '_pv']); nourrir(B.joueur, tarifs[d[1] + '_souffle']); return false; } });
         });
         items.push({ libelle: 'CAFÉ', detail: tarifs.cafe + ' $ / +' + tarifs.cafe_souffle + ' SOUFFLE · COURSE LONGUE ' + B.defs.economie.cafe.duree_s + ' S',
                      actif: p.argent >= tarifs.cafe,
-                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); Son.SFX.argent(); return false; } });
+                     faire: function () { payer(tarifs.cafe, 'CAFÉ'); soigner(B.joueur, tarifs.cafe_pv); nourrir(B.joueur, tarifs.cafe_souffle); cafeine(B.joueur); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items, sur: p.argent + ' $' };
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
@@ -1209,7 +1213,6 @@ const Missions = (function () {
                }
                manger(a);
                if (a.journal) { lireLeJournal(); return true; }
-               Son.SFX.argent();
                return false;
              } };
   }
@@ -1327,7 +1330,6 @@ const Missions = (function () {
     const dehors = B.exterieur && B.exterieur.carte;
     const gain = gainDeFouille(porte && dehors ? Monde.standingA(porte.x, porte.y, dehors) : null);
     encaisser(gain, 'DANS LES TIROIRS');
-    Son.SFX.argent();
     return true;
   }
 
@@ -1891,7 +1893,6 @@ const Missions = (function () {
         payer(prix, 'ME DESJARDINS');
         p.casier = Math.max(0, p.casier - fiche.pages);
         p.nettoyage.avocatJour = p.jour;
-        Son.SFX.argent();
         Hud.message('UNE PAGE DE MOINS — DOSSIER ' + pages(p.casier));
         return true;
       }
@@ -1910,7 +1911,6 @@ const Missions = (function () {
         payer(provision, 'ME DESJARDINS');
         p.nettoyage.provision = true;
         p.nettoyage.avocatJour = p.jour;
-        Son.SFX.argent();
         Hud.message('IL SERA LÀ — LA PROCHAINE SANS AMENDE');
         return true;
       }
@@ -1943,7 +1943,6 @@ const Missions = (function () {
       faire: function () {
         payer(prix, 'LE COMPTOIR DU FOND');
         p.nettoyage.commande = { jour: p.jour + fiche.delai_jours, paye: prix };
-        Son.SFX.argent();
         Hud.message('IL Y TRAVAILLE — REVIENS DEMAIN');
         return true;
       }
@@ -2222,7 +2221,6 @@ const Missions = (function () {
                      rembourser(m, 'À SES HOMMES');
                      B.partie.collecteT = B.t + (f.repit_s || 120) * 60;
                      collecteurs().forEach(function (q) { q.collecteur = false; q.mission = false; q.etat = 'flane'; });
-                     Son.SFX.argent();
                      return true;
                    } });
     });
@@ -2623,7 +2621,6 @@ const Missions = (function () {
                      v.cargaison[slug] = (v.cargaison[slug] || 0) + 1;
                      acheteesAujourdhui();
                      p.contrebande.achetees += 1;
-                     Son.SFX.argent();
                      return false;
                    } });
     });

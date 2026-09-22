@@ -133,6 +133,9 @@ const Son = (function () {
   //: d'armes, chacune avec son filet) sans les reecrire un par un.
   let ici = null;
 
+  //: L'image du dernier bris de decor entendu (`SFX.bris`) : un seul par image.
+  let dernierBris = -1;
+
   /** Une note : frequence en Hz, duree en s, forme, volume, glisse (facteur de frequence finale). */
   function ton(freq, duree, forme, volume, glisse, depart) {
     if (!pret()) return;
@@ -310,6 +313,41 @@ const Son = (function () {
   }
 
   function joue(slug) { return echantillon(slug, ici) !== null; }
+
+  /** `joue`, mais COUPE au bout de `duree` secondes, en fondu : un geste bref
+      qui emprunte un echantillon plus long que lui (la passe du pistolet a
+      peinture dans le souffle de l'extincteur). `part` dose le volume (1 =
+      celui du catalogue). Rend vrai si l'echantillon est parti. */
+  function bref(slug, duree, part) {
+    const options = ici ? { volume: ici.volume * (part || 1), pan: ici.pan } : { volume: part || 1 };
+    const j = echantillon(slug, options);
+    if (!j) return false;
+    const fondu = 0.06, t = ctx.currentTime + Math.max(0, duree - fondu);
+    const g = j.gain.gain.value;
+    // Une courbe, pas une rampe : c'est ce que le banc lit (et un seul appel
+    // par gain, comme le fondu de la musique).
+    j.gain.gain.setValueCurveAtTime(Array.from(courbeDeFondu(false), function (c) { return c * g; }), t, fondu);
+    try { j.source.stop(t + fondu + 0.02); } catch (e) { /* deja finie */ }
+    return true;
+  }
+
+  //: LE BRIS D'UN DECOR, par matiere, dans les echantillons DEJA PAYES : le bois
+  //: et le plastique qui cassent (`casse`, un manche qui claque et ses morceaux
+  //: sur l'asphalte), le metal qui sonne (`pelle`, un clang), le verre qui
+  //: eclate (`bouteille`). ⚠️ Le reste — buisson, chateau de sable, matelas,
+  //: manche a air — n'a que sa poussiere : un craquement de bois sur un
+  //: buisson sonnerait faux. Et la borne, le guichet et les distributrices ont
+  //: leur propre son (`borne_cassee`, `argent`, `monnaie`), joue par `briser`.
+  const MATIERE_DU_BRIS = {
+    lampadaire: 'pelle', parcometre: 'pelle', boite_aux_lettres: 'pelle', poteau_amarrage: 'pelle',
+    baril: 'pelle', caddie: 'pelle', kiosque_journaux: 'pelle', bbq: 'pelle',
+    poubelle: 'pelle', poubelle_pleine: 'pelle',
+    abribus: 'bouteille', abribus_nord: 'bouteille', abribus_est: 'bouteille', abribus_ouest: 'bouteille',
+    bac: 'casse', cible_foire: 'casse', table_pique_nique: 'casse', chaise_sauveteur: 'casse',
+    banc: 'casse', banc_nord: 'casse', banc_est: 'casse', banc_ouest: 'casse', bac_fleurs: 'casse',
+    bac_recyclage: 'casse', palettes: 'casse', caisse: 'casse', cabanon: 'casse',
+    corde_a_linge: 'casse', ordures: 'casse', pneu: 'casse',
+  };
 
   /** Combien s'entend ce qui se passe en (x, y) : 0 hors de l'ecran, et de plus
       en plus fort a mesure que le joueur s'approche (`audio.coups_des_autres`).
@@ -659,7 +697,10 @@ const Son = (function () {
     //: un coup de poing. ⚠️ Synthetise, et ce n'est pas une economie de bouts de
     //: chandelle : le seau des bruitages porte deja 190 fichiers, et un coup sec
     //: est exactement ce qu'un oscillateur fait le mieux.
-    maillet: function () { ton(190, 0.07, 'square', 0.26, 0.4); bruit(0.07, 0.22, 700, 180); },
+    //: ⚠️ 22 sept. 2026 : il emprunte le coup de BATON (`batte`, un « thwack »
+    //: de bois creux), deja paye — la meme matiere qu'un maillet sur un plateau
+    //: de bois, sans un octet de plus au seau. La synthese reste le filet.
+    maillet: function () { if (!joue('batte')) { ton(190, 0.07, 'square', 0.26, 0.4); bruit(0.07, 0.22, 700, 180); } },
     //: LA CLOCHE, en haut de la colonne : UN coup, clair et qui traine. C'est le
     //: seul son du jeu qui dise « tu as gagne » avant que le HUD l'ecrive — deux
     //: coups en feraient un tramway (`cloche_tram`), qui, lui, passe.
@@ -861,9 +902,24 @@ const Son = (function () {
     // aigu qui siffle et le compresseur qui cogne dessous — l'atelier en fait trois
     // (`Missions.majGarage`). ⚠️ Synthetise seulement, comme le rideau : pas de
     // fichier au catalogue.
+    //: ⚠️ 22 sept. 2026 : la passe emprunte le souffle de l'EXTINCTEUR, deja
+    //: paye (un jet de poudre sous pression), coupe a 0,4 s et a moitie
+    //: volume — c'est derriere un rideau baisse. La synthese reste le filet.
     pistolet_peinture: function () {
+      if (bref('extincteur', 0.4, 0.5)) return;
       bruit(0.4, 0.09, 5200, 3400);
       ton(62, 0.12, 'square', 0.04, 0.6);
+    },
+    /** Un decor qui CEDE (`Entites.briser`), par sa matiere : voir
+        `MATIERE_DU_BRIS`. Une seule fois par image : l'explosion d'un char
+        couche six decors d'un coup, et six fois le meme fichier au meme
+        instant ne sonnent pas plus fort, ils saturent. Rend le slug joue. */
+    bris: function (decor) {
+      const slug = MATIERE_DU_BRIS[decor];
+      if (!slug || dernierBris === B.t) return null;
+      dernierBris = B.t;
+      if (!joue(slug)) bruit(0.2, 0.3, slug === 'pelle' ? 2600 : 3000, 400);
+      return slug;
     },
     // ⚠️ La sonnette est l'AVERTISSEUR du velo (`vehicules.py`, `klaxon`) : au
     // meme bouton que le klaxon d'une auto. Les velos du trafic la font deja

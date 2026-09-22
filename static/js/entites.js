@@ -504,6 +504,9 @@ const Entites = (function () {
     }
     reindexerDecor();
     poussiere(e.x, e.y, 8);
+    // Le decor qui cede s'ENTEND, de la ou il est (`Son.SFX.bris`). La borne,
+    // le guichet et les distributrices ont le leur, plus bas.
+    if (typeof Son !== 'undefined') Son.depuis(e, function () { Son.SFX.bris(e.decor); });
     // ⚠️ UN GUICHET DEFONCE REPAND SA CAISSE — et c'est un delit a deux
     // etoiles, quoi qu'il l'ait ouvert (un camion, l'explosion d'a cote, un
     // chargeur entier) : la caisse est par terre, tout le monde l'a vu.

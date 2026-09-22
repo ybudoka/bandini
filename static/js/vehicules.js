@@ -1417,7 +1417,7 @@ const Vehicules = (function () {
   function basculerCrochet(v) {
     if (v.remorque) { decrocher(v); return false; }
     const cible = aCrocher(v);
-    if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); return false; }
+    if (!cible) { Hud.message('RIEN À ACCROCHER DERRIÈRE'); Son.SFX.erreur(); return false; }
     v.remorque = cible;
     cible.remorqueePar = v;
     cible.alarme = 0;
@@ -1595,7 +1595,7 @@ const Vehicules = (function () {
     // serait la facon la plus courte de casser la physique : deux conducteurs,
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
     // s'ouvre pas sans un mot se lit comme un bogue.
-    if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); return false; }
+    if (v.remorqueePar) { Hud.message('IL EST SUR LA FOURCHE'); Son.SFX.erreur(); return false; }
     let crime = null, vu = false;
     if (v.conducteur === 'trafic' && v.def.classe === 'velo') {
       // On prend le velo au cycliste : il tombe, il a tout vu, il le dit.
@@ -1697,7 +1697,7 @@ const Vehicules = (function () {
     // pas (on recule d'abord), et si on y est force — vendu chez Ti-Guy, une epave —
     // on ressort a pied par-dessous le rideau, dans la baie.
     const rideau = Monde.rideauDe(v);
-    if (rideau && !force) { Hud.message('RECULE D’ABORD — T’ES SOUS LE TOIT'); return false; }
+    if (rideau && !force) { Hud.message('RECULE D’ABORD — T’ES SOUS LE TOIT'); Son.SFX.erreur(); return false; }
     const cotes = [v.angle + Math.PI / 2, v.angle - Math.PI / 2, v.angle + Math.PI];
     let pose = false;
     if (rideau) { const baie = Monde.baieDeLaPorteDeGarage(rideau); j.x = baie.x; j.y = baie.y; pose = true; }

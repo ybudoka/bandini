@@ -2216,7 +2216,7 @@ const Histoire = (function () {
       // ⚠️ UN CANARD PAR PASSAGE : sans ça, trois appuis dans la même fenêtre
       // pêchent trois fois le même canard, et le jeu se gagne en martelant.
       const tour = Math.floor((B.t + 1) / (DECORS.peche_canards.anime * DECORS.peche_canards.variantes));
-      if (f.tour === tour) { Hud.message('CELUI-LÀ EST DÉJÀ DANS LE SEAU', 60); return true; }
+      if (f.tour === tour) { Hud.message('CELUI-LÀ EST DÉJÀ DANS LE SEAU', 60); Son.SFX.erreur(); return true; }
       f.tour = tour;
       f.pris++;
       Son.SFX.ramasse();
@@ -2513,7 +2513,7 @@ const Histoire = (function () {
       if (e < dMin) { dMin = e; pas = k; }
     }
     if (dMin > HORS_PISTE_PX) {
-      if (f.hors === 0) Hud.message('HORS PISTE — 5 S POUR REVENIR', 90);
+      if (f.hors === 0) { Hud.message('HORS PISTE — 5 S POUR REVENIR', 90); Son.SFX.erreur(); }
       if (++f.hors > HORS_PISTE_IMAGES) finirDefi(false, 'HORS PISTE');
       return;
     }

@@ -341,7 +341,6 @@ const Police = (function () {
     stool.stool = false; stool.porteBut = null; stool.porteT = 0;
     B.recherche.stoolT = B.t + ficheStool().repit_s * 60;
     Entites.bulle(stool, ficheStool().dit.achete, { duree: 120 });
-    Son.SFX.argent();
     return true;
   }
 

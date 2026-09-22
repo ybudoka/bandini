@@ -94,7 +94,6 @@ const Interactions = (function () {
     artiste.chapeauT = (B.defs.pietons.spectacle && B.defs.pietons.spectacle.applaudit_images) || 40;
     Entites.bulle(artiste, mot(c.merci[artiste.metier] || c.merci.musicien), { duree: 90 });
     j.animT = 12; j.animType = 'ramasse';
-    Son.SFX.argent();
     return true;
   }
 
@@ -345,7 +344,7 @@ const Interactions = (function () {
   function boire(j, fontaine) {
     const c = cfg().boire;
     j.animT = 30; j.animType = 'ramasse';
-    if (fontaineSeche(fontaine)) { Hud.message(c.encore); return true; }
+    if (fontaineSeche(fontaine)) { Hud.message(c.encore); Son.SFX.erreur(); return true; }
     fontaines[tuile(fontaine)] = B.t + c.repit_images;
     j.endurance = Math.min(B.defs.recherche.vitesses.endurance, j.endurance + c.souffle);
     Hud.message(c.message);
