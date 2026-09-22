@@ -90,6 +90,7 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Rien de collé devant chez Ti-Paul | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/rien-de-colle-devant-chez-ti-paul.md#fiche) |
+| Le large de l'aéroport se refuse : on vire de bord avant de voir l'île | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/le-large-de-l-aeroport-se-refuse-on-vire-de-bord-avant-de-voir-l-ile.md#fiche) |
 
 ## L'ordre
 
