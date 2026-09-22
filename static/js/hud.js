@@ -1711,15 +1711,15 @@ const Hud = (function () {
     ⚠️ Et « journal » est pris deux fois dans ce depot : `journal.py` est Le
     Clairon (la manchette du matin), M11 prevoit le carnet du POSTE (le dossier
     de la police sur toi). Ici, c'est la page du joueur, dans LE CARNET. */
-  function menuCarnet() {
+  function menuCarnet(depuis) {
     const p = B.partie;
     const connus = Object.keys(p.connus || {}).length;
-    return enOnglet('carnet', { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
-      { libelle: 'EN COURS', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
+    return surLaLigne(depuis, enOnglet('carnet', { titre: 'LE CARNET', sur: 'JOUR ' + p.jour, largeur: 320, items: [
+      { libelle: 'EN COURS', cle: 'en_cours', detail: Histoire.courante() ? Histoire.courante().titre.toUpperCase() : 'RIEN',
         faire: function () { ouvrirMenu(menuCarnetEnCours()); return false; } },
-      { libelle: 'JOURNAL', detail: (p.carnet || []).length + ' ENTRÉES',
+      { libelle: 'JOURNAL', cle: 'journal', detail: (p.carnet || []).length + ' ENTRÉES',
         faire: function () { ouvrirMenu(menuCarnetJournal()); return false; } },
-      { libelle: 'RÉPERTOIRE', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
+      { libelle: 'RÉPERTOIRE', cle: 'repertoire', detail: connus + ' PERSONNE' + (connus > 1 ? 'S' : ''),
         faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } },
       // ⚠️ LA DETTE SE LIT ICI, sinon on l'oublie entre deux appels. C'est la
       // même règle que le carnet du poste : une pression qu'on subit sans
@@ -1737,7 +1737,21 @@ const Hud = (function () {
       // rien se lit comme un bogue.
       !B.interieur ? { libelle: "REVOIR L'OUVERTURE", faire: function () {
           fermerMenu(); Jeu.reprendre(); Histoire.ouverture(true); return true; } } : null,
-    ].filter(Boolean) });
+    ].filter(Boolean) }));
+  }
+
+  /** Pose le curseur de `menu` sur la ligne `cle` — la page dont on revient.
+
+      ⚠️ RETOUR depuis une fiche rouvrait le repertoire sur sa PREMIERE ligne :
+      avec dix personnes connues, on reperdait sa place a chaque fiche (Martin,
+      22 sept.). Une page qu'on quitte pour y revenir rend le curseur la ou il
+      etait ; une cle qu'on ne trouve plus (la ligne a disparu) laisse
+      `ouvrirMenu` choisir, comme avant. */
+  function surLaLigne(cle, menu) {
+    if (cle === undefined) return menu;
+    const i = menu.items.findIndex(function (item) { return item.cle === cle; });
+    if (i >= 0) menu.curseur = i;
+    return menu;
   }
 
   //: Une ligne qu'on lit, qu'on ne choisit pas.
@@ -1776,9 +1790,9 @@ const Hud = (function () {
       const gps = Histoire.cible();
       if (gps) { items.push(ligne('')); items.push(ligne('OÙ', (gps.nom || '').toUpperCase())); }
     }
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('en_cours')); return false; } });
     return { titre: m ? m.titre.toUpperCase() : 'EN COURS', largeur: 320, curseur: items.length - 1,
-             items: items, retour: function () { ouvrirMenu(menuCarnet()); } };
+             items: items, retour: function () { ouvrirMenu(menuCarnet('en_cours')); } };
   }
 
   /** JOURNAL : ce qui s'est passe, le plus recent en haut, date au jour. */
@@ -1786,24 +1800,24 @@ const Hud = (function () {
     const lignes = (B.partie.carnet || []).slice().reverse();
     const items = lignes.map(function (e) { return ligne(e.t, 'J' + e.j); });
     if (!items.length) items.push(ligne('RIEN ENCORE'));
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('journal')); return false; } });
     return { titre: 'JOURNAL', largeur: 320, hauteur: VH - 30, curseur: 0, items: items,
-             retour: function () { ouvrirMenu(menuCarnet()); } };
+             retour: function () { ouvrirMenu(menuCarnet('journal')); } };
   }
 
   /** RÉPERTOIRE : les gens qu'on a RENCONTRES, et eux seuls. */
-  function menuCarnetRepertoire() {
+  function menuCarnetRepertoire(depuis) {
     const p = B.partie;
     const items = (B.defs.personnages || [])
       .filter(function (q) { return p.connus && p.connus[q.slug]; })
       .map(function (q) {
-        return { libelle: q.nom.toUpperCase(), detail: 'J' + p.connus[q.slug],
+        return { libelle: q.nom.toUpperCase(), cle: q.slug, detail: 'J' + p.connus[q.slug],
                  faire: function () { ouvrirMenu(menuCarnetFiche(q.slug)); return false; } };
       });
     if (!items.length) items.push(ligne('TU N’AS ENCORE PARLÉ À PERSONNE'));
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet()); return false; } });
-    return { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
-             retour: function () { ouvrirMenu(menuCarnet()); } };
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnet('repertoire')); return false; } });
+    return surLaLigne(depuis, { titre: 'RÉPERTOIRE', largeur: 320, hauteur: VH - 30, items: items,
+             retour: function () { ouvrirMenu(menuCarnet('repertoire')); } });
   }
 
   /** Le lieu d'un personnage, en francais : « porte:terminus » est une adresse
@@ -1836,10 +1850,10 @@ const Hud = (function () {
     siennes.forEach(function (m) {
       items.push(ligne('\u00B7 ' + m.titre.toUpperCase(), p.missionsFaites[m.slug] ? 'FAITE' : ''));
     });
-    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire()); return false; } });
+    items.push({ libelle: 'RETOUR', faire: function () { ouvrirMenu(menuCarnetRepertoire(slug)); return false; } });
     return { titre: q ? q.nom.toUpperCase() : slug.toUpperCase(), largeur: 320, colonne: 250,
              curseur: items.length - 1, items: items,
-             retour: function () { ouvrirMenu(menuCarnetRepertoire()); },
+             retour: function () { ouvrirMenu(menuCarnetRepertoire(slug)); },
              // ⚠️ Le visage se cuit avec SES couleurs de palette — celles que
              // `Entites.creerPieton` donne deja a son sosie dans la rue. Rien
              // de neuf a dessiner : on agrandit le meme sprite de 10 x 13.

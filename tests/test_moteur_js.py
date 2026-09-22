@@ -5243,6 +5243,50 @@ def test_le_repertoire_ne_montre_que_les_gens_rencontres(banc, paquet):
     assert r["ou"] and r["ou"] in r["lieux"], "le lieu de la fiche n'existe pas sur la carte : %s" % r["ou"]
 
 
+def test_sortir_d_une_fiche_rend_le_curseur_a_la_meme_personne(banc):
+    """⚠️ RETOUR depuis une fiche rouvrait le RÉPERTOIRE sur sa première ligne :
+    avec dix personnes connues, on reperdait sa place à chaque fiche (Martin,
+    22 sept. 2026). Au clavier, comme on joue : on ouvre la fiche de la
+    DEUXIÈME personne, on en sort par RETOUR puis par B, le curseur est sur
+    elle ; et le carnet rouvre sur RÉPERTOIRE, pas sur EN COURS."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const H = L.Histoire;
+        (L.B.defs.personnages || []).slice(0, 3).forEach(function (q) { H.rencontrer(q.slug); });
+        // La partie neuve ouvre sur l'aide COMMANDES : Echap la ferme, Echap met en pause.
+        while (L.B.menu) o.tape('Escape', 2);
+        o.tape('Escape', 2);
+        L.Hud.ouvrirOnglet('carnet');
+        const sous = function () { const m = L.B.menu; return m && m.items[m.curseur].libelle; };
+        const ici = function () { return L.B.menu ? { titre: L.B.menu.titre, ligne: sous() } : null; };
+        while (sous() !== 'RÉPERTOIRE') o.tape('ArrowDown', 2);
+        o.tape('KeyE', 2);
+        const premier = sous();
+        o.tape('ArrowDown', 2);
+        const visee = sous();
+        o.tape('KeyE', 2);
+        const fiche = ici(), surRetour = sous();
+        o.tape('KeyE', 2);                         // RETOUR, la ligne du bas
+        const parRetour = ici();
+        o.tape('KeyE', 2);
+        o.tape('KeyB', 2);                         // B recule d'un cran (Echap reprend la partie)
+        const parB = ici();
+        o.tape('KeyB', 2);
+        const carnet = ici();
+        return { premier: premier, visee: visee, fiche: fiche, surRetour: surRetour,
+                 parRetour: parRetour, parB: parB, carnet: carnet };
+    }""")
+    assert r["visee"] != r["premier"], "il faut viser une autre personne que la premiere : %s" % r
+    assert r["fiche"]["titre"] == r["visee"] and r["surRetour"] == "RETOUR", r
+    assert r["parRetour"] == {"titre": "RÉPERTOIRE", "ligne": r["visee"]}, (
+        "RETOUR doit rendre le curseur a la personne dont on sort : %s" % r
+    )
+    assert r["parB"] == {"titre": "RÉPERTOIRE", "ligne": r["visee"]}, "B doit faire pareil : %s" % r
+    assert r["carnet"] == {"titre": "LE CARNET", "ligne": "RÉPERTOIRE"}, (
+        "le carnet doit rouvrir sur la page d'ou l'on revient : %s" % r
+    )
+
+
 def test_mal_gare_veut_dire_quelque_chose_et_la_fourriere_passe(banc, paquet):
     """⚠️ La fourrière promet depuis M9 qu'un char mal garé part au lot, et
     **la règle n'existait nulle part**. Depuis que les stationnements ont de
