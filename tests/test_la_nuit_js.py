@@ -912,12 +912,18 @@ def test_a_l_aube_le_camelot_lance_le_clairon_sur_les_perrons(banc, paquet):
         if (!rue) return { camelot: false };
         c.x = rue.x * L.TT + 8; c.y = (rue.y + 1) * L.TT + 8; c.etat = 'flane';
         L.B.decals.length = 0;
+        // ⚠️ La rue VIDEE : suivi de pres, le joueur se tient souvent sur la chaussee, et
+        // depuis que la ville a grandi un char l'y fauchait — le juge finissait a l'hopital.
+        const t = L.B.defs.conduite.trafic;
+        t.vehicules_max = 0; t.stationnes_max = 0; t.garer_la_nuit.max = 0;
+        L.B.entites.filter(function (v) { return v.type === 'vehicule'; }).forEach(L.Entites.retirer);
         for (let i = 0; i < 2400; i++) {
           L.B.partie.heure = AUBE;
           // Qu'il reste dans la bulle : on le suit.
-          L.B.joueur.x = c.x; L.B.joueur.y = c.y + 60;
+          L.B.joueur.x = c.x; L.B.joueur.y = c.y + 60; L.B.joueur.vie = L.B.joueur.vieMax;
           o.frame(1);
         }
+        if (L.B.interieur) return { camelot: true, interieur: L.B.interieur.slug };
         const journaux = L.B.decals.filter(function (d) { return d.type === 'journal'; });
         const toutes = L.Monde.carte.portesFermees;
         const devantUnePorte = journaux.filter(function (d) {
@@ -934,6 +940,7 @@ def test_a_l_aube_le_camelot_lance_le_clairon_sur_les_perrons(banc, paquet):
                  entre: c.etat === 'entre' };
     }""")
     assert r["camelot"], "pas de camelot à l'aube"
+    assert not r.get("interieur"), "le juge a fini dans une pièce (%s) : il ne mesure plus la rue" % r.get("interieur")
     assert r["journaux"] >= 2, "quarante secondes de tournée, %s journal lancé" % r["journaux"]
     assert r["devantUnePorte"] == r["journaux"], "un journal n'est pas tombé sur un perron"
     assert r["restent"] == 0, "passé 9 h, %s journaux traînent encore sur les perrons" % r["restent"]

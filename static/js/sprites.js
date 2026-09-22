@@ -4319,6 +4319,192 @@ function ovaleDeManege(ctx, cx, cy, rx, ry) {
 //: sans l'autre, le joueur appuie sur un canard qui n'est pas la.
 const PECHE_POSE = 2;
 
+/* ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI (Martin, 22 sept. 2026 : « des ratons et des
+   chats plus réalistes quand ils courent pour s'enfuir »). Un chat qui détalait était une
+   image fixe, le nez au nord, qui glissait. Il court maintenant DANS LE SENS OÙ IL VA,
+   comme les passants : de profil vers la gauche ou la droite, de dos vers le haut, de face
+   vers le bas — et avec une FOULÉE qui se voit : quatre images de galop pour le chat
+   (allongé, il retombe sur l'avant, ramassé, il pousse), un trot dandinant pour le raton
+   (les pattes en diagonale, la queue lourde qui suit).
+
+   Un SQUELETTE, pas une grille : le corps (un ovale ombré), la tête, deux oreilles, quatre
+   pattes (celles du côté loin plus sombres), la queue. Chaque image ne change que ses
+   articulations — c'est ce qui garde les quatre images du même animal. Le pas se lit à la
+   DISTANCE parcourue (`Entites.poseDeBete`) : un chat bloqué ne court pas sur place.
+
+   `cle` = « allure|direction|image » : `fuit`, `marche` ou `sursaut` (il se ramasse avant
+   de partir) ; `droite`, `gauche`, `haut`, `bas` ; 0 à 3. */
+const BETES_EN_MOUVEMENT = {
+  chat: {
+    teintes: { dos: '#6b5c4d', flanc: '#54483c', ventre: '#3f362e', patte: '#2f2822', loin: '#3a3029',
+               tete: '#7d6c59', oeil: '#c8d84a', nez: '#e0b7a8', rayure: '#3f362e', queue: '#3f362e' },
+    long: 5.3, epais: 2.5, jambe: 3.3, tete: 2.4, queue: 7, queueEpais: 1,
+    // Le GALOP : pour chaque image, l'etirement du corps, le rebond, les deux pattes avant
+    // (proche, loin) et les deux arriere, en pixels depuis l'epaule ou la hanche, au sol = 0 ;
+    // et la queue (ou elle pointe depuis la croupe).
+    fuit: [
+      { etire: 1.10, rebond: -1.2, avant: [[4.5, -1.2], [3.2, -2.2]], arriere: [[-4.5, -1.2], [-3.2, -2.0]], queue: [-6, -1.5] },
+      { etire: 1.00, rebond: 0.0, avant: [[1.2, 0], [2.6, 0]], arriere: [[-2.8, -2.4], [-1.8, -2.8]], queue: [-6, -3] },
+      { etire: 0.82, rebond: -0.6, avant: [[-0.8, 0], [0.2, -0.8]], arriere: [[1.2, 0], [0.4, -0.6]], queue: [-4.5, -4.5] },
+      { etire: 0.95, rebond: 0.0, avant: [[3.0, -2.2], [2.0, -3.0]], arriere: [[-2.2, 0], [-3.6, 0]], queue: [-6.5, -2.5] },
+    ],
+    marche: [
+      { etire: 1.0, rebond: 0, avant: [[1.5, 0], [-0.5, 0]], arriere: [[-1.5, 0], [0.5, 0]], queue: [-4, -5] },
+      { etire: 1.0, rebond: 0, avant: [[0.5, -1], [0.8, 0]], arriere: [[-0.5, 0], [-0.8, -1]], queue: [-4, -5.5] },
+      { etire: 1.0, rebond: 0, avant: [[-0.5, 0], [1.5, 0]], arriere: [[0.5, 0], [-1.5, 0]], queue: [-4, -5] },
+      { etire: 1.0, rebond: 0, avant: [[0.8, 0], [0.5, -1]], arriere: [[-0.8, -1], [-0.5, 0]], queue: [-4, -5.5] },
+    ],
+    sursaut: [{ etire: 0.78, rebond: 1.0, avant: [[0.8, 0], [1.6, 0]], arriere: [[-0.6, 0], [0.4, 0]], queue: [-3, -6] }],
+  },
+  raton: {
+    teintes: { dos: '#8d8782', flanc: '#77716c', ventre: '#4c4845', patte: '#26232a', loin: '#3a363a',
+               tete: '#a9a39c', museau: '#e6e2dc', masque: '#1c1a1f', oeil: '#f2e27a', nez: '#26232a',
+               anneau: '#26232a', queue: '#a19a93' },
+    long: 5.0, epais: 3.1, jambe: 2.6, tete: 2.5, queue: 6, queueEpais: 2,
+    // Le TROT : les pattes vont par diagonales (avant proche avec arriere loin), le dos
+    // dandine d'un pixel, la queue annelee suit, lourde, presque a l'horizontale.
+    fuit: [
+      { etire: 1.0, rebond: -0.8, avant: [[2.4, 0], [-0.6, -0.8]], arriere: [[0.6, -0.8], [-2.4, 0]], queue: [-5.5, -0.5] },
+      { etire: 0.96, rebond: 0.2, avant: [[1.0, 0], [0.6, 0]], arriere: [[-0.6, 0], [-1.0, 0]], queue: [-5.5, 0.5] },
+      { etire: 1.0, rebond: -0.8, avant: [[-0.6, -0.8], [2.4, 0]], arriere: [[-2.4, 0], [0.6, -0.8]], queue: [-5.5, -0.5] },
+      { etire: 0.96, rebond: 0.2, avant: [[0.6, 0], [1.0, 0]], arriere: [[-1.0, 0], [-0.6, 0]], queue: [-5.5, 0.5] },
+    ],
+    marche: [
+      { etire: 1.0, rebond: 0, avant: [[1.2, 0], [-0.4, 0]], arriere: [[0.4, 0], [-1.2, 0]], queue: [-5, 0] },
+      { etire: 1.0, rebond: 0.3, avant: [[0.5, 0], [0.4, 0]], arriere: [[-0.4, 0], [-0.5, 0]], queue: [-5, 0.5] },
+      { etire: 1.0, rebond: 0, avant: [[-0.4, 0], [1.2, 0]], arriere: [[-1.2, 0], [0.4, 0]], queue: [-5, 0] },
+      { etire: 1.0, rebond: 0.3, avant: [[0.4, 0], [0.5, 0]], arriere: [[-0.5, 0], [-0.4, 0]], queue: [-5, 0.5] },
+    ],
+    sursaut: [{ etire: 0.85, rebond: 0.8, avant: [[0.6, 0], [1.2, 0]], arriere: [[-0.4, 0], [0.4, 0]], queue: [-4, -2.5] }],
+  },
+};
+
+/** Un crayon au pixel : tout se pose en ARRONDI, rien ne s'antialiase. */
+function crayonDeBete(ctx) {
+  const px = function (x, y, c) { ctx.fillStyle = c; ctx.fillRect(Math.round(x), Math.round(y), 1, 1); };
+  return {
+    px: px,
+    ligne: function (x0, y0, x1, y1, c, epais) {
+      const n = Math.max(1, Math.ceil(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))));
+      for (let i = 0; i <= n; i++) {
+        const x = x0 + (x1 - x0) * i / n, y = y0 + (y1 - y0) * i / n;
+        px(x, y, c);
+        if (epais > 1) px(x, y + 1, c);
+      }
+    },
+    // Un ovale plein, eclaire du dessus : le tiers du haut `haut`, le tiers du bas `bas`.
+    ovale: function (cx, cy, a, b, haut, milieu, bas) {
+      for (let y = Math.floor(cy - b); y <= Math.ceil(cy + b); y++) {
+        for (let x = Math.floor(cx - a); x <= Math.ceil(cx + a); x++) {
+          const dx = (x + 0.5 - cx) / a, dy = (y + 0.5 - cy) / b;
+          if (dx * dx + dy * dy > 1) continue;
+          px(x, y, dy < -0.35 ? haut : dy > 0.35 ? bas : milieu);
+        }
+      }
+    },
+  };
+}
+
+/** La bete en mouvement. `cle` = « allure|direction|image ». Le sol est a la rangee 15. */
+function peindreBeteEnMouvement(ctx, espece, cle) {
+  const [allure, dir, n] = cle.split('|');
+  const f = BETES_EN_MOUVEMENT[espece], T = f.teintes, cr = crayonDeBete(ctx);
+  const images = f[allure] || f.fuit, im = images[(+n || 0) % images.length];
+  const SOL = 15;
+  if (dir === 'droite' || dir === 'gauche') {
+    // De PROFIL, dessine vers la droite ; la gauche est son miroir.
+    if (dir === 'gauche') { ctx.translate(28, 0); ctx.scale(-1, 1); }
+    const a = f.long * im.etire, cx = 13, cy = SOL - f.jambe - f.epais + im.rebond;
+    const epaule = [cx + a - 1.5, cy + 1], hanche = [cx - a + 1.5, cy + 1];
+    // L'ombre, collee au sol : elle ne rebondit pas.
+    ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(Math.round(cx - a), SOL + 1, Math.round(a * 2), 1);
+    // Les pattes du cote LOIN d'abord : le corps passe devant elles.
+    cr.ligne(epaule[0], epaule[1], epaule[0] + im.avant[1][0], SOL + im.avant[1][1], T.loin);
+    cr.ligne(hanche[0], hanche[1], hanche[0] + im.arriere[1][0], SOL + im.arriere[1][1], T.loin);
+    // La queue, de la croupe vers sa pointe, en courbe (deux segments).
+    const base = [cx - a + 0.5, cy - 0.8], bout = [base[0] + im.queue[0], base[1] + im.queue[1]];
+    const milieu = [base[0] + im.queue[0] * 0.55, base[1] + im.queue[1] * 0.25];
+    if (T.anneau) {
+      // Les anneaux du raton : on alterne le long de la queue.
+      const pas = 10;
+      for (let i = 0; i <= pas; i++) {
+        const u = i / pas, s = u < 0.5 ? u * 2 : (u - 0.5) * 2;
+        const p = u < 0.5 ? [base[0] + (milieu[0] - base[0]) * s, base[1] + (milieu[1] - base[1]) * s]
+                          : [milieu[0] + (bout[0] - milieu[0]) * s, milieu[1] + (bout[1] - milieu[1]) * s];
+        const c = Math.floor(u * 5) % 2 ? T.queue : T.anneau;
+        cr.px(p[0], p[1], c); cr.px(p[0], p[1] + 1, c);
+      }
+    } else {
+      cr.ligne(base[0], base[1], milieu[0], milieu[1], T.queue, f.queueEpais);
+      cr.ligne(milieu[0], milieu[1], bout[0], bout[1], T.queue, f.queueEpais);
+    }
+    // Le corps.
+    cr.ovale(cx, cy, a, f.epais, T.dos, T.flanc, T.ventre);
+    if (!T.anneau) for (let x = Math.round(cx - a + 2); x < cx + a - 2; x += 2) cr.px(x, Math.round(cy - f.epais + 0.6), T.rayure);
+    // Les pattes du cote PROCHE, par-dessus le ventre.
+    cr.ligne(epaule[0], epaule[1], epaule[0] + im.avant[0][0], SOL + im.avant[0][1], T.patte);
+    cr.ligne(hanche[0], hanche[1], hanche[0] + im.arriere[0][0], SOL + im.arriere[0][1], T.patte);
+    // La tete, en avant du corps, un peu plus haut ; les oreilles ; l'oeil ; le museau.
+    const hx = cx + a + f.tete * 0.55, hy = cy - f.epais * 0.55;
+    cr.ovale(hx, hy, f.tete, f.tete * 0.9, T.tete, T.tete, T.flanc);
+    cr.px(hx - 1, hy - f.tete - 0.6, T.ventre); cr.px(hx + 0.6, hy - f.tete - 0.6, T.ventre);
+    if (T.masque) {
+      // LE MASQUE du raton : une bande noire sur les yeux, le museau blanc devant.
+      cr.px(hx + f.tete - 0.4, hy + 0.4, T.museau); cr.px(hx + f.tete - 1.2, hy + 0.9, T.museau);
+      cr.ligne(hx - 1.4, hy - 0.4, hx + f.tete - 0.8, hy - 0.4, T.masque);
+      cr.px(hx - 0.6, hy - f.tete - 0.2, T.museau);
+    }
+    cr.px(hx + 1, hy - 0.4, T.oeil);
+    cr.px(hx + f.tete + 0.3, hy + 0.5, T.nez);
+    return;
+  }
+  // DE DOS (il s'en va vers le haut) ou DE FACE (il vient vers le bas) : vu d'en haut, un
+  // peu de biais. Le corps est vertical, les pattes sortent aux quatre coins et s'allongent
+  // tour a tour ; la queue fouette derriere lui.
+  const face = dir === 'bas', cx = 13.5, cy = 9 + im.rebond * 0.5, lg = f.long * im.etire * 0.85, lt = f.epais * 1.15 + 0.3;
+  const avantY = face ? cy + lg - 1 : cy - lg + 1, arriereY = face ? cy - lg + 1 : cy + lg - 1, sens = face ? 1 : -1;
+  ctx.fillStyle = 'rgba(20,18,26,0.24)'; ctx.fillRect(Math.round(cx - lt), Math.round(cy + lg), Math.round(lt * 2), 2);
+  // Les pattes : l'allongement d'une patte = de combien son pied avance (profil) ramene a l'axe.
+  const pieds = [[im.avant[0][0], -1, avantY], [im.avant[1][0], 1, avantY], [im.arriere[0][0], 1, arriereY], [im.arriere[1][0], -1, arriereY]];
+  // ⚠️ Elles DEPASSENT des flancs d'un pixel : dessinees sous le corps, on ne les voyait pas.
+  pieds.forEach(function (p) {
+    const x = cx + p[1] * (lt + 0.6), y0 = p[2], y1 = p[2] + sens * p[0] * 0.9;
+    cr.ligne(x, y0, x, y1, T.patte);
+    cr.px(x, y1, T.loin);
+  });
+  // La queue, derriere : elle fouette de gauche a droite d'une image a l'autre.
+  const fouet = [-1.5, 0, 1.5, 0][(+n || 0) % 4];
+  const qx = cx + fouet, qy = arriereY - sens * 1, qbout = qy - sens * (f.queue * 0.65);
+  if (T.anneau) {
+    for (let i = 0; i <= 5; i++) {
+      const y = qy + (qbout - qy) * i / 5, c = i % 2 ? T.queue : T.anneau;
+      cr.px(qx, y, c); cr.px(qx + 1, y, c);
+    }
+  } else {
+    cr.ligne(cx, qy, qx, qbout, T.queue, 1);
+  }
+  // Vu d'en haut, le DOS : clair au milieu, sombre sur les flancs.
+  for (let y = Math.floor(cy - lg); y <= Math.ceil(cy + lg); y++) {
+    for (let x = Math.floor(cx - lt); x <= Math.ceil(cx + lt); x++) {
+      const dx = (x + 0.5 - cx) / lt, dy = (y + 0.5 - cy) / lg;
+      if (dx * dx + dy * dy > 1) continue;
+      cr.px(x, y, Math.abs(dx) < 0.45 ? T.dos : Math.abs(dx) < 0.8 ? T.flanc : T.ventre);
+    }
+  }
+  if (!T.anneau) for (let y = Math.round(cy - lg + 2); y < cy + lg - 1; y += 2) { cr.px(cx - 1, y, T.rayure); cr.px(cx + 1, y, T.rayure); }
+  // La tete, du cote ou il va.
+  const hy = face ? cy + lg + 0.5 : cy - lg - 0.5;
+  cr.ovale(cx, hy, f.tete, f.tete * 0.85, T.tete, T.tete, T.flanc);
+  // Les oreilles, du cote de la nuque : vers le corps.
+  const oy = face ? hy - f.tete * 0.8 : hy + f.tete * 0.2 - 1;
+  cr.px(cx - f.tete + 0.3, oy, T.ventre); cr.px(cx + f.tete - 0.8, oy, T.ventre);
+  if (face) {
+    if (T.masque) { cr.ligne(cx - f.tete + 0.3, hy - 0.3, cx + f.tete - 0.3, hy - 0.3, T.masque); cr.px(cx - 0.5, hy + 0.8, T.museau); }
+    cr.px(cx - 1.2, hy - 0.3, T.oeil); cr.px(cx + 0.8, hy - 0.3, T.oeil);
+    cr.px(cx - 0.2, hy + 1.2, T.nez);
+  }
+}
+
 const DECORS = {
   arbre: { arrete: 2.0, w: 18, h: 26, ancre: [9, 25], r: 5, solide: true, peindre: function (ctx, w, h) {
     ctx.fillStyle = '#5a3a1a'; ctx.fillRect(8, 16, 3, 9);
@@ -5022,6 +5208,16 @@ const DECORS = {
     ctx.fillStyle = '#26232a'; ctx.fillRect(7, y0 + 2, 2, 1);                // le museau
     ctx.fillStyle = '#4c4845';                                               // les oreilles, rondes
     ctx.fillRect(4, y0 - 1, 2, 1); ctx.fillRect(10, y0 - 1, 2, 1);
+  } },
+
+  // Le chat et le raton EN MOUVEMENT (les betes qui se sauvent pour vrai) : un peintre
+  // par espece, la cle dit l'allure, la direction et l'image. Plus large que la bete
+  // assise : de profil, un chat qui galope s'etire sur vingt pixels, queue comprise.
+  chat_bouge: { solide: false, r: 0, variantes: 1, w: 28, h: 18, ancre: [14, 15], peindre: function (ctx, w, h, v) {
+    peindreBeteEnMouvement(ctx, 'chat', v || 'fuit|droite|0');
+  } },
+  raton_bouge: { solide: false, r: 0, variantes: 1, w: 28, h: 18, ancre: [14, 15], peindre: function (ctx, w, h, v) {
+    peindreBeteEnMouvement(ctx, 'raton', v || 'fuit|droite|0');
   } },
 
   // LE BALLON DE PLAGE. ⚠️ Il ne bloque rien et n'entre dans aucun index : il

@@ -2052,6 +2052,9 @@ const Entites = (function () {
       return;
     }
     e.x = nx; e.y = ny;
+    // Au pas aussi, il va dans le sens ou il marche, et ses pattes suivent la distance.
+    e.foulee = (e.foulee || 0) + Math.hypot(e.vx, e.vy);
+    e.dir = directionDeBete(e);
     void fiche;
   }
 
@@ -2065,28 +2068,107 @@ const Entites = (function () {
     e.fuite = e.espece === 'goeland' ? fiche.envol_images : fiche.detale_images;
     e.humeur = 'part';
     e.v = 2;
+    if (e.espece === 'goeland') return;
+    // ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI : il se ramasse, puis il prend son elan
+    // (`majFuite`) — et une bouffee de poussiere part de ses pattes arriere. A
+    // l'empreinte de la bete et de l'instant : un decor ne tire pas de de.
+    e.sursaut = fiche.sursaut_images || 0;
+    e.elan = 0;
+    e.dir = directionDeBete(e);
+    for (let k = 0; k < 3; k++) {
+      const h = hash2(e.id * 31 + k, B.t);
+      particule(e.x - dx / norme * 4, e.y + 2, -dx / norme * 0.5 + ((h % 21) - 10) / 40, -0.1 - (h >>> 8) % 10 / 40,
+                12 + (h >>> 12) % 8, '#b9b2a4', 1, 0.02);
+    }
   }
 
+  //: Ce qui dessine une bete qui BOUGE : le peintre de son espece (`sprites.js`).
+  const BETES_QUI_BOUGENT = { chat: 'chat_bouge', raton: 'raton_bouge' };
+
+  /** Vers ou elle va, en quatre : de profil a gauche ou a droite, de dos vers le haut,
+      de face vers le bas. ⚠️ Avec une PRISE : on garde son sens tant que l'autre axe ne
+      l'emporte pas nettement — sans elle, une course en diagonale clignotait d'un
+      profil a un dos a chaque image. */
+  function directionDeBete(e) {
+    const ax = Math.abs(e.vx), ay = Math.abs(e.vy);
+    if (ax < 1e-6 && ay < 1e-6) return e.dir || 'droite';
+    const garde = { droite: e.vx > 0, gauche: e.vx < 0, bas: e.vy > 0, haut: e.vy < 0 };
+    if (e.dir && garde[e.dir]) {
+      const horiz = e.dir === 'droite' || e.dir === 'gauche';
+      if ((horiz ? ax : ay) >= 0.8 * (horiz ? ay : ax)) return e.dir;
+    }
+    return ax > ay ? (e.vx > 0 ? 'droite' : 'gauche') : (e.vy > 0 ? 'bas' : 'haut');
+  }
+
+  /** Ce qu'on dessine d'une bete qui bouge, ou null (assise, posee — ou un goeland) :
+      le decor, l'allure, la direction et l'image. ⚠️ L'image se lit a la DISTANCE
+      parcourue (`foulee`), pas a l'horloge : une bete bloquee ne court pas sur place. */
+  function poseDeBete(e) {
+    const decor = BETES_QUI_BOUGENT[e.espece];
+    if (!decor) return null;
+    const allure = e.fuite > 0 ? (e.sursaut > 0 ? 'sursaut' : 'fuit') : (e.humeur === 'marche' ? 'marche' : null);
+    if (!allure) return null;
+    const fiche = B.defs.pietons.betes[e.espece] || {};
+    const cycle = (fiche.foulee_px && fiche.foulee_px[allure]) || 24;
+    const image = allure === 'sursaut' ? 0 : Math.floor((e.foulee || 0) / (cycle / 4)) % 4;
+    const dir = e.dir || 'droite';
+    return { decor: decor, allure: allure, dir: dir, image: image, cle: allure + '|' + dir + '|' + image };
+  }
+
+  /** Une tuile ou une bete qui se sauve peut poser la patte. */
+  function libreAuxPattes(x, y) { return Monde.marchablePieton(Math.floor(x / TT), Math.floor(y / TT)); }
+
   function majFuite(e, fiche) {
+    // Le chat et le raton COURENT (`majCourse`) ; le goeland s'envole.
+    if (e.espece !== 'goeland') { majCourse(e, fiche); return; }
     e.fuite--;
     e.x += e.vx; e.y += e.vy;
-    if (e.espece === 'goeland') {
-      // Il monte, puis il plane. L'altitude ne sert qu'au dessin.
-      e.altitude = Math.min(fiche.montee_px, e.altitude + 0.5);
-      e.v = 2;
-    } else {
-      // Le chat file au sol, et il s'arrete s'il se bute a autre chose que sa ruelle.
-      // ⚠️ Le raton sorti d'une poubelle (`libre`) file sur le trottoir : il n'a pas
-      // de ruelle a lui, il a la rue — il s'en va au bout de sa fuite.
-      if (!e.libre && !chezElle(e.espece, Math.floor(e.x / TT), Math.floor(e.y / TT))) { oublier(e); return; }
-      if (e.libre && !Monde.marchablePieton(Math.floor(e.x / TT), Math.floor(e.y / TT))) {
-        // Un mur : il recule d'un pas et tourne d'un quart — il longe, il ne traverse pas.
-        e.x -= e.vx; e.y -= e.vy;
-        const vx = e.vx; e.vx = -e.vy; e.vy = vx;
-      }
-      e.v = 2;
-    }
+    // Il monte, puis il plane. L'altitude ne sert qu'au dessin.
+    e.altitude = Math.min(fiche.montee_px, e.altitude + 0.5);
+    e.v = 2;
     if (e.fuite <= 0) oublier(e);
+  }
+
+  /** ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI (Martin, 22 sept. 2026). Avant : une image
+      fixe qui glissait a pleine vitesse des la premiere image, et qui DISPARAISSAIT net
+      des qu'elle quittait sa ruelle — sous nos yeux. Maintenant :
+      - elle se RAMASSE (`sursaut`), puis ACCELERE (`elan`) ;
+      - un mur, elle le LONGE (on garde l'axe qui passe ; sinon un quart de tour, du cote
+        qui l'eloigne du joueur) — elle ne le traverse ni ne s'y evapore ;
+      - elle peut quitter sa ruelle en fuyant : elle court ou elle peut ;
+      - sa fuite finie, elle ne s'efface que HORS DE L'ECRAN ; sous nos yeux elle court
+        encore, et coincee, elle s'assoit la ou elle est. */
+  function majCourse(e, fiche) {
+    e.v = 2;
+    if (e.sursaut > 0) { e.sursaut--; return; }
+    e.elan = Math.min(1, (e.elan || 0) + 1 / (fiche.elan_images || 1));
+    const k = e.elan * (2 - e.elan);               // elle part vite, puis elle tient sa vitesse
+    let nx = e.x + e.vx * k, ny = e.y + e.vy * k;
+    if (!libreAuxPattes(nx, ny)) {
+      if (libreAuxPattes(nx, e.y)) { ny = e.y; e.vy = 0; e.vx = Math.sign(e.vx) * fiche.detale_vitesse; }
+      else if (libreAuxPattes(e.x, ny)) { nx = e.x; e.vx = 0; e.vy = Math.sign(e.vy) * fiche.detale_vitesse; }
+      else {
+        // Un coin : un quart de tour, du cote qui l'eloigne du joueur.
+        const j = B.joueur, gx = -e.vy, gy = e.vx;
+        const versJ = j ? (gx * (j.x - e.x) + gy * (j.y - e.y)) : 0;
+        const s = versJ > 0 ? -1 : 1;
+        e.vx = gx * s; e.vy = gy * s;
+        nx = e.x; ny = e.y;
+      }
+    }
+    const fait = Math.hypot(nx - e.x, ny - e.y);
+    e.foulee = (e.foulee || 0) + fait;
+    e.x = nx; e.y = ny;
+    e.dir = directionDeBete(e);
+    e.fuite--;
+    e.coinceT = fait < 0.3 ? (e.coinceT || 0) + 1 : 0;
+    if (e.fuite > 0) return;
+    if (!visibleAEcran(e.x, e.y, 16)) { oublier(e); return; }
+    if (e.coinceT < 30) { e.fuite = 1; return; }
+    // Coincee sous nos yeux : elle s'assoit, et elle reprend sa vie de bete.
+    e.fuite = 0; e.humeur = 'pose'; e.v = 0; e.vx = 0; e.vy = 0; e.coinceT = 0;
+    const dur = fiche.assis_images || [120, 240];
+    e.minuterie = dur[0] + hash2(e.id, B.t) % Math.max(1, dur[1] - dur[0]);
   }
 
   // --- La foule de la foire ------------------------------------------------
@@ -2519,13 +2601,21 @@ const Entites = (function () {
     if (!visibleAEcran(e.x, e.y, 40)) { e.etat = 'entre'; e.minuterie = 1; e.vx = 0; e.vy = 0; return; }
     const tx = Math.floor(e.x / TT), ty = Math.floor(e.y / TT);
     if (!Monde.estEau(tx, ty)) return;
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+    // Le sable le plus proche : les quatre voisins d'abord, puis les diagonales.
+    // ⚠️ Un decor SOLIDE sur la tuile (une table de pique-nique, une chaise de
+    // sauveteur) lui barrait la seule sortie : il restait plante dans l'eau, `cap`
+    // repousse par la table a chaque pas. On prend une tuile ou il peut poser le pied.
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1]]) {
       const cx = tx + dx, cy = ty + dy;
       if (Monde.estEau(cx, cy) || !Monde.marchablePieton(cx, cy)) continue;
+      const x = cx * TT + 8, y = cy * TT + 8;
+      if (decorAutour(x, y, 20).some(function (d) {
+        return d.solide && dist2(d.x, d.y, x, y) < (d.r + e.r + 2) * (d.r + e.r + 2);
+      })) continue;
       // ⚠️ Six pixels AU-DELA du centre, comme `bordDeLEau` dans l'autre sens :
       // `cap` s'arrete a 12 px de son but, et vise au centre, il restait les
       // pieds dans l'eau (le juge l'a vu).
-      e.cap = { x: cx * TT + 8 + dx * 6, y: cy * TT + 8 + dy * 6 }; e.capT = 0; e.etat = 'cap';
+      e.cap = { x: x + dx * 6, y: y + dy * 6 }; e.capT = 0; e.etat = 'cap';
       return;
     }
   }
@@ -4836,11 +4926,15 @@ const Entites = (function () {
   function dessinerBetes(ctx, cam) {
     const cx = Math.round(cam.x), cy = Math.round(cam.y);
     for (const e of betes()) {
-      const d = DECORS[e.decor];
+      // Une bete qui BOUGE (le chat, le raton) a son peintre de mouvement : l'allure, le
+      // sens et l'image de sa foulee (`poseDeBete`). Assise, c'est son dessin d'avant.
+      const pose = poseDeBete(e);
+      const nom = pose ? pose.decor : e.decor, v = pose ? pose.cle : e.v;
+      const d = DECORS[nom];
       if (!d) continue;
       if (e.x < cx - 40 || e.x > cx + VW + 40 || e.y < cy - 40 || e.y > cy + VH + 40) continue;
-      const c = Atlas.cuirePeintre('decor|' + e.decor + '|' + e.v, d.w, d.h,
-                                   function (g, w, h) { d.peindre(g, w, h, e.v); });
+      const c = Atlas.cuirePeintre('decor|' + nom + '|' + v, d.w, d.h,
+                                   function (g, w, h) { d.peindre(g, w, h, v); });
       ctx.drawImage(c, Math.round(e.x - d.ancre[0] - cx),
                     Math.round(e.y - d.ancre[1] - (e.altitude || 0) - cy));
       B.stats.images++;
@@ -5072,7 +5166,7 @@ const Entites = (function () {
     naitreLesEnfantsDeLaPlage, majPlage, plierBagage, naitreLeLastCall, chicaner, majCamelot, prochainPerron,
     poserLeJournal, rentrerLesJournaux, fairePartirUnRaton, bordDeLEau, chateauLePlusProche, majBallonVol, lancerLeBallon,
     naitreLesEnfantsAVelo, placeDEnfantAVelo, roulableEnfant, resterSurLeTrottoir,
-    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes,
+    naitreLesBetes, majBete, majLesBetes, chezElle, placeDeBete, betes, dessinerBetes, poseDeBete, directionDeBete, sEnvoler,
     naitreLaFoire, majForain, majMascotte, placeDansLaFoire, destinationDeFoire,
     bulle, taire, dessinerBulle, dansLEau, remous, noyade, masqueDe, mousse,
     particule, sang, poussiere, decal, majParticules,

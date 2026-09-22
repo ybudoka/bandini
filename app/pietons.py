@@ -628,6 +628,13 @@ BETES: dict = {
         "pas": 0.5,
         "assis_images": (120, 420),
         "marche_images": (60, 200),
+        # ⚠️ LES BÊTES QUI SE SAUVENT POUR VRAI (Martin, 22 sept. 2026). Un départ, pas
+        # un glissement : il se RAMASSE (`sursaut_images`), puis il ACCÉLÈRE jusqu'à sa
+        # pleine vitesse (`elan_images`). Sa FOULÉE — quatre images de galop — tourne à la
+        # distance parcourue : `foulee_px` est ce qu'il couvre en un cycle entier.
+        "sursaut_images": 7,
+        "elan_images": 14,
+        "foulee_px": {"fuit": 28, "marche": 12},
     },
     # ⚠️ LA NUIT A SES HABITUDES : LE RATON LAVEUR. Il ne sort que la nuit
     # (`heures`), dans les ruelles comme le chat, et c'est lui qui sort de la
@@ -643,6 +650,11 @@ BETES: dict = {
         "assis_images": (100, 320),
         "marche_images": (60, 180),
         "heures": (0.83, 0.26),
+        # Plus lourd que le chat : il met plus de temps à se décider et à prendre son
+        # élan, et ses courtes pattes battent plus vite (une foulée plus courte).
+        "sursaut_images": 10,
+        "elan_images": 20,
+        "foulee_px": {"fuit": 20, "marche": 10},
     },
     "goeland_dort": True,
     # ⚠️ La bulle des betes est plus PETITE que celle des gens (520) : une bete
