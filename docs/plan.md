@@ -91,6 +91,7 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Des missions plus longues : plus d'étapes, plus loin, plus de dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-missions-plus-longues.md#fiche) |
+| Le dictionnaire de prononciation en phonèmes | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/le-dictionnaire-de-prononciation-en-phonemes.md#fiche) |
 | Refaire les voix que le dictionnaire de prononciation change | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | **correctif** | [fiche](jalons/refaire-les-voix-que-le-dictionnaire-de-prononciation-change.md#fiche) |
 
 ## L'ordre
