@@ -89,6 +89,7 @@ pas quand l'ordre de travail change.
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
 | M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » est entamée : les neuf types, `exige`/`ferme`/`donne` étendu, la sauvegarde et les lieux nommés sont commités — **sans juges de banc ni l'arc F** : un type n'est pas livré tant qu'il n'a pas son juge) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
+| Les montagnes et les falaises infranchissables | ⬜ **en cours** | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/les-montagnes-et-les-falaises-infranchissables.md#fiche) |
 
 ## L'ordre
 
