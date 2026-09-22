@@ -1071,6 +1071,11 @@ const Histoire = (function () {
     Hud.message(m.titre.toUpperCase(), 180);
     Son.SFX.mission();
     if (o) Hud.message(o.texte, 200);
+    // ⚠️ La réplique PENDANT du premier objectif : `avancer(true)` ne l'arme pas (il
+    // se tait sous l'intro) — elle attendait ici, et ne se disait jamais (m6, m54, e02…).
+    if (o && B.mission && (m.dialogue.pendant || []).some(function (l) { return l.objectif === B.partie.mission.etape; })) {
+      B.mission.pendant = B.partie.mission.etape;
+    }
     faireArriver(m, o);
   }
 

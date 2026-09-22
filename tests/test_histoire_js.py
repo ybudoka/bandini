@@ -1558,3 +1558,40 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
     assert [s for s in r["voix"] if s.endswith(("-9", "-10", "-11", "-12"))] == \
         ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"], f"leurs voix ne sont pas demandées : {r['voix']}"
     assert r["muet"] == {"cinema": False, "etape": 1}, f"sans réplique : la poignée de main avance à l'instant ({r['muet']})"
+
+
+def test_la_replique_pendant_du_premier_objectif_se_dit_apres_l_intro(banc, paquet):
+    """⚠️ Rouge avant (22 sept. 2026) : `avancer(true)` se tait sous l'intro et n'arme pas la
+    réplique `pendant` de l'objectif 0 ; `annoncer`, qui dit le reste quand l'intro finit, ne
+    l'armait pas non plus. « Le dépanneur d'abord » de Josée (m6) était payée et jamais dite."""
+    m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    n = 0
+    attendue = None
+    for partie in ("appel", "intro", "client", "fin", "echec", "pendant", "renvoi", "accueil"):
+        for ligne in m6["dialogue"].get(partie, []):
+            n += 1
+            if partie == "pendant" and ligne.get("objectif") == 0 and attendue is None:
+                attendue = f"{ligne['qui']}-m6-{n}"
+    assert attendue, "m6 a une réplique pendant sur son premier objectif"
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const B = L.B, j = B.joueur, attendue = '""" + attendue + """';
+        ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { B.partie.missionsFaites[s] = 1; });
+        B.partie.appels = { m2: true, m3: true, m4: true, m5: true, m6: true };
+        o.entrer(L.Monde.carte.portes.find(function (p) { return p.lieu === 'bar'; }));
+        const d = L.Histoire.donneur('josee');
+        j.x = d.x - 14; j.y = d.y; L.Entites.indexer();
+        o.viser(d);
+        o.touche('KeyE'); o.frame(1); o.relacher('KeyE'); o.frame(1);
+        const vues = [];
+        for (let k = 0; k < 4000 && vues.length < 40; k++) {
+            const c = B.cinema;
+            const s = c && c.lignes[c.i] ? c.lignes[c.i].slug : null;
+            if (s && vues[vues.length - 1] !== s) vues.push(s);
+            if (!B.cinema && !B.scene && k > 60 && vues.indexOf(attendue) >= 0) break;
+            o.frame(1);
+        }
+        return { vues: vues, mission: B.partie.mission && B.partie.mission.slug };
+    }""")
+    assert r["mission"] == "m6", r
+    assert attendue in r["vues"], f"la réplique pendant de l'objectif 0 ({attendue}) n'a jamais été dite : {r['vues']}"
