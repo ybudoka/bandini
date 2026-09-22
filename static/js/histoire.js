@@ -1051,7 +1051,7 @@ const Histoire = (function () {
     if (!m || B.partie.mission) return false;
     B.partie.mission = { slug: slug, etape: -1, t: B.t, chocs: 0 };
     B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
-                  vol: 0, boulotsDepart: 0, suit: null, protege: null };
+                  vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };
     if (!enSilence) { Hud.message(m.titre.toUpperCase(), 180); Son.SFX.mission(); }
     avancer(enSilence);
     return true;
@@ -1152,7 +1152,7 @@ const Histoire = (function () {
         }
         Entites.indexer();
       } else if (o.type === 'suivre') {
-        poserLeFuyard(m, o);
+        poserLeSuivi(m, o);
       } else if (o.type === 'pickpocket') {
         // Un archétype précis, marqué pour le jet des poches : le joueur le
         // vide par-derrière (`Combat.pickpocket`), et `majObjectif` valide
@@ -1417,6 +1417,60 @@ const Histoire = (function () {
     Hud.message('LE FUYARD FILE EN MOTO !', 150);
   }
 
+  /** Aucun char dans la voie, sur `n` tuiles devant cette place (ou jusqu'au
+      croisement, là où la voie change de sens). */
+  function voieLibreDevant(place, n) {
+    const pas = { '>': [1, 0], '<': [-1, 0], '^': [0, -1], 'v': [0, 1] }[place.sens];
+    const tx = Math.floor(place.x / TT), ty = Math.floor(place.y / TT);
+    for (let k = 1; k <= n; k++) {
+      const x = tx + pas[0] * k, y = ty + pas[1] * k;
+      if (Monde.fleche(x, y) !== place.sens) return true;
+      const cx = x * TT + 8, cy = y * TT + 8;
+      if (B.entites.some(function (e) { return e.type === 'vehicule' && dist2(e.x, e.y, cx, cy) < 20 * 20; })) return false;
+    }
+    return true;
+  }
+
+  //: Celui qu'on file (`suivre`) : combien de temps il t'attend au volant, combien la
+  //: méfiance monte avant qu'il te repère, et le temps de le retrouver quand on l'a
+  //: perdu — les cinq secondes du tracé des courses.
+  const SUIVI_ATTENTE = 45 * 60, SUIVI_MEFIANCE = 90, SUIVI_PERDU = 300;
+
+  /** Celui qu'on FILE (`suivre`) : un char qui VA quelque part, pas un fuyard.
+
+      ⚠️ Martin, 22 sept. 2026 : « impossible à faire, on se fait voir tout de suite en
+      sortant de la cantine ». `suivre` posait le fuyard de m50 (`poserLeFuyard`) : sur la
+      tuile de rue la plus proche de la porte du casse-croûte, à 44 px — sous `proche`
+      (3 tuiles, 48 px) —, et l'échec tombait à la première image dehors. Et il FUYAIT
+      (`fuite` et `poursuite` : les feux brûlés, la sortie qui s'éloigne de toi) : à
+      pied, le temps de trouver un char, il était à plus de `loin`.
+
+      Il naît donc à bonne distance, entre `proche` et `loin`, sur une voie libre devant
+      lui, moteur en marche, et attend que tu sois au volant (`attendLeJoueur`). Puis il
+      roule comme le trafic — feux, stops, vitesse de ville — vers le `lieu` de
+      l'objectif : la voie la plus proche de sa porte (`destination`, que `Vehicules`
+      suit aux croisements). */
+  function poserLeSuivi(m, o) {
+    const ici = ouEstLeJoueurEnVille();
+    const min = ((o.proche || 3) + 2) * TT;
+    const assezLoin = function (place) { return dist2(place.x, place.y, ici.x, ici.y) >= min * min; };
+    const rayon = Math.max((o.loin || 10) - 2, (o.proche || 3) + 4);
+    // ⚠️ Et la voie LIBRE devant lui : on se gare devant la porte, sur la rue — il
+    // naissait en amont de notre char, dans la même voie, et restait coincé derrière
+    // lui quinze secondes avant de le pousser.
+    const rue = tuileDeRue(ici.x, ici.y, rayon, function (place) { return assezLoin(place) && sansChar(place) && voieLibreDevant(place, 8); })
+      || tuileDeRue(ici.x, ici.y, rayon, function (place) { return assezLoin(place) && sansChar(place); })
+      || tuileDeRue(ici.x, ici.y, rayon, assezLoin);
+    if (!rue) return;
+    const v = Vehicules.creer(o.vehicule || 'auto', rue.x, rue.y, CAP_DE_FLECHE[rue.sens], { conducteur: 'trafic', etat: 'roule', sens: rue.sens, mission: m.slug, suivi: true });
+    if (!v) return;
+    v.vitesse = 0; v.attendLeJoueur = true;
+    const l = o.lieu ? lieu(o.lieu) : null;
+    v.destination = l ? Monde.routeLaPlusProche(l.x, l.y, 10) : null;
+    B.mission.suivi = v; B.mission.entites.push(v);
+    B.mission.suiviAttente = 0; B.mission.mefiance = 0; B.mission.perdu = 0;
+  }
+
   /** Ti-Guy (M4) « te suit en char » : il nait DERRIERE le char du joueur, dans
       une voie qui roule dans le meme sens que lui.
 
@@ -1623,13 +1677,35 @@ const Histoire = (function () {
         return;
       }
       case 'suivre': {
-        // Filer une cible sans être vu : trop près (`proche`) ou trop loin
-        // (`loin`), c'est raté. La cible est le `fuyard` de la mission.
-        const c = B.mission.fuyard;
+        // Filer un char sans être vu (`poserLeSuivi`). ⚠️ Avec une MARGE, comme le
+        // tracé des courses : trop près (`proche`), la méfiance monte, et redescend
+        // quand on recule ; trop loin (`loin`), on a cinq secondes pour le retrouver.
+        // L'objectif avance quand IL arrive à son `lieu` — sans lui, rien ne le
+        // faisait jamais avancer.
+        const c = B.mission.suivi, bm = B.mission;
         if (!c) { avancer(); return; }
+        if (c.etat === 'epave' || c.conducteur === j) { echouer('etoile'); return; }
+        if (c.attendLeJoueur) {
+          if (j.dansVehicule || ++bm.suiviAttente > SUIVI_ATTENTE) { c.attendLeJoueur = false; Hud.message('IL DÉMARRE — SUIS-LE !', 150); }
+          return;
+        }
+        if (c.destination && dist2(c.x, c.y, c.destination.x, c.destination.y) < (4 * TT) * (4 * TT)) {
+          c.attendLeJoueur = true; c.destination = null;   // rendu : il se range
+          avancer();
+          return;
+        }
+        // ⚠️ Trop près, c'est DANS SON RÉTROVISEUR : derrière lui ou à côté. Il
+        // démarrait devant ton char garé et te frôlait en passant — la méfiance
+        // montait, et la mission ratait sans que tu aies bougé.
         const d = Math.hypot(c.x - j.x, c.y - j.y);
-        if (o.loin && d > o.loin * TT) { echouer('chrono'); return; }
-        if (d < (o.proche || 3) * TT) { echouer('etoile'); return; }
+        const devant = (j.x - c.x) * Math.cos(c.angle) + (j.y - c.y) * Math.sin(c.angle);
+        bm.tropPres = d < (o.proche || 3) * TT && devant < d * 0.5;
+        if (bm.tropPres) {
+          if (++bm.mefiance > SUIVI_MEFIANCE) { echouer('etoile'); return; }
+        } else bm.mefiance = Math.max(0, bm.mefiance - 0.5);
+        if (o.loin && d > o.loin * TT) {
+          if (++bm.perdu > SUIVI_PERDU) { echouer('chrono'); return; }
+        } else bm.perdu = 0;
         return;
       }
       case 'proteger': {
@@ -1803,7 +1879,10 @@ const Histoire = (function () {
     if (!B.mission) return;
     for (const e of B.mission.entites) {
       if (e.type === 'vehicule') {
-        if (tout || e.fuyard || e.escorte) { if (B.joueur.dansVehicule === e) Vehicules.descendre(B.joueur, true); Entites.retirer(e); }
+        // Celui qu'on filait repart comme un autre, qu'on l'ait mené au bout ou
+        // qu'il nous ait vus : il n'est jamais escamoté sous nos yeux.
+        if (e.suivi && B.joueur.dansVehicule !== e) { e.suivi = false; e.attendLeJoueur = false; e.destination = null; e.mission = null; }
+        else if (tout || e.fuyard || e.escorte) { if (B.joueur.dansVehicule === e) Vehicules.descendre(B.joueur, true); Entites.retirer(e); }
         else { e.mission = null; }
       } else if (e.type === 'pieton') { e.cible = false; e.chef = false; if (e.vivant && e.etat !== 'assomme') { e.etat = 'fuit'; e.minuterie = 300; } }
       else Entites.retirer(e);
@@ -2413,7 +2492,7 @@ const Histoire = (function () {
       // (`ramasser` pour `suivre`, `tuer` pour `pickpocket`, `monter` pour
       // `detruire`). `payer` et `boulots` n'ont pas de pixel à pointer : on
       // parle à qui est là, ou on roule au klaxon.
-      else if (o.type === 'suivre') l = B.mission ? B.mission.fuyard : null;
+      else if (o.type === 'suivre') l = B.mission ? B.mission.suivi : null;
       else if (o.type === 'proteger') l = (o.lieu && lieu(o.lieu)) || (B.mission ? B.mission.protege : null);
       else if (o.type === 'pickpocket') l = B.mission ? B.mission.entites.find(function (e) { return e.pickpocket && e.vivant; }) : null;
       else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
@@ -2431,6 +2510,15 @@ const Histoire = (function () {
   }
 
   /** La ligne d'objectif que le HUD ecrit en haut : mission, objectif, compte. */
+  /** Où en est la filature, au bout de la ligne d'objectif : le joueur doit VOIR
+      qu'il est trop près ou qu'il le perd avant que ça rate. */
+  function filature(bm) {
+    if (bm.suivi.attendLeJoueur) return ' — PRENDS UN CHAR';
+    if (bm.perdu > 0) return ' — TU LE PERDS ! ' + Math.max(1, Math.ceil((SUIVI_PERDU - bm.perdu) / 60)) + ' S';
+    if (bm.tropPres) return ' — TROP PRÈS !';
+    return '';
+  }
+
   function ligneObjectif() {
     const m = courante();
     if (B.defi) {
@@ -2469,6 +2557,7 @@ const Histoire = (function () {
       compte = ' ' + Math.max(0, faits - B.mission.boulotsDepart) + '/' + o.n;
     }
     if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
+    if (o.type === 'suivre' && B.mission && B.mission.suivi) compte = filature(B.mission);
     return o.texte + compte;
   }
 
@@ -2501,7 +2590,7 @@ const Histoire = (function () {
     majTelephone();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
-                                    vol: 0, boulotsDepart: 0, suit: null, protege: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
+                                    vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants
       if (B.mission.pendant !== undefined && B.mission.pendant !== null) {
         const etape = B.mission.pendant;
         B.mission.pendant = null;

@@ -10,12 +10,13 @@ MISSION = {
     "recompense": 250,
     "donne": {"message": "LA PHARMACIE EST AU COMPLET"},
 
-    # ⚠️ `suivre` (même patron que f06 : `vehicule`, `loin`/`proche`) puis
+    # ⚠️ `suivre` (même patron que f06 : `vehicule`, `loin`/`proche`, et le `lieu` où
+    # il va — c'est son arrivée au dépanneur qui fait avancer l'objectif) puis
     # `pickpocket` (même patron que f07 : l'archétype dédié, jamais un archétype
     # de gang). Ginette se tient DEHORS (`porte:hopital`) : `retourner` fonctionne.
     "objectifs": [
         {"type": "suivre", "texte": "SUIS-LE SANS TE FAIRE REPÉRER",
-         "vehicule": "auto", "loin": 10, "proche": 3},
+         "vehicule": "auto", "loin": 10, "proche": 3, "lieu": "depanneur"},
 
         {"type": "pickpocket", "texte": "REPRENDS LES PILULES, PAR-DERRIÈRE", "cible": "pickpocket"},
 

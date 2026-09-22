@@ -11,8 +11,12 @@ MISSION = {
     "recompense": 300,
     "donne": {"message": "LE STOOL SE TAIT"},
 
-    # ⚠️ `suivre` (M16) : réutilise le fuyard (`poserLeFuyard`), mais en voiture et sans
-    # combat — `loin` (trop loin, on le perd) et `proche` (trop près, il te repère).
+    # ⚠️ `suivre` (M16) : le stool (`poserLeSuivi`) naît à bonne distance de la porte du
+    # casse-croûte, attend que tu sois au volant, puis roule comme le trafic jusqu'au
+    # `lieu` — c'est SON arrivée qui fait avancer l'objectif. `proche` (trop près, il te
+    # repère) et `loin` (trop loin, on le perd) se tolèrent un moment. ⚠️ Plus le fuyard
+    # de m50 : il naissait devant la porte, sous `proche`, et l'échec tombait à la sortie
+    # (Martin, 22 sept. 2026).
     # `payer` (M16) : `Missions.payer` déduit l'argent, sans UI de plus.
     # ⚠️ Pas de `retourner` après : Bouchard se tient DEDANS (`point:sergent`) — un
     # `retourner` ne se règle qu'avec un donneur en chair et en os dans la ville
@@ -20,7 +24,7 @@ MISSION = {
     # ferme la mission tout seul (comme m51 : Bouchard se dit au combiné).
     "objectifs": [
         {"type": "suivre", "texte": "SUIS-LE SANS TE FAIRE REPÉRER",
-         "vehicule": "auto", "loin": 10, "proche": 3},
+         "vehicule": "auto", "loin": 10, "proche": 3, "lieu": "poste"},
 
         {"type": "payer", "texte": "PAIE-LUI 200 $ POUR SON SILENCE", "montant": 200},
     ],

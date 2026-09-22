@@ -117,61 +117,144 @@ def test_f05_boulots_autobus_compte_jusqu_a_quatre(banc):
     assert r["fait"] is True and 300 in r["argent"], "200 $, +50 % : l'autobus est rendu sans bosse"
 
 
-def test_f06_suivre_de_pres_ou_de_loin_puis_payer(banc):
-    """`suivre` (M16) : trop loin (`loin`) échoue en `chrono`, trop près (`proche`) échoue en
-    `etoile` — mesuré ici sur la voiture du témoin. `payer` (M16) : `Missions.payer` règle le
-    silence, sans autre interaction — dès que l'argent y est, l'objectif avance."""
-    def jouer(pos):
-        return banc("function (L, o) {" + OUTILS + """
-            L.Jeu.commencer(); L.graine(6);
-            const B = L.B, j = B.joueur; j.invincible = 1e6;
-            faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01']);
-            B.partie.argent = 500;
-            const argent = paiements(L);
-            commencer(L, o, 'f06');
-            o.frame(1); fermer(L);   // le « pendant » de l'objectif 0 ouvre une boîte
-            const v = B.mission.fuyard;
-            // Figé : sinon le fuyard (`conducteur: 'trafic'`) roule tout seul et l'écart
-            // qu'on vient de poser ne dit plus rien à l'image suivante.
-            v.conducteur = null; v.vitesse = 0; v.vx = 0; v.vy = 0;
-            j.x = v.x + (POS); j.y = v.y; L.Entites.indexer();
-            o.frame(3);
-            return { etape: etape(L), raison: B.partie.mission ? null : 'rate',
-                     v: !!v, fait: !!B.partie.missionsFaites.f06 };
-        }""".replace("POS", str(pos)))
-    loin = jouer(11 * 16)     # au-delà de `loin: 10` tuiles (16 px/tuile)
-    proche = jouer(1 * 16)    # en-deçà de `proche: 3` tuiles
+#: Le parcours de Martin (22 sept. 2026) : garé devant le casse-croûte, on entre, Bouchard
+#: donne f06 DEDANS, on sort par la porte, on monte dans son char. `SUITE` joue ce qui vient
+#: après ; `c` est le stool, `mien` notre char, `fermer()` passe les répliques.
+F06 = "function (L, o) {" + OUTILS + """
+    L.Jeu.commencer(); L.graine(6);
+    const B = L.B, j = B.joueur, M = L.Monde; j.invincible = 1e6;
+    faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01']);
+    B.partie.argent = 500;
+    const argent = paiements(L);
+    const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+    const porte = (M.carte.def.portes || []).find(function (q) { return q.lieu === 'casse_croute' && q.interieur; });
+    const arret = L.Histoire.tuileDeRue(porte.x * 16 + 8, (porte.y + 1) * 16 + 10, 10);
+    const mien = L.Vehicules.creer('auto', arret.x, arret.y, CAP[arret.sens], { etat: 'stationne' });
+    j.x = porte.x * 16 + 8; j.y = (porte.y + 1) * 16 + 4; L.Entites.indexer();
+    L.Jeu.entrer(porte); o.fondu();
+    for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+    L.Histoire.commencer('f06');
+    passer(L, o);
+    const c = B.mission.suivi;
+    L.Jeu.sortir(); o.fondu();
+    for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+    function fermerTout() { fermer(L); }
+    fermerTout();
+    const dSortie = Math.round(Math.hypot(c.x - j.x, c.y - j.y));
+    // À pied, cinq secondes : il attend qu'on soit au volant, rien ne rate.
+    for (let i = 0; i < 300 && B.partie.mission; i++) { o.frame(1); fermerTout(); }
+    const aPied = { etape: etape(L), attend: c.attendLeJoueur, ligne: L.Histoire.ligneObjectif() };
+    j.x = mien.x + 10; j.y = mien.y; L.Entites.indexer();
+    L.Vehicules.monter(j, mien); L.Entites.indexer();
+    const lignes = [];
+    SUITE
+    return Object.assign({ dSortie: dSortie, aPied: aPied, etape: etape(L), fait: !!B.partie.missionsFaites.f06,
+                           argent: argent.map(function (a) { return a.montant; }),
+                           lignes: lignes.filter(function (l, k) { return l && lignes.indexOf(l) === k; }) }, fin);
+}"""
+
+#: Suivre à `ECART` pixels derrière lui, au pixel (le char collé à son pare-choc
+#: arrière, chaque image), jusqu'à ce que l'objectif avance ou que ça rate.
+DERRIERE = """
+    let i = 0;
+    for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 0; i++) {
+      if (!c.attendLeJoueur) {
+        mien.x = c.x - Math.cos(c.angle) * ECART; mien.y = c.y - Math.sin(c.angle) * ECART;
+        mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
+      }
+      o.frame(1); fermerTout();
+      if (i % 20 === 0) lignes.push(L.Histoire.ligneObjectif());
+    }
+    const poste = L.Histoire.lieu('poste');
+    const fin = { images: i, etapeFilee: etape(L), dPoste: Math.round(Math.hypot(poste.x - c.x, poste.y - c.y)) };
+    finir(L, o);
+    fin.libre = c.mission === null && B.entites.indexOf(c) >= 0;
+"""
+
+#: Rester garé : il démarre, s'éloigne, et on le perd. ⚠️ Garé à côté de sa voie, devant
+#: lui : il passe à notre hauteur en partant — c'est ce frôlement que le rétroviseur excuse.
+GARE = """
+    const hx = Math.cos(c.angle), hy = Math.sin(c.angle);
+    mien.x = c.x + hx * 40 - hy * 22; mien.y = c.y + hy * 40 + hx * 22; j.x = mien.x; j.y = mien.y;
+    L.Entites.indexer();
+    let i = 0;
+    for (; i < 3000 && B.partie.mission; i++) {
+      o.frame(1); fermerTout();
+      if (i % 20 === 0 && B.partie.mission) lignes.push(L.Histoire.ligneObjectif());
+    }
+    const fin = { images: i };
+"""
+
+
+def test_f06_on_sort_du_casse_croute_et_on_le_file_jusqu_au_poste(banc):
+    """⚠️ Martin, 22 sept. 2026 : « mission deuxième service impossible à faire, on se fait voir
+    tout de suite en sortant de la cantine ». Rouge avant : `suivre` posait le fuyard de m50 sur
+    la tuile de rue la plus proche de la porte du casse-croûte — à 44 px, sous `proche` (48) —,
+    et la mission ratait à la première image dehors. Et rien ne la faisait jamais avancer :
+    `suivre` n'avait pas de `lieu`.
+
+    Ici on la joue comme lui : garé devant, Bouchard dedans, la porte, son char. Le stool attend
+    qu'on soit au volant, roule au poste ; à six tuiles derrière lui, il y arrive, on paie, la
+    mission est faite — et son char repart dans le trafic, pas escamoté sous nos yeux."""
+    r = banc(F06.replace("SUITE", DERRIERE.replace("ECART", "96")))
+    assert r["dSortie"] >= 5 * 16, "il naît à cinq tuiles au moins de la porte : %s" % r["dSortie"]
+    assert r["aPied"]["etape"] == 0 and r["aPied"]["attend"] is True, "à pied, il attend : %s" % r["aPied"]
+    assert r["aPied"]["ligne"].endswith("PRENDS UN CHAR"), r["aPied"]
+    assert r["etapeFilee"] == 1 and r["dPoste"] < 8 * 16, "filé jusqu'au poste, l'objectif avance : %s" % r
+    assert r["fait"] is True and 300 in r["argent"], "200 $ payés, 300 $ de prime : %s" % r
+    assert r["libre"], "son char repart dans le trafic"
+
+
+def test_f06_trop_pres_il_te_voit_trop_loin_on_le_perd(banc):
+    """`suivre` se juge avec une MARGE, et le dit : collé à son pare-choc, « TROP PRÈS ! » puis
+    raté (une seconde et demie de méfiance) ; resté garé, « TU LE PERDS ! N S » puis raté
+    (cinq secondes, comme le tracé des courses). ⚠️ Garé, il démarre et passe à notre hauteur :
+    ce frôlement ne le rend pas méfiant — seul compte ce qu'il voit dans son rétroviseur."""
+    pres = banc(F06.replace("SUITE", DERRIERE.replace("ECART", "30")))
+    assert pres["fait"] is False and pres["etape"] is None, "collé : raté %s" % pres
+    assert pres["images"] < 200, "raté vite, pas au bout de la route : %s" % pres["images"]
+    assert any(ligne.endswith("TROP PRÈS !") for ligne in pres["lignes"]), pres["lignes"]
+    loin = banc(F06.replace("SUITE", GARE))
+    assert loin["fait"] is False and loin["etape"] is None, "garé : raté %s" % loin
+    # Il nous voit un instant en passant (« TROP PRÈS ! » peut clignoter), mais c'est de
+    # l'avoir PERDU que ça rate, pas de méfiance.
+    assert any("TU LE PERDS !" in ligne for ligne in loin["lignes"]), "garé, raté par méfiance : %s" % loin["lignes"]
+
+
+def test_h02_le_commis_roule_jusqu_au_depanneur(banc):
+    """h02 file comme f06 (`suivre`, même patron), mais dehors : Ginette se tient devant
+    l'hôpital. Le commis naît à bonne distance, attend qu'on soit au volant, et c'est SON
+    arrivée au dépanneur (`lieu`) qui fait passer au vol des pilules."""
     r = banc("function (L, o) {" + OUTILS + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
-        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm50', 'f01']);
-        B.partie.argent = 500;
-        const argent = paiements(L);
-        commencer(L, o, 'f06');
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'h01']);
+        const g = L.Histoire.donneur('ginette');
+        j.x = g.x - 16; j.y = g.y; L.Entites.indexer();
+        commencer(L, o, 'h02');
         o.frame(1); fermer(L);
-        const v = B.mission.fuyard;
-        v.conducteur = null; v.vitesse = 0; v.vx = 0; v.vy = 0;
-        j.x = v.x + 6 * 16; j.y = v.y; L.Entites.indexer();
-        o.frame(3);
-        const etapeSuivi = etape(L);
-        // À portée, ni trop loin ni trop près : `suivre` n'avance PAS tout seul — il n'a
-        // pas de `lieu` (arrivée au poste, hors de la portée de ce juge-ci) : on force
-        // l'étape suivante à la main, comme le ferait l'arrivée. Sans argent d'abord :
-        // `payer` ne fait rien tant que ça n'y est pas.
-        B.partie.argent = 0;
-        B.partie.mission.etape = 1;
-        o.frame(2);
-        const etapeSansArgent = etape(L);
-        B.partie.argent = 500;
-        finir(L, o);
-        return { etapeSuivi: etapeSuivi, etapeSansArgent: etapeSansArgent,
-                 fait: !!B.partie.missionsFaites.f06, argent: argent.map(function (a) { return a.montant; }) };
+        const c = B.mission.suivi;
+        const dNaissance = Math.round(Math.hypot(c.x - j.x, c.y - j.y));
+        const CAP = { '>': 0, '<': Math.PI, '^': -Math.PI / 2, 'v': Math.PI / 2 };
+        const arret = L.Histoire.tuileDeRue(j.x, j.y, 10);
+        const mien = L.Vehicules.creer('auto', arret.x, arret.y, CAP[arret.sens], { etat: 'stationne' });
+        j.x = mien.x + 10; j.y = mien.y; L.Entites.indexer();
+        L.Vehicules.monter(j, mien); L.Entites.indexer();
+        let i = 0;
+        for (; i < 12000 && B.partie.mission && B.partie.mission.etape === 0; i++) {
+            if (!c.attendLeJoueur) {
+                mien.x = c.x - Math.cos(c.angle) * 96; mien.y = c.y - Math.sin(c.angle) * 96;
+                mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
+            }
+            o.frame(1); fermer(L);
+        }
+        const dep = L.Histoire.lieu('depanneur');
+        return { dNaissance: dNaissance, images: i, etape: etape(L), ligne: L.Histoire.ligneObjectif(),
+                 dDepanneur: Math.round(Math.hypot(dep.x - c.x, dep.y - c.y)) };
     }""")
-    assert loin["v"] and loin["raison"] == "rate", "trop loin : on le perd (`echouer('chrono')`)"
-    assert proche["v"] and proche["raison"] == "rate", "trop près : il nous repère (`echouer('etoile')`)"
-    assert r["etapeSuivi"] == 0, "à bonne distance, `suivre` tient — il n'avance que par son `lieu`"
-    assert r["etapeSansArgent"] == 1, "sans les 200 $, `payer` ne fait rien"
-    assert r["fait"] is True and 300 in r["argent"], "300 $ (récompense) : `payer` ferme la mission, sans `retourner`"
+    assert r["dNaissance"] >= 5 * 16, r
+    assert r["etape"] == 1 and r["ligne"].startswith("REPRENDS"), "arrivé au dépanneur, on passe au vol : %s" % r
+    assert r["dDepanneur"] < 8 * 16, r
 
 
 def test_f07_pickpocket_vide_les_poches_par_derriere(banc):

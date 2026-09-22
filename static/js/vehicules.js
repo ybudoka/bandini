@@ -2282,6 +2282,20 @@ const Vehicules = (function () {
         let ordre;
         if (intention) {
           ordre = intention.ordre.slice();
+        } else if (v.destination) {
+          // Un char qui VA quelque part (celui qu'on file, `suivre` : le stool de
+          // f06 roule au poste) : la sortie d'ou le chemin de chaussee jusqu'au but
+          // est le plus court (`Monde.cheminRoute`, une fois par boite). ⚠️ Pas la
+          // distance a vol d'oiseau de la poursuite : la rue qui s'approche le plus
+          // du but n'est pas toujours celle qui y mene.
+          const but = v.destination, longueurs = {};
+          ['droit', 'droite', 'gauche'].forEach(function (choix) {
+            const q = PAS_FLECHE[vers[choix]];
+            const x = (tx + q[0] * 4) * TT + 8, y = (ty + q[1] * 4) * TT + 8;
+            const c = Monde.cheminRoute(x, y, but.x, but.y);
+            longueurs[choix] = c ? c.length : 1e6 + Math.sqrt(dist2(x, y, but.x, but.y));
+          });
+          ordre = ['droit', 'droite', 'gauche'].sort(function (a, b) { return longueurs[a] - longueurs[b]; });
         } else if (v.poursuite && B.joueur) {
           // En poursuite : la sortie qui rapproche le plus du joueur, d'abord.
           // En fuite (le fuyard de M2) : celle qui en eloigne le plus.
@@ -2597,6 +2611,9 @@ const Vehicules = (function () {
     // pour le prochain qui le ferait : elle reste la ou elle est, sans personne.
     if (v.def.eau) { v.conducteur = null; v.etat = 'stationne'; v.vitesse = 0; v.vx = 0; v.vy = 0; return; }
     const t = trafic();
+    // Celui qu'on file (`suivre`) attend, moteur en marche, que tu sois au volant.
+    // ⚠️ Avant `debloquer` : dix secondes a l'arret, et il le recalait sur sa voie.
+    if (v.attendLeJoueur) { rouler(v, 0); return; }
     if (debloquer(v)) return;
     if (v.deportT > 0 && --v.deportT === 0) v.deportFroid = t.depassement_images;
     if (v.deportFroid > 0) v.deportFroid--;
