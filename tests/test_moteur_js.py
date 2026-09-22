@@ -7749,6 +7749,78 @@ def test_la_pause_a_un_menu_des_options_et_un_bilan(banc):
     assert r["etat"] == "jeu" and r["menu"] is None, "Echap doit reprendre et fermer le menu"
 
 
+def test_le_mode_photo_fige_le_monde_promene_la_camera_et_capture(banc):
+    """M14, 6e vague. Ouvert depuis la PAUSE, comme la carte : le monde attend
+    (`B.t` ne bouge pas) mais l'ecran continue de se dessiner (`B.image`
+    avance) — sinon le mode photo serait un ecran noir, pas une vue qu'on
+    cadre. Le stick deplace la vue SANS toucher `B.cam` (c'est `B.photo.dx/dy`
+    qui bouge), ARME cycle les filtres, ACTION capture et telecharge, ANNULER
+    referme."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const camAvant = { x: L.B.cam.x, y: L.B.cam.y }, tAvant = L.B.t;
+        o.tape('Escape', 2);
+        L.B.menu.items.find(function (i) { return i.libelle === 'MODE PHOTO'; }).faire();
+        // ⚠️ Une COPIE : `L.B.photo` est le meme objet du debut a la fin, le
+        // stick et les filtres le mutent en place plus bas — le lire ici sans
+        // copier aurait rendu l'etat de LA FIN, pas celui de l'ouverture.
+        const ouvert = { etat: L.B.etat, photo: Object.assign({}, L.B.photo), menu: L.B.menu };
+        const imageAvant = L.B.image;
+        o.pad([1, 0]); o.frame(10); o.pad(null);
+        const apresPan = { dx: L.B.photo.dx, camInchangee: L.B.cam.x === camAvant.x && L.B.cam.y === camAvant.y,
+                            imageAvance: L.B.image > imageAvant };
+        o.tape('Tab', 2);
+        const filtreApres1 = L.B.photo.filtre;
+        o.tape('Tab', 2);
+        const filtreApres2 = L.B.photo.filtre;
+        o.tape('Enter', 2);
+        const captures = o.photo.telechargements.length, premiere = o.photo.telechargements[0];
+        // ⚠️ `tGele` AVANT de refermer : sortir du mode photo rend la main au
+        // jeu, qui recommence aussitot a faire avancer `B.t` — le lire apres
+        // les deux images de relache de `tape('Backspace', 2)` aurait mesure
+        // la reprise, pas le gel.
+        const tGele = L.B.t === tAvant;
+        o.tape('Backspace', 2);
+        return { ouvert: ouvert, apresPan: apresPan, filtreApres1: filtreApres1, filtreApres2: filtreApres2,
+                 captures: captures, premiere: premiere, tGele: tGele,
+                 etatApres: L.B.etat, photoApres: L.B.photo };
+    }""")
+    assert r["ouvert"] == {"etat": "photo", "photo": {"dx": 0, "dy": 0, "filtre": 0}, "menu": None}
+    assert r["apresPan"]["dx"] > 0, "le stick doit deplacer la vue"
+    assert r["apresPan"]["camInchangee"], "la camera DU JOUEUR ne bouge pas : seule la vue se detache"
+    assert r["apresPan"]["imageAvance"], "le monde attend, l'ecran continue de se dessiner"
+    assert r["filtreApres1"] == 1 and r["filtreApres2"] == 2, "ARME cycle les filtres un a la fois"
+    assert r["captures"] == 1
+    assert r["premiere"]["href"].startswith("data:image/png")
+    assert r["premiere"]["nom"].startswith("bandini-") and r["premiere"]["nom"].endswith(".png")
+    assert r["tGele"], "le monde attend en mode photo, comme la carte"
+    assert r["etatApres"] == "jeu" and r["photoApres"] is None, "ANNULER referme et rend la main"
+
+
+def test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville(banc):
+    """Sans borne, le stick pousserait la vue hors de la carte — de l'eau et du
+    vide sous la mer, jamais peints (voir `Monde.limitesCamera`). Pousse dans
+    UN SEUL sens largement plus longtemps qu'il n'en faut pour traverser toute
+    la ville, puis encore autant : si la vue s'arretait au bord une fois pour
+    toutes, `camX/Y` ne bougerait plus du tout entre les deux mesures — un
+    plafond qui laisserait encore deriver un peu (un bug d'arrondi, par
+    exemple) se verrait ici, pas seulement « ca n'a pas encore deborde »."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.pause();
+        L.B.menu.items.find(function (i) { return i.libelle === 'MODE PHOTO'; }).faire();
+        const lim = L.Monde.limitesCamera();
+        o.pad([1, 1]); o.frame(2500);
+        const premiere = { x: L.B.cam.x + L.B.photo.dx, y: L.B.cam.y + L.B.photo.dy };
+        o.frame(1200); o.pad(null);
+        const seconde = { x: L.B.cam.x + L.B.photo.dx, y: L.B.cam.y + L.B.photo.dy };
+        return { premiere: premiere, seconde: seconde, lim: lim };
+    }""")
+    assert r["premiere"] == r["seconde"], "colle au bord : pousser plus longtemps ne devrait plus rien deplacer"
+    assert r["premiere"]["x"] == pytest.approx(r["lim"]["xMax"], abs=0.01)
+    assert r["premiere"]["y"] == pytest.approx(r["lim"]["yMax"], abs=0.01)
+
+
 # --- M4 : la police -----------------------------------------------------------
 
 

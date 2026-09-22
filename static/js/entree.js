@@ -767,10 +767,14 @@ const Entree = (function () {
           // change de sens — abandonner, pas frapper.
           : nom === 'piratage'
             ? { attaque: 'ABANDONNER', action: '·', esquive: '·', arme: '·' }
-          // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
-          // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
-          // la bouffee qui coute du souffle.
-          : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
+            // Le mode photo (M14) : pas de FRAPPE ni d'ESQUIVE, on ne fait
+            // que regarder.
+            : nom === 'photo'
+              ? { attaque: '·', action: 'CAPTURER', esquive: '·', arme: 'FILTRE' }
+              // ⚠️ « SPRINT », plus « COURS » : courir est devenu la vitesse par
+              // defaut (la ville fait 421 tuiles), et le bouton ne sert plus qu'a
+              // la bouffee qui coute du souffle.
+              : { attaque: 'FRAPPE', action: 'ACTION', esquive: 'SPRINT', arme: 'ARME' };
   }
 
   function contexte(nom) {

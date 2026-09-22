@@ -1589,6 +1589,7 @@ const Hud = (function () {
     const items = [
       { libelle: 'REPRENDRE', faire: function () { Jeu.reprendre(); return true; } },
       { libelle: 'CARTE DE LA VILLE', faire: function () { Jeu.ouvrirCarte(); return true; } },
+      { libelle: 'MODE PHOTO', faire: function () { Jeu.ouvrirPhoto(); return true; } },
       { libelle: 'LE CARNET', faire: function () { ouvrirMenu(menuCarnet()); return false; } },
       { libelle: 'BILAN DE LA SESSION', faire: function () { ouvrirMenu(menuBilan()); return false; } },
       { libelle: 'COMMANDES', faire: function () { ouvrirMenu(menuCommandes(true)); return false; } },
@@ -2595,6 +2596,17 @@ const Hud = (function () {
     texte(ctx, aide, (VW - Atlas.largeurTexte(aide, 1)) / 2, VH - 12, '#cdc6e6', 1);
   }
 
+  /** Le bandeau du mode photo (M14) : un bord discret plutot que le fond noir
+      de la carte — c'est la ville qu'on cadre, pas une fiche par-dessus elle. */
+  function dessinerPhoto(ctx) {
+    const nom = FILTRES_PHOTO[B.photo.filtre].nom;
+    ctx.fillStyle = 'rgba(11,10,18,0.55)'; ctx.fillRect(0, VH - 13, VW, 13); B.stats.rects++;
+    texte(ctx, 'MODE PHOTO · ' + nom, 6, VH - 10, '#efe6d0', 1);
+    const aide = Entree.estTactile ? 'ACTION : CAPTURER · ARME : FILTRE'
+      : 'ACTION : CAPTURER · ARME : FILTRE · ANNULER : RETOUR';
+    texte(ctx, aide, VW - 6 - Atlas.largeurTexte(aide, 1), VH - 10, '#cdc6e6', 1);
+  }
+
   //: La transparence du calque de zonage. ⚠️ Assez pour qu'un bloc d'usine et
   //: un bloc de maisons ne se confondent plus, pas assez pour effacer les toits
   //: et les cours qu'on reconnaissait deja.
@@ -2927,6 +2939,7 @@ const Hud = (function () {
       dessinerMenu(ctx);
     }
     if (B.etat === 'carte') dessinerCarte(ctx);
+    if (B.etat === 'photo') dessinerPhoto(ctx);
     dessinerTransition(ctx);
     if (B.options.perf) {
       const s = B.stats;

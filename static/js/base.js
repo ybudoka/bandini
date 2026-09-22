@@ -8,9 +8,22 @@ const VW = 480;
 const VH = 270;
 const TT = 16;
 
+//: Les filtres du mode photo (M14) : un nom pour le bandeau, un filtre CSS
+//: applique sur la ville deja peinte — jamais sur le HUD, qui reste lisible
+//: (voir `Base.fin`, remis a 'none' juste apres). ⚠️ Un `ctx.filter` de canvas,
+//: pas une classe CSS : ca doit teindre l'image CAPTUREE (`Base.telecharger`),
+//: pas seulement ce qu'on affiche.
+const FILTRES_PHOTO = [
+  { nom: 'AUCUN', css: 'none' },
+  { nom: 'NOIR ET BLANC', css: 'grayscale(1) contrast(1.1)' },
+  { nom: 'SÉPIA', css: 'sepia(0.8) contrast(1.05) saturate(1.1)' },
+  { nom: 'CONTRASTE', css: 'contrast(1.4) saturate(1.3)' },
+  { nom: 'FROID', css: 'hue-rotate(180deg) saturate(1.2)' },
+];
+
 /** Le sac d'etat : une seule source, lue et ecrite par tous les modules. */
 const B = {
-  etat: 'chargement',   // chargement | titre | jeu | pause | prison | hopital | fin
+  etat: 'chargement',   // chargement | titre | jeu | pause | carte | photo | prison | hopital | fin
   menu: null,           // objet de menu canvas ; non nul = simulation figee
   /*: La roue d'armes OUVERTE : { armes, choix, t } — voir `Combat.majRoue`.
     ⚠️ Elle ne fige pas le monde comme `menu`, elle le RALENTIT (une image
@@ -34,6 +47,9 @@ const B = {
   defs: null,           // le paquet /api/definitions
   carte: null,
   cam: { x: 0, y: 0, secousse: 0 },
+  //: Mode photo (M14, 6e vague) : { dx, dy, filtre } — non nul = simulation
+  //: figee, camera detachee du joueur (voir Jeu.ouvrirPhoto).
+  photo: null,
   joueur: null,
   entites: [],
   particules: [],
@@ -422,8 +438,24 @@ const Base = (function () {
   /** `n` : l'echelle a tenir quelle que soit la fenetre ; null la rend a la fenetre. */
   function imposerEchelle(n) { echelleImposee = n || null; }
 
+  /** Le mode photo (M14) : l'ecran tel qu'il est LA, telecharge en PNG.
+      ⚠️ `cv.toDataURL` et le lien qui se clique tout seul n'existent que dans
+      un vrai navigateur — le banc d'essai (tests/banc.js) n'a ni l'un ni
+      l'autre, et un mode photo qui plante sous Node casserait tous les
+      juges qui passent par la pause. On se tait plutot que de lancer. */
+  function telecharger(nom) {
+    if (!cv || typeof cv.toDataURL !== 'function') return false;
+    if (typeof document === 'undefined' || typeof document.createElement !== 'function') return false;
+    const a = document.createElement('a');
+    if (typeof a.click !== 'function') return false;
+    a.href = cv.toDataURL('image/png');
+    a.download = nom;
+    a.click();
+    return true;
+  }
+
   return {
-    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas,
+    initCanvas, redimensionner, imposerEchelle, debut, fin, ecran, nouveauCanvas, telecharger,
     get SCALE() { return SCALE; },
   };
 })();

@@ -1843,6 +1843,16 @@ const Monde = (function () {
     B.cam.x = c.x; B.cam.y = c.y;
   }
 
+  /** Les bornes que `B.cam.{x,y}` ne depasse jamais — le meme calcul que
+      `cibleCamera`, exposees pour le mode photo (M14) : la camera s'y
+      detache du joueur, mais reste dans la ville. */
+  function limitesCamera() {
+    return {
+      xMin: carte.pxW < VW ? (carte.pxW - VW) / 2 : 0, xMax: carte.pxW < VW ? (carte.pxW - VW) / 2 : carte.pxW - VW,
+      yMin: carte.pxH < VH ? (carte.pxH - VH) / 2 : 0, yMax: carte.pxH < VH ? (carte.pxH - VH) / 2 : carte.pxH - VH,
+    };
+  }
+
   function majCamera() {
     const j = B.joueur;
     if (!j) return;
@@ -2041,7 +2051,7 @@ const Monde = (function () {
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, abrite,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };

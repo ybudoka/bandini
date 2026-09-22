@@ -44,7 +44,10 @@ function faireCanvas(w, h) {
   const ctx = faireC2d();
   return { tagName: 'CANVAS', width: w | 0, height: h | 0, style: {}, dataset: {}, getContext: function () { return ctx; },
            addEventListener: function () {}, setPointerCapture: function () {},
-           getBoundingClientRect: function () { return { left: 0, top: 0, width: this.width, height: this.height }; } };
+           getBoundingClientRect: function () { return { left: 0, top: 0, width: this.width, height: this.height }; },
+           // ⚠️ Le mode photo (M14) : juste assez vrai pour que `Base.telecharger`
+           // ne se taise pas sous Node (voir sa garde `typeof cv.toDataURL`).
+           toDataURL: function () { return 'data:image/png;base64,BANC'; } };
 }
 
 function faireElement(tag, id) {
@@ -125,7 +128,15 @@ function banc(corps) {
   const doc = {
     body: body, documentElement: documentElement, hidden: false, readyState: 'complete',
     getElementById: function (id) { return elements[id] || null; },
-    createElement: function (tag) { return tag === 'canvas' ? faireCanvas(0, 0) : faireElement(tag); },
+    // ⚠️ Le mode photo (M14) telecharge en cliquant un `<a>` fabrique a la
+    // volee (voir `Base.telecharger`) : sans ce `click`, le juge ne peut pas
+    // dire si l'image est vraiment partie.
+    createElement: function (tag) {
+      if (tag === 'canvas') return faireCanvas(0, 0);
+      const el = faireElement(tag);
+      if (tag === 'a') el.click = function () { telechargements.push({ href: el.href, nom: el.download }); };
+      return el;
+    },
     querySelector: function (sel) {
       const m = /data-a="([a-z]+)"/.exec(sel);
       return m ? boutonsTactiles.find(function (b) { return b.dataset.a === m[1]; }) || null : null;
@@ -153,6 +164,7 @@ function banc(corps) {
   const reseau = Object.assign({}, ENTREE.reseau || {});
   const appelsCompte = [];
   const beacons = [];
+  const telechargements = [];   // le mode photo (M14) : chaque capture cliquee
   /*: LE FAUX /api/defi (M14, 5e vague). `ENTREE.defi` : { statut, corps } ou { panne: true }.
     ⚠️ Par DEFAUT le reseau est coupe : sans defi du jour, tout ce qui existait joue comme
     avant — un test qui veut le defi du jour le demande (`defi=` de la fixture `banc`). */
@@ -504,6 +516,7 @@ function banc(corps) {
                                attente.forEach(function (r) { r(); });
                              } },
                    rechargements: function () { return rechargements; },
+                   photo: { telechargements: telechargements },
                    brancherAudio: brancherAudio,
                    // Laisse tourner les promesses en attente (chargement d'un son).
                    attendre: function () { return new Promise(function (r) { setImmediate(r); }); } };

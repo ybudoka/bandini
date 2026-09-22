@@ -521,7 +521,7 @@ const Jeu = (function () {
     if (B.menu) Hud.fermerMenu();
   }
 
-  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); }
+  function basculerPause() { if (B.etat === 'jeu') pause(); else if (B.etat === 'pause') reprendre(); else if (B.etat === 'carte') fermerCarte(); else if (B.etat === 'photo') fermerPhoto(); }
 
   /** Reveille par la suite secrete (`SEQUENCE_DEBUG`) — jamais par un bouton.
       En partie seulement, et pas par-dessus un autre menu, une scene ou la
@@ -549,6 +549,48 @@ const Jeu = (function () {
     if (B.etat !== 'carte') return;
     B.etat = 'jeu';
     Hud.etat('jeu');
+  }
+
+  //: Le PAS d'un fondu de camera par image, en pixels — assez vif pour
+  //: explorer un pate de maisons en une seconde, assez lent pour viser un
+  //: cadrage precis (voir `majPhoto`).
+  const VITESSE_PHOTO = 6;
+
+  /** Le mode photo (M14, 6e vague) : comme la carte, la simulation attend —
+      mais la camera se detache et repond au stick, et l'ecran reste celui du
+      jeu (pas un fond noir) pour qu'on cadre ce qu'on voit. Depuis le jeu ou
+      la pause, comme `ouvrirCarte`. */
+  function ouvrirPhoto() {
+    if (B.etat !== 'jeu' && B.etat !== 'pause') return;
+    Combat.fermerRoue(false);
+    if (B.menu) Hud.fermerMenu();
+    B.etat = 'photo';
+    Hud.etat('photo');
+    Entree.contexte('photo');
+    B.photo = { dx: 0, dy: 0, filtre: 0 };
+  }
+
+  function fermerPhoto() {
+    if (B.etat !== 'photo') return;
+    B.photo = null;
+    B.etat = 'jeu';
+    Hud.etat('jeu');
+    Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
+  }
+
+  /** Le stick promene la camera (bornee a la ville, voir `Monde.limitesCamera`),
+      ARME cycle les filtres, ACTION capture et telecharge, ANNULER/PAUSE/CARTE
+      referment — trois sorties parce que le pouce d'un telephone n'a que
+      quatre boutons et que ANNULER n'en est pas un (voir `Entree.etiquettes`). */
+  function majPhoto() {
+    const p = B.photo, axe = Entree.axe;
+    if (axe.mag > 0) { p.dx += axe.x * axe.mag * VITESSE_PHOTO; p.dy += axe.y * axe.mag * VITESSE_PHOTO; }
+    const lim = Monde.limitesCamera();
+    p.dx = borner(B.cam.x + p.dx, lim.xMin, lim.xMax) - B.cam.x;
+    p.dy = borner(B.cam.y + p.dy, lim.yMin, lim.yMax) - B.cam.y;
+    if (Entree.neuf('arme')) p.filtre = (p.filtre + 1) % FILTRES_PHOTO.length;
+    if (Entree.neuf('action')) Base.telecharger('bandini-' + Date.now() + '.png');
+    if (Entree.neuf('annuler') || Entree.neuf('pause') || Entree.neuf('carte')) fermerPhoto();
   }
 
   function retourTitre() {
@@ -773,6 +815,8 @@ const Jeu = (function () {
     } else if (B.etat === 'carte') {
       // La carte de la ville : N, ECHAP, ACTION ou FRAPPE la referment.
       if (Entree.neuf('carte') || Entree.neuf('pause') || Entree.neuf('action') || Entree.neuf('attaque') || Entree.neuf('annuler')) { fermerCarte(); Entree.videPresse(); return; }
+    } else if (B.etat === 'photo') {
+      majPhoto();
     } else if (B.etat === 'pause') {
       // ⚠️ Pendant qu'on reapprend un bouton de manette, ECHAP annule
       // l'apprentissage ; il ne sort pas de la pause.
@@ -796,7 +840,8 @@ const Jeu = (function () {
     ctx.fillRect(0, 0, VW, VH);
     const cam = B.cam;
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
-    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0), y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) };
+    const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
+                  y: cam.y + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dy : 0) };
     Monde.dessinerSol(ctx, vue);
     if (!B.interieur) Neige.dessinerSol(ctx, vue);     // la neige au sol, SOUS les rails et les gens
     if (!B.interieur) Monde.dessinerMouille(ctx, vue); // derriere l'arroseuse (la nuit a ses habitudes)
@@ -824,7 +869,12 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
+    // ⚠️ Le filtre du mode photo se pose sur l'ECRAN (`Base.ecran()`), pas dans
+    // `Base.fin` : il ne doit teindre QUE le dernier `drawImage` de cette
+    // fonction-la (la ville deja peinte), jamais le HUD dessine juste apres.
+    if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
     Base.fin(Monde.ambiance(), lampes);
+    if (B.photo) Base.ecran().filter = 'none';
     Hud.dessiner();
   }
 
@@ -1048,7 +1098,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */
