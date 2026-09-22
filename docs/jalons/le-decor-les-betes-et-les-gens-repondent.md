@@ -37,14 +37,11 @@ joue et ne garde aucun nombre.
 
 ## Fiche de la deuxième vague
 
-**Ce qui reste, et pourquoi la première vague ne l'a pas pris** — un geste a été écarté
-**exprès**, parce qu'il demande de toucher à un mécanisme qui n'est pas le sien :
-
-- **Se cacher dans un buisson** (186 dans la ville, `casse: 0.9`, non solides) — le geste est
-  facile ; l'**effet** ne l'est pas : `Police.voit(agent, x, y)` ne sait pas qui il regarde, il
-  faudrait qu'il reconnaisse le joueur caché et réduise sa portée. C'est de l'équilibrage de la
-  police (M11), pas un ajout de décor. À faire avec un juge de poursuite (semer un agent en se
-  cachant, et jamais à moins de N pixels).
+⚠️ **Annulé, sur demande de Martin (22 sept. 2026) : se cacher dans un buisson.** Le geste
+était facile (186 buissons dans la ville, `casse: 0.9`, non solides) ; l'effet ne l'était pas —
+`Police.voit(agent, x, y)` ne sait pas qui il regarde, il aurait fallu qu'il reconnaisse le
+joueur caché et réduise sa portée, de l'équilibrage de la police (M11), pas un ajout de décor.
+Ce couplage-là est resté sans réponse.
 
 Et ce qui n'a pas été essayé : **arracher une affiche** « Recherché » (`police.majAffiches` les repose
 sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche arrachée),
@@ -79,16 +76,16 @@ panneau.
   armé il fuit comme avant, ACTION près d'un chat confiant caresse sans rien gagner ni perdre et
   sans le faire fuir (mutation vérifiée rouge sur `utiliserSurLesBetes`), et loin d'un chat ACTION
   ne caresse rien.
-- **Restent** : le buisson, l'affiche arrachée, le parcomètre, le caddie, le panneau.
+- **Restent** : l'affiche arrachée, le parcomètre, le caddie, le panneau (le buisson est
+  annulé, voir « Fiche de la deuxième vague »).
 
 ✅ **2e vague, premier geste : manger au barbecue** (22 sept. 2026).
 
 - **Pourquoi celui-là en premier** : le seul des six restants qui n'a besoin d'aucune place
   neuve en ville — `bbq` existe déjà (`carte.DECOR_SOLIDE`, posé devant les maisons de
   banlieue, `poser_decor("bbq", x, y)`), juste jamais servi. Le chat suit juste après (une
-  confiance à écrire, voir plus haut) ; le buisson (`Police.voit` à équilibrer, M11) demande
-  de toucher un mécanisme qui n'est pas le sien, et l'affiche arrachée attend d'abord un
-  plafond — ceux-là restent.
+  confiance à écrire, voir plus haut) ; l'affiche arrachée attend d'abord un plafond — celle-là
+  reste (le buisson, lui, est annulé, voir « Fiche de la deuxième vague »).
 - **Le geste** (`interactions.BARBECUE`, `Interactions.manger`) : la même route que `boire` —
   8 PV, 15 de souffle (`Missions.soigner`/`nourrir`), une fois par jour et par barbecue
   (la même case `partie.fouilles`, préfixée `bbq:` pour ne jamais collider avec une poubelle
@@ -102,7 +99,8 @@ panneau.
   garde — `refus`, pas la porte de secours redondante dans `manger()`, la même que
   `fouiller`/`boire` portent déjà), et manger à pleine vie ne fait pas déborder la barre.
 - **Restent** (au moment de cette livraison) : le chat, le buisson, l'affiche arrachée, le
-  parcomètre, le caddie, le panneau — le chat est livré juste au-dessus, à sa suite.
+  parcomètre, le caddie, le panneau — le chat est livré juste au-dessus, à sa suite ; le
+  buisson a depuis été annulé (voir « Fiche de la deuxième vague »).
 
 ✅ **Livré** (21 sept. 2026), première vague : les six gestes, sans un son neuf.
 
