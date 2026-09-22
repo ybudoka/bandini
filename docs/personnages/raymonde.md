@@ -71,6 +71,8 @@ paie (s03). Elle se tient **dehors**, devant la porte de l'usine : là où l'on 
 ## Ce qu'elle a dit (le canon)
 
 - m6 : « Josée se porte garante de toi, ça reste à voir. »
+- m6 : les Boulonneux brassent son piquet, « montre-moi ce que Josée voit en toi » ; « le syndicat le salue »
+  (Ovila).
 - s03 : Prévost retient la paie ; le camion près de l'Hôtel Bandini ; le bar de Josée ; « Mes gars vont
   manger cette semaine » ; « moi, j'ai jamais eu peur d'un patron ».
 

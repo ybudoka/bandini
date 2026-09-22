@@ -75,6 +75,7 @@ Il reste **dehors**, devant sa porte : il surveille son parking.
 ## Ce qu'il a dit (le canon)
 
 - m6 : « Ici, rien passe sans que je le sache. »
+- m6 : le pickpocket de son parking ; « T'as des doigts de fée, l'ami! » ; « c'est le pickpocket qui paye ».
 - e01 : les drifts dans son parking, la bière ; « Pas dans mes vitrines, hein? » ; « T'es un artiste! » ;
   Lulu a un camion de poisson.
 - m51 : « Une enveloppe pour Bouchard? Tiens! Pis dis-lui que mon parking a besoin d'une patrouille. »

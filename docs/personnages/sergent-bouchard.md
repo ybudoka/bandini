@@ -75,6 +75,8 @@ quand il parle d'ailleurs (la fin de m4). Il ne se lève pas pour toi : c'est to
 
 - m4 : Marco lui a parlé de toi ; l'auto-patrouille aux papiers pas propres ; « tu dis mon nom » ; Josée,
   au bar, cherche du monde comme toi.
+- m4 (« Des missions plus longues ») : « un sergent qui dîne, ça fait un bon alibi » ; la fourrière dévisse les
+  plaques ; « Propre. » ; « Moi, je finis mon pouding chômeur. »
 - m51 : la cotisation de la Fraternité ; Thibodeau, Lulu, Ti-Paul ; « je sais combien y en a » ; les
   orphelins.
 - m97 (dit par Marco) : il a montré ton dossier à Marco, et il paie pour te voir tomber.

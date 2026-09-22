@@ -78,6 +78,7 @@ garage et **marche** jusqu'à toi avant de parler — l'effort de venir, c'est s
 - m1 : le joueur est « le neveu de Rocco » ; « Rocco est parti se faire oublier » ; le garage est à toi ;
   un char dort dans une ruelle ; la clé de la planque.
 - m4 : « C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs. »
+- m4 : « Heille, deux Cravates reniflent l'auto! Montre-leur que le garage est fermé. »
 
 ## Ce qui l'attend (M16)
 

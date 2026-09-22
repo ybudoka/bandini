@@ -86,6 +86,8 @@ pas qu'on l'entende de loin.
 - f01 : les Cravates disent que Rocco leur devait de l'argent ; « Moi, je surveille la porte. »
 - m97 : Bouchard lui a montré ton dossier ; « T'as bâti un nom sur mon dos » ; « Garde le taxi » ; « Moi, je
   disparais. La ville est à toi, cousin. »
+- m97 : « Rien de personnel, cousin. Bouchard paye comptant. » ; « Tu me couches pas? Rocco, lui, m'aurait
+  couché. » — la fin se dit devant lui, au garage.
 
 ## Ce qui l'attend (M16)
 

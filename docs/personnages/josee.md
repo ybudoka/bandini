@@ -80,8 +80,11 @@ portes de m6) : c'est elle qui décide où l'on regarde.
 
 - m5 : on l'appelle la Chef ; les Cravates tiennent trois coins ; leur chef, elle le veut couché ; le bar
   est à toi ; « Y a plus grand que le Faubourg. »
+- m5 : la caisse des Cravates, « je le reprends » ; pas au Brouillard, derrière la cantine de sa sœur ;
+  « demain le Faubourg se réveille sans cravate ».
 - m6 : Ti-Paul au dépanneur, « ma sœur Lulu » à la cantine, Raymonde au syndicat, Ovila au phare ; « Dans
   cette ville, tout commence par là » (une poignée de main).
+- m6 : « L'auto sans phares? Je sais. Elle est à moi. »
 
 ## Ce qui l'attend (M16)
 

@@ -502,7 +502,9 @@ def test_une_mission_neuve_qui_n_apporte_que_ses_donnees_se_joue(banc):
 TOUR_DE_M6 = """function (L, o) {""" + OUTILS + """
         const m = mission(L, 'm6');
         partie(L, m.slug);
-        const portes = m.objectifs.map(function (q) {
+        // ⚠️ Les `parler` seulement : entre eux, depuis « Des missions plus longues », le pickpocket de Ti-Paul, le
+        // piquet de Raymonde et le retour au Brouillard — l'intro, elle, ne nomme que les quatre contacts.
+        const portes = m.objectifs.filter(function (q) { return q.type === 'parler'; }).map(function (q) {
           const l = L.Histoire.lieuDuPersonnage(q.cible);
           return { slug: q.cible, x: l.x, y: l.y };
         });

@@ -14,7 +14,7 @@
 | Voix | **annonceur centre d'achat 1** — une voix générée, un vieil homme (partagée avec le narrateur : jamais dans le même dialogue) |
 | Bulle | « Les lumières... » |
 | Couleurs | chandail vert, cheveux gris, pantalon marine |
-| Missions | rencontré à **m6** ; l'arc P de M16 est le sien |
+| Missions | rencontré à **m6** ; appelle du phare à **m97** (le taxi de Marco) ; l'arc P de M16 est le sien |
 
 ## Son histoire
 
@@ -71,6 +71,9 @@ tutoie le joueur (« Bonne chance, le jeune »), Ovila **vouvoie** et prend son 
 - m6 : « Les lumières du port, c'est moi. D'ici, je vois tout ce qui entre. »
 - p01 : « La lampe du phare » — un bâton, un extincteur (« la dernière fois que j'ai bricolé la lampe, j'y ai
   laissé un sourcil »), le Skateux qui rôde, puis revient avec ses amis (« épargnez mes fenêtres »).
+- m6 : une auto sans phares tourne autour du Brouillard (c'est celle de Josée).
+- m97 : « Pardonnez-moi. Ici Ovila, au phare » — le taxi de votre cousin a passé le pont ; « tous feux
+  éteints ».
 
 ## Ce qui l'attend (M16)
 

@@ -10,7 +10,14 @@ MISSION = {
     "objectifs": [
         {"type": "tuer", "groupe": "cravates", "n": 6, "ou": "zone:cravates", "coins": 3, "texte": "VIDE LES TROIS COINS DES CRAVATES"},
         {"type": "tuer", "groupe": "cravates", "n": 1, "chef": True, "texte": "COUCHE LE CHEF"},
+        # « Des missions plus longues » (22 sept. 2026) : leur chef couché, leur trésorier file en char
+        # avec la caisse — une POURSUITE (le fuyard de m97 : on le rattrape, un Cravate en descend
+        # avec la caisse, on le couche, on la ramasse). Puis, la police semée, la caisse ne va pas
+        # au bar (c'est chez Josée qu'on cherchera d'abord) : à l'AUTRE BOUT de la ville, derrière la
+        # cantine des Quais — celle de sa sœur, qu'on rencontrera à m6.
+        {"type": "ramasser", "cible": "fuyard", "vehicule": "auto", "texte": "RATTRAPE LA CAISSE DES CRAVATES"},
         {"type": "semer", "etoiles": 3, "texte": "SÈME LA POLICE"},
+        {"type": "aller", "lieu": "cantine", "rayon": 4, "texte": "CACHE LA CAISSE À LA CANTINE DES QUAIS"},
         {"type": "aller", "lieu": "planque", "rayon": 4, "texte": "RENTRE À LA PLANQUE"},
     ],
     # Josée parle au Brouillard : la caméra sort voir le coin des Cravates (un
@@ -27,7 +34,8 @@ MISSION = {
             {"type": "dire"},
         ],
     },
-    # Le jeu de chaque réplique (`jeu=`) — Josee : froide, et elle pese chaque ordre.
+    # Le jeu de chaque réplique (`jeu=`) — Josee : froide, et elle pese chaque ordre ; un seul trait
+    # d'esprit, sec, quand c'est fini (le Faubourg « sans cravate »).
     "dialogue": {
         "appel": [_l("josee", "Tu me connais pas encore. Josée, on m'appelle la Chef. Viens au Brouillard, j'ai à te parler.",
                      jeu="[coldly] Tu me connais pas encore. Josée, on m'appelle la Chef. Viens au Brouillard… j'ai à te parler.")],
@@ -48,7 +56,15 @@ MISSION = {
         "echec": [_l("josee", "Les Cravates sont encore là. Reviens quand tu seras prêt.",
                      jeu="[disappointed] Les Cravates sont encore là. Reviens quand tu seras prêt.")],
         # PENDANT (2e vague des scènes) : dite quand son objectif commence.
-        "pendant": [_p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1,
-                       jeu="[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.")],
+        "pendant": [
+            _p("josee", "Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous.", 1,
+               jeu="[menacingly] Leur chef vient de sortir. Couche-le, pis le Faubourg est à nous."),
+            _p("josee", "Leur trésorier se sauve avec la caisse. Ce qu'ils ont pris au Faubourg, je le reprends.", 2,
+               jeu="[coldly] Leur trésorier se sauve avec la caisse. [firmly] Ce qu'ils ont pris au Faubourg… je le reprends."),
+            _p("josee", "Pas au Brouillard, c'est chez moi qu'ils vont chercher. Laisse la caisse derrière la cantine des Quais.", 4,
+               jeu="[matter-of-fact] Pas au Brouillard, c'est chez moi qu'ils vont chercher. [quietly] Laisse la caisse derrière la cantine des Quais."),
+            _p("josee", "Ma sœur l'a trouvée. Rentre, demain le Faubourg se réveille sans cravate.", 5,
+               jeu="[satisfied] Ma sœur l'a trouvée. [wryly] Rentre… demain le Faubourg se réveille sans cravate."),
+        ],
     },
 }

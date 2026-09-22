@@ -680,6 +680,7 @@ def test_le_sergent_ami_et_le_faubourg_libere(banc):
         const j = L.B.joueur;
         ['m1', 'm2', 'm3'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
         L.Histoire.commencer('m4');
+        L.B.mission.pendant = null;                         // l'alibi de Bouchard (pendant 0) : pas ce qu'on juge ici
         const nuit = L.Monde.estNuit();
         o.frame(2);
         const attend = L.Histoire.ligneObjectif();
@@ -709,7 +710,10 @@ def test_le_tour_du_proprietaire_pointe_chaque_contact(banc, paquet):
     la PERSONNE quand elle est dehors (Ti-Paul au dépanneur, Raymonde à
     l'usine), et sa PORTE quand elle est dedans (Lulu à la cantine, Ovila au
     phare)."""
+    import json
     m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    etapes = [i for i, o in enumerate(m6["objectifs"]) if o["type"] == "parler"]
+    assert [m6["objectifs"][i]["cible"] for i in etapes] == ["tipaul", "lulu", "raymonde", "ovila"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         ['m1', 'm2', 'm3', 'm4', 'm5'].forEach(function (s) { L.B.partie.missionsFaites[s] = 1; });
@@ -728,10 +732,10 @@ def test_le_tour_du_proprietaire_pointe_chaque_contact(banc, paquet):
                         return l && Math.hypot(g.x - l.x, g.y - l.y) < 4;
                      })() : null };
         }
-        return { tiPaul: vue(0), lulu: vue(1), raymonde: vue(2), ovila: vue(3) };
-    }""")
-    # Les quatre objectifs sont bien des `parler`, dans cet ordre.
-    assert [o["cible"] for o in m6["objectifs"]] == ["tipaul", "lulu", "raymonde", "ovila"]
+        return { tiPaul: vue(ETAPES[0]), lulu: vue(ETAPES[1]), raymonde: vue(ETAPES[2]), ovila: vue(ETAPES[3]) };
+    }""".replace("ETAPES", json.dumps(etapes)))
+    # Les quatre `parler`, dans cet ordre (entre eux, depuis « Des missions plus longues », le pickpocket de
+    # Ti-Paul, le piquet de Raymonde et le retour au Brouillard — `test_tronc_plus_long_js.py`).
     assert r["tiPaul"]["nom"] == "Ti-Paul Gagnon", "le GPS nomme Ti-Paul, pas un lieu"
     assert r["tiPaul"]["surLePersonnage"] is True, "Ti-Paul est dehors : on pointe SA personne"
     assert r["lulu"]["nom"] == "Lucienne « Lulu » Pelletier", "le GPS nomme Lulu"
@@ -1157,7 +1161,7 @@ def test_ceux_qu_on_a_couches_restent_couches_quand_la_mission_rate(banc):
     assert r["rateePrison"] is True, "en prison, la mission rate aussi"
     assert r["etapeReprise"] == 1 and r["deboutReprise"] == [True], (
         "les trois coins sont vides : la reprise va droit au chef, seul debout")
-    assert r["etapeApres"] == 2, "le chef couche, on seme la police"
+    assert r["etapeApres"] == 2, "le chef couche, on court apres la caisse des Cravates"
     assert r["oubliees"] is True, "la mission reussie, il n'y a plus d'essai a retenir"
 
 
@@ -1421,7 +1425,7 @@ def test_le_char_de_la_mission_saute_sous_le_joueur_et_la_mission_rate(banc):
         Object.assign(out.m3, sauter(taxi));
         // M4, pendant qu'on seme.
         B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
-        L.Histoire.commencer('m4'); B.cinema = null;
+        L.Histoire.commencer('m4'); B.cinema = null; B.mission.pendant = null;   // l'alibi (pendant 0) se tait
         let h = B.partie.heure;
         for (let k = 0; k < 200 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
         B.partie.heure = h;
@@ -1466,7 +1470,7 @@ def test_le_char_de_la_mission_ne_nait_pas_sous_celui_du_joueur(banc):
             L.Vehicules.monter(j, mien); L.Entites.indexer();
             if (nuit) { let h = B.partie.heure; for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1; B.partie.heure = h; }
             B.partie.missionsFaites = faites;
-            L.Histoire.commencer(slug); B.cinema = null;
+            L.Histoire.commencer(slug); B.cinema = null; B.mission.pendant = null;   // l'alibi de m4 (pendant 0) se tait
             for (let n = 0; n < 30 && !B.mission.vehicule; n++) o.frame(1);
             const v = B.mission.vehicule;
             if (!v) return { etape: B.partie.mission.etape };
@@ -1502,7 +1506,7 @@ def test_ti_guy_nait_derriere_l_auto_patrouille_et_la_suit(banc):
         L.graine(4);
         const B = L.B, j = B.joueur, M = L.Monde;
         B.partie.missionsFaites = { m1: 1, m2: 1, m3: 1 };
-        L.Histoire.commencer('m4'); B.cinema = null;
+        L.Histoire.commencer('m4'); B.cinema = null; B.mission.pendant = null;   // l'alibi (pendant 0) se tait
         let h = B.partie.heure;
         for (let k = 0; k < 400 && !M.estNuit(h); k++) h = (h + 0.005) % 1;
         B.partie.heure = h;
@@ -1545,7 +1549,9 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
     `accueil` — en personne, sa voix demandée — et l'objectif n'avance qu'une fois la boîte fermée.
 
     Et sans `accueil`, la poignée de main reste ce qu'elle était : elle avance à l'instant."""
+    import json
     m6 = next(m for m in paquet["missions"] if m["slug"] == "m6")
+    etapes = [i for i, o in enumerate(m6["objectifs"]) if o["type"] == "parler"]
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.graine(6);
@@ -1554,7 +1560,11 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
         L.Histoire.commencer('m6'); B.cinema = null; B.scene = null;
         const d0 = L.Son.Voix.demandees.length;
         const vus = [];
+        const etapes = ETAPES;
         for (const slug of ['tipaul', 'lulu', 'raymonde', 'ovila']) {
+            // ⚠️ Entre deux poignées de main, les étapes de « Des missions plus longues » (le pickpocket, le
+            // piquet) : on se pose à la suivante, elles sont jouées dans `test_tronc_plus_long_js.py`.
+            if (B.partie.mission) { B.partie.mission.etape = etapes[vus.length]; B.mission.pendant = null; B.cinema = null; }
             const avant = B.partie.mission ? B.partie.mission.etape : null;
             const rendu = L.Histoire.parler(slug);
             const c = B.cinema;
@@ -1574,18 +1584,18 @@ def test_serrer_la_main_d_un_contact_de_m6_le_fait_parler_en_personne_puis_avanc
         L.Histoire.parler('tipaul');
         const muet = { cinema: !!B.cinema, etape: B.partie.mission.etape };
         return { vus: vus, voix: voix, muet: muet };
-    }""")
+    }""".replace("ETAPES", json.dumps(etapes)))
     accueils = m6["dialogue"]["accueil"]
     assert len(r["vus"]) == 4 and len(accueils) == 4
     for i, (v, dit) in enumerate(zip(r["vus"], accueils)):
         assert v["rendu"] is True, f"contact {i} : parler() ne rend pas true"
         assert v["boite"] == {"partie": "accueil", "qui": dit["qui"], "slug": v["boite"]["slug"], "texte": dit["texte"],
                               "telephone": False, "n": 1}, f"contact {i} : {v['boite']}"
-        assert v["etape"] == i, f"contact {i} : l'objectif avance PENDANT sa réplique ({v['etape']})"
-        assert v["apres"] == i + 1 or (i == 3 and v["apres"] != 3), f"contact {i} : l'objectif n'avance pas après ({v['apres']})"
-    assert [v["boite"]["slug"] for v in r["vus"]] == ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"]
-    assert [s for s in r["voix"] if s.endswith(("-9", "-10", "-11", "-12"))] == \
-        ["tipaul-m6-9", "lulu-m6-10", "raymonde-m6-11", "ovila-m6-12"], f"leurs voix ne sont pas demandées : {r['voix']}"
+        assert v["etape"] == etapes[i], f"contact {i} : l'objectif avance PENDANT sa réplique ({v['etape']})"
+        assert v["apres"] == etapes[i] + 1, f"contact {i} : l'objectif n'avance pas après ({v['apres']})"
+    slugs = ["tipaul-m6-15", "lulu-m6-16", "raymonde-m6-17", "ovila-m6-18"]
+    assert [v["boite"]["slug"] for v in r["vus"]] == slugs
+    assert [s for s in r["voix"] if s in slugs] == slugs, f"leurs voix ne sont pas demandées : {r['voix']}"
     assert r["muet"] == {"cinema": False, "etape": 1}, f"sans réplique : la poignée de main avance à l'instant ({r['muet']})"
 
 
