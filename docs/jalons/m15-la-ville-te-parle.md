@@ -56,6 +56,8 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ## Fiche de la deuxième vague
 
+⬜ **En cours (21 sept. 2026)** : la police à la radio, le souffle du joueur, les bruits de quartier.
+
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
 par contexte — une cinquantaine de clips ElevenLabs. C'est la deuxième vague, et elle demande
