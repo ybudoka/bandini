@@ -36,6 +36,7 @@ uv run python scripts/audio_elevenlabs.py --radios      # … et les stations de
 uv run python scripts/audio_elevenlabs.py --voix        # … et les voix (passants + histoire, au caractère ; eleven_v3 ; leur jeu : `jeu=` dans chaque fichier de mission, et app/interpretation.py pour le reste)
 uv run python scripts/audio_elevenlabs.py --musiques    # … et les 15 musiques du jeu (30 crédits/seconde)
 uv run python scripts/audio_elevenlabs.py --refaire coup pas la_brume titre amb_quais ti_guy-m1-1
+uv run python scripts/audio_elevenlabs.py --dictionnaire  # le dictionnaire de prononciation (app/prononciation.pls) : le téléverser, et les voix déjà faites qu'il changerait (gratuit)
 ```
 
 La musique se génère **et** s'écrit. Les quinze morceaux sont des mp3 ElevenLabs

@@ -144,6 +144,14 @@ mots que la boîte »). Le débloquer voudrait dire soit :
 **À trancher par Martin** si le besoin se présente vraiment — ce document ne le fait
 pas de lui-même.
 
+⚠️ **Ouvert le 22 sept. 2026 par le dictionnaire de prononciation**
+([`app/prononciation.pls`](../app/prononciation.pls), recette dans
+[voix-de-l-histoire.md](voix-de-l-histoire.md#le-dictionnaire-22-sept-2026)) : c'est le
+« troisième champ », mais hors de la réplique. ElevenLabs remplace le mot de son côté,
+au moment de générer — `texte` et `jeu` restent identiques, et le juge mot à mot ne voit
+rien. Il sert pour **un mot** qui se dit mal partout (« donc » → « don », « piastres » →
+« piasses »), pas pour l'accent d'un personnage : une règle vaut pour toutes les voix.
+
 ## Sources
 
 - [Best practices — ElevenLabs](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices)

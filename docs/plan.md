@@ -90,7 +90,7 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Des missions plus longues : plus d'étapes, plus loin, plus de dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-missions-plus-longues.md#fiche) |
 | Des squelettes qu'on habille : chapeaux, casquettes, et une garde-robe presque infinie | ⬜ **en cours** (vague 1 livrée : six squelettes, les pièces, les passants et les personnages habillés ; reste la vague 2 : le cavalier, le joueur, les agents) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-squelettes-qu-on-habille-chapeaux-casquettes-et-une-garde-robe.md#fiche) · [notes](jalons/des-squelettes-qu-on-habille-chapeaux-casquettes-et-une-garde-robe.md#notes) |
-| Un dictionnaire de prononciation pour les voix | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/un-dictionnaire-de-prononciation-pour-les-voix.md#fiche) |
+| Un dictionnaire de prononciation pour les voix | ⬜ **en cours** (livrés : le lexique de 15 règles, le serveur MCP, le script, le juge ; reste : la permission `pronunciation_dictionaries_write` sur la clé ElevenLabs — Martin —, puis le premier téléversement et les 13 voix à refaire si Martin le veut) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/un-dictionnaire-de-prononciation-pour-les-voix.md#fiche) · [notes](jalons/un-dictionnaire-de-prononciation-pour-les-voix.md#notes) |
 
 ## L'ordre
 

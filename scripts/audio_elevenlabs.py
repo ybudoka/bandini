@@ -11,6 +11,7 @@ celui qu'on utilise a la main depuis l'agent.
     uv run python scripts/audio_elevenlabs.py --musiques   # les 15 musiques du jeu
     uv run python scripts/audio_elevenlabs.py --refaire coup pas
     uv run python scripts/audio_elevenlabs.py --refaire pas-2   # cette variante-la
+    uv run python scripts/audio_elevenlabs.py --dictionnaire    # le televerser, et ce qu'il change (gratuit)
 
 ⚠️ CHAQUE GENERATION COUTE DES CREDITS. Le script ne touche jamais a un
 fichier deja present (sauf `--refaire`), et ne tourne jamais en CI.
@@ -38,7 +39,7 @@ from pathlib import Path
 RACINE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RACINE))
 
-from app import audio, interpretation  # noqa: E402
+from app import audio, interpretation, prononciation  # noqa: E402
 
 LANCEUR = Path(os.environ.get(
     "BANDINI_MCP_ELEVENLABS",
@@ -314,6 +315,72 @@ def secher(client: ClientMCP, master: Path, dossier: Path) -> Path:
     return cible
 
 
+def lexique(client: ClientMCP, voix: list[dict]) -> dict | None:
+    """Le dictionnaire de prononciation a joindre a chaque voix (`app/prononciation.py`).
+
+    ⚠️ Televerse seulement si le `.pls` a change depuis la derniere fois (son
+    empreinte est dans `prononciation.json`, a committer) : chaque televersement
+    cree un NOUVEAU dictionnaire chez ElevenLabs. C'est gratuit, mais une session
+    qui en creerait un par generation en semerait des dizaines.
+
+    ⚠️ Si ElevenLabs refuse (22 sept. 2026 : la cle n'avait pas la permission
+    `pronunciation_dictionaries_write`), on ne bloque que ce qui en a besoin : des
+    voix qu'aucune regle ne touche se generent sans lui ; une voix touchee, jamais —
+    elle serait a repayer des que le dictionnaire marcherait.
+    """
+    note = prononciation.televerse()
+    if note is None:
+        reponse = client.appeler("elevenlabs_pronunciation_dictionary", {
+            "fichier": str(prononciation.FICHIER), "name": prononciation.NOM,
+            "description": f"app/prononciation.pls, empreinte {prononciation.empreinte()}",
+        })
+        if not reponse.get("ok"):
+            erreur = reponse.get("erreur") or "?"
+            remede = ("\n   Ajouter pronunciation_dictionaries_write (et _read) a la cle : "
+                      "elevenlabs.io/app/settings/api-keys" if "permission" in erreur else "")
+            touchees = [v["slug"] for v in voix if prononciation.touches(interpretation.dit(v))]
+            if touchees:
+                raise SystemExit(f"dictionnaire de prononciation refuse : {erreur}{remede}\n"
+                                 f"   Rien n'est genere : il change {' '.join(touchees)}.")
+            suite = " — aucune de ces voix n'en a besoin, on continue sans." if voix else "."
+            print(f"⚠️  Dictionnaire refuse ({erreur}){suite}{remede}")
+            return None
+        note = prononciation.noter(reponse["id"], reponse.get("version_id"))
+        print(f"Dictionnaire televerse : {reponse.get('regles')} regles, {note['id']} "
+              f"— committer app/prononciation.json")
+    return {"id": note["id"], **({"version_id": note["version_id"]} if note.get("version_id") else {})}
+
+
+def dire_le_dictionnaire() -> int:
+    """`--dictionnaire` : le televerse s'il a change, puis dit ses regles et les voix DEJA
+    generees qu'elles changeraient. Gratuit : aucune voix n'est generee."""
+    regles = prononciation.regles()
+    if prononciation.televerse() is None and LANCEUR.is_file():
+        client = ClientMCP(LANCEUR)
+        try:
+            lexique(client, [])
+        finally:
+            client.fermer()
+    note = prononciation.televerse()
+    print(f"{len(regles)} regle(s) dans {prononciation.FICHIER.relative_to(RACINE)} — "
+          + (f"televerse ({note['id']})" if note else "a televerser (le script le fait avant la premiere voix)"))
+    for mot, alias in regles:
+        print(f"  {mot:>14}  ->  {alias}")
+    touchees = [v for v in audio.toutes_les_voix()
+                if prononciation.touches(interpretation.dit(v)) and audio.chemin_voix(v).exists()]
+    if not touchees:
+        print("\nAucune voix deja generee n'est touchee.")
+        return 0
+    print(f"\n{len(touchees)} voix deja generee(s) les disent encore sans le dictionnaire "
+          f"({sum(len(interpretation.dit(v)) for v in touchees)} caracteres a repayer) :")
+    for v in touchees:
+        print(f"  {v['slug']:>34}  {', '.join(prononciation.touches(interpretation.dit(v)))}")
+    print("\nPour les refaire (PAYANT) :\n  uv run python scripts/audio_elevenlabs.py --masters "
+          "~/elevenlabs-audio/bandini-voix-v3-masters-2026-09-16 --refaire "
+          + " ".join(v["slug"] for v in touchees))
+    return 0
+
+
 def ranger_master(paye: Path, attendu: Path, seche: bool) -> None:
     """⚠️ Le master payé prend le nom que `--refinir` relit. Le serveur n'écrase jamais : un
     `--refaire` avec `--masters` écrivait `<slug>-2.mp3` (et `<slug>-2-sec.wav`) à côté de
@@ -549,6 +616,10 @@ def main() -> int:
     argus.add_argument("--secher", action="store_true",
                        help="avec --masters : passer les voix qui sonnent dans une piece par "
                             "l'isolateur ElevenLabs, puis les finir (1000 credits / minute)")
+    argus.add_argument("--dictionnaire", action="store_true",
+                       help="televerser le dictionnaire de prononciation (app/prononciation.pls) "
+                            "s'il a change, et lister les voix deja generees qu'il changerait ; "
+                            "gratuit, aucune voix n'est generee")
     argus.add_argument("--refinir", action="store_true",
                        help="avec --masters : rejouer la finition des voix depuis leurs masters, "
                             "sans rien generer (gratuit)")
@@ -557,6 +628,8 @@ def main() -> int:
     if os.environ.get("CI"):
         print("⚠️  Jamais en CI : la generation coute des credits.", file=sys.stderr)
         return 2
+    if options.dictionnaire:
+        return dire_le_dictionnaire()
 
     travail = a_faire(options.refaire)
     radios = radios_a_faire(options.refaire) if (options.radios or options.refaire) else []
@@ -601,6 +674,11 @@ def main() -> int:
     for ligne in voix:
         print(f"  {audio.nom_fichier_voix(ligne):>28}  {len(interpretation.dit(ligne)):>4} c  VOIX     "
               f"{ligne['voix'][:22]} — « {interpretation.dit(ligne)[:60]} »")
+    if voix:
+        touchees = sum(1 for v in voix if prononciation.touches(interpretation.dit(v)))
+        print(f"\nDictionnaire de prononciation : {len(prononciation.regles())} regle(s), "
+              f"{'deja televerse' if prononciation.televerse() else 'a televerser (gratuit)'} ; "
+              f"il change {touchees} de ces voix.")
     if options.essai:
         print("\n(--essai : rien n'a ete genere)")
         return 0
@@ -654,6 +732,9 @@ def main() -> int:
         # temps mort de la fin se posent APRES la generation (voir
         # `app/interpretation.py`). Et on ne l'efface plus avant : c'est
         # `finir_voix()` qui la remplace, une fois la nouvelle prete.
+        # ⚠️ Le dictionnaire suit TOUTES les voix, meme celles qu'il ne touche pas :
+        # une regle ajoutee plus tard vaudra pour elles au prochain --refaire.
+        dictionnaires = [d for d in [lexique(client, voix)] if d] if voix else []
         with (contextlib.nullcontext(options.masters) if options.masters
               else tempfile.TemporaryDirectory(prefix="bandini-masters-voix-")) as masters:
             for ligne in voix:
@@ -666,6 +747,7 @@ def main() -> int:
                     "model_id": interpretation.MODELE,
                     "language_code": "fr",
                     "stability": interpretation.STABILITE,
+                    "pronunciation_dictionaries": dictionnaires,
                     "output_format": audio.FORMAT_MASTER,
                     "output_dir": masters,
                     "nom": nom[:-4],

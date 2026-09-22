@@ -42,3 +42,41 @@ des passants. Ce que ça implique, jalon par jalon :
   marché noir après M5 au lieu de dire son repos — on ne paie pas ce qui ne s'entend pas. Le
   texte reste dans la boîte (`missions.REPOS`, source unique), et une boîte dont le mp3 manque
   s'affiche sans voix.
+
+## Le dictionnaire (22 sept. 2026)
+
+Demande de Martin : « crée moi un dictionnaire pour mon jeu » — les
+[pronunciation dictionaries](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices#pronunciation-dictionaries)
+d'ElevenLabs. Un mot que la voix dit mal se corrige **sans toucher au texte** : la boîte
+affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
+
+- **Les règles** vivent dans [`app/prononciation.pls`](../app/prononciation.pls) (format W3C
+  PLS, celui qu'ElevenLabs lit) : un `<grapheme>` (le mot tel qu'on l'écrit) et un `<alias>`
+  (l'orthographe qu'on veut entendre, en français). Un commentaire au-dessus de chaque règle
+  dit pourquoi elle est là.
+- **Ajouter une règle** : un `<lexeme>` de plus dans le `.pls`. ⚠️ Sensible à la **casse**
+  (« Astheure » en tête de phrase est une deuxième règle), un mot **entier** seulement, et
+  seule la **première** règle qui colle s'applique. Pas de `--` dans un commentaire XML (le
+  format l'interdit). `tests/test_prononciation.py` refuse un lexique illisible, une règle en
+  double, une règle morte (son mot n'est plus dans aucune réplique) et une règle qui mordrait
+  dans une balise de jeu.
+- **Des alias, pas des phonèmes** : l'alias marche avec tous les modèles et se relit sans
+  connaître l'IPA ; le phonème dépend du modèle.
+- **Le téléversement** est automatique et gratuit : `scripts/audio_elevenlabs.py` compare
+  l'empreinte du `.pls` à `app/prononciation.json` et en téléverse un neuf s'il a changé
+  (chaque téléversement crée un nouveau dictionnaire chez ElevenLabs — committer le `.json`
+  pour que les autres sessions réutilisent le même). Puis il le joint à **chaque** voix
+  générée (`pronunciation_dictionary_locators`).
+- **Rien ne se régénère tout seul** : une règle vaut pour la prochaine voix générée.
+
+```bash
+uv run python scripts/audio_elevenlabs.py --dictionnaire   # téléverser s'il a changé, et les voix déjà faites qu'il changerait (gratuit)
+```
+
+La commande finit par le `--refaire` qui referait ces voix-là (**payant**, au caractère).
+
+⚠️ **La clé ElevenLabs doit avoir la permission `pronunciation_dictionaries_write`** (et
+`_read`) — celle du 22 sept. 2026 ne l'avait pas (401). Sans elle, le script génère encore
+les voix qu'aucune règle ne touche, et refuse les autres plutôt que de les faire payer deux
+fois.
+
