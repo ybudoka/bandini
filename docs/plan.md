@@ -92,6 +92,7 @@ pas quand l'ordre de travail change.
 | Le large de l'aéroport se refuse : on vire de bord avant de voir l'île | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/le-large-de-l-aeroport-se-refuse-on-vire-de-bord-avant-de-voir-l-ile.md#fiche) |
 | Des menus à onglets, et la téléportation vers les défis | ⬜ **en cours** | 22 sept. 2026 | **P2** | ajout | [fiche](jalons/des-menus-a-onglets-et-la-teleportation-vers-les-defis.md#fiche) |
 | La police a de la tolérance : la chaleur refroidit, les renforts prennent le temps de venir | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-police-a-de-la-tolerance-la-chaleur-refroidit-les-renforts-prennent.md#fiche) |
+| L'escorte emmène le vrai donneur : un seul Bonimenteur, et il suit | ⬜ **en cours** | 22 sept. 2026 | **P1** | **correctif** | [fiche](jalons/l-escorte-emmene-le-vrai-donneur-un-seul-bonimenteur-et-il-suit.md#fiche) |
 
 ## L'ordre
 
