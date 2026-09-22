@@ -15,9 +15,20 @@ MISSION = {
     # SPECIAUX déjà dessiné) : `poserLeChar` le pose au bord de rue le plus proche,
     # comme q04. La traversée Quais → Érables fait tout le trajet — le plan
     # d'origine le disait déjà (« à travers la ville »).
+    #
+    # « Des missions plus longues » (Martin, 22 sept. 2026) : deux caisses pour le
+    # gardien du phare d'abord — le bout est de La Pointe, alors que le dépanneur est
+    # au bout ouest des Érables : la ville au grand complet, deux fois — puis une
+    # patrouille qui trouve la bière louche (`semer`, 1★). La bosse se compte depuis
+    # `monter` : tout le trajet doit rester propre pour la prime.
     "objectifs": [
         {"type": "monter", "texte": "PRENDS LE CAMION DE BIÈRE",
          "vehicule": "camion", "ou": "porte:cantine"},
+
+        {"type": "aller", "texte": "LAISSE DEUX CAISSES AU PHARE",
+         "lieu": "phare", "rayon": 6},
+
+        {"type": "semer", "texte": "UNE PATROUILLE TE SUIT, SÈME-LA", "etoiles": 1},
 
         {"type": "livrer", "texte": "LIVRE-LE AU DÉPANNEUR SANS BOSSE",
          "lieu": "depanneur", "rayon": 4, "sans_degats": True},
@@ -35,11 +46,17 @@ MISSION = {
             _l("tipaul", "Le camion est caché derrière la cantine de Lulu. Prends-le, pis roule tranquille jusqu'ici.",
                jeu="[matter-of-fact] Le camion est caché derrière la cantine de Lulu. [firmly] Prends-le, pis roule tranquille jusqu'ici."),
             _l("tipaul", "Pas une caisse de cassée! J'ai des clients qui comptent leurs bouteilles.",
-               jeu="[annoyed] Pas une caisse de cassée! [playfully] J'ai des clients qui comptent leurs bouteilles.")
+               jeu="[annoyed] Pas une caisse de cassée! [playfully] J'ai des clients qui comptent leurs bouteilles."),
+            _l("tipaul", "Pis en passant, laisse deux caisses au gardien du phare. Il paie en retard, mais il paie en poisson.",
+               jeu="[mischievously] Pis en passant, laisse deux caisses au gardien du phare. [amused] Il paie en retard, mais il paie en poisson.")
         ],
         "pendant": [
             _p("tipaul", "Douce, douce! C'est pas une course, c'est de la bière!", 0,
-               jeu="[nervously] Douce, douce! [firmly] C'est pas une course, c'est de la bière!")
+               jeu="[nervously] Douce, douce! [firmly] C'est pas une course, c'est de la bière!"),
+            _p("tipaul", "Tout au bout de La Pointe, l'ami! Deux caisses, pas trois : il compte juste quand ça l'arrange.", 1,
+               jeu="[cheerful] Tout au bout de La Pointe, l'ami! [knowingly] Deux caisses, pas trois… il compte juste quand ça l'arrange."),
+            _p("tipaul", "Une patrouille te suit? Ma bière a pas de permis, pis toi non plus. Sème-les!", 2,
+               jeu="[nervously] Une patrouille te suit? Ma bière a pas de permis, pis toi non plus. [firmly] Sème-les!")
         ],
         "fin": [
             _l("tipaul", "Pas une bosse, pas une caisse de cassée! T'es un vrai chauffeur, toi.",

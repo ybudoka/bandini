@@ -1,6 +1,6 @@
 """La mission f08 — voir app/missions/__init__.py pour le moteur."""
 
-from ._commun import _l, _p
+from ._commun import _a, _l, _p
 
 MISSION = {
     "slug": "f08",
@@ -14,7 +14,15 @@ MISSION = {
     # ⚠️ Même patron que f02 : un char dort à la fourrière (`porte:fourriere`),
     # `poserLeChar` le fait naître au bord de rue. `semer` (v1, prouvé m4/m5) fait
     # le reste — un lot gardé, ça réagit quand on en sort une berline sans papiers.
+    #
+    # « Des missions plus longues » (Martin, 22 sept. 2026) : la clé d'abord, chez Rosa —
+    # l'ancienne blonde de Rocco l'a gardée (`parler`, sa poignée de main dite) ; et,
+    # la police semée, un dernier tour par le phare de La Pointe, où Rocco allait le
+    # dimanche — le bout est de la ville, le garage est au centre nord.
     "objectifs": [
+        {"type": "parler", "texte": "VA CHERCHER LA CLÉ CHEZ ROSA",
+         "cible": "rosa"},
+
         {"type": "aller", "texte": "VA À LA FOURRIÈRE, DE NUIT",
          "lieu": "fourriere", "rayon": 6, "nuit": True},
 
@@ -22,6 +30,9 @@ MISSION = {
          "vehicule": "luxe", "ou": "porte:fourriere"},
 
         {"type": "semer", "texte": "SÈME LA POLICE", "etoiles": 1},
+
+        {"type": "aller", "texte": "UN DERNIER TOUR PAR LE PHARE",
+         "lieu": "phare", "rayon": 6},
 
         {"type": "livrer", "texte": "LIVRE-LA AU GARAGE",
          "lieu": "garage", "rayon": 4},
@@ -38,11 +49,21 @@ MISSION = {
             _l("marco", "Ils l'ont saisie après sa mort, pis personne l'a réclamée. Va la chercher, de nuit.",
                jeu="[casually] Ils l'ont saisie après sa mort, pis personne l'a réclamée. [firmly] Va la chercher… de nuit."),
             _l("marco", "Le lot est gardé, mais tes vieux réflexes vont faire l'affaire. Ramène-la au garage, je la repeins.",
-               jeu="[wryly] Le lot est gardé, mais tes vieux réflexes vont faire l'affaire. [confident] Ramène-la au garage… je la repeins.")
+               jeu="[wryly] Le lot est gardé, mais tes vieux réflexes vont faire l'affaire. [confident] Ramène-la au garage… je la repeins."),
+            _l("marco", "La clé, par exemple, c'est Rosa qui l'a. Sois poli, cousin, elle a connu Rocco mieux que nous.",
+               jeu="[casually] La clé, par exemple, c'est Rosa qui l'a. [wryly] Sois poli, cousin, elle a connu Rocco mieux que nous.")
         ],
         "pendant": [
-            _p("marco", "Ça klaxonne fort derrière toi! Perds-les avant le garage!", 2,
-               jeu="[worried] Ça klaxonne fort derrière toi! [firmly] Perds-les avant le garage!")
+            _p("marco", "Ça klaxonne fort derrière toi! Perds-les avant le garage!", 3,
+               jeu="[worried] Ça klaxonne fort derrière toi! [firmly] Perds-les avant le garage!"),
+            _p("marco", "Fais-y faire un tour par le phare, cousin. Rocco y allait le dimanche, pour rien, juste pour y aller.", 4,
+               jeu="[tenderly] Fais-y faire un tour par le phare, cousin. [somber] Rocco y allait le dimanche, pour rien… juste pour y aller.")
+        ],
+        # Rosa, à sa boutique : elle se nomme (la première fois qu'on l'entend dans cette
+        # mission), et Rocco n'a jamais son nom sans une pointe d'ironie.
+        "accueil": [
+            _a("rosa", "C'est Rosa. La clé de Rocco? Je la gardais pour la lui lancer par la tête.", 0,
+               jeu="[wryly] C'est Rosa. La clé de Rocco? [amused] Je la gardais pour la lui lancer par la tête.")
         ],
         "fin": [
             _l("marco", "Regarde-moi cette carrosserie. Rocco aurait pleuré de la voir chez nous, astheure.",

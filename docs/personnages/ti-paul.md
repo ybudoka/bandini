@@ -14,7 +14,7 @@
 | Voix | **Québec Tremblay — Confident and Measured** (partagée avec Marco : jamais dans le même dialogue) |
 | Bulle | « Salut, l'ami! » |
 | Couleurs | chandail rouge, cheveux roux, pantalon ardoise |
-| Missions | rencontré à **m6** ; donne **e01** ; une enveloppe de la tournée (**m51**) |
+| Missions | rencontré à **m6** ; donne **e01**, **e02** ; une enveloppe de la tournée (**m51**) ; la piste de la remorqueuse (**s01**) |
 
 ## Son histoire
 
@@ -78,6 +78,9 @@ Il reste **dehors**, devant sa porte : il surveille son parking.
 - e01 : les drifts dans son parking, la bière ; « Pas dans mes vitrines, hein? » ; « T'es un artiste! » ;
   Lulu a un camion de poisson.
 - m51 : « Une enveloppe pour Bouchard? Tiens! Pis dis-lui que mon parking a besoin d'une patrouille. »
+- e02 : deux caisses pour le gardien du phare, « il paie en retard, mais il paie en poisson » ; « Ma bière a
+  pas de permis, pis toi non plus. »
+- s01 : « Les gars de la remorqueuse ont pris douze caisses icitte. À crédit! »
 
 ## Ce qui l'attend (M16)
 

@@ -15,7 +15,7 @@
 | Voix | **Patrick — Clear, Natural and Polished** (partagée avec le Dr Lachance : jamais dans le même dialogue) |
 | Bulle | « Hé, le jeune! » |
 | Couleurs | uniforme olive, cheveux gris, pantalon foncé |
-| Missions | donne **s01** |
+| Missions | donne **s01** ; payé pour regarder ailleurs dans **f02** |
 
 ## Son histoire
 
@@ -61,7 +61,9 @@ dormait.
 
 ## Ce qu'il a dit (le canon)
 
-- s01 : « C'est Gilles, de la fourrière. » ; la remorqueuse, reprise en zone des Boulonneux.
+- s01 : « C'est Gilles, de la fourrière. » ; la remorqueuse, reprise en zone des Boulonneux — il envoie
+  d'abord voir Ti-Paul, « rien passe dans cette ville-là sans qu'il le sache ».
+- f02 : « C'est Gilles, le gardien. Gus m'a payé pour regarder ailleurs, fait que je regarde ailleurs. »
 
 ## Ce qui l'attend (M16)
 

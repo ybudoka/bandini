@@ -15,7 +15,7 @@
 | Voix | **Amélie — Young, Confident and Friendly** |
 | Bulle | « Une minute! » |
 | Couleurs | chandail prune, cheveux foncés, pantalon sombre |
-| Missions | donne **f03** |
+| Missions | donne **f03** ; garde la clé de la berline de Rocco (**f08**) |
 
 ## Son histoire
 
@@ -57,7 +57,9 @@ Reste derrière son comptoir ; les bras croisés en attendant, jamais impatiente
 
 ## Ce qu'elle a dit (le canon)
 
-- f03 : « Rosa, de la boutique. » ; la caisse de robes, reprise à un Chevreuil en fuite.
+- f03 : « Rosa, de la boutique. » ; la caisse de robes, reprise à un Chevreuil en fuite ; la robe de mariée
+  livrée à l'hôtel (« La mariée attend, le marié, moins. »).
+- f08 : « C'est Rosa. La clé de Rocco? Je la gardais pour la lui lancer par la tête. » (sa poignée de main).
 
 ## Ce qui l'attend (M16)
 

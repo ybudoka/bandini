@@ -23,6 +23,14 @@ MISSION = {
 
         {"type": "ramasser", "texte": "RATTRAPE-LE AVANT QU'IL DISPARAISSE",
          "cible": "fuyard", "vehicule": "auto", "sans_etoile": True},
+
+        # « Des missions plus longues » (Martin, 22 sept. 2026) : l'inspectrice t'a vu
+        # partir (`semer`, 1★), puis le carnet va dormir dans le coffre de l'Hôtel
+        # Bandini — au bout sud-ouest, loin du poste — sans une étoile en chemin.
+        {"type": "semer", "texte": "ROY T'A VU PARTIR, SÈME-LA", "etoiles": 1},
+
+        {"type": "aller", "texte": "CACHE LE CARNET À L'HÔTEL, SANS ÉTOILE",
+         "lieu": "hotel", "rayon": 4, "sans_etoile": True},
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Bouchard : bourru, jamais un mot de trop,
@@ -37,11 +45,17 @@ MISSION = {
             _l("bouchard", "Il sort du poste à la noirceur, mon carnet dans sa mallette. Rattrape-le, discret.",
                jeu="[firmly] Il sort du poste à la noirceur, mon carnet dans sa mallette. [gravely] Rattrape-le, discret."),
             _l("bouchard", "Pas d'étoile là-dedans. Un gars qui court après un char au poste, ça pose des questions.",
-               jeu="[serious] Pas d'étoile là-dedans. [matter-of-fact] Un gars qui court après un char au poste… ça pose des questions.")
+               jeu="[serious] Pas d'étoile là-dedans. [matter-of-fact] Un gars qui court après un char au poste… ça pose des questions."),
+            _l("bouchard", "Si ça tourne mal, je te connais pas. C'est comme ça qu'on devient vieux dans la police.",
+               jeu="[deadpan] Si ça tourne mal, je te connais pas. [knowingly] C'est comme ça qu'on devient vieux dans la police.")
         ],
         "pendant": [
             _p("bouchard", "Il roule vers le pont. Reste collé, mais reste invisible.", 1,
-               jeu="[gravely] Il roule vers le pont. [firmly] Reste collé, mais reste invisible.")
+               jeu="[gravely] Il roule vers le pont. [firmly] Reste collé, mais reste invisible."),
+            _p("bouchard", "Roy t'a vu partir. Sème-la, le jeune, une inspectrice ça lâche pas un os.", 2,
+               jeu="[nervously] Roy t'a vu partir. [firmly] Sème-la, le jeune… une inspectrice ça lâche pas un os."),
+            _p("bouchard", "Pas au poste, pas chez nous : le coffre de l'Hôtel Bandini. Personne fouille chez un mort.", 3,
+               jeu="[gravely] Pas au poste, pas chez nous… le coffre de l'Hôtel Bandini. [deadpan] Personne fouille chez un mort.")
         ],
         "fin": [
             _l("bouchard", "Mon carnet. Vingt ans de petites affaires, dedans. Ça reste entre nous deux.",
