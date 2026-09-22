@@ -1837,11 +1837,24 @@ const Histoire = (function () {
   const PANNEAU_LOIN_DU_DONNEUR = 3 * TT;
 
   /** Ce pixel, s'il n'est ni devant un rideau de garage (sa baie, une tuile de
-      marge), ni devant une porte, ni a portee d'un donneur ; sinon null. */
-  function placeDePanneau(p) {
+      marge), ni devant une porte, ni a portee d'un donneur ; sinon null.
+      ⚠️ `aere` : ni SUR un meuble solide, ni coince entre deux. `tuileLibre` ne
+      regarde que la carte : devant le depanneur, le panneau de la course se
+      plantait sur le banc de l'abribus, puis — l'arret parti — entre l'edicule du
+      metro et le guichet (retour de Martin, 22 sept. 2026 : « trop de choses
+      colle devant chez Ti-Paul »). */
+  function placeDePanneau(p, aere) {
     if (!p) return null;
     if (Monde.devantDUnePorte(Math.floor(p.x / TT), Math.floor(p.y / TT))) return null;
     if (Monde.portesDeGarage().some(function (pg) { return Monde.devantLaPorteDeGarage(pg, p.x, p.y, 2, 1); })) return null;
+    if (aere) {
+      const tx = Math.floor(p.x / TT), ty = Math.floor(p.y / TT);
+      const meubles = Entites.decorAutour(p.x, p.y, 2 * TT).filter(function (d) {
+        return d.solide && Math.max(Math.abs(Math.floor(d.x / TT) - tx), Math.abs(Math.floor(d.y / TT) - ty)) <= 1;
+      });
+      const dessus = meubles.some(function (d) { return Math.floor(d.x / TT) === tx && Math.floor(d.y / TT) === ty; });
+      if (dessus || meubles.length >= 2) return null;
+    }
     return Entites.pietonsAutour(p.x, p.y, PANNEAU_LOIN_DU_DONNEUR).some(function (e) { return e.personnage; }) ? null : p;
   }
 
@@ -1879,9 +1892,17 @@ const Histoire = (function () {
       // ⚠️ NI SOUS LE NEZ D'UN DONNEUR : a l'est, c'est Marco qui attend, et
       // ACTION lui parlait au lieu de lire le panneau (`interagir` sert les
       // personnages d'abord). On s'eloigne par pas ; ailleurs, rien ne change.
+      // ⚠️ Une place AEREE d'abord (ni sur un meuble, ni entre deux), un pas plus
+      // loin s'il le faut : au terminus, Ti-Guy, Mo et Fern ne s'empilent plus sur
+      // une tuile, et a eux trois ils tiennent toute la facade. Faute de mieux, la
+      // premiere place d'avant : un panneau serre vaut mieux qu'un defi absent.
       let place = null;
-      for (const loin of [3, 5, 7]) {
-        place = placeDePanneau(tuileLibre(l.x - TT * loin, l.y, 3)) || placeDePanneau(tuileLibre(l.x + TT * loin, l.y, 3));
+      for (const aere of [true, false]) {
+        for (const loin of [3, 5, 7, 9, 11]) {
+          place = placeDePanneau(tuileLibre(l.x - TT * loin, l.y, 3), aere)
+            || placeDePanneau(tuileLibre(l.x + TT * loin, l.y, 3), aere);
+          if (place) break;
+        }
         if (place) break;
       }
       if (!place) continue;

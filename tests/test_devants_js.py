@@ -168,3 +168,29 @@ def test_un_panneau_de_defi_n_est_pas_devant_une_porte(banc):
     }""")
     assert r, "au moins un panneau de defi"
     assert [p["defi"] for p in r if p["devant"]] == []
+
+
+def test_un_panneau_de_defi_ne_se_plante_ni_sur_un_meuble_ni_entre_deux(banc):
+    """Retour de Martin (22 sept. 2026, capture du dépanneur) : « trop de choses collé devant chez
+    Ti-Paul ». Le panneau de la course des Érables se plantait SUR le banc de l'abribus (`tuileLibre`
+    ne regarde que la carte) ; l'arrêt parti, il se glissait entre l'édicule du métro et le guichet.
+    Et au terminus, trois donneurs qui ne s'empilent plus lui prenaient toutes ses places : il
+    disparaissait. Chaque panneau existe, et touche au plus un meuble, jamais dessous."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        return L.B.entites.filter(function (e) { return e.type === 'panneau'; }).map(function (e) {
+          const tx = Math.floor(e.x / 16), ty = Math.floor(e.y / 16);
+          const autour = L.B.entites.filter(function (d) {
+            return d.decor && d.solide && d !== e
+              && Math.max(Math.abs(Math.floor(d.x / 16) - tx), Math.abs(Math.floor(d.y / 16) - ty)) <= 1;
+          });
+          return { defi: e.defi, tuile: [tx, ty], autour: autour.map(function (d) { return d.decor; }),
+                   dessous: autour.filter(function (d) { return Math.floor(d.x / 16) === tx && Math.floor(d.y / 16) === ty; })
+                                  .map(function (d) { return d.decor; }) };
+        });
+    }""")
+    defis = sorted(p["defi"] for p in r)
+    assert defis == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"], defis
+    for p in r:
+        assert not p["dessous"], f"le panneau {p['defi']} est planté sur {p['dessous']} en {p['tuile']}"
+        assert len(p["autour"]) <= 1, f"le panneau {p['defi']} est coincé entre {p['autour']} en {p['tuile']}"
