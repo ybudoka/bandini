@@ -517,6 +517,20 @@ const Entree = (function () {
     gaz = g; frein = f;
   }
 
+  /** Le stick de la DEUXIEME manette (`getGamepads()[1]`) — la coop locale
+      (M14, essai). `lireManette`, au-dessus, FUSIONNE toutes les manettes
+      branchees dans un seul stick : parfait a un joueur, ca ferait marcher le
+      deuxieme avec les doigts du premier. Un lecteur a part, qui ne touche a
+      rien de la manette du joueur 1. Axes 0/1 (la convention W3C du stick de
+      gauche) : pas le profil REAPPRIS du joueur 1, une deuxieme manette n'a
+      aucune raison d'avoir la meme disposition. */
+  function axeManette2() {
+    if (!nav || !nav.getGamepads) return { x: 0, y: 0, mag: 0 };
+    const p = nav.getGamepads()[1];
+    if (!p || p.connected === false) return { x: 0, y: 0, mag: 0 };
+    return zoneMorte(p.axes[AXES_DEFAUT[0]] || 0, p.axes[AXES_DEFAUT[1]] || 0);
+  }
+
   /** Zone morte RADIALE : sous `ZONE_MORTE` rien, au-dela le module repart de
       zero jusqu'a `ZONE_PLEINE` — la direction, elle, est gardee telle quelle. */
   function zoneMorte(ax, ay) {
@@ -803,7 +817,7 @@ const Entree = (function () {
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
-    lireManette, vibrer, pleinEcran,
+    lireManette, vibrer, pleinEcran, axeManette2,
     reglerManette, profilManette, profilParDefaut, apprendre, apprendEnCours,
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
     get appareil() { return appareilCourant(); },

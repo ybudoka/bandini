@@ -419,6 +419,16 @@ function banc(corps) {
                   buttons: (boutons || []).map(function (v) { return { pressed: v > 0.5, value: v }; }) });
     }
   }
+  /** La DEUXIEME manette (`getGamepads()[1]`) — la coop locale (M14, essai).
+      Ne touche jamais a la premiere (`pad`, au-dessus) : les deux vivent
+      cote a cote dans `pads`, comme deux vraies manettes branchees. */
+  function pad2(axes, boutons, fiche) {
+    if (!axes) { delete pads[1]; return; }
+    pads[1] = { connected: true, axes: axes,
+                id: (fiche && fiche.id) || 'Banc Pad 2',
+                mapping: fiche && fiche.mapping !== undefined ? fiche.mapping : 'standard',
+                buttons: (boutons || []).map(function (v) { return { pressed: v > 0.5, value: v }; }) };
+  }
   function pointeur(type, x, y, id) { croix.dispatch(type, evenement(type, { clientX: x, clientY: y, pointerId: id || 1 })); }
   function bouton(a, type) { const b = boutonsTactiles.find(function (q) { return q.dataset.a === a; }); b.dispatch(type, evenement(type, { pointerId: 2 })); }
   /** Pose un pieton a (dx, dy) du joueur, FIGE, et reindexe. Sans cela chaque
@@ -500,7 +510,7 @@ function banc(corps) {
     frame(1);
   }
 
-  const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pointeur: pointeur, bouton: bouton, singe: singe,
+  const outils = { frame: frame, touche: touche, relacher: relacher, tape: tape, pad: pad, pad2: pad2, pointeur: pointeur, bouton: bouton, singe: singe,
                    fenetreEvenement: fenetreEvenement,
                    defi: { appels: appelsDefi, repondre: function (v) { defiEntree = v; } },
                    poser: poser, viser: viser, char: char, ligneDroite: ligneDroite, boulevard: boulevard,

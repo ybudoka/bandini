@@ -170,6 +170,17 @@ const Entites = (function () {
     return j;
   }
 
+  /** Le deuxieme joueur de la coop locale (M14, essai) : un pieton a l'allure
+      du joueur (meme sprite, meme linge), pour qu'on le reconnaisse tout de
+      suite comme « l'autre toi » plutot que comme un passant de plus. */
+  function creerCoopJoueur2(x, y) {
+    const p = B.partie;
+    return creer('pieton', x, y, {
+      r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
+      etat: 'flane', dir: 0, butT: 0, cri: 0, coopJoueur2: true,
+    });
+  }
+
   function creerDecor(def) {
     grilleFixe.clear();
     (def.decor || []).forEach(function (d) {
@@ -3904,6 +3915,23 @@ const Entites = (function () {
     return (e.nage || e.agent || e.barbote || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
   }
 
+  /** La coop locale (M14, essai) : un pieton marque `coopJoueur2`, mene par le
+      stick de la DEUXIEME manette (`Entree.axeManette2`) plutot que par l'IA —
+      aucun combat, aucune interaction, aucune mission : juste marcher, pour
+      juger si la camera a deux (`Monde.majCameraCoop`) tient a 480x270. */
+  function majJoueur2(e) {
+    const v = B.defs.recherche.vitesses;
+    const axe = Entree.axeManette2();
+    if (axe.mag > 0) {
+      const vitesse = v.pieton * axe.mag;
+      e.vx = axe.x * vitesse; e.vy = axe.y * vitesse;
+      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
+      dansLaCarte(e);
+      e.anim.dist += Math.abs(e.vx) + Math.abs(e.vy);
+      regarder(e, e.vx, e.vy);
+    } else { e.vx = 0; e.vy = 0; }
+  }
+
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
@@ -3911,6 +3939,7 @@ const Entites = (function () {
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
+    if (e.coopJoueur2) { majJoueur2(e); return; }
     if (e.saigne > 0) saigner(e);
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
@@ -5025,7 +5054,7 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
-    creer, retirer, vider, creerJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
+    creer, retirer, vider, creerJoueur, creerCoopJoueur2, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,

@@ -1853,9 +1853,34 @@ const Monde = (function () {
     };
   }
 
+  //: La coop locale (essai) : sous cette distance (px) la camera reste a fond
+  //: (ZOOM_PLEIN), au-dela de ZOOM_DIST_MAX elle est a ZOOM_MIN — entre les
+  //: deux, un fondu lineaire. ⚠️ 480 × 270 n'est pas grand : ces trois
+  //: chiffres sont a revoir AU PREMIER ESSAI, pas devines a l'avance.
+  const ZOOM_MIN = 0.55, ZOOM_DIST_PLEIN = 80, ZOOM_DIST_MAX = 260;
+
+  /** La camera de la coop locale (M14, essai) : le MILIEU des deux joueurs,
+      et un zoom arriere qui grandit avec la distance qui les separe — sans
+      ca, l'un des deux sort de l'ecran des qu'ils se séparent. */
+  function majCameraCoop(j, e2) {
+    const mx = (j.x + e2.x) / 2, my = (j.y + e2.y) / 2;
+    const dist = Math.hypot(j.x - e2.x, j.y - e2.y);
+    const t = borner((dist - ZOOM_DIST_PLEIN) / (ZOOM_DIST_MAX - ZOOM_DIST_PLEIN), 0, 1);
+    const zoomCible = 1 - t * (1 - ZOOM_MIN);
+    B.cam.zoom += (zoomCible - B.cam.zoom) * 0.08;
+    const cible = cibleCamera(mx, my);
+    B.cam.x += (cible.x - B.cam.x) * 0.12;
+    B.cam.y += (cible.y - B.cam.y) * 0.12;
+    if (B.cam.secousse > 0) B.cam.secousse *= 0.9;
+  }
+
   function majCamera() {
     const j = B.joueur;
     if (!j) return;
+    if (B.coop && B.coop.entite && B.coop.entite.vivant) { majCameraCoop(j, B.coop.entite); return; }
+    // Hors coop, le zoom revient tranquillement a 1 — sans a-coup si on vient
+    // de l'arreter en pleine separation.
+    B.cam.zoom += (1 - B.cam.zoom) * 0.08;
     let avanceX = 0, avanceY = 0;
     if (j.dansVehicule) {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);

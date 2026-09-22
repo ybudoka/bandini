@@ -7821,6 +7821,74 @@ def test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville(banc):
     assert r["premiere"]["y"] == pytest.approx(r["lim"]["yMax"], abs=0.01)
 
 
+def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_deuxieme_manette(banc):
+    """M14, essai — RISQUÉ, pas promis (voir la fiche du jalon) : `Jeu.basculerCoop`
+    fait naitre un pieton `coopJoueur2`, mene par `getGamepads()[1]` (jamais celle
+    du joueur 1 : `Entree.axeManette2` lit un index a part). Rebasculer l'efface."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const avant = L.B.entites.length, joueurAvant = { x: L.B.joueur.x, y: L.B.joueur.y };
+        L.Jeu.basculerCoop();
+        const ouvert = { coop: !!L.B.coop, entites: L.B.entites.length,
+                          type: L.B.coop.entite.type, coopFlag: L.B.coop.entite.coopJoueur2,
+                          vivant: L.B.coop.entite.vivant };
+        const e2Avant = { x: L.B.coop.entite.x, y: L.B.coop.entite.y };
+        // Seule la DEUXIEME manette pousse : la premiere ne bouge pas.
+        // ⚠️ 200 images, pas 20 : trop pres du spawn, le passage d'un passant
+        // (ou le premier joueur, juste a cote) aurait pu a lui seul bouger le
+        // deuxieme joueur de quelques pixels et rendre ce juge vert sans que
+        // la manette 2 y soit pour rien.
+        o.pad2([1, 0]); o.frame(200); o.pad2(null);
+        const e2Apres = { x: L.B.coop.entite.x, y: L.B.coop.entite.y };
+        const joueurApres = { x: L.B.joueur.x, y: L.B.joueur.y };
+        const e2 = L.B.coop.entite;
+        L.Jeu.basculerCoop();
+        // ⚠️ PAS une comparaison de COMPTE : la foule nait et meurt toute
+        // seule pendant ces images, `L.B.entites.length` bouge pour
+        // d'autres raisons. La seule preuve qui compte, c'est que CETTE
+        // entite-la (`e2`, la reference gardee plus haut) a quitte le tableau.
+        const ferme = { coop: L.B.coop, encore: L.B.entites.indexOf(e2) >= 0 };
+        return { avant: avant, ouvert: ouvert, e2Avant: e2Avant, e2Apres: e2Apres,
+                 joueurAvant: joueurAvant, joueurApres: joueurApres, ferme: ferme };
+    }""")
+    assert r["ouvert"] == {"coop": True, "entites": r["avant"] + 1, "type": "pieton",
+                            "coopFlag": True, "vivant": True}
+    assert r["e2Apres"]["x"] > r["e2Avant"]["x"] + 40, "le deuxieme joueur doit marcher"
+    # ⚠️ PAS un == strict : ne du meme cote que le premier (`placePresDe`, une
+    # tuile marchable A COTE), il peut le frOler en s'ebranlant — c'est la
+    # SEPARATION des cercles (comme deux passants), jamais une entree au
+    # clavier ou a la manette 1 qui aurait fuite vers `B.joueur`.
+    derive = ((r["joueurApres"]["x"] - r["joueurAvant"]["x"]) ** 2
+              + (r["joueurApres"]["y"] - r["joueurAvant"]["y"]) ** 2) ** 0.5
+    assert derive < 45, f"le joueur 1 a derive de {derive:.1f}px : la manette 2 le bouge"
+    assert r["ferme"] == {"coop": None, "encore": False}, "rebasculer efface le deuxieme joueur"
+
+
+def test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent(banc):
+    """Le milieu des deux joueurs, et un zoom arriere qui grandit avec la
+    distance — sans lui, l'un des deux sortirait de l'ecran des qu'ils se
+    séparent (voir `Monde.majCameraCoop`)."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const zoomProche = L.B.cam.zoom;
+        // Le stick pousse le deuxieme joueur loin du premier (immobile) — a
+        // 0,45 px/image (`vitesses.pieton`), 700 images passent large au-dela
+        // du plein zoom (`ZOOM_DIST_PLEIN`, 80 px).
+        o.pad2([1, 0]); o.frame(700); o.pad2(null);
+        const zoomLoin = L.B.cam.zoom;
+        const dist = Math.hypot(L.B.joueur.x - L.B.coop.entite.x, L.B.joueur.y - L.B.coop.entite.y);
+        L.Jeu.basculerCoop();
+        o.frame(60);
+        const zoomApresFerme = L.B.cam.zoom;
+        return { zoomProche: zoomProche, zoomLoin: zoomLoin, dist: dist, zoomApresFerme: zoomApresFerme };
+    }""")
+    assert r["zoomProche"] == pytest.approx(1, abs=0.02), "cote a cote, pas de zoom arriere"
+    assert r["dist"] > 150, "le deuxieme joueur doit s'etre vraiment eloigne"
+    assert r["zoomLoin"] < 0.9, f"zoom={r['zoomLoin']} apres {r['dist']:.0f}px d'ecart : ca ne zoome pas"
+    assert r["zoomApresFerme"] == pytest.approx(1, abs=0.05), "le zoom revient a 1 apres la coop"
+
+
 # --- M4 : la police -----------------------------------------------------------
 
 

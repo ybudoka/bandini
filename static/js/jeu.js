@@ -578,6 +578,37 @@ const Jeu = (function () {
     Entree.contexte(B.joueur && B.joueur.dansVehicule ? 'vehicule' : 'pied');
   }
 
+  //: Les pas essayes pour poser le deuxieme joueur PRES du premier sans le
+  //: planter dans un mur — meme idee que `Hud.placeAupres` (l'objectif
+  //: teleporte), une tuile a la fois autour de lui.
+  const PAS_COOP = [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, 1], [1, -1], [-1, -1], [2, 0], [-2, 0]];
+
+  /** Une tuile marchable A COTE de (x, y) — jamais (x, y) lui-meme, deja pris
+      par celui qu'on longe. */
+  function placePresDe(x, y) {
+    const tx0 = Math.floor(x / TT), ty0 = Math.floor(y / TT);
+    for (const p of PAS_COOP) {
+      const tx = tx0 + p[0], ty = ty0 + p[1];
+      if (Monde.marchablePieton(tx, ty) && !Monde.estMeuble(tx, ty)) return { x: tx * TT + 8, y: ty * TT + 8 };
+    }
+    return { x: x, y: y };
+  }
+
+  /** La coop locale (M14, essai — RISQUÉ, pas promis) : bascule un deuxième
+      joueur, mené par la deuxième manette, à côté du premier. Depuis le menu
+      DEBUG seulement — aucune promesse tant que Martin n'a pas jugé, à deux
+      manettes, si la caméra tient à 480×270 (voir `Monde.majCameraCoop`). */
+  function basculerCoop() {
+    if (B.coop) {
+      Entites.retirer(B.coop.entite);
+      B.coop = null;
+      return;
+    }
+    if (!B.joueur) return;
+    const place = placePresDe(B.joueur.x, B.joueur.y);
+    B.coop = { entite: Entites.creerCoopJoueur2(place.x, place.y) };
+  }
+
   /** Le stick promene la camera (bornee a la ville, voir `Monde.limitesCamera`),
       ARME cycle les filtres, ACTION capture et telecharge, ANNULER/PAUSE/CARTE
       referment — trois sorties parce que le pouce d'un telephone n'a que
@@ -838,6 +869,13 @@ const Jeu = (function () {
     const ctx = Base.debut();
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, VW, VH);
+    // ⚠️ La coop locale (essai) : le zoom se pose ICI, sur le contexte
+    // hors-ecran (`cible.ctx`, ce que `ctx` designe entre `Base.debut()` et
+    // `Base.fin()`) — AVANT tout le reste, fond compris. `Base.fin` compose
+    // aussi ses lampes sur ce meme contexte : les laisser SOUS ce zoom (au
+    // lieu de le retirer avant de l'appeler) les fait grandir/retrecir avec
+    // le monde, au lieu de rester a une echelle qui ne correspond plus a rien.
+    if (B.cam.zoom !== 1) { ctx.translate(VW / 2, VH / 2); ctx.scale(B.cam.zoom, B.cam.zoom); ctx.translate(-VW / 2, -VH / 2); }
     const cam = B.cam;
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
@@ -1098,7 +1136,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

@@ -1801,6 +1801,10 @@ const Hud = (function () {
       { libelle: 'ÉNERGIE INFINIE', detail: triche('endurance') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('endurance', item); return false; } },
       { libelle: 'MUNITIONS INFINIES', detail: triche('munitions') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('munitions', item); return false; } },
       { libelle: 'LA POLICE NE T\'ARRÊTE PAS', detail: triche('pasArrete') ? 'OUI' : 'NON', faire: function (item) { basculerTriche('pasArrete', item); return false; } },
+      // ⚠️ Coop locale (M14, essai) : PAS une triche de `B.partie.triches` — elle
+      // n'est jamais sauvegardee (on la rallume a chaque essai) et bascule une
+      // VRAIE entite dans le monde, pas juste un drapeau.
+      { libelle: 'COOP LOCALE (ESSAI)', detail: B.coop ? 'OUI' : 'NON', faire: function (item) { Jeu.basculerCoop(); item.detail = B.coop ? 'OUI' : 'NON'; return false; } },
       { libelle: 'TÉLÉPORTER À L\'OBJECTIF', actif: !!Histoire.cible(), faire: function () { teleporterVersObjectif(); return true; } },
       { libelle: 'OBJECTIF SUIVANT', actif: !!m, faire: function () { Histoire.avancer(); return true; } },
       { libelle: 'TERMINER LA MISSION', actif: !!m, faire: function () { Histoire.reussir(); return true; } },
