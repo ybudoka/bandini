@@ -81,20 +81,39 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         j.x = garage.x; j.y = garage.y; L.Entites.indexer();
         o.frame(2);
         const etape1 = L.B.partie.mission.etape;
+        // 2. Marco, devant le garage (« des missions plus longues », 22 sept. 2026) : sa poignée
+        // de main se dit, puis l'objectif avance.
+        const marco = L.Histoire.donneur('marco');
+        j.x = marco.x - 16; j.y = marco.y; L.Entites.indexer(); o.viser(marco);
+        L.Missions.interagir(j);
+        const accueil = L.B.cinema ? L.B.cinema.lignes[0].slug : null;
+        ecouter(passes + 10);
+        const etapeMarco = L.B.partie.mission.etape;
         const v = L.B.mission.vehicule;
         const ruelle = v ? L.Monde.glyphe(Math.floor(v.x / L.TT), Math.floor(v.y / L.TT)) : null;
-        // 2. Le char de la ruelle.
+        // 3. Le char de la ruelle.
         j.x = v.x + 12; j.y = v.y; L.Entites.indexer();
         L.Vehicules.monter(j, v);
         o.frame(2);
         const etape2 = L.B.partie.mission.etape;
         const objectif2 = L.Histoire.ligneObjectif();
+        const etoiles = L.B.recherche.etoiles;
         // Au volant, Ti-Guy appelle : la replique PENDANT de l'objectif, au combine
         // (il est au terminus). On l'ecoute.
         const pendant = L.B.cinema ? { partie: L.B.cinema.partie, slug: L.B.cinema.lignes[0].slug,
                                        telephone: L.B.cinema.lignes[0].telephone } : null;
-        ecouter(20);
-        // 3. Au garage, sans bosse, a l'arret.
+        ecouter(passes + 20);
+        // 4. Le propriétaire a appelé la police : personne ne nous voit (on retire les agents,
+        // `test_tronc_plus_long_js.py` la sème au volant), l'étoile tombe toute seule.
+        let seme = 0;
+        while (L.B.recherche.etoiles > 0 && seme < 60 * 40) {
+            L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch === 'policier'; }).forEach(function (e) { L.Entites.retirer(e); });
+            o.frame(1); seme++; if (L.B.cinema) ecouter(passes + 20);
+        }
+        o.frame(2);
+        const etape3 = L.B.partie.mission.etape;
+        ecouter(passes + 20);
+        // 5. Au garage, sans bosse, a l'arret.
         v.x = garage.x; v.y = garage.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y;
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m1;
@@ -105,9 +124,10 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
         while (L.B.scene && !L.B.cinema && attente < 300) { o.frame(1); attente++; }
         const finDite = !!L.B.cinema;
         const voixFin = L.Son.Voix.demandees[L.Son.Voix.demandees.length - 1];
-        ecouter(40);
+        ecouter(passes + 40);
         return { passes: passes, commencee: commencee, etape0: etape0, objectif0: objectif0, gps0: gps0 && gps0.nom,
-                 etape1: etape1, ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
+                 etape1: etape1, accueil: accueil, etapeMarco: etapeMarco, etoiles: etoiles, seme: seme, etape3: etape3,
+                 ruelle: ruelle, etape2: etape2, objectif2: objectif2, finie: finie, finDite: finDite,
                  finJouee: finJouee, voixFin: voixFin, mission: L.B.partie.mission, pendant: pendant,
                  tiGuy: !!L.Histoire.donneur('ti_guy'),
                  missions: L.B.partie.stats.missions, paiements: paiements };
@@ -115,12 +135,14 @@ def test_la_premiere_mission_de_bout_en_bout(banc, paquet):
     assert r["commencee"] == "m1" and r["etape0"] == 0
     assert r["objectif0"] == m1["objectifs"][0]["texte"] and r["gps0"] == "Garage Rocco Bandini"
     assert r["etape1"] == 1, "arrive au garage, l'objectif suivant"
+    assert r["accueil"] == "marco-m1-12" and r["etapeMarco"] == 2, "Marco serre la main, puis on va au char"
     assert r["ruelle"] == "x", "le char de Ti-Guy dort dans une ruelle"
-    assert r["etape2"] == 2 and r["objectif2"] == m1["objectifs"][2]["texte"]
-    assert r["pendant"] == {"partie": "pendant", "slug": "ti_guy-m1-8", "telephone": True}, \
+    assert r["etape2"] == 3 and r["objectif2"] == m1["objectifs"][3]["texte"] and r["etoiles"] == 1
+    assert r["pendant"] == {"partie": "pendant", "slug": "ti_guy-m1-10", "telephone": True}, \
         "au volant, Ti-Guy appelle : sa replique pendant, au combine"
+    assert r["etape3"] == 4 and r["seme"] < 60 * 40, "hors de vue, l'étoile tombe : on livre"
     assert r["finie"] is True and r["finJouee"] is True and r["finDite"] is True, "la mission finie, Ti-Guy conclut"
-    assert r["voixFin"] == "ti_guy-m1-5", "la replique de fin demande sa voix (n continue apres l'intro)"
+    assert r["voixFin"] == "ti_guy-m1-6", "la replique de fin demande sa voix (n continue apres l'intro)"
     # ⚠️ La prime de la MISSION, retrouvee par son libelle : c'est elle qu'on
     # juge, pas la somme de tout ce qui est entre dans les poches en chemin.
     prime = [p for p in r["paiements"] if p["raison"] == m1["titre"].upper()]
@@ -251,11 +273,31 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
         j.x = caisse.x; j.y = caisse.y; L.Entites.indexer();
         o.frame(2);
         const etape2 = L.B.partie.mission.etape;
-        j.x = t.x - 14; j.y = t.y; L.Entites.indexer();
+        // « Des missions plus longues » (22 sept. 2026) : deux de plus arrivent, puis l'hôpital
+        // et Ginette, puis le kiosque (`test_tronc_plus_long_js.py` les joue à pied).
+        while (L.B.cinema) L.Histoire.suivante();
+        o.frame(2);
+        const renforts = L.B.mission.entites.filter(function (e) { return e.type === 'pieton' && e.cible && e.etape === 2; });
+        renforts.forEach(function (e) { L.Entites.assommer(e); });
+        o.frame(2);
+        const etape3 = L.B.partie.mission.etape;
+        while (L.B.cinema) L.Histoire.suivante();
+        const h = L.Histoire.lieu('hopital');
+        j.x = h.x; j.y = h.y; L.Entites.indexer();
+        o.frame(2);
+        const etape4 = L.B.partie.mission.etape;
+        L.Histoire.parler('ginette');
+        while (L.B.cinema) L.Histoire.suivante();
+        const etape5 = L.B.partie.mission.etape;
+        o.frame(2);
+        while (L.B.cinema) L.Histoire.suivante();
+        const t2 = L.Histoire.donneur('thibodeau');
+        j.x = t2.x - 14; j.y = t2.y; L.Entites.indexer();
         o.frame(2);
         const finie = !!L.B.partie.missionsFaites.m2;
         return { n: cibles.length, arrivent: arrivent, ligne0: ligne0, etape1: etape1, pendant: pendant, fuit: fuit, dMax: dMax, tombe: tombe,
-                 porteur: !!porteur, caisse: !!caisse, etape2: etape2, finie: finie,
+                 porteur: !!porteur, caisse: !!caisse, etape2: etape2, renforts: renforts.length, etape3: etape3,
+                 etape4: etape4, etape5: etape5, finie: finie,
                  batte: !!L.B.partie.armes.batte, rabais: L.B.partie.rabais };
     }""")
     assert r["n"] == 2 and r["arrivent"], "deux Cravates arrivent de loin, sur le joueur"
@@ -264,7 +306,9 @@ def test_les_cravates_de_madame_thibodeau_et_le_fuyard(banc):
     assert r["pendant"] == {"partie": "pendant", "telephone": False}, "elle crie apres le fuyard, a deux pas de toi"
     assert r["fuit"] is True and r["dMax"] > 60, "la moto s'eloigne sur les rails"
     assert r["tombe"] and r["porteur"] and r["caisse"], "la moto cassee, le Cravate tombe, la caisse aussi"
-    assert r["etape2"] == 2 and r["finie"] is True
+    assert r["etape2"] == 2 and r["renforts"] == 2 and r["etape3"] == 3, "deux de plus, puis l'hôpital"
+    assert r["etape4"] == 4 and r["etape5"] == 5, "à l'hôpital, Ginette ; puis le kiosque"
+    assert r["finie"] is True
     assert r["batte"] is True and r["rabais"] == {"kiosque": 0.75}, "le baton, et le kiosque moins cher"
 
 
@@ -1332,7 +1376,9 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         j.x = garage.x; j.y = garage.y; L.Entites.indexer();
         M.centrerCamera(j.x, j.y);
         o.frame(3);
-        const v = B.mission.vehicule;
+        // ⚠️ Il dort là dès le début de la mission, mais `B.mission.vehicule` attend le tour de
+        // son `monter` (Marco d'abord, depuis « des missions plus longues ») : on le cherche.
+        const v = B.mission.vehicule || B.entites.find(function (e) { return e.type === 'vehicule' && e.mission === 'm1'; });
         M.centrerCamera(j.x, j.y);
         const vu = L.Entites.visibleAEcran(v.x, v.y, 0);
         // La coupe de l'intro va MONTRER ce char : elle doit tomber sur sa ruelle.
@@ -1363,6 +1409,11 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
             j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
             if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
         }
+        L.Histoire.parler('marco'); while (B.cinema) L.Histoire.suivante();    // la poignée de main
+        for (const c of cotes) {
+            j.x = v.x + c[0]; j.y = v.y + c[1]; L.Entites.indexer(); o.viser(v);
+            if (L.Vehicules.vehiculeSousLaMain(j) === v) break;
+        }
         o.tape('KeyE', 2);
         const monte = j.dansVehicule === v;
         const x0 = v.x, y0 = v.y;
@@ -1377,7 +1428,7 @@ def test_le_char_de_m1_dort_loin_du_garage(banc):
         f"la coupe de l'intro filme une ruelle a {r['ecartCoupe']} px de celle ou dort le char")
     assert r["glyphe"] == "x" and r["bouts"] == ["x", "x"], f"le char deborde de sa ruelle : {r['bouts']}"
     assert r["relie"] is True, "aucune route ne ramene ce char au garage"
-    assert r["monte"] is True and r["etape"] == 2
+    assert r["monte"] is True and r["etape"] == 3, "monté : on sème l'étoile du propriétaire"
     assert r["roule"] > 30 and r["chocs"] == 0, f"le char ne sort pas de sa ruelle ({r['roule']:.0f} px, {r['chocs']} chocs)"
 
 

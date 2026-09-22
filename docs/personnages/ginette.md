@@ -14,7 +14,7 @@
 | Voix | **Jeanne Mance — Charming, Clear and Young** (partagée avec Josée : jamais dans le même dialogue) |
 | Bulle | « Toi, viens voir. » |
 | Couleurs | uniforme pâle, cheveux châtains, pantalon bleu de garde |
-| Missions | donne **h02** |
+| Missions | donne **h02** ; soigne le neveu dans **m2** (sa poignée de main : la première fois qu'on l'entend) |
 
 ## Son histoire
 
@@ -42,6 +42,7 @@ scandale.
 
 | Situation | Ce qu'elle dit | Pourquoi |
 |---|---|---|
+| À la première rencontre, en personne | « C'est Ginette, de l'hôpital. Assis-toi. » (m2) | la même phrase qu'au téléphone : elle se nomme comme elle remplit une fiche |
 | Au téléphone | « C'est Ginette, de l'hôpital. » (h02) | elle se nomme et dit d'où elle appelle, une fois |
 | Déjà connue, en personne | « Toi, viens voir. » (sa bulle) | jamais deux fois son nom dans la même mission |
 | Quand ça tourne mal | « Perdues... Il va continuer à vider mes tablettes. » | le constat, sans s'attarder |
@@ -60,7 +61,8 @@ Reste à son comptoir, droite, les bras croisés en attendant une réponse.
 
 ## Ce qu'elle a dit (le canon)
 
-- h01 : sa première réplique, en personne, quand on lui rend les clés de l'ambulance : « Moi, c'est Ginette,
+- m2 : « Bon, t'en mourras pas, arrête de te battre avec ta face. »
+- h01 : en personne, quand on lui rend les clés de l'ambulance : « Moi, c'est Ginette,
   l'infirmière-chef. » — elle se nomme là ; h02 la renomme au combiné (une fois par mission).
 - h02 : « C'est Ginette, de l'hôpital. » ; les pilules volées, reprises au commis véreux.
 

@@ -308,10 +308,23 @@ def test_la_premiere_mission_se_joue_en_scenes_de_l_intro_a_la_fin(page, serveur
     page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), j = L.B.joueur;
                             j.x = g.x; j.y = g.y; L.Entites.indexer(); }""")
     page.wait_for_function("window.BANDINI.B.partie.mission.etape === 1", timeout=20000)
+    # Marco, devant le garage : sa poignée de main (« des missions plus longues », 22 sept. 2026).
+    page.evaluate("() => window.BANDINI.Histoire.parler('marco')")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 2", timeout=60000)
     page.evaluate("""() => { const L = window.BANDINI, v = L.B.mission.vehicule, j = L.B.joueur;
                             j.x = v.x + 12; j.y = v.y; L.Entites.indexer(); L.Vehicules.monter(j, v); }""")
-    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 2", timeout=20000)
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 3", timeout=20000)
     page.wait_for_function("!window.BANDINI.B.cinema", timeout=60000)      # Ti-Guy au combine
+    # Le propriétaire a appelé la police : personne ne nous voit (les agents sont retirés à mesure
+    # qu'ils naissent), l'étoile tombe toute seule en quinze secondes.
+    page.evaluate("""() => { const L = window.BANDINI;
+        window.__sansAgents = setInterval(function () {
+            L.B.entites.filter(function (e) { return e.type === 'pieton' && e.arch === 'policier'; })
+              .forEach(function (e) { L.Entites.retirer(e); });
+        }, 100); }""")
+    page.wait_for_function("window.BANDINI.B.partie.mission.etape === 4", timeout=60000)
+    page.evaluate("() => clearInterval(window.__sansAgents)")
+    page.wait_for_function("!window.BANDINI.B.cinema", timeout=60000)      # « Beau char! »
     page.evaluate("""() => { const L = window.BANDINI, g = L.Histoire.lieu('garage'), v = L.B.mission.vehicule, j = L.B.joueur;
                             v.x = g.x; v.y = g.y; v.vitesse = 0; v.vx = 0; v.vy = 0; j.x = v.x; j.y = v.y; }""")
     page.wait_for_function("!!window.BANDINI.B.partie.missionsFaites.m1", timeout=20000)

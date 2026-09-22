@@ -14,7 +14,7 @@
 | Voix | **Québec Tremblay — Confident and Measured** (partagée avec Ti-Paul : jamais dans le même dialogue) |
 | Bulle | « Hé! Viens ici! » |
 | Couleurs | chandail jaune, cheveux noirs, peau hâlée |
-| Missions | donne **m3**, **m50**, **f01**, **m97** — le donneur le plus présent du jeu |
+| Missions | donne **m3**, **m50**, **f01**, **m97** — le donneur le plus présent du jeu ; serre la main du neveu dans **m1** |
 
 ## Son histoire
 
@@ -52,6 +52,7 @@ laissant le taxi (m97). Le Cousin n'a jamais eu sa part ; il part avant de la r�
 
 | Situation | Ce qu'il dit | Pourquoi |
 |---|---|---|
+| À la première rencontre, en personne | « Le neveu. Moi, c'est Marco, le Cousin. » (m1, la poignée de main) | « le neveu » dit sec, puis son surnom : il est de la famille, lui aussi, et depuis plus longtemps |
 | Au premier appel | « Salut, c'est Marco, le Cousin. » (m3) | il donne son surnom : il veut qu'on sache qu'il est de la famille |
 | Au téléphone, d'habitude | « Cousin, c'est Marco. » (f01) | « cousin » **d'abord**, puis le nom : la complicité avant l'affaire |
 | Pour une affaire louche | « C'est Marco. Parle pas trop fort, cousin… » (m50) | la contrebande se dit à voix basse, même au combiné |
@@ -80,7 +81,9 @@ pas qu'on l'entende de loin.
 
 ## Ce qu'il a dit (le canon)
 
-- m3 : le taxi dort au garage ; « Y a du monde en ville qui pose des questions sur toi » ; le sergent Bouchard
+- m1 : « Le neveu. Moi, c'est Marco, le Cousin. Le char dort dans la ruelle, les clés dessus. »
+- m3 : le taxi dort au garage ; « touche pas au coffre, y a rien dedans, pis c'est à moi » — la boîte « qui existe
+  pas » va au phare de La Pointe ; « roule comme un chauffeur, pas comme un neveu » ; « Y a du monde en ville qui pose des questions sur toi » ; le sergent Bouchard
   mange au casse-croûte tous les midis, « un ami de la famille ».
 - m50 : un colis sur le cargo, personne ne doit savoir que ça vient de lui.
 - f01 : les Cravates disent que Rocco leur devait de l'argent ; « Moi, je surveille la porte. »

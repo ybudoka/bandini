@@ -76,7 +76,8 @@ garage et **marche** jusqu'à toi avant de parler — l'effort de venir, c'est s
 ## Ce qu'il a dit (le canon)
 
 - m1 : le joueur est « le neveu de Rocco » ; « Rocco est parti se faire oublier » ; le garage est à toi ;
-  un char dort dans une ruelle ; la clé de la planque.
+  un char dort dans une ruelle, « personne va s'en ennuyer » — et le propriétaire appelle les bœufs (il
+  promet trop tôt, c'est son défaut) ; la clé de la planque ; « on y enverra une carte de Noël ».
 - m4 : « C'est Ti-Guy, j'suis juste derrière toi. Roule, j'm'occupe des bœufs. »
 - m4 : « Heille, deux Cravates reniflent l'auto! Montre-leur que le garage est fermé. »
 

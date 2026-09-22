@@ -7154,7 +7154,9 @@ def test_le_taxi_de_marco_ne_se_vend_pas(banc, paquet):
 
         // La livraison, la vraie : on ramene le taxi au garage et la mission
         // se termine toute seule — c'est la qu'on efface `mission`.
-        L.B.partie.mission.etape = 2;
+        // ⚠️ La livraison est le DERNIER objectif (le phare et l'étoile à semer passent avant,
+        // depuis « des missions plus longues ») : on la cherche plutôt que de la compter.
+        L.B.partie.mission.etape = L.B.defs.missions.find(function (m) { return m.slug === 'm3'; }).objectifs.length - 1;
         const g = L.Histoire.lieu('garage');
         taxi.x = g.x; taxi.y = g.y; taxi.vitesse = 0;
         j.x = taxi.x; j.y = taxi.y;

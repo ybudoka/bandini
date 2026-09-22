@@ -73,8 +73,9 @@ juge pas, elle s'inquiète.
 
 ## Ce qu'elle a dit (le canon)
 
-- m2 : les Cravates l'ont « protégée » et ont vidé sa caisse ; le troisième s'est sauvé en moto ; « le bâton
-  de mon défunt » ; au kiosque, c'est moins cher pour toi.
+- m2 : les Cravates l'ont « protégée » et ont vidé sa caisse ; le troisième s'est sauvé en moto ; « ces grands
+  escogriffes-là ont toujours des amis » (deux de plus) ; « pas de sang sur mes journaux » (l'hôpital
+  d'abord) ; « le bâton de mon défunt » ; au kiosque, c'est moins cher pour toi ; « Moi aussi, mais en bien ».
 - m51 : « Le sergent, encore? Tiens, mon p'tit. Dis-lui que j'ai une famille à nourrir, moi aussi. »
 
 ## Ce qui l'attend (M16)

@@ -444,15 +444,17 @@ def test_le_char_d_un_objectif_a_venir_dort_deja_la_et_ne_se_pose_qu_une_fois(ba
         const auDebut = chars(), premier = auDebut[0];
         const avant = { n: auDebut.length, slug: premier ? premier.slug : null,
                         etape: L.B.partie.mission.etape, vehicule: !!L.B.mission.vehicule };
-        // L'objectif du char, venu son tour : le même char, pas un deuxième.
-        L.Histoire.avancer();
+        // L'objectif du char, venu son tour : le même char, pas un deuxième. ⚠️ Son tour, pas
+        // « le suivant » : Marco passe avant lui depuis « des missions plus longues ».
+        for (let k = 0; k < 9 && m.objectifs[L.B.partie.mission.etape].type !== 'monter'; k++) L.Histoire.avancer();
         const apres = chars();
         return { avant: avant, n: apres.length, meme: apres[0] === premier,
                  vehicule: L.B.mission.vehicule === premier, etape: L.B.partie.mission.etape };
     }""")
     assert r["avant"] == {"n": 1, "slug": "auto", "etape": 0, "vehicule": False}, r["avant"]
     assert r["n"] == 1 and r["meme"], f"un deuxième char est né au tour de l'objectif ({r})"
-    assert r["vehicule"] and r["etape"] == 1, f"le char posé d'avance n'est pas devenu celui de la mission ({r})"
+    monter = next(i for i, o in enumerate(missions.par_slug("m1")["objectifs"]) if o["type"] == "monter")
+    assert r["vehicule"] and r["etape"] == monter, f"le char posé d'avance n'est pas devenu celui de la mission ({r})"
 
 
 def test_une_mission_neuve_qui_n_apporte_que_ses_donnees_se_joue(banc):
@@ -609,7 +611,9 @@ VOIX_DU_FICHIER = """
 #: (`dire` `ensemble` sous une coupe de 230 images) coupe Bouchard (m4) et Josée (m5) ; m97 a la même forme
 #: écrite ; la fin de m3 met son premier `dire` en `ensemble` devant un geste d'une seconde. `strict` : le
 #: jour où on les recale, le juge le dit.
-DEJA_COUPEES = {"m3-fin", "m4-intro", "m5-intro", "m97-intro"}
+# ⚠️ « m3-fin » en est sorti le 22 sept. 2026 (« des missions plus longues ») : sa 1re réplique était en
+# `ensemble` sous un geste de 60 images ; chaque `dire` y retient maintenant la scène jusqu'au bout.
+DEJA_COUPEES = {"m4-intro", "m5-intro", "m97-intro"}
 
 
 @ffprobe_present
