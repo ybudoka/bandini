@@ -695,11 +695,14 @@ def test_le_cavalier_reste_assis_quand_sa_machine_tourne(banc):
         const d = o.ligneDroite();
         const j = L.B.joueur; j.x = d.x; j.y = d.y; L.Monde.centrerCamera(j.x, j.y);
         const ctx = L.Base.ecran(), vrai = ctx.drawImage;
-        const corps = L.Atlas.cuire('joueur', L.SPRITES.joueur, null);
         const out = {};
         ['velo', 'moto'].forEach(function (slug) {
             const v = L.Vehicules.creer(slug, j.x + 40, j.y, 0, { conducteur: 'trafic', etat: 'roule' });
             if (!v || !L.Vehicules.cavalierDe(v)) return;
+            // Le corps QUI EST DESSINE : habille (la garde-robe, sa grille et son ancre a lui),
+            // ou le corps commun teint.
+            const tn = L.Vehicules.tenueDuCavalier(v);
+            const corps = tn ? L.Garderobe.cuire(tn) : L.Atlas.cuire('joueur', L.SPRITES.joueur, null);
             v.x = 200; v.y = 100; v.z = 0;
             const selles = [];
             for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {
@@ -1007,7 +1010,8 @@ def test_on_voit_celui_qui_mene_la_chaloupe(banc):
             L.Entites.indexer();
             const amarree = images(v).length;
             L.Vehicules.monter(j, v);
-            const corps = L.Atlas.cuire('joueur', L.SPRITES.joueur, j.swaps);
+            // Le corps QUI EST DESSINE : le joueur habille (la garde-robe), sinon le corps commun teint.
+            const corps = j.tenue ? L.Garderobe.cuire(j.tenue) : L.Atlas.cuire('joueur', L.SPRITES.joueur, j.swaps);
             const posture = L.SPRITES[sprite].posture;
             let vus = 0, bonnePose = 0;
             for (let i = 0; i < L.Vehicules.ROTATIONS; i++) {

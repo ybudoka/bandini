@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (217 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (218 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -91,7 +91,6 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Des missions plus longues : plus d'étapes, plus loin, plus de dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-missions-plus-longues.md#fiche) |
-| Des squelettes qu'on habille : chapeaux, casquettes, et une garde-robe presque infinie | ⬜ **en cours** (vague 1 livrée : six squelettes, les pièces, les passants et les personnages habillés ; vague 2 en cours : le cavalier, le joueur, les agents) | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-squelettes-qu-on-habille-chapeaux-casquettes-et-une-garde-robe.md#fiche) · [notes](jalons/des-squelettes-qu-on-habille-chapeaux-casquettes-et-une-garde-robe.md#notes) |
 | Refaire les voix que le dictionnaire de prononciation change | ⬜ **à faire** (à trancher par Martin : le quota du mois est épuisé jusqu'au 17 oct.) | — | **P4** | **correctif** | [fiche](jalons/refaire-les-voix-que-le-dictionnaire-de-prononciation-change.md#fiche) |
 
 ## L'ordre

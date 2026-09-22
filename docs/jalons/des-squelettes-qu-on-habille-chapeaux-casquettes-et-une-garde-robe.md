@@ -57,3 +57,25 @@ bouge pas) ; les donneurs habillés d'après leur portrait. Vague 2 : le joueur 
 - ⚠️ Le paquet de définitions, déjà au-dessus de son plafond avant ce jalon, prend ≈23 Ko de plus
   (les garde-robes répètent leurs listes de peaux et de cheveux ; à factoriser si on sort les
   dialogues du paquet).
+
+**Vague 2 livrée le 22 sept. 2026 — le joueur, le cavalier, les agents.** Le jalon est livré.
+
+- **Le joueur s'habille** (`Garderobe.duJoueur`) : squelette d'homme, ses couleurs de toujours, la
+  coupe du barbier, le linge porté et un **chapeau**. Chaque tenue de `magasins.TENUES` est
+  maintenant une PIÈCE (`emplacement` `corps` ou `tete`, `piece`) : le complet est un veston et une
+  cravate, la chemise hawaïenne a son motif, le coupe-vent est un coton ouaté ; deux linges neufs
+  (camisole, salopette) et **six chapeaux à vendre chez Rosa** (tuque, casquette, béret, canotier,
+  cowboy, feutre), sous deux sections (« LE LINGE », « LES CHAPEAUX »). Un chapeau se porte
+  par-dessus le linge ; le reporter l'enlève ; le mettre ou l'enlever fait oublier ta tête à la
+  police, comme le linge (jugé : trois changements, trois oublis).
+- **La casquette de la foire devient une casquette** (elle n'était qu'un chandail orange). Une
+  vieille sauvegarde qui la portait comme linge la retrouve sur sa tête, et le chandail revient
+  (`duJoueur`, et `apparenceDuJoueur` ne teint plus le torse avec un chapeau).
+- **Le cavalier** d'un vélo, d'une moto ou d'une chaloupe se dessine habillé
+  (`Vehicules.tenueDuCavalier`) : le joueur garde sa tuque à moto.
+- **Les agents et les gardes** piochent dans leur garde-robe (`policier` : le képi toujours ; `garde` :
+  la casquette), l'uniforme à la couleur que la rue connaît.
+- **La fiche du carnet** montre le personnage dans sa tenue de rue.
+- ⚠️ Deux juges de poses (`test_poses_vehicules.py`) mesuraient le cavalier avec l'ancre du corps
+  commun (12×16) : habillé, sa grille fait 16 colonnes avec une autre ancre, et l'écart de 4 px venait
+  du juge, pas du dessin. Ils prennent maintenant le corps réellement dessiné.
