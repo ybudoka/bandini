@@ -440,6 +440,22 @@ malgré des centaines de lignes ajoutées de chaque bord ; trois petits (une lis
   en plus des quatre phares et du faisceau du camion. Les deux paires empilées fusionnées en un
   seul bloc par côté (même portée verticale, une seule lueur) : six lampes + le faisceau = sept,
   pile la place gardée — `test_chaque_char_du_parc_allume_les_lampes_que_sa_machine_peint` le dit.
+- ⚠️ **Atterrissage final (22 sept. 2026) : `dev` avait encore bougé** (un commit de plus, « les
+  montagnes et les falaises infranchissables », `app/relief.py`) et l'arbre principal portait le
+  travail non commité d'une autre session sur quatre fichiers que je touche aussi
+  (`docs/architecture.md`, `entites.js`, `missions.js`, `vehicules.js`). Fusionné à trois voies
+  (un seul vrai conflit, l'ordre `chantiers.completer` puis `relief.poser` dans `carte.generer` —
+  aucun des deux ne lit ce que l'autre pose) puis atterri par écriture directe des blobs et
+  `update-ref` gardé, sans toucher à l'arbre de travail des fichiers partagés : leur diff non
+  commité (le partage des masses sur rails, `vehicules.js`) ressort intact, rebâti sur mon code.
+  Deux rouges retrouvés à la vérification finale, **confirmés non miens** en les rejouant sur
+  `dev` nu (`0b996ae`, avant ma fusion) : `test_police_js::test_deux_dehors_l_auto_reste_immobile…`
+  (valeurs identiques au pixel près des deux côtés) et `test_definitions::test_le_paquet_reste_leger`
+  — les définitions pèsent maintenant 231 339 octets bruts pour mon plafond de 215 000 ; sans la
+  pelleteuse (+794 octets), elles pèseraient encore 230 545, donc la croissance vient d'ailleurs
+  (missions, montagnes…), pas de ce jalon. Le plafond n'a pas été relevé une seconde fois : la
+  décision appartient à Martin, et le propre docstring du juge dit déjà que ce plafond est ce qui
+  rendra urgent le vrai remède (sortir les dialogues du paquet, M16).
 
 **Le jalon est livré au complet.** Les deux étages du plan sont faits (le décor animé, puis les
 chars qu'on conduit) ; ce qui reste du réservoir d'origine — le rouleau compresseur, la bétonnière,
