@@ -27,7 +27,7 @@ import json
 from dataclasses import dataclass
 
 from . import (armes, audio, carte, devantures, economie, interactions, journal, magasins, manettes,
-               missions, nuit, pietons, recherche, vehicules)
+               missions, nuit, pietons, recherche, vehicules, visages)
 from .version import VERSION
 
 
@@ -64,6 +64,8 @@ def assembler() -> dict:
         "missions": missions.pour_le_navigateur(),
         "defis": missions.DEFIS,
         "personnages": missions.PERSONNAGES,
+        # Le portrait de qui parle, à gauche de la boîte de dialogue (`visages.js`).
+        "visages": visages.pour_le_navigateur(),
         # Les quatre phrases de l'ouverture, avec leur slug de voix : le
         # navigateur les lit, il ne refait pas la regle du slug.
         "ouverture": missions.repliques_ouverture(),

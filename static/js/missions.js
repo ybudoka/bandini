@@ -365,11 +365,12 @@ const Missions = (function () {
         Police.remiseAZero();
         j.arrete = false;
         if (agent) { agent.etat = 'flane'; agent.but = null; }
-        Hud.dialogue(ami ? 'SGT BOUCHARD' : 'L’AGENT', ['« ON N’A RIEN VU. CIRCULE. »'], 180);
+        Hud.dialogue(ami ? 'SGT BOUCHARD' : 'L’AGENT', ['« ON N’A RIEN VU. CIRCULE. »'], 180,
+                     { slug: ami ? 'bouchard' : 'agent', humeur: 'malin' });
         return true;
       }
       Police.signalerCrime('pot_de_vin_refuse', j.x, j.y, true);
-      Hud.dialogue('L’AGENT', ['« TU TE PENSES OÙ, TOI? »'], 120);
+      Hud.dialogue('L’AGENT', ['« TU TE PENSES OÙ, TOI? »'], 120, { slug: 'agent', humeur: 'fache' });
       prison(agent);
       return true;
     } });
@@ -1783,14 +1784,14 @@ const Missions = (function () {
     // annonceur radio, il respire entre ses phrases, et le texte INTERPRETE
     // porte des « … » que `lu` ne montre pas.
     const duree = 90 + ((m.lu && m.lu.length) || (m.titre.length + m.texte.length)) * 4;
-    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree);
-    if (m.slug) { Son.Voix.chargerHistoire('journal'); Son.Voix.parler('narrateur-journal-' + m.slug, {}); }
+    Hud.dialogue('LE CLAIRON DE LA BAIE', [m.titre, m.texte], duree, { slug: 'narrateur', humeur: 'neutre' });
+    if (m.slug) { Son.Voix.chargerHistoire('journal'); if (Son.Voix.parler('narrateur-journal-' + m.slug, {}) && B.dialogue) B.dialogue.voix = true; }
   }
 
   function lireLeJournal() {
     const m = B.partie.derniereManchette;
     if (m) direLaManchette(m);
-    else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN À SIGNALER À BAIE-DES-BRUMES.'], 300);
+    else Hud.dialogue('LE CLAIRON DE LA BAIE', ['RIEN À SIGNALER À BAIE-DES-BRUMES.'], 300, { slug: 'narrateur', humeur: 'neutre' });
   }
 
   function nouveauJour() {

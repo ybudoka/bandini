@@ -691,12 +691,18 @@ def pour_le_navigateur() -> list[dict]:
     ⚠️ `jeu` est ce qu'ElevenLabs dit (`_l(..., jeu=...)`) : il sert à générer les voix, jamais à jouer.
     L'envoyer au navigateur, c'est des balises entre crochets dans le paquet — environ le tiers de
     plus de texte par mission pour rien — et un écran qui pourrait un jour les afficher.
+
+    ⚠️ Ce qui y va à sa place, c'est un MOT : l'`humeur` du visage qui la dit (`visages.humeur`),
+    tirée de la première balise du jeu. Une réplique neutre n'en porte pas — c'est le défaut.
     """
+    from .. import visages
     catalogue = copy.deepcopy(CATALOGUE)
     for mission in catalogue:
         for lignes in mission["dialogue"].values():
             for ligne in lignes:
-                ligne.pop("jeu", None)
+                h = visages.humeur(ligne.pop("jeu", None))
+                if h != "neutre":
+                    ligne["humeur"] = h
     return catalogue
 
 

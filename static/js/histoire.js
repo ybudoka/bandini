@@ -652,7 +652,7 @@ const Histoire = (function () {
     const auto = partie === 'intro' || partie === 'fin' || partie === 'pendant';
     return ((m && m.dialogue && m.dialogue[partie]) || []).map(function (l, i) {
       return { qui: l.qui, texte: l.texte, telephone: toujours, auto: auto, objectif: l.objectif,
-               slug: slugDeVoix(m, partie, i) };
+               slug: slugDeVoix(m, partie, i), humeur: l.humeur };
     }).filter(function (l) { return !filtre || filtre(l); });
   }
 
@@ -706,8 +706,12 @@ const Histoire = (function () {
     // ⚠️ `anonyme` : l'ouverture n'a personne au-dessus de sa boite — c'est une
     // voix qu'on entend, pas quelqu'un a qui l'on parle. Le Clairon se
     // presentera demain matin, avec sa manchette.
-    Hud.dialogue(c.anonyme ? '' : (p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0);
+    // Le visage de qui parle, avec la mine que lui donne son jeu (`l.humeur`, tiree des
+    // balises par `visages.humeur`). ⚠️ Pas pour l'ouverture `anonyme` : une voix sans visage.
+    Hud.dialogue(c.anonyme ? '' : (p ? p.nom : l.qui) + (l.telephone ? ' (AU TÉLÉPHONE)' : ''), decouper(l.texte), 0,
+                 c.anonyme ? null : { slug: l.qui, humeur: l.humeur || 'neutre' });
     c.voix = Son.Voix.parler(l.slug, { telephone: l.telephone, fin: function () { if (B.cinema === c && c.i === c.lignes.indexOf(l)) c.duree = Math.min(c.duree, c.t + 20); } });
+    if (B.dialogue && c.voix) B.dialogue.voix = true;
   }
 
   function finir() {
@@ -942,8 +946,9 @@ const Histoire = (function () {
     // repliques_de_repos`). Sans le mp3 (pas encore genere), la boite reste muette — le filet.
     const voix = slug + '-repos-' + (apres ? 2 : 1);
     const dite = Son.Voix.histoire().some(function (v) { return v.slug === voix && v.fichier; });
-    if (dite) { Son.Voix.chargerHistoire('repos'); Son.Voix.parler(voix, {}); }
-    Hud.dialogue(p.nom, [apres ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], dite ? 220 : 120);
+    Hud.dialogue(p.nom, [apres ? repos.texte_apres : (repos.texte || 'REVIENS ME VOIR PLUS TARD.')], dite ? 220 : 120,
+                 { slug: slug, humeur: 'neutre' });
+    if (dite) { Son.Voix.chargerHistoire('repos'); if (Son.Voix.parler(voix, {}) && B.dialogue) B.dialogue.voix = true; }
     return true;
   }
 

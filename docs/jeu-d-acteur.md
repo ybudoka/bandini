@@ -265,6 +265,14 @@ balise qu'il ne comprend pas (« crochet, tristement »).
 - **`CORPS`** — ce que le corps *fait* : `sighs`, `laughs`, `groans`, `whispers`,
   `shouting`.
 
+⚠️ **La première balise qui dit une mine fait aussi le VISAGE.** Depuis le 22 sept. 2026, le
+portrait de qui parle s'affiche à gauche de la boîte de dialogue, et son expression vient du jeu :
+`visages.humeur` lit les balises dans l'ordre et garde la première qui dit une mine (`[warmly]` →
+content, `[worried]` → inquiet, `[coldly]` → froid ; `[quietly]` ou un accent n'en disent pas).
+C'est la mine qu'il a **en ouvrant la bouche** : si la réplique change de ton en chemin, le visage
+garde le premier. Une balise ajoutée à `interpretation.BALISES` se range aussi dans
+`visages.BALISES` (jugé, `tests/test_visages.py`).
+
 ⚠️ **Toute réplique porte au moins un TON** (jugé). Un soupir ou un rire dit
 *comment* le corps parle, pas *ce qu'on ressent* : une réplique qui ne porte que
 `[sighs]` sort plate à côté des autres. Le corps **colore** le ton, il ne le remplace pas.

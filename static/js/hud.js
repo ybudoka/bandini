@@ -2304,20 +2304,42 @@ const Hud = (function () {
     }
   }
 
-  /** Une boite de texte : une ou deux lignes, qui se ferme au bouton. */
-  function dialogue(qui, lignes, duree) {
-    B.dialogue = { qui: qui, lignes: Array.isArray(lignes) ? lignes : [lignes], t: 0, duree: duree || 0 };
+  /** Une boite de texte : une ou deux lignes, qui se ferme au bouton.
+      `visage` (`{ slug, humeur }`) pose le portrait de qui parle a gauche (`Visages`) ;
+      sans lui, ou pour un slug qui n'a pas de visage, la boite reste celle d'avant. */
+  function dialogue(qui, lignes, duree, visage) {
+    B.dialogue = { qui: qui, lignes: Array.isArray(lignes) ? lignes : [lignes], t: 0, duree: duree || 0,
+                   visage: visage && typeof Visages !== 'undefined' && Visages.connait(visage.slug) ? visage : null,
+                   voix: false };
+  }
+
+  //: Le portrait dans la boite : 42 x 42 cadre compris, a quatre pixels du haut ; le texte
+  //: se pousse de `PORTRAIT_DECALE` a droite. La boite grandit a `PORTRAIT_BOITE` pour le tenir.
+  const PORTRAIT_DECALE = 48, PORTRAIT_BOITE = 50;
+
+  /** La bouche bouge-t-elle ? Tant que SA voix joue ; sans voix (muette, pas encore
+      generee, son coupe), le temps de dire le texte — deux images par lettre. */
+  function parleEncore(d) {
+    if (typeof Son !== 'undefined' && Son.Voix && Son.Voix.enCours) return true;
+    if (d.voix) return false;
+    const lettres = d.lignes.reduce(function (n, l) { return n + l.length; }, 0);
+    return d.t < 10 + lettres * 2;
   }
 
   function dessinerDialogue(ctx) {
     const d = B.dialogue;
     if (!d) return;
     d.t++;
-    const h = 22 + d.lignes.length * 9;
+    const v = d.visage;
+    const h = Math.max(22 + d.lignes.length * 9, v ? PORTRAIT_BOITE : 0);
+    const xt = 18 + (v ? PORTRAIT_DECALE : 0);
     ctx.fillStyle = 'rgba(11,10,18,0.9)'; ctx.fillRect(12, VH - h - 8, VW - 24, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(12, VH - h - 8, VW - 24, 1);
-    if (d.qui) texte(ctx, d.qui.toUpperCase(), 18, VH - h - 2, '#e8b33c', 1);
-    d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, 18, VH - h + 8 + i * 9, '#efe6d0', 1); });
+    // ⚠️ L'HORLOGE DE L'OEIL (`B.image`) pour le clin, comme pour « ACTION > » plus bas :
+    // la ville est figee pendant qu'on lit, et un visage qui ne cligne plus est un masque.
+    if (v) Visages.dessiner(ctx, v.slug, 16, VH - h - 4, v.humeur, B.image || d.t, parleEncore(d));
+    if (d.qui) texte(ctx, d.qui.toUpperCase(), xt, VH - h - 2, '#e8b33c', 1);
+    d.lignes.forEach(function (ligne, i) { texte(ctx, ligne, xt, VH - h + 8 + i * 9, '#efe6d0', 1); });
     // ⚠️ L'HORLOGE DE L'OEIL (`B.image`), PAS CELLE DU MONDE (`B.t`) : depuis
     // qu'un dialogue fige la ville (`Jeu.maj`), `B.t` ne bouge plus pendant
     // qu'on lit — et « ACTION > » serait reste eteint (ou allume) tout l'appel,
