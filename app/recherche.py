@@ -69,6 +69,11 @@ DELITS: dict[str, dict] = {
     # il faut qu'un passant aille le raconter — personne n'appelle la police
     # pour trois canettes, sauf s'il a tout vu.
     "distributrice": {"etoiles": 1, "temoin": True},
+    # Forcer un parcomètre (`interactions.PARCOMETRE`, 2e vague du décor, 22 sept.
+    # 2026). Même gabarit que la distributrice : une étoile, et il faut qu'un
+    # passant l'ait vu ET aille le raconter — personne n'appelle la police pour
+    # quelques dollars de monnaie, sauf s'il a tout vu.
+    "parcometre": {"etoiles": 1, "temoin": True},
     "effraction": {"etoiles": 1, "temoin": True},
     "pot_de_vin_refuse": {"etoiles": 1, "temoin": False},
     # Sortir son char de la fourriere sans passer au comptoir. ⚠️ BRUYANT : les

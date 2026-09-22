@@ -1,6 +1,6 @@
 """Ce que ACTION fait devant le décor, les bêtes et ceux qui travaillent dans la rue (P4).
 
-Huit gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
+Neuf gestes, et aucun n'est un menu : on regarde la chose (`faceA`, comme pour
 tout le reste) et on appuie.
 
 - **s'asseoir** sur un banc : le souffle revient, les forces un peu, la première
@@ -15,6 +15,9 @@ tout le reste) et on appuie.
   ni un passant : il laisse approcher qui marche doucement et sans arme
   (`pietons.BETES["chat"]["confiance_px"]`), au lieu de s'envoler à 74 px. Ne
   rapporte rien — c'est le seul geste qui ne rapporte rien ;
+- **vider un parcomètre** (deuxième vague, 22 sept. 2026) — déjà posé devant les
+  commerces (`mobilier.py`), jamais interactif : de la monnaie, et un DÉLIT
+  (`recherche.DELITS`) — un passant qui voit peut aller le raconter ;
 - **ouvrir la borne-fontaine** : la gerbe que la ville connaît déjà quand un char
   défonce une borne, mais à la main — on s'y rafraîchit ;
 - **un pourboire** à l'artiste de rue : la pièce change vraiment de poche ;
@@ -146,6 +149,26 @@ BARBECUE: dict = {
     "souffle": 15,
 }
 
+# --- Vider un parcomètre -----------------------------------------------------------
+
+#: ⚠️ **AUCUNE PLACE NEUVE NON PLUS** (deuxième vague, 22 sept. 2026) : `parcometre` est déjà
+#: posé (`mobilier.MEUBLES_PAR_USAGE["commercial"]`, devant les commerces), juste jamais
+#: interactif — contrairement au buisson (annulé, § plus bas), rien ici ne touche
+#: `Police.voit`. ⚠️ **C'est un DÉLIT** (`recherche.DELITS["parcometre"]`, le même gabarit
+#: qu'une distributrice défoncée) : un passant qui voit ACTION le forcer peut aller le
+#: raconter à un agent.
+PARCOMETRE: dict = {
+    "invite": "FORCER LE PARCOMÈTRE",
+    "deja": "DÉJÀ VIDÉ",
+    "message": "LA MONNAIE TOMBE",
+    "decors": ("parcometre",),
+    "portee_px": PORTEE_PX,
+    # Plus qu'une poubelle (au pire 4 $, `FOUILLER["trouvailles"]["canettes"]`) — une journée
+    # de quartiers qui paient pour se garer — mais loin d'une distributrice défoncée (4-22 $) :
+    # c'est de la monnaie, pas un coffre.
+    "argent": (4, 9),
+}
+
 # --- Caresser le chat -------------------------------------------------------------
 
 #: ⚠️ **AUCUN NOMBRE, ET C'EST VOULU** (deuxième vague, 22 sept. 2026) : pas de PV,
@@ -219,6 +242,7 @@ def exporter() -> dict:
                                      for s, t in FOUILLER["trouvailles"].items()}},
         "boire": {**BOIRE, "decors": list(BOIRE["decors"])},
         "barbecue": {**BARBECUE, "decors": list(BARBECUE["decors"])},
+        "parcometre": {**PARCOMETRE, "decors": list(PARCOMETRE["decors"]), "argent": list(PARCOMETRE["argent"])},
         "caresser": {**CARESSER, "mots": list(CARESSER["mots"])},
         "borne": {**BORNE, "decors": list(BORNE["decors"])},
         "pourboire": {**POURBOIRE, "metiers": list(POURBOIRE["metiers"]),

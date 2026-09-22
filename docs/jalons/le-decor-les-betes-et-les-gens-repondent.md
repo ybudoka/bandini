@@ -45,10 +45,29 @@ Ce couplage-là est resté sans réponse.
 
 Et ce qui n'a pas été essayé : **arracher une affiche** « Recherché » (`police.majAffiches` les repose
 sans fin tant que les étoiles durent — il faut d'abord un plafond par affiche arrachée),
-**vider un parcomètre** (un délit de plus dans `recherche.DELITS`), **pousser un caddie**, **lire** un
-panneau.
+**pousser un caddie**, **lire** un panneau.
 
 ## Notes
+
+✅ **2e vague, troisième geste : vider un parcomètre** (22 sept. 2026).
+
+- **Aucune place neuve non plus** : `parcometre` est déjà posé
+  (`mobilier.MEUBLES_PAR_USAGE["commercial"]`, devant les commerces), juste jamais interactif —
+  et contrairement au buisson (annulé, § plus haut), rien ici ne touche `Police.voit` : c'est
+  un geste de décor ordinaire, pas de l'équilibrage.
+- **C'est un DÉLIT** (`recherche.DELITS["parcometre"]`, le même gabarit qu'une distributrice
+  défoncée — une étoile, `temoin: True`) : `Police.signalerCrime`/`quelqu_un_voit`, le même
+  appel que pour une distributrice. Quelques dollars de monnaie, ça se raconte, ça n'alarme pas.
+- **Le geste** (`interactions.PARCOMETRE`, `Interactions.forcerLeParcometre`) : la même route
+  que `manger`/`fouiller` — 4 à 9 $, une fois par jour et par parcomètre (encore la même case
+  `partie.fouilles`, préfixée `parc:`). Calibré entre les deux voisins : au moins autant que le
+  meilleur tirage d'une poubelle (4 $), toujours sous une distributrice défoncée (22 $) et sous
+  le dixième de la plus petite prime de mission.
+- **Juges** (`test_interactions.py`, `test_interactions_js.py`) : le délit existe et suit le
+  gabarit de la distributrice, la fourchette d'argent tient sa place entre poubelle et
+  distributrice ; au banc : une fois par jour (même schéma que le barbecue), et le délit est
+  bien signalé une fois (mutation vérifiée rouge — l'appel à `Police.signalerCrime` retiré).
+- **Restent** : l'affiche arrachée, le caddie, le panneau.
 
 ✅ **2e vague, deuxième geste : caresser le chat** (22 sept. 2026).
 

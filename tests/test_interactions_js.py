@@ -76,7 +76,8 @@ def test_le_catalogue_ne_promet_rien_qui_n_existe_pas(banc, racine):
     noms = set()
     for gabarit in (interactions.ASSEOIR["sieges"], interactions.FOUILLER["decors"]):
         noms |= set(gabarit)
-    noms |= set(interactions.BOIRE["decors"]) | set(interactions.BARBECUE["decors"]) | set(interactions.BORNE["decors"])
+    noms |= (set(interactions.BOIRE["decors"]) | set(interactions.BARBECUE["decors"])
+             | set(interactions.PARCOMETRE["decors"]) | set(interactions.BORNE["decors"]))
     r = banc("""function (L, o) {
         const decors = %s, poses = %s;
         return { manquants: decors.filter(function (d) { return !L.DECORS[d]; }),
@@ -334,6 +335,40 @@ def test_un_barbecue_ne_soigne_pas_au_dela_de_la_barre(banc):
     """)
     assert not r.get("pasDeBbq"), "la ville n'a pas de barbecue devant lequel se planter"
     assert r["vie"] == r["vieMax"], "manger a pleine vie ne fait pas déborder la barre"
+
+
+# --- Le parcomètre --------------------------------------------------------------
+
+
+def test_on_force_un_parcometre_une_fois_par_jour_et_ca_signale_un_delit(banc):
+    c = interactions.PARCOMETRE
+    r = jouer(banc, """
+        const d = devant('parcometre');
+        if (!d) return { pasDeParcometre: true };
+        p.jour = 4; p.fouilles = {}; p.argent = 0;
+        const inviteAvant = invite();
+        o.tape('KeyE');
+        const force = { argent: p.argent, msg: L.B.msg };
+        const inviteApres = invite();
+        // Une autre pression, le meme jour : deja vide, et on le dit.
+        suivant();
+        o.tape('KeyE');
+        const deuxieme = { argent: p.argent, msg: L.B.msg };
+        // Le lendemain, il est de nouveau plein.
+        p.jour = 5; const inviteLendemain = invite();
+        const crimes = L.B.crimes.filter(function (q) { return q.type === 'parcometre'; });
+        return { inviteAvant: inviteAvant, force: force, inviteApres: inviteApres, deuxieme: deuxieme,
+                 inviteLendemain: inviteLendemain, crimes: crimes.length };
+    """)
+    assert not r.get("pasDeParcometre"), "la ville n'a pas de parcomètre devant lequel se planter"
+    assert r["inviteAvant"] == c["invite"]
+    assert c["argent"][0] <= r["force"]["argent"] <= c["argent"][1], "la monnaie reste dans la fourchette du catalogue"
+    assert r["force"]["msg"].endswith(c["message"]), r["force"]["msg"]
+    assert r["inviteApres"] == c["deja"], "un parcomètre vidé le dit — l'invite ne promet pas une seconde monnaie"
+    assert r["deuxieme"]["argent"] == r["force"]["argent"] and r["deuxieme"]["msg"] == c["deja"], \
+        "une fois par jour et par parcomètre"
+    assert r["inviteLendemain"] == c["invite"], "le lendemain, on peut le refaire"
+    assert r["crimes"] == 1, "forcer un parcomètre doit signaler le délit (recherche.DELITS), une seule fois"
 
 
 def test_la_borne_s_ouvre_a_la_main_on_s_y_rafraichit_et_on_la_ferme(banc):

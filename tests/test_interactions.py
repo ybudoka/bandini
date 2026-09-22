@@ -10,16 +10,17 @@ import json
 
 import pytest
 
-from app import carte, definitions, interactions, missions
+from app import carte, definitions, interactions, missions, recherche
 
 
 def _mots_affiches():
     """Tous les mots que la ville écrit ou dit : invites, refus, messages, répliques."""
-    a, f, b, bb, ca, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
-                                  interactions.BARBECUE, interactions.CARESSER, interactions.BORNE,
-                                  interactions.POURBOIRE, interactions.PHOTO)
+    a, f, b, bb, pc, ca, bo, p, ph = (interactions.ASSEOIR, interactions.FOUILLER, interactions.BOIRE,
+                                      interactions.BARBECUE, interactions.PARCOMETRE, interactions.CARESSER,
+                                      interactions.BORNE, interactions.POURBOIRE, interactions.PHOTO)
     mots = [a["invite"], *a["refus"].values(), f["invite"], f["deja"], *(t["texte"] for t in f["trouvailles"].values()),
-            b["invite"], b["encore"], b["message"], bb["invite"], bb["deja"], bb["message"], ca["invite"], *ca["mots"],
+            b["invite"], b["encore"], b["message"], bb["invite"], bb["deja"], bb["message"],
+            pc["invite"], pc["deja"], pc["message"], ca["invite"], *ca["mots"],
             bo["invite_ouvrir"], bo["invite_fermer"], p["invite"], ph["invite"], *ph["merci"]]
     for liste in p["merci"].values():
         mots.extend(liste)
@@ -28,7 +29,8 @@ def _mots_affiches():
 
 def test_le_catalogue_voyage_dans_le_paquet_et_se_lit_en_json():
     exporte = interactions.exporter()
-    assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "caresser", "borne", "pourboire", "photo"}
+    assert set(exporte) == {"asseoir", "fouiller", "boire", "barbecue", "parcometre", "caresser", "borne",
+                             "pourboire", "photo"}
     assert json.loads(json.dumps(exporte)) == exporte, "des listes et des dicts, jamais des tuples"
     assert definitions.assembler()["interactions"] == exporte, "le navigateur lit `B.defs.interactions`"
 
@@ -41,6 +43,7 @@ def test_un_decor_ne_donne_qu_un_seul_geste():
         "fouiller": set(interactions.FOUILLER["decors"]),
         "boire": set(interactions.BOIRE["decors"]),
         "barbecue": set(interactions.BARBECUE["decors"]),
+        "parcometre": set(interactions.PARCOMETRE["decors"]),
         "borne": set(interactions.BORNE["decors"]),
     }
     noms = [nom for decors in par_geste.values() for nom in decors]
@@ -77,6 +80,13 @@ def test_rien_ici_ne_remplace_une_mission_un_repas_ou_l_hopital():
     bb = interactions.BARBECUE
     assert bb["pv"] < economie.TARIFS["hotdog_pv"] and bb["souffle"] < economie.TARIFS["hotdog_souffle"], \
         "le barbecue rapporte autant ou plus qu'un hot-dog achete"
+    # Un parcomètre forcé non plus : plus qu'une poubelle, sous une distributrice défoncée.
+    pc = interactions.PARCOMETRE
+    assert pc["argent"][1] * 10 <= plus_petite_prime, \
+        "le plus gros gain d'un parcomètre (%s $) doit rester sous le dixième de la plus petite prime" % pc["argent"][1]
+    assert plus_gros_butin <= pc["argent"][0], "un parcomètre devrait rapporter au moins autant qu'une poubelle"
+    assert pc["argent"][1] < economie.DISTRIBUTRICE["monnaie"][1], \
+        "un parcomètre ne devrait pas valoir plus qu'une distributrice défoncée"
 
 
 def test_les_tables_de_fouille_se_tiennent():
@@ -115,8 +125,21 @@ def test_le_pourboire_et_la_photo_restent_des_gestes_de_rue():
     assert ph["pose_images"] >= 30, "le temps d'un flash"
 
 
+def test_forcer_un_parcometre_est_un_delit_que_recherche_connait():
+    """⚠️ `interactions.py` déclare le geste, `recherche.py` déclare le délit — deux fichiers,
+    une seule règle : un `decors` du catalogue de gestes qui manque à `DELITS` serait un vol
+    que la police ne verrait jamais."""
+    pc = interactions.PARCOMETRE
+    assert "parcometre" in recherche.DELITS, "le geste existe, le délit non"
+    delit = recherche.DELITS["parcometre"]
+    assert delit["temoin"] is True, "quelques dollars de monnaie : ça se raconte, ça n'alarme pas"
+    assert delit["etoiles"] == recherche.DELITS["distributrice"]["etoiles"], \
+        "même gabarit qu'une distributrice défoncée"
+    assert 1 <= pc["argent"][0] <= pc["argent"][1]
+
+
 def test_caresser_le_chat_ne_rapporte_rien():
-    """⚠️ Le seul des huit gestes sans PV, sans souffle, sans argent : `pietons.BETES` et
+    """⚠️ Le seul des neuf gestes sans PV, sans souffle, sans argent : `pietons.BETES` et
     `Entites.majBete` décident déjà qui laisse approcher (le chat, pas le goéland) — ici,
     seulement l'invite et ce qu'on dit."""
     from app import pietons
@@ -153,7 +176,7 @@ def test_les_mots_de_la_ville_sont_ecrits_pour_la_police_pixel():
         assert texte == texte.upper() and texte.strip() == texte and texte, "un mot mal ecrit : %r" % texte
 
 
-@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "barbecue", "caresser", "borne"])
+@pytest.mark.parametrize("nom", ["asseoir", "fouiller", "boire", "barbecue", "parcometre", "caresser", "borne"])
 def test_une_portee_de_geste_est_celle_d_une_main(nom):
     portee = interactions.exporter()[nom]["portee_px"]
     assert 16 <= portee <= 32, "%s : %s px ne se prend pas d'une main" % (nom, portee)

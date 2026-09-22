@@ -168,7 +168,14 @@ const Interactions = (function () {
     return !!p.fouilles && p.fouilles['bbq:' + tuile(bbq)] === p.jour;
   }
 
-  /** Les cinq gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
+  /** Un parcomètre déjà forcé aujourd'hui : la MÊME case que les bacs fouillés
+      (`partie.fouilles`), préfixée `parc:`. */
+  function videDuJour(p) {
+    const partie = B.partie;
+    return !!partie.fouilles && partie.fouilles['parc:' + tuile(p)] === partie.jour;
+  }
+
+  /** Les six gestes de décor, dans l'ordre où l'on tranche à distance égale. `refus`
       dit pourquoi ce n'est pas possible MAINTENANT (le HUD l'écrit, ACTION le dit) —
       un refus se montre, comme « FERMÉ » devant un kiosque. */
   const SUR_LE_DECOR = [
@@ -184,6 +191,9 @@ const Interactions = (function () {
     { geste: 'barbecue', table: function (c) { return c.barbecue.decors; }, portee: function (c) { return c.barbecue.portee_px; },
       refus: function (j, d) { return mangeDuJour(d) ? cfg().barbecue.deja : null; },
       invite: function (c) { return c.barbecue.invite; }, faire: manger },
+    { geste: 'parcometre', table: function (c) { return c.parcometre.decors; }, portee: function (c) { return c.parcometre.portee_px; },
+      refus: function (j, d) { return videDuJour(d) ? cfg().parcometre.deja : null; },
+      invite: function (c) { return c.parcometre.invite; }, faire: forcerLeParcometre },
     { geste: 'borne', table: function (c) { return c.borne.decors; }, portee: function (c) { return c.borne.portee_px; },
       refus: function () { return null; },
       invite: function (c, j, d) { return jetDe(d) ? c.borne.invite_fermer : c.borne.invite_ouvrir; }, faire: ouvrirLaBorne },
@@ -350,6 +360,22 @@ const Interactions = (function () {
     Missions.nourrir(j, c.souffle);
     Hud.message(c.message);
     Son.SFX.ramasse();
+    return true;
+  }
+
+  /** Forcer un parcomètre : un délit (`recherche.DELITS.parcometre`), comme défoncer une
+      distributrice — un passant qui l'a vu peut aller le raconter
+      (`Police.signalerCrime`/`quelqu_un_voit`, le même appel que la distributrice). */
+  function forcerLeParcometre(j, p) {
+    const c = cfg().parcometre, partie = B.partie;
+    j.animT = 20; j.animType = 'ramasse';
+    if (videDuJour(p)) { Hud.message(c.deja); Son.SFX.erreur(); return true; }
+    partie.fouilles = partie.fouilles || {};
+    partie.fouilles['parc:' + tuile(p)] = partie.jour;
+    const gain = c.argent[0] + Math.floor(B.rng() * (c.argent[1] - c.argent[0] + 1));
+    Missions.encaisser(gain, c.message);
+    Son.SFX.argent();
+    Police.signalerCrime('parcometre', p.x, p.y, Police.quelqu_un_voit(p.x, p.y, null));
     return true;
   }
 
