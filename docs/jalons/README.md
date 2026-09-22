@@ -212,3 +212,4 @@ Deux documents d'avant la table :
 | Des quartiers qu'on reconnaît : riches, pauvres, et zonés | ✅ **livré** | 21 sept. 2026 | **P3** | ajout | [fiche](des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#fiche) · [notes](des-quartiers-qu-on-reconnait-riches-pauvres-et-zones.md#notes) |
 | L'aéroport de Baie-des-Brumes | ✅ **livré** | 21 sept. 2026 | **P3** | ajout | [fiche](l-aeroport.md#fiche) · [notes](l-aeroport.md#notes) |
 | Des phares à la mesure de chaque char | ✅ **livré** | 21 sept. 2026 | **P2** | **correctif** | [fiche](des-phares-a-la-mesure-de-chaque-char.md#fiche) · [notes](des-phares-a-la-mesure-de-chaque-char.md#notes) |
+| L'aéroport — le chantier du pont s'allonge, et l'île se cache sur la carte | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [fiche](l-aeroport-le-chantier-s-allonge-l-ile-se-cache.md#fiche) · [notes](l-aeroport-le-chantier-s-allonge-l-ile-se-cache.md#notes) |
