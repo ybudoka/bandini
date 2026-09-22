@@ -100,37 +100,30 @@
          « Bonjour, Martin » se cacherait avec lui — le seul mot qui dit que ça a
          marché. Vu à la capture, le 17 sept. 2026. #}
       <p class="compte-form__etat" id="compte-etat"></p>
+      <h3 class="compte-rubrique" id="compte-rubrique-parties" hidden>Tes parties sur le serveur</h3>
       <ul class="compte-parties" id="compte-parties"></ul>
 
       {# Le reglage du NIP : seulement une fois le compte OUVERT (`Hud.majCompte`
          montre l'une ou l'autre, jamais les deux). #}
-      <form class="compte-form" id="nip-activer-form" hidden>
-        <div class="compte-form__ligne">
-          <input id="nip-nouveau" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="Quatre chiffres">
-          <button class="bouton" id="bouton-nip-activer" type="submit">Ajouter un NIP à cet appareil</button>
+      <div class="compte-bloc" id="compte-appareil" hidden>
+        <h3 class="compte-rubrique">Cet appareil</h3>
+        <form class="compte-form" id="nip-activer-form" hidden>
+          <p class="aide aide--petit">Un NIP de quatre chiffres verrouille ton compte ici : le jeu le demande à chaque lancement. Pratique sur un appareil partagé.</p>
+          <div class="compte-form__ligne">
+            <input id="nip-nouveau" name="nip" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" placeholder="••••" aria-label="Quatre chiffres">
+            <button class="bouton" id="bouton-nip-activer" type="submit">Ajouter un NIP</button>
+          </div>
+        </form>
+        <div class="compte-form" id="nip-retrait" hidden>
+          <p class="aide aide--petit">Cet appareil demande ton NIP à chaque lancement.</p>
+          <button class="bouton" id="bouton-nip-retirer" type="button">Retirer le NIP</button>
         </div>
-      </form>
-      <div class="boutons" id="nip-retrait" hidden>
-        <button class="bouton" id="bouton-nip-retirer" type="button">Retirer le NIP de cet appareil</button>
       </div>
 
-      {# EFFACER SON COMPTE (M14, 4e vague) : seulement une fois le compte OUVERT. Le mot de
-         passe est REDEMANDE — c'est la confirmation, et le serveur la verifie —, et le
-         bouton qui garde est celui qui est mis en avant : un compte efface ne revient pas. #}
-      <div class="boutons" id="compte-effacer-ligne" hidden>
-        <button class="bouton" id="bouton-compte-effacer" type="button">Effacer mon compte</button>
+      <div class="boutons">
+        <button class="bouton" id="bouton-compte-deconnexion" type="button" hidden>Se déconnecter</button>
+        <button class="bouton" id="bouton-fermer-compte" type="button">Retour</button>
       </div>
-      <form class="compte-form" id="compte-effacer-form" hidden>
-        <p class="aide aide--petit">Ton pseudo, ton mot de passe, ton courriel, tes appareils et tes parties gardées <em>sur le serveur</em> seront effacés pour de bon. Les parties de <em>ce navigateur</em>, elles, ne sont pas touchées.</p>
-        <div class="compte-form__ligne">
-          <input id="compte-effacer-passe" name="mot_de_passe" type="password" maxlength="128" autocomplete="current-password" placeholder="Ton mot de passe">
-        </div>
-        <div class="boutons">
-          <button class="bouton bouton--principal" id="bouton-compte-effacer-annuler" type="button">Non, le garder</button>
-          <button class="bouton" id="bouton-compte-effacer-confirmer" type="submit">Oui, tout effacer pour de bon</button>
-        </div>
-        <p class="compte-form__etat" id="compte-effacer-etat"></p>
-      </form>
 
       {# CE QU'ON GARDE, ET COMMENT TOUT EFFACER (M14) : « c'est un jeu pour s'amuser, pas une
          raison de tenir un fichier sur du monde ». Ne dit que ce qui est VRAI aujourd'hui —
@@ -146,10 +139,23 @@
         </ul>
       </details>
 
-      <div class="boutons">
-        <button class="bouton" id="bouton-compte-deconnexion" type="button" hidden>Se déconnecter</button>
-        <button class="bouton" id="bouton-fermer-compte" type="button">Retour</button>
+      {# EFFACER SON COMPTE (M14, 4e vague) : seulement une fois le compte OUVERT. Le mot de
+         passe est REDEMANDE — c'est la confirmation, et le serveur la verifie —, et le
+         bouton qui garde est celui qui est mis en avant : un compte efface ne revient pas. #}
+      <div class="boutons" id="compte-effacer-ligne" hidden>
+        <button class="bouton bouton--discret" id="bouton-compte-effacer" type="button">Effacer mon compte</button>
       </div>
+      <form class="compte-form" id="compte-effacer-form" hidden>
+        <p class="aide aide--petit">Ton pseudo, ton mot de passe, ton courriel, tes appareils et tes parties gardées <em>sur le serveur</em> seront effacés pour de bon. Les parties de <em>ce navigateur</em>, elles, ne sont pas touchées.</p>
+        <div class="compte-form__ligne">
+          <input id="compte-effacer-passe" name="mot_de_passe" type="password" maxlength="128" autocomplete="current-password" placeholder="Ton mot de passe">
+        </div>
+        <div class="boutons">
+          <button class="bouton bouton--principal" id="bouton-compte-effacer-annuler" type="button">Non, le garder</button>
+          <button class="bouton bouton--danger" id="bouton-compte-effacer-confirmer" type="submit">Oui, tout effacer pour de bon</button>
+        </div>
+        <p class="compte-form__etat" id="compte-effacer-etat"></p>
+      </form>
     </section>
   </div>
 

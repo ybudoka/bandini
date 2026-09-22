@@ -115,6 +115,8 @@ function banc(corps) {
    // Effacer son compte (M14, 4e vague).
    'defi-du-jour', 'compte-effacer-ligne', 'bouton-compte-effacer', 'compte-effacer-form', 'compte-effacer-passe',
    'bouton-compte-effacer-confirmer', 'bouton-compte-effacer-annuler', 'compte-effacer-etat', 'compte-garde',
+   // Les rubriques de l'ecran du compte.
+   'compte-rubrique-parties', 'compte-appareil',
    // La ligne d'aide du titre, qui suit l'appareil (l'ecran COMMANDES).
    'aide-clavier', 'aide-manette', 'aide-manette-jouer', 'aide-manette-pause']
     .forEach(function (id) {

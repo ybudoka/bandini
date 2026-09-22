@@ -1200,6 +1200,11 @@ DANS_L_ECRAN = """(id) => {
 }"""
 
 
+# ⚠️ Depuis le 22 sept. 2026, le compte SORT de la boîte du jeu (`position: fixed`) : son « écran »
+# à lui, c'est le voile, qui couvre la fenêtre.
+DANS_LE_COMPTE = DANS_L_ECRAN.replace("document.querySelector('.ecran')", "document.getElementById('voile-compte')")
+
+
 def atteignable_au_doigt(page, ident, pas=60, maxi=60):
     """Vrai si `ident` finit DANS l'écran en faisant défiler le voile comme un doigt le fait.
 
@@ -1211,11 +1216,11 @@ def atteignable_au_doigt(page, ident, pas=60, maxi=60):
         return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }""")
     page.mouse.move(boite["x"], boite["y"])
     for _ in range(maxi):
-        if page.evaluate(DANS_L_ECRAN, ident):
+        if page.evaluate(DANS_LE_COMPTE, ident):
             return True
         page.mouse.wheel(0, pas)
         page.wait_for_timeout(20)
-    return page.evaluate(DANS_L_ECRAN, ident)
+    return page.evaluate(DANS_LE_COMPTE, ident)
 
 
 @pytest.mark.parametrize("nom,taille", [("portrait", (390, 844)), ("paysage", (844, 390))])
@@ -1235,9 +1240,9 @@ def test_tout_l_ecran_du_compte_s_atteint_en_le_faisant_defiler_sur_un_telephone
     page.wait_for_function("window.BANDINI.Compte.etat().etat === 'ouvert'", timeout=15000)
     page.click("#bouton-compte")
     page.evaluate("document.getElementById('bouton-compte-effacer').click()")
-    haut = page.evaluate("(() => { const v = document.getElementById('voile-compte'); return [v.scrollHeight, v.clientHeight]; })()")
-    if nom == "portrait":
-        assert haut[0] > haut[1], "précondition : sur ce petit écran, le contenu déborde"
+    voile = page.evaluate("(() => { const r = document.getElementById('voile-compte').getBoundingClientRect(); return [r.width, r.height]; })()")
+    assert voile[0] >= taille[0] - 1 and voile[1] >= taille[1] - 1, \
+        f"le compte doit prendre toute la fenêtre, pas la boîte du jeu (390×219 en portrait) : {voile}"
     for ident in ("compte-mot", "compte-effacer-passe", "bouton-compte-effacer-annuler",
                   "bouton-compte-effacer-confirmer", "bouton-compte-deconnexion", "bouton-fermer-compte"):
         assert atteignable_au_doigt(page, ident), f"{ident} est inatteignable en {nom} ({taille[0]}×{taille[1]})"

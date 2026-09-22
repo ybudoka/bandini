@@ -601,8 +601,9 @@ def test_l_ecran_du_compte_montre_les_trois_cases(banc):
     assert r["form"] is True, "connecte, on ne redemande pas un mot de passe"
     assert r["partir"] is False
     assert len(r["lignes"]) == 3, "deux passes ne doivent pas empiler six lignes"
-    assert r["lignes"][0][0] == "Partie 1 · jour 18 · 9000 $"
-    assert r["lignes"][1][0] == "Partie 2 · vide"
+    # Une rangee de colonnes : partie, jour, argent (milliers separes), date.
+    assert [t.replace("\u202f", " ").replace("\xa0", " ") for t in r["lignes"][0][:3]] == ["Partie 1", "jour 18", "9 000 $"]
+    assert r["lignes"][1][:2] == ["Partie 2", "vide"]
 
 
 def test_se_connecter_depuis_l_ecran(banc):

@@ -2651,6 +2651,8 @@ const Hud = (function () {
     const effacerLigne = doc.getElementById('compte-effacer-ligne');
     const effacerForm = doc.getElementById('compte-effacer-form');
     const garde = doc.getElementById('compte-garde');
+    const rubrique = doc.getElementById('compte-rubrique-parties');
+    const appareil = doc.getElementById('compte-appareil');
     // ⚠️ Effacer n'existe QUE sur un compte ouvert (le serveur le refuserait de toute facon),
     // et la confirmation prend la place du bouton — jamais les deux a l'ecran.
     if (effacerLigne) effacerLigne.hidden = !ouvert || effacerDemande;
@@ -2661,6 +2663,9 @@ const Hud = (function () {
     if (form) form.hidden = verrouille || ouvert;
     if (mot) mot.hidden = verrouille;
     if (liste) liste.hidden = verrouille;
+    // Les rubriques « Tes parties » et « Cet appareil » n'ont rien a nommer tant que le compte est ferme.
+    if (rubrique) rubrique.hidden = !ouvert;
+    if (appareil) appareil.hidden = !ouvert;
     if (partir) partir.hidden = verrouille || !ouvert;
     if (activerForm) activerForm.hidden = !ouvert || v.nipConfigure;
     if (retrait) retrait.hidden = !ouvert || !v.nipConfigure;
@@ -2677,15 +2682,24 @@ const Hud = (function () {
     if (!liste) return;
     liste.innerHTML = '';
     if (!ouvert) return;
+    // Une case = une rangee de colonnes (partie, jour, argent, date) : les chiffres
+    // s'alignent d'une partie a l'autre, et l'argent ne se casse plus sur deux lignes
+    // (« 4590 $ » se lisait « 4590 » puis « $ », vu a la capture le 22 sept. 2026).
     for (const c of v.cases) {
       const li = doc.createElement('li');
-      const nom = doc.createElement('span');
       const a = c.serveur && c.serveur.apercu;
-      nom.textContent = 'Partie ' + c.emplacement + (a ? ' · jour ' + a.jour + ' · ' + a.argent + ' $' : ' · vide');
-      const detail = doc.createElement('span');
-      detail.textContent = c.decision === 'trancher' ? 'deux versions — choisis en jouant'
-        : c.serveur && c.serveur.sauvee_le ? dateCourte(c.serveur.sauvee_le) : '—';
-      li.appendChild(nom); li.appendChild(detail);
+      const cellules = a ? [['partie', 'Partie ' + c.emplacement], ['jour', 'jour ' + a.jour],
+        ['argent', Number(a.argent).toLocaleString('fr-CA') + ' $']]
+        : [['partie', 'Partie ' + c.emplacement], ['vide', 'vide']];
+      cellules.push(['quand', c.decision === 'trancher' ? 'deux versions — choisis en jouant'
+        : c.serveur && c.serveur.sauvee_le ? dateCourte(c.serveur.sauvee_le) : '']);
+      if (!a) li.className = 'compte-parties__vide';
+      for (const [classe, texte] of cellules) {
+        const span = doc.createElement('span');
+        span.className = 'compte-parties__' + classe;
+        span.textContent = texte;
+        li.appendChild(span);
+      }
       liste.appendChild(li);
     }
   }
