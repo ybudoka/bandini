@@ -16,11 +16,24 @@ MISSION = {
         {"type": "acheter", "texte": "ACHÈTE UN BÂTON SOLIDE À LA QUINCAILLERIE",
          "article": "batte", "ou": "boutique:artisan"},
 
+        # ⚠️ **Plus long** (Martin, 22 sept. 2026 : « des missions plus longues ») : un second
+        # comptoir, à l'autre bout de la ville — l'extincteur ne se vend qu'à la Shop
+        # (`magasins.COMPTOIRS["industrie"]`), le bâton à la quincaillerie. Et c'est la seule
+        # arme que rien ne donne avant : `m2` donne déjà le bâton (`donne.arme`), si bien que
+        # l'objectif 0 est fait d'avance pour qui a joué le tronc — celui-ci ne l'est jamais.
+        {"type": "acheter", "texte": "ACHÈTE UN EXTINCTEUR À LA SHOP, AU CAS OÙ",
+         "article": "extincteur", "ou": "boutique:industrie"},
+
         {"type": "tuer", "texte": "ÉLOIGNE LE SKATEUX QUI RÔDE AUTOUR DU PHARE",
          "groupe": "skateux", "n": 1, "ou": "donneur", "loin": 10},
 
         {"type": "aller", "texte": "RAPPORTE-LE AU PHARE, VITE",
-         "lieu": "phare", "rayon": 6, "chrono_s": 180}
+         "lieu": "phare", "rayon": 6, "chrono_s": 180},
+
+        # Arrivé au phare, le Skateux revient — avec ses amis (`loin` : ils naissent hors champ
+        # et courent sur toi, à la porte d'Ovila).
+        {"type": "tuer", "texte": "LE SKATEUX EST REVENU AVEC SES AMIS — DÉFENDS LE PHARE",
+         "groupe": "skateux", "n": 3, "ou": "donneur", "loin": 12},
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Ovila : formel, il vouvoie toujours, une
@@ -37,12 +50,18 @@ MISSION = {
                jeu="[serious] Des Skateux traînent par icitte, la nuit. [gravely] Faites attention… en revenant.")
         ],
         "pendant": [
-            _p("ovila", "Sans cette lampe, un bateau pourrait se briser sur les récifs. Dépêchez-vous.", 2,
-               jeu="[gravely] Sans cette lampe, un bateau pourrait se briser sur les récifs. [firmly] Dépêchez-vous.")
+            _p("ovila", "Sans cette lampe, un bateau pourrait se briser sur les récifs. Dépêchez-vous.", 3,
+               jeu="[gravely] Sans cette lampe, un bateau pourrait se briser sur les récifs. [firmly] Dépêchez-vous."),
+            _p("ovila", "Et un extincteur, je vous prie. La dernière fois que j'ai bricolé la lampe, j'y ai laissé un sourcil.", 1,
+               jeu="[serious] Et un extincteur, je vous prie. [somber] La dernière fois que j'ai bricolé la lampe… j'y ai laissé un sourcil."),
+            _p("ovila", "Il est revenu avec ses amis. Je vous en prie, épargnez mes fenêtres.", 4,
+               jeu="[worried] Il est revenu… avec ses amis. [gravely] Je vous en prie… épargnez mes fenêtres.")
         ],
         "fin": [
             _l("ovila", "La lampe tient. Vous m'avez rendu un fier service, ce soir.",
                jeu="[relieved] La lampe tient. [warmly] Vous m'avez rendu un fier service… ce soir."),
+            _l("ovila", "Gardez l'extincteur. Avec moi, la lampe finit toujours par s'emporter.",
+               jeu="[calm] Gardez l'extincteur. [wryly] Avec moi… la lampe finit toujours par s'emporter."),
             _l("ovila", "Je n'oublie pas un visage qui m'aide. Revenez me voir.",
                jeu="[tenderly] Je n'oublie pas un visage qui m'aide. [warmly] Revenez me voir.")
         ],

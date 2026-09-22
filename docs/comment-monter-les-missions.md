@@ -173,7 +173,7 @@ attend son **juge de banc** avant de porter une mission) :
 | `sauter` | une rampe | `vol_px` (le juge du Grand Saut) |
 | `eteindre` | un feu à l'extincteur (le jet existe, le feu de char aussi) | — |
 | `boulots` | `n` boulots d'une `sorte` (généralise `courses`, qui reste au taxi) | `n`, `sorte` |
-| `pirater` | s'approcher de `ou`, ACTION l'ouvre, reproduire une séquence de 4 directions avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; une mauvaise direction recommence, `essais` ratés déclenchent l'échec `alarme` | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
+| `pirater` | s'approcher de `ou`, ACTION l'ouvre, reproduire une séquence de 4 directions avec le stick (le même axe unifié que la marche, `Entree.axe` — clavier, manette, doigt) ; une mauvaise direction recommence, `essais` ratés déclenchent l'échec `alarme` ; la flèche mène au terminal (le poste, pour un mouillage) — un `ou` loin du donneur se trouve (l'île de m53, m54) | `ou`, `rayon` (déf. 3), `longueur` (déf. 4), `essais` (déf. 3) |
 
 **Les quatre options transverses** (`OPTIONS_OBJECTIFS`) : ce ne sont **pas**
 des types, mais des clés qui se posent sur **n'importe quel** objectif —
@@ -190,6 +190,11 @@ Contraintes **jugées** (voir `test_missions.py`) :
   termine ne se finirait pas de nuit sans défoncer la chaîne. Aujourd'hui, **`usine`** (la cour ferme la
   nuit) ne peut être le `lieu` d'aucun objectif — `parler` à quelqu'un qui s'y tient reste permis, mais
   on n'y `aller`/`livrer` pas. Le juge ne tourne pas au banc de la mission : il rougit à la suite complète.
+- ⚠️ **L'Île-aux-Corneilles (`ile.py`) n'est jamais un `lieu`** : elle ne se rejoint pas à pied, et
+  `test_barrieres.py` veut qu'on atteigne à pied depuis la planque tout lieu de mission (et `chapelle`
+  n'est pas dans `carte.SPECIAUX`). On y envoie par l'`ou` d'un `tuer` ou d'un `pirater` — `"ou":
+  "chapelle"`, `"ou": "hangar_ile"` : la flèche suit l'homme posé ou le terminal, on y va en bateau,
+  on débarque et on monte à pied (m52-m54, juges `test_m5x_joue_jusqu_au_bout…`).
 - ⚠️ **Un `aller` sur le lieu du donneur veut un rayon de 6 tuiles, pas 4** : il se tient à ~48 px du
   point, et le joueur qui lui parle à 16 px de plus (Ti-Paul : 64,03 px contre 64) — on serait AU lieu et
   la mission demanderait un pas de plus.

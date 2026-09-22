@@ -64,9 +64,17 @@ réveille un matin sans savoir comment elle a perdu.
 
 ## Ce qu'il a dit (le canon)
 
-- m52 : « Le repérage » — une chaloupe, une patrouille discrète, un guetteur des Morues à coucher sans bruit.
-- m53 : « Sous pavillon » — un chalutier, un relais de Josée à faire taire (premier piratage du jeu).
-- m54 : « Le grand soir » — le registre du quai, puis son propre porte-conteneurs, sous la police.
+- m52 : « Le repérage » — une chaloupe, une patrouille discrète, une lunette au clocher de l'Île-aux-Corneilles,
+  l'antenne de l'autre quai, un guetteur des Morues à coucher sans bruit. « Même Dieu travaille pour Josée,
+  maintenant. »
+- m53 : « Sous pavillon » — un chalutier (« la Belle-Josée », pas encore rebaptisé), un relais de Josée à
+  faire taire (premier piratage du jeu), deux Morues qui accourent, et le jumeau du relais au clocher de l'île.
+- m54 : « Le grand soir » — le registre du quai, son propre porte-conteneurs sous la police, le cadenas du
+  hangar sans nom de l'île (le sien, désormais), les Morues venues à la nage, et le registre qui note aussi
+  les retours.
+
+Les trois actes vont à l'**Île-aux-Corneilles** (22 sept. 2026, « des missions plus longues ») : c'est
+l'autre bout de la baie, et le hangar sans nom qu'il y prend est celui que l'arc I lui promet.
 
 ## Ce qui l'attend (M16)
 

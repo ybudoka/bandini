@@ -2649,6 +2649,10 @@ const Histoire = (function () {
       else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
       else if (o.type === 'sauter') l = resoudre(o.ou, m);
       else if (o.type === 'acheter') l = resoudre(o.ou, m);
+      // ⚠️ `pirater` : le terminal, sur le POSTE quand il est sur un mouillage (le quai, là où
+      // `piratageSousLaMain` l'ouvre). Sans ce cas, un terminal loin du donneur (l'île de m53,
+      // m54) n'avait ni flèche ni repère.
+      else if (o.type === 'pirater') { const t = resoudre(o.ou, m); l = t && t.mouillage ? t.mouillage.poste : t; }
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.

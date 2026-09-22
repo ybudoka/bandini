@@ -64,7 +64,7 @@ def test_la_bonne_sequence_avance_l_objectif(banc):
     }""")
     assert r["progres"] == [1, 2, 3, None], f"la séquence n'avance pas un cran à la fois : {r['progres']}"
     assert r["fini"], "le piratage reste ouvert alors que la séquence est complète"
-    assert r["etape"] == 3, "l'objectif suivant (livrer) n'a pas pris la suite"
+    assert r["etape"] == 3, "l'objectif suivant (les deux Morues qui accourent) n'a pas pris la suite"
 
 
 def test_une_mauvaise_direction_recommence_la_sequence(banc):

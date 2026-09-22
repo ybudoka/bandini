@@ -69,6 +69,8 @@ tutoie le joueur (« Bonne chance, le jeune »), Ovila **vouvoie** et prend son 
 ## Ce qu'il a dit (le canon)
 
 - m6 : « Les lumières du port, c'est moi. D'ici, je vois tout ce qui entre. »
+- p01 : « La lampe du phare » — un bâton, un extincteur (« la dernière fois que j'ai bricolé la lampe, j'y ai
+  laissé un sourcil »), le Skateux qui rôde, puis revient avec ses amis (« épargnez mes fenêtres »).
 
 ## Ce qui l'attend (M16)
 

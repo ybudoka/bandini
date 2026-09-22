@@ -22,6 +22,19 @@ MISSION = {
         {"type": "survivre", "texte": "PATROUILLE LA BAIE SANS TE FAIRE VOIR — 45 S",
          "secondes": 45, "sans_etoile": True},
 
+        # ⚠️ **Plus long, plus loin** (Martin, 22 sept. 2026 : « des missions plus longues ») :
+        # les yeux de Josée sont DEUX. Le premier guette de l'Île-aux-Corneilles, à l'autre bout
+        # de la baie (`ile.py` : trente tuiles d'eau, pas de police) — on y va en chaloupe, on
+        # accoste au quai de l'île, on monte à pied jusqu'à la chapelle. `ou` et pas `lieu` :
+        # l'île ne se rejoint pas à pied (`test_barrieres.py`), et la GPS du `tuer` suit
+        # l'homme posé, pas une porte.
+        {"type": "tuer", "texte": "UNE LUNETTE BRILLE AU CLOCHER DE L'ÎLE — VA LA FERMER",
+         "groupe": "morues", "n": 1, "ou": "chapelle"},
+
+        # Au retour, on longe le quai des chalutiers : l'antenne que m53 fera taire.
+        {"type": "aller", "texte": "EN REVENANT, LONGE L'AUTRE QUAI — REGARDE SON ANTENNE",
+         "lieu": "mouillage:chalutier:1", "rayon": 5},
+
         {"type": "tuer", "texte": "UN GUETTEUR DES MORUES T'A REPÉRÉ — COUCHE-LE",
          "groupe": "morues", "n": 1, "ou": "amarrage:sven"},
 
@@ -43,15 +56,23 @@ MISSION = {
             _l("sven", "Une chaloupe t'attend. Fais le tour de la baie, sans bruit, sans lumière.",
                jeu="[Norwegian accent][quietly] Une chaloupe… t'attend. [firmly] Fais le tour de la baie… sans bruit, sans lumière."),
             _l("sven", "Josée regarde son port de trop près. Je veux savoir qui regarde, et quand.",
-               jeu="[Norwegian accent][coldly] Josée regarde son port… de trop près. [calm] Je veux savoir qui regarde… et quand.")
+               jeu="[Norwegian accent][coldly] Josée regarde son port… de trop près. [calm] Je veux savoir qui regarde… et quand."),
+            _l("sven", "Des yeux sur l'île, d'autres sur mon quai. Ferme-les tous, sans bruit.",
+               jeu="[Norwegian accent][calm] Des yeux sur l'île… d'autres sur mon quai. [firmly] Ferme-les tous… sans bruit.")
         ],
         "pendant": [
             _p("sven", "Lentement. Un moteur trop pressé s'entend de loin.", 1,
                jeu="[Norwegian accent][gravely] Lentement. [quietly] Un moteur trop pressé… s'entend de loin."),
-            _p("sven", "Quelqu'un t'a vu. Règle ça vite, et sans un mot.", 2,
-               jeu="[Norwegian accent][dramatic] Quelqu'un… t'a vu. [firmly] Règle ça vite… et sans un mot.")
+            _p("sven", "Quelqu'un t'a vu. Règle ça vite, et sans un mot.", 4,
+               jeu="[Norwegian accent][dramatic] Quelqu'un… t'a vu. [firmly] Règle ça vite… et sans un mot."),
+            _p("sven", "Une lunette brille au clocher de l'île. Personne ne monte là-haut pour prier.", 2,
+               jeu="[Norwegian accent][quietly] Une lunette brille… au clocher de l'île. [wryly] Personne ne monte là-haut… pour prier."),
+            _p("sven", "Cette antenne, sur l'autre quai. Retiens-la, elle écoute pour Josée.", 3,
+               jeu="[Norwegian accent][matter-of-fact] Cette antenne, sur l'autre quai. [coldly] Retiens-la… elle écoute pour Josée.")
         ],
         "fin": [
+            _l("sven", "Un guetteur dans un clocher. Même Dieu travaille pour Josée, maintenant.",
+               jeu="[Norwegian accent][deadpan] Un guetteur… dans un clocher. [wryly] Même Dieu travaille pour Josée… maintenant."),
             _l("sven", "Parfait. C'est tout ce que je demande.",
                jeu="[Norwegian accent][satisfied] Parfait. [calm] C'est tout… ce que je demande."),
             _l("sven", "Tiens. La prochaine fois, le travail sera moins tranquille.",
