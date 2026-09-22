@@ -194,6 +194,10 @@ def test_la_police_parle_a_la_radio(banc):
         j.x = d.x; j.y = d.y; j.intouchable = true;
         L.B.defs.conduite.trafic.vehicules_max = 0;
         L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(function (e) { L.Entites.retirer(e); });
+        // ⚠️ Le juge saute le temps a la main (`attendre`) : les renforts d'une etoile
+        // neuve, eux, comptent leurs images (`renfort_s`, la tolerance du 22 sept. 2026),
+        // et l'helico des cinq etoiles n'arriverait jamais a la seule image jouee.
+        L.B.defs.recherche.police.renfort_s = 0;
         const dernier = function () { const l = L.Son.Ondes.dites; return l.length ? l[l.length - 1].slug : null; };
         const attendre = function () { L.B.t += 60 * 60; };
         L.Police.etoilesAuMoins(1); dit.repere = dernier(); attendre();

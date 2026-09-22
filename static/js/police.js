@@ -22,6 +22,14 @@ const Police = (function () {
   function defs() { return B.defs.recherche; }
   function reglages() { return B.defs.recherche.police; }
   function palier() { return defs().paliers[Math.min(B.recherche.etoiles, defs().etoiles_max)]; }
+  /** Le palier dont le poste a DEJA envoye les renforts (`majRenforts`) : c'est lui, et
+      pas les etoiles, qui dit combien d'agents, d'autos, d'helicos et de barrages viennent.
+      ⚠️ Pas encore de compte, pas encore de renforts : un `undefined` lu comme les
+      etoiles les faisait arriver a l'image meme. */
+  function palierDesRenforts() {
+    const r = B.recherche;
+    return defs().paliers[Math.min(r.renforts || 0, r.etoiles, defs().etoiles_max)];
+  }
 
   /** L'agent en (ax, ay) regardant vers `angle` voit-il (x, y) ? Cone + portee ; la ligne de vue est a part. */
   function dansLeCone(ax, ay, angle, demiAngleRad, portee, x, y) {
@@ -124,6 +132,7 @@ const Police = (function () {
     if (auRefuge()) return;
     const r = B.recherche, d = defs(), avant = r.etoiles;
     r.chaleur += gravite * d.chaleur_par_gravite;
+    r.repitChaleur = d.chaleur_repit_s * 60;          // la jauge ne refroidit qu'apres ce repit (`refroidir`)
     while (r.chaleur >= d.chaleur_etoile && r.etoiles < d.etoiles_max) {
       r.chaleur -= d.chaleur_etoile;
       r.etoiles++;
@@ -154,7 +163,17 @@ const Police = (function () {
     B.crimes.push(crime);
     if (B.crimes.length > 40) B.crimes.shift();
     B.partie.stats.crimes++;
-    if (compte) { ajouterChaleur(delit.etoiles); crime.rapporte = true; B.recherche.dernierVu = { x: x, y: y, t: B.t }; }
+    if (compte) {
+      // ⚠️ UN CARAMBOLAGE EST UN DELIT, PAS TROIS (`repit_s` au catalogue) : le meme
+      // delit, compte de nouveau avant le repit, ne chauffe pas une deuxieme fois. Le
+      // repit part du dernier qui a CHAUFFE — il ne glisse pas, sinon on conduirait
+      // comme un fou sans jamais rien payer. (Un `B.t` plus petit que le souvenir :
+      // une partie neuve, et rien n'est une redite.)
+      const r = B.recherche, dernier = (r.redites || {})[type];
+      const redite = !!delit.repit_s && dernier !== undefined && B.t - dernier >= 0 && B.t - dernier < delit.repit_s * 60;
+      if (!redite) { ajouterChaleur(delit.etoiles); if (delit.repit_s) (r.redites = r.redites || {})[type] = B.t; }
+      crime.rapporte = true; r.dernierVu = { x: x, y: y, t: B.t };
+    }
     // Les temoins : ceux qui ont VU (dans leur cone, rien devant) et qui ont le
     // coeur de le dire. La victime d'un pickpocket, de dos, n'a rien vu.
     const t = defs().temoins, vision = defs().vision.pieton;
@@ -511,6 +530,9 @@ const Police = (function () {
     for (let essai = 0; essai < 20; essai++) {
       const place = Entites.placeDeNaissance();
       if (!place) return null;
+      // ⚠️ Un RENFORT arrive de la rue, pas d'une maison : `placeDeNaissance` fait
+      // sortir un passant sur deux d'une porte, parfois a l'ecran, a deux pas de toi.
+      if (pres && place.porte) continue;
       if (!pres || dist2(place.x, place.y, pres.x, pres.y) < 420 * 420) return place;
     }
     return null;
@@ -531,7 +553,7 @@ const Police = (function () {
     const p = reglages(), table = (defs().standing) || {};
     const f = (table[standing] || { patrouille: 1 }).patrouille;
     return Math.round(Math.min(p.patrouille_par_zone_max, zone ? zone.police : 1)
-                      * Monde.rythme(zone) * f) + palier().agents_pied;
+                      * Monde.rythme(zone) * f) + palierDesRenforts().agents_pied;
   }
 
   function peuplerAgents() {
@@ -558,7 +580,7 @@ const Police = (function () {
   function peuplerAutos() {
     const j = B.joueur, r = B.recherche;
     if (B.t % 45 !== 0) return;
-    const voulu = palier().autos;
+    const voulu = palierDesRenforts().autos;
     // ⚠️ Une auto dont l'equipage est mort reste garee, mais ne compte plus : sans ca, deux agents tues
     // et la police n'enverrait plus jamais de renfort.
     const presentes = autos().filter(function (a) { return !abandonnee(a); });
@@ -905,7 +927,7 @@ const Police = (function () {
   function majBarrages() {
     const j = B.joueur, r = B.recherche, v = j.dansVehicule;
     const existants = barrages();
-    if (r.etoiles <= 0 || !palier().barrages) {
+    if (r.etoiles <= 0 || !palierDesRenforts().barrages) {
       existants.forEach(function (b) { if (!Entites.visibleAEcran(b.x, b.y, 60)) Entites.retirer(b); });
       return;
     }
@@ -974,6 +996,31 @@ const Police = (function () {
 
   // --- La machine de recherche -----------------------------------------------------
 
+  /** ⚠️ LA CHALEUR REFROIDIT (la tolerance, 22 sept. 2026) : `chaleur_repit_s` apres le
+      dernier delit compte, la jauge perd `chaleur_refroidit_par_s` a la seconde. Elle ne
+      redescendait jamais : trois petits delits a vingt minutes d'ecart faisaient une
+      etoile. ⚠️ La jauge seulement : les etoiles, elles, ne tombent qu'hors de vue. */
+  function refroidir() {
+    const r = B.recherche;
+    if (r.repitChaleur > 0) { r.repitChaleur--; return; }
+    if (r.chaleur > 0) r.chaleur = Math.max(0, r.chaleur - defs().chaleur_refroidit_par_s / 60);
+  }
+
+  /** ⚠️ LES RENFORTS PRENNENT LE TEMPS DE VENIR (la tolerance, 22 sept. 2026). Ceux d'une
+      etoile neuve partent du poste `renfort_s` apres elle : `r.renforts` rattrape les
+      etoiles au bout du compte a rebours, et redescend avec elles sans attendre. Une
+      etoile de plus pendant l'attente la relance. ⚠️ Les agents DEJA la ne sont pas des
+      renforts : ils te voient, te poursuivent et tirent tout de suite (`gere`). Un compte
+      a rebours plutot qu'une heure (`B.t`), qui repart de zero a chaque partie. */
+  function majRenforts() {
+    const r = B.recherche;
+    if (r.etoiles > (r.etoilesAvant || 0)) r.renfortN = reglages().renfort_s * 60;
+    r.etoilesAvant = r.etoiles;
+    if (r.renfortN > 0) r.renfortN--;
+    if (r.renforts === undefined) r.renforts = 0;
+    if (!(r.renfortN > 0) || r.renforts > r.etoiles) r.renforts = r.etoiles;
+  }
+
   /** Hors de vue, les etoiles tombent une a une. Rien ne les remet a zero d'un coup. */
   function decroitre() {
     const r = B.recherche;
@@ -990,6 +1037,8 @@ const Police = (function () {
     const r = B.recherche, j = B.joueur;
     if (!j) return;
     if (r.flash > 0) r.flash--;
+    refroidir();
+    majRenforts();
     if (B.interieur) {
       // Dedans, on se fait oublier ; personne ne patrouille les salons. Mais
       // l'helico tourne au-dessus du toit, et repart quand les etoiles tombent.
@@ -1014,7 +1063,7 @@ const Police = (function () {
     decroitre();
     if (r.etoiles > 0) {
       peuplerAutos();
-      if (palier().helico) peuplerHelico();
+      if (palierDesRenforts().helico) peuplerHelico();
     } else {
       autos().forEach(function (v) { if (!Entites.visibleAEcran(v.x, v.y, 60)) Entites.retirer(v); });
     }
@@ -1042,7 +1091,7 @@ const Police = (function () {
     }
   }
 
-  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre,
+  return { dansLeCone, voit, porteeDuCasier, quelqu_un_voit, auRefuge, ajouterChaleur, etoilesAuMoins, signalerCrime, crimeDAutrui, rapporter, acheterLeSilence, remiseAZero, entendre, palierDesRenforts,
            estStool, leStool, prixDuStool, majStools, appelDuStool, acheterLeStool, onNeTeReconnaitPlus,
            creerAgent, agents, autos, gere, commandes, peuplerAgents, peuplerAutos, equipageDe: equipage, abandonnee,
            agentsVoulus, standingIci,

@@ -46,6 +46,24 @@ ETOILES_MAX = len(PALIERS) - 1
 CHALEUR_PAR_GRAVITE = 35
 CHALEUR_ETOILE = 100
 
+#: ⚠️ LA CHALEUR REFROIDIT (demande de Martin en jouant, 22 sept. 2026 : « la
+#: police arrive trop rapidement et les etoiles aussi. il faut plus de
+#: tolerance »). Elle ne redescendait JAMAIS : trois petits delits espaces de
+#: vingt minutes faisaient une etoile, et la jauge portait toute la partie.
+#: Maintenant, `chaleur_repit_s` apres le dernier delit COMPTE, elle perd
+#: `chaleur_refroidit_par_s` points a la seconde : un delit de gravite 1 (35)
+#: s'oublie 37 s apres, et trois delits font toujours une etoile — s'ils
+#: tombent dans la meme demi-minute.
+#:
+#: ⚠️ Seule la JAUGE refroidit, jamais les etoiles : elles ne tombent toujours
+#: qu'hors de vue, une a une (`decroissance_s`).
+#:
+#: ⚠️ DEUXIEME PASSE (22 sept. 2026, Martin en jouant : « ca me semble ENCORE
+#: trop rapide ») : a 20 s de repit et 3 points la seconde, deux petits delits
+#: se rejoignaient encore trop souvent.
+CHALEUR_REPIT_S = 30
+CHALEUR_REFROIDIT_PAR_S = 5
+
 #: Etoiles ajoutees par delit (gravite), et si un temoin est necessaire.
 #: `temoin: False` = le delit est BRUYANT : quiconque le percoit suffit, la
 #: police le sait tout de suite. `temoin: True` = il faut qu'un agent le voie,
@@ -62,7 +80,20 @@ DELITS: dict[str, dict] = {
     "arme_sortie": {"etoiles": 1, "temoin": False},
     "coup_policier": {"etoiles": 2, "temoin": False},
     "mort_policier": {"etoiles": 3, "temoin": False},
-    "conduite_dangereuse": {"etoiles": 1, "temoin": False},
+    # ⚠️ UN CARAMBOLAGE EST UN DELIT, PAS TROIS (la tolerance, 22 sept. 2026).
+    # Chaque accrochage a plus de 2 px/image et chaque cloture defoncee en
+    # etait un, BRUYANT : trois chars touches devant un passant, c'etait une
+    # etoile d'un coup. `repit_s` : le meme delit, de nouveau compte avant ce
+    # delai, ne chauffe pas une deuxieme fois. ⚠️ Le delai part du dernier
+    # delit COMPTE, il ne glisse pas : conduire comme un fou sans arret chauffe
+    # quand meme, une fois par repit.
+    #
+    # ⚠️ ET IL A UN TEMOIN, comme sa fiche le disait deja (« casser est un
+    # delit, avec son temoin qui rapporte ») : un accrochage n'est pas un coup
+    # de feu — il faut qu'un agent le VOIE, ou qu'un passant aille le raconter,
+    # et d'ici la on peut lui acheter son silence. C'etait la derniere raison
+    # pour laquelle les etoiles montaient en conduisant (Martin, 22 sept. 2026).
+    "conduite_dangereuse": {"etoiles": 1, "temoin": True, "repit_s": 20},
     "explosion": {"etoiles": 2, "temoin": False},
     "guichet": {"etoiles": 2, "temoin": False},
     # Defoncer une machine distributrice. ⚠️ Pas un guichet : une etoile, et
@@ -128,7 +159,10 @@ TEMOINS = {
     "cherche_policier_tuiles": 40,
     "oubli_s": 30,
     "proba_telephone": 0.3,
-    "delai_depeche_s": 8,
+    # ⚠️ Le temoin qui ne trouve aucun agent finit par TELEPHONER. Huit secondes,
+    # c'etait le temps de traverser la rue : ni celui de lui acheter son silence,
+    # ni celui de partir (la tolerance, 22 sept. 2026).
+    "delai_depeche_s": 15,
 }
 
 #: ⚠️ LE CRIME D'AUTRUI (M12) : « un crime qu'on n'a pas commis peut te tomber dessus si
@@ -374,6 +408,17 @@ POLICE = {
     # se tient a cette distance. Sans le deuxieme, le bouclier ne servait a
     # rien — ils cessaient de tirer et venaient te cueillir a la main.
     "bouclier_recul_px": 90,
+    # ⚠️ LES RENFORTS PRENNENT LE TEMPS DE VENIR (la tolerance, 22 sept. 2026).
+    # Ceux d'un palier — ses agents a pied en plus, ses autos, l'helico, les
+    # barrages — naissaient a l'image ou l'etoile tombait, a moins de 420 px
+    # d'ou l'on t'avait vu (parfois d'une porte a l'ecran), et couraient a
+    # 1,6 px/image : trois secondes et demie plus tard, ils etaient la. Ils
+    # partent maintenant `renfort_s` apres l'etoile neuve, et jamais d'une
+    # porte. ⚠️ Les agents DEJA sur place, eux, reagissent tout de suite : le
+    # delai est celui du poste, pas celui de l'agent qui te regarde.
+    # ⚠️ Deuxieme passe (22 sept. 2026) : 12 s ne se sentaient pas — une etoile
+    # tombe en 15 s hors de vue, et les renforts doivent arriver APRES ca.
+    "renfort_s": 20,
 }
 
 
@@ -397,6 +442,8 @@ def exporter() -> dict:
         "etoiles_max": ETOILES_MAX,
         "chaleur_par_gravite": CHALEUR_PAR_GRAVITE,
         "chaleur_etoile": CHALEUR_ETOILE,
+        "chaleur_repit_s": CHALEUR_REPIT_S,
+        "chaleur_refroidit_par_s": CHALEUR_REFROIDIT_PAR_S,
         "delits": DELITS,
         "vision": VISION,
         "temoins": TEMOINS,

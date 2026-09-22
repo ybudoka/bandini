@@ -346,6 +346,10 @@ def test_a_trois_etoiles_les_autos_arrivent_et_l_agent_tire(banc):
     r = banc(AGENT + """
         L.Jeu.commencer();
         const j = L.B.joueur;
+        // ⚠️ Ce juge regarde ce que les renforts FONT, pas quand ils partent : leur délai
+        // (`renfort_s`, la tolérance du 22 sept. 2026) a son propre juge, et il dure plus
+        // longtemps que cette boucle.
+        L.B.defs.recherche.police.renfort_s = 0;
         L.Police.ajouterChaleur(9);                  // trois etoiles
         const a = poserAgent(L, 'poursuit', 80);
         j.intouchable = true;                         // on observe : personne ne t'arrete
@@ -415,6 +419,10 @@ def test_a_cinq_etoiles_l_helico_te_survole_et_rien_ne_retombe(banc, paquet):
         L.Jeu.commencer();
         const j = L.B.joueur;
         j.intouchable = true;
+        // ⚠️ Ce juge regarde ce que les renforts FONT, pas quand ils partent : leur délai
+        // (`renfort_s`, la tolérance du 22 sept. 2026) a son propre juge, et il dure plus
+        // longtemps que cette boucle.
+        L.B.defs.recherche.police.renfort_s = 0;
         L.Police.ajouterChaleur(15);                // cinq etoiles
         let apparu = -1, dMin = Infinity;
         for (let i = 0; i < 900; i++) {
@@ -446,6 +454,10 @@ SOUS_L_HELICO = """async function (L, o) {
         await o.attendre(); await o.attendre(); await o.attendre();
         L.B.joueur.intouchable = true;
         if (poser) { poser(L.B.joueur); L.Monde.centrerCamera(L.B.joueur.x, L.B.joueur.y); L.Entites.indexer(); }
+        // ⚠️ Ce juge regarde ce que les renforts FONT, pas quand ils partent : leur délai
+        // (`renfort_s`, la tolérance du 22 sept. 2026) a son propre juge, et il dure plus
+        // longtemps que cette boucle.
+        L.B.defs.recherche.police.renfort_s = 0;
         L.Police.ajouterChaleur(15);
         for (let i = 0; i < 400; i++) o.frame(1);
     }
@@ -791,11 +803,16 @@ def test_deux_dehors_l_auto_reste_immobile_jusqu_a_ce_qu_un_agent_reprenne_le_vo
     r = banc(DEUX_DEHORS + """
         const { j, v, site } = lancer(L, 3.5);
         if (!descendreLesDeux(L, o, v)) return { erreur: 'l equipage n est pas descendu' };
-        const TT = L.TT, bout = site.tx * TT + 24;
+        const TT = L.TT, bout = site.tx * TT + 24, x0 = j.x;
         let sansVolant = 0, pas = 0, faux = 0, reprise = null, plusLoin = 0, maxAutour = 0, loinDeLAuto = 0, plusLoinApres = 0;
         let avant = { x: v.x, y: v.y, abord: 0 }, depart = null;
         for (let i = 0; i < 800; i++) {
-            j.x = Math.max(bout, j.x - 2);                          // tu files vers l'autre bout de la ligne
+            // Tu files vers l'autre bout de la ligne. ⚠️ Par un compteur a toi, pas par
+            // `j.x - 2` : l'equipage se tient entre toi et le bout, et la foule ne se
+            // traverse plus — le joueur restait colle derriere lui, et le juge ne
+            // passait que si un agent ne ailleurs venait le decoincer (la tolerance,
+            // 22 sept. 2026 : les renforts arrivent plus tard, et le de a bouge).
+            j.x = Math.max(bout, x0 - 2 * (i + 1));
             o.frame(1);
             const eq = L.Police.equipageDe(v);
             if (eq.dehors + eq.abord !== 2 || eq.abord < 0 || eq.dehors < 0) faux++;
@@ -858,6 +875,10 @@ def test_une_auto_dont_l_equipage_est_mort_reste_garee_et_ne_retient_plus_les_re
     immobile —, mais elle ne compte plus dans les autos du palier : sans ça, la
     police n'enverrait plus jamais de renfort."""
     r = banc(DEUX_DEHORS + """
+        // ⚠️ Ce juge regarde QUI tient la place d'un renfort, pas QUAND il vient : les
+        // renforts d'une etoile neuve attendent `renfort_s` (la tolerance, 22 sept. 2026),
+        // et son juge est `test_les_renforts_d_une_etoile_neuve_prennent_le_temps_de_venir`.
+        L.B.defs.recherche.police.renfort_s = 0;
         const { j, v, site } = lancer(L, 3.5);
         if (!descendreLesDeux(L, o, v)) return { erreur: 'l equipage n est pas descendu' };
         const garee = { x: v.x, y: v.y };
@@ -939,3 +960,158 @@ def test_signalerCrime_compte_le_guet_d_un_garde_comme_celui_d_un_policier(banc)
     }""")
     assert r["rapporte"] is True, "un garde en cone doit compter comme un agent : %s" % r
     assert r["chaleur"] > 0
+
+
+# --- La tolerance (demande de Martin en jouant, 22 sept. 2026) -----------------------
+#
+# « la police arrive trop rapidement et les etoiles aussi. il faut plus de tolerance ».
+# Trois regles, un juge chacune : la jauge refroidit, un carambolage est UN delit, et
+# les renforts d'une etoile neuve prennent le temps de venir (et jamais par une porte).
+
+
+def test_la_chaleur_refroidit_apres_un_repit_mais_pas_les_etoiles(banc, paquet):
+    """⚠️ La jauge ne redescendait JAMAIS : trois petits delits espaces de vingt
+    minutes faisaient une etoile. Maintenant elle tient `chaleur_repit_s` apres le
+    dernier delit compte, puis perd `chaleur_refroidit_par_s` a la seconde. Le
+    delit oublie, le suivant repart de zero ; trois coup sur coup font toujours
+    leur etoile ; et l'etoile, elle, ne refroidit pas — sous les yeux d'un agent,
+    elle reste."""
+    rech = paquet["recherche"]
+    repit, par_s, g = rech["chaleur_repit_s"], rech["chaleur_refroidit_par_s"], rech["chaleur_par_gravite"]
+    oubli = repit + -(-g // par_s) + 2          # le repit, puis le temps de fondre, en secondes
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, r = L.B.recherche;
+        j.intouchable = true;                         // on observe la jauge : personne ne t'arrete
+        L.Police.ajouterChaleur(1);
+        const dabord = r.chaleur;
+        o.frame(%(repit)d * 60 - 60);
+        const avantLaFin = r.chaleur;
+        o.frame((%(oubli)d - %(repit)d) * 60 + 60);
+        const oublie = r.chaleur;
+        L.Police.ajouterChaleur(1);
+        const ensuite = r.chaleur + r.etoiles * 100;
+        o.frame(60); L.Police.ajouterChaleur(1); o.frame(60); L.Police.ajouterChaleur(1);
+        const serres = r.etoiles;
+        for (let i = 0; i < (%(repit)d + 5) * 60; i++) { r.vu = 0; o.frame(1); }   // un agent te regarde
+        return { dabord: dabord, avantLaFin: avantLaFin, oublie: oublie, ensuite: ensuite,
+                 serres: serres, etoilesApres: r.etoiles, chaleurApres: r.chaleur };
+    }""" % {"repit": repit, "oubli": oubli})
+    assert r["dabord"] == g
+    assert r["avantLaFin"] == g, "la jauge a refroidi avant la fin du repit : %s" % r
+    assert r["oublie"] == 0, "la jauge ne refroidit pas : un petit delit pese toute la partie : %s" % r
+    assert r["ensuite"] == g, "le delit d'apres ne repart pas de zero : %s" % r
+    assert r["serres"] == 1, "trois delits coup sur coup ne font plus leur etoile : %s" % r
+    assert r["etoilesApres"] == 1, "l'etoile a refroidi avec la jauge : elle ne tombe qu'hors de vue : %s" % r
+    assert r["chaleurApres"] == 0, "le reste de la jauge ne refroidit pas une fois l'etoile tombee : %s" % r
+
+
+def test_un_carambolage_ne_chauffe_qu_une_fois_et_pas_sans_temoin(banc, paquet):
+    """⚠️ Chaque accrochage devant un passant etait une conduite dangereuse,
+    BRUYANTE : trois chars touches, une etoile d'un coup. Deux regles, et sa
+    fiche disait deja la seconde (« casser est un delit, avec son temoin qui
+    rapporte ») : `repit_s` — le meme delit, compte de nouveau avant ce delai,
+    ne chauffe pas une deuxieme fois — et `temoin` — il faut qu'un agent le
+    VOIE, ou qu'un passant aille le raconter. Le repit ne glisse pas (sinon on
+    conduirait comme un fou pour rien), et il n'est que pour CE delit : un coup
+    a un agent, dans la foulee, compte."""
+    rech = paquet["recherche"]
+    g, delit = rech["chaleur_par_gravite"], rech["delits"]["conduite_dangereuse"]
+    repit = delit["repit_s"]
+    assert delit["temoin"] is True, "un accrochage n'est pas un coup de feu : il lui faut un temoin"
+    assert repit < rech["chaleur_repit_s"], "le juge suppose que la jauge ne refroidit pas pendant le repit du delit"
+    r = banc(AGENT + """
+        L.Jeu.commencer();
+        const j = L.B.joueur, r = L.B.recherche;
+        j.intouchable = true;
+        const pression = function () { return r.chaleur + r.etoiles * 100; };
+        // 1. Personne en uniforme pour le voir : ca ne chauffe pas tout de suite,
+        //    meme si un passant a tout vu — il faut qu'il aille le raconter.
+        for (const q of L.B.entites.slice()) if (q.agent) L.Entites.retirer(q);
+        const seul = L.Police.signalerCrime('conduite_dangereuse', j.x, j.y, true);
+        const sansAgent = pression();
+        // 2. Un agent le voit : ca compte — mais une seule fois par repit.
+        const a = poserAgent(L, 'flane', 40);
+        const ax = a.x, ay = a.y;
+        const cogner = function () {
+            a.x = ax; a.y = ay; a.etat = 'flane';
+            L.Entites.regarder(a, j.x - ax, j.y - ay);
+            return L.Police.signalerCrime('conduite_dangereuse', j.x, j.y, true);
+        };
+        const vu = cogner();
+        const voit = L.Police.voit(a, j.x, j.y);
+        cogner();
+        o.frame(60);
+        cogner();
+        const rafale = pression();
+        o.frame(%d * 60 + 30);
+        cogner();
+        const plusTard = pression();
+        L.Police.signalerCrime('coup_policier', j.x, j.y, true);
+        return { sansAgent: sansAgent, voit: voit, rafale: rafale, plusTard: plusTard,
+                 autre: pression(), temoinSeul: seul.rapporte, vuParLAgent: vu.rapporte };
+    }""" % repit)
+    assert r["voit"] is True, "le juge est faux : l'agent ne voit pas le lieu du delit : %s" % r
+    assert r["sansAgent"] == 0 and r["temoinSeul"] is False, "un accrochage chauffe encore sans que personne l'ait rapporte : %s" % r
+    assert r["vuParLAgent"] is True, "un agent qui voit l'accrochage doit le compter : %s" % r
+    assert r["rafale"] == g, "trois accrochages dans la foulee chauffent chacun : %s" % r
+    assert r["plusTard"] == 2 * g, "passe le repit, le meme delit ne chauffe plus du tout : %s" % r
+    assert r["autre"] == 2 * g + 2 * g, "le repit d'un delit en a fait taire un autre : %s" % r
+
+
+def test_les_renforts_d_une_etoile_neuve_prennent_le_temps_de_venir(banc, paquet):
+    """⚠️ Les renforts d'un palier naissaient a l'image ou l'etoile tombait, et
+    couraient : trois secondes et demie plus tard, ils etaient la. Ceux de trois
+    etoiles — deux agents a pied, une auto — partent maintenant `renfort_s` apres
+    l'etoile, et arrivent quand meme. ⚠️ L'agent DEJA la n'est pas un renfort : il
+    te voit et te poursuit dans la seconde."""
+    s = paquet["recherche"]["police"]["renfort_s"]
+    r = banc(AGENT + """
+        L.Jeu.commencer();
+        const j = L.B.joueur, r = L.B.recherche;
+        j.intouchable = true;                         // on observe : personne ne t'arrete
+        for (const q of L.B.entites.slice()) {
+            if (q.agent || (q.type === 'vehicule' && q.conducteur === 'police')) L.Entites.retirer(q);
+        }
+        // Pas de patrouille : ce qui vient, ce sont les renforts, et rien d'autre.
+        L.B.defs.recherche.police.patrouille_par_zone_max = 0;
+        L.B.defs.recherche.police.regarde_toutes_les_images = 1;
+        const la = poserAgent(L, 'flane', 40);
+        L.Police.ajouterChaleur(9);                  // trois etoiles
+        const t0 = L.B.t, deja = new Set([la.id]);
+        let poursuit = -1, agent = -1, auto = -1;
+        while (L.B.t - t0 < (%d + 20) * 60 && (agent < 0 || auto < 0 || poursuit < 0)) {
+            o.frame(1);
+            const t = L.B.t - t0;
+            if (poursuit < 0 && la.etat === 'poursuit') poursuit = t;
+            if (agent < 0 && L.Police.agents().some(function (a) { return !deja.has(a.id); })) agent = t;
+            if (auto < 0 && L.Police.autos().length) auto = t;
+        }
+        return { poursuit: poursuit, agent: agent, auto: auto };
+    }""" % s)
+    assert 0 <= r["poursuit"] < 60, "l'agent deja la attend les renforts pour te poursuivre : %s" % r
+    assert r["agent"] >= s * 60 - 2, "un agent de renfort est arrive avant le delai : %s" % r
+    assert r["auto"] >= s * 60 - 2, "l'auto de renfort est arrivee avant le delai : %s" % r
+    assert r["agent"] > 0 and r["auto"] > 0, "les renforts ne sont jamais venus : %s" % r
+
+
+def test_un_renfort_ne_sort_jamais_d_une_porte(banc):
+    """⚠️ `placeDeNaissance` fait sortir un passant sur trois d'une porte — parfois
+    a l'ecran, a deux pas de toi. Un policier de renfort arrive de la rue, pas du
+    salon d'a cote. (Le passant ordinaire, lui, garde ses portes.)"""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const j = L.B.joueur, r = L.B.recherche;
+        for (const q of L.B.entites.slice()) if (q.agent) L.Entites.retirer(q);
+        r.etoiles = 3; r.etoilesAvant = 3; r.renforts = 3; r.renfortN = 0; r.dernierVu = null;
+        const essayer = function (porte) {
+            L.Entites.placeDeNaissance = function () { return { x: j.x + 40, y: j.y, porte: porte }; };
+            L.B.t = Math.ceil((L.B.t + 1) / 30) * 30;       // l'image ou la police peuple
+            const avant = L.Police.agents().length;
+            L.Police.peuplerAgents();
+            return L.Police.agents().length - avant;
+        };
+        return { parLaPorte: essayer({ x: 0, y: 0 }), parLaRue: essayer(undefined) };
+    }""")
+    assert r["parLaRue"] == 1, "le juge est faux : le renfort ne nait meme pas de la rue : %s" % r
+    assert r["parLaPorte"] == 0, "un renfort est sorti d'une porte : %s" % r
