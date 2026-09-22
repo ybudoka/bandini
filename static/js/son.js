@@ -225,12 +225,30 @@ const Son = (function () {
 
   /** Telecharge et decode une fois, apres le premier geste (il faut un ctx).
       ⚠️ Un echec ne remonte nulle part : l'effet retombera sur la synthese. */
+  /** Les slugs qui n'appartiennent qu'aux bruits de quartier (M15, 2e vague) :
+      ils ne se chargent PAS au demarrage — voir `chargerEchantillons`. */
+  function slugsDeQuartier() {
+    const q = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+    const vus = new Set();
+    Object.keys(q.sons || {}).forEach(function (d) {
+      q.sons[d].forEach(function (e) { vus.add(e.slug); });
+    });
+    return vus;
+  }
+
   function chargerEchantillons() {
     const audio = B.defs && B.defs.audio;
     if (demandes || !ctx || !audio || !fenetre || !fenetre.fetch) return;
     demandes = true;
     const dossier = base + audio.dossier + '/';
+    // ⚠️ LES BRUITS DE QUARTIER NE SE CHARGENT PAS ICI (M15, 2e vague) : ils
+    // sont RARES et PROPRES A UN DISTRICT — `Quartier.charger` les demande
+    // en y entrant. Les charger tous au demarrage doublait presque le budget
+    // de bruitages (2,83 Mo pour 2,5 Mo) pour des sons qu'une partie n'entend
+    // peut-etre jamais si on ne visite pas le quartier.
+    const deQuartier = slugsDeQuartier();
     audio.echantillons.forEach(function (e) {
+      if (deQuartier.has(e.slug)) return;
       (e.fichiers || []).forEach(function (nom) {
         decoder(dossier + nom)
           .then(function (tampon) {
@@ -1201,6 +1219,125 @@ const Son = (function () {
     },
   };
 
+  // --- Le souffle du joueur ------------------------------------------------------------
+  /*: ⚠️ M15, 2e vague. Il sprinte, il s'essouffle, et on n'entendait rien : la barre
+    d'endurance ne se lisait qu'en la regardant, alors que le sprint est une
+    ressource qu'on depense par bouffees. Une boucle qui suit la DETTE de souffle
+    (ce qu'on a depense), et une inspiration quand il repart. Tout vient de
+    `audio.souffle` ; `reprises` compte les inspirations (le banc n'a pas d'oreille). */
+  const Souffle = {
+    volume: 0,          // ce que la boucle joue en ce moment (0..1)
+    bas: false,         // descendu sous `bas` : la prochaine remontee s'entend
+    reprises: 0,
+
+    maj: function (j) {
+      const r = (B.defs && B.defs.audio && B.defs.audio.souffle) || {};
+      const max = (B.defs && B.defs.recherche && B.defs.recherche.vitesses.endurance) || 100;
+      // Au volant, on ne s'entend pas respirer — et on ne court pas.
+      const actif = !!(j && j.vivant !== false && !j.dansVehicule && B.etat === 'jeu');
+      const dette = actif ? 1 - Math.max(0, j.endurance) / max : 0;
+      const seuil = r.seuil === undefined ? 0.35 : r.seuil;
+      const voulu = dette <= seuil ? 0 : Math.min(1, (dette - seuil) / (1 - seuil));
+      // ⚠️ Il MONTE vite et REDESCEND doucement : on halete encore un moment apres
+      // s'etre arrete. Un souffle qui se coupe net a la seconde ou l'on lache le
+      // bouton, c'est une barre de vie qui fait du bruit, pas quelqu'un qui respire.
+      Souffle.volume = voulu > Souffle.volume
+        ? Math.min(voulu, Souffle.volume + (r.monte_par_image || 0.03))
+        : Math.max(voulu, Souffle.volume - (r.descend_par_image || 0.006));
+      if (Souffle.volume <= 0.02) {
+        if (boucleActive('souffle')) boucle('souffle', false);
+      } else {
+        if (!boucleActive('souffle')) boucle('souffle', true, Souffle.volume);
+        reglerBoucle('souffle', Souffle.volume);
+      }
+      if (!actif) { Souffle.bas = false; return; }
+      if (j.endurance <= (r.bas || 0.2) * max) Souffle.bas = true;
+      else if (Souffle.bas && j.endurance >= (r.reprise || 0.6) * max) {
+        // ⚠️ LE SOUFFLE REPART : c'est le moment ou l'on peut de nouveau courir,
+        // et c'est la seule chose que la barre disait qu'on ne pouvait pas entendre.
+        Souffle.bas = false;
+        Souffle.reprises++;
+        if (!joue('reprise')) bruit(0.5, 0.05, 1600, 500);
+      }
+    },
+  };
+
+  // --- Les bruits de quartier ----------------------------------------------------------
+  /*: ⚠️ M15, 2e vague. Pas des nappes — chaque district a deja sa musique — mais des
+    EVENEMENTS, rares et au loin : une corne de brume aux Quais, un marteau a La
+    Shop, une tondeuse aux Erables. Un quartier s'entend avant de se voir.
+
+    ⚠️ A TOUR DE ROLE, jamais `B.rng()` (comme `Ondes`), et chaque son a ses heures.
+    Il vient d'une direction qui TOURNE (l'angle d'or) : jamais deux fois du meme
+    cote, et `jouerA` le place a gauche ou a droite. `entendus` garde ce qui a
+    joue, fichier ou pas. */
+  const Quartier = {
+    prochaineT: null,
+    n: 0,
+    tours: {},
+    entendus: [],
+    chargees: new Set(),
+
+    /** Charge les bruits d'UN district, une seule fois — comme `Voix.chargerHistoire`
+        charge les repliques d'une mission. Rare et propre au quartier : les charger
+        tous au demarrage doublerait le budget de bruitages pour rien. */
+    charger: function (district) {
+      if (Quartier.chargees.has(district) || !ctx || !fenetre || !fenetre.fetch) return;
+      Quartier.chargees.add(district);
+      const r = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+      const dossier = base + B.defs.audio.dossier + '/';
+      ((r.sons && r.sons[district]) || []).forEach(function (e) {
+        const def = defEchantillon(e.slug);
+        (def && def.fichiers || []).forEach(function (nom) {
+          decoder(dossier + nom)
+            .then(function (tampon) {
+              const liste = tampons.get(e.slug) || [];
+              liste.push(tampon);
+              tampons.set(e.slug, liste);
+            })
+            .catch(function () { /* ce district restera silencieux, tant pis */ });
+        });
+      });
+    },
+
+    /** `heures` : [debut, fin] sur 24 h ramenees a 0..1 ; peut passer minuit. */
+    aSonHeure: function (e, heure) {
+      if (!e.heures) return true;
+      const d = e.heures[0], f = e.heures[1];
+      return d < f ? (heure >= d && heure < f) : (heure >= d || heure < f);
+    },
+
+    maj: function () {
+      const r = (B.defs && B.defs.audio && B.defs.audio.quartiers) || {};
+      const j = B.joueur;
+      if (!r.sons || !j) return;
+      const iv = r.intervalle_s || [25, 50];
+      if (Quartier.prochaineT === null) { Quartier.prochaineT = B.t + iv[0] * 60; return; }
+      if (B.t < Quartier.prochaineT) return;
+      Quartier.n++;
+      // Entre `iv[0]` et `iv[1]` secondes, et pas toujours le meme ecart — sans de.
+      Quartier.prochaineT = B.t + (iv[0] + (Quartier.n * 17) % Math.max(1, iv[1] - iv[0])) * 60;
+      // Dedans, on n'entend pas la rue : la piece a sa propre musique, ou son silence.
+      if (B.interieur) return;
+      const zone = Monde.zoneA(j.x, j.y);
+      const sons = zone && r.sons[zone.district];
+      if (!sons) return;
+      Quartier.charger(zone.district);
+      const heure = B.partie && B.partie.heure !== undefined ? B.partie.heure : 0.5;
+      const possibles = sons.filter(function (e) { return Quartier.aSonHeure(e, heure); });
+      if (!possibles.length) return;
+      const k = Quartier.tours[zone.district] || 0;
+      Quartier.tours[zone.district] = k + 1;
+      const e = possibles[k % possibles.length];
+      const angle = Quartier.n * 2.39996;
+      const d = r.distance_px || 240;
+      const x = j.x + Math.cos(angle) * d, y = j.y + Math.sin(angle) * d;
+      Quartier.entendus.push({ slug: e.slug, t: B.t, district: zone.district, x: x, y: y });
+      if (Quartier.entendus.length > 50) Quartier.entendus.shift();
+      jouerA(e.slug, x, y, r.portee_px || 420);
+    },
+  };
+
   // --- L'ambiance : la musique de fond, a pied ---------------------------------------
 
   const Ambiance = {
@@ -1936,7 +2073,7 @@ const Son = (function () {
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
-    Radio, Ambiance, Rumeur, Voix, Ondes,
+    Radio, Ambiance, Rumeur, Voix, Ondes, Souffle, Quartier,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.

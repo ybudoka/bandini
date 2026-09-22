@@ -748,6 +748,9 @@ const Jeu = (function () {
         Son.Chef.maj();
         // Et la radio parle entre les tounes (M15) : l'animateur de la station.
         Son.Ondes.maj();
+        // On s'entend respirer, et un quartier s'entend avant de se voir (M15).
+        Son.Souffle.maj(B.joueur);
+        Son.Quartier.maj();
         Monde.majChemins();
         // Les vagues : leur volume est une question de carte, pas de son.
         Monde.majSonDuBord();

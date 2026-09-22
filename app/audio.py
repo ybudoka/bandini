@@ -440,6 +440,62 @@ CATALOGUE: list[Echantillon] = [
        prompt="a small outboard boat motor idling and puttering on calm water, "
               "two-stroke engine putter with water slap against the hull, "
               "recorded from on board, seamless loop, no voices, no music"),
+    # --- M15, 2e vague : LE SOUFFLE DU JOUEUR. Il sprinte, il s'essouffle, et on
+    # n'entendait rien : la barre d'endurance ne se lisait qu'en la regardant.
+    # Une boucle qui monte avec la depense, et une inspiration quand le souffle
+    # repart — c'est-a-dire quand on peut de nouveau courir (`SOUFFLE`).
+    _e("souffle", "Le souffle court", duree_s=3.0, volume=0.45, boucle=True, influence=0.6,
+       prompt="heavy rhythmic panting of a man out of breath after sprinting, fast mouth "
+              "breathing in and out, close mic, dry, no reverb, seamless loop, no voice, no music"),
+    _e("reprise", "Il reprend son souffle", duree_s=2.0, volume=0.5, influence=0.6,
+       prompt="a single deep relieved inhale followed by a long slow exhale, a man catching "
+              "his breath after running, close mic, dry, no reverb, no voice, no music"),
+    # --- M15, 2e vague : LES BRUITS DE QUARTIER. Pas des nappes (chaque district
+    # a deja sa musique) : des EVENEMENTS, rares, au loin — et un quartier
+    # s'entend avant de se voir (`QUARTIERS`). ⚠️ Pas de goeland : c'est une BETE
+    # du jeu, on l'entend quand on la voit. Le huard, lui, ne vit pas en ville.
+    _e("corne_de_brume", "Une corne de brume au loin", duree_s=4.0, volume=0.35, influence=0.6,
+       prompt="a distant foghorn from a lighthouse, one long low mournful blast over a "
+              "foggy harbour, far away, outdoors, no voices, no music"),
+    _e("cloche_de_bouee", "La cloche d'une bouee", duree_s=4.0, volume=0.3, influence=0.6,
+       prompt="a distant bell buoy clanging irregularly as it rocks on gentle waves, "
+              "far away across open water, outdoors, no voices, no music"),
+    _e("quai_qui_grince", "Un quai qui grince", duree_s=3.0, volume=0.3, influence=0.5,
+       prompt="old wooden dock creaking and mooring ropes straining as a boat pulls on "
+              "them, harbour at night, outdoors, no voices, no music"),
+    _e("marteau_au_loin", "On martele au loin", duree_s=3.0, volume=0.3, influence=0.6,
+       prompt="distant heavy hammer blows on steel in an industrial yard, irregular "
+              "metallic clangs echoing between warehouses, far away, no voices, no music"),
+    _e("meuleuse_au_loin", "Une meuleuse au loin", duree_s=3.0, volume=0.25, influence=0.6,
+       prompt="a distant angle grinder cutting metal in a workshop, a few seconds of "
+              "high whine then stopping, heard from outside down the street, no voices, no music"),
+    _e("sifflet_d_usine", "Le sifflet de l'usine", duree_s=3.0, volume=0.3, influence=0.7,
+       prompt="a distant old factory steam whistle blowing one long blast for the shift "
+              "change, far away across an industrial district, no voices, no music"),
+    _e("tondeuse", "Une tondeuse", duree_s=4.0, volume=0.25, influence=0.6,
+       prompt="a gas lawn mower running in a suburban backyard a few houses away, engine "
+              "droning then fading, summer afternoon, no voices, no music"),
+    _e("chien_au_loin", "Un chien au loin", duree_s=2.5, volume=0.3, influence=0.6,
+       prompt="a dog barking a few times in a backyard down the street, distant, "
+              "outdoors, residential neighbourhood, no voices, no music"),
+    _e("oiseaux", "Des oiseaux", duree_s=4.0, volume=0.25, influence=0.5,
+       prompt="small songbirds chirping in a leafy suburban tree, robins and sparrows, "
+              "gentle morning, outdoors, no voices, no music"),
+    _e("vent_dans_les_arbres", "Le vent dans les arbres", duree_s=4.0, volume=0.3, influence=0.5,
+       prompt="a gust of wind rustling through tall trees in a seaside park, leaves "
+              "swishing, rising and falling, outdoors, no voices, no music"),
+    _e("huard", "Le cri du huard", duree_s=4.0, volume=0.25, influence=0.7,
+       prompt="the haunting wail of a common loon calling across a quiet lake at dusk, "
+              "far away, echoing over the water, no voices, no music"),
+    _e("planche_a_roulettes", "Une planche a roulettes", duree_s=3.0, volume=0.25, influence=0.6,
+       prompt="a skateboard rolling on concrete then an ollie and a clacking landing, a "
+              "little way off in a skate park, outdoors, no voices, no music"),
+    _e("cloche_d_eglise", "La cloche de l'eglise", duree_s=4.0, volume=0.3, influence=0.6,
+       prompt="a single church bell tolling a few slow strokes from a steeple downtown, "
+              "heard from a few streets away, outdoors, no voices, no music"),
+    _e("klaxons_au_loin", "Des klaxons au loin", duree_s=3.0, volume=0.25, influence=0.5,
+       prompt="a few impatient car horns honking in a traffic jam a few blocks away, "
+              "downtown street, distant, no voices, no music"),
 ]
 
 # --- La finition des bruitages -------------------------------------------------------
@@ -1030,6 +1086,51 @@ ONDES = {
     "police_repos_s": 30,
 }
 
+#: LE SOUFFLE DU JOUEUR (M15, 2e vague) : la barre d'endurance, lisible sans la
+#: regarder. Tout est une part de `recherche.VITESSES["endurance"]`.
+SOUFFLE = {
+    # Sous cette dette (ce qu'on a depense), on ne s'entend pas respirer : un
+    # petit bout de sprint ne doit pas faire haleter.
+    "seuil": 0.35,
+    # Il MONTE vite (on s'essouffle d'un coup) et REDESCEND doucement : on
+    # continue de haleter un moment apres s'etre arrete, comme en vrai. ⚠️ Plus
+    # lentement que la barre ne se remplit (0,24 point par image, soit 0,0037 de
+    # volume) : a 0,006, le halètement SUIVAIT la barre et se taisait pile quand
+    # elle repassait le seuil — une jauge qui fait du bruit, pas quelqu'un qui souffle.
+    "monte_par_image": 0.03,
+    "descend_par_image": 0.002,
+    # La reprise : descendu sous `bas`, on entend l'inspiration quand la barre
+    # remonte a `reprise` — le moment ou l'on peut de nouveau courir.
+    "bas": 0.2,
+    "reprise": 0.6,
+}
+
+#: LES BRUITS DE QUARTIER (M15, 2e vague) : des EVENEMENTS rares, au loin, qui
+#: font qu'un quartier s'entend avant de se voir. Trois ou quatre par district,
+#: dits a tour de role (⚠️ jamais `B.rng()` : un bruit de fond qui tire un de
+#: decale tout le hasard du jeu), et certains a leurs heures (`heures`, sur
+#: 24 h ramenees a 0..1, comme `pietons.travaille_a`) : on ne tond pas son
+#: gazon a trois heures du matin.
+QUARTIERS = {
+    "intervalle_s": [25, 50],
+    # Ou ca se passe : a cette distance du joueur, dans une direction qui tourne.
+    # La portee dit combien il en reste a l'oreille (`Son.jouerA`) : au loin.
+    "distance_px": 240,
+    "portee_px": 420,
+    "sons": {
+        "faubourg": [{"slug": "cloche_d_eglise", "heures": [0.3, 0.8]}, {"slug": "klaxons_au_loin", "heures": [0.3, 0.85]},
+                     {"slug": "chien_au_loin"}],
+        "erables": [{"slug": "tondeuse", "heures": [0.38, 0.75]}, {"slug": "oiseaux", "heures": [0.25, 0.7]},
+                    {"slug": "chien_au_loin"}],
+        "shop": [{"slug": "marteau_au_loin", "heures": [0.3, 0.75]}, {"slug": "meuleuse_au_loin", "heures": [0.3, 0.75]},
+                 {"slug": "sifflet_d_usine", "heures": [0.3, 0.75]}, {"slug": "chien_au_loin"}],
+        "quais": [{"slug": "corne_de_brume"}, {"slug": "quai_qui_grince"}, {"slug": "cloche_de_bouee"}],
+        "baie": [{"slug": "corne_de_brume"}, {"slug": "cloche_de_bouee"}, {"slug": "huard", "heures": [0.75, 0.95]}],
+        "pointe": [{"slug": "vent_dans_les_arbres"}, {"slug": "planche_a_roulettes", "heures": [0.35, 0.85]},
+                   {"slug": "huard", "heures": [0.75, 0.95]}],
+    },
+}
+
 #: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
 GENRES_DES_ONDES = frozenset({g for genres in ONDES["stations"].values() for g in genres} | {"police"})
 
@@ -1270,6 +1371,9 @@ def exporter() -> dict:
         "rumeur": dict(RUMEUR),
         "ondes": {**ONDES, "stations": {s: list(g) for s, g in ONDES["stations"].items()},
                   "intervalle_s": list(ONDES["intervalle_s"])},
+        "souffle": dict(SOUFFLE),
+        "quartiers": {**QUARTIERS, "intervalle_s": list(QUARTIERS["intervalle_s"]),
+                      "sons": {d: [dict(e) for e in sons] for d, sons in QUARTIERS["sons"].items()}},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus

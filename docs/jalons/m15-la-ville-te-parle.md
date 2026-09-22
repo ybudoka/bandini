@@ -56,7 +56,7 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ## Fiche de la deuxième vague
 
-✅ **La radio parle vraiment, et la police aussi** (21 sept. 2026) — voir les notes. ⬜ **En cours** : le souffle du joueur, les bruits de quartier. **Restent** : le bulletin de nouvelles, les répliques par contexte.
+✅ **La radio, la police, le souffle et les quartiers** (21 sept. 2026) — voir les notes. **Restent** : le bulletin de nouvelles, les répliques par contexte.
 
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
@@ -213,4 +213,37 @@ tout ce qui ne demandait **aucun son neuf**.
   réplique de mission, la pub de ton bar dit que c'est le tien, la police parle par le vrai chemin des étoiles, du
   barrage et de l'hélico, le scanner n'est pas une alarme, et une réplique de mission coupe les ondes — avec du son,
   ce qui passe atteint la sortie.
+
+✅ **2e vague, deuxième partie : on s'entend respirer, et un quartier s'entend avant de se voir** (21 sept. 2026).
+
+- **Le souffle** (`audio.SOUFFLE`, `Son.Souffle`) : une boucle de halètement qui suit la DETTE d'endurance (ce
+  qu'on a dépensé), pas la barre elle-même — sous 35 % de dette, rien ; au-delà, elle monte vite (`monte_par_image`)
+  et redescend LENTEMENT (`descend_par_image`, 15 fois plus lent) : on continue de haleter un moment après s'être
+  arrêté, comme en vrai. ⚠️ Une inspiration (`reprise`) marque le moment où l'on peut de nouveau courir (l'endurance
+  remonte à 60 % après être tombée sous 20 %) — c'est exactement ce que la barre disait qu'on ne pouvait pas
+  entendre. Rien au volant : on ne court pas assis.
+- **Les bruits de quartier** (`audio.QUARTIERS`, `Son.Quartier`) : treize sons, trois ou quatre par district, à
+  tour de rôle et à leurs heures (une tondeuse ne tourne pas à 3 h du matin) — une corne de brume et une cloche de
+  bouée aux Quais et à la baie, un marteau et une meuleuse à La Shop, une tondeuse et des oiseaux aux Érables, le
+  vent dans les arbres et une planche à roulettes à La Pointe, la cloche de l'église et des klaxons au Faubourg, le
+  huard le soir sur l'eau. Un événement, pas une nappe : rare, au loin, et silencieux dans une pièce.
+- ⚠️ **TREIZE SONS DE PLUS AURAIENT FAIT SAUTER LE BUDGET DE DÉMARRAGE** (2,83 Mo pour un plafond de 2,5 Mo, mesuré
+  en générant les seize fichiers avant d'y toucher). Plutôt que relever un plafond qui protège la 3G du premier
+  écran — décision de Martin, pas la mienne —, les bruits de quartier **se chargent à la volée, un district à la
+  fois**, exactement comme une pièce de musique ou une station de radio : `Son.Quartier.charger(district)`, appelé
+  la première fois qu'on y entend quelque chose. `chargerEchantillons()` les exclut désormais du chargement au
+  premier geste. Le budget de démarrage ne bouge pas ; les treize fichiers (≈ 536 Ko, pleine qualité, aucun
+  raccourci) ont leur propre plafond de dépôt (1 Mo), comme les radios et la musique.
+- ⚠️ **À tour de rôle, jamais `B.rng()`**, même règle que les ondes : chaque district lit sa liste dans l'ordre et
+  ne répète qu'après l'avoir dite en entier.
+- **Seize bruitages générés** (≈ 395 crédits, mesurés avant et après). Tous vérifiés sans écoute possible : pic à
+  −1 à −1,6 dBFS (conforme à `PIC_VISE_DBFS`), aucun trou de silence de plus de 0,15 s dans le souffle ni la
+  reprise. ⚠️ **Personne ne les a écoutés** : c'est à Martin.
+- **Juges** (`test_souffle_et_quartiers.py`, 11 ; onze mutations, toutes rouges) : chaque district s'entend (trois
+  sons ou plus, un qui ne dort jamais), on ne tond pas son gazon la nuit, le souffle se lit sans regarder la barre ;
+  au banc : le souffle monte puis repart avec UNE inspiration, rien au volant, un quartier s'entend avant de se
+  voir sans tirer de dé, la nuit change les bruits, la vraie boucle du jeu (`jeu.js`) appelle bien les deux, les
+  bruits de quartier ne se chargent pas au démarrage et un district ne se recharge pas à chaque bruit (compté par
+  les vraies requêtes réseau, `o.fetchs` — un `Set` qui n'enfle pas aurait laissé passer le trou), et le souffle
+  s'entend vraiment (atteint la sortie, s'éteint quand on a repris son souffle).
 

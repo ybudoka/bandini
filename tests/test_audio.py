@@ -47,11 +47,20 @@ def test_le_poids_audio_reste_raisonnable():
     loin du megaoctet. Les radios, elles, n'arrivent qu'au tour de cle."""
     dossier = audio.RACINE_STATIQUE / audio.DOSSIER
     fichiers = list(dossier.glob("*.mp3")) if dossier.is_dir() else []
+    # ⚠️ LES BRUITS DE QUARTIER (M15, 2e vague) SORTENT DU BUDGET DE DEMARRAGE,
+    # ET PAS POUR LUI FAIRE DE LA PLACE : `Son.Quartier.charger` les demande
+    # UN DISTRICT A LA FOIS, en y entrant — jamais au premier geste, exactement
+    # comme la musique. Chaque slug de `audio.QUARTIERS["sons"]` nomme son
+    # fichier `<slug>-1.mp3`, sans prefixe (comme tout `Echantillon`) : on les
+    # reconnait par leur SLUG, pas par leur nom de fichier.
+    slugs_de_quartier = {e["slug"] for sons in audio.QUARTIERS["sons"].values() for e in sons}
     bruitages = [f for f in fichiers
-                 if not f.name.startswith(("radio-", "histoire-", "musique-"))]
+                 if not f.name.startswith(("radio-", "histoire-", "musique-"))
+                 and f.stem.rsplit("-", 1)[0] not in slugs_de_quartier]
     radios = [f for f in fichiers if f.name.startswith("radio-")]
     histoire = [f for f in fichiers if f.name.startswith("histoire-")]
     musiques = [f for f in fichiers if f.name.startswith("musique-")]
+    quartiers = [f for f in fichiers if f.stem.rsplit("-", 1)[0] in slugs_de_quartier]
     # ⚠️ Budget releve de 600 a 650 Ko le 13 sept. 2026 : les trois cris de
     # l'homme-sandwich (22 Ko) l'ont fait deborder de 6 Ko. On reste a un
     # tiers du megaoctet ; la prochaine fois, on compresse avant de relever.
@@ -84,6 +93,15 @@ def test_le_poids_audio_reste_raisonnable():
     assert sum(f.stat().st_size for f in bruitages) < 2_500_000
     for fichier in bruitages:
         assert fichier.stat().st_size < 80_000, fichier.name
+    # ⚠️ Un bruit de quartier ne se telecharge JAMAIS au demarrage
+    # (`Quartier.charger`, un district a la fois, comme une piece de musique) :
+    # ce plafond borne le DEPOT, pas le premier ecran. Mesure du 21 sept. 2026 :
+    # treize sons, ~536 Ko — largement sous le megaoctet ; un joueur qui visite
+    # tous les quartiers d'une partie en telecharge au plus une poignee de Ko
+    # a la fois, jamais plus d'un district d'un coup.
+    for fichier in quartiers:
+        assert fichier.stat().st_size < 80_000, fichier.name
+    assert sum(f.stat().st_size for f in quartiers) < 1_000_000
     for fichier in radios:
         assert 100_000 < fichier.stat().st_size < 700_000, fichier.name
     # 5 stations de 45 s + l'ambiance de 60 s a 64 kbit/s : 2,3 Mo dans le
