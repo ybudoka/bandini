@@ -389,7 +389,16 @@ const Hud = (function () {
     return !m.items.some(function (i) { return !i.entete && i.actif !== false; });
   }
 
-  /** ACTION sur la ligne du curseur — au bouton comme au doigt. */
+  /** ACTION sur la ligne du curseur — au bouton comme au doigt.
+
+      ⚠️ Un `faire` qui rend `false` GARDE le menu ouvert, et le refait
+      (`refaire`) ; tout autre retour le ferme. Demande de Martin (22 sept.
+      2026) : « lors d'une selection d'un achat ou autre, je veux rester dans
+      le meme menu ; on quitte seulement avec B ou Esc ou un menu retour ».
+      Un comptoir rend donc `false` a chaque achat ; seul un choix qui EST un
+      depart (dormir, lire le Clairon, REPARTIR, l'arrestation, reprendre la
+      partie) le ferme — le juge `test_un_comptoir_reste_ouvert_js.py` presse
+      ACTION sur chaque ligne de chaque comptoir de la ville. */
   function choisirLigne(m) {
     const item = m.items[m.curseur];
     if (item && !item.entete && item.actif !== false) {
@@ -510,16 +519,30 @@ const Hud = (function () {
     });
   }
 
+  /** Le toast (`message`), a la hauteur `y`. */
+  function dessinerMessage(ctx, y) {
+    if (!B.msg || B.msgT <= 0) return;
+    const l = Atlas.largeurTexte(B.msg, 2);
+    ctx.fillStyle = 'rgba(11,10,18,0.75)'; ctx.fillRect((VW - l) / 2 - 6, y, l + 12, 16);
+    Atlas.texte(ctx, B.msg, (VW - l) / 2, y + 3, '#efe6d0', 2);
+    B.msgT--;
+  }
+
+  /** La boite d'un menu hors classeur. `largeur`, `hauteur` et `colonne` : un
+      menu qui montre autre chose qu'une liste (l'ecran MANETTE et son dessin)
+      prend la place qu'il lui faut. */
+  function boiteDuMenu(m) {
+    const l = m.largeur || 300;
+    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
+    return { x: (VW - l) / 2, y: (VH - h) / 2, l: l, h: h };
+  }
+
   function dessinerMenu(ctx) {
     const m = B.menu;
     if (!m) return;
     cibles = []; ciblesDe = m;
     if (m.classeur) { dessinerClasseur(ctx, m); return; }
-    // `largeur`, `hauteur` et `colonne` : un menu qui montre autre chose qu'une
-    // liste (l'ecran MANETTE et son dessin) prend la place qu'il lui faut.
-    const l = m.largeur || 300;
-    const h = m.hauteur || Math.min(VH - 30, 40 + m.items.length * 14 + (m.aide ? 14 : 0));
-    const x = (VW - l) / 2, y = (VH - h) / 2;
+    const boite = boiteDuMenu(m), l = boite.l, h = boite.h, x = boite.x, y = boite.y;
     ctx.fillStyle = 'rgba(11,10,18,0.92)'; ctx.fillRect(x, y, l, h);
     ctx.fillStyle = '#e8b33c'; ctx.fillRect(x, y, l, 1); ctx.fillRect(x, y + h - 1, l, 1);
     texte(ctx, m.titre, x + 8, y + 7, '#e8b33c', 2);
@@ -3485,13 +3508,8 @@ const Hud = (function () {
         }
       }
       dessinerPiratage(ctx);
-      // Message.
-      if (B.msg && B.msgT > 0) {
-        const l = Atlas.largeurTexte(B.msg, 2);
-        ctx.fillStyle = 'rgba(11,10,18,0.75)'; ctx.fillRect((VW - l) / 2 - 6, 40, l + 12, 16);
-        Atlas.texte(ctx, B.msg, (VW - l) / 2, 43, '#efe6d0', 2);
-        B.msgT--;
-      }
+      // Message. ⚠️ Un comptoir ouvert le dessine par-dessus lui, plus bas.
+      if (!(B.etat === 'jeu' && B.menu)) dessinerMessage(ctx, 40);
       if (B.etat === 'jeu') iconeDeChargement(ctx);
       if (B.etat === 'pause') {
         ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH);
@@ -3517,6 +3535,7 @@ const Hud = (function () {
       // qu'elle, il merite le meme fond.
       if (B.menu) { ctx.fillStyle = 'rgba(11,10,18,0.6)'; ctx.fillRect(0, 0, VW, VH); B.stats.rects++; }
       dessinerMenu(ctx);
+      if (B.menu && !B.scene) dessinerMessage(ctx, Math.max(2, boiteDuMenu(B.menu).y - 20));
     }
     // Le choix des parties : la ville vide du titre, assombrie, derriere.
     if (B.etat === 'titre' && B.menu) {

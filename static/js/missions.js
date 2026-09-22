@@ -275,7 +275,12 @@ const Missions = (function () {
     // qui donne au menu son curseur. Pose directement, ce comptoir-la s'ouvrait
     // SANS curseur — aucune ligne surlignee, HAUT et BAS le mettaient a NaN,
     // ACTION ne choisissait rien. Le menu le plus tendu du jeu ne se jouait pas.
-    if (homme) { Hud.ouvrirMenu(menuDette(homme)); return true; }
+    if (homme) {
+      const menu = menuDette(homme);
+      menu.refaire = function () { return menuDette(homme); };
+      Hud.ouvrirMenu(menu);
+      return true;
+    }
     // ⚠️ LE STOOL AVANT LE TEMOIN : lui est en route vers un telephone, l'autre
     // cherche encore un agent. Quand les deux sont a portee, c'est le plus
     // presse qu'on paie.
@@ -930,7 +935,7 @@ const Missions = (function () {
       const def = Vehicules.vehiculeDef(c.slug);
       const prix = prixRachat(c.slug);
       items.push({ libelle: (def ? def.nom : c.slug).toUpperCase(), detail: prix + ' $', actif: p.argent >= prix,
-                   faire: function () { return racheter(c, prix); } });
+                   faire: function () { racheter(c, prix); return false; } });
     });
     return { titre: 'FOURRIÈRE MUNICIPALE', items: items,
              sur: p.argent + ' $ · ' + p.fourriere.length + '/' + B.defs.economie.fourriere.places,
@@ -1031,7 +1036,7 @@ const Missions = (function () {
     return { libelle: 'PRENDRE LA CAISSE', detail: caisse + ' $', actif: caisse > 0, faire: function () {
       encaisser(caisse, prop.nom.toUpperCase());
       B.partie.proprietes[prop.slug].caisse = 0;
-      return true;
+      return false;
     } };
   }
 
@@ -1052,7 +1057,7 @@ const Missions = (function () {
       payer(prop.prix, prop.nom.toUpperCase());
       p.proprietes[prop.slug] = { jour: p.jour, caisse: 0 };
       Hud.message(prop.nom.toUpperCase() + ' EST À TOI', 180);
-      return true;
+      return false;
     } };
   }
 
@@ -1090,7 +1095,7 @@ const Missions = (function () {
         if (!Monde.estNuit(p.heure) && p.heure < B.defs.economie.sieste.reveil) {
           items.push({ libelle: 'DORMIR JUSQU’AU SOIR', detail: 'SAUVEGARDE', faire: function () { dormirJusquAuSoir(); return true; } });
         }
-        items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDÉE'); return true; } });
+        items.push({ libelle: 'SAUVEGARDER SEULEMENT', faire: function () { sauvegarderPartie(); Hud.message('PARTIE SAUVEGARDÉE'); return false; } });
         return { titre: piece.nom.toUpperCase(), items: items };
       case 'coffre':
         return menuCoffre();
@@ -1118,7 +1123,7 @@ const Missions = (function () {
       case 'soigner': {
         const prix = B.defs.economie.hopital.minimum;
         items.push({ libelle: 'SOINS COMPLETS', detail: prix + ' $', actif: p.argent >= prix && B.joueur.vie < B.joueur.vieMax,
-                     faire: function () { payer(prix, 'SOINS'); soigner(B.joueur, 999); return true; } });
+                     faire: function () { payer(prix, 'SOINS'); soigner(B.joueur, 999); return false; } });
         return { titre: 'HÔPITAL DE BAIE-DES-BRUMES', items: items, sur: p.argent + ' $' };
       }
       case 'caisse':
@@ -1253,7 +1258,7 @@ const Missions = (function () {
              faire: function () {
                if (!deja) { payer(prix, tenue.nom.toUpperCase()); p.tenues.push(article.tenue); }
                porterTenue(article.tenue);
-               return true;
+               return false;
              } };
   }
 
@@ -1273,7 +1278,7 @@ const Missions = (function () {
                      Police.remiseAZero();
                      // ⚠️ Le stool reconnait une FACE : une coupe neuve la defait.
                      Police.onNeTeReconnaitPlus();
-                     return true;
+                     return false;
                    } });
     });
     return { titre: B.interieur.nom.toUpperCase(), items: items, sur: p.argent + ' $',
@@ -1368,7 +1373,7 @@ const Missions = (function () {
   function menuGardeRobe() {
     const p = B.partie;
     const items = parEmplacement((B.defs.tenues || []).filter(function (t) { return p.tenues.indexOf(t.slug) >= 0; }), function (t) {
-      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : '', faire: function () { porterTenue(t.slug); return true; } };
+      return { libelle: t.nom.toUpperCase(), detail: portee(t) ? (t.emplacement === 'tete' ? 'SUR TA TÊTE' : 'PORTÉE') : '', faire: function () { porterTenue(t.slug); return false; } };
     });
     return { titre: 'GARDE-ROBE', items: items, aide: 'CHANGER DE LINGE FAIT OUBLIER TA TÊTE' };
   }
@@ -1479,15 +1484,18 @@ const Missions = (function () {
         const i = B.exterieur.entites.indexOf(v);
         if (i >= 0) B.exterieur.entites.splice(i, 1);
       } else Entites.retirer(v);
-      return true;
+      // ⚠️ Au RIDEAU, le char vendu part avec le volant : il n'y a plus rien
+      // a faire de ce menu-la. Au comptoir, on reste — la fiche se refait sur
+      // « GARE UN CHAR DEVANT LA PORTE ».
+      return !!vDonne;
     } });
     items.push({ libelle: 'RÉPARER', detail: reparation + ' $', actif: reparation > 0 && p.argent >= reparation, faire: function () {
-      payer(reparation, 'RÉPARATION'); v.vie = v.vieMax; return true;
+      payer(reparation, 'RÉPARATION'); v.vie = v.vieMax; return false;
     } });
     items.push({ libelle: 'REPEINDRE (EFFACE LE VOL)', detail: eco.repeinte + ' $', actif: p.argent >= eco.repeinte, faire: function () {
       payer(eco.repeinte, 'PEINTURE');
       repeindre(v);
-      return true;
+      return false;
     } });
     // L'assurance : Ti-Guy couvre ce qui est gare devant, sans demander a qui
     // c'est. La prime, la valeur couverte, et « deja assure » — une fois.
@@ -1495,10 +1503,10 @@ const Missions = (function () {
     items.push({ libelle: 'ASSURER ' + v.def.nom.toUpperCase(),
                  detail: v.assure ? 'DÉJÀ ASSURÉ' : (enqueteEnCours() ? 'L’ASSUREUR ENQUÊTE' : prime + ' $ / COUVRE ' + couvre + ' $'),
                  actif: !v.assure && !proprio && !enqueteEnCours() && p.argent >= prime,
-                 faire: function () { return assurer(v); } });
+                 faire: function () { assurer(v); return false; } });
     if (p.assurance.du > 0) {
       items.push({ libelle: 'ENCAISSER L’ASSURANCE', detail: p.assurance.du + ' $', actif: true,
-                   faire: function () { encaisserAssurance(); return true; } });
+                   faire: function () { encaisserAssurance(); return false; } });
     }
     return { titre: 'GARAGE ROCCO BANDINI', items: items, sur: p.argent + ' $' };
   }
@@ -1694,7 +1702,9 @@ const Missions = (function () {
       auraient VENDU le char qu'on voulait seulement garer. */
   function menuDuRideau(v) {
     const items = [{ libelle: 'REPARTIR', faire: function () { return true; } }];
-    return menuGarage(items, v);
+    const menu = menuGarage(items, v);
+    menu.refaire = function () { return menuDuRideau(v); };
+    return menu;
   }
 
   // --- Les magasins ------------------------------------------------------------------
@@ -1754,7 +1764,7 @@ const Missions = (function () {
                actif: deja || p.argent >= t.prix, faire: function () {
                  if (!deja) { payer(t.prix, t.nom.toUpperCase()); p.tenues.push(t.slug); }
                  porterTenue(t.slug);
-                 return true;
+                 return false;
                } };
     });
     return { titre: 'BOUTIQUE ROSA', items: items, sur: p.argent + ' $' };
@@ -1894,7 +1904,7 @@ const Missions = (function () {
         p.casier = Math.max(0, p.casier - fiche.pages);
         p.nettoyage.avocatJour = p.jour;
         Hud.message('UNE PAGE DE MOINS — DOSSIER ' + pages(p.casier));
-        return true;
+        return false;
       }
     });
     // ⚠️ L'AUTRE MOITIE DE CE QU'IL VEND. Une provision retenue d'avance :
@@ -1912,7 +1922,7 @@ const Missions = (function () {
         p.nettoyage.provision = true;
         p.nettoyage.avocatJour = p.jour;
         Hud.message('IL SERA LÀ — LA PROCHAINE SANS AMENDE');
-        return true;
+        return false;
       }
     });
     return { titre: 'ME DESJARDINS', items: items, sur: p.argent + ' $',
@@ -1932,7 +1942,7 @@ const Missions = (function () {
                aide: 'TU AS PAYÉ ' + cmd.paye + ' $ — TU SAURAS DEMAIN' };
     }
     if (cmd) {
-      items.push({ libelle: 'PRENDRE LES NOUVELLES', faire: nouvellesDuHacker });
+      items.push({ libelle: 'PRENDRE LES NOUVELLES', faire: function () { nouvellesDuHacker(); return false; } });
       return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
                aide: 'IL A FINI — RESTE À SAVOIR CE QU’IL A FAIT' };
     }
@@ -1944,7 +1954,7 @@ const Missions = (function () {
         payer(prix, 'LE COMPTOIR DU FOND');
         p.nettoyage.commande = { jour: p.jour + fiche.delai_jours, paye: prix };
         Hud.message('IL Y TRAVAILLE — REVIENS DEMAIN');
-        return true;
+        return false;
       }
     });
     return { titre: 'LE COMPTOIR DU FOND', items: items, sur: p.argent + ' $',
@@ -2221,7 +2231,7 @@ const Missions = (function () {
                      rembourser(m, 'À SES HOMMES');
                      B.partie.collecteT = B.t + (f.repit_s || 120) * 60;
                      collecteurs().forEach(function (q) { q.collecteur = false; q.mission = false; q.etat = 'flane'; });
-                     return true;
+                     return false;
                    } });
     });
     return { titre: 'LES HOMMES DE SAL', items: items, sur: p.argent + ' $',
