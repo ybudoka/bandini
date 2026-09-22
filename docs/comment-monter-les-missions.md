@@ -165,7 +165,7 @@ attend son **juge de banc** avant de porter une mission) :
 | Type | Ce qu'il demande | Clés notables |
 |---|---|---|
 | `suivre` | filer un piéton ou un char sans être vu — trop près ou trop loin, raté | `cible` |
-| `proteger` | un personnage te suit à pied ou monte avec toi ; s'il meurt, échec `protege_mort` | `cible` |
+| `proteger` | le **donneur qui est déjà là** (jamais un second) attend qu'on le rejoigne (le GPS mène à lui), puis te suit sur tes pas, à pied, ou monte dans ton char arrêté près de lui ; `lieu` n'est atteint qu'avec lui (il descend en arrivant) ; mission finie, il rentre à son poste hors champ ; couché ou mort, échec `protege_mort` | `cible` |
 | `pickpocket` | les poches d'un piéton **précis**, par-derrière (le jet de m2) | `cible` |
 | `payer` | donner un montant | `montant` |
 | `acheter` | un article à un comptoir | `article`, `ou` |

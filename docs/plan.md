@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (212 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (213 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -89,7 +89,6 @@ pas quand l'ordre de travail change.
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | La police a de la tolérance : la chaleur refroidit, les renforts prennent le temps de venir | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-police-a-de-la-tolerance-la-chaleur-refroidit-les-renforts-prennent.md#fiche) |
-| L'escorte emmène le vrai donneur : un seul Bonimenteur, et il suit | ⬜ **en cours** | 22 sept. 2026 | **P1** | **correctif** | [fiche](jalons/l-escorte-emmene-le-vrai-donneur-un-seul-bonimenteur-et-il-suit.md#fiche) |
 
 ## L'ordre
 

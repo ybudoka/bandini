@@ -1139,16 +1139,30 @@ const Histoire = (function () {
         // surveille, pas `vehicule` (on ne roule pas dedans, on le casse).
         poserLeChar(m, o, p.etape);
       } else if (o.type === 'proteger') {
-        // Le personnage à protéger : posé comme un piéton de mission, il nous
-        // suit (`e.suit = B.joueur`, le mécanisme du petit qui colle à sa mère —
-        // il court à 1.6× son allure et ne s'éloigne jamais) et sa mort est
-        // l'échec `protege_mort`.
+        // Le personnage à protéger. Il ATTEND qu'on vienne le chercher, puis il
+        // nous suit (`majProtege`) — à pied, et dans le char quand on s'arrête
+        // près de lui ; sa mort est l'échec `protege_mort`.
+        //
+        // ⚠️ LE DONNEUR QUI EST LÀ, PAS UN SECOND (22 sept. 2026, p14). On posait
+        // un personnage neuf à côté de celui qui attendait déjà : deux
+        // Bonimenteurs à l'arche, et `donneur()` rendait le PREMIER, resté
+        // planté — les Skateux de `tuer` (`ou: "donneur"`) venaient à la foire
+        // pendant qu'on était au poste, et la fin se disait au téléphone à deux
+        // pas de lui. Un personnage neuf seulement si personne ne se tient en
+        // ville (un donneur `point:`, dedans).
         const p = personnage(o.cible);
-        const place = p ? (ouTrouver(p.slug) || tuileLibre(j.x + 40, j.y, 6)) : tuileLibre(j.x + 40, j.y, 6);
-        if (place) {
-          const e = creerPersonnage(p, place.x, place.y);
-          e.suit = B.joueur; e.courage = 0; e.intouchable = false; e.mission = m.slug;
-          B.mission.protege = e; B.mission.entites.push(e);
+        let e = p ? donneur(p.slug) : null;
+        if (e) e.chezLui = e.plante ? { x: e.plante.x, y: e.plante.y } : { x: e.x, y: e.y };
+        else if (p) {
+          const place = ouTrouver(p.slug) || tuileLibre(j.x + 40, j.y, 6);
+          if (place) { e = creerPersonnage(p, place.x, place.y); B.mission.entites.push(e); }
+        }
+        if (e) {
+          // ⚠️ `plante` retiré : un fige loin de son poste est un MUR pour la
+          // foule (`Entites.cede`), et il le serait deux rues plus loin.
+          e.plante = null; e.courage = 0; e.intouchable = false; e.mission = m.slug;
+          e.vitesseSuite = B.defs.recherche.vitesses.joueur_sprint;
+          B.mission.protege = e;
         }
         Entites.indexer();
       } else if (o.type === 'suivre') {
@@ -1717,8 +1731,15 @@ const Histoire = (function () {
         if (!c) { avancer(); return; }
         if (!c.vivant || c.etat === 'assomme') { echouer('protege_mort'); return; }
         if (o.lieu) {
-          const l = lieu(o.lieu);
-          if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon || 4) * TT * ((o.rayon || 4) * TT)) avancer();
+          // ⚠️ LUI AUSSI, et rejoint : on arrivait au poste seul, lui planté à
+          // l'arche, et l'escorte était faite. Il marche une tuile ou deux
+          // derrière nous (`suite_distance_px`) : deux tuiles de mou pour lui.
+          const l = lieu(o.lieu), r = (o.rayon || 4) * TT, rLui = r + 2 * TT;
+          if (l && c.suit && dist2(j.x, j.y, l.x, l.y) < r * r && dist2(c.x, c.y, l.x, l.y) < rLui * rLui) {
+            // Arrivé, il descend : c'est ici qu'il avait affaire.
+            if (c.dansVehicule) descendreLeProtege(c);
+            avancer();
+          }
         }
         return;
       }
@@ -1872,11 +1893,110 @@ const Histoire = (function () {
   }
 
   /** Ce que la mission avait pose : on l'enleve (ou on le laisse vivre sa vie). */
+  // --- Celui qu'on escorte (`proteger`) ---------------------------------------------------
+
+  //: A cette distance de lui, on l'a rejoint : il se met a nous suivre.
+  const RAYON_REJOINDRE = 3 * TT;
+  //: Le char arrete a cette distance de lui, il monte — celle du client du taxi.
+  const RAYON_MONTER = 40;
+  //: Un pas de piste tous les tant de pixels : la ou le joueur est passe, il passe.
+  const PAS_DE_PISTE = 12;
+  //: Au-dela, les plus vieux pas s'effacent (5 000 px de trajet).
+  const PISTE_MAX = 400;
+  //: Plus pres du joueur que ca, il va droit sur lui.
+  const RAYON_DROIT = 3 * TT;
+
+  /** Il attend qu'on le rejoigne, puis il suit ; il monte dans le char quand on
+      s'arrete pres de lui, et il en descend quand on en descend. ⚠️ Toute la
+      mission, pas seulement l'objectif `proteger` : les Skateux de p14 arrivent
+      APRES, et il reste « colle sur toi » pendant qu'on se bat. */
+  function majProtege() {
+    const c = B.mission && B.mission.protege, j = B.joueur;
+    if (!c || !c.vivant || c.etat === 'assomme' || B.interieur || c.rentre) return;
+    const v = j.dansVehicule;
+    if (!c.suit) {
+      if (dist2(j.x, j.y, c.x, c.y) > RAYON_REJOINDRE * RAYON_REJOINDRE) return;
+      c.suit = j;
+      Hud.message('IL TE SUIT — À PIED OU EN CHAR', 180);
+    }
+    if (c.dansVehicule && c.dansVehicule !== v) descendreLeProtege(c);
+    else if (!c.dansVehicule && v && v.etat !== 'epave' && c.etat !== 'fuit' && Math.abs(v.vitesse) < 0.4
+             && dist2(v.x, v.y, c.x, c.y) < RAYON_MONTER * RAYON_MONTER) {
+      c.dansVehicule = v; c.dessine = false; c.vx = 0; c.vy = 0; c.x = v.x; c.y = v.y;
+      Son.SFX.porte('vehicule');
+    }
+    if (c.dansVehicule) c.piste = null;
+    else suivreLaPiste(c, j);
+  }
+
+  /** Il marche SUR NOS PAS, pas en ligne droite. ⚠️ En ligne droite (`suit`, le
+      petit et sa mere, qui ne s'eloignent jamais), il suffisait d'un sprint pour
+      le distancer, et d'un coin de mur pour le perdre : au banc, le joueur qui
+      court de l'arche au poste le laissait a 2 800 px, colle contre une facade.
+      La ou le joueur a mis les pieds, il y a de la place pour lui. */
+  function suivreLaPiste(c, j) {
+    const piste = c.piste || (c.piste = []);
+    const bout = piste.length ? piste[piste.length - 1] : null;
+    if (!bout || dist2(j.x, j.y, bout.x, bout.y) > PAS_DE_PISTE * PAS_DE_PISTE) piste.push({ x: j.x, y: j.y, vivant: true });
+    if (piste.length > PISTE_MAX) piste.shift();
+    if (dist2(c.x, c.y, j.x, j.y) < RAYON_DROIT * RAYON_DROIT) { piste.length = 0; c.suit = j; return; }
+    // Le plus vieux pas qu'il n'a pas encore atteint. ⚠️ `suit` s'arrete a
+    // `suite_distance_px` de ce qu'il suit : un pas se compte atteint un peu
+    // au-dela, sinon il s'arreterait devant chacun.
+    const atteint = B.defs.pietons.reactions.suite_distance_px + 4;
+    while (piste.length > 1 && dist2(c.x, c.y, piste[0].x, piste[0].y) < atteint * atteint) piste.shift();
+    c.suit = piste[0] || j;
+  }
+
+  /** Il sort du char, du cote du passager — pas sur le joueur qui sort du sien. */
+  function descendreLeProtege(c) {
+    const v = c.dansVehicule, j = B.joueur;
+    c.dansVehicule = null; c.dessine = true;
+    if (!v) return;
+    for (const a of [v.angle - Math.PI / 2, v.angle + Math.PI / 2, v.angle + Math.PI]) {
+      const x = v.x + Math.cos(a) * (v.def.largeur / 2 + 8), y = v.y + Math.sin(a) * (v.def.largeur / 2 + 8);
+      if (dist2(x, y, j.x, j.y) < 12 * 12) continue;
+      if (!Monde.bloque(Math.floor(x / TT), Math.floor(y / TT), Monde.MASQUE_PIETON)) { c.x = x; c.y = y; return; }
+    }
+    c.x = j.x; c.y = j.y;          // tout est bouche : a cote du joueur, `demeler` les ecarte
+  }
+
+  /** La mission finie — reussie, ratee, abandonnee —, il nous lache. Un donneur
+      rentre a son poste (`majRetours`) ; un personnage neuf s'en va avec les
+      figurants de la mission. */
+  function lacherLeProtege() {
+    const c = B.mission.protege;
+    if (!c || !c.chezLui) return;
+    if (c.dansVehicule) descendreLeProtege(c);
+    c.suit = null; c.piste = null; c.mission = null; c.intouchable = true; c.rentre = true;
+  }
+
+  /** Ceux qu'une escorte a eloignes de leur poste y RENTRENT — remis a neuf,
+      morts ou couches compris, comme au chargement —, mais jamais sous nos
+      yeux : ni la ou il est, ni la ou il va, ne sont a l'ecran. Une fois par
+      demi-seconde : il n'y a pas de presse.
+
+      ⚠️ LE MEME, PAS UN NEUF : `creerPersonnage` passe par `creerPieton`, qui
+      tire deux des. Le retour tombe quand la camera s'en va — un moment qu'une
+      scene regardee ou sautee deplace — et le hasard de toute la ville basculait
+      avec lui (`test_une_scene_de_mission_ne_tire_aucun_de`, p14 et f09). */
+  function majRetours() {
+    if (B.interieur || B.t % 30 !== 0) return;
+    const e = B.entites.find(function (q) { return q.rentre && q.type === 'pieton'; });
+    if (!e || Entites.visibleAEcran(e.x, e.y, TT) || Entites.visibleAEcran(e.chezLui.x, e.chezLui.y, TT)) return;
+    e.x = e.chezLui.x; e.y = e.chezLui.y; e.vx = 0; e.vy = 0;
+    e.vivant = true; e.vie = e.vieMax; e.etat = 'fige'; e.face = 'bas'; e.plante = null;
+    e.recul = 0; e.saigne = 0; e.fuite = 0; e.sursaut = 0; e.menace = null; e.minuterie = 0;
+    e.intouchable = true; e.dessine = true; e.vitesseSuite = null; e.rentre = false; e.chezLui = null;
+    Entites.indexer();
+  }
+
   function nettoyer(tout) {
     // ⚠️ TOUJOURS, meme mission deja nulle : un piratage ouvert ne doit pas
     // survivre a la mission qui l'a pose (`reussir`, `echouer`, `abandonner`).
     fermerPiratage();
     if (!B.mission) return;
+    lacherLeProtege();
     for (const e of B.mission.entites) {
       if (e.type === 'vehicule') {
         // Celui qu'on filait repart comme un autre, qu'on l'ait mené au bout ou
@@ -2493,7 +2613,11 @@ const Histoire = (function () {
       // `detruire`). `payer` et `boulots` n'ont pas de pixel à pointer : on
       // parle à qui est là, ou on roule au klaxon.
       else if (o.type === 'suivre') l = B.mission ? B.mission.suivi : null;
-      else if (o.type === 'proteger') l = (o.lieu && lieu(o.lieu)) || (B.mission ? B.mission.protege : null);
+      else if (o.type === 'proteger') {
+        // Lui d'abord, tant qu'on ne l'a pas rejoint ; puis où on l'emmène.
+        const c = B.mission ? B.mission.protege : null;
+        l = (c && !c.suit) ? c : ((o.lieu && lieu(o.lieu)) || c);
+      }
       else if (o.type === 'pickpocket') l = B.mission ? B.mission.entites.find(function (e) { return e.pickpocket && e.vivant; }) : null;
       else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
       else if (o.type === 'sauter') l = resoudre(o.ou, m);
@@ -2587,7 +2711,9 @@ const Histoire = (function () {
     jouerLaFin();
     if (B.cinema) return;
     majBulles();
+    majRetours();
     majTelephone();
+    majProtege();
     if (B.partie.mission) {
       if (!B.mission) B.mission = { entites: [], vehicule: null, chars: {}, fuyard: null, chef: null, escorte: null, courses: 0, kos: 0,
                                     vol: 0, boulotsDepart: 0, suit: null, protege: null, suivi: null };  // partie rechargee : on reprend au meme objectif, sans ses figurants

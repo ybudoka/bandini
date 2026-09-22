@@ -4103,6 +4103,10 @@ const Entites = (function () {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
     if (!e.vivant) { if (e.saigne > 0) e.saigne--; return; }
+    // Assis dans le char du joueur (celui qu'on escorte, `Histoire.majProtege`) :
+    // il va ou le char va, et rien d'autre — `dessine` est faux, et `blesser`
+    // ne touche pas qui est dedans.
+    if (e.dansVehicule) { e.x = e.dansVehicule.x; e.y = e.dansVehicule.y; e.vx = 0; e.vy = 0; return; }
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
@@ -4111,7 +4115,11 @@ const Entites = (function () {
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
 
-    if (e.etat === 'fige') {
+    // ⚠️ `suit` PASSE AVANT `fige` : un donneur est fige (il tient son poste),
+    // et celui qu'on escorte en est un. La branche du poste sortait la premiere
+    // et le ramenait a sa place a chaque image — le Bonimenteur de p14 restait
+    // plante a l'arche, a cote du joueur qui devait l'emmener (22 sept. 2026).
+    if (e.etat === 'fige' && !e.suit) {
       // ⚠️ Fige veut dire « il tient son poste », pas « c'est un poteau ». Un
       // donneur vraiment immobile bouche la rue POUR TOUJOURS : l'agent lance
       // aux trousses du joueur venait buter sur Ti-Guy et y restait — 260
@@ -4134,7 +4142,10 @@ const Entites = (function () {
       const dx = e.suit.x - e.x, dy = e.suit.y - e.y;
       const norme = Math.hypot(dx, dy);
       if (norme > ecart) {
-        const vitesse = Math.min(v.pieton_course, v.pieton * e.allure * 1.6);
+        // ⚠️ `vitesseSuite` : celui qu'on escorte court comme le joueur sprinte
+        // (`Histoire`, `proteger`) — plafonne a `pieton_course`, il se laissait
+        // distancer, et le premier coin de mur le perdait pour de bon.
+        const vitesse = e.vitesseSuite || Math.min(v.pieton_course, v.pieton * e.allure * 1.6);
         e.vx = dx / norme * vitesse;
         e.vy = dy / norme * vitesse;
       } else { e.vx = 0; e.vy = 0; }
