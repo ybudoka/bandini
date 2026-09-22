@@ -1040,6 +1040,21 @@ const Monde = (function () {
       ou derriere les lames. ⚠️ Le meme calcul que `dessinerPortesDeGarage`. */
   function basDuRideau(pg) { return pg.y * TT + 3 + Math.round((TT - 4) * (1 - pg.ouverture)); }
 
+  /** Ce que le toit d'un garage CACHE, en pixels du monde : les colonnes du passage, du
+      fond de la baie jusqu'au bas du rideau. ⚠️ LA MEME ZONE pour le dessin du char
+      (`Entites.dessiner` la decoupe) et pour ses lampes (`Vehicules.allumerLesPhares` n'y
+      allume rien) : les lampes se composent par-dessus toute l'image (`Base.fin`), et un
+      char cache sous le toit y jetait ses phares et ses feux arriere A TRAVERS le toit
+      (retour de Martin, 22 sept. 2026 : « on devrait rien voir »). */
+  function sousLeToit(pg) {
+    return { x0: pg.x * TT, x1: (pg.x + pg.l) * TT, y0: (pg.y - pg.baie) * TT, y1: basDuRideau(pg) };
+  }
+  function cacheSousLeToit(pg, x, y) {
+    if (!pg) return false;
+    const z = sousLeToit(pg);
+    return x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1;
+  }
+
   /** On est devant : le rideau monte (ou reste leve) pour `RIDEAU_TIENT` images. */
   function leverLaPorteDeGarage(pg) { pg.tient = RIDEAU_TIENT; }
 
@@ -2189,7 +2204,7 @@ const Monde = (function () {
     feuxClignotent, arterePasse, nidDePoule, plaqueDAcier, standingA, usageA, couleurDeZonage, calqueDeZonage, coeurDeLaVille, entraveDuJour, cotePourLeDetour,
     ouvrirPorte, battant, majBattants, dessinerBattants, BATTANT_OUVRE,
     portesDeGarage, porteDeGarage, devantLaPorteDeGarage, baieDeLaPorteDeGarage, leverLaPorteDeGarage, majPortesDeGarage, dessinerPortesDeGarage, RIDEAU_MONTE, RIDEAU_TIENT,
-    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, abrite,
+    dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,

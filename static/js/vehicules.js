@@ -3346,6 +3346,10 @@ const Vehicules = (function () {
     // proche, et une lueur posee au cap exact glisserait a cote de sa lampe.
     const cap = capDe(v.angle) * Math.PI * 2 / ROTATIONS - Math.PI / 2;
     const ca = Math.cos(cap), sa = Math.sin(cap), k = lampes.profondeur;
+    // ⚠️ SOUS LE TOIT D'UN GARAGE, RIEN NE S'ALLUME a l'ecran : ni une lueur, ni le
+    // faisceau qui en partirait (`Monde.cacheSousLeToit`, la zone meme que le dessin
+    // decoupe). Ce qui a passe le linteau, le nez dehors, eclaire comme avant.
+    const rideau = Monde.rideauPres ? Monde.rideauPres(v) : null;
     if (faisceau) {
       // ⚠️ AU SOL (`v.y`, pas `v.y - v.z`) : la flaque de lumiere est sur la
       // chaussee, comme l'ombre, meme quand le char saute. Et ECRASEE comme
@@ -3356,7 +3360,7 @@ const Vehicules = (function () {
       // dessine, qu'on marche pour trouver le premier mur devant lui.
       const ox = v.x + b.u * ca - b.w * sa, oy = v.y + b.u * sa + b.w * ca;
       const portee = porteeLibre(ox, oy, ca, sa, faisceau.portee);
-      lampesPhares.liste.push({
+      if (!Monde.cacheSousLeToit(rideau, ox, oy)) lampesPhares.liste.push({
         x: ox - cx, y: v.y + (b.u * sa + b.w * ca) * k - cy,
         a: cap, p: sol ? sol.profondeur : k, r: portee,
         cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture * (portee / faisceau.portee)],
@@ -3369,6 +3373,7 @@ const Vehicules = (function () {
     const x0 = v.x - cx, y0 = v.y - v.z - cy;
     for (const l of lampes) {
       const lampe = { x: x0 + l.u * ca - l.w * sa, y: y0 + (l.u * sa + l.w * ca) * k - l.z, r: l.r, c: l.c };
+      if (Monde.cacheSousLeToit(rideau, lampe.x + cx, lampe.y + cy)) continue;
       if (l.lettre === 't') lampe.arriere = v; else lampe.phare = v;
       lampesPhares.liste.push(lampe);
     }

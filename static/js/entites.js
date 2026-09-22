@@ -5074,13 +5074,14 @@ const Entites = (function () {
         // ⚠️ UN CHAR QUI PASSE LE SEUIL D'UN GARAGE disparait sous le linteau, puis
         // derriere les lames qui descendent : on le peint, moins ce qui est au-dessus
         // du bas du rideau dans le passage (le reste de l'ecran, tout entier).
+        // ⚠️ La zone vient de `Monde.sousLeToit` : ses lampes lisent la meme.
         const rideau = Monde.rideauPres(e);
         if (rideau) {
-          const haut = (rideau.y - rideau.baie) * TT - cy, bas = Monde.basDuRideau(rideau) - cy;
+          const z = Monde.sousLeToit(rideau);
           ctx.save();
           ctx.beginPath();
           ctx.rect(0, 0, VW, VH);
-          ctx.rect(rideau.x * TT - cx, haut, rideau.l * TT, Math.max(0, bas - haut));
+          ctx.rect(z.x0 - cx, z.y0 - cy, z.x1 - z.x0, Math.max(0, z.y1 - z.y0));
           ctx.clip('evenodd');
           Vehicules.dessinerUn(ctx, e, cx, cy);
           ctx.restore();
