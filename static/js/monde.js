@@ -1725,18 +1725,58 @@ const Monde = (function () {
     return '#6b5a3a';
   }
 
+  //: ⚠️ CE QUE LA CARTE NE MONTRE PAS ENCORE : l'ile de l'aeroport, jusqu'au pont
+  //: fini (demande de Martin). Python donne le rectangle, la mission qui le leve et
+  //: la hauteur de la carte connue (`def.aeroport.masque`) ; ici on ne fait que lire
+  //: la partie. La couleur de l'eau, parce que c'est ce qu'on croit y voir.
+  const EAU_MINI = '#24506f';
+  function masqueDeLaCarte(laquelle) {
+    const k = laquelle || carte;
+    const m = k && k.def && k.def.aeroport && k.def.aeroport.masque;
+    if (!m) return null;
+    const p = B.partie;
+    return p && p.missionsFaites && p.missionsFaites[m.apres] ? null : m;
+  }
+  /** Cette tuile est-elle cachee sur la carte ? */
+  function masquee(tx, ty, laquelle) {
+    const m = masqueDeLaCarte(laquelle);
+    return !!m && tx >= m.x && tx < m.x + m.l && ty >= m.y && ty < m.y + m.h;
+  }
+  /** La couleur d'une tuile sur la carte : celle de son sol, ou l'eau si elle est cachee. */
+  function couleurMiniA(tx, ty, laquelle) {
+    const k = laquelle || carte;
+    return masquee(tx, ty, k) ? EAU_MINI : couleurMini(k.sol[ty][tx]);
+  }
+  /** La hauteur de carte que la grande carte montre : celle qu'on CONNAIT tant que
+      l'ile est cachee (sous elle, il n'y a que de l'eau a montrer, et la ville garde
+      son echelle) — sauf si le joueur est lui-meme plus bas : on ne le perd pas. */
+  function hauteurConnue(laquelle, yJoueur) {
+    const k = laquelle || carte;
+    const m = masqueDeLaCarte(k);
+    if (!m || !m.carte_h || (yJoueur !== undefined && yJoueur >= m.carte_h * TT)) return k.h;
+    return Math.min(k.h, m.carte_h);
+  }
+
   /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
-      au chargement valent mieux que 64x48 relus a chaque image. */
+      au chargement valent mieux que 64x48 relus a chaque image.
+      ⚠️ Recuite quand le masque tombe (le pont de l'aeroport fini) : la cle dit
+      avec quel masque elle a ete peinte. */
   function miniCarte(laquelle) {
     const k = laquelle || carte;                  // la ville, meme quand on est dedans
-    if (k.mini) return k.mini;
+    const cle = masqueDeLaCarte(k) ? 'masquee' : 'entiere';
+    if (k.mini && k.miniCle === cle) return k.mini;
     const c = Base.nouveauCanvas(k.w, k.h);
     const ctx = c.getContext('2d');
+    // ⚠️ Le masque se lit UNE fois, pas par tuile : 127 000 tuiles au premier dessin
+    // de la mini-carte, et la premiere image du jeu les attend.
+    const m = masqueDeLaCarte(k);
     for (let y = 0; y < k.h; y++) {
       const ligne = k.sol[y];
-      let debut = 0, couleur = couleurMini(ligne[0]);
+      const x0 = m && y >= m.y && y < m.y + m.h ? m.x : k.w, x1 = m ? m.x + m.l : 0;
+      const couleurEn = function (x) { return x >= x0 && x < x1 ? EAU_MINI : couleurMini(ligne[x]); };
+      let debut = 0, couleur = couleurEn(0);
       for (let x = 1; x <= k.w; x++) {
-        const suivante = x < k.w ? couleurMini(ligne[x]) : null;
+        const suivante = x < k.w ? couleurEn(x) : null;
         if (suivante !== couleur) {
           ctx.fillStyle = couleur;
           ctx.fillRect(debut, y, x - debut, 1);
@@ -1745,6 +1785,7 @@ const Monde = (function () {
       }
     }
     k.mini = c;
+    k.miniCle = cle;
     return c;
   }
 
@@ -1996,7 +2037,7 @@ const Monde = (function () {
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
-    miniCarte, couleurMini, chemin, demanderChemin, majChemins,
+    miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };
 })();

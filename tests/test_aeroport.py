@@ -100,26 +100,33 @@ def test_le_pont_prolonge_une_rue_de_la_pointe_et_le_trafic_ne_le_connait_pas(vi
             assert ville["voie"][y][pont["x"] + d] == ".", "une flèche sur un pont fermé"
 
 
-def test_la_travee_manque_et_se_nage(ville):
-    """⚠️ Le deuxième étage : entre le bout du tablier et celui de l'île, de l'EAU,
-    et pas une rampe sur le pont ni devant — un char lancé finit à l'eau. Pas assez
-    d'eau pour qu'on ne la nage pas à jeun : le bout du tablier est le seul endroit
-    d'où l'île est à portée de brasse (et la guérite attend de l'autre côté).
-
-    ⚠️ Douze tuiles, c'est UNE de moins que ce que dégage une moto lancée sur une
-    rampe (`carte.RECEPTION_DEFI`) : une rampe posée au bout du tablier ferait un
-    saut — c'est une porte laissée à une mission, pas un trou dans la clôture."""
+def test_le_chantier_a_six_piles_et_ne_se_franchit_qu_a_la_nage_bien_nourri(ville):
+    """⚠️ Le deuxième étage — « ajoute 4 sections de plus de pont en construction »
+    (Martin, 21 sept. 2026) : six piles, une toutes les cinq tuiles, sur trente-deux
+    tuiles d'EAU entre le bout du tablier et celui de l'île. Pas une rampe sur le pont
+    ni devant, et même lancée sur une rampe, aucune moto ne saute ça (sa réception,
+    `carte.RECEPTION_DEFI`, fait 13 tuiles). À la nage : ni à jeun, ni au seul café —
+    le café ET l'estomac plein, et de justesse. La guérite attend de l'autre côté."""
     pont = ville["aeroport"]["pont"]
     sol = ville["sol"]
     for y in range(pont["y"] + pont["nord"], pont["y"] + pont["nord"] + pont["trou"]):
         assert all(sol[y][pont["x"] + d] == "~" for d in range(pont["l"])), y
+    rangees = sorted({y for _, y in pont["piles"]})
+    assert len(rangees) == 6, rangees
+    assert all(b - a == 5 for a, b in zip(rangees, rangees[1:])), rangees
+    assert rangees[0] - (pont["y"] + pont["nord"]) == 3 and pont["y"] + pont["nord"] + pont["trou"] - 1 - rangees[-1] == 3
     abords = {"x": pont["x"] - 3, "y": pont["y"] - 8, "l": pont["l"] + 6, "h": pont["nord"] + 8}
-    assert not [r for r in ville["rampes"] if dedans(abords, r["x"], r["y"])], "une rampe devant la travée"
+    assert not [r for r in ville["rampes"] if dedans(abords, r["x"], r["y"])], "une rampe devant le chantier"
     assert not any(carte.LEGENDE[sol[y][x]].get("rampe") for y in range(abords["y"], abords["y"] + abords["h"])
                    for x in range(abords["x"], abords["x"] + abords["l"]))
+    assert pont["trou"] > carte.RECEPTION_DEFI, "une moto lancée saute le chantier"
     # La nage : la première et la dernière tuile sont de l'eau basse (`Monde.eauBasse`).
     a_payer = pont["trou"] - 2
-    assert a_payer * cout_par_tuile() <= recherche.VITESSES["endurance"], "la travée ne se nage même pas"
+    endurance = recherche.VITESSES["endurance"]
+    assert a_payer * cout_par_tuile() > endurance, "le chantier se nage à jeun"
+    assert a_payer * cout_par_tuile(cafe=True) > endurance, "le chantier se nage au seul café"
+    assert a_payer * cout_par_tuile(cafe=True) <= endurance + economie.SOUFFLE["surplus_max"], (
+        "même avec le café et l'estomac plein, le chantier ne se nage plus")
 
 
 def cout_par_tuile(cafe: bool = False) -> float:
@@ -308,6 +315,29 @@ def test_une_autre_graine_a_le_meme_aeroport(graine, ville):
     flanc = {"x": pont["x"] - 1, "y": pont["y"], "l": pont["l"] + 2, "h": pont["nord"]}
     assert not [d for d in autre["decor"] if dedans(flanc, d["x"], d["y"])]
     assert all(len(g) == 1 for g in carte.composantes_par_terre(autre).values())
+
+
+def test_la_carte_cache_l_ile_jusqu_au_pont_fini(ville, sans):
+    """« La carte de l'aéroport peut-elle être masquée » (Martin) : l'île ENTIÈRE, bout
+    du pont compris, jusqu'au pont fini. Python dit quoi cacher et jusqu'à quand : le
+    rectangle de la terre de l'aéroport, la mission `a01`, et la hauteur de la carte
+    connue — sous elle, hors de l'île, il n'y a QUE de l'eau (la grande carte s'y arrête
+    sans rien cacher d'autre)."""
+    a = ville["aeroport"]
+    m = a["masque"]
+    assert (m["x"], m["y"], m["l"], m["h"]) == (a["x"], a["y"], a["l"], a["h"])
+    assert m["apres"] in aeroport.MISSIONS_A_VENIR
+    assert m["apres"] == next(b for b in carte.BARRIERES if b["slug"] == "pont_aeroport")["condition"]["apres"], (
+        "l'île doit apparaître le jour où le pont se finit, pas un autre")
+    assert m["carte_h"] == sans["hauteur"] <= m["y"]
+    aerogare = next(p for p in ville["points_interet"] if p["slug"] == "aeroport")
+    assert dedans(m, aerogare["x"], aerogare["y"])
+    pont = a["pont"]
+    assert pont["y"] + pont["nord"] <= m["carte_h"], "le tablier de La Pointe se voit : il est de ce côté-ci"
+    for y in range(m["carte_h"], ville["hauteur"]):
+        for x in range(ville["largeur"]):
+            if not dedans(m, x, y):
+                assert ville["sol"][y][x] == "~", f"la grande carte coupe autre chose que de l'eau en {(x, y)}"
 
 
 def test_les_missions_a_venir_sont_celles_de_l_arc_a():

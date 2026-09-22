@@ -130,3 +130,35 @@ def test_l_aeroport_est_surveille_et_le_large_n_est_a_personne(banc):
     assert r["zone"] == "aeroport" and r["refuge"] is False, r
     assert r["large"] == "large", r
     assert r["lignes"] == r["hauteur"]
+
+
+def test_la_carte_cache_l_ile_jusqu_au_pont_fini(banc):
+    """Mini-carte et grande carte : l'île est de l'eau, l'aérogare n'a pas de repère,
+    et la grande carte s'arrête à la ville qu'on connaît — tant que a01 n'est pas
+    faite. TÉMOIN : le pont fini, la mini-carte se recuit et tout apparaît."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, carte = M.carte, a = carte.def.aeroport, p = a.piste, j = L.B.joueur, TT = L.TT;
+        const piste = [p.x + 5, p.y + 2], tablier = [a.pont.x + 1, a.pont.y + 2];
+        function etat() {
+            return { masquee: M.masquee(piste[0], piste[1]), couleur: M.couleurMiniA(piste[0], piste[1]),
+                     tablier: M.couleurMiniA(tablier[0], tablier[1]),
+                     lieux: L.Hud.lieuxSurLaCarte(carte).map(function (q) { return q.slug; }).indexOf('aeroport') >= 0,
+                     hauteur: M.hauteurConnue(carte, j.y), surLIle: M.hauteurConnue(carte, (a.y + 10) * TT) };
+        }
+        const avant = etat(), miniAvant = M.miniCarte(), memeMini = M.miniCarte() === miniAvant;
+        // La grande carte s'ouvre et se peint avec son cadrage.
+        L.Jeu.ouvrirCarte(); o.frame(2); const ouverte = L.B.etat; L.Jeu.fermerCarte();
+        L.B.partie.missionsFaites.a01 = true;
+        const apres = etat(), recuite = M.miniCarte() !== miniAvant;
+        return { avant: avant, apres: apres, memeMini: memeMini, recuite: recuite, ouverte: ouverte,
+                 eau: '#24506f', route: M.couleurMini('#'), h: carte.h, connue: a.masque.carte_h };
+    }""")
+    avant, apres = r["avant"], r["apres"]
+    assert avant["masquee"] and avant["couleur"] == r["eau"] and not avant["lieux"], avant
+    assert avant["tablier"] == r["route"], "le tablier de La Pointe a disparu de la carte avec l'île"
+    assert avant["hauteur"] == r["connue"] < r["h"] and avant["surLIle"] == r["h"], avant
+    assert r["memeMini"], "la mini-carte se recuit à chaque image"
+    assert r["ouverte"] == "carte"
+    assert not apres["masquee"] and apres["couleur"] == r["route"] and apres["lieux"], f"le témoin ne mord pas : {apres}"
+    assert apres["hauteur"] == r["h"] and r["recuite"], apres

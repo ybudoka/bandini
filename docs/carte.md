@@ -114,7 +114,7 @@ un paiement.
 | La cour de l'usine Prévost | `usine` | piéton + véhicule | **de jour** |
 | Le quai du cargo | `cargo` | piéton + véhicule | **de nuit** |
 | L'arche de la foire | `foire` | piéton + véhicule | payer le billet (à la journée) |
-| Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau |
+| Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau : trente-deux tuiles de chantier et six piles |
 | La guérite de l'aéroport | `aeroport` | piéton + véhicule | après **a02** (pas encore écrite) — ne se force pas |
 
 ---
@@ -252,9 +252,12 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   deux hangars et la guérite (portes condamnées), la piste 09-27, la voie de
   circulation, trois avions peints (un bimoteur _Air Brumes_, un de Gaspésie, le
   monomoteur de l'aéroclub), un stationnement, une manche à air. Fermé par
-  étages : la barricade du pont, la travée manquante, le barbelé, la guérite, et
-  le large (trop d'eau pour la nager depuis la plage de La Pointe). Les missions
-  qui l'ouvriront : `aeroport.MISSIONS_A_VENIR` (`a01`, `a02`).
+  étages : la barricade du pont, le chantier (six piles sur 32 tuiles d'eau :
+  aucun saut, et la nage demande le café et l'estomac plein), le barbelé, la
+  guérite, et le large (trop d'eau pour la nager depuis la plage de La Pointe).
+  **Caché sur la carte** (mini-carte et grande carte) jusqu'au pont fini : de
+  l'eau à la place de l'île, pas de repère. Les missions qui l'ouvriront :
+  `aeroport.MISSIONS_A_VENIR` (`a01`, `a02`).
 
 ---
 

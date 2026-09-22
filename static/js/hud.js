@@ -2311,7 +2311,7 @@ const Hud = (function () {
   function legendeDeLaCarte(carte) {
     const familles = famillesDeLieu();
     const portees = {};
-    for (const point of (carte.points || [])) if (point.famille) portees[point.famille] = true;
+    for (const point of lieuxSurLaCarte(carte)) if (point.famille) portees[point.famille] = true;
     // ⚠️ L'ordre est celui de la TABLE, pas celui des lieux rencontres : sinon la
     // legende se reordonne d'une ville a l'autre, et on la relit a chaque partie.
     return parRang(familles).filter(function (nom) { return portees[nom]; }).map(function (nom) {
@@ -2367,6 +2367,12 @@ const Hud = (function () {
   }
 
   /** La ville autour du joueur, une tuile par pixel, avec les lieux en blips. */
+  /** Les lieux qu'on montre sur la carte : pas ceux qu'elle cache encore (l'aerogare,
+      tant que le pont de l'aeroport n'est pas fini — `Monde.masquee`). */
+  function lieuxSurLaCarte(carte) {
+    return (carte.points || []).filter(function (p) { return !Monde.masquee(p.x, p.y, carte); });
+  }
+
   function miniCarte(ctx) {
     const carte = Monde.carte, j = B.joueur;
     if (!carte || !j) return;
@@ -2377,7 +2383,7 @@ const Hud = (function () {
     ctx.fillRect(MINI.x - 1, MINI.y - 1, MINI.l + 2, MINI.h + 2);
     ctx.drawImage(mini, sx, sy, MINI.l, MINI.h, MINI.x, MINI.y, MINI.l, MINI.h);
     B.stats.images++;
-    for (const point of carte.points) {
+    for (const point of lieuxSurLaCarte(carte)) {
       const px = MINI.x + point.x - sx, py = MINI.y + point.y - sy;
       if (px < MINI.x || px >= MINI.x + MINI.l || py < MINI.y || py >= MINI.y + MINI.h) continue;
       ctx.fillStyle = '#101018'; ctx.fillRect(px - 1, py - 1, 3, 3);
@@ -2482,19 +2488,22 @@ const Hud = (function () {
     // dans le bandeau du bas, qui tient deja les familles de lieux sur trois rangees.
     const zonage = legendeDuZonage(carte);
     const yHaut = zonage.length ? 24 : 14, yBas = VH - 38;
-    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / carte.h);
+    // ⚠️ LA CARTE QU'ON CONNAIT : tant que l'ile de l'aeroport est cachee, il n'y a que
+    // de l'eau sous la ville, et la ville garde l'echelle qu'elle avait avant lui.
+    const hauteur = Monde.hauteurConnue(carte, B.exterieur ? B.exterieur.y : j.y);
+    const brut = Math.min((VW - 20) / carte.w, (yBas - yHaut) / hauteur);
     const echelle = brut >= 1 ? Math.floor(brut) : brut;
-    const l = carte.w * echelle, h = carte.h * echelle;
+    const l = carte.w * echelle, h = hauteur * echelle;
     const ox = Math.round((VW - l) / 2), oy = yHaut + Math.round((yBas - yHaut - h) / 2);
     ctx.imageSmoothingEnabled = false;
-    ctx.drawImage(mini, 0, 0, carte.w, carte.h, ox, oy, l, h);
+    ctx.drawImage(mini, 0, 0, carte.w, hauteur, ox, oy, l, h);
     B.stats.images++;
     // Le calque du ZONAGE, par-dessus les tuiles et sous tout le reste : les
     // blocs se teignent de leur usage, les rues restent grises et se lisent.
     const calque = Monde.calqueDeZonage(carte);
     if (calque) {
       ctx.globalAlpha = CALQUE_ALPHA;
-      ctx.drawImage(calque, 0, 0, carte.w, carte.h, ox, oy, l, h);
+      ctx.drawImage(calque, 0, 0, carte.w, hauteur, ox, oy, l, h);
       ctx.globalAlpha = 1;
       B.stats.images++;
     }
@@ -2502,7 +2511,7 @@ const Hud = (function () {
     dessinerLignes(ctx, pos);
     Metro.dessinerSurLaCarte(ctx, pos);
     Traversier.dessinerSurLaCarte(ctx, pos);
-    for (const point of carte.points) {
+    for (const point of lieuxSurLaCarte(carte)) {
       const p = pos(point.x * TT, point.y * TT);
       ctx.fillStyle = '#101018'; ctx.fillRect(p.x - 2, p.y - 2, 5, 5);
       ctx.fillStyle = couleurDeLieu(point); ctx.fillRect(p.x - 1, p.y - 1, 3, 3);
@@ -2903,7 +2912,7 @@ const Hud = (function () {
   return { init, voile, etat, progression, partDesScripts, finirChargement, message, dialogue, ouvrirMenu, fermerMenu, rafraichirMenu, majMenu, menuPause, menuDebug, menuCarnet, menuCarnetEnCours, menuCarnetJournal, menuCarnetRepertoire, menuCarnetFiche, menuOptions, menuManette, menuManetteBoutons, menuBilan,
     menuCommandes, ouvrirCommandes, majAideDuTitre, lignesDAide, glypheDAction,
     menuParties, menuEffacer, menuCopier, tempsDeJeu, quand,
-    legendeDeLaCarte, legendeDuZonage, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
+    legendeDeLaCarte, legendeDuZonage, lieuxSurLaCarte, couleurDeLieu, cibleDuBoulot, PULSE_JOUEUR, BATTEMENT_CIBLE, CALQUE_ALPHA,
     marqueurs: function () { return marqueurs; },
     get voileCourant() { return voileCourant; },
            majAvisSon,

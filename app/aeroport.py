@@ -27,15 +27,19 @@ traversier) ne la voit pas non plus, et c'est voulu : rien n'y va encore.
 1. le PONT EN CONSTRUCTION : une barricade à la tête du pont
    (`carte.BARRIERES`, `pont_aeroport`). Elle se défonce en char, et elle
    s'enjambe à pied — mais…
-2. LA TRAVÉE MANQUANTE : le tablier s'arrête au-dessus de l'eau. Des piles sans
-   rien dessus, puis le bout du pont côté île. Un char lancé finit à l'eau ; à
-   la nage, ça passe ;
+2. LE CHANTIER : le tablier s'arrête au-dessus de l'eau. Six piles sans rien
+   dessus sur trente-deux tuiles, puis le bout du pont côté île. Un char lancé
+   finit à l'eau, aucune moto ne saute ça, et à la nage il faut le café ET
+   l'estomac plein ;
 3. LE BARBELÉ : l'aéroport est clôturé au complet, et le barbelé ne s'enjambe
    pas (`carte.ENJAMBABLES`) ;
 4. LA GUÉRITE (`aeroport`) : la seule ouverture de la clôture, au pied du pont.
    Elle ne se force pas ;
 5. LE LARGE : de la plage de La Pointe à l'île, trop d'eau pour la nager, même
-   avec le café et l'estomac plein. Seul le bout du tablier est à portée de nage.
+   avec le café et l'estomac plein. Seul le bout du tablier en laisse la chance.
+
+⚠️ **Et on ne le voit pas venir** (`MASQUE`) : sur la mini-carte et la grande
+carte, l'île est de l'eau tant que le pont n'est pas fini.
 
 ⚠️ **Pas un refuge** : l'aéroport a sa police (`AEROPORT["police"]`). L'île aux
 Corneilles est l'endroit où l'on disparaît ; ici, on est surveillé.
@@ -69,10 +73,16 @@ AEROPORT: dict = {
 #: de la même largeur (`carte._coupe`) — trottoirs en planches, comme l'autre pont.
 #:
 #: `nord`  les rangées de tablier bâties depuis La Pointe ;
-#: `trou`  la travée manquante, de l'eau (⚠️ `test_aeroport` : aucun saut ne la
-#:         franchit, et elle se nage) ;
-#: `piles` les rangées du trou où une pile attend son tablier, relatives au trou.
-#: Le bout côté île va du trou jusqu'à la terre de l'île.
+#: `trou`  le chantier : de l'eau, et ses piles ;
+#: `piles` les rangées du trou où une pile attend son tablier, relatives au trou —
+#:         une toutes les cinq tuiles, trois tuiles d'eau à chaque bout.
+#: Le bout côté île va du trou jusqu'à la terre de l'île (le détroit fait 52 tuiles).
+#:
+#: ⚠️ **Six piles, pas deux** (demande de Martin, 21 sept. 2026 : « ajoute 4 sections
+#: de plus de pont en construction », le chantier plus long). Le trou est passé de 12
+#: à 32 tuiles, et c'est ce qui change le jeu : à 12, il se nageait à jeun et une moto
+#: lancée sur une rampe l'aurait sauté (13 tuiles de réception, `carte.RECEPTION_DEFI`) ;
+#: à 32, aucun saut, et la nage demande le café ET l'estomac plein (`test_aeroport`).
 #:
 #: ⚠️ Aucune FLÈCHE sur le tablier : le champ de direction (`voie`) reste vide, et
 #: le trafic ne sait même pas que le pont existe. La mission qui le finit les posera.
@@ -81,10 +91,20 @@ PONT: dict = {
     "nom": "Le pont de l'aéroport",
     "rue_v": 19,
     "rue_h": 11,
-    "nord": 24,
-    "trou": 12,
-    "piles": (3, 8),
+    "nord": 12,
+    "trou": 32,
+    "piles": (3, 8, 13, 18, 23, 28),
 }
+
+#: ⚠️ **CE QUE LA CARTE NE MONTRE PAS ENCORE** (demande de Martin, 21 sept. 2026 :
+#: « la carte de l'aéroport peut-elle être masquée », l'île entière, jusqu'au pont
+#: fini). Sur la mini-carte et la grande carte, le rectangle de l'île — bout du pont
+#: compris (`terre`) — se peint en eau, et le repère de l'aérogare n'y est pas, tant
+#: que la mission `apres` n'est pas faite. `carte_h` : la hauteur de la carte qu'on
+#: connaît — la grande carte s'y arrête, et la ville y garde l'échelle qu'elle avait
+#: avant l'aéroport (sous elle, il n'y a que de l'eau à montrer). Python décide quoi
+#: cacher et jusqu'à quand ; le navigateur (`Monde.masquee`) ne fait que le lire.
+MASQUE: dict = {"apres": "a01"}
 
 #: ⚠️ LES MISSIONS QUI OUVRIRONT L'AÉROPORT, ET QUI N'EXISTENT PAS ENCORE. Les deux
 #: barrières les attendent (`apres`) : tant qu'elles ne sont pas écrites, la
@@ -94,7 +114,8 @@ PONT: dict = {
 #: mission s'écrit, elle sort de cette table (un juge refuse les deux à la fois).
 MISSIONS_A_VENIR: dict[str, str] = {
     "a01": "Le pont de l'aéroport — l'entrepreneur est en retard (et quelqu'un le paie pour "
-           "l'être) : la travée se pose, la barricade tombe",
+           "l'être) : les travées se posent sur leurs six piles, la barricade tombe, et l'île "
+           "apparaît sur la carte",
     "a02": "Le laissez-passer — un badge de l'aéroport, emprunté ou fabriqué : la guérite lève "
            "sa barrière",
 }
@@ -333,6 +354,8 @@ def _verifier_le_plan() -> None:
         raise ValueError(f"aéroport : {avions} avions au plan, {len(AVIONS)} dans la fiche")
     if not set(MISSIONS_A_VENIR) or any(not s.startswith("a") for s in MISSIONS_A_VENIR):
         raise ValueError("aéroport : les missions à venir sont celles de l'arc A")
+    if not all(0 < r < PONT["trou"] - 1 for r in PONT["piles"]):
+        raise ValueError("aéroport : une pile hors du chantier")
 
 
 _verifier_le_plan()
@@ -518,6 +541,7 @@ def poser(chantier, ville: dict) -> dict:
             "peints": peints, "portes_peintes": portes_peintes,
             "pont": {"x": px, "y": py, "l": len(coupe), "nord": PONT["nord"], "trou": PONT["trou"],
                      "sud": fin - debut_sud, "piles": piles},
+            "masque": {"x": tx, "y": ty, "l": tl, "h": th, "apres": MASQUE["apres"], "carte_h": hauteur_avant},
             "lampes": len(chantier.lampes) - lampes_avant}
 
 
