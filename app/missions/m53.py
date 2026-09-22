@@ -37,11 +37,11 @@ MISSION = {
     "dialogue": {
         "appel": [
             _l("sven", "C'est encore Sven. Un chalutier passe partout. Aujourd'hui, il travaille pour moi.",
-               jeu="[Norwegian accent][calm] C'est encore Sven. [wryly] Un chalutier passe partout. [firmly] Aujourd'hui, il travaille pour moi.")
+               jeu="[Norwegian accent][calm] C'est encore Sven. [wryly] Un chalutier passe… partout. [firmly] Aujourd'hui, il travaille… pour moi.")
         ],
         "intro": [
             _l("sven", "L'autre quai porte un relais. Il écoute la baie pour le compte de Josée.",
-               jeu="[Norwegian accent][matter-of-fact] L'autre quai porte un relais. [coldly] Il écoute la baie… pour le compte de Josée."),
+               jeu="[Norwegian accent][matter-of-fact] L'autre quai porte… un relais. [coldly] Il écoute la baie… pour le compte de Josée."),
             _l("sven", "Fais-le taire. Une bonne pêche ne pose jamais de questions.",
                jeu="[Norwegian accent][firmly] Fais-le taire. [wryly] Une bonne pêche… ne pose jamais de questions.")
         ],
@@ -49,17 +49,17 @@ MISSION = {
             _p("sven", "Doucement. Un chalutier pressé, ça se remarque.", 1,
                jeu="[Norwegian accent][gravely] Doucement. [quietly] Un chalutier pressé… ça se remarque."),
             _p("sven", "Le boîtier est sur le quai. Reproduis ce qu'il montre, rien de plus.", 2,
-               jeu="[Norwegian accent][calm] Le boîtier est sur le quai. [matter-of-fact] Reproduis ce qu'il montre… rien de plus.")
+               jeu="[Norwegian accent][calm] Le boîtier est… sur le quai. [matter-of-fact] Reproduis ce qu'il montre… rien de plus.")
         ],
         "fin": [
             _l("sven", "Le relais est muet. Josée regarde une baie qui ne lui dit plus rien.",
-               jeu="[Norwegian accent][satisfied] Le relais est muet. [wryly] Josée regarde une baie… qui ne lui dit plus rien."),
+               jeu="[Norwegian accent][satisfied] Le relais est… muet. [wryly] Josée regarde une baie… qui ne lui dit plus rien."),
             _l("sven", "Tu apprends vite. Ça me plaît, et ça me coûte cher.",
-               jeu="[Norwegian accent][calm] Tu apprends vite. [wryly] Ça me plaît… et ça me coûte cher.")
+               jeu="[Norwegian accent][calm] Tu apprends… vite. [wryly] Ça me plaît… et ça me coûte cher.")
         ],
         "echec": [
             _l("sven", "Le relais parle encore. Recommence, avant que Josée n'écoute trop bien.",
-               jeu="[Norwegian accent][coldly] Le relais parle encore. [firmly] Recommence… avant que Josée n'écoute trop bien.")
+               jeu="[Norwegian accent][coldly] Le relais parle… encore. [firmly] Recommence… avant que Josée n'écoute trop bien.")
         ]
     }
 

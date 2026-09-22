@@ -37,29 +37,29 @@ MISSION = {
     "dialogue": {
         "appel": [
             _l("sven", "Sven. J'ai du travail pour quelqu'un de discret. Le quai, ce soir.",
-               jeu="[Norwegian accent][calm] Sven. [matter-of-fact] J'ai du travail pour quelqu'un de discret… [firmly] le quai, ce soir.")
+               jeu="[Norwegian accent][calm] Sven. [matter-of-fact] J'ai du travail… pour quelqu'un de discret… [firmly] le quai, ce soir.")
         ],
         "intro": [
             _l("sven", "Une chaloupe t'attend. Fais le tour de la baie, sans bruit, sans lumière.",
-               jeu="[Norwegian accent][quietly] Une chaloupe t'attend. [firmly] Fais le tour de la baie… sans bruit, sans lumière."),
+               jeu="[Norwegian accent][quietly] Une chaloupe… t'attend. [firmly] Fais le tour de la baie… sans bruit, sans lumière."),
             _l("sven", "Josée regarde son port de trop près. Je veux savoir qui regarde, et quand.",
-               jeu="[Norwegian accent][coldly] Josée regarde son port de trop près. [calm] Je veux savoir qui regarde… et quand.")
+               jeu="[Norwegian accent][coldly] Josée regarde son port… de trop près. [calm] Je veux savoir qui regarde… et quand.")
         ],
         "pendant": [
             _p("sven", "Lentement. Un moteur trop pressé s'entend de loin.", 1,
                jeu="[Norwegian accent][gravely] Lentement. [quietly] Un moteur trop pressé… s'entend de loin."),
             _p("sven", "Quelqu'un t'a vu. Règle ça vite, et sans un mot.", 2,
-               jeu="[Norwegian accent][dramatic] Quelqu'un t'a vu. [firmly] Règle ça vite… et sans un mot.")
+               jeu="[Norwegian accent][dramatic] Quelqu'un… t'a vu. [firmly] Règle ça vite… et sans un mot.")
         ],
         "fin": [
             _l("sven", "Parfait. C'est tout ce que je demande.",
-               jeu="[Norwegian accent][satisfied] Parfait. [calm] C'est tout ce que je demande."),
+               jeu="[Norwegian accent][satisfied] Parfait. [calm] C'est tout… ce que je demande."),
             _l("sven", "Tiens. La prochaine fois, le travail sera moins tranquille.",
                jeu="[Norwegian accent][deadpan] Tiens. [knowingly] La prochaine fois… le travail sera moins tranquille.")
         ],
         "echec": [
             _l("sven", "Tu n'étais pas prêt. Reviens quand tu le seras.",
-               jeu="[Norwegian accent][coldly] Tu n'étais pas prêt. [firmly] Reviens… quand tu le seras.")
+               jeu="[Norwegian accent][coldly] Tu n'étais… pas prêt. [firmly] Reviens… quand tu le seras.")
         ]
     }
 

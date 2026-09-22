@@ -37,29 +37,29 @@ MISSION = {
     "dialogue": {
         "appel": [
             _l("sven", "Sven, une dernière fois. Ce soir, mon bateau prend la mer, avec ou sans registre.",
-               jeu="[Norwegian accent][calm] Sven, une dernière fois. [firmly] Ce soir, mon bateau prend la mer… avec ou sans registre.")
+               jeu="[Norwegian accent][calm] Sven… une dernière fois. [firmly] Ce soir, mon bateau prend la mer… avec ou sans registre.")
         ],
         "intro": [
             _l("sven", "Un registre note chaque sortie du quai. Efface la mienne avant que j'appareille.",
-               jeu="[Norwegian accent][matter-of-fact] Un registre note chaque sortie du quai. [firmly] Efface la mienne… avant que j'appareille."),
+               jeu="[Norwegian accent][matter-of-fact] Un registre note… chaque sortie du quai. [firmly] Efface la mienne… avant que j'appareille."),
             _l("sven", "Ensuite, tu le mènes toi-même. Un porte-conteneurs ne se pilote pas à moitié.",
-               jeu="[Norwegian accent][calm] Ensuite, tu le mènes toi-même. [firmly] Un porte-conteneurs… ne se pilote pas à moitié.")
+               jeu="[Norwegian accent][calm] Ensuite, tu le mènes… toi-même. [firmly] Un porte-conteneurs… ne se pilote pas à moitié.")
         ],
         "pendant": [
             _p("sven", "Le boîtier est sur la jetée. Prends ton temps, mais pas trop.", 0,
-               jeu="[Norwegian accent][calm] Le boîtier est sur la jetée. [wryly] Prends ton temps… mais pas trop."),
+               jeu="[Norwegian accent][calm] Le boîtier est… sur la jetée. [wryly] Prends ton temps… mais pas trop."),
             _p("sven", "Le port s'est réveillé! Perds-les dans le brouillard, pas dans un quai.", 2,
-               jeu="[Norwegian accent][dramatic] Le port s'est réveillé! [firmly] Perds-les dans le brouillard… pas dans un quai.")
+               jeu="[Norwegian accent][dramatic] Le port s'est… réveillé! [firmly] Perds-les dans le brouillard… pas dans un quai.")
         ],
         "fin": [
             _l("sven", "Il flotte, il est à moi, et personne ne l'a noté. Parfait.",
-               jeu="[Norwegian accent][satisfied] Il flotte, il est à moi… et personne ne l'a noté. [calm] Parfait."),
+               jeu="[Norwegian accent][satisfied] Il flotte, il est… à moi… et personne ne l'a noté. [calm] Parfait."),
             _l("sven", "Josée avait le port. Maintenant, j'ai un bateau qu'elle n'a jamais vu partir.",
-               jeu="[Norwegian accent][coldly] Josée avait le port. [firmly] Maintenant… j'ai un bateau qu'elle n'a jamais vu partir.")
+               jeu="[Norwegian accent][coldly] Josée avait… le port. [firmly] Maintenant… j'ai un bateau qu'elle n'a jamais vu partir.")
         ],
         "echec": [
             _l("sven", "Le registre me trahit, ou la police m'a vu. Ce n'est pas terminé.",
-               jeu="[Norwegian accent][coldly] Le registre me trahit… ou la police m'a vu. [firmly] Ce n'est pas terminé.")
+               jeu="[Norwegian accent][coldly] Le registre me trahit… ou la police m'a vu. [firmly] Ce n'est pas… terminé.")
         ]
     }
 

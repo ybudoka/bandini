@@ -56,7 +56,38 @@ Cette recette se transpose à toute origine à venir : ce qui rend un personnage
 « pas d'ici » à l'oreille, c'est presque toujours **ce qu'il ne dit jamais** (le sacre,
 le diminutif, l'expression figée) plus qu'un accent posé sur les syllabes.
 
-## 3. Ce qui marche : une balise d'accent, une fois, en tête
+## 3. La prosodie — un levier libre, au-delà d'ElevenLabs
+
+Ce que la vraie phonétique d'une langue change dans un accent, ce sont d'abord des
+**sons** : quel `r`, quel `u`, quelle voyelle nasale un locuteur remplace par celle de sa
+langue première. Des exemples réels, purement à l'oreille — `v` assourdi en `f` en fin de
+mot chez un germanophone, `u` français lu `ou` chez un anglophone ou un hispanophone, un
+`r` moins guttural ([Lingoda](https://www.lingoda.com/blog/fr/erreurs-de-prononciation-que-les-anglophones-font-en-francais/),
+[passerelle-fle](https://passerelle-fle.over-blog.net/pages/Les-difficultes-de-prononciation-de-locuteurs-germanophones-d-allemagne-au-cours-de-l-apprentissage-du-francais-premiere-partie--2025594.html)).
+Ça, seules la voix et la balise d'accent (§ 4) peuvent le porter : aucune lettre de
+`jeu=` ne peut bouger sans casser le juge (§ 1).
+
+Mais la phonétique dit aussi comment une langue **rythme** la phrase — et ça, la
+ponctuation le porte très bien, parce que `mots()` (`app/interpretation.py:372`)
+l'ignore complètement : virgule, point de suspension, point, tout disparaît avant la
+comparaison. `jeu=` peut donc respirer, couper une phrase en deux, hésiter, **sans
+qu'un seul mot ne change** — un levier resté ouvert, qu'aucun juge ne surveille. C'est
+aussi ce qu'ElevenLabs recommande pour toute réplique, accent ou pas : de très longues
+phrases confondent le modèle ; couper aux endroits où on marquerait normalement une
+pause aide beaucoup ([Best practices](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices)).
+
+| Origine | Ce que dit la phonétique | Ce que ça donne dans `jeu=` |
+|---|---|---|
+| Scandinave (Sven : Norvège) | langue à **accent de hauteur** — la mélodie monte et descend sur la syllabe portée, un débit presque chanté et mesuré, jamais pressé ([Alma Musica](https://www.alma-musica.net/html/documents/nordic.html), [Wiktionnaire — norvégien](https://fr.wiktionary.org/wiki/Annexe:Prononciation/norv%C3%A9gien)) | une pause franche avant le mot qui porte l'idée, pas un débit continu — « Sven. … J'ai du travail pour quelqu'un de discret. » |
+| Anglophone | rythme **accentuel** (stress-timed) : les syllabes non accentuées se compriment entre deux temps forts, à l'inverse du français qui les étale ([Linguistic Rhythm in Foreign Accent — Yuan](https://www.ling.upenn.edu/~jiahong/publications/c01.pdf)) | des groupes de mots collés, puis une coupure nette — pas un débit régulier |
+| Hispanophone / italophone | rythme **syllabique**, voyelles pleines non réduites — un débit égal, presque mécanique, à l'oreille française (même source) | peu de pauses courtes ; la phrase coule jusqu'au bout de l'idée, pas de respiration au milieu |
+
+⚠️ Ce ne sont pas des règles vérifiées par un juge — comme tout ce document au-delà de
+§ 1 et § 5, **c'est une audition qui tranche**, pas une formule. Et ça complète § 2 sans
+le remplacer : le rythme appuie le vocabulaire — les phrases courtes de Sven (§ 2) sont
+déjà, sans le nommer, un choix qui suit l'accent de hauteur du norvégien.
+
+## 4. Ce qui marche : une balise d'accent, une fois, en tête
 
 ⚠️ **Confirmé à l'oreille par Martin le 22 sept. 2026** (« c'est mieux ») — c'est la
 recette retenue pour Sven, et pour toute voix multilingue à venir (M16, « les 34
@@ -76,13 +107,16 @@ Ce que ça donne pour Sven (`app/missions/m52.py`) :
 
 ```python
 _l("sven", "Sven. J'ai du travail pour quelqu'un de discret. Le quai, ce soir.",
-   jeu="[Norwegian accent][calm] Sven. [matter-of-fact] J'ai du travail pour "
+   jeu="[Norwegian accent][calm] Sven. [matter-of-fact] J'ai du travail… pour "
        "quelqu'un de discret… [firmly] le quai, ce soir.")
 ```
 
 **Avant d'ajouter un accent pour un nouveau personnage** : écouter d'abord (générer une
 seule réplique, jamais les 26 d'un coup — c'est ce qui a été fait ici), puis seulement
-si ça sonne bon, ajouter la balise à `ACCENTS` et régénérer le reste.
+si ça sonne bon, ajouter la balise à `ACCENTS` et régénérer le reste. Une fois la balise
+retenue, la prosodie (§ 3) est le levier suivant à travailler — une pause de plus avant
+le mot qui porte l'idée, sur les répliques qui n'en avaient encore aucune à l'intérieur
+d'une phrase, comme ci-dessus (« du travail… pour »).
 
 ### Ce qui n'a pas été retenu : des majuscules à l'intérieur d'un mot
 
@@ -95,7 +129,7 @@ mais c'est documenté pour lever une ambiguïté de prononciation anglaise, pas 
 fabriquer un accent. Reste une piste si une origine à venir n'a pas de balise
 `[<pays> accent]` reconnue par v3 : un essai à l'oreille, pas une recette.
 
-## 4. Ce qui reste fermé
+## 5. Ce qui reste fermé
 
 Respeller vraiment un mot phonétiquement (« aujourd'hui » → « ossheurD'hui ») pour
 que la voix le prononce autrement **exige que `texte` et `jeu` divergent**, ce que le
@@ -115,3 +149,8 @@ pas de lui-même.
 - [Best practices — ElevenLabs](https://elevenlabs.io/docs/overview/capabilities/text-to-speech/best-practices)
 - [Eleven v3 Audio Tags: Master AI Accent Emulation — ElevenLabs](https://elevenlabs.io/blog/eleven-v3-audio-tags-emulating-accents-with-precision)
 - [Audio Tags 101: Directing emotional TTS in Eleven v3 — ElevenLabs](https://elevenlabs.io/blog/v3-audiotags)
+- [Erreurs de prononciation que les anglophones font en français — Lingoda](https://www.lingoda.com/blog/fr/erreurs-de-prononciation-que-les-anglophones-font-en-francais/)
+- [Difficultés de prononciation des germanophones en français — passerelle-fle](https://passerelle-fle.over-blog.net/pages/Les-difficultes-de-prononciation-de-locuteurs-germanophones-d-allemagne-au-cours-de-l-apprentissage-du-francais-premiere-partie--2025594.html)
+- [Prononciation des langues scandinaves — Alma Musica](https://www.alma-musica.net/html/documents/nordic.html)
+- [Annexe:Prononciation/norvégien — Wiktionnaire](https://fr.wiktionary.org/wiki/Annexe:Prononciation/norv%C3%A9gien)
+- [Linguistic Rhythm in Foreign Accent — Jiahong Yuan (UPenn)](https://www.ling.upenn.edu/~jiahong/publications/c01.pdf)
