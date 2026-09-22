@@ -38,8 +38,8 @@ gang, son bruit et une raison d'y aller. Le Faubourg n'a pas bougé d'une tuile.
 - 5 lieux de plus, un par district : dépanneur Chez Ti-Paul (caisse, journal), **Hôtel
   Bandini** (un deuxième lit, donc une deuxième sauvegarde — et la propriété qui
   l'attendait existe enfin), cantine des Quais (hot-dog), usine Prévost, phare de La Pointe.
-- `audio.py` : _10-4_ (auto-patrouille) et _Radio-Traversier_ (camion). **À générer et à
-  écouter** : `uv run python scripts/audio_elevenlabs.py --refaire dix_quatre traversier`.
+- `audio.py` : _10-4_ (auto-patrouille) et _Radio-Traversier_ (camion). ✅ **Générées** le
+  13 sept. 2026 (`0598d07`, `--radios`) — ⚠️ **toujours pas écoutées** par Martin.
 - **Le paquet, mesuré** : 319 Ko bruts, **33 Ko gzip** (prévu : 360 / 60), `generer()`
   94 ms **une fois au démarrage du serveur** — le paquet est construit à la création de
   l'app, pas par requête. Budget du test relevé à 400 Ko bruts (puis à **600** le 13 sept. : le brut n'est qu'un indicateur, voir « Dettes »), et un second juge tient le

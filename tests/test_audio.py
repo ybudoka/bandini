@@ -151,6 +151,16 @@ def test_une_station_est_generable(radio):
     assert 0 < radio["volume"] <= 1
 
 
+def test_aucune_radio_declaree_ne_manque_a_l_appel():
+    """⚠️ `10-4` et `Radio-Traversier` sont restees DECLAREES sans mp3 genere pendant des
+    jours (M8 a M9) sans qu'aucun juge ne rougisse : `station_existe` (lu par
+    `test_chaque_char_de_phase_1_a_une_station_qui_existe`, ci-dessous) ne verifie que le
+    SLUG, jamais le fichier — un bouton RADIO pointait vers un mp3 qui n'a jamais existe, et
+    rien ne le disait. `radios_manquantes()` existe depuis la meme epoque pour ca precisement ;
+    c'est elle qu'on juge, maintenant (payee le 13 sept. 2026, `0598d07`)."""
+    assert audio.radios_manquantes() == []
+
+
 def test_chaque_char_de_phase_1_a_une_station_qui_existe():
     """Enregistree ou procedurale — mais elle existe.
 
