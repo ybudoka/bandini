@@ -51,12 +51,36 @@ def test_aucune_regle_en_double():
     assert not doubles, f"règles en double : {doubles}"
 
 
-@pytest.mark.parametrize("mot", [m for m, _ in REGLES])
-def test_chaque_regle_touche_au_moins_une_replique(mot):
-    """Une règle dont le mot a quitté toutes les répliques est morte : on la
-    retire, ou c'est la réplique qui a changé d'orthographe sans prévenir."""
+RESERVE = prononciation.en_reserve()
+
+
+@pytest.mark.parametrize("mot", [m for m, _ in REGLES if m not in RESERVE])
+def test_chaque_regle_hors_reserve_touche_une_replique(mot):
+    """Au-dessus de la réserve, une règle dont le mot n'est dans aucune réplique est
+    une faute de frappe (« Prevost » ne corrigerait jamais « Prévost ») ou une règle
+    morte : on la corrige, on la retire, ou on la descend dans la réserve."""
     assert any(mot in prononciation.touches(t) for t in TEXTES), (
-        f"« {mot} » n'est dans aucune réplique dite (sensible à la casse)")
+        f"« {mot} » n'est dans aucune réplique dite (sensible à la casse) — "
+        f"faute de frappe, ou à descendre sous « {prononciation.MARQUE_RESERVE} »")
+
+
+def test_la_reserve_existe_et_ne_passe_pas_devant():
+    """La réserve est la FIN du fichier : une règle dite qui la suivrait échapperait au
+    juge ci-dessus. Et elle n'est pas vide — c'est elle qui sert les missions à venir."""
+    lexemes = prononciation._lexemes()
+    drapeaux = [reserve for _, _, reserve in lexemes]
+    assert any(drapeaux), f"la marque « {prononciation.MARQUE_RESERVE} » manque"
+    assert drapeaux == sorted(drapeaux), "une règle hors réserve après la marque"
+
+
+def test_une_regle_courte_passe_avant_la_longue_qui_la_contient():
+    """Seule la première règle qui colle s'applique : « Guy » avant « Ti-Guy » ferait
+    dire « Ti-Gui » par hasard, et « Y a » avant … — l'ordre se tient ici."""
+    mots = [m for m, _ in REGLES]
+    for i, court in enumerate(mots):
+        for long in mots[i + 1:]:
+            assert not (court != long and re.search(prononciation._motif(court), long)), (
+                f"« {long} » doit passer AVANT « {court} » : sinon « {court} » le mange")
 
 
 def test_aucune_regle_ne_mord_dans_une_balise():

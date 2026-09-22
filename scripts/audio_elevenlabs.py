@@ -364,8 +364,11 @@ def dire_le_dictionnaire() -> int:
     note = prononciation.televerse()
     print(f"{len(regles)} regle(s) dans {prononciation.FICHIER.relative_to(RACINE)} — "
           + (f"televerse ({note['id']})" if note else "a televerser (le script le fait avant la premiere voix)"))
+    reserve = prononciation.en_reserve()
+    print(f"  ({len(regles) - len(reserve)} touchent une replique, {len(reserve)} en reserve "
+          f"pour les missions a venir)")
     for mot, alias in regles:
-        print(f"  {mot:>14}  ->  {alias}")
+        print(f"  {mot:>14}  ->  {alias}{'   (reserve)' if mot in reserve else ''}")
     touchees = [v for v in audio.toutes_les_voix()
                 if prononciation.touches(interpretation.dit(v)) and audio.chemin_voix(v).exists()]
     if not touchees:

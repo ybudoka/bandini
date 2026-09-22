@@ -40,7 +40,7 @@ génération ou un --refaire.
 - `scripts/audio_elevenlabs.py` : `lexique()` téléverse si l'empreinte du `.pls` a changé
   (`app/prononciation.json`), puis le joint à **chaque** voix ; `--dictionnaire` le téléverse et
   liste les voix déjà faites qu'il changerait, avec la commande `--refaire` (payante).
-- ⚠️ **Premier téléversement refusé** : 401, la clé n'a pas `pronunciation_dictionaries_write`.
+- ⚠️ **Premier téléversement refusé** (corrigé plus bas) : 401, la clé n'a pas `pronunciation_dictionaries_write`.
   Le script ne bloque alors que les voix qu'une règle touche (elles seraient à repayer) et
   génère les autres sans dictionnaire. Donc : **ElevenLabs n'a pas encore lu ce `.pls`**.
   C'est le seul point non vérifié.
@@ -51,3 +51,33 @@ génération ou un --refaire.
   `taxi_trafic_r`, `pub_gus_r`, `ti_guy-m1-1`, `ti_guy-m1-2`, `bouchard-m4-3`, `ti_guy-m4-8`,
   `josee-m6-5`, `raymonde-s03-1/-2/-5/-6`, `narrateur-ouverture-3/-4`. On attend l'accord de
   Martin pour les refaire.
+
+**22 sept. 2026, plus tard — « enrichie le un maximum » (Martin), et le premier téléversement.**
+
+- **107 règles** : 24 touchent une réplique qu'on entend déjà (s'ajoutent `job` → djobbe,
+  `gang` → gaingue, `docker` → dockeur, et les mots mangés `j'suis` → chu, `p't-être` → ptête,
+  `p'tit`, `y'a`, `Y a`, `v'là`), et **83 en réserve** pour les missions à venir : les autres
+  formes (majuscule de tête de phrase, pluriel, singulier), l'anglais de la rue (chum, bum, gun,
+  deal, pusher, cheap, check, shift, right, anyway, sorry…), le fun et la bouffe (fun, party,
+  lunch, chips, steamé…), le garage (brakes, bumper, muffler, windshield, flat, clutch, starter,
+  gear, hood, trunk, truck, pick-up, scrap, junk, towing, speed, cruiser), les noms de famille
+  pas encore dits (Lévesque, Haugen, Di Meo, Guy seul) et les abréviations (Mme, Dr, Sgt, OK,
+  10-4).
+- **La réserve** : un commentaire `EN RÉSERVE` coupe le `.pls` en deux. Au-dessus, le juge exige
+  que chaque règle touche une réplique (une faute de frappe, « Prevost », rougit) ; en dessous, les
+  règles attendent. Deux juges de plus : la réserve est la fin du fichier, et une règle courte ne
+  passe jamais devant la longue qui la contient (« Guy » devant « Ti-Guy » la mangerait). Mutations
+  (Prevost, Guy remonté) : rouge.
+- **Téléversé** après que Martin a ajouté la permission : `mXax8rSoom7LSuxkRcOs`, 107 règles lues
+  par ElevenLabs (commentaires et graphèmes de deux mots compris). `app/prononciation.json` le note.
+- **v3 applique le dictionnaire — prouvé**, pas supposé : un dictionnaire jetable `truck` →
+  « banane », une phrase en v3, et la reconnaissance vocale d'ElevenLabs (Scribe) a entendu « le
+  banane ». ⚠️ Scribe ne sert PAS à juger une règle réaliste : sur « piasses », « gonne », « trok »
+  il a transcrit « piastres », « gun », « truck » — il ramène l'accent à l'orthographe. Seule
+  l'oreille de Martin juge. Le dictionnaire jetable (`dHvIPCSkBpyMxOm2SA9b`, « essai banane (a
+  jeter) ») est resté sur le compte : l'API n'a pas d'archivage (404), il se supprime dans
+  l'interface.
+- ⚠️ **Le quota du mois est épuisé** : 50 105 / 50 216 crédits (les 139 voix des missions muettes,
+  générées sans dictionnaire par une autre session le même jour). Remise le 17 oct. 2026. Les
+  **46 voix** à refaire ont leur ligne dans le plan.
+

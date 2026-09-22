@@ -41,13 +41,35 @@ NOM = "Bandini — le parler de Baie-des-Brumes"
 ESPACE = "http://www.w3.org/2005/01/pronunciation-lexicon"
 _NS = {"pls": ESPACE}
 
+#: Le commentaire qui ouvre la RÉSERVE du `.pls` : les règles d'en dessous attendent
+#: une réplique qui dise leur mot (les prochaines missions). Au-dessus, chaque règle
+#: touche une réplique qu'on entend déjà — le juge l'exige, pour qu'une faute de frappe
+#: dans un mot ne passe pas en silence.
+MARQUE_RESERVE = "EN RÉSERVE"
+
+
+def _lexemes() -> list[tuple[str, str, bool]]:
+    """(mot écrit, mot entendu, en réserve), dans l'ordre du fichier."""
+    parseur = ET.XMLParser(target=ET.TreeBuilder(insert_comments=True))
+    racine = ET.parse(FICHIER, parseur).getroot()
+    resultat, reserve = [], False
+    for noeud in racine:
+        if noeud.tag is ET.Comment:
+            reserve = reserve or MARQUE_RESERVE in (noeud.text or "")
+        elif noeud.tag == f"{{{ESPACE}}}lexeme":
+            resultat.append((noeud.findtext("pls:grapheme", namespaces=_NS),
+                             noeud.findtext("pls:alias", namespaces=_NS), reserve))
+    return resultat
+
 
 def regles() -> list[tuple[str, str]]:
     """(mot écrit, mot entendu), dans l'ordre du fichier — l'ordre compte : la première qui colle gagne."""
-    racine = ET.parse(FICHIER).getroot()
-    return [(lexeme.findtext("pls:grapheme", namespaces=_NS),
-             lexeme.findtext("pls:alias", namespaces=_NS))
-            for lexeme in racine.findall("pls:lexeme", _NS)]
+    return [(mot, alias) for mot, alias, _ in _lexemes()]
+
+
+def en_reserve() -> set[str]:
+    """Les mots des règles qui attendent leur réplique."""
+    return {mot for mot, _, reserve in _lexemes() if reserve}
 
 
 def empreinte() -> str:
@@ -75,16 +97,24 @@ def _motif(mot: str) -> str:
     return rf"(?<!\w){re.escape(mot)}(?!\w)"
 
 
+def _tout() -> re.Pattern | None:
+    table = regles()
+    return re.compile("|".join(_motif(mot) for mot, _ in table)) if table else None
+
+
 def touches(texte: str) -> list[str]:
-    """Les mots de ce texte qu'une règle change, dans l'ordre du dictionnaire."""
-    return [mot for mot, _ in regles() if re.search(_motif(mot), texte)]
+    """Les mots de ce texte qu'une règle change VRAIMENT, dans l'ordre du dictionnaire.
+    ⚠️ Même passe qu'`entendu` : dans « Ti-Guy », « Guy » n'est pas touché, « Ti-Guy » l'a pris."""
+    motif = _tout()
+    pris = {m.group(0) for m in motif.finditer(texte)} if motif else set()
+    return [mot for mot, _ in regles() if mot in pris]
 
 
 def entendu(texte: str) -> str:
     """Ce que la voix dira — le texte après les règles. ⚠️ Une seule passe, la
     première règle qui colle gagne : un alias ne se fait pas réécrire à son tour."""
-    table = regles()
-    if not table:
+    motif = _tout()
+    if motif is None:
         return texte
-    alias = dict(table)
-    return re.sub("|".join(_motif(mot) for mot, _ in table), lambda m: alias[m.group(0)], texte)
+    alias = dict(regles())
+    return motif.sub(lambda m: alias[m.group(0)], texte)

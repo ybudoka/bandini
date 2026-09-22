@@ -60,6 +60,14 @@ affiche « Prenez donc la rue », la voix dit « Prenez don la rue ».
   format l'interdit). `tests/test_prononciation.py` refuse un lexique illisible, une règle en
   double, une règle morte (son mot n'est plus dans aucune réplique) et une règle qui mordrait
   dans une balise de jeu.
+- **Deux parties** : au-dessus du commentaire `EN RÉSERVE`, chaque règle touche une réplique qu'on
+  entend déjà (le juge l'exige : une faute de frappe dans le mot ne corrigerait rien, en silence) ;
+  en dessous, **la réserve** — les mots que les prochaines missions diront sans doute (l'anglais du
+  garage et de la rue, les contractions, les noms pas encore dits, `OK`, `Mme`, `10-4`). Une
+  réplique neuve qui dit « brakes » est donc déjà prononcée « brèques ». Un mot neuf qui sonne mal :
+  sa règle va dans la réserve, ou au-dessus si une réplique le dit déjà.
+- **L'ordre compte** : une règle longue passe avant la courte qu'elle contient (« Ti-Guy » avant
+  « Guy »), le juge y veille.
 - **Des alias, pas des phonèmes** : l'alias marche avec tous les modèles et se relit sans
   connaître l'IPA ; le phonème dépend du modèle.
 - **Le téléversement** est automatique et gratuit : `scripts/audio_elevenlabs.py` compare
@@ -76,7 +84,11 @@ uv run python scripts/audio_elevenlabs.py --dictionnaire   # téléverser s'il a
 La commande finit par le `--refaire` qui referait ces voix-là (**payant**, au caractère).
 
 ⚠️ **La clé ElevenLabs doit avoir la permission `pronunciation_dictionaries_write`** (et
-`_read`) — celle du 22 sept. 2026 ne l'avait pas (401). Sans elle, le script génère encore
-les voix qu'aucune règle ne touche, et refuse les autres plutôt que de les faire payer deux
-fois.
+`_read`) — Martin l'a ajoutée le 22 sept. 2026. Sans elle, le script génère encore les voix
+qu'aucune règle ne touche, et refuse les autres plutôt que de les faire payer deux fois.
+
+⚠️ **v3 applique bien le dictionnaire** (vérifié le 22 sept. 2026 : une règle jetable `truck` →
+« banane », et la reconnaissance vocale a entendu « le banane »). Mais la reconnaissance vocale
+ne sait pas juger une règle réaliste : elle ramène « piasses » à « piastres ». **Seule l'oreille
+juge.**
 
