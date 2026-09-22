@@ -45,6 +45,12 @@ def atteignables(ville) -> set[tuple[int, int]]:
         departs += [n for n in ((amarre["x"] + 1, amarre["y"]), (amarre["x"] - 1, amarre["y"]),
                                 (amarre["x"], amarre["y"] + 1), (amarre["x"], amarre["y"] - 1))
                     if sol[n[1]][n[0]] == "Q" and n not in bloque]
+    # ⚠️ **Et depuis le bout du pont de l'aéroport** (21 sept. 2026) : on y arrive
+    # à la nage, par la travée manquante — ses planches ne sont pas « enfermées »,
+    # elles sont de l'autre côté de l'eau.
+    pont = ville["aeroport"]["pont"]
+    bout = pont["y"] + pont["nord"] + pont["trou"]
+    departs += [(x, bout) for x in range(pont["x"], pont["x"] + pont["l"]) if carte.marchable(sol[bout][x])]
     vus, pile = set(departs), list(departs)
     while pile:
         x, y = pile.pop()

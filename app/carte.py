@@ -493,15 +493,20 @@ def composantes_par_terre(carte: dict) -> dict[str, list[set[tuple[int, int]]]]:
     EXPRÈS, pas le découvrir. Un groupe est de l'île s'il tient entier dans son
     rectangle (`carte["ile"]`) ; tout le reste est la ville — et une poche
     enclavée en ville reste un deuxième groupe de la ville, donc un juge rouge.
+
+    ⚠️ **Et l'aéroport est une troisième terre** (21 sept. 2026) : son pont
+    s'arrête au-dessus de l'eau, et le bout côté île est à lui — `carte["aeroport"]`
+    en porte le rectangle, bout du pont compris.
     """
-    ile = carte.get("ile")
+    iles = [t for t in (carte.get("ile"), carte.get("aeroport")) if t]
     terres: dict[str, list[set[tuple[int, int]]]] = {"ville": []}
-    if ile:
+    for ile in iles:
         terres[ile["slug"]] = []
     for groupe in composantes_marchables(carte):
-        dedans = ile and all(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
-                             for x, y in groupe)
-        terres[ile["slug"] if dedans else "ville"].append(groupe)
+        terre = next((ile["slug"] for ile in iles
+                      if all(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
+                             for x, y in groupe)), "ville")
+        terres[terre].append(groupe)
     return terres
 
 
@@ -550,6 +555,10 @@ EQUIPEMENTS_DE_TOIT = (
     # Il est pose a la main sur la chapelle de l'ile (`ile.BATIMENTS`), et il est
     # ici pour que le juge des toits le connaisse.
     {"type": "clocher", "poids": 1, "genres": ("chapelle",)},
+    # ⚠️ La cabine de la tour de controle non plus : posee a la main sur la tour
+    # (`aeroport.BATIMENTS`). Filtree par son genre avant le tirage, elle ne change
+    # pas d'un cran le de des toits de la ville.
+    {"type": "tour_controle", "poids": 1, "genres": ("aeroport",)},
 )
 
 #: ⚠️ Les genres d'ilot qui ont pignon sur rue. Pas les maisons ni la banlieue
@@ -1447,6 +1456,20 @@ BARRIERES: tuple[dict, ...] = (
      "forcer": {"etoiles": economie.FOIRE["etoiles_resquille"]},
      "raison": f"LA FOIRE : {economie.FOIRE['entree']} $ L'ENTRÉE",
      "decor": None, "prix": economie.FOIRE["entree"], "dedans": "N"},
+    # ⚠️ **L'AÉROPORT, FERMÉ POUR LES MISSIONS À VENIR** (demande de Martin,
+    # 21 sept. 2026 : « bloqué par un pont en construction et d'autres
+    # stratagèmes »). Les deux attendent une mission qui n'existe pas encore
+    # (`aeroport.MISSIONS_A_VENIR`), et c'est `aeroport.poser` qui les résout :
+    # le pont et la guérite n'existent qu'une fois l'aéroport posé, en dernier.
+    # La barricade du pont se défonce et s'enjambe (sans étoile : c'est un
+    # chantier, pas un crime) — derrière, le tablier s'arrête au-dessus de l'eau.
+    # La guérite, elle, ne se force pas.
+    {"slug": "pont_aeroport", "nom": "Le pont de l'aéroport", "ou": {"aeroport": "pont"},
+     "arrete": ("pieton", "vehicule"), "condition": {"apres": "a01"},
+     "forcer": {"degats": 10}, "raison": "PONT EN CONSTRUCTION", "decor": "barricade"},
+    {"slug": "aeroport", "nom": "La guérite de l'aéroport", "ou": {"aeroport": "guerite"},
+     "arrete": ("pieton", "vehicule"), "condition": {"apres": "a02"},
+     "forcer": None, "raison": "AÉROPORT : LAISSEZ-PASSER EXIGÉ", "decor": "levante"},
 )
 
 #: Les batiments garantis : un par majuscule du plan. `interieur` doit exister
@@ -2753,8 +2776,9 @@ class _Chantier:
     def standing_en(self, x: int, y: int) -> str | None:
         """`cossu`, `ordinaire` ou `pauvre` ; `None` sur l'eau. ⚠️ Une rue se
         coupe en deux, comme entre deux districts (`rect_district`) : chaque
-        trottoir est du standing du bloc qu'il borde."""
-        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+        trottoir est du standing du bloc qu'il borde. ⚠️ Hors de la TRAME, None : la
+        carte grandit sous elle (`aeroport.py`), et ce n'est pas un quartier."""
+        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -2762,8 +2786,8 @@ class _Chantier:
 
     def usage_en(self, x: int, y: int) -> str | None:
         """`commercial`, `residentiel`, `industriel`, `parc`, `port` ou `eau` —
-        avec la meme coupe au milieu des rues que `standing_en`."""
-        if not (0 <= x < self.largeur and 0 <= y < self.hauteur):
+        avec la meme coupe au milieu des rues que `standing_en` (et None hors de la trame)."""
+        if not (0 <= x < self.xr[self.nc] + RUES_V[self.nc] and 0 <= y < self.yr[self.nr] + RUES_H[self.nr]):
             return None
         bx = bisect.bisect_right(self._coupes_x, x) - 1
         by = bisect.bisect_right(self._coupes_y, y) - 1
@@ -6391,6 +6415,8 @@ class _Chantier:
         sortie = []
         for fiche in BARRIERES:
             ou = fiche["ou"]
+            if "aeroport" in ou:
+                continue          # resolue par `aeroport.poser`, une fois l'aeroport pose
             if "pont" in ou:
                 sens, i, j = ou["pont"]
                 pont = next(p for p in ponts if p["sens"] == sens and (p["x"], p["y"]) == (
@@ -7010,6 +7036,13 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # ne posent rien et ne tirent aucun de : la ville est la meme sans eux.
     from . import navires as navires_mod
     ville["mouillages"] = navires_mod.amarrer(chantier, ville)
+    # ⚠️ L'AEROPORT, APRES ABSOLUMENT TOUT (demande de Martin, 21 sept. 2026) : la
+    # carte grandit au sud d'une bande d'eau et d'une ile dessinee, et le deuxieme
+    # pont de La Pointe s'arrete au-dessus de l'eau. Pose avant, il re-tirerait les
+    # arbres de rue, les paquets et les nids-de-poule (ils tirent leur place dans des
+    # listes de tuiles) ; ici, la ville d'avant est la meme a la tuile pres. Aucun de.
+    from . import aeroport as aeroport_mod
+    ville["aeroport"] = aeroport_mod.poser(chantier, ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

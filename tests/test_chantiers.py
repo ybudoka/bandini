@@ -79,12 +79,12 @@ def test_a_chaque_phase_la_ville_reste_d_un_seul_tenant(numero):
     for ch in VILLE["chantiers"]:
         phase = ch["phases"][numero]
         sol = _machines_en_murs(chantiers.appliquer(VILLE["sol"], ch, numero), phase["machines"])
-        # ⚠️ Un îlot PAR TERRE FERME : l'île n'a pas de chantier, et elle est
-        # un îlot à elle (`carte.composantes_par_terre`).
+        # ⚠️ Un îlot PAR TERRE FERME : l'île et l'aéroport n'ont pas de chantier,
+        # et chacun est un îlot à lui (`carte.composantes_par_terre`).
         terres = carte.composantes_par_terre(_ville_a(sol))
         groupes = terres["ville"]
         assert len(groupes) == 1, f"chantier {ch['id']}, phase {numero} : {len(groupes)} îlots"
-        principal = groupes[0] | terres["ile"][0]
+        principal = groupes[0] | terres["ile"][0] | terres["aeroport"][0]
         assert (depart["x"], depart["y"]) in principal
         for point in VILLE["points_interet"]:
             assert (point["x"], point["y"]) in principal, (ch["id"], numero, point)

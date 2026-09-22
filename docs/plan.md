@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (193 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (194 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -80,7 +80,6 @@ pas quand l'ordre de travail change.
 |---|---|---|---|---|---|
 | Des phares à la mesure de chaque char | ⬜ **en cours** | 21 sept. 2026 | **P2** | **correctif** | [fiche](jalons/des-phares-a-la-mesure-de-chaque-char.md#fiche) |
 | La ligne d'histoire : une ouverture et un générique | ⬜ **en cours** (l'ouverture livrée) | 16 sept. 2026 | **P2** | ajout | [fiche](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#fiche) · [notes](jalons/la-ligne-d-histoire-une-ouverture-et-un-generique.md#notes) |
-| L'aéroport de Baie-des-Brumes | ⬜ **en cours** | 21 sept. 2026 | **P3** | ajout | [fiche](jalons/l-aeroport.md#fiche) |
 | M15 La ville te parle — deuxième vague | ⬜ **en cours** (déjà livrés : la rue qui se tait, les leçons du Clairon, la radio qui parle ; en cours : la police à la radio, le souffle, les bruits de quartier) | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/m15-la-ville-te-parle.md#fiche-de-la-deuxième-vague) |
 | Ça travaille : chantiers et démolitions | ⬜ **en cours** (4 vagues livrées : l'horloge et les cinq phases ; le chantier qui travaille ; la tranchée et l'équipe ; le signaleur qui arrête le trafic — restent le conteneur qu'on pousse et de nouveaux chantiers) | 20 sept. 2026 | **P4** | ajout | [fiche](jalons/ca-travaille-chantiers-et-demolitions.md#fiche) · [notes](jalons/ca-travaille-chantiers-et-demolitions.md#notes) |
 | Le décor, les bêtes et les gens répondent — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/le-decor-les-betes-et-les-gens-repondent.md#fiche-de-la-deuxième-vague) |

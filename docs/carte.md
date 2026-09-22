@@ -14,6 +14,11 @@ rebâtie à l'ouverture par `generer(plan, graine)`. Rien n'est régulier : chaq
 colonne a sa largeur, chaque rangée sa hauteur, et les superblocs (`<` `^`)
 fusionnent des îlots en effaçant la rue qui les séparait.
 
+**Sous la grille, depuis le 21 sept. 2026 : l'aéroport** (`app/aeroport.py`). La
+carte fait 419 × 304 tuiles au lieu de 419 × 224 : quatre-vingts rangées d'eau (le
+large) et une île **dessinée** sous La Pointe, posée en dernier et sans un dé — la
+ville d'au-dessus n'a pas bougé d'une tuile.
+
 ---
 
 ## 1. Les districts
@@ -28,7 +33,9 @@ rythme de vie (matin/soir/nuit) et ses propres bâtiments garantis.
 | **La Shop** | `shop` | Les Boulonneux | ➖ | L'industriel : entrepôts 2×2, presque pas de rues, désert la nuit. |
 | **Les Quais** | `quais` | Les Morues | ✅ | Le port : hangars longs, une rangée de quais, l'eau au sud. |
 | **La baie** | `baie` | — | ➖ | Pas un quartier : l'eau (un bloc fusionné de 7×6). |
-| **La Pointe** | `pointe` | Les Skateux | ➖ | Le parc au bout de la ville, coupé par un chenal de 24 tuiles — un seul pont et la foire. |
+| **La Pointe** | `pointe` | Les Skateux | ➖ | Le parc au bout de la ville, coupé par un chenal de 24 tuiles — un pont, la foire, et au sud le pont inachevé de l'aéroport. |
+| **Le large** | `large` (zone) | — | ➖ | Pas un district : l'eau que la carte a gagnée au sud (district `baie`), personne n'y naît. |
+| **L'aéroport** | `aeroport` (zone) | — | ➖ | Pas un district de la trame : une île dessinée (`aeroport.py`), clôturée de barbelé, **fermée** pour les missions à venir. Deux agents : ce n'est pas un refuge. |
 
 ---
 
@@ -107,6 +114,8 @@ un paiement.
 | La cour de l'usine Prévost | `usine` | piéton + véhicule | **de jour** |
 | Le quai du cargo | `cargo` | piéton + véhicule | **de nuit** |
 | L'arche de la foire | `foire` | piéton + véhicule | payer le billet (à la journée) |
+| Le pont de l'aéroport | `pont_aeroport` | piéton + véhicule | après **a01** (pas encore écrite) — la barricade se défonce et s'enjambe, sans étoile, mais le tablier s'arrête au-dessus de l'eau |
+| La guérite de l'aéroport | `aeroport` | piéton + véhicule | après **a02** (pas encore écrite) — ne se force pas |
 
 ---
 
@@ -238,6 +247,14 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   `peche_canards`) — un par kiosque, joués à pied.
 - **Plages** : où naissent les baigneurs.
 - **Métro** : quai (`metro_quai`) et rame (`metro_rame`).
+- **Aéroport** (`aeroport.py`) : l'aérogare (lieu `aeroport`, famille transport,
+  pièce `aerogare` — comptoirs, sièges, carrousel, portiques), la tour de contrôle,
+  deux hangars et la guérite (portes condamnées), la piste 09-27, la voie de
+  circulation, trois avions peints (un bimoteur _Air Brumes_, un de Gaspésie, le
+  monomoteur de l'aéroclub), un stationnement, une manche à air. Fermé par
+  étages : la barricade du pont, la travée manquante, le barbelé, la guérite, et
+  le large (trop d'eau pour la nager depuis la plage de La Pointe). Les missions
+  qui l'ouvriront : `aeroport.MISSIONS_A_VENIR` (`a01`, `a02`).
 
 ---
 

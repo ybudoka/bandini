@@ -252,6 +252,8 @@ ENSEIGNES: dict[str, tuple[str, str]] = {
     "usine": ("USINE PRÉVOST", "industrie"),
     "phare": ("LE PHARE", "marine"),
     "kiosque": ("KIOSQUE", "commerce"),
+    # L'aérogare (`aeroport.py`) : posée à la main, sans dé, sur sa façade vitrée.
+    "aeroport": ("AÉROPORT", "service"),
 }
 
 #: ⚠️ **LES CARROSSERIES** (des garages où l'on entre, 21 sept. 2026) : un atelier par

@@ -126,8 +126,12 @@ def test_les_carrosseries_ne_deplacent_rien_d_autre(ville, monkeypatch):
     """⚠️ Posees EN DERNIER et sans de, comme le rideau de Ti-Guy : la meme ville sans
     elles est identique, hors de leur rideau et de leur abord (et du nom sur le bandeau).
     Le devant des portes (`devants.deplacer`) est neutralise des DEUX cotes : il vient
-    apres, et ecarter ce qui tombe devant une porte neuve est son travail."""
+    apres, et ecarter ce qui tombe devant une porte neuve est son travail. L'aeroport
+    aussi : pose apres tout, son point s'ajoute au bout de la liste, derriere ceux
+    des carrosseries — des deux cotes, sinon « au bout » ne veut plus rien dire."""
+    from app import aeroport
     monkeypatch.setattr(devants, "deplacer", lambda chantier, ville_: {})
+    monkeypatch.setattr(aeroport, "poser", lambda chantier, ville_: None)
     avec = carte.generer(graine=ville["graine"])
     monkeypatch.setattr(carte._Chantier, "poser_les_carrosseries", lambda self, ville_: [])
     sans = carte.generer(graine=ville["graine"])

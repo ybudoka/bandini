@@ -834,10 +834,18 @@ def test_derriere_l_arroseuse_la_rue_est_mouillee_et_un_char_y_glisse_puis_elle_
         const v = arroseuse(L);
         if (!v) return { arroseuse: false };
         const traces = [];
+        // ⚠️ LE JOUEUR EST PLANTE SUR LA CHAUSSEE, la nuit, six cents images : le trafic
+        // finissait par le faucher, il se reveillait a l'hopital — et le juge lisait
+        // alors la carte de la PIECE, ou tout ce que l'arroseuse avait mouille etait
+        // « hors route » (21 sept. 2026 : douze tuiles de « trottoir » mouillees, rien
+        // n'etait sur un trottoir). On juge l'arroseuse, pas la survie du joueur.
+        L.B.partie.triches.invincible = true;
+        let dedans = false;
         for (let i = 0; i < 600; i++) {
           L.B.partie.heure = 2 / 24;
           L.B.joueur.x = v.x + 200; L.B.joueur.y = v.y;   // qu'elle reste dans la bulle
           o.frame(1);
+          dedans = dedans || !!L.B.interieur;
           if (i %% 60 === 0) traces.push([Math.floor(v.x / L.TT), Math.floor(v.y / L.TT)]);
         }
         const TT = L.TT;
@@ -857,9 +865,10 @@ def test_derriere_l_arroseuse_la_rue_est_mouillee_et_un_char_y_glisse_puis_elle_
         L.B.t += Math.round(60 / 1440 * L.B.defs.economie.jour_secondes * 60);
         const seche = !L.Monde.mouillee(lx, ly);
         return { tournee: true, arroseuse: true, traces: traces.length, mouilles: mouilles, trottoirs: trottoirs,
-                 adh: adh, frein: frein, seche: seche };
+                 adh: adh, frein: frein, seche: seche, dedans: dedans };
     }""" % TOURNEE)
     assert r["tournee"] and r["arroseuse"], r
+    assert not r["dedans"], "le joueur est entré dans une pièce : le juge ne lit plus la rue"
     assert r["mouilles"] >= r["traces"] - 1, "%s de ses %s passages ne sont pas mouillés" % (r["mouilles"], r["traces"])
     assert r["trottoirs"] == 0, "l'arroseuse a mouillé %s tuiles de trottoir" % r["trottoirs"]
     assert r["adh"][0] < 1 and r["adh"][1] == 1, "sur l'asphalte mouillé, un char tient la route pareil : %s" % r["adh"]

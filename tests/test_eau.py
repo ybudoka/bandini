@@ -84,11 +84,14 @@ def _nage_la_plus_courte_vers_la_pointe() -> int:
     for y in range(pont["y"], pont["y"] + pont["h"]):
         for x in range(pont["x"], pont["x"] + pont["l"]):
             sol[y][x] = "~"                  # on defait le pont : reste la nage
-    ile = CARTE["ile"]
+    # ⚠️ Les îles ne sont pas « le reste de la ville » : ni celle des Corneilles, ni
+    # celle de l'aéroport (21 sept. 2026), dont le pont inachevé part justement de
+    # La Pointe — sa travée manquante se nage, et c'est voulu (`test_aeroport`).
+    iles = (CARTE["ile"], CARTE["aeroport"])
 
     def dans_l_ile(x: int, y: int) -> bool:
-        return (ile["x"] <= x < ile["x"] + ile["l"]
-                and ile["y"] <= y < ile["y"] + ile["h"])
+        return any(ile["x"] <= x < ile["x"] + ile["l"] and ile["y"] <= y < ile["y"] + ile["h"]
+                   for ile in iles)
 
     foire = CARTE["foire"]
     depart = (foire["x"] + foire["l"] // 2, foire["y"] + foire["h"] // 2)

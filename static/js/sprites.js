@@ -3773,6 +3773,20 @@ const FACADES = (function () {
       ctx.fillStyle = '#e8c35a';                                            // la croix, doree
       ctx.fillRect(x + 7, y, 2, 8); ctx.fillRect(x + 5, y + 2, 6, 2);
     },
+    // ⚠️ LA CABINE DE LA TOUR DE CONTROLE de l'aeroport : vue d'en haut, un
+    // octogone de vitres sombres autour d'un toit clair, l'ombre portee loin au
+    // sud-est (c'est la chose la plus haute de l'ile) et le feu rouge du sommet.
+    tour_controle: function (ctx, x, y) {
+      ctx.fillStyle = 'rgba(11,10,18,0.42)'; ctx.fillRect(x + 6, y + 6, 14, 14);
+      ctx.fillStyle = '#1f2c38'; ctx.fillRect(x + 2, y, 12, 16); ctx.fillRect(x, y + 2, 16, 12);
+      ctx.fillStyle = '#4f7089'; ctx.fillRect(x + 3, y + 1, 4, 1); ctx.fillRect(x + 1, y + 3, 1, 4);
+      ctx.fillStyle = '#6d94ae'; ctx.fillRect(x + 12, y + 12, 2, 1);
+      ctx.fillStyle = '#c9cdd2'; ctx.fillRect(x + 4, y + 3, 8, 10); ctx.fillRect(x + 3, y + 4, 10, 8);
+      ctx.fillStyle = '#a9aeb4'; ctx.fillRect(x + 4, y + 11, 8, 1);
+      ctx.fillStyle = '#6a6660'; ctx.fillRect(x + 7, y + 5, 2, 5);           // le mat du radar
+      ctx.fillStyle = '#e6e4da'; ctx.fillRect(x + 5, y + 6, 6, 1);
+      ctx.fillStyle = '#d0342c'; ctx.fillRect(x + 7, y + 4, 2, 1);
+    },
     antenne: function (ctx, x, y, h) {
       ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(x + 8, y + 8, 5, 1);
       ctx.fillStyle = '#b4b0a8';
@@ -5183,6 +5197,21 @@ const DECORS = {
   // se frolent (des poteaux, un bac bas) ; les palettes et la benne arretent.
 
   // LE PARCOMETRE : un poteau gris, une tete ronde, son cadran.
+  // LA MANCHE A AIR de l'aeroport : un mat, et la chaussette rayee orange et blanc
+  // qui file vers l'est — le vent de Baie-des-Brumes vient toujours du large.
+  // ⚠️ Pas solide, comme le parcometre : un mat de 2 px ne bloque personne.
+  manche_a_air: { casse: 0.5, pv: 30, w: 22, h: 30, ancre: [3, 29], r: 2, solide: false, peindre: function (ctx, w, h) {
+    ctx.fillStyle = 'rgba(20,18,26,0.2)'; ctx.fillRect(1, 28, 16, 2);          // son ombre
+    ctx.fillStyle = '#8a8f96'; ctx.fillRect(2, 3, 2, 26);                      // le mat
+    ctx.fillStyle = '#b4b9bf'; ctx.fillRect(2, 3, 1, 26);
+    ctx.fillStyle = '#3a3d44'; ctx.fillRect(1, 2, 4, 2);                       // l'anneau
+    for (let k = 0; k < 5; k++) {                                               // la chaussette, qui s'amincit
+      const haut = 2 + (k >> 1), large = 6 - k;
+      ctx.fillStyle = k % 2 ? '#efe6d0' : '#e2661f';
+      ctx.fillRect(5 + k * 3, haut + (k === 4 ? 1 : 0), 3, Math.max(2, large));
+    }
+    ctx.fillStyle = 'rgba(0,0,0,0.18)'; ctx.fillRect(5, 7, 15, 1);
+  } },
   parcometre: { casse: 0.9, pv: 15, w: 8, h: 18, ancre: [4, 17], r: 2, solide: false, peindre: function (ctx, w, h) {
     ctx.fillStyle = 'rgba(20,18,26,0.18)'; ctx.fillRect(1, 16, 6, 2);         // son ombre
     ctx.fillStyle = '#5a5f66'; ctx.fillRect(3, 7, 2, 10);                     // le poteau

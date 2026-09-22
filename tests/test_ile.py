@@ -92,7 +92,9 @@ def test_un_ilot_par_terre_ferme():
     marchable » devient « un îlot par terre ferme ». La ville reste d'un seul
     tenant, et l'île aussi."""
     terres = carte.composantes_par_terre(VILLE)
-    assert set(terres) == {"ville", "ile"}
+    # ⚠️ Et l'aéroport, depuis le 21 sept. 2026 : une troisième terre, que son pont
+    # inachevé laisse seule (`test_aeroport`).
+    assert set(terres) == {"ville", "ile", "aeroport"}
     assert len(terres["ville"]) == 1, f"{len(terres['ville'])} ilots en ville : un trottoir est enclave"
     assert len(terres["ile"]) == 1, f"{len(terres['ile'])} morceaux d'ile : un bout ne se rejoint pas"
     assert terres["ile"][0] <= terre_de_l_ile()
@@ -162,8 +164,15 @@ def test_une_chaloupe_attend_au_quai_de_l_ile():
 
 def test_la_zone_de_l_ile_est_un_refuge_et_elle_passe_en_dernier():
     """`Monde.zoneA` garde la DERNIÈRE zone qui contient le point : l'île doit
-    passer après la baie, sinon elle n'existe pas pour la police ni la musique."""
-    zone = VILLE["zones"][-1]
+    passer après la baie, sinon elle n'existe pas pour la police ni la musique.
+
+    ⚠️ La dernière de celles qui la TOUCHENT : le large et l'aéroport (21 sept.
+    2026) viennent après elle dans la liste, mais aucun ne mord sur son rectangle."""
+    rang = next(i for i, z in enumerate(VILLE["zones"]) if z["slug"] == "ile")
+    zone = VILLE["zones"][rang]
+    for apres in VILLE["zones"][rang + 1:]:
+        assert not (apres["x"] < zone["x"] + zone["l"] and zone["x"] < apres["x"] + apres["l"]
+                    and apres["y"] < zone["y"] + zone["h"] and zone["y"] < apres["y"] + apres["h"]), apres["slug"]
     assert zone["slug"] == "ile" and zone["district"] == "ile"
     assert (zone["x"], zone["y"], zone["l"], zone["h"]) == (FICHE["x"], FICHE["y"], FICHE["l"], FICHE["h"])
     assert zone["refuge"] is True and zone["police"] == 0 and zone["vehicules"] == 0
@@ -215,7 +224,7 @@ def test_l_ile_ne_deplace_rien_de_la_ville(monkeypatch):
 
     for cle in ("decor", "portes", "points_interet", "lampes", "residences", "toits", "amarrages"):
         assert hors_de_l_ile(avec[cle]) == sans[cle], f"« {cle} » a bouge hors de l'ile"
-    assert avec["zones"][:-1] == sans["zones"]
+    assert [z for z in avec["zones"] if z["slug"] != "ile"] == sans["zones"]
     assert {k: v for k, v in avec["interieurs"].items() if k not in ile.PIECES} == sans["interieurs"]
     for cle in sans:
         if cle in ("sol", "decor", "portes", "points_interet", "lampes", "residences", "toits",

@@ -69,9 +69,16 @@ def test_le_paquet_reste_leger():
     (`/api/dialogue/<slug>`, ETag), et le catalogue seul y reste. Il n'est pas livré ; ce plafond-ci
     est ce qui le rendra urgent. ⚠️ Le JEU des répliques (`jeu=`) n'y voyage PAS
     (`missions.pour_le_navigateur`) : il ne sert qu'à générer les voix.
+
+    ⚠️ **La carte : 50 000 → 53 000 octets gzip, 450 000 → 520 000 bruts, le 21 sept. 2026**
+    — l'aéroport (demande de Martin : « aggrandit la carte au sud »). Mesure : 48 282 → 50 331
+    octets gzip, 409 780 → 483 244 bruts. Les 80 rangées que la carte gagne au sud font
+    presque tout le brut (deux calques de 419 glyphes chacune) et presque rien sur le fil (de
+    l'eau, que gzip avale) ; l'île dessinée et sa fiche font les deux Ko du fil (la fiche seule :
+    454 octets). Une carte plus grande pèse plus : c'est le prix de la demande, pas une fuite.
     """
     paquets = definitions.construire()
-    for nom, brut_max, fil_max in (("definitions", 200_000, 44_000), ("carte", 450_000, 50_000)):
+    for nom, brut_max, fil_max in (("definitions", 200_000, 44_000), ("carte", 520_000, 53_000)):
         paquet = getattr(paquets, nom)
         assert paquet.taille < brut_max, f"{nom} : {paquet.taille} octets, le paquet enfle"
         sur_le_fil = len(gzip.compress(paquet.corps, 6))

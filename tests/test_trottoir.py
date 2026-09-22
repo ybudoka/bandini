@@ -136,7 +136,10 @@ def test_la_largeur_de_la_ville_suit_sa_trame():
     dit tout de suite si une rue a été comptée deux fois."""
     ville = carte.exporter()
     assert ville["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
-    assert ville["hauteur"] == sum(carte.RANGEES) + sum(carte.RUES_H)
+    # ⚠️ Sous la trame, l'aéroport (21 sept. 2026) : la carte s'allonge jusqu'au bas
+    # de son plan, et pas une rangée de blocs ne bouge.
+    _, y0, _, hauteur = ville["aeroport"]["plan"]
+    assert sum(carte.RANGEES) + sum(carte.RUES_H) < y0 and ville["hauteur"] == y0 + hauteur
 
 
 def test_une_rue_garde_deux_voies_et_un_boulevard_quatre():

@@ -50,6 +50,9 @@ const Monde = (function () {
     foire_jaune: { dy: 0, c: 'rgba(255,214,110,0.62)' },
     foire_rose: { dy: 0, c: 'rgba(255,120,190,0.52)' },
     foire_bleue: { dy: 0, c: 'rgba(120,190,255,0.50)' },
+    // ⚠️ LES BALISES DE LA PISTE : une petite lueur froide, au ras du sol. La nuit,
+    // c'est tout ce qu'on voit de l'aeroport depuis La Pointe — deux pointilles.
+    balise: { dy: 8, c: 'rgba(200,225,255,0.55)' },
   };
 
   let carte = null;
@@ -85,6 +88,7 @@ const Monde = (function () {
     }
     return sortie;
   }
+  function somme(nombres) { return nombres.reduce(function (s, n) { return s + n; }, 0); }
   function rang(bornes, v) {
     let i = 0;
     while (i + 1 < bornes.length && bornes[i + 1] <= v) i++;
@@ -94,7 +98,10 @@ const Monde = (function () {
   function lettreDuBloc(nom, tx, ty, laquelle) {
     const k = laquelle || carte;
     const q = k && k.quartiers;
-    if (!q || !q[nom] || tx < 0 || ty < 0 || tx >= k.w || ty >= k.h) return null;
+    // ⚠️ HORS DE LA TRAME, PAS DE QUARTIER : la carte a grandi sous elle (l'aeroport),
+    // et `rang` rendait la derniere rangee de blocs a tout ce qui est plus bas — la
+    // mer au sud des Quais etait « pauvre ». Python rend None au meme endroit.
+    if (!q || !q[nom] || tx < 0 || ty < 0 || tx >= Math.min(k.w, q.w) || ty >= Math.min(k.h, q.h)) return null;
     return q[nom][rang(q.y, ty)][rang(q.x, tx)];
   }
   function standingA(tx, ty, laquelle) {
@@ -231,6 +238,7 @@ const Monde = (function () {
         standing: def.grille.standing, usage: def.grille.usage || null,
         usages: Object.keys(def.zonage || {}).reduce(function (m, slug) { m[def.zonage[slug].lettre] = slug; return m; }, {}),
         x: coupes(def.grille.colonnes, def.grille.rues_v), y: coupes(def.grille.rangees, def.grille.rues_h),
+        w: somme(def.grille.colonnes) + somme(def.grille.rues_v), h: somme(def.grille.rangees) + somme(def.grille.rues_h),
       } : null,
       intersections: def.intersections || [],
       // ⚠️ Trois sortes de lumiere, et elles ne se ressemblent pas : le
@@ -722,6 +730,19 @@ const Monde = (function () {
               ctx.fillStyle = k % 2 ? '#d98324' : '#efe6d0';
               ctx.fillRect(px + k * 4, py + 8, 4, 2);
             }
+          } else if (b.decor === 'levante') {
+            // ⚠️ LA BARRIERE LEVANTE d'une guerite : un bras raye rouge et blanc en
+            // travers de la rue, et son socle au bout ouest. On lit « contrôle »,
+            // pas « chantier » — ce n'est pas la meme promesse.
+            if (tx === b.x) {
+              ctx.fillStyle = '#3a3d44'; ctx.fillRect(px + 1, py + 3, 5, 11);
+              ctx.fillStyle = '#e8b33c'; ctx.fillRect(px + 2, py + 4, 3, 2);
+            }
+            for (let k = 0; k < 4; k++) {
+              ctx.fillStyle = k % 2 ? '#efe6d0' : '#c0392b';
+              ctx.fillRect(px + k * 4, py + 7, 4, 3);
+            }
+            ctx.fillStyle = 'rgba(11,10,18,0.3)'; ctx.fillRect(px, py + 10, TT, 1);
           } else if (b.decor === 'cones') {
             for (const ox of [2, 9]) {
               ctx.fillStyle = '#d98324'; ctx.fillRect(px + ox + 1, py + 5, 3, 7); ctx.fillRect(px + ox, py + 11, 5, 2);
@@ -1650,6 +1671,8 @@ const Monde = (function () {
     }
     // Le chantier par-dessus tout : ses planches et son panneau pendent AU MUR.
     Chantiers.peindre(ctx, mx, my);
+    // L'aeroport : la piste, ses avions, et le pont qui s'arrete au-dessus de l'eau.
+    Aeroport.peindre(ctx, mx, my);
   }
 
   function dessinerSol(ctx, cam) {
