@@ -21,6 +21,20 @@ MISSION = {
         {"type": "tuer", "texte": "CHASSE LES DEUX CRAVATES DE SA CACHE",
          "groupe": "cravates", "n": 2, "ou": "donneur", "loin": 12},
 
+        # ⚠️ Des missions plus longues (Martin, 22 sept. 2026) : la fin disait « trois paquets,
+        # retrouvés » sans qu'on en ramasse un. Les trois caches de Rocco, aux trois coins de la
+        # ville : l'hôtel (au sud-ouest), le phare (à l'est), et le troisième qui file en moto —
+        # un Cravate s'en rappelait aussi (`ramasser` + `fuyard`, posé près de toi, au phare).
+        # Des lieux déjà de mission : la ville ne bouge pas.
+        {"type": "aller", "texte": "LE PREMIER PAQUET : DERRIÈRE L'HÔTEL BANDINI",
+         "lieu": "hotel", "rayon": 6},
+
+        {"type": "aller", "texte": "LE DEUXIÈME : AU PIED DU PHARE DE LA POINTE",
+         "lieu": "phare", "rayon": 6},
+
+        {"type": "ramasser", "texte": "LE TROISIÈME FILE EN MOTO : RATTRAPE-LE",
+         "cible": "fuyard", "vehicule": "moto"},
+
         {"type": "retourner", "texte": "RETOURNE VOIR LE GRAND MO"}
     ],
 
@@ -40,7 +54,15 @@ MISSION = {
         ],
         "pendant": [
             _p("mo", "Deux gars en cravate traînent encore près d'où Rocco cachait ses affaires. Va falloir les convaincre.", 1,
-               jeu="[wryly] Deux gars en cravate traînent encore… près d'où Rocco cachait ses affaires. [firmly] Va falloir les convaincre.")
+               jeu="[wryly] Deux gars en cravate traînent encore… près d'où Rocco cachait ses affaires. [firmly] Va falloir les convaincre."),
+            _p("mo", "Rocco cachait ses affaires à trois places. La première, derrière l'hôtel qui porte son nom.", 2,
+               jeu="[knowingly] Rocco cachait ses affaires à trois places. [amused] La première… derrière l'hôtel qui porte son nom."),
+            _p("mo", "La deuxième, au pied du phare. Il aimait ça, les places où on voit venir le monde.", 3,
+               jeu="[somber] La deuxième, au pied du phare. [knowingly] Il aimait ça, les places où on voit venir le monde."),
+            _p("mo", "Le troisième s'en va en moto? Ah ben. Y a d'autre monde qui a de la mémoire, faut croire.", 4,
+               jeu="[surprised] Le troisième s'en va en moto? [amused] Ah ben. Y a d'autre monde qui a de la mémoire, faut croire."),
+            _p("mo", "Rapporte-moi ça au banc. Prends ton temps, moi, j'ai rien que ça.", 5,
+               jeu="[warmly] Rapporte-moi ça au banc. [amused] Prends ton temps… moi, j'ai rien que ça.")
         ],
         "fin": [
             _l("mo", "Trois paquets, retrouvés. Rocco aurait aimé ça, te voir faire le ménage.",

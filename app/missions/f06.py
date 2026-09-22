@@ -24,13 +24,23 @@ MISSION = {
     # `payer` (M16) : `Missions.payer` déduit l'argent, sans UI de plus.
     # ⚠️ Pas de `retourner` après : Bouchard se tient DEDANS (`point:sergent`) — un
     # `retourner` ne se règle qu'avec un donneur en chair et en os dans la ville
-    # (`Histoire.donneur`), et un `point:` n'en pose jamais. `payer`, dernier objectif,
+    # (`Histoire.donneur`), et un `point:` n'en pose jamais. Le dernier objectif (`semer`)
     # ferme la mission tout seul (comme m51 : Bouchard se dit au combiné).
     "objectifs": [
         {"type": "suivre", "texte": "SUIS-LE SANS TE FAIRE REPÉRER",
          "vehicule": "auto", "loin": 10, "proche": 3, "par": ["garage", "terminus"], "lieu": "poste"},
 
         {"type": "payer", "texte": "PAIE-LUI 200 $ POUR SON SILENCE", "montant": 200},
+
+        # ⚠️ Des missions plus longues (Martin, 22 sept. 2026) — APRÈS la filature, pas un
+        # second détour : un stool garde toujours une copie. La sienne dort dans son autre char,
+        # derrière l'hôtel Bandini, à l'autre bout de la ville (`detruire` le pose là). Le
+        # boum attire la police : on sème les gars de Bouchard. `hotel` est déjà un lieu de
+        # mission : la ville ne bouge pas.
+        {"type": "detruire", "texte": "SA COPIE DORT DANS SON AUTRE CHAR : DÉMOLIS-LE",
+         "vehicule": "auto", "ou": "ruelle:hotel"},
+
+        {"type": "semer", "texte": "LE BOUM A RÉVEILLÉ LE QUARTIER : SÈME LA POLICE", "etoiles": 2},
     ],
 
     # Le jeu de chaque réplique (`jeu=`) — Bouchard : bourru, jamais un mot de trop, une
@@ -49,13 +59,19 @@ MISSION = {
         ],
         "pendant": [
             _p("bouchard", "Reste loin de son pare-choc. Un stool nerveux, ça regarde dans son rétroviseur.", 0,
-               jeu="[gravely] Reste loin de son pare-choc. [wryly] Un stool nerveux… ça regarde dans son rétroviseur.")
+               jeu="[gravely] Reste loin de son pare-choc. [wryly] Un stool nerveux… ça regarde dans son rétroviseur."),
+            _p("bouchard", "Un stool, ça garde toujours une copie. La sienne dort dans son autre char, derrière l'hôtel.", 2,
+               jeu="[knowingly] Un stool, ça garde toujours une copie. [gruffly] La sienne dort dans son autre char… derrière l'hôtel."),
+            _p("bouchard", "Mes gars s'en viennent. Je peux rien pour toi, le jeune, sème-les.", 3,
+               jeu="[nervously] Mes gars s'en viennent. [matter-of-fact] Je peux rien pour toi, le jeune… sème-les.")
         ],
         "fin": [
             _l("bouchard", "Il se taira. Deux cents piastres achètent beaucoup de silence, par icitte.",
                jeu="[satisfied] Il se taira. [wryly] Deux cents piastres achètent beaucoup de silence, par icitte."),
             _l("bouchard", "T'as fait ça proprement. C'est tout ce que je demande.",
-               jeu="[gruffly] T'as fait ça proprement. [matter-of-fact] C'est tout ce que je demande.")
+               jeu="[gruffly] T'as fait ça proprement. [matter-of-fact] C'est tout ce que je demande."),
+            _l("bouchard", "Pis la copie, j'en ai jamais entendu parler.",
+               jeu="[deadpan] Pis la copie… j'en ai jamais entendu parler.")
         ],
         "echec": [
             _l("bouchard", "Il t'a vu, hein? Astheure il va jaser à tout le Faubourg.",

@@ -62,7 +62,8 @@ dépanneur : c'est son coin.
 
 ## Ce qu'il a dit (le canon)
 
-- e12 : un coupé sport, la rampe des Érables, 40 px de vol.
+- e12 : un coupé sport, le phare de La Pointe en arrière-plan, la rampe à son pied (40 px de vol), la police
+  « pas dans le script », et le coupé ramené au dépanneur — « C'est le char de mon oncle, y le sait pas. »
 
 ## Ce qui l'attend (M16)
 
