@@ -3223,7 +3223,7 @@ const Vehicules = (function () {
   //: voit, soir ou pas.
   const FAISCEAU_A_LA_BRUNE = 0.35;
   const NUIT_FAITE = 0.62;
-  const lampesPhares = { image: -1, liste: [], allume: false, fondu: 1 };
+  const lampesPhares = { image: -1, liste: [], corps: [], allume: false, fondu: 1, finalise: false };
 
   /** Les lampes d'une silhouette, lues UNE FOIS dans sa machine : ou elles sont
       (`u` vers l'avant, `w` vers la droite, `z` en hauteur, en px), et la
@@ -3290,16 +3290,53 @@ const Vehicules = (function () {
     return portee;
   }
 
+  /** Un point (en VRAI monde) est-il dans l'empreinte d'un AUTRE char ? `corps`
+      vient de `lampesPhares.corps` : chaque char visible y pose la sienne
+      (`u`, `w` dans son propre repere — la meme rotation inverse que
+      `Atlas.projeter`), `sansCe` exclut le char qui porte ce faisceau. */
+  function dansUnCorps(x, y, corps, sansCe) {
+    for (const c of corps) {
+      if (c.v === sansCe) continue;
+      const dx = x - c.x, dy = y - c.y;
+      const u = dx * c.ca + dy * c.sa, w = -dx * c.sa + dy * c.ca;
+      if (Math.abs(u) <= c.demiL && Math.abs(w) <= c.demiH) return true;
+    }
+    return false;
+  }
+
+  /** Comme `porteeLibre`, mais arrete aussi devant un AUTRE char — jamais le
+      sien (retour de Martin, 22 sept. 2026 : « les phares éclairent encore au
+      travers des véhicules eux-mêmes »). */
+  function porteeLibreDesChars(x0, y0, ca, sa, portee, corps, sansCe) {
+    const pas = TT / 4;
+    for (let d = pas; d < portee; d += pas) {
+      if (dansUnCorps(x0 + ca * d, y0 + sa * d, corps, sansCe)) return d - pas;
+    }
+    return portee;
+  }
+
   function allumerLesPhares(v, cx, cy) {
     if (lampesPhares.image !== B.image) {
       lampesPhares.image = B.image;
       lampesPhares.liste.length = 0;
+      lampesPhares.corps.length = 0;
+      lampesPhares.finalise = false;
       const noir = Monde.ambiance().alpha;
       lampesPhares.allume = noir >= BRUNE;
       lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
         * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));
     }
-    if (!lampesPhares.allume || !v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
+    if (!lampesPhares.allume) return;
+    // ⚠️ L'EMPREINTE SE POSE POUR TOUT CHAR VISIBLE, MENE OU NON : un char garé,
+    // ou en panne, bloque un faisceau tout autant que celui qui roule — c'est sa
+    // CAISSE qui arrête la lumière, pas son moteur. Posee ici (avant le retour
+    // qui suit, propre aux chars menes) pour que meme un char sans lumieres
+    // bloque celle des autres.
+    if (v.def) {
+      lampesPhares.corps.push({ x: v.x, y: v.y, ca: Math.cos(v.angle), sa: Math.sin(v.angle),
+                                 demiL: v.def.longueur / 2, demiH: v.def.largeur / 2, v: v });
+    }
+    if (!v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
     const lampes = lampesDeLaMachine(v.sprite);
     const faisceau = lampes.bas ? FAISCEAUX[v.def.classe] || null : null;
     const n = lampes.length + (faisceau ? 1 : 0);
@@ -3324,6 +3361,9 @@ const Vehicules = (function () {
         a: cap, p: sol ? sol.profondeur : k, r: portee,
         cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture * (portee / faisceau.portee)],
         c: 'rgba(255,236,190,' + (faisceau.force * lampesPhares.fondu).toFixed(3) + ')', faisceau: v,
+        // ⚠️ Pour la 2e passe (`lampesDesPhares`) : l'origine et l'axe en VRAI
+        // monde, et de quoi recalculer le cone si un char le raccourcit encore.
+        ox: ox, oy: oy, ca: ca, sa: sa, demi: b.demi, ouverture: faisceau.ouverture, porteeMax: faisceau.portee,
       });
     }
     const x0 = v.x - cx, y0 = v.y - v.z - cy;
@@ -3334,8 +3374,31 @@ const Vehicules = (function () {
     }
   }
 
-  /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image. */
-  function lampesDesPhares() { return lampesPhares.image === B.image ? lampesPhares.liste : []; }
+  /** Ce que `jeu.js` donne a `Base.fin` — vide des qu'on change d'image.
+
+      ⚠️ **C'EST ICI, PAS DANS `allumerLesPhares`, QUE LES CHARS SE BLOQUENT
+      L'UN L'AUTRE.** Les chars se dessinent dans l'ordre de `Entites`, pas
+      dans celui ou ils se genent : au moment ou le faisceau d'un char
+      s'allume, un char plus loin dans la liste — donc pas encore dessine —
+      peut deja se trouver devant lui, et son empreinte n'existe pas encore
+      dans `lampesPhares.corps`. `lampesDesPhares` n'est appelee qu'UNE FOIS
+      par image, par `jeu.js`, APRES que tous les chars visibles sont passes
+      par `dessinerUn` : c'est le seul moment ou `corps` est complet. */
+  function lampesDesPhares() {
+    if (lampesPhares.image !== B.image) return [];
+    if (!lampesPhares.finalise) {
+      lampesPhares.finalise = true;
+      for (const l of lampesPhares.liste) {
+        if (!l.faisceau) continue;
+        const r = porteeLibreDesChars(l.ox, l.oy, l.ca, l.sa, l.r, lampesPhares.corps, l.faisceau);
+        if (r < l.r) {
+          l.r = r;
+          l.cone = [l.demi + 1, l.demi + 1 + l.ouverture * (r / l.porteeMax)];
+        }
+      }
+    }
+    return lampesPhares.liste;
+  }
 
   /** Une ampoule allumee : le pourtour de la phase, un COEUR plus pale, et la
       lampe qu'elle jette a la brune.

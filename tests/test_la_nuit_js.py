@@ -749,6 +749,85 @@ def test_le_faisceau_porte_sa_pleine_mesure_loin_de_tout_mur(banc, paquet):
     assert r["r"] == 68, f"loin de tout mur, le faisceau du camion ne porte pas ses 68 px pleins : {r}"
 
 
+def test_le_faisceau_ne_passe_pas_a_travers_un_autre_char(banc, paquet):
+    """⚠️ **« Les phares éclairent encore au travers des véhicules eux-mêmes »**
+    (Martin, 22 sept. 2026). Une auto garée 40 px devant le char qu'on mène, sur
+    une route dégagée (aucun mur en cause) : le faisceau s'arrête avant elle —
+    la caisse arrête la lumière, garée ou pas, menée ou pas.
+
+    ⚠️ **L'ORDRE DE CRÉATION COMPTE, ET C'EST LE PIÈGE** : le char qui porte le
+    faisceau naît AVANT celui qui le bloque. Une garde posée dans
+    `allumerLesPhares` (appelée pendant que `dessinerUn` dessine CE char-là)
+    ne verrait pas encore l'empreinte d'un char dessiné plus tard dans la même
+    image — d'où la 2e passe dans `lampesDesPhares`, après que tous les chars
+    visibles sont passés par `dessinerUn`."""
+    r = banc("""function (L, o) {
+        %s
+        %s
+        preparer(L);
+        const route = routeLibre(L, 4);
+        const out = { trouve: !!route };
+        if (!route) return out;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        // Le char MENÉ naît EN PREMIER — c'est le cas qui piège une garde posée
+        // trop tôt, avant que l'auto garée n'existe.
+        const mene = L.Vehicules.creer('auto', route.x, route.y, route.angle,
+                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        mene.vitesse = 0;
+        const ca = Math.cos(route.angle), sa = Math.sin(route.angle);
+        const gare = L.Vehicules.creer('auto', route.x + ca * 40, route.y + sa * 40, route.angle,
+                                        { etat: 'stationne', couleur: '#2980b9' });
+        L.Monde.centrerCamera(mene.x, mene.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === mene; });
+        out.r = f ? f.r : null;
+        out.portee = 56;
+        // La distance du phare (pas du centre) a l'avant de l'auto garee.
+        out.demi = mene.def.longueur / 2;
+        return out;
+    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    assert r["trouve"], "aucune route dégagée près du joueur : le juge ne dit rien"
+    assert r["r"] is not None, "le char mené n'a pas de faisceau"
+    assert r["r"] < r["portee"], f"le faisceau garde sa pleine portée devant une auto garée à 40 px : {r}"
+    # ⚠️ ÉGALITÉ STRICTE (12 px, valeur reproductible : géométrie pure, aucun
+    # dé) : une empreinte deux fois trop étroite déplace le point d'arrêt à
+    # 16 px — une marge large laisserait passer cette mutation-là.
+    assert r["r"] == 12, f"le faisceau ne s'arrête pas au bon endroit devant l'auto garée : {r}"
+
+
+def test_le_faisceau_d_un_char_ne_se_bloque_pas_lui_meme(banc, paquet):
+    """Chaque char visible pose son empreinte, y compris celui qui porte le
+    faisceau — `sansCe` doit l'exclure, sinon tout faisceau s'éteindrait à sa
+    propre caisse. Seul sur la route, il porte sa pleine mesure.
+
+    ⚠️ **La moto, pas l'auto** : le phare d'une auto est déjà presque à son
+    nez (13,4 px sur 14 de demi-longueur) — sans `sansCe`, le premier pas de
+    marche (4 px) le sort déjà de sa propre caisse, et le juge ne verrait
+    rien. Le phare de la moto est bien plus en retrait (5,8 px sur 10) : sans
+    `sansCe`, deux pas y suffisent encore, et le faisceau s'éteindrait tout
+    court."""
+    r = banc("""function (L, o) {
+        %s
+        %s
+        preparer(L);
+        const route = routeLibre(L, 4);
+        const out = { trouve: !!route };
+        if (!route) return out;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        const solo = L.Vehicules.creer('moto', route.x, route.y, route.angle,
+                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        solo.vitesse = 0;
+        L.Monde.centrerCamera(solo.x, solo.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === solo; });
+        return { trouve: true, r: f ? f.r : null };
+    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    assert r["trouve"], "aucune route dégagée près du joueur : le juge ne dit rien"
+    assert r["r"] == 54, f"seul sur la route, le char se bloque lui-même : {r}"
+
+
 # --- Vague 3 : qui est dehors ------------------------------------------------------------
 
 TROIS_H, QUATRE_H = 3.1 / 24, 4.1 / 24
