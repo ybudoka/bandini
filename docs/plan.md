@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (216 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (217 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -90,7 +90,6 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Des missions plus longues : plus d'étapes, plus loin, plus de dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-missions-plus-longues.md#fiche) |
 | Des squelettes qu'on habille : chapeaux, casquettes, et une garde-robe presque infinie | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-squelettes-qu-on-habille-chapeaux-casquettes-et-une-garde-robe.md#fiche) |
-| Un petit icône pour le moment de la journée | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/un-petit-icone-pour-le-moment-de-la-journee.md#fiche) |
 | Un dictionnaire de prononciation pour les voix | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/un-dictionnaire-de-prononciation-pour-les-voix.md#fiche) |
 
 ## L'ordre

@@ -8737,6 +8737,70 @@ def test_la_ligne_d_objectif_ne_passe_sur_rien(banc):
         assert not chevauche, f"la ligne d'objectif passe sur « {autre['nom']} » : {o} / {autre}"
 
 
+def test_le_moment_de_la_journee_suit_le_ciel(banc):
+    """Martin (22 sept. 2026) : « un petit icone pour indiquer quel moment de la
+    journee on est ». Quatre moments, dans l'ordre, une fois chacun par jour —
+    et la lune se leve PILE quand `estNuit` le dit : une icone qui dirait « jour »
+    quand les barrieres se ferment mentirait. Les heures sont ecrites ici, pas
+    relues dans `TEINTES`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        const M = L.Monde, suite = [], desaccords = [];
+        for (let k = 0; k < 24 * 60; k += 5) {
+            const h = k / (24 * 60), p = M.periode(h);
+            if ((p === 'nuit') !== M.estNuit(h)) desaccords.push(k);
+            if (suite[suite.length - 1] !== p) suite.push(p);
+        }
+        return { suite: suite, desaccords: desaccords,
+                 minuit: M.periode(0), midi: M.periode(0.5),
+                 h645: M.periode(6.75 / 24), h1915: M.periode(19.25 / 24),
+                 h900: M.periode(9 / 24), h1700: M.periode(17 / 24) };
+    }""")
+    assert r["suite"] == ["nuit", "aube", "jour", "crepuscule", "nuit"], r["suite"]
+    assert r["desaccords"] == [], f"l'icone et estNuit ne disent pas la meme chose a {r['desaccords']} min"
+    assert (r["minuit"], r["midi"]) == ("nuit", "jour")
+    assert r["h645"] == "aube", "6 h 45 : le ciel est orange, c'est l'aube"
+    assert r["h1915"] == "crepuscule", "19 h 15 : le ciel est orange, c'est le crepuscule"
+    assert (r["h900"], r["h1700"]) == ("jour", "jour")
+
+
+def test_l_icone_du_moment_se_dessine_devant_l_heure(banc):
+    """L'icone est DEVANT « JOUR N HH:MM », a la hauteur du texte, et la boite de
+    l'heure l'englobe — la ligne d'objectif, qui passe sous tout, passe aussi
+    sous elle. ⚠️ Dans une piece, c'est l'heure DEHORS : on dort chez soi la
+    nuit, et l'icone dit encore la lune meme si la piece est eclairee."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        function voir() {
+            L.Jeu.rendre();
+            const a = L.Hud.ancres();
+            function trouver(n) { return a.find(function (x) { return x.nom === n; }) || null; }
+            return { moment: trouver('moment'), heure: trouver('heure') };
+        }
+        L.B.partie.heure = 0.5;
+        const midi = voir();
+        L.B.partie.heure = 0.02;
+        const minuit = voir();
+        const porte = L.Monde.carte.def.portes.filter(function (q) { return q.interieur; })[0];
+        L.Jeu.entrer(porte); L.Jeu.finirTransition();
+        L.B.partie.heure = 0.02;
+        const dedans = voir();
+        return { midi: midi, minuit: minuit, dedans: dedans, interieur: !!L.B.interieur,
+                 eclaire: L.Monde.ambiance().alpha, VW: L.VW };
+    }""")
+    m, h = r["midi"]["moment"], r["midi"]["heure"]
+    assert m, "aucune ancre « moment » : le HUD ne dessine pas l'icone"
+    assert m["periode"] == "jour" and r["minuit"]["moment"]["periode"] == "nuit"
+    assert m["h"] == 7, "l'icone a la hauteur du texte du HUD (7 px)"
+    assert m["y"] == h["y"], "l'icone est sur la ligne de l'heure"
+    assert m["x"] == h["x"], "l'icone est DEVANT l'heure, et sa boite l'englobe"
+    assert h["x"] + h["l"] <= r["VW"], "l'heure deborde de l'ecran"
+    assert h["l"] > m["l"] + 20, "la boite de l'heure ne porte plus le texte"
+    assert r["interieur"] is True, "temoin : on est bien dans une piece"
+    assert r["eclaire"] == 0, "temoin : la piece est eclairee, le ciel ne s'y voit pas"
+    assert r["dedans"]["moment"]["periode"] == "nuit", "dans une piece, l'icone dit l'heure DEHORS"
+
+
 def test_le_niveau_de_recherche_ne_partage_pas_la_couleur_de_l_argent(banc):
     """⚠️ Le dore #e8b33c est deja celui de l'argent et de « ce qui est a toi »
     sur la carte. Deux choses differentes de la meme couleur dans le meme coin

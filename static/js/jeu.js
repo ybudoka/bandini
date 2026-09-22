@@ -1283,7 +1283,7 @@ if (typeof window !== 'undefined') {
     Vehicules: Vehicules, Autobus: Autobus, Metro: Metro, Traversier: Traversier, Neige: Neige, Incendies: Incendies, Interactions: Interactions, Police: Police, Chantiers: Chantiers, Aeroport: Aeroport, Foire: Foire, Missions: Missions, Scenes: Scenes, Histoire: Histoire, Hud: Hud, Casque: Casque, Jeu: Jeu, Sauvegarde: Sauvegarde, Compte: Compte, Defi: Defi,
     Visages: Visages,
     SPRITES: SPRITES, TUILES: TUILES, DECORS: DECORS, DECALS: DECALS, OBJETS: OBJETS, FACADES: FACADES,
-    ETOILE: ETOILE,
+    ETOILE: ETOILE, MOMENTS: MOMENTS,
     BULLES: BULLES, POLICE_PIXEL: POLICE_PIXEL, MARQUES_PIXEL: MARQUES_PIXEL,
     etatInitial: etatInitial, mulberry: mulberry, hash2: hash2, nuances: nuances, faceA: faceA,
     graine: function (n) { B.graine = n; B.rng = mulberry(n); },

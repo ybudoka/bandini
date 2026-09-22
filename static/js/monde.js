@@ -2140,6 +2140,20 @@ const Monde = (function () {
       ce que le lit doit savoir, lui qui est toujours dans une piece. */
   function estNuit(heure) { return ambiance(heure).alpha > 0.4; }
 
+  /** Le moment de la journee, pour l'icone du HUD : 'nuit', 'aube', 'jour' ou
+      'crepuscule'. ⚠️ Lu sur la teinte du ciel, pas sur des heures a part : la
+      lune apparait quand `estNuit` le dit (les barrieres, les fenetres, la
+      police suivent la meme regle), et l'aube et le crepuscule sont les heures
+      ou la ville se teinte d'orange. ⚠️ C'est l'heure DEHORS, meme dans une
+      piece : `ambiance(h)` avec une heure ne regarde pas les murs. */
+  function periode(heure) {
+    const h = heure === undefined ? (B.partie ? B.partie.heure : 0.5) : heure;
+    const a = ambiance(h).alpha;
+    if (a > 0.4) return 'nuit';
+    if (a > 0.1) return h < 0.5 ? 'aube' : 'crepuscule';
+    return 'jour';
+  }
+
   /** Le facteur de foule d'un quartier a cette heure-ci : (nuit, matin, soir).
 
       ⚠️ C'est ce qui empeche les cinq districts d'etre le meme district a cinq
@@ -2287,7 +2301,7 @@ const Monde = (function () {
     dansLePassage, rideauDe, rideauPres, seuilOuvert, basDuRideau, sousLeToit, cacheSousLeToit, abrite,
 estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, varianteDeToit, varianteDePente, estRoute, estPassage, estChaussee, estAbord, estTrottoir, marchablePieton, estMeuble,
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
-    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
+    dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, periode, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
     largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
     cheminRoute, routeLaPlusProche,

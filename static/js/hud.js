@@ -2692,6 +2692,45 @@ const Hud = (function () {
     return { x: x0, y: 4, l: l, h: ETOILE_H };
   }
 
+  //: Les palettes du moment de la journee (`MOMENTS`). ⚠️ Le soleil est
+  //: ORANGE, pas jaune : le jaune est a l'etoile de recherche et le dore a
+  //: l'argent, juste au-dessus. L'aube est rose et claire, le crepuscule
+  //: rouge et sombre : le meme soleil couche, deux moments qu'on ne confond pas.
+  const MOMENT_PALETTES = {
+    jour: { dessin: 'jour', pal: { s: '#ff9f43', r: '#ffc98a' } },
+    aube: { dessin: 'levant', pal: { s: '#ffc06a', r: '#ffe0a0', h: '#9fb4e0' } },
+    crepuscule: { dessin: 'levant', pal: { s: '#ff5e3a', r: '#ff9a5c', h: '#7a5a9e' } },
+    nuit: { dessin: 'nuit', pal: { l: '#dfe6ff' } },
+  };
+  const MOMENT_L = MOMENTS.jour[0].length;
+  const MOMENT_H = MOMENTS.jour.length;
+
+  /** Un moment cuit une fois (et son ombre, comme le texte du HUD : sans elle,
+      le soleil disparait sur un trottoir en plein jour). */
+  function momentCuit(periode, ombre) {
+    const m = MOMENT_PALETTES[periode];
+    const grille = MOMENTS[m.dessin];
+    return Atlas.cuirePeintre('moment|' + periode + (ombre ? '|ombre' : ''), MOMENT_L, MOMENT_H, function (c) {
+      for (let y = 0; y < MOMENT_H; y++) {
+        for (let x = 0; x < MOMENT_L; x++) {
+          const ch = grille[y][x];
+          if (ch === '.' || !m.pal[ch]) continue;
+          c.fillStyle = ombre ? 'rgba(11,10,18,0.8)' : m.pal[ch];
+          c.fillRect(x, y, 1, 1);
+        }
+      }
+    });
+  }
+
+  /** L'icone du moment, le coin haut-gauche en (x, y). */
+  function dessinerMoment(ctx, x, y) {
+    const p = Monde.periode();
+    ctx.drawImage(momentCuit(p, true), x + 1, y + 1);
+    ctx.drawImage(momentCuit(p, false), x, y);
+    B.stats.images += 2;
+    return p;
+  }
+
   function barre(ctx, x, y, l, h, frac, couleur) {
     ctx.fillStyle = '#101018'; ctx.fillRect(x - 1, y - 1, l + 2, h + 2);
     ctx.fillStyle = '#2a2a3a'; ctx.fillRect(x, y, l, h);
@@ -3271,7 +3310,13 @@ const Hud = (function () {
       const heure = 'JOUR ' + p.jour + ' ' + Monde.heureTexte();
       const largeurHeure = Atlas.largeurTexte(heure, 1);
       texte(ctx, heure, VW - marge - largeurHeure, 20, '#cdc6e6', 1);
-      const boiteHeure = { x: VW - marge - largeurHeure, y: 20, l: largeurHeure, h: 7 };
+      // Le moment de la journee, devant l'heure : on lit « la nuit » d'un coup
+      // d'oeil, sans faire le calcul de 20:47. La boite de l'heure l'englobe —
+      // la ligne d'objectif doit passer dessous a elle aussi.
+      const xMoment = VW - marge - largeurHeure - MOMENT_L - 3;
+      const moment = dessinerMoment(ctx, xMoment, 20);
+      ancres.push({ nom: 'moment', x: xMoment, y: 20, l: MOMENT_L, h: MOMENT_H, periode: moment });
+      const boiteHeure = { x: xMoment, y: 20, l: VW - marge - xMoment, h: 7 };
       noter('heure', boiteHeure.x, boiteHeure.y, boiteHeure.l, boiteHeure.h);
       // Le quartier ou l'on se trouve, sous la mini-carte.
       const zone = j && !B.interieur ? Monde.zoneA(j.x, j.y) : null;

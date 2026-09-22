@@ -4012,6 +4012,41 @@ const ETOILE = [
   'kk.......kk',
 ];
 
+/* Le moment de la journee, devant l'heure du HUD (Martin, 22 sept. 2026 :
+   « un petit icone pour indiquer quel moment de la journee on est »). Sept
+   pixels de haut, comme le texte qu'il precede. `s` le soleil, `r` ses rayons,
+   `l` la lune, `h` l'horizon : l'aube et le crepuscule partagent le soleil a
+   moitie couche et ne different que par leur palette (`Hud`). */
+const MOMENTS = {
+  jour: [
+    '...r...',
+    '.r...r.',
+    '..sss..',
+    'r.sss.r',
+    '..sss..',
+    '.r...r.',
+    '...r...',
+  ],
+  levant: [
+    'r..r..r',
+    '.......',
+    '..sss..',
+    '.sssss.',
+    'sssssss',
+    'hhhhhhh',
+    '.......',
+  ],
+  nuit: [
+    '..lll..',
+    '.lll...',
+    'lll....',
+    'lll....',
+    'lll....',
+    '.lll...',
+    '..lll..',
+  ],
+};
+
 /* Le camion-restaurant, vu de trois quarts : un fourgon a caisse, l'enseigne
    sur le toit, la cheminee de la hotte qui fume, l'auvent raye au-dessus du
    guichet, le menu a la craie, le comptoir avec les frites et le gobelet, la
