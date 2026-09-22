@@ -102,9 +102,16 @@ const Entree = (function () {
   }
 
   function bas(a) {
+    // ⚠️ La coop locale (essai, un clavier + une manette) : la manette est
+    // celle du deuxieme joueur — un bouton pese dessus (ATTAQUE, ACTION,
+    // ESQUIVE…) ne doit JAMAIS faire agir le premier. Retour de Martin, 22
+    // sept. : « les frappes ne sont pas bien assignees » — c'etait ca, pas
+    // seulement le stick (deja ferme dans `debutImage`).
+    if (B.coop) return !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
     return !!vPad[a] || !!vTact[a] || !!vCasque[a] || MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
   }
   function neuf(a) {
+    if (B.coop) return neufSansManette(a);
     return !!vNeuf[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
   /** Comme `neuf`, mais la manette ne compte pas — le clavier, le doigt et les

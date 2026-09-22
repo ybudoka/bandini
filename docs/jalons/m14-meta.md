@@ -573,6 +573,25 @@ deuxième joueur.
   MÊME vitesse au pouce près entre les deux à fond, et `Entites.retirer` à la fermeture) et
   `test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse` (téléporté à 300 px, il
   revient sous `LAISSE_COOP`), toutes deux mutées à la main pour confirmer qu'elles mordent.
+- ⚠️ **« Les frappes ne sont pas bien assignées au bon joueur »** (retour de Martin, 22 sept.,
+  EN JOUANT à deux) : le stick était déjà isolé (`debutImage`), mais pas les BOUTONS. `bas()` et
+  `neuf()` — les deux fonctions que tout le jeu utilise pour lire ATTAQUE, ACTION, ESQUIVE,
+  ARME… — comptaient encore `vPad` (la manette) même pendant la coop : un bouton pesé sur la
+  manette du deuxième joueur (qui n'a lui-même aucune action — il ne fait que marcher)
+  déclenchait quand même l'attaque, l'interaction ou le sprint du PREMIER. Corrigé au même
+  endroit que le stick : `bas()` et `neuf()` ignorent `vPad` dès que `B.coop` est vrai (`neuf()`
+  délègue à `neufSansManette`, qui existait déjà pour l'écran MANETTE des options — même
+  besoin, code repris). ⚠️ Juge à part (`test_la_coop_locale_ignore_les_boutons_de_la_manette_pour_le_joueur_1`) :
+  lit `Entree.bas`/`neuf` juste après `Entree.debutImage()`, jamais après un `frame()` complet —
+  `Entree.videPresse()`, appelé en fin de `Jeu.maj()`, remet `neuf()` à faux avant qu'on ait pu
+  le lire, coop ou pas, et le premier jet de ce juge ne testait donc rien du tout sur `neuf`.
+- **Une distinction visuelle entre les deux joueurs** (demande de Martin, 22 sept.) : le
+  deuxième joueur portait exactement le linge du premier (même tenue, même sprite) — impossible
+  à distinguer d'un coup d'œil une fois les deux en mouvement. `Entites.creerCoopJoueur2` force
+  maintenant sa couleur de linge à un teal fixe (`COULEUR_COOP_JOUEUR2`, `#16a085`) qu'aucune
+  tenue en vente ne porte (rouge, bleu, noir, gris, orange — voir `TENUES` dans
+  `app/magasins.py`) : quelle que soit la tenue du joueur 1, « l'autre toi » reste visuellement
+  l'autre. Vérifié à l'œil (Playwright, les deux joueurs posés côte à côte hors de la foule).
 - **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux, un clavier sous une
   main et une manette dans l'autre, devant le même écran de 480×270 — la laisse retient plutôt
   qu'elle ne montre plus, et ça peut se sentir serré. Ni si 130 px est le bon chiffre

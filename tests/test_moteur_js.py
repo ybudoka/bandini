@@ -7879,6 +7879,36 @@ def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
     assert r["ferme"] == {"coop": None, "encore": False}, "rebasculer efface le deuxieme joueur"
 
 
+def test_la_coop_locale_ignore_les_boutons_de_la_manette_pour_le_joueur_1(banc):
+    """Retour de Martin (22 sept., en testant) : « les frappes ne sont pas bien
+    assignées au bon joueur » — c'était plus large que le stick (déjà isolé) :
+    un BOUTON de la manette (ACTION, ATTAQUE, ESQUIVE…) ne doit jamais
+    déclencher une action du joueur 1 pendant la coop, exactement comme son
+    stick ne doit jamais le faire marcher. `bas()`/`neuf()` ignorent la
+    manette pendant `B.coop`, pas seulement `debutImage`."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        // ACTION (0), ESQUIVE/ANNULER (1), ATTAQUE (2, 5), ARME (3, 4) : tous
+        // les boutons de la manette, enfonces en meme temps.
+        o.pad([0, 0], [1, 1, 1, 1, 1, 1]);
+        // ⚠️ `Entree.debutImage()` directement, PAS `o.frame(1)` : un frame
+        // complet appelle `Jeu.maj()`, qui finit par `Entree.videPresse()` —
+        // `neuf()` retomberait a faux avant qu'on le lise, qu'il ait ete
+        // ignore par la coop ou non. Ici on lit la couche d'entree seule,
+        // juste apres le calcul, avant que quoi que ce soit ne la vide.
+        L.Entree.debutImage();
+        const pendant = { bas: L.Entree.bas('attaque'), neuf: L.Entree.neuf('action'),
+                           esquive: L.Entree.bas('esquive'), arme: L.Entree.bas('arme') };
+        o.pad(null);
+        L.Jeu.basculerCoop();
+        return { pendant: pendant };
+    }""")
+    assert r["pendant"] == {"bas": False, "neuf": False, "esquive": False, "arme": False}, (
+        "un bouton de la manette a declenche une action du joueur 1 pendant la coop"
+    )
+
+
 def test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse(banc):
     """Le milieu des deux joueurs, et une LAISSE (`LAISSE_COOP`) qui l'empeche
     de trop s'eloigner — sans elle, l'un des deux sortirait de l'ecran.

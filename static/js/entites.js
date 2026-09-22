@@ -173,10 +173,18 @@ const Entites = (function () {
   /** Le deuxieme joueur de la coop locale (M14, essai) : un pieton a l'allure
       du joueur (meme sprite, meme linge), pour qu'on le reconnaisse tout de
       suite comme « l'autre toi » plutot que comme un passant de plus. */
+  //: Un linge d'une autre couleur que toutes les tenues en vente (rouge,
+  //: bleu, noir, gris, orange — voir `TENUES` dans `app/magasins.py`) : au
+  //: premier coup d'œil, « l'autre toi » reste l'autre, quelle que soit la
+  //: tenue du joueur 1. Retour de Martin, 22 sept. : « je veux une
+  //: distinction pour différencier les joueurs ».
+  const COULEUR_COOP_JOUEUR2 = '#16a085';
+
   function creerCoopJoueur2(x, y) {
     const p = B.partie;
+    const swaps = Object.assign({}, apparenceDuJoueur(p, B.defs), { c: COULEUR_COOP_JOUEUR2 });
     return creer('pieton', x, y, {
-      r: 5, sprite: 'joueur', swaps: apparenceDuJoueur(p, B.defs),
+      r: 5, sprite: 'joueur', swaps: swaps,
       etat: 'flane', dir: 0, butT: 0, cri: 0, coopJoueur2: true,
     });
   }
