@@ -144,6 +144,29 @@ PERSONNAGES: list[Personnage] = [
     {"slug": "ovila", "nom": "Ovila Saint-Onge", "genre": "homme", "voix": "annonceur centre d'achat 1",
      "couleurs": {"c": "#2e8b57", "h": "#8a8a8a", "s": "#e8b088", "p": "#16264a"}, "ou": "point:ovila",
      "heler": "Les lumières..."},
+
+    # --- M16, dix missions de plus (21 sept. 2026) : six personnages, chacun posé à un
+    # lieu DÉJÀ dessiné (`carte.SPECIAUX`) — aucune pièce neuve à peindre cette tranche-ci.
+    # Deux voix libres restantes sont partagées entre quatre d'entre eux : ils ne parlent
+    # jamais dans la même mission (Alexandre Boutin : Mo et Gégé ; Adam : Fern et Xavier).
+    {"slug": "mo", "nom": "Le Grand Mo", "genre": "homme", "voix": "Alexandre Boutin - Professional",
+     "couleurs": {"c": "#5a5a4a", "h": "#c8c8c8", "s": "#c98d66", "p": "#3a3a2a"}, "ou": "porte:terminus",
+     "heler": "J'ai vu de quoi."},
+    {"slug": "fern", "nom": "Fern Côté", "genre": "homme", "voix": "Premium Male teacher, E-learning, Informative",
+     "couleurs": {"c": "#2980b9", "h": "#7a7a7a", "s": "#e8b088", "p": "#1a1a1a"}, "ou": "porte:terminus",
+     "heler": "Monte, le jeune!"},
+    {"slug": "mado", "nom": "Mado", "genre": "femme", "voix": "Caroline - Soft Quebec accent",
+     "couleurs": {"c": "#c9738a", "h": "#7a2a1a", "s": "#e8b088", "p": "#3a3a4a"}, "ou": "porte:casse_croute",
+     "heler": "T'as faim, toi?"},
+    {"slug": "gege", "nom": "Gérard « Gégé » Morin", "genre": "homme", "voix": "Alexandre Boutin - Professional",
+     "couleurs": {"c": "#7f8c8d", "h": "#101018", "s": "#c98d66", "p": "#16264a"}, "ou": "porte:cantine",
+     "heler": "Viens icitte!"},
+    {"slug": "xavier", "nom": "Xavier", "genre": "homme", "voix": "Premium Male teacher, E-learning, Informative",
+     "couleurs": {"c": "#e67e22", "h": "#101018", "s": "#e8b088", "p": "#2a2a3a"}, "ou": "porte:depanneur",
+     "heler": "As-tu un char?"},
+    {"slug": "lachance", "nom": "Dr Lachance", "genre": "homme", "voix": "Patrick - Clear, Natural and Polished",
+     "couleurs": {"c": "#ecf0f1", "h": "#8a8a8a", "s": "#e8b088", "p": "#2c3e50"}, "ou": "point:lachance",
+     "heler": "Viens, vite!"},
 ]
 
 
@@ -360,14 +383,23 @@ def erreurs_de_scene(scene: list[dict]) -> list[str]:
 # ⚠️ `noqa: E402` : cet import est EN BAS a dessein — chaque fichier de mission
 # n'a besoin que de `_commun`, mais `CATALOGUE` se complete juste apres (les
 # cles par defaut et les scenes), et il faut donc que le moteur soit defini.
-from . import e01, f01, m1, m2, m3, m4, m5, m6, m50, m51, m97, q02, s03  # noqa: E402
+from . import (  # noqa: E402
+    e01, e12, f01, f04, f05, f06, f07, f09, f11, h01, m1, m2, m3, m4, m5, m6, m50, m51,
+    m97, p01, q02, q03, s03,
+)
 
 # ⚠️ L'ordre est celui du téléphone : il sonne pour la première mission disponible dont l'appel n'a pas
 # été dit. Après m6, les contacts appellent dans l'ordre où le tour les a présentés (Ti-Paul, Lulu,
 # Raymonde), le sergent après eux, et m97 — la fin de Marco — reste la dernière du tronc.
+# ⚠️ Dix missions de plus (21 sept. 2026) : f04, f05, f06, f07, f09, f11 (Faubourg), h01 (l'hôpital),
+# p01 (La Pointe), q03 (Les Quais), e12 (Les Érables) — chacune après m6 (ou après une des dix,
+# f06/f07/f09), avant m97.
 CATALOGUE: list[Mission] = [
     m1.MISSION, m2.MISSION, m3.MISSION, m4.MISSION, m5.MISSION, m6.MISSION, m50.MISSION,
-    f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION, m97.MISSION,
+    f01.MISSION, e01.MISSION, q02.MISSION, s03.MISSION, m51.MISSION,
+    f04.MISSION, f05.MISSION, f06.MISSION, f07.MISSION, f09.MISSION, f11.MISSION,
+    h01.MISSION, p01.MISSION, q03.MISSION, e12.MISSION,
+    m97.MISSION,
 ]
 
 
@@ -621,7 +653,11 @@ ACTEURS_DE_MISSION = ("joueur", "donneur", "vehicule", "cible", "fuyard")
 #: Les formes de lieu : un acteur, `place:<acteur>` (où il était au début de la
 #: scène), et ce que `Histoire.resoudre` connaît — plus `chez:<personnage>`, la
 #: porte de là où il se tient.
-FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez")
+#: `boutique:<genre>`, `district:<slug>` et `rampe:<district>` (M16) : les
+#: résolveurs déterministes de `Histoire.resoudre` — une scène par défaut peut
+#: montrer où l'on achète (`acheter`) ou saute (`sauter`) sans qu'une mission
+#: ait à nommer un lieu de `carte.SPECIAUX`.
+FORMES_DE_LIEU = ("place", "porte", "ruelle", "zone", "chez", "boutique", "district", "rampe")
 
 
 def _lieux_du_plan(plan: dict) -> list[str]:

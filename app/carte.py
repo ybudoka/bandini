@@ -7304,7 +7304,7 @@ Bn          nB
 BBBBBWWDWWBBBB
 """, points=(_pt("soigner", 4, 3), _pt("escalier", 12, 1, vers="hopital_soins"),
              _pt("distributrice", 12, 4, sorte="cafe"),
-             _pt("distributrice", 12, 6, sorte="grignotines")),
+             _pt("distributrice", 12, 6, sorte="grignotines"), _pt("lachance", 4, 5)),
      gens=_gens(("soignant", 4, 1), ("malade", 9, 1),
                 ("patient", 2, 4), ("patient", 4, 4), ("patient", 8, 4),
                 ("patient", 3, 6), ("patient", 9, 6), ("patient", 10, 6),

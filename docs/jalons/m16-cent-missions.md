@@ -599,3 +599,29 @@ catalogue.
 - ⚠️ **Depuis le 16 sept. 2026, chaque mission vient avec ses scènes et ses dialogues**
   (« Les missions mises en scène », qui passe avant) : une tranche livre ses missions mises
   en scène, ou ne se livre pas
+- **21 sept. 2026 : dix missions de plus, et huit juges de banc.** `f04` (Le Grand Mo,
+  `acheter`), `f05` (Fern, `boulots` — l'autobus gagne son propre `economie.BOULOTS`/`SORTES`),
+  `f06` (Bouchard, `suivre`+`payer`), `f07` (Mme Thibodeau, `pickpocket`), `f09` (Marco,
+  `proteger`), `f11` (Mado, `survivre`+`tuer` — pas `eteindre`, voir plus bas), `h01`
+  (Dr Lachance, `boulots`), `p01` (Ovila, `acheter`+`tuer`), `q03` (Gégé, `detruire`), `e12`
+  (Xavier, `sauter`) — `tests/test_dix_missions_js.py` joue huit des neuf types neufs de bout
+  en bout, sur le modèle de `test_cinq_missions_js.py`. Six personnages de plus
+  (`docs/personnages/`), tous posés à un lieu **déjà dessiné** (`carte.SPECIAUX`) : aucune
+  pièce neuve cette tranche-ci.
+  - ⚠️ **Trois bogues trouvés en écrivant les juges, corrigés dans `histoire.js`** :
+    `proteger` n'avançait jamais (aucune condition de succès — corrigé : comme `aller`, via
+    `lieu`+`rayon`, la cible toujours vivante) ; `pickpocket` guettait `assomme`, que
+    `Combat.pickpocket` (un vol par-derrière réussi) ne produit **jamais** — il laisse la
+    victime `fuit`, poches vides (corrigé : on guette `argent <= 0`) ; et `retourner` ne se
+    règle pas avec un donneur **dedans** (`point:`) — il ne pose jamais de `Histoire.donneur`
+    en ville (`f06`, `h01` finissent sur leur dernier objectif utile à la place, comme `m51`
+    avant elles). Le GPS (`cible()`) et le compteur du HUD (`ligneObjectif()`) apprennent les
+    neuf types neufs.
+  - ⚠️ **`eteindre` reste sans mission.** `Incendies.feuActif()` est un tirage **déterministe
+    par heure de la ville** (`jour:heure`, `carte.incendies.regle`) — rien ne permet à une
+    mission d'allumer SON feu à elle. Lui donner un vrai porteur demande un feu **scopé à la
+    mission** (son propre `feuActif`-like, éteint par le même jet), pas encore écrit.
+  - ⚠️ **`FORMES_DE_LIEU`** (Python) apprend `boutique`, `district`, `rampe` : les résolveurs
+    de lieux de cette tranche existaient déjà côté JS (`Histoire.resoudre`) mais la scène par
+    défaut, qui les cite, n'était pas jugée pour eux — deux scènes par défaut (`f04`, `p01`)
+    sautaient sans lieu à montrer avant ce correctif.

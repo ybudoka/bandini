@@ -444,7 +444,10 @@ CATALOGUE: list[Echantillon] = [
     # n'entendait rien : la barre d'endurance ne se lisait qu'en la regardant.
     # Une boucle qui monte avec la depense, et une inspiration quand le souffle
     # repart — c'est-a-dire quand on peut de nouveau courir (`SOUFFLE`).
-    _e("souffle", "Le souffle court", duree_s=3.0, volume=0.45, boucle=True, influence=0.6,
+    # ⚠️ TROIS variantes, comme `nage` : a chaque sprint on RELANCE la boucle
+    # (`Son.boucle`), et une seule variante ferait entendre le meme haletement
+    # a chaque course — la lecon des pas, la ou l'oreille s'agace le plus vite.
+    _e("souffle", "Le souffle court", variantes=3, duree_s=3.0, volume=0.45, boucle=True, influence=0.6,
        prompt="heavy rhythmic panting of a man out of breath after sprinting, fast mouth "
               "breathing in and out, close mic, dry, no reverb, seamless loop, no voice, no music"),
     _e("reprise", "Il reprend son souffle", duree_s=2.0, volume=0.5, influence=0.6,

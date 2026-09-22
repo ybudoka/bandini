@@ -3271,6 +3271,25 @@ const Vehicules = (function () {
     return 'rgba(' + (n >> 16 & 255) + ',' + (n >> 8 & 255) + ',' + (n & 255) + ',' + a + ')';
   }
 
+  /** Jusqu'ou le faisceau porte avant un MUR — et un toit compte pareil : les
+      deux partagent la meme solidite (1), comme pour `Jeu.ligneLibre`. Un char
+      gare contre un mur, ou une ruelle qui tourne, ne doit pas jeter sa lumiere
+      A TRAVERS (retour de Martin : « les phares ne doivent pas passer au
+      travers des toits »).
+
+      ⚠️ Depuis le PHARE (`x0`, `y0`), pas depuis le centre du char : un phare
+      pres du trottoir voit le mur d'a cote une demi-tuile avant celui du
+      centre. Marche par quarts de tuile — assez fin pour ne pas sauter un mur
+      d'une tuile a un angle serre — et rend la distance JUSTE AVANT le mur, pas
+      dedans. */
+  function porteeLibre(x0, y0, ca, sa, portee) {
+    const pas = TT / 4;
+    for (let d = pas; d < portee; d += pas) {
+      if (Monde.solidite(Math.floor((x0 + ca * d) / TT), Math.floor((y0 + sa * d) / TT)) === 1) return d - pas;
+    }
+    return portee;
+  }
+
   function allumerLesPhares(v, cx, cy) {
     if (lampesPhares.image !== B.image) {
       lampesPhares.image = B.image;
@@ -3296,10 +3315,14 @@ const Vehicules = (function () {
       // elle (`p`) : le sol se voit de biais. Il part des phares, pas de
       // devant le nez — ce qui s'allume derriere les phares, c'est la caisse.
       const b = lampes.bas, sol = ombreDe(v);
+      // Le phare, en VRAI monde (non ecrase) : c'est depuis la, et dans le cap
+      // dessine, qu'on marche pour trouver le premier mur devant lui.
+      const ox = v.x + b.u * ca - b.w * sa, oy = v.y + b.u * sa + b.w * ca;
+      const portee = porteeLibre(ox, oy, ca, sa, faisceau.portee);
       lampesPhares.liste.push({
-        x: v.x + b.u * ca - b.w * sa - cx, y: v.y + (b.u * sa + b.w * ca) * k - cy,
-        a: v.angle, p: sol ? sol.profondeur : k, r: faisceau.portee,
-        cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture],
+        x: ox - cx, y: v.y + (b.u * sa + b.w * ca) * k - cy,
+        a: cap, p: sol ? sol.profondeur : k, r: portee,
+        cone: [b.demi + 1, b.demi + 1 + faisceau.ouverture * (portee / faisceau.portee)],
         c: 'rgba(255,236,190,' + (faisceau.force * lampesPhares.fondu).toFixed(3) + ')', faisceau: v,
       });
     }

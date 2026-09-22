@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (196 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (197 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -86,8 +86,9 @@ pas quand l'ordre de travail change.
 | L'Île-aux-Corneilles — deuxième vague | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/l-ile-aux-corneilles.md#fiche) · [notes](jalons/l-ile-aux-corneilles-deuxieme-vague.md#notes) |
 | Quatre activités que le jeu n'a pas | ⬜ **en cours** (2 des 4 livrées : les paliers de boulot, le pompier volontaire ; restent la patrouille, la liste du quai et les frénésies) | 15 sept. 2026 | **P4** | ajout | [fiche](jalons/quatre-activites-que-le-jeu-n-a-pas.md#fiche) · [notes](jalons/quatre-activites-que-le-jeu-n-a-pas.md#notes) |
 | La réputation et la lecture des passants | ⬜ **à faire** (à trancher par Martin) | — | **P4** | ajout | [fiche](jalons/la-reputation-et-la-lecture-des-passants.md#fiche) |
-| M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » est entamée : les neuf types, `exige`/`ferme`/`donne` étendu, la sauvegarde et les lieux nommés sont commités — **sans juges de banc ni l'arc F** : un type n'est pas livré tant qu'il n'a pas son juge) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
+| M16 Cent missions | ⬜ **en cours** (la tranche 1 « le moteur » avance : dix missions de plus livrées — `f04`, `f05`, `f06`, `f07`, `f09`, `f11`, `h01`, `p01`, `q03`, `e12` — avec le premier juge de banc joué pour huit des neuf types neufs ; restent `eteindre` (pas de feu qu'une mission puisse allumer elle-même), le téléphone qui trie, et le reste de l'arc F) | 18 sept. 2026 | **P4** | ajout | [fiche](jalons/m16-cent-missions.md#fiche) · [notes](jalons/m16-cent-missions.md#notes) |
 | M13 Les deux fins | ⬜ **à faire** | — | **P4** | ajout | [fiche](jalons/m13-les-deux-fins.md#fiche) · [notes](jalons/m13-les-deux-fins.md#notes) |
+| Les montagnes et les falaises infranchissables | ⬜ **en cours** | 21 sept. 2026 | **P4** | ajout | [fiche](jalons/les-montagnes-et-les-falaises-infranchissables.md#fiche) |
 
 ## L'ordre
 
@@ -143,7 +144,6 @@ est un oubli avec du style.
 
 | Dette | Pourquoi pas fait | Déclencheur |
 |---|---|---|
-| Les radios **10-4** et **Radio-Traversier** sont déclarées mais jamais générées ni écoutées | ElevenLabs Music se paie à la seconde, et M8 avait déjà de quoi écouter | La prochaine séance avec la clé : `uv run python scripts/audio_elevenlabs.py --refaire dix_quatre traversier` — puis **les écouter**, un fichier qui se décode n'est pas un fichier qui sonne bien |
 | Le **rythme mesuré sur le vrai téléphone** de Martin (reporté de M7) | Les chiffres du banc (0,29 ms/image de nuit à 5★) sont ceux d'une machine de développement | Avant M12 : la neige touche à la physique **et** au rendu, c'est là que le budget casse |
 | Les **districts chargés autour du joueur** (⚠️ `/api/carte` et son ETag sont **livrés** le 16 sept. 2026 : la carte voyage à part, mais entière) | 43 Ko gzip aujourd'hui (370 Ko bruts ; plafond brut relevé à 600 le 13 sept. 2026, parce qu'il n'est qu'un indicateur : le fil et `JSON.parse` sont les vraies bornes) : le découper maintenant coûterait de la complexité pour rien | Écrit d'avance depuis M8 : **plus de 2 s entre « Jouer » et la ville** sur le téléphone de Martin |
 | **Aucune limite d'essais** à la connexion par mot de passe (M14) | scrypt coûte un moment par essai et deux workers n'en font que quelques-uns à la fois ; et bloquer un pseudo après N échecs laisserait n'importe qui verrouiller le compte d'un autre — la raison même pour laquelle le NIP ne bloque pas le compte | La **2e vague de M14** : le jour où le jeu montre l'écran de connexion à tout le monde (une limite par adresse, pas par pseudo). ⚠️ **Échue** : l'écran est en ligne depuis le 17 sept. 2026, et la confirmation d'effacement (4e vague) est un second endroit où l'on devine un mot de passe |

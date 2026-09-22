@@ -161,6 +161,12 @@ chacun dans [docs/personnages/](personnages/README.md).
 | `lulu` | Lucienne « Lulu » Pelletier | Claudia | point:lulu | — |
 | `raymonde` | Raymonde Fortin | Nadine | porte:usine | — |
 | `ovila` | Ovila Saint-Onge | annonceur centre d'achat 1 | point:ovila | — |
+| `mo` | Le Grand Mo | Alexandre Boutin | porte:terminus | — |
+| `fern` | Fern Côté | Premium Male teacher (Adam) | porte:terminus | — |
+| `mado` | Mado | Caroline | porte:casse_croute | — |
+| `gege` | Gérard « Gégé » Morin | Alexandre Boutin | porte:cantine | — |
+| `xavier` | Xavier | Premium Male teacher (Adam) | porte:depanneur | — |
+| `lachance` | Dr Lachance | Patrick | point:lachance | — |
 
 ---
 
