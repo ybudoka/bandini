@@ -377,8 +377,49 @@ const Base = (function () {
   //: Les parts font 1 au milieu du cone.
   const CONE_FLOU = [[8, 0.45], [0, 0.55]];
 
-  /** Compose la nuit et les lampes, puis envoie a l'ecran. */
-  function fin(ambiance, lampes) {
+  /** Les quatre coins d'un cone (l'ecran, PAS son repere tourne/ecrase) — meme
+      rotation que le sol (`ry` ecrase par `p` APRES avoir tourne), le plus
+      large des deux passes de `CONE_FLOU` pour ne pas raboter le flou. */
+  function coinsDuCone(l) {
+    const ca = Math.cos(l.a || 0), sa = Math.sin(l.a || 0), p = l.p || 1;
+    const large = CONE_FLOU[0][0];
+    return [[0, -l.cone[0] - large / 2], [l.r, -l.cone[1] - large], [l.r, l.cone[1] + large], [0, l.cone[0] + large / 2]]
+      .map(function ([u, w]) { return [l.x + u * ca - w * sa, l.y + (u * sa + w * ca) * p]; });
+  }
+
+  /** Les quatre coins d'une empreinte de char (`Vehicules.corpsDesPhares`), au
+      meme calcul que son ombre au sol (angle tourne, puis ecrasee par `profondeur`). */
+  function coinsDuCorps(b) {
+    const ca = Math.cos(b.angle || 0), sa = Math.sin(b.angle || 0), p = b.profondeur || 1;
+    return [[-b.l / 2, -b.h / 2], [b.l / 2, -b.h / 2], [b.l / 2, b.h / 2], [-b.l / 2, b.h / 2]]
+      .map(function ([u, w]) { return [b.x + u * ca - w * sa, b.y + (u * sa + w * ca) * p]; });
+  }
+
+  /** Decoupe le CONE en cours (contexte deja `beginPath`e) : un `clip` par
+      char devant lui, empreinte par empreinte — jamais une seule passe avec
+      tous les chars dans le meme chemin `evenodd` (deux empreintes qui se
+      chevauchent s'annuleraient et rallumeraient le faisceau entre elles). Le
+      char qui PORTE ce faisceau ne se decoupe pas lui-meme (`b.v === l.faisceau`). */
+  function decouperLesCorps(c, l, corps) {
+    if (!corps || !corps.length) return;
+    const cone = coinsDuCone(l);
+    for (const b of corps) {
+      if (b.v === l.faisceau) continue;
+      c.beginPath();
+      for (const [x, y] of cone) c.lineTo(x, y);
+      c.closePath();
+      const coin = coinsDuCorps(b);
+      c.moveTo(coin[0][0], coin[0][1]);
+      for (let i = 1; i < coin.length; i++) c.lineTo(coin[i][0], coin[i][1]);
+      c.closePath();
+      c.clip('evenodd');
+    }
+  }
+
+  /** Compose la nuit et les lampes, puis envoie a l'ecran. `corps` : les
+      empreintes des chars (`Vehicules.corpsDesPhares`) — un faisceau s'y
+      arrete au lieu de les traverser. */
+  function fin(ambiance, lampes, corps) {
     const c = cible.ctx;
     if (ambiance && ambiance.alpha > 0) {
       c.save();
@@ -399,6 +440,7 @@ const Base = (function () {
           // faisceau en diagonale serait cisaille au lieu d'etre pose a plat.
           if (l.cone) {
             c.save();
+            decouperLesCorps(c, l, corps);
             c.translate(l.x, l.y);
             c.scale(1, l.p || 1);
             c.rotate(l.a || 0);

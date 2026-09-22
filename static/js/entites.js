@@ -4016,16 +4016,41 @@ const Entites = (function () {
   /** La coop locale (M14, essai — un clavier + une manette) : un pieton
       marque `coopJoueur2`, mene par le STICK DE LA MANETTE (`Entree.stick`)
       plutot que par l'IA — le joueur 1, lui, reste au clavier pendant ce
-      temps (`Entree.debutImage`, garde `!B.coop` sur la branche manette).
-      Aucun combat, aucune interaction, aucune mission : juste marcher, a la
-      MEME vitesse que le joueur 1 (`v.joueur_marche`/`v.joueur_course`, pas
+      temps (`Entree.debutImage`, garde `!B.coop` sur la branche manette), a
+      la MEME vitesse que lui (`v.joueur_marche`/`v.joueur_course`, pas
       `v.pieton` — un passant de la foule est plus lent qu'un joueur, et les
       deux couraient a des rythmes differents. Retour de Martin, 22 sept.
       2026, en testant). `Monde.majCameraCoop` les retient a portee l'un de
-      l'autre (une laisse, pas un zoom — voir sa note). */
+      l'autre (une laisse, pas un zoom — voir sa note).
+
+      ACTION (bouton de la manette, `Entree.neufManette`) interagit avec le
+      decor, les betes et les gens — les memes gestes que le joueur 1
+      (`Interactions.utiliserSurLesGens/Betes/LeDecor`), demandes par Martin
+      le meme jour. ⚠️ AUCUN COMBAT : ni le bouclier humain
+      (`Combat.otageSousLaMain`), ni rien d'arme — ce sont des mecaniques de
+      combat, hors de la portee « essai ». ⚠️ Un banc L'ASSOIT (comme le
+      joueur 1, meme table de decor) mais SANS `Interactions.majAssis`
+      complet — cette fonction-la lit `Entree.axe`/`bas`/`neuf` du JOUEUR 1
+      en dur, pas parametree sur qui s'assoit. Un parallele minimal : le
+      stick de la manette leve, un point c'est tout — pas de souffle qui
+      revient ni de soin assis pour le deuxieme joueur pendant l'essai. */
   function majJoueur2(e) {
-    const v = B.defs.recherche.vitesses;
+    // ⚠️ « Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin,
+    // 22 sept.) : sans ca, le deuxieme joueur est un pieton `vivant` comme un
+    // autre, et le premier peut le cogner (poing, arme) comme n'importe quel
+    // passant — un coup de trop dans une bagarre, une balle perdue. Rechargee
+    // CHAQUE image, comme la triche INVINCIBLE du joueur 1 (`Jeu.maj`) :
+    // `blesser()` refuse tout coup tant qu'elle tient (`e.invincible > 0`).
+    e.invincible = 30;
     const axe = Entree.stick;
+    if (e.assis) {
+      if (axe.mag > 0) Interactions.seLever(e, axe.x, axe.y);
+      else { e.vx = 0; e.vy = 0; return; }
+    } else if (Entree.neufManette('action') && typeof Interactions !== 'undefined'
+               && (Interactions.utiliserSurLesGens(e) || Interactions.utiliserSurLesBetes(e) || Interactions.utiliserSurLeDecor(e))) {
+      return;   // le geste a pris la pression : pas de mouvement cette image-ci
+    }
+    const v = B.defs.recherche.vitesses;
     if (axe.mag > 0) {
       const marche = axe.mag < 0.6;
       const vitesse = (marche ? v.joueur_marche : v.joueur_course) * Math.min(1, axe.mag * 1.15);
@@ -5043,6 +5068,15 @@ const Entites = (function () {
     });
     B.stats.entites = visibles.length;
     const ombre = Atlas.cuirePeintre('ombre', DECORS.ombre.w, DECORS.ombre.h, DECORS.ombre.peindre);
+    // ⚠️ La coop locale (essai) : « je verrais aussi comme distinction l'ombre
+    // du personnage de couleur différente, vu qu'on peut s'habiller en
+    // boutique » (Martin, 22 sept.) — le linge change au comptoir, l'ombre
+    // jamais : un second repere qui tient quoi qu'on porte. Meme teal que
+    // `COULEUR_COOP_JOUEUR2` (#16a085 = rgb(22,160,133)), juste plus opaque
+    // qu'un noir a 30 % pour rester lisible a cette taille (12x6 px).
+    const ombreCoop = Atlas.cuirePeintre('ombre_coop', DECORS.ombre.w, DECORS.ombre.h, function (ctx, w, h) {
+      ctx.fillStyle = 'rgba(22,160,133,0.55)'; ctx.fillRect(2, 0, 8, 6); ctx.fillRect(0, 1, 12, 4);
+    });
     const eauRemous = Atlas.cuirePeintre('remous', DECORS.remous.w, DECORS.remous.h, DECORS.remous.peindre);
     const bulles = [];
     for (const e of visibles) {
@@ -5136,7 +5170,7 @@ const Entites = (function () {
       } else if (e.vivant && !(e.alite && (e.etat === 'fige' || e.type === 'joueur'))) {
         // ⚠️ Pas d'ombre sous un malade couche : elle tomberait au milieu de la
         // couverture, une tache grise en travers du lit.
-        ctx.drawImage(ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
+        ctx.drawImage(e.coopJoueur2 ? ombreCoop : ombre, Math.round(e.x - 6 - cx), Math.round(e.y - 3 - cy));
       }
       if (e.invincible > 0 && (e.invincible >> 2) % 2 === 0) continue;
       const p = pose(e);

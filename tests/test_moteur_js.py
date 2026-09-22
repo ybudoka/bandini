@@ -3114,6 +3114,82 @@ def test_la_foule_ne_se_traverse_plus(banc):
     assert r["pire"] < 4.0, f"deux personnes s'enfoncent de {r['pire']} px l'une dans l'autre"
 
 
+def test_les_vehicules_ne_se_chevauchent_pas(banc):
+    """Retour de Martin, 21 sept. 2026 : « les véhicules ne devraient jamais pouvoir
+    se chevaucher ».
+
+    ⚠️ Deux chars « sur des rails » (le trafic, une ligne d'autobus) ne se
+    poussaient PLUS DU TOUT l'un l'autre une fois pris ensemble
+    (`heurterVehicules` sautait la paire au complet : « sur des rails, on ne se
+    pousse pas », posé pour un autre bug — un vélo impatient qui plantait le nez
+    d'un autobus dans le carrefour). Le remède avait bien empêché ce cas-là, mais
+    laissait n'importe quel autre chevauchement entre deux chars sur rails
+    TENIR pour de bon, faute d'un garde-fou qui les sépare. Corrigé : celui qui
+    ATTEND LÉGITIMEMENT (feu rouge, stop, boîte) ne bouge jamais, c'est l'autre
+    qui absorbe toute la séparation ; si aucun des deux n'attend, le partage aux
+    masses d'avant suffit — la même règle que pour la foule
+    (`test_la_foule_ne_se_traverse_plus`), appliquée aux chars.
+    """
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        let paires = 0, pire = 0, images = 0;
+        let gros = 0, plusLong = 0, creuse = 0;
+        const durees = {}, profond = {}, creuseT = {};
+        function pireChevauchement(a, b) {
+            let p = -Infinity;
+            for (const ca of L.Vehicules.cercles(a)) {
+                for (const cb of L.Vehicules.cercles(b)) {
+                    p = Math.max(p, ca.r + cb.r - Math.hypot(ca.x - cb.x, ca.y - cb.y));
+                }
+            }
+            return p;
+        }
+        const touches = ['KeyD', 'KeyW', 'KeyA', 'KeyS'];
+        for (let bloc = 0; bloc < 24; bloc++) {
+            const t = touches[bloc % 4];
+            o.touche(t);
+            for (let k = 0; k < 40; k++) {
+                o.frame(1); images++;
+                const vs = L.B.entites.filter(function (e) { return e.type === 'vehicule' && e.etat !== 'epave' && !e.aBord; });
+                const vues = {};
+                for (let a = 0; a < vs.length; a++) {
+                    for (let b = a + 1; b < vs.length; b++) {
+                        if (vs[a] === vs[b].remorque || vs[a] === vs[b].remorqueePar) continue;
+                        const chevauche = pireChevauchement(vs[a], vs[b]);
+                        if (chevauche > 0) { paires++; pire = Math.max(pire, chevauche); }
+                        const cle = vs[a].id + '-' + vs[b].id;
+                        // ⚠️ Meme methode que la foule : ce qui compte, c'est qu'un
+                        // chevauchement se DEFAIT, pas qu'il n'en existe jamais un —
+                        // deux chars qui se frolent se rapprochent une image, la
+                        // separation les defait a la suivante.
+                        if (chevauche > 1) {
+                            gros++;
+                            durees[cle] = (durees[cle] || 0) + 1;
+                            plusLong = Math.max(plusLong, durees[cle]);
+                            vues[cle] = true;
+                            if (profond[cle] !== undefined && chevauche > profond[cle] + 0.01) {
+                                creuseT[cle] = (creuseT[cle] || 0) + 1;
+                                if (creuseT[cle] >= 2) creuse++;
+                            } else creuseT[cle] = 0;
+                            profond[cle] = chevauche;
+                        }
+                    }
+                }
+                for (const cle in durees) if (!vues[cle]) { durees[cle] = 0; delete profond[cle]; delete creuseT[cle]; }
+            }
+            o.relacher(t);
+        }
+        return { images: images, paires: paires, pire: +pire.toFixed(2), gros: gros, plusLong: plusLong, creuse: creuse };
+    }""")
+    assert r["images"] == 960
+    assert r["creuse"] == 0, (
+        f"{r['creuse']} fois un chevauchement de véhicules s'est CREUSÉ au lieu de se défaire : "
+        "deux chars restent pris l'un dans l'autre"
+    )
+    assert r["plusLong"] <= 8, f"un chevauchement de véhicules tient {r['plusLong']} images d'affilée"
+    assert r["pire"] < 8.0, f"deux véhicules s'enfoncent de {r['pire']} px l'un dans l'autre"
+
+
 def test_courir_ne_permet_pas_de_traverser_les_gens(banc, paquet):
     """⚠️ Le plafond de separation doit passer DEVANT les jambes les plus
     rapides du jeu. Fixe a 1,5 px, il arretait bien le joueur qui MARCHE

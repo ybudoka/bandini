@@ -25,6 +25,15 @@ const Jeu = (function () {
   const SEQUENCE_DEBUG_ACTIONS = ['haut', 'haut', 'bas', 'bas', 'gauche', 'droite', 'gauche', 'droite'];
   let dernier = 0, accu = 0, fenetre = null, doc = null;
   let horsLigne = false;
+  //: Debug des gels (Martin, 21 sept.) : le temps par systeme durant l'image en
+  //: cours de simulation — null hors d'`avancer()` (le banc appelle `maj()`
+  //: tout seul). `pas()` mesure sans rien changer au comportement : un
+  //: `fn` refuse simplement d'etre chronometre quand `tEtapes` est null.
+  let tEtapes = null;
+  //: Le seuil au-dela duquel une image se signale : 50ms, pire que 20 IPS —
+  //: une image ordinaire tourne sous les 16ms. En dessous, ce sont des
+  //: courants d'air normaux, pas un gel.
+  const SEUIL_GEL = 50;
   //: La partie pour laquelle `commencer()` a pose la ville, ou null tant qu'on
   //: n'a pas joue depuis le chargement de la page (voir `jouerPartie`).
   let monde = null;
@@ -815,31 +824,29 @@ const Jeu = (function () {
       // ici mesure le temps en IMAGES (cadences, minuteries, usure) : en
       // sauter trois sur quatre ralentit tout d'un coup, sans un seul `dt`.
       if (Combat.tempsQuiPasse()) {
-        Monde.majHeure();
-        Monde.majBattants();
-        // La musique suit ce qui t'arrive : district, poursuite, bagarre.
-        Son.Chef.maj();
-        // Et la radio parle entre les tounes (M15) : l'animateur de la station.
-        Son.Ondes.maj();
-        // On s'entend respirer, et un quartier s'entend avant de se voir (M15).
-        Son.Souffle.maj(B.joueur);
-        Son.Quartier.maj();
-        Monde.majChemins();
-        // Les vagues : leur volume est une question de carte, pas de son.
-        Monde.majSonDuBord();
-        Entites.maj();
-        Combat.maj();
-        Vehicules.maj();
-        Traversier.maj();                 // apres les chars : ce qui est a bord suit la coque
-        Neige.maj();
-        Police.maj();
-        Incendies.maj();
-        Interactions.maj();
-        Missions.maj();
-        Chantiers.maj();
-        Foire.maj();
-        Metro.maj();
-        Histoire.maj();
+        pas('monde', function () {
+          Monde.majHeure();
+          Monde.majBattants();
+          Monde.majChemins();
+          Monde.majSonDuBord();          // les vagues : leur volume est une question de carte, pas de son
+        });
+        // La musique suit ce qui t'arrive (Chef), la radio parle entre les
+        // tounes (Ondes, M15), on s'entend respirer et un quartier s'entend
+        // avant de se voir (Souffle, Quartier, M15).
+        pas('son', function () { Son.Chef.maj(); Son.Ondes.maj(); Son.Souffle.maj(B.joueur); Son.Quartier.maj(); });
+        pas('entites', Entites.maj);
+        pas('combat', Combat.maj);
+        pas('vehicules', Vehicules.maj);
+        pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
+        pas('neige', Neige.maj);
+        pas('police', Police.maj);
+        pas('incendies', Incendies.maj);
+        pas('interactions', Interactions.maj);
+        pas('missions', Missions.maj);
+        pas('chantiers', Chantiers.maj);
+        pas('foire', Foire.maj);
+        pas('metro', Metro.maj);
+        pas('histoire', Histoire.maj);
         Monde.majCamera();
         B.t++;
       }
@@ -861,6 +868,44 @@ const Jeu = (function () {
       if (!B.menu && B.etat === 'pause') reprendre();
     }
     Entree.videPresse();
+  }
+
+  /** Chronometre `fn` (aucun argument, aucune valeur de retour utilisee — tous
+      les `.maj()` de systeme) sous le nom `nom`, dans `tEtapes` : ne fait rien
+      de plus que l'appel nu quand `tEtapes` est null (hors d'`avancer()`). */
+  function pas(nom, fn) {
+    if (!tEtapes || typeof performance === 'undefined' || !performance.now) { fn(); return; }
+    const d = performance.now();
+    fn();
+    tEtapes[nom] = (tEtapes[nom] || 0) + performance.now() - d;
+  }
+
+  /** Ce qui aide a relire un gel dans la console : ou on en etait, sans
+      rejouer la partie pour le savoir. */
+  function contexteGel() {
+    const b = ['etat=' + B.etat];
+    if (B.partie) b.push('jour ' + B.partie.jour, (Monde.heureTexte && Monde.heureTexte()) || '');
+    if (B.cinema) b.push('cinema:' + (B.cinema.mission || '?'));
+    if (B.scene) b.push('scene');
+    if (B.menu) b.push('menu');
+    if (B.transition) b.push('transition');
+    if (B.joueur && B.joueur.dansVehicule) b.push('vehicule');
+    return b.join(' ');
+  }
+
+  /** Une image a mis plus de `SEUIL_GEL` a se simuler ET se dessiner : on le
+      dit, avec de quoi savoir OU ca a coute cher sans avoir a le reproduire
+      sous un profileur. `etapes` : le temps par systeme, accumule sur les
+      `n` pas de simulation de cette image (voir `avancer`) ; peut etre vide
+      (aucun pas — le jeu etait fige, menu ou cinema). */
+  function signalerGel(duree, etapes, dureeRendu, n) {
+    if (typeof console === 'undefined' || !console.warn) return;
+    const detail = Object.keys(etapes)
+      .sort(function (a, c) { return etapes[c] - etapes[a]; })
+      .map(function (k) { return k + ' ' + Math.round(etapes[k]) + 'ms'; })
+      .join(', ');
+    console.warn('[gel] ' + Math.round(duree) + 'ms (' + n + ' pas, rendu ' + Math.round(dureeRendu) + 'ms) — '
+      + contexteGel() + (detail ? ' — ' + detail : ''));
   }
 
   function rendre() {
@@ -903,11 +948,13 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
+    // Les empreintes des chars, pour decouper les faisceaux qui les recouvrent.
+    const corpsPhares = !B.interieur ? Vehicules.corpsDesPhares() : [];
     // ⚠️ Le filtre du mode photo se pose sur l'ECRAN (`Base.ecran()`), pas dans
     // `Base.fin` : il ne doit teindre QUE le dernier `drawImage` de cette
     // fonction-la (la ville deja peinte), jamais le HUD dessine juste apres.
     if (B.photo) Base.ecran().filter = FILTRES_PHOTO[B.photo.filtre].css;
-    Base.fin(Monde.ambiance(), lampes);
+    Base.fin(Monde.ambiance(), lampes, corpsPhares);
     if (B.photo) Base.ecran().filter = 'none';
     Hud.dessiner();
   }
@@ -927,11 +974,15 @@ const Jeu = (function () {
     dernier = t;
     accu += dt;
     let n = 0;
+    tEtapes = {};
     while (accu >= PAS && n < 4) { maj(); accu -= PAS; n++; }
     if (accu > 200) accu = 0;
+    const avantRendu = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     rendre();
     const fin = (typeof performance !== 'undefined' && performance.now) ? performance.now() : t;
     B.stats.ms = B.stats.ms * 0.9 + (fin - debut) * 0.1;
+    if (fin - debut > SEUIL_GEL) signalerGel(fin - debut, tEtapes, fin - avantRendu, n);
+    tEtapes = null;
   }
 
   // --- Demarrage ------------------------------------------------------------------------
@@ -1016,11 +1067,30 @@ const Jeu = (function () {
     });
   }
 
+  /** Un gel qui ne vient pas de la boucle de jeu (decodage audio, GC, un
+      `fetch` qui bloque) ne passe jamais par `avancer()` — la Long Tasks API
+      le voit quand meme : elle signale TOUT ce qui bloque le fil principal
+      plus de 50ms, quelle qu'en soit la cause. Absente de Safari et Firefox
+      (avril 2026) : `pas()`/`signalerGel` restent le filet la ou elle manque. */
+  function surveillerLesGels(w) {
+    if (!w.PerformanceObserver) return;
+    try {
+      new w.PerformanceObserver(function (liste) {
+        liste.getEntries().forEach(function (e) {
+          if (typeof console !== 'undefined' && console.warn) {
+            console.warn('[gel] tache longue ' + Math.round(e.duration) + 'ms — ' + contexteGel());
+          }
+        });
+      }).observe({ entryTypes: ['longtask'] });
+    } catch (e) { /* entryType inconnu : rien a faire */ }
+  }
+
   function demarrer(w, d) {
     fenetre = w; doc = d;
     const racine = d.getElementById('bandini');
     const toile = d.getElementById('toile');
     Base.initCanvas(toile, fabriqueCanvas);
+    surveillerLesGels(w);
     Son.init(w, racine.dataset.urlStatique);
     // ⚠️ Lire `sessionStorage` peut LEVER (stockage bloque, navigation privee
     // de certains navigateurs) : le choix des parties s'en passe tres bien.

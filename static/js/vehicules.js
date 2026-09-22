@@ -1042,13 +1042,26 @@ const Vehicules = (function () {
           if (d2 >= min * min || d2 === 0) continue;
           const d = Math.sqrt(d2), nx = dx / d, ny = dy / d, chevauche = min - d;
           const m1 = v.def.masse, m2 = autre.def.masse, total = m1 + m2;
-          // Sur des rails : on ne se pousse pas. ⚠️ L'AUTOBUS D'UNE LIGNE AUSSI est
-          // sur des rails (`Autobus.conduire`). Il n'y etait pas : un velo du trafic
-          // qui perdait patience derriere lui (`force`) le poussait de deux pixels
-          // pendant qu'il attendait le feu — assez pour mettre son nez dans le
-          // carrefour, ou le sortir de son trace (`test_autobus_js`, 17 sept. 2026).
+          // ⚠️ DEUX CHARS SUR RAILS NE SE POUSSENT PAS AUX MASSES : un vélo qui
+          // perd patience (`force`) derrière un autobus arrêté au feu le poussait
+          // de deux pixels — assez pour mettre son nez dans le carrefour, ou le
+          // sortir de son tracé (`test_autobus_js`, 17 sept. 2026). Mais NE JAMAIS
+          // POUSSER NI L'UN NI L'AUTRE laissait les deux chevauchés pour de bon
+          // dès qu'ils se touchaient pour une autre raison — retour de Martin,
+          // 21 sept. 2026 : « les véhicules ne devraient jamais pouvoir se
+          // chevaucher ». Celui qui ATTEND LÉGITIMEMENT (feu rouge, stop, boîte)
+          // a raison d'être là et ne bouge jamais ; c'est l'autre — l'impatient,
+          // ou n'importe quel char qui s'est retrouvé là par ailleurs — qui
+          // absorbe TOUTE la séparation. Si aucun des deux n'attend (ils se
+          // frôlent à un coin, en roulant), le partage aux masses d'avant suffit.
           const surDesRails = function (q) { return q.conducteur === 'trafic' || q.conducteur === 'ligne'; };
-          if (surDesRails(v) && surDesRails(autre)) return;
+          if (surDesRails(v) && surDesRails(autre)) {
+            const vAttend = attenteLegitime(v), autreAttend = attenteLegitime(autre);
+            if (vAttend && !autreAttend) { autre.x += nx * chevauche; autre.y += ny * chevauche; }
+            else if (autreAttend && !vAttend) { v.x -= nx * chevauche; v.y -= ny * chevauche; }
+            else { v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total); autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total); }
+            return;
+          }
           v.x -= nx * chevauche * (m2 / total); v.y -= ny * chevauche * (m2 / total);
           autre.x += nx * chevauche * (m1 / total); autre.y += ny * chevauche * (m1 / total);
           const relatif = (v.vx - autre.vx) * nx + (v.vy - autre.vy) * ny;
@@ -2815,13 +2828,22 @@ const Vehicules = (function () {
       else majPhysique(v, { gaz: 0, frein: 0, direction: 0 });
       // La chasse finie, la sirene de l'auto-patrouille se tait.
       if (v.conducteur === 'police') v.sirene = B.recherche.etoiles > 0;
-      if (v.conducteur === 'trafic' || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
+      // ⚠️ UN CHAR VOLE HORS RESEAU N'EST PAS ENCORE SUR SES RAILS (`emporterLeChar`) :
+      // il vise la voie la plus proche en ligne droite (`voieLaPlusProche`), et rien ne
+      // l'arrete sur ce trajet tant qu'il n'y a pas rejoint une tuile de la voirie —
+      // c'etait le vol de char qui traversait un batiment entre sa place et la rue.
+      const surRails = v.conducteur === 'trafic' && !v.horsReseau;
+      if (surRails || v.conducteur === 'ligne' || (v.conducteur === 'police' && v.surRails)) {
         v.x += v.vx; v.y += v.vy;
         heurterVehicules(v);
         heurterPietons(v);
         if (B.options.trace) majTrace(v);
       } else if (Math.abs(v.vx) + Math.abs(v.vy) > 0.01 || v.z > 0) avancer(v);
       else { heurterPietons(v); degager(v); }             // a l'arret, mais quelqu'un a pu le pousser
+      if (v.horsReseau) {
+        const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
+        if (PAS_FLECHE[Monde.fleche(tx, ty)]) v.horsReseau = false;
+      }
       // La distance ROULEE, pas la vitesse : c'est elle qui tourne les pedales.
       // Un velo pousse contre un mur a de la vitesse et ne pedale pas.
       v.parcouru += Math.hypot(v.x - x0, v.y - y0);
@@ -3223,7 +3245,28 @@ const Vehicules = (function () {
   //: voit, soir ou pas.
   const FAISCEAU_A_LA_BRUNE = 0.35;
   const NUIT_FAITE = 0.62;
-  const lampesPhares = { image: -1, liste: [], corps: [], allume: false, fondu: 1, finalise: false };
+  const lampesPhares = { image: -1, liste: [], corps: [], corpsMonde: [], allume: false, fondu: 1, finalise: false };
+
+  /** Remet `lampesPhares` a neuf a la premiere machine dessinee de l'image —
+      IDEMPOTENT (`allumerLesPhares` ET `dessinerUn` l'appellent toutes deux,
+      selon celle qui passe en premier). ⚠️ `corps` (l'empreinte a l'ECRAN, pour
+      le decoupage du cone dans `Base.fin`) et `corpsMonde` (l'empreinte en VRAI
+      monde, pour `porteeLibreDesChars`) sont deux choses : la meme caisse, lue
+      deux fois pour deux geometries differentes — jamais melangees dans le
+      meme tableau, ou l'une des deux marches sur des champs qui n'existent pas
+      chez l'autre. */
+  function rafraichirEtatPhares() {
+    if (lampesPhares.image === B.image) return;
+    lampesPhares.image = B.image;
+    lampesPhares.liste.length = 0;
+    lampesPhares.corps.length = 0;
+    lampesPhares.corpsMonde.length = 0;
+    lampesPhares.finalise = false;
+    const noir = Monde.ambiance().alpha;
+    lampesPhares.allume = noir >= BRUNE;
+    lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
+      * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));
+  }
 
   /** Les lampes d'une silhouette, lues UNE FOIS dans sa machine : ou elles sont
       (`u` vers l'avant, `w` vers la droite, `z` en hauteur, en px), et la
@@ -3337,7 +3380,7 @@ const Vehicules = (function () {
   }
 
   /** Un point (en VRAI monde) est-il dans l'empreinte d'un AUTRE char ? `corps`
-      vient de `lampesPhares.corps` : chaque char visible y pose la sienne
+      vient de `lampesPhares.corpsMonde` : chaque char visible y pose la sienne
       (`u`, `w` dans son propre repere — la meme rotation inverse que
       `Atlas.projeter`), `sansCe` exclut le char qui porte ce faisceau. */
   function dansUnCorps(x, y, corps, sansCe) {
@@ -3362,25 +3405,17 @@ const Vehicules = (function () {
   }
 
   function allumerLesPhares(v, cx, cy) {
-    if (lampesPhares.image !== B.image) {
-      lampesPhares.image = B.image;
-      lampesPhares.liste.length = 0;
-      lampesPhares.corps.length = 0;
-      lampesPhares.finalise = false;
-      const noir = Monde.ambiance().alpha;
-      lampesPhares.allume = noir >= BRUNE;
-      lampesPhares.fondu = FAISCEAU_A_LA_BRUNE + (1 - FAISCEAU_A_LA_BRUNE)
-        * Math.max(0, Math.min(1, (noir - BRUNE) / (NUIT_FAITE - BRUNE)));
-    }
+    rafraichirEtatPhares();
     if (!lampesPhares.allume) return;
-    // ⚠️ L'EMPREINTE SE POSE POUR TOUT CHAR VISIBLE, MENE OU NON : un char garé,
-    // ou en panne, bloque un faisceau tout autant que celui qui roule — c'est sa
-    // CAISSE qui arrête la lumière, pas son moteur. Posee ici (avant le retour
-    // qui suit, propre aux chars menes) pour que meme un char sans lumieres
-    // bloque celle des autres.
+    // ⚠️ L'EMPREINTE (EN VRAI MONDE) SE POSE POUR TOUT CHAR VISIBLE, MENE OU
+    // NON : un char gare, ou en panne, bloque un faisceau tout autant que celui
+    // qui roule — c'est sa CAISSE qui arrete la lumiere, pas son moteur. Posee
+    // ici (avant le retour qui suit, propre aux chars menes) pour que meme un
+    // char sans lumieres bloque celle des autres. `corpsMonde`, pas `corps` :
+    // ce dernier est l'empreinte a l'ECRAN de `dessinerUn`, une autre geometrie.
     if (v.def) {
-      lampesPhares.corps.push({ x: v.x, y: v.y, ca: Math.cos(v.angle), sa: Math.sin(v.angle),
-                                 demiL: v.def.longueur / 2, demiH: v.def.largeur / 2, v: v });
+      lampesPhares.corpsMonde.push({ x: v.x, y: v.y, ca: Math.cos(v.angle), sa: Math.sin(v.angle),
+                                      demiL: v.def.longueur / 2, demiH: v.def.largeur / 2, v: v });
     }
     if (!v.conducteur || v.etat === 'epave' || v.panneT > 0 || !v.def) return;
     const lampes = lampesDeLaMachine(v.sprite);
@@ -3441,7 +3476,7 @@ const Vehicules = (function () {
       dans celui ou ils se genent : au moment ou le faisceau d'un char
       s'allume, un char plus loin dans la liste — donc pas encore dessine —
       peut deja se trouver devant lui, et son empreinte n'existe pas encore
-      dans `lampesPhares.corps`. `lampesDesPhares` n'est appelee qu'UNE FOIS
+      dans `lampesPhares.corpsMonde`. `lampesDesPhares` n'est appelee qu'UNE FOIS
       par image, par `jeu.js`, APRES que tous les chars visibles sont passes
       par `dessinerUn` : c'est le seul moment ou `corps` est complet. */
   function lampesDesPhares() {
@@ -3450,7 +3485,7 @@ const Vehicules = (function () {
       lampesPhares.finalise = true;
       for (const l of lampesPhares.liste) {
         if (!l.faisceau) continue;
-        const r = porteeLibreDesChars(l.ox, l.oy, l.ca, l.sa, l.r, lampesPhares.corps, l.faisceau);
+        const r = porteeLibreDesChars(l.ox, l.oy, l.ca, l.sa, l.r, lampesPhares.corpsMonde, l.faisceau);
         if (r < l.r) {
           l.r = r;
           l.cone = [l.demi + 1, l.demi + 1 + l.ouverture * (r / l.porteeMax)];
@@ -3459,6 +3494,12 @@ const Vehicules = (function () {
     }
     return lampesPhares.liste;
   }
+
+  /** Les empreintes au sol des chars dessines cette image — ce que `Base.fin`
+      decoupe hors d'un faisceau pour qu'il n'eclaire pas AU TRAVERS d'un char
+      gare devant, comme il le faisait avant (la lueur se composait par-dessus
+      toute la scene deja peinte, sans egard a ce qui s'y trouvait). */
+  function corpsDesPhares() { return lampesPhares.image === B.image ? lampesPhares.corps : []; }
 
   /** Une ampoule allumee : le pourtour de la phase, un COEUR plus pale, et la
       lampe qu'elle jette a la brune.
@@ -3777,6 +3818,7 @@ const Vehicules = (function () {
   function dessinerUn(ctx, v, cx, cy) {
     const def = SPRITES[v.sprite];
     if (!def) return;
+    rafraichirEtatPhares();
     // ⚠️ **LES FEUX DE DETRESSE** d'un char en panne : deux ambres qui battent
     // aux quatre coins de sa caisse. C'est tout ce qui le distingue d'un char
     // mal gare — et c'est exactement ce qu'on veut dire.
@@ -3792,6 +3834,13 @@ const Vehicules = (function () {
     }
     const ombre = ombreDe(v);
     if (ombre) {
+      // Meme rectangle que l'ombre, garde pour decouper les faisceaux DES
+      // AUTRES chars (v exclut le sien, cf. Base.fin) : le seul endroit ou
+      // l'empreinte au sol d'un char visible est deja calculee.
+      if (lampesPhares.allume) {
+        lampesPhares.corps.push({ x: ombre.x - cx, y: ombre.y - cy, angle: ombre.angle,
+                                   l: ombre.l, h: ombre.h, profondeur: ombre.profondeur, v: v });
+      }
       // ⚠️ ORIENTEE COMME LE CHAR. Une tache alignee sur les axes ne dit rien
       // de la place qu'il prend : c'est justement l'encombrement qu'on rend a
       // l'oeil, et un autobus en travers de la rue n'a pas la meme empreinte
@@ -3836,7 +3885,7 @@ const Vehicules = (function () {
     pointDArret, approcheDeLaLigne, placeDeLaPanne, placeStationnee, garesVoulus,
     voieDeDepassement, voieLibre, changerDeVoie,
     estVeloDuTrafic, intentionDuVelo, coteDuVelo, aLaBordure, voieDuVelo, roulableHorsRue, boutDeTrottoir, traverseeDuParc, monterSurLeTrottoir,
-    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
+    croisementLibre, creerSignalisation, pointeDuMoment, majNidDePoule, majPlaque, majTas, majPanne, majAmarrages, majMouillages, tuileInterdite, dessinerFeu, dessinerFeuPieton, lampesDesFeux, lampesDesPhares, corpsDesPhares, maj, dessinerUn, swapsDuMoment, ombreDe, faceDe, capDe, centreDuToit, cavalierDe, imageDuCavalier,
     majTrace, dessinerTrace, bilanTrace, etatCourt,
   };
 })();

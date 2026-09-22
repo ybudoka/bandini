@@ -124,6 +124,12 @@ const Entree = (function () {
   function neufSansManette(a) {
     return !!vNeufTact[a] || !!vNeufCasque[a] || MAP_TOUCHES[a].some(function (k) { return presse[k]; });
   }
+  /** La coop locale (essai, un clavier + une manette) : SEULEMENT la manette
+      — celle du deuxieme joueur (`Entites.majJoueur2`, son bouton ACTION).
+      Jamais le clavier, jamais le tactile : le symetrique de
+      `neufSansManette`, qui exclut la manette pour le premier joueur. */
+  function basManette(a) { return !!vPad[a]; }
+  function neufManette(a) { return !!vNeuf[a] && !vNeufTact[a] && !vNeufCasque[a]; }
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
@@ -814,7 +820,7 @@ const Entree = (function () {
 
   return {
     MAP_TOUCHES, MANETTE_DEFAUT, ZONE_MORTE,
-    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, videPresse, toutRelacher, contexte, passerEnTactile,
+    init, debutImage, bas, neuf, basTactile, neufTactile, neufSansManette, basManette, neufManette, videPresse, toutRelacher, contexte, passerEnTactile,
     etiquettesTactiles: etiquettes,
     toucheEnfoncee: function (code) { return !!enfonce[code]; },
     surSecret, surSuiteActions,
