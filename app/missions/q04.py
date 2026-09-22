@@ -52,5 +52,18 @@ MISSION = {
             _l("josee", "Repéré... Le Norvégien va savoir qu'on rôde autour de son quai. Reviens quand t'es plus fin.",
                jeu="[annoyed] Repéré… [gravely] Le Norvégien va savoir qu'on rôde autour de son quai. Reviens quand t'es plus fin.")
         ]
-    }
+    },
+
+    # Intention (intro) : celle du défaut (dedans) — une coupe sur `porte:cantine`, il croise les bras, il
+    # finit. ⚠️ SAUF que la coupe part `ensemble` avec la première réplique au lieu de la retenir (forme
+    # de q02/m51) : la voix dure 5,7 s, la coupe du défaut 3,2 s, et la seconde réplique la coupait.
+    # Le `dire` retient la scène jusqu'au bout de sa voix.
+    "scenes": {
+        "intro": [
+            {"type": "coupe", "vers": "porte:cantine", "ferme": 20, "ouvre": 20, "tient": 150, "ensemble": True},
+            {"type": "dire", "repliques": [1]},
+            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+            {"type": "dire", "repliques": [2]},
+        ],
+    },
 }

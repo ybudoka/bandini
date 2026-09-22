@@ -53,5 +53,18 @@ MISSION = {
             _l("lachance", "On fera avec ce qu'on a... Reviens si tu peux, une autre nuit.",
                jeu="[somber] On fera avec ce qu'on a… [calm] Reviens si tu peux, une autre nuit.")
         ]
-    }
+    },
+
+    # Intention (intro) : celle du défaut (dedans) — une coupe sur `porte:hopital`, il croise les bras, il
+    # finit. ⚠️ SAUF que la coupe part `ensemble` avec la première réplique au lieu de la retenir (forme
+    # de q02/m51) : la voix dure 6,5 s, la coupe du défaut 3,2 s, et la seconde réplique la coupait.
+    # Le `dire` retient la scène jusqu'au bout de sa voix.
+    "scenes": {
+        "intro": [
+            {"type": "coupe", "vers": "porte:hopital", "ferme": 20, "ouvre": 20, "tient": 150, "ensemble": True},
+            {"type": "dire", "repliques": [1]},
+            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+            {"type": "dire", "repliques": [2]},
+        ],
+    },
 }

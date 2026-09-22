@@ -61,5 +61,18 @@ MISSION = {
             _l("bouchard", "Il t'a vu, hein? Astheure il va jaser à tout le Faubourg.",
                jeu="[annoyed] Il t'a vu, hein? [gravely] Astheure il va jaser à tout le Faubourg.")
         ]
-    }
+    },
+
+    # Intention (intro) : celle du défaut (dedans) — une coupe sur `porte:poste`, il croise les bras, il
+    # finit. ⚠️ SAUF que la coupe part `ensemble` avec la première réplique au lieu de la retenir (forme
+    # de q02/m51) : la voix dure 6,3 s, la coupe du défaut 3,2 s, et la seconde réplique la coupait.
+    # Le `dire` retient la scène jusqu'au bout de sa voix.
+    "scenes": {
+        "intro": [
+            {"type": "coupe", "vers": "porte:poste", "ferme": 20, "ouvre": 20, "tient": 150, "ensemble": True},
+            {"type": "dire", "repliques": [1]},
+            {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
+            {"type": "dire", "repliques": [2]},
+        ],
+    },
 }

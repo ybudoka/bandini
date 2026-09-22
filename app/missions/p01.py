@@ -56,11 +56,12 @@ MISSION = {
     # son propos. ⚠️ Le défaut (dedans) serait allé montrer `boutique:artisan` (le
     # comptoir de l'objectif) par une coupe ; rien ne garantit qu'une quincaillerie se
     # résout depuis le phare, à l'autre bout de la ville. On coupe chez lui à la place —
-    # ce que le défaut ferait de toute façon si `ou` n'existait pas.
+    # ce que le défaut ferait de toute façon si `ou` n'existait pas. Et la coupe part `ensemble` avec la
+    # première réplique (forme de q02/m51) : sa voix dure 6,9 s, la coupe 3,2 s, et la seconde la coupait.
     "scenes": {
         "intro": [
-            {"type": "dire", "repliques": [1], "ensemble": True},
-            {"type": "coupe", "vers": "chez:ovila", "ferme": 20, "ouvre": 20, "tient": 150},
+            {"type": "coupe", "vers": "chez:ovila", "ferme": 20, "ouvre": 20, "tient": 150, "ensemble": True},
+            {"type": "dire", "repliques": [1]},
             {"type": "geste", "acteur": "donneur", "geste": "bras_croises", "duree": 90, "ensemble": True},
             {"type": "dire", "repliques": [2]},
         ],
