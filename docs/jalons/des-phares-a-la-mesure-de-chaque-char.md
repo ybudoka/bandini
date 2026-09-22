@@ -57,3 +57,32 @@ la chaussée quand le char saute.
   gzip ; ce jalon n'y ajoute rien, tout est dans le JS),
   `test_histoire_js::test_les_cravates_de_m2_arrivent_quand_madame_thibodeau_a_fini_de_parler` et
   `test_moteur_js::test_la_foule_ne_se_traverse_plus`.
+
+### Vague 2 — le faisceau ne passe pas au travers d'un mur (21 sept. 2026)
+
+Martin : « les phares ne doivent pas passer au travers des toits ». Le faisceau était un cône qui
+ignorait la ville : un char garé nez contre un mur, ou dans une ruelle qui tourne, jetait sa lumière
+à travers — un toit, un pâté de maisons plus loin s'il le fallait.
+
+- **`porteeLibre`** marche depuis le phare, dans le cap dessiné, par quarts de tuile, et s'arrête au
+  premier mur (`Monde.solidite` = 1) — **la même valeur qu'un toit** (`app/carte.py` : une couverture
+  a `"solide": 1`, comme une façade), et la même règle que `Jeu.ligneLibre`. La portée trouvée
+  remplace celle de la classe ; l'ouverture du cône (`cone[1]`) rétrécit dans la même proportion, pour
+  qu'un faisceau raccourci ne s'évase pas plus qu'un long.
+- ⚠️ **La marche part du PHARE, pas du centre du char** : un phare près du trottoir voit le mur d'à
+  côté une demi-tuile avant celui du centre. Et dans le MÊME cap dessiné que la lampe (`cap`, pas
+  `v.angle`) — les deux étaient déjà légèrement désaccordés (l'origine du faisceau au cap arrondi, son
+  axe au cap continu) ; unifiés, sinon le mur qu'on cherche n'est pas celui qu'on éclaire.
+- **Juges** : une scène construite dans la vraie ville générée (jamais posée à la main) — un mur trouvé
+  près du joueur dans les quatre directions cardinales, le CHEMIN JUSQU'À LUI confirmé dégagé (sinon un
+  mur plus proche, jamais vu par la recherche, se glissait sous les roues de l'auto posée entre les
+  deux — premier piège du juge lui-même) ; et le pendant, une route dégagée sur 6 tuiles où le faisceau
+  du camion (le plus long, 68 px) porte sa pleine mesure.
+- **4 mutations, 3 rouges par le juge dédié** (ignorer les murs, un pas de marche trop grossier, un
+  mur qui bloquerait même loin) ; la 4e (marcher depuis le centre du char plutôt que le phare) est
+  rattrapée par un juge voisin (`test_le_faisceau_est_a_la_mesure_de_chaque_classe`), pas par celui-ci
+  — l'écart entre les deux origines (≈13 px) est trop petit pour la marge du juge dédié.
+- **Regardé dans Chromium** : une auto posée à trois tuiles d'un mur (les toits de deux devantures) —
+  comparé au même mur, la garde retirée : sans elle, le cône s'étale sur tout le trottoir et déborde
+  sur le toit ; avec elle, il reste un halo court qui ne dépasse pas le trottoir.
+- Les 17 mutations de la 1re vague mordent toujours (rejouées telles quelles).

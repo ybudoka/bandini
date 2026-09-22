@@ -646,6 +646,109 @@ def test_le_soir_le_faisceau_monte_avec_la_nuit(banc, paquet):
     assert brune["lueur"] == nuit["lueur"], f"le soir, les phares luisent moins que la nuit : {r}"
 
 
+#: Chercher un MUR (une façade, ou un toit — même solidité, 1) proche du joueur
+#: dans les quatre directions cardinales, et une ROUTE dégagée sur plusieurs
+#: tuiles : deux scènes construites dans la vraie ville générée, jamais posées
+#: à la main, pour que le juge reste vrai si la ville change de graine.
+MUR_ET_ROUTE = """
+    // ⚠️ Le mur DOIT être à `minD` tuiles au moins, et le CHEMIN JUSQU'À LUI
+    // (d'=1..d-1, DANS LA MÊME DIRECTION) confirmé dégagé — sinon un mur plus
+    // proche que `minD` mais jamais vu (la boucle ne regardait qu'à partir de
+    // `minD`) se glissait sous les roues de l'auto posée entre les deux.
+    function murProche(L, minD) {
+      const j = L.B.joueur, TT = L.TT;
+      const tx0 = Math.floor(j.x / TT), ty0 = Math.floor(j.y / TT);
+      for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        for (let d = 1; d < 25; d++) {
+          if (L.Monde.solidite(tx0 + dx * d, ty0 + dy * d) === 1) {
+            if (d >= minD) return { tx0: tx0, ty0: ty0, dx: dx, dy: dy, d: d };
+            break;      // le mur de cette direction est trop proche : la suivante
+          }
+        }
+      }
+      return null;
+    }
+    function routeLibre(L, tuiles) {
+      const j = L.B.joueur, TT = L.TT;
+      for (let cy = -25; cy <= 25; cy++) {
+        for (let cx = -25; cx <= 25; cx++) {
+          const tx0 = Math.floor(j.x / TT) + cx, ty0 = Math.floor(j.y / TT) + cy;
+          if (L.Monde.solidite(tx0, ty0) === 1) continue;
+          for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+            let ok = true;
+            for (let d = 1; d <= tuiles; d++) {
+              if (L.Monde.solidite(tx0 + dx * d, ty0 + dy * d) === 1) { ok = false; break; }
+            }
+            if (ok) return { x: tx0 * TT + 8, y: ty0 * TT + 8, angle: Math.atan2(dy, dx) };
+          }
+        }
+      }
+      return null;
+    }
+"""
+
+
+def test_le_faisceau_ne_passe_pas_a_travers_un_mur(banc, paquet):
+    """⚠️ **« Les phares ne doivent pas passer au travers des toits »** (Martin,
+    21 sept. 2026). Un toit partage la même solidité qu'un mur (`Monde.solidite`,
+    valeur 1) — la même règle que celle qui dit `Jeu.ligneLibre` — donc les deux
+    s'arrêtent pareil. Une auto posée à 3 tuiles (48 px) d'un mur, face à lui, a
+    un faisceau qui plafonne à 56 px normalement : sans la garde, il traverserait
+    le mur, tout un pâté de maisons plus loin s'il le fallait."""
+    r = banc("""function (L, o) {
+        %s
+        %s
+        preparer(L);
+        const m = murProche(L, 5);
+        const out = { trouve: !!m };
+        if (!m) return out;
+        const tx = m.tx0 + m.dx * (m.d - 3), ty = m.ty0 + m.dy * (m.d - 3);
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        const angle = Math.atan2(m.dy, m.dx);
+        const auto = L.Vehicules.creer('auto', tx * L.TT + 8, ty * L.TT + 8, angle,
+                                        { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        auto.vitesse = 0;
+        L.Monde.centrerCamera(auto.x, auto.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === auto; });
+        out.r = f ? f.r : null;
+        out.portee = 56;
+        return out;
+    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    assert r["trouve"], "aucun mur trouvé près du joueur : le juge ne dit rien"
+    assert r["r"] is not None, "l'auto face au mur n'a pas de faisceau"
+    assert r["r"] < r["portee"], f"le faisceau garde sa pleine portée devant un mur à 48 px : {r}"
+    assert 0 < r["r"] <= 48, f"le faisceau dépasse le mur planté à 48 px devant lui : {r}"
+    assert r["r"] > 48 - 2 * 16, f"le faisceau s'arrête bien trop court (mur à 48 px) : {r}"
+
+
+def test_le_faisceau_porte_sa_pleine_mesure_loin_de_tout_mur(banc, paquet):
+    """Le pendant du juge précédent : rien devant, et le faisceau du camion — le
+    plus long du parc — porte ses 68 px pleins, sans qu'un mur lointain le
+    raccourcisse par erreur."""
+    r = banc("""function (L, o) {
+        %s
+        %s
+        preparer(L);
+        const route = routeLibre(L, 6);
+        const out = { trouve: !!route };
+        if (!route) return out;
+        L.B.entites.filter(function (e) { return e.type === 'vehicule'; }).forEach(L.Entites.retirer);
+        L.B.partie.heure = %s;
+        const camion = L.Vehicules.creer('camion', route.x, route.y, route.angle,
+                                          { conducteur: 'trafic', etat: 'roule', couleur: '#c0392b' });
+        camion.vitesse = 0;
+        L.Monde.centrerCamera(camion.x, camion.y);
+        L.Jeu.rendre();
+        const f = L.Vehicules.lampesDesPhares().find(function (l) { return l.faisceau === camion; });
+        out.r = f ? f.r : null;
+        return out;
+    }""" % (PARC, MUR_ET_ROUTE, NUIT))
+    assert r["trouve"], "aucune route dégagée sur 6 tuiles près du joueur : le juge ne dit rien"
+    assert r["r"] == 68, f"loin de tout mur, le faisceau du camion ne porte pas ses 68 px pleins : {r}"
+
+
 # --- Vague 3 : qui est dehors ------------------------------------------------------------
 
 TROIS_H, QUATRE_H = 3.1 / 24, 4.1 / 24
