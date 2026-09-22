@@ -54,7 +54,11 @@ def test_les_cinq_missions_se_suivent():
         assert mission["prerequis"] == [precedente["slug"]], "chaque mission de la v1 ouvre la suivante"
     # ⚠️ Trois défis de char depuis la v1, plus les trois jeux d'adresse de la
     # foire : un jeu d'adresse est un DÉFI, pas un moteur.
-    assert len(missions.DEFIS) == 6
+    # ⚠️ Et une course par quartier depuis le 22 sept. 2026 (le Tour du
+    # Faubourg, plus les Érables, la Shop, les Quais et la Pointe).
+    assert len(missions.DEFIS) == 10
+    assert sorted(d["district"] for d in missions.DEFIS if d.get("circuit")) == sorted(
+        d["slug"] for d in carte.DISTRICTS if d["slug"] != "baie")
     assert len(missions.defis_de_foire()) == 3
 
 

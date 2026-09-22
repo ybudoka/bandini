@@ -742,7 +742,8 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
         return { panneaux: panneaux, invite: invite, menu: menu, defi: defi, ligne: ligne, gps: gps && gps.nom,
                  attend: attend, rateA: n, apres: L.B.defi, msg: L.B.msg };
     }""")
-    assert r["panneaux"] == ["livraison", "saut", "tour"]
+    # ⚠️ Une course par quartier depuis le 22 sept. 2026 : quatre panneaux de plus.
+    assert r["panneaux"] == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"]
     assert r["invite"] == "DÉFI" and r["menu"] == "TOUR DU FAUBOURG"
     assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"
     assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]

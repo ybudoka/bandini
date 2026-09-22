@@ -2884,8 +2884,11 @@ const Hud = (function () {
       // il y en a un : on a klaxonne pour ce client, c'est lui qu'on cherche.
       // Deux fleches de deux couleurs, chacune avec ses metres, se marcheraient
       // dessus au meme bord. L'objectif reste sur la mini-carte.
-      const boulotEcran = !B.interieur && j ? cibleDuBoulot() : null;
-      const gps = boulotEcran || (!B.interieur && j ? Histoire.cible() : null);
+      // ⚠️ EN COURSE, PAS DE FLECHE NI DE METRES ICI (Martin, 21 sept. 2026) :
+      // les fleches au sol (`Histoire.dessinerCheminCourse`) montrent la piste
+      // elle-meme — une fleche hors cadre en plus ferait double emploi.
+      const boulotEcran = !B.interieur && j && !Histoire.estCourse() ? cibleDuBoulot() : null;
+      const gps = boulotEcran || (!B.interieur && j && !Histoire.estCourse() ? Histoire.cible() : null);
       marqueurs.ecran = null;
       if (gps) {
         const dx = gps.x - j.x, dy = gps.y - j.y, d = Math.hypot(dx, dy);

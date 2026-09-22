@@ -458,9 +458,38 @@ CATALOGUE: list[Mission] = [
 DEFIS: list[dict] = [
     {"slug": "saut", "titre": "Le Grand Saut", "ou": "rampe", "vehicule": "moto", "vol_px": 60,
      "prime": 250, "texte": "SAUTE LA RAMPE EN MOTO : 60 PX DE VOL"},
-    {"slug": "tour", "titre": "Tour du Faubourg", "ou": "porte:terminus", "tours": 3, "chrono_s": 120,
-     "points": ["terminus", "garage", "hopital", "poste"], "prime": 250,
-     "texte": "TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 2:00"},
+    # --- LES COURSES : UN TOUR PAR QUARTIER (21-22 sept. 2026) ------------------
+    #
+    # ⚠️ **ON SUIT LES FLÈCHES, IL N'Y A PAS DE POINT DE PASSAGE** (Martin : « on
+    # doit suivre les flèches lumineuses au sol. Si on quitte, on a 5 sec pour
+    # revenir ou on doit recommencer »). Une course (`circuit`) est un circuit
+    # fermé sur la chaussée, tiré au panneau par `Histoire.circuit` : les
+    # `points` nommés s'il y en a, sinon le bâtiment du panneau et trois coins
+    # du rectangle de son `district`. Hors du tracé plus de 5 s : raté.
+    #
+    # ⚠️ Chaque panneau se plante devant le seul bâtiment garanti de son quartier
+    # qui soit DÉJÀ un lieu de mission (`devants.lieux_de_mission`) : un défi qui
+    # nommerait une porte neuve élargirait son devant et déplacerait du décor.
+    # Pas l'usine, et sa barrière d'heures : la fourrière.
+    #
+    # ⚠️ **LES CHRONOS SE MESURENT, ILS NE S'ESTIMENT PAS** : chacun exige la
+    # même vitesse moyenne que le Tour du Faubourg sur la longueur de SON
+    # circuit (un juge du banc la recalcule, `test_course_js.py`).
+    {"slug": "tour", "titre": "Tour du Faubourg", "ou": "porte:terminus", "circuit": True, "district": "faubourg",
+     "tours": 3, "chrono_s": 120, "points": ["terminus", "garage", "hopital", "poste"], "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 2:00"},
+    {"slug": "tour_erables", "titre": "Tour des Érables", "ou": "porte:depanneur", "circuit": True, "district": "erables",
+     "tours": 3, "chrono_s": 90, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES ÉRABLES EN MOINS DE 1:30"},
+    {"slug": "tour_shop", "titre": "Tour de la Shop", "ou": "porte:fourriere", "circuit": True, "district": "shop",
+     "tours": 3, "chrono_s": 115, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA SHOP EN MOINS DE 1:55"},
+    {"slug": "tour_quais", "titre": "Tour des Quais", "ou": "porte:hotel", "circuit": True, "district": "quais",
+     "tours": 3, "chrono_s": 115, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES QUAIS EN MOINS DE 1:55"},
+    {"slug": "tour_pointe", "titre": "Tour de la Pointe", "ou": "porte:phare", "circuit": True, "district": "pointe",
+     "tours": 3, "chrono_s": 110, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA POINTE EN MOINS DE 1:50"},
     {"slug": "livraison", "titre": "Livraison sans bosse", "ou": "porte:garage", "lieu": "bar", "chrono_s": 90,
      "etoiles": 1, "prime": 250, "texte": "LIVRE TON CHAR AU BAR EN 90 S, SANS UNE BOSSE, AVEC LA POLICE AUX FESSES"},
 

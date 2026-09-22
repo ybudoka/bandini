@@ -890,6 +890,7 @@ const Jeu = (function () {
     // morceau de 256 px a chaque image pour une porte tuerait le cache.
     if (!B.interieur) { Autobus.dessinerRails(ctx, vue); Neige.dessinerPanneaux(ctx, vue); Monde.dessinerBattants(ctx, vue); Monde.dessinerPortesDeGarage(ctx, vue); Monde.dessinerBarrieres(ctx, vue); }
     Entites.dessinerDecals(ctx, vue);     // le sang est SOUS les pieds
+    if (!B.interieur) Histoire.dessinerCheminCourse(ctx, vue);   // le trace d'une course, sur la chaussee
     if (!B.interieur) Entites.dessinerBetes(ctx, vue);   // un goeland passe sous personne
     Entites.dessiner(ctx, vue);
     Entites.dessinerCible(ctx, vue);
@@ -905,6 +906,8 @@ const Jeu = (function () {
     if (!B.interieur) for (const l of Vehicules.lampesDesFeux()) lampes.push(l);
     // Les phares (la nuit a ses habitudes) : ramasses en dessinant, comme les feux.
     if (!B.interieur) for (const l of Vehicules.lampesDesPhares()) lampes.push(l);
+    // Les fleches d'une course : lumineuses, meme la nuit.
+    if (!B.interieur) for (const l of Histoire.lampesDeCourse(vue)) lampes.push(l);
     const projecteur = !B.interieur ? Police.lampeHelico(vue) : null;
     if (projecteur && Monde.ambiance().alpha > 0.2) lampes.unshift(projecteur);
     // ⚠️ Le filtre du mode photo se pose sur l'ECRAN (`Base.ecran()`), pas dans

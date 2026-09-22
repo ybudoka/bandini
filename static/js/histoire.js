@@ -1953,6 +1953,9 @@ const Histoire = (function () {
     const j = B.joueur;
     B.defi = { slug: d.slug, t: 0, attente: 0, parti: false, etape: 0, tours: 0, vol: 0, chocs: 0, vie: 0,
                coups: 0, pris: 0, tour: -1, x: j.x, y: j.y, avantArme: null };
+    // Une course tire son circuit AU PANNEAU : la ligne de depart se montre
+    // (fleches et GPS) avant meme qu'on ait trouve un char.
+    if (d.circuit) Object.assign(B.defi, { piste: circuit(d), i: 0, avance: 0, hors: 0, enPiste: false });
     Son.SFX.mission();
     // ⚠️ UN JEU DE FOIRE SE JOUE DEBOUT : pas de char a trouver, ca part tout de
     // suite — et le forain RELEVE SES CIBLES avant de nous laisser tirer. Sans
@@ -1986,13 +1989,13 @@ const Histoire = (function () {
       marchant jusqu'a son char, et on comparerait ses bosses a celles d'aucun. */
   function partir(d, v) {
     const f = B.defi;
-    f.parti = true; f.t = 0;
+    f.parti = true; f.t = 0; f.attente = 0;
     f.chocs = v ? v.chocs : 0; f.vie = v ? v.vie : 0;
     if (d.etoiles) { B.recherche.etoiles = Math.max(B.recherche.etoiles, d.etoiles); B.recherche.vu = 0; }
     // ⚠️ **AU GO, ON RAPPELLE QUOI FAIRE** : le menu l'a dit en `aide`, mais on
     // le relit à l'instant où la partie part — et la consigne d'un jeu de
     // foire tient en une ligne (`FRAPPE POUR TIRER`, `MARTÈLE ACTION`…).
-    Hud.message(d.titre.toUpperCase() + ' — GO ! ' + (d.consigne || ''), 160);
+    Hud.message(d.titre.toUpperCase() + (d.circuit ? ' — À LA LIGNE DE DÉPART' : ' — GO ! ' + (d.consigne || '')), 160);
   }
 
   function majDefi() {
@@ -2004,6 +2007,7 @@ const Histoire = (function () {
       if (!j.dansVehicule) { if (++f.attente > ATTENTE_CHAR) finirDefi(false, 'IL FAUT UN CHAR'); return; }
       partir(d, j.dansVehicule);
     }
+    if (d.circuit) { majCircuit(d, f, j.dansVehicule); return; }
     f.t++;
     if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
     const v = j.dansVehicule;
@@ -2011,16 +2015,6 @@ const Histoire = (function () {
       if (!v || v.slug !== 'moto') { if (f.t > 600) finirDefi(false, 'IL FAUT UNE MOTO'); return; }
       if (v.z > 0) { f.vol += Math.hypot(v.vx, v.vy); if (f.vol >= d.vol_px) finirDefi(true); }
       else f.vol = 0;
-      return;
-    }
-    if (d.points) {
-      if (!v) { finirDefi(false, 'SANS CHAR, PAS DE TOUR'); return; }
-      const cible = lieu(d.points[f.etape]);
-      if (cible && dist2(v.x, v.y, cible.x, cible.y) < (5 * TT) * (5 * TT)) {
-        f.etape++;
-        if (f.etape >= d.points.length) { f.etape = 0; f.tours++; Hud.message('TOUR ' + f.tours + ' / ' + d.tours, 90); }
-        if (f.tours >= d.tours) finirDefi(true);
-      }
       return;
     }
     if (d.lieu) {
@@ -2114,6 +2108,196 @@ const Histoire = (function () {
     return defis().find(function (d) { return d.ou === 'foire:' + slug; }) || null;
   }
 
+  // --- Les courses : un circuit, et on suit les fleches -------------------------------------------
+  //: Martin, 21 sept. 2026 : « pour les courses, il faut un nouveau concept de
+  //: fleches lumineuses sur la route qui trace le chemin de la course, pas des
+  //: fleches avec les metres ». Puis le 22 : « pas besoin de point de passage,
+  //: on doit suivre les fleches lumineuses au sol. Si on quitte, on a 5 sec pour
+  //: revenir ou on doit recommencer. »
+  //:
+  //: Une course (`circuit` dans `missions.DEFIS`) est donc un CIRCUIT FERME, tire
+  //: une fois au panneau sur la chaussee (`Monde.cheminRoute`), et on le suit.
+  //: ⚠️ Il est FIXE : un trace recalcule depuis le char suivrait le joueur
+  //: partout, et on ne pourrait jamais en sortir.
+
+  //: Au-dela de cette distance du trace, on n'est plus sur la piste : une rue
+  //: fait quatre ou six tuiles, on y choisit sa voie ; la rue d'a cote est a
+  //: un pate de maisons.
+  const HORS_PISTE_PX = 4 * TT;
+  //: Cinq secondes pour revenir, puis la course est ratee.
+  const HORS_PISTE_IMAGES = 300;
+  //: Le temps de rejoindre la ligne de depart, une fois au volant — le chrono,
+  //: lui, ne part que sur la ligne.
+  const ATTENTE_DEPART = 1200;
+  //: Ou l'on cherche ou l'on en est, en points du trace (seize pixels) : un peu
+  //: derriere, assez devant pour un char lance. ⚠️ Pas plus : un bout du circuit
+  //: qui repasse a cote, c'est un raccourci, pas la piste.
+  const FENETRE_ARRIERE = 8, FENETRE_AVANT = 48;
+  //: Le rectangle du quartier ou se posent les coins du circuit, rentre de sa
+  //: bordure : on tourne DANS le quartier, pas sur le boulevard qui le borde.
+  const COINS_DU_QUARTIER = [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]];
+
+  /** Les ancres d'un circuit, dans l'ordre du tour. Les `points` nommes d'une
+      course s'il y en a (le Tour du Faubourg et ses quatre batiments) ; sinon
+      le batiment du panneau, puis trois coins du quartier (`carte.zones`) dans
+      le sens du tour — le coin le plus pres du panneau saute, le panneau en
+      tient lieu. Pas de hasard : le circuit ne depend que de la carte. */
+  function ancresDuCircuit(d) {
+    if (d.points) return d.points.map(lieu);
+    const z = (Monde.carte.zones || []).find(function (q) { return q.slug === d.district; });
+    const depart = lieu(d.ou.slice(6));
+    if (!z || !depart) return [];
+    const cx = (z.x + z.l / 2) * TT, cy = (z.y + z.h / 2) * TT;
+    const a0 = Math.atan2(depart.y - cy, depart.x - cx);
+    const ecart = function (p) {
+      let e = Math.atan2(p.y - cy, p.x - cx) - a0;
+      while (e <= 0) e += 2 * Math.PI;
+      return e;
+    };
+    const coins = COINS_DU_QUARTIER.map(function (c) { return { x: (z.x + z.l * c[0]) * TT, y: (z.y + z.h * c[1]) * TT }; });
+    coins.sort(function (a, b) { return dist2(a.x, a.y, depart.x, depart.y) - dist2(b.x, b.y, depart.x, depart.y); });
+    return [depart].concat(coins.slice(1).sort(function (a, b) { return ecart(a) - ecart(b); }));
+  }
+
+  /** Le circuit ferme : ses ancres posees sur la chaussee, reliees bout a bout.
+      Une liste de centres de tuiles (seize pixels d'un point au suivant), le
+      depart en tete ; le dernier point touche le premier. null s'il manque un
+      troncon — le defi se rate alors au depart, il ne ment pas en route. */
+  function circuit(d) {
+    const ancres = [];
+    for (const a of ancresDuCircuit(d)) {
+      const r = a && Monde.routeLaPlusProche(a.x, a.y, 16);
+      if (r && !ancres.some(function (q) { return dist2(q.x, q.y, r.x, r.y) < (6 * TT) * (6 * TT); })) ancres.push(r);
+    }
+    if (ancres.length < 3) return null;
+    const piste = [ancres[0]];
+    for (let i = 0; i < ancres.length; i++) {
+      const a = ancres[i], b = ancres[(i + 1) % ancres.length];
+      const bout = Monde.cheminRoute(a.x, a.y, b.x, b.y);
+      if (!bout || !bout.length) return null;
+      for (const p of bout) piste.push(p);
+    }
+    piste.pop();
+    return piste;
+  }
+
+  function distanceASegment(x, y, a, b) {
+    const dx = b.x - a.x, dy = b.y - a.y, l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / l2)) : 0;
+    return Math.hypot(x - (a.x + dx * t), y - (a.y + dy * t));
+  }
+
+  /** Une image d'une course, au volant. Avant la ligne de depart : on la
+      rejoint, sans chrono. Apres : on avance sur le trace, un tour vaut un
+      circuit entier parcouru dans l'ordre, et hors piste le compte de cinq
+      secondes part. */
+  function majCircuit(d, f, v) {
+    if (!v) { finirDefi(false, 'SANS CHAR, PAS DE COURSE'); return; }
+    const p = f.piste;
+    if (!p) { finirDefi(false, 'PAS DE CIRCUIT ICI'); return; }
+    if (!f.enPiste) {
+      if (dist2(v.x, v.y, p[0].x, p[0].y) < HORS_PISTE_PX * HORS_PISTE_PX) {
+        f.enPiste = true; f.t = 0;
+        Hud.message(d.titre.toUpperCase() + ' — GO ! SUIS LES FLÈCHES', 120);
+      } else if (++f.attente > ATTENTE_DEPART) finirDefi(false, 'LA LIGNE DE DÉPART EST AU PANNEAU');
+      return;
+    }
+    f.t++;
+    if (d.chrono_s && f.t > d.chrono_s * 60) { finirDefi(false, 'TEMPS ÉCOULÉ'); return; }
+    const n = p.length;
+    let pas = 0, dMin = Infinity;
+    for (let k = -FENETRE_ARRIERE; k <= FENETRE_AVANT; k++) {
+      const e = distanceASegment(v.x, v.y, p[((f.i + k) % n + n) % n], p[((f.i + k + 1) % n + n) % n]);
+      if (e < dMin) { dMin = e; pas = k; }
+    }
+    if (dMin > HORS_PISTE_PX) {
+      if (f.hors === 0) Hud.message('HORS PISTE — 5 S POUR REVENIR', 90);
+      if (++f.hors > HORS_PISTE_IMAGES) finirDefi(false, 'HORS PISTE');
+      return;
+    }
+    f.hors = 0;
+    f.i = ((f.i + pas) % n + n) % n;
+    f.avance += pas;
+    if (f.avance >= n * (f.tours + 1)) {
+      f.tours++;
+      if (f.tours >= d.tours) { finirDefi(true); return; }
+      Hud.message('TOUR ' + f.tours + ' / ' + d.tours, 90);
+    }
+  }
+
+  /** On roule sur le trace d'une course : le GPS se tait, les fleches parlent. */
+  function estCourse() { return !!(B.defi && B.defi.enPiste); }
+
+  /** Ce que le GPS vise pour une course : la ligne de depart tant qu'on ne l'a
+      pas rejointe, puis un point de la piste devant soi (la mini-carte). */
+  function repereDeCircuit(f) {
+    if (!f.piste) return null;
+    const p = f.enPiste ? f.piste[(f.i + 40) % f.piste.length] : f.piste[0];
+    return { x: p.x, y: p.y, nom: f.enPiste ? 'LA PISTE' : 'LA LIGNE DE DÉPART' };
+  }
+
+  /** « — REVIENS ! 3 S » tant qu'on est hors piste, sinon rien. */
+  function horsPiste(f) {
+    return f.hors > 0 ? ' — REVIENS ! ' + Math.max(1, Math.ceil((HORS_PISTE_IMAGES - f.hors) / 60)) + ' S' : '';
+  }
+
+  //: Une fleche tous les deux points du trace (32 px), et combien on en montre.
+  const COURSE_PAS_POINTS = 2, COURSE_FLECHES_MAX = 24;
+
+  function chevron(ctx, e) {
+    ctx.beginPath();
+    ctx.moveTo(7 * e, 0); ctx.lineTo(-4 * e, -6 * e); ctx.lineTo(-1 * e, 0); ctx.lineTo(-4 * e, 6 * e);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  /** Une fleche lumineuse : un halo, puis le trait clair par-dessus. */
+  function dessinerFlecheDeCourse(ctx, x, y, angle, alpha) {
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.rotate(angle);
+    ctx.globalAlpha = alpha * 0.35;
+    ctx.fillStyle = '#3fb8ff';
+    chevron(ctx, 1.6);
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = '#b8f1ff';
+    chevron(ctx, 1);
+    ctx.restore();
+  }
+
+  /** Les fleches de la piste a l'ecran : devant le char (sur la ligne de depart
+      tant qu'on ne l'a pas rejointe), en pixels d'ecran. La lumiere court vers
+      l'avant, d'une fleche a la suivante — on lit le sens avant la forme. */
+  function flechesALEcran(vue) {
+    const f = B.defi, out = [];
+    if (!f || !f.piste) return out;
+    const p = f.piste, n = p.length;
+    for (let k = 0, m = 0; m < COURSE_FLECHES_MAX && k < n; k += COURSE_PAS_POINTS, m++) {
+      const a = p[(f.i + 1 + k) % n], b = p[(f.i + 3 + k) % n];
+      if (!Entites.visibleAEcran(a.x, a.y, 16)) continue;
+      const vague = 0.5 + 0.5 * Math.sin(B.t / 5 - m * 0.7);
+      out.push({ x: a.x - vue.x, y: a.y - vue.y, angle: Math.atan2(b.y - a.y, b.x - a.x), alpha: 0.35 + 0.65 * vague });
+    }
+    return out;
+  }
+
+  /** Le trace au sol, sous les chars et les gens. */
+  function dessinerCheminCourse(ctx, vue) {
+    for (const q of flechesALEcran(vue)) dessinerFlecheDeCourse(ctx, q.x, q.y, q.angle, q.alpha);
+  }
+
+  /** ⚠️ **LUMINEUSES, MEME LA NUIT.** Peintes au sol, les fleches s'eteignent
+      avec la ville quand la nuit tombe (`Base.fin` assombrit tout ce qui est
+      peint avant elle) : on ne les voyait plus que dans ses phares. Chacune
+      pose donc sa petite lampe, qui bat avec elle. Poussees APRES les phares :
+      si l'ecran deborde du plafond de lampes (`LAMPES_MAX`), ce sont elles
+      qui sautent, pas un lampadaire. */
+  function lampesDeCourse(vue) {
+    return flechesALEcran(vue).map(function (q) {
+      return { x: q.x, y: q.y, r: 18, c: 'rgba(120,210,255,' + (0.6 * q.alpha).toFixed(2) + ')' };
+    });
+  }
+
   // --- Le GPS : ou aller, pour le HUD ------------------------------------------------------------
 
   /** La cible du moment : un objectif, un appel a honorer, un defi en cours. */
@@ -2122,7 +2306,7 @@ const Histoire = (function () {
     if (!j) return null;
     if (B.defi) {
       const d = defis().find(function (q) { return q.slug === B.defi.slug; });
-      const l = d.points ? lieu(d.points[B.defi.etape]) : d.lieu ? lieu(d.lieu) : null;
+      const l = d.circuit ? repereDeCircuit(B.defi) : d.lieu ? lieu(d.lieu) : null;
       return l ? { x: l.x, y: l.y, nom: l.nom, couleur: '#7fc4ff' } : null;
     }
     if (m) {
@@ -2186,7 +2370,12 @@ const Histoire = (function () {
       if (d.coups) return d.titre.toUpperCase() + chrono + ' COUPS ' + B.defi.coups + '/' + d.coups;
       if (d.canards) return d.titre.toUpperCase() + chrono + ' CANARDS ' + B.defi.pris + '/' + d.canards
              + (canardAuCrochet() ? ' — MAINTENANT !' : '');
-      const compte = d.points ? ' TOUR ' + (B.defi.tours + 1) + '/' + d.tours : d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
+      if (d.circuit) {
+        return d.titre.toUpperCase() + chrono + (B.defi.enPiste
+          ? ' TOUR ' + Math.min(B.defi.tours + 1, d.tours) + '/' + d.tours + horsPiste(B.defi)
+          : ' — REJOINS LA LIGNE DE DÉPART');
+      }
+      const compte = d.vol_px ? ' VOL ' + Math.round(B.defi.vol) + '/' + d.vol_px : '';
       return d.titre.toUpperCase() + chrono + compte;
     }
     if (!m) return null;
@@ -2256,5 +2445,5 @@ const Histoire = (function () {
            reinitialiser, noter, rencontrer, CARNET_MAX,
            proposerDefi, commencerDefi, finirDefi, actionDeDefi, defisDeFoire, comptoirDeDefi, defiDuComptoir, canardAuCrochet,
            cible, ligneObjectif, lieu, lieuDeLivraison, ruellePres, tuileLibre, tuileDeRue, slugDeVoix, cibleDuParler, maj,
-           piratageSousLaMain, commencerPiratage };
+           piratageSousLaMain, commencerPiratage, estCourse, dessinerCheminCourse, lampesDeCourse };
 })();

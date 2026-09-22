@@ -219,3 +219,4 @@ Deux documents d'avant la table :
 | Sven et le piratage : trois missions avec les bateaux | ✅ **livré** | 21 sept. 2026 | **P4** | ajout | [fiche](sven-et-le-piratage-trois-missions-avec-les-bateaux.md#fiche) · [notes](sven-et-le-piratage-trois-missions-avec-les-bateaux.md#notes) |
 | L'enfant à vélo, de face et de dos | ✅ **livré** | 22 sept. 2026 | **P4** | **correctif** | [notes](l-enfant-a-velo-de-face-et-de-dos.md#notes) |
 | Les bêtes qui se sauvent pour vrai (chat, raton) | ✅ **livré** | 22 sept. 2026 | **P4** | ajout | [notes](les-betes-qui-se-sauvent-pour-vrai.md#notes) |
+| Les courses : suivre les flèches, un tour par quartier | ✅ **livré** | 22 sept. 2026 | **P4** | ajout | [fiche](les-courses-suivre-les-fleches.md#fiche) · [notes](les-courses-suivre-les-fleches.md#notes) |

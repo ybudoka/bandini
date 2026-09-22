@@ -1314,6 +1314,122 @@ const Monde = (function () {
     return null;
   }
 
+  // --- Chemins de char, par la chaussee (courses) ---------------------------------------
+  //: Un second A*, reserve aux CHARS : la chaussee seule (`estRoute`), pas la
+  //: grille du pieton — sinon le trace d'une course couperait tout droit par
+  //: les parcs et les cours (Martin, 21 sept. 2026 : « des fleches lumineuses
+  //: sur la route qui trace le chemin de la course »). Il sert au depart d'une
+  //: course, une fois par troncon de circuit — jamais a chaque image.
+
+  //: ⚠️ Un troncon traverse un quartier entier (des milliers de tuiles de
+  //: chaussee) : le tas ouvert est un vrai tas, pas la file lineaire de l'A*
+  //: des pietons, dont le cout grimperait au carre du nombre de noeuds.
+  const NOEUDS_MAX_ROUTE = 30000;
+  //: Ce qu'un pas coute EN PLUS : a contre-sens de la voie (on roule a droite,
+  //: et le trace aussi), et quand on tourne (sans ca, une rue de six tuiles se
+  //: descend en escalier d'une voie a l'autre, et les fleches regardent de cote).
+  const COUT_CONTRE_SENS = 3, COUT_VIRAGE = 1;
+  const CONTRE_SENS = { '1,0': '<', '-1,0': '>', '0,1': '^', '0,-1': 'v' };
+
+  /** Une vraie rue : de la chaussee qui a une voie, et un sens. ⚠️ La cour de
+      la fourriere et celle de l'usine sont de la chaussee sans voie (`.`), et
+      elles ne touchent aucune rue — un circuit qui partirait de la ne
+      sortirait jamais de la cour. */
+  function estVoie(tx, ty) { return estRoute(tx, ty) && '<>^v'.indexOf(fleche(tx, ty)) >= 0; }
+
+  /** La tuile qui passe `garde` la plus proche de (tx, ty), en spirale,
+      jusqu'a `rayon` tuiles — un depart se pose devant une porte, jamais sur
+      la route elle-meme. */
+  function procheRoute(tx, ty, rayon, garde) {
+    const ok = garde || estRoute;
+    if (ok(tx, ty)) return { x: tx, y: ty };
+    for (let r = 1; r <= rayon; r++) {
+      for (let dx = -r; dx <= r; dx++) {
+        for (let dy = -r; dy <= r; dy++) {
+          if (Math.max(Math.abs(dx), Math.abs(dy)) !== r) continue;
+          if (ok(tx + dx, ty + dy)) return { x: tx + dx, y: ty + dy };
+        }
+      }
+    }
+    return null;
+  }
+
+  /** Le centre (en pixels) de la tuile de RUE (une voie, un sens) la plus
+      proche de (x, y), ou null : l'ancre d'un circuit de course. */
+  function routeLaPlusProche(x, y, rayon) {
+    const t = procheRoute(Math.floor(x / TT), Math.floor(y / TT), rayon, estVoie);
+    return t ? { x: t.x * TT + 8, y: t.y * TT + 8 } : null;
+  }
+
+  /** Un tas binaire de noeuds, trie sur `f`. */
+  function tasPousser(tas, n) {
+    tas.push(n);
+    let i = tas.length - 1;
+    while (i > 0) {
+      const p = (i - 1) >> 1;
+      if (tas[p].f <= tas[i].f) break;
+      const t = tas[p]; tas[p] = tas[i]; tas[i] = t; i = p;
+    }
+  }
+  function tasTirer(tas) {
+    const haut = tas[0], bas = tas.pop();
+    if (tas.length) {
+      tas[0] = bas;
+      let i = 0;
+      for (;;) {
+        const g = 2 * i + 1, d = g + 1;
+        let m = i;
+        if (g < tas.length && tas[g].f < tas[m].f) m = g;
+        if (d < tas.length && tas[d].f < tas[m].f) m = d;
+        if (m === i) break;
+        const t = tas[m]; tas[m] = tas[i]; tas[i] = t; i = m;
+      }
+    }
+    return haut;
+  }
+
+  /** Un chemin de char, en tuiles de chaussee seulement : des centres de
+      tuiles en pixels, du premier pas jusqu'a la tuile de route la plus
+      proche de l'arrivee — ou null si l'une des deux n'a pas de route a
+      portee, ou si aucune chaussee ne les relie. */
+  function cheminRoute(x0, y0, x1, y1) {
+    if (!carte) return null;
+    const depart = procheRoute(Math.floor(x0 / TT), Math.floor(y0 / TT), 10);
+    const arrivee = procheRoute(Math.floor(x1 / TT), Math.floor(y1 / TT), 10);
+    if (!depart || !arrivee) return null;
+    if (depart.x === arrivee.x && depart.y === arrivee.y) return [];
+    const w = carte.w, h = carte.h, cleDepart = depart.y * w + depart.x;
+    const tas = [];
+    tasPousser(tas, { x: depart.x, y: depart.y, g: 0, f: Math.abs(arrivee.x - depart.x) + Math.abs(arrivee.y - depart.y), dx: 0, dy: 0 });
+    const vu = new Map();
+    vu.set(cleDepart, { g: 0, parent: -1 });
+    let noeuds = 0;
+    while (tas.length) {
+      const c = tasTirer(tas);
+      if (c.g > vu.get(c.y * w + c.x).g) continue;   // une entree perimee du tas
+      if (c.x === arrivee.x && c.y === arrivee.y) {
+        const out = [];
+        for (let cle = arrivee.y * w + arrivee.x; cle !== cleDepart; cle = vu.get(cle).parent) {
+          out.push({ x: (cle % w) * TT + 8, y: Math.floor(cle / w) * TT + 8 });
+        }
+        return out.reverse();
+      }
+      if (++noeuds > NOEUDS_MAX_ROUTE) return null;
+      for (const d of CROIX) {
+        const nx = c.x + d[0], ny = c.y + d[1];
+        if (nx < 0 || ny < 0 || nx >= w || ny >= h || !estRoute(nx, ny)) continue;
+        let g = c.g + 1;
+        if (fleche(nx, ny) === CONTRE_SENS[d[0] + ',' + d[1]]) g += COUT_CONTRE_SENS;
+        if ((c.dx || c.dy) && (c.dx !== d[0] || c.dy !== d[1])) g += COUT_VIRAGE;
+        const cle = ny * w + nx, deja = vu.get(cle);
+        if (deja && deja.g <= g) continue;
+        vu.set(cle, { g: g, parent: c.y * w + c.x });
+        tasPousser(tas, { x: nx, y: ny, g: g, f: g + Math.abs(arrivee.x - nx) + Math.abs(arrivee.y - ny), dx: d[0], dy: d[1] });
+      }
+    }
+    return null;
+  }
+
   // --- Rendu du sol ---------------------------------------------------------------
 
   /** Un passage pieton fait deux tuiles de large, mais ses bandes n'en
@@ -2078,6 +2194,7 @@ estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, variante
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
+    cheminRoute, routeLaPlusProche,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };
 })();
