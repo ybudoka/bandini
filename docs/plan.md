@@ -90,6 +90,7 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | La police a de la tolérance : la chaleur refroidit, les renforts prennent le temps de venir | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-police-a-de-la-tolerance-la-chaleur-refroidit-les-renforts-prennent.md#fiche) |
 | Des missions plus longues : plus d'étapes, plus loin, plus de dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/des-missions-plus-longues.md#fiche) |
+| Un visage dessiné pour chaque dialogue | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/un-visage-dessine-pour-chaque-dialogue.md#fiche) |
 
 ## L'ordre
 
