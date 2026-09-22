@@ -507,3 +507,56 @@ PAUSE ou CARTE) referme et rend la main au jeu.
   distinguent clairement les uns des autres, et le panoramique révèle bien de la ville qui
   n'était pas à l'écran avant.
 - **Reste de M14** : la coop locale.
+
+**Essai livré** (22 sept. 2026) : **la coop locale** — RISQUÉ, marqué ainsi sur la fiche, et
+ça reste vrai après cet essai : ce qui suit est un premier passage jouable, pas une promesse
+tenue. Le verdict (« ça tient à 480×270 » ou « le mode photo suffit ») revient à Martin, à
+deux manettes en main — rien ici ne le remplace.
+
+Depuis le menu DEBUG (« COOP LOCALE (ESSAI) ») : un deuxième joueur naît à côté du premier
+(un piéton `coopJoueur2`, même sprite, même linge — « l'autre toi », pas un passant de plus),
+mené par la **deuxième manette seule** (`Entree.axeManette2`, un lecteur à part sur
+`getGamepads()[1]` — `lireManette` fusionne toutes les manettes branchées dans un seul stick,
+parfait à un joueur, ça aurait fait marcher le deuxième avec les doigts du premier). Marcher
+seulement : aucun combat, aucune interaction, aucune mission, aucune arme — le strict
+nécessaire pour juger si la caméra à deux tient. La caméra (`Monde.majCameraCoop`) vise le
+milieu des deux joueurs et zoome arrière à mesure qu'ils s'éloignent (1 en dessous de 80 px
+d'écart, 0,55 au-delà de 260 px, un fondu entre les deux) ; rebasculer efface le deuxième
+joueur et ramène le zoom à 1 sans à-coup.
+
+- ⚠️ **Le zoom se pose AVANT `Base.fin`, jamais après.** Première idée : appliquer le zoom
+  puis le retirer avant d'appeler `Base.fin` (qui compose aussi les lampes de nuit et les
+  phares des chars). Revenu en arrière en y regardant : `Base.fin` dessine sur le MÊME
+  contexte hors-écran que le reste de la scène (`cible.ctx`) — laisser le zoom actif PENDANT
+  son appel fait grandir ou rétrécir les lampes avec le monde, exactement comme il faut. Le
+  retirer avant l'aurait laissé teindre un monde zoomé avec des lampes à la mauvaise échelle,
+  posées au mauvais endroit. Une seule ligne (`ctx.translate/scale/translate`) juste après le
+  fond, avant `Base.fin` — jamais reset après, `Base.debut()` s'en charge au prochain image.
+- ⚠️ **Le deuxième joueur ne naît jamais exactement où le premier se tient** — une première
+  version le posait à un décalage fixe (+24 px) : assez près pour tomber dans un mur ou
+  chevaucher le joueur selon l'endroit, et les deux corps qui se repoussaient rendaient le
+  mouvement voulu illisible dans les juges (un poussé en +x qui dérivait en -x). Corrigé
+  (`Jeu.placePresDe`) : la même idée que `Hud.placeAupres` (l'objectif téléporté) — une tuile
+  marchable à côté, jamais la tuile du premier joueur lui-même.
+- ⚠️ **`vitesses.pieton` est lent (0,45 px/image)** — le juge de mouvement pousse pendant 200
+  images (jusqu'à 90 px en théorie) et un juge de zoom pendant 700 (jusqu'à 315 px), sans quoi
+  la marge au-dessus du bruit ambiant (la foule qui frôle en passant) ne tient pas. **La
+  coop essai ne connaît que la marche : pas de sprint, pas de bouffée de souffle.**
+- **Juges** : deux tests dans `test_moteur_js.py` —
+  `test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_deuxieme_manette` (naissance à côté du
+  premier, seule la manette 2 le fait marcher — la 1 ne dérive pas au-delà de la séparation
+  ordinaire des cercles —, et `Entites.retirer` à la fermeture) et
+  `test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent` (zoom à 1 côte à côte,
+  zoom arrière après une vraie séparation, retour à 1 une fois la coop refermée), toutes deux
+  mutées à la main pour confirmer qu'elles mordent. Le banc (`tests/banc.js`) a appris
+  `o.pad2(...)`, une DEUXIÈME manette dans `getGamepads()`, sans toucher à `o.pad(...)`.
+- Vérifié à l'œil (Playwright, une fausse deuxième manette posée par
+  `Object.defineProperty(navigator, 'getGamepads', …)` avant le chargement de la page — le
+  vrai Gamepad API ne se simule pas autrement) : les deux personnages naissent côte à côte, la
+  caméra zoome bien arrière quand on éloigne le deuxième à la manette, et referme proprement
+  (zoom et deuxième joueur disparaissent ensemble).
+- **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux vraies manettes,
+  assis côte à côte devant le même écran de 480×270. Ni les trois chiffres du zoom
+  (`ZOOM_MIN`, `ZOOM_DIST_PLEIN`, `ZOOM_DIST_MAX`, dans `monde.js`) — posés à vue, à ajuster
+  une fois essayés pour de vrai. Ni si « marcher seulement » suffit ou si ça donne surtout
+  envie de se battre à deux. **Prochain pas : Martin, une deuxième manette en main.**
