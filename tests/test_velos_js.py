@@ -439,6 +439,34 @@ def test_l_enfant_a_velo_a_un_casque_et_un_corps_a_lui(banc):
     assert {"bas", "haut", "droite", "gauche"} <= set(r["poses"]), r["poses"]
 
 
+def test_de_face_et_de_dos_on_voit_le_velo_et_il_est_assis_dessus(banc):
+    """Martin (22 sept. 2026) : « ameliore les images de face et de dos ». La
+    premiere version etait un enfant en croix au-dessus d'une barre noire. Ce qui
+    dit « un enfant ASSIS sur un velo » : de face le phare ; de dos le
+    catadioptre, seul (colle au cadre rouge, il disparaissait) ; des deux cotes
+    la couleur du cadre autour de la roue ; chaque chaussure sur sa pedale, et
+    au sol la roue seule — les pieds en l'air."""
+    r = banc("""function (L, o) {
+        return L.SPRITES.enfant_velo.poses;
+    }""")
+    for face in ("bas", "haut"):
+        for i, g in enumerate(r[face]):
+            nom = f"{face}[{i}]"
+            assert set(g[-1]) <= {".", "r"}, f"{nom} : au sol, autre chose que la roue : {g[-1]!r}"
+            assert any("v" in rang for rang in g[9:]), f"{nom} : la couleur du cadre ne se voit pas autour de la roue"
+            chaussures = [(y, x) for y, rang in enumerate(g) for x, c in enumerate(rang) if c == "b"]
+            assert chaussures, f"{nom} : pas de pieds"
+            for y, x in chaussures:
+                assert g[y + 1][x] == "m", f"{nom} : la chaussure en ({x}, {y}) n'est pas sur sa pedale"
+            if face == "bas":
+                assert any("l" in rang for rang in g[7:12]), f"{nom} : pas de phare au guidon"
+            else:
+                reflets = [(y, x) for y, rang in enumerate(g) for x, c in enumerate(rang) if c == "t"]
+                assert reflets, f"{nom} : pas de catadioptre"
+                for y, x in reflets:
+                    assert g[y][x - 1] != "v" and g[y][x + 1] != "v", f"{nom} : le catadioptre colle au cadre"
+
+
 def test_la_fiche_de_l_enfant_a_velo():
     """Il ne se tire pas dans la foule, il est intouchable, il ne temoigne pas —
     et le jour, dans les quartiers qui ont des parcs."""

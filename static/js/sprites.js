@@ -118,28 +118,41 @@ SPRITES.enfant = {
 
    Ce n'est PAS le velo du trafic (une machine projetee a 32 caps, `deuxRoues`) :
    c'est un passant, qui flane en quatre directions sur le trottoir et dans le
-   parc, et qui garde les quatre faces de tout le monde. De face et de dos, on
-   voit la roue par la tranche, la fourche a la couleur du cadre, et le
-   catadioptre rouge dans le dos ; de profil, le velo entier, les pieds aux
-   pedales. Deux images par face : les pedales font un demi-tour de l'une a
-   l'autre (la foulee de `imageDe`).
+   parc, et qui garde les quatre faces de tout le monde. De profil, le velo
+   entier, les pieds aux pedales. Deux images par face : les pedales font un
+   demi-tour de l'une a l'autre (la foulee de `imageDe`).
+
+   ⚠️ **DE FACE ET DE DOS, LE VELO PASSE DEVANT LUI** — Martin (22 sept. 2026) :
+   « ameliore les images de face et de dos ». La premiere version etait un
+   enfant en croix, bras a l'horizontale, jambes droites comme debout, et une
+   barre noire sous lui : un monocycle. Ce qui dit « il est ASSIS sur un velo »,
+   c'est ce que fait deja le cycliste du trafic : de face, le guidon plus large
+   que les epaules, les mains dessus et le PHARE au milieu, le garde-boue a la
+   couleur du cadre, la roue par la tranche qui descend SEULE jusqu'au sol ; de
+   dos, la selle sous le short, le catadioptre SEUL sur le garde-boue (a cote
+   des haubans, un cadre rouge l'avalait) et les haubans de chaque cote du pneu.
+   La couleur du cadre autour de la roue, c'est elle qui dit « velo » de loin. Et les
+   PIEDS EN L'AIR, chacun sur sa pedale (grise), l'un plus haut que l'autre : la
+   roue touche le sol, pas lui. Un jour de pixel separe les jambes de la roue —
+   colles, contours compris, ils faisaient un seul pilier noir.
 
    Lettres : l'alphabet de l'enfant (`c` `h` `s` `p`, echanges par le
    catalogue), plus `e` le casque et `v` le cadre, que `ENFANTS_A_VELO` varie
-   d'un enfant a l'autre ; `r` le pneu, `m` le moyeu, `t` le catadioptre. */
+   d'un enfant a l'autre ; `r` le pneu, `m` le moyeu et les pedales, `t` le
+   catadioptre, `l` le phare. */
 SPRITES.enfant_velo = {
   w: 16, h: 15, ancre: [8, 14],
   pal: { k: '#101018', s: '#f0c098', h: '#6b4b2c', c: '#f1c40f', p: '#2f6b8a', o: '#ffffff', b: '#5a3a1a',
-         e: '#e03a2e', v: '#27ae60', r: '#2a2a2e', m: '#9aa0a8', t: '#e0312a' },
+         e: '#e03a2e', v: '#27ae60', r: '#2a2a2e', m: '#9aa0a8', t: '#e0312a', l: '#fff3b0' },
   swaps: ['c', 'h', 's', 'p', 'e', 'v'],
   poses: {
     bas: [
-      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kpkvrrvkbk...', '...kbk.rr.......', '.......rr.......'],
-      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kbkvrrvkpk...', '.......rr.kbk...', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '...kkcccccckk...', '..kskkkllkkksk..', '...kppkvvkppk...', '...kpkvrrvkbk...', '...kbk.rr.kmk...', '...kmk.rr.......', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkhsssshkk...', '....ksossosk....', '....kssssssk....', '.....kssssk.....', '.....kcccck.....', '...kkcccccckk...', '..kskkkllkkksk..', '...kppkvvkppk...', '...kbkvrrvkpk...', '...kmk.rr.kbk...', '.......rr.kmk...', '.......rr.......'],
     ],
     haut: [
-      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kpkvttvkbk...', '...kbk.rr.......', '.......rr.......'],
-      ['.....kkkkkk.....', '....keeeeeek....', '...keeeeeeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '....kccccccck...', '..kkskcccckskk..', '....kkppppkk....', '...kpkvmmvkpk...', '...kbkvttvkpk...', '.......rr.kbk...', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeoooeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '...kkcccccckk...', '..kskcccccccsk..', '...kppkkkkppk...', '...kpk.tt.kbk...', '...kbkvrrvkmk...', '...kmk.rr.......', '.......rr.......'],
+      ['.....kkkkkk.....', '....keeeeeek....', '...keeoooeeek...', '...kkeeeeeekk...', '....khhhhhhk....', '....khhhhhhk....', '.....kssssk.....', '.....kcccck.....', '...kkcccccckk...', '..kskcccccccsk..', '...kppkkkkppk...', '...kbk.tt.kpk...', '...kmkvrrvkbk...', '.......rr.kmk...', '.......rr.......'],
     ],
     cote: [
       ['.....kkkk.......', '....keeeekk.....', '...keeeeeeek....', '...kkhsssok.....', '....khssssk.....', '....kccck.......', '...kccccckk.....', '...kccccssskk...', '....kpppk..k....', '.....vkppkvv....', '.rrrv.vkpkv.vrr.', 'r..vrkbkpk.rv..r', 'r.mvvvvkbbkr.m.r', 'r...r......r...r', '.rrr........rrr.'],
