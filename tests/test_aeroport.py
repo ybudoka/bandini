@@ -107,7 +107,11 @@ def test_le_chantier_a_six_piles_et_ne_se_franchit_qu_a_la_nage_bien_nourri(vill
     tuiles d'EAU entre le bout du tablier et celui de l'île. Pas une rampe sur le pont
     ni devant, et même lancée sur une rampe, aucune moto ne saute ça (sa réception,
     `carte.RECEPTION_DEFI`, fait 13 tuiles). À la nage : ni à jeun, ni au seul café —
-    le café ET l'estomac plein, et de justesse. La guérite attend de l'autre côté."""
+    le café ET l'estomac plein, et de justesse. La guérite attend de l'autre côté.
+
+    ⚠️ Le souffle n'est plus la dernière porte (22 sept. 2026) : le large refusé
+    ramène le nageur avant le bout (`test_le_large_refuse_ramene_le_nageur_de_la_travee`,
+    côté jeu). Ce juge-ci garde la porte d'avant, pour le jour où l'autre tombera."""
     pont = ville["aeroport"]["pont"]
     sol = ville["sol"]
     for y in range(pont["y"] + pont["nord"], pont["y"] + pont["nord"] + pont["trou"]):
@@ -340,6 +344,20 @@ def test_la_carte_cache_l_ile_jusqu_au_pont_fini(ville, sans):
             if not dedans(m, x, y):
                 assert ville["sol"][y][x] in ("~", "M", "C"), \
                     f"la grande carte coupe autre chose que de l'eau ou du relief en {(x, y)}"
+
+
+def test_le_large_refuse_dit_pourquoi_et_tombe_avec_le_masque(ville):
+    """« Une barrière invisible nous fait tourner de bord » (Martin, 22 sept. 2026) :
+    invisible, mais pas muette. Le HUD dit pourquoi à la coque qui vire et au nageur
+    que le courant ramène — deux lignes de barrière (majuscules, 40 caractères au plus,
+    la règle de `carte.BARRIERES`). La ligne tombe avec le masque : c'est la même fiche,
+    la même mission. Sa largeur, elle, est une affaire de caméra (`Monde.largeRefuse`,
+    jugée côté jeu)."""
+    m = ville["aeroport"]["masque"]
+    assert set(m["raisons"]) == {"coque", "nage"}, m
+    for sorte, raison in m["raisons"].items():
+        assert raison == raison.upper() and 0 < len(raison) <= 40, (sorte, raison)
+    assert m["raisons"] == aeroport.MASQUE["raisons"] and m["apres"] == aeroport.MASQUE["apres"]
 
 
 def test_les_missions_a_venir_sont_celles_de_l_arc_a():

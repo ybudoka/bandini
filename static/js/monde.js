@@ -1893,6 +1893,74 @@ const Monde = (function () {
     return Math.min(k.h, m.carte_h);
   }
 
+  //: ⚠️ LE LARGE REFUSÉ (demande de Martin, 22 sept. 2026 : « même en bateau on ne
+  //: puisse pas aller à l'île de l'aéroport avant que le pont soit réparé, une barrière
+  //: invisible nous fait tourner de bord avant qu'on puisse voir l'île »). Tant que
+  //: l'île est cachée sur la carte, elle l'est aussi à l'écran : le rectangle du masque,
+  //: élargi de ce que la caméra montre AU PLUS LOIN de celui qu'elle suit — la demi-vue,
+  //: son avance au volant (`AVANCE_CAMERA`) et une tuile pour la secousse —, ne se
+  //: franchit pas. Python dit quoi cacher, jusqu'à quand, et ce que le HUD dit alors
+  //: (`aeroport.MASQUE`) ; la portée de la vue, elle, est une affaire de caméra.
+  const LARGE_MARGE_PX = TT;
+  //: ⚠️ LA LISIÈRE : on ne franchit jamais la ligne de plus d'une image de char lancé,
+  //: et c'est ce qu'on rend. Plus loin dedans, c'est qu'on y était déjà — une vieille
+  //: sauvegarde prise sur l'île — et l'on circule, comme derrière une barrière.
+  const LARGE_LISIERE_PX = TT;
+  /** Le large refusé, en px ({ x0, y0, x1, y1 }), ou null : le pont est fini, ou l'on
+      est dans une pièce. */
+  function largeRefuse(laquelle) {
+    const m = masqueDeLaCarte(laquelle);
+    if (!m) return null;
+    const px = VW / 2 + AVANCE_CAMERA + LARGE_MARGE_PX, py = VH / 2 + AVANCE_CAMERA + LARGE_MARGE_PX;
+    return { x0: m.x * TT - px, y0: m.y * TT - py, x1: (m.x + m.l) * TT + px, y1: (m.y + m.h) * TT + py };
+  }
+  function dansLeLarge(z, x, y) { return x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1; }
+
+  /** Par où s'éloigner du large refusé : pour un point DEHORS, à moins de `marge` px
+      de lui, la direction unitaire qui en sort (du point du large le plus proche vers
+      lui). Null ailleurs, et dedans. */
+  function sortieDuLarge(x, y, marge) {
+    const z = largeRefuse();
+    if (!z || dansLeLarge(z, x, y)) return null;
+    const dx = x - borner(x, z.x0, z.x1), dy = y - borner(y, z.y0, z.y1), d = Math.hypot(dx, dy);
+    return d > 0 && d <= marge ? { x: dx / d, y: dy / d } : null;
+  }
+
+  /** ⚠️ LA LIGNE. `e` (le joueur, ou le char qu'il conduit) vient de bouger : s'il est
+      entré dans le large refusé — de moins que la lisière —, il ressort par le bord le
+      plus proche, sur un seul axe : comme contre un mur, on glisse le long. Rend la
+      direction de sortie ({ x, y }) quand la ligne a mordu, sinon null. ⚠️ Sans
+      mémoire du pas d'avant : un char qui pivote sur son arrière (`pivoterSurLArriere`)
+      ou qu'un autre pousse y entre aussi, sans passer par `avancer`. */
+  function retenirAuLarge(e) {
+    const z = largeRefuse();
+    if (!z || !dansLeLarge(z, e.x, e.y)) return null;
+    const g = e.x - z.x0, d = z.x1 - e.x, h = e.y - z.y0, b = z.y1 - e.y, p = Math.min(g, d, h, b);
+    if (p > LARGE_LISIERE_PX) return null;
+    if (p === g) { e.x = z.x0 - 0.01; return { x: -1, y: 0 }; }
+    if (p === d) { e.x = z.x1; return { x: 1, y: 0 }; }
+    if (p === h) { e.y = z.y0 - 0.01; return { x: 0, y: -1 }; }
+    e.y = z.y1;
+    return { x: 0, y: 1 };
+  }
+
+  /** Le HUD dit pourquoi, une fois par demi-tour : `sorte` est `coque` ou `nage`. */
+  function avertirDuLarge(sorte) {
+    const m = masqueDeLaCarte();
+    if (!m || !m.raisons || typeof Hud === 'undefined' || B.t - (B.largeMsgT || -999) < 120) return;
+    B.largeMsgT = B.t;
+    Hud.message(m.raisons[sorte], 120);
+  }
+
+  /** Cette vue (le coin nord-ouest de la caméra, en px) montre-t-elle une tuile cachée ?
+      Pour le mode photo, qui promène la caméra loin du joueur : il ne va pas où l'œil ne
+      va pas. */
+  function vueSurLeMasque(cx, cy) {
+    const m = masqueDeLaCarte();
+    if (!m) return false;
+    return cx + VW > m.x * TT && cx < (m.x + m.l) * TT && cy + VH > m.y * TT && cy < (m.y + m.h) * TT;
+  }
+
   /** La ville entiere, une tuile = un pixel. Cuite une fois : 18 000 rectangles
       au chargement valent mieux que 64x48 relus a chaque image.
       ⚠️ Recuite quand le masque tombe (le pont de l'aeroport fini) : la cle dit
@@ -1984,6 +2052,12 @@ const Monde = (function () {
     };
   }
 
+  //: De combien la camera regarde DEVANT le char lance (px, a pleine vitesse). ⚠️ Le
+  //: large refuse s'en sert (`largeRefuse`) : c'est ce qu'elle montre au plus loin du
+  //: joueur. A pied, `vx × 14` reste en dessous — la nage (1 px/image) fait 14, la
+  //: roulade (3,4) 47,6.
+  const AVANCE_CAMERA = 48;
+
   //: La coop locale (essai) : au-dela de cette distance (px) entre les deux
   //: joueurs, on ramene le deuxieme vers le premier — une LAISSE, pas un
   //: zoom arriere. ⚠️ Le zoom arriere a ete essaye (Martin, 22 sept. 2026) et
@@ -2021,7 +2095,7 @@ const Monde = (function () {
     let avanceX = 0, avanceY = 0;
     if (j.dansVehicule) {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);
-      avanceX = Math.cos(v.angle) * 48 * f; avanceY = Math.sin(v.angle) * 48 * f;
+      avanceX = Math.cos(v.angle) * AVANCE_CAMERA * f; avanceY = Math.sin(v.angle) * AVANCE_CAMERA * f;
     } else { avanceX = j.vx * 14; avanceY = j.vy * 14; }
     // ⚠️ Assis dans un manège qui MONTE (la montagne russe), on regarde le chariot,
     // pas le sol sous lui : cent cinquante pixels, c'est plus de la moitié de l'écran.
@@ -2215,6 +2289,7 @@ estCloture, estToit, varianteDeCloture, varianteDeRail, varianteDeBloc, variante
     ligneLibre, porteA, porteDevant, devantDUnePorte, zoneA, fleche, sensArret, intersectionA, feuDeCirculation, feuVert, feuPieton, estRampe, varianteDeTuile, varianteDeSol, varianteDePassage, varianteDeCase, varianteDeRampe, USURES_DE_SOL,
     dessinerSol, centrerCamera, majCamera, limitesCamera, majHeure, ambiance, estNuit, rythme, heureTexte, lampesVisibles, fenetreEteinte, gresilleEteint, mouiller, mouillee, adherenceMouillee, freinMouille, dessinerMouille, oublierLesRuesMouillees,
     miniCarte, couleurMini, couleurMiniA, masqueDeLaCarte, masquee, hauteurConnue, chemin, demanderChemin, majChemins,
+    largeRefuse, sortieDuLarge, retenirAuLarge, avertirDuLarge, vueSurLeMasque, AVANCE_CAMERA,
     cheminRoute, routeLaPlusProche,
     get carte() { return carte; }, get cheminsEnAttente() { return fileChemins.length; },
   };

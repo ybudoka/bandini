@@ -29,17 +29,22 @@ traversier) ne la voit pas non plus, et c'est voulu : rien n'y va encore.
    s'enjambe à pied — mais…
 2. LE CHANTIER : le tablier s'arrête au-dessus de l'eau. Six piles sans rien
    dessus sur trente-deux tuiles, puis le bout du pont côté île. Un char lancé
-   finit à l'eau, aucune moto ne saute ça, et à la nage il faut le café ET
-   l'estomac plein ;
+   finit à l'eau, aucune moto ne saute ça, et à la nage le souffle n'y suffit
+   qu'au café ET à l'estomac plein — et encore : le large refusé (6) ramène le
+   nageur avant le bout ;
 3. LE BARBELÉ : l'aéroport est clôturé au complet, et le barbelé ne s'enjambe
    pas (`carte.ENJAMBABLES`) ;
 4. LA GUÉRITE (`aeroport`) : la seule ouverture de la clôture, au pied du pont.
    Elle ne se force pas ;
 5. LE LARGE : de la plage de La Pointe à l'île, trop d'eau pour la nager, même
-   avec le café et l'estomac plein. Seul le bout du tablier en laisse la chance.
+   avec le café et l'estomac plein. Le bout du tablier en laissait la chance…
+6. …et LE LARGE REFUSÉ la reprend (`MASQUE["raisons"]`) : à une vue de l'île, une
+   ligne qu'on ne voit pas. Une coque y vire de bord toute seule, un nageur est
+   ramené par le courant — même la travée manquante ne se nage plus jusqu'au bout.
 
 ⚠️ **Et on ne le voit pas venir** (`MASQUE`) : sur la mini-carte et la grande
-carte, l'île est de l'eau tant que le pont n'est pas fini.
+carte, l'île est de l'eau tant que le pont n'est pas fini — et à l'écran aussi,
+puisque la ligne passe avant que la caméra l'atteigne.
 
 ⚠️ **Pas un refuge** : l'aéroport a sa police (`AEROPORT["police"]`). L'île aux
 Corneilles est l'endroit où l'on disparaît ; ici, on est surveillé.
@@ -83,6 +88,8 @@ AEROPORT: dict = {
 #: à 32 tuiles, et c'est ce qui change le jeu : à 12, il se nageait à jeun et une moto
 #: lancée sur une rampe l'aurait sauté (13 tuiles de réception, `carte.RECEPTION_DEFI`) ;
 #: à 32, aucun saut, et la nage demande le café ET l'estomac plein (`test_aeroport`).
+#: ⚠️ Depuis le 22 sept. 2026, le courant du large refusé (`MASQUE`) ramène le nageur
+#: au milieu du trou : le souffle n'est plus la dernière porte, il est la deuxième.
 #:
 #: ⚠️ Aucune FLÈCHE sur le tablier : le champ de direction (`voie`) reste vide, et
 #: le trafic ne sait même pas que le pont existe. La mission qui le finit les posera.
@@ -104,7 +111,20 @@ PONT: dict = {
 #: connaît — la grande carte s'y arrête, et la ville y garde l'échelle qu'elle avait
 #: avant l'aéroport (sous elle, il n'y a que de l'eau à montrer). Python décide quoi
 #: cacher et jusqu'à quand ; le navigateur (`Monde.masquee`) ne fait que le lire.
-MASQUE: dict = {"apres": "a01"}
+#:
+#: ⚠️ **ET ON N'Y VA PAS NON PLUS** (demande de Martin, 22 sept. 2026 : « même en
+#: bateau on ne puisse pas aller à l'île de l'aéroport avant que le pont soit réparé,
+#: une barrière invisible nous fait tourner de bord avant qu'on puisse voir l'île »).
+#: Le même rectangle, levé par la même mission, est bordé d'un LARGE REFUSÉ : une
+#: ligne à une vue de distance, que la caméra n'atteint jamais. Sa largeur est une
+#: affaire de caméra, et la caméra vit dans le navigateur (`Monde.largeRefuse`) ; ici,
+#: seulement ce que le HUD dit à celui qu'elle renvoie — la coque qui vire de bord
+#: toute seule, et le nageur que le courant ramène.
+MASQUE: dict = {
+    "apres": "a01",
+    "raisons": {"coque": "TROP DE HOULE AU LARGE — ON VIRE DE BORD",
+                "nage": "LE COURANT TE RAMÈNE VERS LA RIVE"},
+}
 
 #: ⚠️ LES MISSIONS QUI OUVRIRONT L'AÉROPORT, ET QUI N'EXISTENT PAS ENCORE. Les deux
 #: barrières les attendent (`apres`) : tant qu'elles ne sont pas écrites, la
@@ -541,7 +561,8 @@ def poser(chantier, ville: dict) -> dict:
             "peints": peints, "portes_peintes": portes_peintes,
             "pont": {"x": px, "y": py, "l": len(coupe), "nord": PONT["nord"], "trou": PONT["trou"],
                      "sud": fin - debut_sud, "piles": piles},
-            "masque": {"x": tx, "y": ty, "l": tl, "h": th, "apres": MASQUE["apres"], "carte_h": hauteur_avant},
+            "masque": {"x": tx, "y": ty, "l": tl, "h": th, "apres": MASQUE["apres"], "carte_h": hauteur_avant,
+                       "raisons": dict(MASQUE["raisons"])},
             "lampes": len(chantier.lampes) - lampes_avant}
 
 

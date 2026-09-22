@@ -1002,6 +1002,8 @@ const Vehicules = (function () {
     Entites.dansLaCarte(v);
     heurterVehicules(v);
     heurterPietons(v);
+    // ⚠️ La ligne du large refuse ne retient que le joueur : c'est lui que la camera suit.
+    if (v.conducteur === B.joueur) retenirAuLarge(v);
     // La rampe : on decolle a la sortie.
     const tx = Math.floor(v.x / TT), ty = Math.floor(v.y / TT);
     // ⚠️ Le seuil de decollage vient de Python (`saut_vitesse_min`), qui le
@@ -1583,6 +1585,9 @@ const Vehicules = (function () {
     if (!v || v.etat === 'epave' || j.dansVehicule) return false;
     // Le volant part droit : on n'herite pas du braquage de celui d'avant.
     v.volant = 0;
+    // Ni du demi-tour qu'il n'a pas fini (`virerDeBord`) : descendu au large en pleine
+    // virée, il reprenait son vieux cap a la montee suivante.
+    v.virage = null;
     // ⚠️ ON NE MONTE PAS DANS UN CHAR REMORQUE. Rien ne l'interdisait, et ce
     // serait la facon la plus courte de casser la physique : deux conducteurs,
     // deux volontes, un seul lien rigide. Et le refus SE DIT — une porte qui ne
@@ -2712,13 +2717,55 @@ const Vehicules = (function () {
   //: Les mains hors du volant : le char de l'atelier ne bouge pas (`Missions.majGarage`).
   const POINT_MORT = { gaz: 0, frein: 0, direction: 0, freinMain: false };
 
+  //: ⚠️ LE LARGE REFUSE, VU DU VOLANT (`Monde.largeRefuse` ; demande de Martin : « une
+  //: barriere invisible nous fait tourner de bord avant qu'on puisse voir l'ile »). A
+  //: `VIRAGE_BANDE_PX` de la ligne, un char qui y VA vire de bord tout seul : le cap
+  //: pivote vers le large permis de `VIRAGE_RAD` par image (un demi-tour en trois quarts
+  //: de seconde), le moteur tire, et le volant ne repond plus tant que ce n'est pas fait.
+  //: Une coque derive (adherence 0,05) : elle file sur son elan pendant qu'elle tourne,
+  //: et c'est la ligne (`retenirAuLarge`, dans `avancer`) qui garde ce qui passerait
+  //: quand meme. Un char blinde qui roule sur l'eau vire pareil.
+  const VIRAGE_BANDE_PX = 6 * TT, VIRAGE_RAD = 0.07, VIRAGE_ENTRANT = 0.2, VIRAGE_MAX = 150;
+  const VIRAGE = { gaz: 0.6, frein: 0, direction: 0, freinMain: false };
+
+  /** Les commandes du demi-tour, ou null : pas de virage en cours, et pas de raison
+      d'en commencer un. ⚠️ Seulement s'il y VA : longer la ligne, ou s'en eloigner,
+      reste permis. */
+  function virerDeBord(v) {
+    if (!v.virage) {
+      const s = Monde.sortieDuLarge(v.x, v.y, VIRAGE_BANDE_PX);
+      if (!s || v.vx * s.x + v.vy * s.y > -VIRAGE_ENTRANT) return null;
+      v.virage = { cap: Math.atan2(s.y, s.x), sortie: s, t: 0 };
+      Monde.avertirDuLarge('coque');
+      Entites.remous(v.x, v.y, 10);
+    }
+    const w = v.virage;
+    const ecart = ecartAngle(v.angle, w.cap);
+    // ⚠️ Autour du CENTRE, pas de l'arriere (`pivoterSurLArriere`) : pivoter sur la
+    // poupe d'un porte-conteneurs deplacerait son centre de plusieurs tuiles.
+    v.angle += borner(ecart, -VIRAGE_RAD, VIRAGE_RAD);
+    v.volant = 0;
+    w.t++;
+    if ((Math.abs(ecart) <= VIRAGE_RAD && v.vx * w.sortie.x + v.vy * w.sortie.y >= 0) || w.t >= VIRAGE_MAX) v.virage = null;
+    return VIRAGE;
+  }
+
+  /** La ligne mord : on ressort, et l'elan qui y entrait tombe (pas de choc : ce n'est
+      pas un mur, c'est la mer qui ne veut pas). */
+  function retenirAuLarge(v) {
+    const s = Monde.retenirAuLarge(v);
+    if (!s) return;
+    if (s.x && v.vx * s.x < 0) v.vx = 0;
+    if (s.y && v.vy * s.y < 0) v.vy = 0;
+  }
+
   function majJoueur(j) {
     const v = j.dansVehicule;
     if (v.etat === 'epave') { descendre(j, true); return; }
     // ⚠️ SOUS LE RIDEAU, ON NE CONDUIT PAS : il descend, le pistolet siffle, il remonte.
     // Tant que dure l'atelier, le char est a l'arret et le volant ne repond pas.
     if (v.atelier) { v.vitesse = 0; v.vx = 0; v.vy = 0; }
-    majPhysique(v, v.atelier ? POINT_MORT : commandesJoueur(v));
+    majPhysique(v, v.atelier ? POINT_MORT : (virerDeBord(v) || commandesJoueur(v)));
     if (Entree.neuf('attaque')) {
       // ⚠️ Un char a sirene n'a pas de klaxon sous le pouce : il a sa sirene.
       // Le boulot, lui, se prend au meme bouton — dans une ambulance, on

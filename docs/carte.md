@@ -279,7 +279,9 @@ La foule anonyme, les sortes posées, et les gens d'intérieur. `frequence`
   monomoteur de l'aéroclub), un stationnement, une manche à air. Fermé par
   étages : la barricade du pont, le chantier (six piles sur 32 tuiles d'eau :
   aucun saut, et la nage demande le café et l'estomac plein), le barbelé, la
-  guérite, et le large (trop d'eau pour la nager depuis la plage de La Pointe).
+  guérite, le large (trop d'eau pour la nager depuis la plage de La Pointe) — et
+  le **large refusé** : une ligne invisible, à une vue de l'île, où une coque vire
+  de bord toute seule et où le courant ramène le nageur (la travée comprise).
   **Caché sur la carte** (mini-carte et grande carte) jusqu'au pont fini : de
   l'eau à la place de l'île, pas de repère. Les missions qui l'ouvriront :
   `aeroport.MISSIONS_A_VENIR` (`a01`, `a02`).

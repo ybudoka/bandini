@@ -3785,6 +3785,7 @@ const Entites = (function () {
       j.roule--;
       deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
       dansLaCarte(j);
+      auLarge(j);
       if (j.roule === 0) j.invincible = 6;
       return;
     }
@@ -3847,12 +3848,20 @@ const Entites = (function () {
     j.vx = axe.x * vitesse * mag;
     j.vy = axe.y * vitesse * mag;
     if (axe.mag > 0) regarder(j, axe.x, axe.y);
+    // ⚠️ LE COURANT DU LARGE REFUSÉ (`auLarge`) : le temps qu'il nous ramène, on nage
+    // où il veut, le dos tourné à l'île — c'est le « tourner de bord » du nageur.
+    if (j.courant && j.courant.t > 0) {
+      j.courant.t--;
+      j.vx = j.courant.x * vitesse; j.vy = j.courant.y * vitesse;
+      regarder(j, j.courant.x, j.courant.y);
+    }
     // Pousser contre un grillage, c'est vouloir l'enjamber : une seconde en
     // haut, sans frapper, sans tirer, sans courir — et une cible immobile.
     if (axe.mag > 0 && !j.nage && enjamber(j, j.vx, j.vy)) { return; }
     const avant = { x: j.x, y: j.y };
     deplacerCercle(j, j.vx, j.vy, Monde.MASQUE_NAGEUR);
     dansLaCarte(j);
+    auLarge(j);
     if (j.buteImage !== B.t) j.buteT = 0;              // on a lache la barriere
     if (j.forceT > 0) j.forceT--;
     const d = Math.hypot(j.x - avant.x, j.y - avant.y);
@@ -3865,6 +3874,19 @@ const Entites = (function () {
     if (j.invincible > 0) j.invincible--;
     if (j.flagrant > 0) j.flagrant--;
     if (j.saigne > 0) saigner(j);
+  }
+
+  //: Combien d'images le courant ramène le nageur que la ligne a arrêté.
+  const COURANT_IMAGES = 45;
+
+  /** ⚠️ LE LARGE REFUSÉ, À LA NAGE (`Monde.retenirAuLarge`) : la ligne arrête le
+      nageur comme la coque, puis le courant le ramène vers la rive — la travée
+      manquante du pont de l'aéroport ne se nage plus jusqu'au bout. */
+  function auLarge(j) {
+    const s = Monde.retenirAuLarge(j);
+    if (!s) return;
+    j.courant = { x: s.x, y: s.y, t: COURANT_IMAGES };
+    Monde.avertirDuLarge('nage');
   }
 
   // --- Pietons --------------------------------------------------------------------------

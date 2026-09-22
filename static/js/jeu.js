@@ -623,11 +623,20 @@ const Jeu = (function () {
       referment — trois sorties parce que le pouce d'un telephone n'a que
       quatre boutons et que ANNULER n'en est pas un (voir `Entree.etiquettes`). */
   function majPhoto() {
-    const p = B.photo, axe = Entree.axe;
+    const p = B.photo, axe = Entree.axe, ax = p.dx, ay = p.dy;
     if (axe.mag > 0) { p.dx += axe.x * axe.mag * VITESSE_PHOTO; p.dy += axe.y * axe.mag * VITESSE_PHOTO; }
     const lim = Monde.limitesCamera();
     p.dx = borner(B.cam.x + p.dx, lim.xMin, lim.xMax) - B.cam.x;
     p.dy = borner(B.cam.y + p.dy, lim.yMin, lim.yMax) - B.cam.y;
+    // ⚠️ LA PHOTO NE VA PAS OÙ L'ŒIL NE VA PAS : tant que l'île de l'aéroport est
+    // cachée, le large refusé tient la caméra du jeu loin d'elle (`Monde.largeRefuse`),
+    // et celle-ci aussi — un axe à la fois, pour glisser le long comme contre un mur.
+    // (Qui la voyait déjà — une vieille sauvegarde prise sur l'île — garde sa photo.)
+    if (Monde.vueSurLeMasque(B.cam.x + p.dx, B.cam.y + p.dy) && !Monde.vueSurLeMasque(B.cam.x + ax, B.cam.y + ay)) {
+      if (!Monde.vueSurLeMasque(B.cam.x + p.dx, B.cam.y + ay)) p.dy = ay;
+      else if (!Monde.vueSurLeMasque(B.cam.x + ax, B.cam.y + p.dy)) p.dx = ax;
+      else { p.dx = ax; p.dy = ay; }
+    }
     if (Entree.neuf('arme')) p.filtre = (p.filtre + 1) % FILTRES_PHOTO.length;
     if (Entree.neuf('action')) Base.telecharger('bandini-' + Date.now() + '.png');
     if (Entree.neuf('annuler') || Entree.neuf('pause') || Entree.neuf('carte')) fermerPhoto();
