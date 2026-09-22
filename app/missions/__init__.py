@@ -475,21 +475,28 @@ DEFIS: list[dict] = [
     # ⚠️ **LES CHRONOS SE MESURENT, ILS NE S'ESTIMENT PAS** : chacun exige la
     # même vitesse moyenne que le Tour du Faubourg sur la longueur de SON
     # circuit (un juge du banc la recalcule, `test_course_js.py`).
+    #
+    # ⚠️ **ET CETTE VITESSE LAISSE DE LA MARGE** (Martin, 22 sept. 2026 : « je
+    # n'ai pas assez de temps »). L'étalon de la v1, 2:00, exigeait 69 % de la
+    # vitesse max d'une berline en moyenne, virages compris : un pilote parfait
+    # au banc (volant au pixel, char increvable) y laissait 2 à 30 s, et 2 s
+    # seulement sur la Pointe. L'étalon est maintenant 3:00 (≈ 110 px/s, 46 %) ;
+    # le juge refuse de repasser au-dessus de la moitié de la vitesse max.
     {"slug": "tour", "titre": "Tour du Faubourg", "ou": "porte:terminus", "circuit": True, "district": "faubourg",
-     "tours": 3, "chrono_s": 120, "points": ["terminus", "garage", "hopital", "poste"], "prime": 250,
-     "texte": "SUIS LES FLÈCHES : TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 2:00"},
+     "tours": 3, "chrono_s": 180, "points": ["terminus", "garage", "hopital", "poste"], "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS PAR LE GARAGE, L'HÔPITAL ET LE POSTE EN MOINS DE 3:00"},
     {"slug": "tour_erables", "titre": "Tour des Érables", "ou": "porte:depanneur", "circuit": True, "district": "erables",
-     "tours": 3, "chrono_s": 90, "prime": 250,
-     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES ÉRABLES EN MOINS DE 1:30"},
+     "tours": 3, "chrono_s": 135, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES ÉRABLES EN MOINS DE 2:15"},
     {"slug": "tour_shop", "titre": "Tour de la Shop", "ou": "porte:fourriere", "circuit": True, "district": "shop",
-     "tours": 3, "chrono_s": 115, "prime": 250,
-     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA SHOP EN MOINS DE 1:55"},
+     "tours": 3, "chrono_s": 170, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA SHOP EN MOINS DE 2:50"},
     {"slug": "tour_quais", "titre": "Tour des Quais", "ou": "porte:hotel", "circuit": True, "district": "quais",
-     "tours": 3, "chrono_s": 115, "prime": 250,
-     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES QUAIS EN MOINS DE 1:55"},
+     "tours": 3, "chrono_s": 175, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DES QUAIS EN MOINS DE 2:55"},
     {"slug": "tour_pointe", "titre": "Tour de la Pointe", "ou": "porte:phare", "circuit": True, "district": "pointe",
-     "tours": 3, "chrono_s": 110, "prime": 250,
-     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA POINTE EN MOINS DE 1:50"},
+     "tours": 3, "chrono_s": 165, "prime": 250,
+     "texte": "SUIS LES FLÈCHES : TROIS TOURS DE LA POINTE EN MOINS DE 2:45"},
     {"slug": "livraison", "titre": "Livraison sans bosse", "ou": "porte:garage", "lieu": "bar", "chrono_s": 90,
      "etoiles": 1, "prime": 250, "texte": "LIVRE TON CHAR AU BAR EN 90 S, SANS UNE BOSSE, AVEC LA POLICE AUX FESSES"},
 

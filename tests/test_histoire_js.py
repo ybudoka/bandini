@@ -745,9 +745,9 @@ def test_les_defis_ont_un_panneau_et_un_chrono(banc, paquet):
     # ⚠️ Une course par quartier depuis le 22 sept. 2026 : quatre panneaux de plus.
     assert r["panneaux"] == ["livraison", "saut", "tour", "tour_erables", "tour_pointe", "tour_quais", "tour_shop"]
     assert r["invite"] == "DÉFI" and r["menu"] == "TOUR DU FAUBOURG"
-    assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"
+    assert r["defi"] == "tour" and r["ligne"] == "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"
     assert r["gps"] == "Terminus Baie-des-Brumes" or r["gps"]
-    assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 2:00 — MONTE DANS UN CHAR"}, (
+    assert r["attend"] == {"defi": "tour", "ligne": "TOUR DU FAUBOURG 3:00 — MONTE DANS UN CHAR"}, (
         "a pied, le defi attend son char et le chrono ne court pas : %s" % r["attend"])
     assert r["apres"] is None and r["msg"] == "DÉFI RATÉ — IL FAUT UN CHAR"
     assert 590 <= r["rateA"] <= 610, f"{r['rateA']} images : dix secondes pour monter, pas plus"

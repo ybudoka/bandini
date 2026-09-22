@@ -224,3 +224,4 @@ Deux documents d'avant la table :
 | Un char sous le toit d'un garage n'éclaire rien | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [notes](un-char-sous-le-toit-n-eclaire-rien.md#notes) |
 | Les flèches de course restent fixes | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [fiche](les-fleches-de-course-restent-fixes.md#fiche) · [notes](les-fleches-de-course-restent-fixes.md#notes) |
 | On ne voit une lampe que si elle regarde l'œil (les phares selon la direction) | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [notes](on-ne-voit-une-lampe-que-si-elle-regarde-l-oeil.md#notes) |
+| Plus de temps pour les courses aux flèches | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [fiche](plus-de-temps-pour-les-courses-aux-fleches.md#fiche) · [notes](plus-de-temps-pour-les-courses-aux-fleches.md#notes) |

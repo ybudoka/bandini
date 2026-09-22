@@ -120,7 +120,12 @@ def test_chaque_quartier_a_son_circuit_ferme_sur_ses_rues(banc):
 def test_les_chronos_exigent_la_meme_vitesse_que_le_tour_du_faubourg(banc):
     """⚠️ Un chrono se MESURE sur la longueur du circuit, il ne s'estime pas sur la surface du
     quartier : le Tour du Faubourg est l'étalon (joué depuis la v1), les autres exigent la même
-    vitesse moyenne, arrondie en faveur du joueur — et aucun ne demande de rouler à fond."""
+    vitesse moyenne, arrondie en faveur du joueur — et aucun ne demande de rouler à fond.
+
+    ⚠️ **PAS PLUS DE LA MOITIÉ DE LA VITESSE MAX** (Martin, 22 sept. 2026 : « je n'ai pas assez
+    de temps »). L'ancien plafond, 75 %, laissait passer un étalon à 69 % : un pilote parfait au
+    banc — volant au pixel, char increvable, aucune hésitation — finissait la Pointe avec 2 s de
+    reste. Un joueur, lui, freine avant les coins et croise du trafic."""
     r = banc("function (L, o) {" + COMMENCER + """
         L.Jeu.commencer();
         const auto = L.Vehicules.vehiculeDef('auto');
@@ -135,7 +140,7 @@ def test_les_chronos_exigent_la_meme_vitesse_que_le_tour_du_faubourg(banc):
     etalon = r["courses"]["tour"]
     for slug, vitesse in r["courses"].items():
         assert 0.9 * etalon <= vitesse <= etalon, f"{slug} : {vitesse:.0f} px/s exigés, l'étalon en demande {etalon:.0f}"
-        assert vitesse <= 0.75 * r["max"], f"{slug} : il faudrait rouler à {vitesse / r['max']:.0%} de la vitesse max"
+        assert vitesse <= 0.5 * r["max"], f"{slug} : il faudrait rouler à {vitesse / r['max']:.0%} de la vitesse max"
 
 
 def test_on_suit_les_fleches_et_on_gagne_sans_point_de_passage(banc):

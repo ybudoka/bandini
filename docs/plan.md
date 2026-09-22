@@ -9,7 +9,7 @@ Pour reprendre le travail (les commandes, l'audio, la mise en ligne) : [reprendr
 | Pour savoir… | Lire |
 |---|---|
 | ce qu'une ligne ci-dessous **prévoit** (sa fiche) ou a **déjà livré** (ses notes) | son fichier dans [jalons/](jalons/README.md), lié depuis la table |
-| ce qui est **livré** (207 jalons) | [jalons/README.md](jalons/README.md) |
+| ce qui est **livré** (208 jalons) | [jalons/README.md](jalons/README.md) |
 | comment lancer le jeu, régénérer l'audio, mettre en ligne, lire la trace | [reprendre-le-travail.md](reprendre-le-travail.md) |
 | le contexte, les décisions prises avec Martin, la vision | [vision.md](vision.md) |
 | l'architecture, et **la carte du dépôt** (arborescence, modules Python, scripts JS) | [architecture.md](architecture.md) |
@@ -90,7 +90,6 @@ pas quand l'ordre de travail change.
 | Infiltration : portes verrouillées et gardes privés | ⬜ **en cours** | 22 sept. 2026 | **P4** | ajout | [fiche](jalons/infiltration-portes-verrouillees-et-gardes-prives.md#fiche) |
 | Rien de collé devant chez Ti-Paul | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/rien-de-colle-devant-chez-ti-paul.md#fiche) |
 | Le large de l'aéroport se refuse : on vire de bord avant de voir l'île | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/le-large-de-l-aeroport-se-refuse-on-vire-de-bord-avant-de-voir-l-ile.md#fiche) |
-| Plus de temps pour les courses aux flèches | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/plus-de-temps-pour-les-courses-aux-fleches.md#fiche) |
 | Des menus à onglets, et la téléportation vers les défis | ⬜ **en cours** | 22 sept. 2026 | **P2** | ajout | [fiche](jalons/des-menus-a-onglets-et-la-teleportation-vers-les-defis.md#fiche) |
 
 ## L'ordre
