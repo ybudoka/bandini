@@ -81,6 +81,7 @@ Il reste **dehors**, devant sa porte : il surveille son parking.
 - e02 : deux caisses pour le gardien du phare, « il paie en retard, mais il paie en poisson » ; « Ma bière a
   pas de permis, pis toi non plus. »
 - s01 : « Les gars de la remorqueuse ont pris douze caisses icitte. À crédit! »
+- h02 : le commis de l'hôpital lui offre des pilules pour dormir ; « Avec mes vitrines, je dors pas pareil! »
 
 ## Ce qui l'attend (M16)
 

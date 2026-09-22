@@ -61,6 +61,9 @@ dormait.
 
 ## Ce qu'il a dit (le canon)
 
+- q04 : sa première réplique du catalogue — il change les plaques du camion du Norvégien pour Josée, sans
+  poser de questions : « C'est Gilles, de la fourrière. Trente ans que je change des plaques, le jeune, pis
+  jamais les miennes. »
 - s01 : « C'est Gilles, de la fourrière. » ; la remorqueuse, reprise en zone des Boulonneux — il envoie
   d'abord voir Ti-Paul, « rien passe dans cette ville-là sans qu'il le sache ».
 - f02 : « C'est Gilles, le gardien. Gus m'a payé pour regarder ailleurs, fait que je regarde ailleurs. »

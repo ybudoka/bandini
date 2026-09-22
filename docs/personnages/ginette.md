@@ -60,6 +60,8 @@ Reste à son comptoir, droite, les bras croisés en attendant une réponse.
 
 ## Ce qu'elle a dit (le canon)
 
+- h01 : sa première réplique, en personne, quand on lui rend les clés de l'ambulance : « Moi, c'est Ginette,
+  l'infirmière-chef. » — elle se nomme là ; h02 la renomme au combiné (une fois par mission).
 - h02 : « C'est Ginette, de l'hôpital. » ; les pilules volées, reprises au commis véreux.
 
 ## Ce qui l'attend (M16)

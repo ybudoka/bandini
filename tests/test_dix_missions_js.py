@@ -417,14 +417,17 @@ def test_f06_trop_pres_il_te_voit_trop_loin_on_le_perd(banc):
     assert any("TU LE PERDS !" in ligne for ligne in loin["lignes"]), "garé, raté par méfiance : %s" % loin["lignes"]
 
 
-def test_h02_le_commis_roule_jusqu_au_depanneur(banc):
+def test_h02_on_file_le_commis_ti_paul_jase_on_seme_et_on_rapporte(banc):
     """h02 file comme f06 (`suivre`, même patron), mais dehors : Ginette se tient devant
-    l'hôpital. Le commis naît à bonne distance, attend qu'on soit au volant, et c'est SON
-    arrivée au dépanneur (`lieu`) qui fait passer au vol des pilules."""
-    r = banc("function (L, o) {" + OUTILS + """
+    l'hôpital. Le commis naît à bonne distance, attend qu'on soit au volant, traverse la
+    ville, et c'est SON arrivée au dépanneur (`lieu`) qui fait passer à la suite. ⚠️ Plus longue (22 sept. 2026) : on fait jaser Ti-Paul au
+    bouton, on vide les poches du commis, il crie au voleur (une étoile, semée en se
+    cachant pour vrai), et on rapporte les pilules à Ginette, à l'autre bout de la ville."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'h01']);
+        const argent = paiements(L);
         const g = L.Histoire.donneur('ginette');
         j.x = g.x - 16; j.y = g.y; L.Entites.indexer();
         commencer(L, o, 'h02');
@@ -442,15 +445,168 @@ def test_h02_le_commis_roule_jusqu_au_depanneur(banc):
                 mien.x = c.x - Math.cos(c.angle) * 96; mien.y = c.y - Math.sin(c.angle) * 96;
                 mien.vitesse = 0; mien.vx = 0; mien.vy = 0; j.x = mien.x; j.y = mien.y;
             }
-            o.frame(1); fermer(L);
+            o.frame(1); ecouter(L);
         }
         const dep = L.Histoire.lieu('depanneur');
-        return { dNaissance: dNaissance, images: i, etape: etape(L), ligne: L.Histoire.ligneObjectif(),
-                 dDepanneur: Math.round(Math.hypot(dep.x - c.x, dep.y - c.y)) };
+        const file = { images: i, etape: etape(L), ligne: L.Histoire.ligneObjectif(),
+                       dDepanneur: Math.round(Math.hypot(dep.x - c.x, dep.y - c.y)) };
+        jouer(L, o);
+        const accueil = serrer(L, o, 'tipaul');
+        const vol = { etape: etape(L), ligne: L.Histoire.ligneObjectif() };
+        const victime = B.mission.entites.find(function (e) { return e.pickpocket === true; });
+        victime.angle = 0;
+        j.x = victime.x - 12; j.y = victime.y; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
+        const vole = L.Combat.pickpocket(j);
+        jouer(L, o);
+        const semer = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), etoiles: B.recherche.etoiles };
+        const cache = seCacher(L, o);
+        const retour = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), loin: loinDe(L, 'depanneur', 'hopital') };
+        const g2 = L.Histoire.donneur('ginette');
+        j.x = g2.x - 16; j.y = g2.y; L.Entites.indexer();
+        finir(L, o);
+        return { dNaissance: dNaissance, file: file, accueil: accueil, vol: vol, vole: vole, semer: semer, cache: cache,
+                 retour: retour, dites: dites, fait: !!B.partie.missionsFaites.h02,
+                 argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["dNaissance"] >= 5 * 16, r
-    assert r["etape"] == 1 and r["ligne"].startswith("REPRENDS"), "arrivé au dépanneur, on passe au vol : %s" % r
-    assert r["dDepanneur"] < 8 * 16, r
+    f = r["file"]
+    assert f["etape"] == 1 and f["ligne"].startswith("FAIS JASER TI-PAUL"), f"arrivé au dépanneur, on va voir Ti-Paul : {f}"
+    assert f["dDepanneur"] < 8 * 16, f"il s'est rangé au dépanneur : {f}"
+    assert f["images"] > 60 * 60, f"une vraie filature, d'un bout à l'autre de la ville : {f['images']} images"
+    assert r["accueil"] == "accueil", "au bouton, Ti-Paul jase (sa poignée de main)"
+    assert r["vol"]["etape"] == 2 and r["vol"]["ligne"].startswith("REPRENDS"), r["vol"]
+    assert r["vole"] is True
+    assert r["semer"]["etape"] == 3 and r["semer"]["ligne"].startswith("IL CRIE AU VOLEUR") and r["semer"]["etoiles"] >= 1, r["semer"]
+    assert r["cache"]["dedans"] and r["cache"]["apres"] == 0, f"semée en se cachant : {r['cache']}"
+    assert r["retour"]["etape"] == 4 and r["retour"]["loin"] > 200, f"les pilules à rapporter, loin : {r['retour']}"
+    for dite in ("pendant:ginette:1", "accueil:tipaul:1", "pendant:ginette:3"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and 250 in r["argent"], r
+
+#: Les missions allongées (22 sept. 2026, Martin : « des missions plus longues ») : ce que
+#: leurs juges partagent — la nuit, se cacher pour semer, parler au bouton, et les
+#: répliques qu'on a entendues (`dites`), pour juger que chaque étape neuve PARLE.
+PLUS_LONGUES = """
+  const dites = [];
+  function ecouter(L) {
+    let g = 0;
+    while (L.B.cinema && g < 100) {
+      const c = L.B.cinema;
+      if (c.partie) c.lignes.forEach(function (l) { const k = c.partie + ':' + l.qui + ':' + (l.objectif === undefined ? '' : l.objectif); if (dites.indexOf(k) < 0) dites.push(k); });
+      L.Histoire.suivante(); g++;
+    }
+  }
+  // Quelques images, en passant les répliques qui s'ouvrent : un `pendant` part une image
+  // APRÈS le changement d'étape, et tant qu'il parle, aucun objectif n'avance.
+  function jouer(L, o, n) { for (let k = 0; k < (n || 6); k++) { o.frame(1); ecouter(L); } }
+  function laNuit(L, o) {
+    let h = L.B.partie.heure;
+    for (let k = 0; k < 400 && !L.Monde.estNuit(h); k++) h = (h + 0.005) % 1;
+    L.B.partie.heure = h; o.frame(2);
+  }
+  function aPied(L) { if (L.B.joueur.dansVehicule) L.Vehicules.descendre(L.B.joueur, true); }
+  // Serrer la main au BOUTON : à deux pas de lui, ACTION.
+  function serrer(L, o, slug) {
+    aPied(L);
+    const d = L.Histoire.donneur(slug), j = L.B.joueur;
+    j.x = d.x - 16; j.y = d.y; j.angle = 0; j.face = 'droite'; L.Entites.indexer();
+    o.frame(1); j.angle = 0; j.face = 'droite'; L.Missions.majInvite(j); o.tape('KeyE', 2);
+    const partie = L.B.cinema ? L.B.cinema.partie : null;
+    ecouter(L); jouer(L, o);
+    return partie;
+  }
+  // Semer : à pied, dans la pièce la plus proche, jusqu'à zéro étoile — puis ressortir.
+  function seCacher(L, o) {
+    const B = L.B, j = B.joueur;
+    aPied(L);
+    const avant = B.recherche.etoiles;
+    let p = null, d = 1e12;
+    (L.Monde.carte.def.portes || []).forEach(function (q) {
+      if (!q.interieur) return;
+      const dd = Math.pow(q.x * 16 + 8 - j.x, 2) + Math.pow((q.y + 1) * 16 + 8 - j.y, 2);
+      if (dd < d) { d = dd; p = q; }
+    });
+    j.x = p.x * 16 + 8; j.y = (p.y + 1) * 16 + 4; L.Entites.indexer();
+    L.Jeu.entrer(p); o.fondu();
+    for (let k = 0; k < 200 && !B.interieur; k++) o.frame(1);
+    const dedans = !!B.interieur;
+    let n = 0;
+    for (; n < 9000 && B.recherche.etoiles > 0; n++) o.frame(1);
+    L.Jeu.sortir(); o.fondu();
+    for (let k = 0; k < 200 && B.interieur; k++) o.frame(1);
+    jouer(L, o);
+    return { avant: avant, dedans: dedans, images: n, porte: p.lieu, apres: B.recherche.etoiles };
+  }
+  function loinDe(L, a, b) { const p = L.Histoire.lieu(a), q = L.Histoire.lieu(b); return Math.round(Math.hypot(p.x - q.x, p.y - q.y) / 16); }
+"""
+
+
+def test_h01_trois_transports_puis_le_phare_puis_les_cles_a_ginette(banc):
+    """h01 jouée de bout en bout, les trois étapes neuves comprises : la nuit tombe à
+    l'hôpital, l'ambulance, un vrai transport au klaxon (le blessé, puis l'urgence) et le
+    compteur pour les deux autres ; puis l'urgence du phare, à l'autre bout de la ville ;
+    le gardien ramené à l'urgence (`livrer` : l'ambulance est encore le char de la
+    mission) ; et les clés rendues à Ginette, au bouton — sa poignée de main se dit, et la
+    mission se ferme."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
+        L.Jeu.commencer(); L.graine(6);
+        const B = L.B, j = B.joueur; j.invincible = 1e6;
+        faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
+        const argent = paiements(L);
+        const h = L.Histoire.lieu('hopital');
+        j.x = h.x; j.y = h.y + 20; L.Entites.indexer();
+        commencer(L, o, 'h01');
+        let hh = B.partie.heure;
+        for (let k = 0; k < 400 && L.Monde.estNuit(hh); k++) hh = (hh + 0.005) % 1;
+        B.partie.heure = hh; o.frame(2);
+        const deJour = { etape: etape(L), attend: B.mission.attend };
+        laNuit(L, o); ecouter(L);
+        const etapeNuit = etape(L);
+        const v = B.mission.vehicule;
+        j.x = v.x + 20; j.y = v.y; L.Entites.indexer();
+        L.Vehicules.monter(j, v); L.Entites.indexer();
+        jouer(L, o);
+        const etapeMonte = etape(L), ambulance = v.slug;
+        // Un transport pour vrai : le klaxon, le blessé, l'urgence.
+        const b = L.Missions.boulot, pris = b.klaxon(v);
+        for (let k = 0; k < 600 && b.etape === 'ramasse'; k++) {
+            if (b.client) { v.x = b.client.x; v.y = b.client.y; v.vitesse = 0; }
+            o.frame(1); ecouter(L);
+        }
+        for (let k = 0; k < 600 && b.etape === 'route'; k++) {
+            if (b.destination) { v.x = b.destination.x; v.y = b.destination.y; v.vitesse = 0; }
+            o.frame(1); ecouter(L);
+        }
+        const unTransport = (b.faits.ambulance || 0) - B.mission.boulotsDepart;
+        b.faits.ambulance = B.mission.boulotsDepart + 3;
+        jouer(L, o);
+        const etapePhare = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), loin: loinDe(L, 'hopital', 'phare') };
+        const ph = L.Histoire.lieu('phare');
+        v.x = ph.x; v.y = ph.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
+        for (let k = 0; k < 10 && etape(L) === 3; k++) { o.frame(1); ecouter(L); }
+        const etapeRetour = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), dans: j.dansVehicule === v };
+        const baie = L.Histoire.lieuDeLivraison('hopital');
+        v.x = baie.x; v.y = baie.y; v.vitesse = 0; j.x = v.x; j.y = v.y; L.Entites.indexer();
+        for (let k = 0; k < 10 && etape(L) === 4; k++) { o.frame(1); ecouter(L); }
+        const etapeCles = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), aPied: !j.dansVehicule };
+        const accueil = serrer(L, o, 'ginette');
+        finir(L, o);
+        return { deJour: deJour, etapeNuit: etapeNuit, etapeMonte: etapeMonte, ambulance: ambulance, pris: pris,
+                 unTransport: unTransport, etapePhare: etapePhare, etapeRetour: etapeRetour, etapeCles: etapeCles,
+                 accueil: accueil, dites: dites, fait: !!B.partie.missionsFaites.h01,
+                 argent: argent.map(function (a) { return a.montant; }) };
+    }""")
+    assert r["deJour"] == {"etape": 0, "attend": "ATTENDS LA NUIT"}, r["deJour"]
+    assert r["etapeNuit"] == 1 and r["ambulance"] == "ambulance" and r["etapeMonte"] == 2, r
+    assert r["pris"] is True and r["unTransport"] == 1, f"un vrai transport au klaxon compte : {r}"
+    assert r["etapePhare"]["etape"] == 3 and r["etapePhare"]["ligne"].startswith("URGENCE AU PHARE"), r["etapePhare"]
+    assert r["etapePhare"]["loin"] > 150, f"le phare, à l'autre bout de la ville : {r['etapePhare']['loin']} tuiles"
+    assert r["etapeRetour"]["etape"] == 4 and r["etapeRetour"]["dans"], f"au phare en ambulance : on ramène le gardien : {r}"
+    assert r["etapeCles"]["etape"] == 5 and r["etapeCles"]["aPied"], f"livré à l'urgence, on descend : {r['etapeCles']}"
+    assert r["accueil"] == "accueil", f"au bouton, Ginette parle (sa poignée de main) : {r}"
+    for dite in ("pendant:lachance:3", "pendant:lachance:4", "accueil:ginette:5"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
+    assert r["fait"] is True and 300 in r["argent"], r
 
 
 def test_f07_la_cantine_les_poches_par_derriere_puis_le_complice(banc):
@@ -596,30 +752,50 @@ def test_f09_proteger_marco_jusqu_au_kiosque_filer_le_troisieme_puis_le_garage(b
     assert rm["protege"] is False, "protégé assommé : la mission échoue (`protege_mort`)"
 
 
-def test_q03_detruire_le_camion_avant_l_usine(banc):
+def test_q03_detruire_le_camion_puis_les_boulonneux_la_police_et_gege(banc):
     """`detruire` (M16) : réutilise `poserLeChar` comme `monter`, mais c'est
     `B.mission.chars[etape]` que `majObjectif` surveille — on ne roule pas dedans, on le
-    casse."""
-    r = banc("function (L, o) {" + OUTILS + """
+    casse. ⚠️ Plus longue (22 sept. 2026) : les Boulonneux de Prévost ARRIVENT sur le
+    joueur devant l'usine (`loin`), le camion en feu amène deux étoiles qu'on sème en se
+    cachant pour vrai, et on revient chez Gégé, à la cantine, à l'autre bout de la ville."""
+    r = banc("function (L, o) {" + OUTILS + PLUS_LONGUES + """
         L.Jeu.commencer(); L.graine(6);
         const B = L.B, j = B.joueur; j.invincible = 1e6;
         faites(L, ['m1', 'm2', 'm3', 'm4', 'm5', 'm6']);
         const argent = paiements(L);
         commencer(L, o, 'q03');
-        o.frame(1); fermer(L);   // le « pendant » de l'objectif 0 ouvre une boîte : la fermer avant de jouer
+        o.frame(1); ecouter(L);   // le « pendant » de l'objectif 0 ouvre une boîte : la fermer avant de jouer
         const camion = B.mission.chars[0];
         const avant = { etape: etape(L), camion: camion ? camion.slug : null, etat: camion ? camion.etat : null };
+        j.x = camion.x + 60; j.y = camion.y; L.Entites.indexer();
         camion.etat = 'epave';
-        o.frame(2);
+        jouer(L, o);
         const apres = etape(L);
+        const gars = B.mission.entites.filter(function (e) { return e.cible && e.etape === 1; });
+        const bagarre = { n: gars.length, groupe: gars.map(function (e) { return e.archetype || e.arch || ''; }),
+                          courent: gars.every(function (e) { return e.etat === 'attaque_joueur'; }),
+                          pres: Math.max.apply(null, gars.map(function (e) { return Math.round(Math.hypot(e.x - j.x, e.y - j.y) / 16); })) };
+        gars.forEach(function (e) { L.Entites.assommer(e); });
+        jouer(L, o);
+        const semer = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), etoiles: B.recherche.etoiles };
+        const cache = seCacher(L, o);
+        const retour = { etape: etape(L), ligne: L.Histoire.ligneObjectif(), loin: loinDe(L, 'usine', 'cantine') };
         const gege = L.Histoire.donneur('gege');
         j.x = gege.x - 16; j.y = gege.y; L.Entites.indexer();
         finir(L, o);
-        return { avant: avant, apres: apres, fait: !!B.partie.missionsFaites.q03,
-                 argent: argent.map(function (a) { return a.montant; }) };
+        return { avant: avant, apres: apres, bagarre: bagarre, semer: semer, cache: cache, retour: retour, dites: dites,
+                 fait: !!B.partie.missionsFaites.q03, argent: argent.map(function (a) { return a.montant; }) };
     }""")
     assert r["avant"] == {"etape": 0, "camion": "camion", "etat": "stationne"}, r["avant"]
     assert r["apres"] == 1, "le camion est une épave : `detruire` avance"
+    assert r["bagarre"]["n"] == 3 and r["bagarre"]["courent"] and r["bagarre"]["pres"] <= 12, (
+        f"trois Boulonneux arrivent sur le joueur, à la course : {r['bagarre']}")
+    assert r["semer"]["etape"] == 2 and r["semer"]["ligne"].startswith("LA POLICE") and r["semer"]["etoiles"] >= 2, r["semer"]
+    assert r["cache"]["dedans"] and r["cache"]["apres"] == 0 and r["cache"]["images"] > 60, f"semée en se cachant : {r['cache']}"
+    assert r["retour"]["etape"] == 3 and r["retour"]["ligne"].startswith("RETOURNE"), r["retour"]
+    assert r["retour"]["loin"] > 200, f"la cantine, à l'autre bout de la ville : {r['retour']['loin']} tuiles"
+    for dite in ("pendant:gege:1", "pendant:gege:2", "pendant:gege:3"):
+        assert dite in r["dites"], f"{dite} manque : {r['dites']}"
     assert r["fait"] is True and r["argent"] == [300]
 
 

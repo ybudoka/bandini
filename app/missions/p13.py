@@ -15,8 +15,19 @@ MISSION = {
     # `lieuFoire`), vivant à l'arche — contrairement à un donneur `point:`, il est
     # hélable, le GPS le trouve, et `retourner` marche vraiment. `pickpocket`
     # réutilise le patron de f07 : l'archétype dédié, jamais un archétype de gang.
+    # ⚠️ Plus longue (Martin, 22 sept. 2026, « des missions plus longues ») : le voleur
+    # n'avait que la moitié de la recette — son complice file en moto avec le reste
+    # (`ramasser` + `fuyard`, le patron de m2/m50 : on le rattrape, une Cravate en descend
+    # avec la caisse, on la couche, on ramasse) ; ses chums des Cravates arrivent (`tuer`,
+    # `loin`) ; et on rapporte le tout à l'arche, d'où que la moto nous ait menés.
     "objectifs": [
         {"type": "pickpocket", "texte": "REPRENDS LA CAISSE, PAR-DERRIÈRE", "cible": "pickpocket"},
+
+        {"type": "ramasser", "texte": "LE COMPLICE FILE AVEC LE RESTE — RATTRAPE-LE",
+         "cible": "fuyard", "vehicule": "moto"},
+
+        {"type": "tuer", "texte": "SES CHUMS DES CRAVATES — COUCHE-LES",
+         "groupe": "cravates", "n": 2, "ou": "donneur", "loin": 10},
 
         {"type": "retourner", "texte": "RAPPORTE-LA AU BONIMENTEUR"},
     ],
@@ -33,11 +44,19 @@ MISSION = {
             _l("bonimenteur", "Toute la recette du jour, envolée! Il se perd déjà dans le monde, entre les kiosques.",
                jeu="[annoyed] Toute la recette du jour, envolée! [worried] Il se perd déjà dans le monde, entre les kiosques."),
             _l("bonimenteur", "Reprends-la par-derrière, pis rapporte-la-moi avant qu'il file par la palissade.",
-               jeu="[firmly] Reprends-la par-derrière, pis rapporte-la-moi… avant qu'il file par la palissade.")
+               jeu="[firmly] Reprends-la par-derrière, pis rapporte-la-moi… avant qu'il file par la palissade."),
+            _l("bonimenteur", "Pis méfie-toi, jeune : un voleur de foire travaille jamais tout seul.",
+               jeu="[knowingly] Pis méfie-toi, jeune : [worried] un voleur de foire travaille jamais tout seul.")
         ],
         "pendant": [
             _p("bonimenteur", "Il se sauvera au premier bruit. Approche-toi comme un chat!", 0,
-               jeu="[nervously] Il se sauvera au premier bruit. [quietly] Approche-toi comme un chat!")
+               jeu="[nervously] Il se sauvera au premier bruit. [quietly] Approche-toi comme un chat!"),
+            _p("bonimenteur", "Y en manque la moitié! Son complice se sauve en moto avec le reste, cours-y après!", 1,
+               jeu="[annoyed] Y en manque la moitié! [worried] Son complice se sauve en moto avec le reste… cours-y après!"),
+            _p("bonimenteur", "Des Cravates, astheure? Mon doux, dans quoi je t'ai embarqué, toi?", 2,
+               jeu="[nervously] Des Cravates, astheure? [worried] Mon doux… dans quoi je t'ai embarqué, toi?"),
+            _p("bonimenteur", "Reviens à l'arche, jeune, pis tiens ma caisse à deux mains!", 3,
+               jeu="[relieved] Reviens à l'arche, jeune… [cheerful] pis tiens ma caisse à deux mains!")
         ],
         "fin": [
             _l("bonimenteur", "Ma caisse! T'es de la vraie graine, toi. Reviens quand tu veux, la foire est à toi.",
