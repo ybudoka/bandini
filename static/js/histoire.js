@@ -2242,6 +2242,11 @@ const Histoire = (function () {
   }
 
   //: Une fleche tous les deux points du trace (32 px), et combien on en montre.
+  //: ⚠️ **UN POINT SUR DEUX DU CIRCUIT, PAS DU CHAR** (retour de Martin, 22 sept.
+  //: 2026 : « les fleches clignotent quand on avance, il faudrait qu'elles restent
+  //: fixes »). Comptees depuis le char, elles changeaient de parite a chaque tuile
+  //: et sautaient de 16 px. Chacune a sa place sur la piste et n'en bouge plus :
+  //: on les depasse, et les nouvelles naissent loin devant, hors de l'ecran.
   const COURSE_PAS_POINTS = 2, COURSE_FLECHES_MAX = 24;
 
   function chevron(ctx, e) {
@@ -2252,49 +2257,52 @@ const Histoire = (function () {
   }
 
   /** Une fleche lumineuse : un halo, puis le trait clair par-dessus. */
-  function dessinerFlecheDeCourse(ctx, x, y, angle, alpha) {
+  function dessinerFlecheDeCourse(ctx, x, y, angle) {
     ctx.save();
     ctx.translate(x, y);
     ctx.rotate(angle);
-    ctx.globalAlpha = alpha * 0.35;
+    ctx.globalAlpha = 0.35;
     ctx.fillStyle = '#3fb8ff';
     chevron(ctx, 1.6);
-    ctx.globalAlpha = alpha;
+    ctx.globalAlpha = 1;
     ctx.fillStyle = '#b8f1ff';
     chevron(ctx, 1);
     ctx.restore();
   }
 
   /** Les fleches de la piste a l'ecran : devant le char (sur la ligne de depart
-      tant qu'on ne l'a pas rejointe), en pixels d'ecran. La lumiere court vers
-      l'avant, d'une fleche a la suivante — on lit le sens avant la forme. */
+      tant qu'on ne l'a pas rejointe), en pixels d'ecran. Leur lumiere est fixe. */
   function flechesALEcran(vue) {
     const f = B.defi, out = [];
     if (!f || !f.piste) return out;
     const p = f.piste, n = p.length;
-    for (let k = 0, m = 0; m < COURSE_FLECHES_MAX && k < n; k += COURSE_PAS_POINTS, m++) {
-      const a = p[(f.i + 1 + k) % n], b = p[(f.i + 3 + k) % n];
+    for (let j = 1, m = 0; j <= n && m < COURSE_FLECHES_MAX; j++) {
+      // Un circuit ferme, pas a pas sur la grille, a toujours un nombre PAIR de
+      // points : la ligne de depart se franchit sans que le pas de 32 px casse.
+      const k = (f.i + j) % n;
+      if (k % COURSE_PAS_POINTS) continue;
+      m++;
+      const a = p[k], b = p[(k + COURSE_PAS_POINTS) % n];
       if (!Entites.visibleAEcran(a.x, a.y, 16)) continue;
-      const vague = 0.5 + 0.5 * Math.sin(B.t / 5 - m * 0.7);
-      out.push({ x: a.x - vue.x, y: a.y - vue.y, angle: Math.atan2(b.y - a.y, b.x - a.x), alpha: 0.35 + 0.65 * vague });
+      out.push({ x: a.x - vue.x, y: a.y - vue.y, angle: Math.atan2(b.y - a.y, b.x - a.x) });
     }
     return out;
   }
 
   /** Le trace au sol, sous les chars et les gens. */
   function dessinerCheminCourse(ctx, vue) {
-    for (const q of flechesALEcran(vue)) dessinerFlecheDeCourse(ctx, q.x, q.y, q.angle, q.alpha);
+    for (const q of flechesALEcran(vue)) dessinerFlecheDeCourse(ctx, q.x, q.y, q.angle);
   }
 
   /** ⚠️ **LUMINEUSES, MEME LA NUIT.** Peintes au sol, les fleches s'eteignent
       avec la ville quand la nuit tombe (`Base.fin` assombrit tout ce qui est
       peint avant elle) : on ne les voyait plus que dans ses phares. Chacune
-      pose donc sa petite lampe, qui bat avec elle. Poussees APRES les phares :
+      pose donc sa petite lampe, fixe comme elle. Poussees APRES les phares :
       si l'ecran deborde du plafond de lampes (`LAMPES_MAX`), ce sont elles
       qui sautent, pas un lampadaire. */
   function lampesDeCourse(vue) {
     return flechesALEcran(vue).map(function (q) {
-      return { x: q.x, y: q.y, r: 18, c: 'rgba(120,210,255,' + (0.6 * q.alpha).toFixed(2) + ')' };
+      return { x: q.x, y: q.y, r: 18, c: 'rgba(120,210,255,0.6)' };
     });
   }
 

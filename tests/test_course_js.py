@@ -228,3 +228,41 @@ def test_la_ligne_de_depart_se_voit_des_le_panneau(banc):
     assert r["traits"] >= 10, f"les flèches de la ligne de départ ne se peignent pas ({r['traits']} traits)"
     assert r["cible"] == 0, "le GPS ne montre pas la ligne de départ"
     assert r["lampes"] * 2 == r["traits"], f"une lampe par flèche peinte (un halo et un trait chacune) : {r}"
+
+
+def test_les_fleches_restent_fixes_quand_on_avance(banc):
+    """Retour de Martin (22 sept. 2026) : « les flèches clignotent quand on avance, il faudrait
+    qu'elles restent fixes ». ⚠️ Rouge avant : posées DEPUIS LE CHAR (un point sur deux à partir
+    de lui), elles changeaient de parité à chaque tuile et sautaient de 16 px ; et leur lueur
+    battait, à une phase lue sur leur rang devant le char.
+
+    La caméra est tenue fixe : d'une image à la suivante, le char avancé d'une tuile, les flèches
+    à l'écran sont les MÊMES — même place dans le monde, même lumière —, moins celles qu'on a
+    dépassées."""
+    r = banc("function (L, o) {" + COMMENCER + """
+        L.Jeu.commencer();
+        const f = commencer(L, 'tour_quais'), p = f.piste;
+        const v = auVolant(L, o, p[0].x, p[0].y);
+        poser(L, v, p[0]); o.frame(2);
+        const cam = { x: L.B.cam.x, y: L.B.cam.y };
+        function fleches() {
+            L.B.cam.x = cam.x; L.B.cam.y = cam.y;
+            return L.Histoire.lampesDeCourse({ x: cam.x, y: cam.y }).map(function (l) {
+                return Math.round(l.x + cam.x) + ',' + Math.round(l.y + cam.y) + ' ' + l.c;
+            });
+        }
+        let avant = fleches();
+        const premier = avant.length, sauts = [];
+        for (let k = 1; k <= 30; k++) {
+            poser(L, v, p[k]); o.frame(1);
+            const apres = fleches();
+            const bouge = apres.filter(function (q) { return avant.indexOf(q) < 0; });
+            if (bouge.length) sauts.push({ k: k, bouge: bouge.slice(0, 2), avant: avant.slice(0, 2) });
+            avant = apres;
+        }
+        return { premier: premier, dernier: avant.length, sauts: sauts.length, exemple: sauts[0] || null, i: L.B.defi.i };
+    }""")
+    assert r["premier"] >= 5, f"pas assez de flèches à l'écran pour juger : {r}"
+    assert r["i"] >= 25, f"le char n'a pas avancé sur la piste : {r}"
+    assert r["dernier"] < r["premier"], "on a dépassé des flèches : elles doivent disparaître derrière le char"
+    assert r["sauts"] == 0, f"les flèches bougent ou changent de lumière quand on avance ({r['sauts']} images sur 30) : {r['exemple']}"

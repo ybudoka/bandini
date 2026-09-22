@@ -22,3 +22,16 @@ restent, le battement part.
 
 - ⚠️ Le juge regarde deux images de suite, le char avancé d'une tuile : une flèche qui existe aux deux
   est au même pixel du monde, avec la même lumière.
+
+## Notes
+
+**Livré le 22 sept. 2026.** `Histoire.flechesALEcran` prend un point sur deux **du circuit** (son
+indice sur la piste, pas son rang devant le char) ; la lueur ne bat plus, ni sur le trait, ni sur la
+lampe de nuit (`lampesDeCourse`).
+
+- ⚠️ Un circuit fermé, pas à pas sur la grille, a toujours un nombre **pair** de points (les cinq :
+  412, 306, 380, 392, 366) : la ligne de départ se franchit sans que le pas de 32 px casse. Aucune
+  garde pour le cas impair — il n'arrive pas.
+- Juge : `test_les_fleches_restent_fixes_quand_on_avance` (caméra tenue fixe, le char avancé tuile par
+  tuile : mêmes flèches, même place, même lumière, moins celles qu'on dépasse). Rouge avant (15 images
+  sur 30) ; il rougit si on les repose depuis le char, et si la lueur se remet à battre.
