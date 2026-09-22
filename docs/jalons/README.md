@@ -223,3 +223,4 @@ Deux documents d'avant la table :
 | Les phares ne passent pas à travers un autre char | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [fiche](les-phares-ne-passent-pas-a-travers-un-autre-char.md#fiche) · [notes](les-phares-ne-passent-pas-a-travers-un-autre-char.md#notes) |
 | Un char sous le toit d'un garage n'éclaire rien | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [notes](un-char-sous-le-toit-n-eclaire-rien.md#notes) |
 | Les flèches de course restent fixes | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [fiche](les-fleches-de-course-restent-fixes.md#fiche) · [notes](les-fleches-de-course-restent-fixes.md#notes) |
+| On ne voit une lampe que si elle regarde l'œil (les phares selon la direction) | ✅ **livré** | 22 sept. 2026 | **P2** | **correctif** | [notes](on-ne-voit-une-lampe-que-si-elle-regarde-l-oeil.md#notes) |
