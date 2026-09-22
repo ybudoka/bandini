@@ -131,6 +131,14 @@ Ce que la suite **ne fait pas**, pour que le plan tienne : pas de multijoueur en
 de 3D, pas d'histoire à plus de deux fins, pas de génération de sprites par IA. Le jeu
 reste un GTA 1 québécois en pixels, joué au téléphone.
 
+⚠️ **La coop EN LIGNE n'est pas promise — mais la porte lui reste ouverte** (Martin,
+22 sept. 2026 : « il faut laisser la possibilité d'avoir un mode coop online »). Rien de
+réseau n'est écrit et rien n'est prévu ; ce qui existe, c'est le *joint* : chaque joueur
+porte sa **source d'entrées** (`Entree.SOURCE1`/`SOURCE2`, `j.entree`), et tout ce qui le
+fait bouger, frapper ou agir lit cette source-là plutôt que le clavier. Une source remplie
+depuis le réseau se brancherait au même endroit. Le jour où ça se décide, ça devient un
+jalon à part — avec son serveur, sa latence et ses tricheurs.
+
 ⚠️ **Un compte (M14) n'est pas du multijoueur.** Deux joueurs ne se voient jamais dans la
 même ville ; le serveur ne fait que garder une partie et un classement. La ligne ci-dessus
 tient : c'est une sauvegarde qui voyage, pas une partie partagée — et le jeu continue de

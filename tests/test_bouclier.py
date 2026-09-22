@@ -318,7 +318,7 @@ def test_la_police_ne_tire_plus_et_recule(banc):
         saisir();
         const avecOtage = mesurer(90);
         const tenaitEncore = !!j.otage;          // il ne s'est pas degage pendant la mesure
-        L.Combat.lacherOtage(false);
+        L.Combat.lacherOtage(L.B.joueur, false);   // (signature : le joueur qui lache, puis « de lui-meme »)
         const sansOtage = mesurer(90);
         return { sansOtage: sansOtage, avecOtage: avecOtage,
                  tenaitEncore: tenaitEncore,

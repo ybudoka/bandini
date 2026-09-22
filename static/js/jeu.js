@@ -375,7 +375,11 @@ const Jeu = (function () {
     const piece = Monde.entrer(porte);
     if (!piece) return null;
     B.exterieur = { carte: piece.ville, entites: B.entites, x: porte.x * TT + 8, y: (porte.y + 1) * TT + 10 };
-    B.entites = [B.joueur];
+    // ⚠️ TOUS LES JOUEURS PASSENT LA PORTE, pas seulement le premier : en
+    // coop, le deuxieme restait dehors avec ses coordonnees de rue, et la
+    // laisse de la camera (`Monde.majCameraCoop`) le tirait a travers les
+    // murs de la piece. `majCoop` le repose a cote a la premiere image.
+    B.entites = Entites.joueurs();
     B.particules.length = 0;
     B.interieur = piece.interieur;
     Entites.reindexerDecor();
@@ -608,10 +612,9 @@ const Jeu = (function () {
     return { x: x, y: y };
   }
 
-  /** La coop locale (M14, essai — RISQUÉ, pas promis) : bascule un deuxième
-      joueur, mené par la deuxième manette, à côté du premier. Depuis le menu
-      DEBUG seulement — aucune promesse tant que Martin n'a pas jugé, à deux
-      manettes, si la caméra tient à 480×270 (voir `Monde.majCameraCoop`). */
+  /** La coop locale : un DEUXIEME VRAI JOUEUR a cote du premier, sur l'autre
+      appareil (un clavier et une manette — l'option COOP dit lequel va au
+      joueur 1, `Entree.joueur1PrendLaManette`). Depuis le menu DEBUG. */
   function basculerCoop() {
     if (B.coop) {
       Entites.retirer(B.coop.entite);
@@ -620,7 +623,59 @@ const Jeu = (function () {
     }
     if (!B.joueur) return;
     const place = placePresDe(B.joueur.x, B.joueur.y);
-    B.coop = { entite: Entites.creerCoopJoueur2(place.x, place.y) };
+    // `scene` : la piece ou les deux se trouvent (`null` = la rue). C'est elle
+    // qui dit a `majCoop` qu'on vient de changer de decor.
+    B.coop = { entite: Entites.creerJoueur2(place.x, place.y), scene: B.interieur };
+  }
+
+  /** Repose le partenaire a cote du premier, debout et libre de tout ce que
+      la scene d'avant lui avait mis sur le dos. */
+  function poserAupres(e, j) {
+    const place = placePresDe(j.x, j.y);
+    e.x = place.x; e.y = place.y;
+    e.vx = 0; e.vy = 0;
+    e.assis = null; e.alite = false; e.otage = null; e.enjambe = null;
+    e.dansVehicule = null; e.dessine = true; e.nage = false;
+  }
+
+  /** Ce que la coop doit a chaque image, et rien de plus : garder les deux
+      joueurs DANS LA MEME SCENE, et faire monter le deuxieme quand le premier
+      prend le volant.
+
+      ⚠️ « Ce qui change de scene, lance une mission ou conduit, c'est toujours
+      le joueur 1 » (Martin, 22 sept.) : le deuxieme ne pousse pas les portes,
+      il SUIT. Le rattrapage se fait ici, au tour d'apres, plutot qu'a chaque
+      sortie (porte, metro, etage, urgence, prison, cinema) — une scene
+      oubliee le perdrait dans une carte qui n'existe plus. */
+  function majCoop() {
+    if (!B.coop) return;
+    const e = B.coop.entite, j = B.joueur;
+    if (!e || !j) return;
+    // ⚠️ LA SCENE A CHANGE : chaque piece est un objet neuf (`Monde.entrer`) et
+    // la rue est `null` — comparer l'objet suffit, et ca attrape la porte comme
+    // le metro, l'ascenseur, l'urgence ou la prison, sans les enumerer. Il
+    // suit le premier ; ses coordonnees d'avant n'ont plus de sens ici.
+    if (B.coop.scene !== B.interieur) {
+      B.coop.scene = B.interieur;
+      poserAupres(e, j);
+    }
+    if (B.entites.indexOf(e) < 0) {
+      poserAupres(e, j);
+      B.entites.push(e);
+    }
+    // ⚠️ IL MONTE AVEC LUI : sans ca, la laisse de la camera trainait le
+    // deuxieme joueur derriere un char lance, a travers les murs. Passager,
+    // donc invisible et a l'abri (`Entites.blesser` refuse tout a qui est en
+    // char) — il redescend a cote des que le premier se gare.
+    if (j.dansVehicule && !e.dansVehicule) {
+      e.dansVehicule = j.dansVehicule; e.dessine = false;
+      e.vx = 0; e.vy = 0; e.assis = null; e.charge = 0;
+    } else if (!j.dansVehicule && e.dansVehicule) {
+      const place = placePresDe(j.x, j.y);
+      e.x = place.x; e.y = place.y;
+      e.dansVehicule = null; e.dessine = true; e.descenduT = B.t;
+    }
+    if (e.dansVehicule) { e.x = e.dansVehicule.x; e.y = e.dansVehicule.y; }
   }
 
   /** Le stick promene la camera (bornee a la ville, voir `Monde.limitesCamera`),
@@ -851,6 +906,7 @@ const Jeu = (function () {
         pas('entites', Entites.maj);
         pas('combat', Combat.maj);
         pas('vehicules', Vehicules.maj);
+        pas('coop', majCoop);              // apres les chars : le passager suit sa tole
         pas('traversier', Traversier.maj); // apres les chars : ce qui est a bord suit la coque
         pas('neige', Neige.maj);
         pas('police', Police.maj);
@@ -1216,7 +1272,7 @@ const Jeu = (function () {
     });
   }
 
-  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
+  return { demarrer, commencer, jouer, ouvrirParties, jouerPartie, effacerPartie, copierPartie, entrer, sortir, changerEtage, coucherALHopital, quitterLaPiece, transiter, finirTransition, pause, reprendre, basculerPause, ouvrirCarte, fermerCarte, ouvrirPhoto, fermerPhoto, basculerCoop, majCoop, retourTitre, maj, rendre, avancer, get horsLigne() { return horsLigne; } };
 })();
 
 /* Surface de test et de debogage — la seule poignee du banc d'essai. */

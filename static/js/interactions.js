@@ -259,11 +259,14 @@ const Interactions = (function () {
       suit est le nôtre, dans la même image, comme au sortir d'un lit. */
   function majAssis(j) {
     const a = j.assis, c = cfg();
+    // Les entrees de CELUI QUI EST ASSIS : en coop, les deux s'assoient sur
+    // le meme banc, chacun se leve avec son appareil (`Entree.SOURCE1/2`).
+    const ent = j.entree || Entree;
     if (!a) return false;
     // Ailleurs que sur le banc (l'hôpital, le poste, une porte) : on n'est plus assis.
     if (!c || !j.vivant || j.dansVehicule || B.interieur || dist2(j.x, j.y, a.x, a.y) > 81) { j.assis = null; return false; }
-    if (Entree.axe.mag > 0) { seLever(j, Entree.axe.x, Entree.axe.y); return false; }
-    if (Entree.neuf('action')) {
+    if (ent.axe.mag > 0) { seLever(j, ent.axe.x, ent.axe.y); return false; }
+    if (ent.neuf('action')) {
       // ⚠️ La pression qui nous lève est dépensée : sinon `Combat.maj`, plus loin
       // dans la même image, en ferait un pickpocket, ou nous rassoirait aussitôt.
       seLever(j, 0, 0);
@@ -273,7 +276,7 @@ const Interactions = (function () {
     }
     // Un coup donné, une arme sortie, un sprint, un coup reçu : on est debout.
     // ⚠️ ARME se lit TENUE (`bas`), pas a la pression : la roue et le retour rapide se decident au relacher.
-    if (Entree.neuf('attaque') || Entree.bas('arme') || Entree.neuf('esquive') || j.vie < a.vie || j.saigne > 0) {
+    if (ent.neuf('attaque') || ent.bas('arme') || ent.neuf('esquive') || j.vie < a.vie || j.saigne > 0) {
       seLever(j, 0, 0);
       return false;
     }

@@ -210,7 +210,7 @@ const Missions = (function () {
   function interagir(j) {
     // ⚠️ On ne magasine pas avec quelqu'un dans les bras : tant qu'on tient un
     // otage, ACTION ne fait qu'une chose — le lacher.
-    if (j.otage) return Combat.lacherOtage(false);
+    if (j.otage) return Combat.lacherOtage(j, false);
     // ⚠️ UN JEU D'ADRESSE EN COURS PREND LE BOUTON, et il le prend AVANT tout le
     // reste : le marteau de force se joue en martelant ACTION devant son
     // comptoir, et sans cette ligne chaque coup ouvrirait le menu de la

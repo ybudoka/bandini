@@ -175,12 +175,16 @@ const Entree = (function () {
     if (MAP_TOUCHES.haut.some(function (k) { return enfonce[k]; })) y -= 1;
     if (MAP_TOUCHES.bas.some(function (k) { return enfonce[k]; })) y += 1;
     const h = Math.hypot(x, y);
-    return { x: h ? x / h : 0, y: h ? y / h : 0, mag: h ? 1 : 0 };
+    // ⚠️ `source` COMPTE : c'est elle qui dit a `Entites.majJoueur` qu'un
+    // clavier ne sait pas effleurer — sans elle, le joueur au clavier
+    // MARCHAIT au lieu de courir (retour de Martin, 22 sept. : « celui avec
+    // la manette ne court pas a la meme vitesse »).
+    return { x: h ? x / h : 0, y: h ? y / h : 0, mag: h ? 1 : 0, source: 'clavier' };
   }
-  /** La coop locale (essai, un clavier + une manette) : les entrees du
-      DEUXIEME joueur (`Entites.majJoueur2`) — la manette par defaut, le
-      clavier si l'option lui donne celle-ci a la place (`joueur1PrendLaManette`).
-      Jamais celles du premier joueur, quel que soit l'appareil de chacun. */
+  /** La coop locale (un clavier + une manette) : les entrees NUES du deuxieme
+      joueur — la manette par defaut, le clavier si l'option donne celle-la au
+      premier (`joueur1PrendLaManette`). Jamais celles du premier joueur, quel
+      que soit l'appareil de chacun. C'est `SOURCE2` qui les porte jusqu'a lui. */
   function basJoueur2(a) {
     if (joueur1PrendLaManette()) return MAP_TOUCHES[a].some(function (k) { return enfonce[k]; });
     return !!vPad[a];
@@ -192,8 +196,34 @@ const Entree = (function () {
   function axeJoueur2() {
     if (joueur1PrendLaManette()) return axeClavierSeul();
     const st = stickCasque.mag > stick.mag ? stickCasque : stick;
-    return { x: st.x, y: st.y, mag: st.mag };
+    return { x: st.x, y: st.y, mag: st.mag, source: 'manette' };
   }
+
+  /** LES SOURCES D'ENTREES — une par joueur, et c'est LE joint de la coop.
+
+      Chaque joueur porte la sienne (`j.entree`, pose a la naissance), et tout
+      ce qui le fait marcher, frapper, rouler ou se lever la lit plutot que le
+      module : `Entites.majJoueur`, `Combat.majUnJoueur`, `Interactions.majAssis`.
+      Plus personne ne demande « est-ce LE joueur ? » pour savoir quel stick
+      ecouter — il suffit de demander au joueur qu'on est en train d'avancer.
+
+      ⚠️ C'est la porte ouverte a la COOP EN LIGNE : une source n'est qu'un
+      objet a trois entrees (`axe`, `bas`, `neuf`) plus une vibration. Celle
+      d'un joueur distant remplirait les memes champs depuis le reseau, et pas
+      une ligne de `majJoueur` ne changerait.
+
+      La vibration, elle, s'adresse a UNE manette : elle ne part que si ce
+      joueur-la la tient, sinon c'est l'autre qu'on secoue. */
+  const SOURCE1 = {
+    get axe() { return axe; },
+    bas: bas, neuf: neuf,
+    vibrer: function (ms) { if (!B.coop || joueur1PrendLaManette()) vibrer(ms); },
+  };
+  const SOURCE2 = {
+    get axe() { return axeJoueur2(); },
+    bas: basJoueur2, neuf: neufJoueur2,
+    vibrer: function (ms) { if (!joueur1PrendLaManette()) vibrer(ms); },
+  };
   function videPresse() {
     for (const k in presse) presse[k] = false;
     for (const a in vNeuf) vNeuf[a] = false;
@@ -818,7 +848,7 @@ const Entree = (function () {
     const st = stickCasque.mag > stick.mag ? stickCasque : stick;
     // ⚠️ La coop locale (essai, un clavier + une manette) : le joueur 1 n'a
     // la manette QUE si l'option la lui donne (`joueur1PrendLaManette`) —
-    // sinon elle est au deuxieme joueur (`Entites.majJoueur2`, qui lit
+    // sinon elle est au deuxieme joueur (`Entree.SOURCE2`, qui lit
     // `Entree.axeJoueur2` directement), et le premier n'y repond plus.
     const manettePourJoueur1 = !B.coop || joueur1PrendLaManette();
     if (pouce.actif && pouce.mag > 0) {
@@ -904,9 +934,10 @@ const Entree = (function () {
     annulerApprentissage, oublierRepos, manetteInfo, brancherCasque, familleManette,
     get appareil() { return appareilCourant(); },
     get axe() { return axe; },
-    // La coop locale (essai, un clavier + une manette) : les entrees du
-    // DEUXIEME joueur (`Entites.majJoueur2`), et l'option qui decide qui a
-    // la manette (`Hud.menuOptions`, `options.coopP1Manette`).
+    // La coop locale : une SOURCE par joueur (`j.entree`), les entrees nues
+    // du deuxieme, et l'option qui decide qui a la manette
+    // (`Hud.menuOptions`, `options.coopP1Manette`).
+    SOURCE1, SOURCE2,
     basJoueur2, neufJoueur2, axeJoueur2, joueur1PrendLaManette,
     get gaz() { return Math.max(gaz, gazCasque); }, get frein() { return Math.max(frein, freinCasque); },
     get estTactile() { return tactile; },

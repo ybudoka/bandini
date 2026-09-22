@@ -652,3 +652,81 @@ deuxième joueur.
   (`LAISSE_COOP`, dans `monde.js`) — posé à vue, à ajuster au prochain essai. Ni si le deuxième
   joueur à poings nus, sans arme et sans roulade, tient sa place dans une vraie bagarre à deux
   contre une bande. **Prochain pas : Martin, clavier et manette en main, encore.**
+
+---
+
+## Remaniement : **2 vrais joueurs** (22 sept. 2026)
+
+Martin, après l'essai : « **2 vrais joueurs** ». C'est le mot qui a tout décidé — l'essai
+faisait du deuxième joueur un `pieton` déguisé, et une sonde a montré ce que ça coûtait
+vraiment : **ses coups ne touchaient jamais personne** (`Combat.arcDeMelee` refuse un piéton
+qui frappe un piéton — la seule inimitié de la ville, deux gangs entre eux), les portes
+l'oubliaient dehors avec ses coordonnées de rue, et un char lancé le traînait à travers les
+murs au bout de la laisse. Trois bogues, une seule cause : le code demande partout « est-ce LE
+joueur ? », et il répondait non.
+
+**Le remaniement tient dans deux idées.**
+
+1. **Une SOURCE D'ENTRÉES par joueur** (`Entree.SOURCE1`/`SOURCE2`, portée par l'entité :
+   `j.entree`). Un objet à quatre entrées — `axe`, `bas(a)`, `neuf(a)`, `vibrer(ms)`. Tout ce
+   qui fait marcher, frapper, rouler, se lever ou lâcher un otage lit **la source du joueur
+   qu'il avance**, plus le module : `Entites.majJoueur`, `Combat.majGestes`, `Combat.roulade`,
+   `Combat.majSaisie`, `Interactions.majAssis`. Personne ne demande plus « quel stick ? » — il
+   suffit de demander au joueur. ⚠️ **C'est la porte ouverte à la coop en ligne** (demande de
+   Martin, 22 sept., « il faut laisser la possibilité d'avoir un mode coop online ») : une
+   source remplie depuis le réseau se branche au même endroit, sans qu'une ligne de `majJoueur`
+   change. Rien de réseau n'est écrit — c'est le *joint* qui est posé, pas le tuyau.
+2. **Le deuxième joueur est un `type: 'joueur'`** (`Entites.creerJoueur2`). Il passe par
+   `majJoueur` comme le premier — la même fonction pour les deux — et hérite d'un coup de tout
+   ce que l'essai lui refusait : ses **coups portent** (et la police les voit,
+   `Police.signalerCrime` vaut maintenant pour tout joueur), il **nage**, il **sprinte**, il
+   **roule** (`esquive`), il **charge un coup fort** en tenant ATTAQUE, il peut **ramasser une
+   arme** par terre et **prendre un otage**. Ce qui lui reste en propre : la marque
+   `coopJoueur2` — l'ombre verte, et les trois gestes du joueur 1.
+
+**Ce qui reste au joueur 1, et seulement à lui** (Martin : « toutes les mêmes actions sauf ce
+qui change de scène et lancer des missions ou conduire ») : la chaîne de `Missions.interagir`
+au complet (donneurs, comptoirs, guichets, autobus), les **portes** (`Jeu.entrer`/`sortir`), le
+**volant**, la **roue d'armes** (elle ralentit le monde pour les deux), le **verrou de visée**
+(un seul compteur au module), et l'**hôpital**.
+
+- **Il ne pousse pas les portes, il SUIT.** `Jeu.chargerPiece` emmène `Entites.joueurs()` dans
+  la pièce au lieu du seul `B.joueur`, et `Jeu.majCoop` compare l'objet `B.interieur` d'une
+  image à l'autre : dès qu'il change — porte, métro, ascenseur, urgence, prison —, le
+  partenaire est reposé à côté du premier (`placePresDe`). Ceinture **et** bretelles : s'il
+  sort quand même du tableau des entités (une scène qu'on écrira plus tard), il y est repêché à
+  l'image suivante.
+- **Il monte avec lui.** Le premier prend le volant → le deuxième devient passager (invisible,
+  collé à la tôle, à l'abri : `blesser` refuse tout à qui est en char) ; le premier se gare →
+  il redescend à côté. Sans ça, la laisse de la caméra le traînait derrière le char à travers
+  les murs.
+- **Ils ne peuvent pas se frapper** (Martin, 22 sept.) — la règle est descendue là où elle
+  appartient : `Entites.blesser`, le seul passage de toute blessure du jeu. Un joueur ne blesse
+  pas un joueur : le poing, la balle, la grenaille, le brasier et **le char conduit par
+  l'autre** y passent tous. L'essai rechargeait `invincible` à chaque image, ce qui le
+  protégeait aussi de la ville entière (et le faisait clignoter en permanence à l'écran, puisque
+  le dessin fait clignoter tout ce qui est invincible).
+- **Il tombe K.-O., il ne va pas à l'urgence** : l'urgence change de scène. À zéro de vie il
+  reste couché (`assommer`), puis se relève à mi-vie avec une seconde et demie de répit
+  (`majJoueur`). Idem pour la noyade : on le repose au sec, K.-O., au lieu de l'envoyer à
+  l'hôpital — sinon un deuxième joueur qui coule emmènerait la partie du premier dans un lit.
+- **Munitions et sauvegarde restent à la partie** : un seul sac d'armes, une seule partie. Le
+  deuxième tient son arme en main (`j.arme`), pas en mémoire (`B.partie.arme`).
+- **Limite connue, assumée** : la **police** poursuit le joueur 1. Les crimes du deuxième
+  montent bien au compteur (chaleur, étoiles) — c'est une seule recherche pour une seule
+  partie —, mais les agents, les passants qui fuient et les ennemis visent le premier. La
+  généraliser demanderait de reprendre `police.js` de bout en bout : hors de ce passage.
+
+**Juges** (tous mutation-vérifiés, chacun sur la mutation qui le vise) : le coup du deuxième
+joueur **qui porte** (la vie de la cible baisse — l'ancien juge ne regardait que
+`etat === 'attaque'` et restait vert pendant que rien n'arrivait), les deux joueurs qui ne se
+blessent pas **une fois l'invincibilité de naissance retombée** (et le même coup venu d'un
+passant qui, lui, porte), ACTION du deuxième **devant une porte qui ne s'ouvre pas** (et la
+même porte qui s'ouvre pour le premier, sinon le juge ne prouve rien), le partenaire qui suit
+dans la pièce **et** en ressort sans sosie, le passager qui monte et redescend, le K.-O. qui ne
+déclenche pas le fondu de l'urgence, et le repêchage d'un partenaire oublié par une scène.
+
+⚠️ **Le bouton tenu CHARGE**, désormais, pour le deuxième joueur aussi : à poings nus (mêlée),
+tenir ATTAQUE arme un coup fort qui ne part qu'au relâcher. Un juge qui appuie sans jamais
+lâcher ne frappe personne — c'est ce qui l'a fait rougir en premier, et c'est le bon
+comportement.

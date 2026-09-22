@@ -147,6 +147,18 @@ const Entites = (function () {
   /** Le decor solide dans un rayon — index fixe, donc jamais perime. */
   function decorAutour(x, y, rayon) { return chercher(grilleFixe, x, y, rayon, null); }
 
+  /** LES JOUEURS de la partie, dans l'ordre : le premier, puis le deuxieme si
+      la coop est la et qu'il tient debout. Tout ce qui se fait « pour chaque
+      joueur » (le combat, les entrees, la camera) passe par ici plutot que par
+      `B.joueur` — c'est la meme porte qu'ouvrira une coop en ligne. */
+  function joueurs() {
+    const out = [];
+    if (B.joueur) out.push(B.joueur);
+    if (B.coop && B.coop.entite && B.coop.entite.vivant) out.push(B.coop.entite);
+    return out;
+  }
+  function estJoueur(e) { return !!e && e.type === 'joueur'; }
+
   function pietonsAutour(x, y, rayon) {
     return autour(x, y, rayon, function (e) { return e.type === 'pieton' && e.vivant; });
   }
@@ -165,14 +177,19 @@ const Entites = (function () {
       endurance: 100, surplus: 0, cafeine: 0, arme: p.arme || 'poings',
       dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
       cible: null,
+      // Sa SOURCE d'entrees (`Entree.SOURCE1`) : le clavier, la manette ou le
+      // doigt — et en coop, celui des deux appareils que l'option lui donne.
+      // Voir la note des sources dans `entree.js` : c'est par la que passera
+      // un jour un joueur distant.
+      entree: typeof Entree !== 'undefined' ? Entree.SOURCE1 : null,
     });
     B.joueur = j;
     return j;
   }
 
-  /** Le deuxieme joueur de la coop locale (M14, essai) : un pieton a l'allure
-      du joueur (meme sprite, meme linge), pour qu'on le reconnaisse tout de
-      suite comme « l'autre toi » plutot que comme un passant de plus. */
+  /** Le deuxieme joueur de la coop locale : meme sprite, meme linge que le
+      premier, pour qu'on le reconnaisse tout de suite comme « l'autre toi »
+      plutot que comme un passant de plus. */
   //: Un linge d'une autre couleur que toutes les tenues en vente (rouge,
   //: bleu, noir, gris, orange — voir `TENUES` dans `app/magasins.py`) : au
   //: premier coup d'œil, « l'autre toi » reste l'autre, quelle que soit la
@@ -180,16 +197,37 @@ const Entites = (function () {
   //: distinction pour différencier les joueurs ».
   const COULEUR_COOP_JOUEUR2 = '#16a085';
 
-  function creerCoopJoueur2(x, y) {
+  /** ⚠️ UN VRAI JOUEUR, PAS UN PIETON DEGUISE — c'est le remaniement du
+      22 sept. (« 2 vrais joueurs »), et il tient dans le `type`.
+
+      L'essai en faisait un `pieton` marque `coopJoueur2`, et tout ce que le
+      jeu reserve au joueur se demandait « est-ce LE joueur ? » : ses coups ne
+      portaient jamais (`Combat.arcDeMelee` interdit pieton contre pieton), la
+      police ne voyait pas ses crimes, il ne nageait pas, ne roulait pas, ne
+      sprintait pas. Le meme `type` le fait passer par `majJoueur` comme le
+      premier — une seule fonction pour les deux, et c'est la SOURCE
+      D'ENTREES qu'il porte (`entree`) qui les distingue, plus le code.
+
+      Ce qui lui reste en propre tient en une marque, `coopJoueur2` :
+      l'ombre verte, et les trois gestes du joueur 1 (changer de scene,
+      lancer une mission, conduire — Martin, 22 sept. : « les 2 personnages
+      doivent pouvoir faire toutes les memes actions sauf ce qui change de
+      scene et lancer des missions ou conduire »). */
+  function creerJoueur2(x, y) {
     const p = B.partie;
     const swaps = Object.assign({}, apparenceDuJoueur(p, B.defs), { c: COULEUR_COOP_JOUEUR2 });
-    return creer('pieton', x, y, {
-      r: 5, sprite: 'joueur', swaps: swaps,
-      etat: 'flane', dir: 0, butT: 0, cri: 0, coopJoueur2: true,
-      // ⚠️ Deja invincible A LA NAISSANCE, pas seulement a la premiere image
-      // de `majJoueur2` — sans ca, une image separe la creation du premier
-      // rechargement, et un coup porte pile a ce moment-la passerait.
-      invincible: 30,
+    const vieMax = Math.round(100 * Missions.avantage('vie', 1));
+    return creer('joueur', x, y, {
+      r: 5, sprite: 'joueur', swaps: swaps, coopJoueur2: true,
+      entree: typeof Entree !== 'undefined' ? Entree.SOURCE2 : null,
+      vie: vieMax, vieMax: vieMax,
+      endurance: 100, surplus: 0, cafeine: 0, arme: 'poings',
+      dansVehicule: null, flagrant: 0, pasDist: 0, coupT: 0, charge: 0, roule: 0,
+      cible: null, etat: 'flane', dir: 0, butT: 0, cri: 0,
+      // ⚠️ Deja invincible A LA NAISSANCE, pas seulement a la premiere image :
+      // sans ca, une image separe la creation du premier rechargement, et un
+      // coup porte pile a ce moment-la passerait.
+      invincible: 60,
     });
   }
 
@@ -3682,6 +3720,17 @@ const Entites = (function () {
     // Le moment le plus grave que l'eau produit : il ne peut pas etre muet.
     Son.SFX.couler();
     j.vx = 0; j.vy = 0;
+    // ⚠️ LE DEUXIEME JOUEUR NE VA PAS A L'URGENCE : elle change de scene, et
+    // une scene est au joueur 1 (Martin, 22 sept.). Il boit la tasse, on le
+    // repose au sec, K.-O. — comme un coup de trop (`blesser`, `majJoueur`).
+    if (j !== B.joueur) {
+      const sec = trottoirLePlusProche(Math.floor(j.x / TT), Math.floor(j.y / TT));
+      if (sec) { j.x = sec.x; j.y = sec.y; }
+      j.nage = false;
+      j.endurance = B.defs.recherche.vitesses.endurance;
+      assommer(j);
+      return;
+    }
     Missions.hopital(null);
   }
 
@@ -3737,11 +3786,30 @@ const Entites = (function () {
   }
 
   function majJoueur(j) {
+    // ⚠️ LES ENTREES VIENNENT DU JOUEUR QU'ON AVANCE, pas du module : en coop,
+    // cette meme fonction fait marcher les deux, chacun sur son appareil
+    // (`Entree.SOURCE1`/`SOURCE2`). Un joueur sans source, c'est le jeu a un :
+    // on retombe sur `Entree`, ou tout se confond comme avant.
+    const ent = j.entree || Entree;
     // ⚠️ Le `recul` d'un coup recu se decompte ICI, avant tout retour : seuls
     // les pietons le faisaient, et le joueur restait penche de 0,22 rad a vie
     // (retour de Martin : « mon personnage est croche »).
     if (j.recul > 0) j.recul--;
     if (j.dansVehicule) return;
+    // ⚠️ LE DEUXIEME JOUEUR TOMBE K.-O., IL NE VA PAS A L'HOPITAL (`blesser`) :
+    // l'urgence CHANGE DE SCENE, et une scene appartient au joueur 1. Il reste
+    // couche le temps du compte, puis se releve a mi-vie, invincible une
+    // seconde et demie — un joueur a terre attend son partenaire, il ne met
+    // pas fin a la partie.
+    if (j.etat === 'assomme') {
+      j.vx = 0; j.vy = 0;
+      if (--j.minuterie <= 0) {
+        j.etat = 'flane'; j.face = 'bas';
+        j.vie = Math.round(j.vieMax / 2);
+        j.invincible = 90;
+      }
+      return;
+    }
     // ⚠️ A bord du traversier, on regarde passer la baie : la coque nous porte, et
     // l'eau sous le pont n'est pas une raison de nager (`Traversier.maj`).
     if (j.aBord) { j.vx = 0; j.vy = 0; j.nage = false; return; }
@@ -3763,12 +3831,12 @@ const Entites = (function () {
     // ne pousse pas, et la PREMIERE poussee leve. On marche dans la meme image,
     // depuis le pas de cote que `seLever` vient de poser.
     if (j.alite) {
-      if (!(Entree.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
-      seLever(j, Entree.axe.x, Entree.axe.y);
+      if (!(ent.axe.mag > 0)) { j.vx = 0; j.vy = 0; return; }
+      seLever(j, ent.axe.x, ent.axe.y);
     }
     const v = B.defs.recherche.vitesses;
     const eau = B.defs.recherche.nage;
-    const axe = Entree.axe;
+    const axe = ent.axe;
     // ⚠️ L'EAU N'EST PLUS UN MUR. Le joueur et les agents portent le masque du
     // nageur — eux seuls entrent dans la baie — et c'est le SOUFFLE qui decide
     // jusqu'ou. Voir `recherche.NAGE` : les deux nombres se jugent contre la
@@ -3794,7 +3862,7 @@ const Entites = (function () {
     // grandeur de la carte. » Pousser le pouce a fond, ou n'importe quelle
     // touche de direction, c'est courir ; l'effleurer, c'est marcher ; le
     // bouton, c'est SPRINTER, et lui seul coute du souffle.
-    const veutSprinter = Entree.bas('esquive');
+    const veutSprinter = ent.bas('esquive');
     const marche = axe.source !== 'clavier' && axe.mag < 0.6;
     let vitesse = marche ? v.joueur_marche : v.joueur_course;
     // ⚠️ Le cafe allonge le sprint, il ne l'accelere PAS : `joueur_sprint`
@@ -4039,66 +4107,6 @@ const Entites = (function () {
     return (e.nage || e.agent || e.barbote || e.type === 'joueur') ? Monde.MASQUE_NAGEUR : Monde.MASQUE_PIETON;
   }
 
-  /** La coop locale (M14, essai — un clavier + une manette) : un pieton
-      marque `coopJoueur2`, mene par LE DEUXIEME APPAREIL (`Entree.axeJoueur2`
-      — la manette par defaut, ou le clavier si l'option donne la manette au
-      joueur 1, `Entree.joueur1PrendLaManette`) plutot que par l'IA, a la
-      MEME vitesse que le premier (`v.joueur_marche`/`v.joueur_course`, pas
-      `v.pieton` — un passant de la foule est plus lent qu'un joueur, et les
-      deux couraient a des rythmes differents. Retour de Martin, 22 sept.
-      2026, en testant). `Monde.majCameraCoop` les retient a portee l'un de
-      l'autre (une laisse, pas un zoom — voir sa note).
-
-      ⚠️ « Toutes les memes actions, sauf ce qui change de scene, lance une
-      mission ou conduit — ca reste toujours le joueur 1 » (Martin, 22 sept.).
-      ATTAQUE frappe (`Combat.frapper`, toujours a poings nus — le deuxieme
-      joueur n'a pas d'arme a lui, `armeCourante()` ne lit que celle du
-      premier) et ACTION interagit avec le decor, les betes et les gens
-      (`Interactions.utiliserSurLesGens/Betes/LeDecor`) — les memes gestes
-      que le joueur 1, en dehors de la chaine de `Missions.interagir` (portes,
-      donneurs de mission, comptoirs, autobus...), qui reste HORS DE PORTEE :
-      c'est elle qui change de scene et lance des missions. ⚠️ Ni roulade
-      (`Combat.roulade` lit `Entree.axe`/`j.endurance` du joueur 1 en dur), ni
-      bouclier humain, ni arme a soi — hors de la portee « essai ». ⚠️ Un banc
-      L'ASSOIT (meme table de decor que le joueur 1) mais SANS
-      `Interactions.majAssis` complet — cette fonction-la lit aussi
-      `Entree.axe`/`bas`/`neuf` du premier en dur. Un parallele minimal :
-      SEUL le mouvement leve, pas de souffle qui revient ni de soin assis
-      pour le deuxieme joueur pendant l'essai. */
-  function majJoueur2(e) {
-    // ⚠️ « Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin,
-    // 22 sept.) : sans ca, le deuxieme joueur est un pieton `vivant` comme un
-    // autre, et le premier peut le cogner (poing, arme) comme n'importe quel
-    // passant — un coup de trop dans une bagarre, une balle perdue. Rechargee
-    // CHAQUE image, comme la triche INVINCIBLE du joueur 1 (`Jeu.maj`) :
-    // `blesser()` refuse tout coup tant qu'elle tient (`e.invincible > 0`).
-    // ⚠️ Ca protege aussi le PREMIER : le deuxieme joueur ne frappe qu'a
-    // poings nus (plus bas), jamais assez fort pour justifier une riposte —
-    // mais `B.joueur`, lui, reste vulnerable a tout le reste (foule, police).
-    e.invincible = 30;
-    const axe = Entree.axeJoueur2();
-    if (e.assis) {
-      if (axe.mag > 0) Interactions.seLever(e, axe.x, axe.y);
-      else { e.vx = 0; e.vy = 0; return; }
-    } else {
-      if (Entree.neufJoueur2('attaque') && typeof Combat !== 'undefined') Combat.frapper(e, false);
-      if (Entree.neufJoueur2('action') && typeof Interactions !== 'undefined'
-          && (Interactions.utiliserSurLesGens(e) || Interactions.utiliserSurLesBetes(e) || Interactions.utiliserSurLeDecor(e))) {
-        return;   // le geste a pris la pression : pas de mouvement cette image-ci
-      }
-    }
-    const v = B.defs.recherche.vitesses;
-    if (axe.mag > 0) {
-      const marche = axe.mag < 0.6;
-      const vitesse = (marche ? v.joueur_marche : v.joueur_course) * Math.min(1, axe.mag * 1.15);
-      e.vx = axe.x * vitesse; e.vy = axe.y * vitesse;
-      deplacerCercle(e, e.vx, e.vy, masqueDe(e));
-      dansLaCarte(e);
-      e.anim.dist += Math.abs(e.vx) + Math.abs(e.vy);
-      regarder(e, e.vx, e.vy);
-    } else { e.vx = 0; e.vy = 0; }
-  }
-
   function majPieton(e) {
     const v = B.defs.recherche.vitesses;
     const reactions = B.defs.pietons.reactions;
@@ -4110,7 +4118,6 @@ const Entites = (function () {
     // ⚠️ Lu sous les pieds a chaque image, pour tout le monde : c'est ce qui
     // decide du masque, du dessin, et de la vitesse d'un agent a la nage.
     mouiller(e);
-    if (e.coopJoueur2) { majJoueur2(e); return; }
     if (e.saigne > 0) saigner(e);
     if (majEnjambe(e)) return;         // il passe par-dessus une cloture : rien d'autre
     if (majPorte(e)) return;           // il sort d'une porte, ou il y rentre
@@ -4618,7 +4625,11 @@ const Entites = (function () {
     if (e.saigne % 60 === 0) {
       e.vie -= reactions.degats_saignement;
       goutte(e.x, e.y);
-      if (e.vie <= 0 && e.vivant) { if (e.type === 'joueur') Missions.hopital(e.menace); else tuer(e, e.menace); }
+      if (e.vie <= 0 && e.vivant) {
+        if (e === B.joueur) Missions.hopital(e.menace);
+        else if (e.type === 'joueur') assommer(e);
+        else tuer(e, e.menace);
+      }
     }
   }
 
@@ -4632,6 +4643,13 @@ const Entites = (function () {
     // sur un oiseau qui n'a pas de vie a perdre. Un goeland qu'on peut tuer est
     // une CIBLE, et une cible demande un score, un crime, un juge.
     if (e.type !== 'pieton' && e.type !== 'joueur') return false;
+    // ⚠️ DEUX JOUEURS NE SE FRAPPENT PAS — Martin, 22 sept. : « il ne faut pas
+    // qu'il puisse se frapper mutuellement ». Ecrit ICI, au seul passage de
+    // toute blessure du jeu, plutot qu'arme par arme : le poing, la balle, la
+    // grenaille, le brasier et le char conduit par l'autre (`Vehicules`
+    // signale alors `B.joueur` comme source) y passent tous. Une coop ou on
+    // se tue entre partenaires est une coop qui dure une minute.
+    if (e.type === 'joueur' && source && source.type === 'joueur') return false;
     // ⚠️ RIEN n'atteint un enfant : ni un poing, ni une balle, ni un char. Le
     // jeu est adulte, pas ca. Il prend peur et il court, point.
     if (e.intouchable) {
@@ -4670,8 +4688,10 @@ const Entites = (function () {
     // Le grognement vient de celui qui encaisse : muet hors de l'ecran, plus
     // fort a mesure qu'on s'approche (retour de Martin, 16 sept. 2026).
     Son.depuis(e, Son.SFX.touche);
-    if (e.vie <= 0 && e.type === 'joueur') {
+    if (e.vie <= 0 && e === B.joueur) {
       Missions.hopital(source);
+    } else if (e.vie <= 0 && e.type === 'joueur') {
+      assommer(e);                      // le deuxieme joueur : K.-O., voir `majJoueur`
     } else if (e.vie <= 0) {
       if (opts.assomme) assommer(e);
       else tuer(e, source);
@@ -5246,7 +5266,7 @@ const Entites = (function () {
 
   return {
     CELLULE, BULLE_NAISSANCE, BULLE_OUBLI, MAX_PIETONS, MAX_DECALS, MAX_PARTICULES, PORTEE_DECOR,
-    creer, retirer, vider, creerJoueur, creerCoopJoueur2, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
+    creer, retirer, vider, creerJoueur, creerJoueur2, joueurs, estJoueur, creerDecor, creerAmbulants, majKiosques, creerPaquets, creerPieton, reindexerDecor,
     briser, endommagerDecor, reparerLeDecor, releverDecor, DEBRIS_MAX,
     peuplerInterieur, PIEDS_ALITE, coucher, seLever,
     archetype, archetypeDeRue,

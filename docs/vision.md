@@ -123,4 +123,6 @@ voir « Les missions mises en scène ».
 17 sept. 2026, à la demande de Martin — voir « Le tableau des scores s'en va ») · bilan de
 session, caméra qui respire, visée assistée, GPS pointillé, options
 (sang, palette daltonienne, vibration) **v1** · défi du jour à graine serveur, mode photo,
-coop locale **M14**.
+coop locale **à deux vrais joueurs** (un clavier, une manette) **M14** — la coop *en ligne*
+n'est pas promise, mais le joint qui l'accueillerait est posé (une source d'entrées par
+joueur, voir [plan.md](plan.md)).

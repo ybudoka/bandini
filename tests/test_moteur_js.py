@@ -7943,8 +7943,9 @@ def test_la_vue_du_mode_photo_ne_deborde_pas_de_la_ville(banc):
 
 
 def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
-    """M14, essai — RISQUÉ, pas promis (voir la fiche du jalon) : `Jeu.basculerCoop`
-    fait naitre un pieton `coopJoueur2`, mene par LA manette (`Entree.stick`) — le
+    """M14 : `Jeu.basculerCoop` fait naitre un DEUXIEME VRAI JOUEUR
+    (`type: 'joueur'`, pas un pieton deguise — remaniement du 22 sept.,
+    « 2 vrais joueurs »), mene par LA manette (`Entree.SOURCE2`) — le
     joueur 1, lui, ne repond plus qu'au clavier pendant ce temps
     (`Entree.debutImage`, `!B.coop` sur la branche manette). Un clavier, une
     manette : la manette ne bouge jamais le joueur 1, le clavier ne bouge jamais
@@ -7982,14 +7983,15 @@ def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
                  joueurVitesseClavier: joueurVitesseClavier, e2VitesseClavier: e2VitesseClavier,
                  ferme: ferme };
     }""")
-    assert r["ouvert"] == {"coop": True, "entites": r["avant"] + 1, "type": "pieton",
+    assert r["ouvert"] == {"coop": True, "entites": r["avant"] + 1, "type": "joueur",
                             "coopFlag": True, "vivant": True}
     assert r["e2VitesseManette"]["vx"] > 0.2, "la manette doit faire marcher le deuxieme joueur"
     assert r["joueurVitesseManette"] == {"vx": 0, "vy": 0}, "la manette a bouge le joueur 1"
     assert r["joueurVitesseClavier"]["vx"] > 0.5, "le clavier doit faire marcher le joueur 1"
     # ⚠️ Retour de Martin (22 sept., en testant) : le deuxieme joueur ne
-    # courait pas a la meme vitesse que le premier — `majJoueur2` prenait
-    # `v.pieton` (la foule), pas `v.joueur_course` (le joueur). Le stick a
+    # courait pas a la meme vitesse que le premier — l'essai le menait par
+    # `v.pieton` (la foule), pas `v.joueur_course`. Les deux passent
+    # desormais par la MEME fonction (`Entites.majJoueur`). Le stick a
     # fond (mag=1) et le clavier (toujours a fond) doivent donner LA MEME
     # vitesse, au pouce pres.
     assert r["e2VitesseManette"]["vx"] == pytest.approx(r["joueurVitesseClavier"]["vx"], abs=0.05), (
@@ -8061,46 +8063,260 @@ def test_la_coop_locale_le_deuxieme_joueur_interagit_au_bouton_action(banc):
 
 def test_la_coop_locale_les_deux_joueurs_ne_peuvent_pas_se_frapper(banc):
     """« Il ne faut pas qu'ils puissent se frapper mutuellement » (Martin, 22
-    sept.) : `majJoueur2` recharge `e.invincible` chaque image, comme la
-    triche INVINCIBLE du joueur 1 — `Entites.blesser` refuse tout coup tant
-    qu'elle tient."""
-    r = banc("""function (L, o) {
-        L.Jeu.commencer();
-        L.Jeu.basculerCoop();
-        const e2 = L.B.coop.entite, vieAvant = e2.vie;
-        const touche = L.Entites.blesser(e2, 20, 'poings', {});
-        o.frame(1);   // un pas de plus, l'invincibilite tient toujours
-        const toucheEncore = L.Entites.blesser(e2, 20, 'poings', {});
-        L.Jeu.basculerCoop();
-        return { touche: touche, toucheEncore: toucheEncore, vieAvant: vieAvant, vieApres: e2.vie };
-    }""")
-    assert r["touche"] is False and r["toucheEncore"] is False, "le deuxieme joueur peut encore etre blesse"
-    assert r["vieApres"] == r["vieAvant"], "le deuxieme joueur a perdu de la vie malgre l'invincibilite"
-
-
-def test_la_coop_locale_le_deuxieme_joueur_frappe_a_poings_nus(banc):
-    """Demande de Martin (22 sept.) : « toutes les mêmes actions » — ATTAQUE
-    fait frapper le deuxième joueur (`Combat.frapper`, generique sur
-    n'importe quelle entite — deja utilise pour les passants qui se battent).
-    Toujours a poings nus : il n'a pas d'arme a lui (`e.arme` reste vide,
-    `armeCourante()` ne lit que celle du premier)."""
+    sept.) : la regle est ecrite dans `Entites.blesser`, au seul passage de
+    toute blessure du jeu — un joueur ne blesse pas un joueur. ⚠️ Et c'est
+    BIEN CETTE REGLE-LA qu'on juge, pas l'invincibilite de naissance : on
+    attend qu'elle soit retombee, puis le meme coup venant d'un PASSANT
+    porte, lui."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.Jeu.basculerCoop();
         const e2 = L.B.coop.entite;
+        // L'invincibilite de naissance (60 images) doit etre retombee : sans
+        // ca, le juge resterait vert meme sans la regle.
+        for (let i = 0; i < 70; i++) o.frame(1);
+        const invincible = e2.invincible;
+        const vieAvant = e2.vie;
+        const parLeJoueur = L.Entites.blesser(e2, 20, L.B.joueur, {});
+        const vieApres = e2.vie;
+        // Le meme coup, venu d'un passant : il porte. C'est la preuve que le
+        // refus vient de la regle joueur-contre-joueur et de rien d'autre.
+        const passant = L.Entites.creerPieton(e2.x + 40, e2.y, L.Entites.archetypeDeRue());
+        const parUnPassant = L.Entites.blesser(e2, 20, passant, {});
+        // Et dans l'autre sens : le deuxieme ne blesse pas le premier.
+        const jAvant = L.B.joueur.vie;
+        L.B.joueur.invincible = 0;
+        const versLePremier = L.Entites.blesser(L.B.joueur, 20, e2, {});
+        L.Jeu.basculerCoop();
+        return { invincible: invincible, vieAvant: vieAvant, vieApres: vieApres,
+                 parLeJoueur: parLeJoueur, parUnPassant: parUnPassant,
+                 versLePremier: versLePremier, jAvant: jAvant, jApres: L.B.joueur.vie };
+    }""")
+    assert not r["invincible"], "l'invincibilite de naissance tient encore : le juge ne prouverait rien"
+    assert r["parLeJoueur"] is False, "le joueur 1 a pu frapper le deuxieme"
+    assert r["vieApres"] == r["vieAvant"], "le deuxieme joueur a perdu de la vie sous le coup du premier"
+    assert r["parUnPassant"] is True, "un passant doit pouvoir le blesser, lui : sinon le juge ne mord pas"
+    assert r["versLePremier"] is False, "le deuxieme joueur a pu frapper le premier"
+    assert r["jApres"] == r["jAvant"], "le joueur 1 a perdu de la vie sous le coup du deuxieme"
+
+
+def test_la_coop_locale_le_deuxieme_joueur_frappe_a_poings_nus(banc):
+    """Demande de Martin (22 sept.) : « toutes les mêmes actions » — ATTAQUE
+    fait frapper le deuxième joueur, ET SON COUP PORTE.
+
+    ⚠️ C'est LA raison du remaniement « 2 vrais joueurs » : tant qu'il etait
+    un `pieton`, son poing ne touchait jamais personne — `Combat.arcDeMelee`
+    refuse pieton contre pieton (les passants ne se battent pas entre eux,
+    sauf deux gangs). Un juge qui ne regardait que `etat === 'attaque'` restait
+    vert pendant que rien n'arrivait : on mesure donc la VIE de la cible."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        // Le banc plante la cible sous son nez, face a elle, et vide le reste :
+        // un passant qui s'interpose prendrait le coup a sa place.
+        for (const q of L.Entites.autour(e2.x, e2.y, 60, function (v) { return v.type === 'pieton'; })) L.Entites.retirer(q);
+        const cible = L.Entites.creerPieton(e2.x + 9, e2.y, L.Entites.archetypeDeRue());
+        cible.etat = 'fige';
+        L.Entites.regarder(e2, 1, 0);
+        L.Entites.indexer();
+        const vieAvant = cible.vie;
         // ATTAQUE : bouton 2 (MANETTE_DEFAUT.attaque = [2, 5]).
+        // ⚠️ ON PRESSE ET ON RELACHE — a poings nus (melee), le bouton TENU
+        // charge un coup fort, et le coup ne part qu'au relacher
+        // (`Combat.majGestes`). C'est desormais le meme geste que pour le
+        // joueur 1 : le tenir sans jamais le lacher ne frappe personne.
         o.pad([0, 0], [0, 0, 1]);
         o.frame(1);
-        const apres = { etat: e2.etat, arme: e2.arme };
+        const charge = e2.charge;
         o.pad(null);
+        o.frame(1);
+        const etat = e2.etat, arme = e2.arme;
+        // Les trois temps du coup : anticipation, actif, repos.
+        for (let i = 0; i < 20; i++) o.frame(1);
         L.Jeu.basculerCoop();
-        return { apres: apres };
+        return { etat: etat, arme: arme, charge: charge, vieAvant: vieAvant, vieApres: cible.vie,
+                 assomme: cible.etat === 'assomme' };
     }""")
-    assert r["apres"]["etat"] == "attaque", "ATTAQUE doit faire frapper le deuxieme joueur"
-    # ⚠️ `e.arme` vaut `undefined` : JSON (le banc rend le resultat en JSON)
-    # ne porte pas les clefs `undefined`, `r["apres"]` n'a alors pas de clef
-    # "arme" du tout — `.get(...)` plutot qu'un `[...]` qui leverait.
-    assert not r["apres"].get("arme"), "le deuxieme joueur frappe a poings nus, il n'a pas d'arme a lui"
+    assert r["charge"] >= 1, "le bouton tenu doit CHARGER le coup du deuxieme joueur"
+    assert r["etat"] == "attaque", "ATTAQUE doit faire frapper le deuxieme joueur"
+    assert r["arme"] == "poings", "le deuxieme joueur part a poings nus"
+    assert r["vieApres"] < r["vieAvant"] or r["assomme"], (
+        f"le coup du deuxieme joueur n'a rien fait : la cible est passee de {r['vieAvant']} "
+        f"a {r['vieApres']} point(s) de vie"
+    )
+
+
+def test_la_coop_le_deuxieme_joueur_ne_passe_pas_les_portes(banc):
+    """« Les 2 personnages doivent pouvoir faire toutes les mêmes actions sauf
+    ce qui change de scène et lancer des missions ou conduire. C'est toujours
+    le joueur 1 » (Martin, 22 sept.). Le deuxième joueur, ACTION collé à une
+    porte : rien. Pas de fondu, pas de pièce. ⚠️ Jugé PAR LE BOUTON, et le
+    même juge vérifie que la porte, elle, s'ouvre bien pour le PREMIER — sans
+    ça, un décor mal posé (mauvaise tuile, mauvais regard) rendrait le juge
+    vert sans rien prouver."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        // Le DEUXIEME joueur sur le pas de la porte, face a elle ; le premier a cote.
+        e2.x = porte.x * L.TT + 8; e2.y = (porte.y + 1) * L.TT + 10;
+        j.x = e2.x + 20; j.y = e2.y;
+        L.Entites.regarder(e2, 0, -1);
+        L.Entites.regarder(j, 0, -1);
+        // ACTION (bouton 0) a LA MANETTE : c'est le deuxieme joueur.
+        o.pad([0, 0], [1]);
+        o.frame(1);
+        o.pad(null);
+        o.frame(1);
+        const lui = { fondu: !!L.B.transition, dedans: !!L.B.interieur };
+        // La meme porte, au CLAVIER : le joueur 1 la passe.
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        L.Entites.regarder(j, 0, -1);
+        o.tape('KeyE', 1);
+        const premier = { fondu: !!L.B.transition };
+        o.fondu();
+        const apres = { dedans: L.B.interieur ? L.B.interieur.slug : null };
+        return { lui: lui, premier: premier, apres: apres, attendu: porte.interieur };
+    }""")
+    assert r["lui"] == {"fondu": False, "dedans": False}, (
+        "ACTION du deuxieme joueur a ouvert la porte : changer de scene est au joueur 1"
+    )
+    assert r["premier"]["fondu"] is True and r["apres"]["dedans"] == r["attendu"], (
+        "la porte ne s'ouvre meme pas pour le joueur 1 : le decor du juge est faux"
+    )
+
+
+def test_la_coop_le_partenaire_suit_dans_la_piece(banc):
+    """Il ne pousse pas les portes, il SUIT. L'essai le laissait dehors avec ses
+    coordonnees de rue (`Jeu.chargerPiece` : `B.entites = [B.joueur]`), et la
+    laisse de la camera le tirait a travers les murs de la piece. Il entre
+    avec le premier (`Entites.joueurs`), et `Jeu.majCoop` le repose a cote."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite, c = L.Monde.carte;
+        const porte = c.portes.find(function (p) { return p.lieu === 'planque'; });
+        j.x = porte.x * L.TT + 8; j.y = (porte.y + 1) * L.TT + 10;
+        e2.x = j.x + 24; e2.y = j.y;
+        L.Entites.regarder(j, 0, -1);
+        o.tape('KeyE', 1);
+        o.fondu();
+        o.frame(2);
+        const dedans = { piece: L.B.interieur ? L.B.interieur.slug : null,
+                          present: L.B.entites.indexOf(e2) >= 0,
+                          dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        // Et on ressort : il revient dehors avec lui, une seule fois (pas de
+        // sosie laisse dans la rue).
+        L.Jeu.sortir();
+        o.fondu();
+        o.frame(2);
+        let compte = 0;
+        for (const q of L.B.entites) if (q === e2) compte++;
+        const dehors = { present: L.B.entites.indexOf(e2) >= 0, compte: compte,
+                          dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        return { dedans: dedans, dehors: dehors };
+    }""")
+    assert r["dedans"]["piece"], "le joueur 1 n'est pas entre : le decor du juge est faux"
+    assert r["dedans"]["present"] is True, "le deuxieme joueur est reste dehors pendant que le premier entrait"
+    assert r["dedans"]["dist"] <= 32, (
+        f"le deuxieme joueur est a {r['dedans']['dist']} px du premier dans la piece : "
+        "il a garde ses coordonnees de la rue"
+    )
+    assert r["dehors"] == {"present": True, "compte": 1, "dist": r["dehors"]["dist"]}
+    assert r["dehors"]["dist"] <= 32, "en ressortant, le deuxieme joueur est reste dans la piece"
+
+
+def test_la_coop_repeche_le_partenaire_oublie_par_une_scene(banc):
+    """La ceinture ET les bretelles. `Jeu.majCoop` repose le partenaire des que
+    la scene change (l'objet `B.interieur`), mais une sortie qui ne passerait
+    pas par la — une scene qu'on ecrira plus tard — le laisserait hors du
+    tableau des entites, vivant nulle part. Il y est repeche a l'image
+    suivante, a cote du premier, plutot que perdu dans une carte morte."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite;
+        // Ce que ferait une scene qui l'oublie : il quitte le tableau, et ses
+        // coordonnees n'ont plus rien a voir avec celles du premier.
+        L.B.entites.splice(L.B.entites.indexOf(e2), 1);
+        e2.x = j.x + 200; e2.y = j.y + 200;
+        o.frame(2);
+        const r2 = { present: L.B.entites.indexOf(e2) >= 0,
+                      dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        L.Jeu.basculerCoop();
+        return r2;
+    }""")
+    assert r["present"] is True, "le partenaire oublie par une scene n'est jamais revenu"
+    assert r["dist"] <= 32, f"il est revenu a {r['dist']} px du premier, pas a cote"
+
+
+def test_la_coop_le_deuxieme_joueur_monte_en_passager(banc):
+    """Conduire est au joueur 1 — mais le deuxieme MONTE AVEC LUI. Sans ca, la
+    laisse de la camera le trainait derriere un char lance, a travers les murs
+    (vu a la sonde, 22 sept.). Passager : invisible, porte par la tole, et il
+    redescend a cote des que le premier se gare."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const j = L.B.joueur, e2 = L.B.coop.entite;
+        const v = o.char('auto', 24, 0, 0);
+        L.Vehicules.monter(j, v);
+        o.frame(1);
+        const dedans = { passager: e2.dansVehicule === v, dessine: e2.dessine,
+                          surLaTole: Math.round(Math.hypot(e2.x - v.x, e2.y - v.y)) };
+        // Le char roule : le passager suit la tole, il ne se traine pas dedans.
+        v.vitesse = 3;
+        o.frame(20);
+        const enRoute = { passager: e2.dansVehicule === v,
+                           surLaTole: Math.round(Math.hypot(e2.x - v.x, e2.y - v.y)) };
+        L.Vehicules.descendre(j, true);
+        o.frame(2);
+        const gare = { passager: !!e2.dansVehicule, dessine: e2.dessine,
+                        dist: Math.round(Math.hypot(e2.x - j.x, e2.y - j.y)) };
+        L.Jeu.basculerCoop();
+        return { dedans: dedans, enRoute: enRoute, gare: gare };
+    }""")
+    assert r["dedans"]["passager"] is True, "le premier a pris le volant, le deuxieme est reste sur le trottoir"
+    assert r["dedans"]["dessine"] is False, "un passager ne se dessine pas par-dessus le toit"
+    assert r["enRoute"]["passager"] is True and r["enRoute"]["surLaTole"] <= 8, (
+        "le passager a perdu le char en route"
+    )
+    assert r["gare"] == {"passager": False, "dessine": True, "dist": r["gare"]["dist"]}
+    assert r["gare"]["dist"] <= 32, "le deuxieme joueur n'est pas redescendu a cote du premier"
+
+
+def test_la_coop_le_deuxieme_joueur_tombe_ko_sans_envoyer_a_l_hopital(banc):
+    """Un vrai joueur peut tomber — mais l'urgence CHANGE DE SCENE, et une
+    scene est au joueur 1. A zero de vie, le deuxieme joueur est K.-O. sur
+    place (`Entites.blesser` -> `assommer`), il attend son partenaire, puis il
+    se releve a mi-vie (`Entites.majJoueur`). La partie, elle, continue."""
+    r = banc("""function (L, o) {
+        L.Jeu.commencer();
+        L.Jeu.basculerCoop();
+        const e2 = L.B.coop.entite;
+        for (let i = 0; i < 70; i++) o.frame(1);       // l'invincibilite de naissance retombe
+        const passant = L.Entites.creerPieton(e2.x + 40, e2.y, L.Entites.archetypeDeRue());
+        const vieMax = e2.vieMax;
+        L.Entites.blesser(e2, 999, passant, {});
+        const aTerre = { etat: e2.etat, vivant: e2.vivant, fondu: !!L.B.transition,
+                          dedans: !!L.B.interieur, vie: e2.vie };
+        e2.minuterie = 2;                              // le compte du K.-O., abrege
+        o.frame(4);
+        const debout = { etat: e2.etat, vie: e2.vie, vieMax: vieMax, invincible: e2.invincible > 0 };
+        L.Jeu.basculerCoop();
+        return { aTerre: aTerre, debout: debout };
+    }""")
+    assert r["aTerre"]["etat"] == "assomme", "le deuxieme joueur devait tomber K.-O."
+    assert r["aTerre"]["vivant"] is True, "le deuxieme joueur est mort au lieu de tomber K.-O."
+    assert r["aTerre"] == {"etat": "assomme", "vivant": True, "fondu": False, "dedans": False,
+                            "vie": r["aTerre"]["vie"]}, (
+        "la chute du deuxieme joueur a declenche le fondu de l'urgence"
+    )
+    assert r["debout"]["etat"] != "assomme", "le deuxieme joueur ne s'est jamais releve"
+    assert r["debout"]["vie"] == round(r["debout"]["vieMax"] / 2), "il se releve a mi-vie"
+    assert r["debout"]["invincible"] is True, "il se releve sans le repit qui evite de retomber aussitot"
 
 
 def test_la_coop_locale_l_option_donne_la_manette_au_joueur_1(banc):
