@@ -102,12 +102,24 @@ const Police = (function () {
     return !!(trouvee && trouvee.refuge);
   }
 
+  /** CE QUE LA POLICE DIT A LA RADIO quand les etoiles changent (M15, `Son.Ondes`) :
+      repere a la premiere, la poursuite quand les autos s'en melent, perdu quand
+      la derniere tombe. ⚠️ Un saut de zero a trois dit « poursuite » : c'est le
+      plus grave des deux, et le scanner n'en dit qu'un a la fois. */
+  function annoncer(avant) {
+    const r = B.recherche, d = defs();
+    const autos = function (n) { return (d.paliers[Math.min(n, d.etoiles_max)] || {}).autos || 0; };
+    if (r.etoiles > avant && !autos(avant) && autos(r.etoiles)) Son.Ondes.police('poursuite');
+    else if (avant === 0 && r.etoiles > 0) Son.Ondes.police('repere');
+    else if (avant > 0 && r.etoiles === 0) Son.Ondes.police('perdu');
+  }
+
   function ajouterChaleur(gravite) {
     // ⚠️ SUR L'ILE, RIEN NE FAIT MONTER LES ETOILES : ni un crime vu, ni un
     // temoin qui appelle. C'est la seule regle de l'ile, et elle vaut tout le
     // reste de sa fiche — on peut y laisser refroidir un char et un casier.
     if (auRefuge()) return;
-    const r = B.recherche, d = defs();
+    const r = B.recherche, d = defs(), avant = r.etoiles;
     r.chaleur += gravite * d.chaleur_par_gravite;
     while (r.chaleur >= d.chaleur_etoile && r.etoiles < d.etoiles_max) {
       r.chaleur -= d.chaleur_etoile;
@@ -117,6 +129,7 @@ const Police = (function () {
       Son.SFX.etoile();
     }
     if (r.etoiles >= d.etoiles_max) r.chaleur = 0;
+    annoncer(avant);
   }
 
   /** Un crime commis. `vu` : quelqu'un (agent ou passant) l'a vu.
@@ -322,9 +335,11 @@ const Police = (function () {
     const r = B.recherche, d = defs();
     const voulu = Math.min(n, d.etoiles_max);
     if (r.etoiles >= voulu) return false;
+    const avant = r.etoiles;
     r.etoiles = voulu;
     r.chaleur = 0; r.vu = 0; r.flash = 60;
     Son.SFX.etoile();
+    annoncer(avant);
     return true;
   }
 
@@ -763,6 +778,7 @@ const Police = (function () {
       r: 0, z: HELICO_ALTITUDE, solide: false, vivant: true, dessine: false, orbite: a, rotor: 0, part: false,
     });
     Hud.message('UN HÉLICO !', 150);
+    Son.Ondes.police('helico');
   }
 
   function majHelico(h) {
@@ -904,6 +920,7 @@ const Police = (function () {
       for (const s of [-1, 1]) creerAgent(centre.x + cx * 26 + nx * 10 * s, centre.y + cy * 26 + ny * 10 * s, 'poursuit');
       Entites.indexer();
       Hud.message('BARRAGE !', 120);
+      Son.Ondes.police('barrage');
       return { x: centre.x, y: centre.y, autos: autos };
     }
     return null;
@@ -947,7 +964,10 @@ const Police = (function () {
     if (r.etoiles <= 0) return;
     r.vu++;
     const p = defs().paliers[r.etoiles];
-    if (r.vu > p.decroissance_s * 60) { r.etoiles--; r.vu = 0; if (r.etoiles === 0) Hud.message('LA POLICE A LÂCHÉ'); }
+    if (r.vu > p.decroissance_s * 60) {
+      r.etoiles--; r.vu = 0;
+      if (r.etoiles === 0) { Hud.message('LA POLICE A LÂCHÉ'); annoncer(1); }
+    }
   }
 
   function maj() {

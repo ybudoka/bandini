@@ -174,6 +174,9 @@ EGALISATION: dict[str, str] = {
         # +7,7 dB au-dessus de v2 entre 4 et 8 kHz — v3 l'avait deja rendue brillante.
         PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-8,equalizer=f=400:t=o:w=1:g=-5"
         ",equalizer=f=5000:t=o:w=1.5:g=-4",
+    # La repartitrice de la police : une voix de femme, le passe-haut des femmes.
+    # Le scanner la coupe de toute facon sous 300 Hz (`Son.Ondes`).
+    "Caroline - Soft Quebec accent": PASSE_HAUT_FEMMES,
     "Jeanne Mance - Charming, Clear and Young":
         PASSE_HAUT_FEMMES + ",equalizer=f=150:t=o:w=1.2:g=-6,equalizer=f=4000:t=o:w=1.5:g=-4",
     "Léo - Français québécois": PASSE_HAUT_HOMMES + ",highshelf=f=3000:g=5",
@@ -239,13 +242,32 @@ JEU: dict[str, str] = {
     "taxi_bonjour_r": "[excited] Taxi-Radio, votre station! On est en ondes… pis y fait beau à Baie-des-Brumes!",
     "taxi_trafic_r": "[sighs] Ça bouchonne su'l pont, mes amis. [cheerful] Prenez donc la rue des Érables.",
     "taxi_merci_r": "[enthusiastic] Un gros merci à nos commanditaires… pis on remet ça!",
-    # --- Les pubs, et leurs jumelles « a toi ».
+    # --- Les pubs, et les jumelles « a toi » des commerces qui s'achetent. ⚠️ Pas
+    # de « … » devant la chute (les potins, la memoire, la cle a molette) : elle
+    # tombe nette, ou elle ne tombe pas (`docs/ecrire-drole.md`, regle 4).
     "pub_gus_r": "[enthusiastic] Chez Gus! Le meilleur smoked meat en ville… depuis mille neuf cent soixante-deux.",
-    "pub_gus_a_toi_r": "[excited] Chez Gus, sous nouvelle administration! [cheerful] Passez voir le nouveau proprio.",
     "pub_rosa_r": "[confident] Boutique Rosa, rue du Faubourg. Habillez-vous… comme du monde.",
-    "pub_rosa_a_toi_r": "[excited] Boutique Rosa a changé de mains! [warmly] Venez rencontrer le nouveau proprio.",
     "pub_tipaul_r": "[cheerful] Dépanneur Ti-Paul, ouvert tard. Bière frette, loterie… pis du bon café.",
-    "pub_tipaul_a_toi_r": "[excited] Le Dépanneur Ti-Paul est vendu! [cheerful] Le nouveau proprio vous attend.",
+    "pub_kiosque_r": "[cheerful] Le kiosque de Madame Thibodeau : journaux, gomme, billets de loto. "
+                     "[playfully] Pis les potins, ça, c'est gratis.",
+    "pub_kiosque_a_toi_r": "[excited] Le kiosque du Faubourg a un nouveau proprio! [wryly] Madame Thibodeau, elle, garde les potins.",
+    "pub_bar_r": "[confident] Bar Le Brouillard, sur le port. La bière est frette, pis personne se souvient de rien.",
+    "pub_bar_a_toi_r": "[excited] Bar Le Brouillard, sous nouvelle direction! "
+                       "[mischievously] Le nouveau boss paye la première, s'il te connaît.",
+    "pub_garage_r": "[enthusiastic] Garage Rocco Bandini : on répare toute, pis on pose pas de questions.",
+    "pub_garage_a_toi_r": "[warmly] Le Garage Bandini reste dans la famille! [cheerful] Le neveu a repris la clé à molette.",
+    # --- La police au scanner : la repartitrice est calme, c'est son metier ;
+    # l'agent court. Et quand ils t'ont perdu, ils ne sont pas si tristes.
+    "police_repere_1_r": "[matter-of-fact] Central à toutes les voitures : suspect signalé dans le secteur.",
+    "police_repere_2_r": "[serious] Dix-quatre, j'ai un suspect en visuel.",
+    "police_poursuite_1_r": "[firmly] Poursuite en cours! Toutes les unités disponibles.",
+    "police_poursuite_2_r": "[excited] [shouting] Il se sauve! Je le suis, envoyez du renfort!",
+    "police_perdu_1_r": "[disappointed] On l'a perdu. [deadpan] Je m'en vais prendre un café.",
+    "police_perdu_2_r": "[calm] Fin des recherches. [deadpan] Retournez à vos beignes.",
+    "police_barrage_1_r": "[confident] Barrage en place. Il passera pas par icitte.",
+    "police_barrage_2_r": "[firmly] Barrage installé. Bloquez-moi toute ça.",
+    "police_helico_1_r": "[serious] L'hélico décolle. On va l'avoir d'en haut.",
+    "police_helico_2_r": "[confident] Ici l'hélico, je le vois. Y peut pas se cacher.",
 
     # Le jeu des répliques de MISSION n'est pas ici : il est collé à chaque réplique, dans le fichier
     # de la mission (`jeu=` sur `_l`/`_p`/`_r`/`_a`) — voir plus bas.

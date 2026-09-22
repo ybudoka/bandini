@@ -889,6 +889,21 @@ const Son = (function () {
 
   // --- Les voix des passants : un mot quand on se frole ------------------------------
 
+  /** Une BANDE de frequences : un passe-haut puis un passe-bas, plat entre les
+      deux. Le combine du telephone (300 Hz - 3,4 kHz, voir `Voix.parler`), le
+      scanner de la police, le haut-parleur d'un autoradio. `renfort` compense
+      ce que la coupe retire : une voix sans ses graves s'entend moins fort a
+      puissance egale. Rend le dernier noeud, a brancher sur la sortie. */
+  function bande(gain, basHz, hautHz, renfort) {
+    const haut = ctx.createBiquadFilter();
+    haut.type = 'highpass'; haut.frequency.value = basHz;
+    const bas = ctx.createBiquadFilter();
+    bas.type = 'lowpass'; bas.frequency.value = hautHz;
+    gain.gain.value *= renfort || 1;
+    gain.connect(haut); haut.connect(bas);
+    return bas;
+  }
+
   const Voix = {
     dernierT: -9999, chargees: false,
     liste: function () { return (B.defs && B.defs.audio && B.defs.audio.voix) || []; },
@@ -934,6 +949,8 @@ const Son = (function () {
         `fin` s'appelle quand la voix se tait (jamais si elle n'a pas joue). */
     parler: function (slug, options) {
       Voix.couper();
+      // ⚠️ La mission passe AVANT les ondes : l'animateur ou le scanner se taisent.
+      Ondes.couper();
       Voix.demandees.push(slug);
       if (Voix.demandees.length > 50) Voix.demandees.shift();
       const cle = 'histoire-' + slug;
@@ -961,12 +978,7 @@ const Son = (function () {
            Le 2x qui reste n'est pas un caprice : une voix coupee de ses graves
            s'entend moins fort a puissance egale, et un appel se prend au milieu
            des moteurs et de la rue. Un combine, ca doit percer. */
-        const haut = ctx.createBiquadFilter();
-        haut.type = 'highpass'; haut.frequency.value = 300;
-        const bas = ctx.createBiquadFilter();
-        bas.type = 'lowpass'; bas.frequency.value = 3400;
-        gain.gain.value *= 2;
-        gain.connect(haut); haut.connect(bas); sortie = bas;
+        sortie = bande(gain, 300, 3400, 2);
       }
       // ⚠️ Comme dans `echantillon()` : sans cette ligne la replique se charge,
       // se decode, « joue » (`enCours` est pose, la radio baisse, le texte
@@ -995,8 +1007,10 @@ const Son = (function () {
         sa propre sortie : sans lui, sa guitare couvrait la voix au telephone,
         exactement comme la radio du camion le faisait avant elle. */
     baisserLeReste: function (actif) {
-      Duck.viser(actif);
       Voix.ducking = !!actif;
+      // ⚠️ Quelqu'un parle aussi quand c'est la radio ou la police (`Ondes`) : la
+      // fin d'une replique de mission ne remonte pas la musique sous le scanner.
+      Duck.viser(Voix.ducking || !!Ondes.enCours);
     },
 
     /** Une replique du catalogue, au hasard, pour ce genre — SANS regarder si
@@ -1057,6 +1071,133 @@ const Son = (function () {
       const j = B.joueur;
       echantillon('voix-' + v.slug, { volume: v.volume, pan: j ? (x - j.x) / 200 : 0 });
       return v.slug;
+    },
+  };
+
+  // --- Sur les ondes : la radio qui parle, et la police ------------------------------
+  /*: ⚠️ M15, 2e vague. « L'ame d'une radio, c'est ce qui se dit ENTRE les tounes » :
+    douze clips d'animateurs et de pubs etaient generes, declares et telecharges au
+    demarrage depuis le 16 sept. 2026 — et AUCUNE ligne du jeu ne les jouait. Et la
+    police, qu'on voyait partout, ne s'entendait nulle part.
+
+    ⚠️ UNE bande pour les deux : l'animateur et le scanner ne se marchent pas
+    dessus, la police passe devant l'animateur, et une replique de MISSION passe
+    devant tout le monde (`Voix.parler` coupe les ondes ; les ondes attendent
+    qu'elle finisse). Ce qui passe baisse la musique comme une replique.
+
+    ⚠️ A TOUR DE ROLE, JAMAIS `B.rng()` : ce sont des bruits de fond qui tournent
+    toute la partie, et un de de plus decalerait tout le hasard du jeu
+    (`docs/ecrire-drole.md`, regle 8). Chaque liste se lit dans l'ordre.
+
+    `dites` garde ce qui est passe, fichier ou pas : le banc n'a pas d'oreille. */
+  const Ondes = {
+    enCours: null,           // { source, slug, radio } : ce qui passe en ce moment
+    dites: [],               // { slug, t, bande } — ce qui est passe, dans l'ordre
+    tours: {},               // cle -> combien de fois on a pioche dans cette liste
+    station: null,           // la station dont on compte les tounes
+    prochaineT: 0,           // quand l'animateur reprend la parole
+    n: 0,                    // combien de fois il l'a prise sur cette station
+    policeT: -99999,         // le dernier message de la police
+    derniers: {},            // evenement -> quand il a ete dit
+
+    reglages: function () { return (B.defs && B.defs.audio && B.defs.audio.ondes) || {}; },
+
+    /** Le suivant d'une liste, a tour de role : on n'entend deux fois la meme
+        replique qu'apres les avoir toutes entendues. */
+    aTourDeRole: function (cle, liste) {
+      if (!liste.length) return null;
+      const n = Ondes.tours[cle] || 0;
+      Ondes.tours[cle] = n + 1;
+      return liste[n % liste.length];
+    },
+
+    /** La pub suivante. ⚠️ Celle d'un commerce qu'on POSSEDE est sa jumelle « a
+        toi » : entendre son propre bar annonce a la radio, dans un char qu'on
+        vient de voler, c'est exactement ce que M15 promet. */
+    pub: function () {
+      const pubs = Voix.liste().filter(function (v) { return v.genre === 'pub'; });
+      const v = Ondes.aTourDeRole('pub', pubs.filter(function (p) { return !p.a_toi; }));
+      const a = B.partie && B.partie.proprietes;
+      if (!v || !v.propriete || !(a && a[v.propriete])) return v;
+      return pubs.find(function (p) { return p.a_toi && p.propriete === v.propriete; }) || v;
+    },
+
+    /** Une image. L'animateur de la station qui joue reprend la parole entre deux
+        et trois tounes ; une station sans animateur (le Choc, le camion) se tait. */
+    maj: function () {
+      const r = Ondes.reglages();
+      const station = Radio.demandee;
+      if (station !== Ondes.station) {
+        // ⚠️ On change de station, ou on l'eteint : l'animateur se tait avec elle.
+        if (Ondes.enCours && Ondes.enCours.radio) Ondes.couper();
+        Ondes.station = station;
+        Ondes.n = 0;
+        Ondes.prochaineT = B.t + (r.premiere_s || 20) * 60;
+      }
+      const genres = station && r.stations ? r.stations[station] : null;
+      if (!genres || !genres.length || B.t < Ondes.prochaineT) return;
+      if (Voix.enCours || Ondes.enCours) { Ondes.prochaineT = B.t + (r.attente_s || 2) * 60; return; }
+      const genre = genres[Ondes.n % genres.length];
+      const v = genre === 'pub' ? Ondes.pub()
+        : Ondes.aTourDeRole(genre, Voix.liste().filter(function (x) { return x.genre === genre; }));
+      Ondes.n++;
+      // Entre deux et trois tounes, et pas toujours le meme ecart — sans de.
+      const iv = r.intervalle_s || [80, 125];
+      Ondes.prochaineT = B.t + (iv[0] + (Ondes.n * 23) % Math.max(1, iv[1] - iv[0])) * 60;
+      if (v) Ondes.dire(v, 'radio');
+    },
+
+    /** La police parle : `evenement` est l'un de `audio.EVENEMENTS_DE_POLICE`.
+        Rend le slug dit, ou null. ⚠️ Jamais par-dessus une replique de mission,
+        jamais deux messages colles, et le meme evenement ne se redit pas a
+        chaque etoile — sinon le scanner devient une alarme. */
+    police: function (evenement) {
+      const r = Ondes.reglages();
+      if (Voix.enCours) return null;
+      if (B.t - Ondes.policeT < (r.police_temps_mort_s || 6) * 60) return null;
+      const dernier = Ondes.derniers[evenement];
+      if (dernier !== undefined && B.t - dernier < (r.police_repos_s || 30) * 60) return null;
+      const v = Ondes.aTourDeRole('police-' + evenement,
+        Voix.liste().filter(function (x) { return x.genre === 'police' && x.evenement === evenement; }));
+      if (!v) return null;
+      Ondes.policeT = B.t;
+      Ondes.derniers[evenement] = B.t;
+      Ondes.couper();                     // la police passe devant l'animateur
+      Ondes.dire(v, 'police');
+      return v.slug;
+    },
+
+    /** Fait passer `v` sur les ondes. Le scanner est la bande du telephone ;
+        l'autoradio, celle d'un petit haut-parleur. */
+    dire: function (v, quelle) {
+      Ondes.dites.push({ slug: v.slug, t: B.t, bande: quelle });
+      if (Ondes.dites.length > 50) Ondes.dites.shift();
+      const liste = tampons.get('voix-' + v.slug);
+      if (!pret() || !liste || !liste.length) return null;
+      const source = ctx.createBufferSource();
+      source.buffer = liste[0];
+      const gain = ctx.createGain();
+      gain.gain.value = v.volume || 0.7;
+      source.connect(gain);
+      const sortie = ctx.createBiquadFilter
+        ? (quelle === 'police' ? bande(gain, 300, 3400, 2) : bande(gain, 150, 6000, 1.2))
+        : gain;
+      sortie.connect(maitre);
+      const enCours = { source: source, gain: gain, slug: v.slug, radio: quelle === 'radio' };
+      source.onended = function () {
+        if (Ondes.enCours === enCours) { Ondes.enCours = null; Duck.viser(Voix.ducking); }
+      };
+      Ondes.enCours = enCours;
+      Duck.viser(true);
+      source.start(ctx.currentTime);
+      return enCours;
+    },
+
+    couper: function () {
+      if (!Ondes.enCours) return;
+      try { Ondes.enCours.source.onended = null; Ondes.enCours.source.stop(); } catch (e) { /* deja finie */ }
+      Ondes.enCours = null;
+      Duck.viser(Voix.ducking);
     },
   };
 
@@ -1795,7 +1936,7 @@ const Son = (function () {
   return {
     init, reveiller, sonder, etatSon, enAttente, surEtat, pret, suspendre, fermer, majVolume, prechauffer, ton, bruit, SFX, Mus, Chef, Rue,
     chargerEchantillons, echantillon, joue, estCharge, jouerA, presence, depuis, boucle, boucleActive, reglerBoucle, volumeBoucle, etouffer, coupureBoucle,
-    Radio, Ambiance, Rumeur, Voix,
+    Radio, Ambiance, Rumeur, Voix, Ondes,
     get contexte() { return ctx; },
     // ⚠️ Les bruitages seuls : les voix, l'ambiance et les radios ont leurs
     // propres clefs dans `tampons`, et le test des bruitages compte l'egalite.

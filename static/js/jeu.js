@@ -746,6 +746,8 @@ const Jeu = (function () {
         Monde.majBattants();
         // La musique suit ce qui t'arrive : district, poursuite, bagarre.
         Son.Chef.maj();
+        // Et la radio parle entre les tounes (M15) : l'animateur de la station.
+        Son.Ondes.maj();
         Monde.majChemins();
         // Les vagues : leur volume est une question de carte, pas de son.
         Monde.majSonDuBord();

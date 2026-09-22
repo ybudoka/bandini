@@ -56,7 +56,7 @@ que je n'ai pas. Cette première moitié ne demande **aucun son neuf**.
 
 ## Fiche de la deuxième vague
 
-⬜ **En cours (21 sept. 2026)** : la police à la radio, le souffle du joueur, les bruits de quartier.
+✅ **La radio parle vraiment, et la police aussi** (21 sept. 2026) — voir les notes. ⬜ **En cours** : le souffle du joueur, les bruits de quartier. **Restent** : le bulletin de nouvelles, les répliques par contexte.
 
 **Ce qui reste, et ce que ça coûte** : la radio qui parle (animateur, pubs, bulletin), la
 police à la radio, les bruits de quartier, le souffle du joueur, et les banques de répliques
@@ -176,3 +176,41 @@ tout ce qui ne demandait **aucun son neuf**.
   passants ; (2) « la pub change quand tu achètes le commerce » **ne peut viser que ce qui
   s'achète** — Chez Gus et Boutique Rosa existent mais ne se vendent pas ; les quatre
   propriétés sont le kiosque, le bar, le garage et l'hôtel. 11 juges neufs
+
+✅ **2e vague, première partie : la radio parle vraiment, et la police aussi** (21 sept. 2026).
+
+- ⚠️ **LA RADIO NE PARLAIT PAS.** Le commit du 16 sept. (`f3ed153`) annonçait « la radio parle enfin » : ses douze
+  clips (trois animateurs de La Brume, trois de Taxi-Radio, six pubs) étaient générés, déclarés, et **téléchargés au
+  démarrage** — mais aucune ligne du jeu ne les jouait. `grep radio_` dans `static/js/` ne rendait rien. `Son.Ondes`
+  les fait passer : la première voix vingt secondes après avoir allumé la station, puis une toutes les 80 à 125 s
+  (deux ou trois tounes de 45 s), l'animateur et les pubs en alternance. Le Choc et les stations du camion se taisent.
+- ⚠️ **LA PUB QUI CHANGE QUAND TU ACHÈTES ne pouvait jamais changer** : ses trois jumelles « à toi » annonçaient Chez
+  Gus, Boutique Rosa et Ti-Paul, qu'aucun joueur ne peut acheter. Elles sont parties (trois mp3), Gus, Rosa et Ti-Paul
+  gardent leur pub, et les jumelles vont au **kiosque, au bar et au garage** — six clips neufs, `propriete` les y
+  attache, un juge refuse une jumelle qui vise ce qui ne se vend pas. L'hôtel (phase 2) attendra la sienne.
+- **La police au scanner** : cinq événements tirés du vrai chemin de `police.js` — **repéré** (la première étoile),
+  **poursuite** (le palier où les autos s'en mêlent ; un saut de zéro à trois dit « poursuite », le plus grave),
+  **perdu** (la dernière étoile qui tombe), **barrage**, **hélico** — deux répliques chacun, dites à tour de rôle, dans
+  la bande du téléphone. Deux voix du compte que personne n'avait : Caroline en répartitrice, Alexandre Boutin en
+  agent. Six secondes entre deux messages, trente avant de redire le même événement : sinon le scanner devient une
+  alarme.
+- ⚠️ **Une seule bande pour les deux**, et une réplique de mission passe devant tout le monde : `Voix.parler` coupe
+  les ondes, et les ondes attendent qu'elle finisse. Ce qui passe baisse la musique comme une réplique (le ducking
+  sait maintenant qu'on peut parler sur les ondes pendant qu'une mission se tait, et l'inverse).
+- ⚠️ **À tour de rôle, jamais `B.rng()`** : un bruit de fond qui tire un dé décale tout le hasard du jeu
+  (`ecrire-drole.md`, règle 8). Un juge fait tourner dix minutes de radio en comptant les dés : zéro.
+- ⚠️ **Le texte des ondes ne voyage plus** : rien ne l'affiche, et le paquet des définitions est au-dessus de son
+  plafond depuis ce matin (44 559 octets gzip sur la base pour 44 000). Vingt-cinq répliques ajoutées, et le paquet
+  **descend** à 44 397 — toujours au-dessus : relever le plafond reste une décision de Martin. (Et la **carte**, elle,
+  est passée à 50 294 octets pour un plafond de 50 000 avec l'aéroport, le même jour.)
+- **Seize voix** (≈ 1 220 crédits), toutes à −19,6 LUFS ± 0,3, masters dans
+  `~/elevenlabs-audio/bandini-voix-v3-masters-2026-09-16/`. ⚠️ **Personne ne les a écoutées** : c'est à Martin
+  (`--refaire <slug>` pour une prise ratée).
+- **Juges** (`test_ondes.py`, 14 ; seize mutations, toutes rouges) : les stations qui parlent ont de quoi dire, deux
+  tounes entre deux voix, une jumelle vise ce qui s'achète, deux répliques par événement de police et des voix que
+  la rue n'a pas, le paquet porte ce que les ondes lisent (et pas leur texte) ; au banc : la radio parle entre les
+  tounes sans tirer un dé, par la vraie boucle du jeu aussi, le Choc se tait, l'animateur attend la fin d'une
+  réplique de mission, la pub de ton bar dit que c'est le tien, la police parle par le vrai chemin des étoiles, du
+  barrage et de l'hélico, le scanner n'est pas une alarme, et une réplique de mission coupe les ondes — avec du son,
+  ce qui passe atteint la sortie.
+

@@ -818,6 +818,12 @@ class Voix(TypedDict, total=False):
     #: elle est basse. Absents = les reglages de la voix telle quelle.
     style: float
     stabilite: float
+    #: Une pub qui annonce une PROPRIETE (`economie.PROPRIETES`) : quand le joueur
+    #: la possede, la radio dit sa jumelle `a_toi` a sa place.
+    propriete: str
+    a_toi: bool
+    #: Une replique de la police : l'evenement qui la fait dire (`ONDES`).
+    evenement: str
 
 
 #: ⚠️ Deux voix nommees du compte ElevenLabs ; si l'une disparait,
@@ -922,19 +928,110 @@ VOIX: list[Voix] = [
     # cette ligne-la qui fait que ca vaut la peine, pas une autre : entendre son
     # propre commerce annonce a la radio, dans un char qu'on vient de voler, est
     # exactement ce que M15 promet. Une par commerce, plus sa jumelle « a toi ».
+    #
+    # ⚠️ **ELLES NE PEUVENT VISER QUE CE QUI S'ACHETE** (21 sept. 2026). Les
+    # premieres jumelles « a toi » annoncaient Chez Gus, Boutique Rosa et le
+    # Depanneur Ti-Paul sous nouvelle administration — trois commerces qu'AUCUN
+    # joueur ne peut acheter (`economie.PROPRIETES` : le kiosque, le bar, le
+    # garage, l'hotel). Elles ne pouvaient jamais jouer ; elles sont parties.
+    # Gus, Rosa et Ti-Paul gardent leur pub, qui est une pub. Les jumelles vont
+    # aux commerces qui se vendent, et `propriete` les y attache : un juge refuse
+    # une jumelle sans propriete, ou une propriete qui n'existe pas.
     {"slug": "pub_gus_r", "texte": "Chez Gus! Le meilleur smoked meat en ville, depuis mille neuf cent soixante-deux.",
-     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_gus_a_toi_r", "texte": "Chez Gus, sous nouvelle administration! Passez voir le nouveau proprio.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
     {"slug": "pub_rosa_r", "texte": "Boutique Rosa, rue du Faubourg. Habillez-vous comme du monde.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_rosa_a_toi_r", "texte": "Boutique Rosa a changé de mains! Venez rencontrer le nouveau proprio.",
-     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
     {"slug": "pub_tipaul_r", "texte": "Dépanneur Ti-Paul, ouvert tard. Bière frette, loterie, pis du bon café.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
-    {"slug": "pub_tipaul_a_toi_r", "texte": "Le Dépanneur Ti-Paul est vendu! Le nouveau proprio vous attend.",
+    {"slug": "pub_kiosque_r", "propriete": "kiosque",
+     "texte": "Le kiosque de Madame Thibodeau : journaux, gomme, billets de loto. Pis les potins, ça, c'est gratis.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_kiosque_a_toi_r", "propriete": "kiosque", "a_toi": True,
+     "texte": "Le kiosque du Faubourg a un nouveau proprio! Madame Thibodeau, elle, garde les potins.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["femme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_bar_r", "propriete": "bar",
+     "texte": "Bar Le Brouillard, sur le port. La bière est frette, pis personne se souvient de rien.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_bar_a_toi_r", "propriete": "bar", "a_toi": True,
+     "texte": "Bar Le Brouillard, sous nouvelle direction! Le nouveau boss paye la première, s'il te connaît.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_garage_r", "propriete": "garage",
+     "texte": "Garage Rocco Bandini : on répare toute, pis on pose pas de questions.",
+     "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
+    {"slug": "pub_garage_a_toi_r", "propriete": "garage", "a_toi": True,
+     "texte": "Le Garage Bandini reste dans la famille! Le neveu a repris la clé à molette.",
      "genre": "pub", "voix": VOIX_PAR_GENRE["homme"], "volume": 0.66, "style": 0.6, "stabilite": 0.4},
 ]
+
+#: LA POLICE SE PARLE A LA RADIO (M15, 2e vague). On voyait les cones, les
+#: blips, l'helico — on n'entendait RIEN, alors qu'une poursuite est ce qu'il y a
+#: de plus tendu dans le jeu. Cinq evenements, deux repliques chacun, dites a
+#: tour de role : on sait ce qui va nous tomber dessus sans quitter la route des
+#: yeux. Filtrees comme le combine du telephone (`Son.Ondes`).
+#:
+#: ⚠️ Deux voix qui ne sont NI un passant NI un personnage : la repartitrice au
+#: central (calme, c'est son metier) et l'agent sur le terrain (direct, il
+#: court). Une voix de la rue au bout du scanner, on croirait que la passante
+#: d'a cote appelle la police.
+#:
+#: ⚠️ Elles ne sont PAS dans `VOIX` : ce ne sont pas des banques ou l'on tire,
+#: c'est un evenement qui dit la sienne — `PAROLE["memoire"]` ne les regarde pas.
+VOIX_REPARTITRICE = "Caroline - Soft Quebec accent"
+VOIX_AGENT = "Alexandre Boutin - Professional"
+EVENEMENTS_DE_POLICE = ("repere", "poursuite", "perdu", "barrage", "helico")
+VOIX_DE_LA_POLICE: list[Voix] = [
+    {"slug": "police_repere_1_r", "evenement": "repere", "texte": "Central à toutes les voitures : suspect signalé dans le secteur.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_repere_2_r", "evenement": "repere", "texte": "Dix-quatre, j'ai un suspect en visuel.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_poursuite_1_r", "evenement": "poursuite", "texte": "Poursuite en cours! Toutes les unités disponibles.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_poursuite_2_r", "evenement": "poursuite", "texte": "Il se sauve! Je le suis, envoyez du renfort!",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_perdu_1_r", "evenement": "perdu", "texte": "On l'a perdu. Je m'en vais prendre un café.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_perdu_2_r", "evenement": "perdu", "texte": "Fin des recherches. Retournez à vos beignes.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_barrage_1_r", "evenement": "barrage", "texte": "Barrage en place. Il passera pas par icitte.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+    {"slug": "police_barrage_2_r", "evenement": "barrage", "texte": "Barrage installé. Bloquez-moi toute ça.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_helico_1_r", "evenement": "helico", "texte": "L'hélico décolle. On va l'avoir d'en haut.",
+     "genre": "police", "voix": VOIX_REPARTITRICE, "volume": 0.8},
+    {"slug": "police_helico_2_r", "evenement": "helico", "texte": "Ici l'hélico, je le vois. Y peut pas se cacher.",
+     "genre": "police", "voix": VOIX_AGENT, "volume": 0.8},
+]
+
+#: CE QUI PASSE SUR LES ONDES — la radio qui parle entre les tounes, et la police.
+#:
+#: ⚠️ Une seule bande pour les deux (`Son.Ondes`) : l'animateur et le scanner ne
+#: se marchent pas dessus, et ni l'un ni l'autre ne coupe une replique de
+#: mission — c'est elle qui les coupe.
+#:
+#: ⚠️ **A TOUR DE ROLE, JAMAIS AU DE.** Ce sont des bruits de fond, ils tournent
+#: pendant toute une partie : un tirage par `B.rng()` decalerait tout le hasard
+#: du jeu (`docs/ecrire-drole.md`, regle 8), et dix juges sans rapport
+#: tomberaient. Chaque liste se lit dans l'ordre, et on ne l'entend deux fois
+#: qu'apres l'avoir entendue en entier.
+ONDES = {
+    # Les stations qui parlent, et ce qu'elles disent, en alternance. ⚠️ Le Choc
+    # n'y est pas, et les stations du camion non plus : personne au micro, juste
+    # la musique — c'est le propos d'une station de rave a trois heures du matin.
+    "stations": {"la_brume": ["radio_brume", "pub"], "taxi_radio": ["radio_taxi", "pub"]},
+    # La premiere voix vient vite : on sait tout de suite qu'on est a la radio.
+    "premiere_s": 20,
+    # Ensuite, entre deux et trois tounes (une boucle de station dure 45 s).
+    "intervalle_s": [80, 125],
+    # Quelqu'un parle deja (une mission, la police) : on reessaie un peu plus tard.
+    "attente_s": 2,
+    # La police : deux messages ne se marchent pas dessus, et le meme evenement ne
+    # se redit pas a chaque etoile — sinon le scanner devient une alarme.
+    "police_temps_mort_s": 6,
+    "police_repos_s": 30,
+}
+
+#: Ce qui passe sur les ondes, et ne s'affiche donc jamais dans une bulle.
+GENRES_DES_ONDES = frozenset({g for genres in ONDES["stations"].values() for g in genres} | {"police"})
 
 
 #: Les voix de l'histoire : une par personnage, nommees dans `missions.PERSONNAGES`.
@@ -1016,7 +1113,7 @@ def voix_repos() -> list[dict]:
 
 
 def toutes_les_voix() -> list[dict]:
-    return list(VOIX) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
+    return list(VOIX) + list(VOIX_DE_LA_POLICE) + voix_histoire() + voix_journal() + voix_ouverture() + voix_repos()
 
 
 def voix_par_slug(slug: str) -> Voix | None:
@@ -1171,6 +1268,8 @@ def exporter() -> dict:
         "dossier": DOSSIER,
         "parole": dict(PAROLE),
         "rumeur": dict(RUMEUR),
+        "ondes": {**ONDES, "stations": {s: list(g) for s, g in ONDES["stations"].items()},
+                  "intervalle_s": list(ONDES["intervalle_s"])},
         "coups_des_autres": dict(COUPS_DES_AUTRES),
         # LA MUSIQUE. Chaque morceau part de `app/musique.py` (les notes, le
         # filet) et recoit ici le mp3 genere quand il est sur le disque — plus
@@ -1210,10 +1309,18 @@ def exporter() -> dict:
             for r in AMBIANCES
         ],
         # Les repliques des passants : quelques mots, deux voix, en francais.
+        # Et ce qui passe sur les ondes : les animateurs, les pubs (avec la
+        # propriete qu'elles annoncent), la police (avec son evenement).
+        # ⚠️ Le TEXTE ne voyage que s'il s'affiche : une bulle de passant, oui ; ce
+        # qui passe sur les ondes ne s'ecrit nulle part, et le paquet est a son
+        # plafond (`test_definitions`) — 25 repliques de radio et de police y
+        # pesaient 600 octets pour rien.
         "voix": [
-            {"slug": v["slug"], "texte": v["texte"], "genre": v["genre"], "volume": v["volume"],
+            {"slug": v["slug"], "genre": v["genre"], "volume": v["volume"],
+             **({} if v["genre"] in GENRES_DES_ONDES else {"texte": v["texte"]}),
+             **{cle: v[cle] for cle in ("propriete", "a_toi", "evenement") if cle in v},
              "fichier": nom_fichier_voix(v) if chemin_voix(v).is_file() else None}
-            for v in VOIX
+            for v in VOIX + VOIX_DE_LA_POLICE
         ],
         # Les repliques de l'histoire : une voix par personnage, chargees par mission.
         "histoire": [

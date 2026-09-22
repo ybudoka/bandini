@@ -134,7 +134,8 @@ le suivre, pas le précéder.
 | **La fille de la Brume** | `audio.py` (`compagnie_b`…) + JEU | accroche douce, invitation | Elle accoste ; la pause est dans l'invitation, jamais dans le prix. |
 | **Radio La Brume** | `audio.py` (genre `radio_brume`) | animatrice de nuit, posée | « Il est minuit passé… sur le port. » |
 | **Radio Taxi** | `audio.py` (genre `radio_taxi`) | matinale, bonne humeur pleine voix | Balance les embouteillages avec le sourire. |
-| **Pubs** | `audio.py` (genre `pub`) + leurs jumelles `_a_toi_` | slogan, 1-2 phrases | Slogan ; la jumelle « a toi » annonce le nouveau proprio. |
+| **Pubs** | `audio.py` (genre `pub`) + leurs jumelles `_a_toi_` | slogan, 1-2 phrases | Slogan ; la jumelle « a toi » annonce le nouveau proprio — ⚠️ **seulement pour un commerce qui s'achète** (`propriete`, `economie.PROPRIETES`) : une jumelle de Chez Gus ne pourrait jamais jouer. |
+| **La police au scanner** | `audio.py` (`VOIX_DE_LA_POLICE`, genre `police`) | une phrase de radio, deux par événement (repéré, poursuite, perdu, barrage, hélico) | La répartitrice est calme, l'agent court ; quand ils t'ont perdu, ils ne sont pas si tristes (« Retournez à vos beignes. »). |
 | **Manchettes** | `journal.py` (`REGLES`) | `titre` (casse manchette) + `texte` + `lu` (casse naturelle) | Lues au matin selon les stats de la veille, du plus grave au plus banal. |
 | **Matins calmes** | `journal.py` (`MATINS`) | mêmes 4 clés que les manchettes | Le repli qui **varie** : jamais le même deux matins de suite. |
 | **Leçons du journal** | `journal.py` (`lecon_*` → `narrateur-journal-lecon_*` dans JEU) | micro-tutoriel drôle | Enseigne une mécanique *avec* une blague (klaxon, fourrière, café…). |
