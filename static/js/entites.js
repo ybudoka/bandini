@@ -4009,13 +4009,18 @@ const Entites = (function () {
       marque `coopJoueur2`, mene par le STICK DE LA MANETTE (`Entree.stick`)
       plutot que par l'IA — le joueur 1, lui, reste au clavier pendant ce
       temps (`Entree.debutImage`, garde `!B.coop` sur la branche manette).
-      Aucun combat, aucune interaction, aucune mission : juste marcher, pour
-      juger si la camera a deux (`Monde.majCameraCoop`) tient a 480x270. */
+      Aucun combat, aucune interaction, aucune mission : juste marcher, a la
+      MEME vitesse que le joueur 1 (`v.joueur_marche`/`v.joueur_course`, pas
+      `v.pieton` — un passant de la foule est plus lent qu'un joueur, et les
+      deux couraient a des rythmes differents. Retour de Martin, 22 sept.
+      2026, en testant). `Monde.majCameraCoop` les retient a portee l'un de
+      l'autre (une laisse, pas un zoom — voir sa note). */
   function majJoueur2(e) {
     const v = B.defs.recherche.vitesses;
     const axe = Entree.stick;
     if (axe.mag > 0) {
-      const vitesse = v.pieton * axe.mag;
+      const marche = axe.mag < 0.6;
+      const vitesse = (marche ? v.joueur_marche : v.joueur_course) * Math.min(1, axe.mag * 1.15);
       e.vx = axe.x * vitesse; e.vy = axe.y * vitesse;
       deplacerCercle(e, e.vx, e.vy, masqueDe(e));
       dansLaCarte(e);

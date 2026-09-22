@@ -1984,21 +1984,30 @@ const Monde = (function () {
     };
   }
 
-  //: La coop locale (essai) : sous cette distance (px) la camera reste a fond
-  //: (ZOOM_PLEIN), au-dela de ZOOM_DIST_MAX elle est a ZOOM_MIN — entre les
-  //: deux, un fondu lineaire. ⚠️ 480 × 270 n'est pas grand : ces trois
-  //: chiffres sont a revoir AU PREMIER ESSAI, pas devines a l'avance.
-  const ZOOM_MIN = 0.55, ZOOM_DIST_PLEIN = 80, ZOOM_DIST_MAX = 260;
+  //: La coop locale (essai) : au-dela de cette distance (px) entre les deux
+  //: joueurs, on ramene le deuxieme vers le premier — une LAISSE, pas un
+  //: zoom arriere. ⚠️ Le zoom arriere a ete essaye (Martin, 22 sept. 2026) et
+  //: retire : la camera zoomait, mais le sol et les entites ne se dessinent
+  //: QUE dans la fenetre normale (480×270 — `Monde.dessinerSol`,
+  //: `Entites.visibleAEcran` et consorts bornent tout sur `VW`/`VH` en dur,
+  //: pas sur ce que la camera montre) — zoomer aurait exige de reecrire le
+  //: culls dans plusieurs modules pour un essai qui reste RISQUE. La laisse
+  //: est le choix simple : ⚠️ assez court pour tenir dans 480×270 avec de la
+  //: marge (le decalage du HUD, le temps que la camera rattrape le milieu),
+  //: a revoir au prochain essai si ça serre trop.
+  const LAISSE_COOP = 130;
 
-  /** La camera de la coop locale (M14, essai) : le MILIEU des deux joueurs,
-      et un zoom arriere qui grandit avec la distance qui les separe — sans
-      ca, l'un des deux sort de l'ecran des qu'ils se séparent. */
+  /** La camera de la coop locale (M14, essai) : le MILIEU des deux joueurs.
+      `LAISSE_COOP` les empeche de trop s'eloigner — sans elle, l'un des deux
+      sortirait de l'ecran. */
   function majCameraCoop(j, e2) {
+    const dx = e2.x - j.x, dy = e2.y - j.y, dist = Math.hypot(dx, dy);
+    if (dist > LAISSE_COOP) {
+      const t = LAISSE_COOP / dist;
+      e2.x = j.x + dx * t;
+      e2.y = j.y + dy * t;
+    }
     const mx = (j.x + e2.x) / 2, my = (j.y + e2.y) / 2;
-    const dist = Math.hypot(j.x - e2.x, j.y - e2.y);
-    const t = borner((dist - ZOOM_DIST_PLEIN) / (ZOOM_DIST_MAX - ZOOM_DIST_PLEIN), 0, 1);
-    const zoomCible = 1 - t * (1 - ZOOM_MIN);
-    B.cam.zoom += (zoomCible - B.cam.zoom) * 0.08;
     const cible = cibleCamera(mx, my);
     B.cam.x += (cible.x - B.cam.x) * 0.12;
     B.cam.y += (cible.y - B.cam.y) * 0.12;
@@ -2009,9 +2018,6 @@ const Monde = (function () {
     const j = B.joueur;
     if (!j) return;
     if (B.coop && B.coop.entite && B.coop.entite.vivant) { majCameraCoop(j, B.coop.entite); return; }
-    // Hors coop, le zoom revient tranquillement a 1 — sans a-coup si on vient
-    // de l'arreter en pleine separation.
-    B.cam.zoom += (1 - B.cam.zoom) * 0.08;
     let avanceX = 0, avanceY = 0;
     if (j.dansVehicule) {
       const v = j.dansVehicule, f = Math.min(1, Math.abs(v.vitesse || 0) / 4);

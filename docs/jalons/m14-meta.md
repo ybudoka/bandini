@@ -518,11 +518,11 @@ Depuis le menu DEBUG (« COOP LOCALE (ESSAI) ») : un deuxième joueur naît à 
 **Un clavier, une manette** (demande de Martin, 22 sept.) : le joueur 1 ne répond plus QU'AU
 CLAVIER tant que la coop tient (`Entree.debutImage`, la branche manette se ferme sur `!B.coop`),
 le deuxième joueur ne répond QU'À LA MANETTE (`Entities.majJoueur2` lit `Entree.stick`
-directement, jamais le clavier). Marcher seulement : aucun combat, aucune interaction, aucune
-mission, aucune arme — le strict nécessaire pour juger si la caméra à deux tient. La caméra
-(`Monde.majCameraCoop`) vise le milieu des deux joueurs et zoome arrière à mesure qu'ils
-s'éloignent (1 en dessous de 80 px d'écart, 0,55 au-delà de 260 px, un fondu entre les deux) ;
-rebasculer efface le deuxième joueur et ramène le zoom à 1 sans à-coup.
+directement, jamais le clavier), à LA MÊME VITESSE que le joueur 1
+(`v.joueur_marche`/`v.joueur_course`). Marcher seulement : aucun combat, aucune interaction,
+aucune mission, aucune arme. La caméra (`Monde.majCameraCoop`) vise le milieu des deux joueurs
+et les retient à une LAISSE (`LAISSE_COOP`, 130 px) l'un de l'autre ; rebasculer efface le
+deuxième joueur.
 
 - ⚠️ **Deux manettes, ça ne marchait pas avec UNE manette en main** (retour de Martin juste
   après le premier essai) : la version d'origine lisait `getGamepads()[1]` pour le deuxième
@@ -532,14 +532,27 @@ rebasculer efface le deuxième joueur et ramène le zoom à 1 sans à-coup.
   tout cru — jamais `bas()`, qui compte AUSSI la croix d'une manette), le deuxième joueur lit
   `Entree.stick` (le stick déjà fusionné et nettoyé de sa zone morte, celui que `lireManette`
   calcule pour N'IMPORTE QUELLE manette branchée — une seule suffit).
-- ⚠️ **Le zoom se pose AVANT `Base.fin`, jamais après.** Première idée : appliquer le zoom
-  puis le retirer avant d'appeler `Base.fin` (qui compose aussi les lampes de nuit et les
-  phares des chars). Revenu en arrière en y regardant : `Base.fin` dessine sur le MÊME
-  contexte hors-écran que le reste de la scène (`cible.ctx`) — laisser le zoom actif PENDANT
-  son appel fait grandir ou rétrécir les lampes avec le monde, exactement comme il faut. Le
-  retirer avant l'aurait laissé teindre un monde zoomé avec des lampes à la mauvaise échelle,
-  posées au mauvais endroit. Une seule ligne (`ctx.translate/scale/translate`) juste après le
-  fond, avant `Base.fin` — jamais reset après, `Base.debut()` s'en charge au prochain image.
+- ⚠️ **Le deuxième joueur courait plus lentement que le premier** (retour de Martin, 22 sept.,
+  EN JOUANT à deux) : `majJoueur2` prenait `v.pieton` — la vitesse d'un passant de la foule
+  (0,45 px/image), pas celle d'un joueur. Le joueur 1, au clavier, court TOUJOURS
+  (`v.joueur_course`, ~2 px/image) ; le deuxième traînait derrière à moins d'un quart de cette
+  vitesse. Corrigé : mêmes seuils que `majJoueur` (`v.joueur_marche` sous mag 0,6,
+  `v.joueur_course` au-dessus, le même boost de 15 % sur le module). ⚠️ Testé après coup :
+  stick à fond et clavier donnent maintenant EXACTEMENT la même vitesse (juge mutation-vérifié).
+- ⚠️ **Le zoom arrière ne marchait pas — retiré, remplacé par une laisse** (retour de Martin,
+  22 sept., capture d'écran à l'appui : un carré éclairé qui ne grandit pas pendant que la
+  caméra recule, tout le reste à l'écran reste noir). La CAMÉRA zoomait bien, mais `Monde.
+  dessinerSol` (les morceaux de terrain) et les culls de visibilité d'`Entites` (`visibleAEcran`
+  et la demi-douzaine de `dessiner*`) sont bornés sur `VW`/`VH` **en dur** — jamais sur ce que
+  la caméra montre. Zoomer la caméra ne fait QUE réduire l'échelle d'un dessin déjà limité à
+  480×270 : le monde et les gens au-delà de cette fenêtre ne se dessinent tout simplement pas,
+  zoom ou pas. Un vrai zoom exigerait de réécrire ces bornes dans plusieurs modules (le sol, les
+  piétons, les chars, et sans doute la météo/les feux/la foire) — risqué pour un essai qui l'est
+  déjà, et plusieurs de ces fichiers sont activement modifiés par d'autres sessions en ce moment.
+  Choix plus simple, posé avec Martin : une LAISSE (`LAISSE_COOP = 130`, dans `monde.js`) — le
+  deuxième joueur ne peut pas s'éloigner du premier au-delà de cette distance, la caméra n'a
+  donc jamais besoin de montrer plus que la fenêtre normale. `B.cam.zoom` et le transform de
+  `Jeu.rendre()` sont repartis avec le zoom — plus rien n'y touche.
 - ⚠️ **Le deuxième joueur ne naît jamais exactement où le premier se tient** — une première
   version le posait à un décalage fixe (+24 px) : assez près pour tomber dans un mur ou
   chevaucher le joueur selon l'endroit, et les deux corps qui se repoussaient rendaient le
@@ -548,26 +561,21 @@ rebasculer efface le deuxième joueur et ramène le zoom à 1 sans à-coup.
   marchable à côté, jamais la tuile du premier joueur lui-même.
 - ⚠️ **Un juge qui POUSSE longtemps dans une direction fixe peut buter sur un mur pres du
   spawn** — mesuré : plein est pendant 900 images, 22 px parcourus (sur 405 en théorie à 0,45
-  px/image). Le quartier de départ est dense (le terminus, ses bancs, la cabine téléphonique).
-  Le juge de MOUVEMENT s'en tire en lisant la VITESSE juste après avoir poussé (2-3 images,
-  jamais coincé) plutôt que la distance parcourue sur des centaines d'images ; le juge de
-  ZOOM déplace le deuxième joueur directement (`entite.x += 300`) — il teste la formule de la
-  caméra, pas un chemin dans la ville.
+  px/image, avant le correctif de vitesse). Le quartier de départ est dense (le terminus, ses
+  bancs, la cabine téléphonique). Le juge de MOUVEMENT s'en tire en lisant la VITESSE juste
+  après avoir poussé (2-3 images, jamais coincé) plutôt que la distance parcourue sur des
+  centaines d'images ; le juge de LAISSE téléporte le deuxième joueur directement
+  (`entite.x += 300`) — il teste la retenue, pas un chemin dans la ville.
 - **Juges** : deux tests dans `test_moteur_js.py` —
   `test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette` (naissance à côté du premier,
   la manette SEULE fait marcher le deuxième — vitesse du joueur 1 à zéro pendant ce temps —,
-  le clavier SEUL fait marcher le joueur 1 — vitesse du deuxième à zéro pendant ce temps —, et
-  `Entites.retirer` à la fermeture) et `test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent`
-  (zoom à 1 côte à côte, zoom arrière après une vraie séparation, retour à 1 une fois la coop
-  refermée), toutes deux mutées à la main pour confirmer qu'elles mordent.
-- Vérifié à l'œil (Playwright, une fausse manette posée par `Object.defineProperty(navigator,
-  'getGamepads', …)` avant le chargement de la page — le vrai Gamepad API ne se simule pas
-  autrement) : les deux personnages naissent côte à côte, la caméra zoome bien arrière quand on
-  éloigne le deuxième à la manette, et referme proprement (zoom et deuxième joueur disparaissent
-  ensemble). ⚠️ Cette capture-là datait de la version « deux manettes » — à refaire clavier +
-  manette si le prochain passage y touche encore.
+  le clavier SEUL fait marcher le joueur 1 — vitesse du deuxième à zéro pendant ce temps —, LA
+  MÊME vitesse au pouce près entre les deux à fond, et `Entites.retirer` à la fermeture) et
+  `test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse` (téléporté à 300 px, il
+  revient sous `LAISSE_COOP`), toutes deux mutées à la main pour confirmer qu'elles mordent.
 - **Ce que l'essai NE dit PAS** : si c'est *amusant* ou *lisible* à deux, un clavier sous une
-  main et une manette dans l'autre, devant le même écran de 480×270. Ni les trois chiffres du
-  zoom (`ZOOM_MIN`, `ZOOM_DIST_PLEIN`, `ZOOM_DIST_MAX`, dans `monde.js`) — posés à vue, à
-  ajuster une fois essayés pour de vrai. Ni si « marcher seulement » suffit ou si ça donne
-  surtout envie de se battre à deux. **Prochain pas : Martin, clavier et manette en main.**
+  main et une manette dans l'autre, devant le même écran de 480×270 — la laisse retient plutôt
+  qu'elle ne montre plus, et ça peut se sentir serré. Ni si 130 px est le bon chiffre
+  (`LAISSE_COOP`, dans `monde.js`) — posé à vue, à ajuster au prochain essai. Ni si « marcher
+  seulement » suffit ou si ça donne surtout envie de se battre à deux. **Prochain pas : Martin,
+  clavier et manette en main, encore.**

@@ -7866,37 +7866,40 @@ def test_la_coop_locale_bascule_un_deuxieme_joueur_a_la_manette(banc):
     assert r["e2VitesseManette"]["vx"] > 0.2, "la manette doit faire marcher le deuxieme joueur"
     assert r["joueurVitesseManette"] == {"vx": 0, "vy": 0}, "la manette a bouge le joueur 1"
     assert r["joueurVitesseClavier"]["vx"] > 0.5, "le clavier doit faire marcher le joueur 1"
+    # ⚠️ Retour de Martin (22 sept., en testant) : le deuxieme joueur ne
+    # courait pas a la meme vitesse que le premier — `majJoueur2` prenait
+    # `v.pieton` (la foule), pas `v.joueur_course` (le joueur). Le stick a
+    # fond (mag=1) et le clavier (toujours a fond) doivent donner LA MEME
+    # vitesse, au pouce pres.
+    assert r["e2VitesseManette"]["vx"] == pytest.approx(r["joueurVitesseClavier"]["vx"], abs=0.05), (
+        f"le deuxieme joueur court a {r['e2VitesseManette']['vx']:.2f} px/image, "
+        f"le premier a {r['joueurVitesseClavier']['vx']:.2f} : meme manette a fond, meme vitesse attendue"
+    )
     assert r["e2VitesseClavier"] == {"vx": 0, "vy": 0}, "le clavier a bouge le deuxieme joueur"
     assert r["ferme"] == {"coop": None, "encore": False}, "rebasculer efface le deuxieme joueur"
 
 
-def test_la_camera_de_la_coop_zoome_quand_les_deux_joueurs_s_eloignent(banc):
-    """Le milieu des deux joueurs, et un zoom arriere qui grandit avec la
-    distance — sans lui, l'un des deux sortirait de l'ecran des qu'ils se
-    séparent (voir `Monde.majCameraCoop`)."""
+def test_la_camera_de_la_coop_retient_le_deuxieme_joueur_a_une_laisse(banc):
+    """Le milieu des deux joueurs, et une LAISSE (`LAISSE_COOP`) qui l'empeche
+    de trop s'eloigner — sans elle, l'un des deux sortirait de l'ecran.
+
+    ⚠️ Pas un zoom arriere : essayé (22 sept. 2026), puis retiré — le sol et
+    les entités ne se dessinent QUE dans la fenêtre normale (480×270,
+    `Monde.dessinerSol`/`Entites.visibleAEcran` bornent tout sur `VW`/`VH` en
+    dur), un vrai zoom exigeait de réécrire le cull dans plusieurs modules.
+    La laisse est le choix simple qui tient dans l'écran tel qu'il est."""
     r = banc("""function (L, o) {
         L.Jeu.commencer();
         L.Jeu.basculerCoop();
-        const zoomProche = L.B.cam.zoom;
-        // ⚠️ On DEPLACE le deuxieme joueur, on ne le fait pas MARCHER : ce
-        // juge teste la formule de la camera (`Monde.majCameraCoop`), pas le
-        // chemin dans la ville — pousser la manette pendant des centaines
-        // d'images peut buter sur un mur pres du spawn selon l'endroit
-        // (mesure : 22 px apres 900 images, plein est). La marche elle-meme
-        // est le sujet de l'autre juge, avec la meme manette.
+        // Le deuxieme joueur est teleporte loin — bien au-dela de la laisse —
+        // et la camera doit le retenir, pas le suivre jusque-la.
         L.B.coop.entite.x += 300;
-        o.frame(120);
-        const zoomLoin = L.B.cam.zoom;
+        o.frame(5);
         const dist = Math.hypot(L.B.joueur.x - L.B.coop.entite.x, L.B.joueur.y - L.B.coop.entite.y);
         L.Jeu.basculerCoop();
-        o.frame(60);
-        const zoomApresFerme = L.B.cam.zoom;
-        return { zoomProche: zoomProche, zoomLoin: zoomLoin, dist: dist, zoomApresFerme: zoomApresFerme };
+        return { dist: dist };
     }""")
-    assert r["zoomProche"] == pytest.approx(1, abs=0.02), "cote a cote, pas de zoom arriere"
-    assert r["dist"] > 150, "le deuxieme joueur doit s'etre vraiment eloigne"
-    assert r["zoomLoin"] < 0.9, f"zoom={r['zoomLoin']} apres {r['dist']:.0f}px d'ecart : ca ne zoome pas"
-    assert r["zoomApresFerme"] == pytest.approx(1, abs=0.05), "le zoom revient a 1 apres la coop"
+    assert r["dist"] < 135, f"le deuxieme joueur est a {r['dist']:.0f}px du premier : la laisse ne tient pas"
 
 
 # --- M4 : la police -----------------------------------------------------------

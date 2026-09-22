@@ -46,10 +46,7 @@ const B = {
   graine: 1,
   defs: null,           // le paquet /api/definitions
   carte: null,
-  //: `zoom` : 1 en jeu normal ; la coop locale (essai) l'ecarte pour tenir
-  //: les deux joueurs (voir Monde.majCameraCoop) — remis a 1 des qu'elle
-  //: s'arrete.
-  cam: { x: 0, y: 0, secousse: 0, zoom: 1 },
+  cam: { x: 0, y: 0, secousse: 0 },
   //: Mode photo (M14, 6e vague) : { dx, dy, filtre } — non nul = simulation
   //: figee, camera detachee du joueur (voir Jeu.ouvrirPhoto).
   photo: null,

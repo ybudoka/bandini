@@ -869,13 +869,6 @@ const Jeu = (function () {
     const ctx = Base.debut();
     ctx.fillStyle = '#0b0a12';
     ctx.fillRect(0, 0, VW, VH);
-    // ⚠️ La coop locale (essai) : le zoom se pose ICI, sur le contexte
-    // hors-ecran (`cible.ctx`, ce que `ctx` designe entre `Base.debut()` et
-    // `Base.fin()`) — AVANT tout le reste, fond compris. `Base.fin` compose
-    // aussi ses lampes sur ce meme contexte : les laisser SOUS ce zoom (au
-    // lieu de le retirer avant de l'appeler) les fait grandir/retrecir avec
-    // le monde, au lieu de rester a une echelle qui ne correspond plus a rien.
-    if (B.cam.zoom !== 1) { ctx.translate(VW / 2, VH / 2); ctx.scale(B.cam.zoom, B.cam.zoom); ctx.translate(-VW / 2, -VH / 2); }
     const cam = B.cam;
     const sec = B.cam.secousse > 0.05 ? B.cam.secousse : 0;
     const vue = { x: cam.x + (sec ? (Math.random() - 0.5) * sec * 8 : 0) + (B.photo ? B.photo.dx : 0),
