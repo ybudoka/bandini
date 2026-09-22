@@ -3236,8 +3236,12 @@ def test_la_rue_se_peuple_puis_s_oublie(banc, paquet):
         });
         const dansLEcran = pietons.filter(function (e) { return L.Entites.visibleAEcran(e.x, e.y, 0); });
         // On se teleporte a l'autre bout : la foule doit suivre, pas rester la.
+        // ⚠️ « L'autre bout » reste la VILLE, pas le relief (`relief.py`, 21 sept.
+        // 2026) : sa chaine de montagnes, a l'est, est infranchissable — personne
+        // n'y nait, n'y marche ni n'y suit personne.
         const c = L.Monde.carte;
-        j.x = c.pxW - 200; j.y = c.pxH - 200;
+        const largeurRelief = c.def.relief ? c.def.relief.montagnes.l * L.TT : 0;
+        j.x = c.pxW - largeurRelief - 200; j.y = c.pxH - 200;
         L.Monde.centrerCamera(j.x, j.y);
         o.frame(600);
         const apres = L.B.entites.filter(function (e) { return e.type === 'pieton' && !e.metier; });

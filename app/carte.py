@@ -271,6 +271,13 @@ LEGENDE: dict[str, dict] = {
     "T": {"nom": "voie du petit train", "rail": True},
     "Q": {"nom": "quai"},
     "~": {"nom": "eau", "solide": 2},
+    # ⚠️ LE RELIEF (`relief.py`, 21 sept. 2026) : infranchissable comme une
+    # façade — solidité 1, pas 2 comme l'eau ni 5 comme le barbelé. On ne le
+    # nage pas, on ne l'enjambe pas, une balle s'y arrête. `M` la montagne (le
+    # rocher plein), `C` la falaise (la paroi qu'on voit depuis la ville ou
+    # depuis le large — la bordure du relief, jamais son intérieur).
+    "M": {"nom": "montagne", "solide": 1},
+    "C": {"nom": "falaise", "solide": 1},
     # ⚠️ UNE PISCINE DE BANLIEUE N'EST PAS LA BAIE. Hors terre, on y entre
     # debout et on ne s'y noie pas : solidite 3, comme un meuble — un pieton la
     # traverse, une auto non, et aucun juge de connexite ne s'en emeut. Elle
@@ -7043,6 +7050,13 @@ def generer(plan: tuple[str, ...] = PLAN, graine: int = GRAINE) -> dict:
     # listes de tuiles) ; ici, la ville d'avant est la meme a la tuile pres. Aucun de.
     from . import aeroport as aeroport_mod
     ville["aeroport"] = aeroport_mod.poser(chantier, ville)
+    # ⚠️ LE RELIEF, APRÈS ABSOLUMENT TOUT (demande de Martin, 21 sept. 2026 : « ajoute
+    # des falaises et montagnes infranchissable »). Une chaîne de montagnes ajoutée
+    # après la dernière rue, à l'est (la carte grandit, comme l'aéroport au sud) et
+    # une ligne de falaises au sud du large, en place. Aucun dé, rien de la ville
+    # d'aujourd'hui — aéroport compris — ne bouge d'une tuile.
+    from . import relief as relief_mod
+    ville["relief"] = relief_mod.poser(chantier, ville)
     return ville
 
 # --- Les interieurs ---------------------------------------------------------

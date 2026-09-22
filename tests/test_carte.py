@@ -30,9 +30,13 @@ def test_rectangulaire_et_glyphes_connus():
 
 
 def test_la_ville_a_la_taille_de_sa_trame():
-    assert CARTE["largeur"] == sum(carte.COLONNES) + sum(carte.RUES_V)
     # ⚠️ La trame fait la ville ; l'aéroport (21 sept. 2026) l'allonge SOUS elle, de
-    # l'eau et une île dessinée, sans toucher une rangée de blocs (`aeroport.py`).
+    # l'eau et une île dessinée, sans toucher une rangée de blocs (`aeroport.py`) — et
+    # le relief (21 sept. 2026) l'allonge À L'EST, d'une chaîne de montagnes, sans
+    # toucher une colonne de blocs (`relief.py`).
+    largeur_trame = sum(carte.COLONNES) + sum(carte.RUES_V)
+    montagnes = CARTE["relief"]["montagnes"]
+    assert montagnes["x"] == largeur_trame and CARTE["largeur"] == largeur_trame + montagnes["l"]
     trame = sum(carte.RANGEES) + sum(carte.RUES_H)
     _, y0, _, hauteur = CARTE["aeroport"]["plan"]
     assert trame < y0 and CARTE["hauteur"] == y0 + hauteur
