@@ -455,6 +455,15 @@ const Missions = (function () {
       pris: 'À LA FOURRIÈRE',
       fini: 'REMORQUAGE',
     },
+    // ⚠️ M16 : le boulot de l'autobus, sur le patron du taxi (un passager au
+    // bord de la route, une destination ailleurs) — `economie.BOULOTS.autobus`
+    // porte les nombres.
+    autobus: {
+      ramasser: 'client',
+      destination: 'ailleurs',
+      pris: 'PROCHAIN ARRÊT : ',
+      fini: 'ARRÊT',
+    },
   };
 
   //: A cette distance de sa destination, un boulot est arrive.

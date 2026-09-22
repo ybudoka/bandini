@@ -1393,17 +1393,28 @@ const Histoire = (function () {
       }
       case 'proteger': {
         // Un personnage te suit ; s'il meurt, échec `protege_mort`. La cible
-        // est posée en `poser()` (`B.mission.protege`).
+        // est posée en `poser()` (`B.mission.protege`). ⚠️ Comme `aller` : on
+        // avance en ARRIVANT à `lieu` (l'escorte a un but), la cible toujours
+        // vivante — sans `lieu`, l'objectif ne ferait jamais que garder.
         const c = B.mission.protege;
         if (!c) { avancer(); return; }
         if (!c.vivant || c.etat === 'assomme') { echouer('protege_mort'); return; }
+        if (o.lieu) {
+          const l = lieu(o.lieu);
+          if (l && dist2(j.x, j.y, l.x, l.y) < (o.rayon || 4) * TT * ((o.rayon || 4) * TT)) avancer();
+        }
         return;
       }
       case 'pickpocket': {
         // Les poches d'un piéton PRÉCIS, par-derrière (le jet de `Combat`).
-        // `cible` nomme l'archétype ; `Combat.pickpocket` vise le premier à
-        // portée — on ne le fait valider que quand la bonne poche est vide.
-        const victime = B.mission.entites.find(function (e) { return e.pickpocket === true && (!e.vivant || e.etat === 'assomme'); });
+        // `cible` nomme l'archétype. ⚠️ `Combat.pickpocket` ne l'assomme PAS —
+        // un vol par-derrière réussi le laisse `fuit`, poches vides
+        // (`victime.argent = 0`) : c'est CE signal-là qu'on guette, pas
+        // `assomme` (un vol par-derrière ne le produit jamais). Assommé ou
+        // mort compte aussi, si on a réglé ça autrement.
+        const victime = B.mission.entites.find(function (e) {
+          return e.pickpocket === true && (e.argent <= 0 || !e.vivant || e.etat === 'assomme');
+        });
         if (victime) avancer();
         return;
       }
@@ -1922,6 +1933,16 @@ const Histoire = (function () {
           if (ou && qui) l = { x: ou.x, y: ou.y, nom: qui.nom };
         }
       }
+      // --- M16 : les neuf types de plus — le même repère que leurs cousins
+      // (`ramasser` pour `suivre`, `tuer` pour `pickpocket`, `monter` pour
+      // `detruire`). `payer` et `boulots` n'ont pas de pixel à pointer : on
+      // parle à qui est là, ou on roule au klaxon.
+      else if (o.type === 'suivre') l = B.mission ? B.mission.fuyard : null;
+      else if (o.type === 'proteger') l = (o.lieu && lieu(o.lieu)) || (B.mission ? B.mission.protege : null);
+      else if (o.type === 'pickpocket') l = B.mission ? B.mission.entites.find(function (e) { return e.pickpocket && e.vivant; }) : null;
+      else if (o.type === 'detruire') l = B.mission && B.mission.chars ? B.mission.chars[p.mission.etape] : null;
+      else if (o.type === 'sauter') l = resoudre(o.ou, m);
+      else if (o.type === 'acheter') l = resoudre(o.ou, m);
       return l ? { x: l.x, y: l.y, nom: (l.nom || o.texte), couleur: '#e8b33c' } : null;
     }
     // Un appel recu : le donneur a aller voir.
@@ -1961,6 +1982,12 @@ const Histoire = (function () {
     let compte = '';
     if (o.type === 'tuer') compte = ' ' + (B.mission ? B.mission.kos : 0) + '/' + o.n;
     if (o.type === 'courses') compte = ' ' + (B.mission ? B.mission.courses : 0) + '/' + o.n;
+    // --- M16 : `boulots` compte comme `courses`, `sauter` comme le Grand Saut.
+    if (o.type === 'boulots' && B.mission) {
+      const faits = (typeof Missions !== 'undefined' ? Missions.boulot.faits[o.sorte] : 0) || 0;
+      compte = ' ' + Math.max(0, faits - B.mission.boulotsDepart) + '/' + o.n;
+    }
+    if (o.type === 'sauter') compte = ' VOL ' + Math.round(B.mission ? B.mission.vol : 0) + '/' + o.vol_px;
     return o.texte + compte;
   }
 

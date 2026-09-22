@@ -93,6 +93,14 @@ PALIERS: dict[str, tuple[dict, ...]] = {
         {"compte": 50, "type": "char", "valeur": "remorqueuse",
          "nom": "LA DÉPANNEUSE EST À TOI", "detail": "GARÉE À LA PLANQUE"},
     ),
+    "autobus": (
+        {"compte": 10, "type": "prime", "valeur": 1.3,
+         "nom": "UN VISAGE CONNU", "detail": "+30 % DE POURBOIRE"},
+        {"compte": 25, "type": "rabais", "valeur": 0.75, "cle": "kiosque",
+         "nom": "LE CAFÉ DU TERMINUS", "detail": "-25 % AUX KIOSQUES"},
+        {"compte": 50, "type": "char", "valeur": "autobus",
+         "nom": "TON PROPRE AUTOBUS", "detail": "GARÉ À LA PLANQUE"},
+    ),
 }
 
 
@@ -634,6 +642,13 @@ BOULOTS: dict[str, Boulot] = {
     "remorquage": {"slug": "remorquage", "nom": "Remorquage", "vehicule": "remorqueuse",
                    "base": 70, "par_tuile": 0.4, "prime": 0,
                    "etapes": 1, "chrono_s": 0, "malus_choc": 0.0},
+    # ⚠️ M16 : le boulot du terminus (f05, « Le dernier autobus ») — des
+    # passagers a prendre au bord de la route et a mener ailleurs, sur le
+    # patron du taxi, mais plus lent a charger (le malus de choc encaisse
+    # mieux : un autobus plein ne se conduit pas sur la pointe des pieds).
+    "autobus": {"slug": "autobus", "nom": "Arrêt", "vehicule": "autobus",
+                "base": 20, "par_tuile": 0.25, "prime": 15,
+                "etapes": 1, "chrono_s": 0, "malus_choc": 0.30},
 }
 
 #: La course type qui sert a COMPARER les boulots entre eux (en tuiles). Elle

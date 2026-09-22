@@ -35,15 +35,23 @@ Chaque fiche mêle deux sortes de faits.
 | [Ti-Paul Gagnon](ti-paul.md) | `tipaul` | devant son dépanneur | Québec Tremblay | m6 · e01 · m51 |
 | [Lucienne « Lulu » Pelletier](lulu.md) | `lulu` | à la cantine des Quais, dedans | Claudia | m6 · m50 · q02 · m51 |
 | [Raymonde Fortin](raymonde.md) | `raymonde` | devant l'usine Prévost | Nadine | m6 · s03 |
-| [Ovila Saint-Onge](ovila.md) | `ovila` | au phare, dedans | annonceur centre d'achat 1 | m6 |
+| [Ovila Saint-Onge](ovila.md) | `ovila` | au phare, dedans | annonceur centre d'achat 1 | m6 · p01 |
 | [Le narrateur du Clairon](le-narrateur.md) | `narrateur` | nulle part : c'est une voix | annonceur centre d'achat 1 | l'ouverture, le journal |
 | [Le client du taxi](le-client-du-taxi.md) | `civil` | sur la banquette arrière | Alexandre | m3 |
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
+| [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
+| [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 |
+| [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 |
+| [Gérard « Gégé » Morin](gege.md) | `gege` | devant la cantine des Quais | Alexandre Boutin | q03 |
+| [Xavier](xavier.md) | `xavier` | devant le dépanneur | Premium Male teacher (Adam) | e12 |
+| [Dr Lachance](dr-lachance.md) | `lachance` | à l'hôpital, dedans | Patrick | h01 |
 
-⚠️ **Deux voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
-dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fait le narrateur **et** Ovila.
+⚠️ **Quatre voix sont partagées**, et c'est pourquoi leurs personnages ne parlent **jamais dans le même
+dialogue** (jugé) : Québec Tremblay fait Marco **et** Ti-Paul, l'annonceur fait le narrateur **et** Ovila,
+Alexandre Boutin fait Le Grand Mo **et** Gégé, Premium Male teacher (Adam) fait Fern **et** Xavier.
 Ce qui les distingue alors, c'est l'écriture — les mots, la salutation, le rythme : Marco parle bas et
-court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie.
+court, Ti-Paul parle vite et trop ; le narrateur soupire, Ovila vouvoie ; Mo étire ses phrases, Gégé les
+coupe court ; Fern est bref et pressé, Xavier s'emballe et n'arrête plus.
 
 ## On se présente une fois par mission — la salutation de chacun, d'un coup d'œil
 
@@ -64,6 +72,12 @@ fait **à sa façon**. Le tableau est l'aide-mémoire ; la fiche dit pourquoi.
 | Ovila | (il n'appelle pas encore) | « Ovila Saint-Onge, pour vous servir. » — il vouvoie | « Bonsoir. » | le tutoiement ; une hâte |
 | le narrateur | — | ne se présente pas : c'est le journal qui parle | — | « je » |
 | le client | — | ne se présente pas ; il se trahit (« j'suis de la police ») | — | son nom |
+| Le Grand Mo | (il n'appelle pas) | « Le Grand Mo, on m'appelle de même. » | « J'ai vu de quoi. » | son vrai nom |
+| Fern | (il n'appelle pas) | « Fern, le chauffeur. Monte, le jeune... » | « Monte, le jeune! » | une excuse pour un retard |
+| Mado | « C'est Mado, du casse-croûte! » | « Mado, du casse-croûte. Assis-toi, mon grand. » | « T'as faim, toi? » | « je m'excuse » |
+| Gégé | « Gégé, chef des débardeurs. » | la même, en personne | « Viens icitte! » | « s'il te plaît » |
+| Xavier | « Xavier! Tu me replaces pas? » | la même, au téléphone | « As-tu un char? » | un mot d'adulte |
+| Dr Lachance | « Ici le docteur Lachance, de l'hôpital. » | la même, au téléphone | « Viens, vite! » | une plainte sur sa fatigue |
 
 ⚠️ **Une fois par mission, pas une fois par coup de fil.** L'échec, la fin et les `pendant` d'une mission
 ne redisent pas le nom : on a entendu la voix à l'appel. La colonne « Au téléphone » est donc celle de
