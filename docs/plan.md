@@ -93,6 +93,7 @@ pas quand l'ordre de travail change.
 | Des menus à onglets, et la téléportation vers les défis | ⬜ **en cours** | 22 sept. 2026 | **P2** | ajout | [fiche](jalons/des-menus-a-onglets-et-la-teleportation-vers-les-defis.md#fiche) |
 | La police a de la tolérance : la chaleur refroidit, les renforts prennent le temps de venir | ⬜ **en cours** | 22 sept. 2026 | **P2** | **correctif** | [fiche](jalons/la-police-a-de-la-tolerance-la-chaleur-refroidit-les-renforts-prennent.md#fiche) |
 | L'escorte emmène le vrai donneur : un seul Bonimenteur, et il suit | ⬜ **en cours** | 22 sept. 2026 | **P1** | **correctif** | [fiche](jalons/l-escorte-emmene-le-vrai-donneur-un-seul-bonimenteur-et-il-suit.md#fiche) |
+| Suivre sans se faire voir : le stool attend qu'on soit au volant, roule jusqu'au poste, et le filage tolère un écart | ⬜ **en cours** | 22 sept. 2026 | **P1** | **correctif** | [fiche](jalons/suivre-sans-se-faire-voir-le-stool-attend-qu-on-soit-au-volant-roule.md#fiche) |
 
 ## L'ordre
 
