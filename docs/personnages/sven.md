@@ -11,7 +11,7 @@
 | Slug | `sven` |
 | Rôle | le contrebandier qui veut Les Quais — déjà prévu dans le plan M16, posé pour de vrai le 21 sept. 2026 |
 | Où | sur la jetée, à côté de son porte-conteneurs (`mouillage:porte_conteneurs`) |
-| Voix | **Voix Nicolas Petit IA AUDIO Narration** (accent parisien) — ⚠️ **provisoire**, voir « À trancher » |
+| Voix | **Martin - Clear and Comforting** (norvégien, accent d'Oslo) |
 | Bulle | « Viens, discret. » |
 | Couleurs | veste gris-bleu, cheveux gris, pantalon noir |
 | Missions | donne **m52** · **m53** · **m54** |
@@ -76,8 +76,11 @@ antagoniste des Quais ; m52-m54 en sont le premier acte, écrit avant le reste d
 
 ## À trancher
 
-- **Sa voix est un choix temporaire.** Aucune voix du compte ElevenLabs n'est étiquetée « norvégienne » ;
-  `Voix Nicolas Petit IA AUDIO Narration` (accent parisien) est la seule qui lise nettement « pas d'ici »
-  dans le répertoire actuel. Le plan M16 le dit lui-même pour ce personnage précis : « une audition qu'il
-  a écoutée » — c'est Martin qui tranche, à l'oreille, avant toute génération.
 - **Son passé** (pourquoi il est parti, d'où) n'est pas écrit : aucune réplique du jeu n'y touche encore.
+
+## Notes
+
+**Voix tranchée le 22 sept. 2026.** `Martin - Clear and Comforting` (norvégien, accent d'Oslo) a rejoint
+le compte ElevenLabs — la première voix du répertoire qui dise vraiment « pas d'ici », plutôt que le repli
+parisien (`Nicolas Petit`) qui tenait la place depuis la livraison de m52-m54. Rien d'autre ne change :
+mêmes répliques, même `jeu=`.

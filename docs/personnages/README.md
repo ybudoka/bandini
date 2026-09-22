@@ -39,7 +39,7 @@ Chaque fiche mêle deux sortes de faits.
 | [Le narrateur du Clairon](le-narrateur.md) | `narrateur` | nulle part : c'est une voix | annonceur centre d'achat 1 | l'ouverture, le journal |
 | [Le client du taxi](le-client-du-taxi.md) | `civil` | sur la banquette arrière | Alexandre | m3 |
 | [Rocco Bandini](rocco.md) | — | absent : c'est lui qu'on remplace | — | partout, en creux |
-| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Voix Nicolas Petit IA AUDIO Narration (provisoire) | m52 · m53 · m54 |
+| [Sven Haugen](sven.md) | `sven` | sur la jetée, près de son porte-conteneurs | Martin - Clear and Comforting | m52 · m53 · m54 |
 | [Le Grand Mo](le-grand-mo.md) | `mo` | le banc du terminus | Alexandre Boutin | f04 |
 | [Fern Côté](fern.md) | `fern` | le quai d'autobus du terminus | Premium Male teacher (Adam) | f05 |
 | [Mado](mado.md) | `mado` | devant le casse-croûte du Faubourg | Caroline | f11 |

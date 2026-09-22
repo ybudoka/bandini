@@ -66,9 +66,12 @@ rien n'a changé en cours de route sur les trois décisions prises avec Martin.
   mouillage, ACTION parlait à Sven avant d'entrer dans le bateau (la chaîne de
   `Missions.interagir`). Décalé de deux tuiles sur le flanc du quai, comme `poserDonneur` le
   fait déjà pour les autres.
-- **La voix de Sven reste provisoire** — `Nicolas Petit` (accent parisien) tient la place
-  d'une voix « norvégienne » qui n'existe pas au compte ; les textes et leur `jeu=` sont
-  écrits, mais rien n'est généré tant que Martin ne l'a pas entendue.
+- ⚠️ **La voix de Sven tranchée le 22 sept. 2026** — Martin a ajouté `Martin - Clear and
+  Comforting` (norvégien, accent d'Oslo) au compte. Les 26 répliques (m52-m54, huit
+  chacune, plus les deux repos) générées avec elle par `scripts/audio_elevenlabs.py
+  --refaire sven-…` — ciblé par slug, pas `--voix`, pour ne pas payer les personnages d'une
+  autre session au passage. Voir [sa fiche](sven.md#notes). Pas encore écoutées par Martin :
+  c'est toujours lui qui juge un son, jamais un juge automatique.
 - **Deux sessions concurrentes ont atterri en même temps** : dix missions de plus (six
   personnages, `f04`-`e12`) et le correctif des phares sont arrivés sur `dev` pendant
   l'écriture de celle-ci. Les fichiers partagés (`missions/__init__.py`, `interpretation.py`,

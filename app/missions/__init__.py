@@ -182,12 +182,10 @@ PERSONNAGES: list[Personnage] = [
     # prevu dans le plan M16 (« le contrebandier qui veut Les Quais »), jamais
     # encore pose. Il se tient sur SA jetee, a cote de SON porte-conteneurs —
     # `mouillage:porte_conteneurs` (le poste a quai que `navires.py` exporte).
-    # ⚠️ **Sa voix est provisoire.** Aucune voix « norvegienne » au compte
-    # ElevenLabs ; `Nicolas Petit` (accent parisien) est la seule qui lit
-    # nettement « pas d'ici » — a trancher par Martin, a l'oreille, comme le
-    # plan M16 le demande pour lui precisement. Les textes et leur `jeu=` sont
-    # ecrits ; aucune voix n'est generee tant qu'il n'a pas ecoute.
-    {"slug": "sven", "nom": "Sven Haugen", "genre": "homme", "voix": "Voix Nicolas Petit IA AUDIO Narration",
+    # Sa voix : `Martin - Clear and Comforting` (norvegien, accent d'Oslo),
+    # ajoutee au compte le 22 sept. 2026 — la premiere qui dise vraiment
+    # « pas d'ici », plutot que le repli parisien qui tenait la place.
+    {"slug": "sven", "nom": "Sven Haugen", "genre": "homme", "voix": "Martin - Clear and Comforting",
      "couleurs": {"c": "#34495e", "h": "#c8c8c8", "s": "#e8b088", "p": "#1a1a1a"}, "ou": "mouillage:porte_conteneurs",
      "heler": "Viens, discret."},
 ]
